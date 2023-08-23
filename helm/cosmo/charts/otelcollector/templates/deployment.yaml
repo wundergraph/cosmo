@@ -1,0 +1,107 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "otelcollector.fullname" . }}
+  annotations:
+    # Support for k14s.io. This annotation will form a group to coordinate deployments with kapp.
+    kapp.k14s.io/change-group: "cosmo.apps.otelcollector.wundergraph.com/deployment"
+    {{- if .Values.global.clickhouse.enabled }}
+    # Support for k14s.io. This annotation will wait for the clickhouse deployments to be ready before deploying.
+    kapp.k14s.io/change-rule.clickhouse: "upsert after upserting cosmo.apps.clickhouse.wundergraph.com/deployment"
+    {{- end }}
+    {{- if .Values.global.postgresql.enabled }}
+    # Support for k14s.io. This annotation will wait for the postgresql deployments to be ready before deploying.
+    kapp.k14s.io/change-rule.postgresql: "upsert after upserting cosmo.apps.postgresql.wundergraph.com/deployment"
+    {{- end }}
+  labels:
+    {{- include "otelcollector.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  {{- with .Values.deploymentStrategy }}
+  strategy:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "otelcollector.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        # Roll deployments when this config changes. Name doesn't matter, just needs to be unique.
+        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+      {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "otelcollector.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "otelcollector.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      initContainers:
+        {{- tpl (.Values.initContainers | toYaml) . | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ include "otelcollector.image" . }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.port }}
+              protocol: TCP
+            - name: healthcheck
+              containerPort: 13133
+              protocol: TCP
+          env:
+            - name: CLICKHOUSE_ENDPOINT
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "otelcollector.fullname" . }}
+                  key: clickhouseDsn
+            - name: OTEL_INGEST_JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "otelcollector.fullname" . }}
+                  key: authJwtSecret
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 13133
+            {{ if ((.Values.probes).liveness).initialDelaySeconds }}
+            initialDelaySeconds: {{ ((.Values.probes).liveness).initialDelaySeconds | default 0 }}
+            {{ end }}
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 13133
+            {{ if ((.Values.probes).readiness).initialDelaySeconds }}
+            initialDelaySeconds: {{ ((.Values.probes).readiness).initialDelaySeconds | default 0 }}
+            {{ end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if .Values.priorityClassName }}
+      priorityClassName: {{ .Values.priorityClassName }}
+      {{- end }}
+      {{- if .Values.terminationGracePeriodSeconds }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      {{- end }}
+

@@ -1,0 +1,99 @@
+---
+version: "3.8"
+name: cosmo-dev
+services:
+  postgres:
+    image: postgres:${DC_POSTGRESQL_VERSION:-15.3}
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      POSTGRES_DB: ${POSTGRES_DB:-controlplane}
+      PGDATA: /data/postgres
+    volumes:
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - postgres:/data/postgres
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    networks:
+      - primary
+
+  keycloak:
+    build:
+      context: keycloak
+      dockerfile: Dockerfile
+    environment:
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-changeme}
+      KC_DB: postgres
+      KC_DB_URL_HOST: postgres
+      KC_DB_URL_DATABASE: ${POSTGRES_DB:-keycloak}
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      KC_DB_USERNAME: ${POSTGRES_USER:-postgres}
+      KC_DB_SCHEMA: public
+    command:
+      - "start-dev"
+      - "--import-realm"
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./docker/keycloak/realm.json:/opt/keycloak/data/import/realm.json:ro
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    networks:
+      - primary
+
+  # Only to test OTEL Instrumentation
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    ports:
+      - '16686:16686'
+      - '14268:14268'
+      - '4319:4318'
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+      - LOG_LEVEL=debug
+    networks:
+      - primary
+
+  otelcollector:
+    build:
+      context: otelcollector
+      dockerfile: Dockerfile
+    environment:
+      CLICKHOUSE_ENDPOINT: "clickhouse://${CLICKHOUSE_USER:-default}:${CLICKHOUSE_PASSWORD:-changeme}@clickhouse:9000/${CLICKHOUSE_DATABASE:-cosmo}?dial_timeout=15s&compress=lz4"
+      OTEL_INGEST_JWT_SECRET: ${OTEL_INGEST_JWT_SECRET:-fkczyomvdprgvtmvkuhvprxuggkbgwld}
+    ports:
+      - "4318:4318"
+    restart: unless-stopped
+    depends_on:
+      - clickhouse
+    networks:
+      - primary
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:${DC_CLICKHOUSE_VERSION:-23}
+    environment:
+      CLICKHOUSE_DB: ${CLICKHOUSE_DATABASE:-cosmo}
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER:-default}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-changeme}
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: ${CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT:-1}
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+      - "9440:9440"
+    volumes:
+      - clickhouse:/var/lib/clickhouse
+      - ./docker/clickhouse/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
+    networks:
+      - primary
+
+networks:
+  primary:
+    driver: bridge
+    name: primary
+
+volumes:
+  postgres:
+  clickhouse:

@@ -1,0 +1,12 @@
+node_modules
+.husky
+.idea
+.vscode
+**/*.env
+**/*.env.*
+!**/*.env.example
+.auto.tfvars
+# docker volumes
+**/_docker
+tsconfig.tsbuildinfo
+gen

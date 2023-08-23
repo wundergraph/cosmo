@@ -1,0 +1,47 @@
+name: Shared CI
+on:
+  push:
+    branches:
+      - main
+    tags-ignore:
+      - "**"
+    paths:
+      - ".github/workflows/shared-ci.yaml"
+      - "composition/**/*"
+      - "connect/**/*"
+      - "shared/**/*"
+
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/shared-ci.yaml"
+      - "composition/**/*"
+      - "connect/**/*"
+      - "shared/**/*"
+
+concurrency:
+  group: ${{github.workflow}}-${{github.head_ref}}
+  cancel-in-progress: true
+
+jobs:
+  build_test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - uses: ./.github/actions/node
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate code
+        run: pnpm buf generate --template buf.ts.gen.yaml
+
+      - name: Build
+        run: pnpm run --filter ./connect --filter ./shared --filter ./connect --filter ./composition build
+
+      - name: Test
+        run: pnpm run --filter ./shared test

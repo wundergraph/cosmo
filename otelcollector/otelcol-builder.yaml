@@ -1,0 +1,26 @@
+# available options: https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/cmd/otelcontribcol/builder-config.yaml
+
+dist:
+  name: otelcol
+  description: Local OpenTelemetry Collector binary
+  output_path: ./otelcol-dev
+
+extensions:
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/healthcheckextension v0.81.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/jwtauthextension v0.81.0
+
+exporters:
+  - gomod: go.opentelemetry.io/collector/exporter/loggingexporter v0.81.0
+  - gomod: go.opentelemetry.io/collector/exporter/otlpexporter v0.81.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/exporter/clickhouseexporter v0.81.0
+
+receivers:
+  - gomod: go.opentelemetry.io/collector/receiver/otlpreceiver v0.81.0
+
+processors:
+  - gomod: go.opentelemetry.io/collector/processor/batchprocessor v0.81.0
+  - gomod: go.opentelemetry.io/collector/processor/memorylimiterprocessor v0.81.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/processor/attributesprocessor v0.81.0
+
+replaces:
+  - github.com/open-telemetry/opentelemetry-collector-contrib/extension/jwtauthextension => github.com/wundergraph/opentelemetry-collector-contrib/extension/jwtauthextension a68e9a1

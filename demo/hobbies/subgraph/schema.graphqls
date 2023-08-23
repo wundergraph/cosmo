@@ -1,0 +1,76 @@
+enum ExerciseType {
+  CALISTHENICS
+  HIKING
+  SPORT
+  STRENGTH_TRAINING
+}
+
+type Exercise {
+  category: ExerciseType!
+}
+
+interface Experience {
+  yearsOfExperience: Float!
+}
+
+type Flying implements Experience {
+  planeModels: [String!]!
+  yearsOfExperience: Float!
+}
+
+enum GameGenre {
+  ADVENTURE
+  BOARD
+  FPS
+  CARD
+  RPG
+  ROGUELITE
+  SIMULATION
+  STRATEGY
+}
+
+type Gaming implements Experience {
+  genres: [GameGenre!]!
+  name: String!
+  yearsOfExperience: Float!
+}
+
+type Other {
+  name: String!
+}
+
+enum ProgrammingLanguage {
+  CSHARP
+  GO
+  RUST
+  TYPESCRIPT
+}
+
+type Programming {
+  languages: [ProgrammingLanguage!]!
+}
+
+enum Country {
+  AMERICA
+  ENGLAND
+  GERMANY
+  KOREA
+  NETHERLANDS
+  INDONESIA
+  PORTUGAL
+  SERBIA
+  SPAIN
+  TAIWAN
+  THAILAND
+}
+
+type Travelling {
+  countriesLived: [Country!]!
+}
+
+union Hobby = Exercise | Flying | Gaming | Programming | Travelling | Other
+
+type Employee @key(fields: "id") {
+  id: Int!
+  hobbies: [Hobby!]!
+}

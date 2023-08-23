@@ -1,0 +1,3 @@
+src/**/*
+test-suite/**/*
+!README.md

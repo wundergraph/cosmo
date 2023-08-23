@@ -1,0 +1,62 @@
+name: Studio CI
+on:
+  push:
+    branches:
+      - main
+    tags-ignore:
+      - "**"
+    paths:
+      - "studio/**/*"
+      - "connect/**/*"
+      - ".github/workflows/studio-ci.yaml"
+
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "studio/**/*"
+      - "connect/**/*"
+      - ".github/workflows/studio-ci.yaml"
+
+concurrency:
+  group: ${{github.workflow}}-${{github.head_ref}}
+  cancel-in-progress: true
+
+env:
+  CI: true
+
+jobs:
+  build_test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - uses: ./.github/actions/node
+
+      - uses: actions/cache@v3
+        name: Cache Next.js build
+        with:
+          path: |
+            ${{ github.workspace }}/web/.next/cache
+          # Generate a new cache whenever packages or source files change.
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('**/pnpm-lock.yaml') }}-${{ hashFiles('studio/**.[jt]s', 'studio/**.[jt]sx') }}
+          # If source files changed but packages didn't, rebuild from a prior cache.
+          restore-keys: |
+            ${{ runner.os }}-nextjs-${{ hashFiles('**/pnpm-lock.yaml') }}-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate code
+        run: pnpm buf generate --template buf.ts.gen.yaml
+
+      - name: Build
+        run: pnpm run --filter ./studio --filter ./connect --filter ./shared --filter ./composition build
+
+      - name: Lint
+        run: pnpm run --filter studio lint
+
+      - name: Test
+        run: pnpm run --filter studio test

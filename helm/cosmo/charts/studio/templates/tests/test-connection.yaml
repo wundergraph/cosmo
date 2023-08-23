@@ -1,0 +1,19 @@
+{{- if .Values.global.helmTests }}
+{{- if .Values.global.helmTests.enabled | default false }}
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{ include "studio.fullname" . }}-test-connection"
+  labels:
+    {{- include "studio.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test
+spec:
+  containers:
+    - name: wget
+      image: busybox
+      command: ['wget']
+      args: ['{{ include "studio.fullname" . }}:{{ .Values.service.port }}']
+  restartPolicy: Never
+{{- end }}
+{{- end }}

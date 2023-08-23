@@ -1,0 +1,77 @@
+extend schema
+  @link(
+    url: "https://specs.apollo.dev/federation/v2.1"
+    import: [
+      "@key"
+      "@shareable"
+      "@inaccessible"
+      "@composeDirective"
+      "@tag"
+    ]
+  )
+  @link(
+    url: "https://myspecs.dev/myDirective/v1.0"
+    import: ["@myDirective", { name: "@anotherDirective", as: "@hello" }]
+  )
+  @composeDirective(name: "@myDirective")
+  @composeDirective(name: "@hello")
+
+directive @myDirective(a: String!) on FIELD_DEFINITION
+directive @hello on FIELD_DEFINITION
+
+type Query {
+  allProducts: [ProductItf]
+  product(id: ID!): ProductItf
+}
+
+interface SkuItf {
+  sku: String
+}
+
+interface ProductItf implements SkuItf {
+  id: ID!
+  sku: String
+  name: String
+  package: String
+  variation: ProductVariation
+  dimensions: ProductDimension
+  createdBy: User
+  hidden: String @inaccessible
+  oldField: String @deprecated(reason: "refactored out")
+}
+
+type Product implements ProductItf & SkuItf
+  @key(fields: "id")
+  @key(fields: "sku package")
+  @key(fields: "sku variation { id }") {
+  id: ID! @tag(name: "hi-from-products")
+  sku: String
+  name: String @hello
+  package: String
+  variation: ProductVariation
+  dimensions: ProductDimension
+  createdBy: User
+  hidden: String
+  reviewsScore: Float! @shareable
+  oldField: String
+}
+
+enum ShippingClass {
+  STANDARD
+  EXPRESS
+}
+
+type ProductVariation {
+  id: ID!
+  name: String
+}
+
+type ProductDimension @shareable {
+  size: String
+  weight: Float
+}
+
+type User @key(fields: "email") {
+  email: ID!
+  totalProductsCreated: Int @shareable
+}

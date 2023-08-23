@@ -1,0 +1,2 @@
+ALTER TABLE "schema_version_change_action" ADD COLUMN "change_type" "schema_change_type" NOT NULL;--> statement-breakpoint
+ALTER TABLE "schema_version_change_action" ADD COLUMN "change_message" text NOT NULL;

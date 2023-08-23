@@ -1,0 +1,25 @@
+directive @shareable on FIELD_DEFINITION | OBJECT
+directive @override(from: String!) on FIELD_DEFINITION
+
+type Query {
+  review(id: Int!): Review
+}
+
+type Product implements ProductItf @key(fields: "id") {
+  id: ID!
+  reviewsCount: Int!
+  reviewsScore: Float! @shareable @override(from: "products")
+  reviews: [Review!]!
+}
+
+interface ProductItf {
+  id: ID!
+  reviewsCount: Int!
+  reviewsScore: Float!
+  reviews: [Review!]!
+}
+
+type Review {
+  id: Int!
+  body: String!
+}

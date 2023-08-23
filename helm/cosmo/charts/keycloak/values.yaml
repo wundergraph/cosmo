@@ -1,0 +1,124 @@
+# Default values for keycloak.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# Don't modify the chart is only for development purposes
+replicaCount: 1
+
+image:
+  repository: wg-cosmo/cosmo/keycloak
+  registry: us-docker.pkg.dev
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  version: "latest"
+
+imagePullSecrets: []
+
+# String to partially override common.names.fullname template (will maintain the release name)
+nameOverride: ""
+
+# String to fully override common.names.fullname template
+fullnameOverride: ""
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+serviceAnnotations: {}
+
+podAnnotations: {}
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+service:
+  type: ClusterIP
+  port: 8080
+
+#initContainers:
+#  - name: init-postgresql
+#    image: busybox:1.28
+#    imagePullPolicy: "IfNotPresent"
+#    command: ['sh', '-c', 'until nslookup {{ include "postgresql.fullname" . }}; do echo waiting for postgresql; sleep 2; done;']
+
+ingress:
+#  enabled: true
+#  className: ""
+#  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+  # kubernetes.io/tls-acme: "true"
+  hosts:
+#    - host: keycloak.wundergraph.local
+#      paths:
+#        - path: /
+#          pathType: ImplementationSpecific
+  tls: []
+  #  - secretName: chart-example-tls
+  #    hosts:
+  #      - chart-example.local
+
+resources: {}
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+# -- Set to existing PriorityClass name to control pod preemption by the scheduler
+priorityClassName: ""
+
+# -- Sets the [termination grace period](https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#hook-handler-execution) for Deployment pods
+terminationGracePeriodSeconds: 10
+
+probes:
+  # -- Configure readiness probe
+  readiness:
+    initialDelaySeconds: 10
+  # -- Configure liveness probe
+  liveness:
+    initialDelaySeconds: 10
+
+########################
+# Global configuration #
+########################
+
+#global:
+#  keycloak:
+#    enabled: true
+#    realm: "cosmo"
+#    webUrl: "http://keycloak.wundergraph.local"
+#    port: 8080
+#    adminUser: "admin"
+#    adminPassword: "changeme"
+#    database: "keycloak"
+#    databaseSchema: "public"
+#    databaseUsername: "postgres"
+#    databasePassword: "changeme"
+
+#############################
+# Application configuration #
+#############################

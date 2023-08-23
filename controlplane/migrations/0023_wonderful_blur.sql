@@ -1,0 +1,1 @@
+ALTER TABLE "schema_versions" ADD COLUMN "routerConfig" jsonb;

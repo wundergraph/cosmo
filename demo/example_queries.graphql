@@ -1,0 +1,87 @@
+query {
+  employees {
+    # resolved through employees subgraph
+    id
+    details {
+      # resolved through either employees or family subgraph
+      forename
+      surname
+      # resolved through employees subgraph
+      location
+    }
+    # resolved through family subgraph
+    hasChildren
+    # can be null
+    maritalStatus
+    nationality
+    # resolved through employees subgraph
+    role {
+      department
+      title
+      ... on Engineer {
+        engineerType
+      }
+      ... on Operator {
+        operatorType
+      }
+    }
+    # resolved through family subgraph (can be null)
+    pets {
+      class
+      gender
+      name
+      ... on Cat {
+        type
+      }
+      ... on Dog {
+        breed
+      }
+      ... on Alligator {
+        dangerous
+      }
+    }
+    # resolved through hobbies subgraph
+    hobbies {
+      ... on Exercise {
+        category
+      }
+      ... on Flying {
+        planeModels
+        yearsOfExperience
+      }
+      ... on Gaming {
+        genres
+        name
+        yearsOfExperience
+      }
+      ... on Other {
+        name
+      }
+      ... on Programming {
+        languages
+      }
+      ... on Travelling {
+        countriesLived
+      }
+    }
+    # resolved through products subgraph
+    products
+  }
+  employee(id: 1) {
+    # resolved through employees subgraph
+    id
+    details {
+      forename
+      location
+    }
+  }
+  team_mates(team: OPERATIONS) {
+    # resolved through employees subgraph
+    id
+    details {
+      forename
+    }
+    # resolved through products subgraph
+    products
+  }
+}

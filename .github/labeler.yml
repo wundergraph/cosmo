@@ -1,0 +1,17 @@
+studio:
+  - "studio/**/*"
+monorepo:
+  - "pnpm-lock.yaml"
+  - "pnpm-workspace.yaml"
+  - "package.json"
+  - "Makefile"
+cli:
+  - "cli/**/*"
+router:
+  - "router/**/*"
+connect:
+  - "connect/**/*"
+protocol:
+  - "proto/**/*"
+controlplane:
+  - "controlplane/**/*"

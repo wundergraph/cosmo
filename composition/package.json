@@ -1,0 +1,37 @@
+{
+  "name": "@wundergraph/composition",
+  "version": "0.0.1",
+  "author": {
+    "name": "WunderGraph Maintainers",
+    "email": "info@wundergraph.com"
+  },
+  "license": "Apache-2.0",
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "dev": "tsc --watch",
+    "build": "del dist && tsc",
+    "prepublish": "pnpm run build && pnpm run test",
+    "release": "pnpm publish --access restricted --tag latest",
+    "test": "vitest test"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "@graphql-tools/merge": "^9.0.0",
+    "@graphql-tools/schema": "^10.0.0",
+    "@graphql-tools/utils": "^10.0.1",
+    "graphology": "^0.25.1",
+    "graphology-simple-path": "^0.2.0",
+    "graphql": "^16.7.1",
+    "vitest": "^0.34.1"
+  },
+  "devDependencies": {
+    "del-cli": "^5.0.0",
+    "typescript": "^5.1.3"
+  }
+}

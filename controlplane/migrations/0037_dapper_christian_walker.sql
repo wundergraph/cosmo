@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX IF NOT EXISTS "apikey_name_idx" ON "api_keys" ("name","organization_id");

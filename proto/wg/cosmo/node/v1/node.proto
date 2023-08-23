@@ -1,0 +1,208 @@
+syntax = "proto3";
+
+package wg.cosmo.node.v1;
+
+import "wg/cosmo/common.proto";
+
+message RouterConfig {
+  EngineConfiguration engine_config = 1;
+  string version = 2;
+}
+
+message Response {
+  wg.cosmo.common.EnumStatusCode code = 1;
+  // details is an optional field which can be used to provide more details about the error.
+  optional string details = 2;
+}
+
+message ResponseStatus {
+  int32 code = 1;
+  string message = 2;
+}
+
+message GetConfigRequest {
+  // The FQDN of the graph to get the config for e.g. "wg.production"
+  string graph_name = 1;
+}
+
+message GetConfigResponse {
+  Response response = 1;
+  optional RouterConfig config = 2;
+}
+
+service NodeService {
+  rpc GetLatestValidRouterConfig(GetConfigRequest) returns (GetConfigResponse) {}
+}
+
+message EngineConfiguration {
+  int64 defaultFlushInterval = 1;
+  repeated DataSourceConfiguration datasource_configurations = 2;
+  repeated FieldConfiguration field_configurations = 3;
+  string graphqlSchema = 4;
+  repeated TypeConfiguration type_configurations = 5;
+  map<string, string> string_storage = 6;
+}
+
+message DataSourceConfiguration {
+  DataSourceKind kind = 1;
+  repeated TypeField root_nodes = 2;
+  repeated TypeField child_nodes = 3;
+  bool override_field_path_from_alias = 4;
+  DataSourceCustom_GraphQL custom_graphql = 5;
+  DataSourceCustom_Static custom_static = 6;
+  repeated DirectiveConfiguration directives = 7;
+  int64 request_timeout_seconds = 8;
+  string id = 9;
+  repeated RequiredField required_fields = 10;
+}
+
+message FieldConfiguration {
+  string type_name = 1;
+  string field_name = 2;
+  bool disable_default_field_mapping = 3;
+  repeated string path = 4;
+  repeated ArgumentConfiguration arguments_configuration = 6;
+  bool unescape_response_json = 7;
+}
+
+message ArgumentConfiguration {
+  string name = 1;
+  ArgumentSource source_type = 2;
+  repeated string source_path = 3;
+  ArgumentRenderConfiguration render_configuration = 4;
+  string rename_type_to = 5;
+}
+
+enum ArgumentRenderConfiguration {
+  RENDER_ARGUMENT_DEFAULT = 0;
+  RENDER_ARGUMENT_AS_GRAPHQL_VALUE = 1;
+  RENDER_ARGUMENT_AS_ARRAY_CSV = 2;
+}
+
+enum ArgumentSource {
+  OBJECT_FIELD = 0;
+  FIELD_ARGUMENT = 1;
+}
+
+message TypeConfiguration {
+  string type_name = 1;
+  string rename_to = 2;
+}
+
+enum DataSourceKind {
+  STATIC = 0;
+  GRAPHQL = 1;
+}
+
+message TypeField {
+  string type_name = 1;
+  repeated string field_names = 2;
+}
+
+message RequiredField {
+  string type_name = 1;
+  string field_name = 2;
+  string selection_set = 3;
+}
+
+message FetchConfiguration {
+  // You should either configure url OR a combination of baseURL and path
+  // If url resolves to a non empty string, it takes precedence over baseURL and path
+  // If url resolves to an empty string, the url will be configured as "{{baseURL}}{{path}}"
+  ConfigurationVariable url = 1;
+  HTTPMethod method = 2;
+  map<string, HTTPHeader> header = 3;
+  ConfigurationVariable body = 4;
+  repeated URLQueryConfiguration query = 5;
+  // urlEncodeBody defines whether the body should be URL encoded or not
+  // by default, the body will be JSON encoded
+  // setting urlEncodeBody to true will render the body empty,
+  // the Header Content-Type will be set to application/x-www-form-urlencoded,
+  // and the body will be URL encoded and set as the URL Query String
+  bool url_encode_body = 7;
+  MTLSConfiguration mtls = 8;
+  ConfigurationVariable base_url = 9;
+  ConfigurationVariable path = 10;
+  optional ConfigurationVariable http_proxy_url = 11;
+}
+
+message StatusCodeTypeMapping {
+  int64 status_code = 1;
+  string type_name = 2;
+  bool inject_status_code_into_body = 3;
+}
+
+message DataSourceCustom_GraphQL {
+  FetchConfiguration fetch = 1;
+  GraphQLSubscriptionConfiguration subscription = 2;
+  GraphQLFederationConfiguration federation = 3;
+  InternedString upstream_schema = 4;
+  repeated SingleTypeField custom_scalar_type_fields = 6;
+}
+
+message DataSourceCustom_Static {
+  ConfigurationVariable data = 1;
+}
+
+message ConfigurationVariable {
+  ConfigurationVariableKind kind = 1;
+  string static_variable_content = 2;
+  string environment_variable_name = 3;
+  string environment_variable_default_value = 4;
+  string placeholder_variable_name = 5;
+};
+
+enum ConfigurationVariableKind {
+  STATIC_CONFIGURATION_VARIABLE = 0;
+  ENV_CONFIGURATION_VARIABLE = 1;
+  PLACEHOLDER_CONFIGURATION_VARIABLE = 2;
+}
+
+message DirectiveConfiguration {
+  string directive_name = 1;
+  string rename_to = 2;
+}
+
+message URLQueryConfiguration {
+  string name = 1;
+  string value = 2;
+}
+
+message HTTPHeader {
+  repeated ConfigurationVariable values = 1;
+}
+
+enum HTTPMethod {
+  GET = 0;
+  POST = 1;
+  PUT = 2;
+  DELETE = 3;
+  OPTIONS = 4;
+}
+
+message MTLSConfiguration {
+  ConfigurationVariable key = 1;
+  ConfigurationVariable cert = 2;
+  bool insecureSkipVerify = 3;
+}
+
+message GraphQLSubscriptionConfiguration {
+  bool enabled = 1;
+  ConfigurationVariable url = 2;
+  bool useSSE = 3;
+}
+
+message GraphQLFederationConfiguration {
+  bool enabled = 1;
+  string serviceSdl = 2;
+}
+
+message InternedString {
+  // key to index into EngineConfiguration.stringStorage
+  string key = 1;
+}
+
+message SingleTypeField {
+  string type_name = 1;
+  string field_name = 2;
+}

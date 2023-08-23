@@ -1,0 +1,92 @@
+import Table from 'cli-table';
+import { Command } from 'commander';
+import logSymbols from 'log-symbols';
+import pc from 'picocolors';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common_pb';
+import { joinLabel } from '@wundergraph/cosmo-shared';
+import { BaseCommandOptions } from '../../../core/types/types.js';
+import { baseHeaders } from '../../../core/config.js';
+
+export default (opts: BaseCommandOptions) => {
+  const schemaPush = new Command('check');
+  schemaPush.description('Validates the federated graph with the provided configuration for errors.');
+  schemaPush.argument(
+    '<name>',
+    'The name of the federated graph. It is usually in the format of <org>.<env> and is used to uniquely identify your federated graph.',
+  );
+  schemaPush.requiredOption(
+    '--label-matcher <labels...>',
+    'The label matchers to the federated graph with which the check is to be performed',
+  );
+
+  schemaPush.action(async (name, options) => {
+    let success = false;
+    const resp = await opts.client.platform.checkFederatedGraph(
+      {
+        name,
+        labelMatchers: options.labelMatcher,
+      },
+      {
+        headers: baseHeaders,
+      },
+    );
+
+    const compositionErrorsTable = new Table({
+      head: [pc.bold(pc.white('ERROR_MESSAGE'))],
+      colWidths: [120],
+    });
+
+    const matchedSubgraphsTable = new Table({
+      head: [pc.bold(pc.white('NAME')), pc.bold(pc.white('URL')), pc.bold(pc.white('LABELS'))],
+      colWidths: [30, 40, 50],
+    });
+
+    switch (resp.response?.code) {
+      case EnumStatusCode.OK: {
+        success = true;
+        for (const subgraph of resp.subgraphs) {
+          matchedSubgraphsTable.push([
+            subgraph.name,
+            subgraph.routingURL,
+            subgraph.labels.reduce((accumulator, currentLabel) => accumulator + joinLabel(currentLabel), ''),
+          ]);
+        }
+        console.log(matchedSubgraphsTable.toString());
+        console.log('\n' + logSymbols.success + pc.green(' Schema check passed.'));
+        break;
+      }
+      case EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED: {
+        console.log(pc.white('\nMatched Subgraphs are as follows.'));
+        for (const subgraph of resp.subgraphs) {
+          matchedSubgraphsTable.push([
+            subgraph.name,
+            subgraph.routingURL,
+            subgraph.labels.reduce((accumulator, currentLabel) => accumulator + joinLabel(currentLabel), ''),
+          ]);
+        }
+        console.log(matchedSubgraphsTable.toString());
+
+        console.log(pc.red('\nDetected composition errors.'));
+        for (const compositionError of resp.compositionErrors) {
+          compositionErrorsTable.push([compositionError.message]);
+        }
+        console.log(compositionErrorsTable.toString());
+        console.log(logSymbols.error + pc.red(' Schema check failed.'));
+        break;
+      }
+      default: {
+        console.log('\nFailed to perform the check operation.');
+        if (resp.response?.details) {
+          console.log(pc.red(pc.bold(resp.response?.details)));
+        }
+        console.log(logSymbols.error + pc.red(' Schema check failed.'));
+      }
+    }
+
+    if (!success) {
+      process.exit(1);
+    }
+  });
+
+  return schemaPush;
+};
