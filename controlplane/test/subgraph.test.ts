@@ -18,6 +18,7 @@ import {
   genUniqueLabel,
   seedTest,
 } from '../src/core/test-util';
+import Keycloak from '../src/core/services/Keycloak';
 
 let dbname = '';
 
@@ -45,6 +46,20 @@ describe('Subgraph', (ctx) => {
 
     const { authenticator, userTestData } = createTestAuthenticator();
 
+    const realm = 'test';
+    const apiUrl = 'http://localhost:8080';
+    const clientId = 'studio';
+    const adminUser = 'admin';
+    const adminPassword = 'changeme';
+
+    const keycloakClient = new Keycloak({
+      apiUrl,
+      realm,
+      clientId,
+      adminUser,
+      adminPassword,
+    });
+
     await server.register(fastifyConnectPlugin, {
       routes: routes({
         db: server.db,
@@ -52,12 +67,13 @@ describe('Subgraph', (ctx) => {
         authenticator,
         jwtSecret: 'secret',
         keycloak: {
-          realm: 'test',
-          adminUser: 'admin',
-          adminPassword: 'changeme',
-          apiUrl: 'http://localhost:8080',
-          clientId: 'studio',
+          apiUrl,
+          realm,
+          clientId,
+          adminUser,
+          adminPassword,
         },
+        keycloakClient,
       }),
     });
 
@@ -109,21 +125,36 @@ describe('Subgraph', (ctx) => {
 
     const { authenticator, userTestData } = createTestAuthenticator();
 
-    await server.register(fastifyConnectPlugin, {
-      routes: routes({
-        db: server.db,
-        logger: pino(),
-        authenticator,
-        jwtSecret: 'secret',
-        keycloak: {
-          realm: 'test',
-          adminUser: 'admin',
-          adminPassword: 'changeme',
-          apiUrl: 'http://localhost:8080',
-          clientId: 'studio',
-        },
-      }),
-    });
+   const realm = 'test';
+   const apiUrl = 'http://localhost:8080';
+   const clientId = 'studio';
+   const adminUser = 'admin';
+   const adminPassword = 'changeme';
+
+   const keycloakClient = new Keycloak({
+     apiUrl,
+     realm,
+     clientId,
+     adminUser,
+     adminPassword,
+   });
+
+   await server.register(fastifyConnectPlugin, {
+     routes: routes({
+       db: server.db,
+       logger: pino(),
+       authenticator,
+       jwtSecret: 'secret',
+       keycloak: {
+         apiUrl,
+         realm,
+         clientId,
+         adminUser,
+         adminPassword,
+       },
+       keycloakClient,
+     }),
+   });
 
     const addr = await server.listen({
       port: 0,

@@ -1,16 +1,5 @@
-import { relations, sql } from 'drizzle-orm';
-import {
-  boolean,
-  index,
-  jsonb,
-  pgEnum,
-  pgTable,
-  primaryKey,
-  text,
-  timestamp,
-  uniqueIndex,
-  uuid,
-} from 'drizzle-orm/pg-core';
+import { relations } from 'drizzle-orm';
+import { boolean, jsonb, pgEnum, pgTable, primaryKey, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 
 export const federatedGraphs = pgTable('federated_graphs', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -419,7 +408,7 @@ export const organizationRelations = relations(organizations, ({ many }) => ({
 
 export const memberRoleEnum = pgEnum('member_role', ['admin', 'member']);
 
-export const memberRoles = pgTable('member_roles', {
+export const organizationMemberRoles = pgTable('organization_member_roles', {
   id: uuid('id').notNull().primaryKey().defaultRandom(),
   organizationMemberId: uuid('organization_member_id')
     .notNull()
@@ -430,12 +419,12 @@ export const memberRoles = pgTable('member_roles', {
 });
 
 export const organizationMembersRelations = relations(organizationsMembers, ({ many }) => ({
-  memberRoles: many(memberRoles),
+  memberRoles: many(organizationMemberRoles),
 }));
 
-export const memberRolesRelations = relations(memberRoles, ({ one }) => ({
+export const organizationMemberRolesRelations = relations(organizationMemberRoles, ({ one }) => ({
   member: one(organizationsMembers, {
-    fields: [memberRoles.organizationMemberId],
+    fields: [organizationMemberRoles.organizationMemberId],
     references: [organizationsMembers.id],
   }),
 }));

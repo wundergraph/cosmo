@@ -19,7 +19,8 @@ import {
   genID,
   genUniqueLabel,
   seedTest,
-} from 'src/core/test-util';
+} from '../src/core/test-util';
+import Keycloak from '../src/core/services/Keycloak';
 
 let dbname = '';
 
@@ -47,6 +48,20 @@ describe('ComposeFederationV1Graphs', (ctx) => {
 
     const { authenticator, userTestData } = createTestAuthenticator();
 
+    const realm = 'test';
+    const apiUrl = 'http://localhost:8080';
+    const clientId = 'studio';
+    const adminUser = 'admin';
+    const adminPassword = 'changeme';
+
+    const keycloakClient = new Keycloak({
+      apiUrl,
+      realm,
+      clientId,
+      adminUser,
+      adminPassword,
+    });
+
     await server.register(fastifyConnectPlugin, {
       routes: routes({
         db: server.db,
@@ -54,12 +69,13 @@ describe('ComposeFederationV1Graphs', (ctx) => {
         authenticator,
         jwtSecret: 'secret',
         keycloak: {
-          realm: 'test',
-          adminUser: 'admin',
-          adminPassword: 'changeme',
-          apiUrl: 'http://localhost:8080',
-          clientId: 'studio',
+          apiUrl,
+          realm,
+          clientId,
+          adminUser,
+          adminPassword,
         },
+        keycloakClient,
       }),
     });
 

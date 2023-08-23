@@ -6,7 +6,7 @@ import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/pla
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common_pb';
 import { NodeService } from '@wundergraph/cosmo-connect/dist/node/v1/node_connect';
 import build from '../src/core/build-server';
-import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from 'src/core/test-util';
+import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util';
 
 let dbname = '';
 
@@ -31,6 +31,7 @@ describe('Authentication', (ctx) => {
         clientId: 'test',
         secret: 'secret',
         openIdApiBaseUrl: 'http://localhost:8080',
+        openIdBaseUrl: 'http://localhost:8080',
         redirectUri: 'http://localhost:3000',
         webBaseUrl: 'http://localhost:3000',
         webErrorPath: '/error',

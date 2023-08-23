@@ -11,6 +11,7 @@ import { uid } from 'uid';
 import database from '../src/core/plugins/database';
 import routes from '../src/core/routes';
 import { afterAllSetup, beforeAllSetup, createTestAuthenticator, seedTest } from '../src/core/test-util';
+import Keycloak from '../src/core/services/Keycloak';
 
 let dbname = '';
 
@@ -38,6 +39,20 @@ describe('API Keys', (ctx) => {
 
     const { authenticator, userTestData } = createTestAuthenticator();
 
+    const realm = 'test';
+    const apiUrl = 'http://localhost:8080';
+    const clientId = 'studio';
+    const adminUser = 'admin';
+    const adminPassword = 'changeme';
+
+    const keycloakClient = new Keycloak({
+      apiUrl,
+      realm,
+      clientId,
+      adminUser,
+      adminPassword,
+    });
+
     await server.register(fastifyConnectPlugin, {
       routes: routes({
         db: server.db,
@@ -45,12 +60,13 @@ describe('API Keys', (ctx) => {
         authenticator,
         jwtSecret: 'secret',
         keycloak: {
-          realm: 'test',
-          adminUser: 'admin',
-          adminPassword: 'changeme',
-          apiUrl: 'http://localhost:8080',
-          clientId: 'studio',
+          apiUrl,
+          realm,
+          clientId,
+          adminUser,
+          adminPassword,
         },
+        keycloakClient,
       }),
     });
 
@@ -84,7 +100,7 @@ describe('API Keys', (ctx) => {
     expect(response.response?.code).toBe(EnumStatusCode.ERR_ALREADY_EXISTS);
 
     // test when api key name is wrong
-    response = await client.createAPIKey({ name: 'a b', expires: ExpiresAt.NEVER, userID: userTestData.userId });
+    response = await client.createAPIKey({ name: 'ab', expires: ExpiresAt.NEVER, userID: userTestData.userId });
     expect(response.response?.code).toBe(EnumStatusCode.ERR);
 
     let deleteResponse = await client.deleteAPIKey({ name: 'test' });

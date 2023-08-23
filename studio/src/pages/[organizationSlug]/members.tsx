@@ -1,19 +1,30 @@
+import { UserContext } from "@/components/app-provider";
 import { EmptyState } from "@/components/empty-state";
 import { getDashboardLayout } from "@/components/layout/dashboard-layout";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Loader } from "@/components/ui/loader";
 import { useToast } from "@/components/ui/use-toast";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
 import { NextPageWithLayout } from "@/lib/page";
+import { cn } from "@/lib/utils";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { sentenceCase } from "change-case";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common_pb";
 import {
   getOrganizationMembers,
   inviteUser,
+  removeInvitation,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+import { sentenceCase } from "change-case";
+import { useContext } from "react";
+import { HiOutlineDotsVertical } from "react-icons/hi";
 import { z } from "zod";
 
 const emailInputSchema = z.object({
@@ -35,16 +46,10 @@ const InviteForm = ({ refresh }: { refresh: () => void }) => {
 
   const { mutate, isLoading } = useMutation(inviteUser.useMutation());
 
-  const { toast, dismiss } = useToast();
+  const { toast } = useToast();
 
   const sendToast = (description: string) => {
-    const { id } = toast({ description });
-
-    const t = setTimeout(() => {
-      dismiss(id);
-    }, 3000);
-
-    return () => clearTimeout(t);
+    const { id } = toast({ description, duration: 3000 });
   };
 
   const onSubmit: SubmitHandler<EmailInput> = (data) => {
@@ -94,24 +99,112 @@ const MemberCard = ({
   email,
   role,
   acceptedInvite,
+  isAdmin,
+  isCurrentUser,
+  refresh,
 }: {
   email: string;
   role: string;
   acceptedInvite: boolean;
+  isAdmin: boolean;
+  isCurrentUser: boolean;
+  refresh: () => void;
 }) => {
+  const { mutate: resendInvitation } = useMutation(inviteUser.useMutation());
+  const { mutate: revokeInvitation } = useMutation(
+    removeInvitation.useMutation()
+  );
+
+  const { toast, update } = useToast();
+
   return (
     <div className="flex items-center justify-between px-4 py-3 text-sm">
       <div className="flex gap-x-2">
         <span>{email}</span>
       </div>
       <div className="flex items-center gap-x-4 text-muted-foreground">
-        {acceptedInvite ? (
-          <span className="text-sm">{sentenceCase(role)}</span>
-        ) : (
-          <span className="text-sm text-gray-800 dark:text-gray-400">
-            Pending...
-          </span>
-        )}
+        <div className={cn({ "pr-4": isAdmin && isCurrentUser })}>
+          {acceptedInvite ? (
+            <span className="text-sm">{sentenceCase(role)}</span>
+          ) : (
+            <span className="text-sm text-gray-800 dark:text-gray-400">
+              Pending
+            </span>
+          )}
+        </div>
+
+        <div>
+          {isAdmin && !isCurrentUser && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <div className="cursor-pointer">
+                  <HiOutlineDotsVertical />
+                </div>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-[180px]">
+                {!acceptedInvite && (
+                  <DropdownMenuItem
+                    onClick={() => {
+                      const { id } = toast({
+                        description: "Inviting member...",
+                      });
+                      resendInvitation(
+                        { email },
+                        {
+                          onSuccess: (d) => {
+                            update({
+                              description:
+                                d.response?.details ||
+                                "Invited member successfully.",
+                              duration: 2000,
+                              id: id,
+                            });
+                          },
+                          onError: (error) => {
+                            toast({
+                              description:
+                                "Could not invite the member. Please try again.",
+                              duration: 3000,
+                            });
+                          },
+                        }
+                      );
+                    }}
+                  >
+                    Resend invitation
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem
+                  onClick={() => {
+                    revokeInvitation(
+                      { email },
+                      {
+                        onSuccess: (d) => {
+                          toast({
+                            description:
+                              d.response?.details ||
+                              "Removed member successfully.",
+                            duration: 3000,
+                          });
+                          refresh();
+                        },
+                        onError: (error) => {
+                          toast({
+                            description:
+                              "Could not remove the member. Please try again.",
+                            duration: 3000,
+                          });
+                        },
+                      }
+                    );
+                  }}
+                >
+                  {acceptedInvite ? "Remove member" : "Remove invitation"}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -122,13 +215,15 @@ const MembersPage: NextPageWithLayout = () => {
     getOrganizationMembers.useQuery()
   );
 
+  const user = useContext(UserContext);
+
   if (isLoading) return <Loader fullscreen />;
 
-  if (error || data.response?.code !== EnumStatusCode.OK)
+  if (error || data.response?.code !== EnumStatusCode.OK || !user)
     return (
       <EmptyState
         icon={<ExclamationTriangleIcon />}
-        title="Could not retrieve federated graphs"
+        title="Could not retrieve the members of this organization."
         description={
           data?.response?.details || error?.message || "Please try again"
         }
@@ -138,9 +233,14 @@ const MembersPage: NextPageWithLayout = () => {
 
   if (!data?.members) return null;
 
+  const currentUser = data.members.find(
+    (member) => member.email === user.email
+  );
+  const isAdmin = currentUser?.roles.includes("admin");
+
   return (
     <div className="mt-4 flex flex-col gap-y-6">
-      <InviteForm refresh={() => refetch()} />
+      {isAdmin && <InviteForm refresh={() => refetch()} />}
       <div className="flex flex-col divide-y rounded-md border">
         {data.members?.map((member) => {
           return (
@@ -149,6 +249,9 @@ const MembersPage: NextPageWithLayout = () => {
               email={member.email}
               role={member.roles[0]}
               acceptedInvite={member.acceptedInvite}
+              isAdmin={isAdmin || false}
+              isCurrentUser={member.email === user.email}
+              refresh={() => refetch()}
             />
           );
         })}

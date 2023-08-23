@@ -10,6 +10,7 @@ import NodeServiceImpl from './bufservices/NodeService.js';
 import { ClickHouseClient } from './clickhouse/index.js';
 import { Authenticator } from './services/Authentication.js';
 import { BuildConfig } from './build-server.js';
+import Keycloak from './services/Keycloak.js';
 
 export interface RouterOptions {
   db: PostgresJsDatabase<typeof schema>;
@@ -18,6 +19,7 @@ export interface RouterOptions {
   keycloak: BuildConfig['keycloak'];
   chClient?: ClickHouseClient;
   logger: pino.Logger;
+  keycloakClient: Keycloak;
 }
 const handlerOptions: Partial<ConnectRouterOptions> = {
   maxTimeoutMs: 5000,

@@ -10,7 +10,8 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common_pb';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import database from '../src/core/plugins/database';
 import routes from '../src/core/routes';
-import { afterAllSetup, beforeAllSetup, createTestAuthenticator, genID, seedTest } from 'src/core/test-util';
+import { afterAllSetup, beforeAllSetup, createTestAuthenticator, genID, seedTest } from '../src/core/test-util';
+import Keycloak from '../src/core/services/Keycloak';
 
 let dbname = '';
 
@@ -38,6 +39,20 @@ describe('CheckFederatedGraph', (ctx) => {
 
     const { authenticator, userTestData } = createTestAuthenticator();
 
+    const realm = 'test';
+    const apiUrl = 'http://localhost:8080';
+    const clientId = 'studio';
+    const adminUser = 'admin';
+    const adminPassword = 'changeme';
+
+    const keycloakClient = new Keycloak({
+      apiUrl,
+      realm,
+      clientId,
+      adminUser,
+      adminPassword,
+    });
+
     await server.register(fastifyConnectPlugin, {
       routes: routes({
         db: server.db,
@@ -45,12 +60,13 @@ describe('CheckFederatedGraph', (ctx) => {
         authenticator,
         jwtSecret: 'secret',
         keycloak: {
-          realm: 'test',
-          adminUser: 'admin',
-          adminPassword: 'changeme',
-          apiUrl: 'http://localhost:8080',
-          clientId: 'studio',
+          apiUrl,
+          realm,
+          clientId,
+          adminUser,
+          adminPassword,
         },
+        keycloakClient,
       }),
     });
 
