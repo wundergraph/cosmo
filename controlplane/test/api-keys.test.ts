@@ -49,6 +49,7 @@ describe('API Keys', (ctx) => {
           adminUser: 'admin',
           adminPassword: 'changeme',
           apiUrl: 'http://localhost:8080',
+          frontendUrl: 'http://localhost:8080',
           clientId: 'studio',
         },
       }),
@@ -84,7 +85,18 @@ describe('API Keys', (ctx) => {
     expect(response.response?.code).toBe(EnumStatusCode.ERR_ALREADY_EXISTS);
 
     // test when api key name is wrong
-    response = await client.createAPIKey({ name: 'a b', expires: ExpiresAt.NEVER, userID: userTestData.userId });
+    response = await client.createAPIKey({
+      name: 'a'.repeat(100),
+      expires: ExpiresAt.NEVER,
+      userID: userTestData.userId,
+    });
+    expect(response.response?.code).toBe(EnumStatusCode.ERR);
+
+    response = await client.createAPIKey({
+      name: '',
+      expires: ExpiresAt.NEVER,
+      userID: userTestData.userId,
+    });
     expect(response.response?.code).toBe(EnumStatusCode.ERR);
 
     let deleteResponse = await client.deleteAPIKey({ name: 'test' });
