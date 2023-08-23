@@ -20,8 +20,6 @@
     "shared",
     "connect",
     "controlplane",
-    "otelcollector",
-    "router",
     "studio"
   ],
   "npmClient": "pnpm",
