@@ -68,9 +68,7 @@ services:
     restart: unless-stopped
 
   keycloak:
-    build:
-      context: keycloak
-      dockerfile: Dockerfile
+    image: ghcr.io/wundergraph/cosmo/keycloak:${DC_KEYCLOAK_VERSION:-latest}
     environment:
       KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
       KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-changeme}
@@ -97,7 +95,7 @@ services:
 
   otelcollector:
     # On the public repo
-    image: us-docker.pkg.dev/wg-cosmo/cosmo/otelcollector:${DC_OTELCOLLECTOR_VERSION:-latest}
+    image: ghcr.io/wundergraph/cosmo/otelcollector:${DC_OTELCOLLECTOR_VERSION:-latest}
     environment:
       CLICKHOUSE_ENDPOINT: "clickhouse://${CLICKHOUSE_USER:-default}:${CLICKHOUSE_PASSWORD:-changeme}@clickhouse:9000/${CLICKHOUSE_DATABASE:-cosmo}?dial_timeout=15s&compress=lz4"
       OTEL_INGEST_JWT_SECRET: ${OTEL_INGEST_JWT_SECRET:-fkczyomvdprgvtmvkuhvprxuggkbgwld}
@@ -110,7 +108,7 @@ services:
       - clickhouse
 
   controlplane:
-    image: us-docker.pkg.dev/wg-cosmo/cloud/controlplane:${DC_CONTROLPLANE_VERSION:-latest}
+    image: ghcr.io/wundergraph/cosmo/controlplane:${DC_CONTROLPLANE_VERSION:-latest}
     environment:
       DB_URL: "postgresql://postgres:changeme@postgres:5432/controlplane"
       PORT: 3001
@@ -138,7 +136,7 @@ services:
       - clickhouse
 
   seed:
-    image: us-docker.pkg.dev/wg-cosmo/cloud/controlplane:${DC_CONTROLPLANE_VERSION:-latest}
+    image: ghcr.io/wundergraph/cosmo/controlplane:${DC_CONTROLPLANE_VERSION:-latest}
     command:
       - "/app/dist/bin/seed.js"
     environment:
@@ -164,7 +162,7 @@ services:
       - keycloak
 
   router:
-    image: us-docker.pkg.dev/wg-cosmo/cloud/router:${DC_ROUTER_VERSION:-latest}
+    image: ghcr.io/wundergraph/cosmo/router:${DC_ROUTER_VERSION:-latest}
     environment:
       LOG_LEVEL: info
       FEDERATED_GRAPH_NAME: production
@@ -181,7 +179,7 @@ services:
       - '3002:3002'
 
   studio:
-    image: us-docker.pkg.dev/wg-cosmo/cloud/studio:${DC_STUDIO_VERSION:-latest}
+    image: ghcr.io/wundergraph/cosmo/studio:${DC_STUDIO_VERSION:-latest}
     environment:
       NEXT_PUBLIC_COSMO_CP_URL: http://localhost:3001
       HOSTNAME: "0.0.0.0"

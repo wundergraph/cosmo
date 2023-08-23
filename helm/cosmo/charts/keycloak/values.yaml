@@ -6,8 +6,8 @@
 replicaCount: 1
 
 image:
-  repository: wg-cosmo/cosmo/keycloak
-  registry: us-docker.pkg.dev
+  repository: wundergraph/cosmo/keycloak
+  registry: ghcr.io
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
   version: "latest"

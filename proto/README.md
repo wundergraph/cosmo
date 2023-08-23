@@ -1,4 +1,4 @@
-# TypeScript Connect Client
+# Connect RPC API Protobuf Definitions
 
 This directory contains the protobuf definitions for the [Connect RPC API](https://connectrpc.com/). We generate TypeScript and Go code from these definitions.
 

@@ -1,8 +1,8 @@
 {
-  "name": "cosmo-controlplane",
+  "name": "controlplane",
+  "version": "0.0.0",
   "private": true,
-  "version": "0.1.0",
-  "description": "",
+  "description": "WunderGraph Cosmo Controlplane",
   "type": "module",
   "main": "dist/index.js",
   "author": {
