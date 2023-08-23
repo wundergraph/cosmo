@@ -89,11 +89,11 @@ docker-push-local:
 	docker compose --file docker-compose.cosmo.yml push
 
 docker-build-minikube: docker-build-local
-	minikube image load us-docker.pkg.dev/wg-cosmo/cloud/studio:latest & \
-	minikube image load us-docker.pkg.dev/wg-cosmo/cloud/controlplane:latest & \
-	minikube image load us-docker.pkg.dev/wg-cosmo/cosmo/otelcollector:latest & \
-	minikube image load us-docker.pkg.dev/wg-cosmo/cloud/router:latest & \
-	minikube image load us-docker.pkg.dev/wg-cosmo/cosmo/otelcollector:latest
+	minikube image load ghcr.io/wundergraph/cosmo/studio:latest & \
+	minikube image load ghcr.io/wundergraph/cosmo/controlplane:latest & \
+	minikube image load ghcr.io/wundergraph/cosmo/otelcollector:latest & \
+	minikube image load ghcr.io/wundergraph/cosmo/router:latest & \
+	minikube image load ghcr.io/wundergraph/cosmo/keycloak:latest
 	minikube cache reload
 
 new-ch-migration:

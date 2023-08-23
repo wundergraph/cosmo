@@ -60,6 +60,8 @@ jobs:
             type=sha
             # set latest tag for default branch
             type=raw,value=latest,enable={{is_default_branch}}
+            # use custom value instead of git tag
+            type=match,pattern=[a-zA-Z-_]+@(.*),group=1
 
       - name: Install Docker Buildx
         uses: docker/setup-buildx-action@v2
