@@ -2,6 +2,7 @@ name: Studio release
 
 on:
   push:
+    branches: [main]
     tags:
       - 'studio@*'
 
