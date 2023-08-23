@@ -1,4 +1,4 @@
-all: build-kc-theme dev-setup
+all: dev-setup
 
 setup-tools:
 	go install github.com/amacneil/dbmate/v2@v2.5.0
@@ -110,6 +110,3 @@ rollback-ch:
 
 migrate-ch-dump:
 	dbmate -d "./controlplane/clickhouse/migrations" -s "./controlplane/db/schema.sql" -e CLICKHOUSE_DSN dump
-
-build-kc-theme:
-	(cd keycloak/theme && npm i && ./build.sh)
