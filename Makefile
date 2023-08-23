@@ -6,6 +6,7 @@ setup-tools:
 	go install github.com/bufbuild/connect-go/cmd/protoc-gen-connect-go@latest
 	go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
 	go install github.com/yannh/kubeconform/cmd/kubeconform@latest
+	go install github.com/maykonlf/semver-cli/cmd/semver@latest
 
 prerequisites: setup-tools
 	go version
