@@ -50,6 +50,7 @@ describe('Labels', (ctx) => {
 
     const realm = 'test';
     const apiUrl = 'http://localhost:8080';
+    const frontendUrl = 'http://localhost:8080';
     const clientId = 'studio';
     const adminUser = 'admin';
     const adminPassword = 'changeme';
@@ -74,6 +75,7 @@ describe('Labels', (ctx) => {
           clientId,
           adminUser,
           adminPassword,
+          frontendUrl,
         },
         keycloakClient,
       }),
@@ -161,6 +163,7 @@ describe('Labels', (ctx) => {
 
     const realm = 'test';
     const apiUrl = 'http://localhost:8080';
+    const frontendUrl = 'http://localhost:8080';
     const clientId = 'studio';
     const adminUser = 'admin';
     const adminPassword = 'changeme';
@@ -185,6 +188,7 @@ describe('Labels', (ctx) => {
           clientId,
           adminUser,
           adminPassword,
+          frontendUrl,
         },
         keycloakClient,
       }),
@@ -297,6 +301,7 @@ describe('Labels', (ctx) => {
 
     const realm = 'test';
     const apiUrl = 'http://localhost:8080';
+    const frontendUrl = 'http://localhost:8080';
     const clientId = 'studio';
     const adminUser = 'admin';
     const adminPassword = 'changeme';
@@ -321,6 +326,7 @@ describe('Labels', (ctx) => {
           clientId,
           adminUser,
           adminPassword,
+          frontendUrl,
         },
         keycloakClient,
       }),

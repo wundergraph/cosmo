@@ -48,6 +48,7 @@ describe('CheckSubgraphSchema', (ctx) => {
 
     const realm = 'test';
     const apiUrl = 'http://localhost:8080';
+    const frontendUrl = 'http://localhost:8080';
     const clientId = 'studio';
     const adminUser = 'admin';
     const adminPassword = 'changeme';
@@ -72,6 +73,7 @@ describe('CheckSubgraphSchema', (ctx) => {
           clientId,
           adminUser,
           adminPassword,
+          frontendUrl,
         },
         keycloakClient,
       }),
@@ -147,6 +149,7 @@ describe('CheckSubgraphSchema', (ctx) => {
 
     const realm = 'test';
     const apiUrl = 'http://localhost:8080';
+    const frontendUrl = 'http://localhost:8080';
     const clientId = 'studio';
     const adminUser = 'admin';
     const adminPassword = 'changeme';
@@ -171,6 +174,7 @@ describe('CheckSubgraphSchema', (ctx) => {
           clientId,
           adminUser,
           adminPassword,
+          frontendUrl,
         },
         keycloakClient,
       }),
@@ -244,6 +248,7 @@ describe('CheckSubgraphSchema', (ctx) => {
 
     const realm = 'test';
     const apiUrl = 'http://localhost:8080';
+    const frontendUrl = 'http://localhost:8080';
     const clientId = 'studio';
     const adminUser = 'admin';
     const adminPassword = 'changeme';
@@ -268,6 +273,7 @@ describe('CheckSubgraphSchema', (ctx) => {
           clientId,
           adminUser,
           adminPassword,
+          frontendUrl,
         },
         keycloakClient,
       }),

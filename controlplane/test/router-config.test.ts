@@ -50,6 +50,7 @@ describe('Router Config', (ctx) => {
 
     const realm = 'test';
     const apiUrl = 'http://localhost:8080';
+    const frontendUrl = 'http://localhost:8080';
     const clientId = 'studio';
     const adminUser = 'admin';
     const adminPassword = 'changeme';
@@ -74,6 +75,7 @@ describe('Router Config', (ctx) => {
           clientId,
           adminUser,
           adminPassword,
+          frontendUrl,
         },
         keycloakClient,
       }),
@@ -281,6 +283,7 @@ describe('Router Config', (ctx) => {
 
     const realm = 'test';
     const apiUrl = 'http://localhost:8080';
+    const frontendUrl = 'http://localhost:8080';
     const clientId = 'studio';
     const adminUser = 'admin';
     const adminPassword = 'changeme';
@@ -305,6 +308,7 @@ describe('Router Config', (ctx) => {
           clientId,
           adminUser,
           adminPassword,
+          frontendUrl,
         },
         keycloakClient,
       }),

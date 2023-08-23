@@ -47,6 +47,7 @@ describe('Federated Graph', (ctx) => {
 
     const realm = 'test';
     const apiUrl = 'http://localhost:8080';
+    const frontendUrl = 'http://localhost:8080';
     const clientId = 'studio';
     const adminUser = 'admin';
     const adminPassword = 'changeme';
@@ -71,6 +72,7 @@ describe('Federated Graph', (ctx) => {
           clientId,
           adminUser,
           adminPassword,
+          frontendUrl,
         },
         keycloakClient,
       }),
@@ -144,6 +146,7 @@ describe('Federated Graph', (ctx) => {
 
     const realm = 'test';
     const apiUrl = 'http://localhost:8080';
+    const frontendUrl = 'http://localhost:8080';
     const clientId = 'studio';
     const adminUser = 'admin';
     const adminPassword = 'changeme';
@@ -168,6 +171,7 @@ describe('Federated Graph', (ctx) => {
           clientId,
           adminUser,
           adminPassword,
+          frontendUrl,
         },
         keycloakClient,
       }),
@@ -241,6 +245,7 @@ describe('Federated Graph', (ctx) => {
 
     const realm = 'test';
     const apiUrl = 'http://localhost:8080';
+    const frontendUrl = 'http://localhost:8080';
     const clientId = 'studio';
     const adminUser = 'admin';
     const adminPassword = 'changeme';
@@ -265,6 +270,7 @@ describe('Federated Graph', (ctx) => {
           clientId,
           adminUser,
           adminPassword,
+          frontendUrl,
         },
         keycloakClient,
       }),
@@ -338,6 +344,7 @@ describe('Federated Graph', (ctx) => {
 
     const realm = 'test';
     const apiUrl = 'http://localhost:8080';
+    const frontendUrl = 'http://localhost:8080';
     const clientId = 'studio';
     const adminUser = 'admin';
     const adminPassword = 'changeme';
@@ -362,6 +369,7 @@ describe('Federated Graph', (ctx) => {
           clientId,
           adminUser,
           adminPassword,
+          frontendUrl,
         },
         keycloakClient,
       }),
@@ -464,6 +472,7 @@ describe('Federated Graph', (ctx) => {
 
     const realm = 'test';
     const apiUrl = 'http://localhost:8080';
+    const frontendUrl = 'http://localhost:8080';
     const clientId = 'studio';
     const adminUser = 'admin';
     const adminPassword = 'changeme';
@@ -488,6 +497,7 @@ describe('Federated Graph', (ctx) => {
           clientId,
           adminUser,
           adminPassword,
+          frontendUrl,
         },
         keycloakClient,
       }),

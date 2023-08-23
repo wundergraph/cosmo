@@ -50,6 +50,7 @@ describe('ComposeFederationV2Graphs', (ctx) => {
 
     const realm = 'test';
     const apiUrl = 'http://localhost:8080';
+    const frontendUrl = 'http://localhost:8080';
     const clientId = 'studio';
     const adminUser = 'admin';
     const adminPassword = 'changeme';
@@ -74,6 +75,7 @@ describe('ComposeFederationV2Graphs', (ctx) => {
           clientId,
           adminUser,
           adminPassword,
+          frontendUrl,
         },
         keycloakClient,
       }),

@@ -28,10 +28,7 @@ describe('Authentication', (ctx) => {
       },
       allowedOrigins: [],
       auth: {
-        clientId: 'test',
         secret: 'secret',
-        openIdApiBaseUrl: 'http://localhost:8080',
-        openIdBaseUrl: 'http://localhost:8080',
         redirectUri: 'http://localhost:3000',
         webBaseUrl: 'http://localhost:3000',
         webErrorPath: '/error',
@@ -44,6 +41,7 @@ describe('Authentication', (ctx) => {
         adminUser: 'admin',
         adminPassword: 'changeme',
         apiUrl: 'http://localhost:8080',
+        frontendUrl: 'http://localhost:8080',
         clientId: 'studio',
       },
     });
