@@ -25,6 +25,12 @@ jobs:
           - container_name: studio
             dockerfile: studio/Dockerfile
             context_path: .
+          - container_name: keycloak
+            dockerfile: keycloak/Dockerfile
+            context_path: keycloak
+          - container_name: otelcollector
+            dockerfile: otelcollector/Dockerfile
+            context_path: otelcollector
 
     runs-on: ubuntu-latest
     permissions:
