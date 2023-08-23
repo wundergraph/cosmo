@@ -12,8 +12,6 @@
   "scripts": {
     "dev": "tsc --watch",
     "build": "del dist && tsc",
-    "prepublish": "pnpm run build && pnpm run test",
-    "release": "pnpm publish --access restricted --tag latest",
     "test": "vitest test"
   },
   "main": "./dist/index.js",

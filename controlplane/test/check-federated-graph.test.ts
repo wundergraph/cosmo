@@ -49,6 +49,7 @@ describe('CheckFederatedGraph', (ctx) => {
           adminUser: 'admin',
           adminPassword: 'changeme',
           apiUrl: 'http://localhost:8080',
+          frontendUrl: 'http://localhost:8080',
           clientId: 'studio',
         },
       }),

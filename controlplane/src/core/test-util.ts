@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import postgres from 'postgres';
 import nuid from 'nuid';
 import { drizzle } from 'drizzle-orm/postgres-js';
-import { ExpiresAt } from 'node_modules/@wundergraph/cosmo-connect/dist/platform/v1/platform_pb.js';
+import { ExpiresAt } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { Label, UserAuthContext } from '../types/index.js';
 import * as schema from '../db/schema.js';
 import { Authenticator } from './services/Authentication.js';

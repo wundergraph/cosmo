@@ -6,6 +6,7 @@ setup-tools:
 	go install github.com/bufbuild/connect-go/cmd/protoc-gen-connect-go@latest
 	go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
 	go install github.com/yannh/kubeconform/cmd/kubeconform@latest
+	go install github.com/maykonlf/semver-cli/cmd/semver@latest
 
 prerequisites: setup-tools
 	go version
@@ -88,11 +89,11 @@ docker-push-local:
 	docker compose --file docker-compose.cosmo.yml push
 
 docker-build-minikube: docker-build-local
-	minikube image load us-docker.pkg.dev/wg-cosmo/cloud/studio:latest & \
-	minikube image load us-docker.pkg.dev/wg-cosmo/cloud/controlplane:latest & \
-	minikube image load us-docker.pkg.dev/wg-cosmo/cosmo/otelcollector:latest & \
-	minikube image load us-docker.pkg.dev/wg-cosmo/cloud/router:latest & \
-	minikube image load us-docker.pkg.dev/wg-cosmo/cosmo/otelcollector:latest
+	minikube image load ghcr.io/wundergraph/cosmo/studio:latest & \
+	minikube image load ghcr.io/wundergraph/cosmo/controlplane:latest & \
+	minikube image load ghcr.io/wundergraph/cosmo/otelcollector:latest & \
+	minikube image load ghcr.io/wundergraph/cosmo/router:latest & \
+	minikube image load ghcr.io/wundergraph/cosmo/keycloak:latest
 	minikube cache reload
 
 new-ch-migration:
