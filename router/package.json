@@ -1,0 +1,12 @@
+{
+  "name": "router",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Placeholder package to simplify versioning and releasing with lerna.",
+  "keywords": ["wundergraph", "router", "cosmo"],
+  "author": {
+    "name": "WunderGraph Maintainers",
+    "email": "info@wundergraph.com"
+  },
+  "license": "Apache-2.0"
+}
