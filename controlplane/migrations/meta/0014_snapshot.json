@@ -1,0 +1,714 @@
+{
+  "version": "5",
+  "dialect": "pg",
+  "id": "a60112ae-b4dc-4632-a6b3-a3c0fa484168",
+  "prevId": "41989dbd-2b8c-4b29-9af8-8923d294dad8",
+  "tables": {
+    "federated_graphs": {
+      "name": "federated_graphs",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "routing_url": {
+          "name": "routing_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "target_id": {
+          "name": "target_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "composed_schema_version_id": {
+          "name": "composed_schema_version_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "federated_graphs_target_id_targets_id_fk": {
+          "name": "federated_graphs_target_id_targets_id_fk",
+          "tableFrom": "federated_graphs",
+          "tableTo": "targets",
+          "columnsFrom": [
+            "target_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "federated_graphs_composed_schema_version_id_schema_versions_id_fk": {
+          "name": "federated_graphs_composed_schema_version_id_schema_versions_id_fk",
+          "tableFrom": "federated_graphs",
+          "tableTo": "schema_versions",
+          "columnsFrom": [
+            "composed_schema_version_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {}
+    },
+    "schema_check_change_action": {
+      "name": "schema_check_change_action",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "schema_check_id": {
+          "name": "schema_check_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "change_type": {
+          "name": "change_type",
+          "type": "schema_change_type",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "change_message": {
+          "name": "change_message",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "path": {
+          "name": "path",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "schema_check_change_action_schema_check_id_schema_checks_id_fk": {
+          "name": "schema_check_change_action_schema_check_id_schema_checks_id_fk",
+          "tableFrom": "schema_check_change_action",
+          "tableTo": "schema_checks",
+          "columnsFrom": [
+            "schema_check_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {}
+    },
+    "schema_check_composition": {
+      "name": "schema_check_composition",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "schema_check_id": {
+          "name": "schema_check_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "target_id": {
+          "name": "target_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "composition_errors": {
+          "name": "composition_errors",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "composed_schema_sdl": {
+          "name": "composed_schema_sdl",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "schema_check_composition_schema_check_id_schema_checks_id_fk": {
+          "name": "schema_check_composition_schema_check_id_schema_checks_id_fk",
+          "tableFrom": "schema_check_composition",
+          "tableTo": "schema_checks",
+          "columnsFrom": [
+            "schema_check_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "schema_check_composition_target_id_targets_id_fk": {
+          "name": "schema_check_composition_target_id_targets_id_fk",
+          "tableFrom": "schema_check_composition",
+          "tableTo": "targets",
+          "columnsFrom": [
+            "target_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {}
+    },
+    "schema_checks": {
+      "name": "schema_checks",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "target_id": {
+          "name": "target_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "is_composable": {
+          "name": "is_composable",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "has_breaking_changes": {
+          "name": "has_breaking_changes",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "proposed_subgraph_schema_sdl": {
+          "name": "proposed_subgraph_schema_sdl",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "schema_checks_target_id_targets_id_fk": {
+          "name": "schema_checks_target_id_targets_id_fk",
+          "tableFrom": "schema_checks",
+          "tableTo": "targets",
+          "columnsFrom": [
+            "target_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {}
+    },
+    "schema_versions": {
+      "name": "schema_versions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "target_id": {
+          "name": "target_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "schema_sdl": {
+          "name": "schema_sdl",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_composable": {
+          "name": "is_composable",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "composition_errors": {
+          "name": "composition_errors",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "schema_versions_target_id_targets_id_fk": {
+          "name": "schema_versions_target_id_targets_id_fk",
+          "tableFrom": "schema_versions",
+          "tableTo": "targets",
+          "columnsFrom": [
+            "target_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {}
+    },
+    "schema_version_change_action": {
+      "name": "schema_version_change_action",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "schema_version_id": {
+          "name": "schema_version_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "change_type": {
+          "name": "change_type",
+          "type": "change_type",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "change_description": {
+          "name": "change_description",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "schema_version_change_action_schema_version_id_schema_versions_id_fk": {
+          "name": "schema_version_change_action_schema_version_id_schema_versions_id_fk",
+          "tableFrom": "schema_version_change_action",
+          "tableTo": "schema_versions",
+          "columnsFrom": [
+            "schema_version_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {}
+    },
+    "schema_version_changelog": {
+      "name": "schema_version_changelog",
+      "schema": "",
+      "columns": {
+        "schema_version_id": {
+          "name": "schema_version_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "schema_version_change_action_id": {
+          "name": "schema_version_change_action_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "schema_version_changelog_schema_version_id_schema_versions_id_fk": {
+          "name": "schema_version_changelog_schema_version_id_schema_versions_id_fk",
+          "tableFrom": "schema_version_changelog",
+          "tableTo": "schema_versions",
+          "columnsFrom": [
+            "schema_version_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "schema_version_changelog_schema_version_change_action_id_schema_version_change_action_id_fk": {
+          "name": "schema_version_changelog_schema_version_change_action_id_schema_version_change_action_id_fk",
+          "tableFrom": "schema_version_changelog",
+          "tableTo": "schema_version_change_action",
+          "columnsFrom": [
+            "schema_version_change_action_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {}
+    },
+    "subgraphs": {
+      "name": "subgraphs",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "routing_url": {
+          "name": "routing_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "schema_version_id": {
+          "name": "schema_version_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "target_id": {
+          "name": "target_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "subgraphs_schema_version_id_schema_versions_id_fk": {
+          "name": "subgraphs_schema_version_id_schema_versions_id_fk",
+          "tableFrom": "subgraphs",
+          "tableTo": "schema_versions",
+          "columnsFrom": [
+            "schema_version_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "subgraphs_target_id_targets_id_fk": {
+          "name": "subgraphs_target_id_targets_id_fk",
+          "tableFrom": "subgraphs",
+          "tableTo": "targets",
+          "columnsFrom": [
+            "target_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {}
+    },
+    "federated_subgraphs": {
+      "name": "federated_subgraphs",
+      "schema": "",
+      "columns": {
+        "federated_graph_id": {
+          "name": "federated_graph_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "subgraph_id": {
+          "name": "subgraph_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "federated_subgraphs_federated_graph_id_federated_graphs_id_fk": {
+          "name": "federated_subgraphs_federated_graph_id_federated_graphs_id_fk",
+          "tableFrom": "federated_subgraphs",
+          "tableTo": "federated_graphs",
+          "columnsFrom": [
+            "federated_graph_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "federated_subgraphs_subgraph_id_subgraphs_id_fk": {
+          "name": "federated_subgraphs_subgraph_id_subgraphs_id_fk",
+          "tableFrom": "federated_subgraphs",
+          "tableTo": "subgraphs",
+          "columnsFrom": [
+            "subgraph_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "federated_subgraphs_federated_graph_id_subgraph_id": {
+          "name": "federated_subgraphs_federated_graph_id_subgraph_id",
+          "columns": [
+            "federated_graph_id",
+            "subgraph_id"
+          ]
+        }
+      }
+    },
+    "target_labels": {
+      "name": "target_labels",
+      "schema": "",
+      "columns": {
+        "target_id": {
+          "name": "target_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "key": {
+          "name": "key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "value": {
+          "name": "value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "target_labels_target_id_targets_id_fk": {
+          "name": "target_labels_target_id_targets_id_fk",
+          "tableFrom": "target_labels",
+          "tableTo": "targets",
+          "columnsFrom": [
+            "target_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {}
+    },
+    "targets": {
+      "name": "targets",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "type": {
+          "name": "type",
+          "type": "target_type",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "name_idx": {
+          "name": "name_idx",
+          "columns": [
+            "name"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {}
+    }
+  },
+  "enums": {
+    "schema_change_type": {
+      "name": "schema_change_type",
+      "values": {
+        "FIELD_ARGUMENT_DESCRIPTION_CHANGED": "FIELD_ARGUMENT_DESCRIPTION_CHANGED",
+        "FIELD_ARGUMENT_DEFAULT_CHANGED": "FIELD_ARGUMENT_DEFAULT_CHANGED",
+        "FIELD_ARGUMENT_TYPE_CHANGED": "FIELD_ARGUMENT_TYPE_CHANGED",
+        "DIRECTIVE_REMOVED": "DIRECTIVE_REMOVED",
+        "DIRECTIVE_ADDED": "DIRECTIVE_ADDED",
+        "DIRECTIVE_DESCRIPTION_CHANGED": "DIRECTIVE_DESCRIPTION_CHANGED",
+        "DIRECTIVE_LOCATION_ADDED": "DIRECTIVE_LOCATION_ADDED",
+        "DIRECTIVE_LOCATION_REMOVED": "DIRECTIVE_LOCATION_REMOVED",
+        "DIRECTIVE_ARGUMENT_ADDED": "DIRECTIVE_ARGUMENT_ADDED",
+        "DIRECTIVE_ARGUMENT_REMOVED": "DIRECTIVE_ARGUMENT_REMOVED",
+        "DIRECTIVE_ARGUMENT_DESCRIPTION_CHANGED": "DIRECTIVE_ARGUMENT_DESCRIPTION_CHANGED",
+        "DIRECTIVE_ARGUMENT_DEFAULT_VALUE_CHANGED": "DIRECTIVE_ARGUMENT_DEFAULT_VALUE_CHANGED",
+        "DIRECTIVE_ARGUMENT_TYPE_CHANGED": "DIRECTIVE_ARGUMENT_TYPE_CHANGED",
+        "ENUM_VALUE_REMOVED": "ENUM_VALUE_REMOVED",
+        "ENUM_VALUE_ADDED": "ENUM_VALUE_ADDED",
+        "ENUM_VALUE_DESCRIPTION_CHANGED": "ENUM_VALUE_DESCRIPTION_CHANGED",
+        "ENUM_VALUE_DEPRECATION_REASON_CHANGED": "ENUM_VALUE_DEPRECATION_REASON_CHANGED",
+        "ENUM_VALUE_DEPRECATION_REASON_ADDED": "ENUM_VALUE_DEPRECATION_REASON_ADDED",
+        "ENUM_VALUE_DEPRECATION_REASON_REMOVED": "ENUM_VALUE_DEPRECATION_REASON_REMOVED",
+        "FIELD_REMOVED": "FIELD_REMOVED",
+        "FIELD_ADDED": "FIELD_ADDED",
+        "FIELD_DESCRIPTION_CHANGED": "FIELD_DESCRIPTION_CHANGED",
+        "FIELD_DESCRIPTION_ADDED": "FIELD_DESCRIPTION_ADDED",
+        "FIELD_DESCRIPTION_REMOVED": "FIELD_DESCRIPTION_REMOVED",
+        "FIELD_DEPRECATION_ADDED": "FIELD_DEPRECATION_ADDED",
+        "FIELD_DEPRECATION_REMOVED": "FIELD_DEPRECATION_REMOVED",
+        "FIELD_DEPRECATION_REASON_CHANGED": "FIELD_DEPRECATION_REASON_CHANGED",
+        "FIELD_DEPRECATION_REASON_ADDED": "FIELD_DEPRECATION_REASON_ADDED",
+        "FIELD_DEPRECATION_REASON_REMOVED": "FIELD_DEPRECATION_REASON_REMOVED",
+        "FIELD_TYPE_CHANGED": "FIELD_TYPE_CHANGED",
+        "FIELD_ARGUMENT_ADDED": "FIELD_ARGUMENT_ADDED",
+        "FIELD_ARGUMENT_REMOVED": "FIELD_ARGUMENT_REMOVED",
+        "INPUT_FIELD_REMOVED": "INPUT_FIELD_REMOVED",
+        "INPUT_FIELD_ADDED": "INPUT_FIELD_ADDED",
+        "INPUT_FIELD_DESCRIPTION_ADDED": "INPUT_FIELD_DESCRIPTION_ADDED",
+        "INPUT_FIELD_DESCRIPTION_REMOVED": "INPUT_FIELD_DESCRIPTION_REMOVED",
+        "INPUT_FIELD_DESCRIPTION_CHANGED": "INPUT_FIELD_DESCRIPTION_CHANGED",
+        "INPUT_FIELD_DEFAULT_VALUE_CHANGED": "INPUT_FIELD_DEFAULT_VALUE_CHANGED",
+        "INPUT_FIELD_TYPE_CHANGED": "INPUT_FIELD_TYPE_CHANGED",
+        "OBJECT_TYPE_INTERFACE_ADDED": "OBJECT_TYPE_INTERFACE_ADDED",
+        "OBJECT_TYPE_INTERFACE_REMOVED": "OBJECT_TYPE_INTERFACE_REMOVED",
+        "SCHEMA_QUERY_TYPE_CHANGED": "SCHEMA_QUERY_TYPE_CHANGED",
+        "SCHEMA_MUTATION_TYPE_CHANGED": "SCHEMA_MUTATION_TYPE_CHANGED",
+        "SCHEMA_SUBSCRIPTION_TYPE_CHANGED": "SCHEMA_SUBSCRIPTION_TYPE_CHANGED",
+        "TYPE_REMOVED": "TYPE_REMOVED",
+        "TYPE_ADDED": "TYPE_ADDED",
+        "TYPE_KIND_CHANGED": "TYPE_KIND_CHANGED",
+        "TYPE_DESCRIPTION_CHANGED": "TYPE_DESCRIPTION_CHANGED",
+        "TYPE_DESCRIPTION_REMOVED": "TYPE_DESCRIPTION_REMOVED",
+        "TYPE_DESCRIPTION_ADDED": "TYPE_DESCRIPTION_ADDED",
+        "UNION_MEMBER_REMOVED": "UNION_MEMBER_REMOVED",
+        "UNION_MEMBER_ADDED": "UNION_MEMBER_ADDED"
+      }
+    },
+    "change_type": {
+      "name": "change_type",
+      "values": {
+        "add_field": "add_field",
+        "remove_field": "remove_field",
+        "renamed_field": "renamed_field"
+      }
+    },
+    "target_type": {
+      "name": "target_type",
+      "values": {
+        "federated": "federated",
+        "subgraph": "subgraph",
+        "graph": "graph"
+      }
+    }
+  },
+  "schemas": {},
+  "_meta": {
+    "schemas": {},
+    "tables": {},
+    "columns": {}
+  }
+}

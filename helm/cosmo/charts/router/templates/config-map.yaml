@@ -1,0 +1,16 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "router.fullname" . }}
+  annotations:
+    # Support for k14s.io. This annotation will produce a redeployment when the configmap changes.
+    kapp.k14s.io/versioned: ""
+  labels:
+    {{- include "router.labels" . | nindent 4 }}
+data:
+  logLevel: "{{ .Values.configuration.logLevel }}"
+  listenAddress: "0.0.0.0:{{ .Values.service.port }}"
+  controlplaneUrl: "http://{{ include "controlplane.fullname" .}}:{{.Values.global.controlplane.port}}"
+  otelCollectorUrl: "http://{{ include "otelcollector.fullname" .}}:{{.Values.global.otelcollector.port}}"
+  federatedGraphName: "{{ .Values.configuration.federatedGraphName }}"

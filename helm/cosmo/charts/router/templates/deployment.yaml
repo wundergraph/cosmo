@@ -1,0 +1,123 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "router.fullname" . }}
+  annotations:
+    # Support for k14s.io. This annotation will form a group to coordinate deployments with kapp.
+    kapp.k14s.io/change-group: "cosmo.apps.router.wundergraph.com/deployment"
+  labels:
+    {{- include "router.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  {{- with .Values.deploymentStrategy }}
+  strategy:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "router.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        # Roll deployments when this config changes. Name doesn't matter, just needs to be unique.
+        checksum/config: {{ include (print $.Template.BasePath "/config-map.yaml") . | sha256sum }}
+        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+      {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "router.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "router.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      initContainers:
+      {{- if .Values.initContainers }}
+      {{- range $key, $value := .Values.initContainers }}
+        - name: "{{ $key }}"
+          {{- toYaml $value | nindent 10 }}
+      {{- end }}
+      {{- end }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ include "router.image" . }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.port }}
+              protocol: TCP
+          env:
+            - name: GIN_MODE
+              value: release
+            - name: LOG_LEVEL
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "router.fullname" . }}
+                  key: logLevel
+            - name: LISTEN_ADDR
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "router.fullname" . }}
+                  key: listenAddress
+            - name: CONTROLPLANE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "router.fullname" . }}
+                  key: controlplaneUrl
+            - name: OTEL_COLLECTOR_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "router.fullname" . }}
+                  key: otelCollectorUrl
+            - name: FEDERATED_GRAPH_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "router.fullname" . }}
+                  key: federatedGraphName
+            - name: GRAPH_API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "router.fullname" . }}
+                  key: graphApiToken
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            {{ if ((.Values.probes).liveness).initialDelaySeconds }}
+            initialDelaySeconds: {{ ((.Values.probes).liveness).initialDelaySeconds | default 0 }}
+            {{ end }}
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            {{ if ((.Values.probes).readiness).initialDelaySeconds }}
+            initialDelaySeconds: {{ ((.Values.probes).readiness).initialDelaySeconds | default 0 }}
+            {{ end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if .Values.priorityClassName }}
+      priorityClassName: {{ .Values.priorityClassName }}
+      {{- end }}
+      {{- if .Values.terminationGracePeriodSeconds }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      {{- end }}

@@ -1,0 +1,16 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "moduleResolution": "node",
+    "declaration": false,
+    "target": "esnext",
+    "lib": ["ESNext", "DOM"],
+    "sourceMap": true,
+    "outDir": "./dist",
+    "module": "esnext",
+    "noEmit": true,
+  },
+  "include": ["test/**/*"],
+  "exclude": ["node_modules"]
+}

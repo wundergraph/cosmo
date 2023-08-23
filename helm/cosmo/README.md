@@ -1,0 +1,110 @@
+# Cosmo Helm Chart
+
+Navigating the stars with the Cosmo Helm Chart. This chart is a collection of subcharts that make up the Cosmo stack.
+You can use it to deploy a fully functional Cosmo stack for development or production use.
+
+## Getting started
+
+### Prerequisites
+
+- A running Kubernetes cluster, with support for:
+  - PersistentVolume (only development)
+  - Ingress Controller
+- [Helm 3.2.0+](https://helm.sh/docs/intro/install/) installed locally
+
+### Configuring the stack
+
+The Cosmo Helm chart gives you a lot of freedom to configure the stack to suit your needs.
+Helm offers two primary ways to configure your stack, statically by passing a `values.yaml` file or dynamically by offering input via the CLI.
+
+For your convenience, we included two different value presets:
+
+1. `values.full.yaml` - Ready to deploy configuration. Include all subcharts, including Clickhouse, PostgreSQL and Keycloak. Intended for development use.
+2. `values.yaml`. - Only include the Cosmo stack. You need to provide your own Clickhouse, PostgreSQL and Keycloak and update the configuration accordingly.
+
+To apply the changes, run:
+
+```shell
+# Install the helm dependencies (Only needed once)
+helm dependency build
+# Install the helm chart with the release name e.g "cosmo"
+helm install cosmo -f values.full.yaml ./cosmo
+```
+
+### Removing stack after use
+In order to prevent any costs, you can remove the stack after use with:
+
+```shell
+helm uninstall cosmo
+```
+
+**Volumes might not be automatically removed, so you may need to manually remove them with `kubectl delete pvc -l release=my-release`.**
+
+## Production use
+
+We ***strongly recommend*** that if you want to ship this helm chart to production you either:
+- Use a hosted version of Clickhouse, PostgreSQL and Keycloak.
+- Use a dedicated [Clickhouse](https://github.com/Altinity/clickhouse-operator), [Postgres](https://github.com/zalando/postgres-operator), [Keycloak](https://www.keycloak.org/operator/installation) operator of your choice.
+- Use [WunderGraph Cosmo Cloud](https://wundergraph.com/cosmo-cloud).
+
+## Configuration and installation details
+
+By default, the chart deploys a production-grade Cosmo stack **without** Clickhouse, PostgreSQL and Keycloak database.
+After you have provisioned the databases, you can set the right configuration in the `values.yaml` file.
+The studio, controlplane, router and otelcollector are exposed via ingress. Don't forget to update the public URL in the `values.yaml` file as well.
+
+## Seed your organization and account
+
+The seed is a special component that is used to seed your organization and account. It is only needed once and can be disabled after the initial setup. Ensure that your postgres and keycloak are running before you enable the seed.
+Update the `global.seed` values in the `values.yaml` file accordingly and run:
+
+```shell
+helm upgrade cosmo ./cosmo \
+  --set global.seed.enabled=true
+```
+
+### CLI Key
+
+In the `global.seed.apiKey` of your `values.yaml` we defined your API key. You can use this API key to authenticate with the Cosmo CLI.
+
+```sh
+export COSMO_API_KEY="cosmo-669b576aaadc10ee1ae81d9193425705"
+export COSMO_API_URL="http://<your-public-controlplane-url>"
+npx wgc -h
+```
+
+### Router 
+The router is not enabled by default because it requires an API token. After you have created an API token with the Cosmo CLI `wgc federated-graph create-token <graph-name>`, set the right configurations in the `values.yaml` file.
+
+```yaml
+router:
+  configuration:
+    federatedGraphName: "<graph_name>"
+    graphApiToken: "<changeme>"
+```
+
+Run `helm install cosmo` to apply the changes.
+
+## Kapp support
+
+The Helm chart is also compatible with [Kapp](https://get-kapp.io/). Kapp is an alternative way to manage Kubernetes resources. We make use of [Versioned Resources](https://carvel.dev/kapp/docs/v0.58.x/diff/#versioned-resources) to ensure that your Pod is restarted when your config changes.
+We also make use of [Apply Ordering](https://carvel.dev/kapp/docs/v0.58.x/apply-ordering/) to avoid uncessary restarts of your Pods when the dependencies are not ready yet.
+
+You can render the Helm chart and manage the stack with Kapp with the following command:
+
+```shell
+kapp -y deploy -a cosmo -f <(helm template cosmo ./cosmo \
+	  --set global.seed.enabled=true
+```
+
+Delete the stack with:
+
+```shell
+kapp delete -a cosmo
+```
+
+### Tips
+
+It is strongly recommended to use immutable tags in a production environment. This ensures your deployment does not change automatically if the same tag is updated with a different image.
+You can use a tool like [kbld](https://get-kbld.io/) to make sure your images are resolved to immutable tags.
+WunderGraph will release a new chart updating its containers if a new version of the main container, significant changes, or critical vulnerabilities exist.

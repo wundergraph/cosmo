@@ -1,0 +1,27 @@
+node_modules
+
+# Package manager
+pnpm-lock.yaml
+*lock.json
+
+# Output
+gen
+dist
+
+# Next.js build output
+.next
+out
+
+# Logs
+logs
+*.log
+
+# IDE
+.vscode
+.idea
+
+CHANGELOG.md
+.husky
+
+
+controlplane/migrations

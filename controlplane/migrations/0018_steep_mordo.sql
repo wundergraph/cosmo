@@ -1,0 +1,1 @@
+ALTER TABLE "federated_subgraphs" DROP CONSTRAINT "federated_subgraphs_federated_graph_id_subgraph_id";

@@ -1,0 +1,61 @@
+---
+version: "3.8"
+name: cosmo
+services:
+
+  keycloak:
+    # On the public repo
+    image: us-docker.pkg.dev/wg-cosmo/cosmo/keycloak:${DC_KEYCLOAK_VERSION:-latest}
+    build:
+      context: keycloak
+      dockerfile: Dockerfile
+      cache_from:
+        - us-docker.pkg.dev/wg-cosmo/cosmo/keycloak:latest
+      args:
+        GITHUB_SHA: ${GITHUB_SHA:-latest}
+        GITHUB_REF: ${GITHUB_REF:-latest}
+
+  otelcollector:
+    # On the public repo
+    image: us-docker.pkg.dev/wg-cosmo/cosmo/otelcollector:${DC_OTELCOLLECTOR_VERSION:-latest}
+    build:
+      context: otelcollector
+      dockerfile: Dockerfile
+      cache_from:
+        - us-docker.pkg.dev/wg-cosmo/cosmo/otelcollector:latest
+      args:
+        GITHUB_SHA: ${GITHUB_SHA:-latest}
+        GITHUB_REF: ${GITHUB_REF:-latest}
+
+  router:
+    image: us-docker.pkg.dev/wg-cosmo/cloud/router:${DC_ROUTER_VERSION:-latest}
+    build:
+      context: .
+      dockerfile: router/Dockerfile
+      cache_from:
+        - us-docker.pkg.dev/wg-cosmo/cloud/router:latest
+      args:
+        GITHUB_SHA: ${GITHUB_SHA:-latest}
+        GITHUB_REF: ${GITHUB_REF:-latest}
+
+  controlplane:
+    image: us-docker.pkg.dev/wg-cosmo/cloud/controlplane:${DC_CONTROLPLANE_VERSION:-latest}
+    build:
+      context: .
+      dockerfile: controlplane/Dockerfile
+      cache_from:
+        - us-docker.pkg.dev/wg-cosmo/cloud/controlplane:latest
+      args:
+        GITHUB_SHA: ${GITHUB_SHA:-latest}
+        GITHUB_REF: ${GITHUB_REF:-latest}
+
+  studio:
+    image: us-docker.pkg.dev/wg-cosmo/cloud/studio:${DC_STUDIO_VERSION:-latest}
+    build:
+      context: .
+      dockerfile: studio/Dockerfile
+      cache_from:
+        - us-docker.pkg.dev/wg-cosmo/cloud/studio:latest
+      args:
+        GITHUB_SHA: ${GITHUB_SHA:-latest}
+        GITHUB_REF: ${GITHUB_REF:-latest}

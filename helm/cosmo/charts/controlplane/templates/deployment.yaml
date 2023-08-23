@@ -1,0 +1,182 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "controlplane.fullname" . }}
+  annotations:
+    # Support for k14s.io. This annotation will form a group to coordinate deployments with kapp.
+    kapp.k14s.io/change-group: "cosmo.apps.controlplane.wundergraph.com/deployment"
+    {{- if .Values.global.postgresql.enabled }}
+    # Support for k14s.io. This annotation will wait for the postgres deployments to be ready before deploying.
+    kapp.k14s.io/change-rule.postgresql: "upsert after upserting cosmo.apps.postgresql.wundergraph.com/deployment"
+    {{- end }}
+    {{- if .Values.global.keycloak.enabled }}
+    # Support for k14s.io. This annotation will wait for the keycloak deployments to be ready before deploying.
+    kapp.k14s.io/change-rule.keycloak: "upsert after upserting cosmo.apps.keycloak.wundergraph.com/deployment"
+    {{- end }}
+  labels:
+    {{- include "controlplane.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  {{- with .Values.deploymentStrategy }}
+  strategy:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "controlplane.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        # Roll deployments when this config changes. Name doesn't matter, just needs to be unique.
+        checksum/config: {{ include (print $.Template.BasePath "/config-map.yaml") . | sha256sum }}
+        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+      {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "controlplane.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "controlplane.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      initContainers:
+        {{- tpl (.Values.initContainers | toYaml) . | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ include "controlplane.image" . }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-configmap
+                  key: host
+            - name: PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-configmap
+                  key: port
+            - name: LOG_LEVEL
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-configmap
+                  key: logLevel
+            - name: WEB_BASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-configmap
+                  key: webBaseUrl
+            - name: ALLOWED_ORIGINS
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-configmap
+                  key: allowedOrigins
+            - name: DEBUG_SQL
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-configmap
+                  key: debugSQL
+            - name: AUTH_REDIRECT_URI
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-configmap
+                  key: authRedirectUri
+            - name: AUTH_JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-secret
+                  key: jwtSessionSecret
+            - name: DB_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-secret
+                  key: databaseUrl
+            - name: CLICKHOUSE_DSN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-secret
+                  key: clickhouseDsn
+            - name: KC_REALM
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-configmap
+                  key: keycloakRealm
+            - name: KC_ADMIN_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-secret
+                  key: keycloakAdminUser
+            - name: KC_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-secret
+                  key: keycloakAdminPassword
+            - name: KC_API_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-configmap
+                  key: keycloakApiUrl
+            - name: KC_FRONTEND_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-configmap
+                  key: keycloakFrontendUrl
+            - name: KC_CLIENT_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-configmap
+                  key: keycloakClientId
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.port }}
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            {{ if ((.Values.probes).liveness).initialDelaySeconds }}
+            initialDelaySeconds: {{ ((.Values.probes).liveness).initialDelaySeconds | default 0 }}
+            {{ end }}
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            {{ if ((.Values.probes).readiness).initialDelaySeconds }}
+            initialDelaySeconds: {{ ((.Values.probes).readiness).initialDelaySeconds | default 0 }}
+            {{ end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          {{- with .Values.volumeMounts }}
+          volumeMounts:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      {{- with .Values.volumes }}
+      volumes:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if .Values.priorityClassName }}
+      priorityClassName: {{ .Values.priorityClassName }}
+      {{- end }}
+      {{- if .Values.terminationGracePeriodSeconds }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      {{- end }}

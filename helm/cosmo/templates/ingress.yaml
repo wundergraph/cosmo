@@ -1,0 +1,104 @@
+{{- if .Values.ingress.enabled -}}
+{{- $fullName := include "cosmo.fullname" . -}}
+{{- if and .Values.ingress.className (not (semverCompare ">=1.18-0" .Capabilities.KubeVersion.GitVersion)) }}
+  {{- if not (hasKey .Values.ingress.annotations "kubernetes.io/ingress.class") }}
+  {{- $_ := set .Values.ingress.annotations "kubernetes.io/ingress.class" .Values.ingress.className}}
+  {{- end }}
+{{- end }}
+{{- if semverCompare ">=1.19-0" .Capabilities.KubeVersion.GitVersion -}}
+apiVersion: networking.k8s.io/v1
+{{- else if semverCompare ">=1.14-0" .Capabilities.KubeVersion.GitVersion -}}
+apiVersion: networking.k8s.io/v1beta1
+{{- else -}}
+apiVersion: extensions/v1beta1
+{{- end }}
+kind: Ingress
+metadata:
+  name: {{ $fullName }}
+  labels:
+    {{- include "cosmo.labels" . | nindent 4 }}
+  {{- with .Values.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if and .Values.ingress.className (semverCompare ">=1.18-0" .Capabilities.KubeVersion.GitVersion) }}
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- end }}
+  {{- if .Values.ingress.tls }}
+  tls:
+    {{- range .Values.ingress.tls }}
+    - hosts:
+        {{- range .hosts }}
+        - {{ . | quote }}
+        {{- end }}
+      secretName: {{ .secretName }}
+    {{- end }}
+  {{- end }}
+  rules:
+    {{- if .Values.global.controlplane.enabled }}
+    - host: {{ (urlParse .Values.global.controlplane.webUrl).host | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "controlplane.fullname" . }}
+                port:
+                  number: {{ .Values.global.controlplane.port }}
+    {{- end }}
+
+    {{- if .Values.global.keycloak.enabled }}
+    - host: {{ (urlParse .Values.global.keycloak.webUrl).host | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "keycloak.fullname" . }}
+                port:
+                  number: {{ .Values.global.keycloak.port }}
+    {{- end }}
+
+    {{- if .Values.global.otelcollector.enabled }}
+    - host: {{ (urlParse .Values.global.otelcollector.webUrl).host | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "otelcollector.fullname" . }}
+                port:
+                  number: {{ .Values.global.otelcollector.port }}
+    {{- end }}
+
+    {{- if .Values.global.studio.enabled }}
+    - host: {{ (urlParse .Values.global.studio.webUrl).host | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "studio.fullname" . }}
+                port:
+                  number: {{ .Values.global.studio.port }}
+    {{- end }}
+
+    {{- if .Values.global.router.enabled }}
+    - host: {{ (urlParse .Values.global.router.webUrl).host | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "router.fullname" . }}
+                port:
+                  number: {{ .Values.global.router.port }}
+    {{- end }}
+
+{{- end }}

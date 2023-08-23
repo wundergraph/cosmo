@@ -1,0 +1,195 @@
+version: '3'
+name: 'full-cosmo'
+services:
+
+  # Services for the demo
+  employees:
+    container_name: employees
+    build: ./demo/employees
+    profiles:
+      - subgraphs
+    ports:
+      - '4001:4001'
+  family:
+    container_name: family
+    build: ./demo/family
+    profiles:
+      - subgraphs
+    ports:
+      - '4002:4002'
+  hobbies:
+    container_name: hobbies
+    build: ./demo/hobbies
+    profiles:
+      - subgraphs
+    ports:
+      - '4003:4003'
+  products:
+    container_name: products
+    build: ./demo/products
+    profiles:
+      - subgraphs
+    ports:
+      - '4004:4004'
+
+  # Infrastructure services
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:${DC_CLICKHOUSE_VERSION:-23}
+    environment:
+      CLICKHOUSE_DB: ${CLICKHOUSE_DATABASE:-cosmo}
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER:-default}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-changeme}
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: ${CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT:-1}
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+      - "9440:9440"
+    profiles:
+      - default
+    volumes:
+      - clickhouse:/var/lib/clickhouse
+      - ./docker/clickhouse/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
+
+  postgres:
+    image: postgres:${DC_POSTGRESQL_VERSION:-15.3}
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      POSTGRES_DB: ${POSTGRES_DB:-controlplane}
+      PGDATA: /data/postgres
+    volumes:
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - postgres:/data/postgres
+    ports:
+      - "5432:5432"
+    profiles:
+      - default
+    restart: unless-stopped
+
+  keycloak:
+    build:
+      context: keycloak
+      dockerfile: Dockerfile
+    environment:
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-changeme}
+      KC_DB: postgres
+      KC_DB_URL_HOST: postgres
+      KC_DB_URL_DATABASE: ${POSTGRES_DB:-keycloak}
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      KC_DB_USERNAME: ${POSTGRES_USER:-postgres}
+      KC_DB_SCHEMA: public
+    command:
+      - "start-dev"
+      - "--import-realm"
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./docker/keycloak/realm.json:/opt/keycloak/data/import/realm.json:ro
+    restart: unless-stopped
+    profiles:
+      - default
+    depends_on:
+      - postgres
+
+  # Cosmo Platform
+
+  otelcollector:
+    # On the public repo
+    image: us-docker.pkg.dev/wg-cosmo/cosmo/otelcollector:${DC_OTELCOLLECTOR_VERSION:-latest}
+    environment:
+      CLICKHOUSE_ENDPOINT: "clickhouse://${CLICKHOUSE_USER:-default}:${CLICKHOUSE_PASSWORD:-changeme}@clickhouse:9000/${CLICKHOUSE_DATABASE:-cosmo}?dial_timeout=15s&compress=lz4"
+      OTEL_INGEST_JWT_SECRET: ${OTEL_INGEST_JWT_SECRET:-fkczyomvdprgvtmvkuhvprxuggkbgwld}
+    ports:
+      - '4318:4318'
+    restart: unless-stopped
+    profiles:
+      - default
+    depends_on:
+      - clickhouse
+
+  controlplane:
+    image: us-docker.pkg.dev/wg-cosmo/cloud/controlplane:${DC_CONTROLPLANE_VERSION:-latest}
+    environment:
+      DB_URL: "postgresql://postgres:changeme@postgres:5432/controlplane"
+      PORT: 3001
+      HOST: "0.0.0.0"
+      ALLOWED_ORIGINS: "http://localhost:3000"
+      LOG_LEVEL: "info"
+      DEBUG_SQL: "true"
+      CLICKHOUSE_DSN: "http://default:changeme@clickhouse:8123?database=cosmo"
+      AUTH_REDIRECT_URI: "http://localhost:3001/v1/auth/callback"
+      WEB_BASE_URL: "http://localhost:3000"
+      AUTH_JWT_SECRET: "fkczyomvdprgvtmvkuhvprxuggkbgwld"
+      KC_CLIENT_ID: "studio"
+      KC_REALM: "cosmo"
+      KC_ADMIN_USER: ${KEYCLOAK_ADMIN:-admin}
+      KC_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-changeme}
+      KC_API_URL: "http://keycloak:8080"
+      KC_FRONTEND_URL: "http://localhost:8080"
+    ports:
+      - '3001:3001'
+    restart: on-failure
+    profiles:
+      - default
+    depends_on:
+      - postgres
+      - clickhouse
+
+  seed:
+    image: us-docker.pkg.dev/wg-cosmo/cloud/controlplane:${DC_CONTROLPLANE_VERSION:-latest}
+    command:
+      - "/app/dist/bin/seed.js"
+    environment:
+      KC_REALM: "cosmo"
+      KC_API_URL: "http://keycloak:8080"
+      KC_ADMIN_USER: "admin"
+      KC_ADMIN_PASSWORD: "changeme"
+      KC_CLIENT_ID: "studio"
+      API_KEY: cosmo_669b576aaadc10ee1ae81d9193425705
+      DB_URL: "postgresql://postgres:changeme@postgres:5432/controlplane"
+      USER_EMAIL: foo@wundergraph.com
+      USER_PASSWORD: bar
+      USER_FIRSTNAME: foo
+      USER_LASTNAME: bar
+      ORGANIZATION_NAME: wundergraph
+      ORGANIZATION_SLUG: wundergraph
+    restart: on-failure
+    profiles:
+      - default
+    depends_on:
+      - postgres
+      - clickhouse
+      - keycloak
+
+  router:
+    image: us-docker.pkg.dev/wg-cosmo/cloud/router:${DC_ROUTER_VERSION:-latest}
+    environment:
+      LOG_LEVEL: info
+      FEDERATED_GRAPH_NAME: production
+      CORS_ALLOW_CREDENTIALS: true
+      LISTEN_ADDR: "0.0.0.0:3002"
+      PRODUCTION: true
+      CONTROLPLANE_URL: http://controlplane:3001
+      OTEL_COLLECTOR_ENDPOINT: http://otelcollector:4318
+      GRAPH_API_TOKEN: ${ROUTER_TOKEN}
+    restart: on-failure
+    profiles:
+      - router
+    ports:
+      - '3002:3002'
+
+  studio:
+    image: us-docker.pkg.dev/wg-cosmo/cloud/studio:${DC_STUDIO_VERSION:-latest}
+    environment:
+      NEXT_PUBLIC_COSMO_CP_URL: http://localhost:3001
+      HOSTNAME: "0.0.0.0"
+    profiles:
+      - default
+    ports:
+      - '3000:3000'
+
+volumes:
+  postgres:
+  clickhouse:

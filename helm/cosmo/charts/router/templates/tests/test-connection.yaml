@@ -1,0 +1,19 @@
+{{- if .Values.global.helmTests }}
+{{- if .Values.global.helmTests.enabled | default false }}
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{ include "router.fullname" . }}-test-connection"
+  labels:
+    {{- include "router.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test
+spec:
+  containers:
+    - name: wget
+      image: busybox
+      command: ['wget']
+      args: ['{{ include "router.fullname" . }}:{{ .Values.service.port }}/health']
+  restartPolicy: Never
+{{- end }}
+{{- end }}

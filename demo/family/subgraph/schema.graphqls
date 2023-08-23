@@ -1,0 +1,97 @@
+enum Class {
+  Fish
+  Mammal
+  Reptile
+}
+
+enum Gender {
+  FEMALE
+  MALE
+  UNKNOWN
+}
+
+interface Animal {
+  class: Class!
+  gender: Gender!
+}
+
+interface Pet implements Animal {
+  class: Class!
+  gender: Gender!
+  name: String!
+}
+
+enum CatType {
+  HOME
+  STREET
+}
+
+type Alligator implements Pet & Animal {
+  class: Class!
+  dangerous: String!
+  gender: Gender!
+  name: String!
+}
+
+type Cat implements Pet & Animal {
+  class: Class!
+  gender: Gender!
+  name: String!
+  type: CatType!
+}
+
+enum DogBreed {
+  GOLDEN_RETRIEVER
+  POODLE
+  ROTTWEILER
+  YORKSHIRE_TERRIER
+}
+
+type Dog implements Pet & Animal {
+  breed: DogBreed!
+  class: Class!
+  gender: Gender!
+  name: String!
+}
+
+type Mouse implements Pet & Animal {
+  class: Class!
+  gender: Gender!
+  name: String!
+}
+
+type Pony implements Pet & Animal {
+  class: Class!
+  gender: Gender!
+  name: String!
+}
+
+enum MaritalStatus {
+  ENGAGED
+  MARRIED
+}
+
+enum Nationality {
+  AMERICAN
+  DUTCH
+  ENGLISH
+  GERMAN
+  INDIAN
+  SPANISH
+  UKRAINIAN
+}
+
+type Details  {
+  forename: String! @shareable
+  surname: String! @shareable
+}
+
+type Employee @key(fields: "id") {
+  details: Details @shareable
+  id: Int!
+  # move to details eventually
+  hasChildren: Boolean!
+  maritalStatus: MaritalStatus
+  nationality: Nationality!
+  pets: [Pet]
+}

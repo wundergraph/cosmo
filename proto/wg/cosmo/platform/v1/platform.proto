@@ -1,0 +1,608 @@
+// https://protobuf.dev/programming-guides/style/
+
+syntax = "proto3";
+
+package wg.cosmo.platform.v1;
+
+import "wg/cosmo/common.proto";
+import "wg/cosmo/node/v1/node.proto";
+
+message Label {
+  string key = 1;
+  string value = 2;
+}
+
+message Response {
+  wg.cosmo.common.EnumStatusCode code = 1;
+  // details is an optional field which can be used to provide more details about the error.
+  optional string details = 2;
+}
+
+message ResponseStatus {
+  int32 code = 1;
+  string message = 2;
+}
+
+message PublishFederatedSubgraphRequest {
+  // The FQDN of the subgraph to be published e.g. "wg.team1.orders"
+  string name = 1;
+  // The binary representation of the schema, the content of the file
+  bytes schema = 2;
+
+}
+
+message PublishFederatedSubgraphResponse {
+  Response response = 1;
+  repeated CompositionError compositionErrors = 2;
+}
+
+message CheckSubgraphSchemaRequest {
+  // The FQDN of the subgraph to be checked e.g. "wg.team1.orders"
+  string subgraph_name = 1;
+  // The binary representation of the schema, the content of the file
+  bytes schema = 2;
+}
+
+message FixSubgraphSchemaRequest {
+  // The FQDN of the subgraph to be checked e.g. "wg.team1.orders"
+  string subgraph_name = 1;
+  // The binary representation of the schema, the content of the file
+  bytes schema = 2;
+}
+
+message CreateFederatedGraphRequest {
+  // name is the FQDN of the federated graph e.g. "wg.main"
+  string name = 1;
+  // routing_url is the URL of the service which will be used to route the requests to the subgraph.
+  string routing_url = 2;
+  // label_matchers match the labels of the services which will form the federated graph. If the proposed schema composition is invalid, it will be rejected.
+  repeated string label_matchers = 3;
+}
+
+message CreateFederatedSubgraphRequest {
+  // The FQDN of the subgraph to be published e.g. "wg.team1.orders"
+  string name = 1;
+  // routing_url is the URL of the service which will be used to route the requests to the subgraph.
+  string routing_url = 2;
+  // labels are the labels of the services which will form the federated graph. If the proposed is not valid, the service will be rejected.
+  repeated Label labels = 3;
+  // headers are the headers which will be used to route the requests to the subgraph.
+  repeated string headers = 4;
+}
+
+message DeleteFederatedGraphRequest {
+  string name = 1;
+}
+
+message DeleteFederatedSubgraphRequest {
+  // The FQDN of the subgraph to be checked e.g. "wg.team1.orders"
+  string subgraph_name = 1;
+}
+
+message SchemaChange{
+  string message = 1;
+  string changeType = 2;
+  optional string path = 3;
+  bool isBreaking = 4;
+}
+
+message CompositionError{
+  string message = 1;
+  string federatedGraphName = 2;
+}
+
+message CheckSubgraphSchemaResponse {
+  Response response = 1;
+  repeated SchemaChange breakingChanges = 2;
+  repeated SchemaChange nonBreakingChanges = 3;
+  repeated CompositionError compositionErrors = 4;
+}
+
+message FixSubgraphSchemaResponse {
+  Response response = 1;
+  bool modified = 2;
+  string schema = 3;
+}
+
+message CreateFederatedGraphResponse {
+    Response response = 1;
+    repeated CompositionError compositionErrors = 2;
+}
+
+message CreateFederatedSubgraphResponse {
+  Response response = 1;
+}
+
+message DeleteFederatedSubgraphResponse {
+  Response response = 1;
+}
+
+message DeleteFederatedGraphResponse {
+  Response response = 1;
+}
+
+message GetFederatedGraphsRequest {
+  int32 limit = 1;
+  int32 offset = 2;
+  bool includeMetrics = 3;
+}
+
+message FederatedGraph {
+  string name = 1;
+  string routingURL = 2;
+  repeated string label_matchers = 3;
+  string lastUpdatedAt = 4;
+  bool isComposable = 5;
+  string compositionErrors = 6;
+  int32 connectedSubgraphs = 7;
+  repeated RequestSeriesItem requestSeries = 8;
+}
+
+message FederatedGraphChangelog{
+  string id = 1;
+  string path = 2;
+  string changeType = 3;
+  string changeMessage = 4;
+  string createdAt = 5;
+}
+
+message FederatedGraphChangelogOutput{
+  string createdAt = 1;
+  string schemaVersionId = 2;
+  repeated FederatedGraphChangelog changelogs = 3;
+}
+
+message GetFederatedGraphsResponse {
+  Response response = 1;
+  repeated FederatedGraph graphs = 2;
+}
+
+message GetSubgraphsRequest {
+  int32 limit = 1;
+  int32 offset = 2;
+}
+
+message Subgraph {
+  string name = 1;
+  string routingURL = 2;
+  string lastUpdatedAt = 3;
+  repeated Label labels = 4;
+}
+
+message GetSubgraphsResponse {
+  Response response = 1;
+  repeated Subgraph graphs = 2;
+}
+
+message GetFederatedGraphByNameRequest {
+  string name = 1;
+  bool includeMetrics = 3;
+}
+
+message GetFederatedGraphByNameResponse {
+  Response response = 1;
+  FederatedGraph graph = 2;
+  repeated Subgraph subgraphs = 3;
+}
+
+message GetFederatedGraphSDLByNameRequest {
+  string name = 1;
+}
+
+message GetFederatedGraphSDLByNameResponse {
+  Response response = 1;
+  optional string sdl = 2;
+}
+
+message GetSubgraphByNameRequest {
+  string name = 1;
+}
+
+message GetSubgraphByNameResponse {
+  Response response = 1;
+  Subgraph graph = 2;
+}
+
+message GetFederatedSubgraphSDLByNameRequest {
+  string name = 1;
+}
+
+message GetFederatedSubgraphSDLByNameResponse {
+  Response response = 1;
+  optional string sdl = 2;
+}
+
+message GetChecksByFederatedGraphNameRequest {
+  string name = 1;
+}
+
+message SchemaCheck {
+  string id = 1;
+  string targetID = 2;
+  string subgraphName = 3;
+  string timestamp = 4;
+  bool isComposable = 5;
+  bool isBreaking = 6;
+  optional string proposedSubgraphSchemaSDL = 7;
+}
+
+message GetChecksByFederatedGraphNameResponse {
+  Response response = 1;
+  repeated SchemaCheck checks = 2;
+}
+
+message GetCheckDetailsRequest {
+  string checkID = 1;
+  string graphName = 2;
+}
+
+message GetCheckDetailsResponse {
+  Response response = 1;
+  repeated SchemaChange changes = 2;
+  repeated string compositionErrors = 3;
+}
+
+message GetFederatedGraphChangelogRequest {
+  string name = 1;
+}
+
+message GetFederatedGraphChangelogResponse {
+  Response response = 1;
+  repeated FederatedGraphChangelogOutput federatedGraphChangelogOutput = 2;
+}
+
+message GetFederatedResponse {
+  Response response = 1;
+  string FederatedSchemaSDL = 2;
+}
+
+message UpdateSubgraphRequest {
+  string name = 1;
+  string routing_url = 2;
+  repeated Label labels = 3;
+  repeated string headers = 4;
+}
+
+message UpdateSubgraphResponse {
+  Response response = 1;
+  repeated CompositionError compositionErrors = 2;
+}
+
+message UpdateFederatedGraphRequest {
+  string name = 1;
+  string routing_url = 2;
+  repeated string label_matchers = 3;
+}
+
+message UpdateFederatedGraphResponse {
+  Response response = 1;
+  repeated CompositionError compositionErrors = 2;
+}
+
+message CheckFederatedGraphRequest {
+  string name = 1;
+  repeated string label_matchers = 2;
+}
+
+message CheckFederatedGraphResponse {
+  Response response = 1;
+  repeated CompositionError compositionErrors = 2;
+  repeated Subgraph subgraphs = 3;
+}
+
+
+message Pagination {
+  int32 limit = 1;
+  int32 offset = 2;
+}
+
+message AnalyticsConfig {
+  AnalyticsDateRange date_range = 1;
+  repeated AnalyticsFilter filters = 2;
+  Pagination pagination = 3;
+}
+
+message AnalyticsFilter {
+  // The name of the column / attribute to filter on.
+  string field = 1;
+  // The value to filter on.
+  string value = 2;
+  // The operator to use for the filter.
+  AnalyticsViewFilterOperator operator = 3;
+}
+
+message AnalyticsDateRange {
+  // The start date of the date range in ISO 8601 format.
+  string start = 1;
+  // The end date of the date range in ISO 8601 format.
+  string end = 2;
+}
+
+enum AnalyticsViewGroupName {
+  None = 0;
+  OperationName = 1;
+  Client = 2;
+  HttpStatusCode = 3;
+}
+
+message GetAnalyticsViewRequest {
+  string federatedGraphName  = 1;
+  AnalyticsViewGroupName name = 2;
+  AnalyticsConfig config = 3;
+}
+
+message AnalyticsViewResult {
+  repeated AnalyticsViewColumn columns = 1;
+  repeated AnalyticsViewRow rows = 2;
+  repeated AnalyticsViewResultFilter filters = 3;
+  int32 pages = 4;
+}
+
+message AnalyticsViewColumn {
+  string name = 1;
+  string title = 2;
+  string type = 3;
+  optional Unit unit = 4;
+  optional bool is_hidden = 5;
+  optional bool is_cta = 6;
+}
+
+message AnalyticsViewResultFilter {
+  string columnName = 1;
+  string title = 2;
+  repeated AnalyticsViewResultFilterOption options = 3;
+}
+
+message AnalyticsViewResultFilterOption {
+  string label = 1;
+  optional string value = 2;
+  AnalyticsViewFilterOperator operator = 3;
+}
+
+enum Unit {
+  Unspecified = 0;
+  Nanoseconds = 1;
+  UnixTimestamp = 2;
+  Bytes = 3;
+  CodeBlock = 4;
+  StatusCode = 5;
+  TraceID = 6;
+}
+
+enum AnalyticsViewFilterOperator {
+  EQUALS = 0;
+  NOT_EQUALS = 1;
+  GREATER_THAN = 2;
+  LESS_THAN = 3;
+  GREATER_THAN_OR_EQUAL = 4;
+  LESS_THAN_OR_EQUAL = 5;
+  CONTAINS = 6;
+  NOT_CONTAINS = 7;
+  IN = 8;
+  NOT_IN = 9;
+  BETWEEN = 10;
+  NOT_BETWEEN = 11;
+  IS_NULL = 12;
+  IS_NOT_NULL = 13;
+}
+
+message AnalyticsViewRow {
+  map<string, AnalyticsViewRowValue> value = 1;
+}
+
+message AnalyticsViewRowValue {
+  // The kind of value.
+  oneof kind {
+    // Represents a double value.
+    double number_value = 1;
+    // Represents a string value.
+    string string_value = 2;
+    // Represents a boolean value.
+    bool bool_value = 3;
+  }
+}
+
+message GetAnalyticsViewResponse {
+  Response response = 1;
+  AnalyticsViewResult view = 2;
+}
+
+message GetDashboardAnalyticsViewRequest {
+  string federatedGraphName  = 1;
+}
+
+message RequestSeriesItem {
+  string timestamp = 1;
+  int32 totalRequests = 2;
+  int32 erroredRequests = 3;
+}
+
+message OperationRequestCount {
+  string operationName = 1;
+  int32 totalRequests = 2;
+}
+
+message GetDashboardAnalyticsViewResponse {
+  Response response = 1;
+  repeated RequestSeriesItem requestSeries = 2;
+  repeated OperationRequestCount mostRequestedOperations = 3;
+}
+
+message CreateFederatedGraphTokenRequest {
+  string graphName = 1;
+  string tokenName = 2;
+}
+
+message CreateFederatedGraphTokenResponse {
+  Response response = 1;
+  string token = 2;
+}
+
+message User{
+  string id = 1;
+  string email = 2;
+  bool acceptedInvite = 3;
+  repeated string roles = 4;
+}
+
+message GetOrganizationMembersRequest {}
+
+message GetOrganizationMembersResponse {
+  Response response = 1;
+  repeated User members = 2;
+}
+
+message InviteUserRequest {
+  string email = 1;
+}
+
+message InviteUserResponse {
+  Response response = 1;
+}
+
+message APIKey{
+  string id = 1;
+  string name = 2;
+  string createdBy = 3;
+  string createdAt = 4;
+  string lastUsedAt = 5;
+  string expiresAt = 6;
+}
+
+message GetAPIKeysRequest {}
+
+message GetAPIKeysResponse {
+  Response response = 1;
+  repeated APIKey apiKeys = 2;
+}
+
+enum ExpiresAt {
+  NEVER = 0;
+  THIRTY_DAYS = 1;
+  SIX_MONTHS = 2;
+  ONE_YEAR = 3;
+}
+
+message CreateAPIKeyRequest {
+  string name = 1;
+  string userID = 2;
+  ExpiresAt expires = 3;
+}
+
+message CreateAPIKeyResponse {
+  Response response = 1;
+  string apiKey = 2;
+}
+
+message DeleteAPIKeyRequest {
+  string name = 1;
+}
+
+message DeleteAPIKeyResponse {
+  Response response = 1;
+}
+
+message SpanAttributes {
+  string httpStatusCode = 1;
+  string componentName = 2;
+  string operationName = 3;
+  string operationType = 4;
+  string operationContent = 5;
+  string httpURL = 6;
+  string httpHost = 7;
+  string httpUserAgent = 8;
+  string httpMethod = 9;
+  string httpTarget = 10;
+}
+
+message Span {
+  int64 timestamp = 1;
+  string traceID = 2;
+  string spanID = 3;
+  string parentSpanID = 4;
+  string spanName = 5;
+  string spanKind = 6;
+  int64 duration = 7;
+  string serviceName = 8;
+  string statusCode = 9;
+  string statusMessage = 10;
+  SpanAttributes attributes = 11;
+}
+
+message GetTraceRequest {
+  string id = 1;  
+}
+
+message GetTraceResponse {
+  Response response = 1;
+  repeated Span spans = 2;
+}
+
+service PlatformService {
+  // CreateFederatedGraph creates a federated graph on the control plane.
+  rpc CreateFederatedGraph(CreateFederatedGraphRequest) returns (CreateFederatedGraphResponse) {}
+  // CreateFederatedSubgraph creates a federated subgraph on the control plane.
+  rpc CreateFederatedSubgraph(CreateFederatedSubgraphRequest) returns (CreateFederatedSubgraphResponse) {}
+  // PublishFederatedSubgraph pushes the schema of the subgraph to the control plane.
+  rpc PublishFederatedSubgraph(PublishFederatedSubgraphRequest) returns (PublishFederatedSubgraphResponse) {}
+  // DeleteFederatedGraph deletes a federated graph from the control plane.
+  rpc DeleteFederatedGraph(DeleteFederatedGraphRequest) returns (DeleteFederatedGraphResponse) {}
+  // DeleteFederatedSubgraph deletes a federated subgraph from the control plane.
+  rpc DeleteFederatedSubgraph(DeleteFederatedSubgraphRequest) returns (DeleteFederatedSubgraphResponse) {}
+  // CheckSubgraphSchema checks if the schema is valid and if it can be composed without conflicts with the provided new subgraph schema.
+  rpc CheckSubgraphSchema(CheckSubgraphSchemaRequest) returns (CheckSubgraphSchemaResponse) {}
+  rpc FixSubgraphSchema(FixSubgraphSchemaRequest) returns (FixSubgraphSchemaResponse) {}
+  // UpdateFederatedGraph updates a federated graph with new labels and routing url
+  rpc UpdateFederatedGraph(UpdateFederatedGraphRequest) returns (UpdateFederatedGraphResponse) {}
+  // UpdateSubgraph updates a subgraph with new labels and routing url
+  rpc UpdateSubgraph(UpdateSubgraphRequest) returns (UpdateSubgraphResponse) {}
+  // CheckFederatedGraph checks if the federated graph can be composed with the new labels provided.
+  rpc CheckFederatedGraph(CheckFederatedGraphRequest) returns (CheckFederatedGraphResponse) {}
+
+  // For Studio and CLI
+
+  // GetFederatedGraphs returns the list of federated graphs.
+  rpc GetFederatedGraphs(GetFederatedGraphsRequest) returns (GetFederatedGraphsResponse) {}
+  // GetFederatedGraphByName returns the federated graph by name.
+  rpc GetFederatedGraphByName(GetFederatedGraphByNameRequest) returns (GetFederatedGraphByNameResponse) {}
+  // GetFederatedGraphSDLByName returns the SDL of the federated graph by name.
+  rpc GetFederatedGraphSDLByName(GetFederatedGraphSDLByNameRequest) returns (GetFederatedGraphSDLByNameResponse) {}
+  // GetSubgraphs returns the list of subgraphs.
+  rpc GetSubgraphs(GetSubgraphsRequest) returns (GetSubgraphsResponse) {}
+  // GetSubgraphByName returns the subgraph by name.
+  rpc GetSubgraphByName(GetSubgraphByNameRequest) returns (GetSubgraphByNameResponse) {}
+  // GetFederatedSubgraphSDLByName returns the SDL of the subgraph by name.
+  rpc GetFederatedSubgraphSDLByName(GetFederatedSubgraphSDLByNameRequest) returns (GetFederatedSubgraphSDLByNameResponse) {}
+  // GetChecksByFederatedGraphName return schema and composition checks that concern a federated graph
+  rpc GetChecksByFederatedGraphName(GetChecksByFederatedGraphNameRequest) returns (GetChecksByFederatedGraphNameResponse) {}
+  // GetCheckDetails returns changes and composition errors recorded for a check
+  rpc GetCheckDetails(GetCheckDetailsRequest) returns (GetCheckDetailsResponse) {}
+  // GetFederatedGraphChangelog returns the changelog of the federated graph.
+  rpc GetFederatedGraphChangelog(GetFederatedGraphChangelogRequest) returns (GetFederatedGraphChangelogResponse) {}
+  // CreateFederatedGraphToken creates a federated graph token that is consumed by the router to authenticate requests.
+  rpc CreateFederatedGraphToken(CreateFederatedGraphTokenRequest) returns (CreateFederatedGraphTokenResponse) {}
+  // GetOrganizationMembers returns the list of organization members
+  rpc GetOrganizationMembers(GetOrganizationMembersRequest) returns (GetOrganizationMembersResponse){}
+  // InviteUser invites an user to join the organization
+  rpc InviteUser(InviteUserRequest) returns (InviteUserResponse){}
+  // GetAPIKeys returns a list of API keys of the organization
+  rpc GetAPIKeys(GetAPIKeysRequest) returns (GetAPIKeysResponse){}
+  // CreateAPIKey creates an API key for the organization
+  rpc CreateAPIKey(CreateAPIKeyRequest) returns (CreateAPIKeyResponse){}
+  // DeleteAPIKey deletes an API key for the organization
+  rpc DeleteAPIKey(DeleteAPIKeyRequest) returns (DeleteAPIKeyResponse){}
+  // GetLatestValidRouterConfig returns the router config for the federated graph
+  rpc GetLatestValidRouterConfig(wg.cosmo.node.v1.GetConfigRequest) returns (wg.cosmo.node.v1.GetConfigResponse) {}
+
+  // Analytics
+
+  rpc GetAnalyticsView(GetAnalyticsViewRequest) returns (GetAnalyticsViewResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
+  rpc GetDashboardAnalyticsView(GetDashboardAnalyticsViewRequest) returns (GetDashboardAnalyticsViewResponse){
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
+  rpc GetTrace(GetTraceRequest) returns (GetTraceResponse) {}
+}

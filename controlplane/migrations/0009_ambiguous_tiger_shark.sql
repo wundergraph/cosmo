@@ -1,0 +1,1 @@
+ALTER TABLE "federated_graphs" ADD COLUMN "routing_url" text NOT NULL;

@@ -1,0 +1,7 @@
+target
+.parcel-cache
+*.iml
+*.log
+src/main/resources/theme/cosmo/login/resources/dist
+dist
+.DS_Store

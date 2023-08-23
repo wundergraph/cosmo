@@ -1,0 +1,61 @@
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: '0.0.0.0:4318'
+        auth:
+          authenticator: jwt
+
+processors:
+  attributes/from_auth_context:
+    actions:
+      - key: wg.organization.id
+        from_context: auth.organization_id
+        action: insert
+      - key: wg.federated_graph.id
+        from_context: auth.federated_graph_id
+        action: insert
+  batch:
+    send_batch_size: 100000
+    timeout: 5s
+  memory_limiter:
+    # 80% of maximum memory up to 2G
+    limit_mib: 1500
+    # 25% of limit up to 2G
+    spike_limit_mib: 512
+    check_interval: 5s
+
+exporters:
+  clickhouse:
+    endpoint: ${CLICKHOUSE_ENDPOINT}
+    timeout: 10s
+    database: cosmo
+    traces_table_name: otel_traces
+    metrics_table_name: otel_metrics
+    ttl_days: 30
+    sending_queue:
+      queue_size: 5000
+    retry_on_failure:
+      enabled: true
+      initial_interval: 10s
+      max_interval: 30s
+      max_elapsed_time: 300s
+
+extensions:
+  health_check:
+    path: /health
+    endpoint: 0.0.0.0:13133
+  jwt:
+    secret: ${OTEL_INGEST_JWT_SECRET}
+
+service:
+  extensions: [health_check, jwt]
+  pipelines:
+    # metrics:
+    #   receivers: [otlp]
+    #   exporters: [clickhouse]
+    traces:
+      receivers: [otlp]
+      # Order is important here. Otherwise, the attributes processor will not be able to read the attributes from the auth context.
+      processors: [attributes/from_auth_context, memory_limiter, batch]
+      exporters: [clickhouse]

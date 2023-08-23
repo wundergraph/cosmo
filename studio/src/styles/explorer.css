@@ -1,0 +1,31 @@
+.graphiql-container,
+.CodeMirror-info,
+.CodeMirror-lint-tooltip,
+.graphiql-dialog,
+.graphiql-dialog-overlay,
+.graphiql-tooltip,
+[data-radix-popper-content-wrapper] {
+  --color-base: var(--background);
+}
+
+@media (prefers-color-scheme: dark) {
+  body:not(.graphiql-light) .graphiql-container,
+  body:not(.graphiql-light) .CodeMirror-info,
+  body:not(.graphiql-light) .CodeMirror-lint-tooltip,
+  body:not(.graphiql-light) .graphiql-dialog,
+  body:not(.graphiql-light) .graphiql-dialog-overlay,
+  body:not(.graphiql-light) .graphiql-tooltip,
+  body:not(.graphiql-light) [data-radix-popper-content-wrapper] {
+    --color-base: var(--background);
+  }
+}
+
+body.graphiql-dark .graphiql-container,
+body.graphiql-dark .CodeMirror-info,
+body.graphiql-dark .CodeMirror-lint-tooltip,
+body.graphiql-dark .graphiql-dialog,
+body.graphiql-dark .graphiql-dialog-overlay,
+body.graphiql-dark .graphiql-tooltip,
+body.graphiql-dark [data-radix-popper-content-wrapper] {
+  --color-base: var(--background);
+}

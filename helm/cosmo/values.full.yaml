@@ -1,0 +1,139 @@
+# Please, note that this will override the parameters, including dependencies, configured to use the global value
+global:
+  helmTests:
+    enabled: false
+
+  seed:
+    enabled: true
+    apiKey: "cosmo-669b576aaadc10ee1ae81d9193425705"
+    userEmail: "foo@wundergraph.com"
+    userPassword: "bar"
+    firstName: "Foo"
+    lastName: "Bar"
+    organizationName: "WunderGraph"
+    organizationSlug: "wundergraph"
+
+  studio:
+    enabled: true
+    port: 3000
+    webUrl: "http://studio.wundergraph.local"
+
+  router:
+    enabled: false
+
+  clickhouse:
+    enabled: true
+
+  postgresql:
+    enabled: true
+
+  controlplane:
+    enabled: true
+    port: 3001
+    webUrl: "http://controlplane.wundergraph.local"
+    # The following secret is used to sign cookie and JWT tokens
+    jwtSecret: "1YQ4YR18WWNEWCLUIUKN5WVQ31HWDHEM"
+
+  otelcollector:
+    enabled: true
+    port: 4318
+    webUrl: "http://otelcollector.wundergraph.local"
+
+  keycloak:
+    enabled: true
+    # Shared configuration e.g. seed, controlplane
+    realm: "cosmo"
+    webUrl: "http://keycloak.wundergraph.local"
+    apiUrl: "http://keycloak.wundergraph.local"
+    clientId: "studio"
+    adminUser: "admin"
+    adminPassword: "changeme"
+    # Needed when running keycloak
+    port: 8080
+    database: "keycloak"
+    databaseSchema: "public"
+    databaseUsername: "postgres"
+    databasePassword: "changeme"
+
+# Overall Ingress for the Cosmo Platform
+ingress:
+  enabled: true
+  annotations: {}
+  # className: ""
+  # tls: []
+  #  - secretName: chart-example-tls
+  #    hosts:
+  #      - chart-example.local
+
+# Cosmo Controlplane
+controlplane:
+  configuration:
+    logLevel: "info"
+    allowedOrigins:
+      - "http://studio.wundergraph.local"
+    debugSQL: false
+    authRedirectUri: "http://controlplane.wundergraph.local/v1/auth/callback"
+    databaseUrl: "postgres://postgres:changeme@cosmo-postgresql:5432/controlplane"
+    clickhouseDsn: "http://default:changeme@cosmo-clickhouse:8123?database=cosmo"
+    postgres:
+      database: "controlplane"
+    clickhouse:
+      database: "cosmo"
+
+# Cosmo Router
+router:
+  configuration:
+    federatedGraphName: "production"
+    # You need to run `wgc federated-graph create-token production` to generate a token
+    graphApiToken: "changeme"
+    logLevel: "debug"
+
+# Cosmo Open Telemetry Collector
+otelcollector:
+  configuration:
+    clickhouseDsn: "http://default:changeme@cosmo-clickhouse:8123?database=cosmo&dial_timeout=15s&compress=lz4"
+
+# The following configuration enables the stateful services of the Cosmo Platform
+# The charts aren't production ready and are intended for development and testing purposes
+# It is highly recommended to use a managed service in production environments
+# For more information, please refer to the README.md
+
+keycloak:
+  service:
+    http: 8080
+
+clickhouse:
+  configuration:
+    database: "cosmo"
+    auth:
+      username: "default"
+      password: "changeme"
+
+# Postgres for the Cosmo Controlplane
+# https://artifacthub.io/packages/helm/bitnami/postgresql
+postgresql:
+  commonAnnotations:
+    # Support for k14s.io. This annotation will form a group to coordinate deployments with kapp.
+    kapp.k14s.io/change-group: "cosmo.apps.postgresql.wundergraph.com/deployment"
+  service:
+    ports:
+      postgres: 5432
+  auth:
+    # Primary database, automatically created by the chart
+    database: "controlplane"
+    username: "postgres"
+    password: "changeme"
+  primary:
+    persistence:
+      size: 2Gi
+      annotations:
+        # Support for k14s.io. This annotation will allow kapp to delete the PVCs.
+        kapp.k14s.io/owned-for-deletion: ""
+    initdb:
+      # Credentials of the database user.
+      user: "postgres"
+      password: "changeme"
+      scripts:
+        01_init_keycloak.sql: |
+          -- Create the database for Keycloak
+          CREATE DATABASE "keycloak";

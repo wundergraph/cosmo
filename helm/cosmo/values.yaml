@@ -1,0 +1,60 @@
+# Please, note that this will override the parameters, including dependencies, configured to use the global value
+global:
+  helmTests:
+    enabled: false
+
+  seed:
+    enabled: false
+    apiKey: "cosmo-669b576aaadc10ee1ae81d9193425705"
+    userEmail: "foo@wundergraph.com"
+    userName: "foo"
+    userPassword: "bar"
+    firstName: "Foo"
+    lastName: "Bar"
+    organizationName: "WunderGraph"
+    organizationSlug: "wundergraph"
+
+  studio:
+    enabled: false
+    port: 3000
+    webUrl: "http://studio.wundergraph.local"
+
+  router:
+    enabled: false
+
+  clickhouse:
+    enabled: false
+
+  postgresql:
+    enabled: false
+
+  controlplane:
+    enabled: false
+    port: 3001
+    webUrl: "http://controlplane.wundergraph.local"
+    # The following secret is used to sign cookie and JWT tokens
+    jwtSecret: "1YQ4YR18WWNEWCLUIUKN5WVQ31HWDHEM"
+
+  otelcollector:
+    enabled: false
+    port: 4318
+    webUrl: "http://otelcollector.wundergraph.local"
+
+  keycloak:
+    enabled: false
+    realm: "cosmo"
+    adminUrl: "http://keycloak.wundergraph.local"
+    webUrl: "http://keycloak.wundergraph.local"
+    port: 8080
+    adminUser: "admin"
+    adminPassword: "changeme"
+
+# Overall Ingress for the Cosmo Platform
+ingress:
+  enabled: false
+  # annotations: {}
+  # className: ""
+  # tls: []
+  #  - secretName: chart-example-tls
+  #    hosts:
+  #      - chart-example.local

@@ -1,0 +1,21 @@
+name: "Setup Go"
+description: "This action install go and cache modules and build dependencies"
+inputs:
+  go-version:
+    description: "The go version to install"
+    default: "1.20"
+    required: false
+  working-directory:
+    description: "The working directory"
+    required: false
+  gh-engine-repo-token:
+    description: "Temporary token for private engine"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/setup-go@v4
+      with:
+        go-version: ${{ inputs.go-version }}
+        cache-dependency-path: ${{ inputs.cache-dependency-path }}

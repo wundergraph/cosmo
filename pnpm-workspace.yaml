@@ -1,0 +1,8 @@
+packages:
+  - cli
+  - composition
+  - controlplane
+  - proto
+  - shared
+  - studio
+  - connect

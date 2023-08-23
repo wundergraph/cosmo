@@ -1,0 +1,1 @@
+ALTER TABLE "subgraphs" ALTER COLUMN "routing_url" SET NOT NULL;

@@ -1,0 +1,67 @@
+name: Controlplane CI
+on:
+  push:
+    branches:
+      - main
+    tags-ignore:
+      - "**"
+    paths:
+      - "controlplane/**/*"
+      - "connect/**/*"
+      - "composition/**/*"
+      - ".github/workflows/cp-ci.yaml"
+
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "controlplane/**/*"
+      - "connect/**/*"
+      - "composition/**/*"
+      - ".github/workflows/cp-ci.yaml"
+
+concurrency:
+  group: ${{github.workflow}}-${{github.head_ref}}
+  cancel-in-progress: true
+
+env:
+  CI: true
+
+jobs:
+  build_test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        # Docker Hub image
+        image: postgres:14
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: changeme
+        # Set health checks to wait until postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - uses: ./.github/actions/node
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate code
+        run: pnpm buf generate --template buf.ts.gen.yaml
+
+      - name: Build
+        run: pnpm run --filter ./controlplane --filter ./connect --filter ./shared --filter ./composition build
+
+      - name: Test
+        run: pnpm run --filter controlplane test
+        env:
+          DB_URL: "postgresql://postgres:changeme@localhost:5432/controlplane"

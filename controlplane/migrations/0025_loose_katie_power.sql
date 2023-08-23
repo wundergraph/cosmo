@@ -1,0 +1,1 @@
+DROP INDEX IF EXISTS "label_idx";

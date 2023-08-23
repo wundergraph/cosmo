@@ -1,0 +1,14 @@
+enum ProductNames {
+  CLOUD
+  COSMO
+  ENGINE
+  FINANCE
+  HUMAN_RESOURCES
+  MARKETING
+  SDK
+}
+
+type Employee @key(fields: "id") {
+  id: Int!
+  products: [ProductNames!]!
+}
