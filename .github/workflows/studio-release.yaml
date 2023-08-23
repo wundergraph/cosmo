@@ -1,37 +1,17 @@
-name: Build and publish Docker images
+name: Studio release
 
 on:
   push:
-    branches:
-      - 'main'
-    tags-ignore:
-      - '**'
+    tags:
+      - 'studio@*'
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  CONTAINER_NAME: controlplane
 
 jobs:
   build-and-push-image:
-    strategy:
-      matrix:
-        include:
-          - container_name: controlplane
-            dockerfile: controlplane/Dockerfile
-            context_path: .
-          - container_name: router
-            dockerfile: router/Dockerfile
-            context_path: .
-          - container_name: studio
-            dockerfile: studio/Dockerfile
-            context_path: .
-          - container_name: keycloak
-            dockerfile: keycloak/Dockerfile
-            context_path: keycloak
-          - container_name: otelcollector
-            dockerfile: otelcollector/Dockerfile
-            context_path: otelcollector
-
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -53,10 +33,9 @@ jobs:
         uses: docker/metadata-action@v4
         with:
           images: |
-            ${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.container_name }}
+            ${{ env.REGISTRY }}/${{ github.repository }}/${{ env.CONTAINER_NAME }}
           tags: |
             type=ref,event=branch
-            type=ref,event=pr
             type=sha
             # set latest tag for default branch
             type=raw,value=latest,enable={{is_default_branch}}
@@ -70,9 +49,9 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           push: true
-          file: ${{ matrix.dockerfile }}
-          context: ${{ matrix.context_path }}
+          file: controlplane/Dockerfile
+          context: .
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.container_name }}:buildcache
-          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.container_name }}:buildcache,mode=max
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ github.repository }}/${{ env.container_name }}:buildcache
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ github.repository }}/${{ env.container_name }}:buildcache,mode=max
