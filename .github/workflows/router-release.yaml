@@ -1,15 +1,15 @@
-name: Otelcollector release
+name: Router release
 
 on:
   push:
     branches: [main]
     tags:
-      - 'otelcollector@*'
+      - 'router@*'
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
-  CONTAINER_NAME: otelcollector
+  CONTAINER_NAME: router
 
 jobs:
   build-and-push-image:
