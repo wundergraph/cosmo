@@ -43,7 +43,7 @@
     "axios": "^1.4.0",
     "cookie": "^0.5.0",
     "dotenv": "^16.3.1",
-    "drizzle-orm": "^0.28.1",
+    "drizzle-orm": "^0.28.5",
     "fastify": "^4.21.0",
     "fastify-graceful-shutdown": "^3.5.1",
     "fastify-plugin": "^4.5.1",
