@@ -14,6 +14,6 @@ pnpm wgc subgraph create family --label team=A env=production --routing-url http
 pnpm wgc subgraph create hobbies --label team=B env=production --routing-url http://hobbies:4003/graphql
 pnpm wgc subgraph create products --label team=B env=production --routing-url http://products:4004/graphql
 
-./update-docker-demo.sh
+sh ../scripts/update-docker-demo.sh
 
 pnpm wgc federated-graph create-token production --name mytoken

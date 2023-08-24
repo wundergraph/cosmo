@@ -5,28 +5,36 @@ services:
   # Services for the demo
   employees:
     container_name: employees
-    build: ./demo/employees
+    build:
+      context: ./demo
+      dockerfile: Dockerfile.employees
     profiles:
       - subgraphs
     ports:
       - '4001:4001'
   family:
     container_name: family
-    build: ./demo/family
+    build:
+      context: ./demo
+      dockerfile: Dockerfile.family
     profiles:
       - subgraphs
     ports:
       - '4002:4002'
   hobbies:
     container_name: hobbies
-    build: ./demo/hobbies
+    build:
+      context: ./demo
+      dockerfile: Dockerfile.hobbies
     profiles:
       - subgraphs
     ports:
       - '4003:4003'
   products:
     container_name: products
-    build: ./demo/products
+    build:
+      context: ./demo
+      dockerfile: Dockerfile.products
     profiles:
       - subgraphs
     ports:

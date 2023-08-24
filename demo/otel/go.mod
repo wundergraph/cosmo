@@ -1,4 +1,4 @@
-module github.com/wundergraph/comso/demo/otel
+module github.com/wundergraph/cosmo/demo/otel
 
 go 1.20
 

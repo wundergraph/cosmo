@@ -71,22 +71,18 @@ dc-stack-build:
 	docker compose --file docker-compose.cosmo.yml up --build --remove-orphans --detach
 
 full-demo-up:
-	cd demo && find . -type d -depth 1 -not -iname otel -exec cp -fr otel {} \;
 	docker compose -f docker-compose.full.yml --profile default up --build --remove-orphans --detach
 
 full-demo-down:
-	cd demo && find . -type d -depth 1 -not -iname otel -exec rm -fr {}/otel \;
 	docker compose -f docker-compose.full.yml --profile default --profile router --profile subgraphs down --remove-orphans -v
 
 dc-federation-demo:
 	docker compose -f docker-compose.full.yml --profile default --profile router --profile subgraphs up --remove-orphans --detach
 
 dc-subgraphs-demo:
-	cd demo && find . -type d -depth 1 -not -iname otel -exec cp -fr otel {} \;
 	docker compose -f docker-compose.full.yml --profile subgraphs up --remove-orphans --detach
 
 dc-subgraphs-demo-down:
-	cd demo && find . -type d -depth 1 -not -iname otel -exec rm -fr {}/otel \;
 	docker compose -f docker-compose.full.yml --profile subgraphs down --remove-orphans
 
 docker-build-local:
