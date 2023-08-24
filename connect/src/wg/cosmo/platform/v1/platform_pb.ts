@@ -3867,6 +3867,80 @@ export class DeleteAPIKeyResponse extends Message<DeleteAPIKeyResponse> {
 }
 
 /**
+ * @generated from message wg.cosmo.platform.v1.RemoveInvitationRequest
+ */
+export class RemoveInvitationRequest extends Message<RemoveInvitationRequest> {
+  /**
+   * @generated from field: string email = 1;
+   */
+  email = "";
+
+  constructor(data?: PartialMessage<RemoveInvitationRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.RemoveInvitationRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "email", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RemoveInvitationRequest {
+    return new RemoveInvitationRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RemoveInvitationRequest {
+    return new RemoveInvitationRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RemoveInvitationRequest {
+    return new RemoveInvitationRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RemoveInvitationRequest | PlainMessage<RemoveInvitationRequest> | undefined, b: RemoveInvitationRequest | PlainMessage<RemoveInvitationRequest> | undefined): boolean {
+    return proto3.util.equals(RemoveInvitationRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.RemoveInvitationResponse
+ */
+export class RemoveInvitationResponse extends Message<RemoveInvitationResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  constructor(data?: PartialMessage<RemoveInvitationResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.RemoveInvitationResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RemoveInvitationResponse {
+    return new RemoveInvitationResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RemoveInvitationResponse {
+    return new RemoveInvitationResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RemoveInvitationResponse {
+    return new RemoveInvitationResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RemoveInvitationResponse | PlainMessage<RemoveInvitationResponse> | undefined, b: RemoveInvitationResponse | PlainMessage<RemoveInvitationResponse> | undefined): boolean {
+    return proto3.util.equals(RemoveInvitationResponse, a, b);
+  }
+}
+
+/**
  * @generated from message wg.cosmo.platform.v1.SpanAttributes
  */
 export class SpanAttributes extends Message<SpanAttributes> {
