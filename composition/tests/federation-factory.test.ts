@@ -53,10 +53,9 @@ describe('FederationFactory tests', () => {
   });
 
   test('that subgraphs are federated #1', () => {
-    const result = federateSubgraphs([pandas, products, reviews, users]);
-    expect(result.errors).toBeUndefined();
-    const federatedGraph = result.federatedGraphAST!;
-    expect(documentNodeToNormalizedString(federatedGraph)).toBe(
+    const { errors, federationResult } = federateSubgraphs([pandas, products, reviews, users]);
+    expect(errors).toBeUndefined();
+    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
       normalizeString(
         versionTwoBaseSchema +
           `
@@ -66,21 +65,6 @@ describe('FederationFactory tests', () => {
 
       interface SkuItf {
         sku: String
-      }
-
-      interface ProductItf implements SkuItf {
-        id: ID!
-        sku: String
-        name: String
-        package: String
-        variation: ProductVariation
-        dimensions: ProductDimension
-        createdBy: User
-        hidden: String
-        oldField: String
-        reviewsCount: Int!
-        reviewsScore: Float!
-        reviews: [Review!]!
       }
       
       type Query {
@@ -94,21 +78,6 @@ describe('FederationFactory tests', () => {
       type Panda {
         name: ID!
         favoriteFood: String
-      }
-
-      type Product implements ProductItf & SkuItf {
-        id: ID!
-        sku: String
-        name: String
-        package: String
-        variation: ProductVariation
-        dimensions: ProductDimension
-        createdBy: User
-        hidden: String
-        reviewsScore: Float!
-        oldField: String
-        reviewsCount: Int!
-        reviews: [Review!]!
       }
 
       enum ShippingClass {
@@ -136,16 +105,45 @@ describe('FederationFactory tests', () => {
         id: Int!
         body: String!
       }
+
+      interface ProductItf implements SkuItf {
+        id: ID!
+        sku: String
+        name: String
+        package: String
+        variation: ProductVariation
+        dimensions: ProductDimension
+        createdBy: User
+        hidden: String
+        oldField: String
+        reviewsCount: Int!
+        reviewsScore: Float!
+        reviews: [Review!]!
+      }
+      
+      type Product implements ProductItf & SkuItf {
+        id: ID!
+        sku: String
+        name: String
+        package: String
+        variation: ProductVariation
+        dimensions: ProductDimension
+        createdBy: User
+        hidden: String
+        reviewsScore: Float!
+        oldField: String
+        reviewsCount: Int!
+        reviews: [Review!]!
+      }
     `,
       ),
     );
   });
 
   test('that subgraphs are federated #2', () => {
-    const result = federateSubgraphs([subgraphA, subgraphB]);
-    expect(result.errors).toBeUndefined();
-    const federatedGraph = result.federatedGraphAST!;
-    expect(documentNodeToNormalizedString(federatedGraph)).toBe(
+    const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphB]);
+    expect(errors).toBeUndefined();
+    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
       normalizeString(
         versionTwoBaseSchema +
           `
@@ -183,9 +181,9 @@ describe('FederationFactory tests', () => {
   });
 
   test('that root types are promoted', () => {
-    const { errors, federatedGraphAST } = federateSubgraphs([subgraphE]);
+    const { errors, federationResult } = federateSubgraphs([subgraphE]);
     expect(errors).toBeUndefined();
-    expect(documentNodeToNormalizedString(federatedGraphAST!)).toBe(
+    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
       normalizeString(
         versionOneBaseSchema +
           `
@@ -198,9 +196,9 @@ describe('FederationFactory tests', () => {
   });
 
   test('that custom root types are renamed', () => {
-    const { errors, federatedGraphAST } = federateSubgraphs([subgraphF]);
+    const { errors, federationResult } = federateSubgraphs([subgraphF]);
     expect(errors).toBeUndefined();
-    expect(documentNodeToNormalizedString(federatedGraphAST!)).toBe(
+    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
       normalizeString(
         versionOneBaseSchema +
           `

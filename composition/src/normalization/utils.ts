@@ -533,3 +533,8 @@ export function getDefinedArgumentsForDirective(
   }
   return definedArguments;
 }
+
+export type InputValidationContainer = {
+  hasUnhandledError: boolean;
+  typeString: string;
+};

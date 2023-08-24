@@ -7,9 +7,9 @@ describe('Enum federation tests', () => {
   const parentName = 'Instruction';
 
   test('that enums merge by union if unused in inputs or arguments', () => {
-    const result = federateSubgraphs([subgraphA, subgraphB]);
-    expect(result.errors).toBeUndefined();
-    const federatedGraph = result.federatedGraphAST!;
+    const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphB]);
+    expect(errors).toBeUndefined();
+    const federatedGraph = federationResult!.federatedGraphAST;
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
         versionOneBaseSchema +
@@ -26,9 +26,9 @@ describe('Enum federation tests', () => {
   });
 
   test('that enums merge by intersection if used as an input', () => {
-    const result = federateSubgraphs([subgraphA, subgraphC]);
-    expect(result.errors).toBeUndefined();
-    const federatedGraph = result.federatedGraphAST!;
+    const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphC]);
+    expect(errors).toBeUndefined();
+    const federatedGraph = federationResult!.federatedGraphAST;
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
         versionOneBaseSchema +
@@ -47,9 +47,9 @@ describe('Enum federation tests', () => {
   });
 
   test('that enums merge by intersection if used as an argument', () => {
-    const result = federateSubgraphs([subgraphA, subgraphF]);
-    expect(result.errors).toBeUndefined();
-    const federatedGraph = result.federatedGraphAST!;
+    const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphF]);
+    expect(errors).toBeUndefined();
+    const federatedGraph = federationResult!.federatedGraphAST;
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
         versionOneBaseSchema +
@@ -67,9 +67,9 @@ describe('Enum federation tests', () => {
   });
 
   test('that enums must be consistent if used as both an input and output', () => {
-    const result = federateSubgraphs([subgraphC, subgraphD]);
-    expect(result.errors).toBeUndefined();
-    const federatedGraph = result.federatedGraphAST!;
+    const { errors, federationResult } = federateSubgraphs([subgraphC, subgraphD]);
+    expect(errors).toBeUndefined();
+    const federatedGraph = federationResult!.federatedGraphAST;
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
         versionOneBaseSchema +

@@ -1,8 +1,13 @@
 import {
+  duplicateArgumentsError,
   federateSubgraphs,
   incompatibleArgumentDefaultValueError,
   incompatibleArgumentDefaultValueTypeError,
   incompatibleArgumentTypesError,
+  invalidArgumentsError,
+  InvalidRequiredArgument,
+  invalidRequiredArgumentsError,
+  normalizeSubgraphFromString,
   Subgraph,
 } from '../src';
 import { Kind, parse } from 'graphql';
@@ -15,13 +20,12 @@ describe('Argument federation tests', () => {
   const childName = 'field';
 
   test('that equal arguments merge', () => {
-    const result = federateSubgraphs([
+    const { errors, federationResult } = federateSubgraphs([
       subgraphWithArgument('subgraph-a', 'String'),
       subgraphWithArgument('subgraph-b', 'String'),
     ]);
-    expect(result.errors).toBeUndefined();
-    const federatedGraph = result.federatedGraphAST!;
-    expect(documentNodeToNormalizedString(federatedGraph)).toBe(
+    expect(errors).toBeUndefined();
+    expect(documentNodeToNormalizedString(federationResult.federatedGraphAST)).toBe(
       normalizeString(
         versionTwoBaseSchema +
           `type Object {
@@ -33,13 +37,12 @@ describe('Argument federation tests', () => {
   });
 
   test('that arguments merge into their most restrictive form #1', () => {
-    const result = federateSubgraphs([
+    const { errors, federationResult } = federateSubgraphs([
       subgraphWithArgument('subgraph-a', 'Float!'),
       subgraphWithArgument('subgraph-b', 'Float'),
     ]);
-    expect(result.errors).toBeUndefined();
-    const federatedGraph = result.federatedGraphAST!;
-    expect(documentNodeToNormalizedString(federatedGraph)).toBe(
+    expect(errors).toBeUndefined();
+    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
       normalizeString(
         versionTwoBaseSchema +
           `type Object {
@@ -51,13 +54,12 @@ describe('Argument federation tests', () => {
   });
 
   test('that if not all arguments have a default value, the default value is ignored', () => {
-    const result = federateSubgraphs([
+    const { errors, federationResult } = federateSubgraphs([
       subgraphWithArgument('subgraph-a', 'Int'),
       subgraphWithArgumentAndDefaultValue('subgraph-b', 'Int', '1337'),
     ]);
-    expect(result.errors).toBeUndefined();
-    const federatedGraph = result.federatedGraphAST!;
-    expect(documentNodeToNormalizedString(federatedGraph)).toBe(
+    expect(errors).toBeUndefined();
+    expect(documentNodeToNormalizedString(federationResult.federatedGraphAST)).toBe(
       normalizeString(
         versionTwoBaseSchema +
           `type Object {
@@ -69,13 +71,12 @@ describe('Argument federation tests', () => {
   });
 
   test('that if all arguments have the same default value, the default value is included', () => {
-    const result = federateSubgraphs([
+    const { errors, federationResult } = federateSubgraphs([
       subgraphWithArgumentAndDefaultValue('subgraph-a', 'Boolean', 'false'),
       subgraphWithArgumentAndDefaultValue('subgraph-b', 'Boolean', 'false'),
     ]);
-    expect(result.errors).toBeUndefined();
-    const federatedGraph = result.federatedGraphAST!;
-    expect(documentNodeToNormalizedString(federatedGraph)).toBe(
+    expect(errors).toBeUndefined();
+    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
       normalizeString(
         versionTwoBaseSchema +
           `type Object {
@@ -87,12 +88,12 @@ describe('Argument federation tests', () => {
   });
 
   test('that if arguments of the same name are not the same type, an error is returned`', () => {
-    const result = federateSubgraphs([
+    const { errors } = federateSubgraphs([
       subgraphWithArgument('subgraph-a', 'String'),
       subgraphWithArgument('subgraph-b', 'Float'),
     ]);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors![0]).deep.equal(
+    expect(errors).toHaveLength(1);
+    expect(errors![0]).toStrictEqual(
       incompatibleArgumentTypesError(argName, parentName, childName, 'String', 'Float'),
     );
   });
@@ -100,39 +101,123 @@ describe('Argument federation tests', () => {
   test('that if arguments have different string-converted default values, an error is returned`', () => {
     const expectedType = '1';
     const actualType = '2';
-    const result = federateSubgraphs([
+    const { errors } = federateSubgraphs([
       subgraphWithArgumentAndDefaultValue('subgraph-a', 'Int', expectedType),
       subgraphWithArgumentAndDefaultValue('subgraph-b', 'Int', actualType),
     ]);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors![0]).deep.equal(
+    expect(errors).toHaveLength(1);
+    expect(errors![0]).toStrictEqual(
       incompatibleArgumentDefaultValueError(argName, parentName, childName, expectedType, actualType),
     );
   });
 
   test('that if arguments have different boolean default values, an error is returned`', () => {
-    const result = federateSubgraphs([
+    const { errors } = federateSubgraphs([
       subgraphWithArgumentAndDefaultValue('subgraph-a', 'Boolean', 'true'),
       subgraphWithArgumentAndDefaultValue('subgraph-b', 'Boolean', 'false'),
     ]);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors![0]).deep.equal(
+    expect(errors).toHaveLength(1);
+    expect(errors![0]).toStrictEqual(
       incompatibleArgumentDefaultValueError(argName, parentName, childName, true, false),
     );
   });
 
   test('that if arguments have incompatible default values, an error is returned', () => {
-    const result = federateSubgraphs([
+    const { errors } = federateSubgraphs([
       subgraphWithArgumentAndDefaultValue('subgraph-a', 'Boolean', '1'),
       subgraphWithArgumentAndDefaultValue('subgraph-b', 'Boolean', 'false'),
     ]);
-    expect(result.errors).toHaveLength(2);
-    expect(result.errors![0]).deep.equal(
+    expect(errors).toHaveLength(2);
+    expect(errors![0]).toStrictEqual(
       incompatibleArgumentDefaultValueTypeError(argName, parentName, childName, Kind.INT, Kind.BOOLEAN),
     );
-    expect(result.errors![1]).deep.equal(
+    expect(errors![1]).toStrictEqual(
       incompatibleArgumentDefaultValueError(argName, parentName, childName, '1', false),
     );
+  });
+
+  test('that if an argument is optional but not included in all subgraphs, it is not present in the federated graph', () => {
+    const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphB]);
+    expect(errors).toBeUndefined();
+    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST!)).toBe(
+      normalizeString(versionTwoBaseSchema + `
+      interface Interface {
+        field(requiredInAll: Int!, requiredOrOptionalInAll: String!, optionalInAll: Boolean): String
+      }
+    
+      type Object implements Interface {
+        field(requiredInAll: Int!, requiredOrOptionalInAll: String!, optionalInAll: Boolean): String
+      }
+    `,
+      ),
+    );
+  });
+
+  test('that if a required argument is not defined in all definitions of a field, an error is returned', () => {
+    const { errors } = federateSubgraphs([subgraphA, subgraphC]);
+    expect(errors).toBeDefined();
+    expect(errors).toHaveLength(2);
+    const errorArrayOne: InvalidRequiredArgument[] = [{
+      argumentName: 'requiredInAll',
+      missingSubgraphs: ['subgraph-c'],
+      requiredSubgraphs: ['subgraph-a'],
+    }, {
+      argumentName: 'requiredOrOptionalInAll',
+      missingSubgraphs: ['subgraph-c'],
+      requiredSubgraphs: ['subgraph-a'],
+    }];
+    expect(errors![0]).toStrictEqual(invalidRequiredArgumentsError('Interface.field', errorArrayOne));
+    const errorArrayTwo: InvalidRequiredArgument[] = [{
+      argumentName: 'requiredInAll',
+      missingSubgraphs: ['subgraph-c'],
+      requiredSubgraphs: ['subgraph-a'],
+    }, {
+      argumentName: 'requiredOrOptionalInAll',
+      missingSubgraphs: ['subgraph-c'],
+      requiredSubgraphs: ['subgraph-a'],
+    }];
+    expect(errors![1]).toStrictEqual(invalidRequiredArgumentsError('Object.field', errorArrayTwo));
+  });
+
+  test('that if an argument is not a valid input type or defined more than once, an error is returned', () => {
+    const { errors } = normalizeSubgraphFromString(`
+      enum Enum {
+        A
+        B
+        C
+      }
+      
+      input Input {
+        a: String!
+        b: Int!
+        c: Float!
+      }
+      
+      type AnotherObject {
+        a: String!
+        b: Int!
+        c: Float!
+      }
+      
+      type Object {
+        field(argOne: Enum!, argTwo: Input!, argThree: AnotherObject! argThree: String!, argOne: Enum!): String!
+      }
+    `);
+    expect(errors).toBeDefined();
+    expect(errors).toHaveLength(2);
+    expect(errors![0]).toStrictEqual(duplicateArgumentsError(
+      'Object.field',
+      ['argThree', 'argOne'],
+    ));
+    expect(errors![1]).toStrictEqual(invalidArgumentsError(
+      'Object.field',
+      [{
+        argumentName: 'argThree',
+        namedType: 'AnotherObject',
+        typeName: 'AnotherObject!',
+        typeString: 'object',
+      }],
+    ));
   });
 });
 
@@ -155,3 +240,45 @@ const subgraphWithArgumentAndDefaultValue = (name: string, typeName: string, def
     }
   `),
 });
+
+const subgraphA = {
+  name: 'subgraph-a',
+  url: '',
+  definitions: parse(`
+    interface Interface {
+      field(requiredInAll: Int!, requiredOrOptionalInAll: String!, optionalInAll: Boolean, optionalInSome: Float): String
+    }
+    
+    type Object implements Interface @shareable {
+      field(requiredInAll: Int!, requiredOrOptionalInAll: String!, optionalInAll: Boolean, optionalInSome: Float): String
+    }
+  `),
+};
+
+const subgraphB = {
+  name: 'subgraph-b',
+  url: '',
+  definitions: parse(`
+    interface Interface {
+      field(requiredInAll: Int!, requiredOrOptionalInAll: String, optionalInAll: Boolean): String
+    }
+    
+    type Object implements Interface @shareable {
+      field(requiredInAll: Int!, requiredOrOptionalInAll: String, optionalInAll: Boolean): String
+    }
+  `),
+};
+
+const subgraphC = {
+  name: 'subgraph-c',
+  url: '',
+  definitions: parse(`
+    interface Interface {
+      field(optionalInAll: Boolean): String
+    }
+    
+    type Object implements Interface @shareable {
+      field(optionalInAll: Boolean): String
+    }
+  `),
+};

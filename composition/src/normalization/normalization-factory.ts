@@ -46,6 +46,7 @@ import {
   getDirectiveDefinitionArgumentSets,
   inputObjectContainerToNode,
   InputObjectExtensionContainer,
+  InputValidationContainer,
   InputValueContainer,
   ObjectExtensionContainer,
   ObjectLikeContainer,
@@ -75,11 +76,13 @@ import {
   getEntriesNotInHashSet,
   getOrThrowError,
   ImplementationErrors,
+  InvalidArgument,
   InvalidFieldImplementation,
   isTypeValidImplementation,
   kindToTypeString,
 } from '../utils/utils';
 import {
+  duplicateArgumentsError,
   duplicateDirectiveDefinitionError,
   duplicateEnumValueDefinitionError,
   duplicateFieldDefinitionError,
@@ -92,6 +95,7 @@ import {
   incompatibleExtensionError,
   incompatibleExtensionKindsError,
   incompatibleParentKindFatalError,
+  invalidArgumentsError,
   invalidDirectiveError,
   invalidDirectiveLocationErrorMessage,
   invalidKeyDirectiveArgumentErrorMessage,
@@ -152,6 +156,7 @@ export class NormalizationFactory {
   operationTypeNames = new Map<string, OperationTypeNode>();
   parents: ParentMap = new Map<string, ParentContainer>();
   parentTypeName = '';
+  parentsWithChildArguments = new Set<string>();
   extensions: ExtensionMap = new Map<string, ExtensionContainer>();
   isChild = false;
   isCurrentParentExtension = false;
@@ -172,23 +177,61 @@ export class NormalizationFactory {
     };
   }
 
+  validateInputNamedType(namedType: string): InputValidationContainer {
+    if (BASE_SCALARS.has(namedType)) {
+      return { hasUnhandledError: false, typeString: '' };
+    }
+    const parentContainer = this.parents.get(namedType);
+    if (!parentContainer) {
+      this.errors.push(undefinedTypeError(namedType));
+      return { hasUnhandledError: false, typeString: '' };
+    }
+    switch (parentContainer.kind) {
+      case Kind.ENUM_TYPE_DEFINITION:
+      case Kind.INPUT_OBJECT_TYPE_DEFINITION:
+      case Kind.SCALAR_TYPE_DEFINITION:
+        return { hasUnhandledError: false, typeString: '' };
+      default:
+        return { hasUnhandledError: true, typeString: kindToTypeString(parentContainer.kind) };
+    }
+  }
+
   extractArguments(
     node: FieldDefinitionNode,
-    map: Map<string, InputValueDefinitionNode>,
+    argumentByName: Map<string, InputValueDefinitionNode>,
+    fieldPath: string,
   ): Map<string, InputValueDefinitionNode> {
     if (!node.arguments) {
-      return map;
+      return argumentByName;
     }
+    this.parentsWithChildArguments.add(this.parentTypeName);
+    const duplicatedArguments = new Set<string>();
     for (const argumentNode of node.arguments) {
       const argumentName = argumentNode.name.value;
-      if (map.has(argumentName)) {
-        // TODO
-        this.errors.push(new Error('duplicate argument'));
+      if (argumentByName.has(argumentName)) {
+        duplicatedArguments.add(argumentName);
         continue;
       }
-      map.set(argumentName, argumentNode);
+      argumentByName.set(argumentName, argumentNode);
     }
-    return map;
+    if (duplicatedArguments.size > 0) {
+      this.errors.push(duplicateArgumentsError(fieldPath, [...duplicatedArguments]));
+    }
+    return argumentByName;
+  }
+
+  validateArguments(fieldContainer: FieldContainer, fieldPath: string){
+    const invalidArguments: InvalidArgument[] = [];
+    for (const [argumentName, argumentNode] of fieldContainer.arguments) {
+      const namedType = getNamedTypeForChild(fieldPath + `(${argumentName}...)`, argumentNode.type);
+      const { hasUnhandledError, typeString } = this.validateInputNamedType(namedType)
+      if (hasUnhandledError) {
+        invalidArguments.push({ argumentName, namedType, typeString, typeName: printTypeNode(argumentNode.type) });
+      }
+    }
+    if (invalidArguments.length > 0) {
+      this.errors.push(invalidArgumentsError(fieldPath, invalidArguments));
+    }
   }
 
   extractDirectives(
@@ -688,7 +731,7 @@ export class NormalizationFactory {
             return;
           }
           parent.fields.set(name, {
-            arguments: factory.extractArguments(node, new Map<string, InputValueDefinitionNode>),
+            arguments: factory.extractArguments(node, new Map<string, InputValueDefinitionNode>(), fieldPath),
             directives: factory.extractDirectives(node, new Map<string, ConstDirectiveNode[]>()),
             name,
             node,
@@ -1053,6 +1096,9 @@ export class NormalizationFactory {
         case Kind.OBJECT_TYPE_DEFINITION:
           const objectLikeExtension = extension as ObjectLikeExtensionContainer;
           for (const [fieldName, fieldContainer] of objectLikeExtension.fields) {
+            if (fieldContainer.arguments.size > 0) {
+              this.validateArguments(fieldContainer, `${typeName}.${fieldName}`);
+            }
             if (baseType.fields.has(fieldName)) {
               this.errors.push(duplicateFieldDefinitionError(fieldName, typeName));
               continue;
@@ -1094,6 +1140,17 @@ export class NormalizationFactory {
           // intentional fallthrough
         case Kind.OBJECT_TYPE_DEFINITION:
           const entity = this.entityMap.get(typeName);
+          if (this.parentsWithChildArguments.has(typeName)) {
+            const parentContainer = getOrThrowError(this.parents, typeName);
+            if (parentContainer.kind !== Kind.OBJECT_TYPE_DEFINITION
+              && parentContainer.kind !== Kind.INTERFACE_TYPE_DEFINITION) {
+              continue;
+            }
+            for (const [fieldName, fieldContainer] of parentContainer.fields) {
+              const fieldPath = `${typeName}.${fieldName}`;
+              this.validateArguments(fieldContainer, fieldPath);
+            }
+          }
           const configurationData: ConfigurationData = {
             fieldNames: new Set<string>(),
             isRootNode: !!entity,

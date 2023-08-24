@@ -168,7 +168,7 @@ export function walkSubgraphToCollectOperationsAndFields(
         // If the operation returns a concrete type, upsert the field
         // This also records the appearance of this field in the current subgraph
         if (factory.graph.hasNode(fieldRootTypeName)) {
-          factory.upsertConcreteObjectLikeOperationFieldNode(
+          factory.upsertConcreteObjectLikeRootTypeFieldNode(
             fieldName, fieldRootTypeName, fieldPath, printTypeNode(node.type),
           );
           return false;
@@ -185,7 +185,7 @@ export function walkSubgraphToCollectOperationsAndFields(
           return false;
         }
         // Upsert response types and add edges from the operation to each possible concrete type for the abstract field
-        factory.upsertAbstractObjectLikeOperationFieldNode(
+        factory.upsertAbstractObjectLikeRootTypeFieldNode(
           fieldName, fieldRootTypeName, fieldPath, printTypeNode(node.type), concreteTypes
         );
         return false;

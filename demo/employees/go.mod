@@ -7,6 +7,7 @@ replace github.com/wundergraph/cosmo/demo/otel => ../otel
 require (
 	github.com/99designs/gqlgen v0.17.36
 	github.com/vektah/gqlparser/v2 v2.5.8
+	github.com/wundergraph/cosmo/demo/otel v0.0.0-00010101000000-000000000000
 )
 
 require (
@@ -25,7 +26,6 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/urfave/cli/v2 v2.25.5 // indirect
-	github.com/wundergraph/cosmo/demo/otel v0.0.0-00010101000000-000000000000 // indirect
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
 	go.opentelemetry.io/otel v1.16.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/internal/retry v1.16.0 // indirect

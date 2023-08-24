@@ -331,10 +331,8 @@ github.com/ugorji/go/codec v1.2.7/go.mod h1:WGN1fab3R1fzQlVQTkfxVtIBhWDRqOviHU95
 github.com/ugorji/go/codec v1.2.11 h1:BMaWp1Bb6fHwEtbplGBGJ498wD+LKlNSl25MjdZY4dU=
 github.com/ugorji/go/codec v1.2.11/go.mod h1:UNopzCgEMSXjBc6AOMqYvWC1ktqTAfzJZUZgYf6w6lg=
 github.com/vektah/gqlparser/v2 v2.5.1 h1:ZGu+bquAY23jsxDRcYpWjttRZrUz07LbiY77gUOHcr4=
-github.com/wundergraph/graphql-go-tools-private/v2 v2.0.0-20230817140237-3b7eeaa55339 h1:8SqW9yboYUtV6dXesM+ySG/QQilq0uq/40eatnW3+zk=
-github.com/wundergraph/graphql-go-tools-private/v2 v2.0.0-20230817140237-3b7eeaa55339/go.mod h1:jOEQFeTIDSAEWA//qrpSNjGYcCjMylvc/R/W8eM7+gY=
-github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.2.0.20230822083323-a115bc0c7af6 h1:LRQ/s+rdZhVBpOJ2wlIk7vq60VAlanbdzRGZP5ViIeE=
-github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.2.0.20230822083323-a115bc0c7af6/go.mod h1:jOEQFeTIDSAEWA//qrpSNjGYcCjMylvc/R/W8eM7+gY=
+github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.2.0.20230824165637-459cba060f80 h1:AbV7h7Fy2T9a1e74qvWOaf+3Z0J+8pzg26HUuMGNJVM=
+github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.2.0.20230824165637-459cba060f80/go.mod h1:jOEQFeTIDSAEWA//qrpSNjGYcCjMylvc/R/W8eM7+gY=
 github.com/yuin/goldmark v1.1.25/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.1.32/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=

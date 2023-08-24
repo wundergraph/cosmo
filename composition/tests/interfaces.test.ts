@@ -161,9 +161,9 @@ describe('Interface tests', () => {
 
   describe('Federation tests', () => {
     test('that interfaces merge by union', () => {
-      const result = federateSubgraphs([subgraphA, subgraphB]);
-      expect(result.errors).toBeUndefined();
-      const federatedGraph = result.federatedGraphAST!;
+      const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphB]);
+      expect(errors).toBeUndefined();
+      const federatedGraph = federationResult!.federatedGraphAST!;
       expect(documentNodeToNormalizedString(federatedGraph)).toBe(
         normalizeString(
           versionTwoBaseSchema +
@@ -192,9 +192,9 @@ describe('Interface tests', () => {
     });
 
     test('that interfaces and implementations merge by union', () => {
-      const { errors, federatedGraphAST } = federateSubgraphs([subgraphA, subgraphC]);
+      const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphC]);
       expect(errors).toBeUndefined();
-      expect(documentNodeToNormalizedString(federatedGraphAST!)).toBe(
+      expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
         normalizeString(
           versionTwoBaseSchema +
           `
@@ -220,9 +220,9 @@ describe('Interface tests', () => {
     });
 
     test('that nested interfaces merge by union', () => {
-      const { errors, federatedGraphAST} = federateSubgraphs([subgraphC, subgraphD]);
+      const { errors, federationResult } = federateSubgraphs([subgraphC, subgraphD]);
       expect(errors).toBeUndefined();
-      expect(documentNodeToNormalizedString(federatedGraphAST!)).toBe(
+      expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
         normalizeString(
           versionTwoBaseSchema + `
       interface Character {

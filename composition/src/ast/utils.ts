@@ -81,9 +81,18 @@ export type EnumValueContainer = {
 
 export type EnumValueMap = Map<string, EnumValueContainer>;
 
+export type ArgumentContainer = {
+  includeDefaultValue: boolean;
+  node: MutableInputValueDefinitionNode;
+  requiredSubgraphs: Set<string>;
+  subgraphs: Set<string>;
+};
+
+export type ArgumentMap = Map<string, ArgumentContainer>;
+
 export type FieldContainer = {
   appearances: number;
-  arguments: InputValueMap;
+  arguments: ArgumentMap;
   isShareable: boolean;
   node: MutableFieldDefinitionNode;
   rootTypeName: string;
@@ -180,6 +189,7 @@ export type ExtensionContainer = ObjectExtensionContainer;
 
 export type ParentMap = Map<string, ParentContainer>;
 
+export type ObjectLikeContainer = ObjectContainer | InterfaceContainer;
 
 export function isObjectLikeNodeEntity(node: ObjectLikeTypeDefinitionNode): boolean {
   // Interface entities are currently unsupported

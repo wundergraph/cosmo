@@ -5,9 +5,9 @@ import { documentNodeToNormalizedString, normalizeString, versionOneBaseSchema }
 
 describe('Union federation tests', () => {
   test('that unions merge by union', () => {
-    const result = federateSubgraphs([subgraphA, subgraphB]);
-    expect(result.errors).toBeUndefined();
-    const federatedGraph = result.federatedGraphAST!;
+    const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphB]);
+    expect(errors).toBeUndefined();
+    const federatedGraph = federationResult!.federatedGraphAST;
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
         versionOneBaseSchema +
@@ -43,9 +43,9 @@ describe('Union federation tests', () => {
   });
 
   test('that unions with no members throw an error', () => {
-    const result = federateSubgraphs([subgraphB, subgraphC]);
-    expect(result.errors).toBeDefined();
-    expect(result.errors![0].message).equals(invalidUnionError('Starters').message);
+    const { errors } = federateSubgraphs([subgraphB, subgraphC]);
+    expect(errors).toBeDefined();
+    expect(errors![0].message).equals(invalidUnionError('Starters').message);
   });
 });
 

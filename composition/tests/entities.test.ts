@@ -5,9 +5,9 @@ import { parse } from 'graphql';
 
 describe('Entities federation tests', () => {
   test('that entities merge successfully', () => {
-    const result = federateSubgraphs([subgraphA, subgraphB]);
-    expect(result.errors).toBeUndefined();
-    const federatedGraph = result.federatedGraphAST!;
+    const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphB]);
+    expect(errors).toBeUndefined();
+    const federatedGraph = federationResult!.federatedGraphAST;
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
         versionOneBaseSchema +
@@ -33,9 +33,9 @@ describe('Entities federation tests', () => {
   });
 
   test('that an entity and non-declared entity merge if the non-entity is resolvable', () => {
-    const result = federateSubgraphs([subgraphA, subgraphC]);
-    expect(result.errors).toBeUndefined();
-    const federatedGraph = result.federatedGraphAST!;
+    const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphC]);
+    expect(errors).toBeUndefined();
+    const federatedGraph = federationResult!.federatedGraphAST;
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
         versionOneBaseSchema +
@@ -90,9 +90,9 @@ describe('Entities federation tests', () => {
   });
 
   test('that ancestors of resolvable entities are also determined to be resolvable', () => {
-    const result = federateSubgraphs([subgraphC, subgraphF]);
-    expect(result.errors).toBeUndefined();
-    const federatedGraph = result.federatedGraphAST!;
+    const { errors, federationResult } = federateSubgraphs([subgraphC, subgraphF]);
+    expect(errors).toBeUndefined();
+    const federatedGraph = federationResult!.federatedGraphAST;
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
         versionOneBaseSchema +
@@ -126,9 +126,9 @@ describe('Entities federation tests', () => {
   });
 
   test('that ancestors of resolvable entities that are not in the same subgraph return an error', () => {
-    const result = federateSubgraphs([subgraphC, subgraphF]);
-    expect(result.errors).toBeUndefined();
-    const federatedGraph = result.federatedGraphAST!;
+    const { errors, federationResult } = federateSubgraphs([subgraphC, subgraphF]);
+    expect(errors).toBeUndefined();
+    const federatedGraph = federationResult!.federatedGraphAST;
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
         versionOneBaseSchema +
@@ -162,9 +162,9 @@ describe('Entities federation tests', () => {
   });
 
   test('that V1 and V2 entities merge successfully', () => {
-    const result = federateSubgraphs([subgraphB, subgraphG]);
-    expect(result.errors).toBeUndefined();
-    const federatedGraph = result.federatedGraphAST!;
+    const { errors, federationResult } = federateSubgraphs([subgraphB, subgraphG]);
+    expect(errors).toBeUndefined();
+    const federatedGraph = federationResult.federatedGraphAST!;
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
         versionOneBaseSchema +

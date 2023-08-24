@@ -32,6 +32,8 @@ import {
   unionTypeDefinitionNodeToMutable,
 } from '../ast/ast';
 import {
+  ArgumentContainer,
+  ArgumentMap,
   EntityContainer,
   EnumValueContainer,
   ExtensionContainer,
@@ -45,6 +47,7 @@ import {
   MergeMethod,
   ObjectContainer,
   ObjectExtensionContainer,
+  ObjectLikeContainer,
   ParentContainer,
   ParentMap,
   PotentiallyUnresolvableField,
@@ -52,8 +55,10 @@ import {
   stringToNamedTypeNode,
 } from '../ast/utils';
 import {
+  argumentTypeMergeFatalError,
   federationInvalidParentTypeError,
   federationRequiredInputFieldError,
+  fieldTypeMergeFatalError,
   incompatibleArgumentDefaultValueError,
   incompatibleArgumentDefaultValueTypeError,
   incompatibleArgumentTypesError,
@@ -61,6 +66,7 @@ import {
   incompatibleParentKindFatalError,
   incompatibleSharedEnumError,
   invalidMultiGraphNodeFatalError,
+  invalidRequiredArgumentsError,
   invalidSubgraphNameErrorMessage,
   invalidSubgraphNamesError,
   invalidUnionError,
@@ -69,6 +75,7 @@ import {
   shareableFieldDefinitionsError,
   subgraphValidationError,
   subgraphValidationFailureErrorMessage,
+  unexpectedArgumentKindFatalError,
   unexpectedKindFatalError,
   unimplementedInterfaceFieldsError,
   unresolvableFieldError,
@@ -79,7 +86,7 @@ import {
   getNamedTypeForChild,
   isTypeRequired,
 } from '../type-merging/type-merging';
-import { FederationResult } from './federation-result';
+import { FederationResultContainer } from './federation-result';
 import {
   InternalSubgraph,
   Subgraph,
@@ -97,16 +104,19 @@ import {
 } from '../utils/string-constants';
 import {
   doSetsHaveAnyOverlap,
+  getEntriesNotInHashSet,
   getOrThrowError,
   ImplementationErrors,
   InvalidFieldImplementation,
+  InvalidRequiredArgument,
   isTypeValidImplementation,
   kindToTypeString,
 } from '../utils/utils';
 import { normalizeSubgraph } from '../normalization/normalization-factory';
 import { printTypeNode } from '@graphql-tools/merge';
+import { ArgumentConfigurationData } from '../subgraph/field-configuration';
 
-export function federateSubgraphs(subgraphs: Subgraph[]): FederationResult {
+export function federateSubgraphs(subgraphs: Subgraph[]): FederationResultContainer {
   if (subgraphs.length < 1) {
     throw minimumSubgraphRequirementError;
   }
@@ -156,6 +166,7 @@ export class FederationFactory {
   abstractToConcreteTypeNames = new Map<string, Set<string>>();
   areFieldsShareable = false;
   argumentTypeNameSet = new Set<string>();
+  argumentConfigurations: ArgumentConfigurationData[] = [];
   parentTypeName = '';
   currentSubgraphName = '';
   childName = '';
@@ -211,10 +222,6 @@ export class FederationFactory {
     }
   }
 
-  isParentInterface(parent: ParentContainer): boolean {
-    return parent.kind === Kind.INTERFACE_TYPE_DEFINITION;
-  }
-
   isFieldEntityKey(parent: ParentContainer | ExtensionContainer): boolean {
     if (parent.kind === Kind.OBJECT_TYPE_DEFINITION || parent.kind === Kind.OBJECT_TYPE_EXTENSION) {
       return parent.entityKeys.has(this.childName);
@@ -262,13 +269,14 @@ export class FederationFactory {
     }
   }
 
-  compareAndValidateArgumentDefaultValues(existingArg: InputValueContainer, newArg: InputValueDefinitionNode) {
+  compareAndValidateArgumentDefaultValues(existingArg: ArgumentContainer, newArg: InputValueDefinitionNode) {
     const newDefaultValue = newArg.defaultValue;
     existingArg.node.defaultValue = existingArg.node.defaultValue || newDefaultValue;
     if (!existingArg.node.defaultValue || !newDefaultValue) {
       existingArg.includeDefaultValue = false;
       return;
     }
+    const argumentName = existingArg.node.name.value;
     const existingDefaultValue = existingArg.node.defaultValue;
     switch (existingDefaultValue.kind) {
       case Kind.LIST: // TODO
@@ -283,13 +291,21 @@ export class FederationFactory {
       case Kind.FLOAT:
       case Kind.INT:
       case Kind.STRING:
-        this.validateArgumentDefaultValues(existingArg.node.name.value, existingDefaultValue, newDefaultValue);
+        this.validateArgumentDefaultValues(argumentName, existingDefaultValue, newDefaultValue);
         break;
       default:
-        throw new Error('Unexpected argument type'); // TODO
+        throw unexpectedArgumentKindFatalError(argumentName, this.childName);
     }
   }
 
+  upsertRequiredSubgraph(set: Set<string>, isRequired: boolean): Set<string> {
+    if (isRequired) {
+      set.add(this.currentSubgraphName);
+    }
+    return set;
+  }
+
+  // TODO validation of default values
   upsertArgumentsForFieldNode(node: FieldDefinitionNode, existingFieldNode: FieldContainer) {
     if (!node.arguments) {
       return;
@@ -298,53 +314,56 @@ export class FederationFactory {
       const argName = arg.name.value;
       const argPath = `${node.name.value}(${argName}...)`;
       this.argumentTypeNameSet.add(getNamedTypeForChild(argPath, arg.type));
+      const isRequired = isTypeRequired(arg.type);
       const existingArg = existingFieldNode.arguments.get(argName);
-      if (existingArg) {
-        existingArg.appearances += 1;
-        existingArg.node.description = existingArg.node.description || arg.description;
-        const { typeErrors, typeNode } = getMostRestrictiveMergedTypeNode(
-          existingArg.node.type,
-          arg.type,
-          this.childName,
-          argName,
-        );
-        if (typeNode) {
-          existingArg.node.type = typeNode;
-        } else {
-          if (!typeErrors || typeErrors.length < 2) {
-            throw new Error(''); // TODO this should never happen
-          }
-          this.errors.push(
-            incompatibleArgumentTypesError(argName, this.parentTypeName, this.childName, typeErrors[0], typeErrors[1]),
-          );
-        }
-        this.compareAndValidateArgumentDefaultValues(existingArg, arg);
-        return;
+      if (!existingArg) {
+        existingFieldNode.arguments.set(argName, {
+          includeDefaultValue: !!arg.defaultValue,
+          node: inputValueDefinitionNodeToMutable(arg, this.childName),
+          requiredSubgraphs: this.upsertRequiredSubgraph(new Set<string>(), isRequired),
+          subgraphs: new Set<string>([this.currentSubgraphName]),
+        });
+        continue;
       }
-      const newNode = inputValueDefinitionNodeToMutable(arg, this.childName);
-      // TODO validation of default values
-      existingFieldNode.arguments.set(argName, {
-        appearances: 1,
-        includeDefaultValue: !!arg.defaultValue,
-        node: newNode,
-      });
+      existingArg.node.description = existingArg.node.description || arg.description;
+      this.upsertRequiredSubgraph(existingArg.requiredSubgraphs, isRequired);
+      existingArg.subgraphs.add(this.currentSubgraphName);
+      const { typeErrors, typeNode } = getMostRestrictiveMergedTypeNode(
+        existingArg.node.type,
+        arg.type,
+        this.childName,
+        argName,
+      );
+      if (typeNode) {
+        existingArg.node.type = typeNode;
+      } else {
+        if (!typeErrors || typeErrors.length < 2) {
+          throw argumentTypeMergeFatalError(argName, this.childName);
+        }
+        this.errors.push(
+          incompatibleArgumentTypesError(argName, this.parentTypeName, this.childName, typeErrors[0], typeErrors[1]),
+        );
+      }
+      this.compareAndValidateArgumentDefaultValues(existingArg, arg);
     }
   }
 
-  extractArgumentsFromFieldNode(node: FieldDefinitionNode, args: Map<string, InputValueContainer>) {
+  extractArgumentsFromFieldNode(node: FieldDefinitionNode, args: ArgumentMap): ArgumentMap {
     if (!node.arguments) {
-      return;
+      return args;
     }
     for (const arg of node.arguments) {
       const argName = arg.name.value;
       const argPath = `${node.name.value}(${argName}...)`;
       args.set(argName, {
-        appearances: 1,
         includeDefaultValue: !!arg.defaultValue,
         node: inputValueDefinitionNodeToMutable(arg, this.childName),
+        requiredSubgraphs: this.upsertRequiredSubgraph(new Set<string>(), isTypeRequired(arg.type)),
+        subgraphs: new Set<string>([this.currentSubgraphName]),
       });
       this.argumentTypeNameSet.add(getNamedTypeForChild(argPath, arg.type));
     }
+    return args;
   }
 
   addConcreteTypesForInterface(node: ObjectTypeDefinitionNode | ObjectTypeExtensionNode | InterfaceTypeDefinitionNode) {
@@ -494,7 +513,7 @@ export class FederationFactory {
         existingFieldNode.node.type = typeNode;
       } else {
         if (!typeErrors || typeErrors.length < 2) {
-          throw new Error(''); // TODO this should never happen
+          throw fieldTypeMergeFatalError(this.childName);
         }
         this.errors.push(
           incompatibleChildTypesError(this.parentTypeName, this.childName, typeErrors[0], typeErrors[1]),
@@ -512,12 +531,10 @@ export class FederationFactory {
       }
       return;
     }
-    const args = new Map<string, InputValueContainer>();
-    this.extractArgumentsFromFieldNode(node, args);
     this.outputFieldTypeNameSet.add(fieldRootTypeName);
     fieldMap.set(this.childName, {
       appearances: 1,
-      arguments: args,
+      arguments: this.extractArgumentsFromFieldNode(node, new Map<string, ArgumentContainer>()),
       isShareable: isFieldShareable,
       node: fieldDefinitionNodeToMutable(node, this.parentTypeName),
       rootTypeName: fieldRootTypeName,
@@ -544,7 +561,7 @@ export class FederationFactory {
           throw federationInvalidParentTypeError(this.parentTypeName, this.childName);
         }
         if (parent.kind !== Kind.ENUM_TYPE_DEFINITION) {
-          throw incompatibleParentKindFatalError(this.parentTypeName, Kind.ENUM_TYPE_DEFINITION, parent.kind)
+          throw incompatibleParentKindFatalError(this.parentTypeName, Kind.ENUM_TYPE_DEFINITION, parent.kind);
         }
         const enumValues = parent.values;
         const enumValue = enumValues.get(this.childName);
@@ -581,7 +598,7 @@ export class FederationFactory {
             inputValue.node.type = typeNode;
           } else {
             if (!typeErrors || typeErrors.length < 2) {
-              throw new Error(''); // TODO this should never happen
+              throw fieldTypeMergeFatalError(this.childName);
             }
             this.errors.push(
               incompatibleChildTypesError(this.parentTypeName, this.childName, typeErrors[0], typeErrors[1]),
@@ -719,26 +736,26 @@ export class FederationFactory {
     }
   }
 
-  upsertConcreteObjectLikeOperationFieldNode(
+  upsertConcreteObjectLikeRootTypeFieldNode(
     fieldName: string,
     fieldTypeName: string,
-    operationFieldPath: string,
+    rootTypeFieldPath: string,
     responseType: string,
     concreteTypeName = fieldTypeName,
     hasAbstractParent = false,
   ) {
-    const operationFields = this.rootTypeFieldsByResponseTypeName.get(concreteTypeName);
-    if (!operationFields) {
+    const rootTypeFields = this.rootTypeFieldsByResponseTypeName.get(concreteTypeName);
+    if (!rootTypeFields) {
       this.rootTypeFieldsByResponseTypeName.set(
         concreteTypeName,
         new Map<string, RootTypeField>([
           [
-            operationFieldPath,
+            rootTypeFieldPath,
             {
               inlineFragment: hasAbstractParent ? getInlineFragmentString(concreteTypeName) : '.',
               name: fieldName,
               parentTypeName: this.parentTypeName,
-              path: operationFieldPath,
+              path: rootTypeFieldPath,
               responseType,
               rootTypeName: fieldTypeName,
               subgraphs: new Set<string>([this.currentSubgraphName]),
@@ -748,26 +765,26 @@ export class FederationFactory {
       );
       return;
     }
-    const operationField = operationFields.get(operationFieldPath);
-    if (operationField) {
-      operationField.subgraphs.add(this.currentSubgraphName);
+    const rootTypeField = rootTypeFields.get(rootTypeFieldPath);
+    if (rootTypeField) {
+      rootTypeField.subgraphs.add(this.currentSubgraphName);
       return;
     }
-    operationFields.set(operationFieldPath, {
+    rootTypeFields.set(rootTypeFieldPath, {
       inlineFragment: hasAbstractParent ? getInlineFragmentString(concreteTypeName) : '.',
       name: fieldName,
       parentTypeName: this.parentTypeName,
-      path: operationFieldPath,
+      path: rootTypeFieldPath,
       responseType,
       rootTypeName: fieldTypeName,
       subgraphs: new Set<string>([this.currentSubgraphName]),
     });
   }
 
-  upsertAbstractObjectLikeOperationFieldNode(
+  upsertAbstractObjectLikeRootTypeFieldNode(
     fieldName: string,
     fieldTypeName: string,
-    operationFieldPath: string,
+    rootTypeFieldPath: string,
     responseType: string,
     concreteTypeNames: Set<string>,
   ) {
@@ -775,21 +792,21 @@ export class FederationFactory {
       if (!this.graph.hasNode(concreteTypeName)) {
         throw invalidMultiGraphNodeFatalError(concreteTypeName); // should never happen
       }
-      if (!this.graphEdges.has(operationFieldPath)) {
+      if (!this.graphEdges.has(rootTypeFieldPath)) {
         this.graph.addEdge(this.parentTypeName, concreteTypeName, { fieldName });
       }
       // Always upsert the operation field node to record subgraph appearances
-      this.upsertConcreteObjectLikeOperationFieldNode(
+      this.upsertConcreteObjectLikeRootTypeFieldNode(
         fieldName,
         fieldTypeName,
-        operationFieldPath,
+        rootTypeFieldPath,
         responseType,
         concreteTypeName,
         true,
       );
     }
     // Add the path so the edges are not added again
-    this.graphEdges.add(operationFieldPath);
+    this.graphEdges.add(rootTypeFieldPath);
   }
 
   validatePotentiallyUnresolvableFields() {
@@ -927,13 +944,58 @@ export class FederationFactory {
     }
     if (implementationErrorsMap.size) {
       this.errors.push(unimplementedInterfaceFieldsError(
-        container.node.name.value, kindToTypeString(container.kind), implementationErrorsMap
+        container.node.name.value, kindToTypeString(container.kind), implementationErrorsMap,
       ));
     }
     return interfaces;
   }
 
-  federate(): FederationResult {
+  getFieldDefinitionNodeWithMergedArguments(fieldContainer: FieldContainer, parentTypeName: string): FieldDefinitionNode {
+    if (!fieldContainer.arguments) {
+      return fieldContainer.node;
+    }
+    const fieldName = fieldContainer.node.name.value;
+    const fieldPath = `${parentTypeName}.${fieldName}`;
+    const args: InputValueDefinitionNode[] = [];
+    const errors: InvalidRequiredArgument[] = [];
+    const argumentNames: string[] = [];
+    for (const argumentContainer of fieldContainer.arguments.values()) {
+      const missingSubgraphs = getEntriesNotInHashSet(
+        fieldContainer.subgraphs, argumentContainer.subgraphs,
+      );
+      const argumentName = argumentContainer.node.name.value;
+      if (missingSubgraphs.length > 0) {
+        // Required arguments must be defined in all subgraphs that define the field
+        if (argumentContainer.requiredSubgraphs.size > 0) {
+          errors.push({
+            argumentName,
+            missingSubgraphs,
+            requiredSubgraphs: [...argumentContainer.requiredSubgraphs]
+          });
+        }
+        // If the argument is always optional, but it's not defined in all subgraphs that define the field,
+        // the argument should not be included in the federated graph
+        continue;
+      }
+      argumentContainer.node.defaultValue = argumentContainer.includeDefaultValue
+        ? argumentContainer.node.defaultValue : undefined;
+      args.push(argumentContainer.node);
+      argumentNames.push(argumentName);
+    }
+    if (errors.length > 0) {
+      this.errors.push(invalidRequiredArgumentsError(fieldPath, errors));
+    } else if (argumentNames.length > 0) {
+      this.argumentConfigurations.push({
+        argumentNames,
+        fieldName,
+        typeName: parentTypeName
+      });
+    }
+    fieldContainer.node.arguments = args;
+    return fieldContainer.node;
+  }
+
+  federate(): FederationResultContainer {
     this.populateMultiGraphAndRenameOperations(this.subgraphs);
     const factory = this;
     for (const subgraph of this.subgraphs) {
@@ -988,17 +1050,18 @@ export class FederationFactory {
       }
       this.errors.push(shareableFieldDefinitionsError(parent, children));
     }
+    const objectLikeContainersWithInterfaces: ObjectLikeContainer[] = [];
     for (const parent of this.parentMap.values()) {
-      const parentName = parent.node.name.value;
+      const parentTypeName = parent.node.name.value;
       switch (parent.kind) {
         case Kind.ENUM_TYPE_DEFINITION:
           const values: EnumValueDefinitionNode[] = [];
-          const mergeMethod = this.getEnumMergeMethod(parentName);
+          const mergeMethod = this.getEnumMergeMethod(parentTypeName);
           for (const value of parent.values.values()) {
             switch (mergeMethod) {
               case MergeMethod.CONSISTENT:
                 if (value.appearances < parent.appearances) {
-                  this.errors.push(incompatibleSharedEnumError(parentName));
+                  this.errors.push(incompatibleSharedEnumError(parentTypeName));
                 }
                 values.push(value.node);
                 break;
@@ -1021,8 +1084,8 @@ export class FederationFactory {
             if (parent.appearances === value.appearances) {
               inputValues.push(value.node);
             } else if (isTypeRequired(value.node.type)) {
-              // TODO append to errors
-              throw federationRequiredInputFieldError(parentName, value.node.name.value);
+              this.errors.push(federationRequiredInputFieldError(parentTypeName, value.node.name.value));
+              break;
             }
           }
           parent.node.fields = inputValues;
@@ -1030,79 +1093,60 @@ export class FederationFactory {
           break;
         case Kind.INTERFACE_TYPE_DEFINITION:
           const interfaceFields: FieldDefinitionNode[] = [];
-          for (const field of parent.fields.values()) {
-            if (field.arguments) {
-              const args: InputValueDefinitionNode[] = [];
-              for (const arg of field.arguments.values()) {
-                arg.node.defaultValue = arg.includeDefaultValue ? arg.node.defaultValue : undefined;
-                args.push(arg.node);
-              }
-              field.node.arguments = args;
-            }
-            interfaceFields.push(field.node);
+          for (const fieldContainer of parent.fields.values()) {
+            interfaceFields.push(this.getFieldDefinitionNodeWithMergedArguments(fieldContainer, parentTypeName));
           }
-          const otherInterfaces: NamedTypeNode[] = [];
-          for (const iFace of parent.interfaces) {
-            otherInterfaces.push({
-              kind: Kind.NAMED_TYPE,
-              name: {
-                kind: Kind.NAME,
-                value: iFace,
-              },
-            });
-          }
-          parent.node.interfaces = otherInterfaces;
           parent.node.fields = interfaceFields;
-          definitions.push(parent.node);
+          // Interface implementations can only be evaluated after they've been fully merged
+          if (parent.interfaces.size > 0) {
+            objectLikeContainersWithInterfaces.push(parent);
+          } else {
+            definitions.push(parent.node);
+          }
           break;
         case Kind.OBJECT_TYPE_DEFINITION:
           const fields: FieldDefinitionNode[] = [];
-          for (const field of parent.fields.values()) {
-            if (field.arguments) {
-              const args: InputValueDefinitionNode[] = [];
-              for (const arg of field.arguments.values()) {
-                arg.node.defaultValue = arg.includeDefaultValue ? arg.node.defaultValue : undefined;
-                args.push(arg.node);
-              }
-              field.node.arguments = args;
-            }
-            fields.push(field.node);
+          for (const fieldContainer of parent.fields.values()) {
+            fields.push(this.getFieldDefinitionNodeWithMergedArguments(fieldContainer, parentTypeName));
           }
           parent.node.fields = fields;
-          parent.node.interfaces = this.getAndValidateImplementedInterfaces(parent);
-          definitions.push(parent.node);
+          // Interface implementations can only be evaluated after they've been fully merged
+          if (parent.interfaces.size > 0) {
+            objectLikeContainersWithInterfaces.push(parent);
+          } else {
+            definitions.push(parent.node);
+          }
           break;
         case Kind.SCALAR_TYPE_DEFINITION:
           definitions.push(parent.node);
           break;
         case Kind.UNION_TYPE_DEFINITION:
           const types: NamedTypeNode[] = [];
-          for (const member of parent.members) {
-            types.push({
-              kind: Kind.NAMED_TYPE,
-              name: {
-                kind: Kind.NAME,
-                value: member,
-              },
-            });
+          for (const memberName of parent.members) {
+            types.push(stringToNamedTypeNode(memberName));
           }
           parent.node.types = types;
           definitions.push(parent.node);
           break;
       }
     }
+    for (const container of objectLikeContainersWithInterfaces) {
+      container.node.interfaces = this.getAndValidateImplementedInterfaces(container);
+      definitions.push(container.node);
+    }
     if (this.errors.length > 0) {
-      return {
-        errors: this.errors,
-      };
+      return { errors: this.errors };
     }
     const newAst: DocumentNode = {
       kind: Kind.DOCUMENT,
       definitions,
     };
     return {
-      federatedGraphAST: newAst,
-      federatedGraphSchema: buildASTSchema(newAst),
+      federationResult: {
+        argumentConfigurations: this.argumentConfigurations,
+        federatedGraphAST: newAst,
+        federatedGraphSchema: buildASTSchema(newAst),
+      }
     };
   }
 }

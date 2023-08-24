@@ -7,7 +7,13 @@ import {
   TypeDefinitionNode,
   TypeExtensionNode,
 } from 'graphql';
-import { ImplementationErrorsMap, numberToOrdinal } from '../utils/utils';
+import {
+  ImplementationErrorsMap,
+  InvalidArgument,
+  InvalidRequiredArgument,
+  kindToTypeString,
+  numberToOrdinal,
+} from '../utils/utils';
 
 export const minimumSubgraphRequirementError = new Error('At least one subgraph is required for federation.');
 
@@ -373,7 +379,7 @@ export function undefinedParentFatalError(parentTypeName: string): Error {
 
 export function unexpectedKindFatalError(typeName: string) {
   return new Error(
-    `Fatal: Unexpected type for ${typeName}`,
+    `Fatal: Unexpected type for "${typeName}"`,
   );
 }
 
@@ -383,18 +389,38 @@ export function invalidMultiGraphNodeFatalError(nodeName: string): Error {
   );
 }
 
+export function incompatibleParentKindFatalError(parentTypeName: string, expectedKind: Kind, actualKind: Kind): Error {
+  return new Error(
+    `Fatal: Expected "${parentTypeName}" to be type ${kindToTypeString(expectedKind)}` +
+    ` but received "${kindToTypeString(actualKind)}".`
+  );
+}
+
+export function fieldTypeMergeFatalError(fieldName: string) {
+  return new Error(
+    `Fatal: Unsuccessfully merged the cross-subgraph types of field "${fieldName}"` +
+    ` without producing a type error object.`
+  )
+}
+
+export function argumentTypeMergeFatalError(argumentName: string, fieldName: string) {
+  return new Error(
+    `Fatal: Unsuccessfully merged the cross-subgraph types of argument "${argumentName}" on field "${fieldName}"` +
+    ` without producing a type error object.`
+  )
+}
+
+export function unexpectedArgumentKindFatalError(argumentName: string, fieldName: string) {
+  return new Error(
+    `Fatal: Unexpected type for argument "${argumentName}" on field "${fieldName}".`,
+  );
+}
+
 export function unexpectedParentKindErrorMessage(parentTypeName: string, expectedKind: Kind, actualKind: Kind): string {
   return (
     ` Expected "${parentTypeName}" to be type ${expectedKind} but received "${actualKind}".`
   );
 }
-
-export function incompatibleParentKindFatalError(parentTypeName: string, expectedKind: Kind, actualKind: Kind): Error {
-  return new Error(
-    `Fatal: Expected "${parentTypeName}" to be type ${expectedKind} but received "${actualKind}".`
-  );
-}
-
 
 export function unexpectedDirectiveLocationError(locationName: string): Error {
   return new Error(
@@ -512,4 +538,37 @@ export function unimplementedInterfaceFieldsError(
     `The ${parentTypeString} "${parentTypeName}" has the following interface implementation errors:\n` +
     messages.join('\n')
   );
+}
+
+export function invalidRequiredArgumentsError(fieldPath: string, errors: InvalidRequiredArgument[]): Error {
+  let message = `The field "${fieldPath}" could not be federated because:\n`;
+  for (const error of errors) {
+    message += ` The argument "${error.argumentName}" is required in the following subgraph` +
+      (error.requiredSubgraphs.length > 1 ? 's' : '' ) +': "' + error.requiredSubgraphs.join(`", "`) + `"\n` +
+      ` However, the argument "${error.argumentName}" is not defined in the following subgraph` +
+      (error.missingSubgraphs.length > 1 ? 's' : '' ) +': "' + error.missingSubgraphs.join(`", "`) + `"\n` +
+      ` If an argument is required on a field in any one subgraph, it must be at least defined as optional on all` +
+      ` other definitions of that field in all other subgraphs.\n`
+  }
+  return new Error(message);
+}
+
+export function duplicateArgumentsError(fieldPath: string, duplicatedArguments: string[]): Error {
+  return new Error(
+    `The field "${fieldPath}" is invalid because:\n` +
+    ` The following argument` + (duplicatedArguments.length > 1 ? 's are' : ' is') +
+    ` defined more than once: "` + duplicatedArguments.join(`", "`) + `"\n`
+  );
+}
+
+export function invalidArgumentsError(fieldPath: string, invalidArguments: InvalidArgument[]): Error {
+  let message = `The field "${fieldPath}" is invalid because:\n` +
+    ` The named type (root type) of an input must be on of Enum, Input Object, or Scalar type.` +
+    ` For example: "Float", "[[String!]]!", or "[SomeInputObjectName]"\n`
+  for (const invalidArgument of invalidArguments) {
+    message += `  The argument "${invalidArgument.argumentName}" defines type "${invalidArgument.typeName}"` +
+      ` but the named type "${invalidArgument.namedType}" is type "` + invalidArgument.typeString +
+      `", which is not a valid input type.\n`;
+  }
+  return new Error(message);
 }

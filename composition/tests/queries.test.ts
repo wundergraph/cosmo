@@ -10,9 +10,9 @@ import {
 
 describe('Query federation tests', () => {
   test('that shared queries that return a nested type that is only resolvable over multiple subgraphs are valid', () => {
-    const result = federateSubgraphs([subgraphA, subgraphB]);
-    expect(result.errors).toBeUndefined();
-    const federatedGraph = result.federatedGraphAST!;
+    const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphB]);
+    expect(errors).toBeUndefined();
+    const federatedGraph = federationResult!.federatedGraphAST;
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
         versionTwoBaseSchema +
@@ -52,10 +52,10 @@ describe('Query federation tests', () => {
       rootTypeName: 'Nested',
       subgraphs: new Set<string>(['subgraph-b']),
     };
-    const result = federateSubgraphs([subgraphB, subgraphC]);
-    expect(result.errors).toBeDefined();
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors![0]).toStrictEqual(
+    const { errors } = federateSubgraphs([subgraphB, subgraphC]);
+    expect(errors).toBeDefined();
+    expect(errors).toHaveLength(1);
+    expect(errors![0]).toStrictEqual(
       unresolvableFieldError(rootTypeField, 'name', ['Query.query.nest.nest.nest.name'], 'subgraph-c', 'Nested4'),
     );
   });
@@ -71,10 +71,10 @@ describe('Query federation tests', () => {
       rootTypeName: parentTypeName,
       subgraphs: new Set<string>(['subgraph-d']),
     };
-    const result = federateSubgraphs([subgraphD, subgraphF]);
-    expect(result.errors).toBeDefined();
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors![0]).toStrictEqual(
+    const { errors } = federateSubgraphs([subgraphD, subgraphF]);
+    expect(errors).toBeDefined();
+    expect(errors).toHaveLength(1);
+    expect(errors![0]).toStrictEqual(
       unresolvableFieldError(rootTypeField, 'age', ['Query.friend.age'], 'subgraph-f', parentTypeName),
     );
   });
@@ -90,10 +90,10 @@ describe('Query federation tests', () => {
       rootTypeName: parentTypeName,
       subgraphs: new Set<string>(['subgraph-d']),
     };
-    const result = federateSubgraphs([subgraphF, subgraphD]);
-    expect(result.errors).toBeDefined();
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors![0]).toStrictEqual(
+    const { errors } = federateSubgraphs([subgraphF, subgraphD]);
+    expect(errors).toBeDefined();
+    expect(errors).toHaveLength(1);
+    expect(errors![0]).toStrictEqual(
       unresolvableFieldError(rootTypeField, 'age', ['Query.friend.age'], 'subgraph-f', parentTypeName),
     );
   });
@@ -109,21 +109,21 @@ describe('Query federation tests', () => {
       rootTypeName: parentTypeName,
       subgraphs: new Set<string>(['subgraph-d']),
     };
-    const result = federateSubgraphs([subgraphD, subgraphF, subgraphG]);
-    expect(result.errors).toBeDefined();
-    expect(result.errors).toHaveLength(2);
-    expect(result.errors![0]).toStrictEqual(
+    const { errors } = federateSubgraphs([subgraphD, subgraphF, subgraphG]);
+    expect(errors).toBeDefined();
+    expect(errors).toHaveLength(2);
+    expect(errors![0]).toStrictEqual(
       unresolvableFieldError(rootTypeField, 'age', ['Query.friend.age'], 'subgraph-f', parentTypeName),
     );
-    expect(result.errors![1]).toStrictEqual(
+    expect(errors![1]).toStrictEqual(
       unresolvableFieldError(rootTypeField, 'hobbies', ['Query.friend.hobbies'], 'subgraph-g', parentTypeName),
     );
   });
 
   test('that shared queries that return a type that is only resolvable over multiple subgraphs are valid', () => {
-    const result = federateSubgraphs([subgraphD, subgraphE]);
-    expect(result.errors).toBeUndefined();
-    const federatedGraph = result.federatedGraphAST!;
+    const { errors, federationResult } = federateSubgraphs([subgraphD, subgraphE]);
+    expect(errors).toBeUndefined();
+    const federatedGraph = federationResult!.federatedGraphAST;
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
         versionTwoBaseSchema +
@@ -142,9 +142,9 @@ describe('Query federation tests', () => {
   });
 
   test('that shared queries that return an interface that is only resolvable over multiple subgraphs are valid', () => {
-    const result = federateSubgraphs([subgraphH, subgraphI]);
-    expect(result.errors).toBeUndefined();
-    const federatedGraph = result.federatedGraphAST!;
+    const { errors, federationResult } = federateSubgraphs([subgraphH, subgraphI]);
+    expect(errors).toBeUndefined();
+    const federatedGraph = federationResult!.federatedGraphAST;
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
         versionOneBaseSchema +
@@ -194,10 +194,10 @@ describe('Query federation tests', () => {
       rootTypeName: 'Human',
       subgraphs: new Set<string>(['subgraph-k']),
     };
-    const result = federateSubgraphs([subgraphK, subgraphL]);
-    expect(result.errors).toBeDefined();
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors![0]).toStrictEqual(
+    const { errors } = federateSubgraphs([subgraphK, subgraphL]);
+    expect(errors).toBeDefined();
+    expect(errors).toHaveLength(1);
+    expect(errors![0]).toStrictEqual(
       unresolvableFieldError(
         rootTypeField,
         'age',
@@ -209,9 +209,9 @@ describe('Query federation tests', () => {
   });
 
   test('that shared queries that return a union that is only resolvable over multiple subgraphs are valid', () => {
-    const result = federateSubgraphs([subgraphM, subgraphN]);
-    expect(result.errors).toBeUndefined();
-    const federatedGraph = result.federatedGraphAST!;
+    const { errors, federationResult } = federateSubgraphs([subgraphM, subgraphN]);
+    expect(errors).toBeUndefined();
+    const federatedGraph = federationResult!.federatedGraphAST;
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
         versionOneBaseSchema +

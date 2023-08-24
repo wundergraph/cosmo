@@ -6,3 +6,9 @@ export type ConfigurationData = {
   selectionSets: string[];
   typeName: string;
 };
+
+export type ArgumentConfigurationData = {
+  argumentNames: string[];
+  fieldName: string;
+  typeName: string;
+};

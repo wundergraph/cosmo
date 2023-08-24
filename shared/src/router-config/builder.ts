@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import { printSchemaWithDirectives } from '@graphql-tools/utils';
-import { normalizeSubgraphFromString } from '@wundergraph/composition';
-import { GraphQLSchema, lexicographicSortSchema, parse } from 'graphql';
+import { ArgumentConfigurationData, normalizeSubgraphFromString } from '@wundergraph/composition';
+import { GraphQLSchema, lexicographicSortSchema } from 'graphql';
 import {
   ConfigurationVariable,
   ConfigurationVariableKind,
@@ -12,11 +12,15 @@ import {
   InternedString,
   RouterConfig,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
-import { configuration, configurationDataMapToDataSourceConfiguration } from './graphql-configuration.js';
+import {
+  argumentConfigurationDatasToFieldConfigurations,
+  configurationDataMapToDataSourceConfiguration,
+} from './graphql-configuration.js';
 
 export interface Input {
-  subgraphs: Subgraph[];
+  argumentConfigurations: ArgumentConfigurationData[];
   federatedSDL: string;
+  subgraphs: Subgraph[];
 }
 
 export interface Subgraph {
@@ -57,7 +61,6 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
     const { childNodes, rootNodes, requiredFields } = configurationDataMapToDataSourceConfiguration(
       normalizationResult!.configurationDataMap,
     );
-    const { fieldConfigs, typeConfigs } = configuration(parse(subgraph.sdl), true);
     const datasourceConfig = new DataSourceConfiguration({
       id: subgraph.url,
       childNodes,
@@ -96,9 +99,8 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
       requestTimeoutSeconds: BigInt(10),
     });
     engineConfig.datasourceConfigurations.push(datasourceConfig);
-    engineConfig.fieldConfigurations.push(...fieldConfigs);
-    engineConfig.typeConfigurations.push(...typeConfigs);
   }
+  engineConfig.fieldConfigurations = argumentConfigurationDatasToFieldConfigurations(input.argumentConfigurations);
   engineConfig.graphqlSchema = input.federatedSDL;
   return new RouterConfig({
     engineConfig,

@@ -1,4 +1,5 @@
-import { DocumentNode, print } from 'graphql';
+import { DocumentNode, parse, print } from 'graphql';
+import { Subgraph } from '../../src';
 
 export function normalizeString(input: string): string {
   return input.replaceAll(/\n| {2,}/g, '');
@@ -22,3 +23,11 @@ export const versionTwoBaseSchema = versionOneBaseSchema + `
   directive @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
   directive @shareable on FIELD_DEFINITION | OBJECT
 `;
+
+export function createSubgraph(name: string, schemaString: string): Subgraph {
+  return {
+    definitions: parse(schemaString),
+    name,
+    url: '',
+  };
+}

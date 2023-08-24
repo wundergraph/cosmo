@@ -157,3 +157,16 @@ export type ImplementationErrors = {
 };
 
 export type ImplementationErrorsMap = Map<string, ImplementationErrors>;
+
+export type InvalidRequiredArgument = {
+  argumentName: string;
+  missingSubgraphs: string[];
+  requiredSubgraphs: string[];
+};
+
+export type InvalidArgument = {
+  argumentName: string;
+  namedType: string;
+  typeName: string;
+  typeString: string;
+};

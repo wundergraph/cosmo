@@ -5,9 +5,9 @@ import { documentNodeToNormalizedString, normalizeString, versionOneBaseSchema }
 
 describe('Input federation tests', () => {
   test('that inputs merge by intersection if the removed fields are nullable', () => {
-    const result = federateSubgraphs([subgraphA, subgraphB]);
-    expect(result.errors).toBeUndefined();
-    const federatedGraph = result.federatedGraphAST!;
+    const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphB]);
+    expect(errors).toBeUndefined();
+    const federatedGraph = federationResult!.federatedGraphAST;
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
         versionOneBaseSchema +
@@ -21,14 +21,13 @@ describe('Input federation tests', () => {
     );
   });
 
-  // TODO shouldn't be a throw
   test('that a required input object field that is omitted from the federated graph returns an error', () => {
-    // const result = federateSubgraphs([subgraphA, subgraphC]);
     const parentName = 'TechnicalMachine';
     const fieldName = 'move';
-    expect(() => federateSubgraphs([subgraphA, subgraphC])).toThrowError(
-      federationRequiredInputFieldError(parentName, fieldName).message,
-    );
+    const { errors } = federateSubgraphs([subgraphA, subgraphC]);
+    expect(errors).toBeDefined();
+    expect(errors).toHaveLength(1);
+    expect(errors![0]).toStrictEqual(federationRequiredInputFieldError(parentName, fieldName));
   });
 });
 
