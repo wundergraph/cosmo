@@ -20,11 +20,9 @@ const queryClient = new QueryClient();
 function MyApp({ Component, pageProps }: AppPropsWithLayout) {
   if (pageProps.markdoc) {
     return (
-      <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-        <MarkdownLayout>
-          <Component {...pageProps} />
-        </MarkdownLayout>
-      </ThemeProvider>
+      <MarkdownLayout>
+        <Component {...pageProps} />
+      </MarkdownLayout>
     );
   }
 
