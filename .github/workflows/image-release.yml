@@ -24,7 +24,7 @@ on:
         type: string
 
 concurrency:
-  group: Keycloak Production
+  group: ${{ inputs.name }} Image Release
   cancel-in-progress: false
 
 env:
