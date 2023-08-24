@@ -43,6 +43,8 @@ jobs:
 
       - name: Publish packages & Create Github Releases
         run: |
+          git config --global user.email "bot@wundergraph.com"
+          git config --global user.name "hardworker-bot"
           pnpm release
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN_WORKFLOW_PUBLISH }}
