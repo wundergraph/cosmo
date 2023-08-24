@@ -24,7 +24,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { docsBaseURL } from "@/lib/constatnts";
+import { docsBaseURL } from "@/lib/constants";
 import { NextPageWithLayout } from "@/lib/page";
 import { cn } from "@/lib/utils";
 import {
@@ -227,7 +227,6 @@ const ChecksPage: NextPageWithLayout = () => {
   return (
     <div>
       <Table>
-        <TableCaption>Showing {data.checks.length} checks</TableCaption>
         <TableHeader>
           <TableRow>
             <TableHead className="w-[200px]">Timestamp</TableHead>

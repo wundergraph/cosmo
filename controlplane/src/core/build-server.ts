@@ -18,6 +18,7 @@ import { Authentication } from './services/Authentication.js';
 import { OrganizationRepository } from './repositories/OrganizationRepository.js';
 import GraphApiTokenAuthenticator from './services/GraphApiTokenAuthenticator.js';
 import AuthUtils from './auth-utils.js';
+import Keycloak from './services/Keycloak.js';
 
 export interface BuildConfig {
   logger: PinoLoggerOptions;
@@ -34,6 +35,7 @@ export interface BuildConfig {
   production?: boolean;
   clickhouseDsn?: string;
   keycloak: {
+    loginRealm: string;
     realm: string;
     clientId: string;
     adminUser: string;
@@ -61,6 +63,17 @@ const developmentLoggerOpts: PinoLoggerOptions = {
 };
 
 export default async function build(opts: BuildConfig) {
+  opts.logger = {
+    formatters: {
+      level: (label) => {
+        return {
+          level: label,
+        };
+      },
+    },
+    ...opts.logger,
+  };
+
   const fastify = Fastify({
     logger: opts.production ? opts.logger : { ...developmentLoggerOpts, ...opts.logger },
   });
@@ -123,6 +136,14 @@ export default async function build(opts: BuildConfig) {
   const organizationRepository = new OrganizationRepository(fastify.db);
   const authenticator = new Authentication(webAuth, apiKeyAuth, graphKeyAuth, organizationRepository);
 
+  const keycloakClient = new Keycloak({
+    apiUrl: opts.keycloak.apiUrl,
+    realm: opts.keycloak.loginRealm,
+    clientId: opts.keycloak.clientId,
+    adminUser: opts.keycloak.adminUser,
+    adminPassword: opts.keycloak.adminPassword,
+  });
+
   /**
    * Controllers registration
    */
@@ -151,9 +172,10 @@ export default async function build(opts: BuildConfig) {
       db: fastify.db,
       logger: fastify.log as pino.Logger,
       jwtSecret: opts.auth.secret,
-      keycloak: opts.keycloak,
+      keycloakRealm: opts.keycloak.realm,
       chClient: fastify.ch,
       authenticator,
+      keycloakClient,
     }),
     logLevel: opts.logger.level as pino.LevelWithSilent,
     // Avoid compression for small requests

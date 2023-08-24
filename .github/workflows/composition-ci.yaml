@@ -1,14 +1,5 @@
 name: Composition CI
 on:
-  push:
-    branches:
-      - main
-    tags-ignore:
-      - "**"
-    paths:
-      - "composition/**/*"
-      - ".github/workflows/composition-ci.yaml"
-
   pull_request:
     branches:
       - main

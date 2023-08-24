@@ -66,7 +66,7 @@ export async function seedTest(databaseConnectionUrl: string, userTestData: User
     acceptedInvite: true,
   });
 
-  await orgRepo.addMemberRoles({
+  await orgRepo.addOrganizationMemberRoles({
     memberID: orgMember.id,
     roles: ['admin'],
   });
