@@ -23,11 +23,29 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GH_TOKEN_WORKFLOW_PUBLISH }}
 
+      - uses: ./.github/actions/node
+        with:
+          working-directory: ${{ env.WORKING_DIRECTORY }}
+
+      - run: npm config set //registry.npmjs.org/:_authToken $NPM_TOKEN
+        shell: bash
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
       - name: Install
-        run: | 
-          git tag controlplane@0.0.4
-          git tag router@0.0.4
-          git tag studio@0.0.4
-          git tag keycloak@0.0.4
-          git tag otelcollector@0.0.4
-          git push origin --tags
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate code
+        run: pnpm buf generate --template buf.ts.gen.yaml
+
+      - name: Build
+        run: pnpm run --filter='!./studio' build
+
+      - name: Publish packages & Create Github Releases
+        run: |
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+          pnpm release
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN_WORKFLOW_PUBLISH }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

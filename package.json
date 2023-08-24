@@ -25,6 +25,7 @@
     "lint:fix": "pnpm run -r --parallel lint:fix",
     "clean": "del-cli '**/node_modules/' '**/**/dist/' '**/**/gen/' '**/**/.next' '**/**/tsconfig.tsbuildinfo' '**/**/.eslintcache'",
     "release-preview": "lerna publish --dry-run",
+    "postversion": "./scripts/push-tags-one-by-one.sh",
     "release": "lerna publish -y"
   },
   "files": [
