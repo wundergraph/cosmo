@@ -1,16 +1,23 @@
 package main
 
 import (
-	"github.com/99designs/gqlgen/graphql/playground"
-	"github.com/wundergraph/comso/demo/family/subgraph"
+	"context"
 	"log"
 	"net/http"
 	"os"
+
+	"github.com/99designs/gqlgen/graphql/playground"
+	"github.com/wundergraph/cosmo/demo/family/subgraph"
+	"github.com/wundergraph/cosmo/demo/otel"
 )
 
-const defaultPort = "4002"
+const (
+	defaultPort = "4002"
+	serviceName = "family"
+)
 
 func main() {
+	otel.InitTracing(context.Background(), otel.Options{ServiceName: serviceName})
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = defaultPort

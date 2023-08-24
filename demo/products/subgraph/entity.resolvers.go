@@ -7,8 +7,8 @@ package subgraph
 import (
 	"context"
 
-	"github.com/wundergraph/comso/demo/products/subgraph/generated"
-	"github.com/wundergraph/comso/demo/products/subgraph/model"
+	"github.com/wundergraph/cosmo/demo/products/subgraph/generated"
+	"github.com/wundergraph/cosmo/demo/products/subgraph/model"
 )
 
 // FindEmployeeByID is the resolver for the findEmployeeByID field.

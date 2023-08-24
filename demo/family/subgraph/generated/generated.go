@@ -16,7 +16,7 @@ import (
 	"github.com/99designs/gqlgen/plugin/federation/fedruntime"
 	gqlparser "github.com/vektah/gqlparser/v2"
 	"github.com/vektah/gqlparser/v2/ast"
-	"github.com/wundergraph/comso/demo/family/subgraph/model"
+	"github.com/wundergraph/cosmo/demo/family/subgraph/model"
 )
 
 // region    ************************** generated!.gotpl **************************
@@ -465,9 +465,9 @@ enum CatType {
 
 type Alligator implements Pet & Animal {
   class: Class!
+  dangerous: String!
   gender: Gender!
   name: String!
-  dangerous: String!
 }
 
 type Cat implements Pet & Animal {
@@ -720,7 +720,7 @@ func (ec *executionContext) _Alligator_class(ctx context.Context, field graphql.
 	}
 	res := resTmp.(model.Class)
 	fc.Result = res
-	return ec.marshalNClass2githubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐClass(ctx, field.Selections, res)
+	return ec.marshalNClass2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐClass(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Alligator_class(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -731,6 +731,50 @@ func (ec *executionContext) fieldContext_Alligator_class(ctx context.Context, fi
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Class does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Alligator_dangerous(ctx context.Context, field graphql.CollectedField, obj *model.Alligator) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Alligator_dangerous(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Dangerous, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Alligator_dangerous(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Alligator",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
 		},
 	}
 	return fc, nil
@@ -764,7 +808,7 @@ func (ec *executionContext) _Alligator_gender(ctx context.Context, field graphql
 	}
 	res := resTmp.(model.Gender)
 	fc.Result = res
-	return ec.marshalNGender2githubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐGender(ctx, field.Selections, res)
+	return ec.marshalNGender2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐGender(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Alligator_gender(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -824,50 +868,6 @@ func (ec *executionContext) fieldContext_Alligator_name(ctx context.Context, fie
 	return fc, nil
 }
 
-func (ec *executionContext) _Alligator_dangerous(ctx context.Context, field graphql.CollectedField, obj *model.Alligator) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Alligator_dangerous(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Dangerous, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(string)
-	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Alligator_dangerous(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Alligator",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _Cat_class(ctx context.Context, field graphql.CollectedField, obj *model.Cat) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Cat_class(ctx, field)
 	if err != nil {
@@ -896,7 +896,7 @@ func (ec *executionContext) _Cat_class(ctx context.Context, field graphql.Collec
 	}
 	res := resTmp.(model.Class)
 	fc.Result = res
-	return ec.marshalNClass2githubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐClass(ctx, field.Selections, res)
+	return ec.marshalNClass2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐClass(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Cat_class(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -940,7 +940,7 @@ func (ec *executionContext) _Cat_gender(ctx context.Context, field graphql.Colle
 	}
 	res := resTmp.(model.Gender)
 	fc.Result = res
-	return ec.marshalNGender2githubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐGender(ctx, field.Selections, res)
+	return ec.marshalNGender2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐGender(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Cat_gender(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -1028,7 +1028,7 @@ func (ec *executionContext) _Cat_type(ctx context.Context, field graphql.Collect
 	}
 	res := resTmp.(model.CatType)
 	fc.Result = res
-	return ec.marshalNCatType2githubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐCatType(ctx, field.Selections, res)
+	return ec.marshalNCatType2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐCatType(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Cat_type(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -1160,7 +1160,7 @@ func (ec *executionContext) _Dog_breed(ctx context.Context, field graphql.Collec
 	}
 	res := resTmp.(model.DogBreed)
 	fc.Result = res
-	return ec.marshalNDogBreed2githubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐDogBreed(ctx, field.Selections, res)
+	return ec.marshalNDogBreed2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐDogBreed(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Dog_breed(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -1204,7 +1204,7 @@ func (ec *executionContext) _Dog_class(ctx context.Context, field graphql.Collec
 	}
 	res := resTmp.(model.Class)
 	fc.Result = res
-	return ec.marshalNClass2githubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐClass(ctx, field.Selections, res)
+	return ec.marshalNClass2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐClass(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Dog_class(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -1248,7 +1248,7 @@ func (ec *executionContext) _Dog_gender(ctx context.Context, field graphql.Colle
 	}
 	res := resTmp.(model.Gender)
 	fc.Result = res
-	return ec.marshalNGender2githubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐGender(ctx, field.Selections, res)
+	return ec.marshalNGender2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐGender(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Dog_gender(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -1333,7 +1333,7 @@ func (ec *executionContext) _Employee_details(ctx context.Context, field graphql
 	}
 	res := resTmp.(*model.Details)
 	fc.Result = res
-	return ec.marshalODetails2ᚖgithubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐDetails(ctx, field.Selections, res)
+	return ec.marshalODetails2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐDetails(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Employee_details(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -1468,7 +1468,7 @@ func (ec *executionContext) _Employee_maritalStatus(ctx context.Context, field g
 	}
 	res := resTmp.(*model.MaritalStatus)
 	fc.Result = res
-	return ec.marshalOMaritalStatus2ᚖgithubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐMaritalStatus(ctx, field.Selections, res)
+	return ec.marshalOMaritalStatus2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐMaritalStatus(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Employee_maritalStatus(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -1512,7 +1512,7 @@ func (ec *executionContext) _Employee_nationality(ctx context.Context, field gra
 	}
 	res := resTmp.(model.Nationality)
 	fc.Result = res
-	return ec.marshalNNationality2githubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐNationality(ctx, field.Selections, res)
+	return ec.marshalNNationality2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐNationality(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Employee_nationality(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -1553,7 +1553,7 @@ func (ec *executionContext) _Employee_pets(ctx context.Context, field graphql.Co
 	}
 	res := resTmp.([]model.Pet)
 	fc.Result = res
-	return ec.marshalOPet2ᚕgithubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐPet(ctx, field.Selections, res)
+	return ec.marshalOPet2ᚕgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐPet(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Employee_pets(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -1597,7 +1597,7 @@ func (ec *executionContext) _Entity_findEmployeeByID(ctx context.Context, field 
 	}
 	res := resTmp.(*model.Employee)
 	fc.Result = res
-	return ec.marshalNEmployee2ᚖgithubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐEmployee(ctx, field.Selections, res)
+	return ec.marshalNEmployee2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐEmployee(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Entity_findEmployeeByID(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -1666,7 +1666,7 @@ func (ec *executionContext) _Mouse_class(ctx context.Context, field graphql.Coll
 	}
 	res := resTmp.(model.Class)
 	fc.Result = res
-	return ec.marshalNClass2githubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐClass(ctx, field.Selections, res)
+	return ec.marshalNClass2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐClass(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Mouse_class(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -1710,7 +1710,7 @@ func (ec *executionContext) _Mouse_gender(ctx context.Context, field graphql.Col
 	}
 	res := resTmp.(model.Gender)
 	fc.Result = res
-	return ec.marshalNGender2githubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐGender(ctx, field.Selections, res)
+	return ec.marshalNGender2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐGender(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Mouse_gender(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -1798,7 +1798,7 @@ func (ec *executionContext) _Pony_class(ctx context.Context, field graphql.Colle
 	}
 	res := resTmp.(model.Class)
 	fc.Result = res
-	return ec.marshalNClass2githubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐClass(ctx, field.Selections, res)
+	return ec.marshalNClass2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐClass(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Pony_class(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -1842,7 +1842,7 @@ func (ec *executionContext) _Pony_gender(ctx context.Context, field graphql.Coll
 	}
 	res := resTmp.(model.Gender)
 	fc.Result = res
-	return ec.marshalNGender2githubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐGender(ctx, field.Selections, res)
+	return ec.marshalNGender2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐGender(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Pony_gender(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -4081,6 +4081,11 @@ func (ec *executionContext) _Alligator(ctx context.Context, sel ast.SelectionSet
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "dangerous":
+			out.Values[i] = ec._Alligator_dangerous(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "gender":
 			out.Values[i] = ec._Alligator_gender(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -4088,11 +4093,6 @@ func (ec *executionContext) _Alligator(ctx context.Context, sel ast.SelectionSet
 			}
 		case "name":
 			out.Values[i] = ec._Alligator_name(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "dangerous":
-			out.Values[i] = ec._Alligator_dangerous(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -4959,41 +4959,41 @@ func (ec *executionContext) marshalNBoolean2bool(ctx context.Context, sel ast.Se
 	return res
 }
 
-func (ec *executionContext) unmarshalNCatType2githubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐCatType(ctx context.Context, v interface{}) (model.CatType, error) {
+func (ec *executionContext) unmarshalNCatType2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐCatType(ctx context.Context, v interface{}) (model.CatType, error) {
 	var res model.CatType
 	err := res.UnmarshalGQL(v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalNCatType2githubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐCatType(ctx context.Context, sel ast.SelectionSet, v model.CatType) graphql.Marshaler {
+func (ec *executionContext) marshalNCatType2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐCatType(ctx context.Context, sel ast.SelectionSet, v model.CatType) graphql.Marshaler {
 	return v
 }
 
-func (ec *executionContext) unmarshalNClass2githubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐClass(ctx context.Context, v interface{}) (model.Class, error) {
+func (ec *executionContext) unmarshalNClass2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐClass(ctx context.Context, v interface{}) (model.Class, error) {
 	var res model.Class
 	err := res.UnmarshalGQL(v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalNClass2githubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐClass(ctx context.Context, sel ast.SelectionSet, v model.Class) graphql.Marshaler {
+func (ec *executionContext) marshalNClass2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐClass(ctx context.Context, sel ast.SelectionSet, v model.Class) graphql.Marshaler {
 	return v
 }
 
-func (ec *executionContext) unmarshalNDogBreed2githubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐDogBreed(ctx context.Context, v interface{}) (model.DogBreed, error) {
+func (ec *executionContext) unmarshalNDogBreed2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐDogBreed(ctx context.Context, v interface{}) (model.DogBreed, error) {
 	var res model.DogBreed
 	err := res.UnmarshalGQL(v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalNDogBreed2githubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐDogBreed(ctx context.Context, sel ast.SelectionSet, v model.DogBreed) graphql.Marshaler {
+func (ec *executionContext) marshalNDogBreed2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐDogBreed(ctx context.Context, sel ast.SelectionSet, v model.DogBreed) graphql.Marshaler {
 	return v
 }
 
-func (ec *executionContext) marshalNEmployee2githubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐEmployee(ctx context.Context, sel ast.SelectionSet, v model.Employee) graphql.Marshaler {
+func (ec *executionContext) marshalNEmployee2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐEmployee(ctx context.Context, sel ast.SelectionSet, v model.Employee) graphql.Marshaler {
 	return ec._Employee(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNEmployee2ᚖgithubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐEmployee(ctx context.Context, sel ast.SelectionSet, v *model.Employee) graphql.Marshaler {
+func (ec *executionContext) marshalNEmployee2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐEmployee(ctx context.Context, sel ast.SelectionSet, v *model.Employee) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
@@ -5018,13 +5018,13 @@ func (ec *executionContext) marshalNFieldSet2string(ctx context.Context, sel ast
 	return res
 }
 
-func (ec *executionContext) unmarshalNGender2githubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐGender(ctx context.Context, v interface{}) (model.Gender, error) {
+func (ec *executionContext) unmarshalNGender2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐGender(ctx context.Context, v interface{}) (model.Gender, error) {
 	var res model.Gender
 	err := res.UnmarshalGQL(v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalNGender2githubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐGender(ctx context.Context, sel ast.SelectionSet, v model.Gender) graphql.Marshaler {
+func (ec *executionContext) marshalNGender2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐGender(ctx context.Context, sel ast.SelectionSet, v model.Gender) graphql.Marshaler {
 	return v
 }
 
@@ -5043,13 +5043,13 @@ func (ec *executionContext) marshalNInt2int(ctx context.Context, sel ast.Selecti
 	return res
 }
 
-func (ec *executionContext) unmarshalNNationality2githubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐNationality(ctx context.Context, v interface{}) (model.Nationality, error) {
+func (ec *executionContext) unmarshalNNationality2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐNationality(ctx context.Context, v interface{}) (model.Nationality, error) {
 	var res model.Nationality
 	err := res.UnmarshalGQL(v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalNNationality2githubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐNationality(ctx context.Context, sel ast.SelectionSet, v model.Nationality) graphql.Marshaler {
+func (ec *executionContext) marshalNNationality2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐNationality(ctx context.Context, sel ast.SelectionSet, v model.Nationality) graphql.Marshaler {
 	return v
 }
 
@@ -5442,14 +5442,14 @@ func (ec *executionContext) marshalOBoolean2ᚖbool(ctx context.Context, sel ast
 	return res
 }
 
-func (ec *executionContext) marshalODetails2ᚖgithubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐDetails(ctx context.Context, sel ast.SelectionSet, v *model.Details) graphql.Marshaler {
+func (ec *executionContext) marshalODetails2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐDetails(ctx context.Context, sel ast.SelectionSet, v *model.Details) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
 	return ec._Details(ctx, sel, v)
 }
 
-func (ec *executionContext) unmarshalOMaritalStatus2ᚖgithubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐMaritalStatus(ctx context.Context, v interface{}) (*model.MaritalStatus, error) {
+func (ec *executionContext) unmarshalOMaritalStatus2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐMaritalStatus(ctx context.Context, v interface{}) (*model.MaritalStatus, error) {
 	if v == nil {
 		return nil, nil
 	}
@@ -5458,21 +5458,21 @@ func (ec *executionContext) unmarshalOMaritalStatus2ᚖgithubᚗcomᚋwundergrap
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalOMaritalStatus2ᚖgithubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐMaritalStatus(ctx context.Context, sel ast.SelectionSet, v *model.MaritalStatus) graphql.Marshaler {
+func (ec *executionContext) marshalOMaritalStatus2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐMaritalStatus(ctx context.Context, sel ast.SelectionSet, v *model.MaritalStatus) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
 	return v
 }
 
-func (ec *executionContext) marshalOPet2githubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐPet(ctx context.Context, sel ast.SelectionSet, v model.Pet) graphql.Marshaler {
+func (ec *executionContext) marshalOPet2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐPet(ctx context.Context, sel ast.SelectionSet, v model.Pet) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
 	return ec._Pet(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalOPet2ᚕgithubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐPet(ctx context.Context, sel ast.SelectionSet, v []model.Pet) graphql.Marshaler {
+func (ec *executionContext) marshalOPet2ᚕgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐPet(ctx context.Context, sel ast.SelectionSet, v []model.Pet) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
@@ -5499,7 +5499,7 @@ func (ec *executionContext) marshalOPet2ᚕgithubᚗcomᚋwundergraphᚋcomsoᚋ
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalOPet2githubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐPet(ctx, sel, v[i])
+			ret[i] = ec.marshalOPet2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋfamilyᚋsubgraphᚋmodelᚐPet(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)

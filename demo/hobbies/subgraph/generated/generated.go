@@ -16,7 +16,7 @@ import (
 	"github.com/99designs/gqlgen/plugin/federation/fedruntime"
 	gqlparser "github.com/vektah/gqlparser/v2"
 	"github.com/vektah/gqlparser/v2/ast"
-	"github.com/wundergraph/comso/demo/hobbies/subgraph/model"
+	"github.com/wundergraph/cosmo/demo/hobbies/subgraph/model"
 )
 
 // region    ************************** generated!.gotpl **************************
@@ -623,7 +623,7 @@ func (ec *executionContext) _Employee_hobbies(ctx context.Context, field graphql
 	}
 	res := resTmp.([]model.Hobby)
 	fc.Result = res
-	return ec.marshalNHobby2ᚕgithubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋhobbiesᚋsubgraphᚋmodelᚐHobbyᚄ(ctx, field.Selections, res)
+	return ec.marshalNHobby2ᚕgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋhobbiesᚋsubgraphᚋmodelᚐHobbyᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Employee_hobbies(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -667,7 +667,7 @@ func (ec *executionContext) _Entity_findEmployeeByID(ctx context.Context, field 
 	}
 	res := resTmp.(*model.Employee)
 	fc.Result = res
-	return ec.marshalNEmployee2ᚖgithubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋhobbiesᚋsubgraphᚋmodelᚐEmployee(ctx, field.Selections, res)
+	return ec.marshalNEmployee2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋhobbiesᚋsubgraphᚋmodelᚐEmployee(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Entity_findEmployeeByID(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -728,7 +728,7 @@ func (ec *executionContext) _Exercise_category(ctx context.Context, field graphq
 	}
 	res := resTmp.(model.ExerciseType)
 	fc.Result = res
-	return ec.marshalNExerciseType2githubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋhobbiesᚋsubgraphᚋmodelᚐExerciseType(ctx, field.Selections, res)
+	return ec.marshalNExerciseType2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋhobbiesᚋsubgraphᚋmodelᚐExerciseType(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Exercise_category(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -860,7 +860,7 @@ func (ec *executionContext) _Gaming_genres(ctx context.Context, field graphql.Co
 	}
 	res := resTmp.([]model.GameGenre)
 	fc.Result = res
-	return ec.marshalNGameGenre2ᚕgithubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋhobbiesᚋsubgraphᚋmodelᚐGameGenreᚄ(ctx, field.Selections, res)
+	return ec.marshalNGameGenre2ᚕgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋhobbiesᚋsubgraphᚋmodelᚐGameGenreᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Gaming_genres(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -1036,7 +1036,7 @@ func (ec *executionContext) _Programming_languages(ctx context.Context, field gr
 	}
 	res := resTmp.([]model.ProgrammingLanguage)
 	fc.Result = res
-	return ec.marshalNProgrammingLanguage2ᚕgithubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋhobbiesᚋsubgraphᚋmodelᚐProgrammingLanguageᚄ(ctx, field.Selections, res)
+	return ec.marshalNProgrammingLanguage2ᚕgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋhobbiesᚋsubgraphᚋmodelᚐProgrammingLanguageᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Programming_languages(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -1312,7 +1312,7 @@ func (ec *executionContext) _Travelling_countriesLived(ctx context.Context, fiel
 	}
 	res := resTmp.([]model.Country)
 	fc.Result = res
-	return ec.marshalNCountry2ᚕgithubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋhobbiesᚋsubgraphᚋmodelᚐCountryᚄ(ctx, field.Selections, res)
+	return ec.marshalNCountry2ᚕgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋhobbiesᚋsubgraphᚋmodelᚐCountryᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Travelling_countriesLived(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -4068,17 +4068,17 @@ func (ec *executionContext) marshalNBoolean2bool(ctx context.Context, sel ast.Se
 	return res
 }
 
-func (ec *executionContext) unmarshalNCountry2githubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋhobbiesᚋsubgraphᚋmodelᚐCountry(ctx context.Context, v interface{}) (model.Country, error) {
+func (ec *executionContext) unmarshalNCountry2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋhobbiesᚋsubgraphᚋmodelᚐCountry(ctx context.Context, v interface{}) (model.Country, error) {
 	var res model.Country
 	err := res.UnmarshalGQL(v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalNCountry2githubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋhobbiesᚋsubgraphᚋmodelᚐCountry(ctx context.Context, sel ast.SelectionSet, v model.Country) graphql.Marshaler {
+func (ec *executionContext) marshalNCountry2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋhobbiesᚋsubgraphᚋmodelᚐCountry(ctx context.Context, sel ast.SelectionSet, v model.Country) graphql.Marshaler {
 	return v
 }
 
-func (ec *executionContext) unmarshalNCountry2ᚕgithubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋhobbiesᚋsubgraphᚋmodelᚐCountryᚄ(ctx context.Context, v interface{}) ([]model.Country, error) {
+func (ec *executionContext) unmarshalNCountry2ᚕgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋhobbiesᚋsubgraphᚋmodelᚐCountryᚄ(ctx context.Context, v interface{}) ([]model.Country, error) {
 	var vSlice []interface{}
 	if v != nil {
 		vSlice = graphql.CoerceList(v)
@@ -4087,7 +4087,7 @@ func (ec *executionContext) unmarshalNCountry2ᚕgithubᚗcomᚋwundergraphᚋco
 	res := make([]model.Country, len(vSlice))
 	for i := range vSlice {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
-		res[i], err = ec.unmarshalNCountry2githubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋhobbiesᚋsubgraphᚋmodelᚐCountry(ctx, vSlice[i])
+		res[i], err = ec.unmarshalNCountry2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋhobbiesᚋsubgraphᚋmodelᚐCountry(ctx, vSlice[i])
 		if err != nil {
 			return nil, err
 		}
@@ -4095,7 +4095,7 @@ func (ec *executionContext) unmarshalNCountry2ᚕgithubᚗcomᚋwundergraphᚋco
 	return res, nil
 }
 
-func (ec *executionContext) marshalNCountry2ᚕgithubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋhobbiesᚋsubgraphᚋmodelᚐCountryᚄ(ctx context.Context, sel ast.SelectionSet, v []model.Country) graphql.Marshaler {
+func (ec *executionContext) marshalNCountry2ᚕgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋhobbiesᚋsubgraphᚋmodelᚐCountryᚄ(ctx context.Context, sel ast.SelectionSet, v []model.Country) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -4119,7 +4119,7 @@ func (ec *executionContext) marshalNCountry2ᚕgithubᚗcomᚋwundergraphᚋcoms
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNCountry2githubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋhobbiesᚋsubgraphᚋmodelᚐCountry(ctx, sel, v[i])
+			ret[i] = ec.marshalNCountry2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋhobbiesᚋsubgraphᚋmodelᚐCountry(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -4139,11 +4139,11 @@ func (ec *executionContext) marshalNCountry2ᚕgithubᚗcomᚋwundergraphᚋcoms
 	return ret
 }
 
-func (ec *executionContext) marshalNEmployee2githubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋhobbiesᚋsubgraphᚋmodelᚐEmployee(ctx context.Context, sel ast.SelectionSet, v model.Employee) graphql.Marshaler {
+func (ec *executionContext) marshalNEmployee2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋhobbiesᚋsubgraphᚋmodelᚐEmployee(ctx context.Context, sel ast.SelectionSet, v model.Employee) graphql.Marshaler {
 	return ec._Employee(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNEmployee2ᚖgithubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋhobbiesᚋsubgraphᚋmodelᚐEmployee(ctx context.Context, sel ast.SelectionSet, v *model.Employee) graphql.Marshaler {
+func (ec *executionContext) marshalNEmployee2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋhobbiesᚋsubgraphᚋmodelᚐEmployee(ctx context.Context, sel ast.SelectionSet, v *model.Employee) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
@@ -4153,13 +4153,13 @@ func (ec *executionContext) marshalNEmployee2ᚖgithubᚗcomᚋwundergraphᚋcom
 	return ec._Employee(ctx, sel, v)
 }
 
-func (ec *executionContext) unmarshalNExerciseType2githubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋhobbiesᚋsubgraphᚋmodelᚐExerciseType(ctx context.Context, v interface{}) (model.ExerciseType, error) {
+func (ec *executionContext) unmarshalNExerciseType2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋhobbiesᚋsubgraphᚋmodelᚐExerciseType(ctx context.Context, v interface{}) (model.ExerciseType, error) {
 	var res model.ExerciseType
 	err := res.UnmarshalGQL(v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalNExerciseType2githubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋhobbiesᚋsubgraphᚋmodelᚐExerciseType(ctx context.Context, sel ast.SelectionSet, v model.ExerciseType) graphql.Marshaler {
+func (ec *executionContext) marshalNExerciseType2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋhobbiesᚋsubgraphᚋmodelᚐExerciseType(ctx context.Context, sel ast.SelectionSet, v model.ExerciseType) graphql.Marshaler {
 	return v
 }
 
@@ -4193,17 +4193,17 @@ func (ec *executionContext) marshalNFloat2float64(ctx context.Context, sel ast.S
 	return graphql.WrapContextMarshaler(ctx, res)
 }
 
-func (ec *executionContext) unmarshalNGameGenre2githubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋhobbiesᚋsubgraphᚋmodelᚐGameGenre(ctx context.Context, v interface{}) (model.GameGenre, error) {
+func (ec *executionContext) unmarshalNGameGenre2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋhobbiesᚋsubgraphᚋmodelᚐGameGenre(ctx context.Context, v interface{}) (model.GameGenre, error) {
 	var res model.GameGenre
 	err := res.UnmarshalGQL(v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalNGameGenre2githubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋhobbiesᚋsubgraphᚋmodelᚐGameGenre(ctx context.Context, sel ast.SelectionSet, v model.GameGenre) graphql.Marshaler {
+func (ec *executionContext) marshalNGameGenre2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋhobbiesᚋsubgraphᚋmodelᚐGameGenre(ctx context.Context, sel ast.SelectionSet, v model.GameGenre) graphql.Marshaler {
 	return v
 }
 
-func (ec *executionContext) unmarshalNGameGenre2ᚕgithubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋhobbiesᚋsubgraphᚋmodelᚐGameGenreᚄ(ctx context.Context, v interface{}) ([]model.GameGenre, error) {
+func (ec *executionContext) unmarshalNGameGenre2ᚕgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋhobbiesᚋsubgraphᚋmodelᚐGameGenreᚄ(ctx context.Context, v interface{}) ([]model.GameGenre, error) {
 	var vSlice []interface{}
 	if v != nil {
 		vSlice = graphql.CoerceList(v)
@@ -4212,7 +4212,7 @@ func (ec *executionContext) unmarshalNGameGenre2ᚕgithubᚗcomᚋwundergraphᚋ
 	res := make([]model.GameGenre, len(vSlice))
 	for i := range vSlice {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
-		res[i], err = ec.unmarshalNGameGenre2githubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋhobbiesᚋsubgraphᚋmodelᚐGameGenre(ctx, vSlice[i])
+		res[i], err = ec.unmarshalNGameGenre2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋhobbiesᚋsubgraphᚋmodelᚐGameGenre(ctx, vSlice[i])
 		if err != nil {
 			return nil, err
 		}
@@ -4220,7 +4220,7 @@ func (ec *executionContext) unmarshalNGameGenre2ᚕgithubᚗcomᚋwundergraphᚋ
 	return res, nil
 }
 
-func (ec *executionContext) marshalNGameGenre2ᚕgithubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋhobbiesᚋsubgraphᚋmodelᚐGameGenreᚄ(ctx context.Context, sel ast.SelectionSet, v []model.GameGenre) graphql.Marshaler {
+func (ec *executionContext) marshalNGameGenre2ᚕgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋhobbiesᚋsubgraphᚋmodelᚐGameGenreᚄ(ctx context.Context, sel ast.SelectionSet, v []model.GameGenre) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -4244,7 +4244,7 @@ func (ec *executionContext) marshalNGameGenre2ᚕgithubᚗcomᚋwundergraphᚋco
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNGameGenre2githubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋhobbiesᚋsubgraphᚋmodelᚐGameGenre(ctx, sel, v[i])
+			ret[i] = ec.marshalNGameGenre2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋhobbiesᚋsubgraphᚋmodelᚐGameGenre(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -4264,7 +4264,7 @@ func (ec *executionContext) marshalNGameGenre2ᚕgithubᚗcomᚋwundergraphᚋco
 	return ret
 }
 
-func (ec *executionContext) marshalNHobby2githubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋhobbiesᚋsubgraphᚋmodelᚐHobby(ctx context.Context, sel ast.SelectionSet, v model.Hobby) graphql.Marshaler {
+func (ec *executionContext) marshalNHobby2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋhobbiesᚋsubgraphᚋmodelᚐHobby(ctx context.Context, sel ast.SelectionSet, v model.Hobby) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
@@ -4274,7 +4274,7 @@ func (ec *executionContext) marshalNHobby2githubᚗcomᚋwundergraphᚋcomsoᚋd
 	return ec._Hobby(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNHobby2ᚕgithubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋhobbiesᚋsubgraphᚋmodelᚐHobbyᚄ(ctx context.Context, sel ast.SelectionSet, v []model.Hobby) graphql.Marshaler {
+func (ec *executionContext) marshalNHobby2ᚕgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋhobbiesᚋsubgraphᚋmodelᚐHobbyᚄ(ctx context.Context, sel ast.SelectionSet, v []model.Hobby) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -4298,7 +4298,7 @@ func (ec *executionContext) marshalNHobby2ᚕgithubᚗcomᚋwundergraphᚋcomso�
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNHobby2githubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋhobbiesᚋsubgraphᚋmodelᚐHobby(ctx, sel, v[i])
+			ret[i] = ec.marshalNHobby2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋhobbiesᚋsubgraphᚋmodelᚐHobby(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -4333,17 +4333,17 @@ func (ec *executionContext) marshalNInt2int(ctx context.Context, sel ast.Selecti
 	return res
 }
 
-func (ec *executionContext) unmarshalNProgrammingLanguage2githubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋhobbiesᚋsubgraphᚋmodelᚐProgrammingLanguage(ctx context.Context, v interface{}) (model.ProgrammingLanguage, error) {
+func (ec *executionContext) unmarshalNProgrammingLanguage2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋhobbiesᚋsubgraphᚋmodelᚐProgrammingLanguage(ctx context.Context, v interface{}) (model.ProgrammingLanguage, error) {
 	var res model.ProgrammingLanguage
 	err := res.UnmarshalGQL(v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalNProgrammingLanguage2githubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋhobbiesᚋsubgraphᚋmodelᚐProgrammingLanguage(ctx context.Context, sel ast.SelectionSet, v model.ProgrammingLanguage) graphql.Marshaler {
+func (ec *executionContext) marshalNProgrammingLanguage2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋhobbiesᚋsubgraphᚋmodelᚐProgrammingLanguage(ctx context.Context, sel ast.SelectionSet, v model.ProgrammingLanguage) graphql.Marshaler {
 	return v
 }
 
-func (ec *executionContext) unmarshalNProgrammingLanguage2ᚕgithubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋhobbiesᚋsubgraphᚋmodelᚐProgrammingLanguageᚄ(ctx context.Context, v interface{}) ([]model.ProgrammingLanguage, error) {
+func (ec *executionContext) unmarshalNProgrammingLanguage2ᚕgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋhobbiesᚋsubgraphᚋmodelᚐProgrammingLanguageᚄ(ctx context.Context, v interface{}) ([]model.ProgrammingLanguage, error) {
 	var vSlice []interface{}
 	if v != nil {
 		vSlice = graphql.CoerceList(v)
@@ -4352,7 +4352,7 @@ func (ec *executionContext) unmarshalNProgrammingLanguage2ᚕgithubᚗcomᚋwund
 	res := make([]model.ProgrammingLanguage, len(vSlice))
 	for i := range vSlice {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
-		res[i], err = ec.unmarshalNProgrammingLanguage2githubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋhobbiesᚋsubgraphᚋmodelᚐProgrammingLanguage(ctx, vSlice[i])
+		res[i], err = ec.unmarshalNProgrammingLanguage2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋhobbiesᚋsubgraphᚋmodelᚐProgrammingLanguage(ctx, vSlice[i])
 		if err != nil {
 			return nil, err
 		}
@@ -4360,7 +4360,7 @@ func (ec *executionContext) unmarshalNProgrammingLanguage2ᚕgithubᚗcomᚋwund
 	return res, nil
 }
 
-func (ec *executionContext) marshalNProgrammingLanguage2ᚕgithubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋhobbiesᚋsubgraphᚋmodelᚐProgrammingLanguageᚄ(ctx context.Context, sel ast.SelectionSet, v []model.ProgrammingLanguage) graphql.Marshaler {
+func (ec *executionContext) marshalNProgrammingLanguage2ᚕgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋhobbiesᚋsubgraphᚋmodelᚐProgrammingLanguageᚄ(ctx context.Context, sel ast.SelectionSet, v []model.ProgrammingLanguage) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -4384,7 +4384,7 @@ func (ec *executionContext) marshalNProgrammingLanguage2ᚕgithubᚗcomᚋwunder
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNProgrammingLanguage2githubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋhobbiesᚋsubgraphᚋmodelᚐProgrammingLanguage(ctx, sel, v[i])
+			ret[i] = ec.marshalNProgrammingLanguage2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋhobbiesᚋsubgraphᚋmodelᚐProgrammingLanguage(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)

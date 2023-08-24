@@ -83,6 +83,9 @@ dc-federation-demo:
 dc-subgraphs-demo:
 	docker compose -f docker-compose.full.yml --profile subgraphs up --remove-orphans --detach
 
+dc-subgraphs-demo-down:
+	docker compose -f docker-compose.full.yml --profile subgraphs down --remove-orphans
+
 docker-build-local:
 	docker compose --file docker-compose.cosmo.yml build --no-cache
 

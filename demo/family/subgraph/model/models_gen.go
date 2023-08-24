@@ -24,9 +24,9 @@ type Pet interface {
 
 type Alligator struct {
 	Class     Class  `json:"class"`
+	Dangerous string `json:"dangerous"`
 	Gender    Gender `json:"gender"`
 	Name      string `json:"name"`
-	Dangerous string `json:"dangerous"`
 }
 
 func (Alligator) IsPet()                 {}

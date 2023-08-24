@@ -16,7 +16,7 @@ import (
 	"github.com/99designs/gqlgen/plugin/federation/fedruntime"
 	gqlparser "github.com/vektah/gqlparser/v2"
 	"github.com/vektah/gqlparser/v2/ast"
-	"github.com/wundergraph/comso/demo/products/subgraph/model"
+	"github.com/wundergraph/cosmo/demo/products/subgraph/model"
 )
 
 // region    ************************** generated!.gotpl **************************
@@ -471,7 +471,7 @@ func (ec *executionContext) _Employee_products(ctx context.Context, field graphq
 	}
 	res := resTmp.([]model.ProductNames)
 	fc.Result = res
-	return ec.marshalNProductNames2ᚕgithubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋproductsᚋsubgraphᚋmodelᚐProductNamesᚄ(ctx, field.Selections, res)
+	return ec.marshalNProductNames2ᚕgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋproductsᚋsubgraphᚋmodelᚐProductNamesᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Employee_products(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -515,7 +515,7 @@ func (ec *executionContext) _Entity_findEmployeeByID(ctx context.Context, field 
 	}
 	res := resTmp.(*model.Employee)
 	fc.Result = res
-	return ec.marshalNEmployee2ᚖgithubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋproductsᚋsubgraphᚋmodelᚐEmployee(ctx, field.Selections, res)
+	return ec.marshalNEmployee2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋproductsᚋsubgraphᚋmodelᚐEmployee(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Entity_findEmployeeByID(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -3197,11 +3197,11 @@ func (ec *executionContext) marshalNBoolean2bool(ctx context.Context, sel ast.Se
 	return res
 }
 
-func (ec *executionContext) marshalNEmployee2githubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋproductsᚋsubgraphᚋmodelᚐEmployee(ctx context.Context, sel ast.SelectionSet, v model.Employee) graphql.Marshaler {
+func (ec *executionContext) marshalNEmployee2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋproductsᚋsubgraphᚋmodelᚐEmployee(ctx context.Context, sel ast.SelectionSet, v model.Employee) graphql.Marshaler {
 	return ec._Employee(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNEmployee2ᚖgithubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋproductsᚋsubgraphᚋmodelᚐEmployee(ctx context.Context, sel ast.SelectionSet, v *model.Employee) graphql.Marshaler {
+func (ec *executionContext) marshalNEmployee2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋproductsᚋsubgraphᚋmodelᚐEmployee(ctx context.Context, sel ast.SelectionSet, v *model.Employee) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
@@ -3241,17 +3241,17 @@ func (ec *executionContext) marshalNInt2int(ctx context.Context, sel ast.Selecti
 	return res
 }
 
-func (ec *executionContext) unmarshalNProductNames2githubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋproductsᚋsubgraphᚋmodelᚐProductNames(ctx context.Context, v interface{}) (model.ProductNames, error) {
+func (ec *executionContext) unmarshalNProductNames2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋproductsᚋsubgraphᚋmodelᚐProductNames(ctx context.Context, v interface{}) (model.ProductNames, error) {
 	var res model.ProductNames
 	err := res.UnmarshalGQL(v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalNProductNames2githubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋproductsᚋsubgraphᚋmodelᚐProductNames(ctx context.Context, sel ast.SelectionSet, v model.ProductNames) graphql.Marshaler {
+func (ec *executionContext) marshalNProductNames2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋproductsᚋsubgraphᚋmodelᚐProductNames(ctx context.Context, sel ast.SelectionSet, v model.ProductNames) graphql.Marshaler {
 	return v
 }
 
-func (ec *executionContext) unmarshalNProductNames2ᚕgithubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋproductsᚋsubgraphᚋmodelᚐProductNamesᚄ(ctx context.Context, v interface{}) ([]model.ProductNames, error) {
+func (ec *executionContext) unmarshalNProductNames2ᚕgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋproductsᚋsubgraphᚋmodelᚐProductNamesᚄ(ctx context.Context, v interface{}) ([]model.ProductNames, error) {
 	var vSlice []interface{}
 	if v != nil {
 		vSlice = graphql.CoerceList(v)
@@ -3260,7 +3260,7 @@ func (ec *executionContext) unmarshalNProductNames2ᚕgithubᚗcomᚋwundergraph
 	res := make([]model.ProductNames, len(vSlice))
 	for i := range vSlice {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
-		res[i], err = ec.unmarshalNProductNames2githubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋproductsᚋsubgraphᚋmodelᚐProductNames(ctx, vSlice[i])
+		res[i], err = ec.unmarshalNProductNames2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋproductsᚋsubgraphᚋmodelᚐProductNames(ctx, vSlice[i])
 		if err != nil {
 			return nil, err
 		}
@@ -3268,7 +3268,7 @@ func (ec *executionContext) unmarshalNProductNames2ᚕgithubᚗcomᚋwundergraph
 	return res, nil
 }
 
-func (ec *executionContext) marshalNProductNames2ᚕgithubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋproductsᚋsubgraphᚋmodelᚐProductNamesᚄ(ctx context.Context, sel ast.SelectionSet, v []model.ProductNames) graphql.Marshaler {
+func (ec *executionContext) marshalNProductNames2ᚕgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋproductsᚋsubgraphᚋmodelᚐProductNamesᚄ(ctx context.Context, sel ast.SelectionSet, v []model.ProductNames) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -3292,7 +3292,7 @@ func (ec *executionContext) marshalNProductNames2ᚕgithubᚗcomᚋwundergraph�
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNProductNames2githubᚗcomᚋwundergraphᚋcomsoᚋdemoᚋproductsᚋsubgraphᚋmodelᚐProductNames(ctx, sel, v[i])
+			ret[i] = ec.marshalNProductNames2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋproductsᚋsubgraphᚋmodelᚐProductNames(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
