@@ -1,15 +1,5 @@
 name: Studio CI
 on:
-  push:
-    branches:
-      - main
-    tags-ignore:
-      - "**"
-    paths:
-      - "studio/**/*"
-      - "connect/**/*"
-      - ".github/workflows/studio-ci.yaml"
-
   pull_request:
     branches:
       - main
