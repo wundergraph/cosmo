@@ -22,10 +22,10 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.GH_TOKEN_WORKFLOW_PUBLISH }}
+
       - uses: ./.github/actions/node
         with:
           working-directory: ${{ env.WORKING_DIRECTORY }}
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - run: npm config set //registry.npmjs.org/:_authToken $NPM_TOKEN
         shell: bash
@@ -39,7 +39,7 @@ jobs:
         run: pnpm buf generate --template buf.ts.gen.yaml
 
       - name: Build
-        run: pnpm build
+        run: pnpm run --filter='!./studio' build
 
       - name: Publish packages & Create Github Releases
         run: |
