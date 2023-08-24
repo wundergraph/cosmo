@@ -1,6 +1,6 @@
 {
   "name": "@wundergraph/cosmo-connect",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "TypeScript Connect client for WunderGraph Cosmo",
   "scripts": {
     "build": "del dist && tsc"
@@ -20,12 +20,17 @@
     }
   },
   "devDependencies": {
-    "del-cli": "^5.0.0",
-    "typescript": "^5.1.3",
     "@bufbuild/connect-query": "^0.4.1",
-    "@bufbuild/protobuf": "^1.3.0"
+    "@bufbuild/protobuf": "^1.3.0",
+    "del-cli": "^5.0.0",
+    "typescript": "^5.1.3"
   },
-  "keywords": ["wundergraph", "connect", "client", "wundergraph-cosmo"],
+  "keywords": [
+    "wundergraph",
+    "connect",
+    "client",
+    "wundergraph-cosmo"
+  ],
   "author": {
     "name": "WunderGraph Maintainers",
     "email": "info@wundergraph.com"
