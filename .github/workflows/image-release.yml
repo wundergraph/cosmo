@@ -26,7 +26,6 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
-  SERVICE_NAME: ${{ inputs.name }}
 
 jobs:
   build-and-push-image:
