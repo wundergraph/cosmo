@@ -448,7 +448,7 @@ const APIKeysPage: NextPageWithLayout = () => {
         <>
           <div className="flex items-center justify-between px-1">
             <div className="flex gap-x-1 break-words text-sm text-muted-foreground">
-              <span>View and create API Keys for Wundergraph Cosmo CLI.</span>
+              <span>API keys are used to authenticate the Cosmo CLI for local development or CI/CD.</span>
               <Link href={docsBaseURL} className="text-primary">
                 Learn more
               </Link>

@@ -10,3 +10,5 @@ node_modules
 **/_docker
 tsconfig.tsbuildinfo
 gen
+#lerna
+lerna-debug.log

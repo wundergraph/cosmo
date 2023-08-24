@@ -10,5 +10,3 @@ Java 17 + Maven. For example see https://www.digitalocean.com/community/tutorial
 -  Change the theme.
 -  Run build.sh.
 -  `make infra-down && make infra-up` in the root.
-
-

@@ -68,7 +68,6 @@ _Clean up all containers and volumes by running `make full-demo-down`._
 - [NodeJS 18+](https://nodejs.org/en/download/)
 - [PNPM 8+](https://pnpm.io/installation)
 - [Go 1.20+](https://golang.org/doc/install)
-- [Java 17 SDK](https://www.oracle.com/java/technologies/downloads/#java17)
 
 Bootstrapping your development environment is easy. Just run the following commands in order:
 

@@ -1,0 +1,16 @@
+{
+  "name": "otelcollector",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Placeholder package to simplify versioning and releasing with lerna.",
+  "keywords": [
+    "wundergraph",
+    "otelcollector",
+    "cosmo"
+  ],
+  "author": {
+    "name": "WunderGraph Maintainers",
+    "email": "info@wundergraph.com"
+  },
+  "license": "Apache-2.0"
+}
