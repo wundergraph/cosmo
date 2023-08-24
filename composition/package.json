@@ -31,6 +31,5 @@
   "devDependencies": {
     "del-cli": "^5.0.0",
     "typescript": "^5.1.3"
-  },
-  "gitHead": "c37aed755e1b19ed91d30f9b5f7041e15c56901a"
+  }
 }
