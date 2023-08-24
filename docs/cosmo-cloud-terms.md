@@ -1,4 +1,4 @@
-## WunderGraph Cosmo Cloud Terms of Use
+## WunderGraph Cosmo Managed Service Terms of Use
 
 Last modified: August 1st, 2023
 
