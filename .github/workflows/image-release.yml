@@ -1,4 +1,4 @@
-name: Image release
+name: Build and Release Image
 
 on:
   workflow_dispatch:
@@ -23,16 +23,13 @@ on:
         required: true
         type: string
 
-concurrency:
-  group: Keycloak Production
-  cancel-in-progress: false
-
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   build-and-push-image:
+    if: github.ref_name == github.event.repository.default_branch
     runs-on: ubuntu-latest
     permissions:
       contents: read
