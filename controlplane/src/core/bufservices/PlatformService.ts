@@ -55,7 +55,6 @@ import { AnalyticsRequestViewRepository } from '../repositories/analytics/Analyt
 import { TraceRepository } from '../repositories/analytics/TraceRepository.js';
 import type { RouterOptions } from '../routes.js';
 import { ApiKeyGenerator } from '../services/ApiGenerator.js';
-import Keycloak from '../services/Keycloak.js';
 import { handleError, isValidLabelMatchers, isValidLabels } from '../util.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {

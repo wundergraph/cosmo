@@ -11,6 +11,7 @@ export const envVariables = z.object({
   DB_CA_PATH: z.string().optional(),
   DB_KEY_PATH: z.string().optional(),
   KC_REALM: z.string(),
+  KC_LOGIN_REALM: z.string().default('master'),
   KC_CLIENT_ID: z.string(),
   KC_ADMIN_USER: z.string(),
   KC_ADMIN_PASSWORD: z.string(),
