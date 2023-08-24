@@ -8,6 +8,9 @@
     "router",
     "cosmo"
   ],
+  "scripts": {
+    "postversion": "name=\"$(node -p \"var a = require('./package.json');process.stdout.write(a.name)\");process.exit(0)\"; version=\"$(node -p \"var a = require('./package.json');process.stdout.write(a.version);process.exit(0)\")\"; gh workflow run release-image.yml -F name=$name -F tag=$name@v$version"
+  },
   "author": {
     "name": "WunderGraph Maintainers",
     "email": "info@wundergraph.com"
