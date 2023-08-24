@@ -69,6 +69,7 @@ services:
 
   keycloak:
     image: ghcr.io/wundergraph/cosmo/keycloak:${DC_KEYCLOAK_VERSION:-latest}
+    platform: linux/amd64
     environment:
       KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
       KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-changeme}
@@ -96,6 +97,7 @@ services:
   otelcollector:
     # On the public repo
     image: ghcr.io/wundergraph/cosmo/otelcollector:${DC_OTELCOLLECTOR_VERSION:-latest}
+    platform: linux/amd64
     environment:
       CLICKHOUSE_ENDPOINT: "clickhouse://${CLICKHOUSE_USER:-default}:${CLICKHOUSE_PASSWORD:-changeme}@clickhouse:9000/${CLICKHOUSE_DATABASE:-cosmo}?dial_timeout=15s&compress=lz4"
       OTEL_INGEST_JWT_SECRET: ${OTEL_INGEST_JWT_SECRET:-fkczyomvdprgvtmvkuhvprxuggkbgwld}
@@ -109,6 +111,7 @@ services:
 
   controlplane:
     image: ghcr.io/wundergraph/cosmo/controlplane:${DC_CONTROLPLANE_VERSION:-latest}
+    platform: linux/amd64
     environment:
       DB_URL: "postgresql://postgres:changeme@postgres:5432/controlplane"
       PORT: 3001
@@ -137,6 +140,7 @@ services:
 
   seed:
     image: ghcr.io/wundergraph/cosmo/controlplane:${DC_CONTROLPLANE_VERSION:-latest}
+    platform: linux/amd64
     command:
       - "/app/dist/bin/seed.js"
     environment:
@@ -163,6 +167,7 @@ services:
 
   router:
     image: ghcr.io/wundergraph/cosmo/router:${DC_ROUTER_VERSION:-latest}
+    platform: linux/amd64
     environment:
       LOG_LEVEL: info
       FEDERATED_GRAPH_NAME: production
@@ -180,6 +185,7 @@ services:
 
   studio:
     image: ghcr.io/wundergraph/cosmo/studio:${DC_STUDIO_VERSION:-latest}
+    platform: linux/amd64
     environment:
       NEXT_PUBLIC_COSMO_CP_URL: http://localhost:3001
       HOSTNAME: "0.0.0.0"
