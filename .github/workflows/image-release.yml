@@ -6,6 +6,7 @@ on:
       name:
         description: 'Name of the service to release'
         required: true
+        type: choice
         options:
           - keycloak
           - otelcollector
