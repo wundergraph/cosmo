@@ -9,7 +9,7 @@ overrides:
 
 patchedDependencies:
   '@lerna-lite/version@2.5.0':
-    hash: go4en2tj4zmerv4japbrrvf334
+    hash: em3474du342qt4fs5i6q54lb7i
     path: patches/@lerna-lite__version@2.5.0.patch
 
 importers:
@@ -45,7 +45,7 @@ importers:
         version: 2.5.0
       '@lerna-lite/version':
         specifier: 2.5.0
-        version: 2.5.0(patch_hash=go4en2tj4zmerv4japbrrvf334)(@lerna-lite/publish@2.5.0)
+        version: 2.5.0(patch_hash=em3474du342qt4fs5i6q54lb7i)(@lerna-lite/publish@2.5.0)
       del-cli:
         specifier: ^5.0.0
         version: 5.0.0
@@ -1873,7 +1873,7 @@ packages:
       '@lerna-lite/core': 2.5.0
       '@lerna-lite/init': 2.5.0
       '@lerna-lite/publish': 2.5.0
-      '@lerna-lite/version': 2.5.0(patch_hash=go4en2tj4zmerv4japbrrvf334)(@lerna-lite/publish@2.5.0)
+      '@lerna-lite/version': 2.5.0(patch_hash=em3474du342qt4fs5i6q54lb7i)(@lerna-lite/publish@2.5.0)
       dedent: 0.7.0
       dotenv: 16.3.1
       import-local: 3.1.0
@@ -1936,7 +1936,7 @@ packages:
     dependencies:
       '@lerna-lite/cli': 2.5.0(@lerna-lite/publish@2.5.0)(@lerna-lite/version@2.5.0)
       '@lerna-lite/core': 2.5.0
-      '@lerna-lite/version': 2.5.0(patch_hash=go4en2tj4zmerv4japbrrvf334)(@lerna-lite/publish@2.5.0)
+      '@lerna-lite/version': 2.5.0(patch_hash=em3474du342qt4fs5i6q54lb7i)(@lerna-lite/publish@2.5.0)
       '@npmcli/arborist': 6.3.0
       byte-size: 8.1.1
       chalk: 5.3.0
@@ -1970,7 +1970,7 @@ packages:
       - supports-color
     dev: true
 
-  /@lerna-lite/version@2.5.0(patch_hash=go4en2tj4zmerv4japbrrvf334)(@lerna-lite/publish@2.5.0):
+  /@lerna-lite/version@2.5.0(patch_hash=em3474du342qt4fs5i6q54lb7i)(@lerna-lite/publish@2.5.0):
     resolution: {integrity: sha512-hDwlNx57X+JW8A96lieQHDpDIGMhZZh5nuUm78sSwcYAL8hhwNrBcbkvaxjggc3MTsbZp9G416vU7P4gleuMRw==}
     engines: {node: '>=16.15.0', npm: '>=8.5.0'}
     dependencies:
