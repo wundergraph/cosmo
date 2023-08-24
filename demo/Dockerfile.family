@@ -2,14 +2,17 @@ FROM golang:1.20 as builder
 
 WORKDIR /app
 
-COPY go.mod go.sum ./
+COPY family/go.mod family/go.sum ./
+
+RUN mkdir ../otel
+COPY otel ../otel/
 
 RUN go mod download && go mod verify
 
-COPY . .
+COPY family .
 
 RUN go build -o server
 
 ENTRYPOINT [ "./server" ]
 
-EXPOSE 4004
+EXPOSE 4002

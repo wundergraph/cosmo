@@ -1,10 +1,11 @@
 package subgraph
 
 import (
+	"net/http"
+
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/handler/debug"
-	"github.com/wundergraph/comso/demo/employees/subgraph/generated"
-	"net/http"
+	"github.com/wundergraph/cosmo/demo/employees/subgraph/generated"
 )
 
 type EndpointOptions struct {

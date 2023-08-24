@@ -7,14 +7,9 @@ package subgraph
 import (
 	"context"
 
-	"github.com/wundergraph/comso/demo/employees/subgraph/generated"
-	"github.com/wundergraph/comso/demo/employees/subgraph/model"
+	"github.com/wundergraph/cosmo/demo/employees/subgraph/generated"
+	"github.com/wundergraph/cosmo/demo/employees/subgraph/model"
 )
-
-// Employees is the resolver for the employees field.
-func (r *queryResolver) Employees(ctx context.Context) ([]*model.Employee, error) {
-	return employees, nil
-}
 
 // Employee is the resolver for the employee field.
 func (r *queryResolver) Employee(ctx context.Context, id int) (*model.Employee, error) {
@@ -26,6 +21,11 @@ func (r *queryResolver) Employee(ctx context.Context, id int) (*model.Employee, 
 	default:
 		return nil, nil
 	}
+}
+
+// Employees is the resolver for the employees field.
+func (r *queryResolver) Employees(ctx context.Context) ([]*model.Employee, error) {
+	return employees, nil
 }
 
 // TeamMates is the resolver for the team_mates field.

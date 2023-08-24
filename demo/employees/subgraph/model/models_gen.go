@@ -38,8 +38,8 @@ func (Employee) IsEntity() {}
 
 type Engineer struct {
 	Department   Department   `json:"department"`
-	Title        []string     `json:"title"`
 	EngineerType EngineerType `json:"engineerType"`
+	Title        []string     `json:"title"`
 }
 
 func (Engineer) IsRoleType()                    {}
@@ -75,8 +75,8 @@ func (this Marketer) GetTitle() []string {
 
 type Operator struct {
 	Department   Department      `json:"department"`
-	Title        []string        `json:"title"`
 	OperatorType []OperationType `json:"operatorType"`
+	Title        []string        `json:"title"`
 }
 
 func (Operator) IsRoleType()                    {}

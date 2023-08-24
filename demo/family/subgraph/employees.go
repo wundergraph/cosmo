@@ -1,6 +1,6 @@
 package subgraph
 
-import "github.com/wundergraph/comso/demo/family/subgraph/model"
+import "github.com/wundergraph/cosmo/demo/family/subgraph/model"
 
 var engaged = model.MaritalStatusEngaged
 var married = model.MaritalStatusMarried
