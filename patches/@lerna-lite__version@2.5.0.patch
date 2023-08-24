@@ -1,0 +1,47 @@
+diff --git a/dist/lib/git-push.js b/dist/lib/git-push.js
+index eed243fa7ed7122dff5aca246a044730a235acfd..95a6a747aa67ad7d9c40da5e103bf301820b3e91 100644
+--- a/dist/lib/git-push.js
++++ b/dist/lib/git-push.js
+@@ -1,16 +1,29 @@
+-import log from 'npmlog';
+-import { exec } from '@lerna-lite/core';
++import log from "npmlog";
++import { exec } from "@lerna-lite/core";
+ export function gitPush(remote, branch, opts, dryRun = false) {
+-    log.silly('gitPush', remote, branch);
+-    return exec('git', ['push', '--follow-tags', '--no-verify', '--atomic', remote, branch], opts, dryRun).catch((error) => {
+-        if (/does not support --atomic/.test(error.stderr) ||
+-            (process.env.GIT_REDIRECT_STDERR === '2>&1' && /does not support --atomic/.test(error.stdout))) {
+-            process.exitCode = 0;
+-            log.warn('gitPush', error.stderr);
+-            log.info('gitPush', '--atomic failed, attempting non-atomic push');
+-            return exec('git', ['push', '--follow-tags', '--no-verify', remote, branch], opts, dryRun);
+-        }
+-        throw error;
+-    });
++  log.silly("gitPush", remote, branch);
++  return exec(
++    "git",
++    ["push", "--no-verify", "--atomic", remote, branch],
++    opts,
++    dryRun
++  ).catch((error) => {
++    if (
++      /does not support --atomic/.test(error.stderr) ||
++      (process.env.GIT_REDIRECT_STDERR === "2>&1" &&
++        /does not support --atomic/.test(error.stdout))
++    ) {
++      process.exitCode = 0;
++      log.warn("gitPush", error.stderr);
++      log.info("gitPush", "--atomic failed, attempting non-atomic push");
++      return exec(
++        "git",
++        ["push", "--follow-tags", "--no-verify", remote, branch],
++        opts,
++        dryRun
++      );
++    }
++    throw error;
++  });
+ }
+ //# sourceMappingURL=git-push.js.map
