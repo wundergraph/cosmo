@@ -1,4 +1,4 @@
-import { docsBaseURL } from "@/lib/constatnts";
+import { docsBaseURL } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { Cross2Icon, HamburgerMenuIcon } from "@radix-ui/react-icons";
 import { useQuery } from "@tanstack/react-query";

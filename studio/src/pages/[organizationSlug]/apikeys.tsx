@@ -61,7 +61,7 @@ import {
 } from "react";
 import { FiCheck, FiCopy } from "react-icons/fi";
 import { z } from "zod";
-import { docsBaseURL } from "@/lib/constatnts";
+import { docsBaseURL } from "@/lib/constants";
 
 const CreateAPIKeyDialog = ({
   setApiKey,
@@ -476,14 +476,13 @@ const APIKeysPage: NextPageWithLayout = () => {
         />
       ) : (
         <>
-          <div className="flex items-end items-center justify-center justify-between px-1">
+          <div className="flex items-center justify-between px-1">
             <div className="flex gap-x-1 break-words text-sm text-muted-foreground">
-              API keys are used to authenticate the Cosmo CLI for local
-              development or CI/CD.
-              <Link
-                href="https://docs.wundergraph.com"
-                className="text-primary"
-              >
+              <span>
+                API keys are used to authenticate the Cosmo CLI for local
+                development or CI/CD.
+              </span>
+              <Link href={docsBaseURL} className="text-primary">
                 Learn more
               </Link>
             </div>
