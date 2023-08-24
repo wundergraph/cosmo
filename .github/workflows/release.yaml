@@ -26,4 +26,8 @@ jobs:
       - name: Install
         run: | 
           git tag controlplane@0.0.4
+          git tag router@0.0.4
+          git tag studio@0.0.4
+          git tag keycloak@0.0.4
+          git tag otelcollector@0.0.4
           git push origin --tags
