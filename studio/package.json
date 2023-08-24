@@ -1,6 +1,6 @@
 {
-  "name": "cosmo-studio",
-  "version": "0.3.0",
+  "name": "studio",
+  "version": "0.6.0",
   "private": true,
   "license": "Apache-2.0",
   "description": "WunderGraph Cosmo Studio",
@@ -16,7 +16,8 @@
     "lint": "next lint",
     "test": "echo \"Write tests! -> https://nextjs.org/docs/testing\"",
     "lint:fix": "next lint --fix",
-    "preinstall": "npx only-allow pnpm"
+    "preinstall": "npx only-allow pnpm",
+    "postversion": "name=\"$(node -p \"var a = require('./package.json');process.stdout.write(a.name);process.exit(0)\")\"; version=\"$(node -p \"var a = require('./package.json');process.stdout.write(a.version);process.exit(0)\")\"; gh workflow run image-release.yml -F name=$name -F tag=$version -F dockerContext=."
   },
   "author": {
     "name": "WunderGraph Maintainers",

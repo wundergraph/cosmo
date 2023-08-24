@@ -16,7 +16,7 @@ WORKDIR /app/
 COPY . /app/
 
 # Install tools
-RUN make setup-tools
+RUN make setup-build-tools
 
 # Generate code
 RUN buf generate --template buf.go.gen.yaml

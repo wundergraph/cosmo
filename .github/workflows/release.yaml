@@ -33,14 +33,19 @@ jobs:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate code
+        run: pnpm buf generate --template buf.ts.gen.yaml
+
+      - name: Build
+        run: pnpm run --filter='!./studio' build
+
+      - name: Publish packages & Create Github Releases
         run: |
-          git tag controlplane@0.0.4
-          git push origin --tags
-          git tag router@0.0.4
-          git push origin --tags
-          git tag studio@0.0.4
-          git push origin --tags
-          git tag keycloak@0.0.4
-          git push origin --tags
-          git tag otelcollector@0.0.4
-          git push origin --tags
+          git config --global user.email "bot@wundergraph.com"
+          git config --global user.name "hardworker-bot"
+          pnpm release
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN_WORKFLOW_PUBLISH }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
