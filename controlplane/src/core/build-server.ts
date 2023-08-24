@@ -162,7 +162,7 @@ export default async function build(opts: BuildConfig) {
       db: fastify.db,
       logger: fastify.log as pino.Logger,
       jwtSecret: opts.auth.secret,
-      keycloak: opts.keycloak,
+      keycloakRealm: opts.keycloak.realm,
       chClient: fastify.ch,
       authenticator,
       keycloakClient,

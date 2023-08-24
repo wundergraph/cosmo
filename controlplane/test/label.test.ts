@@ -50,7 +50,6 @@ describe('Labels', (ctx) => {
 
     const realm = 'test';
     const apiUrl = 'http://localhost:8080';
-    const frontendUrl = 'http://localhost:8080';
     const clientId = 'studio';
     const adminUser = 'admin';
     const adminPassword = 'changeme';
@@ -69,14 +68,7 @@ describe('Labels', (ctx) => {
         logger: pino(),
         authenticator,
         jwtSecret: 'secret',
-        keycloak: {
-          apiUrl,
-          realm,
-          clientId,
-          adminUser,
-          adminPassword,
-          frontendUrl,
-        },
+        keycloakRealm: realm,
         keycloakClient,
       }),
     });
@@ -163,7 +155,6 @@ describe('Labels', (ctx) => {
 
     const realm = 'test';
     const apiUrl = 'http://localhost:8080';
-    const frontendUrl = 'http://localhost:8080';
     const clientId = 'studio';
     const adminUser = 'admin';
     const adminPassword = 'changeme';
@@ -182,14 +173,7 @@ describe('Labels', (ctx) => {
         logger: pino(),
         authenticator,
         jwtSecret: 'secret',
-        keycloak: {
-          apiUrl,
-          realm,
-          clientId,
-          adminUser,
-          adminPassword,
-          frontendUrl,
-        },
+        keycloakRealm: realm,
         keycloakClient,
       }),
     });
@@ -301,7 +285,6 @@ describe('Labels', (ctx) => {
 
     const realm = 'test';
     const apiUrl = 'http://localhost:8080';
-    const frontendUrl = 'http://localhost:8080';
     const clientId = 'studio';
     const adminUser = 'admin';
     const adminPassword = 'changeme';
@@ -320,14 +303,7 @@ describe('Labels', (ctx) => {
         logger: pino(),
         authenticator,
         jwtSecret: 'secret',
-        keycloak: {
-          apiUrl,
-          realm,
-          clientId,
-          adminUser,
-          adminPassword,
-          frontendUrl,
-        },
+        keycloakRealm: realm,
         keycloakClient,
       }),
     });

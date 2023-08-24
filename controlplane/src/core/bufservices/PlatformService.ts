@@ -1379,7 +1379,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             await opts.keycloakClient.executeActionsEmail({
               userID: user.id,
               redirectURI: `${process.env.WEB_BASE_URL}/login`,
-              realm: opts.keycloak.realm,
+              realm: opts.keycloakRealm,
             });
 
             return {
@@ -1424,7 +1424,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const organizationGroup = await opts.keycloakClient.client.groups.find({
           max: 1,
           search: groupName,
-          realm: opts.keycloak.realm,
+          realm: opts.keycloakRealm,
         });
 
         if (organizationGroup.length === 0) {
@@ -1434,7 +1434,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const keycloakUser = await opts.keycloakClient.client.users.find({
           max: 1,
           email: req.email,
-          realm: opts.keycloak.realm,
+          realm: opts.keycloakRealm,
           exact: true,
         });
 
@@ -1444,7 +1444,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           const userId = await opts.keycloakClient.addKeycloakUser({
             email: req.email,
             isPasswordTemp: true,
-            realm: opts.keycloak.realm,
+            realm: opts.keycloakRealm,
           });
           keycloakUserID = userId;
         } else {
@@ -1453,7 +1453,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const userGroups = await opts.keycloakClient.client.users.listGroups({
           search: groupName,
-          realm: opts.keycloak.realm,
+          realm: opts.keycloakRealm,
           id: keycloakUserID!,
           max: 1,
         });
@@ -1464,14 +1464,14 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           await opts.keycloakClient.client.users.addToGroup({
             id: keycloakUserID!,
             groupId: organizationGroup[0].id!,
-            realm: opts.keycloak.realm,
+            realm: opts.keycloakRealm,
           });
         }
 
         await opts.keycloakClient.executeActionsEmail({
           userID: keycloakUserID!,
           redirectURI: `${process.env.WEB_BASE_URL}/login`,
-          realm: opts.keycloak.realm,
+          realm: opts.keycloakRealm,
         });
 
         // TODO: rate limit this
@@ -1678,7 +1678,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const organizationGroup = await opts.keycloakClient.client.groups.find({
           max: 1,
           search: org.slug,
-          realm: opts.keycloak.realm,
+          realm: opts.keycloakRealm,
         });
 
         if (organizationGroup.length === 0) {
@@ -1688,7 +1688,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         await opts.keycloakClient.client.users.delFromGroup({
           id: user.id,
           groupId: organizationGroup[0].id!,
-          realm: opts.keycloak.realm,
+          realm: opts.keycloakRealm,
         });
 
         await orgRepo.removeOrganizationMember({ organizationID: authContext.organizationId, userID: user.id });
@@ -1696,7 +1696,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         // deleting the user from keycloak
         await opts.keycloakClient.client.users.del({
           id: user.id,
-          realm: opts.keycloak.realm,
+          realm: opts.keycloakRealm,
         });
         // deleting the user from the db
         await userRepo.deleteUser({ id: user.id });
