@@ -13,11 +13,23 @@ import "../styles/explorer.css";
 import "../styles/globals.css";
 import "../styles/login.css";
 import "../styles/utils.css";
+import { MarkdownLayout } from "@/components/layout/markdown-layout";
 
 const queryClient = new QueryClient();
 
 function MyApp({ Component, pageProps }: AppPropsWithLayout) {
+  if (pageProps.markdoc) {
+    return (
+      <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+        <MarkdownLayout>
+          <Component {...pageProps} />
+        </MarkdownLayout>
+      </ThemeProvider>
+    );
+  }
+
   const getLayout = Component.getLayout ?? ((page) => <Layout>{page}</Layout>);
+
   return (
     <>
       <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
