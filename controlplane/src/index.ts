@@ -21,6 +21,7 @@ const {
   WEB_BASE_URL,
   AUTH_JWT_SECRET,
   KC_REALM,
+  KC_LOGIN_REALM,
   KC_CLIENT_ID,
   KC_ADMIN_PASSWORD,
   KC_API_URL,
@@ -41,6 +42,7 @@ const options: BuildConfig = {
   },
   keycloak: {
     realm: KC_REALM,
+    loginRealm: KC_LOGIN_REALM,
     clientId: KC_CLIENT_ID,
     adminUser: KC_ADMIN_USER,
     adminPassword: KC_ADMIN_PASSWORD,

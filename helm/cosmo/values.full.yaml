@@ -43,6 +43,7 @@ global:
     enabled: true
     # Shared configuration e.g. seed, controlplane
     realm: "cosmo"
+    loginRealm: "master"
     webUrl: "http://keycloak.wundergraph.local"
     apiUrl: "http://keycloak.wundergraph.local"
     clientId: "studio"

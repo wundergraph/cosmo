@@ -182,8 +182,8 @@ const MemberCard = ({
                         onSuccess: (d) => {
                           toast({
                             description:
-                              d.response?.details ||
-                              "Removed member successfully.",
+                              d.response?.details || (acceptedInvite ? "Removed member successfully." : "Removed invitation successfully.")
+                              ,
                             duration: 3000,
                           });
                           refresh();
@@ -191,7 +191,7 @@ const MemberCard = ({
                         onError: (error) => {
                           toast({
                             description:
-                              "Could not remove the member. Please try again.",
+                              acceptedInvite ? "Could not remove member. Please try again." : "Could not remove invitation. Please try again.",
                             duration: 3000,
                           });
                         },

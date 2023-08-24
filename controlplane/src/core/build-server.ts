@@ -35,6 +35,7 @@ export interface BuildConfig {
   production?: boolean;
   clickhouseDsn?: string;
   keycloak: {
+    loginRealm: string;
     realm: string;
     clientId: string;
     adminUser: string;
@@ -62,6 +63,17 @@ const developmentLoggerOpts: PinoLoggerOptions = {
 };
 
 export default async function build(opts: BuildConfig) {
+  opts.logger = {
+    formatters: {
+      level: (label) => {
+        return {
+          level: label,
+        };
+      },
+    },
+    ...opts.logger,
+  };
+
   const fastify = Fastify({
     logger: opts.production ? opts.logger : { ...developmentLoggerOpts, ...opts.logger },
   });
@@ -126,9 +138,7 @@ export default async function build(opts: BuildConfig) {
 
   const keycloakClient = new Keycloak({
     apiUrl: opts.keycloak.apiUrl,
-    // Important: If you want to do admin operations, you need to use the master realm
-    // Otherwise use the realm where your users are stored
-    realm: 'master',
+    realm: opts.keycloak.loginRealm,
     clientId: opts.keycloak.clientId,
     adminUser: opts.keycloak.adminUser,
     adminPassword: opts.keycloak.adminPassword,

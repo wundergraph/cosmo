@@ -20,3 +20,4 @@ data:
   keycloakApiUrl: "{{ .Values.global.keycloak.apiUrl }}"
   keycloakFrontendUrl: "{{ .Values.global.keycloak.webUrl }}"
   keycloakClientId: "{{ .Values.global.keycloak.clientId }}"
+  keycloakLoginRealm: "{{ .Values.global.keycloak.loginRealm }}"
