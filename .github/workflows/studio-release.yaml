@@ -5,10 +5,14 @@ on:
     tags:
       - 'studio@*'
 
+concurrency:
+  group: Studio Production
+  cancel-in-progress: false
+
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
-  CONTAINER_NAME: controlplane
+  CONTAINER_NAME: studio
 
 jobs:
   build-and-push-image:

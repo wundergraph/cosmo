@@ -10,6 +10,7 @@
       "createRelease": "github",
       "syncWorkspaceLock": true,
       "changelogIncludeCommitsClientLogin": " (@%l)",
+      "noPush": true,
       "skipBumpOnlyRelease": true,
       "message": "chore(release): Publish [skip ci]"
     }
