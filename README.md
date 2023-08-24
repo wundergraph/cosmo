@@ -6,7 +6,7 @@
 <h5>WunderGraph Cosmo - The GraphQL federation platform</h5>
 <h6><i>Reach for the stars, ignite your cosmo!</i></h6>
 <img alt="CLI CI" src="https://github.com/wundergraph/cosmo/actions/workflows/cli-ci.yaml/badge.svg">
-<img alt="Controlplane CI" src="https://github.com/wundergraph/cosmo/actions/workflows/cp-ci.yaml/badge.svg">
+<img alt="Controlplane CI" src="https://github.com/wundergraph/cosmo/actions/workflows/controlplane-ci.yaml/badge.svg">
 <img alt="Studio CI" src="https://github.com/wundergraph/cosmo/actions/workflows/studio-ci.yaml/badge.svg">
 <img alt="Router CI" src="https://github.com/wundergraph/cosmo/actions/workflows/router-ci.yaml/badge.svg"/>
 <hr />
