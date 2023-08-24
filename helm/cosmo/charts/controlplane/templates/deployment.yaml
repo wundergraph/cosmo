@@ -109,6 +109,11 @@ spec:
                 configMapKeyRef:
                   name: {{ include "controlplane.fullname" . }}-configmap
                   key: keycloakRealm
+            - name: KC_LOGIN_REALM
+              valueFrom:
+               configMapKeyRef:
+                 name: {{ include "controlplane.fullname" . }}-configmap
+                 key: keycloakLoginRealm
             - name: KC_ADMIN_USER
               valueFrom:
                 secretKeyRef:

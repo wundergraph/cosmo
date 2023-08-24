@@ -367,7 +367,17 @@ const APIKeyCreatedDialog = ({
   );
 };
 
-export const Empty = () => {
+export const Empty = ({
+  apiKey,
+  setApiKey,
+  open,
+  setOpen,
+}: {
+  apiKey: string | undefined;
+  setApiKey: Dispatch<SetStateAction<string | undefined>>;
+  open: boolean;
+  setOpen: Dispatch<SetStateAction<boolean>>;
+}) => {
   return (
     <EmptyState
       icon={<KeyIcon />}
@@ -387,32 +397,41 @@ export const Empty = () => {
       }
       actions={
         <div className="mt-2">
-          <CreateAPIKey />
+          <CreateAPIKey
+            apiKey={apiKey}
+            setApiKey={setApiKey}
+            open={open}
+            setOpen={setOpen}
+          />
         </div>
       }
     />
   );
 };
 
-export const CreateAPIKey = () => {
+export const CreateAPIKey = ({
+  apiKey,
+  setApiKey,
+  open,
+  setOpen,
+}: {
+  apiKey: string | undefined;
+  setApiKey: Dispatch<SetStateAction<string | undefined>>;
+  open: boolean;
+  setOpen: Dispatch<SetStateAction<boolean>>;
+}) => {
   const { refetch } = useQuery(getAPIKeys.useQuery());
-  const [apiKey, setApiKey] = useState<string | undefined>();
-  const [openApiKeyCreatedDialog, setOpenApiKeyCreatedDialog] = useState(false);
 
   useEffect(() => {
     if (!apiKey) return;
-    setOpenApiKeyCreatedDialog(true);
-  }, [apiKey]);
+    setOpen(true);
+  }, [apiKey, setOpen]);
 
   return (
     <>
       <CreateAPIKeyDialog refresh={refetch} setApiKey={setApiKey} />
       {apiKey && (
-        <APIKeyCreatedDialog
-          open={openApiKeyCreatedDialog}
-          setOpen={setOpenApiKeyCreatedDialog}
-          apiKey={apiKey}
-        />
+        <APIKeyCreatedDialog open={open} setOpen={setOpen} apiKey={apiKey} />
       )}
     </>
   );
@@ -423,6 +442,12 @@ const APIKeysPage: NextPageWithLayout = () => {
   const { data, isLoading, error, refetch } = useQuery(getAPIKeys.useQuery());
 
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+  const [apiKey, setApiKey] = useState<string | undefined>();
+  const [openApiKeyCreatedDialog, setOpenApiKeyCreatedDialog] = useState(false);
+
+  useEffect(() => {
+    if (!openApiKeyCreatedDialog) setApiKey(undefined);
+  }, [openApiKeyCreatedDialog, setApiKey]);
 
   if (isLoading) return <Loader fullscreen />;
 
@@ -443,17 +468,30 @@ const APIKeysPage: NextPageWithLayout = () => {
   return (
     <div className="mt-4 flex flex-col gap-y-6">
       {apiKeys.length === 0 ? (
-        <Empty />
+        <Empty
+          apiKey={apiKey}
+          setApiKey={setApiKey}
+          open={openApiKeyCreatedDialog}
+          setOpen={setOpenApiKeyCreatedDialog}
+        />
       ) : (
         <>
           <div className="flex items-center justify-between px-1">
             <div className="flex gap-x-1 break-words text-sm text-muted-foreground">
-              <span>API keys are used to authenticate the Cosmo CLI for local development or CI/CD.</span>
+              <span>
+                API keys are used to authenticate the Cosmo CLI for local
+                development or CI/CD.
+              </span>
               <Link href={docsBaseURL} className="text-primary">
                 Learn more
               </Link>
             </div>
-            <CreateAPIKey />
+            <CreateAPIKey
+              apiKey={apiKey}
+              setApiKey={setApiKey}
+              open={openApiKeyCreatedDialog}
+              setOpen={setOpenApiKeyCreatedDialog}
+            />
           </div>
           <Table>
             <TableHeader>
