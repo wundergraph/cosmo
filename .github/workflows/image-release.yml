@@ -23,13 +23,10 @@ on:
         required: true
         type: string
 
-concurrency:
-  group: ${{ inputs.name }} Image Release
-  cancel-in-progress: false
-
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  SERVICE_NAME: ${{ inputs.name }}
 
 jobs:
   build-and-push-image:
