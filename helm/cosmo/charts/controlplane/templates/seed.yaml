@@ -34,6 +34,8 @@ spec:
           env:
             - name: KC_REALM
               value: "{{ .Values.global.keycloak.realm }}"
+            - name: KC_LOGIN_REALM
+              value: "{{ .Values.global.keycloak.loginRealm }}"
             - name: KC_API_URL
               value: "{{ .Values.global.keycloak.apiUrl }}"
             - name: KC_ADMIN_USER

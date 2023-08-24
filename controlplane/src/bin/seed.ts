@@ -8,6 +8,7 @@ import Keycloak from '../core/services/Keycloak.js';
 import { ApiKeyGenerator } from '../core/services/ApiGenerator.js';
 
 const realm = process.env.KC_REALM || 'cosmo';
+const loginRealm = process.env.KC_LOGIN_REALM || 'master';
 const adminUser = process.env.KC_ADMIN_USER || 'admin';
 const adminPassword = process.env.KC_ADMIN_PASSWORD || 'changeme';
 const clientId = process.env.KC_CLIENT_ID || 'studio';
@@ -26,9 +27,7 @@ const databaseConnectionUrl = process.env.DB_URL || 'postgresql://postgres:chang
 
 const keycloakClient = new Keycloak({
   apiUrl,
-  // Important: If you want to do admin operations, you need to use the master realm
-  // Otherwise use the realm where your users are stored
-  realm: 'master',
+  realm: loginRealm,
   clientId,
   adminUser,
   adminPassword,
