@@ -3,6 +3,14 @@ CREATE TABLE IF NOT EXISTS "organization_member_roles" (
 	"organization_member_id" uuid NOT NULL,
 	"role" "member_role" NOT NULL
 );
+
+BEGIN TRANSACTION;
+INSERT INTO "organization_member_roles" ("id", "organization_member_id", "role")
+SELECT "id", "organization_member_id", "role"
+FROM "member_roles";
+
+COMMIT;
+
 --> statement-breakpoint
 DROP TABLE "member_roles";--> statement-breakpoint
 DO $$ BEGIN
