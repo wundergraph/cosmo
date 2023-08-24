@@ -33,10 +33,13 @@ jobs:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Install
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
       - name: Build
         run: pnpm build
+
+      - name: Generate code
+        run: pnpm buf generate --template buf.ts.gen.yaml
 
       - name: Publish packages & Create Github Releases
         run: |
