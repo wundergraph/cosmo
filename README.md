@@ -43,7 +43,7 @@ It can take a few seconds (~30s) until all services are up and running. A seed c
 # Create the demo project
 make create-docker-demo
 
-# Copy the API key from the previous log output
+# Copy the Router token from the previous log output
 export ROUTER_TOKEN=...
 
 # Start the subgraphs + router
@@ -104,7 +104,7 @@ Your API key to access the platform is: `cosmo_669b576aaadc10ee1ae81d9193425705`
 export COSMO_API_KEY=cosmo_669b576aaadc10ee1ae81d9193425705
 export COSMO_API_URL=http://localhost:3001
 
-npx -y wgc@latest -h
+cd cli && pnpm wgc -h
 ```
 
 All services work with environment variables. You can find the default values in the `.env.example` file. Please copy it to `.env`  (Except studio which works with `.env.local`) and adjust the values to your needs.
