@@ -258,33 +258,36 @@ export class FederatedGraphRepository {
         name: targets.name,
       })
       .from(targets)
-      .where(and(eq(targets.organizationId, this.organizationId), eq(targets.type, 'federated')))
-      .innerJoin(federatedGraphs, eq(federatedGraphs.targetId, targets.id))
-      .leftJoin(schemaVersion, eq(schemaVersion.id, federatedGraphs.composedSchemaVersionId))
-      // This is a negative lookup. We check if there is a label matchers of a federated graph
-      // that does not match the given subgraph labels. If all label matchers match, then the
-      // federated graph will be part of the result.
       .where(
-        notExists(
-          this.db
-            .select()
-            .from(targetLabelMatchers)
-            .where(
-              and(
-                eq(targetLabelMatchers.targetId, targets.id),
-                not(
-                  // We created a GIN index on the label_matcher column, so we can look up
-                  // very quickly if the label matcher matches the given subgraph labels.
-                  sql.raw(
-                    `${targetLabelMatchers.labelMatcher.name} && ARRAY[${uniqueLabels.map(
-                      (ul) => "'" + joinLabel(ul) + "'",
-                    )}]`,
+        and(
+          eq(targets.organizationId, this.organizationId),
+          eq(targets.type, 'federated'),
+          // This is a negative lookup. We check if there is a label matchers of a federated graph
+          // that does not match the given subgraph labels. If all label matchers match, then the
+          // federated graph will be part of the result.
+          notExists(
+            this.db
+              .select()
+              .from(targetLabelMatchers)
+              .where(
+                and(
+                  eq(targetLabelMatchers.targetId, targets.id),
+                  not(
+                    // We created a GIN index on the label_matcher column, so we can look up
+                    // very quickly if the label matcher matches the given subgraph labels.
+                    sql.raw(
+                      `${targetLabelMatchers.labelMatcher.name} && ARRAY[${uniqueLabels.map(
+                        (ul) => "'" + joinLabel(ul) + "'",
+                      )}]`,
+                    ),
                   ),
                 ),
               ),
-            ),
+          ),
         ),
       )
+      .innerJoin(federatedGraphs, eq(federatedGraphs.targetId, targets.id))
+      .leftJoin(schemaVersion, eq(schemaVersion.id, federatedGraphs.composedSchemaVersionId))
       .orderBy(asc(targets.createdAt), asc(schemaVersion.createdAt))
       .execute();
 

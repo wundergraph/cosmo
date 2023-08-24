@@ -37,6 +37,7 @@ describe('Authentication', (ctx) => {
         url: databaseConnectionUrl,
       },
       keycloak: {
+        loginRealm: 'test',
         realm: 'test',
         adminUser: 'admin',
         adminPassword: 'changeme',

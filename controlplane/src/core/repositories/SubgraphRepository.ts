@@ -408,8 +408,7 @@ export class SubgraphRepository {
     const subgraphs = await this.db
       .select({ id: schema.subgraphs.id, name: schema.targets.name })
       .from(targets)
-      .where(and(eq(schema.targets.organizationId, this.organizationId), eq(targets.type, 'subgraph')))
-      .where(and(...conditions))
+      .where(and(eq(targets.organizationId, this.organizationId), eq(targets.type, 'subgraph'), ...conditions))
       .innerJoin(schema.subgraphs, eq(schema.subgraphs.targetId, targets.id))
       .execute();
 
