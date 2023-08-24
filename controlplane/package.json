@@ -20,7 +20,8 @@
     "start": "node dist/index.js",
     "test": "pnpm lint && tsc -p tsconfig.test.json && vitest run",
     "lint": "eslint --cache --ext .ts,.mjs,.cjs . && prettier -c src",
-    "lint:fix": "eslint --cache --fix --ext .ts,.mjs,.cjs . && prettier --write -c src"
+    "lint:fix": "eslint --cache --fix --ext .ts,.mjs,.cjs . && prettier --write -c src",
+    "postversion": "name=\"$(node -p \"var a = require('./package.json');process.stdout.write(a.name);process.exit(0)\")\"; version=\"$(node -p \"var a = require('./package.json');process.stdout.write(a.version);process.exit(0)\")\"; gh workflow run image-release.yml -F name=$name -F tag=$version -F dockerContext=."
   },
   "keywords": [
     "controlplane",
