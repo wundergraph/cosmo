@@ -1,15 +1,5 @@
 name: Router CI
 on:
-  push:
-    branches:
-      - main
-    tags-ignore:
-      - "**"
-    paths:
-      - "router/**/*"
-      - "connect/**/*"
-      - ".github/workflows/router-ci.yaml"
-
   pull_request:
     branches:
       - main
@@ -48,7 +38,7 @@ jobs:
           gh-engine-repo-token: ${{ secrets.GH_ENGINE_REPO_TOKEN }}
 
       - name: Install tools
-        run: make setup-tools
+        run: make setup-build-tools
 
       - name: Generate code
         run: buf generate --template buf.go.gen.yaml

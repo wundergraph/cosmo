@@ -15,7 +15,7 @@ import {
   TableCell,
   TableHead,
   TableHeader,
-  TableRow,
+  TableRow
 } from "./ui/table";
 
 export const Empty = ({ graph }: { graph?: FederatedGraph }) => {
