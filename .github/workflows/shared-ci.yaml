@@ -1,16 +1,5 @@
 name: Shared CI
 on:
-  push:
-    branches:
-      - main
-    tags-ignore:
-      - "**"
-    paths:
-      - ".github/workflows/shared-ci.yaml"
-      - "composition/**/*"
-      - "connect/**/*"
-      - "shared/**/*"
-
   pull_request:
     branches:
       - main

@@ -1,15 +1,5 @@
 name: Cli CI
 on:
-  push:
-    branches:
-      - main
-    tags-ignore:
-      - "**"
-    paths:
-      - "cli/**/*"
-      - "connect/**/*"
-      - ".github/workflows/cli-ci.yaml"
-
   pull_request:
     branches:
       - main

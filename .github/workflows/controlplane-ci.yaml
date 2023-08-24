@@ -1,16 +1,5 @@
 name: Controlplane CI
 on:
-  push:
-    branches:
-      - main
-    tags-ignore:
-      - "**"
-    paths:
-      - "controlplane/**/*"
-      - "connect/**/*"
-      - "composition/**/*"
-      - ".github/workflows/cp-ci.yaml"
-
   pull_request:
     branches:
       - main
