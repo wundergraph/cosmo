@@ -19,3 +19,26 @@ index eed243fa7ed7122dff5aca246a044730a235acfd..085cb66d07ce3f143fac5ba7f1effd02
 +    return exec('git', ['push', remote, branch], opts, dryRun)
  }
  //# sourceMappingURL=git-push.js.map
+\ No newline at end of file
+diff --git a/dist/version-command.js b/dist/version-command.js
+index 4557ffc32f18ad076b46060df3303c6bb983a43a..23b1eb6a831b1eb84ea5386e01f993a01dc3a591 100644
+--- a/dist/version-command.js
++++ b/dist/version-command.js
+@@ -1,6 +1,7 @@
+ import chalk from 'chalk';
+ import dedent from 'dedent';
+ import { minimatch } from 'minimatch';
++import { exec } from '@lerna-lite/core';
+ import { EOL as OS_EOL } from 'node:os';
+ import pMap from 'p-map';
+ import pPipe from 'p-pipe';
+@@ -509,6 +510,9 @@ export class VersionCommand extends Command {
+         await gitCommit(message, this.gitOpts, this.execOpts, this.options.dryRun);
+         for (const tag of tags) {
+             await gitTag(tag, this.gitOpts, this.execOpts, this.options.gitTagCommand, this.options.dryRun);
++            // Push tags one by one to avoid running into Github limits
++            this.logger.info('git', 'git push origin %s', tag);
++            await exec('git', ['push', 'origin', '--tags'])
+         }
+         return tags;
+     }
