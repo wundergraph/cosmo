@@ -23,7 +23,8 @@
     "controlplane",
     "router",
     "otelcollector",
-    "studio"
+    "studio",
+    "keycloak"
   ],
   "npmClient": "pnpm",
   "loglevel": "verbose"
