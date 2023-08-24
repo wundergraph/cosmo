@@ -58,5 +58,10 @@
     "husky": "^8.0.3",
     "lint-staged": "^12.5.0"
   },
-  "packageManager": "pnpm"
+  "packageManager": "pnpm",
+  "pnpm": {
+    "patchedDependencies": {
+      "@lerna-lite/version@2.5.0": "patches/@lerna-lite__version@2.5.0.patch"
+    }
+  }
 }
