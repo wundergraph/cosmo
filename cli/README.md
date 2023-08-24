@@ -1,5 +1,7 @@
 # Cosmo CLI aka "wgc"
 
+[![npm version](https://badge.fury.io/js/wgc.svg)](https://badge.fury.io/js/wgc)
+
 ## Getting started
 
 ### Prerequisites

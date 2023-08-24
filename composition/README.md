@@ -1,5 +1,7 @@
 # WunderGraph Composition
 
+[![npm version](https://badge.fury.io/js/%40wundergraph%2Fcomposition.svg)](https://badge.fury.io/js/%40wundergraph%2Fcomposition)
+
 The WunderGraph composition library allows to federate multiple subgraph schemas into a 
 single federated GraphQL schema.
 
