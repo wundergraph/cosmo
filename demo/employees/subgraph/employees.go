@@ -1,6 +1,6 @@
 package subgraph
 
-import "github.com/wundergraph/comso/demo/employees/subgraph/model"
+import "github.com/wundergraph/cosmo/demo/employees/subgraph/model"
 
 var employees = []*model.Employee{
 	{

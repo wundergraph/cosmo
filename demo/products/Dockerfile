@@ -4,9 +4,13 @@ WORKDIR /app
 
 COPY go.mod go.sum ./
 
+RUN mkdir ../otel
+COPY otel ../otel/
+
 RUN go mod download && go mod verify
 
 COPY . .
+COPY otel ..
 
 RUN go build -o server
 
