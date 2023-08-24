@@ -18,6 +18,7 @@ import { Authentication } from './services/Authentication.js';
 import { OrganizationRepository } from './repositories/OrganizationRepository.js';
 import GraphApiTokenAuthenticator from './services/GraphApiTokenAuthenticator.js';
 import AuthUtils from './auth-utils.js';
+import Keycloak from './services/Keycloak.js';
 
 export interface BuildConfig {
   logger: PinoLoggerOptions;
@@ -123,6 +124,16 @@ export default async function build(opts: BuildConfig) {
   const organizationRepository = new OrganizationRepository(fastify.db);
   const authenticator = new Authentication(webAuth, apiKeyAuth, graphKeyAuth, organizationRepository);
 
+  const keycloakClient = new Keycloak({
+    apiUrl: opts.keycloak.apiUrl,
+    // Important: If you want to do admin operations, you need to use the master realm
+    // Otherwise use the realm where your users are stored
+    realm: 'master',
+    clientId: opts.keycloak.clientId,
+    adminUser: opts.keycloak.adminUser,
+    adminPassword: opts.keycloak.adminPassword,
+  });
+
   /**
    * Controllers registration
    */
@@ -151,9 +162,10 @@ export default async function build(opts: BuildConfig) {
       db: fastify.db,
       logger: fastify.log as pino.Logger,
       jwtSecret: opts.auth.secret,
-      keycloak: opts.keycloak,
+      keycloakRealm: opts.keycloak.realm,
       chClient: fastify.ch,
       authenticator,
+      keycloakClient,
     }),
     logLevel: opts.logger.level as pino.LevelWithSilent,
     // Avoid compression for small requests

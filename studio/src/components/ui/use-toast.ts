@@ -182,6 +182,11 @@ function useToast() {
   return {
     ...state,
     toast,
+    update: (props: ToasterToast) =>
+      dispatch({
+        type: "UPDATE_TOAST",
+        toast: { ...props },
+      }),
     dismiss: (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId }),
   };
 }

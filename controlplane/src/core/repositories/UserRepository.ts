@@ -38,6 +38,10 @@ export class UserRepository {
       .execute();
   }
 
+  public async deleteUser(input: { id: string }) {
+    await this.db.delete(users).where(eq(users.id, input.id)).execute();
+  }
+
   public async inviteUser(input: {
     email: string;
     keycloakUserID: string;
@@ -61,7 +65,7 @@ export class UserRepository {
         acceptedInvite: false,
       });
 
-      await orgRepo.addMemberRoles({ memberID: insertedMember.id, roles: ['member'] });
+      await orgRepo.addOrganizationMemberRoles({ memberID: insertedMember.id, roles: ['member'] });
     });
   }
 }

@@ -1,8 +1,8 @@
+import { ExpiresAt } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { and, asc, eq } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { ExpiresAt, User } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import * as schema from '../../db/schema.js';
-import { apiKeys, memberRoles, organizations, organizationsMembers, users } from '../../db/schema.js';
+import { apiKeys, organizationMemberRoles, organizations, organizationsMembers, users } from '../../db/schema.js';
 import { APIKeyDTO, OrganizationDTO, OrganizationMemberDTO } from '../../types/index.js';
 
 /**
@@ -86,6 +86,40 @@ export class OrganizationRepository {
     }));
   }
 
+  public async getOrganizationMember(input: {
+    organizationID: string;
+    userID: string;
+  }): Promise<OrganizationMemberDTO | null> {
+    const orgMember = await this.db
+      .select({
+        id: users.id,
+        email: users.email,
+        acceptedInvite: organizationsMembers.acceptedInvite,
+        memberID: organizationsMembers.id,
+      })
+      .from(organizationsMembers)
+      .innerJoin(users, eq(users.id, organizationsMembers.userId))
+      .where(and(eq(organizationsMembers.organizationId, input.organizationID), eq(users.id, input.userID)))
+      .orderBy(asc(organizationsMembers.createdAt))
+      .execute();
+
+    if (orgMember.length === 0) {
+      return null;
+    }
+
+    const userRoles = await this.getOrganizationMemberRoles({
+      organizationID: input.organizationID,
+      userID: input.userID,
+    });
+
+    return {
+      id: orgMember[0].id,
+      email: orgMember[0].email,
+      roles: userRoles,
+      acceptedInvite: orgMember[0].acceptedInvite,
+    } as OrganizationMemberDTO;
+  }
+
   public async getMembers(input: { organizationID: string }): Promise<OrganizationMemberDTO[]> {
     const orgMembers = await this.db
       .select({
@@ -100,22 +134,22 @@ export class OrganizationRepository {
       .orderBy(asc(organizationsMembers.createdAt))
       .execute();
 
-    const members: User[] = [];
+    const members: OrganizationMemberDTO[] = [];
 
     for (const member of orgMembers) {
       const roles = await this.db
         .select({
-          role: memberRoles.role,
+          role: organizationMemberRoles.role,
         })
-        .from(memberRoles)
-        .where(eq(memberRoles.organizationMemberId, member.memberID))
+        .from(organizationMemberRoles)
+        .where(eq(organizationMemberRoles.organizationMemberId, member.memberID))
         .execute();
       members.push({
         id: member.id,
         email: member.email,
         roles: roles.map((role) => role.role),
         acceptedInvite: member.acceptedInvite,
-      } as User);
+      } as OrganizationMemberDTO);
     }
     return members;
   }
@@ -157,7 +191,7 @@ export class OrganizationRepository {
     return insertedMember[0];
   }
 
-  public async addMemberRoles(input: { memberID: string; roles: ('admin' | 'member')[] }) {
+  public async addOrganizationMemberRoles(input: { memberID: string; roles: ('admin' | 'member')[] }) {
     const values: {
       organizationMemberId: string;
       role: 'admin' | 'member';
@@ -170,16 +204,31 @@ export class OrganizationRepository {
       });
     }
 
-    await this.db.insert(memberRoles).values(values).execute();
+    await this.db.insert(organizationMemberRoles).values(values).execute();
   }
 
-  public async getMemberRoles(input: { userID: string; organizationID: string }): Promise<('admin' | 'member')[]> {
+  public async removeOrganizationMember(input: { userID: string; organizationID: string }) {
+    await this.db
+      .delete(organizationsMembers)
+      .where(
+        and(
+          eq(organizationsMembers.organizationId, input.organizationID),
+          eq(organizationsMembers.userId, input.userID),
+        ),
+      )
+      .execute();
+  }
+
+  public async getOrganizationMemberRoles(input: {
+    userID: string;
+    organizationID: string;
+  }): Promise<('admin' | 'member')[]> {
     const userRoles = await this.db
       .select({
-        role: memberRoles.role,
+        role: organizationMemberRoles.role,
       })
-      .from(memberRoles)
-      .innerJoin(organizationsMembers, eq(organizationsMembers.id, memberRoles.organizationMemberId))
+      .from(organizationMemberRoles)
+      .innerJoin(organizationsMembers, eq(organizationsMembers.id, organizationMemberRoles.organizationMemberId))
       .where(
         and(
           eq(organizationsMembers.userId, input.userID),

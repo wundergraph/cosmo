@@ -18,6 +18,7 @@ import {
   genUniqueLabel,
   seedTest,
 } from '../src/core/test-util';
+import Keycloak from '../src/core/services/Keycloak';
 
 let dbname = '';
 
@@ -45,20 +46,28 @@ describe('Subgraph', (ctx) => {
 
     const { authenticator, userTestData } = createTestAuthenticator();
 
+    const realm = 'test';
+    const apiUrl = 'http://localhost:8080';
+    const clientId = 'studio';
+    const adminUser = 'admin';
+    const adminPassword = 'changeme';
+
+    const keycloakClient = new Keycloak({
+      apiUrl,
+      realm,
+      clientId,
+      adminUser,
+      adminPassword,
+    });
+
     await server.register(fastifyConnectPlugin, {
       routes: routes({
         db: server.db,
         logger: pino(),
         authenticator,
         jwtSecret: 'secret',
-        keycloak: {
-          realm: 'test',
-          adminUser: 'admin',
-          adminPassword: 'changeme',
-          apiUrl: 'http://localhost:8080',
-          frontendUrl: 'http://localhost:8080',
-          clientId: 'studio',
-        },
+        keycloakRealm: realm,
+        keycloakClient,
       }),
     });
 
@@ -110,20 +119,28 @@ describe('Subgraph', (ctx) => {
 
     const { authenticator, userTestData } = createTestAuthenticator();
 
+    const realm = 'test';
+    const apiUrl = 'http://localhost:8080';
+    const clientId = 'studio';
+    const adminUser = 'admin';
+    const adminPassword = 'changeme';
+
+    const keycloakClient = new Keycloak({
+      apiUrl,
+      realm,
+      clientId,
+      adminUser,
+      adminPassword,
+    });
+
     await server.register(fastifyConnectPlugin, {
       routes: routes({
         db: server.db,
         logger: pino(),
         authenticator,
         jwtSecret: 'secret',
-        keycloak: {
-          realm: 'test',
-          adminUser: 'admin',
-          adminPassword: 'changeme',
-          apiUrl: 'http://localhost:8080',
-          frontendUrl: 'http://localhost:8080',
-          clientId: 'studio',
-        },
+        keycloakRealm: realm,
+        keycloakClient,
       }),
     });
 

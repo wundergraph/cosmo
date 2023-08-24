@@ -47,7 +47,7 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
         id: userSession.userId,
         email: userInfoData.email,
         organizations: orgs,
-        roles: await opts.organizationRepository.getMemberRoles({
+        roles: await opts.organizationRepository.getOrganizationMemberRoles({
           userID: userSession.userId,
           // just passing the first org because we are limiting the user to onyly be a part of a single organization.
           organizationID: orgs[0].id,

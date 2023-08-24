@@ -502,6 +502,14 @@ message DeleteAPIKeyResponse {
   Response response = 1;
 }
 
+message RemoveInvitationRequest {
+  string email = 1;
+}
+
+message RemoveInvitationResponse {
+  Response response = 1;
+}
+
 message SpanAttributes {
   string httpStatusCode = 1;
   string componentName = 2;
@@ -591,6 +599,8 @@ service PlatformService {
   rpc CreateAPIKey(CreateAPIKeyRequest) returns (CreateAPIKeyResponse){}
   // DeleteAPIKey deletes an API key for the organization
   rpc DeleteAPIKey(DeleteAPIKeyRequest) returns (DeleteAPIKeyResponse){}
+  // RemoveOrganizationMember removes the user from the organization
+  rpc RemoveInvitation(RemoveInvitationRequest) returns (RemoveInvitationResponse){}
   // GetLatestValidRouterConfig returns the router config for the federated graph
   rpc GetLatestValidRouterConfig(wg.cosmo.node.v1.GetConfigRequest) returns (wg.cosmo.node.v1.GetConfigResponse) {}
 
