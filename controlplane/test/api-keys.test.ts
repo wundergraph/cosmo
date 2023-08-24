@@ -94,7 +94,18 @@ describe('API Keys', (ctx) => {
     expect(response.response?.code).toBe(EnumStatusCode.ERR_ALREADY_EXISTS);
 
     // test when api key name is wrong
-    response = await client.createAPIKey({ name: 'ab', expires: ExpiresAt.NEVER, userID: userTestData.userId });
+    response = await client.createAPIKey({
+      name: 'a'.repeat(100),
+      expires: ExpiresAt.NEVER,
+      userID: userTestData.userId,
+    });
+    expect(response.response?.code).toBe(EnumStatusCode.ERR);
+
+    response = await client.createAPIKey({
+      name: '',
+      expires: ExpiresAt.NEVER,
+      userID: userTestData.userId,
+    });
     expect(response.response?.code).toBe(EnumStatusCode.ERR);
 
     let deleteResponse = await client.deleteAPIKey({ name: 'test' });

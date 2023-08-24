@@ -18,7 +18,10 @@
     "lint": "eslint --cache --ext .ts,.mjs,.cjs . && prettier -c src",
     "lint:fix": "eslint --cache --fix --ext .ts,.mjs,.cjs . && prettier --write -c src"
   },
-  "keywords": ["wundergraph-cosmo", "shared"],
+  "keywords": [
+    "wundergraph-cosmo",
+    "shared"
+  ],
   "author": {
     "name": "WunderGraph Maintainers",
     "email": "info@wundergraph.com"

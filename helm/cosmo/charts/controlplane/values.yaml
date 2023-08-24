@@ -5,8 +5,8 @@
 replicaCount: 1
 
 image:
-  repository: wg-cosmo/cloud/controlplane
-  registry: us-docker.pkg.dev
+  repository: wundergraph/cosmo/controlplane
+  registry: ghcr.io
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
   version: "latest"

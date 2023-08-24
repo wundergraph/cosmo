@@ -1,0 +1,31 @@
+{
+  "$schema": "node_modules/@lerna-lite/cli/schemas/lerna-schema.json",
+  "version": "independent",
+  "command": {
+    "publish": {
+      "registry": "https://registry.npmjs.org"
+    },
+    "version": {
+      "conventionalCommits": true,
+      "createRelease": "github",
+      "syncWorkspaceLock": true,
+      "changelogIncludeCommitsClientLogin": " (@%l)",
+      "noPush": true,
+      "skipBumpOnlyRelease": true,
+      "message": "chore(release): Publish [skip ci]"
+    }
+  },
+  "packages": [
+    "cli",
+    "composition",
+    "shared",
+    "connect",
+    "controlplane",
+    "router",
+    "otelcollector",
+    "studio",
+    "keycloak"
+  ],
+  "npmClient": "pnpm",
+  "loglevel": "verbose"
+}
