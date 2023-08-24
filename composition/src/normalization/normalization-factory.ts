@@ -1097,6 +1097,7 @@ export class NormalizationFactory {
           const objectLikeExtension = extension as ObjectLikeExtensionContainer;
           for (const [fieldName, fieldContainer] of objectLikeExtension.fields) {
             if (fieldContainer.arguments.size > 0) {
+              // Arguments can only be fully validated once all parents types are known
               this.validateArguments(fieldContainer, `${typeName}.${fieldName}`);
             }
             if (baseType.fields.has(fieldName)) {
@@ -1147,8 +1148,8 @@ export class NormalizationFactory {
               continue;
             }
             for (const [fieldName, fieldContainer] of parentContainer.fields) {
-              const fieldPath = `${typeName}.${fieldName}`;
-              this.validateArguments(fieldContainer, fieldPath);
+              // Arguments can only be fully validated once all parents types are known
+              this.validateArguments(fieldContainer, `${typeName}.${fieldName}`);
             }
           }
           const configurationData: ConfigurationData = {
