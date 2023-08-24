@@ -35,11 +35,11 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
-      - name: Build
-        run: pnpm build
-
       - name: Generate code
         run: pnpm buf generate --template buf.ts.gen.yaml
+
+      - name: Build
+        run: pnpm build
 
       - name: Publish packages & Create Github Releases
         run: |
