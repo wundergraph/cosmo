@@ -5,6 +5,10 @@ on:
     tags:
       - 'controlplane@*'
 
+concurrency:
+  group: Controlplane Production
+  cancel-in-progress: false
+
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
