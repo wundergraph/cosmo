@@ -241,36 +241,6 @@ exports[`Router Config Builder > Build Subgraph schema > router.config.json 1`] 
         ]
       }
     ],
-    \\"fieldConfigurations\\": [
-      {
-        \\"typeName\\": \\"Query\\",
-        \\"fieldName\\": \\"topProducts\\",
-        \\"argumentsConfiguration\\": [
-          {
-            \\"name\\": \\"first\\",
-            \\"sourceType\\": 1
-          },
-          {
-            \\"name\\": \\"random\\",
-            \\"sourceType\\": 1
-          }
-        ]
-      },
-      {
-        \\"typeName\\": \\"Mutation\\",
-        \\"fieldName\\": \\"setPrice\\",
-        \\"argumentsConfiguration\\": [
-          {
-            \\"name\\": \\"upc\\",
-            \\"sourceType\\": 1
-          },
-          {
-            \\"name\\": \\"price\\",
-            \\"sourceType\\": 1
-          }
-        ]
-      }
-    ],
     \\"graphqlSchema\\": \\"type Query {}\\",
     \\"stringStorage\\": {
       \\"56b22d2b228499be9dcb1bd0720bbf7d8348104e\\": \\"schema {\\\\n  query: Query\\\\n}\\\\n\\\\ndirective @extends on INTERFACE | OBJECT\\\\n\\\\ndirective @external on FIELD_DEFINITION | OBJECT\\\\n\\\\ndirective @key(fields: String!) repeatable on OBJECT\\\\n\\\\ndirective @provides(fields: String!) on FIELD_DEFINITION\\\\n\\\\ndirective @requires(fields: String!) on FIELD_DEFINITION\\\\n\\\\ndirective @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION\\\\n\\\\ntype Query {\\\\n  me: User\\\\n}\\\\n\\\\ntype User @key(fields: \\\\\\"id\\\\\\") {\\\\n  id: ID!\\\\n  name: String\\\\n  username: String\\\\n}\\",
