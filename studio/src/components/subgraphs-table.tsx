@@ -1,4 +1,4 @@
-import { docsBaseURL } from "@/lib/constatnts";
+import { docsBaseURL } from "@/lib/constants";
 import { CommandLineIcon } from "@heroicons/react/24/outline";
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
@@ -15,7 +15,7 @@ import {
   TableCell,
   TableHead,
   TableHeader,
-  TableRow
+  TableRow,
 } from "./ui/table";
 
 export const Empty = ({ graph }: { graph?: FederatedGraph }) => {

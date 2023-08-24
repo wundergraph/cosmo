@@ -21,7 +21,7 @@ import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
 import { Loader } from "@/components/ui/loader";
 import { CommandLineIcon } from "@heroicons/react/24/outline";
-import { docsBaseURL } from "@/lib/constatnts";
+import { docsBaseURL } from "@/lib/constants";
 import { CLI } from "@/components/ui/cli";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common_pb";
 
