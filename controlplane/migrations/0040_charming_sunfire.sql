@@ -1,0 +1,1 @@
+ALTER TABLE "schema_checks" ALTER COLUMN "schema_version_id" DROP NOT NULL;

@@ -263,9 +263,7 @@ export const schemaChecks = pgTable('schema_checks', {
   hasBreakingChanges: boolean('has_breaking_changes').default(false),
   proposedSubgraphSchemaSDL: text('proposed_subgraph_schema_sdl'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  schemaVersionId: uuid('schema_version_id')
-    .notNull()
-    .references(() => schemaVersion.id),
+  schemaVersionId: uuid('schema_version_id').references(() => schemaVersion.id),
 });
 
 export const schemaChecksRelations = relations(schemaChecks, ({ one }) => ({
