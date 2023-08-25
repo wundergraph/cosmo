@@ -17,21 +17,26 @@ export type DataSourceConfiguration = {
 };
 
 function addRequiredFields(
-  requiredFields: RequiredFieldConfiguration[] | undefined, target: RequiredField[], typeName: string,
+  requiredFields: RequiredFieldConfiguration[] | undefined,
+  target: RequiredField[],
+  typeName: string,
 ) {
   if (!requiredFields) {
-    return
+    return;
   }
   for (const requiredField of requiredFields) {
-    target.push(new RequiredField({
-      typeName, fieldName: requiredField.fieldName, selectionSet: requiredField.selectionSet,
-    }));
+    target.push(
+      new RequiredField({
+        typeName,
+        fieldName: requiredField.fieldName,
+        selectionSet: requiredField.selectionSet,
+      }),
+    );
   }
 }
 
 export function configurationDataMapToDataSourceConfiguration(dataMap: ConfigurationDataMap) {
   const output: DataSourceConfiguration = {
-
     rootNodes: [],
     childNodes: [],
     keys: [],
@@ -53,18 +58,25 @@ export function configurationDataMapToDataSourceConfiguration(dataMap: Configura
   return output;
 }
 
-export function argumentConfigurationDatasToFieldConfigurations(datas: ArgumentConfigurationData[]): FieldConfiguration[] {
+export function argumentConfigurationDatasToFieldConfigurations(
+  datas: ArgumentConfigurationData[],
+): FieldConfiguration[] {
   const output: FieldConfiguration[] = [];
   for (const data of datas) {
-    const argumentConfigurations: ArgumentConfiguration[] = data.argumentNames.map((argumentName: string) => new ArgumentConfiguration({
-      name: argumentName,
-      sourceType: ArgumentSource.FIELD_ARGUMENT,
-    }));
-    output.push(new FieldConfiguration({
-      argumentsConfiguration: argumentConfigurations,
-      fieldName: data.fieldName,
-      typeName: data.typeName,
-    }));
+    const argumentConfigurations: ArgumentConfiguration[] = data.argumentNames.map(
+      (argumentName: string) =>
+        new ArgumentConfiguration({
+          name: argumentName,
+          sourceType: ArgumentSource.FIELD_ARGUMENT,
+        }),
+    );
+    output.push(
+      new FieldConfiguration({
+        argumentsConfiguration: argumentConfigurations,
+        fieldName: data.fieldName,
+        typeName: data.typeName,
+      }),
+    );
   }
   return output;
 }
