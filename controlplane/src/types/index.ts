@@ -41,6 +41,7 @@ export interface SubgraphDTO {
   schemaSDL: string;
   lastUpdatedAt: string;
   labels: Label[];
+  subgraphVersionId: string;
 }
 
 export interface SchemaCheckDTO {
@@ -51,6 +52,7 @@ export interface SchemaCheckDTO {
   isComposable: boolean;
   isBreaking: boolean;
   proposedSubgraphSchemaSDL?: string;
+  originalSchemaSDL: string;
 }
 
 export interface SchemaCheckDetailsDTO {

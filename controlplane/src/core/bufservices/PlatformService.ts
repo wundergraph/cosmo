@@ -419,6 +419,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const schemaCheckID = await schemaCheckRepo.create({
           targetId: subgraph.targetId,
           proposedSubgraphSchemaSDL: newSchemaSDL,
+          schemaVersionId: subgraph.subgraphVersionId,
         });
 
         const schemaChanges = await getDiffBetweenGraphs(subgraph.schemaSDL, newSchemaSDL);

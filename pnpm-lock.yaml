@@ -459,6 +459,9 @@ importers:
       date-fns-tz:
         specifier: ^2.0.0
         version: 2.0.0(date-fns@2.30.0)
+      diff:
+        specifier: ^5.1.0
+        version: 5.1.0
       graphiql:
         specifier: ^2.4.7
         version: 2.4.7(@codemirror/language@6.0.0)(@types/node@20.3.1)(@types/react@18.2.14)(graphql@15.8.0)(react-dom@18.2.0)(react-is@17.0.2)(react@18.2.0)
@@ -529,6 +532,9 @@ importers:
       '@types/dagre':
         specifier: ^0.7.48
         version: 0.7.48
+      '@types/diff':
+        specifier: ^5.0.3
+        version: 5.0.3
       '@types/lodash':
         specifier: ^4.14.195
         version: 4.14.195
@@ -4165,6 +4171,10 @@ packages:
     resolution: {integrity: sha512-rF3yXSwHIrDxEkN6edCE4TXknb5YSEpiXfLaspw1I08grC49ZFuAVGOQCmZGIuLUGoFgcqGlUFBL/XrpgYpQgw==}
     dev: true
 
+  /@types/diff@5.0.3:
+    resolution: {integrity: sha512-amrLbRqTU9bXMCc6uX0sWpxsQzRIo9z6MJPkH1pkez/qOxuqSZVuryJAWoBRq94CeG8JxY+VK4Le9HtjQR5T9A==}
+    dev: true
+
   /@types/geojson@7946.0.10:
     resolution: {integrity: sha512-Nmh0K3iWQJzniTuPRcJn5hxXkfB1T1pgB89SBig5PlJQU5yocazeu4jATJlaA0GYFKWMqDdvYemoSnF2pXgLVA==}
     dev: false
@@ -6011,6 +6021,11 @@ packages:
   /diff@4.0.2:
     resolution: {integrity: sha512-58lmxKSA4BNyLz+HHMUzlOEpg09FV+ev6ZMe3vJihgdxzgcwZ8VoEEPmALCZG9LmqfVoNMMKpttIYTVG6uDY7A==}
     engines: {node: '>=0.3.1'}
+
+  /diff@5.1.0:
+    resolution: {integrity: sha512-D+mk+qE8VC/PAUrlAU34N+VfXev0ghe5ywmpqrawphmVZc1bEfn56uo9qpyGp1p4xpzOHkSW4ztBd6L7Xx4ACw==}
+    engines: {node: '>=0.3.1'}
+    dev: false
 
   /difflib@0.2.4:
     resolution: {integrity: sha512-9YVwmMb0wQHQNr5J9m6BSj6fk4pfGITGQOOs+D9Fl+INODWFOfvhIU1hNv6GgR1RBoC/9NJcwu77zShxV0kT7w==}

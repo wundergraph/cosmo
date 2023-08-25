@@ -1,7 +1,7 @@
 import { GraphContext, getGraphLayout } from "@/components/layout/graph-layout";
 import { PageHeader } from "@/components/layout/head";
 import { TitleLayout } from "@/components/layout/title-layout";
-import { SchemaViewer, SchemaViewerActions } from "@/components/schmea-viewer";
+import { SchemaViewer, SchemaViewerActions } from "@/components/schema-viewer";
 import {
   Select,
   SelectContent,

@@ -61,6 +61,7 @@
     "dagre": "^0.8.5",
     "date-fns": "^2.30.0",
     "date-fns-tz": "^2.0.0",
+    "diff": "^5.1.0",
     "graphiql": "^2.4.7",
     "lodash": "^4.17.21",
     "next": "13.4.19",
@@ -86,6 +87,7 @@
   "devDependencies": {
     "@tailwindcss/typography": "^0.5.9",
     "@types/dagre": "^0.7.48",
+    "@types/diff": "^5.0.3",
     "@types/lodash": "^4.14.195",
     "@types/node": "20.3.1",
     "@types/react": "18.2.14",

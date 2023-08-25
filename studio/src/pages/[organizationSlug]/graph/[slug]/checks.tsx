@@ -2,7 +2,7 @@ import { EmptyState } from "@/components/empty-state";
 import { GraphContext, getGraphLayout } from "@/components/layout/graph-layout";
 import { PageHeader } from "@/components/layout/head";
 import { TitleLayout } from "@/components/layout/title-layout";
-import { SchemaViewer, SchemaViewerActions } from "@/components/schmea-viewer";
+import { SchemaViewer, SchemaViewerActions } from "@/components/schema-viewer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CLI } from "@/components/ui/cli";
@@ -41,6 +41,30 @@ import {
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common_pb";
 import { useContext } from "react";
+import * as Diff from "diff";
+
+const generateDiff = (original: string, newString: string): string => {
+  const diff = Diff.diffLines(original, newString);
+
+  let output = "";
+
+  diff.forEach(function (part) {
+    if (part.added) {
+      const changedLines = part.value.split("\n");
+      if (!changedLines[changedLines.length - 1]) changedLines.pop();
+      output += changedLines.map((each) => `+ ${each}\n`).join("");
+    } else if (part.removed) {
+      const changedLines = part.value.split("\n");
+      if (!changedLines[changedLines.length - 1]) changedLines.pop();
+      output += changedLines.map((each) => `- ${each}\n`).join("");
+    } else {
+      const changedLines = part.value.split("\n");
+      if (!changedLines[changedLines.length - 1]) changedLines.pop();
+      output += changedLines.map((each) => `  ${each}\n`).join("");
+    }
+  });
+  return output;
+};
 
 const Details = ({ id, graphName }: { id: string; graphName: string }) => {
   const { data, isLoading, error, refetch } = useQuery(
@@ -148,7 +172,7 @@ const ProposedSchema = ({
           <DialogTitle>Schema</DialogTitle>
         </DialogHeader>
         <div className="scrollbar-custom h-[70vh] overflow-auto rounded border">
-          <SchemaViewer sdl={sdl} disableLinking />
+          <SchemaViewer sdl={sdl} showDiff={true} disableLinking />
         </div>
         <SchemaViewerActions sdl={sdl} subgraphName={subgraphName} />
       </DialogContent>
@@ -247,7 +271,12 @@ const ChecksPage: NextPageWithLayout = () => {
               subgraphName,
               timestamp,
               proposedSubgraphSchemaSDL,
+              originalSchemaSDL,
             }) => {
+              const output = generateDiff(
+                originalSchemaSDL,
+                proposedSubgraphSchemaSDL!
+              );
               return (
                 <TableRow key={id}>
                   <TableCell className="font-medium ">
@@ -266,7 +295,7 @@ const ChecksPage: NextPageWithLayout = () => {
                   <TableCell className="text-center">
                     {proposedSubgraphSchemaSDL ? (
                       <ProposedSchema
-                        sdl={proposedSubgraphSchemaSDL}
+                        sdl={output}
                         subgraphName={subgraphName}
                       />
                     ) : (

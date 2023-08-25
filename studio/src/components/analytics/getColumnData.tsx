@@ -11,7 +11,7 @@ import {
   Unit,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import React, { ReactNode } from "react";
-import { SchemaViewer } from "../schmea-viewer";
+import { SchemaViewer } from "../schema-viewer";
 import { Button } from "../ui/button";
 import {
   Dialog,

@@ -224,6 +224,7 @@ message SchemaCheck {
   bool isComposable = 5;
   bool isBreaking = 6;
   optional string proposedSubgraphSchemaSDL = 7;
+  string originalSchemaSDL = 8;
 }
 
 message GetChecksByFederatedGraphNameResponse {

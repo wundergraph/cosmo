@@ -178,6 +178,7 @@ export class SubgraphRepository {
         lastUpdatedAt: insertedVersion[0].createdAt.toISOString() ?? '',
         name: subgraphName,
         labels: subgraph.labels,
+        subgraphVersionId: subgraph.subgraphVersionId,
       };
     });
   }
@@ -291,11 +292,13 @@ export class SubgraphRepository {
 
     let lastUpdatedAt = '';
     let schemaSDL = '';
+    let subgraphVersionId = '';
 
     // Subgraphs are created without a schema version.
     if (resp.subgraph.schemaVersion !== null) {
       lastUpdatedAt = resp.subgraph.schemaVersion.createdAt?.toISOString() ?? '';
       schemaSDL = resp.subgraph.schemaVersion.schemaSDL ?? '';
+      subgraphVersionId = resp.subgraph.schemaVersion.id;
     }
 
     return {
@@ -306,6 +309,7 @@ export class SubgraphRepository {
       schemaSDL,
       lastUpdatedAt,
       labels: resp.labels?.map?.((l) => splitLabel(l)) ?? [],
+      subgraphVersionId,
     };
   }
 
@@ -329,6 +333,9 @@ export class SubgraphRepository {
         schema.schemaChecks.targetId,
         subgraphs.map(({ targetId }) => targetId),
       ),
+      with: {
+        schemaVersion: true,
+      },
     });
 
     return checkList.map((c) => ({
@@ -339,6 +346,9 @@ export class SubgraphRepository {
       isBreaking: c.hasBreakingChanges ?? false,
       isComposable: c.isComposable ?? false,
       proposedSubgraphSchemaSDL: c.proposedSubgraphSchemaSDL ?? undefined,
+      // TODO: Figure out why type fails
+      // @ts-ignore
+      originalSchemaSDL: c.schemaVersion.schemaSDL,
     }));
   }
 

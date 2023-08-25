@@ -1910,6 +1910,11 @@ export class SchemaCheck extends Message<SchemaCheck> {
    */
   proposedSubgraphSchemaSDL?: string;
 
+  /**
+   * @generated from field: string originalSchemaSDL = 8;
+   */
+  originalSchemaSDL = "";
+
   constructor(data?: PartialMessage<SchemaCheck>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1925,6 +1930,7 @@ export class SchemaCheck extends Message<SchemaCheck> {
     { no: 5, name: "isComposable", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 6, name: "isBreaking", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 7, name: "proposedSubgraphSchemaSDL", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 8, name: "originalSchemaSDL", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SchemaCheck {

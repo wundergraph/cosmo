@@ -59,9 +59,11 @@ export const SchemaViewerActions = ({
 export const SchemaViewer = ({
   sdl,
   disableLinking,
+  showDiff = false,
 }: {
   sdl: string;
   disableLinking?: boolean;
+  showDiff?: boolean;
 }) => {
   const router = useRouter();
   const pathname = router.asPath.split("#")[0];
@@ -94,12 +96,27 @@ export const SchemaViewer = ({
 
             const href = disableLinking ? "#" : pathname + `#${lineNo}`;
 
+            const lineType = line?.[0]?.content?.startsWith?.("- ")
+              ? "removed"
+              : line?.[0]?.content?.startsWith?.("+ ")
+              ? "added"
+              : "";
+
             return (
               <div
                 id={`id-${lineNo}`}
                 key={i.toString()}
                 {...getLineProps({ line })}
-                className={hash === lineNo ? "bg-secondary" : ""}
+                className={cn(
+                  hash === lineNo ? "bg-secondary" : "",
+                  showDiff
+                    ? lineType === "added"
+                      ? "bg-green-400 bg-opacity-50 dark:bg-green-900"
+                      : lineType === "removed"
+                      ? "bg-red-400 bg-opacity-50 dark:bg-red-900"
+                      : ""
+                    : ""
+                )}
               >
                 <Link
                   href={href}
