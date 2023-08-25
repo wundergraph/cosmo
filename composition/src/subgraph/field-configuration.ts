@@ -1,9 +1,16 @@
 export type ConfigurationDataMap = Map<string, ConfigurationData>;
 
+export type RequiredFieldConfiguration = {
+  fieldName: string;
+  selectionSet: string;
+}
+
 export type ConfigurationData = {
   fieldNames: Set<string>;
   isRootNode: boolean;
-  selectionSets: string[];
+  provides?: RequiredFieldConfiguration[];
+  keys?: RequiredFieldConfiguration[];
+  requires?: RequiredFieldConfiguration[];
   typeName: string;
 };
 

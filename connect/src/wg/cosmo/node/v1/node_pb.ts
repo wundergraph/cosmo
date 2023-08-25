@@ -474,9 +474,19 @@ export class DataSourceConfiguration extends Message<DataSourceConfiguration> {
   id = "";
 
   /**
-   * @generated from field: repeated wg.cosmo.node.v1.RequiredField required_fields = 10;
+   * @generated from field: repeated wg.cosmo.node.v1.RequiredField keys = 10;
    */
-  requiredFields: RequiredField[] = [];
+  keys: RequiredField[] = [];
+
+  /**
+   * @generated from field: repeated wg.cosmo.node.v1.RequiredField provides = 11;
+   */
+  provides: RequiredField[] = [];
+
+  /**
+   * @generated from field: repeated wg.cosmo.node.v1.RequiredField requires = 12;
+   */
+  requires: RequiredField[] = [];
 
   constructor(data?: PartialMessage<DataSourceConfiguration>) {
     super();
@@ -495,7 +505,9 @@ export class DataSourceConfiguration extends Message<DataSourceConfiguration> {
     { no: 7, name: "directives", kind: "message", T: DirectiveConfiguration, repeated: true },
     { no: 8, name: "request_timeout_seconds", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
     { no: 9, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 10, name: "required_fields", kind: "message", T: RequiredField, repeated: true },
+    { no: 10, name: "keys", kind: "message", T: RequiredField, repeated: true },
+    { no: 11, name: "provides", kind: "message", T: RequiredField, repeated: true },
+    { no: 12, name: "requires", kind: "message", T: RequiredField, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DataSourceConfiguration {

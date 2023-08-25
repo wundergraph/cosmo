@@ -26,21 +26,6 @@ interface SkuItf {
   sku: String
 }
 
-interface ProductItf implements SkuItf {
-  id: ID!
-  sku: String
-  name: String
-  package: String
-  variation: ProductVariation
-  dimensions: ProductDimension
-  createdBy: User
-  hidden: String
-  oldField: String
-  reviewsCount: Int!
-  reviewsScore: Float!
-  reviews: [Review!]!
-}
-
 type Query {
   allPandas: [Panda]
   panda(name: ID!): Panda
@@ -52,21 +37,6 @@ type Query {
 type Panda {
   name: ID!
   favoriteFood: String
-}
-
-type Product implements ProductItf & SkuItf {
-  id: ID!
-  sku: String
-  name: String
-  package: String
-  variation: ProductVariation
-  dimensions: ProductDimension
-  createdBy: User
-  hidden: String
-  reviewsScore: Float!
-  oldField: String
-  reviewsCount: Int!
-  reviews: [Review!]!
 }
 
 enum ShippingClass {
@@ -93,4 +63,34 @@ type User {
 type Review {
   id: Int!
   body: String!
+}
+
+interface ProductItf implements SkuItf {
+  id: ID!
+  sku: String
+  name: String
+  package: String
+  variation: ProductVariation
+  dimensions: ProductDimension
+  createdBy: User
+  hidden: String
+  oldField: String
+  reviewsCount: Int!
+  reviewsScore: Float!
+  reviews: [Review!]!
+}
+
+type Product implements ProductItf & SkuItf {
+  id: ID!
+  sku: String
+  name: String
+  package: String
+  variation: ProductVariation
+  dimensions: ProductDimension
+  createdBy: User
+  hidden: String
+  reviewsScore: Float!
+  oldField: String
+  reviewsCount: Int!
+  reviews: [Review!]!
 }

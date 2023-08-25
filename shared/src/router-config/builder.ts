@@ -58,14 +58,16 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
 
     // IMPORTANT NOTE: printSchema and printSchemaWithDirectives promotes extension types to "full" types
     const upstreamSchema = internString(engineConfig, printSchemaWithDirectives(lexicographicSortSchema(schema)));
-    const { childNodes, rootNodes, requiredFields } = configurationDataMapToDataSourceConfiguration(
+    const { childNodes, rootNodes, keys, provides, requires } = configurationDataMapToDataSourceConfiguration(
       normalizationResult!.configurationDataMap,
     );
     const datasourceConfig = new DataSourceConfiguration({
       id: subgraph.url,
       childNodes,
       rootNodes,
-      requiredFields,
+      keys,
+      provides,
+      requires,
       kind: DataSourceKind.GRAPHQL,
       customGraphql: {
         customScalarTypeFields: [],

@@ -53,7 +53,9 @@ message DataSourceConfiguration {
   repeated DirectiveConfiguration directives = 7;
   int64 request_timeout_seconds = 8;
   string id = 9;
-  repeated RequiredField required_fields = 10;
+  repeated RequiredField keys = 10;
+  repeated RequiredField provides = 11;
+  repeated RequiredField requires = 12;
 }
 
 message FieldConfiguration {

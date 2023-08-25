@@ -349,24 +349,28 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, wgServerUrl stri
 			Requires: nil,
 			Provides: nil,
 		}
-		for _, requiredField := range in.RequiredFields {
-			// TODO
+		for _, keyConfiguration := range in.Keys {
 			out.FederationMetaData.Keys = append(out.FederationMetaData.Keys, plan.FederationFieldConfiguration{
-				TypeName:     requiredField.TypeName,
-				FieldName:    requiredField.FieldName,
-				SelectionSet: requiredField.SelectionSet,
+				TypeName:     keyConfiguration.TypeName,
+				FieldName:    keyConfiguration.FieldName,
+				SelectionSet: keyConfiguration.SelectionSet,
+			})
+		}
+		for _, providesConfiguration := range in.Provides {
+			out.FederationMetaData.Provides = append(out.FederationMetaData.Provides, plan.FederationFieldConfiguration{
+				TypeName:     providesConfiguration.TypeName,
+				FieldName:    providesConfiguration.FieldName,
+				SelectionSet: providesConfiguration.SelectionSet,
+			})
+		}
+		for _, requiresConfiguration := range in.Requires {
+			out.FederationMetaData.Requires = append(out.FederationMetaData.Requires, plan.FederationFieldConfiguration{
+				TypeName:     requiresConfiguration.TypeName,
+				FieldName:    requiresConfiguration.FieldName,
+				SelectionSet: requiresConfiguration.SelectionSet,
 			})
 		}
 		outConfig.DataSources = append(outConfig.DataSources, out)
-	}
-	// TODO
-	outConfig.Debug = plan.DebugConfiguration{
-		PrintOperationWithRequiredFields: false,
-		PrintPlanningPaths:               true,
-		PrintQueryPlans:                  false,
-		ConfigurationVisitor:             false,
-		PlanningVisitor:                  false,
-		DatasourceVisitor:                false,
 	}
 	return &outConfig, nil
 }

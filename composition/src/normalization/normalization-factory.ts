@@ -1045,9 +1045,13 @@ export class NormalizationFactory {
       const configurationData: ConfigurationData = {
         fieldNames: new Set<string>(),
         isRootNode: !!entity,
-        selectionSets: entity ? [...entity.keys()] : [],
         typeName,
       };
+      if (entity) {
+        configurationData.keys = [...entity.keys()].map((selectionSet) => ({
+          fieldName: '', selectionSet,
+        }));
+      }
       if (extension.kind === Kind.OBJECT_TYPE_EXTENSION) {
         addIterableValuesToSet(extension.fields.keys(), configurationData.fieldNames);
         configurationDataMap.set(typeName, configurationData);
@@ -1155,9 +1159,13 @@ export class NormalizationFactory {
           const configurationData: ConfigurationData = {
             fieldNames: new Set<string>(),
             isRootNode: !!entity,
-            selectionSets: entity ? [...entity.keys()] : [],
             typeName,
           };
+          if (entity) {
+            configurationData.keys = [...entity.keys()].map((selectionSet) => ({
+              fieldName: '', selectionSet,
+            }));
+          }
           addIterableValuesToSet(parentContainer.fields.keys(), configurationData.fieldNames);
           validateEntityKeys(this, typeName);
           this.validateInterfaceImplementations(parentContainer);

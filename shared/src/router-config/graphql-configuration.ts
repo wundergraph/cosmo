@@ -6,19 +6,37 @@ import {
   RequiredField,
   TypeField,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
-import { ArgumentConfigurationData, ConfigurationDataMap } from '@wundergraph/composition';
+import { ArgumentConfigurationData, ConfigurationDataMap, RequiredFieldConfiguration } from '@wundergraph/composition';
 
 export type DataSourceConfiguration = {
   rootNodes: TypeField[];
   childNodes: TypeField[];
-  requiredFields: RequiredField[];
+  provides: RequiredField[];
+  keys: RequiredField[];
+  requires: RequiredField[];
 };
+
+function addRequiredFields(
+  requiredFields: RequiredFieldConfiguration[] | undefined, target: RequiredField[], typeName: string,
+) {
+  if (!requiredFields) {
+    return
+  }
+  for (const requiredField of requiredFields) {
+    target.push(new RequiredField({
+      typeName, fieldName: requiredField.fieldName, selectionSet: requiredField.selectionSet,
+    }));
+  }
+}
 
 export function configurationDataMapToDataSourceConfiguration(dataMap: ConfigurationDataMap) {
   const output: DataSourceConfiguration = {
+
     rootNodes: [],
     childNodes: [],
-    requiredFields: [],
+    keys: [],
+    provides: [],
+    requires: [],
   };
   for (const [typeName, data] of dataMap) {
     const fieldNames: string[] = [...data.fieldNames];
@@ -28,9 +46,9 @@ export function configurationDataMapToDataSourceConfiguration(dataMap: Configura
     } else {
       output.childNodes.push(typeField);
     }
-    for (const selectionSet of data.selectionSets) {
-      output.requiredFields.push(new RequiredField({ typeName, fieldName: '', selectionSet }));
-    }
+    addRequiredFields(data.keys, output.keys, typeName);
+    addRequiredFields(data.provides, output.provides, typeName);
+    addRequiredFields(data.requires, output.requires, typeName);
   }
   return output;
 }
@@ -38,7 +56,7 @@ export function configurationDataMapToDataSourceConfiguration(dataMap: Configura
 export function argumentConfigurationDatasToFieldConfigurations(datas: ArgumentConfigurationData[]): FieldConfiguration[] {
   const output: FieldConfiguration[] = [];
   for (const data of datas) {
-    const argumentConfigurations: ArgumentConfiguration[] = data.argumentNames.map((argumentName) => new ArgumentConfiguration({
+    const argumentConfigurations: ArgumentConfiguration[] = data.argumentNames.map((argumentName: string) => new ArgumentConfiguration({
       name: argumentName,
       sourceType: ArgumentSource.FIELD_ARGUMENT,
     }));
