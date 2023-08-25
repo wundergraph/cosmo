@@ -181,7 +181,7 @@ export function shareableFieldDefinitionsError(parent: ObjectContainer, children
     }
     if (shareableSubgraphs.length < 1) {
       errorMessages.push(
-        `\n The field "${fieldName}" is defined in the following subgraphs: "${shareableSubgraphs.join('", "')}".` +
+        `\n The field "${fieldName}" is defined in the following subgraphs: "${[...field.subgraphs].join('", "')}".` +
         `\n However, it it is not declared "@shareable" in any of them.`,
       );
     } else {
@@ -572,3 +572,11 @@ export function invalidArgumentsError(fieldPath: string, invalidArguments: Inval
   }
   return new Error(message);
 }
+
+export const noQueryRootTypeError = new Error(
+    `A valid federated graph must have at least one populated query root type.\n` +
+  ` For example:\n` +
+  `  type Query {\n` +
+  `    dummy: String\n` +
+  `  }`
+);

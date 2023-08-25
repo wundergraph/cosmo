@@ -14,6 +14,7 @@ import {
   ImplementationErrors,
   incompatibleParentKindFatalError,
   InvalidFieldImplementation,
+  noQueryRootTypeError,
   unimplementedInterfaceFieldsError,
 } from '@wundergraph/composition';
 import database from '../src/core/plugins/database';
@@ -302,7 +303,7 @@ describe('CompositionErrors', (ctx) => {
     );
   });
 
-  test.skip('Should cause composition errors if the subgraphs have no query', () => {
+  test('that an error is returned if the federated graph has no query root type', () => {
     const subgraph1 = {
       definitions: parse(`
         type TypeA {
@@ -323,12 +324,11 @@ describe('CompositionErrors', (ctx) => {
       name: 'subgraph2',
     };
 
-    const result = composeSubgraphs([subgraph1, subgraph2]);
+    const { errors } = composeSubgraphs([subgraph1, subgraph2]);
 
-    expect(result.errors).toBeDefined();
-    expect(result.errors?.[0].message).toBe(
-      'No queries found in any subgraph: a supergraph must have a query root type.',
-    );
+    expect(errors).toBeDefined();
+    expect(errors).toHaveLength(1);
+    expect(errors?.[0]).toStrictEqual(noQueryRootTypeError);
   });
 
   test('Should cause an composition error when a type and a interface are defined with the same name in different subgraphs', () => {

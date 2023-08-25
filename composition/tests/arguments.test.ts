@@ -25,12 +25,16 @@ describe('Argument federation tests', () => {
       subgraphWithArgument('subgraph-b', 'String'),
     ]);
     expect(errors).toBeUndefined();
-    expect(documentNodeToNormalizedString(federationResult.federatedGraphAST)).toBe(
+    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
       normalizeString(
-        versionTwoBaseSchema +
-          `type Object {
-        field(input: String): String
-      }
+        versionTwoBaseSchema + `
+            type Query {
+              dummy: String!
+            }
+
+            type Object {
+              field(input: String): String
+            }
     `,
       ),
     );
@@ -44,10 +48,14 @@ describe('Argument federation tests', () => {
     expect(errors).toBeUndefined();
     expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
       normalizeString(
-        versionTwoBaseSchema +
-          `type Object {
-        field(input: Float!): String
-      }
+        versionTwoBaseSchema + `
+        type Query {
+          dummy: String!
+        }
+    
+        type Object {
+          field(input: Float!): String
+        }
     `,
       ),
     );
@@ -59,12 +67,16 @@ describe('Argument federation tests', () => {
       subgraphWithArgumentAndDefaultValue('subgraph-b', 'Int', '1337'),
     ]);
     expect(errors).toBeUndefined();
-    expect(documentNodeToNormalizedString(federationResult.federatedGraphAST)).toBe(
+    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
       normalizeString(
-        versionTwoBaseSchema +
-          `type Object {
-        field(input: Int): String
-      }
+        versionTwoBaseSchema + `
+        type Query {
+          dummy: String!
+        }
+
+        type Object {
+          field(input: Int): String
+        }
     `,
       ),
     );
@@ -78,10 +90,14 @@ describe('Argument federation tests', () => {
     expect(errors).toBeUndefined();
     expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
       normalizeString(
-        versionTwoBaseSchema +
-          `type Object {
-        field(input: Boolean = false): String
-      }
+        versionTwoBaseSchema + `
+        type Query {
+          dummy: String!
+        }
+
+        type Object {
+          field(input: Boolean = false): String
+        }
     `,
       ),
     );
@@ -143,6 +159,10 @@ describe('Argument federation tests', () => {
       normalizeString(versionTwoBaseSchema + `
       interface Interface {
         field(requiredInAll: Int!, requiredOrOptionalInAll: String!, optionalInAll: Boolean): String
+      }
+      
+      type Query {
+        dummy: String!
       }
     
       type Object implements Interface {
@@ -225,6 +245,10 @@ const subgraphWithArgument = (name: string, typeName: string): Subgraph => ({
   name,
   url: '',
   definitions: parse(`
+    type Query {
+      dummy: String! @shareable
+    }
+      
     type Object @shareable {
       field(input: ${typeName}): String
     }
@@ -235,6 +259,10 @@ const subgraphWithArgumentAndDefaultValue = (name: string, typeName: string, def
   name,
   url: '',
   definitions: parse(`
+    type Query {
+      dummy: String! @shareable
+    }
+    
     type Object @shareable {
       field(input: ${typeName} = ${defaultValue}): String
     }
@@ -245,6 +273,10 @@ const subgraphA = {
   name: 'subgraph-a',
   url: '',
   definitions: parse(`
+    type Query {
+      dummy: String! @shareable
+    }
+    
     interface Interface {
       field(requiredInAll: Int!, requiredOrOptionalInAll: String!, optionalInAll: Boolean, optionalInSome: Float): String
     }

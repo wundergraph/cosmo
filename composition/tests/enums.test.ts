@@ -1,7 +1,7 @@
 import { federateSubgraphs, incompatibleSharedEnumError, Subgraph } from '../src';
 import { parse } from 'graphql';
 import { describe, expect, test } from 'vitest';
-import { documentNodeToNormalizedString, normalizeString, versionOneBaseSchema } from './utils/utils';
+import { documentNodeToNormalizedString, normalizeString, versionTwoBaseSchema } from './utils/utils';
 
 describe('Enum federation tests', () => {
   const parentName = 'Instruction';
@@ -12,8 +12,11 @@ describe('Enum federation tests', () => {
     const federatedGraph = federationResult!.federatedGraphAST;
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
-        versionOneBaseSchema +
-          `
+        versionTwoBaseSchema + `
+      type Query {
+        dummy: String!
+      }
+
       enum Instruction {
         FIGHT
         POKEMON
@@ -31,8 +34,11 @@ describe('Enum federation tests', () => {
     const federatedGraph = federationResult!.federatedGraphAST;
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
-        versionOneBaseSchema +
-          `
+        versionTwoBaseSchema + `
+      type Query {
+        dummy: String!
+      }
+
       enum Instruction {
         FIGHT
         POKEMON
@@ -52,8 +58,11 @@ describe('Enum federation tests', () => {
     const federatedGraph = federationResult!.federatedGraphAST;
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
-        versionOneBaseSchema +
-          `
+        versionTwoBaseSchema + `
+      type Query {
+        dummy: String!
+      }
+
       enum Instruction {
         FIGHT
       }
@@ -69,11 +78,13 @@ describe('Enum federation tests', () => {
   test('that enums must be consistent if used as both an input and output', () => {
     const { errors, federationResult } = federateSubgraphs([subgraphC, subgraphD]);
     expect(errors).toBeUndefined();
-    const federatedGraph = federationResult!.federatedGraphAST;
-    expect(documentNodeToNormalizedString(federatedGraph)).toBe(
+    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
       normalizeString(
-        versionOneBaseSchema +
-          `
+        versionTwoBaseSchema + `
+      type Query {
+        dummy: String!
+      }
+
       enum Instruction {
         FIGHT
         POKEMON
@@ -103,6 +114,10 @@ const subgraphA: Subgraph = {
   name: 'subgraph-a',
   url: '',
   definitions: parse(`
+    type Query {
+      dummy: String! @shareable
+    }
+
     enum Instruction {
       FIGHT
       POKEMON
@@ -125,6 +140,10 @@ const subgraphC = {
   name: 'subgraph-c',
   url: '',
   definitions: parse(`
+    type Query {
+      dummy: String! @shareable
+    }
+
     enum Instruction {
       FIGHT
       POKEMON

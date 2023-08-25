@@ -166,12 +166,15 @@ describe('Interface tests', () => {
       const federatedGraph = federationResult!.federatedGraphAST!;
       expect(documentNodeToNormalizedString(federatedGraph)).toBe(
         normalizeString(
-          versionTwoBaseSchema +
-          `
+          versionTwoBaseSchema + `
       interface Character {
         name: String!
         age: Int!
         isFriend: Boolean!
+      }
+
+      type Query {
+        dummy: String!
       }
 
       type Trainer implements Character {
@@ -196,8 +199,7 @@ describe('Interface tests', () => {
       expect(errors).toBeUndefined();
       expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
         normalizeString(
-          versionTwoBaseSchema +
-          `
+          versionTwoBaseSchema + `
       interface Character {
         name: String!
         age: Int!
@@ -206,6 +208,10 @@ describe('Interface tests', () => {
       
       interface Human {
         name: String!
+      }
+
+      type Query {
+        dummy: String!
       }
 
       type Trainer implements Character & Human {
@@ -227,6 +233,10 @@ describe('Interface tests', () => {
           versionTwoBaseSchema + `
       interface Character {
         isFriend: Boolean!
+      }
+
+      type Query {
+        dummy: String!
       }
 
       interface Human implements Character {
@@ -303,6 +313,10 @@ const subgraphA: Subgraph = {
   name: 'subgraph-a',
   url: '',
   definitions: parse(`
+    type Query {
+      dummy: String! @shareable
+    }
+
     interface Character {
       name: String!
     }
@@ -343,6 +357,10 @@ const subgraphC: Subgraph = {
   name: 'subgraph-c',
   url: '',
   definitions: parse(`
+    type Query {
+      dummy: String! @shareable
+    }
+
     interface Character {
       isFriend: Boolean!
     }
@@ -382,6 +400,10 @@ const subgraphE: Subgraph = {
   name: 'subgraph-e',
   url: '',
   definitions: parse(`
+    type Query {
+      dummy: String!
+    }
+
     interface Animal {
       sounds(a: String!, b: Int!): [String]
     }
