@@ -10,8 +10,11 @@ describe('Input federation tests', () => {
     const federatedGraph = federationResult!.federatedGraphAST;
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
-        versionOneBaseSchema +
-          `
+        versionOneBaseSchema + `
+      type Query {
+        dummy: String!
+      }
+
       input TechnicalMachine {
         move: String!
         number: Int!
@@ -35,6 +38,10 @@ const subgraphA: Subgraph = {
   name: 'subgraph-a',
   url: '',
   definitions: parse(`
+    type Query {
+      dummy: String!
+    }
+
     input TechnicalMachine {
       move: String!
       number: Int!

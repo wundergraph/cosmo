@@ -10,8 +10,11 @@ describe('Entities federation tests', () => {
     const federatedGraph = federationResult!.federatedGraphAST;
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
-        versionOneBaseSchema +
-          `
+        versionOneBaseSchema + `
+      type Query {
+        dummy: String!
+      }
+
       type Trainer {
         id: Int!
         details: Details!
@@ -38,8 +41,12 @@ describe('Entities federation tests', () => {
     const federatedGraph = federationResult!.federatedGraphAST;
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
-        versionOneBaseSchema +
-          `
+        versionOneBaseSchema + `
+      type Query {
+        dummy: String!
+        trainer: Trainer!
+      }
+
       type Trainer {
         id: Int!
         details: Details!
@@ -49,10 +56,6 @@ describe('Entities federation tests', () => {
       type Details {
         name: String!
         age: Int!
-      }
-
-      type Query {
-        trainer: Trainer!
       }
 
       type Pokemon {
@@ -167,8 +170,7 @@ describe('Entities federation tests', () => {
     const federatedGraph = federationResult!.federatedGraphAST!;
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
-        versionOneBaseSchema +
-          `
+        versionOneBaseSchema + `
       type Trainer {
         id: Int!
         pokemon: [Pokemon!]!
@@ -178,6 +180,10 @@ describe('Entities federation tests', () => {
       type Pokemon {
         name: String!
         level: Int!
+      }
+      
+      type Query {
+        dummy: String!
       }
 
       type Details {
@@ -194,6 +200,10 @@ const subgraphA: Subgraph = {
   name: 'subgraph-a',
   url: '',
   definitions: parse(`
+    type Query {
+      dummy: String!
+    }
+
     type Trainer @key(fields: "id") {
       id: Int!
       details: Details!
@@ -296,6 +306,10 @@ const subgraphG: Subgraph = {
   name: 'subgraph-g',
   url: '',
   definitions: parse(`
+    type Query {
+      dummy: String!
+    }
+
     extend type Trainer @key(fields: "id") {
       id: Int!
       details: Details!

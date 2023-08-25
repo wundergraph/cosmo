@@ -25,6 +25,10 @@ describe('Union federation tests', () => {
       type Charmander {
         name: String!
       }
+      
+      type Query {
+        starter: Starters
+      }
 
       type Chikorita {
         name: String!
@@ -66,6 +70,10 @@ const subgraphA = {
     type Charmander {
       name: String!
     }
+    
+    type Query {
+      starter: Starters
+    }
   `),
 };
 
@@ -73,6 +81,10 @@ const subgraphB = {
   name: 'subgraph-b',
   url: '',
   definitions: parse(`
+    type Query {
+      starter: Starters
+    }
+    
     union Starters = Chikorita | Totodile | Cyndaquil
 
     type Chikorita {

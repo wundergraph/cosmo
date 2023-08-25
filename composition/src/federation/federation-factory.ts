@@ -72,6 +72,7 @@ import {
   invalidUnionError,
   minimumSubgraphRequirementError,
   noBaseTypeExtensionError,
+  noQueryRootTypeError,
   shareableFieldDefinitionsError,
   subgraphValidationError,
   subgraphValidationFailureErrorMessage,
@@ -101,6 +102,7 @@ import {
   DEFAULT_SUBSCRIPTION,
   FIELD_NAME,
   INLINE_FRAGMENT,
+  QUERY,
 } from '../utils/string-constants';
 import {
   doSetsHaveAnyOverlap,
@@ -1133,6 +1135,9 @@ export class FederationFactory {
     for (const container of objectLikeContainersWithInterfaces) {
       container.node.interfaces = this.getAndValidateImplementedInterfaces(container);
       definitions.push(container.node);
+    }
+    if (!this.parentMap.has(QUERY)) {
+      this.errors.push(noQueryRootTypeError);
     }
     if (this.errors.length > 0) {
       return { errors: this.errors };
