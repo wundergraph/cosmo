@@ -13,49 +13,42 @@ describe('Field Configuration tests', () => {
         ['Query', {
           fieldNames: new Set<string>(['employee', 'employees', 'team_mates']),
           isRootNode: true,
-          selectionSets: [],
           typeName: 'Query',
         }],
         ['RoleType', {
           fieldNames: new Set<string>(['department', 'title']),
           isRootNode: false,
-          selectionSets: [],
           typeName: 'RoleType',
         }],
         ['Identifiable', {
           fieldNames: new Set<string>(['id']),
           isRootNode: false,
-          selectionSets: [],
           typeName: 'Identifiable',
         }],
         ['Engineer', {
           fieldNames: new Set<string>(['department', 'engineerType', 'title']),
           isRootNode: false,
-          selectionSets: [],
           typeName: 'Engineer',
         }],
         ['Marketer', {
           fieldNames: new Set<string>(['department', 'title']),
           isRootNode: false,
-          selectionSets: [],
           typeName: 'Marketer',
         }],
         ['Operator', {
           fieldNames: new Set<string>(['department', 'operatorType', 'title']),
           isRootNode: false,
-          selectionSets: [],
           typeName: 'Operator',
         }],
         ['Details', {
           fieldNames: new Set<string>(['forename', 'location', 'surname']),
           isRootNode: false,
-          selectionSets: [],
           typeName: 'Details',
         }],
         ['Employee', {
           fieldNames: new Set<string>(['details', 'id', 'role']),
           isRootNode: true,
-          selectionSets: ['id'],
+          keys: [{ fieldName: '', selectionSet: 'id' }],
           typeName: 'Employee',
         }],
       ]));
@@ -70,55 +63,47 @@ describe('Field Configuration tests', () => {
         ['Animal', {
           fieldNames: new Set<string>(['class', 'gender']),
           isRootNode: false,
-          selectionSets: [],
           typeName: 'Animal',
         }],
         ['Pet', {
           fieldNames: new Set<string>(['class', 'gender', 'name']),
           isRootNode: false,
-          selectionSets: [],
           typeName: 'Pet',
         }],
         ['Alligator', {
           fieldNames: new Set<string>(['class', 'dangerous', 'gender', 'name']),
           isRootNode: false,
-          selectionSets: [],
           typeName: 'Alligator',
         }],
         ['Cat', {
           fieldNames: new Set<string>(['class', 'gender', 'name', 'type']),
           isRootNode: false,
-          selectionSets: [],
           typeName: 'Cat',
         }],
         ['Dog', {
           fieldNames: new Set<string>(['breed', 'class', 'gender', 'name']),
           isRootNode: false,
-          selectionSets: [],
           typeName: 'Dog',
         }],
         ['Mouse', {
           fieldNames: new Set<string>(['class', 'gender', 'name']),
           isRootNode: false,
-          selectionSets: [],
           typeName: 'Mouse',
         }],
         ['Pony', {
           fieldNames: new Set<string>(['class', 'gender', 'name']),
           isRootNode: false,
-          selectionSets: [],
           typeName: 'Pony',
         }],
         ['Details', {
           fieldNames: new Set<string>(['forename', 'surname']),
           isRootNode: false,
-          selectionSets: [],
           typeName: 'Details',
         }],
         ['Employee', {
           fieldNames: new Set<string>(['details', 'id', 'hasChildren', 'maritalStatus', 'nationality', 'pets']),
           isRootNode: true,
-          selectionSets: ['id'],
+          keys: [{ fieldName: '', selectionSet: 'id', }],
           typeName: 'Employee',
         }],
       ]));
@@ -133,49 +118,42 @@ describe('Field Configuration tests', () => {
         ['Exercise', {
           fieldNames: new Set<string>(['category']),
           isRootNode: false,
-          selectionSets: [],
           typeName: 'Exercise',
         }],
         ['Experience', {
           fieldNames: new Set<string>(['yearsOfExperience']),
           isRootNode: false,
-          selectionSets: [],
           typeName: 'Experience',
         }],
         ['Flying', {
           fieldNames: new Set<string>(['planeModels', 'yearsOfExperience']),
           isRootNode: false,
-          selectionSets: [],
           typeName: 'Flying',
         }],
         ['Gaming', {
           fieldNames: new Set<string>(['genres', 'name', 'yearsOfExperience']),
           isRootNode: false,
-          selectionSets: [],
           typeName: 'Gaming',
         }],
         ['Other', {
           fieldNames: new Set<string>(['name']),
           isRootNode: false,
-          selectionSets: [],
           typeName: 'Other',
         }],
         ['Programming', {
           fieldNames: new Set<string>(['languages']),
           isRootNode: false,
-          selectionSets: [],
           typeName: 'Programming',
         }],
         ['Travelling', {
           fieldNames: new Set<string>(['countriesLived']),
           isRootNode: false,
-          selectionSets: [],
           typeName: 'Travelling',
         }],
         ['Employee', {
           fieldNames: new Set<string>(['id', 'hobbies']),
           isRootNode: true,
-          selectionSets: ['id'],
+          keys: [{ fieldName: '', selectionSet: 'id', }],
           typeName: 'Employee',
         }],
       ]));
@@ -190,7 +168,7 @@ describe('Field Configuration tests', () => {
         ['Employee', {
           fieldNames: new Set<string>(['id', 'products']),
           isRootNode: true,
-          selectionSets: ['id'],
+          keys: [{ fieldName: '', selectionSet: 'id', }],
           typeName: 'Employee',
         }],
       ]));

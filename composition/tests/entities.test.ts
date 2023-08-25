@@ -164,7 +164,7 @@ describe('Entities federation tests', () => {
   test('that V1 and V2 entities merge successfully', () => {
     const { errors, federationResult } = federateSubgraphs([subgraphB, subgraphG]);
     expect(errors).toBeUndefined();
-    const federatedGraph = federationResult.federatedGraphAST!;
+    const federatedGraph = federationResult!.federatedGraphAST!;
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
         versionOneBaseSchema +
