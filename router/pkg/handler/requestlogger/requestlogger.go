@@ -88,7 +88,9 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	if h.traceID {
 		spanContext := trace.SpanFromContext(r.Context()).SpanContext()
-		fields = append(fields, zap.String("traceID", spanContext.TraceID().String()))
+		if spanContext.HasTraceID() {
+			fields = append(fields, zap.String("traceID", spanContext.TraceID().String()))
+		}
 	}
 
 	if h.context != nil {

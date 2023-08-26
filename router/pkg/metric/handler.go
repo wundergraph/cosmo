@@ -17,7 +17,7 @@ const (
 	RequestCount          = "router.http.requests"                // Incoming request count total
 	ServerLatency         = "router.http.duration_ms"             // Incoming end to end duration, milliseconds
 	RequestContentLength  = "router.http.request_content_length"  // Incoming request bytes total
-	ResponseContentLength = "router.http.response_content_length" // Incoming response bytes total
+	ResponseContentLength = "router.http.response_content_length" // Outgoing response bytes total
 	InFlightRequests      = "router.http.in_flight_requests"      // Number of requests in flight
 )
 
@@ -118,6 +118,7 @@ func (h *Handler) Handler(handler http.Handler) http.HandlerFunc {
 		if opCtx != nil {
 			baseKeys = append(baseKeys, attribute.String("operation.name", opCtx.Name))
 			baseKeys = append(baseKeys, attribute.String("operation.type", opCtx.Type))
+			baseKeys = append(baseKeys, semconv.HTTPStatusCode(statusCode))
 		}
 
 		baseAttributes := otelmetric.WithAttributes(baseKeys...)
@@ -131,9 +132,6 @@ func (h *Handler) Handler(handler http.Handler) http.HandlerFunc {
 		}
 		h.counters[ResponseContentLength].Add(ctx, int64(ww.BytesWritten()), baseAttributes)
 
-		h.counters[RequestCount].Add(ctx, 1,
-			baseAttributes,
-			otelmetric.WithAttributes(semconv.HTTPStatusCode(statusCode)),
-		)
+		h.counters[RequestCount].Add(ctx, 1, baseAttributes)
 	}
 }
