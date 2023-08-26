@@ -14,11 +14,11 @@ import (
 
 // Server HTTP metrics.
 const (
-	RequestCount          = "router.http.requests"                // Incoming request count total
-	ServerLatency         = "router.http.duration_ms"             // Incoming end to end duration, milliseconds
-	RequestContentLength  = "router.http.request_content_length"  // Incoming request bytes total
-	ResponseContentLength = "router.http.response_content_length" // Outgoing response bytes total
-	InFlightRequests      = "router.http.in_flight_requests"      // Number of requests in flight
+	RequestCount          = "router.http.requests"                      // Incoming request count total
+	ServerLatency         = "router.http.request.duration_milliseconds" // Incoming end to end duration, milliseconds
+	RequestContentLength  = "router.http.request.content_length"        // Incoming request bytes total
+	ResponseContentLength = "router.http.response.content_length"       // Outgoing response bytes total
+	InFlightRequests      = "router.http.requests.in_flight.count"      // Number of requests in flight
 )
 
 type Handler struct {
