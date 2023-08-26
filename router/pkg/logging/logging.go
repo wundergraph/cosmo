@@ -29,7 +29,7 @@ func zapBaseEncoderConfig() zapcore.EncoderConfig {
 	return ec
 }
 
-func zapJsonEncoder() zapcore.Encoder {
+func ZapJsonEncoder() zapcore.Encoder {
 	ec := zapBaseEncoderConfig()
 	ec.EncodeTime = func(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
 		nanos := t.UnixNano()
@@ -68,7 +68,7 @@ func newZapLogger(syncer zapcore.WriteSyncer, prettyLogging bool, debug bool, le
 	if prettyLogging {
 		encoder = zapConsoleEncoder()
 	} else {
-		encoder = zapJsonEncoder()
+		encoder = ZapJsonEncoder()
 	}
 
 	if debug {

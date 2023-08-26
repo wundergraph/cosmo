@@ -1,11 +1,11 @@
 package trace
 
 import (
+	"github.com/go-chi/chi"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
-	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel/codes"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -21,7 +21,7 @@ func TestWrapHttpHandler(t *testing.T) {
 	t.Run("create a span for every request", func(t *testing.T) {
 		exporter := tracetest.NewInMemoryExporter(t)
 
-		router := mux.NewRouter()
+		router := chi.NewRouter()
 
 		router.HandleFunc("/test", func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
@@ -68,7 +68,7 @@ func TestWrapHttpHandler(t *testing.T) {
 		exporter := tracetest.NewInMemoryExporter(t)
 
 		for _, test := range statusCodeTests {
-			router := mux.NewRouter()
+			router := chi.NewRouter()
 
 			statusCode := test.statusCode
 

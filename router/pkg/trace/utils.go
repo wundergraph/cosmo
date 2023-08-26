@@ -3,7 +3,7 @@ package trace
 import (
 	"context"
 	"fmt"
-	"github.com/gin-gonic/gin"
+	"github.com/wundergraph/cosmo/router/pkg/contextx"
 	"net/http"
 
 	"go.opentelemetry.io/otel"
@@ -13,30 +13,43 @@ import (
 // TracerFromContext returns a tracer in ctx, otherwise returns a global tracer.
 func TracerFromContext(ctx context.Context) (tracer trace.Tracer) {
 	if span := trace.SpanFromContext(ctx); span.SpanContext().IsValid() {
-		tracer = span.TracerProvider().Tracer(TraceName)
+		tracer = span.TracerProvider().Tracer(ServerName)
 	} else {
-		tracer = otel.Tracer(TraceName)
+		tracer = otel.Tracer(ServerName)
 	}
 
 	return
 }
 
 // SpanNameFormatter formats the span name based on the http request
-func SpanNameFormatter(_operation string, r *http.Request) string {
+// Note: High cardinality should be avoided because it can be expensive
+func SpanNameFormatter(operation string, r *http.Request) string {
+	if operation != "" {
+		return operation
+	}
+
+	opCtx := contextx.GetOperationContext(r.Context())
+	if opCtx != nil && opCtx.Name != "" {
+		if opCtx.Name != "" {
+			return opCtx.Name
+		}
+		return "unnamed"
+	}
+
 	return fmt.Sprintf("%s %s", r.Method, r.URL.Path)
 }
 
-func RequestFilter(req *http.Request) bool {
-	if req.URL.Path == "/health" || req.URL.Path == "/favicon.ico" || req.Method == "OPTIONS" {
+func RequestFilter(r *http.Request) bool {
+	if r.URL.Path == "/health" || r.URL.Path == "/favicon.ico" || r.Method == "OPTIONS" {
 		return false
 	}
 	return true
 }
 
-func GetClientInfo(c *gin.Context, primaryHeader, fallbackHeader, defaultValue string) string {
-	value := c.GetHeader(primaryHeader)
+func GetClientInfo(h http.Header, primaryHeader, fallbackHeader, defaultValue string) string {
+	value := h.Get(primaryHeader)
 	if value == "" {
-		value = c.GetHeader(fallbackHeader)
+		value = h.Get(fallbackHeader)
 		if value == "" {
 			value = defaultValue
 		}

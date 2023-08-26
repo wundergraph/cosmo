@@ -30,7 +30,7 @@ type transport struct {
 
 func (t *transport) RoundTrip(r *http.Request) (*http.Response, error) {
 	span := trace.SpanFromContext(r.Context())
-	operation := contextx.GetGraphQLOperationFromContext(r.Context())
+	operation := contextx.GetOperationContext(r.Context())
 	if operation != nil {
 		span.SetAttributes(WgOperationName.String(operation.Name))
 		span.SetAttributes(WgOperationType.String(operation.Type))
