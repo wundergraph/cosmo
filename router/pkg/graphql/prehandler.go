@@ -6,6 +6,7 @@ import (
 	"github.com/go-chi/chi/middleware"
 	"github.com/wundergraph/cosmo/router/pkg/contextx"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
+	"github.com/wundergraph/cosmo/router/pkg/otel"
 	"github.com/wundergraph/cosmo/router/pkg/pool"
 	ctrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
@@ -113,15 +114,15 @@ func (h *PreHandler) Handler(handler http.Handler) http.HandlerFunc {
 		// Set the span name to the operation name after we figured it out
 		span.SetName(ctrace.SpanNameFormatter(requestOperationName, r))
 
-		span.SetAttributes(ctrace.WgOperationName.String(requestOperationName))
-		span.SetAttributes(ctrace.WgOperationType.String(requestOperationType))
-		span.SetAttributes(ctrace.WgOperationContent.String(requestQuery))
+		span.SetAttributes(otel.WgOperationName.String(requestOperationName))
+		span.SetAttributes(otel.WgOperationType.String(requestOperationType))
+		span.SetAttributes(otel.WgOperationContent.String(requestQuery))
 
 		// Add client info to trace span
 		clientName := ctrace.GetClientInfo(r.Header, "graphql-client-name", "apollographql-client-name", "unknown")
 		clientVersion := ctrace.GetClientInfo(r.Header, "graphql-client-version", "apollographql-client-version", "missing")
-		span.SetAttributes(ctrace.WgClientName.String(clientName))
-		span.SetAttributes(ctrace.WgClientVersion.String(clientVersion))
+		span.SetAttributes(otel.WgClientName.String(clientName))
+		span.SetAttributes(otel.WgClientVersion.String(clientVersion))
 
 		if shared.Report.HasErrors() {
 			logInternalErrors(shared.Report, requestLogger)

@@ -27,11 +27,14 @@ type Handler struct {
 	counters       map[string]otelmetric.Int64Counter
 	valueRecorders map[string]otelmetric.Float64Histogram
 	updownCounters map[string]otelmetric.Float64UpDownCounter
+
+	baseFields []attribute.KeyValue
 }
 
-func NewMetricHandler(meterProvider *metric.MeterProvider) (*Handler, error) {
+func NewMetricHandler(meterProvider *metric.MeterProvider, baseFields ...attribute.KeyValue) (*Handler, error) {
 	h := &Handler{
 		meterProvider: meterProvider,
+		baseFields:    baseFields,
 	}
 
 	if err := h.createMeasures(); err != nil {
@@ -113,6 +116,8 @@ func (h *Handler) Handler(handler http.Handler) http.HandlerFunc {
 		statusCode := ww.Status()
 
 		var baseKeys []attribute.KeyValue
+
+		baseKeys = append(baseKeys, h.baseFields...)
 
 		opCtx := contextx.GetOperationContext(ctx)
 		if opCtx != nil {

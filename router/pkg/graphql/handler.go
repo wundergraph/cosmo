@@ -9,7 +9,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/contextx"
 	"github.com/wundergraph/cosmo/router/pkg/flushwriter"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
-	ctrace "github.com/wundergraph/cosmo/router/pkg/trace"
+	"github.com/wundergraph/cosmo/router/pkg/otel"
 	"go.opentelemetry.io/otel/trace"
 	"net/http"
 	"strconv"
@@ -157,7 +157,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	operationContext.Plan.Hash.Reset()
 
 	span := trace.SpanFromContext(r.Context())
-	span.SetAttributes(ctrace.WgOperationHash.Int64(int64(operationID)))
+	span.SetAttributes(otel.WgOperationHash.Int64(int64(operationID)))
 
 	// try to get a prepared plan for this operation ID from the cache
 	cachedPlan, ok := h.planCache.Get(operationID)

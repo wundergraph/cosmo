@@ -2,6 +2,7 @@ package trace
 
 import (
 	"github.com/wundergraph/cosmo/router/pkg/contextx"
+	"github.com/wundergraph/cosmo/router/pkg/otel"
 	"go.opentelemetry.io/otel/trace"
 	"net/http"
 
@@ -32,8 +33,8 @@ func (t *transport) RoundTrip(r *http.Request) (*http.Response, error) {
 	span := trace.SpanFromContext(r.Context())
 	operation := contextx.GetOperationContext(r.Context())
 	if operation != nil {
-		span.SetAttributes(WgOperationName.String(operation.Name))
-		span.SetAttributes(WgOperationType.String(operation.Type))
+		span.SetAttributes(otel.WgOperationName.String(operation.Name))
+		span.SetAttributes(otel.WgOperationType.String(operation.Type))
 	}
 
 	res, err := t.rt.RoundTrip(r)

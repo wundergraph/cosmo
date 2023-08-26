@@ -17,6 +17,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/handler/recovery"
 	"github.com/wundergraph/cosmo/router/pkg/handler/requestlogger"
 	"github.com/wundergraph/cosmo/router/pkg/metric"
+	"github.com/wundergraph/cosmo/router/pkg/otel"
 	"github.com/wundergraph/cosmo/router/pkg/planner"
 	"github.com/wundergraph/cosmo/router/pkg/stringsx"
 	"github.com/wundergraph/cosmo/router/pkg/trace"
@@ -368,7 +369,11 @@ func (a *App) newRouter(ctx context.Context, routerConfig *nodev1.RouterConfig) 
 		PlanConfig:      plan.PlanConfig,
 	})
 
-	metricHandler, err := metric.NewMetricHandler(a.meterProvider)
+	metricHandler, err := metric.NewMetricHandler(
+		a.meterProvider,
+		otel.WgRouterGraphName.String(a.federatedGraphName),
+		otel.WgRouterConfigVersion.String(routerConfig.GetVersion()),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create metric handler: %w", err)
 	}
@@ -403,11 +408,11 @@ func (a *App) newRouter(ctx context.Context, routerConfig *nodev1.RouterConfig) 
 		// TODO: Move to middleware after release https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.17.0...HEAD
 		Handler: trace.WrapHandler(
 			recoveryHandler(router),
-			trace.RouterServerAttribute,
+			otel.RouterServerAttribute,
 			otelhttp.WithSpanOptions(
 				oteltrace.WithAttributes(
-					trace.WgRouterGraphName.String(a.federatedGraphName),
-					trace.WgRouterConfigVersion.String(routerConfig.GetVersion()),
+					otel.WgRouterGraphName.String(a.federatedGraphName),
+					otel.WgRouterConfigVersion.String(routerConfig.GetVersion()),
 				),
 			),
 			// Disable built-in metrics
