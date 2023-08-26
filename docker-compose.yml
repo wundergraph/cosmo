@@ -18,20 +18,6 @@ services:
     networks:
       - primary
 
-  prometheus:
-    image: prom/prometheus:v2.37.9
-    command:
-      - --web.enable-remote-write-receiver
-      - --enable-feature=native-histograms
-      - --config.file=/etc/prometheus/prometheus.yml
-    networks:
-      - primary
-    volumes:
-      - prometheus:/prometheus
-      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-    ports:
-      - "9090:9090"
-
   keycloak:
     build:
       context: keycloak
