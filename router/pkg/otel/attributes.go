@@ -10,8 +10,8 @@ const (
 	WgComponentName       = attribute.Key("wg.component.name")
 	WgClientName          = attribute.Key("wg.client.name")
 	WgClientVersion       = attribute.Key("wg.client.version")
-	WgRouterGraphName     = attribute.Key("wg.router.graph_name")
-	WgRouterConfigVersion = attribute.Key("wg.router.config_version")
+	WgRouterGraphName     = attribute.Key("wg.router.graph.name")
+	WgRouterConfigVersion = attribute.Key("wg.router.config.version")
 )
 
 var (

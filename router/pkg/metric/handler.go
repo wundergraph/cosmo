@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/go-chi/chi/middleware"
 	"github.com/wundergraph/cosmo/router/pkg/contextx"
+	"github.com/wundergraph/cosmo/router/pkg/otel"
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/metric"
@@ -121,8 +122,8 @@ func (h *Handler) Handler(handler http.Handler) http.HandlerFunc {
 
 		opCtx := contextx.GetOperationContext(ctx)
 		if opCtx != nil {
-			baseKeys = append(baseKeys, attribute.String("operation.name", opCtx.Name))
-			baseKeys = append(baseKeys, attribute.String("operation.type", opCtx.Type))
+			baseKeys = append(baseKeys, otel.WgOperationName.String(opCtx.Name))
+			baseKeys = append(baseKeys, otel.WgOperationType.String(opCtx.Type))
 			baseKeys = append(baseKeys, semconv.HTTPStatusCode(statusCode))
 		}
 
