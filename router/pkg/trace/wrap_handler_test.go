@@ -2,6 +2,7 @@ package trace
 
 import (
 	"github.com/go-chi/chi"
+	"github.com/wundergraph/cosmo/router/pkg/otel"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -27,7 +28,7 @@ func TestWrapHttpHandler(t *testing.T) {
 			w.WriteHeader(http.StatusOK)
 		})
 
-		h := WrapHandler(router, WgComponentName.String("test"))
+		h := WrapHandler(router, otel.WgComponentName.String("test"))
 
 		req := httptest.NewRequest("GET", "/test?a=b", nil)
 		w := httptest.NewRecorder()
@@ -47,7 +48,7 @@ func TestWrapHttpHandler(t *testing.T) {
 		assert.Contains(t, sn[0].Attributes(), semconv17.HTTPFlavorKey.String("1.1"))
 		assert.Contains(t, sn[0].Attributes(), semconv17.HTTPTarget("/test?a=b"))
 		assert.Contains(t, sn[0].Attributes(), semconv17.HTTPStatusCode(200))
-		assert.Contains(t, sn[0].Attributes(), WgComponentName.String("test"))
+		assert.Contains(t, sn[0].Attributes(), otel.WgComponentName.String("test"))
 		assert.Contains(t, sn[0].Attributes(), semconv12.HTTPHostKey.String("example.com"))
 	})
 
@@ -76,7 +77,7 @@ func TestWrapHttpHandler(t *testing.T) {
 				w.WriteHeader(statusCode)
 			})
 
-			h := WrapHandler(router, WgComponentName.String("test"))
+			h := WrapHandler(router, otel.WgComponentName.String("test"))
 
 			req := httptest.NewRequest("GET", "/test?a=b", nil)
 			w := httptest.NewRecorder()
@@ -97,7 +98,7 @@ func TestWrapHttpHandler(t *testing.T) {
 			assert.Contains(t, sn[0].Attributes(), semconv17.HTTPFlavorKey.String("1.1"))
 			assert.Contains(t, sn[0].Attributes(), semconv17.HTTPTarget("/test?a=b"))
 			assert.Contains(t, sn[0].Attributes(), semconv17.HTTPStatusCode(statusCode))
-			assert.Contains(t, sn[0].Attributes(), WgComponentName.String("test"))
+			assert.Contains(t, sn[0].Attributes(), otel.WgComponentName.String("test"))
 
 			exporter.Reset()
 		}

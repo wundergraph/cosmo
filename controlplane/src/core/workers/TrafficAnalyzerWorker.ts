@@ -38,6 +38,7 @@ export default class TrafficAnalyzerWorker {
    * Handle a traffic analyzer job.
    * @param event
    */
+  // eslint-disable-next-line require-await
   public async handler(event: PgBoss.Job<TrafficAnalyzerJob>): Promise<void> {
     // TODO: Implement me!
     console.log(event);
