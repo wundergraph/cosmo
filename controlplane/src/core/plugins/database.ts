@@ -17,6 +17,7 @@ declare module 'fastify' {
 export interface DbPluginOptions {
   databaseConnectionUrl: string;
   debugSQL?: boolean;
+  gracefulTimeoutSec?: number;
   ssl?: {
     // Necessary only if the server uses a self-signed certificate.
     caPath?: string;
@@ -73,10 +74,12 @@ export default fp<DbPluginOptions>(async function (fastify, opts) {
     }
   });
   fastify.addHook('onClose', () => {
-    fastify.log.debug('Closing database connection');
+    fastify.log.debug('Closing database connection ...');
+
     queryConnection.end({
-      timeout: 5, // in seconds
+      timeout: opts.gracefulTimeoutSec ?? 5,
     });
+
     fastify.log.debug('Database connection closed');
   });
 

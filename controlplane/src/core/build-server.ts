@@ -3,12 +3,13 @@ import { fastifyConnectPlugin } from '@bufbuild/connect-fastify';
 import { cors } from '@bufbuild/connect';
 import fastifyCors from '@fastify/cors';
 import { PinoLoggerOptions } from 'fastify/types/logger.js';
-import pino from 'pino';
+import { pino } from 'pino';
 import { compressionBrotli, compressionGzip } from '@bufbuild/connect-node';
 import fastifyGracefulShutdown from 'fastify-graceful-shutdown';
 import routes from './routes.js';
 import fastifyHealth from './plugins/health.js';
 import fastifyDatabase from './plugins/database.js';
+import fastifyPgBoss from './plugins/pgboss.js';
 import fastifyClickHouse from './plugins/clickhouse.js';
 import AuthController from './controllers/auth.js';
 import { pkceCodeVerifierCookieName, userSessionCookieName } from './crypto/jwt.js';
@@ -19,6 +20,7 @@ import { OrganizationRepository } from './repositories/OrganizationRepository.js
 import GraphApiTokenAuthenticator from './services/GraphApiTokenAuthenticator.js';
 import AuthUtils from './auth-utils.js';
 import Keycloak from './services/Keycloak.js';
+import TrafficAnalyzerWorker from './workers/TrafficAnalyzerWorker.js';
 
 export interface BuildConfig {
   logger: PinoLoggerOptions;
@@ -74,8 +76,12 @@ export default async function build(opts: BuildConfig) {
     ...opts.logger,
   };
 
+  const log = pino(opts.production ? opts.logger : { ...developmentLoggerOpts, ...opts.logger });
+
   const fastify = Fastify({
-    logger: opts.production ? opts.logger : { ...developmentLoggerOpts, ...opts.logger },
+    logger: log,
+    // The maximum amount of time in *milliseconds* in which a plugin can load
+    pluginTimeout: 10_000, // 10s
   });
 
   /**
@@ -86,9 +92,20 @@ export default async function build(opts: BuildConfig) {
 
   await fastify.register(fastifyDatabase, {
     databaseConnectionUrl: opts.database.url,
+    gracefulTimeoutSec: 15,
     ssl: opts.database.ssl,
     debugSQL: opts.debugSQL,
   });
+
+  await fastify.register(fastifyPgBoss, {
+    databaseConnectionUrl: opts.database.url,
+  });
+
+  // PgBoss Workers
+
+  const tw = new TrafficAnalyzerWorker(fastify.pgboss);
+  await tw.register({ graphId: 'test' });
+  await tw.subscribe();
 
   await fastify.register(fastifyCors, {
     // Produce an error if allowedOrigins is undefined
@@ -105,10 +122,10 @@ export default async function build(opts: BuildConfig) {
   if (opts.clickhouseDsn) {
     await fastify.register(fastifyClickHouse, {
       dsn: opts.clickhouseDsn,
-      logger: fastify.log,
+      logger: log,
     });
   } else {
-    fastify.log.warn('ClickHouse connection not configured');
+    log.warn('ClickHouse connection not configured');
   }
 
   const authUtils = new AuthUtils(fastify.db, {
@@ -170,7 +187,7 @@ export default async function build(opts: BuildConfig) {
   await fastify.register(fastifyConnectPlugin, {
     routes: routes({
       db: fastify.db,
-      logger: fastify.log as pino.Logger,
+      logger: log,
       jwtSecret: opts.auth.secret,
       keycloakRealm: opts.keycloak.realm,
       chClient: fastify.ch,
@@ -186,7 +203,9 @@ export default async function build(opts: BuildConfig) {
     acceptCompression: [compressionBrotli, compressionGzip],
   });
 
-  await fastify.register(fastifyGracefulShutdown, {});
+  await fastify.register(fastifyGracefulShutdown, {
+    timeout: 60_000,
+  });
 
   return fastify;
 }
