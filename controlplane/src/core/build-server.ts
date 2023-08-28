@@ -9,7 +9,6 @@ import fastifyGracefulShutdown from 'fastify-graceful-shutdown';
 import routes from './routes.js';
 import fastifyHealth from './plugins/health.js';
 import fastifyDatabase from './plugins/database.js';
-import fastifyPgBoss from './plugins/pgboss.js';
 import fastifyClickHouse from './plugins/clickhouse.js';
 import AuthController from './controllers/auth.js';
 import { pkceCodeVerifierCookieName, userSessionCookieName } from './crypto/jwt.js';
@@ -20,7 +19,6 @@ import { OrganizationRepository } from './repositories/OrganizationRepository.js
 import GraphApiTokenAuthenticator from './services/GraphApiTokenAuthenticator.js';
 import AuthUtils from './auth-utils.js';
 import Keycloak from './services/Keycloak.js';
-import TrafficAnalyzerWorker from './workers/TrafficAnalyzerWorker.js';
 
 export interface BuildConfig {
   logger: PinoLoggerOptions;
@@ -97,9 +95,9 @@ export default async function build(opts: BuildConfig) {
     debugSQL: opts.debugSQL,
   });
 
-  await fastify.register(fastifyPgBoss, {
-    databaseConnectionUrl: opts.database.url,
-  });
+  // await fastify.register(fastifyPgBoss, {
+  //   databaseConnectionUrl: opts.database.url,
+  // });
 
   // PgBoss Workers
 
