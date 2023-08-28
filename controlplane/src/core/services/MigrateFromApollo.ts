@@ -41,7 +41,7 @@ export default class MigrateFromApollo {
       throw new Error('Could not fetch the graph from apollo.');
     }
     const body = await response.json();
-    const data = body.data
+    const data = body.data;
     return {
       id: data.me.id,
       name: data.me.name,
