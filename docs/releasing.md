@@ -15,6 +15,10 @@ Release the full monorepo with all packages and services can be done by triggeri
 
 We use conventional commits to automate the release process. This means that we use the commit message to determine the next version. The commit message must follow the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) specification.
 
+## Release Preview
+
+On every merge to the default branch, a preview of the release will be created. This preview will be available as a summary on the [Release Preview](https://github.com/wundergraph/cosmo/actions/workflows/release-preview.yaml) workflow.
+
 ## Notes
 
 This project uses [Lerna Lite](https://github.com/lerna-lite/lerna-lite) to manage the monorepo. Lerna is a tool that optimizes the workflow around managing multi-package repositories with git and npm.

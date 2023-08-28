@@ -60,8 +60,12 @@ jobs:
             # use custom value instead of git tag
             type=raw,value=${{ inputs.tag }}
 
+      - name: Generate Summary
+        run: echo -e "# ${{ inputs.name }}\n## Tags\`\`\`${{ steps.meta.outputs.tags }}\n\`\`\`## Labels\`\`\`${{ steps.meta.outputs.labels }}\n\`\`\`" >> $GITHUB_STEP_SUMMARY
+
       - name: Install Docker Buildx
         uses: docker/setup-buildx-action@v2
+
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v4
