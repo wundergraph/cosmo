@@ -109,7 +109,6 @@ services:
     environment:
       CLICKHOUSE_ENDPOINT: "clickhouse://${CLICKHOUSE_USER:-default}:${CLICKHOUSE_PASSWORD:-changeme}@clickhouse:9000/${CLICKHOUSE_DATABASE:-cosmo}?dial_timeout=15s&compress=lz4"
       OTEL_INGEST_JWT_SECRET: ${OTEL_INGEST_JWT_SECRET:-fkczyomvdprgvtmvkuhvprxuggkbgwld}
-      PROMETHEUS_REMOTE_ENDPOINT: "http://prometheus:9090/api/v1/write"
     ports:
       - '4318:4318'
     restart: unless-stopped
