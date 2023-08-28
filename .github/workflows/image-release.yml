@@ -20,7 +20,6 @@ on:
 
       dockerContext:
         description: 'Docker context to use'
-        required: true
         type: string
         default: .
 
