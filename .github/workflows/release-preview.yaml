@@ -27,9 +27,6 @@ jobs:
           fetch-depth: 0
 
       - uses: ./.github/actions/node
-        with:
-          working-directory: ${{ env.WORKING_DIRECTORY }}
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install
         run: |
@@ -41,4 +38,4 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Show CHANGELOG.md
-        run: echo -e "\`\`\`diff\n$(git --no-pager diff './packages/*/CHANGELOG.md')\n\`\`\`" >> $GITHUB_STEP_SUMMARY
+        run: echo -e "\`\`\`diff\n$(git --no-pager diff './*/CHANGELOG.md')\n\`\`\`" >> $GITHUB_STEP_SUMMARY
