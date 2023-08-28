@@ -108,6 +108,9 @@ func (h *PreHandler) Handler(handler http.Handler) http.HandlerFunc {
 			Plan:    shared,
 		})
 
+		// Make it available in the request context as well for metrics etc.
+		r = r.WithContext(ctxWithOperation)
+
 		// Add the operation to the trace span
 		span := trace.SpanFromContext(r.Context())
 
@@ -134,9 +137,6 @@ func (h *PreHandler) Handler(handler http.Handler) http.HandlerFunc {
 		// Add the operation to the context, so we can access it later in custom transports etc.
 		shared.Ctx = shared.Ctx.WithContext(ctxWithOperation)
 
-		// Make it available in the request context as well for metrics etc.
-		newReq := r.WithContext(ctxWithOperation)
-
-		handler.ServeHTTP(w, newReq)
+		handler.ServeHTTP(w, r)
 	}
 }

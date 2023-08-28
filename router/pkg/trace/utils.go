@@ -10,6 +10,9 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+// unnamed is the default operation name used when no operation name is provided
+const unnamed = "unnamed"
+
 // TracerFromContext returns a tracer in ctx, otherwise returns a global tracer.
 func TracerFromContext(ctx context.Context) (tracer trace.Tracer) {
 	if span := trace.SpanFromContext(ctx); span.SpanContext().IsValid() {
@@ -29,11 +32,11 @@ func SpanNameFormatter(operation string, r *http.Request) string {
 	}
 
 	opCtx := contextx.GetOperationContext(r.Context())
-	if opCtx != nil && opCtx.Name != "" {
+	if opCtx != nil {
 		if opCtx.Name != "" {
-			return opCtx.Name
+			return fmt.Sprintf("%s %s", r.Method, opCtx.Name)
 		}
-		return "unnamed"
+		return fmt.Sprintf("%s %s", r.Method, unnamed)
 	}
 
 	return fmt.Sprintf("%s %s", r.Method, r.URL.Path)
