@@ -1,21 +1,39 @@
+import { SubmitHandler, useZodForm } from "@/hooks/use-form";
+import { docsBaseURL } from "@/lib/constants";
+import { useChartData } from "@/lib/insights-helpers";
+import { CommandLineIcon } from "@heroicons/react/24/outline";
+import { useMutation } from "@tanstack/react-query";
+import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common_pb";
+import { migrateFromApollo } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { FederatedGraph } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { Empty } from "./federatedgraphs-table";
-import { Line, LineChart, ResponsiveContainer, XAxis } from "recharts";
 import { getTime, parseISO, subDays } from "date-fns";
+import Link from "next/link";
+import { useContext, useState } from "react";
+import { Line, LineChart, ResponsiveContainer, XAxis } from "recharts";
+import { z } from "zod";
+import { UserContext } from "./app-provider";
 import { ComposeStatusMessage } from "./compose-status";
+import { ComposeStatusBulb } from "./compose-status-bulb";
+import { EmptyState } from "./empty-state";
 import { TimeAgo } from "./time-ago";
+import { Button } from "./ui/button";
+import { Card } from "./ui/card";
+import { CLI } from "./ui/cli";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "./ui/dialog";
+import { Input } from "./ui/input";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "./ui/tooltip";
-import { useChartData } from "@/lib/insights-helpers";
-import { Card } from "./ui/card";
-import Link from "next/link";
-import { ComposeStatusBulb } from "./compose-status-bulb";
-import { UserContext } from "./app-provider";
-import { useContext } from "react";
+import { useToast } from "./ui/use-toast";
 
 // this is required to render a blank line with LineChart
 const fallbackData = [
@@ -28,6 +46,153 @@ const fallbackData = [
     totalRequests: 0,
   },
 ];
+
+const MigrationDialog = ({ refetch }: { refetch: () => void }) => {
+  const migrateInputSchema = z.object({
+    apiKey: z.string().min(1),
+  });
+
+  type MigrateInput = z.infer<typeof migrateInputSchema>;
+
+  const {
+    register,
+    formState: { isValid, errors },
+    handleSubmit,
+    reset,
+  } = useZodForm<MigrateInput>({
+    mode: "onBlur",
+    schema: migrateInputSchema,
+  });
+
+  const { toast, update } = useToast();
+
+  const { mutate, isLoading } = useMutation(migrateFromApollo.useMutation());
+  const [open, setOpen] = useState(false);
+
+  const onSubmit: SubmitHandler<MigrateInput> = (data) => {
+    const { id } = toast({
+      description: "Migrating the graph...",
+    });
+    mutate(
+      {
+        apiKey: data.apiKey,
+      },
+      {
+        onSuccess: (d) => {
+          if (d.response?.code === EnumStatusCode.OK) {
+            update({
+              description: "Successfully migrated the graph.",
+              duration: 3000,
+              id: id,
+            });
+            refetch();
+          } else if (d.response?.details) {
+            update({ description: d.response.details, duration: 3000, id: id });
+          }
+        },
+        onError: (error) => {
+          update({
+            description: "Could not migrate the graph. Please try again.",
+            duration: 3000,
+            id: id,
+          });
+        },
+      }
+    );
+    reset();
+    setOpen(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger>
+        <Button>Migrate from Apollo</Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Migrate from Apollo</DialogTitle>
+        </DialogHeader>
+        <div className="flex flex-col gap-y-2">
+          <p className="text-sm">
+            The Graph API Key is the api key associated to the graph which has
+            to be migrated and it should be obtained from Apollo Studio.
+          </p>
+          <p className="text-sm">
+            Click{" "}
+            <Link
+              href={docsBaseURL}
+              className="text-primary"
+              target="_blank"
+              rel="noreferrer"
+            >
+              here
+            </Link>{" "}
+            to find the steps to obtain the key.
+          </p>
+          <p className="text-sm text-primary">
+            Note: This key is not stored, it is just used to fetch the graphs.
+          </p>
+        </div>
+        <form
+          className="mt-2 flex flex-col gap-y-3"
+          onSubmit={handleSubmit(onSubmit)}
+        >
+          <div className="flex flex-col gap-y-2">
+            <span className="text-sm font-semibold">Graph API Key</span>
+            <Input className="w-full" type="text" {...register("apiKey")} />
+            {errors.apiKey && (
+              <span className="px-2 text-xs text-destructive">
+                {errors.apiKey.message}
+              </span>
+            )}
+          </div>
+
+          <Button
+            className="mt-2"
+            type="submit"
+            disabled={!isValid}
+            variant="default"
+            isLoading={isLoading}
+          >
+            Migrate
+          </Button>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+export const Empty = ({ refetch }: { refetch: () => void }) => {
+  let labels = "team=A";
+  return (
+    <EmptyState
+      icon={<CommandLineIcon />}
+      title="Create federated graph using CLI"
+      description={
+        <>
+          No federated graphs found. Use the CLI tool to create one.{" "}
+          <a
+            target="_blank"
+            rel="noreferrer"
+            href={docsBaseURL}
+            className="text-primary"
+          >
+            Learn more.
+          </a>
+        </>
+      }
+      actions={
+        <div className="flex flex-col gap-y-3">
+          <CLI
+            command={`npx wgc federated-graph create production --label-matcher ${labels} --routing-url http://localhost:4000/graphql`}
+          />
+          <span className="text-sm font-bold">OR</span>
+          <MigrationDialog refetch={refetch} />
+        </div>
+      }
+    />
+  );
+};
 
 const GraphCard = ({ graph }: { graph: FederatedGraph }) => {
   const user = useContext(UserContext);
@@ -129,10 +294,12 @@ const GraphCard = ({ graph }: { graph: FederatedGraph }) => {
 
 export const FederatedGraphsCards = ({
   graphs,
+  refetch,
 }: {
   graphs?: FederatedGraph[];
+  refetch: () => void;
 }) => {
-  if (!graphs || graphs.length === 0) return <Empty />;
+  if (!graphs || graphs.length === 0) return <Empty refetch={refetch} />;
 
   return (
     <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">

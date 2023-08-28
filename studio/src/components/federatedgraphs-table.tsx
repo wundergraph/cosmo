@@ -1,10 +1,10 @@
-import { docsBaseURL } from "@/lib/constants";
-import { CommandLineIcon } from "@heroicons/react/24/outline";
+import { FederatedGraph } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
-import { FederatedGraph } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { EmptyState } from "./empty-state";
-import { CLI } from "./ui/cli";
+import { useRouter } from "next/router";
+import { ComposeStatus, ComposeStatusMessage } from "./compose-status";
+import { Empty } from "./federatedgraphs-cards";
+import { Badge } from "./ui/badge";
 import {
   Table,
   TableBody,
@@ -20,37 +20,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "./ui/tooltip";
-import { ComposeStatus, ComposeStatusMessage } from "./compose-status";
-import { Badge } from "./ui/badge";
-import { useRouter } from "next/router";
 
-export const Empty = ({ graph }: { graph?: FederatedGraph }) => {
-  let labels = "team=A";
-  return (
-    <EmptyState
-      icon={<CommandLineIcon />}
-      title="Create federated graph using CLI"
-      description={
-        <>
-          No federated graphs found. Use the CLI tool to create one.{" "}
-          <a
-            target="_blank"
-            rel="noreferrer"
-            href={docsBaseURL}
-            className="text-primary"
-          >
-            Learn more.
-          </a>
-        </>
-      }
-      actions={
-        <CLI
-          command={`npx wgc federated-graph create production --label-matcher ${labels} --routing-url http://localhost:4000/graphql`}
-        />
-      }
-    />
-  );
-};
 
 export const FederatedGraphsTable = ({
   graphs,

@@ -56,6 +56,7 @@ import { TraceRepository } from '../repositories/analytics/TraceRepository.js';
 import type { RouterOptions } from '../routes.js';
 import { ApiKeyGenerator } from '../services/ApiGenerator.js';
 import { handleError, isValidLabelMatchers, isValidLabels } from '../util.js';
+import MigrateFromApollo from '../services/MigrateFromApollo.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -1699,6 +1700,91 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         });
         // deleting the user from the db
         await userRepo.deleteUser({ id: user.id });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+        };
+      });
+    },
+
+    migrateFromApollo: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<DeleteAPIKeyResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const orgRepo = new OrganizationRepository(opts.db);
+        const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+        const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
+
+        const org = await orgRepo.byId(authContext.organizationId);
+        if (!org) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Organization not found`,
+            },
+          };
+        }
+
+        const migrateFromApollo = new MigrateFromApollo({ apiKey: req.apiKey, organizationSlug: org.slug });
+
+        const graph = await migrateFromApollo.fetchGraphID();
+        const graphDetails = await migrateFromApollo.fetchGraphDetails({ graphID: graph.id, variantName: 'main' });
+
+        if (await fedGraphRepo.exists(graph.name)) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_ALREADY_EXISTS,
+              details: `Federated graph '${graph.name}' already exists`,
+            },
+          };
+        }
+
+        const federatedGraph = await fedGraphRepo.create({
+          name: graph.name,
+          labelMatchers: ['env=production'],
+          routingUrl: graphDetails.fedGraphRoutingURL,
+        });
+
+        for (const subgraph of graphDetails.subgraphs) {
+          if (await subgraphRepo.exists(subgraph.name)) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR_ALREADY_EXISTS,
+                details: `Subgraph '${subgraph.name}' already exists`,
+              },
+            };
+          }
+        }
+
+        for (const subgraph of graphDetails.subgraphs) {
+          await subgraphRepo.create({
+            name: subgraph.name,
+            labels: [{ key: 'env', value: 'production' }],
+            routingUrl: subgraph.routingURL,
+          });
+
+          await subgraphRepo.updateSchema(subgraph.name, subgraph.schema);
+        }
+
+        const compositionErrors = await updateComposedSchema({
+          federatedGraph,
+          fedGraphRepo,
+          subgraphRepo,
+        });
+
+        if (compositionErrors.length > 0) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED,
+            },
+          };
+        }
 
         return {
           response: {
