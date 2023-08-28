@@ -63,17 +63,17 @@ jobs:
       - name: Generate Summary
         run: echo -e "# ${{ inputs.name }}\n## Tags\`\`\`${{ steps.meta.outputs.tags }}\n\`\`\`## Labels\`\`\`${{ steps.meta.outputs.labels }}\n\`\`\`" >> $GITHUB_STEP_SUMMARY
 
-      - name: Install Docker Buildx
-        uses: docker/setup-buildx-action@v2
-
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v4
-        with:
-          push: true
-          file: ${{ inputs.name }}/Dockerfile
-          context: ${{ inputs.dockerContext }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ github.repository }}/${{ inputs.name }}:buildcache
-          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ github.repository }}/${{ inputs.name }}:buildcache,mode=max
+#      - name: Install Docker Buildx
+#        uses: docker/setup-buildx-action@v2
+#
+#
+#      - name: Build and push Docker image
+#        uses: docker/build-push-action@v4
+#        with:
+#          push: true
+#          file: ${{ inputs.name }}/Dockerfile
+#          context: ${{ inputs.dockerContext }}
+#          tags: ${{ steps.meta.outputs.tags }}
+#          labels: ${{ steps.meta.outputs.labels }}
+#          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ github.repository }}/${{ inputs.name }}:buildcache
+#          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ github.repository }}/${{ inputs.name }}:buildcache,mode=max
