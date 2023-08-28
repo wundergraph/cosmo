@@ -10,13 +10,13 @@ export class TraceRepository {
     const query = `
     WITH '${traceID}' AS trace_id,
     (
-        SELECT min(Start)
-        FROM ${this.client.database}.otel_traces_trace_id_ts
+        SELECT Start
+        FROM ${this.client.database}.otel_traces_trace_id_ts_mv
         WHERE TraceId = trace_id
     ) AS start,
     (
-        SELECT max(End) + 1
-        FROM ${this.client.database}.otel_traces_trace_id_ts
+        SELECT End + 1
+        FROM ${this.client.database}.otel_traces_trace_id_ts_mv
         WHERE TraceId = trace_id
     ) AS end
     SELECT  
