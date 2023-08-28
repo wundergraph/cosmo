@@ -55,8 +55,6 @@ spec:
               containerPort: {{ .Values.service.port }}
               protocol: TCP
           env:
-            - name: GIN_MODE
-              value: release
             - name: LOG_LEVEL
               valueFrom:
                 configMapKeyRef:

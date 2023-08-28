@@ -99,3 +99,4 @@ networks:
 volumes:
   postgres:
   clickhouse:
+  prometheus:
