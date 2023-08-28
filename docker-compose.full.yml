@@ -225,6 +225,8 @@ services:
     ports:
       - '3000:3000'
 
+# This network is shared between this file and docker-compose.yml to
+# allow the demo subgraphs to communicate with the rest of the infranetworks:
 networks:
   primary:
     driver: bridge
