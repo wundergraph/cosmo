@@ -7,7 +7,7 @@ services:
     container_name: employees
     environment:
       OTEL_AUTH_TOKEN: ${OTEL_AUTH_TOKEN}
-      OTEL_HTTP_ENDPOINT: ${OTEL_HTTP_ENDPOINT:-controlplane:4318}
+      OTEL_HTTP_ENDPOINT: ${OTEL_HTTP_ENDPOINT:-otelcollector:4318}
     build:
       context: ./demo
       dockerfile: Dockerfile.employees
