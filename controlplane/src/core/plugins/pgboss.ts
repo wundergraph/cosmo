@@ -29,8 +29,12 @@ export default fp<PgBossOptions>(async function PgBossPlugin(fastify, opts) {
     retentionDays: 30,
     // How many minutes a job may be in active state before it is failed because of expiration. Must be >=1
     expireInMinutes: 15,
+    // Specifies how long in seconds completed jobs get archived (12 hours).
+    archiveCompletedAfterSeconds: 12 * 60 * 60,
+    // Specifies how long in seconds failed jobs get archived (12 hours).
+    archiveFailedAfterSeconds: 12 * 60 * 60,
     // When jobs in the archive table become eligible for deletion.
-    deleteAfterDays: 7,
+    deleteAfterDays: 30,
     // How often maintenance operations are run against the job and archive tables.
     maintenanceIntervalMinutes: 1,
   };
@@ -49,6 +53,7 @@ export default fp<PgBossOptions>(async function PgBossPlugin(fastify, opts) {
     if (opts.ssl.certPath) {
       sslOptions.cert = await readFile(opts.ssl.certPath, 'utf8');
     }
+
     if (opts.ssl.keyPath) {
       sslOptions.key = await readFile(opts.ssl.keyPath, 'utf8');
     }
