@@ -332,6 +332,7 @@ export class OrganizationRepository {
       .from(apiKeys)
       .innerJoin(users, eq(users.id, apiKeys.userId))
       .where(eq(apiKeys.organizationId, input.organizationID))
+      .orderBy(asc(apiKeys.createdAt))
       .execute();
 
     return keys.map(
