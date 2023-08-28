@@ -74,7 +74,7 @@ func startAgent(log *zap.Logger, c *Config) (*sdktrace.TracerProvider, error) {
 		sdktrace.WithResource(resource.NewSchemaless(semconv.ServiceNameKey.String(c.Name))),
 	}
 
-	if len(c.Endpoint) > 0 {
+	if c.Enabled && len(c.Endpoint) > 0 {
 		exp, err := createExporter(c)
 		if err != nil {
 			log.Error("create exporter error", zap.Error(err))
@@ -89,6 +89,8 @@ func startAgent(log *zap.Logger, c *Config) (*sdktrace.TracerProvider, error) {
 				sdktrace.WithMaxQueueSize(2048),
 			),
 		)
+
+		log.Info("Trace Exporter agent started", zap.String("url", c.Endpoint+c.OtlpHttpPath))
 	}
 
 	tp := sdktrace.NewTracerProvider(opts...)

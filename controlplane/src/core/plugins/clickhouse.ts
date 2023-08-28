@@ -14,7 +14,7 @@ export interface ChPluginOptions {
   logger: BaseLogger;
 }
 
-export default fp<ChPluginOptions>(async function (fastify, opts) {
+export default fp<ChPluginOptions>(async function ClickHousePlugin(fastify, opts) {
   const connection = new ClickHouseClient({
     dsn: opts.dsn,
     logger: opts.logger,

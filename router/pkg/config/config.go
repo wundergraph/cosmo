@@ -26,11 +26,16 @@ type Config struct {
 	FederatedGraphName      string            `envconfig:"FEDERATED_GRAPH_NAME" validate:"required"`
 	ControlplaneURL         string            `validate:"required" envconfig:"CONTROLPLANE_URL" validate:"uri"`
 	ListenAddr              string            `default:"localhost:3002" envconfig:"LISTEN_ADDR"`
+	OTELTracingEnabled      bool              `default:"true" envconfig:"OTEL_TRACING_ENABLED"`
 	OTELCollectorEndpoint   string            `validate:"required" envconfig:"OTEL_COLLECTOR_ENDPOINT" validate:"uri"`
 	OTELCollectorHeaders    map[string]string `default:"" envconfig:"OTEL_COLLECTOR_HEADERS"`
 	OTELSampler             float64           `default:"1" envconfig:"OTEL_SAMPLER"`
 	OTELBatchTimeoutSeconds int               `default:"5" envconfig:"OTEL_BATCH_TIMEOUT_SECONDS"`
-	OTELServiceName         string            `default:"wundergraph-cosmo-router" envconfig:"OTEL_SERVICE_NAME"`
+	OTELServiceName         string            `default:"cosmo-router" envconfig:"OTEL_SERVICE_NAME"`
+	OTELMetricsEnabled      bool              `default:"true" envconfig:"OTEL_METRICS_ENABLED"`
+	PrometheusEnabled       bool              `default:"true" envconfig:"PROMETHEUS_ENABLED"`
+	PrometheusHttpPath      string            `default:"/metrics" envconfig:"PROMETHEUS_HTTP_PATH"`
+	PrometheusHttpAddr      string            `default:"127.0.0.1:8088" envconfig:"PROMETHEUS_HTTP_ADDR"`
 	CORSAllowedOrigins      []string          `default:"*" envconfig:"CORS_ALLOWED_ORIGINS"`
 	CORSAllowedMethods      []string          `default:"HEAD,GET,POST" envconfig:"CORS_ALLOWED_METHODS"`
 	CORSAllowCredentials    bool              `default:"false" envconfig:"CORS_ALLOW_CREDENTIALS"`
@@ -40,7 +45,6 @@ type Config struct {
 	IntrospectionEnabled    bool              `default:"true" envconfig:"INTROSPECTION_ENABLED"`
 	LogLevel                string            `default:"info" envconfig:"LOG_LEVEL" validate:"oneof=debug info warning error fatal panic"`
 	JSONLog                 bool              `default:"true" envconfig:"JSON_LOG"`
-	Production              bool              `default:"false" envconfig:"PRODUCTION"`
 	ShutdownDelaySeconds    int               `default:"15" envconfig:"SHUTDOWN_DELAY_SECONDS"`
 	GracePeriodSeconds      int               `default:"0" envconfig:"GRACE_PERIOD_SECONDS"`
 	PollIntervalSeconds     int               `default:"10" envconfig:"POLL_INTERVAL_SECONDS"`

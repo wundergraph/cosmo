@@ -3,6 +3,7 @@ package trace
 import (
 	"bytes"
 	"context"
+	"github.com/wundergraph/cosmo/router/pkg/otel"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -38,7 +39,7 @@ func TestTransport(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		tr := NewTransport(http.DefaultTransport, otelhttp.WithSpanOptions(trace.WithAttributes(WgComponentName.String("test"))))
+		tr := NewTransport(http.DefaultTransport, otelhttp.WithSpanOptions(trace.WithAttributes(otel.WgComponentName.String("test"))))
 
 		c := http.Client{Transport: tr}
 		res, err := c.Do(r)
@@ -66,7 +67,7 @@ func TestTransport(t *testing.T) {
 		assert.Contains(t, sn[0].Attributes(), semconv.HTTPFlavorKey.String("1.1"))
 		assert.Contains(t, sn[0].Attributes(), semconv.HTTPURL(tsURL))
 		assert.Contains(t, sn[0].Attributes(), semconv.HTTPStatusCode(200))
-		assert.Contains(t, sn[0].Attributes(), WgComponentName.String("test"))
+		assert.Contains(t, sn[0].Attributes(), otel.WgComponentName.String("test"))
 	})
 
 	t.Run("set span status to error", func(t *testing.T) {
@@ -88,7 +89,7 @@ func TestTransport(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		tr := NewTransport(http.DefaultTransport, otelhttp.WithSpanOptions(trace.WithAttributes(WgComponentName.String("test"))))
+		tr := NewTransport(http.DefaultTransport, otelhttp.WithSpanOptions(trace.WithAttributes(otel.WgComponentName.String("test"))))
 
 		c := http.Client{Transport: tr}
 		res, err := c.Do(r)
@@ -116,6 +117,6 @@ func TestTransport(t *testing.T) {
 		assert.Contains(t, sn[0].Attributes(), semconv.HTTPFlavorKey.String("1.1"))
 		assert.Contains(t, sn[0].Attributes(), semconv.HTTPURL(tsURL))
 		assert.Contains(t, sn[0].Attributes(), semconv.HTTPStatusCode(http.StatusInternalServerError))
-		assert.Contains(t, sn[0].Attributes(), WgComponentName.String("test"))
+		assert.Contains(t, sn[0].Attributes(), otel.WgComponentName.String("test"))
 	})
 }

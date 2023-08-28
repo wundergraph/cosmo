@@ -2,9 +2,10 @@ package main
 
 import (
 	"context"
-	"github.com/rs/cors"
 	"github.com/wundergraph/cosmo/router/pkg/app"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane"
+	"github.com/wundergraph/cosmo/router/pkg/handler/cors"
+	"github.com/wundergraph/cosmo/router/pkg/metric"
 	"github.com/wundergraph/cosmo/router/pkg/trace"
 	"log"
 	"os"
@@ -56,17 +57,17 @@ func main() {
 		app.WithConfigFetcher(cp),
 		app.WithIntrospection(cfg.IntrospectionEnabled),
 		app.WithPlayground(cfg.PlaygroundEnabled),
-		app.WithProduction(cfg.Production),
 		app.WithGraphApiToken(cfg.GraphApiToken),
 		app.WithGracePeriod(time.Duration(cfg.GracePeriodSeconds)*time.Second),
-		app.WithCors(&cors.Options{
-			AllowedOrigins:   cfg.CORSAllowedOrigins,
-			AllowedMethods:   cfg.CORSAllowedMethods,
+		app.WithCors(&cors.Config{
+			AllowOrigins:     cfg.CORSAllowedOrigins,
+			AllowMethods:     cfg.CORSAllowedMethods,
 			AllowCredentials: cfg.CORSAllowCredentials,
-			AllowedHeaders:   cfg.CORSAllowedHeaders,
-			MaxAge:           cfg.CORSMaxAgeMinutes,
+			AllowHeaders:     cfg.CORSAllowedHeaders,
+			MaxAge:           time.Duration(cfg.CORSMaxAgeMinutes) * time.Minute,
 		}),
 		app.WithTracing(&trace.Config{
+			Enabled:      cfg.OTELTracingEnabled,
 			Name:         cfg.OTELServiceName,
 			Endpoint:     cfg.OTELCollectorEndpoint,
 			Sampler:      cfg.OTELSampler,
@@ -74,6 +75,18 @@ func main() {
 			BatchTimeout: time.Duration(cfg.OTELBatchTimeoutSeconds) * time.Second,
 			OtlpHeaders:  cfg.OTELCollectorHeaders,
 			OtlpHttpPath: "/v1/traces",
+		}),
+		app.WithMetrics(&metric.Config{
+			Enabled:     cfg.OTELMetricsEnabled,
+			Name:        cfg.OTELServiceName,
+			Endpoint:    cfg.OTELCollectorEndpoint,
+			OtlpHeaders: cfg.OTELCollectorHeaders,
+			Prometheus: metric.Prometheus{
+				Enabled:    cfg.PrometheusEnabled,
+				ListenAddr: cfg.PrometheusHttpAddr,
+				Path:       cfg.PrometheusHttpPath,
+			},
+			OtlpHttpPath: "/v1/metrics",
 		}),
 	)
 

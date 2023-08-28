@@ -2,11 +2,12 @@ package trace
 
 import "time"
 
-// TraceName represents the tracing name.
-const TraceName = "wundergraph-cosmo-router"
+// ServerName Default resource name.
+const ServerName = "cosmo-router"
 
-// A Config is an opentelemetry config.
+// Config represents the configuration for the agent.
 type Config struct {
+	Enabled bool
 	// Name represents the service name for tracing. The default value is wundergraph-cosmo-router.
 	Name     string
 	Endpoint string
@@ -27,7 +28,7 @@ type Config struct {
 // DefaultConfig returns the default config.
 func DefaultConfig() *Config {
 	return &Config{
-		Name:         TraceName,
+		Name:         ServerName,
 		Endpoint:     "http://localhost:4318",
 		Sampler:      1,
 		Batcher:      KindOtlpHttp,

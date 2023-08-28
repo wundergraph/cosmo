@@ -122,12 +122,12 @@ We manage multiple compose files:
 ## On-Premise
 
 Cosmo was designed to be deployed on-premise e.g. Kubernetes. We provide a helm chart to deploy the platform on any Kubernetes like AKS, GKE, AKS or Minikube. You can find the helm chart in the [helm](./helm) directory.
-If you need help with the deployment, please contact us at [Sales](https://wundergraph.com/contact/sales).
+If you need help with the deployment, please contact us [here](https://form.typeform.com/to/oC6XATf4).
 
 ## Managed Service
 
 If you don't want to manage the platform yourself, you can use our managed service [WunderGraph Cosmo Cloud](https://cosmo.wundergraph.com). It is a fully managed platform that don't make you worry about infrastructure, so you can focus on building.
-The managed service is currently in private beta. If you want to participate, please contact us at [Sales](https://wundergraph.com/contact/sales).
+The managed service is currently in private beta. If you want to participate, please contact us [here](https://form.typeform.com/to/oC6XATf4).
 After contacting us, we will hook you up with a free trial and help you to get started.
 
 ## License

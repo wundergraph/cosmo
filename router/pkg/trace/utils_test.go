@@ -39,7 +39,7 @@ func TestTracerFromContext(t *testing.T) {
 		}
 		tp = sdktrace.NewTracerProvider(opts...)
 		otel.SetTracerProvider(tp)
-		ctx, span := tp.Tracer(TraceName).Start(context.Background(), "a")
+		ctx, span := tp.Tracer(ServerName).Start(context.Background(), "a")
 
 		defer span.End()
 		traceFn(ctx, true)
