@@ -62,6 +62,7 @@ import {
 import { FiCheck, FiCopy } from "react-icons/fi";
 import { z } from "zod";
 import { docsBaseURL } from "@/lib/constants";
+import { cn } from "@/lib/utils";
 
 const CreateAPIKeyDialog = ({
   setApiKey,
@@ -104,7 +105,7 @@ const CreateAPIKeyDialog = ({
     handleSubmit,
     reset,
   } = useZodForm<CreateAPIKeyInput>({
-    mode: "onChange",
+    mode: "onBlur",
     schema: createAPIKeyInputSchema,
   });
 
@@ -139,9 +140,12 @@ const CreateAPIKeyDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger>
-        <Button asChild={true} disabled={!user?.roles.includes("admin")}>
-          <div className="flex gap-x-2">
+      <DialogTrigger
+        disabled={!user?.roles.includes("admin")}
+        className={cn({ "cursor-not-allowed": !user?.roles.includes("admin") })}
+      >
+        <Button disabled={!user?.roles.includes("admin")}>
+          <div className="flex items-center gap-x-2">
             <PlusIcon />
             <span>New API key</span>
           </div>
