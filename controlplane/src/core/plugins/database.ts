@@ -41,13 +41,14 @@ export default fp<DbPluginOptions>(async function (fastify, opts) {
 
     // Necessary only if the server uses a self-signed certificate.
     if (opts.ssl.caPath) {
-      sslOptions.key = await readFile(opts.ssl.caPath, 'utf8');
+      sslOptions.ca = await readFile(opts.ssl.caPath, 'utf8');
     }
 
     // Necessary only if the server requires client certificate authentication.
     if (opts.ssl.certPath) {
       sslOptions.cert = await readFile(opts.ssl.certPath, 'utf8');
     }
+
     if (opts.ssl.keyPath) {
       sslOptions.key = await readFile(opts.ssl.keyPath, 'utf8');
     }

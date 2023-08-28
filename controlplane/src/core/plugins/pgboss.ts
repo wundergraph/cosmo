@@ -46,7 +46,7 @@ export default fp<PgBossOptions>(async function PgBossPlugin(fastify, opts) {
 
     // Necessary only if the server uses a self-signed certificate.
     if (opts.ssl.caPath) {
-      sslOptions.key = await readFile(opts.ssl.caPath, 'utf8');
+      sslOptions.ca = await readFile(opts.ssl.caPath, 'utf8');
     }
 
     // Necessary only if the server requires client certificate authentication.
