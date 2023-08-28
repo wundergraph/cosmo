@@ -103,9 +103,10 @@ export default async function build(opts: BuildConfig) {
 
   // PgBoss Workers
 
-  const tw = new TrafficAnalyzerWorker(fastify.pgboss);
-  await tw.register({ graphId: 'test' });
-  await tw.subscribe();
+  // Example
+  // const tw = new TrafficAnalyzerWorker(fastify.pgboss);
+  // await tw.register({ graphId: 'test' });
+  // await tw.subscribe();
 
   await fastify.register(fastifyCors, {
     // Produce an error if allowedOrigins is undefined
