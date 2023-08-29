@@ -16,7 +16,6 @@ import (
 func WrapHandler(wrappedHandler http.Handler, componentName attribute.KeyValue, opts ...otelhttp.Option) http.Handler {
 	// Don't trace health check requests, favicon browser requests or OPTIONS request
 	opts = append(opts, otelhttp.WithFilter(RequestFilter))
-	// TODO: Use router path as span name, high cardinality should be avoided
 	opts = append(opts, otelhttp.WithSpanNameFormatter(SpanNameFormatter))
 
 	setSpanStatusHandler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
@@ -26,6 +25,7 @@ func WrapHandler(wrappedHandler http.Handler, componentName attribute.KeyValue, 
 
 		// Add request target as attribute, so we can filter by path and query
 		span.SetAttributes(semconv17.HTTPTarget(req.RequestURI))
+
 		// Add the host request header to the span
 		span.SetAttributes(semconv12.HTTPHostKey.String(req.Host))
 

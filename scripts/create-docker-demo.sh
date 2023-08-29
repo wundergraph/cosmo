@@ -18,4 +18,6 @@ cd "../scripts"
 
 ./update-docker-demo.sh
 
+cd "../cli"
+
 pnpm wgc federated-graph create-token production --name mytoken

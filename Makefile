@@ -63,7 +63,7 @@ start-router:
 	(cd router && make dev)
 
 dc-dev:
-	docker compose --file docker-compose.yml up --remove-orphans --detach
+	docker compose --file docker-compose.yml up --remove-orphans --detach --build
 
 dc-stack:
 	docker compose --file docker-compose.cosmo.yml up --remove-orphans --detach

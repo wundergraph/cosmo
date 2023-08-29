@@ -1,7 +1,14 @@
 # Change Log
+Images can be found [here](https://github.com/orgs/wundergraph/packages?repo_name=cosmo)
 
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
+
+# [0.6.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.5.0...@wundergraph/cosmo-connect@0.6.0) (2023-08-28)
+
+### Features
+
+* add resend invitation and remove member/invitation functionality ([#2](https://github.com/wundergraph/cosmo/issues/2)) ([7528ba3](https://github.com/wundergraph/cosmo/commit/7528ba3f6456be40769ea314b3b36a26a10e852b)) (@JivusAyrus)
 
 # 0.5.0 (2023-08-24)
 

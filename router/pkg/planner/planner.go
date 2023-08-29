@@ -1,12 +1,12 @@
-package graphql
+package planner
 
 import (
 	"context"
 	"fmt"
-	"github.com/dgraph-io/ristretto"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/factoryresolver"
 	"github.com/wundergraph/cosmo/router/pkg/pool"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/asttransform"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/introspection_datasource"
@@ -16,18 +16,17 @@ import (
 	"net/http"
 )
 
-type BuilderOption func(b *HandlerBuilder)
+type BuilderOption func(b *Planner)
 
-type HandlerBuilder struct {
+type Planner struct {
 	introspection bool
 	baseURL       string
 	transport     *http.Transport
 	logger        *zap.Logger
-	planCache     *ristretto.Cache
 }
 
-func NewGraphQLHandlerBuilder(opts ...BuilderOption) *HandlerBuilder {
-	b := &HandlerBuilder{}
+func NewPlanner(opts ...BuilderOption) *Planner {
+	b := &Planner{}
 	for _, opt := range opts {
 		opt(b)
 	}
@@ -39,7 +38,15 @@ func NewGraphQLHandlerBuilder(opts ...BuilderOption) *HandlerBuilder {
 	return b
 }
 
-func (b *HandlerBuilder) Build(ctx context.Context, routerConfig *nodev1.RouterConfig) (*GraphQLHandler, error) {
+type Plan struct {
+	PlanConfig      plan.Configuration
+	Definition      *ast.Document
+	Resolver        *resolve.Resolver
+	Pool            *pool.Pool
+	RenameTypeNames []resolve.RenameTypeName
+}
+
+func (b *Planner) Build(ctx context.Context, routerConfig *nodev1.RouterConfig) (*Plan, error) {
 	planConfig, err := b.buildPlannerConfiguration(routerConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build planner configuration: %w", err)
@@ -92,21 +99,16 @@ func (b *HandlerBuilder) Build(ctx context.Context, routerConfig *nodev1.RouterC
 		}
 	}
 
-	// finally, we can create the GraphQL Handler and mount it on the router
-	graphQLHandler := NewGraphQLHandler(HandlerOptions{
+	return &Plan{
 		PlanConfig:      *planConfig,
 		Definition:      &definition,
 		Resolver:        resolver,
 		RenameTypeNames: renameTypeNames,
 		Pool:            pool.New(),
-		Cache:           b.planCache,
-		Log:             b.logger,
-	})
-
-	return graphQLHandler, nil
+	}, nil
 }
 
-func (b *HandlerBuilder) buildPlannerConfiguration(routerCfg *nodev1.RouterConfig) (*plan.Configuration, error) {
+func (b *Planner) buildPlannerConfiguration(routerCfg *nodev1.RouterConfig) (*plan.Configuration, error) {
 	// this loader is used to take the engine config and create a plan config
 	// the plan config is what the engine uses to turn a GraphQL Request into an execution plan
 	// the plan config is stateful as it carries connection pools and other things
@@ -133,31 +135,25 @@ func (b *HandlerBuilder) buildPlannerConfiguration(routerCfg *nodev1.RouterConfi
 }
 
 func WithIntrospection() BuilderOption {
-	return func(b *HandlerBuilder) {
+	return func(b *Planner) {
 		b.introspection = true
 	}
 }
 
 func WithBaseURL(baseURL string) BuilderOption {
-	return func(b *HandlerBuilder) {
+	return func(b *Planner) {
 		b.baseURL = baseURL
 	}
 }
 
 func WithTransport(transport *http.Transport) BuilderOption {
-	return func(b *HandlerBuilder) {
+	return func(b *Planner) {
 		b.transport = transport
 	}
 }
 
 func WithLogger(logger *zap.Logger) BuilderOption {
-	return func(b *HandlerBuilder) {
+	return func(b *Planner) {
 		b.logger = logger
-	}
-}
-
-func WithPlanCache(planCache *ristretto.Cache) BuilderOption {
-	return func(b *HandlerBuilder) {
-		b.planCache = planCache
 	}
 }
