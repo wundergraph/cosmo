@@ -140,11 +140,8 @@ const CreateAPIKeyDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger
-        disabled={!user?.roles.includes("admin")}
-        className={cn({ "cursor-not-allowed": !user?.roles.includes("admin") })}
-      >
-        <Button disabled={!user?.roles.includes("admin")}>
+      <DialogTrigger>
+        <Button>
           <div className="flex items-center gap-x-2">
             <PlusIcon />
             <span>New API key</span>
@@ -208,11 +205,13 @@ const DeleteAPIKeyDialog = ({
   refresh,
   open,
   setOpen,
+  setDeleteApiKeyName,
 }: {
   apiKeyName: string;
   refresh: () => void;
   open: boolean;
   setOpen: Dispatch<SetStateAction<boolean>>;
+  setDeleteApiKeyName: Dispatch<SetStateAction<string | undefined>>;
 }) => {
   const { toast } = useToast();
 
@@ -248,6 +247,7 @@ const DeleteAPIKeyDialog = ({
           });
           refresh();
           reset();
+          setDeleteApiKeyName(undefined);
         },
         onError: (error) => {
           toast({
@@ -255,6 +255,7 @@ const DeleteAPIKeyDialog = ({
             duration: 3000,
           });
           reset();
+          setDeleteApiKeyName(undefined);
         },
       }
     );
@@ -442,11 +443,13 @@ export const CreateAPIKey = ({
 };
 
 const APIKeysPage: NextPageWithLayout = () => {
-  const user = useContext(UserContext);
   const { data, isLoading, error, refetch } = useQuery(getAPIKeys.useQuery());
 
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [apiKey, setApiKey] = useState<string | undefined>();
+  const [deleteApiKeyName, setDeleteApiKeyName] = useState<
+    string | undefined
+  >();
   const [openApiKeyCreatedDialog, setOpenApiKeyCreatedDialog] = useState(false);
 
   useEffect(() => {
@@ -497,6 +500,15 @@ const APIKeysPage: NextPageWithLayout = () => {
               setOpen={setOpenApiKeyCreatedDialog}
             />
           </div>
+          {deleteApiKeyName && (
+            <DeleteAPIKeyDialog
+              apiKeyName={deleteApiKeyName}
+              refresh={refetch}
+              open={openDeleteDialog}
+              setOpen={setOpenDeleteDialog}
+              setDeleteApiKeyName={setDeleteApiKeyName}
+            />
+          )}
           <Table>
             <TableHeader>
               <TableRow>
@@ -534,12 +546,6 @@ const APIKeysPage: NextPageWithLayout = () => {
                             : "Never"}
                         </TableCell>
                         <TableCell>
-                          <DeleteAPIKeyDialog
-                            apiKeyName={name}
-                            refresh={refetch}
-                            open={openDeleteDialog}
-                            setOpen={setOpenDeleteDialog}
-                          />
                           <DropdownMenu>
                             <div className="flex justify-center">
                               <DropdownMenuTrigger asChild>
@@ -550,8 +556,10 @@ const APIKeysPage: NextPageWithLayout = () => {
                             </div>
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem
-                                disabled={!user?.roles.includes("admin")}
-                                onClick={() => setOpenDeleteDialog(true)}
+                                onClick={() => {
+                                  setDeleteApiKeyName(name);
+                                  setOpenDeleteDialog(true);
+                                }}
                               >
                                 Delete
                               </DropdownMenuItem>

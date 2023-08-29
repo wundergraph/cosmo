@@ -88,6 +88,7 @@ export interface APIKeyDTO {
   lastUsedAt: string;
   expiresAt: string;
   createdBy: string;
+  creatorUserID: string;
 }
 
 export interface ResponseMessage {
