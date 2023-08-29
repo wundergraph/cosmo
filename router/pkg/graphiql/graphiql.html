@@ -59,7 +59,7 @@
 					const generator = async function* () {
 						const abort = new AbortController();
 						try {
-							const res = await fetch('{{apiURL}}/graphql', {
+							const res = await fetch('{{graphqlURL}}', {
 								method: 'post',
 								headers: {
 									...config.headers || {},
@@ -93,7 +93,7 @@
 					};
 					return generator();
 				}
-				return fetch('{{apiURL}}/graphql', {
+				return fetch('{{graphqlURL}}', {
 					method: 'post',
 					headers: {
 						...config.headers || {},
