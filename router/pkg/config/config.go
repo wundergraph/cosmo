@@ -24,10 +24,10 @@ func (ipd *Base64Decoder) Decode(value string) error {
 
 type Config struct {
 	FederatedGraphName      string            `envconfig:"FEDERATED_GRAPH_NAME" validate:"required"`
-	ControlplaneURL         string            `default:"https://cosmo-cp.wundergraph.com" envconfig:"CONTROLPLANE_URL" validate:"uri"`
+	ControlplaneURL         string            `validate:"required" default:"https://cosmo-cp.wundergraph.com" envconfig:"CONTROLPLANE_URL" validate:"uri"`
 	ListenAddr              string            `default:"localhost:3002" envconfig:"LISTEN_ADDR"`
 	OTELTracingEnabled      bool              `default:"true" envconfig:"OTEL_TRACING_ENABLED"`
-	OTELCollectorEndpoint   string            `default:"https://cosmo-otel.wundergraph.com" envconfig:"OTEL_COLLECTOR_ENDPOINT" validate:"uri"`
+	OTELCollectorEndpoint   string            `validate:"required" default:"https://cosmo-otel.wundergraph.com" envconfig:"OTEL_COLLECTOR_ENDPOINT" validate:"uri"`
 	OTELCollectorHeaders    map[string]string `default:"" envconfig:"OTEL_COLLECTOR_HEADERS"`
 	OTELSampler             float64           `default:"1" envconfig:"OTEL_SAMPLER"`
 	OTELBatchTimeoutSeconds int               `default:"5" envconfig:"OTEL_BATCH_TIMEOUT_SECONDS"`
