@@ -16,6 +16,7 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 concurrency:
+  group: ${{github.workflow}}-${{github.head_ref}}
   cancel-in-progress: false
 
 jobs:
@@ -81,5 +82,5 @@ jobs:
           context: ${{ matrix.context_path }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          #cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.container_name }}:buildcache
-          #cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.container_name }}:buildcache,mode=max
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.container_name }}:buildcache
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.container_name }}:buildcache,mode=max
