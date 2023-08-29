@@ -74,5 +74,5 @@ jobs:
           context: ${{ inputs.dockerContext }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          #cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ github.repository }}/${{ inputs.name }}:buildcache
-          #cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ github.repository }}/${{ inputs.name }}:buildcache,mode=max
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ github.repository }}/${{ inputs.name }}:buildcache
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ github.repository }}/${{ inputs.name }}:buildcache,mode=max
