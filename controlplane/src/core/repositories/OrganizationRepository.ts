@@ -299,6 +299,7 @@ export class OrganizationRepository {
         lastUsedAt: apiKeys.lastUsedAt,
         expiresAt: apiKeys.expiresAt,
         createdBy: users.email,
+        creatorUserID: users.id,
       })
       .from(apiKeys)
       .innerJoin(users, eq(users.id, apiKeys.userId))
@@ -316,6 +317,7 @@ export class OrganizationRepository {
       lastUsedAt: key[0].lastUsedAt?.toISOString() ?? '',
       expiresAt: key[0].expiresAt?.toISOString() ?? '',
       createdBy: key[0].createdBy,
+      creatorUserID: key[0].creatorUserID,
     } as APIKeyDTO;
   }
 
@@ -328,10 +330,12 @@ export class OrganizationRepository {
         lastUsedAt: apiKeys.lastUsedAt,
         expiresAt: apiKeys.expiresAt,
         createdBy: users.email,
+        creatorUserID: users.id,
       })
       .from(apiKeys)
       .innerJoin(users, eq(users.id, apiKeys.userId))
       .where(eq(apiKeys.organizationId, input.organizationID))
+      .orderBy(asc(apiKeys.createdAt))
       .execute();
 
     return keys.map(
@@ -343,6 +347,7 @@ export class OrganizationRepository {
           lastUsedAt: key.lastUsedAt?.toISOString() ?? '',
           expiresAt: key.expiresAt?.toISOString() ?? '',
           createdBy: key.createdBy,
+          creatorUserID: key.creatorUserID,
         } as APIKeyDTO),
     );
   }

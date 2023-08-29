@@ -161,10 +161,11 @@ const MemberCard = ({
                             });
                           },
                           onError: (error) => {
-                            toast({
+                            update({
                               description:
                                 "Could not invite the member. Please try again.",
                               duration: 3000,
+                              id: id,
                             });
                           },
                         }

@@ -15,7 +15,7 @@ export default (opts: BaseCommandOptions) => {
       const deletionConfirmed = await inquirer.prompt({
         name: 'confirmDeletion',
         type: 'confirm',
-        message: 'Are you sure you want to delete this federated graph?',
+        message: 'Are you sure you want to delete this subgraph?',
       });
       if (!deletionConfirmed.confirmDeletion) {
         process.exit(1);
