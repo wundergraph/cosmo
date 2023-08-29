@@ -8,14 +8,14 @@ import (
 )
 
 type PlaygroundOptions struct {
-	Log     *zap.Logger
-	Html    string
-	NodeUrl string
+	Log        *zap.Logger
+	Html       string
+	GraphqlURL string
 }
 
 func NewPlayground(opts *PlaygroundOptions) http.HandlerFunc {
 	fn := func(w http.ResponseWriter, r *http.Request) {
-		tpl := strings.Replace(opts.Html, "{{apiURL}}", opts.NodeUrl, -1)
+		tpl := strings.Replace(opts.Html, "{{graphqlURL}}", opts.GraphqlURL, -1)
 		resp := []byte(tpl)
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")

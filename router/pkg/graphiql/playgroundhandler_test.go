@@ -11,9 +11,9 @@ import (
 
 func TestHealthCheckHandler(t *testing.T) {
 	handler := NewPlayground(&PlaygroundOptions{
-		Log:     zap.NewNop(),
-		Html:    "test {{apiURL}}",
-		NodeUrl: "http://localhost:8080",
+		Log:        zap.NewNop(),
+		Html:       "test {{graphqlURL}}",
+		GraphqlURL: "/",
 	})
 	rec := httptest.NewRecorder()
 
@@ -21,5 +21,5 @@ func TestHealthCheckHandler(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, rec.Code)
 	assert.Equal(t, "text/html; charset=utf-8", rec.Header().Get("Content-Type"))
-	assert.Equal(t, "test http://localhost:8080", rec.Body.String())
+	assert.Equal(t, "test /", rec.Body.String())
 }
