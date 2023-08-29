@@ -348,7 +348,7 @@ export class SubgraphRepository {
       proposedSubgraphSchemaSDL: c.proposedSubgraphSchemaSDL ?? undefined,
       // TODO: Figure out why type fails
       // @ts-ignore
-      originalSchemaSDL: c.schemaVersion.schemaSDL,
+      originalSchemaSDL: c?.schemaVersion?.schemaSDL,
     }));
   }
 

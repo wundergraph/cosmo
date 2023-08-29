@@ -13,7 +13,7 @@ export class SchemaCheckRepository {
     targetId: string;
     isComposable?: boolean;
     proposedSubgraphSchemaSDL: string;
-    schemaVersionId: string;
+    schemaVersionId?: string;
   }): Promise<string> {
     const insertedSchemaCheck = await this.db
       .insert(schemaChecks)
@@ -21,7 +21,7 @@ export class SchemaCheckRepository {
         targetId: data.targetId,
         isComposable: data.isComposable,
         proposedSubgraphSchemaSDL: data.proposedSubgraphSchemaSDL,
-        schemaVersionId: data.schemaVersionId,
+        ...(data.schemaVersionId ? { schemaVersionId: data.schemaVersionId } : {}),
       })
       .returning()
       .execute();

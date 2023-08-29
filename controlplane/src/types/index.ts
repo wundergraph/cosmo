@@ -41,7 +41,7 @@ export interface SubgraphDTO {
   schemaSDL: string;
   lastUpdatedAt: string;
   labels: Label[];
-  subgraphVersionId: string;
+  subgraphVersionId?: string;
 }
 
 export interface SchemaCheckDTO {
