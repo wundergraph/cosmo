@@ -66,7 +66,7 @@ func InitTracing(ctx context.Context, otelOpts Options) error {
 	}
 
 	opts = append(opts,
-		otlptracehttp.WithEndpoint(otelOpts.Endpoint),
+		otlptracehttp.WithEndpoint(otelHttpEndpoint),
 		otlptracehttp.WithURLPath("/v1/traces"),
 	)
 

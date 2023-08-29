@@ -1,6 +1,6 @@
 {
   "name": "studio",
-  "version": "0.7.0",
+  "version": "0.7.2",
   "private": true,
   "license": "Apache-2.0",
   "description": "WunderGraph Cosmo Studio",
@@ -32,7 +32,7 @@
     "@graphiql/toolkit": "^0.8.4",
     "@headlessui/react": "^1.7.15",
     "@heroicons/react": "^2.0.18",
-    "@hookform/resolvers": "^3.1.1",
+    "@hookform/resolvers": "^3.3.1",
     "@markdoc/markdoc": "^0.3.1",
     "@markdoc/next.js": "^0.3.2",
     "@radix-ui/react-accordion": "^1.1.2",

@@ -1616,6 +1616,20 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
+        const userRoles = await orgRepo.getOrganizationMemberRoles({
+          userID: authContext.userId || '',
+          organizationID: authContext.organizationId,
+        });
+
+        if (!(apiKey.creatorUserID === authContext.userId || userRoles.includes('admin'))) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `You are not authorized to delete the api key '${apiKey.name}'`,
+            },
+          };
+        }
+
         await orgRepo.removeAPIKey({
           name: req.name,
           organizationID: authContext.organizationId,

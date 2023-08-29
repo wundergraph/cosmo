@@ -81,13 +81,16 @@ make start-cp
 # 3️⃣ Seed the database with the default user (Wait a few seconds until Keycloak is ready)
 make seed
 
-# 4️⃣ Create the demo and start the subgraphs
-make create-demo && make dc-subgraphs-demo
+# 4️⃣ Create the demo and copy the JWT printed at the bottom
+make create-demo
 
-# 5️⃣ Put the api key from the previous step into the .env file and start the router
+# 5️⃣ Start the subgraphs
+OTEL_AUTH_TOKEN=<jwt-token> make dc-subgraphs-demo
+
+# 6️⃣ Put the JWT from the previous step into the router/.env as GRAPH_API_TOKEN and start the router
 make start-router
 
-# 6️⃣ Start the studio (http://localhost:3000)
+# 7️⃣ Start the studio (http://localhost:3000)
 make start-studio
 ```
 
@@ -133,3 +136,4 @@ After contacting us, we will hook you up with a free trial and help you to get s
 ## License
 
 Cosmo is licensed under the [Apache License, Version 2.0](LICENSE).
+
