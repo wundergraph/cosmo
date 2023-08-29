@@ -1740,16 +1740,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           return {
             response: {
               code: EnumStatusCode.ERR_ALREADY_EXISTS,
-              details: `Federated graph '${graph.name}' already exists`,
+              details: `Federated graph '${graph.name}' already exists.`,
             },
           };
         }
-
-        const federatedGraph = await fedGraphRepo.create({
-          name: graph.name,
-          labelMatchers: ['env=production'],
-          routingUrl: graphDetails.fedGraphRoutingURL,
-        });
 
         for (const subgraph of graphDetails.subgraphs) {
           if (await subgraphRepo.exists(subgraph.name)) {
@@ -1762,15 +1756,14 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           }
         }
 
-        for (const subgraph of graphDetails.subgraphs) {
-          await subgraphRepo.create({
-            name: subgraph.name,
-            labels: [{ key: 'env', value: 'production' }],
-            routingUrl: subgraph.routingURL,
-          });
-
-          await subgraphRepo.updateSchema(subgraph.name, subgraph.schema);
-        }
+        const federatedGraph = await fedGraphRepo.migrateGraphFromApollo({
+          fedGraph: {
+            name: graph.name,
+            routingURL: graphDetails.fedGraphRoutingURL,
+          },
+          subgraphs: graphDetails.subgraphs,
+          organizationID: authContext.organizationId,
+        });
 
         const compositionErrors = await updateComposedSchema({
           federatedGraph,

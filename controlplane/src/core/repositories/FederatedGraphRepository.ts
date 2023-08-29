@@ -20,6 +20,7 @@ import {
   GraphApiKeyDTO,
   Label,
   ListFilterOptions,
+  MigrationSubgraph,
   SchemaChangeType,
 } from '../../types/index.js';
 import { updateComposedSchema } from '../composition/updateComposedSchema.js';
@@ -516,5 +517,41 @@ export class FederatedGraphRepository {
       name: key.name,
       token: key.token,
     };
+  }
+
+  public migrateGraphFromApollo({
+    fedGraph,
+    subgraphs,
+    organizationID,
+  }: {
+    fedGraph: {
+      name: string;
+      routingURL: string;
+    };
+    subgraphs: MigrationSubgraph[];
+    organizationID: string;
+  }): Promise<FederatedGraphDTO> {
+    return this.db.transaction<FederatedGraphDTO>(async (db) => {
+      const fedGraphRepo = new FederatedGraphRepository(db, organizationID);
+      const subgraphRepo = new SubgraphRepository(db, organizationID);
+
+      const federatedGraph = await fedGraphRepo.create({
+        name: fedGraph.name,
+        labelMatchers: ['env=main'],
+        routingUrl: fedGraph.routingURL,
+      });
+
+      for (const subgraph of subgraphs) {
+        await subgraphRepo.create({
+          name: subgraph.name,
+          labels: [{ key: 'env', value: 'main' }],
+          routingUrl: subgraph.routingURL,
+        });
+
+        await subgraphRepo.updateSchema(subgraph.name, subgraph.schema);
+      }
+
+      return federatedGraph;
+    });
   }
 }

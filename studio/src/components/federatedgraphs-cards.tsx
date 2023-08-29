@@ -1,3 +1,4 @@
+import { useFireworks } from "@/hooks/use-fireworks";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
 import { docsBaseURL } from "@/lib/constants";
 import { useChartData } from "@/lib/insights-helpers";
@@ -8,7 +9,12 @@ import { migrateFromApollo } from "@wundergraph/cosmo-connect/dist/platform/v1/p
 import { FederatedGraph } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { getTime, parseISO, subDays } from "date-fns";
 import Link from "next/link";
-import { useContext, useState } from "react";
+import {
+  Dispatch,
+  SetStateAction,
+  useContext,
+  useState
+} from "react";
 import { Line, LineChart, ResponsiveContainer, XAxis } from "recharts";
 import { z } from "zod";
 import { UserContext } from "./app-provider";
@@ -47,7 +53,13 @@ const fallbackData = [
   },
 ];
 
-const MigrationDialog = ({ refetch }: { refetch: () => void }) => {
+const MigrationDialog = ({
+  refetch,
+  setIsMigrationSuccess,
+}: {
+  refetch: () => void;
+  setIsMigrationSuccess: Dispatch<SetStateAction<boolean>>;
+}) => {
   const migrateInputSchema = z.object({
     apiKey: z.string().min(1),
   });
@@ -86,6 +98,7 @@ const MigrationDialog = ({ refetch }: { refetch: () => void }) => {
               id: id,
             });
             refetch();
+            setIsMigrationSuccess(true);
           } else if (d.response?.details) {
             update({ description: d.response.details, duration: 3000, id: id });
           }
@@ -162,7 +175,18 @@ const MigrationDialog = ({ refetch }: { refetch: () => void }) => {
   );
 };
 
-export const Empty = ({ refetch }: { refetch: () => void }) => {
+const MigrationSuccess = () => {
+  useFireworks(true);
+  return null;
+};
+
+export const Empty = ({
+  refetch,
+  setIsMigrationSuccess,
+}: {
+  refetch: () => void;
+  setIsMigrationSuccess: Dispatch<SetStateAction<boolean>>;
+}) => {
   let labels = "team=A";
   return (
     <EmptyState
@@ -187,7 +211,10 @@ export const Empty = ({ refetch }: { refetch: () => void }) => {
             command={`npx wgc federated-graph create production --label-matcher ${labels} --routing-url http://localhost:4000/graphql`}
           />
           <span className="text-sm font-bold">OR</span>
-          <MigrationDialog refetch={refetch} />
+          <MigrationDialog
+            refetch={refetch}
+            setIsMigrationSuccess={setIsMigrationSuccess}
+          />
         </div>
       }
     />
@@ -299,13 +326,21 @@ export const FederatedGraphsCards = ({
   graphs?: FederatedGraph[];
   refetch: () => void;
 }) => {
-  if (!graphs || graphs.length === 0) return <Empty refetch={refetch} />;
+  const [isMigrationSuccess, setIsMigrationSuccess] = useState(false);
+
+  if (!graphs || graphs.length === 0)
+    return (
+      <Empty refetch={refetch} setIsMigrationSuccess={setIsMigrationSuccess} />
+    );
 
   return (
-    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-      {graphs.map((graph, graphIndex) => {
-        return <GraphCard key={graphIndex.toString()} graph={graph} />;
-      })}
-    </div>
+    <>
+      {isMigrationSuccess && <MigrationSuccess />}
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+        {graphs.map((graph, graphIndex) => {
+          return <GraphCard key={graphIndex.toString()} graph={graph} />;
+        })}
+      </div>
+    </>
   );
 };

@@ -1,8 +1,4 @@
-interface Subgraph {
-  name: string;
-  routingURL: string;
-  schema: string;
-}
+import { MigrationSubgraph } from 'src/types/index.js';
 
 export default class MigrateFromApollo {
   apiKey = '';
@@ -51,7 +47,7 @@ export default class MigrateFromApollo {
   // fetches the schemas of the subgraphs and the routing url of the federated graph
   public async fetchGraphDetails({ graphID, variantName }: { graphID: string; variantName: string }): Promise<{
     fedGraphRoutingURL: string;
-    subgraphs: Subgraph[];
+    subgraphs: MigrationSubgraph[];
   }> {
     const headers = new Headers();
     headers.append('X-API-KEY', this.apiKey);
@@ -111,7 +107,7 @@ export default class MigrateFromApollo {
           name: subgraph.name,
           routingURL: subgraph.url,
           schema: subgraph.activePartialSchema.sdl,
-        } as Subgraph;
+        } as MigrationSubgraph;
       }),
     };
   }
