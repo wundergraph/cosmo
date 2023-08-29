@@ -5,6 +5,9 @@ services:
   # Services for the demo
   employees:
     container_name: employees
+    environment:
+      OTEL_AUTH_TOKEN: ${OTEL_AUTH_TOKEN}
+      OTEL_HTTP_ENDPOINT: ${OTEL_HTTP_ENDPOINT:-otelcollector:4318}
     build:
       context: ./demo
       dockerfile: Dockerfile.employees
@@ -12,8 +15,14 @@ services:
       - subgraphs
     ports:
       - '4001:4001'
+    networks:
+      - primary
+
   family:
     container_name: family
+    environment:
+      OTEL_AUTH_TOKEN: ${OTEL_AUTH_TOKEN}
+      OTEL_HTTP_ENDPOINT: ${OTEL_HTTP_ENDPOINT:-otelcollector:4318}
     build:
       context: ./demo
       dockerfile: Dockerfile.family
@@ -21,8 +30,14 @@ services:
       - subgraphs
     ports:
       - '4002:4002'
+    networks:
+      - primary
+
   hobbies:
     container_name: hobbies
+    environment:
+      OTEL_AUTH_TOKEN: ${OTEL_AUTH_TOKEN}
+      OTEL_HTTP_ENDPOINT: ${OTEL_HTTP_ENDPOINT:-otelcollector:4318}
     build:
       context: ./demo
       dockerfile: Dockerfile.hobbies
@@ -30,7 +45,13 @@ services:
       - subgraphs
     ports:
       - '4003:4003'
+    networks:
+      - primary
+
   products:
+    environment:
+      OTEL_AUTH_TOKEN: ${OTEL_AUTH_TOKEN}
+      OTEL_HTTP_ENDPOINT: ${OTEL_HTTP_ENDPOINT:-otelcollector:4318}
     container_name: products
     build:
       context: ./demo
@@ -39,6 +60,8 @@ services:
       - subgraphs
     ports:
       - '4004:4004'
+    networks:
+      - primary
 
   # Infrastructure services
 
@@ -201,6 +224,13 @@ services:
       - default
     ports:
       - '3000:3000'
+
+# This network is shared between this file and docker-compose.yml to
+# allow the demo subgraphs to communicate with the rest of the infranetworks:
+networks:
+  primary:
+    driver: bridge
+    name: primary
 
 volumes:
   postgres:
