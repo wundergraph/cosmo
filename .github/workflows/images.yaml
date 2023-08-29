@@ -8,10 +8,8 @@ on:
       - '**'
     paths-ignore:
       - 'docs/*/**'
-      - '*.md'
       - 'helm/**'
       - 'scripts/**'
-      - '.github/**'
 
 env:
   REGISTRY: ghcr.io

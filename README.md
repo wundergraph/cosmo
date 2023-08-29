@@ -136,3 +136,4 @@ After contacting us, we will hook you up with a free trial and help you to get s
 ## License
 
 Cosmo is licensed under the [Apache License, Version 2.0](LICENSE).
+
