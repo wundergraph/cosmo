@@ -15,6 +15,9 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
+concurrency:
+  cancel-in-progress: false
+
 jobs:
   build-and-push-image:
     strategy:
