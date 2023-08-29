@@ -11,6 +11,14 @@ on:
       - 'helm/**'
       - 'scripts/**'
 
+  pull_request:
+    branches:
+      - main
+    paths-ignore:
+      - 'docs/*/**'
+      - 'helm/**'
+      - 'scripts/**'
+
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
