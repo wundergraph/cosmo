@@ -330,11 +330,11 @@ importers:
         specifier: ^8.14.1
         version: 8.14.1
       zod:
-        specifier: ^3.21.4
-        version: 3.21.4
+        specifier: ^3.22.2
+        version: 3.22.2
       zod-to-json-schema:
         specifier: ^3.21.4
-        version: 3.21.4(zod@3.21.4)
+        version: 3.21.4(zod@3.22.2)
     devDependencies:
       '@types/node':
         specifier: ^20.3.1
@@ -376,8 +376,8 @@ importers:
         specifier: ^2.0.18
         version: 2.0.18(react@18.2.0)
       '@hookform/resolvers':
-        specifier: ^3.1.1
-        version: 3.1.1(react-hook-form@7.45.1)
+        specifier: ^3.3.1
+        version: 3.3.1(react-hook-form@7.45.1)
       '@markdoc/markdoc':
         specifier: ^0.3.1
         version: 0.3.1(@types/react@18.2.14)(react@18.2.0)
@@ -1743,8 +1743,8 @@ packages:
       react: 18.2.0
     dev: false
 
-  /@hookform/resolvers@3.1.1(react-hook-form@7.45.1):
-    resolution: {integrity: sha512-tS16bAUkqjITNSvbJuO1x7MXbn7Oe8ZziDTJdA9mMvsoYthnOOiznOTGBYwbdlYBgU+tgpI/BtTU3paRbCuSlg==}
+  /@hookform/resolvers@3.3.1(react-hook-form@7.45.1):
+    resolution: {integrity: sha512-K7KCKRKjymxIB90nHDQ7b9nli474ru99ZbqxiqDAWYsYhOsU3/4qLxW91y+1n04ic13ajjZ66L3aXbNef8PELQ==}
     peerDependencies:
       react-hook-form: ^7.0.0
     dependencies:
@@ -12390,12 +12390,12 @@ packages:
     resolution: {integrity: sha512-9bnSc/HEW2uRy67wc+T8UwauLuPJVn28jb+GtJY16iiKWyvmYJRXVT4UamsAEGQfPohgr2q4Tq0sQbQlxTfi1g==}
     engines: {node: '>=12.20'}
 
-  /zod-to-json-schema@3.21.4(zod@3.21.4):
+  /zod-to-json-schema@3.21.4(zod@3.22.2):
     resolution: {integrity: sha512-fjUZh4nQ1s6HMccgIeE0VP4QG/YRGPmyjO9sAh890aQKPEk3nqbfUXhMFaC+Dr5KvYBm8BCyvfpZf2jY9aGSsw==}
     peerDependencies:
       zod: ^3.21.4
     dependencies:
-      zod: 3.21.4
+      zod: 3.22.2
     dev: false
 
   /zod@3.21.4:
