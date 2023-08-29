@@ -4,6 +4,12 @@ Images can be found [here](https://github.com/orgs/wundergraph/packages?repo_nam
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.7.2](https://github.com/wundergraph/cosmo/compare/studio@0.7.1...studio@0.7.2) (2023-08-29)
+
+### Bug Fixes
+
+* ci ([#20](https://github.com/wundergraph/cosmo/issues/20)) ([e676b1a](https://github.com/wundergraph/cosmo/commit/e676b1a6dfeaa1ff8b6d55f818ae301f49deea4c)) (@JivusAyrus)
+
 ## [0.7.1](https://github.com/wundergraph/cosmo/compare/studio@0.7.0...studio@0.7.1) (2023-08-29)
 
 ### Bug Fixes

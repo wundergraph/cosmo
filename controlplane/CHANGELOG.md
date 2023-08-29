@@ -4,6 +4,10 @@ Images can be found [here](https://github.com/orgs/wundergraph/packages?repo_nam
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.6.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.6.1...controlplane@0.6.2) (2023-08-29)
+
+**Note:** Version bump only for package controlplane
+
 ## [0.6.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.6.0...controlplane@0.6.1) (2023-08-29)
 
 ### Bug Fixes
