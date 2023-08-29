@@ -317,7 +317,7 @@ export class OrganizationRepository {
       lastUsedAt: key[0].lastUsedAt?.toISOString() ?? '',
       expiresAt: key[0].expiresAt?.toISOString() ?? '',
       createdBy: key[0].createdBy,
-      creatorUserID: key[0].creatorUserID
+      creatorUserID: key[0].creatorUserID,
     } as APIKeyDTO;
   }
 
