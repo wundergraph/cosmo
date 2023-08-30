@@ -98,20 +98,14 @@ spec:
             - name: http
               containerPort: {{ .Values.service.port }}
               protocol: TCP
+          {{ with .Values.probes.liveness }}
           livenessProbe:
-            httpGet:
-              path: /health/live
-              port: http
-            {{ if .Values.probes.liveness.initialDelaySeconds }}
-            initialDelaySeconds: {{ ((.Values.probes).liveness).initialDelaySeconds | default 0 }}
-            {{ end }}
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{ with .Values.probes.readiness }}
           readinessProbe:
-            httpGet:
-              path: /health/ready
-              port: http
-            {{ if .Values.probes.readiness.initialDelaySeconds }}
-            initialDelaySeconds: {{ ((.Values.probes).readiness).initialDelaySeconds | default 0 }}
-            {{ end }}
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       volumes:

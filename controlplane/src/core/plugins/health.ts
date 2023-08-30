@@ -5,6 +5,7 @@ const plugin: FastifyPluginCallback = function HealthPlugin(fastify, opts, done)
   let shutdown = false;
 
   fastify.addHook('onClose', (instance, done) => {
+    fastify.log.debug('Return 503 for health checks because server is shutting down.');
     shutdown = true;
     done();
   });
