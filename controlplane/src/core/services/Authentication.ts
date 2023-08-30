@@ -41,7 +41,7 @@ export class Authentication implements Authenticator {
       const authorization = headers.get('authorization');
       if (authorization) {
         const token = authorization.replace(/^bearer\s+/i, '');
-        return this.keyAuth.authenticate(token);
+        return await this.keyAuth.authenticate(token);
       }
 
       /**

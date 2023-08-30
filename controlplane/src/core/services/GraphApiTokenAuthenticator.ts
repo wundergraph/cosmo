@@ -1,6 +1,4 @@
-import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common_pb';
 import { JWTPayload } from 'jose';
-import { AuthenticationError } from '../errors/errors.js';
 import { verifyJwt } from '../crypto/jwt.js';
 
 export type GraphKeyAuthContext = {
