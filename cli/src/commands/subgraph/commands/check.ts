@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { Command } from 'commander';
-import { join } from 'pathe';
+import { resolve } from 'pathe';
 import pc from 'picocolors';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common_pb';
 import Table from 'cli-table';
@@ -16,11 +16,11 @@ export default (opts: BaseCommandOptions) => {
   schemaCheck.requiredOption('--schema <path-to-schema>', 'The path of the new schema file.');
 
   schemaCheck.action(async (name, options) => {
-    const schemaFile = join(process.cwd(), options.schema);
+    const schemaFile = resolve(process.cwd(), options.schema);
     if (!existsSync(schemaFile)) {
       console.log(
         pc.red(
-          pc.bold(`The schema file '${pc.bold(options.schema)}' does not exist. Please check the path and try again.`),
+          pc.bold(`The schema file '${pc.bold(schemaFile)}' does not exist. Please check the path and try again.`),
         ),
       );
       return;

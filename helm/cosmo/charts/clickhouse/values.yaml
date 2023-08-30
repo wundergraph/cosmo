@@ -83,10 +83,16 @@ terminationGracePeriodSeconds: 30
 probes:
   # -- Configure readiness probe
   readiness:
+    httpGet:
+      path: /ping
+      port: http
     # https://my.f5.com/manage/s/article/K000133302
     initialDelaySeconds: 5
   # -- Configure liveness probe
   liveness:
+    httpGet:
+      path: /ping
+      port: http
     # https://my.f5.com/manage/s/article/K000133302
     initialDelaySeconds: 15
 
