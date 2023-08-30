@@ -1777,7 +1777,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           },
           subgraphs: graphDetails.subgraphs,
           organizationID: authContext.organizationId,
-          db: opts.db
+          db: opts.db,
         });
 
         const compositionErrors = await updateComposedSchema({

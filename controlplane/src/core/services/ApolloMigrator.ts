@@ -120,7 +120,7 @@ export default class ApolloMigrator {
     fedGraph,
     subgraphs,
     organizationID,
-    db
+    db,
   }: {
     fedGraph: {
       name: string;
