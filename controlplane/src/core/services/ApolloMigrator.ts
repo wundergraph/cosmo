@@ -1,6 +1,10 @@
-import { MigrationSubgraph } from 'src/types/index.js';
+import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { FederatedGraphDTO, MigrationSubgraph } from 'src/types/index.js';
+import * as schema from '../../db/schema.js';
+import { SubgraphRepository } from '../repositories/SubgraphRepository.js';
+import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
 
-export default class MigrateFromApollo {
+export default class ApolloMigrator {
   apiKey = '';
   organizationSlug = '';
   constructor({ apiKey, organizationSlug }: { apiKey: string; organizationSlug: string }) {
@@ -110,5 +114,43 @@ export default class MigrateFromApollo {
         } as MigrationSubgraph;
       }),
     };
+  }
+
+  public migrateGraphFromApollo({
+    fedGraph,
+    subgraphs,
+    organizationID,
+    db
+  }: {
+    fedGraph: {
+      name: string;
+      routingURL: string;
+    };
+    subgraphs: MigrationSubgraph[];
+    organizationID: string;
+    db: PostgresJsDatabase<typeof schema>;
+  }): Promise<FederatedGraphDTO> {
+    return db.transaction<FederatedGraphDTO>(async (db) => {
+      const fedGraphRepo = new FederatedGraphRepository(db, organizationID);
+      const subgraphRepo = new SubgraphRepository(db, organizationID);
+
+      const federatedGraph = await fedGraphRepo.create({
+        name: fedGraph.name,
+        labelMatchers: ['env=main'],
+        routingUrl: fedGraph.routingURL,
+      });
+
+      for (const subgraph of subgraphs) {
+        await subgraphRepo.create({
+          name: subgraph.name,
+          labels: [{ key: 'env', value: 'main' }],
+          routingUrl: subgraph.routingURL,
+        });
+
+        await subgraphRepo.updateSchema(subgraph.name, subgraph.schema);
+      }
+
+      return federatedGraph;
+    });
   }
 }

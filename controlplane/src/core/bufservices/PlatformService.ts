@@ -56,7 +56,7 @@ import { TraceRepository } from '../repositories/analytics/TraceRepository.js';
 import type { RouterOptions } from '../routes.js';
 import { ApiKeyGenerator } from '../services/ApiGenerator.js';
 import { handleError, isValidLabelMatchers, isValidLabels } from '../util.js';
-import MigrateFromApollo from '../services/MigrateFromApollo.js';
+import ApolloMigrator from '../services/ApolloMigrator.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -1745,10 +1745,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const migrateFromApollo = new MigrateFromApollo({ apiKey: req.apiKey, organizationSlug: org.slug });
+        const apolloMigrator = new ApolloMigrator({ apiKey: req.apiKey, organizationSlug: org.slug });
 
-        const graph = await migrateFromApollo.fetchGraphID();
-        const graphDetails = await migrateFromApollo.fetchGraphDetails({ graphID: graph.id, variantName: 'main' });
+        const graph = await apolloMigrator.fetchGraphID();
+        const graphDetails = await apolloMigrator.fetchGraphDetails({ graphID: graph.id, variantName: 'main' });
 
         if (await fedGraphRepo.exists(graph.name)) {
           return {
@@ -1770,13 +1770,14 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           }
         }
 
-        const federatedGraph = await fedGraphRepo.migrateGraphFromApollo({
+        const federatedGraph = await apolloMigrator.migrateGraphFromApollo({
           fedGraph: {
             name: graph.name,
             routingURL: graphDetails.fedGraphRoutingURL,
           },
           subgraphs: graphDetails.subgraphs,
           organizationID: authContext.organizationId,
+          db: opts.db
         });
 
         const compositionErrors = await updateComposedSchema({
