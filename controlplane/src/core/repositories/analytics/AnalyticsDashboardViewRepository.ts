@@ -18,7 +18,8 @@ export class AnalyticsDashboardViewRepository {
         FROM
             ${this.client.database}.otel_traces
         WHERE
-            (SpanKind = 'SPAN_KIND_SERVER' OR empty(ParentSpanId))
+        -- Only root spans(spans which have no parent span) and has no condition on SpanKind as a span can start from either the server or the client
+            empty(ParentSpanId)
             AND SpanAttributes['wg.federated_graph.id'] = '${federatedGraphId}'
             AND SpanAttributes['wg.organization.id'] = '${organizationId}'
         AND toDate(Timestamp) >= toDate(now()) - interval 6 day
@@ -53,7 +54,8 @@ export class AnalyticsDashboardViewRepository {
         FROM
             ${this.client.database}.otel_traces
         WHERE
-            (SpanKind = 'SPAN_KIND_SERVER' OR empty(ParentSpanId))
+        -- Only root spans(spans which have no parent span) and has no condition on SpanKind as a span can start from either the server or the client
+            empty(ParentSpanId)
             AND SpanAttributes['wg.organization.id'] = '${organizationId}'
         AND toDate(Timestamp) >= toDate(now()) - interval 6 day
         GROUP BY
@@ -104,7 +106,8 @@ export class AnalyticsDashboardViewRepository {
         FROM
             ${this.client.database}.otel_traces
         WHERE
-            (SpanKind = 'SPAN_KIND_SERVER' OR empty(ParentSpanId))
+        -- Only root spans(spans which have no parent span) and has no condition on SpanKind as a span can start from either the server or the client
+            empty(ParentSpanId)
             AND toDate(Timestamp) >= toDate(now()) - interval 6 day
             AND SpanAttributes['wg.federated_graph.id'] = '${federatedGraphId}'
             AND SpanAttributes['wg.organization.id'] = '${organizationId}'
