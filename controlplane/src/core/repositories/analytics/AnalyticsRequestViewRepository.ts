@@ -241,7 +241,7 @@ export class AnalyticsRequestViewRepository {
               ${this.client.database}.otel_traces
           WHERE
             -- Only root spans
-            (SpanKind = 'SPAN_KIND_SERVER' OR empty(ParentSpanId))
+            empty(ParentSpanId)
             ${baseWhereSql}
           ORDER BY
               Timestamp DESC 
@@ -266,7 +266,7 @@ export class AnalyticsRequestViewRepository {
           FROM
               ${this.client.database}.otel_traces
           WHERE
-            (SpanKind = 'SPAN_KIND_SERVER' OR empty(ParentSpanId))
+            empty(ParentSpanId)
             ${baseWhereSql}
           GROUP BY
             operationName,
@@ -295,7 +295,7 @@ export class AnalyticsRequestViewRepository {
           FROM
               ${this.client.database}.otel_traces
           WHERE
-            (SpanKind = 'SPAN_KIND_SERVER' OR empty(ParentSpanId))
+            empty(ParentSpanId)
             ${baseWhereSql}
           GROUP BY
             clientName,
@@ -317,7 +317,7 @@ export class AnalyticsRequestViewRepository {
           FROM
               ${this.client.database}.otel_traces
           WHERE
-              (SpanKind = 'SPAN_KIND_SERVER' OR empty(ParentSpanId))
+              empty(ParentSpanId)
               ${baseWhereSql}
           GROUP BY
               httpStatusCode
@@ -347,7 +347,7 @@ export class AnalyticsRequestViewRepository {
           SELECT COUNT(*) as count FROM ${this.client.database}.otel_traces
           WHERE
             -- Only root spans
-            (SpanKind = 'SPAN_KIND_SERVER' OR empty(ParentSpanId))
+            empty(ParentSpanId)
           ${baseWhereSql}
         `;
         break;
@@ -360,7 +360,7 @@ export class AnalyticsRequestViewRepository {
             FROM
                 ${this.client.database}.otel_traces
             WHERE
-              (SpanKind = 'SPAN_KIND_SERVER' OR empty(ParentSpanId))
+              empty(ParentSpanId)
               ${baseWhereSql}
             GROUP BY
               SpanAttributes [ 'wg.operation.name' ],
@@ -378,7 +378,7 @@ export class AnalyticsRequestViewRepository {
             FROM
                 ${this.client.database}.otel_traces
             WHERE
-              (SpanKind = 'SPAN_KIND_SERVER' OR empty(ParentSpanId))
+              empty(ParentSpanId)
               ${baseWhereSql}
             GROUP BY
               SpanAttributes [ 'wg.client.name' ],
@@ -396,7 +396,7 @@ export class AnalyticsRequestViewRepository {
             FROM
               ${this.client.database}.otel_traces
             WHERE
-              (SpanKind = 'SPAN_KIND_SERVER' OR empty(ParentSpanId))
+              empty(ParentSpanId)
               ${baseWhereSql}
             GROUP BY
                 httpStatusCode
@@ -425,7 +425,7 @@ export class AnalyticsRequestViewRepository {
       SELECT DISTINCT SpanAttributes['wg.operation.name'] as operationName
       FROM ${this.client.database}.otel_traces
       WHERE
-        (SpanKind = 'SPAN_KIND_SERVER' OR empty(ParentSpanId))
+        empty(ParentSpanId)
         AND SpanAttributes['wg.federated_graph.id'] = '${federatedGraphId}'
       ORDER BY Timestamp DESC
       LIMIT 1000
@@ -450,7 +450,7 @@ export class AnalyticsRequestViewRepository {
       SELECT DISTINCT SpanAttributes [ 'wg.client.name' ] as clientName
       FROM ${this.client.database}.otel_traces
       WHERE 
-        (SpanKind = 'SPAN_KIND_SERVER' OR empty(ParentSpanId))
+        empty(ParentSpanId)
         AND SpanAttributes['wg.federated_graph.id'] = '${federatedGraphId}'
       LIMIT 100
     `;
@@ -474,7 +474,7 @@ export class AnalyticsRequestViewRepository {
       SELECT DISTINCT StatusMessage as statusMessage
       FROM ${this.client.database}.otel_traces
       WHERE 
-        (SpanKind = 'SPAN_KIND_SERVER' OR empty(ParentSpanId))
+        empty(ParentSpanId)
         AND SpanAttributes['wg.federated_graph.id'] = '${federatedGraphId}'
       LIMIT 100
     `;
@@ -498,7 +498,7 @@ export class AnalyticsRequestViewRepository {
       SELECT DISTINCT SpanAttributes [ 'http.status_code' ] as httpStatusCode
       FROM ${this.client.database}.otel_traces
       WHERE 
-        (SpanKind = 'SPAN_KIND_SERVER' OR empty(ParentSpanId))
+        empty(ParentSpanId)
         AND SpanAttributes['wg.federated_graph.id'] = '${federatedGraphId}'
       LIMIT 100
     `;
