@@ -240,7 +240,7 @@ export class AnalyticsRequestViewRepository {
           FROM
               ${this.client.database}.otel_traces
           WHERE
-            -- Only root spans
+            -- Only root spans(spans which have no parent span) and has no condition on SpanKind as a span can start from either the server or the client
             empty(ParentSpanId)
             ${baseWhereSql}
           ORDER BY
@@ -266,6 +266,7 @@ export class AnalyticsRequestViewRepository {
           FROM
               ${this.client.database}.otel_traces
           WHERE
+            -- Only root spans(spans which have no parent span) and has no condition on SpanKind as a span can start from either the server or the client
             empty(ParentSpanId)
             ${baseWhereSql}
           GROUP BY
@@ -295,6 +296,7 @@ export class AnalyticsRequestViewRepository {
           FROM
               ${this.client.database}.otel_traces
           WHERE
+          -- Only root spans(spans which have no parent span) and has no condition on SpanKind as a span can start from either the server or the client
             empty(ParentSpanId)
             ${baseWhereSql}
           GROUP BY
@@ -317,6 +319,7 @@ export class AnalyticsRequestViewRepository {
           FROM
               ${this.client.database}.otel_traces
           WHERE
+          -- Only root spans(spans which have no parent span) and has no condition on SpanKind as a span can start from either the server or the client
               empty(ParentSpanId)
               ${baseWhereSql}
           GROUP BY
@@ -346,7 +349,7 @@ export class AnalyticsRequestViewRepository {
         totalCountQuery = `
           SELECT COUNT(*) as count FROM ${this.client.database}.otel_traces
           WHERE
-            -- Only root spans
+            -- Only root spans(spans which have no parent span) and has no condition on SpanKind as a span can start from either the server or the client
             empty(ParentSpanId)
           ${baseWhereSql}
         `;
@@ -360,6 +363,7 @@ export class AnalyticsRequestViewRepository {
             FROM
                 ${this.client.database}.otel_traces
             WHERE
+            -- Only root spans(spans which have no parent span) and has no condition on SpanKind as a span can start from either the server or the client
               empty(ParentSpanId)
               ${baseWhereSql}
             GROUP BY
@@ -378,6 +382,7 @@ export class AnalyticsRequestViewRepository {
             FROM
                 ${this.client.database}.otel_traces
             WHERE
+            -- Only root spans(spans which have no parent span) and has no condition on SpanKind as a span can start from either the server or the client
               empty(ParentSpanId)
               ${baseWhereSql}
             GROUP BY
@@ -396,6 +401,7 @@ export class AnalyticsRequestViewRepository {
             FROM
               ${this.client.database}.otel_traces
             WHERE
+            -- Only root spans(spans which have no parent span) and has no condition on SpanKind as a span can start from either the server or the client
               empty(ParentSpanId)
               ${baseWhereSql}
             GROUP BY
@@ -425,6 +431,7 @@ export class AnalyticsRequestViewRepository {
       SELECT DISTINCT SpanAttributes['wg.operation.name'] as operationName
       FROM ${this.client.database}.otel_traces
       WHERE
+      -- Only root spans(spans which have no parent span) and has no condition on SpanKind as a span can start from either the server or the client
         empty(ParentSpanId)
         AND SpanAttributes['wg.federated_graph.id'] = '${federatedGraphId}'
       ORDER BY Timestamp DESC
@@ -450,6 +457,7 @@ export class AnalyticsRequestViewRepository {
       SELECT DISTINCT SpanAttributes [ 'wg.client.name' ] as clientName
       FROM ${this.client.database}.otel_traces
       WHERE 
+      -- Only root spans(spans which have no parent span) and has no condition on SpanKind as a span can start from either the server or the client
         empty(ParentSpanId)
         AND SpanAttributes['wg.federated_graph.id'] = '${federatedGraphId}'
       LIMIT 100
@@ -474,6 +482,7 @@ export class AnalyticsRequestViewRepository {
       SELECT DISTINCT StatusMessage as statusMessage
       FROM ${this.client.database}.otel_traces
       WHERE 
+      -- Only root spans(spans which have no parent span) and has no condition on SpanKind as a span can start from either the server or the client
         empty(ParentSpanId)
         AND SpanAttributes['wg.federated_graph.id'] = '${federatedGraphId}'
       LIMIT 100
@@ -498,6 +507,7 @@ export class AnalyticsRequestViewRepository {
       SELECT DISTINCT SpanAttributes [ 'http.status_code' ] as httpStatusCode
       FROM ${this.client.database}.otel_traces
       WHERE 
+      -- Only root spans(spans which have no parent span) and has no condition on SpanKind as a span can start from either the server or the client
         empty(ParentSpanId)
         AND SpanAttributes['wg.federated_graph.id'] = '${federatedGraphId}'
       LIMIT 100
