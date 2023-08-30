@@ -60,8 +60,8 @@ export const ComposeStatusMessage = ({
       <span className="whitespace-pre-line">{errors}</span>
     )
   ) : subgraphsCount ? (
-    <span>Please create a subgraph.</span>
-  ) : (
     <span>Please publish a subgraph.</span>
+  ) : (
+    <span>Please create a subgraph.</span>
   );
 };
