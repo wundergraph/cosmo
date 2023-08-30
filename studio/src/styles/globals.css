@@ -105,3 +105,18 @@
     @apply scrollbar-custom bg-background text-foreground;
   }
 }
+
+.animation {
+  animation: bounce 0.6s;
+  animation-direction: alternate;
+  animation-iteration-count: infinite;
+}
+
+@keyframes bounce {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(10px, 0, 0);
+  }
+}

@@ -2,19 +2,17 @@ import { useFireworks } from "@/hooks/use-fireworks";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
 import { docsBaseURL } from "@/lib/constants";
 import { useChartData } from "@/lib/insights-helpers";
-import { CommandLineIcon } from "@heroicons/react/24/outline";
+import {
+  ChevronDoubleRightIcon,
+  CommandLineIcon,
+} from "@heroicons/react/24/outline";
 import { useMutation } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common_pb";
 import { migrateFromApollo } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { FederatedGraph } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { getTime, parseISO, subDays } from "date-fns";
 import Link from "next/link";
-import {
-  Dispatch,
-  SetStateAction,
-  useContext,
-  useState
-} from "react";
+import { Dispatch, SetStateAction, useContext, useState } from "react";
 import { Line, LineChart, ResponsiveContainer, XAxis } from "recharts";
 import { z } from "zod";
 import { UserContext } from "./app-provider";
@@ -40,6 +38,9 @@ import {
   TooltipTrigger,
 } from "./ui/tooltip";
 import { useToast } from "./ui/use-toast";
+import { Logo } from "./logo";
+import { SiApollographql } from "react-icons/si";
+import { cn } from "@/lib/utils";
 
 // this is required to render a blank line with LineChart
 const fallbackData = [
@@ -56,9 +57,11 @@ const fallbackData = [
 const MigrationDialog = ({
   refetch,
   setIsMigrationSuccess,
+  isEmptyState,
 }: {
   refetch: () => void;
   setIsMigrationSuccess: Dispatch<SetStateAction<boolean>>;
+  isEmptyState?: boolean;
 }) => {
   const migrateInputSchema = z.object({
     apiKey: z.string().min(1),
@@ -91,7 +94,10 @@ const MigrationDialog = ({
       },
       {
         onSuccess: (d) => {
-          if (d.response?.code === EnumStatusCode.OK) {
+          if (
+            d.response?.code === EnumStatusCode.OK ||
+            d.response?.code === EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED
+          ) {
             update({
               description: "Successfully migrated the graph.",
               duration: 3000,
@@ -118,8 +124,22 @@ const MigrationDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger>
-        <Button>Migrate from Apollo</Button>
+      <DialogTrigger
+        className={cn({
+          "flex justify-center": isEmptyState,
+          "h-52": !isEmptyState,
+        })}
+      >
+        <Card className="flex h-full w-64 flex-col justify-center gap-y-2  p-4 group-hover:border-ring dark:hover:border-input">
+          <div className="flex items-center justify-center gap-x-5">
+            <SiApollographql className="h-10 w-10" />
+            <ChevronDoubleRightIcon className="animation h-8 w-8" />
+            <Logo width={50} height={50} />
+          </div>
+          <p className="bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-xl font-semibold text-transparent">
+            Migrate from Apollo
+          </p>
+        </Card>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
@@ -206,7 +226,7 @@ export const Empty = ({
         </>
       }
       actions={
-        <div className="flex flex-col gap-y-3">
+        <div className="flex flex-col gap-y-6">
           <CLI
             command={`npx wgc federated-graph create production --label-matcher ${labels} --routing-url http://localhost:4000/graphql`}
           />
@@ -214,6 +234,7 @@ export const Empty = ({
           <MigrationDialog
             refetch={refetch}
             setIsMigrationSuccess={setIsMigrationSuccess}
+            isEmptyState={true}
           />
         </div>
       }
@@ -340,6 +361,10 @@ export const FederatedGraphsCards = ({
         {graphs.map((graph, graphIndex) => {
           return <GraphCard key={graphIndex.toString()} graph={graph} />;
         })}
+        <MigrationDialog
+          refetch={refetch}
+          setIsMigrationSuccess={setIsMigrationSuccess}
+        />
       </div>
     </>
   );
