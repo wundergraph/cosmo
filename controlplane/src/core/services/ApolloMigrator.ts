@@ -1,8 +1,8 @@
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { FederatedGraphDTO, MigrationSubgraph } from 'src/types/index.js';
 import * as schema from '../../db/schema.js';
-import { SubgraphRepository } from '../repositories/SubgraphRepository.js';
+import { FederatedGraphDTO, MigrationSubgraph } from '../../types/index.js';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
+import { SubgraphRepository } from '../repositories/SubgraphRepository.js';
 
 export default class ApolloMigrator {
   apiKey = '';
