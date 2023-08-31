@@ -4,6 +4,10 @@ Images can be found [here](https://github.com/orgs/wundergraph/packages?repo_nam
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.6.5](https://github.com/wundergraph/cosmo/compare/wgc@0.6.4...wgc@0.6.5) (2023-08-31)
+
+**Note:** Version bump only for package wgc
+
 ## [0.6.4](https://github.com/wundergraph/cosmo/compare/wgc@0.6.3...wgc@0.6.4) (2023-08-31)
 
 ### Bug Fixes
