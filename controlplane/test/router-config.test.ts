@@ -1,4 +1,4 @@
-import { describe, expect, test, beforeAll, afterAll } from 'vitest';
+import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import Fastify from 'fastify';
 
 import { createConnectTransport } from '@bufbuild/connect-node';
@@ -10,6 +10,7 @@ import { pino } from 'pino';
 import { NodeService } from '@wundergraph/cosmo-connect/dist/node/v1/node_connect';
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common_pb';
+import { noQueryRootTypeError } from '@wundergraph/composition';
 import routes from '../src/core/routes';
 import database from '../src/core/plugins/database';
 import {
@@ -345,7 +346,9 @@ describe('Router Config', (ctx) => {
       ),
     });
 
-    expect(publishPandaResp.response?.code).toBe(EnumStatusCode.OK);
+    expect(publishPandaResp.response?.code).toBe(EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED);
+    expect(publishPandaResp.compositionErrors).toHaveLength(1);
+    expect(publishPandaResp.compositionErrors[0].message).toStrictEqual(noQueryRootTypeError.message);
 
     const createUsersSubgraph = await platformClient.createFederatedSubgraph({
       name: usersSubgraph,
