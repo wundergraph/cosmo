@@ -92,7 +92,7 @@ import {
   DEFAULT_MUTATION,
   DEFAULT_QUERY,
   DEFAULT_SUBSCRIPTION,
-  FIELD_NAME,
+  FIELD_NAME, FRAGMENT_REPRESENTATION,
   INLINE_FRAGMENT,
 } from '../utils/string-constants';
 import {
@@ -446,16 +446,16 @@ export class FederationFactory {
         resolverPath += fieldName;
         // If the field could have fields itself, add ellipsis
         if (this.graph.hasNode(fieldContainer.rootTypeName)) {
-          resolverPath += ' { ... }';
+          resolverPath += FRAGMENT_REPRESENTATION;
         }
         partialResolverPaths.push(resolverPath);
       }
       if (partialResolverPaths.length < 1) {
         return;
       }
-      // Each of these operations returns a type that has a path to the parent
+      // Each of these rootTypeFields returns a type that has a path to the parent
       for (const [rootTypeFieldPath, rootTypeField] of rootTypeFields) {
-        // If the rootTypeFields is defined in a subgraph that the field is defined, it is resolvable
+        // If the rootTypeField is defined in a subgraph that the field is defined, it is resolvable
         if (doSetsHaveAnyOverlap(fieldContainer.subgraphs, rootTypeField.subgraphs)) {
           continue;
         }
