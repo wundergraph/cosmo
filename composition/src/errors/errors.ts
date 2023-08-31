@@ -265,6 +265,14 @@ export function invalidUnionError(unionName: string): Error {
   return new Error(`Union "${unionName}" must have at least one member.`);
 }
 
+export function invalidArgumentNumberErrorMessage(expected: number, actual: number): string {
+  return ` Expected ${expected} argument` + (expected === 1 ? '' : 's') + ` but received ${actual}.`;
+}
+
+export const invalidTagDirectiveError = new Error(`
+  Expected the @tag directive to have a single required argument "name" of the type "String!"
+`);
+
 export function invalidDirectiveError(
   directiveName: string,
   hostPath: string,
@@ -540,15 +548,17 @@ export function unimplementedInterfaceFieldsError(
   );
 }
 
-export function invalidRequiredArgumentsError(fieldPath: string, errors: InvalidRequiredArgument[]): Error {
-  let message = `The field "${fieldPath}" could not be federated because:\n`;
+export function invalidRequiredArgumentsError(
+  typeString: string, path: string, errors: InvalidRequiredArgument[],
+): Error {
+  let message = `The ${typeString} "${path}" could not be federated because:\n`;
   for (const error of errors) {
     message += ` The argument "${error.argumentName}" is required in the following subgraph` +
       (error.requiredSubgraphs.length > 1 ? 's' : '' ) +': "' + error.requiredSubgraphs.join(`", "`) + `"\n` +
       ` However, the argument "${error.argumentName}" is not defined in the following subgraph` +
       (error.missingSubgraphs.length > 1 ? 's' : '' ) +': "' + error.missingSubgraphs.join(`", "`) + `"\n` +
-      ` If an argument is required on a field in any one subgraph, it must be at least defined as optional on all` +
-      ` other definitions of that field in all other subgraphs.\n`
+      ` If an argument is required on a ${typeString} in any one subgraph, it must be at least defined as optional` +
+      ` on all other definitions of that ${typeString} in all other subgraphs.\n`
   }
   return new Error(message);
 }

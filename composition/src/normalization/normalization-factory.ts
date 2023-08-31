@@ -598,22 +598,27 @@ export class NormalizationFactory {
 
   normalize(document: DocumentNode) {
     const factory = this;
+    /* factory.allDirectiveDefinitions is initialized with v1 directive definitions, and v2 definitions are only added
+    after the visitor has visited the entire schema and the subgraph is known to be a V2 graph. Consequently,
+    alldirectiveDefinitions cannot be used to check for duplicate definitions, and another set (below) is required */
+    const definedDirectives = new Set<string>();
     visit(document, {
       DirectiveDefinition: {
         enter(node) {
           const name = node.name.value;
-          // TODO These sets would potentially allow the user to define these directives more than once
-          // Add our definitions rather than the existing ones
+          if (definedDirectives.has(name)) {
+            factory.errors.push(duplicateDirectiveDefinitionError(name));
+            return false;
+          } else {
+            definedDirectives.add(name);
+          }
+          // Normalize federation directives by replacing them with predefined definitions
           if (VERSION_TWO_DIRECTIVES.has(name)) {
             factory.isSubgraphVersionTwo = true;
             return false;
           }
+          // The V1 directives are always injected
           if (VERSION_ONE_DIRECTIVES.has(name)) {
-            return false;
-          }
-          const directiveDefinition = factory.allDirectiveDefinitions.get(name);
-          if (directiveDefinition) {
-            factory.errors.push(duplicateDirectiveDefinitionError(name));
             return false;
           }
           factory.allDirectiveDefinitions.set(name, node);
@@ -793,6 +798,10 @@ export class NormalizationFactory {
             return;
           }
           const name = node.name.value;
+          const valueRootTypeName = getNamedTypeForChild(`${factory.parentTypeName}.${name}`, node.type);
+          if (!BASE_SCALARS.has(valueRootTypeName)) {
+            factory.referencedTypeNames.add(valueRootTypeName);
+          }
           const parent = factory.isCurrentParentExtension
             ? getOrThrowError(factory.extensions, factory.parentTypeName)
             : getOrThrowError(factory.parents, factory.parentTypeName);

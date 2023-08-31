@@ -8,7 +8,7 @@ import {
 } from '../src';
 import { parse } from 'graphql';
 import { describe, expect, test } from 'vitest';
-import { documentNodeToNormalizedString, normalizeString, versionTwoBaseSchema } from './utils/utils';
+import { documentNodeToNormalizedString, normalizeString, versionTwoPersistedBaseSchema } from './utils/utils';
 
 describe('Interface tests', () => {
   describe('Normalization tests', () => {
@@ -166,7 +166,7 @@ describe('Interface tests', () => {
       const federatedGraph = federationResult!.federatedGraphAST!;
       expect(documentNodeToNormalizedString(federatedGraph)).toBe(
         normalizeString(
-          versionTwoBaseSchema + `
+          versionTwoPersistedBaseSchema + `
       interface Character {
         name: String!
         age: Int!
@@ -199,7 +199,7 @@ describe('Interface tests', () => {
       expect(errors).toBeUndefined();
       expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
         normalizeString(
-          versionTwoBaseSchema + `
+          versionTwoPersistedBaseSchema + `
       interface Character {
         name: String!
         age: Int!
@@ -230,7 +230,7 @@ describe('Interface tests', () => {
       expect(errors).toBeUndefined();
       expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
         normalizeString(
-          versionTwoBaseSchema + `
+          versionTwoPersistedBaseSchema + `
       interface Character {
         isFriend: Boolean!
       }

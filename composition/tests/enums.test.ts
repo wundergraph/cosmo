@@ -1,7 +1,7 @@
 import { federateSubgraphs, incompatibleSharedEnumError, Subgraph } from '../src';
 import { parse } from 'graphql';
 import { describe, expect, test } from 'vitest';
-import { documentNodeToNormalizedString, normalizeString, versionTwoBaseSchema } from './utils/utils';
+import { documentNodeToNormalizedString, normalizeString, versionTwoPersistedBaseSchema } from './utils/utils';
 
 describe('Enum federation tests', () => {
   const parentName = 'Instruction';
@@ -12,7 +12,7 @@ describe('Enum federation tests', () => {
     const federatedGraph = federationResult!.federatedGraphAST;
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
-        versionTwoBaseSchema + `
+        versionTwoPersistedBaseSchema + `
       type Query {
         dummy: String!
       }
@@ -34,7 +34,7 @@ describe('Enum federation tests', () => {
     const federatedGraph = federationResult!.federatedGraphAST;
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
-        versionTwoBaseSchema + `
+        versionTwoPersistedBaseSchema + `
       type Query {
         dummy: String!
       }
@@ -58,7 +58,7 @@ describe('Enum federation tests', () => {
     const federatedGraph = federationResult!.federatedGraphAST;
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
-        versionTwoBaseSchema + `
+        versionTwoPersistedBaseSchema + `
       type Query {
         dummy: String!
       }
@@ -80,7 +80,7 @@ describe('Enum federation tests', () => {
     expect(errors).toBeUndefined();
     expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
       normalizeString(
-        versionTwoBaseSchema + `
+        versionTwoPersistedBaseSchema + `
       type Query {
         dummy: String!
       }

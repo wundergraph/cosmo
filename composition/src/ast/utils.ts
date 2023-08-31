@@ -1,4 +1,5 @@
 import {
+  ConstDirectiveNode,
   FieldDefinitionNode,
   InterfaceTypeDefinitionNode,
   InterfaceTypeExtensionNode,
@@ -10,6 +11,7 @@ import {
   OperationTypeNode,
 } from 'graphql';
 import {
+  MutableDirectiveDefinitionNode,
   MutableEnumTypeDefinitionNode,
   MutableEnumValueDefinitionNode,
   MutableFieldDefinitionNode,
@@ -27,17 +29,24 @@ import {
   ENUM_VALUE_UPPER,
   EXTENDS,
   FIELD_DEFINITION_UPPER,
+  FIELD_UPPER,
   FIELDS,
+  FRAGMENT_DEFINITION_UPPER,
+  FRAGMENT_SPREAD_UPPER,
+  INLINE_FRAGMENT_UPPER,
   INPUT_OBJECT_UPPER,
   INTERFACE_UPPER,
   KEY,
   MUTATION,
+  MUTATION_UPPER,
   OBJECT_UPPER,
   QUERY,
+  QUERY_UPPER,
   SCALAR_UPPER,
   SCHEMA_UPPER,
   SHAREABLE,
   SUBSCRIPTION,
+  SUBSCRIPTION_UPPER,
 } from '../utils/string-constants';
 import {
   duplicateInterfaceError,
@@ -55,31 +64,21 @@ import {
 } from '../errors/errors';
 import { getOrThrowError } from '../utils/utils';
 
+export const EXECUTABLE_DIRECTIVE_LOCATIONS = new Set<string>([
+  FIELD_UPPER, FRAGMENT_DEFINITION_UPPER, FRAGMENT_SPREAD_UPPER,
+  INLINE_FRAGMENT_UPPER, MUTATION_UPPER, QUERY_UPPER, SUBSCRIPTION_UPPER,
+]);
+
 export enum MergeMethod {
   UNION,
   INTERSECTION,
   CONSISTENT,
 }
 
-export type EntityContainer = {
-  fields: Set<string>;
-  keys: Set<string>;
-  subgraphs: Set<string>;
+export type PersistedDirectivesContainer = {
+  directives: Map<string, ConstDirectiveNode[]>;
+  tags: Map<string, ConstDirectiveNode>;
 };
-
-export type EnumContainer = {
-  appearances: number;
-  values: EnumValueMap;
-  kind: Kind.ENUM_TYPE_DEFINITION;
-  node: MutableEnumTypeDefinitionNode;
-};
-
-export type EnumValueContainer = {
-  appearances: number;
-  node: MutableEnumValueDefinitionNode;
-};
-
-export type EnumValueMap = Map<string, EnumValueContainer>;
 
 export type ArgumentContainer = {
   includeDefaultValue: boolean;
@@ -90,9 +89,40 @@ export type ArgumentContainer = {
 
 export type ArgumentMap = Map<string, ArgumentContainer>;
 
-export type FieldContainer = {
-  appearances: number;
+export type DirectiveContainer = {
   arguments: ArgumentMap;
+  executableLocations: Set<string>;
+  node: MutableDirectiveDefinitionNode;
+  subgraphs: Set<string>;
+};
+
+export type DirectiveMap = Map<string, DirectiveContainer>;
+
+export type EntityContainer = {
+  fields: Set<string>;
+  keys: Set<string>;
+  subgraphs: Set<string>;
+};
+
+export type EnumContainer = {
+  appearances: number;
+  directives: PersistedDirectivesContainer;
+  kind: Kind.ENUM_TYPE_DEFINITION;
+  node: MutableEnumTypeDefinitionNode;
+  values: EnumValueMap;
+};
+
+export type EnumValueContainer = {
+  appearances: number;
+  directives: PersistedDirectivesContainer;
+  node: MutableEnumValueDefinitionNode;
+};
+
+export type EnumValueMap = Map<string, EnumValueContainer>;
+
+export type FieldContainer = {
+  arguments: ArgumentMap;
+  directives: PersistedDirectivesContainer;
   isShareable: boolean;
   node: MutableFieldDefinitionNode;
   rootTypeName: string;
@@ -104,6 +134,7 @@ export type FieldMap = Map<string, FieldContainer>;
 
 export type InputValueContainer = {
   appearances: number;
+  directives: PersistedDirectivesContainer;
   includeDefaultValue: boolean;
   node: MutableInputValueDefinitionNode;
 };
@@ -112,13 +143,14 @@ export type InputValueMap = Map<string, InputValueContainer>;
 
 export type InputObjectContainer = {
   appearances: number;
+  directives: PersistedDirectivesContainer;
   fields: InputValueMap;
   kind: Kind.INPUT_OBJECT_TYPE_DEFINITION;
   node: MutableInputObjectTypeDefinitionNode;
 };
 
 export type InterfaceContainer = {
-  appearances: number;
+  directives: PersistedDirectivesContainer;
   fields: FieldMap;
   interfaces: Set<string>;
   kind: Kind.INTERFACE_TYPE_DEFINITION;
@@ -127,7 +159,7 @@ export type InterfaceContainer = {
 };
 
 export type ObjectContainer = {
-  appearances: number;
+  directives: PersistedDirectivesContainer;
   fields: FieldMap;
   entityKeys: Set<string>;
   interfaces: Set<string>;
@@ -138,7 +170,7 @@ export type ObjectContainer = {
 };
 
 export type ObjectExtensionContainer = {
-  appearances: number;
+  directives: PersistedDirectivesContainer;
   fields: FieldMap;
   entityKeys: Set<string>;
   interfaces: Set<string>;
@@ -165,17 +197,19 @@ export type PotentiallyUnresolvableField = {
 };
 
 export type ScalarContainer = {
-  appearances: number;
+  directives: PersistedDirectivesContainer;
   kind: Kind.SCALAR_TYPE_DEFINITION;
   node: MutableScalarTypeDefinitionNode;
 };
 
 export type UnionContainer = {
-  appearances: number;
+  directives: PersistedDirectivesContainer;
   kind: Kind.UNION_TYPE_DEFINITION;
   members: Set<string>;
   node: MutableUnionTypeDefinitionNode;
 };
+
+export type ChildContainer = FieldContainer | InputValueContainer | EnumValueContainer;
 
 export type ParentContainer =
   | EnumContainer
@@ -184,6 +218,8 @@ export type ParentContainer =
   | ObjectContainer
   | UnionContainer
   | ScalarContainer;
+
+export type NodeContainer = ChildContainer | ParentContainer;
 
 export type ExtensionContainer = ObjectExtensionContainer;
 
@@ -448,9 +484,17 @@ export function stringToNameNode(value: string): NameNode {
   };
 }
 
-export function stringToNameNodes(values: string[]): NameNode[] {
+export function stringArrayToNameNodeArray(values: string[]): NameNode[] {
   const nameNodes: NameNode[] = [];
   for (const value of values) {
+    nameNodes.push(stringToNameNode(value));
+  }
+  return nameNodes;
+}
+
+export function setToNameNodeArray(set: Set<string>): NameNode[] {
+  const nameNodes: NameNode[] = [];
+  for (const value of set) {
     nameNodes.push(stringToNameNode(value));
   }
   return nameNodes;
@@ -522,4 +566,51 @@ export function isKindAbstract(kind: Kind) {
 
 export function getInlineFragmentString(parentTypeName: string): string {
   return ` ... on ${parentTypeName} `;
+}
+
+export function extractNameNodeStringsToSet(nodes: readonly NameNode[] | NameNode[], set: Set<string>): Set<string> {
+  for (const node of nodes) {
+    set.add(node.value);
+  }
+  return set;
+}
+
+export function extractExecutableDirectiveLocations(
+  nodes: readonly NameNode[] | NameNode[], set: Set<string>,
+): Set<string> {
+  for (const node of nodes) {
+    const name = node.value;
+    if (EXECUTABLE_DIRECTIVE_LOCATIONS.has(name)) {
+      set.add(name);
+    }
+  }
+  return set;
+}
+
+export function mergeExecutableDirectiveLocations(
+  nodes: readonly NameNode[] | NameNode[], directiveContainer: DirectiveContainer,
+): Set<string> {
+  const mergedSet = new Set<string>();
+  for (const node of nodes) {
+    const name = node.value;
+    if (directiveContainer.executableLocations.has(name)) {
+      mergedSet.add(name);
+    }
+  }
+  directiveContainer.executableLocations = mergedSet;
+  return mergedSet;
+}
+
+export function pushPersistedDirectivesToNode(container: NodeContainer) {
+  const persistedDirectives: ConstDirectiveNode[] = [...container.directives.tags.values()];
+  for (const directives of container.directives.directives.values()) {
+    persistedDirectives.push(...directives);
+  }
+  container.node.directives = persistedDirectives;
+  return container.node;
+}
+
+export function getNodeWithPersistedDirectives(container: ParentContainer) {
+  pushPersistedDirectivesToNode(container);
+  return container.node;
 }

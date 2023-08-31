@@ -1,5 +1,6 @@
 import {
   BooleanValueNode,
+  ConstDirectiveNode,
   ConstValueNode,
   DirectiveDefinitionNode,
   EnumTypeDefinitionNode,
@@ -10,6 +11,7 @@ import {
   InputObjectTypeDefinitionNode,
   InputValueDefinitionNode,
   InterfaceTypeDefinitionNode,
+  InterfaceTypeExtensionNode,
   IntValueNode,
   Kind,
   NamedTypeNode,
@@ -22,7 +24,6 @@ import {
   UnionTypeDefinitionNode,
 } from 'graphql';
 import { federationUnexpectedNodeKindError } from '../errors/errors';
-import { InterfaceTypeExtensionNode } from 'graphql/index';
 
 function deepCopyFieldsAndInterfaces(
   node: InterfaceTypeDefinitionNode | ObjectTypeDefinitionNode | ObjectTypeExtensionNode,
@@ -69,15 +70,36 @@ export function deepCopyTypeNode(node: TypeNode, parentName: string, fieldName: 
   throw new Error(`Field ${parentName}.${fieldName} has more than 30 layers of nesting, or there is a cyclical error.`);
 }
 
+export type MutableDirectiveDefinitionNode = {
+  arguments?: InputValueDefinitionNode[];
+  description?: StringValueNode;
+  kind: Kind.DIRECTIVE_DEFINITION;
+  locations: NameNode[];
+  name: NameNode;
+  repeatable: boolean;
+};
+
+export function directiveDefinitionNodeToMutable(node: DirectiveDefinitionNode): MutableDirectiveDefinitionNode {
+  return {
+    arguments: node.arguments ? [...node.arguments] : undefined,
+    description: node.description ? { ...node.description } : undefined,
+    kind: node.kind,
+    locations: [...node.locations],
+    name: { ...node.name },
+    repeatable: node.repeatable,
+  };
+}
+
 export type MutableEnumTypeDefinitionNode = {
-  description?: StringValueNode,
-  kind: Kind.ENUM_TYPE_DEFINITION,
-  name: NameNode,
-  values: MutableEnumValueDefinitionNode[],
+  description?: StringValueNode;
+  directives?: ConstDirectiveNode[];
+  kind: Kind.ENUM_TYPE_DEFINITION;
+  name: NameNode;
+  values: MutableEnumValueDefinitionNode[];
 };
 
 export function enumTypeDefinitionNodeToMutable(node: EnumTypeDefinitionNode): MutableEnumTypeDefinitionNode {
-  const values: EnumValueDefinitionNode[] = [];
+  const values: MutableEnumValueDefinitionNode[] = [];
   if (node.values) {
     for (const value of node.values) {
       values.push(enumValueDefinitionNodeToMutable(value));
@@ -93,6 +115,7 @@ export function enumTypeDefinitionNodeToMutable(node: EnumTypeDefinitionNode): M
 
 export type MutableEnumValueDefinitionNode = {
   description?: StringValueNode;
+  directives?: ConstDirectiveNode[];
   kind: Kind.ENUM_VALUE_DEFINITION;
   name: NameNode;
 };
@@ -106,18 +129,19 @@ export function enumValueDefinitionNodeToMutable(node: EnumValueDefinitionNode):
 }
 
 export type MutableFieldDefinitionNode = {
-  arguments: MutableInputValueDefinitionNode[],
-  description?: StringValueNode,
-  kind: Kind.FIELD_DEFINITION,
-  name: NameNode,
-  type: TypeNode,
+  arguments: MutableInputValueDefinitionNode[];
+  description?: StringValueNode;
+  directives?: ConstDirectiveNode[];
+  kind: Kind.FIELD_DEFINITION;
+  name: NameNode;
+  type: TypeNode;
 };
 
 export function fieldDefinitionNodeToMutable(node: FieldDefinitionNode, parentName: string): MutableFieldDefinitionNode {
   const args: MutableInputValueDefinitionNode[] = [];
   if (node.arguments) {
     for (const argument of node.arguments) {
-      args.push(inputValueDefinitionNodeToMutable(argument, node.name.value)); // TODO better error for arguments
+      args.push(inputValueDefinitionNodeToMutable(argument, node.name.value));
     }
   }
   return {
@@ -130,7 +154,8 @@ export function fieldDefinitionNodeToMutable(node: FieldDefinitionNode, parentNa
 }
 
 export type MutableInputObjectTypeDefinitionNode = {
-  description?: StringValueNode,
+  description?: StringValueNode;
+  directives?: ConstDirectiveNode[];
   fields: InputValueDefinitionNode[];
   kind: Kind.INPUT_OBJECT_TYPE_DEFINITION;
   name: NameNode;
@@ -153,10 +178,11 @@ export function inputObjectTypeDefinitionNodeToMutable(node: InputObjectTypeDefi
 
 export type MutableInputValueDefinitionNode = {
   defaultValue?: ConstValueNode;
-  description?: StringValueNode,
-  kind: Kind.INPUT_VALUE_DEFINITION,
-  name: NameNode,
-  type: TypeNode,
+  description?: StringValueNode;
+  directives?: ConstDirectiveNode[];
+  kind: Kind.INPUT_VALUE_DEFINITION;
+  name: NameNode;
+  type: TypeNode;
 }
 
 export function inputValueDefinitionNodeToMutable(node: InputValueDefinitionNode, parentName: string): MutableInputValueDefinitionNode {
@@ -170,11 +196,12 @@ export function inputValueDefinitionNodeToMutable(node: InputValueDefinitionNode
 }
 
 export type MutableInterfaceTypeDefinitionNode = {
-  description?: StringValueNode,
+  description?: StringValueNode;
+  directives?: ConstDirectiveNode[];
   fields: FieldDefinitionNode[];
   interfaces: NamedTypeNode[];
-  kind: Kind.INTERFACE_TYPE_DEFINITION,
-  name: NameNode,
+  kind: Kind.INTERFACE_TYPE_DEFINITION;
+  name: NameNode;
 }
 
 export function interfaceTypeDefinitionNodeToMutable(node: InterfaceTypeDefinitionNode): MutableInterfaceTypeDefinitionNode {
@@ -191,7 +218,8 @@ export function interfaceTypeDefinitionNodeToMutable(node: InterfaceTypeDefiniti
 }
 
 export type MutableObjectTypeDefinitionNode = {
-  description?: StringValueNode,
+  description?: StringValueNode;
+  directives?: ConstDirectiveNode[];
   fields: FieldDefinitionNode[];
   interfaces: NamedTypeNode[];
   kind: Kind.OBJECT_TYPE_DEFINITION;
@@ -212,7 +240,8 @@ export function objectTypeDefinitionNodeToMutable(node: ObjectTypeDefinitionNode
 }
 
 export type MutableObjectTypeExtensionNode = {
-  description?: StringValueNode,
+  description?: StringValueNode;
+  directives?: ConstDirectiveNode[];
   fields: FieldDefinitionNode[];
   interfaces: NamedTypeNode[];
   kind: Kind.OBJECT_TYPE_EXTENSION;
@@ -245,6 +274,7 @@ export function objectTypeExtensionNodeToMutableDefinitionNode(node: ObjectTypeE
 
 export type MutableScalarTypeDefinitionNode = {
   description?: StringValueNode;
+  directives?: ConstDirectiveNode[];
   kind: Kind.SCALAR_TYPE_DEFINITION;
   name: NameNode;
 };
@@ -266,7 +296,8 @@ export type MutableTypeNode = {
 export const maximumTypeNesting = 30;
 
 export type MutableUnionTypeDefinitionNode = {
-  description?: StringValueNode,
+  description?: StringValueNode;
+  directives?: ConstDirectiveNode[];
   kind: Kind.UNION_TYPE_DEFINITION;
   name: NameNode;
   types: NamedTypeNode[];

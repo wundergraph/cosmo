@@ -4,8 +4,8 @@ import { describe, expect, test } from 'vitest';
 import {
   documentNodeToNormalizedString,
   normalizeString,
-  versionOneBaseSchema,
-  versionTwoBaseSchema,
+  versionOnePersistedBaseSchema,
+  versionTwoPersistedBaseSchema,
 } from './utils/utils';
 
 describe('Query federation tests', () => {
@@ -15,7 +15,7 @@ describe('Query federation tests', () => {
     const federatedGraph = federationResult!.federatedGraphAST;
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
-        versionTwoBaseSchema +
+        versionTwoPersistedBaseSchema +
           `
       type Query {
         query: Nested
@@ -126,7 +126,7 @@ describe('Query federation tests', () => {
     const federatedGraph = federationResult!.federatedGraphAST;
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
-        versionTwoBaseSchema +
+        versionTwoPersistedBaseSchema +
           `
       type Query {
         friend: Friend
@@ -147,7 +147,7 @@ describe('Query federation tests', () => {
     const federatedGraph = federationResult!.federatedGraphAST;
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
-        versionOneBaseSchema +
+        versionOnePersistedBaseSchema +
           `
       interface Human {
         name: String!
@@ -214,7 +214,7 @@ describe('Query federation tests', () => {
     const federatedGraph = federationResult!.federatedGraphAST;
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
-        versionOneBaseSchema +
+        versionOnePersistedBaseSchema +
           `
       union Human = Friend | Enemy
       

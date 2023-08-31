@@ -39,11 +39,16 @@ export function validateSubgraphName(
 }
 
 // Places the object-like nodes into the multigraph including the concrete types for abstract types
-export function walkSubgraphToCollectObjects(
+export function walkSubgraphToCollectObjectLikesAndDirectiveDefinitions(
   factory: FederationFactory,
   subgraph: InternalSubgraph,
 ) {
   subgraph.definitions = visit(subgraph.definitions, {
+    DirectiveDefinition: {
+      enter(node) {
+        factory.upsertDirectiveNode(node);
+      },
+    },
     InterfaceTypeDefinition: {
       enter(node) {
         factory.upsertParentNode(node);
@@ -102,7 +107,7 @@ export function walkSubgraphToCollectObjects(
   });
 }
 
-export function walkSubgraphToCollectOperationsAndFields(
+export function walkSubgraphToCollectFields(
   factory: FederationFactory,
   subgraph: Subgraph,
 ) {
@@ -202,14 +207,9 @@ export function walkSubgraphToCollectOperationsAndFields(
 
 export function walkSubgraphToFederate(subgraph: DocumentNode, factory: FederationFactory) {
   visit(subgraph, {
-    DirectiveDefinition: {
-      enter(node) {
-        factory.directiveDefinitions.set(node.name.value, node); // TODO
-      },
-    },
     Directive: {
       enter() {
-        return false; // TODO
+        return false;
       },
     },
     EnumTypeDefinition: {

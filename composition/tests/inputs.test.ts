@@ -1,7 +1,7 @@
 import { federateSubgraphs, federationRequiredInputFieldError, Subgraph } from '../src';
 import { parse } from 'graphql';
 import { describe, expect, test } from 'vitest';
-import { documentNodeToNormalizedString, normalizeString, versionOneBaseSchema } from './utils/utils';
+import { documentNodeToNormalizedString, normalizeString, versionOnePersistedBaseSchema } from './utils/utils';
 
 describe('Input federation tests', () => {
   test('that inputs merge by intersection if the removed fields are nullable', () => {
@@ -10,7 +10,7 @@ describe('Input federation tests', () => {
     const federatedGraph = federationResult!.federatedGraphAST;
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
-        versionOneBaseSchema + `
+        versionOnePersistedBaseSchema + `
       type Query {
         dummy: String!
       }
