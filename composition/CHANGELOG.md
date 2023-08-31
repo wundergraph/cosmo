@@ -4,6 +4,12 @@ Images can be found [here](https://github.com/orgs/wundergraph/packages?repo_nam
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.5.3](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.5.2...@wundergraph/composition@0.5.3) (2023-08-31)
+
+### Bug Fixes
+
+* add caching for multigraph node paths ([#29](https://github.com/wundergraph/cosmo/issues/29)) ([106810b](https://github.com/wundergraph/cosmo/commit/106810b4f24118a707d1798c20d1c7e8975c9a8e)) (@Aenimus)
+
 ## [0.5.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.5.1...@wundergraph/composition@0.5.2) (2023-08-29)
 
 ### Bug Fixes
