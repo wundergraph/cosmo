@@ -33,7 +33,7 @@ export const Empty = ({ graph }: { graph?: FederatedGraph }) => {
           <a
             target="_blank"
             rel="noreferrer"
-            href={docsBaseURL}
+            href={docsBaseURL + "/cli/subgraphs/create"}
             className="text-primary"
           >
             Learn more.
