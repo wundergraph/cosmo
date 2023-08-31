@@ -259,7 +259,6 @@ describe('CompositionErrors', (ctx) => {
     };
 
     const result = composeSubgraphs([subgraph1, subgraph2]);
-    console.log(result);
 
     expect(result.errors).toBeDefined();
     expect(result.errors?.[0].message).toBe(

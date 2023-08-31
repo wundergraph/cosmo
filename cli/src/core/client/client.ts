@@ -1,4 +1,4 @@
-import { compressionBrotli, createConnectTransport } from '@bufbuild/connect-node';
+import { compressionBrotli, compressionGzip, createConnectTransport } from '@bufbuild/connect-node';
 import { createPromiseClient, PromiseClient } from '@bufbuild/connect';
 import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
 import { NodeService } from '@wundergraph/cosmo-connect/dist/node/v1/node_connect';
@@ -24,11 +24,13 @@ export const CreateClient = (opts: ClientOptions): Client => {
     // Avoid compression for small requests
     compressMinBytes: 1024,
 
-    acceptCompression: [compressionBrotli],
+    acceptCompression: [compressionBrotli, compressionGzip],
 
     // The default limit is the maximum supported value of ~4GiB
     // We go with 32MiB to avoid allocating too much memory for large requests
     writeMaxBytes: 32 * 1024 * 1024,
+
+    sendCompression: compressionBrotli,
 
     // Interceptors apply to all calls running through this transport.
     interceptors: [],

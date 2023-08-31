@@ -2,7 +2,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: "{{ include "controlplane.fullname" . }}-seed-organization"
+  name: "{{ include "controlplane.fullname" . }}-seed-organization-{{ now | unixEpoch }}"
   labels:
     {{- include "controlplane.labels" . | nindent 4 }}
   annotations:
@@ -11,9 +11,9 @@ metadata:
     kapp.k14s.io/change-rule.postgres: "upsert after upserting cosmo.apps.postgresql.wundergraph.com/deployment"
     kapp.k14s.io/change-rule.keycloak: "upsert after upserting cosmo.apps.keycloak.wundergraph.com/deployment"
 spec:
-  backoffLimit: 10
+  backoffLimit: 3
   parallelism: 1
-  ttlSecondsAfterFinished: 300
+  ttlSecondsAfterFinished: 120
   template:
     metadata:
       name: "{{ include "controlplane.fullname" . }}-seed-organization"
@@ -33,20 +33,37 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           env:
             - name: KC_REALM
-              value: "{{ .Values.global.keycloak.realm }}"
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-configmap
+                  key: keycloakRealm
             - name: KC_LOGIN_REALM
-              value: "{{ .Values.global.keycloak.loginRealm }}"
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-configmap
+                  key: keycloakLoginRealm
             - name: KC_API_URL
-              value: "{{ .Values.global.keycloak.apiUrl }}"
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-configmap
+                  key: keycloakApiUrl
             - name: KC_ADMIN_USER
-              value: "{{ .Values.global.keycloak.adminUser }}"
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-secret
+                  key: keycloakAdminUser
             - name: KC_ADMIN_PASSWORD
-              value: "{{ .Values.global.keycloak.adminPassword }}"
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-secret
+                  key: keycloakAdminPassword
             - name: KC_CLIENT_ID
-              value: "{{ .Values.global.keycloak.clientId }}"
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-configmap
+                  key: keycloakClientId
             - name: API_KEY
               value: "{{ .Values.global.seed.apiKey }}"
-
             - name: DB_URL
               valueFrom:
                 secretKeyRef:
