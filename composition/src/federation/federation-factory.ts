@@ -165,6 +165,7 @@ export class FederationFactory {
   extensions = new Map<string, ExtensionContainer>();
   graph: MultiGraph = new MultiGraph();
   graphEdges = new Set<string>();
+  graphPaths = new Map<string, Map<string, string[][]>>();
   inputFieldTypeNameSet = new Set<string>();
   isCurrentParentEntity = false;
   isCurrentParentInterface = false;
@@ -388,14 +389,34 @@ export class FederationFactory {
     );
   }
 
+  getAllSimplePaths(responseTypeName: string): string[][] {
+    if (responseTypeName === this.parentTypeName) {
+      return [[this.parentTypeName]];
+    }
+    const responsePaths = this.graphPaths.get(responseTypeName);
+    if (!responsePaths) {
+      const allPaths = allSimplePaths(this.graph, responseTypeName, this.parentTypeName)
+      this.graphPaths.set(responseTypeName, new Map<string, string[][]>([
+        [this.parentTypeName, allPaths]
+      ]));
+      return allPaths;
+    }
+    const pathsToParent = responsePaths.get(this.parentTypeName);
+    if (pathsToParent) {
+      return pathsToParent;
+    }
+    const allParentPaths = allSimplePaths(this.graph, responseTypeName, this.parentTypeName);
+    responsePaths.set(this.parentTypeName, allParentPaths);
+    return allParentPaths;
+  }
+
   addPotentiallyUnresolvableField(parent: ObjectContainer | ObjectExtensionContainer, fieldName: string) {
     const fieldContainer = getOrThrowError(parent.fields, fieldName);
-    for (const [responseTypeName, operation] of this.rootTypeFieldsByResponseTypeName) {
-      // If the operation response type has no path to the parent type, continue
-      const paths = allSimplePaths(this.graph, responseTypeName, this.parentTypeName);
-      if (responseTypeName === this.parentTypeName) {
-        paths.push([this.parentTypeName]);
-      } else if (paths.length < 1) {
+    for (const [responseTypeName, rootTypeFields] of this.rootTypeFieldsByResponseTypeName) {
+      // If the rootTypeFields response type has no path to the parent type, continue
+      const paths = this.getAllSimplePaths(responseTypeName);
+      // If the rootTypeFields response type has no path to the parent type, continue
+      if (paths.length < 1) {
         continue;
       }
       // Construct all possible paths to the unresolvable field but with the fieldName relationship between nodes
@@ -434,8 +455,8 @@ export class FederationFactory {
         return;
       }
       // Each of these operations returns a type that has a path to the parent
-      for (const [operationFieldPath, operationField] of operation) {
-        // If the operation is defined in a subgraph that the field is defined, it is resolvable
+      for (const [operationFieldPath, operationField] of rootTypeFields) {
+        // If the rootTypeFields is defined in a subgraph that the field is defined, it is resolvable
         if (doSetsHaveAnyOverlap(fieldContainer.subgraphs, operationField.subgraphs)) {
           continue;
         }
