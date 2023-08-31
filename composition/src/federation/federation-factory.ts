@@ -413,7 +413,6 @@ export class FederationFactory {
   addPotentiallyUnresolvableField(parent: ObjectContainer | ObjectExtensionContainer, fieldName: string) {
     const fieldContainer = getOrThrowError(parent.fields, fieldName);
     for (const [responseTypeName, rootTypeFields] of this.rootTypeFieldsByResponseTypeName) {
-      // If the rootTypeFields response type has no path to the parent type, continue
       const paths = this.getAllSimplePaths(responseTypeName);
       // If the rootTypeFields response type has no path to the parent type, continue
       if (paths.length < 1) {
