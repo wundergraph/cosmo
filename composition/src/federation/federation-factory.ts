@@ -454,21 +454,21 @@ export class FederationFactory {
         return;
       }
       // Each of these operations returns a type that has a path to the parent
-      for (const [operationFieldPath, operationField] of rootTypeFields) {
+      for (const [rootTypeFieldPath, rootTypeField] of rootTypeFields) {
         // If the rootTypeFields is defined in a subgraph that the field is defined, it is resolvable
-        if (doSetsHaveAnyOverlap(fieldContainer.subgraphs, operationField.subgraphs)) {
+        if (doSetsHaveAnyOverlap(fieldContainer.subgraphs, rootTypeField.subgraphs)) {
           continue;
         }
         const fullResolverPaths: string[] = [];
         // The field is still resolvable if it's defined and resolved in another graph (but that isn't yet known)
         // Consequently, the subgraphs must be compared later to determine that the field is always resolvable
         for (const partialResolverPath of partialResolverPaths) {
-          fullResolverPaths.push(`${operationFieldPath}${operationField.inlineFragment}${partialResolverPath}`);
+          fullResolverPaths.push(`${rootTypeFieldPath}${rootTypeField.inlineFragment}${partialResolverPath}`);
         }
         const potentiallyUnresolvableField: PotentiallyUnresolvableField = {
           fieldContainer,
           fullResolverPaths,
-          rootTypeField: operationField,
+          rootTypeField: rootTypeField,
         };
 
         // The parent might already have unresolvable fields that have already been added
