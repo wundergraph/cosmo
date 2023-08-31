@@ -75,31 +75,34 @@ const Details = ({ id, graphName }: { id: string; graphName: string }) => {
         <div>
           <p className="text-sm font-semibold">Changes</p>
           <Separator className="my-2" />
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[200px]">Change</TableHead>
-                <TableHead className="w-[200px]">Type</TableHead>
-                <TableHead>Description</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {data.changes.map(({ changeType, message, isBreaking }) => {
-                return (
-                  <TableRow
-                    key={changeType + message}
-                    className={cn(isBreaking && "text-destructive")}
-                  >
-                    <TableCell>
-                      {isBreaking ? "Breaking" : "Non-Breaking"}
-                    </TableCell>
-                    <TableCell>{changeType}</TableCell>
-                    <TableCell>{message}</TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+          <div className="scrollbar-custom max-h-[70vh] overflow-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[200px]">Change</TableHead>
+                  <TableHead className="w-[200px]">Type</TableHead>
+                  <TableHead>Description</TableHead>
+                </TableRow>
+              </TableHeader>
+
+              <TableBody>
+                {data.changes.map(({ changeType, message, isBreaking }) => {
+                  return (
+                    <TableRow
+                      key={changeType + message}
+                      className={cn(isBreaking && "text-destructive")}
+                    >
+                      <TableCell>
+                        {isBreaking ? "Breaking" : "Non-Breaking"}
+                      </TableCell>
+                      <TableCell>{changeType}</TableCell>
+                      <TableCell>{message}</TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
         </div>
       )}
       {data.compositionErrors.length > 0 && (

@@ -20,6 +20,7 @@ import {
   GraphApiKeyDTO,
   Label,
   ListFilterOptions,
+  MigrationSubgraph,
   SchemaChangeType,
 } from '../../types/index.js';
 import { updateComposedSchema } from '../composition/updateComposedSchema.js';

@@ -122,6 +122,8 @@ We manage multiple compose files:
 - `docker-compose.full.yml`: This compose file contains the full Cosmo platform. It is used for demo and testing.
 - `docker-compose.cosmo.yml`: This compose file allows to build all cosmo components and manage them in a single compose file. It is used for testing and releasing.
 
+__Clean up a compose stack before starting another one!__
+
 ## On-Premise
 
 Cosmo was designed to be deployed on-premise e.g. Kubernetes. We provide a helm chart to deploy the platform on any Kubernetes like AKS, GKE, AKS or Minikube. You can find the helm chart in the [helm](./helm) directory.
