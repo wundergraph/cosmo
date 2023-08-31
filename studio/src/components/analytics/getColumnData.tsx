@@ -1,41 +1,27 @@
-import { cn } from "@/lib/utils";
-import { EllipsisVerticalIcon } from "@heroicons/react/24/outline";
-import { DropdownMenuItemProps } from "@radix-ui/react-dropdown-menu";
-import { ClipboardCopyIcon } from "@radix-ui/react-icons";
-import { ColumnDef } from "@tanstack/react-table";
-import copy from "copy-to-clipboard";
-import { formatInTimeZone } from "date-fns-tz";
-import compact from "lodash/compact";
-import {
-  AnalyticsViewColumn,
-  Unit,
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import React, { ReactNode } from "react";
-import { SchemaViewer } from "../schmea-viewer";
-import { Button } from "../ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "../ui/dialog";
+import { cn } from '@/lib/utils';
+import { EllipsisVerticalIcon } from '@heroicons/react/24/outline';
+import { DropdownMenuItemProps } from '@radix-ui/react-dropdown-menu';
+import { ClipboardCopyIcon } from '@radix-ui/react-icons';
+import { ColumnDef } from '@tanstack/react-table';
+import { AnalyticsViewColumn, Unit } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import copy from 'copy-to-clipboard';
+import { formatInTimeZone } from 'date-fns-tz';
+import compact from 'lodash/compact';
+import React, { ReactNode } from 'react';
+import { SchemaViewer } from '../schmea-viewer';
+import { Button } from '../ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuTrigger,
-} from "../ui/dropdown-menu";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "../ui/tooltip";
-import { useToast } from "../ui/use-toast";
-import { nanoTimestampToTime } from "./charts";
-import { defaultFilterFn } from "./defaultFilterFunction";
+} from '../ui/dropdown-menu';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
+import { useToast } from '../ui/use-toast';
+import { nanoTimestampToTime } from './charts';
+import { defaultFilterFn } from './defaultFilterFunction';
 
 export const mapStatusCode: Record<string, string> = {
   STATUS_CODE_UNSET: "Success",
@@ -108,7 +94,12 @@ const DialogItem = React.forwardRef<
   const { triggerChildren, children, onSelect, title, ...itemProps } = props;
   return (
     <Dialog>
-      <DialogTrigger asChild>
+      <DialogTrigger
+        asChild
+        onClick={(event) => {
+          event.stopPropagation();
+        }}
+      >
         <DropdownMenuItem
           {...itemProps}
           ref={forwardedRef}
@@ -121,7 +112,12 @@ const DialogItem = React.forwardRef<
         </DropdownMenuItem>
       </DialogTrigger>
 
-      <DialogContent className="max-w-2xl">
+      <DialogContent
+        className="max-w-2xl"
+        onClick={(event) => {
+          event.stopPropagation();
+        }}
+      >
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           {children}
@@ -226,14 +222,25 @@ export const getColumnData = (
         return (
           <DropdownMenu>
             <div className="flex justify-center">
-              <DropdownMenuTrigger asChild>
+              <DropdownMenuTrigger
+                asChild
+                onClick={(event) => {
+                  event.stopPropagation();
+                }}
+              >
                 <Button variant="ghost" size="icon">
                   <EllipsisVerticalIcon className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
             </div>
             <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+              <DropdownMenuLabel
+                onClick={(event) => {
+                  event.stopPropagation();
+                }}
+              >
+                Actions
+              </DropdownMenuLabel>
               {actionColumns.map((action, actionIndex) => {
                 return (
                   <DialogItem

@@ -107,15 +107,27 @@ podDisruptionBudget: {}
 priorityClassName: ""
 
 # -- Sets the [termination grace period](https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#hook-handler-execution) for Deployment pods
-terminationGracePeriodSeconds: 10
+terminationGracePeriodSeconds: 60
 
 probes:
   # -- Configure readiness probe
   readiness:
+    httpGet:
+      path: /health
+      port: http
     initialDelaySeconds: 10
+    timeoutSeconds: 5
+    periodSeconds: 10
+    failureThreshold: 5
   # -- Configure liveness probe
   liveness:
+    httpGet:
+      path: /health
+      port: http
     initialDelaySeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 5
+    periodSeconds: 10
 
 ########################
 # Global configuration #

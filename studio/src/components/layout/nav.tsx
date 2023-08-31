@@ -1,23 +1,18 @@
-import { docsBaseURL } from "@/lib/constants";
-import { cn } from "@/lib/utils";
-import { Cross2Icon, HamburgerMenuIcon } from "@radix-ui/react-icons";
-import { useQuery } from "@tanstack/react-query";
-import Link from "next/link";
-import { useRouter } from "next/router";
-import { getFederatedGraphs } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { ReactNode, useState } from "react";
-import { Logo } from "../logo";
-import { ThemeToggle } from "../theme-toggle";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../ui/select";
-import { Separator } from "../ui/separator";
-import { UserMenu, UserMenuMobile } from "../user-menu";
-import { LayoutProps } from "./layout";
+import { docsBaseURL } from '@/lib/constants';
+import { cn } from '@/lib/utils';
+import { Cross2Icon, HamburgerMenuIcon } from '@radix-ui/react-icons';
+import { useQuery } from '@tanstack/react-query';
+import Link from 'next/link';
+import { useRouter } from 'next/router';
+import { getFederatedGraphs } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
+import { ReactNode, useContext, useState } from 'react';
+import { Logo } from '../logo';
+import { ThemeToggle } from '../theme-toggle';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Separator } from '../ui/separator';
+import { UserMenu, UserMenuMobile } from '../user-menu';
+import { LayoutProps } from './layout';
+import { UserContext } from '../app-provider';
 
 export type NavLink = {
   title: string;
@@ -95,6 +90,7 @@ const Graphs = () => {
 
 export const Nav = ({ children, links }: SideNavLayoutProps) => {
   const router = useRouter();
+  const user = useContext(UserContext);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
 
   return (
@@ -105,8 +101,8 @@ export const Nav = ({ children, links }: SideNavLayoutProps) => {
             <div className="flex w-full items-center gap-x-4 gap-y-8 lg:flex-col lg:items-start">
               <Link href="/" className="flex items-center space-x-2">
                 <Logo />
-                <span className="hidden text-lg font-bold sm:inline-block">
-                  Studio
+                <span className="hidden sm:inline-block font-semibold w-40 capitalize truncate">
+                  {user?.organization.name}
                 </span>
               </Link>
               <Graphs />

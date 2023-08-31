@@ -6,18 +6,21 @@ replace github.com/wundergraph/cosmo/demo/otel => ../otel
 
 require (
 	github.com/99designs/gqlgen v0.17.36
+	github.com/gorilla/websocket v1.5.0
+	github.com/ravilushqa/otelgqlgen v0.13.1
 	github.com/vektah/gqlparser/v2 v2.5.8
 	github.com/wundergraph/cosmo/demo/otel v0.0.0-00010101000000-000000000000
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.42.0
 )
 
 require (
 	github.com/agnivade/levenshtein v1.1.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
+	github.com/felixge/httpsnoop v1.0.3 // indirect
 	github.com/go-logr/logr v1.2.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
-	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.7.0 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.3 // indirect
 	github.com/logrusorgru/aurora/v3 v3.0.0 // indirect
@@ -27,6 +30,7 @@ require (
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/urfave/cli/v2 v2.25.5 // indirect
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
+	go.opentelemetry.io/contrib v1.16.1 // indirect
 	go.opentelemetry.io/otel v1.16.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/internal/retry v1.16.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.16.0 // indirect

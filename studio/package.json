@@ -1,6 +1,6 @@
 {
   "name": "studio",
-  "version": "0.6.0",
+  "version": "0.7.2",
   "private": true,
   "license": "Apache-2.0",
   "description": "WunderGraph Cosmo Studio",
@@ -32,7 +32,7 @@
     "@graphiql/toolkit": "^0.8.4",
     "@headlessui/react": "^1.7.15",
     "@heroicons/react": "^2.0.18",
-    "@hookform/resolvers": "^3.1.1",
+    "@hookform/resolvers": "^3.3.1",
     "@markdoc/markdoc": "^0.3.1",
     "@markdoc/next.js": "^0.3.2",
     "@radix-ui/react-accordion": "^1.1.2",
@@ -53,6 +53,7 @@
     "@tanstack/react-table": "^8.9.3",
     "@wundergraph/cosmo-connect": "workspace:*",
     "bowser": "^2.11.0",
+    "canvas-confetti": "^1.6.0",
     "change-case": "^4.1.2",
     "class-variance-authority": "^0.6.1",
     "clsx": "^1.2.1",
@@ -81,10 +82,11 @@
     "tailwindcss": "3.3.2",
     "tailwindcss-animate": "^1.0.6",
     "use-deep-compare-effect": "^1.8.1",
-    "zod": "^3.21.4"
+    "zod": "^3.22.2"
   },
   "devDependencies": {
     "@tailwindcss/typography": "^0.5.9",
+    "@types/canvas-confetti": "^1.6.0",
     "@types/dagre": "^0.7.48",
     "@types/lodash": "^4.14.195",
     "@types/node": "20.3.1",

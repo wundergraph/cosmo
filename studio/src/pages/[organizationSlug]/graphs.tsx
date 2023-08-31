@@ -1,13 +1,13 @@
-import { EmptyState } from "@/components/empty-state";
-import { getDashboardLayout } from "@/components/layout/dashboard-layout";
-import { Button } from "@/components/ui/button";
-import { Loader } from "@/components/ui/loader";
-import { NextPageWithLayout } from "@/lib/page";
-import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
-import { useQuery } from "@tanstack/react-query";
-import { getFederatedGraphs } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common_pb";
-import { FederatedGraphsCards } from "@/components/federatedgraphs-cards";
+import { EmptyState } from '@/components/empty-state';
+import { getDashboardLayout } from '@/components/layout/dashboard-layout';
+import { Button } from '@/components/ui/button';
+import { Loader } from '@/components/ui/loader';
+import { NextPageWithLayout } from '@/lib/page';
+import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import { useQuery } from '@tanstack/react-query';
+import { getFederatedGraphs } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common_pb';
+import { FederatedGraphsCards } from '@/components/federatedgraphs-cards';
 
 const GraphsDashboardPage: NextPageWithLayout = () => {
   const { data, isLoading, error, refetch } = useQuery(
@@ -30,7 +30,7 @@ const GraphsDashboardPage: NextPageWithLayout = () => {
       />
     );
 
-  return <FederatedGraphsCards graphs={data.graphs} />;
+  return <FederatedGraphsCards graphs={data.graphs} refetch={refetch} />;
 };
 
 GraphsDashboardPage.getLayout = (page) => {

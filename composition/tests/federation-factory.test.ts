@@ -205,6 +205,29 @@ describe('FederationFactory tests', () => {
     );
   });
 
+  test('that service object, entities and service fields are not included in the federated graph', () => {
+    const { errors, federationResult } = federateSubgraphs([subgraphG, subgraphH]);
+    expect(errors).toBeUndefined();
+    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
+      normalizeString(
+        versionOnePersistedBaseSchema +
+          `
+      union _Entity = User
+      
+      type Query {
+        string: String
+      }
+      
+      type User {
+        id: String
+      }
+
+      scalar _Any
+    `,
+      ),
+    );
+  });
+
   test('that tag and inaccessible directives are persisted in the federated schema', () => {
     const { errors, federationResult } = federateSubgraphs([subgraphI, subgraphJ]);
     expect(errors).toBeUndefined();
@@ -487,6 +510,54 @@ const subgraphF: Subgraph = {
     type CustomQuery {
       string: String
     }
+  `),
+};
+
+const subgraphG: Subgraph = {
+  name: 'subgraph-g',
+  url: '',
+  definitions: parse(`
+    type Query {
+      string: String
+      _service: _Service
+      _entities(representations: [_Any!]!): [_Entity]!
+    }
+
+    type _Service{
+      sdl: String
+    }
+
+    union _Entity = User
+
+    type User @key(fields: "id"){
+      id: String
+    }
+
+    scalar _Any
+  `),
+};
+
+const subgraphH: Subgraph = {
+  name: 'subgraph-h',
+  url: '',
+  definitions: parse(`
+    type Query {
+      string: String
+      _service: _Service
+      _entities(representations: [_Any!]!): [_Entity]!
+    }
+
+    type _Service{
+      sdl: String
+    }
+
+    union _Entity = User
+
+    type User @key(fields: "id"){
+      id: String
+    }
+
+    scalar _Any
   `),
 };
 

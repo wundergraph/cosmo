@@ -81,13 +81,16 @@ make start-cp
 # 3️⃣ Seed the database with the default user (Wait a few seconds until Keycloak is ready)
 make seed
 
-# 4️⃣ Create the demo and start the subgraphs
-make create-demo && make dc-subgraphs-demo
+# 4️⃣ Create the demo and copy the JWT printed at the bottom
+make create-demo
 
-# 5️⃣ Put the api key from the previous step into the .env file and start the router
+# 5️⃣ Start the subgraphs
+OTEL_AUTH_TOKEN=<jwt-token> make dc-subgraphs-demo
+
+# 6️⃣ Put the JWT from the previous step into the router/.env as GRAPH_API_TOKEN and start the router
 make start-router
 
-# 6️⃣ Start the studio (http://localhost:3000)
+# 7️⃣ Start the studio (http://localhost:3000)
 make start-studio
 ```
 
@@ -119,17 +122,20 @@ We manage multiple compose files:
 - `docker-compose.full.yml`: This compose file contains the full Cosmo platform. It is used for demo and testing.
 - `docker-compose.cosmo.yml`: This compose file allows to build all cosmo components and manage them in a single compose file. It is used for testing and releasing.
 
+__Clean up a compose stack before starting another one!__
+
 ## On-Premise
 
 Cosmo was designed to be deployed on-premise e.g. Kubernetes. We provide a helm chart to deploy the platform on any Kubernetes like AKS, GKE, AKS or Minikube. You can find the helm chart in the [helm](./helm) directory.
-If you need help with the deployment, please contact us at [Sales](https://wundergraph.com/contact/sales).
+If you need help with the deployment, please contact us [here](https://form.typeform.com/to/oC6XATf4).
 
 ## Managed Service
 
 If you don't want to manage the platform yourself, you can use our managed service [WunderGraph Cosmo Cloud](https://cosmo.wundergraph.com). It is a fully managed platform that don't make you worry about infrastructure, so you can focus on building.
-The managed service is currently in private beta. If you want to participate, please contact us at [Sales](https://wundergraph.com/contact/sales).
+The managed service is currently in private beta. If you want to participate, please contact us [here](https://form.typeform.com/to/oC6XATf4).
 After contacting us, we will hook you up with a free trial and help you to get started.
 
 ## License
 
 Cosmo is licensed under the [Apache License, Version 2.0](LICENSE).
+

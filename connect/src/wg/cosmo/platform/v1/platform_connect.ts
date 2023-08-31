@@ -5,9 +5,70 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { CheckFederatedGraphRequest, CheckFederatedGraphResponse, CheckSubgraphSchemaRequest, CheckSubgraphSchemaResponse, CreateAPIKeyRequest, CreateAPIKeyResponse, CreateFederatedGraphRequest, CreateFederatedGraphResponse, CreateFederatedGraphTokenRequest, CreateFederatedGraphTokenResponse, CreateFederatedSubgraphRequest, CreateFederatedSubgraphResponse, DeleteAPIKeyRequest, DeleteAPIKeyResponse, DeleteFederatedGraphRequest, DeleteFederatedGraphResponse, DeleteFederatedSubgraphRequest, DeleteFederatedSubgraphResponse, FixSubgraphSchemaRequest, FixSubgraphSchemaResponse, GetAnalyticsViewRequest, GetAnalyticsViewResponse, GetAPIKeysRequest, GetAPIKeysResponse, GetCheckDetailsRequest, GetCheckDetailsResponse, GetChecksByFederatedGraphNameRequest, GetChecksByFederatedGraphNameResponse, GetDashboardAnalyticsViewRequest, GetDashboardAnalyticsViewResponse, GetFederatedGraphByNameRequest, GetFederatedGraphByNameResponse, GetFederatedGraphChangelogRequest, GetFederatedGraphChangelogResponse, GetFederatedGraphSDLByNameRequest, GetFederatedGraphSDLByNameResponse, GetFederatedGraphsRequest, GetFederatedGraphsResponse, GetFederatedSubgraphSDLByNameRequest, GetFederatedSubgraphSDLByNameResponse, GetOrganizationMembersRequest, GetOrganizationMembersResponse, GetSubgraphByNameRequest, GetSubgraphByNameResponse, GetSubgraphsRequest, GetSubgraphsResponse, GetTraceRequest, GetTraceResponse, InviteUserRequest, InviteUserResponse, PublishFederatedSubgraphRequest, PublishFederatedSubgraphResponse, RemoveInvitationRequest, RemoveInvitationResponse, UpdateFederatedGraphRequest, UpdateFederatedGraphResponse, UpdateSubgraphRequest, UpdateSubgraphResponse } from "./platform_pb.js";
-import { MethodIdempotency, MethodKind } from "@bufbuild/protobuf";
-import { GetConfigRequest, GetConfigResponse } from "../../node/v1/node_pb.js";
+import {
+  CheckFederatedGraphRequest,
+  CheckFederatedGraphResponse,
+  CheckSubgraphSchemaRequest,
+  CheckSubgraphSchemaResponse,
+  CreateAPIKeyRequest,
+  CreateAPIKeyResponse,
+  CreateFederatedGraphRequest,
+  CreateFederatedGraphResponse,
+  CreateFederatedGraphTokenRequest,
+  CreateFederatedGraphTokenResponse,
+  CreateFederatedSubgraphRequest,
+  CreateFederatedSubgraphResponse,
+  DeleteAPIKeyRequest,
+  DeleteAPIKeyResponse,
+  DeleteFederatedGraphRequest,
+  DeleteFederatedGraphResponse,
+  DeleteFederatedSubgraphRequest,
+  DeleteFederatedSubgraphResponse,
+  FixSubgraphSchemaRequest,
+  FixSubgraphSchemaResponse,
+  GetAnalyticsViewRequest,
+  GetAnalyticsViewResponse,
+  GetAPIKeysRequest,
+  GetAPIKeysResponse,
+  GetCheckDetailsRequest,
+  GetCheckDetailsResponse,
+  GetChecksByFederatedGraphNameRequest,
+  GetChecksByFederatedGraphNameResponse,
+  GetDashboardAnalyticsViewRequest,
+  GetDashboardAnalyticsViewResponse,
+  GetFederatedGraphByNameRequest,
+  GetFederatedGraphByNameResponse,
+  GetFederatedGraphChangelogRequest,
+  GetFederatedGraphChangelogResponse,
+  GetFederatedGraphSDLByNameRequest,
+  GetFederatedGraphSDLByNameResponse,
+  GetFederatedGraphsRequest,
+  GetFederatedGraphsResponse,
+  GetFederatedSubgraphSDLByNameRequest,
+  GetFederatedSubgraphSDLByNameResponse,
+  GetOrganizationMembersRequest,
+  GetOrganizationMembersResponse,
+  GetSubgraphByNameRequest,
+  GetSubgraphByNameResponse,
+  GetSubgraphsRequest,
+  GetSubgraphsResponse,
+  GetTraceRequest,
+  GetTraceResponse,
+  InviteUserRequest,
+  InviteUserResponse,
+  MigrateFromApolloRequest,
+  MigrateFromApolloResponse,
+  PublishFederatedSubgraphRequest,
+  PublishFederatedSubgraphResponse,
+  RemoveInvitationRequest,
+  RemoveInvitationResponse,
+  UpdateFederatedGraphRequest,
+  UpdateFederatedGraphResponse,
+  UpdateSubgraphRequest,
+  UpdateSubgraphResponse,
+} from './platform_pb.js';
+import { MethodIdempotency, MethodKind } from '@bufbuild/protobuf';
+import { GetConfigRequest, GetConfigResponse } from '../../node/v1/node_pb.js';
 
 /**
  * @generated from service wg.cosmo.platform.v1.PlatformService
@@ -308,6 +369,17 @@ export const PlatformService = {
       name: "GetLatestValidRouterConfig",
       I: GetConfigRequest,
       O: GetConfigResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * MigrateFromApollo migrates the graphs from apollo to cosmo
+     *
+     * @generated from rpc wg.cosmo.platform.v1.PlatformService.MigrateFromApollo
+     */
+    migrateFromApollo: {
+      name: "MigrateFromApollo",
+      I: MigrateFromApolloRequest,
+      O: MigrateFromApolloResponse,
       kind: MethodKind.Unary,
     },
     /**

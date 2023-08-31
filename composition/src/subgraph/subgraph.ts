@@ -11,6 +11,7 @@ import {
 import { getNamedTypeForChild } from '../type-merging/type-merging';
 import { getOrThrowError } from '../utils/utils';
 import { printTypeNode } from '@graphql-tools/merge';
+import { ENTITIES_FIELD, SERVICE, SERVICE_FIELD } from '../utils/string-constants';
 
 export type Subgraph = {
   definitions: DocumentNode;
@@ -57,9 +58,11 @@ export function walkSubgraphToCollectObjectLikesAndDirectiveDefinitions(
     ObjectTypeDefinition: {
       enter(node) {
         const name = node.name.value;
+        if (name === SERVICE) {
+          return false;
+        }
         const operationType = subgraph.operationTypes.get(name);
-        const parentTypeName = operationType ? getOrThrowError(operationTypeNodeToDefaultType, operationType)
-          : name;
+        const parentTypeName = operationType ? getOrThrowError(operationTypeNodeToDefaultType, operationType) : name;
         factory.addConcreteTypesForInterface(node);
         if (!factory.graph.hasNode(parentTypeName)) {
           factory.graph.addNode(parentTypeName);
@@ -80,8 +83,7 @@ export function walkSubgraphToCollectObjectLikesAndDirectiveDefinitions(
       enter(node) {
         const name = node.name.value;
         const operationType = subgraph.operationTypes.get(name);
-        const parentTypeName = operationType ? getOrThrowError(operationTypeNodeToDefaultType, operationType)
-          : name;
+        const parentTypeName = operationType ? getOrThrowError(operationTypeNodeToDefaultType, operationType) : name;
         factory.addConcreteTypesForInterface(node);
         if (!factory.graph.hasNode(parentTypeName)) {
           factory.graph.addNode(parentTypeName);
@@ -115,6 +117,9 @@ export function walkSubgraphToCollectFields(
   visit(subgraph.definitions, {
     ObjectTypeDefinition: {
       enter(node) {
+        if (node.name.value === SERVICE) {
+          return false;
+        }
         isCurrentParentRootType = factory.isObjectRootType(node);
         factory.isCurrentParentEntity = isObjectLikeNodeEntity(node);
         factory.parentTypeName = node.name.value;
@@ -138,6 +143,11 @@ export function walkSubgraphToCollectFields(
     FieldDefinition: {
       enter(node) {
         const fieldName = node.name.value;
+        if(isCurrentParentRootType) {
+          if(fieldName === SERVICE_FIELD || fieldName === ENTITIES_FIELD){
+            return false
+          }
+        }
         const fieldPath = `${factory.parentTypeName}.${fieldName}`;
         const fieldRootTypeName = getNamedTypeForChild(fieldPath, node.type);
         // If a node exists in the multigraph, it's a concrete object type
@@ -174,7 +184,10 @@ export function walkSubgraphToCollectFields(
         // This also records the appearance of this field in the current subgraph
         if (factory.graph.hasNode(fieldRootTypeName)) {
           factory.upsertConcreteObjectLikeRootTypeFieldNode(
-            fieldName, fieldRootTypeName, fieldPath, printTypeNode(node.type),
+            fieldName,
+            fieldRootTypeName,
+            fieldPath,
+            printTypeNode(node.type),
           );
           return false;
         }
@@ -191,7 +204,11 @@ export function walkSubgraphToCollectFields(
         }
         // Upsert response types and add edges from the operation to each possible concrete type for the abstract field
         factory.upsertAbstractObjectLikeRootTypeFieldNode(
-          fieldName, fieldRootTypeName, fieldPath, printTypeNode(node.type), concreteTypes
+          fieldName,
+          fieldRootTypeName,
+          fieldPath,
+          printTypeNode(node.type),
+          concreteTypes
         );
         return false;
       },
@@ -232,7 +249,13 @@ export function walkSubgraphToFederate(subgraph: DocumentNode, factory: Federati
     },
     FieldDefinition: {
       enter(node) {
-        factory.childName = node.name.value;
+        const name = node.name.value;
+         if (factory.isParentRootType) {
+           if (name === SERVICE_FIELD || name === ENTITIES_FIELD) {
+             return false;
+           }
+         }
+        factory.childName = name;
         factory.upsertFieldNode(node);
       },
       leave() {
@@ -276,6 +299,9 @@ export function walkSubgraphToFederate(subgraph: DocumentNode, factory: Federati
     },
     ObjectTypeDefinition: {
       enter(node) {
+        if (node.name.value === SERVICE) {
+          return false;
+        }
         factory.areFieldsShareable = !factory.isCurrentSubgraphVersionTwo || isNodeShareable(node);
         factory.isCurrentParentEntity = isObjectLikeNodeEntity(node);
         factory.isParentRootType = factory.isObjectRootType(node);
@@ -295,8 +321,7 @@ export function walkSubgraphToFederate(subgraph: DocumentNode, factory: Federati
         factory.isCurrentParentExtensionType = true;
         factory.isCurrentParentEntity = isObjectLikeNodeEntity(node);
         factory.parentTypeName = name;
-        factory.areFieldsShareable =
-          !factory.isCurrentSubgraphVersionTwo || isNodeShareable(node);
+        factory.areFieldsShareable = !factory.isCurrentSubgraphVersionTwo || isNodeShareable(node);
         factory.isParentRootType = factory.isObjectRootType(node);
         factory.upsertExtensionNode(node);
       },

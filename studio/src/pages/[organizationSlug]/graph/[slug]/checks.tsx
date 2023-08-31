@@ -1,46 +1,29 @@
-import { EmptyState } from "@/components/empty-state";
-import { GraphContext, getGraphLayout } from "@/components/layout/graph-layout";
-import { PageHeader } from "@/components/layout/head";
-import { TitleLayout } from "@/components/layout/title-layout";
-import { SchemaViewer, SchemaViewerActions } from "@/components/schmea-viewer";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { CLI } from "@/components/ui/cli";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Loader } from "@/components/ui/loader";
-import { Separator } from "@/components/ui/separator";
-import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { docsBaseURL } from "@/lib/constants";
-import { NextPageWithLayout } from "@/lib/page";
-import { cn } from "@/lib/utils";
-import {
-  CommandLineIcon,
-  ExclamationTriangleIcon,
-} from "@heroicons/react/24/outline";
-import { CheckCircledIcon, CrossCircledIcon } from "@radix-ui/react-icons";
-import { useQuery } from "@tanstack/react-query";
-import { format } from "date-fns";
-import { useRouter } from "next/router";
+import { EmptyState } from '@/components/empty-state';
+import { getGraphLayout, GraphContext } from '@/components/layout/graph-layout';
+import { PageHeader } from '@/components/layout/head';
+import { TitleLayout } from '@/components/layout/title-layout';
+import { SchemaViewer, SchemaViewerActions } from '@/components/schmea-viewer';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { CLI } from '@/components/ui/cli';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Loader } from '@/components/ui/loader';
+import { Separator } from '@/components/ui/separator';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { docsBaseURL } from '@/lib/constants';
+import { NextPageWithLayout } from '@/lib/page';
+import { cn } from '@/lib/utils';
+import { CommandLineIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import { CheckCircledIcon, CrossCircledIcon } from '@radix-ui/react-icons';
+import { useQuery } from '@tanstack/react-query';
+import { format } from 'date-fns';
+import { useRouter } from 'next/router';
 import {
   getCheckDetails,
   getChecksByFederatedGraphName,
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common_pb";
-import { useContext } from "react";
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common_pb';
+import { useContext } from 'react';
 
 const Details = ({ id, graphName }: { id: string; graphName: string }) => {
   const { data, isLoading, error, refetch } = useQuery(
@@ -75,31 +58,34 @@ const Details = ({ id, graphName }: { id: string; graphName: string }) => {
         <div>
           <p className="text-sm font-semibold">Changes</p>
           <Separator className="my-2" />
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[200px]">Change</TableHead>
-                <TableHead className="w-[200px]">Type</TableHead>
-                <TableHead>Description</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {data.changes.map(({ changeType, message, isBreaking }) => {
-                return (
-                  <TableRow
-                    key={changeType + message}
-                    className={cn(isBreaking && "text-destructive")}
-                  >
-                    <TableCell>
-                      {isBreaking ? "Breaking" : "Non-Breaking"}
-                    </TableCell>
-                    <TableCell>{changeType}</TableCell>
-                    <TableCell>{message}</TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+          <div className="scrollbar-custom max-h-[70vh] overflow-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[200px]">Change</TableHead>
+                  <TableHead className="w-[200px]">Type</TableHead>
+                  <TableHead>Description</TableHead>
+                </TableRow>
+              </TableHeader>
+
+              <TableBody>
+                {data.changes.map(({ changeType, message, isBreaking }) => {
+                  return (
+                    <TableRow
+                      key={changeType + message}
+                      className={cn(isBreaking && "text-destructive")}
+                    >
+                      <TableCell>
+                        {isBreaking ? "Breaking" : "Non-Breaking"}
+                      </TableCell>
+                      <TableCell>{changeType}</TableCell>
+                      <TableCell>{message}</TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
         </div>
       )}
       {data.compositionErrors.length > 0 && (

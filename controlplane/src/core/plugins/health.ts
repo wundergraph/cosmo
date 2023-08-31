@@ -1,10 +1,11 @@
 import fp from 'fastify-plugin';
 import { FastifyPluginCallback } from 'fastify';
 
-const plugin: FastifyPluginCallback = function Health(fastify, opts, done) {
+const plugin: FastifyPluginCallback = function HealthPlugin(fastify, opts, done) {
   let shutdown = false;
 
   fastify.addHook('onClose', (instance, done) => {
+    fastify.log.debug('Return 503 for health checks because server is shutting down.');
     shutdown = true;
     done();
   });
