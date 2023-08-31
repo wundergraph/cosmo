@@ -53,6 +53,7 @@
     "@tanstack/react-table": "^8.9.3",
     "@wundergraph/cosmo-connect": "workspace:*",
     "bowser": "^2.11.0",
+    "canvas-confetti": "^1.6.0",
     "change-case": "^4.1.2",
     "class-variance-authority": "^0.6.1",
     "clsx": "^1.2.1",
@@ -85,6 +86,7 @@
   },
   "devDependencies": {
     "@tailwindcss/typography": "^0.5.9",
+    "@types/canvas-confetti": "^1.6.0",
     "@types/dagre": "^0.7.48",
     "@types/lodash": "^4.14.195",
     "@types/node": "20.3.1",
