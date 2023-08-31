@@ -14,6 +14,7 @@ export const FIELD_SET = 'FieldSet';
 export const FIELDS = 'fields';
 export const FIELD_DEFINITION_UPPER = 'FIELD_DEFINITION';
 export const FRAGMENT_DEFINITION_UPPER = 'FRAGMENT_DEFINITION';
+export const FRAGMENT_REPRESENTATION = ' { ... }';
 export const INLINE_FRAGMENT = 'inlineFragment';
 export const INLINE_FRAGMENT_UPPER = 'INLINE_FRAGMENT';
 export const INPUT_FIELD_DEFINITION_UPPER = 'INPUT_FIELD_DEFINITION';
