@@ -30,7 +30,7 @@ const GraphsDashboardPage: NextPageWithLayout = () => {
       />
     );
 
-  return <FederatedGraphsCards graphs={data.graphs} />;
+  return <FederatedGraphsCards graphs={data.graphs} refetch={refetch} />;
 };
 
 GraphsDashboardPage.getLayout = (page) => {
