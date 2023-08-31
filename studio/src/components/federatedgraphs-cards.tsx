@@ -64,7 +64,9 @@ const MigrationDialog = ({
   isEmptyState?: boolean;
 }) => {
   const migrateInputSchema = z.object({
-    apiKey: z.string().min(1),
+    apiKey: z
+      .string()
+      .min(1, { message: "API Key must contain at least 1 character." }),
   });
 
   type MigrateInput = z.infer<typeof migrateInputSchema>;
@@ -162,8 +164,8 @@ const MigrationDialog = ({
             </Link>{" "}
             to find the steps to obtain the key.
           </p>
-          <p className="text-sm text-primary">
-            Note: This key is not stored, it is just used to fetch the graphs.
+          <p className="text-sm text-teal-400">
+            Note: This key is not stored and only used to fetch the subgraphs.
           </p>
         </div>
         <form
