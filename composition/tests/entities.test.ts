@@ -1,6 +1,6 @@
 import { federateSubgraphs, RootTypeField, Subgraph, unresolvableFieldError } from '../src';
 import { describe, expect, test } from 'vitest';
-import { documentNodeToNormalizedString, normalizeString, versionOneBaseSchema } from './utils/utils';
+import { documentNodeToNormalizedString, normalizeString, versionOnePersistedBaseSchema } from './utils/utils';
 import { parse } from 'graphql';
 
 describe('Entities federation tests', () => {
@@ -10,7 +10,7 @@ describe('Entities federation tests', () => {
     const federatedGraph = federationResult!.federatedGraphAST;
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
-        versionOneBaseSchema + `
+        versionOnePersistedBaseSchema + `
       type Query {
         dummy: String!
       }
@@ -41,7 +41,7 @@ describe('Entities federation tests', () => {
     const federatedGraph = federationResult!.federatedGraphAST;
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
-        versionOneBaseSchema + `
+        versionOnePersistedBaseSchema + `
       type Query {
         dummy: String!
         trainer: Trainer!
@@ -98,7 +98,7 @@ describe('Entities federation tests', () => {
     const federatedGraph = federationResult!.federatedGraphAST;
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
-        versionOneBaseSchema +
+        versionOnePersistedBaseSchema +
           `
       type Query {
         trainer: Trainer!
@@ -134,7 +134,7 @@ describe('Entities federation tests', () => {
     const federatedGraph = federationResult!.federatedGraphAST;
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
-        versionOneBaseSchema +
+        versionOnePersistedBaseSchema +
           `
       type Query {
         trainer: Trainer!
@@ -170,7 +170,7 @@ describe('Entities federation tests', () => {
     const federatedGraph = federationResult!.federatedGraphAST!;
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
-        versionOneBaseSchema + `
+        versionOnePersistedBaseSchema + `
       type Trainer {
         id: Int!
         pokemon: [Pokemon!]!

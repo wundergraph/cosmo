@@ -29,6 +29,7 @@ import {
   FIELD_DEFINITION_UPPER,
   FIELD_UPPER,
   FRAGMENT_DEFINITION_UPPER,
+  FRAGMENT_SPREAD_UPPER,
   INLINE_FRAGMENT_UPPER,
   INPUT_FIELD_DEFINITION_UPPER,
   INPUT_OBJECT_UPPER,
@@ -368,6 +369,11 @@ export function areNodeKindAndDirectiveLocationCompatible(
         break;
       case FRAGMENT_DEFINITION_UPPER:
         if (kind === Kind.FRAGMENT_DEFINITION) {
+          return true;
+        }
+        break;
+      case FRAGMENT_SPREAD_UPPER:
+        if (kind === Kind.FRAGMENT_SPREAD) {
           return true;
         }
         break;

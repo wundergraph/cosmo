@@ -12,7 +12,8 @@ import {
 } from '../src';
 import { Kind, parse } from 'graphql';
 import { describe, expect, test } from 'vitest';
-import { documentNodeToNormalizedString, normalizeString, versionTwoBaseSchema } from './utils/utils';
+import { documentNodeToNormalizedString, normalizeString, versionTwoPersistedBaseSchema } from './utils/utils';
+import { FIELD } from '../src/utils/string-constants';
 
 describe('Argument federation tests', () => {
   const argName = 'input';
@@ -27,7 +28,7 @@ describe('Argument federation tests', () => {
     expect(errors).toBeUndefined();
     expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
       normalizeString(
-        versionTwoBaseSchema + `
+        versionTwoPersistedBaseSchema + `
             type Query {
               dummy: String!
             }
@@ -48,7 +49,7 @@ describe('Argument federation tests', () => {
     expect(errors).toBeUndefined();
     expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
       normalizeString(
-        versionTwoBaseSchema + `
+        versionTwoPersistedBaseSchema + `
         type Query {
           dummy: String!
         }
@@ -69,7 +70,7 @@ describe('Argument federation tests', () => {
     expect(errors).toBeUndefined();
     expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
       normalizeString(
-        versionTwoBaseSchema + `
+        versionTwoPersistedBaseSchema + `
         type Query {
           dummy: String!
         }
@@ -90,7 +91,7 @@ describe('Argument federation tests', () => {
     expect(errors).toBeUndefined();
     expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
       normalizeString(
-        versionTwoBaseSchema + `
+        versionTwoPersistedBaseSchema + `
         type Query {
           dummy: String!
         }
@@ -155,8 +156,8 @@ describe('Argument federation tests', () => {
   test('that if an argument is optional but not included in all subgraphs, it is not present in the federated graph', () => {
     const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphB]);
     expect(errors).toBeUndefined();
-    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST!)).toBe(
-      normalizeString(versionTwoBaseSchema + `
+    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
+      normalizeString(versionTwoPersistedBaseSchema + `
       interface Interface {
         field(requiredInAll: Int!, requiredOrOptionalInAll: String!, optionalInAll: Boolean): String
       }
@@ -186,7 +187,7 @@ describe('Argument federation tests', () => {
       missingSubgraphs: ['subgraph-c'],
       requiredSubgraphs: ['subgraph-a'],
     }];
-    expect(errors![0]).toStrictEqual(invalidRequiredArgumentsError('Interface.field', errorArrayOne));
+    expect(errors![0]).toStrictEqual(invalidRequiredArgumentsError(FIELD, 'Interface.field', errorArrayOne));
     const errorArrayTwo: InvalidRequiredArgument[] = [{
       argumentName: 'requiredInAll',
       missingSubgraphs: ['subgraph-c'],
@@ -196,7 +197,7 @@ describe('Argument federation tests', () => {
       missingSubgraphs: ['subgraph-c'],
       requiredSubgraphs: ['subgraph-a'],
     }];
-    expect(errors![1]).toStrictEqual(invalidRequiredArgumentsError('Object.field', errorArrayTwo));
+    expect(errors![1]).toStrictEqual(invalidRequiredArgumentsError(FIELD,'Object.field', errorArrayTwo));
   });
 
   test('that if an argument is not a valid input type or defined more than once, an error is returned', () => {

@@ -9,6 +9,7 @@ export function documentNodeToNormalizedString(document: DocumentNode): string {
   return normalizeString(print(document));
 }
 
+// The V1 definitions that are required during normalization
 export const versionOneBaseSchema = `
   directive @deprecated(reason: String = "No longer supported") on ARGUMENT_DEFINITION | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION
   directive @extends on INTERFACE | OBJECT
@@ -19,9 +20,20 @@ export const versionOneBaseSchema = `
   directive @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
 `;
 
+// The V1 definitions that are persisted in the raw federated schema
+export const versionOnePersistedBaseSchema = `
+  directive @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
+`;
+
+// The V2 definitions that are required during normalization
 export const versionTwoBaseSchema = versionOneBaseSchema + `
   directive @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
   directive @shareable on FIELD_DEFINITION | OBJECT
+`;
+
+// The V2 definitions that are persisted in the raw federated schema
+export const versionTwoPersistedBaseSchema = versionOnePersistedBaseSchema + `
+  directive @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
 `;
 
 export function createSubgraph(name: string, schemaString: string): Subgraph {

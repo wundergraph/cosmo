@@ -1,7 +1,7 @@
 import { federateSubgraphs, invalidUnionError, Subgraph } from '../src';
 import { parse } from 'graphql';
 import { describe, expect, test } from 'vitest';
-import { documentNodeToNormalizedString, normalizeString, versionOneBaseSchema } from './utils/utils';
+import { documentNodeToNormalizedString, normalizeString, versionOnePersistedBaseSchema } from './utils/utils';
 
 describe('Union federation tests', () => {
   test('that unions merge by union', () => {
@@ -10,8 +10,7 @@ describe('Union federation tests', () => {
     const federatedGraph = federationResult!.federatedGraphAST;
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
-        versionOneBaseSchema +
-          `
+        versionOnePersistedBaseSchema + `
       union Starters = Bulbasaur | Squirtle | Charmander | Chikorita | Totodile | Cyndaquil
 
       type Bulbasaur {
