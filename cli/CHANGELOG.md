@@ -4,6 +4,12 @@ Images can be found [here](https://github.com/orgs/wundergraph/packages?repo_nam
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.6.4](https://github.com/wundergraph/cosmo/compare/wgc@0.6.3...wgc@0.6.4) (2023-08-31)
+
+### Bug Fixes
+
+* throw auth error inside try, allow to customize k8s probes, use … ([#24](https://github.com/wundergraph/cosmo/issues/24)) ([2d5695b](https://github.com/wundergraph/cosmo/commit/2d5695b95adad9b2fd8a6cacbc2dd2a1c2cb9bd6)) (@StarpTech)
+
 ## [0.6.3](https://github.com/wundergraph/cosmo/compare/wgc@0.6.2...wgc@0.6.3) (2023-08-29)
 
 **Note:** Version bump only for package wgc
