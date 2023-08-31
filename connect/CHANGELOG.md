@@ -4,6 +4,12 @@ Images can be found [here](https://github.com/orgs/wundergraph/packages?repo_nam
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.7.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.6.0...@wundergraph/cosmo-connect@0.7.0) (2023-08-31)
+
+### Features
+
+* migrate graphs from apollo ([#17](https://github.com/wundergraph/cosmo/issues/17)) ([0d9d025](https://github.com/wundergraph/cosmo/commit/0d9d025adadf11fd0516cbe10f470765757a9853)) (@JivusAyrus)
+
 # [0.6.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.5.0...@wundergraph/cosmo-connect@0.6.0) (2023-08-28)
 
 ### Features
