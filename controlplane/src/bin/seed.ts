@@ -75,7 +75,7 @@ try {
 
   const organizationGroup = await keycloakClient.client.groups.create({
     realm,
-    name: user.organization.name,
+    name: user.organization.slug,
   });
 
   const adminGroup = await keycloakClient.client.groups.createChildGroup(
