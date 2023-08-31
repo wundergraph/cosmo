@@ -298,6 +298,7 @@ export function getEntityKeyExtractionResult(rawEntityKey: string, parentTypeNam
   let currentSegment = '';
   let segmentEnded = true;
   let currentKey: EntityKey;
+  rawEntityKey = rawEntityKey.replaceAll(',', ' ');
   for (const char of rawEntityKey) {
     currentKey = getOrThrowError(entityKeyMap, keyPath.join('.'));
     switch (char) {

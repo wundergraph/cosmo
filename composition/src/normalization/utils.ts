@@ -449,7 +449,8 @@ function validateEntityKey(
     }
     const fieldPath = `${objectTypeName}.${fieldName}`;
     const fieldTypeName = getNamedTypeForChild(fieldPath, field.node.type);
-    if (factory.parents.has(fieldTypeName)) {
+    const parentContainer = factory.parents.get(fieldTypeName);
+    if (parentContainer && parentContainer.kind === Kind.OBJECT_TYPE_DEFINITION) {
       errorMessages.push(objectInCompositeKeyWithoutSelectionsErrorMessage(fieldName, fieldTypeName));
     }
   }
