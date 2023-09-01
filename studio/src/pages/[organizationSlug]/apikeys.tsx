@@ -393,7 +393,7 @@ export const Empty = ({
           <a
             target="_blank"
             rel="noreferrer"
-            href={docsBaseURL}
+            href={docsBaseURL + "/studio/api-keys"}
             className="text-primary"
           >
             Learn more.
@@ -489,7 +489,12 @@ const APIKeysPage: NextPageWithLayout = () => {
                 API keys are used to authenticate the Cosmo CLI for local
                 development or CI/CD.
               </span>
-              <Link href={docsBaseURL} className="text-primary">
+              <Link
+                href={docsBaseURL + "/studio/api-keys"}
+                className="text-primary"
+                target="_blank"
+                rel="noreferrer"
+              >
                 Learn more
               </Link>
             </div>

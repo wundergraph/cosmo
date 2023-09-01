@@ -1,1 +1,1 @@
-export const docsBaseURL = "https://docs.wundergraph.com";
+export const docsBaseURL = "https://cosmo-docs.wundergraph.com";

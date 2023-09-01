@@ -174,7 +174,7 @@ const ChangelogPage: NextPageWithLayout = () => {
             <a
               target="_blank"
               rel="noreferrer"
-              href={docsBaseURL}
+              href={docsBaseURL + "/cli/subgraphs/publish"}
               className="text-primary"
             >
               Learn more.

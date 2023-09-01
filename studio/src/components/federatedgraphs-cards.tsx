@@ -155,7 +155,7 @@ const MigrationDialog = ({
           <p className="text-sm">
             Click{" "}
             <Link
-              href={docsBaseURL}
+              href={docsBaseURL + "/studio/migrate-from-apollo"}
               className="text-primary"
               target="_blank"
               rel="noreferrer"
@@ -220,7 +220,7 @@ export const Empty = ({
           <a
             target="_blank"
             rel="noreferrer"
-            href={docsBaseURL}
+            href={docsBaseURL + "/cli/federated-graphs/create"}
             className="text-primary"
           >
             Learn more.
