@@ -213,12 +213,5 @@ export default async function build(opts: BuildConfig) {
     timeout: 60_000,
   });
 
-  const result = await prometheusClient.query({
-    query: 'cosmo_router_http_requests',
-    time: '1693585202.256',
-  });
-
-  console.log(result.data.result);
-
   return fastify;
 }
