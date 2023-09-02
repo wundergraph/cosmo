@@ -18,6 +18,22 @@ services:
     networks:
       - primary
 
+  prometheus:
+    image: prom/prometheus:v2.46.0
+    command:
+      - --web.enable-remote-write-receiver
+      - --enable-feature=native-histograms
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --web.config.file=/etc/prometheus/web.yml
+    networks:
+      - primary
+    volumes:
+      - prometheus:/prometheus
+      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./docker/prometheus/web.yml:/etc/prometheus/web.yml
+    ports:
+      - "9090:9090"
+
   keycloak:
     build:
       context: keycloak
@@ -64,6 +80,9 @@ services:
     environment:
       CLICKHOUSE_ENDPOINT: "clickhouse://${CLICKHOUSE_USER:-default}:${CLICKHOUSE_PASSWORD:-changeme}@clickhouse:9000/${CLICKHOUSE_DATABASE:-cosmo}?dial_timeout=15s&compress=lz4"
       OTEL_INGEST_JWT_SECRET: ${OTEL_INGEST_JWT_SECRET:-fkczyomvdprgvtmvkuhvprxuggkbgwld}
+      PROMETHEUS_REMOTE_ENDPOINT: "http://prometheus:9090/api/v1/write"
+      PROMETHEUS_USERNAME: ${PROMETHEUS_USERNAME:-admin}
+      PROMETHEUS_PASSWORD: ${PROMETHEUS_PASSWORD:-test}
     ports:
       - "4318:4318"
     restart: unless-stopped

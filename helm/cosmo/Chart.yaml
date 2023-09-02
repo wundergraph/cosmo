@@ -49,11 +49,15 @@ dependencies:
   - name: otelcollector
     version: "^0"
     condition: global.otelcollector.enabled
-    # Only for development. For production use a managed Postgres / Keycloak / ClickHouse instance
+    # Only for development. For production use a managed Postgres / Keycloak / Prometheus / ClickHouse instance
   - name: postgresql
     version: "12.8.0"
     condition: global.postgresql.enabled
     repository: "https://charts.bitnami.com/bitnami"
+  - name: prometheus
+    version: "24.1.0"
+    condition: global.prometheus.enabled
+    repository: "https://prometheus-community.github.io/helm-charts"
   - name: clickhouse
     version: "^0"
     condition: global.clickhouse.enabled

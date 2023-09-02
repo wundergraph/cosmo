@@ -30,7 +30,7 @@ type Config struct {
 	OTELCollectorEndpoint   string            `validate:"required" default:"https://cosmo-otel.wundergraph.com" envconfig:"OTEL_COLLECTOR_ENDPOINT" validate:"uri"`
 	OTELCollectorHeaders    map[string]string `default:"" envconfig:"OTEL_COLLECTOR_HEADERS"`
 	OTELSampler             float64           `default:"1" envconfig:"OTEL_SAMPLER"`
-	OTELBatchTimeoutSeconds int               `default:"5" envconfig:"OTEL_BATCH_TIMEOUT_SECONDS"`
+	OTELBatchTimeoutSeconds int               `default:"10" envconfig:"OTEL_BATCH_TIMEOUT_SECONDS"`
 	OTELServiceName         string            `default:"cosmo-router" envconfig:"OTEL_SERVICE_NAME"`
 	OTELMetricsEnabled      bool              `default:"true" envconfig:"OTEL_METRICS_ENABLED"`
 	PrometheusEnabled       bool              `default:"true" envconfig:"PROMETHEUS_ENABLED"`

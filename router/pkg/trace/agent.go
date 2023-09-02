@@ -64,6 +64,16 @@ func createExporter(c *Config) (sdktrace.SpanExporter, error) {
 func startAgent(log *zap.Logger, c *Config) (*sdktrace.TracerProvider, error) {
 	opts := []sdktrace.TracerProviderOption{
 		// Set the sampling rate based on the parent span to 100%
+		sdktrace.WithRawSpanLimits(sdktrace.SpanLimits{
+			// Avoid misuse of attributes.
+			AttributeValueLengthLimit: 3 * 1024, // 3KB
+			// Based on the default values from the OpenTelemetry specification.
+			AttributeCountLimit:         sdktrace.DefaultAttributeCountLimit,
+			EventCountLimit:             sdktrace.DefaultEventCountLimit,
+			LinkCountLimit:              sdktrace.DefaultLinkCountLimit,
+			AttributePerEventCountLimit: sdktrace.DefaultEventCountLimit,
+			AttributePerLinkCountLimit:  sdktrace.DefaultAttributePerLinkCountLimit,
+		}),
 		sdktrace.WithSampler(
 			sdktrace.ParentBased(
 				sdktrace.TraceIDRatioBased(c.Sampler),
@@ -85,6 +95,7 @@ func startAgent(log *zap.Logger, c *Config) (*sdktrace.TracerProvider, error) {
 		opts = append(opts,
 			sdktrace.WithBatcher(exp,
 				sdktrace.WithBatchTimeout(c.BatchTimeout),
+				sdktrace.WithExportTimeout(c.ExportTimeout),
 				sdktrace.WithMaxExportBatchSize(512),
 				sdktrace.WithMaxQueueSize(2048),
 			),

@@ -60,6 +60,21 @@ spec:
               containerPort: 13133
               protocol: TCP
           env:
+            - name: PROMETHEUS_REMOTE_ENDPOINT
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "otelcollector.fullname" . }}
+                  key: promRemoteWriteEndpoint
+            - name: PROMETHEUS_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "otelcollector.fullname" . }}
+                  key: promUsername
+            - name: PROMETHEUS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "otelcollector.fullname" . }}
+                  key: promPassword
             - name: CLICKHOUSE_ENDPOINT
               valueFrom:
                 secretKeyRef:
@@ -70,6 +85,13 @@ spec:
                 secretKeyRef:
                   name: {{ include "otelcollector.fullname" . }}
                   key: authJwtSecret
+          {{- if .Values.collectorConfigOverride }}
+          volumeMounts:
+            - mountPath: /etc/otel-config.yaml
+              name: {{ .Values.collectorConfigOverride }}
+              subPath: otel-config.yaml
+              readOnly: true
+          {{ end }}
           livenessProbe:
             httpGet:
               path: /health
@@ -86,6 +108,12 @@ spec:
             {{ end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+      {{- if .Values.collectorConfigOverride }}
+      volumes:
+        - name: otelcollector-config-volume
+          configMap:
+            name: {{ .Values.collectorConfigOverride }}
+      {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

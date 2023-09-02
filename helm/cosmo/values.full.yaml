@@ -3,9 +3,10 @@ global:
   helmTests:
     enabled: false
 
+  # Enable this once to seed a new organization
   seed:
     enabled: true
-    apiKey: "cosmo-669b576aaadc10ee1ae81d9193425705"
+    apiKey: "cosmo_669b576aaadc10ee1ae81d9193425705"
     userEmail: "foo@wundergraph.com"
     userPassword: "bar"
     firstName: "Foo"
@@ -19,6 +20,7 @@ global:
     webUrl: "http://studio.wundergraph.local"
 
   router:
+    # Disabled because we don't have a token yet
     enabled: false
 
   clickhouse:
@@ -56,6 +58,13 @@ global:
     databaseUsername: "postgres"
     databasePassword: "changeme"
 
+  prometheus:
+    enabled: true
+    port: 9090
+    # Might contain basic auth credentials
+    apiUrl: "http://admin:test@prometheus.wundergraph.local/api/v1"
+    webUrl: "http://prometheus.wundergraph.local"
+
 # Overall Ingress for the Cosmo Platform
 ingress:
   enabled: true
@@ -92,6 +101,9 @@ router:
 # Cosmo Open Telemetry Collector
 otelcollector:
   configuration:
+    promUsername: "admin"
+    promPassword: "test"
+    promWriteEndpoint: "http://prometheus.wundergraph.local/api/v1/write"
     clickhouseDsn: "http://default:changeme@cosmo-clickhouse:8123?database=cosmo&dial_timeout=15s&compress=lz4"
 
 # The following configuration enables the stateful services of the Cosmo Platform
@@ -109,6 +121,34 @@ clickhouse:
     auth:
       username: "default"
       password: "changeme"
+
+prometheus:
+  configmapReload:
+    prometheus:
+      enabled: false
+  kube-state-metrics:
+    enabled: false
+  prometheus-pushgateway:
+    enabled: false
+  prometheus-node-exporter:
+    enabled: false
+  serverFiles:
+    web.config.yml:
+      basic_auth_users:
+        admin: '$2b$12$hNf2lSsxfm0.i4a.1kVpSOVyBCfIB51VRjgBUyv6kdnyTlgWj81Ay' # "test"
+  server:
+    extraArgs:
+      web.config.file: /etc/config/web.config.yml
+      enable-feature: remote-write-receiver,native-histograms
+    probeHeaders:
+      - name: Authorization
+        value: "Basic YWRtaW46dGVzdA==" # "admin:test"
+    service:
+      servicePort: 9090
+    persistentVolume:
+      size: 2Gi
+  alertmanager:
+    enabled: false
 
 # Postgres for the Cosmo Controlplane
 # https://artifacthub.io/packages/helm/bitnami/postgresql
