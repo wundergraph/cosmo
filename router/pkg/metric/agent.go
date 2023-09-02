@@ -76,7 +76,7 @@ func startAgent(log *zap.Logger, c *Config) (*sdkmetric.MeterProvider, error) {
 			sdkmetric.WithReader(
 				sdkmetric.NewPeriodicReader(exp,
 					sdkmetric.WithTimeout(30*time.Second),
-					sdkmetric.WithInterval(60*time.Second),
+					sdkmetric.WithInterval(30*time.Second),
 				),
 			),
 		)
