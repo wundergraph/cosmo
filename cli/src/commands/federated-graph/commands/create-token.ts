@@ -14,6 +14,10 @@ export default (opts: BaseCommandOptions) => {
     '-n, --name <name>',
     'The name of the token to create. Only serves as a reference for the user.',
   );
+  createTokenCommand.option(
+    '-r, --raw',
+    'Prints the token in raw format. This is useful if you want to pipe the token into another command.',
+  );
   createTokenCommand.action(async (name, options) => {
     const resp = await opts.client.platform.createFederatedGraphToken(
       {
@@ -26,6 +30,11 @@ export default (opts: BaseCommandOptions) => {
     );
 
     if (resp.response?.code === EnumStatusCode.OK) {
+      if (options.raw) {
+        console.log(resp.token);
+        return;
+      }
+
       console.log(
         `${pc.green(`Successfully created token ${pc.bold(options.name)} for federated graph ${pc.bold(name)}`)}`,
       );
