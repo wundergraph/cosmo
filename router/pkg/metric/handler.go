@@ -122,8 +122,14 @@ func (h *Handler) Handler(handler http.Handler) http.HandlerFunc {
 
 		opCtx := contextx.GetOperationContext(ctx)
 		if opCtx != nil {
-			baseKeys = append(baseKeys, otel.WgOperationName.String(opCtx.Name))
-			baseKeys = append(baseKeys, otel.WgOperationType.String(opCtx.Type))
+			// Metric values must not be empty
+			// M3 does not like empty values
+			if opCtx.Name != "" {
+				baseKeys = append(baseKeys, otel.WgOperationName.String(opCtx.Name))
+			}
+			if opCtx.Type != "" {
+				baseKeys = append(baseKeys, otel.WgOperationType.String(opCtx.Type))
+			}
 			baseKeys = append(baseKeys, semconv.HTTPStatusCode(statusCode))
 		}
 

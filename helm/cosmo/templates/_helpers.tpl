@@ -36,6 +36,10 @@ Define subcharts full names
 {{- printf "%s-%s" .Release.Name "studio" | replace "+" "_" | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 
+{{- define "prometheus.fullname" -}}
+{{- printf "%s-%s" .Release.Name "prometheus-server" | replace "+" "_" | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+
 {{/*
 Expand the name of the chart.
 */}}

@@ -31,9 +31,17 @@ exporters:
     namespace: "cosmo"
     auth:
       authenticator: basicauth/prw
+    retry_on_failure:
+      enabled: true
+      initial_interval: 10s
+      max_interval: 30s
+      max_elapsed_time: 300s
     remote_write_queue:
+      # Maximum number of batches kept in memory before dropping;
       queue_size: 2000
+      # Number of consumers that dequeue batches
       num_consumers: 10
+    timeout: 5s
     target_info:
       enabled: true
   clickhouse:

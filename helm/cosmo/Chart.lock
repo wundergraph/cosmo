@@ -14,11 +14,14 @@ dependencies:
 - name: postgresql
   repository: https://charts.bitnami.com/bitnami
   version: 12.8.0
+- name: prometheus
+  repository: https://prometheus-community.github.io/helm-charts
+  version: 24.1.0
 - name: clickhouse
   repository: ""
   version: ^0
 - name: keycloak
   repository: ""
   version: ^0
-digest: sha256:f80edf50aba7d34e35971f0a86fb135f821ba035e438f322829fb3af29c124b6
-generated: "2023-08-12T10:53:20.863564904+02:00"
+digest: sha256:fe801e2f4da8e10ffe285b1040e24be5b19cc8e1939d3a1d94895281d5e8f6fa
+generated: "2023-09-01T18:34:09.89000466+02:00"

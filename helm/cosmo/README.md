@@ -20,7 +20,7 @@ Helm offers two primary ways to configure your stack, statically by passing a `v
 For your convenience, we included two different value presets:
 
 1. `values.full.yaml` - Ready to deploy configuration. Include all subcharts, including Clickhouse, PostgreSQL and Keycloak. Intended for development use.
-2. `values.yaml`. - Only include the Cosmo stack. You need to provide your own Clickhouse, PostgreSQL and Keycloak and update the configuration accordingly.
+2. `values.yaml`. - Only include the Cosmo stack. You need to provide your own Clickhouse, PostgreSQL, Keycloak and Prometheus and update the configuration accordingly.
 
 To apply the changes, run:
 
@@ -43,13 +43,13 @@ helm uninstall cosmo
 ## Production use
 
 We ***strongly recommend*** that if you want to ship this helm chart to production you either:
-- Use a hosted version of Clickhouse, PostgreSQL and Keycloak.
-- Use a dedicated [Clickhouse](https://github.com/Altinity/clickhouse-operator), [Postgres](https://github.com/zalando/postgres-operator), [Keycloak](https://www.keycloak.org/operator/installation) operator of your choice.
-- Use [WunderGraph Cosmo Cloud](https://wundergraph.com/cosmo-cloud).
+- Use a hosted version of Clickhouse ([Clickhouse Cloud](https://clickhouse.com/)), PostgreSQL ([Aiven.io](https://aiven.io/postgresql)), Keycloak ([Cloud-IAM](https://www.cloud-iam.com/)) and Prometheus ([Grafana Cloud](https://grafana.com/products/cloud/))
+- Use a dedicated [Clickhouse](https://github.com/Altinity/clickhouse-operator), [Postgres](https://github.com/zalando/postgres-operator), [Keycloak](https://www.keycloak.org/operator/installation), [Prometheus](https://github.com/prometheus-operator/prometheus-operator) Kubernetes operator of your choice.
+- Use [WunderGraph Cosmo Cloud](https://wundergraph.com/cosmo-cloud) ✨
 
 ## Configuration and installation details
 
-By default, the chart deploys a production-grade Cosmo stack **without** Clickhouse, PostgreSQL and Keycloak database.
+By default, the chart deploys a production-grade Cosmo stack **without** Clickhouse, PostgreSQL, Keycloak and Prometheus database.
 After you have provisioned the databases, you can set the right configuration in the `values.yaml` file.
 The studio, controlplane, router and otelcollector are exposed via ingress. Don't forget to update the public URL in the `values.yaml` file as well.
 
@@ -68,7 +68,7 @@ helm upgrade cosmo ./cosmo \
 In the `global.seed.apiKey` of your `values.yaml` we defined your API key. You can use this API key to authenticate with the Cosmo CLI.
 
 ```sh
-export COSMO_API_KEY="cosmo-669b576aaadc10ee1ae81d9193425705"
+export COSMO_API_KEY="cosmo_669b576aaadc10ee1ae81d9193425705"
 export COSMO_API_URL="http://<your-public-controlplane-url>"
 npx wgc -h
 ```
