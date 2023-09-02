@@ -3,9 +3,10 @@ global:
   helmTests:
     enabled: false
 
+  # Enable this once to seed a new organization
   seed:
     enabled: false
-    apiKey: "cosmo-669b576aaadc10ee1ae81d9193425705"
+    apiKey: "cosmo_669b576aaadc10ee1ae81d9193425705"
     userEmail: "foo@wundergraph.com"
     userName: "foo"
     userPassword: "bar"
@@ -39,6 +40,7 @@ global:
     enabled: false
     port: 4318
     webUrl: "http://otelcollector.wundergraph.local"
+    promRemoteWriteEndpoint: "http://prometheus.wundergraph.local/api/v1/write"
 
   keycloak:
     enabled: false
@@ -48,6 +50,13 @@ global:
     port: 8080
     adminUser: "admin"
     adminPassword: "changeme"
+
+  prometheus:
+    enabled: false
+    port: 9090
+    # Might contain basic auth credentials
+    apiUrl: "http://prometheus.wundergraph.local/api/v1"
+    webUrl: "http://prometheus.wundergraph.local"
 
 # Overall Ingress for the Cosmo Platform
 ingress:

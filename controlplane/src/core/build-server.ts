@@ -19,6 +19,7 @@ import { OrganizationRepository } from './repositories/OrganizationRepository.js
 import GraphApiTokenAuthenticator from './services/GraphApiTokenAuthenticator.js';
 import AuthUtils from './auth-utils.js';
 import Keycloak from './services/Keycloak.js';
+import PrometheusClient from './prometheus/client.js';
 
 export interface BuildConfig {
   logger: PinoLoggerOptions;
@@ -34,6 +35,9 @@ export interface BuildConfig {
   debugSQL?: boolean;
   production?: boolean;
   clickhouseDsn?: string;
+  prometheus: {
+    apiUrl: string;
+  };
   keycloak: {
     loginRealm: string;
     realm: string;
@@ -146,6 +150,9 @@ export default async function build(opts: BuildConfig) {
     webErrorPath: opts.auth.webErrorPath,
   });
 
+  const prometheusClient = new PrometheusClient({
+    apiUrl: opts.prometheus.apiUrl,
+  });
   const apiKeyAuth = new ApiKeyAuthenticator(fastify.db);
   const webAuth = new WebSessionAuthenticator(opts.auth.secret);
   const graphKeyAuth = new GraphApiTokenAuthenticator(opts.auth.secret);

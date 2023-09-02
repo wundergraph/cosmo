@@ -139,6 +139,11 @@ spec:
                 configMapKeyRef:
                   name: {{ include "controlplane.fullname" . }}-configmap
                   key: keycloakClientId
+            - name: PROMETHEUS_API_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-secret
+                  key: prometheusApiUrl
           ports:
             - name: http
               containerPort: {{ .Values.service.port }}
