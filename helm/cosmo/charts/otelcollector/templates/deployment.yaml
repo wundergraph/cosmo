@@ -60,16 +60,6 @@ spec:
               containerPort: 13133
               protocol: TCP
           env:
-            - name: M3DB_DEFAULT_STORAGE_POLICY
-              valueFrom:
-                configMapKeyRef:
-                  name: {{ include "otelcollector.fullname" . }}-configmap
-                  key: m3dbDefaultStoragePolicy
-            - name: M3DB_DEFAULT_METRICS_TYPE
-              valueFrom:
-                configMapKeyRef:
-                  name: {{ include "otelcollector.fullname" . }}-configmap
-                  key: m3dbDefaultMetricType
             - name: PROMETHEUS_REMOTE_ENDPOINT
               valueFrom:
                 secretKeyRef:
