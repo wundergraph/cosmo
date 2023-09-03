@@ -11,7 +11,7 @@ export default (opts: BaseCommandOptions) => {
   listSubgraphs.action(async () => {
     const resp = await opts.client.platform.getSubgraphs(
       {
-        // limit 0 fetches all 
+        // limit 0 fetches all
         limit: 0,
         offset: 0,
       },
