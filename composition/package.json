@@ -12,7 +12,8 @@
   "scripts": {
     "dev": "tsc --watch",
     "build": "del dist && tsc",
-    "test": "vitest test"
+    "test:watch": "vitest test",
+    "test": "vitest run"
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
