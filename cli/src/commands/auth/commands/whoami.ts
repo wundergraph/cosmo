@@ -20,7 +20,6 @@ export default (opts: BaseCommandOptions) => {
       case EnumStatusCode.OK: {
         console.log('Organization:', pc.bold(resp.organizationName));
         console.log('Api Url:', config.baseURL);
-        console.log('Api Key:', config.apiKey?.slice(0, 12) + pc.dim('X'.repeat(20)));
         break;
       }
       default: {
