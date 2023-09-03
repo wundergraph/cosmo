@@ -1,22 +1,22 @@
 import { lru } from 'tiny-lru';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common_pb';
-import { UserAuthContext } from '../../types/index.js';
+import { AuthContext } from '../../types/index.js';
 import ApiKeyAuthenticator from '../services/ApiKeyAuthenticator.js';
 import WebSessionAuthenticator from '../services/WebSessionAuthenticator.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import { AuthenticationError } from '../errors/errors.js';
-import GraphApiTokenAuthenticator from './GraphApiTokenAuthenticator.js';
+import GraphApiTokenAuthenticator, { GraphKeyAuthContext } from './GraphApiTokenAuthenticator.js';
 
 // The maximum time to cache the user auth context for the web session authentication.
 const maxAuthCacheTtl = 30 * 1000; // 30 seconds
 
 export interface Authenticator {
-  authenticate(headers: Headers): Promise<UserAuthContext>;
-  authenticateRouter(headers: Headers): Promise<UserAuthContext>;
+  authenticate(headers: Headers): Promise<AuthContext>;
+  authenticateRouter(headers: Headers): Promise<GraphKeyAuthContext>;
 }
 
 export class Authentication implements Authenticator {
-  #cache = lru<UserAuthContext>(1000, maxAuthCacheTtl);
+  #cache = lru<AuthContext>(1000, maxAuthCacheTtl);
 
   constructor(
     private webAuth: WebSessionAuthenticator,
@@ -32,7 +32,7 @@ export class Authentication implements Authenticator {
    * the `cosmo-org-id` header to be set and will validate that the user is a member of the organization.
    * If none of these are found, an error is thrown.
    */
-  public async authenticate(headers: Headers): Promise<UserAuthContext> {
+  public async authenticate(headers: Headers): Promise<AuthContext> {
     try {
       /**
        * API keys are authenticated first.
@@ -74,7 +74,7 @@ export class Authentication implements Authenticator {
         throw new Error('user is not a member of the organization');
       }
 
-      const userContext: UserAuthContext = {
+      const userContext: AuthContext = {
         userId: user.userId,
         organizationId: repo.id,
       };
@@ -87,7 +87,7 @@ export class Authentication implements Authenticator {
     }
   }
 
-  async authenticateRouter(headers: Headers): Promise<UserAuthContext> {
+  async authenticateRouter(headers: Headers): Promise<GraphKeyAuthContext> {
     const authorization = headers.get('authorization');
     if (authorization) {
       try {
