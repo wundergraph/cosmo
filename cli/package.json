@@ -30,8 +30,6 @@
   "license": "Apache-2.0",
   "dependencies": {
     "@bufbuild/buf": "^1.26.1",
-    "@bufbuild/connect": "^0.13.0",
-    "@bufbuild/connect-node": "^0.13.0",
     "@wundergraph/cosmo-connect": "workspace:*",
     "@wundergraph/cosmo-shared": "workspace:*",
     "cli-table": "^0.3.11",
@@ -39,7 +37,9 @@
     "inquirer": "^9.2.7",
     "log-symbols": "^5.1.0",
     "pathe": "^1.1.1",
-    "picocolors": "^1.0.0"
+    "picocolors": "^1.0.0",
+    "@connectrpc/connect": "^0.13.2",
+    "@connectrpc/connect-node": "^0.13.2"
   },
   "devDependencies": {
     "@types/cli-table": "^0.3.1",

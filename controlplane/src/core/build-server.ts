@@ -1,10 +1,10 @@
 import Fastify from 'fastify';
-import { fastifyConnectPlugin } from '@bufbuild/connect-fastify';
-import { cors } from '@bufbuild/connect';
+import { fastifyConnectPlugin } from '@connectrpc/connect-fastify';
+import { cors } from '@connectrpc/connect';
 import fastifyCors from '@fastify/cors';
 import { PinoLoggerOptions } from 'fastify/types/logger.js';
 import { pino } from 'pino';
-import { compressionBrotli, compressionGzip } from '@bufbuild/connect-node';
+import { compressionBrotli, compressionGzip } from '@connectrpc/connect-node';
 import fastifyGracefulShutdown from 'fastify-graceful-shutdown';
 import routes from './routes.js';
 import fastifyHealth from './plugins/health.js';
