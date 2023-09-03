@@ -1,4 +1,4 @@
-module github.com/wundergraph/cosmo/examples/router-middleware
+module github.com/wundergraph/cosmo/examples/router-module
 
 go 1.20
 

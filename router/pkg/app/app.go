@@ -341,6 +341,20 @@ func (a *App) newRouter(ctx context.Context, routerConfig *nodev1.RouterConfig) 
 		return nil, fmt.Errorf("failed to create planner cache: %w", err)
 	}
 
+	var (
+		moduleMiddlewares []func(http.Handler) http.Handler
+	)
+
+	for _, moduleInfo := range modules {
+		if fn, ok := moduleInfo.New().(MiddlewareHandler); ok {
+			moduleMiddlewares = append(moduleMiddlewares, func(handler http.Handler) http.Handler {
+				return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+					fn.ServeHTTP(writer, request, handler)
+				})
+			})
+		}
+	}
+
 	pb := planner.NewPlanner(
 		planner.WithIntrospection(),
 		planner.WithLogger(a.logger),
@@ -378,25 +392,11 @@ func (a *App) newRouter(ctx context.Context, routerConfig *nodev1.RouterConfig) 
 		return nil, fmt.Errorf("failed to create metric handler: %w", err)
 	}
 
-	var (
-		handlerFuncs []func(http.Handler) http.Handler
-	)
-
-	for _, moduleInfo := range modules {
-		if fn, ok := moduleInfo.New().(MiddlewareHandler); ok {
-			handlerFuncs = append(handlerFuncs, func(handler http.Handler) http.Handler {
-				return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-					fn.ServeHTTP(writer, request, handler)
-				})
-			})
-		}
-	}
-
 	// Serve GraphQL. Metrics are collected after the request is handled and classified as a GraphQL request.
 	router.Route(a.graphqlPath, func(r chi.Router) {
 		r.Use(graphqlPreHandler.Handler)
 		r.Use(metricHandler.Handler)
-		r.Use(handlerFuncs...)
+		r.Use(moduleMiddlewares...)
 		r.Post("/", graphqlHandler.ServeHTTP)
 	})
 
