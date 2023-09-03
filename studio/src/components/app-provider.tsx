@@ -1,6 +1,6 @@
-import { Transport } from "@bufbuild/connect";
-import { TransportProvider } from "@bufbuild/connect-query";
-import { createConnectTransport } from "@bufbuild/connect-web";
+import { Transport } from "@connectrpc/connect";
+import { TransportProvider } from "@connectrpc/connect-query";
+import { createConnectTransport } from "@connectrpc/connect-web";
 import {
   QueryClient,
   QueryClientProvider,

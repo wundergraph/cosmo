@@ -40,7 +40,7 @@ create-demo:
 	cd scripts && ./create-local-demo.sh
 
 dev-setup: prerequisites
-	pnpm install --frozen-lockfile
+	pnpm install
 	pnpm generate
 	make generate-go
 	make infra-up

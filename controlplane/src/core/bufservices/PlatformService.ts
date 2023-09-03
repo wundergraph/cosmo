@@ -1,4 +1,4 @@
-import { ServiceImpl } from '@bufbuild/connect';
+import { ServiceImpl } from '@connectrpc/connect';
 import { JsonValue, PlainMessage } from '@bufbuild/protobuf';
 import { parse } from 'graphql';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common_pb';

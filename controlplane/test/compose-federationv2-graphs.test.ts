@@ -1,8 +1,8 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { createPromiseClient } from '@bufbuild/connect';
-import { fastifyConnectPlugin } from '@bufbuild/connect-fastify';
-import { createConnectTransport } from '@bufbuild/connect-node';
+import { createPromiseClient } from '@connectrpc/connect';
+import { fastifyConnectPlugin } from '@connectrpc/connect-fastify';
+import { createConnectTransport } from '@connectrpc/connect-node';
 import Fastify from 'fastify';
 import pino from 'pino';
 import * as prettier from 'prettier';

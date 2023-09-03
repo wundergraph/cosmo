@@ -1,5 +1,5 @@
-import { compressionBrotli, compressionGzip, createConnectTransport } from '@bufbuild/connect-node';
-import { createPromiseClient, PromiseClient } from '@bufbuild/connect';
+import { compressionBrotli, compressionGzip, createConnectTransport } from '@connectrpc/connect-node';
+import { createPromiseClient, PromiseClient } from '@connectrpc/connect';
 import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
 import { NodeService } from '@wundergraph/cosmo-connect/dist/node/v1/node_connect';
 

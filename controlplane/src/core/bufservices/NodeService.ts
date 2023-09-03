@@ -1,4 +1,4 @@
-import { ServiceImpl } from '@bufbuild/connect';
+import { ServiceImpl } from '@connectrpc/connect';
 import { NodeService } from '@wundergraph/cosmo-connect/dist/node/v1/node_connect';
 import { PlainMessage } from '@bufbuild/protobuf';
 import { GetConfigResponse } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';

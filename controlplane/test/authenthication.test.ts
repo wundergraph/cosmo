@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
-import { createPromiseClient } from '@bufbuild/connect';
-import { createConnectTransport } from '@bufbuild/connect-node';
+import { createPromiseClient } from '@connectrpc/connect';
+import { createConnectTransport } from '@connectrpc/connect-node';
 import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
 
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common_pb';
