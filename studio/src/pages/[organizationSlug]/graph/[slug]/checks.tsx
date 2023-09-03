@@ -31,7 +31,14 @@ import {
   CommandLineIcon,
   ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
-import { CheckCircledIcon, CrossCircledIcon } from "@radix-ui/react-icons";
+import {
+  CheckCircledIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  CrossCircledIcon,
+  DoubleArrowLeftIcon,
+  DoubleArrowRightIcon,
+} from "@radix-ui/react-icons";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { useRouter } from "next/router";
@@ -40,7 +47,7 @@ import {
   getChecksByFederatedGraphName,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common_pb";
-import { useContext } from "react";
+import { useCallback, useContext, useState } from "react";
 
 const Details = ({ id, graphName }: { id: string; graphName: string }) => {
   const { data, isLoading, error, refetch } = useQuery(
@@ -161,6 +168,8 @@ const ProposedSchema = ({
 
 const ChecksPage: NextPageWithLayout = () => {
   const router = useRouter();
+  const pageNumber = router.query.page ? parseInt(router.query.page as string) : 1;
+  const limit = 10;
 
   const getIcon = (check: boolean) => {
     if (check) {
@@ -182,7 +191,21 @@ const ChecksPage: NextPageWithLayout = () => {
   const { data, isLoading, error, refetch } = useQuery(
     getChecksByFederatedGraphName.useQuery({
       name: router.query.slug as string,
+      limit: limit,
+      offset: (pageNumber - 1) * limit,
     })
+  );
+
+  const applyNewParams = useCallback(
+    (newParams: Record<string, string>) => {
+      router.push({
+        query: {
+          ...router.query,
+          ...newParams,
+        },
+      });
+    },
+    [router]
   );
 
   if (isLoading) return <Loader fullscreen />;
@@ -227,8 +250,10 @@ const ChecksPage: NextPageWithLayout = () => {
       />
     );
 
+  const noOfPages = Math.floor(parseInt(data.checksCount) / limit) + 1;
+
   return (
-    <div>
+    <div className="flex flex-col gap-y-3">
       <Table>
         <TableHeader>
           <TableRow>
@@ -254,7 +279,7 @@ const ChecksPage: NextPageWithLayout = () => {
               return (
                 <TableRow key={id}>
                   <TableCell className="font-medium ">
-                    {format(new Date(timestamp), "dd MMMM yyyy HH:mm")}
+                    {format(new Date(timestamp), "dd MMM yyyy HH:mm")}
                   </TableCell>
                   <TableCell>{subgraphName}</TableCell>
                   <TableCell>
@@ -288,6 +313,57 @@ const ChecksPage: NextPageWithLayout = () => {
           )}
         </TableBody>
       </Table>
+      <div className="mr-2 flex justify-end">
+        <div className="flex w-[100px] items-center justify-center text-sm font-medium">
+          Page {pageNumber} of {noOfPages}
+        </div>
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="outline"
+            className="hidden h-8 w-8 p-0 lg:flex"
+            onClick={() => {
+              applyNewParams({ page: "1" });
+            }}
+            disabled={pageNumber === 1}
+          >
+            <span className="sr-only">Go to first page</span>
+            <DoubleArrowLeftIcon className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            className="h-8 w-8 p-0"
+            onClick={() => {
+              applyNewParams({ page: (pageNumber - 1).toString() });
+            }}
+            disabled={pageNumber === 1}
+          >
+            <span className="sr-only">Go to previous page</span>
+            <ChevronLeftIcon className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            className="h-8 w-8 p-0"
+            onClick={() => {
+              applyNewParams({ page: (pageNumber + 1).toString() });
+            }}
+            disabled={pageNumber === noOfPages}
+          >
+            <span className="sr-only">Go to next page</span>
+            <ChevronRightIcon className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            className="hidden h-8 w-8 p-0 lg:flex"
+            onClick={() => {
+              applyNewParams({ page: noOfPages.toString() });
+            }}
+            disabled={pageNumber === noOfPages}
+          >
+            <span className="sr-only">Go to last page</span>
+            <DoubleArrowRightIcon className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
     </div>
   );
 };

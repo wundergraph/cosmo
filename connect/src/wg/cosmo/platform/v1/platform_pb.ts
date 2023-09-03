@@ -1843,6 +1843,16 @@ export class GetChecksByFederatedGraphNameRequest extends Message<GetChecksByFed
    */
   name = "";
 
+  /**
+   * @generated from field: int32 limit = 2;
+   */
+  limit = 0;
+
+  /**
+   * @generated from field: int32 offset = 3;
+   */
+  offset = 0;
+
   constructor(data?: PartialMessage<GetChecksByFederatedGraphNameRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1852,6 +1862,8 @@ export class GetChecksByFederatedGraphNameRequest extends Message<GetChecksByFed
   static readonly typeName = "wg.cosmo.platform.v1.GetChecksByFederatedGraphNameRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "limit", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 3, name: "offset", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetChecksByFederatedGraphNameRequest {
@@ -1958,6 +1970,11 @@ export class GetChecksByFederatedGraphNameResponse extends Message<GetChecksByFe
    */
   checks: SchemaCheck[] = [];
 
+  /**
+   * @generated from field: string checksCount = 3;
+   */
+  checksCount = "";
+
   constructor(data?: PartialMessage<GetChecksByFederatedGraphNameResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1968,6 +1985,7 @@ export class GetChecksByFederatedGraphNameResponse extends Message<GetChecksByFe
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "checks", kind: "message", T: SchemaCheck, repeated: true },
+    { no: 3, name: "checksCount", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetChecksByFederatedGraphNameResponse {

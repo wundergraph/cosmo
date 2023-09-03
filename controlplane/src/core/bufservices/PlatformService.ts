@@ -825,17 +825,20 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               code: EnumStatusCode.ERR_NOT_FOUND,
             },
             checks: [],
+            checksCount: '0',
           };
         }
 
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
-        const checks = await subgraphRepo.checks(req.name);
+        const checks = await subgraphRepo.checks(req.name, req.limit, req.offset);
+        const checksCount = await subgraphRepo.getChecksCount(req.name);
 
         return {
           response: {
             code: EnumStatusCode.OK,
           },
           checks,
+          checksCount: checksCount.toString(),
         };
       });
     },

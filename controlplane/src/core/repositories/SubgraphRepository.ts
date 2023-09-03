@@ -3,7 +3,7 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { CompositionError } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
 import * as schema from '../../db/schema.js';
-import { schemaVersion, subgraphs, subgraphsToFederatedGraph, targets } from '../../db/schema.js';
+import { schemaChecks, schemaVersion, subgraphs, subgraphsToFederatedGraph, targets } from '../../db/schema.js';
 import { Label, ListFilterOptions, SchemaCheckDTO, SchemaCheckDetailsDTO, SubgraphDTO } from '../../types/index.js';
 import { updateComposedSchema } from '../composition/updateComposedSchema.js';
 import { normalizeLabels } from '../util.js';
@@ -309,7 +309,7 @@ export class SubgraphRepository {
     };
   }
 
-  public async checks(federatedGraphName: string): Promise<SchemaCheckDTO[]> {
+  public async checks(federatedGraphName: string, limit: number, offset: number): Promise<SchemaCheckDTO[]> {
     const subgraphs = await this.listByGraph(federatedGraphName, {
       published: true,
     });
@@ -323,7 +323,8 @@ export class SubgraphRepository {
         hasBreakingChanges: true,
         proposedSubgraphSchemaSDL: true,
       },
-      limit: 100,
+      limit,
+      offset,
       orderBy: desc(schema.schemaChecks.createdAt),
       where: inArray(
         schema.schemaChecks.targetId,
@@ -340,6 +341,27 @@ export class SubgraphRepository {
       isComposable: c.isComposable ?? false,
       proposedSubgraphSchemaSDL: c.proposedSubgraphSchemaSDL ?? undefined,
     }));
+  }
+
+  public async getChecksCount(federatedGraphName: string): Promise<number> {
+    const subgraphs = await this.listByGraph(federatedGraphName, {
+      published: true,
+    });
+
+    const checksCount = await this.db
+      .select({ count: sql<number>`count(*)` })
+      .from(schemaChecks)
+      .where(
+        inArray(
+          schema.schemaChecks.targetId,
+          subgraphs.map(({ targetId }) => targetId),
+        ),
+      );
+
+    if (checksCount.length === 0) {
+      return 0;
+    }
+    return checksCount[0].count;
   }
 
   public async checkDetails(id: string, federatedTargetID: string): Promise<SchemaCheckDetailsDTO> {

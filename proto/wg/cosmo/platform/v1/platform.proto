@@ -214,6 +214,8 @@ message GetFederatedSubgraphSDLByNameResponse {
 
 message GetChecksByFederatedGraphNameRequest {
   string name = 1;
+  int32 limit = 2;
+  int32 offset = 3;
 }
 
 message SchemaCheck {
@@ -229,6 +231,7 @@ message SchemaCheck {
 message GetChecksByFederatedGraphNameResponse {
   Response response = 1;
   repeated SchemaCheck checks = 2;
+  string checksCount = 3;
 }
 
 message GetCheckDetailsRequest {
