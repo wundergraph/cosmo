@@ -1,4 +1,4 @@
-package main
+package cmd
 
 import (
 	"context"
@@ -18,7 +18,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func main() {
+func Main() {
 	cfg, err := config.LoadConfig()
 	if err != nil {
 		log.Fatal("Could not load config", zap.Error(err))

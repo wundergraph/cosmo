@@ -9,6 +9,5 @@ node_modules
 # docker volumes
 **/_docker
 tsconfig.tsbuildinfo
-gen
 #lerna
 lerna-debug.log

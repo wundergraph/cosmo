@@ -100,8 +100,8 @@ func (h *Handler) createMeasures() error {
 	return nil
 }
 
-func (h *Handler) Handler(handler http.Handler) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Handler(next http.Handler) http.Handler {
+	fn := func(w http.ResponseWriter, r *http.Request) {
 		requestStartTime := time.Now()
 
 		h.updownCounters[InFlightRequests].Add(r.Context(), 1)
@@ -110,7 +110,7 @@ func (h *Handler) Handler(handler http.Handler) http.HandlerFunc {
 		ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
 
 		// Process request
-		handler.ServeHTTP(ww, r)
+		next.ServeHTTP(ww, r)
 
 		ctx := r.Context()
 
@@ -146,4 +146,6 @@ func (h *Handler) Handler(handler http.Handler) http.HandlerFunc {
 
 		h.counters[RequestCount].Add(ctx, 1, baseAttributes)
 	}
+
+	return http.HandlerFunc(fn)
 }

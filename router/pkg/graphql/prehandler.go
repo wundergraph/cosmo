@@ -42,8 +42,8 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 	}
 }
 
-func (h *PreHandler) Handler(handler http.Handler) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func (h *PreHandler) Handler(next http.Handler) http.Handler {
+	fn := func(w http.ResponseWriter, r *http.Request) {
 		requestLogger := h.log.With(logging.WithRequestID(middleware.GetReqID(r.Context())))
 
 		buf := pool.GetBytesBuffer()
@@ -137,6 +137,8 @@ func (h *PreHandler) Handler(handler http.Handler) http.HandlerFunc {
 		// Add the operation to the context, so we can access it later in custom transports etc.
 		shared.Ctx = shared.Ctx.WithContext(ctxWithOperation)
 
-		handler.ServeHTTP(w, r)
+		next.ServeHTTP(w, r)
 	}
+
+	return http.HandlerFunc(fn)
 }

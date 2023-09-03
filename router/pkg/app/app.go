@@ -378,8 +378,27 @@ func (a *App) newRouter(ctx context.Context, routerConfig *nodev1.RouterConfig) 
 		return nil, fmt.Errorf("failed to create metric handler: %w", err)
 	}
 
-	// Serve GraphQL. Metrics are collected after the request is handled and considered as a GraphQL request.
-	router.Post(a.graphqlPath, graphqlPreHandler.Handler(metricHandler.Handler(graphqlHandler)))
+	var (
+		handlerFuncs []func(http.Handler) http.Handler
+	)
+
+	for _, moduleInfo := range modules {
+		if fn, ok := moduleInfo.New().(MiddlewareHandler); ok {
+			handlerFuncs = append(handlerFuncs, func(handler http.Handler) http.Handler {
+				return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+					fn.ServeHTTP(writer, request, handler)
+				})
+			})
+		}
+	}
+
+	// Serve GraphQL. Metrics are collected after the request is handled and classified as a GraphQL request.
+	router.Route(a.graphqlPath, func(r chi.Router) {
+		r.Use(graphqlPreHandler.Handler)
+		r.Use(metricHandler.Handler)
+		r.Use(handlerFuncs...)
+		r.Post("/", graphqlHandler.ServeHTTP)
+	})
 
 	a.logger.Debug("GraphQLHandler registered",
 		zap.String("method", http.MethodPost),
