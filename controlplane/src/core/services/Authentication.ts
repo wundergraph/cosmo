@@ -52,7 +52,7 @@ export class Authentication implements Authenticator {
       const repo = await this.orgRepo.bySlug(user.organizationSlug);
 
       if (!repo) {
-        throw new Error('organization not found');
+        throw new Error('Organization not found');
       }
 
       const cacheKey = `${user.userId}:${repo.id}`;
@@ -71,7 +71,7 @@ export class Authentication implements Authenticator {
       });
 
       if (!isMember) {
-        throw new Error('user is not a member of the organization');
+        throw new Error('User is not a member of the organization');
       }
 
       const userContext: AuthContext = {
@@ -83,7 +83,7 @@ export class Authentication implements Authenticator {
 
       return userContext;
     } catch {
-      throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, 'invalid user session');
+      throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, 'Not authenticated');
     }
   }
 
@@ -94,9 +94,9 @@ export class Authentication implements Authenticator {
         const token = authorization.replace(/^bearer\s+/i, '');
         return await this.graphKeyAuth.authenticate(token);
       } catch {
-        throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, 'invalid graph token');
+        throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, 'Graph token is invalid');
       }
     }
-    throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, 'missing graph token');
+    throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, 'Graph token is missing');
   }
 }

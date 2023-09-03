@@ -267,7 +267,7 @@ export class OrganizationRepository {
         break;
       }
       default: {
-        throw new Error('expiresAt value does not exist');
+        throw new Error('ExpiresAt value does not exist');
       }
     }
 
