@@ -59,6 +59,11 @@ export interface SchemaCheckDTO {
   proposedSubgraphSchemaSDL?: string;
 }
 
+export interface GetChecksResponse {
+  checks: SchemaCheckDTO[];
+  checksCount: number;
+}
+
 export interface SchemaCheckDetailsDTO {
   changes: {
     changeType: string;
