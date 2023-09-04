@@ -4282,3 +4282,83 @@ export class GetTraceResponse extends Message<GetTraceResponse> {
   }
 }
 
+/**
+ * @generated from message wg.cosmo.platform.v1.WhoAmIRequest
+ */
+export class WhoAmIRequest extends Message<WhoAmIRequest> {
+  constructor(data?: PartialMessage<WhoAmIRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.WhoAmIRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): WhoAmIRequest {
+    return new WhoAmIRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): WhoAmIRequest {
+    return new WhoAmIRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): WhoAmIRequest {
+    return new WhoAmIRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: WhoAmIRequest | PlainMessage<WhoAmIRequest> | undefined, b: WhoAmIRequest | PlainMessage<WhoAmIRequest> | undefined): boolean {
+    return proto3.util.equals(WhoAmIRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.WhoAmIResponse
+ */
+export class WhoAmIResponse extends Message<WhoAmIResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: string organizationName = 2;
+   */
+  organizationName = "";
+
+  /**
+   * @generated from field: optional string userEmail = 3;
+   */
+  userEmail?: string;
+
+  constructor(data?: PartialMessage<WhoAmIResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.WhoAmIResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "organizationName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "userEmail", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): WhoAmIResponse {
+    return new WhoAmIResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): WhoAmIResponse {
+    return new WhoAmIResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): WhoAmIResponse {
+    return new WhoAmIResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: WhoAmIResponse | PlainMessage<WhoAmIResponse> | undefined, b: WhoAmIResponse | PlainMessage<WhoAmIResponse> | undefined): boolean {
+    return proto3.util.equals(WhoAmIResponse, a, b);
+  }
+}
+
