@@ -838,7 +838,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           startDate: req.startDate,
           endDate: req.endDate,
         });
-        const totalChecksCount = await subgraphRepo.getChecksCount(req.name);
+        const totalChecksCount = await subgraphRepo.getChecksCount({ federatedGraphName: req.name });
 
         return {
           response: {

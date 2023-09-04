@@ -348,19 +348,7 @@ export class SubgraphRepository {
       ),
     });
 
-    const checksCount = await this.db
-      .select({ count: sql<number>`count(*)` })
-      .from(schemaChecks)
-      .where(
-        and(
-          inArray(
-            schemaChecks.targetId,
-            subgraphs.map(({ targetId }) => targetId),
-          ),
-          gt(schemaChecks.createdAt, new Date(startDate)),
-          lt(schemaChecks.createdAt, new Date(endDate)),
-        ),
-      );
+    const checksCount = await this.getChecksCount({ federatedGraphName, startDate, endDate });
 
     return {
       checks: checkList.map((c) => ({
@@ -372,26 +360,47 @@ export class SubgraphRepository {
         isComposable: c.isComposable ?? false,
         proposedSubgraphSchemaSDL: c.proposedSubgraphSchemaSDL ?? undefined,
       })),
-      checksCount: checksCount?.[0].count ?? 0,
+      checksCount,
     };
   }
 
-  public async getChecksCount(federatedGraphName: string): Promise<number> {
+  public async getChecksCount({
+    federatedGraphName,
+    startDate,
+    endDate,
+  }: {
+    federatedGraphName: string;
+    startDate?: string;
+    endDate?: string;
+  }): Promise<number> {
     const subgraphs = await this.listByGraph(federatedGraphName, {
       published: true,
     });
 
+    let conditions: SQL<unknown> | undefined;
+
+    if (startDate && endDate) {
+      conditions = and(
+        inArray(
+          schemaChecks.targetId,
+          subgraphs.map(({ targetId }) => targetId),
+        ),
+        gt(schemaChecks.createdAt, new Date(startDate)),
+        lt(schemaChecks.createdAt, new Date(endDate)),
+      );
+    } else {
+      conditions = and(
+        inArray(
+          schemaChecks.targetId,
+          subgraphs.map(({ targetId }) => targetId),
+        ),
+      );
+    }
+
     const checksCount = await this.db
       .select({ count: sql<number>`count(*)` })
       .from(schemaChecks)
-      .where(
-        and(
-          inArray(
-            schemaChecks.targetId,
-            subgraphs.map(({ targetId }) => targetId),
-          ),
-        ),
-      );
+      .where(conditions);
 
     if (checksCount.length === 0) {
       return 0;
