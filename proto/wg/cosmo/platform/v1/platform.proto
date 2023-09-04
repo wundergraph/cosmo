@@ -560,6 +560,14 @@ message GetTraceResponse {
   repeated Span spans = 2;
 }
 
+message WhoAmIRequest {}
+
+message WhoAmIResponse {
+  Response response = 1;
+  string organizationName = 2;
+  optional string userEmail = 3;
+}
+
 service PlatformService {
   // CreateFederatedGraph creates a federated graph on the control plane.
   rpc CreateFederatedGraph(CreateFederatedGraphRequest) returns (CreateFederatedGraphResponse) {}
@@ -580,6 +588,8 @@ service PlatformService {
   rpc UpdateSubgraph(UpdateSubgraphRequest) returns (UpdateSubgraphResponse) {}
   // CheckFederatedGraph checks if the federated graph can be composed with the new labels provided.
   rpc CheckFederatedGraph(CheckFederatedGraphRequest) returns (CheckFederatedGraphResponse) {}
+  // WhoAmI returns the identity of the user currently logged in.
+  rpc WhoAmI(WhoAmIRequest) returns (WhoAmIResponse) {}
 
   // For Studio and CLI
 

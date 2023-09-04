@@ -208,7 +208,7 @@ export type UserInfoEndpointResponse = {
   email: string;
 };
 
-export type UserAuthContext = {
+export type AuthContext = {
   organizationId: string;
   userId?: string;
 };
