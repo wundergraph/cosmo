@@ -846,7 +846,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           },
           checks: checksData.checks,
           checksCountBasedOnDateRange: checksData.checksCount.toString(),
-          totalChecksCount: totalChecksCount.toString()
+          totalChecksCount: totalChecksCount.toString(),
         };
       });
     },
