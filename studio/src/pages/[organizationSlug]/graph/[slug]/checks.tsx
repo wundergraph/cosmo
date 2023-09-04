@@ -31,16 +31,25 @@ import {
   CommandLineIcon,
   ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
-import { CheckCircledIcon, CrossCircledIcon } from "@radix-ui/react-icons";
+import {
+  CheckCircledIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  CrossCircledIcon,
+  DoubleArrowLeftIcon,
+  DoubleArrowRightIcon,
+} from "@radix-ui/react-icons";
 import { useQuery } from "@tanstack/react-query";
-import { format } from "date-fns";
+import { endOfDay, format, formatISO, startOfDay, subDays } from "date-fns";
 import { useRouter } from "next/router";
 import {
   getCheckDetails,
   getChecksByFederatedGraphName,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common_pb";
-import { useContext } from "react";
+import { useCallback, useContext, useState } from "react";
+import { DatePickerWithRange } from "@/components/date-picker-with-range";
+import { DateRange } from "react-day-picker";
 
 const Details = ({ id, graphName }: { id: string; graphName: string }) => {
   const { data, isLoading, error, refetch } = useQuery(
@@ -161,6 +170,31 @@ const ProposedSchema = ({
 
 const ChecksPage: NextPageWithLayout = () => {
   const router = useRouter();
+  const pageNumber = router.query.page
+    ? parseInt(router.query.page as string)
+    : 1;
+
+  const limit = 10;
+
+  const dateRange = router.query.dateRange
+    ? JSON.parse(router.query.dateRange as string)
+    : {
+        from: subDays(new Date(), 2),
+        to: new Date(),
+      };
+  const startDate = new Date(dateRange.from);
+  const endDate = new Date(dateRange.to);
+
+  const onDateRangeChange = (val: DateRange) => {
+    const stringifiedDateRange = JSON.stringify({
+      from: val.from as Date,
+      to: (val.to as Date) ?? (val.from as Date),
+    });
+
+    applyNewParams({
+      dateRange: stringifiedDateRange,
+    });
+  };
 
   const getIcon = (check: boolean) => {
     if (check) {
@@ -182,7 +216,23 @@ const ChecksPage: NextPageWithLayout = () => {
   const { data, isLoading, error, refetch } = useQuery(
     getChecksByFederatedGraphName.useQuery({
       name: router.query.slug as string,
+      limit: limit,
+      offset: (pageNumber - 1) * limit,
+      startDate: formatISO(startOfDay(startDate)),
+      endDate: formatISO(endOfDay(endDate)),
     })
+  );
+
+  const applyNewParams = useCallback(
+    (newParams: Record<string, string>) => {
+      router.push({
+        query: {
+          ...router.query,
+          ...newParams,
+        },
+      });
+    },
+    [router]
   );
 
   if (isLoading) return <Loader fullscreen />;
@@ -201,7 +251,7 @@ const ChecksPage: NextPageWithLayout = () => {
 
   if (!data?.checks || !graphContext?.graph) return null;
 
-  if (data.checks.length === 0)
+  if (parseInt(data.totalChecksCount) === 0)
     return (
       <EmptyState
         icon={<CommandLineIcon />}
@@ -227,8 +277,15 @@ const ChecksPage: NextPageWithLayout = () => {
       />
     );
 
+  const noOfPages = Math.floor(parseInt(data.checksCountBasedOnDateRange) / limit) + 1;
+
   return (
-    <div>
+    <div className="flex flex-col gap-y-3">
+      <DatePickerWithRange
+        className="mr-2 flex justify-end"
+        selectedDateRange={{ from: startDate, to: endDate }}
+        onDateRangeChange={onDateRangeChange}
+      />
       <Table>
         <TableHeader>
           <TableRow>
@@ -242,52 +299,111 @@ const ChecksPage: NextPageWithLayout = () => {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {data.checks.map(
-            ({
-              id,
-              isBreaking,
-              isComposable,
-              subgraphName,
-              timestamp,
-              proposedSubgraphSchemaSDL,
-            }) => {
-              return (
-                <TableRow key={id}>
-                  <TableCell className="font-medium ">
-                    {format(new Date(timestamp), "dd MMMM yyyy HH:mm")}
-                  </TableCell>
-                  <TableCell>{subgraphName}</TableCell>
-                  <TableCell>
-                    {isComposable && !isBreaking ? (
-                      <Badge variant="success">PASSED</Badge>
-                    ) : (
-                      <Badge variant="destructive">FAILED</Badge>
-                    )}
-                  </TableCell>
-                  <TableCell>{getIcon(isComposable)}</TableCell>
-                  <TableCell>{getIcon(!isBreaking)}</TableCell>
-                  <TableCell className="text-center">
-                    {proposedSubgraphSchemaSDL ? (
-                      <ProposedSchema
-                        sdl={proposedSubgraphSchemaSDL}
-                        subgraphName={subgraphName}
+          {data.checks.length !== 0 ? (
+            data.checks.map(
+              ({
+                id,
+                isBreaking,
+                isComposable,
+                subgraphName,
+                timestamp,
+                proposedSubgraphSchemaSDL,
+              }) => {
+                return (
+                  <TableRow key={id}>
+                    <TableCell className="font-medium ">
+                      {format(new Date(timestamp), "dd MMM yyyy HH:mm")}
+                    </TableCell>
+                    <TableCell>{subgraphName}</TableCell>
+                    <TableCell>
+                      {isComposable && !isBreaking ? (
+                        <Badge variant="success">PASSED</Badge>
+                      ) : (
+                        <Badge variant="destructive">FAILED</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>{getIcon(isComposable)}</TableCell>
+                    <TableCell>{getIcon(!isBreaking)}</TableCell>
+                    <TableCell className="text-center">
+                      {proposedSubgraphSchemaSDL ? (
+                        <ProposedSchema
+                          sdl={proposedSubgraphSchemaSDL}
+                          subgraphName={subgraphName}
+                        />
+                      ) : (
+                        "-"
+                      )}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <DetailsDialog
+                        id={id}
+                        graphName={graphContext.graph?.name ?? ""}
                       />
-                    ) : (
-                      "-"
-                    )}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <DetailsDialog
-                      id={id}
-                      graphName={graphContext.graph?.name ?? ""}
-                    />
-                  </TableCell>
-                </TableRow>
-              );
-            }
+                    </TableCell>
+                  </TableRow>
+                );
+              }
+            )
+          ) : (
+            <TableRow>
+              <TableCell colSpan={7} className="h-24 text-center">
+                No results.
+              </TableCell>
+            </TableRow>
           )}
         </TableBody>
       </Table>
+      <div className="mr-2 flex justify-end">
+        <div className="flex w-[100px] items-center justify-center text-sm font-medium">
+          Page {pageNumber} of {noOfPages}
+        </div>
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="outline"
+            className="hidden h-8 w-8 p-0 lg:flex"
+            onClick={() => {
+              applyNewParams({ page: "1" });
+            }}
+            disabled={pageNumber === 1}
+          >
+            <span className="sr-only">Go to first page</span>
+            <DoubleArrowLeftIcon className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            className="h-8 w-8 p-0"
+            onClick={() => {
+              applyNewParams({ page: (pageNumber - 1).toString() });
+            }}
+            disabled={pageNumber === 1}
+          >
+            <span className="sr-only">Go to previous page</span>
+            <ChevronLeftIcon className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            className="h-8 w-8 p-0"
+            onClick={() => {
+              applyNewParams({ page: (pageNumber + 1).toString() });
+            }}
+            disabled={pageNumber === noOfPages}
+          >
+            <span className="sr-only">Go to next page</span>
+            <ChevronRightIcon className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            className="hidden h-8 w-8 p-0 lg:flex"
+            onClick={() => {
+              applyNewParams({ page: noOfPages.toString() });
+            }}
+            disabled={pageNumber === noOfPages}
+          >
+            <span className="sr-only">Go to last page</span>
+            <DoubleArrowRightIcon className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
     </div>
   );
 };
