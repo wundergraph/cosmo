@@ -3,11 +3,12 @@ import postgres from 'postgres';
 import nuid from 'nuid';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { ExpiresAt } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { Label, UserAuthContext } from '../types/index.js';
+import { Label, AuthContext } from '../types/index.js';
 import * as schema from '../db/schema.js';
 import { Authenticator } from './services/Authentication.js';
 import { UserRepository } from './repositories/UserRepository.js';
 import { OrganizationRepository } from './repositories/OrganizationRepository.js';
+import { GraphKeyAuthContext } from './services/GraphApiTokenAuthenticator.js';
 
 export type UserTestData = {
   userId: string;
@@ -102,10 +103,13 @@ export function createTestAuthenticator(): {
 
   return {
     authenticator: {
-      authenticateRouter(headers: Headers): Promise<UserAuthContext> {
-        return Promise.resolve(userAuthContext);
+      authenticateRouter(headers: Headers): Promise<GraphKeyAuthContext> {
+        return Promise.resolve({
+          federatedGraphId: 'federated-graph-id',
+          organizationId: userAuthContext.organizationId,
+        });
       },
-      authenticate(headers: Headers): Promise<UserAuthContext> {
+      authenticate(headers: Headers): Promise<AuthContext> {
         return Promise.resolve(userAuthContext);
       },
     },

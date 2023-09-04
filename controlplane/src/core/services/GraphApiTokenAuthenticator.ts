@@ -18,7 +18,7 @@ export default class GraphApiTokenAuthenticator {
     const jwtPayload = await verifyJwt<GraphApiJwtPayload>(this.jwtSecret, jwt);
 
     if (!jwtPayload) {
-      throw new Error('invalid graph api token');
+      throw new Error('Invalid graph api token');
     }
 
     return {

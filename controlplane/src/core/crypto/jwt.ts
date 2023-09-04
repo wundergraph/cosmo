@@ -65,7 +65,7 @@ export async function encrypt<Payload extends JWTPayload = JWTPayload>(params: J
 export async function decrypt<Payload = JWTPayload>(params: JWTDecodeParams): Promise<Payload> {
   const { token, secret } = params;
   if (!token) {
-    throw new Error('no token provided');
+    throw new Error('No token provided');
   }
   const encryptionSecret = await getDerivedEncryptionKey(secret);
   const { payload } = await jwtDecrypt(token, encryptionSecret, {

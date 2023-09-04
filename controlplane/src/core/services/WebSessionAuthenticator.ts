@@ -31,12 +31,12 @@ export default class WebSessionAuthenticator {
         });
 
         if (!decryptedJwt.iss) {
-          throw new Error('missing user id in JWT');
+          throw new Error('Missing user id in JWT');
         }
 
         const organizationSlug = headers.get(OrganizationSlugHeader);
         if (!organizationSlug) {
-          throw new Error('missing organization slug header');
+          throw new Error('Missing organization slug header');
         }
 
         return {
@@ -46,6 +46,6 @@ export default class WebSessionAuthenticator {
       }
     }
 
-    throw new Error('missing user session cookie');
+    throw new Error('Missing user session cookie');
   }
 }
