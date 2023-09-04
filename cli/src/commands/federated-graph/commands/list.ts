@@ -5,10 +5,11 @@ import Table from 'cli-table';
 import logSymbols from 'log-symbols';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { baseHeaders } from '../../../core/config.js';
+import program from '../../index.js';
 
 export default (opts: BaseCommandOptions) => {
   const listFederatedGraphs = new Command('list');
-  listFederatedGraphs.description('Fetches a list of federated graphs.');
+  listFederatedGraphs.description('Lists federated graphs.');
   listFederatedGraphs.action(async () => {
     const resp = await opts.client.platform.getFederatedGraphs(
       {
@@ -48,11 +49,7 @@ export default (opts: BaseCommandOptions) => {
         console.log('No federated graphs found');
       }
     } else {
-      console.log(`${pc.red('Could not fetch the list of federated graphs.')}`);
-      if (resp.response?.details) {
-        console.log(pc.red(pc.bold(resp.response?.details)));
-      }
-      process.exit(1);
+      program.error(pc.red('Could not fetch the federated graphs.'));
     }
   });
 

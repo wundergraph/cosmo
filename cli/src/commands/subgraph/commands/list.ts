@@ -4,10 +4,11 @@ import { Command } from 'commander';
 import pc from 'picocolors';
 import { baseHeaders } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
+import program from '../../index.js';
 
 export default (opts: BaseCommandOptions) => {
   const listSubgraphs = new Command('list');
-  listSubgraphs.description('Fetches a list of subgraphs.');
+  listSubgraphs.description('Lists subgraphs.');
   listSubgraphs.action(async () => {
     const resp = await opts.client.platform.getSubgraphs(
       {
@@ -39,11 +40,7 @@ export default (opts: BaseCommandOptions) => {
         console.log('No subgraphs found');
       }
     } else {
-      console.log(`${pc.red('Could not fetch the list of subgraphs.')}`);
-      if (resp.response?.details) {
-        console.log(pc.red(pc.bold(resp.response?.details)));
-      }
-      process.exit(1);
+      program.error(pc.red('Could not fetch the subgraphs.'));
     }
   });
 
