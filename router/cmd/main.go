@@ -58,6 +58,7 @@ func Main() {
 		app.WithIntrospection(cfg.IntrospectionEnabled),
 		app.WithPlayground(cfg.PlaygroundEnabled),
 		app.WithGraphApiToken(cfg.GraphApiToken),
+		app.WithModulesConfig(cfg.Modules),
 		app.WithGracePeriod(time.Duration(cfg.GracePeriodSeconds)*time.Second),
 		app.WithCors(&cors.Config{
 			AllowOrigins:     cfg.CORSAllowedOrigins,

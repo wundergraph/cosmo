@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"sync"
@@ -48,6 +49,44 @@ func RegisterModule(instance Module) {
 
 // Module Interfaces
 
-type MiddlewareHandler interface {
-	ServeHTTP(http.ResponseWriter, *http.Request, http.Handler)
+// RouterMiddlewareHandler allows you to add a middleware to the router.
+// The middleware is called for every request. It allows you to modify the request before it is processed by the router.
+// The same semantics of http.Handler apply here. Don't manipulate / consume the body of the request.
+type RouterMiddlewareHandler interface {
+	// Middleware is the middleware handler
+	Middleware(http.ResponseWriter, *http.Request, http.Handler)
+}
+
+// EnginePreOriginHandler allows you to add a handler to the router engine origin requests.
+// The handler is called before the request is sent to the origin. All origin handlers are called sequentially.
+// It allows you to modify the request before it is sent. The same semantics of http.RoundTripper apply here.
+// If you consume the body of the request it will be empty for the next handler.
+type EnginePreOriginHandler interface {
+	// OnOriginRequest is called before the request is sent to the origin
+	// Might be called multiple times if there are multiple origins
+	OnOriginRequest(*http.Request)
+}
+
+// EnginePostOriginHandler allows you to add a handler to the router engine origin requests.
+// The handler is called after the request is sent to the origin. All origin handlers are called sequentially.
+// It allows you to return a custom response to the client. If the response is nil, the next handler is called.
+// The same semantics of http.RoundTripper apply here. In order to modify the response, you have to return a new response.
+// The response is not safe for concurrent use by multiple goroutines and should be treated as immutable after calling this method.
+type EnginePostOriginHandler interface {
+	// OnOriginResponse is called after the request is sent to the origin.
+	// Might be called multiple times if there are multiple origins
+	OnOriginResponse(*http.Response, *http.Request) (*http.Response, error)
+}
+
+// Provisioner is called before the server starts
+// It allows you to initialize your module e.g. create a database connection
+// or load a configuration file
+type Provisioner interface {
+	// Provision is called before the server starts
+	Provision(context.Context) error
+}
+
+type Cleaner interface {
+	// Cleanup is called after the server stops
+	Cleanup(context.Context) error
 }

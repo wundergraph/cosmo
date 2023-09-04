@@ -7,9 +7,11 @@ import (
 	"github.com/dgraph-io/ristretto"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
+	"github.com/mitchellh/mapstructure"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane"
+	"github.com/wundergraph/cosmo/router/pkg/factoryresolver"
 	"github.com/wundergraph/cosmo/router/pkg/graphiql"
 	"github.com/wundergraph/cosmo/router/pkg/graphql"
 	"github.com/wundergraph/cosmo/router/pkg/handler/cors"
@@ -38,28 +40,33 @@ type (
 	App struct {
 		Options
 		activeServer *Router
+		modules      []Module
 	}
 
 	// Options defines the configurable options for the router.
 	Options struct {
-		transport          *http.Transport
-		logger             *zap.Logger
-		traceConfig        *trace.Config
-		metricConfig       *metric.Config
-		tracerProvider     *sdktrace.TracerProvider
-		meterProvider      *sdkmetric.MeterProvider
-		corsOptions        *cors.Config
-		configFetcher      *controlplane.ConfigFetcher
-		gracePeriod        time.Duration
-		addr               string
-		baseURL            string
-		graphqlPath        string
-		playground         bool
-		introspection      bool
-		production         bool
-		federatedGraphName string
-		graphApiToken      string
-		prometheusServer   *http.Server
+		transport                *http.Transport
+		logger                   *zap.Logger
+		traceConfig              *trace.Config
+		metricConfig             *metric.Config
+		tracerProvider           *sdktrace.TracerProvider
+		meterProvider            *sdkmetric.MeterProvider
+		corsOptions              *cors.Config
+		configFetcher            *controlplane.ConfigFetcher
+		gracePeriod              time.Duration
+		addr                     string
+		baseURL                  string
+		graphqlPath              string
+		playground               bool
+		introspection            bool
+		production               bool
+		federatedGraphName       string
+		graphApiToken            string
+		prometheusServer         *http.Server
+		modulesConfig            map[string]interface{}
+		moduleMiddlewares        []func(http.Handler) http.Handler
+		modulePreOriginHandlers  []factoryresolver.TransportPreHandler
+		modulePostOriginHandlers []factoryresolver.TransportPostHandler
 	}
 
 	// Router is the main router instance.
@@ -223,6 +230,49 @@ func (a *App) startServer(ctx context.Context, cfg *nodev1.RouterConfig) error {
 	return nil
 }
 
+func (a *App) initModules(ctx context.Context) error {
+
+	for _, moduleInfo := range modules {
+		now := time.Now()
+
+		moduleInstance := moduleInfo.New()
+
+		if moduleConfig, ok := a.modulesConfig[string(moduleInfo.ID)]; ok {
+			if err := mapstructure.Decode(moduleConfig, &moduleInstance); err != nil {
+				return fmt.Errorf("failed to decode module config from module %s: %w", moduleInfo.ID, err)
+			}
+		}
+
+		if fn, ok := moduleInstance.(Provisioner); ok {
+			if err := fn.Provision(ctx); err != nil {
+				return fmt.Errorf("failed to provision module %s: %w", moduleInfo.ID, err)
+			}
+		}
+
+		if fn, ok := moduleInstance.(RouterMiddlewareHandler); ok {
+			a.moduleMiddlewares = append(a.moduleMiddlewares, func(handler http.Handler) http.Handler {
+				return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+					fn.Middleware(writer, request, handler)
+				})
+			})
+		}
+
+		if handler, ok := moduleInstance.(EnginePreOriginHandler); ok {
+			a.modulePreOriginHandlers = append(a.modulePreOriginHandlers, handler.OnOriginRequest)
+		}
+
+		if handler, ok := moduleInstance.(EnginePostOriginHandler); ok {
+			a.modulePostOriginHandlers = append(a.modulePostOriginHandlers, handler.OnOriginResponse)
+		}
+
+		a.modules = append(a.modules, moduleInstance)
+
+		a.logger.Info("Module registered", zap.String("id", string(moduleInfo.ID)), zap.String("duration", time.Since(now).String()))
+	}
+
+	return nil
+}
+
 // Start starts the server. It blocks until the context is cancelled or when the initial config could not be fetched.
 func (a *App) Start(ctx context.Context) error {
 
@@ -244,6 +294,10 @@ func (a *App) Start(ctx context.Context) error {
 		eg.Go(func() error {
 			return a.startPrometheus()
 		})
+	}
+
+	if err := a.initModules(ctx); err != nil {
+		return fmt.Errorf("failed to init user modules: %w", err)
 	}
 
 	var initCh = make(chan *nodev1.RouterConfig, 1)
@@ -318,6 +372,7 @@ func (a *App) newRouter(ctx context.Context, routerConfig *nodev1.RouterConfig) 
 	)
 
 	router := chi.NewRouter()
+	router.Use(recoveryHandler)
 	router.Use(middleware.RequestID)
 	router.Use(middleware.RealIP)
 	router.Use(requestLogger)
@@ -341,25 +396,13 @@ func (a *App) newRouter(ctx context.Context, routerConfig *nodev1.RouterConfig) 
 		return nil, fmt.Errorf("failed to create planner cache: %w", err)
 	}
 
-	var (
-		moduleMiddlewares []func(http.Handler) http.Handler
-	)
-
-	for _, moduleInfo := range modules {
-		if fn, ok := moduleInfo.New().(MiddlewareHandler); ok {
-			moduleMiddlewares = append(moduleMiddlewares, func(handler http.Handler) http.Handler {
-				return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-					fn.ServeHTTP(writer, request, handler)
-				})
-			})
-		}
-	}
-
 	pb := planner.NewPlanner(
 		planner.WithIntrospection(),
 		planner.WithLogger(a.logger),
 		planner.WithBaseURL(a.baseURL),
 		planner.WithTransport(a.transport),
+		planner.WithPreOriginHandlers(a.modulePreOriginHandlers),
+		planner.WithPostOriginHandlers(a.modulePostOriginHandlers),
 	)
 
 	plan, err := pb.Build(ctx, routerConfig)
@@ -392,11 +435,23 @@ func (a *App) newRouter(ctx context.Context, routerConfig *nodev1.RouterConfig) 
 		return nil, fmt.Errorf("failed to create metric handler: %w", err)
 	}
 
+	traceMiddleware := trace.NewMiddleware(otel.RouterServerAttribute,
+		otelhttp.WithSpanOptions(
+			oteltrace.WithAttributes(
+				otel.WgRouterGraphName.String(a.federatedGraphName),
+				otel.WgRouterConfigVersion.String(routerConfig.GetVersion()),
+			),
+		),
+		// Disable built-in metrics
+		otelhttp.WithMeterProvider(sdkmetric.NewMeterProvider()),
+	)
+
 	// Serve GraphQL. Metrics are collected after the request is handled and classified as a GraphQL request.
 	router.Route(a.graphqlPath, func(r chi.Router) {
+		r.Use(traceMiddleware.Handler)
 		r.Use(graphqlPreHandler.Handler)
 		r.Use(metricHandler.Handler)
-		r.Use(moduleMiddlewares...)
+		r.Use(a.moduleMiddlewares...)
 		r.Post("/", graphqlHandler.ServeHTTP)
 	})
 
@@ -425,44 +480,35 @@ func (a *App) newRouter(ctx context.Context, routerConfig *nodev1.RouterConfig) 
 		ReadTimeout:       1 * time.Minute,
 		WriteTimeout:      2 * time.Minute,
 		ReadHeaderTimeout: 20 * time.Second,
-		// TODO: Move to middleware after release https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.17.0...HEAD
-		Handler: trace.WrapHandler(
-			recoveryHandler(router),
-			otel.RouterServerAttribute,
-			otelhttp.WithSpanOptions(
-				oteltrace.WithAttributes(
-					otel.WgRouterGraphName.String(a.federatedGraphName),
-					otel.WgRouterConfigVersion.String(routerConfig.GetVersion()),
-				),
-			),
-			// Disable built-in metrics
-			otelhttp.WithMeterProvider(sdkmetric.NewMeterProvider()),
-		),
-		ErrorLog: zap.NewStdLog(a.logger),
+		Handler:           router,
+		ErrorLog:          zap.NewStdLog(a.logger),
 	}
 
 	svr := &Router{
 		routerConfig: routerConfig,
 		server:       server,
 		Options: Options{
-			transport:          a.transport,
-			logger:             a.logger,
-			traceConfig:        a.traceConfig,
-			metricConfig:       a.metricConfig,
-			tracerProvider:     a.tracerProvider,
-			meterProvider:      a.meterProvider,
-			corsOptions:        a.corsOptions,
-			configFetcher:      a.configFetcher,
-			gracePeriod:        a.gracePeriod,
-			addr:               a.addr,
-			baseURL:            a.baseURL,
-			graphqlPath:        a.graphqlPath,
-			playground:         a.playground,
-			introspection:      a.introspection,
-			production:         a.production,
-			federatedGraphName: a.federatedGraphName,
-			graphApiToken:      a.graphApiToken,
-			prometheusServer:   a.prometheusServer,
+			transport:                a.transport,
+			logger:                   a.logger,
+			traceConfig:              a.traceConfig,
+			metricConfig:             a.metricConfig,
+			tracerProvider:           a.tracerProvider,
+			meterProvider:            a.meterProvider,
+			corsOptions:              a.corsOptions,
+			configFetcher:            a.configFetcher,
+			gracePeriod:              a.gracePeriod,
+			addr:                     a.addr,
+			baseURL:                  a.baseURL,
+			graphqlPath:              a.graphqlPath,
+			playground:               a.playground,
+			introspection:            a.introspection,
+			production:               a.production,
+			federatedGraphName:       a.federatedGraphName,
+			graphApiToken:            a.graphApiToken,
+			prometheusServer:         a.prometheusServer,
+			moduleMiddlewares:        a.moduleMiddlewares,
+			modulePreOriginHandlers:  a.modulePreOriginHandlers,
+			modulePostOriginHandlers: a.modulePostOriginHandlers,
 		},
 	}
 
@@ -500,6 +546,14 @@ func (a *App) Shutdown(ctx context.Context) (err error) {
 		}
 		if err := a.tracerProvider.Shutdown(ctx); err != nil {
 			err = errors.Join(err, fmt.Errorf("failed to shutdown tracer: %w", err))
+		}
+	}
+
+	for _, module := range a.modules {
+		if cleaner, ok := module.(Cleaner); ok {
+			if err := cleaner.Cleanup(ctx); err != nil {
+				err = errors.Join(err, fmt.Errorf("failed to clean module %s: %w", module.Module().ID, err))
+			}
 		}
 	}
 
@@ -600,5 +654,11 @@ func CorsDefaultOptions() *cors.Config {
 func WithGraphApiToken(token string) Option {
 	return func(s *App) {
 		s.graphApiToken = token
+	}
+}
+
+func WithModulesConfig(config map[string]interface{}) Option {
+	return func(s *App) {
+		s.modulesConfig = config
 	}
 }

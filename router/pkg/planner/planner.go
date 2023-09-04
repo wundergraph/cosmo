@@ -23,6 +23,9 @@ type Planner struct {
 	baseURL       string
 	transport     *http.Transport
 	logger        *zap.Logger
+
+	preHandlers  []factoryresolver.TransportPreHandler
+	postHandlers []factoryresolver.TransportPostHandler
 }
 
 func NewPlanner(opts ...BuilderOption) *Planner {
@@ -113,7 +116,7 @@ func (b *Planner) buildPlannerConfiguration(routerCfg *nodev1.RouterConfig) (*pl
 	// the plan config is what the engine uses to turn a GraphQL Request into an execution plan
 	// the plan config is stateful as it carries connection pools and other things
 	loader := factoryresolver.NewLoader(factoryresolver.NewDefaultFactoryResolver(
-		factoryresolver.New(),
+		factoryresolver.New(b.preHandlers, b.postHandlers),
 		b.transport,
 		b.logger,
 	))
@@ -155,5 +158,17 @@ func WithTransport(transport *http.Transport) BuilderOption {
 func WithLogger(logger *zap.Logger) BuilderOption {
 	return func(b *Planner) {
 		b.logger = logger
+	}
+}
+
+func WithPreOriginHandlers(preHandlers []factoryresolver.TransportPreHandler) BuilderOption {
+	return func(b *Planner) {
+		b.preHandlers = preHandlers
+	}
+}
+
+func WithPostOriginHandlers(postHandlers []factoryresolver.TransportPostHandler) BuilderOption {
+	return func(b *Planner) {
+		b.postHandlers = postHandlers
 	}
 }

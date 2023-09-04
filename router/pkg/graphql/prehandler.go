@@ -115,7 +115,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		span := trace.SpanFromContext(r.Context())
 
 		// Set the span name to the operation name after we figured it out
-		span.SetName(ctrace.SpanNameFormatter(requestOperationName, r))
+		span.SetName(ctrace.SpanNameFormatter("", r))
 
 		span.SetAttributes(otel.WgOperationName.String(requestOperationName))
 		span.SetAttributes(otel.WgOperationType.String(requestOperationType))

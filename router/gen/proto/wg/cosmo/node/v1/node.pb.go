@@ -358,7 +358,7 @@ func (x *Response) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Response.ProtoReflect.Descriptor instead.
+// Deprecated: Use ResponseWriter.ProtoReflect.Descriptor instead.
 func (*Response) Descriptor() ([]byte, []int) {
 	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{1}
 }
@@ -2315,7 +2315,7 @@ var file_wg_cosmo_node_v1_node_proto_goTypes = []interface{}{
 	(ConfigurationVariableKind)(0),           // 3: wg.cosmo.node.v1.ConfigurationVariableKind
 	(HTTPMethod)(0),                          // 4: wg.cosmo.node.v1.HTTPMethod
 	(*RouterConfig)(nil),                     // 5: wg.cosmo.node.v1.RouterConfig
-	(*Response)(nil),                         // 6: wg.cosmo.node.v1.Response
+	(*Response)(nil),                         // 6: wg.cosmo.node.v1.ResponseWriter
 	(*ResponseStatus)(nil),                   // 7: wg.cosmo.node.v1.ResponseStatus
 	(*GetConfigRequest)(nil),                 // 8: wg.cosmo.node.v1.GetConfigRequest
 	(*GetConfigResponse)(nil),                // 9: wg.cosmo.node.v1.GetConfigResponse
@@ -2345,8 +2345,8 @@ var file_wg_cosmo_node_v1_node_proto_goTypes = []interface{}{
 }
 var file_wg_cosmo_node_v1_node_proto_depIdxs = []int32{
 	10, // 0: wg.cosmo.node.v1.RouterConfig.engine_config:type_name -> wg.cosmo.node.v1.EngineConfiguration
-	32, // 1: wg.cosmo.node.v1.Response.code:type_name -> wg.cosmo.common.EnumStatusCode
-	6,  // 2: wg.cosmo.node.v1.GetConfigResponse.response:type_name -> wg.cosmo.node.v1.Response
+	32, // 1: wg.cosmo.node.v1.ResponseWriter.code:type_name -> wg.cosmo.common.EnumStatusCode
+	6,  // 2: wg.cosmo.node.v1.GetConfigResponse.response:type_name -> wg.cosmo.node.v1.ResponseWriter
 	5,  // 3: wg.cosmo.node.v1.GetConfigResponse.config:type_name -> wg.cosmo.node.v1.RouterConfig
 	11, // 4: wg.cosmo.node.v1.EngineConfiguration.datasource_configurations:type_name -> wg.cosmo.node.v1.DataSourceConfiguration
 	12, // 5: wg.cosmo.node.v1.EngineConfiguration.field_configurations:type_name -> wg.cosmo.node.v1.FieldConfiguration

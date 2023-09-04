@@ -21,18 +21,18 @@ func TestWrapHttpHandler(t *testing.T) {
 
 	t.Run("create a span for every request", func(t *testing.T) {
 		exporter := tracetest.NewInMemoryExporter(t)
+		h := NewMiddleware(otel.WgComponentName.String("test"))
 
 		router := chi.NewRouter()
 
+		router.Use(h.Handler)
 		router.HandleFunc("/test", func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
 		})
 
-		h := WrapHandler(router, otel.WgComponentName.String("test"))
-
 		req := httptest.NewRequest("GET", "/test?a=b", nil)
 		w := httptest.NewRecorder()
-		h.ServeHTTP(w, req)
+		router.ServeHTTP(w, req)
 
 		assert.Equal(t, http.StatusOK, w.Code)
 
@@ -70,19 +70,19 @@ func TestWrapHttpHandler(t *testing.T) {
 
 		for _, test := range statusCodeTests {
 			router := chi.NewRouter()
+			h := NewMiddleware(otel.WgComponentName.String("test"))
 
 			statusCode := test.statusCode
 
+			router.Use(h.Handler)
 			router.HandleFunc("/test", func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(statusCode)
 			})
 
-			h := WrapHandler(router, otel.WgComponentName.String("test"))
-
 			req := httptest.NewRequest("GET", "/test?a=b", nil)
 			w := httptest.NewRecorder()
 
-			h.ServeHTTP(w, req)
+			router.ServeHTTP(w, req)
 
 			assert.Equal(t, statusCode, w.Code)
 
