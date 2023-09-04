@@ -6,6 +6,7 @@ import PublishSubgraph from './commands/publish.js';
 import DeleteSubgraph from './commands/delete.js';
 import UpdateSubgraph from './commands/update.js';
 import FixSubGraph from './commands/fix.js';
+import ListSubgraphs from './commands/list.js';
 
 export default (opts: BaseCommandOptions) => {
   const schema = new Command('subgraph');
@@ -16,5 +17,6 @@ export default (opts: BaseCommandOptions) => {
   schema.addCommand(DeleteSubgraph(opts));
   schema.addCommand(UpdateSubgraph(opts));
   schema.addCommand(FixSubGraph(opts));
+  schema.addCommand(ListSubgraphs(opts));
   return schema;
 };

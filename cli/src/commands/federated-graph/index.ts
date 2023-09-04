@@ -7,6 +7,7 @@ import UpdateFederatedGraphCommand from './commands/update.js';
 import CheckFederatedGraphCommand from './commands/check.js';
 import CreateFederatedGraphToken from './commands/create-token.js';
 import FetchRouterConfig from './commands/fetch-config.js';
+import ListFederatedGraphs from './commands/list.js';
 
 export default (opts: BaseCommandOptions) => {
   const schema = new Command('federated-graph');
@@ -18,5 +19,6 @@ export default (opts: BaseCommandOptions) => {
   schema.addCommand(CheckFederatedGraphCommand(opts));
   schema.addCommand(CreateFederatedGraphToken(opts));
   schema.addCommand(FetchRouterConfig(opts));
+  schema.addCommand(ListFederatedGraphs(opts));
   return schema;
 };
