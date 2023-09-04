@@ -4,6 +4,39 @@ Images can be found [here](https://github.com/orgs/wundergraph/packages?repo_nam
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.9.0](https://github.com/wundergraph/cosmo/compare/studio@0.8.0...studio@0.9.0) (2023-09-02)
+
+### Bug Fixes
+
+* update the docs url ([#30](https://github.com/wundergraph/cosmo/issues/30)) ([e9c498f](https://github.com/wundergraph/cosmo/commit/e9c498faf93a289f2eb62c7203f6a9fe79e7a93a)) (@JivusAyrus)
+
+### Features
+
+* add prometheus ([#31](https://github.com/wundergraph/cosmo/issues/31)) ([d318c73](https://github.com/wundergraph/cosmo/commit/d318c7331d77d21d0246344d76fbe0fc6b617174)) (@StarpTech)
+
+# [0.8.0](https://github.com/wundergraph/cosmo/compare/studio@0.7.2...studio@0.8.0) (2023-08-31)
+
+### Bug Fixes
+
+* improvements ([#25](https://github.com/wundergraph/cosmo/issues/25)) ([5afa6bc](https://github.com/wundergraph/cosmo/commit/5afa6bc0fb89907646212c0449595481e1c8b46d)) (@JivusAyrus)
+* improvements ([#27](https://github.com/wundergraph/cosmo/issues/27)) ([884635f](https://github.com/wundergraph/cosmo/commit/884635f7902f97156e9cdd0cf52d29027509a52e)) (@JivusAyrus)
+
+### Features
+
+* migrate graphs from apollo ([#17](https://github.com/wundergraph/cosmo/issues/17)) ([0d9d025](https://github.com/wundergraph/cosmo/commit/0d9d025adadf11fd0516cbe10f470765757a9853)) (@JivusAyrus)
+
+## [0.7.2](https://github.com/wundergraph/cosmo/compare/studio@0.7.1...studio@0.7.2) (2023-08-29)
+
+### Bug Fixes
+
+* ci ([#20](https://github.com/wundergraph/cosmo/issues/20)) ([e676b1a](https://github.com/wundergraph/cosmo/commit/e676b1a6dfeaa1ff8b6d55f818ae301f49deea4c)) (@JivusAyrus)
+
+## [0.7.1](https://github.com/wundergraph/cosmo/compare/studio@0.7.0...studio@0.7.1) (2023-08-29)
+
+### Bug Fixes
+
+* improvements ([#18](https://github.com/wundergraph/cosmo/issues/18)) ([fdf2b29](https://github.com/wundergraph/cosmo/commit/fdf2b290ec57e502d8011e29e06a067d32afdf18)) (@JivusAyrus)
+
 # [0.7.0](https://github.com/wundergraph/cosmo/compare/studio@0.6.0...studio@0.7.0) (2023-08-28)
 
 ### Bug Fixes

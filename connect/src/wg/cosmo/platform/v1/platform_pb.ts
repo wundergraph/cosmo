@@ -3947,6 +3947,80 @@ export class RemoveInvitationResponse extends Message<RemoveInvitationResponse> 
 }
 
 /**
+ * @generated from message wg.cosmo.platform.v1.MigrateFromApolloRequest
+ */
+export class MigrateFromApolloRequest extends Message<MigrateFromApolloRequest> {
+  /**
+   * @generated from field: string apiKey = 1;
+   */
+  apiKey = "";
+
+  constructor(data?: PartialMessage<MigrateFromApolloRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.MigrateFromApolloRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "apiKey", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MigrateFromApolloRequest {
+    return new MigrateFromApolloRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): MigrateFromApolloRequest {
+    return new MigrateFromApolloRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): MigrateFromApolloRequest {
+    return new MigrateFromApolloRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: MigrateFromApolloRequest | PlainMessage<MigrateFromApolloRequest> | undefined, b: MigrateFromApolloRequest | PlainMessage<MigrateFromApolloRequest> | undefined): boolean {
+    return proto3.util.equals(MigrateFromApolloRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.MigrateFromApolloResponse
+ */
+export class MigrateFromApolloResponse extends Message<MigrateFromApolloResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  constructor(data?: PartialMessage<MigrateFromApolloResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.MigrateFromApolloResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MigrateFromApolloResponse {
+    return new MigrateFromApolloResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): MigrateFromApolloResponse {
+    return new MigrateFromApolloResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): MigrateFromApolloResponse {
+    return new MigrateFromApolloResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: MigrateFromApolloResponse | PlainMessage<MigrateFromApolloResponse> | undefined, b: MigrateFromApolloResponse | PlainMessage<MigrateFromApolloResponse> | undefined): boolean {
+    return proto3.util.equals(MigrateFromApolloResponse, a, b);
+  }
+}
+
+/**
  * @generated from message wg.cosmo.platform.v1.SpanAttributes
  */
 export class SpanAttributes extends Message<SpanAttributes> {

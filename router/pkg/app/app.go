@@ -388,9 +388,10 @@ func (a *App) newRouter(ctx context.Context, routerConfig *nodev1.RouterConfig) 
 
 	if a.playground {
 		graphqlPlaygroundHandler := graphiql.NewPlayground(&graphiql.PlaygroundOptions{
-			Log:     a.logger,
-			Html:    graphiql.GetGraphiqlPlaygroundHTML(),
-			NodeUrl: a.baseURL,
+			Log:  a.logger,
+			Html: graphiql.GetGraphiqlPlaygroundHTML(),
+			// Empty url to use the same url as the playground
+			GraphqlURL: "",
 		})
 		router.Get(a.graphqlPath, graphqlPlaygroundHandler)
 		a.logger.Debug("PlaygroundHandler registered",

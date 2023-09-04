@@ -27,7 +27,7 @@ type Handler struct {
 
 	counters       map[string]otelmetric.Int64Counter
 	valueRecorders map[string]otelmetric.Float64Histogram
-	updownCounters map[string]otelmetric.Float64UpDownCounter
+	updownCounters map[string]otelmetric.Int64UpDownCounter
 
 	baseFields []attribute.KeyValue
 }
@@ -48,7 +48,7 @@ func NewMetricHandler(meterProvider *metric.MeterProvider, baseFields ...attribu
 func (h *Handler) createMeasures() error {
 	h.counters = make(map[string]otelmetric.Int64Counter)
 	h.valueRecorders = make(map[string]otelmetric.Float64Histogram)
-	h.updownCounters = make(map[string]otelmetric.Float64UpDownCounter)
+	h.updownCounters = make(map[string]otelmetric.Int64UpDownCounter)
 
 	routerMeter := h.meterProvider.Meter("cosmo.router")
 	requestCounter, err := routerMeter.Int64Counter(
@@ -88,7 +88,7 @@ func (h *Handler) createMeasures() error {
 
 	h.counters[ResponseContentLength] = responseContentLengthCounter
 
-	inFlightRequestsGauge, err := routerMeter.Float64UpDownCounter(
+	inFlightRequestsGauge, err := routerMeter.Int64UpDownCounter(
 		InFlightRequests,
 		otelmetric.WithDescription("Number of requests in flight"),
 	)
@@ -122,8 +122,14 @@ func (h *Handler) Handler(handler http.Handler) http.HandlerFunc {
 
 		opCtx := contextx.GetOperationContext(ctx)
 		if opCtx != nil {
-			baseKeys = append(baseKeys, otel.WgOperationName.String(opCtx.Name))
-			baseKeys = append(baseKeys, otel.WgOperationType.String(opCtx.Type))
+			// Metric values must not be empty
+			// M3 does not like empty values
+			if opCtx.Name != "" {
+				baseKeys = append(baseKeys, otel.WgOperationName.String(opCtx.Name))
+			}
+			if opCtx.Type != "" {
+				baseKeys = append(baseKeys, otel.WgOperationType.String(opCtx.Type))
+			}
 			baseKeys = append(baseKeys, semconv.HTTPStatusCode(statusCode))
 		}
 

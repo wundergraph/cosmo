@@ -1,4 +1,4 @@
-name: Build and publish Docker images
+name: Build and Push Docker images
 
 on:
   push:
@@ -8,14 +8,24 @@ on:
       - '**'
     paths-ignore:
       - 'docs/*/**'
-      - '*.md'
       - 'helm/**'
       - 'scripts/**'
-      - '.github/**'
+
+  pull_request:
+    branches:
+      - main
+    paths-ignore:
+      - 'docs/*/**'
+      - 'helm/**'
+      - 'scripts/**'
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+
+concurrency:
+  group: ${{github.workflow}}-${{github.head_ref}}
+  cancel-in-progress: false
 
 jobs:
   build-and-push-image:

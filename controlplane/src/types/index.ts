@@ -44,6 +44,12 @@ export interface SubgraphDTO {
   subgraphVersionId?: string;
 }
 
+export interface MigrationSubgraph {
+  name: string;
+  routingURL: string;
+  schema: string;
+}
+
 export interface SchemaCheckDTO {
   id: string;
   targetID: string;
@@ -90,6 +96,7 @@ export interface APIKeyDTO {
   lastUsedAt: string;
   expiresAt: string;
   createdBy: string;
+  creatorUserID: string;
 }
 
 export interface ResponseMessage {

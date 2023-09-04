@@ -108,9 +108,15 @@ terminationGracePeriodSeconds: 30
 probes:
   # -- Configure readiness probe
   readiness:
+    httpGet:
+      path: /health
+      port: http
     initialDelaySeconds: 10
   # -- Configure liveness probe
   liveness:
+    httpGet:
+      path: /health
+      port: http
     initialDelaySeconds: 10
 
 #############################

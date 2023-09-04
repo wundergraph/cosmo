@@ -62,6 +62,7 @@ import {
 import { FiCheck, FiCopy } from "react-icons/fi";
 import { z } from "zod";
 import { docsBaseURL } from "@/lib/constants";
+import { cn } from "@/lib/utils";
 
 const CreateAPIKeyDialog = ({
   setApiKey,
@@ -104,7 +105,7 @@ const CreateAPIKeyDialog = ({
     handleSubmit,
     reset,
   } = useZodForm<CreateAPIKeyInput>({
-    mode: "onChange",
+    mode: "onBlur",
     schema: createAPIKeyInputSchema,
   });
 
@@ -140,8 +141,8 @@ const CreateAPIKeyDialog = ({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger>
-        <Button asChild={true} disabled={!user?.roles.includes("admin")}>
-          <div className="flex gap-x-2">
+        <Button>
+          <div className="flex items-center gap-x-2">
             <PlusIcon />
             <span>New API key</span>
           </div>
@@ -204,11 +205,13 @@ const DeleteAPIKeyDialog = ({
   refresh,
   open,
   setOpen,
+  setDeleteApiKeyName,
 }: {
   apiKeyName: string;
   refresh: () => void;
   open: boolean;
   setOpen: Dispatch<SetStateAction<boolean>>;
+  setDeleteApiKeyName: Dispatch<SetStateAction<string | undefined>>;
 }) => {
   const { toast } = useToast();
 
@@ -244,6 +247,7 @@ const DeleteAPIKeyDialog = ({
           });
           refresh();
           reset();
+          setDeleteApiKeyName(undefined);
         },
         onError: (error) => {
           toast({
@@ -251,6 +255,7 @@ const DeleteAPIKeyDialog = ({
             duration: 3000,
           });
           reset();
+          setDeleteApiKeyName(undefined);
         },
       }
     );
@@ -388,7 +393,7 @@ export const Empty = ({
           <a
             target="_blank"
             rel="noreferrer"
-            href={docsBaseURL}
+            href={docsBaseURL + "/studio/api-keys"}
             className="text-primary"
           >
             Learn more.
@@ -438,11 +443,13 @@ export const CreateAPIKey = ({
 };
 
 const APIKeysPage: NextPageWithLayout = () => {
-  const user = useContext(UserContext);
   const { data, isLoading, error, refetch } = useQuery(getAPIKeys.useQuery());
 
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [apiKey, setApiKey] = useState<string | undefined>();
+  const [deleteApiKeyName, setDeleteApiKeyName] = useState<
+    string | undefined
+  >();
   const [openApiKeyCreatedDialog, setOpenApiKeyCreatedDialog] = useState(false);
 
   useEffect(() => {
@@ -482,7 +489,12 @@ const APIKeysPage: NextPageWithLayout = () => {
                 API keys are used to authenticate the Cosmo CLI for local
                 development or CI/CD.
               </span>
-              <Link href={docsBaseURL} className="text-primary">
+              <Link
+                href={docsBaseURL + "/studio/api-keys"}
+                className="text-primary"
+                target="_blank"
+                rel="noreferrer"
+              >
                 Learn more
               </Link>
             </div>
@@ -493,6 +505,15 @@ const APIKeysPage: NextPageWithLayout = () => {
               setOpen={setOpenApiKeyCreatedDialog}
             />
           </div>
+          {deleteApiKeyName && (
+            <DeleteAPIKeyDialog
+              apiKeyName={deleteApiKeyName}
+              refresh={refetch}
+              open={openDeleteDialog}
+              setOpen={setOpenDeleteDialog}
+              setDeleteApiKeyName={setDeleteApiKeyName}
+            />
+          )}
           <Table>
             <TableHeader>
               <TableRow>
@@ -530,12 +551,6 @@ const APIKeysPage: NextPageWithLayout = () => {
                             : "Never"}
                         </TableCell>
                         <TableCell>
-                          <DeleteAPIKeyDialog
-                            apiKeyName={name}
-                            refresh={refetch}
-                            open={openDeleteDialog}
-                            setOpen={setOpenDeleteDialog}
-                          />
                           <DropdownMenu>
                             <div className="flex justify-center">
                               <DropdownMenuTrigger asChild>
@@ -546,8 +561,10 @@ const APIKeysPage: NextPageWithLayout = () => {
                             </div>
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem
-                                disabled={!user?.roles.includes("admin")}
-                                onClick={() => setOpenDeleteDialog(true)}
+                                onClick={() => {
+                                  setDeleteApiKeyName(name);
+                                  setOpenDeleteDialog(true);
+                                }}
                               >
                                 Delete
                               </DropdownMenuItem>

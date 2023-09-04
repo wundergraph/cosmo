@@ -40,7 +40,7 @@ create-demo:
 	cd scripts && ./create-local-demo.sh
 
 dev-setup: prerequisites
-	pnpm install --frozen-lockfile
+	pnpm install
 	pnpm generate
 	make generate-go
 	make infra-up
@@ -81,7 +81,7 @@ dc-federation-demo:
 	docker compose -f docker-compose.full.yml --profile default --profile router --profile subgraphs up --remove-orphans --detach
 
 dc-subgraphs-demo:
-	docker compose -f docker-compose.full.yml --profile subgraphs up --remove-orphans --detach
+	OTEL_AUTH_TOKEN=$(OTEL_AUTH_TOKEN) docker compose -f docker-compose.full.yml --profile subgraphs up --remove-orphans --detach --build
 
 dc-subgraphs-demo-down:
 	docker compose -f docker-compose.full.yml --profile subgraphs down --remove-orphans

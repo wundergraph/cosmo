@@ -99,13 +99,17 @@ priorityClassName: ""
 # -- Sets the [termination grace period](https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#hook-handler-execution) for Deployment pods
 terminationGracePeriodSeconds: 5
 
-#probes:
-#  # -- Configure readiness probe
-#  readiness:
-#    initialDelaySeconds: 0
-#  # -- Configure liveness probe
-#  liveness:
-#    initialDelaySeconds: 0
+probes:
+  # -- Configure readiness probe
+  readiness:
+    httpGet:
+      path: /
+      port: http
+  # -- Configure liveness probe
+  liveness:
+    httpGet:
+      path: /
+      port: http
 
 ########################
 # Global configuration #

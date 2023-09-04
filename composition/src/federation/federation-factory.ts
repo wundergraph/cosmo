@@ -92,7 +92,7 @@ import {
   DEFAULT_MUTATION,
   DEFAULT_QUERY,
   DEFAULT_SUBSCRIPTION,
-  FIELD_NAME,
+  FIELD_NAME, FRAGMENT_REPRESENTATION,
   INLINE_FRAGMENT,
 } from '../utils/string-constants';
 import {
@@ -165,6 +165,7 @@ export class FederationFactory {
   extensions = new Map<string, ExtensionContainer>();
   graph: MultiGraph = new MultiGraph();
   graphEdges = new Set<string>();
+  graphPaths = new Map<string, Map<string, string[][]>>();
   inputFieldTypeNameSet = new Set<string>();
   isCurrentParentEntity = false;
   isCurrentParentInterface = false;
@@ -388,14 +389,33 @@ export class FederationFactory {
     );
   }
 
+  getAllSimplePaths(responseTypeName: string): string[][] {
+    if (responseTypeName === this.parentTypeName) {
+      return [[this.parentTypeName]];
+    }
+    const responsePaths = this.graphPaths.get(responseTypeName);
+    if (!responsePaths) {
+      const allPaths = allSimplePaths(this.graph, responseTypeName, this.parentTypeName)
+      this.graphPaths.set(responseTypeName, new Map<string, string[][]>([
+        [this.parentTypeName, allPaths]
+      ]));
+      return allPaths;
+    }
+    const pathsToParent = responsePaths.get(this.parentTypeName);
+    if (pathsToParent) {
+      return pathsToParent;
+    }
+    const allParentPaths = allSimplePaths(this.graph, responseTypeName, this.parentTypeName);
+    responsePaths.set(this.parentTypeName, allParentPaths);
+    return allParentPaths;
+  }
+
   addPotentiallyUnresolvableField(parent: ObjectContainer | ObjectExtensionContainer, fieldName: string) {
     const fieldContainer = getOrThrowError(parent.fields, fieldName);
-    for (const [responseTypeName, operation] of this.rootTypeFieldsByResponseTypeName) {
-      // If the operation response type has no path to the parent type, continue
-      const paths = allSimplePaths(this.graph, responseTypeName, this.parentTypeName);
-      if (responseTypeName === this.parentTypeName) {
-        paths.push([this.parentTypeName]);
-      } else if (paths.length < 1) {
+    for (const [responseTypeName, rootTypeFields] of this.rootTypeFieldsByResponseTypeName) {
+      const paths = this.getAllSimplePaths(responseTypeName);
+      // If the rootTypeFields response type has no path to the parent type, continue
+      if (paths.length < 1) {
         continue;
       }
       // Construct all possible paths to the unresolvable field but with the fieldName relationship between nodes
@@ -426,29 +446,29 @@ export class FederationFactory {
         resolverPath += fieldName;
         // If the field could have fields itself, add ellipsis
         if (this.graph.hasNode(fieldContainer.rootTypeName)) {
-          resolverPath += ' { ... }';
+          resolverPath += FRAGMENT_REPRESENTATION;
         }
         partialResolverPaths.push(resolverPath);
       }
       if (partialResolverPaths.length < 1) {
         return;
       }
-      // Each of these operations returns a type that has a path to the parent
-      for (const [operationFieldPath, operationField] of operation) {
-        // If the operation is defined in a subgraph that the field is defined, it is resolvable
-        if (doSetsHaveAnyOverlap(fieldContainer.subgraphs, operationField.subgraphs)) {
+      // Each of these rootTypeFields returns a type that has a path to the parent
+      for (const [rootTypeFieldPath, rootTypeField] of rootTypeFields) {
+        // If the rootTypeField is defined in a subgraph that the field is defined, it is resolvable
+        if (doSetsHaveAnyOverlap(fieldContainer.subgraphs, rootTypeField.subgraphs)) {
           continue;
         }
         const fullResolverPaths: string[] = [];
         // The field is still resolvable if it's defined and resolved in another graph (but that isn't yet known)
         // Consequently, the subgraphs must be compared later to determine that the field is always resolvable
         for (const partialResolverPath of partialResolverPaths) {
-          fullResolverPaths.push(`${operationFieldPath}${operationField.inlineFragment}${partialResolverPath}`);
+          fullResolverPaths.push(`${rootTypeFieldPath}${rootTypeField.inlineFragment}${partialResolverPath}`);
         }
         const potentiallyUnresolvableField: PotentiallyUnresolvableField = {
           fieldContainer,
           fullResolverPaths,
-          rootTypeField: operationField,
+          rootTypeField: rootTypeField,
         };
 
         // The parent might already have unresolvable fields that have already been added

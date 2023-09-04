@@ -24,13 +24,13 @@ func (ipd *Base64Decoder) Decode(value string) error {
 
 type Config struct {
 	FederatedGraphName      string            `envconfig:"FEDERATED_GRAPH_NAME" validate:"required"`
-	ControlplaneURL         string            `validate:"required" envconfig:"CONTROLPLANE_URL" validate:"uri"`
+	ControlplaneURL         string            `validate:"required" default:"https://cosmo-cp.wundergraph.com" envconfig:"CONTROLPLANE_URL" validate:"uri"`
 	ListenAddr              string            `default:"localhost:3002" envconfig:"LISTEN_ADDR"`
 	OTELTracingEnabled      bool              `default:"true" envconfig:"OTEL_TRACING_ENABLED"`
-	OTELCollectorEndpoint   string            `validate:"required" envconfig:"OTEL_COLLECTOR_ENDPOINT" validate:"uri"`
+	OTELCollectorEndpoint   string            `validate:"required" default:"https://cosmo-otel.wundergraph.com" envconfig:"OTEL_COLLECTOR_ENDPOINT" validate:"uri"`
 	OTELCollectorHeaders    map[string]string `default:"" envconfig:"OTEL_COLLECTOR_HEADERS"`
 	OTELSampler             float64           `default:"1" envconfig:"OTEL_SAMPLER"`
-	OTELBatchTimeoutSeconds int               `default:"5" envconfig:"OTEL_BATCH_TIMEOUT_SECONDS"`
+	OTELBatchTimeoutSeconds int               `default:"10" envconfig:"OTEL_BATCH_TIMEOUT_SECONDS"`
 	OTELServiceName         string            `default:"cosmo-router" envconfig:"OTEL_SERVICE_NAME"`
 	OTELMetricsEnabled      bool              `default:"true" envconfig:"OTEL_METRICS_ENABLED"`
 	PrometheusEnabled       bool              `default:"true" envconfig:"PROMETHEUS_ENABLED"`
@@ -38,7 +38,7 @@ type Config struct {
 	PrometheusHttpAddr      string            `default:"127.0.0.1:8088" envconfig:"PROMETHEUS_HTTP_ADDR"`
 	CORSAllowedOrigins      []string          `default:"*" envconfig:"CORS_ALLOWED_ORIGINS"`
 	CORSAllowedMethods      []string          `default:"HEAD,GET,POST" envconfig:"CORS_ALLOWED_METHODS"`
-	CORSAllowCredentials    bool              `default:"false" envconfig:"CORS_ALLOW_CREDENTIALS"`
+	CORSAllowCredentials    bool              `default:"true" envconfig:"CORS_ALLOW_CREDENTIALS"`
 	CORSAllowedHeaders      []string          `default:"Origin,Content-Length,Content-Type" envconfig:"CORS_ALLOWED_HEADERS"`
 	CORSMaxAgeMinutes       int               `default:"5" envconfig:"CORS_MAX_AGE_MINUTES"`
 	PlaygroundEnabled       bool              `default:"true" envconfig:"PLAYGROUND_ENABLED"`

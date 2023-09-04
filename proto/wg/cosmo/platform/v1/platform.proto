@@ -511,6 +511,14 @@ message RemoveInvitationResponse {
   Response response = 1;
 }
 
+message MigrateFromApolloRequest {
+  string apiKey = 1;
+}
+
+message MigrateFromApolloResponse {
+  Response response = 1;
+}
+
 message SpanAttributes {
   string httpStatusCode = 1;
   string componentName = 2;
@@ -604,6 +612,8 @@ service PlatformService {
   rpc RemoveInvitation(RemoveInvitationRequest) returns (RemoveInvitationResponse){}
   // GetLatestValidRouterConfig returns the router config for the federated graph
   rpc GetLatestValidRouterConfig(wg.cosmo.node.v1.GetConfigRequest) returns (wg.cosmo.node.v1.GetConfigResponse) {}
+  // MigrateFromApollo migrates the graphs from apollo to cosmo
+  rpc MigrateFromApollo(MigrateFromApolloRequest) returns (MigrateFromApolloResponse) {}
 
   // Analytics
 
