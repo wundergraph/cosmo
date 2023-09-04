@@ -825,20 +825,28 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               code: EnumStatusCode.ERR_NOT_FOUND,
             },
             checks: [],
-            checksCount: '0',
+            checksCountBasedOnDateRange: '0',
+            totalChecksCount: '0',
           };
         }
 
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
-        const checks = await subgraphRepo.checks(req.name, req.limit, req.offset);
-        const checksCount = await subgraphRepo.getChecksCount(req.name);
+        const checksData = await subgraphRepo.checks({
+          federatedGraphName: req.name,
+          limit: req.limit,
+          offset: req.offset,
+          startDate: req.startDate,
+          endDate: req.endDate,
+        });
+        const totalChecksCount = await subgraphRepo.getChecksCount(req.name);
 
         return {
           response: {
             code: EnumStatusCode.OK,
           },
-          checks,
-          checksCount: checksCount.toString(),
+          checks: checksData.checks,
+          checksCountBasedOnDateRange: checksData.checksCount.toString(),
+          totalChecksCount: totalChecksCount.toString()
         };
       });
     },

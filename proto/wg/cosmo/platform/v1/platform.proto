@@ -216,6 +216,8 @@ message GetChecksByFederatedGraphNameRequest {
   string name = 1;
   int32 limit = 2;
   int32 offset = 3;
+  string startDate = 4;
+  string endDate = 5;
 }
 
 message SchemaCheck {
@@ -231,7 +233,8 @@ message SchemaCheck {
 message GetChecksByFederatedGraphNameResponse {
   Response response = 1;
   repeated SchemaCheck checks = 2;
-  string checksCount = 3;
+  string checksCountBasedOnDateRange = 3;
+  string totalChecksCount = 4;
 }
 
 message GetCheckDetailsRequest {
