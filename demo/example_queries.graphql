@@ -8,12 +8,27 @@ query {
       surname
       # resolved through employees subgraph
       location
+      # resolved through family subgraph
+      hasChildren
+      # maritalStatus can return null
+      maritalStatus
+      nationality
+      # pets can return null
+      pets {
+        class
+        gender
+        name
+        ... on Cat {
+          type
+        }
+        ... on Dog {
+          breed
+        }
+        ... on Alligator {
+          dangerous
+        }
+      }
     }
-    # resolved through family subgraph
-    hasChildren
-    # can be null
-    maritalStatus
-    nationality
     # resolved through employees subgraph
     role {
       department
@@ -23,21 +38,6 @@ query {
       }
       ... on Operator {
         operatorType
-      }
-    }
-    # resolved through family subgraph (can be null)
-    pets {
-      class
-      gender
-      name
-      ... on Cat {
-        type
-      }
-      ... on Dog {
-        breed
-      }
-      ... on Alligator {
-        dangerous
       }
     }
     # resolved through hobbies subgraph
@@ -67,6 +67,7 @@ query {
     # resolved through products subgraph
     products
   }
+  # can return null
   employee(id: 1) {
     # resolved through employees subgraph
     id

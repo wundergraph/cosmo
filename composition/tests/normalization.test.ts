@@ -882,11 +882,10 @@ describe('Normalization tests', () => {
     const subgraphString = normalizationResult!.subgraphString;
     expect(normalizeString(subgraphString!)).toBe(
       normalizeString(
-        versionTwoBaseSchema +
-        `
+        versionTwoBaseSchema + `
       directive @myDirective(a: String!) on FIELD_DEFINITION
       directive @hello on FIELD_DEFINITION
-
+        
       type Query {
         allProducts: [ProductItf]
         product(id: ID!): ProductItf

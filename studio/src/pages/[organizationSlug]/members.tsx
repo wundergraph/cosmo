@@ -1,31 +1,31 @@
-import { UserContext } from "@/components/app-provider";
-import { EmptyState } from "@/components/empty-state";
-import { getDashboardLayout } from "@/components/layout/dashboard-layout";
-import { Button } from "@/components/ui/button";
+import { UserContext } from '@/components/app-provider';
+import { EmptyState } from '@/components/empty-state';
+import { getDashboardLayout } from '@/components/layout/dashboard-layout';
+import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import { Loader } from "@/components/ui/loader";
-import { useToast } from "@/components/ui/use-toast";
-import { SubmitHandler, useZodForm } from "@/hooks/use-form";
-import { NextPageWithLayout } from "@/lib/page";
-import { cn } from "@/lib/utils";
-import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common_pb";
+} from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
+import { Loader } from '@/components/ui/loader';
+import { useToast } from '@/components/ui/use-toast';
+import { SubmitHandler, useZodForm } from '@/hooks/use-form';
+import { NextPageWithLayout } from '@/lib/page';
+import { cn } from '@/lib/utils';
+import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common_pb';
 import {
   getOrganizationMembers,
   inviteUser,
   removeInvitation,
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { sentenceCase } from "change-case";
-import { useContext } from "react";
-import { HiOutlineDotsVertical } from "react-icons/hi";
-import { z } from "zod";
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
+import { sentenceCase } from 'change-case';
+import { useContext } from 'react';
+import { HiOutlineDotsVertical } from 'react-icons/hi';
+import { z } from 'zod';
 
 const emailInputSchema = z.object({
   email: z.string().email(),

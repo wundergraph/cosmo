@@ -8,7 +8,7 @@ import {
 } from '../src';
 import { parse } from 'graphql';
 import { describe, expect, test } from 'vitest';
-import { documentNodeToNormalizedString, normalizeString, versionTwoBaseSchema } from './utils/utils';
+import { documentNodeToNormalizedString, normalizeString, versionTwoPersistedBaseSchema } from './utils/utils';
 
 describe('Interface tests', () => {
   describe('Normalization tests', () => {
@@ -161,17 +161,20 @@ describe('Interface tests', () => {
 
   describe('Federation tests', () => {
     test('that interfaces merge by union', () => {
-      const result = federateSubgraphs([subgraphA, subgraphB]);
-      expect(result.errors).toBeUndefined();
-      const federatedGraph = result.federatedGraphAST!;
+      const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphB]);
+      expect(errors).toBeUndefined();
+      const federatedGraph = federationResult!.federatedGraphAST!;
       expect(documentNodeToNormalizedString(federatedGraph)).toBe(
         normalizeString(
-          versionTwoBaseSchema +
-          `
+          versionTwoPersistedBaseSchema + `
       interface Character {
         name: String!
         age: Int!
         isFriend: Boolean!
+      }
+
+      type Query {
+        dummy: String!
       }
 
       type Trainer implements Character {
@@ -192,12 +195,11 @@ describe('Interface tests', () => {
     });
 
     test('that interfaces and implementations merge by union', () => {
-      const { errors, federatedGraphAST } = federateSubgraphs([subgraphA, subgraphC]);
+      const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphC]);
       expect(errors).toBeUndefined();
-      expect(documentNodeToNormalizedString(federatedGraphAST!)).toBe(
+      expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
         normalizeString(
-          versionTwoBaseSchema +
-          `
+          versionTwoPersistedBaseSchema + `
       interface Character {
         name: String!
         age: Int!
@@ -206,6 +208,10 @@ describe('Interface tests', () => {
       
       interface Human {
         name: String!
+      }
+
+      type Query {
+        dummy: String!
       }
 
       type Trainer implements Character & Human {
@@ -220,13 +226,17 @@ describe('Interface tests', () => {
     });
 
     test('that nested interfaces merge by union', () => {
-      const { errors, federatedGraphAST} = federateSubgraphs([subgraphC, subgraphD]);
+      const { errors, federationResult } = federateSubgraphs([subgraphC, subgraphD]);
       expect(errors).toBeUndefined();
-      expect(documentNodeToNormalizedString(federatedGraphAST!)).toBe(
+      expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
         normalizeString(
-          versionTwoBaseSchema + `
+          versionTwoPersistedBaseSchema + `
       interface Character {
         isFriend: Boolean!
+      }
+
+      type Query {
+        dummy: String!
       }
 
       interface Human implements Character {
@@ -303,6 +313,10 @@ const subgraphA: Subgraph = {
   name: 'subgraph-a',
   url: '',
   definitions: parse(`
+    type Query {
+      dummy: String! @shareable
+    }
+
     interface Character {
       name: String!
     }
@@ -343,6 +357,10 @@ const subgraphC: Subgraph = {
   name: 'subgraph-c',
   url: '',
   definitions: parse(`
+    type Query {
+      dummy: String! @shareable
+    }
+
     interface Character {
       isFriend: Boolean!
     }
@@ -382,6 +400,10 @@ const subgraphE: Subgraph = {
   name: 'subgraph-e',
   url: '',
   definitions: parse(`
+    type Query {
+      dummy: String!
+    }
+
     interface Animal {
       sounds(a: String!, b: Int!): [String]
     }

@@ -31,6 +31,7 @@ export const updateComposedSchema = async ({
   let routerConfigJson: JsonValue = null;
   if (!hasErrors && composedGraph.composedSchema) {
     const routerConfig = buildRouterConfig({
+      argumentConfigurations: composedGraph.argumentConfigurations,
       subgraphs: composedGraph.subgraphs,
       federatedSDL: composedGraph.composedSchema,
     });

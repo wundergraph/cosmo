@@ -1,15 +1,15 @@
 import {
   federateSubgraphs,
-  Subgraph,
+  FederationResultContainer,
   NormalizationResultContainer,
   normalizeSubgraphFromString,
-  FederationResult,
+  Subgraph,
 } from '@wundergraph/composition';
 
 /**
  * Composes a list of subgraphs into a single schema.
  */
-export function composeSubgraphs(subgraphs: Subgraph[]): FederationResult {
+export function composeSubgraphs(subgraphs: Subgraph[]): FederationResultContainer {
   return federateSubgraphs(subgraphs);
 }
 

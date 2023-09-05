@@ -1,4 +1,4 @@
-import { describe, expect, test, beforeAll, afterAll } from 'vitest';
+import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import Fastify from 'fastify';
 
 import { createConnectTransport } from '@connectrpc/connect-node';

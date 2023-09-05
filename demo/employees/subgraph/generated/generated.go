@@ -374,7 +374,7 @@ func (ec *executionContext) introspectType(name string) (*introspection.Type, er
 
 var sources = []*ast.Source{
 	{Name: "../schema.graphqls", Input: `type Query {
-  employee(id: Int!): Employee!
+  employee(id: Int!): Employee
   employees: [Employee!]!
   team_mates(team: Department!): [Employee!]!
 }
@@ -1342,14 +1342,11 @@ func (ec *executionContext) _Query_employee(ctx context.Context, field graphql.C
 		return graphql.Null
 	}
 	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
 		return graphql.Null
 	}
 	res := resTmp.(*model.Employee)
 	fc.Result = res
-	return ec.marshalNEmployee2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋemployeesᚋsubgraphᚋmodelᚐEmployee(ctx, field.Selections, res)
+	return ec.marshalOEmployee2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋemployeesᚋsubgraphᚋmodelᚐEmployee(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Query_employee(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -3948,9 +3945,6 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_employee(ctx, field)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
 				return res
 			}
 
@@ -5084,6 +5078,13 @@ func (ec *executionContext) marshalOBoolean2ᚖbool(ctx context.Context, sel ast
 	}
 	res := graphql.MarshalBoolean(*v)
 	return res
+}
+
+func (ec *executionContext) marshalOEmployee2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋemployeesᚋsubgraphᚋmodelᚐEmployee(ctx context.Context, sel ast.SelectionSet, v *model.Employee) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._Employee(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalOString2string(ctx context.Context, v interface{}) (string, error) {

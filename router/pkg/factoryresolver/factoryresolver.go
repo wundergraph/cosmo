@@ -233,9 +233,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, wgServerUrl stri
 		var args []plan.ArgumentConfiguration
 		for _, argumentConfiguration := range configuration.ArgumentsConfiguration {
 			arg := plan.ArgumentConfiguration{
-				Name:         argumentConfiguration.Name,
-				SourcePath:   argumentConfiguration.SourcePath,
-				RenameTypeTo: argumentConfiguration.RenameTypeTo,
+				Name: argumentConfiguration.Name,
 			}
 			switch argumentConfiguration.SourceType {
 			case nodev1.ArgumentSource_FIELD_ARGUMENT:
@@ -243,23 +241,12 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, wgServerUrl stri
 			case nodev1.ArgumentSource_OBJECT_FIELD:
 				arg.SourceType = plan.ObjectFieldSource
 			}
-			switch argumentConfiguration.RenderConfiguration {
-			case nodev1.ArgumentRenderConfiguration_RENDER_ARGUMENT_DEFAULT:
-				arg.RenderConfig = plan.RenderArgumentDefault
-			case nodev1.ArgumentRenderConfiguration_RENDER_ARGUMENT_AS_ARRAY_CSV:
-				arg.RenderConfig = plan.RenderArgumentAsArrayCSV
-			case nodev1.ArgumentRenderConfiguration_RENDER_ARGUMENT_AS_GRAPHQL_VALUE:
-				arg.RenderConfig = plan.RenderArgumentAsGraphQLValue
-			}
 			args = append(args, arg)
 		}
 		outConfig.Fields = append(outConfig.Fields, plan.FieldConfiguration{
-			TypeName:              configuration.TypeName,
-			FieldName:             configuration.FieldName,
-			DisableDefaultMapping: configuration.DisableDefaultFieldMapping,
-			Path:                  configuration.Path,
-			Arguments:             args,
-			UnescapeResponseJson:  configuration.UnescapeResponseJson,
+			TypeName:  configuration.TypeName,
+			FieldName: configuration.FieldName,
+			Arguments: args,
 		})
 	}
 
@@ -357,16 +344,34 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, wgServerUrl stri
 				RenameTo:      directive.DirectiveName,
 			})
 		}
-		for _, requiredField := range in.RequiredFields {
-			out.RequiredFields = append(out.RequiredFields, plan.RequiredFieldsConfiguration{
-				TypeName:     requiredField.TypeName,
-				FieldName:    requiredField.FieldName,
-				SelectionSet: requiredField.SelectionSet,
+		out.FederationMetaData = plan.FederationMetaData{
+			Keys:     nil,
+			Requires: nil,
+			Provides: nil,
+		}
+		for _, keyConfiguration := range in.Keys {
+			out.FederationMetaData.Keys = append(out.FederationMetaData.Keys, plan.FederationFieldConfiguration{
+				TypeName:     keyConfiguration.TypeName,
+				FieldName:    keyConfiguration.FieldName,
+				SelectionSet: keyConfiguration.SelectionSet,
+			})
+		}
+		for _, providesConfiguration := range in.Provides {
+			out.FederationMetaData.Provides = append(out.FederationMetaData.Provides, plan.FederationFieldConfiguration{
+				TypeName:     providesConfiguration.TypeName,
+				FieldName:    providesConfiguration.FieldName,
+				SelectionSet: providesConfiguration.SelectionSet,
+			})
+		}
+		for _, requiresConfiguration := range in.Requires {
+			out.FederationMetaData.Requires = append(out.FederationMetaData.Requires, plan.FederationFieldConfiguration{
+				TypeName:     requiresConfiguration.TypeName,
+				FieldName:    requiresConfiguration.FieldName,
+				SelectionSet: requiresConfiguration.SelectionSet,
 			})
 		}
 		outConfig.DataSources = append(outConfig.DataSources, out)
 	}
-
 	return &outConfig, nil
 }
 

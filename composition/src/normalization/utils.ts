@@ -20,7 +20,7 @@ import {
   StringValueNode,
   UnionTypeDefinitionNode,
 } from 'graphql';
-import { mapToArrayOfValues } from '../utils/utils';
+import { kindToTypeString, mapToArrayOfValues } from '../utils/utils';
 import { EntityKey, setToNamedTypeNodeArray } from '../ast/utils';
 import {
   ARGUMENT_DEFINITION_UPPER,
@@ -29,6 +29,7 @@ import {
   FIELD_DEFINITION_UPPER,
   FIELD_UPPER,
   FRAGMENT_DEFINITION_UPPER,
+  FRAGMENT_SPREAD_UPPER,
   INLINE_FRAGMENT_UPPER,
   INPUT_FIELD_DEFINITION_UPPER,
   INPUT_OBJECT_UPPER,
@@ -371,6 +372,11 @@ export function areNodeKindAndDirectiveLocationCompatible(
           return true;
         }
         break;
+      case FRAGMENT_SPREAD_UPPER:
+        if (kind === Kind.FRAGMENT_SPREAD) {
+          return true;
+        }
+        break;
       case SCALAR_UPPER:
         if (kind === Kind.SCALAR_TYPE_DEFINITION || kind === Kind.SCALAR_TYPE_EXTENSION) {
           return true;
@@ -443,7 +449,8 @@ function validateEntityKey(
     }
     const fieldPath = `${objectTypeName}.${fieldName}`;
     const fieldTypeName = getNamedTypeForChild(fieldPath, field.node.type);
-    if (factory.parents.has(fieldTypeName)) {
+    const parentContainer = factory.parents.get(fieldTypeName);
+    if (parentContainer && parentContainer.kind === Kind.OBJECT_TYPE_DEFINITION) {
       errorMessages.push(objectInCompositeKeyWithoutSelectionsErrorMessage(fieldName, fieldTypeName));
     }
   }
@@ -467,12 +474,14 @@ function validateBaseObjectEntityKey(
   entityKey: EntityKey,
   errorMessages: string[],
 ) {
-  const object = factory.parents.get(objectTypeName);
+  const object = factory.parents.get(objectTypeName) || factory.extensions.get(objectTypeName);
   if (!object) {
     throw undefinedParentFatalError(objectTypeName);
   }
-  if (object.kind !== Kind.OBJECT_TYPE_DEFINITION) {
-    errorMessages.push(unexpectedParentKindErrorMessage(objectTypeName, object.kind, Kind.OBJECT_TYPE_DEFINITION));
+  if (object.kind !== Kind.OBJECT_TYPE_DEFINITION && object.kind !== Kind.OBJECT_TYPE_EXTENSION) {
+    errorMessages.push(unexpectedParentKindErrorMessage(
+      objectTypeName, 'object or object extension', kindToTypeString(object.kind)),
+    );
     return;
   }
   validateEntityKey(factory, entityKey, object, objectTypeName, errorMessages);
@@ -505,7 +514,8 @@ export function getDirectiveDefinitionArgumentSets(
   for (const argument of args) {
     const argumentName = argument.name.value;
     allArguments.add(argumentName);
-    if (argument.type.kind === Kind.NON_NULL_TYPE) {
+    // If the definition defines a default argument, it's not necessary to include it
+    if (argument.type.kind === Kind.NON_NULL_TYPE && !argument.defaultValue) {
       requiredArguments.add(argumentName);
     }
   }
@@ -533,3 +543,8 @@ export function getDefinedArgumentsForDirective(
   }
   return definedArguments;
 }
+
+export type InputValidationContainer = {
+  hasUnhandledError: boolean;
+  typeString: string;
+};

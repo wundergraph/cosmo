@@ -50,7 +50,7 @@ exports[`Router Config Builder > Build Subgraph schema > router.config.json 1`] 
         },
         \\"requestTimeoutSeconds\\": \\"10\\",
         \\"id\\": \\"https://wg-federation-demo-accounts.fly.dev/graphql\\",
-        \\"requiredFields\\": [
+        \\"keys\\": [
           {
             \\"typeName\\": \\"User\\",
             \\"selectionSet\\": \\"id\\"
@@ -115,7 +115,7 @@ exports[`Router Config Builder > Build Subgraph schema > router.config.json 1`] 
         },
         \\"requestTimeoutSeconds\\": \\"10\\",
         \\"id\\": \\"https://wg-federation-demo-products.fly.dev/graphql\\",
-        \\"requiredFields\\": [
+        \\"keys\\": [
           {
             \\"typeName\\": \\"Product\\",
             \\"selectionSet\\": \\"upc\\"
@@ -177,7 +177,7 @@ exports[`Router Config Builder > Build Subgraph schema > router.config.json 1`] 
         },
         \\"requestTimeoutSeconds\\": \\"10\\",
         \\"id\\": \\"https://wg-federation-demo-reviews.fly.dev/graphql\\",
-        \\"requiredFields\\": [
+        \\"keys\\": [
           {
             \\"typeName\\": \\"User\\",
             \\"selectionSet\\": \\"id\\"
@@ -233,40 +233,10 @@ exports[`Router Config Builder > Build Subgraph schema > router.config.json 1`] 
         },
         \\"requestTimeoutSeconds\\": \\"10\\",
         \\"id\\": \\"https://wg-federation-demo-inventory.fly.dev/graphql\\",
-        \\"requiredFields\\": [
+        \\"keys\\": [
           {
             \\"typeName\\": \\"Product\\",
             \\"selectionSet\\": \\"upc\\"
-          }
-        ]
-      }
-    ],
-    \\"fieldConfigurations\\": [
-      {
-        \\"typeName\\": \\"Query\\",
-        \\"fieldName\\": \\"topProducts\\",
-        \\"argumentsConfiguration\\": [
-          {
-            \\"name\\": \\"first\\",
-            \\"sourceType\\": 1
-          },
-          {
-            \\"name\\": \\"random\\",
-            \\"sourceType\\": 1
-          }
-        ]
-      },
-      {
-        \\"typeName\\": \\"Mutation\\",
-        \\"fieldName\\": \\"setPrice\\",
-        \\"argumentsConfiguration\\": [
-          {
-            \\"name\\": \\"upc\\",
-            \\"sourceType\\": 1
-          },
-          {
-            \\"name\\": \\"price\\",
-            \\"sourceType\\": 1
           }
         ]
       }

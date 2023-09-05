@@ -1,204 +1,206 @@
 import { describe, expect, test } from 'vitest';
-import { normalizeSubgraphFromString } from '../src';
-import { ConfigurationData } from '../src/subgraph/field-configuration';
+import { ConfigurationData, federateSubgraphs, normalizeSubgraphFromString } from '../src';
+import { createSubgraph } from './utils/utils';
 
 describe('Field Configuration tests', () => {
-  test('that field configuration for employees.graphql is correctly generated', () => {
-    const { errors, normalizationResult } = normalizeSubgraphFromString(employees);
-    expect(errors).toBeUndefined();
-    expect(normalizationResult).toBeDefined();
-    const configurationDataMap = normalizationResult!.configurationDataMap;
-    expect(configurationDataMap).toStrictEqual(new Map<string, ConfigurationData>([
-      ['Query', {
-        fieldNames: new Set<string>(['employee', 'employees', 'team_mates']),
-        isRootNode: true,
-        selectionSets: [],
-        typeName: 'Query',
-      }],
-      ['RoleType', {
-        fieldNames: new Set<string>(['department', 'title']),
-        isRootNode: false,
-        selectionSets: [],
-        typeName: 'RoleType',
-      }],
-      ['Identifiable', {
-        fieldNames: new Set<string>(['id']),
-        isRootNode: false,
-        selectionSets: [],
-        typeName: 'Identifiable',
-      }],
-      ['Engineer', {
-        fieldNames: new Set<string>(['department', 'engineerType', 'title']),
-        isRootNode: false,
-        selectionSets: [],
-        typeName: 'Engineer',
-      }],
-      ['Marketer', {
-        fieldNames: new Set<string>(['department', 'title']),
-        isRootNode: false,
-        selectionSets: [],
-        typeName: 'Marketer',
-      }],
-      ['Operator', {
-        fieldNames: new Set<string>(['department', 'operatorType', 'title']),
-        isRootNode: false,
-        selectionSets: [],
-        typeName: 'Operator',
-      }],
-      ['Details', {
-        fieldNames: new Set<string>(['forename', 'location', 'surname']),
-        isRootNode: false,
-        selectionSets: [],
-        typeName: 'Details',
-      }],
-      ['Employee', {
-        fieldNames: new Set<string>(['details', 'id', 'role']),
-        isRootNode: true,
-        selectionSets: ['id'],
-        typeName: 'Employee',
-      }],
-    ]));
+  describe('Normalization tests' ,() => {
+    test('that field configuration for employees.graphql is correctly generated', () => {
+      const { errors, normalizationResult } = normalizeSubgraphFromString(employees);
+      expect(errors).toBeUndefined();
+      expect(normalizationResult).toBeDefined();
+      const configurationDataMap = normalizationResult!.configurationDataMap;
+      expect(configurationDataMap).toStrictEqual(new Map<string, ConfigurationData>([
+        ['Query', {
+          fieldNames: new Set<string>(['employee', 'employees', 'team_mates']),
+          isRootNode: true,
+          typeName: 'Query',
+        }],
+        ['RoleType', {
+          fieldNames: new Set<string>(['department', 'title']),
+          isRootNode: false,
+          typeName: 'RoleType',
+        }],
+        ['Identifiable', {
+          fieldNames: new Set<string>(['id']),
+          isRootNode: false,
+          typeName: 'Identifiable',
+        }],
+        ['Engineer', {
+          fieldNames: new Set<string>(['department', 'engineerType', 'title']),
+          isRootNode: false,
+          typeName: 'Engineer',
+        }],
+        ['Marketer', {
+          fieldNames: new Set<string>(['department', 'title']),
+          isRootNode: false,
+          typeName: 'Marketer',
+        }],
+        ['Operator', {
+          fieldNames: new Set<string>(['department', 'operatorType', 'title']),
+          isRootNode: false,
+          typeName: 'Operator',
+        }],
+        ['Details', {
+          fieldNames: new Set<string>(['forename', 'location', 'surname']),
+          isRootNode: false,
+          typeName: 'Details',
+        }],
+        ['Employee', {
+          fieldNames: new Set<string>(['details', 'id', 'role']),
+          isRootNode: true,
+          keys: [{ fieldName: '', selectionSet: 'id' }],
+          typeName: 'Employee',
+        }],
+      ]));
+    });
+
+    test('that field configuration for family.graphql is correctly generated', () => {
+      const { errors, normalizationResult } = normalizeSubgraphFromString(family);
+      expect(errors).toBeUndefined();
+      expect(normalizationResult).toBeDefined();
+      const configurationDataMap = normalizationResult!.configurationDataMap;
+      expect(configurationDataMap).toStrictEqual(new Map<string, ConfigurationData>([
+        ['Animal', {
+          fieldNames: new Set<string>(['class', 'gender']),
+          isRootNode: false,
+          typeName: 'Animal',
+        }],
+        ['Pet', {
+          fieldNames: new Set<string>(['class', 'gender', 'name']),
+          isRootNode: false,
+          typeName: 'Pet',
+        }],
+        ['Alligator', {
+          fieldNames: new Set<string>(['class', 'dangerous', 'gender', 'name']),
+          isRootNode: false,
+          typeName: 'Alligator',
+        }],
+        ['Cat', {
+          fieldNames: new Set<string>(['class', 'gender', 'name', 'type']),
+          isRootNode: false,
+          typeName: 'Cat',
+        }],
+        ['Dog', {
+          fieldNames: new Set<string>(['breed', 'class', 'gender', 'name']),
+          isRootNode: false,
+          typeName: 'Dog',
+        }],
+        ['Mouse', {
+          fieldNames: new Set<string>(['class', 'gender', 'name']),
+          isRootNode: false,
+          typeName: 'Mouse',
+        }],
+        ['Pony', {
+          fieldNames: new Set<string>(['class', 'gender', 'name']),
+          isRootNode: false,
+          typeName: 'Pony',
+        }],
+        ['Details', {
+          fieldNames: new Set<string>(['forename', 'surname']),
+          isRootNode: false,
+          typeName: 'Details',
+        }],
+        ['Employee', {
+          fieldNames: new Set<string>(['details', 'id', 'hasChildren', 'maritalStatus', 'nationality', 'pets']),
+          isRootNode: true,
+          keys: [{ fieldName: '', selectionSet: 'id', }],
+          typeName: 'Employee',
+        }],
+      ]));
+    });
+
+    test('that field configuration for hobbies.graphql is correctly generated', () => {
+      const { errors, normalizationResult } = normalizeSubgraphFromString(hobbies);
+      expect(errors).toBeUndefined();
+      expect(normalizationResult).toBeDefined();
+      const configurationDataMap = normalizationResult!.configurationDataMap;
+      expect(configurationDataMap).toStrictEqual(new Map<string, ConfigurationData>([
+        ['Exercise', {
+          fieldNames: new Set<string>(['category']),
+          isRootNode: false,
+          typeName: 'Exercise',
+        }],
+        ['Experience', {
+          fieldNames: new Set<string>(['yearsOfExperience']),
+          isRootNode: false,
+          typeName: 'Experience',
+        }],
+        ['Flying', {
+          fieldNames: new Set<string>(['planeModels', 'yearsOfExperience']),
+          isRootNode: false,
+          typeName: 'Flying',
+        }],
+        ['Gaming', {
+          fieldNames: new Set<string>(['genres', 'name', 'yearsOfExperience']),
+          isRootNode: false,
+          typeName: 'Gaming',
+        }],
+        ['Other', {
+          fieldNames: new Set<string>(['name']),
+          isRootNode: false,
+          typeName: 'Other',
+        }],
+        ['Programming', {
+          fieldNames: new Set<string>(['languages']),
+          isRootNode: false,
+          typeName: 'Programming',
+        }],
+        ['Travelling', {
+          fieldNames: new Set<string>(['countriesLived']),
+          isRootNode: false,
+          typeName: 'Travelling',
+        }],
+        ['Employee', {
+          fieldNames: new Set<string>(['id', 'hobbies']),
+          isRootNode: true,
+          keys: [{ fieldName: '', selectionSet: 'id', }],
+          typeName: 'Employee',
+        }],
+      ]));
+    });
+
+    test('that field configuration for products.graphql is correctly generated', () => {
+      const { errors, normalizationResult } = normalizeSubgraphFromString(products);
+      expect(errors).toBeUndefined();
+      expect(normalizationResult).toBeDefined();
+      const configurationDataMap = normalizationResult!.configurationDataMap;
+      expect(configurationDataMap).toStrictEqual(new Map<string, ConfigurationData>([
+        ['Employee', {
+          fieldNames: new Set<string>(['id', 'products']),
+          isRootNode: true,
+          keys: [{ fieldName: '', selectionSet: 'id', }],
+          typeName: 'Employee',
+        }],
+      ]));
+    });
   });
 
-  test('that field configuration for family.graphql is correctly generated', () => {
-    const { errors, normalizationResult } = normalizeSubgraphFromString(family);
-    expect(errors).toBeUndefined();
-    expect(normalizationResult).toBeDefined();
-    const configurationDataMap = normalizationResult!.configurationDataMap;
-    expect(configurationDataMap).toStrictEqual(new Map<string, ConfigurationData>([
-      ['Animal', {
-        fieldNames: new Set<string>(['class', 'gender']),
-        isRootNode: false,
-        selectionSets: [],
-        typeName: 'Animal',
-      }],
-      ['Pet', {
-        fieldNames: new Set<string>(['class', 'gender', 'name']),
-        isRootNode: false,
-        selectionSets: [],
-        typeName: 'Pet',
-      }],
-      ['Alligator', {
-        fieldNames: new Set<string>(['class', 'dangerous', 'gender', 'name']),
-        isRootNode: false,
-        selectionSets: [],
-        typeName: 'Alligator',
-      }],
-      ['Cat', {
-        fieldNames: new Set<string>(['class', 'gender', 'name', 'type']),
-        isRootNode: false,
-        selectionSets: [],
-        typeName: 'Cat',
-      }],
-      ['Dog', {
-        fieldNames: new Set<string>(['breed', 'class', 'gender', 'name']),
-        isRootNode: false,
-        selectionSets: [],
-        typeName: 'Dog',
-      }],
-      ['Mouse', {
-        fieldNames: new Set<string>(['class', 'gender', 'name']),
-        isRootNode: false,
-        selectionSets: [],
-        typeName: 'Mouse',
-      }],
-      ['Pony', {
-        fieldNames: new Set<string>(['class', 'gender', 'name']),
-        isRootNode: false,
-        selectionSets: [],
-        typeName: 'Pony',
-      }],
-      ['Details', {
-        fieldNames: new Set<string>(['forename', 'surname']),
-        isRootNode: false,
-        selectionSets: [],
-        typeName: 'Details',
-      }],
-      ['Employee', {
-        fieldNames: new Set<string>(['details', 'id', 'hasChildren', 'maritalStatus', 'nationality', 'pets']),
-        isRootNode: true,
-        selectionSets: ['id'],
-        typeName: 'Employee',
-      }],
-    ]));
-  });
-
-  test('that field configuration for hobbies.graphql is correctly generated', () => {
-    const { errors, normalizationResult } = normalizeSubgraphFromString(hobbies);
-    expect(errors).toBeUndefined();
-    expect(normalizationResult).toBeDefined();
-    const configurationDataMap = normalizationResult!.configurationDataMap;
-    expect(configurationDataMap).toStrictEqual(new Map<string, ConfigurationData>([
-      ['Exercise', {
-        fieldNames: new Set<string>(['category']),
-        isRootNode: false,
-        selectionSets: [],
-        typeName: 'Exercise',
-      }],
-      ['Experience', {
-        fieldNames: new Set<string>(['yearsOfExperience']),
-        isRootNode: false,
-        selectionSets: [],
-        typeName: 'Experience',
-      }],
-      ['Flying', {
-        fieldNames: new Set<string>(['planeModels', 'yearsOfExperience']),
-        isRootNode: false,
-        selectionSets: [],
-        typeName: 'Flying',
-      }],
-      ['Gaming', {
-        fieldNames: new Set<string>(['genres', 'name', 'yearsOfExperience']),
-        isRootNode: false,
-        selectionSets: [],
-        typeName: 'Gaming',
-      }],
-      ['Other', {
-        fieldNames: new Set<string>(['name']),
-        isRootNode: false,
-        selectionSets: [],
-        typeName: 'Other',
-      }],
-      ['Programming', {
-        fieldNames: new Set<string>(['languages']),
-        isRootNode: false,
-        selectionSets: [],
-        typeName: 'Programming',
-      }],
-      ['Travelling', {
-        fieldNames: new Set<string>(['countriesLived']),
-        isRootNode: false,
-        selectionSets: [],
-        typeName: 'Travelling',
-      }],
-      ['Employee', {
-        fieldNames: new Set<string>(['id', 'hobbies']),
-        isRootNode: true,
-        selectionSets: ['id'],
-        typeName: 'Employee',
-      }],
-    ]));
-  });
-
-  test('that field configuration for products.graphql is correctly generated', () => {
-    const { errors, normalizationResult } = normalizeSubgraphFromString(products);
-    expect(errors).toBeUndefined();
-    expect(normalizationResult).toBeDefined();
-    const configurationDataMap = normalizationResult!.configurationDataMap;
-    expect(configurationDataMap).toStrictEqual(new Map<string, ConfigurationData>([
-      ['Employee', {
-        fieldNames: new Set<string>(['id', 'products']),
-        isRootNode: true,
-        selectionSets: ['id'],
-        typeName: 'Employee',
-      }],
-    ]));
+  describe('Federation tests', () => {
+    test('that argument configurations are correctly generated', () => {
+      const { errors, federationResult } = federateSubgraphs([
+        createSubgraph('employees', employees), createSubgraph('family', family),
+        createSubgraph('hobbies', hobbies), createSubgraph('products', products),
+      ]);
+      expect(errors).toBeUndefined();
+      expect(federationResult!.argumentConfigurations).toStrictEqual([
+        {
+          argumentNames: ['id'],
+          fieldName: 'employee',
+          typeName: 'Query',
+        },
+        {
+          argumentNames: ['team'],
+          fieldName: 'team_mates',
+          typeName: 'Query',
+        },
+      ])
+    });
   });
 });
 
 const employees = `
 type Query {
-  employee(id: Int!): Employee!
+  employee(id: Int!): Employee
   employees: [Employee!]!
   team_mates(team: Department!): [Employee!]!
 }

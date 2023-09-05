@@ -1,13 +1,3 @@
-directive @extends on INTERFACE | OBJECT
-
-directive @external on FIELD_DEFINITION | OBJECT
-
-directive @key(fields: String!) repeatable on OBJECT
-
-directive @provides(fields: String!) on FIELD_DEFINITION
-
-directive @requires(fields: String!) on FIELD_DEFINITION
-
 directive @tag(
   name: String!
 ) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION

@@ -1,22 +1,12 @@
-import { docsBaseURL } from "@/lib/constants";
-import { CommandLineIcon } from "@heroicons/react/24/outline";
-import { formatDistanceToNow } from "date-fns";
-import Link from "next/link";
-import {
-  Subgraph,
-  FederatedGraph,
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { EmptyState } from "./empty-state";
-import { Badge } from "./ui/badge";
-import { CLISteps } from "./ui/cli";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
-} from "./ui/table";
+import { docsBaseURL } from '@/lib/constants';
+import { CommandLineIcon } from '@heroicons/react/24/outline';
+import { formatDistanceToNow } from 'date-fns';
+import Link from 'next/link';
+import { FederatedGraph, Subgraph } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { EmptyState } from './empty-state';
+import { Badge } from './ui/badge';
+import { CLISteps } from './ui/cli';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 
 export const Empty = ({ graph }: { graph?: FederatedGraph }) => {
   let label = "team=A";

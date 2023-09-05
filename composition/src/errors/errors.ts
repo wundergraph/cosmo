@@ -1,4 +1,4 @@
-import { nodeKindToDirectiveLocation, ObjectContainer, RootTypeField } from '../ast/utils';
+import { nodeKindToDirectiveLocation } from '../ast/utils';
 import {
   ConstDirectiveNode,
   Kind,
@@ -7,7 +7,15 @@ import {
   TypeDefinitionNode,
   TypeExtensionNode,
 } from 'graphql';
-import { ImplementationErrorsMap, numberToOrdinal } from '../utils/utils';
+import {
+  ImplementationErrorsMap,
+  InvalidArgument,
+  InvalidRequiredArgument,
+  kindToTypeString,
+  numberToOrdinal,
+} from '../utils/utils';
+import { ObjectContainer, RootTypeFieldData } from '../federation/utils';
+import { QUOTATION_JOIN, UNION } from '../utils/string-constants';
 
 export const minimumSubgraphRequirementError = new Error('At least one subgraph is required for federation.');
 
@@ -175,7 +183,7 @@ export function shareableFieldDefinitionsError(parent: ObjectContainer, children
     }
     if (shareableSubgraphs.length < 1) {
       errorMessages.push(
-        `\n The field "${fieldName}" is defined in the following subgraphs: "${shareableSubgraphs.join('", "')}".` +
+        `\n The field "${fieldName}" is defined in the following subgraphs: "${[...field.subgraphs].join('", "')}".` +
         `\n However, it it is not declared "@shareable" in any of them.`,
       );
     } else {
@@ -206,28 +214,30 @@ export function undefinedEntityKeyErrorMessage(fieldName: string, objectName: st
 }
 
 export function unresolvableFieldError(
-  rootTypeField: RootTypeField,
+  rootTypeFieldData: RootTypeFieldData,
   fieldName: string,
-  unresolvablePaths: string[],
-  fieldSubgraphs: string,
+  fieldSubgraphs: string[],
+  unresolvablePath: string,
   parentTypeName: string,
 ): Error {
   const fieldPath = `${parentTypeName}.${fieldName}`;
   return new Error(
-    `The following root path${unresolvablePaths.length > 1 ? 's are' : ' is'} unresolvable:\n ` +
-    unresolvablePaths.join('\n') +
-    `\nThis is because:\n` +
-    ` The root type field "${rootTypeField.path}" is defined in the following subgraphs: "` +
-    [...rootTypeField.subgraphs].join('", "') + `".\n` +
-    ` However, "${fieldPath}" is only defined in the following subgraphs: "${fieldSubgraphs}".\n` +
-    ` Consequently, "${fieldPath}" cannot be resolved through the root type field "${rootTypeField.path}".\n` +
+    `The path "${unresolvablePath}" cannot be resolved because:\n` +
+    ` The root type field "${rootTypeFieldData.path}" is defined in the following subgraph` +
+    (rootTypeFieldData.subgraphs.size > 1 ? 's' : '') + `: "` +
+    [...rootTypeFieldData.subgraphs].join(QUOTATION_JOIN) + `".\n` +
+    ` However, "${fieldPath}" is only defined in the following subgraph` +
+    (fieldSubgraphs.length > 1 ? 's' : '') + `: "` + fieldSubgraphs + `".\n` +
+    ` Consequently, "${fieldPath}" cannot be resolved through the root type field "${rootTypeFieldData.path}".\n` +
     `Potential solutions:\n` +
-    ` Convert "${parentTypeName}" into an entity using a "@key" directive.\n` +
-    ` Add the shareable root type field "${rootTypeField.path}" to the following subgraphs: "${fieldSubgraphs}".\n` +
+    ` Convert "${parentTypeName}" into an entity using the "@key" directive.\n` +
+    ` Add the shareable root type field "${rootTypeFieldData.path}" to ` +
+    (fieldSubgraphs.length > 1 ? 'one of the following subgraphs' : 'the following subgraph') + `: "`  +
+    fieldSubgraphs.join(QUOTATION_JOIN) + `".\n` +
     `  For example (note that V1 fields are shareable by default and do not require a directive):\n` +
-    `   type ${rootTypeField.parentTypeName} {\n` +
+    `   type ${rootTypeFieldData.typeName} {\n` +
     `     ...\n` +
-    `     ${rootTypeField.name}: ${rootTypeField.responseType} @shareable\n` +
+    `     ${rootTypeFieldData.fieldName}: ${rootTypeFieldData.fieldTypeNodeString} @shareable\n` +
     `   }`,
   );
 }
@@ -258,6 +268,10 @@ export function invalidRepeatedDirectiveErrorMessage(directiveName: string, host
 export function invalidUnionError(unionName: string): Error {
   return new Error(`Union "${unionName}" must have at least one member.`);
 }
+
+export const invalidTagDirectiveError = new Error(`
+  Expected the @tag directive to have a single required argument "name" of the type "String!"
+`);
 
 export function invalidDirectiveError(
   directiveName: string,
@@ -373,7 +387,7 @@ export function undefinedParentFatalError(parentTypeName: string): Error {
 
 export function unexpectedKindFatalError(typeName: string) {
   return new Error(
-    `Fatal: Unexpected type for ${typeName}`,
+    `Fatal: Unexpected type for "${typeName}"`,
   );
 }
 
@@ -383,18 +397,32 @@ export function invalidMultiGraphNodeFatalError(nodeName: string): Error {
   );
 }
 
-export function unexpectedParentKindErrorMessage(parentTypeName: string, expectedKind: Kind, actualKind: Kind): string {
-  return (
-    ` Expected "${parentTypeName}" to be type ${expectedKind} but received "${actualKind}".`
-  );
-}
-
 export function incompatibleParentKindFatalError(parentTypeName: string, expectedKind: Kind, actualKind: Kind): Error {
   return new Error(
-    `Fatal: Expected "${parentTypeName}" to be type ${expectedKind} but received "${actualKind}".`
+    `Fatal: Expected "${parentTypeName}" to be type ${kindToTypeString(expectedKind)}` +
+    ` but received "${kindToTypeString(actualKind)}".`
   );
 }
 
+export function fieldTypeMergeFatalError(fieldName: string) {
+  return new Error(
+    `Fatal: Unsuccessfully merged the cross-subgraph types of field "${fieldName}"` +
+    ` without producing a type error object.`
+  )
+}
+
+export function argumentTypeMergeFatalError(argumentName: string, fieldName: string) {
+  return new Error(
+    `Fatal: Unsuccessfully merged the cross-subgraph types of argument "${argumentName}" on field "${fieldName}"` +
+    ` without producing a type error object.`
+  )
+}
+
+export function unexpectedArgumentKindFatalError(argumentName: string, fieldName: string) {
+  return new Error(
+    `Fatal: Unexpected type for argument "${argumentName}" on field "${fieldName}".`,
+  );
+}
 
 export function unexpectedDirectiveLocationError(locationName: string): Error {
   return new Error(
@@ -406,6 +434,18 @@ export function unexpectedTypeNodeKindError(childPath: string): Error {
   return new Error(
     `Fatal: Expected all constituent types of "${childPath}" to be one of the following: ` +
     `"LIST_TYPE", "NAMED_TYPE", or "NON_NULL_TYPE".`,
+  );
+}
+
+export function invalidKeyFatalError<K>(key: K, mapName: string): Error {
+  return new Error(
+    `Fatal: Expected key "${key}" to exist in the map "${mapName}".`
+  );
+}
+
+export function unexpectedParentKindErrorMessage(parentTypeName: string, expectedTypeString: string, actualTypeString: string): string {
+  return (
+    ` Expected "${parentTypeName}" to be type ${expectedTypeString} but received "${actualTypeString}".`
   );
 }
 
@@ -511,5 +551,69 @@ export function unimplementedInterfaceFieldsError(
   return new Error(
     `The ${parentTypeString} "${parentTypeName}" has the following interface implementation errors:\n` +
     messages.join('\n')
+  );
+}
+
+export function invalidRequiredArgumentsError(
+  typeString: string, path: string, errors: InvalidRequiredArgument[],
+): Error {
+  let message = `The ${typeString} "${path}" could not be federated because:\n`;
+  for (const error of errors) {
+    message += ` The argument "${error.argumentName}" is required in the following subgraph` +
+      (error.requiredSubgraphs.length > 1 ? 's' : '' ) +': "' + error.requiredSubgraphs.join(`", "`) + `"\n` +
+      ` However, the argument "${error.argumentName}" is not defined in the following subgraph` +
+      (error.missingSubgraphs.length > 1 ? 's' : '' ) +': "' + error.missingSubgraphs.join(`", "`) + `"\n` +
+      ` If an argument is required on a ${typeString} in any one subgraph, it must be at least defined as optional` +
+      ` on all other definitions of that ${typeString} in all other subgraphs.\n`
+  }
+  return new Error(message);
+}
+
+export function duplicateArgumentsError(fieldPath: string, duplicatedArguments: string[]): Error {
+  return new Error(
+    `The field "${fieldPath}" is invalid because:\n` +
+    ` The following argument` + (duplicatedArguments.length > 1 ? 's are' : ' is') +
+    ` defined more than once: "` + duplicatedArguments.join(`", "`) + `"\n`
+  );
+}
+
+export function invalidArgumentsError(fieldPath: string, invalidArguments: InvalidArgument[]): Error {
+  let message = `The field "${fieldPath}" is invalid because:\n` +
+    ` The named type (root type) of an input must be on of Enum, Input Object, or Scalar type.` +
+    ` For example: "Float", "[[String!]]!", or "[SomeInputObjectName]"\n`
+  for (const invalidArgument of invalidArguments) {
+    message += `  The argument "${invalidArgument.argumentName}" defines type "${invalidArgument.typeName}"` +
+      ` but the named type "${invalidArgument.namedType}" is type "` + invalidArgument.typeString +
+      `", which is not a valid input type.\n`;
+  }
+  return new Error(message);
+}
+
+export const noQueryRootTypeError = new Error(
+    `A valid federated graph must have at least one populated query root type.\n` +
+  ` For example:\n` +
+  `  type Query {\n` +
+  `    dummy: String\n` +
+  `  }`
+);
+
+export function unexpectedObjectResponseType(fieldPath: string, actualTypeString: string): Error {
+  return new Error(
+    `Expected the path "${fieldPath}" to have the response type` +
+    ` Enum, Interface, Object, Scalar, or Union but received ${actualTypeString}.`
+  );
+}
+
+export function noConcreteTypesForAbstractTypeError(typeString: string, abstractTypeName: string): Error {
+  return new Error(
+    `Expected ${typeString} "${abstractTypeName}" to define at least one ` +
+    (typeString === UNION ? 'member' : 'object that implements the interface') +
+    ` but received none`
+  );
+}
+
+export function expectedEntityError(typeName: string): Error {
+  return new Error(
+    `Expected object "${typeName}" to define a "key" directive, but it defines no directives.`
   );
 }

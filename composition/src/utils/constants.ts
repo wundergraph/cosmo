@@ -1,5 +1,5 @@
 import { DirectiveDefinitionNode, Kind } from 'graphql';
-import { stringToNamedTypeNode, stringToNameNode, stringToNameNodes } from '../ast/utils';
+import { stringArrayToNameNodeArray, stringToNamedTypeNode, stringToNameNode } from '../ast/utils';
 import {
   ARGUMENT_DEFINITION_UPPER,
   DEPRECATED,
@@ -25,10 +25,13 @@ import {
   UNION_UPPER,
 } from './string-constants';
 
-export const BASE_SCALARS = new Set<string>(['Boolean', 'Float', 'ID', 'Int', 'String']);
+export const BASE_SCALARS = new Set<string>(
+  ['_Any', '_Entities', 'Boolean', 'Float', 'ID', 'Int', 'String'],
+);
 
 export const VERSION_ONE_DIRECTIVES = new Set<string>([DEPRECATED, EXTENDS, EXTERNAL, KEY, PROVIDES, REQUIRES, TAG]);
 export const VERSION_TWO_DIRECTIVES = new Set<string>([INACCESSIBLE, SHAREABLE]);
+
 
 export const BASE_DIRECTIVE_DEFINITIONS: DirectiveDefinitionNode[] = [
   /* directive @deprecated(reason: String = "No longer supported") on ARGUMENT_DEFINITION | ENUM_VALUE |
@@ -47,7 +50,7 @@ export const BASE_DIRECTIVE_DEFINITIONS: DirectiveDefinitionNode[] = [
       },
     ],
     kind: Kind.DIRECTIVE_DEFINITION,
-    locations: stringToNameNodes([
+    locations: stringArrayToNameNodeArray([
       ARGUMENT_DEFINITION_UPPER,
       ENUM_VALUE_UPPER,
       FIELD_DEFINITION_UPPER,
@@ -59,14 +62,14 @@ export const BASE_DIRECTIVE_DEFINITIONS: DirectiveDefinitionNode[] = [
   // directive @extends on INTERFACE | OBJECT
   {
     kind: Kind.DIRECTIVE_DEFINITION,
-    locations: stringToNameNodes([INTERFACE_UPPER, OBJECT_UPPER]),
+    locations: stringArrayToNameNodeArray([INTERFACE_UPPER, OBJECT_UPPER]),
     name: stringToNameNode(EXTENDS),
     repeatable: false,
   },
   // directive @external on FIELD_DEFINITION | OBJECT
   {
     kind: Kind.DIRECTIVE_DEFINITION,
-    locations: stringToNameNodes([FIELD_DEFINITION_UPPER, OBJECT_UPPER]),
+    locations: stringArrayToNameNodeArray([FIELD_DEFINITION_UPPER, OBJECT_UPPER]),
     name: stringToNameNode(EXTERNAL),
     repeatable: false,
   },
@@ -139,7 +142,7 @@ export const BASE_DIRECTIVE_DEFINITIONS: DirectiveDefinitionNode[] = [
       },
     ],
     kind: Kind.DIRECTIVE_DEFINITION,
-    locations: stringToNameNodes([
+    locations: stringArrayToNameNodeArray([
       ARGUMENT_DEFINITION_UPPER,
       ENUM_UPPER,
       ENUM_VALUE_UPPER,
@@ -157,12 +160,30 @@ export const BASE_DIRECTIVE_DEFINITIONS: DirectiveDefinitionNode[] = [
 ];
 
 export const VERSION_TWO_DIRECTIVE_DEFINITIONS: DirectiveDefinitionNode[] = [
-  /* directive @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION |INPUT_OBJECT |
+  // @composeDirective is currently unimplemented
+  /* directive @composeDirective(name: String!) repeatable on SCHEMA */
+  // {
+  //   arguments: [
+  //     {
+  //       kind: Kind.INPUT_VALUE_DEFINITION,
+  //       name: stringToNameNode(NAME),
+  //       type: {
+  //         kind: Kind.NON_NULL_TYPE,
+  //         type: stringToNamedTypeNode(STRING_TYPE),
+  //       },
+  //     },
+  //   ],
+  //   kind: Kind.DIRECTIVE_DEFINITION,
+  //   locations: stringToNameNodes([SCHEMA]),
+  //   name: stringToNameNode(COMPOSE_DIRECTIVE),
+  //   repeatable: true,
+  // },
+  /* directive @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_OBJECT |
      INPUT_FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR | UNION
   */
   {
     kind: Kind.DIRECTIVE_DEFINITION,
-    locations: stringToNameNodes([
+    locations: stringArrayToNameNodeArray([
       ARGUMENT_DEFINITION_UPPER,
       ENUM_UPPER,
       ENUM_VALUE_UPPER,
@@ -180,7 +201,7 @@ export const VERSION_TWO_DIRECTIVE_DEFINITIONS: DirectiveDefinitionNode[] = [
   // directive @shareable on FIELD_DEFINITION | OBJECT
   {
     kind: Kind.DIRECTIVE_DEFINITION,
-    locations: stringToNameNodes([FIELD_DEFINITION_UPPER, OBJECT_UPPER]),
+    locations: stringArrayToNameNodeArray([FIELD_DEFINITION_UPPER, OBJECT_UPPER]),
     name: stringToNameNode(SHAREABLE),
     repeatable: false,
   },

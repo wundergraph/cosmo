@@ -1,17 +1,16 @@
 import { federateSubgraphs, invalidUnionError, Subgraph } from '../src';
 import { parse } from 'graphql';
 import { describe, expect, test } from 'vitest';
-import { documentNodeToNormalizedString, normalizeString, versionOneBaseSchema } from './utils/utils';
+import { documentNodeToNormalizedString, normalizeString, versionOnePersistedBaseSchema } from './utils/utils';
 
 describe('Union federation tests', () => {
   test('that unions merge by union', () => {
-    const result = federateSubgraphs([subgraphA, subgraphB]);
-    expect(result.errors).toBeUndefined();
-    const federatedGraph = result.federatedGraphAST!;
+    const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphB]);
+    expect(errors).toBeUndefined();
+    const federatedGraph = federationResult!.federatedGraphAST;
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
-        versionOneBaseSchema +
-          `
+        versionOnePersistedBaseSchema + `
       union Starters = Bulbasaur | Squirtle | Charmander | Chikorita | Totodile | Cyndaquil
 
       type Bulbasaur {
@@ -24,6 +23,10 @@ describe('Union federation tests', () => {
 
       type Charmander {
         name: String!
+      }
+      
+      type Query {
+        starter: Starters
       }
 
       type Chikorita {
@@ -43,9 +46,9 @@ describe('Union federation tests', () => {
   });
 
   test('that unions with no members throw an error', () => {
-    const result = federateSubgraphs([subgraphB, subgraphC]);
-    expect(result.errors).toBeDefined();
-    expect(result.errors![0].message).equals(invalidUnionError('Starters').message);
+    const { errors } = federateSubgraphs([subgraphB, subgraphC]);
+    expect(errors).toBeDefined();
+    expect(errors![0].message).equals(invalidUnionError('Starters').message);
   });
 });
 
@@ -66,6 +69,10 @@ const subgraphA = {
     type Charmander {
       name: String!
     }
+    
+    type Query {
+      starter: Starters
+    }
   `),
 };
 
@@ -73,6 +80,10 @@ const subgraphB = {
   name: 'subgraph-b',
   url: '',
   definitions: parse(`
+    type Query {
+      starter: Starters
+    }
+    
     union Starters = Chikorita | Totodile | Cyndaquil
 
     type Chikorita {

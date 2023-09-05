@@ -1,46 +1,32 @@
-import { useFireworks } from "@/hooks/use-fireworks";
-import { SubmitHandler, useZodForm } from "@/hooks/use-form";
-import { docsBaseURL } from "@/lib/constants";
-import { useChartData } from "@/lib/insights-helpers";
-import {
-  ChevronDoubleRightIcon,
-  CommandLineIcon,
-} from "@heroicons/react/24/outline";
-import { useMutation } from "@tanstack/react-query";
-import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common_pb";
-import { migrateFromApollo } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { FederatedGraph } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { getTime, parseISO, subDays } from "date-fns";
-import Link from "next/link";
-import { Dispatch, SetStateAction, useContext, useState } from "react";
-import { Line, LineChart, ResponsiveContainer, XAxis } from "recharts";
-import { z } from "zod";
-import { UserContext } from "./app-provider";
-import { ComposeStatusMessage } from "./compose-status";
-import { ComposeStatusBulb } from "./compose-status-bulb";
-import { EmptyState } from "./empty-state";
-import { TimeAgo } from "./time-ago";
-import { Button } from "./ui/button";
-import { Card } from "./ui/card";
-import { CLI } from "./ui/cli";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "./ui/dialog";
-import { Input } from "./ui/input";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "./ui/tooltip";
-import { useToast } from "./ui/use-toast";
-import { Logo } from "./logo";
-import { SiApollographql } from "react-icons/si";
-import { cn } from "@/lib/utils";
+import { useFireworks } from '@/hooks/use-fireworks';
+import { SubmitHandler, useZodForm } from '@/hooks/use-form';
+import { docsBaseURL } from '@/lib/constants';
+import { useChartData } from '@/lib/insights-helpers';
+import { ChevronDoubleRightIcon, CommandLineIcon } from '@heroicons/react/24/outline';
+import { useMutation } from '@tanstack/react-query';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common_pb';
+import { migrateFromApollo } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
+import { FederatedGraph } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { getTime, parseISO, subDays } from 'date-fns';
+import Link from 'next/link';
+import { Dispatch, SetStateAction, useContext, useState } from 'react';
+import { Line, LineChart, ResponsiveContainer, XAxis } from 'recharts';
+import { z } from 'zod';
+import { UserContext } from './app-provider';
+import { ComposeStatusMessage } from './compose-status';
+import { ComposeStatusBulb } from './compose-status-bulb';
+import { EmptyState } from './empty-state';
+import { TimeAgo } from './time-ago';
+import { Button } from './ui/button';
+import { Card } from './ui/card';
+import { CLI } from './ui/cli';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
+import { Input } from './ui/input';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
+import { useToast } from './ui/use-toast';
+import { Logo } from './logo';
+import { SiApollographql } from 'react-icons/si';
+import { cn } from '@/lib/utils';
 
 // this is required to render a blank line with LineChart
 const fallbackData = [
