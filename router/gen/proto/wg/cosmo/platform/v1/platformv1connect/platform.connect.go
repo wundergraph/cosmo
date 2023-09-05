@@ -66,6 +66,8 @@ const (
 	// PlatformServiceCheckFederatedGraphProcedure is the fully-qualified name of the PlatformService's
 	// CheckFederatedGraph RPC.
 	PlatformServiceCheckFederatedGraphProcedure = "/wg.cosmo.platform.v1.PlatformService/CheckFederatedGraph"
+	// PlatformServiceWhoAmIProcedure is the fully-qualified name of the PlatformService's WhoAmI RPC.
+	PlatformServiceWhoAmIProcedure = "/wg.cosmo.platform.v1.PlatformService/WhoAmI"
 	// PlatformServiceGetFederatedGraphsProcedure is the fully-qualified name of the PlatformService's
 	// GetFederatedGraphs RPC.
 	PlatformServiceGetFederatedGraphsProcedure = "/wg.cosmo.platform.v1.PlatformService/GetFederatedGraphs"
@@ -152,6 +154,8 @@ type PlatformServiceClient interface {
 	UpdateSubgraph(context.Context, *connect_go.Request[v1.UpdateSubgraphRequest]) (*connect_go.Response[v1.UpdateSubgraphResponse], error)
 	// CheckFederatedGraph checks if the federated graph can be composed with the new labels provided.
 	CheckFederatedGraph(context.Context, *connect_go.Request[v1.CheckFederatedGraphRequest]) (*connect_go.Response[v1.CheckFederatedGraphResponse], error)
+	// WhoAmI returns the identity of the user currently logged in.
+	WhoAmI(context.Context, *connect_go.Request[v1.WhoAmIRequest]) (*connect_go.Response[v1.WhoAmIResponse], error)
 	// GetFederatedGraphs returns the list of federated graphs.
 	GetFederatedGraphs(context.Context, *connect_go.Request[v1.GetFederatedGraphsRequest]) (*connect_go.Response[v1.GetFederatedGraphsResponse], error)
 	// GetFederatedGraphByName returns the federated graph by name.
@@ -251,6 +255,11 @@ func NewPlatformServiceClient(httpClient connect_go.HTTPClient, baseURL string, 
 		checkFederatedGraph: connect_go.NewClient[v1.CheckFederatedGraphRequest, v1.CheckFederatedGraphResponse](
 			httpClient,
 			baseURL+PlatformServiceCheckFederatedGraphProcedure,
+			opts...,
+		),
+		whoAmI: connect_go.NewClient[v1.WhoAmIRequest, v1.WhoAmIResponse](
+			httpClient,
+			baseURL+PlatformServiceWhoAmIProcedure,
 			opts...,
 		),
 		getFederatedGraphs: connect_go.NewClient[v1.GetFederatedGraphsRequest, v1.GetFederatedGraphsResponse](
@@ -375,6 +384,7 @@ type platformServiceClient struct {
 	updateFederatedGraph          *connect_go.Client[v1.UpdateFederatedGraphRequest, v1.UpdateFederatedGraphResponse]
 	updateSubgraph                *connect_go.Client[v1.UpdateSubgraphRequest, v1.UpdateSubgraphResponse]
 	checkFederatedGraph           *connect_go.Client[v1.CheckFederatedGraphRequest, v1.CheckFederatedGraphResponse]
+	whoAmI                        *connect_go.Client[v1.WhoAmIRequest, v1.WhoAmIResponse]
 	getFederatedGraphs            *connect_go.Client[v1.GetFederatedGraphsRequest, v1.GetFederatedGraphsResponse]
 	getFederatedGraphByName       *connect_go.Client[v1.GetFederatedGraphByNameRequest, v1.GetFederatedGraphByNameResponse]
 	getFederatedGraphSDLByName    *connect_go.Client[v1.GetFederatedGraphSDLByNameRequest, v1.GetFederatedGraphSDLByNameResponse]
@@ -446,6 +456,11 @@ func (c *platformServiceClient) UpdateSubgraph(ctx context.Context, req *connect
 // CheckFederatedGraph calls wg.cosmo.platform.v1.PlatformService.CheckFederatedGraph.
 func (c *platformServiceClient) CheckFederatedGraph(ctx context.Context, req *connect_go.Request[v1.CheckFederatedGraphRequest]) (*connect_go.Response[v1.CheckFederatedGraphResponse], error) {
 	return c.checkFederatedGraph.CallUnary(ctx, req)
+}
+
+// WhoAmI calls wg.cosmo.platform.v1.PlatformService.WhoAmI.
+func (c *platformServiceClient) WhoAmI(ctx context.Context, req *connect_go.Request[v1.WhoAmIRequest]) (*connect_go.Response[v1.WhoAmIResponse], error) {
+	return c.whoAmI.CallUnary(ctx, req)
 }
 
 // GetFederatedGraphs calls wg.cosmo.platform.v1.PlatformService.GetFederatedGraphs.
@@ -576,6 +591,8 @@ type PlatformServiceHandler interface {
 	UpdateSubgraph(context.Context, *connect_go.Request[v1.UpdateSubgraphRequest]) (*connect_go.Response[v1.UpdateSubgraphResponse], error)
 	// CheckFederatedGraph checks if the federated graph can be composed with the new labels provided.
 	CheckFederatedGraph(context.Context, *connect_go.Request[v1.CheckFederatedGraphRequest]) (*connect_go.Response[v1.CheckFederatedGraphResponse], error)
+	// WhoAmI returns the identity of the user currently logged in.
+	WhoAmI(context.Context, *connect_go.Request[v1.WhoAmIRequest]) (*connect_go.Response[v1.WhoAmIResponse], error)
 	// GetFederatedGraphs returns the list of federated graphs.
 	GetFederatedGraphs(context.Context, *connect_go.Request[v1.GetFederatedGraphsRequest]) (*connect_go.Response[v1.GetFederatedGraphsResponse], error)
 	// GetFederatedGraphByName returns the federated graph by name.
@@ -671,6 +688,11 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect_go.Ha
 	platformServiceCheckFederatedGraphHandler := connect_go.NewUnaryHandler(
 		PlatformServiceCheckFederatedGraphProcedure,
 		svc.CheckFederatedGraph,
+		opts...,
+	)
+	platformServiceWhoAmIHandler := connect_go.NewUnaryHandler(
+		PlatformServiceWhoAmIProcedure,
+		svc.WhoAmI,
 		opts...,
 	)
 	platformServiceGetFederatedGraphsHandler := connect_go.NewUnaryHandler(
@@ -802,6 +824,8 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect_go.Ha
 			platformServiceUpdateSubgraphHandler.ServeHTTP(w, r)
 		case PlatformServiceCheckFederatedGraphProcedure:
 			platformServiceCheckFederatedGraphHandler.ServeHTTP(w, r)
+		case PlatformServiceWhoAmIProcedure:
+			platformServiceWhoAmIHandler.ServeHTTP(w, r)
 		case PlatformServiceGetFederatedGraphsProcedure:
 			platformServiceGetFederatedGraphsHandler.ServeHTTP(w, r)
 		case PlatformServiceGetFederatedGraphByNameProcedure:
@@ -891,6 +915,10 @@ func (UnimplementedPlatformServiceHandler) UpdateSubgraph(context.Context, *conn
 
 func (UnimplementedPlatformServiceHandler) CheckFederatedGraph(context.Context, *connect_go.Request[v1.CheckFederatedGraphRequest]) (*connect_go.Response[v1.CheckFederatedGraphResponse], error) {
 	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.CheckFederatedGraph is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) WhoAmI(context.Context, *connect_go.Request[v1.WhoAmIRequest]) (*connect_go.Response[v1.WhoAmIResponse], error) {
+	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.WhoAmI is not implemented"))
 }
 
 func (UnimplementedPlatformServiceHandler) GetFederatedGraphs(context.Context, *connect_go.Request[v1.GetFederatedGraphsRequest]) (*connect_go.Response[v1.GetFederatedGraphsResponse], error) {
