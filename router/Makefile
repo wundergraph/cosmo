@@ -1,5 +1,5 @@
 dev:
-	go run main.go
+	go run cmd/router/main.go
 
 test:
 	go test ./...
