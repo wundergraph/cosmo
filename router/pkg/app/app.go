@@ -236,10 +236,13 @@ func (a *App) initModules(ctx context.Context) error {
 
 		moduleInstance := moduleInfo.New()
 
-		if moduleConfig, ok := a.modulesConfig[string(moduleInfo.ID)]; ok {
+		moduleConfig, ok := a.modulesConfig[string(moduleInfo.ID)]
+		if ok {
 			if err := mapstructure.Decode(moduleConfig, &moduleInstance); err != nil {
 				return fmt.Errorf("failed to decode module config from module %s: %w", moduleInfo.ID, err)
 			}
+		} else {
+			a.logger.Debug("No config found for module", zap.String("id", string(moduleInfo.ID)))
 		}
 
 		if fn, ok := moduleInstance.(Provisioner); ok {
@@ -298,6 +301,7 @@ func (a *App) Start(ctx context.Context) error {
 		})
 	}
 
+	// Modules are only initialized once and not on every config change
 	if err := a.initModules(ctx); err != nil {
 		return fmt.Errorf("failed to init user modules: %w", err)
 	}
