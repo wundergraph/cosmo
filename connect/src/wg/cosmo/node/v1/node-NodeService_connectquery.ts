@@ -3,9 +3,9 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { createQueryService } from '@connectrpc/connect-query';
-import { MethodKind } from '@bufbuild/protobuf';
-import { GetConfigRequest, GetConfigResponse } from './node_pb.js';
+import { createQueryService } from "@connectrpc/connect-query";
+import { MethodKind } from "@bufbuild/protobuf";
+import { GetConfigRequest, GetConfigResponse } from "./node_pb.js";
 
 export const typeName = "wg.cosmo.node.v1.NodeService";
 
