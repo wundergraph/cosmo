@@ -56,7 +56,7 @@ interface ProductItf implements SkuItf {
   dimensions: ProductDimension
   createdBy: User
   hidden: String
-  oldField: String
+  oldField: String @deprecated(reason: "refactored out")
   reviewsCount: Int!
   reviewsScore: Float!
   reviews: [Review!]!
