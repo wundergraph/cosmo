@@ -41,10 +41,10 @@ func (m MyModule) OnOriginResponse(response *http.Response, request *http.Reques
 	// If you want to modify the response, return a new response
 	// If you return an error, the request will be aborted and the response will exit with a 500 status code
 
-	op := graphql.GetContext(request.Context())
+	c := graphql.GetContext(request.Context())
 
 	// Set a header on the client response
-	op.ResponseHeader.Set("myHeader", op.GetString("myKey"))
+	c.ResponseHeader.Set("myHeader", c.GetString("myKey"))
 
 	return nil, nil
 }
@@ -55,17 +55,17 @@ func (m MyModule) OnOriginRequest(request *http.Request) {
 }
 
 func (m MyModule) Middleware(w http.ResponseWriter, r *http.Request, next http.Handler) {
-	op := graphql.GetContext(r.Context())
+	c := graphql.GetContext(r.Context())
 
 	// Share a value between different handlers
-	op.Set("myKey", "myValue")
+	c.Set("myKey", "myValue")
 
 	// Access the operation context
 	fmt.Println(
-		op.Name,
-		op.Type,
-		op.OperationHash,
-		op.Content,
+		c.Name,
+		c.Type,
+		c.OperationHash,
+		c.Content,
 	)
 
 	// Call the next handler in the chain, pass the new context with the value
