@@ -1,10 +1,9 @@
-package planner
+package graphql
 
 import (
 	"context"
 	"fmt"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
-	"github.com/wundergraph/cosmo/router/pkg/factoryresolver"
 	"github.com/wundergraph/cosmo/router/pkg/pool"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
@@ -16,7 +15,7 @@ import (
 	"net/http"
 )
 
-type BuilderOption func(b *Planner)
+type PlannerOption func(b *Planner)
 
 type Planner struct {
 	introspection bool
@@ -24,11 +23,11 @@ type Planner struct {
 	transport     *http.Transport
 	logger        *zap.Logger
 
-	preHandlers  []factoryresolver.TransportPreHandler
-	postHandlers []factoryresolver.TransportPostHandler
+	preHandlers  []TransportPreHandler
+	postHandlers []TransportPostHandler
 }
 
-func NewPlanner(opts ...BuilderOption) *Planner {
+func NewPlanner(opts ...PlannerOption) *Planner {
 	b := &Planner{}
 	for _, opt := range opts {
 		opt(b)
@@ -115,8 +114,8 @@ func (b *Planner) buildPlannerConfiguration(routerCfg *nodev1.RouterConfig) (*pl
 	// this loader is used to take the engine config and create a plan config
 	// the plan config is what the engine uses to turn a GraphQL Request into an execution plan
 	// the plan config is stateful as it carries connection pools and other things
-	loader := factoryresolver.NewLoader(factoryresolver.NewDefaultFactoryResolver(
-		factoryresolver.New(b.preHandlers, b.postHandlers),
+	loader := NewLoader(NewDefaultFactoryResolver(
+		New(b.preHandlers, b.postHandlers),
 		b.transport,
 		b.logger,
 	))
@@ -137,37 +136,37 @@ func (b *Planner) buildPlannerConfiguration(routerCfg *nodev1.RouterConfig) (*pl
 	return planConfig, nil
 }
 
-func WithIntrospection() BuilderOption {
+func WithIntrospection() PlannerOption {
 	return func(b *Planner) {
 		b.introspection = true
 	}
 }
 
-func WithBaseURL(baseURL string) BuilderOption {
+func WithBaseURL(baseURL string) PlannerOption {
 	return func(b *Planner) {
 		b.baseURL = baseURL
 	}
 }
 
-func WithTransport(transport *http.Transport) BuilderOption {
+func WithTransport(transport *http.Transport) PlannerOption {
 	return func(b *Planner) {
 		b.transport = transport
 	}
 }
 
-func WithLogger(logger *zap.Logger) BuilderOption {
+func WithLogger(logger *zap.Logger) PlannerOption {
 	return func(b *Planner) {
 		b.logger = logger
 	}
 }
 
-func WithPreOriginHandlers(preHandlers []factoryresolver.TransportPreHandler) BuilderOption {
+func WithPreOriginHandlers(preHandlers []TransportPreHandler) PlannerOption {
 	return func(b *Planner) {
 		b.preHandlers = preHandlers
 	}
 }
 
-func WithPostOriginHandlers(postHandlers []factoryresolver.TransportPostHandler) BuilderOption {
+func WithPostOriginHandlers(postHandlers []TransportPostHandler) PlannerOption {
 	return func(b *Planner) {
 		b.postHandlers = postHandlers
 	}

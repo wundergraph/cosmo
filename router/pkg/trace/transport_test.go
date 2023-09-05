@@ -39,7 +39,7 @@ func TestTransport(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		tr := NewTransport(http.DefaultTransport, otelhttp.WithSpanOptions(trace.WithAttributes(otel.WgComponentName.String("test"))))
+		tr := NewTransport(http.DefaultTransport, nil, otelhttp.WithSpanOptions(trace.WithAttributes(otel.WgComponentName.String("test"))))
 
 		c := http.Client{Transport: tr}
 		res, err := c.Do(r)
@@ -58,7 +58,7 @@ func TestTransport(t *testing.T) {
 
 		sn := exporter.GetSpans().Snapshots()
 		assert.Len(t, sn, 1)
-		assert.Equal(t, "GET /test", sn[0].Name())
+		assert.Equal(t, "HTTP GET", sn[0].Name())
 		assert.Equal(t, trace.SpanKindClient, sn[0].SpanKind())
 		assert.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[0].Status())
 		assert.Len(t, sn[0].Attributes(), 8)
@@ -89,7 +89,7 @@ func TestTransport(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		tr := NewTransport(http.DefaultTransport, otelhttp.WithSpanOptions(trace.WithAttributes(otel.WgComponentName.String("test"))))
+		tr := NewTransport(http.DefaultTransport, nil, otelhttp.WithSpanOptions(trace.WithAttributes(otel.WgComponentName.String("test"))))
 
 		c := http.Client{Transport: tr}
 		res, err := c.Do(r)
@@ -108,7 +108,7 @@ func TestTransport(t *testing.T) {
 
 		sn := exporter.GetSpans().Snapshots()
 		assert.Len(t, sn, 1)
-		assert.Equal(t, "GET /test", sn[0].Name())
+		assert.Equal(t, "HTTP GET", sn[0].Name())
 		assert.Equal(t, trace.SpanKindClient, sn[0].SpanKind())
 		assert.Equal(t, sdktrace.Status{Code: codes.Error}, sn[0].Status())
 		assert.Len(t, sn[0].Attributes(), 8)

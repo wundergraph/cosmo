@@ -11,7 +11,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane"
-	"github.com/wundergraph/cosmo/router/pkg/factoryresolver"
 	"github.com/wundergraph/cosmo/router/pkg/graphiql"
 	"github.com/wundergraph/cosmo/router/pkg/graphql"
 	"github.com/wundergraph/cosmo/router/pkg/handler/cors"
@@ -20,7 +19,6 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/handler/requestlogger"
 	"github.com/wundergraph/cosmo/router/pkg/metric"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
-	"github.com/wundergraph/cosmo/router/pkg/planner"
 	"github.com/wundergraph/cosmo/router/pkg/stringsx"
 	"github.com/wundergraph/cosmo/router/pkg/trace"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
@@ -65,8 +63,8 @@ type (
 		prometheusServer         *http.Server
 		modulesConfig            map[string]interface{}
 		moduleMiddlewares        []func(http.Handler) http.Handler
-		modulePreOriginHandlers  []factoryresolver.TransportPreHandler
-		modulePostOriginHandlers []factoryresolver.TransportPostHandler
+		modulePreOriginHandlers  []graphql.TransportPreHandler
+		modulePostOriginHandlers []graphql.TransportPostHandler
 	}
 
 	// Router is the main router instance.
@@ -396,13 +394,13 @@ func (a *App) newRouter(ctx context.Context, routerConfig *nodev1.RouterConfig) 
 		return nil, fmt.Errorf("failed to create planner cache: %w", err)
 	}
 
-	pb := planner.NewPlanner(
-		planner.WithIntrospection(),
-		planner.WithLogger(a.logger),
-		planner.WithBaseURL(a.baseURL),
-		planner.WithTransport(a.transport),
-		planner.WithPreOriginHandlers(a.modulePreOriginHandlers),
-		planner.WithPostOriginHandlers(a.modulePostOriginHandlers),
+	pb := graphql.NewPlanner(
+		graphql.WithIntrospection(),
+		graphql.WithLogger(a.logger),
+		graphql.WithBaseURL(a.baseURL),
+		graphql.WithTransport(a.transport),
+		graphql.WithPreOriginHandlers(a.modulePreOriginHandlers),
+		graphql.WithPostOriginHandlers(a.modulePostOriginHandlers),
 	)
 
 	plan, err := pb.Build(ctx, routerConfig)
@@ -424,6 +422,7 @@ func (a *App) newRouter(ctx context.Context, routerConfig *nodev1.RouterConfig) 
 		Pool:            plan.Pool,
 		RenameTypeNames: plan.RenameTypeNames,
 		PlanConfig:      plan.PlanConfig,
+		Definition:      plan.Definition,
 	})
 
 	metricHandler, err := metric.NewMetricHandler(
@@ -444,6 +443,7 @@ func (a *App) newRouter(ctx context.Context, routerConfig *nodev1.RouterConfig) 
 		),
 		// Disable built-in metrics
 		otelhttp.WithMeterProvider(sdkmetric.NewMeterProvider()),
+		otelhttp.WithSpanNameFormatter(graphql.SpanNameFormatter),
 	)
 
 	// Serve GraphQL. Metrics are collected after the request is handled and classified as a GraphQL request.

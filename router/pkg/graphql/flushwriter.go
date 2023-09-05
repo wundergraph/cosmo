@@ -1,4 +1,4 @@
-package flushwriter
+package graphql
 
 import (
 	"bytes"

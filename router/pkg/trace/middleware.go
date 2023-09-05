@@ -16,7 +16,6 @@ type Middleware struct {
 
 func NewMiddleware(componentName attribute.KeyValue, opts ...otelhttp.Option) *Middleware {
 	opts = append(opts, otelhttp.WithFilter(RequestFilter))
-	opts = append(opts, otelhttp.WithSpanNameFormatter(SpanNameFormatter))
 
 	h := &Middleware{
 		componentName: componentName,

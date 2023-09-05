@@ -1,6 +1,7 @@
-package factoryresolver
+package graphql
 
 import (
+	"fmt"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 	"github.com/wundergraph/cosmo/router/pkg/trace"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
@@ -14,14 +15,14 @@ type TransportPreHandler func(*http.Request)
 type TransportPostHandler func(*http.Response, *http.Request) (*http.Response, error)
 
 type CustomTransport struct {
-	originalTransport http.RoundTripper
-	preHandlers       []TransportPreHandler
-	postHandlers      []TransportPostHandler
+	roundTripper http.RoundTripper
+	preHandlers  []TransportPreHandler
+	postHandlers []TransportPostHandler
 }
 
 func NewCustomTransport(originalTransport http.RoundTripper) *CustomTransport {
 	return &CustomTransport{
-		originalTransport: originalTransport,
+		roundTripper: originalTransport,
 	}
 }
 
@@ -33,7 +34,7 @@ func (ct *CustomTransport) RoundTrip(req *http.Request) (*http.Response, error) 
 		}
 	}
 
-	resp, err := ct.originalTransport.RoundTrip(req)
+	resp, err := ct.roundTripper.RoundTrip(req)
 
 	// Short circuit if there is an error
 	if err != nil {
@@ -76,6 +77,15 @@ func (t TransportFactory) RoundTripper(transport *http.Transport, enableStreamin
 	tp := NewCustomTransport(
 		trace.NewTransport(
 			transport,
+			func(r *http.Request) {
+				span := otrace.SpanFromContext(r.Context())
+				operation := GetContext(r.Context())
+				if operation != nil {
+					span.SetAttributes(otel.WgOperationName.String(operation.Name))
+					span.SetAttributes(otel.WgOperationType.String(operation.Type))
+				}
+			},
+			otelhttp.WithSpanNameFormatter(SpanNameFormatter),
 			otelhttp.WithSpanOptions(otrace.WithAttributes(otel.EngineTransportAttribute)),
 		),
 	)
@@ -92,4 +102,21 @@ func (t TransportFactory) DefaultTransportTimeout() time.Duration {
 
 func (t TransportFactory) DefaultHTTPProxyURL() *url.URL {
 	return nil
+}
+
+// SpanNameFormatter formats the span name based on the http request
+func SpanNameFormatter(operation string, r *http.Request) string {
+	if operation != "" {
+		return operation
+	}
+
+	opCtx := GetContext(r.Context())
+	if opCtx != nil {
+		if opCtx.Name != "" {
+			return fmt.Sprintf("%s %s", r.Method, opCtx.Name)
+		}
+		return fmt.Sprintf("%s %s", r.Method, "unnamed")
+	}
+
+	return fmt.Sprintf("%s %s", r.Method, r.URL.Path)
 }

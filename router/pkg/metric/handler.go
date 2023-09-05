@@ -3,7 +3,7 @@ package metric
 import (
 	"fmt"
 	"github.com/go-chi/chi/middleware"
-	"github.com/wundergraph/cosmo/router/pkg/contextx"
+	"github.com/wundergraph/cosmo/router/pkg/graphql"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
@@ -120,7 +120,7 @@ func (h *Handler) Handler(next http.Handler) http.Handler {
 
 		baseKeys = append(baseKeys, h.baseFields...)
 
-		opCtx := contextx.GetOperationContext(ctx)
+		opCtx := graphql.GetContext(ctx)
 		if opCtx != nil {
 			// Metric values must not be empty
 			// M3 does not like empty values

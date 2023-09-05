@@ -363,7 +363,7 @@ func (x *Response) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ResponseWriter.ProtoReflect.Descriptor instead.
+// Deprecated: Use Writer.ProtoReflect.Descriptor instead.
 func (*Response) Descriptor() ([]byte, []int) {
 	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{1}
 }
@@ -6532,7 +6532,7 @@ var file_wg_cosmo_platform_v1_platform_proto_goTypes = []interface{}{
 	(AnalyticsViewFilterOperator)(0),              // 2: wg.cosmo.platform.v1.AnalyticsViewFilterOperator
 	(ExpiresAt)(0),                                // 3: wg.cosmo.platform.v1.ExpiresAt
 	(*Label)(nil),                                 // 4: wg.cosmo.platform.v1.Label
-	(*Response)(nil),                              // 5: wg.cosmo.platform.v1.ResponseWriter
+	(*Response)(nil),                              // 5: wg.cosmo.platform.v1.Writer
 	(*ResponseStatus)(nil),                        // 6: wg.cosmo.platform.v1.ResponseStatus
 	(*PublishFederatedSubgraphRequest)(nil),       // 7: wg.cosmo.platform.v1.PublishFederatedSubgraphRequest
 	(*PublishFederatedSubgraphResponse)(nil),      // 8: wg.cosmo.platform.v1.PublishFederatedSubgraphResponse
@@ -6624,47 +6624,47 @@ var file_wg_cosmo_platform_v1_platform_proto_goTypes = []interface{}{
 	(*v1.GetConfigResponse)(nil),           // 94: wg.cosmo.node.v1.GetConfigResponse
 }
 var file_wg_cosmo_platform_v1_platform_proto_depIdxs = []int32{
-	92,  // 0: wg.cosmo.platform.v1.ResponseWriter.code:type_name -> wg.cosmo.common.EnumStatusCode
-	5,   // 1: wg.cosmo.platform.v1.PublishFederatedSubgraphResponse.response:type_name -> wg.cosmo.platform.v1.ResponseWriter
+	92,  // 0: wg.cosmo.platform.v1.Writer.code:type_name -> wg.cosmo.common.EnumStatusCode
+	5,   // 1: wg.cosmo.platform.v1.PublishFederatedSubgraphResponse.response:type_name -> wg.cosmo.platform.v1.Writer
 	16,  // 2: wg.cosmo.platform.v1.PublishFederatedSubgraphResponse.compositionErrors:type_name -> wg.cosmo.platform.v1.CompositionError
 	4,   // 3: wg.cosmo.platform.v1.CreateFederatedSubgraphRequest.labels:type_name -> wg.cosmo.platform.v1.Label
-	5,   // 4: wg.cosmo.platform.v1.CheckSubgraphSchemaResponse.response:type_name -> wg.cosmo.platform.v1.ResponseWriter
+	5,   // 4: wg.cosmo.platform.v1.CheckSubgraphSchemaResponse.response:type_name -> wg.cosmo.platform.v1.Writer
 	15,  // 5: wg.cosmo.platform.v1.CheckSubgraphSchemaResponse.breakingChanges:type_name -> wg.cosmo.platform.v1.SchemaChange
 	15,  // 6: wg.cosmo.platform.v1.CheckSubgraphSchemaResponse.nonBreakingChanges:type_name -> wg.cosmo.platform.v1.SchemaChange
 	16,  // 7: wg.cosmo.platform.v1.CheckSubgraphSchemaResponse.compositionErrors:type_name -> wg.cosmo.platform.v1.CompositionError
-	5,   // 8: wg.cosmo.platform.v1.FixSubgraphSchemaResponse.response:type_name -> wg.cosmo.platform.v1.ResponseWriter
-	5,   // 9: wg.cosmo.platform.v1.CreateFederatedGraphResponse.response:type_name -> wg.cosmo.platform.v1.ResponseWriter
+	5,   // 8: wg.cosmo.platform.v1.FixSubgraphSchemaResponse.response:type_name -> wg.cosmo.platform.v1.Writer
+	5,   // 9: wg.cosmo.platform.v1.CreateFederatedGraphResponse.response:type_name -> wg.cosmo.platform.v1.Writer
 	16,  // 10: wg.cosmo.platform.v1.CreateFederatedGraphResponse.compositionErrors:type_name -> wg.cosmo.platform.v1.CompositionError
-	5,   // 11: wg.cosmo.platform.v1.CreateFederatedSubgraphResponse.response:type_name -> wg.cosmo.platform.v1.ResponseWriter
-	5,   // 12: wg.cosmo.platform.v1.DeleteFederatedSubgraphResponse.response:type_name -> wg.cosmo.platform.v1.ResponseWriter
-	5,   // 13: wg.cosmo.platform.v1.DeleteFederatedGraphResponse.response:type_name -> wg.cosmo.platform.v1.ResponseWriter
+	5,   // 11: wg.cosmo.platform.v1.CreateFederatedSubgraphResponse.response:type_name -> wg.cosmo.platform.v1.Writer
+	5,   // 12: wg.cosmo.platform.v1.DeleteFederatedSubgraphResponse.response:type_name -> wg.cosmo.platform.v1.Writer
+	5,   // 13: wg.cosmo.platform.v1.DeleteFederatedGraphResponse.response:type_name -> wg.cosmo.platform.v1.Writer
 	66,  // 14: wg.cosmo.platform.v1.FederatedGraph.requestSeries:type_name -> wg.cosmo.platform.v1.RequestSeriesItem
 	25,  // 15: wg.cosmo.platform.v1.FederatedGraphChangelogOutput.changelogs:type_name -> wg.cosmo.platform.v1.FederatedGraphChangelog
-	5,   // 16: wg.cosmo.platform.v1.GetFederatedGraphsResponse.response:type_name -> wg.cosmo.platform.v1.ResponseWriter
+	5,   // 16: wg.cosmo.platform.v1.GetFederatedGraphsResponse.response:type_name -> wg.cosmo.platform.v1.Writer
 	24,  // 17: wg.cosmo.platform.v1.GetFederatedGraphsResponse.graphs:type_name -> wg.cosmo.platform.v1.FederatedGraph
 	4,   // 18: wg.cosmo.platform.v1.Subgraph.labels:type_name -> wg.cosmo.platform.v1.Label
-	5,   // 19: wg.cosmo.platform.v1.GetSubgraphsResponse.response:type_name -> wg.cosmo.platform.v1.ResponseWriter
+	5,   // 19: wg.cosmo.platform.v1.GetSubgraphsResponse.response:type_name -> wg.cosmo.platform.v1.Writer
 	29,  // 20: wg.cosmo.platform.v1.GetSubgraphsResponse.graphs:type_name -> wg.cosmo.platform.v1.Subgraph
-	5,   // 21: wg.cosmo.platform.v1.GetFederatedGraphByNameResponse.response:type_name -> wg.cosmo.platform.v1.ResponseWriter
+	5,   // 21: wg.cosmo.platform.v1.GetFederatedGraphByNameResponse.response:type_name -> wg.cosmo.platform.v1.Writer
 	24,  // 22: wg.cosmo.platform.v1.GetFederatedGraphByNameResponse.graph:type_name -> wg.cosmo.platform.v1.FederatedGraph
 	29,  // 23: wg.cosmo.platform.v1.GetFederatedGraphByNameResponse.subgraphs:type_name -> wg.cosmo.platform.v1.Subgraph
-	5,   // 24: wg.cosmo.platform.v1.GetFederatedGraphSDLByNameResponse.response:type_name -> wg.cosmo.platform.v1.ResponseWriter
-	5,   // 25: wg.cosmo.platform.v1.GetSubgraphByNameResponse.response:type_name -> wg.cosmo.platform.v1.ResponseWriter
+	5,   // 24: wg.cosmo.platform.v1.GetFederatedGraphSDLByNameResponse.response:type_name -> wg.cosmo.platform.v1.Writer
+	5,   // 25: wg.cosmo.platform.v1.GetSubgraphByNameResponse.response:type_name -> wg.cosmo.platform.v1.Writer
 	29,  // 26: wg.cosmo.platform.v1.GetSubgraphByNameResponse.graph:type_name -> wg.cosmo.platform.v1.Subgraph
-	5,   // 27: wg.cosmo.platform.v1.GetFederatedSubgraphSDLByNameResponse.response:type_name -> wg.cosmo.platform.v1.ResponseWriter
-	5,   // 28: wg.cosmo.platform.v1.GetChecksByFederatedGraphNameResponse.response:type_name -> wg.cosmo.platform.v1.ResponseWriter
+	5,   // 27: wg.cosmo.platform.v1.GetFederatedSubgraphSDLByNameResponse.response:type_name -> wg.cosmo.platform.v1.Writer
+	5,   // 28: wg.cosmo.platform.v1.GetChecksByFederatedGraphNameResponse.response:type_name -> wg.cosmo.platform.v1.Writer
 	40,  // 29: wg.cosmo.platform.v1.GetChecksByFederatedGraphNameResponse.checks:type_name -> wg.cosmo.platform.v1.SchemaCheck
-	5,   // 30: wg.cosmo.platform.v1.GetCheckDetailsResponse.response:type_name -> wg.cosmo.platform.v1.ResponseWriter
+	5,   // 30: wg.cosmo.platform.v1.GetCheckDetailsResponse.response:type_name -> wg.cosmo.platform.v1.Writer
 	15,  // 31: wg.cosmo.platform.v1.GetCheckDetailsResponse.changes:type_name -> wg.cosmo.platform.v1.SchemaChange
-	5,   // 32: wg.cosmo.platform.v1.GetFederatedGraphChangelogResponse.response:type_name -> wg.cosmo.platform.v1.ResponseWriter
+	5,   // 32: wg.cosmo.platform.v1.GetFederatedGraphChangelogResponse.response:type_name -> wg.cosmo.platform.v1.Writer
 	26,  // 33: wg.cosmo.platform.v1.GetFederatedGraphChangelogResponse.federatedGraphChangelogOutput:type_name -> wg.cosmo.platform.v1.FederatedGraphChangelogOutput
-	5,   // 34: wg.cosmo.platform.v1.GetFederatedResponse.response:type_name -> wg.cosmo.platform.v1.ResponseWriter
+	5,   // 34: wg.cosmo.platform.v1.GetFederatedResponse.response:type_name -> wg.cosmo.platform.v1.Writer
 	4,   // 35: wg.cosmo.platform.v1.UpdateSubgraphRequest.labels:type_name -> wg.cosmo.platform.v1.Label
-	5,   // 36: wg.cosmo.platform.v1.UpdateSubgraphResponse.response:type_name -> wg.cosmo.platform.v1.ResponseWriter
+	5,   // 36: wg.cosmo.platform.v1.UpdateSubgraphResponse.response:type_name -> wg.cosmo.platform.v1.Writer
 	16,  // 37: wg.cosmo.platform.v1.UpdateSubgraphResponse.compositionErrors:type_name -> wg.cosmo.platform.v1.CompositionError
-	5,   // 38: wg.cosmo.platform.v1.UpdateFederatedGraphResponse.response:type_name -> wg.cosmo.platform.v1.ResponseWriter
+	5,   // 38: wg.cosmo.platform.v1.UpdateFederatedGraphResponse.response:type_name -> wg.cosmo.platform.v1.Writer
 	16,  // 39: wg.cosmo.platform.v1.UpdateFederatedGraphResponse.compositionErrors:type_name -> wg.cosmo.platform.v1.CompositionError
-	5,   // 40: wg.cosmo.platform.v1.CheckFederatedGraphResponse.response:type_name -> wg.cosmo.platform.v1.ResponseWriter
+	5,   // 40: wg.cosmo.platform.v1.CheckFederatedGraphResponse.response:type_name -> wg.cosmo.platform.v1.Writer
 	16,  // 41: wg.cosmo.platform.v1.CheckFederatedGraphResponse.compositionErrors:type_name -> wg.cosmo.platform.v1.CompositionError
 	29,  // 42: wg.cosmo.platform.v1.CheckFederatedGraphResponse.subgraphs:type_name -> wg.cosmo.platform.v1.Subgraph
 	56,  // 43: wg.cosmo.platform.v1.AnalyticsConfig.date_range:type_name -> wg.cosmo.platform.v1.AnalyticsDateRange
@@ -6680,24 +6680,24 @@ var file_wg_cosmo_platform_v1_platform_proto_depIdxs = []int32{
 	61,  // 53: wg.cosmo.platform.v1.AnalyticsViewResultFilter.options:type_name -> wg.cosmo.platform.v1.AnalyticsViewResultFilterOption
 	2,   // 54: wg.cosmo.platform.v1.AnalyticsViewResultFilterOption.operator:type_name -> wg.cosmo.platform.v1.AnalyticsViewFilterOperator
 	91,  // 55: wg.cosmo.platform.v1.AnalyticsViewRow.value:type_name -> wg.cosmo.platform.v1.AnalyticsViewRow.ValueEntry
-	5,   // 56: wg.cosmo.platform.v1.GetAnalyticsViewResponse.response:type_name -> wg.cosmo.platform.v1.ResponseWriter
+	5,   // 56: wg.cosmo.platform.v1.GetAnalyticsViewResponse.response:type_name -> wg.cosmo.platform.v1.Writer
 	58,  // 57: wg.cosmo.platform.v1.GetAnalyticsViewResponse.view:type_name -> wg.cosmo.platform.v1.AnalyticsViewResult
-	5,   // 58: wg.cosmo.platform.v1.GetDashboardAnalyticsViewResponse.response:type_name -> wg.cosmo.platform.v1.ResponseWriter
+	5,   // 58: wg.cosmo.platform.v1.GetDashboardAnalyticsViewResponse.response:type_name -> wg.cosmo.platform.v1.Writer
 	66,  // 59: wg.cosmo.platform.v1.GetDashboardAnalyticsViewResponse.requestSeries:type_name -> wg.cosmo.platform.v1.RequestSeriesItem
 	67,  // 60: wg.cosmo.platform.v1.GetDashboardAnalyticsViewResponse.mostRequestedOperations:type_name -> wg.cosmo.platform.v1.OperationRequestCount
-	5,   // 61: wg.cosmo.platform.v1.CreateFederatedGraphTokenResponse.response:type_name -> wg.cosmo.platform.v1.ResponseWriter
-	5,   // 62: wg.cosmo.platform.v1.GetOrganizationMembersResponse.response:type_name -> wg.cosmo.platform.v1.ResponseWriter
+	5,   // 61: wg.cosmo.platform.v1.CreateFederatedGraphTokenResponse.response:type_name -> wg.cosmo.platform.v1.Writer
+	5,   // 62: wg.cosmo.platform.v1.GetOrganizationMembersResponse.response:type_name -> wg.cosmo.platform.v1.Writer
 	71,  // 63: wg.cosmo.platform.v1.GetOrganizationMembersResponse.members:type_name -> wg.cosmo.platform.v1.User
-	5,   // 64: wg.cosmo.platform.v1.InviteUserResponse.response:type_name -> wg.cosmo.platform.v1.ResponseWriter
-	5,   // 65: wg.cosmo.platform.v1.GetAPIKeysResponse.response:type_name -> wg.cosmo.platform.v1.ResponseWriter
+	5,   // 64: wg.cosmo.platform.v1.InviteUserResponse.response:type_name -> wg.cosmo.platform.v1.Writer
+	5,   // 65: wg.cosmo.platform.v1.GetAPIKeysResponse.response:type_name -> wg.cosmo.platform.v1.Writer
 	76,  // 66: wg.cosmo.platform.v1.GetAPIKeysResponse.apiKeys:type_name -> wg.cosmo.platform.v1.APIKey
 	3,   // 67: wg.cosmo.platform.v1.CreateAPIKeyRequest.expires:type_name -> wg.cosmo.platform.v1.ExpiresAt
-	5,   // 68: wg.cosmo.platform.v1.CreateAPIKeyResponse.response:type_name -> wg.cosmo.platform.v1.ResponseWriter
-	5,   // 69: wg.cosmo.platform.v1.DeleteAPIKeyResponse.response:type_name -> wg.cosmo.platform.v1.ResponseWriter
-	5,   // 70: wg.cosmo.platform.v1.RemoveInvitationResponse.response:type_name -> wg.cosmo.platform.v1.ResponseWriter
-	5,   // 71: wg.cosmo.platform.v1.MigrateFromApolloResponse.response:type_name -> wg.cosmo.platform.v1.ResponseWriter
+	5,   // 68: wg.cosmo.platform.v1.CreateAPIKeyResponse.response:type_name -> wg.cosmo.platform.v1.Writer
+	5,   // 69: wg.cosmo.platform.v1.DeleteAPIKeyResponse.response:type_name -> wg.cosmo.platform.v1.Writer
+	5,   // 70: wg.cosmo.platform.v1.RemoveInvitationResponse.response:type_name -> wg.cosmo.platform.v1.Writer
+	5,   // 71: wg.cosmo.platform.v1.MigrateFromApolloResponse.response:type_name -> wg.cosmo.platform.v1.Writer
 	87,  // 72: wg.cosmo.platform.v1.Span.attributes:type_name -> wg.cosmo.platform.v1.SpanAttributes
-	5,   // 73: wg.cosmo.platform.v1.GetTraceResponse.response:type_name -> wg.cosmo.platform.v1.ResponseWriter
+	5,   // 73: wg.cosmo.platform.v1.GetTraceResponse.response:type_name -> wg.cosmo.platform.v1.Writer
 	88,  // 74: wg.cosmo.platform.v1.GetTraceResponse.spans:type_name -> wg.cosmo.platform.v1.Span
 	63,  // 75: wg.cosmo.platform.v1.AnalyticsViewRow.ValueEntry.value:type_name -> wg.cosmo.platform.v1.AnalyticsViewRowValue
 	11,  // 76: wg.cosmo.platform.v1.PlatformService.CreateFederatedGraph:input_type -> wg.cosmo.platform.v1.CreateFederatedGraphRequest
