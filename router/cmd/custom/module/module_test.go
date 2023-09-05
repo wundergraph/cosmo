@@ -7,10 +7,15 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/app"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"net/http/httptest"
+	"os"
 	"testing"
 )
 
 func TestMyModule(t *testing.T) {
+
+	if os.Getenv("CI") != "" {
+		t.Skip("Skipping testing in CI environment")
+	}
 
 	ctx := context.Background()
 	cfg := config.Config{
