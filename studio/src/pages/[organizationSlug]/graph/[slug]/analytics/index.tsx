@@ -1,4 +1,4 @@
-import { DataTable, refreshIntervals } from "@/components/analytics/data-table";
+import { DataTable } from "@/components/analytics/data-table";
 import { useAnalyticsQueryState } from "@/components/analytics/useAnalyticsQueryState";
 import { EmptyState } from "@/components/empty-state";
 import { GraphContext, getGraphLayout } from "@/components/layout/graph-layout";
@@ -10,7 +10,7 @@ import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { useQuery } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common_pb";
 import { getAnalyticsView } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { useContext, useState } from "react";
+import { useContext } from "react";
 
 export type OperationAnalytics = {
   name: string;

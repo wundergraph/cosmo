@@ -24,11 +24,11 @@ export default class ApiKeyAuthenticator {
     });
 
     if (!apiKeyModel || !apiKeyModel.user) {
-      throw new Error('invalid api key');
+      throw new Error('Invalid api key');
     }
 
     if (apiKeyModel?.expiresAt && apiKeyModel.expiresAt < new Date()) {
-      throw new Error('api key is expired');
+      throw new Error('Api key is expired');
     }
     /**
      * Update the last used at timestamp.

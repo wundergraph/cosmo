@@ -214,6 +214,10 @@ message GetFederatedSubgraphSDLByNameResponse {
 
 message GetChecksByFederatedGraphNameRequest {
   string name = 1;
+  int32 limit = 2;
+  int32 offset = 3;
+  string startDate = 4;
+  string endDate = 5;
 }
 
 message SchemaCheck {
@@ -229,6 +233,8 @@ message SchemaCheck {
 message GetChecksByFederatedGraphNameResponse {
   Response response = 1;
   repeated SchemaCheck checks = 2;
+  string checksCountBasedOnDateRange = 3;
+  string totalChecksCount = 4;
 }
 
 message GetCheckDetailsRequest {
@@ -554,6 +560,14 @@ message GetTraceResponse {
   repeated Span spans = 2;
 }
 
+message WhoAmIRequest {}
+
+message WhoAmIResponse {
+  Response response = 1;
+  string organizationName = 2;
+  optional string userEmail = 3;
+}
+
 service PlatformService {
   // CreateFederatedGraph creates a federated graph on the control plane.
   rpc CreateFederatedGraph(CreateFederatedGraphRequest) returns (CreateFederatedGraphResponse) {}
@@ -574,6 +588,8 @@ service PlatformService {
   rpc UpdateSubgraph(UpdateSubgraphRequest) returns (UpdateSubgraphResponse) {}
   // CheckFederatedGraph checks if the federated graph can be composed with the new labels provided.
   rpc CheckFederatedGraph(CheckFederatedGraphRequest) returns (CheckFederatedGraphResponse) {}
+  // WhoAmI returns the identity of the user currently logged in.
+  rpc WhoAmI(WhoAmIRequest) returns (WhoAmIResponse) {}
 
   // For Studio and CLI
 
