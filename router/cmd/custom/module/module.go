@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/wundergraph/cosmo/router/pkg/app"
 	"github.com/wundergraph/cosmo/router/pkg/graphql"
+	"go.uber.org/zap"
 	"net/http"
 )
 
@@ -58,7 +59,9 @@ func (m MyModule) OnOriginResponse(response *http.Response, request *http.Reques
 
 func (m MyModule) OnOriginRequest(request *http.Request) {
 	// Read the request or modify headers here before it is sent to the origin
+	c := app.GetContext(request.Context())
 
+	c.Logger().Info("Subgraph request", zap.String("host", request.Host))
 }
 
 func (m MyModule) Middleware(w http.ResponseWriter, r *http.Request, next http.Handler) {
@@ -68,10 +71,10 @@ func (m MyModule) Middleware(w http.ResponseWriter, r *http.Request, next http.H
 
 	// Access the GraphQL operation context
 	fmt.Println(
-		c.Name(),
-		c.Type(),
-		c.OperationHash(),
-		c.Content(),
+		c.Name,
+		c.Type,
+		c.Hash,
+		c.Content,
 	)
 
 	// Share a value between different handlers

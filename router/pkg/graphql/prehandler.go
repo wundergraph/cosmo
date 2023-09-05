@@ -172,12 +172,12 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		operationID := shared.Hash.Sum64() // generate the operation ID
 		shared.Hash.Reset()
 
-		ctxWithOperation := withOperationContext(r.Context(), &operationContext{
-			name:          requestOperationName,
-			opType:        requestOperationType,
-			operationHash: operationID,
-			content:       requestQuery,
-			plan:          shared,
+		ctxWithOperation := WithOperationContext(r.Context(), &OperationContext{
+			Name:    requestOperationName,
+			Type:    requestOperationType,
+			Hash:    operationID,
+			Content: requestQuery,
+			plan:    shared,
 		})
 
 		// Add the operation to the context, so we can access it later in custom transports etc.

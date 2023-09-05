@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"go.uber.org/zap"
 	"net/http"
 	"sync"
 	"time"
@@ -11,11 +12,13 @@ type key string
 
 const requestContextKey = key("request")
 
-var _ Context = (*appContext)(nil)
+var _ RequestContext = (*Context)(nil)
 
-type Context interface {
+type RequestContext interface {
 	// ResponseHeader is a map of headers that will be set on the response.
 	ResponseHeader() http.Header
+
+	Logger() *zap.Logger
 
 	// Set is used to store a new key/value pair exclusively for this context.
 	Set(string, any)
@@ -66,7 +69,8 @@ type Context interface {
 	GetStringMapStringSlice(string) map[string][]string
 }
 
-type appContext struct {
+type Context struct {
+	logger *zap.Logger
 	// This mutex protects keys map.
 	mu sync.RWMutex
 	// keys is a key/value pair exclusively for the context of each request.
@@ -75,13 +79,20 @@ type appContext struct {
 	responseHeader http.Header
 }
 
-func withContext(ctx context.Context, operation *appContext) context.Context {
+func NewContext(logger *zap.Logger, responseHeader http.Header) *Context {
+	return &Context{
+		logger:         logger,
+		responseHeader: responseHeader,
+	}
+}
+
+func WithContext(ctx context.Context, operation *Context) context.Context {
 	return context.WithValue(ctx, requestContextKey, operation)
 }
 
 // GetContext returns the request context.
 // It provides access to the original Request and ResponseWriter.
-func GetContext(ctx context.Context) Context {
+func GetContext(ctx context.Context) RequestContext {
 	if ctx == nil {
 		return nil
 	}
@@ -89,28 +100,20 @@ func GetContext(ctx context.Context) Context {
 	if op == nil {
 		return nil
 	}
-	return op.(Context)
+	return op.(RequestContext)
 }
 
-// GetContext returns the request context. It is used for internal purposes.
-func getContext(ctx context.Context) *appContext {
-	if ctx == nil {
-		return nil
-	}
-	op := ctx.Value(requestContextKey)
-	if op == nil {
-		return nil
-	}
-	return op.(*appContext)
-}
-
-func (c *appContext) ResponseHeader() http.Header {
+func (c *Context) ResponseHeader() http.Header {
 	return c.responseHeader
+}
+
+func (c *Context) Logger() *zap.Logger {
+	return c.logger
 }
 
 // Set is used to store a new key/value pair exclusively for this context.
 // It also lazy initializes  c.keys if it was not used previously.
-func (c *appContext) Set(key string, value any) {
+func (c *Context) Set(key string, value any) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.keys == nil {
@@ -122,7 +125,7 @@ func (c *appContext) Set(key string, value any) {
 
 // Get returns the value for the given key, ie: (value, true).
 // If the value does not exist it returns (nil, false)
-func (c *appContext) Get(key string) (value any, exists bool) {
+func (c *Context) Get(key string) (value any, exists bool) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	value, exists = c.keys[key]
@@ -130,7 +133,7 @@ func (c *appContext) Get(key string) (value any, exists bool) {
 }
 
 // MustGet returns the value for the given key if it exists, otherwise it panics.
-func (c *appContext) MustGet(key string) any {
+func (c *Context) MustGet(key string) any {
 	if value, exists := c.Get(key); exists {
 		return value
 	}
@@ -138,7 +141,7 @@ func (c *appContext) MustGet(key string) any {
 }
 
 // GetString returns the value associated with the key as a string.
-func (c *appContext) GetString(key string) (s string) {
+func (c *Context) GetString(key string) (s string) {
 	if val, ok := c.Get(key); ok && val != nil {
 		s, _ = val.(string)
 	}
@@ -146,7 +149,7 @@ func (c *appContext) GetString(key string) (s string) {
 }
 
 // GetBool returns the value associated with the key as a boolean.
-func (c *appContext) GetBool(key string) (b bool) {
+func (c *Context) GetBool(key string) (b bool) {
 	if val, ok := c.Get(key); ok && val != nil {
 		b, _ = val.(bool)
 	}
@@ -154,7 +157,7 @@ func (c *appContext) GetBool(key string) (b bool) {
 }
 
 // GetInt returns the value associated with the key as an integer.
-func (c *appContext) GetInt(key string) (i int) {
+func (c *Context) GetInt(key string) (i int) {
 	if val, ok := c.Get(key); ok && val != nil {
 		i, _ = val.(int)
 	}
@@ -162,7 +165,7 @@ func (c *appContext) GetInt(key string) (i int) {
 }
 
 // GetInt64 returns the value associated with the key as an integer.
-func (c *appContext) GetInt64(key string) (i64 int64) {
+func (c *Context) GetInt64(key string) (i64 int64) {
 	if val, ok := c.Get(key); ok && val != nil {
 		i64, _ = val.(int64)
 	}
@@ -170,7 +173,7 @@ func (c *appContext) GetInt64(key string) (i64 int64) {
 }
 
 // GetUint returns the value associated with the key as an unsigned integer.
-func (c *appContext) GetUint(key string) (ui uint) {
+func (c *Context) GetUint(key string) (ui uint) {
 	if val, ok := c.Get(key); ok && val != nil {
 		ui, _ = val.(uint)
 	}
@@ -178,7 +181,7 @@ func (c *appContext) GetUint(key string) (ui uint) {
 }
 
 // GetUint64 returns the value associated with the key as an unsigned integer.
-func (c *appContext) GetUint64(key string) (ui64 uint64) {
+func (c *Context) GetUint64(key string) (ui64 uint64) {
 	if val, ok := c.Get(key); ok && val != nil {
 		ui64, _ = val.(uint64)
 	}
@@ -186,7 +189,7 @@ func (c *appContext) GetUint64(key string) (ui64 uint64) {
 }
 
 // GetFloat64 returns the value associated with the key as a float64.
-func (c *appContext) GetFloat64(key string) (f64 float64) {
+func (c *Context) GetFloat64(key string) (f64 float64) {
 	if val, ok := c.Get(key); ok && val != nil {
 		f64, _ = val.(float64)
 	}
@@ -194,7 +197,7 @@ func (c *appContext) GetFloat64(key string) (f64 float64) {
 }
 
 // GetTime returns the value associated with the key as time.
-func (c *appContext) GetTime(key string) (t time.Time) {
+func (c *Context) GetTime(key string) (t time.Time) {
 	if val, ok := c.Get(key); ok && val != nil {
 		t, _ = val.(time.Time)
 	}
@@ -202,7 +205,7 @@ func (c *appContext) GetTime(key string) (t time.Time) {
 }
 
 // GetDuration returns the value associated with the key as a duration.
-func (c *appContext) GetDuration(key string) (d time.Duration) {
+func (c *Context) GetDuration(key string) (d time.Duration) {
 	if val, ok := c.Get(key); ok && val != nil {
 		d, _ = val.(time.Duration)
 	}
@@ -210,7 +213,7 @@ func (c *appContext) GetDuration(key string) (d time.Duration) {
 }
 
 // GetStringSlice returns the value associated with the key as a slice of strings.
-func (c *appContext) GetStringSlice(key string) (ss []string) {
+func (c *Context) GetStringSlice(key string) (ss []string) {
 	if val, ok := c.Get(key); ok && val != nil {
 		ss, _ = val.([]string)
 	}
@@ -218,7 +221,7 @@ func (c *appContext) GetStringSlice(key string) (ss []string) {
 }
 
 // GetStringMap returns the value associated with the key as a map of interfaces.
-func (c *appContext) GetStringMap(key string) (sm map[string]any) {
+func (c *Context) GetStringMap(key string) (sm map[string]any) {
 	if val, ok := c.Get(key); ok && val != nil {
 		sm, _ = val.(map[string]any)
 	}
@@ -226,7 +229,7 @@ func (c *appContext) GetStringMap(key string) (sm map[string]any) {
 }
 
 // GetStringMapString returns the value associated with the key as a map of strings.
-func (c *appContext) GetStringMapString(key string) (sms map[string]string) {
+func (c *Context) GetStringMapString(key string) (sms map[string]string) {
 	if val, ok := c.Get(key); ok && val != nil {
 		sms, _ = val.(map[string]string)
 	}
@@ -234,7 +237,7 @@ func (c *appContext) GetStringMapString(key string) (sms map[string]string) {
 }
 
 // GetStringMapStringSlice returns the value associated with the key as a map to a slice of strings.
-func (c *appContext) GetStringMapStringSlice(key string) (smss map[string][]string) {
+func (c *Context) GetStringMapStringSlice(key string) (smss map[string][]string) {
 	if val, ok := c.Get(key); ok && val != nil {
 		smss, _ = val.(map[string][]string)
 	}

@@ -124,11 +124,11 @@ func (h *Handler) Handler(next http.Handler) http.Handler {
 		if opCtx != nil {
 			// Metric values must not be empty
 			// M3 does not like empty values
-			if opCtx.Name() != "" {
-				baseKeys = append(baseKeys, otel.WgOperationName.String(opCtx.Name()))
+			if opCtx.Name != "" {
+				baseKeys = append(baseKeys, otel.WgOperationName.String(opCtx.Name))
 			}
-			if opCtx.Type() != "" {
-				baseKeys = append(baseKeys, otel.WgOperationType.String(opCtx.Type()))
+			if opCtx.Type != "" {
+				baseKeys = append(baseKeys, otel.WgOperationType.String(opCtx.Type))
 			}
 			baseKeys = append(baseKeys, semconv.HTTPStatusCode(statusCode))
 		}

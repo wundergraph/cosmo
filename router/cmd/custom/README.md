@@ -38,6 +38,16 @@ go build -o router ./cmd/custom/main.go
 docker build -f custom.Dockerfile -t router-custom:latest .
 ```
 
+## Run tests
+
+In order to run the tests, you need to run the example subgraph first. We use the demo subgraph for this.
+
+```
+make dc-subgraphs-demo
+```
+
+In practice, you would create a custom router config and mock the subgraph dependencies in your tests.
+
 _All commands are run from the root of the router directory._
 
 ## Credits

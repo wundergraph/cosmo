@@ -3,12 +3,11 @@ package config
 import (
 	b64 "encoding/base64"
 	"fmt"
-	"github.com/goccy/go-yaml"
-	"os"
-
 	"github.com/go-playground/validator/v10"
+	"github.com/goccy/go-yaml"
 	"github.com/joho/godotenv"
 	"github.com/kelseyhightower/envconfig"
+	"os"
 )
 
 type Base64Decoder []byte
@@ -63,15 +62,6 @@ func LoadConfig() (*Config, error) {
 	godotenv.Load()
 
 	var c Config
-	err := envconfig.Process("", &c)
-	if err != nil {
-		return nil, err
-	}
-
-	err = validator.New().Struct(c)
-	if err != nil {
-		return nil, err
-	}
 
 	configBytes, err := os.ReadFile("config.yaml")
 
@@ -79,6 +69,16 @@ func LoadConfig() (*Config, error) {
 		if err := yaml.Unmarshal(configBytes, &c); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal router config: %w", err)
 		}
+	}
+
+	err = envconfig.Process("", &c)
+	if err != nil {
+		return nil, err
+	}
+
+	err = validator.New().Struct(c)
+	if err != nil {
+		return nil, err
 	}
 
 	return &c, nil

@@ -77,15 +77,15 @@ type EnginePostOriginHandler interface {
 	OnOriginResponse(*http.Response, *http.Request) (*http.Response, error)
 }
 
-// Provisioner is called before the server starts
+// Provisioner is called before the Server starts
 // It allows you to initialize your module e.g. create a database connection
 // or load a configuration file
 type Provisioner interface {
-	// Provision is called before the server starts
+	// Provision is called before the Server starts
 	Provision(context.Context) error
 }
 
 type Cleaner interface {
-	// Cleanup is called after the server stops
+	// Cleanup is called after the Server stops
 	Cleanup(context.Context) error
 }

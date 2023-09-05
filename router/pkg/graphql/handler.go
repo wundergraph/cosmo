@@ -105,28 +105,28 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	)
 
 	requestLogger := h.log.With(logging.WithRequestID(middleware.GetReqID(r.Context())))
-	operationContext := getOperationContext(r.Context())
+	operationContext := GetOperationContext(r.Context())
 
 	// Update the resolveCtx with the latest request context so user modules can access it
 	operationContext.plan.Ctx = operationContext.plan.Ctx.WithContext(r.Context())
 
-	requestOperationNameBytes := unsafebytes.StringToBytes(operationContext.name)
+	requestOperationNameBytes := unsafebytes.StringToBytes(operationContext.Name)
 
 	// try to get a prepared plan for this operation ID from the cache
-	cachedPlan, ok := h.planCache.Get(operationContext.OperationHash())
+	cachedPlan, ok := h.planCache.Get(operationContext.Hash)
 	if ok && cachedPlan != nil {
 		// re-use a prepared plan
 		preparedPlan = cachedPlan.(planWithExtractedVariables)
 	} else {
 		// prepare a new plan using single flight
 		// this ensures that we only prepare the plan once for this operation ID
-		sharedPreparedPlan, err, _ := h.sf.Do(strconv.FormatUint(operationContext.operationHash, 10), func() (interface{}, error) {
+		sharedPreparedPlan, err, _ := h.sf.Do(strconv.FormatUint(operationContext.Hash, 10), func() (interface{}, error) {
 			prepared, err := h.preparePlan(requestOperationNameBytes, operationContext.plan)
 			if err != nil {
 				return nil, err
 			}
 			// cache the prepared plan for 1 hour
-			h.planCache.SetWithTTL(operationContext.OperationHash(), prepared, 1, time.Hour)
+			h.planCache.SetWithTTL(operationContext.Hash, prepared, 1, time.Hour)
 			return prepared, nil
 		})
 		if err != nil {
