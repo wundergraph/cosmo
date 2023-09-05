@@ -50,7 +50,7 @@ func (m MyModule) OnOriginResponse(response *http.Response, request *http.Reques
 }
 
 func (m MyModule) OnOriginRequest(request *http.Request) {
-	// Read the request or modify headers here
+	// Read the request or modify headers here before it is sent to the origin
 
 }
 
