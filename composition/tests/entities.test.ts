@@ -1,4 +1,4 @@
-import { federateSubgraphs, RootTypeField, Subgraph, unresolvableFieldError } from '../src';
+import { federateSubgraphs, RootTypeFieldData, Subgraph, unresolvableFieldError } from '../src';
 import { describe, expect, test } from 'vitest';
 import { documentNodeToNormalizedString, normalizeString, versionOnePersistedBaseSchema } from './utils/utils';
 import { parse } from 'graphql';
@@ -68,27 +68,24 @@ describe('Entities federation tests', () => {
   });
 
   test('that if an unresolvable field appears in the first subgraph, it returns an error', () => {
-    const rootTypeField: RootTypeField = {
-      inlineFragment: '',
-      name: 'trainer',
+    const rootTypeFieldData: RootTypeFieldData = {
+      fieldName: 'trainer',
+      fieldTypeNodeString: 'Trainer!',
       path: 'Query.trainer',
-      parentTypeName: 'Query',
-      responseType: 'Trainer!',
-      rootTypeName: 'Trainer',
       subgraphs: new Set<string>(['subgraph-e']),
+      typeName: 'Query',
     };
     const result = federateSubgraphs([subgraphD, subgraphE]);
     expect(result.errors).toBeDefined();
-    expect(result.errors).toHaveLength(3);
-    expect(result.errors![0]).deep.equal(
-      unresolvableFieldError(rootTypeField, 'details', ['Query.trainer.details { ... }'], 'subgraph-d', 'Trainer'),
-    );
-    // TODO these errors should not happen because it's the parent that's the problem
-    expect(result.errors![1]).deep.equal(
-      unresolvableFieldError(rootTypeField, 'name', ['Query.trainer.details.name'], 'subgraph-d', 'Details'),
-    );
-    expect(result.errors![2]).deep.equal(
-      unresolvableFieldError(rootTypeField, 'age', ['Query.trainer.details.age'], 'subgraph-d', 'Details'),
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors![0]).toStrictEqual(
+      unresolvableFieldError(
+        rootTypeFieldData,
+        'details',
+        ['subgraph-d'],
+        'Query.trainer.details { ... }',
+        'Trainer'
+      ),
     );
   });
 

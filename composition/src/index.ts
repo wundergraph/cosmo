@@ -1,6 +1,6 @@
 export * from './normalization/normalization-factory';
 export * from './federation/federation-factory';
-export * from './federation/federation-result';
+export * from './federation/utils';
 export * from './subgraph/field-configuration';
 export * from './subgraph/subgraph';
 export * from './errors/errors';

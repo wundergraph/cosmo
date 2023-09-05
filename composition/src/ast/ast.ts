@@ -24,6 +24,7 @@ import {
   UnionTypeDefinitionNode,
 } from 'graphql';
 import { federationUnexpectedNodeKindError } from '../errors/errors';
+import { formatDescription } from './utils';
 
 function deepCopyFieldsAndInterfaces(
   node: InterfaceTypeDefinitionNode | ObjectTypeDefinitionNode | ObjectTypeExtensionNode,
@@ -82,7 +83,7 @@ export type MutableDirectiveDefinitionNode = {
 export function directiveDefinitionNodeToMutable(node: DirectiveDefinitionNode): MutableDirectiveDefinitionNode {
   return {
     arguments: node.arguments ? [...node.arguments] : undefined,
-    description: node.description ? { ...node.description } : undefined,
+    description: formatDescription(node.description),
     kind: node.kind,
     locations: [...node.locations],
     name: { ...node.name },
@@ -106,7 +107,7 @@ export function enumTypeDefinitionNodeToMutable(node: EnumTypeDefinitionNode): M
     }
   }
   return {
-    description: node.description ? { ...node.description } : undefined,
+    description: formatDescription(node.description),
     kind: node.kind,
     name: { ...node.name },
     values,
@@ -122,7 +123,7 @@ export type MutableEnumValueDefinitionNode = {
 
 export function enumValueDefinitionNodeToMutable(node: EnumValueDefinitionNode): MutableEnumValueDefinitionNode {
   return {
-    description: node.description ? { ...node.description } : undefined,
+    description: formatDescription(node.description),
     kind: node.kind,
     name: { ...node.name },
   }
@@ -146,7 +147,7 @@ export function fieldDefinitionNodeToMutable(node: FieldDefinitionNode, parentNa
   }
   return {
     arguments: args,
-    description: node.description ? { ...node.description } : undefined,
+    description: formatDescription(node.description),
     kind: node.kind,
     name: { ...node.name },
     type: deepCopyTypeNode(node.type, parentName, node.name.value),
@@ -169,7 +170,7 @@ export function inputObjectTypeDefinitionNodeToMutable(node: InputObjectTypeDefi
     }
   }
   return {
-    description: node.description ? { ...node.description } : undefined,
+    description: formatDescription(node.description),
     fields,
     kind: node.kind,
     name: { ...node.name },
@@ -188,7 +189,7 @@ export type MutableInputValueDefinitionNode = {
 export function inputValueDefinitionNodeToMutable(node: InputValueDefinitionNode, parentName: string): MutableInputValueDefinitionNode {
   return {
     defaultValue: node.defaultValue ? { ...node.defaultValue } : undefined,
-    description: node.description ? { ...node.description } : undefined,
+    description: formatDescription(node.description),
     kind: node.kind,
     name: { ...node.name },
     type: deepCopyTypeNode(node.type, parentName, node.name.value),
@@ -209,7 +210,7 @@ export function interfaceTypeDefinitionNodeToMutable(node: InterfaceTypeDefiniti
   const interfaces: NamedTypeNode[] = [];
   deepCopyFieldsAndInterfaces(node, fields, interfaces);
   return {
-    description: node.description ? { ...node.description } : undefined,
+    description: formatDescription(node.description),
     fields,
     interfaces,
     kind: node.kind,
@@ -231,7 +232,7 @@ export function objectTypeDefinitionNodeToMutable(node: ObjectTypeDefinitionNode
   const interfaces: NamedTypeNode[] = [];
   deepCopyFieldsAndInterfaces(node, fields, interfaces);
   return {
-    description: node.description ? { ...node.description } : undefined,
+    description: formatDescription(node.description),
     fields,
     interfaces,
     kind: node.kind,
@@ -281,7 +282,7 @@ export type MutableScalarTypeDefinitionNode = {
 
 export function scalarTypeDefinitionNodeToMutable(node: ScalarTypeDefinitionNode): MutableScalarTypeDefinitionNode {
   return {
-    description: node.description ? { ...node.description } : undefined,
+    description: formatDescription(node.description),
     kind: Kind.SCALAR_TYPE_DEFINITION,
     name: { ...node.name },
   };
@@ -311,7 +312,7 @@ export function unionTypeDefinitionNodeToMutable(node: UnionTypeDefinitionNode):
     }
   }
   return {
-    description: node.description ? { ...node.description } : undefined,
+    description: formatDescription(node.description),
     kind: node.kind,
     name: { ...node.name },
     types,
@@ -319,13 +320,14 @@ export function unionTypeDefinitionNodeToMutable(node: UnionTypeDefinitionNode):
 }
 
 export type MutableTypeDefinitionNode =
-  | MutableScalarTypeDefinitionNode
-  | MutableObjectTypeDefinitionNode
-  | MutableInterfaceTypeDefinitionNode
-  | MutableUnionTypeDefinitionNode
+  MutableDirectiveDefinitionNode
   | MutableEnumTypeDefinitionNode
   | MutableInputObjectTypeDefinitionNode
-  | DirectiveDefinitionNode;
+  | MutableInterfaceTypeDefinitionNode
+  | MutableObjectTypeDefinitionNode
+  | MutableScalarTypeDefinitionNode
+  | MutableUnionTypeDefinitionNode;
+
 
 export type ObjectLikeTypeDefinitionNode =
   InterfaceTypeDefinitionNode

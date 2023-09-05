@@ -111,7 +111,7 @@ describe('FederationFactory tests', () => {
         dimensions: ProductDimension
         createdBy: User
         hidden: String @inaccessible
-        oldField: String
+        oldField: String @deprecated(reason: "refactored out")
         reviewsCount: Int!
         reviewsScore: Float!
         reviews: [Review!]!
@@ -210,8 +210,7 @@ describe('FederationFactory tests', () => {
     expect(errors).toBeUndefined();
     expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
       normalizeString(
-        versionOnePersistedBaseSchema +
-          `
+        versionOnePersistedBaseSchema + `
       union _Entity = User
       
       type Query {

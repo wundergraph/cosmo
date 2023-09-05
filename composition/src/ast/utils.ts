@@ -9,19 +9,14 @@ import {
   ObjectTypeDefinitionNode,
   ObjectTypeExtensionNode,
   OperationTypeNode,
+  StringValueNode,
+  UnionTypeExtensionNode,
 } from 'graphql';
 import {
-  MutableDirectiveDefinitionNode,
-  MutableEnumTypeDefinitionNode,
   MutableEnumValueDefinitionNode,
   MutableFieldDefinitionNode,
-  MutableInputObjectTypeDefinitionNode,
   MutableInputValueDefinitionNode,
-  MutableInterfaceTypeDefinitionNode,
-  MutableObjectTypeDefinitionNode,
-  MutableObjectTypeExtensionNode,
-  MutableScalarTypeDefinitionNode,
-  MutableUnionTypeDefinitionNode,
+  MutableTypeDefinitionNode,
   ObjectLikeTypeDefinitionNode,
 } from './ast';
 import {
@@ -29,27 +24,27 @@ import {
   ENUM_VALUE_UPPER,
   EXTENDS,
   FIELD_DEFINITION_UPPER,
-  FIELD_UPPER,
   FIELDS,
   FRAGMENT_DEFINITION_UPPER,
   FRAGMENT_SPREAD_UPPER,
   INLINE_FRAGMENT_UPPER,
+  INPUT_FIELD_DEFINITION_UPPER,
   INPUT_OBJECT_UPPER,
   INTERFACE_UPPER,
   KEY,
   MUTATION,
-  MUTATION_UPPER,
+  NAME,
   OBJECT_UPPER,
   QUERY,
-  QUERY_UPPER,
   SCALAR_UPPER,
   SCHEMA_UPPER,
   SHAREABLE,
   SUBSCRIPTION,
-  SUBSCRIPTION_UPPER,
+  UNION_UPPER,
 } from '../utils/string-constants';
 import {
   duplicateInterfaceError,
+  expectedEntityError,
   invalidClosingBraceErrorMessage,
   invalidEntityKeyError,
   invalidGraphQLNameErrorMessage,
@@ -63,169 +58,13 @@ import {
   unexpectedKindFatalError,
 } from '../errors/errors';
 import { getOrThrowError } from '../utils/utils';
-
-export const EXECUTABLE_DIRECTIVE_LOCATIONS = new Set<string>([
-  FIELD_UPPER, FRAGMENT_DEFINITION_UPPER, FRAGMENT_SPREAD_UPPER,
-  INLINE_FRAGMENT_UPPER, MUTATION_UPPER, QUERY_UPPER, SUBSCRIPTION_UPPER,
-]);
-
-export enum MergeMethod {
-  UNION,
-  INTERSECTION,
-  CONSISTENT,
-}
-
-export type PersistedDirectivesContainer = {
-  directives: Map<string, ConstDirectiveNode[]>;
-  tags: Map<string, ConstDirectiveNode>;
-};
-
-export type ArgumentContainer = {
-  includeDefaultValue: boolean;
-  node: MutableInputValueDefinitionNode;
-  requiredSubgraphs: Set<string>;
-  subgraphs: Set<string>;
-};
-
-export type ArgumentMap = Map<string, ArgumentContainer>;
-
-export type DirectiveContainer = {
-  arguments: ArgumentMap;
-  executableLocations: Set<string>;
-  node: MutableDirectiveDefinitionNode;
-  subgraphs: Set<string>;
-};
-
-export type DirectiveMap = Map<string, DirectiveContainer>;
-
-export type EntityContainer = {
-  fields: Set<string>;
-  keys: Set<string>;
-  subgraphs: Set<string>;
-};
-
-export type EnumContainer = {
-  appearances: number;
-  directives: PersistedDirectivesContainer;
-  kind: Kind.ENUM_TYPE_DEFINITION;
-  node: MutableEnumTypeDefinitionNode;
-  values: EnumValueMap;
-};
-
-export type EnumValueContainer = {
-  appearances: number;
-  directives: PersistedDirectivesContainer;
-  node: MutableEnumValueDefinitionNode;
-};
-
-export type EnumValueMap = Map<string, EnumValueContainer>;
-
-export type FieldContainer = {
-  arguments: ArgumentMap;
-  directives: PersistedDirectivesContainer;
-  isShareable: boolean;
-  node: MutableFieldDefinitionNode;
-  rootTypeName: string;
-  subgraphs: Set<string>;
-  subgraphsByShareable: Map<string, boolean>;
-};
-
-export type FieldMap = Map<string, FieldContainer>;
-
-export type InputValueContainer = {
-  appearances: number;
-  directives: PersistedDirectivesContainer;
-  includeDefaultValue: boolean;
-  node: MutableInputValueDefinitionNode;
-};
-
-export type InputValueMap = Map<string, InputValueContainer>;
-
-export type InputObjectContainer = {
-  appearances: number;
-  directives: PersistedDirectivesContainer;
-  fields: InputValueMap;
-  kind: Kind.INPUT_OBJECT_TYPE_DEFINITION;
-  node: MutableInputObjectTypeDefinitionNode;
-};
-
-export type InterfaceContainer = {
-  directives: PersistedDirectivesContainer;
-  fields: FieldMap;
-  interfaces: Set<string>;
-  kind: Kind.INTERFACE_TYPE_DEFINITION;
-  node: MutableInterfaceTypeDefinitionNode;
-  subgraphs: Set<string>;
-};
-
-export type ObjectContainer = {
-  directives: PersistedDirectivesContainer;
-  fields: FieldMap;
-  entityKeys: Set<string>;
-  interfaces: Set<string>;
-  isRootType: boolean;
-  kind: Kind.OBJECT_TYPE_DEFINITION;
-  node: MutableObjectTypeDefinitionNode;
-  subgraphs: Set<string>;
-};
-
-export type ObjectExtensionContainer = {
-  directives: PersistedDirectivesContainer;
-  fields: FieldMap;
-  entityKeys: Set<string>;
-  interfaces: Set<string>;
-  isRootType: boolean;
-  kind: Kind.OBJECT_TYPE_EXTENSION;
-  node: MutableObjectTypeExtensionNode;
-  subgraphs: Set<string>;
-};
-
-export type RootTypeField = {
-  inlineFragment: string;
-  path: string;
-  name: string;
-  parentTypeName: string;
-  responseType: string;
-  rootTypeName: string;
-  subgraphs: Set<string>;
-};
-
-export type PotentiallyUnresolvableField = {
-  fieldContainer: FieldContainer;
-  fullResolverPaths: string[];
-  rootTypeField: RootTypeField;
-};
-
-export type ScalarContainer = {
-  directives: PersistedDirectivesContainer;
-  kind: Kind.SCALAR_TYPE_DEFINITION;
-  node: MutableScalarTypeDefinitionNode;
-};
-
-export type UnionContainer = {
-  directives: PersistedDirectivesContainer;
-  kind: Kind.UNION_TYPE_DEFINITION;
-  members: Set<string>;
-  node: MutableUnionTypeDefinitionNode;
-};
-
-export type ChildContainer = FieldContainer | InputValueContainer | EnumValueContainer;
-
-export type ParentContainer =
-  | EnumContainer
-  | InputObjectContainer
-  | InterfaceContainer
-  | ObjectContainer
-  | UnionContainer
-  | ScalarContainer;
-
-export type NodeContainer = ChildContainer | ParentContainer;
-
-export type ExtensionContainer = ObjectExtensionContainer;
-
-export type ParentMap = Map<string, ParentContainer>;
-
-export type ObjectLikeContainer = ObjectContainer | InterfaceContainer;
+import { UnionTypeDefinitionNode } from 'graphql/index';
+import {
+  DirectiveContainer,
+  EXECUTABLE_DIRECTIVE_LOCATIONS,
+  NodeContainer,
+  ParentContainer,
+} from '../federation/utils';
 
 export function isObjectLikeNodeEntity(node: ObjectLikeTypeDefinitionNode): boolean {
   // Interface entities are currently unsupported
@@ -257,14 +96,19 @@ export function isNodeExtension(node: ObjectTypeDefinitionNode | InterfaceTypeDe
 export function extractEntityKeys(
   node: ObjectTypeDefinitionNode | ObjectTypeExtensionNode,
   keySet: Set<string>,
+  errors: Error[],
 ): Set<string> {
   if (!node.directives?.length) {
     return keySet;
   }
+  const typeName = node.name.value;
   for (const directive of node.directives) {
     if (directive.name.value === KEY) {
       if (!directive.arguments) {
-        throw new Error('Entity without arguments'); // TODO
+        errors.push(invalidKeyDirectiveError(typeName,[
+          undefinedRequiredArgumentsErrorMessage(KEY, typeName, [NAME])
+        ]));
+        continue;
       }
       for (const arg of directive.arguments) {
         if (arg.name.value !== FIELDS) {
@@ -300,7 +144,7 @@ export function getEntityKeyExtractionResult(rawEntityKey: string, parentTypeNam
   let currentKey: EntityKey;
   rawEntityKey = rawEntityKey.replaceAll(',', ' ');
   for (const char of rawEntityKey) {
-    currentKey = getOrThrowError(entityKeyMap, keyPath.join('.'));
+    currentKey = getOrThrowError(entityKeyMap, keyPath.join('.'), 'entityKeyMap');
     switch (char) {
       case ' ':
         segmentEnded = true;
@@ -374,10 +218,10 @@ export function getEntityKeyExtractionResults(
   node: ObjectTypeDefinitionNode | ObjectTypeExtensionNode,
   entityKeyMap: Map<string, EntityKey>,
 ): EntityKeyExtractionResults {
-  if (!node.directives?.length) {
-    return { entityKeyMap, errors: [new Error('No directives found.')] }; // todo
-  }
   const parentTypeName = node.name.value;
+  if (!node.directives?.length) {
+    return { entityKeyMap, errors: [expectedEntityError(parentTypeName)] };
+  }
   const rawEntityKeys = new Set<string>();
   const errorMessages: string[] = [];
   for (const directive of node.directives) {
@@ -526,6 +370,14 @@ export function nodeKindToDirectiveLocation(kind: Kind): string {
       return ENUM_VALUE_UPPER;
     case Kind.FIELD_DEFINITION:
       return FIELD_DEFINITION_UPPER;
+    case Kind.FRAGMENT_DEFINITION:
+      return FRAGMENT_DEFINITION_UPPER;
+    case Kind.FRAGMENT_SPREAD:
+      return FRAGMENT_SPREAD_UPPER;
+    case Kind.INLINE_FRAGMENT:
+      return INLINE_FRAGMENT_UPPER;
+    case Kind.INPUT_VALUE_DEFINITION:
+      return INPUT_FIELD_DEFINITION_UPPER;
     case Kind.INPUT_OBJECT_TYPE_DEFINITION:
     // intentional fallthrough
     case Kind.INPUT_OBJECT_TYPE_EXTENSION:
@@ -549,9 +401,9 @@ export function nodeKindToDirectiveLocation(kind: Kind): string {
     case Kind.UNION_TYPE_DEFINITION:
     // intentional fallthrough
     case Kind.UNION_TYPE_EXTENSION:
-      return SCHEMA_UPPER;
+      return UNION_UPPER;
     default:
-      throw new Error(`Unknown Kind "${kind}".`); // TODO
+      return kind;
   }
 }
 
@@ -614,4 +466,67 @@ export function pushPersistedDirectivesToNode(container: NodeContainer) {
 export function getNodeWithPersistedDirectives(container: ParentContainer) {
   pushPersistedDirectivesToNode(container);
   return container.node;
+}
+
+export function addConcreteTypesForImplementedInterfaces(
+  node: ObjectTypeDefinitionNode | ObjectTypeExtensionNode | InterfaceTypeDefinitionNode,
+  abstractToConcreteTypeNames: Map<string, Set<string>>,
+) {
+  if (!node.interfaces || node.interfaces.length < 1) {
+    return;
+  }
+  const concreteTypeName = node.name.value;
+  for (const iFace of node.interfaces) {
+    const interfaceName = iFace.name.value;
+    const concreteTypes = abstractToConcreteTypeNames.get(interfaceName);
+    if (concreteTypes) {
+      concreteTypes.add(concreteTypeName);
+    } else {
+      abstractToConcreteTypeNames.set(interfaceName, new Set<string>([concreteTypeName]));
+    }
+  }
+}
+
+export function addConcreteTypesForUnion(
+  node: UnionTypeDefinitionNode | UnionTypeExtensionNode, abstractToConcreteTypeNames: Map<string, Set<string>>,
+) {
+  if (!node.types || node.types.length < 1) {
+    return;
+  }
+  const unionName = node.name.value;
+  for (const member of node.types) {
+    const memberName = member.name.value;
+    const concreteTypes = abstractToConcreteTypeNames.get(unionName);
+    if (concreteTypes) {
+      concreteTypes.add(memberName);
+    } else {
+      abstractToConcreteTypeNames.set(unionName, new Set<string>([memberName]));
+    }
+  }
+}
+
+export function formatDescription(description?: StringValueNode): StringValueNode | undefined {
+  if (!description) {
+    return description;
+  }
+  let value = description.value;
+  if (description.block) {
+    const lines = value.split('\n');
+    if (lines.length > 1) {
+      value = lines.map((line) => line.trimStart()).join('\n');
+    }
+  }
+  return { ...description, value: value, block: true };
+}
+
+export function setLongestDescriptionForNode(
+  existingNode: MutableFieldDefinitionNode | MutableEnumValueDefinitionNode | MutableInputValueDefinitionNode | MutableTypeDefinitionNode,
+  newDescription?: StringValueNode,
+) {
+  if (!newDescription) {
+    return;
+  }
+  if (!existingNode.description || newDescription.value.length > existingNode.description.value.length) {
+    existingNode.description = { ...newDescription, block: true };
+  }
 }

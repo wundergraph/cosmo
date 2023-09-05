@@ -1,4 +1,4 @@
-import { nodeKindToDirectiveLocation, ObjectContainer, RootTypeField } from '../ast/utils';
+import { nodeKindToDirectiveLocation } from '../ast/utils';
 import {
   ConstDirectiveNode,
   Kind,
@@ -14,6 +14,8 @@ import {
   kindToTypeString,
   numberToOrdinal,
 } from '../utils/utils';
+import { ObjectContainer, RootTypeFieldData } from '../federation/utils';
+import { QUOTATION_JOIN, UNION } from '../utils/string-constants';
 
 export const minimumSubgraphRequirementError = new Error('At least one subgraph is required for federation.');
 
@@ -212,28 +214,30 @@ export function undefinedEntityKeyErrorMessage(fieldName: string, objectName: st
 }
 
 export function unresolvableFieldError(
-  rootTypeField: RootTypeField,
+  rootTypeFieldData: RootTypeFieldData,
   fieldName: string,
-  unresolvablePaths: string[],
-  fieldSubgraphs: string,
+  fieldSubgraphs: string[],
+  unresolvablePath: string,
   parentTypeName: string,
 ): Error {
   const fieldPath = `${parentTypeName}.${fieldName}`;
   return new Error(
-    `The following root path${unresolvablePaths.length > 1 ? 's are' : ' is'} unresolvable:\n ` +
-    unresolvablePaths.join('\n') +
-    `\nThis is because:\n` +
-    ` The root type field "${rootTypeField.path}" is defined in the following subgraphs: "` +
-    [...rootTypeField.subgraphs].join('", "') + `".\n` +
-    ` However, "${fieldPath}" is only defined in the following subgraphs: "${fieldSubgraphs}".\n` +
-    ` Consequently, "${fieldPath}" cannot be resolved through the root type field "${rootTypeField.path}".\n` +
+    `The path "${unresolvablePath}" cannot be resolved because:\n` +
+    ` The root type field "${rootTypeFieldData.path}" is defined in the following subgraph` +
+    (rootTypeFieldData.subgraphs.size > 1 ? 's' : '') + `: "` +
+    [...rootTypeFieldData.subgraphs].join(QUOTATION_JOIN) + `".\n` +
+    ` However, "${fieldPath}" is only defined in the following subgraph` +
+    (fieldSubgraphs.length > 1 ? 's' : '') + `: "` + fieldSubgraphs + `".\n` +
+    ` Consequently, "${fieldPath}" cannot be resolved through the root type field "${rootTypeFieldData.path}".\n` +
     `Potential solutions:\n` +
-    ` Convert "${parentTypeName}" into an entity using a "@key" directive.\n` +
-    ` Add the shareable root type field "${rootTypeField.path}" to the following subgraphs: "${fieldSubgraphs}".\n` +
+    ` Convert "${parentTypeName}" into an entity using the "@key" directive.\n` +
+    ` Add the shareable root type field "${rootTypeFieldData.path}" to ` +
+    (fieldSubgraphs.length > 1 ? 'one of the following subgraphs' : 'the following subgraph') + `: "`  +
+    fieldSubgraphs.join(QUOTATION_JOIN) + `".\n` +
     `  For example (note that V1 fields are shareable by default and do not require a directive):\n` +
-    `   type ${rootTypeField.parentTypeName} {\n` +
+    `   type ${rootTypeFieldData.typeName} {\n` +
     `     ...\n` +
-    `     ${rootTypeField.name}: ${rootTypeField.responseType} @shareable\n` +
+    `     ${rootTypeFieldData.fieldName}: ${rootTypeFieldData.fieldTypeNodeString} @shareable\n` +
     `   }`,
   );
 }
@@ -263,10 +267,6 @@ export function invalidRepeatedDirectiveErrorMessage(directiveName: string, host
 
 export function invalidUnionError(unionName: string): Error {
   return new Error(`Union "${unionName}" must have at least one member.`);
-}
-
-export function invalidArgumentNumberErrorMessage(expected: number, actual: number): string {
-  return ` Expected ${expected} argument` + (expected === 1 ? '' : 's') + ` but received ${actual}.`;
 }
 
 export const invalidTagDirectiveError = new Error(`
@@ -424,12 +424,6 @@ export function unexpectedArgumentKindFatalError(argumentName: string, fieldName
   );
 }
 
-export function unexpectedParentKindErrorMessage(parentTypeName: string, expectedKind: Kind, actualKind: Kind): string {
-  return (
-    ` Expected "${parentTypeName}" to be type ${expectedKind} but received "${actualKind}".`
-  );
-}
-
 export function unexpectedDirectiveLocationError(locationName: string): Error {
   return new Error(
     `Fatal: Unknown directive location "${locationName}".`,
@@ -440,6 +434,18 @@ export function unexpectedTypeNodeKindError(childPath: string): Error {
   return new Error(
     `Fatal: Expected all constituent types of "${childPath}" to be one of the following: ` +
     `"LIST_TYPE", "NAMED_TYPE", or "NON_NULL_TYPE".`,
+  );
+}
+
+export function invalidKeyFatalError<K>(key: K, mapName: string): Error {
+  return new Error(
+    `Fatal: Expected key "${key}" to exist in the map "${mapName}".`
+  );
+}
+
+export function unexpectedParentKindErrorMessage(parentTypeName: string, expectedTypeString: string, actualTypeString: string): string {
+  return (
+    ` Expected "${parentTypeName}" to be type ${expectedTypeString} but received "${actualTypeString}".`
   );
 }
 
@@ -590,3 +596,24 @@ export const noQueryRootTypeError = new Error(
   `    dummy: String\n` +
   `  }`
 );
+
+export function unexpectedObjectResponseType(fieldPath: string, actualTypeString: string): Error {
+  return new Error(
+    `Expected the path "${fieldPath}" to have the response type` +
+    ` Enum, Interface, Object, Scalar, or Union but received ${actualTypeString}.`
+  );
+}
+
+export function noConcreteTypesForAbstractTypeError(typeString: string, abstractTypeName: string): Error {
+  return new Error(
+    `Expected ${typeString} "${abstractTypeName}" to define at least one ` +
+    (typeString === UNION ? 'member' : 'object that implements the interface') +
+    ` but received none`
+  );
+}
+
+export function expectedEntityError(typeName: string): Error {
+  return new Error(
+    `Expected object "${typeName}" to define a "key" directive, but it defines no directives.`
+  );
+}

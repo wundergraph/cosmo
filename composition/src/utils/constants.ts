@@ -25,7 +25,9 @@ import {
   UNION_UPPER,
 } from './string-constants';
 
-export const BASE_SCALARS = new Set<string>(['Boolean', 'Float', 'ID', 'Int', 'String']);
+export const BASE_SCALARS = new Set<string>(
+  ['_Any', '_Entities', 'Boolean', 'Float', 'ID', 'Int', 'String'],
+);
 
 export const VERSION_ONE_DIRECTIVES = new Set<string>([DEPRECATED, EXTENDS, EXTERNAL, KEY, PROVIDES, REQUIRES, TAG]);
 export const VERSION_TWO_DIRECTIVES = new Set<string>([INACCESSIBLE, SHAREABLE]);
