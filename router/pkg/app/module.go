@@ -31,9 +31,6 @@ func RegisterModule(instance Module) {
 	if mod.ID == "" {
 		panic("module ID missing")
 	}
-	if mod.ID == "wundergraph" {
-		panic(fmt.Sprintf("module ID '%s' is reserved", mod.ID))
-	}
 	if val := mod.New(); val == nil {
 		panic("ModuleInfo.New must return a non-nil module instance")
 	}
@@ -51,7 +48,8 @@ func RegisterModule(instance Module) {
 
 // RouterMiddlewareHandler allows you to add a middleware to the router.
 // The middleware is called for every request. It allows you to modify the request before it is processed by the router.
-// The same semantics of http.Handler apply here. Don't manipulate / consume the body of the request.
+// The same semantics of http.Handler apply here. Don't manipulate / consume the body of the request unless
+// you know what you are doing. If you consume the body of the request it will not be available for the next handler.
 type RouterMiddlewareHandler interface {
 	// Middleware is the middleware handler
 	Middleware(http.ResponseWriter, *http.Request, http.Handler)
@@ -60,7 +58,8 @@ type RouterMiddlewareHandler interface {
 // EnginePreOriginHandler allows you to add a handler to the router engine origin requests.
 // The handler is called before the request is sent to the origin. All origin handlers are called sequentially.
 // It allows you to modify the request before it is sent. The same semantics of http.RoundTripper apply here.
-// If you consume the body of the request it will be empty for the next handler.
+// Don't manipulate / consume the body of the request unless you know what you are doing.
+// If you consume the body of the request it will not be available for the next handler.
 type EnginePreOriginHandler interface {
 	// OnOriginRequest is called before the request is sent to the origin
 	// Might be called multiple times if there are multiple origins
@@ -68,10 +67,10 @@ type EnginePreOriginHandler interface {
 }
 
 // EnginePostOriginHandler allows you to add a handler to the router engine origin requests.
-// The handler is called after the request is sent to the origin. All origin handlers are called sequentially.
-// It allows you to return a custom response to the client. If the response is nil, the next handler is called.
+// The handler is called after the response was received from the origin. All origin handlers are called sequentially.
+// It allows you to return a custom response to the client. If your return nil as response, the next handler is called.
 // The same semantics of http.RoundTripper apply here. In order to modify the response, you have to return a new response.
-// The response is not safe for concurrent use by multiple goroutines and should be treated as immutable after calling this method.
+
 type EnginePostOriginHandler interface {
 	// OnOriginResponse is called after the request is sent to the origin.
 	// Might be called multiple times if there are multiple origins

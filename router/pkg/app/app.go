@@ -30,6 +30,7 @@ import (
 	"golang.org/x/sync/errgroup"
 	"net"
 	"net/http"
+	"sync"
 	"time"
 )
 
@@ -243,7 +244,7 @@ func (a *App) initModules(ctx context.Context) error {
 
 		if fn, ok := moduleInstance.(Provisioner); ok {
 			if err := fn.Provision(ctx); err != nil {
-				return fmt.Errorf("failed to provision module %s: %w", moduleInfo.ID, err)
+				return fmt.Errorf("failed to provision module '%s': %w", moduleInfo.ID, err)
 			}
 		}
 
@@ -265,7 +266,10 @@ func (a *App) initModules(ctx context.Context) error {
 
 		a.modules = append(a.modules, moduleInstance)
 
-		a.logger.Info("Module registered", zap.String("id", string(moduleInfo.ID)), zap.String("duration", time.Since(now).String()))
+		a.logger.Info("Module registered",
+			zap.String("id", string(moduleInfo.ID)),
+			zap.String("duration", time.Since(now).String()),
+		)
 	}
 
 	return nil
@@ -451,6 +455,19 @@ func (a *App) newRouter(ctx context.Context, routerConfig *nodev1.RouterConfig) 
 		r.Use(traceMiddleware.Handler)
 		r.Use(graphqlPreHandler.Handler)
 		r.Use(metricHandler.Handler)
+
+		// Create an app context that is used by user modules
+		// It must be added before custom user middlewares
+		r.Use(func(handler http.Handler) http.Handler {
+			return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+				appCtx := &appContext{
+					responseHeader: writer.Header(),
+					mu:             sync.RWMutex{},
+				}
+				handler.ServeHTTP(writer, request.WithContext(withContext(request.Context(), appCtx)))
+			})
+		})
+
 		r.Use(a.moduleMiddlewares...)
 		r.Post("/", graphqlHandler.ServeHTTP)
 	})

@@ -38,7 +38,7 @@ func TestWrapHttpHandler(t *testing.T) {
 
 		sn := exporter.GetSpans().Snapshots()
 		assert.Len(t, sn, 1)
-		assert.Equal(t, "GET /test", sn[0].Name())
+		assert.Equal(t, "", sn[0].Name())
 		assert.Equal(t, trace.SpanKindServer, sn[0].SpanKind())
 		assert.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[0].Status())
 		assert.Len(t, sn[0].Attributes(), 10)
@@ -89,7 +89,7 @@ func TestWrapHttpHandler(t *testing.T) {
 			sn := exporter.GetSpans().Snapshots()
 
 			assert.Len(t, sn, 1)
-			assert.Equal(t, "GET /test", sn[0].Name())
+			assert.Equal(t, "", sn[0].Name())
 			assert.Equal(t, test.expected, sn[0].Status())
 			assert.Equal(t, trace.SpanKindServer, sn[0].SpanKind())
 

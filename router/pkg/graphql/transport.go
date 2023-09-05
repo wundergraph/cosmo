@@ -79,10 +79,10 @@ func (t TransportFactory) RoundTripper(transport *http.Transport, enableStreamin
 			transport,
 			func(r *http.Request) {
 				span := otrace.SpanFromContext(r.Context())
-				operation := GetContext(r.Context())
+				operation := getOperationContext(r.Context())
 				if operation != nil {
-					span.SetAttributes(otel.WgOperationName.String(operation.Name))
-					span.SetAttributes(otel.WgOperationType.String(operation.Type))
+					span.SetAttributes(otel.WgOperationName.String(operation.name))
+					span.SetAttributes(otel.WgOperationType.String(operation.opType))
 				}
 			},
 			otelhttp.WithSpanNameFormatter(SpanNameFormatter),
@@ -110,13 +110,17 @@ func SpanNameFormatter(operation string, r *http.Request) string {
 		return operation
 	}
 
-	opCtx := GetContext(r.Context())
+	opCtx := GetOperationContext(r.Context())
 	if opCtx != nil {
-		if opCtx.Name != "" {
-			return fmt.Sprintf("%s %s", r.Method, opCtx.Name)
-		}
-		return fmt.Sprintf("%s %s", r.Method, "unnamed")
+		return GetSpanName(opCtx.Name(), r.Method)
 	}
 
 	return fmt.Sprintf("%s %s", r.Method, r.URL.Path)
+}
+
+func GetSpanName(operationName string, method string) string {
+	if operationName != "" {
+		return fmt.Sprintf("%s %s", method, operationName)
+	}
+	return fmt.Sprintf("%s %s", method, "unnamed")
 }

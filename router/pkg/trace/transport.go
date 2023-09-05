@@ -34,8 +34,8 @@ func (t *transport) RoundTrip(r *http.Request) (*http.Response, error) {
 
 	res, err := t.rt.RoundTrip(r)
 
-	// In case of a roundtrip error the span status is set to error
-	// by the otelhttp.RoundTrip function. Also, status code >= 500 is considered an error
+	// In case of a roundtrip error the span status is set to error by the otelhttp.RoundTrip function.
+	// Also, status code >= 500 is considered an error
 
 	return res, err
 }

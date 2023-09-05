@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/buger/jsonparser"
 	"github.com/go-chi/chi/middleware"
+	"github.com/wundergraph/cosmo/router/pkg/internal/unsafebytes"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 	"github.com/wundergraph/cosmo/router/pkg/pool"
@@ -80,6 +81,15 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			}
 		}
 
+		// Add the operation to the trace span
+		span := trace.SpanFromContext(r.Context())
+		// Set the span name to the operation name after we figured it out
+		span.SetName(GetSpanName(requestOperationName, r.Method))
+
+		span.SetAttributes(otel.WgOperationName.String(requestOperationName))
+		span.SetAttributes(otel.WgOperationType.String(requestOperationType))
+		span.SetAttributes(otel.WgOperationContent.String(requestQuery))
+
 		// If multiple operations are defined, but no operationName is set, we return an error
 		if len(shared.Doc.OperationDefinitions) > 1 && requestOperationName == "" {
 			requestLogger.Error("operation name is required when multiple operations are defined")
@@ -110,23 +120,13 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			return
 		}
 
-		// Add the operation to the trace span
-		span := trace.SpanFromContext(r.Context())
-
-		// Set the span name to the operation name after we figured it out
-		span.SetName(requestOperationName)
-
-		span.SetAttributes(otel.WgOperationName.String(requestOperationName))
-		span.SetAttributes(otel.WgOperationType.String(requestOperationType))
-		span.SetAttributes(otel.WgOperationContent.String(requestQuery))
-
 		// Add client info to trace span
 		clientName := ctrace.GetClientInfo(r.Header, "graphql-client-name", "apollographql-client-name", "unknown")
 		clientVersion := ctrace.GetClientInfo(r.Header, "graphql-client-version", "apollographql-client-version", "missing")
 		span.SetAttributes(otel.WgClientName.String(clientName))
 		span.SetAttributes(otel.WgClientVersion.String(clientVersion))
 
-		requestOperationNameBytes := []byte(requestOperationName)
+		requestOperationNameBytes := unsafebytes.StringToBytes(requestOperationName)
 
 		if requestOperationName == "" {
 			shared.Normalizer.NormalizeOperation(shared.Doc, h.definition, shared.Report)
@@ -172,13 +172,12 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		operationID := shared.Hash.Sum64() // generate the operation ID
 		shared.Hash.Reset()
 
-		ctxWithOperation := withContext(r.Context(), &Context{
-			Name:           requestOperationName,
-			Type:           requestOperationType,
-			OperationHash:  operationID,
-			Content:        requestQuery,
-			plan:           shared,
-			ResponseHeader: w.Header(),
+		ctxWithOperation := withOperationContext(r.Context(), &operationContext{
+			name:          requestOperationName,
+			opType:        requestOperationType,
+			operationHash: operationID,
+			content:       requestQuery,
+			plan:          shared,
 		})
 
 		// Add the operation to the context, so we can access it later in custom transports etc.

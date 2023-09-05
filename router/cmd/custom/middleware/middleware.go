@@ -1,4 +1,4 @@
-package module
+package middleware
 
 import (
 	"context"
@@ -15,7 +15,10 @@ func init() {
 
 const myModuleID = "myModule"
 
-// MyModule is a simple module that adds a header to the response
+// MyModule is a simple module that has access to the GraphQL operation and add a header to the response
+// It demonstrates how to use the different hooks and how to share data between them.
+// It also shows how to use the config file to configure your module and how to validate the config.
+// The config file is located at `config.yaml` in the working directory of the router.
 type MyModule struct {
 	// Properties that are set by the config file are automatically populated based on the `mapstructure` tag
 	// Create a new section under `modules.<name>` in the config file `config.yaml` with the same name as your module.
@@ -26,6 +29,10 @@ type MyModule struct {
 
 func (m MyModule) Provision(ctx context.Context) error {
 	// Provision your module here, validate config etc.
+
+	if m.Value == 0 {
+		return fmt.Errorf("value must be greater than 0")
+	}
 
 	return nil
 }
@@ -41,10 +48,10 @@ func (m MyModule) OnOriginResponse(response *http.Response, request *http.Reques
 	// If you want to modify the response, return a new response
 	// If you return an error, the request will be aborted and the response will exit with a 500 status code
 
-	c := graphql.GetContext(request.Context())
+	c := app.GetContext(request.Context())
 
 	// Set a header on the client response
-	c.ResponseHeader.Set("myHeader", c.GetString("myKey"))
+	c.ResponseHeader().Set("myHeader", c.GetString("myKey"))
 
 	return nil, nil
 }
@@ -55,21 +62,24 @@ func (m MyModule) OnOriginRequest(request *http.Request) {
 }
 
 func (m MyModule) Middleware(w http.ResponseWriter, r *http.Request, next http.Handler) {
-	c := graphql.GetContext(r.Context())
+	ctx := r.Context()
 
-	// Share a value between different handlers
-	c.Set("myKey", "myValue")
+	c := graphql.GetOperationContext(ctx)
 
-	// Access the operation context
+	// Access the GraphQL operation context
 	fmt.Println(
-		c.Name,
-		c.Type,
-		c.OperationHash,
-		c.Content,
+		c.Name(),
+		c.Type(),
+		c.OperationHash(),
+		c.Content(),
 	)
 
-	// Call the next handler in the chain, pass the new context with the value
-	// You can also stop the chain here and return a response by calling w.Write()
+	// Share a value between different handlers
+	// In OnOriginResponse we will read this value and set it as response header
+	appCtx := app.GetContext(ctx)
+	appCtx.Set("myKey", "myValue")
+
+	// Call the next handler in the chain or return early by calling w.Write()
 	next.ServeHTTP(w, r)
 }
 

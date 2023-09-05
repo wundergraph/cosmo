@@ -1096,7 +1096,7 @@ type FetchConfiguration struct {
 	// urlEncodeBody defines whether the body should be URL encoded or not
 	// by default, the body will be JSON encoded
 	// setting urlEncodeBody to true will render the body empty,
-	// the Header Content-Type will be set to application/x-www-form-urlencoded,
+	// the Header OperationContent-OperationType will be set to application/x-www-form-urlencoded,
 	// and the body will be URL encoded and set as the URL Query String
 	UrlEncodeBody bool                   `protobuf:"varint,7,opt,name=url_encode_body,json=urlEncodeBody,proto3" json:"url_encode_body,omitempty"`
 	Mtls          *MTLSConfiguration     `protobuf:"bytes,8,opt,name=mtls,proto3" json:"mtls,omitempty"`

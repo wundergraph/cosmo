@@ -120,15 +120,15 @@ func (h *Handler) Handler(next http.Handler) http.Handler {
 
 		baseKeys = append(baseKeys, h.baseFields...)
 
-		opCtx := graphql.GetContext(ctx)
+		opCtx := graphql.GetOperationContext(ctx)
 		if opCtx != nil {
 			// Metric values must not be empty
 			// M3 does not like empty values
-			if opCtx.Name != "" {
-				baseKeys = append(baseKeys, otel.WgOperationName.String(opCtx.Name))
+			if opCtx.Name() != "" {
+				baseKeys = append(baseKeys, otel.WgOperationName.String(opCtx.Name()))
 			}
-			if opCtx.Type != "" {
-				baseKeys = append(baseKeys, otel.WgOperationType.String(opCtx.Type))
+			if opCtx.Type() != "" {
+				baseKeys = append(baseKeys, otel.WgOperationType.String(opCtx.Type()))
 			}
 			baseKeys = append(baseKeys, semconv.HTTPStatusCode(statusCode))
 		}
