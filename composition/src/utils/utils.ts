@@ -1,4 +1,7 @@
-import { Kind, TypeNode } from 'graphql';
+import { Kind } from 'graphql';
+import { FIELD, UNION } from './string-constants';
+import { MultiGraph } from 'graphology';
+import { invalidKeyFatalError } from '../errors/errors';
 
 export function areSetsEqual<T>(set: Set<T>, other: Set<T>): boolean {
   if (set.size !== other.size) {
@@ -12,10 +15,10 @@ export function areSetsEqual<T>(set: Set<T>, other: Set<T>): boolean {
   return true;
 }
 
-export function getOrThrowError<K, V>(map: Map<K, V>, key: K): V {
+export function getOrThrowError<K, V>(map: Map<K, V>, key: K, mapName: string): V {
   const value = map.get(key);
   if (value === undefined) {
-    throw new Error(`Expected the key ${key} to exist in map ${map}.`); // TODO
+    throw invalidKeyFatalError(key, mapName)
   }
   return value;
 }
@@ -88,10 +91,14 @@ export function kindToTypeString(kind: Kind): string {
       return 'enum';
     case Kind.ENUM_TYPE_EXTENSION:
       return 'enum extension';
+    case Kind.FIELD_DEFINITION:
+      return FIELD;
     case Kind.INPUT_OBJECT_TYPE_DEFINITION:
       return 'input object';
     case Kind.INPUT_OBJECT_TYPE_EXTENSION:
       return 'input object extension';
+    case Kind.INPUT_VALUE_DEFINITION:
+      return 'input value';
     case Kind.INTERFACE_TYPE_DEFINITION:
       return 'interface';
     case Kind.INTERFACE_TYPE_EXTENSION:
@@ -105,35 +112,11 @@ export function kindToTypeString(kind: Kind): string {
     case Kind.SCALAR_TYPE_EXTENSION:
       return 'scalar extension';
     case Kind.UNION_TYPE_DEFINITION:
-      return 'union';
+      return UNION;
     case Kind.UNION_TYPE_EXTENSION:
       return 'union extension';
     default:
       return kind;
-  }
-}
-
-export function isTypeValidImplementation(originalType: TypeNode, implementationType: TypeNode): boolean {
-  if (originalType.kind === Kind.NON_NULL_TYPE) {
-    if (implementationType.kind !== Kind.NON_NULL_TYPE) {
-      return false;
-    }
-    return isTypeValidImplementation(originalType.type, implementationType.type);
-  }
-  if (implementationType.kind === Kind.NON_NULL_TYPE) {
-    return isTypeValidImplementation(originalType, implementationType.type);
-  }
-  switch (originalType.kind) {
-    case Kind.NAMED_TYPE:
-      if (implementationType.kind === Kind.NAMED_TYPE) {
-        return originalType.name.value === implementationType.name.value;
-      }
-      return false;
-    default:
-      if (implementationType.kind === Kind.LIST_TYPE) {
-        return isTypeValidImplementation(originalType.type, implementationType.type);
-      }
-      return false;
   }
 }
 
@@ -157,3 +140,78 @@ export type ImplementationErrors = {
 };
 
 export type ImplementationErrorsMap = Map<string, ImplementationErrors>;
+
+export type InvalidRequiredArgument = {
+  argumentName: string;
+  missingSubgraphs: string[];
+  requiredSubgraphs: string[];
+};
+
+export type InvalidArgument = {
+  argumentName: string;
+  namedType: string;
+  typeName: string;
+  typeString: string;
+};
+
+class StackSet {
+  set = new Set<string>();
+  stack: string[] = [];
+
+  constructor(value: string) {
+    this.push(value);
+  }
+
+  has(value: string): boolean {
+    return this.set.has(value);
+  }
+
+  push(value: string) {
+    this.stack.push(value);
+    this.set.add(value);
+  }
+
+  pop() {
+    const value = this.stack.pop();
+    if (value) {
+      this.set.delete(value);
+    }
+  };
+}
+
+export function hasSimplePath(graph: MultiGraph, source: string, target: string): boolean {
+  if (!graph.hasNode(source) || !graph.hasNode(target)) {
+    return false;
+  }
+
+  const stack = [graph.outboundNeighbors(source)];
+  const visited = new StackSet(source);
+  let children, child;
+
+  while (stack.length > 0) {
+    children = stack[stack.length - 1];
+    child = children.pop();
+
+    if (!child) {
+      stack.pop();
+      visited.pop();
+      continue;
+    }
+    if (visited.has(child)) {
+      continue;
+    }
+
+    if (child === target) {
+      return true;
+    }
+
+    visited.push(child);
+
+    if (!visited.has(target)) {
+      stack.push(graph.outboundNeighbors(child));
+    } else {
+      visited.pop();
+    }
+  }
+  return false;
+}

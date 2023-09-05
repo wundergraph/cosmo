@@ -1,5 +1,5 @@
 import axios, { AxiosHeaders, AxiosRequestConfig } from 'axios';
-import { QueryResultType, Response, QueryRangeRequestParams, QueryRequestParams } from './types.js';
+import { QueryRangeRequestParams, QueryRequestParams, QueryResultType, Response } from './types.js';
 
 export interface Options {
   /**

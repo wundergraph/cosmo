@@ -12,12 +12,12 @@ import {
 import { ClickHouseClient } from '../../clickhouse/index.js';
 import {
   BaseFilters,
-  ColumnMetaData,
   buildAnalyticsViewColumns,
   buildAnalyticsViewFilters,
   buildCoercedFilterSqlStatement,
   buildColumnsFromNames,
   coerceFilterValues,
+  ColumnMetaData,
   fillColumnMetaData,
 } from './util.js';
 

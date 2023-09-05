@@ -46,6 +46,7 @@ describe("Router Config Builder", () => {
       url: "https://wg-federation-demo-inventory.fly.dev/graphql",
     };
     const routerConfig = buildRouterConfig({
+      argumentConfigurations: [],
       subgraphs: [accounts, products, reviews, inventory],
       // Passed as it is to the router config
       federatedSDL: `type Query {}`,
@@ -68,6 +69,7 @@ describe("Router Config Builder", () => {
     let error;
     try {
       buildRouterConfig({
+        argumentConfigurations: [],
         subgraphs: [subgraph],
         federatedSDL: '',
       });

@@ -4,8 +4,8 @@ import { describe, expect, test } from 'vitest';
 import {
   documentNodeToNormalizedString,
   normalizeString,
-  versionOneBaseSchema,
-  versionTwoBaseSchema,
+  versionOnePersistedBaseSchema,
+  versionTwoPersistedBaseSchema,
 } from './utils/utils';
 
 describe('FederationFactory tests', () => {
@@ -53,34 +53,14 @@ describe('FederationFactory tests', () => {
   });
 
   test('that subgraphs are federated #1', () => {
-    const result = federateSubgraphs([pandas, products, reviews, users]);
-    expect(result.errors).toBeUndefined();
-    const federatedGraph = result.federatedGraphAST!;
-    expect(documentNodeToNormalizedString(federatedGraph)).toBe(
+    const { errors, federationResult } = federateSubgraphs([pandas, products, reviews, users]);
+    expect(errors).toBeUndefined();
+    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
       normalizeString(
-        versionTwoBaseSchema +
+        versionTwoPersistedBaseSchema +
           `
-      directive @myDirective(a: String!) on FIELD_DEFINITION
-      directive @hello on FIELD_DEFINITION
-      directive @override(from: String!) on FIELD_DEFINITION
-
       interface SkuItf {
         sku: String
-      }
-
-      interface ProductItf implements SkuItf {
-        id: ID!
-        sku: String
-        name: String
-        package: String
-        variation: ProductVariation
-        dimensions: ProductDimension
-        createdBy: User
-        hidden: String
-        oldField: String
-        reviewsCount: Int!
-        reviewsScore: Float!
-        reviews: [Review!]!
       }
       
       type Query {
@@ -93,22 +73,7 @@ describe('FederationFactory tests', () => {
 
       type Panda {
         name: ID!
-        favoriteFood: String
-      }
-
-      type Product implements ProductItf & SkuItf {
-        id: ID!
-        sku: String
-        name: String
-        package: String
-        variation: ProductVariation
-        dimensions: ProductDimension
-        createdBy: User
-        hidden: String
-        reviewsScore: Float!
-        oldField: String
-        reviewsCount: Int!
-        reviews: [Review!]!
+        favoriteFood: String @tag(name: "nom-nom-nom")
       }
 
       enum ShippingClass {
@@ -127,7 +92,7 @@ describe('FederationFactory tests', () => {
       }
 
       type User {
-        email: ID!
+        email: ID! @tag(name: "test-from-users")
         totalProductsCreated: Int
         name: String
       }
@@ -136,18 +101,47 @@ describe('FederationFactory tests', () => {
         id: Int!
         body: String!
       }
+
+      interface ProductItf implements SkuItf {
+        id: ID!
+        sku: String
+        name: String
+        package: String
+        variation: ProductVariation
+        dimensions: ProductDimension
+        createdBy: User
+        hidden: String @inaccessible
+        oldField: String @deprecated(reason: "refactored out")
+        reviewsCount: Int!
+        reviewsScore: Float!
+        reviews: [Review!]!
+      }
+      
+      type Product implements ProductItf & SkuItf {
+        id: ID! @tag(name: "hi-from-products")
+        sku: String
+        name: String
+        package: String
+        variation: ProductVariation
+        dimensions: ProductDimension
+        createdBy: User
+        hidden: String
+        reviewsScore: Float!
+        oldField: String
+        reviewsCount: Int!
+        reviews: [Review!]!
+      }
     `,
       ),
     );
   });
 
   test('that subgraphs are federated #2', () => {
-    const result = federateSubgraphs([subgraphA, subgraphB]);
-    expect(result.errors).toBeUndefined();
-    const federatedGraph = result.federatedGraphAST!;
-    expect(documentNodeToNormalizedString(federatedGraph)).toBe(
+    const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphB]);
+    expect(errors).toBeUndefined();
+    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
       normalizeString(
-        versionTwoBaseSchema +
+        versionTwoPersistedBaseSchema +
           `
       type Query {
         pokemon: [Pokemon]
@@ -183,11 +177,11 @@ describe('FederationFactory tests', () => {
   });
 
   test('that root types are promoted', () => {
-    const { errors, federatedGraphAST } = federateSubgraphs([subgraphE]);
+    const { errors, federationResult } = federateSubgraphs([subgraphE]);
     expect(errors).toBeUndefined();
-    expect(documentNodeToNormalizedString(federatedGraphAST!)).toBe(
+    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
       normalizeString(
-        versionOneBaseSchema +
+        versionOnePersistedBaseSchema +
           `
       type Query {
         string: String
@@ -198,12 +192,11 @@ describe('FederationFactory tests', () => {
   });
 
   test('that custom root types are renamed', () => {
-    const { errors, federatedGraphAST } = federateSubgraphs([subgraphF]);
+    const { errors, federationResult } = federateSubgraphs([subgraphF]);
     expect(errors).toBeUndefined();
-    expect(documentNodeToNormalizedString(federatedGraphAST!)).toBe(
+    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
       normalizeString(
-        versionOneBaseSchema +
-          `
+        versionOnePersistedBaseSchema + `
       type Query {
         string: String
       }  
@@ -213,12 +206,11 @@ describe('FederationFactory tests', () => {
   });
 
   test('that service object, entities and service fields are not included in the federated graph', () => {
-    const { errors, federatedGraphAST } = federateSubgraphs([subgraphG, subgraphH]);
+    const { errors, federationResult } = federateSubgraphs([subgraphG, subgraphH]);
     expect(errors).toBeUndefined();
-    expect(documentNodeToNormalizedString(federatedGraphAST!)).toBe(
+    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
       normalizeString(
-        versionOneBaseSchema +
-          `
+        versionOnePersistedBaseSchema + `
       union _Entity = User
       
       type Query {
@@ -232,6 +224,52 @@ describe('FederationFactory tests', () => {
       scalar _Any
     `,
       ),
+    );
+  });
+
+  test('that tag and inaccessible directives are persisted in the federated schema', () => {
+    const { errors, federationResult } = federateSubgraphs([subgraphI, subgraphJ]);
+    expect(errors).toBeUndefined();
+    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
+      normalizeString(
+        versionTwoPersistedBaseSchema + `
+      interface I @tag(name: "interface1") @tag(name: "interface2") @inaccessible {
+        field: String @tag(name: "field1") @tag(name: "field2") @inaccessible
+      }
+
+      type Query @tag(name: "object2") @tag(name: "object1") {
+        dummy: String @tag(name: "field1") @tag(name: "field2")
+      }
+      
+      enum E @tag(name: "enum1") @tag(name: "enum2") @inaccessible {
+        A @tag(name: "enum value2") @tag(name: "enum value1") @inaccessible
+      }
+      
+      input In @tag(name: "input object1") @tag(name: "input object2") @inaccessible {
+        field: String @tag(name: "input value2") @tag(name: "input value1") @inaccessible
+      }
+      
+      scalar S @tag(name: "scalar1") @tag(name: "scalar2") @inaccessible
+            
+      type O implements I @tag(name: "object2") @tag(name: "object1") @inaccessible {
+        field: String @tag(name: "field1") @tag(name: "field2") @inaccessible
+      }
+    `,
+      ),
+    );
+  });
+
+  test('that valid executable directives are merged and persisted in the federated graph', () => {
+    const { errors, federationResult } = federateSubgraphs([subgraphK, subgraphL]);
+    expect(errors).toBeUndefined();
+    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
+      normalizeString(versionOnePersistedBaseSchema + `
+        directive @executableDirective(requiredArgInAll: String!, requiredArgInSome: Int!, optionalArgInAll: Float) on FIELD
+        
+        type Query {
+          dummy: String
+        }  
+      `),
     );
   });
 });
@@ -519,5 +557,77 @@ const subgraphH: Subgraph = {
     }
 
     scalar _Any
+  `),
+};
+
+const subgraphI: Subgraph = {
+  name: 'subgraph-i',
+  url: '',
+  definitions: parse(`
+    type Query @shareable @tag(name: "object2") @tag(name: "object1") @tag(name: "object1") {
+      dummy: String @tag(name: "field1") @tag(name: "field1") @tag(name: "field2")
+    }
+    
+    enum E @tag(name: "enum1") @inaccessible @tag(name: "enum1") @tag(name: "enum2") {
+      A @tag(name: "enum value2") @tag(name: "enum value2") @tag(name: "enum value1") @inaccessible
+    }
+    
+    input In @tag(name: "input object1") @tag(name: "input object1") @tag(name: "input object2") {
+      field: String @tag(name: "input value2") @tag(name: "input value2") @tag(name: "input value1") @inaccessible
+    }
+    
+    interface I @tag(name: "interface1") @inaccessible @tag(name: "interface1") @tag(name: "interface2") {
+      field: String @tag(name: "field1") @tag(name: "field1") @inaccessible @tag(name: "field2")
+    }
+    
+    type O implements I @inaccessible @tag(name: "object2") @tag(name: "object1") @tag(name: "object1") @shareable {
+      field: String @tag(name: "field1") @inaccessible @tag(name: "field1") @tag(name: "field2")
+    }
+    
+    scalar S @tag(name: "scalar1") @tag(name: "scalar2") @inaccessible @tag(name: "scalar1")
+  `),
+};
+
+const subgraphJ: Subgraph = {
+  name: 'subgraph-j',
+  url: '',
+  definitions: parse(`
+    enum E @inaccessible @tag(name: "enum2") @tag(name: "enum2") @tag(name: "enum1") {
+      A @tag(name: "enum value1") @tag(name: "enum value2") @tag(name: "enum value1")
+    }
+    
+    input In @tag(name: "input object1") @inaccessible @tag(name: "input object1") @tag(name: "input object2") {
+      field: String @tag(name: "input value1") @inaccessible @tag(name: "input value2") @tag(name: "input value1")
+    }
+    
+    interface I @tag(name: "interface1") @tag(name: "interface1") @inaccessible @tag(name: "interface2") {
+      field: String @inaccessible @tag(name: "field1") @tag(name: "field1") @tag(name: "field2")
+    }
+    
+    type O implements I @tag(name: "object2") @shareable @tag(name: "object1") @inaccessible @tag(name: "object1") {
+      field: String @tag(name: "field1") @tag(name: "field1") @inaccessible @tag(name: "field2")
+    }
+    
+    scalar S @tag(name: "scalar1") @tag(name: "scalar2") @tag(name: "scalar1") @inaccessible
+  `),
+};
+
+const subgraphK: Subgraph = {
+  name: 'subgraph-k',
+  url: '',
+  definitions: parse(`
+    directive @executableDirective(requiredArgInAll: String!, requiredArgInSome: Int!, optionalArgInAll: Float, optionalArg: Boolean) on FIELD | SCHEMA | FIELD_DEFINITION
+  
+    type Query {
+      dummy: String
+    }
+  `),
+};
+
+const subgraphL: Subgraph = {
+  name: 'subgraph-l',
+  url: '',
+  definitions: parse(`
+    directive @executableDirective(requiredArgInAll: String!, requiredArgInSome: Int, optionalArgInAll: Float) on FIELD | OBJECT
   `),
 };

@@ -4,8 +4,8 @@ import axios from 'axios';
 import { eq } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { PKCECodeChallenge, UserInfoEndpointResponse, UserSession } from '../types/index.js';
-import { sessions } from '../db/schema.js';
 import * as schema from '../db/schema.js';
+import { sessions } from '../db/schema.js';
 import {
   calculatePKCECodeChallenge,
   decodeJWT,
