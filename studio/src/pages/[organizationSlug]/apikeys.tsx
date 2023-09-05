@@ -1,68 +1,38 @@
-import { UserContext } from "@/components/app-provider";
-import { EmptyState } from "@/components/empty-state";
-import { getDashboardLayout } from "@/components/layout/dashboard-layout";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { UserContext } from '@/components/app-provider';
+import { EmptyState } from '@/components/empty-state';
+import { getDashboardLayout } from '@/components/layout/dashboard-layout';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import { Loader } from "@/components/ui/loader";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { useToast } from "@/components/ui/use-toast";
-import { SubmitHandler, useZodForm } from "@/hooks/use-form";
-import { NextPageWithLayout } from "@/lib/page";
-import {
-  KeyIcon,
-  EllipsisVerticalIcon,
-  ExclamationTriangleIcon,
-} from "@heroicons/react/24/outline";
-import { PlusIcon } from "@radix-ui/react-icons";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common_pb";
+} from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
+import { Loader } from '@/components/ui/loader';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useToast } from '@/components/ui/use-toast';
+import { SubmitHandler, useZodForm } from '@/hooks/use-form';
+import { NextPageWithLayout } from '@/lib/page';
+import { EllipsisVerticalIcon, ExclamationTriangleIcon, KeyIcon } from '@heroicons/react/24/outline';
+import { PlusIcon } from '@radix-ui/react-icons';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common_pb';
 import {
   createAPIKey,
   deleteAPIKey,
   getAPIKeys,
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { ExpiresAt } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import copy from "copy-to-clipboard";
-import { format } from "date-fns";
-import Link from "next/link";
-import {
-  Dispatch,
-  SetStateAction,
-  useContext,
-  useEffect,
-  useState,
-} from "react";
-import { FiCheck, FiCopy } from "react-icons/fi";
-import { z } from "zod";
-import { docsBaseURL } from "@/lib/constants";
-import { cn } from "@/lib/utils";
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
+import { ExpiresAt } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import copy from 'copy-to-clipboard';
+import { format } from 'date-fns';
+import Link from 'next/link';
+import { Dispatch, SetStateAction, useContext, useEffect, useState } from 'react';
+import { FiCheck, FiCopy } from 'react-icons/fi';
+import { z } from 'zod';
+import { docsBaseURL } from '@/lib/constants';
 
 const CreateAPIKeyDialog = ({
   setApiKey,

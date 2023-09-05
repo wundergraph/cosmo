@@ -3,9 +3,16 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
-import { Message, proto3, protoInt64 } from "@bufbuild/protobuf";
-import { EnumStatusCode } from "../../common_pb.js";
+import type {
+  BinaryReadOptions,
+  FieldList,
+  JsonReadOptions,
+  JsonValue,
+  PartialMessage,
+  PlainMessage,
+} from '@bufbuild/protobuf';
+import { Message, proto3, protoInt64 } from '@bufbuild/protobuf';
+import { EnumStatusCode } from '../../common_pb.js';
 
 /**
  * @generated from enum wg.cosmo.node.v1.ArgumentRenderConfiguration
@@ -467,9 +474,19 @@ export class DataSourceConfiguration extends Message<DataSourceConfiguration> {
   id = "";
 
   /**
-   * @generated from field: repeated wg.cosmo.node.v1.RequiredField required_fields = 10;
+   * @generated from field: repeated wg.cosmo.node.v1.RequiredField keys = 10;
    */
-  requiredFields: RequiredField[] = [];
+  keys: RequiredField[] = [];
+
+  /**
+   * @generated from field: repeated wg.cosmo.node.v1.RequiredField provides = 11;
+   */
+  provides: RequiredField[] = [];
+
+  /**
+   * @generated from field: repeated wg.cosmo.node.v1.RequiredField requires = 12;
+   */
+  requires: RequiredField[] = [];
 
   constructor(data?: PartialMessage<DataSourceConfiguration>) {
     super();
@@ -488,7 +505,9 @@ export class DataSourceConfiguration extends Message<DataSourceConfiguration> {
     { no: 7, name: "directives", kind: "message", T: DirectiveConfiguration, repeated: true },
     { no: 8, name: "request_timeout_seconds", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
     { no: 9, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 10, name: "required_fields", kind: "message", T: RequiredField, repeated: true },
+    { no: 10, name: "keys", kind: "message", T: RequiredField, repeated: true },
+    { no: 11, name: "provides", kind: "message", T: RequiredField, repeated: true },
+    { no: 12, name: "requires", kind: "message", T: RequiredField, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DataSourceConfiguration {
@@ -523,24 +542,9 @@ export class FieldConfiguration extends Message<FieldConfiguration> {
   fieldName = "";
 
   /**
-   * @generated from field: bool disable_default_field_mapping = 3;
-   */
-  disableDefaultFieldMapping = false;
-
-  /**
-   * @generated from field: repeated string path = 4;
-   */
-  path: string[] = [];
-
-  /**
-   * @generated from field: repeated wg.cosmo.node.v1.ArgumentConfiguration arguments_configuration = 6;
+   * @generated from field: repeated wg.cosmo.node.v1.ArgumentConfiguration arguments_configuration = 3;
    */
   argumentsConfiguration: ArgumentConfiguration[] = [];
-
-  /**
-   * @generated from field: bool unescape_response_json = 7;
-   */
-  unescapeResponseJson = false;
 
   constructor(data?: PartialMessage<FieldConfiguration>) {
     super();
@@ -552,10 +556,7 @@ export class FieldConfiguration extends Message<FieldConfiguration> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "type_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "field_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "disable_default_field_mapping", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 4, name: "path", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 6, name: "arguments_configuration", kind: "message", T: ArgumentConfiguration, repeated: true },
-    { no: 7, name: "unescape_response_json", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 3, name: "arguments_configuration", kind: "message", T: ArgumentConfiguration, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FieldConfiguration {
@@ -589,21 +590,6 @@ export class ArgumentConfiguration extends Message<ArgumentConfiguration> {
    */
   sourceType = ArgumentSource.OBJECT_FIELD;
 
-  /**
-   * @generated from field: repeated string source_path = 3;
-   */
-  sourcePath: string[] = [];
-
-  /**
-   * @generated from field: wg.cosmo.node.v1.ArgumentRenderConfiguration render_configuration = 4;
-   */
-  renderConfiguration = ArgumentRenderConfiguration.RENDER_ARGUMENT_DEFAULT;
-
-  /**
-   * @generated from field: string rename_type_to = 5;
-   */
-  renameTypeTo = "";
-
   constructor(data?: PartialMessage<ArgumentConfiguration>) {
     super();
     proto3.util.initPartial(data, this);
@@ -614,9 +600,6 @@ export class ArgumentConfiguration extends Message<ArgumentConfiguration> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "source_type", kind: "enum", T: proto3.getEnumType(ArgumentSource) },
-    { no: 3, name: "source_path", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 4, name: "render_configuration", kind: "enum", T: proto3.getEnumType(ArgumentRenderConfiguration) },
-    { no: 5, name: "rename_type_to", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ArgumentConfiguration {

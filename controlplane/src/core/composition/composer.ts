@@ -1,4 +1,5 @@
-import { GraphQLError, parse, printSchema } from 'graphql';
+import { parse, printSchema } from 'graphql';
+import { ArgumentConfigurationData } from '@wundergraph/composition';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
 import { SubgraphRepository } from '../repositories/SubgraphRepository.js';
 import { Label } from '../../types/index.js';
@@ -9,6 +10,7 @@ export type CompositionResult = {
 };
 
 export interface ComposedFederatedGraph {
+  argumentConfigurations: ArgumentConfigurationData[];
   name: string;
   targetID: string;
   composedSchema?: string;
@@ -45,7 +47,7 @@ export class Composer {
       const subgraphs = await this.subgraphRepo.listByGraph(name, {
         published: true,
       });
-      const result = composeSubgraphs(
+      const { errors, federationResult: result } = composeSubgraphs(
         subgraphs.map((s) => ({
           name: s.name,
           url: s.routingUrl,
@@ -54,10 +56,11 @@ export class Composer {
       );
 
       return {
+        argumentConfigurations: result?.argumentConfigurations || [],
         name,
         targetID,
-        composedSchema: result.federatedGraphSchema ? printSchema(result.federatedGraphSchema) : undefined,
-        errors: result.errors || [],
+        composedSchema: result?.federatedGraphSchema ? printSchema(result.federatedGraphSchema) : undefined,
+        errors: errors || [],
         subgraphs: subgraphs.map((s) => ({
           name: s.name,
           url: s.routingUrl,
@@ -66,6 +69,7 @@ export class Composer {
       };
     } catch (e: any) {
       return {
+        argumentConfigurations: [],
         name,
         targetID,
         errors: [e],
@@ -103,13 +107,13 @@ export class Composer {
           }
         }
 
-        const result = composeSubgraphs(subgraphsToBeComposed);
-
+        const { errors, federationResult: result } = composeSubgraphs(subgraphsToBeComposed);
         composedGraphs.push({
+          argumentConfigurations: result?.argumentConfigurations || [],
           name: graph.name,
           targetID: graph.targetId,
-          composedSchema: result.federatedGraphSchema ? printSchema(result.federatedGraphSchema) : undefined,
-          errors: result.errors || [],
+          composedSchema: result?.federatedGraphSchema ? printSchema(result.federatedGraphSchema) : undefined,
+          errors: errors || [],
           subgraphs: subgraphs.map((s) => ({
             name: s.name,
             url: s.routingUrl,
@@ -118,6 +122,7 @@ export class Composer {
         });
       } catch (e: any) {
         composedGraphs.push({
+          argumentConfigurations: [],
           name: graph.name,
           targetID: graph.targetId,
           errors: [e],

@@ -3,7 +3,7 @@ import postgres from 'postgres';
 import nuid from 'nuid';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { ExpiresAt } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { Label, AuthContext } from '../types/index.js';
+import { AuthContext, Label } from '../types/index.js';
 import * as schema from '../db/schema.js';
 import { Authenticator } from './services/Authentication.js';
 import { UserRepository } from './repositories/UserRepository.js';

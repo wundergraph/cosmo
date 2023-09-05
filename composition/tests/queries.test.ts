@@ -1,21 +1,21 @@
-import { federateSubgraphs, RootTypeField, Subgraph, unresolvableFieldError } from '../src';
+import { federateSubgraphs, RootTypeFieldData, Subgraph, unresolvableFieldError } from '../src';
 import { parse } from 'graphql';
 import { describe, expect, test } from 'vitest';
 import {
   documentNodeToNormalizedString,
   normalizeString,
-  versionOneBaseSchema,
-  versionTwoBaseSchema,
+  versionOnePersistedBaseSchema,
+  versionTwoPersistedBaseSchema,
 } from './utils/utils';
 
 describe('Query federation tests', () => {
   test('that shared queries that return a nested type that is only resolvable over multiple subgraphs are valid', () => {
-    const result = federateSubgraphs([subgraphA, subgraphB]);
-    expect(result.errors).toBeUndefined();
-    const federatedGraph = result.federatedGraphAST!;
+    const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphB]);
+    expect(errors).toBeUndefined();
+    const federatedGraph = federationResult!.federatedGraphAST;
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
-        versionTwoBaseSchema +
+        versionTwoPersistedBaseSchema +
           `
       type Query {
         query: Nested
@@ -43,90 +43,109 @@ describe('Query federation tests', () => {
   });
 
   test('that unshared queries that return a nested type that cannot be resolved in a single subgraph returns an error', () => {
-    const rootTypeField: RootTypeField = {
-      inlineFragment: '',
-      name: 'query',
+    const rootTypeFieldData: RootTypeFieldData = {
+      fieldName: 'query',
+      fieldTypeNodeString: 'Nested',
       path: 'Query.query',
-      parentTypeName: 'Query',
-      responseType: 'Nested',
-      rootTypeName: 'Nested',
       subgraphs: new Set<string>(['subgraph-b']),
+      typeName: 'Query',
     };
-    const result = federateSubgraphs([subgraphB, subgraphC]);
-    expect(result.errors).toBeDefined();
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors![0]).toStrictEqual(
-      unresolvableFieldError(rootTypeField, 'name', ['Query.query.nest.nest.nest.name'], 'subgraph-c', 'Nested4'),
+    const { errors } = federateSubgraphs([subgraphB, subgraphC]);
+    expect(errors).toBeDefined();
+    expect(errors).toHaveLength(1);
+    expect(errors![0]).toStrictEqual(
+      unresolvableFieldError(
+        rootTypeFieldData,
+        'name',
+        ['subgraph-c'],
+        'Query.query.nest.nest.nest.name',
+        'Nested4',
+      ),
     );
   });
 
   test('that unresolvable fields return an error', () => {
-    const parentTypeName = 'Friend';
-    const rootTypeField: RootTypeField = {
-      inlineFragment: '',
-      name: 'friend',
+    const rootTypeFieldData: RootTypeFieldData = {
+      fieldName: 'friend',
+      fieldTypeNodeString: 'Friend',
       path: 'Query.friend',
-      parentTypeName: 'Query',
-      responseType: parentTypeName,
-      rootTypeName: parentTypeName,
       subgraphs: new Set<string>(['subgraph-d']),
+      typeName: 'Query',
     };
-    const result = federateSubgraphs([subgraphD, subgraphF]);
-    expect(result.errors).toBeDefined();
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors![0]).toStrictEqual(
-      unresolvableFieldError(rootTypeField, 'age', ['Query.friend.age'], 'subgraph-f', parentTypeName),
+    const { errors } = federateSubgraphs([subgraphD, subgraphF]);
+    expect(errors).toBeDefined();
+    expect(errors).toHaveLength(1);
+    expect(errors![0]).toStrictEqual(
+      unresolvableFieldError(
+        rootTypeFieldData,
+        'age',
+        ['subgraph-f'],
+        'Query.friend.age',
+        'Friend',
+      ),
     );
   });
 
   test('that unresolvable fields that are the first fields to be added still return an error', () => {
-    const parentTypeName = 'Friend';
-    const rootTypeField: RootTypeField = {
-      inlineFragment: '',
-      name: 'friend',
+    const rootTypeFieldData: RootTypeFieldData = {
+      fieldName: 'friend',
+      fieldTypeNodeString: 'Friend',
       path: 'Query.friend',
-      parentTypeName: 'Query',
-      responseType: parentTypeName,
-      rootTypeName: parentTypeName,
       subgraphs: new Set<string>(['subgraph-d']),
+      typeName: 'Query',
     };
-    const result = federateSubgraphs([subgraphF, subgraphD]);
-    expect(result.errors).toBeDefined();
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors![0]).toStrictEqual(
-      unresolvableFieldError(rootTypeField, 'age', ['Query.friend.age'], 'subgraph-f', parentTypeName),
+    const { errors } = federateSubgraphs([subgraphF, subgraphD]);
+    expect(errors).toBeDefined();
+    expect(errors).toHaveLength(1);
+    expect(errors![0]).toStrictEqual(
+      unresolvableFieldError(
+        rootTypeFieldData,
+        'age',
+        ['subgraph-f'],
+        'Query.friend.age',
+        'Friend',
+      ),
     );
   });
 
   test('that multiple unresolved fields return an error for each', () => {
-    const parentTypeName = 'Friend';
-    const rootTypeField: RootTypeField = {
-      inlineFragment: '',
-      name: 'friend',
+    const rootTypeFieldData: RootTypeFieldData = {
+      fieldName: 'friend',
+      fieldTypeNodeString: 'Friend',
       path: 'Query.friend',
-      parentTypeName: 'Query',
-      responseType: parentTypeName,
-      rootTypeName: parentTypeName,
       subgraphs: new Set<string>(['subgraph-d']),
+      typeName: 'Query',
     };
-    const result = federateSubgraphs([subgraphD, subgraphF, subgraphG]);
-    expect(result.errors).toBeDefined();
-    expect(result.errors).toHaveLength(2);
-    expect(result.errors![0]).toStrictEqual(
-      unresolvableFieldError(rootTypeField, 'age', ['Query.friend.age'], 'subgraph-f', parentTypeName),
+    const { errors } = federateSubgraphs([subgraphD, subgraphF, subgraphG]);
+    expect(errors).toBeDefined();
+    expect(errors).toHaveLength(2);
+    expect(errors![0]).toStrictEqual(
+      unresolvableFieldError(
+        rootTypeFieldData,
+        'age',
+        ['subgraph-f'],
+        'Query.friend.age',
+        'Friend',
+      ),
     );
-    expect(result.errors![1]).toStrictEqual(
-      unresolvableFieldError(rootTypeField, 'hobbies', ['Query.friend.hobbies'], 'subgraph-g', parentTypeName),
+    expect(errors![1]).toStrictEqual(
+      unresolvableFieldError(
+        rootTypeFieldData,
+        'hobbies',
+        ['subgraph-g'],
+        'Query.friend.hobbies',
+        'Friend',
+      ),
     );
   });
 
   test('that shared queries that return a type that is only resolvable over multiple subgraphs are valid', () => {
-    const result = federateSubgraphs([subgraphD, subgraphE]);
-    expect(result.errors).toBeUndefined();
-    const federatedGraph = result.federatedGraphAST!;
+    const { errors, federationResult } = federateSubgraphs([subgraphD, subgraphE]);
+    expect(errors).toBeUndefined();
+    const federatedGraph = federationResult!.federatedGraphAST;
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
-        versionTwoBaseSchema +
+        versionTwoPersistedBaseSchema +
           `
       type Query {
         friend: Friend
@@ -142,12 +161,12 @@ describe('Query federation tests', () => {
   });
 
   test('that shared queries that return an interface that is only resolvable over multiple subgraphs are valid', () => {
-    const result = federateSubgraphs([subgraphH, subgraphI]);
-    expect(result.errors).toBeUndefined();
-    const federatedGraph = result.federatedGraphAST!;
+    const { errors, federationResult } = federateSubgraphs([subgraphH, subgraphI]);
+    expect(errors).toBeUndefined();
+    const federatedGraph = federationResult!.federatedGraphAST;
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
-        versionOneBaseSchema +
+        versionOnePersistedBaseSchema +
           `
       interface Human {
         name: String!
@@ -168,53 +187,56 @@ describe('Query federation tests', () => {
   });
 
   test('that queries that return interfaces whose constituent types are unresolvable return an error', () => {
-    const rootTypeField: RootTypeField = {
-      inlineFragment: '',
-      name: 'humans',
+    const rootTypeFieldData: RootTypeFieldData = {
+      fieldName: 'humans',
+      fieldTypeNodeString: '[Human]',
       path: 'Query.humans',
-      parentTypeName: 'Query',
-      responseType: '[Human]',
-      rootTypeName: 'Human',
       subgraphs: new Set<string>(['subgraph-i']),
+      typeName: 'Query',
     };
     const result = federateSubgraphs([subgraphI, subgraphJ]);
-    expect(result.errors).toBeDefined();
-    expect(result.errors![0]).toStrictEqual(
-      unresolvableFieldError(rootTypeField, 'name', ['Query.humans ... on Friend name'], 'subgraph-j', 'Friend'),
-    );
-  });
-
-  test('that queries that return nested interfaces whose constituent types are unresolvable return an error', () => {
-    const rootTypeField: RootTypeField = {
-      inlineFragment: '',
-      name: 'humans',
-      path: 'Query.humans',
-      parentTypeName: 'Query',
-      responseType: '[Human]',
-      rootTypeName: 'Human',
-      subgraphs: new Set<string>(['subgraph-k']),
-    };
-    const result = federateSubgraphs([subgraphK, subgraphL]);
     expect(result.errors).toBeDefined();
     expect(result.errors).toHaveLength(1);
     expect(result.errors![0]).toStrictEqual(
       unresolvableFieldError(
-        rootTypeField,
+        rootTypeFieldData,
+        'name',
+        ['subgraph-j'],
+        'Query.humans ... on Friend name',
+        'Friend',
+      ),
+    );
+  });
+
+  test('that queries that return nested interfaces whose constituent types are unresolvable return an error', () => {
+    const rootTypeFieldData: RootTypeFieldData = {
+      fieldName: 'humans',
+      fieldTypeNodeString: '[Human]',
+      path: 'Query.humans',
+      subgraphs: new Set<string>(['subgraph-k']),
+      typeName: 'Query',
+    };
+    const { errors } = federateSubgraphs([subgraphK, subgraphL]);
+    expect(errors).toBeDefined();
+    expect(errors).toHaveLength(1);
+    expect(errors![0]).toStrictEqual(
+      unresolvableFieldError(
+        rootTypeFieldData,
         'age',
-        ['Query.humans ... on Friend pets ... on Cat age'],
-        'subgraph-l',
+        ['subgraph-l'],
+        'Query.humans ... on Friend pets ... on Cat age',
         'Cat',
       ),
     );
   });
 
   test('that shared queries that return a union that is only resolvable over multiple subgraphs are valid', () => {
-    const result = federateSubgraphs([subgraphM, subgraphN]);
-    expect(result.errors).toBeUndefined();
-    const federatedGraph = result.federatedGraphAST!;
+    const { errors, federationResult } = federateSubgraphs([subgraphM, subgraphN]);
+    expect(errors).toBeUndefined();
+    const federatedGraph = federationResult!.federatedGraphAST;
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
-        versionOneBaseSchema +
+        versionOnePersistedBaseSchema +
           `
       union Human = Friend | Enemy
       
@@ -235,21 +257,97 @@ describe('Query federation tests', () => {
   });
 
   test('that queries that return unions whose constituent types are unresolvable return an error', () => {
-    const rootTypeField: RootTypeField = {
-      inlineFragment: ' ... on Enemy ',
-      name: 'humans',
+    const rootTypeFieldData: RootTypeFieldData = {
+      fieldName: 'humans',
+      fieldTypeNodeString: '[Human]',
       path: 'Query.humans',
-      parentTypeName: 'Query',
-      responseType: '[Human]',
-      rootTypeName: 'Human',
       subgraphs: new Set<string>(['subgraph-o']),
+      typeName: 'Query',
     };
     const result = federateSubgraphs([subgraphO, subgraphP]);
     expect(result.errors).toBeDefined();
     expect(result.errors).toHaveLength(1);
     expect(result.errors![0]).toStrictEqual(
-      unresolvableFieldError(rootTypeField, 'age', ['Query.humans ... on Enemy age'], 'subgraph-p', 'Enemy'),
+      unresolvableFieldError(
+        rootTypeFieldData,
+        'age',
+        ['subgraph-p'],
+        'Query.humans ... on Enemy age',
+        'Enemy',
+      ),
     );
+  });
+
+  test('that an entity ancestor provides access to an otherwise unreachable field', () => {
+    const { errors, federationResult } = federateSubgraphs([subgraphQ, subgraphR]);
+    expect(errors).toBeUndefined();
+    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(normalizeString(
+      versionOnePersistedBaseSchema + `
+        type Query {
+          entity: SometimesEntity!
+        }
+        
+        type SometimesEntity {
+            id: ID!
+            object: Object!
+        }
+        
+        type Object {
+            nestedObject: NestedObject!
+        }
+        
+        type NestedObject {
+            name: String!
+            age: Int!
+        }
+    `));
+  });
+
+  test('that a nested self-referential type does not create an infinite validation loop', () => {
+    const { errors, federationResult } = federateSubgraphs([subgraphS, subgraphD]);
+    expect(errors).toBeUndefined();
+    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(normalizeString(
+      versionTwoPersistedBaseSchema + `
+        type Query {
+          object: Object!
+          friend: Friend
+        }
+        
+        type Object {
+          nestedObject: NestedObject!
+        }
+        
+        type NestedObject {
+          object: Object!
+        }
+        
+        type Friend {
+          name: String!
+        }
+    `));
+  });
+
+  test('that unreachable interface implementations do not return an error', () => {
+    const { errors, federationResult } = federateSubgraphs([subgraphT, subgraphU]);
+    expect(errors).toBeUndefined();
+    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(normalizeString(
+      versionOnePersistedBaseSchema + `
+        interface Interface {
+          field: String!
+        }
+
+        type Query {
+          query: Interface!
+        }
+
+        type Object implements Interface {
+          field: String!
+        }
+
+        type OtherObject implements Interface {
+          field: String!
+        }
+    `));
   });
 });
 
@@ -327,7 +425,7 @@ const subgraphC: Subgraph = {
   `),
 };
 
-const subgraphD = {
+const subgraphD: Subgraph = {
   name: 'subgraph-d',
   url: '',
   definitions: parse(`
@@ -341,7 +439,7 @@ const subgraphD = {
   `),
 };
 
-const subgraphE = {
+const subgraphE: Subgraph = {
   name: 'subgraph-e',
   url: '',
   definitions: parse(`
@@ -355,7 +453,7 @@ const subgraphE = {
   `),
 };
 
-const subgraphF = {
+const subgraphF: Subgraph = {
   name: 'subgraph-f',
   url: '',
   definitions: parse(`
@@ -365,7 +463,7 @@ const subgraphF = {
   `),
 };
 
-const subgraphG = {
+const subgraphG: Subgraph = {
   name: 'subgraph-g',
   url: '',
   definitions: parse(`
@@ -375,7 +473,7 @@ const subgraphG = {
   `),
 };
 
-const subgraphH = {
+const subgraphH: Subgraph = {
   name: 'subgraph-h',
   url: '',
   definitions: parse(`
@@ -393,7 +491,7 @@ const subgraphH = {
   `),
 };
 
-const subgraphI = {
+const subgraphI: Subgraph = {
   name: 'subgraph-i',
   url: '',
   definitions: parse(`
@@ -411,7 +509,7 @@ const subgraphI = {
   `),
 };
 
-const subgraphJ = {
+const subgraphJ: Subgraph = {
   name: 'subgraph-j',
   url: '',
   definitions: parse(`
@@ -425,7 +523,7 @@ const subgraphJ = {
   `),
 };
 
-const subgraphK = {
+const subgraphK: Subgraph = {
   name: 'subgraph-k',
   url: '',
   definitions: parse(`
@@ -453,7 +551,7 @@ const subgraphK = {
   `),
 };
 
-const subgraphL = {
+const subgraphL: Subgraph = {
   name: 'subgraph-l',
   url: '',
   definitions: parse(`
@@ -477,7 +575,7 @@ const subgraphL = {
   `),
 };
 
-const subgraphM = {
+const subgraphM: Subgraph = {
   name: 'subgraph-m',
   url: '',
   definitions: parse(`
@@ -493,7 +591,7 @@ const subgraphM = {
   `),
 };
 
-const subgraphN = {
+const subgraphN: Subgraph = {
   name: 'subgraph-n',
   url: '',
   definitions: parse(`
@@ -509,7 +607,7 @@ const subgraphN = {
   `),
 };
 
-const subgraphO = {
+const subgraphO: Subgraph = {
   name: 'subgraph-o',
   url: '',
   definitions: parse(`
@@ -529,7 +627,7 @@ const subgraphO = {
   `),
 };
 
-const subgraphP = {
+const subgraphP: Subgraph = {
   name: 'subgraph-p',
   url: '',
   definitions: parse(`
@@ -540,3 +638,96 @@ const subgraphP = {
     }
   `),
 };
+
+const subgraphQ = {
+  name: 'subgraph-q',
+  url: '',
+  definitions: parse(`
+    type Query {
+      entity: SometimesEntity!
+    }
+    
+    type SometimesEntity {
+        id: ID!
+        object: Object!
+    }
+    
+    type Object {
+        nestedObject: NestedObject!
+    }
+    
+    type NestedObject {
+        name: String!
+    }
+  `),
+};
+
+const subgraphR = {
+  name: 'subgraph-r',
+  url: '',
+  definitions: parse(`
+    type SometimesEntity @key(fields: "id") {
+        id: ID!
+        object: Object!
+    }
+    
+    type Object {
+        nestedObject: NestedObject!
+    }
+    
+    type NestedObject {
+        age: Int!
+    }
+  `),
+};
+
+const subgraphS = {
+  name: 'subgraph-s',
+  url: '',
+  definitions: parse(`
+    type Query {
+        object: Object!
+    }
+    
+    type Object {
+        nestedObject: NestedObject!
+    }
+    
+    type NestedObject {
+        object: Object!
+    }
+  `),
+};
+
+const subgraphT = {
+  name: 'subgraph-t',
+  url: '',
+  definitions: parse(`
+    type Query {
+     query: Interface!
+    }
+    
+    interface Interface {
+     field: String!
+    }
+    
+    type Object implements Interface {
+     field: String!
+    }
+  `),
+};
+
+const subgraphU = {
+  name: 'subgraph-u',
+  url: '',
+  definitions: parse(`
+    interface Interface {
+     field: String!
+    }
+    
+    type OtherObject implements Interface {
+     field: String!
+    }
+  `),
+};
+

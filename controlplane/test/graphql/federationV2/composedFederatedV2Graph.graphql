@@ -1,44 +1,11 @@
-directive @extends on INTERFACE | OBJECT
-
-directive @external on FIELD_DEFINITION | OBJECT
-
-directive @key(fields: String!) repeatable on OBJECT
-
-directive @provides(fields: String!) on FIELD_DEFINITION
-
-directive @requires(fields: String!) on FIELD_DEFINITION
-
 directive @tag(
   name: String!
 ) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
 
 directive @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
 
-directive @shareable on FIELD_DEFINITION | OBJECT
-
-directive @myDirective(a: String!) on FIELD_DEFINITION
-
-directive @hello on FIELD_DEFINITION
-
-directive @override(from: String!) on FIELD_DEFINITION
-
 interface SkuItf {
   sku: String
-}
-
-interface ProductItf implements SkuItf {
-  id: ID!
-  sku: String
-  name: String
-  package: String
-  variation: ProductVariation
-  dimensions: ProductDimension
-  createdBy: User
-  hidden: String
-  oldField: String
-  reviewsCount: Int!
-  reviewsScore: Float!
-  reviews: [Review!]!
 }
 
 type Query {
@@ -52,21 +19,6 @@ type Query {
 type Panda {
   name: ID!
   favoriteFood: String
-}
-
-type Product implements ProductItf & SkuItf {
-  id: ID!
-  sku: String
-  name: String
-  package: String
-  variation: ProductVariation
-  dimensions: ProductDimension
-  createdBy: User
-  hidden: String
-  reviewsScore: Float!
-  oldField: String
-  reviewsCount: Int!
-  reviews: [Review!]!
 }
 
 enum ShippingClass {
@@ -93,4 +45,34 @@ type User {
 type Review {
   id: Int!
   body: String!
+}
+
+interface ProductItf implements SkuItf {
+  id: ID!
+  sku: String
+  name: String
+  package: String
+  variation: ProductVariation
+  dimensions: ProductDimension
+  createdBy: User
+  hidden: String
+  oldField: String @deprecated(reason: "refactored out")
+  reviewsCount: Int!
+  reviewsScore: Float!
+  reviews: [Review!]!
+}
+
+type Product implements ProductItf & SkuItf {
+  id: ID!
+  sku: String
+  name: String
+  package: String
+  variation: ProductVariation
+  dimensions: ProductDimension
+  createdBy: User
+  hidden: String
+  reviewsScore: Float!
+  oldField: String
+  reviewsCount: Int!
+  reviews: [Review!]!
 }

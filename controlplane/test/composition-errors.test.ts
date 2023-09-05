@@ -8,8 +8,15 @@ import pino from 'pino';
 import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common_pb';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
-import { parse } from 'graphql';
+import { Kind, parse } from 'graphql';
 import { joinLabel } from '@wundergraph/cosmo-shared';
+import {
+  ImplementationErrors,
+  incompatibleParentKindFatalError,
+  InvalidFieldImplementation,
+  noQueryRootTypeError,
+  unimplementedInterfaceFieldsError,
+} from '@wundergraph/composition';
 import database from '../src/core/plugins/database';
 import routes from '../src/core/routes';
 import { composeSubgraphs } from '../src/core/composition/composition';
@@ -295,7 +302,7 @@ describe('CompositionErrors', (ctx) => {
     );
   });
 
-  test.skip('Should cause composition errors if the subgraphs have no query', () => {
+  test('that an error is returned if the federated graph has no query root type', () => {
     const subgraph1 = {
       definitions: parse(`
         type TypeA {
@@ -316,15 +323,14 @@ describe('CompositionErrors', (ctx) => {
       name: 'subgraph2',
     };
 
-    const result = composeSubgraphs([subgraph1, subgraph2]);
+    const { errors } = composeSubgraphs([subgraph1, subgraph2]);
 
-    expect(result.errors).toBeDefined();
-    expect(result.errors?.[0].message).toBe(
-      'No queries found in any subgraph: a supergraph must have a query root type.',
-    );
+    expect(errors).toBeDefined();
+    expect(errors).toHaveLength(1);
+    expect(errors?.[0]).toStrictEqual(noQueryRootTypeError);
   });
 
-  test.skip('Should cause an composition error when a type and a interface are defined with the same name in different subgraphs', () => {
+  test('Should cause an composition error when a type and a interface are defined with the same name in different subgraphs', () => {
     const subgraph1 = {
       definitions: parse(`
         type Query {
@@ -349,26 +355,26 @@ describe('CompositionErrors', (ctx) => {
       name: 'subgraph2',
     };
 
-    const result = composeSubgraphs([subgraph1, subgraph2]);
-
-    expect(result.errors).toBeDefined();
-    expect(result.errors?.[0].message).toBe(
-      'Type "SameName" has mismatched kind: it is defined as Object Type in subgraph "subgraph1" but Interface Type in subgraph "subgraph2"',
-    );
+    expect(() => composeSubgraphs([subgraph1, subgraph2]))
+      .toThrow(incompatibleParentKindFatalError(
+        'SameName',
+        Kind.OBJECT_TYPE_DEFINITION,
+        Kind.INTERFACE_TYPE_DEFINITION,
+      ));
   });
 
-  test.skip('Should cause composition errors if a type does not implement one of its interface after merge', () => {
+  test('Should cause composition errors if a type does not implement one of its interface after merge', () => {
     const subgraph1 = {
       definitions: parse(`
         type Query {
-          x: [IntefaceA!]
+          x: [InterfaceA!]
         }
 
-        interface IntefaceA {
+        interface InterfaceA {
           a: Int
         }
 
-        type TypeA implements IntefaceA {
+        type TypeA implements InterfaceA {
           a: Int
           b: Int
         }
@@ -379,11 +385,11 @@ describe('CompositionErrors', (ctx) => {
 
     const subgraph2 = {
       definitions: parse(`
-        interface IntefaceA {
+        interface InterfaceA {
           b: Int
         }
 
-        type TypeB implements IntefaceA {
+        type TypeB implements InterfaceA {
           b: Int
         }
       `),
@@ -391,12 +397,19 @@ describe('CompositionErrors', (ctx) => {
       name: 'subgraph2',
     };
 
-    const result = composeSubgraphs([subgraph1, subgraph2]);
+    const { errors } = composeSubgraphs([subgraph1, subgraph2]);
 
-    expect(result.errors).toBeDefined();
-    expect(result.errors?.[0].message).toBe(
-      'Interface field "IntefaceA.a" is declared in subgraph "subgraph1" but type "TypeB", which implements "IntefaceA" only in subgraph "subgraph2" does not have field "a".',
-    );
+    expect(errors).toBeDefined();
+    expect(errors![0]).toStrictEqual(unimplementedInterfaceFieldsError(
+      'TypeB',
+      'object',
+      new Map<string, ImplementationErrors>([
+        ['InterfaceA', {
+          invalidFieldImplementations: new Map<string, InvalidFieldImplementation>(),
+          unimplementedFields: ['a'],
+        }]
+      ]),
+    ));
   });
 
   test.skip('Should cause composition errors when merging completely inconsistent input types', () => {

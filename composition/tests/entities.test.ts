@@ -1,17 +1,20 @@
-import { federateSubgraphs, RootTypeField, Subgraph, unresolvableFieldError } from '../src';
+import { federateSubgraphs, RootTypeFieldData, Subgraph, unresolvableFieldError } from '../src';
 import { describe, expect, test } from 'vitest';
-import { documentNodeToNormalizedString, normalizeString, versionOneBaseSchema } from './utils/utils';
+import { documentNodeToNormalizedString, normalizeString, versionOnePersistedBaseSchema } from './utils/utils';
 import { parse } from 'graphql';
 
 describe('Entities federation tests', () => {
   test('that entities merge successfully', () => {
-    const result = federateSubgraphs([subgraphA, subgraphB]);
-    expect(result.errors).toBeUndefined();
-    const federatedGraph = result.federatedGraphAST!;
+    const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphB]);
+    expect(errors).toBeUndefined();
+    const federatedGraph = federationResult!.federatedGraphAST;
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
-        versionOneBaseSchema +
-          `
+        versionOnePersistedBaseSchema + `
+      type Query {
+        dummy: String!
+      }
+
       type Trainer {
         id: Int!
         details: Details!
@@ -33,13 +36,17 @@ describe('Entities federation tests', () => {
   });
 
   test('that an entity and non-declared entity merge if the non-entity is resolvable', () => {
-    const result = federateSubgraphs([subgraphA, subgraphC]);
-    expect(result.errors).toBeUndefined();
-    const federatedGraph = result.federatedGraphAST!;
+    const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphC]);
+    expect(errors).toBeUndefined();
+    const federatedGraph = federationResult!.federatedGraphAST;
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
-        versionOneBaseSchema +
-          `
+        versionOnePersistedBaseSchema + `
+      type Query {
+        dummy: String!
+        trainer: Trainer!
+      }
+
       type Trainer {
         id: Int!
         details: Details!
@@ -49,10 +56,6 @@ describe('Entities federation tests', () => {
       type Details {
         name: String!
         age: Int!
-      }
-
-      type Query {
-        trainer: Trainer!
       }
 
       type Pokemon {
@@ -65,37 +68,34 @@ describe('Entities federation tests', () => {
   });
 
   test('that if an unresolvable field appears in the first subgraph, it returns an error', () => {
-    const rootTypeField: RootTypeField = {
-      inlineFragment: '',
-      name: 'trainer',
+    const rootTypeFieldData: RootTypeFieldData = {
+      fieldName: 'trainer',
+      fieldTypeNodeString: 'Trainer!',
       path: 'Query.trainer',
-      parentTypeName: 'Query',
-      responseType: 'Trainer!',
-      rootTypeName: 'Trainer',
       subgraphs: new Set<string>(['subgraph-e']),
+      typeName: 'Query',
     };
     const result = federateSubgraphs([subgraphD, subgraphE]);
     expect(result.errors).toBeDefined();
-    expect(result.errors).toHaveLength(3);
-    expect(result.errors![0]).deep.equal(
-      unresolvableFieldError(rootTypeField, 'details', ['Query.trainer.details { ... }'], 'subgraph-d', 'Trainer'),
-    );
-    // TODO these errors should not happen because it's the parent that's the problem
-    expect(result.errors![1]).deep.equal(
-      unresolvableFieldError(rootTypeField, 'name', ['Query.trainer.details.name'], 'subgraph-d', 'Details'),
-    );
-    expect(result.errors![2]).deep.equal(
-      unresolvableFieldError(rootTypeField, 'age', ['Query.trainer.details.age'], 'subgraph-d', 'Details'),
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors![0]).toStrictEqual(
+      unresolvableFieldError(
+        rootTypeFieldData,
+        'details',
+        ['subgraph-d'],
+        'Query.trainer.details { ... }',
+        'Trainer'
+      ),
     );
   });
 
   test('that ancestors of resolvable entities are also determined to be resolvable', () => {
-    const result = federateSubgraphs([subgraphC, subgraphF]);
-    expect(result.errors).toBeUndefined();
-    const federatedGraph = result.federatedGraphAST!;
+    const { errors, federationResult } = federateSubgraphs([subgraphC, subgraphF]);
+    expect(errors).toBeUndefined();
+    const federatedGraph = federationResult!.federatedGraphAST;
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
-        versionOneBaseSchema +
+        versionOnePersistedBaseSchema +
           `
       type Query {
         trainer: Trainer!
@@ -126,12 +126,12 @@ describe('Entities federation tests', () => {
   });
 
   test('that ancestors of resolvable entities that are not in the same subgraph return an error', () => {
-    const result = federateSubgraphs([subgraphC, subgraphF]);
-    expect(result.errors).toBeUndefined();
-    const federatedGraph = result.federatedGraphAST!;
+    const { errors, federationResult } = federateSubgraphs([subgraphC, subgraphF]);
+    expect(errors).toBeUndefined();
+    const federatedGraph = federationResult!.federatedGraphAST;
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
-        versionOneBaseSchema +
+        versionOnePersistedBaseSchema +
           `
       type Query {
         trainer: Trainer!
@@ -162,13 +162,12 @@ describe('Entities federation tests', () => {
   });
 
   test('that V1 and V2 entities merge successfully', () => {
-    const result = federateSubgraphs([subgraphB, subgraphG]);
-    expect(result.errors).toBeUndefined();
-    const federatedGraph = result.federatedGraphAST!;
+    const { errors, federationResult } = federateSubgraphs([subgraphB, subgraphG]);
+    expect(errors).toBeUndefined();
+    const federatedGraph = federationResult!.federatedGraphAST!;
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
-        versionOneBaseSchema +
-          `
+        versionOnePersistedBaseSchema + `
       type Trainer {
         id: Int!
         pokemon: [Pokemon!]!
@@ -178,6 +177,10 @@ describe('Entities federation tests', () => {
       type Pokemon {
         name: String!
         level: Int!
+      }
+      
+      type Query {
+        dummy: String!
       }
 
       type Details {
@@ -194,6 +197,10 @@ const subgraphA: Subgraph = {
   name: 'subgraph-a',
   url: '',
   definitions: parse(`
+    type Query {
+      dummy: String!
+    }
+
     type Trainer @key(fields: "id") {
       id: Int!
       details: Details!
@@ -296,6 +303,10 @@ const subgraphG: Subgraph = {
   name: 'subgraph-g',
   url: '',
   definitions: parse(`
+    type Query {
+      dummy: String!
+    }
+
     extend type Trainer @key(fields: "id") {
       id: Int!
       details: Details!

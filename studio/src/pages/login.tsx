@@ -1,9 +1,9 @@
-import { AuthLayout } from "@/components/layout/auth-layout";
-import { Logo } from "@/components/logo";
-import { Button } from "@/components/ui/button";
-import { docsBaseURL } from "@/lib/constants";
-import { NextPageWithLayout } from "@/lib/page";
-import Link from "next/link";
+import { AuthLayout } from '@/components/layout/auth-layout';
+import { Logo } from '@/components/logo';
+import { Button } from '@/components/ui/button';
+import { docsBaseURL } from '@/lib/constants';
+import { NextPageWithLayout } from '@/lib/page';
+import Link from 'next/link';
 
 const LoginPage: NextPageWithLayout = () => {
   return (

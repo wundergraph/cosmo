@@ -53,24 +53,20 @@ message DataSourceConfiguration {
   repeated DirectiveConfiguration directives = 7;
   int64 request_timeout_seconds = 8;
   string id = 9;
-  repeated RequiredField required_fields = 10;
+  repeated RequiredField keys = 10;
+  repeated RequiredField provides = 11;
+  repeated RequiredField requires = 12;
 }
 
 message FieldConfiguration {
   string type_name = 1;
   string field_name = 2;
-  bool disable_default_field_mapping = 3;
-  repeated string path = 4;
-  repeated ArgumentConfiguration arguments_configuration = 6;
-  bool unescape_response_json = 7;
+  repeated ArgumentConfiguration arguments_configuration = 3;
 }
 
 message ArgumentConfiguration {
   string name = 1;
   ArgumentSource source_type = 2;
-  repeated string source_path = 3;
-  ArgumentRenderConfiguration render_configuration = 4;
-  string rename_type_to = 5;
 }
 
 enum ArgumentRenderConfiguration {

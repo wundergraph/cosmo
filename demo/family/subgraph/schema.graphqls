@@ -84,14 +84,13 @@ enum Nationality {
 type Details  {
   forename: String! @shareable
   surname: String! @shareable
+  hasChildren: Boolean!
+  maritalStatus: MaritalStatus
+  nationality: Nationality!
+  pets: [Pet]
 }
 
 type Employee @key(fields: "id") {
   details: Details @shareable
   id: Int!
-  # move to details eventually
-  hasChildren: Boolean!
-  maritalStatus: MaritalStatus
-  nationality: Nationality!
-  pets: [Pet]
 }

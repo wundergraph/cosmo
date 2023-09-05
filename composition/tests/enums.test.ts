@@ -1,19 +1,22 @@
 import { federateSubgraphs, incompatibleSharedEnumError, Subgraph } from '../src';
 import { parse } from 'graphql';
 import { describe, expect, test } from 'vitest';
-import { documentNodeToNormalizedString, normalizeString, versionOneBaseSchema } from './utils/utils';
+import { documentNodeToNormalizedString, normalizeString, versionTwoPersistedBaseSchema } from './utils/utils';
 
 describe('Enum federation tests', () => {
   const parentName = 'Instruction';
 
   test('that enums merge by union if unused in inputs or arguments', () => {
-    const result = federateSubgraphs([subgraphA, subgraphB]);
-    expect(result.errors).toBeUndefined();
-    const federatedGraph = result.federatedGraphAST!;
+    const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphB]);
+    expect(errors).toBeUndefined();
+    const federatedGraph = federationResult!.federatedGraphAST;
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
-        versionOneBaseSchema +
-          `
+        versionTwoPersistedBaseSchema + `
+      type Query {
+        dummy: String!
+      }
+
       enum Instruction {
         FIGHT
         POKEMON
@@ -26,13 +29,16 @@ describe('Enum federation tests', () => {
   });
 
   test('that enums merge by intersection if used as an input', () => {
-    const result = federateSubgraphs([subgraphA, subgraphC]);
-    expect(result.errors).toBeUndefined();
-    const federatedGraph = result.federatedGraphAST!;
+    const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphC]);
+    expect(errors).toBeUndefined();
+    const federatedGraph = federationResult!.federatedGraphAST;
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
-        versionOneBaseSchema +
-          `
+        versionTwoPersistedBaseSchema + `
+      type Query {
+        dummy: String!
+      }
+
       enum Instruction {
         FIGHT
         POKEMON
@@ -47,13 +53,16 @@ describe('Enum federation tests', () => {
   });
 
   test('that enums merge by intersection if used as an argument', () => {
-    const result = federateSubgraphs([subgraphA, subgraphF]);
-    expect(result.errors).toBeUndefined();
-    const federatedGraph = result.federatedGraphAST!;
+    const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphF]);
+    expect(errors).toBeUndefined();
+    const federatedGraph = federationResult!.federatedGraphAST;
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
-        versionOneBaseSchema +
-          `
+        versionTwoPersistedBaseSchema + `
+      type Query {
+        dummy: String!
+      }
+
       enum Instruction {
         FIGHT
       }
@@ -67,13 +76,15 @@ describe('Enum federation tests', () => {
   });
 
   test('that enums must be consistent if used as both an input and output', () => {
-    const result = federateSubgraphs([subgraphC, subgraphD]);
-    expect(result.errors).toBeUndefined();
-    const federatedGraph = result.federatedGraphAST!;
-    expect(documentNodeToNormalizedString(federatedGraph)).toBe(
+    const { errors, federationResult } = federateSubgraphs([subgraphC, subgraphD]);
+    expect(errors).toBeUndefined();
+    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
       normalizeString(
-        versionOneBaseSchema +
-          `
+        versionTwoPersistedBaseSchema + `
+      type Query {
+        dummy: String!
+      }
+
       enum Instruction {
         FIGHT
         POKEMON
@@ -103,6 +114,10 @@ const subgraphA: Subgraph = {
   name: 'subgraph-a',
   url: '',
   definitions: parse(`
+    type Query {
+      dummy: String! @shareable
+    }
+
     enum Instruction {
       FIGHT
       POKEMON
@@ -125,6 +140,10 @@ const subgraphC = {
   name: 'subgraph-c',
   url: '',
   definitions: parse(`
+    type Query {
+      dummy: String! @shareable
+    }
+
     enum Instruction {
       FIGHT
       POKEMON

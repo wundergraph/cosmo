@@ -1,41 +1,27 @@
-import { cn } from "@/lib/utils";
-import { EllipsisVerticalIcon } from "@heroicons/react/24/outline";
-import { DropdownMenuItemProps } from "@radix-ui/react-dropdown-menu";
-import { ClipboardCopyIcon } from "@radix-ui/react-icons";
-import { ColumnDef } from "@tanstack/react-table";
-import {
-  AnalyticsViewColumn,
-  Unit,
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import copy from "copy-to-clipboard";
-import { formatInTimeZone } from "date-fns-tz";
-import compact from "lodash/compact";
-import React, { ReactNode } from "react";
-import { SchemaViewer } from "../schmea-viewer";
-import { Button } from "../ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "../ui/dialog";
+import { cn } from '@/lib/utils';
+import { EllipsisVerticalIcon } from '@heroicons/react/24/outline';
+import { DropdownMenuItemProps } from '@radix-ui/react-dropdown-menu';
+import { ClipboardCopyIcon } from '@radix-ui/react-icons';
+import { ColumnDef } from '@tanstack/react-table';
+import { AnalyticsViewColumn, Unit } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import copy from 'copy-to-clipboard';
+import { formatInTimeZone } from 'date-fns-tz';
+import compact from 'lodash/compact';
+import React, { ReactNode } from 'react';
+import { SchemaViewer } from '../schmea-viewer';
+import { Button } from '../ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuTrigger,
-} from "../ui/dropdown-menu";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "../ui/tooltip";
-import { useToast } from "../ui/use-toast";
-import { nanoTimestampToTime } from "./charts";
-import { defaultFilterFn } from "./defaultFilterFunction";
+} from '../ui/dropdown-menu';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
+import { useToast } from '../ui/use-toast';
+import { nanoTimestampToTime } from './charts';
+import { defaultFilterFn } from './defaultFilterFunction';
 
 export const mapStatusCode: Record<string, string> = {
   STATUS_CODE_UNSET: "Success",

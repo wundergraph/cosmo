@@ -18,8 +18,8 @@ import {
   FederatedGraphChangelog,
   FederatedGraphChangelogOutput,
   FixSubgraphSchemaResponse,
-  GetAPIKeysResponse,
   GetAnalyticsViewResponse,
+  GetAPIKeysResponse,
   GetCheckDetailsResponse,
   GetChecksByFederatedGraphNameResponse,
   GetDashboardAnalyticsViewResponse,
@@ -39,7 +39,7 @@ import {
   UpdateSubgraphResponse,
   WhoAmIResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { OpenAIGraphql, buildRouterConfig } from '@wundergraph/cosmo-shared';
+import { buildRouterConfig, OpenAIGraphql } from '@wundergraph/cosmo-shared';
 import { GraphApiKeyJwtPayload } from '../../types/index.js';
 import { Composer } from '../composition/composer.js';
 import { buildSchema, composeSubgraphs } from '../composition/composition.js';
@@ -670,8 +670,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           let routerConfigJson: JsonValue = null;
           if (!hasErrors && composedGraph.composedSchema) {
             const routerConfig = buildRouterConfig({
-              subgraphs: composedGraph.subgraphs,
+              argumentConfigurations: composedGraph.argumentConfigurations,
               federatedSDL: composedGraph.composedSchema,
+              subgraphs: composedGraph.subgraphs,
             });
             routerConfigJson = routerConfig.toJson();
           }
@@ -963,6 +964,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           let routerConfigJson: JsonValue = null;
           if (!hasErrors && composedGraph.composedSchema) {
             const routerConfig = buildRouterConfig({
+              argumentConfigurations: composedGraph.argumentConfigurations,
               subgraphs: composedGraph.subgraphs,
               federatedSDL: composedGraph.composedSchema,
             });
@@ -1450,15 +1452,14 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           exact: true,
         });
 
-        let keycloakUserID = null;
+        let keycloakUserID;
 
         if (keycloakUser.length === 0) {
-          const userId = await opts.keycloakClient.addKeycloakUser({
+          keycloakUserID = await opts.keycloakClient.addKeycloakUser({
             email: req.email,
             isPasswordTemp: true,
             realm: opts.keycloakRealm,
           });
-          keycloakUserID = userId;
         } else {
           keycloakUserID = keycloakUser[0].id;
         }
