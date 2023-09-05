@@ -5,18 +5,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/go-chi/chi/middleware"
-	"github.com/wundergraph/cosmo/router/internal/logging"
 	"net/http"
 	"strconv"
 	"sync"
 	"time"
 
 	"github.com/dgraph-io/ristretto"
+	"github.com/go-chi/chi/middleware"
 	"github.com/hashicorp/go-multierror"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
-	"github.com/wundergraph/cosmo/router/internal/unsafebytes"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astvalidation"
@@ -27,7 +25,9 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/sync/singleflight"
 
+	"github.com/wundergraph/cosmo/router/internal/logging"
 	"github.com/wundergraph/cosmo/router/internal/pool"
+	"github.com/wundergraph/cosmo/router/internal/unsafebytes"
 )
 
 const (
@@ -198,7 +198,8 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			requestLogger.Error("unable to resolve subscription response", zap.Error(err))
 			return
 		}
-	case *plan.StreamingResponsePlan:
+	default:
+		requestLogger.Error("unsupported plan kind")
 		w.WriteHeader(http.StatusInternalServerError)
 	}
 }

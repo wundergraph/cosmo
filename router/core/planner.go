@@ -3,8 +3,8 @@ package core
 import (
 	"context"
 	"fmt"
-	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
-	"github.com/wundergraph/cosmo/router/internal/pool"
+	"net/http"
+
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/asttransform"
@@ -12,7 +12,9 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/zap"
-	"net/http"
+
+	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/cosmo/router/internal/pool"
 )
 
 type Planner struct {
@@ -40,7 +42,7 @@ func (b *Planner) Build(ctx context.Context, routerConfig *nodev1.RouterConfig) 
 	}
 
 	// this is the resolver, it's stateful and manages all the client connections, etc...
-	resolver := resolve.New(ctx, resolve.NewFetcher(true), true)
+	resolver := resolve.New(ctx, resolve.NewFetcher(true))
 
 	// this is the GraphQL Schema that we will expose from our API
 	definition, report := astparser.ParseGraphqlDocumentString(routerConfig.EngineConfig.GraphqlSchema)
@@ -110,13 +112,13 @@ func (b *Planner) buildPlannerConfiguration(routerCfg *nodev1.RouterConfig) (*pl
 	if err != nil {
 		return nil, fmt.Errorf("failed to load configuration: %w", err)
 	}
-	//planConfig.Debug = plan.DebugConfiguration{
-	//	PrintOperationWithRequiredFields: true,
-	//	PrintPlanningPaths:               true,
-	//	PrintQueryPlans:                  true,
-	//	ConfigurationVisitor:             false,
-	//	PlanningVisitor:                  false,
-	//	DatasourceVisitor:                false,
-	//}
+	planConfig.Debug = plan.DebugConfiguration{
+		PrintOperationWithRequiredFields: false,
+		PrintPlanningPaths:               false,
+		PrintQueryPlans:                  true,
+		ConfigurationVisitor:             false,
+		PlanningVisitor:                  false,
+		DatasourceVisitor:                false,
+	}
 	return planConfig, nil
 }
