@@ -59,6 +59,11 @@ export interface SchemaCheckDTO {
   proposedSubgraphSchemaSDL?: string;
 }
 
+export interface GetChecksResponse {
+  checks: SchemaCheckDTO[];
+  checksCount: number;
+}
+
 export interface SchemaCheckDetailsDTO {
   changes: {
     changeType: string;
@@ -203,7 +208,7 @@ export type UserInfoEndpointResponse = {
   email: string;
 };
 
-export type UserAuthContext = {
+export type AuthContext = {
   organizationId: string;
   userId?: string;
 };

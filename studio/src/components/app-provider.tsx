@@ -1,13 +1,9 @@
-import { Transport } from "@bufbuild/connect";
-import { TransportProvider } from "@bufbuild/connect-query";
-import { createConnectTransport } from "@bufbuild/connect-web";
-import {
-  QueryClient,
-  QueryClientProvider,
-  useQuery,
-} from "@tanstack/react-query";
-import { useRouter } from "next/router";
-import { ReactNode, createContext, useEffect, useState } from "react";
+import { Transport } from '@connectrpc/connect';
+import { TransportProvider } from '@connectrpc/connect-query';
+import { createConnectTransport } from '@connectrpc/connect-web';
+import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
+import { useRouter } from 'next/router';
+import { createContext, ReactNode, useEffect, useState } from 'react';
 
 interface User {
   id: string;

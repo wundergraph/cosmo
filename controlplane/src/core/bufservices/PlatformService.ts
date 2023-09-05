@@ -1,4 +1,4 @@
-import { ServiceImpl } from '@bufbuild/connect';
+import { ServiceImpl } from '@connectrpc/connect';
 import { JsonValue, PlainMessage } from '@bufbuild/protobuf';
 import { parse } from 'graphql';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common_pb';
@@ -37,6 +37,7 @@ import {
   RequestSeriesItem,
   UpdateFederatedGraphResponse,
   UpdateSubgraphResponse,
+  WhoAmIResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { buildRouterConfig, OpenAIGraphql } from '@wundergraph/cosmo-shared';
 import { GraphApiKeyJwtPayload } from '../../types/index.js';
@@ -826,17 +827,28 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               code: EnumStatusCode.ERR_NOT_FOUND,
             },
             checks: [],
+            checksCountBasedOnDateRange: '0',
+            totalChecksCount: '0',
           };
         }
 
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
-        const checks = await subgraphRepo.checks(req.name);
+        const checksData = await subgraphRepo.checks({
+          federatedGraphName: req.name,
+          limit: req.limit,
+          offset: req.offset,
+          startDate: req.startDate,
+          endDate: req.endDate,
+        });
+        const totalChecksCount = await subgraphRepo.getChecksCount({ federatedGraphName: req.name });
 
         return {
           response: {
             code: EnumStatusCode.OK,
           },
-          checks,
+          checks: checksData.checks,
+          checksCountBasedOnDateRange: checksData.checksCount.toString(),
+          totalChecksCount: totalChecksCount.toString(),
         };
       });
     },
@@ -1593,6 +1605,37 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             code: EnumStatusCode.OK,
           },
           apiKey: generatedAPIKey,
+        };
+      });
+    },
+
+    whoAmI: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<WhoAmIResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const orgRepo = new OrganizationRepository(opts.db);
+
+        const organization = await orgRepo.byId(authContext.organizationId);
+
+        if (!organization) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Organization not found`,
+            },
+            organizationName: '',
+          };
+        }
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          organizationName: organization.name,
         };
       });
     },

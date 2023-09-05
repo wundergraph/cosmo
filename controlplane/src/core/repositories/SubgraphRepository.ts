@@ -1,10 +1,10 @@
-import { SQL, and, asc, desc, eq, inArray, notInArray, sql } from 'drizzle-orm';
-import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { CompositionError } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
+import { and, asc, eq, gt, inArray, lt, notInArray, SQL, sql } from 'drizzle-orm';
+import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema.js';
-import { schemaVersion, subgraphs, subgraphsToFederatedGraph, targets } from '../../db/schema.js';
-import { Label, ListFilterOptions, SchemaCheckDTO, SchemaCheckDetailsDTO, SubgraphDTO } from '../../types/index.js';
+import { schemaChecks, schemaVersion, subgraphs, subgraphsToFederatedGraph, targets } from '../../db/schema.js';
+import { GetChecksResponse, Label, ListFilterOptions, SchemaCheckDetailsDTO, SubgraphDTO } from '../../types/index.js';
 import { updateComposedSchema } from '../composition/updateComposedSchema.js';
 import { normalizeLabels } from '../util.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
@@ -309,7 +309,19 @@ export class SubgraphRepository {
     };
   }
 
-  public async checks(federatedGraphName: string): Promise<SchemaCheckDTO[]> {
+  public async checks({
+    federatedGraphName,
+    limit,
+    offset,
+    startDate,
+    endDate,
+  }: {
+    federatedGraphName: string;
+    limit: number;
+    offset: number;
+    startDate: string;
+    endDate: string;
+  }): Promise<GetChecksResponse> {
     const subgraphs = await this.listByGraph(federatedGraphName, {
       published: true,
     });
@@ -323,23 +335,77 @@ export class SubgraphRepository {
         hasBreakingChanges: true,
         proposedSubgraphSchemaSDL: true,
       },
-      limit: 100,
-      orderBy: desc(schema.schemaChecks.createdAt),
-      where: inArray(
-        schema.schemaChecks.targetId,
-        subgraphs.map(({ targetId }) => targetId),
+      limit,
+      offset,
+      orderBy: asc(schemaChecks.createdAt),
+      where: and(
+        inArray(
+          schemaChecks.targetId,
+          subgraphs.map(({ targetId }) => targetId),
+        ),
+        gt(schemaChecks.createdAt, new Date(startDate)),
+        lt(schemaChecks.createdAt, new Date(endDate)),
       ),
     });
 
-    return checkList.map((c) => ({
-      id: c.id,
-      targetID: c.targetId,
-      subgraphName: subgraphs.find((s) => s.targetId === c.targetId)?.name ?? '',
-      timestamp: c.createdAt.toISOString(),
-      isBreaking: c.hasBreakingChanges ?? false,
-      isComposable: c.isComposable ?? false,
-      proposedSubgraphSchemaSDL: c.proposedSubgraphSchemaSDL ?? undefined,
-    }));
+    const checksCount = await this.getChecksCount({ federatedGraphName, startDate, endDate });
+
+    return {
+      checks: checkList.map((c) => ({
+        id: c.id,
+        targetID: c.targetId,
+        subgraphName: subgraphs.find((s) => s.targetId === c.targetId)?.name ?? '',
+        timestamp: c.createdAt.toISOString(),
+        isBreaking: c.hasBreakingChanges ?? false,
+        isComposable: c.isComposable ?? false,
+        proposedSubgraphSchemaSDL: c.proposedSubgraphSchemaSDL ?? undefined,
+      })),
+      checksCount,
+    };
+  }
+
+  public async getChecksCount({
+    federatedGraphName,
+    startDate,
+    endDate,
+  }: {
+    federatedGraphName: string;
+    startDate?: string;
+    endDate?: string;
+  }): Promise<number> {
+    const subgraphs = await this.listByGraph(federatedGraphName, {
+      published: true,
+    });
+
+    let conditions: SQL<unknown> | undefined;
+
+    if (startDate && endDate) {
+      conditions = and(
+        inArray(
+          schemaChecks.targetId,
+          subgraphs.map(({ targetId }) => targetId),
+        ),
+        gt(schemaChecks.createdAt, new Date(startDate)),
+        lt(schemaChecks.createdAt, new Date(endDate)),
+      );
+    } else {
+      conditions = and(
+        inArray(
+          schemaChecks.targetId,
+          subgraphs.map(({ targetId }) => targetId),
+        ),
+      );
+    }
+
+    const checksCount = await this.db
+      .select({ count: sql<number>`count(*)` })
+      .from(schemaChecks)
+      .where(conditions);
+
+    if (checksCount.length === 0) {
+      return 0;
+    }
+    return checksCount[0].count;
   }
 
   public async checkDetails(id: string, federatedTargetID: string): Promise<SchemaCheckDetailsDTO> {

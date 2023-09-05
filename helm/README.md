@@ -55,6 +55,7 @@ Now, add the following entries to your `/etc/hosts` file and replace the IP with
 192.168.49.2 router.wundergraph.local
 192.168.49.2 keycloak.wundergraph.local
 192.168.49.2 otelcollector.wundergraph.local
+192.168.49.2 prometheus.wundergraph.local
 ```
 
 #### 4. Access the Cosmo Studio
@@ -71,7 +72,7 @@ Password: bar
 In the `global.seed.apiKey` of your `values.yaml` we defined your API key. You can use this API key to authenticate with the Cosmo CLI.
 
 ```sh
-export COSMO_API_KEY="cosmo-669b576aaadc10ee1ae81d9193425705"
+export COSMO_API_KEY="cosmo_669b576aaadc10ee1ae81d9193425705"
 export COSMO_API_URL="http://controlplane.wundergraph.local"
 npx wgc -h
 ```

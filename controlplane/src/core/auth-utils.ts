@@ -4,8 +4,8 @@ import axios from 'axios';
 import { eq } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { PKCECodeChallenge, UserInfoEndpointResponse, UserSession } from '../types/index.js';
-import { sessions } from '../db/schema.js';
 import * as schema from '../db/schema.js';
+import { sessions } from '../db/schema.js';
 import {
   calculatePKCECodeChallenge,
   decodeJWT,
@@ -61,7 +61,7 @@ export default class AuthUtils {
     const cookies = cookie.parse(req.headers.cookie || '');
 
     if (!cookies[this.opts.session.cookieName]) {
-      throw new Error('session cookie not found');
+      throw new Error('Session cookie not found');
     }
 
     const userSession = await decrypt<UserSession>({
@@ -70,7 +70,7 @@ export default class AuthUtils {
     });
 
     if (!userSession) {
-      throw new Error('session cookie could not be found');
+      throw new Error('Session cookie could not be found');
     }
 
     return userSession;
@@ -113,7 +113,7 @@ export default class AuthUtils {
     });
 
     if (res.status !== 200) {
-      throw new Error('not authenticated');
+      throw new Error('Not authenticated');
     }
 
     return res.data as UserInfoEndpointResponse;
@@ -138,7 +138,7 @@ export default class AuthUtils {
     });
 
     if (res.status !== 200) {
-      throw new Error('unable to refresh token');
+      throw new Error('Unable to refresh token');
     }
 
     return {
@@ -199,7 +199,7 @@ export default class AuthUtils {
     const cookies = cookie.parse(req.headers.cookie || '');
 
     if (!cookies[this.opts.pkce.cookieName]) {
-      throw new Error('code challenge cookie not found on callback');
+      throw new Error('Code challenge cookie not found on callback');
     }
 
     const codeChallenge = await decrypt<PKCECodeChallenge>({
@@ -208,7 +208,7 @@ export default class AuthUtils {
     });
 
     if (!codeChallenge) {
-      throw new Error('code challenge could not be found');
+      throw new Error('Code challenge could not be found');
     }
 
     const resp = await axios({
@@ -224,7 +224,7 @@ export default class AuthUtils {
     });
 
     if (resp.status !== 200) {
-      throw new Error('token request failed');
+      throw new Error('Token request failed');
     }
 
     return {
@@ -248,7 +248,7 @@ export default class AuthUtils {
     const userSessions = await this.db.select().from(sessions).where(eq(sessions.id, sessionId)).limit(1).execute();
 
     if (userSessions.length === 0) {
-      throw new Error('session not found');
+      throw new Error('Session not found');
     }
 
     const userSession = userSessions[0];
@@ -260,7 +260,7 @@ export default class AuthUtils {
 
       // Check if the refresh token is valid to issue a new access token
       if (parsedRefreshToken.exp && parsedRefreshToken.exp < Date.now() / 1000) {
-        throw new Error('refresh token expired');
+        throw new Error('Refresh token expired');
       }
 
       const sessionExpiresIn = DEFAULT_SESSION_MAX_AGE_SEC;
@@ -285,7 +285,7 @@ export default class AuthUtils {
         .execute();
 
       if (updatedSessions.length === 0) {
-        throw new Error('session not found');
+        throw new Error('Session not found');
       }
 
       const newUserSession = updatedSessions[0];

@@ -1,8 +1,9 @@
-import { AuthLayout } from "@/components/layout/auth-layout";
-import { Logo } from "@/components/logo";
-import { Button } from "@/components/ui/button";
-import { NextPageWithLayout } from "@/lib/page";
-import Link from "next/link";
+import { AuthLayout } from '@/components/layout/auth-layout';
+import { Logo } from '@/components/logo';
+import { Button } from '@/components/ui/button';
+import { docsBaseURL } from '@/lib/constants';
+import { NextPageWithLayout } from '@/lib/page';
+import Link from 'next/link';
 
 const LoginPage: NextPageWithLayout = () => {
   return (
@@ -30,7 +31,7 @@ const LoginPage: NextPageWithLayout = () => {
             </Button>
             <Button variant="outline" size="lg" className="px-8 py-6" asChild>
               <Link
-                href="https://docs.wundergraph.com"
+                href={docsBaseURL}
                 target="blank"
                 rel="noreferrer"
               >

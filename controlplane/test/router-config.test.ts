@@ -1,10 +1,10 @@
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import Fastify from 'fastify';
 
-import { createConnectTransport } from '@bufbuild/connect-node';
-import { createPromiseClient } from '@bufbuild/connect';
+import { createConnectTransport } from '@connectrpc/connect-node';
+import { createPromiseClient } from '@connectrpc/connect';
 import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
-import { fastifyConnectPlugin } from '@bufbuild/connect-fastify';
+import { fastifyConnectPlugin } from '@connectrpc/connect-fastify';
 import { pino } from 'pino';
 
 import { NodeService } from '@wundergraph/cosmo-connect/dist/node/v1/node_connect';
