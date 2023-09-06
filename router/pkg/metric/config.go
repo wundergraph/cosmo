@@ -30,7 +30,7 @@ type Config struct {
 // DefaultConfig returns the default config.
 func DefaultConfig() *Config {
 	return &Config{
-		Enabled:      true,
+		Enabled:      false,
 		Name:         ServerName,
 		Endpoint:     "http://localhost:4318",
 		OtlpHeaders:  map[string]string{},

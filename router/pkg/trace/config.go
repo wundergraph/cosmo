@@ -29,6 +29,7 @@ type Config struct {
 // DefaultConfig returns the default config.
 func DefaultConfig() *Config {
 	return &Config{
+		Enabled:       false,
 		Name:          ServerName,
 		Endpoint:      "http://localhost:4318",
 		Sampler:       1,

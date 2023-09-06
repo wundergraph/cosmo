@@ -41,7 +41,10 @@ jobs:
         run: make setup-build-tools
 
       - name: Generate code
-        run: buf generate --template buf.go.gen.yaml
+        run: make generate-go
+
+      - name: Check if git is not dirty after generating files
+        run: git diff --no-ext-diff --exit-code
 
       - name: Install dependencies
         working-directory: ./router

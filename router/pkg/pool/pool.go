@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/cespare/xxhash"
+	"github.com/cespare/xxhash/v2"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astnormalization"
@@ -18,17 +18,17 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/postprocess"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
-	p2 "github.com/wundergraph/graphql-go-tools/v2/pkg/pool"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/pool"
 )
 
 func GetBytesBuffer() *bytes.Buffer {
-	buf := p2.BytesBuffer.Get()
+	buf := pool.BytesBuffer.Get()
 	buf.Reset()
 	return buf
 }
 
 func PutBytesBuffer(buf *bytes.Buffer) {
-	p2.BytesBuffer.Put(buf)
+	pool.BytesBuffer.Put(buf)
 }
 
 type Config struct {

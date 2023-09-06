@@ -6,11 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/go-chi/chi/middleware"
-	"github.com/wundergraph/cosmo/router/pkg/contextx"
-	"github.com/wundergraph/cosmo/router/pkg/flushwriter"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
-	"github.com/wundergraph/cosmo/router/pkg/otel"
-	"go.opentelemetry.io/otel/trace"
 	"net/http"
 	"strconv"
 	"sync"
@@ -109,80 +105,37 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	)
 
 	requestLogger := h.log.With(logging.WithRequestID(middleware.GetReqID(r.Context())))
-	operationContext := contextx.GetOperationContext(r.Context())
+	operationContext := GetOperationContext(r.Context())
 
-	requestOperationNameBytes := []byte(operationContext.Name)
+	// Update the resolveCtx with the latest request context so user modules can access it
+	operationContext.plan.Ctx = operationContext.plan.Ctx.WithContext(r.Context())
 
-	if operationContext.Name == "" {
-		operationContext.Plan.Normalizer.NormalizeOperation(operationContext.Plan.Doc, h.definition, operationContext.Plan.Report)
-	} else {
-		operationContext.Plan.Normalizer.NormalizeNamedOperation(operationContext.Plan.Doc, h.definition, requestOperationNameBytes, operationContext.Plan.Report)
-	}
-
-	if operationContext.Plan.Report.HasErrors() {
-		logInternalErrors(operationContext.Plan.Report, requestLogger)
-		w.WriteHeader(http.StatusBadRequest)
-		writeRequestErrorsFromReport(operationContext.Plan.Report, w, requestLogger)
-		return
-	}
-
-	// add the operation name to the hash
-	// this is important for multi operation documents to have a different hash for each operation
-	// otherwise, the prepared plan cache would return the same plan for all operations
-	_, err := operationContext.Plan.Hash.Write(requestOperationNameBytes)
-	if err != nil {
-		requestLogger.Error("hash write failed", zap.Error(err))
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	// create a hash of the query to use as a key for the prepared plan cache
-	// in this hash, we include the printed operation
-	// and the extracted variables (see below)
-	err = operationContext.Plan.Printer.Print(operationContext.Plan.Doc, h.definition, operationContext.Plan.Hash)
-	if err != nil {
-		requestLogger.Error("unable to print document", zap.Error(err))
-		h.respondWithInternalServerError(w, requestLogger)
-		return
-	}
-
-	// add the extracted variables to the hash
-	_, err = operationContext.Plan.Hash.Write(operationContext.Plan.Doc.Input.Variables)
-	if err != nil {
-		requestLogger.Error("hash write failed", zap.Error(err))
-		h.respondWithInternalServerError(w, requestLogger)
-		return
-	}
-	operationID := operationContext.Plan.Hash.Sum64() // generate the operation ID
-	operationContext.Plan.Hash.Reset()
-
-	span := trace.SpanFromContext(r.Context())
-	span.SetAttributes(otel.WgOperationHash.Int64(int64(operationID)))
+	requestOperationNameBytes := unsafebytes.StringToBytes(operationContext.Name)
 
 	// try to get a prepared plan for this operation ID from the cache
-	cachedPlan, ok := h.planCache.Get(operationID)
+	cachedPlan, ok := h.planCache.Get(operationContext.Hash)
 	if ok && cachedPlan != nil {
 		// re-use a prepared plan
 		preparedPlan = cachedPlan.(planWithExtractedVariables)
 	} else {
 		// prepare a new plan using single flight
 		// this ensures that we only prepare the plan once for this operation ID
-		sharedPreparedPlan, err, _ := h.sf.Do(strconv.FormatUint(operationID, 10), func() (interface{}, error) {
-			prepared, err := h.preparePlan(requestOperationNameBytes, operationContext.Plan)
+		sharedPreparedPlan, err, _ := h.sf.Do(strconv.FormatUint(operationContext.Hash, 10), func() (interface{}, error) {
+			prepared, err := h.preparePlan(requestOperationNameBytes, operationContext.plan)
 			if err != nil {
 				return nil, err
 			}
 			// cache the prepared plan for 1 hour
-			h.planCache.SetWithTTL(operationID, prepared, 1, time.Hour)
+			h.planCache.SetWithTTL(operationContext.Hash, prepared, 1, time.Hour)
 			return prepared, nil
 		})
 		if err != nil {
-			if operationContext.Plan.Report.HasErrors() {
+			if operationContext.plan.Report.HasErrors() {
 				w.WriteHeader(http.StatusBadRequest)
-				writeRequestErrorsFromReport(operationContext.Plan.Report, w, requestLogger)
+				writeRequestErrorsFromReport(operationContext.plan.Report, w, requestLogger)
 			} else {
 				requestLogger.Error("prepare plan failed", zap.Error(err))
-				h.respondWithInternalServerError(w, requestLogger)
+				respondWithInternalServerError(w, requestLogger)
 			}
 			return
 		}
@@ -196,7 +149,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(preparedPlan.variables) != 0 {
-		operationContext.Plan.Ctx.Variables = MergeJsonRightIntoLeft(operationContext.Plan.Ctx.Variables, preparedPlan.variables)
+		operationContext.plan.Ctx.Variables = MergeJsonRightIntoLeft(operationContext.plan.Ctx.Variables, preparedPlan.variables)
 	}
 
 	switch p := preparedPlan.preparedPlan.(type) {
@@ -206,7 +159,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		executionBuf := pool.GetBytesBuffer()
 		defer pool.PutBytesBuffer(executionBuf)
 
-		err := h.resolver.ResolveGraphQLResponse(operationContext.Plan.Ctx, p.Response, nil, executionBuf)
+		err := h.resolver.ResolveGraphQLResponse(operationContext.plan.Ctx, p.Response, nil, executionBuf)
 		if err != nil {
 			if errors.Is(err, context.Canceled) {
 				return
@@ -224,17 +177,17 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	case *plan.SubscriptionResponsePlan:
 		var (
-			flushWriter *flushwriter.HttpFlushWriter
+			flushWriter *HttpFlushWriter
 			ok          bool
 		)
-		operationContext.Plan.Ctx, flushWriter, ok = flushwriter.GetFlushWriter(operationContext.Plan.Ctx, operationContext.Plan.Ctx.Variables, r, w)
+		operationContext.plan.Ctx, flushWriter, ok = GetFlushWriter(operationContext.plan.Ctx, operationContext.plan.Ctx.Variables, r, w)
 		if !ok {
 			requestLogger.Error("connection not flushable")
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
-		err := h.resolver.ResolveGraphQLSubscription(operationContext.Plan.Ctx, p.Response, flushWriter)
+		err := h.resolver.ResolveGraphQLSubscription(operationContext.plan.Ctx, p.Response, flushWriter)
 		if err != nil {
 			if errors.Is(err, context.Canceled) {
 				return
@@ -248,11 +201,6 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case *plan.StreamingResponsePlan:
 		w.WriteHeader(http.StatusInternalServerError)
 	}
-}
-
-func (h *GraphQLHandler) respondWithInternalServerError(w http.ResponseWriter, requestLogger *zap.Logger) {
-	w.WriteHeader(http.StatusInternalServerError)
-	writeRequestErrors(graphql.RequestErrorsFromError(internalServerErrorErr), w, requestLogger)
 }
 
 func (h *GraphQLHandler) preparePlan(requestOperationName []byte, shared *pool.Shared) (planWithExtractedVariables, error) {
@@ -294,6 +242,11 @@ func (h *GraphQLHandler) preparePlan(requestOperationName []byte, shared *pool.S
 		preparedPlan: preparedPlan,
 		variables:    variables,
 	}, nil
+}
+
+func respondWithInternalServerError(w http.ResponseWriter, requestLogger *zap.Logger) {
+	w.WriteHeader(http.StatusInternalServerError)
+	writeRequestErrors(graphql.RequestErrorsFromError(internalServerErrorErr), w, requestLogger)
 }
 
 func logInternalErrors(report *operationreport.Report, requestLogger *zap.Logger) {
