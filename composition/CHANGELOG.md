@@ -4,6 +4,13 @@ Images can be found [here](https://github.com/orgs/wundergraph/packages?repo_nam
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.6.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.5.3...@wundergraph/composition@0.6.0) (2023-09-06)
+
+### Features
+
+* add argument configuration ([#10](https://github.com/wundergraph/cosmo/issues/10)) ([48d909f](https://github.com/wundergraph/cosmo/commit/48d909f4de954c2401b557ed6a9f58915388f679)) (@Aenimus)
+* move to new connectrpc packages ([#32](https://github.com/wundergraph/cosmo/issues/32)) ([4c8423b](https://github.com/wundergraph/cosmo/commit/4c8423bf377b63af6a42a42d7d5fc1ce2db1f09e)) (@StarpTech)
+
 ## [0.5.3](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.5.2...@wundergraph/composition@0.5.3) (2023-08-31)
 
 ### Bug Fixes

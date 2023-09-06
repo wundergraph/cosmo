@@ -4,6 +4,14 @@ Images can be found [here](https://github.com/orgs/wundergraph/packages?repo_nam
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.10.0](https://github.com/wundergraph/cosmo/compare/studio@0.9.0...studio@0.10.0) (2023-09-06)
+
+### Features
+
+* add argument configuration ([#10](https://github.com/wundergraph/cosmo/issues/10)) ([48d909f](https://github.com/wundergraph/cosmo/commit/48d909f4de954c2401b557ed6a9f58915388f679)) (@Aenimus)
+* add pagination and date range filter for schema checks ([#35](https://github.com/wundergraph/cosmo/issues/35)) ([e7bbc04](https://github.com/wundergraph/cosmo/commit/e7bbc04f76180cfe4210f173697f323b34650e41)) (@JivusAyrus)
+* move to new connectrpc packages ([#32](https://github.com/wundergraph/cosmo/issues/32)) ([4c8423b](https://github.com/wundergraph/cosmo/commit/4c8423bf377b63af6a42a42d7d5fc1ce2db1f09e)) (@StarpTech)
+
 # [0.9.0](https://github.com/wundergraph/cosmo/compare/studio@0.8.0...studio@0.9.0) (2023-09-02)
 
 ### Bug Fixes
