@@ -1,4 +1,4 @@
-package factoryresolver
+package graphql
 
 import (
 	"context"

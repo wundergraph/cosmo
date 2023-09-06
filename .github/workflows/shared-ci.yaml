@@ -29,6 +29,9 @@ jobs:
       - name: Generate code
         run: pnpm buf generate --template buf.ts.gen.yaml
 
+      - name: Check if git is not dirty after generating files
+        run: git diff --no-ext-diff --exit-code
+
       - name: Build
         run: pnpm run --filter ./connect --filter ./shared --filter ./connect --filter ./composition build
 

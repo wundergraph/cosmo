@@ -51,7 +51,7 @@ generate:
 	make generate-go
 
 generate-go:
-	buf generate --template buf.go.gen.yaml
+	rm -rf router/gen && buf generate --template buf.go.gen.yaml
 
 start-cp:
 	pnpm -r run --filter './controlplane' dev

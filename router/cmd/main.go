@@ -1,7 +1,8 @@
-package main
+package cmd
 
 import (
 	"context"
+	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/app"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane"
 	"github.com/wundergraph/cosmo/router/pkg/handler/cors"
@@ -18,7 +19,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func main() {
+func Main() {
 	cfg, err := config.LoadConfig()
 	if err != nil {
 		log.Fatal("Could not load config", zap.Error(err))
@@ -47,8 +48,16 @@ func main() {
 		controlplane.WithLogger(logger),
 		controlplane.WithGraphApiToken(cfg.GraphApiToken),
 		controlplane.WithPollInterval(time.Duration(cfg.PollIntervalSeconds)*time.Second),
-		controlplane.WithConfigFilePath(cfg.ConfigFilePath),
 	)
+
+	var routerConfig *nodev1.RouterConfig
+
+	if cfg.RouterConfigPath != "" {
+		routerConfig, err = app.SerializeConfigFromFile(cfg.RouterConfigPath)
+		if err != nil {
+			logger.Fatal("Could not read router config", zap.Error(err), zap.String("path", cfg.RouterConfigPath))
+		}
+	}
 
 	rs, err := app.New(
 		app.WithFederatedGraphName(cfg.FederatedGraphName),
@@ -58,7 +67,9 @@ func main() {
 		app.WithIntrospection(cfg.IntrospectionEnabled),
 		app.WithPlayground(cfg.PlaygroundEnabled),
 		app.WithGraphApiToken(cfg.GraphApiToken),
+		app.WithModulesConfig(cfg.Modules),
 		app.WithGracePeriod(time.Duration(cfg.GracePeriodSeconds)*time.Second),
+		app.WithStaticRouterConfig(routerConfig),
 		app.WithCors(&cors.Config{
 			AllowOrigins:     cfg.CORSAllowedOrigins,
 			AllowMethods:     cfg.CORSAllowedMethods,

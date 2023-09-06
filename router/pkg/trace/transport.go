@@ -1,24 +1,20 @@
 package trace
 
 import (
-	"github.com/wundergraph/cosmo/router/pkg/contextx"
-	"github.com/wundergraph/cosmo/router/pkg/otel"
-	"go.opentelemetry.io/otel/trace"
 	"net/http"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
-// NewTransport wraps the provided http.RoundTripper with one that
-// enriches the span with the operation name and type and set the span status
-// Internally it uses otelhttp.NewTransport to instrument the request
-func NewTransport(base http.RoundTripper, opts ...otelhttp.Option) http.RoundTripper {
+// NewTransport wraps the provided http.RoundTripper. It accepts a handler function that is called before the request is processed.
+// Internally it uses otelhttp.NewTransport to instrument the request.
+func NewTransport(base http.RoundTripper, handler func(r *http.Request), opts ...otelhttp.Option) http.RoundTripper {
 	transport := &transport{
-		rt: base,
+		rt:      base,
+		handler: handler,
 	}
 	// ignore health check requests, favicon browser requests or OPTIONS request
 	opts = append(opts, otelhttp.WithFilter(RequestFilter))
-	opts = append(opts, otelhttp.WithSpanNameFormatter(SpanNameFormatter))
 
 	return otelhttp.NewTransport(
 		transport, opts...,
@@ -26,21 +22,20 @@ func NewTransport(base http.RoundTripper, opts ...otelhttp.Option) http.RoundTri
 }
 
 type transport struct {
-	rt http.RoundTripper
+	rt      http.RoundTripper
+	handler func(r *http.Request)
 }
 
 func (t *transport) RoundTrip(r *http.Request) (*http.Response, error) {
-	span := trace.SpanFromContext(r.Context())
-	operation := contextx.GetOperationContext(r.Context())
-	if operation != nil {
-		span.SetAttributes(otel.WgOperationName.String(operation.Name))
-		span.SetAttributes(otel.WgOperationType.String(operation.Type))
+
+	if t.handler != nil {
+		t.handler(r)
 	}
 
 	res, err := t.rt.RoundTrip(r)
 
-	// In case of a roundtrip error the span status is set to error
-	// by the otelhttp.RoundTrip function. Also, status code >= 500 is considered an error
+	// In case of a roundtrip error the span status is set to error by the otelhttp.RoundTrip function.
+	// Also, status code >= 500 is considered an error
 
 	return res, err
 }

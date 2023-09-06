@@ -2,8 +2,6 @@ package trace
 
 import (
 	"context"
-	"fmt"
-	"github.com/wundergraph/cosmo/router/pkg/contextx"
 	"net/http"
 
 	"go.opentelemetry.io/otel"
@@ -22,24 +20,6 @@ func TracerFromContext(ctx context.Context) (tracer trace.Tracer) {
 	}
 
 	return
-}
-
-// SpanNameFormatter formats the span name based on the http request
-// Note: High cardinality should be avoided because it can be expensive
-func SpanNameFormatter(operation string, r *http.Request) string {
-	if operation != "" {
-		return operation
-	}
-
-	opCtx := contextx.GetOperationContext(r.Context())
-	if opCtx != nil {
-		if opCtx.Name != "" {
-			return fmt.Sprintf("%s %s", r.Method, opCtx.Name)
-		}
-		return fmt.Sprintf("%s %s", r.Method, unnamed)
-	}
-
-	return fmt.Sprintf("%s %s", r.Method, r.URL.Path)
 }
 
 func RequestFilter(r *http.Request) bool {

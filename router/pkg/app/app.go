@@ -7,6 +7,7 @@ import (
 	"github.com/dgraph-io/ristretto"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
+	"github.com/mitchellh/mapstructure"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane"
@@ -16,9 +17,9 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/handler/health"
 	"github.com/wundergraph/cosmo/router/pkg/handler/recovery"
 	"github.com/wundergraph/cosmo/router/pkg/handler/requestlogger"
+	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"github.com/wundergraph/cosmo/router/pkg/metric"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
-	"github.com/wundergraph/cosmo/router/pkg/planner"
 	"github.com/wundergraph/cosmo/router/pkg/stringsx"
 	"github.com/wundergraph/cosmo/router/pkg/trace"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
@@ -30,6 +31,7 @@ import (
 	"golang.org/x/sync/errgroup"
 	"net"
 	"net/http"
+	"sync"
 	"time"
 )
 
@@ -38,34 +40,40 @@ type (
 	App struct {
 		Options
 		activeServer *Router
+		modules      []Module
 	}
 
 	// Options defines the configurable options for the router.
 	Options struct {
-		transport          *http.Transport
-		logger             *zap.Logger
-		traceConfig        *trace.Config
-		metricConfig       *metric.Config
-		tracerProvider     *sdktrace.TracerProvider
-		meterProvider      *sdkmetric.MeterProvider
-		corsOptions        *cors.Config
-		configFetcher      *controlplane.ConfigFetcher
-		gracePeriod        time.Duration
-		addr               string
-		baseURL            string
-		graphqlPath        string
-		playground         bool
-		introspection      bool
-		production         bool
-		federatedGraphName string
-		graphApiToken      string
-		prometheusServer   *http.Server
+		transport                *http.Transport
+		logger                   *zap.Logger
+		traceConfig              *trace.Config
+		metricConfig             *metric.Config
+		tracerProvider           *sdktrace.TracerProvider
+		meterProvider            *sdkmetric.MeterProvider
+		corsOptions              *cors.Config
+		configFetcher            controlplane.ConfigFetcher
+		initialRouterConfig      *nodev1.RouterConfig
+		gracePeriod              time.Duration
+		addr                     string
+		baseURL                  string
+		graphqlPath              string
+		playground               bool
+		introspection            bool
+		production               bool
+		federatedGraphName       string
+		graphApiToken            string
+		prometheusServer         *http.Server
+		modulesConfig            map[string]interface{}
+		moduleMiddlewares        []func(http.Handler) http.Handler
+		modulePreOriginHandlers  []graphql.TransportPreHandler
+		modulePostOriginHandlers []graphql.TransportPostHandler
 	}
 
 	// Router is the main router instance.
 	Router struct {
 		Options
-		server       *http.Server
+		Server       *http.Server
 		routerConfig *nodev1.RouterConfig
 	}
 
@@ -154,25 +162,25 @@ func New(opts ...Option) (*App, error) {
 	return r, nil
 }
 
-// startServer starts a new server. It swaps the active server with a new server instance when the config has changed.
+// startAndSwapServer starts a new Server. It swaps the active Server with a new Server instance when the config has changed.
 // This method is not safe for concurrent use.
-func (a *App) startServer(ctx context.Context, cfg *nodev1.RouterConfig) error {
-	// Rebuild server with new router config
-	// In case of an error, we return early and keep the old server running
+func (a *App) startAndSwapServer(ctx context.Context, cfg *nodev1.RouterConfig) error {
+	// Rebuild Server with new router config
+	// In case of an error, we return early and keep the old Server running
 
-	newServer, err := a.newRouter(ctx, cfg)
+	newRouter, err := a.newRouter(ctx, cfg)
 	if err != nil {
-		a.logger.Error("Failed to newRouter server", zap.Error(err))
+		a.logger.Error("Failed to newRouter Server", zap.Error(err))
 		return err
 	}
 
-	// Gracefully shutdown server
-	// Wait grace period before forcefully shutting down the server
+	// Gracefully shutdown Server
+	// Wait grace period before forcefully shutting down the Server
 
 	prevServer := a.activeServer
 
 	if prevServer != nil {
-		a.logger.Info("Gracefully shutting down server ...",
+		a.logger.Info("Gracefully shutting down Server ...",
 			zap.String("version", prevServer.routerConfig.GetVersion()),
 			zap.String("gracePeriod", a.gracePeriod.String()),
 		)
@@ -188,15 +196,15 @@ func (a *App) startServer(ctx context.Context, cfg *nodev1.RouterConfig) error {
 		}
 	}
 
-	// Swap active server
-	a.activeServer = newServer
+	// Swap active Server
+	a.activeServer = newRouter
 
-	// Start new server
+	// Start new Server
 
 	go func() {
 
 		if prevServer != nil {
-			a.logger.Info("Starting server with new config",
+			a.logger.Info("Starting Server with new config",
 				zap.String("version", cfg.GetVersion()),
 			)
 		} else {
@@ -223,27 +231,117 @@ func (a *App) startServer(ctx context.Context, cfg *nodev1.RouterConfig) error {
 	return nil
 }
 
-// Start starts the server. It blocks until the context is cancelled or when the initial config could not be fetched.
-func (a *App) Start(ctx context.Context) error {
+func (a *App) initModules(ctx context.Context) error {
+	for _, moduleInfo := range modules {
+		now := time.Now()
 
+		moduleInstance := moduleInfo.New()
+
+		mc := &ModuleContext{
+			Context: ctx,
+			module:  moduleInstance,
+			logger:  a.logger,
+		}
+
+		moduleConfig, ok := a.modulesConfig[string(moduleInfo.ID)]
+		if ok {
+			if err := mapstructure.Decode(moduleConfig, &moduleInstance); err != nil {
+				return fmt.Errorf("failed to decode module config from module %s: %w", moduleInfo.ID, err)
+			}
+		} else {
+			a.logger.Debug("No config found for module", zap.String("id", string(moduleInfo.ID)))
+		}
+
+		if fn, ok := moduleInstance.(Provisioner); ok {
+			if err := fn.Provision(mc); err != nil {
+				return fmt.Errorf("failed to provision module '%s': %w", moduleInfo.ID, err)
+			}
+		}
+
+		if fn, ok := moduleInstance.(RouterMiddlewareHandler); ok {
+			a.moduleMiddlewares = append(a.moduleMiddlewares, func(handler http.Handler) http.Handler {
+				return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+					fn.Middleware(writer, request, handler)
+				})
+			})
+		}
+
+		if handler, ok := moduleInstance.(EnginePreOriginHandler); ok {
+			a.modulePreOriginHandlers = append(a.modulePreOriginHandlers, handler.OnOriginRequest)
+		}
+
+		if handler, ok := moduleInstance.(EnginePostOriginHandler); ok {
+			a.modulePostOriginHandlers = append(a.modulePostOriginHandlers, handler.OnOriginResponse)
+		}
+
+		a.modules = append(a.modules, moduleInstance)
+
+		a.logger.Info("Module registered",
+			zap.String("id", string(moduleInfo.ID)),
+			zap.String("duration", time.Since(now).String()),
+		)
+	}
+
+	return nil
+}
+
+// NewTestRouter creates a new Router instance without starting the Server. The method should be only used for testing purposes.
+// It is a lightweight version of Start() and does not require a config fetcher. Use app.WithStaticRouterConfig to pass the initial config.
+func (a *App) NewTestRouter(ctx context.Context) (*Router, error) {
+
+	if err := a.bootstrap(ctx); err != nil {
+		return nil, fmt.Errorf("failed to bootstrap application: %w", err)
+	}
+
+	newRouter, err := a.newRouter(ctx, a.initialRouterConfig)
+	if err != nil {
+		a.logger.Error("Failed to create a new router", zap.Error(err))
+		return nil, err
+	}
+
+	return newRouter, nil
+}
+
+func (a *App) bootstrap(ctx context.Context) error {
+
+	if a.traceConfig.Enabled {
+		tp, err := trace.StartAgent(a.logger, a.traceConfig)
+		if err != nil {
+			return fmt.Errorf("failed to start trace agent: %w", err)
+		}
+		a.tracerProvider = tp
+	}
+
+	if a.metricConfig.Enabled {
+		mp, err := metric.StartAgent(a.logger, a.metricConfig)
+		if err != nil {
+			return fmt.Errorf("failed to start trace agent: %w", err)
+		}
+		a.meterProvider = mp
+
+		if a.metricConfig.Prometheus.Enabled {
+			go func() {
+				if err := a.startPrometheus(); err != nil {
+					a.logger.Error("Failed to start Prometheus", zap.Error(err))
+				}
+			}()
+		}
+	}
+
+	// Modules are only initialized once and not on every config change
+	if err := a.initModules(ctx); err != nil {
+		return fmt.Errorf("failed to init user modules: %w", err)
+	}
+
+	return nil
+}
+
+// Start starts the Server. It blocks until the context is cancelled or when the initial config could not be fetched.
+func (a *App) Start(ctx context.Context) error {
 	eg, ctx := errgroup.WithContext(ctx)
 
-	tp, err := trace.StartAgent(a.logger, a.traceConfig)
-	if err != nil {
-		return fmt.Errorf("failed to start trace agent: %w", err)
-	}
-	a.tracerProvider = tp
-
-	mp, err := metric.StartAgent(a.logger, a.metricConfig)
-	if err != nil {
-		return fmt.Errorf("failed to start trace agent: %w", err)
-	}
-	a.meterProvider = mp
-
-	if a.metricConfig.Prometheus.Enabled {
-		eg.Go(func() error {
-			return a.startPrometheus()
-		})
+	if err := a.bootstrap(ctx); err != nil {
+		return fmt.Errorf("failed to bootstrap application: %w", err)
 	}
 
 	var initCh = make(chan *nodev1.RouterConfig, 1)
@@ -254,25 +352,29 @@ func (a *App) Start(ctx context.Context) error {
 			case <-ctx.Done(): // context cancelled
 				return nil
 			case cfg := <-initCh: // initial config
-				if err := a.startServer(ctx, cfg); err != nil {
+				if err := a.startAndSwapServer(ctx, cfg); err != nil {
 					return fmt.Errorf("failed to handle initial config: %w", err)
 				}
 			case cfg := <-a.configFetcher.Subscribe(ctx): // new config
-				if err := a.startServer(ctx, cfg); err != nil {
+				if err := a.startAndSwapServer(ctx, cfg); err != nil {
 					continue
 				}
 			}
 		}
 	})
 
-	// Get initial router config
+	// Get initial router config from static config file
+	if a.initialRouterConfig != nil {
+		initCh <- a.initialRouterConfig
+	} else {
+		// Load initial router config from controlplane
+		initialCfg, err := a.configFetcher.GetRouterConfig(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to get initial router config: %w", err)
+		}
 
-	initialCfg, err := a.configFetcher.GetRouterConfig(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to get initial router config: %w", err)
+		initCh <- initialCfg
 	}
-
-	initCh <- initialCfg
 
 	return eg.Wait()
 }
@@ -301,7 +403,7 @@ func (a *App) startPrometheus() error {
 	return nil
 }
 
-// newRouter creates a new server instance.
+// newRouter creates a new Server instance.
 // All stateful data is copied from the app over to the new router instance.
 func (a *App) newRouter(ctx context.Context, routerConfig *nodev1.RouterConfig) (*Router, error) {
 	recoveryHandler := recovery.New(recovery.WithLogger(a.logger), recovery.WithPrintStack())
@@ -318,6 +420,7 @@ func (a *App) newRouter(ctx context.Context, routerConfig *nodev1.RouterConfig) 
 	)
 
 	router := chi.NewRouter()
+	router.Use(recoveryHandler)
 	router.Use(middleware.RequestID)
 	router.Use(middleware.RealIP)
 	router.Use(requestLogger)
@@ -341,11 +444,13 @@ func (a *App) newRouter(ctx context.Context, routerConfig *nodev1.RouterConfig) 
 		return nil, fmt.Errorf("failed to create planner cache: %w", err)
 	}
 
-	pb := planner.NewPlanner(
-		planner.WithIntrospection(),
-		planner.WithLogger(a.logger),
-		planner.WithBaseURL(a.baseURL),
-		planner.WithTransport(a.transport),
+	pb := graphql.NewPlanner(
+		graphql.WithIntrospection(),
+		graphql.WithLogger(a.logger),
+		graphql.WithBaseURL(a.baseURL),
+		graphql.WithTransport(a.transport),
+		graphql.WithPreOriginHandlers(a.modulePreOriginHandlers),
+		graphql.WithPostOriginHandlers(a.modulePostOriginHandlers),
 	)
 
 	plan, err := pb.Build(ctx, routerConfig)
@@ -367,19 +472,70 @@ func (a *App) newRouter(ctx context.Context, routerConfig *nodev1.RouterConfig) 
 		Pool:            plan.Pool,
 		RenameTypeNames: plan.RenameTypeNames,
 		PlanConfig:      plan.PlanConfig,
+		Definition:      plan.Definition,
 	})
 
-	metricHandler, err := metric.NewMetricHandler(
-		a.meterProvider,
-		otel.WgRouterGraphName.String(a.federatedGraphName),
-		otel.WgRouterConfigVersion.String(routerConfig.GetVersion()),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create metric handler: %w", err)
+	var metricHandler *metric.Handler
+
+	if a.metricConfig.Enabled {
+		h, err := metric.NewMetricHandler(
+			a.meterProvider,
+			otel.WgRouterGraphName.String(a.federatedGraphName),
+			otel.WgRouterConfigVersion.String(routerConfig.GetVersion()),
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create metric handler: %w", err)
+		}
+
+		metricHandler = h
 	}
 
-	// Serve GraphQL. Metrics are collected after the request is handled and considered as a GraphQL request.
-	router.Post(a.graphqlPath, graphqlPreHandler.Handler(metricHandler.Handler(graphqlHandler)))
+	var traceHandler *trace.Middleware
+
+	if a.metricConfig.Enabled {
+		h := trace.NewMiddleware(otel.RouterServerAttribute,
+			otelhttp.WithSpanOptions(
+				oteltrace.WithAttributes(
+					otel.WgRouterGraphName.String(a.federatedGraphName),
+					otel.WgRouterConfigVersion.String(routerConfig.GetVersion()),
+				),
+			),
+			// Disable built-in metrics
+			otelhttp.WithMeterProvider(sdkmetric.NewMeterProvider()),
+			otelhttp.WithSpanNameFormatter(graphql.SpanNameFormatter),
+		)
+
+		traceHandler = h
+	}
+
+	// Serve GraphQL. Metrics are collected after the request is handled and classified as a GraphQL request.
+	router.Route(a.graphqlPath, func(r chi.Router) {
+		if traceHandler != nil {
+			r.Use(traceHandler.Handler)
+		}
+
+		r.Use(graphqlPreHandler.Handler)
+
+		if metricHandler != nil {
+			r.Use(metricHandler.Handler)
+		}
+
+		// Create an app context that is used by user modules
+		// It must be added before custom user middlewares
+		r.Use(func(handler http.Handler) http.Handler {
+			return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+				appCtx := &requestContext{
+					responseHeader: writer.Header(),
+					mu:             sync.RWMutex{},
+					logger:         a.logger.With(logging.WithRequestID(middleware.GetReqID(request.Context()))),
+				}
+				handler.ServeHTTP(writer, request.WithContext(WithRequestContext(request.Context(), appCtx)))
+			})
+		})
+
+		r.Use(a.moduleMiddlewares...)
+		r.Post("/", graphqlHandler.ServeHTTP)
+	})
 
 	a.logger.Debug("GraphQLHandler registered",
 		zap.String("method", http.MethodPost),
@@ -406,54 +562,45 @@ func (a *App) newRouter(ctx context.Context, routerConfig *nodev1.RouterConfig) 
 		ReadTimeout:       1 * time.Minute,
 		WriteTimeout:      2 * time.Minute,
 		ReadHeaderTimeout: 20 * time.Second,
-		// TODO: Move to middleware after release https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.17.0...HEAD
-		Handler: trace.WrapHandler(
-			recoveryHandler(router),
-			otel.RouterServerAttribute,
-			otelhttp.WithSpanOptions(
-				oteltrace.WithAttributes(
-					otel.WgRouterGraphName.String(a.federatedGraphName),
-					otel.WgRouterConfigVersion.String(routerConfig.GetVersion()),
-				),
-			),
-			// Disable built-in metrics
-			otelhttp.WithMeterProvider(sdkmetric.NewMeterProvider()),
-		),
-		ErrorLog: zap.NewStdLog(a.logger),
+		Handler:           router,
+		ErrorLog:          zap.NewStdLog(a.logger),
 	}
 
 	svr := &Router{
 		routerConfig: routerConfig,
-		server:       server,
+		Server:       server,
 		Options: Options{
-			transport:          a.transport,
-			logger:             a.logger,
-			traceConfig:        a.traceConfig,
-			metricConfig:       a.metricConfig,
-			tracerProvider:     a.tracerProvider,
-			meterProvider:      a.meterProvider,
-			corsOptions:        a.corsOptions,
-			configFetcher:      a.configFetcher,
-			gracePeriod:        a.gracePeriod,
-			addr:               a.addr,
-			baseURL:            a.baseURL,
-			graphqlPath:        a.graphqlPath,
-			playground:         a.playground,
-			introspection:      a.introspection,
-			production:         a.production,
-			federatedGraphName: a.federatedGraphName,
-			graphApiToken:      a.graphApiToken,
-			prometheusServer:   a.prometheusServer,
+			transport:                a.transport,
+			logger:                   a.logger,
+			traceConfig:              a.traceConfig,
+			metricConfig:             a.metricConfig,
+			tracerProvider:           a.tracerProvider,
+			meterProvider:            a.meterProvider,
+			corsOptions:              a.corsOptions,
+			configFetcher:            a.configFetcher,
+			gracePeriod:              a.gracePeriod,
+			addr:                     a.addr,
+			baseURL:                  a.baseURL,
+			graphqlPath:              a.graphqlPath,
+			playground:               a.playground,
+			introspection:            a.introspection,
+			production:               a.production,
+			federatedGraphName:       a.federatedGraphName,
+			graphApiToken:            a.graphApiToken,
+			prometheusServer:         a.prometheusServer,
+			moduleMiddlewares:        a.moduleMiddlewares,
+			modulePreOriginHandlers:  a.modulePreOriginHandlers,
+			modulePostOriginHandlers: a.modulePostOriginHandlers,
 		},
 	}
 
 	return svr, nil
 }
 
-// listenAndServe starts the server and blocks until the server is shutdown.
+// listenAndServe starts the Server and blocks until the Server is shutdown.
 func (r *Router) listenAndServe() error {
 
-	if err := r.server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+	if err := r.Server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		return err
 	}
 
@@ -484,13 +631,21 @@ func (a *App) Shutdown(ctx context.Context) (err error) {
 		}
 	}
 
+	for _, module := range a.modules {
+		if cleaner, ok := module.(Cleaner); ok {
+			if err := cleaner.Cleanup(); err != nil {
+				err = errors.Join(err, fmt.Errorf("failed to clean module %s: %w", module.Module().ID, err))
+			}
+		}
+	}
+
 	return err
 }
 
-// Shutdown gracefully shuts down the server.
+// Shutdown gracefully shuts down the Server.
 func (r *Router) Shutdown(ctx context.Context) (err error) {
-	if r.server != nil {
-		if err := r.server.Shutdown(ctx); err != nil {
+	if r.Server != nil {
+		if err := r.Server.Shutdown(ctx); err != nil {
 			return err
 		}
 	}
@@ -540,7 +695,7 @@ func WithGraphQLPath(path string) Option {
 	}
 }
 
-func WithConfigFetcher(cf *controlplane.ConfigFetcher) Option {
+func WithConfigFetcher(cf controlplane.ConfigFetcher) Option {
 	return func(s *App) {
 		s.configFetcher = cf
 	}
@@ -581,5 +736,17 @@ func CorsDefaultOptions() *cors.Config {
 func WithGraphApiToken(token string) Option {
 	return func(s *App) {
 		s.graphApiToken = token
+	}
+}
+
+func WithModulesConfig(config map[string]interface{}) Option {
+	return func(s *App) {
+		s.modulesConfig = config
+	}
+}
+
+func WithStaticRouterConfig(cfg *nodev1.RouterConfig) Option {
+	return func(s *App) {
+		s.initialRouterConfig = cfg
 	}
 }
