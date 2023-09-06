@@ -105,7 +105,7 @@ export default class ApolloMigrator {
     if (response.status !== 200) {
       return {
         success: false,
-        fedGraphRoutingURL: "",
+        fedGraphRoutingURL: '',
         subgraphs: [],
         errorMessage: 'Could not fetch the graphs from apollo.',
       };

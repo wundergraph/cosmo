@@ -1798,7 +1798,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const graph = await apolloMigrator.fetchGraphID();
         const graphDetails = await apolloMigrator.fetchGraphDetails({ graphID: graph.id });
 
-        if(!graphDetails.success){
+        if (!graphDetails.success) {
           return {
             response: {
               code: EnumStatusCode.ERR,
