@@ -1,32 +1,46 @@
-import { useFireworks } from '@/hooks/use-fireworks';
-import { SubmitHandler, useZodForm } from '@/hooks/use-form';
-import { docsBaseURL } from '@/lib/constants';
-import { useChartData } from '@/lib/insights-helpers';
-import { ChevronDoubleRightIcon, CommandLineIcon } from '@heroicons/react/24/outline';
-import { useMutation } from '@tanstack/react-query';
-import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common_pb';
-import { migrateFromApollo } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
-import { FederatedGraph } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { getTime, parseISO, subDays } from 'date-fns';
-import Link from 'next/link';
-import { Dispatch, SetStateAction, useContext, useState } from 'react';
-import { Line, LineChart, ResponsiveContainer, XAxis } from 'recharts';
-import { z } from 'zod';
-import { UserContext } from './app-provider';
-import { ComposeStatusMessage } from './compose-status';
-import { ComposeStatusBulb } from './compose-status-bulb';
-import { EmptyState } from './empty-state';
-import { TimeAgo } from './time-ago';
-import { Button } from './ui/button';
-import { Card } from './ui/card';
-import { CLI } from './ui/cli';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
-import { Input } from './ui/input';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
-import { useToast } from './ui/use-toast';
-import { Logo } from './logo';
-import { SiApollographql } from 'react-icons/si';
-import { cn } from '@/lib/utils';
+import { useFireworks } from "@/hooks/use-fireworks";
+import { SubmitHandler, useZodForm } from "@/hooks/use-form";
+import { docsBaseURL } from "@/lib/constants";
+import { useChartData } from "@/lib/insights-helpers";
+import {
+  ChevronDoubleRightIcon,
+  CommandLineIcon,
+} from "@heroicons/react/24/outline";
+import { useMutation } from "@tanstack/react-query";
+import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common_pb";
+import { migrateFromApollo } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+import { FederatedGraph } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
+import { getTime, parseISO, subDays } from "date-fns";
+import Link from "next/link";
+import { Dispatch, SetStateAction, useContext, useState } from "react";
+import { Line, LineChart, ResponsiveContainer, XAxis } from "recharts";
+import { z } from "zod";
+import { UserContext } from "./app-provider";
+import { ComposeStatusMessage } from "./compose-status";
+import { ComposeStatusBulb } from "./compose-status-bulb";
+import { EmptyState } from "./empty-state";
+import { TimeAgo } from "./time-ago";
+import { Button } from "./ui/button";
+import { Card } from "./ui/card";
+import { CLI } from "./ui/cli";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "./ui/dialog";
+import { Input } from "./ui/input";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "./ui/tooltip";
+import { useToast } from "./ui/use-toast";
+import { Logo } from "./logo";
+import { SiApollographql } from "react-icons/si";
+import { cn } from "@/lib/utils";
 
 // this is required to render a blank line with LineChart
 const fallbackData = [
@@ -53,6 +67,9 @@ const MigrationDialog = ({
     apiKey: z
       .string()
       .min(1, { message: "API Key must contain at least 1 character." }),
+    variantName: z
+      .string()
+      .min(1, { message: "Variant name must contain at least 1 character." }),
   });
 
   type MigrateInput = z.infer<typeof migrateInputSchema>;
@@ -79,6 +96,7 @@ const MigrationDialog = ({
     mutate(
       {
         apiKey: data.apiKey,
+        variantName: data.variantName,
       },
       {
         onSuccess: (d) => {
@@ -164,6 +182,19 @@ const MigrationDialog = ({
             {errors.apiKey && (
               <span className="px-2 text-xs text-destructive">
                 {errors.apiKey.message}
+              </span>
+            )}
+          </div>
+          <div className="flex flex-col gap-y-2">
+            <span className="text-sm font-semibold">Graph Variant Name</span>
+            <Input
+              className="w-full"
+              type="text"
+              {...register("variantName")}
+            />
+            {errors.variantName && (
+              <span className="px-2 text-xs text-destructive">
+                {errors.variantName.message}
               </span>
             )}
           </div>
