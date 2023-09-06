@@ -81,13 +81,6 @@ type requestContext struct {
 	responseHeader http.Header
 }
 
-func NewContext(logger *zap.Logger, responseHeader http.Header) *requestContext {
-	return &requestContext{
-		logger:         logger,
-		responseHeader: responseHeader,
-	}
-}
-
 func WithRequestContext(ctx context.Context, operation *requestContext) context.Context {
 	return context.WithValue(ctx, requestContextKey, operation)
 }

@@ -6,7 +6,7 @@ import (
 	"os"
 )
 
-// SerializeConfigFromFile returns the router config read from the file whose path is given in env
+// SerializeConfigFromFile returns the router config read from the file.
 func SerializeConfigFromFile(path string) (*nodev1.RouterConfig, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
