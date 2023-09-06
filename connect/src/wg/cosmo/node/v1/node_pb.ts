@@ -3,16 +3,9 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import type {
-  BinaryReadOptions,
-  FieldList,
-  JsonReadOptions,
-  JsonValue,
-  PartialMessage,
-  PlainMessage,
-} from '@bufbuild/protobuf';
-import { Message, proto3, protoInt64 } from '@bufbuild/protobuf';
-import { EnumStatusCode } from '../../common_pb.js';
+import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
+import { Message, proto3, protoInt64 } from "@bufbuild/protobuf";
+import { EnumStatusCode } from "../../common_pb.js";
 
 /**
  * @generated from enum wg.cosmo.node.v1.ArgumentRenderConfiguration
