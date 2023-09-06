@@ -4,6 +4,12 @@ Images can be found [here](https://github.com/orgs/wundergraph/packages?repo_nam
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.6.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.5.5...@wundergraph/cosmo-shared@0.6.0) (2023-09-06)
+
+### Features
+
+* add argument configuration ([#10](https://github.com/wundergraph/cosmo/issues/10)) ([48d909f](https://github.com/wundergraph/cosmo/commit/48d909f4de954c2401b557ed6a9f58915388f679)) (@Aenimus)
+
 ## [0.5.5](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.5.4...@wundergraph/cosmo-shared@0.5.5) (2023-08-31)
 
 **Note:** Version bump only for package @wundergraph/cosmo-shared
