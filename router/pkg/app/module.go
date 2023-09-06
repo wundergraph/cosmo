@@ -1,7 +1,6 @@
 package app
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"sync"
@@ -82,10 +81,10 @@ type EnginePostOriginHandler interface {
 // or load a configuration file
 type Provisioner interface {
 	// Provision is called before the Server starts
-	Provision(context.Context) error
+	Provision(*ModuleContext) error
 }
 
 type Cleaner interface {
 	// Cleanup is called after the Server stops
-	Cleanup(context.Context) error
+	Cleanup() error
 }

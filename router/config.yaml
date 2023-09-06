@@ -2,4 +2,4 @@ version: 1
 modules:
   # For custom module in the cmd/custom folder
   myModule:
-    value: 123
+    value: 1

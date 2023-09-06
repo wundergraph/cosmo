@@ -1,7 +1,6 @@
 package module
 
 import (
-	"context"
 	"fmt"
 	"github.com/wundergraph/cosmo/router/pkg/app"
 	"github.com/wundergraph/cosmo/router/pkg/graphql"
@@ -17,28 +16,34 @@ func init() {
 const myModuleID = "myModule"
 
 // MyModule is a simple module that has access to the GraphQL operation and add a header to the response
-// It demonstrates how to use the different hooks and how to share data between them.
-// It also shows how to use the config file to configure your module and how to validate the config.
-// The config file is located at `config.yaml` in the working directory of the router.
+// It demonstrates how to use the different handlers to customize the router.
+// It also shows how to use the config file to configure and validate your module config.
+// By default, the config file is located at `config.yaml` in the working directory of the router.
 type MyModule struct {
 	// Properties that are set by the config file are automatically populated based on the `mapstructure` tag
-	// Create a new section under `modules.<name>` in the config file `config.yaml` with the same name as your module.
-	// Don't forget in go the first letter of a property must be uppercase to be exported
+	// Create a new section under `modules.<name>` in the config file with the same name as your module.
+	// Don't forget in Go the first letter of a property must be uppercase to be exported
 
 	Value uint64 `mapstructure:"value"`
+
+	Logger *zap.Logger
 }
 
-func (m MyModule) Provision(ctx context.Context) error {
+func (m MyModule) Provision(ctx *app.ModuleContext) error {
 	// Provision your module here, validate config etc.
 
 	if m.Value == 0 {
+		ctx.Logger().Error("Value must be greater than 0")
 		return fmt.Errorf("value must be greater than 0")
 	}
+
+	// Assign the logger to the module for non-request related logging
+	m.Logger = ctx.Logger()
 
 	return nil
 }
 
-func (m MyModule) Cleanup(ctx context.Context) error {
+func (m MyModule) Cleanup() error {
 	// Shutdown your module here, close connections etc.
 
 	return nil
@@ -49,7 +54,7 @@ func (m MyModule) OnOriginResponse(response *http.Response, request *http.Reques
 	// If you want to modify the response, return a new response
 	// If you return an error, the request will be aborted and the response will exit with a 500 status code
 
-	c := app.GetContext(request.Context())
+	c := app.GetRequestContext(request.Context())
 
 	// Set a header on the client response
 	c.ResponseHeader().Set("myHeader", c.GetString("myKey"))
@@ -59,8 +64,9 @@ func (m MyModule) OnOriginResponse(response *http.Response, request *http.Reques
 
 func (m MyModule) OnOriginRequest(request *http.Request) {
 	// Read the request or modify headers here before it is sent to the origin
-	c := app.GetContext(request.Context())
+	c := app.GetRequestContext(request.Context())
 
+	// Use the request logger to log information
 	c.Logger().Info("Subgraph request", zap.String("host", request.Host))
 }
 
@@ -79,7 +85,7 @@ func (m MyModule) Middleware(w http.ResponseWriter, r *http.Request, next http.H
 
 	// Share a value between different handlers
 	// In OnOriginResponse we will read this value and set it as response header
-	appCtx := app.GetContext(ctx)
+	appCtx := app.GetRequestContext(ctx)
 	appCtx.Set("myKey", "myValue")
 
 	// Call the next handler in the chain or return early by calling w.Write()

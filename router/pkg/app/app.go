@@ -232,11 +232,16 @@ func (a *App) startAndSwapServer(ctx context.Context, cfg *nodev1.RouterConfig) 
 }
 
 func (a *App) initModules(ctx context.Context) error {
-
 	for _, moduleInfo := range modules {
 		now := time.Now()
 
 		moduleInstance := moduleInfo.New()
+
+		mc := &ModuleContext{
+			Context: ctx,
+			module:  moduleInstance,
+			logger:  a.logger,
+		}
 
 		moduleConfig, ok := a.modulesConfig[string(moduleInfo.ID)]
 		if ok {
@@ -248,7 +253,7 @@ func (a *App) initModules(ctx context.Context) error {
 		}
 
 		if fn, ok := moduleInstance.(Provisioner); ok {
-			if err := fn.Provision(ctx); err != nil {
+			if err := fn.Provision(mc); err != nil {
 				return fmt.Errorf("failed to provision module '%s': %w", moduleInfo.ID, err)
 			}
 		}
@@ -519,12 +524,12 @@ func (a *App) newRouter(ctx context.Context, routerConfig *nodev1.RouterConfig) 
 		// It must be added before custom user middlewares
 		r.Use(func(handler http.Handler) http.Handler {
 			return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-				appCtx := &Context{
+				appCtx := &requestContext{
 					responseHeader: writer.Header(),
 					mu:             sync.RWMutex{},
 					logger:         a.logger.With(logging.WithRequestID(middleware.GetReqID(request.Context()))),
 				}
-				handler.ServeHTTP(writer, request.WithContext(WithContext(request.Context(), appCtx)))
+				handler.ServeHTTP(writer, request.WithContext(WithRequestContext(request.Context(), appCtx)))
 			})
 		})
 
@@ -628,7 +633,7 @@ func (a *App) Shutdown(ctx context.Context) (err error) {
 
 	for _, module := range a.modules {
 		if cleaner, ok := module.(Cleaner); ok {
-			if err := cleaner.Cleanup(ctx); err != nil {
+			if err := cleaner.Cleanup(); err != nil {
 				err = errors.Join(err, fmt.Errorf("failed to clean module %s: %w", module.Module().ID, err))
 			}
 		}
