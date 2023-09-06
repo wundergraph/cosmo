@@ -5,4 +5,4 @@ modules:
     value: 1
 
 # Router configuration
-logLevel: "debug"
+logLevel: "info"
