@@ -3,8 +3,8 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { GetConfigRequest, GetConfigResponse } from './node_pb.js';
-import { MethodKind } from '@bufbuild/protobuf';
+import { GetConfigRequest, GetConfigResponse } from "./node_pb.js";
+import { MethodKind } from "@bufbuild/protobuf";
 
 /**
  * @generated from service wg.cosmo.node.v1.NodeService
