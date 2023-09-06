@@ -114,7 +114,7 @@ export default async function build(opts: BuildConfig) {
     // Produce an error if allowedOrigins is undefined
     origin: opts.allowedOrigins || [],
     methods: [...cors.allowedMethods],
-    allowedHeaders: [...cors.allowedHeaders, 'cosmo-org-slug'],
+    allowedHeaders: [...cors.allowedHeaders, 'cosmo-org-slug', 'user-agent'],
     exposedHeaders: [...cors.exposedHeaders, 'Trailer-Response-Id'],
     credentials: true,
     // Let browsers cache CORS information to reduce the number of
