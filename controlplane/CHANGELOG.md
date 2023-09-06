@@ -4,6 +4,12 @@ Images can be found [here](https://github.com/orgs/wundergraph/packages?repo_nam
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.9.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.9.0...controlplane@0.9.1) (2023-09-06)
+
+### Bug Fixes
+
+* support firefox and other browsers by adding user agent to the allowed headers ([#39](https://github.com/wundergraph/cosmo/issues/39)) ([11be0dc](https://github.com/wundergraph/cosmo/commit/11be0dc0145c08d5aaf5b1919b2529e26f3e397b)) (@JivusAyrus)
+
 # [0.9.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.8.0...controlplane@0.9.0) (2023-09-06)
 
 ### Features
