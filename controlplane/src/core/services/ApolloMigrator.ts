@@ -7,9 +7,19 @@ import { SubgraphRepository } from '../repositories/SubgraphRepository.js';
 export default class ApolloMigrator {
   apiKey = '';
   organizationSlug = '';
-  constructor({ apiKey, organizationSlug }: { apiKey: string; organizationSlug: string }) {
+  variantName = '';
+  constructor({
+    apiKey,
+    organizationSlug,
+    variantName,
+  }: {
+    apiKey: string;
+    organizationSlug: string;
+    variantName: string;
+  }) {
     this.apiKey = apiKey;
     this.organizationSlug = organizationSlug;
+    this.variantName = variantName;
   }
 
   public async fetchGraphID(): Promise<{ id: string; name: string }> {
@@ -49,9 +59,11 @@ export default class ApolloMigrator {
   }
 
   // fetches the schemas of the subgraphs and the routing url of the federated graph
-  public async fetchGraphDetails({ graphID, variantName }: { graphID: string; variantName: string }): Promise<{
+  public async fetchGraphDetails({ graphID }: { graphID: string }): Promise<{
+    success: boolean;
     fedGraphRoutingURL: string;
     subgraphs: MigrationSubgraph[];
+    errorMessage?: string;
   }> {
     const headers = new Headers();
     headers.append('X-API-KEY', this.apiKey);
@@ -91,20 +103,31 @@ export default class ApolloMigrator {
       body: graphql,
     });
     if (response.status !== 200) {
-      throw new Error('Could not fetch the subgraphs from apollo.');
+      return {
+        success: false,
+        fedGraphRoutingURL: "",
+        subgraphs: [],
+        errorMessage: 'Could not fetch the graphs from apollo.',
+      };
     }
     const body = await response.json();
     const data = body.data;
     const variants: any[] = data.graph.variants;
 
-    const variant = variants.find((v: { name: string }) => v.name === variantName);
+    const variant = variants.find((v: { name: string }) => v.name === this.variantName);
 
     if (!variant) {
-      throw new Error('Could not find the requested variant of the graph.');
+      return {
+        success: false,
+        fedGraphRoutingURL: '',
+        subgraphs: [],
+        errorMessage: 'Could not find the requested variant of the graph.',
+      };
     }
     const subgraphs: any[] = variant.subgraphs;
 
     return {
+      success: true,
       fedGraphRoutingURL: variant.url,
       subgraphs: subgraphs.map((subgraph) => {
         return {

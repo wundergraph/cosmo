@@ -1789,10 +1789,23 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const apolloMigrator = new ApolloMigrator({ apiKey: req.apiKey, organizationSlug: org.slug });
+        const apolloMigrator = new ApolloMigrator({
+          apiKey: req.apiKey,
+          organizationSlug: org.slug,
+          variantName: req.variantName,
+        });
 
         const graph = await apolloMigrator.fetchGraphID();
-        const graphDetails = await apolloMigrator.fetchGraphDetails({ graphID: graph.id, variantName: 'main' });
+        const graphDetails = await apolloMigrator.fetchGraphDetails({ graphID: graph.id });
+
+        if(!graphDetails.success){
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: graphDetails.errorMessage,
+            },
+          };
+        }
 
         if (await fedGraphRepo.exists(graph.name)) {
           return {
