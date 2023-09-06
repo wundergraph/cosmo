@@ -52,10 +52,10 @@ func Main() {
 
 	var routerConfig *nodev1.RouterConfig
 
-	if cfg.ConfigFilePath != "" {
-		routerConfig, err = app.SerializeConfigFromFile(cfg.ConfigFilePath)
+	if cfg.RouterConfigPath != "" {
+		routerConfig, err = app.SerializeConfigFromFile(cfg.RouterConfigPath)
 		if err != nil {
-			logger.Fatal("Could not read router config", zap.Error(err), zap.String("path", cfg.ConfigFilePath))
+			logger.Fatal("Could not read router config", zap.Error(err), zap.String("path", cfg.RouterConfigPath))
 		}
 	}
 

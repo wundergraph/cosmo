@@ -27,7 +27,7 @@ type Config struct {
 	Version string `yaml:"version"`
 
 	FederatedGraphName      string            `yaml:"federatedGraphName" envconfig:"FEDERATED_GRAPH_NAME" validate:"required"`
-	ControlplaneURL         string            `yaml:"controlplaneURL" validate:"required" default:"https://cosmo-cp.wundergraph.com" envconfig:"CONTROLPLANE_URL" validate:"uri"`
+	ControlplaneURL         string            `yaml:"controlplaneUrl" validate:"required" default:"https://cosmo-cp.wundergraph.com" envconfig:"CONTROLPLANE_URL" validate:"uri"`
 	ListenAddr              string            `yaml:"listenAddr" default:"localhost:3002" envconfig:"LISTEN_ADDR"`
 	OTELTracingEnabled      bool              `yaml:"otelTracingEnabled" default:"true" envconfig:"OTEL_TRACING_ENABLED"`
 	OTELCollectorEndpoint   string            `yaml:"otelCollectorEndpoint" validate:"required" default:"https://cosmo-otel.wundergraph.com" envconfig:"OTEL_COLLECTOR_ENDPOINT" validate:"uri"`
@@ -52,7 +52,8 @@ type Config struct {
 	GracePeriodSeconds      int               `yaml:"gracePeriodSeconds" default:"0" envconfig:"GRACE_PERIOD_SECONDS"`
 	PollIntervalSeconds     int               `yaml:"pollIntervalSeconds" default:"10" envconfig:"POLL_INTERVAL_SECONDS"`
 	GraphApiToken           string            `yaml:"graphApiToken" envconfig:"GRAPH_API_TOKEN" validate:"required"`
-	ConfigFilePath          string            `yaml:"configFilePath" default:"" envconfig:"CONFIG_FILE_PATH" validate:"omitempty,filepath"`
+	RouterConfigPath        string            `yaml:"routerConfigPath" default:"" envconfig:"ROUTER_CONFIG_PATH" validate:"omitempty,filepath"`
+	ConfigPath              string            `yaml:"configFilePath" default:"config.yaml" envconfig:"CONFIG_PATH" validate:"omitempty,filepath"`
 
 	Modules map[string]interface{} `yaml:"modules"`
 }
@@ -63,17 +64,17 @@ func LoadConfig() (*Config, error) {
 
 	var c Config
 
-	configBytes, err := os.ReadFile("config.yaml")
+	err := envconfig.Process("", &c)
+	if err != nil {
+		return nil, err
+	}
+
+	configBytes, err := os.ReadFile(c.ConfigPath)
 
 	if err == nil {
 		if err := yaml.Unmarshal(configBytes, &c); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal router config: %w", err)
 		}
-	}
-
-	err = envconfig.Process("", &c)
-	if err != nil {
-		return nil, err
 	}
 
 	err = validator.New().Struct(c)
