@@ -518,6 +518,7 @@ message RemoveInvitationResponse {
 
 message MigrateFromApolloRequest {
   string apiKey = 1;
+  string variantName = 2;
 }
 
 message MigrateFromApolloResponse {
