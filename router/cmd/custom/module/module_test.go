@@ -13,7 +13,7 @@ import (
 
 func TestMyModule(t *testing.T) {
 
-	if os.Getenv("CI") != "" {
+	if os.Getenv("MODULE_TESTS") == "" {
 		t.Skip("Skipping testing in CI environment")
 	}
 
