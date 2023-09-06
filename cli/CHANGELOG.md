@@ -4,6 +4,14 @@ Images can be found [here](https://github.com/orgs/wundergraph/packages?repo_nam
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.8.0](https://github.com/wundergraph/cosmo/compare/wgc@0.7.0...wgc@0.8.0) (2023-09-06)
+
+### Features
+
+* add federatedGraph and subgraph list command ([#34](https://github.com/wundergraph/cosmo/issues/34)) ([d235307](https://github.com/wundergraph/cosmo/commit/d2353070bd3fa29ccbd4ccf571964482532fae0a)) (@JivusAyrus)
+* implement whoami cli command ([#33](https://github.com/wundergraph/cosmo/issues/33)) ([c920b25](https://github.com/wundergraph/cosmo/commit/c920b25ff4dc31cf9788b1590e3c89e4a33a3ac0)) (@StarpTech)
+* move to new connectrpc packages ([#32](https://github.com/wundergraph/cosmo/issues/32)) ([4c8423b](https://github.com/wundergraph/cosmo/commit/4c8423bf377b63af6a42a42d7d5fc1ce2db1f09e)) (@StarpTech)
+
 # [0.7.0](https://github.com/wundergraph/cosmo/compare/wgc@0.6.5...wgc@0.7.0) (2023-09-02)
 
 ### Features
