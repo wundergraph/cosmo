@@ -36,7 +36,7 @@ export default (opts: BaseCommandOptions) => {
       console.log(pc.dim(pc.green(`A new federated graph called '${name}' was created.`)));
     } else if (resp.response?.code === EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED) {
       console.log(pc.dim(pc.green(`A new federated graph called '${name}' was created.`)));
-      
+
       const compositionErrorsTable = new Table({
         head: [pc.bold(pc.white('FEDERATED_GRAPH_NAME')), pc.bold(pc.white('ERROR_MESSAGE'))],
         colWidths: [30, 120],
