@@ -29,29 +29,36 @@ type Graph struct {
 	RouterConfigPath string `yaml:"router_config_path" envconfig:"ROUTER_CONFIG_PATH" validate:"omitempty,filepath"`
 }
 
+type Tracing struct {
+	Enabled bool `yaml:"enabled" default:"true" envconfig:"TRACING_ENABLED"`
+	Config  struct {
+		BatchTimeoutSeconds int     `yaml:"batch_timeout_seconds" default:"10" envconfig:"TRACING_BATCH_TIMEOUT_SECONDS"`
+		SamplingRate        float64 `yaml:"sampling_rate" default:"1" validate:"min=0,max=1" envconfig:"TRACING_SAMPLING_RATE"`
+	} `yaml:"config"`
+}
+
+type Prometheus struct {
+	Enabled    bool   `yaml:"enabled" default:"true" envconfig:"PROMETHEUS_ENABLED"`
+	Path       string `yaml:"path" default:"/metrics" validate:"uri" envconfig:"PROMETHEUS_HTTP_PATH"`
+	ListenAddr string `yaml:"listen_addr" default:"127.0.0.1:8088" validate:"hostname_port" envconfig:"PROMETHEUS_LISTEN_ADDR"`
+}
+
+type Metrics struct {
+	Common     MetricCommon `yaml:"common"`
+	Prometheus Prometheus   `yaml:"prometheus"`
+}
+
+type MetricCommon struct {
+	Enabled bool `yaml:"enabled" default:"true" envconfig:"METRICS_ENABLED"`
+}
+
 type OpenTelemetry struct {
 	ServiceName string            `yaml:"service_name" default:"cosmo-router" envconfig:"TELEMETRY_SERVICE_NAME" validate:"required"`
 	Endpoint    string            `yaml:"endpoint" validate:"required" default:"https://cosmo-otel.wundergraph.com" envconfig:"TELEMETRY_ENDPOINT" validate:"http_url"`
 	Headers     map[string]string `yaml:"headers" envconfig:"TELEMETRY_HEADERS"`
 
-	Tracing struct {
-		Enabled bool `yaml:"enabled" default:"true" envconfig:"TRACING_ENABLED"`
-		Config  struct {
-			BatchTimeoutSeconds int     `yaml:"batch_timeout_seconds" default:"10" envconfig:"TRACING_BATCH_TIMEOUT_SECONDS"`
-			SamplingRate        float64 `yaml:"sampling_rate" default:"1" validate:"min=0,max=1" envconfig:"TRACING_SAMPLING_RATE"`
-		} `yaml:"config"`
-	} `yaml:"tracing"`
-
-	Metrics struct {
-		Common struct {
-			Enabled bool `yaml:"enabled" default:"true" envconfig:"METRICS_ENABLED"`
-		}
-		Prometheus struct {
-			Enabled    bool   `yaml:"enabled" default:"true" envconfig:"PROMETHEUS_ENABLED"`
-			Path       string `yaml:"path" default:"/metrics" validate:"uri" envconfig:"PROMETHEUS_HTTP_PATH"`
-			ListenAddr string `yaml:"listen_addr" default:"127.0.0.1:8088" validate:"hostname_port" envconfig:"PROMETHEUS_LISTEN_ADDR"`
-		} `yaml:"prometheus"`
-	} `yaml:"metrics"`
+	Tracing Tracing `yaml:"tracing"`
+	Metrics Metrics `yaml:"metrics"`
 }
 
 type CORS struct {
