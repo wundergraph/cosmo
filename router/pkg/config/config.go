@@ -24,9 +24,8 @@ func (ipd *Base64Decoder) Decode(value string) error {
 }
 
 type Graph struct {
-	Name             string `yaml:"name" envconfig:"GRAPH_NAME" validate:"required"`
-	Token            string `yaml:"token" envconfig:"GRAPH_API_TOKEN" validate:"required"`
-	RouterConfigPath string `yaml:"router_config_path" envconfig:"ROUTER_CONFIG_PATH" validate:"omitempty,filepath"`
+	Name  string `yaml:"name" envconfig:"FEDERATED_GRAPH_NAME" validate:"required"`
+	Token string `yaml:"token" envconfig:"GRAPH_API_TOKEN" validate:"required"`
 }
 
 type Tracing struct {
@@ -44,11 +43,11 @@ type Prometheus struct {
 }
 
 type Metrics struct {
-	Common     MetricCommon `yaml:"common"`
-	Prometheus Prometheus   `yaml:"prometheus"`
+	Common     MetricsCommon `yaml:"common"`
+	Prometheus Prometheus    `yaml:"prometheus"`
 }
 
-type MetricCommon struct {
+type MetricsCommon struct {
 	Enabled bool `yaml:"enabled" default:"true" envconfig:"METRICS_ENABLED"`
 }
 
@@ -89,7 +88,8 @@ type Config struct {
 	PollIntervalSeconds  int    `yaml:"poll_interval_seconds" default:"10" validate:"min=5" envconfig:"POLL_INTERVAL_SECONDS"`
 	HealthCheckPath      string `yaml:"health_check_path" default:"/health" envconfig:"HEALTH_CHECK_PATH" validate:"uri"`
 
-	ConfigPath string `default:"config.yaml" envconfig:"CONFIG_PATH" validate:"omitempty,filepath"`
+	ConfigPath       string `default:"config.yaml" envconfig:"CONFIG_PATH" validate:"omitempty,filepath"`
+	RouterConfigPath string `yaml:"router_config_path" envconfig:"ROUTER_CONFIG_PATH" validate:"omitempty,filepath"`
 }
 
 func LoadConfig() (*Config, error) {

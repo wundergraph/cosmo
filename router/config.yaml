@@ -1,1 +1,3 @@
 version: "1"
+
+# See pkg/config/config.go for the full list of configuration options.
