@@ -43,7 +43,8 @@ export function configurationDataMapToDataSourceConfiguration(dataMap: Configura
     provides: [],
     requires: [],
   };
-  for (const [typeName, data] of dataMap) {
+  for (const data of dataMap.values()) {
+    const typeName = data.typeName;
     const fieldNames: string[] = [...data.fieldNames];
     const typeField = new TypeField({ typeName, fieldNames });
     if (data.isRootNode) {
