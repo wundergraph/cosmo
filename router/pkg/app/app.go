@@ -63,6 +63,7 @@ type (
 		production               bool
 		federatedGraphName       string
 		graphApiToken            string
+		healthCheckPath          string
 		prometheusServer         *http.Server
 		modulesConfig            map[string]interface{}
 		moduleMiddlewares        []func(http.Handler) http.Handler
@@ -104,6 +105,10 @@ func New(opts ...Option) (*App, error) {
 
 	if r.corsOptions == nil {
 		r.corsOptions = CorsDefaultOptions()
+	}
+
+	if r.healthCheckPath == "" {
+		r.healthCheckPath = "/health"
 	}
 
 	defaultHeaders := []string{
@@ -427,7 +432,7 @@ func (a *App) newRouter(ctx context.Context, routerConfig *nodev1.RouterConfig) 
 	router.Use(cors.New(*a.corsOptions))
 
 	// Health check
-	router.Get("/health", health.New())
+	router.Get(a.healthCheckPath, health.New())
 
 	// when an execution plan was generated, which can be quite expensive, we want to cache it
 	// this means that we can hash the input and cache the generated plan
@@ -591,6 +596,7 @@ func (a *App) newRouter(ctx context.Context, routerConfig *nodev1.RouterConfig) 
 			moduleMiddlewares:        a.moduleMiddlewares,
 			modulePreOriginHandlers:  a.modulePreOriginHandlers,
 			modulePostOriginHandlers: a.modulePostOriginHandlers,
+			healthCheckPath:          a.healthCheckPath,
 		},
 	}
 
@@ -748,5 +754,11 @@ func WithModulesConfig(config map[string]interface{}) Option {
 func WithStaticRouterConfig(cfg *nodev1.RouterConfig) Option {
 	return func(s *App) {
 		s.initialRouterConfig = cfg
+	}
+}
+
+func WithHealthCheckPath(path string) Option {
+	return func(s *App) {
+		s.healthCheckPath = path
 	}
 }
