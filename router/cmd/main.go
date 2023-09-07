@@ -39,7 +39,7 @@ func Main() {
 		log.Fatal("Could not parse log level", zap.Error(err))
 	}
 
-	logger := logging.New(cfg.JSONLog, false, logLevel).
+	logger := logging.New(!cfg.JSONLog, cfg.LogLevel == "debug", logLevel).
 		With(zap.String("component", "@wundergraph/router"))
 
 	cp := controlplane.New(
