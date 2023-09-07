@@ -36,7 +36,7 @@ export default (opts: BaseCommandOptions) => {
 
     if (resp.response?.code === EnumStatusCode.OK) {
       console.log('SDL of the subgraph:-\n');
-      console.log(resp.sdl)
+      console.log(resp.sdl);
     } else {
       program.error(pc.red('Could not introspect the subgraph.'));
     }
