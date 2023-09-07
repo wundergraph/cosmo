@@ -3,11 +3,12 @@ package config
 import (
 	b64 "encoding/base64"
 	"fmt"
+	"os"
+
 	"github.com/go-playground/validator/v10"
 	"github.com/goccy/go-yaml"
 	"github.com/joho/godotenv"
 	"github.com/kelseyhightower/envconfig"
-	"os"
 )
 
 type Base64Decoder []byte
@@ -116,9 +117,13 @@ type Config struct {
 	RouterConfigPath string `yaml:"router_config_path" envconfig:"ROUTER_CONFIG_PATH" validate:"omitempty,filepath"`
 }
 
-func LoadConfig() (*Config, error) {
+func LoadConfig(override string) (*Config, error) {
 	godotenv.Load(".env.local")
 	godotenv.Load()
+
+	if override != "" {
+		godotenv.Overload(override)
+	}
 
 	var c Config
 
