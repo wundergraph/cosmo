@@ -19,7 +19,9 @@ func TestMyModule(t *testing.T) {
 
 	ctx := context.Background()
 	cfg := config.Config{
-		FederatedGraphName: "production",
+		Graph: config.Graph{
+			Name: "production",
+		},
 		Modules: map[string]interface{}{
 			"myModule": MyModule{
 				Value: 1,
@@ -31,7 +33,7 @@ func TestMyModule(t *testing.T) {
 	assert.Nil(t, err)
 
 	rs, err := app.New(
-		app.WithFederatedGraphName(cfg.FederatedGraphName),
+		app.WithFederatedGraphName(cfg.Graph.Name),
 		app.WithStaticRouterConfig(routerConfig),
 		app.WithModulesConfig(cfg.Modules),
 		app.WithListenerAddr("http://localhost:3002"),
