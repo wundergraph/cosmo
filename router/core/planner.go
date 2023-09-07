@@ -115,7 +115,7 @@ func (b *Planner) buildPlannerConfiguration(routerCfg *nodev1.RouterConfig) (*pl
 	planConfig.Debug = plan.DebugConfiguration{
 		PrintOperationWithRequiredFields: false,
 		PrintPlanningPaths:               false,
-		PrintQueryPlans:                  true,
+		PrintQueryPlans:                  false,
 		ConfigurationVisitor:             false,
 		PlanningVisitor:                  false,
 		DatasourceVisitor:                false,
