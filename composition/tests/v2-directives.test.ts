@@ -48,7 +48,7 @@ describe('V2 Directives Tests', () => {
     );
   });
 
-  test('that fields defined in multiple subgraphs with shareable return an error', () => {
+  test('that unshareable fields defined in multiple subgraphs return an error', () => {
     const { errors } = federateSubgraphs(
       [subgraphC, subgraphD]
     );
