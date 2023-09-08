@@ -461,8 +461,9 @@ function validateEntityKey(
     const entityKeyParent = factory.keyFieldsByParentTypeName.get(objectTypeName);
     if (entityKeyParent) {
       addIterableValuesToSet(keyFields, entityKeyParent)
+    } else {
+      factory.keyFieldsByParentTypeName.set(objectTypeName, keyFields);
     }
-    factory.keyFieldsByParentTypeName.set(objectTypeName, keyFields);
   }
   if (errorMessages.length > 0 || !entityKey.nestedKeys) {
     return;

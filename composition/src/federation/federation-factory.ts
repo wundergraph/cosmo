@@ -37,7 +37,7 @@ import {
   extractEntityKeys,
   extractExecutableDirectiveLocations,
   extractInterfaces,
-  isNodeExternal,
+  isNodeExternal, isNodeOverridden,
   isNodeShareable,
   mergeExecutableDirectiveLocations,
   pushPersistedDirectivesAndGetNode,
@@ -347,6 +347,7 @@ export class FederationFactory {
       || this.areFieldsShareable
       || this.isFieldEntityKey()
       || isNodeShareable(node)
+      || isNodeOverridden(node)
     );
   }
 
@@ -377,6 +378,28 @@ export class FederationFactory {
     if (executableLocations.size > 0) {
       this.executableDirectives.add(directiveName);
     }
+  }
+
+  isFieldExternalOrShareable(fieldContainer: FieldContainer) {
+    let shareableFields = 0;
+    let unshareableFields = 0;
+    for (const [subgraphName, isShareable] of fieldContainer.subgraphsByShareable) {
+      if (isShareable) {
+        shareableFields += 1
+        if (shareableFields && unshareableFields) {
+          return false;
+        }
+        continue;
+      }
+      if (fieldContainer.subgraphsByExternal.get(subgraphName)) {
+        continue;
+      }
+      unshareableFields += 1;
+      if (shareableFields || unshareableFields > 1) {
+        return false;
+      }
+    }
+    return true;
   }
 
   upsertFieldNode(node: FieldDefinitionNode) {
@@ -419,19 +442,26 @@ export class FederationFactory {
         );
       }
       this.upsertArguments(node, existingFieldContainer.arguments);
-      // If the parent is not an interface and both fields are not shareable, is it is a shareable error
-      if (!this.isCurrentParentInterface
-        && !isFieldExternal
-        && (!existingFieldContainer.isShareable || !isFieldShareable)
-        && existingFieldContainer.subgraphsByExternal.size !== existingFieldContainer.subgraphs.size
+      /* A field is valid if one of the following is true:
+        1. The field is an interface
+        2. The field is external
+        3. The existing fields AND the current field are ALL shareable
+        4. All other fields besides the current field are external
+      */
+      if (this.isCurrentParentInterface
+        || isFieldExternal
+        || (existingFieldContainer.isShareable && isFieldShareable)
+        || this.isFieldExternalOrShareable(existingFieldContainer)
       ) {
-        const shareableErrorTypeNames = this.shareableErrorTypeNames.get(this.parentTypeName);
-        if (shareableErrorTypeNames) {
-          shareableErrorTypeNames.add(this.childName);
-        } else {
-          this.shareableErrorTypeNames.set(this.parentTypeName, new Set<string>([this.childName]));
-        }
+        return;
       }
+      const shareableErrorTypeNames = this.shareableErrorTypeNames.get(this.parentTypeName);
+      if (shareableErrorTypeNames) {
+        shareableErrorTypeNames.add(this.childName);
+      } else {
+        this.shareableErrorTypeNames.set(this.parentTypeName, new Set<string>([this.childName]));
+      }
+      // }
       return;
     }
     this.outputFieldTypeNameSet.add(fieldRootTypeName);

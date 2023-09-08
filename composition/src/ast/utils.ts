@@ -35,7 +35,7 @@ import {
   KEY,
   MUTATION,
   NAME,
-  OBJECT_UPPER,
+  OBJECT_UPPER, OVERRIDE,
   QUERY,
   RESOLVABLE,
   SCALAR_UPPER,
@@ -311,6 +311,20 @@ export function isNodeExternal(
   }
   for (const directive of node.directives) {
     if (directive.name.value === EXTERNAL) {
+      return true;
+    }
+  }
+  return false;
+}
+
+export function isNodeOverridden(
+  node: ObjectTypeDefinitionNode | ObjectTypeExtensionNode | FieldDefinitionNode,
+): boolean {
+  if (!node.directives) {
+    return false;
+  }
+  for (const directive of node.directives) {
+    if (directive.name.value === OVERRIDE) {
       return true;
     }
   }
