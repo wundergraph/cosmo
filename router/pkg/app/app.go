@@ -329,12 +329,10 @@ func (a *App) bootstrap(ctx context.Context) error {
 	}
 
 	if a.metricConfig.Prometheus.Enabled {
+		promSvr := createPrometheus(a.logger, a.metricConfig.Prometheus.ListenAddr, a.metricConfig.Prometheus.Path)
 		go func() {
-			a.mu.Lock()
-			defer a.mu.Unlock()
-
-			if err := a.startPrometheus(); err != nil {
-				a.logger.Error("Failed to start Prometheus", zap.Error(err))
+			if err := promSvr.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+				a.logger.Error("Failed to start Prometheus server", zap.Error(err))
 			}
 		}()
 	}
@@ -395,31 +393,23 @@ func (a *App) Start(ctx context.Context) error {
 	return eg.Wait()
 }
 
-func (a *App) startPrometheus() error {
+func createPrometheus(logger *zap.Logger, listenAddr, path string) *http.Server {
 	r := chi.NewRouter()
 	r.Use(middleware.Recoverer)
-	r.Handle(a.metricConfig.Prometheus.Path, promhttp.Handler())
+	r.Handle(path, promhttp.Handler())
 
 	svr := &http.Server{
-		Addr:              a.metricConfig.Prometheus.ListenAddr,
+		Addr:              listenAddr,
 		ReadTimeout:       1 * time.Minute,
 		WriteTimeout:      2 * time.Minute,
 		ReadHeaderTimeout: 20 * time.Second,
-		ErrorLog:          zap.NewStdLog(a.logger),
+		ErrorLog:          zap.NewStdLog(logger),
 		Handler:           r,
 	}
 
-	a.mu.Lock()
-	a.prometheusServer = svr
-	a.mu.Unlock()
+	logger.Info("Serve Prometheus metrics", zap.String("listenAddr", svr.Addr), zap.String("endpoint", path))
 
-	a.logger.Info("Serve Prometheus metrics", zap.String("listenAddr", svr.Addr), zap.String("endpoint", a.metricConfig.Prometheus.Path))
-
-	if err := svr.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		return err
-	}
-
-	return nil
+	return svr
 }
 
 // newRouter creates a new Server instance.
