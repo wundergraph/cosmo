@@ -252,9 +252,6 @@ export function walkSubgraphToFederate(subgraph: DocumentNode, factory: Federati
     },
     ObjectTypeDefinition: {
       enter(node) {
-        // if (node.name.value === SERVICE_OBJECT) {
-        //   return false;
-        // }
         factory.areFieldsExternal = isNodeExternal(node);
         factory.areFieldsShareable = !factory.isCurrentSubgraphVersionTwo || isNodeShareable(node);
         factory.isCurrentParentEntity = isObjectLikeNodeEntity(node);
