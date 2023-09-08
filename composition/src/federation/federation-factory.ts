@@ -380,7 +380,7 @@ export class FederationFactory {
     }
   }
 
-  isFieldExternalOrShareable(fieldContainer: FieldContainer) {
+  areAllFieldInstancesExternalOrShareable(fieldContainer: FieldContainer) {
     let shareableFields = 0;
     let unshareableFields = 0;
     for (const [subgraphName, isShareable] of fieldContainer.subgraphsByShareable) {
@@ -451,7 +451,7 @@ export class FederationFactory {
       if (this.isCurrentParentInterface
         || isFieldExternal
         || (existingFieldContainer.isShareable && isFieldShareable)
-        || this.isFieldExternalOrShareable(existingFieldContainer)
+        || this.areAllFieldInstancesExternalOrShareable(existingFieldContainer)
       ) {
         return;
       }
