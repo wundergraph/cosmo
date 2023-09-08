@@ -20,7 +20,7 @@ import {
   StringValueNode,
   UnionTypeDefinitionNode,
 } from 'graphql';
-import { kindToTypeString, mapToArrayOfValues } from '../utils/utils';
+import { addIterableValuesToSet, kindToTypeString, mapToArrayOfValues } from '../utils/utils';
 import { EntityKey, setToNamedTypeNodeArray } from '../ast/utils';
 import {
   ARGUMENT_DEFINITION_UPPER,
@@ -438,12 +438,15 @@ function validateEntityKey(
   objectTypeName: string,
   errorMessages: string[],
 ) {
+  const keyFields = new Set<string>();
   for (const fieldName of entityKey.siblings) {
     const field = object.fields.get(fieldName);
     if (!field) {
       errorMessages.push(undefinedEntityKeyErrorMessage(fieldName, objectTypeName));
       continue;
     }
+    // Entity keys are always shareable
+    keyFields.add(fieldName);
     if (entityKey.nestedKeys?.some((nestedKey) => nestedKey.parent === fieldName)) {
       continue;
     }
@@ -453,6 +456,13 @@ function validateEntityKey(
     if (parentContainer && parentContainer.kind === Kind.OBJECT_TYPE_DEFINITION) {
       errorMessages.push(objectInCompositeKeyWithoutSelectionsErrorMessage(fieldName, fieldTypeName));
     }
+  }
+  if (keyFields.size > 0) {
+    const entityKeyParent = factory.keyFieldsByParentTypeName.get(objectTypeName);
+    if (entityKeyParent) {
+      addIterableValuesToSet(keyFields, entityKeyParent)
+    }
+    factory.keyFieldsByParentTypeName.set(objectTypeName, keyFields);
   }
   if (errorMessages.length > 0 || !entityKey.nestedKeys) {
     return;

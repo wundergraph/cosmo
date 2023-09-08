@@ -2,7 +2,7 @@ import { DocumentNode, OperationTypeNode, visit } from 'graphql';
 import { FederationFactory } from '../federation/federation-factory';
 import {
   addConcreteTypesForImplementedInterfaces,
-  addConcreteTypesForUnion,
+  addConcreteTypesForUnion, isNodeExternal,
   isNodeShareable,
   isObjectLikeNodeEntity,
   operationTypeNodeToDefaultType,
@@ -10,7 +10,7 @@ import {
 } from '../ast/utils';
 import { getNamedTypeForChild } from '../type-merging/type-merging';
 import { getOrThrowError } from '../utils/utils';
-import { ENTITIES, ENTITIES_FIELD, OPERATION_TO_DEFAULT, SERVICE, SERVICE_FIELD } from '../utils/string-constants';
+import { ENTITIES, ENTITIES_FIELD, OPERATION_TO_DEFAULT, SERVICE_OBJECT, SERVICE_FIELD } from '../utils/string-constants';
 
 export type Subgraph = {
   definitions: DocumentNode;
@@ -21,6 +21,7 @@ export type Subgraph = {
 export type InternalSubgraph = {
   definitions: DocumentNode;
   isVersionTwo: boolean;
+  keyFieldsByParentTypeName: Map<string, Set<string>>;
   name: string;
   operationTypes: Map<string, OperationTypeNode>;
   url: string;
@@ -251,9 +252,10 @@ export function walkSubgraphToFederate(subgraph: DocumentNode, factory: Federati
     },
     ObjectTypeDefinition: {
       enter(node) {
-        if (node.name.value === SERVICE) {
-          return false;
-        }
+        // if (node.name.value === SERVICE_OBJECT) {
+        //   return false;
+        // }
+        factory.areFieldsExternal = isNodeExternal(node);
         factory.areFieldsShareable = !factory.isCurrentSubgraphVersionTwo || isNodeShareable(node);
         factory.isCurrentParentEntity = isObjectLikeNodeEntity(node);
         factory.isParentRootType = factory.isObjectRootType(node);
@@ -261,6 +263,7 @@ export function walkSubgraphToFederate(subgraph: DocumentNode, factory: Federati
         factory.upsertParentNode(node);
       },
       leave() {
+        factory.areFieldsExternal = false;
         factory.areFieldsShareable = false;
         factory.isCurrentParentEntity = false;
         factory.isParentRootType = false;
@@ -270,14 +273,16 @@ export function walkSubgraphToFederate(subgraph: DocumentNode, factory: Federati
     ObjectTypeExtension: {
       enter(node) {
         const name = node.name.value;
+        factory.areFieldsExternal = isNodeExternal(node);
+        factory.areFieldsShareable = !factory.isCurrentSubgraphVersionTwo || isNodeShareable(node);
         factory.isCurrentParentExtensionType = true;
         factory.isCurrentParentEntity = isObjectLikeNodeEntity(node);
         factory.parentTypeName = name;
-        factory.areFieldsShareable = !factory.isCurrentSubgraphVersionTwo || isNodeShareable(node);
         factory.isParentRootType = factory.isObjectRootType(node);
         factory.upsertExtensionNode(node);
       },
       leave() {
+        factory.areFieldsExternal = false;
         factory.areFieldsShareable = false;
         factory.isCurrentParentEntity = false;
         factory.isCurrentParentExtensionType = false;

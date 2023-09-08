@@ -23,6 +23,7 @@ import {
   ENUM_UPPER,
   ENUM_VALUE_UPPER,
   EXTENDS,
+  EXTERNAL,
   FIELD_DEFINITION_UPPER,
   FIELDS,
   FRAGMENT_DEFINITION_UPPER,
@@ -36,6 +37,7 @@ import {
   NAME,
   OBJECT_UPPER,
   QUERY,
+  RESOLVABLE,
   SCALAR_UPPER,
   SCHEMA_UPPER,
   SHAREABLE,
@@ -59,12 +61,7 @@ import {
 } from '../errors/errors';
 import { getOrThrowError } from '../utils/utils';
 import { UnionTypeDefinitionNode } from 'graphql/index';
-import {
-  DirectiveContainer,
-  EXECUTABLE_DIRECTIVE_LOCATIONS,
-  NodeContainer,
-  ParentContainer,
-} from '../federation/utils';
+import { DirectiveContainer, EXECUTABLE_DIRECTIVE_LOCATIONS, NodeContainer } from '../federation/utils';
 
 export function isObjectLikeNodeEntity(node: ObjectLikeTypeDefinitionNode): boolean {
   // Interface entities are currently unsupported
@@ -142,7 +139,7 @@ export function getEntityKeyExtractionResult(rawEntityKey: string, parentTypeNam
   let currentSegment = '';
   let segmentEnded = true;
   let currentKey: EntityKey;
-  rawEntityKey = rawEntityKey.replaceAll(',', ' ');
+  rawEntityKey = rawEntityKey.replaceAll(/[,\n]/g, ' ');
   for (const char of rawEntityKey) {
     currentKey = getOrThrowError(entityKeyMap, keyPath.join('.'), 'entityKeyMap');
     switch (char) {
@@ -234,6 +231,9 @@ export function getEntityKeyExtractionResults(
     }
     for (const arg of directive.arguments) {
       const argumentName = arg.name.value;
+      if (arg.name.value === RESOLVABLE) {
+        continue;
+      }
       if (arg.name.value !== FIELDS) {
         errorMessages.push(unexpectedDirectiveArgumentErrorMessage(KEY, argumentName));
         break;
@@ -297,6 +297,20 @@ export function isNodeShareable(
   }
   for (const directive of node.directives) {
     if (directive.name.value === SHAREABLE) {
+      return true;
+    }
+  }
+  return false;
+}
+
+export function isNodeExternal(
+  node: ObjectTypeDefinitionNode | ObjectTypeExtensionNode | FieldDefinitionNode,
+): boolean {
+  if (!node.directives) {
+    return false;
+  }
+  for (const directive of node.directives) {
+    if (directive.name.value === EXTERNAL) {
       return true;
     }
   }
@@ -454,17 +468,16 @@ export function mergeExecutableDirectiveLocations(
   return mergedSet;
 }
 
-export function pushPersistedDirectivesToNode(container: NodeContainer) {
+export function pushPersistedDirectivesAndGetNode<T extends NodeContainer>(container: T): T['node'] {
   const persistedDirectives: ConstDirectiveNode[] = [...container.directives.tags.values()];
+  const deprecatedDirective = container.directives.deprecated.directive;
+  if (deprecatedDirective) {
+    persistedDirectives.push(deprecatedDirective);
+  }
   for (const directives of container.directives.directives.values()) {
     persistedDirectives.push(...directives);
   }
   container.node.directives = persistedDirectives;
-  return container.node;
-}
-
-export function getNodeWithPersistedDirectives(container: ParentContainer) {
-  pushPersistedDirectivesToNode(container);
   return container.node;
 }
 
