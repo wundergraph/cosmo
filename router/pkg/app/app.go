@@ -330,6 +330,9 @@ func (a *App) bootstrap(ctx context.Context) error {
 
 	if a.metricConfig.Prometheus.Enabled {
 		go func() {
+			a.mu.Lock()
+			defer a.mu.Unlock()
+
 			if err := a.startPrometheus(); err != nil {
 				a.logger.Error("Failed to start Prometheus", zap.Error(err))
 			}
@@ -406,7 +409,9 @@ func (a *App) startPrometheus() error {
 		Handler:           r,
 	}
 
+	a.mu.Lock()
 	a.prometheusServer = svr
+	a.mu.Unlock()
 
 	a.logger.Info("Serve Prometheus metrics", zap.String("listenAddr", svr.Addr), zap.String("endpoint", a.metricConfig.Prometheus.Path))
 
