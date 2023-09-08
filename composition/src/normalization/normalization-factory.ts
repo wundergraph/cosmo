@@ -125,8 +125,8 @@ import {
   PARENTS,
   ROOT_TYPES,
   SCHEMA,
-  SERVICE,
-  SERVICE_FIELD,
+  SERVICE_OBJECT,
+  SERVICE_FIELD, ENTITY_UNION, ANY_SCALAR,
 } from '../utils/string-constants';
 import { buildASTSchema } from '../buildASTSchema/buildASTSchema';
 import { ConfigurationData, ConfigurationDataMap } from '../subgraph/field-configuration';
@@ -136,6 +136,7 @@ import { inputValueDefinitionNodeToMutable, MutableInputValueDefinitionNode } fr
 export type NormalizationResult = {
   configurationDataMap: ConfigurationDataMap;
   isVersionTwo: boolean;
+  keyFieldsByParentTypeName: Map<string, Set<string>>;
   operationTypes: Map<string, OperationTypeNode>;
   schema: GraphQLSchema;
   subgraphAST: DocumentNode;
@@ -169,6 +170,7 @@ export class NormalizationFactory {
   customDirectiveDefinitions = new Map<string, DirectiveDefinitionNode>();
   errors: Error[] = [];
   entityMap = new Map<string, Map<string, EntityKey>>();
+  keyFieldsByParentTypeName = new Map<string, Set<string>>();
   operationTypeNames = new Map<string, OperationTypeNode>();
   parents: ParentMap = new Map<string, ParentContainer>();
   parentTypeName = '';
@@ -917,7 +919,7 @@ export class NormalizationFactory {
       ObjectTypeDefinition: {
         enter(node) {
           const name = node.name.value;
-          if (name === SERVICE) {
+          if (name === SERVICE_OBJECT) {
             return false;
           }
           isCurrentParentRootType = ROOT_TYPES.has(name);
@@ -965,7 +967,7 @@ export class NormalizationFactory {
       ObjectTypeExtension: {
         enter(node) {
           const name = node.name.value;
-          if (name === SERVICE) {
+          if (name === SERVICE_OBJECT) {
             return false;
           }
           isCurrentParentRootType = ROOT_TYPES.has(name);
@@ -1006,6 +1008,9 @@ export class NormalizationFactory {
       ScalarTypeDefinition: {
         enter(node) {
           const name = node.name.value;
+          if (name === ANY_SCALAR) {
+            return false;
+          }
           const parent = factory.parents.get(name);
           if (parent) {
             factory.errors.push(duplicateTypeDefinitionError(kindToTypeString(node.kind), name));
@@ -1022,6 +1027,9 @@ export class NormalizationFactory {
       ScalarTypeExtension: {
         enter(node) {
           const name = node.name.value;
+          if (name === ANY_SCALAR) {
+            return false;
+          }
           const extension = factory.extensions.get(name);
           if (extension) {
             if (extension.kind !== Kind.SCALAR_TYPE_EXTENSION) {
@@ -1053,6 +1061,9 @@ export class NormalizationFactory {
       UnionTypeDefinition: {
         enter(node) {
           const name = node.name.value;
+          if (name === ENTITY_UNION) {
+            return false;
+          }
           factory.parentTypeName = name;
           const parent = factory.parents.get(name);
           if (parent) {
@@ -1079,6 +1090,9 @@ export class NormalizationFactory {
       UnionTypeExtension: {
         enter(node) {
           const name = node.name.value;
+          if (name === ENTITY_UNION) {
+            return false;
+          }
           const extension = factory.extensions.get(name);
           if (!node.types) {
             factory.errors.push();
@@ -1358,6 +1372,7 @@ export class NormalizationFactory {
       normalizationResult: {
         configurationDataMap,
         isVersionTwo: this.isSubgraphVersionTwo,
+        keyFieldsByParentTypeName: this.keyFieldsByParentTypeName,
         operationTypes: this.operationTypeNames,
         subgraphAST: newAST,
         subgraphString: print(newAST),

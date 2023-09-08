@@ -269,6 +269,10 @@ export function invalidUnionError(unionName: string): Error {
   return new Error(`Union "${unionName}" must have at least one member.`);
 }
 
+export const invalidDeprecatedDirectiveError = new Error(`
+  Expected the @deprecated directive to have a single optional argument "reason" of the type "String!"
+`);
+
 export const invalidTagDirectiveError = new Error(`
   Expected the @tag directive to have a single required argument "name" of the type "String!"
 `);
@@ -319,7 +323,7 @@ export function undefinedRequiredArgumentsErrorMessage(
     ` The definition for the directive "${directiveName}" defines the following ` +
     requiredArguments.length +
     ` required argument` +
-    (requiredArguments.length > 1 ? 's: ' : ': "') +
+    (requiredArguments.length > 1 ? 's: ' : ': ') + `"` +
     requiredArguments.join('", "') + `"` +
     `.\n However, the same directive that is declared on "${hostPath}" does not define` +
     (missingRequiredArguments.length > 0

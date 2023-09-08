@@ -205,14 +205,12 @@ describe('FederationFactory tests', () => {
     );
   });
 
-  test('that service object, entities and service fields are not included in the federated graph', () => {
+  test('that _Any, _Entity, _Service, _service, _entities, are not included in the federated graph', () => {
     const { errors, federationResult } = federateSubgraphs([subgraphG, subgraphH]);
     expect(errors).toBeUndefined();
     expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
       normalizeString(
         versionOnePersistedBaseSchema + `
-      union _Entity = User
-      
       type Query {
         string: String
       }
@@ -220,8 +218,6 @@ describe('FederationFactory tests', () => {
       type User {
         id: String
       }
-
-      scalar _Any
     `,
       ),
     );

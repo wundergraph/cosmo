@@ -15,6 +15,16 @@ export function areSetsEqual<T>(set: Set<T>, other: Set<T>): boolean {
   return true;
 }
 
+export function getAllMutualEntries<T>(set: Set<T>, other: Set<T>): Set<T> {
+  const mutualEntries: Set<T> = new Set<T>();
+  for (const entry of set) {
+    if (other.has(entry)) {
+      mutualEntries.add(entry);
+    }
+  }
+  return mutualEntries;
+}
+
 export function getOrThrowError<K, V>(map: Map<K, V>, key: K, mapName: string): V {
   const value = map.get(key);
   if (value === undefined) {
