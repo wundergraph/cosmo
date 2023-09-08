@@ -115,9 +115,9 @@ probes:
     httpGet:
       path: /health
       port: http
-    initialDelaySeconds: 10
-    timeoutSeconds: 5
-    periodSeconds: 10
+    initialDelaySeconds: 5
+    timeoutSeconds: 3
+    periodSeconds: 5
     failureThreshold: 5
   # -- Configure liveness probe
   liveness:
