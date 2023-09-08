@@ -317,20 +317,21 @@ func (a *App) bootstrap(ctx context.Context) error {
 		a.tracerProvider = tp
 	}
 
-	if a.metricConfig.Enabled {
+	// Prometheus metrics rely on OTLP metrics
+	if a.metricConfig.Enabled || a.metricConfig.Prometheus.Enabled {
 		mp, err := metric.StartAgent(a.logger, a.metricConfig)
 		if err != nil {
 			return fmt.Errorf("failed to start trace agent: %w", err)
 		}
 		a.meterProvider = mp
+	}
 
-		if a.metricConfig.Prometheus.Enabled {
-			go func() {
-				if err := a.startPrometheus(); err != nil {
-					a.logger.Error("Failed to start Prometheus", zap.Error(err))
-				}
-			}()
-		}
+	if a.metricConfig.Prometheus.Enabled {
+		go func() {
+			if err := a.startPrometheus(); err != nil {
+				a.logger.Error("Failed to start Prometheus", zap.Error(err))
+			}
+		}()
 	}
 
 	// Modules are only initialized once and not on every config change
@@ -482,7 +483,10 @@ func (a *App) newRouter(ctx context.Context, routerConfig *nodev1.RouterConfig) 
 
 	var metricHandler *metric.Handler
 
-	if a.metricConfig.Enabled {
+	// Prometheus metrics rely on OTLP metrics
+	metricsEnabled := a.metricConfig.Enabled || a.metricConfig.Prometheus.Enabled
+
+	if metricsEnabled {
 		h, err := metric.NewMetricHandler(
 			a.meterProvider,
 			otel.WgRouterGraphName.String(a.federatedGraphName),
@@ -497,7 +501,7 @@ func (a *App) newRouter(ctx context.Context, routerConfig *nodev1.RouterConfig) 
 
 	var traceHandler *trace.Middleware
 
-	if a.metricConfig.Enabled {
+	if metricsEnabled {
 		h := trace.NewMiddleware(otel.RouterServerAttribute,
 			otelhttp.WithSpanOptions(
 				oteltrace.WithAttributes(
