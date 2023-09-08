@@ -70,6 +70,8 @@ func Main() {
 		app.WithModulesConfig(cfg.Modules),
 		app.WithGracePeriod(time.Duration(cfg.GracePeriodSeconds)*time.Second),
 		app.WithHealthCheckPath(cfg.HealthCheckPath),
+		app.WithLivenessCheckPath(cfg.LivenessCheckPath),
+		app.WithReadinessCheckPath(cfg.ReadinessCheckPath),
 		app.WithStaticRouterConfig(routerConfig),
 		app.WithCors(&cors.Config{
 			AllowOrigins:     cfg.CORS.AllowOrigins,
@@ -119,7 +121,7 @@ func Main() {
 	shutdownDelayDuration := time.Duration(cfg.ShutdownDelaySeconds) * time.Second
 	logger.Info("Graceful shutdown ...", zap.String("shutdownDelay", shutdownDelayDuration.String()))
 
-	// enforce a maximum timeout of 10 seconds
+	// enforce a maximum shutdown delay
 	ctx, cancel := context.WithTimeout(context.Background(), shutdownDelayDuration)
 	defer cancel()
 

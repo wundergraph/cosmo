@@ -83,10 +83,12 @@ type Config struct {
 	IntrospectionEnabled bool   `yaml:"introspection_enabled" default:"true" envconfig:"INTROSPECTION_ENABLED"`
 	LogLevel             string `yaml:"log_level" default:"info" envconfig:"LOG_LEVEL" validate:"oneof=debug info warning error fatal panic"`
 	JSONLog              bool   `yaml:"json_log" default:"true" envconfig:"JSON_LOG"`
-	ShutdownDelaySeconds int    `yaml:"shutdown_delay_seconds" default:"15" validate:"min=5" envconfig:"SHUTDOWN_DELAY_SECONDS"`
-	GracePeriodSeconds   int    `yaml:"grace_period_seconds" default:"0" envconfig:"GRACE_PERIOD_SECONDS"`
+	ShutdownDelaySeconds int    `yaml:"shutdown_delay_seconds" default:"30" validate:"min=5" envconfig:"SHUTDOWN_DELAY_SECONDS"`
+	GracePeriodSeconds   int    `yaml:"grace_period_seconds" default:"20" envconfig:"GRACE_PERIOD_SECONDS"`
 	PollIntervalSeconds  int    `yaml:"poll_interval_seconds" default:"10" validate:"min=5" envconfig:"POLL_INTERVAL_SECONDS"`
 	HealthCheckPath      string `yaml:"health_check_path" default:"/health" envconfig:"HEALTH_CHECK_PATH" validate:"uri"`
+	ReadinessCheckPath   string `yaml:"readiness_check_path" default:"/health/ready" envconfig:"READINESS_CHECK_PATH" validate:"uri"`
+	LivenessCheckPath    string `yaml:"liveness_check_path" default:"/health/live" envconfig:"LIVENESS_CHECK_PATH" validate:"uri"`
 
 	ConfigPath       string `default:"config.yaml" envconfig:"CONFIG_PATH" validate:"omitempty,filepath"`
 	RouterConfigPath string `yaml:"router_config_path" envconfig:"ROUTER_CONFIG_PATH" validate:"omitempty,filepath"`

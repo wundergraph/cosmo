@@ -70,13 +70,20 @@ func (c *client) Subscribe(ctx context.Context) chan *nodev1.RouterConfig {
 				ticker.Stop()
 				return
 			case <-ticker.C:
+
 				cfg, err := c.getRouterConfigFromCP(ctx)
 				if err != nil {
 					c.logger.Error("Could not get latest router config, trying again in 10 seconds", zap.Error(err))
 					continue
 				}
 
-				if cfg.GetVersion() == c.latestRouterVersion {
+				newVersion := cfg.GetVersion()
+
+				c.mu.Lock()
+				latestVersion := c.latestRouterVersion
+				c.mu.Unlock()
+
+				if newVersion == latestVersion {
 					c.logger.Debug("No new router config available, trying again in 10 seconds")
 					continue
 				}
@@ -86,6 +93,7 @@ func (c *client) Subscribe(ctx context.Context) chan *nodev1.RouterConfig {
 					c.mu.Lock()
 					c.latestRouterVersion = cfg.GetVersion()
 					c.mu.Unlock()
+
 				default:
 					c.logger.Warn("Could not proceed new router config, app is still processing the previous one. Please wait for the next update cycle")
 				}
