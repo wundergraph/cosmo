@@ -393,25 +393,6 @@ func (a *App) Start(ctx context.Context) error {
 	return eg.Wait()
 }
 
-func createPrometheus(logger *zap.Logger, listenAddr, path string) *http.Server {
-	r := chi.NewRouter()
-	r.Use(middleware.Recoverer)
-	r.Handle(path, promhttp.Handler())
-
-	svr := &http.Server{
-		Addr:              listenAddr,
-		ReadTimeout:       1 * time.Minute,
-		WriteTimeout:      2 * time.Minute,
-		ReadHeaderTimeout: 20 * time.Second,
-		ErrorLog:          zap.NewStdLog(logger),
-		Handler:           r,
-	}
-
-	logger.Info("Serve Prometheus metrics", zap.String("listenAddr", svr.Addr), zap.String("endpoint", path))
-
-	return svr
-}
-
 // newRouter creates a new Server instance.
 // All stateful data is copied from the app over to the new router instance.
 func (a *App) newRouter(ctx context.Context, routerConfig *nodev1.RouterConfig) (*Router, error) {
@@ -674,6 +655,25 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 	}
 
 	return err
+}
+
+func createPrometheus(logger *zap.Logger, listenAddr, path string) *http.Server {
+	r := chi.NewRouter()
+	r.Use(middleware.Recoverer)
+	r.Handle(path, promhttp.Handler())
+
+	svr := &http.Server{
+		Addr:              listenAddr,
+		ReadTimeout:       1 * time.Minute,
+		WriteTimeout:      2 * time.Minute,
+		ReadHeaderTimeout: 20 * time.Second,
+		ErrorLog:          zap.NewStdLog(logger),
+		Handler:           r,
+	}
+
+	logger.Info("Serve Prometheus metrics", zap.String("listenAddr", svr.Addr), zap.String("endpoint", path))
+
+	return svr
 }
 
 func WithListenerAddr(addr string) Option {
