@@ -1,6 +1,7 @@
 package core
 
 import (
+	"fmt"
 	"github.com/wundergraph/cosmo/router/internal/config"
 	"net/http"
 	"regexp"
@@ -28,21 +29,25 @@ type HeaderRuleEngine struct {
 	rules config.HeaderRules
 }
 
-func NewHeaderTransformer(rules config.HeaderRules) *HeaderRuleEngine {
+func NewHeaderTransformer(rules config.HeaderRules) (*HeaderRuleEngine, error) {
 	hf := HeaderRuleEngine{
 		rules: rules,
 		regex: map[string]regexp.Regexp{},
 	}
 
-	for _, rule := range rules.All.Request {
+	for i, rule := range rules.All.Request {
 		if rule.Operation == "propagate" {
 			if rule.Matching != "" {
-				hf.regex[rule.Matching] = *regexp.MustCompile(rule.Matching)
+				regex, err := regexp.Compile(rule.Matching)
+				if err != nil {
+					return nil, fmt.Errorf("invalid regex '%s' for all request header rule %d: %w", rule.Matching, i, err)
+				}
+				hf.regex[rule.Matching] = *regex
 			}
 		}
 	}
 
-	return &hf
+	return &hf, nil
 }
 
 func (h HeaderRuleEngine) OnOriginRequest(request *http.Request, ctx RequestContext) (*http.Request, *http.Response) {

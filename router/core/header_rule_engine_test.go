@@ -12,7 +12,7 @@ import (
 
 func TestNamedPropagateHeaderRule(t *testing.T) {
 
-	ht := NewHeaderTransformer(config.HeaderRules{
+	ht, err := NewHeaderTransformer(config.HeaderRules{
 		All: config.GlobalHeaderRule{
 			Request: []config.RequestHeaderRule{
 				{
@@ -22,6 +22,7 @@ func TestNamedPropagateHeaderRule(t *testing.T) {
 			},
 		},
 	})
+	assert.Nil(t, err)
 
 	rr := httptest.NewRecorder()
 
@@ -45,7 +46,7 @@ func TestNamedPropagateHeaderRule(t *testing.T) {
 
 func TestRegexPropagateHeaderRule(t *testing.T) {
 
-	ht := NewHeaderTransformer(config.HeaderRules{
+	ht, err := NewHeaderTransformer(config.HeaderRules{
 		All: config.GlobalHeaderRule{
 			Request: []config.RequestHeaderRule{
 				{
@@ -55,6 +56,7 @@ func TestRegexPropagateHeaderRule(t *testing.T) {
 			},
 		},
 	})
+	assert.Nil(t, err)
 
 	rr := httptest.NewRecorder()
 
@@ -80,7 +82,7 @@ func TestRegexPropagateHeaderRule(t *testing.T) {
 
 func TestNamedPropagateDefaultValue(t *testing.T) {
 
-	ht := NewHeaderTransformer(config.HeaderRules{
+	ht, err := NewHeaderTransformer(config.HeaderRules{
 		All: config.GlobalHeaderRule{
 			Request: []config.RequestHeaderRule{
 				{
@@ -91,6 +93,7 @@ func TestNamedPropagateDefaultValue(t *testing.T) {
 			},
 		},
 	})
+	assert.Nil(t, err)
 
 	rr := httptest.NewRecorder()
 
@@ -111,7 +114,7 @@ func TestNamedPropagateDefaultValue(t *testing.T) {
 
 func TestSkipHopHeadersRegex(t *testing.T) {
 
-	ht := NewHeaderTransformer(config.HeaderRules{
+	ht, err := NewHeaderTransformer(config.HeaderRules{
 		All: config.GlobalHeaderRule{
 			Request: []config.RequestHeaderRule{
 				{
@@ -121,6 +124,7 @@ func TestSkipHopHeadersRegex(t *testing.T) {
 			},
 		},
 	})
+	assert.Nil(t, err)
 
 	rr := httptest.NewRecorder()
 
@@ -147,4 +151,19 @@ func TestSkipHopHeadersRegex(t *testing.T) {
 
 	assert.Equal(t, "test1", updatedClientReq.Header.Get("X-Test-1"))
 
+}
+
+func TestInvalidRegex(t *testing.T) {
+
+	_, err := NewHeaderTransformer(config.HeaderRules{
+		All: config.GlobalHeaderRule{
+			Request: []config.RequestHeaderRule{
+				{
+					Operation: "propagate",
+					Matching:  "[",
+				},
+			},
+		},
+	})
+	assert.Error(t, err)
 }

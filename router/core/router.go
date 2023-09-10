@@ -126,7 +126,13 @@ func NewRouter(opts ...Option) (*Router, error) {
 		r.livenessCheckPath = "/health/live"
 	}
 
-	r.headerRuleEngine = NewHeaderTransformer(r.headerRules)
+	hr, err := NewHeaderTransformer(r.headerRules)
+	if err != nil {
+		return nil, err
+	}
+
+	r.headerRuleEngine = hr
+
 	r.preOriginHandlers = append(r.preOriginHandlers, r.headerRuleEngine.OnOriginRequest)
 
 	defaultHeaders := []string{
