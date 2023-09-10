@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"context"
 	"github.com/stretchr/testify/assert"
-	"github.com/wundergraph/cosmo/router/pkg/app"
-	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/core"
+	"github.com/wundergraph/cosmo/router/internal/config"
 	"net/http/httptest"
 	"os"
 	"testing"
@@ -29,21 +29,21 @@ func TestMyModule(t *testing.T) {
 		},
 	}
 
-	routerConfig, err := app.SerializeConfigFromFile("./router-config.json")
+	routerConfig, err := core.SerializeConfigFromFile("./router-config.json")
 	assert.Nil(t, err)
 
-	rs, err := app.New(
-		app.WithFederatedGraphName(cfg.Graph.Name),
-		app.WithStaticRouterConfig(routerConfig),
-		app.WithModulesConfig(cfg.Modules),
-		app.WithListenerAddr("http://localhost:3002"),
+	rs, err := core.NewRouter(
+		core.WithFederatedGraphName(cfg.Graph.Name),
+		core.WithStaticRouterConfig(routerConfig),
+		core.WithModulesConfig(cfg.Modules),
+		core.WithListenerAddr("http://localhost:3002"),
 	)
 	assert.Nil(t, err)
 	t.Cleanup(func() {
 		assert.Nil(t, rs.Shutdown(ctx))
 	})
 
-	router, err := rs.NewTestRouter(ctx)
+	server, err := rs.NewTestServer(ctx)
 	assert.Nil(t, err)
 
 	rr := httptest.NewRecorder()
@@ -53,7 +53,7 @@ func TestMyModule(t *testing.T) {
 		"operationName": "MyQuery"
 	}`)
 	req := httptest.NewRequest("POST", "/graphql", bytes.NewBuffer(jsonData))
-	router.Server.Handler.ServeHTTP(rr, req)
+	server.Server.Handler.ServeHTTP(rr, req)
 
 	assert.Equal(t, 200, rr.Code)
 
