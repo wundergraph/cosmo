@@ -12,7 +12,7 @@ import (
 )
 
 type TransportPreHandler func(req *http.Request, ctx RequestContext) (*http.Request, *http.Response)
-type TransportPostHandler func(resp *http.Response, ctx RequestContext) (*http.Response, error)
+type TransportPostHandler func(resp *http.Response, ctx RequestContext) *http.Response
 
 type CustomTransport struct {
 	roundTripper http.RoundTripper
@@ -43,23 +43,23 @@ func (ct *CustomTransport) RoundTrip(req *http.Request) (*http.Response, error) 
 
 	resp, err := ct.roundTripper.RoundTrip(req)
 
-	// Short circuit if there is an error
+	// Set the error on the request context so that it can be checked by the post handlers
 	if err != nil {
 		reqContext.sendError = err
 	}
 
 	if ct.postHandlers != nil {
 		for _, postHandler := range ct.postHandlers {
-			handlerResp, err := postHandler(resp, reqContext)
-			// Abort with the first handler that returns an error
-			if err != nil {
-				return nil, err
-			}
+			newResp := postHandler(resp, reqContext)
 			// Abort with the first handler that returns a non-nil response
-			if handlerResp != nil {
-				return handlerResp, err
+			if newResp != nil {
+				return newResp, nil
 			}
 		}
+	}
+
+	if err != nil {
+		return nil, err
 	}
 
 	return resp, err
