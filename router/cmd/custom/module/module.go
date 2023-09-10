@@ -48,15 +48,14 @@ func (m MyModule) Cleanup() error {
 	return nil
 }
 
-func (m MyModule) OnOriginResponse(response *http.Response, ctx core.RequestContext) (*http.Response, error) {
+func (m MyModule) OnOriginResponse(response *http.Response, ctx core.RequestContext) *http.Response {
 	// Return a new response or nil if you want to pass it to the next handler
 	// If you want to modify the response, return a new response
-	// If you return an error, the request will be aborted with a GraphQL error response and status code 500
 
 	// Set a header on the final client response
 	ctx.ResponseWriter().Header().Set("myHeader", ctx.GetString("myValue"))
 
-	return nil, nil
+	return nil
 }
 
 func (m MyModule) OnOriginRequest(request *http.Request, ctx core.RequestContext) (*http.Request, *http.Response) {
