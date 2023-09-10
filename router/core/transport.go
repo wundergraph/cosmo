@@ -92,7 +92,9 @@ func (t TransportFactory) RoundTripper(transport *http.Transport, enableStreamin
 				span := otrace.SpanFromContext(r.Context())
 				operation := getOperationContext(r.Context())
 				if operation != nil {
-					span.SetAttributes(otel.WgOperationName.String(operation.name))
+					if operation.name != "" {
+						span.SetAttributes(otel.WgOperationName.String(operation.name))
+					}
 					span.SetAttributes(otel.WgOperationType.String(operation.opType))
 				}
 			}),

@@ -494,8 +494,8 @@ func (a *App) newRouter(ctx context.Context, routerConfig *nodev1.RouterConfig) 
 				otel.WgRouterGraphName.String(a.federatedGraphName),
 				otel.WgRouterConfigVersion.String(routerConfig.GetVersion()),
 			),
-			metric.WithRequestAttributes(func(h *http.Request) (attributes []attribute.KeyValue) {
-				opCtx := getOperationContext(ctx)
+			metric.WithRequestAttributes(func(r *http.Request) (attributes []attribute.KeyValue) {
+				opCtx := getOperationContext(r.Context())
 
 				if opCtx != nil {
 					// Metric values must not be empty

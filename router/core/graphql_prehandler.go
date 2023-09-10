@@ -81,6 +81,21 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			}
 		}
 
+		// Extract the operation type from the first operation that matches the operationName
+		for _, op := range shared.Doc.OperationDefinitions {
+			if shared.Doc.Input.ByteSlice(op.Name).String() == requestOperationName {
+				switch op.OperationType {
+				case ast.OperationTypeQuery:
+					requestOperationType = "query"
+				case ast.OperationTypeMutation:
+					requestOperationType = "mutation"
+				case ast.OperationTypeSubscription:
+					requestOperationType = "subscription"
+				}
+				break
+			}
+		}
+
 		// Add the operation to the trace span
 		span := trace.SpanFromContext(r.Context())
 		// Set the span name to the operation name after we figured it out
@@ -96,21 +111,6 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			w.WriteHeader(http.StatusBadRequest)
 			w.Write([]byte("operation name is required when multiple operations are defined"))
 			return
-		}
-
-		// Extract the operation type from the first operation that matches the operationName
-		for _, op := range shared.Doc.OperationDefinitions {
-			if shared.Doc.Input.ByteSlice(op.Name).String() == requestOperationName {
-				switch op.OperationType {
-				case ast.OperationTypeQuery:
-					requestOperationType = "query"
-				case ast.OperationTypeMutation:
-					requestOperationType = "mutation"
-				case ast.OperationTypeSubscription:
-					requestOperationType = "subscription"
-				}
-				break
-			}
 		}
 
 		if shared.Report.HasErrors() {

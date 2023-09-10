@@ -5,11 +5,3 @@ modules:
     value: 1
 
 # See pkg/config/config.go for the full list of configuration options.
-
-headers:
-  all: # Header rules for all origin requests.
-    request:
-      - op: "propagate"
-        named: X-Test-Header
-      - op: "propagate"
-        matching: (?i)^x-deprecated-.*
