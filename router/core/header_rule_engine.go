@@ -7,17 +7,16 @@ import (
 )
 
 var (
-	_             EnginePreOriginHandler = (*HeaderRuleEngine)(nil)
-	hophopHeaders                        = []string{
+	_          EnginePreOriginHandler = (*HeaderRuleEngine)(nil)
+	hopHeaders                        = []string{
 		"Connection",
+		"Proxy-Connection", // non-standard but still sent by libcurl and rejected by e.g. google
 		"Keep-Alive",
 		"Proxy-Authenticate",
 		"Proxy-Authorization",
-		"Te",
-		"Trailer",
+		"Te",      // canonicalized version of "TE"
+		"Trailer", // not Trailers per URL above; https://www.rfc-editor.org/errata_search.php?eid=4522
 		"Transfer-Encoding",
-		"Content-Length",
-		"Accept-Encoding",
 		"Upgrade",
 	}
 )
@@ -66,8 +65,8 @@ func (h HeaderRuleEngine) OnOriginRequest(request *http.Request, ctx RequestCont
 			if regex, ok := h.regex[rule.Matching]; ok {
 
 				for name, _ := range ctx.Request().Header {
-					// Skip hop-by-hop headers
-					if contains(hophopHeaders, name) {
+					// Skip hop-by-hop headers and connection headers
+					if contains(hopHeaders, name) {
 						continue
 					}
 					// Headers are case-insensitive, but Go canonicalize them

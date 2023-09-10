@@ -109,7 +109,7 @@ func TestNamedPropagateDefaultValue(t *testing.T) {
 	assert.Equal(t, "default", updatedClientReq.Header.Get("X-Test-1"))
 }
 
-func TestUnProxiedHopHopHeadersRegex(t *testing.T) {
+func TestSkipHopHeadersRegex(t *testing.T) {
 
 	ht := NewHeaderTransformer(config.HeaderRules{
 		All: config.GlobalHeaderRule{
@@ -127,7 +127,7 @@ func TestUnProxiedHopHopHeadersRegex(t *testing.T) {
 	clientReq, err := http.NewRequest("POST", "http://localhost", nil)
 	clientReq.Header.Set("X-Test-1", "test1")
 
-	for i, header := range hophopHeaders {
+	for i, header := range hopHeaders {
 		clientReq.Header.Set(header, fmt.Sprintf("test-%d", i))
 	}
 
@@ -141,7 +141,7 @@ func TestUnProxiedHopHopHeadersRegex(t *testing.T) {
 		operation:      &operationContext{},
 	})
 
-	for _, header := range hophopHeaders {
+	for _, header := range hopHeaders {
 		assert.Empty(t, updatedClientReq.Header.Get(header), fmt.Sprintf("header %s should be empty", header))
 	}
 
