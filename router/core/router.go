@@ -37,16 +37,16 @@ import (
 )
 
 type (
-	// App is the main application instance.
-	App struct {
-		Options
-		activeRouter *Router
+	// Router is the main application instance.
+	Router struct {
+		Config
+		activeRouter *Server
 		modules      []Module
 		mu           sync.Mutex
 	}
 
-	// Options defines the configurable options for the router.
-	Options struct {
+	// Config defines the configuration options for the Router.
+	Config struct {
 		transport           *http.Transport
 		logger              *zap.Logger
 		traceConfig         *trace.Config
@@ -78,21 +78,22 @@ type (
 		headerRules         config.HeaderRules
 	}
 
-	// Router is the main router instance.
-	Router struct {
-		Options
+	// Server is the main router instance.
+	Server struct {
+		Config
 		Server       *http.Server
 		routerConfig *nodev1.RouterConfig
 		healthChecks *health.Checks
 	}
 
-	// Option defines the method to customize Router.
-	Option func(svr *App)
+	// Option defines the method to customize Server.
+	Option func(svr *Router)
 )
 
-// New creates a new App instance.
-func New(opts ...Option) (*App, error) {
-	r := &App{}
+// NewRouter creates a new Router instance. Router.Start() must be called to start the server.
+// Alternatively, use Router.NewTestServer() to create a new Server instance without starting it for testing purposes.
+func NewRouter(opts ...Option) (*Router, error) {
+	r := &Router{}
 	r.graphqlPath = "/graphql"
 
 	for _, opt := range opts {
@@ -186,65 +187,65 @@ func New(opts ...Option) (*App, error) {
 
 // startAndSwapServer starts a new Server. It swaps the active Server with a new Server instance when the config has changed.
 // This method is not safe for concurrent use.
-func (a *App) startAndSwapServer(ctx context.Context, cfg *nodev1.RouterConfig) error {
+func (r *Router) startAndSwapServer(ctx context.Context, cfg *nodev1.RouterConfig) error {
 	// Rebuild Server with new router config
 	// In case of an error, we return early and keep the old Server running
 
-	newRouter, err := a.newRouter(ctx, cfg)
+	newRouter, err := r.newServer(ctx, cfg)
 	if err != nil {
-		a.logger.Error("Failed to create a new router. Keeping old router running", zap.Error(err))
+		r.logger.Error("Failed to create r new router. Keeping old router running", zap.Error(err))
 		return err
 	}
 
-	prevRouter := a.activeRouter
+	prevRouter := r.activeRouter
 
 	if prevRouter != nil {
 		if err := prevRouter.Shutdown(ctx); err != nil {
-			a.logger.Error("Could not shutdown router", zap.Error(err))
+			r.logger.Error("Could not shutdown router", zap.Error(err))
 			return err
 		}
 	}
 
 	// Swap active Server
-	a.mu.Lock()
-	a.activeRouter = newRouter
-	a.mu.Unlock()
+	r.mu.Lock()
+	r.activeRouter = newRouter
+	r.mu.Unlock()
 
 	// Start new Server
 	go func() {
 
 		if prevRouter != nil {
-			a.logger.Info("Starting Server with new config",
+			r.logger.Info("Starting Server with new config",
 				zap.String("version", cfg.GetVersion()),
 			)
 		} else {
-			a.logger.Info("Server listening",
-				zap.String("listen_addr", a.listenAddr),
-				zap.Bool("playground", a.playground),
-				zap.Bool("introspection", a.introspection),
+			r.logger.Info("Server listening",
+				zap.String("listen_addr", r.listenAddr),
+				zap.Bool("playground", r.playground),
+				zap.Bool("introspection", r.introspection),
 				zap.String("version", cfg.GetVersion()),
 			)
 
-			if a.playground && a.introspection {
-				a.logger.Info("Playground available at", zap.String("url", a.baseURL+"/graphql"))
+			if r.playground && r.introspection {
+				r.logger.Info("Playground available at", zap.String("url", r.baseURL+"/graphql"))
 			}
 		}
 
-		a.activeRouter.healthChecks.SetReady(true)
+		r.activeRouter.healthChecks.SetReady(true)
 
-		// This is a blocking call
-		if err := a.activeRouter.listenAndServe(); err != nil {
-			a.activeRouter.healthChecks.SetReady(true)
-			a.logger.Error("Failed to start new server", zap.Error(err))
+		// This is r blocking call
+		if err := r.activeRouter.listenAndServe(); err != nil {
+			r.activeRouter.healthChecks.SetReady(true)
+			r.logger.Error("Failed to start new server", zap.Error(err))
 		}
 
-		a.logger.Info("Server stopped", zap.String("version", newRouter.routerConfig.GetVersion()))
+		r.logger.Info("Server stopped", zap.String("version", newRouter.routerConfig.GetVersion()))
 	}()
 
 	return nil
 }
 
-func (a *App) initModules(ctx context.Context) error {
+func (r *Router) initModules(ctx context.Context) error {
 	for _, moduleInfo := range modules {
 		now := time.Now()
 
@@ -253,16 +254,16 @@ func (a *App) initModules(ctx context.Context) error {
 		mc := &ModuleContext{
 			Context: ctx,
 			Module:  moduleInstance,
-			Logger:  a.logger.With(zap.String("module", string(moduleInfo.ID))),
+			Logger:  r.logger.With(zap.String("module", string(moduleInfo.ID))),
 		}
 
-		moduleConfig, ok := a.modulesConfig[string(moduleInfo.ID)]
+		moduleConfig, ok := r.modulesConfig[string(moduleInfo.ID)]
 		if ok {
 			if err := mapstructure.Decode(moduleConfig, &moduleInstance); err != nil {
 				return fmt.Errorf("failed to decode module config from module %s: %w", moduleInfo.ID, err)
 			}
 		} else {
-			a.logger.Debug("No config found for module", zap.String("id", string(moduleInfo.ID)))
+			r.logger.Debug("No config found for module", zap.String("id", string(moduleInfo.ID)))
 		}
 
 		if fn, ok := moduleInstance.(Provisioner); ok {
@@ -272,7 +273,7 @@ func (a *App) initModules(ctx context.Context) error {
 		}
 
 		if fn, ok := moduleInstance.(RouterMiddlewareHandler); ok {
-			a.routerMiddlewares = append(a.routerMiddlewares, func(handler http.Handler) http.Handler {
+			r.routerMiddlewares = append(r.routerMiddlewares, func(handler http.Handler) http.Handler {
 				return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 					reqContext := getRequestContext(request.Context())
 					reqContext.request = request
@@ -282,16 +283,16 @@ func (a *App) initModules(ctx context.Context) error {
 		}
 
 		if handler, ok := moduleInstance.(EnginePreOriginHandler); ok {
-			a.preOriginHandlers = append(a.preOriginHandlers, handler.OnOriginRequest)
+			r.preOriginHandlers = append(r.preOriginHandlers, handler.OnOriginRequest)
 		}
 
 		if handler, ok := moduleInstance.(EnginePostOriginHandler); ok {
-			a.postOriginHandlers = append(a.postOriginHandlers, handler.OnOriginResponse)
+			r.postOriginHandlers = append(r.postOriginHandlers, handler.OnOriginResponse)
 		}
 
-		a.modules = append(a.modules, moduleInstance)
+		r.modules = append(r.modules, moduleInstance)
 
-		a.logger.Info("Module registered",
+		r.logger.Info("Module registered",
 			zap.String("id", string(moduleInfo.ID)),
 			zap.String("duration", time.Since(now).String()),
 		)
@@ -300,53 +301,53 @@ func (a *App) initModules(ctx context.Context) error {
 	return nil
 }
 
-// NewTestRouter creates a new Router instance without starting the Router. The method should be only used for testing purposes.
-// It is a lightweight version of Start() but does not start the server or require a config fetcher. Use core.WithStaticRouterConfig to pass the initial config.
-func (a *App) NewTestRouter(ctx context.Context) (*Router, error) {
+// NewTestServer prepares a new Server instance but does not start it. The method should be only used for testing purposes.
+// Use core.WithStaticRouterConfig to pass the initial config otherwise the engine will error.
+func (r *Router) NewTestServer(ctx context.Context) (*Server, error) {
 
-	if err := a.bootstrap(ctx); err != nil {
+	if err := r.bootstrap(ctx); err != nil {
 		return nil, fmt.Errorf("failed to bootstrap application: %w", err)
 	}
 
-	newRouter, err := a.newRouter(ctx, a.initialRouterConfig)
+	newRouter, err := r.newServer(ctx, r.initialRouterConfig)
 	if err != nil {
-		a.logger.Error("Failed to create a new router", zap.Error(err))
+		r.logger.Error("Failed to create r new router", zap.Error(err))
 		return nil, err
 	}
 
 	return newRouter, nil
 }
 
-func (a *App) bootstrap(ctx context.Context) error {
+func (r *Router) bootstrap(ctx context.Context) error {
 
-	if a.traceConfig.Enabled {
-		tp, err := trace.StartAgent(a.logger, a.traceConfig)
+	if r.traceConfig.Enabled {
+		tp, err := trace.StartAgent(r.logger, r.traceConfig)
 		if err != nil {
 			return fmt.Errorf("failed to start trace agent: %w", err)
 		}
-		a.tracerProvider = tp
+		r.tracerProvider = tp
 	}
 
 	// Prometheus metrics rely on OTLP metrics
-	if a.metricConfig.Enabled || a.metricConfig.Prometheus.Enabled {
-		mp, err := metric.StartAgent(a.logger, a.metricConfig)
+	if r.metricConfig.Enabled || r.metricConfig.Prometheus.Enabled {
+		mp, err := metric.StartAgent(r.logger, r.metricConfig)
 		if err != nil {
 			return fmt.Errorf("failed to start trace agent: %w", err)
 		}
-		a.meterProvider = mp
+		r.meterProvider = mp
 	}
 
-	if a.metricConfig.Prometheus.Enabled {
-		promSvr := createPrometheus(a.logger, a.metricConfig.Prometheus.ListenAddr, a.metricConfig.Prometheus.Path)
+	if r.metricConfig.Prometheus.Enabled {
+		promSvr := createPrometheus(r.logger, r.metricConfig.Prometheus.ListenAddr, r.metricConfig.Prometheus.Path)
 		go func() {
 			if err := promSvr.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-				a.logger.Error("Failed to start Prometheus server", zap.Error(err))
+				r.logger.Error("Failed to start Prometheus server", zap.Error(err))
 			}
 		}()
 	}
 
 	// Modules are only initialized once and not on every config change
-	if err := a.initModules(ctx); err != nil {
+	if err := r.initModules(ctx); err != nil {
 		return fmt.Errorf("failed to init user modules: %w", err)
 	}
 
@@ -354,14 +355,14 @@ func (a *App) bootstrap(ctx context.Context) error {
 }
 
 // Start starts the Server. It blocks until the context is cancelled or when the initial config could not be fetched.
-func (a *App) Start(ctx context.Context) error {
-	if a.shutdown {
-		return fmt.Errorf("server is closed. Create a new instance with New()")
+func (r *Router) Start(ctx context.Context) error {
+	if r.shutdown {
+		return fmt.Errorf("router is closed. Create r new instance with router.NewRouter()")
 	}
 
 	eg, ctx := errgroup.WithContext(ctx)
 
-	if err := a.bootstrap(ctx); err != nil {
+	if err := r.bootstrap(ctx); err != nil {
 		return fmt.Errorf("failed to bootstrap application: %w", err)
 	}
 
@@ -373,12 +374,12 @@ func (a *App) Start(ctx context.Context) error {
 			case <-ctx.Done(): // context cancelled
 				return nil
 			case cfg := <-initCh: // initial config
-				if err := a.startAndSwapServer(ctx, cfg); err != nil {
+				if err := r.startAndSwapServer(ctx, cfg); err != nil {
 					return fmt.Errorf("failed to start server with initial config: %w", err)
 				}
-			case cfg := <-a.configFetcher.Subscribe(ctx): // new config
-				if err := a.startAndSwapServer(ctx, cfg); err != nil {
-					a.logger.Error("Failed to start server with new config", zap.Error(err))
+			case cfg := <-r.configFetcher.Subscribe(ctx): // new config
+				if err := r.startAndSwapServer(ctx, cfg); err != nil {
+					r.logger.Error("Failed to start server with new config", zap.Error(err))
 					continue
 				}
 			}
@@ -386,11 +387,11 @@ func (a *App) Start(ctx context.Context) error {
 	})
 
 	// Get initial router config from static config file
-	if a.initialRouterConfig != nil {
-		initCh <- a.initialRouterConfig
+	if r.initialRouterConfig != nil {
+		initCh <- r.initialRouterConfig
 	} else {
 		// Load initial router config from controlplane
-		initialCfg, err := a.configFetcher.GetRouterConfig(ctx)
+		initialCfg, err := r.configFetcher.GetRouterConfig(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to get initial router config: %w", err)
 		}
@@ -401,23 +402,23 @@ func (a *App) Start(ctx context.Context) error {
 	return eg.Wait()
 }
 
-// newRouter creates a new Server instance.
-// All stateful data is copied from the app over to the new router instance.
-func (a *App) newRouter(ctx context.Context, routerConfig *nodev1.RouterConfig) (*Router, error) {
-	ro := &Router{
+// newServer creates a new Server instance.
+// All stateful data is copied from the Router over to the new server instance.
+func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfig) (*Server, error) {
+	ro := &Server{
 		routerConfig: routerConfig,
-		Options:      a.Options,
+		Config:       r.Config,
 	}
 
-	recoveryHandler := recovery.New(recovery.WithLogger(a.logger), recovery.WithPrintStack())
+	recoveryHandler := recovery.New(recovery.WithLogger(r.logger), recovery.WithPrintStack())
 	requestLogger := requestlogger.New(
-		a.logger,
+		r.logger,
 		requestlogger.WithDefaultOptions(),
-		requestlogger.WithContext(func(r *http.Request) []zapcore.Field {
+		requestlogger.WithContext(func(request *http.Request) []zapcore.Field {
 			return []zapcore.Field{
 				zap.String("configVersion", routerConfig.GetVersion()),
-				zap.String("requestID", middleware.GetReqID(r.Context())),
-				zap.String("federatedGraphName", a.federatedGraphName),
+				zap.String("requestID", middleware.GetReqID(request.Context())),
+				zap.String("federatedGraphName", r.federatedGraphName),
 			}
 		}),
 	)
@@ -427,14 +428,14 @@ func (a *App) newRouter(ctx context.Context, routerConfig *nodev1.RouterConfig) 
 	httpRouter.Use(middleware.RequestID)
 	httpRouter.Use(middleware.RealIP)
 	httpRouter.Use(requestLogger)
-	httpRouter.Use(cors.New(*a.corsOptions))
+	httpRouter.Use(cors.New(*r.corsOptions))
 
 	ro.healthChecks = health.New(&health.Options{
-		Logger: a.logger,
+		Logger: r.logger,
 	})
-	httpRouter.Get(a.healthCheckPath, ro.healthChecks.Liveness())
-	httpRouter.Get(a.livenessCheckPath, ro.healthChecks.Liveness())
-	httpRouter.Get(a.readinessCheckPath, ro.healthChecks.Readiness())
+	httpRouter.Get(r.healthCheckPath, ro.healthChecks.Liveness())
+	httpRouter.Get(r.livenessCheckPath, ro.healthChecks.Liveness())
+	httpRouter.Get(r.readinessCheckPath, ro.healthChecks.Readiness())
 
 	// when an execution plan was generated, which can be quite expensive, we want to cache it
 	// this means that we can hash the input and cache the generated plan
@@ -453,11 +454,11 @@ func (a *App) newRouter(ctx context.Context, routerConfig *nodev1.RouterConfig) 
 
 	pb := &Planner{
 		introspection: true,
-		baseURL:       a.baseURL,
-		transport:     a.transport,
-		logger:        a.logger,
-		preHandlers:   a.preOriginHandlers,
-		postHandlers:  a.postOriginHandlers,
+		baseURL:       r.baseURL,
+		transport:     r.transport,
+		logger:        r.logger,
+		preHandlers:   r.preOriginHandlers,
+		postHandlers:  r.postOriginHandlers,
 	}
 
 	plan, err := pb.Build(ctx, routerConfig)
@@ -471,11 +472,11 @@ func (a *App) newRouter(ctx context.Context, routerConfig *nodev1.RouterConfig) 
 		Resolver:   plan.Resolver,
 		Pool:       plan.Pool,
 		Cache:      planCache,
-		Log:        a.logger,
+		Log:        r.logger,
 	})
 
 	graphqlPreHandler := NewPreHandler(&PreHandlerOptions{
-		Logger:          a.logger,
+		Logger:          r.logger,
 		Pool:            plan.Pool,
 		RenameTypeNames: plan.RenameTypeNames,
 		PlanConfig:      plan.PlanConfig,
@@ -485,13 +486,13 @@ func (a *App) newRouter(ctx context.Context, routerConfig *nodev1.RouterConfig) 
 	var metricHandler *metric.Handler
 
 	// Prometheus metrics rely on OTLP metrics
-	metricsEnabled := a.metricConfig.Enabled || a.metricConfig.Prometheus.Enabled
+	metricsEnabled := r.metricConfig.Enabled || r.metricConfig.Prometheus.Enabled
 
 	if metricsEnabled {
 		h, err := metric.NewMetricHandler(
-			a.meterProvider,
+			r.meterProvider,
 			metric.WithAttributes(
-				otel.WgRouterGraphName.String(a.federatedGraphName),
+				otel.WgRouterGraphName.String(r.federatedGraphName),
 				otel.WgRouterConfigVersion.String(routerConfig.GetVersion()),
 			),
 			metric.WithRequestAttributes(func(r *http.Request) (attributes []attribute.KeyValue) {
@@ -524,7 +525,7 @@ func (a *App) newRouter(ctx context.Context, routerConfig *nodev1.RouterConfig) 
 		h := trace.NewMiddleware(otel.RouterServerAttribute,
 			otelhttp.WithSpanOptions(
 				oteltrace.WithAttributes(
-					otel.WgRouterGraphName.String(a.federatedGraphName),
+					otel.WgRouterGraphName.String(r.federatedGraphName),
 					otel.WgRouterConfigVersion.String(routerConfig.GetVersion()),
 				),
 			),
@@ -536,25 +537,25 @@ func (a *App) newRouter(ctx context.Context, routerConfig *nodev1.RouterConfig) 
 		traceHandler = h
 	}
 
-	// Serve GraphQL. Metrics are collected after the request is handled and classified as a GraphQL request.
-	httpRouter.Route(a.graphqlPath, func(r chi.Router) {
+	// Serve GraphQL. Metrics are collected after the request is handled and classified as r GraphQL request.
+	httpRouter.Route(r.graphqlPath, func(subChiRouter chi.Router) {
 		if traceHandler != nil {
-			r.Use(traceHandler.Handler)
+			subChiRouter.Use(traceHandler.Handler)
 		}
 
-		r.Use(graphqlPreHandler.Handler)
+		subChiRouter.Use(graphqlPreHandler.Handler)
 
 		if metricHandler != nil {
-			r.Use(metricHandler.Handler)
+			subChiRouter.Use(metricHandler.Handler)
 		}
 
-		// Create a custom request context that provides access to the request and response.
+		// Create r custom request context that provides access to the request and response.
 		// It is used by custom modules and handlers. It must be added before custom user middlewares
-		r.Use(func(handler http.Handler) http.Handler {
+		subChiRouter.Use(func(handler http.Handler) http.Handler {
 			return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 				operationContext := getOperationContext(request.Context())
 				requestContext := &requestContext{
-					logger:         a.logger.With(logging.WithRequestID(middleware.GetReqID(request.Context()))),
+					logger:         r.logger.With(logging.WithRequestID(middleware.GetReqID(request.Context()))),
 					mu:             sync.RWMutex{},
 					keys:           map[string]any{},
 					responseWriter: writer,
@@ -565,44 +566,44 @@ func (a *App) newRouter(ctx context.Context, routerConfig *nodev1.RouterConfig) 
 			})
 		})
 
-		r.Use(a.routerMiddlewares...)
-		r.Post("/", graphqlHandler.ServeHTTP)
+		subChiRouter.Use(r.routerMiddlewares...)
+		subChiRouter.Post("/", graphqlHandler.ServeHTTP)
 	})
 
-	a.logger.Debug("GraphQLHandler registered",
+	r.logger.Debug("GraphQLHandler registered",
 		zap.String("method", http.MethodPost),
-		zap.String("path", a.graphqlPath),
+		zap.String("path", r.graphqlPath),
 	)
 
-	if a.playground {
+	if r.playground {
 		graphqlPlaygroundHandler := graphiql2.NewPlayground(&graphiql2.PlaygroundOptions{
-			Log:  a.logger,
+			Log:  r.logger,
 			Html: graphiql2.GetGraphiqlPlaygroundHTML(),
 			// Empty url to use the same url as the playground
 			GraphqlURL: "",
 		})
-		httpRouter.Get(a.graphqlPath, graphqlPlaygroundHandler)
-		a.logger.Debug("PlaygroundHandler registered",
+		httpRouter.Get(r.graphqlPath, graphqlPlaygroundHandler)
+		r.logger.Debug("PlaygroundHandler registered",
 			zap.String("method", http.MethodGet),
-			zap.String("path", a.graphqlPath),
+			zap.String("path", r.graphqlPath),
 		)
 	}
 
 	ro.Server = &http.Server{
-		Addr: a.listenAddr,
+		Addr: r.listenAddr,
 		// https://ieftimov.com/posts/make-resilient-golang-net-http-servers-using-timeouts-deadlines-context-cancellation/
 		ReadTimeout:       1 * time.Minute,
 		WriteTimeout:      2 * time.Minute,
 		ReadHeaderTimeout: 20 * time.Second,
 		Handler:           httpRouter,
-		ErrorLog:          zap.NewStdLog(a.logger),
+		ErrorLog:          zap.NewStdLog(r.logger),
 	}
 
 	return ro, nil
 }
 
 // listenAndServe starts the Server and blocks until the Server is shutdown.
-func (r *Router) listenAndServe() error {
+func (r *Server) listenAndServe() error {
 
 	if err := r.Server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		return err
@@ -612,30 +613,31 @@ func (r *Router) listenAndServe() error {
 }
 
 // Shutdown gracefully shuts down the router.
-func (a *App) Shutdown(ctx context.Context) (err error) {
-	a.shutdown = true
+func (r *Router) Shutdown(ctx context.Context) (err error) {
+	r.shutdown = true
 
 	var wg sync.WaitGroup
 
-	if a.prometheusServer != nil {
+	if r.prometheusServer != nil {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			if err := a.prometheusServer.Close(); err != nil {
+			if err := r.prometheusServer.Close(); err != nil {
 				err = errors.Join(err, fmt.Errorf("failed to shutdown prometheus server: %w", err))
 			}
 		}()
 	}
 
-	if a.tracerProvider != nil {
+	if r.tracerProvider != nil {
 		wg.Add(1)
-		defer wg.Done()
 
 		go func() {
-			if err := a.tracerProvider.ForceFlush(ctx); err != nil {
+			defer wg.Done()
+
+			if err := r.tracerProvider.ForceFlush(ctx); err != nil {
 				err = errors.Join(err, fmt.Errorf("failed to force flush tracer: %w", err))
 			}
-			if err := a.tracerProvider.Shutdown(ctx); err != nil {
+			if err := r.tracerProvider.Shutdown(ctx); err != nil {
 				err = errors.Join(err, fmt.Errorf("failed to shutdown tracer: %w", err))
 			}
 		}()
@@ -645,7 +647,7 @@ func (a *App) Shutdown(ctx context.Context) (err error) {
 	go func() {
 		defer wg.Done()
 
-		for _, module := range a.modules {
+		for _, module := range r.modules {
 			if cleaner, ok := module.(Cleaner); ok {
 				if err := cleaner.Cleanup(); err != nil {
 					err = errors.Join(err, fmt.Errorf("failed to clean module %s: %w", module.Module().ID, err))
@@ -654,8 +656,10 @@ func (a *App) Shutdown(ctx context.Context) (err error) {
 		}
 	}()
 
-	if a.activeRouter != nil {
-		if err := a.activeRouter.Shutdown(ctx); err != nil {
+	wg.Wait()
+
+	if r.activeRouter != nil {
+		if err := r.activeRouter.Shutdown(ctx); err != nil {
 			err = errors.Join(err, fmt.Errorf("failed to shutdown primary server: %w", err))
 		}
 	}
@@ -663,8 +667,8 @@ func (a *App) Shutdown(ctx context.Context) (err error) {
 	return err
 }
 
-// Shutdown gracefully shutdown the Router.
-func (r *Router) Shutdown(ctx context.Context) (err error) {
+// Shutdown gracefully shutdown the Server.
+func (r *Server) Shutdown(ctx context.Context) (err error) {
 	r.logger.Info("Gracefully shutting down the router ...",
 		zap.String("version", r.routerConfig.GetVersion()),
 		zap.String("gracePeriod", r.gracePeriod.String()),
@@ -707,68 +711,68 @@ func createPrometheus(logger *zap.Logger, listenAddr, path string) *http.Server 
 }
 
 func WithListenerAddr(addr string) Option {
-	return func(s *App) {
-		s.listenAddr = addr
+	return func(r *Router) {
+		r.listenAddr = addr
 	}
 }
 
 func WithLogger(logger *zap.Logger) Option {
-	return func(s *App) {
-		s.logger = logger
+	return func(r *Router) {
+		r.logger = logger
 	}
 }
 
 func WithPlayground(enable bool) Option {
-	return func(s *App) {
-		s.playground = enable
+	return func(r *Router) {
+		r.playground = enable
 	}
 }
 
 func WithIntrospection(enable bool) Option {
-	return func(s *App) {
-		s.introspection = enable
+	return func(r *Router) {
+		r.introspection = enable
 	}
 }
 
 func WithTracing(cfg *trace.Config) Option {
-	return func(s *App) {
-		s.traceConfig = cfg
+	return func(r *Router) {
+		r.traceConfig = cfg
 	}
 }
 
 func WithCors(corsOpts *cors.Config) Option {
-	return func(s *App) {
-		s.corsOptions = corsOpts
+	return func(r *Router) {
+		r.corsOptions = corsOpts
 	}
 }
 
 func WithGraphQLPath(path string) Option {
-	return func(s *App) {
-		s.graphqlPath = path
+	return func(r *Router) {
+		r.graphqlPath = path
 	}
 }
 
 func WithConfigFetcher(cf controlplane.ConfigFetcher) Option {
-	return func(s *App) {
-		s.configFetcher = cf
+	return func(r *Router) {
+		r.configFetcher = cf
 	}
 }
 
 func WithGracePeriod(timeout time.Duration) Option {
-	return func(s *App) {
-		s.gracePeriod = timeout
+	return func(r *Router) {
+		r.gracePeriod = timeout
 	}
 }
 
 func WithMetrics(cfg *metric.Config) Option {
-	return func(s *App) {
-		s.metricConfig = cfg
+	return func(r *Router) {
+		r.metricConfig = cfg
 	}
 }
 
 func WithFederatedGraphName(name string) Option {
-	return func(s *App) {
-		s.federatedGraphName = name
+	return func(r *Router) {
+		r.federatedGraphName = name
 	}
 }
 
@@ -787,43 +791,43 @@ func CorsDefaultOptions() *cors.Config {
 }
 
 func WithGraphApiToken(token string) Option {
-	return func(s *App) {
-		s.graphApiToken = token
+	return func(r *Router) {
+		r.graphApiToken = token
 	}
 }
 
 func WithModulesConfig(config map[string]interface{}) Option {
-	return func(s *App) {
-		s.modulesConfig = config
+	return func(r *Router) {
+		r.modulesConfig = config
 	}
 }
 
 func WithStaticRouterConfig(cfg *nodev1.RouterConfig) Option {
-	return func(s *App) {
-		s.initialRouterConfig = cfg
+	return func(r *Router) {
+		r.initialRouterConfig = cfg
 	}
 }
 
 func WithHealthCheckPath(path string) Option {
-	return func(s *App) {
-		s.healthCheckPath = path
+	return func(r *Router) {
+		r.healthCheckPath = path
 	}
 }
 
 func WithReadinessCheckPath(path string) Option {
-	return func(s *App) {
-		s.readinessCheckPath = path
+	return func(r *Router) {
+		r.readinessCheckPath = path
 	}
 }
 
 func WithLivenessCheckPath(path string) Option {
-	return func(s *App) {
-		s.livenessCheckPath = path
+	return func(r *Router) {
+		r.livenessCheckPath = path
 	}
 }
 
 func WithHeaderRules(headers config.HeaderRules) Option {
-	return func(s *App) {
-		s.headerRules = headers
+	return func(r *Router) {
+		r.headerRules = headers
 	}
 }

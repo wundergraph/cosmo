@@ -32,7 +32,7 @@ func TestMyModule(t *testing.T) {
 	routerConfig, err := core.SerializeConfigFromFile("./router-config.json")
 	assert.Nil(t, err)
 
-	rs, err := core.New(
+	rs, err := core.NewRouter(
 		core.WithFederatedGraphName(cfg.Graph.Name),
 		core.WithStaticRouterConfig(routerConfig),
 		core.WithModulesConfig(cfg.Modules),
@@ -43,7 +43,7 @@ func TestMyModule(t *testing.T) {
 		assert.Nil(t, rs.Shutdown(ctx))
 	})
 
-	router, err := rs.NewTestRouter(ctx)
+	server, err := rs.NewTestServer(ctx)
 	assert.Nil(t, err)
 
 	rr := httptest.NewRecorder()
@@ -53,7 +53,7 @@ func TestMyModule(t *testing.T) {
 		"operationName": "MyQuery"
 	}`)
 	req := httptest.NewRequest("POST", "/graphql", bytes.NewBuffer(jsonData))
-	router.Server.Handler.ServeHTTP(rr, req)
+	server.Server.Handler.ServeHTTP(rr, req)
 
 	assert.Equal(t, 200, rr.Code)
 

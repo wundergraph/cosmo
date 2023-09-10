@@ -59,7 +59,7 @@ func Main() {
 		}
 	}
 
-	rs, err := core.New(
+	router, err := core.NewRouter(
 		core.WithFederatedGraphName(cfg.Graph.Name),
 		core.WithListenerAddr(cfg.ListenAddr),
 		core.WithLogger(logger),
@@ -111,7 +111,7 @@ func Main() {
 	}
 
 	go func() {
-		if err := rs.Start(ctx); err != nil {
+		if err := router.Start(ctx); err != nil {
 			logger.Error("Could not start server", zap.Error(err))
 			stop()
 		}
@@ -126,10 +126,10 @@ func Main() {
 	ctx, cancel := context.WithTimeout(context.Background(), shutdownDelayDuration)
 	defer cancel()
 
-	if err := rs.Shutdown(ctx); err != nil {
+	if err := router.Shutdown(ctx); err != nil {
 		logger.Error("Could not shutdown server", zap.Error(err))
 	}
 
-	logger.Debug("Router exiting")
+	logger.Debug("Server exiting")
 	os.Exit(0)
 }
