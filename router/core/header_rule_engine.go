@@ -7,7 +7,19 @@ import (
 )
 
 var (
-	_ EnginePreOriginHandler = (*HeaderRuleEngine)(nil)
+	_             EnginePreOriginHandler = (*HeaderRuleEngine)(nil)
+	hophopHeaders                        = []string{
+		"Connection",
+		"Keep-Alive",
+		"Proxy-Authenticate",
+		"Proxy-Authorization",
+		"Te",
+		"Trailer",
+		"Transfer-Encoding",
+		"Content-Length",
+		"Accept-Encoding",
+		"Upgrade",
+	}
 )
 
 // HeaderRuleEngine is a pre-origin handler that can be used to propagate and
@@ -44,13 +56,20 @@ func (h HeaderRuleEngine) OnOriginRequest(request *http.Request, ctx RequestCont
 				value := ctx.Request().Header.Get(rule.Named)
 				if value != "" {
 					request.Header.Set(rule.Named, ctx.Request().Header.Get(rule.Named))
+				} else if rule.Default != "" {
+					request.Header.Set(rule.Named, rule.Default)
 				}
 				continue
 			}
 
 			// Regex match
 			if regex, ok := h.regex[rule.Matching]; ok {
+
 				for name, _ := range ctx.Request().Header {
+					// Skip hop-by-hop headers
+					if contains(hophopHeaders, name) {
+						continue
+					}
 					// Headers are case-insensitive, but Go canonicalize them
 					// Issue: https://github.com/golang/go/issues/37834
 					if regex.MatchString(name) {
@@ -63,4 +82,13 @@ func (h HeaderRuleEngine) OnOriginRequest(request *http.Request, ctx RequestCont
 	}
 
 	return request, nil
+}
+
+func contains(list []string, item string) bool {
+	for _, l := range list {
+		if l == item {
+			return true
+		}
+	}
+	return false
 }

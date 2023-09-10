@@ -85,6 +85,8 @@ type RequestHeaderRule struct {
 	Matching string `yaml:"matching" validate:"excluded_with=Named"`
 	// Named is the exact header name to match
 	Named string `yaml:"named" validate:"excluded_with=Matching"`
+	// Default is the default value to set if the header is not present
+	Default string `yaml:"default"`
 }
 
 type Config struct {
