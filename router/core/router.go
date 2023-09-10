@@ -276,6 +276,7 @@ func (r *Router) initModules(ctx context.Context) error {
 			r.routerMiddlewares = append(r.routerMiddlewares, func(handler http.Handler) http.Handler {
 				return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 					reqContext := getRequestContext(request.Context())
+					// Ensure we work with latest request in the chain to work with the right context
 					reqContext.request = request
 					fn.Middleware(reqContext, handler)
 				})
