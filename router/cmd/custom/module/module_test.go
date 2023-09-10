@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"context"
 	"github.com/stretchr/testify/assert"
-	"github.com/wundergraph/cosmo/router/pkg/app"
-	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/core"
+	"github.com/wundergraph/cosmo/router/internal/config"
 	"net/http/httptest"
 	"os"
 	"testing"
@@ -29,14 +29,14 @@ func TestMyModule(t *testing.T) {
 		},
 	}
 
-	routerConfig, err := app.SerializeConfigFromFile("./router-config.json")
+	routerConfig, err := core.SerializeConfigFromFile("./router-config.json")
 	assert.Nil(t, err)
 
-	rs, err := app.New(
-		app.WithFederatedGraphName(cfg.Graph.Name),
-		app.WithStaticRouterConfig(routerConfig),
-		app.WithModulesConfig(cfg.Modules),
-		app.WithListenerAddr("http://localhost:3002"),
+	rs, err := core.New(
+		core.WithFederatedGraphName(cfg.Graph.Name),
+		core.WithStaticRouterConfig(routerConfig),
+		core.WithModulesConfig(cfg.Modules),
+		core.WithListenerAddr("http://localhost:3002"),
 	)
 	assert.Nil(t, err)
 	t.Cleanup(func() {
