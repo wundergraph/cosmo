@@ -9,6 +9,7 @@ const info = JSON.parse(
 export const config = {
   baseURL: process.env.COSMO_API_URL || 'https://cosmo-cp.wundergraph.com',
   apiKey: process.env.COSMO_API_KEY,
+  kcApiURL: process.env.KC_API_URL || 'http://localhost:8080',
   version: info.version,
 };
 
