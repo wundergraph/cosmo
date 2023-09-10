@@ -1,7 +1,3 @@
-version: "1"
-
-modules:
-  myModule:
-    value: 1
+# config.yaml
 
 # See pkg/config/config.go for the full list of configuration options.

@@ -72,7 +72,7 @@ func (m MyModule) OnOriginRequest(request *http.Request, ctx core.RequestContext
 	return request, nil
 }
 
-func (m MyModule) Middleware(w http.ResponseWriter, ctx core.RequestContext, next http.Handler) {
+func (m MyModule) Middleware(ctx core.RequestContext, next http.Handler) {
 
 	operation := ctx.Operation()
 
@@ -85,7 +85,7 @@ func (m MyModule) Middleware(w http.ResponseWriter, ctx core.RequestContext, nex
 	)
 
 	// Call the next handler in the chain or return early by calling w.Write()
-	next.ServeHTTP(w, ctx.Request())
+	next.ServeHTTP(ctx.ResponseWriter(), ctx.Request())
 }
 
 func (m MyModule) Module() core.ModuleInfo {

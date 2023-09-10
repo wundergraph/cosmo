@@ -276,7 +276,7 @@ func (a *App) initModules(ctx context.Context) error {
 				return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 					reqContext := getRequestContext(request.Context())
 					reqContext.request = request
-					fn.Middleware(writer, reqContext, handler)
+					fn.Middleware(reqContext, handler)
 				})
 			})
 		}
