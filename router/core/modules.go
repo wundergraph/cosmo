@@ -70,12 +70,11 @@ type EnginePreOriginHandler interface {
 // EnginePostOriginHandler allows you to add a handler to the router engine origin requests.
 // The handler is called after the response was received from the origin. All origin handlers are called sequentially.
 // It allows you to return a custom response to the client. If your return nil as response, the next handler is called.
-// If you return an error, the request will be aborted with a GraphQL error response and status code 500.
 // The same semantics of http.RoundTripper apply here. In order to modify the response, you have to return a new response.
 type EnginePostOriginHandler interface {
 	// OnOriginResponse is called after the request is sent to the origin.
 	// Might be called multiple times if there are multiple origins
-	OnOriginResponse(resp *http.Response, ctx RequestContext) (*http.Response, error)
+	OnOriginResponse(resp *http.Response, ctx RequestContext) *http.Response
 }
 
 // Provisioner is called before the Server starts
