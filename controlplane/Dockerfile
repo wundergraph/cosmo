@@ -2,6 +2,9 @@ FROM node:18 as builder
 
 WORKDIR /app
 
+RUN curl -fsSL -o /usr/local/bin/dbmate https://github.com/amacneil/dbmate/releases/latest/download/dbmate-linux-amd64 && \
+    chmod +x /usr/local/bin/dbmate
+
 # Ensure we have pnpm available to us
 RUN npm install --global pnpm@8
 

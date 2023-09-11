@@ -84,6 +84,19 @@ services:
       - clickhouse:/var/lib/clickhouse
       - ./docker/clickhouse/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
 
+  dbmate:
+    image: amacneil/dbmate:latest
+    depends_on:
+      - clickhouse
+    environment:
+      - DATABASE_URL=clickhouse://${CLICKHOUSE_USER:-default}:${CLICKHOUSE_PASSWORD:-changeme}@clickhouse:9000/${CLICKHOUSE_DATABASE:-cosmo}
+    volumes:
+      - ./controlplane/clickhouse/migrations:/db/migrations
+    networks:
+      - primary
+    restart: on-failure
+    command: up
+
   postgres:
     image: postgres:${DC_POSTGRESQL_VERSION:-15.3}
     environment:
