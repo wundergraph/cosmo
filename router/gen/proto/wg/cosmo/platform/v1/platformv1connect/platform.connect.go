@@ -68,9 +68,6 @@ const (
 	PlatformServiceCheckFederatedGraphProcedure = "/wg.cosmo.platform.v1.PlatformService/CheckFederatedGraph"
 	// PlatformServiceWhoAmIProcedure is the fully-qualified name of the PlatformService's WhoAmI RPC.
 	PlatformServiceWhoAmIProcedure = "/wg.cosmo.platform.v1.PlatformService/WhoAmI"
-	// PlatformServiceIntrospectSubgraphProcedure is the fully-qualified name of the PlatformService's
-	// IntrospectSubgraph RPC.
-	PlatformServiceIntrospectSubgraphProcedure = "/wg.cosmo.platform.v1.PlatformService/IntrospectSubgraph"
 	// PlatformServiceGetFederatedGraphsProcedure is the fully-qualified name of the PlatformService's
 	// GetFederatedGraphs RPC.
 	PlatformServiceGetFederatedGraphsProcedure = "/wg.cosmo.platform.v1.PlatformService/GetFederatedGraphs"
@@ -159,8 +156,6 @@ type PlatformServiceClient interface {
 	CheckFederatedGraph(context.Context, *connect_go.Request[v1.CheckFederatedGraphRequest]) (*connect_go.Response[v1.CheckFederatedGraphResponse], error)
 	// WhoAmI returns the identity of the user currently logged in.
 	WhoAmI(context.Context, *connect_go.Request[v1.WhoAmIRequest]) (*connect_go.Response[v1.WhoAmIResponse], error)
-	// IntrospectSubgraph returns the sdl of the subgraph.
-	IntrospectSubgraph(context.Context, *connect_go.Request[v1.IntrospectSubgraphRequest]) (*connect_go.Response[v1.IntrospectSubgraphResponse], error)
 	// GetFederatedGraphs returns the list of federated graphs.
 	GetFederatedGraphs(context.Context, *connect_go.Request[v1.GetFederatedGraphsRequest]) (*connect_go.Response[v1.GetFederatedGraphsResponse], error)
 	// GetFederatedGraphByName returns the federated graph by name.
@@ -265,11 +260,6 @@ func NewPlatformServiceClient(httpClient connect_go.HTTPClient, baseURL string, 
 		whoAmI: connect_go.NewClient[v1.WhoAmIRequest, v1.WhoAmIResponse](
 			httpClient,
 			baseURL+PlatformServiceWhoAmIProcedure,
-			opts...,
-		),
-		introspectSubgraph: connect_go.NewClient[v1.IntrospectSubgraphRequest, v1.IntrospectSubgraphResponse](
-			httpClient,
-			baseURL+PlatformServiceIntrospectSubgraphProcedure,
 			opts...,
 		),
 		getFederatedGraphs: connect_go.NewClient[v1.GetFederatedGraphsRequest, v1.GetFederatedGraphsResponse](
@@ -395,7 +385,6 @@ type platformServiceClient struct {
 	updateSubgraph                *connect_go.Client[v1.UpdateSubgraphRequest, v1.UpdateSubgraphResponse]
 	checkFederatedGraph           *connect_go.Client[v1.CheckFederatedGraphRequest, v1.CheckFederatedGraphResponse]
 	whoAmI                        *connect_go.Client[v1.WhoAmIRequest, v1.WhoAmIResponse]
-	introspectSubgraph            *connect_go.Client[v1.IntrospectSubgraphRequest, v1.IntrospectSubgraphResponse]
 	getFederatedGraphs            *connect_go.Client[v1.GetFederatedGraphsRequest, v1.GetFederatedGraphsResponse]
 	getFederatedGraphByName       *connect_go.Client[v1.GetFederatedGraphByNameRequest, v1.GetFederatedGraphByNameResponse]
 	getFederatedGraphSDLByName    *connect_go.Client[v1.GetFederatedGraphSDLByNameRequest, v1.GetFederatedGraphSDLByNameResponse]
@@ -472,11 +461,6 @@ func (c *platformServiceClient) CheckFederatedGraph(ctx context.Context, req *co
 // WhoAmI calls wg.cosmo.platform.v1.PlatformService.WhoAmI.
 func (c *platformServiceClient) WhoAmI(ctx context.Context, req *connect_go.Request[v1.WhoAmIRequest]) (*connect_go.Response[v1.WhoAmIResponse], error) {
 	return c.whoAmI.CallUnary(ctx, req)
-}
-
-// IntrospectSubgraph calls wg.cosmo.platform.v1.PlatformService.IntrospectSubgraph.
-func (c *platformServiceClient) IntrospectSubgraph(ctx context.Context, req *connect_go.Request[v1.IntrospectSubgraphRequest]) (*connect_go.Response[v1.IntrospectSubgraphResponse], error) {
-	return c.introspectSubgraph.CallUnary(ctx, req)
 }
 
 // GetFederatedGraphs calls wg.cosmo.platform.v1.PlatformService.GetFederatedGraphs.
@@ -609,8 +593,6 @@ type PlatformServiceHandler interface {
 	CheckFederatedGraph(context.Context, *connect_go.Request[v1.CheckFederatedGraphRequest]) (*connect_go.Response[v1.CheckFederatedGraphResponse], error)
 	// WhoAmI returns the identity of the user currently logged in.
 	WhoAmI(context.Context, *connect_go.Request[v1.WhoAmIRequest]) (*connect_go.Response[v1.WhoAmIResponse], error)
-	// IntrospectSubgraph returns the sdl of the subgraph.
-	IntrospectSubgraph(context.Context, *connect_go.Request[v1.IntrospectSubgraphRequest]) (*connect_go.Response[v1.IntrospectSubgraphResponse], error)
 	// GetFederatedGraphs returns the list of federated graphs.
 	GetFederatedGraphs(context.Context, *connect_go.Request[v1.GetFederatedGraphsRequest]) (*connect_go.Response[v1.GetFederatedGraphsResponse], error)
 	// GetFederatedGraphByName returns the federated graph by name.
@@ -711,11 +693,6 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect_go.Ha
 	platformServiceWhoAmIHandler := connect_go.NewUnaryHandler(
 		PlatformServiceWhoAmIProcedure,
 		svc.WhoAmI,
-		opts...,
-	)
-	platformServiceIntrospectSubgraphHandler := connect_go.NewUnaryHandler(
-		PlatformServiceIntrospectSubgraphProcedure,
-		svc.IntrospectSubgraph,
 		opts...,
 	)
 	platformServiceGetFederatedGraphsHandler := connect_go.NewUnaryHandler(
@@ -849,8 +826,6 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect_go.Ha
 			platformServiceCheckFederatedGraphHandler.ServeHTTP(w, r)
 		case PlatformServiceWhoAmIProcedure:
 			platformServiceWhoAmIHandler.ServeHTTP(w, r)
-		case PlatformServiceIntrospectSubgraphProcedure:
-			platformServiceIntrospectSubgraphHandler.ServeHTTP(w, r)
 		case PlatformServiceGetFederatedGraphsProcedure:
 			platformServiceGetFederatedGraphsHandler.ServeHTTP(w, r)
 		case PlatformServiceGetFederatedGraphByNameProcedure:
@@ -944,10 +919,6 @@ func (UnimplementedPlatformServiceHandler) CheckFederatedGraph(context.Context, 
 
 func (UnimplementedPlatformServiceHandler) WhoAmI(context.Context, *connect_go.Request[v1.WhoAmIRequest]) (*connect_go.Response[v1.WhoAmIResponse], error) {
 	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.WhoAmI is not implemented"))
-}
-
-func (UnimplementedPlatformServiceHandler) IntrospectSubgraph(context.Context, *connect_go.Request[v1.IntrospectSubgraphRequest]) (*connect_go.Response[v1.IntrospectSubgraphResponse], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.IntrospectSubgraph is not implemented"))
 }
 
 func (UnimplementedPlatformServiceHandler) GetFederatedGraphs(context.Context, *connect_go.Request[v1.GetFederatedGraphsRequest]) (*connect_go.Response[v1.GetFederatedGraphsResponse], error) {
