@@ -2,9 +2,10 @@ import { Command } from 'commander';
 import pc from 'picocolors';
 import { CreateClient } from '../core/client/client.js';
 import { config } from '../core/config.js';
-import SchemaCommands from './subgraph/index.js';
 import AuthCommands from './auth/index.js';
 import FederatedGraphCommands from './federated-graph/index.js';
+import RouterCommands from './router/index.js';
+import SchemaCommands from './subgraph/index.js';
 
 if (!config.apiKey) {
   console.log(
@@ -40,6 +41,11 @@ program.addCommand(
 );
 program.addCommand(
   AuthCommands({
+    client,
+  }),
+);
+program.addCommand(
+  RouterCommands({
     client,
   }),
 );
