@@ -76,8 +76,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         })
       );
 
-      if (router.pathname === "/" || router.pathname === "/login")
-        router.replace(`/${organizationSlug}`);
+      if (router.pathname === "/" || router.pathname === "/login"){
+        const url = new URL(
+          window.location.origin + router.basePath + router.asPath
+        );
+        const params = new URLSearchParams(url.search);
+        router.replace(`/${organizationSlug}?${params}`);
+      }
     } else {
       if (router.pathname !== "/login") {
         router.replace("/login");

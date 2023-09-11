@@ -159,6 +159,7 @@ export class OrganizationRepository {
     organizationName: string;
     organizationSlug: string;
     ownerID: string;
+    isFreeTrail?: boolean;
   }): Promise<OrganizationDTO> {
     const insertedOrg = await this.db
       .insert(organizations)
@@ -167,6 +168,7 @@ export class OrganizationRepository {
         name: input.organizationName,
         slug: input.organizationSlug,
         createdBy: input.ownerID,
+        isFreeTrail: input.isFreeTrail,
       })
       .returning()
       .execute();

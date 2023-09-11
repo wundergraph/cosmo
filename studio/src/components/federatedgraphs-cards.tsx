@@ -41,6 +41,7 @@ import { useToast } from "./ui/use-toast";
 import { Logo } from "./logo";
 import { SiApollographql } from "react-icons/si";
 import { cn } from "@/lib/utils";
+import { useRouter } from "next/router";
 
 // this is required to render a blank line with LineChart
 const fallbackData = [
@@ -63,6 +64,9 @@ const MigrationDialog = ({
   setIsMigrationSuccess: Dispatch<SetStateAction<boolean>>;
   isEmptyState?: boolean;
 }) => {
+  const router = useRouter();
+  const organizationSlug = router.query.organizationSlug as string;
+  const migrate = !!router.query.migrate;
   const migrateInputSchema = z.object({
     apiKey: z
       .string()
@@ -87,7 +91,7 @@ const MigrationDialog = ({
   const { toast, update } = useToast();
 
   const { mutate, isLoading } = useMutation(migrateFromApollo.useMutation());
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(migrate || false);
 
   const onSubmit: SubmitHandler<MigrateInput> = (data) => {
     const { id } = toast({
@@ -126,6 +130,7 @@ const MigrationDialog = ({
     );
     reset();
     setOpen(false);
+    router.replace(`/${organizationSlug}/graphs`);
   };
 
   return (
