@@ -1,3 +1,5 @@
+import { federateSubgraphs, FederationResultContainer, Subgraph } from '@wundergraph/composition';
+
 export interface Header {
   key: string;
   value: string;
@@ -46,3 +48,10 @@ export const introspectSubgraph = async ({
     sdl: data._service.sdl,
   };
 };
+
+/**
+ * Composes a list of subgraphs into a single schema.
+ */
+export function composeSubgraphs(subgraphs: Subgraph[]): FederationResultContainer {
+  return federateSubgraphs(subgraphs);
+}

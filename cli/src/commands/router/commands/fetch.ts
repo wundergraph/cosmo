@@ -5,7 +5,7 @@ import { baseHeaders } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 
 export default (opts: BaseCommandOptions) => {
-  const command = new Command('fetch-config');
+  const command = new Command('fetch');
   command.description(
     'Fetches the latest valid router config for a federated graph. The output can be piped to a file.',
   );

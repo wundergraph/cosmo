@@ -2,8 +2,8 @@ import { splitLabel } from '@wundergraph/cosmo-shared';
 import { Command } from 'commander';
 import pc from 'picocolors';
 import { BaseCommandOptions } from '../../../core/types/types.js';
+import { introspectSubgraph } from '../../../utils.js';
 import program from '../../index.js';
-import { introspectSubgraph } from '../utils.js';
 
 export default (opts: BaseCommandOptions) => {
   const introspectSubgraphCmd = new Command('introspect');
