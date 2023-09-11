@@ -40,7 +40,7 @@ import {
   WhoAmIResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { buildRouterConfig, OpenAIGraphql } from '@wundergraph/cosmo-shared';
-import { GraphApiKeyJwtPayload } from '../../types/index.js';
+import { GraphApiKeyJwtPayload, Header } from '../../types/index.js';
 import { Composer } from '../composition/composer.js';
 import { buildSchema, composeSubgraphs } from '../composition/composition.js';
 import { getDiffBetweenGraphs } from '../composition/schemaCheck.js';
@@ -58,6 +58,7 @@ import type { RouterOptions } from '../routes.js';
 import { ApiKeyGenerator } from '../services/ApiGenerator.js';
 import { handleError, isValidLabelMatchers, isValidLabels } from '../util.js';
 import ApolloMigrator from '../services/ApolloMigrator.js';
+import IntrospectSubgraph from '../services/IntrospectSubgraph.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -1855,6 +1856,40 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           response: {
             code: EnumStatusCode.OK,
           },
+        };
+      });
+    },
+
+    introspectSubgraph: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<DeleteAPIKeyResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const introspectSubgraph = new IntrospectSubgraph();
+
+        const result = await introspectSubgraph.introspect({
+          subgraphURL: req.url,
+          additionalHeaders: req.headers,
+        });
+
+        if (!result.success) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: result.errorMessage,
+            },
+            sdl: '',
+          };
+        }
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          sdl: result.sdl,
         };
       });
     },

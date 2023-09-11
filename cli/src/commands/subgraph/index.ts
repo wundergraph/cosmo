@@ -7,6 +7,7 @@ import DeleteSubgraph from './commands/delete.js';
 import UpdateSubgraph from './commands/update.js';
 import FixSubGraph from './commands/fix.js';
 import ListSubgraphs from './commands/list.js';
+import IntrospectSubgraph from './commands/introspect.js';
 
 export default (opts: BaseCommandOptions) => {
   const schema = new Command('subgraph');
@@ -18,5 +19,6 @@ export default (opts: BaseCommandOptions) => {
   schema.addCommand(UpdateSubgraph(opts));
   schema.addCommand(FixSubGraph(opts));
   schema.addCommand(ListSubgraphs(opts));
+  schema.addCommand(IntrospectSubgraph(opts));
   return schema;
 };
