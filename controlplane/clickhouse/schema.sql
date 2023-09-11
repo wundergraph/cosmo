@@ -5,43 +5,23 @@
 
 CREATE DATABASE IF NOT EXISTS cosmo;
 
-CREATE TABLE cosmo.`.inner_id.6e0a4771-ada2-4d4c-ace5-accc997fdf96`
-(
-    `Timestamp` DateTime('UTC') CODEC(Delta(4), ZSTD(1)),
-    `OperationName` String CODEC(ZSTD(1)),
-    `OperationType` String CODEC(ZSTD(1)),
-    `FederatedGraphID` String CODEC(ZSTD(1)),
-    `OrganizationID` String CODEC(ZSTD(1)),
-    `Subscription` Bool CODEC(ZSTD(1)),
-    `TotalRequests` UInt64 CODEC(ZSTD(1)),
-    `TotalRequestsError` UInt64 CODEC(ZSTD(1)),
-    `TotalRequestsOk` UInt64 CODEC(ZSTD(1)),
-    `DurationQuantiles` AggregateFunction(quantiles(0.75, 0.9, 0.95, 0.99), Int64) CODEC(ZSTD(1)),
-    `LastCalled` DateTime('UTC') CODEC(ZSTD(1))
-)
-ENGINE = SummingMergeTree
-PARTITION BY toDate(Timestamp)
-ORDER BY (toUnixTimestamp(Timestamp), FederatedGraphID, OrganizationID, OperationName, OperationType)
-TTL toDateTime(Timestamp) + toIntervalDay(30)
-SETTINGS index_granularity = 8192, ttl_only_drop_parts = 1;
-
-CREATE TABLE cosmo.`.inner_id.7f078007-0e11-4cae-9ca8-ffdce1472af2`
+CREATE TABLE cosmo.`.inner_id.3c8d0e93-937f-4072-ac49-2f680228037d`
 (
     `Timestamp` DateTime('UTC') CODEC(Delta(4), ZSTD(1)),
     `HttpStatusCode` String CODEC(ZSTD(1)),
     `OrganizationID` String CODEC(ZSTD(1)),
     `FederatedGraphID` String CODEC(ZSTD(1)),
     `TotalRequests` UInt64 CODEC(ZSTD(1)),
-    `DurationQuantiles` AggregateFunction(quantiles(0.75, 0.9, 0.95, 0.99), Int64) CODEC(ZSTD(1)),
+    `DurationQuantiles` AggregateFunction(quantiles(0.5, 0.75, 0.9, 0.95, 0.99), Int64) CODEC(ZSTD(1)),
     `LastCalled` DateTime('UTC') CODEC(ZSTD(1))
 )
 ENGINE = SummingMergeTree
 PARTITION BY toDate(Timestamp)
-ORDER BY (toUnixTimestamp(Timestamp), FederatedGraphID, OrganizationID, HttpStatusCode)
+ORDER BY (toUnixTimestamp(Timestamp), OrganizationID, FederatedGraphID, HttpStatusCode)
 TTL toDateTime(Timestamp) + toIntervalDay(30)
 SETTINGS index_granularity = 8192, ttl_only_drop_parts = 1;
 
-CREATE TABLE cosmo.`.inner_id.93e906e3-754e-4e90-8968-3f613ab94351`
+CREATE TABLE cosmo.`.inner_id.70f42704-1b82-43eb-8f5d-e2225e3aa032`
 (
     `TraceId` String CODEC(ZSTD(1)),
     `Timestamp` DateTime('UTC') CODEC(Delta(4), ZSTD(1)),
@@ -68,7 +48,27 @@ ORDER BY (toUnixTimestamp(Timestamp), FederatedGraphID, OrganizationID, Operatio
 TTL toDateTime(Timestamp) + toIntervalDay(30)
 SETTINGS index_granularity = 8192, ttl_only_drop_parts = 1;
 
-CREATE TABLE cosmo.`.inner_id.a410b77d-1f37-4785-82c3-e659a77bfffe`
+CREATE TABLE cosmo.`.inner_id.89a02a17-90d8-4a9e-a7b5-03540c3016eb`
+(
+    `Timestamp` DateTime('UTC') CODEC(Delta(4), ZSTD(1)),
+    `OperationName` String CODEC(ZSTD(1)),
+    `OperationType` String CODEC(ZSTD(1)),
+    `FederatedGraphID` String CODEC(ZSTD(1)),
+    `OrganizationID` String CODEC(ZSTD(1)),
+    `IsSubscription` Bool CODEC(ZSTD(1)),
+    `TotalRequests` UInt64 CODEC(ZSTD(1)),
+    `TotalRequestsError` UInt64 CODEC(ZSTD(1)),
+    `TotalRequestsOk` UInt64 CODEC(ZSTD(1)),
+    `DurationQuantiles` AggregateFunction(quantiles(0.5, 0.75, 0.9, 0.95, 0.99), Int64) CODEC(ZSTD(1)),
+    `LastCalled` DateTime('UTC') CODEC(ZSTD(1))
+)
+ENGINE = SummingMergeTree
+PARTITION BY toDate(Timestamp)
+ORDER BY (toUnixTimestamp(Timestamp), OrganizationID, FederatedGraphID, OperationName, OperationType)
+TTL toDateTime(Timestamp) + toIntervalDay(30)
+SETTINGS index_granularity = 8192, ttl_only_drop_parts = 1;
+
+CREATE TABLE cosmo.`.inner_id.d715af6b-677f-4397-aa5a-012e8a75060d`
 (
     `Timestamp` DateTime('UTC') CODEC(Delta(4), ZSTD(1)),
     `ClientName` String CODEC(ZSTD(1)),
@@ -78,12 +78,12 @@ CREATE TABLE cosmo.`.inner_id.a410b77d-1f37-4785-82c3-e659a77bfffe`
     `TotalRequests` UInt64 CODEC(ZSTD(1)),
     `TotalRequestsError` UInt64 CODEC(ZSTD(1)),
     `TotalRequestsOk` UInt64 CODEC(ZSTD(1)),
-    `DurationQuantiles` AggregateFunction(quantiles(0.75, 0.9, 0.95, 0.99), Int64) CODEC(ZSTD(1)),
+    `DurationQuantiles` AggregateFunction(quantiles(0.5, 0.75, 0.9, 0.95, 0.99), Int64) CODEC(ZSTD(1)),
     `LastCalled` DateTime('UTC') CODEC(ZSTD(1))
 )
 ENGINE = SummingMergeTree
 PARTITION BY toDate(Timestamp)
-ORDER BY (toUnixTimestamp(Timestamp), FederatedGraphID, OrganizationID, ClientName)
+ORDER BY (toUnixTimestamp(Timestamp), OrganizationID, FederatedGraphID, ClientName)
 TTL toDateTime(Timestamp) + toIntervalDay(30)
 SETTINGS index_granularity = 8192, ttl_only_drop_parts = 1;
 
@@ -171,12 +171,12 @@ CREATE MATERIALIZED VIEW cosmo.traces_by_client_quarter_hourly_mv
     `TotalRequests` UInt64 CODEC(ZSTD(1)),
     `TotalRequestsError` UInt64 CODEC(ZSTD(1)),
     `TotalRequestsOk` UInt64 CODEC(ZSTD(1)),
-    `DurationQuantiles` AggregateFunction(quantiles(0.75, 0.9, 0.95, 0.99), Int64) CODEC(ZSTD(1)),
+    `DurationQuantiles` AggregateFunction(quantiles(0.5, 0.75, 0.9, 0.95, 0.99), Int64) CODEC(ZSTD(1)),
     `LastCalled` DateTime('UTC') CODEC(ZSTD(1))
 )
 ENGINE = SummingMergeTree
 PARTITION BY toDate(Timestamp)
-ORDER BY (toUnixTimestamp(Timestamp), FederatedGraphID, OrganizationID, ClientName)
+ORDER BY (toUnixTimestamp(Timestamp), OrganizationID, FederatedGraphID, ClientName)
 TTL toDateTime(Timestamp) + toIntervalDay(30)
 SETTINGS index_granularity = 8192, ttl_only_drop_parts = 1 AS
 SELECT
@@ -186,19 +186,19 @@ SELECT
     SpanAttributes['wg.organization.id'] AS OrganizationID,
     SpanAttributes['wg.federated_graph.id'] AS FederatedGraphID,
     count() AS TotalRequests,
-    countIf((StatusCode = 'STATUS_CODE_ERROR') OR (position(SpanAttributes['http.status_code'], '4') = 1)) AS TotalRequestsError,
-    countIf((StatusCode != 'STATUS_CODE_ERROR') OR (position(SpanAttributes['http.status_code'], '4') != 1)) AS TotalRequestsOk,
-    quantilesState(0.75, 0.9, 0.95, 0.99)(Duration) AS DurationQuantiles,
+    countIf((StatusCode = 'STATUS_CODE_ERROR') OR (position(SpanAttributes['http.status_code'], '5') = 1)) AS TotalRequestsError,
+    countIf((StatusCode != 'STATUS_CODE_ERROR') OR (position(SpanAttributes['http.status_code'], '5') != 1)) AS TotalRequestsOk,
+    quantilesState(0.5, 0.75, 0.9, 0.95, 0.99)(Duration) AS DurationQuantiles,
     toUnixTimestamp(max(Timestamp)) AS LastCalled
 FROM cosmo.otel_traces
-WHERE empty(ParentSpanId) AND ((SpanAttributes['http.status_code']) != '404')
+WHERE empty(ParentSpanId)
 GROUP BY
     Timestamp,
     ClientName,
     ClientVersion,
     FederatedGraphID,
     OrganizationID
-ORDER BY TotalRequests DESC;
+ORDER BY Timestamp DESC;
 
 CREATE MATERIALIZED VIEW cosmo.traces_by_http_status_code_quarter_hourly_mv
 (
@@ -207,12 +207,12 @@ CREATE MATERIALIZED VIEW cosmo.traces_by_http_status_code_quarter_hourly_mv
     `OrganizationID` String CODEC(ZSTD(1)),
     `FederatedGraphID` String CODEC(ZSTD(1)),
     `TotalRequests` UInt64 CODEC(ZSTD(1)),
-    `DurationQuantiles` AggregateFunction(quantiles(0.75, 0.9, 0.95, 0.99), Int64) CODEC(ZSTD(1)),
+    `DurationQuantiles` AggregateFunction(quantiles(0.5, 0.75, 0.9, 0.95, 0.99), Int64) CODEC(ZSTD(1)),
     `LastCalled` DateTime('UTC') CODEC(ZSTD(1))
 )
 ENGINE = SummingMergeTree
 PARTITION BY toDate(Timestamp)
-ORDER BY (toUnixTimestamp(Timestamp), FederatedGraphID, OrganizationID, HttpStatusCode)
+ORDER BY (toUnixTimestamp(Timestamp), OrganizationID, FederatedGraphID, HttpStatusCode)
 TTL toDateTime(Timestamp) + toIntervalDay(30)
 SETTINGS index_granularity = 8192, ttl_only_drop_parts = 1 AS
 SELECT
@@ -221,16 +221,16 @@ SELECT
     SpanAttributes['wg.organization.id'] AS OrganizationID,
     SpanAttributes['wg.federated_graph.id'] AS FederatedGraphID,
     count() AS TotalRequests,
-    quantilesState(0.75, 0.9, 0.95, 0.99)(Duration) AS DurationQuantiles,
+    quantilesState(0.5, 0.75, 0.9, 0.95, 0.99)(Duration) AS DurationQuantiles,
     toUnixTimestamp(max(Timestamp)) AS LastCalled
 FROM cosmo.otel_traces
-WHERE empty(ParentSpanId) AND ((SpanAttributes['http.status_code']) != '404')
+WHERE empty(ParentSpanId)
 GROUP BY
     Timestamp,
     HttpStatusCode,
     FederatedGraphID,
     OrganizationID
-ORDER BY TotalRequests DESC;
+ORDER BY Timestamp DESC;
 
 CREATE MATERIALIZED VIEW cosmo.traces_by_operation_quarter_hourly_mv
 (
@@ -239,16 +239,16 @@ CREATE MATERIALIZED VIEW cosmo.traces_by_operation_quarter_hourly_mv
     `OperationType` String CODEC(ZSTD(1)),
     `FederatedGraphID` String CODEC(ZSTD(1)),
     `OrganizationID` String CODEC(ZSTD(1)),
-    `Subscription` Bool CODEC(ZSTD(1)),
+    `IsSubscription` Bool CODEC(ZSTD(1)),
     `TotalRequests` UInt64 CODEC(ZSTD(1)),
     `TotalRequestsError` UInt64 CODEC(ZSTD(1)),
     `TotalRequestsOk` UInt64 CODEC(ZSTD(1)),
-    `DurationQuantiles` AggregateFunction(quantiles(0.75, 0.9, 0.95, 0.99), Int64) CODEC(ZSTD(1)),
+    `DurationQuantiles` AggregateFunction(quantiles(0.5, 0.75, 0.9, 0.95, 0.99), Int64) CODEC(ZSTD(1)),
     `LastCalled` DateTime('UTC') CODEC(ZSTD(1))
 )
 ENGINE = SummingMergeTree
 PARTITION BY toDate(Timestamp)
-ORDER BY (toUnixTimestamp(Timestamp), FederatedGraphID, OrganizationID, OperationName, OperationType)
+ORDER BY (toUnixTimestamp(Timestamp), OrganizationID, FederatedGraphID, OperationName, OperationType)
 TTL toDateTime(Timestamp) + toIntervalDay(30)
 SETTINGS index_granularity = 8192, ttl_only_drop_parts = 1 AS
 SELECT
@@ -257,21 +257,21 @@ SELECT
     SpanAttributes['wg.operation.type'] AS OperationType,
     SpanAttributes['wg.federated_graph.id'] AS FederatedGraphID,
     SpanAttributes['wg.organization.id'] AS OrganizationID,
-    mapContains(SpanAttributes, 'wg.subscription') AS Subscription,
+    mapContains(SpanAttributes, 'wg.subscription') AS IsSubscription,
     count() AS TotalRequests,
-    countIf((StatusCode = 'STATUS_CODE_ERROR') OR (position(SpanAttributes['http.status_code'], '4') = 1)) AS TotalRequestsError,
-    countIf((StatusCode != 'STATUS_CODE_ERROR') OR (position(SpanAttributes['http.status_code'], '4') != 1)) AS TotalRequestsOk,
-    quantilesState(0.75, 0.9, 0.95, 0.99)(Duration) AS DurationQuantiles,
+    countIf((StatusCode = 'STATUS_CODE_ERROR') OR (position(SpanAttributes['http.status_code'], '5') = 1)) AS TotalRequestsError,
+    countIf((StatusCode != 'STATUS_CODE_ERROR') OR (position(SpanAttributes['http.status_code'], '5') != 1)) AS TotalRequestsOk,
+    quantilesState(0.5, 0.75, 0.9, 0.95, 0.99)(Duration) AS DurationQuantiles,
     toUnixTimestamp(max(Timestamp)) AS LastCalled
 FROM cosmo.otel_traces
-WHERE empty(ParentSpanId) AND ((SpanAttributes['http.status_code']) != '404')
+WHERE empty(ParentSpanId)
 GROUP BY
     Timestamp,
     FederatedGraphID,
     OrganizationID,
     OperationName,
     OperationType,
-    Subscription
+    IsSubscription
 ORDER BY Timestamp DESC;
 
 CREATE MATERIALIZED VIEW cosmo.traces_mv
