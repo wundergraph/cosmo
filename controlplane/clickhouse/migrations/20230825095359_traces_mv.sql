@@ -23,7 +23,7 @@ CREATE MATERIALIZED VIEW IF NOT EXISTS cosmo.traces_mv (
 ENGINE = SummingMergeTree
 PARTITION BY toDate(Timestamp)
 ORDER BY (
-    toUnixTimestamp(Timestamp), FederatedGraphID, OrganizationID, OperationName, OperationType
+    toUnixTimestamp(Timestamp), OrganizationID, FederatedGraphID, OperationName, OperationType
 )
 TTL toDateTime(Timestamp) + toIntervalDay(30) SETTINGS index_granularity = 8192, ttl_only_drop_parts = 1 POPULATE AS
 SELECT
