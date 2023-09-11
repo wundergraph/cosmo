@@ -104,13 +104,13 @@ new-ch-migration:
 	 dbmate -d "./controlplane/clickhouse/migrations" new $(name)
 
 migrate-ch:
-	 dbmate -d "./controlplane/clickhouse/migrations" -s "./controlplane/db/schema.sql" -e CLICKHOUSE_DSN up
+	 dbmate -d "./controlplane/clickhouse/migrations" -s "./controlplane/clickhouse/schema.sql" -e CLICKHOUSE_DSN up
 
 migrate-ch-down:
-	 dbmate -d "./controlplane/clickhouse/migrations" -s "./controlplane/db/schema.sql" -e CLICKHOUSE_DSN down
+	 dbmate -d "./controlplane/clickhouse/migrations" -s "./controlplane/clickhouse/schema.sql" -e CLICKHOUSE_DSN down
 
 rollback-ch:
-	 dbmate -d "./controlplane/clickhouse/migrations" -s "./controlplane/db/schema.sql" -e CLICKHOUSE_DSN rollback
+	 dbmate -d "./controlplane/clickhouse/migrations" -s "./controlplane/clickhouse/schema.sql" -e CLICKHOUSE_DSN rollback
 
 migrate-ch-dump:
-	dbmate -d "./controlplane/clickhouse/migrations" -s "./controlplane/db/schema.sql" -e CLICKHOUSE_DSN dump
+	dbmate -d "./controlplane/clickhouse/migrations" -s "./controlplane/clickhouse/schema.sql" -e CLICKHOUSE_DSN dump
