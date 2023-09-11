@@ -574,16 +574,6 @@ message Header{
   string value = 2;
 }
 
-message IntrospectSubgraphRequest {
-  string url = 1;
-  repeated Header headers = 2;
-}
-
-message IntrospectSubgraphResponse {
-  Response response = 1;
-  string sdl = 2;
-}
-
 service PlatformService {
   // CreateFederatedGraph creates a federated graph on the control plane.
   rpc CreateFederatedGraph(CreateFederatedGraphRequest) returns (CreateFederatedGraphResponse) {}
@@ -606,8 +596,6 @@ service PlatformService {
   rpc CheckFederatedGraph(CheckFederatedGraphRequest) returns (CheckFederatedGraphResponse) {}
   // WhoAmI returns the identity of the user currently logged in.
   rpc WhoAmI(WhoAmIRequest) returns (WhoAmIResponse) {}
-  // IntrospectSubgraph returns the sdl of the subgraph.
-  rpc IntrospectSubgraph(IntrospectSubgraphRequest) returns (IntrospectSubgraphResponse) {}
 
   // For Studio and CLI
 

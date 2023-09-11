@@ -223,8 +223,3 @@ export interface GraphApiKeyDTO {
   name: string;
   token: string;
 }
-
-export interface Header {
-  key: string;
-  value: string;
-}
