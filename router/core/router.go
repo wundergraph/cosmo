@@ -4,11 +4,25 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
+	"net/http"
+	"sync"
+	"time"
+
 	"github.com/dgraph-io/ristretto"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/mitchellh/mapstructure"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel/attribute"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	oteltrace "go.opentelemetry.io/otel/trace"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+	"golang.org/x/sync/errgroup"
+
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/internal/config"
 	"github.com/wundergraph/cosmo/router/internal/controlplane"
@@ -22,18 +36,6 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/otel"
 	"github.com/wundergraph/cosmo/router/internal/stringsx"
 	"github.com/wundergraph/cosmo/router/internal/trace"
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
-	"go.opentelemetry.io/otel/attribute"
-	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	oteltrace "go.opentelemetry.io/otel/trace"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
-	"golang.org/x/sync/errgroup"
-	"net"
-	"net/http"
-	"sync"
-	"time"
 )
 
 type (
@@ -459,7 +461,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		return nil, fmt.Errorf("failed to create planner cache: %w", err)
 	}
 
-	pb := &Planner{
+	ecb := &ExecutorConfigurationBuilder{
 		introspection: true,
 		baseURL:       r.baseURL,
 		transport:     r.transport,
@@ -468,26 +470,20 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		postHandlers:  r.postOriginHandlers,
 	}
 
-	plan, err := pb.Build(ctx, routerConfig)
+	executor, err := ecb.Build(ctx, routerConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build plan configuration: %w", err)
 	}
 
 	graphqlHandler := NewGraphQLHandler(HandlerOptions{
-		PlanConfig: plan.PlanConfig,
-		Definition: plan.Definition,
-		Resolver:   plan.Resolver,
-		Pool:       plan.Pool,
-		Cache:      planCache,
-		Log:        r.logger,
+		Executor: executor,
+		Cache:    planCache,
+		Log:      r.logger,
 	})
 
 	graphqlPreHandler := NewPreHandler(&PreHandlerOptions{
-		Logger:          r.logger,
-		Pool:            plan.Pool,
-		RenameTypeNames: plan.RenameTypeNames,
-		PlanConfig:      plan.PlanConfig,
-		Definition:      plan.Definition,
+		Executor: executor,
+		Logger:   r.logger,
 	})
 
 	var metricHandler *metric.Handler

@@ -5,19 +5,20 @@ import (
 	"fmt"
 	"net/http"
 
+	"go.uber.org/zap"
+
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/asttransform"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/introspection_datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
-	"go.uber.org/zap"
 
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/internal/pool"
 )
 
-type Planner struct {
+type ExecutorConfigurationBuilder struct {
 	introspection bool
 	baseURL       string
 	transport     *http.Transport
@@ -27,7 +28,7 @@ type Planner struct {
 	postHandlers []TransportPostHandler
 }
 
-type Plan struct {
+type Executor struct {
 	PlanConfig      plan.Configuration
 	Definition      *ast.Document
 	Resolver        *resolve.Resolver
@@ -35,14 +36,14 @@ type Plan struct {
 	RenameTypeNames []resolve.RenameTypeName
 }
 
-func (b *Planner) Build(ctx context.Context, routerConfig *nodev1.RouterConfig) (*Plan, error) {
+func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, routerConfig *nodev1.RouterConfig) (*Executor, error) {
 	planConfig, err := b.buildPlannerConfiguration(routerConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build planner configuration: %w", err)
 	}
 
 	// this is the resolver, it's stateful and manages all the client connections, etc...
-	resolver := resolve.New(ctx, resolve.NewFetcher(true))
+	resolver := resolve.New(ctx, true)
 
 	// this is the GraphQL Schema that we will expose from our API
 	definition, report := astparser.ParseGraphqlDocumentString(routerConfig.EngineConfig.GraphqlSchema)
@@ -88,7 +89,7 @@ func (b *Planner) Build(ctx context.Context, routerConfig *nodev1.RouterConfig) 
 		}
 	}
 
-	return &Plan{
+	return &Executor{
 		PlanConfig:      *planConfig,
 		Definition:      &definition,
 		Resolver:        resolver,
@@ -97,7 +98,7 @@ func (b *Planner) Build(ctx context.Context, routerConfig *nodev1.RouterConfig) 
 	}, nil
 }
 
-func (b *Planner) buildPlannerConfiguration(routerCfg *nodev1.RouterConfig) (*plan.Configuration, error) {
+func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(routerCfg *nodev1.RouterConfig) (*plan.Configuration, error) {
 	// this loader is used to take the engine config and create a plan config
 	// the plan config is what the engine uses to turn a GraphQL Request into an execution plan
 	// the plan config is stateful as it carries connection pools and other things
