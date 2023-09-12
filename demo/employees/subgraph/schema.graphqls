@@ -53,15 +53,15 @@ enum Country {
   GERMANY
   INDIA
   NETHERLANDS
-  # PORTUGAL
-  # SPAIN
-  # UKRAINE
+  PORTUGAL
+  SPAIN
+  UKRAINE
 }
 
 type Details @shareable {
   forename: String!
   location: Country!
-  # surname: String!
+  surname: String!
 }
 
 type Employee implements Identifiable @key(fields: "id") {
