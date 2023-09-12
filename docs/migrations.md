@@ -22,6 +22,8 @@ Go to the controlplane [directory](../controlplane) and run the following comman
 pnpm db:generate
 # Create a custom migration e.g. for data migration
 pnpm db:custom
+# (Important) Use this command to delete the last migration
+pnpm db:drop
 ```
 
 ### ClickHouse
