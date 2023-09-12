@@ -173,7 +173,7 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
 
       const organizationSlug = uid(8);
 
-      await opts.keycloakClient.seedGroup({ userID: userId, organizationSlug });
+      await opts.keycloakClient.seedGroup({ userID: userId, organizationSlug, realm: opts.keycloakRealm });
 
       await opts.db.transaction(async (db) => {
         const insertedOrg = await opts.organizationRepository.createOrganization({
