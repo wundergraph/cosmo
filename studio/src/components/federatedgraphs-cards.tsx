@@ -495,7 +495,7 @@ export const FederatedGraphsCards = ({
   graphs?: FederatedGraph[];
   refetch: () => void;
 }) => {
-  const [isMigrationSuccess, setIsMigrationSuccess] = useState(true);
+  const [isMigrationSuccess, setIsMigrationSuccess] = useState(false);
 
   if (!graphs || graphs.length === 0)
     return (
