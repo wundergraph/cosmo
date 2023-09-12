@@ -1,7 +1,7 @@
 {
   "version": "5",
   "dialect": "pg",
-  "id": "821252de-82d2-4624-a979-479bc143651e",
+  "id": "fa85d6b4-c3be-4a2a-88ab-9c12374db92d",
   "prevId": "2b9ca50f-d51c-4224-9c2a-6305c149865f",
   "tables": {
     "api_keys": {
@@ -344,8 +344,8 @@
           "notNull": true,
           "default": "now()"
         },
-        "is_free_trail": {
-          "name": "is_free_trail",
+        "is_free_trial": {
+          "name": "is_free_trial",
           "type": "boolean",
           "primaryKey": false,
           "notNull": false,
