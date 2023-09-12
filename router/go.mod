@@ -19,7 +19,7 @@ require (
 	github.com/stretchr/testify v1.8.4
 	github.com/tidwall/gjson v1.14.4
 	github.com/tidwall/sjson v1.2.5
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.2.0.20230911161856-213e5ea61a13
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.2.0.20230912132139-7fac6d9abf64
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.43.0
 	go.opentelemetry.io/otel v1.17.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp v0.39.0
@@ -93,4 +93,4 @@ require (
 	nhooyr.io/websocket v1.8.7 // indirect
 )
 
-replace github.com/wundergraph/graphql-go-tools/v2 => ../../graphql-go-tools/v2
+//replace github.com/wundergraph/graphql-go-tools/v2 => ../../graphql-go-tools/v2
