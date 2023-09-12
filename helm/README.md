@@ -44,6 +44,10 @@ make dev
 
 The provisioning will take a few seconds to bootstrap the whole cluster and seed the database with a default user and organization.
 
+#### Migrations
+
+We run several Kubernetes jobs to run migrations. While we provide Helm hook support to run migrations, we recommend to use Kapp because it is more powerful in coordinating the deployment.
+
 #### 3. Make ingress available locally
 
 Minikube will automatically expose the ingress controller on your local machine. You can get the IP with `minikube ip`.

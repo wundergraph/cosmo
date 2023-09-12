@@ -35,7 +35,8 @@ Running cosmo is as easy as running a single command:
 make full-demo-up
 ```
 
-It can take a few seconds (~30s) until all services are up and running. A seed container will create a default user for you.
+It can take a few seconds (~30s) until all services are up and running. A seed container and few migrations are running in the background to bootstrap the platform.
+They might restart a few times until the database is ready. You can check the status of the services by running `docker-compose -f docker-compose.full.yml ps`.
 
 2. Now, you can create a small demo project and start the router and subgraphs:
 

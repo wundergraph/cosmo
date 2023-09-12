@@ -10,6 +10,8 @@ metadata:
     # Run migration job before helm install/upgrade
     "helm.sh/hook": pre-install,pre-upgrade
     "helm.sh/hook-delete-policy": before-hook-creation
+    # Less priority than the migration job so the secret is created before the migration job
+    "helm.sh/hook-weight": "-10"
     # Support for k14s.io. This annotation ensure that the job is run after clickhouse deployment
     {{- if .Values.global.clickhouse.enabled }}
     kapp.k14s.io/change-rule.clickhouse: "upsert after upserting cosmo.apps.clickhouse.wundergraph.com/deployment"
