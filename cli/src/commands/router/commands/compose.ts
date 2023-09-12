@@ -13,7 +13,7 @@ type Config = {
   version: number;
   subgraphs: {
     name: string;
-    routingURL: string;
+    routing_url: string;
     schema?: {
       file: string;
     };
@@ -52,7 +52,7 @@ export default (opts: BaseCommandOptions) => {
       }
 
       const result = await introspectSubgraph({
-        subgraphURL: s.introspection?.url ?? s.routingURL,
+        subgraphURL: s.introspection?.url ?? s.routing_url,
         additionalHeaders: Object.entries(s.introspection?.headers ?? {}).map(([key, value]) => ({
           key,
           value,
@@ -69,7 +69,7 @@ export default (opts: BaseCommandOptions) => {
     const result = composeSubgraphs(
       config.subgraphs.map((s, index) => ({
         name: s.name,
-        url: s.routingURL,
+        url: s.routing_url,
         definitions: parse(sdls[index]),
       })),
     );
@@ -87,7 +87,7 @@ export default (opts: BaseCommandOptions) => {
       federatedSDL: printSchema(result.federationResult.federatedGraphSchema),
       subgraphs: config.subgraphs.map((s, index) => ({
         name: s.name,
-        url: s.routingURL,
+        url: s.routing_url,
         sdl: sdls[index],
       })),
     });
