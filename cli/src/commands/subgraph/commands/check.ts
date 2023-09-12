@@ -4,8 +4,8 @@ import { Command } from 'commander';
 import { resolve } from 'pathe';
 import pc from 'picocolors';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common_pb';
-import Table from 'cli-table';
 import logSymbols from 'log-symbols';
+import Table from 'cli-table3';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { baseHeaders } from '../../../core/config.js';
 
@@ -41,11 +41,13 @@ export default (opts: BaseCommandOptions) => {
     const changesTable = new Table({
       head: [pc.bold(pc.white('CHANGE')), pc.bold(pc.white('TYPE')), pc.bold(pc.white('DESCRIPTION'))],
       colWidths: [15, 30, 80],
+      wordWrap: true,
     });
 
     const compositionErrorsTable = new Table({
       head: [pc.bold(pc.white('FEDERATED_GRAPH_NAME')), pc.bold(pc.white('ERROR_MESSAGE'))],
       colWidths: [30, 120],
+      wordWrap: true,
     });
 
     switch (resp.response?.code) {

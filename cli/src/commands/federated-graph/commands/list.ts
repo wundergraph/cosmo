@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import pc from 'picocolors';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common_pb';
-import Table from 'cli-table';
+import Table from 'cli-table3';
 import logSymbols from 'log-symbols';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { baseHeaders } from '../../../core/config.js';
@@ -30,8 +30,9 @@ export default (opts: BaseCommandOptions) => {
         pc.bold(pc.white('ROUTING_URL')),
         pc.bold(pc.white('IS_COMPOSABLE')),
       ],
-      colAligns: ['left', 'left', 'left', 'middle'],
-      colWidths: [30, 40, 60, 15],
+      colAligns: ['left', 'left', 'left', 'center'],
+      colWidths: [25, 40, 70, 15],
+      wordWrap: true,
     });
 
     if (resp.response?.code === EnumStatusCode.OK) {
