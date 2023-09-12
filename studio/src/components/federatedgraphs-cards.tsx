@@ -12,7 +12,13 @@ import { migrateFromApollo } from "@wundergraph/cosmo-connect/dist/platform/v1/p
 import { FederatedGraph } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { getTime, parseISO, subDays } from "date-fns";
 import Link from "next/link";
-import { Dispatch, SetStateAction, useContext, useState } from "react";
+import {
+  Dispatch,
+  SetStateAction,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 import { Line, LineChart, ResponsiveContainer, XAxis } from "recharts";
 import { z } from "zod";
 import { UserContext } from "./app-provider";
@@ -42,6 +48,9 @@ import { Logo } from "./logo";
 import { SiApollographql } from "react-icons/si";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/router";
+import { CheckIcon, CopyIcon } from "@radix-ui/react-icons";
+import copy from "copy-to-clipboard";
+import { FiCheck, FiCopy } from "react-icons/fi";
 
 // this is required to render a blank line with LineChart
 const fallbackData = [
@@ -224,6 +233,121 @@ const MigrationSuccess = () => {
   return null;
 };
 
+const RunRouterCommand = ({
+  open,
+  setOpen,
+  graphName,
+}: {
+  open: boolean;
+  setOpen: Dispatch<SetStateAction<boolean>>;
+  graphName: string;
+}) => {
+  const dockerRunCommand = `docker run \\ \n
+  --name cosmo-router \\ \n
+  -e FEDERATED_GRAPH_NAME="${graphName}" \\ \n
+  -e GRAPH_API_TOKEN=<router_api_token> \\ \n
+  -e LISTEN_ADDR=0.0.0.0:3002 \\ \n
+  --platform=linux/amd64 \\ \n
+  -p 3002:3002 \\ \n
+  ghcr.io/wundergraph/cosmo/router:latest`;
+
+  const tokenCommand = `npx wgc federated-graph create-token "${graphName}"`;
+
+  const [copyDockerCommand, setCopyDockerCommand] = useState(false);
+  const [copyTokenCommand, setCopyTokenCommand] = useState(false);
+
+  useEffect(() => {
+    if (copyDockerCommand) {
+      copy(dockerRunCommand);
+      const to = setTimeout(setCopyDockerCommand, 1000, false);
+      return () => clearTimeout(to);
+    }
+  }, [dockerRunCommand, copyDockerCommand]);
+
+  useEffect(() => {
+    if (copyTokenCommand) {
+      copy(tokenCommand);
+      const to = setTimeout(setCopyTokenCommand, 1000, false);
+      return () => clearTimeout(to);
+    }
+  }, [tokenCommand, copyTokenCommand]);
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogContent
+        onInteractOutside={(event) => {
+          event.preventDefault();
+        }}
+      >
+        <DialogHeader>
+          <DialogTitle>Router Initiation</DialogTitle>
+        </DialogHeader>
+        <div className="flex flex-col gap-y-4 pt-2">
+          <div className="w-full">
+            <p className="pb-2">
+              1. Run the below command to generate a graph api token.
+            </p>
+            <div className="flex justify-between gap-x-2 rounded border border-input bg-background p-4">
+              <code className="break-all rounded font-mono text-xs leading-tight text-muted-foreground">
+                {tokenCommand}
+              </code>
+              <Button
+                asChild={true}
+                size="sm"
+                variant="secondary"
+                onClick={() => setCopyTokenCommand(true)}
+                className="cursor-pointer"
+              >
+                <div>
+                  {copyTokenCommand ? (
+                    <FiCheck className="text-xs" />
+                  ) : (
+                    <FiCopy className="text-xs" />
+                  )}
+                </div>
+              </Button>
+            </div>
+          </div>
+          <div>
+            <p className="pb-2">
+              2. Use the generated token in the below command to initiate the
+              router.
+            </p>
+            <div className="flex justify-between rounded border border-input bg-background p-4">
+              <code className="whitespace-pre-wrap break-all rounded font-mono text-xs leading-none text-muted-foreground">
+                {dockerRunCommand}
+              </code>
+              <Button
+                asChild={true}
+                size="sm"
+                variant="secondary"
+                onClick={() => setCopyDockerCommand(true)}
+                className="cursor-pointer"
+              >
+                <div>
+                  {copyDockerCommand ? (
+                    <FiCheck className="text-xs" />
+                  ) : (
+                    <FiCopy className="text-xs" />
+                  )}
+                </div>
+              </Button>
+            </div>
+          </div>
+          <Link
+            href={docsBaseURL + "/router/deployment"}
+            className="text-sm text-primary"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Learn more
+          </Link>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 export const Empty = ({
   refetch,
   setIsMigrationSuccess,
@@ -371,7 +495,7 @@ export const FederatedGraphsCards = ({
   graphs?: FederatedGraph[];
   refetch: () => void;
 }) => {
-  const [isMigrationSuccess, setIsMigrationSuccess] = useState(false);
+  const [isMigrationSuccess, setIsMigrationSuccess] = useState(true);
 
   if (!graphs || graphs.length === 0)
     return (
@@ -380,7 +504,16 @@ export const FederatedGraphsCards = ({
 
   return (
     <>
-      {isMigrationSuccess && <MigrationSuccess />}
+      {isMigrationSuccess && (
+        <>
+          <MigrationSuccess />
+          <RunRouterCommand
+            open={isMigrationSuccess}
+            setOpen={setIsMigrationSuccess}
+            graphName={graphs[graphs.length - 1].name}
+          />
+        </>
+      )}
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
         {graphs.map((graph, graphIndex) => {
           return <GraphCard key={graphIndex.toString()} graph={graph} />;
