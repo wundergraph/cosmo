@@ -12,7 +12,11 @@ const DashboardPage: NextPageWithLayout = () => {
       window.location.origin + router.basePath + router.asPath
     );
     const params = new URLSearchParams(url.search);
-    router.replace(`/${organizationSlug}/graphs?${params}`);
+    router.replace(
+      params
+        ? `/${organizationSlug}/graphs?${params}`
+        : `/${organizationSlug}/graphs`
+    );
   }, [router, organizationSlug]);
 
   return null;

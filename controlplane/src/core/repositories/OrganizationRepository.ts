@@ -72,6 +72,7 @@ export class OrganizationRepository {
         id: organizations.id,
         name: organizations.name,
         slug: organizations.slug,
+        isFreeTrial: organizations.isFreeTrail
       })
       .from(organizationsMembers)
       .innerJoin(organizations, eq(organizations.id, organizationsMembers.organizationId))
@@ -83,6 +84,7 @@ export class OrganizationRepository {
       id: org.id,
       name: org.name,
       slug: org.slug,
+      isFreeTrial: org.isFreeTrial || false,
     }));
   }
 

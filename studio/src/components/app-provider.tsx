@@ -1,9 +1,13 @@
-import { Transport } from '@connectrpc/connect';
-import { TransportProvider } from '@connectrpc/connect-query';
-import { createConnectTransport } from '@connectrpc/connect-web';
-import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
-import { useRouter } from 'next/router';
-import { createContext, ReactNode, useEffect, useState } from 'react';
+import { Transport } from "@connectrpc/connect";
+import { TransportProvider } from "@connectrpc/connect-query";
+import { createConnectTransport } from "@connectrpc/connect-web";
+import {
+  QueryClient,
+  QueryClientProvider,
+  useQuery,
+} from "@tanstack/react-query";
+import { useRouter } from "next/router";
+import { createContext, ReactNode, useEffect, useState } from "react";
 
 interface User {
   id: string;
@@ -16,6 +20,7 @@ interface Organization {
   id: string;
   name: string;
   slug: string;
+  isFreeTrial: boolean;
 }
 
 const queryClient = new QueryClient();
@@ -76,12 +81,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         })
       );
 
-      if (router.pathname === "/" || router.pathname === "/login"){
+      if (router.pathname === "/" || router.pathname === "/login") {
         const url = new URL(
           window.location.origin + router.basePath + router.asPath
         );
         const params = new URLSearchParams(url.search);
-        router.replace(`/${organizationSlug}?${params}`);
+        router.replace(
+          params ? `/${organizationSlug}?${params}` : `/${organizationSlug}`
+        );
       }
     } else {
       if (router.pathname !== "/login") {
