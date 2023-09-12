@@ -111,6 +111,7 @@ func Main() {
 			},
 			OtlpHttpPath: "/v1/metrics",
 		}),
+		core.WithEngineExecutionConfig(cfg.EngineExecutionConfiguration),
 	)
 
 	if err != nil {

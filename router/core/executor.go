@@ -7,6 +7,7 @@ import (
 
 	"go.uber.org/zap"
 
+	"github.com/wundergraph/cosmo/router/internal/config"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/asttransform"
@@ -36,14 +37,14 @@ type Executor struct {
 	RenameTypeNames []resolve.RenameTypeName
 }
 
-func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, routerConfig *nodev1.RouterConfig) (*Executor, error) {
-	planConfig, err := b.buildPlannerConfiguration(routerConfig)
+func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, routerConfig *nodev1.RouterConfig, executionConfiguration config.EngineExecutionConfiguration) (*Executor, error) {
+	planConfig, err := b.buildPlannerConfiguration(routerConfig, executionConfiguration.Debug)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build planner configuration: %w", err)
 	}
 
 	// this is the resolver, it's stateful and manages all the client connections, etc...
-	resolver := resolve.New(ctx, true)
+	resolver := resolve.New(ctx, executionConfiguration.EnableSingleFlight)
 
 	// this is the GraphQL Schema that we will expose from our API
 	definition, report := astparser.ParseGraphqlDocumentString(routerConfig.EngineConfig.GraphqlSchema)
@@ -98,7 +99,7 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, routerConfig *
 	}, nil
 }
 
-func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(routerCfg *nodev1.RouterConfig) (*plan.Configuration, error) {
+func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(routerCfg *nodev1.RouterConfig, engineDebugConfig config.EngineDebugConfiguration) (*plan.Configuration, error) {
 	// this loader is used to take the engine config and create a plan config
 	// the plan config is what the engine uses to turn a GraphQL Request into an execution plan
 	// the plan config is stateful as it carries connection pools and other things
@@ -114,12 +115,12 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(routerCfg *node
 		return nil, fmt.Errorf("failed to load configuration: %w", err)
 	}
 	planConfig.Debug = plan.DebugConfiguration{
-		PrintOperationWithRequiredFields: false,
-		PrintPlanningPaths:               false,
-		PrintQueryPlans:                  false,
-		ConfigurationVisitor:             false,
-		PlanningVisitor:                  false,
-		DatasourceVisitor:                false,
+		PrintOperationWithRequiredFields: engineDebugConfig.PrintOperationWithRequiredFields,
+		PrintPlanningPaths:               engineDebugConfig.PrintPlanningPaths,
+		PrintQueryPlans:                  engineDebugConfig.PrintQueryPlans,
+		ConfigurationVisitor:             engineDebugConfig.ConfigurationVisitor,
+		PlanningVisitor:                  engineDebugConfig.PlanningVisitor,
+		DatasourceVisitor:                engineDebugConfig.DatasourceVisitor,
 	}
 	return planConfig, nil
 }

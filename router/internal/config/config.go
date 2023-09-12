@@ -90,6 +90,20 @@ type RequestHeaderRule struct {
 	Default string `yaml:"default"`
 }
 
+type EngineDebugConfiguration struct {
+	PrintOperationWithRequiredFields bool `envconfig:"ENGINE_DEBUG_PRINT_OPERATION_WITH_REQUIRED_FIELDS"`
+	PrintPlanningPaths               bool `envconfig:"ENGINE_DEBUG_PRINT_PLANNING_PATHS"`
+	PrintQueryPlans                  bool `envconfig:"ENGINE_DEBUG_PRINT_QUERY_PLANS"`
+	ConfigurationVisitor             bool `envconfig:"ENGINE_DEBUG_CONFIGURATION_VISITOR"`
+	PlanningVisitor                  bool `envconfig:"ENGINE_DEBUG_PLANNING_VISITOR"`
+	DatasourceVisitor                bool `envconfig:"ENGINE_DEBUG_DATASOURCE_VISITOR"`
+}
+
+type EngineExecutionConfiguration struct {
+	Debug              EngineDebugConfiguration
+	EnableSingleFlight bool `default:"true" envconfig:"ENGINE_ENABLE_SINGLE_FLIGHT"`
+}
+
 type Config struct {
 	Version string `yaml:"version"`
 
@@ -115,6 +129,8 @@ type Config struct {
 
 	ConfigPath       string `default:"config.yaml" envconfig:"CONFIG_PATH" validate:"omitempty,filepath"`
 	RouterConfigPath string `yaml:"router_config_path" envconfig:"ROUTER_CONFIG_PATH" validate:"omitempty,filepath"`
+
+	EngineExecutionConfiguration EngineExecutionConfiguration
 }
 
 func LoadConfig(override string) (*Config, error) {

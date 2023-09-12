@@ -78,6 +78,8 @@ type (
 		postOriginHandlers  []TransportPostHandler
 		headerRuleEngine    *HeaderRuleEngine
 		headerRules         config.HeaderRules
+
+		engineExecutionConfiguration config.EngineExecutionConfiguration
 	}
 
 	// Server is the main router instance.
@@ -462,7 +464,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	}
 
 	ecb := &ExecutorConfigurationBuilder{
-		introspection: true,
+		introspection: r.introspection,
 		baseURL:       r.baseURL,
 		transport:     r.transport,
 		logger:        r.logger,
@@ -470,7 +472,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		postHandlers:  r.postOriginHandlers,
 	}
 
-	executor, err := ecb.Build(ctx, routerConfig)
+	executor, err := ecb.Build(ctx, routerConfig, r.engineExecutionConfiguration)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build plan configuration: %w", err)
 	}
@@ -832,5 +834,11 @@ func WithLivenessCheckPath(path string) Option {
 func WithHeaderRules(headers config.HeaderRules) Option {
 	return func(r *Router) {
 		r.headerRules = headers
+	}
+}
+
+func WithEngineExecutionConfig(cfg config.EngineExecutionConfiguration) Option {
+	return func(r *Router) {
+		r.engineExecutionConfiguration = cfg
 	}
 }
