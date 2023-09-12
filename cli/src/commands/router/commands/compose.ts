@@ -9,25 +9,21 @@ import pc from 'picocolors';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { composeSubgraphs, introspectSubgraph } from '../../../utils.js';
 
-type Subgraph = {
-  name: string;
-  url: string;
-  headers?: {
-    [key: string]: string;
-  };
-};
-
-type Graph = {
-  name: string;
-  router: {
-    url: string;
-  };
-  subgraphs: Subgraph[];
-};
-
 type Config = {
   version: number;
-  graphs: Graph[];
+  subgraphs: {
+    name: string;
+    routingURL: string;
+    schema?: {
+      file: string;
+    };
+    introspection?: {
+      url: string;
+      headers?: {
+        [key: string]: string;
+      };
+    };
+  }[];
 };
 
 export default (opts: BaseCommandOptions) => {
@@ -47,29 +43,34 @@ export default (opts: BaseCommandOptions) => {
     const fileContent = (await readFile(inputFile)).toString();
     const config = yaml.load(fileContent) as Config;
 
-    const promises = [];
-    for (const s of config.graphs[0].subgraphs) {
-      const promise = introspectSubgraph({
-        subgraphURL: s.url,
-        additionalHeaders: Object.entries(s.headers ?? {}).map(([key, value]) => ({
+    const sdls: string[] = [];
+    for (const s of config.subgraphs) {
+      if (s.schema?.file) {
+        const sdl = (await readFile(s.schema.file)).toString();
+        sdls.push(sdl);
+        continue;
+      }
+
+      const result = await introspectSubgraph({
+        subgraphURL: s.introspection?.url ?? s.routingURL,
+        additionalHeaders: Object.entries(s.introspection?.headers ?? {}).map(([key, value]) => ({
           key,
           value,
         })),
       });
-      promises.push(promise);
-    }
 
-    const introspectResults = await Promise.all(promises);
+      if (!result.success) {
+        program.error(`Could not introspect subgraph ${s.name}: ${result.errorMessage ?? 'failed'}`);
+      }
 
-    if (introspectResults.some((r) => !r.success)) {
-      program.error('Could not introspect one or more subgraphs');
+      sdls.push(result.sdl);
     }
 
     const result = composeSubgraphs(
-      config.graphs[0].subgraphs.map((s, index) => ({
+      config.subgraphs.map((s, index) => ({
         name: s.name,
-        url: s.url,
-        definitions: parse(introspectResults[index].sdl),
+        url: s.routingURL,
+        definitions: parse(sdls[index]),
       })),
     );
 
@@ -84,10 +85,10 @@ export default (opts: BaseCommandOptions) => {
     const routerConfig = buildRouterConfig({
       argumentConfigurations: result.federationResult.argumentConfigurations,
       federatedSDL: printSchema(result.federationResult.federatedGraphSchema),
-      subgraphs: config.graphs[0].subgraphs.map((s, index) => ({
+      subgraphs: config.subgraphs.map((s, index) => ({
         name: s.name,
-        url: s.url,
-        sdl: introspectResults[index].sdl,
+        url: s.routingURL,
+        sdl: sdls[index],
       })),
     });
 
