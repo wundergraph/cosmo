@@ -9,7 +9,7 @@ Before you can run migrations, you need to pass `DB_URL` as an environment varia
 
 We use [dbmate](https://github.com/amacneil/dbmate) to manage migrations for ClickHouse. (Important: ClickHouse does not support transactions, so be careful when writing migrations.)
 Before you can run migrations, you need to pass `CLICKHOUSE_MIGRATION_DSN` or `CLICKHOUSE_DSN` as an environment variable.
-Dbmate does not support clickhouse http protocol, so we need two different dsn in production and development environment.
+Dbmate does not support clickhouse HTTP protocol, so we need two different dsn in production and development environment.
 
 ## Create a new migration
 
