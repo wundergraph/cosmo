@@ -5,7 +5,6 @@ import { drizzle, PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { sql } from 'drizzle-orm';
 import postgres from 'postgres';
 import * as schema from '../../db/schema.js';
-import { start } from '../migrate.js';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -61,8 +60,6 @@ export default fp<DbPluginOptions>(async function (fastify, opts) {
     schema: { ...schema },
     logger: opts.debugSQL,
   });
-
-  await start(opts.databaseConnectionUrl);
 
   fastify.decorate('dbHealthcheck', async () => {
     try {

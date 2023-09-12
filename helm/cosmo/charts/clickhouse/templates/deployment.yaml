@@ -58,7 +58,10 @@ spec:
               value: "1"
           ports:
             - name: http
-              containerPort: {{ .Values.service.port }}
+              containerPort: {{ .Values.service.httpPort }}
+              protocol: TCP
+            - name: native
+              containerPort: {{ .Values.service.nativePort }}
               protocol: TCP
           {{ with .Values.probes.liveness }}
           livenessProbe:

@@ -1,5 +1,4 @@
----
-version: "3.8"
+version: '3.8'
 name: cosmo-dev
 services:
   postgres:
@@ -107,19 +106,6 @@ services:
       - ./docker/clickhouse/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
     networks:
       - primary
-
-  dbmate:
-    image: amacneil/dbmate:latest
-    depends_on:
-      - clickhouse
-    environment:
-      - DATABASE_URL=clickhouse://${CLICKHOUSE_USER:-default}:${CLICKHOUSE_PASSWORD:-changeme}@clickhouse:9000/${CLICKHOUSE_DATABASE:-cosmo}
-    volumes:
-      - ./controlplane/clickhouse/migrations:/db/migrations
-    networks:
-      - primary
-    restart: on-failure
-    command: up
 
 # This network is shared between this file and docker-compose.full.yml to
 # allow the demo subgraphs to communicate with the rest of the infra

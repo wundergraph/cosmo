@@ -2,9 +2,6 @@ FROM node:18 as builder
 
 WORKDIR /app
 
-RUN curl -fsSL -o /usr/local/bin/dbmate https://github.com/amacneil/dbmate/releases/latest/download/dbmate-linux-amd64 && \
-    chmod +x /usr/local/bin/dbmate
-
 # Ensure we have pnpm available to us
 RUN npm install --global pnpm@8
 
@@ -25,6 +22,9 @@ RUN pnpm buf generate --template buf.ts.gen.yaml
 
 RUN pnpm run --filter=./connect --filter=./shared --filter=./controlplane --filter=./composition build
 
+RUN curl -fsSL -o /usr/local/bin/dbmate https://github.com/amacneil/dbmate/releases/download/v2.6.0/dbmate-linux-amd64 && \
+    chmod +x /usr/local/bin/dbmate
+
 # Deploy
 RUN pnpm --filter=./controlplane --prod deploy pruned
 
@@ -36,6 +36,8 @@ ENV NODE_ENV production
 
 # Fetch built artifacts
 COPY --from=builder /app/pruned .
+
+COPY --from=builder /usr/local/bin/dbmate /usr/local/bin/dbmate
 
 CMD ["node", "dist", "index.js"]
 
