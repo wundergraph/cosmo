@@ -175,32 +175,25 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
       await opts.keycloakClient.seedGroup({ userID: userId, organizationSlug, realm: opts.keycloakRealm });
 
       await opts.db.transaction(async (db) => {
-        const insertedOrg = await db
-          .insert(organizations)
-          .values({
-            id: randomUUID(),
-            name: userEmail.split('@')[0],
-            slug: organizationSlug,
-            createdBy: userId,
-            isFreeTrial: true,
-          })
-          .returning()
-          .execute();
+        const orgRepo = new OrganizationRepository(db)
 
-        const insertedOrgMember = await db
-          .insert(organizationsMembers)
-          .values({
-            userId,
-            organizationId: insertedOrg[0].id,
-            acceptedInvite: true,
-          })
-          .returning()
-          .execute();
+       const insertedOrg = await orgRepo.createOrganization({
+         organizationName: userEmail.split('@')[0],
+         organizationSlug,
+         ownerID: userId,
+         isFreeTrial: true,
+       });
 
-        await db
-          .insert(organizationMemberRoles)
-          .values({ organizationMemberId: insertedOrgMember[0].id, role: 'admin' })
-          .execute();
+       const orgMember = await orgRepo.addOrganizationMember({
+         organizationID: insertedOrg.id,
+         userID: userId,
+         acceptedInvite: true,
+       });
+
+       await orgRepo.addOrganizationMemberRoles({
+         memberID: orgMember.id,
+         roles: ['admin'],
+       });
       });
     }
 

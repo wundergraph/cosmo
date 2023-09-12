@@ -157,7 +157,7 @@ export class OrganizationRepository {
   }
 
   public async createOrganization(input: {
-    organizationID: string;
+    organizationID?: string;
     organizationName: string;
     organizationSlug: string;
     ownerID: string;
