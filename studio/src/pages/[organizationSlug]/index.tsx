@@ -13,7 +13,7 @@ const DashboardPage: NextPageWithLayout = () => {
     );
     const params = new URLSearchParams(url.search);
     router.replace(
-      params
+      params.size !== 0
         ? `/${organizationSlug}/graphs?${params}`
         : `/${organizationSlug}/graphs`
     );

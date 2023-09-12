@@ -8,7 +8,7 @@ import { uid } from 'uid';
 import { decodeJWT, DEFAULT_SESSION_MAX_AGE_SEC, encrypt } from '../crypto/jwt.js';
 import { CustomAccessTokenClaims, UserInfoEndpointResponse, UserSession } from '../../types/index.js';
 import * as schema from '../../db/schema.js';
-import { organizationsMembers, sessions, users } from '../../db/schema.js';
+import { organizationMemberRoles, organizations, organizationsMembers, sessions, users } from '../../db/schema.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import AuthUtils from '../auth-utils.js';
 import WebSessionAuthenticator from '../services/WebSessionAuthenticator.js';
@@ -56,7 +56,6 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
           userID: userSession.userId,
           // just passing the first org because we are limiting the user to onyly be a part of a single organization.
           organizationID: orgs[0].id,
-          // organizationID: '531507ef-1778-4af5-8a00-45533b22183c',
         }),
         expiresAt: userSession.expiresAt,
       };
@@ -176,24 +175,32 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
       await opts.keycloakClient.seedGroup({ userID: userId, organizationSlug, realm: opts.keycloakRealm });
 
       await opts.db.transaction(async (db) => {
-        const insertedOrg = await opts.organizationRepository.createOrganization({
-          organizationID: randomUUID(),
-          organizationName: userEmail.split('@')[0],
-          organizationSlug,
-          ownerID: userId,
-          isFreeTrail: true,
-        });
+        const insertedOrg = await db
+          .insert(organizations)
+          .values({
+            id: randomUUID(),
+            name: userEmail.split('@')[0],
+            slug: organizationSlug,
+            createdBy: userId,
+            isFreeTrial: true,
+          })
+          .returning()
+          .execute();
 
-        const orgMember = await opts.organizationRepository.addOrganizationMember({
-          organizationID: insertedOrg.id,
-          userID: userId,
-          acceptedInvite: true,
-        });
+        const insertedOrgMember = await db
+          .insert(organizationsMembers)
+          .values({
+            userId,
+            organizationId: insertedOrg[0].id,
+            acceptedInvite: true,
+          })
+          .returning()
+          .execute();
 
-        await opts.organizationRepository.addOrganizationMemberRoles({
-          memberID: orgMember.id,
-          roles: ['admin'],
-        });
+        await db
+          .insert(organizationMemberRoles)
+          .values({ organizationMemberId: insertedOrgMember[0].id, role: 'admin' })
+          .execute();
       });
     }
 

@@ -87,7 +87,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         );
         const params = new URLSearchParams(url.search);
         router.replace(
-          params ? `/${organizationSlug}?${params}` : `/${organizationSlug}`
+          params.size !== 0 ? `/${organizationSlug}?${params}` : `/${organizationSlug}`
         );
       }
     } else {

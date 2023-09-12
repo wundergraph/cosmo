@@ -1,0 +1,1 @@
+ALTER TABLE "organizations" RENAME COLUMN "is_free_trail" TO "is_free_trial";
