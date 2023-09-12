@@ -11,3 +11,4 @@ node_modules
 tsconfig.tsbuildinfo
 #lerna
 lerna-debug.log
+.DS_Store

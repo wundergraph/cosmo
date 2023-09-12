@@ -5,29 +5,28 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/go-chi/chi/middleware"
-	"github.com/wundergraph/cosmo/router/internal/logging"
 	"net/http"
 	"strconv"
 	"sync"
 	"time"
 
 	"github.com/dgraph-io/ristretto"
+	"github.com/go-chi/chi/middleware"
 	"github.com/hashicorp/go-multierror"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
-	"github.com/wundergraph/cosmo/router/internal/unsafebytes"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/astvalidation"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphql"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
 	"go.uber.org/zap"
 	"golang.org/x/sync/singleflight"
 
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/astvalidation"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphql"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
+
+	"github.com/wundergraph/cosmo/router/internal/logging"
 	"github.com/wundergraph/cosmo/router/internal/pool"
+	"github.com/wundergraph/cosmo/router/internal/unsafebytes"
 )
 
 const (
@@ -61,40 +60,31 @@ func MergeJsonRightIntoLeft(left, right []byte) []byte {
 }
 
 type HandlerOptions struct {
-	PlanConfig plan.Configuration
-	Definition *ast.Document
-	Resolver   *resolve.Resolver
-	Pool       *pool.Pool
-	Cache      *ristretto.Cache
-	Log        *zap.Logger
+	Executor *Executor
+	Cache    *ristretto.Cache
+	Log      *zap.Logger
 }
 
 func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 	graphQLHandler := &GraphQLHandler{
-		planConfig:  opts.PlanConfig,
-		definition:  opts.Definition,
-		resolver:    opts.Resolver,
 		log:         opts.Log,
-		pool:        opts.Pool,
 		sf:          &singleflight.Group{},
 		prepared:    map[uint64]planWithExtractedVariables{},
 		preparedMux: &sync.RWMutex{},
 		planCache:   opts.Cache,
+		executor:    opts.Executor,
 	}
 	return graphQLHandler
 }
 
 type GraphQLHandler struct {
-	planConfig plan.Configuration
-	definition *ast.Document
-	resolver   *resolve.Resolver
-	log        *zap.Logger
-	pool       *pool.Pool
-	sf         *singleflight.Group
+	log      *zap.Logger
+	executor *Executor
 
 	prepared    map[uint64]planWithExtractedVariables
 	preparedMux *sync.RWMutex
 
+	sf        *singleflight.Group
 	planCache *ristretto.Cache
 }
 
@@ -159,7 +149,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		executionBuf := pool.GetBytesBuffer()
 		defer pool.PutBytesBuffer(executionBuf)
 
-		err := h.resolver.ResolveGraphQLResponse(operationContext.plan.Ctx, p.Response, nil, executionBuf)
+		err := h.executor.Resolver.ResolveGraphQLResponse(operationContext.plan.Ctx, p.Response, nil, executionBuf)
 		if err != nil {
 			if errors.Is(err, context.Canceled) {
 				return
@@ -187,7 +177,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		err := h.resolver.ResolveGraphQLSubscription(operationContext.plan.Ctx, p.Response, flushWriter)
+		err := h.executor.Resolver.ResolveGraphQLSubscription(operationContext.plan.Ctx, p.Response, flushWriter)
 		if err != nil {
 			if errors.Is(err, context.Canceled) {
 				return
@@ -198,7 +188,8 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			requestLogger.Error("unable to resolve subscription response", zap.Error(err))
 			return
 		}
-	case *plan.StreamingResponsePlan:
+	default:
+		requestLogger.Error("unsupported plan kind")
 		w.WriteHeader(http.StatusInternalServerError)
 	}
 }
@@ -213,7 +204,7 @@ func (h *GraphQLHandler) preparePlan(requestOperationName []byte, shared *pool.S
 	// this is necessary because the shared document will be re-used across requests
 	// as the plan is cached, and will have references to the document, it cannot be re-used
 	buf := &bytes.Buffer{}
-	err := shared.Printer.Print(shared.Doc, h.definition, buf)
+	err := shared.Printer.Print(shared.Doc, h.executor.Definition, buf)
 	if err != nil {
 		return planWithExtractedVariables{}, fmt.Errorf(ErrMsgOperationParseFailed, err)
 	}
@@ -226,13 +217,13 @@ func (h *GraphQLHandler) preparePlan(requestOperationName []byte, shared *pool.S
 	}
 
 	// validate the document before planning
-	state := shared.Validation.Validate(&doc, h.definition, shared.Report)
+	state := shared.Validation.Validate(&doc, h.executor.Definition, shared.Report)
 	if state != astvalidation.Valid {
 		return planWithExtractedVariables{}, fmt.Errorf(ErrMsgOperationValidationFailed, state.String())
 	}
 
 	// create and postprocess the plan
-	preparedPlan := shared.Planner.Plan(&doc, h.definition, unsafebytes.BytesToString(requestOperationName), shared.Report)
+	preparedPlan := shared.Planner.Plan(&doc, h.executor.Definition, unsafebytes.BytesToString(requestOperationName), shared.Report)
 	if shared.Report.HasErrors() {
 		return planWithExtractedVariables{}, fmt.Errorf(ErrMsgOperationParseFailed, err)
 	}

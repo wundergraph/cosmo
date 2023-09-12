@@ -2,6 +2,13 @@ package cmd
 
 import (
 	"context"
+	"flag"
+	"log"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
 	"github.com/wundergraph/cosmo/router/core"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/internal/config"
@@ -9,18 +16,18 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/handler/cors"
 	"github.com/wundergraph/cosmo/router/internal/metric"
 	"github.com/wundergraph/cosmo/router/internal/trace"
-	"log"
-	"os"
-	"os/signal"
-	"syscall"
-	"time"
+
+	"go.uber.org/zap"
 
 	"github.com/wundergraph/cosmo/router/internal/logging"
-	"go.uber.org/zap"
 )
 
 func Main() {
-	cfg, err := config.LoadConfig()
+	var overrideEnv string
+	flag.StringVar(&overrideEnv, "override-env", "", "env file name to override env variables")
+	flag.Parse()
+
+	cfg, err := config.LoadConfig(overrideEnv)
 	if err != nil {
 		log.Fatal("Could not load config", zap.Error(err))
 	}
@@ -104,6 +111,7 @@ func Main() {
 			},
 			OtlpHttpPath: "/v1/metrics",
 		}),
+		core.WithEngineExecutionConfig(cfg.EngineExecutionConfiguration),
 	)
 
 	if err != nil {

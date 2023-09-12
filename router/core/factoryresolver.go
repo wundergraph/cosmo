@@ -6,19 +6,19 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/internal/config"
 	"net"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
 
-	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/staticdatasource"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"go.uber.org/zap"
 
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
+	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/cosmo/router/internal/config"
 )
 
 type Loader struct {
@@ -61,7 +61,6 @@ func NewDefaultFactoryResolver(transportFactory ApiTransportFactory, baseTranspo
 		graphql: &graphql_datasource.Factory{
 			HTTPClient:      defaultHttpClient,
 			StreamingClient: streamingClient,
-			BatchFactory:    graphql_datasource.NewBatchFactory(),
 		},
 		log: log,
 	}
@@ -189,7 +188,6 @@ func (d *DefaultFactoryResolver) Resolve(ds *nodev1.DataSourceConfiguration) (pl
 		factory := &graphql_datasource.Factory{
 			HTTPClient:      d.graphql.HTTPClient,
 			StreamingClient: d.graphql.StreamingClient,
-			BatchFactory:    d.graphql.BatchFactory,
 		}
 
 		if d.requiresDedicatedHTTPClient(ds, ds.CustomGraphql.Fetch) {

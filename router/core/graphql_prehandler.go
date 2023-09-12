@@ -2,46 +2,37 @@ package core
 
 import (
 	"errors"
+	"io"
+	"net/http"
+
 	"github.com/buger/jsonparser"
 	"github.com/go-chi/chi/middleware"
+	"go.opentelemetry.io/otel/trace"
+	"go.uber.org/zap"
+
 	"github.com/wundergraph/cosmo/router/internal/logging"
 	"github.com/wundergraph/cosmo/router/internal/otel"
 	"github.com/wundergraph/cosmo/router/internal/pool"
 	ctrace "github.com/wundergraph/cosmo/router/internal/trace"
 	"github.com/wundergraph/cosmo/router/internal/unsafebytes"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphql"
-	"go.opentelemetry.io/otel/trace"
-	"go.uber.org/zap"
-	"io"
-	"net/http"
 )
 
 type PreHandlerOptions struct {
-	Logger          *zap.Logger
-	Pool            *pool.Pool
-	RenameTypeNames []resolve.RenameTypeName
-	PlanConfig      plan.Configuration
-	Definition      *ast.Document
+	Logger   *zap.Logger
+	Executor *Executor
 }
 
 type PreHandler struct {
-	log             *zap.Logger
-	pool            *pool.Pool
-	renameTypeNames []resolve.RenameTypeName
-	planConfig      plan.Configuration
-	definition      *ast.Document
+	log      *zap.Logger
+	executor *Executor
 }
 
 func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 	return &PreHandler{
-		log:             opts.Logger,
-		pool:            opts.Pool,
-		renameTypeNames: opts.RenameTypeNames,
-		planConfig:      opts.PlanConfig,
-		definition:      opts.Definition,
+		log:      opts.Logger,
+		executor: opts.Executor,
 	}
 }
 
@@ -66,10 +57,10 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		requestVariables, _, _, _ := jsonparser.Get(body, "variables")
 		requestOperationType := ""
 
-		shared := h.pool.GetSharedFromRequest(r, h.planConfig, pool.Config{
-			RenameTypeNames: h.renameTypeNames,
+		shared := h.executor.Pool.GetSharedFromRequest(r, h.executor.PlanConfig, pool.Config{
+			RenameTypeNames: h.executor.RenameTypeNames,
 		})
-		defer h.pool.PutShared(shared)
+		defer h.executor.Pool.PutShared(shared)
 		shared.Ctx.Variables = requestVariables
 		shared.Doc.Input.ResetInputString(requestQuery)
 		shared.Parser.Parse(shared.Doc, shared.Report)
@@ -129,9 +120,9 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		requestOperationNameBytes := unsafebytes.StringToBytes(requestOperationName)
 
 		if requestOperationName == "" {
-			shared.Normalizer.NormalizeOperation(shared.Doc, h.definition, shared.Report)
+			shared.Normalizer.NormalizeOperation(shared.Doc, h.executor.Definition, shared.Report)
 		} else {
-			shared.Normalizer.NormalizeNamedOperation(shared.Doc, h.definition, requestOperationNameBytes, shared.Report)
+			shared.Normalizer.NormalizeNamedOperation(shared.Doc, h.executor.Definition, requestOperationNameBytes, shared.Report)
 		}
 
 		if shared.Report.HasErrors() {
@@ -154,7 +145,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		// create a hash of the query to use as a key for the prepared plan cache
 		// in this hash, we include the printed operation
 		// and the extracted variables (see below)
-		err = shared.Printer.Print(shared.Doc, h.definition, shared.Hash)
+		err = shared.Printer.Print(shared.Doc, h.executor.Definition, shared.Hash)
 		if err != nil {
 			requestLogger.Error("unable to print document", zap.Error(err))
 			respondWithInternalServerError(w, requestLogger)
