@@ -92,3 +92,5 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.container_name }}:buildcache
           cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.container_name }}:buildcache,mode=max
+          build-args: |
+            VERSION=${{ github.sha }}

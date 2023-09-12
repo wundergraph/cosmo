@@ -190,6 +190,7 @@ export function inputValueDefinitionNodeToMutable(node: InputValueDefinitionNode
   return {
     defaultValue: node.defaultValue ? { ...node.defaultValue } : undefined,
     description: formatDescription(node.description),
+    directives: node.directives ? [...node.directives] : undefined,
     kind: node.kind,
     name: { ...node.name },
     type: deepCopyTypeNode(node.type, parentName, node.name.value),

@@ -238,9 +238,8 @@ services:
       FEDERATED_GRAPH_NAME: production
       CORS_ALLOW_CREDENTIALS: true
       LISTEN_ADDR: "0.0.0.0:3002"
-      PRODUCTION: true
       CONTROLPLANE_URL: http://controlplane:3001
-      OTEL_COLLECTOR_ENDPOINT: http://otelcollector:4318
+      TELEMETRY_ENDPOINT: http://otelcollector:4318
       GRAPH_API_TOKEN: ${ROUTER_TOKEN}
     restart: on-failure
     networks:
