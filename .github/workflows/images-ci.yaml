@@ -88,6 +88,7 @@ jobs:
         with:
           require: 'write'
           token: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ github.triggering_actor }}
 
       # This is a limitation of GitHub. Only organization members can push to GitHub Container Registry
       - name: Build Docker image (No push)
