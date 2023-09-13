@@ -261,13 +261,13 @@ const RunRouterCommand = ({
   graphName: string;
   token: string;
 }) => {
-  const dockerRunCommand = `docker run \\ \n
-  --name cosmo-router \\ \n
-  -e FEDERATED_GRAPH_NAME="${graphName}" \\ \n
-  -e GRAPH_API_TOKEN=${token} \\ \n
-  -e LISTEN_ADDR=0.0.0.0:3002 \\ \n
-  --platform=linux/amd64 \\ \n
-  -p 3002:3002 \\ \n
+  const dockerRunCommand = `docker run \\
+  --name cosmo-router \\
+  -e FEDERATED_GRAPH_NAME="${graphName}" \\
+  -e GRAPH_API_TOKEN=${token} \\
+  -e LISTEN_ADDR=0.0.0.0:3002 \\
+  --platform=linux/amd64 \\
+  -p 3002:3002 \\
   ghcr.io/wundergraph/cosmo/router:latest`;
 
   const [copyDockerCommand, setCopyDockerCommand] = useState(false);
@@ -304,7 +304,7 @@ const RunRouterCommand = ({
               </Link>
             </p>
             <div className="flex justify-between rounded border border-input bg-background p-4">
-              <code className="whitespace-pre-wrap break-all rounded font-mono text-xs leading-tight text-muted-foreground">
+              <code className="whitespace-pre-wrap break-all rounded font-mono text-xs leading-normal text-muted-foreground">
                 {dockerRunCommand}
               </code>
               <Button
