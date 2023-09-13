@@ -159,14 +159,17 @@ export default class ApolloMigrator {
 
       const federatedGraph = await fedGraphRepo.create({
         name: fedGraph.name,
-        labelMatchers: ['env=main'],
+        labelMatchers: ['env=main', `name=${fedGraph.name}`],
         routingUrl: fedGraph.routingURL,
       });
 
       for (const subgraph of subgraphs) {
         await subgraphRepo.create({
           name: subgraph.name,
-          labels: [{ key: 'env', value: 'main' }],
+          labels: [
+            { key: 'env', value: 'main' },
+            { key: 'name', value: fedGraph.name },
+          ],
           routingUrl: subgraph.routingURL,
         });
 
