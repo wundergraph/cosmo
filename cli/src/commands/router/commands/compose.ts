@@ -28,7 +28,9 @@ type Config = {
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('compose');
-  command.description('Generates the router config locally. The output can be piped to a file.');
+  command.description(
+    'Generates the router config locally. The output can be piped to a file. To generate config for production use please use router fetch instead.',
+  );
   command.requiredOption('-i, --input <path-to-input>', 'The yaml file with data about graph and subgraphs.');
   command.action(async (options) => {
     const inputFile = resolve(process.cwd(), options.input);
