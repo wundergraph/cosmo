@@ -1,21 +1,9 @@
-FROM golang:1.20 as builder
+FROM ghcr.io/wundergraph/cosmo/router:0.12.0-onbuild as builder
 
-WORKDIR /app/
+# Copy custom files
+COPY . /app/router/cmd/custom
 
-# Copy only the files required for go mod download
-COPY ./go.* .
-
-# Download dependencies
-RUN go mod download
-
-# Copy the rest of the files
-COPY . .
-
-# Run tests
-RUN go test -v ./...
-
-# Build router
-RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -a -o router cmd/custom/main.go
+# The other instructions are inherited from the builder image: download dependencies, run tests, build the binary
 
 FROM gcr.io/distroless/static:latest
 

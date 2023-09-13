@@ -3,31 +3,17 @@ FROM golang:1.20 as builder
 WORKDIR /app/
 
 # Copy only the files required for go mod download
-COPY ./router/go.* ./router/
-
-WORKDIR /app/router
+COPY ./go.* .
 
 # Download dependencies
 RUN go mod download
 
-WORKDIR /app/
-
 # Copy the rest of the files
-COPY . /app/
+COPY . .
 
-# Install tools
-RUN make setup-build-tools
-
-# Generate code
-RUN buf generate --template buf.go.gen.yaml
-
-WORKDIR /app/router
-
-# Run tests
-RUN make test
-
-# Build router
-RUN make build
+ONBUILD RUN go mod download
+ONBUILD RUN make test
+ONBUILD RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -a -o router cmd/custom/main.go
 
 FROM gcr.io/distroless/static:latest
 
