@@ -89,10 +89,24 @@ jobs:
           require: 'write'
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      # This is a limitation of GitHub. Only organization members can push to GitHub Container Registry
+      - name: Build Docker image (No push)
+        uses: docker/build-push-action@v4
+        if: ${{ steps.perm_check.outputs.check-result == 'false' }}
+        with:
+          push: false
+          file: ${{ matrix.dockerfile }}
+          context: ${{ matrix.context_path }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            VERSION=${{ github.sha }}
+
       - name: Build and push Docker image (For organization members only)
         uses: docker/build-push-action@v4
+        if: ${{ steps.perm_check.outputs.check-result == 'true' }}
         with:
-          push: ${{ steps.perm_check.outputs.check-result == 'true' }}
+          push: true
           file: ${{ matrix.dockerfile }}
           context: ${{ matrix.context_path }}
           tags: ${{ steps.meta.outputs.tags }}
