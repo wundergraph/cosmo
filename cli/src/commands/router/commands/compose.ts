@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
-import { buildRouterConfig } from '@wundergraph/cosmo-shared';
+import { buildRouterConfig, normalizeURL } from '@wundergraph/cosmo-shared';
 import { Command, program } from 'commander';
 import { parse, printSchema } from 'graphql';
 import * as yaml from 'js-yaml';
@@ -69,7 +69,7 @@ export default (opts: BaseCommandOptions) => {
     const result = composeSubgraphs(
       config.subgraphs.map((s, index) => ({
         name: s.name,
-        url: s.routing_url,
+        url: normalizeURL(s.routing_url),
         definitions: parse(sdls[index]),
       })),
     );
@@ -88,7 +88,7 @@ export default (opts: BaseCommandOptions) => {
       subgraphs: config.subgraphs.map((s, index) => ({
         id: `${index}`,
         name: s.name,
-        url: s.routing_url,
+        url: normalizeURL(s.routing_url),
         sdl: sdls[index],
       })),
     });

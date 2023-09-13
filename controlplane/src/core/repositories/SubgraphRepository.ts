@@ -1,12 +1,12 @@
 import { CompositionError } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
+import { joinLabel, normalizeURL, splitLabel } from '@wundergraph/cosmo-shared';
 import { and, asc, eq, gt, inArray, lt, notInArray, SQL, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema.js';
 import { schemaChecks, schemaVersion, subgraphs, subgraphsToFederatedGraph, targets } from '../../db/schema.js';
 import { GetChecksResponse, Label, ListFilterOptions, SchemaCheckDetailsDTO, SubgraphDTO } from '../../types/index.js';
 import { updateComposedSchema } from '../composition/updateComposedSchema.js';
-import { normalizeLabels, normalizeURL } from '../util.js';
+import { normalizeLabels } from '../util.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 
 /**

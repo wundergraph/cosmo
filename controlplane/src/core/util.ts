@@ -80,11 +80,6 @@ export function isValidLabelMatchers(labelMatchers: string[]): boolean {
   return true;
 }
 
-export function normalizeURL(url: string): string {
-  const parts = url.split(/[#/?]/, 5);
-  return parts.slice(0, 4).join('/');
-}
-
 export function normalizeLabelMatchers(labelMatchers: string[]): string[] {
   const normalizedMatchers: string[] = [];
 

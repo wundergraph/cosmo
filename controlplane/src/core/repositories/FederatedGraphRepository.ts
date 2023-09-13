@@ -3,7 +3,7 @@ import { and, asc, desc, eq, inArray, not, notExists, notInArray, SQL, sql } fro
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { RouterConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { CompositionError, SchemaChange } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { joinLabel } from '@wundergraph/cosmo-shared';
+import { joinLabel, normalizeURL } from '@wundergraph/cosmo-shared';
 import * as schema from '../../db/schema.js';
 import {
   federatedGraphs,
@@ -23,7 +23,7 @@ import {
   SchemaChangeType,
 } from '../../types/index.js';
 import { updateComposedSchema } from '../composition/updateComposedSchema.js';
-import { normalizeLabelMatchers, normalizeLabels, normalizeURL } from '../util.js';
+import { normalizeLabelMatchers, normalizeLabels } from '../util.js';
 import { SubgraphRepository } from './SubgraphRepository.js';
 
 /**
