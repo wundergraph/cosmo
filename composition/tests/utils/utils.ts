@@ -30,7 +30,7 @@ export const versionOnePersistedBaseSchema = `
 export const versionTwoBaseSchema = versionOneBaseSchema + `
   directive @composeDirective(name: String!) repeatable on SCHEMA
   directive @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
-  directive @link(url: String!, as: String, for: String, import: [String]) repeatable on schema
+  directive @link(url: String!, as: String, for: String, import: [String]) repeatable on SCHEMA
   directive @override(from: String!) on FIELD_DEFINITION
   directive @shareable on FIELD_DEFINITION | OBJECT
 `;

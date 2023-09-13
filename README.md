@@ -42,7 +42,7 @@ They might restart a few times until the database is ready. You can check the st
 
 ```shell
 # Create the demo project
-make create-docker-demo
+make create-cli-demo
 
 # Copy the Router token from the previous log output
 export ROUTER_TOKEN=...
@@ -111,7 +111,7 @@ export COSMO_API_URL=http://localhost:3001
 cd cli && pnpm wgc -h
 ```
 
-All services work with environment variables. You can find the default values in the `.env.example` file. Please copy it to `.env`  (Except studio which works with `.env.local`) and adjust the values to your needs.
+All services work with environment variables. You can find the default values in the `.env.example` file. Please copy it to `.env` (Except studio which works with `.env.local`) and adjust the values to your needs.
 
 _Clean up all containers and volumes by running `make infra-down-v`._
 
@@ -123,7 +123,7 @@ We manage multiple compose files:
 - `docker-compose.full.yml`: This compose file contains the full Cosmo platform. It is used for demo and testing.
 - `docker-compose.cosmo.yml`: This compose file allows to build all cosmo components and manage them in a single compose file. It is used for testing and releasing.
 
-__Clean up a compose stack before starting another one!__
+**Clean up a compose stack before starting another one!**
 
 ## On-Premise
 
@@ -139,4 +139,3 @@ After contacting us, we will hook you up with a free trial and help you to get s
 ## License
 
 Cosmo is licensed under the [Apache License, Version 2.0](LICENSE).
-
