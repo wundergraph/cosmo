@@ -14,8 +14,8 @@ import (
 // FindEmployeeByID is the resolver for the findEmployeeByID field.
 func (r *entityResolver) FindEmployeeByID(ctx context.Context, id int) (*model.Employee, error) {
 	switch id {
-	// Dustin, Nithin, Suvij, Dani
-	case 2, 7, 8, 13:
+	// Dustin, Nithin, Suvij
+	case 2, 7, 8:
 		return &model.Employee{
 			Products: []model.ProductNames{
 				model.ProductNamesCloud,
