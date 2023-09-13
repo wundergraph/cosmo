@@ -1,15 +1,18 @@
+import { randomUUID } from 'node:crypto';
 import { FastifyPluginCallback } from 'fastify';
 import fp from 'fastify-plugin';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { eq } from 'drizzle-orm';
 import { lru } from 'tiny-lru';
+import { uid } from 'uid';
 import { decodeJWT, DEFAULT_SESSION_MAX_AGE_SEC, encrypt } from '../crypto/jwt.js';
 import { CustomAccessTokenClaims, UserInfoEndpointResponse, UserSession } from '../../types/index.js';
 import * as schema from '../../db/schema.js';
-import { organizationsMembers, sessions, users } from '../../db/schema.js';
+import { organizationMemberRoles, organizations, organizationsMembers, sessions, users } from '../../db/schema.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import AuthUtils from '../auth-utils.js';
 import WebSessionAuthenticator from '../services/WebSessionAuthenticator.js';
+import Keycloak from '../services/Keycloak.js';
 
 export type AuthControllerOptions = {
   db: PostgresJsDatabase<typeof schema>;
@@ -24,6 +27,8 @@ export type AuthControllerOptions = {
   session: {
     cookieName: string;
   };
+  keycloakClient: Keycloak;
+  keycloakRealm: string;
 };
 
 const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fastify, opts, done) {
@@ -101,6 +106,7 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
     const sessionExpiresDate = new Date(Date.now() + 1000 * sessionExpiresIn);
 
     const userId = accessTokenPayload.sub!;
+    const userEmail = accessTokenPayload.email!;
 
     const insertedSession = await opts.db.transaction(async (db) => {
       // Upsert the user
@@ -158,6 +164,39 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
       return insertedSessions[0];
     });
 
+    const orgs = await opts.organizationRepository.memberships({
+      userId,
+    });
+    if (orgs.length === 0) {
+      await opts.keycloakClient.authenticateClient();
+
+      const organizationSlug = uid(8);
+
+      await opts.keycloakClient.seedGroup({ userID: userId, organizationSlug, realm: opts.keycloakRealm });
+
+      await opts.db.transaction(async (db) => {
+        const orgRepo = new OrganizationRepository(db);
+
+        const insertedOrg = await orgRepo.createOrganization({
+          organizationName: userEmail.split('@')[0],
+          organizationSlug,
+          ownerID: userId,
+          isFreeTrial: true,
+        });
+
+        const orgMember = await orgRepo.addOrganizationMember({
+          organizationID: insertedOrg.id,
+          userID: userId,
+          acceptedInvite: true,
+        });
+
+        await orgRepo.addOrganizationMemberRoles({
+          memberID: orgMember.id,
+          roles: ['admin'],
+        });
+      });
+    }
+
     // Create a JWT token containing the session id and user id.
     const jwt = await encrypt<UserSession>({
       maxAge: sessionExpiresIn,
@@ -170,6 +209,10 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
 
     // Set the session cookie. The cookie value is encrypted.
     opts.authUtils.createSessionCookie(res, jwt, sessionExpiresDate);
+
+    if (orgs.length === 0) {
+      res.redirect(opts.webBaseUrl + '?migrate=true');
+    }
 
     res.redirect(opts.webBaseUrl);
   });

@@ -32,6 +32,7 @@ import {
   GetSubgraphsResponse,
   GetTraceResponse,
   InviteUserResponse,
+  MigrateFromApolloResponse,
   PublishFederatedSubgraphResponse,
   RemoveInvitationResponse,
   RequestSeriesItem,
@@ -1774,7 +1775,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         method: ctx.method.name,
       });
 
-      return handleError<PlainMessage<DeleteAPIKeyResponse>>(logger, async () => {
+      return handleError<PlainMessage<MigrateFromApolloResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
@@ -1787,6 +1788,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               code: EnumStatusCode.ERR_NOT_FOUND,
               details: `Organization not found`,
             },
+            token: '',
           };
         }
 
@@ -1805,6 +1807,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               code: EnumStatusCode.ERR,
               details: graphDetails.errorMessage,
             },
+            token: '',
           };
         }
 
@@ -1814,6 +1817,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               code: EnumStatusCode.ERR_ALREADY_EXISTS,
               details: `Federated graph '${graph.name}' already exists.`,
             },
+            token: '',
           };
         }
 
@@ -1824,6 +1828,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
                 code: EnumStatusCode.ERR_ALREADY_EXISTS,
                 details: `Subgraph '${subgraph.name}' already exists`,
               },
+              token: '',
             };
           }
         }
@@ -1844,11 +1849,28 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           subgraphRepo,
         });
 
+        const tokenValue = await signJwt<GraphApiKeyJwtPayload>({
+          secret: opts.jwtSecret,
+          token: {
+            iss: authContext.userId,
+            federated_graph_id: federatedGraph.id,
+            organization_id: authContext.organizationId,
+          },
+        });
+
+        const token = await fedGraphRepo.createToken({
+          token: tokenValue,
+          federatedGraphId: federatedGraph.id,
+          tokenName: federatedGraph.name,
+          organizationId: authContext.organizationId,
+        });
+
         if (compositionErrors.length > 0) {
           return {
             response: {
               code: EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED,
             },
+            token: token.token,
           };
         }
 
@@ -1856,6 +1878,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           response: {
             code: EnumStatusCode.OK,
           },
+          token: token.token,
         };
       });
     },
