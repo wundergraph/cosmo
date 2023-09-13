@@ -65,17 +65,23 @@ const fallbackData = [
 
 const MigrationDialog = ({
   refetch,
+  isMigrating,
+  setIsMigrating,
   setIsMigrationSuccess,
   setToken,
   isEmptyState,
 }: {
   refetch: () => void;
+  isMigrating: boolean;
+  setIsMigrating: Dispatch<SetStateAction<boolean>>;
   setIsMigrationSuccess: Dispatch<SetStateAction<boolean>>;
   setToken: Dispatch<SetStateAction<string | undefined>>;
   isEmptyState?: boolean;
 }) => {
   const router = useRouter();
+  const { organizationSlug } = router.query;
   const migrate = !!router.query.migrate;
+
   const migrateInputSchema = z.object({
     apiKey: z
       .string()
@@ -100,8 +106,8 @@ const MigrationDialog = ({
   const { toast } = useToast();
 
   const { mutate } = useMutation(migrateFromApollo.useMutation());
+
   const [open, setOpen] = useState(migrate || false);
-  const [isMigrating, setIsMigrating] = useState(false);
 
   const onSubmit: SubmitHandler<MigrateInput> = (data) => {
     setIsMigrating(true);
@@ -127,7 +133,7 @@ const MigrationDialog = ({
           } else if (d.response?.details) {
             toast({ description: d.response.details, duration: 3000 });
           }
-          setIsMigrating(false);
+          router.replace(`/${organizationSlug}/graphs`);
         },
         onError: (error) => {
           toast({
@@ -135,7 +141,7 @@ const MigrationDialog = ({
             duration: 3000,
           });
           setOpen(false);
-          setIsMigrating(false);
+          router.replace(`/${organizationSlug}/graphs`);
         },
       }
     );
@@ -292,7 +298,7 @@ const RunRouterCommand = ({
         </DialogHeader>
         <div className="flex flex-col gap-y-4 pt-2">
           <div>
-            <p className="pb-2">
+            <p className="pb-2 text-sm">
               Use the below command to initiate the router.{" "}
               <Link
                 href={docsBaseURL + "/router/deployment"}
@@ -323,9 +329,10 @@ const RunRouterCommand = ({
                 </div>
               </Button>
             </div>
-            <p className="text-xs mt-2 text-muted-foreground">
+            <p className="mt-2 text-xs text-muted-foreground">
               Hint: The Graph API Token which is scoped to the migrated
-              federated graph is generated. Please store it safely for future use.
+              federated graph is generated. Please store it safely for future
+              use.
             </p>
           </div>
         </div>
@@ -338,10 +345,14 @@ export const Empty = ({
   refetch,
   setIsMigrationSuccess,
   setToken,
+  isMigrating,
+  setIsMigrating,
 }: {
   refetch: () => void;
   setIsMigrationSuccess: Dispatch<SetStateAction<boolean>>;
   setToken: Dispatch<SetStateAction<string | undefined>>;
+  isMigrating: boolean;
+  setIsMigrating: Dispatch<SetStateAction<boolean>>;
 }) => {
   let labels = "team=A";
   return (
@@ -372,6 +383,8 @@ export const Empty = ({
             setIsMigrationSuccess={setIsMigrationSuccess}
             isEmptyState={true}
             setToken={setToken}
+            isMigrating={isMigrating}
+            setIsMigrating={setIsMigrating}
           />
         </div>
       }
@@ -486,6 +499,14 @@ export const FederatedGraphsCards = ({
 }) => {
   const [isMigrationSuccess, setIsMigrationSuccess] = useState(false);
   const [token, setToken] = useState<string | undefined>();
+  const [isMigrating, setIsMigrating] = useState(false);
+
+  useEffect(() => {
+    if (isMigrationSuccess) {
+      const to = setTimeout(setIsMigrating, 1500, false);
+      return () => clearTimeout(to);
+    }
+  }, [isMigrationSuccess]);
 
   if (!graphs || graphs.length === 0)
     return (
@@ -493,6 +514,8 @@ export const FederatedGraphsCards = ({
         refetch={refetch}
         setIsMigrationSuccess={setIsMigrationSuccess}
         setToken={setToken}
+        isMigrating={isMigrating}
+        setIsMigrating={setIsMigrating}
       />
     );
 
@@ -517,6 +540,8 @@ export const FederatedGraphsCards = ({
           refetch={refetch}
           setIsMigrationSuccess={setIsMigrationSuccess}
           setToken={setToken}
+          isMigrating={isMigrating}
+          setIsMigrating={setIsMigrating}
         />
       </div>
     </>
