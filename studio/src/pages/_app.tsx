@@ -14,6 +14,7 @@ import "../styles/globals.css";
 import "../styles/login.css";
 import "../styles/utils.css";
 import { MarkdownLayout } from "@/components/layout/markdown-layout";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 const queryClient = new QueryClient();
 
@@ -33,8 +34,10 @@ function MyApp({ Component, pageProps }: AppPropsWithLayout) {
       <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
         <QueryClientProvider client={queryClient}>
           <AppProvider>
-            <Toaster />
-            {getLayout(<Component {...pageProps} />)}
+            <TooltipProvider>
+              <Toaster />
+              {getLayout(<Component {...pageProps} />)}
+            </TooltipProvider>
           </AppProvider>
         </QueryClientProvider>
       </ThemeProvider>
