@@ -248,6 +248,28 @@ exports[`Router Config Builder > Build Subgraph schema > router.config.json 1`] 
       \\"8a904460a39840651fa27227d6d58eea045b6d43\\": \\"directive @extends on INTERFACE | OBJECT\\\\n\\\\ndirective @external on FIELD_DEFINITION | OBJECT\\\\n\\\\ndirective @key(fields: String!, resolvable: Boolean = true) repeatable on OBJECT\\\\n\\\\ndirective @provides(fields: String!) on FIELD_DEFINITION\\\\n\\\\ndirective @requires(fields: String!) on FIELD_DEFINITION\\\\n\\\\ndirective @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION\\\\n\\\\ntype Product @key(fields: \\\\\\"upc\\\\\\") {\\\\n  reviews: [Review]\\\\n  upc: String! @external\\\\n}\\\\n\\\\ntype Review @key(fields: \\\\\\"id\\\\\\") {\\\\n  author: User @provides(fields: \\\\\\"username\\\\\\")\\\\n  body: String\\\\n  id: ID!\\\\n  product: Product\\\\n}\\\\n\\\\ntype User @key(fields: \\\\\\"id\\\\\\") {\\\\n  id: ID! @external\\\\n  reviews: [Review]\\\\n  username: String @external\\\\n}\\",
       \\"3531c756933bcd4e82697efeebe068ff77d89443\\": \\"directive @extends on INTERFACE | OBJECT\\\\n\\\\ndirective @external on FIELD_DEFINITION | OBJECT\\\\n\\\\ndirective @key(fields: String!, resolvable: Boolean = true) repeatable on OBJECT\\\\n\\\\ndirective @provides(fields: String!) on FIELD_DEFINITION\\\\n\\\\ndirective @requires(fields: String!) on FIELD_DEFINITION\\\\n\\\\ndirective @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION\\\\n\\\\ntype Product @key(fields: \\\\\\"upc\\\\\\") {\\\\n  inStock: Boolean\\\\n  price: Int @external\\\\n  shippingEstimate: Int @requires(fields: \\\\\\"price weight\\\\\\")\\\\n  upc: String! @external\\\\n  weight: Int @external\\\\n}\\"
     }
-  }
+  },
+  \\"subgraphs\\": [
+    {
+      \\"id\\": \\"0\\",
+      \\"name\\": \\"accounts\\",
+      \\"routingUrl\\": \\"https://wg-federation-demo-accounts.fly.dev/graphql\\"
+    },
+    {
+      \\"id\\": \\"1\\",
+      \\"name\\": \\"products\\",
+      \\"routingUrl\\": \\"https://wg-federation-demo-products.fly.dev/graphql\\"
+    },
+    {
+      \\"id\\": \\"2\\",
+      \\"name\\": \\"reviews\\",
+      \\"routingUrl\\": \\"https://wg-federation-demo-reviews.fly.dev/graphql\\"
+    },
+    {
+      \\"id\\": \\"3\\",
+      \\"name\\": \\"inventory\\",
+      \\"routingUrl\\": \\"https://wg-federation-demo-inventory.fly.dev/graphql\\"
+    }
+  ]
 }"
 `;
