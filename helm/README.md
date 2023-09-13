@@ -10,7 +10,7 @@
 - [Kapp](https://get-kapp.io/) installed locally
 - [Kubectl](https://kubernetes.io/docs/tasks/tools/) installed locally
 
-### Render the Helm chart locally
+### Install helm dependencies
 
 ```shell
 # Install the helm dependencies (Only needed once)
