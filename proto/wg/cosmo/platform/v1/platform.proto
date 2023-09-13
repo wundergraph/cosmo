@@ -523,6 +523,7 @@ message MigrateFromApolloRequest {
 
 message MigrateFromApolloResponse {
   Response response = 1;
+  string token = 2;
 }
 
 message SpanAttributes {

@@ -3,7 +3,7 @@
     <#if section = "header">
         ${msg("registerTitle")}
     <#elseif section = "form">
-        <form id="kc-register-form" class="flex flex-col md:grid grid-cols-2 gap-2" action="${url.registrationAction}" method="post">
+        <form id="kc-register-form" class="flex flex-col w-full px-2 gap-2" action="${url.registrationAction}" method="post">
             <div class="${properties.kcFormGroupClass!}">
                 <div class="${properties.kcLabelWrapperClass!}">
                     <label for="firstName" class="${properties.kcLabelClass!}">${msg("firstName")}</label>

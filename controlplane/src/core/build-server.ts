@@ -185,6 +185,8 @@ export default async function build(opts: BuildConfig) {
       cookieName: pkceCodeVerifierCookieName,
     },
     webBaseUrl: opts.auth.webBaseUrl,
+    keycloakClient,
+    keycloakRealm: opts.keycloak.realm,
   });
 
   // Must be registered after custom fastify routes

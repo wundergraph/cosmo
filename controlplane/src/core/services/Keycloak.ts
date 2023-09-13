@@ -114,4 +114,36 @@ export default class Keycloak {
       clientId: this.clientId,
     });
   }
+
+  public async seedGroup({
+    realm,
+    userID,
+    organizationSlug,
+  }: {
+    realm?: string;
+    userID: string;
+    organizationSlug: string;
+  }) {
+    const organizationGroup = await this.client.groups.create({
+      realm: realm || this.realm,
+      name: organizationSlug,
+    });
+
+    const adminGroup = await this.client.groups.createChildGroup(
+      {
+        realm: realm || this.realm,
+        id: organizationGroup.id,
+      },
+      {
+        name: 'admin',
+        realmRoles: ['admin'],
+      },
+    );
+
+    await this.client.users.addToGroup({
+      id: userID,
+      realm: realm || this.realm,
+      groupId: adminGroup.id,
+    });
+  }
 }

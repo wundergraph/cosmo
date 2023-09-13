@@ -4028,6 +4028,11 @@ export class MigrateFromApolloResponse extends Message<MigrateFromApolloResponse
    */
   response?: Response;
 
+  /**
+   * @generated from field: string token = 2;
+   */
+  token = "";
+
   constructor(data?: PartialMessage<MigrateFromApolloResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -4037,6 +4042,7 @@ export class MigrateFromApolloResponse extends Message<MigrateFromApolloResponse
   static readonly typeName = "wg.cosmo.platform.v1.MigrateFromApolloResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "token", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MigrateFromApolloResponse {
