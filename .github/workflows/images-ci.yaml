@@ -82,10 +82,18 @@ jobs:
       - name: Install Docker Buildx
         uses: docker/setup-buildx-action@v2
 
-      - name: Build and push Docker image
+      - name: Check if organization member
+        id: is_organization_member
+        uses: jamessingleton/is-organization-member@v1
+        with:
+          organization: wundergraph
+          username: ${{ github.event.issue.user.login }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image (For organization members only)
         uses: docker/build-push-action@v4
         with:
-          push: true
+          push: ${{ steps.is_organization_member.outputs.result == true }}
           file: ${{ matrix.dockerfile }}
           context: ${{ matrix.context_path }}
           tags: ${{ steps.meta.outputs.tags }}
