@@ -57,5 +57,5 @@
     "@connectrpc/connect-query": "^0.4.2",
     "@connectrpc/protoc-gen-connect-query": "^0.4.2"
   },
-  "packageManager": "pnpm"
+  "packageManager": "pnpm@8.7.0"
 }
