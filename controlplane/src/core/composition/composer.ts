@@ -16,6 +16,7 @@ export interface ComposedFederatedGraph {
   composedSchema?: string;
   errors: Error[];
   subgraphs: {
+    id: string;
     name: string;
     sdl: string;
     url: string;
@@ -62,6 +63,7 @@ export class Composer {
         composedSchema: result?.federatedGraphSchema ? printSchema(result.federatedGraphSchema) : undefined,
         errors: errors || [],
         subgraphs: subgraphs.map((s) => ({
+          id: s.id,
           name: s.name,
           url: s.routingUrl,
           sdl: s.schemaSDL,
@@ -115,6 +117,7 @@ export class Composer {
           composedSchema: result?.federatedGraphSchema ? printSchema(result.federatedGraphSchema) : undefined,
           errors: errors || [],
           subgraphs: subgraphs.map((s) => ({
+            id: s.id,
             name: s.name,
             url: s.routingUrl,
             sdl: s.schemaSDL,

@@ -86,6 +86,7 @@ export default (opts: BaseCommandOptions) => {
       argumentConfigurations: result.federationResult.argumentConfigurations,
       federatedSDL: printSchema(result.federationResult.federatedGraphSchema),
       subgraphs: config.subgraphs.map((s, index) => ({
+        id: `${index}`,
         name: s.name,
         url: s.routing_url,
         sdl: sdls[index],

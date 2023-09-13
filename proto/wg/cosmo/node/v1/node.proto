@@ -4,9 +4,16 @@ package wg.cosmo.node.v1;
 
 import "wg/cosmo/common.proto";
 
+message Subgraph {
+  string id = 1;
+  string name = 2;
+  string routing_url = 3;
+}
+
 message RouterConfig {
   EngineConfiguration engine_config = 1;
   string version = 2;
+  repeated Subgraph subgraphs = 3;
 }
 
 message Response {
