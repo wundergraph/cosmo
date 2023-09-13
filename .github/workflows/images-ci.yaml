@@ -82,18 +82,17 @@ jobs:
       - name: Install Docker Buildx
         uses: docker/setup-buildx-action@v2
 
-      - name: Check if organization member
-        id: is_organization_member
-        uses: jamessingleton/is-organization-member@v1
+      - name: "Check if user has write permission to the repository"
+        id: perm_check
+        uses: actions-cool/check-user-permission@v2
         with:
-          organization: wundergraph
-          username: ${{ github.event.issue.user.login }}
+          require: 'write'
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push Docker image (For organization members only)
         uses: docker/build-push-action@v4
         with:
-          push: ${{ steps.is_organization_member.outputs.result == true }}
+          push: ${{ steps.perm_check.outputs.check-result == 'true' }}
           file: ${{ matrix.dockerfile }}
           context: ${{ matrix.context_path }}
           tags: ${{ steps.meta.outputs.tags }}
