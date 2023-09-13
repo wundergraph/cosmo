@@ -17,6 +17,19 @@ export function joinLabel({ key, value }: { key: string; value: string }) {
 }
 
 export function normalizeURL(url: string): string {
-  const parts = url.split(/[#/?]/, 5);
-  return parts.slice(0, 4).join('/');
+  // return empty
+  if (!url) {
+    return url;
+  }
+
+  const parsedUrl = new URL(url);
+  let path = parsedUrl.pathname;
+
+  // Remove the trailing slash if present
+  if (path.endsWith('/')) {
+    path = path.slice(0, -1);
+  }
+
+  const port = parsedUrl.port ? `:${parsedUrl.port}` : '';
+  return `${parsedUrl.protocol}//${parsedUrl.hostname}${port}${path}`;
 }
