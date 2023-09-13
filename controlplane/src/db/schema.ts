@@ -377,6 +377,7 @@ export const organizations = pgTable('organizations', {
     .references(() => users.id)
     .notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  isFreeTrial: boolean('is_free_trial').default(false),
 });
 
 export const organizationsMembers = pgTable(
