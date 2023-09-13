@@ -7,9 +7,13 @@ metadata:
 spec:
   type: {{ .Values.service.type }}
   ports:
-    - port: {{ .Values.service.port }}
+    - port: {{ .Values.service.httpPort }}
       targetPort: http
       protocol: TCP
       name: http
+    - port: {{ .Values.service.nativePort }}
+      targetPort: native
+      protocol: TCP
+      name: native
   selector:
     {{- include "clickhouse.selectorLabels" . | nindent 4 }}

@@ -10,7 +10,7 @@
 - [Kapp](https://get-kapp.io/) installed locally
 - [Kubectl](https://kubernetes.io/docs/tasks/tools/) installed locally
 
-### Render the Helm chart locally
+### Install helm dependencies
 
 ```shell
 # Install the helm dependencies (Only needed once)
@@ -43,6 +43,10 @@ make dev
 ```
 
 The provisioning will take a few seconds to bootstrap the whole cluster and seed the database with a default user and organization.
+
+#### Migrations
+
+We run several Kubernetes jobs to run migrations. While we provide Helm hook support to run migrations, we recommend to use Kapp because it is more powerful in coordinating the deployment.
 
 #### 3. Make ingress available locally
 

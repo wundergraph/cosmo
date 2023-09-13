@@ -35,7 +35,8 @@ Running cosmo is as easy as running a single command:
 make full-demo-up
 ```
 
-It can take a few seconds (~30s) until all services are up and running. A seed container will create a default user for you.
+It can take a few seconds (~30s) until all services are up and running. A seed container and few migrations are running in the background to bootstrap the platform.
+They might restart a few times until the database is ready. You can check the status of the services by running `docker-compose -f docker-compose.full.yml ps`.
 
 2. Now, you can create a small demo project and start the router and subgraphs:
 
@@ -72,25 +73,25 @@ _Clean up all containers and volumes by running `make full-demo-down`._
 Bootstrapping your development environment is easy. Just run the following commands in order:
 
 ```shell
-# 1️⃣ Setup the repository and start all services (docker-compose)
+# 1️⃣ Setup the repository and start all services (Wait a few seconds until Keycloak is ready)
 make
 
-# 2️⃣ Start the control plane (Will run any pending migrations)
+# 2️⃣ Run migrations and seed the database
+make migrate && make seed
+
+# 3️⃣ Start the control plane
 make start-cp
 
-# 3️⃣ Seed the database with the default user (Wait a few seconds until Keycloak is ready)
-make seed
-
-# 4️⃣ Create the demo and copy the JWT printed at the bottom
+# 4️⃣⃣ Create the demo and copy the JWT printed at the bottom
 make create-demo
 
 # 5️⃣ Start the subgraphs
 OTEL_AUTH_TOKEN=<jwt-token> make dc-subgraphs-demo
 
-# 6️⃣ Put the JWT from the previous step into the router/.env as GRAPH_API_TOKEN and start the router
+# 6️⃣⃣ Put the JWT from the previous step into the router/.env as GRAPH_API_TOKEN and start the router
 make start-router
 
-# 7️⃣ Start the studio (http://localhost:3000)
+# ✨ Finally, Start the studio (http://localhost:3000) and explore the Cosmo platform
 make start-studio
 ```
 

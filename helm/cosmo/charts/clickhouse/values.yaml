@@ -44,7 +44,8 @@ securityContext: {}
 
 service:
   type: ClusterIP
-  port: 8123
+  httpPort: 8123
+  nativePort: 9000
 
 resources: {}
   # We usually recommend not to specify default resources and to leave this as a conscious

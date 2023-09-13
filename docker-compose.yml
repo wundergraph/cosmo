@@ -1,5 +1,4 @@
----
-version: "3.8"
+version: '3.8'
 name: cosmo-dev
 services:
   postgres:

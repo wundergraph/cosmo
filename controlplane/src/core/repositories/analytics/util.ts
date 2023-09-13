@@ -228,7 +228,7 @@ export function buildCoercedFilterSqlStatement(
   }
 
   if (whereFilterSqlStatement.length > 0) {
-    whereSql = 'AND ' + whereFilterSqlStatement.join(' AND ');
+    whereSql = whereFilterSqlStatement.join(' AND ');
   }
 
   if (havingFilterSqlStatement.length > 0) {

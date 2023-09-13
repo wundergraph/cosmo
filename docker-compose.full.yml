@@ -1,8 +1,9 @@
-version: '3'
+version: '3.8'
 name: 'full-cosmo'
 services:
 
   # Services for the demo
+
   employees:
     container_name: employees
     environment:
@@ -201,35 +202,6 @@ services:
       - postgres
       - clickhouse
 
-  seed:
-    image: ghcr.io/wundergraph/cosmo/controlplane:${DC_CONTROLPLANE_VERSION:-latest}
-    platform: linux/amd64
-    command:
-      - "/app/dist/bin/seed.js"
-    environment:
-      KC_REALM: "cosmo"
-      KC_API_URL: "http://keycloak:8080"
-      KC_ADMIN_USER: "admin"
-      KC_ADMIN_PASSWORD: "changeme"
-      KC_CLIENT_ID: "studio"
-      API_KEY: cosmo_669b576aaadc10ee1ae81d9193425705
-      DB_URL: "postgresql://postgres:changeme@postgres:5432/controlplane"
-      USER_EMAIL: foo@wundergraph.com
-      USER_PASSWORD: bar
-      USER_FIRSTNAME: foo
-      USER_LASTNAME: bar
-      ORGANIZATION_NAME: wundergraph
-      ORGANIZATION_SLUG: wundergraph
-    restart: on-failure
-    networks:
-      - primary
-    profiles:
-      - default
-    depends_on:
-      - postgres
-      - clickhouse
-      - keycloak
-
   router:
     image: ghcr.io/wundergraph/cosmo/router:${DC_ROUTER_VERSION:-latest}
     platform: linux/amd64
@@ -260,8 +232,67 @@ services:
     ports:
       - '3000:3000'
 
+  # Migrations & Seed
+
+  seed:
+    image: ghcr.io/wundergraph/cosmo/controlplane:${DC_CONTROLPLANE_VERSION:-latest}
+    platform: linux/amd64
+    command:
+      - "/app/dist/bin/seed.js"
+    environment:
+      KC_REALM: "cosmo"
+      KC_API_URL: "http://keycloak:8080"
+      KC_ADMIN_USER: "admin"
+      KC_ADMIN_PASSWORD: "changeme"
+      KC_CLIENT_ID: "studio"
+      API_KEY: cosmo_669b576aaadc10ee1ae81d9193425705
+      DB_URL: "postgresql://postgres:changeme@postgres:5432/controlplane"
+      USER_EMAIL: foo@wundergraph.com
+      USER_PASSWORD: bar
+      USER_FIRSTNAME: foo
+      USER_LASTNAME: bar
+      ORGANIZATION_NAME: wundergraph
+      ORGANIZATION_SLUG: wundergraph
+    restart: on-failure
+    networks:
+      - primary
+    profiles:
+      - default
+    depends_on:
+      - postgres
+      - clickhouse
+      - keycloak
+
+  clickhouse-migration:
+    image: ghcr.io/wundergraph/cosmo/controlplane:${DC_CONTROLPLANE_VERSION:-latest}
+    platform: linux/amd64
+    command: node dist/bin/ch-migrate.js
+    depends_on:
+      - clickhouse
+    environment:
+      - CLICKHOUSE_DSN=clickhouse://default:changeme@clickhouse:9000/cosmo
+    networks:
+      - primary
+    profiles:
+      - default
+    restart: on-failure
+
+  database-migration:
+    image: ghcr.io/wundergraph/cosmo/controlplane:${DC_CONTROLPLANE_VERSION:-latest}
+    platform: linux/amd64
+    command: node dist/bin/db-migrate.js
+    depends_on:
+      - postgres
+    environment:
+      - DB_URL=postgresql://postgres:changeme@postgres:5432/controlplane
+    networks:
+      - primary
+    profiles:
+      - default
+    restart: on-failure
+
 # This network is shared between this file and docker-compose.yml to
-# allow the demo subgraphs to communicate with the rest of the infranetworks:
+# allow the demo subgraphs to communicate with the rest of the infra-networks:
 networks:
   primary:
     driver: bridge

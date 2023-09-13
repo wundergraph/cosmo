@@ -6,6 +6,7 @@ metadata:
   labels:
     {{- include "controlplane.labels" . | nindent 4 }}
   annotations:
+    # Run the job before installing the helm chart
     "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
     # Support for k14s.io. This annotation ensure that the job is run after the postgresql and keycloak deployment
     kapp.k14s.io/change-rule.postgres: "upsert after upserting cosmo.apps.postgresql.wundergraph.com/deployment"

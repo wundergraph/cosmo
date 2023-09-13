@@ -2,7 +2,7 @@ import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 
-export async function start(databaseConnectionUrl: string) {
+export async function RunMigration(databaseConnectionUrl: string) {
   const migrationConnection = postgres(databaseConnectionUrl, {
     max: 1,
     onnotice(notice) {},

@@ -9,10 +9,6 @@ metadata:
     # Support for k14s.io. This annotation will wait for the clickhouse deployments to be ready before deploying.
     kapp.k14s.io/change-rule.clickhouse: "upsert after upserting cosmo.apps.clickhouse.wundergraph.com/deployment"
     {{- end }}
-    {{- if .Values.global.postgresql.enabled }}
-    # Support for k14s.io. This annotation will wait for the postgresql deployments to be ready before deploying.
-    kapp.k14s.io/change-rule.postgresql: "upsert after upserting cosmo.apps.postgresql.wundergraph.com/deployment"
-    {{- end }}
   labels:
     {{- include "otelcollector.labels" . | nindent 4 }}
 spec:

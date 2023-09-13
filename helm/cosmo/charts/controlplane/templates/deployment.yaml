@@ -13,6 +13,9 @@ metadata:
     # Support for k14s.io. This annotation will wait for the keycloak deployments to be ready before deploying.
     kapp.k14s.io/change-rule.keycloak: "upsert after upserting cosmo.apps.keycloak.wundergraph.com/deployment"
     {{- end }}
+    # Only deploy the controlplane after the migrations have been applied.
+    kapp.k14s.io/change-rule.ch-migration: "upsert after upserting cosmo.apps.controlplane.wundergraph.com/ch-migration"
+    kapp.k14s.io/change-rule.db-migration: "upsert after upserting cosmo.apps.controlplane.wundergraph.com/db-migration"
   labels:
     {{- include "controlplane.labels" . | nindent 4 }}
 spec:
