@@ -9,6 +9,7 @@ import { TitleLayout } from "@/components/layout/title-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CustomTooltip } from "@/components/ui/charts";
 import { DeltaBadge } from "@/components/ui/delta-badge";
 import {
   Select,
@@ -19,7 +20,7 @@ import {
 } from "@/components/ui/select";
 import { Spacer } from "@/components/ui/spacer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useChartData } from "@/lib/insights-helpers";
+import { dateFormatter, useChartData } from "@/lib/insights-helpers";
 import { NextPageWithLayout } from "@/lib/page";
 import { cn } from "@/lib/utils";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
@@ -348,8 +349,6 @@ const RequestRate = () => {
   const id = useId();
   const { data, ticks, domain, timeFormatter } = useChartData(7 * 24, series);
 
-  const strokeColor = "#0284C7";
-
   return (
     <Card className="bg-transparent">
       <CardHeader>
@@ -415,12 +414,19 @@ const RequestRate = () => {
             />
 
             <Tooltip
-              labelFormatter={(value) => {
-                return format(value, "dd MMM yyyy HH:mm");
-              }}
-              formatter={(value) => {
-                return value + " per minute";
-              }}
+              content={(props) => (
+                <CustomTooltip
+                  {...props}
+                  label={
+                    <div>
+                      {dateFormatter(props.label, false)}
+                      <p>
+                        Error rate: {props.payload?.[0]?.payload?.errors ?? 0}
+                      </p>
+                    </div>
+                  }
+                />
+              )}
             />
           </AreaChart>
         </ResponsiveContainer>

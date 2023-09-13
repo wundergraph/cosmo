@@ -9,12 +9,16 @@ export interface CopyButtonProps extends ButtonProps {
 }
 
 const copyToClipboard = (value: string) => {
-  const el = document.createElement("textarea");
-  el.value = value;
-  document.body.appendChild(el);
-  el.select();
-  document.execCommand("copy");
-  document.body.removeChild(el);
+  if (!navigator.clipboard) {
+    const el = document.createElement("textarea");
+    el.value = value;
+    document.body.appendChild(el);
+    el.select();
+    document.execCommand("copy");
+    document.body.removeChild(el);
+  } else {
+    navigator.clipboard.writeText(value);
+  }
 };
 
 export const CopyButton: React.FC<CopyButtonProps> = (props) => {

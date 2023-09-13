@@ -34,7 +34,7 @@ export const DeltaBadge: React.FC<DeltaBadgeProps> = (props) => {
   const { type, className, ...rest } = props;
   return (
     <Badge
-      variant="default"
+      variant="plain"
       className={cn(deltaBadgeVariants({ type }), className)}
       {...rest}
     >

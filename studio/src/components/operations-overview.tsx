@@ -1,39 +1,35 @@
-import useWindowSize from '@/hooks/use-window-size';
-import { dateFormatter, useChartData } from '@/lib/insights-helpers';
-import { formatNumber } from '@/lib/utils';
-import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
-import { useQuery } from '@tanstack/react-query';
+import useWindowSize from "@/hooks/use-window-size";
+import { dateFormatter, useChartData } from "@/lib/insights-helpers";
+import { formatNumber } from "@/lib/utils";
+import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
+import { useQuery } from "@tanstack/react-query";
+import { getDashboardAnalyticsView } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import {
-  getDashboardAnalyticsView,
-} from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
-import { OperationRequestCount, RequestSeriesItem } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { useId, useMemo } from 'react';
-import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import BarList from './analytics/barlist';
-import { EmptyState } from './empty-state';
-import { Badge } from './ui/badge';
-import { Button } from './ui/button';
-import { Loader } from './ui/loader';
-import { Separator } from './ui/separator';
-import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common_pb';
-import { useRouter } from 'next/router';
-import { constructAnalyticsTableQueryState } from './analytics/constructAnalyticsTableQueryState';
+  OperationRequestCount,
+  RequestSeriesItem,
+} from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
+import { useId, useMemo } from "react";
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+import BarList from "./analytics/barlist";
+import { EmptyState } from "./empty-state";
+import { Badge } from "./ui/badge";
+import { Button } from "./ui/button";
+import { Loader } from "./ui/loader";
+import { Separator } from "./ui/separator";
+import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common_pb";
+import { useRouter } from "next/router";
+import { constructAnalyticsTableQueryState } from "./analytics/constructAnalyticsTableQueryState";
+import { CustomTooltip } from "./ui/charts";
 
 const valueFormatter = (number: number) => `${formatNumber(number)}`;
-
-const CustomTooltip = ({ active, payload, label, valueLabel }: any) => {
-  if (active && payload && payload.length) {
-    return (
-      <div className="rounded-md border border-popover bg-popover p-2 text-sm shadow-md outline-0 backdrop-blur-lg">
-        <div className="label">{label}</div>
-        <div className="intro">
-          {valueLabel || payload[0].name}: {payload[0].value}
-        </div>
-      </div>
-    );
-  }
-  return null;
-};
 
 const RequestChart = ({
   requestSeries,
@@ -126,32 +122,26 @@ const RequestChart = ({
           />
           <CartesianGrid strokeDasharray="3 3" className="stroke-secondary" />
           <Tooltip
-            cursor={false}
-            content={(props) => {
-              return (
-                <CustomTooltip
-                  valueLabel="Total"
-                  {...props}
-                  label={
-                    <div>
-                      {dateFormatter(props.label, false)}
-                      <p>
-                        Success:{" "}
-                        {props.payload?.[0]?.payload?.totalRequests
-                          ? props.payload?.[0]?.payload?.totalRequests -
-                              props.payload?.[0]?.payload?.erroredRequests ?? 0
-                          : 0}
-                      </p>
-                      <p>
-                        Error:{" "}
-                        {props.payload?.[0]?.payload?.erroredRequests ?? 0}
-                      </p>
-                    </div>
-                  }
-                />
-              );
-            }}
-            wrapperStyle={{ border: 0, background: "none", outline: "none" }}
+            content={(props) => (
+              <CustomTooltip
+                {...props}
+                label={
+                  <div>
+                    {dateFormatter(props.label, false)}
+                    <p>
+                      Success:{" "}
+                      {props.payload?.[0]?.payload?.totalRequests
+                        ? props.payload?.[0]?.payload?.totalRequests -
+                            props.payload?.[0]?.payload?.erroredRequests ?? 0
+                        : 0}
+                    </p>
+                    <p>
+                      Error: {props.payload?.[0]?.payload?.erroredRequests ?? 0}
+                    </p>
+                  </div>
+                }
+              />
+            )}
           />
           <Area
             type="monotone"
