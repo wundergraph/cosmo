@@ -23,7 +23,7 @@ import {
   SchemaChangeType,
 } from '../../types/index.js';
 import { updateComposedSchema } from '../composition/updateComposedSchema.js';
-import { normalizeLabelMatchers, normalizeLabels } from '../util.js';
+import { normalizeLabelMatchers, normalizeLabels, normalizeURL } from '../util.js';
 import { SubgraphRepository } from './SubgraphRepository.js';
 
 /**
@@ -37,6 +37,7 @@ export class FederatedGraphRepository {
       const subgraphRepo = new SubgraphRepository(db, this.organizationId);
 
       const labelMatchers = normalizeLabelMatchers(data.labelMatchers);
+      const routingUrl = normalizeURL(data.routingUrl);
 
       const insertedTarget = await db
         .insert(targets)
@@ -52,7 +53,7 @@ export class FederatedGraphRepository {
         .insert(federatedGraphs)
         .values({
           targetId: insertedTarget[0].id,
-          routingUrl: data.routingUrl,
+          routingUrl,
         })
         .returning()
         .execute();
@@ -108,6 +109,7 @@ export class FederatedGraphRepository {
     }
 
     const labelMatchers = normalizeLabelMatchers(data.labelMatchers);
+    const routingUrl = normalizeURL(data.routingUrl);
 
     await this.db.transaction(async (db) => {
       const fedGraphRepo = new FederatedGraphRepository(db, this.organizationId);
@@ -174,11 +176,7 @@ export class FederatedGraphRepository {
 
       // update routing URL
       if (data.routingUrl !== '') {
-        await db
-          .update(federatedGraphs)
-          .set({ routingUrl: data.routingUrl })
-          .where(eq(federatedGraphs.id, federatedGraph.id))
-          .execute();
+        await db.update(federatedGraphs).set({ routingUrl }).where(eq(federatedGraphs.id, federatedGraph.id)).execute();
       }
     });
 

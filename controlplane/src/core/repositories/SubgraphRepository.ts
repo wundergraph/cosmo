@@ -6,7 +6,7 @@ import * as schema from '../../db/schema.js';
 import { schemaChecks, schemaVersion, subgraphs, subgraphsToFederatedGraph, targets } from '../../db/schema.js';
 import { GetChecksResponse, Label, ListFilterOptions, SchemaCheckDetailsDTO, SubgraphDTO } from '../../types/index.js';
 import { updateComposedSchema } from '../composition/updateComposedSchema.js';
-import { normalizeLabels } from '../util.js';
+import { normalizeLabels, normalizeURL } from '../util.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 
 /**
@@ -17,6 +17,7 @@ export class SubgraphRepository {
 
   public create(data: { name: string; routingUrl: string; labels: Label[] }): Promise<SubgraphDTO | undefined> {
     const uniqueLabels = normalizeLabels(data.labels);
+    const routingUrl = normalizeURL(data.routingUrl);
 
     return this.db.transaction(async (db) => {
       /**
@@ -41,7 +42,7 @@ export class SubgraphRepository {
         .insert(subgraphs)
         .values({
           targetId: insertedTarget[0].id,
-          routingUrl: data.routingUrl,
+          routingUrl,
         })
         .returning()
         .execute();
@@ -71,6 +72,8 @@ export class SubgraphRepository {
 
   public async update(data: { name: string; routingUrl: string; labels: Label[] }): Promise<CompositionError[]> {
     const uniqueLabels = normalizeLabels(data.labels);
+    const routingUrl = normalizeURL(data.routingUrl);
+
     const compositionErrors: CompositionError[] = [];
 
     const subgraph = await this.byName(data.name);
@@ -134,7 +137,7 @@ export class SubgraphRepository {
 
       // update routing URL
       if (data.routingUrl !== '') {
-        await db.update(subgraphs).set({ routingUrl: data.routingUrl }).where(eq(subgraphs.id, subgraph.id)).execute();
+        await db.update(subgraphs).set({ routingUrl }).where(eq(subgraphs.id, subgraph.id)).execute();
       }
     });
 
