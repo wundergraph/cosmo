@@ -4,6 +4,13 @@ Images can be found [here](https://github.com/orgs/wundergraph/packages?repo_nam
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.11.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.10.1...controlplane@0.11.0) (2023-09-13)
+
+### Features
+
+* add user registration ([#57](https://github.com/wundergraph/cosmo/issues/57)) ([c1d1841](https://github.com/wundergraph/cosmo/commit/c1d184192511f015c4b33db91d7342a0bb35710e)) (@JivusAyrus)
+* use materialized views for traces ([#51](https://github.com/wundergraph/cosmo/issues/51)) ([f1bfbf5](https://github.com/wundergraph/cosmo/commit/f1bfbf5950ba92adbfeae5a3d4ef0cab14363150)) (@thisisnithin)
+
 ## [0.10.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.10.0...controlplane@0.10.1) (2023-09-11)
 
 **Note:** Version bump only for package controlplane
