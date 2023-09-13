@@ -1,0 +1,46 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: "{{ include "controlplane.fullname" . }}-database-migration-{{ now | unixEpoch }}"
+  labels:
+    {{- include "controlplane.labels" . | nindent 4 }}
+  annotations:
+    # Run migration job before helm install/upgrade
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-delete-policy": before-hook-creation
+    # Less priority than the migration job so the secret is created before the migration job
+    "helm.sh/hook-weight": "-10"
+    # Support for k14s.io. This annotation ensure that the job is run after the postgresql deployment
+    {{- if .Values.global.postgresql.enabled }}
+    kapp.k14s.io/change-rule.postgres: "upsert after upserting cosmo.apps.postgresql.wundergraph.com/deployment"
+    {{- end }}
+    # Create a new change-group so the controlplane can be deployed after the database migration
+    kapp.k14s.io/change-group: "cosmo.apps.controlplane.wundergraph.com/db-migration"
+spec:
+  backoffLimit: 3
+  parallelism: 1
+  template:
+    metadata:
+      name: "{{ include "controlplane.fullname" . }}-database-migration"
+      labels:
+        {{- include "controlplane.labels" . | nindent 8 }}
+    spec:
+      restartPolicy: OnFailure
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: seed
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ include "controlplane.image" . }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: DB_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-secret
+                  key: databaseUrl
+          args:
+            - "/app/dist/bin/db-migrate.js"
