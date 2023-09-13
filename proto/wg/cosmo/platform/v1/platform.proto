@@ -569,6 +569,11 @@ message WhoAmIResponse {
   optional string userEmail = 3;
 }
 
+message Header{
+  string key = 1;
+  string value = 2;
+}
+
 service PlatformService {
   // CreateFederatedGraph creates a federated graph on the control plane.
   rpc CreateFederatedGraph(CreateFederatedGraphRequest) returns (CreateFederatedGraphResponse) {}

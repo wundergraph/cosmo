@@ -2,25 +2,32 @@ package cmd
 
 import (
 	"context"
-	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
-	"github.com/wundergraph/cosmo/router/pkg/app"
-	"github.com/wundergraph/cosmo/router/pkg/controlplane"
-	"github.com/wundergraph/cosmo/router/pkg/handler/cors"
-	"github.com/wundergraph/cosmo/router/pkg/metric"
-	"github.com/wundergraph/cosmo/router/pkg/trace"
+	"flag"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
-	"github.com/wundergraph/cosmo/router/pkg/config"
-	"github.com/wundergraph/cosmo/router/pkg/logging"
+	"github.com/wundergraph/cosmo/router/core"
+	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/cosmo/router/internal/config"
+	"github.com/wundergraph/cosmo/router/internal/controlplane"
+	"github.com/wundergraph/cosmo/router/internal/handler/cors"
+	"github.com/wundergraph/cosmo/router/internal/metric"
+	"github.com/wundergraph/cosmo/router/internal/trace"
+
 	"go.uber.org/zap"
+
+	"github.com/wundergraph/cosmo/router/internal/logging"
 )
 
 func Main() {
-	cfg, err := config.LoadConfig()
+	var overrideEnv string
+	flag.StringVar(&overrideEnv, "override-env", "", "env file name to override env variables")
+	flag.Parse()
+
+	cfg, err := config.LoadConfig(overrideEnv)
 	if err != nil {
 		log.Fatal("Could not load config", zap.Error(err))
 	}
@@ -39,7 +46,7 @@ func Main() {
 		log.Fatal("Could not parse log level", zap.Error(err))
 	}
 
-	logger := logging.New(cfg.JSONLog, false, logLevel).
+	logger := logging.New(!cfg.JSONLog, cfg.LogLevel == "debug", logLevel).
 		With(zap.String("component", "@wundergraph/router"))
 
 	cp := controlplane.New(
@@ -53,32 +60,35 @@ func Main() {
 	var routerConfig *nodev1.RouterConfig
 
 	if cfg.RouterConfigPath != "" {
-		routerConfig, err = app.SerializeConfigFromFile(cfg.RouterConfigPath)
+		routerConfig, err = core.SerializeConfigFromFile(cfg.RouterConfigPath)
 		if err != nil {
 			logger.Fatal("Could not read router config", zap.Error(err), zap.String("path", cfg.RouterConfigPath))
 		}
 	}
 
-	rs, err := app.New(
-		app.WithFederatedGraphName(cfg.Graph.Name),
-		app.WithListenerAddr(cfg.ListenAddr),
-		app.WithLogger(logger),
-		app.WithConfigFetcher(cp),
-		app.WithIntrospection(cfg.IntrospectionEnabled),
-		app.WithPlayground(cfg.PlaygroundEnabled),
-		app.WithGraphApiToken(cfg.Graph.Token),
-		app.WithModulesConfig(cfg.Modules),
-		app.WithGracePeriod(time.Duration(cfg.GracePeriodSeconds)*time.Second),
-		app.WithHealthCheckPath(cfg.HealthCheckPath),
-		app.WithStaticRouterConfig(routerConfig),
-		app.WithCors(&cors.Config{
+	router, err := core.NewRouter(
+		core.WithFederatedGraphName(cfg.Graph.Name),
+		core.WithListenerAddr(cfg.ListenAddr),
+		core.WithLogger(logger),
+		core.WithConfigFetcher(cp),
+		core.WithIntrospection(cfg.IntrospectionEnabled),
+		core.WithPlayground(cfg.PlaygroundEnabled),
+		core.WithGraphApiToken(cfg.Graph.Token),
+		core.WithModulesConfig(cfg.Modules),
+		core.WithGracePeriod(time.Duration(cfg.GracePeriodSeconds)*time.Second),
+		core.WithHealthCheckPath(cfg.HealthCheckPath),
+		core.WithLivenessCheckPath(cfg.LivenessCheckPath),
+		core.WithReadinessCheckPath(cfg.ReadinessCheckPath),
+		core.WithHeaderRules(cfg.Headers),
+		core.WithStaticRouterConfig(routerConfig),
+		core.WithCors(&cors.Config{
 			AllowOrigins:     cfg.CORS.AllowOrigins,
 			AllowMethods:     cfg.CORS.AllowMethods,
 			AllowCredentials: cfg.CORS.AllowCredentials,
 			AllowHeaders:     cfg.CORS.AllowHeaders,
 			MaxAge:           time.Duration(cfg.CORS.MaxAgeMinutes) * time.Minute,
 		}),
-		app.WithTracing(&trace.Config{
+		core.WithTracing(&trace.Config{
 			Enabled:       cfg.Telemetry.Tracing.Enabled,
 			Name:          cfg.Telemetry.ServiceName,
 			Endpoint:      cfg.Telemetry.Endpoint,
@@ -89,7 +99,7 @@ func Main() {
 			OtlpHeaders:   cfg.Telemetry.Headers,
 			OtlpHttpPath:  "/v1/traces",
 		}),
-		app.WithMetrics(&metric.Config{
+		core.WithMetrics(&metric.Config{
 			Enabled:     cfg.Telemetry.Metrics.Common.Enabled,
 			Name:        cfg.Telemetry.ServiceName,
 			Endpoint:    cfg.Telemetry.Endpoint,
@@ -101,6 +111,7 @@ func Main() {
 			},
 			OtlpHttpPath: "/v1/metrics",
 		}),
+		core.WithEngineExecutionConfig(cfg.EngineExecutionConfiguration),
 	)
 
 	if err != nil {
@@ -108,7 +119,7 @@ func Main() {
 	}
 
 	go func() {
-		if err := rs.Start(ctx); err != nil {
+		if err := router.Start(ctx); err != nil {
 			logger.Error("Could not start server", zap.Error(err))
 			stop()
 		}
@@ -119,14 +130,14 @@ func Main() {
 	shutdownDelayDuration := time.Duration(cfg.ShutdownDelaySeconds) * time.Second
 	logger.Info("Graceful shutdown ...", zap.String("shutdownDelay", shutdownDelayDuration.String()))
 
-	// enforce a maximum timeout of 10 seconds
+	// enforce a maximum shutdown delay
 	ctx, cancel := context.WithTimeout(context.Background(), shutdownDelayDuration)
 	defer cancel()
 
-	if err := rs.Shutdown(ctx); err != nil {
+	if err := router.Shutdown(ctx); err != nil {
 		logger.Error("Could not shutdown server", zap.Error(err))
 	}
 
-	logger.Debug("Router exiting")
+	logger.Debug("Server exiting")
 	os.Exit(0)
 }

@@ -1,4 +1,4 @@
-import Table from 'cli-table';
+import Table from 'cli-table3';
 import { Command } from 'commander';
 import pc from 'picocolors';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common_pb';
@@ -46,9 +46,11 @@ export default (opts: BaseCommandOptions) => {
       console.log(pc.dim(pc.green(`Subgraph '${name}' was updated.`)));
     } else if (resp.response?.code === EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED) {
       console.log(pc.dim(pc.green(`Subgraph called '${name}' was updated.`)));
+
       const compositionErrorsTable = new Table({
         head: [pc.bold(pc.white('FEDERATED_GRAPH_NAME')), pc.bold(pc.white('ERROR_MESSAGE'))],
         colWidths: [30, 120],
+        wordWrap: true,
       });
 
       console.log(
