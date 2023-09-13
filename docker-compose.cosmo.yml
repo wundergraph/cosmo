@@ -4,7 +4,6 @@ name: cosmo
 services:
 
   keycloak:
-    # On the public repo
     image: ghcr.io/wundergraph/cosmo/keycloak:${DC_KEYCLOAK_VERSION:-latest}
     build:
       context: keycloak
@@ -16,7 +15,6 @@ services:
         GITHUB_REF: ${GITHUB_REF:-latest}
 
   otelcollector:
-    # On the public repo
     image: ghcr.io/wundergraph/cosmo/otelcollector:${DC_OTELCOLLECTOR_VERSION:-latest}
     build:
       context: otelcollector
