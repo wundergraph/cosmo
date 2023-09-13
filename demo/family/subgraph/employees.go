@@ -208,12 +208,4 @@ var employees = []*model.Employee{
 			},
 		},
 	},
-	{
-		Details: &model.Details{
-			Forename:      "Dani",
-			Surname:       "Akash",
-			MaritalStatus: &engaged,
-			Nationality:   model.NationalityIndian,
-		},
-	},
 }

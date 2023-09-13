@@ -7,7 +7,7 @@ The OpenTelemetry Collector is a vendor-agnostic service that allows to receive,
 You can simply build the collector by running the following command from the root of the repository:
 
 ```shell
-docker compose --profile analytics -f docker-compose.yml build otelcollector --no-cache
+docker compose -f docker-compose.yml build otelcollector --no-cache
 ```
 
 (Optional) Please read the [Building a custom collector](https://opentelemetry.io/docs/collector/custom-collector/) to learn how to build a custom collector.
