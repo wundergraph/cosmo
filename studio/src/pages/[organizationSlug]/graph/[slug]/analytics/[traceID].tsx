@@ -59,7 +59,7 @@ const TracePage: NextPageWithLayout = () => {
 const TraceToolbar = () => {
   const router = useRouter();
   return (
-    <AnalyticsToolbar tab="operations">
+    <AnalyticsToolbar tab="traces">
       <span className="text-muted-foreground">/</span>{" "}
       <span className="text-sm">{router.query.traceID}</span>
       <CopyButton

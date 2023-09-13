@@ -112,11 +112,11 @@ const Metrics = () => {
           <BarList
             data={requests.data.map((row) => ({
               ...row,
-              href: `${
-                router.asPath
-              }/operations${constructAnalyticsTableQueryState({
-                operationName: row.name,
-              })}`,
+              href: `${router.asPath}/traces${constructAnalyticsTableQueryState(
+                {
+                  operationName: row.name,
+                }
+              )}`,
             }))}
             valueFormatter={(number: number) =>
               Intl.NumberFormat("us").format(number).toString()
@@ -142,11 +142,11 @@ const Metrics = () => {
           <BarList
             data={latency.data.map((row) => ({
               ...row,
-              href: `${
-                router.asPath
-              }/operations${constructAnalyticsTableQueryState({
-                operationName: row.name,
-              })}`,
+              href: `${router.asPath}/traces${constructAnalyticsTableQueryState(
+                {
+                  operationName: row.name,
+                }
+              )}`,
             }))}
             valueFormatter={(number: number) =>
               Intl.NumberFormat("us").format(number).toString() + "ms"
@@ -173,11 +173,11 @@ const Metrics = () => {
             maxValue={1100}
             data={errors.data.map((row) => ({
               ...row,
-              href: `${
-                router.asPath
-              }/operations${constructAnalyticsTableQueryState({
-                operationName: row.name,
-              })}`,
+              href: `${router.asPath}/traces${constructAnalyticsTableQueryState(
+                {
+                  operationName: row.name,
+                }
+              )}`,
             }))}
             valueFormatter={(number: number) =>
               Intl.NumberFormat("us").format(number).toString() + "%"

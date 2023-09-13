@@ -94,7 +94,7 @@ AnalyticsPage.getLayout = (page) =>
       <TitleLayout
         title="Analytics"
         subtitle="Comprehensive view into Federated GraphQL Performance"
-        toolbar={<AnalyticsToolbar tab="operations" />}
+        toolbar={<AnalyticsToolbar tab="traces" />}
       >
         {page}
       </TitleLayout>
