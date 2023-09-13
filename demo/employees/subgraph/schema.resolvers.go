@@ -16,7 +16,7 @@ func (r *queryResolver) Employee(ctx context.Context, id int) (*model.Employee, 
 	switch id {
 	case 1, 2, 3, 4, 5:
 		return employees[id-1], nil
-	case 7, 8, 9, 10, 11, 12, 13:
+	case 7, 8, 9, 10, 11, 12:
 		return employees[id-2], nil
 	default:
 		return nil, nil
