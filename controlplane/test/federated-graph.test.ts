@@ -37,6 +37,7 @@ describe('Federated Graph', (ctx) => {
     await server.register(database, {
       databaseConnectionUrl,
       debugSQL: false,
+      runMigration: true,
     });
 
     testContext.onTestFailed(async () => {
@@ -128,6 +129,7 @@ describe('Federated Graph', (ctx) => {
     await server.register(database, {
       databaseConnectionUrl,
       debugSQL: false,
+      runMigration: true,
     });
 
     testContext.onTestFailed(async () => {
@@ -219,6 +221,7 @@ describe('Federated Graph', (ctx) => {
     await server.register(database, {
       databaseConnectionUrl,
       debugSQL: false,
+      runMigration: true,
     });
 
     testContext.onTestFailed(async () => {
@@ -310,6 +313,7 @@ describe('Federated Graph', (ctx) => {
     await server.register(database, {
       databaseConnectionUrl,
       debugSQL: false,
+      runMigration: true,
     });
 
     testContext.onTestFailed(async () => {
@@ -430,6 +434,7 @@ describe('Federated Graph', (ctx) => {
     await server.register(database, {
       databaseConnectionUrl,
       debugSQL: false,
+      runMigration: true,
     });
 
     testContext.onTestFailed(async () => {
