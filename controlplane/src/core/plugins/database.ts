@@ -5,6 +5,7 @@ import { drizzle, PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { sql } from 'drizzle-orm';
 import postgres from 'postgres';
 import * as schema from '../../db/schema.js';
+import { RunMigration } from '../migrate.js';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -17,6 +18,7 @@ export interface DbPluginOptions {
   databaseConnectionUrl: string;
   debugSQL?: boolean;
   gracefulTimeoutSec?: number;
+  runMigration?: boolean;
   ssl?: {
     // Necessary only if the server uses a self-signed certificate.
     caPath?: string;
@@ -60,6 +62,10 @@ export default fp<DbPluginOptions>(async function (fastify, opts) {
     schema: { ...schema },
     logger: opts.debugSQL,
   });
+
+  if (opts.runMigration) {
+    await RunMigration(opts.databaseConnectionUrl);
+  }
 
   fastify.decorate('dbHealthcheck', async () => {
     try {
