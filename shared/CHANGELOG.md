@@ -4,6 +4,26 @@ Images can be found [here](https://github.com/orgs/wundergraph/packages?repo_nam
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.6.5](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.6.4...@wundergraph/cosmo-shared@0.6.5) (2023-09-11)
+
+**Note:** Version bump only for package @wundergraph/cosmo-shared
+
+## [0.6.4](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.6.3...@wundergraph/cosmo-shared@0.6.4) (2023-09-11)
+
+**Note:** Version bump only for package @wundergraph/cosmo-shared
+
+## [0.6.3](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.6.2...@wundergraph/cosmo-shared@0.6.3) (2023-09-08)
+
+### Bug Fixes
+
+* fix migration issues ([#47](https://github.com/wundergraph/cosmo/issues/47)) ([048398a](https://github.com/wundergraph/cosmo/commit/048398a3b5c4effaa1d7f6387c4ca02fbd28700c)) (@Aenimus)
+
+## [0.6.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.6.1...@wundergraph/cosmo-shared@0.6.2) (2023-09-07)
+
+### Bug Fixes
+
+* pass renamed type to router config ([#43](https://github.com/wundergraph/cosmo/issues/43)) ([bf9365b](https://github.com/wundergraph/cosmo/commit/bf9365b38b904c897453fece0ad096c16b5142ab)) (@Aenimus)
+
 ## [0.6.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.6.0...@wundergraph/cosmo-shared@0.6.1) (2023-09-06)
 
 **Note:** Version bump only for package @wundergraph/cosmo-shared

@@ -4,6 +4,25 @@ Images can be found [here](https://github.com/orgs/wundergraph/packages?repo_nam
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.10.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.10.0...controlplane@0.10.1) (2023-09-11)
+
+**Note:** Version bump only for package controlplane
+
+# [0.10.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.9.4...controlplane@0.10.0) (2023-09-11)
+
+### Features
+
+* add introspect subgraph command ([#44](https://github.com/wundergraph/cosmo/issues/44)) ([bf376cd](https://github.com/wundergraph/cosmo/commit/bf376cd75382b16659efb670ea54494f691328aa)) (@JivusAyrus)
+* introspect subgraphs in cli ([#53](https://github.com/wundergraph/cosmo/issues/53)) ([2bd9f95](https://github.com/wundergraph/cosmo/commit/2bd9f95cd3ac13e878a12ab526d575c9b1daf248)) (@JivusAyrus)
+
+## [0.9.4](https://github.com/wundergraph/cosmo/compare/controlplane@0.9.3...controlplane@0.9.4) (2023-09-08)
+
+**Note:** Version bump only for package controlplane
+
+## [0.9.3](https://github.com/wundergraph/cosmo/compare/controlplane@0.9.2...controlplane@0.9.3) (2023-09-07)
+
+**Note:** Version bump only for package controlplane
+
 ## [0.9.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.9.1...controlplane@0.9.2) (2023-09-06)
 
 ### Bug Fixes

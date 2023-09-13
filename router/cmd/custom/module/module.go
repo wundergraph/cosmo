@@ -2,15 +2,14 @@ package module
 
 import (
 	"fmt"
-	"github.com/wundergraph/cosmo/router/pkg/app"
-	"github.com/wundergraph/cosmo/router/pkg/graphql"
+	"github.com/wundergraph/cosmo/router/core"
 	"go.uber.org/zap"
 	"net/http"
 )
 
 func init() {
 	// Register your module here
-	app.RegisterModule(&MyModule{})
+	core.RegisterModule(&MyModule{})
 }
 
 const myModuleID = "myModule"
@@ -29,16 +28,16 @@ type MyModule struct {
 	Logger *zap.Logger
 }
 
-func (m MyModule) Provision(ctx *app.ModuleContext) error {
+func (m MyModule) Provision(ctx *core.ModuleContext) error {
 	// Provision your module here, validate config etc.
 
 	if m.Value == 0 {
-		ctx.Logger().Error("Value must be greater than 0")
+		ctx.Logger.Error("Value must be greater than 0")
 		return fmt.Errorf("value must be greater than 0")
 	}
 
 	// Assign the logger to the module for non-request related logging
-	m.Logger = ctx.Logger()
+	m.Logger = ctx.Logger
 
 	return nil
 }
@@ -49,54 +48,50 @@ func (m MyModule) Cleanup() error {
 	return nil
 }
 
-func (m MyModule) OnOriginResponse(response *http.Response, request *http.Request) (*http.Response, error) {
+func (m MyModule) OnOriginResponse(response *http.Response, ctx core.RequestContext) *http.Response {
 	// Return a new response or nil if you want to pass it to the next handler
 	// If you want to modify the response, return a new response
-	// If you return an error, the request will be aborted and the response will exit with a 500 status code
 
-	c := app.GetRequestContext(request.Context())
+	// Set a header on the final client response
+	ctx.ResponseWriter().Header().Set("myHeader", ctx.GetString("myValue"))
 
-	// Set a header on the client response
-	c.ResponseHeader().Set("myHeader", c.GetString("myKey"))
-
-	return nil, nil
+	return nil
 }
 
-func (m MyModule) OnOriginRequest(request *http.Request) {
-	// Read the request or modify headers here before it is sent to the origin
-	c := app.GetRequestContext(request.Context())
+func (m MyModule) OnOriginRequest(request *http.Request, ctx core.RequestContext) (*http.Request, *http.Response) {
+	// Return the modified request or nil if you want to pass it to the next handler
+	// Return a new response if you want to abort the request and return a custom response
 
-	// Use the request logger to log information
-	c.Logger().Info("Subgraph request", zap.String("host", request.Host))
+	// Set a header on all origin requests
+	request.Header.Set("myHeader", ctx.GetString("myValue"))
+
+	// Set a custom value on the request context. See OnOriginResponse
+	ctx.Set("myValue", "myValue")
+
+	return request, nil
 }
 
-func (m MyModule) Middleware(w http.ResponseWriter, r *http.Request, next http.Handler) {
-	ctx := r.Context()
+func (m MyModule) Middleware(ctx core.RequestContext, next http.Handler) {
 
-	c := graphql.GetOperationContext(ctx)
+	operation := ctx.Operation()
 
 	// Access the GraphQL operation context
 	fmt.Println(
-		c.Name,
-		c.Type,
-		c.Hash,
-		c.Content,
+		operation.Name(),
+		operation.Type(),
+		operation.Hash(),
+		operation.Content(),
 	)
 
-	// Share a value between different handlers
-	// In OnOriginResponse we will read this value and set it as response header
-	appCtx := app.GetRequestContext(ctx)
-	appCtx.Set("myKey", "myValue")
-
 	// Call the next handler in the chain or return early by calling w.Write()
-	next.ServeHTTP(w, r)
+	next.ServeHTTP(ctx.ResponseWriter(), ctx.Request())
 }
 
-func (m MyModule) Module() app.ModuleInfo {
-	return app.ModuleInfo{
+func (m MyModule) Module() core.ModuleInfo {
+	return core.ModuleInfo{
 		// This is the ID of your module, it must be unique
 		ID: myModuleID,
-		New: func() app.Module {
+		New: func() core.Module {
 			return MyModule{}
 		},
 	}
@@ -104,9 +99,9 @@ func (m MyModule) Module() app.ModuleInfo {
 
 // Interface guard
 var (
-	_ app.RouterMiddlewareHandler = (*MyModule)(nil)
-	_ app.EnginePreOriginHandler  = (*MyModule)(nil)
-	_ app.EnginePostOriginHandler = (*MyModule)(nil)
-	_ app.Provisioner             = (*MyModule)(nil)
-	_ app.Cleaner                 = (*MyModule)(nil)
+	_ core.RouterMiddlewareHandler = (*MyModule)(nil)
+	_ core.EnginePreOriginHandler  = (*MyModule)(nil)
+	_ core.EnginePostOriginHandler = (*MyModule)(nil)
+	_ core.Provisioner             = (*MyModule)(nil)
+	_ core.Cleaner                 = (*MyModule)(nil)
 )

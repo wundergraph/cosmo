@@ -4,6 +4,36 @@ Images can be found [here](https://github.com/orgs/wundergraph/packages?repo_nam
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.10.0](https://github.com/wundergraph/cosmo/compare/wgc@0.9.1...wgc@0.10.0) (2023-09-12)
+
+### Bug Fixes
+
+* improve compose command input ([#58](https://github.com/wundergraph/cosmo/issues/58)) ([4430f85](https://github.com/wundergraph/cosmo/commit/4430f85615a3fb4bd0cbc41e6919981556927ab5)) (@thisisnithin)
+
+### Features
+
+* migrate from cli-table to cli-table3 ([#41](https://github.com/wundergraph/cosmo/issues/41)) ([d21bbd9](https://github.com/wundergraph/cosmo/commit/d21bbd935f17ff35d03a2a2cb43ad1fedf815906)) (@JivusAyrus)
+
+## [0.9.1](https://github.com/wundergraph/cosmo/compare/wgc@0.9.0...wgc@0.9.1) (2023-09-11)
+
+**Note:** Version bump only for package wgc
+
+# [0.9.0](https://github.com/wundergraph/cosmo/compare/wgc@0.8.3...wgc@0.9.0) (2023-09-11)
+
+### Features
+
+* add introspect subgraph command ([#44](https://github.com/wundergraph/cosmo/issues/44)) ([bf376cd](https://github.com/wundergraph/cosmo/commit/bf376cd75382b16659efb670ea54494f691328aa)) (@JivusAyrus)
+* introspect subgraphs in cli ([#53](https://github.com/wundergraph/cosmo/issues/53)) ([2bd9f95](https://github.com/wundergraph/cosmo/commit/2bd9f95cd3ac13e878a12ab526d575c9b1daf248)) (@JivusAyrus)
+* router compose command ([#54](https://github.com/wundergraph/cosmo/issues/54)) ([109313a](https://github.com/wundergraph/cosmo/commit/109313a54d730e143d2b182fb7a72e7dd4386317)) (@thisisnithin)
+
+## [0.8.3](https://github.com/wundergraph/cosmo/compare/wgc@0.8.2...wgc@0.8.3) (2023-09-08)
+
+**Note:** Version bump only for package wgc
+
+## [0.8.2](https://github.com/wundergraph/cosmo/compare/wgc@0.8.1...wgc@0.8.2) (2023-09-07)
+
+**Note:** Version bump only for package wgc
+
 ## [0.8.1](https://github.com/wundergraph/cosmo/compare/wgc@0.8.0...wgc@0.8.1) (2023-09-06)
 
 **Note:** Version bump only for package wgc
