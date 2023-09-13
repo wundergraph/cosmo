@@ -33,6 +33,9 @@ infra-down-v:
 seed:
 	pnpm -r run --filter './controlplane' seed
 
+create-cli-demo:
+	cd scripts && ./create-cli-demo.sh
+
 create-docker-demo:
 	cd scripts && ./create-docker-demo.sh
 
