@@ -16,9 +16,9 @@ metadata:
     {{- if .Values.global.clickhouse.enabled }}
     kapp.k14s.io/change-rule.clickhouse: "upsert after upserting cosmo.apps.clickhouse.wundergraph.com/deployment"
     {{- end }}
-    # Run clickhouse migration after otelcollector and clickhouse deployment
-    kapp.k14s.io/change-rule.clickhouse: "upsert after upserting cosmo.apps.clickhouse.wundergraph.com/deployment"
+    {{- if .Values.global.otelcollector.enabled }}
     kapp.k14s.io/change-rule.otelcollector: "upsert after upserting cosmo.apps.otelcollector.wundergraph.com/deployment"
+    {{- end }}
     # Create a new change-group so the controlplane can be deployed after the clickhouse migration
     kapp.k14s.io/change-group: "cosmo.apps.controlplane.wundergraph.com/ch-migration"
 spec:
