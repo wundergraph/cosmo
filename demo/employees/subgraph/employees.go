@@ -149,17 +149,4 @@ var employees = []*model.Employee{
 			Title:        []string{"Software Engineer"},
 		},
 	},
-	{
-		Details: &model.Details{
-			Forename: "Dani",
-			Location: model.CountryIndia,
-			Surname:  "Akash",
-		},
-		ID: 13,
-		Role: model.Engineer{
-			Department:   model.DepartmentEngineering,
-			EngineerType: model.EngineerTypeFrontend,
-			Title:        []string{"Senior Frontend Engineer"},
-		},
-	},
 }

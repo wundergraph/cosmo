@@ -8,6 +8,7 @@ require (
 	github.com/99designs/gqlgen v0.17.36
 	github.com/gorilla/websocket v1.5.0
 	github.com/ravilushqa/otelgqlgen v0.13.1
+	github.com/rs/cors v1.10.0
 	github.com/vektah/gqlparser/v2 v2.5.8
 	github.com/wundergraph/cosmo/demo/otel v0.0.0-00010101000000-000000000000
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.42.0
