@@ -219,12 +219,4 @@ var employees = []*model.Employee{
 			},
 		},
 	},
-	{
-		// Dani
-		Hobbies: []model.Hobby{
-			model.Other{
-				Name: "Watching anime",
-			},
-		},
-	},
 }

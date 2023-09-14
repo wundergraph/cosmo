@@ -25,7 +25,11 @@ For more information, see [ESM Node.js](https://www.typescriptlang.org/docs/hand
 
 # Migrations
 
-Migrations are run automatically on start.
+Run the migrations with:
+
+```shell
+pnpm migrate
+```
 
 # Stack
 

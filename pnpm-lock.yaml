@@ -444,6 +444,9 @@ importers:
       '@tanstack/react-table':
         specifier: ^8.9.3
         version: 8.9.3(react-dom@18.2.0)(react@18.2.0)
+      '@typeform/embed':
+        specifier: ^2.16.1
+        version: 2.16.1
       '@wundergraph/cosmo-connect':
         specifier: workspace:*
         version: link:../connect
@@ -4027,6 +4030,11 @@ packages:
       '@tufjs/canonical-json': 2.0.0
       minimatch: 9.0.3
     dev: true
+
+  /@typeform/embed@2.16.1:
+    resolution: {integrity: sha512-CId70qZjKs//Y/MP69U3di/HT6zUR609+QImsgm0gaFodKHAxBZ1bbeg1VkLDD2q5jPbnb+D0KBhE4B28lsOWQ==}
+    engines: {node: '>=10'}
+    dev: false
 
   /@types/canvas-confetti@1.6.0:
     resolution: {integrity: sha512-Yq6rIccwcco0TLD5SMUrIM7Fk7Fe/C0jmNRxJJCLtAF6gebDkPuUjK5EHedxecm69Pi/aA+It39Ux4OHmFhjRw==}
