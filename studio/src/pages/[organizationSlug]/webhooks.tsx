@@ -98,111 +98,110 @@ const WebhooksPage: NextPageWithLayout = () => {
     );
 
   return (
-    <div className="flex h-full flex-1 items-center justify-center">
-      <Form {...form}>
-        <form
-          className="mx-auto mt-4 flex w-full flex-col gap-y-6 rounded-md border bg-popover p-8 md:max-w-xl xl:max-w-lg"
-          onSubmit={form.handleSubmit(onSubmit)}
-        >
-          <FormField
-            defaultValue={data?.endpoint}
-            control={form.control}
-            name="endpoint"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Endpoint</FormLabel>
-                <FormControl>
-                  <Input placeholder="https://example.com/webhook" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+    // <div className="flex h-full flex-1 items-center justify-center">
+    <Form {...form}>
+      <form
+        className="flex w-full flex-col gap-y-6"
+        onSubmit={form.handleSubmit(onSubmit)}
+      >
+        <FormField
+          defaultValue={data?.endpoint}
+          control={form.control}
+          name="endpoint"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Endpoint</FormLabel>
+              <FormControl>
+                <Input placeholder="https://example.com/webhook" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-          <FormField
-            control={form.control}
-            name="key"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Secret key</FormLabel>
-                <FormControl>
-                  <Input placeholder="************" {...field} />
-                </FormControl>
+        <FormField
+          control={form.control}
+          name="key"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Secret key</FormLabel>
+              <FormControl>
+                <Input placeholder="************" {...field} />
+              </FormControl>
+              <FormDescription>
+                This is attached in the header <code>x-cosmo-webhook-key</code>{" "}
+                which you can use for verification
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          defaultValue={data.events}
+          control={form.control}
+          name="events"
+          render={() => (
+            <FormItem>
+              <div className="mb-4">
+                <FormLabel className="text-base">Events</FormLabel>
                 <FormDescription>
-                  This is attached in the header{" "}
-                  <code>x-cosmo-webhook-key</code> which you can use for
-                  verification
+                  Select the events for which you want webhooks to fire
                 </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+              </div>
+              {events.map((event) => (
+                <FormField
+                  key={event.id}
+                  control={form.control}
+                  name="events"
+                  render={({ field }) => {
+                    return (
+                      <FormItem
+                        key={event.id}
+                        className="flex flex-row items-start space-x-3 space-y-0"
+                      >
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value?.includes(event.id)}
+                            onCheckedChange={(checked) => {
+                              return checked
+                                ? field.onChange([
+                                    ...(field.value ?? []),
+                                    event.id,
+                                  ])
+                                : field.onChange(
+                                    field.value?.filter(
+                                      (value) => value !== event.id
+                                    )
+                                  );
+                            }}
+                          />
+                        </FormControl>
+                        <FormLabel className="text-sm font-normal">
+                          {event.label}
+                        </FormLabel>
+                      </FormItem>
+                    );
+                  }}
+                />
+              ))}
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-          <FormField
-            defaultValue={data.events}
-            control={form.control}
-            name="events"
-            render={() => (
-              <FormItem>
-                <div className="mb-4">
-                  <FormLabel className="text-base">Events</FormLabel>
-                  <FormDescription>
-                    Select the events for which you want webhooks to fire
-                  </FormDescription>
-                </div>
-                {events.map((event) => (
-                  <FormField
-                    key={event.id}
-                    control={form.control}
-                    name="events"
-                    render={({ field }) => {
-                      return (
-                        <FormItem
-                          key={event.id}
-                          className="flex flex-row items-start space-x-3 space-y-0"
-                        >
-                          <FormControl>
-                            <Checkbox
-                              checked={field.value?.includes(event.id)}
-                              onCheckedChange={(checked) => {
-                                return checked
-                                  ? field.onChange([
-                                      ...(field.value ?? []),
-                                      event.id,
-                                    ])
-                                  : field.onChange(
-                                      field.value?.filter(
-                                        (value) => value !== event.id
-                                      )
-                                    );
-                              }}
-                            />
-                          </FormControl>
-                          <FormLabel className="text-sm font-normal">
-                            {event.label}
-                          </FormLabel>
-                        </FormItem>
-                      );
-                    }}
-                  />
-                ))}
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <Button
-            className="mt-2"
-            type="submit"
-            disabled={!form.formState.isValid}
-            variant="default"
-            isLoading={isSaving}
-          >
-            Save
-          </Button>
-        </form>
-      </Form>
-    </div>
+        <Button
+          className="mt-2"
+          type="submit"
+          disabled={!form.formState.isValid}
+          variant="default"
+          isLoading={isSaving}
+        >
+          Save
+        </Button>
+      </form>
+    </Form>
+    // </div>
   );
 };
 
