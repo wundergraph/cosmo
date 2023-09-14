@@ -82,20 +82,12 @@ jobs:
       - name: Install Docker Buildx
         uses: docker/setup-buildx-action@v2
 
-      - name: Check if organization member
-        id: is_organization_member
-        uses: jamessingleton/is-organization-member@v1.0.1
-        with:
-          organization: wundergraph
-          username: ${{ github.event.issue.user.login }}
-          token: ${{ secrets.GITHUB_TOKEN }}
-
       # This is a limitation of GitHub. Only organization members can push to GitHub Container Registry
-      # For now, we will disable the push to GitHub Container Registry for non-organization members
-      - name: Build Docker image
+      # For now, we will disable the push step for Pull Requests
+      - name: Build Docker image (No push)
         uses: docker/build-push-action@v4
         with:
-          push: ${{ steps.is_organization_member.outputs.result }}
+          push: false
           file: ${{ matrix.dockerfile }}
           context: ${{ matrix.context_path }}
           tags: ${{ steps.meta.outputs.tags }}
