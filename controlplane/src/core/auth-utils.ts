@@ -42,8 +42,8 @@ const scope = 'openid profile email';
 
 export default class AuthUtils {
   private webUrl: URL;
-  private webDomain: string;
-  private secureCookie = false;
+  private readonly webDomain: string;
+  private readonly secureCookie: boolean = false;
 
   constructor(private db: PostgresJsDatabase<typeof schema>, private opts: AuthUtilsOptions) {
     this.webUrl = new URL(opts.webBaseUrl);
@@ -115,7 +115,7 @@ export default class AuthUtils {
     });
 
     if (res.status !== 200) {
-      throw new Error('Not authenticated');
+      throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, 'Not authenticated');
     }
 
     return res.data as UserInfoEndpointResponse;
@@ -140,7 +140,7 @@ export default class AuthUtils {
     });
 
     if (res.status !== 200) {
-      throw new Error('Unable to refresh token');
+      throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, 'Unable to refresh token');
     }
 
     return {
@@ -201,7 +201,10 @@ export default class AuthUtils {
     const cookies = cookie.parse(req.headers.cookie || '');
 
     if (!cookies[this.opts.pkce.cookieName]) {
-      throw new Error('Code challenge cookie not found on callback');
+      throw new AuthenticationError(
+        EnumStatusCode.ERROR_NOT_AUTHENTICATED,
+        'Code challenge cookie not found on callback',
+      );
     }
 
     const codeChallenge = await decrypt<PKCECodeChallenge>({
@@ -210,7 +213,7 @@ export default class AuthUtils {
     });
 
     if (!codeChallenge) {
-      throw new Error('Code challenge could not be found');
+      throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, 'Code challenge could not be found');
     }
 
     const resp = await axios({
@@ -226,7 +229,7 @@ export default class AuthUtils {
     });
 
     if (resp.status !== 200) {
-      throw new Error('Token request failed');
+      throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, 'Token request failed');
     }
 
     return {
