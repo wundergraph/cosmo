@@ -39,7 +39,7 @@ jobs:
           goarch: ${{ matrix.goarch }}
           project_path: "./router"
           binary_name: "router"
-          build_flags: "-trimpath -a -o router cmd/router/main.go"
+          build_flags: "-trimpath cmd/router/main.go"
           overwrite: true
           extra_files: LICENSE
           release_tag: router@0.14.0
