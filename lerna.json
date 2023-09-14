@@ -11,7 +11,7 @@
       "syncWorkspaceLock": true,
       "changelogIncludeCommitsClientLogin": " (@%l)",
       "message": "chore(release): Publish [skip ci]",
-      "changelogHeaderMessage": "Images can be found [here](https://github.com/orgs/wundergraph/packages?repo_name=cosmo)"
+      "changelogHeaderMessage": "Binaries are attached to the github release otherwise all images can be found [here](https://github.com/orgs/wundergraph/packages?repo_name=cosmo)"
     }
   },
   "packages": [
