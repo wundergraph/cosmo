@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto';
 import { FastifyPluginCallback } from 'fastify';
 import fp from 'fastify-plugin';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
@@ -8,11 +7,12 @@ import { uid } from 'uid';
 import { decodeJWT, DEFAULT_SESSION_MAX_AGE_SEC, encrypt } from '../crypto/jwt.js';
 import { CustomAccessTokenClaims, UserInfoEndpointResponse, UserSession } from '../../types/index.js';
 import * as schema from '../../db/schema.js';
-import { organizationMemberRoles, organizations, organizationsMembers, sessions, users } from '../../db/schema.js';
+import { organizationsMembers, sessions, users } from '../../db/schema.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import AuthUtils from '../auth-utils.js';
 import WebSessionAuthenticator from '../services/WebSessionAuthenticator.js';
 import Keycloak from '../services/Keycloak.js';
+import { AuthenticationError } from '../errors/errors.js';
 
 export type AuthControllerOptions = {
   db: PostgresJsDatabase<typeof schema>;
@@ -60,9 +60,13 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
         expiresAt: userSession.expiresAt,
       };
     } catch (err: any) {
-      req.log.error(err);
+      if (err instanceof AuthenticationError) {
+        req.log.debug(err);
+      } else {
+        req.log.error(err);
+      }
 
-      req.log.error('Cookie cleared due to error in /session route');
+      req.log.debug('Cookie cleared due to error in /session route');
 
       // We assume that the session is invalid if there is an error
       // Clear the session cookie and redirect the user to the login page on the frontend
