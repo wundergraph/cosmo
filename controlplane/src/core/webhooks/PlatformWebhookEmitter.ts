@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { backOff } from 'exponential-backoff';
 
 interface GraphMigrate {
   id?: string;
@@ -36,19 +37,23 @@ export class PlatformWebhookEmitter {
       return;
     }
 
-    axios
-      .post(
-        this.url,
-        {
-          event: eventName,
-          payload: data,
-        },
-        {
-          headers: {
-            'x-cosmo-webhook-key': this.key,
+    backOff(
+      () =>
+        axios.post(
+          this.url,
+          {
+            event: eventName,
+            payload: data,
           },
-        },
-      )
-      .catch((e) => {});
+          {
+            headers: {
+              'x-cosmo-webhook-key': this.key,
+            },
+          },
+        ),
+      {
+        numOfAttempts: 5,
+      },
+    ).catch((e) => {});
   }
 }
