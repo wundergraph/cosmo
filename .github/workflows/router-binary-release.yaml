@@ -37,9 +37,11 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           goos: ${{ matrix.goos }}
           goarch: ${{ matrix.goarch }}
-          project_path: "./router"
+          # Where to run `go build .`
+          project_path: "router/cmd/router"
           binary_name: "router"
-          build_flags: "-trimpath cmd/router/main.go"
+          pre_command: export CGO_ENABLED=0
+          ldflags: -extldflags -static
           overwrite: true
           extra_files: LICENSE
           release_tag: router@0.14.0
