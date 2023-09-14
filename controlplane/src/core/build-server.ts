@@ -199,6 +199,7 @@ export default async function build(opts: BuildConfig) {
       chClient: fastify.ch,
       authenticator,
       keycloakClient,
+      prometheus: prometheusClient,
     }),
     logLevel: opts.logger.level as pino.LevelWithSilent,
     // Avoid compression for small requests
