@@ -20,6 +20,7 @@ import GraphApiTokenAuthenticator from './services/GraphApiTokenAuthenticator.js
 import AuthUtils from './auth-utils.js';
 import Keycloak from './services/Keycloak.js';
 import PrometheusClient from './prometheus/client.js';
+import { PlatformWebhookEmitter } from './webhooks/PlatformWebhookEmitter.js';
 
 export interface BuildConfig {
   logger: PinoLoggerOptions;
@@ -53,6 +54,10 @@ export interface BuildConfig {
     webErrorPath: string;
     secret: string;
     redirectUri: string;
+  };
+  webhook?: {
+    url?: string;
+    key?: string;
   };
 }
 
@@ -171,6 +176,8 @@ export default async function build(opts: BuildConfig) {
    * Controllers registration
    */
 
+  const platformWebhooks = new PlatformWebhookEmitter(opts.webhook?.url, opts.webhook?.key);
+
   await fastify.register(AuthController, {
     organizationRepository,
     webAuth,
@@ -187,6 +194,7 @@ export default async function build(opts: BuildConfig) {
     webBaseUrl: opts.auth.webBaseUrl,
     keycloakClient,
     keycloakRealm: opts.keycloak.realm,
+    platformWebhooks,
   });
 
   // Must be registered after custom fastify routes
@@ -201,6 +209,7 @@ export default async function build(opts: BuildConfig) {
       chClient: fastify.ch,
       authenticator,
       keycloakClient,
+      platformWebhooks,
     }),
     logLevel: opts.logger.level as pino.LevelWithSilent,
     // Avoid compression for small requests

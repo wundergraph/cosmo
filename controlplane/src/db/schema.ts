@@ -429,3 +429,22 @@ export const organizationMemberRolesRelations = relations(organizationMemberRole
     references: [organizationsMembers.id],
   }),
 }));
+
+export const organizationWebhooks = pgTable('organization_webhook_configs', {
+  organizationId: uuid('organization_id')
+    .primaryKey()
+    .notNull()
+    .references(() => organizations.id, {
+      onDelete: 'cascade',
+    }),
+  endpoint: text('endpoint'),
+  key: text('key'),
+  events: text('events').array(),
+});
+
+export const organizationWebhookRelations = relations(organizationWebhooks, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [organizationWebhooks.organizationId],
+    references: [organizations.id],
+  }),
+}));

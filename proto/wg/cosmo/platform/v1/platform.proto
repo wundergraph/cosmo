@@ -575,6 +575,24 @@ message Header{
   string value = 2;
 }
 
+message SaveWebhookConfigRequest {
+  string endpoint = 1;
+  string key = 2;
+  repeated string events = 3;
+}
+
+message SaveWebhookConfigResponse {
+  Response response = 1;
+}
+
+message GetWebhookConfigRequest {}
+
+message GetWebhookConfigResponse {
+  Response response = 1;
+  string endpoint = 2;
+  repeated string events = 3;
+}
+
 service PlatformService {
   // CreateFederatedGraph creates a federated graph on the control plane.
   rpc CreateFederatedGraph(CreateFederatedGraphRequest) returns (CreateFederatedGraphResponse) {}
@@ -636,6 +654,9 @@ service PlatformService {
   rpc GetLatestValidRouterConfig(wg.cosmo.node.v1.GetConfigRequest) returns (wg.cosmo.node.v1.GetConfigResponse) {}
   // MigrateFromApollo migrates the graphs from apollo to cosmo
   rpc MigrateFromApollo(MigrateFromApolloRequest) returns (MigrateFromApolloResponse) {}
+  
+  rpc SaveOrganizationWebhookConfig(SaveWebhookConfigRequest) returns (SaveWebhookConfigResponse) {}
+  rpc GetOrganizationWebhookConfig(GetWebhookConfigRequest) returns (GetWebhookConfigResponse) {}
 
   // Analytics
 

@@ -28,4 +28,6 @@ export const envVariables = z.object({
     .string()
     .transform((val) => val === 'true')
     .optional(),
+  WEBHOOK_URL: z.string().optional(),
+  WEBHOOK_KEY: z.string().optional(),
 });

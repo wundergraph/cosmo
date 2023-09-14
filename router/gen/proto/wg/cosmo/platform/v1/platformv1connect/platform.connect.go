@@ -122,6 +122,12 @@ const (
 	// PlatformServiceMigrateFromApolloProcedure is the fully-qualified name of the PlatformService's
 	// MigrateFromApollo RPC.
 	PlatformServiceMigrateFromApolloProcedure = "/wg.cosmo.platform.v1.PlatformService/MigrateFromApollo"
+	// PlatformServiceSaveOrganizationWebhookConfigProcedure is the fully-qualified name of the
+	// PlatformService's SaveOrganizationWebhookConfig RPC.
+	PlatformServiceSaveOrganizationWebhookConfigProcedure = "/wg.cosmo.platform.v1.PlatformService/SaveOrganizationWebhookConfig"
+	// PlatformServiceGetOrganizationWebhookConfigProcedure is the fully-qualified name of the
+	// PlatformService's GetOrganizationWebhookConfig RPC.
+	PlatformServiceGetOrganizationWebhookConfigProcedure = "/wg.cosmo.platform.v1.PlatformService/GetOrganizationWebhookConfig"
 	// PlatformServiceGetAnalyticsViewProcedure is the fully-qualified name of the PlatformService's
 	// GetAnalyticsView RPC.
 	PlatformServiceGetAnalyticsViewProcedure = "/wg.cosmo.platform.v1.PlatformService/GetAnalyticsView"
@@ -192,6 +198,8 @@ type PlatformServiceClient interface {
 	GetLatestValidRouterConfig(context.Context, *connect_go.Request[v11.GetConfigRequest]) (*connect_go.Response[v11.GetConfigResponse], error)
 	// MigrateFromApollo migrates the graphs from apollo to cosmo
 	MigrateFromApollo(context.Context, *connect_go.Request[v1.MigrateFromApolloRequest]) (*connect_go.Response[v1.MigrateFromApolloResponse], error)
+	SaveOrganizationWebhookConfig(context.Context, *connect_go.Request[v1.SaveWebhookConfigRequest]) (*connect_go.Response[v1.SaveWebhookConfigResponse], error)
+	GetOrganizationWebhookConfig(context.Context, *connect_go.Request[v1.GetWebhookConfigRequest]) (*connect_go.Response[v1.GetWebhookConfigResponse], error)
 	GetAnalyticsView(context.Context, *connect_go.Request[v1.GetAnalyticsViewRequest]) (*connect_go.Response[v1.GetAnalyticsViewResponse], error)
 	GetDashboardAnalyticsView(context.Context, *connect_go.Request[v1.GetDashboardAnalyticsViewRequest]) (*connect_go.Response[v1.GetDashboardAnalyticsViewResponse], error)
 	GetTrace(context.Context, *connect_go.Request[v1.GetTraceRequest]) (*connect_go.Response[v1.GetTraceResponse], error)
@@ -352,6 +360,16 @@ func NewPlatformServiceClient(httpClient connect_go.HTTPClient, baseURL string, 
 			baseURL+PlatformServiceMigrateFromApolloProcedure,
 			opts...,
 		),
+		saveOrganizationWebhookConfig: connect_go.NewClient[v1.SaveWebhookConfigRequest, v1.SaveWebhookConfigResponse](
+			httpClient,
+			baseURL+PlatformServiceSaveOrganizationWebhookConfigProcedure,
+			opts...,
+		),
+		getOrganizationWebhookConfig: connect_go.NewClient[v1.GetWebhookConfigRequest, v1.GetWebhookConfigResponse](
+			httpClient,
+			baseURL+PlatformServiceGetOrganizationWebhookConfigProcedure,
+			opts...,
+		),
 		getAnalyticsView: connect_go.NewClient[v1.GetAnalyticsViewRequest, v1.GetAnalyticsViewResponse](
 			httpClient,
 			baseURL+PlatformServiceGetAnalyticsViewProcedure,
@@ -403,6 +421,8 @@ type platformServiceClient struct {
 	removeInvitation              *connect_go.Client[v1.RemoveInvitationRequest, v1.RemoveInvitationResponse]
 	getLatestValidRouterConfig    *connect_go.Client[v11.GetConfigRequest, v11.GetConfigResponse]
 	migrateFromApollo             *connect_go.Client[v1.MigrateFromApolloRequest, v1.MigrateFromApolloResponse]
+	saveOrganizationWebhookConfig *connect_go.Client[v1.SaveWebhookConfigRequest, v1.SaveWebhookConfigResponse]
+	getOrganizationWebhookConfig  *connect_go.Client[v1.GetWebhookConfigRequest, v1.GetWebhookConfigResponse]
 	getAnalyticsView              *connect_go.Client[v1.GetAnalyticsViewRequest, v1.GetAnalyticsViewResponse]
 	getDashboardAnalyticsView     *connect_go.Client[v1.GetDashboardAnalyticsViewRequest, v1.GetDashboardAnalyticsViewResponse]
 	getTrace                      *connect_go.Client[v1.GetTraceRequest, v1.GetTraceResponse]
@@ -555,6 +575,18 @@ func (c *platformServiceClient) MigrateFromApollo(ctx context.Context, req *conn
 	return c.migrateFromApollo.CallUnary(ctx, req)
 }
 
+// SaveOrganizationWebhookConfig calls
+// wg.cosmo.platform.v1.PlatformService.SaveOrganizationWebhookConfig.
+func (c *platformServiceClient) SaveOrganizationWebhookConfig(ctx context.Context, req *connect_go.Request[v1.SaveWebhookConfigRequest]) (*connect_go.Response[v1.SaveWebhookConfigResponse], error) {
+	return c.saveOrganizationWebhookConfig.CallUnary(ctx, req)
+}
+
+// GetOrganizationWebhookConfig calls
+// wg.cosmo.platform.v1.PlatformService.GetOrganizationWebhookConfig.
+func (c *platformServiceClient) GetOrganizationWebhookConfig(ctx context.Context, req *connect_go.Request[v1.GetWebhookConfigRequest]) (*connect_go.Response[v1.GetWebhookConfigResponse], error) {
+	return c.getOrganizationWebhookConfig.CallUnary(ctx, req)
+}
+
 // GetAnalyticsView calls wg.cosmo.platform.v1.PlatformService.GetAnalyticsView.
 func (c *platformServiceClient) GetAnalyticsView(ctx context.Context, req *connect_go.Request[v1.GetAnalyticsViewRequest]) (*connect_go.Response[v1.GetAnalyticsViewResponse], error) {
 	return c.getAnalyticsView.CallUnary(ctx, req)
@@ -629,6 +661,8 @@ type PlatformServiceHandler interface {
 	GetLatestValidRouterConfig(context.Context, *connect_go.Request[v11.GetConfigRequest]) (*connect_go.Response[v11.GetConfigResponse], error)
 	// MigrateFromApollo migrates the graphs from apollo to cosmo
 	MigrateFromApollo(context.Context, *connect_go.Request[v1.MigrateFromApolloRequest]) (*connect_go.Response[v1.MigrateFromApolloResponse], error)
+	SaveOrganizationWebhookConfig(context.Context, *connect_go.Request[v1.SaveWebhookConfigRequest]) (*connect_go.Response[v1.SaveWebhookConfigResponse], error)
+	GetOrganizationWebhookConfig(context.Context, *connect_go.Request[v1.GetWebhookConfigRequest]) (*connect_go.Response[v1.GetWebhookConfigResponse], error)
 	GetAnalyticsView(context.Context, *connect_go.Request[v1.GetAnalyticsViewRequest]) (*connect_go.Response[v1.GetAnalyticsViewResponse], error)
 	GetDashboardAnalyticsView(context.Context, *connect_go.Request[v1.GetDashboardAnalyticsViewRequest]) (*connect_go.Response[v1.GetDashboardAnalyticsViewResponse], error)
 	GetTrace(context.Context, *connect_go.Request[v1.GetTraceRequest]) (*connect_go.Response[v1.GetTraceResponse], error)
@@ -785,6 +819,16 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect_go.Ha
 		svc.MigrateFromApollo,
 		opts...,
 	)
+	platformServiceSaveOrganizationWebhookConfigHandler := connect_go.NewUnaryHandler(
+		PlatformServiceSaveOrganizationWebhookConfigProcedure,
+		svc.SaveOrganizationWebhookConfig,
+		opts...,
+	)
+	platformServiceGetOrganizationWebhookConfigHandler := connect_go.NewUnaryHandler(
+		PlatformServiceGetOrganizationWebhookConfigProcedure,
+		svc.GetOrganizationWebhookConfig,
+		opts...,
+	)
 	platformServiceGetAnalyticsViewHandler := connect_go.NewUnaryHandler(
 		PlatformServiceGetAnalyticsViewProcedure,
 		svc.GetAnalyticsView,
@@ -862,6 +906,10 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect_go.Ha
 			platformServiceGetLatestValidRouterConfigHandler.ServeHTTP(w, r)
 		case PlatformServiceMigrateFromApolloProcedure:
 			platformServiceMigrateFromApolloHandler.ServeHTTP(w, r)
+		case PlatformServiceSaveOrganizationWebhookConfigProcedure:
+			platformServiceSaveOrganizationWebhookConfigHandler.ServeHTTP(w, r)
+		case PlatformServiceGetOrganizationWebhookConfigProcedure:
+			platformServiceGetOrganizationWebhookConfigHandler.ServeHTTP(w, r)
 		case PlatformServiceGetAnalyticsViewProcedure:
 			platformServiceGetAnalyticsViewHandler.ServeHTTP(w, r)
 		case PlatformServiceGetDashboardAnalyticsViewProcedure:
@@ -991,6 +1039,14 @@ func (UnimplementedPlatformServiceHandler) GetLatestValidRouterConfig(context.Co
 
 func (UnimplementedPlatformServiceHandler) MigrateFromApollo(context.Context, *connect_go.Request[v1.MigrateFromApolloRequest]) (*connect_go.Response[v1.MigrateFromApolloResponse], error) {
 	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.MigrateFromApollo is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) SaveOrganizationWebhookConfig(context.Context, *connect_go.Request[v1.SaveWebhookConfigRequest]) (*connect_go.Response[v1.SaveWebhookConfigResponse], error) {
+	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.SaveOrganizationWebhookConfig is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) GetOrganizationWebhookConfig(context.Context, *connect_go.Request[v1.GetWebhookConfigRequest]) (*connect_go.Response[v1.GetWebhookConfigResponse], error) {
+	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetOrganizationWebhookConfig is not implemented"))
 }
 
 func (UnimplementedPlatformServiceHandler) GetAnalyticsView(context.Context, *connect_go.Request[v1.GetAnalyticsViewRequest]) (*connect_go.Response[v1.GetAnalyticsViewResponse], error) {

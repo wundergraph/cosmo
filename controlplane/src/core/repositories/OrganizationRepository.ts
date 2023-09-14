@@ -2,8 +2,15 @@ import { ExpiresAt } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_
 import { and, asc, eq } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema.js';
-import { apiKeys, organizationMemberRoles, organizations, organizationsMembers, users } from '../../db/schema.js';
-import { APIKeyDTO, OrganizationDTO, OrganizationMemberDTO } from '../../types/index.js';
+import {
+  apiKeys,
+  organizationMemberRoles,
+  organizationWebhooks,
+  organizations,
+  organizationsMembers,
+  users,
+} from '../../db/schema.js';
+import { APIKeyDTO, OrganizationDTO, OrganizationMemberDTO, WebhooksConfigDTO } from '../../types/index.js';
 
 /**
  * Repository for organization related operations.
@@ -354,5 +361,30 @@ export class OrganizationRepository {
           creatorUserID: key.creatorUserID,
         } as APIKeyDTO),
     );
+  }
+
+  public async saveWebhooksConfig(input: { organizationId: string; endpoint: string; key: string; events: string[] }) {
+    await this.db
+      .insert(organizationWebhooks)
+      .values({
+        ...input,
+      })
+      .onConflictDoUpdate({
+        target: organizationWebhooks.organizationId,
+        set: {
+          ...input,
+        },
+      });
+  }
+
+  public async getWebhooksConfig(organizationId: string): Promise<WebhooksConfigDTO> {
+    const res = await this.db.query.organizationWebhooks.findFirst({
+      where: eq(organizationWebhooks.organizationId, organizationId),
+    });
+
+    return {
+      endpoint: res?.endpoint ?? '',
+      events: res?.events ?? [],
+    };
   }
 }

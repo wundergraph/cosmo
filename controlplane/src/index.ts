@@ -28,6 +28,8 @@ const {
   KC_FRONTEND_URL,
   KC_ADMIN_USER,
   PROMETHEUS_API_URL,
+  WEBHOOK_URL,
+  WEBHOOK_KEY,
 } = envVariables.parse(process.env);
 
 const options: BuildConfig = {
@@ -58,6 +60,10 @@ const options: BuildConfig = {
     secret: AUTH_JWT_SECRET,
     webBaseUrl: WEB_BASE_URL,
     webErrorPath: '/auth/error',
+  },
+  webhook: {
+    url: WEBHOOK_URL,
+    key: WEBHOOK_KEY,
   },
   debugSQL: DEBUG_SQL,
 };

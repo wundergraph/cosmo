@@ -13,6 +13,7 @@ import { OrganizationRepository } from '../repositories/OrganizationRepository.j
 import AuthUtils from '../auth-utils.js';
 import WebSessionAuthenticator from '../services/WebSessionAuthenticator.js';
 import Keycloak from '../services/Keycloak.js';
+import { PlatformWebhookEmitter } from '../webhooks/PlatformWebhookEmitter.js';
 
 export type AuthControllerOptions = {
   db: PostgresJsDatabase<typeof schema>;
@@ -29,6 +30,7 @@ export type AuthControllerOptions = {
   };
   keycloakClient: Keycloak;
   keycloakRealm: string;
+  platformWebhooks: PlatformWebhookEmitter;
 };
 
 const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fastify, opts, done) {
@@ -160,6 +162,11 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
           userId: sessions.userId,
         })
         .execute();
+
+      opts.platformWebhooks.send('user.register.success', {
+        id: userId,
+        email: userEmail,
+      });
 
       return insertedSessions[0];
     });
