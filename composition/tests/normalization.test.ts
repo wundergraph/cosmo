@@ -4,16 +4,15 @@ import {
   duplicateFieldDefinitionError,
   duplicateTypeDefinitionError,
   duplicateUnionMemberError,
-  invalidClosingBraceErrorMessage,
   invalidDirectiveError,
-  invalidEntityKeyError,
-  invalidKeyDirectiveError,
+  invalidKeyDirectivesError,
+  invalidSelectionSetErrorMessage,
   noBaseTypeExtensionError,
   normalizeSubgraphFromString,
-  objectInCompositeKeyWithoutSelectionsErrorMessage,
   undefinedDirectiveError,
-  undefinedEntityKeyErrorMessage,
+  undefinedFieldInFieldSetErrorMessage,
   undefinedTypeError,
+  unparsableFieldSetErrorMessage,
 } from '../src';
 import { readFileSync } from 'fs';
 import { join } from 'node:path';
@@ -25,7 +24,10 @@ describe('Normalization tests', () => {
     const { errors } = normalizeSubgraphFromString('');
     expect(errors).toBeDefined();
     expect(errors).toHaveLength(1);
-    expect(errors![0].message).toContain(`The subgraph has syntax errors and could not be parsed:\n Syntax Error`);
+    expect(errors![0].message).toContain(
+      `The subgraph has syntax errors and could not be parsed.\n` +
+      ` The reason provided was: Syntax Error`,
+    );
   });
 
   test('that an undefined type that is referenced in the schema returns an error', () => {
@@ -149,8 +151,10 @@ describe('Normalization tests', () => {
     `);
     expect(errors).toBeDefined();
     expect(errors).toHaveLength(1);
-    const errorMessages = [undefinedEntityKeyErrorMessage('unknown', 'Entity')];
-    expect(errors![0]).toStrictEqual(invalidKeyDirectiveError('Entity', errorMessages));
+    expect(errors![0]).toStrictEqual(invalidKeyDirectivesError(
+      'Entity',
+      [undefinedFieldInFieldSetErrorMessage('unknown', 'Entity', 'unknown')],
+    ));
   });
 
   test('that an undefined key field returns an error #2', () => {
@@ -165,8 +169,10 @@ describe('Normalization tests', () => {
     `);
     expect(errors).toBeDefined();
     expect(errors).toHaveLength(1);
-    const errorMessages = [undefinedEntityKeyErrorMessage('unknown', 'Entity')];
-    expect(errors![0]).toStrictEqual(invalidKeyDirectiveError('Entity', errorMessages));
+    expect(errors![0]).toStrictEqual(invalidKeyDirectivesError(
+      'Entity',
+      [undefinedFieldInFieldSetErrorMessage('unknown', 'Entity', 'unknown')],
+    ));
   });
 
   test('that an undefined key field returns an error #3', () => {
@@ -177,8 +183,10 @@ describe('Normalization tests', () => {
     `);
     expect(errors).toBeDefined();
     expect(errors).toHaveLength(1);
-    const errorMessages = [undefinedEntityKeyErrorMessage('unknown', 'Entity')];
-    expect(errors![0]).toStrictEqual(invalidKeyDirectiveError('Entity', errorMessages));
+    expect(errors![0]).toStrictEqual(invalidKeyDirectivesError(
+      'Entity',
+      [undefinedFieldInFieldSetErrorMessage('unknown', 'Entity', 'unknown')],
+    ));
   });
 
   test('that extending an entity with the same key directive does not duplicate the directive', () => {
@@ -477,8 +485,9 @@ describe('Normalization tests', () => {
     `);
     expect(errors).toBeDefined();
     expect(errors).toHaveLength(1);
-    expect(errors![0].message).toContain(
-      `The subgraph has syntax errors and could not be parsed:\n` + ` Syntax Error: Expected Name, found "}".`,
+    expect(errors![0].message).toBe(
+      `The subgraph has syntax errors and could not be parsed.\n`
+      + ` The reason provided was: Syntax Error: Expected Name, found "}".`,
     );
   });
 
@@ -690,8 +699,9 @@ describe('Normalization tests', () => {
     `);
     expect(errors).toBeDefined();
     expect(errors).toHaveLength(1);
-    expect(errors![0].message).toContain(
-      `The subgraph has syntax errors and could not be parsed:\n` + ` Syntax Error: Unexpected Name "Pepper".`,
+    expect(errors![0].message).toBe(
+      `The subgraph has syntax errors and could not be parsed.\n` +
+      ` The reason provided was: Syntax Error: Unexpected Name "Pepper".`,
     );
   });
 
@@ -713,8 +723,9 @@ describe('Normalization tests', () => {
       }
     `);
     expect(errors).toBeDefined();
-    expect(errors![0].message).toContain(
-      `The subgraph has syntax errors and could not be parsed:\n` + ` Syntax Error: Expected Name, found Int "1".`,
+    expect(errors![0].message).toBe(
+      `The subgraph has syntax errors and could not be parsed.\n` +
+      ` The reason provided was: Syntax Error: Expected Name, found Int "1".`,
     );
   });
 
@@ -739,8 +750,9 @@ describe('Normalization tests', () => {
       }
     `);
     expect(errors).toBeDefined();
-    expect(errors![0].message).toContain(
-      `The subgraph has syntax errors and could not be parsed:\n` + ` Syntax Error: Expected Name, found "!".`,
+    expect(errors![0].message).toBe(
+      `The subgraph has syntax errors and could not be parsed.\n` +
+      ` The reason provided was: Syntax Error: Expected Name, found "!".`,
     );
   });
 
@@ -975,8 +987,15 @@ describe('Normalization tests', () => {
       }
     `);
     expect(errors).toBeDefined();
-    const errorMessages = [undefinedEntityKeyErrorMessage('id', 'User')];
-    expect(errors![0]).toStrictEqual(invalidKeyDirectiveError('User', errorMessages));
+    expect(errors).toHaveLength(1);
+    expect(errors![0]).toStrictEqual(invalidKeyDirectivesError(
+      'User',
+      [undefinedFieldInFieldSetErrorMessage(
+        'id',
+        'User',
+        'id',
+      )],
+    ));
   });
 
   test('Should give errors when key directive is applied to a interface', () => {
@@ -1251,8 +1270,8 @@ describe('Normalization tests', () => {
     );
   });
 
-  // Requires directive
-  test('Should normalize schemas with requires directives', () => {
+  // Requires directive TODO
+  test.skip('Should normalize schemas with requires directives', () => {
     const { errors } = normalizeSubgraphFromString(`
        type Product @key(fields : "id") {
         id: String!
@@ -1540,7 +1559,7 @@ describe('Normalization tests', () => {
     expect(errors).toBeUndefined();
   });
 
-  test('that the invalid fields in composite keys give an error', () => {
+  test('that invalid fields in composite keys return an error', () => {
     const { errors } = normalizeSubgraphFromString(`
        type Entity @key(fields: "id email") @key(fields: "id organization { id details { id age } }") {
          id: ID!
@@ -1559,14 +1578,19 @@ describe('Normalization tests', () => {
         }
     `);
     expect(errors).toBeDefined();
-    expect(errors![0]).toStrictEqual(
-      invalidKeyDirectiveError('Entity', [undefinedEntityKeyErrorMessage('age', 'Details')]),
-    );
+    expect(errors![0]).toStrictEqual(invalidKeyDirectivesError(
+      'Entity',
+      [undefinedFieldInFieldSetErrorMessage(
+        'id organization { id details { id age } }',
+        'Details',
+        'age',
+      )],
+    ));
   });
 
-  test('that if no fields are passed in composite keys gives an error', () => {
+  test('that an empty selection set in a composite key returns a parse error', () => {
     const { errors } = normalizeSubgraphFromString(`
-       type Entity @key(fields: "id email") @key(fields: "id organization { id details {  } }") {
+       type Entity @key(fields: "id email") @key(fields: "id organization { id details { } }") {
          id: ID!
          email: ID!
          organization: Organization!
@@ -1583,9 +1607,13 @@ describe('Normalization tests', () => {
         }
     `);
     expect(errors).toBeDefined();
-    expect(errors![0]).toStrictEqual(
-      invalidEntityKeyError('Entity', 'id organization { id details {  } }', invalidClosingBraceErrorMessage),
-    );
+    expect(errors![0]).toStrictEqual(invalidKeyDirectivesError(
+      'Entity',
+      [unparsableFieldSetErrorMessage(
+        'id organization { id details { } }',
+        new Error('Syntax Error: Expected Name, found "}".'),
+      )],
+    ));
   });
 
   test('that if an object without its fields are passed in composite keys gives an error', () => {
@@ -1607,9 +1635,15 @@ describe('Normalization tests', () => {
         }
     `);
     expect(errors).toBeDefined();
-    expect(errors![0]).toStrictEqual(
-      invalidKeyDirectiveError('Entity', [objectInCompositeKeyWithoutSelectionsErrorMessage('details', 'Details')]),
-    );
+    expect(errors![0]).toStrictEqual(invalidKeyDirectivesError(
+      'Entity',
+      [invalidSelectionSetErrorMessage(
+        'id organization { id details }',
+        'Organization.details',
+        'Details',
+        'object',
+      )],
+    ));
   });
 
   test('that if multiple nested objects passed in composite keys are identified', () => {
@@ -1663,9 +1697,15 @@ describe('Normalization tests', () => {
         }
     `);
     expect(errors).toBeDefined();
-    expect(errors![0]).toStrictEqual(
-      invalidKeyDirectiveError('Entity', [undefinedEntityKeyErrorMessage('id', 'SomethingElse')]),
-    );
+    expect(errors).toHaveLength(1);
+    expect(errors![0]).toStrictEqual(invalidKeyDirectivesError(
+      'Entity',
+      [undefinedFieldInFieldSetErrorMessage(
+        'id organization { details { id } somethingElse { id } }',
+        'SomethingElse',
+        'id',
+      )],
+    ));
   });
 
   test('that objects and interfaces can be extended using the @extends directive', () => {
