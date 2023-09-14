@@ -163,11 +163,6 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
         })
         .execute();
 
-      opts.platformWebhooks.send('user.register.success', {
-        id: userId,
-        email: userEmail,
-      });
-
       return insertedSessions[0];
     });
 
@@ -201,6 +196,11 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
           memberID: orgMember.id,
           roles: ['admin'],
         });
+      });
+
+      opts.platformWebhooks.send('user.register.success', {
+        id: userId,
+        email: userEmail,
       });
     }
 
