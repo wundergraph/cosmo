@@ -58,6 +58,7 @@ jobs:
 
   build-release-router-binaries:
     #if: inputs.name == 'router'
+    name: Build and Release Router Binaries
     runs-on: ubuntu-latest
 
     strategy:
@@ -78,6 +79,7 @@ jobs:
       - uses: ./.github/actions/go
 
       - uses: wangyoucao577/go-release-action@v1
+        name: Build and attach binaries to GitHub Release
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           goos: ${{ matrix.goos }}
