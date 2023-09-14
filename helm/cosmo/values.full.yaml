@@ -87,10 +87,10 @@ controlplane:
     authRedirectUri: "http://controlplane.wundergraph.local/v1/auth/callback"
     databaseUrl: "postgres://postgres:changeme@cosmo-postgresql:5432/controlplane"
     clickhouseDsn: "http://default:changeme@cosmo-clickhouse:8123?database=cosmo"
+    # Migration tool doesn't support HTTP clickhouse protocol yet
+    clickhouseMigrationDsn: "clickhouse://default:changeme@cosmo-clickhouse:9000?database=cosmo"
     postgres:
       database: "controlplane"
-    clickhouse:
-      database: "cosmo"
 
 # Cosmo Router
 router:

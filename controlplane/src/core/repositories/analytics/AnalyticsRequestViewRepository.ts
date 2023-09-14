@@ -117,14 +117,14 @@ export class AnalyticsRequestViewRepository {
 
   public baseFilters: BaseFilters = {
     operationName: {
-      dbField: "SpanAttributes [ 'wg.operation.name' ]",
+      dbField: 'OperationName',
       dbClause: 'where',
       columnName: 'operationName',
       title: 'Operation Name',
       options: [],
     },
     operationType: {
-      dbField: "SpanAttributes [ 'wg.operation.type' ]",
+      dbField: 'OperationType',
       dbClause: 'where',
       title: 'Operation Type',
       columnName: 'operationType',
@@ -165,7 +165,7 @@ export class AnalyticsRequestViewRepository {
       ],
     },
     p95: {
-      dbField: 'quantile(0.95)(Duration)',
+      dbField: 'quantilesMerge(0.95)(DurationQuantiles)[1]',
       dbClause: 'having',
       title: 'P95 Latency',
       columnName: 'p95',
@@ -193,14 +193,14 @@ export class AnalyticsRequestViewRepository {
       ],
     },
     clientName: {
-      dbField: "SpanAttributes [ 'wg.client.name' ]",
+      dbField: 'ClientName',
       dbClause: 'where',
       columnName: 'clientName',
       title: 'Client Name',
       options: [],
     },
     httpStatusCode: {
-      dbField: "SpanAttributes [ 'http.status_code' ]",
+      dbField: 'HttpStatusCode',
       dbClause: 'where',
       columnName: 'httpStatusCode',
       title: 'Http Status Code',
@@ -221,112 +221,104 @@ export class AnalyticsRequestViewRepository {
       case AnalyticsViewGroupName.None: {
         query = `
           SELECT
-              TraceId as traceId,
-              toString(toUnixTimestamp(Timestamp)) as unixTimestamp,
-              -- DateTime64 is returned as a string
-              SpanAttributes['wg.operation.name'] as operationName,
-              SpanAttributes [ 'wg.operation.type' ] as operationType,
-              Duration as durationInNano,
-              StatusCode as statusCode,
-              StatusMessage as statusMessage,
-              SpanAttributes [ 'wg.operation.hash' ] as operationHash,
-              SpanAttributes [ 'wg.operation.content' ] as operationContent,
-              SpanAttributes [ 'http.status_code' ] as httpStatusCode,
-              SpanAttributes [ 'http.host' ] as httpHost,
-              SpanAttributes [ 'http.user_agent' ] as httpUserAgent,
-              SpanAttributes [ 'http.method' ] as httpMethod,
-              SpanAttributes [ 'http.target' ] as httpTarget,
-              SpanAttributes [ 'wg.client.name' ] as clientName
+            TraceId as traceId,
+            toString(toUnixTimestamp(Timestamp)) as unixTimestamp,
+            -- DateTime64 is returned as a string
+            OperationName as operationName,
+            OperationType as operationType,
+            Duration as durationInNano,
+            StatusCode as statusCode,
+            StatusMessage as statusMessage,
+            OperationHash as operationHash,
+            OperationContent as operationContent,
+            HttpStatusCode as httpStatusCode,
+            HttpHost as httpHost,
+            HttpUserAgent as httpUserAgent,
+            HttpMethod as httpMethod,
+            HttpTarget as httpTarget,
+            ClientName as clientName
           FROM
-              ${this.client.database}.otel_traces
+            ${this.client.database}.traces_mv
           WHERE
-            -- Only root spans(spans which have no parent span) and has no condition on SpanKind as a span can start from either the server or the client
-            empty(ParentSpanId)
             ${baseWhereSql}
           ORDER BY
-              Timestamp DESC 
-            ${basePaginationSql}
+            Timestamp DESC 
+          ${basePaginationSql}
         `;
         break;
       }
       case AnalyticsViewGroupName.OperationName: {
         query = `
           SELECT
-            SpanAttributes['wg.operation.name'] as operationName,
-            SpanAttributes [ 'wg.operation.type' ] as operationType,
-            COUNT(*) as totalRequests,
-            quantile(0.95)(Duration) as p95,
+            OperationName as operationName,
+            OperationType as operationType,
+            sum(TotalRequests) as totalRequests,
+            quantilesMerge(0.95)(DurationQuantiles)[1] as p95,
             CONCAT(
-                toString(SUM(if(StatusCode = 'STATUS_CODE_ERROR' OR position(SpanAttributes['http.status_code'],'4') = 1, 1, 0))), 
-                ' (',
-                toString(round(SUM(if(StatusCode = 'STATUS_CODE_ERROR' OR position(SpanAttributes['http.status_code'],'4') = 1, 1, 0)) / COUNT(*) * 100, 2)),
-                '%)'
+              toString(sum(TotalRequestsError)),
+              ' (',
+              toString(round(sum(TotalRequestsError) / sum(TotalRequests) * 100, 2)),
+              '%)'
             ) as errorsWithRate,
-            toString(toUnixTimestamp(MAX(Timestamp))) as lastCalled
+            toString(toUnixTimestamp(max(LastCalled))) as lastCalled
           FROM
-              ${this.client.database}.otel_traces
+            ${this.client.database}.traces_by_operation_quarter_hourly_mv
           WHERE
-            -- Only root spans(spans which have no parent span) and has no condition on SpanKind as a span can start from either the server or the client
-            empty(ParentSpanId)
             ${baseWhereSql}
           GROUP BY
             operationName,
             operationType
           ${baseHavingSql}
           ORDER BY
-              totalRequests DESC
-            ${basePaginationSql}
+            totalRequests DESC
+          ${basePaginationSql}
         `;
         break;
       }
       case AnalyticsViewGroupName.Client: {
         query = `
           SELECT
-            SpanAttributes [ 'wg.client.name' ] as clientName,
-            SpanAttributes [ 'wg.client.version' ] as clientVersion,
-            COUNT(*) as totalRequests,
-            quantile(0.95)(Duration) as p95,
+            ClientName as clientName,
+            ClientVersion as clientVersion,
+            sum(TotalRequests) as totalRequests,
+            quantilesMerge(0.95)(DurationQuantiles)[1] as p95,
             CONCAT(
-                toString(SUM(if(StatusCode = 'STATUS_CODE_ERROR' OR position(SpanAttributes['http.status_code'],'4') = 1, 1, 0))), 
-                ' (',
-                toString(round(SUM(if(StatusCode = 'STATUS_CODE_ERROR' OR position(SpanAttributes['http.status_code'],'4') = 1, 1, 0)) / COUNT(*) * 100, 2)),
-                '%)'
+              toString(sum(TotalRequestsError)),
+              ' (',
+              toString(round(sum(TotalRequestsError) / sum(TotalRequests) * 100, 2)),
+              '%)'
             ) as errorsWithRate,
-            toString(toUnixTimestamp(MAX(Timestamp))) as lastCalled
+            toString(toUnixTimestamp(max(LastCalled))) as lastCalled
           FROM
-              ${this.client.database}.otel_traces
+            ${this.client.database}.traces_by_client_quarter_hourly_mv
           WHERE
-          -- Only root spans(spans which have no parent span) and has no condition on SpanKind as a span can start from either the server or the client
-            empty(ParentSpanId)
             ${baseWhereSql}
           GROUP BY
             clientName,
             clientVersion
           ${baseHavingSql}
           ORDER BY
-              totalRequests DESC
-            ${basePaginationSql}
+            totalRequests DESC
+          ${basePaginationSql}
         `;
         break;
       }
       case AnalyticsViewGroupName.HttpStatusCode: {
         query = `
           SELECT
-            SpanAttributes['http.status_code'] as httpStatusCode,
-            COUNT(*) as totalRequests,
-            quantile(0.95)(Duration) as p95,
-            toString(toUnixTimestamp(MAX(Timestamp))) as lastCalled
+            HttpStatusCode as httpStatusCode,
+            sum(TotalRequests) as totalRequests,
+            quantilesMerge(0.95)(DurationQuantiles)[1] as p95,
+            toString(toUnixTimestamp(max(LastCalled))) as lastCalled
           FROM
-              ${this.client.database}.otel_traces
+            ${this.client.database}.traces_by_http_status_code_quarter_hourly_mv
           WHERE
-          -- Only root spans(spans which have no parent span) and has no condition on SpanKind as a span can start from either the server or the client
-              empty(ParentSpanId)
-              ${baseWhereSql}
+            ${baseWhereSql}
           GROUP BY
-              httpStatusCode
+            httpStatusCode
           ${baseHavingSql}
           ORDER BY
-              totalRequests DESC
+            totalRequests DESC
           ${basePaginationSql}
         `;
         break;
@@ -347,11 +339,9 @@ export class AnalyticsRequestViewRepository {
     switch (name) {
       case AnalyticsViewGroupName.None: {
         totalCountQuery = `
-          SELECT COUNT(*) as count FROM ${this.client.database}.otel_traces
+          SELECT COUNT(*) as count FROM ${this.client.database}.traces_mv
           WHERE
-            -- Only root spans(spans which have no parent span) and has no condition on SpanKind as a span can start from either the server or the client
-            empty(ParentSpanId)
-          ${baseWhereSql}
+            ${baseWhereSql}
         `;
         break;
       }
@@ -359,16 +349,16 @@ export class AnalyticsRequestViewRepository {
         totalCountQuery = `
           SELECT COUNT(*) as count FROM (
             SELECT
-              SpanAttributes [ 'wg.operation.name' ]
+              OperationName as operationName,
+              OperationType as operationType,
+              quantilesMerge(0.95)(DurationQuantiles)[1] as p95
             FROM
-                ${this.client.database}.otel_traces
+              ${this.client.database}.traces_by_operation_quarter_hourly_mv
             WHERE
-            -- Only root spans(spans which have no parent span) and has no condition on SpanKind as a span can start from either the server or the client
-              empty(ParentSpanId)
               ${baseWhereSql}
             GROUP BY
-              SpanAttributes [ 'wg.operation.name' ],
-              SpanAttributes [ 'wg.operation.type' ]
+              operationName,
+              operationType
             ${baseHavingSql}
           )
         `;
@@ -378,16 +368,14 @@ export class AnalyticsRequestViewRepository {
         totalCountQuery = `
           SELECT COUNT(*) as count FROM (
             SELECT
-              SpanAttributes [ 'wg.client.name' ]
+              ClientName
             FROM
-                ${this.client.database}.otel_traces
+              ${this.client.database}.traces_by_client_quarter_hourly_mv
             WHERE
-            -- Only root spans(spans which have no parent span) and has no condition on SpanKind as a span can start from either the server or the client
-              empty(ParentSpanId)
               ${baseWhereSql}
             GROUP BY
-              SpanAttributes [ 'wg.client.name' ],
-              SpanAttributes [ 'wg.client.version' ]
+              ClientName,
+              ClientVersion
             ${baseHavingSql}
           )
         `;
@@ -397,15 +385,13 @@ export class AnalyticsRequestViewRepository {
         totalCountQuery = `
           SELECT COUNT(*) as count FROM (
             SELECT
-              SpanAttributes['http.status_code'] as httpStatusCode
+              HttpStatusCode as httpStatusCode
             FROM
-              ${this.client.database}.otel_traces
+              ${this.client.database}.traces_by_http_status_code_quarter_hourly_mv
             WHERE
-            -- Only root spans(spans which have no parent span) and has no condition on SpanKind as a span can start from either the server or the client
-              empty(ParentSpanId)
               ${baseWhereSql}
             GROUP BY
-                httpStatusCode
+              httpStatusCode
             ${baseHavingSql}
           )
         `;
@@ -471,31 +457,6 @@ export class AnalyticsRequestViewRepository {
     }
 
     return clientNames;
-  }
-
-  private async getAllStatusMessages(federatedGraphId: string, shouldExecute: boolean): Promise<string[]> {
-    if (!shouldExecute) {
-      return [];
-    }
-
-    const query = `
-      SELECT DISTINCT StatusMessage as statusMessage
-      FROM ${this.client.database}.otel_traces
-      WHERE 
-      -- Only root spans(spans which have no parent span) and has no condition on SpanKind as a span can start from either the server or the client
-        empty(ParentSpanId)
-        AND SpanAttributes['wg.federated_graph.id'] = '${federatedGraphId}'
-      LIMIT 100
-    `;
-
-    const result = await this.client?.queryPromise(query);
-
-    const statusMessages: string[] = [];
-    if (Array.isArray(result)) {
-      statusMessages.push(...result.map((s) => s.statusMessage));
-    }
-
-    return statusMessages;
   }
 
   private async getAllHttpStatusCodes(federatedGraphId: string, shouldExecute: boolean): Promise<string[]> {
@@ -612,8 +573,8 @@ export class AnalyticsRequestViewRepository {
 
     // Important: This is the only place where we scope the data to a particular organization and graph.
     // We can only filter for data that is part of the JWT token otherwise a user could send us whatever they want.
-    whereSql += ` AND SpanAttributes['wg.federated_graph.id'] = '${federatedGraphId}'`;
-    whereSql += ` AND SpanAttributes['wg.organization.id'] = '${organizationId}'`;
+    whereSql += ` AND FederatedGraphID = '${federatedGraphId}'`;
+    whereSql += ` AND OrganizationID = '${organizationId}'`;
 
     const [result, totalCount] = await Promise.all([
       this.getViewData(name, whereSql, havingSql, paginationSql, coercedQueryParams),

@@ -523,6 +523,7 @@ message MigrateFromApolloRequest {
 
 message MigrateFromApolloResponse {
   Response response = 1;
+  string token = 2;
 }
 
 message SpanAttributes {
@@ -567,6 +568,11 @@ message WhoAmIResponse {
   Response response = 1;
   string organizationName = 2;
   optional string userEmail = 3;
+}
+
+message Header{
+  string key = 1;
+  string value = 2;
 }
 
 service PlatformService {

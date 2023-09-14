@@ -48,6 +48,7 @@ describe('CompositionErrors', (ctx) => {
     await server.register(database, {
       databaseConnectionUrl,
       debugSQL: false,
+      runMigration: true,
     });
 
     testContext.onTestFailed(async () => {
@@ -355,12 +356,9 @@ describe('CompositionErrors', (ctx) => {
       name: 'subgraph2',
     };
 
-    expect(() => composeSubgraphs([subgraph1, subgraph2]))
-      .toThrow(incompatibleParentKindFatalError(
-        'SameName',
-        Kind.OBJECT_TYPE_DEFINITION,
-        Kind.INTERFACE_TYPE_DEFINITION,
-      ));
+    expect(() => composeSubgraphs([subgraph1, subgraph2])).toThrow(
+      incompatibleParentKindFatalError('SameName', Kind.OBJECT_TYPE_DEFINITION, Kind.INTERFACE_TYPE_DEFINITION),
+    );
   });
 
   test('Should cause composition errors if a type does not implement one of its interface after merge', () => {
@@ -400,16 +398,21 @@ describe('CompositionErrors', (ctx) => {
     const { errors } = composeSubgraphs([subgraph1, subgraph2]);
 
     expect(errors).toBeDefined();
-    expect(errors![0]).toStrictEqual(unimplementedInterfaceFieldsError(
-      'TypeB',
-      'object',
-      new Map<string, ImplementationErrors>([
-        ['InterfaceA', {
-          invalidFieldImplementations: new Map<string, InvalidFieldImplementation>(),
-          unimplementedFields: ['a'],
-        }]
-      ]),
-    ));
+    expect(errors![0]).toStrictEqual(
+      unimplementedInterfaceFieldsError(
+        'TypeB',
+        'object',
+        new Map<string, ImplementationErrors>([
+          [
+            'InterfaceA',
+            {
+              invalidFieldImplementations: new Map<string, InvalidFieldImplementation>(),
+              unimplementedFields: ['a'],
+            },
+          ],
+        ]),
+      ),
+    );
   });
 
   test.skip('Should cause composition errors when merging completely inconsistent input types', () => {

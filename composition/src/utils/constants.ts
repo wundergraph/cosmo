@@ -247,7 +247,7 @@ export const VERSION_TWO_DIRECTIVE_DEFINITIONS: DirectiveDefinitionNode[] = [
       },
     ],
     kind: Kind.DIRECTIVE_DEFINITION,
-    locations: stringArrayToNameNodeArray([SCHEMA]),
+    locations: stringArrayToNameNodeArray([SCHEMA_UPPER]),
     name: stringToNameNode(LINK),
     repeatable: true,
   },

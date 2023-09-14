@@ -35,7 +35,7 @@ jobs:
 
       - uses: ./.github/actions/go
         with:
-          gh-engine-repo-token: ${{ secrets.GH_ENGINE_REPO_TOKEN }}
+          cache-dependency-path: router/go.sum
 
       - name: Install tools
         run: make setup-build-tools

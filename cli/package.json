@@ -1,6 +1,6 @@
 {
   "name": "wgc",
-  "version": "0.8.3",
+  "version": "0.10.1",
   "description": "The official CLI tool to manage the GraphQL Federation Platform Cosmo",
   "type": "module",
   "main": "dist/index.js",
@@ -32,11 +32,14 @@
     "@bufbuild/buf": "^1.26.1",
     "@connectrpc/connect": "^0.13.2",
     "@connectrpc/connect-node": "^0.13.2",
+    "@wundergraph/composition": "workspace:*",
     "@wundergraph/cosmo-connect": "workspace:*",
     "@wundergraph/cosmo-shared": "workspace:*",
-    "cli-table": "^0.3.11",
+    "cli-table3": "^0.6.3",
     "commander": "^11.0.0",
+    "graphql": "^16.7.1",
     "inquirer": "^9.2.7",
+    "js-yaml": "^4.1.0",
     "log-symbols": "^5.1.0",
     "pathe": "^1.1.1",
     "picocolors": "^1.0.0"
@@ -44,6 +47,7 @@
   "devDependencies": {
     "@types/cli-table": "^0.3.1",
     "@types/inquirer": "^9.0.3",
+    "@types/js-yaml": "^4.0.5",
     "@types/node": "^20.3.1",
     "del-cli": "^5.0.0",
     "eslint": "^8.44.0",

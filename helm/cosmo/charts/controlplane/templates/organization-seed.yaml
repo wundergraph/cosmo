@@ -1,0 +1,88 @@
+{{ if .Values.global.seed.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: "{{ include "controlplane.fullname" . }}-seed-organization-{{ now | unixEpoch }}"
+  labels:
+    {{- include "controlplane.labels" . | nindent 4 }}
+  annotations:
+    # Run the job before installing the helm chart
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+    # Support for k14s.io. This annotation ensure that the job is run after the postgresql and keycloak deployment
+    kapp.k14s.io/change-rule.postgres: "upsert after upserting cosmo.apps.postgresql.wundergraph.com/deployment"
+    kapp.k14s.io/change-rule.keycloak: "upsert after upserting cosmo.apps.keycloak.wundergraph.com/deployment"
+spec:
+  backoffLimit: 3
+  parallelism: 1
+  ttlSecondsAfterFinished: 120
+  template:
+    metadata:
+      name: "{{ include "controlplane.fullname" . }}-seed-organization"
+      labels:
+        {{- include "controlplane.labels" . | nindent 8 }}
+    spec:
+      restartPolicy: OnFailure
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: seed
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ include "controlplane.image" . }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: KC_REALM
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-configmap
+                  key: keycloakRealm
+            - name: KC_LOGIN_REALM
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-configmap
+                  key: keycloakLoginRealm
+            - name: KC_API_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-configmap
+                  key: keycloakApiUrl
+            - name: KC_ADMIN_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-secret
+                  key: keycloakAdminUser
+            - name: KC_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-secret
+                  key: keycloakAdminPassword
+            - name: KC_CLIENT_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-configmap
+                  key: keycloakClientId
+            - name: API_KEY
+              value: "{{ .Values.global.seed.apiKey }}"
+            - name: DB_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-secret
+                  key: databaseUrl
+
+            - name: USER_EMAIL
+              value: "{{ .Values.global.seed.userEmail }}"
+            - name: USER_PASSWORD
+              value: "{{ .Values.global.seed.userPassword }}"
+            - name: USER_FIRSTNAME
+              value: "{{ .Values.global.seed.firstName }}"
+            - name: USER_LASTNAME
+              value: "{{ .Values.global.seed.lastName }}"
+            - name: ORGANIZATION_NAME
+              value: "{{ .Values.global.seed.organizationName }}"
+            - name: ORGANIZATION_SLUG
+              value: "{{ .Values.global.seed.organizationSlug }}"
+          args:
+            - "/app/dist/bin/seed.js"
+{{- end }}

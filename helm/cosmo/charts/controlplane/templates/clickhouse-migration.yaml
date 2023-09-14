@@ -1,0 +1,52 @@
+# The otelcollector provides the necessary database schema for the migration
+{{- if .Values.global.otelcollector.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: "{{ include "controlplane.fullname" . }}-clickhouse-migration-{{ now | unixEpoch }}"
+  labels:
+    {{- include "controlplane.labels" . | nindent 4 }}
+  annotations:
+    # Run migration job before helm install/upgrade
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-delete-policy": before-hook-creation
+    # Less priority than the migration job so the secret is created before the migration job
+    "helm.sh/hook-weight": "-10"
+    # Support for k14s.io. This annotation ensure that the job is run after clickhouse deployment
+    {{- if .Values.global.clickhouse.enabled }}
+    kapp.k14s.io/change-rule.clickhouse: "upsert after upserting cosmo.apps.clickhouse.wundergraph.com/deployment"
+    {{- end }}
+    {{- if .Values.global.otelcollector.enabled }}
+    kapp.k14s.io/change-rule.otelcollector: "upsert after upserting cosmo.apps.otelcollector.wundergraph.com/deployment"
+    {{- end }}
+    # Create a new change-group so the controlplane can be deployed after the clickhouse migration
+    kapp.k14s.io/change-group: "cosmo.apps.controlplane.wundergraph.com/ch-migration"
+spec:
+  backoffLimit: 3
+  parallelism: 1
+  template:
+    metadata:
+      name: "{{ include "controlplane.fullname" . }}-clickhouse-migration"
+      labels:
+        {{- include "controlplane.labels" . | nindent 8 }}
+    spec:
+      restartPolicy: OnFailure
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: seed
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ include "controlplane.image" . }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: CLICKHOUSE_DSN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-secret
+                  key: clickhouseMigrationDsn
+          args:
+            - "/app/dist/bin/ch-migrate.js"
+{{- end }}

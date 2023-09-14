@@ -1,8 +1,38 @@
 # Change Log
-Images can be found [here](https://github.com/orgs/wundergraph/packages?repo_name=cosmo)
+Binaries are attached to the github release otherwise all images can be found [here](https://github.com/orgs/wundergraph/packages?repo_name=cosmo)
 
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
+
+## [0.11.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.11.1...controlplane@0.11.2) (2023-09-14)
+
+### Bug Fixes
+
+* avoid excessive error logs in session handler ([#70](https://github.com/wundergraph/cosmo/issues/70)) ([ed5a4c5](https://github.com/wundergraph/cosmo/commit/ed5a4c515b5d3bf6d5776e53a9ffe70bd474a418)) (@StarpTech)
+
+## [0.11.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.11.0...controlplane@0.11.1) (2023-09-14)
+
+### Bug Fixes
+
+* labels of the migrated graphs ([#65](https://github.com/wundergraph/cosmo/issues/65)) ([6ca790c](https://github.com/wundergraph/cosmo/commit/6ca790c7c73e66fc0d51bd6f79fc4899a8686064)) (@JivusAyrus)
+
+# [0.11.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.10.1...controlplane@0.11.0) (2023-09-13)
+
+### Features
+
+* add user registration ([#57](https://github.com/wundergraph/cosmo/issues/57)) ([c1d1841](https://github.com/wundergraph/cosmo/commit/c1d184192511f015c4b33db91d7342a0bb35710e)) (@JivusAyrus)
+* use materialized views for traces ([#51](https://github.com/wundergraph/cosmo/issues/51)) ([f1bfbf5](https://github.com/wundergraph/cosmo/commit/f1bfbf5950ba92adbfeae5a3d4ef0cab14363150)) (@thisisnithin)
+
+## [0.10.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.10.0...controlplane@0.10.1) (2023-09-11)
+
+**Note:** Version bump only for package controlplane
+
+# [0.10.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.9.4...controlplane@0.10.0) (2023-09-11)
+
+### Features
+
+* add introspect subgraph command ([#44](https://github.com/wundergraph/cosmo/issues/44)) ([bf376cd](https://github.com/wundergraph/cosmo/commit/bf376cd75382b16659efb670ea54494f691328aa)) (@JivusAyrus)
+* introspect subgraphs in cli ([#53](https://github.com/wundergraph/cosmo/issues/53)) ([2bd9f95](https://github.com/wundergraph/cosmo/commit/2bd9f95cd3ac13e878a12ab526d575c9b1daf248)) (@JivusAyrus)
 
 ## [0.9.4](https://github.com/wundergraph/cosmo/compare/controlplane@0.9.3...controlplane@0.9.4) (2023-09-08)
 

@@ -3,6 +3,7 @@ import cookie from 'cookie';
 import axios from 'axios';
 import { eq } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common_pb';
 import { PKCECodeChallenge, UserInfoEndpointResponse, UserSession } from '../types/index.js';
 import * as schema from '../db/schema.js';
 import { sessions } from '../db/schema.js';
@@ -14,6 +15,7 @@ import {
   encrypt,
   generateRandomCodeVerifier,
 } from './crypto/jwt.js';
+import { AuthenticationError } from './errors/errors.js';
 
 export type AuthUtilsOptions = {
   webBaseUrl: string;
@@ -248,7 +250,7 @@ export default class AuthUtils {
     const userSessions = await this.db.select().from(sessions).where(eq(sessions.id, sessionId)).limit(1).execute();
 
     if (userSessions.length === 0) {
-      throw new Error('Session not found');
+      throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, 'Session not found');
     }
 
     const userSession = userSessions[0];
@@ -260,7 +262,7 @@ export default class AuthUtils {
 
       // Check if the refresh token is valid to issue a new access token
       if (parsedRefreshToken.exp && parsedRefreshToken.exp < Date.now() / 1000) {
-        throw new Error('Refresh token expired');
+        throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, 'Refresh token expired');
       }
 
       const sessionExpiresIn = DEFAULT_SESSION_MAX_AGE_SEC;
@@ -285,7 +287,7 @@ export default class AuthUtils {
         .execute();
 
       if (updatedSessions.length === 0) {
-        throw new Error('Session not found');
+        throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, 'Session not found');
       }
 
       const newUserSession = updatedSessions[0];

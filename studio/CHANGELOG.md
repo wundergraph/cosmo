@@ -4,6 +4,24 @@ Images can be found [here](https://github.com/orgs/wundergraph/packages?repo_nam
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.11.1](https://github.com/wundergraph/cosmo/compare/studio@0.11.0...studio@0.11.1) (2023-09-14)
+
+### Bug Fixes
+
+* router docs dialog ([#63](https://github.com/wundergraph/cosmo/issues/63)) ([fbedd8b](https://github.com/wundergraph/cosmo/commit/fbedd8bdb16070ae0bdc013c738ec3d70ac56327)) (@JivusAyrus)
+
+# [0.11.0](https://github.com/wundergraph/cosmo/compare/studio@0.10.2...studio@0.11.0) (2023-09-13)
+
+### Features
+
+* add user registration ([#57](https://github.com/wundergraph/cosmo/issues/57)) ([c1d1841](https://github.com/wundergraph/cosmo/commit/c1d184192511f015c4b33db91d7342a0bb35710e)) (@JivusAyrus)
+
+## [0.10.2](https://github.com/wundergraph/cosmo/compare/studio@0.10.1...studio@0.10.2) (2023-09-11)
+
+### Bug Fixes
+
+* changelog date overflow ([#52](https://github.com/wundergraph/cosmo/issues/52)) ([27b23fb](https://github.com/wundergraph/cosmo/commit/27b23fbae994cd34116c4318596807cc25aed80f)) (@thisisnithin)
+
 ## [0.10.1](https://github.com/wundergraph/cosmo/compare/studio@0.10.0...studio@0.10.1) (2023-09-06)
 
 ### Bug Fixes
