@@ -40,11 +40,7 @@ export class OrganizationWebhookEmitter {
     this.synced = true;
   }
 
-  async send<T extends keyof EventMap>(eventName: T, data: EventMap[T]) {
-    if (!this.synced) {
-      await this.syncOrganizationSettings();
-    }
-
+  private sendEvent<T extends keyof EventMap>(eventName: T, data: EventMap[T]) {
     if (!this.url) {
       return;
     }
@@ -71,5 +67,14 @@ export class OrganizationWebhookEmitter {
         numOfAttempts: 5,
       },
     ).catch((e) => {});
+  }
+
+  send<T extends keyof EventMap>(eventName: T, data: EventMap[T]) {
+    if (!this.synced) {
+      this.syncOrganizationSettings().then(() => this.sendEvent(eventName, data));
+      return;
+    }
+
+    this.sendEvent(eventName, data);
   }
 }
