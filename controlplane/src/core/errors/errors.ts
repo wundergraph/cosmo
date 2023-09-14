@@ -12,7 +12,7 @@ export class PublicError extends ServiceError {}
 
 export class AuthenticationError extends ServiceError {}
 
-export function isAuthenticationError(e: Error): e is PublicError {
+export function isAuthenticationError(e: Error): e is AuthenticationError {
   return e instanceof AuthenticationError;
 }
 
