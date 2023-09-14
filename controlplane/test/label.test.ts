@@ -21,6 +21,7 @@ import {
   seedTest,
 } from '../src/core/test-util';
 import Keycloak from '../src/core/services/Keycloak';
+import { PlatformWebhookEmitter } from '../src/core/webhooks/PlatformWebhookEmitter';
 
 let dbname = '';
 
@@ -63,6 +64,8 @@ describe('Labels', (ctx) => {
       adminPassword,
     });
 
+    const platformWebhooks = new PlatformWebhookEmitter();
+
     await server.register(fastifyConnectPlugin, {
       routes: routes({
         db: server.db,
@@ -71,6 +74,7 @@ describe('Labels', (ctx) => {
         jwtSecret: 'secret',
         keycloakRealm: realm,
         keycloakClient,
+        platformWebhooks,
       }),
     });
 
@@ -169,6 +173,8 @@ describe('Labels', (ctx) => {
       adminPassword,
     });
 
+    const platformWebhooks = new PlatformWebhookEmitter();
+
     await server.register(fastifyConnectPlugin, {
       routes: routes({
         db: server.db,
@@ -177,6 +183,7 @@ describe('Labels', (ctx) => {
         jwtSecret: 'secret',
         keycloakRealm: realm,
         keycloakClient,
+        platformWebhooks,
       }),
     });
 
@@ -300,6 +307,8 @@ describe('Labels', (ctx) => {
       adminPassword,
     });
 
+    const platformWebhooks = new PlatformWebhookEmitter();
+
     await server.register(fastifyConnectPlugin, {
       routes: routes({
         db: server.db,
@@ -308,6 +317,7 @@ describe('Labels', (ctx) => {
         jwtSecret: 'secret',
         keycloakRealm: realm,
         keycloakClient,
+        platformWebhooks,
       }),
     });
 

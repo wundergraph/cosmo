@@ -12,6 +12,7 @@ import database from '../src/core/plugins/database';
 import routes from '../src/core/routes';
 import { afterAllSetup, beforeAllSetup, createTestAuthenticator, genID, seedTest } from '../src/core/test-util';
 import Keycloak from '../src/core/services/Keycloak';
+import { PlatformWebhookEmitter } from '../src/core/webhooks/PlatformWebhookEmitter';
 
 let dbname = '';
 
@@ -54,6 +55,8 @@ describe('CheckFederatedGraph', (ctx) => {
       adminPassword,
     });
 
+    const platformWebhooks = new PlatformWebhookEmitter();
+
     await server.register(fastifyConnectPlugin, {
       routes: routes({
         db: server.db,
@@ -62,6 +65,7 @@ describe('CheckFederatedGraph', (ctx) => {
         jwtSecret: 'secret',
         keycloakRealm: realm,
         keycloakClient,
+        platformWebhooks,
       }),
     });
 

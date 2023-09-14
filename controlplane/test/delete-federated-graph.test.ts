@@ -18,6 +18,7 @@ import {
   seedTest,
 } from '../src/core/test-util';
 import Keycloak from '../src/core/services/Keycloak';
+import { PlatformWebhookEmitter } from '../src/core/webhooks/PlatformWebhookEmitter';
 
 let dbname = '';
 
@@ -60,6 +61,8 @@ describe('DeleteFederatedGraph', (ctx) => {
       adminPassword,
     });
 
+    const platformWebhooks = new PlatformWebhookEmitter();
+
     await server.register(fastifyConnectPlugin, {
       routes: routes({
         db: server.db,
@@ -68,6 +71,7 @@ describe('DeleteFederatedGraph', (ctx) => {
         jwtSecret: 'secret',
         keycloakRealm: realm,
         keycloakClient,
+        platformWebhooks,
       }),
     });
 

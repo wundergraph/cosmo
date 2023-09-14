@@ -712,7 +712,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           }
 
           if (federatedGraph) {
-            console.log('REEE', federatedGraph.id);
             orgWebhooks.send('graph.schema.updated', {
               id: federatedGraph.id,
               name: federatedGraph.name,
