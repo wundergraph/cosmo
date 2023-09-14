@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   releases-matrix:
-    if: startsWith(github.event.release.tag_name, 'router@')
+    #if: startsWith(github.event.release.tag_name, 'router@')
     name: Build and Release Router Binaries
     runs-on: ubuntu-latest
 
