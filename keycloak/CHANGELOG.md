@@ -4,6 +4,12 @@ Images can be found [here](https://github.com/orgs/wundergraph/packages?repo_nam
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.8.0](https://github.com/wundergraph/cosmo/compare/keycloak@0.7.0...keycloak@0.8.0) (2023-09-14)
+
+### Features
+
+* change logo and add identity providers ([#67](https://github.com/wundergraph/cosmo/issues/67)) ([c38933c](https://github.com/wundergraph/cosmo/commit/c38933cf9422e1cdb3d93a3adbfbab12798f2bf8)) (@JivusAyrus)
+
 # [0.7.0](https://github.com/wundergraph/cosmo/compare/keycloak@0.6.1...keycloak@0.7.0) (2023-09-13)
 
 ### Features
