@@ -8,7 +8,7 @@ The router is the component that understands the GraphQL Federation protocol. It
 
 - [Go 1.20](https://golang.org/doc/install)
 
-Use the `.env.example` file to create a `.env` file with the required environment variables.
+Use the `.env.example` file to create a `.env` file with the specified environment variables.
 
 ```shell
 make dev
@@ -30,5 +30,4 @@ See [Router Customizability](https://cosmo-docs.wundergraph.com/router/customiza
 
 The router is a HTTP server that accepts GraphQL requests and forwards them to the correct service.
 The core aka [`the Engine`](https://github.com/wundergraph/graphql-go-tools) implements the GraphQL Federation protocol and is responsible for parsing the request, resolving the query and aggregating the responses.
-
 We use [Connect](https://connect.build/) to communicate with the controlplane. Connect is framework build on top of [gRPC](https://grpc.io/) and simplify code-generation and reuse between `Studio` -> `Controlplane` <- `Router`.
