@@ -8,9 +8,6 @@ inputs:
   working-directory:
     description: "The working directory"
     required: false
-  gh-engine-repo-token:
-    description: "Temporary token for private engine"
-    required: true
 
 runs:
   using: "composite"

@@ -34,8 +34,6 @@ jobs:
             ${{ runner.os }}-go-
 
       - uses: ./.github/actions/go
-        with:
-          gh-engine-repo-token: ${{ secrets.GH_ENGINE_REPO_TOKEN }}
 
       - name: Install tools
         run: make setup-build-tools
@@ -57,5 +55,39 @@ jobs:
       - name: Build
         working-directory: ./router
         run: make build
+
+  build-release-router-binaries:
+    #if: inputs.name == 'router'
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        # build and publish in parallel: linux/386, linux/amd64, linux/arm64, windows/386, windows/amd64, darwin/amd64, darwin/arm64
+        goos: [linux, windows, darwin]
+        goarch: ["386", amd64, arm64]
+        exclude:
+          - goarch: "386"
+            goos: darwin
+          - goarch: arm64
+            goos: windows
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - uses: ./.github/actions/go
+
+      - uses: wangyoucao577/go-release-action@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          goos: ${{ matrix.goos }}
+          goarch: ${{ matrix.goarch }}
+          project_path: "./router"
+          binary_name: "router"
+          build_flags: "-trimpath -a -o router cmd/router/main.go"
+          overwrite: true
+          extra_files: LICENSE
+          #release_tag: ${{ inputs.name }}@${{ inputs.tag }}
+          release_tag: router@0.14.0
 
 
