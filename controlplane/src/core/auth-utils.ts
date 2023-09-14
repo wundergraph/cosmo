@@ -63,7 +63,7 @@ export default class AuthUtils {
     const cookies = cookie.parse(req.headers.cookie || '');
 
     if (!cookies[this.opts.session.cookieName]) {
-      throw new Error('Session cookie not found');
+      throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, 'Session cookie not found');
     }
 
     const userSession = await decrypt<UserSession>({
@@ -72,7 +72,7 @@ export default class AuthUtils {
     });
 
     if (!userSession) {
-      throw new Error('Session cookie could not be found');
+      throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, 'Session cookie could not be found');
     }
 
     return userSession;
