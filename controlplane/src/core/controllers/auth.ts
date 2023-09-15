@@ -13,7 +13,7 @@ import { OrganizationRepository } from '../repositories/OrganizationRepository.j
 import AuthUtils from '../auth-utils.js';
 import WebSessionAuthenticator from '../services/WebSessionAuthenticator.js';
 import Keycloak from '../services/Keycloak.js';
-import { PlatformWebhookEmitter } from '../webhooks/PlatformWebhookEmitter.js';
+import { IPlatformWebhookEmitter } from '../webhooks/PlatformWebhookEmitter.js';
 import { AuthenticationError } from '../errors/errors.js';
 
 export type AuthControllerOptions = {
@@ -31,7 +31,7 @@ export type AuthControllerOptions = {
   };
   keycloakClient: Keycloak;
   keycloakRealm: string;
-  platformWebhooks: PlatformWebhookEmitter;
+  platformWebhooks: IPlatformWebhookEmitter;
 };
 
 const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fastify, opts, done) {

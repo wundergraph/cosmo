@@ -10,7 +10,7 @@ import PlatformServiceImpl from './bufservices/PlatformService.js';
 import { ClickHouseClient } from './clickhouse/index.js';
 import { Authenticator } from './services/Authentication.js';
 import Keycloak from './services/Keycloak.js';
-import { PlatformWebhookEmitter } from './webhooks/PlatformWebhookEmitter.js';
+import { IPlatformWebhookEmitter } from './webhooks/PlatformWebhookEmitter.js';
 
 export interface RouterOptions {
   db: PostgresJsDatabase<typeof schema>;
@@ -20,7 +20,7 @@ export interface RouterOptions {
   chClient?: ClickHouseClient;
   logger: pino.Logger;
   keycloakClient: Keycloak;
-  platformWebhooks: PlatformWebhookEmitter;
+  platformWebhooks: IPlatformWebhookEmitter;
 }
 const handlerOptions: Partial<ConnectRouterOptions> = {
   maxTimeoutMs: 5000,

@@ -20,7 +20,11 @@ export type EventType<T extends keyof EventMap> = {
   data: EventMap[T];
 };
 
-export class PlatformWebhookEmitter {
+export interface IPlatformWebhookEmitter {
+  send<T extends keyof EventMap>(eventName: T, eventData: EventMap[T]): void;
+}
+
+export class PlatformWebhookEmitter implements IPlatformWebhookEmitter {
   private url: string;
   private key: string;
   private logger: pino.Logger;
@@ -68,7 +72,7 @@ export class PlatformWebhookEmitter {
   }
 }
 
-export class MockPlatformWebhookEmitter extends PlatformWebhookEmitter {
+export class MockPlatformWebhookEmitter implements IPlatformWebhookEmitter {
   public sentEvents: Array<{ eventName: keyof EventMap; eventData: PlainMessage<any> }> = [];
 
   send<T extends keyof EventMap>(eventName: T, eventData: EventMap[T]) {
