@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log"
 	"os"
+	"time"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
@@ -77,7 +78,7 @@ func InitTracing(ctx context.Context, otelOpts Options) error {
 
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
-		sdktrace.WithSyncer(traceExporter),
+		sdktrace.WithBatcher(traceExporter, sdktrace.WithBatchTimeout(100*time.Millisecond)),
 		sdktrace.WithResource(resource.NewSchemaless(semconv.ServiceNameKey.String(otelOpts.ServiceName))),
 		sdktrace.WithSampler(
 			sdktrace.ParentBased(sdktrace.AlwaysSample()),
