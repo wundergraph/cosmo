@@ -43,7 +43,7 @@ export class GraphMigrate extends Message<GraphMigrate> {
   version = 0;
 
   /**
-   * @generated from field: wg.cosmo.webhooks.FederatedGraph federatedGraph = 2;
+   * @generated from field: wg.cosmo.webhooks.FederatedGraph federated_graph = 2;
    */
   federatedGraph?: FederatedGraph;
 
@@ -61,7 +61,7 @@ export class GraphMigrate extends Message<GraphMigrate> {
   static readonly typeName = "wg.cosmo.webhooks.GraphMigrate";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "version", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
-    { no: 2, name: "federatedGraph", kind: "message", T: FederatedGraph },
+    { no: 2, name: "federated_graph", kind: "message", T: FederatedGraph },
     { no: 3, name: "actorID", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 

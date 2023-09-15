@@ -12,7 +12,7 @@ enum PlatformEventName {
 
 message GraphMigrate {
   int32 version = 1;
-  FederatedGraph federatedGraph = 2;
+  FederatedGraph federated_graph = 2;
   optional string actorID = 3;
 }
 
