@@ -326,6 +326,13 @@ export class SubgraphRepository {
       published: true,
     });
 
+    if (subgraphs.length === 0) {
+      return {
+        checks: [],
+        checksCount: 0,
+      };
+    }
+
     const checkList = await this.db.query.schemaChecks.findMany({
       columns: {
         id: true,
