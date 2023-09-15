@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package wg.cosmo.webhooks;
+
+message FederatedGraph {
+  string id = 1;
+  string name = 2;
+}
+

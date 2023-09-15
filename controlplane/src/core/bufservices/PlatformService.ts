@@ -43,6 +43,8 @@ import {
   WhoAmIResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { buildRouterConfig, OpenAIGraphql } from '@wundergraph/cosmo-shared';
+import { OrganizationEventName } from '@wundergraph/cosmo-connect/dist/webhooks/organization_webhooks_pb';
+import { PlatformEventName } from '@wundergraph/cosmo-connect/dist/webhooks/platform_webhooks_pb';
 import { GraphApiKeyJwtPayload } from '../../types/index.js';
 import { Composer } from '../composition/composer.js';
 import { buildSchema, composeSubgraphs } from '../composition/composition.js';
@@ -133,9 +135,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        orgWebhooks.send('graph.schema.updated', {
-          id: federatedGraph.id,
-          name: federatedGraph.name,
+        orgWebhooks.send(OrganizationEventName.GRAPH_SCHEMA_UPDATED, {
+          version: 1,
+          federatedGraph: {
+            id: federatedGraph.id,
+            name: federatedGraph.name,
+          },
           errors: compositionErrors.length > 0,
           actorID: authContext.userId,
         });
@@ -712,9 +717,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           }
 
           if (federatedGraph) {
-            orgWebhooks.send('graph.schema.updated', {
-              id: federatedGraph.id,
-              name: federatedGraph.name,
+            orgWebhooks.send(OrganizationEventName.GRAPH_SCHEMA_UPDATED, {
+              version: 1,
+              federatedGraph: {
+                id: federatedGraph.id,
+                name: federatedGraph.name,
+              },
               errors: hasErrors,
               actorID: authContext.userId,
             });
@@ -1015,9 +1023,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           }
 
           if (federatedGraph) {
-            orgWebhooks.send('graph.schema.updated', {
-              id: federatedGraph.id,
-              name: federatedGraph.name,
+            orgWebhooks.send(OrganizationEventName.GRAPH_SCHEMA_UPDATED, {
+              version: 1,
+              federatedGraph: {
+                id: federatedGraph.id,
+                name: federatedGraph.name,
+              },
               errors: hasErrors,
               actorID: authContext.userId,
             });
@@ -1078,9 +1089,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        orgWebhooks.send('graph.schema.updated', {
-          id: federatedGraph.id,
-          name: federatedGraph.name,
+        orgWebhooks.send(OrganizationEventName.GRAPH_SCHEMA_UPDATED, {
+          version: 1,
+          federatedGraph: {
+            id: federatedGraph.id,
+            name: federatedGraph.name,
+          },
           errors: compositionErrors.length > 0,
           actorID: authContext.userId,
         });
@@ -1141,9 +1155,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         }
 
         for (const graph of updatedFederatedGraphs) {
-          orgWebhooks.send('graph.schema.updated', {
-            id: graph.id,
-            name: graph.name,
+          orgWebhooks.send(OrganizationEventName.GRAPH_SCHEMA_UPDATED, {
+            version: 1,
+            federatedGraph: {
+              id: graph.id,
+              name: graph.name,
+            },
             errors: compositionErrors.length > 0,
             actorID: authContext.userId,
           });
@@ -1829,7 +1846,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const orgWebhooks = new OrganizationWebhookEmitter(opts.db, authContext.organizationId);
 
-        opts.platformWebhooks.send('graph.migrate.init', {
+        opts.platformWebhooks.send(PlatformEventName.GRAPH_MIGRATE_INIT, {
+          version: 1,
           actorID: authContext.userId,
         });
 
@@ -1917,16 +1935,22 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           organizationId: authContext.organizationId,
         });
 
-        orgWebhooks.send('graph.schema.updated', {
-          id: federatedGraph.id,
-          name: federatedGraph.name,
+        orgWebhooks.send(OrganizationEventName.GRAPH_SCHEMA_UPDATED, {
+          version: 1,
+          federatedGraph: {
+            id: federatedGraph.id,
+            name: federatedGraph.name,
+          },
           errors: compositionErrors.length > 0,
           actorID: authContext.userId,
         });
 
-        opts.platformWebhooks.send('graph.migrate.success', {
-          id: federatedGraph.id,
-          name: federatedGraph.name,
+        opts.platformWebhooks.send(PlatformEventName.GRAPH_MIGRATE_SUCCESS, {
+          version: 1,
+          federatedGraph: {
+            id: federatedGraph.id,
+            name: federatedGraph.name,
+          },
           actorID: authContext.userId,
         });
 

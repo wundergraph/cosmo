@@ -1,21 +1,16 @@
+import { PlainMessage } from '@bufbuild/protobuf';
+import {
+  GraphMigrate,
+  PlatformEventName,
+  UserRegister,
+} from '@wundergraph/cosmo-connect/dist/webhooks/platform_webhooks_pb';
 import axios from 'axios';
 import { backOff } from 'exponential-backoff';
 
-interface GraphMigrate {
-  id?: string;
-  name?: string;
-  actorID?: string;
-}
-
-interface UserRegister {
-  id: string;
-  email: string;
-}
-
 interface EventMap {
-  'user.register.success': UserRegister;
-  'graph.migrate.init': GraphMigrate;
-  'graph.migrate.success': GraphMigrate;
+  [PlatformEventName.USER_REGISTER_SUCCESS]: PlainMessage<UserRegister>;
+  [PlatformEventName.GRAPH_MIGRATE_INIT]: PlainMessage<GraphMigrate>;
+  [PlatformEventName.GRAPH_MIGRATE_SUCCESS]: PlainMessage<GraphMigrate>;
 }
 
 export type EventType<T extends keyof EventMap> = {
@@ -42,7 +37,7 @@ export class PlatformWebhookEmitter {
         axios.post(
           this.url,
           {
-            event: eventName,
+            event: PlatformEventName[eventName],
             payload: data,
           },
           {

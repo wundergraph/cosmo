@@ -2,23 +2,16 @@ import axios from 'axios';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { eq } from 'drizzle-orm';
 import { backOff } from 'exponential-backoff';
+import {
+  GraphSchemaUpdate,
+  OrganizationEventName,
+} from '@wundergraph/cosmo-connect/dist/webhooks/organization_webhooks_pb';
+import { PlainMessage } from '@bufbuild/protobuf';
 import * as schema from '../../db/schema.js';
 
-interface GraphSchemaUpdate {
-  id: string;
-  name: string;
-  errors: boolean;
-  actorID?: string;
-}
-
 interface EventMap {
-  'graph.schema.updated': GraphSchemaUpdate;
+  [OrganizationEventName.GRAPH_SCHEMA_UPDATED]: PlainMessage<GraphSchemaUpdate>;
 }
-
-export type EventType<T extends keyof EventMap> = {
-  name: T;
-  data: EventMap[T];
-};
 
 export class OrganizationWebhookEmitter {
   private url?: string;
@@ -45,7 +38,7 @@ export class OrganizationWebhookEmitter {
       return;
     }
 
-    if (!this.allowedUserEvents?.includes(eventName)) {
+    if (!this.allowedUserEvents?.includes(OrganizationEventName[eventName])) {
       return;
     }
 
@@ -54,7 +47,7 @@ export class OrganizationWebhookEmitter {
         axios.post(
           this.url!,
           {
-            event: eventName,
+            event: OrganizationEventName[eventName],
             payload: data,
           },
           {

@@ -23,6 +23,7 @@ import {
   getOrganizationWebhookConfig,
   saveOrganizationWebhookConfig,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+import { OrganizationEventName } from "@wundergraph/cosmo-connect/dist/webhooks/organization_webhooks_pb";
 import { z } from "zod";
 
 const FormSchema = z.object({
@@ -34,7 +35,11 @@ const FormSchema = z.object({
 type Input = z.infer<typeof FormSchema>;
 
 const events = [
-  { id: "graph.schema.updated", label: "Graph Schema Update" },
+  {
+    id: OrganizationEventName[OrganizationEventName.GRAPH_SCHEMA_UPDATED],
+    label: "Graph Schema Update",
+    description: "An update to the schema of any graph",
+  },
 ] as const;
 
 const WebhooksPage: NextPageWithLayout = () => {

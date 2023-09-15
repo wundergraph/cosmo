@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package wg.cosmo.webhooks;
+
+import 'wg/cosmo/webhooks/common.proto';
+
+enum PlatformEventName {
+  USER_REGISTER_SUCCESS = 0;
+  GRAPH_MIGRATE_INIT = 1;
+  GRAPH_MIGRATE_SUCCESS = 2;
+}
+
+message GraphMigrate {
+  int32 version = 1;
+  FederatedGraph federatedGraph = 2;
+  optional string actorID = 3;
+}
+
+message UserRegister {
+  int32 version = 1;
+  string id = 2;
+  string email = 3;
+}

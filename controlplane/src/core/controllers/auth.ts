@@ -5,6 +5,7 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { eq } from 'drizzle-orm';
 import { lru } from 'tiny-lru';
 import { uid } from 'uid';
+import { PlatformEventName } from '@wundergraph/cosmo-connect/dist/webhooks/platform_webhooks_pb';
 import { decodeJWT, DEFAULT_SESSION_MAX_AGE_SEC, encrypt } from '../crypto/jwt.js';
 import { CustomAccessTokenClaims, UserInfoEndpointResponse, UserSession } from '../../types/index.js';
 import * as schema from '../../db/schema.js';
@@ -198,7 +199,8 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
         });
       });
 
-      opts.platformWebhooks.send('user.register.success', {
+      opts.platformWebhooks.send(PlatformEventName.USER_REGISTER_SUCCESS, {
+        version: 1,
         id: userId,
         email: userEmail,
       });
