@@ -36,7 +36,7 @@ import {
   getOrganizationWebhookConfigs,
   updateOrganizationWebhookConfig,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { OrganizationEventName } from "@wundergraph/cosmo-connect/dist/webhooks/organization_webhooks_pb";
+import { OrganizationEventName } from "@wundergraph/cosmo-connect/dist/webhooks/events_pb";
 import { useEffect, useState } from "react";
 import { PiWebhooksLogo } from "react-icons/pi";
 import { z } from "zod";
@@ -146,9 +146,11 @@ type Input = z.infer<typeof FormSchema>;
 
 const webhookEvents = [
   {
-    id: OrganizationEventName[OrganizationEventName.GRAPH_SCHEMA_UPDATED],
-    label: "Graph Schema Update",
-    description: "An update to the schema of any graph",
+    id: OrganizationEventName[
+      OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED
+    ],
+    label: "Federated Graph Schema Update",
+    description: "An update to the schema of any federated graph",
   },
 ] as const;
 

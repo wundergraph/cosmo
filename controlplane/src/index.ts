@@ -29,7 +29,7 @@ const {
   KC_ADMIN_USER,
   PROMETHEUS_API_URL,
   WEBHOOK_URL,
-  WEBHOOK_KEY,
+  WEBHOOK_SECRET,
 } = envVariables.parse(process.env);
 
 const options: BuildConfig = {
@@ -63,7 +63,7 @@ const options: BuildConfig = {
   },
   webhook: {
     url: WEBHOOK_URL,
-    key: WEBHOOK_KEY,
+    key: WEBHOOK_SECRET,
   },
   debugSQL: DEBUG_SQL,
 };

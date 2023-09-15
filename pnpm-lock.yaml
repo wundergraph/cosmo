@@ -211,6 +211,9 @@ importers:
       axios:
         specifier: ^1.4.0
         version: 1.4.0
+      axios-retry:
+        specifier: ^3.7.0
+        version: 3.7.0
       cookie:
         specifier: ^0.5.0
         version: 0.5.0
@@ -220,9 +223,6 @@ importers:
       drizzle-orm:
         specifier: ^0.28.5
         version: 0.28.5(pg@8.11.3)(postgres@3.3.5)
-      exponential-backoff:
-        specifier: ^3.1.1
-        version: 3.1.1
       fastify:
         specifier: ^4.22.0
         version: 4.22.0
@@ -4994,6 +4994,13 @@ packages:
     engines: {node: '>=4'}
     dev: true
 
+  /axios-retry@3.7.0:
+    resolution: {integrity: sha512-ZTnCkJbRtfScvwiRnoVskFAfvU0UG3xNcsjwTR0mawSbIJoothxn67gKsMaNAFHRXJ1RmuLhmZBzvyXi3+9WyQ==}
+    dependencies:
+      '@babel/runtime': 7.22.6
+      is-retry-allowed: 2.2.0
+    dev: false
+
   /axios@0.26.1:
     resolution: {integrity: sha512-fPwcX4EvnSHuInCMItEhAGnaSEXRBjtzh9fOtsE6E1G6p7vl7edEeZe11QHf18+6+9gR5PbKV/sGKNaD8YaMeA==}
     dependencies:
@@ -7302,6 +7309,7 @@ packages:
 
   /exponential-backoff@3.1.1:
     resolution: {integrity: sha512-dX7e/LHVJ6W3DE1MHWi9S1EYzDESENfLrYohG2G++ovZrYOkm4Knwa0mc1cn84xJOR4KEU0WSchhLbd0UklbHw==}
+    dev: true
 
   /ext@1.7.0:
     resolution: {integrity: sha512-6hxeJYaL110a9b5TEJSj0gojyHQAmA2ch5Os+ySCiA1QGdS697XWY1pzsrSjqA9LDEEgdB/KypIlR59RcLuHYw==}
@@ -8497,6 +8505,11 @@ packages:
       call-bind: 1.0.2
       has-tostringtag: 1.0.0
     dev: true
+
+  /is-retry-allowed@2.2.0:
+    resolution: {integrity: sha512-XVm7LOeLpTW4jV19QSH38vkswxoLud8sQ57YwJVTPWdiaI9I8keEhGFpBlslyVsgdQy4Opg8QOLb8YRgsyZiQg==}
+    engines: {node: '>=10'}
+    dev: false
 
   /is-shared-array-buffer@1.0.2:
     resolution: {integrity: sha512-sqN2UDu1/0y6uvXyStCOzyhAjCSlHceFoMKJW8W9EU9cvic/QdsZ0kEU93HEy3IUEFZIiH/3w+AH/UQbPHNdhA==}
