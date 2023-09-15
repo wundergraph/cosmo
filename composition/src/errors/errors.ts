@@ -699,11 +699,12 @@ export function unknownProvidesEntityErrorMessage(fieldPath: string, responseTyp
 }
 
 export function invalidInlineFragmentTypeErrorMessage(
-  fieldSet: string, fieldPath: string, parentTypeName: string,
+  fieldSet: string, fieldPath: string, typeConditionName: string, parentTypeName: string,
 ): string {
   return ` The following FieldSet is invalid:\n "${fieldSet}"\n` +
-    `  This is because "${fieldPath}" defines an inline fragment, but "${parentTypeName}"` +
-    ` is not an abstract (union or interface) type.`;
+    `  This is because "${fieldPath}" defines an inline fragment with the type condition "${typeConditionName}".\n` +
+    `  However, "${parentTypeName}" is not an abstract (interface or union) type.\n` +
+    `  Consequently, the only valid type condition would be "${parentTypeName}".`;
 }
 
 export function inlineFragmentWithoutTypeConditionErrorMessage(fieldSet: string, fieldPath: string): string {
@@ -737,4 +738,12 @@ export function invalidInlineFragmentTypeConditionErrorMessage(
     return message + `  However, "${typeConditionName}" does not implement "${parentTypeName}"`;
   }
   return message + `  However, "${typeConditionName}" is not a member of the union "${parentTypeName}".`;
+}
+
+export function invalidSelectionOnUnionErrorMessage(
+  fieldSet: string, fieldPath: string, responseTypeName: string,
+): string {
+  return ` The following FieldSet is invalid:\n "${fieldSet}"\n` +
+    `  This is because "${fieldPath}" returns "${responseTypeName}", which is type "union".\n` +
+    `  Consequently, an inline fragment is required to make a selection on one of the union's members.`;
 }

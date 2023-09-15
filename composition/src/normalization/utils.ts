@@ -64,6 +64,7 @@ import {
   invalidInlineFragmentTypeErrorMessage,
   invalidKeyDirectivesError,
   invalidProvidesOrRequiresDirectivesError,
+  invalidSelectionOnUnionErrorMessage,
   invalidSelectionSetDefinitionErrorMessage,
   invalidSelectionSetErrorMessage,
   undefinedFieldInFieldSetErrorMessage,
@@ -550,34 +551,41 @@ function validateNonRepeatableFieldSet(
     return { errorMessage: unparsableFieldSetErrorMessage(fieldSet, error) };
   }
   let errorMessage;
-  const parentContainers: (InterfaceContainer | ObjectContainer | ObjectExtensionContainer)[] = [parentContainer];
+  const parentContainers: (
+    InterfaceContainer | ObjectContainer | ObjectExtensionContainer | UnionContainer
+  )[] = [parentContainer];
   const definedFields: Set<string>[] = [];
   let currentDepth = -1;
   let shouldDefineSelectionSet = true;
-  let lastFieldName = '';
+  let lastFieldName = directiveFieldName;
+  let fieldPath = parentContainer.name.value;
   visit(documentNode, {
     Argument: {
       enter(node) {
-
+        return false;
       },
     },
     Field: {
       enter(node) {
-        const grandparentContainer = parentContainers[currentDepth - 1];
+        // const grandparentContainer = parentContainers[currentDepth - 1];
         const parentContainer = parentContainers[currentDepth];
         const parentTypeName = parentContainer.name.value;
+        if (parentContainer.kind === Kind.UNION_TYPE_DEFINITION) {
+          errorMessage = invalidSelectionOnUnionErrorMessage(fieldSet, fieldPath, parentTypeName);
+          return BREAK;
+        }
         // If an object-like was just visited, a selection set should have been entered
         if (shouldDefineSelectionSet) {
           errorMessage = invalidSelectionSetErrorMessage(
             fieldSet,
-            `${grandparentContainer.name.value}.${lastFieldName}`,
+            fieldPath,
             parentTypeName,
             kindToTypeString(parentContainer.kind),
           );
           return BREAK;
         }
         const fieldName = node.name.value;
-        const fieldPath = `${parentTypeName}.${fieldName}`;
+        fieldPath = `${parentTypeName}.${fieldName}`;
         lastFieldName = fieldName;
         const fieldContainer = parentContainer.fields.get(fieldName);
         // undefined if the field does not exist on the parent
@@ -611,6 +619,7 @@ function validateNonRepeatableFieldSet(
           childContainer.kind === Kind.OBJECT_TYPE_DEFINITION
           || childContainer.kind === Kind.OBJECT_TYPE_EXTENSION
           || childContainer.kind === Kind.INTERFACE_TYPE_DEFINITION
+          || childContainer.kind === Kind.UNION_TYPE_DEFINITION
         ) {
           shouldDefineSelectionSet = true;
           parentContainers.push(childContainer);
@@ -620,23 +629,21 @@ function validateNonRepeatableFieldSet(
     },
     InlineFragment: {
       enter(node) {
-        const grandparentContainer = parentContainers[currentDepth - 1];
-        const fieldPath = `${grandparentContainer.name.value}.${lastFieldName}`;
         const parentContainer = parentContainers[currentDepth];
         const parentTypeName = parentContainer.name.value;
         if (!node.typeCondition) {
           errorMessage = inlineFragmentWithoutTypeConditionErrorMessage(fieldSet, fieldPath);
           return BREAK;
         }
-        currentDepth += 1;
         const typeConditionName = node.typeCondition.name.value;
         // It's possible to infinitely define fragments
         if (typeConditionName === parentTypeName) {
           parentContainers.push(parentContainer);
+          shouldDefineSelectionSet = true;
           return;
         }
         if (!isKindAbstract(parentContainer.kind)) {
-          errorMessage = invalidInlineFragmentTypeErrorMessage(fieldSet, fieldPath, parentTypeName);
+          errorMessage = invalidInlineFragmentTypeErrorMessage(fieldSet, fieldPath, typeConditionName, parentTypeName);
           return BREAK;
         }
         const fragmentTypeContainer = factory.parents.get(typeConditionName)
@@ -649,6 +656,7 @@ function validateNonRepeatableFieldSet(
           fragmentTypeContainer.kind !== Kind.INTERFACE_TYPE_DEFINITION
           && fragmentTypeContainer.kind !== Kind.OBJECT_TYPE_DEFINITION
           && fragmentTypeContainer.kind !== Kind.OBJECT_TYPE_EXTENSION
+          && fragmentTypeContainer.kind !== Kind.UNION_TYPE_DEFINITION
         ) {
           errorMessage = invalidInlineFragmentTypeConditionTypeErrorMessage(
             fieldSet, fieldPath, typeConditionName, kindToTypeString(fragmentTypeContainer.kind),
@@ -658,14 +666,14 @@ function validateNonRepeatableFieldSet(
         const concreteTypeNames = factory.abstractToConcreteTypeNames.get(parentTypeName);
         if (!concreteTypeNames || !concreteTypeNames.has(typeConditionName)) {
           errorMessage = invalidInlineFragmentTypeConditionErrorMessage(
-            fieldSet, fieldPath, typeConditionName, parentTypeName, kindToTypeString(parentContainer.kind),
+            fieldSet, fieldPath, typeConditionName, kindToTypeString(parentContainer.kind), parentTypeName,
           );
           return BREAK;
         }
+        shouldDefineSelectionSet = true;
         parentContainers.push(fragmentTypeContainer);
       },
       leave() {
-        currentDepth -= 1;
         parentContainers.pop();
       },
     },
@@ -673,9 +681,11 @@ function validateNonRepeatableFieldSet(
       enter() {
         if (!shouldDefineSelectionSet) {
           const parentContainer = parentContainers[currentDepth];
-          const parentTypeName = parentContainer.name.value;
-          const fieldPath = `${parentTypeName}.${lastFieldName}`;
-          // If the last field is not an object-like
+          if (parentContainer.kind === Kind.UNION_TYPE_DEFINITION) {
+            // Should never happen
+            errorMessage = unparsableFieldSetSelectionErrorMessage(fieldSet, lastFieldName);
+            return BREAK;
+          }
           const fieldContainer = parentContainer.fields.get(lastFieldName);
           if (!fieldContainer) {
             errorMessage = undefinedFieldInFieldSetErrorMessage(fieldSet, fieldPath, lastFieldName);
@@ -701,10 +711,7 @@ function validateNonRepeatableFieldSet(
       },
       leave() {
         if (shouldDefineSelectionSet) {
-          const grandparentContainer = parentContainers[currentDepth];
-          const grandparentTypeName = grandparentContainer.name.value;
           const parentContainer = parentContainers[currentDepth + 1];
-          const fieldPath = `${grandparentTypeName}.${lastFieldName}`;
           errorMessage = invalidSelectionSetErrorMessage(
             fieldSet,
             fieldPath,

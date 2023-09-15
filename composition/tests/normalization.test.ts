@@ -6,6 +6,7 @@ import {
   duplicateUnionMemberError,
   invalidDirectiveError,
   invalidKeyDirectivesError,
+  invalidProvidesOrRequiresDirectivesError,
   invalidSelectionSetErrorMessage,
   noBaseTypeExtensionError,
   normalizeSubgraphFromString,
@@ -1294,7 +1295,7 @@ describe('Normalization tests', () => {
     expect(errors).toBeDefined();
   });
 
-  test.skip('Should give errors if the requires directive points to a field which does not exist ', () => {
+  test('Should give errors if the requires directive points to a field which does not exist ', () => {
     const { errors } = normalizeSubgraphFromString(`
      type Product @key(fields : "id") {
         id: String!
@@ -1303,6 +1304,13 @@ describe('Normalization tests', () => {
       }
     `);
     expect(errors).toBeDefined();
+    expect(errors).toHaveLength(1);
+    expect(errors![0]).toStrictEqual(invalidProvidesOrRequiresDirectivesError(
+      'requires',
+      [` On "Product.shippingCost" —` +undefinedFieldInFieldSetErrorMessage(
+        'age', 'Product', 'age',
+      )],
+    ))
   });
 
   test('Should give errors if the requires directive doesnt have a fields argument', () => {
