@@ -4,6 +4,10 @@ Images can be found [here](https://github.com/orgs/wundergraph/packages?repo_nam
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.8.1](https://github.com/wundergraph/cosmo/compare/otelcollector@0.8.0...otelcollector@0.8.1) (2023-09-14)
+
+**Note:** Version bump only for package otelcollector
+
 # [0.8.0](https://github.com/wundergraph/cosmo/compare/otelcollector@0.7.0...otelcollector@0.8.0) (2023-09-08)
 
 ### Features
