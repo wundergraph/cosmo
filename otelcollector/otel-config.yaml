@@ -16,14 +16,13 @@ processors:
         from_context: auth.federated_graph_id
         action: insert
   batch:
-    send_batch_size: 100000
+    send_batch_size: 10000
     timeout: 5s
   memory_limiter:
-    # 80% of maximum memory up to 2G
-    limit_mib: 1500
-    # 25% of limit up to 2G
-    spike_limit_mib: 512
-    check_interval: 5s
+    # percentage of memory only supported on linux
+    limit_percentage: 75
+    spike_limit_percentage: 25
+    check_interval: 1s
 
 exporters:
   prometheusremotewrite:
@@ -33,12 +32,12 @@ exporters:
       authenticator: basicauth/prw
     retry_on_failure:
       enabled: true
-      initial_interval: 10s
+      initial_interval: 5s
       max_interval: 30s
-      max_elapsed_time: 300s
+      max_elapsed_time: 60s
     remote_write_queue:
       # Maximum number of batches kept in memory before dropping;
-      queue_size: 2000
+      queue_size: 1000
       # Number of consumers that dequeue batches
       num_consumers: 10
     timeout: 5s

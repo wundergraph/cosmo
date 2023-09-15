@@ -1,8 +1,26 @@
 # Change Log
-Images can be found [here](https://github.com/orgs/wundergraph/packages?repo_name=cosmo)
+Binaries are attached to the github release otherwise all images can be found [here](https://github.com/orgs/wundergraph/packages?repo_name=cosmo)
 
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
+
+## [0.11.3](https://github.com/wundergraph/cosmo/compare/controlplane@0.11.2...controlplane@0.11.3) (2023-09-15)
+
+### Bug Fixes
+
+* reduce error logs ([#72](https://github.com/wundergraph/cosmo/issues/72)) ([cba6fef](https://github.com/wundergraph/cosmo/commit/cba6fefe854bc3852708fd6a37eb5fa07d7fea24)) (@StarpTech)
+
+## [0.11.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.11.1...controlplane@0.11.2) (2023-09-14)
+
+### Bug Fixes
+
+* avoid excessive error logs in session handler ([#70](https://github.com/wundergraph/cosmo/issues/70)) ([ed5a4c5](https://github.com/wundergraph/cosmo/commit/ed5a4c515b5d3bf6d5776e53a9ffe70bd474a418)) (@StarpTech)
+
+## [0.11.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.11.0...controlplane@0.11.1) (2023-09-14)
+
+### Bug Fixes
+
+* labels of the migrated graphs ([#65](https://github.com/wundergraph/cosmo/issues/65)) ([6ca790c](https://github.com/wundergraph/cosmo/commit/6ca790c7c73e66fc0d51bd6f79fc4899a8686064)) (@JivusAyrus)
 
 # [0.11.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.10.1...controlplane@0.11.0) (2023-09-13)
 

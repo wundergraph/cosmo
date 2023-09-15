@@ -5,12 +5,8 @@ inputs:
     description: "The go version to install"
     default: "1.20"
     required: false
-  working-directory:
-    description: "The working directory"
-    required: false
-  gh-engine-repo-token:
-    description: "Temporary token for private engine"
-    required: true
+  cache-dependency-path:
+    description: "The path to the dependency to cache"
 
 runs:
   using: "composite"

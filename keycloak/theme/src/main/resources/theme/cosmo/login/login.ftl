@@ -4,6 +4,21 @@
         ${msg("loginAccountTitle")}
     <#elseif section = "form">
         <div id="kc-form">
+         <#if realm.password && social.providers??>
+                <div id="kc-social-providers" class="${properties.kcFormSocialAccountSectionClass!}">
+                    <#list social.providers as p>
+                        <a id="social-${p.alias}" type="button" href="${p.loginUrl}">
+                            <#if p.iconClasses?has_content>
+                                <i class="${properties.kcCommonLogoIdP!} ${p.iconClasses!}" aria-hidden="true"></i>
+                                <span class="${properties.kcFormSocialAccountNameClass!} kc-social-icon-text">${p.displayName!}</span>
+                            <#else>
+                                <span class="${properties.kcFormSocialAccountNameClass!}">${p.displayName!}</span>
+                            </#if>
+                        </a>
+                    </#list>
+                </div>
+            </#if>
+            <hr class="border-gray-700 my-8"/>
             <div id="kc-form-wrapper">
                 <#if realm.password>
                     <form id="kc-form-login" onsubmit="login.disabled = true; return true;" action="${url.loginAction}"
