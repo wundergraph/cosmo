@@ -342,9 +342,7 @@ const Webhook = ({
                     <a
                       target="_blank"
                       rel="noreferrer"
-                      href={
-                        docsBaseURL + "/control-plane/webhooks#verification"
-                      }
+                      href={docsBaseURL + "/studio/webhooks#verification"}
                       className="text-primary"
                     >
                       Learn more.
@@ -456,7 +454,7 @@ const WebhooksPage: NextPageWithLayout = () => {
             <a
               target="_blank"
               rel="noreferrer"
-              href={docsBaseURL + "/control-plane/webhooks"}
+              href={docsBaseURL + "/studio/webhooks"}
               className="text-primary"
             >
               Learn more.
@@ -474,7 +472,7 @@ const WebhooksPage: NextPageWithLayout = () => {
         <p className="text-sm text-muted-foreground">
           Webhooks are used to receive certain events from the platform.{" "}
           <Link
-            href={docsBaseURL + "/control-plane/webhooks"}
+            href={docsBaseURL + "/studio/webhooks"}
             className="text-primary"
             target="_blank"
             rel="noreferrer"
