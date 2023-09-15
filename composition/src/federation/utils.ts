@@ -93,7 +93,6 @@ export type DirectiveMap = Map<string, DirectiveContainer>;
 
 export type EntityContainer = {
   fields: Set<string>;
-  keys: Set<string>;
   subgraphs: Set<string>;
 };
 
@@ -155,7 +154,6 @@ export type InterfaceContainer = {
 export type ObjectContainer = {
   directives: PersistedDirectivesContainer;
   fields: FieldMap;
-  entityKeys: Set<string>;
   interfaces: Set<string>;
   isRootType: boolean;
   kind: Kind.OBJECT_TYPE_DEFINITION;
@@ -166,7 +164,6 @@ export type ObjectContainer = {
 export type ObjectExtensionContainer = {
   directives: PersistedDirectivesContainer;
   fields: FieldMap;
-  entityKeys: Set<string>;
   interfaces: Set<string>;
   isRootType: boolean;
   kind: Kind.OBJECT_TYPE_EXTENSION;

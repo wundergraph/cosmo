@@ -28,7 +28,7 @@ export function getAllMutualEntries<T>(set: Set<T>, other: Set<T>): Set<T> {
 export function getOrThrowError<K, V>(map: Map<K, V>, key: K, mapName: string): V {
   const value = map.get(key);
   if (value === undefined) {
-    throw invalidKeyFatalError(key, mapName)
+    throw  invalidKeyFatalError(key, mapName);
   }
   return value;
 }
@@ -224,4 +224,14 @@ export function hasSimplePath(graph: MultiGraph, source: string, target: string)
     }
   }
   return false;
+}
+
+export function getValueOrDefault<K, V>(map: Map<K, V>, key: K, constructor: () => V): V {
+  const existingValue = map.get(key);
+  if (existingValue) {
+    return existingValue;
+  }
+  const value = constructor();
+  map.set(key, value);
+  return value;
 }

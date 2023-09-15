@@ -1,4 +1,4 @@
-import { DirectiveDefinitionNode, Kind } from 'graphql';
+import { DirectiveDefinitionNode, Kind, ScalarTypeDefinitionNode } from 'graphql';
 import { stringArrayToNameNodeArray, stringToNamedTypeNode, stringToNameNode } from '../ast/utils';
 import {
   ARGUMENT_DEFINITION_UPPER,
@@ -10,6 +10,7 @@ import {
   EXTENDS,
   EXTERNAL,
   FIELD_DEFINITION_UPPER,
+  FIELD_SET,
   FIELDS,
   INACCESSIBLE,
   INPUT_FIELD_DEFINITION_UPPER,
@@ -33,7 +34,7 @@ import {
 } from './string-constants';
 
 export const BASE_SCALARS = new Set<string>(
-  ['_Any', '_Entities', 'Boolean', 'Float', 'ID', 'Int', 'String'],
+  ['_Any', '_Entities', 'Boolean', 'Float', 'ID', 'Int', 'openfed__FieldSet', 'String'],
 );
 
 export const VERSION_ONE_DIRECTIVES = new Set<string>([
@@ -84,8 +85,7 @@ export const BASE_DIRECTIVE_DEFINITIONS: DirectiveDefinitionNode[] = [
     name: stringToNameNode(EXTERNAL),
     repeatable: false,
   },
-  // TODO handle FieldSet
-  // directive @key(fields: String!) on OBJECT
+  // directive @key(fields: openfed__FieldSet!) on OBJECT
   {
     arguments: [
       {
@@ -93,7 +93,7 @@ export const BASE_DIRECTIVE_DEFINITIONS: DirectiveDefinitionNode[] = [
         name: stringToNameNode(FIELDS),
         type: {
           kind: Kind.NON_NULL_TYPE,
-          type: stringToNamedTypeNode(STRING_TYPE),
+          type: stringToNamedTypeNode(FIELD_SET),
         },
       },
       {
@@ -111,8 +111,7 @@ export const BASE_DIRECTIVE_DEFINITIONS: DirectiveDefinitionNode[] = [
     name: stringToNameNode(KEY),
     repeatable: true,
   },
-  // TODO handle FieldSet
-  // directive @provides(fields: FieldSet!) on FIELD_DEFINITION
+  // directive @provides(fields: openfed__FieldSet!) on FIELD_DEFINITION
   {
     arguments: [
       {
@@ -120,7 +119,7 @@ export const BASE_DIRECTIVE_DEFINITIONS: DirectiveDefinitionNode[] = [
         name: stringToNameNode(FIELDS),
         type: {
           kind: Kind.NON_NULL_TYPE,
-          type: stringToNamedTypeNode(STRING_TYPE),
+          type: stringToNamedTypeNode(FIELD_SET),
         },
       },
     ],
@@ -129,8 +128,7 @@ export const BASE_DIRECTIVE_DEFINITIONS: DirectiveDefinitionNode[] = [
     name: stringToNameNode(PROVIDES),
     repeatable: false,
   },
-  // TODO handle FieldSet
-  // directive @requires(fields: FieldSet!) on FIELD_DEFINITION
+  // directive @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION
   {
     arguments: [
       {
@@ -138,7 +136,7 @@ export const BASE_DIRECTIVE_DEFINITIONS: DirectiveDefinitionNode[] = [
         name: stringToNameNode(FIELDS),
         type: {
           kind: Kind.NON_NULL_TYPE,
-          type: stringToNamedTypeNode(STRING_TYPE),
+          type: stringToNamedTypeNode(FIELD_SET),
         },
       },
     ],
@@ -278,3 +276,8 @@ export const VERSION_TWO_DIRECTIVE_DEFINITIONS: DirectiveDefinitionNode[] = [
     repeatable: false,
   },
 ];
+
+export const FIELD_SET_DEFINITION: ScalarTypeDefinitionNode = {
+  kind: Kind.SCALAR_TYPE_DEFINITION,
+  name: stringToNameNode(FIELD_SET),
+};

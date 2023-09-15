@@ -1,6 +1,9 @@
 import {
+  ArgumentNode,
   ConstDirectiveNode,
+  DocumentNode,
   FieldDefinitionNode,
+  FieldNode,
   InterfaceTypeDefinitionNode,
   InterfaceTypeExtensionNode,
   Kind,
@@ -9,6 +12,8 @@ import {
   ObjectTypeDefinitionNode,
   ObjectTypeExtensionNode,
   OperationTypeNode,
+  parse,
+  SelectionSetNode,
   StringValueNode,
   UnionTypeExtensionNode,
 } from 'graphql';
@@ -25,7 +30,6 @@ import {
   EXTENDS,
   EXTERNAL,
   FIELD_DEFINITION_UPPER,
-  FIELDS,
   FRAGMENT_DEFINITION_UPPER,
   FRAGMENT_SPREAD_UPPER,
   INLINE_FRAGMENT_UPPER,
@@ -34,32 +38,16 @@ import {
   INTERFACE_UPPER,
   KEY,
   MUTATION,
-  NAME,
-  OBJECT_UPPER, OVERRIDE,
+  OBJECT_UPPER,
+  OVERRIDE,
   QUERY,
-  RESOLVABLE,
   SCALAR_UPPER,
   SCHEMA_UPPER,
   SHAREABLE,
   SUBSCRIPTION,
   UNION_UPPER,
 } from '../utils/string-constants';
-import {
-  duplicateInterfaceError,
-  expectedEntityError,
-  invalidClosingBraceErrorMessage,
-  invalidEntityKeyError,
-  invalidGraphQLNameErrorMessage,
-  invalidKeyDirectiveArgumentErrorMessage,
-  invalidKeyDirectiveError,
-  invalidNestingClosureErrorMessage,
-  invalidNestingErrorMessage,
-  invalidOpeningBraceErrorMessage,
-  undefinedRequiredArgumentsErrorMessage,
-  unexpectedDirectiveArgumentErrorMessage,
-  unexpectedKindFatalError,
-} from '../errors/errors';
-import { getOrThrowError } from '../utils/utils';
+import { duplicateInterfaceError, unexpectedKindFatalError } from '../errors/errors';
 import { UnionTypeDefinitionNode } from 'graphql/index';
 import { DirectiveContainer, EXECUTABLE_DIRECTIVE_LOCATIONS, NodeContainer } from '../federation/utils';
 
@@ -88,185 +76,6 @@ export function isNodeExtension(node: ObjectTypeDefinitionNode | InterfaceTypeDe
     }
   }
   return false;
-}
-
-export function extractEntityKeys(
-  node: ObjectTypeDefinitionNode | ObjectTypeExtensionNode,
-  keySet: Set<string>,
-  errors: Error[],
-): Set<string> {
-  if (!node.directives?.length) {
-    return keySet;
-  }
-  const typeName = node.name.value;
-  for (const directive of node.directives) {
-    if (directive.name.value === KEY) {
-      if (!directive.arguments) {
-        errors.push(invalidKeyDirectiveError(typeName,[
-          undefinedRequiredArgumentsErrorMessage(KEY, typeName, [NAME])
-        ]));
-        continue;
-      }
-      for (const arg of directive.arguments) {
-        if (arg.name.value !== FIELDS) {
-          continue;
-        }
-        if (arg.value.kind !== Kind.STRING) {
-          continue;
-        }
-        keySet.add(arg.value.value);
-      }
-    }
-  }
-  return keySet;
-}
-
-export type EntityKey = {
-  nestedKeys?: EntityKey[];
-  parent: string;
-  siblings: string[];
-};
-
-export type EntityKeyExtractionResult = {
-  entityKey?: EntityKey;
-  error?: Error;
-};
-
-export function getEntityKeyExtractionResult(rawEntityKey: string, parentTypeName: string): EntityKeyExtractionResult {
-  const rootKey: EntityKey = { parent: '', siblings: [] };
-  const entityKeyMap = new Map<string, EntityKey>([[parentTypeName, rootKey]]);
-  const keyPath: string[] = [parentTypeName];
-  let currentSegment = '';
-  let segmentEnded = true;
-  let currentKey: EntityKey;
-  rawEntityKey = rawEntityKey.replaceAll(/[,\n]/g, ' ');
-  for (const char of rawEntityKey) {
-    currentKey = getOrThrowError(entityKeyMap, keyPath.join('.'), 'entityKeyMap');
-    switch (char) {
-      case ' ':
-        segmentEnded = true;
-        break;
-      case '{':
-        if (!currentSegment) {
-          return { error: invalidEntityKeyError(parentTypeName, rawEntityKey, invalidOpeningBraceErrorMessage) };
-        }
-        currentKey.siblings.push(currentSegment);
-        const nestedKey: EntityKey = { parent: currentSegment, siblings: [] };
-        if (currentKey.nestedKeys) {
-          currentKey.nestedKeys.push(nestedKey);
-        } else {
-          currentKey.nestedKeys = [nestedKey];
-        }
-        keyPath.push(currentSegment);
-        currentSegment = '';
-        entityKeyMap.set(keyPath.join('.'), nestedKey);
-        segmentEnded = true;
-        break;
-      case '}':
-        if (currentSegment) {
-          currentKey.siblings.push(currentSegment);
-        }
-
-        if (currentKey.siblings.length < 1) {
-          return { error: invalidEntityKeyError(parentTypeName, rawEntityKey, invalidClosingBraceErrorMessage) };
-        }
-
-        if (keyPath.join('.') === parentTypeName) {
-          return { error: invalidEntityKeyError(parentTypeName, rawEntityKey, invalidNestingClosureErrorMessage) };
-        }
-        currentSegment = '';
-        keyPath.pop();
-        segmentEnded = true;
-        break;
-      default:
-        if (currentSegment && segmentEnded) {
-          if (!currentSegment.match(/[_A-Za-z][_A-Za-z0-9]*/)) {
-            return {
-              error: invalidEntityKeyError(
-                parentTypeName,
-                rawEntityKey,
-                invalidGraphQLNameErrorMessage('field', currentSegment),
-              ),
-            };
-          }
-          currentKey.siblings.push(currentSegment);
-          currentSegment = char;
-        } else {
-          currentSegment += char;
-        }
-        segmentEnded = false;
-    }
-  }
-  if (keyPath.join('.') !== parentTypeName) {
-    return { error: invalidEntityKeyError(parentTypeName, rawEntityKey, invalidNestingErrorMessage) };
-  }
-  if (currentSegment) {
-    rootKey.siblings.push(currentSegment);
-  }
-  return { entityKey: rootKey };
-}
-
-export type EntityKeyExtractionResults = {
-  entityKeyMap: Map<string, EntityKey>;
-  errors: Error[];
-};
-
-export function getEntityKeyExtractionResults(
-  node: ObjectTypeDefinitionNode | ObjectTypeExtensionNode,
-  entityKeyMap: Map<string, EntityKey>,
-): EntityKeyExtractionResults {
-  const parentTypeName = node.name.value;
-  if (!node.directives?.length) {
-    return { entityKeyMap, errors: [expectedEntityError(parentTypeName)] };
-  }
-  const rawEntityKeys = new Set<string>();
-  const errorMessages: string[] = [];
-  for (const directive of node.directives) {
-    if (directive.name.value !== KEY) {
-      continue;
-    }
-    if (!directive.arguments || directive.arguments.length < 1) {
-      errorMessages.push(undefinedRequiredArgumentsErrorMessage(KEY, parentTypeName, [FIELDS]));
-      continue;
-    }
-    for (const arg of directive.arguments) {
-      const argumentName = arg.name.value;
-      if (arg.name.value === RESOLVABLE) {
-        continue;
-      }
-      if (arg.name.value !== FIELDS) {
-        errorMessages.push(unexpectedDirectiveArgumentErrorMessage(KEY, argumentName));
-        break;
-      }
-      if (arg.value.kind !== Kind.STRING) {
-        errorMessages.push(invalidKeyDirectiveArgumentErrorMessage(arg.value.kind));
-        break;
-      }
-      rawEntityKeys.add(arg.value.value);
-    }
-  }
-  const errors: Error[] = [];
-  if (errorMessages.length > 0) {
-    errors.push(invalidKeyDirectiveError(parentTypeName, errorMessages));
-  }
-
-  for (const rawEntityKey of rawEntityKeys) {
-    const existingEntityKey = entityKeyMap.get(rawEntityKey);
-    if (existingEntityKey) {
-      continue;
-    }
-    const { entityKey, error } = getEntityKeyExtractionResult(rawEntityKey, parentTypeName);
-    if (error) {
-      errors.push(error);
-      continue;
-    }
-    if (!entityKey) {
-      throw new Error(); // this should never happen
-    }
-    entityKeyMap.set(rawEntityKey, entityKey);
-  }
-
-  return { entityKeyMap, errors };
 }
 
 export function extractInterfaces(
@@ -445,17 +254,6 @@ export function isKindAbstract(kind: Kind) {
   return kind === Kind.INTERFACE_TYPE_DEFINITION || kind === Kind.UNION_TYPE_DEFINITION;
 }
 
-export function getInlineFragmentString(parentTypeName: string): string {
-  return ` ... on ${parentTypeName} `;
-}
-
-export function extractNameNodeStringsToSet(nodes: readonly NameNode[] | NameNode[], set: Set<string>): Set<string> {
-  for (const node of nodes) {
-    set.add(node.value);
-  }
-  return set;
-}
-
 export function extractExecutableDirectiveLocations(
   nodes: readonly NameNode[] | NameNode[], set: Set<string>,
 ): Set<string> {
@@ -555,5 +353,57 @@ export function setLongestDescriptionForNode(
   }
   if (!existingNode.description || newDescription.value.length > existingNode.description.value.length) {
     existingNode.description = { ...newDescription, block: true };
+  }
+}
+
+export function lexicographicallySortArgumentNodes(fieldNode: FieldNode): ArgumentNode[] | undefined {
+  if (!fieldNode.arguments) {
+    return fieldNode.arguments;
+  }
+  const argumentNodes = fieldNode.arguments as ArgumentNode[];
+  return argumentNodes.sort((a, b) => a.name.value.localeCompare(b.name.value));
+}
+
+export function lexicographicallySortSelectionSetNode(selectionSetNode: SelectionSetNode): SelectionSetNode {
+  const selections = selectionSetNode.selections as FieldNode[];
+  return {
+    ...selectionSetNode,
+    selections: selections
+      .sort((a, b) => a.name.value.localeCompare(b.name.value))
+      .map((selection) => ({
+        ...selection,
+        arguments: lexicographicallySortArgumentNodes(selection),
+        selectionSet: selection.selectionSet
+          ? lexicographicallySortSelectionSetNode(selection.selectionSet) : selection.selectionSet,
+      })),
+  };
+}
+
+export function lexicographicallySortDocumentNode(documentNode: DocumentNode): DocumentNode {
+  return {
+    ...documentNode,
+    definitions: documentNode.definitions.map((definition) => {
+      if (definition.kind !== Kind.OPERATION_DEFINITION) {
+        return definition;
+      }
+      return {
+        ...definition,
+        selectionSet: lexicographicallySortSelectionSetNode(definition.selectionSet),
+      };
+    }),
+  };
+}
+
+type ParseResult = {
+  documentNode?: DocumentNode;
+  error?: Error;
+}
+
+export function safeParse(value: string): ParseResult {
+  try {
+    const parsedValue = parse(value);
+    return { documentNode: parsedValue };
+  } catch (e) {
+    return { error: e as Error };
   }
 }

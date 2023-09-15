@@ -173,6 +173,111 @@ describe('Field Configuration tests', () => {
         }],
       ]));
     });
+
+    test('that external fields that are part of a key FieldSet are included in the root node', () => {
+      const { errors, normalizationResult } = normalizeSubgraphFromString(`
+      type Entity @key(fields: "id") {
+        id: ID! @external
+      }`);
+      expect(errors).toBeUndefined();
+      expect(normalizationResult).toBeDefined();
+      const configurationDataMap = normalizationResult!.configurationDataMap;
+      expect(configurationDataMap).toStrictEqual(new Map<string, ConfigurationData>([
+        ['Entity', {
+          fieldNames: new Set<string>(['id']),
+          isRootNode: true,
+          keys: [{ fieldName: '', selectionSet: 'id', }],
+          typeName: 'Entity',
+        }],
+      ]));
+    });
+
+    test('that external fields that are not part of a key FieldSet are not included in the root node', () => {
+      const { errors, normalizationResult } = normalizeSubgraphFromString(`
+      type Entity @key(fields: "id") {
+        id: ID! @external
+        name: String! @external
+      }`);
+      expect(errors).toBeUndefined();
+      expect(normalizationResult).toBeDefined();
+      const configurationDataMap = normalizationResult!.configurationDataMap;
+      expect(configurationDataMap).toStrictEqual(new Map<string, ConfigurationData>([
+        ['Entity', {
+          fieldNames: new Set<string>(['id']),
+          isRootNode: true,
+          keys: [{ fieldName: '', selectionSet: 'id', }],
+          typeName: 'Entity',
+        }],
+      ]));
+    });
+
+    test('that FieldSet configuration is generated', () => {
+      const { errors, normalizationResult } = normalizeSubgraphFromString(`
+      type Entity @key(fields: "id") {
+        id: ID! @external
+        name: String! @external
+      }
+      
+      type Object {
+        "invalid @provides like this (not on an entity response type) are ignored"
+        age: Int! @provides(fields: "name")
+        entity: AnotherEntity @provides(fields: "field")
+        "invalid @requires like this (not on an entity parent) are ignored"
+        name: String! @requires(fields: "id")
+       }
+       
+      type AnotherEntity @key(fields: "id") {
+        id: ID!
+        field: String! @external
+        anotherField: OtherObject! @external
+        myField: Boolean @requires(fields: "anotherField { nested { name } name, age }")
+      }
+      
+      type OtherObject {
+        age: Int!
+        name: String!
+        nested: NestedObject!
+      }
+      
+      type NestedObject {
+        name: String!
+      }
+      `);
+      expect(errors).toBeUndefined();
+      expect(normalizationResult).toBeDefined();
+      const configurationDataMap = normalizationResult!.configurationDataMap;
+      expect(configurationDataMap).toStrictEqual(new Map<string, ConfigurationData>([
+        ['Entity', {
+          fieldNames: new Set<string>(['id']),
+          isRootNode: true,
+          keys: [{ fieldName: '', selectionSet: 'id', }],
+          typeName: 'Entity',
+        }],
+        ['Object', {
+          fieldNames: new Set<string>(['age', 'entity', 'name']),
+          isRootNode: false,
+          provides: [{ fieldName: 'entity', selectionSet: 'field', }],
+          typeName: 'Object',
+        }],
+        ['AnotherEntity', {
+          fieldNames: new Set<string>(['id', 'myField']),
+          isRootNode: true,
+          keys: [{ fieldName: '', selectionSet: 'id', }],
+          requires: [{ fieldName: 'myField', selectionSet: 'anotherField { age name nested { name } }', }],
+          typeName: 'AnotherEntity',
+        }],
+        ['OtherObject', {
+          fieldNames: new Set<string>(['age', 'name', 'nested']),
+          isRootNode: false,
+          typeName: 'OtherObject',
+        }],
+        ['NestedObject', {
+          fieldNames: new Set<string>(['name']),
+          isRootNode: false,
+          typeName: 'NestedObject',
+        }],
+      ]));
+    });
   });
 
   describe('Federation tests', () => {
