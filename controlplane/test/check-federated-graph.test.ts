@@ -12,7 +12,7 @@ import database from '../src/core/plugins/database';
 import routes from '../src/core/routes';
 import { afterAllSetup, beforeAllSetup, createTestAuthenticator, genID, seedTest } from '../src/core/test-util';
 import Keycloak from '../src/core/services/Keycloak';
-import { MockPlatformWebhookEmitter } from '../src/core/webhooks/PlatformWebhookEmitter';
+import { MockPlatformWebhookService } from '../src/core/webhooks/PlatformWebhookService';
 
 let dbname = '';
 
@@ -55,7 +55,7 @@ describe('CheckFederatedGraph', (ctx) => {
       adminPassword,
     });
 
-    const platformWebhooks = new MockPlatformWebhookEmitter();
+    const platformWebhooks = new MockPlatformWebhookService();
 
     await server.register(fastifyConnectPlugin, {
       routes: routes({

@@ -57,7 +57,7 @@ export class PlatformWebhookService implements IPlatformWebhookService {
   }
 }
 
-export class MockPlatformWebhookEmitter implements IPlatformWebhookService {
+export class MockPlatformWebhookService implements IPlatformWebhookService {
   public sentEvents: Array<{ eventName: keyof EventMap; eventPayload: PlainMessage<any> }> = [];
 
   send<T extends keyof EventMap>(eventName: T, eventPayload: EventMap[T]) {

@@ -22,7 +22,7 @@ import {
   seedTest,
 } from '../src/core/test-util';
 import Keycloak from '../src/core/services/Keycloak';
-import { MockPlatformWebhookEmitter } from '../src/core/webhooks/PlatformWebhookEmitter';
+import { MockPlatformWebhookService } from '../src/core/webhooks/PlatformWebhookService';
 
 let dbname = '';
 
@@ -65,7 +65,7 @@ describe('Router Config', (ctx) => {
       adminPassword,
     });
 
-    const platformWebhooks = new MockPlatformWebhookEmitter();
+    const platformWebhooks = new MockPlatformWebhookService();
 
     await server.register(fastifyConnectPlugin, {
       routes: routes({
@@ -294,7 +294,7 @@ describe('Router Config', (ctx) => {
       adminPassword,
     });
 
-    const platformWebhooks = new MockPlatformWebhookEmitter();
+    const platformWebhooks = new MockPlatformWebhookService();
 
     await server.register(fastifyConnectPlugin, {
       routes: routes({
