@@ -1,7 +1,7 @@
 {
   "version": "5",
   "dialect": "pg",
-  "id": "7413f663-fd0d-478d-bc0d-bcb90eaaa62a",
+  "id": "0ef775be-c46d-49db-8c3b-dd19e87f9162",
   "prevId": "fa85d6b4-c3be-4a2a-88ab-9c12374db92d",
   "tables": {
     "api_keys": {
@@ -306,10 +306,17 @@
       "name": "organization_webhook_configs",
       "schema": "",
       "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
         "organization_id": {
           "name": "organization_id",
           "type": "uuid",
-          "primaryKey": true,
+          "primaryKey": false,
           "notNull": true
         },
         "endpoint": {
@@ -329,6 +336,13 @@
           "type": "text[]",
           "primaryKey": false,
           "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
         }
       },
       "indexes": {},

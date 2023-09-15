@@ -104,6 +104,7 @@ export interface APIKeyDTO {
 }
 
 export interface WebhooksConfigDTO {
+  id: string;
   endpoint: string;
   events: string[];
 }

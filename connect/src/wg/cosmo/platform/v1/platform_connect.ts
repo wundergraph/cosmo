@@ -5,7 +5,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { CheckFederatedGraphRequest, CheckFederatedGraphResponse, CheckSubgraphSchemaRequest, CheckSubgraphSchemaResponse, CreateAPIKeyRequest, CreateAPIKeyResponse, CreateFederatedGraphRequest, CreateFederatedGraphResponse, CreateFederatedGraphTokenRequest, CreateFederatedGraphTokenResponse, CreateFederatedSubgraphRequest, CreateFederatedSubgraphResponse, DeleteAPIKeyRequest, DeleteAPIKeyResponse, DeleteFederatedGraphRequest, DeleteFederatedGraphResponse, DeleteFederatedSubgraphRequest, DeleteFederatedSubgraphResponse, FixSubgraphSchemaRequest, FixSubgraphSchemaResponse, GetAnalyticsViewRequest, GetAnalyticsViewResponse, GetAPIKeysRequest, GetAPIKeysResponse, GetCheckDetailsRequest, GetCheckDetailsResponse, GetChecksByFederatedGraphNameRequest, GetChecksByFederatedGraphNameResponse, GetDashboardAnalyticsViewRequest, GetDashboardAnalyticsViewResponse, GetFederatedGraphByNameRequest, GetFederatedGraphByNameResponse, GetFederatedGraphChangelogRequest, GetFederatedGraphChangelogResponse, GetFederatedGraphSDLByNameRequest, GetFederatedGraphSDLByNameResponse, GetFederatedGraphsRequest, GetFederatedGraphsResponse, GetFederatedSubgraphSDLByNameRequest, GetFederatedSubgraphSDLByNameResponse, GetOrganizationMembersRequest, GetOrganizationMembersResponse, GetSubgraphByNameRequest, GetSubgraphByNameResponse, GetSubgraphsRequest, GetSubgraphsResponse, GetTraceRequest, GetTraceResponse, GetWebhookConfigRequest, GetWebhookConfigResponse, InviteUserRequest, InviteUserResponse, MigrateFromApolloRequest, MigrateFromApolloResponse, PublishFederatedSubgraphRequest, PublishFederatedSubgraphResponse, RemoveInvitationRequest, RemoveInvitationResponse, SaveWebhookConfigRequest, SaveWebhookConfigResponse, UpdateFederatedGraphRequest, UpdateFederatedGraphResponse, UpdateSubgraphRequest, UpdateSubgraphResponse, WhoAmIRequest, WhoAmIResponse } from "./platform_pb.js";
+import { CheckFederatedGraphRequest, CheckFederatedGraphResponse, CheckSubgraphSchemaRequest, CheckSubgraphSchemaResponse, CreateAPIKeyRequest, CreateAPIKeyResponse, CreateFederatedGraphRequest, CreateFederatedGraphResponse, CreateFederatedGraphTokenRequest, CreateFederatedGraphTokenResponse, CreateFederatedSubgraphRequest, CreateFederatedSubgraphResponse, CreateOrganizationWebhookConfigRequest, CreateOrganizationWebhookConfigResponse, DeleteAPIKeyRequest, DeleteAPIKeyResponse, DeleteFederatedGraphRequest, DeleteFederatedGraphResponse, DeleteFederatedSubgraphRequest, DeleteFederatedSubgraphResponse, DeleteOrganizationWebhookConfigRequest, DeleteOrganizationWebhookConfigResponse, FixSubgraphSchemaRequest, FixSubgraphSchemaResponse, GetAnalyticsViewRequest, GetAnalyticsViewResponse, GetAPIKeysRequest, GetAPIKeysResponse, GetCheckDetailsRequest, GetCheckDetailsResponse, GetChecksByFederatedGraphNameRequest, GetChecksByFederatedGraphNameResponse, GetDashboardAnalyticsViewRequest, GetDashboardAnalyticsViewResponse, GetFederatedGraphByNameRequest, GetFederatedGraphByNameResponse, GetFederatedGraphChangelogRequest, GetFederatedGraphChangelogResponse, GetFederatedGraphSDLByNameRequest, GetFederatedGraphSDLByNameResponse, GetFederatedGraphsRequest, GetFederatedGraphsResponse, GetFederatedSubgraphSDLByNameRequest, GetFederatedSubgraphSDLByNameResponse, GetOrganizationMembersRequest, GetOrganizationMembersResponse, GetOrganizationWebhookConfigsRequest, GetOrganizationWebhookConfigsResponse, GetSubgraphByNameRequest, GetSubgraphByNameResponse, GetSubgraphsRequest, GetSubgraphsResponse, GetTraceRequest, GetTraceResponse, InviteUserRequest, InviteUserResponse, MigrateFromApolloRequest, MigrateFromApolloResponse, PublishFederatedSubgraphRequest, PublishFederatedSubgraphResponse, RemoveInvitationRequest, RemoveInvitationResponse, UpdateFederatedGraphRequest, UpdateFederatedGraphResponse, UpdateOrganizationWebhookConfigRequest, UpdateOrganizationWebhookConfigResponse, UpdateSubgraphRequest, UpdateSubgraphResponse, WhoAmIRequest, WhoAmIResponse } from "./platform_pb.js";
 import { MethodIdempotency, MethodKind } from "@bufbuild/protobuf";
 import { GetConfigRequest, GetConfigResponse } from "../../node/v1/node_pb.js";
 
@@ -333,21 +333,47 @@ export const PlatformService = {
       kind: MethodKind.Unary,
     },
     /**
-     * @generated from rpc wg.cosmo.platform.v1.PlatformService.SaveOrganizationWebhookConfig
+     * CreateOrganizationWebhookConfig create a new webhook config for the organization
+     *
+     * @generated from rpc wg.cosmo.platform.v1.PlatformService.CreateOrganizationWebhookConfig
      */
-    saveOrganizationWebhookConfig: {
-      name: "SaveOrganizationWebhookConfig",
-      I: SaveWebhookConfigRequest,
-      O: SaveWebhookConfigResponse,
+    createOrganizationWebhookConfig: {
+      name: "CreateOrganizationWebhookConfig",
+      I: CreateOrganizationWebhookConfigRequest,
+      O: CreateOrganizationWebhookConfigResponse,
       kind: MethodKind.Unary,
     },
     /**
-     * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetOrganizationWebhookConfig
+     * GetOrganizationWebhookConfigs returns all webhooks for the organization
+     *
+     * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetOrganizationWebhookConfigs
      */
-    getOrganizationWebhookConfig: {
-      name: "GetOrganizationWebhookConfig",
-      I: GetWebhookConfigRequest,
-      O: GetWebhookConfigResponse,
+    getOrganizationWebhookConfigs: {
+      name: "GetOrganizationWebhookConfigs",
+      I: GetOrganizationWebhookConfigsRequest,
+      O: GetOrganizationWebhookConfigsResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * UpdateOrganizationWebhookConfig updates an existing webhook for the organization
+     *
+     * @generated from rpc wg.cosmo.platform.v1.PlatformService.UpdateOrganizationWebhookConfig
+     */
+    updateOrganizationWebhookConfig: {
+      name: "UpdateOrganizationWebhookConfig",
+      I: UpdateOrganizationWebhookConfigRequest,
+      O: UpdateOrganizationWebhookConfigResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * DeleteOrganizationWebhookConfig deletes an organization webhook
+     *
+     * @generated from rpc wg.cosmo.platform.v1.PlatformService.DeleteOrganizationWebhookConfig
+     */
+    deleteOrganizationWebhookConfig: {
+      name: "DeleteOrganizationWebhookConfig",
+      I: DeleteOrganizationWebhookConfigRequest,
+      O: DeleteOrganizationWebhookConfigResponse,
       kind: MethodKind.Unary,
     },
     /**

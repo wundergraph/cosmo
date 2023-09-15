@@ -1,9 +1,8 @@
-import { ServiceImpl } from '@connectrpc/connect';
 import { JsonValue, PlainMessage } from '@bufbuild/protobuf';
-import { parse } from 'graphql';
+import { ServiceImpl } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common_pb';
-import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
 import { GetConfigResponse } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
 import {
   CheckFederatedGraphResponse,
   CheckSubgraphSchemaResponse,
@@ -12,14 +11,15 @@ import {
   CreateFederatedGraphResponse,
   CreateFederatedGraphTokenResponse,
   CreateFederatedSubgraphResponse,
+  CreateOrganizationWebhookConfigResponse,
   DeleteAPIKeyResponse,
   DeleteFederatedGraphResponse,
   DeleteFederatedSubgraphResponse,
   FederatedGraphChangelog,
   FederatedGraphChangelogOutput,
   FixSubgraphSchemaResponse,
-  GetAnalyticsViewResponse,
   GetAPIKeysResponse,
+  GetAnalyticsViewResponse,
   GetCheckDetailsResponse,
   GetChecksByFederatedGraphNameResponse,
   GetDashboardAnalyticsViewResponse,
@@ -28,23 +28,24 @@ import {
   GetFederatedGraphSDLByNameResponse,
   GetFederatedGraphsResponse,
   GetOrganizationMembersResponse,
+  GetOrganizationWebhookConfigsResponse,
   GetSubgraphByNameResponse,
   GetSubgraphsResponse,
   GetTraceResponse,
-  GetWebhookConfigResponse,
   InviteUserResponse,
   MigrateFromApolloResponse,
   PublishFederatedSubgraphResponse,
   RemoveInvitationResponse,
   RequestSeriesItem,
-  SaveWebhookConfigResponse,
   UpdateFederatedGraphResponse,
+  UpdateOrganizationWebhookConfigResponse,
   UpdateSubgraphResponse,
   WhoAmIResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { buildRouterConfig, OpenAIGraphql } from '@wundergraph/cosmo-shared';
 import { OrganizationEventName } from '@wundergraph/cosmo-connect/dist/webhooks/organization_webhooks_pb';
 import { PlatformEventName } from '@wundergraph/cosmo-connect/dist/webhooks/platform_webhooks_pb';
+import { OpenAIGraphql, buildRouterConfig } from '@wundergraph/cosmo-shared';
+import { parse } from 'graphql';
 import { GraphApiKeyJwtPayload } from '../../types/index.js';
 import { Composer } from '../composition/composer.js';
 import { buildSchema, composeSubgraphs } from '../composition/composition.js';
@@ -61,8 +62,8 @@ import { AnalyticsRequestViewRepository } from '../repositories/analytics/Analyt
 import { TraceRepository } from '../repositories/analytics/TraceRepository.js';
 import type { RouterOptions } from '../routes.js';
 import { ApiKeyGenerator } from '../services/ApiGenerator.js';
-import { handleError, isValidLabelMatchers, isValidLabels } from '../util.js';
 import ApolloMigrator from '../services/ApolloMigrator.js';
+import { handleError, isValidLabelMatchers, isValidLabels } from '../util.js';
 import { OrganizationWebhookEmitter } from '../webhooks/OrganizationWebhookEmitter.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
@@ -1972,17 +1973,17 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    saveOrganizationWebhookConfig: (req, ctx) => {
+    createOrganizationWebhookConfig: (req, ctx) => {
       const logger = opts.logger.child({
         service: ctx.service.typeName,
         method: ctx.method.name,
       });
 
-      return handleError<PlainMessage<SaveWebhookConfigResponse>>(logger, async () => {
+      return handleError<PlainMessage<CreateOrganizationWebhookConfigResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db);
 
-        await orgRepo.saveWebhooksConfig({
+        await orgRepo.createWebhookConfig({
           organizationId: authContext.organizationId,
           ...req,
         });
@@ -1995,23 +1996,69 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    getOrganizationWebhookConfig: (req, ctx) => {
+    getOrganizationWebhookConfigs: (req, ctx) => {
       const logger = opts.logger.child({
         service: ctx.service.typeName,
         method: ctx.method.name,
       });
 
-      return handleError<PlainMessage<GetWebhookConfigResponse>>(logger, async () => {
+      return handleError<PlainMessage<GetOrganizationWebhookConfigsResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db);
 
-        const result = await orgRepo.getWebhooksConfig(authContext.organizationId);
+        const configs = await orgRepo.getWebhookConfigs(authContext.organizationId);
 
         return {
           response: {
             code: EnumStatusCode.OK,
           },
-          ...result,
+          configs,
+        };
+      });
+    },
+
+    updateOrganizationWebhookConfig: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<UpdateOrganizationWebhookConfigResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const orgRepo = new OrganizationRepository(opts.db);
+
+        await orgRepo.updateWebhookConfig({
+          organizationId: authContext.organizationId,
+          ...req,
+        });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+        };
+      });
+    },
+
+    deleteOrganizationWebhookConfig: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<UpdateOrganizationWebhookConfigResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const orgRepo = new OrganizationRepository(opts.db);
+
+        await orgRepo.deleteWebhookConfig({
+          organizationId: authContext.organizationId,
+          ...req,
+        });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
         };
       });
     },

@@ -4454,9 +4454,9 @@ export class Header extends Message<Header> {
 }
 
 /**
- * @generated from message wg.cosmo.platform.v1.SaveWebhookConfigRequest
+ * @generated from message wg.cosmo.platform.v1.CreateOrganizationWebhookConfigRequest
  */
-export class SaveWebhookConfigRequest extends Message<SaveWebhookConfigRequest> {
+export class CreateOrganizationWebhookConfigRequest extends Message<CreateOrganizationWebhookConfigRequest> {
   /**
    * @generated from field: string endpoint = 1;
    */
@@ -4472,112 +4472,155 @@ export class SaveWebhookConfigRequest extends Message<SaveWebhookConfigRequest> 
    */
   events: string[] = [];
 
-  constructor(data?: PartialMessage<SaveWebhookConfigRequest>) {
+  constructor(data?: PartialMessage<CreateOrganizationWebhookConfigRequest>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.platform.v1.SaveWebhookConfigRequest";
+  static readonly typeName = "wg.cosmo.platform.v1.CreateOrganizationWebhookConfigRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "endpoint", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "events", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SaveWebhookConfigRequest {
-    return new SaveWebhookConfigRequest().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateOrganizationWebhookConfigRequest {
+    return new CreateOrganizationWebhookConfigRequest().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SaveWebhookConfigRequest {
-    return new SaveWebhookConfigRequest().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateOrganizationWebhookConfigRequest {
+    return new CreateOrganizationWebhookConfigRequest().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SaveWebhookConfigRequest {
-    return new SaveWebhookConfigRequest().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateOrganizationWebhookConfigRequest {
+    return new CreateOrganizationWebhookConfigRequest().fromJsonString(jsonString, options);
   }
 
-  static equals(a: SaveWebhookConfigRequest | PlainMessage<SaveWebhookConfigRequest> | undefined, b: SaveWebhookConfigRequest | PlainMessage<SaveWebhookConfigRequest> | undefined): boolean {
-    return proto3.util.equals(SaveWebhookConfigRequest, a, b);
+  static equals(a: CreateOrganizationWebhookConfigRequest | PlainMessage<CreateOrganizationWebhookConfigRequest> | undefined, b: CreateOrganizationWebhookConfigRequest | PlainMessage<CreateOrganizationWebhookConfigRequest> | undefined): boolean {
+    return proto3.util.equals(CreateOrganizationWebhookConfigRequest, a, b);
   }
 }
 
 /**
- * @generated from message wg.cosmo.platform.v1.SaveWebhookConfigResponse
+ * @generated from message wg.cosmo.platform.v1.CreateOrganizationWebhookConfigResponse
  */
-export class SaveWebhookConfigResponse extends Message<SaveWebhookConfigResponse> {
+export class CreateOrganizationWebhookConfigResponse extends Message<CreateOrganizationWebhookConfigResponse> {
   /**
    * @generated from field: wg.cosmo.platform.v1.Response response = 1;
    */
   response?: Response;
 
-  constructor(data?: PartialMessage<SaveWebhookConfigResponse>) {
+  constructor(data?: PartialMessage<CreateOrganizationWebhookConfigResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.platform.v1.SaveWebhookConfigResponse";
+  static readonly typeName = "wg.cosmo.platform.v1.CreateOrganizationWebhookConfigResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SaveWebhookConfigResponse {
-    return new SaveWebhookConfigResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateOrganizationWebhookConfigResponse {
+    return new CreateOrganizationWebhookConfigResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SaveWebhookConfigResponse {
-    return new SaveWebhookConfigResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateOrganizationWebhookConfigResponse {
+    return new CreateOrganizationWebhookConfigResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SaveWebhookConfigResponse {
-    return new SaveWebhookConfigResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateOrganizationWebhookConfigResponse {
+    return new CreateOrganizationWebhookConfigResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: SaveWebhookConfigResponse | PlainMessage<SaveWebhookConfigResponse> | undefined, b: SaveWebhookConfigResponse | PlainMessage<SaveWebhookConfigResponse> | undefined): boolean {
-    return proto3.util.equals(SaveWebhookConfigResponse, a, b);
+  static equals(a: CreateOrganizationWebhookConfigResponse | PlainMessage<CreateOrganizationWebhookConfigResponse> | undefined, b: CreateOrganizationWebhookConfigResponse | PlainMessage<CreateOrganizationWebhookConfigResponse> | undefined): boolean {
+    return proto3.util.equals(CreateOrganizationWebhookConfigResponse, a, b);
   }
 }
 
 /**
- * @generated from message wg.cosmo.platform.v1.GetWebhookConfigRequest
+ * @generated from message wg.cosmo.platform.v1.GetOrganizationWebhookConfigsRequest
  */
-export class GetWebhookConfigRequest extends Message<GetWebhookConfigRequest> {
-  constructor(data?: PartialMessage<GetWebhookConfigRequest>) {
+export class GetOrganizationWebhookConfigsRequest extends Message<GetOrganizationWebhookConfigsRequest> {
+  constructor(data?: PartialMessage<GetOrganizationWebhookConfigsRequest>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.platform.v1.GetWebhookConfigRequest";
+  static readonly typeName = "wg.cosmo.platform.v1.GetOrganizationWebhookConfigsRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetWebhookConfigRequest {
-    return new GetWebhookConfigRequest().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetOrganizationWebhookConfigsRequest {
+    return new GetOrganizationWebhookConfigsRequest().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetWebhookConfigRequest {
-    return new GetWebhookConfigRequest().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetOrganizationWebhookConfigsRequest {
+    return new GetOrganizationWebhookConfigsRequest().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetWebhookConfigRequest {
-    return new GetWebhookConfigRequest().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetOrganizationWebhookConfigsRequest {
+    return new GetOrganizationWebhookConfigsRequest().fromJsonString(jsonString, options);
   }
 
-  static equals(a: GetWebhookConfigRequest | PlainMessage<GetWebhookConfigRequest> | undefined, b: GetWebhookConfigRequest | PlainMessage<GetWebhookConfigRequest> | undefined): boolean {
-    return proto3.util.equals(GetWebhookConfigRequest, a, b);
+  static equals(a: GetOrganizationWebhookConfigsRequest | PlainMessage<GetOrganizationWebhookConfigsRequest> | undefined, b: GetOrganizationWebhookConfigsRequest | PlainMessage<GetOrganizationWebhookConfigsRequest> | undefined): boolean {
+    return proto3.util.equals(GetOrganizationWebhookConfigsRequest, a, b);
   }
 }
 
 /**
- * @generated from message wg.cosmo.platform.v1.GetWebhookConfigResponse
+ * @generated from message wg.cosmo.platform.v1.GetOrganizationWebhookConfigsResponse
  */
-export class GetWebhookConfigResponse extends Message<GetWebhookConfigResponse> {
+export class GetOrganizationWebhookConfigsResponse extends Message<GetOrganizationWebhookConfigsResponse> {
   /**
    * @generated from field: wg.cosmo.platform.v1.Response response = 1;
    */
   response?: Response;
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.GetOrganizationWebhookConfigsResponse.Config configs = 2;
+   */
+  configs: GetOrganizationWebhookConfigsResponse_Config[] = [];
+
+  constructor(data?: PartialMessage<GetOrganizationWebhookConfigsResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetOrganizationWebhookConfigsResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "configs", kind: "message", T: GetOrganizationWebhookConfigsResponse_Config, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetOrganizationWebhookConfigsResponse {
+    return new GetOrganizationWebhookConfigsResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetOrganizationWebhookConfigsResponse {
+    return new GetOrganizationWebhookConfigsResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetOrganizationWebhookConfigsResponse {
+    return new GetOrganizationWebhookConfigsResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetOrganizationWebhookConfigsResponse | PlainMessage<GetOrganizationWebhookConfigsResponse> | undefined, b: GetOrganizationWebhookConfigsResponse | PlainMessage<GetOrganizationWebhookConfigsResponse> | undefined): boolean {
+    return proto3.util.equals(GetOrganizationWebhookConfigsResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetOrganizationWebhookConfigsResponse.Config
+ */
+export class GetOrganizationWebhookConfigsResponse_Config extends Message<GetOrganizationWebhookConfigsResponse_Config> {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id = "";
 
   /**
    * @generated from field: string endpoint = 2;
@@ -4589,33 +4632,205 @@ export class GetWebhookConfigResponse extends Message<GetWebhookConfigResponse> 
    */
   events: string[] = [];
 
-  constructor(data?: PartialMessage<GetWebhookConfigResponse>) {
+  constructor(data?: PartialMessage<GetOrganizationWebhookConfigsResponse_Config>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.platform.v1.GetWebhookConfigResponse";
+  static readonly typeName = "wg.cosmo.platform.v1.GetOrganizationWebhookConfigsResponse.Config";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "endpoint", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "events", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetWebhookConfigResponse {
-    return new GetWebhookConfigResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetOrganizationWebhookConfigsResponse_Config {
+    return new GetOrganizationWebhookConfigsResponse_Config().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetWebhookConfigResponse {
-    return new GetWebhookConfigResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetOrganizationWebhookConfigsResponse_Config {
+    return new GetOrganizationWebhookConfigsResponse_Config().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetWebhookConfigResponse {
-    return new GetWebhookConfigResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetOrganizationWebhookConfigsResponse_Config {
+    return new GetOrganizationWebhookConfigsResponse_Config().fromJsonString(jsonString, options);
   }
 
-  static equals(a: GetWebhookConfigResponse | PlainMessage<GetWebhookConfigResponse> | undefined, b: GetWebhookConfigResponse | PlainMessage<GetWebhookConfigResponse> | undefined): boolean {
-    return proto3.util.equals(GetWebhookConfigResponse, a, b);
+  static equals(a: GetOrganizationWebhookConfigsResponse_Config | PlainMessage<GetOrganizationWebhookConfigsResponse_Config> | undefined, b: GetOrganizationWebhookConfigsResponse_Config | PlainMessage<GetOrganizationWebhookConfigsResponse_Config> | undefined): boolean {
+    return proto3.util.equals(GetOrganizationWebhookConfigsResponse_Config, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.UpdateOrganizationWebhookConfigRequest
+ */
+export class UpdateOrganizationWebhookConfigRequest extends Message<UpdateOrganizationWebhookConfigRequest> {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id = "";
+
+  /**
+   * @generated from field: string endpoint = 2;
+   */
+  endpoint = "";
+
+  /**
+   * @generated from field: string key = 3;
+   */
+  key = "";
+
+  /**
+   * @generated from field: repeated string events = 4;
+   */
+  events: string[] = [];
+
+  /**
+   * @generated from field: bool shouldUpdateKey = 5;
+   */
+  shouldUpdateKey = false;
+
+  constructor(data?: PartialMessage<UpdateOrganizationWebhookConfigRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.UpdateOrganizationWebhookConfigRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "endpoint", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "events", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 5, name: "shouldUpdateKey", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateOrganizationWebhookConfigRequest {
+    return new UpdateOrganizationWebhookConfigRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateOrganizationWebhookConfigRequest {
+    return new UpdateOrganizationWebhookConfigRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateOrganizationWebhookConfigRequest {
+    return new UpdateOrganizationWebhookConfigRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateOrganizationWebhookConfigRequest | PlainMessage<UpdateOrganizationWebhookConfigRequest> | undefined, b: UpdateOrganizationWebhookConfigRequest | PlainMessage<UpdateOrganizationWebhookConfigRequest> | undefined): boolean {
+    return proto3.util.equals(UpdateOrganizationWebhookConfigRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.UpdateOrganizationWebhookConfigResponse
+ */
+export class UpdateOrganizationWebhookConfigResponse extends Message<UpdateOrganizationWebhookConfigResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  constructor(data?: PartialMessage<UpdateOrganizationWebhookConfigResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.UpdateOrganizationWebhookConfigResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateOrganizationWebhookConfigResponse {
+    return new UpdateOrganizationWebhookConfigResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateOrganizationWebhookConfigResponse {
+    return new UpdateOrganizationWebhookConfigResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateOrganizationWebhookConfigResponse {
+    return new UpdateOrganizationWebhookConfigResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateOrganizationWebhookConfigResponse | PlainMessage<UpdateOrganizationWebhookConfigResponse> | undefined, b: UpdateOrganizationWebhookConfigResponse | PlainMessage<UpdateOrganizationWebhookConfigResponse> | undefined): boolean {
+    return proto3.util.equals(UpdateOrganizationWebhookConfigResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.DeleteOrganizationWebhookConfigRequest
+ */
+export class DeleteOrganizationWebhookConfigRequest extends Message<DeleteOrganizationWebhookConfigRequest> {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id = "";
+
+  constructor(data?: PartialMessage<DeleteOrganizationWebhookConfigRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.DeleteOrganizationWebhookConfigRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteOrganizationWebhookConfigRequest {
+    return new DeleteOrganizationWebhookConfigRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteOrganizationWebhookConfigRequest {
+    return new DeleteOrganizationWebhookConfigRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteOrganizationWebhookConfigRequest {
+    return new DeleteOrganizationWebhookConfigRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DeleteOrganizationWebhookConfigRequest | PlainMessage<DeleteOrganizationWebhookConfigRequest> | undefined, b: DeleteOrganizationWebhookConfigRequest | PlainMessage<DeleteOrganizationWebhookConfigRequest> | undefined): boolean {
+    return proto3.util.equals(DeleteOrganizationWebhookConfigRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.DeleteOrganizationWebhookConfigResponse
+ */
+export class DeleteOrganizationWebhookConfigResponse extends Message<DeleteOrganizationWebhookConfigResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  constructor(data?: PartialMessage<DeleteOrganizationWebhookConfigResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.DeleteOrganizationWebhookConfigResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteOrganizationWebhookConfigResponse {
+    return new DeleteOrganizationWebhookConfigResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteOrganizationWebhookConfigResponse {
+    return new DeleteOrganizationWebhookConfigResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteOrganizationWebhookConfigResponse {
+    return new DeleteOrganizationWebhookConfigResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DeleteOrganizationWebhookConfigResponse | PlainMessage<DeleteOrganizationWebhookConfigResponse> | undefined, b: DeleteOrganizationWebhookConfigResponse | PlainMessage<DeleteOrganizationWebhookConfigResponse> | undefined): boolean {
+    return proto3.util.equals(DeleteOrganizationWebhookConfigResponse, a, b);
   }
 }
 

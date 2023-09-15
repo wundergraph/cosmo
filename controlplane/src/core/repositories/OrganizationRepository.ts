@@ -363,28 +363,48 @@ export class OrganizationRepository {
     );
   }
 
-  public async saveWebhooksConfig(input: { organizationId: string; endpoint: string; key: string; events: string[] }) {
-    await this.db
-      .insert(organizationWebhooks)
-      .values({
-        ...input,
-      })
-      .onConflictDoUpdate({
-        target: organizationWebhooks.organizationId,
-        set: {
-          ...input,
-        },
-      });
+  public async createWebhookConfig(input: { organizationId: string; endpoint: string; key: string; events: string[] }) {
+    await this.db.insert(organizationWebhooks).values({
+      ...input,
+    });
   }
 
-  public async getWebhooksConfig(organizationId: string): Promise<WebhooksConfigDTO> {
-    const res = await this.db.query.organizationWebhooks.findFirst({
+  public async getWebhookConfigs(organizationId: string): Promise<WebhooksConfigDTO[]> {
+    const res = await this.db.query.organizationWebhooks.findMany({
       where: eq(organizationWebhooks.organizationId, organizationId),
+      orderBy: (webhooks, { desc }) => [desc(webhooks.createdAt)],
     });
 
-    return {
-      endpoint: res?.endpoint ?? '',
-      events: res?.events ?? [],
+    return res.map((r) => ({
+      id: r.id,
+      endpoint: r.endpoint ?? '',
+      events: r.events ?? [],
+    }));
+  }
+
+  public async updateWebhookConfig(input: {
+    id: string;
+    organizationId: string;
+    endpoint: string;
+    key: string;
+    events: string[];
+    shouldUpdateKey: boolean;
+  }) {
+    const set: Partial<typeof organizationWebhooks.$inferInsert> = {
+      endpoint: input.endpoint,
+      events: input.events,
     };
+
+    if (input.shouldUpdateKey) {
+      set.key = input.key;
+    }
+
+    await this.db.update(organizationWebhooks).set(set).where(eq(organizationWebhooks.id, input.id));
+  }
+
+  public async deleteWebhookConfig(input: { id: string; organizationId: string }) {
+    await this.db
+      .delete(organizationWebhooks)
+      .where(and(eq(organizationWebhooks.id, input.id), eq(organizationWebhooks.organizationId, input.organizationId)));
   }
 }

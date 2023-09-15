@@ -16,67 +16,83 @@ interface EventMap {
 }
 
 export class OrganizationWebhookEmitter {
-  private url?: string;
-  private key?: string;
-  private allowedUserEvents?: string[];
+  private configs?: {
+    url?: string;
+    key?: string;
+    allowedUserEvents?: string[];
+  }[];
+
   private synced?: boolean;
 
   constructor(
     private db: PostgresJsDatabase<typeof schema>,
     private organizationId: string,
     private logger: pino.Logger,
-  ) {}
+  ) {
+    this.configs = [];
+    this.synced = false;
+  }
 
   private async syncOrganizationSettings() {
-    const config = await this.db.query.organizationWebhooks.findFirst({
+    const orgConfigs = await this.db.query.organizationWebhooks.findMany({
       where: eq(schema.organizationWebhooks.organizationId, this.organizationId),
     });
 
-    this.url = config?.endpoint ?? '';
-    this.key = config?.key ?? '';
-    this.allowedUserEvents = config?.events ?? [];
+    orgConfigs.map((config) =>
+      this.configs?.push({
+        url: config?.endpoint ?? '',
+        key: config?.key ?? '',
+        allowedUserEvents: config?.events ?? [],
+      }),
+    );
 
     this.synced = true;
   }
 
   private sendEvent<T extends keyof EventMap>(eventName: T, eventData: EventMap[T]) {
-    if (!this.url) {
+    if (!this.configs) {
       return;
     }
 
-    if (!this.allowedUserEvents?.includes(OrganizationEventName[eventName])) {
-      return;
+    for (const config of this.configs) {
+      if (!config.url) {
+        continue;
+      }
+
+      if (!config.allowedUserEvents?.includes(OrganizationEventName[eventName])) {
+        continue;
+      }
+
+      const data = {
+        event: OrganizationEventName[eventName],
+        payload: eventData,
+      };
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      if (config.key) {
+        const dataString = JSON.stringify(data);
+        const signature = createHmac('sha256', config.key).update(dataString).digest('hex');
+        headers['X-Cosmo-Signature-256'] = signature;
+      }
+
+      backOff(
+        () =>
+          axios.post(config.url!, data, {
+            headers,
+            timeout: 3000,
+          }),
+        {
+          numOfAttempts: 5,
+        },
+      ).catch((e) => {
+        let logger = this.logger.child({ eventName: OrganizationEventName[eventName] });
+        logger = logger.child({ eventData });
+        logger.debug(`Could not send organization webhook event`, e.message);
+      });
     }
-
-    const data = {
-      event: OrganizationEventName[eventName],
-      payload: eventData,
-    };
-
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    };
-
-    if (this.key) {
-      const dataString = JSON.stringify(data);
-      const signature = createHmac('sha256', this.key).update(dataString).digest('hex');
-      headers['X-Cosmo-Signature-256'] = signature;
-    }
-
-    backOff(
-      () =>
-        axios.post(this.url!, data, {
-          headers,
-          timeout: 3000,
-        }),
-      {
-        numOfAttempts: 5,
-      },
-    ).catch((e) => {
-      let logger = this.logger.child({ eventName: OrganizationEventName[eventName] });
-      logger = logger.child({ eventData });
-      logger.debug(`Could not send organization webhook event`, e.message);
-    });
   }
 
   send<T extends keyof EventMap>(eventName: T, data: EventMap[T]) {
