@@ -1,3 +1,4 @@
+import { createHmac } from 'node:crypto';
 import axios from 'axios';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { eq } from 'drizzle-orm';
@@ -7,6 +8,7 @@ import {
   OrganizationEventName,
 } from '@wundergraph/cosmo-connect/dist/webhooks/organization_webhooks_pb';
 import { PlainMessage } from '@bufbuild/protobuf';
+import pino from 'pino';
 import * as schema from '../../db/schema.js';
 
 interface EventMap {
@@ -19,7 +21,11 @@ export class OrganizationWebhookEmitter {
   private allowedUserEvents?: string[];
   private synced?: boolean;
 
-  constructor(private db: PostgresJsDatabase<typeof schema>, private organizationId: string) {}
+  constructor(
+    private db: PostgresJsDatabase<typeof schema>,
+    private organizationId: string,
+    private logger: pino.Logger,
+  ) {}
 
   private async syncOrganizationSettings() {
     const config = await this.db.query.organizationWebhooks.findFirst({
@@ -33,7 +39,7 @@ export class OrganizationWebhookEmitter {
     this.synced = true;
   }
 
-  private sendEvent<T extends keyof EventMap>(eventName: T, data: EventMap[T]) {
+  private sendEvent<T extends keyof EventMap>(eventName: T, eventData: EventMap[T]) {
     if (!this.url) {
       return;
     }
@@ -42,24 +48,35 @@ export class OrganizationWebhookEmitter {
       return;
     }
 
+    const data = {
+      event: OrganizationEventName[eventName],
+      payload: eventData,
+    };
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+
+    if (this.key) {
+      const dataString = JSON.stringify(data);
+      const signature = createHmac('sha256', this.key).update(dataString).digest('hex');
+      headers['X-Cosmo-Signature-256'] = signature;
+    }
+
     backOff(
       () =>
-        axios.post(
-          this.url!,
-          {
-            event: OrganizationEventName[eventName],
-            payload: data,
-          },
-          {
-            headers: {
-              'x-cosmo-webhook-key': this.key,
-            },
-          },
-        ),
+        axios.post(this.url!, data, {
+          headers,
+          timeout: 3000,
+        }),
       {
         numOfAttempts: 5,
       },
-    ).catch((e) => {});
+    ).catch((e) => {
+      let logger = this.logger.child({ eventName: OrganizationEventName[eventName] });
+      logger = logger.child({ eventData });
+      logger.debug(`Could not send organization webhook event`, e.message);
+    });
   }
 
   send<T extends keyof EventMap>(eventName: T, data: EventMap[T]) {

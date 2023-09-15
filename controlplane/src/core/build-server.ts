@@ -176,7 +176,7 @@ export default async function build(opts: BuildConfig) {
    * Controllers registration
    */
 
-  const platformWebhooks = new PlatformWebhookEmitter(opts.webhook?.url, opts.webhook?.key);
+  const platformWebhooks = new PlatformWebhookEmitter(opts.webhook?.url, opts.webhook?.key, log);
 
   await fastify.register(AuthController, {
     organizationRepository,

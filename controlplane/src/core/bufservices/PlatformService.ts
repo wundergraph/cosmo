@@ -75,7 +75,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
       return handleError<PlainMessage<CreateFederatedGraphResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const orgWebhooks = new OrganizationWebhookEmitter(opts.db, authContext.organizationId);
+        const orgWebhooks = new OrganizationWebhookEmitter(opts.db, authContext.organizationId, opts.logger);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
 
@@ -626,7 +626,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const compChecker = new Composer(fedGraphRepo, subgraphRepo);
         const subgraph = await subgraphRepo.byName(req.name);
-        const orgWebhooks = new OrganizationWebhookEmitter(opts.db, authContext.organizationId);
+        const orgWebhooks = new OrganizationWebhookEmitter(opts.db, authContext.organizationId, opts.logger);
 
         if (!subgraph) {
           return {
@@ -965,7 +965,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const compChecker = new Composer(fedGraphRepo, subgraphRepo);
-        const orgWebhooks = new OrganizationWebhookEmitter(opts.db, authContext.organizationId);
+        const orgWebhooks = new OrganizationWebhookEmitter(opts.db, authContext.organizationId, opts.logger);
 
         const subgraph = await subgraphRepo.byName(req.subgraphName);
         if (!subgraph) {
@@ -1052,7 +1052,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<UpdateFederatedGraphResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
-        const orgWebhooks = new OrganizationWebhookEmitter(opts.db, authContext.organizationId);
+        const orgWebhooks = new OrganizationWebhookEmitter(opts.db, authContext.organizationId, opts.logger);
 
         const federatedGraph = await fedGraphRepo.byName(req.name);
         if (!federatedGraph) {
@@ -1117,7 +1117,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<UpdateSubgraphResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const repo = new SubgraphRepository(opts.db, authContext.organizationId);
-        const orgWebhooks = new OrganizationWebhookEmitter(opts.db, authContext.organizationId);
+        const orgWebhooks = new OrganizationWebhookEmitter(opts.db, authContext.organizationId, opts.logger);
 
         const exists = await repo.exists(req.name);
         if (!exists) {
@@ -1844,7 +1844,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const orgRepo = new OrganizationRepository(opts.db);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
-        const orgWebhooks = new OrganizationWebhookEmitter(opts.db, authContext.organizationId);
+        const orgWebhooks = new OrganizationWebhookEmitter(opts.db, authContext.organizationId, opts.logger);
 
         opts.platformWebhooks.send(PlatformEventName.GRAPH_MIGRATE_INIT, {
           version: 1,

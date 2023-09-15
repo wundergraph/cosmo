@@ -1,3 +1,4 @@
+import { createHmac } from 'node:crypto';
 import { PlainMessage } from '@bufbuild/protobuf';
 import {
   GraphMigrate,
@@ -6,6 +7,7 @@ import {
 } from '@wundergraph/cosmo-connect/dist/webhooks/platform_webhooks_pb';
 import axios from 'axios';
 import { backOff } from 'exponential-backoff';
+import pino from 'pino';
 
 interface EventMap {
   [PlatformEventName.USER_REGISTER_SUCCESS]: PlainMessage<UserRegister>;
@@ -21,42 +23,55 @@ export type EventType<T extends keyof EventMap> = {
 export class PlatformWebhookEmitter {
   private url: string;
   private key: string;
+  private logger: pino.Logger;
 
-  constructor(webhookURL = '', webhookKey = '') {
+  constructor(webhookURL = '', webhookKey = '', logger: pino.Logger) {
     this.url = webhookURL;
     this.key = webhookKey;
+    this.logger = logger;
   }
 
-  send<T extends keyof EventMap>(eventName: T, data: EventMap[T]) {
+  send<T extends keyof EventMap>(eventName: T, eventData: EventMap[T]) {
     if (!this.url) {
       return;
     }
 
+    const data = {
+      event: PlatformEventName[eventName],
+      payload: eventData,
+    };
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+
+    if (this.key) {
+      const dataString = JSON.stringify(data);
+      const signature = createHmac('sha256', this.key).update(dataString).digest('hex');
+      headers['X-Cosmo-Signature-256'] = signature;
+    }
+
     backOff(
       () =>
-        axios.post(
-          this.url,
-          {
-            event: PlatformEventName[eventName],
-            payload: data,
-          },
-          {
-            headers: {
-              'x-cosmo-webhook-key': this.key,
-            },
-          },
-        ),
+        axios.post(this.url, data, {
+          headers,
+          timeout: 3000,
+        }),
       {
         numOfAttempts: 5,
       },
-    ).catch((e) => {});
+    ).catch((e) => {
+      let logger = this.logger.child({ eventName: PlatformEventName[eventName] });
+      logger = logger.child({ eventData });
+      logger.debug(`Could not send platform webhook event`, e.message);
+    });
   }
 }
 
 export class MockPlatformWebhookEmitter extends PlatformWebhookEmitter {
-  public sentEvents: Array<{ eventName: keyof EventMap; data: PlainMessage<any> }> = [];
+  public sentEvents: Array<{ eventName: keyof EventMap; eventData: PlainMessage<any> }> = [];
 
-  send<T extends keyof EventMap>(eventName: T, data: EventMap[T]) {
-    this.sentEvents.push({ eventName, data });
+  send<T extends keyof EventMap>(eventName: T, eventData: EventMap[T]) {
+    this.sentEvents.push({ eventName, eventData });
   }
 }
