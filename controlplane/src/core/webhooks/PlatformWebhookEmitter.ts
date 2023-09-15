@@ -52,3 +52,11 @@ export class PlatformWebhookEmitter {
     ).catch((e) => {});
   }
 }
+
+export class MockPlatformWebhookEmitter extends PlatformWebhookEmitter {
+  public sentEvents: Array<{ eventName: keyof EventMap; data: PlainMessage<any> }> = [];
+
+  send<T extends keyof EventMap>(eventName: T, data: EventMap[T]) {
+    this.sentEvents.push({ eventName, data });
+  }
+}

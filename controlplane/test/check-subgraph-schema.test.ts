@@ -19,7 +19,7 @@ import {
   seedTest,
 } from '../src/core/test-util';
 import Keycloak from '../src/core/services/Keycloak';
-import { PlatformWebhookEmitter } from '../src/core/webhooks/PlatformWebhookEmitter';
+import { MockPlatformWebhookEmitter } from '../src/core/webhooks/PlatformWebhookEmitter';
 
 let dbname = '';
 
@@ -62,7 +62,7 @@ describe('CheckSubgraphSchema', (ctx) => {
       adminPassword,
     });
 
-    const platformWebhooks = new PlatformWebhookEmitter();
+    const platformWebhooks = new MockPlatformWebhookEmitter();
 
     await server.register(fastifyConnectPlugin, {
       routes: routes({
@@ -159,7 +159,7 @@ describe('CheckSubgraphSchema', (ctx) => {
       adminPassword,
     });
 
-    const platformWebhooks = new PlatformWebhookEmitter();
+    const platformWebhooks = new MockPlatformWebhookEmitter();
 
     await server.register(fastifyConnectPlugin, {
       routes: routes({
@@ -254,7 +254,7 @@ describe('CheckSubgraphSchema', (ctx) => {
       adminPassword,
     });
 
-    const platformWebhooks = new PlatformWebhookEmitter();
+    const platformWebhooks = new MockPlatformWebhookEmitter();
 
     await server.register(fastifyConnectPlugin, {
       routes: routes({
