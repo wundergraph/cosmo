@@ -1,8 +1,14 @@
 # Change Log
-Images can be found [here](https://github.com/orgs/wundergraph/packages?repo_name=cosmo)
+Binaries are attached to the github release otherwise all images can be found [here](https://github.com/orgs/wundergraph/packages?repo_name=cosmo)
 
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
+
+## [0.8.2](https://github.com/wundergraph/cosmo/compare/otelcollector@0.8.1...otelcollector@0.8.2) (2023-09-15)
+
+### Bug Fixes
+
+* reduce error logs ([#72](https://github.com/wundergraph/cosmo/issues/72)) ([cba6fef](https://github.com/wundergraph/cosmo/commit/cba6fefe854bc3852708fd6a37eb5fa07d7fea24)) (@StarpTech)
 
 ## [0.8.1](https://github.com/wundergraph/cosmo/compare/otelcollector@0.8.0...otelcollector@0.8.1) (2023-09-14)
 
