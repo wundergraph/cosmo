@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.11.0](https://github.com/wundergraph/cosmo/compare/wgc@0.10.2...wgc@0.11.0) (2023-09-16)
+
+### Features
+
+* only generate node api for router ([#76](https://github.com/wundergraph/cosmo/issues/76)) ([9307648](https://github.com/wundergraph/cosmo/commit/93076481437030fa6e348dccbc74591f91878f57)) (@StarpTech)
+
 ## [0.10.2](https://github.com/wundergraph/cosmo/compare/wgc@0.10.1...wgc@0.10.2) (2023-09-15)
 
 **Note:** Version bump only for package wgc
