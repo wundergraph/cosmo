@@ -1,6 +1,6 @@
 {
   "name": "controlplane",
-  "version": "0.11.3",
+  "version": "0.12.0",
   "private": true,
   "description": "WunderGraph Cosmo Controlplane",
   "type": "module",
