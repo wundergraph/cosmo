@@ -4,6 +4,7 @@ import (
 	b64 "encoding/base64"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/goccy/go-yaml"
@@ -32,8 +33,8 @@ type Graph struct {
 type Tracing struct {
 	Enabled bool `yaml:"enabled" default:"true" envconfig:"TRACING_ENABLED"`
 	Config  struct {
-		BatchTimeoutSeconds int     `yaml:"batch_timeout_seconds" default:"10" envconfig:"TRACING_BATCH_TIMEOUT_SECONDS"`
-		SamplingRate        float64 `yaml:"sampling_rate" default:"1" validate:"min=0,max=1" envconfig:"TRACING_SAMPLING_RATE"`
+		BatchTimeout time.Duration `yaml:"batch_timeout" default:"10s" envconfig:"TRACING_BATCH_TIMEOUT"`
+		SamplingRate float64       `yaml:"sampling_rate" default:"1" validate:"min=0,max=1" envconfig:"TRACING_SAMPLING_RATE"`
 	} `yaml:"config"`
 }
 
@@ -62,11 +63,30 @@ type OpenTelemetry struct {
 }
 
 type CORS struct {
-	AllowOrigins     []string `yaml:"allow_origins" default:"*" envconfig:"CORS_ALLOW_ORIGINS"`
-	AllowMethods     []string `yaml:"allow_methods" default:"HEAD,GET,POST" envconfig:"CORS_ALLOW_METHODS"`
-	AllowHeaders     []string `yaml:"allow_headers" default:"Origin,Content-Length,Content-Type" envconfig:"CORS_ALLOW_HEADERS"`
-	AllowCredentials bool     `yaml:"allow_credentials" default:"true" envconfig:"CORS_ALLOW_CREDENTIALS"`
-	MaxAgeMinutes    int      `yaml:"max_age_minutes" default:"5" validate:"min=5" envconfig:"CORS_MAX_AGE_MINUTES"`
+	AllowOrigins     []string      `yaml:"allow_origins" default:"*" envconfig:"CORS_ALLOW_ORIGINS"`
+	AllowMethods     []string      `yaml:"allow_methods" default:"HEAD,GET,POST" envconfig:"CORS_ALLOW_METHODS"`
+	AllowHeaders     []string      `yaml:"allow_headers" default:"Origin,Content-Length,Content-Type" envconfig:"CORS_ALLOW_HEADERS"`
+	AllowCredentials bool          `yaml:"allow_credentials" default:"true" envconfig:"CORS_ALLOW_CREDENTIALS"`
+	MaxAge           time.Duration `yaml:"max_age" default:"5m" validate:"min=5m" envconfig:"CORS_MAX_AGE"`
+}
+
+type TrafficShapingRules struct {
+	// All is a set of rules that apply to all requests
+	All GlobalTrafficShapingRule `yaml:"all"`
+}
+
+type GlobalTrafficShapingRule struct {
+	Retry TrafficShapingRetry `yaml:"retry"`
+}
+
+type TrafficShapingRetry struct {
+	BackoffJitter LinearJitterOptions `yaml:"backoff_jitter"`
+}
+
+type LinearJitterOptions struct {
+	MaxAttempts int           `yaml:"max_attempts" default:"5" validate:"min=1"`
+	MaxDuration time.Duration `yaml:"max_duration" default:"20s"`
+	Interval    time.Duration `yaml:"interval" default:"5s"`
 }
 
 type HeaderRules struct {
@@ -111,21 +131,22 @@ type Config struct {
 	Telemetry OpenTelemetry `yaml:"telemetry"`
 	CORS      CORS          `yaml:"cors"`
 
-	Modules map[string]interface{} `yaml:"modules"`
-	Headers HeaderRules            `yaml:"headers"`
+	Modules        map[string]interface{} `yaml:"modules"`
+	Headers        HeaderRules            `yaml:"headers"`
+	TrafficShaping TrafficShapingRules    `yaml:"traffic_shaping"`
 
-	ListenAddr           string `yaml:"listen_addr" default:"localhost:3002" validate:"hostname_port" envconfig:"LISTEN_ADDR"`
-	ControlplaneURL      string `yaml:"controlplane_url" validate:"required" default:"https://cosmo-cp.wundergraph.com" envconfig:"CONTROLPLANE_URL" validate:"uri"`
-	PlaygroundEnabled    bool   `yaml:"playground_enabled" default:"true" envconfig:"PLAYGROUND_ENABLED"`
-	IntrospectionEnabled bool   `yaml:"introspection_enabled" default:"true" envconfig:"INTROSPECTION_ENABLED"`
-	LogLevel             string `yaml:"log_level" default:"info" envconfig:"LOG_LEVEL" validate:"oneof=debug info warning error fatal panic"`
-	JSONLog              bool   `yaml:"json_log" default:"true" envconfig:"JSON_LOG"`
-	ShutdownDelaySeconds int    `yaml:"shutdown_delay_seconds" default:"30" validate:"min=5" envconfig:"SHUTDOWN_DELAY_SECONDS"`
-	GracePeriodSeconds   int    `yaml:"grace_period_seconds" default:"20" envconfig:"GRACE_PERIOD_SECONDS"`
-	PollIntervalSeconds  int    `yaml:"poll_interval_seconds" default:"10" validate:"min=5" envconfig:"POLL_INTERVAL_SECONDS"`
-	HealthCheckPath      string `yaml:"health_check_path" default:"/health" envconfig:"HEALTH_CHECK_PATH" validate:"uri"`
-	ReadinessCheckPath   string `yaml:"readiness_check_path" default:"/health/ready" envconfig:"READINESS_CHECK_PATH" validate:"uri"`
-	LivenessCheckPath    string `yaml:"liveness_check_path" default:"/health/live" envconfig:"LIVENESS_CHECK_PATH" validate:"uri"`
+	ListenAddr           string        `yaml:"listen_addr" default:"localhost:3002" validate:"hostname_port" envconfig:"LISTEN_ADDR"`
+	ControlplaneURL      string        `yaml:"controlplane_url" validate:"required" default:"https://cosmo-cp.wundergraph.com" envconfig:"CONTROLPLANE_URL" validate:"uri"`
+	PlaygroundEnabled    bool          `yaml:"playground_enabled" default:"true" envconfig:"PLAYGROUND_ENABLED"`
+	IntrospectionEnabled bool          `yaml:"introspection_enabled" default:"true" envconfig:"INTROSPECTION_ENABLED"`
+	LogLevel             string        `yaml:"log_level" default:"info" envconfig:"LOG_LEVEL" validate:"oneof=debug info warning error fatal panic"`
+	JSONLog              bool          `yaml:"json_log" default:"true" envconfig:"JSON_LOG"`
+	ShutdownDelay        time.Duration `yaml:"shutdown_delay" default:"30s" validate:"min=5s" envconfig:"SHUTDOWN_DELAY"`
+	GracePeriod          time.Duration `yaml:"grace_period" default:"20s" envconfig:"GRACE_PERIOD"`
+	PollInterval         time.Duration `yaml:"poll_interval" default:"10s" validate:"min=5s" envconfig:"POLL_INTERVAL"`
+	HealthCheckPath      string        `yaml:"health_check_path" default:"/health" envconfig:"HEALTH_CHECK_PATH" validate:"uri"`
+	ReadinessCheckPath   string        `yaml:"readiness_check_path" default:"/health/ready" envconfig:"READINESS_CHECK_PATH" validate:"uri"`
+	LivenessCheckPath    string        `yaml:"liveness_check_path" default:"/health/live" envconfig:"LIVENESS_CHECK_PATH" validate:"uri"`
 
 	ConfigPath       string `default:"config.yaml" envconfig:"CONFIG_PATH" validate:"omitempty,filepath"`
 	RouterConfigPath string `yaml:"router_config_path" envconfig:"ROUTER_CONFIG_PATH" validate:"omitempty,filepath"`
