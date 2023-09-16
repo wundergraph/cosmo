@@ -1,4 +1,4 @@
-import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common_pb';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 
 export class ServiceError extends Error {
   constructor(public code: EnumStatusCode, message: string, cause?: Error) {
