@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/bufbuild/connect-go"
-	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo"
+	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1/nodev1connect"
 	"go.uber.org/zap"
@@ -117,7 +117,7 @@ func (c *client) getRouterConfigFromCP(ctx context.Context) (*nodev1.RouterConfi
 		return nil, err
 	}
 
-	if resp.Msg.GetResponse().GetCode() != cosmo.EnumStatusCode_OK {
+	if resp.Msg.GetResponse().GetCode() != common.EnumStatusCode_OK {
 		return nil, fmt.Errorf(
 			"could not get latest router config: %s, Details: %s",
 			resp.Msg.GetResponse().GetCode(),

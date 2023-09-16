@@ -7,7 +7,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3, protoInt64 } from "@bufbuild/protobuf";
-import { EnumStatusCode } from "../../common_pb.js";
+import { EnumStatusCode } from "../../common/common_pb.js";
 
 /**
  * @generated from enum wg.cosmo.platform.v1.AnalyticsViewGroupName

@@ -3,7 +3,7 @@ import { existsSync } from 'node:fs';
 import { Command } from 'commander';
 import { resolve } from 'pathe';
 import pc from 'picocolors';
-import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common_pb';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import logSymbols from 'log-symbols';
 import Table from 'cli-table3';
 import { BaseCommandOptions } from '../../../core/types/types.js';

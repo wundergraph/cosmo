@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { Command } from 'commander';
 import pc from 'picocolors';
-import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common_pb';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { splitLabel } from '@wundergraph/cosmo-shared';
 import { join } from 'pathe';
 import { BaseCommandOptions } from '../../../core/types/types.js';
