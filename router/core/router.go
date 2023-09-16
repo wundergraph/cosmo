@@ -141,6 +141,10 @@ func NewRouter(opts ...Option) (*Router, error) {
 
 	// Default values for retry options
 
+	if r.maxRetryCount == 0 {
+		r.maxRetryCount = 5
+	}
+
 	if r.retryInterval == 0 {
 		r.retryInterval = 5 * time.Second
 	}

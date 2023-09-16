@@ -49,7 +49,7 @@ func TestRetryOnHTTP5xx(t *testing.T) {
 		},
 		RetryOptions: RetryOptions{
 			MaxRetryCount: 3,
-			MinDuration:   1 * time.Millisecond,
+			Interval:      1 * time.Millisecond,
 			MaxDuration:   10 * time.Millisecond,
 			ShouldRetry: func(err error, req *http.Request, resp *http.Response) bool {
 				return IsRetryableError(err, resp)
@@ -97,7 +97,7 @@ func TestRetryOnNetErrors(t *testing.T) {
 		},
 		RetryOptions: RetryOptions{
 			MaxRetryCount: 4,
-			MinDuration:   1 * time.Millisecond,
+			Interval:      1 * time.Millisecond,
 			MaxDuration:   10 * time.Millisecond,
 			ShouldRetry: func(err error, req *http.Request, resp *http.Response) bool {
 				return IsRetryableError(err, resp)
