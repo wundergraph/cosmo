@@ -20,7 +20,7 @@ import { Button } from "../ui/button";
 import { Loader } from "../ui/loader";
 import { LayoutProps } from "./layout";
 import { Nav, NavLink } from "./nav";
-import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common_pb";
+import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 
 const icons: { [key: string]: ReactNode } = {
   Overview: <HomeIcon />,

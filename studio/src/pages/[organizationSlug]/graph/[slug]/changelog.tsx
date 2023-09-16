@@ -23,7 +23,7 @@ import { Loader } from "@/components/ui/loader";
 import { CommandLineIcon } from "@heroicons/react/24/outline";
 import { docsBaseURL } from "@/lib/constants";
 import { CLI } from "@/components/ui/cli";
-import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common_pb";
+import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 
 interface StructuredChangelog {
   changeType: string;

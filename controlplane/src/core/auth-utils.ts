@@ -3,7 +3,7 @@ import cookie from 'cookie';
 import axios from 'axios';
 import { eq } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common_pb';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { PKCECodeChallenge, UserInfoEndpointResponse, UserSession } from '../types/index.js';
 import * as schema from '../db/schema.js';
 import { sessions } from '../db/schema.js';

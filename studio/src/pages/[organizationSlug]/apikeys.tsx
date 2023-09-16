@@ -42,7 +42,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { PlusIcon } from "@radix-ui/react-icons";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common_pb";
+import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   createAPIKey,
   deleteAPIKey,

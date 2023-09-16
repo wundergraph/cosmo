@@ -7,7 +7,7 @@ import Fastify from 'fastify';
 import pino from 'pino';
 import * as prettier from 'prettier';
 import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
-import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common_pb';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import database from '../src/core/plugins/database';
