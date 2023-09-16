@@ -33,9 +33,12 @@ export default class ApiKeyAuthenticator {
     /**
      * Update the last used at timestamp.
      */
-    await this.db.update(schema.apiKeys).set({
-      lastUsedAt: new Date(),
-    });
+    await this.db
+      .update(schema.apiKeys)
+      .set({
+        lastUsedAt: new Date(),
+      })
+      .where(eq(schema.apiKeys.id, apiKeyModel.id));
 
     return {
       organizationId: apiKeyModel.organizationId,
