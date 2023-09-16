@@ -4,7 +4,7 @@ syntax = "proto3";
 
 package wg.cosmo.platform.v1;
 
-import "wg/cosmo/common.proto";
+import "wg/cosmo/common/common.proto";
 import "wg/cosmo/node/v1/node.proto";
 
 message Label {
