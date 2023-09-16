@@ -1,16 +1,16 @@
-import { DataTable } from '@/components/analytics/data-table';
-import { useAnalyticsQueryState } from '@/components/analytics/useAnalyticsQueryState';
-import { EmptyState } from '@/components/empty-state';
-import { getGraphLayout, GraphContext } from '@/components/layout/graph-layout';
-import { PageHeader } from '@/components/layout/head';
-import { TitleLayout } from '@/components/layout/title-layout';
-import { Button } from '@/components/ui/button';
-import { NextPageWithLayout } from '@/lib/page';
-import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
-import { useQuery } from '@tanstack/react-query';
-import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common_pb';
-import { getAnalyticsView } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
-import { useContext } from 'react';
+import { DataTable } from "@/components/analytics/data-table";
+import { useAnalyticsQueryState } from "@/components/analytics/useAnalyticsQueryState";
+import { EmptyState } from "@/components/empty-state";
+import { getGraphLayout, GraphContext } from "@/components/layout/graph-layout";
+import { PageHeader } from "@/components/layout/head";
+import { TitleLayout } from "@/components/layout/title-layout";
+import { Button } from "@/components/ui/button";
+import { NextPageWithLayout } from "@/lib/page";
+import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
+import { useQuery } from "@tanstack/react-query";
+import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
+import { getAnalyticsView } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+import { useContext } from "react";
 
 export type OperationAnalytics = {
   name: string;

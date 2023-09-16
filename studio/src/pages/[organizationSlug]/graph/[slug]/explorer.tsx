@@ -14,7 +14,7 @@ import { Loader } from "@/components/ui/loader";
 import { useRouter } from "next/router";
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
-import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common_pb";
+import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 
 const graphiQLFetch: typeof fetch = async (...args) => {
   try {
