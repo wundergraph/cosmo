@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package wg.cosmo.webhooks;
+
+enum OrganizationEventName {
+  FEDERATED_GRAPH_SCHEMA_UPDATED = 0;
+}
+
+enum PlatformEventName {
+  USER_REGISTER_SUCCESS = 0;
+  APOLLO_MIGRATE_INIT = 1;
+  APOLLO_MIGRATE_SUCCESS = 2;
+}

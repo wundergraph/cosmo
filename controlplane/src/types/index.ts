@@ -103,6 +103,12 @@ export interface APIKeyDTO {
   creatorUserID: string;
 }
 
+export interface WebhooksConfigDTO {
+  id: string;
+  endpoint: string;
+  events: string[];
+}
+
 export interface ResponseMessage {
   response?: {
     code: number;

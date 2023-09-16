@@ -2,7 +2,7 @@ import { Component2Icon } from "@radix-ui/react-icons";
 import { useRouter } from "next/router";
 import { useMemo } from "react";
 import { IoKeyOutline, IoPeopleOutline } from "react-icons/io5";
-import { PiGraphLight } from "react-icons/pi";
+import { PiGraphLight, PiWebhooksLogo } from "react-icons/pi";
 import { PageHeader } from "./head";
 import { LayoutProps } from "./layout";
 import { Nav, NavLink } from "./nav";
@@ -36,6 +36,11 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
         title: "API Keys",
         href: basePath + "/apikeys",
         icon: <IoKeyOutline />,
+      },
+      {
+        title: "Webhooks",
+        href: basePath + "/webhooks",
+        icon: <PiWebhooksLogo />,
       },
     ];
   }, [organizationSlug]);
