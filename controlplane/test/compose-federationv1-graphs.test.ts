@@ -21,6 +21,7 @@ import {
   seedTest,
 } from '../src/core/test-util';
 import Keycloak from '../src/core/services/Keycloak';
+import { MockPlatformWebhookService } from '../src/core/webhooks/PlatformWebhookService';
 
 let dbname = '';
 
@@ -63,6 +64,8 @@ describe('ComposeFederationV1Graphs', (ctx) => {
       adminPassword,
     });
 
+    const platformWebhooks = new MockPlatformWebhookService();
+
     await server.register(fastifyConnectPlugin, {
       routes: routes({
         db: server.db,
@@ -71,6 +74,7 @@ describe('ComposeFederationV1Graphs', (ctx) => {
         jwtSecret: 'secret',
         keycloakRealm: realm,
         keycloakClient,
+        platformWebhooks,
       }),
     });
 

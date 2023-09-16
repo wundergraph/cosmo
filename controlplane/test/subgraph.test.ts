@@ -19,6 +19,7 @@ import {
   seedTest,
 } from '../src/core/test-util';
 import Keycloak from '../src/core/services/Keycloak';
+import { MockPlatformWebhookService } from '../src/core/webhooks/PlatformWebhookService';
 
 let dbname = '';
 
@@ -61,6 +62,8 @@ describe('Subgraph', (ctx) => {
       adminPassword,
     });
 
+    const platformWebhooks = new MockPlatformWebhookService();
+
     await server.register(fastifyConnectPlugin, {
       routes: routes({
         db: server.db,
@@ -69,6 +72,7 @@ describe('Subgraph', (ctx) => {
         jwtSecret: 'secret',
         keycloakRealm: realm,
         keycloakClient,
+        platformWebhooks,
       }),
     });
 
@@ -135,6 +139,8 @@ describe('Subgraph', (ctx) => {
       adminPassword,
     });
 
+    const platformWebhooks = new MockPlatformWebhookService();
+
     await server.register(fastifyConnectPlugin, {
       routes: routes({
         db: server.db,
@@ -143,6 +149,7 @@ describe('Subgraph', (ctx) => {
         jwtSecret: 'secret',
         keycloakRealm: realm,
         keycloakClient,
+        platformWebhooks,
       }),
     });
 
