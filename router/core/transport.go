@@ -24,8 +24,15 @@ type CustomTransport struct {
 }
 
 func NewCustomTransport(logger *zap.Logger, roundTripper http.RoundTripper, retryOptions retrytransport.RetryOptions) *CustomTransport {
+
+	if retryOptions.Enabled {
+		return &CustomTransport{
+			roundTripper: retrytransport.NewRetryHTTPTransport(roundTripper, retryOptions, logger),
+		}
+	}
+
 	return &CustomTransport{
-		roundTripper: retrytransport.NewRetryHTTPTransport(roundTripper, retryOptions, logger),
+		roundTripper: roundTripper,
 	}
 }
 

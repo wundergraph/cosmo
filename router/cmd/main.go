@@ -82,9 +82,10 @@ func Main() {
 		core.WithHeaderRules(cfg.Headers),
 		core.WithStaticRouterConfig(routerConfig),
 		core.WithRetryOptions(
-			cfg.TrafficShaping.All.Retry.BackoffJitter.MaxAttempts,
-			cfg.TrafficShaping.All.Retry.BackoffJitter.MaxDuration,
-			cfg.TrafficShaping.All.Retry.BackoffJitter.Interval,
+			cfg.TrafficShaping.All.BackoffJitterRetry.Enabled,
+			cfg.TrafficShaping.All.BackoffJitterRetry.MaxAttempts,
+			cfg.TrafficShaping.All.BackoffJitterRetry.MaxDuration,
+			cfg.TrafficShaping.All.BackoffJitterRetry.Interval,
 		),
 		core.WithCors(&cors.Config{
 			AllowOrigins:     cfg.CORS.AllowOrigins,

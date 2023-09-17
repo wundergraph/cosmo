@@ -72,21 +72,18 @@ type CORS struct {
 
 type TrafficShapingRules struct {
 	// All is a set of rules that apply to all requests
-	All GlobalTrafficShapingRule `yaml:"all"`
+	All GlobalSubgraphRequestRule `yaml:"all"`
 }
 
-type GlobalTrafficShapingRule struct {
-	Retry TrafficShapingRetry `yaml:"retry"`
+type GlobalSubgraphRequestRule struct {
+	BackoffJitterRetry BackoffJitterRetry `yaml:"retry"`
 }
 
-type TrafficShapingRetry struct {
-	BackoffJitter LinearJitterOptions `yaml:"backoff_jitter"`
-}
-
-type LinearJitterOptions struct {
+type BackoffJitterRetry struct {
+	Enabled     bool          `yaml:"enabled" default:"true" envconfig:"RETRY_ENABLED"`
 	MaxAttempts int           `yaml:"max_attempts" default:"5" validate:"min=1"`
-	MaxDuration time.Duration `yaml:"max_duration" default:"20s"`
-	Interval    time.Duration `yaml:"interval" default:"5s"`
+	MaxDuration time.Duration `yaml:"max_duration" default:"20s" validate:"min=1s"`
+	Interval    time.Duration `yaml:"interval" default:"3s" validate:"min=100ms"`
 }
 
 type HeaderRules struct {

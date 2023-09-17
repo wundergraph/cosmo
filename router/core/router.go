@@ -80,9 +80,7 @@ type (
 		headerRuleEngine    *HeaderRuleEngine
 		headerRules         config.HeaderRules
 
-		maxRetryCount    int
-		retryInterval    time.Duration
-		retryMaxDuration time.Duration
+		retryOptions retrytransport.RetryOptions
 
 		engineExecutionConfiguration config.EngineExecutionConfiguration
 	}
@@ -137,20 +135,6 @@ func NewRouter(opts ...Option) (*Router, error) {
 	}
 	if r.livenessCheckPath == "" {
 		r.livenessCheckPath = "/health/live"
-	}
-
-	// Default values for retry options
-
-	if r.maxRetryCount == 0 {
-		r.maxRetryCount = 5
-	}
-
-	if r.retryInterval == 0 {
-		r.retryInterval = 5 * time.Second
-	}
-
-	if r.retryMaxDuration == 0 {
-		r.retryInterval = 20 * time.Second
 	}
 
 	hr, err := NewHeaderTransformer(r.headerRules)
@@ -495,9 +479,10 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 			preHandlers:  r.preOriginHandlers,
 			postHandlers: r.postOriginHandlers,
 			retryOptions: retrytransport.RetryOptions{
-				MaxRetryCount: r.maxRetryCount,
-				MaxDuration:   r.retryMaxDuration,
-				Interval:      r.retryInterval,
+				Enabled:       r.retryOptions.Enabled,
+				MaxRetryCount: r.retryOptions.MaxRetryCount,
+				MaxDuration:   r.retryOptions.MaxDuration,
+				Interval:      r.retryOptions.Interval,
 				ShouldRetry: func(err error, req *http.Request, resp *http.Response) bool {
 					return retrytransport.IsRetryableError(err, resp) && !isMutationRequest(req.Context())
 				},
@@ -877,10 +862,13 @@ func WithEngineExecutionConfig(cfg config.EngineExecutionConfiguration) Option {
 	}
 }
 
-func WithRetryOptions(maxRetryCount int, retryMaxDuration, retryInterval time.Duration) Option {
+func WithRetryOptions(enabled bool, maxRetryCount int, retryMaxDuration, retryInterval time.Duration) Option {
 	return func(r *Router) {
-		r.maxRetryCount = maxRetryCount
-		r.retryMaxDuration = retryMaxDuration
-		r.retryInterval = retryInterval
+		r.retryOptions = retrytransport.RetryOptions{
+			Enabled:       enabled,
+			MaxRetryCount: maxRetryCount,
+			MaxDuration:   retryMaxDuration,
+			Interval:      retryInterval,
+		}
 	}
 }

@@ -23,12 +23,22 @@ var defaultRetryableErrors = []error{
 	errors.New("unexpected EOF reading trailer"),
 }
 
+var defaultRetryableStatusCodes = []int{
+	http.StatusBadGateway,
+	http.StatusServiceUnavailable,
+	http.StatusGatewayTimeout,
+	http.StatusTooManyRequests,
+}
+
+type ShouldRetryFunc func(err error, req *http.Request, resp *http.Response) bool
+
 type RetryOptions struct {
+	Enabled       bool
 	MaxRetryCount int
 	Interval      time.Duration
 	MaxDuration   time.Duration
 	OnRetry       func(count int, req *http.Request, resp *http.Response, err error)
-	ShouldRetry   func(err error, req *http.Request, resp *http.Response) bool
+	ShouldRetry   ShouldRetryFunc
 }
 
 type RetryHTTPTransport struct {
@@ -64,7 +74,11 @@ func (rt *RetryHTTPTransport) RoundTrip(req *http.Request) (*http.Response, erro
 		// Wait for the specified backoff period
 		sleepDuration := b.Duration()
 
-		rt.Logger.Info("Retrying request", zap.Int("retry", retries), zap.String("url", req.URL.String()), zap.Duration("sleep", sleepDuration))
+		rt.Logger.Debug("Retrying request",
+			zap.Int("retry", retries),
+			zap.String("url", req.URL.String()),
+			zap.Duration("sleep", sleepDuration),
+		)
 
 		// Wait for the specified backoff period
 		time.Sleep(sleepDuration)
@@ -81,11 +95,10 @@ func IsRetryableError(err error, resp *http.Response) bool {
 
 	if resp != nil {
 		// HTTP
-		if resp.StatusCode == http.StatusBadGateway ||
-			resp.StatusCode == http.StatusServiceUnavailable ||
-			resp.StatusCode == http.StatusGatewayTimeout ||
-			resp.StatusCode == http.StatusTooManyRequests {
-			return true
+		for _, retryableStatusCode := range defaultRetryableStatusCodes {
+			if resp.StatusCode == retryableStatusCode {
+				return true
+			}
 		}
 	}
 
