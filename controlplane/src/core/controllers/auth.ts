@@ -4,6 +4,7 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { eq } from 'drizzle-orm';
 import { lru } from 'tiny-lru';
 import { uid } from 'uid';
+import { PlatformEventName } from '@wundergraph/cosmo-connect/dist/webhooks/events_pb';
 import { decodeJWT, DEFAULT_SESSION_MAX_AGE_SEC, encrypt } from '../crypto/jwt.js';
 import { CustomAccessTokenClaims, UserInfoEndpointResponse, UserSession } from '../../types/index.js';
 import * as schema from '../../db/schema.js';
@@ -12,6 +13,7 @@ import { OrganizationRepository } from '../repositories/OrganizationRepository.j
 import AuthUtils from '../auth-utils.js';
 import WebSessionAuthenticator from '../services/WebSessionAuthenticator.js';
 import Keycloak from '../services/Keycloak.js';
+import { IPlatformWebhookService } from '../webhooks/PlatformWebhookService.js';
 import { AuthenticationError } from '../errors/errors.js';
 
 export type AuthControllerOptions = {
@@ -29,6 +31,7 @@ export type AuthControllerOptions = {
   };
   keycloakClient: Keycloak;
   keycloakRealm: string;
+  platformWebhooks: IPlatformWebhookService;
 };
 
 const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fastify, opts, done) {
@@ -198,6 +201,11 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
           memberID: orgMember.id,
           roles: ['admin'],
         });
+      });
+
+      opts.platformWebhooks.send(PlatformEventName.USER_REGISTER_SUCCESS, {
+        user_id: userId,
+        user_email: userEmail,
       });
     }
 
