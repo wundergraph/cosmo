@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.11.1](https://github.com/wundergraph/cosmo/compare/wgc@0.11.0...wgc@0.11.1) (2023-09-17)
+
+### Bug Fixes
+
+* use relative path to read subgraph schema ([#75](https://github.com/wundergraph/cosmo/issues/75)) ([26a145f](https://github.com/wundergraph/cosmo/commit/26a145f5412d753f710a273d78be0b7dcb4d5a23)) (@devsergiy)
+
 # [0.11.0](https://github.com/wundergraph/cosmo/compare/wgc@0.10.2...wgc@0.11.0) (2023-09-16)
 
 ### Features
