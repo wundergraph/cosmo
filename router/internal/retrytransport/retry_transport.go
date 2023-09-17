@@ -58,6 +58,10 @@ func NewRetryHTTPTransport(roundTripper http.RoundTripper, retryOptions RetryOpt
 func (rt *RetryHTTPTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 
 	resp, err := rt.RoundTripper.RoundTrip(req)
+	// Short circuit if the request was successful
+	if err == nil && resp.StatusCode == http.StatusOK {
+		return resp, nil
+	}
 
 	b := backoff.New(rt.RetryOptions.MaxDuration, rt.RetryOptions.Interval)
 	defer b.Reset()
@@ -86,21 +90,17 @@ func (rt *RetryHTTPTransport) RoundTrip(req *http.Request) (*http.Response, erro
 		// Retry the request
 		resp, err = rt.RoundTripper.RoundTrip(req)
 
+		// Short circuit if the request was successful
+		if err == nil && resp.StatusCode == http.StatusOK {
+			return resp, nil
+		}
+
 	}
 
 	return resp, err
 }
 
 func IsRetryableError(err error, resp *http.Response) bool {
-
-	if resp != nil {
-		// HTTP
-		for _, retryableStatusCode := range defaultRetryableStatusCodes {
-			if resp.StatusCode == retryableStatusCode {
-				return true
-			}
-		}
-	}
 
 	if err != nil {
 		// Network
@@ -109,6 +109,15 @@ func IsRetryableError(err error, resp *http.Response) bool {
 			if strings.HasSuffix(
 				strings.ToLower(s),
 				strings.ToLower(retryableError.Error())) {
+				return true
+			}
+		}
+	}
+
+	if resp != nil {
+		// HTTP
+		for _, retryableStatusCode := range defaultRetryableStatusCodes {
+			if resp.StatusCode == retryableStatusCode {
 				return true
 			}
 		}
