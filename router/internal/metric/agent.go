@@ -40,6 +40,7 @@ func createHttpExporter(c *Config) (sdkmetric.Exporter, error) {
 	opts := []otlpmetrichttp.Option{
 		// Includes host and port
 		otlpmetrichttp.WithEndpoint(u.Host),
+		otlpmetrichttp.WithCompression(otlpmetrichttp.GzipCompression),
 	}
 
 	if u.Scheme != "https" {
