@@ -33,8 +33,8 @@ type Graph struct {
 type Tracing struct {
 	Enabled bool `yaml:"enabled" default:"true" envconfig:"TRACING_ENABLED"`
 	Config  struct {
-		BatchTimeout time.Duration `yaml:"batch_timeout" default:"10s" envconfig:"TRACING_BATCH_TIMEOUT"`
-		SamplingRate float64       `yaml:"sampling_rate" default:"1" validate:"min=0,max=1" envconfig:"TRACING_SAMPLING_RATE"`
+		BatchTimeout time.Duration `yaml:"batch_timeout" default:"10s" validate:"required,min=5s,max=120s" envconfig:"TRACING_BATCH_TIMEOUT"`
+		SamplingRate float64       `yaml:"sampling_rate" default:"1" validate:"required,min=0,max=1" envconfig:"TRACING_SAMPLING_RATE"`
 	} `yaml:"config"`
 }
 
@@ -67,7 +67,7 @@ type CORS struct {
 	AllowMethods     []string      `yaml:"allow_methods" default:"HEAD,GET,POST" envconfig:"CORS_ALLOW_METHODS"`
 	AllowHeaders     []string      `yaml:"allow_headers" default:"Origin,Content-Length,Content-Type" envconfig:"CORS_ALLOW_HEADERS"`
 	AllowCredentials bool          `yaml:"allow_credentials" default:"true" envconfig:"CORS_ALLOW_CREDENTIALS"`
-	MaxAge           time.Duration `yaml:"max_age" default:"5m" validate:"min=5m" envconfig:"CORS_MAX_AGE"`
+	MaxAge           time.Duration `yaml:"max_age" default:"5m" validate:"required,min=5m" envconfig:"CORS_MAX_AGE"`
 }
 
 type TrafficShapingRules struct {
@@ -81,9 +81,10 @@ type GlobalSubgraphRequestRule struct {
 
 type BackoffJitterRetry struct {
 	Enabled     bool          `yaml:"enabled" default:"true" envconfig:"RETRY_ENABLED"`
-	MaxAttempts int           `yaml:"max_attempts" default:"5" validate:"min=1"`
-	MaxDuration time.Duration `yaml:"max_duration" default:"20s" validate:"min=1s"`
-	Interval    time.Duration `yaml:"interval" default:"3s" validate:"min=100ms"`
+	Algorithm   string        `yaml:"algorithm" default:"backoff_jitter" validate:"oneof=backoff_jitter"`
+	MaxAttempts int           `yaml:"max_attempts" default:"5" validate:"required,min=1,required_if=Algorithm backoff_jitter"`
+	MaxDuration time.Duration `yaml:"max_duration" default:"10s" validate:"required,min=1s,required_if=Algorithm backoff_jitter"`
+	Interval    time.Duration `yaml:"interval" default:"3s" validate:"required,min=100ms,required_if=Algorithm backoff_jitter"`
 }
 
 type HeaderRules struct {
@@ -138,9 +139,9 @@ type Config struct {
 	IntrospectionEnabled bool          `yaml:"introspection_enabled" default:"true" envconfig:"INTROSPECTION_ENABLED"`
 	LogLevel             string        `yaml:"log_level" default:"info" envconfig:"LOG_LEVEL" validate:"oneof=debug info warning error fatal panic"`
 	JSONLog              bool          `yaml:"json_log" default:"true" envconfig:"JSON_LOG"`
-	ShutdownDelay        time.Duration `yaml:"shutdown_delay" default:"30s" validate:"min=5s" envconfig:"SHUTDOWN_DELAY"`
-	GracePeriod          time.Duration `yaml:"grace_period" default:"20s" envconfig:"GRACE_PERIOD"`
-	PollInterval         time.Duration `yaml:"poll_interval" default:"10s" validate:"min=5s" envconfig:"POLL_INTERVAL"`
+	ShutdownDelay        time.Duration `yaml:"shutdown_delay" default:"30s" validate:"required,min=5s" envconfig:"SHUTDOWN_DELAY"`
+	GracePeriod          time.Duration `yaml:"grace_period" default:"20s" validate:"required" envconfig:"GRACE_PERIOD"`
+	PollInterval         time.Duration `yaml:"poll_interval" default:"10s" validate:"required,min=5s" envconfig:"POLL_INTERVAL"`
 	HealthCheckPath      string        `yaml:"health_check_path" default:"/health" envconfig:"HEALTH_CHECK_PATH" validate:"uri"`
 	ReadinessCheckPath   string        `yaml:"readiness_check_path" default:"/health/ready" envconfig:"READINESS_CHECK_PATH" validate:"uri"`
 	LivenessCheckPath    string        `yaml:"liveness_check_path" default:"/health/live" envconfig:"LIVENESS_CHECK_PATH" validate:"uri"`
