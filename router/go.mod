@@ -6,6 +6,7 @@ require (
 	github.com/bufbuild/connect-go v1.9.0
 	github.com/buger/jsonparser v1.1.1
 	github.com/cespare/xxhash/v2 v2.2.0
+	github.com/cloudflare/backoff v0.0.0-20161212185259-647f3cdfc87a
 	github.com/dgraph-io/ristretto v0.1.1
 	github.com/go-chi/chi v1.5.4
 	github.com/go-playground/validator/v10 v10.15.3

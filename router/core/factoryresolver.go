@@ -1,15 +1,9 @@
 package core
 
 import (
-	"context"
-	"crypto/tls"
-	"crypto/x509"
-	"errors"
 	"fmt"
-	"net"
 	"net/http"
 	"net/url"
-	"strings"
 	"time"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource"
@@ -30,7 +24,7 @@ type FactoryResolver interface {
 }
 
 type ApiTransportFactory interface {
-	RoundTripper(transport *http.Transport, enableStreamingMode bool) http.RoundTripper
+	RoundTripper(transport http.RoundTripper, enableStreamingMode bool) http.RoundTripper
 	DefaultTransportTimeout() time.Duration
 	DefaultHTTPProxyURL() *url.URL
 }
@@ -66,122 +60,6 @@ func NewDefaultFactoryResolver(transportFactory ApiTransportFactory, baseTranspo
 	}
 }
 
-// requiresDedicatedHTTPClient returns true if the given FetchConfiguration requires a dedicated HTTP client
-func (d *DefaultFactoryResolver) requiresDedicatedHTTPClient(ds *nodev1.DataSourceConfiguration, cfg *nodev1.FetchConfiguration) bool {
-	// when a custom timeout is specified, we can't use the shared http.Client
-	if ds != nil && ds.RequestTimeoutSeconds > 0 {
-		return true
-	}
-	if cfg != nil {
-		// when mTLS is enabled, we need to create a new client
-		if cfg.Mtls != nil {
-			return true
-		}
-		// if the data source uses a custom proxy, create a dedicated client
-		if dataSourceUsesHTTPProxy(ds) {
-			_, found := config.LookupStringVariable(cfg.HttpProxyUrl)
-			return found
-		}
-	}
-	return false
-}
-
-// customTLSTransport returns a TLS *http.Transport with the given key and certificates loaded
-func (d *DefaultFactoryResolver) customTLSTransport(mTLS *nodev1.MTLSConfiguration) (*http.Transport, error) {
-	privateKey := config.LoadStringVariable(mTLS.Key)
-	caCert := config.LoadStringVariable(mTLS.Cert)
-
-	if privateKey == "" || caCert == "" {
-		return nil, errors.New("invalid key/cert in mTLS configuration")
-	}
-
-	caCertData := []byte(caCert)
-	cert, err := tls.X509KeyPair(caCertData, []byte(privateKey))
-	if err != nil {
-		return nil, fmt.Errorf("unable to build key pair: %w", err)
-	}
-
-	dialer := &net.Dialer{
-		Timeout:   10 * time.Second,
-		KeepAlive: 90 * time.Second,
-	}
-
-	// building an empty pool of certificates means no other certificates are allowed
-	// even if they are in the system trust store
-	caCertPool := x509.NewCertPool()
-	caCertPool.AppendCertsFromPEM(caCertData)
-
-	return &http.Transport{
-		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
-			return dialer.DialContext(ctx, network, addr)
-		},
-		MaxIdleConns:        1024,
-		IdleConnTimeout:     90 * time.Second,
-		TLSHandshakeTimeout: 10 * time.Second,
-		TLSClientConfig: &tls.Config{
-			Certificates:       []tls.Certificate{cert},
-			RootCAs:            caCertPool,
-			InsecureSkipVerify: mTLS.InsecureSkipVerify,
-		},
-	}, nil
-}
-
-// newHTTPClient returns a custom http.Client with the given FetchConfiguration applied. Configuration
-// should have been previously validated by d.fetchConfigurationRequiresDedicatedHTTPClient()
-func (d *DefaultFactoryResolver) newHTTPClient(ds *nodev1.DataSourceConfiguration, cfg *nodev1.FetchConfiguration) (*http.Client, error) {
-	// Timeout
-	timeout := d.transportFactory.DefaultTransportTimeout()
-	if ds != nil && ds.RequestTimeoutSeconds > 0 {
-		timeout = time.Duration(ds.RequestTimeoutSeconds) * time.Second
-	}
-	// TLS
-	var transport *http.Transport
-	var err error
-	if cfg != nil && cfg.Mtls != nil {
-		transport, err = d.customTLSTransport(cfg.Mtls)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		transport = d.baseTransport.Clone()
-	}
-	// Proxy
-	var proxyURL *url.URL
-
-	if cfg != nil {
-		proxyURLString, found := config.LookupStringVariable(cfg.HttpProxyUrl)
-		if found {
-			if proxyURLString != "" {
-				proxyURL, err = url.Parse(proxyURLString)
-				if err != nil {
-					return nil, fmt.Errorf("invalid proxy URL %q: %w", proxyURLString, err)
-				}
-				d.log.Debug("using HTTP proxy for data source", zap.String("proxy", proxyURLString), zap.String("url", config.LoadStringVariable(cfg.Url)))
-			}
-		} else {
-			if dataSourceUsesHTTPProxy(ds) {
-				proxyURL = d.transportFactory.DefaultHTTPProxyURL()
-			}
-		}
-	}
-
-	if proxyURL != nil {
-		transport.Proxy = func(r *http.Request) (*url.URL, error) {
-			return proxyURL, nil
-		}
-	} else {
-		if transport.Proxy != nil && dataSourceUsesHTTPProxy(ds) {
-			d.log.Debug("disabling global HTTP proxy for data source", zap.String("url", config.LoadStringVariable(cfg.Url)))
-		}
-		transport.Proxy = nil
-	}
-
-	return &http.Client{
-		Timeout:   timeout,
-		Transport: d.transportFactory.RoundTripper(transport, false),
-	}, nil
-}
-
 func (d *DefaultFactoryResolver) Resolve(ds *nodev1.DataSourceConfiguration) (plan.PlannerFactory, error) {
 	switch ds.Kind {
 	case nodev1.DataSourceKind_GRAPHQL:
@@ -189,15 +67,6 @@ func (d *DefaultFactoryResolver) Resolve(ds *nodev1.DataSourceConfiguration) (pl
 			HTTPClient:      d.graphql.HTTPClient,
 			StreamingClient: d.graphql.StreamingClient,
 		}
-
-		if d.requiresDedicatedHTTPClient(ds, ds.CustomGraphql.Fetch) {
-			client, err := d.newHTTPClient(ds, ds.CustomGraphql.Fetch)
-			if err != nil {
-				return nil, err
-			}
-			factory.HTTPClient = client
-		}
-
 		return factory, nil
 	case nodev1.DataSourceKind_STATIC:
 		return d.static, nil
@@ -221,7 +90,7 @@ func (l *Loader) LoadInternedString(engineConfig *nodev1.EngineConfiguration, st
 	return s, nil
 }
 
-func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, wgServerUrl string) (*plan.Configuration, error) {
+func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration) (*plan.Configuration, error) {
 	var (
 		outConfig plan.Configuration
 	)
@@ -279,12 +148,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, wgServerUrl stri
 				}
 			}
 
-			fetchUrl := buildFetchUrl(
-				config.LoadStringVariable(in.CustomGraphql.Fetch.GetUrl()),
-				config.LoadStringVariable(in.CustomGraphql.Fetch.GetBaseUrl()),
-				config.LoadStringVariable(in.CustomGraphql.Fetch.GetPath()),
-				wgServerUrl,
-			)
+			fetchUrl := config.LoadStringVariable(in.CustomGraphql.Fetch.GetUrl())
 
 			subscriptionUrl := config.LoadStringVariable(in.CustomGraphql.Subscription.Url)
 			if subscriptionUrl == "" {
@@ -384,32 +248,4 @@ func (l *Loader) resolveFactory(ds *nodev1.DataSourceConfiguration) (plan.Planne
 		}
 	}
 	return nil, nil
-}
-
-const serverUrlPlaceholder = "WG_SERVER_URL-"
-
-func buildFetchUrl(url, baseUrl, path string, hooksServerUrl string) string {
-	if strings.HasPrefix(url, serverUrlPlaceholder) {
-		return fmt.Sprintf("%s/%s", strings.TrimSuffix(hooksServerUrl, "/"), strings.TrimPrefix(path, "/"))
-	}
-
-	if url != "" {
-		return url
-	}
-
-	return fmt.Sprintf("%s/%s", strings.TrimSuffix(baseUrl, "/"), strings.TrimPrefix(path, "/"))
-}
-
-func dataSourceUsesHTTPProxy(ds *nodev1.DataSourceConfiguration) bool {
-	if ds == nil {
-		return false
-	}
-	switch ds.Kind {
-	case nodev1.DataSourceKind_GRAPHQL:
-		return true
-	case nodev1.DataSourceKind_STATIC:
-		return false
-
-	}
-	panic("unhandled data source kind")
 }
