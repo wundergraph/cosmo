@@ -3,6 +3,8 @@ package config
 import (
 	b64 "encoding/base64"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/internal/logging"
+	"go.uber.org/zap"
 	"os"
 	"time"
 
@@ -11,6 +13,8 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/kelseyhightower/envconfig"
 )
+
+const defaultConfigPath = "config.yaml"
 
 type Base64Decoder []byte
 
@@ -146,19 +150,20 @@ type Config struct {
 	HealthCheckPath      string        `yaml:"health_check_path" default:"/health" envconfig:"HEALTH_CHECK_PATH" validate:"uri"`
 	ReadinessCheckPath   string        `yaml:"readiness_check_path" default:"/health/ready" envconfig:"READINESS_CHECK_PATH" validate:"uri"`
 	LivenessCheckPath    string        `yaml:"liveness_check_path" default:"/health/live" envconfig:"LIVENESS_CHECK_PATH" validate:"uri"`
+	GraphQLPath          string        `yaml:"graphql_path" default:"/graphql" envconfig:"GRAPHQL_PATH"`
 
-	ConfigPath       string `default:"config.yaml" envconfig:"CONFIG_PATH" validate:"omitempty,filepath"`
+	ConfigPath       string `envconfig:"CONFIG_PATH" validate:"omitempty,filepath"`
 	RouterConfigPath string `yaml:"router_config_path" envconfig:"ROUTER_CONFIG_PATH" validate:"omitempty,filepath"`
 
 	EngineExecutionConfiguration EngineExecutionConfiguration
 }
 
-func LoadConfig(override string) (*Config, error) {
+func LoadConfig(envOverride string) (*Config, error) {
 	godotenv.Load(".env.local")
 	godotenv.Load()
 
-	if override != "" {
-		godotenv.Overload(override)
+	if envOverride != "" {
+		godotenv.Overload(envOverride)
 	}
 
 	var c Config
@@ -168,7 +173,32 @@ func LoadConfig(override string) (*Config, error) {
 		return nil, err
 	}
 
+	configPathOverride := false
+
+	if c.ConfigPath != "" {
+		configPathOverride = true
+	} else {
+		// Ensure default
+		c.ConfigPath = defaultConfigPath
+	}
+
+	// Configuration from environment variables. We don't have the config here.
+	logLevel, err := logging.ZapLogLevelFromString(c.LogLevel)
+	logger := logging.New(!c.JSONLog, c.LogLevel == "debug", logLevel).
+		With(zap.String("component", "@wundergraph/router"))
+
+	// Custom config path can only be supported through environment variable
 	configBytes, err := os.ReadFile(c.ConfigPath)
+	if err != nil {
+		if configPathOverride {
+			return nil, fmt.Errorf("could not read custom config file %s: %w", c.ConfigPath, err)
+		} else {
+			logger.Info("Default config file is not loaded",
+				zap.String("configPath", defaultConfigPath),
+				zap.Error(err),
+			)
+		}
+	}
 
 	if err == nil {
 		if err := yaml.Unmarshal(configBytes, &c); err != nil {

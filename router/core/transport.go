@@ -127,6 +127,10 @@ func (t TransportFactory) RoundTripper(transport http.RoundTripper, enableStream
 		t.retryOptions,
 	)
 
+	tp.preHandlers = t.preHandlers
+	tp.postHandlers = t.postHandlers
+	tp.logger = t.logger
+
 	return tp
 }
 
