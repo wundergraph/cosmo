@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CustomTooltip } from "@/components/ui/charts";
 import { DeltaBadge } from "@/components/ui/delta-badge";
+import { Loader } from "@/components/ui/loader";
 import {
   Select,
   SelectContent,
@@ -26,7 +27,16 @@ import { cn } from "@/lib/utils";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { useQuery } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common_pb";
-import { getAnalyticsView } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+import {
+  getAnalyticsView,
+  getMetricsDashboard,
+} from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+import {
+  GetMetricsDashboardResponse,
+  MetricsErrors,
+  MetricsLatency,
+  MetricsRequests,
+} from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { format, subDays, subHours, subMinutes } from "date-fns";
 import { useRouter } from "next/router";
 import { useContext, useId, useMemo } from "react";
@@ -35,8 +45,6 @@ import {
   Area,
   AreaChart,
   Legend,
-  Line,
-  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -55,140 +63,165 @@ const AnalyticsPage: NextPageWithLayout = () => {
   const { name, filters, pagination, dateRange, page, refreshInterval } =
     useAnalyticsQueryState();
 
-  // let { data, isFetching, isLoading, error, refetch } = useQuery({
-  //   queryFn: () => {
-  //     return {
-  //       response: {
-  //         code: 1,
-  //         details: "",
-  //       },
-  //     };
-  //   },
-  //   keepPreviousData: true,
-  //   refetchOnWindowFocus: false,
-  //   refetchInterval: refreshInterval.value,
-  // });
+  let { data, isFetching, isLoading, error, refetch } = useQuery({
+    ...getMetricsDashboard.useQuery({
+      federatedGraphName: graphContext?.graph?.name,
+      // name,
+      // config: {
+      //   filters,
+      //   dateRange,
+      //   pagination,
+      // },
+    }),
+    keepPreviousData: true,
+    refetchOnWindowFocus: false,
+    refetchInterval: refreshInterval.value,
+  });
 
-  // if (!isLoading && (error || data?.response?.code !== EnumStatusCode.OK)) {
-  //   return (
-  //     <div className="my-auto">
-  //       <EmptyState
-  //         icon={<ExclamationTriangleIcon />}
-  //         title="Could not retrieve analytics data"
-  //         description={
-  //           data?.response?.details || error?.message || "Please try again"
-  //         }
-  //         actions={<Button onClick={() => refetch()}>Retry</Button>}
-  //       />
-  //     </div>
-  //   );
-  // }
+  if (!isLoading && (error || data?.response?.code !== EnumStatusCode.OK)) {
+    return (
+      <div className="my-auto">
+        <EmptyState
+          icon={<ExclamationTriangleIcon />}
+          title="Could not retrieve analytics data"
+          description={
+            data?.response?.details || error?.message || "Please try again"
+          }
+          actions={<Button onClick={() => refetch()}>Retry</Button>}
+        />
+      </div>
+    );
+  } else if (isLoading) {
+    return <Loader fullscreen />;
+  }
 
   return (
     <div className="w-full space-y-4">
-      <Metrics />
+      <div className="grid grid-cols-3 gap-4">
+        <RequestMetricsCard data={data?.requests} />
+        <LatencyMetricsCard data={data?.latency} />
+        <ErrorMetricsCard data={data?.errors} />
+      </div>
 
       <RequestRate />
     </div>
   );
 };
 
-const Metrics = () => {
+const RequestMetricsCard = (props: { data?: MetricsRequests }) => {
   const router = useRouter();
+
+  const { data } = props;
+
+  const top = data?.top ?? [];
+
   return (
-    <div className="grid grid-cols-3 gap-4">
-      <Card className="bg-transparent">
-        <CardHeader className="flex flex-row items-start">
-          <div className="flex-1">
-            <h4 className="text-sm text-muted-foreground">Request Rate</h4>
-            <p className="text-xl font-semibold">{requests.value}</p>
-          </div>
+    <Card className="bg-transparent">
+      <CardHeader className="flex flex-row items-start">
+        <div className="flex-1">
+          <h4 className="text-sm text-muted-foreground">Request Rate</h4>
+          <p className="text-xl font-semibold">{data?.median}</p>
+        </div>
 
-          <DeltaBadge type={requests.deltaType} value={requests.deltaValue} />
-        </CardHeader>
-        <CardContent className="border-b pb-2">
-          <Sparkline series={requests.series} />
-        </CardContent>
-        <CardContent className="pt-6">
-          <BarList
-            data={requests.data.map((row) => ({
-              ...row,
-              href: `${router.asPath}/traces${constructAnalyticsTableQueryState(
-                {
-                  operationName: row.name,
-                }
-              )}`,
-            }))}
-            valueFormatter={(number: number) =>
-              Intl.NumberFormat("us").format(number).toString()
-            }
-            rowHeight={4}
-            rowClassName="bg-muted text-muted-foreground hover:text-foreground"
-          />
-        </CardContent>
-      </Card>
-      <Card className="bg-transparent">
-        <CardHeader className="flex flex-row items-start">
-          <div className="flex-1">
-            <h4 className="text-sm text-muted-foreground">P95 Latency</h4>
-            <p className="text-xl font-semibold">{latency.value}</p>
-          </div>
+        <DeltaBadge type={requests.deltaType} value={requests.deltaValue} />
+      </CardHeader>
+      <CardContent className="border-b pb-2">
+        <Sparkline series={data?.series ?? []} />
+      </CardContent>
+      <CardContent className="pt-6">
+        <BarList
+          data={top.map((row) => ({
+            ...row,
+            href: `${router.asPath}/traces${constructAnalyticsTableQueryState({
+              operationName: row.name,
+            })}`,
+          }))}
+          valueFormatter={(number: number) =>
+            Intl.NumberFormat("us").format(number).toString()
+          }
+          rowHeight={4}
+          rowClassName="bg-muted text-muted-foreground hover:text-foreground"
+        />
+      </CardContent>
+    </Card>
+  );
+};
 
-          <DeltaBadge type={latency.deltaType} value={latency.deltaValue} />
-        </CardHeader>
-        <CardContent className="border-b pb-2">
-          <Sparkline series={latency.series} />
-        </CardContent>
-        <CardContent className="pt-6">
-          <BarList
-            data={latency.data.map((row) => ({
-              ...row,
-              href: `${router.asPath}/traces${constructAnalyticsTableQueryState(
-                {
-                  operationName: row.name,
-                }
-              )}`,
-            }))}
-            valueFormatter={(number: number) =>
-              Intl.NumberFormat("us").format(number).toString() + "ms"
-            }
-            rowHeight={4}
-            rowClassName="bg-muted text-muted-foreground hover:text-foreground"
-          />
-        </CardContent>
-      </Card>
-      <Card className="bg-transparent">
-        <CardHeader className="flex flex-row items-start">
-          <div className="flex-1">
-            <h4 className="text-sm text-muted-foreground">Error Percentage</h4>
-            <p className="text-xl font-semibold">0.3%</p>
-          </div>
+const LatencyMetricsCard = (props: { data?: MetricsLatency }) => {
+  const router = useRouter();
 
-          <DeltaBadge type={errors.deltaType} value={errors.deltaValue} />
-        </CardHeader>
-        <CardContent className="border-b pb-2">
-          <ErrorPercentChart series={errors.series} />
-        </CardContent>
-        <CardContent className="pt-6">
-          <BarList
-            maxValue={1100}
-            data={errors.data.map((row) => ({
-              ...row,
-              href: `${router.asPath}/traces${constructAnalyticsTableQueryState(
-                {
-                  operationName: row.name,
-                }
-              )}`,
-            }))}
-            valueFormatter={(number: number) =>
-              Intl.NumberFormat("us").format(number).toString() + "%"
-            }
-            rowHeight={4}
-            rowClassName="bg-muted text-muted-foreground hover:text-foreground"
-          />
-        </CardContent>
-      </Card>
-    </div>
+  const { data } = props;
+
+  const top = data?.top ?? [];
+
+  return (
+    <Card className="bg-transparent">
+      <CardHeader className="flex flex-row items-start">
+        <div className="flex-1">
+          <h4 className="text-sm text-muted-foreground">P95 Latency</h4>
+          <p className="text-xl font-semibold">{data?.p95 || 0}</p>
+        </div>
+
+        <DeltaBadge type={latency.deltaType} value={latency.deltaValue} />
+      </CardHeader>
+      <CardContent className="border-b pb-2">
+        <Sparkline series={data?.series ?? []} />
+      </CardContent>
+      <CardContent className="pt-6">
+        <BarList
+          data={top.map((row) => ({
+            ...row,
+            href: `${router.asPath}/traces${constructAnalyticsTableQueryState({
+              operationName: row.name,
+            })}`,
+          }))}
+          valueFormatter={(number: number) =>
+            Intl.NumberFormat("us").format(number).toString() + "ms"
+          }
+          rowHeight={4}
+          rowClassName="bg-muted text-muted-foreground hover:text-foreground"
+        />
+      </CardContent>
+    </Card>
+  );
+};
+
+const ErrorMetricsCard = (props: { data?: MetricsErrors }) => {
+  const router = useRouter();
+
+  const { data } = props;
+
+  const top = data?.top ?? [];
+
+  return (
+    <Card className="bg-transparent">
+      <CardHeader className="flex flex-row items-start">
+        <div className="flex-1">
+          <h4 className="text-sm text-muted-foreground">Error Percentage</h4>
+          <p className="text-xl font-semibold">{data?.percentage}%</p>
+        </div>
+
+        <DeltaBadge type={errors.deltaType} value={errors.deltaValue} />
+      </CardHeader>
+      <CardContent className="border-b pb-2">
+        <ErrorPercentChart series={data?.series ?? []} />
+      </CardContent>
+      <CardContent className="pt-6">
+        <BarList
+          data={top.map((row) => ({
+            ...row,
+            href: `${router.asPath}/traces${constructAnalyticsTableQueryState({
+              operationName: row.name,
+            })}`,
+          }))}
+          valueFormatter={(number: number) =>
+            Intl.NumberFormat("us").format(number).toString() + "%"
+          }
+          rowHeight={4}
+          rowClassName="bg-muted text-muted-foreground hover:text-foreground"
+        />
+      </CardContent>
+    </Card>
   );
 };
 

@@ -27,6 +27,7 @@ import {
   GetFederatedGraphChangelogResponse,
   GetFederatedGraphSDLByNameResponse,
   GetFederatedGraphsResponse,
+  GetMetricsDashboardResponse,
   GetOrganizationMembersResponse,
   GetSubgraphByNameResponse,
   GetSubgraphsResponse,
@@ -59,6 +60,7 @@ import type { RouterOptions } from '../routes.js';
 import { ApiKeyGenerator } from '../services/ApiGenerator.js';
 import { handleError, isValidLabelMatchers, isValidLabels } from '../util.js';
 import ApolloMigrator from '../services/ApolloMigrator.js';
+import { MetricsDashboardRepository } from '../repositories/analytics/MetricsDashboardRepository.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -1190,6 +1192,69 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           },
           mostRequestedOperations,
           requestSeries,
+        };
+      });
+    },
+
+    getMetricsDashboard: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetMetricsDashboardResponse>>(logger, async () => {
+        if (!opts.chClient) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_ANALYTICS_DISABLED,
+            },
+          };
+        }
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const repo = new MetricsDashboardRepository(opts.prometheus);
+        const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+
+        const graph = await fedGraphRepo.byName(req.federatedGraphName);
+        if (!graph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Federated graph '${req.federatedGraphName}' not found`,
+            },
+          };
+        }
+
+        const requests = await repo.getRequestRateMetrics({
+          params: {
+            organizationId: authContext.organizationId,
+            graphId: graph.id,
+            graphName: req.federatedGraphName,
+          },
+        });
+
+        const latency = await repo.getLatencyMetrics({
+          params: {
+            organizationId: authContext.organizationId,
+            graphId: graph.id,
+            graphName: req.federatedGraphName,
+          },
+        });
+
+        const errors = await repo.getErrorMetrics({
+          params: {
+            organizationId: authContext.organizationId,
+            graphId: graph.id,
+            graphName: req.federatedGraphName,
+          },
+        });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          requests,
+          latency,
+          errors,
         };
       });
     },

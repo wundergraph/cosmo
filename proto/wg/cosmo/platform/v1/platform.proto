@@ -585,19 +585,37 @@ message GetMetricsDashboardRequest {
 message GetMetricsDashboardResponse {
   Response response = 1;
   MetricsRequests requests = 2;
+  MetricsLatency latency = 3;
+  MetricsErrors errors= 4;
 }
 
 message MetricsRequests {
-  int32 total = 1;
-  int32 errored = 2;
-  int32 latencyP95 = 3;
-  repeated MetricsRequestSeriesItem series = 4;
+  int32 median = 1;
+  repeated MetricsTopItem top = 2;
+  repeated MetricsSeriesItem series = 3;
 }
 
-message MetricsRequestSeriesItem {
+message MetricsLatency {
+  int32 p95 = 1;
+  repeated MetricsTopItem top = 2;
+  repeated MetricsSeriesItem series = 3;
+}
+
+message MetricsErrors {
+  int32 percentage = 1;
+  repeated MetricsTopItem top = 2;
+  repeated MetricsSeriesItem series = 3;
+}
+
+message MetricsTopItem {
+  string name = 1;
+  int32 value = 2;
+}
+
+message MetricsSeriesItem {
   string timestamp = 1;
-  int32 requests = 2;
-  int32 previousRequests = 3;
+  int32 value = 2;
+  int32 previousValue = 3;
 }
 
 message MetricsDashboard {

@@ -131,6 +131,9 @@ const (
 	// PlatformServiceGetTraceProcedure is the fully-qualified name of the PlatformService's GetTrace
 	// RPC.
 	PlatformServiceGetTraceProcedure = "/wg.cosmo.platform.v1.PlatformService/GetTrace"
+	// PlatformServiceGetMetricsDashboardProcedure is the fully-qualified name of the PlatformService's
+	// GetMetricsDashboard RPC.
+	PlatformServiceGetMetricsDashboardProcedure = "/wg.cosmo.platform.v1.PlatformService/GetMetricsDashboard"
 )
 
 // PlatformServiceClient is a client for the wg.cosmo.platform.v1.PlatformService service.
@@ -195,6 +198,7 @@ type PlatformServiceClient interface {
 	GetAnalyticsView(context.Context, *connect_go.Request[v1.GetAnalyticsViewRequest]) (*connect_go.Response[v1.GetAnalyticsViewResponse], error)
 	GetDashboardAnalyticsView(context.Context, *connect_go.Request[v1.GetDashboardAnalyticsViewRequest]) (*connect_go.Response[v1.GetDashboardAnalyticsViewResponse], error)
 	GetTrace(context.Context, *connect_go.Request[v1.GetTraceRequest]) (*connect_go.Response[v1.GetTraceResponse], error)
+	GetMetricsDashboard(context.Context, *connect_go.Request[v1.GetMetricsDashboardRequest]) (*connect_go.Response[v1.GetMetricsDashboardResponse], error)
 }
 
 // NewPlatformServiceClient constructs a client for the wg.cosmo.platform.v1.PlatformService
@@ -369,6 +373,12 @@ func NewPlatformServiceClient(httpClient connect_go.HTTPClient, baseURL string, 
 			baseURL+PlatformServiceGetTraceProcedure,
 			opts...,
 		),
+		getMetricsDashboard: connect_go.NewClient[v1.GetMetricsDashboardRequest, v1.GetMetricsDashboardResponse](
+			httpClient,
+			baseURL+PlatformServiceGetMetricsDashboardProcedure,
+			connect_go.WithIdempotency(connect_go.IdempotencyNoSideEffects),
+			connect_go.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -406,6 +416,7 @@ type platformServiceClient struct {
 	getAnalyticsView              *connect_go.Client[v1.GetAnalyticsViewRequest, v1.GetAnalyticsViewResponse]
 	getDashboardAnalyticsView     *connect_go.Client[v1.GetDashboardAnalyticsViewRequest, v1.GetDashboardAnalyticsViewResponse]
 	getTrace                      *connect_go.Client[v1.GetTraceRequest, v1.GetTraceResponse]
+	getMetricsDashboard           *connect_go.Client[v1.GetMetricsDashboardRequest, v1.GetMetricsDashboardResponse]
 }
 
 // CreateFederatedGraph calls wg.cosmo.platform.v1.PlatformService.CreateFederatedGraph.
@@ -570,6 +581,11 @@ func (c *platformServiceClient) GetTrace(ctx context.Context, req *connect_go.Re
 	return c.getTrace.CallUnary(ctx, req)
 }
 
+// GetMetricsDashboard calls wg.cosmo.platform.v1.PlatformService.GetMetricsDashboard.
+func (c *platformServiceClient) GetMetricsDashboard(ctx context.Context, req *connect_go.Request[v1.GetMetricsDashboardRequest]) (*connect_go.Response[v1.GetMetricsDashboardResponse], error) {
+	return c.getMetricsDashboard.CallUnary(ctx, req)
+}
+
 // PlatformServiceHandler is an implementation of the wg.cosmo.platform.v1.PlatformService service.
 type PlatformServiceHandler interface {
 	// CreateFederatedGraph creates a federated graph on the control plane.
@@ -632,6 +648,7 @@ type PlatformServiceHandler interface {
 	GetAnalyticsView(context.Context, *connect_go.Request[v1.GetAnalyticsViewRequest]) (*connect_go.Response[v1.GetAnalyticsViewResponse], error)
 	GetDashboardAnalyticsView(context.Context, *connect_go.Request[v1.GetDashboardAnalyticsViewRequest]) (*connect_go.Response[v1.GetDashboardAnalyticsViewResponse], error)
 	GetTrace(context.Context, *connect_go.Request[v1.GetTraceRequest]) (*connect_go.Response[v1.GetTraceResponse], error)
+	GetMetricsDashboard(context.Context, *connect_go.Request[v1.GetMetricsDashboardRequest]) (*connect_go.Response[v1.GetMetricsDashboardResponse], error)
 }
 
 // NewPlatformServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -802,6 +819,12 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect_go.Ha
 		svc.GetTrace,
 		opts...,
 	)
+	platformServiceGetMetricsDashboardHandler := connect_go.NewUnaryHandler(
+		PlatformServiceGetMetricsDashboardProcedure,
+		svc.GetMetricsDashboard,
+		connect_go.WithIdempotency(connect_go.IdempotencyNoSideEffects),
+		connect_go.WithHandlerOptions(opts...),
+	)
 	return "/wg.cosmo.platform.v1.PlatformService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case PlatformServiceCreateFederatedGraphProcedure:
@@ -868,6 +891,8 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect_go.Ha
 			platformServiceGetDashboardAnalyticsViewHandler.ServeHTTP(w, r)
 		case PlatformServiceGetTraceProcedure:
 			platformServiceGetTraceHandler.ServeHTTP(w, r)
+		case PlatformServiceGetMetricsDashboardProcedure:
+			platformServiceGetMetricsDashboardHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -1003,4 +1028,8 @@ func (UnimplementedPlatformServiceHandler) GetDashboardAnalyticsView(context.Con
 
 func (UnimplementedPlatformServiceHandler) GetTrace(context.Context, *connect_go.Request[v1.GetTraceRequest]) (*connect_go.Response[v1.GetTraceResponse], error) {
 	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetTrace is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) GetMetricsDashboard(context.Context, *connect_go.Request[v1.GetMetricsDashboardRequest]) (*connect_go.Response[v1.GetMetricsDashboardResponse], error) {
+	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetMetricsDashboard is not implemented"))
 }
