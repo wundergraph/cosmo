@@ -79,6 +79,7 @@ type (
 		postOriginHandlers  []TransportPostHandler
 		headerRuleEngine    *HeaderRuleEngine
 		headerRules         config.HeaderRules
+		requestTimeout      time.Duration
 
 		retryOptions retrytransport.RetryOptions
 
@@ -135,6 +136,10 @@ func NewRouter(opts ...Option) (*Router, error) {
 	}
 	if r.livenessCheckPath == "" {
 		r.livenessCheckPath = "/health/live"
+	}
+
+	if r.requestTimeout == 0 {
+		r.requestTimeout = 60 * time.Second
 	}
 
 	hr, err := NewHeaderTransformer(r.headerRules)
@@ -859,6 +864,12 @@ func WithHeaderRules(headers config.HeaderRules) Option {
 func WithEngineExecutionConfig(cfg config.EngineExecutionConfiguration) Option {
 	return func(r *Router) {
 		r.engineExecutionConfiguration = cfg
+	}
+}
+
+func WithRequestTimeout(timeout time.Duration) Option {
+	return func(r *Router) {
+		r.requestTimeout = timeout
 	}
 }
 

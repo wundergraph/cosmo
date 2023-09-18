@@ -81,6 +81,7 @@ func Main() {
 		core.WithReadinessCheckPath(cfg.ReadinessCheckPath),
 		core.WithHeaderRules(cfg.Headers),
 		core.WithStaticRouterConfig(routerConfig),
+		core.WithRequestTimeout(cfg.TrafficShaping.All.RequestTimeout),
 		core.WithRetryOptions(
 			cfg.TrafficShaping.All.BackoffJitterRetry.Enabled,
 			cfg.TrafficShaping.All.BackoffJitterRetry.MaxAttempts,

@@ -77,6 +77,7 @@ type TrafficShapingRules struct {
 
 type GlobalSubgraphRequestRule struct {
 	BackoffJitterRetry BackoffJitterRetry `yaml:"retry"`
+	RequestTimeout     time.Duration      `yaml:"request_timeout" default:"60s" validate:"required,min=1s"`
 }
 
 type BackoffJitterRetry struct {
