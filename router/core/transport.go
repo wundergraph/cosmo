@@ -80,24 +80,27 @@ type TransportFactory struct {
 	preHandlers     []TransportPreHandler
 	postHandlers    []TransportPostHandler
 	retryOptions    retrytransport.RetryOptions
+	requestTimeout  time.Duration
 	logger          *zap.Logger
 }
 
 var _ ApiTransportFactory = TransportFactory{}
 
 type TransportOptions struct {
-	preHandlers  []TransportPreHandler
-	postHandlers []TransportPostHandler
-	retryOptions retrytransport.RetryOptions
-	logger       *zap.Logger
+	preHandlers    []TransportPreHandler
+	postHandlers   []TransportPostHandler
+	retryOptions   retrytransport.RetryOptions
+	requestTimeout time.Duration
+	logger         *zap.Logger
 }
 
 func NewTransport(opts *TransportOptions) *TransportFactory {
 	return &TransportFactory{
-		preHandlers:  opts.preHandlers,
-		postHandlers: opts.postHandlers,
-		logger:       opts.logger,
-		retryOptions: opts.retryOptions,
+		preHandlers:    opts.preHandlers,
+		postHandlers:   opts.postHandlers,
+		logger:         opts.logger,
+		retryOptions:   opts.retryOptions,
+		requestTimeout: opts.requestTimeout,
 	}
 }
 
@@ -132,7 +135,7 @@ func (t TransportFactory) RoundTripper(transport http.RoundTripper, enableStream
 }
 
 func (t TransportFactory) DefaultTransportTimeout() time.Duration {
-	return time.Duration(60) * time.Second
+	return t.requestTimeout
 }
 
 func (t TransportFactory) DefaultHTTPProxyURL() *url.URL {
