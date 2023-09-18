@@ -3,6 +3,8 @@ package config
 import (
 	b64 "encoding/base64"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/internal/logging"
+	"go.uber.org/zap"
 	"os"
 	"time"
 
@@ -11,6 +13,8 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/kelseyhightower/envconfig"
 )
+
+const defaultConfigPath = "config.yaml"
 
 type Base64Decoder []byte
 
@@ -146,18 +150,18 @@ type Config struct {
 	ReadinessCheckPath   string        `yaml:"readiness_check_path" default:"/health/ready" envconfig:"READINESS_CHECK_PATH" validate:"uri"`
 	LivenessCheckPath    string        `yaml:"liveness_check_path" default:"/health/live" envconfig:"LIVENESS_CHECK_PATH" validate:"uri"`
 
-	ConfigPath       string `default:"config.yaml" envconfig:"CONFIG_PATH" validate:"omitempty,filepath"`
+	ConfigPath       string `envconfig:"CONFIG_PATH" validate:"omitempty,filepath"`
 	RouterConfigPath string `yaml:"router_config_path" envconfig:"ROUTER_CONFIG_PATH" validate:"omitempty,filepath"`
 
 	EngineExecutionConfiguration EngineExecutionConfiguration
 }
 
-func LoadConfig(override string) (*Config, error) {
+func LoadConfig(envOverride string) (*Config, error) {
 	godotenv.Load(".env.local")
 	godotenv.Load()
 
-	if override != "" {
-		godotenv.Overload(override)
+	if envOverride != "" {
+		godotenv.Overload(envOverride)
 	}
 
 	var c Config
@@ -167,7 +171,30 @@ func LoadConfig(override string) (*Config, error) {
 		return nil, err
 	}
 
+	configPathOverride := false
+
+	if c.ConfigPath != "" {
+		configPathOverride = true
+	} else {
+		// Ensure default
+		c.ConfigPath = defaultConfigPath
+	}
+
+	logLevel, err := logging.ZapLogLevelFromString(c.LogLevel)
+	logger := logging.New(!c.JSONLog, c.LogLevel == "debug", logLevel).
+		With(zap.String("component", "@wundergraph/router"))
+
 	configBytes, err := os.ReadFile(c.ConfigPath)
+	if err != nil {
+		if configPathOverride {
+			return nil, fmt.Errorf("config file %s could not be found: %w", c.ConfigPath, err)
+		} else {
+			logger.Info("Default config file could not be found",
+				zap.String("configPath", defaultConfigPath),
+				zap.Error(err),
+			)
+		}
+	}
 
 	if err == nil {
 		if err := yaml.Unmarshal(configBytes, &c); err != nil {
