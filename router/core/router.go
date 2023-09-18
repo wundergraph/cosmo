@@ -101,7 +101,6 @@ type (
 // Alternatively, use Router.NewTestServer() to create a new Server instance without starting it for testing purposes.
 func NewRouter(opts ...Option) (*Router, error) {
 	r := &Router{}
-	r.graphqlPath = "/graphql"
 
 	for _, opt := range opts {
 		opt(r)
@@ -109,6 +108,11 @@ func NewRouter(opts ...Option) (*Router, error) {
 
 	if r.logger == nil {
 		r.logger = zap.NewNop()
+	}
+
+	// Default value for graphql path
+	if r.graphqlPath == "" {
+		r.graphqlPath = "/graphql"
 	}
 
 	// Default values for trace and metric config
