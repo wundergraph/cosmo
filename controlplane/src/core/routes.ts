@@ -11,6 +11,7 @@ import { ClickHouseClient } from './clickhouse/index.js';
 import { Authenticator } from './services/Authentication.js';
 import Keycloak from './services/Keycloak.js';
 import PrometheusClient from './prometheus/client.js';
+import { IPlatformWebhookService } from './webhooks/PlatformWebhookService.js';
 
 export interface RouterOptions {
   db: PostgresJsDatabase<typeof schema>;
@@ -21,6 +22,7 @@ export interface RouterOptions {
   logger: pino.Logger;
   keycloakClient: Keycloak;
   prometheus: PrometheusClient;
+  platformWebhooks: IPlatformWebhookService;
 }
 const handlerOptions: Partial<ConnectRouterOptions> = {
   maxTimeoutMs: 5000,

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"net"
 	"net/http"
 	"sync"
@@ -79,6 +80,8 @@ type (
 		headerRuleEngine    *HeaderRuleEngine
 		headerRules         config.HeaderRules
 
+		retryOptions retrytransport.RetryOptions
+
 		engineExecutionConfiguration config.EngineExecutionConfiguration
 	}
 
@@ -98,7 +101,6 @@ type (
 // Alternatively, use Router.NewTestServer() to create a new Server instance without starting it for testing purposes.
 func NewRouter(opts ...Option) (*Router, error) {
 	r := &Router{}
-	r.graphqlPath = "/graphql"
 
 	for _, opt := range opts {
 		opt(r)
@@ -107,6 +109,13 @@ func NewRouter(opts ...Option) (*Router, error) {
 	if r.logger == nil {
 		r.logger = zap.NewNop()
 	}
+
+	// Default value for graphql path
+	if r.graphqlPath == "" {
+		r.graphqlPath = "/graphql"
+	}
+
+	// Default values for trace and metric config
 
 	if r.traceConfig == nil {
 		r.traceConfig = trace.DefaultConfig()
@@ -119,6 +128,8 @@ func NewRouter(opts ...Option) (*Router, error) {
 	if r.corsOptions == nil {
 		r.corsOptions = CorsDefaultOptions()
 	}
+
+	// Default values for health check paths
 
 	if r.healthCheckPath == "" {
 		r.healthCheckPath = "/health"
@@ -468,8 +479,20 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		baseURL:       r.baseURL,
 		transport:     r.transport,
 		logger:        r.logger,
-		preHandlers:   r.preOriginHandlers,
-		postHandlers:  r.postOriginHandlers,
+		transportOptions: &TransportOptions{
+			preHandlers:  r.preOriginHandlers,
+			postHandlers: r.postOriginHandlers,
+			retryOptions: retrytransport.RetryOptions{
+				Enabled:       r.retryOptions.Enabled,
+				MaxRetryCount: r.retryOptions.MaxRetryCount,
+				MaxDuration:   r.retryOptions.MaxDuration,
+				Interval:      r.retryOptions.Interval,
+				ShouldRetry: func(err error, req *http.Request, resp *http.Response) bool {
+					return retrytransport.IsRetryableError(err, resp) && !isMutationRequest(req.Context())
+				},
+			},
+			logger: r.logger,
+		},
 	}
 
 	executor, err := ecb.Build(ctx, routerConfig, r.engineExecutionConfiguration)
@@ -567,7 +590,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 					request:        request,
 					operation:      operationContext,
 				}
-				handler.ServeHTTP(writer, request.WithContext(WithRequestContext(request.Context(), requestContext)))
+				handler.ServeHTTP(writer, request.WithContext(withRequestContext(request.Context(), requestContext)))
 			})
 		})
 
@@ -840,5 +863,16 @@ func WithHeaderRules(headers config.HeaderRules) Option {
 func WithEngineExecutionConfig(cfg config.EngineExecutionConfiguration) Option {
 	return func(r *Router) {
 		r.engineExecutionConfiguration = cfg
+	}
+}
+
+func WithRetryOptions(enabled bool, maxRetryCount int, retryMaxDuration, retryInterval time.Duration) Option {
+	return func(r *Router) {
+		r.retryOptions = retrytransport.RetryOptions{
+			Enabled:       enabled,
+			MaxRetryCount: maxRetryCount,
+			MaxDuration:   retryMaxDuration,
+			Interval:      retryInterval,
+		}
 	}
 }

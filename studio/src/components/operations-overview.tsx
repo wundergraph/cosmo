@@ -24,7 +24,7 @@ import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Loader } from "./ui/loader";
 import { Separator } from "./ui/separator";
-import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common_pb";
+import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { useRouter } from "next/router";
 import { constructAnalyticsTableQueryState } from "./analytics/constructAnalyticsTableQueryState";
 import { CustomTooltip } from "./ui/charts";

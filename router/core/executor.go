@@ -25,8 +25,7 @@ type ExecutorConfigurationBuilder struct {
 	transport     *http.Transport
 	logger        *zap.Logger
 
-	preHandlers  []TransportPreHandler
-	postHandlers []TransportPostHandler
+	transportOptions *TransportOptions
 }
 
 type Executor struct {
@@ -104,13 +103,13 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(routerCfg *node
 	// the plan config is what the engine uses to turn a GraphQL Request into an execution plan
 	// the plan config is stateful as it carries connection pools and other things
 	loader := NewLoader(NewDefaultFactoryResolver(
-		NewTransport(b.preHandlers, b.postHandlers),
+		NewTransport(b.transportOptions),
 		b.transport,
 		b.logger,
 	))
 
 	// this generates the plan config using the data source factories from the config package
-	planConfig, err := loader.Load(routerCfg.EngineConfig, b.baseURL)
+	planConfig, err := loader.Load(routerCfg.EngineConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load configuration: %w", err)
 	}

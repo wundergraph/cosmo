@@ -93,7 +93,7 @@ type requestContext struct {
 	// request is the original request received by the router.
 	request *http.Request
 	// operation is the GraphQL operation context
-	operation OperationContext
+	operation *operationContext
 	// sendError returns the most recent error occurred while trying to make the origin request.
 	sendError error
 }
@@ -110,7 +110,7 @@ func (c *requestContext) Request() *http.Request {
 	return c.request
 }
 
-func WithRequestContext(ctx context.Context, operation RequestContext) context.Context {
+func withRequestContext(ctx context.Context, operation *requestContext) context.Context {
 	return context.WithValue(ctx, requestContextKey, operation)
 }
 
@@ -327,4 +327,13 @@ func getOperationContext(ctx context.Context) *operationContext {
 		return nil
 	}
 	return op.(*operationContext)
+}
+
+// isMutationRequest returns true if the current request is a mutation request
+func isMutationRequest(ctx context.Context) bool {
+	op := getRequestContext(ctx)
+	if op == nil {
+		return false
+	}
+	return op.Operation().Type() == "mutation"
 }

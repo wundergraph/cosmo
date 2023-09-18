@@ -10,7 +10,7 @@ import { NextPageWithLayout } from "@/lib/page";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/router";
-import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common_pb";
+import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { getTrace } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { AnalyticsToolbar } from "@/components/analytics/toolbar";
 import { CopyButton } from "@/components/ui/copy-button";

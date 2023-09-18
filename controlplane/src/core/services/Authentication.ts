@@ -1,5 +1,5 @@
 import { lru } from 'tiny-lru';
-import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common_pb';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { AuthContext } from '../../types/index.js';
 import ApiKeyAuthenticator from '../services/ApiKeyAuthenticator.js';
 import WebSessionAuthenticator from '../services/WebSessionAuthenticator.js';

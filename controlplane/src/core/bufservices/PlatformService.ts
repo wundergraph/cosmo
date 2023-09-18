@@ -1,9 +1,8 @@
-import { ServiceImpl } from '@connectrpc/connect';
 import { JsonValue, PlainMessage } from '@bufbuild/protobuf';
-import { parse } from 'graphql';
-import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common_pb';
-import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
+import { ServiceImpl } from '@connectrpc/connect';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { GetConfigResponse } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
 import {
   CheckFederatedGraphResponse,
   CheckSubgraphSchemaResponse,
@@ -12,14 +11,15 @@ import {
   CreateFederatedGraphResponse,
   CreateFederatedGraphTokenResponse,
   CreateFederatedSubgraphResponse,
+  CreateOrganizationWebhookConfigResponse,
   DeleteAPIKeyResponse,
   DeleteFederatedGraphResponse,
   DeleteFederatedSubgraphResponse,
   FederatedGraphChangelog,
   FederatedGraphChangelogOutput,
   FixSubgraphSchemaResponse,
-  GetAnalyticsViewResponse,
   GetAPIKeysResponse,
+  GetAnalyticsViewResponse,
   GetCheckDetailsResponse,
   GetChecksByFederatedGraphNameResponse,
   GetDashboardAnalyticsViewResponse,
@@ -29,6 +29,7 @@ import {
   GetFederatedGraphsResponse,
   GetMetricsDashboardResponse,
   GetOrganizationMembersResponse,
+  GetOrganizationWebhookConfigsResponse,
   GetSubgraphByNameResponse,
   GetSubgraphsResponse,
   GetTraceResponse,
@@ -38,10 +39,13 @@ import {
   RemoveInvitationResponse,
   RequestSeriesItem,
   UpdateFederatedGraphResponse,
+  UpdateOrganizationWebhookConfigResponse,
   UpdateSubgraphResponse,
   WhoAmIResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { buildRouterConfig, OpenAIGraphql } from '@wundergraph/cosmo-shared';
+import { PlatformEventName, OrganizationEventName } from '@wundergraph/cosmo-connect/dist/webhooks/events_pb';
+import { OpenAIGraphql, buildRouterConfig } from '@wundergraph/cosmo-shared';
+import { parse } from 'graphql';
 import { GraphApiKeyJwtPayload } from '../../types/index.js';
 import { Composer } from '../composition/composer.js';
 import { buildSchema, composeSubgraphs } from '../composition/composition.js';
@@ -58,9 +62,10 @@ import { AnalyticsRequestViewRepository } from '../repositories/analytics/Analyt
 import { TraceRepository } from '../repositories/analytics/TraceRepository.js';
 import type { RouterOptions } from '../routes.js';
 import { ApiKeyGenerator } from '../services/ApiGenerator.js';
-import { handleError, isValidLabelMatchers, isValidLabels } from '../util.js';
 import ApolloMigrator from '../services/ApolloMigrator.js';
 import { MetricsDashboardRepository } from '../repositories/analytics/MetricsDashboardRepository.js';
+import { handleError, isValidLabelMatchers, isValidLabels } from '../util.js';
+import { OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -72,7 +77,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
       return handleError<PlainMessage<CreateFederatedGraphResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-
+        const orgWebhooks = new OrganizationWebhookService(opts.db, authContext.organizationId, opts.logger);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
 
@@ -131,6 +136,15 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             compositionErrors,
           };
         }
+
+        orgWebhooks.send(OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED, {
+          federated_graph: {
+            id: federatedGraph.id,
+            name: federatedGraph.name,
+          },
+          errors: compositionErrors.length > 0,
+          actor_id: authContext.userId,
+        });
 
         return {
           response: {
@@ -613,6 +627,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const compChecker = new Composer(fedGraphRepo, subgraphRepo);
         const subgraph = await subgraphRepo.byName(req.name);
+        const orgWebhooks = new OrganizationWebhookService(opts.db, authContext.organizationId, opts.logger);
 
         if (!subgraph) {
           return {
@@ -700,6 +715,17 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
                 changes: schemaChanges.changes,
               });
             }
+          }
+
+          if (federatedGraph) {
+            orgWebhooks.send(OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED, {
+              federated_graph: {
+                id: federatedGraph.id,
+                name: federatedGraph.name,
+              },
+              errors: hasErrors,
+              actor_id: authContext.userId,
+            });
           }
         }
 
@@ -939,6 +965,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const compChecker = new Composer(fedGraphRepo, subgraphRepo);
+        const orgWebhooks = new OrganizationWebhookService(opts.db, authContext.organizationId, opts.logger);
 
         const subgraph = await subgraphRepo.byName(req.subgraphName);
         if (!subgraph) {
@@ -994,6 +1021,17 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               });
             }
           }
+
+          if (federatedGraph) {
+            orgWebhooks.send(OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED, {
+              federated_graph: {
+                id: federatedGraph.id,
+                name: federatedGraph.name,
+              },
+              errors: hasErrors,
+              actor_id: authContext.userId,
+            });
+          }
         }
 
         return {
@@ -1013,9 +1051,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<UpdateFederatedGraphResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+        const orgWebhooks = new OrganizationWebhookService(opts.db, authContext.organizationId, opts.logger);
 
-        const exists = await fedGraphRepo.exists(req.name);
-        if (!exists) {
+        const federatedGraph = await fedGraphRepo.byName(req.name);
+        if (!federatedGraph) {
           return {
             response: {
               code: EnumStatusCode.ERR_NOT_FOUND,
@@ -1049,6 +1088,15 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
+        orgWebhooks.send(OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED, {
+          federated_graph: {
+            id: federatedGraph.id,
+            name: federatedGraph.name,
+          },
+          errors: compositionErrors.length > 0,
+          actor_id: authContext.userId,
+        });
+
         return {
           response: {
             code: EnumStatusCode.OK,
@@ -1067,6 +1115,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<UpdateSubgraphResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const repo = new SubgraphRepository(opts.db, authContext.organizationId);
+        const orgWebhooks = new OrganizationWebhookService(opts.db, authContext.organizationId, opts.logger);
 
         const exists = await repo.exists(req.name);
         if (!exists) {
@@ -1089,7 +1138,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const compositionErrors = await repo.update({
+        const { compositionErrors, updatedFederatedGraphs } = await repo.update({
           name: req.name,
           labels: req.labels,
           routingUrl: req.routingUrl,
@@ -1101,6 +1150,17 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             },
             compositionErrors,
           };
+        }
+
+        for (const graph of updatedFederatedGraphs) {
+          orgWebhooks.send(OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED, {
+            federated_graph: {
+              id: graph.id,
+              name: graph.name,
+            },
+            errors: compositionErrors.length > 0,
+            actor_id: authContext.userId,
+          });
         }
 
         return {
@@ -1844,6 +1904,11 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const orgRepo = new OrganizationRepository(opts.db);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
+        const orgWebhooks = new OrganizationWebhookService(opts.db, authContext.organizationId, opts.logger);
+
+        opts.platformWebhooks.send(PlatformEventName.APOLLO_MIGRATE_INIT, {
+          actor_id: authContext.userId,
+        });
 
         const org = await orgRepo.byId(authContext.organizationId);
         if (!org) {
@@ -1929,6 +1994,23 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           organizationId: authContext.organizationId,
         });
 
+        orgWebhooks.send(OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED, {
+          federated_graph: {
+            id: federatedGraph.id,
+            name: federatedGraph.name,
+          },
+          errors: compositionErrors.length > 0,
+          actor_id: authContext.userId,
+        });
+
+        opts.platformWebhooks.send(PlatformEventName.APOLLO_MIGRATE_SUCCESS, {
+          federated_graph: {
+            id: federatedGraph.id,
+            name: federatedGraph.name,
+          },
+          actor_id: authContext.userId,
+        });
+
         if (compositionErrors.length > 0) {
           return {
             response: {
@@ -1943,6 +2025,96 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             code: EnumStatusCode.OK,
           },
           token: token.token,
+        };
+      });
+    },
+
+    createOrganizationWebhookConfig: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<CreateOrganizationWebhookConfigResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const orgRepo = new OrganizationRepository(opts.db);
+
+        await orgRepo.createWebhookConfig({
+          organizationId: authContext.organizationId,
+          ...req,
+        });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+        };
+      });
+    },
+
+    getOrganizationWebhookConfigs: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetOrganizationWebhookConfigsResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const orgRepo = new OrganizationRepository(opts.db);
+
+        const configs = await orgRepo.getWebhookConfigs(authContext.organizationId);
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          configs,
+        };
+      });
+    },
+
+    updateOrganizationWebhookConfig: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<UpdateOrganizationWebhookConfigResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const orgRepo = new OrganizationRepository(opts.db);
+
+        await orgRepo.updateWebhookConfig({
+          organizationId: authContext.organizationId,
+          ...req,
+        });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+        };
+      });
+    },
+
+    deleteOrganizationWebhookConfig: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<UpdateOrganizationWebhookConfigResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const orgRepo = new OrganizationRepository(opts.db);
+
+        await orgRepo.deleteWebhookConfig({
+          organizationId: authContext.organizationId,
+          ...req,
+        });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
         };
       });
     },

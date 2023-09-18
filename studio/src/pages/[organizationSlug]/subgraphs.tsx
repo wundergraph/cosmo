@@ -7,7 +7,7 @@ import { NextPageWithLayout } from "@/lib/page";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { useQuery } from "@tanstack/react-query";
 import { getSubgraphs } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common_pb";
+import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 
 const SubgraphsDashboardPage: NextPageWithLayout = () => {
   const { data, isLoading, error, refetch } = useQuery(getSubgraphs.useQuery());

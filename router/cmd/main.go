@@ -54,7 +54,7 @@ func Main() {
 		controlplane.WithFederatedGraph(cfg.Graph.Name),
 		controlplane.WithLogger(logger),
 		controlplane.WithGraphApiToken(cfg.Graph.Token),
-		controlplane.WithPollInterval(time.Duration(cfg.PollIntervalSeconds)*time.Second),
+		controlplane.WithPollInterval(cfg.PollInterval),
 	)
 
 	var routerConfig *nodev1.RouterConfig
@@ -74,19 +74,26 @@ func Main() {
 		core.WithIntrospection(cfg.IntrospectionEnabled),
 		core.WithPlayground(cfg.PlaygroundEnabled),
 		core.WithGraphApiToken(cfg.Graph.Token),
+		core.WithGraphQLPath(cfg.GraphQLPath),
 		core.WithModulesConfig(cfg.Modules),
-		core.WithGracePeriod(time.Duration(cfg.GracePeriodSeconds)*time.Second),
+		core.WithGracePeriod(cfg.GracePeriod),
 		core.WithHealthCheckPath(cfg.HealthCheckPath),
 		core.WithLivenessCheckPath(cfg.LivenessCheckPath),
 		core.WithReadinessCheckPath(cfg.ReadinessCheckPath),
 		core.WithHeaderRules(cfg.Headers),
 		core.WithStaticRouterConfig(routerConfig),
+		core.WithRetryOptions(
+			cfg.TrafficShaping.All.BackoffJitterRetry.Enabled,
+			cfg.TrafficShaping.All.BackoffJitterRetry.MaxAttempts,
+			cfg.TrafficShaping.All.BackoffJitterRetry.MaxDuration,
+			cfg.TrafficShaping.All.BackoffJitterRetry.Interval,
+		),
 		core.WithCors(&cors.Config{
 			AllowOrigins:     cfg.CORS.AllowOrigins,
 			AllowMethods:     cfg.CORS.AllowMethods,
 			AllowCredentials: cfg.CORS.AllowCredentials,
 			AllowHeaders:     cfg.CORS.AllowHeaders,
-			MaxAge:           time.Duration(cfg.CORS.MaxAgeMinutes) * time.Minute,
+			MaxAge:           cfg.CORS.MaxAge,
 		}),
 		core.WithTracing(&trace.Config{
 			Enabled:       cfg.Telemetry.Tracing.Enabled,
@@ -94,7 +101,7 @@ func Main() {
 			Endpoint:      cfg.Telemetry.Endpoint,
 			Sampler:       cfg.Telemetry.Tracing.Config.SamplingRate,
 			Batcher:       trace.KindOtlpHttp,
-			BatchTimeout:  time.Duration(cfg.Telemetry.Tracing.Config.BatchTimeoutSeconds) * time.Second,
+			BatchTimeout:  cfg.Telemetry.Tracing.Config.BatchTimeout,
 			ExportTimeout: 30 * time.Second,
 			OtlpHeaders:   cfg.Telemetry.Headers,
 			OtlpHttpPath:  "/v1/traces",
@@ -127,11 +134,10 @@ func Main() {
 
 	<-ctx.Done()
 
-	shutdownDelayDuration := time.Duration(cfg.ShutdownDelaySeconds) * time.Second
-	logger.Info("Graceful shutdown ...", zap.String("shutdownDelay", shutdownDelayDuration.String()))
+	logger.Info("Graceful shutdown ...", zap.String("shutdownDelay", cfg.ShutdownDelay.String()))
 
 	// enforce a maximum shutdown delay
-	ctx, cancel := context.WithTimeout(context.Background(), shutdownDelayDuration)
+	ctx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownDelay)
 	defer cancel()
 
 	if err := router.Shutdown(ctx); err != nil {
