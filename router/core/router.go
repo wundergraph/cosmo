@@ -79,6 +79,7 @@ type (
 		postOriginHandlers  []TransportPostHandler
 		headerRuleEngine    *HeaderRuleEngine
 		headerRules         config.HeaderRules
+		requestTimeout      time.Duration
 
 		retryOptions retrytransport.RetryOptions
 
@@ -139,6 +140,10 @@ func NewRouter(opts ...Option) (*Router, error) {
 	}
 	if r.livenessCheckPath == "" {
 		r.livenessCheckPath = "/health/live"
+	}
+
+	if r.requestTimeout == 0 {
+		r.requestTimeout = 60 * time.Second
 	}
 
 	hr, err := NewHeaderTransformer(r.headerRules)
@@ -577,7 +582,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 			subChiRouter.Use(metricHandler.Handler)
 		}
 
-		// Create r custom request context that provides access to the request and response.
+		// Create custom request context that provides access to the request and response.
 		// It is used by custom modules and handlers. It must be added before custom user middlewares
 		subChiRouter.Use(func(handler http.Handler) http.Handler {
 			return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
@@ -607,7 +612,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		graphqlPlaygroundHandler := graphiql2.NewPlayground(&graphiql2.PlaygroundOptions{
 			Log:  r.logger,
 			Html: graphiql2.GetGraphiqlPlaygroundHTML(),
-			// Empty url to use the same url as the playground
+			// Empty url to use the same url (relatively) as the playground
 			GraphqlURL: "",
 		})
 		httpRouter.Get(r.graphqlPath, graphqlPlaygroundHandler)
@@ -863,6 +868,12 @@ func WithHeaderRules(headers config.HeaderRules) Option {
 func WithEngineExecutionConfig(cfg config.EngineExecutionConfiguration) Option {
 	return func(r *Router) {
 		r.engineExecutionConfiguration = cfg
+	}
+}
+
+func WithRequestTimeout(timeout time.Duration) Option {
+	return func(r *Router) {
+		r.requestTimeout = timeout
 	}
 }
 
