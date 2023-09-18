@@ -189,7 +189,7 @@ func LoadConfig(envOverride string) (*Config, error) {
 		if configPathOverride {
 			return nil, fmt.Errorf("could not read custom config file %s: %w", c.ConfigPath, err)
 		} else {
-			logger.Info("Default config file could not be found",
+			logger.Info("Default config file is not loaded",
 				zap.String("configPath", defaultConfigPath),
 				zap.Error(err),
 			)
