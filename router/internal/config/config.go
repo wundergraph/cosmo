@@ -149,6 +149,7 @@ type Config struct {
 	HealthCheckPath      string        `yaml:"health_check_path" default:"/health" envconfig:"HEALTH_CHECK_PATH" validate:"uri"`
 	ReadinessCheckPath   string        `yaml:"readiness_check_path" default:"/health/ready" envconfig:"READINESS_CHECK_PATH" validate:"uri"`
 	LivenessCheckPath    string        `yaml:"liveness_check_path" default:"/health/live" envconfig:"LIVENESS_CHECK_PATH" validate:"uri"`
+	GraphQLPath          string        `yaml:"graphql_path" default:"/graphql" envconfig:"GRAPHQL_PATH"`
 
 	ConfigPath       string `envconfig:"CONFIG_PATH" validate:"omitempty,filepath"`
 	RouterConfigPath string `yaml:"router_config_path" envconfig:"ROUTER_CONFIG_PATH" validate:"omitempty,filepath"`
