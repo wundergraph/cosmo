@@ -186,6 +186,7 @@ func LoadConfig(envOverride string) (*Config, error) {
 	logger := logging.New(!c.JSONLog, c.LogLevel == "debug", logLevel).
 		With(zap.String("component", "@wundergraph/router"))
 
+	// Custom config path can only be supported through environment variable
 	configBytes, err := os.ReadFile(c.ConfigPath)
 	if err != nil {
 		if configPathOverride {
