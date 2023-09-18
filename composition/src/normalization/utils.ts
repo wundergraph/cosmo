@@ -24,7 +24,7 @@ import {
   UnionTypeDefinitionNode,
   visit,
 } from 'graphql';
-import { getOrThrowError, kindToTypeString, mapToArrayOfValues } from '../utils/utils';
+import { getOrThrowError, getValueOrDefault, kindToTypeString, mapToArrayOfValues } from '../utils/utils';
 import { isKindAbstract, lexicographicallySortDocumentNode, safeParse, setToNamedTypeNodeArray } from '../ast/utils';
 import {
   ARGUMENT_DEFINITION_UPPER,
@@ -805,6 +805,8 @@ function validateKeyFieldSets(
             keyFieldNames.add(fieldName);
             fieldNames.add(fieldName);
           }
+          getValueOrDefault(factory.keyFieldsByParentTypeName, parentTypeName, () => new Set<string>)
+            .add(fieldName);
           const namedTypeName = getNamedTypeForChild(fieldPath, fieldContainer.node.type);
           // The base scalars are not in the parents map
           if (BASE_SCALARS.has(namedTypeName)) {
@@ -900,7 +902,6 @@ function validateKeyFieldSets(
     factory.errors.push(invalidKeyDirectivesError(entityTypeName, errorMessages));
     return;
   }
-  factory.keyFieldsByParentTypeName.set(entityTypeName, keyFieldNames);
   if (configurations.length) {
     return configurations;
   }

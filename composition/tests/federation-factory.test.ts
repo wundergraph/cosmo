@@ -268,6 +268,38 @@ describe('FederationFactory tests', () => {
       `),
     );
   });
+
+  test('that all nested entity keys are considered to be shareable', () => {
+    const { errors, federationResult } = federateSubgraphs([subgraphM, subgraphN]);
+    expect(errors).toBeUndefined();
+    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
+      normalizeString(versionTwoPersistedBaseSchema + `
+    type Query {
+      user: User!
+    }
+    
+    type User {
+      name: String!
+      nestedObjectOne: NestedObjectOne!
+      nestedObjectTwo: NestedObjectTwo!
+      age: Int!
+    }
+    
+    type NestedObjectOne {
+      name: String!
+    }
+    
+    type NestedObjectTwo {
+      innerNestedObject: InnerNestedObject!
+    }
+    
+    type InnerNestedObject {
+      fieldOne: String!
+      fieldTwo: Int!
+    }
+      `),
+    );
+  });
 });
 
 const subgraphA = {
@@ -626,4 +658,78 @@ const subgraphL: Subgraph = {
   definitions: parse(`
     directive @executableDirective(requiredArgInAll: String!, requiredArgInSome: Int, optionalArgInAll: Float) on FIELD | OBJECT
   `),
+};
+
+const subgraphM: Subgraph = {
+  name: 'subgraph-m',
+  url: '',
+  definitions: parse(`
+    type Query {
+      user: User!
+    }
+    
+    type User @key(fields: "nestedObjectOne { name }")
+    @key(fields: """
+      nestedObjectTwo {
+        innerNestedObject {
+          fieldOne
+          fieldTwo
+        }
+      }
+      name
+    """)  {
+      name: String!
+      nestedObjectOne: NestedObjectOne!
+      nestedObjectTwo: NestedObjectTwo!
+      age: Int! @shareable
+    }
+    
+    type NestedObjectOne {
+      name: String!
+    }
+    
+    type NestedObjectTwo {
+      innerNestedObject: InnerNestedObject!
+    }
+    
+    type InnerNestedObject {
+      fieldOne: String!
+      fieldTwo: Int!
+    }
+`),
+};
+
+const subgraphN: Subgraph = {
+  name: 'subgraph-n',
+  url: '',
+  definitions: parse(`
+    type User @key(fields: "nestedObjectOne { name }")
+    @key(fields: """
+      nestedObjectTwo {
+        innerNestedObject {
+          fieldOne
+          fieldTwo
+        }
+      }
+      name
+    """)  {
+      name: String!
+      nestedObjectOne: NestedObjectOne!
+      nestedObjectTwo: NestedObjectTwo!
+      age: Int! @shareable
+    }
+    
+    type NestedObjectOne {
+      name: String!
+    }
+    
+    type NestedObjectTwo {
+      innerNestedObject: InnerNestedObject!
+    }
+    
+    type InnerNestedObject {
+      fieldOne: String!
+      fieldTwo: Int!
+    }
+`),
 };

@@ -798,7 +798,7 @@ describe('openfed_FieldSet Tests', () => {
           'interface',
           'I'
         )],
-      ))
+      ));
     });
 
     test('that a @requires FieldSet supports an inline fragment with a valid type condition on a union', () => {
@@ -831,7 +831,7 @@ describe('openfed_FieldSet Tests', () => {
           isRootNode: false,
           typeName: 'Object',
         }],
-      ]))
+      ]));
     });
 
     test('that a @requires FieldSet returns an error if a union does not define a fragment', () => {
@@ -857,7 +857,7 @@ describe('openfed_FieldSet Tests', () => {
           'Entity.union',
           'U',
         )],
-      ))
+      ));
     });
 
     test('that a @requires FieldSet returns an error for an inline fragment with an invalid type condition on a union', () => {
@@ -890,7 +890,7 @@ describe('openfed_FieldSet Tests', () => {
           'union',
           'U'
         )],
-      ))
+      ));
     });
   });
 });
