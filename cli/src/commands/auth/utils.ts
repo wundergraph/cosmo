@@ -23,6 +23,7 @@ export const performDeviceAuth = async ({
   headers.append('Content-Type', 'application/x-www-form-urlencoded');
 
   const requestBody = new URLSearchParams();
+  requestBody.append('scope', 'openid');
   requestBody.append('client_id', cliClientId);
 
   const response = await fetch(config.kcApiURL + '/realms/cosmo/protocol/openid-connect/auth/device', {
@@ -70,6 +71,7 @@ export const startPollingForAccessToken = async ({
   requestBody.append('client_id', cliClientId);
   requestBody.append('grant_type', 'urn:ietf:params:oauth:grant-type:device_code');
   requestBody.append('device_code', deviceCode);
+  requestBody.append('scope', 'openid');
 
   while (true) {
     const response = await fetch(config.kcApiURL + '/realms/cosmo/protocol/openid-connect/token', {

@@ -7,12 +7,13 @@ import open from 'open';
 import pc from 'picocolors';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { performDeviceAuth, startPollingForAccessToken } from '../utils.js';
+import { baseHeaders } from '../../../core/config.js';
 
 export default (opts: BaseCommandOptions) => {
   const loginCommand = new Command('login');
   loginCommand.description('Login a user.');
 
-  loginCommand.action(async (name, options) => {
+  loginCommand.action(async () => {
     const rootDir = process.cwd();
     // const rootDir = path.parse(process.cwd()).root;
     const dir = path.join(rootDir, 'cosmoConfig.yml');
