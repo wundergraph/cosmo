@@ -213,7 +213,7 @@ export type UserInfoEndpointResponse = {
   given_name: string;
   family_name: string;
   email: string;
-  groups: string[]
+  groups: string[];
 };
 
 export type AuthContext = {

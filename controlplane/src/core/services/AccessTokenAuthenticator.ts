@@ -16,9 +16,6 @@ export default class AccessTokenAuthenticator {
    */
   public async authenticate(accessToken: string): Promise<AccessTokenAuthContext> {
     const userInfoData = await this.authUtils.getUserInfo(accessToken);
-     if (!userInfoData) {
-       throw new Error('User is not a member of the organization');
-     }
 
     // TODO will have to change when wesupport multiple orgs
     const orgSlug = userInfoData.groups[0].split('/')[1];

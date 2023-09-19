@@ -164,13 +164,7 @@ export default async function build(opts: BuildConfig) {
   const graphKeyAuth = new GraphApiTokenAuthenticator(opts.auth.secret);
   const organizationRepository = new OrganizationRepository(fastify.db);
   const accessTokenAuth = new AccessTokenAuthenticator(organizationRepository, authUtils);
-  const authenticator = new Authentication(
-    webAuth,
-    apiKeyAuth,
-    accessTokenAuth,
-    graphKeyAuth,
-    organizationRepository,
-  );
+  const authenticator = new Authentication(webAuth, apiKeyAuth, accessTokenAuth, graphKeyAuth, organizationRepository);
 
   const keycloakClient = new Keycloak({
     apiUrl: opts.keycloak.apiUrl,
