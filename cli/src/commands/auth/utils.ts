@@ -1,4 +1,7 @@
-import { config } from '../../core/config.js';
+import { existsSync, readFileSync } from 'node:fs';
+import yaml from 'js-yaml';
+import pc from 'picocolors';
+import { config, configFile } from '../../core/config.js';
 
 interface DeviceAuthResponse {
   deviceCode: string;
@@ -101,5 +104,16 @@ export const startPollingForAccessToken = async ({
         refreshExpiresAt: new Date(new Date().setSeconds(present.getSeconds() + body.refresh_expires_in)),
       },
     };
+  }
+};
+
+export const checkConfigFile = () => {
+  if (existsSync(configFile)) {
+    const data = yaml.load(readFileSync(configFile, 'utf8'));
+    const loginData = JSON.parse(JSON.stringify(data));
+    if (loginData && loginData?.expiresAt && new Date(loginData.expiresAt) > new Date()) {
+      console.log(pc.green('You are already logged in.'));
+      process.exit(0);
+    }
   }
 };

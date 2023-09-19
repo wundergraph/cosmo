@@ -11,7 +11,7 @@ const info = JSON.parse(
 );
 
 const paths = envPaths('cosmo', { suffix: '' });
-export const configDir = paths.config
+export const configDir = paths.config;
 export const configFile = path.join(configDir, 'config.yaml');
 
 const getAccessToken = () => {
