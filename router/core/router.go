@@ -496,8 +496,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 					return retrytransport.IsRetryableError(err, resp) && !isMutationRequest(req.Context())
 				},
 			},
-			logger:       r.logger,
-			routerConfig: routerConfig,
+			logger: r.logger,
 		},
 	}
 
@@ -583,6 +582,16 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 			subChiRouter.Use(metricHandler.Handler)
 		}
 
+		var subgraphs []Subgraph
+		for _, s := range routerConfig.Subgraphs {
+			subgraph := Subgraph{
+				Id:   s.Id,
+				Name: s.Name,
+				Url:  s.RoutingUrl,
+			}
+			subgraphs = append(subgraphs, subgraph)
+		}
+
 		// Create custom request context that provides access to the request and response.
 		// It is used by custom modules and handlers. It must be added before custom user middlewares
 		subChiRouter.Use(func(handler http.Handler) http.Handler {
@@ -595,6 +604,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 					responseWriter: writer,
 					request:        request,
 					operation:      operationContext,
+					subgraphs:      subgraphs,
 				}
 				handler.ServeHTTP(writer, request.WithContext(withRequestContext(request.Context(), requestContext)))
 			})

@@ -2,7 +2,6 @@ package core
 
 import (
 	"fmt"
-	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"net/http"
 	"net/url"
 	"time"
@@ -84,7 +83,6 @@ type TransportFactory struct {
 	retryOptions    retrytransport.RetryOptions
 	requestTimeout  time.Duration
 	logger          *zap.Logger
-	routerConfig    *nodev1.RouterConfig
 }
 
 var _ ApiTransportFactory = TransportFactory{}
@@ -95,7 +93,6 @@ type TransportOptions struct {
 	retryOptions   retrytransport.RetryOptions
 	requestTimeout time.Duration
 	logger         *zap.Logger
-	routerConfig   *nodev1.RouterConfig
 }
 
 func NewTransport(opts *TransportOptions) *TransportFactory {
@@ -105,7 +102,6 @@ func NewTransport(opts *TransportOptions) *TransportFactory {
 		logger:         opts.logger,
 		retryOptions:   opts.retryOptions,
 		requestTimeout: opts.requestTimeout,
-		routerConfig:   opts.routerConfig,
 	}
 }
 
@@ -128,13 +124,9 @@ func (t TransportFactory) RoundTripper(transport http.RoundTripper, enableStream
 					span.SetAttributes(otel.WgOperationType.String(operation.opType))
 				}
 
-				var subgraph *nodev1.Subgraph
-				for _, sg := range t.routerConfig.Subgraphs {
-					if sg.RoutingUrl == r.URL.String() {
-						subgraph = sg
-					}
-				}
+				reqContext := getRequestContext(r.Context())
 
+				subgraph := reqContext.ActiveSubgraph(r)
 				if subgraph != nil {
 					span.SetAttributes(otel.WgSubgraphID.String(subgraph.Id))
 					span.SetAttributes(otel.WgSubgraphName.String(subgraph.Name))

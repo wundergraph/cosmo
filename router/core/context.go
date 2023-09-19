@@ -15,6 +15,12 @@ const requestContextKey = key("request")
 
 var _ RequestContext = (*requestContext)(nil)
 
+type Subgraph struct {
+	Id   string
+	Name string
+	Url  string
+}
+
 type RequestContext interface {
 	// ResponseWriter is the original response writer received by the router.
 	ResponseWriter() http.ResponseWriter
@@ -78,6 +84,9 @@ type RequestContext interface {
 
 	// GetStringMapStringSlice returns the value associated with the key as a map to a slice of strings.
 	GetStringMapStringSlice(string) map[string][]string
+
+	// ActiveSubgraph returns the current subgraph to which the request is made to
+	ActiveSubgraph(subgraphRequest *http.Request) *Subgraph
 }
 
 // requestContext is the default implementation of RequestContext
@@ -96,6 +105,8 @@ type requestContext struct {
 	operation *operationContext
 	// sendError returns the most recent error occurred while trying to make the origin request.
 	sendError error
+	// subgraphs is the list of subgraphs taken from the router config
+	subgraphs []Subgraph
 }
 
 func (c *requestContext) SendError() error {
@@ -264,6 +275,15 @@ func (c *requestContext) GetStringMapStringSlice(key string) (smss map[string][]
 		smss, _ = val.(map[string][]string)
 	}
 	return
+}
+
+func (c *requestContext) ActiveSubgraph(subgraphRequest *http.Request) *Subgraph {
+	for _, sg := range c.subgraphs {
+		if sg.Url == subgraphRequest.URL.String() {
+			return &sg
+		}
+	}
+	return nil
 }
 
 const operationContextKey = key("graphql")
