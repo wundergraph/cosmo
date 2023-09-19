@@ -386,7 +386,7 @@ const subgraphF = {
   name: 'subgraph-f',
   url: '',
   definitions: parse(`
-    type Entity @key(fields: "id") @tag(name: "subgraph-f") {
+    extend type Entity @key(fields: "id") @tag(name: "subgraph-f") {
       id: ID!
         field(one: Int = null @tag(name: "extension"), two: Int = null @tag(name: "extension"), three: String = null @deprecated(reason: "just because"), four: String = null): String
     }

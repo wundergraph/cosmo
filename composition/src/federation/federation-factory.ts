@@ -284,7 +284,7 @@ export class FederationFactory {
     return set;
   }
 
-  upsertExtensionFieldArgumentPersistedDirectives(extensionDirectives: PersistedDirectivesContainer, baseDirectives: PersistedDirectivesContainer) {
+  upsertExtensionPersistedDirectives(extensionDirectives: PersistedDirectivesContainer, baseDirectives: PersistedDirectivesContainer) {
     // Add unique tag directives
     for (const [tagValue, tagDirectiveNode] of extensionDirectives.tags) {
       baseDirectives.tags.set(tagValue, tagDirectiveNode);
@@ -350,7 +350,7 @@ export class FederationFactory {
         );
       }
       this.compareAndValidateArgumentDefaultValues(existingArgumentContainer, extensionArgumentContainer.node);
-      this.upsertExtensionFieldArgumentPersistedDirectives(
+      this.upsertExtensionPersistedDirectives(
         extensionArgumentContainer.directives, existingArgumentContainer.directives,
       );
     }
@@ -1347,6 +1347,7 @@ export class FederationFactory {
       if (baseObject.kind !== Kind.OBJECT_TYPE_DEFINITION) {
         throw incompatibleParentKindFatalError(typeName, Kind.OBJECT_TYPE_DEFINITION, baseObject.kind);
       }
+      this.upsertExtensionPersistedDirectives(extension.directives, baseObject.directives);
       for (const [extensionFieldName, extensionFieldContainer] of extension.fields) {
         const baseFieldContainer = baseObject.fields.get(extensionFieldName);
         if (!baseFieldContainer) {
