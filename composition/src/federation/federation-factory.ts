@@ -284,6 +284,78 @@ export class FederationFactory {
     return set;
   }
 
+  upsertExtensionFieldArgumentPersistedDirectives(extensionDirectives: PersistedDirectivesContainer, baseDirectives: PersistedDirectivesContainer) {
+    // Add unique tag directives
+    for (const [tagValue, tagDirectiveNode] of extensionDirectives.tags) {
+      baseDirectives.tags.set(tagValue, tagDirectiveNode);
+    }
+    // Push other directives
+    for (const [directiveName, directiveNodes] of extensionDirectives.directives) {
+      const existingDirectives = baseDirectives.directives.get(directiveName);
+      if (!existingDirectives) {
+        baseDirectives.directives.set(directiveName, directiveNodes);
+        continue;
+      }
+      existingDirectives.push(...directiveNodes);
+    }
+    // If the extension has no deprecated directive, there's nothing further to do
+    const extensionDeprecatedDirective = extensionDirectives.deprecated.directive;
+    const extensionDeprecatedReason = extensionDirectives.deprecated.reason;
+    if (!extensionDeprecatedDirective || !extensionDeprecatedReason) {
+      return;
+    }
+    // If there is no reason or the existing reason is longer, return
+    if (
+      baseDirectives.deprecated.directive && baseDirectives.deprecated.reason
+      && extensionDeprecatedReason.length < baseDirectives.deprecated.reason.length
+    ) {
+      return;
+    }
+    // Only update if the new reason is longer
+    baseDirectives.deprecated.directive = extensionDeprecatedDirective;
+    baseDirectives.deprecated.reason = extensionDeprecatedReason;
+  }
+
+  upsertExtensionFieldArguments(extensionFieldArguments: ArgumentMap, baseFieldArguments: ArgumentMap) {
+    for (const [argumentName, extensionArgumentContainer] of extensionFieldArguments) {
+      const existingArgumentContainer = baseFieldArguments.get(argumentName);
+      if (!existingArgumentContainer) {
+        // If the argument doesn't exist on the base field, simply add it
+        baseFieldArguments.set(argumentName, extensionArgumentContainer);
+        continue;
+      }
+      if (extensionArgumentContainer.requiredSubgraphs.size > 0) {
+        // If the argument is required on any extensions, add it to the base requiredSubgraphs set
+        addIterableValuesToSet(
+          extensionArgumentContainer.requiredSubgraphs, existingArgumentContainer.requiredSubgraphs,
+        );
+      }
+      // Add the subgraphs in which the extensions' arguments are found to the base subgraphs set
+      addIterableValuesToSet(extensionArgumentContainer.subgraphs, existingArgumentContainer.subgraphs);
+      // Set the most restrictive type for the argument
+      const { typeErrors, typeNode } = getMostRestrictiveMergedTypeNode(
+        existingArgumentContainer.node.type,
+        extensionArgumentContainer.node.type,
+        this.childName,
+        argumentName,
+      );
+      if (typeNode) {
+        existingArgumentContainer.node.type = typeNode;
+      } else {
+        if (!typeErrors || typeErrors.length < 2) {
+          throw argumentTypeMergeFatalError(argumentName, this.childName);
+        }
+        this.errors.push(
+          incompatibleArgumentTypesError(argumentName, this.parentTypeName, this.childName, typeErrors[0], typeErrors[1]),
+        );
+      }
+      this.compareAndValidateArgumentDefaultValues(existingArgumentContainer, extensionArgumentContainer.node);
+      this.upsertExtensionFieldArgumentPersistedDirectives(
+        extensionArgumentContainer.directives, existingArgumentContainer.directives,
+      );
+    }
+  }
+
   // TODO validation of default values
   upsertArguments(node: DirectiveDefinitionNode | FieldDefinitionNode, argumentMap: ArgumentMap): ArgumentMap {
     if (!node.arguments) {
@@ -1262,6 +1334,7 @@ export class FederationFactory {
       this.addValidExecutableDirectiveDefinition(directiveName, directiveContainer, definitions);
     }
     for (const [typeName, extension] of this.extensions) {
+      this.parentTypeName = typeName;
       if (extension.isRootType && !this.parents.has(typeName)) {
         this.upsertParentNode(objectTypeExtensionNodeToMutableDefinitionNode(extension.node));
       }
@@ -1281,11 +1354,12 @@ export class FederationFactory {
           continue;
         }
         if (baseFieldContainer.isShareable && extensionFieldContainer.isShareable) {
+          this.childName = extensionFieldName;
+          this.upsertExtensionFieldArguments(extensionFieldContainer.arguments, baseFieldContainer.arguments);
           setLongestDescriptionForNode(baseFieldContainer.node, extensionFieldContainer.node.description);
           addIterableValuesToSet(extensionFieldContainer.subgraphs, baseFieldContainer.subgraphs);
           continue;
         }
-
         const parent = this.shareableErrorTypeNames.get(typeName);
         if (parent) {
           parent.add(extensionFieldName);
