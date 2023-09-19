@@ -116,15 +116,15 @@ func (t TransportFactory) RoundTripper(transport http.RoundTripper, enableStream
 			},
 			trace.WithPreHandler(func(r *http.Request) {
 				span := otrace.SpanFromContext(r.Context())
-				operation := getOperationContext(r.Context())
+				reqContext := getRequestContext(r.Context())
+				operation := reqContext.operation
+
 				if operation != nil {
 					if operation.name != "" {
 						span.SetAttributes(otel.WgOperationName.String(operation.name))
 					}
 					span.SetAttributes(otel.WgOperationType.String(operation.opType))
 				}
-
-				reqContext := getRequestContext(r.Context())
 
 				subgraph := reqContext.ActiveSubgraph(r)
 				if subgraph != nil {

@@ -599,7 +599,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		for _, s := range routerConfig.Subgraphs {
 			parsedURL, err := url.Parse(s.RoutingUrl)
 			if err != nil {
-				r.logger.Error("Failed to parse subgraph url", zap.Error(err))
+				r.logger.Error("Failed to parse subgraph url", zap.String("url", s.RoutingUrl), zap.Error(err))
 			}
 
 			subgraph := Subgraph{
