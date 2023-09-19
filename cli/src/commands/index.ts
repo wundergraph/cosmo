@@ -1,21 +1,13 @@
 import { Command } from 'commander';
-import pc from 'picocolors';
+
 import { CreateClient } from '../core/client/client.js';
 import { config } from '../core/config.js';
+import LoginCmd from './auth/commands/login.js';
+import RouterComposeCmd from './router/commands/compose.js';
 import AuthCommands from './auth/index.js';
 import FederatedGraphCommands from './federated-graph/index.js';
 import RouterCommands from './router/index.js';
 import SchemaCommands from './subgraph/index.js';
-
-if (!config.apiKey) {
-  console.log(
-    pc.yellow(
-      `No API key found. Please create an API key and set as environment variable ${pc.bold('COSMO_API_KEY')}.` +
-        '\n' +
-        'Without an API key, you will not be able to interact with the control plane.',
-    ) + '\n',
-  );
-}
 
 const client = CreateClient({
   baseUrl: config.baseURL,

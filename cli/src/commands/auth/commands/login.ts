@@ -13,7 +13,7 @@ export default (opts: BaseCommandOptions) => {
   loginCommand.description('Login a user.');
 
   loginCommand.action(async () => {
-    if (existsSync(configDir)) {
+    if (existsSync(configFile)) {
       const data = yaml.load(readFileSync(configFile, 'utf8'));
       const loginData = JSON.parse(JSON.stringify(data));
       if (loginData && loginData?.expiresAt && new Date(loginData.expiresAt) > new Date()) {
@@ -48,7 +48,7 @@ export default (opts: BaseCommandOptions) => {
     const token = yaml.dump(accessTokenResp.response);
     await writeFile(configFile, token);
 
-    console.log(pc.green('Login Successful'));
+    console.log(pc.green('Logged in Successfully!'));
   });
 
   return loginCommand;
