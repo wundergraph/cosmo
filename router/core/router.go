@@ -496,7 +496,8 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 					return retrytransport.IsRetryableError(err, resp) && !isMutationRequest(req.Context())
 				},
 			},
-			logger: r.logger,
+			logger:       r.logger,
+			routerConfig: routerConfig,
 		},
 	}
 

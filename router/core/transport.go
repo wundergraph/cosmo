@@ -2,15 +2,17 @@ package core
 
 import (
 	"fmt"
+	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"net/http"
+	"net/url"
+	"time"
+
 	"github.com/wundergraph/cosmo/router/internal/otel"
 	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"github.com/wundergraph/cosmo/router/internal/trace"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	otrace "go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
-	"net/http"
-	"net/url"
-	"time"
 )
 
 type TransportPreHandler func(req *http.Request, ctx RequestContext) (*http.Request, *http.Response)
@@ -82,6 +84,7 @@ type TransportFactory struct {
 	retryOptions    retrytransport.RetryOptions
 	requestTimeout  time.Duration
 	logger          *zap.Logger
+	routerConfig    *nodev1.RouterConfig
 }
 
 var _ ApiTransportFactory = TransportFactory{}
@@ -92,6 +95,7 @@ type TransportOptions struct {
 	retryOptions   retrytransport.RetryOptions
 	requestTimeout time.Duration
 	logger         *zap.Logger
+	routerConfig   *nodev1.RouterConfig
 }
 
 func NewTransport(opts *TransportOptions) *TransportFactory {
@@ -101,6 +105,7 @@ func NewTransport(opts *TransportOptions) *TransportFactory {
 		logger:         opts.logger,
 		retryOptions:   opts.retryOptions,
 		requestTimeout: opts.requestTimeout,
+		routerConfig:   opts.routerConfig,
 	}
 }
 
@@ -122,6 +127,19 @@ func (t TransportFactory) RoundTripper(transport http.RoundTripper, enableStream
 					}
 					span.SetAttributes(otel.WgOperationType.String(operation.opType))
 				}
+
+				var subgraph *nodev1.Subgraph
+				for _, sg := range t.routerConfig.Subgraphs {
+					if sg.RoutingUrl == r.URL.String() {
+						subgraph = sg
+					}
+				}
+
+				if subgraph != nil {
+					span.SetAttributes(otel.WgSubgraphID.String(subgraph.Id))
+					span.SetAttributes(otel.WgSubgraphName.String(subgraph.Name))
+				}
+
 			}),
 		),
 		t.retryOptions,
