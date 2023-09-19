@@ -85,8 +85,8 @@ type RequestContext interface {
 	// GetStringMapStringSlice returns the value associated with the key as a map to a slice of strings.
 	GetStringMapStringSlice(string) map[string][]string
 
-	// ActiveSubgraph returns the current subgraph to which the request is made to
-	ActiveSubgraph(subgraphRequest *http.Request) *Subgraph
+	// GetActiveSubgraph returns the current subgraph to which the request is made to
+	GetActiveSubgraph(subgraphRequest *http.Request) *Subgraph
 }
 
 // requestContext is the default implementation of RequestContext
@@ -277,7 +277,7 @@ func (c *requestContext) GetStringMapStringSlice(key string) (smss map[string][]
 	return
 }
 
-func (c *requestContext) ActiveSubgraph(subgraphRequest *http.Request) *Subgraph {
+func (c *requestContext) GetActiveSubgraph(subgraphRequest *http.Request) *Subgraph {
 	for _, sg := range c.subgraphs {
 		if sg.Url == subgraphRequest.URL.String() {
 			return &sg

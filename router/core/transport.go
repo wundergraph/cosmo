@@ -126,7 +126,7 @@ func (t TransportFactory) RoundTripper(transport http.RoundTripper, enableStream
 
 				reqContext := getRequestContext(r.Context())
 
-				subgraph := reqContext.ActiveSubgraph(r)
+				subgraph := reqContext.GetActiveSubgraph(r)
 				if subgraph != nil {
 					span.SetAttributes(otel.WgSubgraphID.String(subgraph.Id))
 					span.SetAttributes(otel.WgSubgraphName.String(subgraph.Name))
