@@ -14,17 +14,17 @@ export interface KeycloakToken {
   refreshExpiresAt: Date;
 }
 
-export const performDeviceAuth = async ({
-  cliClientId,
-}: {
-  cliClientId: string;
-}): Promise<{ success: boolean; response: DeviceAuthResponse; errorMessage?: string }> => {
+export const performDeviceAuth = async (): Promise<{
+  success: boolean;
+  response: DeviceAuthResponse;
+  errorMessage?: string;
+}> => {
   const headers = new Headers();
   headers.append('Content-Type', 'application/x-www-form-urlencoded');
 
   const requestBody = new URLSearchParams();
   requestBody.append('scope', 'openid');
-  requestBody.append('client_id', cliClientId);
+  requestBody.append('client_id', config.kcRealm);
 
   const response = await fetch(config.kcApiURL + '/realms/cosmo/protocol/openid-connect/auth/device', {
     method: 'POST',
@@ -56,11 +56,9 @@ export const performDeviceAuth = async ({
 };
 
 export const startPollingForAccessToken = async ({
-  cliClientId,
   deviceCode,
   interval,
 }: {
-  cliClientId: string;
   deviceCode: string;
   interval: number;
 }): Promise<{ success: boolean; response?: KeycloakToken; errorMessage?: string }> => {
@@ -68,7 +66,7 @@ export const startPollingForAccessToken = async ({
   headers.append('Content-Type', 'application/x-www-form-urlencoded');
 
   const requestBody = new URLSearchParams();
-  requestBody.append('client_id', cliClientId);
+  requestBody.append('client_id', config.kcRealm);
   requestBody.append('grant_type', 'urn:ietf:params:oauth:grant-type:device_code');
   requestBody.append('device_code', deviceCode);
   requestBody.append('scope', 'openid');

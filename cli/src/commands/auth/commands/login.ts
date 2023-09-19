@@ -22,7 +22,7 @@ export default (opts: BaseCommandOptions) => {
       }
     }
 
-    const resp = await performDeviceAuth({ cliClientId: 'cosmo-cli' });
+    const resp = await performDeviceAuth();
     if (!resp.success) {
       program.error('Could not perform authentication. Please try again');
     }
@@ -35,7 +35,6 @@ export default (opts: BaseCommandOptions) => {
     await open(resp.response.verificationURI);
 
     const accessTokenResp = await startPollingForAccessToken({
-      cliClientId: 'cosmo-cli',
       deviceCode: resp.response.deviceCode,
       interval: resp.response.interval,
     });
