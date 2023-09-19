@@ -19,7 +19,7 @@ const getAccessToken = () => {
     const loginData = JSON.parse(JSON.stringify(data));
     return loginData.accessToken;
   } catch {
-    return null
+    return null;
   }
 };
 
