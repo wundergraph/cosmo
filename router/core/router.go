@@ -7,6 +7,7 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"net"
 	"net/http"
+	"net/url"
 	"sync"
 	"time"
 
@@ -582,12 +583,17 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 			subChiRouter.Use(metricHandler.Handler)
 		}
 
-		var subgraphs []Subgraph
+		subgraphs := make([]Subgraph, len(routerConfig.Subgraphs))
 		for _, s := range routerConfig.Subgraphs {
+			parsedURL, err := url.Parse(s.RoutingUrl)
+			if err != nil {
+				r.logger.Error("Failed to parse subgraph url", zap.Error(err))
+			}
+
 			subgraph := Subgraph{
 				Id:   s.Id,
 				Name: s.Name,
-				Url:  s.RoutingUrl,
+				Url:  parsedURL,
 			}
 			subgraphs = append(subgraphs, subgraph)
 		}

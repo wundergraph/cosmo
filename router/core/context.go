@@ -5,6 +5,7 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/pool"
 	"go.uber.org/zap"
 	"net/http"
+	"net/url"
 	"sync"
 	"time"
 )
@@ -18,7 +19,7 @@ var _ RequestContext = (*requestContext)(nil)
 type Subgraph struct {
 	Id   string
 	Name string
-	Url  string
+	Url  *url.URL
 }
 
 type RequestContext interface {
@@ -279,7 +280,7 @@ func (c *requestContext) GetStringMapStringSlice(key string) (smss map[string][]
 
 func (c *requestContext) GetActiveSubgraph(subgraphRequest *http.Request) *Subgraph {
 	for _, sg := range c.subgraphs {
-		if sg.Url == subgraphRequest.URL.String() {
+		if sg.Url != nil && sg.Url.Hostname() == subgraphRequest.URL.Hostname() && sg.Url.Port() == subgraphRequest.URL.Port() {
 			return &sg
 		}
 	}
