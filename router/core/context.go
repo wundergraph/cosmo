@@ -280,7 +280,7 @@ func (c *requestContext) GetStringMapStringSlice(key string) (smss map[string][]
 
 func (c *requestContext) ActiveSubgraph(subgraphRequest *http.Request) *Subgraph {
 	for _, sg := range c.subgraphs {
-		if sg.Url != nil && sg.Url.Hostname() == subgraphRequest.URL.Hostname() && sg.Url.Port() == subgraphRequest.URL.Port() {
+		if sg.Url != nil && sg.Url.String() == subgraphRequest.URL.String() {
 			return &sg
 		}
 	}
