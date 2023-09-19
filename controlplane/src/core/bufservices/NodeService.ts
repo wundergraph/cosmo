@@ -2,7 +2,7 @@ import { ServiceImpl } from '@connectrpc/connect';
 import { NodeService } from '@wundergraph/cosmo-connect/dist/node/v1/node_connect';
 import { PlainMessage } from '@bufbuild/protobuf';
 import { GetConfigResponse } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
-import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common_pb';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { handleError } from '../util.js';
 import type { RouterOptions } from '../routes.js';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';

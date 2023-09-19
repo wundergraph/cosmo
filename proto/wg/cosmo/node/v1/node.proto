@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package wg.cosmo.node.v1;
 
-import "wg/cosmo/common.proto";
+import "wg/cosmo/common/common.proto";
 
 message Subgraph {
   string id = 1;

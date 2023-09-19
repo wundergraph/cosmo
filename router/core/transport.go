@@ -3,9 +3,11 @@ package core
 import (
 	"fmt"
 	"github.com/wundergraph/cosmo/router/internal/otel"
+	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"github.com/wundergraph/cosmo/router/internal/trace"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	otrace "go.opentelemetry.io/otel/trace"
+	"go.uber.org/zap"
 	"net/http"
 	"net/url"
 	"time"
@@ -18,11 +20,19 @@ type CustomTransport struct {
 	roundTripper http.RoundTripper
 	preHandlers  []TransportPreHandler
 	postHandlers []TransportPostHandler
+	logger       *zap.Logger
 }
 
-func NewCustomTransport(originalTransport http.RoundTripper) *CustomTransport {
+func NewCustomTransport(logger *zap.Logger, roundTripper http.RoundTripper, retryOptions retrytransport.RetryOptions) *CustomTransport {
+
+	if retryOptions.Enabled {
+		return &CustomTransport{
+			roundTripper: retrytransport.NewRetryHTTPTransport(roundTripper, retryOptions, logger),
+		}
+	}
+
 	return &CustomTransport{
-		roundTripper: originalTransport,
+		roundTripper: roundTripper,
 	}
 }
 
@@ -69,19 +79,34 @@ type TransportFactory struct {
 	customTransport *CustomTransport
 	preHandlers     []TransportPreHandler
 	postHandlers    []TransportPostHandler
+	retryOptions    retrytransport.RetryOptions
+	requestTimeout  time.Duration
+	logger          *zap.Logger
 }
 
 var _ ApiTransportFactory = TransportFactory{}
 
-func NewTransport(preHandlers []TransportPreHandler, postHandlers []TransportPostHandler) *TransportFactory {
+type TransportOptions struct {
+	preHandlers    []TransportPreHandler
+	postHandlers   []TransportPostHandler
+	retryOptions   retrytransport.RetryOptions
+	requestTimeout time.Duration
+	logger         *zap.Logger
+}
+
+func NewTransport(opts *TransportOptions) *TransportFactory {
 	return &TransportFactory{
-		preHandlers:  preHandlers,
-		postHandlers: postHandlers,
+		preHandlers:    opts.preHandlers,
+		postHandlers:   opts.postHandlers,
+		logger:         opts.logger,
+		retryOptions:   opts.retryOptions,
+		requestTimeout: opts.requestTimeout,
 	}
 }
 
-func (t TransportFactory) RoundTripper(transport *http.Transport, enableStreamingMode bool) http.RoundTripper {
+func (t TransportFactory) RoundTripper(transport http.RoundTripper, enableStreamingMode bool) http.RoundTripper {
 	tp := NewCustomTransport(
+		t.logger,
 		trace.NewTransport(
 			transport,
 			[]otelhttp.Option{
@@ -99,16 +124,18 @@ func (t TransportFactory) RoundTripper(transport *http.Transport, enableStreamin
 				}
 			}),
 		),
+		t.retryOptions,
 	)
 
 	tp.preHandlers = t.preHandlers
 	tp.postHandlers = t.postHandlers
+	tp.logger = t.logger
 
 	return tp
 }
 
 func (t TransportFactory) DefaultTransportTimeout() time.Duration {
-	return time.Duration(60) * time.Second
+	return t.requestTimeout
 }
 
 func (t TransportFactory) DefaultHTTPProxyURL() *url.URL {

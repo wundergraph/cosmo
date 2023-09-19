@@ -4,7 +4,7 @@ import { buildRouterConfig, normalizeURL } from '@wundergraph/cosmo-shared';
 import { Command, program } from 'commander';
 import { parse, printSchema } from 'graphql';
 import * as yaml from 'js-yaml';
-import { resolve } from 'pathe';
+import { resolve, dirname } from 'pathe';
 import pc from 'picocolors';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { composeSubgraphs, introspectSubgraph } from '../../../utils.js';
@@ -34,6 +34,7 @@ export default (opts: BaseCommandOptions) => {
   command.requiredOption('-i, --input <path-to-input>', 'The yaml file with data about graph and subgraphs.');
   command.action(async (options) => {
     const inputFile = resolve(process.cwd(), options.input);
+    const inputFileLocation = dirname(inputFile);
 
     if (!existsSync(inputFile)) {
       console.log(
@@ -48,7 +49,8 @@ export default (opts: BaseCommandOptions) => {
     const sdls: string[] = [];
     for (const s of config.subgraphs) {
       if (s.schema?.file) {
-        const sdl = (await readFile(s.schema.file)).toString();
+        const schemaFile = resolve(inputFileLocation, s.schema.file);
+        const sdl = (await readFile(schemaFile)).toString();
         sdls.push(sdl);
         continue;
       }

@@ -1,8 +1,28 @@
 # Change Log
-Images can be found [here](https://github.com/orgs/wundergraph/packages?repo_name=cosmo)
+Binaries are attached to the github release otherwise all images can be found [here](https://github.com/orgs/wundergraph/packages?repo_name=cosmo)
 
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
+
+## [0.11.2](https://github.com/wundergraph/cosmo/compare/wgc@0.11.1...wgc@0.11.2) (2023-09-18)
+
+**Note:** Version bump only for package wgc
+
+## [0.11.1](https://github.com/wundergraph/cosmo/compare/wgc@0.11.0...wgc@0.11.1) (2023-09-17)
+
+### Bug Fixes
+
+* use relative path to read subgraph schema ([#75](https://github.com/wundergraph/cosmo/issues/75)) ([26a145f](https://github.com/wundergraph/cosmo/commit/26a145f5412d753f710a273d78be0b7dcb4d5a23)) (@devsergiy)
+
+# [0.11.0](https://github.com/wundergraph/cosmo/compare/wgc@0.10.2...wgc@0.11.0) (2023-09-16)
+
+### Features
+
+* only generate node api for router ([#76](https://github.com/wundergraph/cosmo/issues/76)) ([9307648](https://github.com/wundergraph/cosmo/commit/93076481437030fa6e348dccbc74591f91878f57)) (@StarpTech)
+
+## [0.10.2](https://github.com/wundergraph/cosmo/compare/wgc@0.10.1...wgc@0.10.2) (2023-09-15)
+
+**Note:** Version bump only for package wgc
 
 ## [0.10.1](https://github.com/wundergraph/cosmo/compare/wgc@0.10.0...wgc@0.10.1) (2023-09-13)
 

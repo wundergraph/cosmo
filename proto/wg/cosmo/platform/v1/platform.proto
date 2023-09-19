@@ -4,7 +4,7 @@ syntax = "proto3";
 
 package wg.cosmo.platform.v1;
 
-import "wg/cosmo/common.proto";
+import "wg/cosmo/common/common.proto";
 import "wg/cosmo/node/v1/node.proto";
 
 message Label {
@@ -575,6 +575,48 @@ message Header{
   string value = 2;
 }
 
+message CreateOrganizationWebhookConfigRequest {
+  string endpoint = 1;
+  string key = 2;
+  repeated string events = 3;
+}
+
+message CreateOrganizationWebhookConfigResponse {
+  Response response = 1;
+}
+
+message GetOrganizationWebhookConfigsRequest {}
+
+message GetOrganizationWebhookConfigsResponse {
+  message Config {
+    string id = 1;
+    string endpoint = 2;
+    repeated string events = 3;
+  }
+  Response response = 1;
+  repeated Config configs = 2;
+}
+
+message UpdateOrganizationWebhookConfigRequest {
+  string id = 1;
+  string endpoint = 2;
+  string key = 3;
+  repeated string events = 4;
+  bool shouldUpdateKey = 5;
+}
+
+message UpdateOrganizationWebhookConfigResponse {
+  Response response = 1;
+}
+
+message DeleteOrganizationWebhookConfigRequest {
+  string id = 1;
+}
+
+message DeleteOrganizationWebhookConfigResponse {
+  Response response = 1;
+}
+
 service PlatformService {
   // CreateFederatedGraph creates a federated graph on the control plane.
   rpc CreateFederatedGraph(CreateFederatedGraphRequest) returns (CreateFederatedGraphResponse) {}
@@ -636,6 +678,15 @@ service PlatformService {
   rpc GetLatestValidRouterConfig(wg.cosmo.node.v1.GetConfigRequest) returns (wg.cosmo.node.v1.GetConfigResponse) {}
   // MigrateFromApollo migrates the graphs from apollo to cosmo
   rpc MigrateFromApollo(MigrateFromApolloRequest) returns (MigrateFromApolloResponse) {}
+  
+  // CreateOrganizationWebhookConfig create a new webhook config for the organization
+  rpc CreateOrganizationWebhookConfig(CreateOrganizationWebhookConfigRequest) returns (CreateOrganizationWebhookConfigResponse) {}
+  // GetOrganizationWebhookConfigs returns all webhooks for the organization
+  rpc GetOrganizationWebhookConfigs(GetOrganizationWebhookConfigsRequest) returns (GetOrganizationWebhookConfigsResponse) {}
+  // UpdateOrganizationWebhookConfig updates an existing webhook for the organization
+  rpc UpdateOrganizationWebhookConfig(UpdateOrganizationWebhookConfigRequest) returns (UpdateOrganizationWebhookConfigResponse) {}
+  // DeleteOrganizationWebhookConfig deletes an organization webhook
+  rpc DeleteOrganizationWebhookConfig(DeleteOrganizationWebhookConfigRequest) returns (DeleteOrganizationWebhookConfigResponse) {}
 
   // Analytics
 
