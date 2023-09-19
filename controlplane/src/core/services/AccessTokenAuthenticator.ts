@@ -1,4 +1,6 @@
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import AuthUtils from '../auth-utils.js';
+import { AuthenticationError } from '../errors/errors.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 
 export type AccessTokenAuthContext = {
@@ -17,13 +19,13 @@ export default class AccessTokenAuthenticator {
   public async authenticate(accessToken: string): Promise<AccessTokenAuthContext> {
     const userInfoData = await this.authUtils.getUserInfo(accessToken);
 
-    // TODO will have to change when wesupport multiple orgs
+    // TODO will have to change when we support multiple orgs
     const orgSlug = userInfoData.groups[0].split('/')[1];
 
     const organization = await this.orgRepo.bySlug(orgSlug);
 
     if (!organization || !organization?.id) {
-      throw new Error('Organization deosnt exist');
+      throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, 'Organization does not exist');
     }
 
     const isMember = await this.orgRepo.isMemberOf({
@@ -32,7 +34,7 @@ export default class AccessTokenAuthenticator {
     });
 
     if (!isMember) {
-      throw new Error('User is not a member of the organization');
+      throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, 'User is not a member of the organization');
     }
 
     return {
