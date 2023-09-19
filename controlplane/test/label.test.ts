@@ -6,7 +6,7 @@ import { fastifyConnectPlugin } from '@connectrpc/connect-fastify';
 import { createConnectTransport } from '@connectrpc/connect-node';
 import { pino } from 'pino';
 import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
-import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common_pb';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import database from '../src/core/plugins/database';
@@ -21,6 +21,7 @@ import {
   seedTest,
 } from '../src/core/test-util';
 import Keycloak from '../src/core/services/Keycloak';
+import { MockPlatformWebhookService } from '../src/core/webhooks/PlatformWebhookService';
 
 let dbname = '';
 
@@ -40,6 +41,7 @@ describe('Labels', (ctx) => {
     await server.register(database, {
       databaseConnectionUrl,
       debugSQL: false,
+      runMigration: true,
     });
 
     testContext.onTestFailed(async () => {
@@ -62,6 +64,8 @@ describe('Labels', (ctx) => {
       adminPassword,
     });
 
+    const platformWebhooks = new MockPlatformWebhookService();
+
     await server.register(fastifyConnectPlugin, {
       routes: routes({
         db: server.db,
@@ -70,6 +74,7 @@ describe('Labels', (ctx) => {
         jwtSecret: 'secret',
         keycloakRealm: realm,
         keycloakClient,
+        platformWebhooks,
       }),
     });
 
@@ -145,6 +150,7 @@ describe('Labels', (ctx) => {
     await server.register(database, {
       databaseConnectionUrl,
       debugSQL: false,
+      runMigration: true,
     });
 
     testContext.onTestFailed(async () => {
@@ -167,6 +173,8 @@ describe('Labels', (ctx) => {
       adminPassword,
     });
 
+    const platformWebhooks = new MockPlatformWebhookService();
+
     await server.register(fastifyConnectPlugin, {
       routes: routes({
         db: server.db,
@@ -175,6 +183,7 @@ describe('Labels', (ctx) => {
         jwtSecret: 'secret',
         keycloakRealm: realm,
         keycloakClient,
+        platformWebhooks,
       }),
     });
 
@@ -275,6 +284,7 @@ describe('Labels', (ctx) => {
     await server.register(database, {
       databaseConnectionUrl,
       debugSQL: false,
+      runMigration: true,
     });
 
     testContext.onTestFailed(async () => {
@@ -297,6 +307,8 @@ describe('Labels', (ctx) => {
       adminPassword,
     });
 
+    const platformWebhooks = new MockPlatformWebhookService();
+
     await server.register(fastifyConnectPlugin, {
       routes: routes({
         db: server.db,
@@ -305,6 +317,7 @@ describe('Labels', (ctx) => {
         jwtSecret: 'secret',
         keycloakRealm: realm,
         keycloakClient,
+        platformWebhooks,
       }),
     });
 

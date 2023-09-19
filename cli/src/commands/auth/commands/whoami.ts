@@ -1,6 +1,6 @@
 import { Command, program } from 'commander';
 import pc from 'picocolors';
-import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common_pb';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { baseHeaders, config } from '../../../core/config.js';
 

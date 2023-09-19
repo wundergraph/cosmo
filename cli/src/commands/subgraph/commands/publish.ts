@@ -1,10 +1,10 @@
 import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
-import Table from 'cli-table';
+import Table from 'cli-table3';
 import { Command } from 'commander';
 import { resolve } from 'pathe';
 import pc from 'picocolors';
-import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common_pb';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { baseHeaders } from '../../../core/config.js';
 
@@ -41,9 +41,11 @@ export default (opts: BaseCommandOptions) => {
       console.log(pc.dim(pc.green(`Subgraph '${name}' was updated successfully.`)));
     } else if (resp.response?.code === EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED) {
       console.log(pc.dim(pc.green(`Subgraph '${name}' was updated successfully.`)));
+
       const compositionErrorsTable = new Table({
         head: [pc.bold(pc.white('FEDERATED_GRAPH_NAME')), pc.bold(pc.white('ERROR_MESSAGE'))],
         colWidths: [30, 120],
+        wordWrap: true,
       });
 
       console.log(

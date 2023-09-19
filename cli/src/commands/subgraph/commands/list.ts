@@ -1,5 +1,5 @@
-import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common_pb';
-import Table from 'cli-table';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import Table from 'cli-table3';
 import { Command } from 'commander';
 import pc from 'picocolors';
 import { baseHeaders } from '../../../core/config.js';
@@ -23,7 +23,8 @@ export default (opts: BaseCommandOptions) => {
 
     const graphsTable = new Table({
       head: [pc.bold(pc.white('NAME')), pc.bold(pc.white('LABELS')), pc.bold(pc.white('ROUTING_URL'))],
-      colWidths: [15, 40, 60],
+      colWidths: [15, 30, 60],
+      wordWrap: true,
     });
 
     if (resp.response?.code === EnumStatusCode.OK) {

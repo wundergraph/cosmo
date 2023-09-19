@@ -78,6 +78,7 @@ export interface OrganizationDTO {
   id: string;
   name: string;
   slug: string;
+  isFreeTrial?: boolean;
 }
 
 export interface UserDTO {
@@ -100,6 +101,12 @@ export interface APIKeyDTO {
   expiresAt: string;
   createdBy: string;
   creatorUserID: string;
+}
+
+export interface WebhooksConfigDTO {
+  id: string;
+  endpoint: string;
+  events: string[];
 }
 
 export interface ResponseMessage {

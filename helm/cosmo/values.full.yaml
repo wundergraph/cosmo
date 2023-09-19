@@ -22,6 +22,8 @@ global:
   router:
     # Disabled because we don't have a token yet
     enabled: false
+    webUrl: "http://router.wundergraph.local"
+    port: 3002
 
   clickhouse:
     enabled: true
@@ -85,17 +87,22 @@ controlplane:
     authRedirectUri: "http://controlplane.wundergraph.local/v1/auth/callback"
     databaseUrl: "postgres://postgres:changeme@cosmo-postgresql:5432/controlplane"
     clickhouseDsn: "http://default:changeme@cosmo-clickhouse:8123?database=cosmo"
+    # Migration tool doesn't support HTTP clickhouse protocol yet
+    clickhouseMigrationDsn: "clickhouse://default:changeme@cosmo-clickhouse:9000?database=cosmo"
     postgres:
       database: "controlplane"
-    clickhouse:
-      database: "cosmo"
 
 # Cosmo Router
 router:
+  terminationGracePeriodSeconds: 60
+  deploymentStrategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
   configuration:
     federatedGraphName: "production"
     # You need to run `wgc federated-graph create-token production` to generate a token
-    graphApiToken: "changeme"
+    graphApiToken: ""
     logLevel: "debug"
 
 # Cosmo Open Telemetry Collector

@@ -1,8 +1,28 @@
 # Change Log
-Images can be found [here](https://github.com/orgs/wundergraph/packages?repo_name=cosmo)
+Binaries are attached to the github release otherwise all images can be found [here](https://github.com/orgs/wundergraph/packages?repo_name=cosmo)
 
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
+
+# [0.11.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.10.0...@wundergraph/cosmo-connect@0.11.0) (2023-09-16)
+
+### Features
+
+* only generate node api for router ([#76](https://github.com/wundergraph/cosmo/issues/76)) ([9307648](https://github.com/wundergraph/cosmo/commit/93076481437030fa6e348dccbc74591f91878f57)) (@StarpTech)
+* webhooks ([#66](https://github.com/wundergraph/cosmo/issues/66)) ([dbb281f](https://github.com/wundergraph/cosmo/commit/dbb281fda114ddb6be309b3336d0668d705e7bc9)) (@thisisnithin)
+
+# [0.10.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.9.0...@wundergraph/cosmo-connect@0.10.0) (2023-09-13)
+
+### Features
+
+* add user registration ([#57](https://github.com/wundergraph/cosmo/issues/57)) ([c1d1841](https://github.com/wundergraph/cosmo/commit/c1d184192511f015c4b33db91d7342a0bb35710e)) (@JivusAyrus)
+
+# [0.9.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.8.1...@wundergraph/cosmo-connect@0.9.0) (2023-09-11)
+
+### Features
+
+* add introspect subgraph command ([#44](https://github.com/wundergraph/cosmo/issues/44)) ([bf376cd](https://github.com/wundergraph/cosmo/commit/bf376cd75382b16659efb670ea54494f691328aa)) (@JivusAyrus)
+* introspect subgraphs in cli ([#53](https://github.com/wundergraph/cosmo/issues/53)) ([2bd9f95](https://github.com/wundergraph/cosmo/commit/2bd9f95cd3ac13e878a12ab526d575c9b1daf248)) (@JivusAyrus)
 
 ## [0.8.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.8.0...@wundergraph/cosmo-connect@0.8.1) (2023-09-06)
 

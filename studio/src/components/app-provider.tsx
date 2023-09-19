@@ -1,9 +1,13 @@
-import { Transport } from '@connectrpc/connect';
-import { TransportProvider } from '@connectrpc/connect-query';
-import { createConnectTransport } from '@connectrpc/connect-web';
-import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
-import { useRouter } from 'next/router';
-import { createContext, ReactNode, useEffect, useState } from 'react';
+import { Transport } from "@connectrpc/connect";
+import { TransportProvider } from "@connectrpc/connect-query";
+import { createConnectTransport } from "@connectrpc/connect-web";
+import {
+  QueryClient,
+  QueryClientProvider,
+  useQuery,
+} from "@tanstack/react-query";
+import { useRouter } from "next/router";
+import { createContext, ReactNode, useEffect, useState } from "react";
 
 interface User {
   id: string;
@@ -16,6 +20,21 @@ interface Organization {
   id: string;
   name: string;
   slug: string;
+  isFreeTrial: boolean;
+}
+
+interface Session {
+  id: string;
+  email: string;
+  organizations: Organization[];
+  roles: ("admin" | "member")[];
+}
+
+class UnauthorizedError extends Error {
+  constructor() {
+    super();
+    this.name = "UnauthorizedError";
+  }
 }
 
 const queryClient = new QueryClient();
@@ -35,16 +54,21 @@ const fetchSession = async () => {
     if (response.status === 200) {
       const body = await response.json();
       return body;
+    } else if (response.status === 401) {
+      throw new UnauthorizedError();
     }
     return null;
   } catch (e) {
-    return null;
+    throw e;
   }
 };
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
-  const { data, isFetching } = useQuery(["user"], () => fetchSession(), {
+  const { data, error, isFetching } = useQuery<
+    Session | null,
+    UnauthorizedError | Error
+  >(["user"], () => fetchSession(), {
     refetchOnWindowFocus: true,
   });
   const [user, setUser] = useState<User>();
@@ -76,14 +100,23 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         })
       );
 
-      if (router.pathname === "/" || router.pathname === "/login")
-        router.replace(`/${organizationSlug}`);
+      if (router.pathname === "/" || router.pathname === "/login") {
+        const url = new URL(
+          window.location.origin + router.basePath + router.asPath
+        );
+        const params = new URLSearchParams(url.search);
+        router.replace(
+          params.size !== 0
+            ? `/${organizationSlug}?${params}`
+            : `/${organizationSlug}`
+        );
+      }
     } else {
-      if (router.pathname !== "/login") {
+      if (router.pathname !== "/login" && error instanceof UnauthorizedError) {
         router.replace("/login");
       }
     }
-  }, [router, data, isFetching]);
+  }, [router, data, isFetching, error]);
 
   if (!transport) {
     return <UserContext.Provider value={user}>{children}</UserContext.Provider>;

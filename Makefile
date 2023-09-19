@@ -6,7 +6,7 @@ setup-build-tools:
 	go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
 
 setup-dev-tools: setup-build-tools
-	go install github.com/amacneil/dbmate/v2@v2.5.0
+	go install github.com/amacneil/dbmate/v2@v2.6.0
 	go install github.com/yannh/kubeconform/cmd/kubeconform@latest
 
 prerequisites: setup-dev-tools
@@ -33,6 +33,9 @@ infra-down-v:
 seed:
 	pnpm -r run --filter './controlplane' seed
 
+create-cli-demo:
+	cd scripts && ./create-cli-demo.sh
+
 create-docker-demo:
 	cd scripts && ./create-docker-demo.sh
 
@@ -46,12 +49,15 @@ dev-setup: prerequisites
 	make infra-up
 	pnpm -r run --filter '!studio' build
 
+migrate:
+	pnpm -r run --filter './controlplane' migrate
+
 generate:
 	pnpm generate
 	make generate-go
 
 generate-go:
-	rm -rf router/gen && buf generate --template buf.go.gen.yaml
+	rm -rf router/gen && buf generate --path proto/wg/cosmo/node --path proto/wg/cosmo/common --template buf.go.gen.yaml
 
 start-cp:
 	pnpm -r run --filter './controlplane' dev
@@ -99,18 +105,3 @@ docker-build-minikube: docker-build-local
 	minikube image load ghcr.io/wundergraph/cosmo/router:latest & \
 	minikube image load ghcr.io/wundergraph/cosmo/keycloak:latest
 	minikube cache reload
-
-new-ch-migration:
-	 dbmate -d "./controlplane/clickhouse/migrations" new $(name)
-
-migrate-ch:
-	 dbmate -d "./controlplane/clickhouse/migrations" -s "./controlplane/db/schema.sql" -e CLICKHOUSE_DSN up
-
-migrate-ch-down:
-	 dbmate -d "./controlplane/clickhouse/migrations" -s "./controlplane/db/schema.sql" -e CLICKHOUSE_DSN down
-
-rollback-ch:
-	 dbmate -d "./controlplane/clickhouse/migrations" -s "./controlplane/db/schema.sql" -e CLICKHOUSE_DSN rollback
-
-migrate-ch-dump:
-	dbmate -d "./controlplane/clickhouse/migrations" -s "./controlplane/db/schema.sql" -e CLICKHOUSE_DSN dump

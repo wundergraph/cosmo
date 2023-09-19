@@ -21,16 +21,16 @@
   "accessCodeLifespan": 60,
   "accessCodeLifespanUserAction": 300,
   "accessCodeLifespanLogin": 1800,
-  "actionTokenGeneratedByAdminLifespan": 43200,
-  "actionTokenGeneratedByUserLifespan": 300,
+  "actionTokenGeneratedByAdminLifespan": 259200,
+  "actionTokenGeneratedByUserLifespan": 900,
   "oauth2DeviceCodeLifespan": 600,
   "oauth2DevicePollingInterval": 5,
   "enabled": true,
   "sslRequired": "external",
-  "registrationAllowed": false,
+  "registrationAllowed": true,
   "registrationEmailAsUsername": true,
   "rememberMe": false,
-  "verifyEmail": false,
+  "verifyEmail": true,
   "loginWithEmailAllowed": true,
   "duplicateEmailsAllowed": false,
   "resetPasswordAllowed": true,
@@ -59,7 +59,7 @@
   "otpPolicyLookAheadWindow": 1,
   "otpPolicyPeriod": 30,
   "otpPolicyCodeReusable": false,
-  "otpSupportedApplications": ["totpAppFreeOTPName", "totpAppMicrosoftAuthenticatorName", "totpAppGoogleName"],
+  "otpSupportedApplications": ["totpAppFreeOTPName", "totpAppGoogleName", "totpAppMicrosoftAuthenticatorName"],
   "webAuthnPolicyRpEntityName": "keycloak",
   "webAuthnPolicySignatureAlgorithms": ["ES256"],
   "webAuthnPolicyRpId": "",
@@ -955,14 +955,14 @@
         "subComponents": {},
         "config": {
           "allowed-protocol-mapper-types": [
-            "oidc-full-name-mapper",
-            "oidc-sha256-pairwise-sub-mapper",
+            "saml-user-property-mapper",
+            "oidc-address-mapper",
+            "saml-role-list-mapper",
             "oidc-usermodel-property-mapper",
             "saml-user-attribute-mapper",
-            "saml-user-property-mapper",
-            "saml-role-list-mapper",
+            "oidc-full-name-mapper",
             "oidc-usermodel-attribute-mapper",
-            "oidc-address-mapper"
+            "oidc-sha256-pairwise-sub-mapper"
           ]
         }
       },
@@ -982,14 +982,14 @@
         "subComponents": {},
         "config": {
           "allowed-protocol-mapper-types": [
-            "oidc-sha256-pairwise-sub-mapper",
-            "saml-user-property-mapper",
-            "oidc-address-mapper",
             "oidc-full-name-mapper",
-            "oidc-usermodel-property-mapper",
-            "saml-user-attribute-mapper",
+            "saml-user-property-mapper",
+            "oidc-sha256-pairwise-sub-mapper",
+            "oidc-address-mapper",
             "saml-role-list-mapper",
-            "oidc-usermodel-attribute-mapper"
+            "oidc-usermodel-attribute-mapper",
+            "saml-user-attribute-mapper",
+            "oidc-usermodel-property-mapper"
           ]
         }
       },
@@ -1015,7 +1015,7 @@
     ],
     "org.keycloak.userprofile.UserProfileProvider": [
       {
-        "id": "5f750087-2aee-476e-85db-13c20972649d",
+        "id": "6fc9eab1-7e58-4dc3-bb57-8f4aa2ad5d70",
         "providerId": "declarative-user-profile",
         "subComponents": {},
         "config": {}
@@ -1702,15 +1702,15 @@
     "actionTokenGeneratedByUserLifespan-reset-credentials": "",
     "cibaInterval": "5",
     "realmReusableOtpCode": "false",
-    "frontendUrl": "http://localhost:8080",
     "cibaExpiresIn": "120",
     "oauth2DeviceCodeLifespan": "600",
     "actionTokenGeneratedByUserLifespan-idp-verify-account-via-email": "",
     "parRequestUriLifespan": "60",
     "clientSessionMaxLifespan": "0",
+    "frontendUrl": "http://localhost:8080",
     "shortVerificationUri": ""
   },
-  "keycloakVersion": "22.0.1",
+  "keycloakVersion": "22.0.3",
   "userManagedAccessAllowed": false,
   "clientProfiles": {
     "profiles": []

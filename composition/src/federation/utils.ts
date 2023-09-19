@@ -53,12 +53,27 @@ export enum MergeMethod {
   CONSISTENT,
 }
 
+export type DeprecatedDirectiveContainer = {
+  reason?: string;
+  directive?: ConstDirectiveNode;
+};
+
 export type PersistedDirectivesContainer = {
+  deprecated: DeprecatedDirectiveContainer;
   directives: Map<string, ConstDirectiveNode[]>;
   tags: Map<string, ConstDirectiveNode>;
 };
 
+export function newPersistedDirectivesContainer(): PersistedDirectivesContainer {
+  return {
+    deprecated: {},
+    directives: new Map<string, ConstDirectiveNode[]>(),
+      tags: new Map<string, ConstDirectiveNode>(),
+  };
+}
+
 export type ArgumentContainer = {
+  directives: PersistedDirectivesContainer;
   includeDefaultValue: boolean;
   node: MutableInputValueDefinitionNode;
   requiredSubgraphs: Set<string>;
@@ -78,7 +93,6 @@ export type DirectiveMap = Map<string, DirectiveContainer>;
 
 export type EntityContainer = {
   fields: Set<string>;
-  keys: Set<string>;
   subgraphs: Set<string>;
 };
 
@@ -105,6 +119,7 @@ export type FieldContainer = {
   node: MutableFieldDefinitionNode;
   namedTypeName: string;
   subgraphs: Set<string>;
+  subgraphsByExternal: Map<String, boolean>;
   subgraphsByShareable: Map<string, boolean>;
 };
 
@@ -139,7 +154,6 @@ export type InterfaceContainer = {
 export type ObjectContainer = {
   directives: PersistedDirectivesContainer;
   fields: FieldMap;
-  entityKeys: Set<string>;
   interfaces: Set<string>;
   isRootType: boolean;
   kind: Kind.OBJECT_TYPE_DEFINITION;
@@ -150,7 +164,6 @@ export type ObjectContainer = {
 export type ObjectExtensionContainer = {
   directives: PersistedDirectivesContainer;
   fields: FieldMap;
-  entityKeys: Set<string>;
   interfaces: Set<string>;
   isRootType: boolean;
   kind: Kind.OBJECT_TYPE_EXTENSION;
@@ -181,7 +194,7 @@ export type ParentContainer =
   | UnionContainer
   | ScalarContainer;
 
-export type NodeContainer = ChildContainer | ParentContainer;
+export type NodeContainer = ArgumentContainer | ChildContainer | ParentContainer;
 export type ExtensionContainer = ObjectExtensionContainer;
 export type ParentMap = Map<string, ParentContainer>;
 export type ObjectLikeContainer = ObjectContainer | InterfaceContainer;

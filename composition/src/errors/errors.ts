@@ -85,7 +85,7 @@ export function incompatibleSharedEnumError(parentName: string): Error {
 
 // The @extends directive means a TypeDefinitionNode is possible
 export function incompatibleExtensionKindsError(
-  node: TypeDefinitionNode | TypeExtensionNode | SchemaExtensionNode, existingKind: Kind
+  node: TypeDefinitionNode | TypeExtensionNode | SchemaExtensionNode, existingKind: Kind,
 ) {
   const name = node.kind === Kind.SCHEMA_EXTENSION ? 'schema' : node.name.value;
   return new Error(`Expected extension "${name}" to be type ${existingKind} but received ${node.kind}.`);
@@ -184,14 +184,14 @@ export function shareableFieldDefinitionsError(parent: ObjectContainer, children
     if (shareableSubgraphs.length < 1) {
       errorMessages.push(
         `\n The field "${fieldName}" is defined in the following subgraphs: "${[...field.subgraphs].join('", "')}".` +
-        `\n However, it it is not declared "@shareable" in any of them.`,
+        `\n However, it is not declared "@shareable" in any of them.`,
       );
     } else {
       errorMessages.push(
-        `\n The field "${fieldName}" is defined and declared "@shareable" in the following subgraphs:` +
-        ` "${shareableSubgraphs.join('", "')}".` +
-        `\n However, it is not declared "@shareable" in the following subgraphs: ` +
-        `"${nonShareableSubgraphs.join('", "')}".`,
+        `\n The field "${fieldName}" is defined and declared "@shareable" in the following subgraph` +
+        (shareableSubgraphs.length > 1 ? 's' : '') + `: "` + shareableSubgraphs.join('", "') + `".` +
+        `\n However, it is not declared "@shareable" in the following subgraph` +
+        (nonShareableSubgraphs.length > 1 ? 's' : '') + `: "${nonShareableSubgraphs.join('", "')}".`,
       );
     }
   }
@@ -232,7 +232,7 @@ export function unresolvableFieldError(
     `Potential solutions:\n` +
     ` Convert "${parentTypeName}" into an entity using the "@key" directive.\n` +
     ` Add the shareable root type field "${rootTypeFieldData.path}" to ` +
-    (fieldSubgraphs.length > 1 ? 'one of the following subgraphs' : 'the following subgraph') + `: "`  +
+    (fieldSubgraphs.length > 1 ? 'one of the following subgraphs' : 'the following subgraph') + `: "` +
     fieldSubgraphs.join(QUOTATION_JOIN) + `".\n` +
     `  For example (note that V1 fields are shareable by default and do not require a directive):\n` +
     `   type ${rootTypeFieldData.typeName} {\n` +
@@ -268,6 +268,10 @@ export function invalidRepeatedDirectiveErrorMessage(directiveName: string, host
 export function invalidUnionError(unionName: string): Error {
   return new Error(`Union "${unionName}" must have at least one member.`);
 }
+
+export const invalidDeprecatedDirectiveError = new Error(`
+  Expected the @deprecated directive to have a single optional argument "reason" of the type "String!"
+`);
 
 export const invalidTagDirectiveError = new Error(`
   Expected the @tag directive to have a single required argument "name" of the type "String!"
@@ -319,7 +323,7 @@ export function undefinedRequiredArgumentsErrorMessage(
     ` The definition for the directive "${directiveName}" defines the following ` +
     requiredArguments.length +
     ` required argument` +
-    (requiredArguments.length > 1 ? 's: ' : ': "') +
+    (requiredArguments.length > 1 ? 's: ' : ': ') + `"` +
     requiredArguments.join('", "') + `"` +
     `.\n However, the same directive that is declared on "${hostPath}" does not define` +
     (missingRequiredArguments.length > 0
@@ -372,16 +376,10 @@ export function invalidEntityKeyError(parentTypeName: string, entityKey: string,
   );
 }
 
-export function invalidKeyDirectiveError(parentTypeName: string, errorMessages: string[]): Error {
+export function invalidKeyDirectivesError(parentTypeName: string, errorMessages: string[]): Error {
   return new Error(
-    `One or more "key" directives defined on "${parentTypeName}" are invalid for the following reason` +
-    (errorMessages.length > 1 ? 's:\n' : ':\n') + errorMessages.join('\n'),
-  );
-}
-
-export function undefinedParentFatalError(parentTypeName: string): Error {
-  return new Error(
-    `Fatal: Expected parent type "${parentTypeName}" to be defined.`,
+    `The entity "${parentTypeName}" defines the following invalid "key" directive` +
+    (errorMessages.length > 1 ? 's' : '') + `:\n` + errorMessages.join('\n'),
   );
 }
 
@@ -391,31 +389,25 @@ export function unexpectedKindFatalError(typeName: string) {
   );
 }
 
-export function invalidMultiGraphNodeFatalError(nodeName: string): Error {
-  return new Error(
-    `Fatal: Expected node "${nodeName}" to exist in the multi graph.`
-  );
-}
-
 export function incompatibleParentKindFatalError(parentTypeName: string, expectedKind: Kind, actualKind: Kind): Error {
   return new Error(
     `Fatal: Expected "${parentTypeName}" to be type ${kindToTypeString(expectedKind)}` +
-    ` but received "${kindToTypeString(actualKind)}".`
+    ` but received "${kindToTypeString(actualKind)}".`,
   );
 }
 
 export function fieldTypeMergeFatalError(fieldName: string) {
   return new Error(
     `Fatal: Unsuccessfully merged the cross-subgraph types of field "${fieldName}"` +
-    ` without producing a type error object.`
-  )
+    ` without producing a type error object.`,
+  );
 }
 
 export function argumentTypeMergeFatalError(argumentName: string, fieldName: string) {
   return new Error(
     `Fatal: Unsuccessfully merged the cross-subgraph types of argument "${argumentName}" on field "${fieldName}"` +
-    ` without producing a type error object.`
-  )
+    ` without producing a type error object.`,
+  );
 }
 
 export function unexpectedArgumentKindFatalError(argumentName: string, fieldName: string) {
@@ -439,20 +431,19 @@ export function unexpectedTypeNodeKindError(childPath: string): Error {
 
 export function invalidKeyFatalError<K>(key: K, mapName: string): Error {
   return new Error(
-    `Fatal: Expected key "${key}" to exist in the map "${mapName}".`
+    `Fatal: Expected key "${key}" to exist in the map "${mapName}".`,
+  );
+}
+
+export function invalidConfigurationResultFatalError(fieldPath: string): Error {
+  return new Error(
+    `Fatal: Expected either errors or configurations for the path ${fieldPath}" but received neither".`,
   );
 }
 
 export function unexpectedParentKindErrorMessage(parentTypeName: string, expectedTypeString: string, actualTypeString: string): string {
   return (
     ` Expected "${parentTypeName}" to be type ${expectedTypeString} but received "${actualTypeString}".`
-  );
-}
-
-export function objectInCompositeKeyWithoutSelectionsErrorMessage(fieldName: string, fieldTypeName: string): string {
-  return (
-    ` The "fields" argument defines "${fieldName}", which is type "${fieldTypeName}, as part of a key.\n` +
-    ` However, "${fieldTypeName}" is an object type; consequently, it must have its own selections to be a valid key.`
   );
 }
 
@@ -476,30 +467,32 @@ export function invalidSubgraphNameErrorMessage(index: number, newName: string):
 
 export function invalidOperationTypeDefinitionError(
   existingOperationType: OperationTypeNode, typeName: string, newOperationType: OperationTypeNode,
-  ): Error {
+): Error {
   return new Error(
     `The schema definition defines the "${existingOperationType}" operation as type "${typeName}".` +
     ` However, "${typeName}" was also used for the "${newOperationType}" operation.\n` +
-    ` If explicitly defined, each operation type must be a unique and valid Object type.`
+    ` If explicitly defined, each operation type must be a unique and valid Object type.`,
   );
 }
 
 export function invalidRootTypeDefinitionError(
-  operationType: OperationTypeNode, typeName: string, defaultTypeName: string
+  operationType: OperationTypeNode, typeName: string, defaultTypeName: string,
 ): Error {
   return new Error(
     `The schema definition defines the "${operationType}" operation as type "${typeName}".` +
     ` However, the schema also defines another type named "${defaultTypeName}",` +
     ` which is the default (root) type name for the "${operationType}" operation.\n` +
     `For federation, it is only possible to use the default root types names ("Mutation", "Query", "Subscription") as` +
-    ` operation definitions. No other definitions with these default root type names are valid.`
+    ` operation definitions. No other definitions with these default root type names are valid.`,
   );
 }
 
-export function subgraphInvalidSyntaxError(error: Error): Error {
-  return new Error(
-    `The subgraph has syntax errors and could not be parsed:\n ${error}`
-  );
+export function subgraphInvalidSyntaxError(error?: Error): Error {
+  let message = `The subgraph has syntax errors and could not be parsed.`;
+  if (error) {
+    message += `\n The reason provided was: ` + error.message;
+  }
+  return new Error(message);
 }
 
 export function unimplementedInterfaceFieldsError(
@@ -519,7 +512,7 @@ export function unimplementedInterfaceFieldsError(
     for (const [fieldName, invalidFieldImplementation] of implementationErrors.invalidFieldImplementations) {
       const unimplementedArgumentsSize = invalidFieldImplementation.unimplementedArguments.size;
       const invalidArgumentsLength = invalidFieldImplementation.invalidImplementedArguments.length;
-      const invalidAdditionalArgumentsSize= invalidFieldImplementation.invalidAdditionalArguments.size;
+      const invalidAdditionalArgumentsSize = invalidFieldImplementation.invalidAdditionalArguments.size;
       message += `  The field "${fieldName}" is invalid because:\n`;
       if (unimplementedArgumentsSize) {
         message += `   The following argument${unimplementedArgumentsSize > 1 ? 's are' : ' is'} not implemented: "`
@@ -535,10 +528,10 @@ export function unimplementedInterfaceFieldsError(
       if (invalidAdditionalArgumentsSize) {
         message += `   If a field from an interface is implemented, any additional arguments that were not defined` +
           ` on the original interface field must be optional (nullable).\n`;
-          message += `    The following additional argument` +
-            (invalidFieldImplementation.invalidAdditionalArguments.size > 1 ? `s are` : ` is`) +
-            ` not defined as optional: "` +
-            [...invalidFieldImplementation.invalidAdditionalArguments].join(`", "`) + `"\n`
+        message += `    The following additional argument` +
+          (invalidFieldImplementation.invalidAdditionalArguments.size > 1 ? `s are` : ` is`) +
+          ` not defined as optional: "` +
+          [...invalidFieldImplementation.invalidAdditionalArguments].join(`", "`) + `"\n`;
       }
       if (invalidFieldImplementation.implementedResponseType) {
         message += `   The implemented response type "${invalidFieldImplementation.implementedResponseType}" is not` +
@@ -550,7 +543,7 @@ export function unimplementedInterfaceFieldsError(
   }
   return new Error(
     `The ${parentTypeString} "${parentTypeName}" has the following interface implementation errors:\n` +
-    messages.join('\n')
+    messages.join('\n'),
   );
 }
 
@@ -560,11 +553,11 @@ export function invalidRequiredArgumentsError(
   let message = `The ${typeString} "${path}" could not be federated because:\n`;
   for (const error of errors) {
     message += ` The argument "${error.argumentName}" is required in the following subgraph` +
-      (error.requiredSubgraphs.length > 1 ? 's' : '' ) +': "' + error.requiredSubgraphs.join(`", "`) + `"\n` +
+      (error.requiredSubgraphs.length > 1 ? 's' : '') + ': "' + error.requiredSubgraphs.join(`", "`) + `"\n` +
       ` However, the argument "${error.argumentName}" is not defined in the following subgraph` +
-      (error.missingSubgraphs.length > 1 ? 's' : '' ) +': "' + error.missingSubgraphs.join(`", "`) + `"\n` +
+      (error.missingSubgraphs.length > 1 ? 's' : '') + ': "' + error.missingSubgraphs.join(`", "`) + `"\n` +
       ` If an argument is required on a ${typeString} in any one subgraph, it must be at least defined as optional` +
-      ` on all other definitions of that ${typeString} in all other subgraphs.\n`
+      ` on all other definitions of that ${typeString} in all other subgraphs.\n`;
   }
   return new Error(message);
 }
@@ -573,14 +566,14 @@ export function duplicateArgumentsError(fieldPath: string, duplicatedArguments: 
   return new Error(
     `The field "${fieldPath}" is invalid because:\n` +
     ` The following argument` + (duplicatedArguments.length > 1 ? 's are' : ' is') +
-    ` defined more than once: "` + duplicatedArguments.join(`", "`) + `"\n`
+    ` defined more than once: "` + duplicatedArguments.join(`", "`) + `"\n`,
   );
 }
 
 export function invalidArgumentsError(fieldPath: string, invalidArguments: InvalidArgument[]): Error {
   let message = `The field "${fieldPath}" is invalid because:\n` +
     ` The named type (root type) of an input must be on of Enum, Input Object, or Scalar type.` +
-    ` For example: "Float", "[[String!]]!", or "[SomeInputObjectName]"\n`
+    ` For example: "Float", "[[String!]]!", or "[SomeInputObjectName]"\n`;
   for (const invalidArgument of invalidArguments) {
     message += `  The argument "${invalidArgument.argumentName}" defines type "${invalidArgument.typeName}"` +
       ` but the named type "${invalidArgument.namedType}" is type "` + invalidArgument.typeString +
@@ -590,17 +583,17 @@ export function invalidArgumentsError(fieldPath: string, invalidArguments: Inval
 }
 
 export const noQueryRootTypeError = new Error(
-    `A valid federated graph must have at least one populated query root type.\n` +
+  `A valid federated graph must have at least one populated query root type.\n` +
   ` For example:\n` +
   `  type Query {\n` +
   `    dummy: String\n` +
-  `  }`
+  `  }`,
 );
 
 export function unexpectedObjectResponseType(fieldPath: string, actualTypeString: string): Error {
   return new Error(
     `Expected the path "${fieldPath}" to have the response type` +
-    ` Enum, Interface, Object, Scalar, or Union but received ${actualTypeString}.`
+    ` Enum, Interface, Object, Scalar, or Union but received ${actualTypeString}.`,
   );
 }
 
@@ -608,12 +601,149 @@ export function noConcreteTypesForAbstractTypeError(typeString: string, abstract
   return new Error(
     `Expected ${typeString} "${abstractTypeName}" to define at least one ` +
     (typeString === UNION ? 'member' : 'object that implements the interface') +
-    ` but received none`
+    ` but received none`,
   );
 }
 
 export function expectedEntityError(typeName: string): Error {
   return new Error(
-    `Expected object "${typeName}" to define a "key" directive, but it defines no directives.`
+    `Expected object "${typeName}" to define a "key" directive, but it defines no directives.`,
   );
+}
+
+export const inlineFragmentInFieldSetErrorMessage =
+  ` Inline fragments are not currently supported within a FieldSet argument.`;
+
+export function abstractTypeInKeyFieldSetErrorMessage(
+  fieldSet: string, fieldPath: string, abstractTypeName: string, abstractTypeString: string,
+): string {
+  return ` The following FieldSet is invalid:\n "${fieldSet}"\n` +
+    `  This is because "${fieldPath}" returns "${abstractTypeName}", which is type "${abstractTypeString}".\n` +
+    `  Fields that return abstract types (interfaces and unions)` +
+    ` cannot be included in the FieldSet of "@key" directives.`;
+}
+
+export function unknownTypeInFieldSetErrorMessage(fieldSet: string, fieldPath: string, responseTypeName: string): string {
+  return ` The following FieldSet is invalid:\n "${fieldSet}"\n` +
+    `  This is because "${fieldPath}" returns the unknown type "${responseTypeName}".`;
+}
+
+export function invalidSelectionSetErrorMessage(
+  fieldSet: string, fieldPath: string, fieldTypeName: string, fieldTypeString: string,
+): string {
+  return ` The following FieldSet is invalid:\n "${fieldSet}"\n` +
+    `  This is because "${fieldPath}" returns "${fieldTypeName}", which is type "${fieldTypeString}".\n` +
+    ` Types such as "${fieldTypeString}" that define fields` +
+    ` must define a selection set with at least one field selection.`;
+}
+
+export function invalidSelectionSetDefinitionErrorMessage(
+  fieldSet: string, fieldPath: string, fieldTypeName: string, fieldTypeString: string,
+): string {
+  return ` The following FieldSet is invalid:\n "${fieldSet}"\n` +
+    `  This is because "${fieldPath}" returns "${fieldTypeName}", which is type "${fieldTypeString}".\n` +
+    `  Types such as "${fieldTypeString}" that do not define fields cannot define a selection set.`;
+}
+
+export function undefinedFieldInFieldSetErrorMessage(fieldSet: string, parentTypeName: string, fieldName: string): string {
+  return ` The following FieldSet is invalid:\n "${fieldSet}"\n` +
+    `  This is because "${parentTypeName}" does not define a field named "${fieldName}".`;
+}
+
+export function unparsableFieldSetErrorMessage(fieldSet: string, error?: Error): string {
+  let message = ` The following FieldSet is invalid:\n "${fieldSet}"\n` +
+    `  The FieldSet could not be parsed.`;
+  if (error) {
+    message += `\n The reason provided was: ` + error.message;
+  }
+  return message;
+}
+
+export function unparsableFieldSetSelectionErrorMessage(fieldSet: string, fieldName: string): string {
+  return ` The following FieldSet is invalid:\n "${fieldSet}"\n` +
+    `  This is because the selection set defined on "${fieldName}" could not be parsed.`;
+}
+
+export function undefinedObjectParentError(parentTypeName: string): Error {
+  return new Error(
+    ` Expected an object or object extension named "${parentTypeName}" to exist.`,
+  );
+}
+
+export function unexpectedArgumentErrorMessage(fieldSet: string, fieldPath: string, argumentName: string): string {
+  return ` The following FieldSet is invalid:\n "${fieldSet}"\n` +
+    `  This is because "${fieldPath}" does not define an argument named "${argumentName}".`;
+}
+
+export function argumentsInKeyFieldSetErrorMessage(fieldSet: string, fieldPath: string): string {
+  return ` The following FieldSet is invalid:\n "${fieldSet}"\n` +
+    `  This is because "${fieldPath}" defines arguments.\n` +
+    `  Fields that define arguments cannot be included in the FieldSet of @key directives.`;
+}
+
+export function invalidProvidesOrRequiresDirectivesError(directiveName: string, errorMessages: string[]): Error {
+  return new Error(
+    `The following "${directiveName}" directive` + (errorMessages.length > 1 ? 's are' : ' is') +
+    ` invalid:\n` + errorMessages.join(`\n`),
+  );
+}
+
+export function duplicateFieldInFieldSetErrorMessage(fieldSet: string, fieldPath: string): string {
+  return ` The following FieldSet is invalid:\n "${fieldSet}"\n` +
+    `  This is because "${fieldPath}" was included in the FieldSet more than once.`;
+}
+
+export function unknownProvidesEntityErrorMessage(fieldPath: string, responseType: string): string {
+  return ` A @provides directive is declared on "${fieldPath}".\n` +
+    ` However, the response type "${responseType}" object or object extension definition was not found.`;
+}
+
+export function invalidInlineFragmentTypeErrorMessage(
+  fieldSet: string, fieldPath: string, typeConditionName: string, parentTypeName: string,
+): string {
+  return ` The following FieldSet is invalid:\n "${fieldSet}"\n` +
+    `  This is because "${fieldPath}" defines an inline fragment with the type condition "${typeConditionName}".\n` +
+    `  However, "${parentTypeName}" is not an abstract (interface or union) type.\n` +
+    `  Consequently, the only valid type condition would be "${parentTypeName}".`;
+}
+
+export function inlineFragmentWithoutTypeConditionErrorMessage(fieldSet: string, fieldPath: string): string {
+  return ` The following FieldSet is invalid:\n "${fieldSet}"\n` +
+    `  This is because "${fieldPath}" defines an inline fragment without a type condition.`;
+}
+
+export function unknownInlineFragmentTypeConditionErrorMessage(
+  fieldSet: string, fieldPath: string, typeConditionName: string,
+): string {
+  return ` The following FieldSet is invalid:\n "${fieldSet}"\n` +
+    `  This is because "${fieldPath}" defines an inline fragment` +
+    ` with the unknown type condition "${typeConditionName}".`;
+}
+
+export function invalidInlineFragmentTypeConditionTypeErrorMessage(
+  fieldSet: string, fieldPath: string, typeConditionName: string, typeConditionTypeString: string,
+): string {
+  return ` The following FieldSet is invalid:\n "${fieldSet}"\n` +
+    `  This is because "${fieldPath}" defines an inline fragment with the type condition "${typeConditionName}",` +
+    ` which is type "${typeConditionTypeString}".\n` +
+    `  However, either an "interface" or "object" type was expected.`;
+}
+
+export function invalidInlineFragmentTypeConditionErrorMessage(
+  fieldSet: string, fieldPath: string, typeConditionName: string, parentTypeString: string, parentTypeName: string,
+): string {
+  let message = ` The following FieldSet is invalid:\n "${fieldSet}"\n` +
+    `  This is because "${fieldPath}" defines an inline fragment with the type condition "${typeConditionName}".\n`;
+  if (parentTypeString === 'interface') {
+    return message + `  However, "${typeConditionName}" does not implement "${parentTypeName}"`;
+  }
+  return message + `  However, "${typeConditionName}" is not a member of the union "${parentTypeName}".`;
+}
+
+export function invalidSelectionOnUnionErrorMessage(
+  fieldSet: string, fieldPath: string, responseTypeName: string,
+): string {
+  return ` The following FieldSet is invalid:\n "${fieldSet}"\n` +
+    `  This is because "${fieldPath}" returns "${responseTypeName}", which is type "union".\n` +
+    `  Consequently, an inline fragment is required to make a selection on one of the union's members.`;
 }

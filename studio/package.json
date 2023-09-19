@@ -1,6 +1,6 @@
 {
   "name": "studio",
-  "version": "0.10.1",
+  "version": "0.12.0",
   "private": true,
   "license": "Apache-2.0",
   "description": "WunderGraph Cosmo Studio",
@@ -51,6 +51,7 @@
     "@t3-oss/env-nextjs": "^0.4.1",
     "@tanstack/react-query": "^4.33.0",
     "@tanstack/react-table": "^8.9.3",
+    "@typeform/embed": "^2.16.1",
     "@wundergraph/cosmo-connect": "workspace:*",
     "bowser": "^2.11.0",
     "canvas-confetti": "^1.6.0",

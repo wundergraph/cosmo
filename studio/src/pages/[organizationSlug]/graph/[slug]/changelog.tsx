@@ -1,25 +1,29 @@
-import { getGraphLayout } from '@/components/layout/graph-layout';
-import { PageHeader } from '@/components/layout/head';
-import { TitleLayout } from '@/components/layout/title-layout';
-import { Badge } from '@/components/ui/badge';
-import { NextPageWithLayout } from '@/lib/page';
-import { cn } from '@/lib/utils';
-import { DotFilledIcon, ExclamationTriangleIcon, MinusIcon, PlusIcon, UpdateIcon } from '@radix-ui/react-icons';
-import { noCase } from 'change-case';
-import { format } from 'date-fns';
-import { useQuery } from '@tanstack/react-query';
+import { getGraphLayout } from "@/components/layout/graph-layout";
+import { PageHeader } from "@/components/layout/head";
+import { TitleLayout } from "@/components/layout/title-layout";
+import { Badge } from "@/components/ui/badge";
+import { NextPageWithLayout } from "@/lib/page";
+import { cn } from "@/lib/utils";
 import {
-  getFederatedGraphChangelog,
-} from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
-import { useRouter } from 'next/router';
-import { FederatedGraphChangelog } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { EmptyState } from '@/components/empty-state';
-import { Button } from '@/components/ui/button';
-import { Loader } from '@/components/ui/loader';
-import { CommandLineIcon } from '@heroicons/react/24/outline';
-import { docsBaseURL } from '@/lib/constants';
-import { CLI } from '@/components/ui/cli';
-import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common_pb';
+  DotFilledIcon,
+  ExclamationTriangleIcon,
+  MinusIcon,
+  PlusIcon,
+  UpdateIcon,
+} from "@radix-ui/react-icons";
+import { noCase } from "change-case";
+import { format } from "date-fns";
+import { useQuery } from "@tanstack/react-query";
+import { getFederatedGraphChangelog } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+import { useRouter } from "next/router";
+import { FederatedGraphChangelog } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
+import { EmptyState } from "@/components/empty-state";
+import { Button } from "@/components/ui/button";
+import { Loader } from "@/components/ui/loader";
+import { CommandLineIcon } from "@heroicons/react/24/outline";
+import { docsBaseURL } from "@/lib/constants";
+import { CLI } from "@/components/ui/cli";
+import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 
 interface StructuredChangelog {
   changeType: string;
@@ -208,7 +212,7 @@ const ChangelogPage: NextPageWithLayout = () => {
                   key={createdAt}
                   className="text-left text-muted-foreground hover:text-foreground hover:underline"
                 >
-                  {format(new Date(createdAt), "dd MMMM yyyy HH:mm")}
+                  {format(new Date(createdAt), "dd MMM yyyy HH:mm")}
                 </button>
               );
             }
@@ -229,7 +233,7 @@ const ChangelogPage: NextPageWithLayout = () => {
                 <div className="flex w-full flex-col items-start gap-x-16 gap-y-4 lg:flex-row">
                   <div className="flex flex-col items-end gap-y-1">
                     <time className="mt-2 text-sm font-bold leading-none">
-                      {format(new Date(createdAt), "dd MMMM yyyy HH:mm")}
+                      {format(new Date(createdAt), "dd MMM yyyy HH:mm")}
                     </time>
                     <p className="text-sm font-bold text-muted-foreground">
                       {id.slice(0, 6)}

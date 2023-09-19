@@ -377,6 +377,7 @@ export const organizations = pgTable('organizations', {
     .references(() => users.id)
     .notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  isFreeTrial: boolean('is_free_trial').default(false),
 });
 
 export const organizationsMembers = pgTable(
@@ -427,4 +428,21 @@ export const organizationMemberRolesRelations = relations(organizationMemberRole
     fields: [organizationMemberRoles.organizationMemberId],
     references: [organizationsMembers.id],
   }),
+}));
+
+export const organizationWebhooks = pgTable('organization_webhook_configs', {
+  id: uuid('id').notNull().primaryKey().defaultRandom(),
+  organizationId: uuid('organization_id')
+    .notNull()
+    .references(() => organizations.id, {
+      onDelete: 'cascade',
+    }),
+  endpoint: text('endpoint'),
+  key: text('key'),
+  events: text('events').array(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const organizationWebhookRelations = relations(organizationWebhooks, ({ many }) => ({
+  organization: many(organizations),
 }));

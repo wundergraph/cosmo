@@ -2,23 +2,35 @@ import { useFireworks } from "@/hooks/use-fireworks";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
 import { docsBaseURL } from "@/lib/constants";
 import { useChartData } from "@/lib/insights-helpers";
+import { cn } from "@/lib/utils";
 import {
   ChevronDoubleRightIcon,
   CommandLineIcon,
 } from "@heroicons/react/24/outline";
 import { useMutation } from "@tanstack/react-query";
-import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common_pb";
+import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { migrateFromApollo } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { FederatedGraph } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
+import copy from "copy-to-clipboard";
 import { getTime, parseISO, subDays } from "date-fns";
 import Link from "next/link";
-import { Dispatch, SetStateAction, useContext, useState } from "react";
+import { useRouter } from "next/router";
+import {
+  Dispatch,
+  SetStateAction,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
+import { FiCheck, FiCopy } from "react-icons/fi";
+import { SiApollographql } from "react-icons/si";
 import { Line, LineChart, ResponsiveContainer, XAxis } from "recharts";
 import { z } from "zod";
 import { UserContext } from "./app-provider";
 import { ComposeStatusMessage } from "./compose-status";
 import { ComposeStatusBulb } from "./compose-status-bulb";
 import { EmptyState } from "./empty-state";
+import { Logo } from "./logo";
 import { TimeAgo } from "./time-ago";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
@@ -38,9 +50,6 @@ import {
   TooltipTrigger,
 } from "./ui/tooltip";
 import { useToast } from "./ui/use-toast";
-import { Logo } from "./logo";
-import { SiApollographql } from "react-icons/si";
-import { cn } from "@/lib/utils";
 
 // this is required to render a blank line with LineChart
 const fallbackData = [
@@ -56,13 +65,23 @@ const fallbackData = [
 
 const MigrationDialog = ({
   refetch,
+  isMigrating,
+  setIsMigrating,
   setIsMigrationSuccess,
+  setToken,
   isEmptyState,
 }: {
   refetch: () => void;
+  isMigrating: boolean;
+  setIsMigrating: Dispatch<SetStateAction<boolean>>;
   setIsMigrationSuccess: Dispatch<SetStateAction<boolean>>;
+  setToken: Dispatch<SetStateAction<string | undefined>>;
   isEmptyState?: boolean;
 }) => {
+  const router = useRouter();
+  const { organizationSlug } = router.query;
+  const migrate = !!router.query.migrate;
+
   const migrateInputSchema = z.object({
     apiKey: z
       .string()
@@ -84,15 +103,14 @@ const MigrationDialog = ({
     schema: migrateInputSchema,
   });
 
-  const { toast, update } = useToast();
+  const { toast } = useToast();
 
-  const { mutate, isLoading } = useMutation(migrateFromApollo.useMutation());
-  const [open, setOpen] = useState(false);
+  const { mutate } = useMutation(migrateFromApollo.useMutation());
+
+  const [open, setOpen] = useState(migrate || false);
 
   const onSubmit: SubmitHandler<MigrateInput> = (data) => {
-    const { id } = toast({
-      description: "Migrating the graph...",
-    });
+    setIsMigrating(true);
     mutate(
       {
         apiKey: data.apiKey,
@@ -100,32 +118,34 @@ const MigrationDialog = ({
       },
       {
         onSuccess: (d) => {
+          setOpen(false);
           if (
             d.response?.code === EnumStatusCode.OK ||
             d.response?.code === EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED
           ) {
-            update({
+            toast({
               description: "Successfully migrated the graph.",
-              duration: 3000,
-              id: id,
+              duration: 2000,
             });
             refetch();
             setIsMigrationSuccess(true);
+            setToken(d.token);
           } else if (d.response?.details) {
-            update({ description: d.response.details, duration: 3000, id: id });
+            toast({ description: d.response.details, duration: 3000 });
           }
+          router.replace(`/${organizationSlug}/graphs`);
         },
         onError: (error) => {
-          update({
+          toast({
             description: "Could not migrate the graph. Please try again.",
             duration: 3000,
-            id: id,
           });
+          setOpen(false);
+          router.replace(`/${organizationSlug}/graphs`);
         },
       }
     );
     reset();
-    setOpen(false);
   };
 
   return (
@@ -148,67 +168,84 @@ const MigrationDialog = ({
         </Card>
       </DialogTrigger>
       <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Migrate from Apollo</DialogTitle>
-        </DialogHeader>
-        <div className="flex flex-col gap-y-2">
-          <p className="text-sm">
-            The Graph API Key is the api key associated to the graph which has
-            to be migrated and it should be obtained from Apollo Studio.
-          </p>
-          <p className="text-sm">
-            Click{" "}
-            <Link
-              href={docsBaseURL + "/studio/migrate-from-apollo"}
-              className="text-primary"
-              target="_blank"
-              rel="noreferrer"
+        {!isMigrating ? (
+          <>
+            <DialogHeader>
+              <DialogTitle>Migrate from Apollo</DialogTitle>
+            </DialogHeader>
+            <div className="flex flex-col gap-y-2">
+              <p className="text-sm">
+                The Graph API Key is the api key associated to the graph which
+                has to be migrated and it should be obtained from Apollo Studio.
+              </p>
+              <p className="text-sm">
+                Click{" "}
+                <Link
+                  href={docsBaseURL + "/studio/migrate-from-apollo"}
+                  className="text-primary"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  here
+                </Link>{" "}
+                to find the steps to obtain the key.
+              </p>
+              <p className="text-sm text-teal-400">
+                Note: This key is not stored and only used to fetch the
+                subgraphs.
+              </p>
+            </div>
+            <form
+              className="mt-2 flex flex-col gap-y-3"
+              onSubmit={handleSubmit(onSubmit)}
             >
-              here
-            </Link>{" "}
-            to find the steps to obtain the key.
-          </p>
-          <p className="text-sm text-teal-400">
-            Note: This key is not stored and only used to fetch the subgraphs.
-          </p>
-        </div>
-        <form
-          className="mt-2 flex flex-col gap-y-3"
-          onSubmit={handleSubmit(onSubmit)}
-        >
-          <div className="flex flex-col gap-y-2">
-            <span className="text-sm font-semibold">Graph API Key</span>
-            <Input className="w-full" type="text" {...register("apiKey")} />
-            {errors.apiKey && (
-              <span className="px-2 text-xs text-destructive">
-                {errors.apiKey.message}
-              </span>
-            )}
-          </div>
-          <div className="flex flex-col gap-y-2">
-            <span className="text-sm font-semibold">Graph Variant Name</span>
-            <Input
-              className="w-full"
-              type="text"
-              {...register("variantName")}
-            />
-            {errors.variantName && (
-              <span className="px-2 text-xs text-destructive">
-                {errors.variantName.message}
-              </span>
-            )}
-          </div>
+              <div className="flex flex-col gap-y-2">
+                <span className="text-sm font-semibold">Graph API Key</span>
+                <Input className="w-full" type="text" {...register("apiKey")} />
+                {errors.apiKey && (
+                  <span className="px-2 text-xs text-destructive">
+                    {errors.apiKey.message}
+                  </span>
+                )}
+              </div>
+              <div className="flex flex-col gap-y-2">
+                <span className="text-sm font-semibold">
+                  Graph Variant Name
+                </span>
+                <Input
+                  className="w-full"
+                  type="text"
+                  {...register("variantName")}
+                />
+                {errors.variantName && (
+                  <span className="px-2 text-xs text-destructive">
+                    {errors.variantName.message}
+                  </span>
+                )}
+              </div>
 
-          <Button
-            className="mt-2"
-            type="submit"
-            disabled={!isValid}
-            variant="default"
-            isLoading={isLoading}
-          >
-            Migrate
-          </Button>
-        </form>
+              <Button
+                className="mt-2"
+                type="submit"
+                disabled={!isValid}
+                variant="default"
+              >
+                Migrate
+              </Button>
+            </form>
+          </>
+        ) : (
+          <div className="flex flex-col items-center justify-center gap-y-4 py-4">
+            <div className="flex items-center justify-center gap-x-5">
+              <SiApollographql className="h-10 w-10" />
+              <ChevronDoubleRightIcon className="animation h-8 w-8" />
+              <Logo width={50} height={50} />
+            </div>
+            <p className="bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-xl font-semibold text-transparent">
+              Migrating...
+            </p>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
@@ -219,12 +256,103 @@ const MigrationSuccess = () => {
   return null;
 };
 
+const RunRouterCommand = ({
+  open,
+  setOpen,
+  graphName,
+  token,
+}: {
+  open: boolean;
+  setOpen: Dispatch<SetStateAction<boolean>>;
+  graphName: string;
+  token: string;
+}) => {
+  const dockerRunCommand = `docker run \\
+  --name cosmo-router \\
+  -e FEDERATED_GRAPH_NAME="${graphName}" \\
+  -e GRAPH_API_TOKEN=${token} \\
+  -e LISTEN_ADDR=0.0.0.0:3002 \\
+  --platform=linux/amd64 \\
+  -p 3002:3002 \\
+  ghcr.io/wundergraph/cosmo/router:latest`;
+
+  const [copyDockerCommand, setCopyDockerCommand] = useState(false);
+
+  useEffect(() => {
+    if (copyDockerCommand) {
+      copy(dockerRunCommand);
+      const to = setTimeout(setCopyDockerCommand, 1000, false);
+      return () => clearTimeout(to);
+    }
+  }, [dockerRunCommand, copyDockerCommand]);
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogContent
+        onInteractOutside={(event) => {
+          event.preventDefault();
+        }}
+      >
+        <DialogHeader>
+          <DialogTitle>Router Initiation</DialogTitle>
+        </DialogHeader>
+        <div className="flex flex-col gap-y-4 pt-2">
+          <div>
+            <p className="pb-2 text-sm">
+              Use the below command to initiate the router.{" "}
+              <Link
+                href={docsBaseURL + "/router/deployment"}
+                className="text-sm text-primary"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Learn more
+              </Link>
+            </p>
+            <div className="flex justify-between rounded border border-input bg-background p-4">
+              <code className="whitespace-pre-wrap break-all rounded font-mono text-xs leading-normal text-muted-foreground">
+                {dockerRunCommand}
+              </code>
+              <Button
+                asChild={true}
+                size="sm"
+                variant="secondary"
+                onClick={() => setCopyDockerCommand(true)}
+                className="cursor-pointer"
+              >
+                <div>
+                  {copyDockerCommand ? (
+                    <FiCheck className="text-xs" />
+                  ) : (
+                    <FiCopy className="text-xs" />
+                  )}
+                </div>
+              </Button>
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Hint: The Graph API Token which is scoped to the migrated
+              federated graph is generated. Please store it safely for future
+              use.
+            </p>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 export const Empty = ({
   refetch,
   setIsMigrationSuccess,
+  setToken,
+  isMigrating,
+  setIsMigrating,
 }: {
   refetch: () => void;
   setIsMigrationSuccess: Dispatch<SetStateAction<boolean>>;
+  setToken: Dispatch<SetStateAction<string | undefined>>;
+  isMigrating: boolean;
+  setIsMigrating: Dispatch<SetStateAction<boolean>>;
 }) => {
   let labels = "team=A";
   return (
@@ -254,6 +382,9 @@ export const Empty = ({
             refetch={refetch}
             setIsMigrationSuccess={setIsMigrationSuccess}
             isEmptyState={true}
+            setToken={setToken}
+            isMigrating={isMigrating}
+            setIsMigrating={setIsMigrating}
           />
         </div>
       }
@@ -367,15 +498,40 @@ export const FederatedGraphsCards = ({
   refetch: () => void;
 }) => {
   const [isMigrationSuccess, setIsMigrationSuccess] = useState(false);
+  const [token, setToken] = useState<string | undefined>();
+  const [isMigrating, setIsMigrating] = useState(false);
+
+  useEffect(() => {
+    if (isMigrationSuccess) {
+      const to = setTimeout(setIsMigrating, 1500, false);
+      return () => clearTimeout(to);
+    }
+  }, [isMigrationSuccess]);
 
   if (!graphs || graphs.length === 0)
     return (
-      <Empty refetch={refetch} setIsMigrationSuccess={setIsMigrationSuccess} />
+      <Empty
+        refetch={refetch}
+        setIsMigrationSuccess={setIsMigrationSuccess}
+        setToken={setToken}
+        isMigrating={isMigrating}
+        setIsMigrating={setIsMigrating}
+      />
     );
 
   return (
     <>
-      {isMigrationSuccess && <MigrationSuccess />}
+      {isMigrationSuccess && token && (
+        <>
+          <MigrationSuccess />
+          <RunRouterCommand
+            open={isMigrationSuccess}
+            setOpen={setIsMigrationSuccess}
+            graphName={graphs[graphs.length - 1].name}
+            token={token}
+          />
+        </>
+      )}
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
         {graphs.map((graph, graphIndex) => {
           return <GraphCard key={graphIndex.toString()} graph={graph} />;
@@ -383,6 +539,9 @@ export const FederatedGraphsCards = ({
         <MigrationDialog
           refetch={refetch}
           setIsMigrationSuccess={setIsMigrationSuccess}
+          setToken={setToken}
+          isMigrating={isMigrating}
+          setIsMigrating={setIsMigrating}
         />
       </div>
     </>

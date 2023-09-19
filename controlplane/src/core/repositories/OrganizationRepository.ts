@@ -2,8 +2,15 @@ import { ExpiresAt } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_
 import { and, asc, eq } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema.js';
-import { apiKeys, organizationMemberRoles, organizations, organizationsMembers, users } from '../../db/schema.js';
-import { APIKeyDTO, OrganizationDTO, OrganizationMemberDTO } from '../../types/index.js';
+import {
+  apiKeys,
+  organizationMemberRoles,
+  organizationWebhooks,
+  organizations,
+  organizationsMembers,
+  users,
+} from '../../db/schema.js';
+import { APIKeyDTO, OrganizationDTO, OrganizationMemberDTO, WebhooksConfigDTO } from '../../types/index.js';
 
 /**
  * Repository for organization related operations.
@@ -72,6 +79,7 @@ export class OrganizationRepository {
         id: organizations.id,
         name: organizations.name,
         slug: organizations.slug,
+        isFreeTrial: organizations.isFreeTrial,
       })
       .from(organizationsMembers)
       .innerJoin(organizations, eq(organizations.id, organizationsMembers.organizationId))
@@ -83,6 +91,7 @@ export class OrganizationRepository {
       id: org.id,
       name: org.name,
       slug: org.slug,
+      isFreeTrial: org.isFreeTrial || false,
     }));
   }
 
@@ -155,10 +164,11 @@ export class OrganizationRepository {
   }
 
   public async createOrganization(input: {
-    organizationID: string;
+    organizationID?: string;
     organizationName: string;
     organizationSlug: string;
     ownerID: string;
+    isFreeTrial?: boolean;
   }): Promise<OrganizationDTO> {
     const insertedOrg = await this.db
       .insert(organizations)
@@ -167,6 +177,7 @@ export class OrganizationRepository {
         name: input.organizationName,
         slug: input.organizationSlug,
         createdBy: input.ownerID,
+        isFreeTrial: input.isFreeTrial,
       })
       .returning()
       .execute();
@@ -350,5 +361,50 @@ export class OrganizationRepository {
           creatorUserID: key.creatorUserID,
         } as APIKeyDTO),
     );
+  }
+
+  public async createWebhookConfig(input: { organizationId: string; endpoint: string; key: string; events: string[] }) {
+    await this.db.insert(organizationWebhooks).values({
+      ...input,
+    });
+  }
+
+  public async getWebhookConfigs(organizationId: string): Promise<WebhooksConfigDTO[]> {
+    const res = await this.db.query.organizationWebhooks.findMany({
+      where: eq(organizationWebhooks.organizationId, organizationId),
+      orderBy: (webhooks, { desc }) => [desc(webhooks.createdAt)],
+    });
+
+    return res.map((r) => ({
+      id: r.id,
+      endpoint: r.endpoint ?? '',
+      events: r.events ?? [],
+    }));
+  }
+
+  public async updateWebhookConfig(input: {
+    id: string;
+    organizationId: string;
+    endpoint: string;
+    key: string;
+    events: string[];
+    shouldUpdateKey: boolean;
+  }) {
+    const set: Partial<typeof organizationWebhooks.$inferInsert> = {
+      endpoint: input.endpoint,
+      events: input.events,
+    };
+
+    if (input.shouldUpdateKey) {
+      set.key = input.key;
+    }
+
+    await this.db.update(organizationWebhooks).set(set).where(eq(organizationWebhooks.id, input.id));
+  }
+
+  public async deleteWebhookConfig(input: { id: string; organizationId: string }) {
+    await this.db
+      .delete(organizationWebhooks)
+      .where(and(eq(organizationWebhooks.id, input.id), eq(organizationWebhooks.organizationId, input.organizationId)));
   }
 }

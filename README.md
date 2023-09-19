@@ -18,7 +18,7 @@ WunderGraph Cosmo is the On-Premise Platform for building, maintaining, and coll
 The repository consists of the following components:
 
 - [CLI](./cli): The cosmo CLI tool `wgc`. Used to manage the cosmo platform e.g. pushing schema, check schemas, creating new projects, managing users, etc. It interacts with the control plane.
-- [Control-Plane](./control-plane): The control plane is the central component of the cosmo platform. It consists of a platform API and a node API. The platform API is used by the cosmo `CLI` tool and the `Studio` to manage the platform.
+- [Control Plane](./controlplane): The control plane is the central component of the cosmo platform. It consists of a platform API and a node API. The platform API is used by the cosmo `CLI` tool and the `Studio` to manage the platform.
 - [Router](./router): The router is the component that understands the GraphQL Federation protocol. It is responsible for routing requests to the correct service and for aggregating the responses. It is in connection with the control plane to register itself for advanced fleet management.
 - [Studio](./studio): The studio is the web interface for the cosmo platform. It is used to manage the platform and to collaborate on GraphQL Federation. It is in connection with the control plane through the Platform API to manage the platform.
 
@@ -35,13 +35,14 @@ Running cosmo is as easy as running a single command:
 make full-demo-up
 ```
 
-It can take a few seconds (~30s) until all services are up and running. A seed container will create a default user for you.
+It can take a few seconds (~30s) until all services are up and running. A seed container and few migrations are running in the background to bootstrap the platform.
+They might restart a few times until the database is ready. You can check the status of the services by running `docker-compose -f docker-compose.full.yml ps`.
 
 2. Now, you can create a small demo project and start the router and subgraphs:
 
 ```shell
 # Create the demo project
-make create-docker-demo
+make create-cli-demo
 
 # Copy the Router token from the previous log output
 export ROUTER_TOKEN=...
@@ -50,7 +51,7 @@ export ROUTER_TOKEN=...
 make dc-federation-demo
 ```
 
-3. Navigate to the [Studio explorer](http://localhost:3001/wundergraph/graph/production/explorer) and query the router. Login with the default credentials:
+3. Navigate to the [Studio explorer](http://localhost:3000/wundergraph/graph/production/explorer) and query the router. Login with the default credentials:
 
 ```
 Username: foo@wundergraph.com
@@ -72,25 +73,25 @@ _Clean up all containers and volumes by running `make full-demo-down`._
 Bootstrapping your development environment is easy. Just run the following commands in order:
 
 ```shell
-# 1️⃣ Setup the repository and start all services (docker-compose)
+# 1️⃣ Setup the repository and start all services (Wait a few seconds until Keycloak is ready)
 make
 
-# 2️⃣ Start the control plane (Will run any pending migrations)
+# 2️⃣ Run migrations and seed the database
+make migrate && make seed
+
+# 3️⃣ Start the control plane
 make start-cp
 
-# 3️⃣ Seed the database with the default user (Wait a few seconds until Keycloak is ready)
-make seed
-
-# 4️⃣ Create the demo and copy the JWT printed at the bottom
+# 4️⃣⃣ Create the demo and copy the JWT printed at the bottom
 make create-demo
 
 # 5️⃣ Start the subgraphs
 OTEL_AUTH_TOKEN=<jwt-token> make dc-subgraphs-demo
 
-# 6️⃣ Put the JWT from the previous step into the router/.env as GRAPH_API_TOKEN and start the router
+# 6️⃣⃣ Put the JWT from the previous step into the router/.env as GRAPH_API_TOKEN and start the router
 make start-router
 
-# 7️⃣ Start the studio (http://localhost:3000)
+# ✨ Finally, Start the studio (http://localhost:3000) and explore the Cosmo platform
 make start-studio
 ```
 
@@ -110,7 +111,7 @@ export COSMO_API_URL=http://localhost:3001
 cd cli && pnpm wgc -h
 ```
 
-All services work with environment variables. You can find the default values in the `.env.example` file. Please copy it to `.env`  (Except studio which works with `.env.local`) and adjust the values to your needs.
+All services work with environment variables. You can find the default values in the `.env.example` file. Please copy it to `.env` (Except studio which works with `.env.local`) and adjust the values to your needs.
 
 _Clean up all containers and volumes by running `make infra-down-v`._
 
@@ -122,7 +123,7 @@ We manage multiple compose files:
 - `docker-compose.full.yml`: This compose file contains the full Cosmo platform. It is used for demo and testing.
 - `docker-compose.cosmo.yml`: This compose file allows to build all cosmo components and manage them in a single compose file. It is used for testing and releasing.
 
-__Clean up a compose stack before starting another one!__
+**Clean up a compose stack before starting another one!**
 
 ## On-Premise
 
@@ -138,4 +139,3 @@ After contacting us, we will hook you up with a free trial and help you to get s
 ## License
 
 Cosmo is licensed under the [Apache License, Version 2.0](LICENSE).
-

@@ -1,4 +1,4 @@
-import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common_pb';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 
 export class ServiceError extends Error {
   constructor(public code: EnumStatusCode, message: string, cause?: Error) {
@@ -12,7 +12,7 @@ export class PublicError extends ServiceError {}
 
 export class AuthenticationError extends ServiceError {}
 
-export function isAuthenticationError(e: Error): e is PublicError {
+export function isAuthenticationError(e: Error): e is AuthenticationError {
   return e instanceof AuthenticationError;
 }
 

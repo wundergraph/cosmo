@@ -34,13 +34,13 @@ import {
   unionTypeDefinitionNodeToMutable,
 } from '../ast/ast';
 import {
-  extractEntityKeys,
   extractExecutableDirectiveLocations,
   extractInterfaces,
-  getNodeWithPersistedDirectives,
+  isNodeExternal,
+  isNodeOverridden,
   isNodeShareable,
   mergeExecutableDirectiveLocations,
-  pushPersistedDirectivesToNode,
+  pushPersistedDirectivesAndGetNode,
   setLongestDescriptionForNode,
   setToNameNodeArray,
   stringToNamedTypeNode,
@@ -56,6 +56,7 @@ import {
   incompatibleChildTypesError,
   incompatibleParentKindFatalError,
   incompatibleSharedEnumError,
+  invalidDeprecatedDirectiveError,
   invalidRequiredArgumentsError,
   invalidSubgraphNameErrorMessage,
   invalidSubgraphNamesError,
@@ -72,6 +73,7 @@ import {
   unexpectedArgumentKindFatalError,
   unexpectedKindFatalError,
   unexpectedObjectResponseType,
+  unexpectedParentKindErrorMessage,
   unimplementedInterfaceFieldsError,
   unresolvableFieldError,
 } from '../errors/errors';
@@ -84,6 +86,7 @@ import {
 import {
   ArgumentContainer,
   ArgumentMap,
+  DeprecatedDirectiveContainer,
   DirectiveContainer,
   DirectiveMap,
   EntityContainer,
@@ -94,6 +97,7 @@ import {
   InputValueContainer,
   InterfaceContainer,
   MergeMethod,
+  newPersistedDirectivesContainer,
   ObjectContainer,
   ObjectLikeContainer,
   ParentContainer,
@@ -128,6 +132,7 @@ import {
 import {
   addIterableValuesToSet,
   doSetsHaveAnyOverlap,
+  getAllMutualEntries,
   getEntriesNotInHashSet,
   getOrThrowError,
   hasSimplePath,
@@ -143,6 +148,7 @@ import { normalizeSubgraph } from '../normalization/normalization-factory';
 
 export class FederationFactory {
   abstractToConcreteTypeNames = new Map<string, Set<string>>();
+  areFieldsExternal = false;
   areFieldsShareable = false;
   argumentTypeNameSet = new Set<string>();
   argumentConfigurations: ArgumentConfigurationData[] = [];
@@ -165,11 +171,13 @@ export class FederationFactory {
   isCurrentParentExtensionType = false;
   isParentRootType = false;
   isParentInputObject = false;
+  keyFieldsByParentTypeName = new Map<string, Set<string>>();
   outputFieldTypeNameSet = new Set<string>();
   parents: ParentMap = new Map<string, ParentContainer>();
   rootTypeNames = new Set<string>([DEFAULT_MUTATION, DEFAULT_QUERY, DEFAULT_SUBSCRIPTION]);
   subgraphs: InternalSubgraph[] = [];
   shareableErrorTypeNames = new Map<string, Set<string>>();
+  evaluatedObjectLikesBySubgraph = new Map<string, Set<string>>();
 
   constructor(subgraphs: InternalSubgraph[]) {
     this.subgraphs = subgraphs;
@@ -183,13 +191,11 @@ export class FederationFactory {
     const typeName = node.name.value;
     const entity = this.entities.get(typeName);
     if (entity) {
-      extractEntityKeys(node, entity.keys, this.errors);
       entity.subgraphs.add(this.currentSubgraphName);
       return;
     }
     this.entities.set(typeName, {
       fields: new Set<string>(),
-      keys: extractEntityKeys(node, new Set<string>(), this.errors),
       subgraphs: new Set<string>([this.currentSubgraphName]),
     });
   }
@@ -200,13 +206,6 @@ export class FederationFactory {
       walkSubgraphToCollectObjectLikesAndDirectiveDefinitions(this, subgraph);
       walkSubgraphToCollectFields(this, subgraph);
     }
-  }
-
-  isFieldEntityKey(parent: ParentContainer | ExtensionContainer): boolean {
-    if (parent.kind === Kind.OBJECT_TYPE_DEFINITION || parent.kind === Kind.OBJECT_TYPE_EXTENSION) {
-      return parent.entityKeys.has(this.childName);
-    }
-    return false;
   }
 
   getEnumMergeMethod(enumName: string): MergeMethod {
@@ -298,6 +297,9 @@ export class FederationFactory {
       const existingArgumentContainer = argumentMap.get(argName);
       if (!existingArgumentContainer) {
         argumentMap.set(argName, {
+          directives: this.extractPersistedDirectives(
+            argumentNode.directives || [], newPersistedDirectivesContainer(),
+          ),
           includeDefaultValue: !!argumentNode.defaultValue,
           node: inputValueDefinitionNodeToMutable(argumentNode, this.childName),
           requiredSubgraphs: this.upsertRequiredSubgraph(new Set<string>(), isRequired),
@@ -305,6 +307,7 @@ export class FederationFactory {
         });
         continue;
       }
+      this.extractPersistedDirectives(argumentNode.directives || [], existingArgumentContainer.directives);
       setLongestDescriptionForNode(existingArgumentContainer.node, argumentNode.description);
       this.upsertRequiredSubgraph(existingArgumentContainer.requiredSubgraphs, isRequired);
       existingArgumentContainer.subgraphs.add(this.currentSubgraphName);
@@ -329,12 +332,25 @@ export class FederationFactory {
     return argumentMap;
   }
 
+  isFieldEntityKey(): boolean {
+    const parent = this.keyFieldsByParentTypeName.get(this.parentTypeName);
+    if (parent) {
+      return parent.has(this.childName);
+    }
+    return false;
+  }
+
+  isFieldExternal(node: FieldDefinitionNode): boolean {
+    return this.areFieldsExternal || isNodeExternal(node);
+  }
+
   isFieldShareable(node: FieldDefinitionNode, parent: ParentContainer | ExtensionContainer): boolean {
     return (
-      !this.isCurrentSubgraphVersionTwo ||
-      this.areFieldsShareable ||
-      isNodeShareable(node) ||
-      (this.isCurrentParentEntity && this.isFieldEntityKey(parent))
+      !this.isCurrentSubgraphVersionTwo
+      || this.areFieldsShareable
+      || this.isFieldEntityKey()
+      || isNodeShareable(node)
+      || isNodeOverridden(node)
     );
   }
 
@@ -367,6 +383,28 @@ export class FederationFactory {
     }
   }
 
+  areAllFieldInstancesExternalOrShareable(fieldContainer: FieldContainer) {
+    let shareableFields = 0;
+    let unshareableFields = 0;
+    for (const [subgraphName, isShareable] of fieldContainer.subgraphsByShareable) {
+      if (isShareable) {
+        shareableFields += 1;
+        if (shareableFields && unshareableFields) {
+          return false;
+        }
+        continue;
+      }
+      if (fieldContainer.subgraphsByExternal.get(subgraphName)) {
+        continue;
+      }
+      unshareableFields += 1;
+      if (shareableFields || unshareableFields > 1) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   upsertFieldNode(node: FieldDefinitionNode) {
     const parent = this.isCurrentParentExtensionType
       ? getOrThrowError(this.extensions, this.parentTypeName, EXTENSIONS)
@@ -379,6 +417,7 @@ export class FederationFactory {
       throw unexpectedKindFatalError(this.parentTypeName);
     }
     const fieldMap = parent.fields;
+    const isFieldExternal = this.isFieldExternal(node);
     const isFieldShareable = this.isFieldShareable(node, parent);
     const fieldPath = `${this.parentTypeName}.${this.childName}`;
     const fieldRootTypeName = getNamedTypeForChild(fieldPath, node.type);
@@ -388,6 +427,7 @@ export class FederationFactory {
       setLongestDescriptionForNode(existingFieldContainer.node, node.description);
       existingFieldContainer.subgraphs.add(this.currentSubgraphName);
       existingFieldContainer.subgraphsByShareable.set(this.currentSubgraphName, isFieldShareable);
+      existingFieldContainer.subgraphsByExternal.set(this.currentSubgraphName, isFieldExternal);
       const { typeErrors, typeNode } = getLeastRestrictiveMergedTypeNode(
         existingFieldContainer.node.type,
         node.type,
@@ -405,14 +445,24 @@ export class FederationFactory {
         );
       }
       this.upsertArguments(node, existingFieldContainer.arguments);
-      // If the parent is not an interface and both fields are not shareable, is it is a shareable error
-      if (!this.isCurrentParentInterface && (!existingFieldContainer.isShareable || !isFieldShareable)) {
-        const shareableErrorTypeNames = this.shareableErrorTypeNames.get(this.parentTypeName);
-        if (shareableErrorTypeNames) {
-          shareableErrorTypeNames.add(this.childName);
-        } else {
-          this.shareableErrorTypeNames.set(this.parentTypeName, new Set<string>([this.childName]));
-        }
+      /* A field is valid if one of the following is true:
+        1. The field is an interface
+        2. The field is external
+        3. The existing fields AND the current field are ALL shareable
+        4. All other fields besides the current field are external
+      */
+      if (this.isCurrentParentInterface
+        || isFieldExternal
+        || (existingFieldContainer.isShareable && isFieldShareable)
+        || this.areAllFieldInstancesExternalOrShareable(existingFieldContainer)
+      ) {
+        return;
+      }
+      const shareableErrorTypeNames = this.shareableErrorTypeNames.get(this.parentTypeName);
+      if (shareableErrorTypeNames) {
+        shareableErrorTypeNames.add(this.childName);
+      } else {
+        this.shareableErrorTypeNames.set(this.parentTypeName, new Set<string>([this.childName]));
       }
       return;
     }
@@ -420,17 +470,14 @@ export class FederationFactory {
     fieldMap.set(this.childName, {
       arguments: this.upsertArguments(node, new Map<string, ArgumentContainer>()),
       directives: this.extractPersistedDirectives(
-        node.directives || [],
-        {
-          directives: new Map<string, ConstDirectiveNode[]>(),
-          tags: new Map<string, ConstDirectiveNode>(),
-        },
+        node.directives || [], newPersistedDirectivesContainer(),
       ),
       isShareable: isFieldShareable,
       node: fieldDefinitionNodeToMutable(node, this.parentTypeName),
       namedTypeName: fieldRootTypeName,
       subgraphs: new Set<string>([this.currentSubgraphName]),
       subgraphsByShareable: new Map<string, boolean>([[this.currentSubgraphName, isFieldShareable]]),
+      subgraphsByExternal: new Map<string, boolean>([[this.currentSubgraphName, isFieldExternal]]),
     });
   }
 
@@ -456,11 +503,7 @@ export class FederationFactory {
         enumValues.set(this.childName, {
           appearances: 1,
           directives: this.extractPersistedDirectives(
-            node.directives || [],
-            {
-              directives: new Map<string, ConstDirectiveNode[]>(),
-              tags: new Map<string, ConstDirectiveNode>(),
-            },
+            node.directives || [], newPersistedDirectivesContainer(),
           ),
           node: enumValueDefinitionNodeToMutable(node),
         });
@@ -503,11 +546,7 @@ export class FederationFactory {
         inputValues.set(this.childName, {
           appearances: 1,
           directives: this.extractPersistedDirectives(
-            node.directives || [],
-            {
-              directives: new Map<string, ConstDirectiveNode[]>(),
-              tags: new Map<string, ConstDirectiveNode>(),
-            },
+            node.directives || [], newPersistedDirectivesContainer(),
           ),
           includeDefaultValue: !!node.defaultValue,
           node: inputValueDefinitionNodeToMutable(node, this.parentTypeName),
@@ -537,11 +576,7 @@ export class FederationFactory {
         this.parents.set(parentTypeName, {
           appearances: 1,
           directives: this.extractPersistedDirectives(
-            node.directives || [],
-            {
-              directives: new Map<string, ConstDirectiveNode[]>(),
-              tags: new Map<string, ConstDirectiveNode>(),
-            },
+            node.directives || [], newPersistedDirectivesContainer(),
           ),
           values: new Map<string, EnumValueContainer>(),
           kind: node.kind,
@@ -559,11 +594,7 @@ export class FederationFactory {
         this.parents.set(parentTypeName, {
           appearances: 1,
           directives: this.extractPersistedDirectives(
-            node.directives || [],
-            {
-              directives: new Map<string, ConstDirectiveNode[]>(),
-              tags: new Map<string, ConstDirectiveNode>(),
-            },
+            node.directives || [], newPersistedDirectivesContainer(),
           ),
           fields: new Map<string, InputValueContainer>(),
           kind: node.kind,
@@ -583,11 +614,7 @@ export class FederationFactory {
         extractInterfaces(node, nestedInterfaces);
         this.parents.set(parentTypeName, {
           directives: this.extractPersistedDirectives(
-            node.directives || [],
-            {
-              directives: new Map<string, ConstDirectiveNode[]>(),
-              tags: new Map<string, ConstDirectiveNode>(),
-            },
+            node.directives || [], newPersistedDirectivesContainer(),
           ),
           fields: new Map<string, FieldContainer>(),
           interfaces: nestedInterfaces,
@@ -605,11 +632,7 @@ export class FederationFactory {
         }
         this.parents.set(parentTypeName, {
           directives: this.extractPersistedDirectives(
-            node.directives || [],
-            {
-              directives: new Map<string, ConstDirectiveNode[]>(),
-              tags: new Map<string, ConstDirectiveNode>(),
-            },
+            node.directives || [], newPersistedDirectivesContainer(),
           ),
           kind: node.kind,
           node: scalarTypeDefinitionNodeToMutable(node),
@@ -621,24 +644,16 @@ export class FederationFactory {
             throw incompatibleParentKindFatalError(parentTypeName, node.kind, parent.kind);
           }
           extractInterfaces(node, parent.interfaces);
-          extractEntityKeys(node, parent.entityKeys, this.errors);
           parent.subgraphs.add(this.currentSubgraphName);
           return;
         }
         const interfaces = new Set<string>();
         extractInterfaces(node, interfaces);
-        const entityKeys = new Set<string>();
-        extractEntityKeys(node, entityKeys, this.errors);
         this.parents.set(parentTypeName, {
           directives: this.extractPersistedDirectives(
-            node.directives || [],
-            {
-              directives: new Map<string, ConstDirectiveNode[]>(),
-              tags: new Map<string, ConstDirectiveNode>(),
-            },
+            node.directives || [], newPersistedDirectivesContainer(),
           ),
           fields: new Map<string, FieldContainer>(),
-          entityKeys,
           interfaces,
           isRootType: this.isParentRootType,
           kind: node.kind,
@@ -660,11 +675,7 @@ export class FederationFactory {
         }
         this.parents.set(parentTypeName, {
           directives: this.extractPersistedDirectives(
-            node.directives || [],
-            {
-              directives: new Map<string, ConstDirectiveNode[]>(),
-              tags: new Map<string, ConstDirectiveNode>(),
-            },
+            node.directives || [], newPersistedDirectivesContainer(),
           ),
           kind: node.kind,
           members: new Set<string>(node.types?.map((member) => member.name.value)),
@@ -687,16 +698,10 @@ export class FederationFactory {
     }
     // build a new extension
     const interfaces = extractInterfaces(node, new Set<string>());
-    const entityKeys = extractEntityKeys(node, new Set<string>(), this.errors);
     this.extensions.set(this.parentTypeName, {
       directives: this.extractPersistedDirectives(
-        node.directives || [],
-        {
-          directives: new Map<string, ConstDirectiveNode[]>(),
-          tags: new Map<string, ConstDirectiveNode>(),
-        },
+        node.directives || [], newPersistedDirectivesContainer(),
       ),
-      entityKeys,
       fields: new Map<string, FieldContainer>(),
       interfaces,
       isRootType: this.isParentRootType,
@@ -847,7 +852,7 @@ export class FederationFactory {
           errors.push({
             argumentName,
             missingSubgraphs,
-            requiredSubgraphs: [...argumentContainer.requiredSubgraphs]
+            requiredSubgraphs: [...argumentContainer.requiredSubgraphs],
           });
         }
         // If the argument is always optional, but it's not defined in all subgraphs that define the field,
@@ -856,7 +861,7 @@ export class FederationFactory {
       }
       argumentContainer.node.defaultValue = argumentContainer.includeDefaultValue
         ? argumentContainer.node.defaultValue : undefined;
-      args.push(argumentContainer.node);
+      args.push(pushPersistedDirectivesAndGetNode(argumentContainer));
       if (argumentNames) {
         argumentNames.push(argumentName);
       }
@@ -885,14 +890,14 @@ export class FederationFactory {
       return;
     }
     directiveContainer.node.arguments = args;
-    definitions.push(directiveContainer.node)
+    definitions.push(directiveContainer.node);
   }
 
   getMergedFieldDefinitionNode(fieldContainer: FieldContainer, parentTypeName: string): FieldDefinitionNode {
     if (!fieldContainer.arguments) {
       return fieldContainer.node;
     }
-    pushPersistedDirectivesToNode(fieldContainer);
+    pushPersistedDirectivesAndGetNode(fieldContainer);
     const fieldName = fieldContainer.node.name.value;
     const fieldPath = `${parentTypeName}.${fieldName}`;
     const args: MutableInputValueDefinitionNode[] = [];
@@ -905,11 +910,36 @@ export class FederationFactory {
       this.argumentConfigurations.push({
         argumentNames,
         fieldName,
-        typeName: parentTypeName
+        typeName: parentTypeName,
       });
     }
     fieldContainer.node.arguments = args;
     return fieldContainer.node;
+  }
+
+  // the deprecated directive with the longest reason is kept
+  upsertDeprecatedDirective(directive: ConstDirectiveNode, deprecatedDirectiveContainer: DeprecatedDirectiveContainer) {
+    if (!directive.arguments || directive.arguments.length < 1) {
+      deprecatedDirectiveContainer.directive = directive;
+      return;
+    }
+    if (directive.arguments.length !== 1) {
+      this.errors.push(invalidDeprecatedDirectiveError);
+      return;
+    }
+    const reasonArgument = directive.arguments[0].value;
+    if (reasonArgument.kind !== Kind.STRING) {
+      this.errors.push(invalidDeprecatedDirectiveError);
+      return;
+    }
+    if (
+      deprecatedDirectiveContainer.reason
+      && reasonArgument.value.length < deprecatedDirectiveContainer.reason.length
+    ) {
+      return;
+    }
+    deprecatedDirectiveContainer.reason = reasonArgument.value;
+    deprecatedDirectiveContainer.directive = directive;
   }
 
   // tags with the same name string are merged
@@ -938,6 +968,10 @@ export class FederationFactory {
       if (!this.persistedDirectives.has(directiveName)) {
         continue;
       }
+      if (directiveName == DEPRECATED) {
+        this.upsertDeprecatedDirective(directive, container.deprecated);
+        continue;
+      }
       if (directiveName === TAG) {
         this.mergeTagDirectives(directive, container.tags);
         continue;
@@ -959,30 +993,92 @@ export class FederationFactory {
     return container;
   }
 
-  entityAncestor(entityAncestors: string[], fieldSubgraphs: Set<string>, parentTypeName: string): boolean {
+  isFieldResolvableByEntityAncestor(entityAncestors: string[], fieldSubgraphs: Set<string>, parentTypeName: string): boolean {
     if (!this.graph.hasNode(parentTypeName)) {
       return false;
     }
     for (const entityAncestorName of entityAncestors) {
       const path = `${entityAncestorName}.${parentTypeName}`;
-      if (this.graphPaths.get(path)) {
+      if (entityAncestorName !== parentTypeName && this.graphPaths.get(path)) {
         return true;
       }
       if (entityAncestorName === parentTypeName) {
         const hasOverlap = doSetsHaveAnyOverlap(
           fieldSubgraphs,
-          getOrThrowError(this.entities, entityAncestorName, ENTITIES).subgraphs
+          getOrThrowError(this.entities, entityAncestorName, ENTITIES).subgraphs,
         );
         this.graphPaths.set(path, hasOverlap);
         return hasOverlap;
       }
       if (hasSimplePath(this.graph, entityAncestorName, parentTypeName)) {
-        this.graphPaths.set(path, true)
+        this.graphPaths.set(path, true);
         return true;
       }
       this.graphPaths.set(path, false);
     }
     return false;
+  }
+
+  shouldEvaluateObjectLike(rootTypeFieldSubgraphs: Set<string>, parentTypeName: string): boolean {
+    for (const subgraph of rootTypeFieldSubgraphs) {
+      const evaluatedObjectLikes = this.evaluatedObjectLikesBySubgraph.get(subgraph);
+      if (evaluatedObjectLikes && evaluatedObjectLikes.has(parentTypeName)) {
+        continue;
+      }
+      return true;
+    }
+    return false;
+  }
+
+  isFieldExternalInAllMutualSubgraphs(subgraphs: Set<string>, fieldContainer: FieldContainer): boolean {
+    const mutualSubgraphs = getAllMutualEntries(subgraphs, fieldContainer.subgraphs);
+    if (mutualSubgraphs.size < 1) {
+      return false;
+    }
+    for (const mutualSubgraph of mutualSubgraphs) {
+      const isExternal = fieldContainer.subgraphsByExternal.get(mutualSubgraph);
+      if (isExternal) {
+        continue;
+      }
+      return false;
+    }
+    return true;
+  }
+
+  updateEvaluatedSubgraphOccurrences(
+    rootTypeFieldSubgraphs: Set<string>,
+    objectSubgraphs: Set<string>,
+    entityAncestors: string[],
+    parentTypeName: string,
+  ) {
+    const mutualSubgraphs = getAllMutualEntries(rootTypeFieldSubgraphs, objectSubgraphs);
+    if (mutualSubgraphs.size > 0) {
+      for (const mutualSubgraph of mutualSubgraphs) {
+        const evaluatedObjects = this.evaluatedObjectLikesBySubgraph.get(mutualSubgraph);
+        if (evaluatedObjects) {
+          evaluatedObjects.add(parentTypeName);
+        } else {
+          this.evaluatedObjectLikesBySubgraph.set(mutualSubgraph, new Set<string>([parentTypeName]));
+        }
+      }
+    }
+    for (const entityAncestor of entityAncestors) {
+      const entityContainer = getOrThrowError(this.parents, entityAncestor, PARENTS) as ObjectContainer;
+      const mutualEntityAncestorRootTypeFieldSubgraphs = getAllMutualEntries(
+        rootTypeFieldSubgraphs, entityContainer.subgraphs,
+      );
+      const mutualEntityAncestorSubgraphs = getAllMutualEntries(
+        mutualEntityAncestorRootTypeFieldSubgraphs, objectSubgraphs,
+      );
+      for (const mutualSubgraph of mutualEntityAncestorSubgraphs) {
+        const objects = this.evaluatedObjectLikesBySubgraph.get(mutualSubgraph);
+        if (objects) {
+          objects.add(parentTypeName);
+        } else {
+          this.evaluatedObjectLikesBySubgraph.set(mutualSubgraph, new Set<string>([parentTypeName]));
+        }
+      }
+    }
   }
 
   evaluateResolvabilityOfObject(
@@ -997,6 +1093,11 @@ export class FederationFactory {
     if (evaluatedObjectLikes.has(parentTypeName)) {
       return;
     }
+    if (!this.shouldEvaluateObjectLike(rootTypeFieldData.subgraphs, parentTypeName)) {
+      evaluatedObjectLikes.add(parentTypeName);
+      return;
+    }
+
     for (const [fieldName, fieldContainer] of parentContainer.fields) {
       const fieldNamedTypeName = fieldContainer.namedTypeName;
       if (ROOT_TYPES.has(fieldNamedTypeName)) {
@@ -1006,10 +1107,18 @@ export class FederationFactory {
       if (evaluatedObjectLikes.has(fieldNamedTypeName)) {
         continue;
       }
-      const isFieldResolvable = doSetsHaveAnyOverlap(rootTypeFieldData.subgraphs, fieldContainer.subgraphs);
+      if (this.isFieldExternalInAllMutualSubgraphs(rootTypeFieldData.subgraphs, fieldContainer)) {
+        continue;
+      }
+      this.updateEvaluatedSubgraphOccurrences(
+        rootTypeFieldData.subgraphs, parentContainer.subgraphs, entityAncestors, parentTypeName,
+      );
+      evaluatedObjectLikes.add(parentTypeName);
+      const isFieldResolvable = doSetsHaveAnyOverlap(rootTypeFieldData.subgraphs, fieldContainer.subgraphs)
+        || this.isFieldResolvableByEntityAncestor(entityAncestors, fieldContainer.subgraphs, parentTypeName);
       const newCurrentFieldPath = currentFieldPath + (isParentAbstract ? ' ' : '.') + fieldName;
       const entity = this.entities.get(fieldNamedTypeName);
-      if (isFieldResolvable || this.entityAncestor(entityAncestors, fieldContainer.subgraphs, parentTypeName)) {
+      if (isFieldResolvable) {
         // The base scalars are not in this.parentMap
         if (BASE_SCALARS.has(fieldNamedTypeName)) {
           continue;
@@ -1025,7 +1134,7 @@ export class FederationFactory {
               childContainer,
               rootTypeFieldData,
               newCurrentFieldPath,
-              new Set<string>([...evaluatedObjectLikes, parentTypeName]),
+              evaluatedObjectLikes,
               entity ? [...entityAncestors, fieldNamedTypeName] : [...entityAncestors],
             );
             continue;
@@ -1037,7 +1146,7 @@ export class FederationFactory {
               childContainer.kind,
               rootTypeFieldData,
               newCurrentFieldPath,
-              new Set<string>([...evaluatedObjectLikes, parentTypeName]),
+              evaluatedObjectLikes,
               entity ? [...entityAncestors, fieldNamedTypeName] : [...entityAncestors],
               fieldContainer.subgraphs,
             );
@@ -1071,9 +1180,9 @@ export class FederationFactory {
           ));
           continue;
         case Kind.INTERFACE_TYPE_DEFINITION:
-          // intentional fallthrough
+        // intentional fallthrough
         case Kind.UNION_TYPE_DEFINITION:
-          // intentional fallthrough
+        // intentional fallthrough
         case Kind.OBJECT_TYPE_DEFINITION:
           this.errors.push(unresolvableFieldError(
             rootTypeFieldData,
@@ -1090,20 +1199,21 @@ export class FederationFactory {
   }
 
   evaluateResolvabilityOfAbstractType(
-    fieldNamedTypeName: string,
-    fieldNamedTypeKind: Kind,
+    abstractTypeName: string,
+    abstractKind: Kind,
     rootTypeFieldData: RootTypeFieldData,
     currentFieldPath: string,
     evaluatedObjectLikes: Set<string>,
     entityAncestors: string[],
     parentSubgraphs: Set<string>,
   ) {
-    if (evaluatedObjectLikes.has(fieldNamedTypeName)) {
+    if (evaluatedObjectLikes.has(abstractTypeName)) {
       return;
     }
-    const concreteTypeNames = this.abstractToConcreteTypeNames.get(fieldNamedTypeName);
+    evaluatedObjectLikes.add(abstractTypeName);
+    const concreteTypeNames = this.abstractToConcreteTypeNames.get(abstractTypeName);
     if (!concreteTypeNames) {
-      noConcreteTypesForAbstractTypeError(kindToTypeString(fieldNamedTypeKind), fieldNamedTypeName)
+      noConcreteTypesForAbstractTypeError(kindToTypeString(abstractKind), abstractTypeName);
       return;
     }
     for (const concreteTypeName of concreteTypeNames) {
@@ -1112,9 +1222,12 @@ export class FederationFactory {
       }
       const concreteParentContainer = getOrThrowError(this.parents, concreteTypeName, PARENTS);
       if (concreteParentContainer.kind !== Kind.OBJECT_TYPE_DEFINITION) {
-        // throw
-        continue;
+        throw unexpectedParentKindErrorMessage(
+          concreteTypeName, 'Object', kindToTypeString(concreteParentContainer.kind),
+        );
       }
+
+      // If the concrete type is unreachable through the abstract type, it is not an error
       if (!doSetsHaveAnyOverlap(concreteParentContainer.subgraphs, parentSubgraphs)) {
         continue;
       }
@@ -1123,9 +1236,9 @@ export class FederationFactory {
         concreteParentContainer,
         rootTypeFieldData,
         currentFieldPath + ` ... on ` + concreteTypeName,
-        new Set<string>([...evaluatedObjectLikes, fieldNamedTypeName]),
+        evaluatedObjectLikes,
         entity ? [...entityAncestors, concreteTypeName] : [...entityAncestors],
-        true
+        true,
       );
     }
   }
@@ -1136,6 +1249,7 @@ export class FederationFactory {
     for (const subgraph of this.subgraphs) {
       this.isCurrentSubgraphVersionTwo = subgraph.isVersionTwo;
       this.currentSubgraphName = subgraph.name;
+      this.keyFieldsByParentTypeName = subgraph.keyFieldsByParentTypeName;
       walkSubgraphToFederate(subgraph.definitions, factory);
     }
     const definitions: MutableTypeDefinitionNode[] = [];
@@ -1198,7 +1312,7 @@ export class FederationFactory {
           const values: MutableEnumValueDefinitionNode[] = [];
           const mergeMethod = this.getEnumMergeMethod(parentTypeName);
           for (const enumValueContainer of parentContainer.values.values()) {
-            pushPersistedDirectivesToNode(enumValueContainer);
+            pushPersistedDirectivesAndGetNode(enumValueContainer);
             switch (mergeMethod) {
               case MergeMethod.CONSISTENT:
                 if (enumValueContainer.appearances < parentContainer.appearances) {
@@ -1217,12 +1331,12 @@ export class FederationFactory {
             }
           }
           parentContainer.node.values = values;
-          definitions.push(getNodeWithPersistedDirectives(parentContainer));
+          definitions.push(pushPersistedDirectivesAndGetNode(parentContainer));
           break;
         case Kind.INPUT_OBJECT_TYPE_DEFINITION:
           const inputValues: InputValueDefinitionNode[] = [];
           for (const inputValueContainer of parentContainer.fields.values()) {
-            pushPersistedDirectivesToNode(inputValueContainer);
+            pushPersistedDirectivesAndGetNode(inputValueContainer);
             if (parentContainer.appearances === inputValueContainer.appearances) {
               inputValues.push(inputValueContainer.node);
             } else if (isTypeRequired(inputValueContainer.node.type)) {
@@ -1231,7 +1345,7 @@ export class FederationFactory {
             }
           }
           parentContainer.node.fields = inputValues;
-          definitions.push(getNodeWithPersistedDirectives(parentContainer));
+          definitions.push(pushPersistedDirectivesAndGetNode(parentContainer));
           break;
         case Kind.INTERFACE_TYPE_DEFINITION:
           const interfaceFields: FieldDefinitionNode[] = [];
@@ -1239,7 +1353,7 @@ export class FederationFactory {
             interfaceFields.push(this.getMergedFieldDefinitionNode(fieldContainer, parentTypeName));
           }
           parentContainer.node.fields = interfaceFields;
-          pushPersistedDirectivesToNode(parentContainer);
+          pushPersistedDirectivesAndGetNode(parentContainer);
           // Interface implementations can only be evaluated after they've been fully merged
           if (parentContainer.interfaces.size > 0) {
             objectLikeContainersWithInterfaces.push(parentContainer);
@@ -1253,7 +1367,7 @@ export class FederationFactory {
             fields.push(this.getMergedFieldDefinitionNode(fieldContainer, parentTypeName));
           }
           parentContainer.node.fields = fields;
-          pushPersistedDirectivesToNode(parentContainer);
+          pushPersistedDirectivesAndGetNode(parentContainer);
           // Interface implementations can only be evaluated after they've been fully merged
           if (parentContainer.interfaces.size > 0) {
             objectLikeContainersWithInterfaces.push(parentContainer);
@@ -1262,7 +1376,9 @@ export class FederationFactory {
           }
           break;
         case Kind.SCALAR_TYPE_DEFINITION:
-          definitions.push(getNodeWithPersistedDirectives(parentContainer));
+          if (!BASE_SCALARS.has(parentTypeName)) {
+            definitions.push(pushPersistedDirectivesAndGetNode(parentContainer));
+          }
           break;
         case Kind.UNION_TYPE_DEFINITION:
           const types: NamedTypeNode[] = [];
@@ -1270,7 +1386,7 @@ export class FederationFactory {
             types.push(stringToNamedTypeNode(memberName));
           }
           parentContainer.node.types = types;
-          definitions.push(getNodeWithPersistedDirectives(parentContainer));
+          definitions.push(pushPersistedDirectivesAndGetNode(parentContainer));
           break;
       }
     }
@@ -1290,11 +1406,18 @@ export class FederationFactory {
       if (!rootTypeContainer || rootTypeContainer.kind !== Kind.OBJECT_TYPE_DEFINITION) {
         continue;
       }
+      // After evaluating all of a root type's fields, break and return if there are errors
+      if (this.errors.length > 0) {
+        break;
+      }
       // If a root type field returns a Scalar or Enum, track it so that it is not evaluated it again
-      const evaluatedNamedTypes = new Set<string>(BASE_SCALARS);
+      const evaluatedRootScalarsAndEnums = new Set<string>(BASE_SCALARS);
       for (const [rootTypeFieldName, rootTypeFieldContainer] of rootTypeContainer.fields) {
         const rootTypeFieldNamedTypeName = rootTypeFieldContainer.namedTypeName;
-        if (evaluatedNamedTypes.has(rootTypeFieldNamedTypeName)) {
+        if (evaluatedRootScalarsAndEnums.has(rootTypeFieldNamedTypeName)) {
+          continue;
+        }
+        if (!this.shouldEvaluateObjectLike(rootTypeFieldContainer.subgraphs, rootTypeFieldNamedTypeName)) {
           continue;
         }
         const childContainer = getOrThrowError(this.parents, rootTypeFieldNamedTypeName, PARENTS);
@@ -1306,21 +1429,20 @@ export class FederationFactory {
           typeName: rootTypeName,
           subgraphs: rootTypeFieldContainer.subgraphs,
         };
-        const evaluatedObjectLikes = new Set<string>();
         switch (childContainer.kind) {
           case Kind.ENUM_TYPE_DEFINITION:
           // intentional fallthrough
           case Kind.SCALAR_TYPE_DEFINITION:
             // Root type fields whose response type is an Enums and Scalars will always be resolvable
             // Consequently, subsequent checks can be skipped
-            evaluatedNamedTypes.add(rootTypeFieldNamedTypeName);
+            evaluatedRootScalarsAndEnums.add(rootTypeFieldNamedTypeName);
             continue;
           case Kind.OBJECT_TYPE_DEFINITION:
             this.evaluateResolvabilityOfObject(
               childContainer,
               rootTypeFieldData,
               fieldPath,
-              evaluatedObjectLikes,
+              new Set<string>(),
               this.entities.has(rootTypeFieldNamedTypeName) ? [rootTypeFieldNamedTypeName] : [],
             );
             continue;
@@ -1332,7 +1454,7 @@ export class FederationFactory {
               childContainer.kind,
               rootTypeFieldData,
               fieldPath,
-              evaluatedObjectLikes,
+              new Set<string>(),
               this.entities.has(rootTypeFieldNamedTypeName) ? [rootTypeFieldNamedTypeName] : [],
               rootTypeFieldContainer.subgraphs,
             );
@@ -1354,7 +1476,7 @@ export class FederationFactory {
         argumentConfigurations: this.argumentConfigurations,
         federatedGraphAST: newAst,
         federatedGraphSchema: buildASTSchema(newAst),
-      }
+      },
     };
   }
 }
@@ -1387,6 +1509,7 @@ export function federateSubgraphs(subgraphs: Subgraph[]): FederationResultContai
     }
     normalizedSubgraphs.push({
       definitions: normalizationResult.subgraphAST,
+      keyFieldsByParentTypeName: normalizationResult.keyFieldsByParentTypeName,
       isVersionTwo: normalizationResult.isVersionTwo,
       name,
       operationTypes: normalizationResult.operationTypes,

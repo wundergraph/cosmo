@@ -1,8 +1,8 @@
-import Table from 'cli-table';
+import Table from 'cli-table3';
 import { Command } from 'commander';
 import logSymbols from 'log-symbols';
 import pc from 'picocolors';
-import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common_pb';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { baseHeaders } from '../../../core/config.js';
@@ -34,11 +34,13 @@ export default (opts: BaseCommandOptions) => {
     const compositionErrorsTable = new Table({
       head: [pc.bold(pc.white('ERROR_MESSAGE'))],
       colWidths: [120],
+      wordWrap: true,
     });
 
     const matchedSubgraphsTable = new Table({
       head: [pc.bold(pc.white('NAME')), pc.bold(pc.white('URL')), pc.bold(pc.white('LABELS'))],
       colWidths: [30, 40, 50],
+      wordWrap: true,
     });
 
     switch (resp.response?.code) {

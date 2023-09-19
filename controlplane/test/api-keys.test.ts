@@ -3,7 +3,7 @@ import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { createPromiseClient } from '@connectrpc/connect';
 import { fastifyConnectPlugin } from '@connectrpc/connect-fastify';
 import { createConnectTransport } from '@connectrpc/connect-node';
-import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common_pb';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
 import { pino } from 'pino';
 import { CreateAPIKeyResponse, ExpiresAt } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
@@ -12,6 +12,7 @@ import database from '../src/core/plugins/database';
 import routes from '../src/core/routes';
 import { afterAllSetup, beforeAllSetup, createTestAuthenticator, seedTest } from '../src/core/test-util';
 import Keycloak from '../src/core/services/Keycloak';
+import { MockPlatformWebhookService } from '../src/core/webhooks/PlatformWebhookService';
 
 let dbname = '';
 
@@ -31,6 +32,7 @@ describe('API Keys', (ctx) => {
     await server.register(database, {
       databaseConnectionUrl,
       debugSQL: false,
+      runMigration: true,
     });
 
     testContext.onTestFailed(async () => {
@@ -53,6 +55,8 @@ describe('API Keys', (ctx) => {
       adminPassword,
     });
 
+    const platformWebhooks = new MockPlatformWebhookService();
+
     await server.register(fastifyConnectPlugin, {
       routes: routes({
         db: server.db,
@@ -61,6 +65,7 @@ describe('API Keys', (ctx) => {
         jwtSecret: 'secret',
         keycloakRealm: realm,
         keycloakClient,
+        platformWebhooks,
       }),
     });
 

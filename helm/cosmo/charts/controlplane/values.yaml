@@ -115,9 +115,9 @@ probes:
     httpGet:
       path: /health
       port: http
-    initialDelaySeconds: 10
-    timeoutSeconds: 5
-    periodSeconds: 10
+    initialDelaySeconds: 5
+    timeoutSeconds: 3
+    periodSeconds: 5
     failureThreshold: 5
   # -- Configure liveness probe
   liveness:
@@ -150,5 +150,4 @@ configuration:
   authRedirectUri: "http://controlplane.wundergraph.local/v1/auth/callback"
   databaseUrl: "postgres://postgres:changeme@cosmo-postgresql:5432/controlplane"
   clickhouseDsn: "http://default:changeme@cosmo-clickhouse:8123?database=cosmo"
-  clickhouse:
-    database: "cosmo"
+  clickhouseMigrationDsn: "clickhouse://default:changeme@cosmo-clickhouse:9000?database=cosmo"

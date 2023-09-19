@@ -5,7 +5,7 @@ import { createConnectTransport } from '@connectrpc/connect-node';
 import { createPromiseClient } from '@connectrpc/connect';
 import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
 import { fastifyConnectPlugin } from '@connectrpc/connect-fastify';
-import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common_pb';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { pino } from 'pino';
 
 import routes from '../src/core/routes';
@@ -19,6 +19,7 @@ import {
   seedTest,
 } from '../src/core/test-util';
 import Keycloak from '../src/core/services/Keycloak';
+import { MockPlatformWebhookService } from '../src/core/webhooks/PlatformWebhookService';
 
 let dbname = '';
 
@@ -38,6 +39,7 @@ describe('Subgraph', (ctx) => {
     await server.register(database, {
       databaseConnectionUrl,
       debugSQL: false,
+      runMigration: true,
     });
 
     testContext.onTestFailed(async () => {
@@ -60,6 +62,8 @@ describe('Subgraph', (ctx) => {
       adminPassword,
     });
 
+    const platformWebhooks = new MockPlatformWebhookService();
+
     await server.register(fastifyConnectPlugin, {
       routes: routes({
         db: server.db,
@@ -68,6 +72,7 @@ describe('Subgraph', (ctx) => {
         jwtSecret: 'secret',
         keycloakRealm: realm,
         keycloakClient,
+        platformWebhooks,
       }),
     });
 
@@ -111,6 +116,7 @@ describe('Subgraph', (ctx) => {
     await server.register(database, {
       databaseConnectionUrl,
       debugSQL: false,
+      runMigration: true,
     });
 
     testContext.onTestFailed(async () => {
@@ -133,6 +139,8 @@ describe('Subgraph', (ctx) => {
       adminPassword,
     });
 
+    const platformWebhooks = new MockPlatformWebhookService();
+
     await server.register(fastifyConnectPlugin, {
       routes: routes({
         db: server.db,
@@ -141,6 +149,7 @@ describe('Subgraph', (ctx) => {
         jwtSecret: 'secret',
         keycloakRealm: realm,
         keycloakClient,
+        platformWebhooks,
       }),
     });
 
