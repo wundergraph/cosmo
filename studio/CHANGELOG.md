@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.12.1](https://github.com/wundergraph/cosmo/compare/studio@0.12.0...studio@0.12.1) (2023-09-19)
+
+### Bug Fixes
+
+* only redirect to login when user is actually logged out ([#89](https://github.com/wundergraph/cosmo/issues/89)) ([ff4b3df](https://github.com/wundergraph/cosmo/commit/ff4b3df18f91179a83e47ec5f48157bc3a0ee9fb)) (@Pagebakers)
+
 # [0.12.0](https://github.com/wundergraph/cosmo/compare/studio@0.11.1...studio@0.12.0) (2023-09-16)
 
 ### Features
