@@ -1,25 +1,20 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { writeFile } from 'node:fs/promises';
-import path from 'node:path';
-import yaml from 'js-yaml';
 import { Command, program } from 'commander';
+import yaml from 'js-yaml';
 import open from 'open';
 import pc from 'picocolors';
+import { configDir, configFile } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { performDeviceAuth, startPollingForAccessToken } from '../utils.js';
-import { baseHeaders } from '../../../core/config.js';
 
 export default (opts: BaseCommandOptions) => {
   const loginCommand = new Command('login');
   loginCommand.description('Login a user.');
 
   loginCommand.action(async () => {
-    const rootDir = process.cwd();
-    // const rootDir = path.parse(process.cwd()).root;
-    const dir = path.join(rootDir, 'cosmoConfig.yml');
-
-    if (existsSync(dir)) {
-      const data = yaml.load(readFileSync(dir, 'utf8'));
+    if (existsSync(configDir)) {
+      const data = yaml.load(readFileSync(configFile, 'utf8'));
       const loginData = JSON.parse(JSON.stringify(data));
       if (loginData && loginData?.expiresAt && new Date(loginData.expiresAt) > new Date()) {
         console.log(pc.green('You are already logged in.'));
@@ -49,12 +44,9 @@ export default (opts: BaseCommandOptions) => {
       program.error(accessTokenResp.errorMessage + ' Please try again.');
     }
 
-    // if (!fs.existsSync(dir)) {
-    //   fs.mkdirSync(dir);
-    // }
-
+    mkdirSync(configDir, { recursive: true });
     const token = yaml.dump(accessTokenResp.response);
-    await writeFile(dir, token);
+    await writeFile(configFile, token);
 
     console.log(pc.green('Login Successful'));
   });

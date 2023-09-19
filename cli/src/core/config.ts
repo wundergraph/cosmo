@@ -1,6 +1,7 @@
+import { readFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
+import os from 'node:os';
 import path from 'node:path';
-import { existsSync, readFileSync } from 'node:fs';
 import yaml from 'js-yaml';
 
 const info = JSON.parse(
@@ -9,26 +10,27 @@ const info = JSON.parse(
   }),
 );
 
+export const configDir = path.join(os.homedir(), '.cosmo');
+export const configFile = path.join(configDir, 'config.yaml');
+
 const getAccessToken = () => {
-  const rootDir = process.cwd();
-  // const rootDir = path.parse(process.cwd()).root;
-  const dir = path.join(rootDir, 'cosmoConfig.yml');
-  if (existsSync(dir)) {
-    const data = yaml.load(readFileSync(dir, 'utf8'));
+  try {
+    const data = yaml.load(readFileSync(configFile, 'utf8'));
     const loginData = JSON.parse(JSON.stringify(data));
     return loginData.accessToken;
+  } catch {
+    return null
   }
-  return null;
 };
 
 export const config = {
   baseURL: process.env.COSMO_API_URL || 'https://cosmo-cp.wundergraph.com',
-  apiKey: process.env.COSMO_API_KEY,
+  apiKey: getAccessToken() || process.env.COSMO_API_KEY,
   kcApiURL: process.env.KC_API_URL || 'http://localhost:8080',
   version: info.version,
 };
 
 export const baseHeaders: HeadersInit = {
   'user-agent': `cosmo-cli/${info.version}`,
-  authorization: 'Bearer ' + (getAccessToken() || config.apiKey),
+  authorization: 'Bearer ' + config.apiKey,
 };
