@@ -15,3 +15,21 @@ export function splitLabel(label: string) {
 export function joinLabel({ key, value }: { key: string; value: string }) {
   return key + labelSeparator + value;
 }
+
+export function normalizeURL(url: string): string {
+  // return empty
+  if (!url) {
+    return url;
+  }
+
+  const parsedUrl = new URL(url);
+  let path = parsedUrl.pathname;
+
+  // Remove the trailing slash if present
+  if (path.endsWith('/')) {
+    path = path.slice(0, -1);
+  }
+
+  const port = parsedUrl.port ? `:${parsedUrl.port}` : '';
+  return `${parsedUrl.protocol}//${parsedUrl.hostname}${port}${path}`;
+}
