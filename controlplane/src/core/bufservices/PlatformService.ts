@@ -1589,6 +1589,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             code: EnumStatusCode.OK,
           },
           config: {
+            subgraphs: config.config.subgraphs,
             engineConfig: config.config.engineConfig,
             version: config.version,
           },
