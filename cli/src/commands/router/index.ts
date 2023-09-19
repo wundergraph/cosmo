@@ -11,7 +11,7 @@ export default (opts: BaseCommandOptions) => {
   cmd.addCommand(ComposeRouterConfig(opts));
 
   cmd.hook('preAction', (thisCmd) => {
-    if (thisCmd.args.includes('compose')) {
+    if (thisCmd.args[0] === 'compose') {
       return;
     }
     checkAPIKey();

@@ -11,7 +11,7 @@ export default (opts: BaseCommandOptions) => {
   schema.addCommand(Login(opts));
 
   schema.hook('preAction', (thisCmd) => {
-    if (thisCmd.args.includes('login')) {
+    if (thisCmd.args[0] === 'login') {
       return;
     }
     checkAPIKey();
