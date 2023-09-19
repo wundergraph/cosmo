@@ -92,7 +92,7 @@ const Details = () => {
           variant={
             emptyGraph ? "default" : validGraph ? "default" : "destructive"
           }
-          className="scrollbar-custom max-h-[7rem] w-full overflow-auto"
+          className="scrollbar-custom max-h-[5rem] w-full overflow-auto"
         >
           {emptyGraph ? (
             <ExclamationCircleIcon className="h-5 w-5" />

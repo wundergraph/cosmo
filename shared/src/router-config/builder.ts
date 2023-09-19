@@ -24,6 +24,8 @@ export interface Input {
 }
 
 export interface Subgraph {
+  id: string;
+  name: string;
   sdl: string;
   url: string;
 }
@@ -106,5 +108,10 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
   engineConfig.graphqlSchema = input.federatedSDL;
   return new RouterConfig({
     engineConfig,
+    subgraphs: input.subgraphs.map((s) => ({
+      id: s.id,
+      name: s.name,
+      routingUrl: s.url,
+    })),
   });
 };

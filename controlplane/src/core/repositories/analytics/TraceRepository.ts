@@ -39,7 +39,8 @@ export class TraceRepository {
         SpanAttributes['http.host'] as attrHttpHost,
         SpanAttributes['http.user_agent'] as attrHttpUserAgent,
         SpanAttributes['http.method'] as attrHttpMethod,
-        SpanAttributes['http.target'] as attrHttpTarget
+        SpanAttributes['http.target'] as attrHttpTarget,
+        SpanAttributes['wg.subgraph.name'] as attrSubgraphName
     FROM ${this.client.database}.otel_traces
     WHERE (TraceId = trace_id) AND (Timestamp >= start) AND (Timestamp <= end) AND SpanAttributes['wg.organization.id'] = '${organizationID}'
     ORDER BY Timestamp ASC
@@ -73,6 +74,7 @@ export class TraceRepository {
         httpUserAgent: result.attrHttpUserAgent,
         httpMethod: result.attrHttpMethod,
         httpTarget: result.attrHttpTarget,
+        subgraphName: result.attrSubgraphName,
       },
     }));
   }

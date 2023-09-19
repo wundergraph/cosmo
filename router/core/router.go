@@ -7,6 +7,7 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"net"
 	"net/http"
+	"net/url"
 	"sync"
 	"time"
 
@@ -594,6 +595,21 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 			subChiRouter.Use(metricHandler.Handler)
 		}
 
+		subgraphs := make([]Subgraph, len(routerConfig.Subgraphs))
+		for _, s := range routerConfig.Subgraphs {
+			parsedURL, err := url.Parse(s.RoutingUrl)
+			if err != nil {
+				r.logger.Error("Failed to parse subgraph url", zap.String("url", s.RoutingUrl), zap.Error(err))
+			}
+
+			subgraph := Subgraph{
+				Id:   s.Id,
+				Name: s.Name,
+				Url:  parsedURL,
+			}
+			subgraphs = append(subgraphs, subgraph)
+		}
+
 		// Create custom request context that provides access to the request and response.
 		// It is used by custom modules and handlers. It must be added before custom user middlewares
 		subChiRouter.Use(func(handler http.Handler) http.Handler {
@@ -606,6 +622,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 					responseWriter: writer,
 					request:        request,
 					operation:      operationContext,
+					subgraphs:      subgraphs,
 				}
 				handler.ServeHTTP(writer, request.WithContext(withRequestContext(request.Context(), requestContext)))
 			})

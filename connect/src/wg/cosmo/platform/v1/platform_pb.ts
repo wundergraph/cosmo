@@ -4116,6 +4116,11 @@ export class SpanAttributes extends Message<SpanAttributes> {
    */
   httpTarget = "";
 
+  /**
+   * @generated from field: string subgraphName = 11;
+   */
+  subgraphName = "";
+
   constructor(data?: PartialMessage<SpanAttributes>) {
     super();
     proto3.util.initPartial(data, this);
@@ -4134,6 +4139,7 @@ export class SpanAttributes extends Message<SpanAttributes> {
     { no: 8, name: "httpUserAgent", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 9, name: "httpMethod", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 10, name: "httpTarget", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 11, name: "subgraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SpanAttributes {
