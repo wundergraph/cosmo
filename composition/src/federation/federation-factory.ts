@@ -1299,8 +1299,8 @@ export class FederationFactory {
         );
       }
 
-      // If the concrete type is unreachable through the abstract type, it is not an error
-      if (!doSetsHaveAnyOverlap(concreteParentContainer.subgraphs, parentSubgraphs)) {
+      // If the concrete type is unreachable through an inline fragment, it is not an error
+      if (!doSetsHaveAnyOverlap(concreteParentContainer.subgraphs, rootTypeFieldData.subgraphs)) {
         continue;
       }
       const entity = this.entities.get(concreteTypeName);
