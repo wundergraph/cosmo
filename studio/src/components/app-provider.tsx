@@ -70,6 +70,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     UnauthorizedError | Error
   >(["user"], () => fetchSession(), {
     refetchOnWindowFocus: true,
+    retry(failureCount, error) {
+      if (error instanceof UnauthorizedError) return false;
+      return failureCount < 3;
+    },
   });
   const [user, setUser] = useState<User>();
   const [transport, setTransport] = useState<Transport>();
