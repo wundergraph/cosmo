@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
-import { buildRouterConfig } from '@wundergraph/cosmo-shared';
+import { buildRouterConfig, normalizeURL } from '@wundergraph/cosmo-shared';
 import { Command, program } from 'commander';
 import { parse, printSchema } from 'graphql';
 import * as yaml from 'js-yaml';
@@ -28,7 +28,9 @@ type Config = {
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('compose');
-  command.description('Generates the router config locally. The output can be piped to a file.');
+  command.description(
+    'Generates a router config from a local composition file. This makes it easy to test your router without a control-plane connection. For production, please use the "router fetch" command',
+  );
   command.requiredOption('-i, --input <path-to-input>', 'The yaml file with data about graph and subgraphs.');
   command.action(async (options) => {
     const inputFile = resolve(process.cwd(), options.input);
@@ -71,7 +73,7 @@ export default (opts: BaseCommandOptions) => {
     const result = composeSubgraphs(
       config.subgraphs.map((s, index) => ({
         name: s.name,
-        url: s.routing_url,
+        url: normalizeURL(s.routing_url),
         definitions: parse(sdls[index]),
       })),
     );
@@ -88,8 +90,9 @@ export default (opts: BaseCommandOptions) => {
       argumentConfigurations: result.federationResult.argumentConfigurations,
       federatedSDL: printSchema(result.federationResult.federatedGraphSchema),
       subgraphs: config.subgraphs.map((s, index) => ({
+        id: `${index}`,
         name: s.name,
-        url: s.routing_url,
+        url: normalizeURL(s.routing_url),
         sdl: sdls[index],
       })),
     });

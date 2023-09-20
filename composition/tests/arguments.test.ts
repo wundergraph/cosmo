@@ -12,7 +12,12 @@ import {
 } from '../src';
 import { Kind, parse } from 'graphql';
 import { describe, expect, test } from 'vitest';
-import { documentNodeToNormalizedString, normalizeString, versionTwoPersistedBaseSchema } from './utils/utils';
+import {
+  documentNodeToNormalizedString,
+  normalizeString,
+  versionOnePersistedBaseSchema,
+  versionTwoPersistedBaseSchema,
+} from './utils/utils';
 import { FIELD } from '../src/utils/string-constants';
 
 describe('Argument federation tests', () => {
@@ -240,6 +245,33 @@ describe('Argument federation tests', () => {
       }],
     ));
   });
+
+  test('that arguments are accounted for when merging extension and base definitions', () => {
+    const { errors, federationResult } = federateSubgraphs([
+      subgraphD, subgraphE, subgraphF,
+    ]);
+    expect(errors).toBeUndefined();
+    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(normalizeString(
+      versionOnePersistedBaseSchema + `
+      interface Interface {
+        field(one: Int = null, two: Int = null, three: String = null, four: String = null): String
+      }
+      
+      type Query {
+        dummy: String!
+      }
+      
+      type Entity implements Interface @tag(name: "subgraph-f") {
+        id: ID!
+        field(
+          one: Int = null @tag(name: "extension"), 
+          two: Int = null @tag(name: "object") @tag(name: "extension"), 
+          three: String = null @deprecated(reason: "just because"), 
+          four: String = null @tag(name: "object")
+        ): String
+      }
+   `));
+  });
 });
 
 const subgraphWithArgument = (name: string, typeName: string): Subgraph => ({
@@ -312,6 +344,51 @@ const subgraphC = {
     
     type Object implements Interface @shareable {
       field(optionalInAll: Boolean): String
+    }
+  `),
+};
+
+const subgraphD = {
+  name: 'subgraph-d',
+  url: '',
+  definitions: parse(`
+    interface Interface {
+      field(one: Int = null, two: Int = null, three: String = null, four: String = null): String
+    }
+    
+    extend type Entity implements Interface @key(fields: "id") {
+      id: ID! @external
+      field(one: Int = null @tag(name: "extension"), two: Int = null @tag(name: "extension"), three: String = null @deprecated(reason: "just because"), four: String = null): String
+    }
+  `),
+};
+
+const subgraphE = {
+  name: 'subgraph-e',
+  url: '',
+  definitions: parse(`
+    type Query {
+      dummy: String!
+    }
+    
+    interface Interface {
+      field(one: Int = null, two: Int = null, three: String = null, four: String = null): String
+    }
+    
+    type Entity implements Interface @key(fields: "id") {
+      id: ID!
+      field(one: Int = null, two: Int = null @tag(name: "object"), three: String = null, four: String = null @tag(name: "object")): String
+    }
+  `),
+};
+
+const subgraphF = {
+  name: 'subgraph-f',
+  url: '',
+  definitions: parse(`
+    extend type Entity @key(fields: "id") @tag(name: "subgraph-f") {
+      id: ID!
+        field(one: Int = null @tag(name: "extension"), two: Int = null @tag(name: "extension"), three: String = null @deprecated(reason: "just because"), four: String = null): String
     }
   `),
 };
