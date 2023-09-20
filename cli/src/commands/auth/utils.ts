@@ -103,5 +103,3 @@ export const startPollingForAccessToken = async ({
     };
   }
 };
-
-
