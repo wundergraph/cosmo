@@ -6,15 +6,17 @@ import open from 'open';
 import pc from 'picocolors';
 import { configDir, configFile } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
-import { checkConfigFile, performDeviceAuth, startPollingForAccessToken } from '../utils.js';
+import { performDeviceAuth, startPollingForAccessToken } from '../utils.js';
+import UserConfig from '../user-config.js';
 
 export default (opts: BaseCommandOptions) => {
   const loginCommand = new Command('login');
-  loginCommand.description('Login as an user.');
+  loginCommand.description('Login a user into the Cosmo platform. Supports browser-based authentication.');
 
   loginCommand.action(async () => {
+    const userConfig = new UserConfig();
     // checks if the config file exists and checks if the access token is not expired
-    checkConfigFile();
+    userConfig.validateToken();
 
     const resp = await performDeviceAuth();
     if (!resp.success) {
@@ -37,9 +39,11 @@ export default (opts: BaseCommandOptions) => {
       program.error(accessTokenResp.errorMessage + ' Please try again.');
     }
 
-    mkdirSync(configDir, { recursive: true });
-    const token = yaml.dump(accessTokenResp.response);
-    await writeFile(configFile, token);
+    if (!accessTokenResp.response) {
+      program.error('Could not perform authentication. Please try again');
+    }
+
+    userConfig.loadToken(accessTokenResp.response);
 
     console.log(pc.green('Logged in Successfully!'));
   });
