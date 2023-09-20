@@ -13,6 +13,7 @@ import routes from '../src/core/routes';
 import { afterAllSetup, beforeAllSetup, createTestAuthenticator, genID, seedTest } from '../src/core/test-util';
 import Keycloak from '../src/core/services/Keycloak';
 import { MockPlatformWebhookService } from '../src/core/webhooks/PlatformWebhookService';
+import PrometheusClient from '../src/core/prometheus/client';
 
 let dbname = '';
 
@@ -57,6 +58,10 @@ describe('CheckFederatedGraph', (ctx) => {
 
     const platformWebhooks = new MockPlatformWebhookService();
 
+    const prometheus = new PrometheusClient({
+      apiUrl: 'http://localhost:9090',
+    });
+
     await server.register(fastifyConnectPlugin, {
       routes: routes({
         db: server.db,
@@ -66,6 +71,7 @@ describe('CheckFederatedGraph', (ctx) => {
         keycloakRealm: realm,
         keycloakClient,
         platformWebhooks,
+        prometheus,
       }),
     });
 
