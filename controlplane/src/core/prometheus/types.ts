@@ -21,7 +21,7 @@ export enum QueryResultType {
 
 export interface QueryResultValue {
   metric: { [key: string]: string };
-  values: [number, string];
+  values: [number, string][];
   value: [number, string];
 }
 

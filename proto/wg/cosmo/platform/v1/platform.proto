@@ -622,42 +622,33 @@ message DeleteOrganizationWebhookConfigResponse {
  */
  message GetMetricsDashboardRequest {
   string federatedGraphName = 1;
+  int32 range = 2;
 }
 
 message GetMetricsDashboardResponse {
   Response response = 1;
-  MetricsRequests requests = 2;
-  MetricsLatency latency = 3;
-  MetricsErrors errors= 4;
+  MetricsDashboardMetric requests = 2;
+  MetricsDashboardMetric latency = 3;
+  MetricsDashboardMetric errors = 4;
+  optional string json = 5;
 }
 
-message MetricsRequests {
-  int32 median = 1;
-  repeated MetricsTopItem top = 2;
-  repeated MetricsSeriesItem series = 3;
-}
-
-message MetricsLatency {
-  int32 p95 = 1;
-  repeated MetricsTopItem top = 2;
-  repeated MetricsSeriesItem series = 3;
-}
-
-message MetricsErrors {
-  int32 percentage = 1;
-  repeated MetricsTopItem top = 2;
-  repeated MetricsSeriesItem series = 3;
+message MetricsDashboardMetric {
+  string value = 1;
+  optional string previousValue = 2;
+  repeated MetricsTopItem top = 3;
+  repeated MetricsSeriesItem series = 4;
 }
 
 message MetricsTopItem {
   string name = 1;
-  int32 value = 2;
+  string value = 2;
 }
 
 message MetricsSeriesItem {
   string timestamp = 1;
-  int32 value = 2;
-  int32 previousValue = 3;
+  string value = 2;
+  optional string previousValue = 3;
 }
 
 message MetricsDashboard {
@@ -667,6 +658,17 @@ message MetricsDashboard {
   optional Unit unit = 4;
   optional bool is_hidden = 5;
   optional bool is_cta = 6;
+}
+
+message GetMetricsErrorRateRequest {
+  string federatedGraphName = 1;
+  int32 range = 2;
+}
+
+message GetMetricsErrorRateResponse {
+  Response response = 1;
+  repeated MetricsSeriesItem series = 2;
+  repeated MetricsSeriesItem errorSeries = 3;
 }
 
 service PlatformService {
@@ -753,6 +755,10 @@ service PlatformService {
   rpc GetTrace(GetTraceRequest) returns (GetTraceResponse) {}
 
   rpc GetMetricsDashboard(GetMetricsDashboardRequest) returns (GetMetricsDashboardResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
+  rpc GetMetricsErrorRate(GetMetricsErrorRateRequest) returns (GetMetricsErrorRateResponse) {
     option idempotency_level = NO_SIDE_EFFECTS;
   }
 }

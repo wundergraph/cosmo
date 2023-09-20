@@ -1,7 +1,7 @@
 import { cva, type VariantProps } from "class-variance-authority";
 
-import { Badge } from "./badge";
-import { FiArrowDown, FiArrowUp } from "react-icons/fi";
+import { Badge } from "../ui/badge";
+import { FiArrowDown, FiArrowRight, FiArrowUp } from "react-icons/fi";
 import { cn } from "@/lib/utils";
 
 const deltaBadgeVariants = cva(
@@ -9,13 +9,13 @@ const deltaBadgeVariants = cva(
   {
     variants: {
       type: {
-        neutral: "border-transparent bg-gray-500/20 text-muted",
+        neutral: "border-transparent bg-muted text-muted-foreground",
         "increase-positive": "border-transparent bg-success/10 text-success",
         "increase-negative":
           "border-transparent bg-destructive/10 text-destructive",
         "decrease-positive": "border-transparent bg-success/10 text-success",
         "decrease-negative":
-          "border-transparent border-destructive/10 text-destructive",
+          "border-transparent bg-destructive/10 text-destructive",
       },
     },
     defaultVariants: {
@@ -38,7 +38,13 @@ export const DeltaBadge: React.FC<DeltaBadgeProps> = (props) => {
       className={cn(deltaBadgeVariants({ type }), className)}
       {...rest}
     >
-      {props.type?.match("increase") ? <FiArrowUp /> : <FiArrowDown />}
+      {props.type === "neutral" ? (
+        <FiArrowRight />
+      ) : props.type?.match("increase") ? (
+        <FiArrowUp />
+      ) : (
+        <FiArrowDown />
+      )}
       {props.value}
     </Badge>
   );

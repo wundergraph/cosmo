@@ -1,6 +1,6 @@
 import useWindowSize from "@/hooks/use-window-size";
 import { dateFormatter, useChartData } from "@/lib/insights-helpers";
-import { formatNumber } from "@/lib/utils";
+import { cn, formatNumber } from "@/lib/utils";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { useQuery } from "@tanstack/react-query";
 import { getDashboardAnalyticsView } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
@@ -14,7 +14,6 @@ import {
   AreaChart,
   CartesianGrid,
   ResponsiveContainer,
-  Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
@@ -27,7 +26,7 @@ import { Separator } from "./ui/separator";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { useRouter } from "next/router";
 import { constructAnalyticsTableQueryState } from "./analytics/constructAnalyticsTableQueryState";
-import { CustomTooltip } from "./ui/charts";
+import { ChartTooltip, CustomTooltip } from "./analytics/charts";
 
 const valueFormatter = (number: number) => `${formatNumber(number)}`;
 
@@ -121,34 +120,35 @@ const RequestChart = ({
             hide={isMobile}
           />
           <CartesianGrid strokeDasharray="3 3" className="stroke-secondary" />
-          <Tooltip
-            content={(props) => (
-              <CustomTooltip
-                {...props}
-                label={
-                  <div>
-                    {dateFormatter(props.label, false)}
-                    <p>
-                      Success:{" "}
-                      {props.payload?.[0]?.payload?.totalRequests
-                        ? props.payload?.[0]?.payload?.totalRequests -
-                            props.payload?.[0]?.payload?.erroredRequests ?? 0
-                        : 0}
-                    </p>
-                    <p>
-                      Error: {props.payload?.[0]?.payload?.erroredRequests ?? 0}
-                    </p>
-                  </div>
-                }
-              />
-            )}
+
+          <ChartTooltip
+            content={(props) => {
+              console.log(props);
+              return (
+                <div className={cn(props.wrapperClassName, "space-y-2")}>
+                  <p>{dateFormatter(props.label, false)}</p>
+                  <p className="text-success">
+                    Success:{" "}
+                    {props.payload?.[0]?.payload?.totalRequests
+                      ? props.payload?.[0]?.payload?.totalRequests -
+                          props.payload?.[0]?.payload?.erroredRequests ?? 0
+                      : 0}
+                  </p>
+                  <p className="text-destructive">
+                    Errors: {props.payload?.[0]?.payload?.erroredRequests ?? 0}
+                  </p>
+                </div>
+              );
+            }}
           />
           <Area
+            name="Total requests"
             type="monotone"
             dataKey="totalRequests"
             fill={`url(#${color1})`}
           />
           <Area
+            name="Errors"
             type="monotone"
             dataKey="erroredRequests"
             stroke="#ef4444"

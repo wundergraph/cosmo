@@ -4846,6 +4846,11 @@ export class GetMetricsDashboardRequest extends Message<GetMetricsDashboardReque
    */
   federatedGraphName = "";
 
+  /**
+   * @generated from field: int32 range = 2;
+   */
+  range = 0;
+
   constructor(data?: PartialMessage<GetMetricsDashboardRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -4855,6 +4860,7 @@ export class GetMetricsDashboardRequest extends Message<GetMetricsDashboardReque
   static readonly typeName = "wg.cosmo.platform.v1.GetMetricsDashboardRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "federatedGraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "range", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetMetricsDashboardRequest {
@@ -4884,19 +4890,24 @@ export class GetMetricsDashboardResponse extends Message<GetMetricsDashboardResp
   response?: Response;
 
   /**
-   * @generated from field: wg.cosmo.platform.v1.MetricsRequests requests = 2;
+   * @generated from field: wg.cosmo.platform.v1.MetricsDashboardMetric requests = 2;
    */
-  requests?: MetricsRequests;
+  requests?: MetricsDashboardMetric;
 
   /**
-   * @generated from field: wg.cosmo.platform.v1.MetricsLatency latency = 3;
+   * @generated from field: wg.cosmo.platform.v1.MetricsDashboardMetric latency = 3;
    */
-  latency?: MetricsLatency;
+  latency?: MetricsDashboardMetric;
 
   /**
-   * @generated from field: wg.cosmo.platform.v1.MetricsErrors errors = 4;
+   * @generated from field: wg.cosmo.platform.v1.MetricsDashboardMetric errors = 4;
    */
-  errors?: MetricsErrors;
+  errors?: MetricsDashboardMetric;
+
+  /**
+   * @generated from field: optional string json = 5;
+   */
+  json?: string;
 
   constructor(data?: PartialMessage<GetMetricsDashboardResponse>) {
     super();
@@ -4907,9 +4918,10 @@ export class GetMetricsDashboardResponse extends Message<GetMetricsDashboardResp
   static readonly typeName = "wg.cosmo.platform.v1.GetMetricsDashboardResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
-    { no: 2, name: "requests", kind: "message", T: MetricsRequests },
-    { no: 3, name: "latency", kind: "message", T: MetricsLatency },
-    { no: 4, name: "errors", kind: "message", T: MetricsErrors },
+    { no: 2, name: "requests", kind: "message", T: MetricsDashboardMetric },
+    { no: 3, name: "latency", kind: "message", T: MetricsDashboardMetric },
+    { no: 4, name: "errors", kind: "message", T: MetricsDashboardMetric },
+    { no: 5, name: "json", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetMetricsDashboardResponse {
@@ -4930,149 +4942,57 @@ export class GetMetricsDashboardResponse extends Message<GetMetricsDashboardResp
 }
 
 /**
- * @generated from message wg.cosmo.platform.v1.MetricsRequests
+ * @generated from message wg.cosmo.platform.v1.MetricsDashboardMetric
  */
-export class MetricsRequests extends Message<MetricsRequests> {
+export class MetricsDashboardMetric extends Message<MetricsDashboardMetric> {
   /**
-   * @generated from field: int32 median = 1;
+   * @generated from field: string value = 1;
    */
-  median = 0;
+  value = "";
 
   /**
-   * @generated from field: repeated wg.cosmo.platform.v1.MetricsTopItem top = 2;
+   * @generated from field: optional string previousValue = 2;
+   */
+  previousValue?: string;
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.MetricsTopItem top = 3;
    */
   top: MetricsTopItem[] = [];
 
   /**
-   * @generated from field: repeated wg.cosmo.platform.v1.MetricsSeriesItem series = 3;
+   * @generated from field: repeated wg.cosmo.platform.v1.MetricsSeriesItem series = 4;
    */
   series: MetricsSeriesItem[] = [];
 
-  constructor(data?: PartialMessage<MetricsRequests>) {
+  constructor(data?: PartialMessage<MetricsDashboardMetric>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.platform.v1.MetricsRequests";
+  static readonly typeName = "wg.cosmo.platform.v1.MetricsDashboardMetric";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "median", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
-    { no: 2, name: "top", kind: "message", T: MetricsTopItem, repeated: true },
-    { no: 3, name: "series", kind: "message", T: MetricsSeriesItem, repeated: true },
+    { no: 1, name: "value", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "previousValue", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 3, name: "top", kind: "message", T: MetricsTopItem, repeated: true },
+    { no: 4, name: "series", kind: "message", T: MetricsSeriesItem, repeated: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MetricsRequests {
-    return new MetricsRequests().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MetricsDashboardMetric {
+    return new MetricsDashboardMetric().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): MetricsRequests {
-    return new MetricsRequests().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): MetricsDashboardMetric {
+    return new MetricsDashboardMetric().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): MetricsRequests {
-    return new MetricsRequests().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): MetricsDashboardMetric {
+    return new MetricsDashboardMetric().fromJsonString(jsonString, options);
   }
 
-  static equals(a: MetricsRequests | PlainMessage<MetricsRequests> | undefined, b: MetricsRequests | PlainMessage<MetricsRequests> | undefined): boolean {
-    return proto3.util.equals(MetricsRequests, a, b);
-  }
-}
-
-/**
- * @generated from message wg.cosmo.platform.v1.MetricsLatency
- */
-export class MetricsLatency extends Message<MetricsLatency> {
-  /**
-   * @generated from field: int32 p95 = 1;
-   */
-  p95 = 0;
-
-  /**
-   * @generated from field: repeated wg.cosmo.platform.v1.MetricsTopItem top = 2;
-   */
-  top: MetricsTopItem[] = [];
-
-  /**
-   * @generated from field: repeated wg.cosmo.platform.v1.MetricsSeriesItem series = 3;
-   */
-  series: MetricsSeriesItem[] = [];
-
-  constructor(data?: PartialMessage<MetricsLatency>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.platform.v1.MetricsLatency";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "p95", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
-    { no: 2, name: "top", kind: "message", T: MetricsTopItem, repeated: true },
-    { no: 3, name: "series", kind: "message", T: MetricsSeriesItem, repeated: true },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MetricsLatency {
-    return new MetricsLatency().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): MetricsLatency {
-    return new MetricsLatency().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): MetricsLatency {
-    return new MetricsLatency().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: MetricsLatency | PlainMessage<MetricsLatency> | undefined, b: MetricsLatency | PlainMessage<MetricsLatency> | undefined): boolean {
-    return proto3.util.equals(MetricsLatency, a, b);
-  }
-}
-
-/**
- * @generated from message wg.cosmo.platform.v1.MetricsErrors
- */
-export class MetricsErrors extends Message<MetricsErrors> {
-  /**
-   * @generated from field: int32 percentage = 1;
-   */
-  percentage = 0;
-
-  /**
-   * @generated from field: repeated wg.cosmo.platform.v1.MetricsTopItem top = 2;
-   */
-  top: MetricsTopItem[] = [];
-
-  /**
-   * @generated from field: repeated wg.cosmo.platform.v1.MetricsSeriesItem series = 3;
-   */
-  series: MetricsSeriesItem[] = [];
-
-  constructor(data?: PartialMessage<MetricsErrors>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.platform.v1.MetricsErrors";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "percentage", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
-    { no: 2, name: "top", kind: "message", T: MetricsTopItem, repeated: true },
-    { no: 3, name: "series", kind: "message", T: MetricsSeriesItem, repeated: true },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MetricsErrors {
-    return new MetricsErrors().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): MetricsErrors {
-    return new MetricsErrors().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): MetricsErrors {
-    return new MetricsErrors().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: MetricsErrors | PlainMessage<MetricsErrors> | undefined, b: MetricsErrors | PlainMessage<MetricsErrors> | undefined): boolean {
-    return proto3.util.equals(MetricsErrors, a, b);
+  static equals(a: MetricsDashboardMetric | PlainMessage<MetricsDashboardMetric> | undefined, b: MetricsDashboardMetric | PlainMessage<MetricsDashboardMetric> | undefined): boolean {
+    return proto3.util.equals(MetricsDashboardMetric, a, b);
   }
 }
 
@@ -5086,9 +5006,9 @@ export class MetricsTopItem extends Message<MetricsTopItem> {
   name = "";
 
   /**
-   * @generated from field: int32 value = 2;
+   * @generated from field: string value = 2;
    */
-  value = 0;
+  value = "";
 
   constructor(data?: PartialMessage<MetricsTopItem>) {
     super();
@@ -5099,7 +5019,7 @@ export class MetricsTopItem extends Message<MetricsTopItem> {
   static readonly typeName = "wg.cosmo.platform.v1.MetricsTopItem";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "value", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 2, name: "value", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MetricsTopItem {
@@ -5129,14 +5049,14 @@ export class MetricsSeriesItem extends Message<MetricsSeriesItem> {
   timestamp = "";
 
   /**
-   * @generated from field: int32 value = 2;
+   * @generated from field: string value = 2;
    */
-  value = 0;
+  value = "";
 
   /**
-   * @generated from field: int32 previousValue = 3;
+   * @generated from field: optional string previousValue = 3;
    */
-  previousValue = 0;
+  previousValue?: string;
 
   constructor(data?: PartialMessage<MetricsSeriesItem>) {
     super();
@@ -5147,8 +5067,8 @@ export class MetricsSeriesItem extends Message<MetricsSeriesItem> {
   static readonly typeName = "wg.cosmo.platform.v1.MetricsSeriesItem";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "timestamp", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "value", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
-    { no: 3, name: "previousValue", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 2, name: "value", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "previousValue", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MetricsSeriesItem {
@@ -5232,6 +5152,98 @@ export class MetricsDashboard extends Message<MetricsDashboard> {
 
   static equals(a: MetricsDashboard | PlainMessage<MetricsDashboard> | undefined, b: MetricsDashboard | PlainMessage<MetricsDashboard> | undefined): boolean {
     return proto3.util.equals(MetricsDashboard, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetMetricsErrorRateRequest
+ */
+export class GetMetricsErrorRateRequest extends Message<GetMetricsErrorRateRequest> {
+  /**
+   * @generated from field: string federatedGraphName = 1;
+   */
+  federatedGraphName = "";
+
+  /**
+   * @generated from field: int32 range = 2;
+   */
+  range = 0;
+
+  constructor(data?: PartialMessage<GetMetricsErrorRateRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetMetricsErrorRateRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "federatedGraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "range", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetMetricsErrorRateRequest {
+    return new GetMetricsErrorRateRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetMetricsErrorRateRequest {
+    return new GetMetricsErrorRateRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetMetricsErrorRateRequest {
+    return new GetMetricsErrorRateRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetMetricsErrorRateRequest | PlainMessage<GetMetricsErrorRateRequest> | undefined, b: GetMetricsErrorRateRequest | PlainMessage<GetMetricsErrorRateRequest> | undefined): boolean {
+    return proto3.util.equals(GetMetricsErrorRateRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetMetricsErrorRateResponse
+ */
+export class GetMetricsErrorRateResponse extends Message<GetMetricsErrorRateResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.MetricsSeriesItem series = 2;
+   */
+  series: MetricsSeriesItem[] = [];
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.MetricsSeriesItem errorSeries = 3;
+   */
+  errorSeries: MetricsSeriesItem[] = [];
+
+  constructor(data?: PartialMessage<GetMetricsErrorRateResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetMetricsErrorRateResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "series", kind: "message", T: MetricsSeriesItem, repeated: true },
+    { no: 3, name: "errorSeries", kind: "message", T: MetricsSeriesItem, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetMetricsErrorRateResponse {
+    return new GetMetricsErrorRateResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetMetricsErrorRateResponse {
+    return new GetMetricsErrorRateResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetMetricsErrorRateResponse {
+    return new GetMetricsErrorRateResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetMetricsErrorRateResponse | PlainMessage<GetMetricsErrorRateResponse> | undefined, b: GetMetricsErrorRateResponse | PlainMessage<GetMetricsErrorRateResponse> | undefined): boolean {
+    return proto3.util.equals(GetMetricsErrorRateResponse, a, b);
   }
 }
 

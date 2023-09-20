@@ -6,11 +6,10 @@ import { EmptyState } from "@/components/empty-state";
 import { getGraphLayout, GraphContext } from "@/components/layout/graph-layout";
 import { PageHeader } from "@/components/layout/head";
 import { TitleLayout } from "@/components/layout/title-layout";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CustomTooltip } from "@/components/ui/charts";
-import { DeltaBadge } from "@/components/ui/delta-badge";
+
+import { DeltaBadge } from "@/components/analytics/delta-badge";
 import { Loader } from "@/components/ui/loader";
 import {
   Select,
@@ -20,36 +19,29 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Spacer } from "@/components/ui/spacer";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { dateFormatter, useChartData } from "@/lib/insights-helpers";
+import { useChartData } from "@/lib/insights-helpers";
 import { NextPageWithLayout } from "@/lib/page";
 import { cn } from "@/lib/utils";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { useQuery } from "@tanstack/react-query";
-import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common_pb";
+import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
-  getAnalyticsView,
   getMetricsDashboard,
+  getMetricsErrorRate,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import {
-  GetMetricsDashboardResponse,
-  MetricsErrors,
-  MetricsLatency,
-  MetricsRequests,
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { format, subDays, subHours, subMinutes } from "date-fns";
+import { MetricsDashboardMetric } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
+import { format, subMinutes } from "date-fns";
 import { useRouter } from "next/router";
-import { useContext, useId, useMemo } from "react";
-import { FiArrowDown, FiArrowUp } from "react-icons/fi";
+import React, { useContext, useId, useMemo } from "react";
 import {
   Area,
   AreaChart,
   Legend,
   ResponsiveContainer,
-  Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
+import { ChartTooltip } from "@/components/analytics/charts";
 
 export type OperationAnalytics = {
   name: string;
@@ -57,26 +49,40 @@ export type OperationAnalytics = {
   operationType: number;
 };
 
+// This is now static, but at some point we can introduce a date range picker for custom ranges.
+const useRange = () => {
+  const router = useRouter();
+
+  const range = parseInt(router.query.range?.toString() ?? "24");
+
+  switch (range) {
+    case 24:
+      return 24;
+    case 72:
+      return 72;
+    case 168:
+      return 168;
+    default:
+      return Math.min(24, range);
+  }
+};
+
 const AnalyticsPage: NextPageWithLayout = () => {
   const graphContext = useContext(GraphContext);
 
-  const { name, filters, pagination, dateRange, page, refreshInterval } =
-    useAnalyticsQueryState();
+  const range = useRange();
 
   let { data, isFetching, isLoading, error, refetch } = useQuery({
     ...getMetricsDashboard.useQuery({
       federatedGraphName: graphContext?.graph?.name,
-      // name,
-      // config: {
-      //   filters,
-      //   dateRange,
-      //   pagination,
-      // },
+      range,
     }),
     keepPreviousData: true,
     refetchOnWindowFocus: false,
-    refetchInterval: refreshInterval.value,
+    refetchInterval: 10000,
   });
+
+  console.log("json", JSON.parse(data?.json ?? "{}"));
 
   if (!isLoading && (error || data?.response?.code !== EnumStatusCode.OK)) {
     return (
@@ -108,37 +114,90 @@ const AnalyticsPage: NextPageWithLayout = () => {
   );
 };
 
-const RequestMetricsCard = (props: { data?: MetricsRequests }) => {
-  const router = useRouter();
+const getDeltaType = (value: number, invert: boolean = false) => {
+  if (value > 0 && !invert) {
+    return "increase-positive";
+  } else if (value > 0 && invert) {
+    return "increase-negative";
+  } else if (value < 0 && !invert) {
+    return "decrease-positive";
+  } else if (value < 0 && invert) {
+    return "decrease-negative";
+  }
 
+  return "neutral";
+};
+
+const Change = ({
+  value,
+  previousValue,
+  invert,
+  deltaType,
+}: {
+  value?: number;
+  previousValue?: number;
+  invert?: boolean;
+  deltaType?: string;
+}) => {
+  if (typeof value === "undefined" || typeof previousValue === "undefined") {
+    return null;
+  }
+
+  let delta = 0;
+  if (previousValue !== 0) {
+    delta = ((value || 0) / (previousValue || 1)) * 100 - 100;
+  }
+
+  return (
+    <DeltaBadge
+      type={deltaType || (getDeltaType(delta, invert) as any)}
+      value={`${delta.toFixed(2)}%`}
+    />
+  );
+};
+
+const RequestMetricsCard = (props: { data?: MetricsDashboardMetric }) => {
+  const router = useRouter();
+  const range = useRange();
   const { data } = props;
 
   const top = data?.top ?? [];
+
+  const value = Number.parseInt(data?.value || "0");
+  const previousValue = Number.parseInt(data?.previousValue || "0");
+
+  const formatter = (value: number) =>
+    Intl.NumberFormat("us").format(value).toString();
 
   return (
     <Card className="bg-transparent">
       <CardHeader className="flex flex-row items-start">
         <div className="flex-1">
           <h4 className="text-sm text-muted-foreground">Request Rate</h4>
-          <p className="text-xl font-semibold">{data?.median}</p>
+          <p className="text-xl font-semibold">{formatter(value)} RPM</p>
         </div>
 
-        <DeltaBadge type={requests.deltaType} value={requests.deltaValue} />
+        <Change value={value} previousValue={previousValue} invert />
       </CardHeader>
       <CardContent className="border-b pb-2">
-        <Sparkline series={data?.series ?? []} />
+        <Sparkline
+          series={data?.series ?? []}
+          valueFormatter={formatter}
+          timeRange={range}
+        />
       </CardContent>
       <CardContent className="pt-6">
+        <h5 className="mb-2 px-2 text-sm font-medium">Highest RPM</h5>
         <BarList
           data={top.map((row) => ({
             ...row,
+            value: Number.parseInt(row.value ?? "0"),
+            name: row.name === "" ? "unknown" : row.name,
             href: `${router.asPath}/traces${constructAnalyticsTableQueryState({
-              operationName: row.name,
+              operationName: row.name === "" ? "unknown" : row.name,
             })}`,
           }))}
-          valueFormatter={(number: number) =>
-            Intl.NumberFormat("us").format(number).toString()
-          }
+          valueFormatter={formatter}
           rowHeight={4}
           rowClassName="bg-muted text-muted-foreground hover:text-foreground"
         />
@@ -147,37 +206,48 @@ const RequestMetricsCard = (props: { data?: MetricsRequests }) => {
   );
 };
 
-const LatencyMetricsCard = (props: { data?: MetricsLatency }) => {
+const LatencyMetricsCard = (props: { data?: MetricsDashboardMetric }) => {
   const router = useRouter();
-
+  const range = useRange();
   const { data } = props;
 
   const top = data?.top ?? [];
+
+  const value = Number.parseInt(data?.value || "0");
+  const previousValue = Number.parseInt(data?.previousValue || "0");
+
+  const formatter = (value: number) =>
+    Intl.NumberFormat("us").format(value).toString();
 
   return (
     <Card className="bg-transparent">
       <CardHeader className="flex flex-row items-start">
         <div className="flex-1">
           <h4 className="text-sm text-muted-foreground">P95 Latency</h4>
-          <p className="text-xl font-semibold">{data?.p95 || 0}</p>
+          <p className="text-xl font-semibold">{formatter(value)} ms</p>
         </div>
 
-        <DeltaBadge type={latency.deltaType} value={latency.deltaValue} />
+        <Change value={value} previousValue={previousValue} />
       </CardHeader>
       <CardContent className="border-b pb-2">
-        <Sparkline series={data?.series ?? []} />
+        <Sparkline
+          series={data?.series ?? []}
+          valueFormatter={formatter}
+          timeRange={range}
+        />
       </CardContent>
       <CardContent className="pt-6">
+        <h5 className="mb-2 px-2 text-sm font-medium">Highest latency</h5>
         <BarList
           data={top.map((row) => ({
             ...row,
+            name: row.name === "" ? "unknown" : row.name,
+            value: Number.parseInt(row.value ?? "0"),
             href: `${router.asPath}/traces${constructAnalyticsTableQueryState({
-              operationName: row.name,
+              operationName: row.name === "" ? "unknown" : row.name,
             })}`,
           }))}
-          valueFormatter={(number: number) =>
-            Intl.NumberFormat("us").format(number).toString() + "ms"
-          }
+          valueFormatter={formatter}
           rowHeight={4}
           rowClassName="bg-muted text-muted-foreground hover:text-foreground"
         />
@@ -186,37 +256,54 @@ const LatencyMetricsCard = (props: { data?: MetricsLatency }) => {
   );
 };
 
-const ErrorMetricsCard = (props: { data?: MetricsErrors }) => {
+const ErrorMetricsCard = (props: { data?: MetricsDashboardMetric }) => {
   const router = useRouter();
-
+  const range = useRange();
   const { data } = props;
 
   const top = data?.top ?? [];
+
+  const value = Number.parseFloat(data?.value || "0");
+  const previousValue = Number.parseFloat(data?.previousValue || "0");
+
+  const formatter = (value: number) =>
+    Intl.NumberFormat("us", {
+      maximumFractionDigits: 2,
+    })
+      .format(value)
+      .toString() + "%";
 
   return (
     <Card className="bg-transparent">
       <CardHeader className="flex flex-row items-start">
         <div className="flex-1">
-          <h4 className="text-sm text-muted-foreground">Error Percentage</h4>
-          <p className="text-xl font-semibold">{data?.percentage}%</p>
+          <h4 className="text-sm text-muted-foreground">Error Percentage </h4>
+          <p className="text-xl font-semibold">{formatter(value)}</p>
         </div>
 
-        <DeltaBadge type={errors.deltaType} value={errors.deltaValue} />
+        <Change value={value} previousValue={previousValue} invert />
       </CardHeader>
       <CardContent className="border-b pb-2">
-        <ErrorPercentChart series={data?.series ?? []} />
+        <ErrorPercentChart
+          series={data?.series ?? []}
+          valueFormatter={formatter}
+          timeRange={range}
+        />
       </CardContent>
       <CardContent className="pt-6">
+        <h5 className="mb-2 px-2 text-sm font-medium">
+          Highest error percentage
+        </h5>
         <BarList
           data={top.map((row) => ({
             ...row,
+            name: row.name === "" ? "unknown" : row.name,
+            value: Number.parseFloat(row.value ?? "0"),
             href: `${router.asPath}/traces${constructAnalyticsTableQueryState({
-              operationName: row.name,
+              operationName: row.name === "" ? "unknown" : row.name,
             })}`,
           }))}
-          valueFormatter={(number: number) =>
-            Intl.NumberFormat("us").format(number).toString() + "%"
-          }
+          valueFormatter={formatter}
           rowHeight={4}
           rowClassName="bg-muted text-muted-foreground hover:text-foreground"
         />
@@ -227,13 +314,17 @@ const ErrorMetricsCard = (props: { data?: MetricsErrors }) => {
 
 interface SparklineProps {
   series: any[];
+  timeRange: number;
   className?: string;
+  valueFormatter?: (value: any) => any;
 }
 
 const Sparkline: React.FC<SparklineProps> = (props) => {
+  const { timeRange = 24, valueFormatter } = props;
   const id = useId();
+
   const { data, ticks, domain, timeFormatter } = useChartData(
-    7 * 24,
+    timeRange,
     props.series
   );
 
@@ -269,8 +360,9 @@ const Sparkline: React.FC<SparklineProps> = (props) => {
             </linearGradient>
           </defs>
           <Area
-            type="natural"
-            dataKey="value"
+            name="Previous"
+            type="monotone"
+            dataKey="previousValue"
             animationDuration={300}
             stroke={strokeColor}
             fill={`url(#${id}-gradient-previous)`}
@@ -280,8 +372,9 @@ const Sparkline: React.FC<SparklineProps> = (props) => {
             strokeDasharray="4 2"
           />
           <Area
-            type="natural"
-            dataKey="previousValue"
+            name="Current"
+            type="monotone"
+            dataKey="value"
             animationDuration={300}
             stroke={strokeColor}
             fill={`url(#${id}-gradient)`}
@@ -299,6 +392,8 @@ const Sparkline: React.FC<SparklineProps> = (props) => {
             axisLine={false}
             hide
           />
+
+          <ChartTooltip formatter={valueFormatter} />
         </AreaChart>
       </ResponsiveContainer>
     </div>
@@ -306,9 +401,10 @@ const Sparkline: React.FC<SparklineProps> = (props) => {
 };
 
 const ErrorPercentChart: React.FC<SparklineProps> = (props) => {
+  const { timeRange = 24, valueFormatter } = props;
   const id = useId();
   const { data, ticks, domain, timeFormatter } = useChartData(
-    7 * 24,
+    timeRange,
     props.series
   );
 
@@ -326,8 +422,9 @@ const ErrorPercentChart: React.FC<SparklineProps> = (props) => {
             </linearGradient>
           </defs>
           <Area
-            type="natural"
-            dataKey="compareValue"
+            name="Previous"
+            type="monotone"
+            dataKey="previousValue"
             animationDuration={300}
             stroke={"hsl(215.4 16.3% 46.9%)"}
             fill={`url(#${id}-gradient)`}
@@ -338,7 +435,8 @@ const ErrorPercentChart: React.FC<SparklineProps> = (props) => {
             strokeDasharray="4 2"
           />
           <Area
-            type="natural"
+            name="Current"
+            type="monotone"
             dataKey="value"
             animationDuration={300}
             stroke="hsl(var(--destructive))"
@@ -357,6 +455,10 @@ const ErrorPercentChart: React.FC<SparklineProps> = (props) => {
             axisLine={false}
             hide
           />
+
+          <XAxis dataKey="timestamp" type="number" axisLine={false} hide />
+
+          <ChartTooltip formatter={valueFormatter} />
         </AreaChart>
       </ResponsiveContainer>
     </div>
@@ -364,23 +466,119 @@ const ErrorPercentChart: React.FC<SparklineProps> = (props) => {
 };
 
 const RequestRate = () => {
-  const series = useMemo(
-    () =>
-      generateMinuteSeries().map((s) => {
-        const value = s.value * 100;
-        return {
-          timestamp: s.timestamp,
-          errors: Math.floor(
-            ((value / 100) * Math.floor(Math.random() * 5 * 100)) / 100
-          ),
-          value: value,
-        };
-      }),
-    []
+  const id = useId();
+
+  const graphContext = useContext(GraphContext);
+
+  const range = useRange();
+
+  let {
+    data: responseData,
+    isFetching,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
+    ...getMetricsErrorRate.useQuery({
+      federatedGraphName: graphContext?.graph?.name,
+      range,
+    }),
+    keepPreviousData: true,
+    refetchOnWindowFocus: false,
+    refetchInterval: 10000,
+  });
+
+  const { data, ticks, domain, timeFormatter } = useChartData(
+    24,
+    responseData?.series ?? []
   );
 
-  const id = useId();
-  const { data, ticks, domain, timeFormatter } = useChartData(7 * 24, series);
+  const { data: errorData } = useChartData(24, responseData?.errorSeries ?? []);
+
+  let content;
+  if (
+    !isLoading &&
+    (error || responseData?.response?.code !== EnumStatusCode.OK)
+  ) {
+    content = (
+      <EmptyState
+        className="h-auto"
+        icon={<ExclamationTriangleIcon />}
+        title="Could not retrieve analytics data"
+        description={
+          responseData?.response?.details ||
+          error?.message ||
+          "Please try again"
+        }
+        actions={<Button onClick={() => refetch()}>Retry</Button>}
+      />
+    );
+  } else if (isLoading) {
+    content = <Loader fullscreen />;
+  } else {
+    content = (
+      <ResponsiveContainer width="100%" height="100%">
+        <AreaChart margin={{ top: 10, right: 0, bottom: 8, left: 0 }}>
+          <defs>
+            <linearGradient id={`${id}-gradient`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor={"hsl(var(--muted-foreground))"} />
+              <stop offset="95%" stopColor={"hsl(var(--muted))"} />
+            </linearGradient>
+          </defs>
+          <Area
+            name="Request rate"
+            data={data}
+            type="monotone"
+            dataKey="value"
+            animationDuration={300}
+            stroke="hsl(var(--muted-foreground))"
+            fill={`url(#${id}-gradient)`}
+            dot={false}
+            strokeWidth={1.5}
+            opacity="0.4"
+          />
+          <Area
+            name="Error rate"
+            data={errorData}
+            type="monotone"
+            dataKey="errors"
+            animationDuration={300}
+            stroke="hsl(var(--destructive))"
+            fill="none"
+            fillOpacity="1"
+            dot={false}
+            strokeWidth={1.5}
+          />
+
+          <XAxis
+            dataKey="timestamp"
+            domain={domain}
+            // ticks={ticks}
+            tickFormatter={(value) => {
+              return format(value, "HH:mm");
+            }}
+            type="category"
+            // interval={0}
+            // interval="preserveStart"
+            minTickGap={60}
+            tick={{ fill: "hsl(var(--muted-foreground))", fontSize: "13px" }}
+          />
+
+          <YAxis
+            tick={{ fill: "hsl(var(--muted-foreground))", fontSize: "13px" }}
+          />
+
+          <Legend
+            verticalAlign="top"
+            align="right"
+            wrapperStyle={{ fontSize: "13px", marginTop: "-10px" }}
+          />
+
+          <ChartTooltip />
+        </AreaChart>
+      </ResponsiveContainer>
+    );
+  }
 
   return (
     <Card className="bg-transparent">
@@ -388,107 +586,9 @@ const RequestRate = () => {
         <CardTitle>Error rate over time</CardTitle>
       </CardHeader>
 
-      <CardContent className="h-[200px]">
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart
-            data={data}
-            margin={{ top: 10, right: 0, bottom: 8, left: 0 }}
-          >
-            <defs>
-              <linearGradient id={`${id}-gradient`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor={"hsl(var(--muted-foreground))"} />
-                <stop offset="95%" stopColor={"hsl(var(--muted))"} />
-              </linearGradient>
-            </defs>
-            <Area
-              name="Request rate"
-              type="natural"
-              dataKey="value"
-              animationDuration={300}
-              stroke="hsl(var(--muted-foreground))"
-              fill={`url(#${id}-gradient)`}
-              dot={false}
-              strokeWidth={1.5}
-              opacity="0.4"
-            />
-            <Area
-              name="Error rate"
-              type="natural"
-              dataKey="errors"
-              animationDuration={300}
-              stroke="hsl(var(--destructive))"
-              fill="none"
-              fillOpacity="1"
-              dot={false}
-              strokeWidth={1.5}
-            />
-
-            <XAxis
-              dataKey="timestamp"
-              domain={domain}
-              ticks={ticks}
-              tickFormatter={(value) => {
-                return format(value, "HH:mm");
-              }}
-              type="number"
-              interval="preserveStart"
-              minTickGap={60}
-              tick={{ fill: "hsl(var(--muted-foreground))", fontSize: "13px" }}
-            />
-
-            <YAxis
-              tick={{ fill: "hsl(var(--muted-foreground))", fontSize: "13px" }}
-            />
-
-            <Legend
-              verticalAlign="top"
-              align="right"
-              wrapperStyle={{ fontSize: "13px", marginTop: "-10px" }}
-            />
-
-            <Tooltip
-              content={(props) => (
-                <CustomTooltip
-                  {...props}
-                  label={
-                    <div>
-                      {dateFormatter(props.label, false)}
-                      <p>
-                        Error rate: {props.payload?.[0]?.payload?.errors ?? 0}
-                      </p>
-                    </div>
-                  }
-                />
-              )}
-            />
-          </AreaChart>
-        </ResponsiveContainer>
-      </CardContent>
+      <CardContent className="h-[240px]">{content}</CardContent>
     </Card>
   );
-};
-
-const fallbackData = [
-  {
-    timestamp: subDays(new Date(), 1),
-    value: 0,
-  },
-  {
-    timestamp: new Date(),
-    value: 0,
-  },
-];
-
-const generateSeries = () => {
-  const series = [];
-  for (let i = 0; i < 24; i++) {
-    series.push({
-      timestamp: subHours(new Date(), i),
-      value: Math.floor(Math.random() * 100),
-      previousValue: Math.floor(Math.random() * 100),
-    });
-  }
-  return series;
 };
 
 const generateMinuteSeries = () => {
@@ -503,59 +603,24 @@ const generateMinuteSeries = () => {
   return series;
 };
 
-const requests = {
-  deltaType: "increase-positive" as any,
-  deltaValue: "200",
-  value: "13.000 RPM",
-  series: generateSeries(),
-  data: [
-    { name: "employee", value: 1230 },
-    { name: "employees", value: 751 },
-    { name: "team_mates", value: 471 },
-    { name: "updateEmployee", value: 280 },
-    { name: "createEmployee", value: 78 },
-  ],
-};
-
-const latency = {
-  deltaType: "increase-negative" as any,
-  deltaValue: "50",
-  value: "130ms",
-  series: generateSeries(),
-  data: [
-    { name: "createEmployee", value: 453 },
-    { name: "updateEmployee", value: 351 },
-    { name: "team_mates", value: 271 },
-    { name: "employees", value: 191 },
-    { name: "employee", value: 121 },
-  ],
-};
-
-const errors = {
-  deltaType: "decrease-positive" as any,
-  deltaValue: "-0.1",
-  value: "0.3%",
-  series: generateSeries().map((s) => {
-    return {
-      timestamp: s.timestamp,
-      value:
-        ((s.previousValue / 100) * Math.floor(Math.random() * 50 * 100)) / 100,
-      compareValue: s.previousValue,
-    };
-  }),
-  data: [
-    { name: "GraphQLParseFailure", value: 100 },
-    { name: "updateEmployee", value: 82 },
-    { name: "createEmployee", value: 54 },
-    { name: "team_mates", value: 10 },
-  ],
-};
-
 const OverviewToolbar = () => {
+  const router = useRouter();
+  const onRangeChange = (value: string) => {
+    router.push({
+      pathname: router.pathname,
+      query: {
+        ...router.query,
+        range: value,
+      },
+    });
+  };
+
+  const range = useRange();
+
   return (
     <AnalyticsToolbar tab="overview">
       <Spacer />
-      <Select value="24">
+      <Select value={String(range)} onValueChange={onRangeChange}>
         <SelectTrigger className="w-[180px]">
           <SelectValue />
         </SelectTrigger>

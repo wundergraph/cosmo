@@ -1284,23 +1284,63 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const requests = await repo.getRequestRateMetrics({
+        const params = {
+          range: req.range,
           params: {
             organizationId: authContext.organizationId,
             graphId: graph.id,
             graphName: req.federatedGraphName,
           },
-        });
+        };
 
-        const latency = await repo.getLatencyMetrics({
-          params: {
-            organizationId: authContext.organizationId,
-            graphId: graph.id,
-            graphName: req.federatedGraphName,
+        const requests = await repo.getRequestRateMetrics(params);
+        const latency = await repo.getLatencyMetrics(params);
+        const errors = await repo.getErrorMetrics(params);
+
+        const json = await repo.getJson(params);
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
           },
-        });
+          requests,
+          latency,
+          errors,
+          json,
+        };
+      });
+    },
 
-        const errors = await repo.getErrorMetrics({
+    getMetricsErrorRate: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetMetricsDashboardResponse>>(logger, async () => {
+        if (!opts.chClient) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_ANALYTICS_DISABLED,
+            },
+          };
+        }
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const repo = new MetricsDashboardRepository(opts.prometheus);
+        const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+
+        const graph = await fedGraphRepo.byName(req.federatedGraphName);
+        if (!graph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Federated graph '${req.federatedGraphName}' not found`,
+            },
+          };
+        }
+
+        const metrics = await repo.getErrorRateMetrics({
+          range: req.range,
           params: {
             organizationId: authContext.organizationId,
             graphId: graph.id,
@@ -1312,9 +1352,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           response: {
             code: EnumStatusCode.OK,
           },
-          requests,
-          latency,
-          errors,
+          ...metrics,
         };
       });
     },
