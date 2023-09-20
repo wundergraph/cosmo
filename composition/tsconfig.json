@@ -1,6 +1,7 @@
 {
   "extends": "../tsconfig.base.json",
   "compilerOptions": {
+    "target": "ES2021",
     "declaration": true,
     "outDir": "./dist",
     "module": "commonjs",
