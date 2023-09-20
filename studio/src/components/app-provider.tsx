@@ -80,7 +80,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     if (isFetching) return;
-    if (data) {
+
+    if (
+      error &&
+      error instanceof UnauthorizedError &&
+      router.pathname !== "/login"
+    ) {
+      router.replace("/login");
+    } else if (data) {
       setUser({
         id: data.id,
         email: data.email,
@@ -114,10 +121,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             ? `/${organizationSlug}?${params}`
             : `/${organizationSlug}`
         );
-      }
-    } else {
-      if (router.pathname !== "/login" && error instanceof UnauthorizedError) {
-        router.replace("/login");
       }
     }
   }, [router, data, isFetching, error]);
