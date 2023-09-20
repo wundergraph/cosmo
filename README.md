@@ -22,6 +22,12 @@ The repository consists of the following components:
 - [Router](./router): The router is the component that understands the GraphQL Federation protocol. It is responsible for routing requests to the correct service and for aggregating the responses. It is in connection with the control plane to register itself for advanced fleet management.
 - [Studio](./studio): The studio is the web interface for the cosmo platform. It is used to manage the platform and to collaborate on GraphQL Federation. It is in connection with the control plane through the Platform API to manage the platform.
 
+## Migrate from Apollo GraphOS / Apollo Federation
+
+We've made it super easy for you to migrate from Apollo by using our fully automatic [Migration Assistant](https://cosmo-cp.wundergraph.com/v1/auth/login).
+Log into Cosmo Cloud, enter your Graph API Token and Graph variant, and the Assistant migrates over your Graph in just a few seconds.
+That's it, migrate over with a single click!
+
 ## Getting Started
 
 ### Prerequisites
