@@ -1,5 +1,6 @@
 import { Command } from 'commander';
 import { BaseCommandOptions } from '../../core/types/types.js';
+import { checkAPIKey } from '../../utils.js';
 import CheckSubgraph from './commands/check.js';
 import CreateSubgraphCommand from './commands/create.js';
 import PublishSubgraph from './commands/publish.js';
@@ -20,5 +21,10 @@ export default (opts: BaseCommandOptions) => {
   schema.addCommand(FixSubGraph(opts));
   schema.addCommand(ListSubgraphs(opts));
   schema.addCommand(IntrospectSubgraph(opts));
+
+  schema.hook('preAction', () => {
+    checkAPIKey();
+  });
+
   return schema;
 };

@@ -1,5 +1,6 @@
 import { Command } from 'commander';
 import { BaseCommandOptions } from '../../core/types/types.js';
+import { checkAPIKey } from '../../utils.js';
 import CheckFederatedGraphCommand from './commands/check.js';
 import CreateFederatedGraphToken from './commands/create-token.js';
 import CreateFederatedGraphCommand from './commands/create.js';
@@ -18,5 +19,10 @@ export default (opts: BaseCommandOptions) => {
   schema.addCommand(CheckFederatedGraphCommand(opts));
   schema.addCommand(CreateFederatedGraphToken(opts));
   schema.addCommand(ListFederatedGraphs(opts));
+
+  schema.hook('preAction', () => {
+    checkAPIKey();
+  });
+
   return schema;
 };

@@ -6,6 +6,7 @@ import WebSessionAuthenticator from '../services/WebSessionAuthenticator.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import { AuthenticationError } from '../errors/errors.js';
 import GraphApiTokenAuthenticator, { GraphKeyAuthContext } from './GraphApiTokenAuthenticator.js';
+import AccessTokenAuthenticator from './AccessTokenAuthenticator.js';
 
 // The maximum time to cache the user auth context for the web session authentication.
 const maxAuthCacheTtl = 30 * 1000; // 30 seconds
@@ -21,6 +22,7 @@ export class Authentication implements Authenticator {
   constructor(
     private webAuth: WebSessionAuthenticator,
     private keyAuth: ApiKeyAuthenticator,
+    private accessTokenAuth: AccessTokenAuthenticator,
     private graphKeyAuth: GraphApiTokenAuthenticator,
     private orgRepo: OrganizationRepository,
   ) {}
@@ -41,7 +43,10 @@ export class Authentication implements Authenticator {
       const authorization = headers.get('authorization');
       if (authorization) {
         const token = authorization.replace(/^bearer\s+/i, '');
-        return await this.keyAuth.authenticate(token);
+        if (token.startsWith('cosmo')) {
+          return await this.keyAuth.authenticate(token);
+        }
+        return await this.accessTokenAuth.authenticate(token);
       }
 
       /**
