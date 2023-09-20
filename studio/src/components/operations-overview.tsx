@@ -123,7 +123,6 @@ const RequestChart = ({
 
           <ChartTooltip
             content={(props) => {
-              console.log(props);
               return (
                 <div className={cn(props.wrapperClassName, "space-y-2")}>
                   <p>{dateFormatter(props.label, false)}</p>

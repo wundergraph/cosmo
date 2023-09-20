@@ -1297,8 +1297,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const latency = await repo.getLatencyMetrics(params);
         const errors = await repo.getErrorMetrics(params);
 
-        const json = await repo.getJson(params);
-
         return {
           response: {
             code: EnumStatusCode.OK,
@@ -1306,7 +1304,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           requests,
           latency,
           errors,
-          json,
         };
       });
     },

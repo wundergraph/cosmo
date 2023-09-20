@@ -1,7 +1,6 @@
 import BarList from "@/components/analytics/barlist";
 import { constructAnalyticsTableQueryState } from "@/components/analytics/constructAnalyticsTableQueryState";
 import { AnalyticsToolbar } from "@/components/analytics/toolbar";
-import { useAnalyticsQueryState } from "@/components/analytics/useAnalyticsQueryState";
 import { EmptyState } from "@/components/empty-state";
 import { getGraphLayout, GraphContext } from "@/components/layout/graph-layout";
 import { PageHeader } from "@/components/layout/head";
@@ -30,7 +29,6 @@ import {
   getMetricsErrorRate,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { MetricsDashboardMetric } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { format, subMinutes } from "date-fns";
 import { useRouter } from "next/router";
 import React, { useContext, useId, useMemo } from "react";
 import {
@@ -42,6 +40,7 @@ import {
   YAxis,
 } from "recharts";
 import { ChartTooltip } from "@/components/analytics/charts";
+import { InfoTooltip } from "@/components/info-tooltip";
 
 export type OperationAnalytics = {
   name: string;
@@ -67,12 +66,24 @@ const useRange = () => {
   }
 };
 
+const getInfoTip = (range: number) => {
+  switch (range) {
+    case 72:
+      return "3 day  median";
+    case 168:
+      return "1 week median";
+    case 24:
+    default:
+      return "24 hour median";
+  }
+};
+
 const AnalyticsPage: NextPageWithLayout = () => {
   const graphContext = useContext(GraphContext);
 
   const range = useRange();
 
-  let { data, isFetching, isLoading, error, refetch } = useQuery({
+  let { data, isLoading, error, refetch } = useQuery({
     ...getMetricsDashboard.useQuery({
       federatedGraphName: graphContext?.graph?.name,
       range,
@@ -81,8 +92,6 @@ const AnalyticsPage: NextPageWithLayout = () => {
     refetchOnWindowFocus: false,
     refetchInterval: 10000,
   });
-
-  console.log("json", JSON.parse(data?.json ?? "{}"));
 
   if (!isLoading && (error || data?.response?.code !== EnumStatusCode.OK)) {
     return (
@@ -109,7 +118,7 @@ const AnalyticsPage: NextPageWithLayout = () => {
         <ErrorMetricsCard data={data?.errors} />
       </div>
 
-      <RequestRate />
+      <ErrorRateOverTimeCard />
     </div>
   );
 };
@@ -173,7 +182,11 @@ const RequestMetricsCard = (props: { data?: MetricsDashboardMetric }) => {
     <Card className="bg-transparent">
       <CardHeader className="flex flex-row items-start">
         <div className="flex-1">
-          <h4 className="text-sm text-muted-foreground">Request Rate</h4>
+          <div className="flex space-x-2 text-sm text-muted-foreground">
+            <h4>Request Rate</h4>
+            <InfoTooltip>{getInfoTip(range)}</InfoTooltip>
+          </div>
+
           <p className="text-xl font-semibold">{formatter(value)} RPM</p>
         </div>
 
@@ -223,7 +236,10 @@ const LatencyMetricsCard = (props: { data?: MetricsDashboardMetric }) => {
     <Card className="bg-transparent">
       <CardHeader className="flex flex-row items-start">
         <div className="flex-1">
-          <h4 className="text-sm text-muted-foreground">P95 Latency</h4>
+          <div className="flex space-x-2 text-sm text-muted-foreground">
+            <h4>P95 Latency</h4>
+            <InfoTooltip>{getInfoTip(range)}</InfoTooltip>
+          </div>
           <p className="text-xl font-semibold">{formatter(value)} ms</p>
         </div>
 
@@ -277,7 +293,10 @@ const ErrorMetricsCard = (props: { data?: MetricsDashboardMetric }) => {
     <Card className="bg-transparent">
       <CardHeader className="flex flex-row items-start">
         <div className="flex-1">
-          <h4 className="text-sm text-muted-foreground">Error Percentage </h4>
+          <div className="flex space-x-2 text-sm text-muted-foreground">
+            <h4>Error Percentage</h4>
+            <InfoTooltip>{getInfoTip(range)}</InfoTooltip>
+          </div>
           <p className="text-xl font-semibold">{formatter(value)}</p>
         </div>
 
@@ -465,16 +484,13 @@ const ErrorPercentChart: React.FC<SparklineProps> = (props) => {
   );
 };
 
-const RequestRate = () => {
+const ErrorRateOverTimeCard = () => {
   const id = useId();
-
-  const graphContext = useContext(GraphContext);
-
   const range = useRange();
+  const graphContext = useContext(GraphContext);
 
   let {
     data: responseData,
-    isFetching,
     isLoading,
     error,
     refetch,
@@ -489,11 +505,14 @@ const RequestRate = () => {
   });
 
   const { data, ticks, domain, timeFormatter } = useChartData(
-    24,
+    range,
     responseData?.series ?? []
   );
 
-  const { data: errorData } = useChartData(24, responseData?.errorSeries ?? []);
+  const { data: errorData } = useChartData(
+    range,
+    responseData?.errorSeries ?? []
+  );
 
   let content;
   if (
@@ -541,7 +560,7 @@ const RequestRate = () => {
             name="Error rate"
             data={errorData}
             type="monotone"
-            dataKey="errors"
+            dataKey="value"
             animationDuration={300}
             stroke="hsl(var(--destructive))"
             fill="none"
@@ -553,13 +572,10 @@ const RequestRate = () => {
           <XAxis
             dataKey="timestamp"
             domain={domain}
-            // ticks={ticks}
-            tickFormatter={(value) => {
-              return format(value, "HH:mm");
-            }}
-            type="category"
-            // interval={0}
-            // interval="preserveStart"
+            ticks={ticks}
+            tickFormatter={timeFormatter}
+            type="number"
+            interval="preserveStart"
             minTickGap={60}
             tick={{ fill: "hsl(var(--muted-foreground))", fontSize: "13px" }}
           />
@@ -589,18 +605,6 @@ const RequestRate = () => {
       <CardContent className="h-[240px]">{content}</CardContent>
     </Card>
   );
-};
-
-const generateMinuteSeries = () => {
-  const series = [];
-  for (let i = 0; i < 24 * 12; i++) {
-    series.push({
-      timestamp: subMinutes(new Date(), i),
-      value: Math.floor(Math.random() * 100),
-      previousValue: Math.floor(Math.random() * 100),
-    });
-  }
-  return series;
 };
 
 const OverviewToolbar = () => {
