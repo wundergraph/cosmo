@@ -4,36 +4,14 @@
         <#if client.attributes.logoUri??>
             <img src="${client.attributes.logoUri}"/>
         </#if>
+        <#if client.name?has_content>
+            ${msg("oauthGrantTitle",advancedMsg(client.name))}
+        <#else>
+            ${msg("oauthGrantTitle",client.clientId)}
+        </#if>
     <#elseif section = "form">
-        <div id="kc-oauth" class="kcform content-area px-4">
-            <h1 id="kc-page-title">
-                <#if client.name?has_content>
-                    ${msg("oauthGrantTitle",advancedMsg(client.name))}
-                <#else>
-                    ${msg("oauthGrantTitle",client.clientId)}
-                </#if>
-            </h1>
-            <p>
-                <#if client.name?has_content>
-                    ${msg("oauthGrantRequest",client.name,(realm.displayName!''))}
-                <#else>
-                    ${msg("oauthGrantRequest",client.clientId,(realm.displayName!''))}
-                </#if>
-            </p>
-            <ul>
-                <#if oauth.clientScopesRequested??>
-                    <#list oauth.clientScopesRequested as clientScope>
-                        <li>
-                            <span><#if !clientScope.dynamicScopeParameter??>
-                                        ${advancedMsg(clientScope.consentScreenText)}
-                                    <#else>
-                                        ${advancedMsg(clientScope.consentScreenText)}: <b>${clientScope.dynamicScopeParameter}</b>
-                                </#if>
-                            </span>
-                        </li>
-                    </#list>
-                </#if>
-            </ul>
+        <div id="kc-oauth" class="content-area">
+            <h1 class="text-lg">${msg("oauthGrantRequest")}</h1>
             <#if client.attributes.policyUri?? || client.attributes.tosUri??>
                 <h3>
                     <#if client.name?has_content>
@@ -52,20 +30,11 @@
                 </h3>
             </#if>
 
-            <form class="form-actions mt-4" action="${url.oauthAction}" method="POST">
+            <form class="form-actions" action="${url.oauthAction}" method="POST">
                 <input type="hidden" name="code" value="${oauth.code}">
-                <div class="${properties.kcFormGroupClass!}">
-                    <div id="kc-form-options">
-                        <div class="${properties.kcFormOptionsWrapperClass!}">
-                        </div>
-                    </div>
-
-                    <div id="kc-form-buttons">
-                        <div class="form-buttons justify-content-between">
-                            <input class="btn btn-outline-primary" name="cancel" id="kc-cancel" type="submit" value="${msg("doCancel")}"/>
-                            <input class="btn btn-primary" name="accept" id="kc-login" type="submit" value="${msg("doAllow")}"/>
-                        </div>
-                    </div>
+                <div id="kc-form-buttons" class="flex gap-x-2 my-4">
+                    <input tabindex="4" class="flex h-10 w-full text-base justify-center items-center space-x-3 rounded-md border font-semibold focus:outline-none focus:ring-2 focus:ring-sky-900 transition disabled:cursor-not-allowed text-white bg-sky-600 border-sky-500 hover:bg-sky-500 hover:border-sky-400" name="accept" id="kc-login" type="submit" value="${msg("doYes")}"/>
+                    <input tabindex="4" class="flex h-10 w-full text-base justify-center items-center space-x-3 rounded-md border font-semibold focus:outline-none focus:ring-2 focus:ring-sky-900 transition disabled:cursor-not-allowed text-white bg-sky-600 border-sky-500 hover:bg-sky-500 hover:border-sky-400" name="cancel" id="kc-cancel" type="submit" value="${msg("doNo")}"/>
                 </div>
             </form>
             <div class="clearfix"></div>
