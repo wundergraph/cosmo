@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.12.0](https://github.com/wundergraph/cosmo/compare/wgc@0.11.3...wgc@0.12.0) (2023-09-20)
+
+### Features
+
+* store subgraphs in router config ([#61](https://github.com/wundergraph/cosmo/issues/61)) ([de7b132](https://github.com/wundergraph/cosmo/commit/de7b13244755acd49c38ff1e6c537234ab506960)) (@thisisnithin)
+
+## [0.11.3](https://github.com/wundergraph/cosmo/compare/wgc@0.11.2...wgc@0.11.3) (2023-09-19)
+
+**Note:** Version bump only for package wgc
+
 ## [0.11.2](https://github.com/wundergraph/cosmo/compare/wgc@0.11.1...wgc@0.11.2) (2023-09-18)
 
 **Note:** Version bump only for package wgc

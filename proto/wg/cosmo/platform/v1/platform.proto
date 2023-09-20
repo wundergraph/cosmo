@@ -537,6 +537,7 @@ message SpanAttributes {
   string httpUserAgent = 8;
   string httpMethod = 9;
   string httpTarget = 10;
+  string subgraphName = 11;
 }
 
 message Span {

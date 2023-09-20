@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.8.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.7.3...@wundergraph/cosmo-shared@0.8.0) (2023-09-20)
+
+### Features
+
+* store subgraphs in router config ([#61](https://github.com/wundergraph/cosmo/issues/61)) ([de7b132](https://github.com/wundergraph/cosmo/commit/de7b13244755acd49c38ff1e6c537234ab506960)) (@thisisnithin)
+
+## [0.7.3](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.7.2...@wundergraph/cosmo-shared@0.7.3) (2023-09-19)
+
+**Note:** Version bump only for package @wundergraph/cosmo-shared
+
 ## [0.7.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.7.1...@wundergraph/cosmo-shared@0.7.2) (2023-09-18)
 
 **Note:** Version bump only for package @wundergraph/cosmo-shared
