@@ -1,5 +1,5 @@
 import { CompositionError } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
+import { joinLabel, normalizeURL, splitLabel } from '@wundergraph/cosmo-shared';
 import { and, asc, eq, gt, inArray, lt, notInArray, SQL, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema.js';
@@ -24,6 +24,7 @@ export class SubgraphRepository {
 
   public create(data: { name: string; routingUrl: string; labels: Label[] }): Promise<SubgraphDTO | undefined> {
     const uniqueLabels = normalizeLabels(data.labels);
+    const routingUrl = normalizeURL(data.routingUrl);
 
     return this.db.transaction(async (db) => {
       /**
@@ -48,7 +49,7 @@ export class SubgraphRepository {
         .insert(subgraphs)
         .values({
           targetId: insertedTarget[0].id,
-          routingUrl: data.routingUrl,
+          routingUrl,
         })
         .returning()
         .execute();
@@ -82,6 +83,8 @@ export class SubgraphRepository {
     labels: Label[];
   }): Promise<{ compositionErrors: CompositionError[]; updatedFederatedGraphs: FederatedGraphDTO[] }> {
     const uniqueLabels = normalizeLabels(data.labels);
+    const routingUrl = normalizeURL(data.routingUrl);
+
     const compositionErrors: CompositionError[] = [];
     const updatedFederatedGraphs: FederatedGraphDTO[] = [];
 
@@ -153,7 +156,7 @@ export class SubgraphRepository {
 
       // update routing URL
       if (data.routingUrl !== '') {
-        await db.update(subgraphs).set({ routingUrl: data.routingUrl }).where(eq(subgraphs.id, subgraph.id)).execute();
+        await db.update(subgraphs).set({ routingUrl }).where(eq(subgraphs.id, subgraph.id)).execute();
       }
     });
 
