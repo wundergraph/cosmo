@@ -1,5 +1,6 @@
 import { federateSubgraphs, FederationResultContainer, Subgraph } from '@wundergraph/composition';
 import pc from 'picocolors';
+import { program } from 'commander';
 import { config } from './core/config.js';
 
 export interface Header {
@@ -61,7 +62,7 @@ export function composeSubgraphs(subgraphs: Subgraph[]): FederationResultContain
 // checks if either of access token or api key are present
 export function checkAPIKey() {
   if (!config.apiKey) {
-    console.log(
+    program.error(
       pc.yellow(
         `No AccessToken/API key found. Please run ${pc.bold(
           'wgc auth login',
