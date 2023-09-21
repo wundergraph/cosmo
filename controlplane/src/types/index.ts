@@ -25,12 +25,15 @@ export interface FederatedGraphDTO {
 }
 
 export interface FederatedGraphChangelogDTO {
-  id: string;
-  path: string;
-  changeType: string;
-  changeMessage: string;
-  createdAt: string;
   schemaVersionId: string;
+  createdAt: string;
+  changelogs: {
+    id: string;
+    path: string;
+    changeType: string;
+    changeMessage: string;
+    createdAt: string;
+  }[];
 }
 
 export interface SubgraphDTO {
