@@ -24,9 +24,9 @@ export const performDeviceAuth = async (): Promise<{
 
   const requestBody = new URLSearchParams();
   requestBody.append('scope', 'openid');
-  requestBody.append('client_id', config.kcRealm);
+  requestBody.append('client_id', config.kcClientId);
 
-  const response = await fetch(config.kcApiURL + '/realms/cosmo/protocol/openid-connect/auth/device', {
+  const response = await fetch(`${config.kcApiURL}/realms/${config.kcRealm}/protocol/openid-connect/auth/device`, {
     method: 'POST',
     headers,
     body: requestBody,
@@ -66,13 +66,13 @@ export const startPollingForAccessToken = async ({
   headers.append('Content-Type', 'application/x-www-form-urlencoded');
 
   const requestBody = new URLSearchParams();
-  requestBody.append('client_id', config.kcRealm);
+  requestBody.append('client_id', config.kcClientId);
   requestBody.append('grant_type', 'urn:ietf:params:oauth:grant-type:device_code');
   requestBody.append('device_code', deviceCode);
   requestBody.append('scope', 'openid');
 
   while (true) {
-    const response = await fetch(config.kcApiURL + '/realms/cosmo/protocol/openid-connect/token', {
+    const response = await fetch(`${config.kcApiURL}/realms/${config.kcRealm}/protocol/openid-connect/token`, {
       method: 'POST',
       headers,
       body: requestBody,
