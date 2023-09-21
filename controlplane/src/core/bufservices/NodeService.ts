@@ -36,7 +36,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof NodeSe
           return {
             response: {
               code: EnumStatusCode.ERR_NOT_FOUND,
-            }
+            },
           };
         }
 

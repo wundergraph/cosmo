@@ -220,7 +220,7 @@ export class FederatedGraphRepository {
                 isComposable: true,
                 compositionErrors: true,
                 createdAt: true,
-              }
+              },
             },
             subgraphs: {
               columns: {
@@ -354,7 +354,7 @@ export class FederatedGraphRepository {
           // Update the schema of the federated graph with a valid schema version.
           composedSchemaVersionId: insertedVersion[0].insertedId,
         })
-        .where(eq(federatedGraphs.id, fedGraph.id))
+        .where(eq(federatedGraphs.id, fedGraph.id));
 
       return {
         id: fedGraph.id,
@@ -375,7 +375,6 @@ export class FederatedGraphRepository {
     const res = await this.byName(name);
     return res !== undefined;
   }
-
 
   public async isLatestVersion(name: string, version: string) {
     const res = await this.byName(name);
