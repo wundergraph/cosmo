@@ -1,4 +1,5 @@
 import PrometheusClient from 'src/core/prometheus/client.js';
+import { QueryResultType, Response } from 'src/core/prometheus/types.js';
 
 const getUtcUnixTime = () => {
   const now = new Date();
@@ -98,6 +99,34 @@ interface GetMetricsProps {
 export class MetricsDashboardRepository {
   constructor(private client: PrometheusClient) {}
 
+  protected async getResponses<Queries extends Promise<Response<QueryResultType.Scalar | QueryResultType.Matrix>>[]>(
+    ...queries: Queries
+  ) {
+    const responses = await Promise.allSettled(queries);
+
+    return responses.map((r) => {
+      if (r.status === 'rejected') {
+        return {
+          error: {
+            type: r.status,
+            message: r.reason,
+          },
+        };
+      } else if (r.status === 'fulfilled' && r.value.status === 'error') {
+        return {
+          error: {
+            type: r.value.errorType,
+            message: r.value.error,
+            warnings: r.value.warnings,
+          },
+        };
+      }
+      return {
+        data: r.value.data,
+      };
+    });
+  }
+
   /**
    * Get request rate metrics
    */
@@ -105,27 +134,27 @@ export class MetricsDashboardRepository {
     const prange = '15m';
 
     // get median of requests in last [range] hours
-    const median = await this.client.query({
+    const median = this.client.query({
       query: `quantile(0.5, sum(rate(cosmo_router_http_requests_total{${this.getQueryLabels(
         params,
       )}}[${range}h])) * 60)`,
     });
 
-    const prevMedian = await this.client.query({
+    const prevMedian = this.client.query({
       query: `quantile(0.5, sum(rate(cosmo_router_http_requests_total{${this.getQueryLabels(
         params,
       )}}[${range}h] offset ${range}h)) * 60)`,
     });
 
     // get top 5 operations in last [range] hours
-    const top5 = await this.client.query({
+    const top5 = this.client.query({
       query: `topk(5, sum by (wg_operation_name) (rate(cosmo_router_http_requests_total{${this.getQueryLabels(
         params,
       )}}[${range}h])) * 60)`,
     });
 
     // get requests in last [range] hours in series of [step]
-    const result = await this.client.queryRange({
+    const series = this.client.queryRange({
       query: `sum (rate(cosmo_router_http_requests_total{${this.getQueryLabels(params)}}[${prange}]) * 60)`,
       ...this.getRangeQueryProps({
         range,
@@ -133,7 +162,7 @@ export class MetricsDashboardRepository {
       }),
     });
 
-    const prevResult = await this.client.queryRange({
+    const prevSeries = this.client.queryRange({
       query: `sum (rate(cosmo_router_http_requests_total{${this.getQueryLabels(params)}}[${prange}]) * 60)`,
       ...this.getRangeQueryProps({
         range,
@@ -141,14 +170,26 @@ export class MetricsDashboardRepository {
       }),
     });
 
+    const responses = await this.getResponses(median, prevMedian, top5, series, prevSeries);
+    const [medianResponse, prevMedianResponse, top5Response, seriesResponse, prevSeriesResponse] = responses;
+
     return {
-      value: median.data.result[0]?.value[1],
-      previousValue: prevMedian.data.result[0]?.value[1],
-      top: top5.data.result.map((v: any) => ({
-        name: v.metric.wg_operation_name,
-        value: v.value[1],
-      })),
-      series: this.mapSeries(endDate, range, result.data.result[0].values, prevResult.data.result[0]?.values),
+      data: {
+        value: medianResponse.data?.result[0]?.value[1] || '0',
+        previousValue: prevMedianResponse.data?.result[0]?.value[1] || '0',
+        top:
+          top5Response.data?.result?.map((v: any) => ({
+            name: v.metric.wg_operation_name || 'unknown',
+            value: v.value[1] || '0',
+          })) || [],
+        series: this.mapSeries(
+          endDate,
+          range,
+          seriesResponse.data?.result[0]?.values,
+          prevSeriesResponse.data?.result[0]?.values,
+        ),
+      },
+      errors: responses.filter((r) => r.error),
     };
   }
 
@@ -159,27 +200,27 @@ export class MetricsDashboardRepository {
     const prange = '15m';
 
     // get p95 of requests in last [range] hours
-    const latencyP95 = await this.client.query({
+    const p95 = this.client.query({
       query: `histogram_quantile(0.95, sum(rate(cosmo_router_http_request_duration_milliseconds_bucket{${this.getQueryLabels(
         params,
       )}}[${range}h])) by (le))`,
     });
 
-    const prevLatencyP95 = await this.client.query({
+    const prevP95 = this.client.query({
       query: `histogram_quantile(0.95, sum(rate(cosmo_router_http_request_duration_milliseconds_bucket{${this.getQueryLabels(
         params,
       )}}[${range}h] offset ${range}h)) by (le))`,
     });
 
     // get top 5 operations in last [range] hours
-    const top5 = await this.client.query({
+    const top5 = this.client.query({
       query: `topk(5, sum by (wg_operation_name) (rate(cosmo_router_http_request_duration_milliseconds_bucket{${this.getQueryLabels(
         params,
       )}}[${range}h])))`,
     });
 
     // get p95 latency [range] hours in series of [step]
-    const result = await this.client.queryRange({
+    const series = this.client.queryRange({
       query: `histogram_quantile(0.95, sum(rate(cosmo_router_http_request_duration_milliseconds_bucket{${this.getQueryLabels(
         params,
       )}}[${prange}])) by (le))`,
@@ -189,7 +230,7 @@ export class MetricsDashboardRepository {
       }),
     });
 
-    const prevResult = await this.client.queryRange({
+    const prevSeries = this.client.queryRange({
       query: `histogram_quantile(0.95, sum(rate(cosmo_router_http_request_duration_milliseconds_bucket{${this.getQueryLabels(
         params,
       )}}[${prange}] offset ${range}h)) by (le))`,
@@ -199,14 +240,26 @@ export class MetricsDashboardRepository {
       }),
     });
 
+    const responses = await this.getResponses(p95, prevP95, top5, series, prevSeries);
+    const [p95Response, prevP95Response, top5Response, seriesResponse, prevSeriesResponse] = responses;
+
     return {
-      value: latencyP95.data.result[0]?.value[1],
-      previousValue: prevLatencyP95.data.result[0]?.value[1],
-      top: top5.data.result.map((v: any) => ({
-        name: v.metric.wg_operation_name,
-        value: v.value[1],
-      })),
-      series: this.mapSeries(endDate, range, result.data.result[0].values, prevResult.data.result[0]?.values),
+      data: {
+        value: p95Response.data?.result[0]?.value[1] || '0',
+        previousValue: prevP95Response.data?.result[0]?.value[1] || '0',
+        top:
+          top5Response.data?.result.map((v: any) => ({
+            name: v.metric.wg_operation_name || 'unknown',
+            value: v.value[1] || '0',
+          })) || [],
+        series: this.mapSeries(
+          endDate,
+          range,
+          seriesResponse.data?.result[0].values,
+          prevSeriesResponse.data?.result[0]?.values,
+        ),
+      },
+      errors: responses.filter((r) => r.error),
     };
   }
 
@@ -217,32 +270,32 @@ export class MetricsDashboardRepository {
     const prange = '15m';
 
     // get error percentage of requests in last [range] hours
-    const percentage = await this.client.query({
+    const percentage = this.client.query({
       query: `sum(rate(cosmo_router_http_requests_total{${this.getQueryLabels(
         params,
-      )}, http_status_code!~"2.."}[${range}h])) / sum(rate(cosmo_router_http_requests_total{${this.getQueryLabels(
+      )}, http_status_code=~"5.."}[${range}h])) / sum(rate(cosmo_router_http_requests_total{${this.getQueryLabels(
         params,
       )}}[${range}h])) * 100`,
     });
-    const previousPercentage = await this.client.query({
+    const prevPercentage = this.client.query({
       query: `sum(rate(cosmo_router_http_requests_total{${this.getQueryLabels(
         params,
-      )}, http_status_code!~"2.."}[${range}h])) / sum(rate(cosmo_router_http_requests_total{${this.getQueryLabels(
+      )}, http_status_code=~"5.."}[${range}h])) / sum(rate(cosmo_router_http_requests_total{${this.getQueryLabels(
         params,
       )}}[${range}h] offset ${range}h)) * 100`,
     });
 
     // get top 5 operations in last [range] hours
-    const top5 = await this.client.query({
+    const top5 = this.client.query({
       query: `topk(5, sum by (wg_operation_name) (rate(cosmo_router_http_requests_total{${this.getQueryLabels(
         params,
-      )}, http_status_code!~"2.."}[${range}h])) / sum by (wg_operation_name) (rate(cosmo_router_http_requests_total{${this.getQueryLabels(
+      )}, http_status_code!="5.."}[${range}h])) / sum by (wg_operation_name) (rate(cosmo_router_http_requests_total{${this.getQueryLabels(
         params,
       )}}[${range}h])) * 100)`,
     });
 
     // get requests in last [range] hours in series of [step]
-    const result = await this.client.queryRange({
+    const series = this.client.queryRange({
       query: `sum (rate(cosmo_router_http_requests_total{${this.getQueryLabels(params)}}[${prange}]))`,
       ...this.getRangeQueryProps({
         range,
@@ -250,7 +303,7 @@ export class MetricsDashboardRepository {
       }),
     });
 
-    const prevResult = await this.client.queryRange({
+    const prevSeries = this.client.queryRange({
       query: `sum (rate(cosmo_router_http_requests_total{${this.getQueryLabels(params)}}[${prange}]))`,
       ...this.getRangeQueryProps({
         range,
@@ -258,14 +311,26 @@ export class MetricsDashboardRepository {
       }),
     });
 
+    const responses = await this.getResponses(percentage, prevPercentage, top5, series, prevSeries);
+    const [valueResponse, prevValueResponse, top5Response, seriesResponse, prevSeriesResponse] = responses;
+
     return {
-      value: percentage.data.result[0]?.value[1],
-      previousValue: previousPercentage.data.result[0]?.value[1],
-      top: top5.data.result.map((v: any) => ({
-        name: v.metric.wg_operation_name,
-        value: v.value[1],
-      })),
-      series: this.mapSeries(endDate, range, result.data.result[0].values, prevResult.data.result[0]?.values),
+      data: {
+        value: valueResponse.data?.result[0]?.value[1] || '0',
+        previousValue: prevValueResponse.data?.result[0]?.value[1] || '0',
+        top:
+          top5Response.data?.result.map((v: any) => ({
+            name: v.metric.wg_operation_name || 'unknown',
+            value: v.value[1] || '0',
+          })) || [],
+        series: this.mapSeries(
+          endDate,
+          range,
+          seriesResponse.data?.result[0].values,
+          prevSeriesResponse.data?.result[0]?.values,
+        ),
+      },
+      errors: responses.filter((r) => r.error),
     };
   }
 
@@ -284,7 +349,7 @@ export class MetricsDashboardRepository {
     const prange = '5m';
 
     // get requests in last [range] hours in series of [step]
-    const result = await this.client.queryRange({
+    const requestRate = this.client.queryRange({
       query: `sum(rate(cosmo_router_http_requests_total{${this.getQueryLabels(params)}}[${prange}]) * 60)`,
       ...this.getRangeQueryProps({
         range,
@@ -292,24 +357,30 @@ export class MetricsDashboardRepository {
       }),
     });
 
-    const errorRate = await this.client.queryRange({
+    const errorRate = this.client.queryRange({
       query: `sum(rate(cosmo_router_http_requests_total{${this.getQueryLabels(
         params,
-      )}, http_status_code!~"2.."}[${prange}]) * 60)`,
+      )}, http_status_code=~"5.."}[${prange}]) * 60)`,
       ...this.getRangeQueryProps({
         range,
         endDate,
       }),
     });
 
+    const responses = await this.getResponses(requestRate, errorRate);
+    const [requestRateResponse, errorRateResponse] = responses;
+
     return {
-      series: this.mapSeries(endDate, range, result.data.result[0].values),
-      errorSeries: this.mapSeries(endDate, range, errorRate.data.result[0].values),
+      data: {
+        series: this.mapSeries(endDate, range, requestRateResponse.data?.result[0].values),
+        errorSeries: this.mapSeries(endDate, range, errorRateResponse.data?.result[0].values),
+      },
+      errors: responses.filter((r) => r.error),
     };
   }
 
   protected getQueryLabels = (params: MetricsParams) => {
-    return `wg_organization_id="${params.organizationId}", wg_federated_graph_id="${params.graphId}", wg_router_graph_name="${params.graphName}"`;
+    return `wg_organization_id="${params.organizationId}", wg_federated_graph_id="${params.graphId}"`;
   };
 
   /**
