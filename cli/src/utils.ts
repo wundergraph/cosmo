@@ -64,7 +64,7 @@ export function checkAPIKey() {
   if (!config.apiKey) {
     program.error(
       pc.yellow(
-        `No AccessToken/API key found. Please run ${pc.bold(
+        `Not authenticated. Please run ${pc.bold(
           'wgc auth login',
         )} or create an API key and set as environment variable ${pc.bold('COSMO_API_KEY')}.` +
           '\n' +
