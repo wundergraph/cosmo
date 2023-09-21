@@ -18,6 +18,18 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof NodeSe
       return handleError<PlainMessage<GetConfigResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticateRouter(ctx.requestHeader);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+
+        if (req.version) {
+          const isLatest = await fedGraphRepo.isLatestVersion(req.graphName, req.version);
+          if (isLatest) {
+            return {
+              response: {
+                code: EnumStatusCode.OK,
+              },
+            };
+          }
+        }
+
         const config = await fedGraphRepo.getLatestValidRouterConfig(req.graphName);
 
         if (!config) {

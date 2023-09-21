@@ -334,6 +334,15 @@ export class GetConfigRequest extends Message<GetConfigRequest> {
    */
   graphName = "";
 
+  /**
+   * The version to check for. If the version is not specified, the latest router config version will be returned.
+   * Otherwise, the version will be used to check if a newer version of the router config is available.
+   * That allow us to not send the router config if the version is the same.
+   *
+   * @generated from field: optional string version = 2;
+   */
+  version?: string;
+
   constructor(data?: PartialMessage<GetConfigRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -343,6 +352,7 @@ export class GetConfigRequest extends Message<GetConfigRequest> {
   static readonly typeName = "wg.cosmo.node.v1.GetConfigRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "graph_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "version", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetConfigRequest {
@@ -372,6 +382,8 @@ export class GetConfigResponse extends Message<GetConfigResponse> {
   response?: Response;
 
   /**
+   * RouterConfig is the router config for the graph. It can be nil when a version is specified and the version is the same as the latest version.
+   *
    * @generated from field: optional wg.cosmo.node.v1.RouterConfig config = 2;
    */
   config?: RouterConfig;
