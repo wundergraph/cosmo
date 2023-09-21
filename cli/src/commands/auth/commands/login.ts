@@ -1,10 +1,6 @@
-import { mkdirSync } from 'node:fs';
-import { writeFile } from 'node:fs/promises';
 import { Command, program } from 'commander';
-import yaml from 'js-yaml';
 import open from 'open';
 import pc from 'picocolors';
-import { configDir, configFile } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { performDeviceAuth, startPollingForAccessToken } from '../utils.js';
 import UserConfig from '../user-config.js';
