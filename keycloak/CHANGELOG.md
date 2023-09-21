@@ -1,8 +1,14 @@
 # Change Log
-Images can be found [here](https://github.com/orgs/wundergraph/packages?repo_name=cosmo)
+Binaries are attached to the github release otherwise all images can be found [here](https://github.com/orgs/wundergraph/packages?repo_name=cosmo)
 
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
+
+## [0.8.1](https://github.com/wundergraph/cosmo/compare/keycloak@0.8.0...keycloak@0.8.1) (2023-09-21)
+
+### Bug Fixes
+
+* ui of a few keycloak screens ([#102](https://github.com/wundergraph/cosmo/issues/102)) ([638cebd](https://github.com/wundergraph/cosmo/commit/638cebdadebf510913e8c9de4ca6418871dcd6a5)) (@JivusAyrus)
 
 # [0.8.0](https://github.com/wundergraph/cosmo/compare/keycloak@0.7.0...keycloak@0.8.0) (2023-09-14)
 
