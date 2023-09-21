@@ -1,9 +1,6 @@
 import { Command } from 'commander';
-
 import { CreateClient } from '../core/client/client.js';
 import { config } from '../core/config.js';
-import LoginCmd from './auth/commands/login.js';
-import RouterComposeCmd from './router/commands/compose.js';
 import AuthCommands from './auth/index.js';
 import FederatedGraphCommands from './federated-graph/index.js';
 import RouterCommands from './router/index.js';
