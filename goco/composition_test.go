@@ -56,3 +56,12 @@ func TestFederateSubgraphs(t *testing.T) {
 	sub, err := Federate(subgraphs...)
 	fmt.Printf("%+v %s\n", sub, err)
 }
+
+func BenchmarkFederateSubgraphs(b *testing.B) {
+	b.ReportAllocs()
+	for ii := 0; ii < b.N; ii++ {
+		if _, err := Federate(subgraphs...); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
