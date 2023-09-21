@@ -19,7 +19,7 @@ import {
 } from '../src/core/test-util';
 import Keycloak from '../src/core/services/Keycloak';
 import { MockPlatformWebhookService } from '../src/core/webhooks/PlatformWebhookService';
-import PrometheusClient from '../src/core/prometheus/client';
+import { MockPrometheusClient } from '../src/core/prometheus/client';
 
 let dbname = '';
 
@@ -64,7 +64,7 @@ describe('Federated Graph', (ctx) => {
 
     const platformWebhooks = new MockPlatformWebhookService();
 
-    const prometheus = new PrometheusClient({
+    const prometheus = new MockPrometheusClient({
       apiUrl: 'http://localhost:9090',
     });
 
@@ -164,7 +164,7 @@ describe('Federated Graph', (ctx) => {
 
     const platformWebhooks = new MockPlatformWebhookService();
 
-    const prometheus = new PrometheusClient({
+    const prometheus = new MockPrometheusClient({
       apiUrl: 'http://localhost:9090',
     });
 
@@ -264,7 +264,7 @@ describe('Federated Graph', (ctx) => {
 
     const platformWebhooks = new MockPlatformWebhookService();
 
-    const prometheus = new PrometheusClient({
+    const prometheus = new MockPrometheusClient({
       apiUrl: 'http://localhost:9090',
     });
 
@@ -364,7 +364,7 @@ describe('Federated Graph', (ctx) => {
 
     const platformWebhooks = new MockPlatformWebhookService();
 
-    const prometheus = new PrometheusClient({
+    const prometheus = new MockPrometheusClient({
       apiUrl: 'http://localhost:9090',
     });
 
@@ -493,7 +493,7 @@ describe('Federated Graph', (ctx) => {
 
     const platformWebhooks = new MockPlatformWebhookService();
 
-    const prometheus = new PrometheusClient({
+    const prometheus = new MockPrometheusClient({
       apiUrl: 'http://localhost:9090',
     });
 
