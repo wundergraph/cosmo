@@ -213,7 +213,15 @@ export class FederatedGraphRepository {
       with: {
         federatedGraph: {
           with: {
-            composedSchemaVersion: true,
+            composedSchemaVersion: {
+              // Don't load the schema SDL, since it can be very large.
+              columns: {
+                id: true,
+                isComposable: true,
+                compositionErrors: true,
+                createdAt: true,
+              }
+            },
             subgraphs: {
               columns: {
                 subgraphId: true,
@@ -347,7 +355,6 @@ export class FederatedGraphRepository {
           composedSchemaVersionId: insertedVersion[0].insertedId,
         })
         .where(eq(federatedGraphs.id, fedGraph.id))
-        .returning();
 
       return {
         id: fedGraph.id,
@@ -367,6 +374,12 @@ export class FederatedGraphRepository {
   public async exists(name: string) {
     const res = await this.byName(name);
     return res !== undefined;
+  }
+
+
+  public async isLatestVersion(name: string, version: string) {
+    const res = await this.byName(name);
+    return res?.schemaVersionId === version;
   }
 
   public async getLatestValidRouterConfig(name: string): Promise<
