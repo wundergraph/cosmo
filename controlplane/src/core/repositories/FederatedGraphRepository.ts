@@ -1,5 +1,5 @@
 import { JsonValue } from '@bufbuild/protobuf';
-import { and, asc, desc, eq, inArray, not, notExists, notInArray, SQL, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, exists, inArray, not, notExists, notInArray, SQL, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { RouterConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { CompositionError, SchemaChange } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
@@ -444,36 +444,74 @@ export class FederatedGraphRepository {
     });
   }
 
-  public fetchFederatedGraphChangelog(targetId: string): Promise<FederatedGraphChangelogDTO[] | undefined> {
-    return this.db.transaction<FederatedGraphChangelogDTO[] | undefined>(async (db) => {
-      const federatedChangelog: FederatedGraphChangelogDTO[] = [];
+  public fetchFederatedGraphChangelog(
+    targetId: string,
+    limit: number,
+    offset: number,
+  ): Promise<{ federatedGraphChangelog: FederatedGraphChangelogDTO[]; hasNextPage: boolean } | undefined> {
+    return this.db.transaction<
+      { federatedGraphChangelog: FederatedGraphChangelogDTO[]; hasNextPage: boolean } | undefined
+    >(async (db) => {
+      const federatedGraphChangelog: FederatedGraphChangelogDTO[] = [];
 
-      const changelog = await db
-        .select({
-          id: schemaVersionChangeAction.id,
-          path: schemaVersionChangeAction.path,
-          changeType: schemaVersionChangeAction.changeType,
-          changeMessage: schemaVersionChangeAction.changeMessage,
-          createdAt: schemaVersionChangeAction.createdAt,
-          schemaVersionID: schemaVersion.id,
-        })
-        .from(schemaVersionChangeAction)
-        .innerJoin(schemaVersion, eq(schemaVersion.id, schemaVersionChangeAction.schemaVersionId))
+      // Get all schema version ids which have changelogs
+      const schemaVersionIds = (
+        await db
+          .select({
+            id: schemaVersion.id,
+          })
+          .from(schemaVersion)
+          .where(eq(schemaVersion.targetId, targetId))
+          .innerJoin(schemaVersionChangeAction, eq(schemaVersionChangeAction.schemaVersionId, schemaVersion.id))
+          .orderBy(desc(schemaVersion.createdAt))
+          .groupBy(schemaVersion.id)
+          .offset(offset)
+          .limit(limit)
+      ).map((sv) => sv.id);
+
+      if (schemaVersionIds.length === 0) {
+        return { federatedGraphChangelog, hasNextPage: false };
+      }
+
+      const schemaVersions = await db.query.schemaVersion.findMany({
+        where: (sv) => inArray(sv.id, schemaVersionIds),
+        columns: {
+          id: true,
+          createdAt: true,
+        },
+        with: {
+          changes: {
+            orderBy: desc(schemaVersionChangeAction.createdAt),
+          },
+        },
+        orderBy: desc(schemaVersion.createdAt),
+      });
+
+      const entriesAfterCurrentPage = await db
+        .select({ id: schemaVersion.id })
+        .from(schemaVersion)
+        .innerJoin(schemaVersionChangeAction, eq(schemaVersionChangeAction.schemaVersionId, schemaVersion.id))
         .where(eq(schemaVersion.targetId, targetId))
-        .orderBy(desc(schemaVersionChangeAction.createdAt))
-        .execute();
+        .orderBy(desc(schemaVersion.createdAt))
+        .groupBy(schemaVersion.id)
+        .offset(offset + schemaVersions.length)
+        .limit(limit);
 
-      for (const log of changelog) {
-        federatedChangelog.push({
-          id: log.id,
-          path: log.path || '',
-          changeType: log.changeType,
-          changeMessage: log.changeMessage,
-          createdAt: log.createdAt.toString(),
-          schemaVersionId: log.schemaVersionID,
+      for (const sv of schemaVersions) {
+        federatedGraphChangelog.push({
+          schemaVersionId: sv.id,
+          createdAt: sv.createdAt.toString(),
+          changelogs: sv.changes.map((c) => ({
+            id: c.id,
+            path: c.path || '',
+            changeType: c.changeType,
+            changeMessage: c.changeMessage,
+            createdAt: c.createdAt.toString(),
+          })),
         });
       }
-      return federatedChangelog;
+
+      return { federatedGraphChangelog, hasNextPage: entriesAfterCurrentPage.length > 0 };
     });
   }
 
