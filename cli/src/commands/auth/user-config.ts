@@ -14,7 +14,7 @@ export default class UserConfig {
         return;
       }
       const loginData = JSON.parse(JSON.stringify(data));
-      if (loginData && loginData?.expiresAt && new Date(loginData.expiresAt) > new Date()) {
+      if (loginData && loginData?.accessToken && loginData?.expiresAt && new Date(loginData.expiresAt) > new Date()) {
         console.log(pc.green('You are already logged in.'));
         process.exit(0);
       }
