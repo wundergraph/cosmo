@@ -144,13 +144,13 @@ spec:
                   key: keycloakClientId
             - name: PROMETHEUS_API_URL
               valueFrom:
-                secretKeyRef:
-                  name: {{ include "controlplane.fullname" . }}-secret
+                configMapKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-configmap
                   key: prometheusApiUrl
             - name: WEBHOOK_URL
               valueFrom:
-                secretKeyRef:
-                  name: {{ include "controlplane.fullname" . }}-secret
+                configMapKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-configmap
                   key: webhookUrl
             - name: WEBHOOK_SECRET
               valueFrom:
