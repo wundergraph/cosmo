@@ -1,4 +1,8 @@
+import { readFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
+import path from 'node:path';
+import yaml from 'js-yaml';
+import envPaths from 'env-paths';
 
 const info = JSON.parse(
   await readFile(new URL('../../package.json', import.meta.url), {
@@ -6,9 +10,26 @@ const info = JSON.parse(
   }),
 );
 
+const paths = envPaths('cosmo', { suffix: '' });
+export const configDir = paths.config;
+export const configFile = path.join(configDir, 'config.yaml');
+
+const getAccessToken = () => {
+  try {
+    const data = yaml.load(readFileSync(configFile, 'utf8'));
+    const loginData = JSON.parse(JSON.stringify(data));
+    return loginData.accessToken;
+  } catch {
+    return null;
+  }
+};
+
 export const config = {
   baseURL: process.env.COSMO_API_URL || 'https://cosmo-cp.wundergraph.com',
-  apiKey: process.env.COSMO_API_KEY,
+  apiKey: getAccessToken() || process.env.COSMO_API_KEY,
+  kcApiURL: process.env.KC_API_URL || 'https://accounts.wundergraph.com/auth',
+  kcClientId: process.env.KC_CLIENT_ID || 'cosmo-cli',
+  kcRealm: process.env.KC_REALM || 'cosmo',
   version: info.version,
 };
 

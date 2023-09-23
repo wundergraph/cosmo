@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.13.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.12.0...@wundergraph/cosmo-connect@0.13.0) (2023-09-21)
+
+### Features
+
+* changelog pagination ([#103](https://github.com/wundergraph/cosmo/issues/103)) ([614b57e](https://github.com/wundergraph/cosmo/commit/614b57ed4904dde04682e75ad80670f08f64b7b2)) (@thisisnithin)
+* don't poll router config when config hasn't changed ([#105](https://github.com/wundergraph/cosmo/issues/105)) ([ea33961](https://github.com/wundergraph/cosmo/commit/ea339617a7d1724fd9b727953db5d591e50241dd)) (@StarpTech)
+
 # [0.12.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.11.0...@wundergraph/cosmo-connect@0.12.0) (2023-09-20)
 
 ### Features
