@@ -4,6 +4,34 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.15.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.14.0...controlplane@0.15.0) (2023-09-21)
+
+### Features
+
+* add login command ([#95](https://github.com/wundergraph/cosmo/issues/95)) ([e9da8c3](https://github.com/wundergraph/cosmo/commit/e9da8c3c9e018029e0aef06d3b3b823732812a47)) (@JivusAyrus)
+* changelog pagination ([#103](https://github.com/wundergraph/cosmo/issues/103)) ([614b57e](https://github.com/wundergraph/cosmo/commit/614b57ed4904dde04682e75ad80670f08f64b7b2)) (@thisisnithin)
+* don't poll router config when config hasn't changed ([#105](https://github.com/wundergraph/cosmo/issues/105)) ([ea33961](https://github.com/wundergraph/cosmo/commit/ea339617a7d1724fd9b727953db5d591e50241dd)) (@StarpTech)
+
+# [0.14.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.13.2...controlplane@0.14.0) (2023-09-20)
+
+### Features
+
+* store subgraphs in router config ([#61](https://github.com/wundergraph/cosmo/issues/61)) ([de7b132](https://github.com/wundergraph/cosmo/commit/de7b13244755acd49c38ff1e6c537234ab506960)) (@thisisnithin)
+
+## [0.13.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.13.1...controlplane@0.13.2) (2023-09-19)
+
+**Note:** Version bump only for package controlplane
+
+## [0.13.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.13.0...controlplane@0.13.1) (2023-09-18)
+
+**Note:** Version bump only for package controlplane
+
+# [0.13.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.12.1...controlplane@0.13.0) (2023-09-18)
+
+### Features
+
+* only log system errors as errors ([#80](https://github.com/wundergraph/cosmo/issues/80)) ([127614c](https://github.com/wundergraph/cosmo/commit/127614c889c6a98c3dc4963a502ef82fae3362d0)) (@StarpTech)
+
 ## [0.12.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.12.0...controlplane@0.12.1) (2023-09-17)
 
 ### Bug Fixes

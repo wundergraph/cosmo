@@ -74,6 +74,7 @@ func Main() {
 		core.WithIntrospection(cfg.IntrospectionEnabled),
 		core.WithPlayground(cfg.PlaygroundEnabled),
 		core.WithGraphApiToken(cfg.Graph.Token),
+		core.WithGraphQLPath(cfg.GraphQLPath),
 		core.WithModulesConfig(cfg.Modules),
 		core.WithGracePeriod(cfg.GracePeriod),
 		core.WithHealthCheckPath(cfg.HealthCheckPath),
@@ -81,6 +82,7 @@ func Main() {
 		core.WithReadinessCheckPath(cfg.ReadinessCheckPath),
 		core.WithHeaderRules(cfg.Headers),
 		core.WithStaticRouterConfig(routerConfig),
+		core.WithRequestTimeout(cfg.TrafficShaping.All.RequestTimeout),
 		core.WithRetryOptions(
 			cfg.TrafficShaping.All.BackoffJitterRetry.Enabled,
 			cfg.TrafficShaping.All.BackoffJitterRetry.MaxAttempts,

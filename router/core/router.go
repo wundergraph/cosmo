@@ -7,6 +7,7 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"net"
 	"net/http"
+	"net/url"
 	"sync"
 	"time"
 
@@ -50,35 +51,36 @@ type (
 
 	// Config defines the configuration options for the Router.
 	Config struct {
-		transport           *http.Transport
-		logger              *zap.Logger
-		traceConfig         *trace.Config
-		metricConfig        *metric.Config
-		tracerProvider      *sdktrace.TracerProvider
-		meterProvider       *sdkmetric.MeterProvider
-		corsOptions         *cors.Config
-		configFetcher       controlplane.ConfigFetcher
-		initialRouterConfig *nodev1.RouterConfig
-		gracePeriod         time.Duration
-		shutdown            bool
-		listenAddr          string
-		baseURL             string
-		graphqlPath         string
-		playground          bool
-		introspection       bool
-		production          bool
-		federatedGraphName  string
-		graphApiToken       string
-		healthCheckPath     string
-		readinessCheckPath  string
-		livenessCheckPath   string
-		prometheusServer    *http.Server
-		modulesConfig       map[string]interface{}
-		routerMiddlewares   []func(http.Handler) http.Handler
-		preOriginHandlers   []TransportPreHandler
-		postOriginHandlers  []TransportPostHandler
-		headerRuleEngine    *HeaderRuleEngine
-		headerRules         config.HeaderRules
+		transport          *http.Transport
+		logger             *zap.Logger
+		traceConfig        *trace.Config
+		metricConfig       *metric.Config
+		tracerProvider     *sdktrace.TracerProvider
+		meterProvider      *sdkmetric.MeterProvider
+		corsOptions        *cors.Config
+		configFetcher      controlplane.ConfigFetcher
+		routerConfig       *nodev1.RouterConfig
+		gracePeriod        time.Duration
+		shutdown           bool
+		listenAddr         string
+		baseURL            string
+		graphqlPath        string
+		playground         bool
+		introspection      bool
+		production         bool
+		federatedGraphName string
+		graphApiToken      string
+		healthCheckPath    string
+		readinessCheckPath string
+		livenessCheckPath  string
+		prometheusServer   *http.Server
+		modulesConfig      map[string]interface{}
+		routerMiddlewares  []func(http.Handler) http.Handler
+		preOriginHandlers  []TransportPreHandler
+		postOriginHandlers []TransportPostHandler
+		headerRuleEngine   *HeaderRuleEngine
+		headerRules        config.HeaderRules
+		requestTimeout     time.Duration
 
 		retryOptions retrytransport.RetryOptions
 
@@ -101,7 +103,6 @@ type (
 // Alternatively, use Router.NewTestServer() to create a new Server instance without starting it for testing purposes.
 func NewRouter(opts ...Option) (*Router, error) {
 	r := &Router{}
-	r.graphqlPath = "/graphql"
 
 	for _, opt := range opts {
 		opt(r)
@@ -109,6 +110,11 @@ func NewRouter(opts ...Option) (*Router, error) {
 
 	if r.logger == nil {
 		r.logger = zap.NewNop()
+	}
+
+	// Default value for graphql path
+	if r.graphqlPath == "" {
+		r.graphqlPath = "/graphql"
 	}
 
 	// Default values for trace and metric config
@@ -135,6 +141,10 @@ func NewRouter(opts ...Option) (*Router, error) {
 	}
 	if r.livenessCheckPath == "" {
 		r.livenessCheckPath = "/health/live"
+	}
+
+	if r.requestTimeout == 0 {
+		r.requestTimeout = 60 * time.Second
 	}
 
 	hr, err := NewHeaderTransformer(r.headerRules)
@@ -202,9 +212,9 @@ func NewRouter(opts ...Option) (*Router, error) {
 	return r, nil
 }
 
-// startAndSwapServer starts a new Server. It swaps the active Server with a new Server instance when the config has changed.
-// This method is not safe for concurrent use.
-func (r *Router) startAndSwapServer(ctx context.Context, cfg *nodev1.RouterConfig) error {
+// updateServer starts a new Server. It swaps the active Server with a new Server instance when the config has changed.
+// This method is safe for concurrent use. When the router can't be swapped due to an error the old server kept running.
+func (r *Router) updateServer(ctx context.Context, cfg *nodev1.RouterConfig) error {
 	// Rebuild Server with new router config
 	// In case of an error, we return early and keep the old Server running
 
@@ -327,9 +337,9 @@ func (r *Router) NewTestServer(ctx context.Context) (*Server, error) {
 		return nil, fmt.Errorf("failed to bootstrap application: %w", err)
 	}
 
-	newRouter, err := r.newServer(ctx, r.initialRouterConfig)
+	newRouter, err := r.newServer(ctx, r.routerConfig)
 	if err != nil {
-		r.logger.Error("Failed to create r new router", zap.Error(err))
+		r.logger.Error("Failed to create new server", zap.Error(err))
 		return nil, err
 	}
 
@@ -384,6 +394,22 @@ func (r *Router) Start(ctx context.Context) error {
 		return fmt.Errorf("failed to bootstrap application: %w", err)
 	}
 
+	// Start the server with the static config without polling
+	if r.routerConfig != nil {
+
+		r.logger.Info("Static router config provided. Polling is disabled.")
+
+		eg.Go(func() error {
+			return r.updateServer(ctx, r.routerConfig)
+		})
+
+		return eg.Wait()
+	}
+
+	if r.configFetcher == nil {
+		return fmt.Errorf("config fetcher not provided. Please provide a static router config instead")
+	}
+
 	var initCh = make(chan *nodev1.RouterConfig, 1)
 
 	eg.Go(func() error {
@@ -392,11 +418,11 @@ func (r *Router) Start(ctx context.Context) error {
 			case <-ctx.Done(): // context cancelled
 				return nil
 			case cfg := <-initCh: // initial config
-				if err := r.startAndSwapServer(ctx, cfg); err != nil {
+				if err := r.updateServer(ctx, cfg); err != nil {
 					return fmt.Errorf("failed to start server with initial config: %w", err)
 				}
 			case cfg := <-r.configFetcher.Subscribe(ctx): // new config
-				if err := r.startAndSwapServer(ctx, cfg); err != nil {
+				if err := r.updateServer(ctx, cfg); err != nil {
 					r.logger.Error("Failed to start server with new config", zap.Error(err))
 					continue
 				}
@@ -404,18 +430,14 @@ func (r *Router) Start(ctx context.Context) error {
 		}
 	})
 
-	// Get initial router config from static config file
-	if r.initialRouterConfig != nil {
-		initCh <- r.initialRouterConfig
-	} else {
-		// Load initial router config from controlplane
-		initialCfg, err := r.configFetcher.GetRouterConfig(ctx)
-		if err != nil {
-			return fmt.Errorf("failed to get initial router config: %w", err)
-		}
-
-		initCh <- initialCfg
+	// Poll control-plane to get initial router config
+	initialCfg, err := r.configFetcher.GetRouterConfig(ctx)
+	if err != nil {
+		// The router can't work without a config there we exit hard
+		return fmt.Errorf("failed to get initial router config: %w", err)
 	}
+
+	initCh <- initialCfg
 
 	return eg.Wait()
 }
@@ -573,7 +595,22 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 			subChiRouter.Use(metricHandler.Handler)
 		}
 
-		// Create r custom request context that provides access to the request and response.
+		subgraphs := make([]Subgraph, len(routerConfig.Subgraphs))
+		for _, s := range routerConfig.Subgraphs {
+			parsedURL, err := url.Parse(s.RoutingUrl)
+			if err != nil {
+				r.logger.Error("Failed to parse subgraph url", zap.String("url", s.RoutingUrl), zap.Error(err))
+			}
+
+			subgraph := Subgraph{
+				Id:   s.Id,
+				Name: s.Name,
+				Url:  parsedURL,
+			}
+			subgraphs = append(subgraphs, subgraph)
+		}
+
+		// Create custom request context that provides access to the request and response.
 		// It is used by custom modules and handlers. It must be added before custom user middlewares
 		subChiRouter.Use(func(handler http.Handler) http.Handler {
 			return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
@@ -585,6 +622,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 					responseWriter: writer,
 					request:        request,
 					operation:      operationContext,
+					subgraphs:      subgraphs,
 				}
 				handler.ServeHTTP(writer, request.WithContext(withRequestContext(request.Context(), requestContext)))
 			})
@@ -603,7 +641,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		graphqlPlaygroundHandler := graphiql2.NewPlayground(&graphiql2.PlaygroundOptions{
 			Log:  r.logger,
 			Html: graphiql2.GetGraphiqlPlaygroundHTML(),
-			// Empty url to use the same url as the playground
+			// Empty url to use the same url (relatively) as the playground
 			GraphqlURL: "",
 		})
 		httpRouter.Get(r.graphqlPath, graphqlPlaygroundHandler)
@@ -828,7 +866,7 @@ func WithModulesConfig(config map[string]interface{}) Option {
 
 func WithStaticRouterConfig(cfg *nodev1.RouterConfig) Option {
 	return func(r *Router) {
-		r.initialRouterConfig = cfg
+		r.routerConfig = cfg
 	}
 }
 
@@ -859,6 +897,12 @@ func WithHeaderRules(headers config.HeaderRules) Option {
 func WithEngineExecutionConfig(cfg config.EngineExecutionConfiguration) Option {
 	return func(r *Router) {
 		r.engineExecutionConfiguration = cfg
+	}
+}
+
+func WithRequestTimeout(timeout time.Duration) Option {
+	return func(r *Router) {
+		r.requestTimeout = timeout
 	}
 }
 
