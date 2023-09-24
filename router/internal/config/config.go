@@ -3,10 +3,11 @@ package config
 import (
 	b64 "encoding/base64"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/internal/logging"
-	"go.uber.org/zap"
 	"os"
 	"time"
+
+	"github.com/wundergraph/cosmo/router/internal/logging"
+	"go.uber.org/zap"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/goccy/go-yaml"
@@ -127,6 +128,10 @@ type EngineExecutionConfiguration struct {
 	EnableSingleFlight bool `default:"true" envconfig:"ENGINE_ENABLE_SINGLE_FLIGHT"`
 }
 
+type OverrideRoutingURLConfiguration struct {
+	Subgraphs map[string]string `yaml:"subgraphs" validate:"dive,required,url"`
+}
+
 type Config struct {
 	Version string `yaml:"version"`
 
@@ -154,6 +159,8 @@ type Config struct {
 
 	ConfigPath       string `envconfig:"CONFIG_PATH" validate:"omitempty,filepath"`
 	RouterConfigPath string `yaml:"router_config_path" envconfig:"ROUTER_CONFIG_PATH" validate:"omitempty,filepath"`
+
+	OverrideRoutingURL OverrideRoutingURLConfiguration `yaml:"override_routing_url"`
 
 	EngineExecutionConfiguration EngineExecutionConfiguration
 }

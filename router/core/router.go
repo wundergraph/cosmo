@@ -4,12 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"net"
 	"net/http"
 	"net/url"
 	"sync"
 	"time"
+
+	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 
 	"github.com/dgraph-io/ristretto"
 	"github.com/go-chi/chi"
@@ -85,6 +86,8 @@ type (
 		retryOptions retrytransport.RetryOptions
 
 		engineExecutionConfiguration config.EngineExecutionConfiguration
+
+		overrideRoutingURL config.OverrideRoutingURLConfiguration
 	}
 
 	// Server is the main router instance.
@@ -597,9 +600,17 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 
 		subgraphs := make([]Subgraph, len(routerConfig.Subgraphs))
 		for _, s := range routerConfig.Subgraphs {
-			parsedURL, err := url.Parse(s.RoutingUrl)
+			rawURL := s.RoutingUrl
+
+			overrideURL, overrideFound := r.overrideRoutingURL.Subgraphs[s.Name]
+			if overrideFound {
+				rawURL = overrideURL
+			}
+
+			parsedURL, err := url.Parse(rawURL)
+
 			if err != nil {
-				r.logger.Error("Failed to parse subgraph url", zap.String("url", s.RoutingUrl), zap.Error(err))
+				r.logger.Error("Failed to parse subgraph url", zap.String("url", rawURL), zap.Error(err))
 			}
 
 			subgraph := Subgraph{
@@ -891,6 +902,12 @@ func WithLivenessCheckPath(path string) Option {
 func WithHeaderRules(headers config.HeaderRules) Option {
 	return func(r *Router) {
 		r.headerRules = headers
+	}
+}
+
+func WithOverrideRoutingURL(overrideRoutingURLs config.OverrideRoutingURLConfiguration) Option {
+	return func(r *Router) {
+		r.overrideRoutingURL = overrideRoutingURLs
 	}
 }
 
