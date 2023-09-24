@@ -3,10 +3,11 @@ package config
 import (
 	b64 "encoding/base64"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/internal/logging"
-	"go.uber.org/zap"
 	"os"
 	"time"
+
+	"github.com/wundergraph/cosmo/router/internal/logging"
+	"go.uber.org/zap"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/goccy/go-yaml"
@@ -189,6 +190,8 @@ func LoadConfig(envOverride string) (*Config, error) {
 
 	// Custom config path can only be supported through environment variable
 	configBytes, err := os.ReadFile(c.ConfigPath)
+	expandedConfigBytes := []byte(os.ExpandEnv(string(configBytes)))
+
 	if err != nil {
 		if configPathOverride {
 			return nil, fmt.Errorf("could not read custom config file %s: %w", c.ConfigPath, err)
@@ -201,7 +204,7 @@ func LoadConfig(envOverride string) (*Config, error) {
 	}
 
 	if err == nil {
-		if err := yaml.Unmarshal(configBytes, &c); err != nil {
+		if err := yaml.Unmarshal(expandedConfigBytes, &c); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal router config: %w", err)
 		}
 	}
