@@ -3,10 +3,11 @@ package config
 import (
 	b64 "encoding/base64"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/internal/logging"
-	"go.uber.org/zap"
 	"os"
 	"time"
+
+	"github.com/wundergraph/cosmo/router/internal/logging"
+	"go.uber.org/zap"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/goccy/go-yaml"
@@ -94,7 +95,8 @@ type BackoffJitterRetry struct {
 
 type HeaderRules struct {
 	// All is a set of rules that apply to all requests
-	All GlobalHeaderRule `yaml:"all"`
+	All       GlobalHeaderRule            `yaml:"all"`
+	Subgraphs map[string]GlobalHeaderRule `yaml:"subgraphs"`
 }
 
 type GlobalHeaderRule struct {
