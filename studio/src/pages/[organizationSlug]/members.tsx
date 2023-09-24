@@ -219,7 +219,7 @@ const MembersPage: NextPageWithLayout = () => {
     getOrganizationMembers.useQuery()
   );
 
-  const user = useContext(UserContext);
+  const [user] = useContext(UserContext);
 
   if (isLoading) return <Loader fullscreen />;
 

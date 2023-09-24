@@ -7,13 +7,20 @@ import {
   useQuery,
 } from "@tanstack/react-query";
 import { useRouter } from "next/router";
-import { createContext, ReactNode, useEffect, useState } from "react";
+import {
+  createContext,
+  Dispatch,
+  ReactNode,
+  SetStateAction,
+  useEffect,
+  useState,
+} from "react";
 
 interface User {
   id: string;
   email: string;
-  organization: Organization;
-  roles: ("admin" | "member")[];
+  currentOrganization: Organization;
+  organizations: Organization[];
 }
 
 interface Organization {
@@ -21,13 +28,13 @@ interface Organization {
   name: string;
   slug: string;
   isFreeTrial: boolean;
+  roles: string[];
 }
 
 interface Session {
   id: string;
   email: string;
   organizations: Organization[];
-  roles: ("admin" | "member")[];
 }
 
 class UnauthorizedError extends Error {
@@ -39,7 +46,9 @@ class UnauthorizedError extends Error {
 
 const queryClient = new QueryClient();
 
-export const UserContext = createContext<User | undefined>(undefined);
+export const UserContext = createContext<
+  [User | undefined, Dispatch<SetStateAction<User | undefined>> | undefined]
+>([undefined, undefined]);
 
 const fetchSession = async () => {
   try {
@@ -65,6 +74,7 @@ const fetchSession = async () => {
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
+  const currentOrgSlug = router.query.organizationSlug;
   const { data, error, isFetching } = useQuery<
     Session | null,
     UnauthorizedError | Error
@@ -88,13 +98,17 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     ) {
       router.replace("/login");
     } else if (data) {
+      const currentOrg = data.organizations.find(
+        (org) => org.slug === currentOrgSlug
+      );
+
       setUser({
         id: data.id,
         email: data.email,
-        organization: data.organizations[0],
-        roles: data.roles,
+        currentOrganization: currentOrg || data.organizations[0],
+        organizations: data.organizations,
       });
-      const organizationSlug = data.organizations[0].slug;
+      const organizationSlug = currentOrg?.slug || data.organizations[0].slug;
 
       setTransport(
         createConnectTransport({
@@ -111,7 +125,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         })
       );
 
-      if (router.pathname === "/" || router.pathname === "/login") {
+      if (
+        router.pathname === "/" ||
+        router.pathname === "/login" ||
+        !currentOrg
+      ) {
         const url = new URL(
           window.location.origin + router.basePath + router.asPath
         );
@@ -123,16 +141,22 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         );
       }
     }
-  }, [router, data, isFetching, error]);
+  }, [router, data, isFetching, error, currentOrgSlug]);
 
   if (!transport) {
-    return <UserContext.Provider value={user}>{children}</UserContext.Provider>;
+    return (
+      <UserContext.Provider value={[user, setUser]}>
+        {children}
+      </UserContext.Provider>
+    );
   }
 
   return (
     <TransportProvider transport={transport}>
       <QueryClientProvider client={queryClient}>
-        <UserContext.Provider value={user}>{children}</UserContext.Provider>
+        <UserContext.Provider value={[user, setUser]}>
+          {children}
+        </UserContext.Provider>
       </QueryClientProvider>
     </TransportProvider>
   );

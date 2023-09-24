@@ -620,6 +620,22 @@ message DeleteOrganizationWebhookConfigResponse {
   Response response = 1;
 }
 
+message DeleteOrganizationRequest {
+  string userID = 1;
+}
+
+message DeleteOrganizationResponse {
+  Response response = 1;
+}
+
+message LeaveOrganizationRequest {
+  string userID = 1;
+}
+
+message LeaveOrganizationResponse {
+  Response response = 1;
+}
+
 service PlatformService {
   // CreateFederatedGraph creates a federated graph on the control plane.
   rpc CreateFederatedGraph(CreateFederatedGraphRequest) returns (CreateFederatedGraphResponse) {}
@@ -690,6 +706,11 @@ service PlatformService {
   rpc UpdateOrganizationWebhookConfig(UpdateOrganizationWebhookConfigRequest) returns (UpdateOrganizationWebhookConfigResponse) {}
   // DeleteOrganizationWebhookConfig deletes an organization webhook
   rpc DeleteOrganizationWebhookConfig(DeleteOrganizationWebhookConfigRequest) returns (DeleteOrganizationWebhookConfigResponse) {}
+
+  // DeleteOrganization deletes an organization 
+  rpc DeleteOrganization(DeleteOrganizationRequest) returns (DeleteOrganizationResponse) {}
+  // LeaveOrganization removes a member from the organization
+  rpc LeaveOrganization(LeaveOrganizationRequest) returns (LeaveOrganizationResponse) {}
 
   // Analytics
 
