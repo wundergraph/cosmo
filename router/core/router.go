@@ -195,7 +195,7 @@ func NewRouter(opts ...Option) (*Router, error) {
 		IdleConnTimeout:     90 * time.Second,
 		// Set more timeouts https://gitlab.com/gitlab-org/gitlab-pages/-/issues/495
 		TLSHandshakeTimeout:   10 * time.Second,
-		ResponseHeaderTimeout: 15 * time.Second,
+		ResponseHeaderTimeout: 30 * time.Second,
 		ExpectContinueTimeout: 15 * time.Second,
 	}
 
