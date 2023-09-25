@@ -66,6 +66,7 @@ import ApolloMigrator from '../services/ApolloMigrator.js';
 import { MetricsDashboardRepository } from '../repositories/analytics/MetricsDashboardRepository.js';
 import { handleError, isValidLabelMatchers, isValidLabels } from '../util.js';
 import { OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
+import { AnalyticsDashboardViewRepository2 } from '../repositories/analytics/AnalyticsDashboardViewRepository2.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -1226,7 +1227,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const analyticsDashRepo = new AnalyticsDashboardViewRepository(opts.chClient);
+        // const analyticsDashRepo = new AnalyticsDashboardViewRepository(opts.chClient);
+        const analyticsDashRepo = new AnalyticsDashboardViewRepository2(opts.prometheus);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
 
         const graph = await fedGraphRepo.byName(req.federatedGraphName);

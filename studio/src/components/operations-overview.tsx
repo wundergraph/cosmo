@@ -198,6 +198,60 @@ export const OperationsOverview = ({
 }: {
   federatedGraphName: string;
 }) => {
+  return (
+    <div className="order-2 flex w-full flex-col items-center gap-4">
+      <OperationsOverviewOld federatedGraphName={federatedGraphName} />
+      <OperationsOverviewNew federatedGraphName={federatedGraphName} />
+    </div>
+  );
+};
+
+export const OperationsOverviewOld = ({
+  federatedGraphName,
+}: {
+  federatedGraphName: string;
+}) => {
+  const { data, isLoading, error, refetch } = useQuery(
+    getDashboardAnalyticsView.useQuery({
+      federatedGraphName,
+    })
+  );
+
+  if (isLoading) {
+    return (
+      <div className="order-2 h-72 w-full border lg:order-last">
+        <Loader fullscreen />
+      </div>
+    );
+  }
+
+  if (error || data?.response?.code !== EnumStatusCode.OK) {
+    return (
+      <EmptyState
+        className="order-2 h-72 border lg:order-last"
+        icon={<ExclamationTriangleIcon />}
+        title="Could not retrieve weekly analytics data"
+        description={
+          data?.response?.details || error?.message || "Please try again"
+        }
+        actions={<Button onClick={() => refetch()}>Retry</Button>}
+      />
+    );
+  }
+
+  return (
+    <div className="order-2 flex w-full flex-col items-center gap-4 lg:order-last lg:flex-row">
+      <RequestChart requestSeries={data?.requestSeries ?? []} />
+      <MostRequested data={data?.mostRequestedOperations ?? []} />
+    </div>
+  );
+};
+
+export const OperationsOverviewNew = ({
+  federatedGraphName,
+}: {
+  federatedGraphName: string;
+}) => {
   const { data, isLoading, error, refetch } = useQuery(
     getDashboardAnalyticsView.useQuery({
       federatedGraphName,
