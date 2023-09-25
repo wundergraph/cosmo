@@ -15701,7 +15701,7 @@ ${operationTypes.join("\n")}
       exports2.EXTENSIONS = "extensions";
       exports2.FIELD = "field";
       exports2.FIELD_UPPER = "FIELD";
-      exports2.FIELD_SET = "FieldSet";
+      exports2.FIELD_SET = "openfed__FieldSet";
       exports2.FIELDS = "fields";
       exports2.FIELD_DEFINITION_UPPER = "FIELD_DEFINITION";
       exports2.FRAGMENT_DEFINITION_UPPER = "FRAGMENT_DEFINITION";
@@ -15754,7 +15754,7 @@ ${operationTypes.join("\n")}
       init_buffer2();
       init_process2();
       Object.defineProperty(exports2, "__esModule", { value: true });
-      exports2.hasSimplePath = exports2.kindToTypeString = exports2.addIterableValuesToSet = exports2.numberToOrdinal = exports2.mapToArrayOfValues = exports2.doSetsHaveAnyOverlap = exports2.getEntriesNotInHashSet = exports2.getAllSetDisparities = exports2.getOrThrowError = exports2.getAllMutualEntries = exports2.areSetsEqual = void 0;
+      exports2.getValueOrDefault = exports2.hasSimplePath = exports2.kindToTypeString = exports2.addIterableValuesToSet = exports2.numberToOrdinal = exports2.mapToArrayOfValues = exports2.doSetsHaveAnyOverlap = exports2.getEntriesNotInHashSet = exports2.getAllSetDisparities = exports2.getOrThrowError = exports2.getAllMutualEntries = exports2.areSetsEqual = void 0;
       var graphql_1 = (init_graphql2(), __toCommonJS(graphql_exports));
       var string_constants_1 = require_string_constants();
       var errors_1 = require_errors();
@@ -15936,6 +15936,16 @@ ${operationTypes.join("\n")}
         return false;
       }
       exports2.hasSimplePath = hasSimplePath;
+      function getValueOrDefault(map, key, constructor) {
+        const existingValue = map.get(key);
+        if (existingValue) {
+          return existingValue;
+        }
+        const value = constructor();
+        map.set(key, value);
+        return value;
+      }
+      exports2.getValueOrDefault = getValueOrDefault;
     }
   });
 
@@ -15947,8 +15957,8 @@ ${operationTypes.join("\n")}
       init_buffer2();
       init_process2();
       Object.defineProperty(exports2, "__esModule", { value: true });
-      exports2.unexpectedKindFatalError = exports2.undefinedParentFatalError = exports2.invalidKeyDirectiveError = exports2.invalidEntityKeyError = exports2.invalidNestingErrorMessage = exports2.invalidNestingClosureErrorMessage = exports2.invalidClosingBraceErrorMessage = exports2.invalidOpeningBraceErrorMessage = exports2.invalidGraphQLNameErrorMessage = exports2.invalidKeyDirectiveArgumentErrorMessage = exports2.duplicateDirectiveArgumentDefinitionErrorMessage = exports2.unexpectedDirectiveArgumentErrorMessage = exports2.undefinedRequiredArgumentsErrorMessage = exports2.unexpectedDirectiveArgumentsErrorMessage = exports2.invalidDirectiveLocationErrorMessage = exports2.invalidDirectiveError = exports2.invalidTagDirectiveError = exports2.invalidDeprecatedDirectiveError = exports2.invalidUnionError = exports2.invalidRepeatedDirectiveErrorMessage = exports2.federationRequiredInputFieldError = exports2.federationInvalidParentTypeError = exports2.federationUnexpectedNodeKindError = exports2.undefinedTypeError = exports2.unresolvableFieldError = exports2.undefinedEntityKeyErrorMessage = exports2.undefinedDirectiveError = exports2.shareableFieldDefinitionsError = exports2.operationDefinitionError = exports2.noDefinedUnionMembersError = exports2.noBaseTypeExtensionError = exports2.duplicateOperationTypeDefinitionError = exports2.duplicateTypeDefinitionError = exports2.duplicateValueExtensionError = exports2.duplicateUnionMemberError = exports2.duplicateInterfaceError = exports2.duplicateInterfaceExtensionError = exports2.duplicateFieldExtensionError = exports2.duplicateEnumValueDefinitionError = exports2.duplicateDirectiveDefinitionError = exports2.duplicateFieldDefinitionError = exports2.invalidSubgraphNamesError = exports2.incompatibleExtensionKindsError = exports2.incompatibleSharedEnumError = exports2.incompatibleArgumentDefaultValueTypeError = exports2.incompatibleArgumentDefaultValueError = exports2.incompatibleChildTypesError = exports2.incompatibleArgumentTypesError = exports2.incompatibleExtensionError = exports2.minimumSubgraphRequirementError = void 0;
-      exports2.expectedEntityError = exports2.noConcreteTypesForAbstractTypeError = exports2.unexpectedObjectResponseType = exports2.noQueryRootTypeError = exports2.invalidArgumentsError = exports2.duplicateArgumentsError = exports2.invalidRequiredArgumentsError = exports2.unimplementedInterfaceFieldsError = exports2.subgraphInvalidSyntaxError = exports2.invalidRootTypeDefinitionError = exports2.invalidOperationTypeDefinitionError = exports2.invalidSubgraphNameErrorMessage = exports2.subgraphValidationFailureErrorMessage = exports2.subgraphValidationError = exports2.objectInCompositeKeyWithoutSelectionsErrorMessage = exports2.unexpectedParentKindErrorMessage = exports2.invalidKeyFatalError = exports2.unexpectedTypeNodeKindError = exports2.unexpectedDirectiveLocationError = exports2.unexpectedArgumentKindFatalError = exports2.argumentTypeMergeFatalError = exports2.fieldTypeMergeFatalError = exports2.incompatibleParentKindFatalError = exports2.invalidMultiGraphNodeFatalError = void 0;
+      exports2.incompatibleParentKindFatalError = exports2.unexpectedKindFatalError = exports2.invalidKeyDirectivesError = exports2.invalidEntityKeyError = exports2.invalidNestingErrorMessage = exports2.invalidNestingClosureErrorMessage = exports2.invalidClosingBraceErrorMessage = exports2.invalidOpeningBraceErrorMessage = exports2.invalidGraphQLNameErrorMessage = exports2.invalidKeyDirectiveArgumentErrorMessage = exports2.duplicateDirectiveArgumentDefinitionErrorMessage = exports2.unexpectedDirectiveArgumentErrorMessage = exports2.undefinedRequiredArgumentsErrorMessage = exports2.unexpectedDirectiveArgumentsErrorMessage = exports2.invalidDirectiveLocationErrorMessage = exports2.invalidDirectiveError = exports2.invalidTagDirectiveError = exports2.invalidDeprecatedDirectiveError = exports2.invalidUnionError = exports2.invalidRepeatedDirectiveErrorMessage = exports2.federationRequiredInputFieldError = exports2.federationInvalidParentTypeError = exports2.federationUnexpectedNodeKindError = exports2.undefinedTypeError = exports2.unresolvableFieldError = exports2.undefinedEntityKeyErrorMessage = exports2.undefinedDirectiveError = exports2.shareableFieldDefinitionsError = exports2.operationDefinitionError = exports2.noDefinedUnionMembersError = exports2.noBaseTypeExtensionError = exports2.duplicateOperationTypeDefinitionError = exports2.duplicateTypeDefinitionError = exports2.duplicateValueExtensionError = exports2.duplicateUnionMemberError = exports2.duplicateInterfaceError = exports2.duplicateInterfaceExtensionError = exports2.duplicateFieldExtensionError = exports2.duplicateEnumValueDefinitionError = exports2.duplicateDirectiveDefinitionError = exports2.duplicateFieldDefinitionError = exports2.invalidSubgraphNamesError = exports2.incompatibleExtensionKindsError = exports2.incompatibleSharedEnumError = exports2.incompatibleArgumentDefaultValueTypeError = exports2.incompatibleArgumentDefaultValueError = exports2.incompatibleChildTypesError = exports2.incompatibleArgumentTypesError = exports2.incompatibleExtensionError = exports2.minimumSubgraphRequirementError = void 0;
+      exports2.invalidSelectionOnUnionErrorMessage = exports2.invalidInlineFragmentTypeConditionErrorMessage = exports2.invalidInlineFragmentTypeConditionTypeErrorMessage = exports2.unknownInlineFragmentTypeConditionErrorMessage = exports2.inlineFragmentWithoutTypeConditionErrorMessage = exports2.invalidInlineFragmentTypeErrorMessage = exports2.unknownProvidesEntityErrorMessage = exports2.duplicateFieldInFieldSetErrorMessage = exports2.invalidProvidesOrRequiresDirectivesError = exports2.argumentsInKeyFieldSetErrorMessage = exports2.unexpectedArgumentErrorMessage = exports2.undefinedObjectParentError = exports2.unparsableFieldSetSelectionErrorMessage = exports2.unparsableFieldSetErrorMessage = exports2.undefinedFieldInFieldSetErrorMessage = exports2.invalidSelectionSetDefinitionErrorMessage = exports2.invalidSelectionSetErrorMessage = exports2.unknownTypeInFieldSetErrorMessage = exports2.abstractTypeInKeyFieldSetErrorMessage = exports2.inlineFragmentInFieldSetErrorMessage = exports2.expectedEntityError = exports2.noConcreteTypesForAbstractTypeError = exports2.unexpectedObjectResponseType = exports2.noQueryRootTypeError = exports2.invalidArgumentsError = exports2.duplicateArgumentsError = exports2.invalidRequiredArgumentsError = exports2.unimplementedInterfaceFieldsError = exports2.subgraphInvalidSyntaxError = exports2.invalidRootTypeDefinitionError = exports2.invalidOperationTypeDefinitionError = exports2.invalidSubgraphNameErrorMessage = exports2.subgraphValidationFailureErrorMessage = exports2.subgraphValidationError = exports2.unexpectedParentKindErrorMessage = exports2.invalidConfigurationResultFatalError = exports2.invalidKeyFatalError = exports2.unexpectedTypeNodeKindError = exports2.unexpectedDirectiveLocationError = exports2.unexpectedArgumentKindFatalError = exports2.argumentTypeMergeFatalError = exports2.fieldTypeMergeFatalError = void 0;
       var utils_1 = require_utils3();
       var graphql_1 = (init_graphql2(), __toCommonJS(graphql_exports));
       var utils_2 = require_utils();
@@ -16075,11 +16085,11 @@ ${operationTypes.join("\n")}
           if (shareableSubgraphs.length < 1) {
             errorMessages.push(`
  The field "${fieldName}" is defined in the following subgraphs: "${[...field.subgraphs].join('", "')}".
- However, it it is not declared "@shareable" in any of them.`);
+ However, it is not declared "@shareable" in any of them.`);
           } else {
             errorMessages.push(`
- The field "${fieldName}" is defined and declared "@shareable" in the following subgraphs: "${shareableSubgraphs.join('", "')}".
- However, it is not declared "@shareable" in the following subgraphs: "${nonShareableSubgraphs.join('", "')}".`);
+ The field "${fieldName}" is defined and declared "@shareable" in the following subgraph` + (shareableSubgraphs.length > 1 ? "s" : "") + `: "` + shareableSubgraphs.join('", "') + `".
+ However, it is not declared "@shareable" in the following subgraph` + (nonShareableSubgraphs.length > 1 ? "s" : "") + `: "${nonShareableSubgraphs.join('", "')}".`);
           }
         }
         return new Error(`The object "${parentTypeName}" defines the same fields in multiple subgraphs without the "@shareable" directive:${errorMessages.join("\n")}`);
@@ -16184,22 +16194,15 @@ Potential solutions:
 ` + errorMessage);
       }
       exports2.invalidEntityKeyError = invalidEntityKeyError;
-      function invalidKeyDirectiveError(parentTypeName, errorMessages) {
-        return new Error(`One or more "key" directives defined on "${parentTypeName}" are invalid for the following reason` + (errorMessages.length > 1 ? "s:\n" : ":\n") + errorMessages.join("\n"));
+      function invalidKeyDirectivesError(parentTypeName, errorMessages) {
+        return new Error(`The entity "${parentTypeName}" defines the following invalid "key" directive` + (errorMessages.length > 1 ? "s" : "") + `:
+` + errorMessages.join("\n"));
       }
-      exports2.invalidKeyDirectiveError = invalidKeyDirectiveError;
-      function undefinedParentFatalError(parentTypeName) {
-        return new Error(`Fatal: Expected parent type "${parentTypeName}" to be defined.`);
-      }
-      exports2.undefinedParentFatalError = undefinedParentFatalError;
+      exports2.invalidKeyDirectivesError = invalidKeyDirectivesError;
       function unexpectedKindFatalError(typeName) {
         return new Error(`Fatal: Unexpected type for "${typeName}"`);
       }
       exports2.unexpectedKindFatalError = unexpectedKindFatalError;
-      function invalidMultiGraphNodeFatalError(nodeName) {
-        return new Error(`Fatal: Expected node "${nodeName}" to exist in the multi graph.`);
-      }
-      exports2.invalidMultiGraphNodeFatalError = invalidMultiGraphNodeFatalError;
       function incompatibleParentKindFatalError(parentTypeName, expectedKind, actualKind) {
         return new Error(`Fatal: Expected "${parentTypeName}" to be type ${(0, utils_2.kindToTypeString)(expectedKind)} but received "${(0, utils_2.kindToTypeString)(actualKind)}".`);
       }
@@ -16228,15 +16231,14 @@ Potential solutions:
         return new Error(`Fatal: Expected key "${key}" to exist in the map "${mapName}".`);
       }
       exports2.invalidKeyFatalError = invalidKeyFatalError;
+      function invalidConfigurationResultFatalError(fieldPath) {
+        return new Error(`Fatal: Expected either errors or configurations for the path ${fieldPath}" but received neither".`);
+      }
+      exports2.invalidConfigurationResultFatalError = invalidConfigurationResultFatalError;
       function unexpectedParentKindErrorMessage(parentTypeName, expectedTypeString, actualTypeString) {
         return ` Expected "${parentTypeName}" to be type ${expectedTypeString} but received "${actualTypeString}".`;
       }
       exports2.unexpectedParentKindErrorMessage = unexpectedParentKindErrorMessage;
-      function objectInCompositeKeyWithoutSelectionsErrorMessage(fieldName, fieldTypeName) {
-        return ` The "fields" argument defines "${fieldName}", which is type "${fieldTypeName}, as part of a key.
- However, "${fieldTypeName}" is an object type; consequently, it must have its own selections to be a valid key.`;
-      }
-      exports2.objectInCompositeKeyWithoutSelectionsErrorMessage = objectInCompositeKeyWithoutSelectionsErrorMessage;
       function subgraphValidationError(subgraphName, errors) {
         return new Error(`The subgraph "${subgraphName}" could not be federated for the following reason` + (errors.length > 1 ? "s:\n" : "s:\n") + errors.map((error) => error.message).join("\n"));
       }
@@ -16257,8 +16259,12 @@ For federation, it is only possible to use the default root types names ("Mutati
       }
       exports2.invalidRootTypeDefinitionError = invalidRootTypeDefinitionError;
       function subgraphInvalidSyntaxError(error) {
-        return new Error(`The subgraph has syntax errors and could not be parsed:
- ${error}`);
+        let message = `The subgraph has syntax errors and could not be parsed.`;
+        if (error) {
+          message += `
+ The reason provided was: ` + error.message;
+        }
+        return new Error(message);
       }
       exports2.subgraphInvalidSyntaxError = subgraphInvalidSyntaxError;
       function unimplementedInterfaceFieldsError(parentTypeName, parentTypeString, implementationErrorsMap) {
@@ -16349,6 +16355,136 @@ For federation, it is only possible to use the default root types names ("Mutati
         return new Error(`Expected object "${typeName}" to define a "key" directive, but it defines no directives.`);
       }
       exports2.expectedEntityError = expectedEntityError;
+      exports2.inlineFragmentInFieldSetErrorMessage = ` Inline fragments are not currently supported within a FieldSet argument.`;
+      function abstractTypeInKeyFieldSetErrorMessage(fieldSet, fieldPath, abstractTypeName, abstractTypeString) {
+        return ` The following FieldSet is invalid:
+ "${fieldSet}"
+  This is because "${fieldPath}" returns "${abstractTypeName}", which is type "${abstractTypeString}".
+  Fields that return abstract types (interfaces and unions) cannot be included in the FieldSet of "@key" directives.`;
+      }
+      exports2.abstractTypeInKeyFieldSetErrorMessage = abstractTypeInKeyFieldSetErrorMessage;
+      function unknownTypeInFieldSetErrorMessage(fieldSet, fieldPath, responseTypeName) {
+        return ` The following FieldSet is invalid:
+ "${fieldSet}"
+  This is because "${fieldPath}" returns the unknown type "${responseTypeName}".`;
+      }
+      exports2.unknownTypeInFieldSetErrorMessage = unknownTypeInFieldSetErrorMessage;
+      function invalidSelectionSetErrorMessage(fieldSet, fieldPath, fieldTypeName, fieldTypeString) {
+        return ` The following FieldSet is invalid:
+ "${fieldSet}"
+  This is because "${fieldPath}" returns "${fieldTypeName}", which is type "${fieldTypeString}".
+ Types such as "${fieldTypeString}" that define fields must define a selection set with at least one field selection.`;
+      }
+      exports2.invalidSelectionSetErrorMessage = invalidSelectionSetErrorMessage;
+      function invalidSelectionSetDefinitionErrorMessage(fieldSet, fieldPath, fieldTypeName, fieldTypeString) {
+        return ` The following FieldSet is invalid:
+ "${fieldSet}"
+  This is because "${fieldPath}" returns "${fieldTypeName}", which is type "${fieldTypeString}".
+  Types such as "${fieldTypeString}" that do not define fields cannot define a selection set.`;
+      }
+      exports2.invalidSelectionSetDefinitionErrorMessage = invalidSelectionSetDefinitionErrorMessage;
+      function undefinedFieldInFieldSetErrorMessage(fieldSet, parentTypeName, fieldName) {
+        return ` The following FieldSet is invalid:
+ "${fieldSet}"
+  This is because "${parentTypeName}" does not define a field named "${fieldName}".`;
+      }
+      exports2.undefinedFieldInFieldSetErrorMessage = undefinedFieldInFieldSetErrorMessage;
+      function unparsableFieldSetErrorMessage(fieldSet, error) {
+        let message = ` The following FieldSet is invalid:
+ "${fieldSet}"
+  The FieldSet could not be parsed.`;
+        if (error) {
+          message += `
+ The reason provided was: ` + error.message;
+        }
+        return message;
+      }
+      exports2.unparsableFieldSetErrorMessage = unparsableFieldSetErrorMessage;
+      function unparsableFieldSetSelectionErrorMessage(fieldSet, fieldName) {
+        return ` The following FieldSet is invalid:
+ "${fieldSet}"
+  This is because the selection set defined on "${fieldName}" could not be parsed.`;
+      }
+      exports2.unparsableFieldSetSelectionErrorMessage = unparsableFieldSetSelectionErrorMessage;
+      function undefinedObjectParentError(parentTypeName) {
+        return new Error(` Expected an object or object extension named "${parentTypeName}" to exist.`);
+      }
+      exports2.undefinedObjectParentError = undefinedObjectParentError;
+      function unexpectedArgumentErrorMessage(fieldSet, fieldPath, argumentName) {
+        return ` The following FieldSet is invalid:
+ "${fieldSet}"
+  This is because "${fieldPath}" does not define an argument named "${argumentName}".`;
+      }
+      exports2.unexpectedArgumentErrorMessage = unexpectedArgumentErrorMessage;
+      function argumentsInKeyFieldSetErrorMessage(fieldSet, fieldPath) {
+        return ` The following FieldSet is invalid:
+ "${fieldSet}"
+  This is because "${fieldPath}" defines arguments.
+  Fields that define arguments cannot be included in the FieldSet of @key directives.`;
+      }
+      exports2.argumentsInKeyFieldSetErrorMessage = argumentsInKeyFieldSetErrorMessage;
+      function invalidProvidesOrRequiresDirectivesError(directiveName, errorMessages) {
+        return new Error(`The following "${directiveName}" directive` + (errorMessages.length > 1 ? "s are" : " is") + ` invalid:
+` + errorMessages.join(`
+`));
+      }
+      exports2.invalidProvidesOrRequiresDirectivesError = invalidProvidesOrRequiresDirectivesError;
+      function duplicateFieldInFieldSetErrorMessage(fieldSet, fieldPath) {
+        return ` The following FieldSet is invalid:
+ "${fieldSet}"
+  This is because "${fieldPath}" was included in the FieldSet more than once.`;
+      }
+      exports2.duplicateFieldInFieldSetErrorMessage = duplicateFieldInFieldSetErrorMessage;
+      function unknownProvidesEntityErrorMessage(fieldPath, responseType) {
+        return ` A @provides directive is declared on "${fieldPath}".
+ However, the response type "${responseType}" object or object extension definition was not found.`;
+      }
+      exports2.unknownProvidesEntityErrorMessage = unknownProvidesEntityErrorMessage;
+      function invalidInlineFragmentTypeErrorMessage(fieldSet, fieldPath, typeConditionName, parentTypeName) {
+        return ` The following FieldSet is invalid:
+ "${fieldSet}"
+  This is because "${fieldPath}" defines an inline fragment with the type condition "${typeConditionName}".
+  However, "${parentTypeName}" is not an abstract (interface or union) type.
+  Consequently, the only valid type condition would be "${parentTypeName}".`;
+      }
+      exports2.invalidInlineFragmentTypeErrorMessage = invalidInlineFragmentTypeErrorMessage;
+      function inlineFragmentWithoutTypeConditionErrorMessage(fieldSet, fieldPath) {
+        return ` The following FieldSet is invalid:
+ "${fieldSet}"
+  This is because "${fieldPath}" defines an inline fragment without a type condition.`;
+      }
+      exports2.inlineFragmentWithoutTypeConditionErrorMessage = inlineFragmentWithoutTypeConditionErrorMessage;
+      function unknownInlineFragmentTypeConditionErrorMessage(fieldSet, fieldPath, typeConditionName) {
+        return ` The following FieldSet is invalid:
+ "${fieldSet}"
+  This is because "${fieldPath}" defines an inline fragment with the unknown type condition "${typeConditionName}".`;
+      }
+      exports2.unknownInlineFragmentTypeConditionErrorMessage = unknownInlineFragmentTypeConditionErrorMessage;
+      function invalidInlineFragmentTypeConditionTypeErrorMessage(fieldSet, fieldPath, typeConditionName, typeConditionTypeString) {
+        return ` The following FieldSet is invalid:
+ "${fieldSet}"
+  This is because "${fieldPath}" defines an inline fragment with the type condition "${typeConditionName}", which is type "${typeConditionTypeString}".
+  However, either an "interface" or "object" type was expected.`;
+      }
+      exports2.invalidInlineFragmentTypeConditionTypeErrorMessage = invalidInlineFragmentTypeConditionTypeErrorMessage;
+      function invalidInlineFragmentTypeConditionErrorMessage(fieldSet, fieldPath, typeConditionName, parentTypeString, parentTypeName) {
+        let message = ` The following FieldSet is invalid:
+ "${fieldSet}"
+  This is because "${fieldPath}" defines an inline fragment with the type condition "${typeConditionName}".
+`;
+        if (parentTypeString === "interface") {
+          return message + `  However, "${typeConditionName}" does not implement "${parentTypeName}"`;
+        }
+        return message + `  However, "${typeConditionName}" is not a member of the union "${parentTypeName}".`;
+      }
+      exports2.invalidInlineFragmentTypeConditionErrorMessage = invalidInlineFragmentTypeConditionErrorMessage;
+      function invalidSelectionOnUnionErrorMessage(fieldSet, fieldPath, responseTypeName) {
+        return ` The following FieldSet is invalid:
+ "${fieldSet}"
+  This is because "${fieldPath}" returns "${responseTypeName}", which is type "union".
+  Consequently, an inline fragment is required to make a selection on one of the union's members.`;
+      }
+      exports2.invalidSelectionOnUnionErrorMessage = invalidSelectionOnUnionErrorMessage;
     }
   });
 
@@ -16396,12 +16532,11 @@ For federation, it is only possible to use the default root types names ("Mutati
       init_buffer2();
       init_process2();
       Object.defineProperty(exports2, "__esModule", { value: true });
-      exports2.setLongestDescriptionForNode = exports2.formatDescription = exports2.addConcreteTypesForUnion = exports2.addConcreteTypesForImplementedInterfaces = exports2.pushPersistedDirectivesAndGetNode = exports2.mergeExecutableDirectiveLocations = exports2.extractExecutableDirectiveLocations = exports2.extractNameNodeStringsToSet = exports2.getInlineFragmentString = exports2.isKindAbstract = exports2.operationTypeNodeToDefaultType = exports2.nodeKindToDirectiveLocation = exports2.setToNamedTypeNodeArray = exports2.stringToNamedTypeNode = exports2.setToNameNodeArray = exports2.stringArrayToNameNodeArray = exports2.stringToNameNode = exports2.areBaseAndExtensionKindsCompatible = exports2.isNodeOverridden = exports2.isNodeExternal = exports2.isNodeShareable = exports2.extractInterfaces = exports2.getEntityKeyExtractionResults = exports2.getEntityKeyExtractionResult = exports2.extractEntityKeys = exports2.isNodeExtension = exports2.isObjectLikeNodeEntity = void 0;
+      exports2.safeParse = exports2.lexicographicallySortDocumentNode = exports2.lexicographicallySortSelectionSetNode = exports2.lexicographicallySortArgumentNodes = exports2.setLongestDescriptionForNode = exports2.formatDescription = exports2.addConcreteTypesForUnion = exports2.addConcreteTypesForImplementedInterfaces = exports2.pushPersistedDirectivesAndGetNode = exports2.mergeExecutableDirectiveLocations = exports2.extractExecutableDirectiveLocations = exports2.isKindAbstract = exports2.operationTypeNodeToDefaultType = exports2.nodeKindToDirectiveLocation = exports2.setToNamedTypeNodeArray = exports2.stringToNamedTypeNode = exports2.setToNameNodeArray = exports2.stringArrayToNameNodeArray = exports2.stringToNameNode = exports2.areBaseAndExtensionKindsCompatible = exports2.isNodeOverridden = exports2.isNodeExternal = exports2.isNodeShareable = exports2.extractInterfaces = exports2.isNodeExtension = exports2.isObjectLikeNodeEntity = void 0;
       var graphql_1 = (init_graphql2(), __toCommonJS(graphql_exports));
       var string_constants_1 = require_string_constants();
       var errors_1 = require_errors();
-      var utils_1 = require_utils();
-      var utils_2 = require_utils2();
+      var utils_1 = require_utils2();
       function isObjectLikeNodeEntity(node) {
         var _a;
         if (node.kind === graphql_1.Kind.INTERFACE_TYPE_DEFINITION || node.kind === graphql_1.Kind.INTERFACE_TYPE_EXTENSION || !((_a = node.directives) == null ? void 0 : _a.length)) {
@@ -16428,156 +16563,6 @@ For federation, it is only possible to use the default root types names ("Mutati
         return false;
       }
       exports2.isNodeExtension = isNodeExtension;
-      function extractEntityKeys(node, keySet, errors) {
-        var _a;
-        if (!((_a = node.directives) == null ? void 0 : _a.length)) {
-          return keySet;
-        }
-        const typeName = node.name.value;
-        for (const directive of node.directives) {
-          if (directive.name.value === string_constants_1.KEY) {
-            if (!directive.arguments) {
-              errors.push((0, errors_1.invalidKeyDirectiveError)(typeName, [
-                (0, errors_1.undefinedRequiredArgumentsErrorMessage)(string_constants_1.KEY, typeName, [string_constants_1.NAME])
-              ]));
-              continue;
-            }
-            for (const arg of directive.arguments) {
-              if (arg.name.value !== string_constants_1.FIELDS) {
-                continue;
-              }
-              if (arg.value.kind !== graphql_1.Kind.STRING) {
-                continue;
-              }
-              keySet.add(arg.value.value);
-            }
-          }
-        }
-        return keySet;
-      }
-      exports2.extractEntityKeys = extractEntityKeys;
-      function getEntityKeyExtractionResult(rawEntityKey, parentTypeName) {
-        const rootKey = { parent: "", siblings: [] };
-        const entityKeyMap = /* @__PURE__ */ new Map([[parentTypeName, rootKey]]);
-        const keyPath = [parentTypeName];
-        let currentSegment = "";
-        let segmentEnded = true;
-        let currentKey;
-        rawEntityKey = rawEntityKey.replaceAll(/[,\n]/g, " ");
-        for (const char of rawEntityKey) {
-          currentKey = (0, utils_1.getOrThrowError)(entityKeyMap, keyPath.join("."), "entityKeyMap");
-          switch (char) {
-            case " ":
-              segmentEnded = true;
-              break;
-            case "{":
-              if (!currentSegment) {
-                return { error: (0, errors_1.invalidEntityKeyError)(parentTypeName, rawEntityKey, errors_1.invalidOpeningBraceErrorMessage) };
-              }
-              currentKey.siblings.push(currentSegment);
-              const nestedKey = { parent: currentSegment, siblings: [] };
-              if (currentKey.nestedKeys) {
-                currentKey.nestedKeys.push(nestedKey);
-              } else {
-                currentKey.nestedKeys = [nestedKey];
-              }
-              keyPath.push(currentSegment);
-              currentSegment = "";
-              entityKeyMap.set(keyPath.join("."), nestedKey);
-              segmentEnded = true;
-              break;
-            case "}":
-              if (currentSegment) {
-                currentKey.siblings.push(currentSegment);
-              }
-              if (currentKey.siblings.length < 1) {
-                return { error: (0, errors_1.invalidEntityKeyError)(parentTypeName, rawEntityKey, errors_1.invalidClosingBraceErrorMessage) };
-              }
-              if (keyPath.join(".") === parentTypeName) {
-                return { error: (0, errors_1.invalidEntityKeyError)(parentTypeName, rawEntityKey, errors_1.invalidNestingClosureErrorMessage) };
-              }
-              currentSegment = "";
-              keyPath.pop();
-              segmentEnded = true;
-              break;
-            default:
-              if (currentSegment && segmentEnded) {
-                if (!currentSegment.match(/[_A-Za-z][_A-Za-z0-9]*/)) {
-                  return {
-                    error: (0, errors_1.invalidEntityKeyError)(parentTypeName, rawEntityKey, (0, errors_1.invalidGraphQLNameErrorMessage)("field", currentSegment))
-                  };
-                }
-                currentKey.siblings.push(currentSegment);
-                currentSegment = char;
-              } else {
-                currentSegment += char;
-              }
-              segmentEnded = false;
-          }
-        }
-        if (keyPath.join(".") !== parentTypeName) {
-          return { error: (0, errors_1.invalidEntityKeyError)(parentTypeName, rawEntityKey, errors_1.invalidNestingErrorMessage) };
-        }
-        if (currentSegment) {
-          rootKey.siblings.push(currentSegment);
-        }
-        return { entityKey: rootKey };
-      }
-      exports2.getEntityKeyExtractionResult = getEntityKeyExtractionResult;
-      function getEntityKeyExtractionResults(node, entityKeyMap) {
-        var _a;
-        const parentTypeName = node.name.value;
-        if (!((_a = node.directives) == null ? void 0 : _a.length)) {
-          return { entityKeyMap, errors: [(0, errors_1.expectedEntityError)(parentTypeName)] };
-        }
-        const rawEntityKeys = /* @__PURE__ */ new Set();
-        const errorMessages = [];
-        for (const directive of node.directives) {
-          if (directive.name.value !== string_constants_1.KEY) {
-            continue;
-          }
-          if (!directive.arguments || directive.arguments.length < 1) {
-            errorMessages.push((0, errors_1.undefinedRequiredArgumentsErrorMessage)(string_constants_1.KEY, parentTypeName, [string_constants_1.FIELDS]));
-            continue;
-          }
-          for (const arg of directive.arguments) {
-            const argumentName = arg.name.value;
-            if (arg.name.value === string_constants_1.RESOLVABLE) {
-              continue;
-            }
-            if (arg.name.value !== string_constants_1.FIELDS) {
-              errorMessages.push((0, errors_1.unexpectedDirectiveArgumentErrorMessage)(string_constants_1.KEY, argumentName));
-              break;
-            }
-            if (arg.value.kind !== graphql_1.Kind.STRING) {
-              errorMessages.push((0, errors_1.invalidKeyDirectiveArgumentErrorMessage)(arg.value.kind));
-              break;
-            }
-            rawEntityKeys.add(arg.value.value);
-          }
-        }
-        const errors = [];
-        if (errorMessages.length > 0) {
-          errors.push((0, errors_1.invalidKeyDirectiveError)(parentTypeName, errorMessages));
-        }
-        for (const rawEntityKey of rawEntityKeys) {
-          const existingEntityKey = entityKeyMap.get(rawEntityKey);
-          if (existingEntityKey) {
-            continue;
-          }
-          const { entityKey, error } = getEntityKeyExtractionResult(rawEntityKey, parentTypeName);
-          if (error) {
-            errors.push(error);
-            continue;
-          }
-          if (!entityKey) {
-            throw new Error();
-          }
-          entityKeyMap.set(rawEntityKey, entityKey);
-        }
-        return { entityKeyMap, errors };
-      }
-      exports2.getEntityKeyExtractionResults = getEntityKeyExtractionResults;
       function extractInterfaces(node, interfaces, errors) {
         if (!node.interfaces) {
           return interfaces;
@@ -16736,21 +16721,10 @@ For federation, it is only possible to use the default root types names ("Mutati
         return kind === graphql_1.Kind.INTERFACE_TYPE_DEFINITION || kind === graphql_1.Kind.UNION_TYPE_DEFINITION;
       }
       exports2.isKindAbstract = isKindAbstract;
-      function getInlineFragmentString(parentTypeName) {
-        return ` ... on ${parentTypeName} `;
-      }
-      exports2.getInlineFragmentString = getInlineFragmentString;
-      function extractNameNodeStringsToSet(nodes, set) {
-        for (const node of nodes) {
-          set.add(node.value);
-        }
-        return set;
-      }
-      exports2.extractNameNodeStringsToSet = extractNameNodeStringsToSet;
       function extractExecutableDirectiveLocations(nodes, set) {
         for (const node of nodes) {
           const name2 = node.value;
-          if (utils_2.EXECUTABLE_DIRECTIVE_LOCATIONS.has(name2)) {
+          if (utils_1.EXECUTABLE_DIRECTIVE_LOCATIONS.has(name2)) {
             set.add(name2);
           }
         }
@@ -16837,6 +16811,46 @@ For federation, it is only possible to use the default root types names ("Mutati
         }
       }
       exports2.setLongestDescriptionForNode = setLongestDescriptionForNode;
+      function lexicographicallySortArgumentNodes(fieldNode) {
+        if (!fieldNode.arguments) {
+          return fieldNode.arguments;
+        }
+        const argumentNodes = fieldNode.arguments;
+        return argumentNodes.sort((a2, b) => a2.name.value.localeCompare(b.name.value));
+      }
+      exports2.lexicographicallySortArgumentNodes = lexicographicallySortArgumentNodes;
+      function lexicographicallySortSelectionSetNode(selectionSetNode) {
+        const selections = selectionSetNode.selections;
+        return __spreadProps(__spreadValues({}, selectionSetNode), {
+          selections: selections.sort((a2, b) => a2.name.value.localeCompare(b.name.value)).map((selection) => __spreadProps(__spreadValues({}, selection), {
+            arguments: lexicographicallySortArgumentNodes(selection),
+            selectionSet: selection.selectionSet ? lexicographicallySortSelectionSetNode(selection.selectionSet) : selection.selectionSet
+          }))
+        });
+      }
+      exports2.lexicographicallySortSelectionSetNode = lexicographicallySortSelectionSetNode;
+      function lexicographicallySortDocumentNode(documentNode) {
+        return __spreadProps(__spreadValues({}, documentNode), {
+          definitions: documentNode.definitions.map((definition) => {
+            if (definition.kind !== graphql_1.Kind.OPERATION_DEFINITION) {
+              return definition;
+            }
+            return __spreadProps(__spreadValues({}, definition), {
+              selectionSet: lexicographicallySortSelectionSetNode(definition.selectionSet)
+            });
+          })
+        });
+      }
+      exports2.lexicographicallySortDocumentNode = lexicographicallySortDocumentNode;
+      function safeParse(value) {
+        try {
+          const parsedValue = (0, graphql_1.parse)(value);
+          return { documentNode: parsedValue };
+        } catch (e2) {
+          return { error: e2 };
+        }
+      }
+      exports2.safeParse = safeParse;
     }
   });
 
@@ -17157,6 +17171,272 @@ For federation, it is only possible to use the default root types names ("Mutati
     }
   });
 
+  // ../../composition/dist/utils/constants.js
+  var require_constants = __commonJS({
+    "../../composition/dist/utils/constants.js"(exports2) {
+      "use strict";
+      init_dirname();
+      init_buffer2();
+      init_process2();
+      Object.defineProperty(exports2, "__esModule", { value: true });
+      exports2.FIELD_SET_DEFINITION = exports2.VERSION_TWO_DIRECTIVE_DEFINITIONS = exports2.BASE_DIRECTIVE_DEFINITIONS = exports2.VERSION_TWO_DIRECTIVES = exports2.VERSION_ONE_DIRECTIVES = exports2.BASE_SCALARS = void 0;
+      var graphql_1 = (init_graphql2(), __toCommonJS(graphql_exports));
+      var utils_1 = require_utils3();
+      var string_constants_1 = require_string_constants();
+      exports2.BASE_SCALARS = /* @__PURE__ */ new Set(["_Any", "_Entities", "Boolean", "Float", "ID", "Int", "openfed__FieldSet", "String"]);
+      exports2.VERSION_ONE_DIRECTIVES = /* @__PURE__ */ new Set([
+        string_constants_1.DEPRECATED,
+        string_constants_1.EXTENDS,
+        string_constants_1.EXTERNAL,
+        string_constants_1.KEY,
+        string_constants_1.PROVIDES,
+        string_constants_1.REQUIRES,
+        string_constants_1.TAG
+      ]);
+      exports2.VERSION_TWO_DIRECTIVES = /* @__PURE__ */ new Set([
+        string_constants_1.COMPOSE_DIRECTIVE,
+        string_constants_1.LINK,
+        string_constants_1.OVERRIDE,
+        string_constants_1.INACCESSIBLE,
+        string_constants_1.SHAREABLE
+      ]);
+      exports2.BASE_DIRECTIVE_DEFINITIONS = [
+        /* directive @deprecated(reason: String = "No longer supported") on ARGUMENT_DEFINITION | ENUM_VALUE |
+           FIELD_DEFINITION | INPUT_FIELD_DEFINITION
+        */
+        {
+          arguments: [
+            {
+              kind: graphql_1.Kind.INPUT_VALUE_DEFINITION,
+              name: (0, utils_1.stringToNameNode)("reason"),
+              type: (0, utils_1.stringToNamedTypeNode)(string_constants_1.STRING_TYPE),
+              defaultValue: {
+                kind: graphql_1.Kind.STRING,
+                value: "No longer supported"
+              }
+            }
+          ],
+          kind: graphql_1.Kind.DIRECTIVE_DEFINITION,
+          locations: (0, utils_1.stringArrayToNameNodeArray)([
+            string_constants_1.ARGUMENT_DEFINITION_UPPER,
+            string_constants_1.ENUM_VALUE_UPPER,
+            string_constants_1.FIELD_DEFINITION_UPPER,
+            string_constants_1.INPUT_FIELD_DEFINITION_UPPER
+          ]),
+          name: (0, utils_1.stringToNameNode)(string_constants_1.DEPRECATED),
+          repeatable: false
+        },
+        // directive @extends on INTERFACE | OBJECT
+        {
+          kind: graphql_1.Kind.DIRECTIVE_DEFINITION,
+          locations: (0, utils_1.stringArrayToNameNodeArray)([string_constants_1.INTERFACE_UPPER, string_constants_1.OBJECT_UPPER]),
+          name: (0, utils_1.stringToNameNode)(string_constants_1.EXTENDS),
+          repeatable: false
+        },
+        // directive @external on FIELD_DEFINITION | OBJECT
+        {
+          kind: graphql_1.Kind.DIRECTIVE_DEFINITION,
+          locations: (0, utils_1.stringArrayToNameNodeArray)([string_constants_1.FIELD_DEFINITION_UPPER, string_constants_1.OBJECT_UPPER]),
+          name: (0, utils_1.stringToNameNode)(string_constants_1.EXTERNAL),
+          repeatable: false
+        },
+        // directive @key(fields: openfed__FieldSet!) on OBJECT
+        {
+          arguments: [
+            {
+              kind: graphql_1.Kind.INPUT_VALUE_DEFINITION,
+              name: (0, utils_1.stringToNameNode)(string_constants_1.FIELDS),
+              type: {
+                kind: graphql_1.Kind.NON_NULL_TYPE,
+                type: (0, utils_1.stringToNamedTypeNode)(string_constants_1.FIELD_SET)
+              }
+            },
+            {
+              kind: graphql_1.Kind.INPUT_VALUE_DEFINITION,
+              name: (0, utils_1.stringToNameNode)(string_constants_1.RESOLVABLE),
+              type: (0, utils_1.stringToNamedTypeNode)(string_constants_1.BOOLEAN_TYPE),
+              defaultValue: {
+                kind: graphql_1.Kind.BOOLEAN,
+                value: true
+              }
+            }
+          ],
+          kind: graphql_1.Kind.DIRECTIVE_DEFINITION,
+          locations: [(0, utils_1.stringToNameNode)(string_constants_1.OBJECT_UPPER)],
+          name: (0, utils_1.stringToNameNode)(string_constants_1.KEY),
+          repeatable: true
+        },
+        // directive @provides(fields: openfed__FieldSet!) on FIELD_DEFINITION
+        {
+          arguments: [
+            {
+              kind: graphql_1.Kind.INPUT_VALUE_DEFINITION,
+              name: (0, utils_1.stringToNameNode)(string_constants_1.FIELDS),
+              type: {
+                kind: graphql_1.Kind.NON_NULL_TYPE,
+                type: (0, utils_1.stringToNamedTypeNode)(string_constants_1.FIELD_SET)
+              }
+            }
+          ],
+          kind: graphql_1.Kind.DIRECTIVE_DEFINITION,
+          locations: [(0, utils_1.stringToNameNode)(string_constants_1.FIELD_DEFINITION_UPPER)],
+          name: (0, utils_1.stringToNameNode)(string_constants_1.PROVIDES),
+          repeatable: false
+        },
+        // directive @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION
+        {
+          arguments: [
+            {
+              kind: graphql_1.Kind.INPUT_VALUE_DEFINITION,
+              name: (0, utils_1.stringToNameNode)(string_constants_1.FIELDS),
+              type: {
+                kind: graphql_1.Kind.NON_NULL_TYPE,
+                type: (0, utils_1.stringToNamedTypeNode)(string_constants_1.FIELD_SET)
+              }
+            }
+          ],
+          kind: graphql_1.Kind.DIRECTIVE_DEFINITION,
+          locations: [(0, utils_1.stringToNameNode)(string_constants_1.FIELD_DEFINITION_UPPER)],
+          name: (0, utils_1.stringToNameNode)(string_constants_1.REQUIRES),
+          repeatable: false
+        },
+        /* directive @tag(name: String!) on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_OBJECT |
+           INPUT_FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR | UNION
+        */
+        {
+          arguments: [
+            {
+              kind: graphql_1.Kind.INPUT_VALUE_DEFINITION,
+              name: (0, utils_1.stringToNameNode)(string_constants_1.NAME),
+              type: {
+                kind: graphql_1.Kind.NON_NULL_TYPE,
+                type: (0, utils_1.stringToNamedTypeNode)(string_constants_1.STRING_TYPE)
+              }
+            }
+          ],
+          kind: graphql_1.Kind.DIRECTIVE_DEFINITION,
+          locations: (0, utils_1.stringArrayToNameNodeArray)([
+            string_constants_1.ARGUMENT_DEFINITION_UPPER,
+            string_constants_1.ENUM_UPPER,
+            string_constants_1.ENUM_VALUE_UPPER,
+            string_constants_1.FIELD_DEFINITION_UPPER,
+            string_constants_1.INPUT_FIELD_DEFINITION_UPPER,
+            string_constants_1.INPUT_OBJECT_UPPER,
+            string_constants_1.INTERFACE_UPPER,
+            string_constants_1.OBJECT_UPPER,
+            string_constants_1.SCALAR_UPPER,
+            string_constants_1.UNION_UPPER
+          ]),
+          name: (0, utils_1.stringToNameNode)(string_constants_1.TAG),
+          repeatable: true
+        }
+      ];
+      exports2.VERSION_TWO_DIRECTIVE_DEFINITIONS = [
+        // @composeDirective is currently unimplemented
+        /* directive @composeDirective(name: String!) repeatable on SCHEMA */
+        {
+          arguments: [
+            {
+              kind: graphql_1.Kind.INPUT_VALUE_DEFINITION,
+              name: (0, utils_1.stringToNameNode)(string_constants_1.NAME),
+              type: {
+                kind: graphql_1.Kind.NON_NULL_TYPE,
+                type: (0, utils_1.stringToNamedTypeNode)(string_constants_1.STRING_TYPE)
+              }
+            }
+          ],
+          kind: graphql_1.Kind.DIRECTIVE_DEFINITION,
+          locations: (0, utils_1.stringArrayToNameNodeArray)([string_constants_1.SCHEMA_UPPER]),
+          name: (0, utils_1.stringToNameNode)(string_constants_1.COMPOSE_DIRECTIVE),
+          repeatable: true
+        },
+        /* directive @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_OBJECT |
+           INPUT_FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR | UNION
+        */
+        {
+          kind: graphql_1.Kind.DIRECTIVE_DEFINITION,
+          locations: (0, utils_1.stringArrayToNameNodeArray)([
+            string_constants_1.ARGUMENT_DEFINITION_UPPER,
+            string_constants_1.ENUM_UPPER,
+            string_constants_1.ENUM_VALUE_UPPER,
+            string_constants_1.FIELD_DEFINITION_UPPER,
+            string_constants_1.INPUT_FIELD_DEFINITION_UPPER,
+            string_constants_1.INPUT_OBJECT_UPPER,
+            string_constants_1.INTERFACE_UPPER,
+            string_constants_1.OBJECT_UPPER,
+            string_constants_1.SCALAR_UPPER,
+            string_constants_1.UNION_UPPER
+          ]),
+          name: (0, utils_1.stringToNameNode)(string_constants_1.INACCESSIBLE),
+          repeatable: false
+        },
+        // directive @link(url: String!, as: String!, for: String, import: [String]) repeatable on SCHEMA
+        {
+          arguments: [
+            {
+              kind: graphql_1.Kind.INPUT_VALUE_DEFINITION,
+              name: (0, utils_1.stringToNameNode)("url"),
+              type: {
+                kind: graphql_1.Kind.NON_NULL_TYPE,
+                type: (0, utils_1.stringToNamedTypeNode)(string_constants_1.STRING_TYPE)
+              }
+            },
+            {
+              kind: graphql_1.Kind.INPUT_VALUE_DEFINITION,
+              name: (0, utils_1.stringToNameNode)("as"),
+              type: (0, utils_1.stringToNamedTypeNode)(string_constants_1.STRING_TYPE)
+            },
+            {
+              kind: graphql_1.Kind.INPUT_VALUE_DEFINITION,
+              name: (0, utils_1.stringToNameNode)("for"),
+              type: (0, utils_1.stringToNamedTypeNode)(string_constants_1.STRING_TYPE)
+            },
+            {
+              kind: graphql_1.Kind.INPUT_VALUE_DEFINITION,
+              name: (0, utils_1.stringToNameNode)("import"),
+              type: {
+                kind: graphql_1.Kind.LIST_TYPE,
+                type: (0, utils_1.stringToNamedTypeNode)(string_constants_1.STRING_TYPE)
+              }
+            }
+          ],
+          kind: graphql_1.Kind.DIRECTIVE_DEFINITION,
+          locations: (0, utils_1.stringArrayToNameNodeArray)([string_constants_1.SCHEMA_UPPER]),
+          name: (0, utils_1.stringToNameNode)(string_constants_1.LINK),
+          repeatable: true
+        },
+        // directive @override(from: String!) on FIELD_DEFINITION
+        {
+          arguments: [
+            {
+              kind: graphql_1.Kind.INPUT_VALUE_DEFINITION,
+              name: (0, utils_1.stringToNameNode)("from"),
+              type: {
+                kind: graphql_1.Kind.NON_NULL_TYPE,
+                type: (0, utils_1.stringToNamedTypeNode)(string_constants_1.STRING_TYPE)
+              }
+            }
+          ],
+          kind: graphql_1.Kind.DIRECTIVE_DEFINITION,
+          locations: (0, utils_1.stringArrayToNameNodeArray)([string_constants_1.FIELD_DEFINITION_UPPER]),
+          name: (0, utils_1.stringToNameNode)(string_constants_1.OVERRIDE),
+          repeatable: false
+        },
+        // directive @shareable on FIELD_DEFINITION | OBJECT
+        {
+          kind: graphql_1.Kind.DIRECTIVE_DEFINITION,
+          locations: (0, utils_1.stringArrayToNameNodeArray)([string_constants_1.FIELD_DEFINITION_UPPER, string_constants_1.OBJECT_UPPER]),
+          name: (0, utils_1.stringToNameNode)(string_constants_1.SHAREABLE),
+          repeatable: false
+        }
+      ];
+      exports2.FIELD_SET_DEFINITION = {
+        kind: graphql_1.Kind.SCALAR_TYPE_DEFINITION,
+        name: (0, utils_1.stringToNameNode)(string_constants_1.FIELD_SET)
+      };
+    }
+  });
+
   // ../../composition/dist/normalization/utils.js
   var require_utils4 = __commonJS({
     "../../composition/dist/normalization/utils.js"(exports2) {
@@ -17165,13 +17445,22 @@ For federation, it is only possible to use the default root types names ("Mutati
       init_buffer2();
       init_process2();
       Object.defineProperty(exports2, "__esModule", { value: true });
-      exports2.getDefinedArgumentsForDirective = exports2.getDirectiveDefinitionArgumentSets = exports2.validateEntityKeys = exports2.areNodeKindAndDirectiveLocationCompatible = exports2.unionContainerToNode = exports2.schemaContainerToNode = exports2.scalarContainerToNode = exports2.objectLikeContainerToNode = exports2.inputObjectContainerToNode = exports2.enumContainerToNode = void 0;
+      exports2.validateDirectivesWithFieldSet = exports2.getNormalizedFieldSet = exports2.extractFieldSetValue = exports2.addNonExternalFieldsToSet = exports2.getDefinedArgumentsForDirective = exports2.getDirectiveDefinitionArgumentSets = exports2.areNodeKindAndDirectiveLocationCompatible = exports2.unionContainerToNode = exports2.schemaContainerToNode = exports2.scalarContainerToNode = exports2.objectLikeContainerToNode = exports2.inputObjectContainerToNode = exports2.enumContainerToNode = exports2.newFieldSetContainer = void 0;
       var graphql_1 = (init_graphql2(), __toCommonJS(graphql_exports));
       var utils_1 = require_utils();
       var utils_2 = require_utils3();
       var string_constants_1 = require_string_constants();
       var type_merging_1 = require_type_merging();
       var errors_1 = require_errors();
+      var constants_1 = require_constants();
+      function newFieldSetContainer() {
+        return {
+          keys: /* @__PURE__ */ new Set(),
+          provides: /* @__PURE__ */ new Map(),
+          requires: /* @__PURE__ */ new Map()
+        };
+      }
+      exports2.newFieldSetContainer = newFieldSetContainer;
       function childMapToValueArray(factory, map, parentTypeName) {
         const valueArray = [];
         for (const childContainer of map.values()) {
@@ -17345,87 +17634,6 @@ For federation, it is only possible to use the default root types names ("Mutati
         return false;
       }
       exports2.areNodeKindAndDirectiveLocationCompatible = areNodeKindAndDirectiveLocationCompatible;
-      function validateEntityKeys(factory, objectTypeName, isExtension = false) {
-        const entityKeyMap = factory.entityMap.get(objectTypeName);
-        if (!entityKeyMap) {
-          return;
-        }
-        for (const entityKey of entityKeyMap.values()) {
-          const errorMessages = [];
-          if (isExtension) {
-            validateExtensionEntityKey(factory, objectTypeName, entityKey, errorMessages);
-          } else {
-            validateBaseObjectEntityKey(factory, objectTypeName, entityKey, errorMessages);
-          }
-          if (errorMessages.length > 0) {
-            factory.errors.push((0, errors_1.invalidKeyDirectiveError)(objectTypeName, errorMessages));
-          }
-        }
-      }
-      exports2.validateEntityKeys = validateEntityKeys;
-      function validateEntityKey(factory, entityKey, object, objectTypeName, errorMessages) {
-        var _a;
-        const keyFields = /* @__PURE__ */ new Set();
-        for (const fieldName of entityKey.siblings) {
-          const field = object.fields.get(fieldName);
-          if (!field) {
-            errorMessages.push((0, errors_1.undefinedEntityKeyErrorMessage)(fieldName, objectTypeName));
-            continue;
-          }
-          keyFields.add(fieldName);
-          if ((_a = entityKey.nestedKeys) == null ? void 0 : _a.some((nestedKey) => nestedKey.parent === fieldName)) {
-            continue;
-          }
-          const fieldPath = `${objectTypeName}.${fieldName}`;
-          const fieldTypeName = (0, type_merging_1.getNamedTypeForChild)(fieldPath, field.node.type);
-          const parentContainer = factory.parents.get(fieldTypeName);
-          if (parentContainer && parentContainer.kind === graphql_1.Kind.OBJECT_TYPE_DEFINITION) {
-            errorMessages.push((0, errors_1.objectInCompositeKeyWithoutSelectionsErrorMessage)(fieldName, fieldTypeName));
-          }
-        }
-        if (keyFields.size > 0) {
-          const entityKeyParent = factory.keyFieldsByParentTypeName.get(objectTypeName);
-          if (entityKeyParent) {
-            (0, utils_1.addIterableValuesToSet)(keyFields, entityKeyParent);
-          } else {
-            factory.keyFieldsByParentTypeName.set(objectTypeName, keyFields);
-          }
-        }
-        if (errorMessages.length > 0 || !entityKey.nestedKeys) {
-          return;
-        }
-        for (const nestedKey of entityKey.nestedKeys) {
-          const field = object.fields.get(nestedKey.parent);
-          if (!field) {
-            errorMessages.push((0, errors_1.undefinedEntityKeyErrorMessage)(nestedKey.parent, objectTypeName));
-            continue;
-          }
-          const fieldPath = `${objectTypeName}.${field.name}`;
-          validateBaseObjectEntityKey(factory, (0, type_merging_1.getNamedTypeForChild)(fieldPath, field.node.type), nestedKey, errorMessages);
-        }
-      }
-      function validateBaseObjectEntityKey(factory, objectTypeName, entityKey, errorMessages) {
-        const object = factory.parents.get(objectTypeName) || factory.extensions.get(objectTypeName);
-        if (!object) {
-          throw (0, errors_1.undefinedParentFatalError)(objectTypeName);
-        }
-        if (object.kind !== graphql_1.Kind.OBJECT_TYPE_DEFINITION && object.kind !== graphql_1.Kind.OBJECT_TYPE_EXTENSION) {
-          errorMessages.push((0, errors_1.unexpectedParentKindErrorMessage)(objectTypeName, "object or object extension", (0, utils_1.kindToTypeString)(object.kind)));
-          return;
-        }
-        validateEntityKey(factory, entityKey, object, objectTypeName, errorMessages);
-      }
-      function validateExtensionEntityKey(factory, objectTypeName, entityKey, errorMessages) {
-        const objectExtension = factory.extensions.get(objectTypeName);
-        if (!objectExtension) {
-          throw (0, errors_1.undefinedParentFatalError)(objectTypeName);
-        }
-        if (objectExtension.kind !== graphql_1.Kind.OBJECT_TYPE_EXTENSION) {
-          errorMessages.push((0, errors_1.unexpectedParentKindErrorMessage)(objectTypeName, objectExtension.kind, graphql_1.Kind.OBJECT_TYPE_EXTENSION));
-          return;
-        }
-        validateEntityKey(factory, entityKey, objectExtension, objectTypeName, errorMessages);
-      }
       function getDirectiveDefinitionArgumentSets(args, allArguments, requiredArguments) {
         for (const argument of args) {
           const argumentName = argument.name.value;
@@ -17453,271 +17661,383 @@ For federation, it is only possible to use the default root types names ("Mutati
         return definedArguments;
       }
       exports2.getDefinedArgumentsForDirective = getDefinedArgumentsForDirective;
-    }
-  });
-
-  // ../../composition/dist/utils/constants.js
-  var require_constants = __commonJS({
-    "../../composition/dist/utils/constants.js"(exports2) {
-      "use strict";
-      init_dirname();
-      init_buffer2();
-      init_process2();
-      Object.defineProperty(exports2, "__esModule", { value: true });
-      exports2.VERSION_TWO_DIRECTIVE_DEFINITIONS = exports2.BASE_DIRECTIVE_DEFINITIONS = exports2.VERSION_TWO_DIRECTIVES = exports2.VERSION_ONE_DIRECTIVES = exports2.BASE_SCALARS = void 0;
-      var graphql_1 = (init_graphql2(), __toCommonJS(graphql_exports));
-      var utils_1 = require_utils3();
-      var string_constants_1 = require_string_constants();
-      exports2.BASE_SCALARS = /* @__PURE__ */ new Set(["_Any", "_Entities", "Boolean", "Float", "ID", "Int", "String"]);
-      exports2.VERSION_ONE_DIRECTIVES = /* @__PURE__ */ new Set([
-        string_constants_1.DEPRECATED,
-        string_constants_1.EXTENDS,
-        string_constants_1.EXTERNAL,
-        string_constants_1.KEY,
-        string_constants_1.PROVIDES,
-        string_constants_1.REQUIRES,
-        string_constants_1.TAG
-      ]);
-      exports2.VERSION_TWO_DIRECTIVES = /* @__PURE__ */ new Set([
-        string_constants_1.COMPOSE_DIRECTIVE,
-        string_constants_1.LINK,
-        string_constants_1.OVERRIDE,
-        string_constants_1.INACCESSIBLE,
-        string_constants_1.SHAREABLE
-      ]);
-      exports2.BASE_DIRECTIVE_DEFINITIONS = [
-        /* directive @deprecated(reason: String = "No longer supported") on ARGUMENT_DEFINITION | ENUM_VALUE |
-           FIELD_DEFINITION | INPUT_FIELD_DEFINITION
-        */
-        {
-          arguments: [
-            {
-              kind: graphql_1.Kind.INPUT_VALUE_DEFINITION,
-              name: (0, utils_1.stringToNameNode)("reason"),
-              type: (0, utils_1.stringToNamedTypeNode)(string_constants_1.STRING_TYPE),
-              defaultValue: {
-                kind: graphql_1.Kind.STRING,
-                value: "No longer supported"
-              }
-            }
-          ],
-          kind: graphql_1.Kind.DIRECTIVE_DEFINITION,
-          locations: (0, utils_1.stringArrayToNameNodeArray)([
-            string_constants_1.ARGUMENT_DEFINITION_UPPER,
-            string_constants_1.ENUM_VALUE_UPPER,
-            string_constants_1.FIELD_DEFINITION_UPPER,
-            string_constants_1.INPUT_FIELD_DEFINITION_UPPER
-          ]),
-          name: (0, utils_1.stringToNameNode)(string_constants_1.DEPRECATED),
-          repeatable: false
-        },
-        // directive @extends on INTERFACE | OBJECT
-        {
-          kind: graphql_1.Kind.DIRECTIVE_DEFINITION,
-          locations: (0, utils_1.stringArrayToNameNodeArray)([string_constants_1.INTERFACE_UPPER, string_constants_1.OBJECT_UPPER]),
-          name: (0, utils_1.stringToNameNode)(string_constants_1.EXTENDS),
-          repeatable: false
-        },
-        // directive @external on FIELD_DEFINITION | OBJECT
-        {
-          kind: graphql_1.Kind.DIRECTIVE_DEFINITION,
-          locations: (0, utils_1.stringArrayToNameNodeArray)([string_constants_1.FIELD_DEFINITION_UPPER, string_constants_1.OBJECT_UPPER]),
-          name: (0, utils_1.stringToNameNode)(string_constants_1.EXTERNAL),
-          repeatable: false
-        },
-        // TODO handle FieldSet
-        // directive @key(fields: String!) on OBJECT
-        {
-          arguments: [
-            {
-              kind: graphql_1.Kind.INPUT_VALUE_DEFINITION,
-              name: (0, utils_1.stringToNameNode)(string_constants_1.FIELDS),
-              type: {
-                kind: graphql_1.Kind.NON_NULL_TYPE,
-                type: (0, utils_1.stringToNamedTypeNode)(string_constants_1.STRING_TYPE)
-              }
-            },
-            {
-              kind: graphql_1.Kind.INPUT_VALUE_DEFINITION,
-              name: (0, utils_1.stringToNameNode)(string_constants_1.RESOLVABLE),
-              type: (0, utils_1.stringToNamedTypeNode)(string_constants_1.BOOLEAN_TYPE),
-              defaultValue: {
-                kind: graphql_1.Kind.BOOLEAN,
-                value: true
-              }
-            }
-          ],
-          kind: graphql_1.Kind.DIRECTIVE_DEFINITION,
-          locations: [(0, utils_1.stringToNameNode)(string_constants_1.OBJECT_UPPER)],
-          name: (0, utils_1.stringToNameNode)(string_constants_1.KEY),
-          repeatable: true
-        },
-        // TODO handle FieldSet
-        // directive @provides(fields: FieldSet!) on FIELD_DEFINITION
-        {
-          arguments: [
-            {
-              kind: graphql_1.Kind.INPUT_VALUE_DEFINITION,
-              name: (0, utils_1.stringToNameNode)(string_constants_1.FIELDS),
-              type: {
-                kind: graphql_1.Kind.NON_NULL_TYPE,
-                type: (0, utils_1.stringToNamedTypeNode)(string_constants_1.STRING_TYPE)
-              }
-            }
-          ],
-          kind: graphql_1.Kind.DIRECTIVE_DEFINITION,
-          locations: [(0, utils_1.stringToNameNode)(string_constants_1.FIELD_DEFINITION_UPPER)],
-          name: (0, utils_1.stringToNameNode)(string_constants_1.PROVIDES),
-          repeatable: false
-        },
-        // TODO handle FieldSet
-        // directive @requires(fields: FieldSet!) on FIELD_DEFINITION
-        {
-          arguments: [
-            {
-              kind: graphql_1.Kind.INPUT_VALUE_DEFINITION,
-              name: (0, utils_1.stringToNameNode)(string_constants_1.FIELDS),
-              type: {
-                kind: graphql_1.Kind.NON_NULL_TYPE,
-                type: (0, utils_1.stringToNamedTypeNode)(string_constants_1.STRING_TYPE)
-              }
-            }
-          ],
-          kind: graphql_1.Kind.DIRECTIVE_DEFINITION,
-          locations: [(0, utils_1.stringToNameNode)(string_constants_1.FIELD_DEFINITION_UPPER)],
-          name: (0, utils_1.stringToNameNode)(string_constants_1.REQUIRES),
-          repeatable: false
-        },
-        /* directive @tag(name: String!) on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_OBJECT |
-           INPUT_FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR | UNION
-        */
-        {
-          arguments: [
-            {
-              kind: graphql_1.Kind.INPUT_VALUE_DEFINITION,
-              name: (0, utils_1.stringToNameNode)(string_constants_1.NAME),
-              type: {
-                kind: graphql_1.Kind.NON_NULL_TYPE,
-                type: (0, utils_1.stringToNamedTypeNode)(string_constants_1.STRING_TYPE)
-              }
-            }
-          ],
-          kind: graphql_1.Kind.DIRECTIVE_DEFINITION,
-          locations: (0, utils_1.stringArrayToNameNodeArray)([
-            string_constants_1.ARGUMENT_DEFINITION_UPPER,
-            string_constants_1.ENUM_UPPER,
-            string_constants_1.ENUM_VALUE_UPPER,
-            string_constants_1.FIELD_DEFINITION_UPPER,
-            string_constants_1.INPUT_FIELD_DEFINITION_UPPER,
-            string_constants_1.INPUT_OBJECT_UPPER,
-            string_constants_1.INTERFACE_UPPER,
-            string_constants_1.OBJECT_UPPER,
-            string_constants_1.SCALAR_UPPER,
-            string_constants_1.UNION_UPPER
-          ]),
-          name: (0, utils_1.stringToNameNode)(string_constants_1.TAG),
-          repeatable: true
+      function addNonExternalFieldsToSet(fields, fieldNames) {
+        for (const [fieldName, fieldContainer] of fields) {
+          if (fieldContainer.directives.has(string_constants_1.EXTERNAL)) {
+            continue;
+          }
+          fieldNames.add(fieldName);
         }
-      ];
-      exports2.VERSION_TWO_DIRECTIVE_DEFINITIONS = [
-        // @composeDirective is currently unimplemented
-        /* directive @composeDirective(name: String!) repeatable on SCHEMA */
-        {
-          arguments: [
-            {
-              kind: graphql_1.Kind.INPUT_VALUE_DEFINITION,
-              name: (0, utils_1.stringToNameNode)(string_constants_1.NAME),
-              type: {
-                kind: graphql_1.Kind.NON_NULL_TYPE,
-                type: (0, utils_1.stringToNamedTypeNode)(string_constants_1.STRING_TYPE)
-              }
-            }
-          ],
-          kind: graphql_1.Kind.DIRECTIVE_DEFINITION,
-          locations: (0, utils_1.stringArrayToNameNodeArray)([string_constants_1.SCHEMA_UPPER]),
-          name: (0, utils_1.stringToNameNode)(string_constants_1.COMPOSE_DIRECTIVE),
-          repeatable: true
-        },
-        /* directive @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_OBJECT |
-           INPUT_FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR | UNION
-        */
-        {
-          kind: graphql_1.Kind.DIRECTIVE_DEFINITION,
-          locations: (0, utils_1.stringArrayToNameNodeArray)([
-            string_constants_1.ARGUMENT_DEFINITION_UPPER,
-            string_constants_1.ENUM_UPPER,
-            string_constants_1.ENUM_VALUE_UPPER,
-            string_constants_1.FIELD_DEFINITION_UPPER,
-            string_constants_1.INPUT_FIELD_DEFINITION_UPPER,
-            string_constants_1.INPUT_OBJECT_UPPER,
-            string_constants_1.INTERFACE_UPPER,
-            string_constants_1.OBJECT_UPPER,
-            string_constants_1.SCALAR_UPPER,
-            string_constants_1.UNION_UPPER
-          ]),
-          name: (0, utils_1.stringToNameNode)(string_constants_1.INACCESSIBLE),
-          repeatable: false
-        },
-        // directive @link(url: String!, as: String!, for: String, import: [String]) repeatable on SCHEMA
-        {
-          arguments: [
-            {
-              kind: graphql_1.Kind.INPUT_VALUE_DEFINITION,
-              name: (0, utils_1.stringToNameNode)("url"),
-              type: {
-                kind: graphql_1.Kind.NON_NULL_TYPE,
-                type: (0, utils_1.stringToNamedTypeNode)(string_constants_1.STRING_TYPE)
-              }
-            },
-            {
-              kind: graphql_1.Kind.INPUT_VALUE_DEFINITION,
-              name: (0, utils_1.stringToNameNode)("as"),
-              type: (0, utils_1.stringToNamedTypeNode)(string_constants_1.STRING_TYPE)
-            },
-            {
-              kind: graphql_1.Kind.INPUT_VALUE_DEFINITION,
-              name: (0, utils_1.stringToNameNode)("for"),
-              type: (0, utils_1.stringToNamedTypeNode)(string_constants_1.STRING_TYPE)
-            },
-            {
-              kind: graphql_1.Kind.INPUT_VALUE_DEFINITION,
-              name: (0, utils_1.stringToNameNode)("import"),
-              type: {
-                kind: graphql_1.Kind.LIST_TYPE,
-                type: (0, utils_1.stringToNamedTypeNode)(string_constants_1.STRING_TYPE)
-              }
-            }
-          ],
-          kind: graphql_1.Kind.DIRECTIVE_DEFINITION,
-          locations: (0, utils_1.stringArrayToNameNodeArray)([string_constants_1.SCHEMA_UPPER]),
-          name: (0, utils_1.stringToNameNode)(string_constants_1.LINK),
-          repeatable: true
-        },
-        // directive @override(from: String!) on FIELD_DEFINITION
-        {
-          arguments: [
-            {
-              kind: graphql_1.Kind.INPUT_VALUE_DEFINITION,
-              name: (0, utils_1.stringToNameNode)("from"),
-              type: {
-                kind: graphql_1.Kind.NON_NULL_TYPE,
-                type: (0, utils_1.stringToNamedTypeNode)(string_constants_1.STRING_TYPE)
-              }
-            }
-          ],
-          kind: graphql_1.Kind.DIRECTIVE_DEFINITION,
-          locations: (0, utils_1.stringArrayToNameNodeArray)([string_constants_1.FIELD_DEFINITION_UPPER]),
-          name: (0, utils_1.stringToNameNode)(string_constants_1.OVERRIDE),
-          repeatable: false
-        },
-        // directive @shareable on FIELD_DEFINITION | OBJECT
-        {
-          kind: graphql_1.Kind.DIRECTIVE_DEFINITION,
-          locations: (0, utils_1.stringArrayToNameNodeArray)([string_constants_1.FIELD_DEFINITION_UPPER, string_constants_1.OBJECT_UPPER]),
-          name: (0, utils_1.stringToNameNode)(string_constants_1.SHAREABLE),
-          repeatable: false
+      }
+      exports2.addNonExternalFieldsToSet = addNonExternalFieldsToSet;
+      function extractFieldSetValue(name2, map, directives) {
+        if (!directives || directives.length > 1) {
+          return;
         }
-      ];
+        const args = directives[0].arguments;
+        if (!args || args.length !== 1) {
+          return;
+        }
+        const fieldsArgument = args[0];
+        if (fieldsArgument.name.value !== string_constants_1.FIELDS || fieldsArgument.value.kind !== graphql_1.Kind.STRING) {
+          return;
+        }
+        map.set(name2, fieldsArgument.value.value);
+      }
+      exports2.extractFieldSetValue = extractFieldSetValue;
+      function getNormalizedFieldSet(documentNode) {
+        return (0, graphql_1.print)((0, utils_2.lexicographicallySortDocumentNode)(documentNode)).replaceAll(/\s+/g, " ").slice(2, -2);
+      }
+      exports2.getNormalizedFieldSet = getNormalizedFieldSet;
+      function validateNonRepeatableFieldSet(factory, parentContainer, fieldSet, directiveFieldName) {
+        const { error, documentNode } = (0, utils_2.safeParse)("{" + fieldSet + "}");
+        if (error || !documentNode) {
+          return { errorMessage: (0, errors_1.unparsableFieldSetErrorMessage)(fieldSet, error) };
+        }
+        let errorMessage;
+        const parentContainers = [parentContainer];
+        const definedFields = [];
+        let currentDepth = -1;
+        let shouldDefineSelectionSet = true;
+        let lastFieldName = directiveFieldName;
+        let fieldPath = parentContainer.name.value;
+        (0, graphql_1.visit)(documentNode, {
+          Argument: {
+            enter(node) {
+              return false;
+            }
+          },
+          Field: {
+            enter(node) {
+              const parentContainer2 = parentContainers[currentDepth];
+              const parentTypeName = parentContainer2.name.value;
+              if (parentContainer2.kind === graphql_1.Kind.UNION_TYPE_DEFINITION) {
+                errorMessage = (0, errors_1.invalidSelectionOnUnionErrorMessage)(fieldSet, fieldPath, parentTypeName);
+                return graphql_1.BREAK;
+              }
+              if (shouldDefineSelectionSet) {
+                errorMessage = (0, errors_1.invalidSelectionSetErrorMessage)(fieldSet, fieldPath, parentTypeName, (0, utils_1.kindToTypeString)(parentContainer2.kind));
+                return graphql_1.BREAK;
+              }
+              const fieldName = node.name.value;
+              fieldPath = `${parentTypeName}.${fieldName}`;
+              lastFieldName = fieldName;
+              const fieldContainer = parentContainer2.fields.get(fieldName);
+              if (!fieldContainer) {
+                errorMessage = (0, errors_1.undefinedFieldInFieldSetErrorMessage)(fieldSet, parentTypeName, fieldName);
+                return graphql_1.BREAK;
+              }
+              if (fieldContainer.arguments.size) {
+                errorMessage = (0, errors_1.argumentsInKeyFieldSetErrorMessage)(fieldSet, fieldPath);
+                return graphql_1.BREAK;
+              }
+              if (definedFields[currentDepth].has(fieldName)) {
+                errorMessage = (0, errors_1.duplicateFieldInFieldSetErrorMessage)(fieldSet, fieldPath);
+                return graphql_1.BREAK;
+              }
+              definedFields[currentDepth].add(fieldName);
+              const namedTypeName = (0, type_merging_1.getNamedTypeForChild)(fieldPath, fieldContainer.node.type);
+              if (constants_1.BASE_SCALARS.has(namedTypeName)) {
+                return;
+              }
+              const childContainer = factory.parents.get(namedTypeName) || factory.extensions.get(namedTypeName);
+              if (!childContainer) {
+                errorMessage = (0, errors_1.unknownTypeInFieldSetErrorMessage)(fieldSet, fieldPath, namedTypeName);
+                return graphql_1.BREAK;
+              }
+              if (childContainer.kind === graphql_1.Kind.OBJECT_TYPE_DEFINITION || childContainer.kind === graphql_1.Kind.OBJECT_TYPE_EXTENSION || childContainer.kind === graphql_1.Kind.INTERFACE_TYPE_DEFINITION || childContainer.kind === graphql_1.Kind.UNION_TYPE_DEFINITION) {
+                shouldDefineSelectionSet = true;
+                parentContainers.push(childContainer);
+                return;
+              }
+            }
+          },
+          InlineFragment: {
+            enter(node) {
+              const parentContainer2 = parentContainers[currentDepth];
+              const parentTypeName = parentContainer2.name.value;
+              if (!node.typeCondition) {
+                errorMessage = (0, errors_1.inlineFragmentWithoutTypeConditionErrorMessage)(fieldSet, fieldPath);
+                return graphql_1.BREAK;
+              }
+              const typeConditionName = node.typeCondition.name.value;
+              if (typeConditionName === parentTypeName) {
+                parentContainers.push(parentContainer2);
+                shouldDefineSelectionSet = true;
+                return;
+              }
+              if (!(0, utils_2.isKindAbstract)(parentContainer2.kind)) {
+                errorMessage = (0, errors_1.invalidInlineFragmentTypeErrorMessage)(fieldSet, fieldPath, typeConditionName, parentTypeName);
+                return graphql_1.BREAK;
+              }
+              const fragmentTypeContainer = factory.parents.get(typeConditionName) || factory.extensions.get(typeConditionName);
+              if (!fragmentTypeContainer) {
+                errorMessage = (0, errors_1.unknownInlineFragmentTypeConditionErrorMessage)(fieldSet, fieldPath, typeConditionName);
+                return graphql_1.BREAK;
+              }
+              if (fragmentTypeContainer.kind !== graphql_1.Kind.INTERFACE_TYPE_DEFINITION && fragmentTypeContainer.kind !== graphql_1.Kind.OBJECT_TYPE_DEFINITION && fragmentTypeContainer.kind !== graphql_1.Kind.OBJECT_TYPE_EXTENSION && fragmentTypeContainer.kind !== graphql_1.Kind.UNION_TYPE_DEFINITION) {
+                errorMessage = (0, errors_1.invalidInlineFragmentTypeConditionTypeErrorMessage)(fieldSet, fieldPath, typeConditionName, (0, utils_1.kindToTypeString)(fragmentTypeContainer.kind));
+                return graphql_1.BREAK;
+              }
+              const concreteTypeNames = factory.abstractToConcreteTypeNames.get(parentTypeName);
+              if (!concreteTypeNames || !concreteTypeNames.has(typeConditionName)) {
+                errorMessage = (0, errors_1.invalidInlineFragmentTypeConditionErrorMessage)(fieldSet, fieldPath, typeConditionName, (0, utils_1.kindToTypeString)(parentContainer2.kind), parentTypeName);
+                return graphql_1.BREAK;
+              }
+              shouldDefineSelectionSet = true;
+              parentContainers.push(fragmentTypeContainer);
+            },
+            leave() {
+              parentContainers.pop();
+            }
+          },
+          SelectionSet: {
+            enter() {
+              if (!shouldDefineSelectionSet) {
+                const parentContainer2 = parentContainers[currentDepth];
+                if (parentContainer2.kind === graphql_1.Kind.UNION_TYPE_DEFINITION) {
+                  errorMessage = (0, errors_1.unparsableFieldSetSelectionErrorMessage)(fieldSet, lastFieldName);
+                  return graphql_1.BREAK;
+                }
+                const fieldContainer = parentContainer2.fields.get(lastFieldName);
+                if (!fieldContainer) {
+                  errorMessage = (0, errors_1.undefinedFieldInFieldSetErrorMessage)(fieldSet, fieldPath, lastFieldName);
+                  return graphql_1.BREAK;
+                }
+                const fieldNamedTypeName = (0, type_merging_1.getNamedTypeForChild)(fieldPath, fieldContainer.node.type);
+                const childContainer = factory.parents.get(fieldNamedTypeName);
+                const childKind = childContainer ? childContainer.kind : graphql_1.Kind.SCALAR_TYPE_DEFINITION;
+                errorMessage = (0, errors_1.invalidSelectionSetDefinitionErrorMessage)(fieldSet, fieldPath, fieldNamedTypeName, (0, utils_1.kindToTypeString)(childKind));
+                return graphql_1.BREAK;
+              }
+              currentDepth += 1;
+              shouldDefineSelectionSet = false;
+              if (currentDepth < 0 || currentDepth >= parentContainers.length) {
+                errorMessage = (0, errors_1.unparsableFieldSetSelectionErrorMessage)(fieldSet, lastFieldName);
+                return graphql_1.BREAK;
+              }
+              definedFields.push(/* @__PURE__ */ new Set());
+            },
+            leave() {
+              if (shouldDefineSelectionSet) {
+                const parentContainer2 = parentContainers[currentDepth + 1];
+                errorMessage = (0, errors_1.invalidSelectionSetErrorMessage)(fieldSet, fieldPath, parentContainer2.name.value, (0, utils_1.kindToTypeString)(parentContainer2.kind));
+                shouldDefineSelectionSet = false;
+              }
+              currentDepth -= 1;
+              parentContainers.pop();
+              definedFields.pop();
+            }
+          }
+        });
+        if (errorMessage) {
+          return { errorMessage };
+        }
+        return { configuration: { fieldName: directiveFieldName, selectionSet: getNormalizedFieldSet(documentNode) } };
+      }
+      function validateKeyFieldSets(factory, entityContainer, fieldSets, fieldNames) {
+        const entityTypeName = entityContainer.name.value;
+        const errorMessages = [];
+        const configurations = [];
+        const keyFieldNames = /* @__PURE__ */ new Set();
+        for (const fieldSet of fieldSets) {
+          const { error, documentNode } = (0, utils_2.safeParse)("{" + fieldSet + "}");
+          if (error || !documentNode) {
+            errorMessages.push((0, errors_1.unparsableFieldSetErrorMessage)(fieldSet, error));
+            continue;
+          }
+          const parentContainers = [entityContainer];
+          const definedFields = [];
+          let currentDepth = -1;
+          let shouldDefineSelectionSet = true;
+          let lastFieldName = "";
+          (0, graphql_1.visit)(documentNode, {
+            Argument: {
+              enter(node) {
+                errorMessages.push((0, errors_1.unexpectedArgumentErrorMessage)(fieldSet, `${parentContainers[currentDepth].name.value}.${lastFieldName}`, node.name.value));
+                return graphql_1.BREAK;
+              }
+            },
+            Field: {
+              enter(node) {
+                const grandparentContainer = parentContainers[currentDepth - 1];
+                const parentContainer = parentContainers[currentDepth];
+                const parentTypeName = parentContainer.name.value;
+                if (shouldDefineSelectionSet) {
+                  errorMessages.push((0, errors_1.invalidSelectionSetErrorMessage)(fieldSet, `${grandparentContainer.name.value}.${lastFieldName}`, parentTypeName, (0, utils_1.kindToTypeString)(parentContainer.kind)));
+                  return graphql_1.BREAK;
+                }
+                const fieldName = node.name.value;
+                const fieldPath = `${parentTypeName}.${fieldName}`;
+                lastFieldName = fieldName;
+                const fieldContainer = parentContainer.fields.get(fieldName);
+                if (!fieldContainer) {
+                  errorMessages.push((0, errors_1.undefinedFieldInFieldSetErrorMessage)(fieldSet, parentTypeName, fieldName));
+                  return graphql_1.BREAK;
+                }
+                if (fieldContainer.arguments.size) {
+                  errorMessages.push((0, errors_1.argumentsInKeyFieldSetErrorMessage)(fieldSet, fieldPath));
+                  return graphql_1.BREAK;
+                }
+                if (definedFields[currentDepth].has(fieldName)) {
+                  errorMessages.push((0, errors_1.duplicateFieldInFieldSetErrorMessage)(fieldSet, fieldPath));
+                  return graphql_1.BREAK;
+                }
+                definedFields[currentDepth].add(fieldName);
+                if (currentDepth === 0) {
+                  keyFieldNames.add(fieldName);
+                  fieldNames.add(fieldName);
+                }
+                (0, utils_1.getValueOrDefault)(factory.keyFieldsByParentTypeName, parentTypeName, () => /* @__PURE__ */ new Set()).add(fieldName);
+                const namedTypeName = (0, type_merging_1.getNamedTypeForChild)(fieldPath, fieldContainer.node.type);
+                if (constants_1.BASE_SCALARS.has(namedTypeName)) {
+                  return;
+                }
+                const childContainer = factory.parents.get(namedTypeName) || factory.extensions.get(namedTypeName);
+                if (!childContainer) {
+                  errorMessages.push((0, errors_1.unknownTypeInFieldSetErrorMessage)(fieldSet, fieldPath, namedTypeName));
+                  return graphql_1.BREAK;
+                }
+                if (childContainer.kind === graphql_1.Kind.OBJECT_TYPE_DEFINITION || childContainer.kind === graphql_1.Kind.OBJECT_TYPE_EXTENSION) {
+                  shouldDefineSelectionSet = true;
+                  parentContainers.push(childContainer);
+                  return;
+                }
+                if ((0, utils_2.isKindAbstract)(childContainer.kind)) {
+                  errorMessages.push((0, errors_1.abstractTypeInKeyFieldSetErrorMessage)(fieldSet, fieldPath, namedTypeName, (0, utils_1.kindToTypeString)(childContainer.kind)));
+                  return graphql_1.BREAK;
+                }
+              }
+            },
+            InlineFragment: {
+              enter() {
+                errorMessages.push(errors_1.inlineFragmentInFieldSetErrorMessage);
+                return graphql_1.BREAK;
+              }
+            },
+            SelectionSet: {
+              enter() {
+                if (!shouldDefineSelectionSet) {
+                  const parentContainer = parentContainers[currentDepth];
+                  const parentTypeName = parentContainer.name.value;
+                  const fieldPath = `${parentTypeName}.${lastFieldName}`;
+                  const fieldContainer = parentContainer.fields.get(lastFieldName);
+                  if (!fieldContainer) {
+                    errorMessages.push((0, errors_1.undefinedFieldInFieldSetErrorMessage)(fieldSet, fieldPath, lastFieldName));
+                    return graphql_1.BREAK;
+                  }
+                  const fieldNamedTypeName = (0, type_merging_1.getNamedTypeForChild)(fieldPath, fieldContainer.node.type);
+                  const childContainer = factory.parents.get(fieldNamedTypeName);
+                  const childKind = childContainer ? childContainer.kind : graphql_1.Kind.SCALAR_TYPE_DEFINITION;
+                  errorMessages.push((0, errors_1.invalidSelectionSetDefinitionErrorMessage)(fieldSet, fieldPath, fieldNamedTypeName, (0, utils_1.kindToTypeString)(childKind)));
+                  return graphql_1.BREAK;
+                }
+                currentDepth += 1;
+                shouldDefineSelectionSet = false;
+                if (currentDepth < 0 || currentDepth >= parentContainers.length) {
+                  errorMessages.push((0, errors_1.unparsableFieldSetSelectionErrorMessage)(fieldSet, lastFieldName));
+                  return graphql_1.BREAK;
+                }
+                definedFields.push(/* @__PURE__ */ new Set());
+              },
+              leave() {
+                if (shouldDefineSelectionSet) {
+                  const grandparentContainer = parentContainers[currentDepth];
+                  const grandparentTypeName = grandparentContainer.name.value;
+                  const parentContainer = parentContainers[currentDepth + 1];
+                  const fieldPath = `${grandparentTypeName}.${lastFieldName}`;
+                  errorMessages.push((0, errors_1.invalidSelectionSetErrorMessage)(fieldSet, fieldPath, parentContainer.name.value, (0, utils_1.kindToTypeString)(parentContainer.kind)));
+                  shouldDefineSelectionSet = false;
+                }
+                currentDepth -= 1;
+                parentContainers.pop();
+                definedFields.pop();
+              }
+            }
+          });
+          if (!errorMessages.length) {
+            configurations.push({ fieldName: "", selectionSet: getNormalizedFieldSet(documentNode) });
+          }
+        }
+        if (errorMessages.length) {
+          factory.errors.push((0, errors_1.invalidKeyDirectivesError)(entityTypeName, errorMessages));
+          return;
+        }
+        if (configurations.length) {
+          return configurations;
+        }
+      }
+      var FieldSetDirective;
+      (function(FieldSetDirective2) {
+        FieldSetDirective2["PROVIDES"] = "provides";
+        FieldSetDirective2["REQUIRES"] = "requires";
+      })(FieldSetDirective || (FieldSetDirective = {}));
+      function getFieldSetParent(factory, fieldSetDirective, parentContainer, fieldName, parentTypeName) {
+        if (fieldSetDirective !== FieldSetDirective.PROVIDES) {
+          return factory.entities.has(parentTypeName) ? { fieldSetParentContainer: parentContainer } : {};
+        }
+        const fieldContainer = (0, utils_1.getOrThrowError)(parentContainer.fields, fieldName, `${parentTypeName}.fields`);
+        const fieldNamedTypeName = (0, type_merging_1.getNamedTypeForChild)(`${parentTypeName}.${fieldName}`, fieldContainer.node.type);
+        if (!factory.entities.has(fieldNamedTypeName)) {
+          return {};
+        }
+        const childContainer = factory.parents.get(fieldNamedTypeName) || factory.extensions.get(fieldNamedTypeName);
+        if (!childContainer || childContainer.kind !== graphql_1.Kind.OBJECT_TYPE_DEFINITION && childContainer.kind !== graphql_1.Kind.OBJECT_TYPE_EXTENSION) {
+          return {
+            errorString: (0, errors_1.unknownProvidesEntityErrorMessage)(`${parentTypeName}.${fieldName}`, fieldNamedTypeName)
+          };
+        }
+        return { fieldSetParentContainer: childContainer };
+      }
+      function validateProvidesOrRequires(factory, parentContainer, fieldSetByFieldName, fieldSetDirective) {
+        const errorMessages = [];
+        const configurations = [];
+        const parentTypeName = parentContainer.name.value;
+        for (const [fieldName, fieldSet] of fieldSetByFieldName) {
+          const { fieldSetParentContainer, errorString } = getFieldSetParent(factory, fieldSetDirective, parentContainer, fieldName, parentTypeName);
+          const fieldPath = `${parentTypeName}.${fieldName}`;
+          if (errorString) {
+            errorMessages.push(errorString);
+            continue;
+          }
+          if (!fieldSetParentContainer) {
+            continue;
+          }
+          const { errorMessage, configuration } = validateNonRepeatableFieldSet(factory, fieldSetParentContainer, fieldSet, fieldName);
+          if (errorMessage) {
+            errorMessages.push(` On "${parentTypeName}.${fieldName}" \u2014` + errorMessage);
+            continue;
+          }
+          if (configuration) {
+            configurations.push(configuration);
+            continue;
+          }
+          throw (0, errors_1.invalidConfigurationResultFatalError)(fieldPath);
+        }
+        if (errorMessages.length) {
+          factory.errors.push((0, errors_1.invalidProvidesOrRequiresDirectivesError)(fieldSetDirective, errorMessages));
+          return;
+        }
+        if (configurations.length) {
+          return configurations;
+        }
+      }
+      function validateDirectivesWithFieldSet(factory, parentContainer, fieldSetContainer) {
+        const configurationData = (0, utils_1.getOrThrowError)(factory.configurationDataMap, parentContainer.name.value, "configurationDataMap");
+        const keys = validateKeyFieldSets(factory, parentContainer, fieldSetContainer.keys, configurationData.fieldNames);
+        if (keys) {
+          configurationData.keys = keys;
+        }
+        const provides = validateProvidesOrRequires(factory, parentContainer, fieldSetContainer.provides, FieldSetDirective.PROVIDES);
+        if (provides) {
+          configurationData.provides = provides;
+        }
+        const requires = validateProvidesOrRequires(factory, parentContainer, fieldSetContainer.requires, FieldSetDirective.REQUIRES);
+        if (requires) {
+          configurationData.requires = requires;
+        }
+      }
+      exports2.validateDirectivesWithFieldSet = validateDirectivesWithFieldSet;
     }
   });
 
@@ -33569,14 +33889,12 @@ Received directive:
       var merge_1 = require_cjs2();
       var ast_1 = require_ast();
       function normalizeSubgraphFromString(subgraph) {
-        let document;
-        try {
-          document = (0, graphql_1.parse)(subgraph);
-        } catch (err) {
-          return { errors: [(0, errors_1.subgraphInvalidSyntaxError)(err)] };
+        const { error, documentNode } = (0, utils_1.safeParse)(subgraph);
+        if (error || !documentNode) {
+          return { errors: [(0, errors_1.subgraphInvalidSyntaxError)(error)] };
         }
         const normalizationFactory = new NormalizationFactory();
-        return normalizationFactory.normalize(document);
+        return normalizationFactory.normalize(documentNode);
       }
       exports2.normalizeSubgraphFromString = normalizeSubgraphFromString;
       function normalizeSubgraph(document) {
@@ -33588,9 +33906,11 @@ Received directive:
         constructor() {
           __publicField(this, "abstractToConcreteTypeNames", /* @__PURE__ */ new Map());
           __publicField(this, "allDirectiveDefinitions", /* @__PURE__ */ new Map());
+          __publicField(this, "configurationDataMap", /* @__PURE__ */ new Map());
           __publicField(this, "customDirectiveDefinitions", /* @__PURE__ */ new Map());
           __publicField(this, "errors", []);
-          __publicField(this, "entityMap", /* @__PURE__ */ new Map());
+          __publicField(this, "entities", /* @__PURE__ */ new Set());
+          __publicField(this, "fieldSetsByParent", /* @__PURE__ */ new Map());
           __publicField(this, "keyFieldsByParentTypeName", /* @__PURE__ */ new Map());
           __publicField(this, "operationTypeNames", /* @__PURE__ */ new Map());
           __publicField(this, "parents", /* @__PURE__ */ new Map());
@@ -33830,14 +34150,9 @@ Received directive:
           if (node.kind === graphql_1.Kind.INTERFACE_TYPE_DEFINITION || node.kind === graphql_1.Kind.INTERFACE_TYPE_EXTENSION || !isEntity) {
             return;
           }
-          const existingEntityKeyMap = this.entityMap.get(this.parentTypeName);
-          const { entityKeyMap, errors } = (0, utils_1.getEntityKeyExtractionResults)(node, existingEntityKeyMap || /* @__PURE__ */ new Map());
-          if (errors.length > 0) {
-            this.errors.push(...errors);
-          }
-          if (!existingEntityKeyMap) {
-            this.entityMap.set(this.parentTypeName, entityKeyMap);
-          }
+          this.entities.add(this.parentTypeName);
+          const fieldSets = (0, utils_3.getValueOrDefault)(this.fieldSetsByParent, this.parentTypeName, utils_2.newFieldSetContainer);
+          this.extractKeyFieldSets(node, fieldSets.keys);
         }
         validateChildDirectives(child, hostPath) {
           const childKind = child.node.kind;
@@ -33911,6 +34226,42 @@ Received directive:
                 return this.isTypeValidImplementation(originalType.type, implementationType.type);
               }
               return false;
+          }
+        }
+        extractKeyFieldSets(node, rawFieldSets) {
+          var _a;
+          const parentTypeName = node.name.value;
+          if (!((_a = node.directives) == null ? void 0 : _a.length)) {
+            this.errors.push((0, errors_1.expectedEntityError)(parentTypeName));
+            return;
+          }
+          const errorMessages = [];
+          for (const directive of node.directives) {
+            if (directive.name.value !== string_constants_1.KEY) {
+              continue;
+            }
+            if (!directive.arguments || directive.arguments.length < 1) {
+              errorMessages.push((0, errors_1.undefinedRequiredArgumentsErrorMessage)(string_constants_1.KEY, parentTypeName, [string_constants_1.FIELDS]));
+              continue;
+            }
+            for (const arg of directive.arguments) {
+              const argumentName = arg.name.value;
+              if (arg.name.value === string_constants_1.RESOLVABLE) {
+                continue;
+              }
+              if (arg.name.value !== string_constants_1.FIELDS) {
+                errorMessages.push((0, errors_1.unexpectedDirectiveArgumentErrorMessage)(string_constants_1.KEY, argumentName));
+                break;
+              }
+              if (arg.value.kind !== graphql_1.Kind.STRING) {
+                errorMessages.push((0, errors_1.invalidKeyDirectiveArgumentErrorMessage)(arg.value.kind));
+                break;
+              }
+              rawFieldSets.add(arg.value.value);
+            }
+          }
+          if (errorMessages.length) {
+            this.errors.push((0, errors_1.invalidKeyDirectivesError)(parentTypeName, errorMessages));
           }
         }
         validateInterfaceImplementations(container) {
@@ -34101,20 +34452,19 @@ Received directive:
                 }
                 const fieldPath = `${factory.parentTypeName}.${name2}`;
                 factory.isChild = true;
-                const fieldRootType = (0, type_merging_1.getNamedTypeForChild)(fieldPath, node.type);
-                if (!constants_1.BASE_SCALARS.has(fieldRootType)) {
-                  factory.referencedTypeNames.add(fieldRootType);
+                const fieldNamedTypeName = (0, type_merging_1.getNamedTypeForChild)(fieldPath, node.type);
+                if (!constants_1.BASE_SCALARS.has(fieldNamedTypeName)) {
+                  factory.referencedTypeNames.add(fieldNamedTypeName);
                 }
                 const parent = factory.isCurrentParentExtension ? (0, utils_3.getOrThrowError)(factory.extensions, factory.parentTypeName, string_constants_1.EXTENSIONS) : (0, utils_3.getOrThrowError)(factory.parents, factory.parentTypeName, string_constants_1.PARENTS);
                 if (parent.kind !== graphql_1.Kind.OBJECT_TYPE_DEFINITION && parent.kind !== graphql_1.Kind.OBJECT_TYPE_EXTENSION && parent.kind !== graphql_1.Kind.INTERFACE_TYPE_DEFINITION && parent.kind !== graphql_1.Kind.INTERFACE_TYPE_EXTENSION) {
                   throw (0, errors_1.unexpectedKindFatalError)(factory.parentTypeName);
                 }
                 if (parent.fields.has(name2)) {
-                  const error = factory.isCurrentParentExtension ? (0, errors_1.duplicateFieldExtensionError)(factory.parentTypeName, name2) : (0, errors_1.duplicateFieldDefinitionError)(name2, factory.parentTypeName);
-                  factory.errors.push(error);
+                  factory.errors.push((0, errors_1.duplicateFieldDefinitionError)(name2, factory.parentTypeName));
                   return;
                 }
-                parent.fields.set(name2, {
+                const fieldContainer = {
                   arguments: factory.extractArguments(node, /* @__PURE__ */ new Map(), fieldPath),
                   directives: factory.extractDirectives(node, /* @__PURE__ */ new Map()),
                   name: name2,
@@ -34123,7 +34473,20 @@ Received directive:
                       description: (0, utils_1.formatDescription)(arg.description)
                     }))
                   })
-                });
+                };
+                parent.fields.set(name2, fieldContainer);
+                const existingFieldSet = factory.fieldSetsByParent.get(factory.parentTypeName);
+                if (existingFieldSet) {
+                  (0, utils_2.extractFieldSetValue)(name2, existingFieldSet.requires, fieldContainer.directives.get(string_constants_1.REQUIRES));
+                  (0, utils_2.extractFieldSetValue)(name2, existingFieldSet.provides, fieldContainer.directives.get(string_constants_1.PROVIDES));
+                  return;
+                }
+                const providesDirectives = fieldContainer.directives.get(string_constants_1.PROVIDES);
+                if (!providesDirectives) {
+                  return;
+                }
+                const fieldSetContainer = (0, utils_3.getValueOrDefault)(factory.fieldSetsByParent, factory.parentTypeName, utils_2.newFieldSetContainer);
+                (0, utils_2.extractFieldSetValue)(name2, fieldSetContainer.provides, providesDirectives);
               },
               leave() {
                 factory.isChild = false;
@@ -34264,14 +34627,9 @@ Received directive:
                 if (!isEntity) {
                   return;
                 }
-                const existingEntityKeyMap = factory.entityMap.get(name2);
-                const { entityKeyMap, errors } = (0, utils_1.getEntityKeyExtractionResults)(node, existingEntityKeyMap || /* @__PURE__ */ new Map());
-                if (errors.length > 0) {
-                  factory.errors.push(...errors);
-                }
-                if (!existingEntityKeyMap) {
-                  factory.entityMap.set(name2, entityKeyMap);
-                }
+                factory.entities.add(name2);
+                const fieldSets = (0, utils_3.getValueOrDefault)(factory.fieldSetsByParent, name2, utils_2.newFieldSetContainer);
+                factory.extractKeyFieldSets(node, fieldSets.keys);
               },
               leave() {
                 factory.isCurrentParentExtension = false;
@@ -34432,6 +34790,7 @@ Received directive:
           for (const directiveDefinition of constants_1.BASE_DIRECTIVE_DEFINITIONS) {
             definitions.push(directiveDefinition);
           }
+          definitions.push(constants_1.FIELD_SET_DEFINITION);
           if (factory.isSubgraphVersionTwo) {
             for (const directiveDefinition of constants_1.VERSION_TWO_DIRECTIVE_DEFINITIONS) {
               definitions.push(directiveDefinition);
@@ -34444,36 +34803,28 @@ Received directive:
           if (this.schemaDefinition.operationTypes.size > 0) {
             definitions.push((0, utils_2.schemaContainerToNode)(this, this.schemaDefinition));
           }
-          const configurationDataMap = /* @__PURE__ */ new Map();
           const validExtensionOrphans = /* @__PURE__ */ new Set();
           const parentsToIgnore = /* @__PURE__ */ new Set();
           for (const [extensionTypeName, extensionContainer] of this.extensions) {
-            const entity = this.entityMap.get(extensionTypeName);
+            const isEntity = this.entities.has(extensionTypeName);
             const configurationData = {
               fieldNames: /* @__PURE__ */ new Set(),
-              isRootNode: !!entity,
+              isRootNode: isEntity,
               typeName: extensionTypeName
             };
-            if (entity) {
-              configurationData.keys = [...entity.keys()].map((selectionSet) => ({
-                fieldName: "",
-                selectionSet
-              }));
-            }
+            this.configurationDataMap.set(extensionTypeName, configurationData);
             if (extensionContainer.kind === graphql_1.Kind.OBJECT_TYPE_EXTENSION) {
               if (this.operationTypeNames.has(extensionTypeName)) {
                 extensionContainer.fields.delete(string_constants_1.SERVICE_FIELD);
                 extensionContainer.fields.delete(string_constants_1.ENTITIES_FIELD);
               }
-              (0, utils_3.addIterableValuesToSet)(extensionContainer.fields.keys(), configurationData.fieldNames);
-              configurationDataMap.set(extensionTypeName, configurationData);
+              (0, utils_2.addNonExternalFieldsToSet)(extensionContainer.fields, configurationData.fieldNames);
             }
             const baseType = this.parents.get(extensionTypeName);
             if (!baseType) {
               if (extensionContainer.kind !== graphql_1.Kind.OBJECT_TYPE_EXTENSION) {
                 this.errors.push((0, errors_1.noBaseTypeExtensionError)(extensionTypeName));
               } else {
-                (0, utils_2.validateEntityKeys)(this, extensionTypeName, true);
                 this.validateInterfaceImplementations(extensionContainer);
                 validExtensionOrphans.add(extensionTypeName);
                 definitions.push((0, utils_2.objectLikeContainerToNode)(this, extensionContainer));
@@ -34523,12 +34874,12 @@ Received directive:
                     continue;
                   }
                   baseType.fields.set(fieldName, fieldContainer);
-                  configurationData.fieldNames.add(fieldName);
+                  if (!fieldContainer.arguments.has(string_constants_1.EXTERNAL)) {
+                    configurationData.fieldNames.add(fieldName);
+                  }
                 }
-                (0, utils_2.validateEntityKeys)(this, extensionTypeName);
                 this.mergeUniqueInterfaces(objectLikeExtension.interfaces, baseType.interfaces, extensionTypeName);
                 this.validateInterfaceImplementations(baseType);
-                configurationDataMap.set(extensionTypeName, configurationData);
                 definitions.push((0, utils_2.objectLikeContainerToNode)(this, baseType, objectLikeExtension));
                 break;
               case graphql_1.Kind.SCALAR_TYPE_DEFINITION:
@@ -34556,35 +34907,27 @@ Received directive:
                 break;
               case graphql_1.Kind.INTERFACE_TYPE_DEFINITION:
               case graphql_1.Kind.OBJECT_TYPE_DEFINITION:
-                const entity = this.entityMap.get(parentTypeName);
+                const isEntity = this.entities.has(parentTypeName);
                 if (this.operationTypeNames.has(parentTypeName)) {
                   parentContainer.fields.delete(string_constants_1.SERVICE_FIELD);
                   parentContainer.fields.delete(string_constants_1.ENTITIES_FIELD);
                 }
                 if (this.parentsWithChildArguments.has(parentTypeName)) {
-                  const parentContainer2 = (0, utils_3.getOrThrowError)(this.parents, parentTypeName, string_constants_1.PARENTS);
-                  if (parentContainer2.kind !== graphql_1.Kind.OBJECT_TYPE_DEFINITION && parentContainer2.kind !== graphql_1.Kind.INTERFACE_TYPE_DEFINITION) {
+                  if (parentContainer.kind !== graphql_1.Kind.OBJECT_TYPE_DEFINITION && parentContainer.kind !== graphql_1.Kind.INTERFACE_TYPE_DEFINITION) {
                     continue;
                   }
-                  for (const [fieldName, fieldContainer] of parentContainer2.fields) {
+                  for (const [fieldName, fieldContainer] of parentContainer.fields) {
                     this.validateArguments(fieldContainer, `${parentTypeName}.${fieldName}`);
                   }
                 }
                 const configurationData = {
                   fieldNames: /* @__PURE__ */ new Set(),
-                  isRootNode: !!entity,
+                  isRootNode: isEntity,
                   typeName: parentTypeName
                 };
-                if (entity) {
-                  configurationData.keys = [...entity.keys()].map((selectionSet) => ({
-                    fieldName: "",
-                    selectionSet
-                  }));
-                }
-                (0, utils_3.addIterableValuesToSet)(parentContainer.fields.keys(), configurationData.fieldNames);
-                (0, utils_2.validateEntityKeys)(this, parentTypeName);
+                this.configurationDataMap.set(parentTypeName, configurationData);
+                (0, utils_2.addNonExternalFieldsToSet)(parentContainer.fields, configurationData.fieldNames);
                 this.validateInterfaceImplementations(parentContainer);
-                configurationDataMap.set(parentTypeName, configurationData);
                 definitions.push((0, utils_2.objectLikeContainerToNode)(this, parentContainer));
                 break;
               case graphql_1.Kind.SCALAR_TYPE_DEFINITION:
@@ -34617,7 +34960,7 @@ Received directive:
             if (!object && !extension) {
               continue;
             }
-            const rootNode = configurationDataMap.get(operationTypeName);
+            const rootNode = this.configurationDataMap.get(operationTypeName);
             if (rootNode) {
               rootNode.isRootNode = true;
               rootNode.typeName = defaultTypeName;
@@ -34642,13 +34985,21 @@ Received directive:
             }
           }
           for (const referencedTypeName of this.referencedTypeNames) {
-            if (this.parents.has(referencedTypeName) || this.entityMap.has(referencedTypeName)) {
+            if (this.parents.has(referencedTypeName) || this.entities.has(referencedTypeName)) {
               continue;
             }
             const extension = this.extensions.get(referencedTypeName);
             if (!extension || extension.kind !== graphql_1.Kind.OBJECT_TYPE_EXTENSION) {
               this.errors.push((0, errors_1.undefinedTypeError)(referencedTypeName));
             }
+          }
+          for (const [parentTypeName, fieldSets] of this.fieldSetsByParent) {
+            const parentContainer = this.parents.get(parentTypeName) || this.extensions.get(parentTypeName);
+            if (!parentContainer || parentContainer.kind !== graphql_1.Kind.OBJECT_TYPE_DEFINITION && parentContainer.kind != graphql_1.Kind.OBJECT_TYPE_EXTENSION) {
+              this.errors.push((0, errors_1.undefinedObjectParentError)(parentTypeName));
+              continue;
+            }
+            (0, utils_2.validateDirectivesWithFieldSet)(this, parentContainer, fieldSets);
           }
           if (this.errors.length > 0) {
             return { errors: this.errors };
@@ -34659,7 +35010,9 @@ Received directive:
           };
           return {
             normalizationResult: {
-              configurationDataMap,
+              // configurationDataMap is map of ConfigurationData per type name.
+              // It is an Intermediate configuration object that will be converted to an engine configuration in the router
+              configurationDataMap: this.configurationDataMap,
               isVersionTwo: this.isSubgraphVersionTwo,
               keyFieldsByParentTypeName: this.keyFieldsByParentTypeName,
               operationTypes: this.operationTypeNames,
@@ -39767,13 +40120,11 @@ Received directive:
           const typeName = node.name.value;
           const entity = this.entities.get(typeName);
           if (entity) {
-            (0, utils_1.extractEntityKeys)(node, entity.keys, this.errors);
             entity.subgraphs.add(this.currentSubgraphName);
             return;
           }
           this.entities.set(typeName, {
             fields: /* @__PURE__ */ new Set(),
-            keys: (0, utils_1.extractEntityKeys)(node, /* @__PURE__ */ new Set(), this.errors),
             subgraphs: /* @__PURE__ */ new Set([this.currentSubgraphName])
           });
         }
@@ -39833,6 +40184,53 @@ Received directive:
             set.add(this.currentSubgraphName);
           }
           return set;
+        }
+        upsertExtensionPersistedDirectives(extensionDirectives, baseDirectives) {
+          for (const [tagValue, tagDirectiveNode] of extensionDirectives.tags) {
+            baseDirectives.tags.set(tagValue, tagDirectiveNode);
+          }
+          for (const [directiveName, directiveNodes] of extensionDirectives.directives) {
+            const existingDirectives = baseDirectives.directives.get(directiveName);
+            if (!existingDirectives) {
+              baseDirectives.directives.set(directiveName, directiveNodes);
+              continue;
+            }
+            existingDirectives.push(...directiveNodes);
+          }
+          const extensionDeprecatedDirective = extensionDirectives.deprecated.directive;
+          const extensionDeprecatedReason = extensionDirectives.deprecated.reason;
+          if (!extensionDeprecatedDirective || !extensionDeprecatedReason) {
+            return;
+          }
+          if (baseDirectives.deprecated.directive && baseDirectives.deprecated.reason && extensionDeprecatedReason.length < baseDirectives.deprecated.reason.length) {
+            return;
+          }
+          baseDirectives.deprecated.directive = extensionDeprecatedDirective;
+          baseDirectives.deprecated.reason = extensionDeprecatedReason;
+        }
+        upsertExtensionFieldArguments(extensionFieldArguments, baseFieldArguments) {
+          for (const [argumentName, extensionArgumentContainer] of extensionFieldArguments) {
+            const existingArgumentContainer = baseFieldArguments.get(argumentName);
+            if (!existingArgumentContainer) {
+              baseFieldArguments.set(argumentName, extensionArgumentContainer);
+              continue;
+            }
+            if (extensionArgumentContainer.requiredSubgraphs.size > 0) {
+              (0, utils_3.addIterableValuesToSet)(extensionArgumentContainer.requiredSubgraphs, existingArgumentContainer.requiredSubgraphs);
+            }
+            (0, utils_3.addIterableValuesToSet)(extensionArgumentContainer.subgraphs, existingArgumentContainer.subgraphs);
+            const { typeErrors, typeNode } = (0, type_merging_1.getMostRestrictiveMergedTypeNode)(existingArgumentContainer.node.type, extensionArgumentContainer.node.type, this.childName, argumentName);
+            if (typeNode) {
+              existingArgumentContainer.node.type = typeNode;
+            } else {
+              if (!typeErrors || typeErrors.length < 2) {
+                throw (0, errors_1.argumentTypeMergeFatalError)(argumentName, this.childName);
+              }
+              this.errors.push((0, errors_1.incompatibleArgumentTypesError)(argumentName, this.parentTypeName, this.childName, typeErrors[0], typeErrors[1]));
+            }
+            this.compareAndValidateArgumentDefaultValues(existingArgumentContainer, extensionArgumentContainer.node);
+            this.upsertExtensionPersistedDirectives(extensionArgumentContainer.directives, existingArgumentContainer.directives);
+          }
         }
         // TODO validation of default values
         upsertArguments(node, argumentMap) {
@@ -40126,18 +40524,14 @@ Received directive:
                   throw (0, errors_1.incompatibleParentKindFatalError)(parentTypeName, node.kind, parent.kind);
                 }
                 (0, utils_1.extractInterfaces)(node, parent.interfaces);
-                (0, utils_1.extractEntityKeys)(node, parent.entityKeys, this.errors);
                 parent.subgraphs.add(this.currentSubgraphName);
                 return;
               }
               const interfaces = /* @__PURE__ */ new Set();
               (0, utils_1.extractInterfaces)(node, interfaces);
-              const entityKeys = /* @__PURE__ */ new Set();
-              (0, utils_1.extractEntityKeys)(node, entityKeys, this.errors);
               this.parents.set(parentTypeName, {
                 directives: this.extractPersistedDirectives(node.directives || [], (0, utils_2.newPersistedDirectivesContainer)()),
                 fields: /* @__PURE__ */ new Map(),
-                entityKeys,
                 interfaces,
                 isRootType: this.isParentRootType,
                 kind: node.kind,
@@ -40178,10 +40572,8 @@ Received directive:
             return;
           }
           const interfaces = (0, utils_1.extractInterfaces)(node, /* @__PURE__ */ new Set());
-          const entityKeys = (0, utils_1.extractEntityKeys)(node, /* @__PURE__ */ new Set(), this.errors);
           this.extensions.set(this.parentTypeName, {
             directives: this.extractPersistedDirectives(node.directives || [], (0, utils_2.newPersistedDirectivesContainer)()),
-            entityKeys,
             fields: /* @__PURE__ */ new Map(),
             interfaces,
             isRootType: this.isParentRootType,
@@ -40593,7 +40985,7 @@ Received directive:
             if (concreteParentContainer.kind !== graphql_1.Kind.OBJECT_TYPE_DEFINITION) {
               throw (0, errors_1.unexpectedParentKindErrorMessage)(concreteTypeName, "Object", (0, utils_3.kindToTypeString)(concreteParentContainer.kind));
             }
-            if (!(0, utils_3.doSetsHaveAnyOverlap)(concreteParentContainer.subgraphs, parentSubgraphs)) {
+            if (!(0, utils_3.doSetsHaveAnyOverlap)(concreteParentContainer.subgraphs, rootTypeFieldData.subgraphs)) {
               continue;
             }
             const entity = this.entities.get(concreteTypeName);
@@ -40618,6 +41010,7 @@ Received directive:
             this.addValidExecutableDirectiveDefinition(directiveName, directiveContainer, definitions);
           }
           for (const [typeName, extension] of this.extensions) {
+            this.parentTypeName = typeName;
             if (extension.isRootType && !this.parents.has(typeName)) {
               this.upsertParentNode((0, ast_1.objectTypeExtensionNodeToMutableDefinitionNode)(extension.node));
             }
@@ -40629,6 +41022,7 @@ Received directive:
             if (baseObject.kind !== graphql_1.Kind.OBJECT_TYPE_DEFINITION) {
               throw (0, errors_1.incompatibleParentKindFatalError)(typeName, graphql_1.Kind.OBJECT_TYPE_DEFINITION, baseObject.kind);
             }
+            this.upsertExtensionPersistedDirectives(extension.directives, baseObject.directives);
             for (const [extensionFieldName, extensionFieldContainer] of extension.fields) {
               const baseFieldContainer = baseObject.fields.get(extensionFieldName);
               if (!baseFieldContainer) {
@@ -40636,6 +41030,8 @@ Received directive:
                 continue;
               }
               if (baseFieldContainer.isShareable && extensionFieldContainer.isShareable) {
+                this.childName = extensionFieldName;
+                this.upsertExtensionFieldArguments(extensionFieldContainer.arguments, baseFieldContainer.arguments);
                 (0, utils_1.setLongestDescriptionForNode)(baseFieldContainer.node, extensionFieldContainer.node.description);
                 (0, utils_3.addIterableValuesToSet)(extensionFieldContainer.subgraphs, baseFieldContainer.subgraphs);
                 continue;
@@ -40728,7 +41124,9 @@ Received directive:
                 }
                 break;
               case graphql_1.Kind.SCALAR_TYPE_DEFINITION:
-                definitions.push((0, utils_1.pushPersistedDirectivesAndGetNode)(parentContainer));
+                if (!constants_1.BASE_SCALARS.has(parentTypeName)) {
+                  definitions.push((0, utils_1.pushPersistedDirectivesAndGetNode)(parentContainer));
+                }
                 break;
               case graphql_1.Kind.UNION_TYPE_DEFINITION:
                 const types = [];

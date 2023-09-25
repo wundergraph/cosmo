@@ -32,7 +32,8 @@ jobs:
         run: pnpm buf generate --template buf.ts.gen.yaml
 
       - name: Generate code to be embedded in Go library
-        run: pnpm --filter='@wundergraph/composition' build && cd composition-go && ./generate.sh
+        run: ./generate.sh
+        working-directory:  composition-go
 
       - name: Check if git is not dirty after generating files
         run: git diff --no-ext-diff --exit-code

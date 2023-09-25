@@ -1,5 +1,5 @@
 {
-  "name": "shim",
+  "name": "@wundergraph/composition-shim",
   "version": "1.0.0",
   "description": "",
   "main": "./dist/index.js",
@@ -8,7 +8,8 @@
     "dist"
   ],
   "scripts": {
-    "dev": "tsc --watch"
+    "dev": "tsc --watch",
+    "build": "tsup"
   },
   "keywords": [],
   "author": "",
