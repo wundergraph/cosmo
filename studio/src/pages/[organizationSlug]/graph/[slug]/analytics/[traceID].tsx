@@ -12,6 +12,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/router";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { getTrace } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+import { AnalyticsToolbar } from "@/components/analytics/toolbar";
+import { CopyButton } from "@/components/ui/copy-button";
 
 const TracePage: NextPageWithLayout = () => {
   const { query } = useRouter();
@@ -25,12 +27,10 @@ const TracePage: NextPageWithLayout = () => {
     refetchInterval: 10000,
   });
 
-  let content;
-
   if (isLoading) {
-    content = <Loader fullscreen />;
+    return <Loader fullscreen />;
   } else if (error || data?.response?.code !== EnumStatusCode.OK) {
-    content = (
+    return (
       <EmptyState
         className="order-2 h-72 border lg:order-last"
         icon={<ExclamationTriangleIcon />}
@@ -41,32 +41,46 @@ const TracePage: NextPageWithLayout = () => {
         actions={<Button onClick={() => refetch()}>Retry</Button>}
       />
     );
-  } else {
-    content = (
-      <div>
-        <Trace spans={data.spans} />
-        <div className="scrollbar-custom !mt-6 max-h-96 overflow-auto rounded border">
-          <SchemaViewer
-            sdl={data.spans[0].attributes?.operationContent ?? ""}
-            disableLinking
-          />
-        </div>
-      </div>
-    );
   }
 
   return (
-    <PageHeader title="Analytics | Trace">
-      <TitleLayout
-        title="Trace"
-        subtitle={`Detailed trace view for ${traceID}`}
-      >
-        {content}
-      </TitleLayout>
-    </PageHeader>
+    <div>
+      <Trace spans={data.spans} />
+      <div className="scrollbar-custom !mt-6 max-h-96 overflow-auto rounded border">
+        <SchemaViewer
+          sdl={data.spans[0].attributes?.operationContent ?? ""}
+          disableLinking
+        />
+      </div>
+    </div>
   );
 };
 
-TracePage.getLayout = getGraphLayout;
+const TraceToolbar = () => {
+  const router = useRouter();
+  return (
+    <AnalyticsToolbar tab="traces">
+      <span className="text-muted-foreground">/</span>{" "}
+      <span className="text-sm">{router.query.traceID}</span>
+      <CopyButton
+        tooltip="Copy trace id"
+        value={router.query.traceID?.toString() || ""}
+      />
+    </AnalyticsToolbar>
+  );
+};
+
+TracePage.getLayout = (page) =>
+  getGraphLayout(
+    <PageHeader title="Analytics | Trace">
+      <TitleLayout
+        title="Analytics"
+        subtitle="Comprehensive view into Federated GraphQL Performance"
+        toolbar={<TraceToolbar />}
+      >
+        {page}
+      </TitleLayout>
+    </PageHeader>
+  );
 
 export default TracePage;

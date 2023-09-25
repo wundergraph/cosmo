@@ -211,6 +211,7 @@ export default async function build(opts: BuildConfig) {
       chClient: fastify.ch,
       authenticator,
       keycloakClient,
+      prometheus: prometheusClient,
       platformWebhooks,
     }),
     logLevel: opts.logger.level as pino.LevelWithSilent,
