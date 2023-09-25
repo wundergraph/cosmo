@@ -62,7 +62,7 @@ export const viewOptions: { label: string; value: TimeSetting }[] = [
 
 export const useChartData = (
   timeRange: number,
-  rawData: any[],
+  rawData: { timestamp: number | string | Date }[],
   timeSetting: TimeSetting | undefined = "local"
 ) => {
   let suffix = "h";
@@ -75,9 +75,19 @@ export const useChartData = (
     timeDifference = differenceInDays;
   }
 
-  const data = rawData.map((t) => ({
+  const data = rawData.map((t: any) => ({
     ...t,
-    timestamp: new Date(t.timestamp).getTime(),
+    value: Number.parseFloat(t.value) || 0,
+    previousValue: Number.parseFloat(t.previousValue) || 0,
+    // @todo different timestamp formats are used throughout the app, so this is a bit of a mess
+    timestamp:
+      t.timestamp instanceof Date ||
+      (typeof t.timestamp === "string" &&
+        t.timestamp.match(/^(\d{4})-([0-1]\d)-([0-3]\d)/))
+        ? new Date(t.timestamp).getTime()
+        : typeof t.timestamp === "string"
+        ? Number.parseInt(t.timestamp)
+        : t.timestamp,
   }));
 
   const ticks = data.map((d) => d.timestamp);
