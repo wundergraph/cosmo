@@ -1,6 +1,6 @@
 import useWindowSize from "@/hooks/use-window-size";
 import { dateFormatter, useChartData } from "@/lib/insights-helpers";
-import { formatNumber } from "@/lib/utils";
+import { cn, formatNumber } from "@/lib/utils";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { useQuery } from "@tanstack/react-query";
 import { getDashboardAnalyticsView } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
@@ -14,7 +14,6 @@ import {
   AreaChart,
   CartesianGrid,
   ResponsiveContainer,
-  Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
@@ -27,22 +26,9 @@ import { Separator } from "./ui/separator";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { useRouter } from "next/router";
 import { constructAnalyticsTableQueryState } from "./analytics/constructAnalyticsTableQueryState";
+import { ChartTooltip, CustomTooltip } from "./analytics/charts";
 
 const valueFormatter = (number: number) => `${formatNumber(number)}`;
-
-const CustomTooltip = ({ active, payload, label, valueLabel }: any) => {
-  if (active && payload && payload.length) {
-    return (
-      <div className="rounded-md border border-popover bg-popover p-2 text-sm shadow-md outline-0 backdrop-blur-lg">
-        <div className="label">{label}</div>
-        <div className="intro">
-          {valueLabel || payload[0].name}: {payload[0].value}
-        </div>
-      </div>
-    );
-  }
-  return null;
-};
 
 const RequestChart = ({
   requestSeries,
@@ -134,40 +120,34 @@ const RequestChart = ({
             hide={isMobile}
           />
           <CartesianGrid strokeDasharray="3 3" className="stroke-secondary" />
-          <Tooltip
-            cursor={false}
+
+          <ChartTooltip
             content={(props) => {
               return (
-                <CustomTooltip
-                  valueLabel="Total"
-                  {...props}
-                  label={
-                    <div>
-                      {dateFormatter(props.label, false)}
-                      <p>
-                        Success:{" "}
-                        {props.payload?.[0]?.payload?.totalRequests
-                          ? props.payload?.[0]?.payload?.totalRequests -
-                              props.payload?.[0]?.payload?.erroredRequests ?? 0
-                          : 0}
-                      </p>
-                      <p>
-                        Error:{" "}
-                        {props.payload?.[0]?.payload?.erroredRequests ?? 0}
-                      </p>
-                    </div>
-                  }
-                />
+                <div className={cn(props.wrapperClassName, "space-y-2")}>
+                  <p>{dateFormatter(props.label, false)}</p>
+                  <p className="text-success">
+                    Success:{" "}
+                    {props.payload?.[0]?.payload?.totalRequests
+                      ? props.payload?.[0]?.payload?.totalRequests -
+                          props.payload?.[0]?.payload?.erroredRequests ?? 0
+                      : 0}
+                  </p>
+                  <p className="text-destructive">
+                    Errors: {props.payload?.[0]?.payload?.erroredRequests ?? 0}
+                  </p>
+                </div>
               );
             }}
-            wrapperStyle={{ border: 0, background: "none", outline: "none" }}
           />
           <Area
+            name="Total requests"
             type="monotone"
             dataKey="totalRequests"
             fill={`url(#${color1})`}
           />
           <Area
+            name="Errors"
             type="monotone"
             dataKey="erroredRequests"
             stroke="#ef4444"
