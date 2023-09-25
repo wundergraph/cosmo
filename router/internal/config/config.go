@@ -102,7 +102,8 @@ type BackoffJitterRetry struct {
 
 type HeaderRules struct {
 	// All is a set of rules that apply to all requests
-	All GlobalHeaderRule `yaml:"all"`
+	All       GlobalHeaderRule            `yaml:"all"`
+	Subgraphs map[string]GlobalHeaderRule `yaml:"subgraphs"`
 }
 
 type GlobalHeaderRule struct {
