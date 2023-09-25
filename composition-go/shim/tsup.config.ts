@@ -1,9 +1,9 @@
 import type { Options } from 'tsup';
-import { polyfillNode } from "esbuild-plugin-polyfill-node";
+import { polyfillNode } from 'esbuild-plugin-polyfill-node';
 
 export const tsup: Options = {
   splitting: false,
-  clean: true, 
+  clean: true,
   dts: true,
   globalName: 'shim',
   format: ['iife'],
