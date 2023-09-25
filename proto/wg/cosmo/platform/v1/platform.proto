@@ -636,6 +636,60 @@ message LeaveOrganizationResponse {
   Response response = 1;
 }
 
+/**
+ * MetricsDashboard
+ */
+ message GetMetricsDashboardRequest {
+  string federatedGraphName = 1;
+  int32 range = 2;
+}
+
+message GetMetricsDashboardResponse {
+  Response response = 1;
+  MetricsDashboardMetric requests = 2;
+  MetricsDashboardMetric latency = 3;
+  MetricsDashboardMetric errors = 4;
+  optional string json = 5;
+}
+
+message MetricsDashboardMetric {
+  string value = 1;
+  optional string previousValue = 2;
+  repeated MetricsTopItem top = 3;
+  repeated MetricsSeriesItem series = 4;
+}
+
+message MetricsTopItem {
+  string name = 1;
+  string value = 2;
+}
+
+message MetricsSeriesItem {
+  string timestamp = 1;
+  string value = 2;
+  optional string previousValue = 3;
+}
+
+message MetricsDashboard {
+  string name = 1;
+  string title = 2;
+  string type = 3;
+  optional Unit unit = 4;
+  optional bool is_hidden = 5;
+  optional bool is_cta = 6;
+}
+
+message GetMetricsErrorRateRequest {
+  string federatedGraphName = 1;
+  int32 range = 2;
+}
+
+message GetMetricsErrorRateResponse {
+  Response response = 1;
+  repeated MetricsSeriesItem series = 2;
+  repeated MetricsSeriesItem errorSeries = 3;
+}
+
 service PlatformService {
   // CreateFederatedGraph creates a federated graph on the control plane.
   rpc CreateFederatedGraph(CreateFederatedGraphRequest) returns (CreateFederatedGraphResponse) {}
@@ -723,4 +777,12 @@ service PlatformService {
   }
 
   rpc GetTrace(GetTraceRequest) returns (GetTraceResponse) {}
+
+  rpc GetMetricsDashboard(GetMetricsDashboardRequest) returns (GetMetricsDashboardResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
+  rpc GetMetricsErrorRate(GetMetricsErrorRateRequest) returns (GetMetricsErrorRateResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
 }
