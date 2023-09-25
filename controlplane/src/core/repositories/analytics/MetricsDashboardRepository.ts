@@ -255,7 +255,7 @@ export class MetricsDashboardRepository {
         series: this.mapSeries(
           endDate,
           range,
-          seriesResponse.data?.result[0].values,
+          seriesResponse.data?.result[0]?.values,
           prevSeriesResponse.data?.result[0]?.values,
         ),
       },
@@ -326,7 +326,7 @@ export class MetricsDashboardRepository {
         series: this.mapSeries(
           endDate,
           range,
-          seriesResponse.data?.result[0].values,
+          seriesResponse.data?.result[0]?.values,
           prevSeriesResponse.data?.result[0]?.values,
         ),
       },
@@ -372,8 +372,8 @@ export class MetricsDashboardRepository {
 
     return {
       data: {
-        series: this.mapSeries(endDate, range, requestRateResponse.data?.result[0].values),
-        errorSeries: this.mapSeries(endDate, range, errorRateResponse.data?.result[0].values),
+        series: this.mapSeries(endDate, range, requestRateResponse.data?.result[0]?.values),
+        errorSeries: this.mapSeries(endDate, range, errorRateResponse.data?.result[0]?.values),
       },
       errors: responses.filter((r) => r.error),
     };
