@@ -198,6 +198,7 @@ func LoadConfig(envOverride string) (*Config, error) {
 
 	// Custom config path can only be supported through environment variable
 	configBytes, err := os.ReadFile(c.ConfigPath)
+
 	if err != nil {
 		if configPathOverride {
 			return nil, fmt.Errorf("could not read custom config file %s: %w", c.ConfigPath, err)
@@ -208,9 +209,10 @@ func LoadConfig(envOverride string) (*Config, error) {
 			)
 		}
 	}
+	expandedConfigBytes := []byte(os.ExpandEnv(string(configBytes)))
 
 	if err == nil {
-		if err := yaml.Unmarshal(configBytes, &c); err != nil {
+		if err := yaml.Unmarshal(expandedConfigBytes, &c); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal router config: %w", err)
 		}
 	}
