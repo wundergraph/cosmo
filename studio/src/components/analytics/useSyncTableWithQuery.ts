@@ -87,8 +87,8 @@ export const useSyncTableWithQuery = <T>({
         router.query.dateRange !== stringifiedDateRange
       ) {
         let dateRangeObjectISO = {
-          from: formatISO(startOfDay(subDays(new Date(), 30))),
-          to: formatISO(endOfDay(new Date())),
+          start: formatISO(startOfDay(subDays(new Date(), 30))),
+          end: formatISO(endOfDay(new Date())),
         };
 
         try {
@@ -97,12 +97,14 @@ export const useSyncTableWithQuery = <T>({
           console.error(e);
         }
 
-        const dateRangeObject = {
-          from: new Date(dateRangeObjectISO.from),
-          to: new Date(dateRangeObjectISO.to),
-        };
+        // using the same (start/end) terminology here as in the api
+        const start = new Date(dateRangeObjectISO.start);
+        const end = new Date(dateRangeObjectISO.end);
 
-        setDateRange(dateRangeObject);
+        setDateRange({
+          from: start,
+          to: end,
+        });
       }
 
       if (
