@@ -1,4 +1,4 @@
-//go:build v8
+//go:build wg_composition_v8
 
 package composition
 
