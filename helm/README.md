@@ -80,3 +80,11 @@ export COSMO_API_KEY="cosmo_669b576aaadc10ee1ae81d9193425705"
 export COSMO_API_URL="http://controlplane.wundergraph.local"
 npx wgc -h
 ```
+
+## Minikube
+
+Enable ingress addon before deploying the Helm chart:
+
+```shell
+minikube addons enable ingress
+```
