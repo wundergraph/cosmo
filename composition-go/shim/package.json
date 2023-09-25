@@ -1,0 +1,27 @@
+{
+  "name": "@wundergraph/composition-shim",
+  "version": "1.0.0",
+  "description": "",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "dev": "tsc --watch",
+    "build": "tsup"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@wundergraph/composition": "workspace:*",
+    "graphql": "^16.7.1"
+  },
+  "devDependencies": {
+    "esbuild-plugin-polyfill-node": "^0.3.0",
+    "tsup": "^7.2.0",
+    "typescript": "^5.1.3"
+  }
+}

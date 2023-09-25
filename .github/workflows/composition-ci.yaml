@@ -3,7 +3,9 @@ on:
   pull_request:
     branches:
       - main
+    paths:
       - "composition/**/*"
+      - composition-go/**/*"
       - ".github/workflows/composition-ci.yaml"
 
 concurrency:
@@ -23,11 +25,17 @@ jobs:
 
       - uses: ./.github/actions/node
 
+      - uses: ./.github/actions/go
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
       - name: Generate code
         run: pnpm buf generate --template buf.ts.gen.yaml
+
+      - name: Generate code to be embedded in Go library
+        run: ./generate.sh
+        working-directory: composition-go
 
       - name: Check if git is not dirty after generating files
         run: git diff --no-ext-diff --exit-code
@@ -37,3 +45,11 @@ jobs:
 
       - name: Test
         run: pnpm run --filter composition test
+
+      - name: Test Go library
+        run: go test
+        working-directory: composition-go
+
+      - name: Test Go library with V8
+        run: go test -tags wg_composition_v8
+        working-directory: composition-go
