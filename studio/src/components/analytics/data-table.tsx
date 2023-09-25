@@ -208,8 +208,8 @@ export function AnalyticsDataTable<T>({
 
   const onDateRangeChange = (val: DateRange) => {
     const stringifiedDateRange = JSON.stringify({
-      from: formatISO(val.from as Date),
-      to: formatISO((val.to as Date) ?? (val.from as Date)),
+      start: formatISO(val.from as Date),
+      end: formatISO((val.to as Date) ?? (val.from as Date)),
     });
 
     applyNewParams({

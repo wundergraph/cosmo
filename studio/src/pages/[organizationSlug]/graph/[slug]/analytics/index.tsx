@@ -1,5 +1,8 @@
 import BarList from "@/components/analytics/barlist";
-import { constructAnalyticsTableQueryState } from "@/components/analytics/constructAnalyticsTableQueryState";
+import {
+  constructAnalyticsTableQueryState,
+  createFilterState,
+} from "@/components/analytics/constructAnalyticsTableQueryState";
 import { AnalyticsToolbar } from "@/components/analytics/toolbar";
 import { EmptyState } from "@/components/empty-state";
 import { getGraphLayout, GraphContext } from "@/components/layout/graph-layout";
@@ -42,6 +45,7 @@ import {
 import { ChartTooltip } from "@/components/analytics/charts";
 import { InfoTooltip } from "@/components/info-tooltip";
 import useWindowSize from "@/hooks/use-window-size";
+import { endOfDay, formatISO, startOfDay, subDays, subHours } from "date-fns";
 
 export type OperationAnalytics = {
   name: string;
@@ -67,15 +71,22 @@ const useRange = () => {
   }
 };
 
+const createDateRange = (range: number) => {
+  return JSON.stringify({
+    start: formatISO(startOfDay(subHours(new Date(), range))),
+    end: formatISO(endOfDay(new Date())),
+  });
+};
+
 const getInfoTip = (range: number) => {
   switch (range) {
     case 72:
-      return "3 day  median";
+      return "3 day average";
     case 168:
-      return "1 week median";
+      return "1 week average";
     case 24:
     default:
-      return "24 hour median";
+      return "24 hour average";
   }
 };
 
@@ -177,7 +188,7 @@ const RequestMetricsCard = (props: { data?: MetricsDashboardMetric }) => {
   const previousValue = Number.parseInt(data?.previousValue || "0");
 
   const formatter = (value: number) =>
-    Intl.NumberFormat("us").format(value).toString();
+    Intl.NumberFormat("us").format(value).toString() + " RPM";
 
   return (
     <Card className="bg-transparent">
@@ -185,10 +196,9 @@ const RequestMetricsCard = (props: { data?: MetricsDashboardMetric }) => {
         <div className="flex-1">
           <div className="flex space-x-2 text-sm text-muted-foreground">
             <h4>Request Rate</h4>
-            <InfoTooltip>{getInfoTip(range)}</InfoTooltip>
           </div>
 
-          <p className="text-xl font-semibold">{formatter(value)} RPM</p>
+          <p className="text-xl font-semibold">{formatter(value)}</p>
         </div>
 
         <Change value={value} previousValue={previousValue} invert />
@@ -201,15 +211,26 @@ const RequestMetricsCard = (props: { data?: MetricsDashboardMetric }) => {
         />
       </CardContent>
       <CardContent className="pt-6">
-        <h5 className="mb-2 px-2 text-sm font-medium">Highest RPM</h5>
+        <div className="mb-2 flex space-x-2 px-2 text-sm">
+          <h5 className=" text-sm font-medium">Highest RPM</h5>
+          <InfoTooltip>{getInfoTip(range)}</InfoTooltip>
+        </div>
         <BarList
           data={top.map((row) => ({
             ...row,
             value: Number.parseInt(row.value ?? "0"),
             name: row.name === "" ? "unknown" : row.name,
-            href: `${router.asPath}/traces${constructAnalyticsTableQueryState({
-              operationName: row.name === "" ? "unknown" : row.name,
-            })}`,
+            href: {
+              pathname: `${router.pathname}/traces`,
+              query: {
+                organizationSlug: router.query.organizationSlug,
+                slug: router.query.slug,
+                filterState: createFilterState({
+                  operationName: row.name === "" ? "unknown" : row.name,
+                }),
+                dateRange: createDateRange(range),
+              },
+            },
           }))}
           valueFormatter={formatter}
           rowHeight={4}
@@ -231,7 +252,7 @@ const LatencyMetricsCard = (props: { data?: MetricsDashboardMetric }) => {
   const previousValue = Number.parseInt(data?.previousValue || "0");
 
   const formatter = (value: number) =>
-    Intl.NumberFormat("us").format(value).toString();
+    Intl.NumberFormat("us").format(value).toString() + " ms";
 
   return (
     <Card className="bg-transparent">
@@ -239,9 +260,8 @@ const LatencyMetricsCard = (props: { data?: MetricsDashboardMetric }) => {
         <div className="flex-1">
           <div className="flex space-x-2 text-sm text-muted-foreground">
             <h4>P95 Latency</h4>
-            <InfoTooltip>{getInfoTip(range)}</InfoTooltip>
           </div>
-          <p className="text-xl font-semibold">{formatter(value)} ms</p>
+          <p className="text-xl font-semibold">{formatter(value)}</p>
         </div>
 
         <Change value={value} previousValue={previousValue} />
@@ -254,15 +274,26 @@ const LatencyMetricsCard = (props: { data?: MetricsDashboardMetric }) => {
         />
       </CardContent>
       <CardContent className="pt-6">
-        <h5 className="mb-2 px-2 text-sm font-medium">Highest latency</h5>
+        <div className="mb-2 flex space-x-2 px-2 text-sm">
+          <h5 className="text-sm font-medium">Highest latency</h5>
+          <InfoTooltip>{getInfoTip(range)}</InfoTooltip>
+        </div>
         <BarList
           data={top.map((row) => ({
             ...row,
             name: row.name === "" ? "unknown" : row.name,
             value: Number.parseInt(row.value ?? "0"),
-            href: `${router.asPath}/traces${constructAnalyticsTableQueryState({
-              operationName: row.name === "" ? "unknown" : row.name,
-            })}`,
+            href: {
+              pathname: `${router.pathname}/traces`,
+              query: {
+                organizationSlug: router.query.organizationSlug,
+                slug: router.query.slug,
+                filterState: createFilterState({
+                  operationName: row.name === "" ? "unknown" : row.name,
+                }),
+                dateRange: createDateRange(range),
+              },
+            },
           }))}
           valueFormatter={formatter}
           rowHeight={4}
@@ -296,7 +327,6 @@ const ErrorMetricsCard = (props: { data?: MetricsDashboardMetric }) => {
         <div className="flex-1">
           <div className="flex space-x-2 text-sm text-muted-foreground">
             <h4>Error Percentage</h4>
-            <InfoTooltip>{getInfoTip(range)}</InfoTooltip>
           </div>
           <p className="text-xl font-semibold">{formatter(value)}</p>
         </div>
@@ -311,17 +341,26 @@ const ErrorMetricsCard = (props: { data?: MetricsDashboardMetric }) => {
         />
       </CardContent>
       <CardContent className="pt-6">
-        <h5 className="mb-2 px-2 text-sm font-medium">
-          Highest error percentage
-        </h5>
+        <div className="mb-2 flex space-x-2 px-2 text-sm">
+          <h5 className="text-sm font-medium">Highest error precentage</h5>
+          <InfoTooltip>{getInfoTip(range)}</InfoTooltip>
+        </div>
         <BarList
           data={top.map((row) => ({
             ...row,
             name: row.name === "" ? "unknown" : row.name,
             value: Number.parseFloat(row.value ?? "0"),
-            href: `${router.asPath}/traces${constructAnalyticsTableQueryState({
-              operationName: row.name === "" ? "unknown" : row.name,
-            })}`,
+            href: {
+              pathname: `${router.pathname}/traces`,
+              query: {
+                organizationSlug: router.query.organizationSlug,
+                slug: router.query.slug,
+                filterState: createFilterState({
+                  operationName: row.name === "" ? "unknown" : row.name,
+                }),
+                dateRange: createDateRange(range),
+              },
+            },
           }))}
           valueFormatter={formatter}
           rowHeight={4}
@@ -509,12 +548,18 @@ const ErrorRateOverTimeCard = () => {
 
   const { data, ticks, domain, timeFormatter } = useChartData(
     range,
-    responseData?.series ?? []
+    (responseData?.series ?? []).map((s) => ({
+      ...s,
+      value: Number.parseInt(s.value),
+    }))
   );
 
   const { data: errorData } = useChartData(
     range,
-    responseData?.errorSeries ?? []
+    (responseData?.errorSeries ?? []).map((s) => ({
+      ...s,
+      value: Number.parseInt(s.value),
+    }))
   );
 
   let content;

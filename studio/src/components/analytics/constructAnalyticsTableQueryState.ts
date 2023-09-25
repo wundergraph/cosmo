@@ -1,6 +1,16 @@
 import { AnalyticsViewFilterOperator } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 
-export const constructAnalyticsTableQueryState = ({
+export const constructAnalyticsTableQueryState = (state: {
+  operationName?: string;
+}) => {
+  const filterState = createFilterState(state);
+
+  const filterQuery = `?filterState=${encodeURIComponent(filterState)}`;
+
+  return filterQuery;
+};
+
+export const createFilterState = ({
   operationName,
 }: {
   operationName?: string;
@@ -21,9 +31,5 @@ export const constructAnalyticsTableQueryState = ({
     });
   }
 
-  const filterQuery = `?filterState=${encodeURIComponent(
-    JSON.stringify(filterState)
-  )}`;
-
-  return filterQuery;
+  return JSON.stringify(filterState);
 };
