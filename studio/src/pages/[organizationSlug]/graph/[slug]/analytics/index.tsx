@@ -41,6 +41,7 @@ import {
 } from "recharts";
 import { ChartTooltip } from "@/components/analytics/charts";
 import { InfoTooltip } from "@/components/info-tooltip";
+import useWindowSize from "@/hooks/use-window-size";
 
 export type OperationAnalytics = {
   name: string;
@@ -112,7 +113,7 @@ const AnalyticsPage: NextPageWithLayout = () => {
 
   return (
     <div className="w-full space-y-4">
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid gap-4 lg:grid-cols-3">
         <RequestMetricsCard data={data?.requests} />
         <LatencyMetricsCard data={data?.latency} />
         <ErrorMetricsCard data={data?.errors} />
@@ -489,6 +490,8 @@ const ErrorRateOverTimeCard = () => {
   const range = useRange();
   const graphContext = useContext(GraphContext);
 
+  const { isMobile } = useWindowSize();
+
   let {
     data: responseData,
     isLoading,
@@ -581,6 +584,7 @@ const ErrorRateOverTimeCard = () => {
           />
 
           <YAxis
+            hide={isMobile}
             tick={{ fill: "hsl(var(--muted-foreground))", fontSize: "13px" }}
           />
 
