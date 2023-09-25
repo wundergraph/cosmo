@@ -27,6 +27,7 @@ import {
   GetFederatedGraphChangelogResponse,
   GetFederatedGraphSDLByNameResponse,
   GetFederatedGraphsResponse,
+  GetMetricsDashboardResponse,
   GetOrganizationMembersResponse,
   GetOrganizationWebhookConfigsResponse,
   GetSubgraphByNameResponse,
@@ -62,6 +63,7 @@ import { TraceRepository } from '../repositories/analytics/TraceRepository.js';
 import type { RouterOptions } from '../routes.js';
 import { ApiKeyGenerator } from '../services/ApiGenerator.js';
 import ApolloMigrator from '../services/ApolloMigrator.js';
+import { MetricsDashboardRepository } from '../repositories/analytics/MetricsDashboardRepository.js';
 import { handleError, isValidLabelMatchers, isValidLabels } from '../util.js';
 import { OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
 
@@ -1229,6 +1231,104 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           },
           mostRequestedOperations,
           requestSeries,
+        };
+      });
+    },
+
+    getMetricsDashboard: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetMetricsDashboardResponse>>(logger, async () => {
+        if (!opts.chClient) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_ANALYTICS_DISABLED,
+            },
+          };
+        }
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const repo = new MetricsDashboardRepository(opts.prometheus);
+        const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+
+        const graph = await fedGraphRepo.byName(req.federatedGraphName);
+        if (!graph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Federated graph '${req.federatedGraphName}' not found`,
+            },
+          };
+        }
+
+        const params = {
+          range: req.range,
+          params: {
+            organizationId: authContext.organizationId,
+            graphId: graph.id,
+            graphName: req.federatedGraphName,
+          },
+        };
+
+        const requests = await repo.getRequestRateMetrics(params);
+        const latency = await repo.getLatencyMetrics(params);
+        const errors = await repo.getErrorMetrics(params);
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          requests: requests.data,
+          latency: latency.data,
+          errors: errors.data,
+        };
+      });
+    },
+
+    getMetricsErrorRate: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetMetricsDashboardResponse>>(logger, async () => {
+        if (!opts.chClient) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_ANALYTICS_DISABLED,
+            },
+          };
+        }
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const repo = new MetricsDashboardRepository(opts.prometheus);
+        const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+
+        const graph = await fedGraphRepo.byName(req.federatedGraphName);
+        if (!graph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Federated graph '${req.federatedGraphName}' not found`,
+            },
+          };
+        }
+
+        const metrics = await repo.getErrorRateMetrics({
+          range: req.range,
+          params: {
+            organizationId: authContext.organizationId,
+            graphId: graph.id,
+            graphName: req.federatedGraphName,
+          },
+        });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          ...metrics.data,
         };
       });
     },

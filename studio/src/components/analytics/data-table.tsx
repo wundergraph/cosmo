@@ -50,6 +50,7 @@ import { DataTablePrimaryFilterMenu } from "./data-table-primary-filter-menu";
 import { getColumnData } from "./getColumnData";
 import { getDataTableFilters } from "./getDataTableFilters";
 import { useSyncTableWithQuery } from "./useSyncTableWithQuery";
+import { useSessionStorage } from "@/hooks/use-session-storage";
 
 export const refreshIntervals = [
   {
@@ -74,7 +75,7 @@ export const refreshIntervals = [
   },
 ];
 
-export function DataTable<T>({
+export function AnalyticsDataTable<T>({
   data,
   columnsList,
   filters,
@@ -92,6 +93,8 @@ export function DataTable<T>({
   refresh: () => void;
 }) {
   const router = useRouter();
+
+  const [, setRouteCache] = useSessionStorage("analytics.route", router.asPath);
 
   const [refreshInterval, setRefreshInterval] = useState(refreshIntervals[0]);
 
@@ -267,6 +270,10 @@ export function DataTable<T>({
       case AnalyticsViewGroupName.None: {
         const { slug } = router.query;
         const { organizationSlug } = router.query;
+
+        // Save the current route in sessionStorage so we can go back to it
+        setRouteCache(router.asPath);
+
         router.push(
           `/${organizationSlug}/graph/${slug}/analytics/${row.getValue(
             "traceId"
