@@ -257,7 +257,8 @@ const ChecksPage: NextPageWithLayout = () => {
         title="Run checks using the CLI"
         description={
           <>
-            No checks found. Use the CLI tool to run one.{" "}
+            No checks found. Use the CLI tool to run one or adjust the date
+            range.{" "}
             <a
               target="_blank"
               rel="noreferrer"
@@ -269,9 +270,17 @@ const ChecksPage: NextPageWithLayout = () => {
           </>
         }
         actions={
-          <CLI
-            command={`npx wgc subgraph check users --schema users.graphql`}
-          />
+          <div className="flex w-full flex-col gap-2 rounded border border-dashed p-3 md:w-auto md:p-6">
+            <CLI
+              command={`npx wgc subgraph check users --schema users.graphql`}
+            />
+            <DatePickerWithRange
+              className="w-full text-xs"
+              align="center"
+              selectedDateRange={{ from: startDate, to: endDate }}
+              onDateRangeChange={onDateRangeChange}
+            />
+          </div>
         }
       />
     );

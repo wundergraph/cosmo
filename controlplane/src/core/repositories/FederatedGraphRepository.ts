@@ -1,5 +1,5 @@
 import { JsonValue } from '@bufbuild/protobuf';
-import { and, asc, desc, eq, exists, inArray, not, notExists, notInArray, SQL, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, exists, gt, inArray, lt, not, notExists, notInArray, SQL, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { RouterConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { CompositionError, SchemaChange } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
@@ -458,13 +458,22 @@ export class FederatedGraphRepository {
 
   public fetchFederatedGraphChangelog(
     targetId: string,
-    limit: number,
-    offset: number,
+    pagination: {
+      limit: number;
+      offset: number;
+    },
+    dateRange: {
+      start: string;
+      end: string;
+    },
   ): Promise<{ federatedGraphChangelog: FederatedGraphChangelogDTO[]; hasNextPage: boolean } | undefined> {
     return this.db.transaction<
       { federatedGraphChangelog: FederatedGraphChangelogDTO[]; hasNextPage: boolean } | undefined
     >(async (db) => {
       const federatedGraphChangelog: FederatedGraphChangelogDTO[] = [];
+
+      const { offset, limit } = pagination;
+      const { start, end } = dateRange;
 
       // Get all schema version ids which have changelogs
       const schemaVersionIds = (
@@ -473,7 +482,13 @@ export class FederatedGraphRepository {
             id: schemaVersion.id,
           })
           .from(schemaVersion)
-          .where(eq(schemaVersion.targetId, targetId))
+          .where(
+            and(
+              eq(schemaVersion.targetId, targetId),
+              gt(schemaVersion.createdAt, new Date(start)),
+              lt(schemaVersion.createdAt, new Date(end)),
+            ),
+          )
           .innerJoin(schemaVersionChangeAction, eq(schemaVersionChangeAction.schemaVersionId, schemaVersion.id))
           .orderBy(desc(schemaVersion.createdAt))
           .groupBy(schemaVersion.id)
@@ -503,7 +518,13 @@ export class FederatedGraphRepository {
         .select({ id: schemaVersion.id })
         .from(schemaVersion)
         .innerJoin(schemaVersionChangeAction, eq(schemaVersionChangeAction.schemaVersionId, schemaVersion.id))
-        .where(eq(schemaVersion.targetId, targetId))
+        .where(
+          and(
+            eq(schemaVersion.targetId, targetId),
+            gt(schemaVersion.createdAt, new Date(start)),
+            lt(schemaVersion.createdAt, new Date(end)),
+          ),
+        )
         .orderBy(desc(schemaVersion.createdAt))
         .groupBy(schemaVersion.id)
         .offset(offset + schemaVersions.length)

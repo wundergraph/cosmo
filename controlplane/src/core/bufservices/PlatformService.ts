@@ -15,8 +15,6 @@ import {
   DeleteAPIKeyResponse,
   DeleteFederatedGraphResponse,
   DeleteFederatedSubgraphResponse,
-  FederatedGraphChangelog,
-  FederatedGraphChangelogOutput,
   FixSubgraphSchemaResponse,
   GetAPIKeysResponse,
   GetAnalyticsViewResponse,
@@ -781,11 +779,11 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        if (!req.pagination) {
+        if (!req.pagination || !req.dateRange) {
           return {
             response: {
               code: EnumStatusCode.ERR,
-              details: 'Please provide pagination with limit and offset.',
+              details: 'Please provide pagination and datetange',
             },
             federatedGraphChangelogOutput: [],
             hasNextPage: false,
@@ -794,8 +792,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const result = await fedgraphRepo.fetchFederatedGraphChangelog(
           federatedGraph.targetId,
-          req.pagination.limit,
-          req.pagination.offset,
+          req.pagination,
+          req.dateRange,
         );
 
         if (!result) {

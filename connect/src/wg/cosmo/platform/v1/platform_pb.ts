@@ -2019,6 +2019,11 @@ export class GetFederatedGraphChangelogRequest extends Message<GetFederatedGraph
    */
   pagination?: Pagination;
 
+  /**
+   * @generated from field: wg.cosmo.platform.v1.DateRange date_range = 3;
+   */
+  dateRange?: DateRange;
+
   constructor(data?: PartialMessage<GetFederatedGraphChangelogRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -2029,6 +2034,7 @@ export class GetFederatedGraphChangelogRequest extends Message<GetFederatedGraph
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "pagination", kind: "message", T: Pagination },
+    { no: 3, name: "date_range", kind: "message", T: DateRange },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetFederatedGraphChangelogRequest {
@@ -2580,9 +2586,9 @@ export class Pagination extends Message<Pagination> {
  */
 export class AnalyticsConfig extends Message<AnalyticsConfig> {
   /**
-   * @generated from field: wg.cosmo.platform.v1.AnalyticsDateRange date_range = 1;
+   * @generated from field: wg.cosmo.platform.v1.DateRange date_range = 1;
    */
-  dateRange?: AnalyticsDateRange;
+  dateRange?: DateRange;
 
   /**
    * @generated from field: repeated wg.cosmo.platform.v1.AnalyticsFilter filters = 2;
@@ -2602,7 +2608,7 @@ export class AnalyticsConfig extends Message<AnalyticsConfig> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "wg.cosmo.platform.v1.AnalyticsConfig";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "date_range", kind: "message", T: AnalyticsDateRange },
+    { no: 1, name: "date_range", kind: "message", T: DateRange },
     { no: 2, name: "filters", kind: "message", T: AnalyticsFilter, repeated: true },
     { no: 3, name: "pagination", kind: "message", T: Pagination },
   ]);
@@ -2680,9 +2686,9 @@ export class AnalyticsFilter extends Message<AnalyticsFilter> {
 }
 
 /**
- * @generated from message wg.cosmo.platform.v1.AnalyticsDateRange
+ * @generated from message wg.cosmo.platform.v1.DateRange
  */
-export class AnalyticsDateRange extends Message<AnalyticsDateRange> {
+export class DateRange extends Message<DateRange> {
   /**
    * The start date of the date range in ISO 8601 format.
    *
@@ -2697,32 +2703,32 @@ export class AnalyticsDateRange extends Message<AnalyticsDateRange> {
    */
   end = "";
 
-  constructor(data?: PartialMessage<AnalyticsDateRange>) {
+  constructor(data?: PartialMessage<DateRange>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.platform.v1.AnalyticsDateRange";
+  static readonly typeName = "wg.cosmo.platform.v1.DateRange";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "start", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "end", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AnalyticsDateRange {
-    return new AnalyticsDateRange().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DateRange {
+    return new DateRange().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): AnalyticsDateRange {
-    return new AnalyticsDateRange().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DateRange {
+    return new DateRange().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): AnalyticsDateRange {
-    return new AnalyticsDateRange().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DateRange {
+    return new DateRange().fromJsonString(jsonString, options);
   }
 
-  static equals(a: AnalyticsDateRange | PlainMessage<AnalyticsDateRange> | undefined, b: AnalyticsDateRange | PlainMessage<AnalyticsDateRange> | undefined): boolean {
-    return proto3.util.equals(AnalyticsDateRange, a, b);
+  static equals(a: DateRange | PlainMessage<DateRange> | undefined, b: DateRange | PlainMessage<DateRange> | undefined): boolean {
+    return proto3.util.equals(DateRange, a, b);
   }
 }
 

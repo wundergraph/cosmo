@@ -1,6 +1,6 @@
 import { PlainMessage } from '@bufbuild/protobuf';
 import {
-  AnalyticsDateRange,
+  DateRange,
   AnalyticsFilter,
   AnalyticsViewColumn,
   AnalyticsViewFilterOperator,
@@ -145,7 +145,7 @@ export function buildCoercedFilterSqlStatement(
       dbClause: 'where' | 'having';
     }
   >,
-  dateRange?: AnalyticsDateRange,
+  dateRange?: DateRange,
 ): { whereSql: string; havingSql: string } {
   const whereFilterSqlStatement = [];
   const havingFilterSqlStatement = [];
