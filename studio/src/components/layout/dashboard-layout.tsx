@@ -3,7 +3,6 @@ import { useRouter } from "next/router";
 import { useMemo } from "react";
 import { IoKeyOutline, IoPeopleOutline } from "react-icons/io5";
 import {
-  PiGear,
   PiGraphLight,
   PiWebhooksLogo
 } from "react-icons/pi";
@@ -45,11 +44,6 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
         title: "Webhooks",
         href: basePath + "/webhooks",
         icon: <PiWebhooksLogo />,
-      },
-      {
-        title: "Settings",
-        href: basePath + "/settings",
-        icon: <PiGear />,
       },
     ];
   }, [organizationSlug]);
