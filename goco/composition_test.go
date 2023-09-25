@@ -64,35 +64,9 @@ func normalizeWhiteSpace(s string) string {
 
 func TestFederateSubgraphs(t *testing.T) {
 	const (
-		expectedAST = `
+		expectedSDL = `
 			directive @deprecated(reason: String = "No longer supported") on ARGUMENT_DEFINITION | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION
 
-			directive @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
-
-			directive @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
-
-			type Query {
-			query: Nested
-			}
-
-			type Nested {
-			nest: Nested2
-			}
-
-			type Nested2 {
-			nest: Nested3
-			}
-
-			type Nested3 {
-			nest: Nested4
-			}
-
-			type Nested4 {
-			name: String
-			age: Int
-			}
-		`
-		expectedSchema = `
 			directive @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
 
 			directive @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
@@ -121,8 +95,7 @@ func TestFederateSubgraphs(t *testing.T) {
 	)
 	federated, err := Federate(subgraphs...)
 	require.NoError(t, err)
-	assert.Equal(t, normalizeWhiteSpace(expectedAST), normalizeWhiteSpace(federated.AST))
-	assert.Equal(t, normalizeWhiteSpace(expectedSchema), normalizeWhiteSpace(federated.Schema))
+	assert.Equal(t, normalizeWhiteSpace(expectedSDL), normalizeWhiteSpace(federated.SDL))
 	assert.Len(t, federated.ArgumentConfigurations, 0)
 }
 

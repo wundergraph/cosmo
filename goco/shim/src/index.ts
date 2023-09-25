@@ -10,8 +10,7 @@ export type Subgraph = {
 
 export type FederatedGraph = {
     argumentConfigurations: ArgumentConfigurationData[];
-    ast: string;
-    schema: string;
+    sdl: string;
 }
 
 export function federateSubgraphs(subgraphs: Subgraph[]): FederatedGraph {
@@ -33,7 +32,6 @@ export function federateSubgraphs(subgraphs: Subgraph[]): FederatedGraph {
     }
     return {
         argumentConfigurations: federationResult!.argumentConfigurations,
-        ast: print(federationResult!.federatedGraphAST),
-        schema: printSchema(federationResult!.federatedGraphSchema),
+        sdl: print(federationResult!.federatedGraphAST),
     }
 }

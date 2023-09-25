@@ -40941,8 +40941,7 @@ Received directive:
     }
     return {
       argumentConfigurations: federationResult.argumentConfigurations,
-      ast: print(federationResult.federatedGraphAST),
-      schema: printSchema(federationResult.federatedGraphSchema)
+      sdl: print(federationResult.federatedGraphAST)
     };
   }
   return __toCommonJS(src_exports);

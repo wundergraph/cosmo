@@ -21,8 +21,7 @@ type ArgumentConfiguration struct {
 
 type FederatedGraph struct {
 	ArgumentConfigurations []*ArgumentConfiguration `goja:"argumentConfigurations"`
-	AST                    string                   `goja:"ast"`
-	Schema                 string                   `goja:"schema"`
+	SDL                    string                   `goja:"sdl"`
 }
 
 const (

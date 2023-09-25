@@ -99,18 +99,13 @@ func (m *v8Vm) FederateSubgraphs(subgraphs []*Subgraph) (*FederatedGraph, error)
 	if err != nil {
 		return nil, err
 	}
-	ast, err := resultObject.Get("ast")
-	if err != nil {
-		return nil, err
-	}
-	schema, err := resultObject.Get("schema")
+	sdl, err := resultObject.Get("sdl")
 	if err != nil {
 		return nil, err
 	}
 	return &FederatedGraph{
 		ArgumentConfigurations: argumentConfigurations,
-		AST:                    ast.String(),
-		Schema:                 schema.String(),
+		SDL:                    sdl.String(),
 	}, nil
 }
 
