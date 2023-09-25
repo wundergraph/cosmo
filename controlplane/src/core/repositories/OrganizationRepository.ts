@@ -415,15 +415,4 @@ export class OrganizationRepository {
       .delete(organizationWebhooks)
       .where(and(eq(organizationWebhooks.id, input.id), eq(organizationWebhooks.organizationId, input.organizationId)));
   }
-
-  public async deleteOrganization(organizationID: string) {
-    await this.db.delete(organizations).where(eq(organizations.id, organizationID));
-  }
-
-  public async updateUserRole(input: { orgMemberID: string; organizationID: string; role: MemberRole }) {
-    await this.db
-      .update(organizationMemberRoles)
-      .set({ role: input.role })
-      .where(eq(organizationMemberRoles.id, input.orgMemberID));
-  }
 }
