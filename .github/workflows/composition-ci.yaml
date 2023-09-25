@@ -25,6 +25,8 @@ jobs:
 
       - uses: ./.github/actions/node
 
+      - uses: ./.github/actions/go
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
@@ -33,7 +35,7 @@ jobs:
 
       - name: Generate code to be embedded in Go library
         run: ./generate.sh
-        working-directory:  composition-go
+        working-directory: composition-go
 
       - name: Check if git is not dirty after generating files
         run: git diff --no-ext-diff --exit-code
@@ -43,3 +45,11 @@ jobs:
 
       - name: Test
         run: pnpm run --filter composition test
+
+      - name: Test Go library
+        run: go test
+        working-directory: composition-go
+
+      - name: Test Go library with V8
+        run: go test -tags wg_composition_v8
+        working-directory: composition-go
