@@ -3,7 +3,7 @@ import { fastifyConnectPlugin } from '@connectrpc/connect-fastify';
 import { cors } from '@connectrpc/connect';
 import fastifyCors from '@fastify/cors';
 import { PinoLoggerOptions } from 'fastify/types/logger.js';
-import { pino } from 'pino';
+import { pino, stdTimeFunctions } from 'pino';
 import { compressionBrotli, compressionGzip } from '@connectrpc/connect-node';
 import fastifyGracefulShutdown from 'fastify-graceful-shutdown';
 import routes from './routes.js';
@@ -74,6 +74,7 @@ const developmentLoggerOpts: PinoLoggerOptions = {
 
 export default async function build(opts: BuildConfig) {
   opts.logger = {
+    timestamp: stdTimeFunctions.isoTime,
     formatters: {
       level: (label) => {
         return {
