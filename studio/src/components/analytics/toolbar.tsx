@@ -21,7 +21,7 @@ export const AnalyticsToolbar: React.FC<{
   };
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2 px-4 py-2 lg:px-6 lg:py-4">
       <Tabs defaultValue={props.tab}>
         <TabsList>
           <TabsTrigger value="overview" asChild>
