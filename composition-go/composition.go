@@ -1,5 +1,6 @@
 //go:generate ./generate.sh
 
+// Package composition implements federation composition for GraphQL.
 package composition
 
 import (
@@ -7,6 +8,7 @@ import (
 	"sync"
 )
 
+// Subgraph represents a graph to be federated. URL is optional.
 type Subgraph struct {
 	Name   string `goja:"name"`
 	URL    string `goja:"url"`
@@ -39,6 +41,8 @@ var (
 	pool sync.Pool
 )
 
+// Federate produces a federated graphs from the schemas and names
+// of each of the subgraphs.
 func Federate(subgraphs ...*Subgraph) (*FederatedGraph, error) {
 	vm, _ := pool.Get().(*vm)
 	if vm == nil {
