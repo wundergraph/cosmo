@@ -12,9 +12,9 @@ metadata:
     kapp.k14s.io/change-rule.postgres: "upsert after upserting cosmo.apps.postgresql.wundergraph.com/deployment"
     kapp.k14s.io/change-rule.keycloak: "upsert after upserting cosmo.apps.keycloak.wundergraph.com/deployment"
 spec:
-  backoffLimit: 3
+  backoffLimit: 5
   parallelism: 1
-  ttlSecondsAfterFinished: 120
+  ttlSecondsAfterFinished: 360
   template:
     metadata:
       name: "{{ include "controlplane.fullname" . }}-seed-organization"
