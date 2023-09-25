@@ -176,6 +176,7 @@ export class OrganizationRepository {
     organizationName: string;
     organizationSlug: string;
     ownerID: string;
+    isPersonal?: boolean;
     isFreeTrial?: boolean;
   }): Promise<OrganizationDTO> {
     const insertedOrg = await this.db
@@ -185,6 +186,7 @@ export class OrganizationRepository {
         name: input.organizationName,
         slug: input.organizationSlug,
         createdBy: input.ownerID,
+        isPersonal: input.isPersonal,
         isFreeTrial: input.isFreeTrial,
       })
       .returning()

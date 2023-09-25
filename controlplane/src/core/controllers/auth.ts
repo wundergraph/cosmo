@@ -185,6 +185,7 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
             organizationSlug,
             ownerID: userId,
             isFreeTrial: true,
+            isPersonal: true,
           });
 
           const orgMember = await orgRepo.addOrganizationMember({
