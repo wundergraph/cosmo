@@ -509,12 +509,18 @@ const ErrorRateOverTimeCard = () => {
 
   const { data, ticks, domain, timeFormatter } = useChartData(
     range,
-    responseData?.series ?? []
+    (responseData?.series ?? []).map((s) => ({
+      ...s,
+      value: Number.parseInt(s.value),
+    }))
   );
 
   const { data: errorData } = useChartData(
     range,
-    responseData?.errorSeries ?? []
+    (responseData?.errorSeries ?? []).map((s) => ({
+      ...s,
+      value: Number.parseInt(s.value),
+    }))
   );
 
   let content;
