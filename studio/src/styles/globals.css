@@ -111,7 +111,7 @@
 
 @layer utilities {
   .scrollbar-custom {
-    @apply transition-colors scrollbar-thin scrollbar-thumb-gray-400 scrollbar-thumb-rounded-md hover:scrollbar-thumb-gray-500 dark:scrollbar-thumb-gray-700 dark:hover:scrollbar-thumb-gray-600;
+    @apply transition-colors scrollbar-thin scrollbar-thumb-stone-300 scrollbar-thumb-rounded-md hover:scrollbar-thumb-stone-400 dark:scrollbar-thumb-secondary dark:hover:scrollbar-thumb-muted;
   }
 }
 

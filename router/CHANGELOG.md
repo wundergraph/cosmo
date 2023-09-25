@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.20.2](https://github.com/wundergraph/cosmo/compare/router@0.20.1...router@0.20.2) (2023-09-25)
+
+### Bug Fixes
+
+* **router:** pass timeout correctly to the transport ([#111](https://github.com/wundergraph/cosmo/issues/111)) ([d234982](https://github.com/wundergraph/cosmo/commit/d234982925da122fe7bd488615255a0eb43ffbd4)) (@StarpTech)
+
 ## [0.20.1](https://github.com/wundergraph/cosmo/compare/router@0.20.0...router@0.20.1) (2023-09-22)
 
 **Note:** Version bump only for package router
