@@ -1,13 +1,14 @@
 import { cn } from "@/lib/utils";
 import React from "react";
 import Link from "next/link";
+import { Url } from "next/dist/shared/lib/router/router";
 
 type Bar = {
   key?: string;
   value: number;
   name: string;
   icon?: React.JSXElementConstructor<any>;
-  href?: string;
+  href?: Url;
   target?: string;
 };
 
@@ -116,7 +117,7 @@ const BarList = React.forwardRef<HTMLDivElement, BarListProps>((props, ref) => {
               idx === data.length - 1 ? "mb-0" : "mb-2"
             )}
           >
-            <p className={cn("text-sm text-foreground")}>
+            <p className={cn("whitespace-nowrap text-sm text-foreground")}>
               {valueFormatter(item.value)}
             </p>
           </div>
