@@ -5,7 +5,7 @@ import { createConnectTransport } from '@connectrpc/connect-node';
 import { createPromiseClient } from '@connectrpc/connect';
 import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
 import { fastifyConnectPlugin } from '@connectrpc/connect-fastify';
-import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common_pb';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { pino } from 'pino';
 
 import routes from '../src/core/routes';
@@ -19,6 +19,8 @@ import {
   seedTest,
 } from '../src/core/test-util';
 import Keycloak from '../src/core/services/Keycloak';
+import { MockPlatformWebhookService } from '../src/core/webhooks/PlatformWebhookService';
+import { MockPrometheusClient } from '../src/core/prometheus/client';
 
 let dbname = '';
 
@@ -61,6 +63,12 @@ describe('Subgraph', (ctx) => {
       adminPassword,
     });
 
+    const platformWebhooks = new MockPlatformWebhookService();
+
+    const prometheus = new MockPrometheusClient({
+      apiUrl: 'http://localhost:9090',
+    });
+
     await server.register(fastifyConnectPlugin, {
       routes: routes({
         db: server.db,
@@ -69,6 +77,8 @@ describe('Subgraph', (ctx) => {
         jwtSecret: 'secret',
         keycloakRealm: realm,
         keycloakClient,
+        platformWebhooks,
+        prometheus,
       }),
     });
 
@@ -135,6 +145,12 @@ describe('Subgraph', (ctx) => {
       adminPassword,
     });
 
+    const platformWebhooks = new MockPlatformWebhookService();
+
+    const prometheus = new MockPrometheusClient({
+      apiUrl: 'http://localhost:9090',
+    });
+
     await server.register(fastifyConnectPlugin, {
       routes: routes({
         db: server.db,
@@ -143,6 +159,8 @@ describe('Subgraph', (ctx) => {
         jwtSecret: 'secret',
         keycloakRealm: realm,
         keycloakClient,
+        platformWebhooks,
+        prometheus,
       }),
     });
 

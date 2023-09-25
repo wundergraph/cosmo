@@ -40,6 +40,7 @@ func createExporter(c *Config) (sdktrace.SpanExporter, error) {
 		opts := []otlptracehttp.Option{
 			// Includes host and port
 			otlptracehttp.WithEndpoint(u.Host),
+			otlptracehttp.WithCompression(otlptracehttp.GzipCompression),
 		}
 
 		if u.Scheme != "https" {

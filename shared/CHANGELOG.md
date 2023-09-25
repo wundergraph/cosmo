@@ -1,8 +1,40 @@
 # Change Log
-Images can be found [here](https://github.com/orgs/wundergraph/packages?repo_name=cosmo)
+Binaries are attached to the github release otherwise all images can be found [here](https://github.com/orgs/wundergraph/packages?repo_name=cosmo)
 
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
+
+## [0.8.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.8.1...@wundergraph/cosmo-shared@0.8.2) (2023-09-25)
+
+**Note:** Version bump only for package @wundergraph/cosmo-shared
+
+## [0.8.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.8.0...@wundergraph/cosmo-shared@0.8.1) (2023-09-21)
+
+**Note:** Version bump only for package @wundergraph/cosmo-shared
+
+# [0.8.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.7.3...@wundergraph/cosmo-shared@0.8.0) (2023-09-20)
+
+### Features
+
+* store subgraphs in router config ([#61](https://github.com/wundergraph/cosmo/issues/61)) ([de7b132](https://github.com/wundergraph/cosmo/commit/de7b13244755acd49c38ff1e6c537234ab506960)) (@thisisnithin)
+
+## [0.7.3](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.7.2...@wundergraph/cosmo-shared@0.7.3) (2023-09-19)
+
+**Note:** Version bump only for package @wundergraph/cosmo-shared
+
+## [0.7.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.7.1...@wundergraph/cosmo-shared@0.7.2) (2023-09-18)
+
+**Note:** Version bump only for package @wundergraph/cosmo-shared
+
+## [0.7.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.7.0...@wundergraph/cosmo-shared@0.7.1) (2023-09-16)
+
+**Note:** Version bump only for package @wundergraph/cosmo-shared
+
+# [0.7.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.6.6...@wundergraph/cosmo-shared@0.7.0) (2023-09-15)
+
+### Features
+
+* refactor FieldSet ([#71](https://github.com/wundergraph/cosmo/issues/71)) ([45224d6](https://github.com/wundergraph/cosmo/commit/45224d6b6a2d5a2689fd034947a1acd69572e9c6)) (@Aenimus)
 
 ## [0.6.6](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.6.5...@wundergraph/cosmo-shared@0.6.6) (2023-09-13)
 

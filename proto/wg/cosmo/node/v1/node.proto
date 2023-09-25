@@ -2,11 +2,18 @@ syntax = "proto3";
 
 package wg.cosmo.node.v1;
 
-import "wg/cosmo/common.proto";
+import "wg/cosmo/common/common.proto";
+
+message Subgraph {
+  string id = 1;
+  string name = 2;
+  string routing_url = 3;
+}
 
 message RouterConfig {
   EngineConfiguration engine_config = 1;
   string version = 2;
+  repeated Subgraph subgraphs = 3;
 }
 
 message Response {
@@ -23,11 +30,17 @@ message ResponseStatus {
 message GetConfigRequest {
   // The FQDN of the graph to get the config for e.g. "wg.production"
   string graph_name = 1;
+  // The version to check for. If the version is not specified, the latest router config version will be returned.
+  // Otherwise, the version will be used to check if a newer version of the router config is available.
+  // That allow us to not send the router config if the version is the same.
+  optional string version = 2;
 }
 
 message GetConfigResponse {
   Response response = 1;
+  // RouterConfig is the router config for the graph. It can be nil when a version is specified and the version is the same as the latest version.
   optional RouterConfig config = 2;
+
 }
 
 service NodeService {

@@ -1,10 +1,17 @@
 import { CompositionError } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
+import { joinLabel, normalizeURL, splitLabel } from '@wundergraph/cosmo-shared';
 import { and, asc, eq, gt, inArray, lt, notInArray, SQL, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema.js';
 import { schemaChecks, schemaVersion, subgraphs, subgraphsToFederatedGraph, targets } from '../../db/schema.js';
-import { GetChecksResponse, Label, ListFilterOptions, SchemaCheckDetailsDTO, SubgraphDTO } from '../../types/index.js';
+import {
+  FederatedGraphDTO,
+  GetChecksResponse,
+  Label,
+  ListFilterOptions,
+  SchemaCheckDetailsDTO,
+  SubgraphDTO,
+} from '../../types/index.js';
 import { updateComposedSchema } from '../composition/updateComposedSchema.js';
 import { normalizeLabels } from '../util.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
@@ -17,6 +24,7 @@ export class SubgraphRepository {
 
   public create(data: { name: string; routingUrl: string; labels: Label[] }): Promise<SubgraphDTO | undefined> {
     const uniqueLabels = normalizeLabels(data.labels);
+    const routingUrl = normalizeURL(data.routingUrl);
 
     return this.db.transaction(async (db) => {
       /**
@@ -41,7 +49,7 @@ export class SubgraphRepository {
         .insert(subgraphs)
         .values({
           targetId: insertedTarget[0].id,
-          routingUrl: data.routingUrl,
+          routingUrl,
         })
         .returning()
         .execute();
@@ -69,13 +77,20 @@ export class SubgraphRepository {
     });
   }
 
-  public async update(data: { name: string; routingUrl: string; labels: Label[] }): Promise<CompositionError[]> {
+  public async update(data: {
+    name: string;
+    routingUrl: string;
+    labels: Label[];
+  }): Promise<{ compositionErrors: CompositionError[]; updatedFederatedGraphs: FederatedGraphDTO[] }> {
     const uniqueLabels = normalizeLabels(data.labels);
+    const routingUrl = normalizeURL(data.routingUrl);
+
     const compositionErrors: CompositionError[] = [];
+    const updatedFederatedGraphs: FederatedGraphDTO[] = [];
 
     const subgraph = await this.byName(data.name);
     if (!subgraph) {
-      return compositionErrors;
+      return { compositionErrors, updatedFederatedGraphs };
     }
 
     await this.db.transaction(async (db) => {
@@ -84,6 +99,8 @@ export class SubgraphRepository {
 
       // update labels
       if (data.labels.length > 0) {
+        const oldGraphs = await fedGraphRepo.bySubgraphLabels(uniqueLabels);
+
         await db
           .update(targets)
           .set({
@@ -91,24 +108,24 @@ export class SubgraphRepository {
           })
           .where(eq(targets.id, subgraph.targetId));
 
-        const graphs = await fedGraphRepo.bySubgraphLabels(uniqueLabels);
+        const newGraphs = await fedGraphRepo.bySubgraphLabels(uniqueLabels);
 
         let deleteCondition: SQL<unknown> | undefined = eq(subgraphsToFederatedGraph.subgraphId, subgraph.id);
 
         // we do this conditionally because notInArray cannot take empty value
-        if (graphs.length > 0) {
+        if (newGraphs.length > 0) {
           deleteCondition = and(
             deleteCondition,
             notInArray(
               subgraphsToFederatedGraph.federatedGraphId,
-              graphs.map((g) => g.id),
+              newGraphs.map((g) => g.id),
             ),
           );
         }
 
         await db.delete(subgraphsToFederatedGraph).where(deleteCondition);
 
-        const insertOps = graphs.map((federatedGraph) => {
+        const insertOps = newGraphs.map((federatedGraph) => {
           return db
             .insert(subgraphsToFederatedGraph)
             .values({
@@ -121,8 +138,13 @@ export class SubgraphRepository {
 
         await Promise.all(insertOps);
 
-        // update schema since subgraphs would have changed
-        graphs.map(async (federatedGraph) => {
+        // update schema of graphs which were changed since subgraphs would have changed
+        const changedGraphs = [
+          ...oldGraphs.filter((b) => !newGraphs.some((a) => a.id === b.id)),
+          ...newGraphs.filter((a) => !oldGraphs.some((b) => a.id === b.id)),
+        ];
+        updatedFederatedGraphs.push(...changedGraphs);
+        changedGraphs.map(async (federatedGraph) => {
           const ce = await updateComposedSchema({
             federatedGraph,
             fedGraphRepo,
@@ -134,11 +156,11 @@ export class SubgraphRepository {
 
       // update routing URL
       if (data.routingUrl !== '') {
-        await db.update(subgraphs).set({ routingUrl: data.routingUrl }).where(eq(subgraphs.id, subgraph.id)).execute();
+        await db.update(subgraphs).set({ routingUrl }).where(eq(subgraphs.id, subgraph.id)).execute();
       }
     });
 
-    return compositionErrors;
+    return { compositionErrors, updatedFederatedGraphs };
   }
 
   public updateSchema(subgraphName: string, subgraphSchema: string): Promise<SubgraphDTO | undefined> {
@@ -325,6 +347,13 @@ export class SubgraphRepository {
     const subgraphs = await this.listByGraph(federatedGraphName, {
       published: true,
     });
+
+    if (subgraphs.length === 0) {
+      return {
+        checks: [],
+        checksCount: 0,
+      };
+    }
 
     const checkList = await this.db.query.schemaChecks.findMany({
       columns: {

@@ -6,19 +6,26 @@ import {
   LineChart,
   ResponsiveContainer,
   Tooltip,
+  TooltipProps,
   XAxis,
   YAxis,
 } from "recharts";
 import React from "react";
 import useWindowSize from "@/hooks/use-window-size";
+import { format } from "date-fns";
+
+const labelFormatter = (label: number, utc?: boolean) => {
+  return utc
+    ? new Date(label).toUTCString()
+    : label
+    ? format(label, "PPpp")
+    : label;
+};
 
 export const valueFormatter = (tick: number) =>
   tick === 0 || tick % 1 != 0 ? "" : `${tick}`;
 
 type TimeSetting = "relative" | "local" | "utc";
-
-const labelFormatter = (tick: number, utc: boolean) =>
-  utc ? new Date(tick).toUTCString() : new Date(tick).toLocaleString();
 
 export const nanoTimestampToTime = (nano: number) => {
   let ms = (nano / 1000000).toFixed(1);
@@ -30,7 +37,25 @@ export const nanoTimestampToTime = (nano: number) => {
   return ms + " ms";
 };
 
-const CustomTooltip = ({
+export const tooltipWrapperClassName =
+  "rounded-md border !border-popover !bg-popover/60 p-2 text-sm shadow-md outline-0 backdrop-blur-lg";
+
+export const ChartTooltip = (
+  props: TooltipProps<any, any> & { utc?: boolean }
+) => {
+  const { utc, ...rest } = props;
+  return (
+    <Tooltip
+      wrapperClassName={tooltipWrapperClassName}
+      labelFormatter={(label) => labelFormatter(parseInt(label), utc)}
+      {...rest}
+    />
+  );
+};
+
+ChartTooltip.displayName = "Tooltip";
+
+export const CustomTooltip = ({
   active,
   payload,
   label,
@@ -40,7 +65,7 @@ const CustomTooltip = ({
 }: any) => {
   if (active && payload && payload.length) {
     return (
-      <div className="rounded-md border border-gray-100 bg-white/60 p-2 text-sm shadow-md outline-0 backdrop-blur-lg dark:border-gray-700/80 dark:bg-gray-800/60 dark:bg-gray-900">
+      <div className={tooltipWrapperClassName}>
         <p className="label">{labelFormatter(label, utc)}</p>
         <p className="intro">
           {valueLabel}:{" "}
@@ -102,16 +127,7 @@ export const BarChartComponent = ({
           tickLine={false}
           interval={1}
         />
-        <Tooltip
-          cursor={false}
-          content={
-            <CustomTooltip
-              utc={viewOption.value === "utc"}
-              valueLabel={toolTipLabel}
-            />
-          }
-          wrapperStyle={{ border: 0, background: "none", outline: "none" }}
-        />
+        <ChartTooltip utc={viewOption.value === "utc"} />
       </BarChart>
     </ResponsiveContainer>
   );
@@ -182,15 +198,8 @@ export const LineChartComponent = ({
           tickLine={false}
           hide={hideYAxis}
         />
-        <Tooltip
-          content={
-            <CustomTooltip
-              utc={viewOption.value === "utc"}
-              valueLabel={toolTipLabel}
-            />
-          }
-          wrapperStyle={{ border: 0, background: "none", outline: "none" }}
-        />
+
+        <ChartTooltip utc={viewOption.value === "utc"} />
       </LineChart>
     </ResponsiveContainer>
   );

@@ -16,7 +16,7 @@ body, .login-pf body, .login-pf {
 }
 
 #kc-header-wrapper {
-  background-image: url(../img/630x630-white.png);
+  background-image: url(../img/WG_Cosmonauts_Super_Cosmo.svg);
   background-size: 6rem;
   @apply h-24 w-full bg-no-repeat bg-center text-transparent;
 }
@@ -46,7 +46,7 @@ div.kc-logo-text span {
 }
 
 .login-pf-header h1 {
-  @apply text-center text-3xl font-bold text-white my-3;
+  @apply text-center text-3xl font-bold text-white my-3 sm:my-2;
 }
 
 #id-hidden-input {

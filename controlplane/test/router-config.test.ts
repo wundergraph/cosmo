@@ -9,7 +9,7 @@ import { pino } from 'pino';
 
 import { NodeService } from '@wundergraph/cosmo-connect/dist/node/v1/node_connect';
 import { joinLabel } from '@wundergraph/cosmo-shared';
-import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common_pb';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { noQueryRootTypeError } from '@wundergraph/composition';
 import routes from '../src/core/routes';
 import database from '../src/core/plugins/database';
@@ -22,6 +22,8 @@ import {
   seedTest,
 } from '../src/core/test-util';
 import Keycloak from '../src/core/services/Keycloak';
+import { MockPlatformWebhookService } from '../src/core/webhooks/PlatformWebhookService';
+import { MockPrometheusClient } from '../src/core/prometheus/client';
 
 let dbname = '';
 
@@ -64,6 +66,12 @@ describe('Router Config', (ctx) => {
       adminPassword,
     });
 
+    const platformWebhooks = new MockPlatformWebhookService();
+
+    const prometheus = new MockPrometheusClient({
+      apiUrl: 'http://localhost:9090',
+    });
+
     await server.register(fastifyConnectPlugin, {
       routes: routes({
         db: server.db,
@@ -72,6 +80,8 @@ describe('Router Config', (ctx) => {
         jwtSecret: 'secret',
         keycloakRealm: realm,
         keycloakClient,
+        platformWebhooks,
+        prometheus,
       }),
     });
 
@@ -290,6 +300,12 @@ describe('Router Config', (ctx) => {
       adminPassword,
     });
 
+    const platformWebhooks = new MockPlatformWebhookService();
+
+    const prometheus = new MockPrometheusClient({
+      apiUrl: 'http://localhost:9090',
+    });
+
     await server.register(fastifyConnectPlugin, {
       routes: routes({
         db: server.db,
@@ -298,6 +314,8 @@ describe('Router Config', (ctx) => {
         jwtSecret: 'secret',
         keycloakRealm: realm,
         keycloakClient,
+        platformWebhooks,
+        prometheus,
       }),
     });
 

@@ -5,7 +5,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3, protoInt64 } from "@bufbuild/protobuf";
-import { EnumStatusCode } from "../../common_pb.js";
+import { EnumStatusCode } from "../../common/common_pb.js";
 
 /**
  * @generated from enum wg.cosmo.node.v1.ArgumentRenderConfiguration
@@ -138,6 +138,55 @@ proto3.util.setEnumType(HTTPMethod, "wg.cosmo.node.v1.HTTPMethod", [
 ]);
 
 /**
+ * @generated from message wg.cosmo.node.v1.Subgraph
+ */
+export class Subgraph extends Message<Subgraph> {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id = "";
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name = "";
+
+  /**
+   * @generated from field: string routing_url = 3;
+   */
+  routingUrl = "";
+
+  constructor(data?: PartialMessage<Subgraph>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.node.v1.Subgraph";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "routing_url", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Subgraph {
+    return new Subgraph().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Subgraph {
+    return new Subgraph().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Subgraph {
+    return new Subgraph().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: Subgraph | PlainMessage<Subgraph> | undefined, b: Subgraph | PlainMessage<Subgraph> | undefined): boolean {
+    return proto3.util.equals(Subgraph, a, b);
+  }
+}
+
+/**
  * @generated from message wg.cosmo.node.v1.RouterConfig
  */
 export class RouterConfig extends Message<RouterConfig> {
@@ -151,6 +200,11 @@ export class RouterConfig extends Message<RouterConfig> {
    */
   version = "";
 
+  /**
+   * @generated from field: repeated wg.cosmo.node.v1.Subgraph subgraphs = 3;
+   */
+  subgraphs: Subgraph[] = [];
+
   constructor(data?: PartialMessage<RouterConfig>) {
     super();
     proto3.util.initPartial(data, this);
@@ -161,6 +215,7 @@ export class RouterConfig extends Message<RouterConfig> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "engine_config", kind: "message", T: EngineConfiguration },
     { no: 2, name: "version", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "subgraphs", kind: "message", T: Subgraph, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RouterConfig {
@@ -279,6 +334,15 @@ export class GetConfigRequest extends Message<GetConfigRequest> {
    */
   graphName = "";
 
+  /**
+   * The version to check for. If the version is not specified, the latest router config version will be returned.
+   * Otherwise, the version will be used to check if a newer version of the router config is available.
+   * That allow us to not send the router config if the version is the same.
+   *
+   * @generated from field: optional string version = 2;
+   */
+  version?: string;
+
   constructor(data?: PartialMessage<GetConfigRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -288,6 +352,7 @@ export class GetConfigRequest extends Message<GetConfigRequest> {
   static readonly typeName = "wg.cosmo.node.v1.GetConfigRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "graph_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "version", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetConfigRequest {
@@ -317,6 +382,8 @@ export class GetConfigResponse extends Message<GetConfigResponse> {
   response?: Response;
 
   /**
+   * RouterConfig is the router config for the graph. It can be nil when a version is specified and the version is the same as the latest version.
+   *
    * @generated from field: optional wg.cosmo.node.v1.RouterConfig config = 2;
    */
   config?: RouterConfig;

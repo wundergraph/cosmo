@@ -1,8 +1,32 @@
 # Change Log
-Images can be found [here](https://github.com/orgs/wundergraph/packages?repo_name=cosmo)
+Binaries are attached to the github release otherwise all images can be found [here](https://github.com/orgs/wundergraph/packages?repo_name=cosmo)
 
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
+
+## [0.8.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.8.0...@wundergraph/composition@0.8.1) (2023-09-20)
+
+### Bug Fixes
+
+* composition false flag ([#97](https://github.com/wundergraph/cosmo/issues/97)) ([a25cc7f](https://github.com/wundergraph/cosmo/commit/a25cc7f13adbf6f8e29113f49d364fc1f8bb9e81)) (@Aenimus)
+
+# [0.8.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.7.1...@wundergraph/composition@0.8.0) (2023-09-19)
+
+### Features
+
+* account for extension field arguments ([#94](https://github.com/wundergraph/cosmo/issues/94)) ([3ae8cbe](https://github.com/wundergraph/cosmo/commit/3ae8cbef79e9b5de9140f201cb867d05b9da7d31)) (@Aenimus)
+
+## [0.7.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.7.0...@wundergraph/composition@0.7.1) (2023-09-18)
+
+### Bug Fixes
+
+* consider nested entity keys to be shareable ([#86](https://github.com/wundergraph/cosmo/issues/86)) ([98b68a1](https://github.com/wundergraph/cosmo/commit/98b68a1bcbd40fc2c5ec0b9866218b6854cf95ee)) (@Aenimus)
+
+# [0.7.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.6.2...@wundergraph/composition@0.7.0) (2023-09-15)
+
+### Features
+
+* refactor FieldSet ([#71](https://github.com/wundergraph/cosmo/issues/71)) ([45224d6](https://github.com/wundergraph/cosmo/commit/45224d6b6a2d5a2689fd034947a1acd69572e9c6)) (@Aenimus)
 
 ## [0.6.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.6.1...@wundergraph/composition@0.6.2) (2023-09-11)
 

@@ -20,6 +20,8 @@ import GraphApiTokenAuthenticator from './services/GraphApiTokenAuthenticator.js
 import AuthUtils from './auth-utils.js';
 import Keycloak from './services/Keycloak.js';
 import PrometheusClient from './prometheus/client.js';
+import { PlatformWebhookService } from './webhooks/PlatformWebhookService.js';
+import AccessTokenAuthenticator from './services/AccessTokenAuthenticator.js';
 
 export interface BuildConfig {
   logger: PinoLoggerOptions;
@@ -53,6 +55,10 @@ export interface BuildConfig {
     webErrorPath: string;
     secret: string;
     redirectUri: string;
+  };
+  webhook?: {
+    url?: string;
+    key?: string;
   };
 }
 
@@ -157,7 +163,8 @@ export default async function build(opts: BuildConfig) {
   const webAuth = new WebSessionAuthenticator(opts.auth.secret);
   const graphKeyAuth = new GraphApiTokenAuthenticator(opts.auth.secret);
   const organizationRepository = new OrganizationRepository(fastify.db);
-  const authenticator = new Authentication(webAuth, apiKeyAuth, graphKeyAuth, organizationRepository);
+  const accessTokenAuth = new AccessTokenAuthenticator(organizationRepository, authUtils);
+  const authenticator = new Authentication(webAuth, apiKeyAuth, accessTokenAuth, graphKeyAuth, organizationRepository);
 
   const keycloakClient = new Keycloak({
     apiUrl: opts.keycloak.apiUrl,
@@ -170,6 +177,8 @@ export default async function build(opts: BuildConfig) {
   /**
    * Controllers registration
    */
+
+  const platformWebhooks = new PlatformWebhookService(opts.webhook?.url, opts.webhook?.key, log);
 
   await fastify.register(AuthController, {
     organizationRepository,
@@ -187,6 +196,7 @@ export default async function build(opts: BuildConfig) {
     webBaseUrl: opts.auth.webBaseUrl,
     keycloakClient,
     keycloakRealm: opts.keycloak.realm,
+    platformWebhooks,
   });
 
   // Must be registered after custom fastify routes
@@ -201,6 +211,8 @@ export default async function build(opts: BuildConfig) {
       chClient: fastify.ch,
       authenticator,
       keycloakClient,
+      prometheus: prometheusClient,
+      platformWebhooks,
     }),
     logLevel: opts.logger.level as pino.LevelWithSilent,
     // Avoid compression for small requests

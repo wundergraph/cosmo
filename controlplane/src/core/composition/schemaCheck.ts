@@ -1,7 +1,7 @@
 import { CriticalityLevel, diff, Change } from '@graphql-inspector/core';
 import { SchemaChange } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { GraphQLSchema } from 'graphql';
-import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common_pb';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { buildSchema } from './composition.js';
 
 export interface GetDiffBetweenGraphsSuccess {

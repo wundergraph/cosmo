@@ -6,6 +6,7 @@ require (
 	github.com/bufbuild/connect-go v1.9.0
 	github.com/buger/jsonparser v1.1.1
 	github.com/cespare/xxhash/v2 v2.2.0
+	github.com/cloudflare/backoff v0.0.0-20161212185259-647f3cdfc87a
 	github.com/dgraph-io/ristretto v0.1.1
 	github.com/go-chi/chi v1.5.4
 	github.com/go-playground/validator/v10 v10.15.3
@@ -19,7 +20,7 @@ require (
 	github.com/stretchr/testify v1.8.4
 	github.com/tidwall/gjson v1.14.4
 	github.com/tidwall/sjson v1.2.5
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.2.0.20230912132139-7fac6d9abf64
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.2.0.20230921161321-42234f3bdef7
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.43.0
 	go.opentelemetry.io/otel v1.17.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp v0.39.0

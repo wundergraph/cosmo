@@ -1,4 +1,7 @@
 import { federateSubgraphs, FederationResultContainer, Subgraph } from '@wundergraph/composition';
+import pc from 'picocolors';
+import { program } from 'commander';
+import { config } from './core/config.js';
 
 export interface Header {
   key: string;
@@ -54,4 +57,19 @@ export const introspectSubgraph = async ({
  */
 export function composeSubgraphs(subgraphs: Subgraph[]): FederationResultContainer {
   return federateSubgraphs(subgraphs);
+}
+
+// checks if either of access token or api key are present
+export function checkAPIKey() {
+  if (!config.apiKey) {
+    program.error(
+      pc.yellow(
+        `Not authenticated. Please run ${pc.bold(
+          'wgc auth login',
+        )} or create an API key and set as environment variable ${pc.bold('COSMO_API_KEY')}.` +
+          '\n' +
+          'Without an AccessToken/API key, you will not be able to interact with the control plane.',
+      ) + '\n',
+    );
+  }
 }

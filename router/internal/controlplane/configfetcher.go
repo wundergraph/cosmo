@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/bufbuild/connect-go"
-	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo"
+	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1/nodev1connect"
 	"go.uber.org/zap"
@@ -71,9 +71,14 @@ func (c *client) Subscribe(ctx context.Context) chan *nodev1.RouterConfig {
 				return
 			case <-ticker.C:
 
-				cfg, err := c.getRouterConfigFromCP(ctx)
+				cfg, err := c.getRouterConfigFromCP(ctx, &c.latestRouterVersion)
 				if err != nil {
 					c.logger.Error("Could not get latest router config, trying again in 10 seconds", zap.Error(err))
+					continue
+				}
+
+				if cfg == nil {
+					c.logger.Debug("No new router config available, received nil router config, trying again in 10 seconds")
 					continue
 				}
 
@@ -105,9 +110,10 @@ func (c *client) Subscribe(ctx context.Context) chan *nodev1.RouterConfig {
 }
 
 // getRouterConfigFromCP returns the latest router config from the controlplane
-func (c *client) getRouterConfigFromCP(ctx context.Context) (*nodev1.RouterConfig, error) {
+func (c *client) getRouterConfigFromCP(ctx context.Context, version *string) (*nodev1.RouterConfig, error) {
 	req := connect.NewRequest(&nodev1.GetConfigRequest{
 		GraphName: c.federatedGraphName,
+		Version:   version,
 	})
 
 	req.Header().Set("Authorization", fmt.Sprintf("Bearer %s", c.graphApiToken))
@@ -117,7 +123,7 @@ func (c *client) getRouterConfigFromCP(ctx context.Context) (*nodev1.RouterConfi
 		return nil, err
 	}
 
-	if resp.Msg.GetResponse().GetCode() != cosmo.EnumStatusCode_OK {
+	if resp.Msg.GetResponse().GetCode() != common.EnumStatusCode_OK {
 		return nil, fmt.Errorf(
 			"could not get latest router config: %s, Details: %s",
 			resp.Msg.GetResponse().GetCode(),
@@ -134,7 +140,7 @@ func (c *client) GetRouterConfig(ctx context.Context) (*nodev1.RouterConfig, err
 
 	c.logger.Info("Fetching initial router configuration from control plane")
 
-	cfg, err := c.getRouterConfigFromCP(ctx)
+	cfg, err := c.getRouterConfigFromCP(ctx, nil)
 	if err != nil {
 		return nil, err
 	}

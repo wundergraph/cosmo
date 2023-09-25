@@ -4,7 +4,7 @@ syntax = "proto3";
 
 package wg.cosmo.platform.v1;
 
-import "wg/cosmo/common.proto";
+import "wg/cosmo/common/common.proto";
 import "wg/cosmo/node/v1/node.proto";
 
 message Label {
@@ -138,20 +138,6 @@ message FederatedGraph {
   repeated RequestSeriesItem requestSeries = 8;
 }
 
-message FederatedGraphChangelog{
-  string id = 1;
-  string path = 2;
-  string changeType = 3;
-  string changeMessage = 4;
-  string createdAt = 5;
-}
-
-message FederatedGraphChangelogOutput{
-  string createdAt = 1;
-  string schemaVersionId = 2;
-  repeated FederatedGraphChangelog changelogs = 3;
-}
-
 message GetFederatedGraphsResponse {
   Response response = 1;
   repeated FederatedGraph graphs = 2;
@@ -250,11 +236,27 @@ message GetCheckDetailsResponse {
 
 message GetFederatedGraphChangelogRequest {
   string name = 1;
+  Pagination pagination = 2;
+}
+
+message FederatedGraphChangelog{
+  string id = 1;
+  string path = 2;
+  string changeType = 3;
+  string changeMessage = 4;
+  string createdAt = 5;
+}
+
+message FederatedGraphChangelogOutput{
+  string createdAt = 1;
+  string schemaVersionId = 2;
+  repeated FederatedGraphChangelog changelogs = 3;
 }
 
 message GetFederatedGraphChangelogResponse {
   Response response = 1;
   repeated FederatedGraphChangelogOutput federatedGraphChangelogOutput = 2;
+  bool hasNextPage = 3;
 }
 
 message GetFederatedResponse {
@@ -537,6 +539,7 @@ message SpanAttributes {
   string httpUserAgent = 8;
   string httpMethod = 9;
   string httpTarget = 10;
+  string subgraphName = 11;
 }
 
 message Span {
@@ -573,6 +576,102 @@ message WhoAmIResponse {
 message Header{
   string key = 1;
   string value = 2;
+}
+
+message CreateOrganizationWebhookConfigRequest {
+  string endpoint = 1;
+  string key = 2;
+  repeated string events = 3;
+}
+
+message CreateOrganizationWebhookConfigResponse {
+  Response response = 1;
+}
+
+message GetOrganizationWebhookConfigsRequest {}
+
+message GetOrganizationWebhookConfigsResponse {
+  message Config {
+    string id = 1;
+    string endpoint = 2;
+    repeated string events = 3;
+  }
+  Response response = 1;
+  repeated Config configs = 2;
+}
+
+message UpdateOrganizationWebhookConfigRequest {
+  string id = 1;
+  string endpoint = 2;
+  string key = 3;
+  repeated string events = 4;
+  bool shouldUpdateKey = 5;
+}
+
+message UpdateOrganizationWebhookConfigResponse {
+  Response response = 1;
+}
+
+message DeleteOrganizationWebhookConfigRequest {
+  string id = 1;
+}
+
+message DeleteOrganizationWebhookConfigResponse {
+  Response response = 1;
+}
+
+/**
+ * MetricsDashboard
+ */
+ message GetMetricsDashboardRequest {
+  string federatedGraphName = 1;
+  int32 range = 2;
+}
+
+message GetMetricsDashboardResponse {
+  Response response = 1;
+  MetricsDashboardMetric requests = 2;
+  MetricsDashboardMetric latency = 3;
+  MetricsDashboardMetric errors = 4;
+  optional string json = 5;
+}
+
+message MetricsDashboardMetric {
+  string value = 1;
+  optional string previousValue = 2;
+  repeated MetricsTopItem top = 3;
+  repeated MetricsSeriesItem series = 4;
+}
+
+message MetricsTopItem {
+  string name = 1;
+  string value = 2;
+}
+
+message MetricsSeriesItem {
+  string timestamp = 1;
+  string value = 2;
+  optional string previousValue = 3;
+}
+
+message MetricsDashboard {
+  string name = 1;
+  string title = 2;
+  string type = 3;
+  optional Unit unit = 4;
+  optional bool is_hidden = 5;
+  optional bool is_cta = 6;
+}
+
+message GetMetricsErrorRateRequest {
+  string federatedGraphName = 1;
+  int32 range = 2;
+}
+
+message GetMetricsErrorRateResponse {
+  Response response = 1;
+  repeated MetricsSeriesItem series = 2;
+  repeated MetricsSeriesItem errorSeries = 3;
 }
 
 service PlatformService {
@@ -636,6 +735,15 @@ service PlatformService {
   rpc GetLatestValidRouterConfig(wg.cosmo.node.v1.GetConfigRequest) returns (wg.cosmo.node.v1.GetConfigResponse) {}
   // MigrateFromApollo migrates the graphs from apollo to cosmo
   rpc MigrateFromApollo(MigrateFromApolloRequest) returns (MigrateFromApolloResponse) {}
+  
+  // CreateOrganizationWebhookConfig create a new webhook config for the organization
+  rpc CreateOrganizationWebhookConfig(CreateOrganizationWebhookConfigRequest) returns (CreateOrganizationWebhookConfigResponse) {}
+  // GetOrganizationWebhookConfigs returns all webhooks for the organization
+  rpc GetOrganizationWebhookConfigs(GetOrganizationWebhookConfigsRequest) returns (GetOrganizationWebhookConfigsResponse) {}
+  // UpdateOrganizationWebhookConfig updates an existing webhook for the organization
+  rpc UpdateOrganizationWebhookConfig(UpdateOrganizationWebhookConfigRequest) returns (UpdateOrganizationWebhookConfigResponse) {}
+  // DeleteOrganizationWebhookConfig deletes an organization webhook
+  rpc DeleteOrganizationWebhookConfig(DeleteOrganizationWebhookConfigRequest) returns (DeleteOrganizationWebhookConfigResponse) {}
 
   // Analytics
 
@@ -648,4 +756,12 @@ service PlatformService {
   }
 
   rpc GetTrace(GetTraceRequest) returns (GetTraceResponse) {}
+
+  rpc GetMetricsDashboard(GetMetricsDashboardRequest) returns (GetMetricsDashboardResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
+  rpc GetMetricsErrorRate(GetMetricsErrorRateRequest) returns (GetMetricsErrorRateResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
 }

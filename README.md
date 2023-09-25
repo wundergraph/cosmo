@@ -18,9 +18,15 @@ WunderGraph Cosmo is the On-Premise Platform for building, maintaining, and coll
 The repository consists of the following components:
 
 - [CLI](./cli): The cosmo CLI tool `wgc`. Used to manage the cosmo platform e.g. pushing schema, check schemas, creating new projects, managing users, etc. It interacts with the control plane.
-- [Control-Plane](./control-plane): The control plane is the central component of the cosmo platform. It consists of a platform API and a node API. The platform API is used by the cosmo `CLI` tool and the `Studio` to manage the platform.
+- [Control Plane](./controlplane): The control plane is the central component of the cosmo platform. It consists of a platform API and a node API. The platform API is used by the cosmo `CLI` tool and the `Studio` to manage the platform.
 - [Router](./router): The router is the component that understands the GraphQL Federation protocol. It is responsible for routing requests to the correct service and for aggregating the responses. It is in connection with the control plane to register itself for advanced fleet management.
 - [Studio](./studio): The studio is the web interface for the cosmo platform. It is used to manage the platform and to collaborate on GraphQL Federation. It is in connection with the control plane through the Platform API to manage the platform.
+
+## Migrate from Apollo GraphOS / Apollo Federation
+
+We've made it super easy for you to migrate from Apollo by using our fully automatic [Migration Assistant](https://cosmo-cp.wundergraph.com/v1/auth/login).
+Log into Cosmo Cloud, enter your Graph API Token and Graph variant, and the Assistant migrates over your Graph in just a few seconds.
+That's it, migrate over with a single click!
 
 ## Getting Started
 
@@ -51,7 +57,7 @@ export ROUTER_TOKEN=...
 make dc-federation-demo
 ```
 
-3. Navigate to the [Studio explorer](http://localhost:3001/wundergraph/graph/production/explorer) and query the router. Login with the default credentials:
+3. Navigate to the [Studio explorer](http://localhost:3000/wundergraph/graph/production/explorer) and query the router. Login with the default credentials:
 
 ```
 Username: foo@wundergraph.com

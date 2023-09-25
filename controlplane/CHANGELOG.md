@@ -1,8 +1,79 @@
 # Change Log
-Images can be found [here](https://github.com/orgs/wundergraph/packages?repo_name=cosmo)
+Binaries are attached to the github release otherwise all images can be found [here](https://github.com/orgs/wundergraph/packages?repo_name=cosmo)
 
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
+
+## [0.16.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.16.0...controlplane@0.16.1) (2023-09-25)
+
+### Bug Fixes
+
+* metrics repository and ui ([#113](https://github.com/wundergraph/cosmo/issues/113)) ([549ac6c](https://github.com/wundergraph/cosmo/commit/549ac6cd88e148ed9924d427ca306eb832cdd2ec)) (@thisisnithin)
+
+# [0.16.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.15.0...controlplane@0.16.0) (2023-09-25)
+
+### Features
+
+* advanced analytics ([#99](https://github.com/wundergraph/cosmo/issues/99)) ([a7a3058](https://github.com/wundergraph/cosmo/commit/a7a305851faa868d30dc202eef197afc6065ce92)) (@Pagebakers)
+
+# [0.15.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.14.0...controlplane@0.15.0) (2023-09-21)
+
+### Features
+
+* add login command ([#95](https://github.com/wundergraph/cosmo/issues/95)) ([e9da8c3](https://github.com/wundergraph/cosmo/commit/e9da8c3c9e018029e0aef06d3b3b823732812a47)) (@JivusAyrus)
+* changelog pagination ([#103](https://github.com/wundergraph/cosmo/issues/103)) ([614b57e](https://github.com/wundergraph/cosmo/commit/614b57ed4904dde04682e75ad80670f08f64b7b2)) (@thisisnithin)
+* don't poll router config when config hasn't changed ([#105](https://github.com/wundergraph/cosmo/issues/105)) ([ea33961](https://github.com/wundergraph/cosmo/commit/ea339617a7d1724fd9b727953db5d591e50241dd)) (@StarpTech)
+
+# [0.14.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.13.2...controlplane@0.14.0) (2023-09-20)
+
+### Features
+
+* store subgraphs in router config ([#61](https://github.com/wundergraph/cosmo/issues/61)) ([de7b132](https://github.com/wundergraph/cosmo/commit/de7b13244755acd49c38ff1e6c537234ab506960)) (@thisisnithin)
+
+## [0.13.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.13.1...controlplane@0.13.2) (2023-09-19)
+
+**Note:** Version bump only for package controlplane
+
+## [0.13.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.13.0...controlplane@0.13.1) (2023-09-18)
+
+**Note:** Version bump only for package controlplane
+
+# [0.13.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.12.1...controlplane@0.13.0) (2023-09-18)
+
+### Features
+
+* only log system errors as errors ([#80](https://github.com/wundergraph/cosmo/issues/80)) ([127614c](https://github.com/wundergraph/cosmo/commit/127614c889c6a98c3dc4963a502ef82fae3362d0)) (@StarpTech)
+
+## [0.12.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.12.0...controlplane@0.12.1) (2023-09-17)
+
+### Bug Fixes
+
+* api key last used update ([#77](https://github.com/wundergraph/cosmo/issues/77)) ([d02cb22](https://github.com/wundergraph/cosmo/commit/d02cb22624b5d37862f4b4c1b0c8f413855bbb40)) (@thisisnithin)
+
+# [0.12.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.11.3...controlplane@0.12.0) (2023-09-16)
+
+### Features
+
+* only generate node api for router ([#76](https://github.com/wundergraph/cosmo/issues/76)) ([9307648](https://github.com/wundergraph/cosmo/commit/93076481437030fa6e348dccbc74591f91878f57)) (@StarpTech)
+* webhooks ([#66](https://github.com/wundergraph/cosmo/issues/66)) ([dbb281f](https://github.com/wundergraph/cosmo/commit/dbb281fda114ddb6be309b3336d0668d705e7bc9)) (@thisisnithin)
+
+## [0.11.3](https://github.com/wundergraph/cosmo/compare/controlplane@0.11.2...controlplane@0.11.3) (2023-09-15)
+
+### Bug Fixes
+
+* reduce error logs ([#72](https://github.com/wundergraph/cosmo/issues/72)) ([cba6fef](https://github.com/wundergraph/cosmo/commit/cba6fefe854bc3852708fd6a37eb5fa07d7fea24)) (@StarpTech)
+
+## [0.11.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.11.1...controlplane@0.11.2) (2023-09-14)
+
+### Bug Fixes
+
+* avoid excessive error logs in session handler ([#70](https://github.com/wundergraph/cosmo/issues/70)) ([ed5a4c5](https://github.com/wundergraph/cosmo/commit/ed5a4c515b5d3bf6d5776e53a9ffe70bd474a418)) (@StarpTech)
+
+## [0.11.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.11.0...controlplane@0.11.1) (2023-09-14)
+
+### Bug Fixes
+
+* labels of the migrated graphs ([#65](https://github.com/wundergraph/cosmo/issues/65)) ([6ca790c](https://github.com/wundergraph/cosmo/commit/6ca790c7c73e66fc0d51bd6f79fc4899a8686064)) (@JivusAyrus)
 
 # [0.11.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.10.1...controlplane@0.11.0) (2023-09-13)
 

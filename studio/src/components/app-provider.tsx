@@ -23,6 +23,20 @@ interface Organization {
   isFreeTrial: boolean;
 }
 
+interface Session {
+  id: string;
+  email: string;
+  organizations: Organization[];
+  roles: ("admin" | "member")[];
+}
+
+class UnauthorizedError extends Error {
+  constructor() {
+    super();
+    this.name = "UnauthorizedError";
+  }
+}
+
 const queryClient = new QueryClient();
 
 export const UserContext = createContext<User | undefined>(undefined);
@@ -40,24 +54,40 @@ const fetchSession = async () => {
     if (response.status === 200) {
       const body = await response.json();
       return body;
+    } else if (response.status === 401) {
+      throw new UnauthorizedError();
     }
     return null;
   } catch (e) {
-    return null;
+    throw e;
   }
 };
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
-  const { data, isFetching } = useQuery(["user"], () => fetchSession(), {
+  const { data, error, isFetching } = useQuery<
+    Session | null,
+    UnauthorizedError | Error
+  >(["user"], () => fetchSession(), {
     refetchOnWindowFocus: true,
+    retry(failureCount, error) {
+      if (error instanceof UnauthorizedError) return false;
+      return failureCount < 3;
+    },
   });
   const [user, setUser] = useState<User>();
   const [transport, setTransport] = useState<Transport>();
 
   useEffect(() => {
     if (isFetching) return;
-    if (data) {
+
+    if (
+      error &&
+      error instanceof UnauthorizedError &&
+      router.pathname !== "/login"
+    ) {
+      router.replace("/login");
+    } else if (data) {
       setUser({
         id: data.id,
         email: data.email,
@@ -87,15 +117,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         );
         const params = new URLSearchParams(url.search);
         router.replace(
-          params.size !== 0 ? `/${organizationSlug}?${params}` : `/${organizationSlug}`
+          params.size !== 0
+            ? `/${organizationSlug}?${params}`
+            : `/${organizationSlug}`
         );
       }
-    } else {
-      if (router.pathname !== "/login") {
-        router.replace("/login");
-      }
     }
-  }, [router, data, isFetching]);
+  }, [router, data, isFetching, error]);
 
   if (!transport) {
     return <UserContext.Provider value={user}>{children}</UserContext.Provider>;

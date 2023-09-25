@@ -1,8 +1,57 @@
 # Change Log
-Images can be found [here](https://github.com/orgs/wundergraph/packages?repo_name=cosmo)
+Binaries are attached to the github release otherwise all images can be found [here](https://github.com/orgs/wundergraph/packages?repo_name=cosmo)
 
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
+
+## [0.15.1](https://github.com/wundergraph/cosmo/compare/studio@0.15.0...studio@0.15.1) (2023-09-25)
+
+### Bug Fixes
+
+* metrics repository and ui ([#113](https://github.com/wundergraph/cosmo/issues/113)) ([549ac6c](https://github.com/wundergraph/cosmo/commit/549ac6cd88e148ed9924d427ca306eb832cdd2ec)) (@thisisnithin)
+
+# [0.15.0](https://github.com/wundergraph/cosmo/compare/studio@0.14.0...studio@0.15.0) (2023-09-25)
+
+### Features
+
+* advanced analytics ([#99](https://github.com/wundergraph/cosmo/issues/99)) ([a7a3058](https://github.com/wundergraph/cosmo/commit/a7a305851faa868d30dc202eef197afc6065ce92)) (@Pagebakers)
+
+# [0.14.0](https://github.com/wundergraph/cosmo/compare/studio@0.13.1...studio@0.14.0) (2023-09-21)
+
+### Features
+
+* changelog pagination ([#103](https://github.com/wundergraph/cosmo/issues/103)) ([614b57e](https://github.com/wundergraph/cosmo/commit/614b57ed4904dde04682e75ad80670f08f64b7b2)) (@thisisnithin)
+
+## [0.13.1](https://github.com/wundergraph/cosmo/compare/studio@0.13.0...studio@0.13.1) (2023-09-20)
+
+### Bug Fixes
+
+* improve session redirect ([#96](https://github.com/wundergraph/cosmo/issues/96)) ([5ff36ce](https://github.com/wundergraph/cosmo/commit/5ff36ce7ee9892a8d70a4ecb4052ac0f5548c127)) (@Pagebakers)
+
+# [0.13.0](https://github.com/wundergraph/cosmo/compare/studio@0.12.1...studio@0.13.0) (2023-09-20)
+
+### Features
+
+* store subgraphs in router config ([#61](https://github.com/wundergraph/cosmo/issues/61)) ([de7b132](https://github.com/wundergraph/cosmo/commit/de7b13244755acd49c38ff1e6c537234ab506960)) (@thisisnithin)
+
+## [0.12.1](https://github.com/wundergraph/cosmo/compare/studio@0.12.0...studio@0.12.1) (2023-09-19)
+
+### Bug Fixes
+
+* only redirect to login when user is actually logged out ([#89](https://github.com/wundergraph/cosmo/issues/89)) ([ff4b3df](https://github.com/wundergraph/cosmo/commit/ff4b3df18f91179a83e47ec5f48157bc3a0ee9fb)) (@Pagebakers)
+
+# [0.12.0](https://github.com/wundergraph/cosmo/compare/studio@0.11.1...studio@0.12.0) (2023-09-16)
+
+### Features
+
+* only generate node api for router ([#76](https://github.com/wundergraph/cosmo/issues/76)) ([9307648](https://github.com/wundergraph/cosmo/commit/93076481437030fa6e348dccbc74591f91878f57)) (@StarpTech)
+* webhooks ([#66](https://github.com/wundergraph/cosmo/issues/66)) ([dbb281f](https://github.com/wundergraph/cosmo/commit/dbb281fda114ddb6be309b3336d0668d705e7bc9)) (@thisisnithin)
+
+## [0.11.1](https://github.com/wundergraph/cosmo/compare/studio@0.11.0...studio@0.11.1) (2023-09-14)
+
+### Bug Fixes
+
+* router docs dialog ([#63](https://github.com/wundergraph/cosmo/issues/63)) ([fbedd8b](https://github.com/wundergraph/cosmo/commit/fbedd8bdb16070ae0bdc013c738ec3d70ac56327)) (@JivusAyrus)
 
 # [0.11.0](https://github.com/wundergraph/cosmo/compare/studio@0.10.2...studio@0.11.0) (2023-09-13)
 
