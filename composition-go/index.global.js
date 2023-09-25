@@ -40923,19 +40923,21 @@ Received directive:
   var import_composition = __toESM(require_dist());
   init_graphql2();
   function federateSubgraphs(subgraphs) {
-    const { federationResult, errors } = (0, import_composition.federateSubgraphs)(subgraphs.map(({ schema, name: name2, url }) => {
-      let definitions;
-      try {
-        definitions = parse(schema);
-      } catch (e2) {
-        throw new Error(`could not parse schema for Graph ${name2}: ${e2}`);
-      }
-      return {
-        definitions,
-        name: name2,
-        url
-      };
-    }));
+    const { federationResult, errors } = (0, import_composition.federateSubgraphs)(
+      subgraphs.map(({ schema, name: name2, url }) => {
+        let definitions;
+        try {
+          definitions = parse(schema);
+        } catch (e2) {
+          throw new Error(`could not parse schema for Graph ${name2}: ${e2}`);
+        }
+        return {
+          definitions,
+          name: name2,
+          url
+        };
+      })
+    );
     if (errors && errors.length > 0) {
       throw new Error(`could not federate schema: ${errors.map((e2) => e2.message).join(", ")}`);
     }
