@@ -498,8 +498,9 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		transport:     r.transport,
 		logger:        r.logger,
 		transportOptions: &TransportOptions{
-			preHandlers:  r.preOriginHandlers,
-			postHandlers: r.postOriginHandlers,
+			preHandlers:    r.preOriginHandlers,
+			postHandlers:   r.postOriginHandlers,
+			requestTimeout: r.requestTimeout,
 			retryOptions: retrytransport.RetryOptions{
 				Enabled:       r.retryOptions.Enabled,
 				MaxRetryCount: r.retryOptions.MaxRetryCount,
