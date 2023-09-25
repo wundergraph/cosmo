@@ -11,15 +11,18 @@ type Bar = {
   target?: string;
 };
 
-const getWidthsFromValues = (dataValues: number[]) => {
-  let maxValue = -Infinity;
-  dataValues.forEach((value) => {
-    maxValue = Math.max(maxValue, value);
-  });
+const getWidthsFromValues = (dataValues: number[], maxValue?: number) => {
+  let max = maxValue ?? -Infinity;
+
+  if (maxValue === undefined) {
+    dataValues.forEach((value) => {
+      max = Math.max(max, value);
+    });
+  }
 
   return dataValues.map((value) => {
     if (value === 0) return 0;
-    return Math.max((value / maxValue) * 100, 1);
+    return Math.max((value / max) * 100, 1);
   });
 };
 
@@ -27,6 +30,9 @@ export interface BarListProps extends React.HTMLAttributes<HTMLDivElement> {
   data: Bar[];
   valueFormatter?: (value: number) => string;
   showAnimation?: boolean;
+  rowHeight?: number;
+  rowClassName?: string;
+  maxValue?: number;
 }
 
 export const defaultValueFormatter = (value: number) => value.toString();
@@ -38,12 +44,16 @@ const BarList = React.forwardRef<HTMLDivElement, BarListProps>((props, ref) => {
     valueFormatter = defaultValueFormatter,
     showAnimation = true,
     className,
+    rowHeight = 9,
+    rowClassName,
+    maxValue,
     ...other
   } = props;
 
-  const widths = getWidthsFromValues(data.map((item) => item.value));
-
-  const rowHeight = "h-9";
+  const widths = getWidthsFromValues(
+    data.map((item) => item.value),
+    maxValue
+  );
 
   if (data.length === 0) {
     return (
@@ -67,8 +77,9 @@ const BarList = React.forwardRef<HTMLDivElement, BarListProps>((props, ref) => {
             <div
               key={item.key ?? item.name}
               className={cn(
-                "flex items-center rounded-sm bg-primary/30",
-                rowHeight,
+                "flex items-center rounded-sm bg-primary/30 text-secondary-foreground",
+                `h-${rowHeight}`,
+                rowClassName,
                 idx === data.length - 1 ? "mb-0" : "mb-2"
               )}
               style={{
@@ -77,22 +88,18 @@ const BarList = React.forwardRef<HTMLDivElement, BarListProps>((props, ref) => {
               }}
             >
               <div className={cn("absolute left-2 flex w-full text-sm")}>
-                {Icon ? (
-                  <Icon
-                    className={cn("mr-2 h-5 w-5 text-secondary-foreground")}
-                  />
-                ) : null}
+                {Icon ? <Icon className={cn("mr-2 h-5 w-5")} /> : null}
                 {item.href ? (
                   <Link
                     href={item.href}
                     target={item.target}
                     rel="noreferrer"
-                    className={cn("w-full text-secondary-foreground")}
+                    className={cn("w-full")}
                   >
                     {item.name}
                   </Link>
                 ) : (
-                  <p className={cn("text-secondary-foreground")}>{item.name}</p>
+                  <p>{item.name}</p>
                 )}
               </div>
             </div>
@@ -105,7 +112,7 @@ const BarList = React.forwardRef<HTMLDivElement, BarListProps>((props, ref) => {
             key={item.key ?? item.name}
             className={cn(
               "flex items-center justify-end",
-              rowHeight,
+              `h-${rowHeight}`,
               idx === data.length - 1 ? "mb-0" : "mb-2"
             )}
           >
