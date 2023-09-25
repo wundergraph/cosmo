@@ -296,7 +296,11 @@ export class MetricsDashboardRepository {
 
     // get requests in last [range] hours in series of [step]
     const series = this.client.queryRange({
-      query: `sum (rate(cosmo_router_http_requests_total{${this.getQueryLabels(params)}}[${prange}]))`,
+      query: `sum (rate(cosmo_router_http_requests_total{${this.getQueryLabels(
+        params,
+      )}, http_status_code=~"5.." }[${prange}])) / sum (rate(cosmo_router_http_requests_total{${this.getQueryLabels(
+        params,
+      )} }[${prange}])) * 100`,
       ...this.getRangeQueryProps({
         range,
         endDate,
@@ -304,7 +308,11 @@ export class MetricsDashboardRepository {
     });
 
     const prevSeries = this.client.queryRange({
-      query: `sum (rate(cosmo_router_http_requests_total{${this.getQueryLabels(params)}}[${prange}]))`,
+      query: `sum (rate(cosmo_router_http_requests_total{${this.getQueryLabels(
+        params,
+      )}, http_status_code=~"5.." }[${prange}])) / sum (rate(cosmo_router_http_requests_total{${this.getQueryLabels(
+        params,
+      )} }[${prange}])) * 100`,
       ...this.getRangeQueryProps({
         range,
         endDate: endDate - range * 60 * 60 * 1000,
