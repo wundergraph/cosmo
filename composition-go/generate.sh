@@ -4,7 +4,5 @@
 # the library, which are then embedded by the Go compiler
 # via embed
 
-rm -fr node_modules
-
 cd shim && pnpm i && pnpm exec tsup && cd -
-cp shim/dist/index.global.js .
+cp -f shim/dist/index.global.js .

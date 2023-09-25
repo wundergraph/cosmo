@@ -8,9 +8,7 @@
     "dist"
   ],
   "scripts": {
-    "dev": "tsc --watch",
-    "test:watch": "vitest test",
-    "test": "vitest run"
+    "dev": "tsc --watch"
   },
   "keywords": [],
   "author": "",
