@@ -50,15 +50,16 @@ export const useAnalyticsQueryState = () => {
       start: formatISO(startOfDay(subDays(new Date(), 1))),
       end: formatISO(endOfDay(new Date())),
     };
+
     if (query.dateRange) {
       let tempRange = parse(query.dateRange as string, {
-        from: subDays(new Date(), 1),
-        to: new Date(),
+        start: subDays(new Date(), 1),
+        end: new Date(),
       });
 
       dateRange = {
-        start: formatISO(startOfDay(new Date(tempRange.from))),
-        end: formatISO(endOfDay(new Date(tempRange.to))),
+        start: formatISO(startOfDay(new Date(tempRange.start))),
+        end: formatISO(endOfDay(new Date(tempRange.end))),
       };
     }
 
