@@ -91,7 +91,7 @@ func Main() {
 			TLSHandshakeTimeout:    cfg.TrafficShaping.All.TLSHandshakeTimeout,
 			KeepAliveProbeInterval: cfg.TrafficShaping.All.KeepAliveProbeInterval,
 		}),
-		core.WithRetryOptions(
+		core.WithSubgraphRetryOptions(
 			cfg.TrafficShaping.All.BackoffJitterRetry.Enabled,
 			cfg.TrafficShaping.All.BackoffJitterRetry.MaxAttempts,
 			cfg.TrafficShaping.All.BackoffJitterRetry.MaxDuration,
