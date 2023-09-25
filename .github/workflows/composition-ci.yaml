@@ -4,6 +4,7 @@ on:
     branches:
       - main
       - "composition/**/*"
+      - "composition-go/**/*"
       - ".github/workflows/composition-ci.yaml"
 
 concurrency:
@@ -28,6 +29,10 @@ jobs:
 
       - name: Generate code
         run: pnpm buf generate --template buf.ts.gen.yaml
+
+      - name: Generate code to be embedded in Go library
+        run: ./generate.sh
+        working-directory: composition-go
 
       - name: Check if git is not dirty after generating files
         run: git diff --no-ext-diff --exit-code
