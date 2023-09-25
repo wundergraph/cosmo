@@ -82,7 +82,15 @@ func Main() {
 		core.WithReadinessCheckPath(cfg.ReadinessCheckPath),
 		core.WithHeaderRules(cfg.Headers),
 		core.WithStaticRouterConfig(routerConfig),
-		core.WithRequestTimeout(cfg.TrafficShaping.All.RequestTimeout),
+		core.WithSubgraphTransportOptions(&core.SubgraphTransportOptions{
+			RequestTimeout:         cfg.TrafficShaping.All.RequestTimeout,
+			ResponseHeaderTimeout:  cfg.TrafficShaping.All.ResponseHeaderTimeout,
+			ExpectContinueTimeout:  cfg.TrafficShaping.All.ExpectContinueTimeout,
+			KeepAliveIdleTimeout:   cfg.TrafficShaping.All.KeepAliveIdleTimeout,
+			DialTimeout:            cfg.TrafficShaping.All.DialTimeout,
+			TLSHandshakeTimeout:    cfg.TrafficShaping.All.TLSHandshakeTimeout,
+			KeepAliveProbeInterval: cfg.TrafficShaping.All.KeepAliveProbeInterval,
+		}),
 		core.WithRetryOptions(
 			cfg.TrafficShaping.All.BackoffJitterRetry.Enabled,
 			cfg.TrafficShaping.All.BackoffJitterRetry.MaxAttempts,
