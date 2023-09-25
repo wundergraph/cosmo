@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.17.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.16.2...controlplane@0.17.0) (2023-09-25)
+
+### Features
+
+* **controlplane:** use datetime formatted logs ([#118](https://github.com/wundergraph/cosmo/issues/118)) ([ea00e97](https://github.com/wundergraph/cosmo/commit/ea00e974b32ba752b10c0a2efeec932c1e22009e)) (@StarpTech)
+* implement get changelog cli command ([#117](https://github.com/wundergraph/cosmo/issues/117)) ([ffaad09](https://github.com/wundergraph/cosmo/commit/ffaad093a212a6340263c4223452fb9edfec7570)) (@thisisnithin)
+
 ## [0.16.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.16.1...controlplane@0.16.2) (2023-09-25)
 
 ### Bug Fixes
