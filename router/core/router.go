@@ -931,11 +931,11 @@ func WithSubgraphRetryOptions(enabled bool, maxRetryCount int, retryMaxDuration,
 func DefaultSubgraphTransportOptions() *SubgraphTransportOptions {
 	return &SubgraphTransportOptions{
 		RequestTimeout:         60 * time.Second,
-		KeepAliveIdleTimeout:   90 * time.Second,
 		TLSHandshakeTimeout:    10 * time.Second,
-		ResponseHeaderTimeout:  15 * time.Second,
-		ExpectContinueTimeout:  15 * time.Second,
+		ResponseHeaderTimeout:  0 * time.Second,
+		ExpectContinueTimeout:  0 * time.Second,
 		KeepAliveProbeInterval: 30 * time.Second,
+		KeepAliveIdleTimeout:   0 * time.Second,
 		DialTimeout:            30 * time.Second,
 	}
 }

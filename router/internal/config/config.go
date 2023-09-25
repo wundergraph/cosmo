@@ -80,14 +80,15 @@ type TrafficShapingRules struct {
 }
 
 type GlobalSubgraphRequestRule struct {
-	BackoffJitterRetry     BackoffJitterRetry `yaml:"retry"`
-	RequestTimeout         time.Duration      `yaml:"request_timeout" default:"60s" validate:"required,min=1s"`
-	DialTimeout            time.Duration      `yaml:"dial_timeout" default:"30s"`
-	ResponseHeaderTimeout  time.Duration      `yaml:"response_header_timeout" default:"15s"`
-	ExpectContinueTimeout  time.Duration      `yaml:"expect_continue_timeout" default:"15s"`
-	TLSHandshakeTimeout    time.Duration      `yaml:"tls_handshake_timeout" default:"10s"`
-	KeepAliveIdleTimeout   time.Duration      `yaml:"keep_alive_idle_timeout" default:"90s"`
-	KeepAliveProbeInterval time.Duration      `yaml:"keep_alive_probe_interval" default:"30s"`
+	BackoffJitterRetry BackoffJitterRetry `yaml:"retry"`
+	// See https://blog.cloudflare.com/the-complete-guide-to-golang-net-http-timeouts/
+	RequestTimeout         time.Duration `yaml:"request_timeout" default:"60s" validate:"required,min=1s"`
+	DialTimeout            time.Duration `yaml:"dial_timeout" default:"30s"`
+	ResponseHeaderTimeout  time.Duration `yaml:"response_header_timeout" default:"0s"`
+	ExpectContinueTimeout  time.Duration `yaml:"expect_continue_timeout" default:"0s"`
+	TLSHandshakeTimeout    time.Duration `yaml:"tls_handshake_timeout" default:"10s"`
+	KeepAliveIdleTimeout   time.Duration `yaml:"keep_alive_idle_timeout" default:"0s"`
+	KeepAliveProbeInterval time.Duration `yaml:"keep_alive_probe_interval" default:"30s"`
 }
 
 type BackoffJitterRetry struct {
