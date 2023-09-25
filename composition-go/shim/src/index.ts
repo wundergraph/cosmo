@@ -1,5 +1,5 @@
 import { ArgumentConfigurationData, federateSubgraphs as realFederateSubgraphs } from '@wundergraph/composition';
-import { DocumentNode, parse, print, printSchema } from 'graphql';
+import { DocumentNode, parse, print } from 'graphql';
 
 export type Subgraph = {
   schema: string;

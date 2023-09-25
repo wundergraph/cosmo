@@ -7,7 +7,7 @@ export const tsup: Options = {
   dts: true,
   globalName: 'shim',
   format: ['iife'],
-  minify: false,
+  minify: true,
   esbuildPlugins: [polyfillNode()],
   noExternal: [/(.*)/],
   entryPoints: ['src/index.ts'],
