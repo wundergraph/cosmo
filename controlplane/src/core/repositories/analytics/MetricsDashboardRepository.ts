@@ -289,7 +289,7 @@ export class MetricsDashboardRepository {
     const top5 = this.client.query({
       query: `topk(5, sum by (wg_operation_name) (rate(cosmo_router_http_requests_total{${this.getQueryLabels(
         params,
-      )}, http_status_code!="5.."}[${range}h])) / sum by (wg_operation_name) (rate(cosmo_router_http_requests_total{${this.getQueryLabels(
+      )}, http_status_code=~"5.."}[${range}h])) / sum by (wg_operation_name) (rate(cosmo_router_http_requests_total{${this.getQueryLabels(
         params,
       )}}[${range}h])) * 100)`,
     });
@@ -321,7 +321,7 @@ export class MetricsDashboardRepository {
         top:
           top5Response.data?.result.map((v: any) => ({
             name: v.metric.wg_operation_name || 'unknown',
-            value: v.value[1] || '0',
+            value: !v.value[1] || v.value[1] === 'NaN' ? '0' : v.value[1],
           })) || [],
         series: this.mapSeries(
           endDate,
