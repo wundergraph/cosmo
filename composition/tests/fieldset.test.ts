@@ -636,6 +636,80 @@ describe('openfed_FieldSet Tests', () => {
         )],
       ))
     });
+
+    test('that a @provides FieldSet allows undefined optional arguments', () => {
+      const { errors, normalizationResult } = normalizeSubgraphFromString(`
+        type Object {
+          entity: Entity! @provides(fields: "anotherObject { name }")
+        }
+        type Entity @key(fields: "id") {
+          id: ID!
+          anotherObject(arg: String): AnotherObject! @external
+        }
+ 
+        type AnotherObject {
+          name: String!
+        }
+      `);
+      expect(errors).toBeUndefined();
+      expect(normalizationResult).toBeDefined();
+      expect(normalizationResult!.configurationDataMap).toStrictEqual(new Map<string, ConfigurationData>([
+        ['Object', {
+          fieldNames: new Set<string>(['entity']),
+          isRootNode: false,
+          provides: [{ fieldName: 'entity', selectionSet: 'anotherObject { name }' }],
+          typeName: 'Object',
+        }],
+        ['Entity', {
+          fieldNames: new Set<string>(['id']),
+          isRootNode: true,
+          keys: [{ fieldName: '', selectionSet: 'id' }],
+          typeName: 'Entity',
+        }],
+        ['AnotherObject', {
+          fieldNames: new Set<string>(['name']),
+          isRootNode: false,
+          typeName: 'AnotherObject',
+        }],
+      ]));
+    });
+
+    test('that a @provides FieldSet allows defined optional arguments', () => {
+      const { errors, normalizationResult } = normalizeSubgraphFromString(`
+        type Object {
+          entity: Entity! @provides(fields: "anotherObject(arg: \\"string\\") { name }")
+        }
+        type Entity @key(fields: "id") {
+          id: ID!
+          anotherObject(arg: String): AnotherObject! @external
+        }
+ 
+        type AnotherObject {
+          name: String!
+        }
+      `);
+      expect(errors).toBeUndefined();
+      expect(normalizationResult).toBeDefined();
+      expect(normalizationResult!.configurationDataMap).toStrictEqual(new Map<string, ConfigurationData>([
+        ['Object', {
+          fieldNames: new Set<string>(['entity']),
+          isRootNode: false,
+          provides: [{ fieldName: 'entity', selectionSet: 'anotherObject(arg: "string") { name }' }],
+          typeName: 'Object',
+        }],
+        ['Entity', {
+          fieldNames: new Set<string>(['id']),
+          isRootNode: true,
+          keys: [{ fieldName: '', selectionSet: 'id' }],
+          typeName: 'Entity',
+        }],
+        ['AnotherObject', {
+          fieldNames: new Set<string>(['name']),
+          isRootNode: false,
+          typeName: 'AnotherObject',
+        }],
+      ]));
+    });
   });
 
   describe('@requires FieldSets', () => {
@@ -891,6 +965,66 @@ describe('openfed_FieldSet Tests', () => {
           'U'
         )],
       ));
+    });
+
+    test('that a @requires FieldSet allows undefined optional arguments', () => {
+      const { errors, normalizationResult } = normalizeSubgraphFromString(`
+        type Entity @key(fields: "id") {
+          id: ID!
+          object(arg: String): Object! @external
+          age: Int! @requires(fields: "object { name }")
+        }
+ 
+        type Object {
+          name: String!
+        }
+      `);
+      expect(errors).toBeUndefined();
+      expect(normalizationResult).toBeDefined();
+      expect(normalizationResult!.configurationDataMap).toStrictEqual(new Map<string, ConfigurationData>([
+        ['Entity', {
+          fieldNames: new Set<string>(['id', 'age']),
+          isRootNode: true,
+          keys: [{ fieldName: '', selectionSet: 'id' }],
+          requires: [{ fieldName: 'age', selectionSet: 'object { name }' }],
+          typeName: 'Entity',
+        }],
+        ['Object', {
+          fieldNames: new Set<string>(['name']),
+          isRootNode: false,
+          typeName: 'Object',
+        }],
+      ]));
+    });
+
+    test('that a @requires FieldSet allows defined optional arguments', () => {
+      const { errors, normalizationResult } = normalizeSubgraphFromString(`
+        type Entity @key(fields: "id") {
+          id: ID!
+          object(arg: String): Object! @external
+          age: Int! @requires(fields: "object(arg: \\"string\\") { name }")
+        }
+ 
+        type Object {
+          name: String!
+        }
+      `);
+      expect(errors).toBeUndefined();
+      expect(normalizationResult).toBeDefined();
+      expect(normalizationResult!.configurationDataMap).toStrictEqual(new Map<string, ConfigurationData>([
+        ['Entity', {
+          fieldNames: new Set<string>(['id', 'age']),
+          isRootNode: true,
+          keys: [{ fieldName: '', selectionSet: 'id' }],
+          requires: [{ fieldName: 'age', selectionSet: 'object(arg: "string") { name }' }],
+          typeName: 'Entity',
+        }],
+        ['Object', {
+          fieldNames: new Set<string>(['name']),
+          isRootNode: false,
+          typeName: 'Object',
+        }],
+      ]));
     });
   });
 });

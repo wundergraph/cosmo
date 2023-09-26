@@ -593,10 +593,6 @@ function validateNonRepeatableFieldSet(
           errorMessage = undefinedFieldInFieldSetErrorMessage(fieldSet, parentTypeName, fieldName);
           return BREAK;
         }
-        if (fieldContainer.arguments.size) {
-          errorMessage = argumentsInKeyFieldSetErrorMessage(fieldSet, fieldPath);
-          return BREAK;
-        }
         if (definedFields[currentDepth].has(fieldName)) {
           errorMessage = duplicateFieldInFieldSetErrorMessage(fieldSet, fieldPath);
           return BREAK;
