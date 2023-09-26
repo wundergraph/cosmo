@@ -3,6 +3,7 @@ import * as schema from '../../db/schema.js';
 import { FederatedGraphDTO, MigrationSubgraph } from '../../types/index.js';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
 import { SubgraphRepository } from '../repositories/SubgraphRepository.js';
+import { sanitizeMigratedGraphName } from '../util.js';
 
 export default class ApolloMigrator {
   apiKey = '';
@@ -156,10 +157,10 @@ export default class ApolloMigrator {
     return db.transaction<FederatedGraphDTO>(async (db) => {
       const fedGraphRepo = new FederatedGraphRepository(db, organizationID);
       const subgraphRepo = new SubgraphRepository(db, organizationID);
-
+      const sanitizedGraphName = sanitizeMigratedGraphName(fedGraph.name);
       const federatedGraph = await fedGraphRepo.create({
         name: fedGraph.name,
-        labelMatchers: ['env=main', `name=${fedGraph.name}`],
+        labelMatchers: ['env=main', `name=${sanitizedGraphName}`],
         routingUrl: fedGraph.routingURL,
       });
 
@@ -168,7 +169,7 @@ export default class ApolloMigrator {
           name: subgraph.name,
           labels: [
             { key: 'env', value: 'main' },
-            { key: 'name', value: fedGraph.name },
+            { key: 'name', value: sanitizedGraphName },
           ],
           routingUrl: subgraph.routingURL,
         });
