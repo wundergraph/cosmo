@@ -55,53 +55,6 @@ export class AnalyticsDashboardViewRepository {
   private async getAllWeeklyRequestSeries(
     organizationId: string,
   ): Promise<Record<string, PlainMessage<RequestSeriesItem>[]>> {
-    // const query = `
-    //     SELECT
-    //         toDate(Timestamp) as timestamp,
-    //         COUNT(*) as totalRequests,
-    //         SUM(if(StatusCode = 'STATUS_CODE_ERROR' OR position(SpanAttributes['http.status_code'],'4') = 1, 1, 0)) as erroredRequests,
-    //         SpanAttributes['wg.federated_graph.id'] as graphId
-    //     FROM
-    //         ${this.client.database}.otel_traces
-    //     WHERE
-    //     -- Only root spans(spans which have no parent span) and has no condition on SpanKind as a span can start from either the server or the client
-    //         empty(ParentSpanId)
-    //         AND SpanAttributes['wg.organization.id'] = '${organizationId}'
-    //     AND toDate(Timestamp) >= toDate(now()) - interval 6 day
-    //     GROUP BY
-    //         timestamp,
-    //         SpanAttributes['wg.federated_graph.id']
-    //     ORDER BY
-    //         timestamp DESC
-    // `;
-
-    // const seriesResWithGraphId = await this.client.queryPromise(query);
-
-    // if (Array.isArray(seriesResWithGraphId)) {
-    //   const transformed: Record<string, PlainMessage<RequestSeriesItem>[]> = {};
-
-    //   for (const item of seriesResWithGraphId) {
-    //     const { graphId, ...rest } = item;
-
-    //     if (!transformed[graphId]) {
-    //       transformed[graphId] = [];
-    //     }
-
-    //     transformed[graphId].push(rest);
-    //   }
-
-    //   for (const key in transformed) {
-    //     const padded = padMissingDates(transformed[key]);
-    //     transformed[key] = padded;
-    //     for (const item of padded) {
-    //       item.totalRequests = Number(item.totalRequests);
-    //       item.erroredRequests = Number(item.erroredRequests);
-    //     }
-    //   }
-
-    //   return transformed;
-    // }
-
     const endDate = Math.round(Date.now() / 1000) * 1000;
 
     const requests = this.client.queryRange({
