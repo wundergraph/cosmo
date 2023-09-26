@@ -76,9 +76,11 @@ export class AnalyticsDashboardViewRepository {
     const series: Record<string, PlainMessage<RequestSeriesItem>[]> = {};
 
     for (const serie in requestsResponse.data.result) {
-      series[requestsResponse.data.result[serie].metric.wg_federated_graph_id] = this.mapSeries(endDate, 168, {
+      const id = requestsResponse.data.result[serie].metric.wg_federated_graph_id;
+      const errorRequests = errorsResponse.data.result?.find(({ metric }) => metric?.wg_federated_graph_id === id);
+      series[id] = this.mapSeries(endDate, 168, {
         totalRequests: [requestsResponse.data.result[serie]],
-        erroredRequests: [errorsResponse.data.result[serie]],
+        erroredRequests: errorRequests ? [errorRequests] : [],
       });
     }
 
