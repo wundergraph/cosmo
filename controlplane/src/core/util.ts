@@ -69,10 +69,6 @@ export function isValidLabels(labels: Label[]): boolean {
   return true;
 }
 
-function isValidLabel(value: string): boolean {
-  return labelRegex.test(value);
-}
-
 export function isValidLabelMatchers(labelMatchers: string[]): boolean {
   for (const lm of labelMatchers) {
     const labels = lm.split(',').map((l) => splitLabel(l));
@@ -119,7 +115,7 @@ export function randomString(length: number): Promise<string> {
 }
 
 export function sanitizeMigratedGraphName(input: string): string {
-  if (isValidLabel(input)) {
+  if (labelRegex.test(input)) {
     return input;
   }
   return `migrated_graph_${uid(12)}`;
