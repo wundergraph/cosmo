@@ -300,14 +300,14 @@ export class MetricsDashboardRepository {
     const percentage = this.client.query({
       query: `sum(rate(cosmo_router_http_requests_total{${this.getQueryLabels(
         params,
-      )}, http_status_code=~"5.."}[${range}h])) / sum(rate(cosmo_router_http_requests_total{${this.getQueryLabels(
+      )}, http_status_code=~"5.."}[5m])) / sum(rate(cosmo_router_http_requests_total{${this.getQueryLabels(
         params,
       )}}[5m])) * 100`,
     });
     const prevPercentage = this.client.query({
       query: `sum(rate(cosmo_router_http_requests_total{${this.getQueryLabels(
         params,
-      )}, http_status_code=~"5.."}[${range}h])) / sum(rate(cosmo_router_http_requests_total{${this.getQueryLabels(
+      )}, http_status_code=~"5.."}[5m])) / sum(rate(cosmo_router_http_requests_total{${this.getQueryLabels(
         params,
       )}}[5m] offset ${range}h)) * 100`,
     });
