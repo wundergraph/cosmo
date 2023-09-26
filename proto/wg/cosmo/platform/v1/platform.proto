@@ -138,20 +138,6 @@ message FederatedGraph {
   repeated RequestSeriesItem requestSeries = 8;
 }
 
-message FederatedGraphChangelog{
-  string id = 1;
-  string path = 2;
-  string changeType = 3;
-  string changeMessage = 4;
-  string createdAt = 5;
-}
-
-message FederatedGraphChangelogOutput{
-  string createdAt = 1;
-  string schemaVersionId = 2;
-  repeated FederatedGraphChangelog changelogs = 3;
-}
-
 message GetFederatedGraphsResponse {
   Response response = 1;
   repeated FederatedGraph graphs = 2;
@@ -250,11 +236,28 @@ message GetCheckDetailsResponse {
 
 message GetFederatedGraphChangelogRequest {
   string name = 1;
+  Pagination pagination = 2;
+  DateRange date_range = 3;
+}
+
+message FederatedGraphChangelog{
+  string id = 1;
+  string path = 2;
+  string changeType = 3;
+  string changeMessage = 4;
+  string createdAt = 5;
+}
+
+message FederatedGraphChangelogOutput{
+  string createdAt = 1;
+  string schemaVersionId = 2;
+  repeated FederatedGraphChangelog changelogs = 3;
 }
 
 message GetFederatedGraphChangelogResponse {
   Response response = 1;
   repeated FederatedGraphChangelogOutput federatedGraphChangelogOutput = 2;
+  bool hasNextPage = 3;
 }
 
 message GetFederatedResponse {
@@ -303,7 +306,7 @@ message Pagination {
 }
 
 message AnalyticsConfig {
-  AnalyticsDateRange date_range = 1;
+  DateRange date_range = 1;
   repeated AnalyticsFilter filters = 2;
   Pagination pagination = 3;
 }
@@ -317,7 +320,7 @@ message AnalyticsFilter {
   AnalyticsViewFilterOperator operator = 3;
 }
 
-message AnalyticsDateRange {
+message DateRange {
   // The start date of the date range in ISO 8601 format.
   string start = 1;
   // The end date of the date range in ISO 8601 format.

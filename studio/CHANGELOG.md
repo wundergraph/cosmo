@@ -4,6 +4,42 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.16.0](https://github.com/wundergraph/cosmo/compare/studio@0.15.2...studio@0.16.0) (2023-09-25)
+
+### Features
+
+* implement get changelog cli command ([#117](https://github.com/wundergraph/cosmo/issues/117)) ([ffaad09](https://github.com/wundergraph/cosmo/commit/ffaad093a212a6340263c4223452fb9edfec7570)) (@thisisnithin)
+
+## [0.15.2](https://github.com/wundergraph/cosmo/compare/studio@0.15.1...studio@0.15.2) (2023-09-25)
+
+### Bug Fixes
+
+* improved analytics queries and output ([#115](https://github.com/wundergraph/cosmo/issues/115)) ([c0d4b9d](https://github.com/wundergraph/cosmo/commit/c0d4b9d2392aac205d6671e1c8c418de8eb40cf4)) (@Pagebakers)
+
+## [0.15.1](https://github.com/wundergraph/cosmo/compare/studio@0.15.0...studio@0.15.1) (2023-09-25)
+
+### Bug Fixes
+
+* metrics repository and ui ([#113](https://github.com/wundergraph/cosmo/issues/113)) ([549ac6c](https://github.com/wundergraph/cosmo/commit/549ac6cd88e148ed9924d427ca306eb832cdd2ec)) (@thisisnithin)
+
+# [0.15.0](https://github.com/wundergraph/cosmo/compare/studio@0.14.0...studio@0.15.0) (2023-09-25)
+
+### Features
+
+* advanced analytics ([#99](https://github.com/wundergraph/cosmo/issues/99)) ([a7a3058](https://github.com/wundergraph/cosmo/commit/a7a305851faa868d30dc202eef197afc6065ce92)) (@Pagebakers)
+
+# [0.14.0](https://github.com/wundergraph/cosmo/compare/studio@0.13.1...studio@0.14.0) (2023-09-21)
+
+### Features
+
+* changelog pagination ([#103](https://github.com/wundergraph/cosmo/issues/103)) ([614b57e](https://github.com/wundergraph/cosmo/commit/614b57ed4904dde04682e75ad80670f08f64b7b2)) (@thisisnithin)
+
+## [0.13.1](https://github.com/wundergraph/cosmo/compare/studio@0.13.0...studio@0.13.1) (2023-09-20)
+
+### Bug Fixes
+
+* improve session redirect ([#96](https://github.com/wundergraph/cosmo/issues/96)) ([5ff36ce](https://github.com/wundergraph/cosmo/commit/5ff36ce7ee9892a8d70a4ecb4052ac0f5548c127)) (@Pagebakers)
+
 # [0.13.0](https://github.com/wundergraph/cosmo/compare/studio@0.12.1...studio@0.13.0) (2023-09-20)
 
 ### Features

@@ -3,7 +3,7 @@ import { fastifyConnectPlugin } from '@connectrpc/connect-fastify';
 import { cors } from '@connectrpc/connect';
 import fastifyCors from '@fastify/cors';
 import { PinoLoggerOptions } from 'fastify/types/logger.js';
-import { pino } from 'pino';
+import { pino, stdTimeFunctions } from 'pino';
 import { compressionBrotli, compressionGzip } from '@connectrpc/connect-node';
 import fastifyGracefulShutdown from 'fastify-graceful-shutdown';
 import routes from './routes.js';
@@ -21,6 +21,7 @@ import AuthUtils from './auth-utils.js';
 import Keycloak from './services/Keycloak.js';
 import PrometheusClient from './prometheus/client.js';
 import { PlatformWebhookService } from './webhooks/PlatformWebhookService.js';
+import AccessTokenAuthenticator from './services/AccessTokenAuthenticator.js';
 
 export interface BuildConfig {
   logger: PinoLoggerOptions;
@@ -73,6 +74,7 @@ const developmentLoggerOpts: PinoLoggerOptions = {
 
 export default async function build(opts: BuildConfig) {
   opts.logger = {
+    timestamp: stdTimeFunctions.isoTime,
     formatters: {
       level: (label) => {
         return {
@@ -162,7 +164,8 @@ export default async function build(opts: BuildConfig) {
   const webAuth = new WebSessionAuthenticator(opts.auth.secret);
   const graphKeyAuth = new GraphApiTokenAuthenticator(opts.auth.secret);
   const organizationRepository = new OrganizationRepository(fastify.db);
-  const authenticator = new Authentication(webAuth, apiKeyAuth, graphKeyAuth, organizationRepository);
+  const accessTokenAuth = new AccessTokenAuthenticator(organizationRepository, authUtils);
+  const authenticator = new Authentication(webAuth, apiKeyAuth, accessTokenAuth, graphKeyAuth, organizationRepository);
 
   const keycloakClient = new Keycloak({
     apiUrl: opts.keycloak.apiUrl,

@@ -15,8 +15,6 @@ import {
   DeleteAPIKeyResponse,
   DeleteFederatedGraphResponse,
   DeleteFederatedSubgraphResponse,
-  FederatedGraphChangelog,
-  FederatedGraphChangelogOutput,
   FixSubgraphSchemaResponse,
   GetAPIKeysResponse,
   GetAnalyticsViewResponse,
@@ -778,64 +776,43 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               code: EnumStatusCode.ERR_NOT_FOUND,
             },
             federatedGraphChangelogOutput: [],
+            hasNextPage: false,
           };
         }
 
-        const dbChangelogs = await fedgraphRepo.fetchFederatedGraphChangelog(federatedGraph.targetId);
+        if (!req.pagination || !req.dateRange) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: 'Please provide pagination and datetange',
+            },
+            federatedGraphChangelogOutput: [],
+            hasNextPage: false,
+          };
+        }
 
-        if (!dbChangelogs) {
+        const result = await fedgraphRepo.fetchFederatedGraphChangelog(
+          federatedGraph.targetId,
+          req.pagination,
+          req.dateRange,
+        );
+
+        if (!result) {
           return {
             federatedGraphChangelogOutput: [],
+            hasNextPage: false,
             response: {
               code: EnumStatusCode.ERR_NOT_FOUND,
             },
           };
         }
 
-        // dbChangelogs are not grouped based on schemaVersionID
-        const groupedChangelog: {
-          [key: string]: FederatedGraphChangelog[];
-        } = {};
-
-        for (const log of dbChangelogs) {
-          const schemaVersionId = log.schemaVersionId;
-
-          if (groupedChangelog[schemaVersionId]) {
-            groupedChangelog[schemaVersionId].push({
-              id: log.id,
-              path: log.path,
-              changeType: log.changeType,
-              changeMessage: log.changeMessage,
-              createdAt: log.createdAt,
-            } as FederatedGraphChangelog);
-          } else {
-            groupedChangelog[schemaVersionId] = [
-              {
-                id: log.id,
-                path: log.path,
-                changeType: log.changeType,
-                changeMessage: log.changeMessage,
-                createdAt: log.createdAt,
-              } as FederatedGraphChangelog,
-            ];
-          }
-        }
-
-        const federatedGraphChangelogOutput: FederatedGraphChangelogOutput[] = Object.keys(groupedChangelog).map(
-          (schemaVersionId) => {
-            return {
-              createdAt: groupedChangelog[schemaVersionId][0].createdAt,
-              schemaVersionId,
-              changelogs: groupedChangelog[schemaVersionId],
-            } as FederatedGraphChangelogOutput;
-          },
-        );
-
         return {
-          federatedGraphChangelogOutput,
           response: {
             code: EnumStatusCode.OK,
           },
+          federatedGraphChangelogOutput: result.federatedGraphChangelog,
+          hasNextPage: result.hasNextPage,
         };
       });
     },
@@ -1676,6 +1653,18 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<GetConfigResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+
+        if (req.version) {
+          const isLatest = await fedGraphRepo.isLatestVersion(req.graphName, req.version);
+          if (isLatest) {
+            return {
+              response: {
+                code: EnumStatusCode.OK,
+              },
+            };
+          }
+        }
+
         const config = await fedGraphRepo.getLatestValidRouterConfig(req.graphName);
 
         if (!config) {

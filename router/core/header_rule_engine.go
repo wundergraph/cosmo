@@ -2,9 +2,10 @@ package core
 
 import (
 	"fmt"
-	"github.com/wundergraph/cosmo/router/internal/config"
 	"net/http"
 	"regexp"
+
+	"github.com/wundergraph/cosmo/router/internal/config"
 )
 
 var (
@@ -35,7 +36,15 @@ func NewHeaderTransformer(rules config.HeaderRules) (*HeaderRuleEngine, error) {
 		regex: map[string]regexp.Regexp{},
 	}
 
-	for i, rule := range rules.All.Request {
+	var rhrs []config.RequestHeaderRule
+
+	rhrs = append(rhrs, rules.All.Request...)
+
+	for _, subgraph := range rules.Subgraphs {
+		rhrs = append(rhrs, subgraph.Request...)
+	}
+
+	for i, rule := range rhrs {
 		if rule.Operation == "propagate" {
 			if rule.Matching != "" {
 				regex, err := regexp.Compile(rule.Matching)
@@ -51,7 +60,16 @@ func NewHeaderTransformer(rules config.HeaderRules) (*HeaderRuleEngine, error) {
 }
 
 func (h HeaderRuleEngine) OnOriginRequest(request *http.Request, ctx RequestContext) (*http.Request, *http.Response) {
-	for _, rule := range h.rules.All.Request {
+	requestRules := h.rules.All.Request
+
+	subgraph := ctx.ActiveSubgraph(request)
+	if subgraph != nil {
+		if subgraphRules, ok := h.rules.Subgraphs[subgraph.Name]; ok {
+			requestRules = append(requestRules, subgraphRules.Request...)
+		}
+	}
+
+	for _, rule := range requestRules {
 		// Forwards the matching client request header to the upstream
 		if rule.Operation == "propagate" {
 
@@ -69,7 +87,7 @@ func (h HeaderRuleEngine) OnOriginRequest(request *http.Request, ctx RequestCont
 			// Regex match
 			if regex, ok := h.regex[rule.Matching]; ok {
 
-				for name, _ := range ctx.Request().Header {
+				for name := range ctx.Request().Header {
 					// Skip hop-by-hop headers and connection headers
 					if contains(hopHeaders, name) {
 						continue

@@ -1209,116 +1209,6 @@ export class FederatedGraph extends Message<FederatedGraph> {
 }
 
 /**
- * @generated from message wg.cosmo.platform.v1.FederatedGraphChangelog
- */
-export class FederatedGraphChangelog extends Message<FederatedGraphChangelog> {
-  /**
-   * @generated from field: string id = 1;
-   */
-  id = "";
-
-  /**
-   * @generated from field: string path = 2;
-   */
-  path = "";
-
-  /**
-   * @generated from field: string changeType = 3;
-   */
-  changeType = "";
-
-  /**
-   * @generated from field: string changeMessage = 4;
-   */
-  changeMessage = "";
-
-  /**
-   * @generated from field: string createdAt = 5;
-   */
-  createdAt = "";
-
-  constructor(data?: PartialMessage<FederatedGraphChangelog>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.platform.v1.FederatedGraphChangelog";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "path", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "changeType", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 4, name: "changeMessage", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 5, name: "createdAt", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FederatedGraphChangelog {
-    return new FederatedGraphChangelog().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): FederatedGraphChangelog {
-    return new FederatedGraphChangelog().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): FederatedGraphChangelog {
-    return new FederatedGraphChangelog().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: FederatedGraphChangelog | PlainMessage<FederatedGraphChangelog> | undefined, b: FederatedGraphChangelog | PlainMessage<FederatedGraphChangelog> | undefined): boolean {
-    return proto3.util.equals(FederatedGraphChangelog, a, b);
-  }
-}
-
-/**
- * @generated from message wg.cosmo.platform.v1.FederatedGraphChangelogOutput
- */
-export class FederatedGraphChangelogOutput extends Message<FederatedGraphChangelogOutput> {
-  /**
-   * @generated from field: string createdAt = 1;
-   */
-  createdAt = "";
-
-  /**
-   * @generated from field: string schemaVersionId = 2;
-   */
-  schemaVersionId = "";
-
-  /**
-   * @generated from field: repeated wg.cosmo.platform.v1.FederatedGraphChangelog changelogs = 3;
-   */
-  changelogs: FederatedGraphChangelog[] = [];
-
-  constructor(data?: PartialMessage<FederatedGraphChangelogOutput>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.platform.v1.FederatedGraphChangelogOutput";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "createdAt", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "schemaVersionId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "changelogs", kind: "message", T: FederatedGraphChangelog, repeated: true },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FederatedGraphChangelogOutput {
-    return new FederatedGraphChangelogOutput().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): FederatedGraphChangelogOutput {
-    return new FederatedGraphChangelogOutput().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): FederatedGraphChangelogOutput {
-    return new FederatedGraphChangelogOutput().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: FederatedGraphChangelogOutput | PlainMessage<FederatedGraphChangelogOutput> | undefined, b: FederatedGraphChangelogOutput | PlainMessage<FederatedGraphChangelogOutput> | undefined): boolean {
-    return proto3.util.equals(FederatedGraphChangelogOutput, a, b);
-  }
-}
-
-/**
  * @generated from message wg.cosmo.platform.v1.GetFederatedGraphsResponse
  */
 export class GetFederatedGraphsResponse extends Message<GetFederatedGraphsResponse> {
@@ -2124,6 +2014,16 @@ export class GetFederatedGraphChangelogRequest extends Message<GetFederatedGraph
    */
   name = "";
 
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Pagination pagination = 2;
+   */
+  pagination?: Pagination;
+
+  /**
+   * @generated from field: wg.cosmo.platform.v1.DateRange date_range = 3;
+   */
+  dateRange?: DateRange;
+
   constructor(data?: PartialMessage<GetFederatedGraphChangelogRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -2133,6 +2033,8 @@ export class GetFederatedGraphChangelogRequest extends Message<GetFederatedGraph
   static readonly typeName = "wg.cosmo.platform.v1.GetFederatedGraphChangelogRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "pagination", kind: "message", T: Pagination },
+    { no: 3, name: "date_range", kind: "message", T: DateRange },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetFederatedGraphChangelogRequest {
@@ -2153,6 +2055,116 @@ export class GetFederatedGraphChangelogRequest extends Message<GetFederatedGraph
 }
 
 /**
+ * @generated from message wg.cosmo.platform.v1.FederatedGraphChangelog
+ */
+export class FederatedGraphChangelog extends Message<FederatedGraphChangelog> {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id = "";
+
+  /**
+   * @generated from field: string path = 2;
+   */
+  path = "";
+
+  /**
+   * @generated from field: string changeType = 3;
+   */
+  changeType = "";
+
+  /**
+   * @generated from field: string changeMessage = 4;
+   */
+  changeMessage = "";
+
+  /**
+   * @generated from field: string createdAt = 5;
+   */
+  createdAt = "";
+
+  constructor(data?: PartialMessage<FederatedGraphChangelog>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.FederatedGraphChangelog";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "path", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "changeType", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "changeMessage", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "createdAt", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FederatedGraphChangelog {
+    return new FederatedGraphChangelog().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): FederatedGraphChangelog {
+    return new FederatedGraphChangelog().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): FederatedGraphChangelog {
+    return new FederatedGraphChangelog().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: FederatedGraphChangelog | PlainMessage<FederatedGraphChangelog> | undefined, b: FederatedGraphChangelog | PlainMessage<FederatedGraphChangelog> | undefined): boolean {
+    return proto3.util.equals(FederatedGraphChangelog, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.FederatedGraphChangelogOutput
+ */
+export class FederatedGraphChangelogOutput extends Message<FederatedGraphChangelogOutput> {
+  /**
+   * @generated from field: string createdAt = 1;
+   */
+  createdAt = "";
+
+  /**
+   * @generated from field: string schemaVersionId = 2;
+   */
+  schemaVersionId = "";
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.FederatedGraphChangelog changelogs = 3;
+   */
+  changelogs: FederatedGraphChangelog[] = [];
+
+  constructor(data?: PartialMessage<FederatedGraphChangelogOutput>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.FederatedGraphChangelogOutput";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "createdAt", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "schemaVersionId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "changelogs", kind: "message", T: FederatedGraphChangelog, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FederatedGraphChangelogOutput {
+    return new FederatedGraphChangelogOutput().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): FederatedGraphChangelogOutput {
+    return new FederatedGraphChangelogOutput().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): FederatedGraphChangelogOutput {
+    return new FederatedGraphChangelogOutput().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: FederatedGraphChangelogOutput | PlainMessage<FederatedGraphChangelogOutput> | undefined, b: FederatedGraphChangelogOutput | PlainMessage<FederatedGraphChangelogOutput> | undefined): boolean {
+    return proto3.util.equals(FederatedGraphChangelogOutput, a, b);
+  }
+}
+
+/**
  * @generated from message wg.cosmo.platform.v1.GetFederatedGraphChangelogResponse
  */
 export class GetFederatedGraphChangelogResponse extends Message<GetFederatedGraphChangelogResponse> {
@@ -2166,6 +2178,11 @@ export class GetFederatedGraphChangelogResponse extends Message<GetFederatedGrap
    */
   federatedGraphChangelogOutput: FederatedGraphChangelogOutput[] = [];
 
+  /**
+   * @generated from field: bool hasNextPage = 3;
+   */
+  hasNextPage = false;
+
   constructor(data?: PartialMessage<GetFederatedGraphChangelogResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -2176,6 +2193,7 @@ export class GetFederatedGraphChangelogResponse extends Message<GetFederatedGrap
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "federatedGraphChangelogOutput", kind: "message", T: FederatedGraphChangelogOutput, repeated: true },
+    { no: 3, name: "hasNextPage", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetFederatedGraphChangelogResponse {
@@ -2568,9 +2586,9 @@ export class Pagination extends Message<Pagination> {
  */
 export class AnalyticsConfig extends Message<AnalyticsConfig> {
   /**
-   * @generated from field: wg.cosmo.platform.v1.AnalyticsDateRange date_range = 1;
+   * @generated from field: wg.cosmo.platform.v1.DateRange date_range = 1;
    */
-  dateRange?: AnalyticsDateRange;
+  dateRange?: DateRange;
 
   /**
    * @generated from field: repeated wg.cosmo.platform.v1.AnalyticsFilter filters = 2;
@@ -2590,7 +2608,7 @@ export class AnalyticsConfig extends Message<AnalyticsConfig> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "wg.cosmo.platform.v1.AnalyticsConfig";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "date_range", kind: "message", T: AnalyticsDateRange },
+    { no: 1, name: "date_range", kind: "message", T: DateRange },
     { no: 2, name: "filters", kind: "message", T: AnalyticsFilter, repeated: true },
     { no: 3, name: "pagination", kind: "message", T: Pagination },
   ]);
@@ -2668,9 +2686,9 @@ export class AnalyticsFilter extends Message<AnalyticsFilter> {
 }
 
 /**
- * @generated from message wg.cosmo.platform.v1.AnalyticsDateRange
+ * @generated from message wg.cosmo.platform.v1.DateRange
  */
-export class AnalyticsDateRange extends Message<AnalyticsDateRange> {
+export class DateRange extends Message<DateRange> {
   /**
    * The start date of the date range in ISO 8601 format.
    *
@@ -2685,32 +2703,32 @@ export class AnalyticsDateRange extends Message<AnalyticsDateRange> {
    */
   end = "";
 
-  constructor(data?: PartialMessage<AnalyticsDateRange>) {
+  constructor(data?: PartialMessage<DateRange>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.platform.v1.AnalyticsDateRange";
+  static readonly typeName = "wg.cosmo.platform.v1.DateRange";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "start", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "end", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AnalyticsDateRange {
-    return new AnalyticsDateRange().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DateRange {
+    return new DateRange().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): AnalyticsDateRange {
-    return new AnalyticsDateRange().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DateRange {
+    return new DateRange().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): AnalyticsDateRange {
-    return new AnalyticsDateRange().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DateRange {
+    return new DateRange().fromJsonString(jsonString, options);
   }
 
-  static equals(a: AnalyticsDateRange | PlainMessage<AnalyticsDateRange> | undefined, b: AnalyticsDateRange | PlainMessage<AnalyticsDateRange> | undefined): boolean {
-    return proto3.util.equals(AnalyticsDateRange, a, b);
+  static equals(a: DateRange | PlainMessage<DateRange> | undefined, b: DateRange | PlainMessage<DateRange> | undefined): boolean {
+    return proto3.util.equals(DateRange, a, b);
   }
 }
 
