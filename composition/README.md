@@ -19,7 +19,7 @@ The function must be provided with an array of at least one [`Subgraph` object](
 An example federation of two simple subgraphs:
 
 ```typescript
-import { federateSubgraphs, Subgraph } from '@wundergraph.composition';
+import { federateSubgraphs, Subgraph } from '@wundergraph/composition';
 import { parse } from 'graphql';
 
 const federationResult: FederationResult = federateSubgraphs([subgraphA, subgraphB]);
