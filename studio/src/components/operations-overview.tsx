@@ -26,32 +26,44 @@ import { Separator } from "./ui/separator";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { useRouter } from "next/router";
 import { constructAnalyticsTableQueryState } from "./analytics/constructAnalyticsTableQueryState";
-import { ChartTooltip, CustomTooltip } from "./analytics/charts";
+import { ChartTooltip } from "./analytics/charts";
 
 const valueFormatter = (number: number) => `${formatNumber(number)}`;
 
 const RequestChart = ({
   requestSeries,
+  totals,
 }: {
   requestSeries: RequestSeriesItem[];
+  totals?: {
+    requests: number;
+    errors: number;
+  };
 }) => {
   const categorized = useMemo(() => {
+    if (totals) {
+      return {
+        requests: totals.requests,
+        success: totals.requests - totals.errors,
+        error: totals.errors,
+      };
+    }
+
+    let requests = 0;
     let success = 0;
     let error = 0;
     requestSeries.forEach((o) => {
+      requests += o.totalRequests;
       success += o.totalRequests - o.erroredRequests;
       error += o.erroredRequests;
     });
 
     return {
+      requests,
       success,
       error,
     };
-  }, [requestSeries]);
-
-  const count = requestSeries.reduce((accumulator, operation) => {
-    return accumulator + operation.totalRequests;
-  }, 0);
+  }, [requestSeries, totals]);
 
   const { isMobile } = useWindowSize();
 
@@ -67,20 +79,25 @@ const RequestChart = ({
     <div className="flex h-full w-full flex-col gap-y-8 rounded-md border p-4 lg:w-3/5 lg:gap-y-4">
       <div className="flex flex-col gap-x-6 gap-y-2 md:flex-row md:items-center">
         <h2 className="flex items-center gap-x-2">
-          <span>Requests</span>
+          <span className="text-md font-semibold">Requests</span>
           <Separator orientation="vertical" className="h-4" />
           <span className="text-xs text-muted-foreground">1 Week</span>
         </h2>
         <div className="flex items-center gap-x-2 text-sm md:ml-auto">
           <div className="h-3 w-3 rounded-full bg-primary" />
           Total
-          <Badge variant="secondary">{count}</Badge>
+          <Badge variant="secondary">
+            {new Intl.NumberFormat().format(categorized.requests)}
+          </Badge>
         </div>
         <div className="flex items-center gap-x-2 text-sm">
           <div className="h-3 w-3 rounded-full bg-destructive/75" />
-          Errored
+          Errors
           <Badge variant="secondary">
-            {((categorized.error / (count || 1)) * 100).toFixed(2)}%
+            {((categorized.error / (categorized.requests || 1)) * 100).toFixed(
+              2
+            )}
+            %
           </Badge>
         </div>
       </div>
@@ -110,6 +127,7 @@ const RequestChart = ({
             tickFormatter={timeFormatter}
             type="number"
             axisLine={false}
+            minTickGap={40}
           />
           <YAxis
             tickFormatter={valueFormatter}
@@ -129,12 +147,17 @@ const RequestChart = ({
                   <p className="text-success">
                     Success:{" "}
                     {props.payload?.[0]?.payload?.totalRequests
-                      ? props.payload?.[0]?.payload?.totalRequests -
-                          props.payload?.[0]?.payload?.erroredRequests ?? 0
+                      ? new Intl.NumberFormat().format(
+                          props.payload?.[0]?.payload?.totalRequests -
+                            props.payload?.[0]?.payload?.erroredRequests ?? 0
+                        )
                       : 0}
                   </p>
                   <p className="text-destructive">
-                    Errors: {props.payload?.[0]?.payload?.erroredRequests ?? 0}
+                    Errors:{" "}
+                    {new Intl.NumberFormat().format(
+                      props.payload?.[0]?.payload?.erroredRequests ?? 0
+                    )}
                   </p>
                 </div>
               );
@@ -180,7 +203,7 @@ const MostRequested = ({ data }: { data: OperationRequestCount[] }) => {
   return (
     <div className="flex h-full w-full flex-col gap-y-4 rounded-md border p-4 lg:w-2/5">
       <h2 className="flex items-center gap-x-2">
-        <span>Most Requested</span>
+        <span className="font-semibold">Most Requested</span>
         <Separator orientation="vertical" className="h-4" />
         <span className="text-xs text-muted-foreground">1 Week</span>
       </h2>
@@ -200,49 +223,7 @@ export const OperationsOverview = ({
 }) => {
   return (
     <div className="order-2 flex w-full flex-col items-center gap-4">
-      <OperationsOverviewOld federatedGraphName={federatedGraphName} />
       <OperationsOverviewNew federatedGraphName={federatedGraphName} />
-    </div>
-  );
-};
-
-export const OperationsOverviewOld = ({
-  federatedGraphName,
-}: {
-  federatedGraphName: string;
-}) => {
-  const { data, isLoading, error, refetch } = useQuery(
-    getDashboardAnalyticsView.useQuery({
-      federatedGraphName,
-    })
-  );
-
-  if (isLoading) {
-    return (
-      <div className="order-2 h-72 w-full border lg:order-last">
-        <Loader fullscreen />
-      </div>
-    );
-  }
-
-  if (error || data?.response?.code !== EnumStatusCode.OK) {
-    return (
-      <EmptyState
-        className="order-2 h-72 border lg:order-last"
-        icon={<ExclamationTriangleIcon />}
-        title="Could not retrieve weekly analytics data"
-        description={
-          data?.response?.details || error?.message || "Please try again"
-        }
-        actions={<Button onClick={() => refetch()}>Retry</Button>}
-      />
-    );
-  }
-
-  return (
-    <div className="order-2 flex w-full flex-col items-center gap-4 lg:order-last lg:flex-row">
-      <RequestChart requestSeries={data?.requestSeries ?? []} />
-      <MostRequested data={data?.mostRequestedOperations ?? []} />
     </div>
   );
 };
@@ -282,7 +263,10 @@ export const OperationsOverviewNew = ({
 
   return (
     <div className="order-2 flex w-full flex-col items-center gap-4 lg:order-last lg:flex-row">
-      <RequestChart requestSeries={data?.requestSeries ?? []} />
+      <RequestChart
+        requestSeries={data?.requestSeries ?? []}
+        totals={data?.totals}
+      />
       <MostRequested data={data?.mostRequestedOperations ?? []} />
     </div>
   );

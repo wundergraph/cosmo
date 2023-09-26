@@ -431,10 +431,16 @@ message OperationRequestCount {
   int32 totalRequests = 2;
 }
 
+message DashboardTotals {
+  int32 requests = 1;
+  int32 errors = 2;
+}
+
 message GetDashboardAnalyticsViewResponse {
   Response response = 1;
-  repeated RequestSeriesItem requestSeries = 2;
-  repeated OperationRequestCount mostRequestedOperations = 3;
+  DashboardTotals totals = 2;
+  repeated RequestSeriesItem requestSeries = 3;
+  repeated OperationRequestCount mostRequestedOperations = 4;
 }
 
 message CreateFederatedGraphTokenRequest {

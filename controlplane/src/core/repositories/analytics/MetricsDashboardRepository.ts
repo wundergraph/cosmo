@@ -1,5 +1,6 @@
 import PrometheusClient from 'src/core/prometheus/client.js';
 import { QueryResultType, Response } from 'src/core/prometheus/types.js';
+import { createTimeRange, parseValue } from './util.js';
 
 const getUtcUnixTime = () => {
   const now = new Date();
@@ -58,50 +59,6 @@ const getPRange = (range: number) => {
   }
 
   return '1m';
-};
-
-const createTimeRange = (endDate: number, rangeInHours: number): Array<{ timestamp: string }> => {
-  const range = [];
-
-  const startTimestamp = endDate;
-
-  let step = 60;
-  switch (rangeInHours) {
-    case 168: {
-      step = 60;
-      break;
-    }
-    case 72: {
-      step = 15;
-      break;
-    }
-    case 48: {
-      step = 15;
-      break;
-    }
-    case 24: {
-      step = 5;
-      break;
-    }
-    case 1: {
-      step = 60;
-      break;
-    }
-  }
-
-  const x = (60 / step) * rangeInHours;
-
-  for (let i = 0; i <= x; i++) {
-    range.unshift({
-      timestamp: String(startTimestamp - i * step * 60 * 1000),
-    });
-  }
-
-  return range;
-};
-
-const parseValue = (value?: string) => {
-  return !value || value === 'NaN' || value === '+Inf' ? '0' : value;
 };
 
 interface GetRangeQueryPropsOptions {

@@ -307,3 +307,63 @@ export function timestampToNanoseconds(timestamp: string): bigint {
   const nanoseconds = BigInt(date.getTime()) * BigInt(1e6);
   return nanoseconds + BigInt(fractionalSeconds);
 }
+
+/**
+ * Creates a range of timestamps to be used to fill up gaps in prometheus data.
+ * @param endDate The enddate to start the range from, unix timestamp in milli seconds
+ * @param rangeInHours The range length
+ * @param stepInHours Use a custom step
+ * @returns {timestamp: string}[] An array of objects with timestamp
+ */
+export const createTimeRange = (
+  endDate: number,
+  rangeInHours: number,
+  stepInMinutes?: number,
+): Array<{ timestamp: string }> => {
+  const range = [];
+
+  const startTimestamp = endDate;
+
+  let step = stepInMinutes || 60;
+  if (!stepInMinutes) {
+    switch (rangeInHours) {
+      case 168: {
+        step = 60;
+        break;
+      }
+      case 72: {
+        step = 15;
+        break;
+      }
+      case 48: {
+        step = 15;
+        break;
+      }
+      case 24: {
+        step = 5;
+        break;
+      }
+      case 1: {
+        step = 60;
+        break;
+      }
+    }
+  }
+
+  const x = (60 / step) * rangeInHours;
+
+  for (let i = 0; i <= x; i++) {
+    range.unshift({
+      timestamp: String(startTimestamp - i * step * 60 * 1000),
+    });
+  }
+
+  return range;
+};
+
+/**
+ * Parse Prometheus value and fallback to 0 if value is invalid or is undefined
+ */
+export const parseValue = (value?: string) => {
+  return !value || value === 'NaN' || value === '+Inf' ? '0' : value;
+};

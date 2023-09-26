@@ -1,133 +1,151 @@
 import { PlainMessage } from '@bufbuild/protobuf';
 import { OperationRequestCount, RequestSeriesItem } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { ClickHouseClient } from '../../clickhouse/index.js';
-import { padMissingDates } from './util.js';
+import PrometheusClient from 'src/core/prometheus/client.js';
+import { QueryResultValue } from 'src/core/prometheus/types.js';
+import { createTimeRange, parseValue } from './util.js';
 
 export class AnalyticsDashboardViewRepository {
-  constructor(private client: ClickHouseClient) {}
+  constructor(private client: PrometheusClient) {}
 
   private async getWeeklyRequestSeries(
     federatedGraphId: string,
     organizationId: string,
   ): Promise<PlainMessage<RequestSeriesItem>[]> {
-    const query = `
-        SELECT
-            toDate(Timestamp) as timestamp,
-            COUNT(*) as totalRequests,
-            SUM(if(StatusCode = 'STATUS_CODE_ERROR' OR position(SpanAttributes['http.status_code'],'4') = 1, 1, 0)) as erroredRequests
-        FROM
-            ${this.client.database}.otel_traces
-        WHERE
-        -- Only root spans(spans which have no parent span) and has no condition on SpanKind as a span can start from either the server or the client
-            empty(ParentSpanId)
-            AND SpanAttributes['wg.federated_graph.id'] = '${federatedGraphId}'
-            AND SpanAttributes['wg.organization.id'] = '${organizationId}'
-        AND toDate(Timestamp) >= toDate(now()) - interval 6 day
-        GROUP BY
-            timestamp
-        ORDER BY
-            timestamp DESC
-    `;
+    const endDate = Math.round(Date.now() / 1000) * 1000;
 
-    const seriesRes = await this.client.queryPromise(query);
-    if (Array.isArray(seriesRes)) {
-      const padded = padMissingDates(seriesRes);
-      return padded.map((p) => ({
-        ...p,
-        totalRequests: Number(p.totalRequests),
-        erroredRequests: Number(p.erroredRequests),
-      }));
-    }
+    const requests = this.client.queryRange({
+      query: `sum(rate(cosmo_router_http_requests_total{wg_organization_id="${organizationId}", wg_federated_graph_id="${federatedGraphId}"}[4h]) * 60 * 60 * 4)`,
+      start: String((endDate - 7 * 24 * 60 * 60 * 1000) / 1000),
+      end: String(endDate / 1000),
+      step: String(4 * 60 * 60),
+    });
 
-    return [];
+    const errors = this.client.queryRange({
+      query: `sum(rate(cosmo_router_http_requests_total{wg_organization_id="${organizationId}", wg_federated_graph_id="${federatedGraphId}", http_status_code=~"4..|5.."}[4h]) * 60 * 60 * 4)`,
+      start: String((endDate - 7 * 24 * 60 * 60 * 1000) / 1000),
+      end: String(endDate / 1000),
+      step: String(4 * 60 * 60),
+    });
+
+    const [requestsResponse, errorsResponse] = await Promise.all([requests, errors]);
+
+    return this.mapSeries(endDate, 168, {
+      totalRequests: requestsResponse.data.result,
+      erroredRequests: errorsResponse.data.result,
+    });
+  }
+
+  private async getWeeklyTotals(federatedGraphId: string, organizationId: string) {
+    const total = this.client.query({
+      query: `sum(increase(cosmo_router_http_requests_total{wg_organization_id="${organizationId}", wg_federated_graph_id="${federatedGraphId}"}[1w]))`,
+    });
+
+    const totalErrors = this.client.query({
+      query: `sum(increase(cosmo_router_http_requests_total{wg_organization_id="${organizationId}", wg_federated_graph_id="${federatedGraphId}", http_status_code=~"4..|5.."}[1w]))`,
+    });
+
+    const [totalResponse, totalErrorsResponse] = await Promise.all([total, totalErrors]);
+
+    return {
+      requests: Number.parseInt(parseValue(totalResponse.data.result[0].value[1])),
+      errors: Number.parseInt(parseValue(totalErrorsResponse.data.result[0].value[1])),
+    };
   }
 
   private async getAllWeeklyRequestSeries(
     organizationId: string,
   ): Promise<Record<string, PlainMessage<RequestSeriesItem>[]>> {
-    const query = `
-        SELECT
-            toDate(Timestamp) as timestamp,
-            COUNT(*) as totalRequests,
-            SUM(if(StatusCode = 'STATUS_CODE_ERROR' OR position(SpanAttributes['http.status_code'],'4') = 1, 1, 0)) as erroredRequests,
-            SpanAttributes['wg.federated_graph.id'] as graphId
-        FROM
-            ${this.client.database}.otel_traces
-        WHERE
-        -- Only root spans(spans which have no parent span) and has no condition on SpanKind as a span can start from either the server or the client
-            empty(ParentSpanId)
-            AND SpanAttributes['wg.organization.id'] = '${organizationId}'
-        AND toDate(Timestamp) >= toDate(now()) - interval 6 day
-        GROUP BY
-            timestamp,
-            SpanAttributes['wg.federated_graph.id']
-        ORDER BY
-            timestamp DESC
-    `;
+    // const query = `
+    //     SELECT
+    //         toDate(Timestamp) as timestamp,
+    //         COUNT(*) as totalRequests,
+    //         SUM(if(StatusCode = 'STATUS_CODE_ERROR' OR position(SpanAttributes['http.status_code'],'4') = 1, 1, 0)) as erroredRequests,
+    //         SpanAttributes['wg.federated_graph.id'] as graphId
+    //     FROM
+    //         ${this.client.database}.otel_traces
+    //     WHERE
+    //     -- Only root spans(spans which have no parent span) and has no condition on SpanKind as a span can start from either the server or the client
+    //         empty(ParentSpanId)
+    //         AND SpanAttributes['wg.organization.id'] = '${organizationId}'
+    //     AND toDate(Timestamp) >= toDate(now()) - interval 6 day
+    //     GROUP BY
+    //         timestamp,
+    //         SpanAttributes['wg.federated_graph.id']
+    //     ORDER BY
+    //         timestamp DESC
+    // `;
 
-    const seriesResWithGraphId = await this.client.queryPromise(query);
+    // const seriesResWithGraphId = await this.client.queryPromise(query);
 
-    if (Array.isArray(seriesResWithGraphId)) {
-      const transformed: Record<string, PlainMessage<RequestSeriesItem>[]> = {};
+    // if (Array.isArray(seriesResWithGraphId)) {
+    //   const transformed: Record<string, PlainMessage<RequestSeriesItem>[]> = {};
 
-      for (const item of seriesResWithGraphId) {
-        const { graphId, ...rest } = item;
+    //   for (const item of seriesResWithGraphId) {
+    //     const { graphId, ...rest } = item;
 
-        if (!transformed[graphId]) {
-          transformed[graphId] = [];
-        }
+    //     if (!transformed[graphId]) {
+    //       transformed[graphId] = [];
+    //     }
 
-        transformed[graphId].push(rest);
-      }
+    //     transformed[graphId].push(rest);
+    //   }
 
-      for (const key in transformed) {
-        const padded = padMissingDates(transformed[key]);
-        transformed[key] = padded;
-        for (const item of padded) {
-          item.totalRequests = Number(item.totalRequests);
-          item.erroredRequests = Number(item.erroredRequests);
-        }
-      }
+    //   for (const key in transformed) {
+    //     const padded = padMissingDates(transformed[key]);
+    //     transformed[key] = padded;
+    //     for (const item of padded) {
+    //       item.totalRequests = Number(item.totalRequests);
+    //       item.erroredRequests = Number(item.erroredRequests);
+    //     }
+    //   }
 
-      return transformed;
+    //   return transformed;
+    // }
+
+    const endDate = Math.round(Date.now() / 1000) * 1000;
+
+    const requests = this.client.queryRange({
+      query: `sum by (wg_federated_graph_id) (rate(cosmo_router_http_requests_total{wg_organization_id="${organizationId}"}[4h]) * 60 * 60 * 4)`,
+      start: String((endDate - 7 * 24 * 60 * 60 * 1000) / 1000),
+      end: String(endDate / 1000),
+      step: String(4 * 60 * 60),
+    });
+
+    const errors = this.client.queryRange({
+      query: `sum by (wg_federated_graph_id) (rate(cosmo_router_http_requests_total{wg_organization_id="${organizationId}", http_status_code=~"4..|5.."}[4h]) * 60 * 60 * 4)`,
+      start: String((endDate - 7 * 24 * 60 * 60 * 1000) / 1000),
+      end: String(endDate / 1000),
+      step: String(4 * 60 * 60),
+    });
+
+    const [requestsResponse, errorsResponse] = await Promise.all([requests, errors]);
+
+    const series: Record<string, PlainMessage<RequestSeriesItem>[]> = {};
+
+    for (const serie in requestsResponse.data.result) {
+      series[requestsResponse.data.result[serie].metric.wg_federated_graph_id] = this.mapSeries(endDate, 168, {
+        totalRequests: [requestsResponse.data.result[serie]],
+        erroredRequests: [errorsResponse.data.result[serie]],
+      });
     }
 
-    return {};
+    return series;
   }
 
   private async getWeeklyMostRequested(
     federatedGraphId: string,
     organizationId: string,
   ): Promise<PlainMessage<OperationRequestCount>[]> {
-    const query = `
-        SELECT
-            COALESCE(NULLIF(SpanAttributes['wg.operation.name'], ''), 'unknown') as operationName,
-            COUNT(*) as totalRequests
-        FROM
-            ${this.client.database}.otel_traces
-        WHERE
-        -- Only root spans(spans which have no parent span) and has no condition on SpanKind as a span can start from either the server or the client
-            empty(ParentSpanId)
-            AND toDate(Timestamp) >= toDate(now()) - interval 6 day
-            AND SpanAttributes['wg.federated_graph.id'] = '${federatedGraphId}'
-            AND SpanAttributes['wg.organization.id'] = '${organizationId}'
-        GROUP BY
-            operationName
-        ORDER BY
-            totalRequests DESC
-        LIMIT 5
-    `;
+    const top5 = await this.client.query({
+      query: `topk(5, sum by (wg_operation_name) (increase(cosmo_router_http_requests_total{wg_organization_id="${organizationId}", wg_federated_graph_id="${federatedGraphId}"}[1w])))`,
+    });
 
-    const res = await this.client.queryPromise(query);
-
-    if (Array.isArray(res)) {
-      return res.map((r) => ({
-        ...r,
-        totalRequests: Number(r.totalRequests),
-      }));
-    }
-
-    return [];
+    return top5.data.result.map((result) => {
+      return {
+        operationName: result.metric.wg_operation_name || 'unknown',
+        totalRequests: Number.parseInt(parseValue(result.value[1])),
+      };
+    });
   }
 
   public async getListView(organizationId: string): Promise<Record<string, PlainMessage<RequestSeriesItem>[]>> {
@@ -136,14 +154,46 @@ export class AnalyticsDashboardViewRepository {
   }
 
   public async getView(federatedGraphId: string, organizationId: string) {
-    const [requestSeries, mostRequestedOperations] = await Promise.all([
+    const [totals, requestSeries, mostRequestedOperations] = await Promise.all([
+      this.getWeeklyTotals(federatedGraphId, organizationId),
       this.getWeeklyRequestSeries(federatedGraphId, organizationId),
       this.getWeeklyMostRequested(federatedGraphId, organizationId),
     ]);
 
     return {
+      totals,
       requestSeries,
       mostRequestedOperations,
     };
+  }
+
+  protected mapSeries<Series extends Record<string, QueryResultValue[]>>(
+    endDate: number,
+    range: number,
+    series: Series,
+  ): Series extends Record<infer Key, QueryResultValue[]>
+    ? ({ timestamp: string } & {
+        [key in Key]: number;
+      })[]
+    : [] {
+    const timeRange = createTimeRange(endDate, range, 4 * 60);
+
+    const s = Object.entries(series);
+
+    return timeRange.map((v) => {
+      const timestamp = String(Math.round(Number.parseInt(v.timestamp) / 1000));
+
+      const metrics: Record<string, number> = {};
+
+      for (const [key, results] of s) {
+        const values = results[0].values;
+        metrics[key] = Number.parseInt(values?.find((s) => String(s[0]) === timestamp)?.[1] || '0');
+      }
+
+      return {
+        ...metrics,
+        ...v,
+      };
+    }) as any;
   }
 }

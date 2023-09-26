@@ -64,7 +64,6 @@ import ApolloMigrator from '../services/ApolloMigrator.js';
 import { MetricsDashboardRepository } from '../repositories/analytics/MetricsDashboardRepository.js';
 import { handleError, isValidLabelMatchers, isValidLabels } from '../util.js';
 import { OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
-import { AnalyticsDashboardViewRepository2 } from '../repositories/analytics/AnalyticsDashboardViewRepository2.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -279,7 +278,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         let requestSeriesList: Record<string, PlainMessage<RequestSeriesItem>[]> = {};
 
         if (req.includeMetrics && opts.chClient) {
-          const analyticsDashRepo = new AnalyticsDashboardViewRepository(opts.chClient);
+          const analyticsDashRepo = new AnalyticsDashboardViewRepository(opts.prometheus);
           requestSeriesList = await analyticsDashRepo.getListView(authContext.organizationId);
         }
 
@@ -376,7 +375,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         let requestSeries: PlainMessage<RequestSeriesItem>[] = [];
         if (req.includeMetrics && opts.chClient) {
-          const analyticsDashRepo = new AnalyticsDashboardViewRepository(opts.chClient);
+          const analyticsDashRepo = new AnalyticsDashboardViewRepository(opts.prometheus);
           const graphResponse = await analyticsDashRepo.getView(federatedGraph.id, authContext.organizationId);
           requestSeries = graphResponse.requestSeries;
         }
@@ -1204,8 +1203,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        // const analyticsDashRepo = new AnalyticsDashboardViewRepository(opts.chClient);
-        const analyticsDashRepo = new AnalyticsDashboardViewRepository2(opts.prometheus);
+        const analyticsDashRepo = new AnalyticsDashboardViewRepository(opts.prometheus);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
 
         const graph = await fedGraphRepo.byName(req.federatedGraphName);
@@ -1220,7 +1218,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const { requestSeries, mostRequestedOperations } = await analyticsDashRepo.getView(
+        const { requestSeries, mostRequestedOperations, totals } = await analyticsDashRepo.getView(
           graph.id,
           authContext.organizationId,
         );
@@ -1229,6 +1227,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           response: {
             code: EnumStatusCode.OK,
           },
+          totals,
           mostRequestedOperations,
           requestSeries,
         };

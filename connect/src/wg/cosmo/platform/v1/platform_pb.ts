@@ -3276,6 +3276,49 @@ export class OperationRequestCount extends Message<OperationRequestCount> {
 }
 
 /**
+ * @generated from message wg.cosmo.platform.v1.DashboardTotals
+ */
+export class DashboardTotals extends Message<DashboardTotals> {
+  /**
+   * @generated from field: int32 requests = 1;
+   */
+  requests = 0;
+
+  /**
+   * @generated from field: int32 errors = 2;
+   */
+  errors = 0;
+
+  constructor(data?: PartialMessage<DashboardTotals>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.DashboardTotals";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "requests", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 2, name: "errors", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DashboardTotals {
+    return new DashboardTotals().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DashboardTotals {
+    return new DashboardTotals().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DashboardTotals {
+    return new DashboardTotals().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DashboardTotals | PlainMessage<DashboardTotals> | undefined, b: DashboardTotals | PlainMessage<DashboardTotals> | undefined): boolean {
+    return proto3.util.equals(DashboardTotals, a, b);
+  }
+}
+
+/**
  * @generated from message wg.cosmo.platform.v1.GetDashboardAnalyticsViewResponse
  */
 export class GetDashboardAnalyticsViewResponse extends Message<GetDashboardAnalyticsViewResponse> {
@@ -3285,12 +3328,17 @@ export class GetDashboardAnalyticsViewResponse extends Message<GetDashboardAnaly
   response?: Response;
 
   /**
-   * @generated from field: repeated wg.cosmo.platform.v1.RequestSeriesItem requestSeries = 2;
+   * @generated from field: wg.cosmo.platform.v1.DashboardTotals totals = 2;
+   */
+  totals?: DashboardTotals;
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.RequestSeriesItem requestSeries = 3;
    */
   requestSeries: RequestSeriesItem[] = [];
 
   /**
-   * @generated from field: repeated wg.cosmo.platform.v1.OperationRequestCount mostRequestedOperations = 3;
+   * @generated from field: repeated wg.cosmo.platform.v1.OperationRequestCount mostRequestedOperations = 4;
    */
   mostRequestedOperations: OperationRequestCount[] = [];
 
@@ -3303,8 +3351,9 @@ export class GetDashboardAnalyticsViewResponse extends Message<GetDashboardAnaly
   static readonly typeName = "wg.cosmo.platform.v1.GetDashboardAnalyticsViewResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
-    { no: 2, name: "requestSeries", kind: "message", T: RequestSeriesItem, repeated: true },
-    { no: 3, name: "mostRequestedOperations", kind: "message", T: OperationRequestCount, repeated: true },
+    { no: 2, name: "totals", kind: "message", T: DashboardTotals },
+    { no: 3, name: "requestSeries", kind: "message", T: RequestSeriesItem, repeated: true },
+    { no: 4, name: "mostRequestedOperations", kind: "message", T: OperationRequestCount, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetDashboardAnalyticsViewResponse {
