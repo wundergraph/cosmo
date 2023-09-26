@@ -80,6 +80,7 @@ export class OrganizationRepository {
         name: organizations.name,
         slug: organizations.slug,
         isFreeTrial: organizations.isFreeTrial,
+        isPersonal: organizations.isPersonal,
       })
       .from(organizationsMembers)
       .innerJoin(organizations, eq(organizations.id, organizationsMembers.organizationId))
@@ -93,6 +94,7 @@ export class OrganizationRepository {
         name: org.name,
         slug: org.slug,
         isFreeTrial: org.isFreeTrial || false,
+        isPersonal: org.isPersonal || false,
         roles: await this.getOrganizationMemberRoles({
           userID: input.userId,
           organizationID: org.id,
