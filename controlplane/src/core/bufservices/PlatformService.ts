@@ -1894,13 +1894,20 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         await orgRepo.removeOrganizationMember({ organizationID: authContext.organizationId, userID: user.id });
 
-        // deleting the user from keycloak
-        await opts.keycloakClient.client.users.del({
-          id: user.id,
-          realm: opts.keycloakRealm,
-        });
-        // deleting the user from the db
-        await userRepo.deleteUser({ id: user.id });
+        const userMemberships = await orgRepo.memberships({ userId: user.id });
+
+        // delete the user only when user doesnt have any memberships
+        // this will happen only when the user was invited but the user didnt login and the admin removed that user, 
+        // in this case the user will not have a personal org 
+        if (userMemberships.length === 0) {
+          // deleting the user from keycloak
+          await opts.keycloakClient.client.users.del({
+            id: user.id,
+            realm: opts.keycloakRealm,
+          });
+          // deleting the user from the db
+          await userRepo.deleteUser({ id: user.id });
+        }
 
         return {
           response: {
