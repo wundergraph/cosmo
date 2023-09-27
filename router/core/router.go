@@ -4,12 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"net"
 	"net/http"
 	"net/url"
 	"sync"
 	"time"
+
+	"github.com/wundergraph/cosmo/router/internal/otel/otelconfig"
+	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 
 	"github.com/dgraph-io/ristretto"
 	"github.com/go-chi/chi"
@@ -108,6 +110,14 @@ type (
 	// Option defines the method to customize Server.
 	Option func(svr *Router)
 )
+
+func setAuthorizationHeader(headers map[string]string, bearerToken string) map[string]string {
+	if headers == nil {
+		headers = make(map[string]string)
+	}
+	headers["Authorization"] = fmt.Sprintf("Bearer %s", bearerToken)
+	return headers
+}
 
 // NewRouter creates a new Router instance. Router.Start() must be called to start the server.
 // Alternatively, use Router.NewTestServer() to create a new Server instance without starting it for testing purposes.
@@ -209,16 +219,17 @@ func NewRouter(opts ...Option) (*Router, error) {
 		ExpectContinueTimeout: r.subgraphTransportOptions.ExpectContinueTimeout,
 	}
 
-	if r.traceConfig.OtlpHeaders == nil {
-		r.traceConfig.OtlpHeaders = make(map[string]string)
+	// Add r.graphApiToken to default OTEL providers, if they were configured
+	for _, exp := range r.traceConfig.Exporters {
+		if exp.Endpoint == otelconfig.DefaultEndpoint {
+			exp.Headers = setAuthorizationHeader(exp.Headers, r.graphApiToken)
+		}
 	}
-	r.traceConfig.OtlpHeaders["Authorization"] = fmt.Sprintf("Bearer %s", r.graphApiToken)
-
-	if r.metricConfig.OtlpHeaders == nil {
-		r.metricConfig.OtlpHeaders = make(map[string]string)
+	for _, exp := range r.metricConfig.OpenTelemetry.Exporters {
+		if exp.Endpoint == otelconfig.DefaultEndpoint {
+			exp.Headers = setAuthorizationHeader(exp.Headers, r.graphApiToken)
+		}
 	}
-	r.metricConfig.OtlpHeaders["Authorization"] = fmt.Sprintf("Bearer %s", r.graphApiToken)
-
 	return r, nil
 }
 

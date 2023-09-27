@@ -3,15 +3,19 @@ package metric
 import (
 	"context"
 	"fmt"
+	"net/url"
+	"time"
+
+	"github.com/wundergraph/cosmo/router/internal/otel/otelconfig"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
 	"go.opentelemetry.io/otel/exporters/prometheus"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	"go.uber.org/zap"
-	"net/url"
-	"time"
+	_ "google.golang.org/grpc/encoding/gzip" // Required for gzip support over grpc
 )
 
 var (
@@ -31,33 +35,65 @@ func createPromExporter() (*prometheus.Exporter, error) {
 	return prometheusExporter, nil
 }
 
-func createHttpExporter(c *Config) (sdkmetric.Exporter, error) {
-	u, err := url.Parse(c.Endpoint)
+func createOTELExporter(log *zap.Logger, exp *OpenTelemetryExporter) (sdkmetric.Exporter, error) {
+	u, err := url.Parse(exp.Endpoint)
 	if err != nil {
-		return nil, fmt.Errorf("invalid OpenTelemetry endpoint: %w", err)
+		return nil, fmt.Errorf("invalid OpenTelemetry endpoint %q: %w", exp.Endpoint, err)
 	}
+	var exporter sdkmetric.Exporter
+	switch exp.Exporter {
+	case otelconfig.ExporterDefault, otelconfig.ExporterOLTPHTTP:
+		opts := []otlpmetrichttp.Option{
+			// Includes host and port
+			otlpmetrichttp.WithEndpoint(u.Host),
+			otlpmetrichttp.WithCompression(otlpmetrichttp.GzipCompression),
+		}
 
-	opts := []otlpmetrichttp.Option{
-		// Includes host and port
-		otlpmetrichttp.WithEndpoint(u.Host),
-		otlpmetrichttp.WithCompression(otlpmetrichttp.GzipCompression),
-	}
+		if u.Scheme != "https" {
+			opts = append(opts, otlpmetrichttp.WithInsecure())
+		}
 
-	if u.Scheme != "https" {
-		opts = append(opts, otlpmetrichttp.WithInsecure())
-	}
+		if len(exp.Headers) > 0 {
+			opts = append(opts, otlpmetrichttp.WithHeaders(exp.Headers))
+		}
+		if len(exp.HTTPPath) > 0 {
+			opts = append(opts, otlpmetrichttp.WithURLPath(exp.HTTPPath))
+		}
 
-	if len(c.OtlpHeaders) > 0 {
-		opts = append(opts, otlpmetrichttp.WithHeaders(c.OtlpHeaders))
-	}
-	if len(c.OtlpHttpPath) > 0 {
-		opts = append(opts, otlpmetrichttp.WithURLPath(c.OtlpHttpPath))
-	}
+		exporter, err = otlpmetrichttp.New(
+			context.Background(),
+			opts...,
+		)
+	case otelconfig.ExporterOLTPGRPC:
+		opts := []otlpmetricgrpc.Option{
+			// Includes host and port
+			otlpmetricgrpc.WithEndpoint(u.Host),
+			otlpmetricgrpc.WithCompressor("gzip"),
+		}
 
-	return otlpmetrichttp.New(
-		context.Background(),
-		opts...,
-	)
+		if u.Scheme != "https" {
+			opts = append(opts, otlpmetricgrpc.WithInsecure())
+		}
+
+		if len(exp.Headers) > 0 {
+			opts = append(opts, otlpmetricgrpc.WithHeaders(exp.Headers))
+		}
+		if len(exp.HTTPPath) > 0 {
+			log.Warn("otlpmetricgrpc exporter doesn't support arbitrary paths", zap.String("path", exp.HTTPPath))
+		}
+
+		exporter, err = otlpmetricgrpc.New(
+			context.Background(),
+			opts...,
+		)
+	default:
+		return nil, fmt.Errorf("unknown metrics exporter %s", exp.Exporter)
+	}
+	if err != nil {
+		return nil, err
+	}
+	log.Info("using metrics exporter", zap.String("exporter", string(exp.Exporter)), zap.String("endpoint", exp.Endpoint), zap.String("path", exp.HTTPPath))
+	return exporter, nil
 }
 
 func startAgent(log *zap.Logger, c *Config) (*sdkmetric.MeterProvider, error) {
@@ -66,23 +102,23 @@ func startAgent(log *zap.Logger, c *Config) (*sdkmetric.MeterProvider, error) {
 		sdkmetric.WithResource(resource.NewSchemaless(semconv.ServiceNameKey.String(c.Name))),
 	}
 
-	if c.Enabled && len(c.Endpoint) > 0 {
-		exp, err := createHttpExporter(c)
-		if err != nil {
-			log.Error("create exporter error", zap.Error(err))
-			return nil, err
-		}
+	if c.Enabled {
+		for _, exp := range c.OpenTelemetry.Exporters {
+			exporter, err := createOTELExporter(log, exp)
+			if err != nil {
+				log.Error("creating OTEL metrics exporter", zap.Error(err))
+				return nil, err
+			}
 
-		opts = append(opts,
-			sdkmetric.WithReader(
-				sdkmetric.NewPeriodicReader(exp,
-					sdkmetric.WithTimeout(30*time.Second),
-					sdkmetric.WithInterval(30*time.Second),
+			opts = append(opts,
+				sdkmetric.WithReader(
+					sdkmetric.NewPeriodicReader(exporter,
+						sdkmetric.WithTimeout(30*time.Second),
+						sdkmetric.WithInterval(30*time.Second),
+					),
 				),
-			),
-		)
-
-		log.Info("Metric Exporter agent started", zap.String("url", c.Endpoint+c.OtlpHttpPath))
+			)
+		}
 	}
 
 	if c.Prometheus.Enabled {
