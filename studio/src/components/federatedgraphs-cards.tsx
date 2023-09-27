@@ -393,8 +393,7 @@ export const Empty = ({
 };
 
 const GraphCard = ({ graph }: { graph: FederatedGraph }) => {
-  const user = useContext(UserContext);
-
+  const [user] = useContext(UserContext);
   const { data, ticks, domain, timeFormatter } = useChartData(
     7 * 24,
     graph.requestSeries.length > 0 ? graph.requestSeries : fallbackData
@@ -409,7 +408,7 @@ const GraphCard = ({ graph }: { graph: FederatedGraph }) => {
 
   return (
     <Link
-      href={`/${user?.organization?.slug}/graph/${graph.name}`}
+      href={`/${user?.currentOrganization?.slug}/graph/${graph.name}`}
       className="project-list-item group"
     >
       <Card className="py-4 group-hover:border-ring dark:group-hover:border-input">

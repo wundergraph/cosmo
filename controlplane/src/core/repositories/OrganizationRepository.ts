@@ -10,7 +10,7 @@ import {
   organizationsMembers,
   users,
 } from '../../db/schema.js';
-import { APIKeyDTO, OrganizationDTO, OrganizationMemberDTO, WebhooksConfigDTO } from '../../types/index.js';
+import { APIKeyDTO, MemberRole, OrganizationDTO, OrganizationMemberDTO, WebhooksConfigDTO } from '../../types/index.js';
 
 /**
  * Repository for organization related operations.
@@ -73,13 +73,14 @@ export class OrganizationRepository {
     return org[0];
   }
 
-  public async memberships(input: { userId: string }): Promise<OrganizationDTO[]> {
+  public async memberships(input: { userId: string }): Promise<(OrganizationDTO & { roles: string[] })[]> {
     const userOrganizations = await this.db
       .select({
         id: organizations.id,
         name: organizations.name,
         slug: organizations.slug,
         isFreeTrial: organizations.isFreeTrial,
+        isPersonal: organizations.isPersonal,
       })
       .from(organizationsMembers)
       .innerJoin(organizations, eq(organizations.id, organizationsMembers.organizationId))
@@ -87,12 +88,21 @@ export class OrganizationRepository {
       .where(eq(users.id, input.userId))
       .execute();
 
-    return userOrganizations.map((org) => ({
-      id: org.id,
-      name: org.name,
-      slug: org.slug,
-      isFreeTrial: org.isFreeTrial || false,
-    }));
+    const userMemberships = await Promise.all(
+      userOrganizations.map(async (org) => ({
+        id: org.id,
+        name: org.name,
+        slug: org.slug,
+        isFreeTrial: org.isFreeTrial || false,
+        isPersonal: org.isPersonal || false,
+        roles: await this.getOrganizationMemberRoles({
+          userID: input.userId,
+          organizationID: org.id,
+        }),
+      })),
+    );
+
+    return userMemberships;
   }
 
   public async getOrganizationMember(input: {
@@ -168,6 +178,7 @@ export class OrganizationRepository {
     organizationName: string;
     organizationSlug: string;
     ownerID: string;
+    isPersonal?: boolean;
     isFreeTrial?: boolean;
   }): Promise<OrganizationDTO> {
     const insertedOrg = await this.db
@@ -177,6 +188,7 @@ export class OrganizationRepository {
         name: input.organizationName,
         slug: input.organizationSlug,
         createdBy: input.ownerID,
+        isPersonal: input.isPersonal,
         isFreeTrial: input.isFreeTrial,
       })
       .returning()
