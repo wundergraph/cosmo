@@ -119,10 +119,10 @@ const Organizations = () => {
     >
       <SelectTrigger
         value={user.currentOrganization.name}
-        className="w-[200px] lg:w-full"
+        className="flex w-[200px] gap-x-2 border-0 bg-transparent px-2 lg:w-full"
       >
         <SelectValue aria-label={user.currentOrganization.name}>
-          <span className="flex w-36 truncate">
+          <span className="flex w-36 truncate font-semibold capitalize">
             {user.currentOrganization.name}
           </span>
         </SelectValue>
@@ -155,13 +155,7 @@ export const Nav = ({ children, links, canChangeOrgs }: SideNavLayoutProps) => {
                 <Link href="/">
                   <Logo />
                 </Link>
-                {canChangeOrgs ? (
-                  <Organizations />
-                ) : (
-                  <span className="hidden w-40 truncate font-semibold capitalize sm:inline-block">
-                    {user?.currentOrganization.name}
-                  </span>
-                )}
+                <Organizations />
               </div>
               <Graphs />
             </div>

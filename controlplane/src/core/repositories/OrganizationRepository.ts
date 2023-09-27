@@ -80,6 +80,7 @@ export class OrganizationRepository {
         name: organizations.name,
         slug: organizations.slug,
         isFreeTrial: organizations.isFreeTrial,
+        isPersonal: organizations.isPersonal,
       })
       .from(organizationsMembers)
       .innerJoin(organizations, eq(organizations.id, organizationsMembers.organizationId))
@@ -93,6 +94,7 @@ export class OrganizationRepository {
         name: org.name,
         slug: org.slug,
         isFreeTrial: org.isFreeTrial || false,
+        isPersonal: org.isPersonal || false,
         roles: await this.getOrganizationMemberRoles({
           userID: input.userId,
           organizationID: org.id,
@@ -176,6 +178,7 @@ export class OrganizationRepository {
     organizationName: string;
     organizationSlug: string;
     ownerID: string;
+    isPersonal?: boolean;
     isFreeTrial?: boolean;
   }): Promise<OrganizationDTO> {
     const insertedOrg = await this.db
@@ -185,6 +188,7 @@ export class OrganizationRepository {
         name: input.organizationName,
         slug: input.organizationSlug,
         createdBy: input.ownerID,
+        isPersonal: input.isPersonal,
         isFreeTrial: input.isFreeTrial,
       })
       .returning()
