@@ -1551,14 +1551,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           const userMemberships = await orgRepo.memberships({
             userId: user.id,
           });
-          if (userMemberships.length > 0) {
-            return {
-              response: {
-                code: EnumStatusCode.ERR_ALREADY_EXISTS,
-                details: `${req.email} is already a member of another organization`,
-              },
-            };
-          }
         }
 
         const organization = await orgRepo.byId(authContext.organizationId);
