@@ -8,6 +8,7 @@ import {
   organizationWebhooks,
   organizations,
   organizationsMembers,
+  targets,
   users,
 } from '../../db/schema.js';
 import { APIKeyDTO, MemberRole, OrganizationDTO, OrganizationMemberDTO, WebhooksConfigDTO } from '../../types/index.js';
@@ -41,6 +42,7 @@ export class OrganizationRepository {
         id: organizations.id,
         name: organizations.name,
         slug: organizations.slug,
+        creatorUserId: organizations.createdBy,
       })
       .from(organizations)
       .where(eq(organizations.slug, slug))
@@ -60,6 +62,7 @@ export class OrganizationRepository {
         id: organizations.id,
         name: organizations.name,
         slug: organizations.slug,
+        creatorUserId: organizations.createdBy,
       })
       .from(organizations)
       .where(eq(organizations.id, id))
@@ -79,6 +82,7 @@ export class OrganizationRepository {
         id: organizations.id,
         name: organizations.name,
         slug: organizations.slug,
+        creatorUserId: organizations.createdBy,
         isFreeTrial: organizations.isFreeTrial,
         isPersonal: organizations.isPersonal,
       })
@@ -93,6 +97,7 @@ export class OrganizationRepository {
         id: org.id,
         name: org.name,
         slug: org.slug,
+        creatorUserId: org.creatorUserId,
         isFreeTrial: org.isFreeTrial || false,
         isPersonal: org.isPersonal || false,
         roles: await this.getOrganizationMemberRoles({
@@ -198,6 +203,7 @@ export class OrganizationRepository {
       id: insertedOrg[0].id,
       name: insertedOrg[0].name,
       slug: insertedOrg[0].slug,
+      creatorUserId: insertedOrg[0].createdBy,
     };
   }
 
@@ -421,7 +427,13 @@ export class OrganizationRepository {
   }
 
   public async deleteOrganization(organizationID: string) {
-    await this.db.delete(organizations).where(eq(organizations.id, organizationID));
+    await this.db.transaction(async (db) => {
+      const orgRepo = new OrganizationRepository(db);
+
+      await orgRepo.deleteOrganizationResources(organizationID);
+
+      await db.delete(organizations).where(eq(organizations.id, organizationID));
+    });
   }
 
   public async updateUserRole(input: { orgMemberID: string; organizationID: string; role: MemberRole }) {
@@ -429,5 +441,22 @@ export class OrganizationRepository {
       .update(organizationMemberRoles)
       .set({ role: input.role })
       .where(eq(organizationMemberRoles.id, input.orgMemberID));
+  }
+
+  public async getOrganizationAdmins(input: { organizationID: string }): Promise<OrganizationMemberDTO[]> {
+    const orgAdmins: OrganizationMemberDTO[] = [];
+    const orgMembers = await this.getMembers({ organizationID: input.organizationID });
+
+    for (const member of orgMembers) {
+      if (member.roles.includes('admin')) {
+        orgAdmins.push(member);
+      }
+    }
+
+    return orgAdmins;
+  }
+
+  public async deleteOrganizationResources(organizationID: string) {
+    await this.db.delete(targets).where(eq(organizations.id, organizationID));
   }
 }

@@ -2169,11 +2169,23 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             },
           };
         }
+
+        // non admins cannot delete the organization
         if (!user.roles.includes('admin')) {
           return {
             response: {
               code: EnumStatusCode.ERR,
               details: 'User does not have the permissions to delete the organization.',
+            },
+          };
+        }
+
+        // the personal org cannot be deleted
+        if (org.isPersonal) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Personal organization cannot be deleted.`,
             },
           };
         }
@@ -2240,6 +2252,30 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
+        // the creator of the personal org cannot leave the organization.
+        if (org.isPersonal && org.creatorUserId === (authContext.userId || req.userID)) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Creator of a personal organization cannot leave the organization.`,
+            },
+          };
+        }
+
+        // checking if the user is an single admin
+        if (orgMember.roles.includes('admin')) {
+          const orgAdmins = await orgRepo.getOrganizationAdmins({ organizationID: authContext.organizationId });
+          if (orgAdmins.length === 1) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR,
+                details:
+                  'Single admins cannot leave the organization. Please make another member an admin and try again.',
+              },
+            };
+          }
+        }
+
         await opts.keycloakClient.authenticateClient();
 
         const organizationGroup = await opts.keycloakClient.client.groups.find({
@@ -2264,37 +2300,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           userID: authContext.userId || req.userID,
           organizationID: authContext.organizationId,
         });
-
-        if (orgMember.roles.includes('admin')) {
-          const orgMembers = await orgRepo.getMembers({ organizationID: authContext.organizationId });
-          // if no organization members exist, we delete the org too
-          if (orgMembers.length === 0) {
-            await opts.keycloakClient.client.groups.del({
-              id: organizationGroup[0].id!,
-              realm: opts.keycloakRealm,
-            });
-
-            await orgRepo.deleteOrganization(authContext.organizationId);
-          } else {
-            // if org members exist, we update one of the user's role to admin
-            await orgRepo.updateUserRole({
-              orgMemberID: orgMembers[0].id,
-              organizationID: authContext.organizationId,
-              role: 'admin',
-            });
-          }
-        }
-
-        const userMemberships = await orgRepo.memberships({ userId: authContext.userId || req.userID });
-        if (userMemberships.length === 0) {
-          // deleting the user from keycloak
-          await opts.keycloakClient.client.users.del({
-            id: authContext.userId || req.userID,
-            realm: opts.keycloakRealm,
-          });
-          // deleting the user from the db
-          await userRepo.deleteUser({ id: authContext.userId || req.userID });
-        }
 
         return {
           response: {
