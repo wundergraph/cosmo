@@ -10,6 +10,8 @@ const deltaBadgeVariants = cva(
     variants: {
       type: {
         neutral: "border-transparent bg-muted text-muted-foreground",
+        "increase-neutral": "border-transparent bg-muted text-muted-foreground",
+        "decrease-neutral": "border-transparent bg-muted text-muted-foreground",
         "increase-positive": "border-transparent bg-success/10 text-success",
         "increase-negative":
           "border-transparent bg-destructive/10 text-destructive",
