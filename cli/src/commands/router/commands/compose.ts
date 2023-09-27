@@ -1,10 +1,10 @@
 import { existsSync } from 'node:fs';
-import { readFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
 import { buildRouterConfig, normalizeURL } from '@wundergraph/cosmo-shared';
 import { Command, program } from 'commander';
 import { parse, printSchema } from 'graphql';
 import * as yaml from 'js-yaml';
-import { resolve, dirname } from 'pathe';
+import { resolve, dirname, join } from 'pathe';
 import pc from 'picocolors';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { composeSubgraphs, introspectSubgraph } from '../../../utils.js';
@@ -32,6 +32,7 @@ export default (opts: BaseCommandOptions) => {
     'Generates a router config from a local composition file. This makes it easy to test your router without a control-plane connection. For production, please use the "router fetch" command',
   );
   command.requiredOption('-i, --input <path-to-input>', 'The yaml file with data about graph and subgraphs.');
+  command.option('-o, --out [string]', 'Destination file for the router config.');
   command.action(async (options) => {
     const inputFile = resolve(process.cwd(), options.input);
     const inputFileLocation = dirname(inputFile);
@@ -97,7 +98,11 @@ export default (opts: BaseCommandOptions) => {
       })),
     });
 
-    console.log(routerConfig.toJsonString());
+    if (options.out) {
+      await writeFile(join(process.cwd(), options.out), routerConfig.toJsonString());
+    } else {
+      console.log(routerConfig.toJsonString());
+    }
   });
 
   return command;

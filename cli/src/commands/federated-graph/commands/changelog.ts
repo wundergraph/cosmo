@@ -1,13 +1,13 @@
-import * as fs from 'node:fs';
+import { writeFile } from 'node:fs/promises';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { Command, program } from 'commander';
 import { endOfDay, formatISO, startOfDay, subDays } from 'date-fns';
 import pc from 'picocolors';
+import { join } from 'pathe';
 import { baseHeaders } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 
-// modifying this type is a breaking change
-type SchemaChanges = {
+type OutputFile = {
   createdAt: string;
   schemaVersionId: string;
   changelogs: {
@@ -27,7 +27,7 @@ export default (opts: BaseCommandOptions) => {
   command.option('-f, --offset [number]', 'Offset of entries. Defaults to 0', '0');
   command.option('-s, --start [date]', 'Start date. Defaults to 3 days back');
   command.option('-e, --end [date]', 'End date. Defaults to today');
-  command.option('-o, --out', 'Destination file for changelog. Defaults to changelog.json', 'changelog.json');
+  command.option('-o, --out [string]', 'Destination file for changelog. Defaults to changelog.json', 'changelog.json');
   command.action(async (name, options) => {
     let startDate = subDays(new Date(), 3);
     let endDate = new Date();
@@ -57,19 +57,21 @@ export default (opts: BaseCommandOptions) => {
     );
 
     if (resp.response?.code === EnumStatusCode.OK) {
-      const output: SchemaChanges = resp.federatedGraphChangelogOutput.map((op) => ({
-        createdAt: op.createdAt,
-        schemaVersionId: op.schemaVersionId,
-        changelogs: op.changelogs.map((cl) => ({
-          id: cl.id,
-          path: cl.path,
-          changeType: cl.changeType,
-          changeMessage: cl.changeMessage,
-          createdAt: cl.createdAt,
-        })),
-      }));
-
-      fs.writeFileSync(options.out, JSON.stringify(output));
+      const output = resp.federatedGraphChangelogOutput.map(
+        (op) =>
+          ({
+            createdAt: op.createdAt,
+            schemaVersionId: op.schemaVersionId,
+            changelogs: op.changelogs.map((cl) => ({
+              id: cl.id,
+              path: cl.path,
+              changeType: cl.changeType,
+              changeMessage: cl.changeMessage,
+              createdAt: cl.createdAt,
+            })),
+          } as OutputFile[number]),
+      );
+      await writeFile(join(process.cwd(), options.out), JSON.stringify(output));
     } else {
       let message = `Failed to fetch changelog for ${pc.bold(name)}.`;
       if (resp.response?.details) {

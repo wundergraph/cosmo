@@ -1,16 +1,17 @@
-import { Command } from 'commander';
-import pc from 'picocolors';
+import { writeFile } from 'node:fs/promises';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { BaseCommandOptions } from '../../../core/types/types.js';
+import { Command } from 'commander';
+import { join } from 'pathe';
+import pc from 'picocolors';
 import { baseHeaders } from '../../../core/config.js';
+import { BaseCommandOptions } from '../../../core/types/types.js';
 
 export default (opts: BaseCommandOptions) => {
-  const fetchFederatedGraph = new Command('fetch');
-  fetchFederatedGraph.description(
-    'Fetches the latest valid SDL of a federated graph. The output can be piped to a file.',
-  );
-  fetchFederatedGraph.argument('<name>', 'The name of the federated graph to fetch.');
-  fetchFederatedGraph.action(async (name, options) => {
+  const command = new Command('fetch');
+  command.description('Fetches the latest valid SDL of a federated graph. The output can be piped to a file.');
+  command.argument('<name>', 'The name of the federated graph to fetch.');
+  command.option('-o, --out [string]', 'Destination file for the SDL.');
+  command.action(async (name, options) => {
     const resp = await opts.client.platform.getFederatedGraphSDLByName(
       {
         name,
@@ -29,8 +30,12 @@ export default (opts: BaseCommandOptions) => {
       process.exit(1);
     }
 
-    console.log(resp.sdl);
+    if (options.out) {
+      await writeFile(join(process.cwd(), options.out), resp.sdl ?? '');
+    } else {
+      console.log(resp.sdl);
+    }
   });
 
-  return fetchFederatedGraph;
+  return command;
 };
