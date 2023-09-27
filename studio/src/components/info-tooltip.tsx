@@ -9,7 +9,7 @@ export interface InfoTooltipProps {
 export const InfoTooltip: React.FC<InfoTooltipProps> = (props) => {
   const { children } = props;
   return (
-    <Tooltip>
+    <Tooltip delayDuration={50}>
       <TooltipTrigger>
         <span className="text-muted-foreground">
           <FiInfo />
