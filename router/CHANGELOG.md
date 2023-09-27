@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.21.2](https://github.com/wundergraph/cosmo/compare/router@0.21.1...router@0.21.2) (2023-09-27)
+
+### Bug Fixes
+
+* update engine to address entity array issues ([#131](https://github.com/wundergraph/cosmo/issues/131)) ([5e042e2](https://github.com/wundergraph/cosmo/commit/5e042e204709030e283d82e67e5a050ceb4397c6)) (@Aenimus)
+
 ## [0.21.1](https://github.com/wundergraph/cosmo/compare/router@0.21.0...router@0.21.1) (2023-09-27)
 
 ### Bug Fixes
