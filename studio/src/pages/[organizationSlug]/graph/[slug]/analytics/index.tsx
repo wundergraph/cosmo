@@ -25,7 +25,7 @@ import { useChartData } from "@/lib/insights-helpers";
 import { NextPageWithLayout } from "@/lib/page";
 import { cn } from "@/lib/utils";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
-import { useQuery } from "@tanstack/react-query";
+import { useIsFetching, useQuery, useQueryClient } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   getMetricsDashboard,
@@ -33,7 +33,7 @@ import {
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { MetricsDashboardMetric } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { useRouter } from "next/router";
-import React, { useContext, useId, useMemo } from "react";
+import React, { useContext, useId } from "react";
 import {
   Area,
   AreaChart,
@@ -46,6 +46,7 @@ import { ChartTooltip } from "@/components/analytics/charts";
 import { InfoTooltip } from "@/components/info-tooltip";
 import useWindowSize from "@/hooks/use-window-size";
 import { endOfDay, formatISO, startOfDay, subHours } from "date-fns";
+import { UpdateIcon } from "@radix-ui/react-icons";
 
 export type OperationAnalytics = {
   name: string;
@@ -102,7 +103,6 @@ const AnalyticsPage: NextPageWithLayout = () => {
     }),
     keepPreviousData: true,
     refetchOnWindowFocus: false,
-    refetchInterval: 10000,
   });
 
   if (!isLoading && (error || data?.response?.code !== EnumStatusCode.OK)) {
@@ -593,7 +593,6 @@ const ErrorRateOverTimeCard = () => {
     }),
     keepPreviousData: true,
     refetchOnWindowFocus: false,
-    refetchInterval: 10000,
   });
 
   const { data, ticks, domain, timeFormatter } = useChartData(
@@ -707,7 +706,11 @@ const ErrorRateOverTimeCard = () => {
 };
 
 const OverviewToolbar = () => {
+  const graphContext = useContext(GraphContext);
   const router = useRouter();
+  const client = useQueryClient();
+  const range = useRange();
+
   const onRangeChange = (value: string) => {
     router.push({
       pathname: router.pathname,
@@ -718,11 +721,31 @@ const OverviewToolbar = () => {
     });
   };
 
-  const range = useRange();
+  const metrics = getMetricsDashboard.useQuery({
+    federatedGraphName: graphContext?.graph?.name,
+    range,
+  });
+
+  const errorRate = getMetricsErrorRate.useQuery({
+    federatedGraphName: graphContext?.graph?.name,
+    range,
+  });
+
+  const isFetching = useIsFetching();
 
   return (
     <AnalyticsToolbar tab="overview">
       <Spacer />
+      <Button
+        isLoading={!!isFetching}
+        onClick={() => {
+          client.invalidateQueries(metrics.queryKey);
+          client.invalidateQueries(errorRate.queryKey);
+        }}
+        variant="outline"
+      >
+        <UpdateIcon />
+      </Button>
       <Select value={String(range)} onValueChange={onRangeChange}>
         <SelectTrigger className="w-[180px]">
           <SelectValue />
