@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.18.0](https://github.com/wundergraph/cosmo/compare/studio@0.17.1...studio@0.18.0) (2023-09-27)
+
+### Features
+
+* add 1 and 4 hour ranges, refresh button and minor improvements ([#128](https://github.com/wundergraph/cosmo/issues/128)) ([f5cbfc7](https://github.com/wundergraph/cosmo/commit/f5cbfc79f23d0a1bbbbb1a910d82ff5894a0240d)) (@Pagebakers)
+
 ## [0.17.1](https://github.com/wundergraph/cosmo/compare/studio@0.17.0...studio@0.17.1) (2023-09-27)
 
 ### Bug Fixes
