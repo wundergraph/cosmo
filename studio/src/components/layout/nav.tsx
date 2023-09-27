@@ -1,18 +1,24 @@
-import { docsBaseURL } from '@/lib/constants';
-import { cn } from '@/lib/utils';
-import { Cross2Icon, HamburgerMenuIcon } from '@radix-ui/react-icons';
-import { useQuery } from '@tanstack/react-query';
-import Link from 'next/link';
-import { useRouter } from 'next/router';
-import { getFederatedGraphs } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
-import { ReactNode, useContext, useState } from 'react';
-import { Logo } from '../logo';
-import { ThemeToggle } from '../theme-toggle';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Separator } from '../ui/separator';
-import { UserMenu, UserMenuMobile } from '../user-menu';
-import { LayoutProps } from './layout';
-import { UserContext } from '../app-provider';
+import { docsBaseURL } from "@/lib/constants";
+import { cn } from "@/lib/utils";
+import { Cross2Icon, HamburgerMenuIcon } from "@radix-ui/react-icons";
+import { useQuery } from "@tanstack/react-query";
+import Link from "next/link";
+import { useRouter } from "next/router";
+import { getFederatedGraphs } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+import { ReactNode, useContext, useState } from "react";
+import { Logo } from "../logo";
+import { ThemeToggle } from "../theme-toggle";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
+import { Separator } from "../ui/separator";
+import { UserMenu, UserMenuMobile } from "../user-menu";
+import { LayoutProps } from "./layout";
+import { UserContext } from "../app-provider";
 
 export type NavLink = {
   title: string;
@@ -30,6 +36,7 @@ const isExternalUrl = (link: string): boolean => !link?.startsWith("/");
 
 interface SideNavLayoutProps extends LayoutProps {
   links?: NavLink[];
+  canChangeOrgs?: boolean;
 }
 
 const MobileNav = () => {
@@ -88,9 +95,54 @@ const Graphs = () => {
   );
 };
 
-export const Nav = ({ children, links }: SideNavLayoutProps) => {
+const Organizations = () => {
+  const [user, setUser] = useContext(UserContext);
   const router = useRouter();
-  const user = useContext(UserContext);
+
+  if (!user?.currentOrganization) return null;
+
+  return (
+    <Select
+      value={user.currentOrganization.slug}
+      onValueChange={(orgSlug) => {
+        const currentOrg = user.organizations.find(
+          (org) => org.slug === orgSlug
+        );
+        if (currentOrg && setUser) {
+          setUser({
+            ...user,
+            currentOrganization: currentOrg,
+          });
+          router.replace(`/${currentOrg.slug}`);
+        }
+      }}
+    >
+      <SelectTrigger
+        value={user.currentOrganization.name}
+        className="flex w-[200px] gap-x-2 border-0 bg-transparent px-2 lg:w-full"
+      >
+        <SelectValue aria-label={user.currentOrganization.name}>
+          <span className="flex w-36 truncate font-semibold capitalize">
+            {user.currentOrganization.name}
+          </span>
+        </SelectValue>
+      </SelectTrigger>
+      <SelectContent>
+        {user?.organizations?.map(({ name, slug }) => {
+          return (
+            <SelectItem key={slug} value={slug}>
+              {name}
+            </SelectItem>
+          );
+        })}
+      </SelectContent>
+    </Select>
+  );
+};
+
+export const Nav = ({ children, links, canChangeOrgs }: SideNavLayoutProps) => {
+  const router = useRouter();
+  const [user] = useContext(UserContext);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
 
   return (
@@ -99,12 +151,12 @@ export const Nav = ({ children, links }: SideNavLayoutProps) => {
         <div className="flex flex-col gap-y-4 px-4 lg:gap-y-8 lg:px-0">
           <div className="flex items-center justify-between gap-x-4">
             <div className="flex w-full items-center gap-x-4 gap-y-8 lg:flex-col lg:items-start">
-              <Link href="/" className="flex items-center space-x-2">
-                <Logo />
-                <span className="hidden sm:inline-block font-semibold w-40 capitalize truncate">
-                  {user?.organization.name}
-                </span>
-              </Link>
+              <div className="flex w-full items-center space-x-2">
+                <Link href="/">
+                  <Logo />
+                </Link>
+                <Organizations />
+              </div>
               <Graphs />
             </div>
             <button

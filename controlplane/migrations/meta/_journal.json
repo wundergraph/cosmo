@@ -288,6 +288,20 @@
       "when": 1694802593997,
       "tag": "0040_mute_diamondback",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "5",
+      "when": 1695671118208,
+      "tag": "0041_rapid_argent",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "5",
+      "when": 1695721674234,
+      "tag": "0042_colorful_obadiah_stane",
+      "breakpoints": true
     }
   ]
 }

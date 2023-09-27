@@ -11,7 +11,7 @@ import { UserContext } from "./app-provider";
 import { Button } from "./ui/button";
 
 export const UserMenuMobile = () => {
-  const user = useContext(UserContext);
+  const [user] = useContext(UserContext);
 
   if (!user) return null;
 
@@ -28,7 +28,7 @@ export const UserMenuMobile = () => {
 };
 
 export const UserMenu = () => {
-  const user = useContext(UserContext);
+  const [user] = useContext(UserContext);
 
   if (!user) return null;
 

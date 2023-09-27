@@ -82,6 +82,7 @@ export interface OrganizationDTO {
   name: string;
   slug: string;
   isFreeTrial?: boolean;
+  isPersonal?: boolean;
 }
 
 export interface UserDTO {
@@ -118,6 +119,8 @@ export interface ResponseMessage {
     details?: string;
   };
 }
+
+export type MemberRole = 'admin' | 'member';
 
 // https://github.com/kamilkisiela/graphql-inspector/blob/f3b9ed7e277f1a4928da7d0fdc212685ff77752a/packages/core/src/diff/changes/change.ts
 export enum SchemaChangeType {

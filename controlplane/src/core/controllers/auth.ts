@@ -55,11 +55,6 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
         id: userSession.userId,
         email: userInfoData.email,
         organizations: orgs,
-        roles: await opts.organizationRepository.getOrganizationMemberRoles({
-          userID: userSession.userId,
-          // just passing the first org because we are limiting the user to onyly be a part of a single organization.
-          organizationID: orgs[0].id,
-        }),
         expiresAt: userSession.expiresAt,
       };
     } catch (err: any) {
@@ -175,7 +170,10 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
       const orgs = await opts.organizationRepository.memberships({
         userId,
       });
-      if (orgs.length === 0) {
+
+      const personalOrg = orgs.find((org) => org.isPersonal === true);
+
+      if (orgs.length === 0 || !personalOrg) {
         await opts.keycloakClient.authenticateClient();
 
         const organizationSlug = uid(8);
@@ -190,6 +188,7 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
             organizationSlug,
             ownerID: userId,
             isFreeTrial: true,
+            isPersonal: true,
           });
 
           const orgMember = await orgRepo.addOrganizationMember({

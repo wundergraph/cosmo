@@ -70,7 +70,7 @@ const CreateAPIKeyDialog = ({
   setApiKey: Dispatch<SetStateAction<string | undefined>>;
   refresh: () => void;
 }) => {
-  const user = useContext(UserContext);
+  const [user] = useContext(UserContext);
   const { toast } = useToast();
 
   const { mutate, isLoading } = useMutation(createAPIKey.useMutation());
