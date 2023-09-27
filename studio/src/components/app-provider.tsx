@@ -97,7 +97,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       router.pathname !== "/login"
     ) {
       router.replace("/login");
-    } else if (data) {
+    } else if (data && !error) {
       const currentOrg = data.organizations.find(
         (org) => org.slug === currentOrgSlug
       );
