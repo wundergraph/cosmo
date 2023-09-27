@@ -457,7 +457,7 @@ export function AnalyticsDataTable<T>({
                 key={row.id}
                 data-state={row.getIsSelected() && "selected"}
                 onClick={() => relinkTable(row)}
-                className="cursor-pointer"
+                className="cursor-pointer hover:bg-secondary/50"
               >
                 {row.getVisibleCells().map((cell) => (
                   <TableCell key={cell.id}>

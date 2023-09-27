@@ -270,17 +270,9 @@ const ChecksPage: NextPageWithLayout = () => {
           </>
         }
         actions={
-          <div className="flex w-full flex-col gap-2 rounded border border-dashed p-3 md:w-auto md:p-6">
-            <CLI
-              command={`npx wgc subgraph check users --schema users.graphql`}
-            />
-            <DatePickerWithRange
-              className="w-full text-xs"
-              align="center"
-              selectedDateRange={{ from: startDate, to: endDate }}
-              onDateRangeChange={onDateRangeChange}
-            />
-          </div>
+          <CLI
+            command={`npx wgc subgraph check users --schema users.graphql`}
+          />
         }
       />
     );

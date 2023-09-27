@@ -1,27 +1,34 @@
-import { cn } from '@/lib/utils';
-import { EllipsisVerticalIcon } from '@heroicons/react/24/outline';
-import { DropdownMenuItemProps } from '@radix-ui/react-dropdown-menu';
-import { ClipboardCopyIcon } from '@radix-ui/react-icons';
-import { ColumnDef } from '@tanstack/react-table';
-import { AnalyticsViewColumn, Unit } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import copy from 'copy-to-clipboard';
-import { formatInTimeZone } from 'date-fns-tz';
-import compact from 'lodash/compact';
-import React, { ReactNode } from 'react';
-import { SchemaViewer } from '../schmea-viewer';
-import { Button } from '../ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
+import { cn } from "@/lib/utils";
+import { EllipsisVerticalIcon } from "@heroicons/react/24/outline";
+import { ClipboardCopyIcon } from "@radix-ui/react-icons";
+import { ColumnDef } from "@tanstack/react-table";
+import {
+  AnalyticsViewColumn,
+  Unit,
+} from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
+import copy from "copy-to-clipboard";
+import { formatInTimeZone } from "date-fns-tz";
+import compact from "lodash/compact";
+import { ReactNode, useState } from "react";
+import { SchemaViewer } from "../schmea-viewer";
+import { Button } from "../ui/button";
+import { Dialog2, Dialog2Content, Dialog2Title } from "../ui/dialog2";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuTrigger,
-} from '../ui/dropdown-menu';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
-import { useToast } from '../ui/use-toast';
-import { nanoTimestampToTime } from './charts';
-import { defaultFilterFn } from './defaultFilterFunction';
+} from "../ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "../ui/tooltip";
+import { useToast } from "../ui/use-toast";
+import { nanoTimestampToTime } from "./charts";
+import { defaultFilterFn } from "./defaultFilterFunction";
 
 export const mapStatusCode: Record<string, string> = {
   STATUS_CODE_UNSET: "Success",
@@ -83,51 +90,89 @@ const formatColumnData = (data: string | number, type: Unit): ReactNode => {
   return data;
 };
 
-/**
- * Fix for multiple dialog boxes on dropdowns based on
- * https://codesandbox.io/embed/r9sq1q
- */
-const DialogItem = React.forwardRef<
-  HTMLDivElement,
-  DropdownMenuItemProps & { triggerChildren: ReactNode; title: string }
->((props, forwardedRef) => {
-  const { triggerChildren, children, onSelect, title, ...itemProps } = props;
+const ActionDialog = (props: {
+  title: string;
+  content: string;
+  unit: Unit;
+  isOpen: boolean;
+  setIsOpen: (open: boolean) => void;
+}) => {
+  const { content, title, unit } = props;
   return (
-    <Dialog>
-      <DialogTrigger
-        asChild
-        onClick={(event) => {
-          event.stopPropagation();
-        }}
-      >
-        <DropdownMenuItem
-          {...itemProps}
-          ref={forwardedRef}
-          onSelect={(event) => {
-            event.preventDefault();
-            onSelect && onSelect(event);
-          }}
-        >
-          {triggerChildren}
-        </DropdownMenuItem>
-      </DialogTrigger>
-
-      <DialogContent
-        className="max-w-2xl"
-        onClick={(event) => {
-          event.stopPropagation();
-        }}
-      >
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          {children}
-        </DialogHeader>
-      </DialogContent>
-    </Dialog>
+    <Dialog2 isOpen={props.isOpen} setIsOpen={props.setIsOpen}>
+      <Dialog2Content className="max-w-2xl">
+        <Dialog2Title>{title}</Dialog2Title>
+        {unit === Unit.CodeBlock ? (
+          <QueryContent query={content} />
+        ) : (
+          <TextContent text={content} />
+        )}
+      </Dialog2Content>
+    </Dialog2>
   );
-});
+};
 
-DialogItem.displayName = "DialogItem";
+const ActionsDropdown = ({
+  actionColumns,
+  rowData,
+}: {
+  actionColumns: AnalyticsViewColumn[];
+  rowData: any;
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [data, setData] = useState<
+    | {
+        title: string;
+        content: string;
+        unit: Unit;
+      }
+    | undefined
+  >();
+
+  return (
+    <>
+      <DropdownMenu>
+        <div className="flex justify-center">
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon">
+              <EllipsisVerticalIcon className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+        </div>
+        <DropdownMenuContent align="end">
+          <DropdownMenuLabel
+            onClick={(event) => {
+              event.stopPropagation();
+            }}
+          >
+            Actions
+          </DropdownMenuLabel>
+          {actionColumns.map((action) => {
+            return (
+              <DropdownMenuItem
+                key={action.title}
+                onClick={(e) => e.stopPropagation()}
+                onSelect={() => {
+                  setData({
+                    title: action.title,
+                    content: rowData[action.name],
+                    unit: action.unit ?? Unit.Unspecified,
+                  });
+                  setIsOpen(true);
+                }}
+              >
+                <span>{action.title}</span>
+              </DropdownMenuItem>
+            );
+          })}
+        </DropdownMenuContent>
+      </DropdownMenu>
+      {data && isOpen && (
+        <ActionDialog {...data} isOpen={isOpen} setIsOpen={setIsOpen} />
+      )}
+    </>
+  );
+};
 
 const QueryContent = ({ query }: { query: string }) => {
   return (
@@ -220,44 +265,7 @@ export const getColumnData = (
         const rowData = row.original;
 
         return (
-          <DropdownMenu>
-            <div className="flex justify-center">
-              <DropdownMenuTrigger
-                asChild
-                onClick={(event) => {
-                  event.stopPropagation();
-                }}
-              >
-                <Button variant="ghost" size="icon">
-                  <EllipsisVerticalIcon className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-            </div>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel
-                onClick={(event) => {
-                  event.stopPropagation();
-                }}
-              >
-                Actions
-              </DropdownMenuLabel>
-              {actionColumns.map((action, actionIndex) => {
-                return (
-                  <DialogItem
-                    title={action.title}
-                    key={actionIndex.toString()}
-                    triggerChildren={<span>{action.title}</span>}
-                  >
-                    {action.unit === Unit.CodeBlock ? (
-                      <QueryContent query={rowData[action.name]} />
-                    ) : (
-                      <TextContent text={rowData[action.name]} />
-                    )}
-                  </DialogItem>
-                );
-              })}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <ActionsDropdown actionColumns={actionColumns} rowData={rowData} />
         );
       },
     };

@@ -300,30 +300,31 @@ const ChangelogPage: NextPageWithLayout = () => {
 
   return (
     <div className="relative h-full w-full">
-      <div className="fixed top-44 z-20 hidden w-[280px] grid-cols-2 rounded border bg-card px-4 py-2 lg:right-6 lg:grid 2xl:left-3/4 2xl:right-[unset]">
-        <h2 className="text-sm font-semibold">Jump to log</h2>
-        {/* <hr className="my-2" /> */}
-        <div className="scrollbar-custom flex max-h-96 flex-col overflow-y-auto text-xs">
-          {items.map(({ schemaVersionId: id, createdAt }) => {
-            return (
-              <button
-                onClick={() => {
-                  const element = document.getElementById(id)!;
-                  const offset = 112;
+      <div className="sticky top-[184px] z-20 h-0 overflow-visible">
+        <div className="absolute right-0 hidden w-[280px] grid-cols-2 rounded border bg-card px-4 py-2 lg:grid">
+          <h2 className="text-sm font-semibold">Jump to log</h2>
+          <div className="scrollbar-custom flex max-h-96 flex-col overflow-y-auto text-xs">
+            {items.map(({ schemaVersionId: id, createdAt }) => {
+              return (
+                <button
+                  onClick={() => {
+                    const element = document.getElementById(id)!;
+                    const offset = 112;
 
-                  const elementPosition = element.getBoundingClientRect().top;
-                  const scrollPosition =
-                    window.scrollY + elementPosition - offset;
+                    const elementPosition = element.getBoundingClientRect().top;
+                    const scrollPosition =
+                      window.scrollY + elementPosition - offset;
 
-                  window.scrollTo({ top: scrollPosition });
-                }}
-                key={createdAt}
-                className="text-left text-muted-foreground hover:text-foreground hover:underline"
-              >
-                {format(new Date(createdAt), "dd MMM yyyy HH:mm")}
-              </button>
-            );
-          })}
+                    window.scrollTo({ top: scrollPosition });
+                  }}
+                  key={createdAt}
+                  className="text-left text-muted-foreground hover:text-foreground hover:underline"
+                >
+                  {format(new Date(createdAt), "dd MMM yyyy HH:mm")}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
       <div className="absolute left-40 ml-1.5 hidden h-full w-px border-r lg:block" />
