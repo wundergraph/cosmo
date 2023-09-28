@@ -1,3 +1,4 @@
+import { DatePickerWithRange } from "@/components/date-picker-with-range";
 import { EmptyState } from "@/components/empty-state";
 import { getGraphLayout } from "@/components/layout/graph-layout";
 import { PageHeader } from "@/components/layout/head";
@@ -25,9 +26,56 @@ import {
   FederatedGraphChangelogOutput,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { noCase } from "change-case";
-import { format } from "date-fns";
+import { endOfDay, format, formatISO, startOfDay, subDays } from "date-fns";
 import { useRouter } from "next/router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { DateRange } from "react-day-picker";
+
+const Toolbar = () => {
+  const router = useRouter();
+
+  const dateRange = router.query.dateRange
+    ? JSON.parse(router.query.dateRange as string)
+    : {
+        from: subDays(new Date(), 3),
+        to: new Date(),
+      };
+  const startDate = new Date(dateRange.from);
+  const endDate = new Date(dateRange.to);
+
+  const onDateRangeChange = (val: DateRange) => {
+    const stringifiedDateRange = JSON.stringify({
+      from: val.from as Date,
+      to: (val.to as Date) ?? (val.from as Date),
+    });
+
+    applyNewParams({
+      dateRange: stringifiedDateRange,
+    });
+  };
+
+  const applyNewParams = useCallback(
+    (newParams: Record<string, string>) => {
+      router.push({
+        query: {
+          ...router.query,
+          ...newParams,
+        },
+      });
+    },
+    [router]
+  );
+
+  return (
+    <div className="flex w-full justify-center border-b px-4 py-2 md:justify-start lg:justify-end lg:px-6 lg:py-4">
+      <DatePickerWithRange
+        selectedDateRange={{ from: startDate, to: endDate }}
+        onDateRangeChange={onDateRangeChange}
+        align="end"
+      />
+    </div>
+  );
+};
 
 interface StructuredChangelog {
   changeType: string;
@@ -152,6 +200,15 @@ const ChangelogPage: NextPageWithLayout = () => {
   const [items, setItems] = useState<FederatedGraphChangelogOutput[]>([]);
   const [offset, setOffset] = useState(0);
 
+  const dateRange = router.query.dateRange
+    ? JSON.parse(router.query.dateRange as string)
+    : {
+        from: subDays(new Date(), 3),
+        to: new Date(),
+      };
+  const startDate = new Date(dateRange.from);
+  const endDate = new Date(dateRange.to);
+
   const { data, isLoading, error, refetch } = useQuery({
     ...getFederatedGraphChangelog.useQuery({
       name: router.query.slug as string,
@@ -159,9 +216,23 @@ const ChangelogPage: NextPageWithLayout = () => {
         limit,
         offset,
       },
+      dateRange: {
+        start: formatISO(startOfDay(startDate)),
+        end: formatISO(endOfDay(endDate)),
+      },
     }),
     enabled: false,
+    onSuccess: (data) => {
+      if (!data) return;
+      setItems((prev) => [...prev, ...data.federatedGraphChangelogOutput]);
+    },
   });
+
+  useEffect(() => {
+    // We need to fetch from scratch on date change
+    setItems([]);
+    setOffset(0);
+  }, [router.query.dateRange]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -180,13 +251,8 @@ const ChangelogPage: NextPageWithLayout = () => {
   }, [isLoading, refetch, data?.hasNextPage]);
 
   useEffect(() => {
-    if (!data) return;
-    setItems((prev) => [...prev, ...data.federatedGraphChangelogOutput]);
-  }, [data]);
-
-  useEffect(() => {
     refetch();
-  }, [refetch, offset]);
+  }, [refetch, offset, router.query.dateRange]);
 
   if (items.length === 0 && isLoading) return <Loader fullscreen />;
 
@@ -212,7 +278,8 @@ const ChangelogPage: NextPageWithLayout = () => {
         title="Publish schema using the CLI"
         description={
           <>
-            No changelogs found. Use the CLI tool to publish.{" "}
+            No changelogs found. Use the CLI tool to publish or adjust the date
+            range.{" "}
             <a
               target="_blank"
               rel="noreferrer"
@@ -233,30 +300,31 @@ const ChangelogPage: NextPageWithLayout = () => {
 
   return (
     <div className="relative h-full w-full">
-      <div className="top-30 fixed z-20 hidden rounded border bg-card px-4 py-2 lg:right-6 lg:block 2xl:left-3/4 2xl:right-[unset]">
-        <h2 className="text-sm font-semibold">Jump to log</h2>
-        <hr className="my-2" />
-        <div className="scrollbar-custom flex max-h-96 flex-col overflow-y-auto text-xs">
-          {items.map(({ schemaVersionId: id, createdAt }) => {
-            return (
-              <button
-                onClick={() => {
-                  const element = document.getElementById(id)!;
-                  const offset = 112;
+      <div className="sticky top-[184px] z-20 h-0 overflow-visible">
+        <div className="absolute right-0 hidden w-[280px] grid-cols-2 rounded border bg-card px-4 py-2 lg:grid">
+          <h2 className="text-sm font-semibold">Jump to log</h2>
+          <div className="scrollbar-custom flex max-h-96 flex-col overflow-y-auto text-xs">
+            {items.map(({ schemaVersionId: id, createdAt }) => {
+              return (
+                <button
+                  onClick={() => {
+                    const element = document.getElementById(id)!;
+                    const offset = 112;
 
-                  const elementPosition = element.getBoundingClientRect().top;
-                  const scrollPosition =
-                    window.scrollY + elementPosition - offset;
+                    const elementPosition = element.getBoundingClientRect().top;
+                    const scrollPosition =
+                      window.scrollY + elementPosition - offset;
 
-                  window.scrollTo({ top: scrollPosition });
-                }}
-                key={createdAt}
-                className="text-left text-muted-foreground hover:text-foreground hover:underline"
-              >
-                {format(new Date(createdAt), "dd MMM yyyy HH:mm")}
-              </button>
-            );
-          })}
+                    window.scrollTo({ top: scrollPosition });
+                  }}
+                  key={createdAt}
+                  className="text-left text-muted-foreground hover:text-foreground hover:underline"
+                >
+                  {format(new Date(createdAt), "dd MMM yyyy HH:mm")}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
       <div className="absolute left-40 ml-1.5 hidden h-full w-px border-r lg:block" />
@@ -314,6 +382,7 @@ ChangelogPage.getLayout = (page) =>
       <TitleLayout
         title="Changelog"
         subtitle="Keep track of changes made to your federated graph"
+        toolbar={<Toolbar />}
       >
         {page}
       </TitleLayout>

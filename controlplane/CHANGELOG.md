@@ -4,6 +4,49 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.19.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.18.1...controlplane@0.19.0) (2023-09-27)
+
+### Features
+
+* add 1 and 4 hour ranges, refresh button and minor improvements ([#128](https://github.com/wundergraph/cosmo/issues/128)) ([f5cbfc7](https://github.com/wundergraph/cosmo/commit/f5cbfc79f23d0a1bbbbb1a910d82ff5894a0240d)) (@Pagebakers)
+
+## [0.18.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.18.0...controlplane@0.18.1) (2023-09-27)
+
+### Bug Fixes
+
+* remove member ([#129](https://github.com/wundergraph/cosmo/issues/129)) ([6d7a478](https://github.com/wundergraph/cosmo/commit/6d7a4780b3b5da8efe8413f015d9df07f492efef)) (@JivusAyrus)
+
+# [0.18.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.17.2...controlplane@0.18.0) (2023-09-27)
+
+### Features
+
+* support being a part of multiple organizations ([#119](https://github.com/wundergraph/cosmo/issues/119)) ([338e336](https://github.com/wundergraph/cosmo/commit/338e336a75435e150c8acfb01b88a8a086f7000a)) (@JivusAyrus)
+
+## [0.17.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.17.1...controlplane@0.17.2) (2023-09-26)
+
+### Bug Fixes
+
+* sanitize migrated graph label ([#124](https://github.com/wundergraph/cosmo/issues/124)) ([563e090](https://github.com/wundergraph/cosmo/commit/563e090adb1ab69fc96153ac226e391a5c609ff0)) (@Aenimus)
+
+## [0.17.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.17.0...controlplane@0.17.1) (2023-09-26)
+
+### Bug Fixes
+
+* range in error query ([#120](https://github.com/wundergraph/cosmo/issues/120)) ([48d73ea](https://github.com/wundergraph/cosmo/commit/48d73ea9198d3ecbae00caaf928ba2d2d97ea0d8)) (@Pagebakers)
+
+# [0.17.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.16.2...controlplane@0.17.0) (2023-09-25)
+
+### Features
+
+* **controlplane:** use datetime formatted logs ([#118](https://github.com/wundergraph/cosmo/issues/118)) ([ea00e97](https://github.com/wundergraph/cosmo/commit/ea00e974b32ba752b10c0a2efeec932c1e22009e)) (@StarpTech)
+* implement get changelog cli command ([#117](https://github.com/wundergraph/cosmo/issues/117)) ([ffaad09](https://github.com/wundergraph/cosmo/commit/ffaad093a212a6340263c4223452fb9edfec7570)) (@thisisnithin)
+
+## [0.16.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.16.1...controlplane@0.16.2) (2023-09-25)
+
+### Bug Fixes
+
+* improved analytics queries and output ([#115](https://github.com/wundergraph/cosmo/issues/115)) ([c0d4b9d](https://github.com/wundergraph/cosmo/commit/c0d4b9d2392aac205d6671e1c8c418de8eb40cf4)) (@Pagebakers)
+
 ## [0.16.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.16.0...controlplane@0.16.1) (2023-09-25)
 
 ### Bug Fixes

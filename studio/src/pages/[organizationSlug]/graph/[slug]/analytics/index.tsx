@@ -25,7 +25,7 @@ import { useChartData } from "@/lib/insights-helpers";
 import { NextPageWithLayout } from "@/lib/page";
 import { cn } from "@/lib/utils";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
-import { useQuery } from "@tanstack/react-query";
+import { useIsFetching, useQuery, useQueryClient } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   getMetricsDashboard,
@@ -33,7 +33,7 @@ import {
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { MetricsDashboardMetric } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { useRouter } from "next/router";
-import React, { useContext, useId, useMemo } from "react";
+import React, { useContext, useId } from "react";
 import {
   Area,
   AreaChart,
@@ -45,7 +45,8 @@ import {
 import { ChartTooltip } from "@/components/analytics/charts";
 import { InfoTooltip } from "@/components/info-tooltip";
 import useWindowSize from "@/hooks/use-window-size";
-import { endOfDay, formatISO, startOfDay, subDays, subHours } from "date-fns";
+import { endOfDay, formatISO, startOfDay, subHours } from "date-fns";
+import { UpdateIcon } from "@radix-ui/react-icons";
 
 export type OperationAnalytics = {
   name: string;
@@ -81,12 +82,12 @@ const createDateRange = (range: number) => {
 const getInfoTip = (range: number) => {
   switch (range) {
     case 72:
-      return "3 day average";
+      return "3 day median";
     case 168:
-      return "1 week average";
+      return "1 week median";
     case 24:
     default:
-      return "24 hour average";
+      return `${range} hour median`;
   }
 };
 
@@ -102,7 +103,6 @@ const AnalyticsPage: NextPageWithLayout = () => {
     }),
     keepPreviousData: true,
     refetchOnWindowFocus: false,
-    refetchInterval: 10000,
   });
 
   if (!isLoading && (error || data?.response?.code !== EnumStatusCode.OK)) {
@@ -135,8 +135,19 @@ const AnalyticsPage: NextPageWithLayout = () => {
   );
 };
 
-const getDeltaType = (value: number, invert: boolean = false) => {
-  if (value > 0 && !invert) {
+const getDeltaType = (
+  value: number,
+  { invert, neutral }: { invert?: boolean; neutral?: boolean }
+) => {
+  if (value === 0) {
+    return "neutral";
+  }
+
+  const d = value > 0 ? "increase" : "decrease";
+
+  if (neutral) {
+    return `${d}-neutral`;
+  } else if (value > 0 && !invert) {
     return "increase-positive";
   } else if (value > 0 && invert) {
     return "increase-negative";
@@ -153,11 +164,13 @@ const Change = ({
   value,
   previousValue,
   invert,
+  neutral,
   deltaType,
 }: {
   value?: number;
   previousValue?: number;
   invert?: boolean;
+  neutral?: boolean;
   deltaType?: string;
 }) => {
   if (typeof value === "undefined" || typeof previousValue === "undefined") {
@@ -167,12 +180,15 @@ const Change = ({
   let delta = 0;
   if (previousValue !== 0) {
     delta = ((value || 0) / (previousValue || 1)) * 100 - 100;
+  } else if (value !== 0 && previousValue === 0) {
+    // If previous range is zero, we assume 100% change.
+    delta = 100;
   }
 
   return (
     <DeltaBadge
-      type={deltaType || (getDeltaType(delta, invert) as any)}
-      value={`${delta.toFixed(2)}%`}
+      type={deltaType || (getDeltaType(delta, { invert, neutral }) as any)}
+      value={`${delta < 1 ? delta.toFixed(2) : delta.toFixed(0)}%`}
     />
   );
 };
@@ -184,11 +200,28 @@ const RequestMetricsCard = (props: { data?: MetricsDashboardMetric }) => {
 
   const top = data?.top ?? [];
 
-  const value = Number.parseInt(data?.value || "0");
-  const previousValue = Number.parseInt(data?.previousValue || "0");
+  const value = Number.parseFloat(data?.value || "0");
+  const previousValue = Number.parseFloat(data?.previousValue || "0");
 
-  const formatter = (value: number) =>
-    Intl.NumberFormat("us").format(value).toString() + " RPM";
+  const formatter = (value: number) => {
+    if (value < 1) {
+      return (
+        Intl.NumberFormat("us", {
+          maximumFractionDigits: 3,
+        })
+          .format(value)
+          .toString() + " RPM"
+      );
+    }
+
+    return (
+      Intl.NumberFormat("us", {
+        maximumFractionDigits: 0,
+      })
+        .format(value)
+        .toString() + " RPM"
+    );
+  };
 
   return (
     <Card className="bg-transparent">
@@ -196,12 +229,13 @@ const RequestMetricsCard = (props: { data?: MetricsDashboardMetric }) => {
         <div className="flex-1">
           <div className="flex space-x-2 text-sm text-muted-foreground">
             <h4>Request Rate</h4>
+            <InfoTooltip>{getInfoTip(range)}</InfoTooltip>
           </div>
 
           <p className="text-xl font-semibold">{formatter(value)}</p>
         </div>
 
-        <Change value={value} previousValue={previousValue} invert />
+        <Change value={value} previousValue={previousValue} neutral />
       </CardHeader>
       <CardContent className="border-b pb-2">
         <Sparkline
@@ -212,13 +246,12 @@ const RequestMetricsCard = (props: { data?: MetricsDashboardMetric }) => {
       </CardContent>
       <CardContent className="pt-6">
         <div className="mb-2 flex space-x-2 px-2 text-sm">
-          <h5 className=" text-sm font-medium">Highest RPM</h5>
-          <InfoTooltip>{getInfoTip(range)}</InfoTooltip>
+          <h5 className="text-sm font-medium">Highest RPM</h5>
         </div>
         <BarList
           data={top.map((row) => ({
             ...row,
-            value: Number.parseInt(row.value ?? "0"),
+            value: Number.parseFloat(row.value ?? "0"),
             name: row.name === "" ? "unknown" : row.name,
             href: {
               pathname: `${router.pathname}/traces`,
@@ -251,8 +284,25 @@ const LatencyMetricsCard = (props: { data?: MetricsDashboardMetric }) => {
   const value = Number.parseInt(data?.value || "0");
   const previousValue = Number.parseInt(data?.previousValue || "0");
 
-  const formatter = (value: number) =>
-    Intl.NumberFormat("us").format(value).toString() + " ms";
+  const formatter = (value: number) => {
+    if (value < 1) {
+      return (
+        Intl.NumberFormat("us", {
+          maximumFractionDigits: 3,
+        })
+          .format(value)
+          .toString() + " ms"
+      );
+    }
+
+    return (
+      Intl.NumberFormat("us", {
+        maximumFractionDigits: 0,
+      })
+        .format(value)
+        .toString() + " ms"
+    );
+  };
 
   return (
     <Card className="bg-transparent">
@@ -260,11 +310,12 @@ const LatencyMetricsCard = (props: { data?: MetricsDashboardMetric }) => {
         <div className="flex-1">
           <div className="flex space-x-2 text-sm text-muted-foreground">
             <h4>P95 Latency</h4>
+            <InfoTooltip>{getInfoTip(range)}</InfoTooltip>
           </div>
           <p className="text-xl font-semibold">{formatter(value)}</p>
         </div>
 
-        <Change value={value} previousValue={previousValue} />
+        <Change value={value} previousValue={previousValue} invert />
       </CardHeader>
       <CardContent className="border-b pb-2">
         <Sparkline
@@ -276,13 +327,12 @@ const LatencyMetricsCard = (props: { data?: MetricsDashboardMetric }) => {
       <CardContent className="pt-6">
         <div className="mb-2 flex space-x-2 px-2 text-sm">
           <h5 className="text-sm font-medium">Highest latency</h5>
-          <InfoTooltip>{getInfoTip(range)}</InfoTooltip>
         </div>
         <BarList
           data={top.map((row) => ({
             ...row,
             name: row.name === "" ? "unknown" : row.name,
-            value: Number.parseInt(row.value ?? "0"),
+            value: Number.parseFloat(row.value ?? "0"),
             href: {
               pathname: `${router.pathname}/traces`,
               query: {
@@ -327,6 +377,7 @@ const ErrorMetricsCard = (props: { data?: MetricsDashboardMetric }) => {
         <div className="flex-1">
           <div className="flex space-x-2 text-sm text-muted-foreground">
             <h4>Error Percentage</h4>
+            <InfoTooltip>{getInfoTip(range)}</InfoTooltip>
           </div>
           <p className="text-xl font-semibold">{formatter(value)}</p>
         </div>
@@ -343,7 +394,6 @@ const ErrorMetricsCard = (props: { data?: MetricsDashboardMetric }) => {
       <CardContent className="pt-6">
         <div className="mb-2 flex space-x-2 px-2 text-sm">
           <h5 className="text-sm font-medium">Highest error precentage</h5>
-          <InfoTooltip>{getInfoTip(range)}</InfoTooltip>
         </div>
         <BarList
           data={top.map((row) => ({
@@ -543,7 +593,6 @@ const ErrorRateOverTimeCard = () => {
     }),
     keepPreviousData: true,
     refetchOnWindowFocus: false,
-    refetchInterval: 10000,
   });
 
   const { data, ticks, domain, timeFormatter } = useChartData(
@@ -657,7 +706,11 @@ const ErrorRateOverTimeCard = () => {
 };
 
 const OverviewToolbar = () => {
+  const graphContext = useContext(GraphContext);
   const router = useRouter();
+  const client = useQueryClient();
+  const range = useRange();
+
   const onRangeChange = (value: string) => {
     router.push({
       pathname: router.pathname,
@@ -668,16 +721,38 @@ const OverviewToolbar = () => {
     });
   };
 
-  const range = useRange();
+  const metrics = getMetricsDashboard.useQuery({
+    federatedGraphName: graphContext?.graph?.name,
+    range,
+  });
+
+  const errorRate = getMetricsErrorRate.useQuery({
+    federatedGraphName: graphContext?.graph?.name,
+    range,
+  });
+
+  const isFetching = useIsFetching();
 
   return (
     <AnalyticsToolbar tab="overview">
       <Spacer />
+      <Button
+        isLoading={!!isFetching}
+        onClick={() => {
+          client.invalidateQueries(metrics.queryKey);
+          client.invalidateQueries(errorRate.queryKey);
+        }}
+        variant="outline"
+      >
+        <UpdateIcon />
+      </Button>
       <Select value={String(range)} onValueChange={onRangeChange}>
         <SelectTrigger className="w-[180px]">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
+          <SelectItem value="1">Last hour</SelectItem>
+          <SelectItem value="4">Last 4 hours</SelectItem>
           <SelectItem value="24">Last day</SelectItem>
           <SelectItem value="72">Last 3 days</SelectItem>
           <SelectItem value="168">Last week</SelectItem>

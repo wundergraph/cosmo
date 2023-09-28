@@ -1,7 +1,6 @@
 import { useRouter } from "next/router";
 import { Tabs, TabsList, TabsTrigger } from "../ui/tabs";
 import { useSessionStorage } from "@/hooks/use-session-storage";
-import { set } from "lodash";
 import Link from "next/link";
 
 export const AnalyticsToolbar: React.FC<{
@@ -21,7 +20,7 @@ export const AnalyticsToolbar: React.FC<{
   };
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2 px-4 py-2 lg:px-6 lg:py-4">
       <Tabs defaultValue={props.tab}>
         <TabsList>
           <TabsTrigger value="overview" asChild>

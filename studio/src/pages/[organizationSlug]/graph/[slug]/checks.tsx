@@ -257,7 +257,8 @@ const ChecksPage: NextPageWithLayout = () => {
         title="Run checks using the CLI"
         description={
           <>
-            No checks found. Use the CLI tool to run one.{" "}
+            No checks found. Use the CLI tool to run one or adjust the date
+            range.{" "}
             <a
               target="_blank"
               rel="noreferrer"
