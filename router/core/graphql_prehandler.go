@@ -2,8 +2,11 @@ package core
 
 import (
 	"errors"
+	"github.com/wundergraph/cosmo/router/internal/metric"
+	"go.opentelemetry.io/otel/attribute"
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/buger/jsonparser"
 	"github.com/go-chi/chi/middleware"
@@ -20,24 +23,34 @@ import (
 )
 
 type PreHandlerOptions struct {
-	Logger   *zap.Logger
-	Executor *Executor
+	Logger         *zap.Logger
+	Executor       *Executor
+	requestMetrics *metric.Metrics
 }
 
 type PreHandler struct {
-	log      *zap.Logger
-	executor *Executor
+	log            *zap.Logger
+	executor       *Executor
+	requestMetrics *metric.Metrics
 }
 
 func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 	return &PreHandler{
-		log:      opts.Logger,
-		executor: opts.Executor,
+		log:            opts.Logger,
+		executor:       opts.Executor,
+		requestMetrics: opts.requestMetrics,
 	}
 }
 
 func (h *PreHandler) Handler(next http.Handler) http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
+
+		if h.requestMetrics != nil {
+			inflightMetric := h.requestMetrics.MeasureInFlight(r)
+			defer inflightMetric()
+		}
+
+		requestStartTime := time.Now()
 		requestLogger := h.log.With(logging.WithRequestID(middleware.GetReqID(r.Context())))
 
 		buf := pool.GetBytesBuffer()
@@ -50,12 +63,18 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			return
 		}
 
+		var baseFields []attribute.KeyValue
+
 		body := buf.Bytes()
 
 		requestQuery, _ := jsonparser.GetString(body, "query")
 		requestOperationName, _ := jsonparser.GetString(body, "operationName")
 		requestVariables, _, _, _ := jsonparser.Get(body, "variables")
 		requestOperationType := ""
+
+		if requestOperationName != "" {
+			baseFields = append(baseFields, otel.WgOperationName.String(requestOperationName))
+		}
 
 		shared := h.executor.Pool.GetSharedFromRequest(r, h.executor.PlanConfig, pool.Config{
 			RenameTypeNames: h.executor.RenameTypeNames,
@@ -85,6 +104,15 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 				}
 				break
 			}
+		}
+
+		if requestOperationType != "" {
+			baseFields = append(baseFields, otel.WgOperationType.String(requestOperationType))
+		}
+
+		if h.requestMetrics != nil {
+			h.requestMetrics.MeasureRequestCount(r, baseFields...)
+			h.requestMetrics.MeasureRequestSize(r, baseFields...)
 		}
 
 		// Add the operation to the trace span
@@ -179,9 +207,23 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		// Add the operation hash to the trace span attributes
 		span.SetAttributes(otel.WgOperationHash.Int64(int64(operationID)))
 
+		ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
+
+		newReq := r.WithContext(ctxWithOperation)
+
 		// Call the final handler that resolves the operation
 		// and enrich the context to make it available in the request context as well for metrics etc.
-		next.ServeHTTP(w, r.WithContext(ctxWithOperation))
+		next.ServeHTTP(ww, newReq)
+
+		if h.requestMetrics != nil {
+			h.requestMetrics.MeasureLatency(
+				newReq,
+				requestStartTime,
+				ww.Status(),
+			)
+
+			h.requestMetrics.MeasureResponseSize(r, int64(ww.BytesWritten()))
+		}
 	}
 
 	return http.HandlerFunc(fn)
