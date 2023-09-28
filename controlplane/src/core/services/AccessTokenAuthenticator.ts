@@ -1,6 +1,7 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { addDays } from 'date-fns';
 import AuthUtils from '../auth-utils.js';
-import { AuthenticationError } from '../errors/errors.js';
+import { AuthenticationError, FreeTrialExpiredError } from '../errors/errors.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 
 export type AccessTokenAuthContext = {
@@ -26,6 +27,15 @@ export default class AccessTokenAuthenticator {
 
     if (!organization || !organization?.id) {
       throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, 'Organization does not exist');
+    }
+
+    const isFreeTrialExpired = organization.isFreeTrial && new Date() > addDays(new Date(organization.createdAt), 10);
+
+    if (isFreeTrialExpired) {
+      throw new FreeTrialExpiredError(
+        EnumStatusCode.ERR_FREE_TRIAL_EXPIRED,
+        'Free trial has concluded. Please talk to sales to upgrade your plan.',
+      );
     }
 
     const isMember = await this.orgRepo.isMemberOf({

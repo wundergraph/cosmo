@@ -1,10 +1,11 @@
 import { lru } from 'tiny-lru';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { addDays } from 'date-fns';
 import { AuthContext } from '../../types/index.js';
-import ApiKeyAuthenticator from '../services/ApiKeyAuthenticator.js';
-import WebSessionAuthenticator from '../services/WebSessionAuthenticator.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
-import { AuthenticationError } from '../errors/errors.js';
+import { AuthenticationError, FreeTrialExpiredError, isFreeTrialExpiredError } from '../errors/errors.js';
+import WebSessionAuthenticator from './WebSessionAuthenticator.js';
+import ApiKeyAuthenticator from './ApiKeyAuthenticator.js';
 import GraphApiTokenAuthenticator, { GraphKeyAuthContext } from './GraphApiTokenAuthenticator.js';
 import AccessTokenAuthenticator from './AccessTokenAuthenticator.js';
 
@@ -54,13 +55,22 @@ export class Authentication implements Authenticator {
        * The `cosmo-org-id` header must be set.
        */
       const user = await this.webAuth.authenticate(headers);
-      const repo = await this.orgRepo.bySlug(user.organizationSlug);
+      const organization = await this.orgRepo.bySlug(user.organizationSlug);
 
-      if (!repo) {
+      if (!organization) {
         throw new Error('Organization not found');
       }
 
-      const cacheKey = `${user.userId}:${repo.id}`;
+      const isFreeTrialExpired = organization.isFreeTrial && new Date() > addDays(new Date(organization.createdAt), 10);
+
+      if (isFreeTrialExpired) {
+        throw new FreeTrialExpiredError(
+          EnumStatusCode.ERR_FREE_TRIAL_EXPIRED,
+          'Free trial has concluded. Please talk to sales to upgrade your plan.',
+        );
+      }
+
+      const cacheKey = `${user.userId}:${organization.id}`;
       const cachedUserContext = this.#cache.get(cacheKey);
 
       if (cachedUserContext) {
@@ -72,7 +82,7 @@ export class Authentication implements Authenticator {
        */
       const isMember = await this.orgRepo.isMemberOf({
         userId: user.userId,
-        organizationId: repo.id,
+        organizationId: organization.id,
       });
 
       if (!isMember) {
@@ -81,13 +91,16 @@ export class Authentication implements Authenticator {
 
       const userContext: AuthContext = {
         userId: user.userId,
-        organizationId: repo.id,
+        organizationId: organization.id,
       };
 
       this.#cache.set(cacheKey, userContext);
 
       return userContext;
-    } catch {
+    } catch (e: any) {
+      if (isFreeTrialExpiredError(e)) {
+        throw e;
+      }
       throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, 'Not authenticated');
     }
   }

@@ -2,10 +2,11 @@ import { docsBaseURL } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { Cross2Icon, HamburgerMenuIcon } from "@radix-ui/react-icons";
 import { useQuery } from "@tanstack/react-query";
+import { getFederatedGraphs } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { getFederatedGraphs } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { ReactNode, useContext, useState } from "react";
+import { UserContext } from "../app-provider";
 import { Logo } from "../logo";
 import { ThemeToggle } from "../theme-toggle";
 import {
@@ -18,7 +19,6 @@ import {
 import { Separator } from "../ui/separator";
 import { UserMenu, UserMenuMobile } from "../user-menu";
 import { LayoutProps } from "./layout";
-import { UserContext } from "../app-provider";
 
 export type NavLink = {
   title: string;
@@ -36,7 +36,6 @@ const isExternalUrl = (link: string): boolean => !link?.startsWith("/");
 
 interface SideNavLayoutProps extends LayoutProps {
   links?: NavLink[];
-  canChangeOrgs?: boolean;
 }
 
 const MobileNav = () => {
@@ -140,14 +139,23 @@ const Organizations = () => {
   );
 };
 
-export const Nav = ({ children, links, canChangeOrgs }: SideNavLayoutProps) => {
+export const Nav = ({ children, links }: SideNavLayoutProps) => {
   const router = useRouter();
-  const [user] = useContext(UserContext);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [user] = useContext(UserContext);
 
   return (
     <div className="flex min-h-screen flex-1 flex-col lg:grid lg:grid-cols-[auto_1fr] lg:divide-x">
-      <aside className="sticky top-[0] z-40 flex min-w-[248px] flex-col bg-background pt-4 lg:h-screen lg:px-6 lg:pb-4">
+      <aside
+        className={cn(
+          "sticky top-[0] z-40 flex min-w-[248px] flex-col bg-background pt-4 lg:px-6 lg:pb-4",
+          {
+            "lg:h-[97.5vh] top-8": true,
+            // "lg:h-[97.5vh]": user?.currentOrganization.isFreeTrial,
+            // "lg:h-screen": !user?.currentOrganization.isFreeTrial,
+          }
+        )}
+      >
         <div className="flex flex-col gap-y-4 px-4 lg:gap-y-8 lg:px-0">
           <div className="flex items-center justify-between gap-x-4">
             <div className="flex w-full items-center gap-x-4 gap-y-8 lg:flex-col lg:items-start">

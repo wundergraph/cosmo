@@ -42,6 +42,7 @@ export class OrganizationRepository {
         name: organizations.name,
         slug: organizations.slug,
         createdAt: organizations.createdAt,
+        isFreeTrial: organizations.isFreeTrial,
       })
       .from(organizations)
       .where(eq(organizations.slug, slug))
@@ -56,6 +57,7 @@ export class OrganizationRepository {
       id: org[0].id,
       name: org[0].name,
       slug: org[0].slug,
+      isFreeTrial: org[0].isFreeTrial || false,
       createdAt: org[0].createdAt.toISOString(),
     };
   }
@@ -67,6 +69,7 @@ export class OrganizationRepository {
         name: organizations.name,
         slug: organizations.slug,
         createdAt: organizations.createdAt,
+        isFreeTrial: organizations.isFreeTrial,
       })
       .from(organizations)
       .where(eq(organizations.id, id))
@@ -77,12 +80,13 @@ export class OrganizationRepository {
       return null;
     }
 
-   return {
-     id: org[0].id,
-     name: org[0].name,
-     slug: org[0].slug,
-     createdAt: org[0].createdAt.toISOString(),
-   };
+    return {
+      id: org[0].id,
+      name: org[0].name,
+      slug: org[0].slug,
+      isFreeTrial: org[0].isFreeTrial || false,
+      createdAt: org[0].createdAt.toISOString(),
+    };
   }
 
   public async memberships(input: { userId: string }): Promise<(OrganizationDTO & { roles: string[] })[]> {
