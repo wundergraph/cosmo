@@ -600,11 +600,11 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 			subChiRouter.Use(traceHandler.Handler)
 		}
 
-		subChiRouter.Use(graphqlPreHandler.Handler)
-
 		if metricHandler != nil {
 			subChiRouter.Use(metricHandler.Handler)
 		}
+
+		subChiRouter.Use(graphqlPreHandler.Handler)
 
 		subgraphs := make([]Subgraph, len(routerConfig.Subgraphs))
 		for _, s := range routerConfig.Subgraphs {
