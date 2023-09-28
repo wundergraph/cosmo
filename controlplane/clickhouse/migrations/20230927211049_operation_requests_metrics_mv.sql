@@ -12,8 +12,7 @@ CREATE MATERIALIZED VIEW IF NOT EXISTS cosmo.operation_request_metrics_5_30_mv (
    OrganizationID String CODEC(ZSTD(1)),
    IsSubscription Bool CODEC(ZSTD(1)),
    ClientName String CODEC (ZSTD(1)),
-   ClientVersion String CODEC (ZSTD(1)),
-   LastCalled DateTime64(9) CODEC(Delta, ZSTD(1))
+   ClientVersion String CODEC (ZSTD(1))
 )
 ENGINE = SummingMergeTree
 PARTITION BY toDate(Timestamp)
@@ -33,8 +32,7 @@ SELECT
     Attributes [ 'wg.organization.id' ] as OrganizationID,
     mapContains(Attributes, 'wg.subscription') as IsSubscription,
     Attributes [ 'wg.client.name' ] as ClientName,
-    Attributes [ 'wg.client.version' ] as ClientVersion,
-    toUnixTimestamp(max(TimeUnix)) as LastCalled
+    Attributes [ 'wg.client.version' ] as ClientVersion
 FROM
     cosmo.otel_metrics_sum
 WHERE IsMonotonic = true AND MetricName = 'router.http.requests' AND OperationName != '' AND OrganizationID != '' AND FederatedGraphID != ''
