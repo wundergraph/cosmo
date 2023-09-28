@@ -35,7 +35,7 @@ SELECT
     Attributes [ 'wg.client.version' ] as ClientVersion
 FROM
     cosmo.otel_metrics_sum
-WHERE IsMonotonic = true AND MetricName = 'router.http.requests' AND OperationName != '' AND OrganizationID != '' AND FederatedGraphID != ''
+WHERE IsMonotonic = true AND MetricName = 'router.http.requests' AND OrganizationID != '' AND FederatedGraphID != ''
 GROUP BY
     OperationName,
     OperationHash,

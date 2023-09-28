@@ -35,7 +35,7 @@ SELECT
     mapContains(Attributes, 'wg.subscription') as IsSubscription
 FROM
     cosmo.otel_metrics_histogram
-WHERE MetricName = 'router.http.request.duration_milliseconds' AND OperationName != '' AND OrganizationID != '' AND FederatedGraphID != ''
+WHERE MetricName = 'router.http.request.duration_milliseconds' AND OrganizationID != '' AND FederatedGraphID != ''
 GROUP BY
     OperationName,
     OperationHash,
