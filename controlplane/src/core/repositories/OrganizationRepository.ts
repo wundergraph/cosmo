@@ -116,7 +116,7 @@ export class OrganizationRepository {
   }): Promise<OrganizationMemberDTO | null> {
     const orgMember = await this.db
       .select({
-        id: users.id,
+        userID: users.id,
         email: users.email,
         acceptedInvite: organizationsMembers.acceptedInvite,
         memberID: organizationsMembers.id,
@@ -137,7 +137,8 @@ export class OrganizationRepository {
     });
 
     return {
-      id: orgMember[0].id,
+      userID: orgMember[0].userID,
+      orgMemberID: orgMember[0].memberID,
       email: orgMember[0].email,
       roles: userRoles,
       acceptedInvite: orgMember[0].acceptedInvite,
@@ -147,7 +148,7 @@ export class OrganizationRepository {
   public async getMembers(input: { organizationID: string }): Promise<OrganizationMemberDTO[]> {
     const orgMembers = await this.db
       .select({
-        id: users.id,
+        userID: users.id,
         email: users.email,
         acceptedInvite: organizationsMembers.acceptedInvite,
         memberID: organizationsMembers.id,
@@ -169,7 +170,8 @@ export class OrganizationRepository {
         .where(eq(organizationMemberRoles.organizationMemberId, member.memberID))
         .execute();
       members.push({
-        id: member.id,
+        userID: member.userID,
+        orgMemberID: member.memberID,
         email: member.email,
         roles: roles.map((role) => role.role),
         acceptedInvite: member.acceptedInvite,
@@ -205,6 +207,17 @@ export class OrganizationRepository {
       slug: insertedOrg[0].slug,
       creatorUserId: insertedOrg[0].createdBy,
     };
+  }
+
+  public async updateOrganization(input: { id: string; slug?: string; name?: string }) {
+    await this.db
+      .update(organizations)
+      .set({
+        name: input.name,
+        slug: input.slug,
+      })
+      .where(eq(organizations.id, input.id))
+      .execute();
   }
 
   public async addOrganizationMember(input: { userID: string; organizationID: string; acceptedInvite: boolean }) {
@@ -440,7 +453,7 @@ export class OrganizationRepository {
     await this.db
       .update(organizationMemberRoles)
       .set({ role: input.role })
-      .where(eq(organizationMemberRoles.id, input.orgMemberID));
+      .where(eq(organizationMemberRoles.organizationMemberId, input.orgMemberID));
   }
 
   public async getOrganizationAdmins(input: { organizationID: string }): Promise<OrganizationMemberDTO[]> {

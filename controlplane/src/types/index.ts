@@ -92,7 +92,8 @@ export interface UserDTO {
 }
 
 export interface OrganizationMemberDTO {
-  id: string;
+  userID: string;
+  orgMemberID: string;
   email: string;
   acceptedInvite: boolean;
   roles: string[];

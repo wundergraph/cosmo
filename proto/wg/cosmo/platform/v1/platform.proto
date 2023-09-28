@@ -447,18 +447,19 @@ message CreateFederatedGraphTokenResponse {
   string token = 2;
 }
 
-message User{
-  string id = 1;
+message OrgMember{
+  string userID = 1;
   string email = 2;
   bool acceptedInvite = 3;
   repeated string roles = 4;
+  string orgMemberID = 5;
 }
 
 message GetOrganizationMembersRequest {}
 
 message GetOrganizationMembersResponse {
   Response response = 1;
-  repeated User members = 2;
+  repeated OrgMember members = 2;
 }
 
 message InviteUserRequest {
@@ -637,6 +638,34 @@ message LeaveOrganizationResponse {
   Response response = 1;
 }
 
+message UpdateOrganizationNameRequest {
+  string userID = 1;
+  string organizationName = 2;
+}
+
+message UpdateOrganizationNameResponse {
+  Response response = 1;
+}
+
+message UpdateOrganizationSlugRequest {
+  string userID = 1;
+  string organizationSlug = 2;
+}
+
+message UpdateOrganizationSlugResponse {
+  Response response = 1;
+}
+
+message UpdateOrgMemberRoleRequest {
+  string userID = 1;
+  string orgMemberUserID = 2;
+  string role = 3;
+}
+
+message UpdateOrgMemberRoleResponse {
+  Response response = 1;
+}
+
 /**
  * MetricsDashboard
  */
@@ -766,6 +795,12 @@ service PlatformService {
   rpc DeleteOrganization(DeleteOrganizationRequest) returns (DeleteOrganizationResponse) {}
   // LeaveOrganization removes a member from the organization
   rpc LeaveOrganization(LeaveOrganizationRequest) returns (LeaveOrganizationResponse) {}
+  // UpdateOrganizationName updates the name of the organization
+  rpc UpdateOrganizationName(UpdateOrganizationNameRequest) returns (UpdateOrganizationNameResponse) {}
+  // UpdateOrganizationSlug updates the slug of the organization
+  rpc UpdateOrganizationSlug(UpdateOrganizationSlugRequest) returns (UpdateOrganizationSlugResponse) {}
+  // UpdateOrgMemberRole updates the role of an org member
+  rpc UpdateOrgMemberRole(UpdateOrgMemberRoleRequest) returns (UpdateOrgMemberRoleResponse) {}
 
   // Analytics
 
