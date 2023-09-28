@@ -1,4 +1,8 @@
+import { useContext } from "react";
 import { Separator } from "../ui/separator";
+import { UserContext } from "../app-provider";
+import { cn } from "@/lib/utils";
+import { addDays } from "date-fns";
 
 export const TitleLayout = ({
   title,
@@ -13,6 +17,9 @@ export const TitleLayout = ({
   toolbar?: React.ReactNode;
   children?: React.ReactNode;
 }) => {
+  const [user] = useContext(UserContext);
+  const present = new Date();
+
   return (
     <div className="flex h-full flex-col">
       <div className="sticky top-0 z-10 bg-background md:top-6 lg:top-0">
@@ -26,7 +33,15 @@ export const TitleLayout = ({
         <Separator className="mt-4" />
         {toolbar}
       </div>
-      <div className="h-auto flex-1 px-4 py-4 lg:px-6">{children}</div>
+      <div
+        className={cn("h-auto flex-1 px-4 py-4 lg:px-6", {
+          "pointer-events-none blur-lg":
+            user?.currentOrganization.isFreeTrial &&
+            present > addDays(new Date(user.currentOrganization.createdAt), 10),
+        })}
+      >
+        {children}
+      </div>
     </div>
   );
 };

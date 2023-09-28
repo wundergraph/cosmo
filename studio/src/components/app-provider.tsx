@@ -29,6 +29,7 @@ interface Organization {
   slug: string;
   isFreeTrial: boolean;
   roles: string[];
+  createdAt: string;
 }
 
 interface Session {
