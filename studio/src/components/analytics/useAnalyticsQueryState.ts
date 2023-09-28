@@ -4,31 +4,29 @@ import { AnalyticsViewGroupName } from "@wundergraph/cosmo-connect/dist/platform
 import { useMemo } from "react";
 import { refreshIntervals } from "./data-table";
 
+const parse = (value: string, fallback: any) => {
+  try {
+    return JSON.parse(value);
+  } catch (e) {
+    return fallback;
+  }
+};
+
 export const useAnalyticsQueryState = () => {
   const { query } = useRouter();
 
   return useMemo(() => {
     const { filterState, pageSize, page, group, refreshInterval } = query;
 
-    let filterStateObject = [];
-    try {
-      filterStateObject = JSON.parse(filterState as string);
-    } catch (e) {
-      console.error(e);
-    }
+    let filterStateObject = parse(filterState as string, []);
+
     const filters = filterStateObject
       .map((each: { id: string; value: string[] }) => {
         return each.value.map((eachValue) => {
           let valueObject: {
             value?: string;
             operator?: string;
-          } = {};
-
-          try {
-            valueObject = JSON.parse(eachValue);
-          } catch (e) {
-            console.error(e);
-          }
+          } = parse(eachValue, {});
 
           return {
             field: each.id,
@@ -52,29 +50,23 @@ export const useAnalyticsQueryState = () => {
       start: formatISO(startOfDay(subDays(new Date(), 1))),
       end: formatISO(endOfDay(new Date())),
     };
+
     if (query.dateRange) {
-      let tempRange = {
-        from: subDays(new Date(), 1),
-        to: new Date(),
-      };
-      try {
-        tempRange = JSON.parse(query.dateRange as string);
-      } catch (e) {
-        console.error(e);
-      }
+      let tempRange = parse(query.dateRange as string, {
+        start: subDays(new Date(), 1),
+        end: new Date(),
+      });
+
       dateRange = {
-        start: formatISO(startOfDay(new Date(tempRange.from))),
-        end: formatISO(endOfDay(new Date(tempRange.to))),
+        start: formatISO(startOfDay(new Date(tempRange.start))),
+        end: formatISO(endOfDay(new Date(tempRange.end))),
       };
     }
 
-    let refreshIntervalObject = refreshIntervals[0];
-
-    try {
-      refreshIntervalObject = JSON.parse(refreshInterval as string);
-    } catch (e) {
-      console.error(e);
-    }
+    let refreshIntervalObject = parse(
+      refreshInterval as string,
+      refreshIntervals[0]
+    );
 
     return {
       name,

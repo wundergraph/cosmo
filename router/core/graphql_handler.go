@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"strconv"
 	"sync"
@@ -155,7 +156,13 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			w.WriteHeader(http.StatusInternalServerError)
+			var nErr net.Error
+			if errors.As(err, &nErr) && nErr.Timeout() {
+				w.WriteHeader(http.StatusGatewayTimeout)
+			} else {
+				w.WriteHeader(http.StatusInternalServerError)
+			}
+
 			writeRequestErrors(graphql.RequestErrorsFromError(couldNotResolveResponseErr), w, requestLogger)
 			requestLogger.Error("unable to resolve GraphQL response", zap.Error(err))
 			return

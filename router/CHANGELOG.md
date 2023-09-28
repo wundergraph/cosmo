@@ -4,6 +4,32 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.21.2](https://github.com/wundergraph/cosmo/compare/router@0.21.1...router@0.21.2) (2023-09-27)
+
+### Bug Fixes
+
+* update engine to address entity array issues ([#131](https://github.com/wundergraph/cosmo/issues/131)) ([5e042e2](https://github.com/wundergraph/cosmo/commit/5e042e204709030e283d82e67e5a050ceb4397c6)) (@Aenimus)
+
+## [0.21.1](https://github.com/wundergraph/cosmo/compare/router@0.21.0...router@0.21.1) (2023-09-27)
+
+### Bug Fixes
+
+* update engine to address representation issues ([#126](https://github.com/wundergraph/cosmo/issues/126)) ([7ca1360](https://github.com/wundergraph/cosmo/commit/7ca1360c954a272957d661a1689ed9a93715355d)) (@Aenimus)
+
+# [0.21.0](https://github.com/wundergraph/cosmo/compare/router@0.20.2...router@0.21.0) (2023-09-25)
+
+### Features
+
+* expand environmental variables in config.yaml ([#108](https://github.com/wundergraph/cosmo/issues/108)) ([65269be](https://github.com/wundergraph/cosmo/commit/65269be92ce11c8d29814d04814515d19a910f01)) (@cs-clarence)
+* **router:** make subgraph transport timeouts configurable ([#116](https://github.com/wundergraph/cosmo/issues/116)) ([fcd5a29](https://github.com/wundergraph/cosmo/commit/fcd5a2971057ebb3b38aa93de06f5dd1077471e3)) (@StarpTech)
+* support per subgraph header rules ([#110](https://github.com/wundergraph/cosmo/issues/110)) ([8e2be3e](https://github.com/wundergraph/cosmo/commit/8e2be3e4eadf7bd534731a81901b60e9b0e3a94a)) (@cs-clarence)
+
+## [0.20.2](https://github.com/wundergraph/cosmo/compare/router@0.20.1...router@0.20.2) (2023-09-25)
+
+### Bug Fixes
+
+* **router:** pass timeout correctly to the transport ([#111](https://github.com/wundergraph/cosmo/issues/111)) ([d234982](https://github.com/wundergraph/cosmo/commit/d234982925da122fe7bd488615255a0eb43ffbd4)) (@StarpTech)
+
 ## [0.20.1](https://github.com/wundergraph/cosmo/compare/router@0.20.0...router@0.20.1) (2023-09-22)
 
 **Note:** Version bump only for package router

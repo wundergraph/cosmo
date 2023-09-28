@@ -60,3 +60,31 @@ export default class PrometheusClient {
     return resp.data;
   }
 }
+
+interface MockData {
+  query?: Response<QueryResultType.Scalar>;
+  queryRange?: Response<QueryResultType.Matrix>;
+}
+
+export class MockPrometheusClient extends PrometheusClient {
+  private readonly mockData: MockData;
+
+  constructor(options: Options, mockData: MockData = {}) {
+    super(options);
+    this.mockData = mockData;
+  }
+
+  async query(params: QueryRequestParams) {
+    if (!this.mockData?.query) {
+      throw new Error('Mock data not set for query');
+    }
+    return await this.mockData?.query;
+  }
+
+  async queryRange(params: QueryRangeRequestParams) {
+    if (!this.mockData?.queryRange) {
+      throw new Error('Mock data not set for query');
+    }
+    return await this.mockData?.queryRange;
+  }
+}

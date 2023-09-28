@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.15.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.14.0...@wundergraph/cosmo-connect@0.15.0) (2023-09-25)
+
+### Features
+
+* implement get changelog cli command ([#117](https://github.com/wundergraph/cosmo/issues/117)) ([ffaad09](https://github.com/wundergraph/cosmo/commit/ffaad093a212a6340263c4223452fb9edfec7570)) (@thisisnithin)
+
+# [0.14.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.13.0...@wundergraph/cosmo-connect@0.14.0) (2023-09-25)
+
+### Features
+
+* advanced analytics ([#99](https://github.com/wundergraph/cosmo/issues/99)) ([a7a3058](https://github.com/wundergraph/cosmo/commit/a7a305851faa868d30dc202eef197afc6065ce92)) (@Pagebakers)
+
 # [0.13.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.12.0...@wundergraph/cosmo-connect@0.13.0) (2023-09-21)
 
 ### Features

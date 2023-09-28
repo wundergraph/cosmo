@@ -15,8 +15,6 @@ import {
   DeleteAPIKeyResponse,
   DeleteFederatedGraphResponse,
   DeleteFederatedSubgraphResponse,
-  FederatedGraphChangelog,
-  FederatedGraphChangelogOutput,
   FixSubgraphSchemaResponse,
   GetAPIKeysResponse,
   GetAnalyticsViewResponse,
@@ -27,6 +25,7 @@ import {
   GetFederatedGraphChangelogResponse,
   GetFederatedGraphSDLByNameResponse,
   GetFederatedGraphsResponse,
+  GetMetricsDashboardResponse,
   GetOrganizationMembersResponse,
   GetOrganizationWebhookConfigsResponse,
   GetSubgraphByNameResponse,
@@ -62,6 +61,7 @@ import { TraceRepository } from '../repositories/analytics/TraceRepository.js';
 import type { RouterOptions } from '../routes.js';
 import { ApiKeyGenerator } from '../services/ApiGenerator.js';
 import ApolloMigrator from '../services/ApolloMigrator.js';
+import { MetricsDashboardRepository } from '../repositories/analytics/MetricsDashboardRepository.js';
 import { handleError, isValidLabelMatchers, isValidLabels } from '../util.js';
 import { OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
 
@@ -779,11 +779,11 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        if (!req.pagination) {
+        if (!req.pagination || !req.dateRange) {
           return {
             response: {
               code: EnumStatusCode.ERR,
-              details: 'Please provide pagination with limit and offset.',
+              details: 'Please provide pagination and datetange',
             },
             federatedGraphChangelogOutput: [],
             hasNextPage: false,
@@ -792,8 +792,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const result = await fedgraphRepo.fetchFederatedGraphChangelog(
           federatedGraph.targetId,
-          req.pagination.limit,
-          req.pagination.offset,
+          req.pagination,
+          req.dateRange,
         );
 
         if (!result) {
@@ -1233,6 +1233,104 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
+    getMetricsDashboard: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetMetricsDashboardResponse>>(logger, async () => {
+        if (!opts.chClient) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_ANALYTICS_DISABLED,
+            },
+          };
+        }
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const repo = new MetricsDashboardRepository(opts.prometheus);
+        const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+
+        const graph = await fedGraphRepo.byName(req.federatedGraphName);
+        if (!graph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Federated graph '${req.federatedGraphName}' not found`,
+            },
+          };
+        }
+
+        const params = {
+          range: req.range,
+          params: {
+            organizationId: authContext.organizationId,
+            graphId: graph.id,
+            graphName: req.federatedGraphName,
+          },
+        };
+
+        const requests = await repo.getRequestRateMetrics(params);
+        const latency = await repo.getLatencyMetrics(params);
+        const errors = await repo.getErrorMetrics(params);
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          requests: requests.data,
+          latency: latency.data,
+          errors: errors.data,
+        };
+      });
+    },
+
+    getMetricsErrorRate: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetMetricsDashboardResponse>>(logger, async () => {
+        if (!opts.chClient) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_ANALYTICS_DISABLED,
+            },
+          };
+        }
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const repo = new MetricsDashboardRepository(opts.prometheus);
+        const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+
+        const graph = await fedGraphRepo.byName(req.federatedGraphName);
+        if (!graph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Federated graph '${req.federatedGraphName}' not found`,
+            },
+          };
+        }
+
+        const metrics = await repo.getErrorRateMetrics({
+          range: req.range,
+          params: {
+            organizationId: authContext.organizationId,
+            graphId: graph.id,
+            graphName: req.federatedGraphName,
+          },
+        });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          ...metrics.data,
+        };
+      });
+    },
+
     checkFederatedGraph: (req, ctx) => {
       const logger = opts.logger.child({
         service: ctx.service.typeName,
@@ -1453,14 +1551,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           const userMemberships = await orgRepo.memberships({
             userId: user.id,
           });
-          if (userMemberships.length > 0) {
-            return {
-              response: {
-                code: EnumStatusCode.ERR_ALREADY_EXISTS,
-                details: `${req.email} is already a member of another organization`,
-              },
-            };
-          }
         }
 
         const organization = await orgRepo.byId(authContext.organizationId);
@@ -1804,13 +1894,20 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         await orgRepo.removeOrganizationMember({ organizationID: authContext.organizationId, userID: user.id });
 
-        // deleting the user from keycloak
-        await opts.keycloakClient.client.users.del({
-          id: user.id,
-          realm: opts.keycloakRealm,
-        });
-        // deleting the user from the db
-        await userRepo.deleteUser({ id: user.id });
+        const userMemberships = await orgRepo.memberships({ userId: user.id });
+
+        // delete the user only when user doesnt have any memberships
+        // this will happen only when the user was invited but the user didnt login and the admin removed that user,
+        // in this case the user will not have a personal org
+        if (userMemberships.length === 0) {
+          // deleting the user from keycloak
+          await opts.keycloakClient.client.users.del({
+            id: user.id,
+            realm: opts.keycloakRealm,
+          });
+          // deleting the user from the db
+          await userRepo.deleteUser({ id: user.id });
+        }
 
         return {
           response: {

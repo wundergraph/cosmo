@@ -50,38 +50,48 @@ type (
 		mu           sync.Mutex
 	}
 
+	SubgraphTransportOptions struct {
+		RequestTimeout         time.Duration
+		ResponseHeaderTimeout  time.Duration
+		ExpectContinueTimeout  time.Duration
+		KeepAliveIdleTimeout   time.Duration
+		DialTimeout            time.Duration
+		TLSHandshakeTimeout    time.Duration
+		KeepAliveProbeInterval time.Duration
+	}
+
 	// Config defines the configuration options for the Router.
 	Config struct {
-		transport          *http.Transport
-		logger             *zap.Logger
-		traceConfig        *trace.Config
-		metricConfig       *metric.Config
-		tracerProvider     *sdktrace.TracerProvider
-		meterProvider      *sdkmetric.MeterProvider
-		corsOptions        *cors.Config
-		configFetcher      controlplane.ConfigFetcher
-		routerConfig       *nodev1.RouterConfig
-		gracePeriod        time.Duration
-		shutdown           bool
-		listenAddr         string
-		baseURL            string
-		graphqlPath        string
-		playground         bool
-		introspection      bool
-		production         bool
-		federatedGraphName string
-		graphApiToken      string
-		healthCheckPath    string
-		readinessCheckPath string
-		livenessCheckPath  string
-		prometheusServer   *http.Server
-		modulesConfig      map[string]interface{}
-		routerMiddlewares  []func(http.Handler) http.Handler
-		preOriginHandlers  []TransportPreHandler
-		postOriginHandlers []TransportPostHandler
-		headerRuleEngine   *HeaderRuleEngine
-		headerRules        config.HeaderRules
-		requestTimeout     time.Duration
+		transport                *http.Transport
+		logger                   *zap.Logger
+		traceConfig              *trace.Config
+		metricConfig             *metric.Config
+		tracerProvider           *sdktrace.TracerProvider
+		meterProvider            *sdkmetric.MeterProvider
+		corsOptions              *cors.Config
+		configFetcher            controlplane.ConfigFetcher
+		routerConfig             *nodev1.RouterConfig
+		gracePeriod              time.Duration
+		shutdown                 bool
+		listenAddr               string
+		baseURL                  string
+		graphqlPath              string
+		playground               bool
+		introspection            bool
+		production               bool
+		federatedGraphName       string
+		graphApiToken            string
+		healthCheckPath          string
+		readinessCheckPath       string
+		livenessCheckPath        string
+		prometheusServer         *http.Server
+		modulesConfig            map[string]interface{}
+		routerMiddlewares        []func(http.Handler) http.Handler
+		preOriginHandlers        []TransportPreHandler
+		postOriginHandlers       []TransportPostHandler
+		headerRuleEngine         *HeaderRuleEngine
+		headerRules              config.HeaderRules
+		subgraphTransportOptions *SubgraphTransportOptions
 
 		retryOptions retrytransport.RetryOptions
 
@@ -134,6 +144,10 @@ func NewRouter(opts ...Option) (*Router, error) {
 		r.corsOptions = CorsDefaultOptions()
 	}
 
+	if r.subgraphTransportOptions == nil {
+		r.subgraphTransportOptions = DefaultSubgraphTransportOptions()
+	}
+
 	// Default values for health check paths
 
 	if r.healthCheckPath == "" {
@@ -144,10 +158,6 @@ func NewRouter(opts ...Option) (*Router, error) {
 	}
 	if r.livenessCheckPath == "" {
 		r.livenessCheckPath = "/health/live"
-	}
-
-	if r.requestTimeout == 0 {
-		r.requestTimeout = 60 * time.Second
 	}
 
 	hr, err := NewHeaderTransformer(r.headerRules)
@@ -175,8 +185,8 @@ func NewRouter(opts ...Option) (*Router, error) {
 	r.baseURL = fmt.Sprintf("http://%s", r.listenAddr)
 
 	dialer := &net.Dialer{
-		Timeout:   30 * time.Second,
-		KeepAlive: 30 * time.Second,
+		Timeout:   r.subgraphTransportOptions.DialTimeout,
+		KeepAlive: r.subgraphTransportOptions.KeepAliveProbeInterval,
 	}
 
 	// Great source of inspiration: https://gitlab.com/gitlab-org/gitlab-pages
@@ -195,11 +205,11 @@ func NewRouter(opts ...Option) (*Router, error) {
 		// Details: https://gitlab.com/gitlab-org/gitlab-pages/-/merge_requests/274
 		MaxIdleConnsPerHost: 20,
 		ForceAttemptHTTP2:   true,
-		IdleConnTimeout:     90 * time.Second,
+		IdleConnTimeout:     r.subgraphTransportOptions.KeepAliveIdleTimeout,
 		// Set more timeouts https://gitlab.com/gitlab-org/gitlab-pages/-/issues/495
-		TLSHandshakeTimeout:   10 * time.Second,
-		ResponseHeaderTimeout: 15 * time.Second,
-		ExpectContinueTimeout: 15 * time.Second,
+		TLSHandshakeTimeout:   r.subgraphTransportOptions.TLSHandshakeTimeout,
+		ResponseHeaderTimeout: r.subgraphTransportOptions.ResponseHeaderTimeout,
+		ExpectContinueTimeout: r.subgraphTransportOptions.ExpectContinueTimeout,
 	}
 
 	if r.traceConfig.OtlpHeaders == nil {
@@ -501,8 +511,9 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		transport:     r.transport,
 		logger:        r.logger,
 		transportOptions: &TransportOptions{
-			preHandlers:  r.preOriginHandlers,
-			postHandlers: r.postOriginHandlers,
+			requestTimeout: r.subgraphTransportOptions.RequestTimeout,
+			preHandlers:    r.preOriginHandlers,
+			postHandlers:   r.postOriginHandlers,
 			retryOptions: retrytransport.RetryOptions{
 				Enabled:       r.retryOptions.Enabled,
 				MaxRetryCount: r.retryOptions.MaxRetryCount,
@@ -917,13 +928,13 @@ func WithEngineExecutionConfig(cfg config.EngineExecutionConfiguration) Option {
 	}
 }
 
-func WithRequestTimeout(timeout time.Duration) Option {
+func WithSubgraphTransportOptions(opts *SubgraphTransportOptions) Option {
 	return func(r *Router) {
-		r.requestTimeout = timeout
+		r.subgraphTransportOptions = opts
 	}
 }
 
-func WithRetryOptions(enabled bool, maxRetryCount int, retryMaxDuration, retryInterval time.Duration) Option {
+func WithSubgraphRetryOptions(enabled bool, maxRetryCount int, retryMaxDuration, retryInterval time.Duration) Option {
 	return func(r *Router) {
 		r.retryOptions = retrytransport.RetryOptions{
 			Enabled:       enabled,
@@ -931,5 +942,17 @@ func WithRetryOptions(enabled bool, maxRetryCount int, retryMaxDuration, retryIn
 			MaxDuration:   retryMaxDuration,
 			Interval:      retryInterval,
 		}
+	}
+}
+
+func DefaultSubgraphTransportOptions() *SubgraphTransportOptions {
+	return &SubgraphTransportOptions{
+		RequestTimeout:         60 * time.Second,
+		TLSHandshakeTimeout:    10 * time.Second,
+		ResponseHeaderTimeout:  0 * time.Second,
+		ExpectContinueTimeout:  0 * time.Second,
+		KeepAliveProbeInterval: 30 * time.Second,
+		KeepAliveIdleTimeout:   0 * time.Second,
+		DialTimeout:            30 * time.Second,
 	}
 }

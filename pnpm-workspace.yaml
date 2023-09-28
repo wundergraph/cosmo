@@ -1,6 +1,7 @@
 packages:
   - cli
   - composition
+  - composition-go/shim
   - controlplane
   - proto
   - shared

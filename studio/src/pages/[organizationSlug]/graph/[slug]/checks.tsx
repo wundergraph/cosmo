@@ -178,16 +178,16 @@ const ChecksPage: NextPageWithLayout = () => {
   const dateRange = router.query.dateRange
     ? JSON.parse(router.query.dateRange as string)
     : {
-        from: subDays(new Date(), 2),
-        to: new Date(),
+        start: subDays(new Date(), 2),
+        end: new Date(),
       };
-  const startDate = new Date(dateRange.from);
-  const endDate = new Date(dateRange.to);
+  const startDate = new Date(dateRange.start);
+  const endDate = new Date(dateRange.end);
 
   const onDateRangeChange = (val: DateRange) => {
     const stringifiedDateRange = JSON.stringify({
-      from: val.from as Date,
-      to: (val.to as Date) ?? (val.from as Date),
+      start: val.from as Date,
+      end: (val.to as Date) ?? (val.from as Date),
     });
 
     applyNewParams({
@@ -257,7 +257,8 @@ const ChecksPage: NextPageWithLayout = () => {
         title="Run checks using the CLI"
         description={
           <>
-            No checks found. Use the CLI tool to run one.{" "}
+            No checks found. Use the CLI tool to run one or adjust the date
+            range.{" "}
             <a
               target="_blank"
               rel="noreferrer"
