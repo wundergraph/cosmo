@@ -17,7 +17,6 @@ import (
 	"github.com/mitchellh/mapstructure"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
-	"go.opentelemetry.io/otel/attribute"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	oteltrace "go.opentelemetry.io/otel/trace"
@@ -535,46 +534,31 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		Log:      r.logger,
 	})
 
-	graphqlPreHandler := NewPreHandler(&PreHandlerOptions{
-		Executor: executor,
-		Logger:   r.logger,
-	})
-
-	var metricHandler *metric.Handler
+	var metricStore *metric.Metrics
 
 	// Prometheus metrics rely on OTLP metrics
 	metricsEnabled := r.metricConfig.Enabled || r.metricConfig.Prometheus.Enabled
 
 	if metricsEnabled {
-		h, err := metric.NewMetricHandler(
+		m, err := metric.NewMetrics(
 			r.meterProvider,
 			metric.WithAttributes(
 				otel.WgRouterGraphName.String(r.federatedGraphName),
 				otel.WgRouterConfigVersion.String(routerConfig.GetVersion()),
 			),
-			metric.WithRequestAttributes(func(r *http.Request) (attributes []attribute.KeyValue) {
-				opCtx := getOperationContext(r.Context())
-
-				if opCtx != nil {
-					// Metric values must not be empty
-					// M3 does not like empty values
-					if opCtx.Name() != "" {
-						attributes = append(attributes, otel.WgOperationName.String(opCtx.Name()))
-					}
-					if opCtx.Type() != "" {
-						attributes = append(attributes, otel.WgOperationType.String(opCtx.Type()))
-					}
-				}
-
-				return attributes
-			}),
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create metric handler: %w", err)
 		}
 
-		metricHandler = h
+		metricStore = m
 	}
+
+	graphqlPreHandler := NewPreHandler(&PreHandlerOptions{
+		Executor:       executor,
+		Logger:         r.logger,
+		requestMetrics: metricStore,
+	})
 
 	var traceHandler *trace.Middleware
 
@@ -601,10 +585,6 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		}
 
 		subChiRouter.Use(graphqlPreHandler.Handler)
-
-		if metricHandler != nil {
-			subChiRouter.Use(metricHandler.Handler)
-		}
 
 		subgraphs := make([]Subgraph, len(routerConfig.Subgraphs))
 		for _, s := range routerConfig.Subgraphs {

@@ -1,16 +1,28 @@
+import { writeFile } from 'node:fs/promises';
 import { Command } from 'commander';
 import pc from 'picocolors';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import Table from 'cli-table3';
 import logSymbols from 'log-symbols';
+import { join } from 'pathe';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { baseHeaders } from '../../../core/config.js';
 import program from '../../index.js';
 
+type OutputFile = {
+  name: string;
+  labelMatchers: string[];
+  routingURL: string;
+  isComposable: boolean;
+  lastUpdatedAt: string;
+}[];
+
 export default (opts: BaseCommandOptions) => {
-  const listFederatedGraphs = new Command('list');
-  listFederatedGraphs.description('Lists federated graphs.');
-  listFederatedGraphs.action(async () => {
+  const command = new Command('list');
+  command.description('Lists federated graphs.');
+  command.option('-o, --out [string]', 'Destination file for the json output.');
+  command.option('-r, --raw', 'Prints to the console in json format instead of table');
+  command.action(async (options) => {
     const resp = await opts.client.platform.getFederatedGraphs(
       {
         includeMetrics: false,
@@ -23,36 +35,59 @@ export default (opts: BaseCommandOptions) => {
       },
     );
 
+    if (resp.response?.code !== EnumStatusCode.OK) {
+      program.error(pc.red('Could not fetch the federated graphs.'));
+    }
+
+    if (resp.graphs.length === 0) {
+      console.log('No federated graphs found');
+      process.exit(0);
+    }
+
+    if (options.out) {
+      const output = resp.graphs.map(
+        (g) =>
+          ({
+            name: g.name,
+            labelMatchers: g.labelMatchers,
+            routingURL: g.routingURL,
+            isComposable: g.isComposable,
+            lastUpdatedAt: g.lastUpdatedAt,
+          } as OutputFile[number]),
+      );
+      await writeFile(join(process.cwd(), options.out), JSON.stringify(output));
+      process.exit(0);
+    }
+
+    if (options.raw) {
+      console.log(resp.graphs);
+      process.exit(0);
+    }
+
     const graphsTable = new Table({
       head: [
         pc.bold(pc.white('NAME')),
         pc.bold(pc.white('LABEL_MATCHERS')),
         pc.bold(pc.white('ROUTING_URL')),
         pc.bold(pc.white('IS_COMPOSABLE')),
+        pc.bold(pc.white('UPDATED_AT')),
       ],
       colAligns: ['left', 'left', 'left', 'center'],
-      colWidths: [25, 40, 70, 15],
+      colWidths: [25, 40, 70, 15, 30],
       wordWrap: true,
     });
 
-    if (resp.response?.code === EnumStatusCode.OK) {
-      if (resp.graphs.length > 0) {
-        for (const graph of resp.graphs) {
-          graphsTable.push([
-            graph.name,
-            graph.labelMatchers.join(','),
-            graph.routingURL,
-            graph.isComposable ? logSymbols.success : logSymbols.error,
-          ]);
-        }
-        console.log(graphsTable.toString());
-      } else {
-        console.log('No federated graphs found');
-      }
-    } else {
-      program.error(pc.red('Could not fetch the federated graphs.'));
+    for (const graph of resp.graphs) {
+      graphsTable.push([
+        graph.name,
+        graph.labelMatchers.join(','),
+        graph.routingURL,
+        graph.isComposable ? logSymbols.success : logSymbols.error,
+        graph.lastUpdatedAt,
+      ]);
     }
+    console.log(graphsTable.toString());
   });
 
-  return listFederatedGraphs;
+  return command;
 };
