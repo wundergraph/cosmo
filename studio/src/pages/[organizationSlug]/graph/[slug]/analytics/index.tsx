@@ -579,6 +579,26 @@ const ErrorRateOverTimeCard = () => {
   const range = useRange();
   const graphContext = useContext(GraphContext);
 
+  const formatter = (value: number) => {
+    if (value < 1) {
+      return (
+        Intl.NumberFormat("us", {
+          maximumFractionDigits: 3,
+        })
+          .format(value)
+          .toString() + " RPM"
+      );
+    }
+
+    return (
+      Intl.NumberFormat("us", {
+        maximumFractionDigits: 0,
+      })
+        .format(value)
+        .toString() + " RPM"
+    );
+  };
+
   const { isMobile } = useWindowSize();
 
   let {
@@ -599,7 +619,7 @@ const ErrorRateOverTimeCard = () => {
     range,
     (responseData?.series ?? []).map((s) => ({
       ...s,
-      value: Number.parseInt(s.value),
+      value: Number.parseFloat(s.value),
     }))
   );
 
@@ -607,7 +627,7 @@ const ErrorRateOverTimeCard = () => {
     range,
     (responseData?.errorSeries ?? []).map((s) => ({
       ...s,
-      value: Number.parseInt(s.value),
+      value: Number.parseFloat(s.value),
     }))
   );
 
@@ -688,7 +708,7 @@ const ErrorRateOverTimeCard = () => {
             wrapperStyle={{ fontSize: "13px", marginTop: "-10px" }}
           />
 
-          <ChartTooltip />
+          <ChartTooltip formatter={formatter} />
         </AreaChart>
       </ResponsiveContainer>
     );
