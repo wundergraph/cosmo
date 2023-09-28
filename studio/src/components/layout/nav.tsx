@@ -42,7 +42,7 @@ const MobileNav = () => {
   return (
     <div
       className={cn(
-        "fixed inset-0 top-16 z-50 grid h-[calc(100vh-4rem)] grid-flow-row auto-rows-max overflow-auto border-t bg-popover shadow-md animate-in slide-in-from-bottom-64 lg:hidden"
+        "fixed inset-0 top-28 z-50 grid h-[calc(100vh-112px)] grid-flow-row auto-rows-max overflow-auto border-t bg-popover shadow-md animate-in slide-in-from-bottom-64 lg:hidden"
       )}
     >
       <div className="relative z-20 grid gap-6 rounded-md p-4 text-popover-foreground">
@@ -74,23 +74,27 @@ const Graphs = () => {
   if (router.pathname.split("/")[2] !== "graph") return null;
 
   return (
-    <Select
-      value={slug}
-      onValueChange={(gID) => router.push(`/${organizationSlug}/graph/${gID}`)}
-    >
-      <SelectTrigger value={slug} className="w-[200px] lg:w-full">
-        <SelectValue aria-label={slug}>{slug}</SelectValue>
-      </SelectTrigger>
-      <SelectContent>
-        {data?.graphs?.map(({ name }) => {
-          return (
-            <SelectItem key={name} value={name}>
-              {name}
-            </SelectItem>
-          );
-        })}
-      </SelectContent>
-    </Select>
+    <div className="hidden lg:flex w-full">
+      <Select
+        value={slug}
+        onValueChange={(gID) =>
+          router.push(`/${organizationSlug}/graph/${gID}`)
+        }
+      >
+        <SelectTrigger value={slug} className="w-[200px] lg:w-full">
+          <SelectValue aria-label={slug}>{slug}</SelectValue>
+        </SelectTrigger>
+        <SelectContent>
+          {data?.graphs?.map(({ name }) => {
+            return (
+              <SelectItem key={name} value={name}>
+                {name}
+              </SelectItem>
+            );
+          })}
+        </SelectContent>
+      </Select>
+    </div>
   );
 };
 
@@ -101,41 +105,41 @@ const Organizations = () => {
   if (!user?.currentOrganization) return null;
 
   return (
-    <Select
-      value={user.currentOrganization.slug}
-      onValueChange={(orgSlug) => {
-        const currentOrg = user.organizations.find(
-          (org) => org.slug === orgSlug
-        );
-        if (currentOrg && setUser) {
-          setUser({
-            ...user,
-            currentOrganization: currentOrg,
-          });
-          router.replace(`/${currentOrg.slug}`);
-        }
-      }}
-    >
-      <SelectTrigger
-        value={user.currentOrganization.name}
-        className="flex w-[200px] gap-x-2 border-0 bg-transparent px-2 lg:w-full"
-      >
-        <SelectValue aria-label={user.currentOrganization.name}>
-          <span className="flex w-36 truncate font-semibold capitalize">
-            {user.currentOrganization.name}
-          </span>
-        </SelectValue>
-      </SelectTrigger>
-      <SelectContent>
-        {user?.organizations?.map(({ name, slug }) => {
-          return (
-            <SelectItem key={slug} value={slug}>
-              {name}
-            </SelectItem>
+      <Select
+        value={user.currentOrganization.slug}
+        onValueChange={(orgSlug) => {
+          const currentOrg = user.organizations.find(
+            (org) => org.slug === orgSlug
           );
-        })}
-      </SelectContent>
-    </Select>
+          if (currentOrg && setUser) {
+            setUser({
+              ...user,
+              currentOrganization: currentOrg,
+            });
+            router.replace(`/${currentOrg.slug}`);
+          }
+        }}
+      >
+        <SelectTrigger
+          value={user.currentOrganization.name}
+          className="flex w-[200px] gap-x-2 border-0 bg-transparent px-2 lg:w-full"
+        >
+          <SelectValue aria-label={user.currentOrganization.name}>
+            <span className="flex w-36 truncate font-semibold capitalize">
+              {user.currentOrganization.name}
+            </span>
+          </SelectValue>
+        </SelectTrigger>
+        <SelectContent>
+          {user?.organizations?.map(({ name, slug }) => {
+            return (
+              <SelectItem key={slug} value={slug}>
+                {name}
+              </SelectItem>
+            );
+          })}
+        </SelectContent>
+      </Select>
   );
 };
 
@@ -150,7 +154,7 @@ export const Nav = ({ children, links }: SideNavLayoutProps) => {
         className={cn(
           "sticky top-[0] z-40 flex min-w-[248px] flex-col bg-background pt-4 lg:px-6 lg:pb-4",
           {
-            "lg:h-[97.5vh] top-8": user?.currentOrganization.isFreeTrial,
+            "top-7 lg:h-[calc(100vh-28px)]": user?.currentOrganization.isFreeTrial,
             "lg:h-screen": !user?.currentOrganization.isFreeTrial,
           }
         )}
