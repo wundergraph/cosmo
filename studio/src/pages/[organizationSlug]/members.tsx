@@ -2,7 +2,6 @@ import { UserContext } from "@/components/app-provider";
 import { EmptyState } from "@/components/empty-state";
 import {
   getDashboardLayout,
-  openCosmoTypeForm,
 } from "@/components/layout/dashboard-layout";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,7 +15,7 @@ import { Loader } from "@/components/ui/loader";
 import { useToast } from "@/components/ui/use-toast";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
 import { NextPageWithLayout } from "@/lib/page";
-import { cn } from "@/lib/utils";
+import { cn, showCal } from "@/lib/utils";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
@@ -257,8 +256,8 @@ const MembersPage: NextPageWithLayout = () => {
           <span>
             {"Your organization's plan does not allow you to invite members. "}
             Please{" "}
-            <a className="text-primary" onClick={openCosmoTypeForm}>
-              contact support
+            <a className="text-primary underline underline-offset-2" onClick={showCal}>
+              contact us
             </a>{" "}
             to upgrade.
           </span>

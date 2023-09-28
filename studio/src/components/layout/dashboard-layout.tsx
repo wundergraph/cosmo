@@ -55,7 +55,7 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
       <div className=" min-h-screen bg-background font-sans antialiased 2xl:min-w-[1536px] 2xl:max-w-screen-2xl">
         {user?.currentOrganization.isFreeTrial && (
           <div
-            className="sticky top-0 z-50 flex h-[2.5vh] cursor-pointer justify-center rounded bg-primary py-1 px-2 text-secondary-foreground"
+            className="sticky top-0 z-50 h-8 flex cursor-pointer justify-center rounded bg-primary py-1 px-2 text-secondary-foreground"
             onClick={showCal}
           >
             {!user.currentOrganization.isFreeTrialExpired ? (
