@@ -359,7 +359,7 @@ func (r *Router) NewTestServer(ctx context.Context) (*Server, error) {
 func (r *Router) bootstrap(ctx context.Context) error {
 
 	if r.traceConfig.Enabled {
-		tp, err := trace.StartAgent(r.logger, r.traceConfig)
+		tp, err := trace.StartAgent(ctx, r.logger, r.traceConfig)
 		if err != nil {
 			return fmt.Errorf("failed to start trace agent: %w", err)
 		}
@@ -368,7 +368,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 
 	// Prometheus metrics rely on OTLP metrics
 	if r.metricConfig.Enabled || r.metricConfig.Prometheus.Enabled {
-		mp, err := metric.StartAgent(r.logger, r.metricConfig)
+		mp, err := metric.StartAgent(ctx, r.logger, r.metricConfig)
 		if err != nil {
 			return fmt.Errorf("failed to start trace agent: %w", err)
 		}
