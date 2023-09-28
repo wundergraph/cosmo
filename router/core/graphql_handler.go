@@ -126,7 +126,8 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				writeRequestErrorsFromReport(operationContext.plan.Report, w, requestLogger)
 			} else {
 				requestLogger.Error("prepare plan failed", zap.Error(err))
-				respondWithInternalServerError(w, requestLogger)
+				w.WriteHeader(http.StatusInternalServerError)
+				writeRequestErrors(graphql.RequestErrorsFromError(internalServerErrorErr), w, requestLogger)
 			}
 			return
 		}
@@ -240,11 +241,6 @@ func (h *GraphQLHandler) preparePlan(requestOperationName []byte, shared *pool.S
 		preparedPlan: preparedPlan,
 		variables:    variables,
 	}, nil
-}
-
-func respondWithInternalServerError(w http.ResponseWriter, requestLogger *zap.Logger) {
-	w.WriteHeader(http.StatusInternalServerError)
-	writeRequestErrors(graphql.RequestErrorsFromError(internalServerErrorErr), w, requestLogger)
 }
 
 func logInternalErrors(report *operationreport.Report, requestLogger *zap.Logger) {
