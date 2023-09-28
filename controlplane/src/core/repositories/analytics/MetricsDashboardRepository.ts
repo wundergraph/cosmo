@@ -1,9 +1,14 @@
 import PrometheusClient from 'src/core/prometheus/client.js';
 import { QueryResultType, Response } from 'src/core/prometheus/types.js';
 
-const getUtcUnixTime = () => {
+const getEndDate = () => {
   const now = new Date();
-  return Math.floor(now.getTime() / 1000) * 1000;
+
+  now.setSeconds(59);
+  now.setMilliseconds(999);
+
+  // round up to whole minutes
+  return Math.round(now.getTime() / 1000) * 1000;
 };
 
 const getStep = (range: number) => {
@@ -23,6 +28,10 @@ const getStep = (range: number) => {
     case 24: {
       // 1 day
       return '300'; // 5m
+    }
+    case 4: {
+      // 4 hour
+      return '300'; // 1m
     }
     case 1: {
       // 1 hour
@@ -50,6 +59,9 @@ const getPRange = (range: number) => {
     case 24: {
       // 1 day
       return '5m'; // 5m
+    }
+    case 4: {
+      return '5m'; // 1m
     }
     case 1: {
       // 1 hour
@@ -83,8 +95,12 @@ const createTimeRange = (endDate: number, rangeInHours: number): Array<{ timesta
       step = 5;
       break;
     }
+    case 4: {
+      step = 5;
+      break;
+    }
     case 1: {
-      step = 60;
+      step = 1;
       break;
     }
   }
@@ -161,16 +177,20 @@ export class MetricsDashboardRepository {
   /**
    * Get request rate metrics
    */
-  public async getRequestRateMetrics({ range = 24, endDate = getUtcUnixTime(), params }: GetMetricsProps) {
+  public async getRequestRateMetrics({ range = 24, endDate = getEndDate(), params }: GetMetricsProps) {
     const prange = getPRange(range);
 
-    // get RPM requests in last 5m
+    // get median RPM requests in last [range]h
     const rate = this.client.query({
-      query: `sum(rate(cosmo_router_http_requests_total{${this.getQueryLabels(params)}}[5m])) * 60`,
+      query: `quantile(0.5, sum(rate(cosmo_router_http_requests_total{${this.getQueryLabels(
+        params,
+      )}}[${range}h])) * 60)`,
     });
 
     const prevRate = this.client.query({
-      query: `sum(rate(cosmo_router_http_requests_total{${this.getQueryLabels(params)}}[5m] offset ${range}h)) * 60`,
+      query: `quantile(0.5, sum(rate(cosmo_router_http_requests_total{${this.getQueryLabels(
+        params,
+      )}}[${range}h] offset ${range}h)) * 60)`,
     });
 
     // get top 5 operations in last [range] hours
@@ -182,7 +202,7 @@ export class MetricsDashboardRepository {
 
     // get requests in last [range] hours in series of [step]
     const series = this.client.queryRange({
-      query: `sum (rate(cosmo_router_http_requests_total{${this.getQueryLabels(params)}}[${prange}]) * 60)`,
+      query: `sum(rate(cosmo_router_http_requests_total{${this.getQueryLabels(params)}}[${prange}]) * 60)`,
       ...this.getRangeQueryProps({
         range,
         endDate,
@@ -190,7 +210,7 @@ export class MetricsDashboardRepository {
     });
 
     const prevSeries = this.client.queryRange({
-      query: `sum (rate(cosmo_router_http_requests_total{${this.getQueryLabels(params)}}[${prange}]) * 60)`,
+      query: `sum(rate(cosmo_router_http_requests_total{${this.getQueryLabels(params)}}[${prange}]) * 60)`,
       ...this.getRangeQueryProps({
         range,
         endDate: endDate - range * 60 * 60 * 1000,
@@ -223,20 +243,20 @@ export class MetricsDashboardRepository {
   /**
    * Get latency metrics
    */
-  public async getLatencyMetrics({ range = 24, endDate = getUtcUnixTime(), params }: GetMetricsProps) {
+  public async getLatencyMetrics({ range = 24, endDate = getEndDate(), params }: GetMetricsProps) {
     const prange = getPRange(range);
 
     // get p95 of requests in last 5min
     const p95 = this.client.query({
       query: `histogram_quantile(0.95, sum(rate(cosmo_router_http_request_duration_milliseconds_bucket{${this.getQueryLabels(
         params,
-      )}}[5m])) by (le))`,
+      )}}[${range}h])) by (le))`,
     });
 
     const prevP95 = this.client.query({
       query: `histogram_quantile(0.95, sum(rate(cosmo_router_http_request_duration_milliseconds_bucket{${this.getQueryLabels(
         params,
-      )}}[5m] offset ${range}h)) by (le))`,
+      )}}[${range}h]] offset ${range}h)) by (le))`,
     });
 
     // get top 5 operations in last [range] hours
@@ -293,30 +313,30 @@ export class MetricsDashboardRepository {
   /**
    * Get error metrics
    */
-  public async getErrorMetrics({ range = 24, endDate = getUtcUnixTime(), params }: GetMetricsProps) {
+  public async getErrorMetrics({ range = 24, endDate = getEndDate(), params }: GetMetricsProps) {
     const prange = getPRange(range);
 
     // get error percentage of requests in last 5min
     const percentage = this.client.query({
       query: `sum(rate(cosmo_router_http_requests_total{${this.getQueryLabels(
         params,
-      )}, http_status_code=~"5.."}[${range}h])) / sum(rate(cosmo_router_http_requests_total{${this.getQueryLabels(
+      )}, http_status_code=~"4..|5.."}[${range}h])) / sum(rate(cosmo_router_http_requests_total{${this.getQueryLabels(
         params,
-      )}}[5m])) * 100`,
+      )}}[${range}h])) * 100`,
     });
     const prevPercentage = this.client.query({
       query: `sum(rate(cosmo_router_http_requests_total{${this.getQueryLabels(
         params,
-      )}, http_status_code=~"5.."}[${range}h])) / sum(rate(cosmo_router_http_requests_total{${this.getQueryLabels(
+      )}, http_status_code=~"4..|5.."}[${range}h])) / sum(rate(cosmo_router_http_requests_total{${this.getQueryLabels(
         params,
-      )}}[5m] offset ${range}h)) * 100`,
+      )}}[${range}h] offset ${range}h)) * 100`,
     });
 
     // get top 5 operations in last [range] hours
     const top5 = this.client.query({
       query: `topk(5, sum by (wg_operation_name) (rate(cosmo_router_http_requests_total{${this.getQueryLabels(
         params,
-      )}, http_status_code=~"5.."}[${range}h])) / sum by (wg_operation_name) (rate(cosmo_router_http_requests_total{${this.getQueryLabels(
+      )}, http_status_code=~"4..|5.."}[${range}h])) / sum by (wg_operation_name) (rate(cosmo_router_http_requests_total{${this.getQueryLabels(
         params,
       )}}[${range}h])) * 100)`,
     });
@@ -325,7 +345,7 @@ export class MetricsDashboardRepository {
     const series = this.client.queryRange({
       query: `sum (rate(cosmo_router_http_requests_total{${this.getQueryLabels(
         params,
-      )}, http_status_code=~"5.." }[${prange}])) / sum (rate(cosmo_router_http_requests_total{${this.getQueryLabels(
+      )}, http_status_code=~"4..|5.." }[${prange}])) / sum (rate(cosmo_router_http_requests_total{${this.getQueryLabels(
         params,
       )} }[${prange}])) * 100`,
       ...this.getRangeQueryProps({
@@ -337,7 +357,7 @@ export class MetricsDashboardRepository {
     const prevSeries = this.client.queryRange({
       query: `sum (rate(cosmo_router_http_requests_total{${this.getQueryLabels(
         params,
-      )}, http_status_code=~"5.." }[${prange}])) / sum (rate(cosmo_router_http_requests_total{${this.getQueryLabels(
+      )}, http_status_code=~"4..|5.." }[${prange}])) / sum (rate(cosmo_router_http_requests_total{${this.getQueryLabels(
         params,
       )} }[${prange}])) * 100`,
       ...this.getRangeQueryProps({
@@ -374,7 +394,7 @@ export class MetricsDashboardRepository {
    */
   public async getErrorRateMetrics({
     range = 24,
-    endDate = getUtcUnixTime(),
+    endDate = getEndDate(),
     params,
   }: {
     range?: number;
@@ -424,11 +444,11 @@ export class MetricsDashboardRepository {
    * @returns
    */
   protected getRangeQueryProps = (options: GetRangeQueryPropsOptions) => {
-    const { range, endDate = Date.now() } = options;
+    const { range, endDate = getEndDate() } = options;
 
     return {
       start: this.getStart(endDate, range),
-      end: String(endDate / 1000),
+      end: String(Math.round(endDate / 1000)),
       step: getStep(range),
     };
   };
@@ -460,9 +480,9 @@ export class MetricsDashboardRepository {
       const prevTimestamp = String(Math.round((Number.parseInt(v.timestamp) - range * 60 * 60 * 1000) / 1000));
       return {
         ...v,
-        value: String(Number.parseFloat(series?.find((s) => String(s[0]) === timestamp)?.[1] || '0')),
+        value: String(Number.parseFloat(series?.find((s) => String(Math.round(s[0])) === timestamp)?.[1] || '0')),
         previousValue: String(
-          Number.parseFloat(previousSeries?.find((s) => String(s[0]) === prevTimestamp)?.[1] || '0'),
+          Number.parseFloat(previousSeries?.find((s) => String(Math.round(s[0])) === prevTimestamp)?.[1] || '0'),
         ),
       };
     });

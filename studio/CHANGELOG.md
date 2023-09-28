@@ -4,6 +4,32 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.18.1](https://github.com/wundergraph/cosmo/compare/studio@0.18.0...studio@0.18.1) (2023-09-28)
+
+### Bug Fixes
+
+* fixed issue where tracing elements would render on top of the page header ([#134](https://github.com/wundergraph/cosmo/issues/134)) ([da4379e](https://github.com/wundergraph/cosmo/commit/da4379e9692f81780faff72695360964d84506e3)) (@Pagebakers)
+* use correct range for error rate queries ([#133](https://github.com/wundergraph/cosmo/issues/133)) ([ff0b004](https://github.com/wundergraph/cosmo/commit/ff0b004fd6cf4f08540f76c858ea6dfaebcdd70e)) (@Pagebakers)
+
+# [0.18.0](https://github.com/wundergraph/cosmo/compare/studio@0.17.1...studio@0.18.0) (2023-09-27)
+
+### Features
+
+* add 1 and 4 hour ranges, refresh button and minor improvements ([#128](https://github.com/wundergraph/cosmo/issues/128)) ([f5cbfc7](https://github.com/wundergraph/cosmo/commit/f5cbfc79f23d0a1bbbbb1a910d82ff5894a0240d)) (@Pagebakers)
+
+## [0.17.1](https://github.com/wundergraph/cosmo/compare/studio@0.17.0...studio@0.17.1) (2023-09-27)
+
+### Bug Fixes
+
+* click on analaytics row menu opens trace view ([#125](https://github.com/wundergraph/cosmo/issues/125)) ([2740207](https://github.com/wundergraph/cosmo/commit/2740207004eb52e53710a349d94c49aac0952c2a)) (@thisisnithin)
+* fixed issue where expired session would cause redirect loop ([#127](https://github.com/wundergraph/cosmo/issues/127)) ([618de74](https://github.com/wundergraph/cosmo/commit/618de74934b27a704124186ff41341727e284553)) (@Pagebakers)
+
+# [0.17.0](https://github.com/wundergraph/cosmo/compare/studio@0.16.0...studio@0.17.0) (2023-09-27)
+
+### Features
+
+* support being a part of multiple organizations ([#119](https://github.com/wundergraph/cosmo/issues/119)) ([338e336](https://github.com/wundergraph/cosmo/commit/338e336a75435e150c8acfb01b88a8a086f7000a)) (@JivusAyrus)
+
 # [0.16.0](https://github.com/wundergraph/cosmo/compare/studio@0.15.2...studio@0.16.0) (2023-09-25)
 
 ### Features

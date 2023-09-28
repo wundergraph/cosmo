@@ -28,7 +28,7 @@ const GraphsDashboardPage: NextPageWithLayout = () => {
     })
   );
 
-  const user = useContext(UserContext);
+  const [user] = useContext(UserContext);
 
   if (isLoading) return <Loader fullscreen />;
 
@@ -46,7 +46,7 @@ const GraphsDashboardPage: NextPageWithLayout = () => {
 
   return (
     <div className="flex flex-col gap-y-4">
-      {user?.organization.isFreeTrial && (
+      {user?.currentOrganization.isFreeTrial && (
         <div
           className="flex cursor-pointer justify-center rounded bg-secondary py-1 text-secondary-foreground"
           onClick={openCosmoTypeForm}

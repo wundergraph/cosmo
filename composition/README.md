@@ -2,7 +2,7 @@
 
 [![npm version](https://badge.fury.io/js/%40wundergraph%2Fcomposition.svg)](https://badge.fury.io/js/%40wundergraph%2Fcomposition)
 
-The WunderGraph composition library allows to federate multiple subgraph schemas into a 
+The WunderGraph composition library facilitates the federation of multiple subgraph schemas into a 
 single federated GraphQL schema.
 
 ### Prerequisites
@@ -19,7 +19,7 @@ The function must be provided with an array of at least one [`Subgraph` object](
 An example federation of two simple subgraphs:
 
 ```typescript
-import { federateSubgraphs, Subgraph } from '@wundergraph.composition';
+import { federateSubgraphs, Subgraph } from '@wundergraph/composition';
 import { parse } from 'graphql';
 
 const federationResult: FederationResult = federateSubgraphs([subgraphA, subgraphB]);
@@ -51,17 +51,26 @@ const subgraphB: Subgraph = {
 };
 ```
 
+### FederationResultContainer properties
+
+The `federateSubgraphs` function returns a `FederationResultContainer` object.
+If federation was successful, the `errors` property will be undefined, and the `federationResult` object will be 
+defined.
+
+| property         | Description                         | type                          |
+|------------------|-------------------------------------|-------------------------------|
+| errors           | array of composition errors         | Error[] \| undefined          |
+| federationResult | FederationResult object (see below) | FederationResult \| undefined |
+
 ### FederationResult properties
 
-The `federateSubgraphs` function returns a `FederationResult` object.
-If federation was successful, the `errors` property will be undefined, and both the `federatedGraphAST` and 
-the `federatedGraphSchema` objects will be defined.
+If federation was successful, `FieldResultContainer` will contain a defined `federationResult` property.
 
-| property             | Description                                     | type                               |
-|----------------------|-------------------------------------------------|------------------------------------|
-| errors               | unique name of the subgraph                     | Error[] \| undefined               |
-| federatedGraphAST    | federated schema represented as an AST          | graphql.DocumentNode \| undefined  |
-| federatedGraphSchema | federated schema represented as a schema object | graphql.GraphQLSchema \| undefined |
+| property               | Description                                               | type                        |
+|------------------------|-----------------------------------------------------------|-----------------------------|
+| argumentConfigurations | array of router argument configurations                   | ArgumentConfigurationData[] |
+| federatedGraphAST      | an AST object representation of the federated graph sdl   | graphql.DocumentNode        |
+| federatedGraphSchema   | a schema object representation of the federated graph sdl | graphql.GraphQLSchema       |
 
 ### Debugging
 
@@ -74,15 +83,15 @@ An example of a simple debugging framework might be:
 import { federateSubgraphs, Subgraph } from '@wundergraph.composition';
 import { print, printSchema } from 'graphql';
 
-const result = federateSubgraphs([subgraphA, subgraphB]);
-if (result.errors) {
-  for (const err of result.errors) {
+const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphB]);
+if (errors) {
+  for (const err of errors) {
     console.log(err.message);
   }
 } else {
   // Both options to print the federated graph as a string are included for documentational purposes only
-  console.log(print(result.federatedGraphAST!)); // log the federated graph AST as a string
-  console.log(printSchema(result.federatedGraphSchema!)); // log the federated graph schema as a string
+  console.log(print(federationResult!.federatedGraphAST)); // log the federated graph AST as a string
+  console.log(printSchema(federationResult!.federatedGraphSchema)); // log the federated graph schema as a string
 }
 
 // subgraph definitions would be below [removed for brevity]
@@ -96,10 +105,11 @@ Errors can happen in three main stages:
 (if this stage fails, federation will not be attempted)
 3. During the federation process itself.
 
-All errors will be appended to the `FederationResult.errors` array.
+All errors will be appended to the `FederationResultContainer.errors` array.
 Often, the error message will suggest potential fixes. For instance:
 
-`Error: The following root path is unresolvable:
+```
+Error: The following root path is unresolvable:
     Query.user.name
     This is because:
         The root type field "Query.user" is defined in the following subgraphs: "subgraph-b".
@@ -113,11 +123,13 @@ Often, the error message will suggest potential fixes. For instance:
                     ...
                     user: User @shareable
                 }
-`
+`````
 
 ## Subgraph object
 
 The `Subgraph` object is the core of the WunderGraph composition library.
+The `definitions` property must be provided as a `graphQL.DocumentNode` type.
+This is easily achieved by passing string representation of the subgraph SDL to the graphql.js `parse` function.
 An example is shown below:
 
 ```typescript
@@ -128,6 +140,10 @@ const subgraphA: Subgraph = {
   name: 'subgraph-a',
   url: 'http://localhost:4001',
   definitions: parse(`
+    type Query {
+      user: User!
+    }
+
     type User {
       name: String!
     }
@@ -137,8 +153,8 @@ const subgraphA: Subgraph = {
 
 ### Subgraph Properties
 
-| property    | Description                      | type                 |
-|-------------|----------------------------------|----------------------|
-| name        | unique name of the subgraph      | string               |
-| url         | unique endpoint for the subgraph | string               |
-| definitions | SDL of the subgraph              | graphql.DocumentNode |
+| property    | Description                               | type                 |
+|-------------|-------------------------------------------|----------------------|
+| name        | unique name of the subgraph               | string               |
+| url         | unique endpoint for the subgraph          | string               |
+| definitions | an AST representation of the subgraph SDL | graphql.DocumentNode |

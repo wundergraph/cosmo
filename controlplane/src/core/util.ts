@@ -1,9 +1,11 @@
 import { randomFill } from 'node:crypto';
 import pino from 'pino';
-import { splitLabel, joinLabel } from '@wundergraph/cosmo-shared';
+import { joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
 import { uid } from 'uid/secure';
 import { Label, ResponseMessage } from '../types/index.js';
 import { isAuthenticationError, isPublicError } from './errors/errors.js';
+
+const labelRegex = /^[\dA-Za-z](?:[\w.-]{0,61}[\dA-Za-z])?$/;
 
 /**
  * Wraps a function with a try/catch block and logs any errors that occur.
@@ -57,8 +59,6 @@ export function normalizeLabels(labels: Label[]): Label[] {
  * Could contain dashes (-), underscores (_), dots (.), and alphanumerics between.
  */
 export function isValidLabels(labels: Label[]): boolean {
-  const labelRegex = /^[\dA-Za-z](?:[\w.-]{0,61}[\dA-Za-z])?$/;
-
   for (const label of labels) {
     const { key, value } = label;
     if (!labelRegex.test(key) || !labelRegex.test(value)) {
@@ -112,4 +112,11 @@ export function randomString(length: number): Promise<string> {
       resolve(base64URLEncode(buf));
     });
   });
+}
+
+export function sanitizeMigratedGraphName(input: string): string {
+  if (labelRegex.test(input)) {
+    return input;
+  }
+  return `migrated_graph_${uid(12)}`;
 }
