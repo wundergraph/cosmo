@@ -178,7 +178,7 @@ function Node({
               onClick={toggleTree}
               disabled={!hasChildren}
               className={clsx(
-                "z-10 mt-1.5 h-min w-min rounded-sm border border-input p-px",
+                "mt-1.5 h-min w-min rounded-sm border border-input p-px",
                 {
                   "border-none": !hasChildren,
                 }
@@ -255,13 +255,13 @@ function Node({
                 left: `${visualOffsetPercentage}%`,
                 backgroundColor: service?.color,
               }}
-              className="absolute z-10 mx-2 h-3/5 max-h-6 rounded"
+              className="z-8 absolute mx-2 h-3/5 max-h-6 rounded"
             />
             <div
               style={{
                 left: getDurationOffset(),
               }}
-              className={clsx("absolute z-10 bg-transparent text-xs", {
+              className={clsx("z-8 absolute bg-transparent text-xs", {
                 "px-2": visualWidthPercentage < 8,
                 "!text-white": visualWidthPercentage >= 8,
               })}
