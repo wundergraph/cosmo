@@ -5,7 +5,6 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/metric"
-	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 	"net/http"
 	"time"
 )
@@ -106,11 +105,10 @@ func (h *Metrics) createMeasures() error {
 	return nil
 }
 
-func (h *Metrics) MeasureInFlight(r *http.Request, attr ...attribute.KeyValue) func() {
+func (h *Metrics) MeasureInFlight(r *http.Request) func() {
 	var baseKeys []attribute.KeyValue
 
 	baseKeys = append(baseKeys, h.baseFields...)
-	baseKeys = append(baseKeys, attr...)
 
 	baseAttributes := otelmetric.WithAttributes(baseKeys...)
 
@@ -160,7 +158,6 @@ func (h *Metrics) MeasureLatency(r *http.Request, requestStartTime time.Time, st
 	var baseKeys []attribute.KeyValue
 
 	baseKeys = append(baseKeys, h.baseFields...)
-	baseKeys = append(baseKeys, semconv.HTTPStatusCode(statusCode))
 	baseKeys = append(baseKeys, attr...)
 
 	baseAttributes := otelmetric.WithAttributes(baseKeys...)

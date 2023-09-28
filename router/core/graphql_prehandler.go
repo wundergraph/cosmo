@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/wundergraph/cosmo/router/internal/metric"
 	"go.opentelemetry.io/otel/attribute"
+	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"io"
 	"net/http"
 	"time"
@@ -43,27 +44,45 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 }
 
 func (h *PreHandler) Handler(next http.Handler) http.Handler {
+
 	fn := func(w http.ResponseWriter, r *http.Request) {
 
+		var baseFields []attribute.KeyValue
+		var statusCode int
+		var writtenBytes int
+
 		if h.requestMetrics != nil {
+			requestStartTime := time.Now()
+
 			inflightMetric := h.requestMetrics.MeasureInFlight(r)
-			defer inflightMetric()
+
+			defer func() {
+				inflightMetric()
+
+				baseFields = append(baseFields, semconv.HTTPStatusCode(statusCode))
+				h.requestMetrics.MeasureRequestCount(r, baseFields...)
+				h.requestMetrics.MeasureRequestSize(r, baseFields...)
+				h.requestMetrics.MeasureLatency(
+					r,
+					requestStartTime,
+					statusCode,
+				)
+				h.requestMetrics.MeasureResponseSize(r, int64(writtenBytes), baseFields...)
+			}()
 		}
 
-		requestStartTime := time.Now()
 		requestLogger := h.log.With(logging.WithRequestID(middleware.GetReqID(r.Context())))
 
 		buf := pool.GetBytesBuffer()
 		defer pool.PutBytesBuffer(buf)
 		_, err := io.Copy(buf, r.Body)
 		if err != nil {
+			statusCode = http.StatusInternalServerError
 			requestLogger.Error("failed to read request body", zap.Error(err))
 			writeRequestErrors(graphql.RequestErrorsFromError(errors.New("bad request")), w, requestLogger)
-			w.WriteHeader(http.StatusInternalServerError)
+			w.WriteHeader(statusCode)
 			return
 		}
-
-		var baseFields []attribute.KeyValue
 
 		body := buf.Bytes()
 
@@ -110,11 +129,6 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			baseFields = append(baseFields, otel.WgOperationType.String(requestOperationType))
 		}
 
-		if h.requestMetrics != nil {
-			h.requestMetrics.MeasureRequestCount(r, baseFields...)
-			h.requestMetrics.MeasureRequestSize(r, baseFields...)
-		}
-
 		// Add the operation to the trace span
 		span := trace.SpanFromContext(r.Context())
 		// Set the span name to the operation name after we figured it out
@@ -126,15 +140,17 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 		// If multiple operations are defined, but no operationName is set, we return an error
 		if len(shared.Doc.OperationDefinitions) > 1 && requestOperationName == "" {
+			statusCode = http.StatusBadRequest
 			requestLogger.Error("operation name is required when multiple operations are defined")
-			w.WriteHeader(http.StatusBadRequest)
+			w.WriteHeader(statusCode)
 			w.Write([]byte("operation name is required when multiple operations are defined"))
 			return
 		}
 
 		if shared.Report.HasErrors() {
+			statusCode = http.StatusBadRequest
 			logInternalErrors(shared.Report, requestLogger)
-			w.WriteHeader(http.StatusBadRequest)
+			w.WriteHeader(statusCode)
 			writeRequestErrorsFromReport(shared.Report, w, requestLogger)
 			return
 		}
@@ -154,8 +170,9 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		}
 
 		if shared.Report.HasErrors() {
+			statusCode = http.StatusBadRequest
 			logInternalErrors(shared.Report, requestLogger)
-			w.WriteHeader(http.StatusBadRequest)
+			w.WriteHeader(statusCode)
 			writeRequestErrorsFromReport(shared.Report, w, requestLogger)
 			return
 		}
@@ -165,8 +182,9 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		// otherwise, the prepared plan cache would return the same plan for all operations
 		_, err = shared.Hash.Write(requestOperationNameBytes)
 		if err != nil {
+			statusCode = http.StatusInternalServerError
 			requestLogger.Error("hash write failed", zap.Error(err))
-			w.WriteHeader(http.StatusInternalServerError)
+			w.WriteHeader(statusCode)
 			return
 		}
 
@@ -175,8 +193,10 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		// and the extracted variables (see below)
 		err = shared.Printer.Print(shared.Doc, h.executor.Definition, shared.Hash)
 		if err != nil {
+			statusCode = http.StatusInternalServerError
 			requestLogger.Error("unable to print document", zap.Error(err))
-			respondWithInternalServerError(w, requestLogger)
+			w.WriteHeader(statusCode)
+			writeRequestErrors(graphql.RequestErrorsFromError(internalServerErrorErr), w, requestLogger)
 			return
 		}
 
@@ -184,7 +204,9 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		_, err = shared.Hash.Write(shared.Doc.Input.Variables)
 		if err != nil {
 			requestLogger.Error("hash write failed", zap.Error(err))
-			respondWithInternalServerError(w, requestLogger)
+			statusCode = http.StatusInternalServerError
+			w.WriteHeader(statusCode)
+			writeRequestErrors(graphql.RequestErrorsFromError(internalServerErrorErr), w, requestLogger)
 			return
 		}
 
@@ -215,15 +237,8 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		// and enrich the context to make it available in the request context as well for metrics etc.
 		next.ServeHTTP(ww, newReq)
 
-		if h.requestMetrics != nil {
-			h.requestMetrics.MeasureLatency(
-				newReq,
-				requestStartTime,
-				ww.Status(),
-			)
-
-			h.requestMetrics.MeasureResponseSize(r, int64(ww.BytesWritten()))
-		}
+		statusCode = ww.Status()
+		writtenBytes = ww.BytesWritten()
 	}
 
 	return http.HandlerFunc(fn)
