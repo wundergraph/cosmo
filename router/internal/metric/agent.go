@@ -55,7 +55,7 @@ func createHttpExporter(c *Config) (sdkmetric.Exporter, error) {
 				return metricdata.DeltaTemporality
 			case sdkmetric.InstrumentKindUpDownCounter,
 				sdkmetric.InstrumentKindObservableUpDownCounter:
-				return metricdata.CumulativeTemporality
+				return metricdata.DeltaTemporality
 			}
 			panic("unknown instrument kind")
 		}),
