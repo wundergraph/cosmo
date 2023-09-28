@@ -28,7 +28,7 @@ type Exporter struct {
 // Config represents the configuration for the agent.
 type Config struct {
 	Enabled bool
-	// Name represents the service name for tracing. The default value is wundergraph-cosmo-router.
+	// Name represents the service name for tracing. The default value is cosmo-router.
 	Name string
 	// Sampler represents the sampler for tracing. The default value is 1.
 	Sampler   float64

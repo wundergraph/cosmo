@@ -80,19 +80,6 @@ type MetricsCommon struct {
 	Enabled bool `yaml:"enabled" default:"true" envconfig:"METRICS_ENABLED"`
 }
 
-// telemetry:
-// 	service_name: my-router
-// 	default_exporters: false
-// 	exporters:
-// 	- endpoint: https://cosmo-otel.wundergraph.com
-// 		headers:
-// 			Authorization: Bearer \\${MY_TOKEN} "${MY_TOKEN}"
-// 			//Authorization: Bearer <token>"
-// 			//Authorization: Bearer <token>
-// 			X-Foo: bar
-// 	- endpoint: https://datadog.com
-// 		headers:
-
 type Telemetry struct {
 	ServiceName         string            `yaml:"service_name" default:"cosmo-router" envconfig:"TELEMETRY_SERVICE_NAME" validate:"required"`
 	UseDefaultExporters bool              `yaml:"use_default_exporters" default:"true" envconfig:"TELEMETRY_USE_DEFAULT_EXPORTERS"`
