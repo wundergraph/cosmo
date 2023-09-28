@@ -9,6 +9,7 @@ CREATE MATERIALIZED VIEW IF NOT EXISTS cosmo.operation_request_metrics_5_30_mv (
    TotalClientErrors UInt64 CODEC(ZSTD(1)),
    OperationType String CODEC (ZSTD(1)),
    FederatedGraphID String CODEC(ZSTD(1)),
+   RouterConfigVersion String CODEC(ZSTD(1)),
    OrganizationID String CODEC(ZSTD(1)),
    IsSubscription Bool CODEC(ZSTD(1)),
    ClientName String CODEC (ZSTD(1)),
@@ -17,7 +18,7 @@ CREATE MATERIALIZED VIEW IF NOT EXISTS cosmo.operation_request_metrics_5_30_mv (
 ENGINE = SummingMergeTree
 PARTITION BY toDate(Timestamp)
 ORDER BY (
-    toUnixTimestamp(Timestamp), OrganizationID, FederatedGraphID, OperationName, OperationType, ClientName, ClientVersion, IsSubscription, OperationHash
+    toUnixTimestamp(Timestamp), OrganizationID, FederatedGraphID, RouterConfigVersion, OperationName, OperationType, ClientName, ClientVersion, IsSubscription, OperationHash
 )
 TTL toDateTime(Timestamp) + toIntervalDay(30) SETTINGS index_granularity = 8192, ttl_only_drop_parts = 1 POPULATE AS
 SELECT
@@ -29,6 +30,7 @@ SELECT
     sumIf(Value, position(Attributes['http.status_code'],'4') = 1) as TotalClientErrors,
     Attributes [ 'wg.operation.type' ] as OperationType,
     Attributes [ 'wg.federated_graph.id'] as FederatedGraphID,
+    Attributes [ 'wg.router.config.version'] as RouterConfigVersion,
     Attributes [ 'wg.organization.id' ] as OrganizationID,
     mapContains(Attributes, 'wg.subscription') as IsSubscription,
     Attributes [ 'wg.client.name' ] as ClientName,
@@ -40,6 +42,7 @@ GROUP BY
     OperationName,
     OperationHash,
     FederatedGraphID,
+    RouterConfigVersion,
     OrganizationID,
     OperationType,
     Timestamp,

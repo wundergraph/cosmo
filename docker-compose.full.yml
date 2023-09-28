@@ -130,24 +130,6 @@ services:
     depends_on:
       - postgres
 
-  prometheus:
-    image: prom/prometheus:v2.46.0
-    command:
-      - --web.enable-remote-write-receiver
-      - --enable-feature=native-histograms
-      - --config.file=/etc/prometheus/prometheus.yml
-      - --web.config.file=/etc/prometheus/web.yml
-    volumes:
-      - prometheus:/prometheus
-      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-      - ./docker/prometheus/web.yml:/etc/prometheus/web.yml
-    networks:
-      - primary
-    profiles:
-      - default
-    ports:
-      - "9090:9090"
-
   # Cosmo Platform
 
   otelcollector:
