@@ -262,7 +262,7 @@ const LeaveOrganization = () => {
               duration: 3000,
             });
           } else if (d.response?.details) {
-            toast({ description: d.response.details, duration: 3000 });
+            toast({ description: d.response.details, duration: 4000 });
           }
         },
         onError: (error) => {
