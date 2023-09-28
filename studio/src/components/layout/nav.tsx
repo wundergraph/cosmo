@@ -150,9 +150,8 @@ export const Nav = ({ children, links }: SideNavLayoutProps) => {
         className={cn(
           "sticky top-[0] z-40 flex min-w-[248px] flex-col bg-background pt-4 lg:px-6 lg:pb-4",
           {
-            "lg:h-[97.5vh] top-8": true,
-            // "lg:h-[97.5vh]": user?.currentOrganization.isFreeTrial,
-            // "lg:h-screen": !user?.currentOrganization.isFreeTrial,
+            "lg:h-[97.5vh] top-8": user?.currentOrganization.isFreeTrial,
+            "lg:h-screen": !user?.currentOrganization.isFreeTrial,
           }
         )}
       >
