@@ -7,6 +7,7 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"io"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/buger/jsonparser"
@@ -106,7 +107,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		// If the operationName is not set, we try to get it from the named operation in the document
 		if requestOperationName == "" {
 			if len(shared.Doc.OperationDefinitions) == 1 {
-				requestOperationName = shared.Doc.Input.ByteSlice(shared.Doc.OperationDefinitions[0].Name).String()
+				requestOperationName = string(shared.Doc.OperationDefinitionNameBytes(0))
 			}
 		}
 
@@ -227,7 +228,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		shared.Ctx = shared.Ctx.WithContext(ctxWithOperation)
 
 		// Add the operation hash to the trace span attributes
-		span.SetAttributes(otel.WgOperationHash.Int64(int64(operationID)))
+		span.SetAttributes(otel.WgOperationHash.String(strconv.FormatUint(operationID, 10)))
 
 		ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
 
