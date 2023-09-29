@@ -50,11 +50,9 @@ type TracingExporter struct {
 }
 
 type Tracing struct {
-	Enabled       bool              `yaml:"enabled" default:"true" envconfig:"TRACING_ENABLED"`
-	SamplingRate  float64           `yaml:"sampling_rate" default:"1" validate:"required,min=0,max=1" envconfig:"TRACING_SAMPLING_RATE"`
-	BatchTimeout  time.Duration     `yaml:"batch_timeout" default:"10s" validate:"required,min=5s,max=120s" envconfig:"TRACING_BATCH_TIMEOUT"`
-	ExportTimeout time.Duration     `yaml:"export_timeout" default:"30s" validate:"required,min=5s,max=120s" envconfig:"TRACING_EXPORT_TIMEOUT"`
-	Exporters     []TracingExporter `yaml:"exporters"`
+	Enabled      bool              `yaml:"enabled" default:"true" envconfig:"TRACING_ENABLED"`
+	SamplingRate float64           `yaml:"sampling_rate" default:"1" validate:"required,min=0,max=1" envconfig:"TRACING_SAMPLING_RATE"`
+	Exporters    []TracingExporter `yaml:"exporters"`
 }
 
 type Prometheus struct {
@@ -63,7 +61,12 @@ type Prometheus struct {
 	ListenAddr string `yaml:"listen_addr" default:"127.0.0.1:8088" validate:"hostname_port" envconfig:"PROMETHEUS_LISTEN_ADDR"`
 }
 
-type MetricsExporter struct {
+type MetricsOpenTelemetry struct {
+	Enabled   bool                           `yaml:"enabled" default:"true" envconfig:"METRICS_OPENTELEMETRY_ENABLED"`
+	Exporters []MetricsOpenTelemetryExporter `yaml:"exporters"`
+}
+
+type MetricsOpenTelemetryExporter struct {
 	Exporter otelconfig.Exporter `yaml:"exporter" validate:"oneof=otlphttp otlpgrpc"`
 	Endpoint string              `yaml:"endpoint" validate:"http_url"`
 	HTTPPath string              `yaml:"path"`
@@ -71,9 +74,9 @@ type MetricsExporter struct {
 }
 
 type Metrics struct {
-	Common     MetricsCommon     `yaml:"common"`
-	Exporters  []MetricsExporter `yaml:"exporters"`
-	Prometheus Prometheus        `yaml:"prometheus"`
+	Common        MetricsCommon        `yaml:"common"`
+	OpenTelemetry MetricsOpenTelemetry `yaml:"opentelemetry"`
+	Prometheus    Prometheus           `yaml:"prometheus"`
 }
 
 type MetricsCommon struct {
@@ -81,12 +84,9 @@ type MetricsCommon struct {
 }
 
 type Telemetry struct {
-	ServiceName         string            `yaml:"service_name" default:"cosmo-router" envconfig:"TELEMETRY_SERVICE_NAME" validate:"required"`
-	UseDefaultExporters bool              `yaml:"use_default_exporters" default:"true" envconfig:"TELEMETRY_USE_DEFAULT_EXPORTERS"`
-	Endpoint            string            `yaml:"endpoint" envconfig:"TELEMETRY_ENDPOINT" default:"https://cosmo-otel.wundergraph.com"`
-	Headers             map[string]string `yaml:"headers" envconfig:"TELEMETRY_HEADERS"`
-	Tracing             Tracing           `yaml:"tracing"`
-	Metrics             Metrics           `yaml:"metrics"`
+	ServiceName string  `yaml:"service_name" default:"cosmo-router" envconfig:"TELEMETRY_SERVICE_NAME" validate:"required"`
+	Tracing     Tracing `yaml:"tracing"`
+	Metrics     Metrics `yaml:"metrics"`
 }
 
 type CORS struct {

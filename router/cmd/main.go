@@ -14,7 +14,6 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/controlplane"
 	"github.com/wundergraph/cosmo/router/internal/handler/cors"
 	"github.com/wundergraph/cosmo/router/internal/metric"
-	"github.com/wundergraph/cosmo/router/internal/otel/otelconfig"
 	"github.com/wundergraph/cosmo/router/internal/trace"
 
 	"go.uber.org/zap"
@@ -148,20 +147,6 @@ func traceConfig(cfg *config.Telemetry) *trace.Config {
 			HTTPPath:      exp.HTTPPath,
 		})
 	}
-	if cfg.UseDefaultExporters {
-		exporters = append(exporters, &trace.Exporter{
-			Endpoint: otelconfig.DefaultEndpoint,
-			// Auth is set by router
-		})
-	}
-	if cfg.Endpoint != "" && cfg.Endpoint != otelconfig.DefaultEndpoint {
-		exporters = append(exporters, &trace.Exporter{
-			Endpoint:      cfg.Endpoint,
-			BatchTimeout:  cfg.Tracing.BatchTimeout,
-			ExportTimeout: cfg.Tracing.ExportTimeout,
-			Headers:       cfg.Headers,
-		})
-	}
 	return &trace.Config{
 		Enabled:   cfg.Tracing.Enabled,
 		Name:      cfg.ServiceName,
@@ -172,7 +157,7 @@ func traceConfig(cfg *config.Telemetry) *trace.Config {
 
 func metricsConfig(cfg *config.Telemetry) *metric.Config {
 	var openTelemetryExporters []*metric.OpenTelemetryExporter
-	for _, exp := range cfg.Metrics.Exporters {
+	for _, exp := range cfg.Metrics.OpenTelemetry.Exporters {
 		openTelemetryExporters = append(openTelemetryExporters, &metric.OpenTelemetryExporter{
 			Endpoint: exp.Endpoint,
 			Exporter: exp.Exporter,
@@ -181,24 +166,11 @@ func metricsConfig(cfg *config.Telemetry) *metric.Config {
 		})
 	}
 
-	if cfg.UseDefaultExporters {
-		openTelemetryExporters = append(openTelemetryExporters, &metric.OpenTelemetryExporter{
-			Endpoint: otelconfig.DefaultEndpoint,
-			// Auth is set by router
-		})
-	}
-
-	if cfg.Endpoint != "" && cfg.Endpoint != otelconfig.DefaultEndpoint {
-		openTelemetryExporters = append(openTelemetryExporters, &metric.OpenTelemetryExporter{
-			Endpoint: cfg.Endpoint,
-			Headers:  cfg.Headers,
-		})
-	}
-
 	return &metric.Config{
 		Enabled: cfg.Metrics.Common.Enabled,
 		Name:    cfg.ServiceName,
 		OpenTelemetry: metric.OpenTelemetry{
+			Enabled:   cfg.Metrics.OpenTelemetry.Enabled,
 			Exporters: openTelemetryExporters,
 		},
 		Prometheus: metric.Prometheus{

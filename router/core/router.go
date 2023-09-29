@@ -218,16 +218,22 @@ func NewRouter(opts ...Option) (*Router, error) {
 		ExpectContinueTimeout: r.subgraphTransportOptions.ExpectContinueTimeout,
 	}
 
-	// Add r.graphApiToken to default OTEL providers, if they were configured
-	for _, exp := range r.traceConfig.Exporters {
-		if exp.Endpoint == otelconfig.DefaultEndpoint {
-			exp.Headers = setAuthorizationHeader(exp.Headers, r.graphApiToken)
-		}
+	// Add default exporters if needed
+	if r.traceConfig.Enabled && len(r.traceConfig.Exporters) == 0 {
+		endpoint := otelconfig.DefaultEndpoint()
+		r.logger.Debug("using default trace exporter", zap.String("endpoint", endpoint))
+		r.traceConfig.Exporters = append(r.traceConfig.Exporters, &trace.Exporter{
+			Endpoint: endpoint,
+			Headers:  otelconfig.DefaultEndpointHeaders(r.graphApiToken),
+		})
 	}
-	for _, exp := range r.metricConfig.OpenTelemetry.Exporters {
-		if exp.Endpoint == otelconfig.DefaultEndpoint {
-			exp.Headers = setAuthorizationHeader(exp.Headers, r.graphApiToken)
-		}
+	if r.metricConfig.Enabled && r.metricConfig.OpenTelemetry.Enabled && len(r.metricConfig.OpenTelemetry.Exporters) == 0 {
+		endpoint := otelconfig.DefaultEndpoint()
+		r.logger.Debug("using default metrics exporter", zap.String("endpoint", endpoint))
+		r.metricConfig.OpenTelemetry.Exporters = append(r.metricConfig.OpenTelemetry.Exporters, &metric.OpenTelemetryExporter{
+			Endpoint: endpoint,
+			Headers:  otelconfig.DefaultEndpointHeaders(r.graphApiToken),
+		})
 	}
 	return r, nil
 }

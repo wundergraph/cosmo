@@ -25,6 +25,7 @@ type OpenTelemetryExporter struct {
 }
 
 type OpenTelemetry struct {
+	Enabled   bool
 	Exporters []*OpenTelemetryExporter
 }
 
