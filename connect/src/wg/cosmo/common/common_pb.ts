@@ -63,6 +63,11 @@ export enum EnumStatusCode {
    * @generated from enum value: ERR_OPENAI_DISABLED = 10;
    */
   ERR_OPENAI_DISABLED = 10,
+
+  /**
+   * @generated from enum value: ERR_FREE_TRIAL_EXPIRED = 11;
+   */
+  ERR_FREE_TRIAL_EXPIRED = 11,
 }
 // Retrieve enum metadata with: proto3.getEnumType(EnumStatusCode)
 proto3.util.setEnumType(EnumStatusCode, "wg.cosmo.common.EnumStatusCode", [
@@ -77,5 +82,6 @@ proto3.util.setEnumType(EnumStatusCode, "wg.cosmo.common.EnumStatusCode", [
   { no: 8, name: "ERR_ANALYTICS_DISABLED" },
   { no: 9, name: "ERROR_NOT_AUTHENTICATED" },
   { no: 10, name: "ERR_OPENAI_DISABLED" },
+  { no: 11, name: "ERR_FREE_TRIAL_EXPIRED" },
 ]);
 
