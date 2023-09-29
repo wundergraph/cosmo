@@ -3,7 +3,7 @@ import pino from 'pino';
 import { joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
 import { uid } from 'uid/secure';
 import { Label, ResponseMessage } from '../types/index.js';
-import { isAuthenticationError, isPublicError } from './errors/errors.js';
+import { isAuthenticationError, isFreeTrialExpiredError, isPublicError } from './errors/errors.js';
 
 const labelRegex = /^[\dA-Za-z](?:[\w.-]{0,61}[\dA-Za-z])?$/;
 
@@ -29,6 +29,13 @@ export async function handleError<T extends ResponseMessage>(
         },
       } as T;
     } else if (isPublicError(error)) {
+      return {
+        response: {
+          code: error.code,
+          details: error.message,
+        },
+      } as T;
+    } else if (isFreeTrialExpiredError(error)) {
       return {
         response: {
           code: error.code,
