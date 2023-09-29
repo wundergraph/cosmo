@@ -13,7 +13,6 @@ import "../styles/explorer.css";
 import "../styles/globals.css";
 import "../styles/login.css";
 import "../styles/utils.css";
-import "@typeform/embed/build/css/popup.css";
 import { MarkdownLayout } from "@/components/layout/markdown-layout";
 import { TooltipProvider } from "@/components/ui/tooltip";
 

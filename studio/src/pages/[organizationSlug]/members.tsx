@@ -1,6 +1,8 @@
 import { UserContext } from "@/components/app-provider";
 import { EmptyState } from "@/components/empty-state";
-import { getDashboardLayout } from "@/components/layout/dashboard-layout";
+import {
+  getDashboardLayout,
+} from "@/components/layout/dashboard-layout";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -13,7 +15,7 @@ import { Loader } from "@/components/ui/loader";
 import { useToast } from "@/components/ui/use-toast";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
 import { NextPageWithLayout } from "@/lib/page";
-import { cn } from "@/lib/utils";
+import { cn, showCal } from "@/lib/utils";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
@@ -21,10 +23,12 @@ import {
   getOrganizationMembers,
   inviteUser,
   removeInvitation,
+  updateOrgMemberRole,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { sentenceCase } from "change-case";
 import { useContext } from "react";
 import { HiOutlineDotsVertical } from "react-icons/hi";
+import { IoInformationCircle } from "react-icons/io5";
 import { z } from "zod";
 
 const emailInputSchema = z.object({
@@ -98,6 +102,7 @@ const InviteForm = ({ refresh }: { refresh: () => void }) => {
 const MemberCard = ({
   email,
   role,
+  memberUserID,
   acceptedInvite,
   isAdmin,
   isCurrentUser,
@@ -105,14 +110,20 @@ const MemberCard = ({
 }: {
   email: string;
   role: string;
+  memberUserID: string;
   acceptedInvite: boolean;
   isAdmin: boolean;
   isCurrentUser: boolean;
   refresh: () => void;
 }) => {
+  const [user] = useContext(UserContext);
+
   const { mutate: resendInvitation } = useMutation(inviteUser.useMutation());
   const { mutate: revokeInvitation } = useMutation(
     removeInvitation.useMutation()
+  );
+  const { mutate: updateUserRole } = useMutation(
+    updateOrgMemberRole.useMutation()
   );
 
   const { toast, update } = useToast();
@@ -123,7 +134,7 @@ const MemberCard = ({
         <span>{email}</span>
       </div>
       <div className="flex items-center gap-x-4 text-muted-foreground">
-        <div className={cn({ "pr-4": isAdmin && isCurrentUser })}>
+        <div className={cn({ "pr-[14px]": isAdmin && isCurrentUser })}>
           {acceptedInvite ? (
             <span className="text-sm">{sentenceCase(role)}</span>
           ) : (
@@ -205,6 +216,41 @@ const MemberCard = ({
                 >
                   {acceptedInvite ? "Remove member" : "Remove invitation"}
                 </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    updateUserRole(
+                      {
+                        userID: user?.id,
+                        orgMemberUserID: memberUserID,
+                        role: role === "admin" ? "member" : "admin",
+                      },
+                      {
+                        onSuccess: (d) => {
+                          toast({
+                            description:
+                              d.response?.details ||
+                              (role === "admin"
+                                ? "Demoted member successfully."
+                                : "Promoted member successfully."),
+                            duration: 3000,
+                          });
+                          refresh();
+                        },
+                        onError: (error) => {
+                          toast({
+                            description:
+                              role === "admin"
+                                ? "Could not demote member. Please try again."
+                                : "Could not promote member. Please try again.",
+                            duration: 3000,
+                          });
+                        },
+                      }
+                    );
+                  }}
+                >
+                  {role === "admin" ? "Demote to member" : "Promote to admin"}
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           )}
@@ -244,14 +290,30 @@ const MembersPage: NextPageWithLayout = () => {
 
   return (
     <div className="mt-4 flex flex-col gap-y-6">
-      {isAdmin && <InviteForm refresh={() => refetch()} />}
+      {isAdmin && !user.currentOrganization.isFreeTrial && (
+        <InviteForm refresh={() => refetch()} />
+      )}
+      {user.currentOrganization.isFreeTrial && (
+        <div className="flex cursor-pointer items-center justify-center gap-x-2 rounded bg-secondary px-2 py-1 text-secondary-foreground">
+          <IoInformationCircle size={20} className="text-primary" />
+          <span>
+            {"Your organization's plan does not allow you to invite members. "}
+            Please{" "}
+            <a className="text-primary underline underline-offset-2" onClick={showCal}>
+              contact us
+            </a>{" "}
+            to upgrade.
+          </span>
+        </div>
+      )}
       <div className="flex flex-col divide-y rounded-md border">
         {data.members?.map((member) => {
           return (
             <MemberCard
-              key={member.id}
+              key={member.userID}
               email={member.email}
               role={member.roles[0]}
+              memberUserID={member.userID}
               acceptedInvite={member.acceptedInvite}
               isAdmin={isAdmin || false}
               isCurrentUser={member.email === user.email}
