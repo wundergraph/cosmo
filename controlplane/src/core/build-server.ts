@@ -37,9 +37,6 @@ export interface BuildConfig {
   debugSQL?: boolean;
   production?: boolean;
   clickhouseDsn?: string;
-  prometheus: {
-    apiUrl: string;
-  };
   keycloak: {
     loginRealm: string;
     realm: string;
@@ -158,7 +155,7 @@ export default async function build(opts: BuildConfig) {
   });
 
   const prometheusClient = new PrometheusClient({
-    apiUrl: opts.prometheus.apiUrl,
+    apiUrl: 'http://localhost:9090',
   });
   const apiKeyAuth = new ApiKeyAuthenticator(fastify.db);
   const webAuth = new WebSessionAuthenticator(opts.auth.secret);

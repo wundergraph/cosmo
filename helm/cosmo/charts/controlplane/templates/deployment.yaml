@@ -142,21 +142,6 @@ spec:
                 configMapKeyRef:
                   name: {{ include "controlplane.fullname" . }}-configmap
                   key: keycloakClientId
-            - name: PROMETHEUS_API_URL
-              valueFrom:
-                configMapKeyRef:
-                  name: {{ include "controlplane.fullname" . }}-configmap
-                  key: prometheusApiUrl
-            - name: WEBHOOK_URL
-              valueFrom:
-                configMapKeyRef:
-                  name: {{ include "controlplane.fullname" . }}-configmap
-                  key: webhookUrl
-            - name: WEBHOOK_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "controlplane.fullname" . }}-secret
-                  key: webhookSecret
           ports:
             - name: http
               containerPort: {{ .Values.service.port }}
