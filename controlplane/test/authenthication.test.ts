@@ -36,9 +36,6 @@ describe('Authentication', (ctx) => {
       database: {
         url: databaseConnectionUrl,
       },
-      prometheus: {
-        apiUrl: 'http://localhost:9090/api/v1',
-      },
       keycloak: {
         loginRealm: 'test',
         realm: 'test',
