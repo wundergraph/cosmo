@@ -466,7 +466,7 @@ export class OrganizationRepository {
 
       await orgRepo.deleteOrganizationResources(organizationID);
 
-      await db.delete(organizations).where(eq(organizations.id, organizationID));
+      await db.delete(organizations).where(eq(organizations.id, organizationID)).execute();
     });
   }
 
@@ -491,6 +491,9 @@ export class OrganizationRepository {
   }
 
   public async deleteOrganizationResources(organizationID: string) {
-    await this.db.delete(targets).where(eq(organizations.id, organizationID));
+    await this.db.transaction(async (db) => {
+      await db.delete(apiKeys).where(eq(apiKeys.organizationId, organizationID)).execute();
+      await db.delete(targets).where(eq(targets.organizationId, organizationID)).execute();
+    });
   }
 }

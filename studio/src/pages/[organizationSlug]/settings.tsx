@@ -343,6 +343,7 @@ const LeaveOrganization = () => {
 
 const DeleteOrganization = () => {
   const [user] = useContext(UserContext);
+  const router = useRouter();
   const [open, setOpen] = useState(false);
 
   const regex = new RegExp(`^${user?.currentOrganization.name}$`);
@@ -375,6 +376,7 @@ const DeleteOrganization = () => {
       {
         onSuccess: (d) => {
           if (d.response?.code === EnumStatusCode.OK) {
+            router.reload();
             toast({
               description: "Deleted the organization succesfully.",
               duration: 3000,
