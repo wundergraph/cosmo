@@ -187,7 +187,7 @@ export default async function build(opts: BuildConfig) {
 
   let githubApp: App | undefined;
   if (opts.githubApp?.clientId) {
-    const githubApp = new App({
+    githubApp = new App({
       appId: opts.githubApp?.id ?? '',
       privateKey: Buffer.from(opts.githubApp?.privateKey ?? '', 'base64').toString(),
       oauth: {
