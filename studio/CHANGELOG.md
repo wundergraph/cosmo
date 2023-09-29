@@ -4,6 +4,20 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.19.0](https://github.com/wundergraph/cosmo/compare/studio@0.18.1...studio@0.19.0) (2023-09-29)
+
+### Features
+
+* implement leave and delete organization ([#112](https://github.com/wundergraph/cosmo/issues/112)) ([59bc44f](https://github.com/wundergraph/cosmo/commit/59bc44f53cbc72d492cf0e07e75d7e62e7c68b61)) (@JivusAyrus)
+* improve trail version banner and handle trial version expiry ([#138](https://github.com/wundergraph/cosmo/issues/138)) ([0ecb2d1](https://github.com/wundergraph/cosmo/commit/0ecb2d150d9f9906631168aa0f588d2ca64ab590)) (@JivusAyrus)
+
+## [0.18.1](https://github.com/wundergraph/cosmo/compare/studio@0.18.0...studio@0.18.1) (2023-09-28)
+
+### Bug Fixes
+
+* fixed issue where tracing elements would render on top of the page header ([#134](https://github.com/wundergraph/cosmo/issues/134)) ([da4379e](https://github.com/wundergraph/cosmo/commit/da4379e9692f81780faff72695360964d84506e3)) (@Pagebakers)
+* use correct range for error rate queries ([#133](https://github.com/wundergraph/cosmo/issues/133)) ([ff0b004](https://github.com/wundergraph/cosmo/commit/ff0b004fd6cf4f08540f76c858ea6dfaebcdd70e)) (@Pagebakers)
+
 # [0.18.0](https://github.com/wundergraph/cosmo/compare/studio@0.17.1...studio@0.18.0) (2023-09-27)
 
 ### Features
