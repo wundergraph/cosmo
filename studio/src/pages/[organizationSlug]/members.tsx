@@ -23,6 +23,7 @@ import {
   getOrganizationMembers,
   inviteUser,
   removeInvitation,
+  updateOrgMemberRole,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { sentenceCase } from "change-case";
 import { useContext } from "react";
@@ -101,6 +102,7 @@ const InviteForm = ({ refresh }: { refresh: () => void }) => {
 const MemberCard = ({
   email,
   role,
+  memberUserID,
   acceptedInvite,
   isAdmin,
   isCurrentUser,
@@ -108,14 +110,20 @@ const MemberCard = ({
 }: {
   email: string;
   role: string;
+  memberUserID: string;
   acceptedInvite: boolean;
   isAdmin: boolean;
   isCurrentUser: boolean;
   refresh: () => void;
 }) => {
+  const [user] = useContext(UserContext);
+
   const { mutate: resendInvitation } = useMutation(inviteUser.useMutation());
   const { mutate: revokeInvitation } = useMutation(
     removeInvitation.useMutation()
+  );
+  const { mutate: updateUserRole } = useMutation(
+    updateOrgMemberRole.useMutation()
   );
 
   const { toast, update } = useToast();
@@ -126,7 +134,7 @@ const MemberCard = ({
         <span>{email}</span>
       </div>
       <div className="flex items-center gap-x-4 text-muted-foreground">
-        <div className={cn({ "pr-4": isAdmin && isCurrentUser })}>
+        <div className={cn({ "pr-[14px]": isAdmin && isCurrentUser })}>
           {acceptedInvite ? (
             <span className="text-sm">{sentenceCase(role)}</span>
           ) : (
@@ -208,6 +216,41 @@ const MemberCard = ({
                 >
                   {acceptedInvite ? "Remove member" : "Remove invitation"}
                 </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    updateUserRole(
+                      {
+                        userID: user?.id,
+                        orgMemberUserID: memberUserID,
+                        role: role === "admin" ? "member" : "admin",
+                      },
+                      {
+                        onSuccess: (d) => {
+                          toast({
+                            description:
+                              d.response?.details ||
+                              (role === "admin"
+                                ? "Demoted member successfully."
+                                : "Promoted member successfully."),
+                            duration: 3000,
+                          });
+                          refresh();
+                        },
+                        onError: (error) => {
+                          toast({
+                            description:
+                              role === "admin"
+                                ? "Could not demote member. Please try again."
+                                : "Could not promote member. Please try again.",
+                            duration: 3000,
+                          });
+                        },
+                      }
+                    );
+                  }}
+                >
+                  {role === "admin" ? "Demote to member" : "Promote to admin"}
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           )}
@@ -267,9 +310,10 @@ const MembersPage: NextPageWithLayout = () => {
         {data.members?.map((member) => {
           return (
             <MemberCard
-              key={member.id}
+              key={member.userID}
               email={member.email}
               role={member.roles[0]}
+              memberUserID={member.userID}
               acceptedInvite={member.acceptedInvite}
               isAdmin={isAdmin || false}
               isCurrentUser={member.email === user.email}
