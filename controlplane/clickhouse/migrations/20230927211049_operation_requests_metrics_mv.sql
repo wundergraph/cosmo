@@ -2,18 +2,18 @@
 
 CREATE MATERIALIZED VIEW IF NOT EXISTS cosmo.operation_request_metrics_5_30_mv (
    Timestamp DateTime('UTC') CODEC (Delta(4), ZSTD(1)),
-   OperationName String CODEC (ZSTD(1)),
+   OperationName LowCardinality(String) CODEC (ZSTD(1)),
    OperationHash String CODEC (ZSTD(1)),
    TotalRequests UInt64 CODEC(ZSTD(1)),
    TotalErrors UInt64 CODEC(ZSTD(1)),
    TotalClientErrors UInt64 CODEC(ZSTD(1)),
-   OperationType String CODEC (ZSTD(1)),
-   FederatedGraphID String CODEC(ZSTD(1)),
-   RouterConfigVersion String CODEC(ZSTD(1)),
-   OrganizationID String CODEC(ZSTD(1)),
+   OperationType LowCardinality(String) CODEC (ZSTD(1)),
+   FederatedGraphID LowCardinality(String) CODEC(ZSTD(1)),
+   RouterConfigVersion LowCardinality(String) CODEC(ZSTD(1)),
+   OrganizationID LowCardinality(String) CODEC(ZSTD(1)),
    IsSubscription Bool CODEC(ZSTD(1)),
-   ClientName String CODEC (ZSTD(1)),
-   ClientVersion String CODEC (ZSTD(1))
+   ClientName LowCardinality(String) CODEC (ZSTD(1)),
+   ClientVersion LowCardinality(String) CODEC (ZSTD(1))
 )
 ENGINE = SummingMergeTree
 PARTITION BY toDate(Timestamp)
