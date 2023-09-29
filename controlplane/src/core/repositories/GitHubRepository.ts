@@ -87,15 +87,15 @@ export class GitHubRepository {
     let title = 'Composed successfully';
     let conclusion: 'success' | 'failure' = 'success';
 
-    if (breakingChangesCount > 0) {
-      title = `Found ${breakingChangesCount} breaking change`;
-      if (breakingChangesCount > 1) {
+    if (compositionErrors.length > 0) {
+      title = `Found ${compositionErrors.length} composition error`;
+      if (compositionErrors.length > 1) {
         title += 's';
       }
       conclusion = 'failure';
-    } else if (compositionErrors.length > 0) {
-      title = `Found ${compositionErrors.length} composition error`;
-      if (compositionErrors.length > 1) {
+    } else if (breakingChangesCount > 0) {
+      title = `Found ${breakingChangesCount} breaking change`;
+      if (breakingChangesCount > 1) {
         title += 's';
       }
       conclusion = 'failure';
