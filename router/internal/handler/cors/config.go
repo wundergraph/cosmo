@@ -82,14 +82,18 @@ func (cors *cors) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method == "OPTIONS" {
 		cors.handlePreflight(w)
-		defer w.WriteHeader(http.StatusNoContent) // Using 204 is better than 200 when the request status is OPTIONS
+		// Wildcard is automatically set when AllowAllOrigins is true
+		if !cors.allowAllOrigins {
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+		}
+		w.WriteHeader(http.StatusNoContent) // Using 204 is better than 200 when the request status is OPTIONS
 	} else {
 		cors.handleNormal(w)
+		// Wildcard is automatically set when AllowAllOrigins is true
+		if !cors.allowAllOrigins {
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+		}
 		cors.handler.ServeHTTP(w, r)
-	}
-
-	if !cors.allowAllOrigins {
-		w.Header().Set("Access-Control-Allow-Origin", origin)
 	}
 }
 
