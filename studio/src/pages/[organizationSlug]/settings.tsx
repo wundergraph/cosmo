@@ -76,7 +76,8 @@ const OrganizationName = () => {
         },
         onError: (error) => {
           toast({
-            description: "Could not update the organization name. Please try again.",
+            description:
+              "Could not update the organization name. Please try again.",
             duration: 3000,
           });
         },
@@ -174,7 +175,8 @@ const OrganizationSlug = () => {
         },
         onError: (error) => {
           toast({
-            description: "Could not update the organization slug. Please try again.",
+            description:
+              "Could not update the organization slug. Please try again.",
             duration: 3000,
           });
         },
@@ -401,9 +403,11 @@ const DeleteOrganization = () => {
         The organization will be permanently deleted. This action is
         irreversible and can not be undone.
       </p>
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog
+        open={user?.currentOrganization.roles.includes("admin") ? open : false}
+        onOpenChange={setOpen}
+      >
         <DialogTrigger
-          disabled={!user?.currentOrganization.roles.includes("admin")}
           className={cn(
             {
               "cursor-not-allowed":
