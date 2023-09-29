@@ -10,7 +10,7 @@ import {
   organizationsMembers,
   users,
 } from '../../db/schema.js';
-import { APIKeyDTO, MemberRole, OrganizationDTO, OrganizationMemberDTO, WebhooksConfigDTO } from '../../types/index.js';
+import { APIKeyDTO, OrganizationDTO, OrganizationMemberDTO, WebhooksConfigDTO } from '../../types/index.js';
 
 /**
  * Repository for organization related operations.
@@ -41,6 +41,8 @@ export class OrganizationRepository {
         id: organizations.id,
         name: organizations.name,
         slug: organizations.slug,
+        createdAt: organizations.createdAt,
+        isFreeTrial: organizations.isFreeTrial,
       })
       .from(organizations)
       .where(eq(organizations.slug, slug))
@@ -51,7 +53,13 @@ export class OrganizationRepository {
       return null;
     }
 
-    return org[0];
+    return {
+      id: org[0].id,
+      name: org[0].name,
+      slug: org[0].slug,
+      isFreeTrial: org[0].isFreeTrial || false,
+      createdAt: org[0].createdAt.toISOString(),
+    };
   }
 
   public async byId(id: string): Promise<OrganizationDTO | null> {
@@ -60,6 +68,8 @@ export class OrganizationRepository {
         id: organizations.id,
         name: organizations.name,
         slug: organizations.slug,
+        createdAt: organizations.createdAt,
+        isFreeTrial: organizations.isFreeTrial,
       })
       .from(organizations)
       .where(eq(organizations.id, id))
@@ -70,7 +80,13 @@ export class OrganizationRepository {
       return null;
     }
 
-    return org[0];
+    return {
+      id: org[0].id,
+      name: org[0].name,
+      slug: org[0].slug,
+      isFreeTrial: org[0].isFreeTrial || false,
+      createdAt: org[0].createdAt.toISOString(),
+    };
   }
 
   public async memberships(input: { userId: string }): Promise<(OrganizationDTO & { roles: string[] })[]> {
@@ -81,6 +97,7 @@ export class OrganizationRepository {
         slug: organizations.slug,
         isFreeTrial: organizations.isFreeTrial,
         isPersonal: organizations.isPersonal,
+        createdAt: organizations.createdAt,
       })
       .from(organizationsMembers)
       .innerJoin(organizations, eq(organizations.id, organizationsMembers.organizationId))
@@ -93,6 +110,7 @@ export class OrganizationRepository {
         id: org.id,
         name: org.name,
         slug: org.slug,
+        createdAt: org.createdAt.toISOString(),
         isFreeTrial: org.isFreeTrial || false,
         isPersonal: org.isPersonal || false,
         roles: await this.getOrganizationMemberRoles({
@@ -198,6 +216,7 @@ export class OrganizationRepository {
       id: insertedOrg[0].id,
       name: insertedOrg[0].name,
       slug: insertedOrg[0].slug,
+      createdAt: insertedOrg[0].createdAt.toISOString(),
     };
   }
 
