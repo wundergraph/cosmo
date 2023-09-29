@@ -25,7 +25,7 @@ export interface RouterOptions {
   prometheus: PrometheusClient;
   platformWebhooks: IPlatformWebhookService;
   webBaseUrl: string;
-  githubApp: App;
+  githubApp?: App;
 }
 const handlerOptions: Partial<ConnectRouterOptions> = {
   maxTimeoutMs: 5000,

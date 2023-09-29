@@ -185,21 +185,32 @@ export default async function build(opts: BuildConfig) {
     adminPassword: opts.keycloak.adminPassword,
   });
 
-  const githubApp = new App({
-    appId: opts.githubApp?.id ?? '',
-    privateKey: Buffer.from(opts.githubApp?.privateKey ?? '', 'base64').toString(),
-    oauth: {
-      clientId: opts.githubApp?.clientId ?? '',
-      clientSecret: opts.githubApp?.clientSecret ?? '',
-    },
-  });
+  let githubApp: App | undefined;
+  if (opts.githubApp?.clientId) {
+    const githubApp = new App({
+      appId: opts.githubApp?.id ?? '',
+      privateKey: Buffer.from(opts.githubApp?.privateKey ?? '', 'base64').toString(),
+      oauth: {
+        clientId: opts.githubApp?.clientId ?? '',
+        clientSecret: opts.githubApp?.clientSecret ?? '',
+      },
+    });
 
-  const platformWebhooks = new PlatformWebhookService(opts.webhook?.url, opts.webhook?.key, log);
-  const githubRepository = new GitHubRepository(fastify.db, githubApp);
+    const githubRepository = new GitHubRepository(fastify.db, githubApp);
+
+    await fastify.register(GitHubWebhookController, {
+      prefix: '/webhook/github',
+      githubRepository,
+      webhookSecret: opts.githubApp?.webhookSecret ?? '',
+      logger: log,
+    });
+  }
 
   /**
    * Controllers registration
    */
+
+  const platformWebhooks = new PlatformWebhookService(opts.webhook?.url, opts.webhook?.key, log);
 
   await fastify.register(AuthController, {
     organizationRepository,
@@ -218,13 +229,6 @@ export default async function build(opts: BuildConfig) {
     keycloakClient,
     keycloakRealm: opts.keycloak.realm,
     platformWebhooks,
-  });
-
-  await fastify.register(GitHubWebhookController, {
-    prefix: '/webhook/github',
-    githubRepository,
-    webhookSecret: opts.githubApp?.webhookSecret ?? '',
-    logger: log,
   });
 
   // Must be registered after custom fastify routes

@@ -420,7 +420,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const orgRepo = new OrganizationRepository(opts.db);
         const schemaCheckRepo = new SchemaCheckRepository(opts.db);
-        const githubRepo = new GitHubRepository(opts.db, opts.githubApp);
 
         const org = await orgRepo.byId(authContext.organizationId);
         if (!org) {
@@ -503,7 +502,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           }
         }
 
-        if (req.gitInfo) {
+        if (req.gitInfo && opts.githubApp) {
+          const githubRepo = new GitHubRepository(opts.db, opts.githubApp);
           githubRepo.createCommitCheck({
             schemaCheckID,
             gitInfo: req.gitInfo,
@@ -945,7 +945,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<ForceCheckSuccessResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
-        const githubRepo = new GitHubRepository(opts.db, opts.githubApp);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
 
         const graph = await fedGraphRepo.byName(req.graphName);
@@ -976,7 +975,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const githubDetails = await subgraphRepo.forceCheckSuccess(details.check.id);
 
-        if (githubDetails) {
+        if (githubDetails && opts.githubApp) {
+          const githubRepo = new GitHubRepository(opts.db, opts.githubApp);
           await githubRepo.markCheckAsSuccess({
             ...githubDetails,
           });
