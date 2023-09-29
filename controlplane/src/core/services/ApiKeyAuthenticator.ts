@@ -1,13 +1,18 @@
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { eq } from 'drizzle-orm';
+import { addDays } from 'date-fns';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import * as schema from '../../db/schema.js';
+import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
+import { AuthenticationError, FreeTrialExpiredError } from '../errors/errors.js';
+import { calLink } from './Authentication.js';
 
 export type ApiKeyAuthContext = {
   organizationId: string;
 };
 
 export default class ApiKeyAuthenticator {
-  constructor(private db: PostgresJsDatabase<typeof schema>) {}
+  constructor(private db: PostgresJsDatabase<typeof schema>, private orgRepo: OrganizationRepository) {}
 
   /**
    * Authenticates the user with the given api key. Returns the user's organization ID.
@@ -30,6 +35,21 @@ export default class ApiKeyAuthenticator {
     if (apiKeyModel?.expiresAt && apiKeyModel.expiresAt < new Date()) {
       throw new Error('Api key is expired');
     }
+
+    const organization = await this.orgRepo.byId(apiKeyModel.organizationId);
+    if (!organization) {
+      throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, 'Organization does not exist');
+    }
+
+    const isFreeTrialExpired = organization.isFreeTrial && new Date() > addDays(new Date(organization.createdAt), 10);
+
+    if (isFreeTrialExpired) {
+      throw new FreeTrialExpiredError(
+        EnumStatusCode.ERR_FREE_TRIAL_EXPIRED,
+        `Free trial has concluded. Please talk to sales to upgrade your plan.\n${calLink}\n`,
+      );
+    }
+
     /**
      * Update the last used at timestamp.
      */

@@ -2,10 +2,11 @@ import { docsBaseURL } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { Cross2Icon, HamburgerMenuIcon } from "@radix-ui/react-icons";
 import { useQuery } from "@tanstack/react-query";
+import { getFederatedGraphs } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { getFederatedGraphs } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { ReactNode, useContext, useState } from "react";
+import { UserContext } from "../app-provider";
 import { Logo } from "../logo";
 import { ThemeToggle } from "../theme-toggle";
 import {
@@ -18,7 +19,6 @@ import {
 import { Separator } from "../ui/separator";
 import { UserMenu, UserMenuMobile } from "../user-menu";
 import { LayoutProps } from "./layout";
-import { UserContext } from "../app-provider";
 
 export type NavLink = {
   title: string;
@@ -36,14 +36,13 @@ const isExternalUrl = (link: string): boolean => !link?.startsWith("/");
 
 interface SideNavLayoutProps extends LayoutProps {
   links?: NavLink[];
-  canChangeOrgs?: boolean;
 }
 
 const MobileNav = () => {
   return (
     <div
       className={cn(
-        "fixed inset-0 top-16 z-50 grid h-[calc(100vh-4rem)] grid-flow-row auto-rows-max overflow-auto border-t bg-popover shadow-md animate-in slide-in-from-bottom-64 lg:hidden"
+        "fixed inset-0 top-28 z-50 grid h-[calc(100vh-112px)] grid-flow-row auto-rows-max overflow-auto border-t bg-popover shadow-md animate-in slide-in-from-bottom-64 lg:hidden"
       )}
     >
       <div className="relative z-20 grid gap-6 rounded-md p-4 text-popover-foreground">
@@ -75,23 +74,27 @@ const Graphs = () => {
   if (router.pathname.split("/")[2] !== "graph") return null;
 
   return (
-    <Select
-      value={slug}
-      onValueChange={(gID) => router.push(`/${organizationSlug}/graph/${gID}`)}
-    >
-      <SelectTrigger value={slug} className="w-[200px] lg:w-full">
-        <SelectValue aria-label={slug}>{slug}</SelectValue>
-      </SelectTrigger>
-      <SelectContent>
-        {data?.graphs?.map(({ name }) => {
-          return (
-            <SelectItem key={name} value={name}>
-              {name}
-            </SelectItem>
-          );
-        })}
-      </SelectContent>
-    </Select>
+    <div className="hidden lg:flex w-full">
+      <Select
+        value={slug}
+        onValueChange={(gID) =>
+          router.push(`/${organizationSlug}/graph/${gID}`)
+        }
+      >
+        <SelectTrigger value={slug} className="w-[200px] lg:w-full">
+          <SelectValue aria-label={slug}>{slug}</SelectValue>
+        </SelectTrigger>
+        <SelectContent>
+          {data?.graphs?.map(({ name }) => {
+            return (
+              <SelectItem key={name} value={name}>
+                {name}
+              </SelectItem>
+            );
+          })}
+        </SelectContent>
+      </Select>
+    </div>
   );
 };
 
@@ -102,52 +105,60 @@ const Organizations = () => {
   if (!user?.currentOrganization) return null;
 
   return (
-    <Select
-      value={user.currentOrganization.slug}
-      onValueChange={(orgSlug) => {
-        const currentOrg = user.organizations.find(
-          (org) => org.slug === orgSlug
-        );
-        if (currentOrg && setUser) {
-          setUser({
-            ...user,
-            currentOrganization: currentOrg,
-          });
-          router.replace(`/${currentOrg.slug}`);
-        }
-      }}
-    >
-      <SelectTrigger
-        value={user.currentOrganization.name}
-        className="flex w-[200px] gap-x-2 border-0 bg-transparent px-2 lg:w-full"
-      >
-        <SelectValue aria-label={user.currentOrganization.name}>
-          <span className="flex w-36 truncate font-semibold capitalize">
-            {user.currentOrganization.name}
-          </span>
-        </SelectValue>
-      </SelectTrigger>
-      <SelectContent>
-        {user?.organizations?.map(({ name, slug }) => {
-          return (
-            <SelectItem key={slug} value={slug}>
-              {name}
-            </SelectItem>
+      <Select
+        value={user.currentOrganization.slug}
+        onValueChange={(orgSlug) => {
+          const currentOrg = user.organizations.find(
+            (org) => org.slug === orgSlug
           );
-        })}
-      </SelectContent>
-    </Select>
+          if (currentOrg && setUser) {
+            setUser({
+              ...user,
+              currentOrganization: currentOrg,
+            });
+            router.replace(`/${currentOrg.slug}`);
+          }
+        }}
+      >
+        <SelectTrigger
+          value={user.currentOrganization.name}
+          className="flex w-[200px] gap-x-2 border-0 bg-transparent px-2 lg:w-full"
+        >
+          <SelectValue aria-label={user.currentOrganization.name}>
+            <span className="flex w-36 truncate font-semibold capitalize">
+              {user.currentOrganization.name}
+            </span>
+          </SelectValue>
+        </SelectTrigger>
+        <SelectContent>
+          {user?.organizations?.map(({ name, slug }) => {
+            return (
+              <SelectItem key={slug} value={slug}>
+                {name}
+              </SelectItem>
+            );
+          })}
+        </SelectContent>
+      </Select>
   );
 };
 
-export const Nav = ({ children, links, canChangeOrgs }: SideNavLayoutProps) => {
+export const Nav = ({ children, links }: SideNavLayoutProps) => {
   const router = useRouter();
-  const [user] = useContext(UserContext);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [user] = useContext(UserContext);
 
   return (
     <div className="flex min-h-screen flex-1 flex-col lg:grid lg:grid-cols-[auto_1fr] lg:divide-x">
-      <aside className="sticky top-[0] z-40 flex min-w-[248px] flex-col bg-background pt-4 lg:h-screen lg:px-6 lg:pb-4">
+      <aside
+        className={cn(
+          "sticky top-[0] z-40 flex min-w-[248px] flex-col bg-background pt-4 lg:px-6 lg:pb-4",
+          {
+            "top-7 lg:h-[calc(100vh-28px)]": user?.currentOrganization.isFreeTrial,
+            "lg:h-screen": !user?.currentOrganization.isFreeTrial,
+          }
+        )}
+      >
         <div className="flex flex-col gap-y-4 px-4 lg:gap-y-8 lg:px-0">
           <div className="flex items-center justify-between gap-x-4">
             <div className="flex w-full items-center gap-x-4 gap-y-8 lg:flex-col lg:items-start">

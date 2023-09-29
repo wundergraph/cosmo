@@ -5,6 +5,7 @@ import { join } from 'pathe';
 import pc from 'picocolors';
 import { baseHeaders } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
+import program from '../../index.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('fetch');
@@ -20,6 +21,10 @@ export default (opts: BaseCommandOptions) => {
         headers: baseHeaders,
       },
     );
+
+    if (resp.response?.code === EnumStatusCode.ERR_FREE_TRIAL_EXPIRED) {
+      program.error(resp.response.details || 'Free trial has concluded. Please talk to sales to upgrade your plan.');
+    }
 
     if (resp.response?.code === EnumStatusCode.ERR_NOT_FOUND) {
       console.log(`${pc.red(`No valid composition could be fetched for federated graph ${pc.bold(name)}`)}`);

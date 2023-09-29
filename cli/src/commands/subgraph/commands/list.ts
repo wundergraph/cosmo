@@ -34,6 +34,7 @@ export default (opts: BaseCommandOptions) => {
     );
 
     if (resp.response?.code !== EnumStatusCode.OK) {
+      console.log(pc.red(resp.response?.details));
       program.error(pc.red('Could not fetch subgraphs.'));
     }
 
