@@ -28,6 +28,7 @@ interface Organization {
   id: string;
   name: string;
   slug: string;
+  isPersonal: boolean;
   isFreeTrial: boolean;
   isFreeTrialExpired: boolean;
   roles: string[];
