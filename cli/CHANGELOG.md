@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.17.0](https://github.com/wundergraph/cosmo/compare/wgc@0.16.0...wgc@0.17.0) (2023-09-29)
+
+### Features
+
+* improve trail version banner and handle trial version expiry ([#138](https://github.com/wundergraph/cosmo/issues/138)) ([0ecb2d1](https://github.com/wundergraph/cosmo/commit/0ecb2d150d9f9906631168aa0f588d2ca64ab590)) (@JivusAyrus)
+
 # [0.16.0](https://github.com/wundergraph/cosmo/compare/wgc@0.15.1...wgc@0.16.0) (2023-09-27)
 
 ### Features

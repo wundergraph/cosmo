@@ -4,6 +4,20 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.22.0](https://github.com/wundergraph/cosmo/compare/router@0.21.2...router@0.22.0) (2023-09-29)
+
+### Bug Fixes
+
+* add dive validation to Subgraphs field of HeaderRules config struct ([#132](https://github.com/wundergraph/cosmo/issues/132)) ([1eaa466](https://github.com/wundergraph/cosmo/commit/1eaa4669b1e8bf6d48f6ad9430614d909c15b2e8)) (@cs-clarence)
+* collect request metrics as early as possible ([#139](https://github.com/wundergraph/cosmo/issues/139)) ([480d7a1](https://github.com/wundergraph/cosmo/commit/480d7a1afdf3596e8103aacd09cf6c8036e0a961)) (@StarpTech)
+* set CORS header before passing through ([#142](https://github.com/wundergraph/cosmo/issues/142)) ([6008dc2](https://github.com/wundergraph/cosmo/commit/6008dc224c17e0113228a87539348e17de054050)) (@StarpTech)
+* store operation Hash and Name correctly ([#141](https://github.com/wundergraph/cosmo/issues/141)) ([3d63163](https://github.com/wundergraph/cosmo/commit/3d631637fad1ec7abe41143d91c4010a4473c832)) (@StarpTech)
+* track graphql errors in metrics ([#136](https://github.com/wundergraph/cosmo/issues/136)) ([db26994](https://github.com/wundergraph/cosmo/commit/db26994b40685418a3618a6927fbfe9a7073dce7)) (@StarpTech)
+
+### Features
+
+* improve trail version banner and handle trial version expiry ([#138](https://github.com/wundergraph/cosmo/issues/138)) ([0ecb2d1](https://github.com/wundergraph/cosmo/commit/0ecb2d150d9f9906631168aa0f588d2ca64ab590)) (@JivusAyrus)
+
 ## [0.21.2](https://github.com/wundergraph/cosmo/compare/router@0.21.1...router@0.21.2) (2023-09-27)
 
 ### Bug Fixes

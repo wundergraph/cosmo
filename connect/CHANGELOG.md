@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.16.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.15.0...@wundergraph/cosmo-connect@0.16.0) (2023-09-29)
+
+### Features
+
+* implement leave and delete organization ([#112](https://github.com/wundergraph/cosmo/issues/112)) ([59bc44f](https://github.com/wundergraph/cosmo/commit/59bc44f53cbc72d492cf0e07e75d7e62e7c68b61)) (@JivusAyrus)
+* improve trail version banner and handle trial version expiry ([#138](https://github.com/wundergraph/cosmo/issues/138)) ([0ecb2d1](https://github.com/wundergraph/cosmo/commit/0ecb2d150d9f9906631168aa0f588d2ca64ab590)) (@JivusAyrus)
+
 # [0.15.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.14.0...@wundergraph/cosmo-connect@0.15.0) (2023-09-25)
 
 ### Features
