@@ -504,7 +504,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         if (req.gitInfo && opts.githubApp) {
           const githubRepo = new GitHubRepository(opts.db, opts.githubApp);
-          githubRepo.createCommitCheck({
+          await githubRepo.createCommitCheck({
             schemaCheckID,
             gitInfo: req.gitInfo,
             compositionErrors,
