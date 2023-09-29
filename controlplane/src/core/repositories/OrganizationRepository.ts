@@ -43,6 +43,8 @@ export class OrganizationRepository {
         name: organizations.name,
         slug: organizations.slug,
         creatorUserId: organizations.createdBy,
+        createdAt: organizations.createdAt,
+        isFreeTrial: organizations.isFreeTrial,
       })
       .from(organizations)
       .where(eq(organizations.slug, slug))
@@ -53,7 +55,14 @@ export class OrganizationRepository {
       return null;
     }
 
-    return org[0];
+    return {
+      id: org[0].id,
+      name: org[0].name,
+      slug: org[0].slug,
+      isFreeTrial: org[0].isFreeTrial || false,
+      creatorUserId: org[0].creatorUserId,
+      createdAt: org[0].createdAt.toISOString(),
+    };
   }
 
   public async byId(id: string): Promise<OrganizationDTO | null> {
@@ -63,6 +72,8 @@ export class OrganizationRepository {
         name: organizations.name,
         slug: organizations.slug,
         creatorUserId: organizations.createdBy,
+        createdAt: organizations.createdAt,
+        isFreeTrial: organizations.isFreeTrial,
       })
       .from(organizations)
       .where(eq(organizations.id, id))
@@ -73,7 +84,14 @@ export class OrganizationRepository {
       return null;
     }
 
-    return org[0];
+    return {
+      id: org[0].id,
+      name: org[0].name,
+      slug: org[0].slug,
+      isFreeTrial: org[0].isFreeTrial || false,
+      creatorUserId: org[0].creatorUserId,
+      createdAt: org[0].createdAt.toISOString(),
+    };
   }
 
   public async memberships(input: { userId: string }): Promise<(OrganizationDTO & { roles: string[] })[]> {
@@ -85,6 +103,7 @@ export class OrganizationRepository {
         creatorUserId: organizations.createdBy,
         isFreeTrial: organizations.isFreeTrial,
         isPersonal: organizations.isPersonal,
+        createdAt: organizations.createdAt,
       })
       .from(organizationsMembers)
       .innerJoin(organizations, eq(organizations.id, organizationsMembers.organizationId))
@@ -98,6 +117,7 @@ export class OrganizationRepository {
         name: org.name,
         slug: org.slug,
         creatorUserId: org.creatorUserId,
+        createdAt: org.createdAt.toISOString(),
         isFreeTrial: org.isFreeTrial || false,
         isPersonal: org.isPersonal || false,
         roles: await this.getOrganizationMemberRoles({
@@ -206,6 +226,7 @@ export class OrganizationRepository {
       name: insertedOrg[0].name,
       slug: insertedOrg[0].slug,
       creatorUserId: insertedOrg[0].createdBy,
+      createdAt: insertedOrg[0].createdAt.toISOString(),
     };
   }
 

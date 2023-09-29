@@ -6,6 +6,7 @@ import {
   QueryClientProvider,
   useQuery,
 } from "@tanstack/react-query";
+import { addDays } from "date-fns";
 import { useRouter } from "next/router";
 import {
   createContext,
@@ -27,9 +28,11 @@ interface Organization {
   id: string;
   name: string;
   slug: string;
-  isFreeTrial: boolean;
   isPersonal: boolean;
+  isFreeTrial: boolean;
+  isFreeTrialExpired: boolean;
   roles: string[];
+  createdAt: string;
 }
 
 interface Session {
@@ -103,10 +106,17 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         (org) => org.slug === currentOrgSlug
       );
 
+      const organization = currentOrg || data.organizations[0];
+
       setUser({
         id: data.id,
         email: data.email,
-        currentOrganization: currentOrg || data.organizations[0],
+        currentOrganization: {
+          ...organization,
+          isFreeTrialExpired:
+            organization.isFreeTrial &&
+            new Date() > addDays(new Date(organization.createdAt), 10),
+        },
         organizations: data.organizations,
       });
       const organizationSlug = currentOrg?.slug || data.organizations[0].slug;

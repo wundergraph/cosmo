@@ -82,6 +82,7 @@ export interface OrganizationDTO {
   name: string;
   slug: string;
   creatorUserId: string;
+  createdAt: string;
   isFreeTrial?: boolean;
   isPersonal?: boolean;
 }
