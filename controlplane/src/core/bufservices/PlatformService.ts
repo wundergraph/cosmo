@@ -2238,5 +2238,462 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         };
       });
     },
+
+    deleteOrganization: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<UpdateOrganizationWebhookConfigResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const orgRepo = new OrganizationRepository(opts.db);
+
+        const org = await orgRepo.byId(authContext.organizationId);
+        if (!org) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Organization not found`,
+            },
+          };
+        }
+
+        const user = await orgRepo.getOrganizationMember({
+          organizationID: authContext.organizationId,
+          userID: authContext.userId || req.userID,
+        });
+
+        if (!user) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: 'User is not a part of this organization.',
+            },
+          };
+        }
+
+        // non admins cannot delete the organization
+        if (!user.roles.includes('admin')) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: 'User does not have the permissions to delete the organization.',
+            },
+          };
+        }
+
+        // the personal org cannot be deleted
+        if (org.isPersonal) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Personal organization cannot be deleted.`,
+            },
+          };
+        }
+
+        await opts.keycloakClient.authenticateClient();
+
+        const organizationGroup = await opts.keycloakClient.client.groups.find({
+          max: 1,
+          search: org.slug,
+          realm: opts.keycloakRealm,
+        });
+
+        if (organizationGroup.length === 0) {
+          throw new Error(`Organization group '${org.slug}' not found`);
+        }
+
+        await opts.keycloakClient.client.groups.del({
+          id: organizationGroup[0].id!,
+          realm: opts.keycloakRealm,
+        });
+
+        await orgRepo.deleteOrganization(authContext.organizationId);
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+        };
+      });
+    },
+
+    leaveOrganization: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<UpdateOrganizationWebhookConfigResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const orgRepo = new OrganizationRepository(opts.db);
+
+        const org = await orgRepo.byId(authContext.organizationId);
+        if (!org) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Organization not found`,
+            },
+          };
+        }
+
+        const orgMember = await orgRepo.getOrganizationMember({
+          organizationID: authContext.organizationId,
+          userID: authContext.userId || req.userID,
+        });
+
+        if (!orgMember) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: 'User is not a part of this organization.',
+            },
+          };
+        }
+
+        // the creator of the personal org cannot leave the organization.
+        if (org.isPersonal && org.creatorUserId === (authContext.userId || req.userID)) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Creator of a personal organization cannot leave the organization.`,
+            },
+          };
+        }
+
+        // checking if the user is an single admin
+        if (orgMember.roles.includes('admin')) {
+          const orgAdmins = await orgRepo.getOrganizationAdmins({ organizationID: authContext.organizationId });
+          if (orgAdmins.length === 1) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR,
+                details:
+                  'Single admins cannot leave the organization. Please make another member an admin and try again.',
+              },
+            };
+          }
+        }
+
+        await opts.keycloakClient.authenticateClient();
+
+        const organizationGroup = await opts.keycloakClient.client.groups.find({
+          max: 1,
+          search: org.slug,
+          realm: opts.keycloakRealm,
+        });
+
+        if (organizationGroup.length === 0) {
+          throw new Error(`Organization group '${org.slug}' not found`);
+        }
+
+        // removing the group from the keycloak user
+        await opts.keycloakClient.client.users.delFromGroup({
+          id: orgMember.userID,
+          groupId: organizationGroup[0].id!,
+          realm: opts.keycloakRealm,
+        });
+
+        // removing the user for the organization in the db
+        await orgRepo.removeOrganizationMember({
+          userID: authContext.userId || req.userID,
+          organizationID: authContext.organizationId,
+        });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+        };
+      });
+    },
+
+    updateOrganizationName: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<UpdateOrganizationWebhookConfigResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const orgRepo = new OrganizationRepository(opts.db);
+
+        const org = await orgRepo.byId(authContext.organizationId);
+        if (!org) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Organization not found`,
+            },
+          };
+        }
+
+        const orgMember = await orgRepo.getOrganizationMember({
+          organizationID: authContext.organizationId,
+          userID: authContext.userId || req.userID,
+        });
+
+        if (!orgMember) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: 'User is not a part of this organization.',
+            },
+          };
+        }
+
+        // non admins cannot update the organization name
+        if (!orgMember.roles.includes('admin')) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: 'User does not have the permissions to update the organization name.',
+            },
+          };
+        }
+
+        await orgRepo.updateOrganization({ id: authContext.organizationId, name: req.organizationName });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+        };
+      });
+    },
+
+    updateOrganizationSlug: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<UpdateOrganizationWebhookConfigResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const orgRepo = new OrganizationRepository(opts.db);
+
+        const org = await orgRepo.byId(authContext.organizationId);
+        if (!org) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Organization not found`,
+            },
+          };
+        }
+
+        const orgMember = await orgRepo.getOrganizationMember({
+          organizationID: authContext.organizationId,
+          userID: authContext.userId || req.userID,
+        });
+
+        if (!orgMember) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: 'User is not a part of this organization.',
+            },
+          };
+        }
+
+        // non admins cannot update the organization name
+        if (!orgMember.roles.includes('admin')) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: 'User does not have the permissions to update the organization slug.',
+            },
+          };
+        }
+
+        // checking if the provided orgSlug is available
+        const newOrg = await orgRepo.bySlug(req.organizationSlug);
+        if (newOrg) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_ALREADY_EXISTS,
+              details: `Organization with slug ${req.organizationSlug} already exists.`,
+            },
+          };
+        }
+
+        await opts.keycloakClient.authenticateClient();
+
+        const organizationGroup = await opts.keycloakClient.client.groups.find({
+          max: 1,
+          search: org.slug,
+          realm: opts.keycloakRealm,
+        });
+
+        if (organizationGroup.length === 0) {
+          throw new Error(`Organization group '${org.slug}' not found`);
+        }
+
+        await opts.keycloakClient.client.groups.update(
+          {
+            id: organizationGroup[0].id!,
+            realm: opts.keycloakRealm,
+          },
+          { name: req.organizationSlug },
+        );
+
+        await orgRepo.updateOrganization({ id: authContext.organizationId, slug: req.organizationSlug });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+        };
+      });
+    },
+
+    updateOrgMemberRole: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<UpdateOrganizationWebhookConfigResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const orgRepo = new OrganizationRepository(opts.db);
+
+        const org = await orgRepo.byId(authContext.organizationId);
+        if (!org) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Organization not found`,
+            },
+          };
+        }
+
+        const user = await orgRepo.getOrganizationMember({
+          organizationID: authContext.organizationId,
+          userID: authContext.userId || req.userID,
+        });
+
+        if (!user) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: 'User is not a part of this organization.',
+            },
+          };
+        }
+
+        // non admins cannot update the role of an org member
+        if (!user.roles.includes('admin')) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: 'User does not have the permissions to the role of an organization member.',
+            },
+          };
+        }
+
+        const orgMember = await orgRepo.getOrganizationMember({
+          organizationID: authContext.organizationId,
+          userID: req.orgMemberUserID,
+        });
+
+        if (!orgMember) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: 'User is not a part of this organization.',
+            },
+          };
+        }
+
+        await opts.keycloakClient.authenticateClient();
+
+        const users = await opts.keycloakClient.client.users.find({
+          realm: opts.keycloakRealm,
+          email: orgMember.email,
+        });
+
+        if (users.length === 0) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: 'User does not exist.',
+            },
+          };
+        }
+
+        const organizationGroup = await opts.keycloakClient.client.groups.find({
+          max: 1,
+          search: org.slug,
+          realm: opts.keycloakRealm,
+          briefRepresentation: false,
+        });
+
+        if (organizationGroup.length === 0) {
+          throw new Error(`Organization group '${org.slug}' not found`);
+        }
+
+        const childGroups = await opts.keycloakClient.client.groups.find({
+          search: 'admin',
+          realm: opts.keycloakRealm,
+        });
+
+        if (childGroups.length === 0) {
+          throw new Error(`Organization group '${org.slug}' does not have any child groups`);
+        }
+
+        const childGroup = childGroups.find((group) => group.id === organizationGroup[0].id)?.subGroups?.[0];
+
+        if (!childGroup) {
+          throw new Error(`Organization group '${org.slug}' does not have any child groups`);
+        }
+
+        if (req.role === 'admin') {
+          await opts.keycloakClient.client.users.delFromGroup({
+            id: users[0].id!,
+            realm: opts.keycloakRealm,
+            groupId: organizationGroup[0].id!,
+          });
+
+          await opts.keycloakClient.client.users.addToGroup({
+            id: users[0].id!,
+            realm: opts.keycloakRealm,
+            groupId: childGroup.id!,
+          });
+
+          await orgRepo.updateUserRole({
+            organizationID: authContext.organizationId,
+            orgMemberID: orgMember.orgMemberID,
+            role: 'admin',
+          });
+        } else {
+          await opts.keycloakClient.client.users.addToGroup({
+            id: users[0].id!,
+            realm: opts.keycloakRealm,
+            groupId: organizationGroup[0].id!,
+          });
+
+          await opts.keycloakClient.client.users.delFromGroup({
+            id: users[0].id!,
+            realm: opts.keycloakRealm,
+            groupId: childGroup.id!,
+          });
+
+          await orgRepo.updateUserRole({
+            organizationID: authContext.organizationId,
+            orgMemberID: orgMember.orgMemberID,
+            role: 'member',
+          });
+        }
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+        };
+      });
+    },
   };
 }

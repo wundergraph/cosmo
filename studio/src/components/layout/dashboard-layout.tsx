@@ -4,7 +4,11 @@ import { addDays, formatDistance } from "date-fns";
 import { useRouter } from "next/router";
 import { useContext, useMemo } from "react";
 import { IoKeyOutline, IoPeopleOutline } from "react-icons/io5";
-import { PiGraphLight, PiWebhooksLogo } from "react-icons/pi";
+import {
+  PiGear,
+  PiGraphLight,
+  PiWebhooksLogo
+} from "react-icons/pi";
 import { UserContext } from "../app-provider";
 import { PageHeader } from "./head";
 import { LayoutProps } from "./layout";
@@ -46,6 +50,11 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
         title: "Webhooks",
         href: basePath + "/webhooks",
         icon: <PiWebhooksLogo />,
+      },
+      {
+        title: "Settings",
+        href: basePath + "/settings",
+        icon: <PiGear />,
       },
     ];
   }, [organizationSlug]);

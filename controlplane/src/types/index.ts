@@ -83,6 +83,7 @@ export interface OrganizationDTO {
   id: string;
   name: string;
   slug: string;
+  creatorUserId: string;
   createdAt: string;
   isFreeTrial?: boolean;
   isPersonal?: boolean;
@@ -94,7 +95,8 @@ export interface UserDTO {
 }
 
 export interface OrganizationMemberDTO {
-  id: string;
+  userID: string;
+  orgMemberID: string;
   email: string;
   acceptedInvite: boolean;
   roles: string[];

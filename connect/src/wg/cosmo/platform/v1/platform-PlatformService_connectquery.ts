@@ -7,7 +7,7 @@
 
 import { createQueryService } from "@connectrpc/connect-query";
 import { MethodIdempotency, MethodKind } from "@bufbuild/protobuf";
-import { CheckFederatedGraphRequest, CheckFederatedGraphResponse, CheckSubgraphSchemaRequest, CheckSubgraphSchemaResponse, CreateAPIKeyRequest, CreateAPIKeyResponse, CreateFederatedGraphRequest, CreateFederatedGraphResponse, CreateFederatedGraphTokenRequest, CreateFederatedGraphTokenResponse, CreateFederatedSubgraphRequest, CreateFederatedSubgraphResponse, CreateOrganizationWebhookConfigRequest, CreateOrganizationWebhookConfigResponse, DeleteAPIKeyRequest, DeleteAPIKeyResponse, DeleteFederatedGraphRequest, DeleteFederatedGraphResponse, DeleteFederatedSubgraphRequest, DeleteFederatedSubgraphResponse, DeleteOrganizationWebhookConfigRequest, DeleteOrganizationWebhookConfigResponse, FixSubgraphSchemaRequest, FixSubgraphSchemaResponse, ForceCheckSuccessRequest, ForceCheckSuccessResponse, GetAnalyticsViewRequest, GetAnalyticsViewResponse, GetAPIKeysRequest, GetAPIKeysResponse, GetCheckDetailsRequest, GetCheckDetailsResponse, GetChecksByFederatedGraphNameRequest, GetChecksByFederatedGraphNameResponse, GetDashboardAnalyticsViewRequest, GetDashboardAnalyticsViewResponse, GetFederatedGraphByNameRequest, GetFederatedGraphByNameResponse, GetFederatedGraphChangelogRequest, GetFederatedGraphChangelogResponse, GetFederatedGraphSDLByNameRequest, GetFederatedGraphSDLByNameResponse, GetFederatedGraphsRequest, GetFederatedGraphsResponse, GetFederatedSubgraphSDLByNameRequest, GetFederatedSubgraphSDLByNameResponse, GetMetricsDashboardRequest, GetMetricsDashboardResponse, GetMetricsErrorRateRequest, GetMetricsErrorRateResponse, GetOrganizationMembersRequest, GetOrganizationMembersResponse, GetOrganizationWebhookConfigsRequest, GetOrganizationWebhookConfigsResponse, GetSubgraphByNameRequest, GetSubgraphByNameResponse, GetSubgraphsRequest, GetSubgraphsResponse, GetTraceRequest, GetTraceResponse, InviteUserRequest, InviteUserResponse, MigrateFromApolloRequest, MigrateFromApolloResponse, PublishFederatedSubgraphRequest, PublishFederatedSubgraphResponse, RemoveInvitationRequest, RemoveInvitationResponse, UpdateFederatedGraphRequest, UpdateFederatedGraphResponse, UpdateOrganizationWebhookConfigRequest, UpdateOrganizationWebhookConfigResponse, UpdateSubgraphRequest, UpdateSubgraphResponse, WhoAmIRequest, WhoAmIResponse } from "./platform_pb.js";
+import { CheckFederatedGraphRequest, CheckFederatedGraphResponse, CheckSubgraphSchemaRequest, CheckSubgraphSchemaResponse, CreateAPIKeyRequest, CreateAPIKeyResponse, CreateFederatedGraphRequest, CreateFederatedGraphResponse, CreateFederatedGraphTokenRequest, CreateFederatedGraphTokenResponse, CreateFederatedSubgraphRequest, CreateFederatedSubgraphResponse, CreateOrganizationWebhookConfigRequest, CreateOrganizationWebhookConfigResponse, DeleteAPIKeyRequest, DeleteAPIKeyResponse, DeleteFederatedGraphRequest, DeleteFederatedGraphResponse, DeleteFederatedSubgraphRequest, DeleteFederatedSubgraphResponse, DeleteOrganizationRequest, DeleteOrganizationResponse, DeleteOrganizationWebhookConfigRequest, DeleteOrganizationWebhookConfigResponse, FixSubgraphSchemaRequest, FixSubgraphSchemaResponse, ForceCheckSuccessRequest, ForceCheckSuccessResponse, GetAnalyticsViewRequest, GetAnalyticsViewResponse, GetAPIKeysRequest, GetAPIKeysResponse, GetCheckDetailsRequest, GetCheckDetailsResponse, GetChecksByFederatedGraphNameRequest, GetChecksByFederatedGraphNameResponse, GetDashboardAnalyticsViewRequest, GetDashboardAnalyticsViewResponse, GetFederatedGraphByNameRequest, GetFederatedGraphByNameResponse, GetFederatedGraphChangelogRequest, GetFederatedGraphChangelogResponse, GetFederatedGraphSDLByNameRequest, GetFederatedGraphSDLByNameResponse, GetFederatedGraphsRequest, GetFederatedGraphsResponse, GetFederatedSubgraphSDLByNameRequest, GetFederatedSubgraphSDLByNameResponse, GetMetricsDashboardRequest, GetMetricsDashboardResponse, GetMetricsErrorRateRequest, GetMetricsErrorRateResponse, GetOrganizationMembersRequest, GetOrganizationMembersResponse, GetOrganizationWebhookConfigsRequest, GetOrganizationWebhookConfigsResponse, GetSubgraphByNameRequest, GetSubgraphByNameResponse, GetSubgraphsRequest, GetSubgraphsResponse, GetTraceRequest, GetTraceResponse, InviteUserRequest, InviteUserResponse, LeaveOrganizationRequest, LeaveOrganizationResponse, MigrateFromApolloRequest, MigrateFromApolloResponse, PublishFederatedSubgraphRequest, PublishFederatedSubgraphResponse, RemoveInvitationRequest, RemoveInvitationResponse, UpdateFederatedGraphRequest, UpdateFederatedGraphResponse, UpdateOrganizationNameRequest, UpdateOrganizationNameResponse, UpdateOrganizationSlugRequest, UpdateOrganizationSlugResponse, UpdateOrganizationWebhookConfigRequest, UpdateOrganizationWebhookConfigResponse, UpdateOrgMemberRoleRequest, UpdateOrgMemberRoleResponse, UpdateSubgraphRequest, UpdateSubgraphResponse, WhoAmIRequest, WhoAmIResponse } from "./platform_pb.js";
 import { GetConfigRequest, GetConfigResponse } from "../../node/v1/node_pb.js";
 
 export const typeName = "wg.cosmo.platform.v1.PlatformService";
@@ -655,6 +655,101 @@ export const deleteOrganizationWebhookConfig = createQueryService({
     typeName: "wg.cosmo.platform.v1.PlatformService",
   },
 }).deleteOrganizationWebhookConfig;
+
+/**
+ * DeleteOrganization deletes an organization 
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.DeleteOrganization
+ */
+export const deleteOrganization = createQueryService({
+  service: {
+    methods: {
+      deleteOrganization: {
+        name: "DeleteOrganization",
+        kind: MethodKind.Unary,
+        I: DeleteOrganizationRequest,
+        O: DeleteOrganizationResponse,
+      },
+    },
+    typeName: "wg.cosmo.platform.v1.PlatformService",
+  },
+}).deleteOrganization;
+
+/**
+ * LeaveOrganization removes a member from the organization
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.LeaveOrganization
+ */
+export const leaveOrganization = createQueryService({
+  service: {
+    methods: {
+      leaveOrganization: {
+        name: "LeaveOrganization",
+        kind: MethodKind.Unary,
+        I: LeaveOrganizationRequest,
+        O: LeaveOrganizationResponse,
+      },
+    },
+    typeName: "wg.cosmo.platform.v1.PlatformService",
+  },
+}).leaveOrganization;
+
+/**
+ * UpdateOrganizationName updates the name of the organization
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.UpdateOrganizationName
+ */
+export const updateOrganizationName = createQueryService({
+  service: {
+    methods: {
+      updateOrganizationName: {
+        name: "UpdateOrganizationName",
+        kind: MethodKind.Unary,
+        I: UpdateOrganizationNameRequest,
+        O: UpdateOrganizationNameResponse,
+      },
+    },
+    typeName: "wg.cosmo.platform.v1.PlatformService",
+  },
+}).updateOrganizationName;
+
+/**
+ * UpdateOrganizationSlug updates the slug of the organization
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.UpdateOrganizationSlug
+ */
+export const updateOrganizationSlug = createQueryService({
+  service: {
+    methods: {
+      updateOrganizationSlug: {
+        name: "UpdateOrganizationSlug",
+        kind: MethodKind.Unary,
+        I: UpdateOrganizationSlugRequest,
+        O: UpdateOrganizationSlugResponse,
+      },
+    },
+    typeName: "wg.cosmo.platform.v1.PlatformService",
+  },
+}).updateOrganizationSlug;
+
+/**
+ * UpdateOrgMemberRole updates the role of an org member
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.UpdateOrgMemberRole
+ */
+export const updateOrgMemberRole = createQueryService({
+  service: {
+    methods: {
+      updateOrgMemberRole: {
+        name: "UpdateOrgMemberRole",
+        kind: MethodKind.Unary,
+        I: UpdateOrgMemberRoleRequest,
+        O: UpdateOrgMemberRoleResponse,
+      },
+    },
+    typeName: "wg.cosmo.platform.v1.PlatformService",
+  },
+}).updateOrgMemberRole;
 
 /**
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetAnalyticsView
