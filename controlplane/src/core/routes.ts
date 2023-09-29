@@ -4,6 +4,7 @@ import { NodeService } from '@wundergraph/cosmo-connect/dist/node/v1/node_connec
 import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import pino from 'pino';
+import { App } from 'octokit';
 import * as schema from '../db/schema.js';
 import NodeServiceImpl from './bufservices/NodeService.js';
 import PlatformServiceImpl from './bufservices/PlatformService.js';
@@ -23,6 +24,8 @@ export interface RouterOptions {
   keycloakClient: Keycloak;
   prometheus: PrometheusClient;
   platformWebhooks: IPlatformWebhookService;
+  webBaseUrl: string;
+  githubApp: App;
 }
 const handlerOptions: Partial<ConnectRouterOptions> = {
   maxTimeoutMs: 5000,

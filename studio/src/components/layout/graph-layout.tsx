@@ -90,6 +90,7 @@ const GraphLayout = ({ children }: LayoutProps) => {
       {
         title: "Checks",
         href: basePath + "/checks",
+        matchExact: false,
         icon: <CheckCircledIcon />,
       },
     ];

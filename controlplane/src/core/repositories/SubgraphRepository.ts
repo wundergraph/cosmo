@@ -1,6 +1,6 @@
 import { CompositionError } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { joinLabel, normalizeURL, splitLabel } from '@wundergraph/cosmo-shared';
-import { and, asc, eq, gt, inArray, lt, notInArray, SQL, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, inArray, lt, notInArray, SQL, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema.js';
 import { schemaChecks, schemaVersion, subgraphs, subgraphsToFederatedGraph, targets } from '../../db/schema.js';
@@ -363,10 +363,11 @@ export class SubgraphRepository {
         isComposable: true,
         hasBreakingChanges: true,
         proposedSubgraphSchemaSDL: true,
+        forcedSuccess: true,
       },
       limit,
       offset,
-      orderBy: asc(schemaChecks.createdAt),
+      orderBy: desc(schemaChecks.createdAt),
       where: and(
         inArray(
           schemaChecks.targetId,
@@ -388,6 +389,7 @@ export class SubgraphRepository {
         isBreaking: c.hasBreakingChanges ?? false,
         isComposable: c.isComposable ?? false,
         proposedSubgraphSchemaSDL: c.proposedSubgraphSchemaSDL ?? undefined,
+        isForcedSuccess: c.forcedSuccess ?? false,
       })),
       checksCount,
     };
@@ -437,7 +439,11 @@ export class SubgraphRepository {
     return checksCount[0].count;
   }
 
-  public async checkDetails(id: string, federatedTargetID: string): Promise<SchemaCheckDetailsDTO> {
+  public async checkDetails(
+    id: string,
+    federatedTargetID: string,
+    federatedGraphName: string,
+  ): Promise<SchemaCheckDetailsDTO | undefined> {
     const changes = await this.db.query.schemaCheckChangeAction.findMany({
       columns: {
         changeType: true,
@@ -465,7 +471,29 @@ export class SubgraphRepository {
       .split('\n')
       .filter((m) => !!m);
 
+    const check = await this.db.query.schemaChecks.findFirst({
+      where: eq(schema.schemaChecks.id, id),
+    });
+
+    if (!check) {
+      return;
+    }
+
+    const subgraphs = await this.listByGraph(federatedGraphName, {
+      published: true,
+    });
+
     return {
+      check: {
+        id: check.id,
+        targetID: check.targetId,
+        subgraphName: subgraphs.find((s) => s.targetId === check.targetId)?.name ?? '',
+        timestamp: check.createdAt.toISOString(),
+        isBreaking: check.hasBreakingChanges ?? false,
+        isComposable: check.isComposable ?? false,
+        proposedSubgraphSchemaSDL: check.proposedSubgraphSchemaSDL ?? undefined,
+        isForcedSuccess: check.forcedSuccess ?? false,
+      },
       changes: changes.map((c) => ({
         changeType: c.changeType ?? '',
         message: c.changeMessage ?? '',
@@ -474,6 +502,20 @@ export class SubgraphRepository {
       })),
       compositionErrors,
     };
+  }
+
+  public async forceCheckSuccess(checkId: string) {
+    const result = await this.db
+      .update(schema.schemaChecks)
+      .set({
+        forcedSuccess: true,
+      })
+      .where(eq(schema.schemaChecks.id, checkId))
+      .returning({
+        ghDetails: schema.schemaChecks.ghDetails,
+      });
+
+    return result[0].ghDetails;
   }
 
   public async exists(name: string) {

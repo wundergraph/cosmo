@@ -437,6 +437,61 @@ export class PublishFederatedSubgraphResponse extends Message<PublishFederatedSu
 }
 
 /**
+ * @generated from message wg.cosmo.platform.v1.GitInfo
+ */
+export class GitInfo extends Message<GitInfo> {
+  /**
+   * @generated from field: string commit_sha = 1;
+   */
+  commitSha = "";
+
+  /**
+   * @generated from field: string account_id = 2;
+   */
+  accountId = "";
+
+  /**
+   * @generated from field: string owner_slug = 3;
+   */
+  ownerSlug = "";
+
+  /**
+   * @generated from field: string repository_slug = 4;
+   */
+  repositorySlug = "";
+
+  constructor(data?: PartialMessage<GitInfo>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GitInfo";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "commit_sha", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "account_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "owner_slug", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "repository_slug", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GitInfo {
+    return new GitInfo().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GitInfo {
+    return new GitInfo().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GitInfo {
+    return new GitInfo().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GitInfo | PlainMessage<GitInfo> | undefined, b: GitInfo | PlainMessage<GitInfo> | undefined): boolean {
+    return proto3.util.equals(GitInfo, a, b);
+  }
+}
+
+/**
  * @generated from message wg.cosmo.platform.v1.CheckSubgraphSchemaRequest
  */
 export class CheckSubgraphSchemaRequest extends Message<CheckSubgraphSchemaRequest> {
@@ -454,6 +509,11 @@ export class CheckSubgraphSchemaRequest extends Message<CheckSubgraphSchemaReque
    */
   schema = new Uint8Array(0);
 
+  /**
+   * @generated from field: wg.cosmo.platform.v1.GitInfo gitInfo = 3;
+   */
+  gitInfo?: GitInfo;
+
   constructor(data?: PartialMessage<CheckSubgraphSchemaRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -464,6 +524,7 @@ export class CheckSubgraphSchemaRequest extends Message<CheckSubgraphSchemaReque
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "subgraph_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "schema", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
+    { no: 3, name: "gitInfo", kind: "message", T: GitInfo },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CheckSubgraphSchemaRequest {
@@ -1824,6 +1885,11 @@ export class SchemaCheck extends Message<SchemaCheck> {
    */
   proposedSubgraphSchemaSDL?: string;
 
+  /**
+   * @generated from field: bool isForcedSuccess = 8;
+   */
+  isForcedSuccess = false;
+
   constructor(data?: PartialMessage<SchemaCheck>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1839,6 +1905,7 @@ export class SchemaCheck extends Message<SchemaCheck> {
     { no: 5, name: "isComposable", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 6, name: "isBreaking", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 7, name: "proposedSubgraphSchemaSDL", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 8, name: "isForcedSuccess", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SchemaCheck {
@@ -1975,6 +2042,11 @@ export class GetCheckDetailsResponse extends Message<GetCheckDetailsResponse> {
    */
   compositionErrors: string[] = [];
 
+  /**
+   * @generated from field: wg.cosmo.platform.v1.SchemaCheck check = 4;
+   */
+  check?: SchemaCheck;
+
   constructor(data?: PartialMessage<GetCheckDetailsResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1986,6 +2058,7 @@ export class GetCheckDetailsResponse extends Message<GetCheckDetailsResponse> {
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "changes", kind: "message", T: SchemaChange, repeated: true },
     { no: 3, name: "compositionErrors", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 4, name: "check", kind: "message", T: SchemaCheck },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCheckDetailsResponse {
@@ -5268,6 +5341,86 @@ export class GetMetricsErrorRateResponse extends Message<GetMetricsErrorRateResp
 
   static equals(a: GetMetricsErrorRateResponse | PlainMessage<GetMetricsErrorRateResponse> | undefined, b: GetMetricsErrorRateResponse | PlainMessage<GetMetricsErrorRateResponse> | undefined): boolean {
     return proto3.util.equals(GetMetricsErrorRateResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.ForceCheckSuccessRequest
+ */
+export class ForceCheckSuccessRequest extends Message<ForceCheckSuccessRequest> {
+  /**
+   * @generated from field: string check_id = 1;
+   */
+  checkId = "";
+
+  /**
+   * @generated from field: string graph_name = 2;
+   */
+  graphName = "";
+
+  constructor(data?: PartialMessage<ForceCheckSuccessRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.ForceCheckSuccessRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "check_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "graph_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ForceCheckSuccessRequest {
+    return new ForceCheckSuccessRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ForceCheckSuccessRequest {
+    return new ForceCheckSuccessRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ForceCheckSuccessRequest {
+    return new ForceCheckSuccessRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ForceCheckSuccessRequest | PlainMessage<ForceCheckSuccessRequest> | undefined, b: ForceCheckSuccessRequest | PlainMessage<ForceCheckSuccessRequest> | undefined): boolean {
+    return proto3.util.equals(ForceCheckSuccessRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.ForceCheckSuccessResponse
+ */
+export class ForceCheckSuccessResponse extends Message<ForceCheckSuccessResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  constructor(data?: PartialMessage<ForceCheckSuccessResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.ForceCheckSuccessResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ForceCheckSuccessResponse {
+    return new ForceCheckSuccessResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ForceCheckSuccessResponse {
+    return new ForceCheckSuccessResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ForceCheckSuccessResponse {
+    return new ForceCheckSuccessResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ForceCheckSuccessResponse | PlainMessage<ForceCheckSuccessResponse> | undefined, b: ForceCheckSuccessResponse | PlainMessage<ForceCheckSuccessResponse> | undefined): boolean {
+    return proto3.util.equals(ForceCheckSuccessResponse, a, b);
   }
 }
 

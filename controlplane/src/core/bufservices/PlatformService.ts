@@ -16,6 +16,7 @@ import {
   DeleteFederatedGraphResponse,
   DeleteFederatedSubgraphResponse,
   FixSubgraphSchemaResponse,
+  ForceCheckSuccessResponse,
   GetAPIKeysResponse,
   GetAnalyticsViewResponse,
   GetCheckDetailsResponse,
@@ -64,6 +65,7 @@ import ApolloMigrator from '../services/ApolloMigrator.js';
 import { MetricsDashboardRepository } from '../repositories/analytics/MetricsDashboardRepository.js';
 import { handleError, isValidLabelMatchers, isValidLabels } from '../util.js';
 import { OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
+import { GitHubRepository } from '../repositories/GitHubRepository.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -416,10 +418,25 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
+        const orgRepo = new OrganizationRepository(opts.db);
         const schemaCheckRepo = new SchemaCheckRepository(opts.db);
+        const githubRepo = new GitHubRepository(opts.db, opts.githubApp);
+
+        const org = await orgRepo.byId(authContext.organizationId);
+        if (!org) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Organization not found`,
+            },
+            breakingChanges: [],
+            nonBreakingChanges: [],
+            compositionErrors: [],
+          };
+        }
+
         const subgraph = await subgraphRepo.byName(req.subgraphName);
         const compChecker = new Composer(fedGraphRepo, subgraphRepo);
-
         if (!subgraph) {
           return {
             response: {
@@ -431,6 +448,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             compositionErrors: [],
           };
         }
+
         const newSchemaSDL = new TextDecoder().decode(req.schema);
 
         const schemaCheckID = await schemaCheckRepo.create({
@@ -483,6 +501,19 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               } as CompositionError);
             }
           }
+        }
+
+        if (req.gitInfo) {
+          githubRepo.createCommitCheck({
+            schemaCheckID,
+            gitInfo: req.gitInfo,
+            compositionErrors,
+            breakingChangesCount: schemaChanges.breakingChanges.length,
+            subgraphName: subgraph.name,
+            organizationSlug: org.slug,
+            webBaseUrl: opts.webBaseUrl,
+            composedGraphs: result.compositions.map((c) => c.name),
+          });
         }
 
         return {
@@ -883,13 +914,78 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const details = await subgraphRepo.checkDetails(req.checkID, graph.targetId);
+        const details = await subgraphRepo.checkDetails(req.checkID, graph.targetId, graph.name);
+
+        if (!details) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: 'Requested check not found',
+            },
+            changes: [],
+            compositionErrors: [],
+          };
+        }
 
         return {
           response: {
             code: EnumStatusCode.OK,
           },
           ...details,
+        };
+      });
+    },
+
+    forceCheckSuccess: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<ForceCheckSuccessResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
+        const githubRepo = new GitHubRepository(opts.db, opts.githubApp);
+        const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+
+        const graph = await fedGraphRepo.byName(req.graphName);
+
+        if (!graph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: 'Requested graph does not exist',
+            },
+            changes: [],
+            compositionErrors: [],
+          };
+        }
+
+        const details = await subgraphRepo.checkDetails(req.checkId, graph.targetId, graph.name);
+
+        if (!details) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: 'Requested check does not exist',
+            },
+            changes: [],
+            compositionErrors: [],
+          };
+        }
+
+        const githubDetails = await subgraphRepo.forceCheckSuccess(details.check.id);
+
+        if (githubDetails) {
+          await githubRepo.markCheckAsSuccess({
+            ...githubDetails,
+          });
+        }
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
         };
       });
     },
