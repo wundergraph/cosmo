@@ -13,7 +13,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/router";
 import { getFederatedGraphByName } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { GetFederatedGraphByNameResponse } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { ReactNode, createContext, useMemo } from "react";
+import { ReactNode, createContext, useContext, useMemo } from "react";
 import { PiGitBranch } from "react-icons/pi";
 import { EmptyState } from "../empty-state";
 import { Button } from "../ui/button";
@@ -21,6 +21,9 @@ import { Loader } from "../ui/loader";
 import { LayoutProps } from "./layout";
 import { Nav, NavLink } from "./nav";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
+import { addDays, formatDistance } from "date-fns";
+import { UserContext } from "../app-provider";
+import { showCal } from "@/lib/utils";
 
 const icons: { [key: string]: ReactNode } = {
   Overview: <HomeIcon />,
@@ -45,6 +48,7 @@ const GraphLayout = ({ children }: LayoutProps) => {
   const router = useRouter();
   const organizationSlug = router.query.organizationSlug as string;
   const slug = router.query.slug as string;
+  const [user] = useContext(UserContext);
 
   const { data, isLoading, error, refetch } = useQuery(
     getFederatedGraphByName.useQuery({
@@ -124,6 +128,33 @@ const GraphLayout = ({ children }: LayoutProps) => {
   return (
     <div className="2xl:flex 2xl:flex-1 2xl:flex-col 2xl:items-center">
       <div className="min-h-screen bg-background font-sans antialiased 2xl:min-w-[1536px] 2xl:max-w-screen-2xl">
+        {user?.currentOrganization.isFreeTrial && (
+          <div
+            className="sticky top-0 z-50 flex cursor-pointer justify-center rounded bg-primary px-2 py-1 text-sm text-secondary-foreground"
+            onClick={showCal}
+          >
+            {!user.currentOrganization.isFreeTrialExpired ? (
+              <span>
+                Limited trial version (
+                {formatDistance(
+                  addDays(new Date(user.currentOrganization.createdAt), 10),
+                  new Date()
+                )}{" "}
+                left).{" "}
+                <span className="underline underline-offset-2">
+                  Talk to sales
+                </span>{" "}
+                for Production use.
+              </span>
+            ) : (
+              <span>
+                Limited trial has concluded.{" "}
+                <span className="underline underline-offset-2">Click here</span>{" "}
+                to contact us and upgrade your plan for continued usage.
+              </span>
+            )}
+          </div>
+        )}
         <Nav links={links}>{render}</Nav>
       </div>
     </div>
