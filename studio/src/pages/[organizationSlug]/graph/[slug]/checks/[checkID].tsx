@@ -147,7 +147,8 @@ const CheckDetailsPage: NextPageWithLayout = () => {
             )}
           </div>
           {!data.check.isForcedSuccess &&
-            (data.check.isBreaking || !data.check.isComposable) && (
+            data.check.isBreaking &&
+            data.check.isComposable && (
               <Button
                 variant="secondary"
                 isLoading={isForcingSuccess}
