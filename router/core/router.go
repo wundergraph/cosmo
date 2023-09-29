@@ -97,7 +97,7 @@ type (
 
 		engineExecutionConfiguration config.EngineExecutionConfiguration
 
-		overrideRoutingURL config.OverrideRoutingURLConfiguration
+		overrideRoutingURLConfiguration config.OverrideRoutingURLConfiguration
 	}
 
 	// Server is the main router instance.
@@ -527,7 +527,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		},
 	}
 
-	executor, err := ecb.Build(ctx, routerConfig, r.engineExecutionConfiguration)
+	executor, err := ecb.Build(ctx, routerConfig, r.engineExecutionConfiguration, r.overrideRoutingURLConfiguration)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build plan configuration: %w", err)
 	}
@@ -613,7 +613,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		for _, s := range routerConfig.Subgraphs {
 			rawURL := s.RoutingUrl
 
-			overrideURL, overrideFound := r.overrideRoutingURL.Subgraphs[s.Name]
+			overrideURL, overrideFound := r.overrideRoutingURLConfiguration.Subgraphs[s.Name]
 			if overrideFound {
 				rawURL = overrideURL
 			}
@@ -916,9 +916,9 @@ func WithHeaderRules(headers config.HeaderRules) Option {
 	}
 }
 
-func WithOverrideRoutingURL(overrideRoutingURLs config.OverrideRoutingURLConfiguration) Option {
+func WithOverrideRoutingURL(overrideRoutingURL config.OverrideRoutingURLConfiguration) Option {
 	return func(r *Router) {
-		r.overrideRoutingURL = overrideRoutingURLs
+		r.overrideRoutingURLConfiguration = overrideRoutingURL
 	}
 }
 

@@ -15,8 +15,11 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/config"
 )
 
+type RoutingURLOverrides (map[string]string)
+
 type Loader struct {
-	resolvers []FactoryResolver
+	resolvers           []FactoryResolver
+	routingURLOverrides RoutingURLOverrides
 }
 
 type FactoryResolver interface {
@@ -75,9 +78,10 @@ func (d *DefaultFactoryResolver) Resolve(ds *nodev1.DataSourceConfiguration) (pl
 	}
 }
 
-func NewLoader(resolvers ...FactoryResolver) *Loader {
+func NewLoader(overrides RoutingURLOverrides, resolvers ...FactoryResolver) *Loader {
 	return &Loader{
-		resolvers: resolvers,
+		resolvers:           resolvers,
+		routingURLOverrides: overrides,
 	}
 }
 
@@ -149,6 +153,12 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration) (*plan.Configura
 			}
 
 			fetchUrl := config.LoadStringVariable(in.CustomGraphql.Fetch.GetUrl())
+
+			if l.routingURLOverrides != nil {
+				if overrideUrl, ok := l.routingURLOverrides[fetchUrl]; ok {
+					fetchUrl = overrideUrl
+				}
+			}
 
 			subscriptionUrl := config.LoadStringVariable(in.CustomGraphql.Subscription.Url)
 			if subscriptionUrl == "" {

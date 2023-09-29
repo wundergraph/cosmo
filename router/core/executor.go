@@ -36,8 +36,8 @@ type Executor struct {
 	RenameTypeNames []resolve.RenameTypeName
 }
 
-func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, routerConfig *nodev1.RouterConfig, executionConfiguration config.EngineExecutionConfiguration) (*Executor, error) {
-	planConfig, err := b.buildPlannerConfiguration(routerConfig, executionConfiguration.Debug)
+func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, routerConfig *nodev1.RouterConfig, executionConfiguration config.EngineExecutionConfiguration, overrideRoutingURLConfiguration config.OverrideRoutingURLConfiguration) (*Executor, error) {
+	planConfig, err := b.buildPlannerConfiguration(routerConfig, executionConfiguration.Debug, overrideRoutingURLConfiguration)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build planner configuration: %w", err)
 	}
@@ -98,11 +98,18 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, routerConfig *
 	}, nil
 }
 
-func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(routerCfg *nodev1.RouterConfig, engineDebugConfig config.EngineDebugConfiguration) (*plan.Configuration, error) {
+func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(routerCfg *nodev1.RouterConfig, engineDebugConfig config.EngineDebugConfiguration, overrideRoutingURLConfiguration config.OverrideRoutingURLConfiguration) (*plan.Configuration, error) {
 	// this loader is used to take the engine config and create a plan config
 	// the plan config is what the engine uses to turn a GraphQL Request into an execution plan
 	// the plan config is stateful as it carries connection pools and other things
-	loader := NewLoader(NewDefaultFactoryResolver(
+
+	routingUrlOverrides := make(RoutingURLOverrides)
+
+	for _, sg := range routerCfg.Subgraphs {
+		routingUrlOverrides[sg.RoutingUrl] = overrideRoutingURLConfiguration.Subgraphs[sg.Name]
+	}
+
+	loader := NewLoader(routingUrlOverrides, NewDefaultFactoryResolver(
 		NewTransport(b.transportOptions),
 		b.transport,
 		b.logger,
