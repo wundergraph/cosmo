@@ -22,19 +22,19 @@ ORDER BY (
 )
 TTL toDateTime(Timestamp) + toIntervalDay(30) SETTINGS index_granularity = 8192, ttl_only_drop_parts = 1 POPULATE AS
 SELECT
-    toStartOfFiveMinute(TimeUnix) as Timestamp,
-    Attributes [ 'wg.operation.name' ] as OperationName,
-    Attributes [ 'wg.operation.hash' ] as OperationHash,
+    toStartOfFiveMinute(TimeUnix) AS Timestamp,
+    Attributes [ 'wg.operation.name' ] AS OperationName,
+    Attributes [ 'wg.operation.hash' ] AS OperationHash,
     sum(Value) as TotalRequests,
-    sumIf(Value, position(Attributes['http.status_code'],'5') = 1) as TotalErrors,
-    sumIf(Value, position(Attributes['http.status_code'],'4') = 1) as TotalClientErrors,
-    Attributes [ 'wg.operation.type' ] as OperationType,
-    Attributes [ 'wg.federated_graph.id'] as FederatedGraphID,
-    Attributes [ 'wg.router.config.version'] as RouterConfigVersion,
+    sumIf(Value, position(Attributes['http.status_code'],'5') = 1 OR position(Attributes['http.status_code'],'4') = 1) as TotalErrors,
+    sumIf(Value, position(Attributes['http.status_code'],'4') = 1) AS TotalClientErrors,
+    Attributes [ 'wg.operation.type' ] AS OperationType,
+    Attributes [ 'wg.federated_graph.id'] AS FederatedGraphID,
+    Attributes [ 'wg.router.config.version'] AS RouterConfigVersion,
     Attributes [ 'wg.organization.id' ] as OrganizationID,
-    mapContains(Attributes, 'wg.subscription') as IsSubscription,
-    Attributes [ 'wg.client.name' ] as ClientName,
-    Attributes [ 'wg.client.version' ] as ClientVersion
+    mapContains(Attributes, 'wg.subscription') AS IsSubscription,
+    Attributes [ 'wg.client.name' ] AS ClientName,
+    Attributes [ 'wg.client.version' ] AS ClientVersion
 FROM
     cosmo.otel_metrics_sum
 WHERE IsMonotonic = true AND MetricName = 'router.http.requests' AND OrganizationID != '' AND FederatedGraphID != ''
