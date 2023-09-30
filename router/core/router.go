@@ -528,11 +528,6 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	)
 
 	httpRouter := chi.NewRouter()
-	httpRouter.Use(func(h http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			h.ServeHTTP(w, r)
-		})
-	})
 	httpRouter.Use(recoveryHandler)
 	httpRouter.Use(middleware.RequestID)
 	httpRouter.Use(middleware.RealIP)
