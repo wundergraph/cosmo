@@ -227,8 +227,6 @@ func NewRouter(opts ...Option) (*Router, error) {
 // updateServer starts a new Server. It swaps the active Server with a new Server instance when the config has changed.
 // This method is safe for concurrent use. When the router can't be swapped due to an error the old server kept running.
 func (r *Router) updateServer(ctx context.Context, cfg *nodev1.RouterConfig) error {
-	// Rebuild Server with new router config
-	// In case of an error, we return early and keep the old Server running
 	overrides := make(map[string]string)
 
 	for _, sg := range cfg.Subgraphs {
@@ -252,6 +250,8 @@ func (r *Router) updateServer(ctx context.Context, cfg *nodev1.RouterConfig) err
 		}
 	}
 
+	// Rebuild Server with new router config
+	// In case of an error, we return early and keep the old Server running
 	newRouter, err := r.newServer(ctx, cfg)
 	if err != nil {
 		r.logger.Error("Failed to create r new router. Keeping old router running", zap.Error(err))
