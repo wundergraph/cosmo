@@ -229,6 +229,28 @@ func NewRouter(opts ...Option) (*Router, error) {
 func (r *Router) updateServer(ctx context.Context, cfg *nodev1.RouterConfig) error {
 	// Rebuild Server with new router config
 	// In case of an error, we return early and keep the old Server running
+	overrides := make(map[string]string)
+
+	for _, sg := range cfg.Subgraphs {
+		if sg.RoutingUrl == "" {
+			return fmt.Errorf("subgraph '%s' has no routing url", sg.Name)
+		}
+
+		overrideURL := r.overrideRoutingURLConfiguration.Subgraphs[sg.Name]
+
+		if overrideURL != "" {
+			overrides[sg.RoutingUrl] = overrideURL
+		}
+	}
+
+	for _, conf := range cfg.EngineConfig.DatasourceConfigurations {
+		fetchURL := (conf.CustomGraphql.Fetch.Url)
+		url := config.LoadStringVariable(fetchURL)
+
+		if overrideURL, ok := overrides[url]; ok {
+			conf.CustomGraphql.Fetch.Url.StaticVariableContent = overrideURL
+		}
+	}
 
 	newRouter, err := r.newServer(ctx, cfg)
 	if err != nil {
@@ -526,7 +548,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		},
 	}
 
-	executor, err := ecb.Build(ctx, routerConfig, r.engineExecutionConfiguration, r.overrideRoutingURLConfiguration)
+	executor, err := ecb.Build(ctx, routerConfig, r.engineExecutionConfiguration)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build plan configuration: %w", err)
 	}
