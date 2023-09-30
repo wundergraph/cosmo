@@ -234,10 +234,11 @@ func (r *Router) updateServer(ctx context.Context, cfg *nodev1.RouterConfig) err
 			return fmt.Errorf("subgraph '%s' has no routing url", sg.Name)
 		}
 
-		overrideURL := r.overrideRoutingURLConfiguration.Subgraphs[sg.Name]
+		overrideURL, ok := r.overrideRoutingURLConfiguration.Subgraphs[sg.Name]
 
-		if overrideURL != "" {
+		if ok && overrideURL != "" {
 			overrides[sg.RoutingUrl] = overrideURL
+			sg.RoutingUrl = overrideURL
 		}
 	}
 
@@ -498,6 +499,11 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	)
 
 	httpRouter := chi.NewRouter()
+	httpRouter.Use(func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			h.ServeHTTP(w, r)
+		})
+	})
 	httpRouter.Use(recoveryHandler)
 	httpRouter.Use(middleware.RequestID)
 	httpRouter.Use(middleware.RealIP)

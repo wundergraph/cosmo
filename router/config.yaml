@@ -1,3 +1,104 @@
-# config.yaml
+version: 1
 
-# See pkg/config/config.go for the full list of configuration options.
+## For custom modules
+## See "https://cosmo-docs.wundergraph.com/router/custom-modules" for more information
+# modules:
+#   my_module_id:
+#     value: 1
+
+graph:
+  name: taskgrove-beta
+  token: '${GRAPH_TOKEN}'
+
+log_level: debug
+listen_addr: 0.0.0.0:4000
+controlplane_url: https://cosmo-cp.wundergraph.com
+playground_enabled: true
+introspection_enabled: true
+json_log: true
+shutdown_delay: 15s
+grace_period: 20s
+poll_interval: 10s
+health_check_path: /health
+readiness_check_path: /health/ready
+liveness_check_path: /health/live
+router_config_path: '/home/rencedm112/Repositories/Mono/@taskgrove/services/graphql-federation-router/src/config/router-config.json'
+
+override_routing_url:
+  subgraphs:
+    iam: http://localhost:5000/api/iam/graphql
+    project-management: http://localhost:5000/api/project-management/graphql
+
+cors:
+  allow_origins:
+    - http://localhost:3000
+    - https://localhost:3000
+  allow_methods:
+    - HEAD
+    - GET
+    - POST
+  allow_headers:
+    - Authorization
+    - Origin
+    - Content-Length
+    - Content-Type
+  allow_credentials: true
+  max_age_minutes: 5m
+
+telemetry:
+  # Common options
+  service_name: cosmo-router
+  endpoint: https://cosmo-otel.wundergraph.com
+  headers:
+    #X-Test: "test"
+
+  # OpenTelemetry Tracing
+  tracing:
+    enabled: true
+    config:
+      batch_timeout: 10s
+      sampling_rate: 1
+
+  metrics:
+    # OpenTelemetry Metrics
+    common:
+      enabled: true
+    # Expose OpenTelemetry metrics for scraping
+    prometheus:
+      enabled: true
+      path: /metrics
+      listen_addr: 0.0.0.0:8088
+
+# Config for custom modules
+# modules:
+#   myModule:
+#     value: 1
+
+# Traffic configuration
+traffic_shaping:
+  all: # Rules are applied to all subgraph requests.
+    request_timeout: 60s # Request to the subgraph
+    retry: # Rule is only applied to GraphQL operations of type "query"
+      enabled: true
+      algorithm: backoff_jitter
+      max_attempts: 5
+      interval: 3s
+      max_duration: 10s
+
+# Header manipulation
+headers:
+  all:
+    request:
+      - op: propagate
+        named: Origin
+  subgraphs:
+    iam:
+      request:
+        - op: propagate
+          named: subgraph-authorization
+          default: ${IAM_GRAPHQL_SUBGRAPH_SECRET}
+    project-management:
+      request:
+        - op: propagate
+          named: subgraph-authorization
+          default: ${PROJECT_MANAGAEMENT_GRAPHQL_SUBGRAPH_SECRET}
