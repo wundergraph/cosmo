@@ -10,8 +10,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/wundergraph/cosmo/router/internal/retrytransport"
-
 	"github.com/dgraph-io/ristretto"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
@@ -36,6 +34,7 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/logging"
 	"github.com/wundergraph/cosmo/router/internal/metric"
 	"github.com/wundergraph/cosmo/router/internal/otel"
+	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"github.com/wundergraph/cosmo/router/internal/stringsx"
 	"github.com/wundergraph/cosmo/router/internal/trace"
 )
@@ -224,31 +223,50 @@ func NewRouter(opts ...Option) (*Router, error) {
 	return r, nil
 }
 
-// updateServer starts a new Server. It swaps the active Server with a new Server instance when the config has changed.
-// This method is safe for concurrent use. When the router can't be swapped due to an error the old server kept running.
-func (r *Router) updateServer(ctx context.Context, cfg *nodev1.RouterConfig) error {
+func configureSubgraphOverwrites(subgraphs map[string]string, cfg *nodev1.RouterConfig) error {
 	overrides := make(map[string]string)
 
+	// Validate all the URLs first before we start overriding
 	for _, sg := range cfg.Subgraphs {
 		if sg.RoutingUrl == "" {
 			return fmt.Errorf("subgraph '%s' has no routing url", sg.Name)
 		}
 
-		overrideURL, ok := r.overrideRoutingURLConfiguration.Subgraphs[sg.Name]
+		overrideURL, ok := subgraphs[sg.Name]
 
 		if ok && overrideURL != "" {
+			if _, err := url.Parse(overrideURL); err != nil {
+				return fmt.Errorf("failed to parse override url '%s': %w", overrideURL, err)
+			}
+
 			overrides[sg.RoutingUrl] = overrideURL
+		}
+	}
+
+	for _, sg := range cfg.Subgraphs {
+		if overrideURL, ok := overrides[sg.RoutingUrl]; ok {
 			sg.RoutingUrl = overrideURL
 		}
 	}
 
 	for _, conf := range cfg.EngineConfig.DatasourceConfigurations {
-		fetchURL := (conf.CustomGraphql.Fetch.Url)
+		fetchURL := conf.CustomGraphql.Fetch.Url
 		url := config.LoadStringVariable(fetchURL)
 
 		if overrideURL, ok := overrides[url]; ok {
 			conf.CustomGraphql.Fetch.Url.StaticVariableContent = overrideURL
 		}
+	}
+
+	return nil
+}
+
+// updateServer starts a new Server. It swaps the active Server with a new Server instance when the config has changed.
+// This method is safe for concurrent use. When the router can't be swapped due to an error the old server kept running.
+func (r *Router) updateServer(ctx context.Context, cfg *nodev1.RouterConfig) error {
+	err := configureSubgraphOverwrites(r.overrideRoutingURLConfiguration.Subgraphs, cfg)
+	if err != nil {
+		return err
 	}
 
 	// Rebuild Server with new router config
@@ -275,7 +293,6 @@ func (r *Router) updateServer(ctx context.Context, cfg *nodev1.RouterConfig) err
 
 	// Start new Server
 	go func() {
-
 		if prevRouter != nil {
 			r.logger.Info("Starting Server with new config",
 				zap.String("version", cfg.GetVersion()),
@@ -367,7 +384,6 @@ func (r *Router) initModules(ctx context.Context) error {
 // NewTestServer prepares a new Server instance but does not start it. The method should be only used for testing purposes.
 // Use core.WithStaticRouterConfig to pass the initial config otherwise the engine will error.
 func (r *Router) NewTestServer(ctx context.Context) (*Server, error) {
-
 	if err := r.bootstrap(ctx); err != nil {
 		return nil, fmt.Errorf("failed to bootstrap application: %w", err)
 	}
@@ -382,7 +398,6 @@ func (r *Router) NewTestServer(ctx context.Context) (*Server, error) {
 }
 
 func (r *Router) bootstrap(ctx context.Context) error {
-
 	if r.traceConfig.Enabled {
 		tp, err := trace.StartAgent(r.logger, r.traceConfig)
 		if err != nil {
@@ -445,7 +460,7 @@ func (r *Router) Start(ctx context.Context) error {
 		return fmt.Errorf("config fetcher not provided. Please provide a static router config instead")
 	}
 
-	var initCh = make(chan *nodev1.RouterConfig, 1)
+	initCh := make(chan *nodev1.RouterConfig, 1)
 
 	eg.Go(func() error {
 		for {
@@ -627,7 +642,6 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 			}
 
 			parsedURL, err := url.Parse(rawURL)
-
 			if err != nil {
 				r.logger.Error("Failed to parse subgraph url", zap.String("url", rawURL), zap.Error(err))
 			}
@@ -696,7 +710,6 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 
 // listenAndServe starts the Server and blocks until the Server is shutdown.
 func (r *Server) listenAndServe() error {
-
 	if err := r.Server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		return err
 	}
