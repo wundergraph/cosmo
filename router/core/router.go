@@ -223,30 +223,44 @@ func NewRouter(opts ...Option) (*Router, error) {
 	return r, nil
 }
 
-func (r *Router) configureSubgraphOverwrites(cfg *nodev1.RouterConfig) error {
+func (r *Router) configureSubgraphOverwrites(cfg *nodev1.RouterConfig) ([]Subgraph, error) {
 	overrides := make(map[string]string)
 
 	// Validate all the URLs first before we start overriding
 	for _, sg := range cfg.Subgraphs {
 		if sg.RoutingUrl == "" {
-			return fmt.Errorf("subgraph '%s' has no routing url", sg.Name)
+			return nil, fmt.Errorf("subgraph '%s' has no routing url", sg.Name)
 		}
 
 		overrideURL, ok := r.overrideRoutingURLConfiguration.Subgraphs[sg.Name]
 
 		if ok && overrideURL != "" {
 			if _, err := url.Parse(overrideURL); err != nil {
-				return fmt.Errorf("failed to parse override url '%s': %w", overrideURL, err)
+				return nil, fmt.Errorf("failed to parse override url '%s': %w", overrideURL, err)
 			}
 
 			overrides[sg.RoutingUrl] = overrideURL
 		}
 	}
 
+	subgraphs := make([]Subgraph, len(cfg.Subgraphs))
 	for _, sg := range cfg.Subgraphs {
 		if overrideURL, ok := overrides[sg.RoutingUrl]; ok {
 			sg.RoutingUrl = overrideURL
 		}
+
+		routingURL := sg.RoutingUrl
+		parsedURL, err := url.Parse(routingURL)
+		if err != nil {
+			r.logger.Error("Failed to parse subgraph url", zap.String("url", routingURL), zap.Error(err))
+		}
+
+		subgraph := Subgraph{
+			Id:   sg.Id,
+			Name: sg.Name,
+			Url:  parsedURL,
+		}
+		subgraphs = append(subgraphs, subgraph)
 	}
 
 	for _, conf := range cfg.EngineConfig.DatasourceConfigurations {
@@ -258,17 +272,12 @@ func (r *Router) configureSubgraphOverwrites(cfg *nodev1.RouterConfig) error {
 		}
 	}
 
-	return nil
+	return subgraphs, nil
 }
 
 // updateServer starts a new Server. It swaps the active Server with a new Server instance when the config has changed.
 // This method is safe for concurrent use. When the router can't be swapped due to an error the old server kept running.
 func (r *Router) updateServer(ctx context.Context, cfg *nodev1.RouterConfig) error {
-	err := r.configureSubgraphOverwrites(cfg)
-	if err != nil {
-		return err
-	}
-
 	// Rebuild Server with new router config
 	// In case of an error, we return early and keep the old Server running
 	newRouter, err := r.newServer(ctx, cfg)
@@ -495,6 +504,11 @@ func (r *Router) Start(ctx context.Context) error {
 // newServer creates a new Server instance.
 // All stateful data is copied from the Router over to the new server instance.
 func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfig) (*Server, error) {
+	subgraphs, err := r.configureSubgraphOverwrites(routerConfig)
+	if err != nil {
+		return nil, err
+	}
+
 	ro := &Server{
 		routerConfig: routerConfig,
 		Config:       r.Config,
@@ -631,23 +645,6 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		}
 
 		subChiRouter.Use(graphqlPreHandler.Handler)
-
-		subgraphs := make([]Subgraph, len(routerConfig.Subgraphs))
-		for _, s := range routerConfig.Subgraphs {
-			routingURL := s.RoutingUrl
-
-			parsedURL, err := url.Parse(s.RoutingUrl)
-			if err != nil {
-				r.logger.Error("Failed to parse subgraph url", zap.String("url", routingURL), zap.Error(err))
-			}
-
-			subgraph := Subgraph{
-				Id:   s.Id,
-				Name: s.Name,
-				Url:  parsedURL,
-			}
-			subgraphs = append(subgraphs, subgraph)
-		}
 
 		// Create custom request context that provides access to the request and response.
 		// It is used by custom modules and handlers. It must be added before custom user middlewares
