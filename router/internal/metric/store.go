@@ -11,11 +11,16 @@ import (
 
 // Server HTTP metrics.
 const (
-	RequestCount          = "router.http.requests"                      // Incoming request count total
-	ServerLatency         = "router.http.request.duration_milliseconds" // Incoming end to end duration, milliseconds
-	RequestContentLength  = "router.http.request.content_length"        // Incoming request bytes total
-	ResponseContentLength = "router.http.response.content_length"       // Outgoing response bytes total
-	InFlightRequests      = "router.http.requests.in_flight.count"      // Number of requests in flight
+	RequestCounter                = "router.http.requests"                      // Incoming request count total
+	ServerLatencyHistogram        = "router.http.request.duration_milliseconds" // Incoming end to end duration, milliseconds
+	RequestContentLengthCounter   = "router.http.request.content_length"        // Incoming request bytes total
+	ResponseContentLengthCounter  = "router.http.response.content_length"       // Outgoing response bytes total
+	InFlightRequestsUpDownCounter = "router.http.requests.in_flight.count"      // Number of requests in flight
+
+	cosmoRouterMeterName = "cosmo.router"
+
+	unitBytes        = "bytes"
+	unitMilliseconds = "ms"
 )
 
 type Option func(svr *Metrics)
@@ -55,52 +60,54 @@ func (h *Metrics) createMeasures() error {
 	h.valueRecorders = make(map[string]otelmetric.Float64Histogram)
 	h.upDownCounters = make(map[string]otelmetric.Int64UpDownCounter)
 
-	routerMeter := h.meterProvider.Meter("cosmo.router")
+	routerMeter := h.meterProvider.Meter(cosmoRouterMeterName)
 	requestCounter, err := routerMeter.Int64Counter(
-		RequestCount,
+		RequestCounter,
 		otelmetric.WithDescription("Total number of requests"),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create request counter: %w", err)
 	}
-	h.counters[RequestCount] = requestCounter
+	h.counters[RequestCounter] = requestCounter
 
 	serverLatencyMeasure, err := routerMeter.Float64Histogram(
-		ServerLatency,
+		ServerLatencyHistogram,
+		otelmetric.WithUnit("ms"),
 		otelmetric.WithDescription("Server latency in milliseconds"),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create server latency measure: %w", err)
 	}
-	h.valueRecorders[ServerLatency] = serverLatencyMeasure
+	h.valueRecorders[ServerLatencyHistogram] = serverLatencyMeasure
 
 	requestContentLengthCounter, err := routerMeter.Int64Counter(
-		RequestContentLength,
+		RequestContentLengthCounter,
 		otelmetric.WithDescription("Total number of request bytes"),
+		otelmetric.WithUnit("bytes"),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create request content length counter: %w", err)
 	}
-	h.counters[RequestContentLength] = requestContentLengthCounter
+	h.counters[RequestContentLengthCounter] = requestContentLengthCounter
 
 	responseContentLengthCounter, err := routerMeter.Int64Counter(
-		ResponseContentLength,
+		ResponseContentLengthCounter,
 		otelmetric.WithDescription("Total number of response bytes"),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create response content length counter: %w", err)
 	}
 
-	h.counters[ResponseContentLength] = responseContentLengthCounter
+	h.counters[ResponseContentLengthCounter] = responseContentLengthCounter
 
 	inFlightRequestsGauge, err := routerMeter.Int64UpDownCounter(
-		InFlightRequests,
+		InFlightRequestsUpDownCounter,
 		otelmetric.WithDescription("Number of requests in flight"),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create in flight requests gauge: %w", err)
 	}
-	h.upDownCounters[InFlightRequests] = inFlightRequestsGauge
+	h.upDownCounters[InFlightRequestsUpDownCounter] = inFlightRequestsGauge
 
 	return nil
 }
@@ -112,10 +119,10 @@ func (h *Metrics) MeasureInFlight(r *http.Request) func() {
 
 	baseAttributes := otelmetric.WithAttributes(baseKeys...)
 
-	h.upDownCounters[InFlightRequests].Add(r.Context(), 1, baseAttributes)
+	h.upDownCounters[InFlightRequestsUpDownCounter].Add(r.Context(), 1, baseAttributes)
 
 	return func() {
-		h.upDownCounters[InFlightRequests].Add(r.Context(), -1, baseAttributes)
+		h.upDownCounters[InFlightRequestsUpDownCounter].Add(r.Context(), -1, baseAttributes)
 	}
 }
 
@@ -127,7 +134,7 @@ func (h *Metrics) MeasureRequestCount(r *http.Request, attr ...attribute.KeyValu
 
 	baseAttributes := otelmetric.WithAttributes(baseKeys...)
 
-	h.counters[RequestCount].Add(r.Context(), 1, baseAttributes)
+	h.counters[RequestCounter].Add(r.Context(), 1, baseAttributes)
 }
 
 func (h *Metrics) MeasureRequestSize(r *http.Request, attr ...attribute.KeyValue) {
@@ -138,7 +145,7 @@ func (h *Metrics) MeasureRequestSize(r *http.Request, attr ...attribute.KeyValue
 
 	baseAttributes := otelmetric.WithAttributes(baseKeys...)
 
-	h.counters[RequestContentLength].Add(r.Context(), r.ContentLength, baseAttributes)
+	h.counters[RequestContentLengthCounter].Add(r.Context(), r.ContentLength, baseAttributes)
 }
 
 func (h *Metrics) MeasureResponseSize(r *http.Request, size int64, attr ...attribute.KeyValue) {
@@ -149,7 +156,7 @@ func (h *Metrics) MeasureResponseSize(r *http.Request, size int64, attr ...attri
 
 	baseAttributes := otelmetric.WithAttributes(baseKeys...)
 
-	h.counters[ResponseContentLength].Add(r.Context(), size, baseAttributes)
+	h.counters[ResponseContentLengthCounter].Add(r.Context(), size, baseAttributes)
 }
 
 func (h *Metrics) MeasureLatency(r *http.Request, requestStartTime time.Time, statusCode int, attr ...attribute.KeyValue) {
@@ -164,7 +171,7 @@ func (h *Metrics) MeasureLatency(r *http.Request, requestStartTime time.Time, st
 
 	// Use floating point division here for higher precision (instead of Millisecond method).
 	elapsedTime := float64(time.Since(requestStartTime)) / float64(time.Millisecond)
-	h.valueRecorders[ServerLatency].Record(ctx, elapsedTime, baseAttributes)
+	h.valueRecorders[ServerLatencyHistogram].Record(ctx, elapsedTime, baseAttributes)
 }
 
 // WithAttributes adds attributes to the base attributes
