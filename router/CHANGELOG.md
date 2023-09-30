@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.22.1](https://github.com/wundergraph/cosmo/compare/router@0.22.0...router@0.22.1) (2023-09-30)
+
+### Bug Fixes
+
+* add operation attrs to request latency metric ([#143](https://github.com/wundergraph/cosmo/issues/143)) ([619326a](https://github.com/wundergraph/cosmo/commit/619326afe10dc62848cdb4785a2becefe9dddc7a)) (@StarpTech)
+
 # [0.22.0](https://github.com/wundergraph/cosmo/compare/router@0.21.2...router@0.22.0) (2023-09-29)
 
 ### Bug Fixes
