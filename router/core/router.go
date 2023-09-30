@@ -223,7 +223,7 @@ func NewRouter(opts ...Option) (*Router, error) {
 	return r, nil
 }
 
-func configureSubgraphOverwrites(subgraphs map[string]string, cfg *nodev1.RouterConfig) error {
+func (r *Router) configureSubgraphOverwrites(cfg *nodev1.RouterConfig) error {
 	overrides := make(map[string]string)
 
 	// Validate all the URLs first before we start overriding
@@ -232,7 +232,7 @@ func configureSubgraphOverwrites(subgraphs map[string]string, cfg *nodev1.Router
 			return fmt.Errorf("subgraph '%s' has no routing url", sg.Name)
 		}
 
-		overrideURL, ok := subgraphs[sg.Name]
+		overrideURL, ok := r.overrideRoutingURLConfiguration.Subgraphs[sg.Name]
 
 		if ok && overrideURL != "" {
 			if _, err := url.Parse(overrideURL); err != nil {
@@ -264,7 +264,7 @@ func configureSubgraphOverwrites(subgraphs map[string]string, cfg *nodev1.Router
 // updateServer starts a new Server. It swaps the active Server with a new Server instance when the config has changed.
 // This method is safe for concurrent use. When the router can't be swapped due to an error the old server kept running.
 func (r *Router) updateServer(ctx context.Context, cfg *nodev1.RouterConfig) error {
-	err := configureSubgraphOverwrites(r.overrideRoutingURLConfiguration.Subgraphs, cfg)
+	err := r.configureSubgraphOverwrites(cfg)
 	if err != nil {
 		return err
 	}
@@ -634,16 +634,11 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 
 		subgraphs := make([]Subgraph, len(routerConfig.Subgraphs))
 		for _, s := range routerConfig.Subgraphs {
-			rawURL := s.RoutingUrl
+			routingURL := s.RoutingUrl
 
-			overrideURL, overrideFound := r.overrideRoutingURLConfiguration.Subgraphs[s.Name]
-			if overrideFound {
-				rawURL = overrideURL
-			}
-
-			parsedURL, err := url.Parse(rawURL)
+			parsedURL, err := url.Parse(s.RoutingUrl)
 			if err != nil {
-				r.logger.Error("Failed to parse subgraph url", zap.String("url", rawURL), zap.Error(err))
+				r.logger.Error("Failed to parse subgraph url", zap.String("url", routingURL), zap.Error(err))
 			}
 
 			subgraph := Subgraph{
