@@ -157,7 +157,7 @@ func traceConfig(cfg *config.Telemetry) *trace.Config {
 
 func metricsConfig(cfg *config.Telemetry) *metric.Config {
 	var openTelemetryExporters []*metric.OpenTelemetryExporter
-	for _, exp := range cfg.Metrics.OpenTelemetry.Exporters {
+	for _, exp := range cfg.Metrics.OTLP.Exporters {
 		openTelemetryExporters = append(openTelemetryExporters, &metric.OpenTelemetryExporter{
 			Endpoint: exp.Endpoint,
 			Exporter: exp.Exporter,
@@ -167,10 +167,10 @@ func metricsConfig(cfg *config.Telemetry) *metric.Config {
 	}
 
 	return &metric.Config{
-		Enabled: cfg.Metrics.Common.Enabled,
+		Enabled: cfg.Metrics.OTLP.Enabled || cfg.Metrics.Prometheus.Enabled,
 		Name:    cfg.ServiceName,
 		OpenTelemetry: metric.OpenTelemetry{
-			Enabled:   cfg.Metrics.OpenTelemetry.Enabled,
+			Enabled:   cfg.Metrics.OTLP.Enabled,
 			Exporters: openTelemetryExporters,
 		},
 		Prometheus: metric.Prometheus{

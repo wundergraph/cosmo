@@ -61,12 +61,7 @@ type Prometheus struct {
 	ListenAddr string `yaml:"listen_addr" default:"127.0.0.1:8088" validate:"hostname_port" envconfig:"PROMETHEUS_LISTEN_ADDR"`
 }
 
-type MetricsOpenTelemetry struct {
-	Enabled   bool                           `yaml:"enabled" default:"true" envconfig:"METRICS_OPENTELEMETRY_ENABLED"`
-	Exporters []MetricsOpenTelemetryExporter `yaml:"exporters"`
-}
-
-type MetricsOpenTelemetryExporter struct {
+type MetricsOTLPExporter struct {
 	Exporter otelconfig.Exporter `yaml:"exporter" validate:"oneof=otlphttp otlpgrpc"`
 	Endpoint string              `yaml:"endpoint" validate:"http_url"`
 	HTTPPath string              `yaml:"path"`
@@ -74,13 +69,13 @@ type MetricsOpenTelemetryExporter struct {
 }
 
 type Metrics struct {
-	Common        MetricsCommon        `yaml:"common"`
-	OpenTelemetry MetricsOpenTelemetry `yaml:"opentelemetry"`
-	Prometheus    Prometheus           `yaml:"prometheus"`
+	OTLP       MetricsOTLP `yaml:"otlp"`
+	Prometheus Prometheus  `yaml:"prometheus"`
 }
 
-type MetricsCommon struct {
-	Enabled bool `yaml:"enabled" default:"true" envconfig:"METRICS_ENABLED"`
+type MetricsOTLP struct {
+	Enabled   bool                  `yaml:"enabled" default:"true" envconfig:"METRICS_OTLP_ENABLED"`
+	Exporters []MetricsOTLPExporter `yaml:"exporters"`
 }
 
 type Telemetry struct {
