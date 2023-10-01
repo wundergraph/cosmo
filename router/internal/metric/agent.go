@@ -27,7 +27,7 @@ func StartAgent(ctx context.Context, log *zap.Logger, c *Config) (*sdkmetric.Met
 }
 
 func createPromExporter() (*prometheus.Exporter, error) {
-	prometheusExporter, err := prometheus.New()
+	prometheusExporter, err := prometheus.New(prometheus.WithoutUnits())
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +106,7 @@ func startAgent(ctx context.Context, log *zap.Logger, c *Config) (*sdkmetric.Met
 
 		msBucketHistogram := aggregation.ExplicitBucketHistogram{
 			// 0ms-5min
-			Boundaries: []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000, 15000, 20000, 30000, 60000, 300000},
+			Boundaries: []float64{0, 5, 10, 25, 50, 75, 100, 200, 300, 400, 500, 650, 800, 950, 1100, 1250, 1400, 1550, 1700, 1850, 2000, 2500, 3000, 5000, 10000, 15000, 20000, 30000, 60000, 300000},
 		}
 		bytesBucketHistogram := aggregation.ExplicitBucketHistogram{
 			// 0kb-5MB
