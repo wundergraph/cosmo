@@ -42,7 +42,7 @@ type TracingExporterConfig struct {
 }
 
 type TracingExporter struct {
-	Exporter              otelconfig.Exporter `yaml:"exporter" validate:"oneof=otlphttp otlpgrpc"`
+	Exporter              otelconfig.Exporter `yaml:"exporter" validate:"oneof=http grpc"`
 	Endpoint              string              `yaml:"endpoint" validate:"http_url"`
 	HTTPPath              string              `yaml:"path"`
 	Headers               map[string]string   `yaml:"headers"`
@@ -62,7 +62,7 @@ type Prometheus struct {
 }
 
 type MetricsOTLPExporter struct {
-	Exporter otelconfig.Exporter `yaml:"exporter" validate:"oneof=otlphttp otlpgrpc"`
+	Exporter otelconfig.Exporter `yaml:"exporter" validate:"oneof=http grpc"`
 	Endpoint string              `yaml:"endpoint" validate:"http_url"`
 	HTTPPath string              `yaml:"path"`
 	Headers  map[string]string   `yaml:"headers"`

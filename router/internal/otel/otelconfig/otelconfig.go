@@ -5,9 +5,9 @@ import "os"
 type Exporter string
 
 const (
-	ExporterDefault  Exporter = "" // Use otlphttp
-	ExporterOLTPHTTP Exporter = "otlphttp"
-	ExporterOLTPGRPC Exporter = "otlpgrpc"
+	ExporterDefault  Exporter = "" // Use ExporterOLTPHTTP
+	ExporterOLTPHTTP Exporter = "http"
+	ExporterOLTPGRPC Exporter = "grpc"
 )
 
 // DefaultEndpoint is the default endpoint used by subsystems that
