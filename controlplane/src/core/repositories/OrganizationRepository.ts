@@ -8,6 +8,7 @@ import {
   organizationWebhooks,
   organizations,
   organizationsMembers,
+  targets,
   users,
 } from '../../db/schema.js';
 import { APIKeyDTO, MemberRole, OrganizationDTO, OrganizationMemberDTO, WebhooksConfigDTO } from '../../types/index.js';
@@ -41,6 +42,9 @@ export class OrganizationRepository {
         id: organizations.id,
         name: organizations.name,
         slug: organizations.slug,
+        creatorUserId: organizations.createdBy,
+        createdAt: organizations.createdAt,
+        isFreeTrial: organizations.isFreeTrial,
       })
       .from(organizations)
       .where(eq(organizations.slug, slug))
@@ -51,7 +55,14 @@ export class OrganizationRepository {
       return null;
     }
 
-    return org[0];
+    return {
+      id: org[0].id,
+      name: org[0].name,
+      slug: org[0].slug,
+      isFreeTrial: org[0].isFreeTrial || false,
+      creatorUserId: org[0].creatorUserId,
+      createdAt: org[0].createdAt.toISOString(),
+    };
   }
 
   public async byId(id: string): Promise<OrganizationDTO | null> {
@@ -60,6 +71,9 @@ export class OrganizationRepository {
         id: organizations.id,
         name: organizations.name,
         slug: organizations.slug,
+        creatorUserId: organizations.createdBy,
+        createdAt: organizations.createdAt,
+        isFreeTrial: organizations.isFreeTrial,
       })
       .from(organizations)
       .where(eq(organizations.id, id))
@@ -70,7 +84,14 @@ export class OrganizationRepository {
       return null;
     }
 
-    return org[0];
+    return {
+      id: org[0].id,
+      name: org[0].name,
+      slug: org[0].slug,
+      isFreeTrial: org[0].isFreeTrial || false,
+      creatorUserId: org[0].creatorUserId,
+      createdAt: org[0].createdAt.toISOString(),
+    };
   }
 
   public async memberships(input: { userId: string }): Promise<(OrganizationDTO & { roles: string[] })[]> {
@@ -79,8 +100,10 @@ export class OrganizationRepository {
         id: organizations.id,
         name: organizations.name,
         slug: organizations.slug,
+        creatorUserId: organizations.createdBy,
         isFreeTrial: organizations.isFreeTrial,
         isPersonal: organizations.isPersonal,
+        createdAt: organizations.createdAt,
       })
       .from(organizationsMembers)
       .innerJoin(organizations, eq(organizations.id, organizationsMembers.organizationId))
@@ -93,6 +116,8 @@ export class OrganizationRepository {
         id: org.id,
         name: org.name,
         slug: org.slug,
+        creatorUserId: org.creatorUserId,
+        createdAt: org.createdAt.toISOString(),
         isFreeTrial: org.isFreeTrial || false,
         isPersonal: org.isPersonal || false,
         roles: await this.getOrganizationMemberRoles({
@@ -111,7 +136,7 @@ export class OrganizationRepository {
   }): Promise<OrganizationMemberDTO | null> {
     const orgMember = await this.db
       .select({
-        id: users.id,
+        userID: users.id,
         email: users.email,
         acceptedInvite: organizationsMembers.acceptedInvite,
         memberID: organizationsMembers.id,
@@ -132,7 +157,8 @@ export class OrganizationRepository {
     });
 
     return {
-      id: orgMember[0].id,
+      userID: orgMember[0].userID,
+      orgMemberID: orgMember[0].memberID,
       email: orgMember[0].email,
       roles: userRoles,
       acceptedInvite: orgMember[0].acceptedInvite,
@@ -142,7 +168,7 @@ export class OrganizationRepository {
   public async getMembers(input: { organizationID: string }): Promise<OrganizationMemberDTO[]> {
     const orgMembers = await this.db
       .select({
-        id: users.id,
+        userID: users.id,
         email: users.email,
         acceptedInvite: organizationsMembers.acceptedInvite,
         memberID: organizationsMembers.id,
@@ -164,7 +190,8 @@ export class OrganizationRepository {
         .where(eq(organizationMemberRoles.organizationMemberId, member.memberID))
         .execute();
       members.push({
-        id: member.id,
+        userID: member.userID,
+        orgMemberID: member.memberID,
         email: member.email,
         roles: roles.map((role) => role.role),
         acceptedInvite: member.acceptedInvite,
@@ -198,7 +225,20 @@ export class OrganizationRepository {
       id: insertedOrg[0].id,
       name: insertedOrg[0].name,
       slug: insertedOrg[0].slug,
+      creatorUserId: insertedOrg[0].createdBy,
+      createdAt: insertedOrg[0].createdAt.toISOString(),
     };
+  }
+
+  public async updateOrganization(input: { id: string; slug?: string; name?: string }) {
+    await this.db
+      .update(organizations)
+      .set({
+        name: input.name,
+        slug: input.slug,
+      })
+      .where(eq(organizations.id, input.id))
+      .execute();
   }
 
   public async addOrganizationMember(input: { userID: string; organizationID: string; acceptedInvite: boolean }) {
@@ -418,5 +458,42 @@ export class OrganizationRepository {
     await this.db
       .delete(organizationWebhooks)
       .where(and(eq(organizationWebhooks.id, input.id), eq(organizationWebhooks.organizationId, input.organizationId)));
+  }
+
+  public async deleteOrganization(organizationID: string) {
+    await this.db.transaction(async (db) => {
+      const orgRepo = new OrganizationRepository(db);
+
+      await orgRepo.deleteOrganizationResources(organizationID);
+
+      await db.delete(organizations).where(eq(organizations.id, organizationID)).execute();
+    });
+  }
+
+  public async updateUserRole(input: { orgMemberID: string; organizationID: string; role: MemberRole }) {
+    await this.db
+      .update(organizationMemberRoles)
+      .set({ role: input.role })
+      .where(eq(organizationMemberRoles.organizationMemberId, input.orgMemberID));
+  }
+
+  public async getOrganizationAdmins(input: { organizationID: string }): Promise<OrganizationMemberDTO[]> {
+    const orgAdmins: OrganizationMemberDTO[] = [];
+    const orgMembers = await this.getMembers({ organizationID: input.organizationID });
+
+    for (const member of orgMembers) {
+      if (member.roles.includes('admin')) {
+        orgAdmins.push(member);
+      }
+    }
+
+    return orgAdmins;
+  }
+
+  public async deleteOrganizationResources(organizationID: string) {
+    await this.db.transaction(async (db) => {
+      await db.delete(apiKeys).where(eq(apiKeys.organizationId, organizationID)).execute();
+      await db.delete(targets).where(eq(targets.organizationId, organizationID)).execute();
+    });
   }
 }

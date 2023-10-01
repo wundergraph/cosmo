@@ -1,3 +1,4 @@
+import { UserContext } from "@/components/app-provider";
 import { DatePickerWithRange } from "@/components/date-picker-with-range";
 import { EmptyState } from "@/components/empty-state";
 import { getGraphLayout } from "@/components/layout/graph-layout";
@@ -28,7 +29,7 @@ import {
 import { noCase } from "change-case";
 import { endOfDay, format, formatISO, startOfDay, subDays } from "date-fns";
 import { useRouter } from "next/router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useContext, useEffect, useState } from "react";
 import { DateRange } from "react-day-picker";
 
 const Toolbar = () => {
@@ -195,7 +196,7 @@ const Changes = ({ changes }: { changes: FederatedGraphChangelog[] }) => {
 
 const ChangelogPage: NextPageWithLayout = () => {
   const router = useRouter();
-
+  const [user] = useContext(UserContext);
   const limit = 10;
   const [items, setItems] = useState<FederatedGraphChangelogOutput[]>([]);
   const [offset, setOffset] = useState(0);
@@ -300,7 +301,11 @@ const ChangelogPage: NextPageWithLayout = () => {
 
   return (
     <div className="relative h-full w-full">
-      <div className="sticky top-[184px] z-20 h-0 overflow-visible">
+      <div
+        className={cn("sticky top-[184px] z-20 h-0 overflow-visible", {
+          "top-[216px]": user?.currentOrganization.isFreeTrial,
+        })}
+      >
         <div className="absolute right-0 hidden w-[280px] grid-cols-2 rounded border bg-card px-4 py-2 lg:grid">
           <h2 className="text-sm font-semibold">Jump to log</h2>
           <div className="scrollbar-custom flex max-h-96 flex-col overflow-y-auto text-xs">

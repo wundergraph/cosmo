@@ -67,6 +67,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 					r,
 					requestStartTime,
 					statusCode,
+					baseFields...,
 				)
 				h.requestMetrics.MeasureResponseSize(r, int64(writtenBytes), baseFields...)
 			}()
