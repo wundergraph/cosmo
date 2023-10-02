@@ -58,7 +58,7 @@ const BarList = React.forwardRef<HTMLDivElement, BarListProps>((props, ref) => {
 
   if (data.length === 0) {
     return (
-      <div className="flex flex-1 items-center justify-center italic text-muted-foreground">
+      <div className="flex flex-1 items-center justify-center italic text-muted-foreground text-sm py-2">
         No data available
       </div>
     );

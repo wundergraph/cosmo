@@ -33,7 +33,7 @@ import {
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { MetricsDashboardMetric } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { useRouter } from "next/router";
-import React, { useContext, useId } from "react";
+import React, { useContext, useEffect, useId } from "react";
 import {
   Area,
   AreaChart,
@@ -47,6 +47,7 @@ import { InfoTooltip } from "@/components/info-tooltip";
 import useWindowSize from "@/hooks/use-window-size";
 import { endOfDay, formatISO, startOfDay, subHours } from "date-fns";
 import { UpdateIcon } from "@radix-ui/react-icons";
+import { useSessionStorage } from "@/hooks/use-session-storage";
 
 export type OperationAnalytics = {
   name: string;
@@ -58,7 +59,15 @@ export type OperationAnalytics = {
 const useRange = () => {
   const router = useRouter();
 
-  const range = parseInt(router.query.range?.toString() ?? "24");
+  const [storedRange, setRange] = useSessionStorage('analytics.range', 24)
+
+  const range = router.query.range ? parseInt(router.query.range?.toString()) || storedRange : storedRange;
+
+  useEffect(() => {
+    if (range !== storedRange) {
+      setRange(range)
+    }
+  }, [range, storedRange])
 
   switch (range) {
     case 24:
