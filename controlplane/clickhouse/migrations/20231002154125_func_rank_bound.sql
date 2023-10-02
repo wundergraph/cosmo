@@ -1,6 +1,6 @@
 -- migrate:up
 
-CREATE FUNCTION func_rank_bound as (rank,buckets,bounds) -> arraySlice(bounds,arrayFirstIndex(x -> if(x > rank, 1, 0),arrayCumSum(buckets)),2);
+CREATE FUNCTION func_rank_bound as (rank,bucketLowerIndex,buckets,bounds) -> arraySlice(bounds,bucketLowerIndex,2);
 
 -- migrate:down
 
