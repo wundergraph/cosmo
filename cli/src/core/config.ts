@@ -14,7 +14,7 @@ const paths = envPaths('cosmo', { suffix: '' });
 export const configDir = paths.config;
 export const configFile = path.join(configDir, 'config.yaml');
 
-const getLoginDetails = (): {accessToken: string; organizationSlug: string} | null => {
+const getLoginDetails = (): { accessToken: string; organizationSlug: string } | null => {
   try {
     const data = yaml.load(readFileSync(configFile, 'utf8'));
     const loginData = JSON.parse(JSON.stringify(data));
