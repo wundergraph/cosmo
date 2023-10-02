@@ -11,12 +11,12 @@ CREATE MATERIALIZED VIEW IF NOT EXISTS cosmo.operation_latency_metrics_5_30_mv (
    OrganizationID LowCardinality(String) CODEC(ZSTD(1)),
    ClientName LowCardinality(String) CODEC (ZSTD(1)),
    ClientVersion LowCardinality(String) CODEC (ZSTD(1)),
-   BucketCounts Array(UInt64) CODEC(ZSTD(1)),
+   BucketCounts AggregateFunction(sumForEach, Array(UInt64)) CODEC(ZSTD(1)),
    ExplicitBounds Array(Float64) CODEC(ZSTD(1)),
-   Sum Float64 CODEC(ZSTD(1)),
-   Count Float64 CODEC(ZSTD(1)),
-   MinDuration Float64 CODEC(ZSTD(1)),
-   MaxDuration Float64 CODEC(ZSTD(1)),
+   Sum AggregateFunction(sum, Float64) CODEC(ZSTD(1)),
+   Count AggregateFunction(sum, UInt64) CODEC(ZSTD(1)),
+   MinDuration AggregateFunction(min, Float64) CODEC(ZSTD(1)),
+   MaxDuration AggregateFunction(max, Float64) CODEC(ZSTD(1)),
    IsSubscription Bool CODEC(ZSTD(1))
 )
 ENGINE = SummingMergeTree
@@ -37,13 +37,13 @@ SELECT
     Attributes [ 'wg.client.name' ] as ClientName,
     Attributes [ 'wg.client.version' ] as ClientVersion,
     -- Sum up the bucket counts on the same index which produces the overall count of samples of the histogram
-    sumForEach(BucketCounts) as BucketCounts,
+    sumForEachState(BucketCounts) as BucketCounts,
     -- Populate the bounds so we have a base value for quantile calculations
     ExplicitBounds,
-    sum(Sum) AS Sum,
-    sum(Count) AS Count,
-    max(Max) AS Max,
-    min(Min) AS Min,
+    sumState(Sum) AS Sum,
+    sumState(Count) AS Count,
+    minState(Min) AS Min,
+    maxState(Max) AS Max,
     mapContains(Attributes, 'wg.subscription') as IsSubscription
 FROM otel_metrics_histogram
 -- Only works with the same bounds for all buckets. If bounds are different, we can't add them together
