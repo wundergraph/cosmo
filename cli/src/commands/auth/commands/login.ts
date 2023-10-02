@@ -41,7 +41,13 @@ export default (opts: BaseCommandOptions) => {
       program.error('Could not perform authentication. Please try again');
     }
 
-    const decoded = jwtDecode<DecodedAccessToken>(accessTokenResp.response.accessToken);
+    let decoded: DecodedAccessToken;
+
+    try {
+      decoded = jwtDecode<DecodedAccessToken>(accessTokenResp.response.accessToken);
+    } catch {
+      program.error('Could not perform authentication. Please try again');
+    }
 
     const organizations = decoded.groups.map((group) => group.split('/')[1]);
 
