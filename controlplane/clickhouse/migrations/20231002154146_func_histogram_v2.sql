@@ -6,7 +6,7 @@
 -- CREATE FUNCTION func_rank_in_bucket_position as (rank,bucketLowerIndex,buckets) -> minus(rank,arrayElement(arrayCumSum(buckets),minus(bucketLowerIndex,1)))
 
 CREATE FUNCTION func_histogram_v2 as (rank,bucketLowerIndex,rank_bound,buckets,bounds) ->
-    -- When +inf is matched, we return the last bucket's upper bound
+    -- When +inf is the lowest bound, we return the last bucket's upper bound
     if(bucketLowerIndex = length(buckets), bounds[length(bounds)],
        -- else
        rank_bound[1] + (rank_bound[2] - rank_bound[1]) *
@@ -17,4 +17,3 @@ CREATE FUNCTION func_histogram_v2 as (rank,bucketLowerIndex,rank_bound,buckets,b
 -- migrate:down
 
 DROP FUNCTION func_histogram_v2;
-

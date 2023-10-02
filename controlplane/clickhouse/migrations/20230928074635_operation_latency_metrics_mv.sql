@@ -13,10 +13,10 @@ CREATE MATERIALIZED VIEW IF NOT EXISTS cosmo.operation_latency_metrics_5_30_mv (
    ClientVersion LowCardinality(String) CODEC (ZSTD(1)),
    BucketCounts AggregateFunction(sumForEach, Array(UInt64)) CODEC(ZSTD(1)),
    ExplicitBounds Array(Float64) CODEC(ZSTD(1)),
-   Sum AggregateFunction(sum, Float64) CODEC(ZSTD(1)),
-   Count AggregateFunction(sum, UInt64) CODEC(ZSTD(1)),
-   MinDuration AggregateFunction(min, Float64) CODEC(ZSTD(1)),
-   MaxDuration AggregateFunction(max, Float64) CODEC(ZSTD(1)),
+   Sum Float64 CODEC(ZSTD(1)),
+   Count UInt64 CODEC(ZSTD(1)),
+   MinDuration Float64 CODEC(ZSTD(1)),
+   MaxDuration Float64 CODEC(ZSTD(1)),
    IsSubscription Bool CODEC(ZSTD(1))
 )
 ENGINE = SummingMergeTree
@@ -40,10 +40,10 @@ SELECT
     sumForEachState(BucketCounts) as BucketCounts,
     -- Populate the bounds so we have a base value for quantile calculations
     ExplicitBounds,
-    sumState(Sum) AS Sum,
-    sumState(Count) AS Count,
-    minState(Min) AS Min,
-    maxState(Max) AS Max,
+    sum(Sum) AS Sum,
+    sum(Count) AS Count,
+    min(Min) AS Min,
+    max(Max) AS Max,
     mapContains(Attributes, 'wg.subscription') as IsSubscription
 FROM otel_metrics_histogram
 -- Only works with the same bounds for all buckets. If bounds are different, we can't add them together
