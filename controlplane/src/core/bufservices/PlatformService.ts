@@ -1248,7 +1248,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const repo = new MetricsDashboardRepository(opts.prometheus);
+        const repo = new MetricsDashboardRepository(opts.chClient);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
 
         const graph = await fedGraphRepo.byName(req.federatedGraphName);
@@ -1300,7 +1300,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const repo = new MetricsDashboardRepository(opts.prometheus);
+        const repo = new MetricsDashboardRepository(opts.chClient);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
 
         const graph = await fedGraphRepo.byName(req.federatedGraphName);

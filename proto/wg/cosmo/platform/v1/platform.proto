@@ -716,9 +716,15 @@ message GetMetricsErrorRateRequest {
 
 message GetMetricsErrorRateResponse {
   Response response = 1;
-  repeated MetricsSeriesItem series = 2;
-  repeated MetricsSeriesItem errorSeries = 3;
+  repeated MetricsErrorRateSeriesItem series = 2;
 }
+
+message MetricsErrorRateSeriesItem {
+  string timestamp = 1;
+  float requestRate = 2;
+  float errorRate = 3;
+}
+
 
 service PlatformService {
   // CreateFederatedGraph creates a federated graph on the control plane.

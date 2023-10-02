@@ -1,4 +1,4 @@
-import PrometheusClient from 'src/core/prometheus/client.js';
+import { ClickHouseClient } from 'src/core/clickhouse/index.js';
 import { QueryResultType, Response } from 'src/core/prometheus/types.js';
 
 const getEndDate = () => {
@@ -7,8 +7,40 @@ const getEndDate = () => {
   now.setSeconds(59);
   now.setMilliseconds(999);
 
-  // round up to whole minutes
   return Math.round(now.getTime() / 1000) * 1000;
+};
+
+// parse a Date to ISO9075 format in UTC, as used by Clickhouse
+const toISO9075 = (date: Date): string => {
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(date.getUTCDate()).padStart(2, '0');
+  const hours = String(date.getUTCHours()).padStart(2, '0');
+  const minutes = String(date.getUTCMinutes()).padStart(2, '0');
+  const seconds = String(date.getUTCSeconds()).padStart(2, '0');
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+};
+
+const getUnixTimeInSeconds = (timestamp: Date | number, offset?: number) => {
+  let date: number;
+  if (timestamp instanceof Date) {
+    date = timestamp.getTime();
+  } else {
+    date = timestamp;
+  }
+
+  if (offset) {
+    date = date - offset * 60 * 60 * 1000;
+  }
+
+  return Math.round(date / 1000);
+};
+
+const getDateRange = (endDate: Date | number, range: number, offset = 0) => {
+  const start = getUnixTimeInSeconds(endDate, range + offset);
+  const end = getUnixTimeInSeconds(endDate, offset);
+
+  return [start, end];
 };
 
 const getStep = (range: number) => {
@@ -46,90 +78,38 @@ const getPRange = (range: number) => {
   switch (range) {
     case 168: {
       // 7 days
-      return '4h'; // 4H
+      return '240'; // 4H
     }
     case 72: {
       // 3 days
-      return '30m'; // 30 min
+      return '30'; // 30 min
     }
     case 48: {
       // 2 days
-      return '15m'; // 15min
+      return '15'; // 15min
     }
     case 24: {
       // 1 day
-      return '5m'; // 5m
+      return '5'; // 5m
     }
     case 4: {
-      return '5m'; // 1m
+      return '5'; // 1m
     }
     case 1: {
       // 1 hour
-      return '1m'; // 1m
+      return '1'; // 1m
     }
   }
 
   return '1m';
 };
 
-const createTimeRange = (endDate: number, rangeInHours: number): Array<{ timestamp: string }> => {
-  const range = [];
-
-  const startTimestamp = endDate;
-
-  let step = 60;
-  switch (rangeInHours) {
-    case 168: {
-      step = 60;
-      break;
-    }
-    case 72: {
-      step = 15;
-      break;
-    }
-    case 48: {
-      step = 15;
-      break;
-    }
-    case 24: {
-      step = 5;
-      break;
-    }
-    case 4: {
-      step = 5;
-      break;
-    }
-    case 1: {
-      step = 1;
-      break;
-    }
+const parseValue = (value?: string | number | null) => {
+  if (typeof value === 'number') {
+    return String(value);
   }
-
-  const x = (60 / step) * rangeInHours;
-
-  for (let i = 0; i <= x; i++) {
-    range.unshift({
-      timestamp: String(startTimestamp - i * step * 60 * 1000),
-    });
-  }
-
-  return range;
+  return value || '0';
 };
-
-const parseValue = (value?: string) => {
-  return !value || value === 'NaN' || value === '+Inf' ? '0' : value;
-};
-
-interface GetRangeQueryPropsOptions {
-  /**
-   * Range in hours
-   */
-  range: number;
-  /**
-   * End date in milliseconds
-   */
-  endDate: number;
-}
 
 interface MetricsParams {
   organizationId: string;
@@ -144,7 +124,7 @@ interface GetMetricsProps {
 }
 
 export class MetricsDashboardRepository {
-  constructor(private client: PrometheusClient) {}
+  constructor(private chClient: ClickHouseClient) {}
 
   protected async getResponses<Queries extends Promise<Response<QueryResultType.Scalar | QueryResultType.Matrix>>[]>(
     ...queries: Queries
@@ -180,64 +160,106 @@ export class MetricsDashboardRepository {
   public async getRequestRateMetrics({ range = 24, endDate = getEndDate(), params }: GetMetricsProps) {
     const prange = getPRange(range);
 
-    // get median RPM requests in last [range]h
-    const rate = this.client.query({
-      query: `quantile(0.5, sum(rate(cosmo_router_http_requests_total{${this.getQueryLabels(
-        params,
-      )}}[${range}h])) * 60)`,
-    });
+    const [start, end] = getDateRange(endDate, range);
+    const [prevStart, prevEnd] = getDateRange(endDate, range, range);
 
-    const prevRate = this.client.query({
-      query: `quantile(0.5, sum(rate(cosmo_router_http_requests_total{${this.getQueryLabels(
-        params,
-      )}}[${range}h] offset ${range}h)) * 60)`,
-    });
+    // get median request rate in last [range]h
+    const medianRate = this.chClient.queryPromise<{ medianRate: number | null }>(`
+      SELECT round(quantileDeterministic(0.5)(rate, 1) / 60, 4) AS medianRate FROM (
+        SELECT
+          toDateTime('${start}') AS startDate,
+          toDateTime('${end}') AS endDate,
+          sum(TotalRequests) / 5 AS rate
+        FROM operation_request_metrics_5_30_mv
+        WHERE Timestamp >= startDate AND Timestamp <= endDate
+          AND OrganizationID = '${params.organizationId}'
+          AND FederatedGraphID = '${params.graphId}'
+        GROUP BY Timestamp, OperationName 
+      )
+    `);
+
+    const prevMedianRate = this.chClient.queryPromise<{ medianRate: number | null }>(`
+      SELECT round(quantileDeterministic(0.5)(rate, 1) / 60, 4) AS medianRate FROM (
+        SELECT
+          toDateTime('${prevStart}') AS startDate,
+          toDateTime('${prevEnd}') AS endDate,
+          sum(TotalRequests) / 5 AS rate
+        FROM operation_request_metrics_5_30_mv
+        WHERE Timestamp >= startDate AND Timestamp <= endDate
+          AND OrganizationID = '${params.organizationId}'
+          AND FederatedGraphID = '${params.graphId}'
+        GROUP BY Timestamp, OperationName 
+      )
+    `);
 
     // get top 5 operations in last [range] hours
-    const top5 = this.client.query({
-      query: `topk(5, sum by (wg_operation_name) (rate(cosmo_router_http_requests_total{${this.getQueryLabels(
-        params,
-      )}}[${range}h])) * 60)`,
-    });
+    const top5 = this.chClient.queryPromise<{ name: string; value: string }>(`
+      WITH
+        toDateTime('${start}') AS startDate,
+        toDateTime('${end}') AS endDate
+      SELECT name, round(quantileDeterministic(0.5)(rate, 1) / 60, 4) AS value FROM (
+        SELECT
+          Timestamp as timestamp,
+        OperationName as name,
+          sum(TotalRequests) / 5 as rate
+        FROM operation_request_metrics_5_30_mv
+        WHERE Timestamp >= startDate AND Timestamp <= endDate
+          AND OrganizationID = '${params.organizationId}'
+          AND FederatedGraphID = '${params.graphId}'
+        GROUP BY Timestamp, OperationName 
+      ) GROUP BY name ORDER BY value DESC LIMIT 5
+    `);
 
-    // get requests in last [range] hours in series of [step]
-    const series = this.client.queryRange({
-      query: `sum(rate(cosmo_router_http_requests_total{${this.getQueryLabels(params)}}[${prange}]) * 60)`,
-      ...this.getRangeQueryProps({
-        range,
-        endDate,
-      }),
-    });
+    // get time series of last [range] hours
+    const series = await this.chClient.queryPromise<{ value: number | null }[]>(`
+      WITH
+        toDateTime('${start}') AS startDate,
+        toDateTime('${end}') AS endDate
+      SELECT
+          Timestamp AS timestamp,
+          round(sum(TotalRequests) / 5, 4) AS value
+      FROM operation_request_metrics_5_30_mv
+      WHERE timestamp >= startDate AND timestamp <= endDate
+        AND OrganizationID = '${params.organizationId}'
+        AND FederatedGraphID = '${params.graphId}'
+      GROUP BY timestamp, OperationName
+      ORDER BY timestamp ASC WITH FILL FROM toDateTime('${start}') TO toDateTime('${end}') STEP INTERVAL ${prange} minute
+    `);
 
-    const prevSeries = this.client.queryRange({
-      query: `sum(rate(cosmo_router_http_requests_total{${this.getQueryLabels(params)}}[${prange}]) * 60)`,
-      ...this.getRangeQueryProps({
-        range,
-        endDate: endDate - range * 60 * 60 * 1000,
-      }),
-    });
+    const prevSeries = await this.chClient.queryPromise<{ value: number | null }[]>(`
+      WITH
+        toDateTime('${prevStart}') AS startDate,
+        toDateTime('${prevEnd}') AS endDate
+      SELECT
+          Timestamp AS timestamp,
+          round(sum(TotalRequests) / 5, 4) AS value
+      FROM operation_request_metrics_5_30_mv
+      WHERE timestamp >= startDate AND timestamp <= endDate
+        AND OrganizationID = '${params.organizationId}'
+        AND FederatedGraphID = '${params.graphId}'
+      GROUP BY timestamp, OperationName
+      ORDER BY timestamp ASC WITH FILL FROM toDateTime('${prevStart}') TO toDateTime('${prevEnd}') STEP INTERVAL ${prange} minute
+    `);
 
-    const responses = await this.getResponses(rate, prevRate, top5, series, prevSeries);
-    const [medianResponse, prevMedianResponse, top5Response, seriesResponse, prevSeriesResponse] = responses;
+    const [medianResponse, prevMedianResponse, top5Response, seriesResponse, prevSeriesResponse] = await Promise.all([
+      medianRate,
+      prevMedianRate,
+      top5,
+      series,
+      prevSeries,
+    ]);
 
     return {
       data: {
-        value: parseValue(medianResponse.data?.result[0]?.value[1]),
-        previousValue: parseValue(prevMedianResponse.data?.result[0]?.value[1]),
-        top:
-          top5Response.data?.result?.map((v: any) => ({
-            name: v.metric.wg_operation_name || 'unknown',
-            value: parseValue(v.value[1]),
-          })) || [],
-        series: this.mapSeries(
-          endDate,
-          range,
-          seriesResponse.data?.result[0]?.values,
-          prevSeriesResponse.data?.result[0]?.values,
-        ),
+        value: parseValue(medianResponse[0]?.medianRate),
+        previousValue: parseValue(prevMedianResponse[0]?.medianRate),
+        top: top5Response.map((v) => ({
+          name: v.name,
+          value: parseValue(v.value),
+        })),
+        series: this.mapSeries(range, seriesResponse, prevSeriesResponse),
       },
-      errors: responses.filter((r) => r.error),
-    };
+    } as any;
   }
 
   /**
@@ -246,68 +268,103 @@ export class MetricsDashboardRepository {
   public async getLatencyMetrics({ range = 24, endDate = getEndDate(), params }: GetMetricsProps) {
     const prange = getPRange(range);
 
-    // get p95 of requests in last 5min
-    const p95 = this.client.query({
-      query: `histogram_quantile(0.95, sum(rate(cosmo_router_http_request_duration_milliseconds_bucket{${this.getQueryLabels(
-        params,
-      )}}[${range}h])) by (le))`,
-    });
+    const [start, end] = getDateRange(endDate, range);
+    const [prevStart, prevEnd] = getDateRange(endDate, range, range);
 
-    const prevP95 = this.client.query({
-      query: `histogram_quantile(0.95, sum(rate(cosmo_router_http_request_duration_milliseconds_bucket{${this.getQueryLabels(
-        params,
-      )}}[${range}h]] offset ${range}h)) by (le))`,
-    });
+    const p95 = await this.chClient.queryPromise<{ p95: number }>(`
+      WITH
+      toDateTime('${start}') AS startDate,
+      toDateTime('${end}') AS endDate
+      SELECT
+       quantilesMerge(0.95)(DurationQuantiles)[1] AS p95
+      FROM operation_latency_metrics_5_30_mv
+      WHERE Timestamp >= startDate AND Timestamp <= endDate
+        AND OrganizationID = '${params.organizationId}'
+        AND FederatedGraphID = '${params.graphId}'
+    `);
+
+    const prevP95 = await this.chClient.queryPromise<{ p95: number }>(`
+      WITH
+      toDateTime('${prevStart}') AS startDate,
+      toDateTime('${prevEnd}') AS endDate
+      SELECT
+      quantilesMerge(0.95)(DurationQuantiles)[1] AS p95
+      FROM operation_latency_metrics_5_30_mv
+      WHERE Timestamp >= startDate AND Timestamp <= endDate
+        AND OrganizationID = '${params.organizationId}'
+        AND FederatedGraphID = '${params.graphId}'
+    `);
 
     // get top 5 operations in last [range] hours
-    const top5 = this.client.query({
-      query: `topk(5, sum by (wg_operation_name) (rate(cosmo_router_http_request_duration_milliseconds_bucket{${this.getQueryLabels(
-        params,
-      )}}[${range}h])))`,
-    });
+    const top5 = this.chClient.queryPromise<{ name: string; value: string }>(`
+      WITH
+        toDateTime('${start}') AS startDate,
+        toDateTime('${end}') AS endDate
+      SELECT name, round(quantileDeterministic(0.5)(p95, 1), 4) AS value FROM (
+        SELECT
+          Timestamp as timestamp,
+          OperationName as name,
+          quantilesMerge(0.95)(DurationQuantiles)[1] AS p95
+        FROM operation_latency_metrics_5_30_mv
+        WHERE Timestamp >= startDate AND Timestamp <= endDate
+          AND OrganizationID = '${params.organizationId}'
+          AND FederatedGraphID = '${params.graphId}'
+        GROUP BY Timestamp, OperationName 
+      ) GROUP BY name ORDER BY value DESC LIMIT 5
+    `);
 
-    // get p95 latency [range] hours in series of [step]
-    const series = this.client.queryRange({
-      query: `histogram_quantile(0.95, sum(rate(cosmo_router_http_request_duration_milliseconds_bucket{${this.getQueryLabels(
-        params,
-      )}}[${prange}])) by (le))`,
-      ...this.getRangeQueryProps({
-        range,
-        endDate,
-      }),
-    });
+    // get time series of last [range] hours
+    const series = await this.chClient.queryPromise<{ value: number | null }[]>(`
+      WITH
+        toDateTime('${start}') AS startDate,
+        toDateTime('${end}') AS endDate
+      SELECT
+          Timestamp AS timestamp,
+          quantilesMerge(0.95)(DurationQuantiles)[1] AS value
+      FROM operation_latency_metrics_5_30_mv
+      WHERE timestamp >= startDate AND timestamp <= endDate
+        AND OrganizationID = '${params.organizationId}'
+        AND FederatedGraphID = '${params.graphId}'
+      GROUP BY timestamp, OperationName
+      ORDER BY timestamp ASC WITH FILL FROM toDateTime('${start}') TO toDateTime('${end}') STEP INTERVAL ${prange} minute
+    `);
 
-    const prevSeries = this.client.queryRange({
-      query: `histogram_quantile(0.95, sum(rate(cosmo_router_http_request_duration_milliseconds_bucket{${this.getQueryLabels(
-        params,
-      )}}[${prange}] offset ${range}h)) by (le))`,
-      ...this.getRangeQueryProps({
-        range,
-        endDate: endDate - range * 60 * 60 * 1000,
-      }),
-    });
+    const prevSeries = await this.chClient.queryPromise<{ value: number | null }[]>(`
+      WITH
+        toDateTime('${prevStart}') AS startDate,
+        toDateTime('${prevEnd}') AS endDate
+      SELECT
+          Timestamp AS timestamp,
+          quantilesMerge(0.95)(DurationQuantiles)[1] AS value
+      FROM operation_latency_metrics_5_30_mv
+      WHERE timestamp >= startDate AND timestamp <= endDate
+        AND OrganizationID = '${params.organizationId}'
+        AND FederatedGraphID = '${params.graphId}'
+      GROUP BY timestamp, OperationName
+      ORDER BY timestamp ASC WITH FILL FROM toDateTime('${prevStart}') TO toDateTime('${prevEnd}') STEP INTERVAL ${prange} minute
+    `);
 
-    const responses = await this.getResponses(p95, prevP95, top5, series, prevSeries);
-    const [p95Response, prevP95Response, top5Response, seriesResponse, prevSeriesResponse] = responses;
+    // const responses = await this.getResponses(p95, prevP95, top5, series, prevSeries);
+    const [p95Response, prevP95Response, top5Response, seriesResponse, prevSeriesResponse] = await Promise.all([
+      p95,
+      prevP95,
+      top5,
+      series,
+      prevSeries,
+    ]);
 
-    return {
+    return (await {
       data: {
-        value: parseValue(p95Response.data?.result[0]?.value[1]),
-        previousValue: parseValue(prevP95Response.data?.result[0]?.value[1]),
-        top:
-          top5Response.data?.result.map((v: any) => ({
-            name: v.metric.wg_operation_name || 'unknown',
-            value: parseValue(v.value[1]),
-          })) || [],
-        series: this.mapSeries(
-          endDate,
-          range,
-          seriesResponse.data?.result[0]?.values,
-          prevSeriesResponse.data?.result[0]?.values,
-        ),
+        value: parseValue(p95Response[0].p95),
+        previousValue: parseValue(prevP95Response[0].p95),
+        top: top5Response.map((v) => ({
+          name: v.name,
+          value: parseValue(v.value),
+        })),
+        series: this.mapSeries(range, seriesResponse, prevSeriesResponse),
       },
-      errors: responses.filter((r) => r.error),
-    };
+      errors: [],
+    }) as any;
   }
 
   /**
@@ -316,77 +373,139 @@ export class MetricsDashboardRepository {
   public async getErrorMetrics({ range = 24, endDate = getEndDate(), params }: GetMetricsProps) {
     const prange = getPRange(range);
 
-    // get error percentage of requests in last 5min
-    const percentage = this.client.query({
-      query: `sum(rate(cosmo_router_http_requests_total{${this.getQueryLabels(
-        params,
-      )}, http_status_code=~"4..|5.."}[${range}h])) / sum(rate(cosmo_router_http_requests_total{${this.getQueryLabels(
-        params,
-      )}}[${range}h])) * 100`,
-    });
-    const prevPercentage = this.client.query({
-      query: `sum(rate(cosmo_router_http_requests_total{${this.getQueryLabels(
-        params,
-      )}, http_status_code=~"4..|5.."}[${range}h])) / sum(rate(cosmo_router_http_requests_total{${this.getQueryLabels(
-        params,
-      )}}[${range}h] offset ${range}h)) * 100`,
-    });
+    const [start, end] = getDateRange(endDate, range);
+    const [prevStart, prevEnd] = getDateRange(endDate, range, range);
+
+    // get median request rate in last [range]h
+    const value = this.chClient.queryPromise<{ errorPercentage: number }>(`
+      WITH
+        toDateTime('${start}') AS startDate,
+        toDateTime('${end}') AS endDate
+      SELECT
+        sum(totalErrors) AS serverErrors,
+        sum(totalClientErrors) as clientErrors,
+        sum(totalRequests) AS requests,
+        round(serverErrors + clientErrors, 3) as errors,
+        if(errors > 0, round(errors / requests * 100, 2), 0) AS errorPercentage FROM (
+        SELECT
+          sum(TotalRequests) as totalRequests,
+          sum(TotalErrors) as totalErrors,
+          sum(TotalClientErrors) as totalClientErrors
+        FROM operation_request_metrics_5_30_mv
+        WHERE Timestamp >= startDate AND Timestamp <= endDate
+          AND OrganizationID = '${params.organizationId}'
+          AND FederatedGraphID = '${params.graphId}'
+        GROUP BY Timestamp, OperationName 
+      )
+    `);
+
+    const prevValue = this.chClient.queryPromise<{ errorPercentage: number | null }>(`
+      WITH
+        toDateTime('${prevStart}') AS startDate,
+        toDateTime('${prevEnd}') AS endDate
+      SELECT
+        sum(totalErrors) AS serverErrors,
+        sum(totalClientErrors) as clientErrors,
+        sum(totalRequests) AS requests,
+        round(serverErrors + clientErrors, 3) as errors,
+        if(errors > 0, round(errors / requests * 100, 2), 0) AS errorPercentage FROM (
+        SELECT
+          sum(TotalRequests) as totalRequests,
+          sum(TotalErrors) as totalErrors,
+          sum(TotalClientErrors) as totalClientErrors
+        FROM operation_request_metrics_5_30_mv
+        WHERE Timestamp >= startDate AND Timestamp <= endDate
+          AND OrganizationID = '${params.organizationId}'
+          AND FederatedGraphID = '${params.graphId}'
+        GROUP BY Timestamp, OperationName 
+      )
+    `);
 
     // get top 5 operations in last [range] hours
-    const top5 = this.client.query({
-      query: `topk(5, sum by (wg_operation_name) (rate(cosmo_router_http_requests_total{${this.getQueryLabels(
-        params,
-      )}, http_status_code=~"4..|5.."}[${range}h])) / sum by (wg_operation_name) (rate(cosmo_router_http_requests_total{${this.getQueryLabels(
-        params,
-      )}}[${range}h])) * 100)`,
-    });
+    const top5 = this.chClient.queryPromise<{ name: string; value: string }>(`
+      WITH
+        toDateTime('${start}') AS startDate,
+        toDateTime('${end}') AS endDate
+      SELECT
+        name,
+        sum(totalErrors) AS serverErrors,
+        sum(totalClientErrors) as clientErrors,
+        sum(totalRequests) AS requests,
+        round(serverErrors + clientErrors, 3) as errors,
+        if(errors > 0, round(errors / requests * 100, 2), 0) AS value
+      FROM (
+        SELECT
+          Timestamp as timestamp,
+          OperationName as name,
+          sum(TotalRequests) as totalRequests,
+          sum(TotalErrors) as totalErrors,
+          sum(TotalClientErrors) as totalClientErrors
+        FROM operation_request_metrics_5_30_mv
+        WHERE Timestamp >= startDate AND Timestamp <= endDate
+          AND OrganizationID = '${params.organizationId}'
+          AND FederatedGraphID = '${params.graphId}'
+        GROUP BY Timestamp, OperationName 
+      ) GROUP BY name ORDER BY value DESC LIMIT 5
+    `);
 
-    // get requests in last [range] hours in series of [step]
-    const series = this.client.queryRange({
-      query: `sum (rate(cosmo_router_http_requests_total{${this.getQueryLabels(
-        params,
-      )}, http_status_code=~"4..|5.." }[${prange}])) / sum (rate(cosmo_router_http_requests_total{${this.getQueryLabels(
-        params,
-      )} }[${prange}])) * 100`,
-      ...this.getRangeQueryProps({
-        range,
-        endDate,
-      }),
-    });
+    // get time series of last [range] hours
+    const series = this.chClient.queryPromise<{ value: number | null }[]>(`
+      WITH
+        toDateTime('${start}') AS startDate,
+        toDateTime('${end}') AS endDate
+      SELECT
+          Timestamp AS timestamp,
+          sum(TotalErrors) AS serverErrors,
+          sum(TotalClientErrors) as clientErrors,
+          sum(TotalRequests) AS requests,
+          round(serverErrors + clientErrors, 3) as errors,
+          if(errors > 0, round(errors / requests * 100, 2), 0) AS value
+      FROM operation_request_metrics_5_30_mv
+      WHERE timestamp >= startDate AND timestamp <= endDate
+        AND OrganizationID = '${params.organizationId}'
+        AND FederatedGraphID = '${params.graphId}'
+      GROUP BY timestamp, OperationName
+      ORDER BY timestamp ASC WITH FILL FROM toDateTime('${start}') TO toDateTime('${end}') STEP INTERVAL ${prange} minute
+    `);
 
-    const prevSeries = this.client.queryRange({
-      query: `sum (rate(cosmo_router_http_requests_total{${this.getQueryLabels(
-        params,
-      )}, http_status_code=~"4..|5.." }[${prange}])) / sum (rate(cosmo_router_http_requests_total{${this.getQueryLabels(
-        params,
-      )} }[${prange}])) * 100`,
-      ...this.getRangeQueryProps({
-        range,
-        endDate: endDate - range * 60 * 60 * 1000,
-      }),
-    });
+    const prevSeries = this.chClient.queryPromise<{ value: number | null }[]>(`
+      WITH
+        toDateTime('${prevStart}') AS startDate,
+        toDateTime('${prevEnd}') AS endDate
+      SELECT
+          Timestamp AS timestamp,
+          sum(TotalErrors) AS serverErrors,
+          sum(TotalClientErrors) as clientErrors,
+          sum(TotalRequests) AS requests,
+          round(serverErrors + clientErrors, 3) as errors,
+          if(errors > 0, round(errors / requests * 100, 2), 0) AS value
+      FROM operation_request_metrics_5_30_mv
+      WHERE timestamp >= startDate AND timestamp <= endDate
+        AND OrganizationID = '${params.organizationId}'
+        AND FederatedGraphID = '${params.graphId}'
+      GROUP BY timestamp, OperationName
+      ORDER BY timestamp ASC WITH FILL FROM toDateTime('${start}') TO toDateTime('${end}') STEP INTERVAL ${prange} minute
+    `);
 
-    const responses = await this.getResponses(percentage, prevPercentage, top5, series, prevSeries);
-    const [valueResponse, prevValueResponse, top5Response, seriesResponse, prevSeriesResponse] = responses;
+    const [valueResponse, prevValueResponse, top5Response, seriesResponse, prevSeriesResponse] = await Promise.all([
+      value,
+      prevValue,
+      top5,
+      series,
+      prevSeries,
+    ]);
 
-    return {
+    return (await {
       data: {
-        value: parseValue(valueResponse.data?.result[0]?.value[1]),
-        previousValue: parseValue(prevValueResponse.data?.result[0]?.value[1]),
-        top:
-          top5Response.data?.result.map((v: any) => ({
-            name: v.metric.wg_operation_name || 'unknown',
-            value: parseValue(v.value[1]),
-          })) || [],
-        series: this.mapSeries(
-          endDate,
-          range,
-          seriesResponse.data?.result[0]?.values,
-          prevSeriesResponse.data?.result[0]?.values,
-        ),
+        value: parseValue(valueResponse[0].errorPercentage),
+        previousValue: parseValue(prevValueResponse[0].errorPercentage),
+        top: top5Response.map((v) => ({
+          name: v.name,
+          value: parseValue(v.value),
+        })),
+        series: this.mapSeries(range, seriesResponse, prevSeriesResponse),
       },
-      errors: responses.filter((r) => r.error),
-    };
+    }) as any;
   }
 
   /**
@@ -403,86 +522,55 @@ export class MetricsDashboardRepository {
   }) {
     const prange = getPRange(range);
 
+    const [start, end] = getDateRange(endDate, range);
+
     // get requests in last [range] hours in series of [step]
-    const requestRate = this.client.queryRange({
-      query: `sum(rate(cosmo_router_http_requests_total{${this.getQueryLabels(params)}}[${prange}]) * 60)`,
-      ...this.getRangeQueryProps({
-        range,
-        endDate,
-      }),
-    });
+    const series = await this.chClient.queryPromise<{ timestamp: string; requestRate: number; errorRate: number }>(`
+      WITH
+        toDateTime('${start}') AS startDate,
+        toDateTime('${end}') AS endDate
+      SELECT
+          Timestamp AS timestamp,
+          round(sum(TotalRequests) / 5, 4) AS requestRate,
+          round(sum(TotalErrors) + sum(TotalClientErrors) / 5, 4) AS errorRate
+      FROM operation_request_metrics_5_30_mv
+      WHERE timestamp >= startDate AND timestamp <= endDate
+        AND OrganizationID = '${params.organizationId}'
+        AND FederatedGraphID = '${params.graphId}'
+      GROUP BY timestamp, OperationName
+      ORDER BY timestamp ASC WITH FILL FROM toDateTime('${start}') TO toDateTime('${end}') STEP INTERVAL ${prange} minute
+    `);
 
-    const errorRate = this.client.queryRange({
-      query: `sum(rate(cosmo_router_http_requests_total{${this.getQueryLabels(
-        params,
-      )}, http_status_code=~"5.."}[${prange}]) * 60)`,
-      ...this.getRangeQueryProps({
-        range,
-        endDate,
-      }),
-    });
-
-    const responses = await this.getResponses(requestRate, errorRate);
-    const [requestRateResponse, errorRateResponse] = responses;
-
-    return {
+    return await {
       data: {
-        series: this.mapSeries(endDate, range, requestRateResponse.data?.result[0]?.values),
-        errorSeries: this.mapSeries(endDate, range, errorRateResponse.data?.result[0]?.values),
+        series: series.map((s) => {
+          return {
+            timestamp: String(new Date(s.timestamp + 'Z').getTime()),
+            requestRate: s.requestRate,
+            errorRate: s.errorRate,
+          };
+        }),
       },
-      errors: responses.filter((r) => r.error),
     };
   }
 
-  protected getQueryLabels = (params: MetricsParams) => {
-    return `wg_organization_id="${params.organizationId}", wg_federated_graph_id="${params.graphId}"`;
-  };
-
   /**
-   * Get range query props
-   * @param options {GetRangeQueryPropsOptions}
-   * @returns
-   */
-  protected getRangeQueryProps = (options: GetRangeQueryPropsOptions) => {
-    const { range, endDate = getEndDate() } = options;
-
-    return {
-      start: this.getStart(endDate, range),
-      end: String(Math.round(endDate / 1000)),
-      step: getStep(range),
-    };
-  };
-
-  /**
-   * Subtracts the range in hours from the timestamp and returns the start timestamp
-   * @param timestampInMs
-   * @param rangeInHours
-   * @returns
-   */
-  protected getStart = (timestampInMs: number, rangeInHours: number) => {
-    return String(timestampInMs / 1000 - rangeInHours * 60 * 60);
-  };
-
-  /**
-   * @todo This is efficient, but prometheus doesn't fill in missing values, so we create the series range
-   * and then fill in the values from the prometheus response
-   * @param endDate
+   * Merges series and previous series into one array, @todo could be handled in query directly.
    * @param range
    * @param series
    * @param previousSeries
    * @returns
    */
-  protected mapSeries(endDate: number, range: number, series: any[] = [], previousSeries?: any[]) {
-    const timeRange = createTimeRange(endDate, range);
+  protected mapSeries(range: number, series: any[] = [], previousSeries?: any[]) {
+    return series.map((s) => {
+      const timestamp = new Date(s.timestamp + 'Z').getTime();
+      const prevTimestamp = toISO9075(new Date(timestamp - range * 60 * 60 * 1000));
 
-    return timeRange.map((v) => {
-      const timestamp = String(Math.round(Number.parseInt(v.timestamp) / 1000));
-      const prevTimestamp = String(Math.round((Number.parseInt(v.timestamp) - range * 60 * 60 * 1000) / 1000));
       return {
-        ...v,
-        value: String(Number.parseFloat(series?.find((s) => String(Math.round(s[0])) === timestamp)?.[1] || '0')),
+        timestamp: String(timestamp),
+        value: String(s.value),
         previousValue: String(
-          Number.parseFloat(previousSeries?.find((s) => String(Math.round(s[0])) === prevTimestamp)?.[1] || '0'),
+          Number.parseFloat(previousSeries?.find((s) => s.timestamp === prevTimestamp)?.value || '0'),
         ),
       };
     });
