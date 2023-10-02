@@ -152,9 +152,9 @@ const getDeltaType = (
   } else if (value > 0 && invert) {
     return "increase-negative";
   } else if (value < 0 && !invert) {
-    return "decrease-positive";
-  } else if (value < 0 && invert) {
     return "decrease-negative";
+  } else if (value < 0 && invert) {
+    return "decrease-positive";
   }
 
   return "neutral";
@@ -617,18 +617,7 @@ const ErrorRateOverTimeCard = () => {
 
   const { data, ticks, domain, timeFormatter } = useChartData(
     range,
-    (responseData?.series ?? []).map((s) => ({
-      ...s,
-      value: Number.parseFloat(s.value),
-    }))
-  );
-
-  const { data: errorData } = useChartData(
-    range,
-    (responseData?.errorSeries ?? []).map((s) => ({
-      ...s,
-      value: Number.parseFloat(s.value),
-    }))
+    responseData?.series ?? []
   );
 
   let content;
@@ -654,7 +643,10 @@ const ErrorRateOverTimeCard = () => {
   } else {
     content = (
       <ResponsiveContainer width="100%" height="100%">
-        <AreaChart margin={{ top: 10, right: 0, bottom: 8, left: 0 }}>
+        <AreaChart
+          data={data}
+          margin={{ top: 10, right: 0, bottom: 8, left: 0 }}
+        >
           <defs>
             <linearGradient id={`${id}-gradient`} x1="0" y1="0" x2="0" y2="1">
               <stop offset="5%" stopColor={"hsl(var(--muted-foreground))"} />
@@ -663,9 +655,8 @@ const ErrorRateOverTimeCard = () => {
           </defs>
           <Area
             name="Request rate"
-            data={data}
             type="monotone"
-            dataKey="value"
+            dataKey="requestRate"
             animationDuration={300}
             stroke="hsl(var(--muted-foreground))"
             fill={`url(#${id}-gradient)`}
@@ -675,9 +666,8 @@ const ErrorRateOverTimeCard = () => {
           />
           <Area
             name="Error rate"
-            data={errorData}
             type="monotone"
-            dataKey="value"
+            dataKey="errorRate"
             animationDuration={300}
             stroke="hsl(var(--destructive))"
             fill="none"
