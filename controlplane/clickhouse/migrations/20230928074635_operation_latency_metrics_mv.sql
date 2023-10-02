@@ -11,7 +11,7 @@ CREATE MATERIALIZED VIEW IF NOT EXISTS cosmo.operation_latency_metrics_5_30_mv (
    OrganizationID LowCardinality(String) CODEC(ZSTD(1)),
    ClientName LowCardinality(String) CODEC (ZSTD(1)),
    ClientVersion LowCardinality(String) CODEC (ZSTD(1)),
-   BucketCounts AggregateFunction(sumForEach, Array(UInt64)) CODEC(ZSTD(1)),
+   BucketCounts Array(UInt64) CODEC(ZSTD(1)),
    ExplicitBounds Array(Float64) CODEC(ZSTD(1)),
    Sum Float64 CODEC(ZSTD(1)),
    Count UInt64 CODEC(ZSTD(1)),
@@ -37,7 +37,7 @@ SELECT
     Attributes [ 'wg.client.name' ] as ClientName,
     Attributes [ 'wg.client.version' ] as ClientVersion,
     -- Sum up the bucket counts on the same index which produces the overall count of samples of the histogram
-    sumForEachState(BucketCounts) as BucketCounts,
+    sumForEach(BucketCounts) as BucketCounts,
     -- Populate the bounds so we have a base value for quantile calculations
     ExplicitBounds,
     sum(Sum) AS Sum,
