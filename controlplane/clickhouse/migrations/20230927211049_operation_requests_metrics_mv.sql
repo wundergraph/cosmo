@@ -2,18 +2,18 @@
 
 CREATE MATERIALIZED VIEW IF NOT EXISTS cosmo.operation_request_metrics_5_30_mv (
    Timestamp DateTime('UTC') CODEC (Delta(4), ZSTD(1)),
-   OperationName String CODEC (ZSTD(1)),
+   OperationName LowCardinality(String) CODEC (ZSTD(1)),
    OperationHash String CODEC (ZSTD(1)),
    TotalRequests UInt64 CODEC(ZSTD(1)),
    TotalErrors UInt64 CODEC(ZSTD(1)),
    TotalClientErrors UInt64 CODEC(ZSTD(1)),
-   OperationType String CODEC (ZSTD(1)),
-   FederatedGraphID String CODEC(ZSTD(1)),
-   RouterConfigVersion String CODEC(ZSTD(1)),
-   OrganizationID String CODEC(ZSTD(1)),
+   OperationType LowCardinality(String) CODEC (ZSTD(1)),
+   FederatedGraphID LowCardinality(String) CODEC(ZSTD(1)),
+   RouterConfigVersion LowCardinality(String) CODEC(ZSTD(1)),
+   OrganizationID LowCardinality(String) CODEC(ZSTD(1)),
    IsSubscription Bool CODEC(ZSTD(1)),
-   ClientName String CODEC (ZSTD(1)),
-   ClientVersion String CODEC (ZSTD(1))
+   ClientName LowCardinality(String) CODEC (ZSTD(1)),
+   ClientVersion LowCardinality(String) CODEC (ZSTD(1))
 )
 ENGINE = SummingMergeTree
 PARTITION BY toDate(Timestamp)
@@ -22,19 +22,19 @@ ORDER BY (
 )
 TTL toDateTime(Timestamp) + toIntervalDay(30) SETTINGS index_granularity = 8192, ttl_only_drop_parts = 1 POPULATE AS
 SELECT
-    toStartOfFiveMinute(TimeUnix) as Timestamp,
-    Attributes [ 'wg.operation.name' ] as OperationName,
-    Attributes [ 'wg.operation.hash' ] as OperationHash,
+    toStartOfFiveMinute(TimeUnix) AS Timestamp,
+    Attributes [ 'wg.operation.name' ] AS OperationName,
+    Attributes [ 'wg.operation.hash' ] AS OperationHash,
     sum(Value) as TotalRequests,
-    sumIf(Value, position(Attributes['http.status_code'],'5') = 1) as TotalErrors,
-    sumIf(Value, position(Attributes['http.status_code'],'4') = 1) as TotalClientErrors,
-    Attributes [ 'wg.operation.type' ] as OperationType,
-    Attributes [ 'wg.federated_graph.id'] as FederatedGraphID,
-    Attributes [ 'wg.router.config.version'] as RouterConfigVersion,
+    sumIf(Value, position(Attributes['http.status_code'],'5') = 1 OR position(Attributes['http.status_code'],'4') = 1) as TotalErrors,
+    sumIf(Value, position(Attributes['http.status_code'],'4') = 1) AS TotalClientErrors,
+    Attributes [ 'wg.operation.type' ] AS OperationType,
+    Attributes [ 'wg.federated_graph.id'] AS FederatedGraphID,
+    Attributes [ 'wg.router.config.version'] AS RouterConfigVersion,
     Attributes [ 'wg.organization.id' ] as OrganizationID,
-    mapContains(Attributes, 'wg.subscription') as IsSubscription,
-    Attributes [ 'wg.client.name' ] as ClientName,
-    Attributes [ 'wg.client.version' ] as ClientVersion
+    mapContains(Attributes, 'wg.subscription') AS IsSubscription,
+    Attributes [ 'wg.client.name' ] AS ClientName,
+    Attributes [ 'wg.client.version' ] AS ClientVersion
 FROM
     cosmo.otel_metrics_sum
 WHERE IsMonotonic = true AND MetricName = 'router.http.requests' AND OrganizationID != '' AND FederatedGraphID != ''

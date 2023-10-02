@@ -6,7 +6,9 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
 	"go.opentelemetry.io/otel/exporters/prometheus"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
@@ -25,7 +27,7 @@ func StartAgent(ctx context.Context, log *zap.Logger, c *Config) (*sdkmetric.Met
 }
 
 func createPromExporter() (*prometheus.Exporter, error) {
-	prometheusExporter, err := prometheus.New()
+	prometheusExporter, err := prometheus.New(prometheus.WithoutUnits())
 	if err != nil {
 		return nil, err
 	}
@@ -102,7 +104,34 @@ func startAgent(ctx context.Context, log *zap.Logger, c *Config) (*sdkmetric.Met
 			return nil, err
 		}
 
+		msBucketHistogram := aggregation.ExplicitBucketHistogram{
+			// 0ms-5min
+			Boundaries: []float64{0, 5, 10, 25, 50, 75, 100, 200, 300, 400, 500, 650, 800, 950, 1100, 1250, 1400, 1550, 1700, 1850, 2000, 2500, 3000, 5000, 10000, 15000, 20000, 30000, 60000, 300000},
+		}
+		bytesBucketHistogram := aggregation.ExplicitBucketHistogram{
+			// 0kb-5MB
+			Boundaries: []float64{0, 100, 300, 500, 1000, 3000, 5000, 15000, 30000, 50000, 70000, 90000, 150000, 300000, 600000, 800000, 1000000, 5000000},
+		}
+
 		opts = append(opts,
+			sdkmetric.WithView(sdkmetric.NewView(
+				sdkmetric.Instrument{
+					Unit:  unitMilliseconds,
+					Scope: instrumentation.Scope{Name: cosmoRouterMeterName},
+				},
+				sdkmetric.Stream{
+					Aggregation: msBucketHistogram,
+				},
+			)),
+			sdkmetric.WithView(sdkmetric.NewView(
+				sdkmetric.Instrument{
+					Unit:  unitBytes,
+					Scope: instrumentation.Scope{Name: cosmoRouterMeterName},
+				},
+				sdkmetric.Stream{
+					Aggregation: bytesBucketHistogram,
+				},
+			)),
 			sdkmetric.WithReader(
 				sdkmetric.NewPeriodicReader(exp,
 					sdkmetric.WithTimeout(30*time.Second),
