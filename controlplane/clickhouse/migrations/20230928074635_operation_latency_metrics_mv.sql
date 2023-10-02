@@ -1,3 +1,4 @@
+
 -- migrate:up
 
 CREATE MATERIALIZED VIEW IF NOT EXISTS cosmo.operation_latency_metrics_5_30_mv (
@@ -10,9 +11,12 @@ CREATE MATERIALIZED VIEW IF NOT EXISTS cosmo.operation_latency_metrics_5_30_mv (
    OrganizationID LowCardinality(String) CODEC(ZSTD(1)),
    ClientName LowCardinality(String) CODEC (ZSTD(1)),
    ClientVersion LowCardinality(String) CODEC (ZSTD(1)),
-   DurationQuantiles AggregateFunction(quantiles(0.5, 0.75, 0.9, 0.95, 0.99), Float64) CODEC(ZSTD(1)),
-   MaxDuration Float64 CODEC(ZSTD(1)),
+   BucketCounts Array(UInt64) CODEC(ZSTD(1)),
+   ExplicitBounds Array(Float64) CODEC(ZSTD(1)),
+   Sum Float64 CODEC(ZSTD(1)),
+   Count Float64 CODEC(ZSTD(1)),
    MinDuration Float64 CODEC(ZSTD(1)),
+   MaxDuration Float64 CODEC(ZSTD(1)),
    IsSubscription Bool CODEC(ZSTD(1))
 )
 ENGINE = SummingMergeTree
@@ -21,6 +25,7 @@ ORDER BY (
     toUnixTimestamp(Timestamp), OrganizationID, FederatedGraphID, RouterConfigVersion, OperationName, OperationType, ClientName, ClientVersion, OperationHash
 )
 TTL toDateTime(Timestamp) + toIntervalDay(30) SETTINGS index_granularity = 8192, ttl_only_drop_parts = 1 POPULATE AS
+-- Aggregate histogram buckets into a 5 minute window, Counts are summed, Min/Max are taken
 SELECT
     toStartOfFiveMinute(TimeUnix) as Timestamp,
     Attributes [ 'wg.operation.name' ] as OperationName,
@@ -31,12 +36,17 @@ SELECT
     Attributes [ 'wg.organization.id' ] as OrganizationID,
     Attributes [ 'wg.client.name' ] as ClientName,
     Attributes [ 'wg.client.version' ] as ClientVersion,
-    quantilesState(0.5, 0.75, 0.9, 0.95, 0.99)(Sum / Count) AS DurationQuantiles,
-    max(Max) AS MaxDuration,
-    min(Min) AS MinDuration,
+    -- Sum up the bucket counts on the same index which produces the overall count of samples of the histogram
+    sumForEach(BucketCounts) as BucketCounts,
+    -- Populate the bounds so we have a base value for quantile calculations
+    ExplicitBounds,
+    sum(Sum) AS Sum,
+    sum(Count) AS Count,
+    max(Max) AS Max,
+    min(Min) AS Min,
     mapContains(Attributes, 'wg.subscription') as IsSubscription
-FROM
-    cosmo.otel_metrics_histogram
+FROM otel_metrics_histogram
+-- Only works with the same bounds for all buckets. If bounds are different, we can't add them together
 WHERE MetricName = 'router.http.request.duration_milliseconds' AND OrganizationID != '' AND FederatedGraphID != ''
 GROUP BY
     OperationName,
@@ -48,7 +58,8 @@ GROUP BY
     Timestamp,
     ClientName,
     ClientVersion,
-    IsSubscription
+    IsSubscription,
+    ExplicitBounds
 ORDER BY
     Timestamp;
 
