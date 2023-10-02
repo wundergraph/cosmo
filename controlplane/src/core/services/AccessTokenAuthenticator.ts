@@ -18,11 +18,10 @@ export default class AccessTokenAuthenticator {
    *
    * @param accessToken
    */
-  public async authenticate(accessToken: string): Promise<AccessTokenAuthContext> {
+  public async authenticate(accessToken: string, organizationSlug: string | null): Promise<AccessTokenAuthContext> {
     const userInfoData = await this.authUtils.getUserInfo(accessToken);
 
-    // TODO will have to change when we support multiple orgs
-    const orgSlug = userInfoData.groups[0].split('/')[1];
+    const orgSlug = organizationSlug || userInfoData.groups[0].split('/')[1];
 
     const organization = await this.orgRepo.bySlug(orgSlug);
 
