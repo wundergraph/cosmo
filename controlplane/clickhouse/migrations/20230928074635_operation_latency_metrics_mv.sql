@@ -42,8 +42,8 @@ SELECT
     ExplicitBounds,
     sum(Sum) AS Sum,
     sum(Count) AS Count,
-    min(Min) AS Min,
-    max(Max) AS Max,
+    min(Min) AS MinDuration,
+    max(Max) AS MaxDuration,
     mapContains(Attributes, 'wg.subscription') as IsSubscription
 FROM otel_metrics_histogram
 -- Only works with the same bounds for all buckets. If bounds are different, we can't add them together
