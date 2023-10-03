@@ -127,15 +127,14 @@ export class MetricsDashboardRepository {
 
     const multiplier = range * 60;
 
-    // round(quantileDeterministic(0.5)(rate, 1), 4)
     // get median request rate in last [range]h
     const queryRate = (start: number, end: number) => {
       return this.chClient.queryPromise<{ medianRate: number | null }>(`
-      SELECT round(sum(rate) / ${multiplier}, 4) AS medianRate FROM (
+      SELECT round(sum(total) / ${multiplier}, 4) AS medianRate FROM (
         SELECT
           toDateTime('${start}') AS startDate,
           toDateTime('${end}') AS endDate,
-          sum(TotalRequests) AS rate
+          sum(TotalRequests) AS total
         FROM operation_request_metrics_5_30_mv
         WHERE Timestamp >= startDate AND Timestamp <= endDate
           AND OrganizationID = '${params.organizationId}'
@@ -152,11 +151,11 @@ export class MetricsDashboardRepository {
       WITH
         toDateTime('${start}') AS startDate,
         toDateTime('${end}') AS endDate
-      SELECT name, round(sum(rate) / ${multiplier}, 4) AS value FROM (
+      SELECT name, round(sum(total) / ${multiplier}, 4) AS value FROM (
         SELECT
           Timestamp as timestamp,
         OperationName as name,
-          sum(TotalRequests) as rate
+          sum(TotalRequests) as total
         FROM operation_request_metrics_5_30_mv
         WHERE Timestamp >= startDate AND Timestamp <= endDate
           AND OrganizationID = '${params.organizationId}'
@@ -225,25 +224,19 @@ export class MetricsDashboardRepository {
         WITH
           toDateTime('${start}') AS startDate,
           toDateTime('${end}') AS endDate
-        SELECT round(quantile(0.5)(value), 4) as value FROM (
+        SELECT round(median(value), 2) as value FROM (
           SELECT
             func_rank(${quantile}, BucketCounts) as rank,
-            func_rank_bucket_lower_index(rank, BucketCounts) as bucketLowerIndex,
-            func_rank_bound(rank, bucketLowerIndex, BucketCounts, ExplicitBounds) as bound,
+            func_rank_bucket_lower_index(rank, BucketCounts) as b,
             func_histogram_v2(
-                    rank,
-                    bucketLowerIndex,
-                    bound,
-                    BucketCounts,
-                    ExplicitBounds
-                ) as value,
+                rank,
+                b,
+                BucketCounts,
+                ExplicitBounds
+            ) as value,
 
             -- Histogram aggregations
-            sumForEach(BucketCounts) as BucketCounts,
-            sum(Sum) AS Sum,
-            sum(Count) AS Count,
-            min(MinDuration) AS Min,
-            max(MaxDuration) AS Max
+            sumForEach(BucketCounts) as BucketCounts
           FROM operation_latency_metrics_5_30_mv
           WHERE Timestamp >= startDate AND Timestamp <= endDate
             AND OrganizationID = '${params.organizationId}'
@@ -263,27 +256,21 @@ export class MetricsDashboardRepository {
       WITH
         toDateTime('${start}') AS startDate,
         toDateTime('${end}') AS endDate
-      SELECT name, round(quantile(0.5)(value), 4) AS value FROM (
+      SELECT name, round(median(value), 2) AS value FROM (
         SELECT
           Timestamp as timestamp,
           OperationName as name,
           func_rank(${quantile}, BucketCounts) as rank,
-          func_rank_bucket_lower_index(rank, BucketCounts) as bucketLowerIndex,
-          func_rank_bound(rank, bucketLowerIndex, BucketCounts, ExplicitBounds) as bound,
+          func_rank_bucket_lower_index(rank, BucketCounts) as b,
           func_histogram_v2(
-                  rank,
-                  bucketLowerIndex,
-                  bound,
-                  BucketCounts,
-                  ExplicitBounds
-              ) as value,
+              rank,
+              b,
+              BucketCounts,
+              ExplicitBounds
+          ) as value,
 
           -- Histogram aggregations
-          sumForEach(BucketCounts) as BucketCounts,
-          sum(Sum) AS Sum,
-          sum(Count) AS Count,
-          min(MinDuration) AS Min,
-          max(MaxDuration) AS Max
+          sumForEach(BucketCounts) as BucketCounts
         FROM operation_latency_metrics_5_30_mv
         WHERE Timestamp >= startDate AND Timestamp <= endDate
           AND OrganizationID = '${params.organizationId}'
@@ -304,22 +291,16 @@ export class MetricsDashboardRepository {
         SELECT
             toStartOfInterval(Timestamp, INTERVAL ${granule} MINUTE) AS timestamp,
             func_rank(${quantile}, BucketCounts) as rank,
-            func_rank_bucket_lower_index(rank, BucketCounts) as bucketLowerIndex,
-            func_rank_bound(rank, bucketLowerIndex, BucketCounts, ExplicitBounds) as bound,
+            func_rank_bucket_lower_index(rank, BucketCounts) as b,
             func_histogram_v2(
-                    rank,
-                    bucketLowerIndex,
-                    bound,
-                    BucketCounts,
-                    ExplicitBounds
-                ) as value,
+                rank,
+                b,
+                BucketCounts,
+                ExplicitBounds
+            ) as value,
   
             -- Histogram aggregations
-            sumForEach(BucketCounts) as BucketCounts,
-            sum(Sum) AS Sum,
-            sum(Count) AS Count,
-            min(MinDuration) AS Min,
-            max(MaxDuration) AS Max
+            sumForEach(BucketCounts) as BucketCounts
         FROM operation_latency_metrics_5_30_mv
         WHERE timestamp >= startDate AND timestamp <= endDate
           AND OrganizationID = '${params.organizationId}'
@@ -336,7 +317,6 @@ export class MetricsDashboardRepository {
     const series = querySeries('0.95', start, end);
     const prevSeries = querySeries('0.95', prevStart, prevEnd);
 
-    // const responses = await this.getResponses(p95, prevP95, top5, series, prevSeries);
     const [p95Response, prevP95Response, top5Response, seriesResponse, prevSeriesResponse] = await Promise.all([
       p95,
       prevP95,
@@ -368,43 +348,30 @@ export class MetricsDashboardRepository {
     const [prevStart, prevEnd] = getDateRange(endDate, range, range);
 
     // get median request rate in last [range]h
-    const value = this.chClient.queryPromise<{ errorPercentage: number }>(`
+    const queryPercentage = (start: number, end: number) => {
+      return this.chClient.queryPromise<{ errorPercentage: number }>(`
       WITH
         toDateTime('${start}') AS startDate,
         toDateTime('${end}') AS endDate
       SELECT
         sum(totalErrors) AS errors,
         sum(totalRequests) AS requests,
-        if(errors > 0, round(errors / requests * 100, 2), 0) AS errorPercentage FROM (
-        SELECT
-          sum(TotalRequests) as totalRequests,
-          sum(TotalErrors) as totalErrors
-        FROM operation_request_metrics_5_30_mv
-        WHERE Timestamp >= startDate AND Timestamp <= endDate
-          AND OrganizationID = '${params.organizationId}'
-          AND FederatedGraphID = '${params.graphId}'
-        GROUP BY Timestamp, OperationName 
-      )
+        if(errors > 0, round(errors / requests * 100, 2), 0) AS errorPercentage
+        FROM (
+          SELECT
+            sum(TotalRequests) as totalRequests,
+            sum(TotalErrors) as totalErrors
+          FROM operation_request_metrics_5_30_mv
+          WHERE Timestamp >= startDate AND Timestamp <= endDate
+            AND OrganizationID = '${params.organizationId}'
+            AND FederatedGraphID = '${params.graphId}'
+          GROUP BY Timestamp, OperationName 
+        )
     `);
+    };
 
-    const prevValue = this.chClient.queryPromise<{ errorPercentage: number | null }>(`
-      WITH
-        toDateTime('${prevStart}') AS startDate,
-        toDateTime('${prevEnd}') AS endDate
-      SELECT
-        sum(totalErrors) AS errors,
-        sum(totalRequests) AS requests,
-        if(errors > 0, round(errors / requests * 100, 2), 0) AS errorPercentage FROM (
-        SELECT
-          sum(TotalRequests) as totalRequests,
-          sum(TotalErrors) as totalErrors
-        FROM operation_request_metrics_5_30_mv
-        WHERE Timestamp >= startDate AND Timestamp <= endDate
-          AND OrganizationID = '${params.organizationId}'
-          AND FederatedGraphID = '${params.graphId}'
-        GROUP BY Timestamp, OperationName 
-      )
-    `);
+    const value = queryPercentage(start, end);
+    const prevValue = queryPercentage(prevStart, prevEnd);
 
     // get top 5 operations in last [range] hours
     const top5 = this.chClient.queryPromise<{ name: string; value: string }>(`
@@ -413,15 +380,14 @@ export class MetricsDashboardRepository {
         toDateTime('${end}') AS endDate
       SELECT
         name,
-        sum(totalErrors) AS errors,
-        sum(totalRequests) AS requests,
-        if(errors > 0, round(errors / requests * 100, 2), 0) AS value
+        median(errorPercentage) as value
       FROM (
         SELECT
           Timestamp as timestamp,
           OperationName as name,
           sum(TotalRequests) as totalRequests,
-          sum(TotalErrors) as totalErrors
+          sum(TotalErrors) as totalErrors,
+          if(totalErrors > 0, round(totalErrors / totalRequests * 100, 2), 0) AS errorPercentage
         FROM operation_request_metrics_5_30_mv
         WHERE Timestamp >= startDate AND Timestamp <= endDate
           AND OrganizationID = '${params.organizationId}'
@@ -431,7 +397,8 @@ export class MetricsDashboardRepository {
     `);
 
     // get time series of last [range] hours
-    const series = this.chClient.queryPromise<{ value: number | null }[]>(`
+    const getSeries = (start: number, end: number) => {
+      return this.chClient.queryPromise<{ value: number | null }[]>(`
       WITH
         toStartOfInterval(toDateTime('${start}'), INTERVAL ${granule} MINUTE) AS startDate,
         toDateTime('${end}') AS endDate
@@ -451,27 +418,10 @@ export class MetricsDashboardRepository {
         toDateTime('${end}')
       STEP INTERVAL ${granule} minute
     `);
+    };
 
-    const prevSeries = this.chClient.queryPromise<{ value: number | null }[]>(`
-      WITH
-        toStartOfInterval(toDateTime('${prevStart}'), INTERVAL ${granule} MINUTE) AS startDate,
-        toDateTime('${prevEnd}') AS endDate
-      SELECT
-          toStartOfInterval(Timestamp, INTERVAL ${granule} MINUTE) AS timestamp,
-          sum(TotalErrors) AS errors,
-          sum(TotalRequests) AS requests,
-          if(errors > 0, round(errors / requests * 100, 2), 0) AS value
-      FROM operation_request_metrics_5_30_mv
-      WHERE timestamp >= startDate AND timestamp <= endDate
-        AND OrganizationID = '${params.organizationId}'
-        AND FederatedGraphID = '${params.graphId}'
-      GROUP BY timestamp
-      ORDER BY timestamp ASC WITH FILL FROM
-        toStartOfInterval(toDateTime('${prevStart}'), INTERVAL ${granule} MINUTE)
-      TO
-        toDateTime('${prevEnd}')
-      STEP INTERVAL ${granule} MINUTE
-    `);
+    const series = getSeries(start, end);
+    const prevSeries = getSeries(prevStart, prevEnd);
 
     const [valueResponse, prevValueResponse, top5Response, seriesResponse, prevSeriesResponse] = await Promise.all([
       value,
