@@ -11,15 +11,14 @@ CREATE MATERIALIZED VIEW IF NOT EXISTS cosmo.operation_latency_metrics_5_30_mv (
    OrganizationID LowCardinality(String) CODEC(ZSTD(1)),
    ClientName LowCardinality(String) CODEC (ZSTD(1)),
    ClientVersion LowCardinality(String) CODEC (ZSTD(1)),
-   BucketCounts Array(UInt64) CODEC(ZSTD(1)),
+   BucketCounts AggregateFunction(sumForEach, Array(UInt64)) CODEC(ZSTD(1)),
    ExplicitBounds Array(Float64) CODEC(ZSTD(1)),
-   Sum Float64 CODEC(ZSTD(1)),
-   Count UInt64 CODEC(ZSTD(1)),
-   MinDuration Float64 CODEC(ZSTD(1)),
-   MaxDuration Float64 CODEC(ZSTD(1)),
-   IsSubscription Bool CODEC(ZSTD(1))
+   Sum SimpleAggregateFunction(sum, Float64) CODEC(ZSTD(1)),
+   Count SimpleAggregateFunction(sum, UInt64) CODEC(ZSTD(1)),
+   MinDuration SimpleAggregateFunction(min, Float64) CODEC(ZSTD(1)),
+   MaxDuration SimpleAggregateFunction(max, Float64) CODEC(ZSTD(1))
 )
-ENGINE = SummingMergeTree
+ENGINE = AggregatingMergeTree
 PARTITION BY toDate(Timestamp)
 ORDER BY (
     toUnixTimestamp(Timestamp), OrganizationID, FederatedGraphID, RouterConfigVersion, OperationName, OperationType, ClientName, ClientVersion, OperationHash
@@ -37,14 +36,13 @@ SELECT
     Attributes [ 'wg.client.name' ] as ClientName,
     Attributes [ 'wg.client.version' ] as ClientVersion,
     -- Sum up the bucket counts on the same index which produces the overall count of samples of the histogram
-    sumForEach(BucketCounts) as BucketCounts,
+    sumForEachState(BucketCounts) as BucketCounts,
     -- Populate the bounds so we have a base value for quantile calculations
     ExplicitBounds,
-    sum(Sum) AS Sum,
-    sum(Count) AS Count,
-    min(Min) AS MinDuration,
-    max(Max) AS MaxDuration,
-    mapContains(Attributes, 'wg.subscription') as IsSubscription
+    sumSimpleState(Sum) AS Sum,
+    sumSimpleState(Count) AS Count,
+    minSimpleState(Min) AS MinDuration,
+    maxSimpleState(Max) AS MaxDuration
 FROM otel_metrics_histogram
 -- Only works with the same bounds for all buckets. If bounds are different, we can't add them together
 WHERE MetricName = 'router.http.request.duration_milliseconds' AND OrganizationID != '' AND FederatedGraphID != ''
@@ -58,7 +56,6 @@ GROUP BY
     Timestamp,
     ClientName,
     ClientVersion,
-    IsSubscription,
     ExplicitBounds
 ORDER BY
     Timestamp;
