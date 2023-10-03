@@ -31,7 +31,6 @@ type OpenTelemetry struct {
 
 // Config represents the configuration for the agent.
 type Config struct {
-	Enabled bool
 	// Name represents the service name for metrics. The default value is cosmo-router.
 	Name string
 
@@ -44,9 +43,9 @@ type Config struct {
 // DefaultConfig returns the default config.
 func DefaultConfig() *Config {
 	return &Config{
-		Enabled: false,
-		Name:    ServerName,
+		Name: ServerName,
 		OpenTelemetry: OpenTelemetry{
+			Enabled: false,
 			Exporters: []*OpenTelemetryExporter{
 				{
 					Endpoint: "http://localhost:4318",
@@ -54,7 +53,7 @@ func DefaultConfig() *Config {
 			},
 		},
 		Prometheus: Prometheus{
-			Enabled:    true,
+			Enabled:    false,
 			ListenAddr: "0.0.0.0:9090",
 			Path:       "/metrics",
 		},

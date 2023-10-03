@@ -102,7 +102,7 @@ func startAgent(log *zap.Logger, c *Config) (*sdkmetric.MeterProvider, error) {
 		sdkmetric.WithResource(resource.NewSchemaless(semconv.ServiceNameKey.String(c.Name))),
 	}
 
-	if c.Enabled {
+	if c.OpenTelemetry.Enabled {
 		for _, exp := range c.OpenTelemetry.Exporters {
 			exporter, err := createOTELExporter(log, exp)
 			if err != nil {
