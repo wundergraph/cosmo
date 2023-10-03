@@ -104,13 +104,14 @@ func startAgent(ctx context.Context, log *zap.Logger, c *Config) (*sdkmetric.Met
 			return nil, err
 		}
 
+		// Please version this meter name if you change the buckets.
+
 		msBucketHistogram := aggregation.ExplicitBucketHistogram{
-			// 0ms-10min
+			// 0ms-10s
 			Boundaries: []float64{
-				0, 5, 7, 10, 25, 50, 75, 100, 125, 150, 200, 250, 300, 350,
-				400, 450, 500, 600, 700, 800, 900, 1000, 1250, 1500, 1750,
-				2000, 2250, 2500, 2750, 3000, 3250, 3500, 3750, 4000, 5000,
-				10000, 15000, 20000, 30000, 60000, 300000, 600000,
+				0, 5, 7, 10, 15, 25, 50, 75, 100, 125, 150, 175, 200, 225,
+				250, 275, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000, 1250,
+				1500, 1750, 2000, 2250, 2500, 2750, 3000, 3500, 4000, 5000, 10000,
 			},
 		}
 		bytesBucketHistogram := aggregation.ExplicitBucketHistogram{
