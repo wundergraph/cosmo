@@ -108,17 +108,10 @@ export class MetricsDashboardRepository {
             message: r.reason,
           },
         };
-      } else if (r.status === 'fulfilled' && r.value.status === 'error') {
-        return {
-          error: {
-            type: r.value.errorType,
-            message: r.value.error,
-            warnings: r.value.warnings,
-          },
-        };
       }
+
       return {
-        data: r.value.data,
+        data: r.value,
       };
     });
   }
@@ -215,7 +208,7 @@ export class MetricsDashboardRepository {
         })),
         series: this.mapSeries(range, seriesResponse, prevSeriesResponse),
       },
-    } as any;
+    };
   }
 
   /**
@@ -352,7 +345,7 @@ export class MetricsDashboardRepository {
       prevSeries,
     ]);
 
-    return (await {
+    return {
       data: {
         value: parseValue(p95Response[0]?.value),
         previousValue: parseValue(prevP95Response[0]?.value),
@@ -362,8 +355,7 @@ export class MetricsDashboardRepository {
         })),
         series: this.mapSeries(range, seriesResponse, prevSeriesResponse),
       },
-      errors: [],
-    }) as any;
+    };
   }
 
   /**
@@ -502,7 +494,7 @@ export class MetricsDashboardRepository {
       prevSeries,
     ]);
 
-    return (await {
+    return {
       data: {
         value: parseValue(valueResponse[0].errorPercentage),
         previousValue: parseValue(prevValueResponse[0].errorPercentage),
@@ -512,7 +504,7 @@ export class MetricsDashboardRepository {
         })),
         series: this.mapSeries(range, seriesResponse, prevSeriesResponse),
       },
-    }) as any;
+    };
   }
 
   /**
@@ -552,7 +544,7 @@ export class MetricsDashboardRepository {
       STEP INTERVAL ${granule} MINUTE
     `);
 
-    return await {
+    return {
       data: {
         series: series.map((s) => {
           return {
