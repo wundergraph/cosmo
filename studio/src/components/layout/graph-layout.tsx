@@ -48,7 +48,7 @@ const GraphLayout = ({ children }: LayoutProps) => {
   const router = useRouter();
   const organizationSlug = router.query.organizationSlug as string;
   const slug = router.query.slug as string;
-  const [user] = useContext(UserContext);
+  const user = useContext(UserContext);
 
   const { data, isLoading, error, refetch } = useQuery(
     getFederatedGraphByName.useQuery({
