@@ -160,27 +160,27 @@ spec:
             - name: GITHUB_APP_CLIENT_ID
               valueFrom:
                 configMapKeyRef:
-                  name: { { include "controlplane.fullname" . } }-configmap
+                  name: {{ include "controlplane.fullname" . }}-configmap
                   key: githubAppClientId
             - name: GITHUB_APP_ID
               valueFrom:
                 configMapKeyRef:
-                  name: { { include "controlplane.fullname" . } }-configmap
+                  name: {{ include "controlplane.fullname" . }}-configmap
                   key: githubAppId
             - name: GITHUB_APP_CLIENT_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: { { include "controlplane.fullname" . } }-secret
+                  name: {{ include "controlplane.fullname" . }}-secret
                   key: githubAppClientSecret
             - name: GITHUB_APP_PRIVATE_KEY
               valueFrom:
                 secretKeyRef:
-                  name: { { include "controlplane.fullname" . } }-secret
+                  name: {{ include "controlplane.fullname" . }}-secret
                   key: githubAppPrivateKey
             - name: GITHUB_APP_WEBHOOK_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: { { include "controlplane.fullname" . } }-secret
+                  name: {{ include "controlplane.fullname" . }}-secret
                   key: githubAppWebhookSecret
           ports:
             - name: http
