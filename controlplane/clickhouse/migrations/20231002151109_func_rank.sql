@@ -1,6 +1,6 @@
 -- migrate:up
 
-CREATE FUNCTION func_rank as (q,buckets) -> toUInt64(q*arraySum(buckets));
+CREATE FUNCTION func_rank as (q,buckets) -> q*arraySum(buckets);
 
 -- migrate:down
 

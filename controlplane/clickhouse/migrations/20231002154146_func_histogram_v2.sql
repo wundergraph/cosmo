@@ -1,18 +1,22 @@
 -- migrate:up
 
--- CREATE FUNCTION func_rank as (q,buckets) -> toUInt64(q*arraySum(buckets));
--- CREATE FUNCTION func_rank_bucket_lower_index as (rank,buckets) -> arrayFirstIndex(x -> if(x > rank, 1, 0),arrayCumSum(buckets));
--- CREATE FUNCTION func_rank_bound as (rank,bucketLowerIndex,buckets,bounds) -> arraySlice(bounds,bucketLowerIndex,2);
--- CREATE FUNCTION func_rank_in_bucket_position as (rank,bucketLowerIndex,buckets) -> minus(rank,arrayElement(arrayCumSum(buckets),minus(bucketLowerIndex,1)))
+-- Source: https://github.com/prometheus/prometheus/blob/main/promql/quantile.go#L74
 
-CREATE FUNCTION func_histogram_v2 as (rank,bucketLowerIndex,rank_bound,buckets,bounds) ->
-    -- When +inf is the lowest bound, we return the last bucket's upper bound
-    if(bucketLowerIndex = length(buckets), bounds[length(bounds)],
-       -- else
-       rank_bound[1] + (rank_bound[2] - rank_bound[1]) *
-                       (func_rank_in_bucket_position(rank, bucketLowerIndex, buckets) /
-                        arrayElement(buckets, bucketLowerIndex))
-    )
+-- CREATE FUNCTION func_rank as (q,buckets) -> q*arraySum(buckets);
+-- CREATE FUNCTION func_rank_bucket_lower_index as (rank,buckets) -> arrayFirstIndex(x -> if(x >= rank, 1, 0),arrayCumSum(buckets));
+
+CREATE FUNCTION func_histogram_v2 as (rank,b,buckets,bounds) ->
+    -- When +inf is matched, we return the last bucket's upper bound
+    if(b = length(buckets), bounds[length(bounds)],
+       if(b > 1,
+          -- if the bucketLowerIndex is greater than 1, we interpolate between the lower and upper bounds of the bucket
+          bounds[b] + (bounds[b+1] - bounds[b]) *
+                          (minus(rank,arrayElement(arrayCumSum(buckets),minus(b,1))) /
+                           minus(arrayElement(arrayCumSum(buckets),b), arrayElement(arrayCumSum(buckets), minus(b,1)))),
+           -- else
+          bounds[b+1] * (rank / arrayElement(arrayCumSum(buckets),b))
+       )
+    );
 
 -- migrate:down
 
