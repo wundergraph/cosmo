@@ -225,7 +225,7 @@ export class MetricsDashboardRepository {
         WITH
           toDateTime('${start}') AS startDate,
           toDateTime('${end}') AS endDate
-        SELECT quantile(0.5)(value) as value FROM (
+        SELECT round(quantile(0.5)(value), 4) as value FROM (
           SELECT
             func_rank(${quantile}, BucketCounts) as rank,
             func_rank_bucket_lower_index(rank, BucketCounts) as bucketLowerIndex,
