@@ -575,6 +575,31 @@ message WhoAmIResponse {
   optional string userEmail = 3;
 }
 
+message RouterToken {
+  string id = 1;
+  string name = 2;
+  string token = 3;
+  string createdAt = 4;
+}
+
+message GetRouterTokensRequest {
+  string fedGraphName = 1;
+}
+
+message GetRouterTokensResponse {
+  Response response = 1;
+  repeated RouterToken tokens = 2;
+}
+
+message DeleteRouterTokenRequest {
+  string tokenName = 1;
+  string fedGraphName = 2;
+}
+
+message DeleteRouterTokenResponse {
+  Response response = 1;
+}
+
 message Header{
   string key = 1;
   string value = 2;
@@ -742,6 +767,10 @@ service PlatformService {
   rpc CheckFederatedGraph(CheckFederatedGraphRequest) returns (CheckFederatedGraphResponse) {}
   // WhoAmI returns the identity of the user currently logged in.
   rpc WhoAmI(WhoAmIRequest) returns (WhoAmIResponse) {}
+  // GetRouterTokens returns the router tokens of a federated graph.
+  rpc GetRouterTokens(GetRouterTokensRequest) returns (GetRouterTokensResponse) {}
+  // DeleteRouterToken deletes the router token of a federated graph.
+  rpc DeleteRouterToken(DeleteRouterTokenRequest) returns (DeleteRouterTokenResponse) {}
 
   // For Studio and CLI
 

@@ -15,6 +15,7 @@ import {
   DeleteAPIKeyResponse,
   DeleteFederatedGraphResponse,
   DeleteFederatedSubgraphResponse,
+  DeleteRouterTokenResponse,
   FixSubgraphSchemaResponse,
   GetAPIKeysResponse,
   GetAnalyticsViewResponse,
@@ -28,6 +29,7 @@ import {
   GetMetricsDashboardResponse,
   GetOrganizationMembersResponse,
   GetOrganizationWebhookConfigsResponse,
+  GetRouterTokensResponse,
   GetSubgraphByNameResponse,
   GetSubgraphsResponse,
   GetTraceResponse,
@@ -64,6 +66,7 @@ import ApolloMigrator from '../services/ApolloMigrator.js';
 import { MetricsDashboardRepository } from '../repositories/analytics/MetricsDashboardRepository.js';
 import { handleError, isValidLabelMatchers, isValidLabels } from '../util.js';
 import { OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
+import auth from '../controllers/auth.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -1433,6 +1436,21 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
+        const currToken = await fedGraphRepo.getRouterToken({
+          federatedGraphId: graph.id,
+          organizationId: authContext.organizationId,
+          tokenName: req.tokenName,
+        });
+        if (currToken) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_ALREADY_EXISTS,
+              details: `Router token '${req.tokenName}' already exists`,
+            },
+            token: '',
+          };
+        }
+
         const tokenValue = await signJwt<GraphApiKeyJwtPayload>({
           secret: opts.jwtSecret,
           token: {
@@ -2591,6 +2609,91 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             role: 'member',
           });
         }
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+        };
+      });
+    },
+
+    getRouterTokens: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetRouterTokensResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const fedRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+
+        const federatedGraph = await fedRepo.byName(req.fedGraphName);
+        if (!federatedGraph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Federated graph '${req.fedGraphName}' not found`,
+            },
+            tokens: [],
+          };
+        }
+
+        const tokens = await fedRepo.getRouterTokens({
+          organizationId: authContext.organizationId,
+          federatedGraphId: federatedGraph.id,
+        });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          tokens,
+        };
+      });
+    },
+
+    deleteRouterToken: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<DeleteRouterTokenResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+
+        const federatedGraph = await fedGraphRepo.byName(req.fedGraphName);
+        if (!federatedGraph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Federated graph '${req.fedGraphName}' not found`,
+            },
+          };
+        }
+
+        const currToken = await fedGraphRepo.getRouterToken({
+          federatedGraphId: federatedGraph.id,
+          organizationId: authContext.organizationId,
+          tokenName: req.tokenName,
+        });
+
+        if (!currToken) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Router token '${req.tokenName}' doesn't exist`,
+            },
+            token: '',
+          };
+        }
+
+        await fedGraphRepo.deleteToken({
+          federatedGraphId: federatedGraph.id,
+          organizationId: authContext.organizationId,
+          tokenName: req.tokenName,
+        });
 
         return {
           response: {

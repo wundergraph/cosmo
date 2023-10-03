@@ -1,11 +1,11 @@
 import { Command } from 'commander';
 import pc from 'picocolors';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { BaseCommandOptions } from '../../../core/types/types.js';
-import { baseHeaders } from '../../../core/config.js';
+import { BaseCommandOptions } from '../../../../../core/types/types.js';
+import { baseHeaders } from '../../../../../core/config.js';
 
 export default (opts: BaseCommandOptions) => {
-  const createTokenCommand = new Command('create-token');
+  const createTokenCommand = new Command('create');
   createTokenCommand.description(
     'Creates a new token for a federated graph. The token can be used to authenticate against the control plane from the routers.',
   );

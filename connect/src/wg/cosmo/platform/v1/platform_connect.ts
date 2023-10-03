@@ -5,7 +5,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { CheckFederatedGraphRequest, CheckFederatedGraphResponse, CheckSubgraphSchemaRequest, CheckSubgraphSchemaResponse, CreateAPIKeyRequest, CreateAPIKeyResponse, CreateFederatedGraphRequest, CreateFederatedGraphResponse, CreateFederatedGraphTokenRequest, CreateFederatedGraphTokenResponse, CreateFederatedSubgraphRequest, CreateFederatedSubgraphResponse, CreateOrganizationWebhookConfigRequest, CreateOrganizationWebhookConfigResponse, DeleteAPIKeyRequest, DeleteAPIKeyResponse, DeleteFederatedGraphRequest, DeleteFederatedGraphResponse, DeleteFederatedSubgraphRequest, DeleteFederatedSubgraphResponse, DeleteOrganizationRequest, DeleteOrganizationResponse, DeleteOrganizationWebhookConfigRequest, DeleteOrganizationWebhookConfigResponse, FixSubgraphSchemaRequest, FixSubgraphSchemaResponse, GetAnalyticsViewRequest, GetAnalyticsViewResponse, GetAPIKeysRequest, GetAPIKeysResponse, GetCheckDetailsRequest, GetCheckDetailsResponse, GetChecksByFederatedGraphNameRequest, GetChecksByFederatedGraphNameResponse, GetDashboardAnalyticsViewRequest, GetDashboardAnalyticsViewResponse, GetFederatedGraphByNameRequest, GetFederatedGraphByNameResponse, GetFederatedGraphChangelogRequest, GetFederatedGraphChangelogResponse, GetFederatedGraphSDLByNameRequest, GetFederatedGraphSDLByNameResponse, GetFederatedGraphsRequest, GetFederatedGraphsResponse, GetFederatedSubgraphSDLByNameRequest, GetFederatedSubgraphSDLByNameResponse, GetMetricsDashboardRequest, GetMetricsDashboardResponse, GetMetricsErrorRateRequest, GetMetricsErrorRateResponse, GetOrganizationMembersRequest, GetOrganizationMembersResponse, GetOrganizationWebhookConfigsRequest, GetOrganizationWebhookConfigsResponse, GetSubgraphByNameRequest, GetSubgraphByNameResponse, GetSubgraphsRequest, GetSubgraphsResponse, GetTraceRequest, GetTraceResponse, InviteUserRequest, InviteUserResponse, LeaveOrganizationRequest, LeaveOrganizationResponse, MigrateFromApolloRequest, MigrateFromApolloResponse, PublishFederatedSubgraphRequest, PublishFederatedSubgraphResponse, RemoveInvitationRequest, RemoveInvitationResponse, UpdateFederatedGraphRequest, UpdateFederatedGraphResponse, UpdateOrganizationNameRequest, UpdateOrganizationNameResponse, UpdateOrganizationSlugRequest, UpdateOrganizationSlugResponse, UpdateOrganizationWebhookConfigRequest, UpdateOrganizationWebhookConfigResponse, UpdateOrgMemberRoleRequest, UpdateOrgMemberRoleResponse, UpdateSubgraphRequest, UpdateSubgraphResponse, WhoAmIRequest, WhoAmIResponse } from "./platform_pb.js";
+import { CheckFederatedGraphRequest, CheckFederatedGraphResponse, CheckSubgraphSchemaRequest, CheckSubgraphSchemaResponse, CreateAPIKeyRequest, CreateAPIKeyResponse, CreateFederatedGraphRequest, CreateFederatedGraphResponse, CreateFederatedGraphTokenRequest, CreateFederatedGraphTokenResponse, CreateFederatedSubgraphRequest, CreateFederatedSubgraphResponse, CreateOrganizationWebhookConfigRequest, CreateOrganizationWebhookConfigResponse, DeleteAPIKeyRequest, DeleteAPIKeyResponse, DeleteFederatedGraphRequest, DeleteFederatedGraphResponse, DeleteFederatedSubgraphRequest, DeleteFederatedSubgraphResponse, DeleteOrganizationRequest, DeleteOrganizationResponse, DeleteOrganizationWebhookConfigRequest, DeleteOrganizationWebhookConfigResponse, DeleteRouterTokenRequest, DeleteRouterTokenResponse, FixSubgraphSchemaRequest, FixSubgraphSchemaResponse, GetAnalyticsViewRequest, GetAnalyticsViewResponse, GetAPIKeysRequest, GetAPIKeysResponse, GetCheckDetailsRequest, GetCheckDetailsResponse, GetChecksByFederatedGraphNameRequest, GetChecksByFederatedGraphNameResponse, GetDashboardAnalyticsViewRequest, GetDashboardAnalyticsViewResponse, GetFederatedGraphByNameRequest, GetFederatedGraphByNameResponse, GetFederatedGraphChangelogRequest, GetFederatedGraphChangelogResponse, GetFederatedGraphSDLByNameRequest, GetFederatedGraphSDLByNameResponse, GetFederatedGraphsRequest, GetFederatedGraphsResponse, GetFederatedSubgraphSDLByNameRequest, GetFederatedSubgraphSDLByNameResponse, GetMetricsDashboardRequest, GetMetricsDashboardResponse, GetMetricsErrorRateRequest, GetMetricsErrorRateResponse, GetOrganizationMembersRequest, GetOrganizationMembersResponse, GetOrganizationWebhookConfigsRequest, GetOrganizationWebhookConfigsResponse, GetRouterTokensRequest, GetRouterTokensResponse, GetSubgraphByNameRequest, GetSubgraphByNameResponse, GetSubgraphsRequest, GetSubgraphsResponse, GetTraceRequest, GetTraceResponse, InviteUserRequest, InviteUserResponse, LeaveOrganizationRequest, LeaveOrganizationResponse, MigrateFromApolloRequest, MigrateFromApolloResponse, PublishFederatedSubgraphRequest, PublishFederatedSubgraphResponse, RemoveInvitationRequest, RemoveInvitationResponse, UpdateFederatedGraphRequest, UpdateFederatedGraphResponse, UpdateOrganizationNameRequest, UpdateOrganizationNameResponse, UpdateOrganizationSlugRequest, UpdateOrganizationSlugResponse, UpdateOrganizationWebhookConfigRequest, UpdateOrganizationWebhookConfigResponse, UpdateOrgMemberRoleRequest, UpdateOrgMemberRoleResponse, UpdateSubgraphRequest, UpdateSubgraphResponse, WhoAmIRequest, WhoAmIResponse } from "./platform_pb.js";
 import { MethodIdempotency, MethodKind } from "@bufbuild/protobuf";
 import { GetConfigRequest, GetConfigResponse } from "../../node/v1/node_pb.js";
 
@@ -132,6 +132,28 @@ export const PlatformService = {
       name: "WhoAmI",
       I: WhoAmIRequest,
       O: WhoAmIResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * GetRouterTokens returns the router tokens of a federated graph.
+     *
+     * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetRouterTokens
+     */
+    getRouterTokens: {
+      name: "GetRouterTokens",
+      I: GetRouterTokensRequest,
+      O: GetRouterTokensResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * DeleteRouterToken deletes the router token of a federated graph.
+     *
+     * @generated from rpc wg.cosmo.platform.v1.PlatformService.DeleteRouterToken
+     */
+    deleteRouterToken: {
+      name: "DeleteRouterToken",
+      I: DeleteRouterTokenRequest,
+      O: DeleteRouterTokenResponse,
       kind: MethodKind.Unary,
     },
     /**

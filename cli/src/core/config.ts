@@ -27,7 +27,7 @@ const getAccessToken = () => {
 export const config = {
   baseURL: process.env.COSMO_API_URL || 'https://cosmo-cp.wundergraph.com',
   apiKey: getAccessToken() || process.env.COSMO_API_KEY,
-  kcApiURL: process.env.KC_API_URL || 'https://accounts.wundergraph.com/auth',
+  kcApiURL: process.env.KC_API_URL || 'http://localhost:8080',
   kcClientId: process.env.KC_CLIENT_ID || 'cosmo-cli',
   kcRealm: process.env.KC_REALM || 'cosmo',
   version: info.version,

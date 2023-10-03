@@ -239,4 +239,5 @@ export interface GraphApiKeyDTO {
   id: string;
   name: string;
   token: string;
+  createdAt: string;
 }
