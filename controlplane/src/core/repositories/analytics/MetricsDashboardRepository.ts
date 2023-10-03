@@ -263,7 +263,7 @@ export class MetricsDashboardRepository {
       WITH
         toDateTime('${start}') AS startDate,
         toDateTime('${end}') AS endDate
-      SELECT name, round(quantileDeterministic(0.5)(value, 1), 4) AS value FROM (
+      SELECT name, round(quantile(0.5)(value), 4) AS value FROM (
         SELECT
           Timestamp as timestamp,
           OperationName as name,
@@ -373,15 +373,12 @@ export class MetricsDashboardRepository {
         toDateTime('${start}') AS startDate,
         toDateTime('${end}') AS endDate
       SELECT
-        sum(totalErrors) AS serverErrors,
-        sum(totalClientErrors) as clientErrors,
+        sum(totalErrors) AS errors,
         sum(totalRequests) AS requests,
-        round(serverErrors + clientErrors, 3) as errors,
         if(errors > 0, round(errors / requests * 100, 2), 0) AS errorPercentage FROM (
         SELECT
           sum(TotalRequests) as totalRequests,
-          sum(TotalErrors) as totalErrors,
-          sum(TotalClientErrors) as totalClientErrors
+          sum(TotalErrors) as totalErrors
         FROM operation_request_metrics_5_30_mv
         WHERE Timestamp >= startDate AND Timestamp <= endDate
           AND OrganizationID = '${params.organizationId}'
@@ -395,15 +392,12 @@ export class MetricsDashboardRepository {
         toDateTime('${prevStart}') AS startDate,
         toDateTime('${prevEnd}') AS endDate
       SELECT
-        sum(totalErrors) AS serverErrors,
-        sum(totalClientErrors) as clientErrors,
+        sum(totalErrors) AS errors,
         sum(totalRequests) AS requests,
-        round(serverErrors + clientErrors, 3) as errors,
         if(errors > 0, round(errors / requests * 100, 2), 0) AS errorPercentage FROM (
         SELECT
           sum(TotalRequests) as totalRequests,
-          sum(TotalErrors) as totalErrors,
-          sum(TotalClientErrors) as totalClientErrors
+          sum(TotalErrors) as totalErrors
         FROM operation_request_metrics_5_30_mv
         WHERE Timestamp >= startDate AND Timestamp <= endDate
           AND OrganizationID = '${params.organizationId}'
@@ -419,18 +413,15 @@ export class MetricsDashboardRepository {
         toDateTime('${end}') AS endDate
       SELECT
         name,
-        sum(totalErrors) AS serverErrors,
-        sum(totalClientErrors) as clientErrors,
+        sum(totalErrors) AS errors,
         sum(totalRequests) AS requests,
-        round(serverErrors + clientErrors, 3) as errors,
         if(errors > 0, round(errors / requests * 100, 2), 0) AS value
       FROM (
         SELECT
           Timestamp as timestamp,
           OperationName as name,
           sum(TotalRequests) as totalRequests,
-          sum(TotalErrors) as totalErrors,
-          sum(TotalClientErrors) as totalClientErrors
+          sum(TotalErrors) as totalErrors
         FROM operation_request_metrics_5_30_mv
         WHERE Timestamp >= startDate AND Timestamp <= endDate
           AND OrganizationID = '${params.organizationId}'
@@ -446,10 +437,8 @@ export class MetricsDashboardRepository {
         toDateTime('${end}') AS endDate
       SELECT
           toStartOfInterval(Timestamp, INTERVAL ${granule} MINUTE) AS timestamp,
-          sum(TotalErrors) AS serverErrors,
-          sum(TotalClientErrors) as clientErrors,
+          sum(TotalErrors) AS errors,
           sum(TotalRequests) AS requests,
-          round(serverErrors + clientErrors, 3) as errors,
           if(errors > 0, round(errors / requests * 100, 2), 0) AS value
       FROM operation_request_metrics_5_30_mv
       WHERE timestamp >= startDate AND timestamp <= endDate
@@ -469,10 +458,8 @@ export class MetricsDashboardRepository {
         toDateTime('${prevEnd}') AS endDate
       SELECT
           toStartOfInterval(Timestamp, INTERVAL ${granule} MINUTE) AS timestamp,
-          sum(TotalErrors) AS serverErrors,
-          sum(TotalClientErrors) as clientErrors,
+          sum(TotalErrors) AS errors,
           sum(TotalRequests) AS requests,
-          round(serverErrors + clientErrors, 3) as errors,
           if(errors > 0, round(errors / requests * 100, 2), 0) AS value
       FROM operation_request_metrics_5_30_mv
       WHERE timestamp >= startDate AND timestamp <= endDate
@@ -530,8 +517,8 @@ export class MetricsDashboardRepository {
         toDateTime('${end}') AS endDate
       SELECT
           toStartOfInterval(Timestamp, INTERVAL ${granule} MINUTE) AS timestamp,
-          sum(TotalRequests) AS requestRate,
-          sum(TotalErrors) + sum(TotalClientErrors) AS errorRate
+          round(sum(TotalRequests) / ${granule}, 4) AS requestRate,
+          round(sum(TotalErrors) / ${granule}, 4) AS errorRate
       FROM operation_request_metrics_5_30_mv
       WHERE timestamp >= startDate AND timestamp <= endDate
         AND OrganizationID = '${params.organizationId}'
