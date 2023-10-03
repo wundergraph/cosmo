@@ -220,7 +220,7 @@ func NewRouter(opts ...Option) (*Router, error) {
 			})
 		}
 	}
-	if r.metricConfig.Enabled && r.metricConfig.OpenTelemetry.Enabled && len(r.metricConfig.OpenTelemetry.Exporters) == 0 {
+	if r.metricConfig.OpenTelemetry.Enabled && len(r.metricConfig.OpenTelemetry.Exporters) == 0 {
 		if endpoint := otelconfig.DefaultEndpoint(); endpoint != "" {
 			r.logger.Debug("using default metrics exporter", zap.String("endpoint", endpoint))
 			r.metricConfig.OpenTelemetry.Exporters = append(r.metricConfig.OpenTelemetry.Exporters, &metric.OpenTelemetryExporter{
@@ -377,15 +377,13 @@ func (r *Router) bootstrap(ctx context.Context) error {
 	}
 
 	// Prometheus metrics rely on OTLP metrics
-	if r.metricConfig.Enabled || r.metricConfig.Prometheus.Enabled {
+	if r.metricConfig.Prometheus.Enabled {
 		mp, err := metric.StartAgent(r.logger, r.metricConfig)
 		if err != nil {
 			return fmt.Errorf("failed to start trace agent: %w", err)
 		}
 		r.meterProvider = mp
-	}
 
-	if r.metricConfig.Prometheus.Enabled {
 		promSvr := createPrometheus(r.logger, r.metricConfig.Prometheus.ListenAddr, r.metricConfig.Prometheus.Path)
 		go func() {
 			if err := promSvr.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
@@ -548,9 +546,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	var metricStore *metric.Metrics
 
 	// Prometheus metrics rely on OTLP metrics
-	metricsEnabled := r.metricConfig.Enabled || r.metricConfig.Prometheus.Enabled
-
-	if metricsEnabled {
+	if r.metricConfig.IsEnabled() {
 		m, err := metric.NewMetrics(
 			r.meterProvider,
 			metric.WithAttributes(
@@ -573,7 +569,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 
 	var traceHandler *trace.Middleware
 
-	if metricsEnabled {
+	if r.metricConfig.IsEnabled() {
 		h := trace.NewMiddleware(otel.RouterServerAttribute,
 			otelhttp.WithSpanOptions(
 				oteltrace.WithAttributes(

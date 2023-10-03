@@ -40,6 +40,10 @@ type Config struct {
 	Prometheus Prometheus
 }
 
+func (c *Config) IsEnabled() bool {
+	return c != nil && (c.OpenTelemetry.Enabled || c.Prometheus.Enabled)
+}
+
 // DefaultConfig returns the default config.
 func DefaultConfig() *Config {
 	return &Config{

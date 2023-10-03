@@ -167,8 +167,7 @@ func metricsConfig(cfg *config.Telemetry) *metric.Config {
 	}
 
 	return &metric.Config{
-		Enabled: cfg.Metrics.OTLP.Enabled || cfg.Metrics.Prometheus.Enabled,
-		Name:    cfg.ServiceName,
+		Name: cfg.ServiceName,
 		OpenTelemetry: metric.OpenTelemetry{
 			Enabled:   cfg.Metrics.OTLP.Enabled,
 			Exporters: openTelemetryExporters,
