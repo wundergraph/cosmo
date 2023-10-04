@@ -85,10 +85,13 @@ func createExporter(log *zap.Logger, exp *Exporter) (sdktrace.SpanExporter, erro
 	default:
 		return nil, fmt.Errorf("unknown exporter type: %s", exp.Exporter)
 	}
+
 	if err != nil {
 		return nil, err
 	}
+
 	log.Info("using trace exporter", zap.String("exporter", string(exp.Exporter)), zap.String("endpoint", exp.Endpoint), zap.String("path", exp.HTTPPath))
+
 	return exporter, nil
 }
 

@@ -377,19 +377,21 @@ func (r *Router) bootstrap(ctx context.Context) error {
 	}
 
 	// Prometheus metrics rely on OTLP metrics
-	if r.metricConfig.Prometheus.Enabled {
+	if r.metricConfig.IsEnabled() {
 		mp, err := metric.StartAgent(ctx, r.logger, r.metricConfig)
 		if err != nil {
 			return fmt.Errorf("failed to start trace agent: %w", err)
 		}
 		r.meterProvider = mp
 
-		promSvr := createPrometheus(r.logger, r.metricConfig.Prometheus.ListenAddr, r.metricConfig.Prometheus.Path)
-		go func() {
-			if err := promSvr.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-				r.logger.Error("Failed to start Prometheus server", zap.Error(err))
-			}
-		}()
+		if r.metricConfig.Prometheus.Enabled {
+			promSvr := createPrometheus(r.logger, r.metricConfig.Prometheus.ListenAddr, r.metricConfig.Prometheus.Path)
+			go func() {
+				if err := promSvr.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+					r.logger.Error("Failed to start Prometheus server", zap.Error(err))
+				}
+			}()
+		}
 	}
 
 	// Modules are only initialized once and not on every config change
