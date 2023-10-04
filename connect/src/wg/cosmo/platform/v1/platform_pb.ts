@@ -4514,6 +4514,221 @@ export class WhoAmIResponse extends Message<WhoAmIResponse> {
 }
 
 /**
+ * @generated from message wg.cosmo.platform.v1.RouterToken
+ */
+export class RouterToken extends Message<RouterToken> {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id = "";
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name = "";
+
+  /**
+   * @generated from field: string token = 3;
+   */
+  token = "";
+
+  /**
+   * @generated from field: string createdAt = 4;
+   */
+  createdAt = "";
+
+  constructor(data?: PartialMessage<RouterToken>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.RouterToken";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "token", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "createdAt", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RouterToken {
+    return new RouterToken().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RouterToken {
+    return new RouterToken().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RouterToken {
+    return new RouterToken().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RouterToken | PlainMessage<RouterToken> | undefined, b: RouterToken | PlainMessage<RouterToken> | undefined): boolean {
+    return proto3.util.equals(RouterToken, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetRouterTokensRequest
+ */
+export class GetRouterTokensRequest extends Message<GetRouterTokensRequest> {
+  /**
+   * @generated from field: string fedGraphName = 1;
+   */
+  fedGraphName = "";
+
+  constructor(data?: PartialMessage<GetRouterTokensRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetRouterTokensRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "fedGraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetRouterTokensRequest {
+    return new GetRouterTokensRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetRouterTokensRequest {
+    return new GetRouterTokensRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetRouterTokensRequest {
+    return new GetRouterTokensRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetRouterTokensRequest | PlainMessage<GetRouterTokensRequest> | undefined, b: GetRouterTokensRequest | PlainMessage<GetRouterTokensRequest> | undefined): boolean {
+    return proto3.util.equals(GetRouterTokensRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetRouterTokensResponse
+ */
+export class GetRouterTokensResponse extends Message<GetRouterTokensResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.RouterToken tokens = 2;
+   */
+  tokens: RouterToken[] = [];
+
+  constructor(data?: PartialMessage<GetRouterTokensResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetRouterTokensResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "tokens", kind: "message", T: RouterToken, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetRouterTokensResponse {
+    return new GetRouterTokensResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetRouterTokensResponse {
+    return new GetRouterTokensResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetRouterTokensResponse {
+    return new GetRouterTokensResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetRouterTokensResponse | PlainMessage<GetRouterTokensResponse> | undefined, b: GetRouterTokensResponse | PlainMessage<GetRouterTokensResponse> | undefined): boolean {
+    return proto3.util.equals(GetRouterTokensResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.DeleteRouterTokenRequest
+ */
+export class DeleteRouterTokenRequest extends Message<DeleteRouterTokenRequest> {
+  /**
+   * @generated from field: string tokenName = 1;
+   */
+  tokenName = "";
+
+  /**
+   * @generated from field: string fedGraphName = 2;
+   */
+  fedGraphName = "";
+
+  constructor(data?: PartialMessage<DeleteRouterTokenRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.DeleteRouterTokenRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "tokenName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "fedGraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteRouterTokenRequest {
+    return new DeleteRouterTokenRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteRouterTokenRequest {
+    return new DeleteRouterTokenRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteRouterTokenRequest {
+    return new DeleteRouterTokenRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DeleteRouterTokenRequest | PlainMessage<DeleteRouterTokenRequest> | undefined, b: DeleteRouterTokenRequest | PlainMessage<DeleteRouterTokenRequest> | undefined): boolean {
+    return proto3.util.equals(DeleteRouterTokenRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.DeleteRouterTokenResponse
+ */
+export class DeleteRouterTokenResponse extends Message<DeleteRouterTokenResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  constructor(data?: PartialMessage<DeleteRouterTokenResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.DeleteRouterTokenResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteRouterTokenResponse {
+    return new DeleteRouterTokenResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteRouterTokenResponse {
+    return new DeleteRouterTokenResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteRouterTokenResponse {
+    return new DeleteRouterTokenResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DeleteRouterTokenResponse | PlainMessage<DeleteRouterTokenResponse> | undefined, b: DeleteRouterTokenResponse | PlainMessage<DeleteRouterTokenResponse> | undefined): boolean {
+    return proto3.util.equals(DeleteRouterTokenResponse, a, b);
+  }
+}
+
+/**
  * @generated from message wg.cosmo.platform.v1.Header
  */
 export class Header extends Message<Header> {
