@@ -2,8 +2,8 @@
   "extends": "../tsconfig.base.json",
   "compilerOptions": {
     "target": "ES2019",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
+    "module": "esnext",
+    "moduleResolution": "node",
     "declarationDir": "./dist",
     "outDir": "./dist",
     "typeRoots": ["./node_modules/@types", "./src/typedefinitions"]

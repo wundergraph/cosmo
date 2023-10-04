@@ -49,7 +49,8 @@ export class Authentication implements Authenticator {
         if (token.startsWith('cosmo')) {
           return await this.keyAuth.authenticate(token);
         }
-        return await this.accessTokenAuth.authenticate(token);
+        const organizationSlug = headers.get('cosmo-org-slug');
+        return await this.accessTokenAuth.authenticate(token, organizationSlug);
       }
 
       /**

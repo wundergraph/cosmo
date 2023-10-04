@@ -1,8 +1,10 @@
 import { Command, program } from 'commander';
 import open from 'open';
 import pc from 'picocolors';
+import jwtDecode from 'jwt-decode';
+import inquirer from 'inquirer';
 import { BaseCommandOptions } from '../../../core/types/types.js';
-import { performDeviceAuth, startPollingForAccessToken } from '../utils.js';
+import { DecodedAccessToken, performDeviceAuth, startPollingForAccessToken } from '../utils.js';
 import UserConfig from '../user-config.js';
 
 export default (opts: BaseCommandOptions) => {
@@ -39,7 +41,24 @@ export default (opts: BaseCommandOptions) => {
       program.error('Could not perform authentication. Please try again');
     }
 
-    userConfig.loadToken(accessTokenResp.response);
+    let decoded: DecodedAccessToken;
+
+    try {
+      decoded = jwtDecode<DecodedAccessToken>(accessTokenResp.response.accessToken);
+    } catch {
+      program.error('Could not perform authentication. Please try again');
+    }
+
+    const organizations = decoded.groups.map((group) => group.split('/')[1]);
+
+    const selectedOrganization = await inquirer.prompt({
+      name: 'organizationSlug',
+      type: 'list',
+      message: 'Select Organization:',
+      choices: organizations,
+    });
+
+    userConfig.loadToken({ ...accessTokenResp.response, organizationSlug: selectedOrganization.organizationSlug });
 
     console.log(pc.green('Logged in Successfully!'));
   });

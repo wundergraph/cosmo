@@ -14,6 +14,18 @@ export interface KeycloakToken {
   refreshExpiresAt: Date;
 }
 
+export interface DecodedAccessToken {
+  iss?: string;
+  sub?: string;
+  aud?: string[] | string;
+  exp?: number;
+  nbf?: number;
+  iat?: number;
+  jti?: string;
+  groups: string[];
+  email: string;
+}
+
 export const performDeviceAuth = async (): Promise<{
   success: boolean;
   response: DeviceAuthResponse;
