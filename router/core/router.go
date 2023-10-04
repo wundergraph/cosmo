@@ -4,12 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"net"
 	"net/http"
 	"net/url"
 	"sync"
 	"time"
+
+	"github.com/wundergraph/cosmo/router/internal/otel/otelconfig"
+	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 
 	"github.com/dgraph-io/ristretto"
 	"github.com/go-chi/chi"
@@ -208,16 +210,25 @@ func NewRouter(opts ...Option) (*Router, error) {
 		ExpectContinueTimeout: r.subgraphTransportOptions.ExpectContinueTimeout,
 	}
 
-	if r.traceConfig.OtlpHeaders == nil {
-		r.traceConfig.OtlpHeaders = make(map[string]string)
+	// Add default exporters if needed
+	if r.traceConfig.Enabled && len(r.traceConfig.Exporters) == 0 {
+		if endpoint := otelconfig.DefaultEndpoint(); endpoint != "" {
+			r.logger.Debug("using default trace exporter", zap.String("endpoint", endpoint))
+			r.traceConfig.Exporters = append(r.traceConfig.Exporters, &trace.Exporter{
+				Endpoint: endpoint,
+				Headers:  otelconfig.DefaultEndpointHeaders(r.graphApiToken),
+			})
+		}
 	}
-	r.traceConfig.OtlpHeaders["Authorization"] = fmt.Sprintf("Bearer %s", r.graphApiToken)
-
-	if r.metricConfig.OtlpHeaders == nil {
-		r.metricConfig.OtlpHeaders = make(map[string]string)
+	if r.metricConfig.OpenTelemetry.Enabled && len(r.metricConfig.OpenTelemetry.Exporters) == 0 {
+		if endpoint := otelconfig.DefaultEndpoint(); endpoint != "" {
+			r.logger.Debug("using default metrics exporter", zap.String("endpoint", endpoint))
+			r.metricConfig.OpenTelemetry.Exporters = append(r.metricConfig.OpenTelemetry.Exporters, &metric.OpenTelemetryExporter{
+				Endpoint: endpoint,
+				Headers:  otelconfig.DefaultEndpointHeaders(r.graphApiToken),
+			})
+		}
 	}
-	r.metricConfig.OtlpHeaders["Authorization"] = fmt.Sprintf("Bearer %s", r.graphApiToken)
-
 	return r, nil
 }
 
@@ -366,15 +377,13 @@ func (r *Router) bootstrap(ctx context.Context) error {
 	}
 
 	// Prometheus metrics rely on OTLP metrics
-	if r.metricConfig.Enabled || r.metricConfig.Prometheus.Enabled {
+	if r.metricConfig.Prometheus.Enabled {
 		mp, err := metric.StartAgent(ctx, r.logger, r.metricConfig)
 		if err != nil {
 			return fmt.Errorf("failed to start trace agent: %w", err)
 		}
 		r.meterProvider = mp
-	}
 
-	if r.metricConfig.Prometheus.Enabled {
 		promSvr := createPrometheus(r.logger, r.metricConfig.Prometheus.ListenAddr, r.metricConfig.Prometheus.Path)
 		go func() {
 			if err := promSvr.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
@@ -537,9 +546,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	var metricStore *metric.Metrics
 
 	// Prometheus metrics rely on OTLP metrics
-	metricsEnabled := r.metricConfig.Enabled || r.metricConfig.Prometheus.Enabled
-
-	if metricsEnabled {
+	if r.metricConfig.IsEnabled() {
 		m, err := metric.NewMetrics(
 			r.meterProvider,
 			metric.WithApplicationVersion(Version),

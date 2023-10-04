@@ -4,19 +4,23 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"time"
 
+	"github.com/wundergraph/cosmo/router/internal/otel/otelconfig"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	"go.uber.org/zap"
+
+	_ "google.golang.org/grpc/encoding/gzip" // Required for gzip support over grpc
 )
 
-type KindOtlp string
-
 const (
-	KindOtlpHttp KindOtlp = "otlphttp"
+	defaultBatchTimeout  = 10 * time.Second
+	defaultExportTimeout = 30 * time.Second
 )
 
 var (
@@ -28,15 +32,15 @@ func StartAgent(ctx context.Context, log *zap.Logger, c *Config) (*sdktrace.Trac
 	return startAgent(ctx, log, c)
 }
 
-func createExporter(c *Config) (sdktrace.SpanExporter, error) {
-	// Just support OTLP for now. Jaeger has native OTLP support.
-	switch c.Batcher {
-	case KindOtlpHttp:
-		u, err := url.Parse(c.Endpoint)
-		if err != nil {
-			return nil, fmt.Errorf("invalid OpenTelemetry endpoint: %w", err)
-		}
-
+func createExporter(log *zap.Logger, exp *Exporter) (sdktrace.SpanExporter, error) {
+	u, err := url.Parse(exp.Endpoint)
+	if err != nil {
+		return nil, fmt.Errorf("invalid OpenTelemetry endpoint: %w", err)
+	}
+	var exporter sdktrace.SpanExporter
+	// Just support OTLP and gRPC for now. Jaeger has native OTLP support.
+	switch exp.Exporter {
+	case otelconfig.ExporterDefault, otelconfig.ExporterOLTPHTTP:
 		opts := []otlptracehttp.Option{
 			// Includes host and port
 			otlptracehttp.WithEndpoint(u.Host),
@@ -47,19 +51,45 @@ func createExporter(c *Config) (sdktrace.SpanExporter, error) {
 			opts = append(opts, otlptracehttp.WithInsecure())
 		}
 
-		if len(c.OtlpHeaders) > 0 {
-			opts = append(opts, otlptracehttp.WithHeaders(c.OtlpHeaders))
+		if len(exp.Headers) > 0 {
+			opts = append(opts, otlptracehttp.WithHeaders(exp.Headers))
 		}
-		if len(c.OtlpHttpPath) > 0 {
-			opts = append(opts, otlptracehttp.WithURLPath(c.OtlpHttpPath))
+		if len(exp.HTTPPath) > 0 {
+			opts = append(opts, otlptracehttp.WithURLPath(exp.HTTPPath))
 		}
-		return otlptracehttp.New(
+		exporter, err = otlptracehttp.New(
+			context.Background(),
+			opts...,
+		)
+	case otelconfig.ExporterOLTPGRPC:
+		opts := []otlptracegrpc.Option{
+			// Includes host and port
+			otlptracegrpc.WithEndpoint(u.Host),
+			otlptracegrpc.WithCompressor("gzip"),
+		}
+
+		if u.Scheme != "https" {
+			opts = append(opts, otlptracegrpc.WithInsecure())
+		}
+
+		if len(exp.Headers) > 0 {
+			opts = append(opts, otlptracegrpc.WithHeaders(exp.Headers))
+		}
+		if len(exp.HTTPPath) > 0 {
+			log.Warn("otlptracegrpc exporter doesn't support arbitrary paths", zap.String("path", exp.HTTPPath))
+		}
+		exporter, err = otlptracegrpc.New(
 			context.Background(),
 			opts...,
 		)
 	default:
-		return nil, fmt.Errorf("unknown exporter: %s", c.Batcher)
+		return nil, fmt.Errorf("unknown exporter type: %s", exp.Exporter)
 	}
+	if err != nil {
+		return nil, err
+	}
+	log.Info("using trace exporter", zap.String("exporter", string(exp.Exporter)), zap.String("endpoint", exp.Endpoint), zap.String("path", exp.HTTPPath))
+	return exporter, nil
 }
 
 func startAgent(ctx context.Context, log *zap.Logger, c *Config) (*sdktrace.TracerProvider, error) {
@@ -96,24 +126,34 @@ func startAgent(ctx context.Context, log *zap.Logger, c *Config) (*sdktrace.Trac
 		sdktrace.WithResource(r),
 	}
 
-	if c.Enabled && len(c.Endpoint) > 0 {
-		exp, err := createExporter(c)
-		if err != nil {
-			log.Error("create exporter error", zap.Error(err))
-			return nil, err
+	if c.Enabled {
+		for _, exp := range c.Exporters {
+			exporter, err := createExporter(log, exp)
+			if err != nil {
+				log.Error("creating exporter", zap.Error(err))
+				return nil, err
+			}
+
+			batchTimeout := exp.BatchTimeout
+			if batchTimeout == 0 {
+				batchTimeout = defaultBatchTimeout
+			}
+
+			exportTimeout := exp.ExportTimeout
+			if exportTimeout == 0 {
+				exportTimeout = defaultExportTimeout
+			}
+
+			// Always be sure to batch in production.
+			opts = append(opts,
+				sdktrace.WithBatcher(exporter,
+					sdktrace.WithBatchTimeout(batchTimeout),
+					sdktrace.WithExportTimeout(exportTimeout),
+					sdktrace.WithMaxExportBatchSize(512),
+					sdktrace.WithMaxQueueSize(2048),
+				),
+			)
 		}
-
-		// Always be sure to batch in production.
-		opts = append(opts,
-			sdktrace.WithBatcher(exp,
-				sdktrace.WithBatchTimeout(c.BatchTimeout),
-				sdktrace.WithExportTimeout(c.ExportTimeout),
-				sdktrace.WithMaxExportBatchSize(512),
-				sdktrace.WithMaxQueueSize(2048),
-			),
-		)
-
-		log.Info("Trace Exporter agent started", zap.String("url", c.Endpoint+c.OtlpHttpPath))
 	}
 
 	tp := sdktrace.NewTracerProvider(opts...)

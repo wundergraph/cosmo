@@ -17,18 +17,20 @@ func TestStartAgent(t *testing.T) {
 		Name: "foo",
 	}
 	c2 := &Config{
-		Name:     "bla",
-		Endpoint: endpoint,
-		Batcher:  "otlp",
+		Name: "bla",
+		Exporters: []*Exporter{{
+			Endpoint: endpoint,
+		}},
 	}
 	c3 := &Config{
-		Name:     "otlphttp",
-		Endpoint: endpoint,
-		Batcher:  KindOtlpHttp,
-		OtlpHeaders: map[string]string{
-			"Authorization": "Bearer token",
-		},
-		OtlpHttpPath: "/v1/traces",
+		Name: "otlphttp",
+		Exporters: []*Exporter{{
+			Endpoint: endpoint,
+			Headers: map[string]string{
+				"Authorization": "Bearer token",
+			},
+			HTTPPath: "/v1/traces",
+		}},
 	}
 
 	log := zap.NewNop()
