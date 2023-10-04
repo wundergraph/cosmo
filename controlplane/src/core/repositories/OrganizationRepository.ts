@@ -512,7 +512,7 @@ export class OrganizationRepository {
         set.key = input.key;
       }
 
-      await this.db.update(organizationWebhooks).set(set).where(eq(organizationWebhooks.id, input.id));
+      await db.update(organizationWebhooks).set(set).where(eq(organizationWebhooks.id, input.id));
 
       if (!input.eventsMeta) {
         return;
@@ -528,17 +528,16 @@ export class OrganizationRepository {
           .delete(schema.webhookGraphSchemaUpdate)
           .where(and(eq(schema.webhookGraphSchemaUpdate.webhookId, input.id)));
 
-        for (const id of ids) {
-          const op = db
-            .insert(schema.webhookGraphSchemaUpdate)
-            .values({
+        await db
+          .insert(schema.webhookGraphSchemaUpdate)
+          .values(
+            ids.map((id) => ({
               webhookId: input.id,
               federatedGraphId: id,
-            })
-            .onConflictDoNothing();
-          promises.push(op);
-        }
-        await Promise.all(promises);
+            })),
+          )
+          .onConflictDoNothing()
+          .execute();
       }
     });
   }
