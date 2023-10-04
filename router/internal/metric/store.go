@@ -26,8 +26,9 @@ const (
 type Option func(svr *Metrics)
 
 type Metrics struct {
-	meterProvider *metric.MeterProvider
+	applicationVersion string
 
+	meterProvider  *metric.MeterProvider
 	counters       map[string]otelmetric.Int64Counter
 	valueRecorders map[string]otelmetric.Float64Histogram
 	upDownCounters map[string]otelmetric.Int64UpDownCounter
@@ -159,7 +160,7 @@ func (h *Metrics) MeasureResponseSize(r *http.Request, size int64, attr ...attri
 	h.counters[ResponseContentLengthCounter].Add(r.Context(), size, baseAttributes)
 }
 
-func (h *Metrics) MeasureLatency(r *http.Request, requestStartTime time.Time, statusCode int, attr ...attribute.KeyValue) {
+func (h *Metrics) MeasureLatency(r *http.Request, requestStartTime time.Time, attr ...attribute.KeyValue) {
 	ctx := r.Context()
 
 	var baseKeys []attribute.KeyValue
@@ -172,6 +173,12 @@ func (h *Metrics) MeasureLatency(r *http.Request, requestStartTime time.Time, st
 	// Use floating point division here for higher precision (instead of Millisecond method).
 	elapsedTime := float64(time.Since(requestStartTime)) / float64(time.Millisecond)
 	h.valueRecorders[ServerLatencyHistogram].Record(ctx, elapsedTime, baseAttributes)
+}
+
+func WithApplicationVersion(version string) Option {
+	return func(h *Metrics) {
+		h.applicationVersion = version
+	}
 }
 
 // WithAttributes adds attributes to the base attributes
