@@ -23,7 +23,6 @@ import {
 } from '../src/core/test-util';
 import Keycloak from '../src/core/services/Keycloak';
 import { MockPlatformWebhookService } from '../src/core/webhooks/PlatformWebhookService';
-import { MockPrometheusClient } from '../src/core/prometheus/client';
 
 let dbname = '';
 
@@ -68,10 +67,6 @@ describe('Router Config', (ctx) => {
 
     const platformWebhooks = new MockPlatformWebhookService();
 
-    const prometheus = new MockPrometheusClient({
-      apiUrl: 'http://localhost:9090',
-    });
-
     await server.register(fastifyConnectPlugin, {
       routes: routes({
         db: server.db,
@@ -81,7 +76,6 @@ describe('Router Config', (ctx) => {
         keycloakRealm: realm,
         keycloakClient,
         platformWebhooks,
-        prometheus,
       }),
     });
 
@@ -302,10 +296,6 @@ describe('Router Config', (ctx) => {
 
     const platformWebhooks = new MockPlatformWebhookService();
 
-    const prometheus = new MockPrometheusClient({
-      apiUrl: 'http://localhost:9090',
-    });
-
     await server.register(fastifyConnectPlugin, {
       routes: routes({
         db: server.db,
@@ -315,7 +305,6 @@ describe('Router Config', (ctx) => {
         keycloakRealm: realm,
         keycloakClient,
         platformWebhooks,
-        prometheus,
       }),
     });
 

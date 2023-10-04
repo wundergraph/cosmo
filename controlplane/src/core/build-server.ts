@@ -19,7 +19,6 @@ import { OrganizationRepository } from './repositories/OrganizationRepository.js
 import GraphApiTokenAuthenticator from './services/GraphApiTokenAuthenticator.js';
 import AuthUtils from './auth-utils.js';
 import Keycloak from './services/Keycloak.js';
-import PrometheusClient from './prometheus/client.js';
 import { PlatformWebhookService } from './webhooks/PlatformWebhookService.js';
 import AccessTokenAuthenticator from './services/AccessTokenAuthenticator.js';
 
@@ -154,9 +153,6 @@ export default async function build(opts: BuildConfig) {
     webErrorPath: opts.auth.webErrorPath,
   });
 
-  const prometheusClient = new PrometheusClient({
-    apiUrl: 'http://localhost:9090',
-  });
   const organizationRepository = new OrganizationRepository(fastify.db);
   const apiKeyAuth = new ApiKeyAuthenticator(fastify.db, organizationRepository);
   const webAuth = new WebSessionAuthenticator(opts.auth.secret);
@@ -209,7 +205,6 @@ export default async function build(opts: BuildConfig) {
       chClient: fastify.ch,
       authenticator,
       keycloakClient,
-      prometheus: prometheusClient,
       platformWebhooks,
     }),
     logLevel: opts.logger.level as pino.LevelWithSilent,
