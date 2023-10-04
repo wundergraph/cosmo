@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.18.0](https://github.com/wundergraph/cosmo/compare/wgc@0.17.0...wgc@0.18.0) (2023-10-04)
+
+### Features
+
+* github app integration ([#140](https://github.com/wundergraph/cosmo/issues/140)) ([783a1f9](https://github.com/wundergraph/cosmo/commit/783a1f9c3f42284d1bf6cfa0d8fd46971724500a)) (@thisisnithin)
+* handle multiple orgs in the cli ([#145](https://github.com/wundergraph/cosmo/issues/145)) ([77234c9](https://github.com/wundergraph/cosmo/commit/77234c979e117473bf8429c0cd0e4d4c888eb81d)) (@JivusAyrus)
+
 # [0.17.0](https://github.com/wundergraph/cosmo/compare/wgc@0.16.0...wgc@0.17.0) (2023-09-29)
 
 ### Features
