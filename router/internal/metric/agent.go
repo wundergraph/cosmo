@@ -145,7 +145,7 @@ func startAgent(ctx context.Context, log *zap.Logger, c *Config) (*sdkmetric.Met
 			sdkmetric.WithReader(
 				sdkmetric.NewPeriodicReader(exp,
 					sdkmetric.WithTimeout(30*time.Second),
-					sdkmetric.WithInterval(5*time.Second),
+					sdkmetric.WithInterval(15*time.Second),
 				),
 			),
 		)
