@@ -1,7 +1,8 @@
-import { EventsMeta } from '@wundergraph/cosmo-shared';
 import { relations } from 'drizzle-orm';
 import {
+  bigint,
   boolean,
+  json,
   jsonb,
   pgEnum,
   pgTable,
@@ -10,8 +11,6 @@ import {
   timestamp,
   uniqueIndex,
   uuid,
-  bigint,
-  json,
 } from 'drizzle-orm/pg-core';
 
 export const federatedGraphs = pgTable('federated_graphs', {
@@ -485,6 +484,17 @@ export const webhookGraphSchemaUpdate = pgTable(
     };
   },
 );
+
+export const webhookGraphSchemaUpdateRelations = relations(webhookGraphSchemaUpdate, ({ one }) => ({
+  organizationWebhook: one(organizationWebhooks, {
+    fields: [webhookGraphSchemaUpdate.webhookId],
+    references: [organizationWebhooks.id],
+  }),
+  federatedGraph: one(federatedGraphs, {
+    fields: [webhookGraphSchemaUpdate.federatedGraphId],
+    references: [federatedGraphs.id],
+  }),
+}));
 
 export const organizationWebhookRelations = relations(organizationWebhooks, ({ many }) => ({
   organization: many(organizations),
