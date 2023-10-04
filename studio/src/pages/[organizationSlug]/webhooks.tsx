@@ -275,6 +275,7 @@ const Webhook = ({
     ...getOrganizationWebhookMeta.useQuery({
       id: existing?.id ?? "",
     }),
+    cacheTime: 0,
     enabled: !!existing?.id && mode === "update" && isOpen,
   });
 
