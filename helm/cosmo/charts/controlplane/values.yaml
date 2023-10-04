@@ -153,3 +153,8 @@ configuration:
   clickhouseMigrationDsn: "clickhouse://default:changeme@cosmo-clickhouse:9000?database=cosmo"
   webhookUrl: ""
   webhookSecret: ""
+  githubAppClientId: ""
+  githubAppClientSecret: ""
+  githubAppId: ""
+  githubAppPrivateKey: ""
+  githubAppWebhookSecret: ""

@@ -60,6 +60,7 @@ export interface SchemaCheckDTO {
   isComposable: boolean;
   isBreaking: boolean;
   proposedSubgraphSchemaSDL?: string;
+  isForcedSuccess: boolean;
 }
 
 export interface GetChecksResponse {
@@ -75,6 +76,7 @@ export interface SchemaCheckDetailsDTO {
     isBreaking: boolean;
   }[];
   compositionErrors: string[];
+  check: SchemaCheckDTO;
 }
 
 export interface OrganizationDTO {

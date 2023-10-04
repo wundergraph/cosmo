@@ -47,6 +47,7 @@ describe('API Keys', (ctx) => {
     const clientId = 'studio';
     const adminUser = 'admin';
     const adminPassword = 'changeme';
+    const webBaseUrl = 'http://localhost:3000';
 
     const keycloakClient = new Keycloak({
       apiUrl,
@@ -72,6 +73,7 @@ describe('API Keys', (ctx) => {
         keycloakClient,
         platformWebhooks,
         prometheus,
+        webBaseUrl,
       }),
     });
 

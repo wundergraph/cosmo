@@ -1,13 +1,16 @@
-import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
+import { PartialMessage } from '@bufbuild/protobuf';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { GitInfo } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import Table from 'cli-table3';
 import { Command } from 'commander';
+import logSymbols from 'log-symbols';
 import { resolve } from 'pathe';
 import pc from 'picocolors';
-import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import logSymbols from 'log-symbols';
-import Table from 'cli-table3';
-import { BaseCommandOptions } from '../../../core/types/types.js';
 import { baseHeaders } from '../../../core/config.js';
+import { BaseCommandOptions } from '../../../core/types/types.js';
+import { useGitHub } from '../../../github.js';
 
 export default (opts: BaseCommandOptions) => {
   const schemaCheck = new Command('check');
@@ -26,12 +29,23 @@ export default (opts: BaseCommandOptions) => {
       return;
     }
 
-    let success = false;
+    let gitInfo: PartialMessage<GitInfo> | undefined;
+    const { isPr, commit: commitSha, repository, accountId } = useGitHub();
+    if (isPr && commitSha && repository && accountId) {
+      const [repositorySlug, ownerSlug] = repository?.split('/');
+      gitInfo = {
+        commitSha,
+        accountId,
+        ownerSlug,
+        repositorySlug,
+      };
+    }
 
     const resp = await opts.client.platform.checkSubgraphSchema(
       {
         subgraphName: name,
         schema: await readFile(schemaFile),
+        gitInfo,
       },
       {
         headers: baseHeaders,
@@ -49,6 +63,8 @@ export default (opts: BaseCommandOptions) => {
       colWidths: [30, 120],
       wordWrap: true,
     });
+
+    let success = false;
 
     switch (resp.response?.code) {
       case EnumStatusCode.OK: {
