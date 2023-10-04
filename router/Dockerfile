@@ -1,5 +1,9 @@
 FROM golang:1.20 as builder
 
+ARG VERSION=dev
+
+ENV VERSION=$VERSION
+
 WORKDIR /app/
 
 # Copy only the files required for go mod download
@@ -27,7 +31,7 @@ WORKDIR /app/router
 RUN make test
 
 # Build router
-RUN make build
+RUN make build VERSION=${VERSION}
 
 FROM gcr.io/distroless/static:latest
 

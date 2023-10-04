@@ -542,9 +542,11 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	if metricsEnabled {
 		m, err := metric.NewMetrics(
 			r.meterProvider,
+			metric.WithApplicationVersion(Version),
 			metric.WithAttributes(
 				otel.WgRouterGraphName.String(r.federatedGraphName),
 				otel.WgRouterConfigVersion.String(routerConfig.GetVersion()),
+				otel.WgRouterVersion.String(Version),
 			),
 		)
 		if err != nil {
@@ -562,12 +564,13 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 
 	var traceHandler *trace.Middleware
 
-	if metricsEnabled {
+	if r.traceConfig.Enabled {
 		h := trace.NewMiddleware(otel.RouterServerAttribute,
 			otelhttp.WithSpanOptions(
 				oteltrace.WithAttributes(
 					otel.WgRouterGraphName.String(r.federatedGraphName),
 					otel.WgRouterConfigVersion.String(routerConfig.GetVersion()),
+					otel.WgRouterVersion.String(Version),
 				),
 			),
 			// Disable built-in metrics

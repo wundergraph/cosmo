@@ -47,7 +47,10 @@ func Main() {
 	}
 
 	logger := logging.New(!cfg.JSONLog, cfg.LogLevel == "debug", logLevel).
-		With(zap.String("component", "@wundergraph/router"))
+		With(
+			zap.String("component", "@wundergraph/router"),
+			zap.String("router_version", core.Version),
+		)
 
 	cp := controlplane.New(
 		controlplane.WithControlPlaneEndpoint(cfg.ControlplaneURL),
