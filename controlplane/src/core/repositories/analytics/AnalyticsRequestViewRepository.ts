@@ -214,6 +214,7 @@ export class AnalyticsRequestViewRepository {
     baseHavingSql: string,
     basePaginationSql: string,
     queryParams: Record<string, string | number>,
+    baseOrderSql?: string,
   ) {
     let query = ``;
 
@@ -241,9 +242,8 @@ export class AnalyticsRequestViewRepository {
             ${this.client.database}.traces_mv
           WHERE
             ${baseWhereSql}
-          ORDER BY
-            Timestamp DESC 
-          ${basePaginationSql}
+            ${baseOrderSql || 'ORDER BY Timestamp DESC'}
+            ${basePaginationSql}
         `;
         break;
       }
@@ -269,8 +269,7 @@ export class AnalyticsRequestViewRepository {
             operationName,
             operationType
           ${baseHavingSql}
-          ORDER BY
-            totalRequests DESC
+          ${baseOrderSql || 'ORDER BY totalRequests DESC'}
           ${basePaginationSql}
         `;
         break;
@@ -297,8 +296,7 @@ export class AnalyticsRequestViewRepository {
             clientName,
             clientVersion
           ${baseHavingSql}
-          ORDER BY
-            totalRequests DESC
+          ${baseOrderSql || 'ORDER BY totalRequests DESC'}
           ${basePaginationSql}
         `;
         break;
@@ -317,8 +315,7 @@ export class AnalyticsRequestViewRepository {
           GROUP BY
             httpStatusCode
           ${baseHavingSql}
-          ORDER BY
-            totalRequests DESC
+          ${baseOrderSql || 'ORDER BY totalRequests DESC'}
           ${basePaginationSql}
         `;
         break;
@@ -541,6 +538,14 @@ export class AnalyticsRequestViewRepository {
     }
   }
 
+  private getSortOrder = (id?: string, desc?: boolean) => {
+    const allowedColumns = Object.keys(this.columnMetadata);
+
+    if (id && allowedColumns.includes(id)) {
+      return `ORDER BY ${id} ${desc ? 'DESC' : 'ASC'}`;
+    }
+  };
+
   public async getView(
     organizationId: string,
     federatedGraphId: string,
@@ -550,6 +555,7 @@ export class AnalyticsRequestViewRepository {
     const inputFilters = opts?.filters ?? [];
     const columnMetaData = fillColumnMetaData(this.columnMetadata);
     const paginationSql = `LIMIT {limit:Int16} OFFSET {offset:Int16}`;
+    const orderSql = this.getSortOrder(opts?.sort?.id, opts?.sort?.desc);
 
     const { result: coercedQueryParams, filterMapper } = coerceFilterValues(
       columnMetaData,
@@ -577,7 +583,7 @@ export class AnalyticsRequestViewRepository {
     whereSql += ` AND OrganizationID = '${organizationId}'`;
 
     const [result, totalCount] = await Promise.all([
-      this.getViewData(name, whereSql, havingSql, paginationSql, coercedQueryParams),
+      this.getViewData(name, whereSql, havingSql, paginationSql, coercedQueryParams, orderSql),
       this.getTotalCount(name, whereSql, havingSql, coercedQueryParams),
     ]);
 

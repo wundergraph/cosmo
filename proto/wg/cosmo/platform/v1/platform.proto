@@ -305,10 +305,16 @@ message Pagination {
   int32 offset = 2;
 }
 
+message Sort {
+  string id = 1;
+  bool desc = 2; 
+}
+
 message AnalyticsConfig {
   DateRange date_range = 1;
   repeated AnalyticsFilter filters = 2;
   Pagination pagination = 3;
+  optional Sort sort = 4;
 }
 
 message AnalyticsFilter {

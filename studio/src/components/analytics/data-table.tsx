@@ -14,7 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
-import { ChevronDownIcon as ChevronDown } from "@heroicons/react/24/outline";
+import { ChevronDownIcon, ChevronUpIcon } from "@heroicons/react/24/outline";
 import { ClockIcon, Cross2Icon, UpdateIcon } from "@radix-ui/react-icons";
 import {
   ColumnFiltersState,
@@ -49,7 +49,7 @@ import { DataTablePagination } from "./data-table-pagination";
 import { DataTablePrimaryFilterMenu } from "./data-table-primary-filter-menu";
 import { getColumnData } from "./getColumnData";
 import { getDataTableFilters } from "./getDataTableFilters";
-import { useSyncTableWithQuery } from "./useSyncTableWithQuery";
+import { getDefaultSort, useSyncTableWithQuery } from "./useSyncTableWithQuery";
 import { useSessionStorage } from "@/hooks/use-session-storage";
 
 export const refreshIntervals = [
@@ -98,7 +98,8 @@ export function AnalyticsDataTable<T>({
 
   const [refreshInterval, setRefreshInterval] = useState(refreshIntervals[0]);
 
-  const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [sorting, setSorting] = React.useState<SortingState>(getDefaultSort(router.query.group?.toString()));
+
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     []
   );
@@ -151,10 +152,11 @@ export function AnalyticsDataTable<T>({
   };
 
   const applyNewParams = useCallback(
-    (newParams: Record<string, string>) => {
+    (newParams: Record<string, string | null>, unset?: string[]) => {
+      const q = Object.fromEntries(Object.entries(router.query).filter(([key]) => !unset?.includes(key)))
       router.push({
         query: {
-          ...router.query,
+          ...q,
           ...newParams,
         },
       });
@@ -167,8 +169,9 @@ export function AnalyticsDataTable<T>({
     columns,
     pageCount,
     state,
+    maxMultiSortColCount: 1,
     manualPagination: true,
-    onSortingChange: setSorting,
+    manualSorting: true,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -198,12 +201,30 @@ export function AnalyticsDataTable<T>({
         });
       }
     },
+    onSortingChange: (t) => {
+      if (typeof t === 'function') {
+        const newVal = functionalUpdate(t, state.sorting);
+
+        if (newVal.length) {
+          applyNewParams({
+            sort: newVal[0]?.id,
+            sortDir: newVal[0]?.desc ? 'desc' : 'asc'
+          });
+        } else {
+          applyNewParams({}, ['sort', 'sortDir']);
+        }
+      }
+    },
   });
 
   const onGroupChange = (val: AnalyticsViewGroupName) => {
+    if (val === AnalyticsViewGroupName.None) {
+      return applyNewParams({}, ['group', 'sort', 'sortDir']);
+    }
+
     applyNewParams({
       group: AnalyticsViewGroupName[val],
-    });
+    }, ['sort', 'sortDir']);
   };
 
   const onDateRangeChange = (val: DateRange) => {
@@ -237,6 +258,7 @@ export function AnalyticsDataTable<T>({
     selectedDateRange,
     setDateRange,
     setColumnFilters,
+    setSorting,
     pagination,
     setPagination,
     onRefreshIntervalChange,
@@ -377,7 +399,7 @@ export function AnalyticsDataTable<T>({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline">
-                Columns <ChevronDown className="ml-2 h-4 w-4" />
+                Columns <ChevronDownIcon className="ml-2 h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
@@ -436,14 +458,28 @@ export function AnalyticsDataTable<T>({
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id}>
               {headerGroup.headers.map((header) => {
+                let headerProps = {}
+
+                const sorted = header.column.getIsSorted()
+
+                if (header.column.getCanSort()) {
+                  headerProps = {
+                    className: 'select-none cursor-pointer',
+                    onClick: header.column.getToggleSortingHandler(),
+                  }
+                }
+
                 return (
-                  <TableHead key={header.id}>
+                  <TableHead key={header.id} {...headerProps}>
+                    <div className="flex items-center space-x-1">
                     {header.isPlaceholder
-                      ? null
-                      : flexRender(
+                      ? null : flexRender(
                           header.column.columnDef.header,
                           header.getContext()
                         )}
+
+                    {sorted ? sorted === 'desc' ? <ChevronDownIcon className="h-4 w-4" /> : <ChevronUpIcon className="h4 w-4" /> : null}
+                    </div>
                   </TableHead>
                 );
               })}
