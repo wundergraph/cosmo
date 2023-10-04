@@ -1,6 +1,5 @@
 import BarList from "@/components/analytics/barlist";
 import {
-  constructAnalyticsTableQueryState,
   createFilterState,
 } from "@/components/analytics/constructAnalyticsTableQueryState";
 import { AnalyticsToolbar } from "@/components/analytics/toolbar";
@@ -91,12 +90,12 @@ const createDateRange = (range: number) => {
 const getInfoTip = (range: number) => {
   switch (range) {
     case 72:
-      return "3 day median";
+      return "3 day";
     case 168:
-      return "1 week median";
+      return "1 week";
     case 24:
     default:
-      return `${range} hour median`;
+      return `${range} hour`;
   }
 };
 
@@ -238,7 +237,7 @@ const RequestMetricsCard = (props: { data?: MetricsDashboardMetric }) => {
         <div className="flex-1">
           <div className="flex space-x-2 text-sm text-muted-foreground">
             <h4>Request Rate</h4>
-            <InfoTooltip>{getInfoTip(range)}</InfoTooltip>
+            <InfoTooltip>RPM in last {getInfoTip(range)}</InfoTooltip>
           </div>
 
           <p className="text-xl font-semibold">{formatter(value)}</p>
@@ -319,7 +318,7 @@ const LatencyMetricsCard = (props: { data?: MetricsDashboardMetric }) => {
         <div className="flex-1">
           <div className="flex space-x-2 text-sm text-muted-foreground">
             <h4>P95 Latency</h4>
-            <InfoTooltip>{getInfoTip(range)}</InfoTooltip>
+            <InfoTooltip>P95 latency in last {getInfoTip(range)}</InfoTooltip>
           </div>
           <p className="text-xl font-semibold">{formatter(value)}</p>
         </div>
@@ -386,7 +385,7 @@ const ErrorMetricsCard = (props: { data?: MetricsDashboardMetric }) => {
         <div className="flex-1">
           <div className="flex space-x-2 text-sm text-muted-foreground">
             <h4>Error Percentage</h4>
-            <InfoTooltip>{getInfoTip(range)}</InfoTooltip>
+            <InfoTooltip>Error percentage in last {getInfoTip(range)}</InfoTooltip>
           </div>
           <p className="text-xl font-semibold">{formatter(value)}</p>
         </div>

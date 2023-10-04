@@ -127,10 +127,10 @@ export class MetricsDashboardRepository {
 
     const multiplier = range * 60;
 
-    // get median request rate in last [range]h
+    // get total request rate in last [range]h
     const queryRate = (start: number, end: number) => {
-      return this.chClient.queryPromise<{ medianRate: number | null }>(`
-      SELECT round(sum(total) / ${multiplier}, 4) AS medianRate FROM (
+      return this.chClient.queryPromise<{ value: number | null }>(`
+        SELECT round(sum(total) / ${multiplier}, 4) AS value FROM (
         SELECT
           toDateTime('${start}') AS startDate,
           toDateTime('${end}') AS endDate,
@@ -139,7 +139,7 @@ export class MetricsDashboardRepository {
         WHERE Timestamp >= startDate AND Timestamp <= endDate
           AND OrganizationID = '${params.organizationId}'
           AND FederatedGraphID = '${params.graphId}'
-        GROUP BY Timestamp, OperationName 
+        GROUP BY Timestamp 
       )
     `);
     };
@@ -199,8 +199,8 @@ export class MetricsDashboardRepository {
 
     return {
       data: {
-        value: parseValue(medianResponse[0]?.medianRate),
-        previousValue: parseValue(prevMedianResponse[0]?.medianRate),
+        value: parseValue(medianResponse[0]?.value),
+        previousValue: parseValue(prevMedianResponse[0]?.value),
         top: top5Response.map((v) => ({
           name: v.name,
           value: parseValue(v.value),
@@ -224,26 +224,22 @@ export class MetricsDashboardRepository {
         WITH
           toDateTime('${start}') AS startDate,
           toDateTime('${end}') AS endDate
-        SELECT round(median(value), 2) as value FROM (
-          SELECT
-            func_rank(${quantile}, BucketCounts) as rank,
-            func_rank_bucket_lower_index(rank, BucketCounts) as b,
-            func_histogram_v2(
-                rank,
-                b,
-                BucketCounts,
-                ExplicitBounds
-            ) as value,
+        SELECT
+          func_rank(${quantile}, BucketCounts) as rank,
+          func_rank_bucket_lower_index(rank, BucketCounts) as b,
+          func_histogram_v2(
+              rank,
+              b,
+              BucketCounts,
+              anyLast(ExplicitBounds)
+          ) as value,
 
-            -- Histogram aggregations
-            sumForEach(BucketCounts) as BucketCounts
-          FROM operation_latency_metrics_5_30_mv
-          WHERE Timestamp >= startDate AND Timestamp <= endDate
-            AND OrganizationID = '${params.organizationId}'
-            AND FederatedGraphID = '${params.graphId}'
-          GROUP BY Timestamp, OperationName, ExplicitBounds
-          ORDER BY Timestamp
-        )
+          -- Histogram aggregations
+          sumForEachMerge(BucketCounts) as BucketCounts
+        FROM operation_latency_metrics_5_30_mv
+        WHERE Timestamp >= startDate AND Timestamp <= endDate
+          AND OrganizationID = '${params.organizationId}'
+          AND FederatedGraphID = '${params.graphId}'
     `);
     };
 
@@ -253,30 +249,27 @@ export class MetricsDashboardRepository {
     // get top 5 operations in last [range] hours
     const queryTop5 = (quantile: string, start: number, end: number) => {
       return this.chClient.queryPromise<{ name: string; value: string }>(`
-      WITH
-        toDateTime('${start}') AS startDate,
-        toDateTime('${end}') AS endDate
-      SELECT name, round(median(value), 2) AS value FROM (
+        WITH
+          toDateTime('${start}') AS startDate,
+          toDateTime('${end}') AS endDate
         SELECT
-          Timestamp as timestamp,
           OperationName as name,
           func_rank(${quantile}, BucketCounts) as rank,
           func_rank_bucket_lower_index(rank, BucketCounts) as b,
-          func_histogram_v2(
+          round(func_histogram_v2(
               rank,
               b,
               BucketCounts,
-              ExplicitBounds
-          ) as value,
+              anyLast(ExplicitBounds)
+          ), 2) as value,
 
           -- Histogram aggregations
-          sumForEach(BucketCounts) as BucketCounts
+          sumForEachMerge(BucketCounts) as BucketCounts
         FROM operation_latency_metrics_5_30_mv
         WHERE Timestamp >= startDate AND Timestamp <= endDate
           AND OrganizationID = '${params.organizationId}'
           AND FederatedGraphID = '${params.graphId}'
-        GROUP BY Timestamp, OperationName, ExplicitBounds
-      ) GROUP BY name ORDER BY value DESC LIMIT 5
+        GROUP BY OperationName ORDER BY value DESC LIMIT 5
     `);
     };
 
@@ -296,11 +289,11 @@ export class MetricsDashboardRepository {
                 rank,
                 b,
                 BucketCounts,
-                ExplicitBounds
+                anyLast(ExplicitBounds)
             ) as value,
-  
+
             -- Histogram aggregations
-            sumForEach(BucketCounts) as BucketCounts
+            sumForEachMerge(BucketCounts) as BucketCounts
         FROM operation_latency_metrics_5_30_mv
         WHERE timestamp >= startDate AND timestamp <= endDate
           AND OrganizationID = '${params.organizationId}'
