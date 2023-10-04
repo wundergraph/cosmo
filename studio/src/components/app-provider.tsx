@@ -50,9 +50,7 @@ class UnauthorizedError extends Error {
 
 const queryClient = new QueryClient();
 
-export const UserContext = createContext<
-  [User | undefined, Dispatch<SetStateAction<User | undefined>> | undefined]
->([undefined, undefined]);
+export const UserContext = createContext<User | undefined>(undefined);
 
 const fetchSession = async () => {
   try {
@@ -82,7 +80,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const { data, error, isFetching } = useQuery<
     Session | null,
     UnauthorizedError | Error
-  >(["user"], () => fetchSession(), {
+  >(["user", router.asPath], () => fetchSession(), {
     refetchOnWindowFocus: true,
     retry(failureCount, error) {
       if (error instanceof UnauthorizedError) return false;
@@ -155,19 +153,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   }, [router, data, isFetching, error, currentOrgSlug]);
 
   if (!transport) {
-    return (
-      <UserContext.Provider value={[user, setUser]}>
-        {children}
-      </UserContext.Provider>
-    );
+    return <UserContext.Provider value={user}>{children}</UserContext.Provider>;
   }
 
   return (
     <TransportProvider transport={transport}>
       <QueryClientProvider client={queryClient}>
-        <UserContext.Provider value={[user, setUser]}>
-          {children}
-        </UserContext.Provider>
+        <UserContext.Provider value={user}>{children}</UserContext.Provider>
       </QueryClientProvider>
     </TransportProvider>
   );

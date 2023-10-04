@@ -1,8 +1,6 @@
 import { UserContext } from "@/components/app-provider";
 import { EmptyState } from "@/components/empty-state";
-import {
-  getDashboardLayout,
-} from "@/components/layout/dashboard-layout";
+import { getDashboardLayout } from "@/components/layout/dashboard-layout";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -116,7 +114,7 @@ const MemberCard = ({
   isCurrentUser: boolean;
   refresh: () => void;
 }) => {
-  const [user] = useContext(UserContext);
+  const user = useContext(UserContext);
 
   const { mutate: resendInvitation } = useMutation(inviteUser.useMutation());
   const { mutate: revokeInvitation } = useMutation(
@@ -261,11 +259,15 @@ const MemberCard = ({
 };
 
 const MembersPage: NextPageWithLayout = () => {
-  const { data, isLoading, error, refetch } = useQuery(
-    getOrganizationMembers.useQuery()
-  );
-
-  const [user] = useContext(UserContext);
+  const user = useContext(UserContext);
+  const { data, isLoading, error, refetch } = useQuery({
+    ...getOrganizationMembers.useQuery(),
+    queryKey: [
+      user?.currentOrganization.slug || "",
+      "GetOrganizationMembers",
+      {},
+    ],
+  });
 
   if (isLoading) return <Loader fullscreen />;
 
@@ -299,7 +301,10 @@ const MembersPage: NextPageWithLayout = () => {
           <span>
             {"Your organization's plan does not allow you to invite members. "}
             Please{" "}
-            <a className="text-primary underline underline-offset-2" onClick={showCal}>
+            <a
+              className="text-primary underline underline-offset-2"
+              onClick={showCal}
+            >
               contact us
             </a>{" "}
             to upgrade.

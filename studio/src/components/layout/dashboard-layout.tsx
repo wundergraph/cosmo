@@ -4,11 +4,7 @@ import { addDays, formatDistance } from "date-fns";
 import { useRouter } from "next/router";
 import { useContext, useMemo } from "react";
 import { IoKeyOutline, IoPeopleOutline } from "react-icons/io5";
-import {
-  PiGear,
-  PiGraphLight,
-  PiWebhooksLogo
-} from "react-icons/pi";
+import { PiGear, PiGraphLight, PiWebhooksLogo } from "react-icons/pi";
 import { UserContext } from "../app-provider";
 import { PageHeader } from "./head";
 import { LayoutProps } from "./layout";
@@ -19,7 +15,7 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
   const router = useRouter();
   const organizationSlug = router.query.organizationSlug as string;
 
-  const [user] = useContext(UserContext);
+  const user = useContext(UserContext);
 
   const links: NavLink[] = useMemo(() => {
     const basePath = `/${organizationSlug}`;
@@ -64,7 +60,7 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
       <div className=" min-h-screen bg-background font-sans antialiased 2xl:min-w-[1536px] 2xl:max-w-screen-2xl">
         {user?.currentOrganization.isFreeTrial && (
           <div
-            className="sticky top-0 z-50 flex cursor-pointer justify-center rounded bg-primary py-1 px-2 text-secondary-foreground text-sm"
+            className="sticky top-0 z-50 flex cursor-pointer justify-center rounded bg-primary px-2 py-1 text-sm text-secondary-foreground"
             onClick={showCal}
           >
             {!user.currentOrganization.isFreeTrialExpired ? (

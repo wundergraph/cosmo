@@ -27,7 +27,7 @@ import { useContext, useState } from "react";
 import { z } from "zod";
 
 const OrganizationName = () => {
-  const [user] = useContext(UserContext);
+  const user = useContext(UserContext);
   const router = useRouter();
 
   const schema = z.object({
@@ -126,7 +126,7 @@ const OrganizationName = () => {
 };
 
 const OrganizationSlug = () => {
-  const [user] = useContext(UserContext);
+  const user = useContext(UserContext);
   const router = useRouter();
 
   const schema = z.object({
@@ -224,7 +224,7 @@ const OrganizationSlug = () => {
 };
 
 const LeaveOrganization = () => {
-  const [user] = useContext(UserContext);
+  const user = useContext(UserContext);
   const router = useRouter();
   const [open, setOpen] = useState(false);
 
@@ -342,7 +342,7 @@ const LeaveOrganization = () => {
 };
 
 const DeleteOrganization = () => {
-  const [user] = useContext(UserContext);
+  const user = useContext(UserContext);
   const router = useRouter();
   const [open, setOpen] = useState(false);
 
@@ -476,7 +476,7 @@ const DeleteOrganization = () => {
 };
 
 const SettingsDashboardPage: NextPageWithLayout = () => {
-  const [user] = useContext(UserContext);
+  const user = useContext(UserContext);
 
   return (
     <div className="mt-4 flex flex-col gap-y-4">

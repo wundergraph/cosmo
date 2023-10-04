@@ -74,7 +74,7 @@ const Graphs = () => {
   if (router.pathname.split("/")[2] !== "graph") return null;
 
   return (
-    <div className="hidden lg:flex w-full">
+    <div className="hidden w-full lg:flex">
       <Select
         value={slug}
         onValueChange={(gID) =>
@@ -99,54 +99,55 @@ const Graphs = () => {
 };
 
 const Organizations = () => {
-  const [user, setUser] = useContext(UserContext);
+  const user = useContext(UserContext);
   const router = useRouter();
+  const currentPage = router.asPath.split("/")[2];
 
   if (!user?.currentOrganization) return null;
 
   return (
-      <Select
-        value={user.currentOrganization.slug}
-        onValueChange={(orgSlug) => {
-          const currentOrg = user.organizations.find(
-            (org) => org.slug === orgSlug
+    <Select
+      value={user.currentOrganization.slug}
+      onValueChange={(orgSlug) => {
+        const currentOrg = user.organizations.find(
+          (org) => org.slug === orgSlug
+        );
+        if (currentOrg) {
+          router.replace(
+            currentPage === "graph"
+              ? `/${currentOrg.slug}/graphs`
+              : `/${currentOrg.slug}/${currentPage}`
           );
-          if (currentOrg && setUser) {
-            setUser({
-              ...user,
-              currentOrganization: currentOrg,
-            });
-            router.replace(`/${currentOrg.slug}`);
-          }
-        }}
+        }
+      }}
+    >
+      <SelectTrigger
+        value={user.currentOrganization.name}
+        className="flex w-[200px] gap-x-2 border-0 bg-transparent px-2 lg:w-full"
       >
-        <SelectTrigger
-          value={user.currentOrganization.name}
-          className="flex w-[200px] gap-x-2 border-0 bg-transparent px-2 lg:w-full"
-        >
-          <SelectValue aria-label={user.currentOrganization.name}>
-            <span className="flex w-36 truncate font-semibold capitalize">
-              {user.currentOrganization.name}
-            </span>
-          </SelectValue>
-        </SelectTrigger>
-        <SelectContent>
-          {user?.organizations?.map(({ name, slug }) => {
-            return (
-              <SelectItem key={slug} value={slug}>
-                {name}
-              </SelectItem>
-            );
-          })}
-        </SelectContent>
-      </Select>
+        <SelectValue aria-label={user.currentOrganization.name}>
+          <span className="flex w-36 truncate font-semibold capitalize">
+            {user.currentOrganization.name}
+          </span>
+        </SelectValue>
+      </SelectTrigger>
+      <SelectContent>
+        {user?.organizations?.map(({ name, slug }) => {
+          return (
+            <SelectItem key={slug} value={slug}>
+              {name}
+            </SelectItem>
+          );
+        })}
+      </SelectContent>
+    </Select>
   );
 };
 
 export const Nav = ({ children, links }: SideNavLayoutProps) => {
   const router = useRouter();
   const [showMobileMenu, setShowMobileMenu] = useState(false);
-  const [user] = useContext(UserContext);
+  const user = useContext(UserContext);
 
   return (
     <div className="flex min-h-screen flex-1 flex-col lg:grid lg:grid-cols-[auto_1fr] lg:divide-x">
@@ -154,7 +155,8 @@ export const Nav = ({ children, links }: SideNavLayoutProps) => {
         className={cn(
           "sticky top-[0] z-40 flex min-w-[248px] flex-col bg-background pt-4 lg:px-6 lg:pb-4",
           {
-            "top-7 lg:h-[calc(100vh-28px)]": user?.currentOrganization.isFreeTrial,
+            "top-7 lg:h-[calc(100vh-28px)]":
+              user?.currentOrganization.isFreeTrial,
             "lg:h-screen": !user?.currentOrganization.isFreeTrial,
           }
         )}
