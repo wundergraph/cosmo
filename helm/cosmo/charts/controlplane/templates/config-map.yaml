@@ -21,5 +21,6 @@ data:
   keycloakFrontendUrl: "{{ .Values.global.keycloak.webUrl }}"
   keycloakClientId: "{{ .Values.global.keycloak.clientId }}"
   keycloakLoginRealm: "{{ .Values.global.keycloak.loginRealm }}"
-  prometheusApiUrl: "{{ .Values.global.prometheus.apiUrl }}"
   webhookUrl: "{{ .Values.configuration.webhookUrl }}"
+  githubAppClientId: "{{ .Values.configuration.githubAppClientId }}"
+  githubAppId: "{{ .Values.configuration.githubAppId }}"

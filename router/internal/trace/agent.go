@@ -28,8 +28,8 @@ var (
 )
 
 // StartAgent starts an opentelemetry agent.
-func StartAgent(log *zap.Logger, c *Config) (*sdktrace.TracerProvider, error) {
-	return startAgent(log, c)
+func StartAgent(ctx context.Context, log *zap.Logger, c *Config) (*sdktrace.TracerProvider, error) {
+	return startAgent(ctx, log, c)
 }
 
 func createExporter(log *zap.Logger, exp *Exporter) (sdktrace.SpanExporter, error) {
@@ -92,7 +92,18 @@ func createExporter(log *zap.Logger, exp *Exporter) (sdktrace.SpanExporter, erro
 	return exporter, nil
 }
 
-func startAgent(log *zap.Logger, c *Config) (*sdktrace.TracerProvider, error) {
+func startAgent(ctx context.Context, log *zap.Logger, c *Config) (*sdktrace.TracerProvider, error) {
+	r, err := resource.New(ctx,
+		resource.WithAttributes(semconv.ServiceNameKey.String(c.Name)),
+		resource.WithProcessPID(),
+		resource.WithFromEnv(),
+		resource.WithHostID(),
+		resource.WithHost(),
+	)
+	if err != nil {
+		return nil, err
+	}
+
 	opts := []sdktrace.TracerProviderOption{
 		// Set the sampling rate based on the parent span to 100%
 		sdktrace.WithRawSpanLimits(sdktrace.SpanLimits{
@@ -112,7 +123,7 @@ func startAgent(log *zap.Logger, c *Config) (*sdktrace.TracerProvider, error) {
 			),
 		),
 		// Record information about this application in a Resource.
-		sdktrace.WithResource(resource.NewSchemaless(semconv.ServiceNameKey.String(c.Name))),
+		sdktrace.WithResource(r),
 	}
 
 	if c.Enabled {

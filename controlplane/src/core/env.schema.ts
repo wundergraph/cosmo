@@ -17,7 +17,6 @@ export const envVariables = z.object({
   KC_ADMIN_PASSWORD: z.string(),
   KC_API_URL: z.string().url(),
   KC_FRONTEND_URL: z.string().url(),
-  PROMETHEUS_API_URL: z.string().url(),
   PORT: z
     .string()
     .default('3001')
@@ -30,4 +29,9 @@ export const envVariables = z.object({
     .optional(),
   WEBHOOK_URL: z.string().optional(),
   WEBHOOK_SECRET: z.string().optional(),
+  GITHUB_APP_CLIENT_ID: z.string().optional(),
+  GITHUB_APP_CLIENT_SECRET: z.string().optional(),
+  GITHUB_APP_ID: z.string().optional(),
+  GITHUB_APP_PRIVATE_KEY: z.string().optional(),
+  GITHUB_APP_WEBHOOK_SECRET: z.string().optional(),
 });

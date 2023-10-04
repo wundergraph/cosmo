@@ -11,9 +11,12 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
 	"go.opentelemetry.io/otel/exporters/prometheus"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"go.uber.org/zap"
 	_ "google.golang.org/grpc/encoding/gzip" // Required for gzip support over grpc
 )
@@ -23,12 +26,12 @@ var (
 )
 
 // StartAgent starts an opentelemetry metric agent.
-func StartAgent(log *zap.Logger, c *Config) (*sdkmetric.MeterProvider, error) {
-	return startAgent(log, c)
+func StartAgent(ctx context.Context, log *zap.Logger, c *Config) (*sdkmetric.MeterProvider, error) {
+	return startAgent(ctx, log, c)
 }
 
 func createPromExporter() (*prometheus.Exporter, error) {
-	prometheusExporter, err := prometheus.New()
+	prometheusExporter, err := prometheus.New(prometheus.WithoutUnits())
 	if err != nil {
 		return nil, err
 	}
@@ -40,6 +43,23 @@ func createOTELExporter(log *zap.Logger, exp *OpenTelemetryExporter) (sdkmetric.
 	if err != nil {
 		return nil, fmt.Errorf("invalid OpenTelemetry endpoint %q: %w", exp.Endpoint, err)
 	}
+	// Use delta temporalities for counters, gauge and histograms
+	// Delta temporalities are reported as completed intervals. They don't build upon each other.
+	// This makes queries easier and reduce the amount of data to be transferred because the SDK
+	// client will aggregate the data before sending it to the collector.
+	temporalitySelector := func(kind sdkmetric.InstrumentKind) metricdata.Temporality {
+		switch kind {
+		case sdkmetric.InstrumentKindCounter,
+			sdkmetric.InstrumentKindHistogram,
+			sdkmetric.InstrumentKindObservableGauge,
+			sdkmetric.InstrumentKindObservableCounter:
+			return metricdata.DeltaTemporality
+		case sdkmetric.InstrumentKindUpDownCounter,
+			sdkmetric.InstrumentKindObservableUpDownCounter:
+			return metricdata.DeltaTemporality
+		}
+		panic("unknown instrument kind")
+	}
 	var exporter sdkmetric.Exporter
 	switch exp.Exporter {
 	case otelconfig.ExporterDefault, otelconfig.ExporterOLTPHTTP:
@@ -47,6 +67,7 @@ func createOTELExporter(log *zap.Logger, exp *OpenTelemetryExporter) (sdkmetric.
 			// Includes host and port
 			otlpmetrichttp.WithEndpoint(u.Host),
 			otlpmetrichttp.WithCompression(otlpmetrichttp.GzipCompression),
+			otlpmetrichttp.WithTemporalitySelector(temporalitySelector),
 		}
 
 		if u.Scheme != "https" {
@@ -69,6 +90,7 @@ func createOTELExporter(log *zap.Logger, exp *OpenTelemetryExporter) (sdkmetric.
 			// Includes host and port
 			otlpmetricgrpc.WithEndpoint(u.Host),
 			otlpmetricgrpc.WithCompressor("gzip"),
+			otlpmetricgrpc.WithTemporalitySelector(temporalitySelector),
 		}
 
 		if u.Scheme != "https" {
@@ -96,10 +118,21 @@ func createOTELExporter(log *zap.Logger, exp *OpenTelemetryExporter) (sdkmetric.
 	return exporter, nil
 }
 
-func startAgent(log *zap.Logger, c *Config) (*sdkmetric.MeterProvider, error) {
+func startAgent(ctx context.Context, log *zap.Logger, c *Config) (*sdkmetric.MeterProvider, error) {
+	r, err := resource.New(ctx,
+		resource.WithAttributes(semconv.ServiceNameKey.String(c.Name)),
+		resource.WithProcessPID(),
+		resource.WithFromEnv(),
+		resource.WithHostID(),
+		resource.WithHost(),
+	)
+	if err != nil {
+		return nil, err
+	}
+
 	opts := []sdkmetric.Option{
 		// Record information about this application in a Resource.
-		sdkmetric.WithResource(resource.NewSchemaless(semconv.ServiceNameKey.String(c.Name))),
+		sdkmetric.WithResource(r),
 	}
 
 	if c.OpenTelemetry.Enabled {
@@ -110,14 +143,50 @@ func startAgent(log *zap.Logger, c *Config) (*sdkmetric.MeterProvider, error) {
 				return nil, err
 			}
 
+			// Please version this meter name if you change the buckets.
+
+			msBucketHistogram := aggregation.ExplicitBucketHistogram{
+				// 0ms-10s
+				Boundaries: []float64{
+					0, 5, 7, 10, 15, 25, 50, 75, 100, 125, 150, 175, 200, 225,
+					250, 275, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000, 1250,
+					1500, 1750, 2000, 2250, 2500, 2750, 3000, 3500, 4000, 5000, 10000,
+				},
+			}
+			bytesBucketHistogram := aggregation.ExplicitBucketHistogram{
+				// 0kb-20MB
+				Boundaries: []float64{
+					0, 50, 100, 300, 500, 1000, 3000, 5000, 10000, 15000,
+					30000, 50000, 70000, 90000, 150000, 300000, 600000,
+					800000, 1000000, 5000000, 10000000, 20000000,
+				},
+			}
+
 			opts = append(opts,
+				sdkmetric.WithView(sdkmetric.NewView(
+					sdkmetric.Instrument{
+						Unit:  unitMilliseconds,
+						Scope: instrumentation.Scope{Name: cosmoRouterMeterName},
+					},
+					sdkmetric.Stream{
+						Aggregation: msBucketHistogram,
+					},
+				)),
+				sdkmetric.WithView(sdkmetric.NewView(
+					sdkmetric.Instrument{
+						Unit:  unitBytes,
+						Scope: instrumentation.Scope{Name: cosmoRouterMeterName},
+					},
+					sdkmetric.Stream{
+						Aggregation: bytesBucketHistogram,
+					},
+				)),
 				sdkmetric.WithReader(
 					sdkmetric.NewPeriodicReader(exporter,
 						sdkmetric.WithTimeout(30*time.Second),
-						sdkmetric.WithInterval(30*time.Second),
+						sdkmetric.WithInterval(15*time.Second),
 					),
-				),
-			)
+				))
 		}
 	}
 

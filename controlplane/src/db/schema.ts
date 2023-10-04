@@ -1,5 +1,17 @@
 import { relations } from 'drizzle-orm';
-import { boolean, jsonb, pgEnum, pgTable, primaryKey, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import {
+  boolean,
+  jsonb,
+  pgEnum,
+  pgTable,
+  primaryKey,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid,
+  bigint,
+  json,
+} from 'drizzle-orm/pg-core';
 
 export const federatedGraphs = pgTable('federated_graphs', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -262,6 +274,14 @@ export const schemaChecks = pgTable('schema_checks', {
   hasBreakingChanges: boolean('has_breaking_changes').default(false),
   proposedSubgraphSchemaSDL: text('proposed_subgraph_schema_sdl'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  ghDetails: json('gh_details').$type<{
+    accountId: number;
+    repositorySlug: string;
+    ownerSlug: string;
+    checkRunId: number;
+    commitSha: string;
+  }>(),
+  forcedSuccess: boolean('forced_success').default(false),
 });
 
 export const schemaCheckChangeAction = pgTable('schema_check_change_action', {
@@ -447,3 +467,16 @@ export const organizationWebhooks = pgTable('organization_webhook_configs', {
 export const organizationWebhookRelations = relations(organizationWebhooks, ({ many }) => ({
   organization: many(organizations),
 }));
+
+export const gitInstallationTypeEnum = pgEnum('git_installation_type', ['PERSONAL', 'ORGANIZATION']);
+
+export const gitInstallations = pgTable('git_installations', {
+  id: uuid('id').notNull().primaryKey().defaultRandom(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  slug: text('slug').notNull(),
+  type: gitInstallationTypeEnum('type').notNull(),
+  providerAccountId: bigint('provider_account_id', { mode: 'number' }).notNull(),
+  providerInstallationId: bigint('provider_installation_id', { mode: 'number' }).notNull(),
+  providerName: text('provider_name').notNull(),
+  oauthToken: text('oauth_token'),
+});

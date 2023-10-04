@@ -196,7 +196,7 @@ const Changes = ({ changes }: { changes: FederatedGraphChangelog[] }) => {
 
 const ChangelogPage: NextPageWithLayout = () => {
   const router = useRouter();
-  const [user] = useContext(UserContext);
+  const user = useContext(UserContext);
   const limit = 10;
   const [items, setItems] = useState<FederatedGraphChangelogOutput[]>([]);
   const [offset, setOffset] = useState(0);

@@ -6,11 +6,13 @@ import { PinoLoggerOptions } from 'fastify/types/logger.js';
 import { pino, stdTimeFunctions } from 'pino';
 import { compressionBrotli, compressionGzip } from '@connectrpc/connect-node';
 import fastifyGracefulShutdown from 'fastify-graceful-shutdown';
+import { App } from 'octokit';
 import routes from './routes.js';
 import fastifyHealth from './plugins/health.js';
 import fastifyDatabase from './plugins/database.js';
 import fastifyClickHouse from './plugins/clickhouse.js';
 import AuthController from './controllers/auth.js';
+import GitHubWebhookController from './controllers/github.js';
 import { pkceCodeVerifierCookieName, userSessionCookieName } from './crypto/jwt.js';
 import ApiKeyAuthenticator from './services/ApiKeyAuthenticator.js';
 import WebSessionAuthenticator from './services/WebSessionAuthenticator.js';
@@ -22,6 +24,7 @@ import Keycloak from './services/Keycloak.js';
 import PrometheusClient from './prometheus/client.js';
 import { PlatformWebhookService } from './webhooks/PlatformWebhookService.js';
 import AccessTokenAuthenticator from './services/AccessTokenAuthenticator.js';
+import { GitHubRepository } from './repositories/GitHubRepository.js';
 
 export interface BuildConfig {
   logger: PinoLoggerOptions;
@@ -37,9 +40,6 @@ export interface BuildConfig {
   debugSQL?: boolean;
   production?: boolean;
   clickhouseDsn?: string;
-  prometheus: {
-    apiUrl: string;
-  };
   keycloak: {
     loginRealm: string;
     realm: string;
@@ -59,6 +59,13 @@ export interface BuildConfig {
   webhook?: {
     url?: string;
     key?: string;
+  };
+  githubApp?: {
+    webhookSecret?: string;
+    clientId?: string;
+    clientSecret?: string;
+    id?: string;
+    privateKey?: string;
   };
 }
 
@@ -158,7 +165,7 @@ export default async function build(opts: BuildConfig) {
   });
 
   const prometheusClient = new PrometheusClient({
-    apiUrl: opts.prometheus.apiUrl,
+    apiUrl: 'http://localhost:9090',
   });
   const organizationRepository = new OrganizationRepository(fastify.db);
   const apiKeyAuth = new ApiKeyAuthenticator(fastify.db, organizationRepository);
@@ -174,6 +181,27 @@ export default async function build(opts: BuildConfig) {
     adminUser: opts.keycloak.adminUser,
     adminPassword: opts.keycloak.adminPassword,
   });
+
+  let githubApp: App | undefined;
+  if (opts.githubApp?.clientId) {
+    githubApp = new App({
+      appId: opts.githubApp?.id ?? '',
+      privateKey: Buffer.from(opts.githubApp?.privateKey ?? '', 'base64').toString(),
+      oauth: {
+        clientId: opts.githubApp?.clientId ?? '',
+        clientSecret: opts.githubApp?.clientSecret ?? '',
+      },
+    });
+
+    const githubRepository = new GitHubRepository(fastify.db, githubApp);
+
+    await fastify.register(GitHubWebhookController, {
+      prefix: '/webhook/github',
+      githubRepository,
+      webhookSecret: opts.githubApp?.webhookSecret ?? '',
+      logger: log,
+    });
+  }
 
   /**
    * Controllers registration
@@ -214,6 +242,8 @@ export default async function build(opts: BuildConfig) {
       keycloakClient,
       prometheus: prometheusClient,
       platformWebhooks,
+      githubApp,
+      webBaseUrl: opts.auth.webBaseUrl,
     }),
     logLevel: opts.logger.level as pino.LevelWithSilent,
     // Avoid compression for small requests
