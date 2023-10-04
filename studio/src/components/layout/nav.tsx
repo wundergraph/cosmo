@@ -113,7 +113,11 @@ const Organizations = () => {
           (org) => org.slug === orgSlug
         );
         if (currentOrg) {
-          router.replace(`/${currentOrg.slug}/${currentPage}`);
+          router.replace(
+            currentPage === "graph"
+              ? `/${currentOrg.slug}/graphs`
+              : `/${currentOrg.slug}/${currentPage}`
+          );
         }
       }}
     >
