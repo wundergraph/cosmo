@@ -4747,11 +4747,6 @@ export class GetOrganizationWebhookConfigsResponse_Config extends Message<GetOrg
    */
   events: string[] = [];
 
-  /**
-   * @generated from field: string events_meta = 4;
-   */
-  eventsMeta = "";
-
   constructor(data?: PartialMessage<GetOrganizationWebhookConfigsResponse_Config>) {
     super();
     proto3.util.initPartial(data, this);
@@ -4763,7 +4758,6 @@ export class GetOrganizationWebhookConfigsResponse_Config extends Message<GetOrg
     { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "endpoint", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "events", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 4, name: "events_meta", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetOrganizationWebhookConfigsResponse_Config {
@@ -4780,6 +4774,86 @@ export class GetOrganizationWebhookConfigsResponse_Config extends Message<GetOrg
 
   static equals(a: GetOrganizationWebhookConfigsResponse_Config | PlainMessage<GetOrganizationWebhookConfigsResponse_Config> | undefined, b: GetOrganizationWebhookConfigsResponse_Config | PlainMessage<GetOrganizationWebhookConfigsResponse_Config> | undefined): boolean {
     return proto3.util.equals(GetOrganizationWebhookConfigsResponse_Config, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetOrganizationWebhookMetaRequest
+ */
+export class GetOrganizationWebhookMetaRequest extends Message<GetOrganizationWebhookMetaRequest> {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id = "";
+
+  constructor(data?: PartialMessage<GetOrganizationWebhookMetaRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetOrganizationWebhookMetaRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetOrganizationWebhookMetaRequest {
+    return new GetOrganizationWebhookMetaRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetOrganizationWebhookMetaRequest {
+    return new GetOrganizationWebhookMetaRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetOrganizationWebhookMetaRequest {
+    return new GetOrganizationWebhookMetaRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetOrganizationWebhookMetaRequest | PlainMessage<GetOrganizationWebhookMetaRequest> | undefined, b: GetOrganizationWebhookMetaRequest | PlainMessage<GetOrganizationWebhookMetaRequest> | undefined): boolean {
+    return proto3.util.equals(GetOrganizationWebhookMetaRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetOrganizationWebhookMetaResponse
+ */
+export class GetOrganizationWebhookMetaResponse extends Message<GetOrganizationWebhookMetaResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: string meta = 2;
+   */
+  meta = "";
+
+  constructor(data?: PartialMessage<GetOrganizationWebhookMetaResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetOrganizationWebhookMetaResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "meta", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetOrganizationWebhookMetaResponse {
+    return new GetOrganizationWebhookMetaResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetOrganizationWebhookMetaResponse {
+    return new GetOrganizationWebhookMetaResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetOrganizationWebhookMetaResponse {
+    return new GetOrganizationWebhookMetaResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetOrganizationWebhookMetaResponse | PlainMessage<GetOrganizationWebhookMetaResponse> | undefined, b: GetOrganizationWebhookMetaResponse | PlainMessage<GetOrganizationWebhookMetaResponse> | undefined): boolean {
+    return proto3.util.equals(GetOrganizationWebhookMetaResponse, a, b);
   }
 }
 

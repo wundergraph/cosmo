@@ -609,10 +609,18 @@ message GetOrganizationWebhookConfigsResponse {
     string id = 1;
     string endpoint = 2;
     repeated string events = 3;
-    string events_meta = 4;
   }
   Response response = 1;
   repeated Config configs = 2;
+}
+
+message GetOrganizationWebhookMetaRequest {
+  string id = 1;
+}
+
+message GetOrganizationWebhookMetaResponse {
+  Response response = 1;
+  string meta = 2;
 }
 
 message UpdateOrganizationWebhookConfigRequest {
@@ -811,6 +819,8 @@ service PlatformService {
   rpc CreateOrganizationWebhookConfig(CreateOrganizationWebhookConfigRequest) returns (CreateOrganizationWebhookConfigResponse) {}
   // GetOrganizationWebhookConfigs returns all webhooks for the organization
   rpc GetOrganizationWebhookConfigs(GetOrganizationWebhookConfigsRequest) returns (GetOrganizationWebhookConfigsResponse) {}
+  // GetOrganizationWebhookMeta returns the meta data for a particular webhook
+  rpc GetOrganizationWebhookMeta(GetOrganizationWebhookMetaRequest) returns (GetOrganizationWebhookMetaResponse) {}
   // UpdateOrganizationWebhookConfig updates an existing webhook for the organization
   rpc UpdateOrganizationWebhookConfig(UpdateOrganizationWebhookConfigRequest) returns (UpdateOrganizationWebhookConfigResponse) {}
   // DeleteOrganizationWebhookConfig deletes an organization webhook

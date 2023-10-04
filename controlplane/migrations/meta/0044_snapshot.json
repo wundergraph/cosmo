@@ -1,7 +1,7 @@
 {
   "version": "5",
   "dialect": "pg",
-  "id": "373bb9b4-5b18-42ae-b3f9-ad3d9e77d7c6",
+  "id": "b90e3b89-291d-41e3-b77e-fe8edab7d05f",
   "prevId": "a9187047-ff43-4c52-b637-cd0bbb3e8689",
   "tables": {
     "api_keys": {
@@ -394,12 +394,6 @@
         "events": {
           "name": "events",
           "type": "text[]",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "events_meta": {
-          "name": "events_meta",
-          "type": "json",
           "primaryKey": false,
           "notNull": false
         },
@@ -1288,6 +1282,63 @@
           ]
         }
       }
+    },
+    "webhook_graph_schema_update": {
+      "name": "webhook_graph_schema_update",
+      "schema": "",
+      "columns": {
+        "webhook_id": {
+          "name": "webhook_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "federated_graph_id": {
+          "name": "federated_graph_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "webhook_graph_schema_update_webhook_id_organization_webhook_configs_id_fk": {
+          "name": "webhook_graph_schema_update_webhook_id_organization_webhook_configs_id_fk",
+          "tableFrom": "webhook_graph_schema_update",
+          "tableTo": "organization_webhook_configs",
+          "columnsFrom": [
+            "webhook_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "webhook_graph_schema_update_federated_graph_id_federated_graphs_id_fk": {
+          "name": "webhook_graph_schema_update_federated_graph_id_federated_graphs_id_fk",
+          "tableFrom": "webhook_graph_schema_update",
+          "tableTo": "federated_graphs",
+          "columnsFrom": [
+            "federated_graph_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "webhook_graph_schema_update_webhook_id_federated_graph_id": {
+          "name": "webhook_graph_schema_update_webhook_id_federated_graph_id",
+          "columns": [
+            "webhook_id",
+            "federated_graph_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {}
     }
   },
   "enums": {

@@ -23,8 +23,9 @@ type Config = {
   url?: string;
   key?: string;
   allowedUserEvents?: string[];
-  meta?: EventsMeta;
+  meta: EventsMeta;
 };
+
 export class OrganizationWebhookService {
   private configs?: Config[];
 
@@ -42,16 +43,25 @@ export class OrganizationWebhookService {
   private async syncOrganizationSettings() {
     const orgConfigs = await this.db.query.organizationWebhooks.findMany({
       where: eq(schema.organizationWebhooks.organizationId, this.organizationId),
+      with: {
+        webhookGraphSchemaUpdate: true,
+      },
     });
 
-    orgConfigs.map((config) =>
+    for (const config of orgConfigs) {
+      const meta: EventsMeta = {};
+
+      meta[OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED] = {
+        graphIds: config.webhookGraphSchemaUpdate.map((wu) => wu.federatedGraphId),
+      };
+
       this.configs?.push({
         url: config?.endpoint ?? '',
         key: config?.key ?? '',
         allowedUserEvents: config?.events ?? [],
-        meta: config.eventsMeta ?? undefined,
-      }),
-    );
+        meta,
+      });
+    }
 
     this.synced = true;
   }

@@ -53,12 +53,14 @@ import {
   deleteOrganizationWebhookConfig,
   getFederatedGraphs,
   getOrganizationWebhookConfigs,
+  getOrganizationWebhookMeta,
   updateOrganizationWebhookConfig,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+import { CreateOrganizationWebhookConfigResponse } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { OrganizationEventName } from "@wundergraph/cosmo-connect/dist/webhooks/events_pb";
 import { EventsMeta } from "@wundergraph/cosmo-shared";
 import Link from "next/link";
-import { useContext, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { PiWebhooksLogo } from "react-icons/pi";
 import { z } from "zod";
 
@@ -249,7 +251,6 @@ const Webhook = ({
     id: string;
     endpoint: string;
     events: string[];
-    eventsMeta?: EventsMeta;
   };
 }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -270,7 +271,21 @@ const Webhook = ({
     schema: FormSchema,
   });
 
-  const [meta, setMeta] = useState<EventsMeta>(existing?.eventsMeta || {});
+  const { data, isLoading, error, refetch } = useQuery({
+    ...getOrganizationWebhookMeta.useQuery({
+      id: existing?.id ?? "",
+    }),
+    enabled: !!existing?.id && mode === "update" && isOpen,
+  });
+
+  const [meta, setMeta] = useState<EventsMeta>(JSON.parse(data?.meta || "{}"));
+
+  useEffect(() => {
+    if (!data?.meta || Object.keys(meta).length !== 0) {
+      return;
+    }
+    setMeta({ ...JSON.parse(data.meta) });
+  }, [data?.meta, meta]);
 
   const onSubmit: SubmitHandler<Input> = (data) => {
     if (mode === "create") {
@@ -345,7 +360,10 @@ const Webhook = ({
     <Dialog
       open={isOpen}
       onOpenChange={(state) => {
-        setShouldUpdateKey(false);
+        if (!state) {
+          setShouldUpdateKey(false);
+          setMeta({});
+        }
         setIsOpen(state);
       }}
     >
@@ -372,149 +390,162 @@ const Webhook = ({
             A POST request will be sent to the provided endpoint
           </DialogDescription>
         </DialogHeader>
-        <Form {...form}>
-          <form
-            className="flex w-full flex-col gap-y-6"
-            onSubmit={form.handleSubmit(onSubmit)}
-          >
-            <FormField
-              defaultValue={existing?.endpoint}
-              control={form.control}
-              name="endpoint"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Endpoint</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="https://example.com/webhook"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <Alert
-              className={cn({
-                hidden: mode === "create" || shouldUpdateKey,
-              })}
+        {error && mode === "update" && (
+          <EmptyState
+            icon={<ExclamationTriangleIcon />}
+            title="Could not retrieve webhook"
+            description={
+              data?.response?.details || error?.message || "Please try again"
+            }
+            actions={<Button onClick={() => refetch()}>Retry</Button>}
+          />
+        )}
+        {isLoading && mode === "update" && <Loader className="my-8" />}
+        {(data?.meta !== undefined || mode === "create") && (
+          <Form {...form}>
+            <form
+              className="flex w-full flex-col gap-y-6"
+              onSubmit={form.handleSubmit(onSubmit)}
             >
-              <AlertDescription>
-                If you have lost or forgotten this secret key, you can change
-                it.{" "}
-                <button
-                  className="text-primary"
-                  type="button"
-                  onClick={() => setShouldUpdateKey(true)}
-                >
-                  Change secret key
-                </button>
-              </AlertDescription>
-            </Alert>
+              <FormField
+                defaultValue={existing?.endpoint}
+                control={form.control}
+                name="endpoint"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Endpoint</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="https://example.com/webhook"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <FormField
-              control={form.control}
-              name="key"
-              render={({ field }) => (
-                <FormItem
-                  className={cn({
-                    hidden: mode === "update" && !shouldUpdateKey,
-                  })}
-                >
-                  <FormLabel>Secret key</FormLabel>
-                  <FormControl>
-                    <Input placeholder="************" {...field} />
-                  </FormControl>
-                  <FormDescription>
-                    This can be used to verify if the events are originating
-                    from Cosmo.{" "}
-                    <a
-                      target="_blank"
-                      rel="noreferrer"
-                      href={docsBaseURL + "/studio/webhooks#verification"}
-                      className="text-primary"
-                    >
-                      Learn more.
-                    </a>
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              <Alert
+                className={cn({
+                  hidden: mode === "create" || shouldUpdateKey,
+                })}
+              >
+                <AlertDescription>
+                  If you have lost or forgotten this secret key, you can change
+                  it.{" "}
+                  <button
+                    className="text-primary"
+                    type="button"
+                    onClick={() => setShouldUpdateKey(true)}
+                  >
+                    Change secret key
+                  </button>
+                </AlertDescription>
+              </Alert>
 
-            <FormField
-              defaultValue={existing?.events}
-              control={form.control}
-              name="events"
-              render={() => (
-                <FormItem>
-                  <div className="mb-4">
-                    <FormLabel className="text-base">Events</FormLabel>
+              <FormField
+                control={form.control}
+                name="key"
+                render={({ field }) => (
+                  <FormItem
+                    className={cn({
+                      hidden: mode === "update" && !shouldUpdateKey,
+                    })}
+                  >
+                    <FormLabel>Secret key</FormLabel>
+                    <FormControl>
+                      <Input placeholder="************" {...field} />
+                    </FormControl>
                     <FormDescription>
-                      Select the events for which you want webhooks to fire
+                      This can be used to verify if the events are originating
+                      from Cosmo.{" "}
+                      <a
+                        target="_blank"
+                        rel="noreferrer"
+                        href={docsBaseURL + "/studio/webhooks#verification"}
+                        className="text-primary"
+                      >
+                        Learn more.
+                      </a>
                     </FormDescription>
-                  </div>
-                  {webhookEvents.map((event) => (
-                    <FormField
-                      key={event.id}
-                      control={form.control}
-                      name="events"
-                      render={({ field }) => {
-                        return (
-                          <div className="flex flex-col gap-y-1">
-                            <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                              <FormControl>
-                                <Checkbox
-                                  checked={field.value?.includes(event.name)}
-                                  onCheckedChange={(checked) => {
-                                    return checked
-                                      ? field.onChange([
-                                          ...(field.value ?? []),
-                                          event.name,
-                                        ])
-                                      : field.onChange(
-                                          field.value?.filter(
-                                            (value) => value !== event.name
-                                          )
-                                        );
-                                  }}
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                defaultValue={existing?.events}
+                control={form.control}
+                name="events"
+                render={() => (
+                  <FormItem>
+                    <div className="mb-4">
+                      <FormLabel className="text-base">Events</FormLabel>
+                      <FormDescription>
+                        Select the events for which you want webhooks to fire
+                      </FormDescription>
+                    </div>
+                    {webhookEvents.map((event) => (
+                      <FormField
+                        key={event.id}
+                        control={form.control}
+                        name="events"
+                        render={({ field }) => {
+                          return (
+                            <div className="flex flex-col gap-y-1">
+                              <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                                <FormControl>
+                                  <Checkbox
+                                    checked={field.value?.includes(event.name)}
+                                    onCheckedChange={(checked) => {
+                                      return checked
+                                        ? field.onChange([
+                                            ...(field.value ?? []),
+                                            event.name,
+                                          ])
+                                        : field.onChange(
+                                            field.value?.filter(
+                                              (value) => value !== event.name
+                                            )
+                                          );
+                                    }}
+                                  />
+                                </FormControl>
+                                <FormLabel className="text-sm font-normal">
+                                  {event.label}
+                                  <FormDescription>
+                                    {event.description}
+                                  </FormDescription>
+                                </FormLabel>
+                              </FormItem>
+                              <div className="ml-7">
+                                <Meta
+                                  id={event.id}
+                                  meta={meta}
+                                  setMeta={setMeta}
                                 />
-                              </FormControl>
-                              <FormLabel className="text-sm font-normal">
-                                {event.label}
-                                <FormDescription>
-                                  {event.description}
-                                </FormDescription>
-                              </FormLabel>
-                            </FormItem>
-                            <div className="ml-7">
-                              <Meta
-                                id={event.id}
-                                meta={meta}
-                                setMeta={setMeta}
-                              />
+                              </div>
                             </div>
-                          </div>
-                        );
-                      }}
-                    />
-                  ))}
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <Button
-              className="mt-2"
-              type="submit"
-              disabled={!form.formState.isValid}
-              variant="default"
-              isLoading={mode === "create" ? isCreating : isUpdating}
-            >
-              {mode === "create" ? "Create" : "Save"}
-            </Button>
-          </form>
-        </Form>
+                          );
+                        }}
+                      />
+                    ))}
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Button
+                className="mt-2"
+                type="submit"
+                disabled={!form.formState.isValid}
+                variant="default"
+                isLoading={mode === "create" ? isCreating : isUpdating}
+              >
+                {mode === "create" ? "Create" : "Save"}
+              </Button>
+            </form>
+          </Form>
+        )}
       </DialogContent>
     </Dialog>
   );
@@ -593,7 +624,7 @@ const WebhooksPage: NextPageWithLayout = () => {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {data.configs.map(({ id, endpoint, events, eventsMeta }) => {
+          {data.configs.map(({ id, endpoint, events }) => {
             return (
               <TableRow key={id}>
                 <TableCell className="font-medium">{endpoint}</TableCell>
@@ -617,9 +648,6 @@ const WebhooksPage: NextPageWithLayout = () => {
                       id,
                       endpoint,
                       events,
-                      eventsMeta: eventsMeta
-                        ? JSON.parse(eventsMeta)
-                        : undefined,
                     }}
                   />
                   <DeleteWebhook id={id} refresh={() => refetch()} />

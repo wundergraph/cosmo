@@ -2,6 +2,7 @@ import { ExpiresAt } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_
 import { and, asc, eq } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { EventsMeta } from '@wundergraph/cosmo-shared';
+import { OrganizationEventName } from '@wundergraph/cosmo-connect/dist/webhooks/events_pb';
 import * as schema from '../../db/schema.js';
 import {
   apiKeys,
@@ -423,18 +424,61 @@ export class OrganizationRepository {
     events: string[];
     eventsMeta: string;
   }) {
-    const insert: typeof organizationWebhooks.$inferInsert = {
-      organizationId: input.organizationId,
-      endpoint: input.endpoint,
-      events: input.events,
-      key: input.key,
+    await this.db.transaction(async (db) => {
+      const createWebhookResult = await db
+        .insert(organizationWebhooks)
+        .values({
+          organizationId: input.organizationId,
+          endpoint: input.endpoint,
+          events: input.events,
+          key: input.key,
+        })
+        .returning();
+
+      if (!input.eventsMeta) {
+        return;
+      }
+
+      const meta = JSON.parse(input.eventsMeta) as EventsMeta;
+
+      if (meta[OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED]) {
+        const promises = [];
+        for (const id of meta[OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED].graphIds) {
+          const op = db.insert(schema.webhookGraphSchemaUpdate).values({
+            webhookId: createWebhookResult[0].id,
+            federatedGraphId: id,
+          });
+          promises.push(op);
+        }
+        await Promise.all(promises);
+      }
+    });
+  }
+
+  public async getWebhookMeta(id: string, organizationId: string): Promise<EventsMeta> {
+    const results = await this.db
+      .select({
+        graphId: schema.webhookGraphSchemaUpdate.federatedGraphId,
+      })
+      .from(schema.webhookGraphSchemaUpdate)
+      .innerJoin(
+        schema.organizationWebhooks,
+        eq(schema.organizationWebhooks.id, schema.webhookGraphSchemaUpdate.webhookId),
+      )
+      .where(
+        and(
+          eq(schema.organizationWebhooks.organizationId, organizationId),
+          eq(schema.webhookGraphSchemaUpdate.webhookId, id),
+        ),
+      );
+
+    const meta: EventsMeta = {};
+
+    meta[OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED] = {
+      graphIds: results.map((r) => r.graphId),
     };
 
-    if (input.eventsMeta) {
-      insert.eventsMeta = JSON.parse(input.eventsMeta) as EventsMeta;
-    }
-
-    await this.db.insert(organizationWebhooks).values(insert);
+    return meta;
   }
 
   public async getWebhookConfigs(organizationId: string): Promise<WebhooksConfigDTO[]> {
@@ -447,7 +491,6 @@ export class OrganizationRepository {
       id: r.id,
       endpoint: r.endpoint ?? '',
       events: r.events ?? [],
-      eventsMeta: JSON.stringify(r.eventsMeta),
     }));
   }
 
@@ -460,20 +503,44 @@ export class OrganizationRepository {
     eventsMeta: string;
     shouldUpdateKey: boolean;
   }) {
-    const set: Partial<typeof organizationWebhooks.$inferInsert> = {
-      endpoint: input.endpoint,
-      events: input.events,
-    };
+    await this.db.transaction(async (db) => {
+      const set: Partial<typeof organizationWebhooks.$inferInsert> = {
+        endpoint: input.endpoint,
+        events: input.events,
+      };
+      if (input.shouldUpdateKey) {
+        set.key = input.key;
+      }
 
-    if (input.shouldUpdateKey) {
-      set.key = input.key;
-    }
+      await this.db.update(organizationWebhooks).set(set).where(eq(organizationWebhooks.id, input.id));
 
-    if (input.eventsMeta) {
-      set.eventsMeta = JSON.parse(input.eventsMeta);
-    }
+      if (!input.eventsMeta) {
+        return;
+      }
 
-    await this.db.update(organizationWebhooks).set(set).where(eq(organizationWebhooks.id, input.id));
+      const meta = JSON.parse(input.eventsMeta) as EventsMeta;
+
+      if (meta[OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED]) {
+        const promises = [];
+        const ids = meta[OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED].graphIds;
+
+        await db
+          .delete(schema.webhookGraphSchemaUpdate)
+          .where(and(eq(schema.webhookGraphSchemaUpdate.webhookId, input.id)));
+
+        for (const id of ids) {
+          const op = db
+            .insert(schema.webhookGraphSchemaUpdate)
+            .values({
+              webhookId: input.id,
+              federatedGraphId: id,
+            })
+            .onConflictDoNothing();
+          promises.push(op);
+        }
+        await Promise.all(promises);
+      }
+    });
   }
 
   public async deleteWebhookConfig(input: { id: string; organizationId: string }) {

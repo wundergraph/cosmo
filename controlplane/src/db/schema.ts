@@ -462,12 +462,33 @@ export const organizationWebhooks = pgTable('organization_webhook_configs', {
   endpoint: text('endpoint'),
   key: text('key'),
   events: text('events').array(),
-  eventsMeta: json('events_meta').$type<EventsMeta>(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
+export const webhookGraphSchemaUpdate = pgTable(
+  'webhook_graph_schema_update',
+  {
+    webhookId: uuid('webhook_id')
+      .notNull()
+      .references(() => organizationWebhooks.id, {
+        onDelete: 'cascade',
+      }),
+    federatedGraphId: uuid('federated_graph_id')
+      .notNull()
+      .references(() => federatedGraphs.id, {
+        onDelete: 'cascade',
+      }),
+  },
+  (t) => {
+    return {
+      pk: primaryKey(t.webhookId, t.federatedGraphId),
+    };
+  },
+);
+
 export const organizationWebhookRelations = relations(organizationWebhooks, ({ many }) => ({
   organization: many(organizations),
+  webhookGraphSchemaUpdate: many(webhookGraphSchemaUpdate),
 }));
 
 export const gitInstallationTypeEnum = pgEnum('git_installation_type', ['PERSONAL', 'ORGANIZATION']);
