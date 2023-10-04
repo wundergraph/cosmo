@@ -1,9 +1,10 @@
+import { getCheckBadge, getCheckIcon } from "@/components/check-badge-icon";
+import { DatePickerWithRange } from "@/components/date-picker-with-range";
 import { EmptyState } from "@/components/empty-state";
-import { getGraphLayout, GraphContext } from "@/components/layout/graph-layout";
+import { GraphContext, getGraphLayout } from "@/components/layout/graph-layout";
 import { PageHeader } from "@/components/layout/head";
 import { TitleLayout } from "@/components/layout/title-layout";
 import { SchemaViewer, SchemaViewerActions } from "@/components/schmea-viewer";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CLI } from "@/components/ui/cli";
 import {
@@ -14,7 +15,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Loader } from "@/components/ui/loader";
-import { Separator } from "@/components/ui/separator";
 import {
   Table,
   TableBody,
@@ -23,126 +23,27 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useSessionStorage } from "@/hooks/use-session-storage";
 import { docsBaseURL } from "@/lib/constants";
 import { NextPageWithLayout } from "@/lib/page";
-import { cn } from "@/lib/utils";
 import {
   CommandLineIcon,
   ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
 import {
-  CheckCircledIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
-  CrossCircledIcon,
   DoubleArrowLeftIcon,
   DoubleArrowRightIcon,
 } from "@radix-ui/react-icons";
 import { useQuery } from "@tanstack/react-query";
-import { endOfDay, format, formatISO, startOfDay, subDays } from "date-fns";
-import { useRouter } from "next/router";
-import {
-  getCheckDetails,
-  getChecksByFederatedGraphName,
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
+import { getChecksByFederatedGraphName } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+import { endOfDay, format, formatISO, startOfDay, subDays } from "date-fns";
+import Link from "next/link";
+import { useRouter } from "next/router";
 import { useCallback, useContext } from "react";
-import { DatePickerWithRange } from "@/components/date-picker-with-range";
 import { DateRange } from "react-day-picker";
-
-const Details = ({ id, graphName }: { id: string; graphName: string }) => {
-  const { data, isLoading, error, refetch } = useQuery(
-    getCheckDetails.useQuery({
-      checkID: id,
-      graphName,
-    })
-  );
-
-  if (isLoading) return <Loader fullscreen />;
-
-  if (error || data.response?.code !== EnumStatusCode.OK)
-    return (
-      <EmptyState
-        icon={<ExclamationTriangleIcon />}
-        title="Could not retrieve details"
-        description={
-          data?.response?.details || error?.message || "Please try again"
-        }
-        actions={<Button onClick={() => refetch()}>Retry</Button>}
-      />
-    );
-
-  if (!data) return null;
-
-  return (
-    <div className="space-y-4">
-      {data.changes.length === 0 && data.compositionErrors.length == 0 && (
-        <p>No changes or composition errors to show</p>
-      )}
-      {data.changes.length > 0 && (
-        <div>
-          <p className="text-sm font-semibold">Changes</p>
-          <Separator className="my-2" />
-          <div className="scrollbar-custom max-h-[70vh] overflow-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[200px]">Change</TableHead>
-                  <TableHead className="w-[200px]">Type</TableHead>
-                  <TableHead>Description</TableHead>
-                </TableRow>
-              </TableHeader>
-
-              <TableBody>
-                {data.changes.map(({ changeType, message, isBreaking }) => {
-                  return (
-                    <TableRow
-                      key={changeType + message}
-                      className={cn(isBreaking && "text-destructive")}
-                    >
-                      <TableCell>
-                        {isBreaking ? "Breaking" : "Non-Breaking"}
-                      </TableCell>
-                      <TableCell>{changeType}</TableCell>
-                      <TableCell>{message}</TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </div>
-        </div>
-      )}
-      {data.compositionErrors.length > 0 && (
-        <div className="text-sm">
-          <p className="font-semibold">Composition Errors</p>
-          <Separator className="my-2" />
-          <pre className="py-4">{data.compositionErrors.join("\n")}</pre>
-        </div>
-      )}
-    </div>
-  );
-};
-
-const DetailsDialog = ({
-  id,
-  graphName,
-}: {
-  id: string;
-  graphName: string;
-}) => {
-  return (
-    <Dialog>
-      <DialogTrigger className="text-primary">View</DialogTrigger>
-      <DialogContent className="max-w-4xl">
-        <DialogHeader>
-          <DialogTitle>Details</DialogTitle>
-        </DialogHeader>
-        <Details id={id} graphName={graphName} />
-      </DialogContent>
-    </Dialog>
-  );
-};
 
 const ProposedSchema = ({
   sdl,
@@ -195,22 +96,9 @@ const ChecksPage: NextPageWithLayout = () => {
     });
   };
 
-  const getIcon = (check: boolean) => {
-    if (check) {
-      return (
-        <div className="flex justify-center">
-          <CheckCircledIcon className="h-4 w-4 text-success" />
-        </div>
-      );
-    }
-    return (
-      <div className="flex justify-center">
-        <CrossCircledIcon className="h-4 w-4 text-destructive" />
-      </div>
-    );
-  };
-
   const graphContext = useContext(GraphContext);
+
+  const [, setRouteCache] = useSessionStorage("checks.route", router.asPath);
 
   const { data, isLoading, error, refetch } = useQuery(
     getChecksByFederatedGraphName.useQuery({
@@ -283,7 +171,7 @@ const ChecksPage: NextPageWithLayout = () => {
   return (
     <div className="flex flex-col gap-y-3">
       <DatePickerWithRange
-        className="mr-2 flex justify-end"
+        className="ml-auto"
         selectedDateRange={{ from: startDate, to: endDate }}
         onDateRangeChange={onDateRangeChange}
       />
@@ -309,6 +197,7 @@ const ChecksPage: NextPageWithLayout = () => {
                 subgraphName,
                 timestamp,
                 proposedSubgraphSchemaSDL,
+                isForcedSuccess,
               }) => {
                 return (
                   <TableRow key={id}>
@@ -317,14 +206,10 @@ const ChecksPage: NextPageWithLayout = () => {
                     </TableCell>
                     <TableCell>{subgraphName}</TableCell>
                     <TableCell>
-                      {isComposable && !isBreaking ? (
-                        <Badge variant="success">PASSED</Badge>
-                      ) : (
-                        <Badge variant="destructive">FAILED</Badge>
-                      )}
+                      {getCheckBadge(isBreaking, isComposable, isForcedSuccess)}
                     </TableCell>
-                    <TableCell>{getIcon(isComposable)}</TableCell>
-                    <TableCell>{getIcon(!isBreaking)}</TableCell>
+                    <TableCell>{getCheckIcon(isComposable)}</TableCell>
+                    <TableCell>{getCheckIcon(!isBreaking)}</TableCell>
                     <TableCell className="text-center">
                       {proposedSubgraphSchemaSDL ? (
                         <ProposedSchema
@@ -335,11 +220,13 @@ const ChecksPage: NextPageWithLayout = () => {
                         "-"
                       )}
                     </TableCell>
-                    <TableCell className="text-center">
-                      <DetailsDialog
-                        id={id}
-                        graphName={graphContext.graph?.name ?? ""}
-                      />
+                    <TableCell className="text-center text-primary">
+                      <Link
+                        onClick={() => setRouteCache(router.asPath)}
+                        href={`${router.asPath.split("?")[0]}/${id}`}
+                      >
+                        View
+                      </Link>
                     </TableCell>
                   </TableRow>
                 );
