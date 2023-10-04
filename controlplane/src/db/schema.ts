@@ -1,3 +1,4 @@
+import { EventsMeta } from '@wundergraph/cosmo-shared';
 import { relations } from 'drizzle-orm';
 import {
   boolean,
@@ -461,6 +462,7 @@ export const organizationWebhooks = pgTable('organization_webhook_configs', {
   endpoint: text('endpoint'),
   key: text('key'),
   events: text('events').array(),
+  eventsMeta: json('events_meta').$type<EventsMeta>(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 

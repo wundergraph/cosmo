@@ -136,14 +136,15 @@ message GetFederatedGraphsRequest {
 }
 
 message FederatedGraph {
-  string name = 1;
-  string routingURL = 2;
-  repeated string label_matchers = 3;
-  string lastUpdatedAt = 4;
-  bool isComposable = 5;
-  string compositionErrors = 6;
-  int32 connectedSubgraphs = 7;
-  repeated RequestSeriesItem requestSeries = 8;
+  string id = 1;
+  string name = 2;
+  string routingURL = 3;
+  repeated string label_matchers = 4;
+  string lastUpdatedAt = 5;
+  bool isComposable = 6;
+  string compositionErrors = 7;
+  int32 connectedSubgraphs = 8;
+  repeated RequestSeriesItem requestSeries = 9;
 }
 
 message GetFederatedGraphsResponse {
@@ -594,6 +595,7 @@ message CreateOrganizationWebhookConfigRequest {
   string endpoint = 1;
   string key = 2;
   repeated string events = 3;
+  string events_meta = 4;
 }
 
 message CreateOrganizationWebhookConfigResponse {
@@ -607,6 +609,7 @@ message GetOrganizationWebhookConfigsResponse {
     string id = 1;
     string endpoint = 2;
     repeated string events = 3;
+    string events_meta = 4;
   }
   Response response = 1;
   repeated Config configs = 2;
@@ -617,7 +620,8 @@ message UpdateOrganizationWebhookConfigRequest {
   string endpoint = 2;
   string key = 3;
   repeated string events = 4;
-  bool shouldUpdateKey = 5;
+  string events_meta = 5;
+  bool should_update_key = 6;
 }
 
 message UpdateOrganizationWebhookConfigResponse {

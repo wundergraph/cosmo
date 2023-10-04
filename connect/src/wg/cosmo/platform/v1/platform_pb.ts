@@ -1195,42 +1195,47 @@ export class GetFederatedGraphsRequest extends Message<GetFederatedGraphsRequest
  */
 export class FederatedGraph extends Message<FederatedGraph> {
   /**
-   * @generated from field: string name = 1;
+   * @generated from field: string id = 1;
+   */
+  id = "";
+
+  /**
+   * @generated from field: string name = 2;
    */
   name = "";
 
   /**
-   * @generated from field: string routingURL = 2;
+   * @generated from field: string routingURL = 3;
    */
   routingURL = "";
 
   /**
-   * @generated from field: repeated string label_matchers = 3;
+   * @generated from field: repeated string label_matchers = 4;
    */
   labelMatchers: string[] = [];
 
   /**
-   * @generated from field: string lastUpdatedAt = 4;
+   * @generated from field: string lastUpdatedAt = 5;
    */
   lastUpdatedAt = "";
 
   /**
-   * @generated from field: bool isComposable = 5;
+   * @generated from field: bool isComposable = 6;
    */
   isComposable = false;
 
   /**
-   * @generated from field: string compositionErrors = 6;
+   * @generated from field: string compositionErrors = 7;
    */
   compositionErrors = "";
 
   /**
-   * @generated from field: int32 connectedSubgraphs = 7;
+   * @generated from field: int32 connectedSubgraphs = 8;
    */
   connectedSubgraphs = 0;
 
   /**
-   * @generated from field: repeated wg.cosmo.platform.v1.RequestSeriesItem requestSeries = 8;
+   * @generated from field: repeated wg.cosmo.platform.v1.RequestSeriesItem requestSeries = 9;
    */
   requestSeries: RequestSeriesItem[] = [];
 
@@ -1242,14 +1247,15 @@ export class FederatedGraph extends Message<FederatedGraph> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "wg.cosmo.platform.v1.FederatedGraph";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "routingURL", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "label_matchers", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 4, name: "lastUpdatedAt", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 5, name: "isComposable", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 6, name: "compositionErrors", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 7, name: "connectedSubgraphs", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
-    { no: 8, name: "requestSeries", kind: "message", T: RequestSeriesItem, repeated: true },
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "routingURL", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "label_matchers", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 5, name: "lastUpdatedAt", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 6, name: "isComposable", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 7, name: "compositionErrors", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 8, name: "connectedSubgraphs", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 9, name: "requestSeries", kind: "message", T: RequestSeriesItem, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FederatedGraph {
@@ -4575,6 +4581,11 @@ export class CreateOrganizationWebhookConfigRequest extends Message<CreateOrgani
    */
   events: string[] = [];
 
+  /**
+   * @generated from field: string events_meta = 4;
+   */
+  eventsMeta = "";
+
   constructor(data?: PartialMessage<CreateOrganizationWebhookConfigRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -4586,6 +4597,7 @@ export class CreateOrganizationWebhookConfigRequest extends Message<CreateOrgani
     { no: 1, name: "endpoint", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "events", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 4, name: "events_meta", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateOrganizationWebhookConfigRequest {
@@ -4735,6 +4747,11 @@ export class GetOrganizationWebhookConfigsResponse_Config extends Message<GetOrg
    */
   events: string[] = [];
 
+  /**
+   * @generated from field: string events_meta = 4;
+   */
+  eventsMeta = "";
+
   constructor(data?: PartialMessage<GetOrganizationWebhookConfigsResponse_Config>) {
     super();
     proto3.util.initPartial(data, this);
@@ -4746,6 +4763,7 @@ export class GetOrganizationWebhookConfigsResponse_Config extends Message<GetOrg
     { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "endpoint", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "events", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 4, name: "events_meta", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetOrganizationWebhookConfigsResponse_Config {
@@ -4790,7 +4808,12 @@ export class UpdateOrganizationWebhookConfigRequest extends Message<UpdateOrgani
   events: string[] = [];
 
   /**
-   * @generated from field: bool shouldUpdateKey = 5;
+   * @generated from field: string events_meta = 5;
+   */
+  eventsMeta = "";
+
+  /**
+   * @generated from field: bool should_update_key = 6;
    */
   shouldUpdateKey = false;
 
@@ -4806,7 +4829,8 @@ export class UpdateOrganizationWebhookConfigRequest extends Message<UpdateOrgani
     { no: 2, name: "endpoint", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "events", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 5, name: "shouldUpdateKey", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 5, name: "events_meta", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 6, name: "should_update_key", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateOrganizationWebhookConfigRequest {

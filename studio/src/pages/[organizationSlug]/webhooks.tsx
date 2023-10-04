@@ -15,6 +15,12 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Form,
   FormControl,
   FormDescription,
@@ -45,10 +51,12 @@ import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb
 import {
   createOrganizationWebhookConfig,
   deleteOrganizationWebhookConfig,
+  getFederatedGraphs,
   getOrganizationWebhookConfigs,
   updateOrganizationWebhookConfig,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { OrganizationEventName } from "@wundergraph/cosmo-connect/dist/webhooks/events_pb";
+import { EventsMeta } from "@wundergraph/cosmo-shared";
 import Link from "next/link";
 import { useContext, useState } from "react";
 import { PiWebhooksLogo } from "react-icons/pi";
@@ -128,6 +136,79 @@ const DeleteWebhook = ({
   );
 };
 
+const SelectFederatedGraphs = ({
+  meta,
+  setMeta,
+}: {
+  meta?: EventsMeta;
+  setMeta: (meta: EventsMeta) => void;
+}) => {
+  const { data } = useQuery(getFederatedGraphs.useQuery());
+
+  const graphIds =
+    meta?.[OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED]?.graphIds ??
+    [];
+
+  const onCheckedChange = (val: boolean, graphId: string) => {
+    const tempMeta = { ...meta } ?? {};
+    const newGraphIds: string[] = [];
+
+    if (val) {
+      newGraphIds.push(...Array.from(new Set([...graphIds, graphId])));
+    } else {
+      newGraphIds.push(...graphIds.filter((g) => g !== graphId));
+    }
+
+    tempMeta[OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED] = {
+      graphIds: newGraphIds,
+    };
+
+    setMeta(tempMeta);
+  };
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button size="sm" variant="outline">
+          {graphIds.length > 0
+            ? `${graphIds.length} selected`
+            : "Select graphs"}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="">
+        {data?.graphs?.map((graph) => {
+          return (
+            <DropdownMenuCheckboxItem
+              key={graph.id}
+              checked={graphIds.includes(graph.id)}
+              onCheckedChange={(val) => onCheckedChange(val, graph.id)}
+              onSelect={(e) => e.preventDefault()}
+            >
+              {graph.name}
+            </DropdownMenuCheckboxItem>
+          );
+        })}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+};
+
+const Meta = ({
+  id,
+  meta,
+  setMeta,
+}: {
+  id: OrganizationEventName;
+  meta?: EventsMeta;
+  setMeta: (meta: EventsMeta) => void;
+}) => {
+  if (id == OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED) {
+    return <SelectFederatedGraphs meta={meta} setMeta={setMeta} />;
+  }
+
+  return null;
+};
+
 const FormSchema = z.object({
   endpoint: z
     .string()
@@ -147,7 +228,8 @@ type Input = z.infer<typeof FormSchema>;
 
 const webhookEvents = [
   {
-    id: OrganizationEventName[
+    id: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
+    name: OrganizationEventName[
       OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED
     ],
     label: "Federated Graph Schema Update",
@@ -158,16 +240,17 @@ const webhookEvents = [
 const Webhook = ({
   mode,
   refresh,
-  id,
-  endpoint,
-  events,
+  existing,
 }: {
   mode: "create" | "update";
   refresh: () => void;
   buttonText?: React.ReactNode;
-  id?: string;
-  endpoint?: string;
-  events?: string[];
+  existing?: {
+    id: string;
+    endpoint: string;
+    events: string[];
+    eventsMeta?: EventsMeta;
+  };
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const { toast } = useToast();
@@ -187,6 +270,8 @@ const Webhook = ({
     schema: FormSchema,
   });
 
+  const [meta, setMeta] = useState<EventsMeta>(existing?.eventsMeta || {});
+
   const onSubmit: SubmitHandler<Input> = (data) => {
     if (mode === "create") {
       create(
@@ -194,6 +279,7 @@ const Webhook = ({
           endpoint: data.endpoint,
           key: data.key,
           events: data.events ?? [],
+          eventsMeta: JSON.stringify(meta),
         },
         {
           onSuccess: (d) => {
@@ -218,13 +304,14 @@ const Webhook = ({
           },
         }
       );
-    } else if (mode === "update" && id) {
+    } else if (mode === "update" && existing?.id) {
       update(
         {
-          id,
+          id: existing.id,
           endpoint: data.endpoint,
           key: data.key,
           events: data.events ?? [],
+          eventsMeta: JSON.stringify(meta),
           shouldUpdateKey,
         },
         {
@@ -291,7 +378,7 @@ const Webhook = ({
             onSubmit={form.handleSubmit(onSubmit)}
           >
             <FormField
-              defaultValue={endpoint}
+              defaultValue={existing?.endpoint}
               control={form.control}
               name="endpoint"
               render={({ field }) => (
@@ -357,7 +444,7 @@ const Webhook = ({
             />
 
             <FormField
-              defaultValue={events}
+              defaultValue={existing?.events}
               control={form.control}
               name="events"
               render={() => (
@@ -375,34 +462,40 @@ const Webhook = ({
                       name="events"
                       render={({ field }) => {
                         return (
-                          <FormItem
-                            key={event.id}
-                            className="flex flex-row items-start space-x-3 space-y-0"
-                          >
-                            <FormControl>
-                              <Checkbox
-                                checked={field.value?.includes(event.id)}
-                                onCheckedChange={(checked) => {
-                                  return checked
-                                    ? field.onChange([
-                                        ...(field.value ?? []),
-                                        event.id,
-                                      ])
-                                    : field.onChange(
-                                        field.value?.filter(
-                                          (value) => value !== event.id
-                                        )
-                                      );
-                                }}
+                          <div className="flex flex-col gap-y-1">
+                            <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value?.includes(event.name)}
+                                  onCheckedChange={(checked) => {
+                                    return checked
+                                      ? field.onChange([
+                                          ...(field.value ?? []),
+                                          event.name,
+                                        ])
+                                      : field.onChange(
+                                          field.value?.filter(
+                                            (value) => value !== event.name
+                                          )
+                                        );
+                                  }}
+                                />
+                              </FormControl>
+                              <FormLabel className="text-sm font-normal">
+                                {event.label}
+                                <FormDescription>
+                                  {event.description}
+                                </FormDescription>
+                              </FormLabel>
+                            </FormItem>
+                            <div className="ml-7">
+                              <Meta
+                                id={event.id}
+                                meta={meta}
+                                setMeta={setMeta}
                               />
-                            </FormControl>
-                            <FormLabel className="text-sm font-normal">
-                              {event.label}
-                              <FormDescription>
-                                {event.description}
-                              </FormDescription>
-                            </FormLabel>
-                          </FormItem>
+                            </div>
+                          </div>
                         );
                       }}
                     />
@@ -500,7 +593,7 @@ const WebhooksPage: NextPageWithLayout = () => {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {data.configs.map(({ id, endpoint, events }) => {
+          {data.configs.map(({ id, endpoint, events, eventsMeta }) => {
             return (
               <TableRow key={id}>
                 <TableCell className="font-medium">{endpoint}</TableCell>
@@ -520,9 +613,14 @@ const WebhooksPage: NextPageWithLayout = () => {
                   <Webhook
                     mode="update"
                     refresh={() => refetch()}
-                    id={id}
-                    endpoint={endpoint}
-                    events={events}
+                    existing={{
+                      id,
+                      endpoint,
+                      events,
+                      eventsMeta: eventsMeta
+                        ? JSON.parse(eventsMeta)
+                        : undefined,
+                    }}
                   />
                   <DeleteWebhook id={id} refresh={() => refetch()} />
                 </TableCell>

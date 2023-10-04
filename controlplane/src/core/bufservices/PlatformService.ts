@@ -286,6 +286,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         return {
           graphs: list.map((g) => ({
+            id: g.id,
             name: g.name,
             labelMatchers: g.labelMatchers,
             routingURL: g.routingUrl,
@@ -386,6 +387,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         return {
           graph: {
+            id: federatedGraph.id,
             name: federatedGraph.name,
             routingURL: federatedGraph.routingUrl,
             labelMatchers: federatedGraph.labelMatchers,

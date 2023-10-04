@@ -1,6 +1,7 @@
 import { ExpiresAt } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { and, asc, eq } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { EventsMeta } from '@wundergraph/cosmo-shared';
 import * as schema from '../../db/schema.js';
 import {
   apiKeys,
@@ -415,10 +416,25 @@ export class OrganizationRepository {
     );
   }
 
-  public async createWebhookConfig(input: { organizationId: string; endpoint: string; key: string; events: string[] }) {
-    await this.db.insert(organizationWebhooks).values({
-      ...input,
-    });
+  public async createWebhookConfig(input: {
+    organizationId: string;
+    endpoint: string;
+    key: string;
+    events: string[];
+    eventsMeta: string;
+  }) {
+    const insert: typeof organizationWebhooks.$inferInsert = {
+      organizationId: input.organizationId,
+      endpoint: input.endpoint,
+      events: input.events,
+      key: input.key,
+    };
+
+    if (input.eventsMeta) {
+      insert.eventsMeta = JSON.parse(input.eventsMeta) as EventsMeta;
+    }
+
+    await this.db.insert(organizationWebhooks).values(insert);
   }
 
   public async getWebhookConfigs(organizationId: string): Promise<WebhooksConfigDTO[]> {
@@ -431,6 +447,7 @@ export class OrganizationRepository {
       id: r.id,
       endpoint: r.endpoint ?? '',
       events: r.events ?? [],
+      eventsMeta: JSON.stringify(r.eventsMeta),
     }));
   }
 
@@ -440,6 +457,7 @@ export class OrganizationRepository {
     endpoint: string;
     key: string;
     events: string[];
+    eventsMeta: string;
     shouldUpdateKey: boolean;
   }) {
     const set: Partial<typeof organizationWebhooks.$inferInsert> = {
@@ -449,6 +467,10 @@ export class OrganizationRepository {
 
     if (input.shouldUpdateKey) {
       set.key = input.key;
+    }
+
+    if (input.eventsMeta) {
+      set.eventsMeta = JSON.parse(input.eventsMeta);
     }
 
     await this.db.update(organizationWebhooks).set(set).where(eq(organizationWebhooks.id, input.id));
