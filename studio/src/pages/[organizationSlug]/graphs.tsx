@@ -1,3 +1,4 @@
+import { UserContext } from "@/components/app-provider";
 import { EmptyState } from "@/components/empty-state";
 import { FederatedGraphsCards } from "@/components/federatedgraphs-cards";
 import { getDashboardLayout } from "@/components/layout/dashboard-layout";
@@ -8,15 +9,20 @@ import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { useQuery } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { getFederatedGraphs } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-
-
+import { useContext } from "react";
 
 const GraphsDashboardPage: NextPageWithLayout = () => {
-  const { data, isLoading, error, refetch } = useQuery(
-    getFederatedGraphs.useQuery({
+  const user = useContext(UserContext);
+  const { data, isLoading, error, refetch } = useQuery({
+    ...getFederatedGraphs.useQuery({
       includeMetrics: true,
-    })
-  );
+    }),
+    queryKey: [
+      user?.currentOrganization.slug || "",
+      "GetFederatedGraphs",
+      { includeMetrics: true },
+    ],
+  });
 
   if (isLoading) return <Loader fullscreen />;
 

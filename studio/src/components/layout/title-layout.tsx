@@ -18,7 +18,7 @@ export const TitleLayout = ({
   children?: React.ReactNode;
 }) => {
   const router = useRouter();
-  const [user] = useContext(UserContext);
+  const user = useContext(UserContext);
 
   const ref = useRef<HTMLDivElement>(null);
 
