@@ -393,7 +393,7 @@ export const Empty = ({
 };
 
 const GraphCard = ({ graph }: { graph: FederatedGraph }) => {
-  const [user] = useContext(UserContext);
+  const user = useContext(UserContext);
   const { data, ticks, domain, timeFormatter } = useChartData(
     7 * 24,
     graph.requestSeries.length > 0 ? graph.requestSeries : fallbackData

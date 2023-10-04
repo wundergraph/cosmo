@@ -1,5 +1,8 @@
+import { UserContext } from "@/components/app-provider";
 import { EmptyState } from "@/components/empty-state";
 import { getDashboardLayout } from "@/components/layout/dashboard-layout";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -11,7 +14,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Form,
   FormControl,
@@ -23,11 +25,21 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Loader } from "@/components/ui/loader";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { useToast } from "@/components/ui/use-toast";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
 import { docsBaseURL } from "@/lib/constants";
 import { NextPageWithLayout } from "@/lib/page";
+import { cn } from "@/lib/utils";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
+import { Pencil1Icon, PlusIcon, TrashIcon } from "@radix-ui/react-icons";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
@@ -37,21 +49,10 @@ import {
   updateOrganizationWebhookConfig,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { OrganizationEventName } from "@wundergraph/cosmo-connect/dist/webhooks/events_pb";
-import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useContext, useState } from "react";
 import { PiWebhooksLogo } from "react-icons/pi";
 import { z } from "zod";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Pencil1Icon, PlusIcon, TrashIcon } from "@radix-ui/react-icons";
-import Link from "next/link";
-import { cn } from "@/lib/utils";
 
 const DeleteWebhook = ({
   id,
@@ -427,9 +428,15 @@ const Webhook = ({
 };
 
 const WebhooksPage: NextPageWithLayout = () => {
-  const { data, isLoading, error, refetch } = useQuery(
-    getOrganizationWebhookConfigs.useQuery()
-  );
+  const user = useContext(UserContext);
+  const { data, isLoading, error, refetch } = useQuery({
+    ...getOrganizationWebhookConfigs.useQuery(),
+    queryKey: [
+      user?.currentOrganization.slug || "",
+      "GetOrganizationWebhookConfigs",
+      {},
+    ],
+  });
 
   if (isLoading) return <Loader fullscreen />;
 
