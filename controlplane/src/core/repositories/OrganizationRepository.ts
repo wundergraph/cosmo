@@ -442,15 +442,13 @@ export class OrganizationRepository {
       const meta = JSON.parse(input.eventsMeta) as EventsMeta;
 
       if (meta[OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED]) {
-        const promises = [];
-        for (const id of meta[OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED].graphIds) {
-          const op = db.insert(schema.webhookGraphSchemaUpdate).values({
+        const ids = meta[OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED].graphIds;
+        await db.insert(schema.webhookGraphSchemaUpdate).values(
+          ids.map((id) => ({
             webhookId: createWebhookResult[0].id,
             federatedGraphId: id,
-          });
-          promises.push(op);
-        }
-        await Promise.all(promises);
+          })),
+        );
       }
     });
   }
@@ -521,7 +519,6 @@ export class OrganizationRepository {
       const meta = JSON.parse(input.eventsMeta) as EventsMeta;
 
       if (meta[OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED]) {
-        const promises = [];
         const ids = meta[OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED].graphIds;
 
         await db
