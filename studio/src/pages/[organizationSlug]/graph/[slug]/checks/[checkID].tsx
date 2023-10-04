@@ -167,8 +167,10 @@ const CheckDetailsPage: NextPageWithLayout = () => {
       </Card>
       <div className="mt-6 space-y-2">
         <h3 className="font-semibold">Proposed Schema</h3>
-        <div className="scrollbar-custom h-96 overflow-auto rounded border">
-          <SchemaViewer sdl={sdl} disableLinking />
+        <div className="scrollbar-custom relative h-96 overflow-auto rounded border">
+          <div className="absolute left-0 right-0 h-full">
+            <SchemaViewer sdl={sdl} disableLinking />
+          </div>
         </div>
       </div>
 
