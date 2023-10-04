@@ -1,6 +1,6 @@
 {
   "name": "controlplane",
-  "version": "0.20.0",
+  "version": "0.21.0",
   "private": true,
   "description": "WunderGraph Cosmo Controlplane",
   "type": "module",
@@ -41,6 +41,7 @@
     "@fastify/cors": "^8.3.0",
     "@graphql-inspector/core": "^5.0.1",
     "@keycloak/keycloak-admin-client": "^22.0.1",
+    "@octokit/webhooks-types": "^7.3.1",
     "@wundergraph/composition": "workspace:*",
     "@wundergraph/cosmo-connect": "workspace:*",
     "@wundergraph/cosmo-shared": "workspace:*",
@@ -56,6 +57,7 @@
     "graphql": "^16.7.1",
     "jose": "^4.14.4",
     "nuid": "^1.1.6",
+    "octokit": "^3.1.1",
     "pg-boss": "^9.0.3",
     "pino": "^8.15.0",
     "postgres": "^3.3.5",

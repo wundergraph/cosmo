@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.8.6](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.8.5...@wundergraph/cosmo-shared@0.8.6) (2023-10-04)
+
+### Bug Fixes
+
+* flickering issue on change of orgs ([#147](https://github.com/wundergraph/cosmo/issues/147)) ([eadbb77](https://github.com/wundergraph/cosmo/commit/eadbb775e63cd10488c21079fed14e59771249c7)) (@JivusAyrus)
+
 ## [0.8.5](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.8.4...@wundergraph/cosmo-shared@0.8.5) (2023-09-29)
 
 **Note:** Version bump only for package @wundergraph/cosmo-shared

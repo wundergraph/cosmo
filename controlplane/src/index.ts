@@ -30,6 +30,11 @@ const {
   PROMETHEUS_API_URL,
   WEBHOOK_URL,
   WEBHOOK_SECRET,
+  GITHUB_APP_WEBHOOK_SECRET,
+  GITHUB_APP_CLIENT_ID,
+  GITHUB_APP_CLIENT_SECRET,
+  GITHUB_APP_ID,
+  GITHUB_APP_PRIVATE_KEY,
 } = envVariables.parse(process.env);
 
 const options: BuildConfig = {
@@ -64,6 +69,13 @@ const options: BuildConfig = {
   webhook: {
     url: WEBHOOK_URL,
     key: WEBHOOK_SECRET,
+  },
+  githubApp: {
+    webhookSecret: GITHUB_APP_WEBHOOK_SECRET,
+    clientId: GITHUB_APP_CLIENT_ID,
+    clientSecret: GITHUB_APP_CLIENT_SECRET,
+    id: GITHUB_APP_ID,
+    privateKey: GITHUB_APP_PRIVATE_KEY,
   },
   debugSQL: DEBUG_SQL,
 };

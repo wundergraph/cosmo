@@ -4,6 +4,17 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.21.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.20.0...controlplane@0.21.0) (2023-10-04)
+
+### Bug Fixes
+
+* flickering issue on change of orgs ([#147](https://github.com/wundergraph/cosmo/issues/147)) ([eadbb77](https://github.com/wundergraph/cosmo/commit/eadbb775e63cd10488c21079fed14e59771249c7)) (@JivusAyrus)
+
+### Features
+
+* github app integration ([#140](https://github.com/wundergraph/cosmo/issues/140)) ([783a1f9](https://github.com/wundergraph/cosmo/commit/783a1f9c3f42284d1bf6cfa0d8fd46971724500a)) (@thisisnithin)
+* handle multiple orgs in the cli ([#145](https://github.com/wundergraph/cosmo/issues/145)) ([77234c9](https://github.com/wundergraph/cosmo/commit/77234c979e117473bf8429c0cd0e4d4c888eb81d)) (@JivusAyrus)
+
 # [0.20.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.19.1...controlplane@0.20.0) (2023-09-29)
 
 ### Features
