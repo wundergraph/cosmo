@@ -1,8 +1,8 @@
 {
   "version": "5",
   "dialect": "pg",
-  "id": "d1333efa-b6b1-4229-b36f-89bde310e2f5",
-  "prevId": "a9187047-ff43-4c52-b637-cd0bbb3e8689",
+  "id": "3a205106-9469-4914-a3bb-ce1486abf8d3",
+  "prevId": "d1333efa-b6b1-4229-b36f-89bde310e2f5",
   "tables": {
     "api_keys": {
       "name": "api_keys",
@@ -1291,6 +1291,63 @@
           ]
         }
       }
+    },
+    "webhook_graph_schema_update": {
+      "name": "webhook_graph_schema_update",
+      "schema": "",
+      "columns": {
+        "webhook_id": {
+          "name": "webhook_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "federated_graph_id": {
+          "name": "federated_graph_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "webhook_graph_schema_update_webhook_id_organization_webhook_configs_id_fk": {
+          "name": "webhook_graph_schema_update_webhook_id_organization_webhook_configs_id_fk",
+          "tableFrom": "webhook_graph_schema_update",
+          "tableTo": "organization_webhook_configs",
+          "columnsFrom": [
+            "webhook_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "webhook_graph_schema_update_federated_graph_id_federated_graphs_id_fk": {
+          "name": "webhook_graph_schema_update_federated_graph_id_federated_graphs_id_fk",
+          "tableFrom": "webhook_graph_schema_update",
+          "tableTo": "federated_graphs",
+          "columnsFrom": [
+            "federated_graph_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "webhook_graph_schema_update_webhook_id_federated_graph_id": {
+          "name": "webhook_graph_schema_update_webhook_id_federated_graph_id",
+          "columns": [
+            "webhook_id",
+            "federated_graph_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {}
     }
   },
   "enums": {

@@ -374,19 +374,27 @@ export const apiKeysRelations = relations(apiKeys, ({ one }) => ({
   }),
 }));
 
-export const graphApiTokens = pgTable('graph_api_tokens', {
-  id: uuid('id').notNull().primaryKey().defaultRandom(),
-  organizationId: uuid('organization_id')
-    .notNull()
-    .references(() => organizations.id),
-  federatedGraphId: uuid('federated_graph_id')
-    .notNull()
-    .references(() => federatedGraphs.id, { onDelete: 'cascade' }),
-  name: text('name').notNull(),
-  token: text('token').unique().notNull(),
-  lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-});
+export const graphApiTokens = pgTable(
+  'graph_api_tokens',
+  {
+    id: uuid('id').notNull().primaryKey().defaultRandom(),
+    organizationId: uuid('organization_id')
+      .notNull()
+      .references(() => organizations.id),
+    federatedGraphId: uuid('federated_graph_id')
+      .notNull()
+      .references(() => federatedGraphs.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    token: text('token').unique().notNull(),
+    lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => {
+    return {
+      nameIndex: uniqueIndex('graphApiToken_name_idx').on(t.name, t.federatedGraphId),
+    };
+  },
+);
 
 export const organizations = pgTable('organizations', {
   id: uuid('id').notNull().primaryKey().defaultRandom(),
