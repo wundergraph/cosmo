@@ -9,10 +9,10 @@ export default (opts: BaseCommandOptions) => {
   createTokenCommand.description(
     'Creates a new token for a federated graph. The token can be used to authenticate against the control plane from the routers.',
   );
-  createTokenCommand.argument('<name>', 'The name of the federated graph that the token should be created for.');
+  createTokenCommand.argument('<name>', 'The name of the token to create. Only serves as a reference for the user.');
   createTokenCommand.requiredOption(
-    '-n, --name <name>',
-    'The name of the token to create. Only serves as a reference for the user.',
+    '-gn, --graph-name <graphName>',
+    'The name of the federated graph that the token should be created for.',
   );
   createTokenCommand.option(
     '-r, --raw',
@@ -21,8 +21,8 @@ export default (opts: BaseCommandOptions) => {
   createTokenCommand.action(async (name, options) => {
     const resp = await opts.client.platform.createFederatedGraphToken(
       {
-        graphName: name,
-        tokenName: options.name,
+        tokenName: name,
+        graphName: options.graphName,
       },
       {
         headers: baseHeaders,
