@@ -259,7 +259,7 @@ func (r *Router) updateServer(ctx context.Context, cfg *nodev1.RouterConfig) err
 				zap.String("listen_addr", r.listenAddr),
 				zap.Bool("playground", r.playground),
 				zap.Bool("introspection", r.introspection),
-				zap.String("version", cfg.GetVersion()),
+				zap.String("config_version", cfg.GetVersion()),
 			)
 
 			if r.playground && r.introspection {
@@ -275,7 +275,7 @@ func (r *Router) updateServer(ctx context.Context, cfg *nodev1.RouterConfig) err
 			r.logger.Error("Failed to start new server", zap.Error(err))
 		}
 
-		r.logger.Info("Server stopped", zap.String("version", newRouter.routerConfig.GetVersion()))
+		r.logger.Info("Server stopped", zap.String("config_version", newRouter.routerConfig.GetVersion()))
 	}()
 
 	return nil
@@ -465,9 +465,9 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		requestlogger.WithDefaultOptions(),
 		requestlogger.WithContext(func(request *http.Request) []zapcore.Field {
 			return []zapcore.Field{
-				zap.String("configVersion", routerConfig.GetVersion()),
-				zap.String("requestID", middleware.GetReqID(request.Context())),
-				zap.String("federatedGraphName", r.federatedGraphName),
+				zap.String("config_version", routerConfig.GetVersion()),
+				zap.String("request_id", middleware.GetReqID(request.Context())),
+				zap.String("federated_graph_name", r.federatedGraphName),
 			}
 		}),
 	)
@@ -726,8 +726,8 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 // Shutdown gracefully shutdown the Server.
 func (r *Server) Shutdown(ctx context.Context) (err error) {
 	r.logger.Info("Gracefully shutting down the router ...",
-		zap.String("version", r.routerConfig.GetVersion()),
-		zap.String("gracePeriod", r.gracePeriod.String()),
+		zap.String("config_version", r.routerConfig.GetVersion()),
+		zap.String("grace_period", r.gracePeriod.String()),
 	)
 
 	if r.gracePeriod > 0 {
@@ -761,7 +761,7 @@ func createPrometheus(logger *zap.Logger, listenAddr, path string) *http.Server 
 		Handler:           r,
 	}
 
-	logger.Info("Serve Prometheus metrics", zap.String("listenAddr", svr.Addr), zap.String("endpoint", path))
+	logger.Info("Serve Prometheus metrics", zap.String("listen_addr", svr.Addr), zap.String("endpoint", path))
 
 	return svr
 }
