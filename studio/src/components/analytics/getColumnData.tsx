@@ -10,7 +10,7 @@ import copy from "copy-to-clipboard";
 import { formatInTimeZone } from "date-fns-tz";
 import compact from "lodash/compact";
 import { ReactNode, useState } from "react";
-import { SchemaViewer } from "../schmea-viewer";
+import { SchemaViewer } from "../schema-viewer";
 import { Button } from "../ui/button";
 import { Dialog2, Dialog2Content, Dialog2Title } from "../ui/dialog2";
 import {
