@@ -1,7 +1,8 @@
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { eq } from 'drizzle-orm';
-import { OrganizationEventName } from '@wundergraph/cosmo-connect/dist/webhooks/events_pb';
+import { EventMeta, OrganizationEventName } from '@wundergraph/cosmo-connect/dist/webhooks/events_pb';
 import pino from 'pino';
+import { PartialMessage } from '@bufbuild/protobuf';
 import * as schema from '../../db/schema.js';
 import { post } from './utils.js';
 
@@ -18,12 +19,15 @@ interface EventMap {
   [OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED]: FederatedGraphSchemaUpdate;
 }
 
+type Config = {
+  url?: string;
+  key?: string;
+  allowedUserEvents?: string[];
+  meta: PartialMessage<EventMeta>[];
+};
+
 export class OrganizationWebhookService {
-  private configs?: {
-    url?: string;
-    key?: string;
-    allowedUserEvents?: string[];
-  }[];
+  private configs?: Config[];
 
   private synced?: boolean;
 
@@ -39,17 +43,64 @@ export class OrganizationWebhookService {
   private async syncOrganizationSettings() {
     const orgConfigs = await this.db.query.organizationWebhooks.findMany({
       where: eq(schema.organizationWebhooks.organizationId, this.organizationId),
+      with: {
+        webhookGraphSchemaUpdate: true,
+      },
     });
 
-    orgConfigs.map((config) =>
+    for (const config of orgConfigs) {
+      const meta: PartialMessage<EventMeta>[] = [];
+
+      meta.push({
+        eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
+        meta: {
+          case: 'federatedGraphSchemaUpdated',
+          value: {
+            graphIds: config.webhookGraphSchemaUpdate.map((wu) => wu.federatedGraphId),
+          },
+        },
+      });
+
       this.configs?.push({
         url: config?.endpoint ?? '',
         key: config?.key ?? '',
         allowedUserEvents: config?.events ?? [],
-      }),
-    );
+        meta,
+      });
+    }
 
     this.synced = true;
+  }
+
+  private shouldProcess<T extends keyof EventMap>(eventName: T, eventPayload: EventMap[T], config: Config) {
+    if (!config.url) {
+      return false;
+    }
+
+    if (!config.allowedUserEvents?.includes(OrganizationEventName[eventName])) {
+      return false;
+    }
+
+    if (!config.meta) {
+      return true;
+    }
+
+    switch (eventName) {
+      case OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED: {
+        const meta = config.meta.find(
+          (m) => m.eventName === OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
+        )?.meta;
+
+        if (!meta || meta?.case !== 'federatedGraphSchemaUpdated' || meta.value.graphIds?.length === 0) {
+          return true;
+        }
+
+        return meta.value.graphIds?.includes(eventPayload.federated_graph.id);
+      }
+      default: {
+        return true;
+      }
+    }
   }
 
   private sendEvent<T extends keyof EventMap>(eventName: T, eventPayload: EventMap[T]) {
@@ -58,11 +109,7 @@ export class OrganizationWebhookService {
     }
 
     for (const config of this.configs) {
-      if (!config.url) {
-        continue;
-      }
-
-      if (!config.allowedUserEvents?.includes(OrganizationEventName[eventName])) {
+      if (!this.shouldProcess(eventName, eventPayload, config)) {
         continue;
       }
 
@@ -72,7 +119,7 @@ export class OrganizationWebhookService {
         payload: eventPayload,
       };
 
-      post(OrganizationEventName[eventName], data, this.logger, config.url, config.key);
+      post(OrganizationEventName[eventName], data, this.logger, config.url!, config.key);
     }
   }
 

@@ -1,6 +1,8 @@
 import { relations } from 'drizzle-orm';
 import {
+  bigint,
   boolean,
+  json,
   jsonb,
   pgEnum,
   pgTable,
@@ -9,8 +11,6 @@ import {
   timestamp,
   uniqueIndex,
   uuid,
-  bigint,
-  json,
 } from 'drizzle-orm/pg-core';
 
 export const federatedGraphs = pgTable('federated_graphs', {
@@ -374,19 +374,27 @@ export const apiKeysRelations = relations(apiKeys, ({ one }) => ({
   }),
 }));
 
-export const graphApiTokens = pgTable('graph_api_tokens', {
-  id: uuid('id').notNull().primaryKey().defaultRandom(),
-  organizationId: uuid('organization_id')
-    .notNull()
-    .references(() => organizations.id),
-  federatedGraphId: uuid('federated_graph_id')
-    .notNull()
-    .references(() => federatedGraphs.id, { onDelete: 'cascade' }),
-  name: text('name').notNull(),
-  token: text('token').unique().notNull(),
-  lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-});
+export const graphApiTokens = pgTable(
+  'graph_api_tokens',
+  {
+    id: uuid('id').notNull().primaryKey().defaultRandom(),
+    organizationId: uuid('organization_id')
+      .notNull()
+      .references(() => organizations.id),
+    federatedGraphId: uuid('federated_graph_id')
+      .notNull()
+      .references(() => federatedGraphs.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    token: text('token').unique().notNull(),
+    lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => {
+    return {
+      nameIndex: uniqueIndex('graphApiToken_name_idx').on(t.name, t.federatedGraphId),
+    };
+  },
+);
 
 export const organizations = pgTable('organizations', {
   id: uuid('id').notNull().primaryKey().defaultRandom(),
@@ -464,8 +472,41 @@ export const organizationWebhooks = pgTable('organization_webhook_configs', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
+export const webhookGraphSchemaUpdate = pgTable(
+  'webhook_graph_schema_update',
+  {
+    webhookId: uuid('webhook_id')
+      .notNull()
+      .references(() => organizationWebhooks.id, {
+        onDelete: 'cascade',
+      }),
+    federatedGraphId: uuid('federated_graph_id')
+      .notNull()
+      .references(() => federatedGraphs.id, {
+        onDelete: 'cascade',
+      }),
+  },
+  (t) => {
+    return {
+      pk: primaryKey(t.webhookId, t.federatedGraphId),
+    };
+  },
+);
+
+export const webhookGraphSchemaUpdateRelations = relations(webhookGraphSchemaUpdate, ({ one }) => ({
+  organizationWebhook: one(organizationWebhooks, {
+    fields: [webhookGraphSchemaUpdate.webhookId],
+    references: [organizationWebhooks.id],
+  }),
+  federatedGraph: one(federatedGraphs, {
+    fields: [webhookGraphSchemaUpdate.federatedGraphId],
+    references: [federatedGraphs.id],
+  }),
+}));
+
 export const organizationWebhookRelations = relations(organizationWebhooks, ({ many }) => ({
   organization: many(organizations),
+  webhookGraphSchemaUpdate: many(webhookGraphSchemaUpdate),
 }));
 
 export const gitInstallationTypeEnum = pgEnum('git_installation_type', ['PERSONAL', 'ORGANIZATION']);

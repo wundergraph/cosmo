@@ -6,6 +6,7 @@ package wg.cosmo.platform.v1;
 
 import "wg/cosmo/common/common.proto";
 import "wg/cosmo/node/v1/node.proto";
+import "wg/cosmo/webhooks/events.proto";
 
 message Label {
   string key = 1;
@@ -136,14 +137,15 @@ message GetFederatedGraphsRequest {
 }
 
 message FederatedGraph {
-  string name = 1;
-  string routingURL = 2;
-  repeated string label_matchers = 3;
-  string lastUpdatedAt = 4;
-  bool isComposable = 5;
-  string compositionErrors = 6;
-  int32 connectedSubgraphs = 7;
-  repeated RequestSeriesItem requestSeries = 8;
+  string id = 1;
+  string name = 2;
+  string routingURL = 3;
+  repeated string label_matchers = 4;
+  string lastUpdatedAt = 5;
+  bool isComposable = 6;
+  string compositionErrors = 7;
+  int32 connectedSubgraphs = 8;
+  repeated RequestSeriesItem requestSeries = 9;
 }
 
 message GetFederatedGraphsResponse {
@@ -591,6 +593,31 @@ message WhoAmIResponse {
   optional string userEmail = 3;
 }
 
+message RouterToken {
+  string id = 1;
+  string name = 2;
+  string token = 3;
+  string createdAt = 4;
+}
+
+message GetRouterTokensRequest {
+  string fedGraphName = 1;
+}
+
+message GetRouterTokensResponse {
+  Response response = 1;
+  repeated RouterToken tokens = 2;
+}
+
+message DeleteRouterTokenRequest {
+  string tokenName = 1;
+  string fedGraphName = 2;
+}
+
+message DeleteRouterTokenResponse {
+  Response response = 1;
+}
+
 message Header{
   string key = 1;
   string value = 2;
@@ -600,6 +627,7 @@ message CreateOrganizationWebhookConfigRequest {
   string endpoint = 1;
   string key = 2;
   repeated string events = 3;
+  repeated wg.cosmo.webhooks.EventMeta events_meta = 4;
 }
 
 message CreateOrganizationWebhookConfigResponse {
@@ -618,12 +646,22 @@ message GetOrganizationWebhookConfigsResponse {
   repeated Config configs = 2;
 }
 
+message GetOrganizationWebhookMetaRequest {
+  string id = 1;
+}
+
+message GetOrganizationWebhookMetaResponse {
+  Response response = 1;
+  repeated wg.cosmo.webhooks.EventMeta events_meta = 2;
+}
+
 message UpdateOrganizationWebhookConfigRequest {
   string id = 1;
   string endpoint = 2;
   string key = 3;
   repeated string events = 4;
-  bool shouldUpdateKey = 5;
+  repeated wg.cosmo.webhooks.EventMeta events_meta = 5;
+  bool should_update_key = 6;
 }
 
 message UpdateOrganizationWebhookConfigResponse {
@@ -772,6 +810,10 @@ service PlatformService {
   rpc CheckFederatedGraph(CheckFederatedGraphRequest) returns (CheckFederatedGraphResponse) {}
   // WhoAmI returns the identity of the user currently logged in.
   rpc WhoAmI(WhoAmIRequest) returns (WhoAmIResponse) {}
+  // GetRouterTokens returns the router tokens of a federated graph.
+  rpc GetRouterTokens(GetRouterTokensRequest) returns (GetRouterTokensResponse) {}
+  // DeleteRouterToken deletes the router token of a federated graph.
+  rpc DeleteRouterToken(DeleteRouterTokenRequest) returns (DeleteRouterTokenResponse) {}
 
   // For Studio and CLI
 
@@ -818,6 +860,8 @@ service PlatformService {
   rpc CreateOrganizationWebhookConfig(CreateOrganizationWebhookConfigRequest) returns (CreateOrganizationWebhookConfigResponse) {}
   // GetOrganizationWebhookConfigs returns all webhooks for the organization
   rpc GetOrganizationWebhookConfigs(GetOrganizationWebhookConfigsRequest) returns (GetOrganizationWebhookConfigsResponse) {}
+  // GetOrganizationWebhookMeta returns the meta data for a particular webhook
+  rpc GetOrganizationWebhookMeta(GetOrganizationWebhookMetaRequest) returns (GetOrganizationWebhookMetaResponse) {}
   // UpdateOrganizationWebhookConfig updates an existing webhook for the organization
   rpc UpdateOrganizationWebhookConfig(UpdateOrganizationWebhookConfigRequest) returns (UpdateOrganizationWebhookConfigResponse) {}
   // DeleteOrganizationWebhookConfig deletes an organization webhook

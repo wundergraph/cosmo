@@ -584,6 +584,82 @@ export class FederatedGraphRepository {
       id: key.id,
       name: key.name,
       token: key.token,
+      createdAt: key.createdAt.toISOString(),
     };
+  }
+
+  public async deleteToken(input: { tokenName: string; organizationId: string; federatedGraphId: string }) {
+    await this.db
+      .delete(graphApiTokens)
+      .where(
+        and(
+          eq(graphApiTokens.organizationId, input.organizationId),
+          eq(graphApiTokens.federatedGraphId, input.federatedGraphId),
+          eq(graphApiTokens.name, input.tokenName),
+        ),
+      )
+      .execute();
+  }
+
+  public async getRouterToken(input: {
+    organizationId: string;
+    federatedGraphId: string;
+    tokenName: string;
+  }): Promise<GraphApiKeyDTO | undefined> {
+    const tokens = await this.db
+      .select({
+        id: graphApiTokens.id,
+        name: graphApiTokens.name,
+        createdAt: graphApiTokens.createdAt,
+        token: graphApiTokens.token,
+      })
+      .from(graphApiTokens)
+      .where(
+        and(
+          eq(graphApiTokens.organizationId, input.organizationId),
+          eq(graphApiTokens.federatedGraphId, input.federatedGraphId),
+          eq(graphApiTokens.name, input.tokenName),
+        ),
+      )
+      .execute();
+
+    if (tokens.length === 0) {
+      return undefined;
+    }
+
+    return {
+      id: tokens[0].id,
+      name: tokens[0].name,
+      createdAt: tokens[0].createdAt.toISOString(),
+      token: tokens[0].token,
+    } as GraphApiKeyDTO;
+  }
+
+  public async getRouterTokens(input: { organizationId: string; federatedGraphId: string }): Promise<GraphApiKeyDTO[]> {
+    const tokens = await this.db
+      .select({
+        id: graphApiTokens.id,
+        name: graphApiTokens.name,
+        createdAt: graphApiTokens.createdAt,
+        token: graphApiTokens.token,
+      })
+      .from(graphApiTokens)
+      .where(
+        and(
+          eq(graphApiTokens.organizationId, input.organizationId),
+          eq(graphApiTokens.federatedGraphId, input.federatedGraphId),
+        ),
+      )
+      .execute();
+
+    return tokens.map(
+      (token) =>
+        ({
+          id: token.id,
+          name: token.name,
+          createdAt: token.createdAt.toISOString(),
+          token: token.token,
+        } as GraphApiKeyDTO),
+    );
   }
 }

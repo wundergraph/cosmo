@@ -1,4 +1,4 @@
-import { downloadStringAsFile } from "@/lib/downloadStringAsFile";
+import { downloadStringAsFile } from "@/lib/download-string-as-file";
 import { cn } from "@/lib/utils";
 import { ClipboardCopyIcon, DownloadIcon } from "@radix-ui/react-icons";
 import copy from "copy-to-clipboard";

@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.22.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.21.0...controlplane@0.22.0) (2023-10-05)
+
+### Features
+
+* configurable webhook events ([#149](https://github.com/wundergraph/cosmo/issues/149)) ([54836cc](https://github.com/wundergraph/cosmo/commit/54836cc5cb5a4fb46817ec04e82bfafaa134d59c)) (@thisisnithin)
+* implement list and delete router tokens ([#146](https://github.com/wundergraph/cosmo/issues/146)) ([72543f7](https://github.com/wundergraph/cosmo/commit/72543f796c66d155782cd90bc4828803fbb971c7)) (@JivusAyrus)
+
 # [0.21.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.20.0...controlplane@0.21.0) (2023-10-04)
 
 ### Bug Fixes

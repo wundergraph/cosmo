@@ -1,18 +1,18 @@
 import { Command } from 'commander';
 import pc from 'picocolors';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { BaseCommandOptions } from '../../../core/types/types.js';
-import { baseHeaders } from '../../../core/config.js';
+import { BaseCommandOptions } from '../../../../../core/types/types.js';
+import { baseHeaders } from '../../../../../core/config.js';
 
 export default (opts: BaseCommandOptions) => {
-  const createTokenCommand = new Command('create-token');
+  const createTokenCommand = new Command('create');
   createTokenCommand.description(
     'Creates a new token for a federated graph. The token can be used to authenticate against the control plane from the routers.',
   );
-  createTokenCommand.argument('<name>', 'The name of the federated graph that the token should be created for.');
-  createTokenCommand.option(
-    '-n, --name <name>',
-    'The name of the token to create. Only serves as a reference for the user.',
+  createTokenCommand.argument('<name>', 'The name of the token to create. Only serves as a reference for the user.');
+  createTokenCommand.requiredOption(
+    '-g, --graph-name <graphName>',
+    'The name of the federated graph that the token should be created for.',
   );
   createTokenCommand.option(
     '-r, --raw',
@@ -21,8 +21,8 @@ export default (opts: BaseCommandOptions) => {
   createTokenCommand.action(async (name, options) => {
     const resp = await opts.client.platform.createFederatedGraphToken(
       {
-        graphName: name,
-        tokenName: options.name,
+        tokenName: name,
+        graphName: options.graphName,
       },
       {
         headers: baseHeaders,
@@ -36,7 +36,7 @@ export default (opts: BaseCommandOptions) => {
       }
 
       console.log(
-        `${pc.green(`Successfully created token ${pc.bold(options.name)} for federated graph ${pc.bold(name)}`)}`,
+        `${pc.green(`Successfully created token ${pc.bold(name)} for federated graph ${pc.bold(options.graphName)}`)}`,
       );
       console.log('');
       console.log(`${pc.bold(resp.token)}\n`);
