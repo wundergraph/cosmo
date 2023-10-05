@@ -67,7 +67,8 @@ services:
       PROMETHEUS_USERNAME: ${PROMETHEUS_USERNAME:-admin}
       PROMETHEUS_PASSWORD: ${PROMETHEUS_PASSWORD:-test}
     ports:
-      - "4318:4318"
+      - "4317:4317" # otlpgrpc
+      - "4318:4318" # otlphttp
     restart: unless-stopped
     depends_on:
       - clickhouse

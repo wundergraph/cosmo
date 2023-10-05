@@ -49,6 +49,7 @@ describe('DeleteFederatedGraph', (ctx) => {
 
     const realm = 'test';
     const apiUrl = 'http://localhost:8080';
+    const webBaseUrl = 'http://localhost:3000';
     const clientId = 'studio';
     const adminUser = 'admin';
     const adminPassword = 'changeme';
@@ -72,6 +73,7 @@ describe('DeleteFederatedGraph', (ctx) => {
         keycloakRealm: realm,
         keycloakClient,
         platformWebhooks,
+        webBaseUrl,
       }),
     });
 

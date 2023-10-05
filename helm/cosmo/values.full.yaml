@@ -86,6 +86,11 @@ controlplane:
       database: "controlplane"
     webhookUrl: ""
     webhookSecret: ""
+    githubAppClientId: ""
+    githubAppClientSecret: ""
+    githubAppId: ""
+    githubAppPrivateKey: ""
+    githubAppWebhookSecret: ""
 
 # Cosmo Router
 router:

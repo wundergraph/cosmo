@@ -1,6 +1,10 @@
 receivers:
   otlp:
     protocols:
+      grpc:
+        endpoint: '0.0.0.0:4317'
+        auth:
+          authenticator: jwt
       http:
         endpoint: '0.0.0.0:4318'
         auth:

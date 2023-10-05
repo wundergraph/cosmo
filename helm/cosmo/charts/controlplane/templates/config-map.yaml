@@ -22,3 +22,5 @@ data:
   keycloakClientId: "{{ .Values.global.keycloak.clientId }}"
   keycloakLoginRealm: "{{ .Values.global.keycloak.loginRealm }}"
   webhookUrl: "{{ .Values.configuration.webhookUrl }}"
+  githubAppClientId: "{{ .Values.configuration.githubAppClientId }}"
+  githubAppId: "{{ .Values.configuration.githubAppId }}"

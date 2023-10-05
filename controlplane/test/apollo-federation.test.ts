@@ -51,6 +51,7 @@ describe('Apollo Federated Graph', (ctx) => {
 
     const realm = 'test';
     const apiUrl = 'http://localhost:8080';
+    const webBaseUrl = 'http://localhost:3000';
     const clientId = 'studio';
     const adminUser = 'admin';
     const adminPassword = 'changeme';
@@ -74,6 +75,7 @@ describe('Apollo Federated Graph', (ctx) => {
         keycloakRealm: realm,
         keycloakClient,
         platformWebhooks,
+        webBaseUrl,
       }),
     });
 
