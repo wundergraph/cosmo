@@ -36,11 +36,19 @@ message PublishFederatedSubgraphResponse {
   repeated CompositionError compositionErrors = 2;
 }
 
+message GitInfo {
+  string commit_sha = 1;
+  string account_id = 2;
+  string owner_slug = 3;
+  string repository_slug = 4;
+}
+
 message CheckSubgraphSchemaRequest {
   // The FQDN of the subgraph to be checked e.g. "wg.team1.orders"
   string subgraph_name = 1;
   // The binary representation of the schema, the content of the file
   bytes schema = 2;
+  GitInfo gitInfo = 3;
 }
 
 message FixSubgraphSchemaRequest {
@@ -214,6 +222,7 @@ message SchemaCheck {
   bool isComposable = 5;
   bool isBreaking = 6;
   optional string proposedSubgraphSchemaSDL = 7;
+  bool isForcedSuccess = 8;
 }
 
 message GetChecksByFederatedGraphNameResponse {
@@ -232,6 +241,7 @@ message GetCheckDetailsResponse {
   Response response = 1;
   repeated SchemaChange changes = 2;
   repeated string compositionErrors = 3;
+  SchemaCheck check = 4;
 }
 
 message GetFederatedGraphChangelogRequest {
@@ -731,6 +741,14 @@ message MetricsErrorRateSeriesItem {
   float errorRate = 3;
 }
 
+message ForceCheckSuccessRequest {
+  string check_id = 1;
+  string graph_name = 2;
+}
+
+message ForceCheckSuccessResponse {
+  Response response = 1;
+}
 
 service PlatformService {
   // CreateFederatedGraph creates a federated graph on the control plane.
@@ -773,6 +791,8 @@ service PlatformService {
   rpc GetChecksByFederatedGraphName(GetChecksByFederatedGraphNameRequest) returns (GetChecksByFederatedGraphNameResponse) {}
   // GetCheckDetails returns changes and composition errors recorded for a check
   rpc GetCheckDetails(GetCheckDetailsRequest) returns (GetCheckDetailsResponse) {}
+  // ForceCheckSuccess forces a failed check to be marked as successful
+  rpc ForceCheckSuccess(ForceCheckSuccessRequest) returns (ForceCheckSuccessResponse) {}
   // GetFederatedGraphChangelog returns the changelog of the federated graph.
   rpc GetFederatedGraphChangelog(GetFederatedGraphChangelogRequest) returns (GetFederatedGraphChangelogResponse) {}
   // CreateFederatedGraphToken creates a federated graph token that is consumed by the router to authenticate requests.

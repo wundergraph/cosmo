@@ -14,11 +14,11 @@ const paths = envPaths('cosmo', { suffix: '' });
 export const configDir = paths.config;
 export const configFile = path.join(configDir, 'config.yaml');
 
-const getAccessToken = () => {
+const getLoginDetails = (): { accessToken: string; organizationSlug: string } | null => {
   try {
     const data = yaml.load(readFileSync(configFile, 'utf8'));
     const loginData = JSON.parse(JSON.stringify(data));
-    return loginData.accessToken;
+    return { accessToken: loginData.accessToken, organizationSlug: loginData.organizationSlug };
   } catch {
     return null;
   }
@@ -26,7 +26,7 @@ const getAccessToken = () => {
 
 export const config = {
   baseURL: process.env.COSMO_API_URL || 'https://cosmo-cp.wundergraph.com',
-  apiKey: getAccessToken() || process.env.COSMO_API_KEY,
+  apiKey: getLoginDetails()?.accessToken || process.env.COSMO_API_KEY,
   kcApiURL: process.env.KC_API_URL || 'https://accounts.wundergraph.com/auth',
   kcClientId: process.env.KC_CLIENT_ID || 'cosmo-cli',
   kcRealm: process.env.KC_REALM || 'cosmo',
@@ -36,4 +36,5 @@ export const config = {
 export const baseHeaders: HeadersInit = {
   'user-agent': `cosmo-cli/${info.version}`,
   authorization: 'Bearer ' + config.apiKey,
+  'cosmo-org-slug': getLoginDetails()?.organizationSlug || '',
 };

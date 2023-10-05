@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/table";
 import { useToast } from "@/components/ui/use-toast";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
+import { docsBaseURL } from "@/lib/constants";
 import { NextPageWithLayout } from "@/lib/page";
 import {
   EllipsisVerticalIcon,
@@ -61,7 +62,6 @@ import {
 } from "react";
 import { FiCheck, FiCopy } from "react-icons/fi";
 import { z } from "zod";
-import { docsBaseURL } from "@/lib/constants";
 
 const CreateAPIKeyDialog = ({
   setApiKey,
@@ -70,7 +70,7 @@ const CreateAPIKeyDialog = ({
   setApiKey: Dispatch<SetStateAction<string | undefined>>;
   refresh: () => void;
 }) => {
-  const [user] = useContext(UserContext);
+  const user = useContext(UserContext);
   const { toast } = useToast();
 
   const { mutate, isLoading } = useMutation(createAPIKey.useMutation());
@@ -442,7 +442,11 @@ export const CreateAPIKey = ({
 };
 
 const APIKeysPage: NextPageWithLayout = () => {
-  const { data, isLoading, error, refetch } = useQuery(getAPIKeys.useQuery());
+  const user = useContext(UserContext);
+  const { data, isLoading, error, refetch } = useQuery({
+    ...getAPIKeys.useQuery(),
+    queryKey: [user?.currentOrganization.slug || "", "GetAPIKeys", {}],
+  });
 
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [apiKey, setApiKey] = useState<string | undefined>();

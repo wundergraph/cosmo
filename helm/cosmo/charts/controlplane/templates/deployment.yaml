@@ -142,6 +142,46 @@ spec:
                 configMapKeyRef:
                   name: {{ include "controlplane.fullname" . }}-configmap
                   key: keycloakClientId
+            - name: PROMETHEUS_API_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-configmap
+                  key: prometheusApiUrl
+            - name: WEBHOOK_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-configmap
+                  key: webhookUrl
+            - name: WEBHOOK_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-secret
+                  key: webhookSecret
+            - name: GITHUB_APP_CLIENT_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-configmap
+                  key: githubAppClientId
+            - name: GITHUB_APP_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-configmap
+                  key: githubAppId
+            - name: GITHUB_APP_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-secret
+                  key: githubAppClientSecret
+            - name: GITHUB_APP_PRIVATE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-secret
+                  key: githubAppPrivateKey
+            - name: GITHUB_APP_WEBHOOK_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-secret
+                  key: githubAppWebhookSecret
           ports:
             - name: http
               containerPort: {{ .Values.service.port }}
