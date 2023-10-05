@@ -11,7 +11,7 @@ export default (opts: BaseCommandOptions) => {
   );
   createTokenCommand.argument('<name>', 'The name of the token to create. Only serves as a reference for the user.');
   createTokenCommand.requiredOption(
-    '-gn, --graph-name <graphName>',
+    '-g, --graph-name <graphName>',
     'The name of the federated graph that the token should be created for.',
   );
   createTokenCommand.option(
@@ -36,7 +36,7 @@ export default (opts: BaseCommandOptions) => {
       }
 
       console.log(
-        `${pc.green(`Successfully created token ${pc.bold(options.name)} for federated graph ${pc.bold(name)}`)}`,
+        `${pc.green(`Successfully created token ${pc.bold(name)} for federated graph ${pc.bold(options.graphName)}`)}`,
       );
       console.log('');
       console.log(`${pc.bold(resp.token)}\n`);

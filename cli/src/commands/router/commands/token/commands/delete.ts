@@ -9,7 +9,7 @@ export default (opts: BaseCommandOptions) => {
   const command = new Command('delete');
   command.description('Deletes a router token of a federated graph.');
   command.argument('<name>', 'The name of the router token.');
-  command.requiredOption('-gn, --graph-name <graphName>', 'The name of the federated graph the token belongs to');
+  command.requiredOption('-g, --graph-name <graphName>', 'The name of the federated graph the token belongs to');
   command.option('-f --force', 'Option to force delete');
   command.action(async (name, options) => {
     if (!options.force) {
