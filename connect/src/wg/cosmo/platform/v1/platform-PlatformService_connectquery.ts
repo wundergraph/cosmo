@@ -7,7 +7,7 @@
 
 import { createQueryService } from "@connectrpc/connect-query";
 import { MethodIdempotency, MethodKind } from "@bufbuild/protobuf";
-import { CheckFederatedGraphRequest, CheckFederatedGraphResponse, CheckSubgraphSchemaRequest, CheckSubgraphSchemaResponse, CreateAPIKeyRequest, CreateAPIKeyResponse, CreateFederatedGraphRequest, CreateFederatedGraphResponse, CreateFederatedGraphTokenRequest, CreateFederatedGraphTokenResponse, CreateFederatedSubgraphRequest, CreateFederatedSubgraphResponse, CreateOrganizationWebhookConfigRequest, CreateOrganizationWebhookConfigResponse, DeleteAPIKeyRequest, DeleteAPIKeyResponse, DeleteFederatedGraphRequest, DeleteFederatedGraphResponse, DeleteFederatedSubgraphRequest, DeleteFederatedSubgraphResponse, DeleteOrganizationRequest, DeleteOrganizationResponse, DeleteOrganizationWebhookConfigRequest, DeleteOrganizationWebhookConfigResponse, FixSubgraphSchemaRequest, FixSubgraphSchemaResponse, ForceCheckSuccessRequest, ForceCheckSuccessResponse, GetAnalyticsViewRequest, GetAnalyticsViewResponse, GetAPIKeysRequest, GetAPIKeysResponse, GetCheckDetailsRequest, GetCheckDetailsResponse, GetChecksByFederatedGraphNameRequest, GetChecksByFederatedGraphNameResponse, GetDashboardAnalyticsViewRequest, GetDashboardAnalyticsViewResponse, GetFederatedGraphByNameRequest, GetFederatedGraphByNameResponse, GetFederatedGraphChangelogRequest, GetFederatedGraphChangelogResponse, GetFederatedGraphSDLByNameRequest, GetFederatedGraphSDLByNameResponse, GetFederatedGraphsRequest, GetFederatedGraphsResponse, GetFederatedSubgraphSDLByNameRequest, GetFederatedSubgraphSDLByNameResponse, GetMetricsDashboardRequest, GetMetricsDashboardResponse, GetMetricsErrorRateRequest, GetMetricsErrorRateResponse, GetOrganizationMembersRequest, GetOrganizationMembersResponse, GetOrganizationWebhookConfigsRequest, GetOrganizationWebhookConfigsResponse, GetSubgraphByNameRequest, GetSubgraphByNameResponse, GetSubgraphsRequest, GetSubgraphsResponse, GetTraceRequest, GetTraceResponse, InviteUserRequest, InviteUserResponse, LeaveOrganizationRequest, LeaveOrganizationResponse, MigrateFromApolloRequest, MigrateFromApolloResponse, PublishFederatedSubgraphRequest, PublishFederatedSubgraphResponse, RemoveInvitationRequest, RemoveInvitationResponse, UpdateFederatedGraphRequest, UpdateFederatedGraphResponse, UpdateOrganizationNameRequest, UpdateOrganizationNameResponse, UpdateOrganizationSlugRequest, UpdateOrganizationSlugResponse, UpdateOrganizationWebhookConfigRequest, UpdateOrganizationWebhookConfigResponse, UpdateOrgMemberRoleRequest, UpdateOrgMemberRoleResponse, UpdateSubgraphRequest, UpdateSubgraphResponse, WhoAmIRequest, WhoAmIResponse } from "./platform_pb.js";
+import { CheckFederatedGraphRequest, CheckFederatedGraphResponse, CheckSubgraphSchemaRequest, CheckSubgraphSchemaResponse, CreateAPIKeyRequest, CreateAPIKeyResponse, CreateFederatedGraphRequest, CreateFederatedGraphResponse, CreateFederatedGraphTokenRequest, CreateFederatedGraphTokenResponse, CreateFederatedSubgraphRequest, CreateFederatedSubgraphResponse, CreateOrganizationWebhookConfigRequest, CreateOrganizationWebhookConfigResponse, DeleteAPIKeyRequest, DeleteAPIKeyResponse, DeleteFederatedGraphRequest, DeleteFederatedGraphResponse, DeleteFederatedSubgraphRequest, DeleteFederatedSubgraphResponse, DeleteOrganizationRequest, DeleteOrganizationResponse, DeleteOrganizationWebhookConfigRequest, DeleteOrganizationWebhookConfigResponse, DeleteRouterTokenRequest, DeleteRouterTokenResponse, FixSubgraphSchemaRequest, FixSubgraphSchemaResponse, ForceCheckSuccessRequest, ForceCheckSuccessResponse, GetAnalyticsViewRequest, GetAnalyticsViewResponse, GetAPIKeysRequest, GetAPIKeysResponse, GetCheckDetailsRequest, GetCheckDetailsResponse, GetChecksByFederatedGraphNameRequest, GetChecksByFederatedGraphNameResponse, GetDashboardAnalyticsViewRequest, GetDashboardAnalyticsViewResponse, GetFederatedGraphByNameRequest, GetFederatedGraphByNameResponse, GetFederatedGraphChangelogRequest, GetFederatedGraphChangelogResponse, GetFederatedGraphSDLByNameRequest, GetFederatedGraphSDLByNameResponse, GetFederatedGraphsRequest, GetFederatedGraphsResponse, GetFederatedSubgraphSDLByNameRequest, GetFederatedSubgraphSDLByNameResponse, GetMetricsDashboardRequest, GetMetricsDashboardResponse, GetMetricsErrorRateRequest, GetMetricsErrorRateResponse, GetOrganizationMembersRequest, GetOrganizationMembersResponse, GetOrganizationWebhookConfigsRequest, GetOrganizationWebhookConfigsResponse, GetOrganizationWebhookMetaRequest, GetOrganizationWebhookMetaResponse, GetRouterTokensRequest, GetRouterTokensResponse, GetSubgraphByNameRequest, GetSubgraphByNameResponse, GetSubgraphsRequest, GetSubgraphsResponse, GetTraceRequest, GetTraceResponse, InviteUserRequest, InviteUserResponse, LeaveOrganizationRequest, LeaveOrganizationResponse, MigrateFromApolloRequest, MigrateFromApolloResponse, PublishFederatedSubgraphRequest, PublishFederatedSubgraphResponse, RemoveInvitationRequest, RemoveInvitationResponse, UpdateFederatedGraphRequest, UpdateFederatedGraphResponse, UpdateOrganizationNameRequest, UpdateOrganizationNameResponse, UpdateOrganizationSlugRequest, UpdateOrganizationSlugResponse, UpdateOrganizationWebhookConfigRequest, UpdateOrganizationWebhookConfigResponse, UpdateOrgMemberRoleRequest, UpdateOrgMemberRoleResponse, UpdateSubgraphRequest, UpdateSubgraphResponse, WhoAmIRequest, WhoAmIResponse } from "./platform_pb.js";
 import { GetConfigRequest, GetConfigResponse } from "../../node/v1/node_pb.js";
 
 export const typeName = "wg.cosmo.platform.v1.PlatformService";
@@ -218,6 +218,44 @@ export const whoAmI = createQueryService({
     typeName: "wg.cosmo.platform.v1.PlatformService",
   },
 }).whoAmI;
+
+/**
+ * GetRouterTokens returns the router tokens of a federated graph.
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetRouterTokens
+ */
+export const getRouterTokens = createQueryService({
+  service: {
+    methods: {
+      getRouterTokens: {
+        name: "GetRouterTokens",
+        kind: MethodKind.Unary,
+        I: GetRouterTokensRequest,
+        O: GetRouterTokensResponse,
+      },
+    },
+    typeName: "wg.cosmo.platform.v1.PlatformService",
+  },
+}).getRouterTokens;
+
+/**
+ * DeleteRouterToken deletes the router token of a federated graph.
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.DeleteRouterToken
+ */
+export const deleteRouterToken = createQueryService({
+  service: {
+    methods: {
+      deleteRouterToken: {
+        name: "DeleteRouterToken",
+        kind: MethodKind.Unary,
+        I: DeleteRouterTokenRequest,
+        O: DeleteRouterTokenResponse,
+      },
+    },
+    typeName: "wg.cosmo.platform.v1.PlatformService",
+  },
+}).deleteRouterToken;
 
 /**
  * GetFederatedGraphs returns the list of federated graphs.
@@ -617,6 +655,25 @@ export const getOrganizationWebhookConfigs = createQueryService({
     typeName: "wg.cosmo.platform.v1.PlatformService",
   },
 }).getOrganizationWebhookConfigs;
+
+/**
+ * GetOrganizationWebhookMeta returns the meta data for a particular webhook
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetOrganizationWebhookMeta
+ */
+export const getOrganizationWebhookMeta = createQueryService({
+  service: {
+    methods: {
+      getOrganizationWebhookMeta: {
+        name: "GetOrganizationWebhookMeta",
+        kind: MethodKind.Unary,
+        I: GetOrganizationWebhookMetaRequest,
+        O: GetOrganizationWebhookMetaResponse,
+      },
+    },
+    typeName: "wg.cosmo.platform.v1.PlatformService",
+  },
+}).getOrganizationWebhookMeta;
 
 /**
  * UpdateOrganizationWebhookConfig updates an existing webhook for the organization
