@@ -224,52 +224,55 @@ func NewRouter(opts ...Option) (*Router, error) {
 }
 
 func (r *Router) configureSubgraphOverwrites(cfg *nodev1.RouterConfig) ([]Subgraph, error) {
-	overrides := make(map[string]string)
-
-	// Validate all the URLs first before we start overriding
+	subgraphs := make([]Subgraph, 0, len(cfg.Subgraphs))
 	for _, sg := range cfg.Subgraphs {
-		if sg.RoutingUrl == "" {
-			return nil, fmt.Errorf("subgraph '%s' has no routing url", sg.Name)
-		}
-
-		overrideURL, ok := r.overrideRoutingURLConfiguration.Subgraphs[sg.Name]
-
-		if ok && overrideURL != "" {
-			if _, err := url.Parse(overrideURL); err != nil {
-				return nil, fmt.Errorf("failed to parse override url '%s': %w", overrideURL, err)
-			}
-
-			overrides[sg.RoutingUrl] = overrideURL
-		}
-	}
-
-	subgraphs := make([]Subgraph, len(cfg.Subgraphs))
-	for _, sg := range cfg.Subgraphs {
-		if overrideURL, ok := overrides[sg.RoutingUrl]; ok {
-			sg.RoutingUrl = overrideURL
-		}
-
-		routingURL := sg.RoutingUrl
-		parsedURL, err := url.Parse(routingURL)
-		if err != nil {
-			r.logger.Error("Failed to parse subgraph url", zap.String("url", routingURL), zap.Error(err))
-		}
 
 		subgraph := Subgraph{
 			Id:   sg.Id,
 			Name: sg.Name,
-			Url:  parsedURL,
 		}
+
+		// Validate subgraph url
+		if sg.RoutingUrl == "" {
+			return nil, fmt.Errorf("subgraph '%s' has no routing url", sg.Name)
+		}
+
+		parsedURL, err := url.Parse(sg.RoutingUrl)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse subgraph url '%s': %w", sg.RoutingUrl, err)
+		}
+
+		subgraph.Url = parsedURL
+
+		overrideURL, ok := r.overrideRoutingURLConfiguration.Subgraphs[sg.Name]
+
+		// check if the subgraph is overridden
+		if ok && overrideURL != "" {
+			parsedURL, err := url.Parse(overrideURL)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse override url '%s': %w", overrideURL, err)
+			}
+
+			subgraph.Url = parsedURL
+
+			// Override datasource urls
+			for _, conf := range cfg.EngineConfig.DatasourceConfigurations {
+				fetchURL := conf.CustomGraphql.Fetch.Url
+				subgraphURL := config.LoadStringVariable(fetchURL)
+
+				// Identify the datasource by the previous subgraph url
+				// Override datasource id, url and subgraph url
+				if subgraphURL == sg.RoutingUrl {
+					conf.Id = overrideURL
+					conf.CustomGraphql.Fetch.Url.StaticVariableContent = overrideURL
+					conf.CustomGraphql.Subscription.Url.StaticVariableContent = overrideURL
+					sg.RoutingUrl = overrideURL
+					break
+				}
+			}
+		}
+
 		subgraphs = append(subgraphs, subgraph)
-	}
-
-	for _, conf := range cfg.EngineConfig.DatasourceConfigurations {
-		fetchURL := conf.CustomGraphql.Fetch.Url
-		url := config.LoadStringVariable(fetchURL)
-
-		if overrideURL, ok := overrides[url]; ok {
-			conf.CustomGraphql.Fetch.Url.StaticVariableContent = overrideURL
-		}
 	}
 
 	return subgraphs, nil
