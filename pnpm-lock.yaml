@@ -496,9 +496,6 @@ importers:
       '@wundergraph/cosmo-connect':
         specifier: workspace:*
         version: link:../connect
-      '@wundergraph/cosmo-shared':
-        specifier: workspace:*
-        version: link:../shared
       bowser:
         specifier: ^2.11.0
         version: 2.11.0

@@ -44,6 +44,7 @@ import { SubmitHandler, useZodForm } from "@/hooks/use-form";
 import { docsBaseURL } from "@/lib/constants";
 import { NextPageWithLayout } from "@/lib/page";
 import { cn } from "@/lib/utils";
+import { PartialMessage } from "@bufbuild/protobuf";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { Pencil1Icon, PlusIcon, TrashIcon } from "@radix-ui/react-icons";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -56,13 +57,16 @@ import {
   getOrganizationWebhookMeta,
   updateOrganizationWebhookConfig,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { CreateOrganizationWebhookConfigResponse } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { OrganizationEventName } from "@wundergraph/cosmo-connect/dist/webhooks/events_pb";
-import { EventsMeta } from "@wundergraph/cosmo-shared";
+import {
+  EventMeta,
+  OrganizationEventName,
+} from "@wundergraph/cosmo-connect/dist/webhooks/events_pb";
 import Link from "next/link";
-import { useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useMemo, useState } from "react";
 import { PiWebhooksLogo } from "react-icons/pi";
 import { z } from "zod";
+
+type EventsMeta = Array<PartialMessage<EventMeta>>;
 
 const DeleteWebhook = ({
   id,
@@ -142,17 +146,22 @@ const SelectFederatedGraphs = ({
   meta,
   setMeta,
 }: {
-  meta?: EventsMeta;
+  meta: EventsMeta;
   setMeta: (meta: EventsMeta) => void;
 }) => {
   const { data } = useQuery(getFederatedGraphs.useQuery());
 
-  const graphIds =
-    meta?.[OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED]?.graphIds ??
-    [];
+  const graphIds = useMemo(() => {
+    const entry = meta.find(
+      (m) =>
+        m.eventName === OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED
+    );
+    if (entry?.meta?.case !== "federatedGraphSchemaUpdated") return [];
+    return entry.meta.value.graphIds ?? [];
+  }, [meta]);
 
   const onCheckedChange = (val: boolean, graphId: string) => {
-    const tempMeta = { ...meta } ?? {};
+    const tempMeta: EventsMeta = [...meta];
     const newGraphIds: string[] = [];
 
     if (val) {
@@ -161,9 +170,26 @@ const SelectFederatedGraphs = ({
       newGraphIds.push(...graphIds.filter((g) => g !== graphId));
     }
 
-    tempMeta[OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED] = {
-      graphIds: newGraphIds,
+    const entry: EventsMeta[number] = {
+      eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
+      meta: {
+        case: "federatedGraphSchemaUpdated",
+        value: {
+          graphIds: newGraphIds,
+        },
+      },
     };
+
+    const idx = tempMeta.findIndex(
+      (v) =>
+        v.eventName === OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED
+    );
+
+    if (idx === -1) {
+      tempMeta.push(entry);
+    } else {
+      tempMeta[idx] = entry;
+    }
 
     setMeta(tempMeta);
   };
@@ -201,7 +227,7 @@ const Meta = ({
   setMeta,
 }: {
   id: OrganizationEventName;
-  meta?: EventsMeta;
+  meta: EventsMeta;
   setMeta: (meta: EventsMeta) => void;
 }) => {
   if (id == OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED) {
@@ -279,14 +305,14 @@ const Webhook = ({
     enabled: !!existing?.id && mode === "update" && isOpen,
   });
 
-  const [meta, setMeta] = useState<EventsMeta>(JSON.parse(data?.meta || "{}"));
+  const [meta, setMeta] = useState<EventsMeta>(data?.eventsMeta || []);
 
   useEffect(() => {
-    if (!data?.meta || Object.keys(meta).length !== 0) {
+    if (!data?.eventsMeta || meta.length !== 0) {
       return;
     }
-    setMeta({ ...JSON.parse(data.meta) });
-  }, [data?.meta, meta]);
+    setMeta(data.eventsMeta);
+  }, [data?.eventsMeta, meta]);
 
   const onSubmit: SubmitHandler<Input> = (data) => {
     if (mode === "create") {
@@ -295,7 +321,7 @@ const Webhook = ({
           endpoint: data.endpoint,
           key: data.key,
           events: data.events ?? [],
-          eventsMeta: JSON.stringify(meta),
+          eventsMeta: meta,
         },
         {
           onSuccess: (d) => {
@@ -327,7 +353,7 @@ const Webhook = ({
           endpoint: data.endpoint,
           key: data.key,
           events: data.events ?? [],
-          eventsMeta: JSON.stringify(meta),
+          eventsMeta: meta,
           shouldUpdateKey,
         },
         {
@@ -363,7 +389,7 @@ const Webhook = ({
       onOpenChange={(state) => {
         if (!state) {
           setShouldUpdateKey(false);
-          setMeta({});
+          setMeta([]);
         }
         setIsOpen(state);
       }}
@@ -402,7 +428,7 @@ const Webhook = ({
           />
         )}
         {isLoading && mode === "update" && <Loader className="my-8" />}
-        {(data?.meta !== undefined || mode === "create") && (
+        {(data?.eventsMeta !== undefined || mode === "create") && (
           <Form {...form}>
             <form
               className="flex w-full flex-col gap-y-6"

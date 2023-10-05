@@ -1,5 +1,4 @@
-// eslint-disable-next-line unicorn/prefer-node-protocol
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 import { printSchemaWithDirectives } from '@graphql-tools/utils';
 import { ArgumentConfigurationData, normalizeSubgraphFromString } from '@wundergraph/composition';
 import { GraphQLSchema, lexicographicSortSchema } from 'graphql';

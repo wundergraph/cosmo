@@ -6,6 +6,7 @@ package wg.cosmo.platform.v1;
 
 import "wg/cosmo/common/common.proto";
 import "wg/cosmo/node/v1/node.proto";
+import "wg/cosmo/webhooks/events.proto";
 
 message Label {
   string key = 1;
@@ -620,7 +621,7 @@ message CreateOrganizationWebhookConfigRequest {
   string endpoint = 1;
   string key = 2;
   repeated string events = 3;
-  string events_meta = 4;
+  repeated wg.cosmo.webhooks.EventMeta events_meta = 4;
 }
 
 message CreateOrganizationWebhookConfigResponse {
@@ -645,7 +646,7 @@ message GetOrganizationWebhookMetaRequest {
 
 message GetOrganizationWebhookMetaResponse {
   Response response = 1;
-  string meta = 2;
+  repeated wg.cosmo.webhooks.EventMeta events_meta = 2;
 }
 
 message UpdateOrganizationWebhookConfigRequest {
@@ -653,7 +654,7 @@ message UpdateOrganizationWebhookConfigRequest {
   string endpoint = 2;
   string key = 3;
   repeated string events = 4;
-  string events_meta = 5;
+  repeated wg.cosmo.webhooks.EventMeta events_meta = 5;
   bool should_update_key = 6;
 }
 

@@ -2223,13 +2223,13 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db);
 
-        const meta = await orgRepo.getWebhookMeta(req.id, authContext.organizationId);
+        const eventsMeta = await orgRepo.getWebhookMeta(req.id, authContext.organizationId);
 
         return {
           response: {
             code: EnumStatusCode.OK,
           },
-          meta: JSON.stringify(meta),
+          eventsMeta,
         };
       });
     },

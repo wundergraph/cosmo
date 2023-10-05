@@ -1,8 +1,8 @@
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { eq } from 'drizzle-orm';
-import { OrganizationEventName } from '@wundergraph/cosmo-connect/dist/webhooks/events_pb';
+import { EventMeta, OrganizationEventName } from '@wundergraph/cosmo-connect/dist/webhooks/events_pb';
 import pino from 'pino';
-import { EventsMeta } from '@wundergraph/cosmo-shared';
+import { PartialMessage } from '@bufbuild/protobuf';
 import * as schema from '../../db/schema.js';
 import { post } from './utils.js';
 
@@ -23,7 +23,7 @@ type Config = {
   url?: string;
   key?: string;
   allowedUserEvents?: string[];
-  meta: EventsMeta;
+  meta: PartialMessage<EventMeta>[];
 };
 
 export class OrganizationWebhookService {
@@ -49,11 +49,17 @@ export class OrganizationWebhookService {
     });
 
     for (const config of orgConfigs) {
-      const meta: EventsMeta = {};
+      const meta: PartialMessage<EventMeta>[] = [];
 
-      meta[OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED] = {
-        graphIds: config.webhookGraphSchemaUpdate.map((wu) => wu.federatedGraphId),
-      };
+      meta.push({
+        eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
+        meta: {
+          case: 'federatedGraphSchemaUpdated',
+          value: {
+            graphIds: config.webhookGraphSchemaUpdate.map((wu) => wu.federatedGraphId),
+          },
+        },
+      });
 
       this.configs?.push({
         url: config?.endpoint ?? '',
@@ -81,8 +87,15 @@ export class OrganizationWebhookService {
 
     switch (eventName) {
       case OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED: {
-        const meta = config.meta[OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED];
-        return !meta || meta.graphIds.length === 0 || meta.graphIds.includes(eventPayload.federated_graph.id);
+        const meta = config.meta.find(
+          (m) => m.eventName === OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
+        )?.meta;
+
+        if (!meta || meta?.case !== 'federatedGraphSchemaUpdated' || meta.value.graphIds?.length === 0) {
+          return true;
+        }
+
+        return meta.value.graphIds?.includes(eventPayload.federated_graph.id);
       }
       default: {
         return true;

@@ -8,6 +8,7 @@
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3, protoInt64 } from "@bufbuild/protobuf";
 import { EnumStatusCode } from "../../common/common_pb.js";
+import { EventMeta } from "../../webhooks/events_pb.js";
 
 /**
  * @generated from enum wg.cosmo.platform.v1.AnalyticsViewGroupName
@@ -4797,9 +4798,9 @@ export class CreateOrganizationWebhookConfigRequest extends Message<CreateOrgani
   events: string[] = [];
 
   /**
-   * @generated from field: string events_meta = 4;
+   * @generated from field: repeated wg.cosmo.webhooks.EventMeta events_meta = 4;
    */
-  eventsMeta = "";
+  eventsMeta: EventMeta[] = [];
 
   constructor(data?: PartialMessage<CreateOrganizationWebhookConfigRequest>) {
     super();
@@ -4812,7 +4813,7 @@ export class CreateOrganizationWebhookConfigRequest extends Message<CreateOrgani
     { no: 1, name: "endpoint", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "events", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 4, name: "events_meta", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "events_meta", kind: "message", T: EventMeta, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateOrganizationWebhookConfigRequest {
@@ -5039,9 +5040,9 @@ export class GetOrganizationWebhookMetaResponse extends Message<GetOrganizationW
   response?: Response;
 
   /**
-   * @generated from field: string meta = 2;
+   * @generated from field: repeated wg.cosmo.webhooks.EventMeta events_meta = 2;
    */
-  meta = "";
+  eventsMeta: EventMeta[] = [];
 
   constructor(data?: PartialMessage<GetOrganizationWebhookMetaResponse>) {
     super();
@@ -5052,7 +5053,7 @@ export class GetOrganizationWebhookMetaResponse extends Message<GetOrganizationW
   static readonly typeName = "wg.cosmo.platform.v1.GetOrganizationWebhookMetaResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
-    { no: 2, name: "meta", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "events_meta", kind: "message", T: EventMeta, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetOrganizationWebhookMetaResponse {
@@ -5097,9 +5098,9 @@ export class UpdateOrganizationWebhookConfigRequest extends Message<UpdateOrgani
   events: string[] = [];
 
   /**
-   * @generated from field: string events_meta = 5;
+   * @generated from field: repeated wg.cosmo.webhooks.EventMeta events_meta = 5;
    */
-  eventsMeta = "";
+  eventsMeta: EventMeta[] = [];
 
   /**
    * @generated from field: bool should_update_key = 6;
@@ -5118,7 +5119,7 @@ export class UpdateOrganizationWebhookConfigRequest extends Message<UpdateOrgani
     { no: 2, name: "endpoint", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "events", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 5, name: "events_meta", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "events_meta", kind: "message", T: EventMeta, repeated: true },
     { no: 6, name: "should_update_key", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
