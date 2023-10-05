@@ -1522,6 +1522,11 @@ export class GetFederatedGraphByNameResponse extends Message<GetFederatedGraphBy
    */
   subgraphs: Subgraph[] = [];
 
+  /**
+   * @generated from field: string graphToken = 4;
+   */
+  graphToken = "";
+
   constructor(data?: PartialMessage<GetFederatedGraphByNameResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1533,6 +1538,7 @@ export class GetFederatedGraphByNameResponse extends Message<GetFederatedGraphBy
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "graph", kind: "message", T: FederatedGraph },
     { no: 3, name: "subgraphs", kind: "message", T: Subgraph, repeated: true },
+    { no: 4, name: "graphToken", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetFederatedGraphByNameResponse {
