@@ -48,7 +48,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 	fn := func(w http.ResponseWriter, r *http.Request) {
 
-		var baseFields []attribute.KeyValue
+		var metricBaseFields []attribute.KeyValue
 		var statusCode int
 		var writtenBytes int
 
@@ -60,15 +60,15 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			defer func() {
 				inflightMetric()
 
-				baseFields = append(baseFields, semconv.HTTPStatusCode(statusCode))
-				h.requestMetrics.MeasureRequestCount(r, baseFields...)
-				h.requestMetrics.MeasureRequestSize(r, baseFields...)
+				metricBaseFields = append(metricBaseFields, semconv.HTTPStatusCode(statusCode))
+				h.requestMetrics.MeasureRequestCount(r, metricBaseFields...)
+				h.requestMetrics.MeasureRequestSize(r, metricBaseFields...)
 				h.requestMetrics.MeasureLatency(
 					r,
 					requestStartTime,
-					baseFields...,
+					metricBaseFields...,
 				)
-				h.requestMetrics.MeasureResponseSize(r, int64(writtenBytes), baseFields...)
+				h.requestMetrics.MeasureResponseSize(r, int64(writtenBytes), metricBaseFields...)
 			}()
 		}
 
@@ -93,7 +93,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		requestOperationType := ""
 
 		if requestOperationName != "" {
-			baseFields = append(baseFields, otel.WgOperationName.String(requestOperationName))
+			metricBaseFields = append(metricBaseFields, otel.WgOperationName.String(requestOperationName))
 		}
 
 		shared := h.executor.Pool.GetSharedFromRequest(r, h.executor.PlanConfig, pool.Config{
@@ -127,7 +127,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		}
 
 		if requestOperationType != "" {
-			baseFields = append(baseFields, otel.WgOperationType.String(requestOperationType))
+			metricBaseFields = append(metricBaseFields, otel.WgOperationType.String(requestOperationType))
 		}
 
 		// Add the operation to the trace span
@@ -228,7 +228,11 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		shared.Ctx = shared.Ctx.WithContext(ctxWithOperation)
 
 		// Add the operation hash to the trace span attributes
-		span.SetAttributes(otel.WgOperationHash.String(strconv.FormatUint(operationID, 10)))
+		opHashID := otel.WgOperationHash.String(strconv.FormatUint(operationID, 10))
+		span.SetAttributes(opHashID)
+
+		// Add hash to metrics base fields
+		metricBaseFields = append(metricBaseFields, opHashID)
 
 		ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
 

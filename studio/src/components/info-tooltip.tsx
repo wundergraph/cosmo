@@ -11,7 +11,7 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = (props) => {
   return (
     <Tooltip delayDuration={50}>
       <TooltipTrigger>
-        <span className="text-muted-foreground">
+        <span className="text-muted-foreground text-sm">
           <FiInfo />
         </span>
       </TooltipTrigger>

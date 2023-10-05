@@ -95,12 +95,12 @@ const BarList = React.forwardRef<HTMLDivElement, BarListProps>((props, ref) => {
                     href={item.href}
                     target={item.target}
                     rel="noreferrer"
-                    className={cn("w-full")}
+                    className={cn("flex-1 truncate")}
                   >
                     {item.name}
                   </Link>
                 ) : (
-                  <p>{item.name}</p>
+                  <p className="truncate">{item.name}</p>
                 )}
               </div>
             </div>

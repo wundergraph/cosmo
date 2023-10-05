@@ -131,14 +131,16 @@ const AnalyticsPage: NextPageWithLayout = () => {
   }
 
   return (
-    <div className="w-full space-y-4">
+    <div className=" w-full space-y-4">
       <div className="grid gap-4 lg:grid-cols-3">
         <RequestMetricsCard data={data?.requests} />
         <LatencyMetricsCard data={data?.latency} />
         <ErrorMetricsCard data={data?.errors} />
       </div>
 
-      <ErrorRateOverTimeCard />
+      <div className="flex flex-col items-stretch">
+        <ErrorRateOverTimeCard />
+      </div>
     </div>
   );
 };
@@ -233,14 +235,16 @@ const RequestMetricsCard = (props: { data?: MetricsDashboardMetric }) => {
 
   return (
     <Card className="bg-transparent">
-      <CardHeader className="flex flex-row items-start">
+      <CardHeader className="flex flex-row items-start pb-2">
         <div className="flex-1">
-          <div className="flex space-x-2 text-sm text-muted-foreground">
+          <div className="flex space-x-2 text-sm">
             <h4>Request Rate</h4>
             <InfoTooltip>RPM in last {getInfoTip(range)}</InfoTooltip>
           </div>
 
           <p className="text-xl font-semibold">{formatter(value)}</p>
+
+          <p className="text-sm text-muted-foreground">vs {formatter(previousValue)} last period</p>
         </div>
 
         <Change value={value} previousValue={previousValue} neutral />
@@ -314,13 +318,15 @@ const LatencyMetricsCard = (props: { data?: MetricsDashboardMetric }) => {
 
   return (
     <Card className="bg-transparent">
-      <CardHeader className="flex flex-row items-start">
+      <CardHeader className="flex flex-row items-start pb-2">
         <div className="flex-1">
-          <div className="flex space-x-2 text-sm text-muted-foreground">
+          <div className="flex space-x-2 text-sm">
             <h4>P95 Latency</h4>
             <InfoTooltip>P95 latency in last {getInfoTip(range)}</InfoTooltip>
           </div>
           <p className="text-xl font-semibold">{formatter(value)}</p>
+
+          <p className="text-sm text-muted-foreground">vs {formatter(previousValue)} last period</p>
         </div>
 
         <Change value={value} previousValue={previousValue} invert />
@@ -381,13 +387,14 @@ const ErrorMetricsCard = (props: { data?: MetricsDashboardMetric }) => {
 
   return (
     <Card className="bg-transparent">
-      <CardHeader className="flex flex-row items-start">
+      <CardHeader className="flex flex-row items-start pb-2">
         <div className="flex-1">
-          <div className="flex space-x-2 text-sm text-muted-foreground">
+          <div className="flex space-x-2 text-sm">
             <h4>Error Percentage</h4>
             <InfoTooltip>Error percentage in last {getInfoTip(range)}</InfoTooltip>
           </div>
           <p className="text-xl font-semibold">{formatter(value)}</p>
+          <p className="text-sm text-muted-foreground">vs {formatter(previousValue)} last period</p>
         </div>
 
         <Change value={value} previousValue={previousValue} invert />
@@ -452,7 +459,7 @@ const Sparkline: React.FC<SparklineProps> = (props) => {
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart
           data={data}
-          margin={{ top: 10, right: 0, bottom: 8, left: 0 }}
+          margin={{ top: 10, right: 6, bottom: 8, left: 6 }}
         >
           <defs>
             <linearGradient
@@ -480,6 +487,7 @@ const Sparkline: React.FC<SparklineProps> = (props) => {
             name="Previous"
             type="monotone"
             dataKey="previousValue"
+            activeDot={false}
             animationDuration={300}
             stroke={strokeColor}
             fill={`url(#${id}-gradient-previous)`}
@@ -530,7 +538,7 @@ const ErrorPercentChart: React.FC<SparklineProps> = (props) => {
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart
           data={data}
-          margin={{ top: 10, right: 0, bottom: 8, left: 0 }}
+          margin={{ top: 10, right: 6, bottom: 8, left: 6 }}
         >
           <defs>
             <linearGradient id={`${id}-gradient`} x1="0" y1="0" x2="0" y2="1">
@@ -542,6 +550,7 @@ const ErrorPercentChart: React.FC<SparklineProps> = (props) => {
             name="Previous"
             type="monotone"
             dataKey="previousValue"
+            activeDot={false}
             animationDuration={300}
             stroke={"hsl(215.4 16.3% 46.9%)"}
             fill={`url(#${id}-gradient)`}
@@ -653,7 +662,7 @@ const ErrorRateOverTimeCard = () => {
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart
           data={data}
-          margin={{ top: 10, right: 0, bottom: 8, left: 0 }}
+          margin={{ top: 8, right: 8, bottom: 8, left: 0 }}
         >
           <defs>
             <linearGradient id={`${id}-gradient`} x1="0" y1="0" x2="0" y2="1">
@@ -715,7 +724,10 @@ const ErrorRateOverTimeCard = () => {
   return (
     <Card className="bg-transparent">
       <CardHeader>
-        <CardTitle>Error rate over time</CardTitle>
+        <div className="flex space-x-2">
+          <CardTitle>Error rate over time</CardTitle>
+          <InfoTooltip>Error rate per minute in last {getInfoTip(range)}</InfoTooltip>
+        </div>
       </CardHeader>
 
       <CardContent className="h-[240px]">{content}</CardContent>
