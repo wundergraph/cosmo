@@ -1,6 +1,7 @@
 import useWindowSize from "@/hooks/use-window-size";
 import { dateFormatter, useChartData } from "@/lib/insights-helpers";
-import { cn, formatNumber } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import { formatMetric, formatPercentMetric } from "@/lib/format-metric";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { useQuery } from "@tanstack/react-query";
 import { getDashboardAnalyticsView } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
@@ -26,9 +27,9 @@ import { Separator } from "./ui/separator";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { useRouter } from "next/router";
 import { constructAnalyticsTableQueryState } from "./analytics/constructAnalyticsTableQueryState";
-import { ChartTooltip, CustomTooltip } from "./analytics/charts";
+import { ChartTooltip } from "./analytics/charts";
 
-const valueFormatter = (number: number) => `${formatNumber(number)}`;
+const valueFormatter = (number: number) => `${formatMetric(number)}`;
 
 const RequestChart = ({
   requestSeries,
@@ -74,13 +75,13 @@ const RequestChart = ({
         <div className="flex items-center gap-x-2 text-sm md:ml-auto">
           <div className="h-3 w-3 rounded-full bg-primary" />
           Total
-          <Badge variant="secondary">{count}</Badge>
+          <Badge variant="secondary">{formatMetric(count)}</Badge>
         </div>
         <div className="flex items-center gap-x-2 text-sm">
           <div className="h-3 w-3 rounded-full bg-destructive/75" />
           Errored
           <Badge variant="secondary">
-            {((categorized.error / (count || 1)) * 100).toFixed(2)}%
+            {formatPercentMetric((categorized.error / (count || 1)) * 100)}
           </Badge>
         </div>
       </div>

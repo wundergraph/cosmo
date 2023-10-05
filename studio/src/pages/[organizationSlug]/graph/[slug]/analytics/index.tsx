@@ -1,7 +1,5 @@
 import BarList from "@/components/analytics/barlist";
-import {
-  createFilterState,
-} from "@/components/analytics/constructAnalyticsTableQueryState";
+import { createFilterState } from "@/components/analytics/constructAnalyticsTableQueryState";
 import { AnalyticsToolbar } from "@/components/analytics/toolbar";
 import { EmptyState } from "@/components/empty-state";
 import { getGraphLayout, GraphContext } from "@/components/layout/graph-layout";
@@ -47,6 +45,11 @@ import useWindowSize from "@/hooks/use-window-size";
 import { endOfDay, formatISO, startOfDay, subHours } from "date-fns";
 import { UpdateIcon } from "@radix-ui/react-icons";
 import { useSessionStorage } from "@/hooks/use-session-storage";
+import {
+  formatDurationMetric,
+  formatMetric,
+  formatPercentMetric,
+} from "@/lib/format-metric";
 
 export type OperationAnalytics = {
   name: string;
@@ -58,15 +61,17 @@ export type OperationAnalytics = {
 const useRange = () => {
   const router = useRouter();
 
-  const [storedRange, setRange] = useSessionStorage('analytics.range', 24)
+  const [storedRange, setRange] = useSessionStorage("analytics.range", 24);
 
-  const range = router.query.range ? parseInt(router.query.range?.toString()) || storedRange : storedRange;
+  const range = router.query.range
+    ? parseInt(router.query.range?.toString()) || storedRange
+    : storedRange;
 
   useEffect(() => {
     if (range !== storedRange) {
-      setRange(range)
+      setRange(range);
     }
-  }, [range, storedRange])
+  }, [range, storedRange]);
 
   switch (range) {
     case 24:
@@ -132,7 +137,7 @@ const AnalyticsPage: NextPageWithLayout = () => {
 
   return (
     <div className="w-full space-y-4">
-      <div className="flex flex-col lg:grid gap-4 lg:grid-cols-3">
+      <div className="flex flex-col gap-4 lg:grid lg:grid-cols-3">
         <RequestMetricsCard data={data?.requests} />
         <LatencyMetricsCard data={data?.latency} />
         <ErrorMetricsCard data={data?.errors} />
@@ -198,7 +203,7 @@ const Change = ({
   return (
     <DeltaBadge
       type={deltaType || (getDeltaType(delta, { invert, neutral }) as any)}
-      value={`${delta < 1 ? delta.toFixed(2) : delta.toFixed(0)}%`}
+      value={formatPercentMetric(delta)}
     />
   );
 };
@@ -216,20 +221,16 @@ const RequestMetricsCard = (props: { data?: MetricsDashboardMetric }) => {
   const formatter = (value: number) => {
     if (value < 1) {
       return (
-        Intl.NumberFormat("us", {
+        formatMetric(value, {
           maximumFractionDigits: 3,
-        })
-          .format(value)
-          .toString() + " RPM"
+        }) + " RPM"
       );
     }
 
     return (
-      Intl.NumberFormat("us", {
+      formatMetric(value, {
         maximumFractionDigits: 0,
-      })
-        .format(value)
-        .toString() + " RPM"
+      }) + " RPM"
     );
   };
 
@@ -244,7 +245,9 @@ const RequestMetricsCard = (props: { data?: MetricsDashboardMetric }) => {
 
           <p className="text-xl font-semibold">{formatter(value)}</p>
 
-          <p className="text-sm text-muted-foreground">vs {formatter(previousValue)} last period</p>
+          <p className="text-sm text-muted-foreground">
+            vs {formatter(previousValue)} last period
+          </p>
         </div>
 
         <Change value={value} previousValue={previousValue} neutral />
@@ -297,23 +300,9 @@ const LatencyMetricsCard = (props: { data?: MetricsDashboardMetric }) => {
   const previousValue = Number.parseInt(data?.previousValue || "0");
 
   const formatter = (value: number) => {
-    if (value < 1) {
-      return (
-        Intl.NumberFormat("us", {
-          maximumFractionDigits: 3,
-        })
-          .format(value)
-          .toString() + " ms"
-      );
-    }
-
-    return (
-      Intl.NumberFormat("us", {
-        maximumFractionDigits: 0,
-      })
-        .format(value)
-        .toString() + " ms"
-    );
+    return formatDurationMetric(value, {
+      maximumFractionDigits: 3,
+    });
   };
 
   return (
@@ -326,7 +315,9 @@ const LatencyMetricsCard = (props: { data?: MetricsDashboardMetric }) => {
           </div>
           <p className="text-xl font-semibold">{formatter(value)}</p>
 
-          <p className="text-sm text-muted-foreground">vs {formatter(previousValue)} last period</p>
+          <p className="text-sm text-muted-foreground">
+            vs {formatter(previousValue)} last period
+          </p>
         </div>
 
         <Change value={value} previousValue={previousValue} invert />
@@ -378,12 +369,7 @@ const ErrorMetricsCard = (props: { data?: MetricsDashboardMetric }) => {
   const value = Number.parseFloat(data?.value || "0");
   const previousValue = Number.parseFloat(data?.previousValue || "0");
 
-  const formatter = (value: number) =>
-    Intl.NumberFormat("us", {
-      maximumFractionDigits: 2,
-    })
-      .format(value)
-      .toString() + "%";
+  const formatter = (value: number) => formatPercentMetric(value);
 
   return (
     <Card className="bg-transparent">
@@ -391,10 +377,14 @@ const ErrorMetricsCard = (props: { data?: MetricsDashboardMetric }) => {
         <div className="flex-1">
           <div className="flex space-x-2 text-sm">
             <h4>Error Percentage</h4>
-            <InfoTooltip>Error percentage in last {getInfoTip(range)}</InfoTooltip>
+            <InfoTooltip>
+              Error percentage in last {getInfoTip(range)}
+            </InfoTooltip>
           </div>
           <p className="text-xl font-semibold">{formatter(value)}</p>
-          <p className="text-sm text-muted-foreground">vs {formatter(previousValue)} last period</p>
+          <p className="text-sm text-muted-foreground">
+            vs {formatter(previousValue)} last period
+          </p>
         </div>
 
         <Change value={value} previousValue={previousValue} invert />
@@ -599,20 +589,16 @@ const ErrorRateOverTimeCard = () => {
   const formatter = (value: number) => {
     if (value < 1) {
       return (
-        Intl.NumberFormat("us", {
+        formatMetric(value, {
           maximumFractionDigits: 3,
-        })
-          .format(value)
-          .toString() + " RPM"
+        }) + " RPM"
       );
     }
 
     return (
-      Intl.NumberFormat("us", {
+      formatMetric(value, {
         maximumFractionDigits: 0,
-      })
-        .format(value)
-        .toString() + " RPM"
+      }) + " RPM"
     );
   };
 
@@ -726,7 +712,9 @@ const ErrorRateOverTimeCard = () => {
       <CardHeader>
         <div className="flex space-x-2">
           <CardTitle>Error rate over time</CardTitle>
-          <InfoTooltip>Error rate per minute in last {getInfoTip(range)}</InfoTooltip>
+          <InfoTooltip>
+            Error rate per minute in last {getInfoTip(range)}
+          </InfoTooltip>
         </div>
       </CardHeader>
 
