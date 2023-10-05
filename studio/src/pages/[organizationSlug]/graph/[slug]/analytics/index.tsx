@@ -1,6 +1,5 @@
 import BarList from "@/components/analytics/barlist";
 import {
-  constructAnalyticsTableQueryState,
   createFilterState,
 } from "@/components/analytics/constructAnalyticsTableQueryState";
 import { AnalyticsToolbar } from "@/components/analytics/toolbar";
@@ -33,7 +32,7 @@ import {
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { MetricsDashboardMetric } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { useRouter } from "next/router";
-import React, { useContext, useId } from "react";
+import React, { useContext, useEffect, useId } from "react";
 import {
   Area,
   AreaChart,
@@ -47,6 +46,7 @@ import { InfoTooltip } from "@/components/info-tooltip";
 import useWindowSize from "@/hooks/use-window-size";
 import { endOfDay, formatISO, startOfDay, subHours } from "date-fns";
 import { UpdateIcon } from "@radix-ui/react-icons";
+import { useSessionStorage } from "@/hooks/use-session-storage";
 
 export type OperationAnalytics = {
   name: string;
@@ -58,7 +58,15 @@ export type OperationAnalytics = {
 const useRange = () => {
   const router = useRouter();
 
-  const range = parseInt(router.query.range?.toString() ?? "24");
+  const [storedRange, setRange] = useSessionStorage('analytics.range', 24)
+
+  const range = router.query.range ? parseInt(router.query.range?.toString()) || storedRange : storedRange;
+
+  useEffect(() => {
+    if (range !== storedRange) {
+      setRange(range)
+    }
+  }, [range, storedRange])
 
   switch (range) {
     case 24:
@@ -82,12 +90,12 @@ const createDateRange = (range: number) => {
 const getInfoTip = (range: number) => {
   switch (range) {
     case 72:
-      return "3 day median";
+      return "3 day";
     case 168:
-      return "1 week median";
+      return "1 week";
     case 24:
     default:
-      return `${range} hour median`;
+      return `${range} hour`;
   }
 };
 
@@ -123,14 +131,16 @@ const AnalyticsPage: NextPageWithLayout = () => {
   }
 
   return (
-    <div className="w-full space-y-4">
+    <div className=" w-full space-y-4">
       <div className="grid gap-4 lg:grid-cols-3">
         <RequestMetricsCard data={data?.requests} />
         <LatencyMetricsCard data={data?.latency} />
         <ErrorMetricsCard data={data?.errors} />
       </div>
 
-      <ErrorRateOverTimeCard />
+      <div className="flex flex-col items-stretch">
+        <ErrorRateOverTimeCard />
+      </div>
     </div>
   );
 };
@@ -152,9 +162,9 @@ const getDeltaType = (
   } else if (value > 0 && invert) {
     return "increase-negative";
   } else if (value < 0 && !invert) {
-    return "decrease-positive";
-  } else if (value < 0 && invert) {
     return "decrease-negative";
+  } else if (value < 0 && invert) {
+    return "decrease-positive";
   }
 
   return "neutral";
@@ -225,14 +235,16 @@ const RequestMetricsCard = (props: { data?: MetricsDashboardMetric }) => {
 
   return (
     <Card className="bg-transparent">
-      <CardHeader className="flex flex-row items-start">
+      <CardHeader className="flex flex-row items-start pb-2">
         <div className="flex-1">
-          <div className="flex space-x-2 text-sm text-muted-foreground">
+          <div className="flex space-x-2 text-sm">
             <h4>Request Rate</h4>
-            <InfoTooltip>{getInfoTip(range)}</InfoTooltip>
+            <InfoTooltip>RPM in last {getInfoTip(range)}</InfoTooltip>
           </div>
 
           <p className="text-xl font-semibold">{formatter(value)}</p>
+
+          <p className="text-sm text-muted-foreground">vs {formatter(previousValue)} last period</p>
         </div>
 
         <Change value={value} previousValue={previousValue} neutral />
@@ -306,13 +318,15 @@ const LatencyMetricsCard = (props: { data?: MetricsDashboardMetric }) => {
 
   return (
     <Card className="bg-transparent">
-      <CardHeader className="flex flex-row items-start">
+      <CardHeader className="flex flex-row items-start pb-2">
         <div className="flex-1">
-          <div className="flex space-x-2 text-sm text-muted-foreground">
+          <div className="flex space-x-2 text-sm">
             <h4>P95 Latency</h4>
-            <InfoTooltip>{getInfoTip(range)}</InfoTooltip>
+            <InfoTooltip>P95 latency in last {getInfoTip(range)}</InfoTooltip>
           </div>
           <p className="text-xl font-semibold">{formatter(value)}</p>
+
+          <p className="text-sm text-muted-foreground">vs {formatter(previousValue)} last period</p>
         </div>
 
         <Change value={value} previousValue={previousValue} invert />
@@ -373,13 +387,14 @@ const ErrorMetricsCard = (props: { data?: MetricsDashboardMetric }) => {
 
   return (
     <Card className="bg-transparent">
-      <CardHeader className="flex flex-row items-start">
+      <CardHeader className="flex flex-row items-start pb-2">
         <div className="flex-1">
-          <div className="flex space-x-2 text-sm text-muted-foreground">
+          <div className="flex space-x-2 text-sm">
             <h4>Error Percentage</h4>
-            <InfoTooltip>{getInfoTip(range)}</InfoTooltip>
+            <InfoTooltip>Error percentage in last {getInfoTip(range)}</InfoTooltip>
           </div>
           <p className="text-xl font-semibold">{formatter(value)}</p>
+          <p className="text-sm text-muted-foreground">vs {formatter(previousValue)} last period</p>
         </div>
 
         <Change value={value} previousValue={previousValue} invert />
@@ -444,7 +459,7 @@ const Sparkline: React.FC<SparklineProps> = (props) => {
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart
           data={data}
-          margin={{ top: 10, right: 0, bottom: 8, left: 0 }}
+          margin={{ top: 10, right: 6, bottom: 8, left: 6 }}
         >
           <defs>
             <linearGradient
@@ -472,6 +487,7 @@ const Sparkline: React.FC<SparklineProps> = (props) => {
             name="Previous"
             type="monotone"
             dataKey="previousValue"
+            activeDot={false}
             animationDuration={300}
             stroke={strokeColor}
             fill={`url(#${id}-gradient-previous)`}
@@ -522,7 +538,7 @@ const ErrorPercentChart: React.FC<SparklineProps> = (props) => {
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart
           data={data}
-          margin={{ top: 10, right: 0, bottom: 8, left: 0 }}
+          margin={{ top: 10, right: 6, bottom: 8, left: 6 }}
         >
           <defs>
             <linearGradient id={`${id}-gradient`} x1="0" y1="0" x2="0" y2="1">
@@ -534,6 +550,7 @@ const ErrorPercentChart: React.FC<SparklineProps> = (props) => {
             name="Previous"
             type="monotone"
             dataKey="previousValue"
+            activeDot={false}
             animationDuration={300}
             stroke={"hsl(215.4 16.3% 46.9%)"}
             fill={`url(#${id}-gradient)`}
@@ -617,18 +634,7 @@ const ErrorRateOverTimeCard = () => {
 
   const { data, ticks, domain, timeFormatter } = useChartData(
     range,
-    (responseData?.series ?? []).map((s) => ({
-      ...s,
-      value: Number.parseFloat(s.value),
-    }))
-  );
-
-  const { data: errorData } = useChartData(
-    range,
-    (responseData?.errorSeries ?? []).map((s) => ({
-      ...s,
-      value: Number.parseFloat(s.value),
-    }))
+    responseData?.series ?? []
   );
 
   let content;
@@ -654,7 +660,10 @@ const ErrorRateOverTimeCard = () => {
   } else {
     content = (
       <ResponsiveContainer width="100%" height="100%">
-        <AreaChart margin={{ top: 10, right: 0, bottom: 8, left: 0 }}>
+        <AreaChart
+          data={data}
+          margin={{ top: 8, right: 8, bottom: 8, left: 0 }}
+        >
           <defs>
             <linearGradient id={`${id}-gradient`} x1="0" y1="0" x2="0" y2="1">
               <stop offset="5%" stopColor={"hsl(var(--muted-foreground))"} />
@@ -663,9 +672,8 @@ const ErrorRateOverTimeCard = () => {
           </defs>
           <Area
             name="Request rate"
-            data={data}
             type="monotone"
-            dataKey="value"
+            dataKey="requestRate"
             animationDuration={300}
             stroke="hsl(var(--muted-foreground))"
             fill={`url(#${id}-gradient)`}
@@ -675,9 +683,8 @@ const ErrorRateOverTimeCard = () => {
           />
           <Area
             name="Error rate"
-            data={errorData}
             type="monotone"
-            dataKey="value"
+            dataKey="errorRate"
             animationDuration={300}
             stroke="hsl(var(--destructive))"
             fill="none"
@@ -717,7 +724,10 @@ const ErrorRateOverTimeCard = () => {
   return (
     <Card className="bg-transparent">
       <CardHeader>
-        <CardTitle>Error rate over time</CardTitle>
+        <div className="flex space-x-2">
+          <CardTitle>Error rate over time</CardTitle>
+          <InfoTooltip>Error rate per minute in last {getInfoTip(range)}</InfoTooltip>
+        </div>
       </CardHeader>
 
       <CardContent className="h-[240px]">{content}</CardContent>
