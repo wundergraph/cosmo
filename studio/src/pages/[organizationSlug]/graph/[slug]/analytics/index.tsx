@@ -131,8 +131,8 @@ const AnalyticsPage: NextPageWithLayout = () => {
   }
 
   return (
-    <div className=" w-full space-y-4">
-      <div className="grid gap-4 lg:grid-cols-3">
+    <div className="w-full space-y-4">
+      <div className="flex flex-col lg:grid gap-4 lg:grid-cols-3">
         <RequestMetricsCard data={data?.requests} />
         <LatencyMetricsCard data={data?.latency} />
         <ErrorMetricsCard data={data?.errors} />
