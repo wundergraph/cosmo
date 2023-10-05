@@ -10,21 +10,15 @@ enum PlatformEventName {
 
 enum OrganizationEventName {
   FEDERATED_GRAPH_SCHEMA_UPDATED = 0;
-  Test = 1;
 }
 
 message FederatedGraphSchemaUpdatedMeta {
   repeated string graphIds = 1;
 }
 
-message TestMeta {
-  string hello = 1;
-}
-
 message EventMeta {
   OrganizationEventName event_name = 1;
   oneof meta {
     FederatedGraphSchemaUpdatedMeta federated_graph_schema_updated = 2;
-    TestMeta test = 3;
   }
 }

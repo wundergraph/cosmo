@@ -40,16 +40,10 @@ export enum OrganizationEventName {
    * @generated from enum value: FEDERATED_GRAPH_SCHEMA_UPDATED = 0;
    */
   FEDERATED_GRAPH_SCHEMA_UPDATED = 0,
-
-  /**
-   * @generated from enum value: Test = 1;
-   */
-  Test = 1,
 }
 // Retrieve enum metadata with: proto3.getEnumType(OrganizationEventName)
 proto3.util.setEnumType(OrganizationEventName, "wg.cosmo.webhooks.OrganizationEventName", [
   { no: 0, name: "FEDERATED_GRAPH_SCHEMA_UPDATED" },
-  { no: 1, name: "Test" },
 ]);
 
 /**
@@ -90,43 +84,6 @@ export class FederatedGraphSchemaUpdatedMeta extends Message<FederatedGraphSchem
 }
 
 /**
- * @generated from message wg.cosmo.webhooks.TestMeta
- */
-export class TestMeta extends Message<TestMeta> {
-  /**
-   * @generated from field: string hello = 1;
-   */
-  hello = "";
-
-  constructor(data?: PartialMessage<TestMeta>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.webhooks.TestMeta";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "hello", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): TestMeta {
-    return new TestMeta().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): TestMeta {
-    return new TestMeta().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): TestMeta {
-    return new TestMeta().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: TestMeta | PlainMessage<TestMeta> | undefined, b: TestMeta | PlainMessage<TestMeta> | undefined): boolean {
-    return proto3.util.equals(TestMeta, a, b);
-  }
-}
-
-/**
  * @generated from message wg.cosmo.webhooks.EventMeta
  */
 export class EventMeta extends Message<EventMeta> {
@@ -144,12 +101,6 @@ export class EventMeta extends Message<EventMeta> {
      */
     value: FederatedGraphSchemaUpdatedMeta;
     case: "federatedGraphSchemaUpdated";
-  } | {
-    /**
-     * @generated from field: wg.cosmo.webhooks.TestMeta test = 3;
-     */
-    value: TestMeta;
-    case: "test";
   } | { case: undefined; value?: undefined } = { case: undefined };
 
   constructor(data?: PartialMessage<EventMeta>) {
@@ -162,7 +113,6 @@ export class EventMeta extends Message<EventMeta> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "event_name", kind: "enum", T: proto3.getEnumType(OrganizationEventName) },
     { no: 2, name: "federated_graph_schema_updated", kind: "message", T: FederatedGraphSchemaUpdatedMeta, oneof: "meta" },
-    { no: 3, name: "test", kind: "message", T: TestMeta, oneof: "meta" },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EventMeta {
