@@ -1,5 +1,4 @@
 import { ClickHouseClient } from 'src/core/clickhouse/index.js';
-import { QueryResultType, Response } from 'src/core/prometheus/types.js';
 
 const getEndDate = () => {
   const now = new Date();
@@ -94,27 +93,6 @@ interface GetMetricsProps {
 
 export class MetricsDashboardRepository {
   constructor(private chClient: ClickHouseClient) {}
-
-  protected async getResponses<Queries extends Promise<Response<QueryResultType.Scalar | QueryResultType.Matrix>>[]>(
-    ...queries: Queries
-  ) {
-    const responses = await Promise.allSettled(queries);
-
-    return responses.map((r) => {
-      if (r.status === 'rejected') {
-        return {
-          error: {
-            type: r.status,
-            message: r.reason,
-          },
-        };
-      }
-
-      return {
-        data: r.value,
-      };
-    });
-  }
 
   /**
    * Get request rate metrics
