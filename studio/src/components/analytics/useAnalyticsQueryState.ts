@@ -68,6 +68,19 @@ export const useAnalyticsQueryState = () => {
       refreshIntervals[0]
     );
 
+    let sort = group ? {
+       id: 'totalRequests',
+       desc: true
+    }: {
+      id: 'unixTimestamp',
+      desc: true
+    }
+
+    if (query.sort) {
+      sort.id = query.sort.toString()
+      sort.desc = query.sortDir === 'desc'
+    }
+
     return {
       name,
       filters,
@@ -75,6 +88,7 @@ export const useAnalyticsQueryState = () => {
       dateRange,
       page,
       refreshInterval: refreshIntervalObject,
+      sort
     };
   }, [query]);
 };

@@ -2662,6 +2662,49 @@ export class Pagination extends Message<Pagination> {
 }
 
 /**
+ * @generated from message wg.cosmo.platform.v1.Sort
+ */
+export class Sort extends Message<Sort> {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id = "";
+
+  /**
+   * @generated from field: bool desc = 2;
+   */
+  desc = false;
+
+  constructor(data?: PartialMessage<Sort>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.Sort";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "desc", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Sort {
+    return new Sort().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Sort {
+    return new Sort().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Sort {
+    return new Sort().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: Sort | PlainMessage<Sort> | undefined, b: Sort | PlainMessage<Sort> | undefined): boolean {
+    return proto3.util.equals(Sort, a, b);
+  }
+}
+
+/**
  * @generated from message wg.cosmo.platform.v1.AnalyticsConfig
  */
 export class AnalyticsConfig extends Message<AnalyticsConfig> {
@@ -2680,6 +2723,11 @@ export class AnalyticsConfig extends Message<AnalyticsConfig> {
    */
   pagination?: Pagination;
 
+  /**
+   * @generated from field: optional wg.cosmo.platform.v1.Sort sort = 4;
+   */
+  sort?: Sort;
+
   constructor(data?: PartialMessage<AnalyticsConfig>) {
     super();
     proto3.util.initPartial(data, this);
@@ -2691,6 +2739,7 @@ export class AnalyticsConfig extends Message<AnalyticsConfig> {
     { no: 1, name: "date_range", kind: "message", T: DateRange },
     { no: 2, name: "filters", kind: "message", T: AnalyticsFilter, repeated: true },
     { no: 3, name: "pagination", kind: "message", T: Pagination },
+    { no: 4, name: "sort", kind: "message", T: Sort, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AnalyticsConfig {

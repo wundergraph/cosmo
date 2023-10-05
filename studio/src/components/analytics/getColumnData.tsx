@@ -1,5 +1,9 @@
 import { cn } from "@/lib/utils";
-import { EllipsisVerticalIcon } from "@heroicons/react/24/outline";
+import {
+  ChevronDownIcon,
+  ChevronUpIcon,
+  EllipsisVerticalIcon,
+} from "@heroicons/react/24/outline";
 import { ClipboardCopyIcon } from "@radix-ui/react-icons";
 import { ColumnDef } from "@tanstack/react-table";
 import {
@@ -34,6 +38,29 @@ export const mapStatusCode: Record<string, string> = {
   STATUS_CODE_UNSET: "Success",
   STATUS_CODE_OK: "Success",
   STATUS_CODE_ERROR: "Error",
+};
+
+const columnConfig: Record<string, Record<string, any>> = {
+  traceId: {
+    header: {
+      className: "w-[80]px",
+    },
+  },
+  unixTimestamp: {
+    header: {
+      className: "w-[150px]",
+    },
+  },
+  operationName: {
+    cell: {
+      className: "w-[200px] lg:w-[320px] truncate",
+    },
+  },
+  actions: {
+    header: {
+      className: "w-[100]px",
+    },
+  },
 };
 
 const formatColumnData = (data: string | number, type: Unit): ReactNode => {
@@ -243,16 +270,54 @@ export const getColumnData = (
         return null;
       }
 
+      const config = columnConfig[each.name] || {};
+
       return {
         accessorKey: each.name,
-        header: () => <div className="text-left">{each.title}</div>,
-        cell: ({ row }: { row: any }) => {
+        header: ({ header }) => {
+          let sortedProps: Record<string, any> = {};
+
+          const sorted = header.column.getIsSorted();
+
+          if (header.column.getCanSort()) {
+            sortedProps = {
+              className: "select-none cursor-pointer hover:text-foreground",
+              onClick: header.column.getToggleSortingHandler(),
+            };
+          }
+
           return (
-            <div>{formatColumnData(row.getValue(each.name), each.unit!)}</div>
+            <div
+              {...sortedProps}
+              className={cn(
+                "inline-flex items-center space-x-1 text-left",
+                config?.header?.className,
+                sortedProps?.className
+              )}
+            >
+              <span>{each.title}</span>
+
+              <span className="inline-block w-3">
+                {sorted ? (
+                  sorted === "desc" ? (
+                    <ChevronDownIcon className="h-3 w-3" />
+                  ) : (
+                    <ChevronUpIcon className="h-3 w-3" />
+                  )
+                ) : null}
+              </span>
+            </div>
+          );
+        },
+        cell: ({ row }) => {
+          return (
+            <div className={cn(config?.cell?.className)}>
+              {formatColumnData(row.getValue(each.name), each.unit!)}
+            </div>
           );
         },
         filterFn: defaultFilterFn,
-      };
+      } satisfies ColumnDef<any>;
     })
   );
 
