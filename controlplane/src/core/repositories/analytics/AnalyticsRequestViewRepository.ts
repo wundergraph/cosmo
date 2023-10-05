@@ -54,10 +54,10 @@ export class AnalyticsRequestViewRepository {
       title: 'Operation Hash',
     },
     operationName: {
-      title: 'Operation Name',
+      title: 'Name',
     },
     operationType: {
-      title: 'Operation Type',
+      title: 'Type',
     },
     operationContent: {
       title: 'Operation Content',
@@ -65,7 +65,7 @@ export class AnalyticsRequestViewRepository {
       unit: Unit.CodeBlock,
     },
     httpStatusCode: {
-      title: 'HTTP Status Code',
+      title: 'Status Code',
     },
     httpHost: {
       isHidden: true,

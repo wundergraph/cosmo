@@ -98,7 +98,9 @@ export function AnalyticsDataTable<T>({
 
   const [refreshInterval, setRefreshInterval] = useState(refreshIntervals[0]);
 
-  const [sorting, setSorting] = React.useState<SortingState>(getDefaultSort(router.query.group?.toString()));
+  const [sorting, setSorting] = React.useState<SortingState>(
+    getDefaultSort(router.query.group?.toString())
+  );
 
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     []
@@ -153,7 +155,9 @@ export function AnalyticsDataTable<T>({
 
   const applyNewParams = useCallback(
     (newParams: Record<string, string | null>, unset?: string[]) => {
-      const q = Object.fromEntries(Object.entries(router.query).filter(([key]) => !unset?.includes(key)))
+      const q = Object.fromEntries(
+        Object.entries(router.query).filter(([key]) => !unset?.includes(key))
+      );
       router.push({
         query: {
           ...q,
@@ -202,16 +206,24 @@ export function AnalyticsDataTable<T>({
       }
     },
     onSortingChange: (t) => {
-      if (typeof t === 'function') {
+      if (typeof t === "function") {
         const newVal = functionalUpdate(t, state.sorting);
-
+        const defaultSort = getDefaultSort();
         if (newVal.length) {
           applyNewParams({
             sort: newVal[0]?.id,
-            sortDir: newVal[0]?.desc ? 'desc' : 'asc'
+            sortDir: newVal[0]?.desc ? "desc" : "asc",
           });
+        } else if (defaultSort[0].id === state.sorting[0].id) {
+          applyNewParams(
+            {
+              sort: defaultSort[0].id,
+              sortDir: defaultSort[0]?.desc ? "asc" : "desc",
+            },
+            ["sort", "sortDir"]
+          );
         } else {
-          applyNewParams({}, ['sort', 'sortDir']);
+          applyNewParams({}, ["sort", "sortDir"]);
         }
       }
     },
@@ -219,12 +231,15 @@ export function AnalyticsDataTable<T>({
 
   const onGroupChange = (val: AnalyticsViewGroupName) => {
     if (val === AnalyticsViewGroupName.None) {
-      return applyNewParams({}, ['group', 'sort', 'sortDir']);
+      return applyNewParams({}, ["group", "sort", "sortDir"]);
     }
 
-    applyNewParams({
-      group: AnalyticsViewGroupName[val],
-    }, ['sort', 'sortDir']);
+    applyNewParams(
+      {
+        group: AnalyticsViewGroupName[val],
+      },
+      ["sort", "sortDir"]
+    );
   };
 
   const onDateRangeChange = (val: DateRange) => {
@@ -458,28 +473,14 @@ export function AnalyticsDataTable<T>({
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id}>
               {headerGroup.headers.map((header) => {
-                let headerProps = {}
-
-                const sorted = header.column.getIsSorted()
-
-                if (header.column.getCanSort()) {
-                  headerProps = {
-                    className: 'select-none cursor-pointer',
-                    onClick: header.column.getToggleSortingHandler(),
-                  }
-                }
-
                 return (
-                  <TableHead key={header.id} {...headerProps}>
-                    <div className="flex items-center space-x-1">
+                  <TableHead key={header.id}>
                     {header.isPlaceholder
-                      ? null : flexRender(
+                      ? null
+                      : flexRender(
                           header.column.columnDef.header,
                           header.getContext()
                         )}
-
-                    {sorted ? sorted === 'desc' ? <ChevronDownIcon className="h-4 w-4" /> : <ChevronUpIcon className="h4 w-4" /> : null}
-                    </div>
                   </TableHead>
                 );
               })}
