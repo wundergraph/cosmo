@@ -55,9 +55,14 @@ body:
 
   - type: textarea
     attributes:
-      label: Router config
-      description: Please provide the configuration you are using (e.g. the YAML config file or environment variables).
+      label: Router configuration
+      description: Please provide the configuration you are using (e.g. the config.yaml file or environment variables).
       render: yaml
+  - type: textarea
+    attributes:
+      label: Router execution config
+      description: Please provide your router config (Run `wgc federated-graph fetch <name>` to get the config)
+      render: json
   - type: textarea
     attributes:
       label: Log output
