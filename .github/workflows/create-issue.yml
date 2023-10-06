@@ -1,0 +1,19 @@
+name: 'Add priority disclaimer'
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  add-labels:
+    if: github.repository_owner == 'wundergraph' }}
+
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create comment
+        uses: peter-evans/create-or-update-comment@v3
+        with:
+          issue-number: ${{ github.event.issue.number }}
+          body: |
+            WunderGraph commits fully to Open Source and we want to make sure that we can help you as fast as possible.
+            The roadmap is driven by our customers and we have to prioritize issues that are important to them.
+            You can influence the priority by becoming a customer. Please contact us [here](https://form.typeform.com/to/oC6XATf4).
