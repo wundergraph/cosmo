@@ -9,9 +9,9 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/wundergraph/cosmo/router/config"
 	"github.com/wundergraph/cosmo/router/core"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
-	"github.com/wundergraph/cosmo/router/internal/config"
 	"github.com/wundergraph/cosmo/router/internal/controlplane"
 	"github.com/wundergraph/cosmo/router/internal/handler/cors"
 	"github.com/wundergraph/cosmo/router/internal/metric"

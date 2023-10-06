@@ -4,12 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"net"
 	"net/http"
 	"net/url"
 	"sync"
 	"time"
+
+	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 
 	"github.com/dgraph-io/ristretto"
 	"github.com/go-chi/chi"
@@ -24,8 +25,8 @@ import (
 	"go.uber.org/zap/zapcore"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/wundergraph/cosmo/router/config"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
-	"github.com/wundergraph/cosmo/router/internal/config"
 	"github.com/wundergraph/cosmo/router/internal/controlplane"
 	graphiql2 "github.com/wundergraph/cosmo/router/internal/graphiql"
 	"github.com/wundergraph/cosmo/router/internal/handler/cors"

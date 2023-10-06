@@ -4,34 +4,44 @@ import (
 	"bytes"
 	"context"
 	"net/http/httptest"
-	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/wundergraph/cosmo/demo/pkg/subgraphs"
 	"github.com/wundergraph/cosmo/router/config"
 	"github.com/wundergraph/cosmo/router/core"
 )
 
-func TestMyModule(t *testing.T) {
-
-	if os.Getenv("MODULE_TESTS") == "" {
-		t.Skip("Skipping testing in CI environment")
-	}
+func TestIntegration(t *testing.T) {
 
 	ctx := context.Background()
 	cfg := config.Config{
 		Graph: config.Graph{
 			Name: "production",
 		},
-		Modules: map[string]interface{}{
-			"myModule": MyModule{
-				Value: 1,
-			},
-		},
 	}
 
-	routerConfig, err := core.SerializeConfigFromFile("./router-config.json")
-	assert.Nil(t, err)
+	routerConfig, err := core.SerializeConfigFromFile(filepath.Join("testdata", "config.json"))
+	require.Nil(t, err)
+
+	sg, err := subgraphs.New(&subgraphs.Config{
+		Ports: subgraphs.Ports{
+			Employees: 4001,
+			Family:    4002,
+			Hobbies:   4003,
+			Products:  4004,
+		},
+	})
+	require.Nil(t, err)
+
+	go func() {
+		require.Nil(t, sg.ListenAndServe(ctx))
+	}()
+	t.Cleanup(func() {
+		assert.Nil(t, sg.Shutdown(ctx))
+	})
 
 	rs, err := core.NewRouter(
 		core.WithFederatedGraphName(cfg.Graph.Name),
@@ -39,13 +49,14 @@ func TestMyModule(t *testing.T) {
 		core.WithModulesConfig(cfg.Modules),
 		core.WithListenerAddr("http://localhost:3002"),
 	)
-	assert.Nil(t, err)
+	require.Nil(t, err)
+
 	t.Cleanup(func() {
 		assert.Nil(t, rs.Shutdown(ctx))
 	})
 
 	server, err := rs.NewTestServer(ctx)
-	assert.Nil(t, err)
+	require.Nil(t, err)
 
 	rr := httptest.NewRecorder()
 
@@ -58,8 +69,5 @@ func TestMyModule(t *testing.T) {
 
 	assert.Equal(t, 200, rr.Code)
 
-	// This header was set by the module
-	assert.Equal(t, rr.Result().Header.Get("myHeader"), "myValue")
-
-	assert.JSONEq(t, rr.Body.String(), `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12},{"id":13}]}}`)
+	assert.JSONEq(t, rr.Body.String(), `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`)
 }
