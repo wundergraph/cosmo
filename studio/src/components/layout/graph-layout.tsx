@@ -38,6 +38,7 @@ const icons: { [key: string]: ReactNode } = {
 export interface GraphContextProps {
   graph: GetFederatedGraphByNameResponse["graph"];
   subgraphs: GetFederatedGraphByNameResponse["subgraphs"];
+  graphToken: string;
 }
 
 export const GraphContext = createContext<GraphContextProps | undefined>(
@@ -60,7 +61,11 @@ const GraphLayout = ({ children }: LayoutProps) => {
     if (!data) {
       return undefined;
     }
-    return { graph: data.graph, subgraphs: data.subgraphs };
+    return {
+      graph: data.graph,
+      subgraphs: data.subgraphs,
+      graphToken: data.graphToken,
+    };
   }, [data]);
 
   const links: NavLink[] = useMemo(() => {

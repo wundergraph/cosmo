@@ -256,16 +256,22 @@ const MigrationSuccess = () => {
   return null;
 };
 
-const RunRouterCommand = ({
+export const RunRouterCommand = ({
   open,
   setOpen,
   graphName,
   token,
+  triggerLabel,
+  triggerClassName,
+  hint,
 }: {
   open: boolean;
   setOpen: Dispatch<SetStateAction<boolean>>;
   graphName: string;
   token: string;
+  triggerLabel?: string;
+  triggerClassName?: string;
+  hint?: string;
 }) => {
   const dockerRunCommand = `docker run \\
   --name cosmo-router \\
@@ -288,6 +294,18 @@ const RunRouterCommand = ({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
+      {triggerLabel && (
+        <DialogTrigger className={triggerClassName}>
+          <Button
+            className="w-full"
+            onClick={() => {
+              setOpen(true);
+            }}
+          >
+            {triggerLabel}
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent
         onInteractOutside={(event) => {
           event.preventDefault();
@@ -329,11 +347,9 @@ const RunRouterCommand = ({
                 </div>
               </Button>
             </div>
-            <p className="mt-2 text-xs text-muted-foreground">
-              Hint: The Graph API Token which is scoped to the migrated
-              federated graph is generated. Please store it safely for future
-              use.
-            </p>
+            {hint && (
+              <p className="mt-2 text-xs text-muted-foreground">{`Hint: ${hint}`}</p>
+            )}
           </div>
         </div>
       </DialogContent>
@@ -529,6 +545,9 @@ export const FederatedGraphsCards = ({
             setOpen={setIsMigrationSuccess}
             graphName={graphs[graphs.length - 1].name}
             token={token}
+            hint="The Graph API Token which is scoped to the migrated
+                federated graph is generated. Please store it safely for future
+                use."
           />
         </>
       )}
