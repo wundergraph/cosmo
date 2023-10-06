@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/cespare/xxhash/v2"
@@ -40,6 +41,7 @@ type PreHandler struct {
 	log            *zap.Logger
 	executor       *Executor
 	requestMetrics *metric.Metrics
+	documentPool   *sync.Pool
 }
 
 func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
@@ -47,6 +49,11 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 		log:            opts.Logger,
 		executor:       opts.Executor,
 		requestMetrics: opts.requestMetrics,
+		documentPool: &sync.Pool{
+			New: func() interface{} {
+				return ast.NewSmallDocument()
+			},
+		},
 	}
 }
 
@@ -102,7 +109,9 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			metricBaseFields = append(metricBaseFields, otel.WgOperationName.String(requestOperationName))
 		}
 
-		doc := ast.NewDocument()
+		doc := h.documentPool.Get().(*ast.Document)
+		doc.Reset()
+		defer h.documentPool.Put(doc)
 		doc.Input.ResetInputString(requestQuery)
 		parser := astparser.NewParser()
 		report := &operationreport.Report{}
