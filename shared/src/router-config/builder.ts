@@ -64,6 +64,7 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
       normalizationResult!.configurationDataMap,
     );
     const datasourceConfig = new DataSourceConfiguration({
+      // When changing this, please do it in the router subgraph override as well
       id: subgraph.url,
       childNodes,
       rootNodes,
@@ -91,6 +92,7 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
         },
         subscription: {
           enabled: true,
+          // When changing this, please do it in the router subgraph override as well
           url: new ConfigurationVariable({
             kind: ConfigurationVariableKind.STATIC_CONFIGURATION_VARIABLE,
             staticVariableContent: subgraph.url,
