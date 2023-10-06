@@ -32,7 +32,7 @@ export default (opts: BaseCommandOptions) => {
     let gitInfo: PartialMessage<GitInfo> | undefined;
     const { isPr, commit: commitSha, repository, accountId } = useGitHub();
     if (isPr && commitSha && repository && accountId) {
-      const [repositorySlug, ownerSlug] = repository?.split('/');
+      const [ownerSlug, repositorySlug] = repository?.split('/');
       gitInfo = {
         commitSha,
         accountId,
