@@ -5,7 +5,7 @@ on:
 
 jobs:
   add-labels:
-    if: github.repository_owner == 'wundergraph' }}
+    if: {{ github.repository_owner == 'wundergraph' }}
 
     runs-on: ubuntu-latest
     steps:
