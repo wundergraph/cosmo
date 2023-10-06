@@ -35,7 +35,7 @@ exporters:
     database: cosmo
     traces_table_name: otel_traces
     metrics_table_name: otel_metrics
-    ttl_days: 3
+    ttl_days: 30
     sending_queue:
       queue_size: 5000
     retry_on_failure:
