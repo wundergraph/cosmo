@@ -108,8 +108,6 @@ router:
 # Cosmo Open Telemetry Collector
 otelcollector:
   configuration:
-    promUsername: "admin"
-    promPassword: "test"
     clickhouseDsn: "http://default:changeme@cosmo-clickhouse:8123?database=cosmo&dial_timeout=15s&compress=lz4"
 
 # The following configuration enables the stateful services of the Cosmo Platform
