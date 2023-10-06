@@ -3,11 +3,12 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/rs/cors"
 	"log"
 	"net/http"
 	"os"
 	"time"
+
+	"github.com/rs/cors"
 
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/99designs/gqlgen/graphql/handler"
@@ -16,9 +17,9 @@ import (
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/gorilla/websocket"
 	"github.com/ravilushqa/otelgqlgen"
-	"github.com/wundergraph/cosmo/demo/otel"
-	"github.com/wundergraph/cosmo/demo/products/subgraph"
-	"github.com/wundergraph/cosmo/demo/products/subgraph/generated"
+	"github.com/wundergraph/cosmo/demo/pkg/otel"
+	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/products/subgraph"
+	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/products/subgraph/generated"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 

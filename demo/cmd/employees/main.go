@@ -16,9 +16,9 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/ravilushqa/otelgqlgen"
 	"github.com/rs/cors"
-	"github.com/wundergraph/cosmo/demo/employees/subgraph"
-	"github.com/wundergraph/cosmo/demo/employees/subgraph/generated"
-	"github.com/wundergraph/cosmo/demo/otel"
+	"github.com/wundergraph/cosmo/demo/pkg/otel"
+	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/employees/subgraph"
+	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/employees/subgraph/generated"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 

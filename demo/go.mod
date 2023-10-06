@@ -8,14 +8,11 @@ require (
 	github.com/ravilushqa/otelgqlgen v0.13.1
 	github.com/rs/cors v1.10.1
 	github.com/vektah/gqlparser/v2 v2.5.10
-	github.com/wundergraph/cosmo/demo/employees v0.0.0-20231006093349-928d57d7cea5
-	github.com/wundergraph/cosmo/demo/hobbies v0.0.0-20231006093349-928d57d7cea5
-	github.com/wundergraph/cosmo/demo/otel v0.0.0-20231006093349-928d57d7cea5
-	github.com/wundergraph/cosmo/demo/products v0.0.0-20231006093349-928d57d7cea5
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.45.0
 	go.opentelemetry.io/otel v1.19.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.19.0
 	go.opentelemetry.io/otel/sdk v1.19.0
+	golang.org/x/sync v0.3.0
 )
 
 require (
