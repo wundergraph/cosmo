@@ -2,12 +2,18 @@ package main
 
 import (
 	"context"
+	"flag"
 	"log"
 
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs"
 )
 
+var (
+	debug = flag.Bool("debug", false, "Enable debug logging")
+)
+
 func main() {
+	flag.Parse()
 	config := subgraphs.Config{
 		Ports: subgraphs.Ports{
 			Employees: 4001,
@@ -15,7 +21,7 @@ func main() {
 			Hobbies:   4003,
 			Products:  4004,
 		},
-		EnableDebug: true,
+		EnableDebug: *debug,
 	}
 	subgraphs, err := subgraphs.New(&config)
 	if err != nil {
