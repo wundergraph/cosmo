@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"net"
 	"net/http"
 	"net/url"
@@ -35,6 +34,7 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/logging"
 	"github.com/wundergraph/cosmo/router/internal/metric"
 	"github.com/wundergraph/cosmo/router/internal/otel"
+	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"github.com/wundergraph/cosmo/router/internal/stringsx"
 	"github.com/wundergraph/cosmo/router/internal/trace"
 )
@@ -94,6 +94,8 @@ type (
 		retryOptions retrytransport.RetryOptions
 
 		engineExecutionConfiguration config.EngineExecutionConfiguration
+
+		overrideRoutingURLConfiguration config.OverrideRoutingURLConfiguration
 	}
 
 	// Server is the main router instance.
@@ -221,12 +223,66 @@ func NewRouter(opts ...Option) (*Router, error) {
 	return r, nil
 }
 
+func (r *Router) configureSubgraphOverwrites(cfg *nodev1.RouterConfig) ([]Subgraph, error) {
+	subgraphs := make([]Subgraph, 0, len(cfg.Subgraphs))
+	for _, sg := range cfg.Subgraphs {
+
+		subgraph := Subgraph{
+			Id:   sg.Id,
+			Name: sg.Name,
+		}
+
+		// Validate subgraph url
+		if sg.RoutingUrl == "" {
+			return nil, fmt.Errorf("subgraph '%s' has no routing url", sg.Name)
+		}
+
+		parsedURL, err := url.Parse(sg.RoutingUrl)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse subgraph url '%s': %w", sg.RoutingUrl, err)
+		}
+
+		subgraph.Url = parsedURL
+
+		overrideURL, ok := r.overrideRoutingURLConfiguration.Subgraphs[sg.Name]
+
+		// check if the subgraph is overridden
+		if ok && overrideURL != "" {
+			parsedURL, err := url.Parse(overrideURL)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse override url '%s': %w", overrideURL, err)
+			}
+
+			subgraph.Url = parsedURL
+
+			// Override datasource urls
+			for _, conf := range cfg.EngineConfig.DatasourceConfigurations {
+				fetchURL := conf.CustomGraphql.Fetch.Url
+				subgraphURL := config.LoadStringVariable(fetchURL)
+
+				// Identify the datasource by the previous subgraph url
+				// Override datasource id, url and subgraph url
+				if subgraphURL == sg.RoutingUrl {
+					conf.Id = overrideURL
+					conf.CustomGraphql.Fetch.Url.StaticVariableContent = overrideURL
+					conf.CustomGraphql.Subscription.Url.StaticVariableContent = overrideURL
+					sg.RoutingUrl = overrideURL
+					break
+				}
+			}
+		}
+
+		subgraphs = append(subgraphs, subgraph)
+	}
+
+	return subgraphs, nil
+}
+
 // updateServer starts a new Server. It swaps the active Server with a new Server instance when the config has changed.
 // This method is safe for concurrent use. When the router can't be swapped due to an error the old server kept running.
 func (r *Router) updateServer(ctx context.Context, cfg *nodev1.RouterConfig) error {
 	// Rebuild Server with new router config
 	// In case of an error, we return early and keep the old Server running
-
 	newRouter, err := r.newServer(ctx, cfg)
 	if err != nil {
 		r.logger.Error("Failed to create r new router. Keeping old router running", zap.Error(err))
@@ -249,7 +305,6 @@ func (r *Router) updateServer(ctx context.Context, cfg *nodev1.RouterConfig) err
 
 	// Start new Server
 	go func() {
-
 		if prevRouter != nil {
 			r.logger.Info("Starting Server with new config",
 				zap.String("version", cfg.GetVersion()),
@@ -341,7 +396,6 @@ func (r *Router) initModules(ctx context.Context) error {
 // NewTestServer prepares a new Server instance but does not start it. The method should be only used for testing purposes.
 // Use core.WithStaticRouterConfig to pass the initial config otherwise the engine will error.
 func (r *Router) NewTestServer(ctx context.Context) (*Server, error) {
-
 	if err := r.bootstrap(ctx); err != nil {
 		return nil, fmt.Errorf("failed to bootstrap application: %w", err)
 	}
@@ -356,7 +410,6 @@ func (r *Router) NewTestServer(ctx context.Context) (*Server, error) {
 }
 
 func (r *Router) bootstrap(ctx context.Context) error {
-
 	if r.traceConfig.Enabled {
 		tp, err := trace.StartAgent(r.logger, r.traceConfig)
 		if err != nil {
@@ -419,7 +472,7 @@ func (r *Router) Start(ctx context.Context) error {
 		return fmt.Errorf("config fetcher not provided. Please provide a static router config instead")
 	}
 
-	var initCh = make(chan *nodev1.RouterConfig, 1)
+	initCh := make(chan *nodev1.RouterConfig, 1)
 
 	eg.Go(func() error {
 		for {
@@ -454,6 +507,11 @@ func (r *Router) Start(ctx context.Context) error {
 // newServer creates a new Server instance.
 // All stateful data is copied from the Router over to the new server instance.
 func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfig) (*Server, error) {
+	subgraphs, err := r.configureSubgraphOverwrites(routerConfig)
+	if err != nil {
+		return nil, err
+	}
+
 	ro := &Server{
 		routerConfig: routerConfig,
 		Config:       r.Config,
@@ -586,21 +644,6 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 
 		subChiRouter.Use(graphqlPreHandler.Handler)
 
-		subgraphs := make([]Subgraph, len(routerConfig.Subgraphs))
-		for _, s := range routerConfig.Subgraphs {
-			parsedURL, err := url.Parse(s.RoutingUrl)
-			if err != nil {
-				r.logger.Error("Failed to parse subgraph url", zap.String("url", s.RoutingUrl), zap.Error(err))
-			}
-
-			subgraph := Subgraph{
-				Id:   s.Id,
-				Name: s.Name,
-				Url:  parsedURL,
-			}
-			subgraphs = append(subgraphs, subgraph)
-		}
-
 		// Create custom request context that provides access to the request and response.
 		// It is used by custom modules and handlers. It must be added before custom user middlewares
 		subChiRouter.Use(func(handler http.Handler) http.Handler {
@@ -657,7 +700,6 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 
 // listenAndServe starts the Server and blocks until the Server is shutdown.
 func (r *Server) listenAndServe() error {
-
 	if err := r.Server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		return err
 	}
@@ -882,6 +924,12 @@ func WithLivenessCheckPath(path string) Option {
 func WithHeaderRules(headers config.HeaderRules) Option {
 	return func(r *Router) {
 		r.headerRules = headers
+	}
+}
+
+func WithOverrideRoutingURL(overrideRoutingURL config.OverrideRoutingURLConfiguration) Option {
+	return func(r *Router) {
+		r.overrideRoutingURLConfiguration = overrideRoutingURL
 	}
 }
 

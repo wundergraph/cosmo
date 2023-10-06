@@ -11,7 +11,14 @@ axiosRetry(axios, {
   shouldResetTimeout: true,
 });
 
-export const post = (event: string, data: any, logger: pino.Logger, url: string, key?: string) => {
+export const post = (
+  event: string,
+  data: any,
+  logger: pino.Logger,
+  logLevel: 'error' | 'debug',
+  url: string,
+  key?: string,
+) => {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
@@ -27,9 +34,22 @@ export const post = (event: string, data: any, logger: pino.Logger, url: string,
       headers,
       timeout: 3000,
     })
-    .catch((e) => {
+    .catch((error) => {
       let log = logger.child({ eventName: event });
       log = log.child({ eventData: data });
-      log.debug(`Could not send webhook event`, e.message);
+
+      if (error.response) {
+        log = log.child({ statusCode: error.response.status });
+      } else if (error.request) {
+        log = log.child({ message: 'failed to send request' });
+      } else {
+        log = log.child({ message: error.message });
+      }
+
+      if (logLevel === 'error') {
+        log.error('Could not send webhook event');
+      } else {
+        log.debug('Could not send webhook event');
+      }
     });
 };
