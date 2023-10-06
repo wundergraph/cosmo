@@ -25,6 +25,11 @@ var (
 	mp *sdkmetric.MeterProvider
 )
 
+const (
+	defaultExportTimeout  = 30 * time.Second
+	defaultExportInterval = 15 * time.Second
+)
+
 // StartAgent starts an opentelemetry metric agent.
 func StartAgent(ctx context.Context, log *zap.Logger, c *Config) (*sdkmetric.MeterProvider, error) {
 	return startAgent(ctx, log, c)
@@ -183,8 +188,8 @@ func startAgent(ctx context.Context, log *zap.Logger, c *Config) (*sdkmetric.Met
 				)),
 				sdkmetric.WithReader(
 					sdkmetric.NewPeriodicReader(exporter,
-						sdkmetric.WithTimeout(30*time.Second),
-						sdkmetric.WithInterval(15*time.Second),
+						sdkmetric.WithTimeout(defaultExportTimeout),
+						sdkmetric.WithInterval(defaultExportInterval),
 					),
 				))
 		}
