@@ -56,21 +56,6 @@ spec:
               containerPort: 13133
               protocol: TCP
           env:
-            - name: PROMETHEUS_REMOTE_ENDPOINT
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "otelcollector.fullname" . }}
-                  key: promRemoteWriteEndpoint
-            - name: PROMETHEUS_USERNAME
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "otelcollector.fullname" . }}
-                  key: promUsername
-            - name: PROMETHEUS_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "otelcollector.fullname" . }}
-                  key: promPassword
             - name: CLICKHOUSE_ENDPOINT
               valueFrom:
                 secretKeyRef:

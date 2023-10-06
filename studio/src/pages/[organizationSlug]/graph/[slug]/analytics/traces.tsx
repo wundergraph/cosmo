@@ -27,7 +27,7 @@ export type OperationAnalytics = {
 const AnalyticsPage: NextPageWithLayout = () => {
   const graphContext = useContext(GraphContext);
 
-  const { name, filters, pagination, dateRange, page, refreshInterval } =
+  const { name, filters, pagination, dateRange, page, refreshInterval, sort } =
     useAnalyticsQueryState();
 
   let { data, isFetching, isLoading, error, refetch } = useQuery({
@@ -38,6 +38,7 @@ const AnalyticsPage: NextPageWithLayout = () => {
         filters,
         dateRange,
         pagination,
+        sort
       },
     }),
     keepPreviousData: true,

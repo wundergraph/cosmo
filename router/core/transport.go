@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 	"time"
 
 	"github.com/wundergraph/cosmo/router/internal/otel"
@@ -123,7 +124,12 @@ func (t TransportFactory) RoundTripper(transport http.RoundTripper, enableStream
 					if operation.name != "" {
 						span.SetAttributes(otel.WgOperationName.String(operation.name))
 					}
-					span.SetAttributes(otel.WgOperationType.String(operation.opType))
+					if operation.opType != "" {
+						span.SetAttributes(otel.WgOperationType.String(operation.opType))
+					}
+					if operation.hash != 0 {
+						span.SetAttributes(otel.WgOperationHash.String(strconv.FormatUint(operation.hash, 10)))
+					}
 				}
 
 				subgraph := reqContext.ActiveSubgraph(r)

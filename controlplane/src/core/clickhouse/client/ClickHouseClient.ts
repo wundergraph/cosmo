@@ -188,8 +188,8 @@ export class ClickHouseClient {
    * Promise based query
    * @private
    */
-  private _queryPromise<T = any>(query: string, params?: Record<string, string | number>) {
-    return new Promise<T[] | string>((resolve, reject) => {
+  private _queryPromise<T = string>(query: string, params?: Record<string, string | number>) {
+    return new Promise<T extends string ? string | T[] : T[]>((resolve, reject) => {
       axios
         .request({
           ...this._getRequestOptions(query, params),
@@ -202,7 +202,7 @@ export class ClickHouseClient {
             case ClickHouseDataFormat.JSONCompact:
             case ClickHouseDataFormat.JSONCompactStrings:
             case ClickHouseDataFormat.JSONStrings: {
-              return resolve(JSON.parse(data).data as T[]);
+              return resolve(JSON.parse(data).data);
             }
             default: {
               return resolve(data);
