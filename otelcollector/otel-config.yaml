@@ -35,12 +35,12 @@ exporters:
     database: cosmo
     traces_table_name: otel_traces
     metrics_table_name: otel_metrics
-    ttl_days: 30
+    ttl_days: 3
     sending_queue:
       queue_size: 5000
     retry_on_failure:
       enabled: true
-      initial_interval: 10s
+      initial_interval: 5s
       max_interval: 30s
       max_elapsed_time: 300s
 
