@@ -4,10 +4,10 @@ on:
     types: [opened]
 
 jobs:
-  add-labels:
-    if: {{ github.repository_owner == 'wundergraph' }}
-
+  add-disclaimer:
     runs-on: ubuntu-latest
+    permissions:
+      issues: write
     steps:
       - name: Create comment
         uses: peter-evans/create-or-update-comment@v3
