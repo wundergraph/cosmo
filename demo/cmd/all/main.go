@@ -1,9 +1,14 @@
 package main
 
-import "github.com/wundergraph/cosmo/demo/pkg/subgraphs"
+import (
+	"context"
+	"log"
+
+	"github.com/wundergraph/cosmo/demo/pkg/subgraphs"
+)
 
 func main() {
-	config := subgraphs.Subgraphs{
+	config := subgraphs.Config{
 		Ports: subgraphs.Ports{
 			Employees: 4001,
 			Family:    4002,
@@ -12,5 +17,9 @@ func main() {
 		},
 		EnableDebug: true,
 	}
-	subgraphs.Listen(config)
+	subgraphs, err := subgraphs.New(&config)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Fatal(subgraphs.ListenAndServe(context.Background()))
 }
