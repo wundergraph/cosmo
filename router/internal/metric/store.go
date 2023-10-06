@@ -17,7 +17,8 @@ const (
 	ResponseContentLengthCounter  = "router.http.response.content_length"       // Outgoing response bytes total
 	InFlightRequestsUpDownCounter = "router.http.requests.in_flight.count"      // Number of requests in flight
 
-	cosmoRouterMeterName = "cosmo.router"
+	cosmoRouterMeterName    = "cosmo.router"
+	cosmoRouterMeterVersion = "0.0.1"
 
 	unitBytes        = "bytes"
 	unitMilliseconds = "ms"
@@ -61,7 +62,9 @@ func (h *Metrics) createMeasures() error {
 	h.valueRecorders = make(map[string]otelmetric.Float64Histogram)
 	h.upDownCounters = make(map[string]otelmetric.Int64UpDownCounter)
 
-	routerMeter := h.meterProvider.Meter(cosmoRouterMeterName)
+	routerMeter := h.meterProvider.Meter(cosmoRouterMeterName,
+		otelmetric.WithInstrumentationVersion(cosmoRouterMeterVersion),
+	)
 	requestCounter, err := routerMeter.Int64Counter(
 		RequestCounter,
 		otelmetric.WithDescription("Total number of requests"),
