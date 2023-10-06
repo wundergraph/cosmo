@@ -459,6 +459,8 @@ export const organizationMemberRolesRelations = relations(organizationMemberRole
   }),
 }));
 
+export const webhookTypeEnum = pgEnum('webhook_type', ['webhook', 'slack']);
+
 export const organizationWebhooks = pgTable('organization_webhook_configs', {
   id: uuid('id').notNull().primaryKey().defaultRandom(),
   organizationId: uuid('organization_id')
@@ -469,6 +471,7 @@ export const organizationWebhooks = pgTable('organization_webhook_configs', {
   endpoint: text('endpoint'),
   key: text('key'),
   events: text('events').array(),
+  type: webhookTypeEnum('type').notNull().default('webhook'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 

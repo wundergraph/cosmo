@@ -501,6 +501,7 @@ export class OrganizationRepository {
       id: r.id,
       endpoint: r.endpoint ?? '',
       events: r.events ?? [],
+      type: r.type,
     }));
   }
 

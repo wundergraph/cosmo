@@ -24,6 +24,7 @@ type Config = {
   key?: string;
   allowedUserEvents?: string[];
   meta: PartialMessage<EventMeta>[];
+  type: string;
 };
 
 export class OrganizationWebhookService {
@@ -65,6 +66,7 @@ export class OrganizationWebhookService {
         url: config?.endpoint ?? '',
         key: config?.key ?? '',
         allowedUserEvents: config?.events ?? [],
+        type: config.type,
         meta,
       });
     }
@@ -113,11 +115,40 @@ export class OrganizationWebhookService {
         continue;
       }
 
-      const data = {
-        version: 1,
-        event: OrganizationEventName[eventName],
-        payload: eventPayload,
-      };
+      let data = {};
+      if (config.type === 'webhook') {
+        data = {
+          version: 1,
+          event: OrganizationEventName[eventName],
+          payload: eventPayload,
+        };
+      } else {
+        data = {
+          blocks: [
+            {
+              type: 'header',
+              text: {
+                type: 'plain_text',
+                text: `Schema of the federated graph ${eventPayload.federated_graph.name} has been updated`,
+              },
+            },
+            {
+              type: 'section',
+              text: {
+                type: 'mrkdwn',
+                text: `*Has composition errors*: ${eventPayload.errors}`,
+              },
+            },
+            {
+              type: 'section',
+              text: {
+                type: 'mrkdwn',
+                text: '<https://wundergraph.com|View schema>',
+              },
+            },
+          ],
+        };
+      }
 
       post(OrganizationEventName[eventName], data, this.logger, config.url!, config.key);
     }

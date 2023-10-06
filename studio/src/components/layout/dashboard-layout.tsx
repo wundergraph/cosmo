@@ -43,7 +43,7 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
         icon: <IoKeyOutline />,
       },
       {
-        title: "Webhooks",
+        title: "Alerts",
         href: basePath + "/webhooks",
         icon: <PiWebhooksLogo />,
       },

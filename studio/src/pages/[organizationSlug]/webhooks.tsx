@@ -39,6 +39,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
 import { docsBaseURL } from "@/lib/constants";
@@ -57,16 +58,20 @@ import {
   getOrganizationWebhookMeta,
   updateOrganizationWebhookConfig,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+import { WebhookType } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import {
   EventMeta,
   OrganizationEventName,
 } from "@wundergraph/cosmo-connect/dist/webhooks/events_pb";
 import Link from "next/link";
+import { useRouter } from "next/router";
 import { useContext, useEffect, useMemo, useState } from "react";
 import { PiWebhooksLogo } from "react-icons/pi";
 import { z } from "zod";
 
 type EventsMeta = Array<PartialMessage<EventMeta>>;
+
+type AlertTab = "webhooks" | "integrations";
 
 const DeleteWebhook = ({
   id,
@@ -578,6 +583,35 @@ const Webhook = ({
   );
 };
 
+export const AlertTabs = ({ tab }: { tab: AlertTab }) => {
+  const router = useRouter();
+
+  return (
+    <Tabs defaultValue={tab}>
+      <TabsList>
+        <TabsTrigger value="webhooks" asChild>
+          <Link
+            href={{
+              pathname: `/${router.query.organizationSlug}/webhooks`,
+            }}
+          >
+            Webhooks
+          </Link>
+        </TabsTrigger>
+        <TabsTrigger value="integrations" asChild>
+          <Link
+            href={{
+              pathname: `/${router.query.organizationSlug}/integrations`,
+            }}
+          >
+            Integrations
+          </Link>
+        </TabsTrigger>
+      </TabsList>
+    </Tabs>
+  );
+};
+
 const WebhooksPage: NextPageWithLayout = () => {
   const user = useContext(UserContext);
   const { data, isLoading, error, refetch } = useQuery({
@@ -603,7 +637,9 @@ const WebhooksPage: NextPageWithLayout = () => {
       />
     );
 
-  if (data.configs.length === 0) {
+  const webhooks = data.configs.filter((w) => w.type === "webhook");
+
+  if (webhooks.length === 0) {
     return (
       <EmptyState
         icon={<PiWebhooksLogo />}
@@ -629,7 +665,7 @@ const WebhooksPage: NextPageWithLayout = () => {
   return (
     <div className="flex flex-col gap-y-6">
       <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-muted-foreground ml-1">
           Webhooks are used to receive certain events from the platform.{" "}
           <Link
             href={docsBaseURL + "/studio/webhooks"}
@@ -651,7 +687,7 @@ const WebhooksPage: NextPageWithLayout = () => {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {data.configs.map(({ id, endpoint, events }) => {
+          {webhooks.map(({ id, endpoint, events }) => {
             return (
               <TableRow key={id}>
                 <TableCell className="font-medium">{endpoint}</TableCell>
@@ -690,7 +726,10 @@ const WebhooksPage: NextPageWithLayout = () => {
 
 WebhooksPage.getLayout = (page) => {
   return getDashboardLayout(
-    page,
+    <div className="flex flex-col gap-y-4">
+      <AlertTabs tab="webhooks" />
+      <>{page}</>
+    </div>,
     "Webhooks",
     "Configure webhooks for your organization"
   );

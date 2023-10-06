@@ -617,11 +617,17 @@ message Header{
   string value = 2;
 }
 
+enum WebhookType {
+  WEBHOOK = 0;
+  SLACK = 1;
+}
+
 message CreateOrganizationWebhookConfigRequest {
   string endpoint = 1;
   string key = 2;
   repeated string events = 3;
   repeated wg.cosmo.webhooks.EventMeta events_meta = 4;
+  WebhookType type = 5;
 }
 
 message CreateOrganizationWebhookConfigResponse {
@@ -635,6 +641,7 @@ message GetOrganizationWebhookConfigsResponse {
     string id = 1;
     string endpoint = 2;
     repeated string events = 3;
+    string type = 4;
   }
   Response response = 1;
   repeated Config configs = 2;

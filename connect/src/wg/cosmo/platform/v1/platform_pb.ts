@@ -217,6 +217,26 @@ proto3.util.setEnumType(ExpiresAt, "wg.cosmo.platform.v1.ExpiresAt", [
 ]);
 
 /**
+ * @generated from enum wg.cosmo.platform.v1.WebhookType
+ */
+export enum WebhookType {
+  /**
+   * @generated from enum value: WEBHOOK = 0;
+   */
+  WEBHOOK = 0,
+
+  /**
+   * @generated from enum value: SLACK = 1;
+   */
+  SLACK = 1,
+}
+// Retrieve enum metadata with: proto3.getEnumType(WebhookType)
+proto3.util.setEnumType(WebhookType, "wg.cosmo.platform.v1.WebhookType", [
+  { no: 0, name: "WEBHOOK" },
+  { no: 1, name: "SLACK" },
+]);
+
+/**
  * @generated from message wg.cosmo.platform.v1.Label
  */
 export class Label extends Message<Label> {
@@ -4802,6 +4822,11 @@ export class CreateOrganizationWebhookConfigRequest extends Message<CreateOrgani
    */
   eventsMeta: EventMeta[] = [];
 
+  /**
+   * @generated from field: wg.cosmo.platform.v1.WebhookType type = 5;
+   */
+  type = WebhookType.WEBHOOK;
+
   constructor(data?: PartialMessage<CreateOrganizationWebhookConfigRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -4814,6 +4839,7 @@ export class CreateOrganizationWebhookConfigRequest extends Message<CreateOrgani
     { no: 2, name: "key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "events", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 4, name: "events_meta", kind: "message", T: EventMeta, repeated: true },
+    { no: 5, name: "type", kind: "enum", T: proto3.getEnumType(WebhookType) },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateOrganizationWebhookConfigRequest {
@@ -4963,6 +4989,11 @@ export class GetOrganizationWebhookConfigsResponse_Config extends Message<GetOrg
    */
   events: string[] = [];
 
+  /**
+   * @generated from field: string type = 4;
+   */
+  type = "";
+
   constructor(data?: PartialMessage<GetOrganizationWebhookConfigsResponse_Config>) {
     super();
     proto3.util.initPartial(data, this);
@@ -4974,6 +5005,7 @@ export class GetOrganizationWebhookConfigsResponse_Config extends Message<GetOrg
     { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "endpoint", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "events", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 4, name: "type", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetOrganizationWebhookConfigsResponse_Config {
