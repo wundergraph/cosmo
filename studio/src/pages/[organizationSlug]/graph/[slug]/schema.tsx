@@ -1,7 +1,7 @@
 import { GraphContext, getGraphLayout } from "@/components/layout/graph-layout";
 import { PageHeader } from "@/components/layout/head";
 import { TitleLayout } from "@/components/layout/title-layout";
-import { SchemaViewer, SchemaViewerActions } from "@/components/schmea-viewer";
+import { SchemaViewer, SchemaViewerActions } from "@/components/schema-viewer";
 import {
   Select,
   SelectContent,
@@ -25,6 +25,7 @@ import {
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { useContext, useEffect, useState } from "react";
 import { PiGraphLight } from "react-icons/pi";
+import { formatDateTime } from "@/lib/format-date";
 
 const useScrollIntoView = (lineNo: string) => {
   const [isMounted, setIsMounted] = useState(false);
@@ -169,9 +170,7 @@ const SchemaPage: NextPageWithLayout = () => {
         {activeGraphWithSDL.time && (
           <p className="flex items-center gap-x-1">
             Last updated :
-            <span>
-              {format(new Date(activeGraphWithSDL.time), "dd MMMM yyyy HH:mm")}
-            </span>
+            <span>{formatDateTime(new Date(activeGraphWithSDL.time))}</span>
           </p>
         )}
       </div>

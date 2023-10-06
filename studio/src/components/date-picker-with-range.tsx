@@ -1,5 +1,5 @@
 import * as React from "react";
-import { addDays, addYears, format } from "date-fns";
+import { addDays, addYears } from "date-fns";
 import { DateRange } from "react-day-picker";
 
 import { cn } from "@/lib/utils";
@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/popover";
 import CalendarIcon from "@heroicons/react/24/outline/CalendarIcon";
 import useWindowSize from "@/hooks/use-window-size";
+import { formatDate } from "@/lib/format-date";
 
 export function DatePickerWithRange({
   selectedDateRange,
@@ -32,7 +33,7 @@ export function DatePickerWithRange({
           id="date"
           variant={"outline"}
           className={cn(
-            "w-[280px] justify-center text-left font-normal",
+            "w-[240px] justify-center text-left font-normal",
             className,
             !selectedDateRange && "text-muted-foreground"
           )}
@@ -41,11 +42,11 @@ export function DatePickerWithRange({
           {selectedDateRange?.from ? (
             selectedDateRange.to ? (
               <>
-                {format(selectedDateRange.from, "LLL dd, y")} -{" "}
-                {format(selectedDateRange.to, "LLL dd, y")}
+                {formatDate(selectedDateRange.from)} -{" "}
+                {formatDate(selectedDateRange.to)}
               </>
             ) : (
-              format(selectedDateRange.from, "LLL dd, y")
+              formatDate(selectedDateRange.from)
             )
           ) : (
             <span>Pick a date</span>

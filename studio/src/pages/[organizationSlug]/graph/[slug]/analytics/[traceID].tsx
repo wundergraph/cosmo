@@ -3,7 +3,7 @@ import { EmptyState } from "@/components/empty-state";
 import { getGraphLayout } from "@/components/layout/graph-layout";
 import { PageHeader } from "@/components/layout/head";
 import { TitleLayout } from "@/components/layout/title-layout";
-import { SchemaViewer } from "@/components/schmea-viewer";
+import { SchemaViewer } from "@/components/schema-viewer";
 import { Button } from "@/components/ui/button";
 import { Loader } from "@/components/ui/loader";
 import { NextPageWithLayout } from "@/lib/page";

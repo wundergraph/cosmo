@@ -11,6 +11,7 @@ const (
 	WgClientName          = attribute.Key("wg.client.name")
 	WgClientVersion       = attribute.Key("wg.client.version")
 	WgRouterGraphName     = attribute.Key("wg.router.graph.name")
+	WgRouterVersion       = attribute.Key("wg.router.version")
 	WgRouterConfigVersion = attribute.Key("wg.router.config.version")
 	WgSubgraphID          = attribute.Key("wg.subgraph.id")
 	WgSubgraphName        = attribute.Key("wg.subgraph.name")

@@ -59,7 +59,6 @@ Now, add the following entries to your `/etc/hosts` file and replace the IP with
 192.168.49.2 router.wundergraph.local
 192.168.49.2 keycloak.wundergraph.local
 192.168.49.2 otelcollector.wundergraph.local
-192.168.49.2 prometheus.wundergraph.local
 ```
 
 #### 4. Access the Cosmo Studio

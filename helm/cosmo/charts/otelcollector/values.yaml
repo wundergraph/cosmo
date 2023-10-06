@@ -132,5 +132,4 @@ collectorConfigOverride:
 configuration:
   promUsername: "admin"
   promPassword: "test"
-  promWriteEndpoint: "http://prometheus.wundergraph.local/api/v1/write"
   clickhouseDsn: "http://default:changeme@cosmo-clickhouse:8123?database=cosmo&dial_timeout=15s&compress=lz4"

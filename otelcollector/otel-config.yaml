@@ -1,6 +1,10 @@
 receivers:
   otlp:
     protocols:
+      grpc:
+        endpoint: '0.0.0.0:4317'
+        auth:
+          authenticator: jwt
       http:
         endpoint: '0.0.0.0:4318'
         auth:
@@ -25,44 +29,22 @@ processors:
     check_interval: 1s
 
 exporters:
-  prometheusremotewrite:
-    endpoint: "${PROMETHEUS_REMOTE_ENDPOINT}"
-    namespace: "cosmo"
-    auth:
-      authenticator: basicauth/prw
-    retry_on_failure:
-      enabled: true
-      initial_interval: 5s
-      max_interval: 30s
-      max_elapsed_time: 60s
-    remote_write_queue:
-      # Maximum number of batches kept in memory before dropping;
-      queue_size: 1000
-      # Number of consumers that dequeue batches
-      num_consumers: 10
-    timeout: 5s
-    target_info:
-      enabled: true
   clickhouse:
     endpoint: ${CLICKHOUSE_ENDPOINT}
     timeout: 10s
     database: cosmo
     traces_table_name: otel_traces
     metrics_table_name: otel_metrics
-    ttl_days: 30
+    ttl_days: 3
     sending_queue:
       queue_size: 5000
     retry_on_failure:
       enabled: true
-      initial_interval: 10s
+      initial_interval: 5s
       max_interval: 30s
       max_elapsed_time: 300s
 
 extensions:
-  basicauth/prw:
-    client_auth:
-      username: ${PROMETHEUS_USERNAME}
-      password: ${PROMETHEUS_PASSWORD}
   health_check:
     path: /health
     endpoint: 0.0.0.0:13133
@@ -70,13 +52,13 @@ extensions:
     secret: ${OTEL_INGEST_JWT_SECRET}
 
 service:
-  extensions: [health_check, jwt, basicauth/prw]
+  extensions: [health_check, jwt]
   pipelines:
     metrics:
       receivers: [otlp]
       # Order is important here. Otherwise, the attributes processor will not be able to read the attributes from the auth context.
       processors: [attributes/from_auth_context, memory_limiter, batch]
-      exporters: [prometheusremotewrite]
+      exporters: [clickhouse]
     traces:
       receivers: [otlp]
       # Order is important here. Otherwise, the attributes processor will not be able to read the attributes from the auth context.

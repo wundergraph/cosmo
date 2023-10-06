@@ -19,13 +19,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { CLI } from "@/components/ui/cli";
+import { formatDateTime } from "@/lib/format-date";
 import { NextPageWithLayout } from "@/lib/page";
 import {
   ExclamationCircleIcon,
   ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
 import { RocketIcon } from "@radix-ui/react-icons";
-import { format } from "date-fns";
 import { useRouter } from "next/router";
 import { useContext, useState } from "react";
 import { ReactFlowProvider } from "reactflow";
@@ -58,7 +58,7 @@ const Details = () => {
             <CardDescription>
               Last updated:{" "}
               {lastUpdatedAt
-                ? `on ${format(new Date(lastUpdatedAt), "dd MMMM yyyy HH:mm")}`
+                ? `on ${formatDateTime(new Date(lastUpdatedAt))}`
                 : "Never"}
             </CardDescription>
           </CardHeader>

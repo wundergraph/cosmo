@@ -21,4 +21,4 @@ RUN /otelcol --version
 
 
 ENTRYPOINT ["/otelcol"]
-CMD ["--config", "/etc/otel-config.yaml", "--feature-gates=pkg.translator.prometheus.NormalizeName"]
+CMD ["--config", "/etc/otel-config.yaml"]

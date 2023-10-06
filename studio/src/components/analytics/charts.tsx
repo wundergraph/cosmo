@@ -12,13 +12,13 @@ import {
 } from "recharts";
 import React from "react";
 import useWindowSize from "@/hooks/use-window-size";
-import { format } from "date-fns";
+import { formatDateTime } from "@/lib/format-date";
 
 const labelFormatter = (label: number, utc?: boolean) => {
   return utc
     ? new Date(label).toUTCString()
     : label
-    ? format(label, "PPpp")
+    ? formatDateTime(label)
     : label;
 };
 

@@ -1,15 +1,26 @@
 import {
   ColumnFiltersState,
   PaginationState,
+  SortingState,
   Table,
 } from "@tanstack/react-table";
 import { endOfDay, formatISO, startOfDay, subDays } from "date-fns";
 import isEqual from "lodash/isEqual";
 import { useRouter } from "next/router";
 import { AnalyticsViewGroupName } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { DateRange } from "react-day-picker";
 import { refreshIntervals } from "./data-table";
+
+export const getDefaultSort = (group?: string) => {
+  return group ? [{
+    id: 'totalRequests',
+    desc: true
+  }] : [{
+    id: 'unixTimestamp',
+    desc: true
+  }]
+}
 
 export const useSyncTableWithQuery = <T>({
   table,
@@ -18,6 +29,7 @@ export const useSyncTableWithQuery = <T>({
   selectedDateRange,
   setDateRange,
   setColumnFilters,
+  setSorting,
   pagination,
   setPagination,
   refreshInterval,
@@ -29,12 +41,15 @@ export const useSyncTableWithQuery = <T>({
   selectedDateRange: DateRange;
   setDateRange: (newVal: DateRange) => unknown;
   setColumnFilters: (newVal: ColumnFiltersState) => void;
+  setSorting: (state: SortingState) => void;
   pagination: PaginationState;
   setPagination: (newVal: PaginationState) => void;
   refreshInterval: (typeof refreshIntervals)[number];
   onRefreshIntervalChange: (ri: (typeof refreshIntervals)[number]) => void;
 }) => {
   const router = useRouter();
+
+  const initial = useRef(true)
 
   const selectedFilters = table.getState().columnFilters;
 
@@ -121,6 +136,14 @@ export const useSyncTableWithQuery = <T>({
         }
         onRefreshIntervalChange(refreshIntervalObject);
       }
+
+      if (router.query.sort) {
+        setSorting([{ id: router.query.sort.toString(), desc: router.query.sortDir?.toString() !== 'asc'}])
+      } else if (!initial.current) {
+        setSorting([])
+      }
+
+      initial.current = false
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
@@ -131,5 +154,7 @@ export const useSyncTableWithQuery = <T>({
     router.query.pageSize,
     router.query.dateRange,
     router.query.refreshInterval,
+    router.query.sort,
+    router.query.sortDir
   ]);
 };

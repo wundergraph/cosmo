@@ -3,9 +3,10 @@ import {
   differenceInHours,
   differenceInMinutes,
 } from "date-fns";
+import { formatDateTime } from "./format-date";
 
 export const dateFormatter = (tick: number, utc: boolean) =>
-  utc ? new Date(tick).toUTCString() : new Date(tick).toLocaleString();
+  utc ? new Date(tick).toUTCString() : formatDateTime(tick);
 
 export const valueFormatter = (tick: number) =>
   tick === 0 || tick % 1 != 0 ? "" : `${tick}`;
