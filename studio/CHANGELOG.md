@@ -4,6 +4,23 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.22.0](https://github.com/wundergraph/cosmo/compare/studio@0.21.0...studio@0.22.0) (2023-10-06)
+
+### Features
+
+* display router initiation command ([#158](https://github.com/wundergraph/cosmo/issues/158)) ([284200b](https://github.com/wundergraph/cosmo/commit/284200b5ebae35a348fef1a650d268800f3887ac)) (@JivusAyrus)
+* use clickhouse as metric storage ([#137](https://github.com/wundergraph/cosmo/issues/137)) ([c5e9bf4](https://github.com/wundergraph/cosmo/commit/c5e9bf4b74d32f3cae7da27b6170300c1a462e52)) (@StarpTech)
+
+# [0.21.0](https://github.com/wundergraph/cosmo/compare/studio@0.20.0...studio@0.21.0) (2023-10-05)
+
+### Bug Fixes
+
+* sdl viewer overflow ([#148](https://github.com/wundergraph/cosmo/issues/148)) ([bf1b8e8](https://github.com/wundergraph/cosmo/commit/bf1b8e8f9435f90ee152bcb4c1780a854f4a96c7)) (@thisisnithin)
+
+### Features
+
+* configurable webhook events ([#149](https://github.com/wundergraph/cosmo/issues/149)) ([54836cc](https://github.com/wundergraph/cosmo/commit/54836cc5cb5a4fb46817ec04e82bfafaa134d59c)) (@thisisnithin)
+
 # [0.20.0](https://github.com/wundergraph/cosmo/compare/studio@0.19.0...studio@0.20.0) (2023-10-04)
 
 ### Bug Fixes

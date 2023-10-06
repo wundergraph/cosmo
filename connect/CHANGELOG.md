@@ -4,6 +4,20 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.19.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.18.0...@wundergraph/cosmo-connect@0.19.0) (2023-10-06)
+
+### Features
+
+* display router initiation command ([#158](https://github.com/wundergraph/cosmo/issues/158)) ([284200b](https://github.com/wundergraph/cosmo/commit/284200b5ebae35a348fef1a650d268800f3887ac)) (@JivusAyrus)
+* use clickhouse as metric storage ([#137](https://github.com/wundergraph/cosmo/issues/137)) ([c5e9bf4](https://github.com/wundergraph/cosmo/commit/c5e9bf4b74d32f3cae7da27b6170300c1a462e52)) (@StarpTech)
+
+# [0.18.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.17.0...@wundergraph/cosmo-connect@0.18.0) (2023-10-05)
+
+### Features
+
+* configurable webhook events ([#149](https://github.com/wundergraph/cosmo/issues/149)) ([54836cc](https://github.com/wundergraph/cosmo/commit/54836cc5cb5a4fb46817ec04e82bfafaa134d59c)) (@thisisnithin)
+* implement list and delete router tokens ([#146](https://github.com/wundergraph/cosmo/issues/146)) ([72543f7](https://github.com/wundergraph/cosmo/commit/72543f796c66d155782cd90bc4828803fbb971c7)) (@JivusAyrus)
+
 # [0.17.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.16.0...@wundergraph/cosmo-connect@0.17.0) (2023-10-04)
 
 ### Features

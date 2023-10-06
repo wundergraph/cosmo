@@ -4,6 +4,30 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.19.3](https://github.com/wundergraph/cosmo/compare/wgc@0.19.2...wgc@0.19.3) (2023-10-06)
+
+### Bug Fixes
+
+* repository and owner slug swapped ([#166](https://github.com/wundergraph/cosmo/issues/166)) ([1b61193](https://github.com/wundergraph/cosmo/commit/1b61193751992ee81e80a7712aeb9b9c69d3045a)) (@thisisnithin)
+
+## [0.19.2](https://github.com/wundergraph/cosmo/compare/wgc@0.19.1...wgc@0.19.2) (2023-10-06)
+
+### Bug Fixes
+
+* cli reading incorrect github sha ([#162](https://github.com/wundergraph/cosmo/issues/162)) ([89de9a5](https://github.com/wundergraph/cosmo/commit/89de9a5435f7538a275f5931cd5a473b065cae04)) (@thisisnithin)
+
+## [0.19.1](https://github.com/wundergraph/cosmo/compare/wgc@0.19.0...wgc@0.19.1) (2023-10-06)
+
+### Bug Fixes
+
+* update local demo script and fix the create router token cmd ([#151](https://github.com/wundergraph/cosmo/issues/151)) ([b305cfb](https://github.com/wundergraph/cosmo/commit/b305cfb4710316f6ebb63e1b8f40362b06e38c42)) (@JivusAyrus)
+
+# [0.19.0](https://github.com/wundergraph/cosmo/compare/wgc@0.18.0...wgc@0.19.0) (2023-10-05)
+
+### Features
+
+* implement list and delete router tokens ([#146](https://github.com/wundergraph/cosmo/issues/146)) ([72543f7](https://github.com/wundergraph/cosmo/commit/72543f796c66d155782cd90bc4828803fbb971c7)) (@JivusAyrus)
+
 # [0.18.0](https://github.com/wundergraph/cosmo/compare/wgc@0.17.0...wgc@0.18.0) (2023-10-04)
 
 ### Features

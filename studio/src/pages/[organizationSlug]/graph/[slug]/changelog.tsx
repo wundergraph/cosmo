@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { CLI } from "@/components/ui/cli";
 import { Loader } from "@/components/ui/loader";
 import { docsBaseURL } from "@/lib/constants";
+import { formatDateTime } from "@/lib/format-date";
 import { NextPageWithLayout } from "@/lib/page";
 import { cn } from "@/lib/utils";
 import { CommandLineIcon } from "@heroicons/react/24/outline";
@@ -27,7 +28,7 @@ import {
   FederatedGraphChangelogOutput,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { noCase } from "change-case";
-import { endOfDay, format, formatISO, startOfDay, subDays } from "date-fns";
+import { endOfDay, formatISO, startOfDay, subDays } from "date-fns";
 import { useRouter } from "next/router";
 import { useCallback, useContext, useEffect, useState } from "react";
 import { DateRange } from "react-day-picker";
@@ -325,7 +326,7 @@ const ChangelogPage: NextPageWithLayout = () => {
                   key={createdAt}
                   className="text-left text-muted-foreground hover:text-foreground hover:underline"
                 >
-                  {format(new Date(createdAt), "dd MMM yyyy HH:mm")}
+                  {formatDateTime(new Date(createdAt))}
                 </button>
               );
             })}
@@ -345,7 +346,7 @@ const ChangelogPage: NextPageWithLayout = () => {
               <div className="flex w-full flex-col items-start gap-x-16 gap-y-4 lg:flex-row">
                 <div className="flex flex-col items-end gap-y-1">
                   <time className="mt-2 text-sm font-bold leading-none">
-                    {format(new Date(createdAt), "dd MMM yyyy HH:mm")}
+                    {formatDateTime(new Date(createdAt))}
                   </time>
                   <p className="text-sm font-bold text-muted-foreground">
                     {id.slice(0, 6)}

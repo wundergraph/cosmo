@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/wundergraph/cosmo/router/internal/logging"
+	"github.com/wundergraph/cosmo/router/internal/otel/otelconfig"
 	"go.uber.org/zap"
 
 	"github.com/go-playground/validator/v10"
@@ -35,12 +36,23 @@ type Graph struct {
 	Token string `yaml:"token" envconfig:"GRAPH_API_TOKEN" validate:"required"`
 }
 
+type TracingExporterConfig struct {
+	BatchTimeout  time.Duration `yaml:"batch_timeout" default:"10s" validate:"required,min=5s,max=120s"`
+	ExportTimeout time.Duration `yaml:"export_timeout" default:"30s" validate:"required,min=5s,max=120s"`
+}
+
+type TracingExporter struct {
+	Exporter              otelconfig.Exporter `yaml:"exporter" validate:"oneof=http grpc"`
+	Endpoint              string              `yaml:"endpoint" validate:"http_url"`
+	HTTPPath              string              `yaml:"path"`
+	Headers               map[string]string   `yaml:"headers"`
+	TracingExporterConfig `yaml:",inline"`
+}
+
 type Tracing struct {
-	Enabled bool `yaml:"enabled" default:"true" envconfig:"TRACING_ENABLED"`
-	Config  struct {
-		BatchTimeout time.Duration `yaml:"batch_timeout" default:"10s" validate:"required,min=5s,max=120s" envconfig:"TRACING_BATCH_TIMEOUT"`
-		SamplingRate float64       `yaml:"sampling_rate" default:"1" validate:"required,min=0,max=1" envconfig:"TRACING_SAMPLING_RATE"`
-	} `yaml:"config"`
+	Enabled      bool              `yaml:"enabled" default:"true" envconfig:"TRACING_ENABLED"`
+	SamplingRate float64           `yaml:"sampling_rate" default:"1" validate:"required,min=0,max=1" envconfig:"TRACING_SAMPLING_RATE"`
+	Exporters    []TracingExporter `yaml:"exporters"`
 }
 
 type Prometheus struct {
@@ -49,22 +61,27 @@ type Prometheus struct {
 	ListenAddr string `yaml:"listen_addr" default:"127.0.0.1:8088" validate:"hostname_port" envconfig:"PROMETHEUS_LISTEN_ADDR"`
 }
 
+type MetricsOTLPExporter struct {
+	Exporter otelconfig.Exporter `yaml:"exporter" validate:"oneof=http grpc"`
+	Endpoint string              `yaml:"endpoint" validate:"http_url"`
+	HTTPPath string              `yaml:"path"`
+	Headers  map[string]string   `yaml:"headers"`
+}
+
 type Metrics struct {
-	Common     MetricsCommon `yaml:"common"`
-	Prometheus Prometheus    `yaml:"prometheus"`
+	OTLP       MetricsOTLP `yaml:"otlp"`
+	Prometheus Prometheus  `yaml:"prometheus"`
 }
 
-type MetricsCommon struct {
-	Enabled bool `yaml:"enabled" default:"true" envconfig:"METRICS_ENABLED"`
+type MetricsOTLP struct {
+	Enabled   bool                  `yaml:"enabled" default:"true" envconfig:"METRICS_OTLP_ENABLED"`
+	Exporters []MetricsOTLPExporter `yaml:"exporters"`
 }
 
-type OpenTelemetry struct {
-	ServiceName string            `yaml:"service_name" default:"cosmo-router" envconfig:"TELEMETRY_SERVICE_NAME" validate:"required"`
-	Endpoint    string            `yaml:"endpoint" validate:"required" default:"https://cosmo-otel.wundergraph.com" envconfig:"TELEMETRY_ENDPOINT" validate:"http_url"`
-	Headers     map[string]string `yaml:"headers" envconfig:"TELEMETRY_HEADERS"`
-
-	Tracing Tracing `yaml:"tracing"`
-	Metrics Metrics `yaml:"metrics"`
+type Telemetry struct {
+	ServiceName string  `yaml:"service_name" default:"cosmo-router" envconfig:"TELEMETRY_SERVICE_NAME" validate:"required"`
+	Tracing     Tracing `yaml:"tracing"`
+	Metrics     Metrics `yaml:"metrics"`
 }
 
 type CORS struct {
@@ -136,12 +153,16 @@ type EngineExecutionConfiguration struct {
 	EnableSingleFlight bool `default:"true" envconfig:"ENGINE_ENABLE_SINGLE_FLIGHT"`
 }
 
+type OverrideRoutingURLConfiguration struct {
+	Subgraphs map[string]string `yaml:"subgraphs" validate:"dive,required,url"`
+}
+
 type Config struct {
 	Version string `yaml:"version"`
 
-	Graph     Graph         `yaml:"graph"`
-	Telemetry OpenTelemetry `yaml:"telemetry"`
-	CORS      CORS          `yaml:"cors"`
+	Graph     Graph     `yaml:"graph"`
+	Telemetry Telemetry `yaml:"telemetry"`
+	CORS      CORS      `yaml:"cors"`
 
 	Modules        map[string]interface{} `yaml:"modules"`
 	Headers        HeaderRules            `yaml:"headers"`
@@ -163,6 +184,8 @@ type Config struct {
 
 	ConfigPath       string `envconfig:"CONFIG_PATH" validate:"omitempty,filepath"`
 	RouterConfigPath string `yaml:"router_config_path" envconfig:"ROUTER_CONFIG_PATH" validate:"omitempty,filepath"`
+
+	OverrideRoutingURL OverrideRoutingURLConfiguration `yaml:"override_routing_url"`
 
 	EngineExecutionConfiguration EngineExecutionConfiguration
 }

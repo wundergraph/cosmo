@@ -30,6 +30,7 @@ import {
   GetMetricsDashboardResponse,
   GetOrganizationMembersResponse,
   GetOrganizationWebhookConfigsResponse,
+  GetOrganizationWebhookMetaResponse,
   GetRouterTokensResponse,
   GetSubgraphByNameResponse,
   GetSubgraphsResponse,
@@ -47,7 +48,7 @@ import {
 import { PlatformEventName, OrganizationEventName } from '@wundergraph/cosmo-connect/dist/webhooks/events_pb';
 import { OpenAIGraphql, buildRouterConfig } from '@wundergraph/cosmo-shared';
 import { parse } from 'graphql';
-import { GraphApiKeyJwtPayload } from '../../types/index.js';
+import { GraphApiKeyDTO, GraphApiKeyJwtPayload } from '../../types/index.js';
 import { Composer } from '../composition/composer.js';
 import { buildSchema, composeSubgraphs } from '../composition/composition.js';
 import { getDiffBetweenGraphs } from '../composition/schemaCheck.js';
@@ -288,6 +289,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         return {
           graphs: list.map((g) => ({
+            id: g.id,
             name: g.name,
             labelMatchers: g.labelMatchers,
             routingURL: g.routingUrl,
@@ -370,6 +372,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         if (!federatedGraph) {
           return {
             subgraphs: [],
+            graphToken: '',
             response: {
               code: EnumStatusCode.ERR_NOT_FOUND,
               details: `Federated graph '${req.name}' not found`,
@@ -386,8 +389,37 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const list = await subgraphRepo.listByGraph(req.name);
 
+        const tokens = await fedRepo.getRouterTokens({
+          organizationId: authContext.organizationId,
+          federatedGraphId: federatedGraph.id,
+        });
+
+        let graphToken: GraphApiKeyDTO;
+
+        if (tokens.length === 0) {
+          const tokenValue = await signJwt<GraphApiKeyJwtPayload>({
+            secret: opts.jwtSecret,
+            token: {
+              iss: authContext.userId,
+              federated_graph_id: federatedGraph.id,
+              organization_id: authContext.organizationId,
+            },
+          });
+
+          const token = await fedRepo.createToken({
+            token: tokenValue,
+            federatedGraphId: federatedGraph.id,
+            tokenName: federatedGraph.name,
+            organizationId: authContext.organizationId,
+          });
+
+          graphToken = token;
+        } else {
+          graphToken = tokens[0];
+        }
         return {
           graph: {
+            id: federatedGraph.id,
             name: federatedGraph.name,
             routingURL: federatedGraph.routingUrl,
             labelMatchers: federatedGraph.labelMatchers,
@@ -403,6 +435,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             lastUpdatedAt: g.lastUpdatedAt,
             labels: g.labels,
           })),
+          graphToken: graphToken.token,
           response: {
             code: EnumStatusCode.OK,
           },
@@ -1346,7 +1379,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const repo = new MetricsDashboardRepository(opts.prometheus);
+        const repo = new MetricsDashboardRepository(opts.chClient);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
 
         const graph = await fedGraphRepo.byName(req.federatedGraphName);
@@ -1398,7 +1431,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const repo = new MetricsDashboardRepository(opts.prometheus);
+        const repo = new MetricsDashboardRepository(opts.chClient);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
 
         const graph = await fedGraphRepo.byName(req.federatedGraphName);
@@ -2206,6 +2239,27 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             code: EnumStatusCode.OK,
           },
           configs,
+        };
+      });
+    },
+
+    getOrganizationWebhookMeta: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetOrganizationWebhookMetaResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const orgRepo = new OrganizationRepository(opts.db);
+
+        const eventsMeta = await orgRepo.getWebhookMeta(req.id, authContext.organizationId);
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          eventsMeta,
         };
       });
     },

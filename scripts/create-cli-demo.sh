@@ -5,6 +5,7 @@
 
 export COSMO_API_KEY=cosmo_669b576aaadc10ee1ae81d9193425705
 export COSMO_API_URL=http://localhost:3001
+export KC_API_URL=http://localhost:8080
 
 npm install -g wgc
 
@@ -20,4 +21,4 @@ wgc subgraph publish family --schema ../demo/family/subgraph/schema.graphqls
 wgc subgraph publish hobbies --schema ../demo/hobbies/subgraph/schema.graphqls
 wgc subgraph publish products --schema ../demo/products/subgraph/schema.graphqls
 
-wgc federated-graph create-token production --name mytoken
+wgc router token create mytoken --graph-name production

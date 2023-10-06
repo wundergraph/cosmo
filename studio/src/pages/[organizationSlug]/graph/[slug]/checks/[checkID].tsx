@@ -3,7 +3,7 @@ import { EmptyState } from "@/components/empty-state";
 import { GraphContext, getGraphLayout } from "@/components/layout/graph-layout";
 import { PageHeader } from "@/components/layout/head";
 import { TitleLayout } from "@/components/layout/title-layout";
-import { SchemaViewer } from "@/components/schmea-viewer";
+import { SchemaViewer } from "@/components/schema-viewer";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/table";
 import { useToast } from "@/components/ui/use-toast";
 import { useSessionStorage } from "@/hooks/use-session-storage";
+import { formatDateTime } from "@/lib/format-date";
 import { NextPageWithLayout } from "@/lib/page";
 import { cn } from "@/lib/utils";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
@@ -121,8 +122,7 @@ const CheckDetailsPage: NextPageWithLayout = () => {
         <CardHeader>
           <CardTitle>Check details</CardTitle>
           <CardDescription>
-            Created At:{" "}
-            {format(new Date(data.check.timestamp), "dd MMM yyyy HH:mm")}
+            Created At: {formatDateTime(new Date(data.check.timestamp))}
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-y-2 text-sm">

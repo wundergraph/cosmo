@@ -27,7 +27,6 @@ const {
   KC_API_URL,
   KC_FRONTEND_URL,
   KC_ADMIN_USER,
-  PROMETHEUS_API_URL,
   WEBHOOK_URL,
   WEBHOOK_SECRET,
   GITHUB_APP_WEBHOOK_SECRET,
@@ -47,9 +46,6 @@ const options: BuildConfig = {
   logger: {
     enabled: true,
     level: LOG_LEVEL as pino.LevelWithSilent,
-  },
-  prometheus: {
-    apiUrl: PROMETHEUS_API_URL,
   },
   keycloak: {
     realm: KC_REALM,

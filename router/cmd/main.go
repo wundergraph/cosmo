@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/wundergraph/cosmo/router/config"
 	"github.com/wundergraph/cosmo/router/core"
@@ -47,7 +46,10 @@ func Main() {
 	}
 
 	logger := logging.New(!cfg.JSONLog, cfg.LogLevel == "debug", logLevel).
-		With(zap.String("component", "@wundergraph/router"))
+		With(
+			zap.String("component", "@wundergraph/router"),
+			zap.String("router_version", core.Version),
+		)
 
 	cp := controlplane.New(
 		controlplane.WithControlPlaneEndpoint(cfg.ControlplaneURL),
@@ -69,6 +71,7 @@ func Main() {
 	router, err := core.NewRouter(
 		core.WithFederatedGraphName(cfg.Graph.Name),
 		core.WithListenerAddr(cfg.ListenAddr),
+		core.WithOverrideRoutingURL(cfg.OverrideRoutingURL),
 		core.WithLogger(logger),
 		core.WithConfigFetcher(cp),
 		core.WithIntrospection(cfg.IntrospectionEnabled),
@@ -104,29 +107,8 @@ func Main() {
 			AllowHeaders:     cfg.CORS.AllowHeaders,
 			MaxAge:           cfg.CORS.MaxAge,
 		}),
-		core.WithTracing(&trace.Config{
-			Enabled:       cfg.Telemetry.Tracing.Enabled,
-			Name:          cfg.Telemetry.ServiceName,
-			Endpoint:      cfg.Telemetry.Endpoint,
-			Sampler:       cfg.Telemetry.Tracing.Config.SamplingRate,
-			Batcher:       trace.KindOtlpHttp,
-			BatchTimeout:  cfg.Telemetry.Tracing.Config.BatchTimeout,
-			ExportTimeout: 30 * time.Second,
-			OtlpHeaders:   cfg.Telemetry.Headers,
-			OtlpHttpPath:  "/v1/traces",
-		}),
-		core.WithMetrics(&metric.Config{
-			Enabled:     cfg.Telemetry.Metrics.Common.Enabled,
-			Name:        cfg.Telemetry.ServiceName,
-			Endpoint:    cfg.Telemetry.Endpoint,
-			OtlpHeaders: cfg.Telemetry.Headers,
-			Prometheus: metric.Prometheus{
-				Enabled:    cfg.Telemetry.Metrics.Prometheus.Enabled,
-				ListenAddr: cfg.Telemetry.Metrics.Prometheus.ListenAddr,
-				Path:       cfg.Telemetry.Metrics.Prometheus.Path,
-			},
-			OtlpHttpPath: "/v1/metrics",
-		}),
+		core.WithTracing(traceConfig(&cfg.Telemetry)),
+		core.WithMetrics(metricsConfig(&cfg.Telemetry)),
 		core.WithEngineExecutionConfig(cfg.EngineExecutionConfiguration),
 	)
 
@@ -155,4 +137,49 @@ func Main() {
 
 	logger.Debug("Server exiting")
 	os.Exit(0)
+}
+
+func traceConfig(cfg *config.Telemetry) *trace.Config {
+	var exporters []*trace.Exporter
+	for _, exp := range cfg.Tracing.Exporters {
+		exporters = append(exporters, &trace.Exporter{
+			Endpoint:      exp.Endpoint,
+			Exporter:      exp.Exporter,
+			BatchTimeout:  exp.BatchTimeout,
+			ExportTimeout: exp.ExportTimeout,
+			Headers:       exp.Headers,
+			HTTPPath:      exp.HTTPPath,
+		})
+	}
+	return &trace.Config{
+		Enabled:   cfg.Tracing.Enabled,
+		Name:      cfg.ServiceName,
+		Sampler:   cfg.Tracing.SamplingRate,
+		Exporters: exporters,
+	}
+}
+
+func metricsConfig(cfg *config.Telemetry) *metric.Config {
+	var openTelemetryExporters []*metric.OpenTelemetryExporter
+	for _, exp := range cfg.Metrics.OTLP.Exporters {
+		openTelemetryExporters = append(openTelemetryExporters, &metric.OpenTelemetryExporter{
+			Endpoint: exp.Endpoint,
+			Exporter: exp.Exporter,
+			Headers:  exp.Headers,
+			HTTPPath: exp.HTTPPath,
+		})
+	}
+
+	return &metric.Config{
+		Name: cfg.ServiceName,
+		OpenTelemetry: metric.OpenTelemetry{
+			Enabled:   cfg.Metrics.OTLP.Enabled,
+			Exporters: openTelemetryExporters,
+		},
+		Prometheus: metric.Prometheus{
+			Enabled:    cfg.Metrics.Prometheus.Enabled,
+			ListenAddr: cfg.Metrics.Prometheus.ListenAddr,
+			Path:       cfg.Metrics.Prometheus.Path,
+		},
+	}
 }
