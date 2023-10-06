@@ -2,6 +2,7 @@ import {
   ComposeStatus,
   ComposeStatusMessage,
 } from "@/components/compose-status";
+import { RunRouterCommand } from "@/components/federatedgraphs-cards";
 import GraphVisualization from "@/components/graph-visualization";
 import { GraphContext, getGraphLayout } from "@/components/layout/graph-layout";
 import { PageHeader } from "@/components/layout/head";
@@ -26,11 +27,12 @@ import {
 } from "@heroicons/react/24/outline";
 import { RocketIcon } from "@radix-ui/react-icons";
 import { useRouter } from "next/router";
-import { useContext } from "react";
+import { useContext, useState } from "react";
 import { ReactFlowProvider } from "reactflow";
 
 const Details = () => {
   const graphData = useContext(GraphContext);
+  const [open, setOpen] = useState(false);
 
   if (!graphData?.graph) return null;
 
@@ -41,6 +43,7 @@ const Details = () => {
     connectedSubgraphs,
     isComposable,
     compositionErrors,
+    name,
   } = graphData.graph;
 
   const validGraph = isComposable && !!lastUpdatedAt;
@@ -48,7 +51,7 @@ const Details = () => {
 
   return (
     <div className="flex flex-col flex-wrap items-stretch gap-y-4 pb-4 lg:flex-row lg:gap-x-4">
-      <div className="order-1 flex flex-col justify-between space-y-3 lg:w-1/3">
+      <div className="order-1 flex flex-col justify-between space-y-2 lg:w-1/3">
         <Card className="flex grow flex-col justify-between">
           <CardHeader>
             <CardTitle>Graph details</CardTitle>
@@ -66,11 +69,11 @@ const Details = () => {
             </div>
             <div className="flex items-start gap-x-4">
               <span className="w-28 flex-shrink-0">Matchers</span> :
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 overflow-hidden">
                 {labelMatchers.map((lm) => {
                   return (
-                    <Badge variant="secondary" key={lm}>
-                      {lm}
+                    <Badge variant="secondary" key={lm} className="truncate">
+                      <span className="truncate">{lm}</span>
                     </Badge>
                   );
                 })}
@@ -86,6 +89,15 @@ const Details = () => {
               Router Url:
             </span>
             <CLI className="mt-1 md:w-full" command={routingURL} />
+
+            <RunRouterCommand
+              open={open}
+              setOpen={setOpen}
+              graphName={name}
+              token={graphData.graphToken}
+              triggerLabel="Run router locally"
+              triggerClassName="mt-3 w-full"
+            />
           </CardFooter>
         </Card>
         <Alert
@@ -118,7 +130,7 @@ const Details = () => {
           </AlertDescription>
         </Alert>
       </div>
-      <div className="order-3 h-[25rem] lg:order-2 lg:w-2/3 lg:flex-1">
+      <div className="order-3 lg:order-2 lg:w-2/3 lg:flex-1">
         <Card className="h-full">
           <ReactFlowProvider>
             <GraphVisualization />
