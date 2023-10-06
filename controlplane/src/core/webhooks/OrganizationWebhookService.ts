@@ -119,7 +119,7 @@ export class OrganizationWebhookService {
         payload: eventPayload,
       };
 
-      post(OrganizationEventName[eventName], data, this.logger, config.url!, config.key);
+      post(OrganizationEventName[eventName], data, this.logger, 'debug', config.url!, config.key);
     }
   }
 
