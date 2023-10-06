@@ -71,6 +71,7 @@ func Main() {
 	router, err := core.NewRouter(
 		core.WithFederatedGraphName(cfg.Graph.Name),
 		core.WithListenerAddr(cfg.ListenAddr),
+		core.WithOverrideRoutingURL(cfg.OverrideRoutingURL),
 		core.WithLogger(logger),
 		core.WithConfigFetcher(cp),
 		core.WithIntrospection(cfg.IntrospectionEnabled),

@@ -153,6 +153,10 @@ type EngineExecutionConfiguration struct {
 	EnableSingleFlight bool `default:"true" envconfig:"ENGINE_ENABLE_SINGLE_FLIGHT"`
 }
 
+type OverrideRoutingURLConfiguration struct {
+	Subgraphs map[string]string `yaml:"subgraphs" validate:"dive,required,url"`
+}
+
 type Config struct {
 	Version string `yaml:"version"`
 
@@ -180,6 +184,8 @@ type Config struct {
 
 	ConfigPath       string `envconfig:"CONFIG_PATH" validate:"omitempty,filepath"`
 	RouterConfigPath string `yaml:"router_config_path" envconfig:"ROUTER_CONFIG_PATH" validate:"omitempty,filepath"`
+
+	OverrideRoutingURL OverrideRoutingURLConfiguration `yaml:"override_routing_url"`
 
 	EngineExecutionConfiguration EngineExecutionConfiguration
 }
