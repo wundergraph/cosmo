@@ -50,6 +50,7 @@ body:
       value: |
         ## Environment
         OS: (e.g., "Ubuntu 20.04")
+        Package Manager: pnpm, npm, yarn, etc
         Compiler(if manually compiled): (e.g., "go 14.2")
 
   - type: textarea
