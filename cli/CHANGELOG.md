@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.19.3](https://github.com/wundergraph/cosmo/compare/wgc@0.19.2...wgc@0.19.3) (2023-10-06)
+
+### Bug Fixes
+
+* repository and owner slug swapped ([#166](https://github.com/wundergraph/cosmo/issues/166)) ([1b61193](https://github.com/wundergraph/cosmo/commit/1b61193751992ee81e80a7712aeb9b9c69d3045a)) (@thisisnithin)
+
 ## [0.19.2](https://github.com/wundergraph/cosmo/compare/wgc@0.19.1...wgc@0.19.2) (2023-10-06)
 
 ### Bug Fixes
