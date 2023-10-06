@@ -1,0 +1,75 @@
+name: Bug report
+description: Create a report to help us improve
+labels: ["bug", "needs triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for taking the time to complete this bug report! Please ensure that you fill out the entire form below, offering as much context as possible to assist us in triaging and swiftly locating the source of the bug.
+  
+        Before submitting a bug, please make sure to search through the [existing bugs](https://github.com/wundergraph/cosmo/issues) to check if an existing issue already addresses your problem.
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component(s)
+      description: Which component(s) does your bug report concern?
+      multiple: true
+      options:
+        - router
+        - controlplane
+        - studio
+        - composition
+        - otelcollector
+        - helm
+        - cli
+  - type: textarea
+    attributes:
+      label: What happened?
+      description: Please provide as much detail as you reasonably can.
+      value: |
+        ## Description
+
+        ## Steps to Reproduce
+
+        ## Expected Result
+
+        ## Actual Result
+
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: Component version
+      description: What version did you use? (e.g., `v0.4.0`, `1eb551b`, etc)
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Environment information
+      description: Please provide any additional information about your installation.
+      value: |
+        ## Environment
+        OS: (e.g., "Ubuntu 20.04")
+        Package Manager: pnpm, npm, yarn, etc
+        Compiler(if manually compiled): (e.g., "go 14.2")
+
+  - type: textarea
+    attributes:
+      label: Router configuration
+      description: Please provide the configuration you are using (e.g. the config.yaml file or environment variables).
+      render: yaml
+  - type: textarea
+    attributes:
+      label: Router execution config
+      description: Please provide your router config (Run `wgc federated-graph fetch <name>` to get the config)
+      render: json
+  - type: textarea
+    attributes:
+      label: Log output
+      description: |
+        Please copy and paste any relevant log output.
+      render: shell
+  - type: textarea
+    attributes:
+      label: Additional context
+      description: Any additional information you think may be relevant to this issue.
