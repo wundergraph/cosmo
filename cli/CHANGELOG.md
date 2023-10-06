@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.19.1](https://github.com/wundergraph/cosmo/compare/wgc@0.19.0...wgc@0.19.1) (2023-10-06)
+
+### Bug Fixes
+
+* update local demo script and fix the create router token cmd ([#151](https://github.com/wundergraph/cosmo/issues/151)) ([b305cfb](https://github.com/wundergraph/cosmo/commit/b305cfb4710316f6ebb63e1b8f40362b06e38c42)) (@JivusAyrus)
+
 # [0.19.0](https://github.com/wundergraph/cosmo/compare/wgc@0.18.0...wgc@0.19.0) (2023-10-05)
 
 ### Features
