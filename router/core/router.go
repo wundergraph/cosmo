@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/wundergraph/cosmo/router/internal/otel/otelconfig"
-	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 
 	"github.com/dgraph-io/ristretto"
 	"github.com/go-chi/chi"
