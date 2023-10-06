@@ -102,6 +102,7 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(routerCfg *node
 	// this loader is used to take the engine config and create a plan config
 	// the plan config is what the engine uses to turn a GraphQL Request into an execution plan
 	// the plan config is stateful as it carries connection pools and other things
+
 	loader := NewLoader(NewDefaultFactoryResolver(
 		NewTransport(b.transportOptions),
 		b.transport,
