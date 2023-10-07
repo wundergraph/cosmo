@@ -115,7 +115,7 @@ export class AnalyticsDashboardViewRepository {
     return [];
   }
 
-  public getListView(organizationId: string): Promise<Record<string, PlainMessage<RequestSeriesItem>[]>> {
+  public async getListView(organizationId: string): Promise<Record<string, PlainMessage<RequestSeriesItem>[]>> {
     return this.getAllWeeklyRequestSeries(organizationId);
   }
 
