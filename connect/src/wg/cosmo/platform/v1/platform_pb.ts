@@ -5704,9 +5704,9 @@ export class UpdateOrgMemberRoleResponse extends Message<UpdateOrgMemberRoleResp
  * *
  * MetricsDashboard
  *
- * @generated from message wg.cosmo.platform.v1.GetMetricsDashboardRequest
+ * @generated from message wg.cosmo.platform.v1.GetGraphMetricsRequest
  */
-export class GetMetricsDashboardRequest extends Message<GetMetricsDashboardRequest> {
+export class GetGraphMetricsRequest extends Message<GetGraphMetricsRequest> {
   /**
    * @generated from field: string federatedGraphName = 1;
    */
@@ -5717,39 +5717,39 @@ export class GetMetricsDashboardRequest extends Message<GetMetricsDashboardReque
    */
   range = 0;
 
-  constructor(data?: PartialMessage<GetMetricsDashboardRequest>) {
+  constructor(data?: PartialMessage<GetGraphMetricsRequest>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.platform.v1.GetMetricsDashboardRequest";
+  static readonly typeName = "wg.cosmo.platform.v1.GetGraphMetricsRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "federatedGraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "range", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetMetricsDashboardRequest {
-    return new GetMetricsDashboardRequest().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetGraphMetricsRequest {
+    return new GetGraphMetricsRequest().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetMetricsDashboardRequest {
-    return new GetMetricsDashboardRequest().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetGraphMetricsRequest {
+    return new GetGraphMetricsRequest().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetMetricsDashboardRequest {
-    return new GetMetricsDashboardRequest().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetGraphMetricsRequest {
+    return new GetGraphMetricsRequest().fromJsonString(jsonString, options);
   }
 
-  static equals(a: GetMetricsDashboardRequest | PlainMessage<GetMetricsDashboardRequest> | undefined, b: GetMetricsDashboardRequest | PlainMessage<GetMetricsDashboardRequest> | undefined): boolean {
-    return proto3.util.equals(GetMetricsDashboardRequest, a, b);
+  static equals(a: GetGraphMetricsRequest | PlainMessage<GetGraphMetricsRequest> | undefined, b: GetGraphMetricsRequest | PlainMessage<GetGraphMetricsRequest> | undefined): boolean {
+    return proto3.util.equals(GetGraphMetricsRequest, a, b);
   }
 }
 
 /**
- * @generated from message wg.cosmo.platform.v1.GetMetricsDashboardResponse
+ * @generated from message wg.cosmo.platform.v1.GetGraphMetricsResponse
  */
-export class GetMetricsDashboardResponse extends Message<GetMetricsDashboardResponse> {
+export class GetGraphMetricsResponse extends Message<GetGraphMetricsResponse> {
   /**
    * @generated from field: wg.cosmo.platform.v1.Response response = 1;
    */
@@ -5775,13 +5775,13 @@ export class GetMetricsDashboardResponse extends Message<GetMetricsDashboardResp
    */
   json?: string;
 
-  constructor(data?: PartialMessage<GetMetricsDashboardResponse>) {
+  constructor(data?: PartialMessage<GetGraphMetricsResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.platform.v1.GetMetricsDashboardResponse";
+  static readonly typeName = "wg.cosmo.platform.v1.GetGraphMetricsResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "requests", kind: "message", T: MetricsDashboardMetric },
@@ -5790,20 +5790,20 @@ export class GetMetricsDashboardResponse extends Message<GetMetricsDashboardResp
     { no: 5, name: "json", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetMetricsDashboardResponse {
-    return new GetMetricsDashboardResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetGraphMetricsResponse {
+    return new GetGraphMetricsResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetMetricsDashboardResponse {
-    return new GetMetricsDashboardResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetGraphMetricsResponse {
+    return new GetGraphMetricsResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetMetricsDashboardResponse {
-    return new GetMetricsDashboardResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetGraphMetricsResponse {
+    return new GetGraphMetricsResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: GetMetricsDashboardResponse | PlainMessage<GetMetricsDashboardResponse> | undefined, b: GetMetricsDashboardResponse | PlainMessage<GetMetricsDashboardResponse> | undefined): boolean {
-    return proto3.util.equals(GetMetricsDashboardResponse, a, b);
+  static equals(a: GetGraphMetricsResponse | PlainMessage<GetGraphMetricsResponse> | undefined, b: GetGraphMetricsResponse | PlainMessage<GetGraphMetricsResponse> | undefined): boolean {
+    return proto3.util.equals(GetGraphMetricsResponse, a, b);
   }
 }
 

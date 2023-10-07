@@ -724,12 +724,12 @@ message UpdateOrgMemberRoleResponse {
 /**
  * MetricsDashboard
  */
- message GetMetricsDashboardRequest {
+ message GetGraphMetricsRequest {
   string federatedGraphName = 1;
   int32 range = 2;
 }
 
-message GetMetricsDashboardResponse {
+message GetGraphMetricsResponse {
   Response response = 1;
   MetricsDashboardMetric requests = 2;
   MetricsDashboardMetric latency = 3;
@@ -891,7 +891,7 @@ service PlatformService {
 
   rpc GetTrace(GetTraceRequest) returns (GetTraceResponse) {}
 
-  rpc GetMetricsDashboard(GetMetricsDashboardRequest) returns (GetMetricsDashboardResponse) {
+  rpc GetGraphMetrics(GetGraphMetricsRequest) returns (GetGraphMetricsResponse) {
     option idempotency_level = NO_SIDE_EFFECTS;
   }
 

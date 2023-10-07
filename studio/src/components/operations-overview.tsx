@@ -81,7 +81,8 @@ const RequestChart = ({
           <div className="h-3 w-3 rounded-full bg-destructive/75" />
           Errored
           <Badge variant="secondary">
-            {formatPercentMetric((categorized.error / (count || 1)) * 100)}
+            {formatPercentMetric((categorized.error / (count || 1)) * 100)} (
+            {formatMetric(categorized.error)})
           </Badge>
         </div>
       </div>
