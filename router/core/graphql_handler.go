@@ -255,7 +255,7 @@ func (h *GraphQLHandler) preparePlan(requestOperationName []byte, requestOperati
 	// validate the document before planning
 	state := validation.Validate(&doc, h.executor.Definition, &report)
 	if state != astvalidation.Valid {
-		return planWithExtractedVariables{}, fmt.Errorf(ErrMsgOperationValidationFailed, state.String())
+		return planWithExtractedVariables{}, &reportError{report: &report}
 	}
 
 	planner := plan.NewPlanner(context.Background(), h.executor.PlanConfig)
