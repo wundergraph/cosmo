@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -39,6 +40,30 @@ var (
 	couldNotResolveResponseErr = errors.New("could not resolve response")
 	internalServerErrorErr     = errors.New("internal server error")
 )
+
+type ReportError interface {
+	error
+	Report() *operationreport.Report
+}
+
+type reportError struct {
+	report *operationreport.Report
+}
+
+func (e *reportError) Error() string {
+	if len(e.report.InternalErrors) > 0 {
+		return errors.Join(e.report.InternalErrors...).Error()
+	}
+	var messages []string
+	for _, e := range e.report.ExternalErrors {
+		messages = append(messages, e.Message)
+	}
+	return strings.Join(messages, ", ")
+}
+
+func (e *reportError) Report() *operationreport.Report {
+	return e.report
+}
 
 type planWithExtractedVariables struct {
 	preparedPlan plan.Plan
@@ -121,7 +146,11 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return prepared, nil
 		})
 		if err != nil {
-			if operationContext.plan.Report.HasErrors() {
+			var reportErr ReportError
+			if errors.As(err, &reportErr) {
+				w.WriteHeader(http.StatusBadRequest)
+				writeRequestErrorsFromReport(reportErr.Report(), w, requestLogger)
+			} else if operationContext.plan.Report.HasErrors() {
 				w.WriteHeader(http.StatusBadRequest)
 				writeRequestErrorsFromReport(operationContext.plan.Report, w, requestLogger)
 			} else {
@@ -221,7 +250,7 @@ func (h *GraphQLHandler) preparePlan(requestOperationName []byte, shared *pool.S
 	// this will be cached, so it's insignificant that reparsing causes overhead
 	doc, report := astparser.ParseGraphqlDocumentBytes(buf.Bytes())
 	if report.HasErrors() {
-		return planWithExtractedVariables{}, fmt.Errorf(ErrMsgOperationParseFailed, err)
+		return planWithExtractedVariables{}, &reportError{report: &report}
 	}
 
 	// validate the document before planning
