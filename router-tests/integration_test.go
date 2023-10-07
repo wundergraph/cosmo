@@ -27,7 +27,7 @@ import (
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 var (
-	useSubprocess = flag.Bool("subprocess", false, "Run the subgraphs in a separate subprocess")
+	subgraphsMode = flag.String("subgraphs", "in-process", "How to run the subgraphs: in-process | subprocess | external")
 	workers       = flag.Int("workers", 4, "Number of workers to use for parallel benchmarks")
 )
 
@@ -36,10 +36,15 @@ func TestMain(m *testing.M) {
 	ctx := context.Background()
 	var runner SubgraphsRunner
 	var err error
-	if *useSubprocess {
-		runner, err = NewSubprocessSubgraphsRunner()
-	} else {
+	switch *subgraphsMode {
+	case "in-process":
 		runner, err = NewInProcessSubgraphsRunner()
+	case "subprocess":
+		runner, err = NewSubprocessSubgraphsRunner()
+	case "external":
+		runner, err = NewExternalSubgraphsRunner()
+	default:
+		panic(fmt.Errorf("unknown subgraphs mode %q", *subgraphsMode))
 	}
 	if err != nil {
 		panic(err)
@@ -226,4 +231,52 @@ func BenchmarkParallel(b *testing.B) {
 	}
 	close(ch)
 	wg.Wait()
+}
+
+// Notes on fuzzing! The go fuzzer runs multiple processes in parallel, so we
+// need to run the subgraphs off process. This is done by starting demo/cmd/all/main.go
+// and running go test -v -subgraphs external -fuzz=.
+//
+// Keep in mind that during normal test runs the tests generated from fuzzing are ran
+// as normal tests so running the subgraphs in-process works fine.
+
+func FuzzQuery(f *testing.F) {
+	server := setupServer(f)
+	corpus := []struct {
+		Query     string
+		Variables []byte // As JSON
+	}{
+		{
+			Query: "{ employees { id } }",
+		},
+		{
+			Query: `($team:Department!= MARKETING) {
+				team_mates(team:$team) {
+				  id
+				}
+			  }`,
+			Variables: []byte(`{"team":"MARKETING"}`),
+		},
+		{
+			Query:     `($n:Int!) { employee(id:$n) { id } }`,
+			Variables: []byte(`{"n":4}`),
+		},
+	}
+	for _, tc := range corpus {
+		f.Add(tc.Query, tc.Variables)
+	}
+	f.Fuzz(func(t *testing.T, query string, variables []byte) {
+		rr := httptest.NewRecorder()
+		var q testQuery
+		if err := json.Unmarshal(variables, &q.Variables); err != nil {
+			// Invalid JSON, mark as uninteresting input
+			t.Skip()
+		}
+		q.Body = query
+		req := httptest.NewRequest("POST", "/graphql", bytes.NewBuffer(q.Data()))
+		server.Server.Handler.ServeHTTP(rr, req)
+		if rr.Code != 200 && rr.Code != 400 {
+			t.Error("unexpected status code", rr.Code)
+		}
+	})
 }
