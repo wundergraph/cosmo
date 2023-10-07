@@ -151,9 +151,6 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			if errors.As(err, &reportErr) {
 				w.WriteHeader(http.StatusBadRequest)
 				writeRequestErrorsFromReport(reportErr.Report(), w, requestLogger)
-			} else if operationContext.plan.Report.HasErrors() {
-				w.WriteHeader(http.StatusBadRequest)
-				writeRequestErrorsFromReport(operationContext.plan.Report, w, requestLogger)
 			} else {
 				requestLogger.Error("prepare plan failed", zap.Error(err))
 				w.WriteHeader(http.StatusInternalServerError)
