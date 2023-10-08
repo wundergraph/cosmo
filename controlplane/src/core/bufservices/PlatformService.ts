@@ -2095,9 +2095,20 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           apiKey: req.apiKey,
           organizationSlug: org.slug,
           variantName: req.variantName,
+          logger,
         });
 
         const graph = await apolloMigrator.fetchGraphID();
+        if (!graph.success) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `Could not fetch the graph from Apollo. Please ensure that the API Key is valid.`,
+            },
+            token: '',
+          };
+        }
+
         const graphDetails = await apolloMigrator.fetchGraphDetails({ graphID: graph.id });
 
         if (!graphDetails.success) {
@@ -2135,7 +2146,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const federatedGraph = await apolloMigrator.migrateGraphFromApollo({
           fedGraph: {
             name: graph.name,
-            routingURL: graphDetails.fedGraphRoutingURL,
+            routingURL: graphDetails.fedGraphRoutingURL || '',
           },
           subgraphs: graphDetails.subgraphs,
           organizationID: authContext.organizationId,

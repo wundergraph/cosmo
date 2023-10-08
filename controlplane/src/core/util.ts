@@ -19,8 +19,6 @@ export async function handleError<T extends ResponseMessage>(
   try {
     return await fn();
   } catch (error: any) {
-    logger.error(error);
-
     if (isAuthenticationError(error)) {
       return {
         response: {
@@ -43,6 +41,7 @@ export async function handleError<T extends ResponseMessage>(
         },
       } as T;
     }
+    logger.error(error);
 
     throw error;
   }

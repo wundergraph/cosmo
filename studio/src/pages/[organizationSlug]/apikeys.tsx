@@ -424,7 +424,11 @@ export const CreateAPIKey = ({
   open: boolean;
   setOpen: Dispatch<SetStateAction<boolean>>;
 }) => {
-  const { refetch } = useQuery(getAPIKeys.useQuery());
+  const user = useContext(UserContext);
+  const { refetch } = useQuery({
+    ...getAPIKeys.useQuery(),
+    queryKey: [user?.currentOrganization.slug || "", "GetAPIKeys", {}],
+  });
 
   useEffect(() => {
     if (!apiKey) return;
