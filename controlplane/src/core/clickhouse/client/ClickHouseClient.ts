@@ -138,7 +138,7 @@ export class ClickHouseClient {
 
     const params = new URLSearchParams(rawParams);
 
-    const requestOptions: AxiosRequestConfig = {
+    return {
       url: this.options?.dsn,
       params,
       responseType: 'stream',
@@ -150,9 +150,7 @@ export class ClickHouseClient {
       maxContentLength: this.options?.httpConfig?.maxContentLength,
       timeout: this.options?.httpConfig?.timeout,
       headers: this._getHeaders(),
-    };
-
-    return requestOptions;
+    } as AxiosRequestConfig;
   }
 
   /**
