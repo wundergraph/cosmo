@@ -182,7 +182,7 @@ const MostRequested = ({ data }: { data: OperationRequestCount[] }) => {
   return (
     <div className="flex h-full w-full flex-col gap-y-4 rounded-md border p-4 lg:w-2/5">
       <h2 className="flex items-center gap-x-2">
-        <span>Most Requested</span>
+        <span>Top 5 Operations</span>
         <Separator orientation="vertical" className="h-4" />
         <span className="text-xs text-muted-foreground">1 Week</span>
       </h2>
