@@ -89,7 +89,7 @@ export class ClickHouseHttpConfig {
   /**
    * ClickHouse HTTP Interface Compression Method
    *
-   * Default: NONE
+   * Default: BROTLI
    */
   public compression?: ClickHouseCompressionMethod = ClickHouseCompressionMethod.BROTLI;
 }
