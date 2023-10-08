@@ -1,5 +1,4 @@
 import { IncomingMessage } from 'node:http';
-import * as zlib from 'node:zlib';
 import axios, { AxiosError, AxiosRequestConfig } from 'axios';
 import Pick from 'stream-json/filters/Pick.js';
 import StreamArray from 'stream-json/streamers/StreamArray.js';
@@ -150,11 +149,6 @@ export class ClickHouseClient {
       maxBodyLength: this.options?.httpConfig?.maxBodyLength,
       maxContentLength: this.options?.httpConfig?.maxContentLength,
       timeout: this.options?.httpConfig?.timeout,
-      transformResponse: (data: IncomingMessage) => {
-        return this.options?.httpConfig?.compression === ClickHouseCompressionMethod.BROTLI
-          ? data.pipe(zlib.createBrotliDecompress())
-          : data;
-      },
       headers: this._getHeaders(),
     };
 

@@ -91,7 +91,7 @@ export class ClickHouseHttpConfig {
    *
    * Default: NONE
    */
-  public compression?: ClickHouseCompressionMethod = ClickHouseCompressionMethod.NONE;
+  public compression?: ClickHouseCompressionMethod = ClickHouseCompressionMethod.BROTLI;
 }
 
 export class ClickHouseClientOptions {
