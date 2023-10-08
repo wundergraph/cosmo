@@ -150,7 +150,7 @@ export class ClickHouseClient {
       maxContentLength: this.options?.httpConfig?.maxContentLength,
       timeout: this.options?.httpConfig?.timeout,
       headers: this._getHeaders(),
-    } as AxiosRequestConfig;
+    };
   }
 
   /**
