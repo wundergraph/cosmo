@@ -693,21 +693,13 @@ message LeaveOrganizationResponse {
   Response response = 1;
 }
 
-message UpdateOrganizationNameRequest {
+message UpdateOrganizationDetailsRequest {
   string userID = 1;
   string organizationName = 2;
+  string organizationSlug = 3;
 }
 
-message UpdateOrganizationNameResponse {
-  Response response = 1;
-}
-
-message UpdateOrganizationSlugRequest {
-  string userID = 1;
-  string organizationSlug = 2;
-}
-
-message UpdateOrganizationSlugResponse {
+message UpdateOrganizationDetailsResponse {
   Response response = 1;
 }
 
@@ -872,10 +864,8 @@ service PlatformService {
   rpc DeleteOrganization(DeleteOrganizationRequest) returns (DeleteOrganizationResponse) {}
   // LeaveOrganization removes a member from the organization
   rpc LeaveOrganization(LeaveOrganizationRequest) returns (LeaveOrganizationResponse) {}
-  // UpdateOrganizationName updates the name of the organization
-  rpc UpdateOrganizationName(UpdateOrganizationNameRequest) returns (UpdateOrganizationNameResponse) {}
-  // UpdateOrganizationSlug updates the slug of the organization
-  rpc UpdateOrganizationSlug(UpdateOrganizationSlugRequest) returns (UpdateOrganizationSlugResponse) {}
+  // UpdateOrganizationDetails updates the name and slug of the organization
+  rpc UpdateOrganizationDetails(UpdateOrganizationDetailsRequest) returns (UpdateOrganizationDetailsResponse) {}
   // UpdateOrgMemberRole updates the role of an org member
   rpc UpdateOrgMemberRole(UpdateOrgMemberRoleRequest) returns (UpdateOrgMemberRoleResponse) {}
 
