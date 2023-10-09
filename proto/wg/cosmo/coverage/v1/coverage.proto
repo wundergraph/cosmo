@@ -1,0 +1,18 @@
+// https://protobuf.dev/programming-guides/style/
+
+syntax = "proto3";
+
+package wg.cosmo.coverage.v1;
+
+import "wg/cosmo/common/common.proto";
+
+message PublishOperationCoverageReportRequest {
+}
+
+message PublishOperationCoverageReportResponse {
+}
+
+service CoverageService {
+  // PublishOperationCoverageReport stats to the platform.
+  rpc PublishOperationCoverageReport(PublishOperationCoverageReportRequest) returns (PublishOperationCoverageReportResponse) {}
+}

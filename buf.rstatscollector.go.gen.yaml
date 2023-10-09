@@ -1,0 +1,17 @@
+version: v1
+managed:
+  enabled: true
+  go_package_prefix:
+    default: github.com/wundergraph/cosmo/rstatscollector/gen/proto
+    # Remove `except` field if googleapis is not used
+    except:
+      - buf.build/googleapis/googleapis
+plugins:
+  - plugin: connect-go
+    out: rstatscollector/gen/proto
+    opt:
+      - paths=source_relative
+  - plugin: go
+    out: rstatscollector/gen/proto
+    opt:
+      - paths=source_relative
