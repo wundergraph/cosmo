@@ -120,7 +120,14 @@ export class SubgraphRepository {
           })
           .where(eq(targets.id, subgraph.targetId));
 
-        newGraphs.push(...(await fedGraphRepo.bySubgraphLabels(uniqueLabels)));
+        const graphs = await fedGraphRepo.bySubgraphLabels(uniqueLabels);
+        for (const graph of graphs) {
+          const idx = newGraphs.findIndex((g) => g.id === graph.id);
+          if (idx !== -1) {
+            continue;
+          }
+          newGraphs.push(graph);
+        }
 
         let deleteCondition: SQL<unknown> | undefined = eq(subgraphsToFederatedGraph.subgraphId, subgraph.id);
 
