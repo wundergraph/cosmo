@@ -341,7 +341,7 @@ const Integration = ({
                     <FormLabel>Endpoint</FormLabel>
                     <FormControl>
                       <CreateIntegrationInput
-                        placeholder="https://example.com/webhook"
+                        placeholder="https://hooks.slack.com/..."
                         {...field}
                       />
                     </FormControl>
@@ -573,8 +573,8 @@ IntegrationsPage.getLayout = (page) => {
       <NotificationTabs tab="integrations" />
       <>{page}</>
     </div>,
-    "Webhooks",
-    "Configure webhooks for your organization"
+    "Integrations",
+    "Configure integrations for your organization"
   );
 };
 
