@@ -24,7 +24,7 @@ export const TitleLayout = ({
 
   useEffect(() => {
     if (!ref.current) return;
-    const className = cn("h-auto flex-1 px-4 py-4 lg:px-6", {
+    const className = cn("h-auto flex-1 px-4 py-4", {
       "pointer-events-none blur-lg":
         user?.currentOrganization.isFreeTrialExpired,
     });
@@ -39,7 +39,7 @@ export const TitleLayout = ({
           "lg:top-8": user?.currentOrganization.isFreeTrial,
         })}
       >
-        <div className="flex flex-col justify-between gap-y-4 px-4 pt-4 lg:flex-row lg:items-center lg:px-6">
+        <div className="flex flex-col justify-between gap-y-4 px-4 pt-4 lg:flex-row lg:items-center">
           <div className="space-y-2">
             <h1 className="text-2xl font-bold">{title}</h1>
             <p className="text-muted-foreground">{subtitle}</p>
