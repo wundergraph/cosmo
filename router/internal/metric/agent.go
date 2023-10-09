@@ -127,8 +127,7 @@ func startAgent(ctx context.Context, log *zap.Logger, c *Config) (*sdkmetric.Met
 	r, err := resource.New(ctx,
 		resource.WithAttributes(semconv.ServiceNameKey.String(c.Name)),
 		resource.WithProcessPID(),
-		resource.WithFromEnv(),
-		resource.WithHostID(),
+		resource.WithTelemetrySDK(),
 		resource.WithHost(),
 	)
 	if err != nil {
