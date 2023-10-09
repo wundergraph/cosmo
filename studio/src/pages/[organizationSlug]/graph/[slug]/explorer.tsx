@@ -16,11 +16,6 @@ import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 
-import getConfig from "next/config";
-
-const { publicRuntimeConfig } = getConfig();
-const version = publicRuntimeConfig?.version;
-
 const graphiQLFetch: typeof fetch = async (...args) => {
   try {
     const response = await fetch(...args);
@@ -91,10 +86,6 @@ const ExplorerPage: NextPageWithLayout = () => {
     return createGraphiQLFetcher({
       url: data?.graph?.routingURL ?? "",
       fetch: graphiQLFetch,
-      headers: {
-        "graphql-client-name": "cosmo-studio",
-        "graphql-client-version": version,
-      },
     });
   }, [data?.graph?.routingURL]);
 
