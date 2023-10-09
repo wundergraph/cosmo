@@ -313,8 +313,6 @@ type operationContext struct {
 	// Content is the content of the operation
 	content   string
 	variables []byte
-	// plan is the execution plan of the operation
-	//plan *pool.Shared
 }
 
 func (o *operationContext) Name() string {
