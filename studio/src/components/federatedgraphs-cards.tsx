@@ -141,6 +141,7 @@ const MigrationDialog = ({
             duration: 3000,
           });
           setOpen(false);
+          setIsMigrating(false);
           router.replace(`/${organizationSlug}/graphs`);
         },
       }

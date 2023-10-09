@@ -28,6 +28,23 @@ export class UserRepository {
     return user[0];
   }
 
+  public async byId(id: string): Promise<UserDTO | null> {
+    const user = await this.db
+      .select({
+        email: users.email,
+        id: users.id,
+      })
+      .from(users)
+      .where(eq(users.id, id))
+      .execute();
+
+    if (user.length === 0) {
+      return null;
+    }
+
+    return user[0];
+  }
+
   public async addUser(input: { id: string; email: string }) {
     await this.db
       .insert(users)
