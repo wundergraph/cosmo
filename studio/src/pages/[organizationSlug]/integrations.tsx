@@ -503,7 +503,7 @@ const IntegrationsPage: NextPageWithLayout = () => {
     <div className="flex flex-col gap-y-6">
       <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
         <p className="ml-1 text-sm text-muted-foreground">
-          Webhooks are used to receive certain events from the platform.{" "}
+          Integrations are used to receive notifications on certain events from the platform.{" "}
           <Link
             href={docsBaseURL + "/studio/webhooks"}
             className="text-primary"
