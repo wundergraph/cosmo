@@ -4,7 +4,7 @@ replace github.com/wundergraph/cosmo/router => ../router
 
 replace github.com/wundergraph/cosmo/demo => ../demo
 
-go 1.21.2
+go 1.21
 
 require (
 	github.com/stretchr/testify v1.8.4
