@@ -4,12 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"net"
 	"net/http"
 	"net/url"
 	"sync"
 	"time"
+
+	"github.com/wundergraph/cosmo/router/internal/otel/otelconfig"
 
 	"github.com/dgraph-io/ristretto"
 	"github.com/go-chi/chi"
@@ -24,8 +25,8 @@ import (
 	"go.uber.org/zap/zapcore"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/wundergraph/cosmo/router/config"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
-	"github.com/wundergraph/cosmo/router/internal/config"
 	"github.com/wundergraph/cosmo/router/internal/controlplane"
 	graphiql2 "github.com/wundergraph/cosmo/router/internal/graphiql"
 	"github.com/wundergraph/cosmo/router/internal/handler/cors"
@@ -35,6 +36,7 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/logging"
 	"github.com/wundergraph/cosmo/router/internal/metric"
 	"github.com/wundergraph/cosmo/router/internal/otel"
+	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"github.com/wundergraph/cosmo/router/internal/stringsx"
 	"github.com/wundergraph/cosmo/router/internal/trace"
 )
@@ -94,6 +96,8 @@ type (
 		retryOptions retrytransport.RetryOptions
 
 		engineExecutionConfiguration config.EngineExecutionConfiguration
+
+		overrideRoutingURLConfiguration config.OverrideRoutingURLConfiguration
 	}
 
 	// Server is the main router instance.
@@ -208,17 +212,81 @@ func NewRouter(opts ...Option) (*Router, error) {
 		ExpectContinueTimeout: r.subgraphTransportOptions.ExpectContinueTimeout,
 	}
 
-	if r.traceConfig.OtlpHeaders == nil {
-		r.traceConfig.OtlpHeaders = make(map[string]string)
+	// Add default exporters if needed
+	if r.traceConfig.Enabled && len(r.traceConfig.Exporters) == 0 {
+		if endpoint := otelconfig.DefaultEndpoint(); endpoint != "" {
+			r.logger.Debug("using default trace exporter", zap.String("endpoint", endpoint))
+			r.traceConfig.Exporters = append(r.traceConfig.Exporters, &trace.Exporter{
+				Endpoint: endpoint,
+				Headers:  otelconfig.DefaultEndpointHeaders(r.graphApiToken),
+			})
+		}
 	}
-	r.traceConfig.OtlpHeaders["Authorization"] = fmt.Sprintf("Bearer %s", r.graphApiToken)
-
-	if r.metricConfig.OtlpHeaders == nil {
-		r.metricConfig.OtlpHeaders = make(map[string]string)
+	if r.metricConfig.OpenTelemetry.Enabled && len(r.metricConfig.OpenTelemetry.Exporters) == 0 {
+		if endpoint := otelconfig.DefaultEndpoint(); endpoint != "" {
+			r.logger.Debug("using default metrics exporter", zap.String("endpoint", endpoint))
+			r.metricConfig.OpenTelemetry.Exporters = append(r.metricConfig.OpenTelemetry.Exporters, &metric.OpenTelemetryExporter{
+				Endpoint: endpoint,
+				Headers:  otelconfig.DefaultEndpointHeaders(r.graphApiToken),
+			})
+		}
 	}
-	r.metricConfig.OtlpHeaders["Authorization"] = fmt.Sprintf("Bearer %s", r.graphApiToken)
-
 	return r, nil
+}
+
+func (r *Router) configureSubgraphOverwrites(cfg *nodev1.RouterConfig) ([]Subgraph, error) {
+	subgraphs := make([]Subgraph, 0, len(cfg.Subgraphs))
+	for _, sg := range cfg.Subgraphs {
+
+		subgraph := Subgraph{
+			Id:   sg.Id,
+			Name: sg.Name,
+		}
+
+		// Validate subgraph url
+		if sg.RoutingUrl == "" {
+			return nil, fmt.Errorf("subgraph '%s' has no routing url", sg.Name)
+		}
+
+		parsedURL, err := url.Parse(sg.RoutingUrl)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse subgraph url '%s': %w", sg.RoutingUrl, err)
+		}
+
+		subgraph.Url = parsedURL
+
+		overrideURL, ok := r.overrideRoutingURLConfiguration.Subgraphs[sg.Name]
+
+		// check if the subgraph is overridden
+		if ok && overrideURL != "" {
+			parsedURL, err := url.Parse(overrideURL)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse override url '%s': %w", overrideURL, err)
+			}
+
+			subgraph.Url = parsedURL
+
+			// Override datasource urls
+			for _, conf := range cfg.EngineConfig.DatasourceConfigurations {
+				fetchURL := conf.CustomGraphql.Fetch.Url
+				subgraphURL := config.LoadStringVariable(fetchURL)
+
+				// Identify the datasource by the previous subgraph url
+				// Override datasource id, url and subgraph url
+				if subgraphURL == sg.RoutingUrl {
+					conf.Id = overrideURL
+					conf.CustomGraphql.Fetch.Url.StaticVariableContent = overrideURL
+					conf.CustomGraphql.Subscription.Url.StaticVariableContent = overrideURL
+					sg.RoutingUrl = overrideURL
+					break
+				}
+			}
+		}
+
+		subgraphs = append(subgraphs, subgraph)
+	}
+
+	return subgraphs, nil
 }
 
 // updateServer starts a new Server. It swaps the active Server with a new Server instance when the config has changed.
@@ -226,7 +294,6 @@ func NewRouter(opts ...Option) (*Router, error) {
 func (r *Router) updateServer(ctx context.Context, cfg *nodev1.RouterConfig) error {
 	// Rebuild Server with new router config
 	// In case of an error, we return early and keep the old Server running
-
 	newRouter, err := r.newServer(ctx, cfg)
 	if err != nil {
 		r.logger.Error("Failed to create r new router. Keeping old router running", zap.Error(err))
@@ -249,7 +316,6 @@ func (r *Router) updateServer(ctx context.Context, cfg *nodev1.RouterConfig) err
 
 	// Start new Server
 	go func() {
-
 		if prevRouter != nil {
 			r.logger.Info("Starting Server with new config",
 				zap.String("version", cfg.GetVersion()),
@@ -259,7 +325,7 @@ func (r *Router) updateServer(ctx context.Context, cfg *nodev1.RouterConfig) err
 				zap.String("listen_addr", r.listenAddr),
 				zap.Bool("playground", r.playground),
 				zap.Bool("introspection", r.introspection),
-				zap.String("version", cfg.GetVersion()),
+				zap.String("config_version", cfg.GetVersion()),
 			)
 
 			if r.playground && r.introspection {
@@ -275,7 +341,7 @@ func (r *Router) updateServer(ctx context.Context, cfg *nodev1.RouterConfig) err
 			r.logger.Error("Failed to start new server", zap.Error(err))
 		}
 
-		r.logger.Info("Server stopped", zap.String("version", newRouter.routerConfig.GetVersion()))
+		r.logger.Info("Server stopped", zap.String("config_version", newRouter.routerConfig.GetVersion()))
 	}()
 
 	return nil
@@ -341,7 +407,6 @@ func (r *Router) initModules(ctx context.Context) error {
 // NewTestServer prepares a new Server instance but does not start it. The method should be only used for testing purposes.
 // Use core.WithStaticRouterConfig to pass the initial config otherwise the engine will error.
 func (r *Router) NewTestServer(ctx context.Context) (*Server, error) {
-
 	if err := r.bootstrap(ctx); err != nil {
 		return nil, fmt.Errorf("failed to bootstrap application: %w", err)
 	}
@@ -356,9 +421,8 @@ func (r *Router) NewTestServer(ctx context.Context) (*Server, error) {
 }
 
 func (r *Router) bootstrap(ctx context.Context) error {
-
 	if r.traceConfig.Enabled {
-		tp, err := trace.StartAgent(r.logger, r.traceConfig)
+		tp, err := trace.StartAgent(ctx, r.logger, r.traceConfig)
 		if err != nil {
 			return fmt.Errorf("failed to start trace agent: %w", err)
 		}
@@ -366,21 +430,21 @@ func (r *Router) bootstrap(ctx context.Context) error {
 	}
 
 	// Prometheus metrics rely on OTLP metrics
-	if r.metricConfig.Enabled || r.metricConfig.Prometheus.Enabled {
-		mp, err := metric.StartAgent(r.logger, r.metricConfig)
+	if r.metricConfig.IsEnabled() {
+		mp, err := metric.StartAgent(ctx, r.logger, r.metricConfig)
 		if err != nil {
 			return fmt.Errorf("failed to start trace agent: %w", err)
 		}
 		r.meterProvider = mp
-	}
 
-	if r.metricConfig.Prometheus.Enabled {
-		promSvr := createPrometheus(r.logger, r.metricConfig.Prometheus.ListenAddr, r.metricConfig.Prometheus.Path)
-		go func() {
-			if err := promSvr.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-				r.logger.Error("Failed to start Prometheus server", zap.Error(err))
-			}
-		}()
+		if r.metricConfig.Prometheus.Enabled {
+			promSvr := createPrometheus(r.logger, r.metricConfig.Prometheus.ListenAddr, r.metricConfig.Prometheus.Path)
+			go func() {
+				if err := promSvr.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+					r.logger.Error("Failed to start Prometheus server", zap.Error(err))
+				}
+			}()
+		}
 	}
 
 	// Modules are only initialized once and not on every config change
@@ -419,7 +483,7 @@ func (r *Router) Start(ctx context.Context) error {
 		return fmt.Errorf("config fetcher not provided. Please provide a static router config instead")
 	}
 
-	var initCh = make(chan *nodev1.RouterConfig, 1)
+	initCh := make(chan *nodev1.RouterConfig, 1)
 
 	eg.Go(func() error {
 		for {
@@ -454,6 +518,11 @@ func (r *Router) Start(ctx context.Context) error {
 // newServer creates a new Server instance.
 // All stateful data is copied from the Router over to the new server instance.
 func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfig) (*Server, error) {
+	subgraphs, err := r.configureSubgraphOverwrites(routerConfig)
+	if err != nil {
+		return nil, err
+	}
+
 	ro := &Server{
 		routerConfig: routerConfig,
 		Config:       r.Config,
@@ -465,9 +534,9 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		requestlogger.WithDefaultOptions(),
 		requestlogger.WithContext(func(request *http.Request) []zapcore.Field {
 			return []zapcore.Field{
-				zap.String("configVersion", routerConfig.GetVersion()),
-				zap.String("requestID", middleware.GetReqID(request.Context())),
-				zap.String("federatedGraphName", r.federatedGraphName),
+				zap.String("config_version", routerConfig.GetVersion()),
+				zap.String("request_id", middleware.GetReqID(request.Context())),
+				zap.String("federated_graph_name", r.federatedGraphName),
 			}
 		}),
 	)
@@ -537,14 +606,14 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	var metricStore *metric.Metrics
 
 	// Prometheus metrics rely on OTLP metrics
-	metricsEnabled := r.metricConfig.Enabled || r.metricConfig.Prometheus.Enabled
-
-	if metricsEnabled {
+	if r.metricConfig.IsEnabled() {
 		m, err := metric.NewMetrics(
 			r.meterProvider,
+			metric.WithApplicationVersion(Version),
 			metric.WithAttributes(
 				otel.WgRouterGraphName.String(r.federatedGraphName),
 				otel.WgRouterConfigVersion.String(routerConfig.GetVersion()),
+				otel.WgRouterVersion.String(Version),
 			),
 		)
 		if err != nil {
@@ -562,12 +631,13 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 
 	var traceHandler *trace.Middleware
 
-	if metricsEnabled {
+	if r.traceConfig.Enabled {
 		h := trace.NewMiddleware(otel.RouterServerAttribute,
 			otelhttp.WithSpanOptions(
 				oteltrace.WithAttributes(
 					otel.WgRouterGraphName.String(r.federatedGraphName),
 					otel.WgRouterConfigVersion.String(routerConfig.GetVersion()),
+					otel.WgRouterVersion.String(Version),
 				),
 			),
 			// Disable built-in metrics
@@ -585,21 +655,6 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		}
 
 		subChiRouter.Use(graphqlPreHandler.Handler)
-
-		subgraphs := make([]Subgraph, len(routerConfig.Subgraphs))
-		for _, s := range routerConfig.Subgraphs {
-			parsedURL, err := url.Parse(s.RoutingUrl)
-			if err != nil {
-				r.logger.Error("Failed to parse subgraph url", zap.String("url", s.RoutingUrl), zap.Error(err))
-			}
-
-			subgraph := Subgraph{
-				Id:   s.Id,
-				Name: s.Name,
-				Url:  parsedURL,
-			}
-			subgraphs = append(subgraphs, subgraph)
-		}
 
 		// Create custom request context that provides access to the request and response.
 		// It is used by custom modules and handlers. It must be added before custom user middlewares
@@ -657,7 +712,6 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 
 // listenAndServe starts the Server and blocks until the Server is shutdown.
 func (r *Server) listenAndServe() error {
-
 	if err := r.Server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		return err
 	}
@@ -723,8 +777,8 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 // Shutdown gracefully shutdown the Server.
 func (r *Server) Shutdown(ctx context.Context) (err error) {
 	r.logger.Info("Gracefully shutting down the router ...",
-		zap.String("version", r.routerConfig.GetVersion()),
-		zap.String("gracePeriod", r.gracePeriod.String()),
+		zap.String("config_version", r.routerConfig.GetVersion()),
+		zap.String("grace_period", r.gracePeriod.String()),
 	)
 
 	if r.gracePeriod > 0 {
@@ -758,7 +812,7 @@ func createPrometheus(logger *zap.Logger, listenAddr, path string) *http.Server 
 		Handler:           r,
 	}
 
-	logger.Info("Serve Prometheus metrics", zap.String("listenAddr", svr.Addr), zap.String("endpoint", path))
+	logger.Info("Serve Prometheus metrics", zap.String("listen_addr", svr.Addr), zap.String("endpoint", path))
 
 	return svr
 }
@@ -882,6 +936,12 @@ func WithLivenessCheckPath(path string) Option {
 func WithHeaderRules(headers config.HeaderRules) Option {
 	return func(r *Router) {
 		r.headerRules = headers
+	}
+}
+
+func WithOverrideRoutingURL(overrideRoutingURL config.OverrideRoutingURLConfiguration) Option {
+	return func(r *Router) {
+		r.overrideRoutingURLConfiguration = overrideRoutingURL
 	}
 }
 

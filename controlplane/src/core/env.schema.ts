@@ -17,7 +17,6 @@ export const envVariables = z.object({
   KC_ADMIN_PASSWORD: z.string(),
   KC_API_URL: z.string().url(),
   KC_FRONTEND_URL: z.string().url(),
-  PROMETHEUS_API_URL: z.string().url(),
   PORT: z
     .string()
     .default('3001')

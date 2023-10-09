@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.10.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.9.0...@wundergraph/composition@0.10.0) (2023-10-09)
+
+### Features
+
+* use metric data for dashboard stats ([#169](https://github.com/wundergraph/cosmo/issues/169)) ([e25fe32](https://github.com/wundergraph/cosmo/commit/e25fe32cdc053d658b0b0cdcd819b039be3341e6)) (@StarpTech)
+
 # [0.9.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.8.1...@wundergraph/composition@0.9.0) (2023-09-26)
 
 ### Features

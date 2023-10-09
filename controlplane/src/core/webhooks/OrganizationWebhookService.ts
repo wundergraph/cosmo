@@ -164,7 +164,7 @@ export class OrganizationWebhookService {
         };
       }
 
-      post(OrganizationEventName[eventName], data, this.logger, config.url!, config.key);
+      post(OrganizationEventName[eventName], data, this.logger, 'debug', config.url!, config.key);
     }
   }
 

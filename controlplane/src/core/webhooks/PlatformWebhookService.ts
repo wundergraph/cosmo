@@ -53,7 +53,7 @@ export class PlatformWebhookService implements IPlatformWebhookService {
       payload: eventData,
     };
 
-    post(PlatformEventName[eventName], data, this.logger, this.url, this.key);
+    post(PlatformEventName[eventName], data, this.logger, 'error', this.url, this.key);
   }
 }
 

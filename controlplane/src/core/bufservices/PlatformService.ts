@@ -29,7 +29,6 @@ import {
   GetFederatedGraphChangelogResponse,
   GetFederatedGraphSDLByNameResponse,
   GetFederatedGraphsResponse,
-  GetMetricsDashboardResponse,
   GetOrganizationIntegrationsResponse,
   GetOrganizationMembersResponse,
   GetOrganizationWebhookConfigsResponse,
@@ -45,14 +44,17 @@ import {
   RequestSeriesItem,
   UpdateFederatedGraphResponse,
   UpdateIntegrationConfigResponse,
+  UpdateOrganizationDetailsResponse,
   UpdateOrganizationWebhookConfigResponse,
   UpdateSubgraphResponse,
   WhoAmIResponse,
+  GetGraphMetricsResponse,
+  GetMetricsErrorRateResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { PlatformEventName, OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import { OpenAIGraphql, buildRouterConfig } from '@wundergraph/cosmo-shared';
 import { parse } from 'graphql';
-import { GraphApiKeyJwtPayload } from '../../types/index.js';
+import { GraphApiKeyDTO, GraphApiKeyJwtPayload } from '../../types/index.js';
 import { Composer } from '../composition/composer.js';
 import { buildSchema, composeSubgraphs } from '../composition/composition.js';
 import { getDiffBetweenGraphs } from '../composition/schemaCheck.js';
@@ -69,7 +71,7 @@ import { TraceRepository } from '../repositories/analytics/TraceRepository.js';
 import type { RouterOptions } from '../routes.js';
 import { ApiKeyGenerator } from '../services/ApiGenerator.js';
 import ApolloMigrator from '../services/ApolloMigrator.js';
-import { MetricsDashboardRepository } from '../repositories/analytics/MetricsDashboardRepository.js';
+import { MetricsRepository } from '../repositories/analytics/MetricsRepository.js';
 import { handleError, isValidLabelMatchers, isValidLabels } from '../util.js';
 import { OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
 import { GitHubRepository } from '../repositories/GitHubRepository.js';
@@ -380,6 +382,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         if (!federatedGraph) {
           return {
             subgraphs: [],
+            graphToken: '',
             response: {
               code: EnumStatusCode.ERR_NOT_FOUND,
               details: `Federated graph '${req.name}' not found`,
@@ -396,6 +399,34 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const list = await subgraphRepo.listByGraph(req.name);
 
+        const tokens = await fedRepo.getRouterTokens({
+          organizationId: authContext.organizationId,
+          federatedGraphId: federatedGraph.id,
+        });
+
+        let graphToken: GraphApiKeyDTO;
+
+        if (tokens.length === 0) {
+          const tokenValue = await signJwt<GraphApiKeyJwtPayload>({
+            secret: opts.jwtSecret,
+            token: {
+              iss: authContext.userId,
+              federated_graph_id: federatedGraph.id,
+              organization_id: authContext.organizationId,
+            },
+          });
+
+          const token = await fedRepo.createToken({
+            token: tokenValue,
+            federatedGraphId: federatedGraph.id,
+            tokenName: federatedGraph.name,
+            organizationId: authContext.organizationId,
+          });
+
+          graphToken = token;
+        } else {
+          graphToken = tokens[0];
+        }
         return {
           graph: {
             id: federatedGraph.id,
@@ -414,6 +445,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             lastUpdatedAt: g.lastUpdatedAt,
             labels: g.labels,
           })),
+          graphToken: graphToken.token,
           response: {
             code: EnumStatusCode.OK,
           },
@@ -1329,6 +1361,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const metricsRepository = new MetricsRepository(opts.chClient);
         const analyticsDashRepo = new AnalyticsDashboardViewRepository(opts.chClient);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
 
@@ -1359,13 +1392,13 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    getMetricsDashboard: (req, ctx) => {
+    getGraphMetrics: (req, ctx) => {
       const logger = opts.logger.child({
         service: ctx.service.typeName,
         method: ctx.method.name,
       });
 
-      return handleError<PlainMessage<GetMetricsDashboardResponse>>(logger, async () => {
+      return handleError<PlainMessage<GetGraphMetricsResponse>>(logger, async () => {
         if (!opts.chClient) {
           return {
             response: {
@@ -1374,7 +1407,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const repo = new MetricsDashboardRepository(opts.prometheus);
+        const repo = new MetricsRepository(opts.chClient);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
 
         const graph = await fedGraphRepo.byName(req.federatedGraphName);
@@ -1417,16 +1450,17 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         method: ctx.method.name,
       });
 
-      return handleError<PlainMessage<GetMetricsDashboardResponse>>(logger, async () => {
+      return handleError<PlainMessage<GetMetricsErrorRateResponse>>(logger, async () => {
         if (!opts.chClient) {
           return {
             response: {
               code: EnumStatusCode.ERR_ANALYTICS_DISABLED,
             },
+            series: [],
           };
         }
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const repo = new MetricsDashboardRepository(opts.prometheus);
+        const repo = new MetricsRepository(opts.chClient);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
 
         const graph = await fedGraphRepo.byName(req.federatedGraphName);
@@ -1436,6 +1470,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               code: EnumStatusCode.ERR_NOT_FOUND,
               details: `Federated graph '${req.federatedGraphName}' not found`,
             },
+            series: [],
           };
         }
 
@@ -1452,7 +1487,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           response: {
             code: EnumStatusCode.OK,
           },
-          ...metrics.data,
+          series: metrics.data.series,
         };
       });
     },
@@ -2481,13 +2516,13 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    updateOrganizationName: (req, ctx) => {
+    updateOrganizationDetails: (req, ctx) => {
       const logger = opts.logger.child({
         service: ctx.service.typeName,
         method: ctx.method.name,
       });
 
-      return handleError<PlainMessage<UpdateOrganizationWebhookConfigResponse>>(logger, async () => {
+      return handleError<PlainMessage<UpdateOrganizationDetailsResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db);
 
@@ -2525,92 +2560,44 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        await orgRepo.updateOrganization({ id: authContext.organizationId, name: req.organizationName });
+        if (org.slug !== req.organizationSlug) {
+          // checking if the provided orgSlug is available
+          const newOrg = await orgRepo.bySlug(req.organizationSlug);
+          if (newOrg) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR_ALREADY_EXISTS,
+                details: `Organization with slug ${req.organizationSlug} already exists.`,
+              },
+            };
+          }
 
-        return {
-          response: {
-            code: EnumStatusCode.OK,
-          },
-        };
-      });
-    },
+          await opts.keycloakClient.authenticateClient();
 
-    updateOrganizationSlug: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
-
-      return handleError<PlainMessage<UpdateOrganizationWebhookConfigResponse>>(logger, async () => {
-        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const orgRepo = new OrganizationRepository(opts.db);
-
-        const org = await orgRepo.byId(authContext.organizationId);
-        if (!org) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_NOT_FOUND,
-              details: `Organization not found`,
-            },
-          };
-        }
-
-        const orgMember = await orgRepo.getOrganizationMember({
-          organizationID: authContext.organizationId,
-          userID: authContext.userId || req.userID,
-        });
-
-        if (!orgMember) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR,
-              details: 'User is not a part of this organization.',
-            },
-          };
-        }
-
-        // non admins cannot update the organization name
-        if (!orgMember.roles.includes('admin')) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR,
-              details: 'User does not have the permissions to update the organization slug.',
-            },
-          };
-        }
-
-        // checking if the provided orgSlug is available
-        const newOrg = await orgRepo.bySlug(req.organizationSlug);
-        if (newOrg) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_ALREADY_EXISTS,
-              details: `Organization with slug ${req.organizationSlug} already exists.`,
-            },
-          };
-        }
-
-        await opts.keycloakClient.authenticateClient();
-
-        const organizationGroup = await opts.keycloakClient.client.groups.find({
-          max: 1,
-          search: org.slug,
-          realm: opts.keycloakRealm,
-        });
-
-        if (organizationGroup.length === 0) {
-          throw new Error(`Organization group '${org.slug}' not found`);
-        }
-
-        await opts.keycloakClient.client.groups.update(
-          {
-            id: organizationGroup[0].id!,
+          const organizationGroup = await opts.keycloakClient.client.groups.find({
+            max: 1,
+            search: org.slug,
             realm: opts.keycloakRealm,
-          },
-          { name: req.organizationSlug },
-        );
+          });
 
-        await orgRepo.updateOrganization({ id: authContext.organizationId, slug: req.organizationSlug });
+          if (organizationGroup.length === 0) {
+            throw new Error(`Organization group '${org.slug}' not found`);
+          }
+
+          await opts.keycloakClient.client.groups.update(
+            {
+              id: organizationGroup[0].id!,
+              realm: opts.keycloakRealm,
+            },
+            { name: req.organizationSlug },
+          );
+        }
+
+        await orgRepo.updateOrganization({
+          id: authContext.organizationId,
+          name: req.organizationName,
+          slug: req.organizationSlug,
+        });
 
         return {
           response: {

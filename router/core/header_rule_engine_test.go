@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/wundergraph/cosmo/router/internal/config"
+	"github.com/wundergraph/cosmo/router/config"
 	"go.uber.org/zap"
 )
 

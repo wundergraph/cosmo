@@ -4,7 +4,7 @@ import { EmptyState } from "@/components/empty-state";
 import { GraphContext, getGraphLayout } from "@/components/layout/graph-layout";
 import { PageHeader } from "@/components/layout/head";
 import { TitleLayout } from "@/components/layout/title-layout";
-import { SchemaViewer, SchemaViewerActions } from "@/components/schmea-viewer";
+import { SchemaViewer, SchemaViewerActions } from "@/components/schema-viewer";
 import { Button } from "@/components/ui/button";
 import { CLI } from "@/components/ui/cli";
 import {
@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/table";
 import { useSessionStorage } from "@/hooks/use-session-storage";
 import { docsBaseURL } from "@/lib/constants";
+import { formatDateTime } from "@/lib/format-date";
 import { NextPageWithLayout } from "@/lib/page";
 import {
   CommandLineIcon,
@@ -180,7 +181,7 @@ const ChecksPage: NextPageWithLayout = () => {
           <TableRow>
             <TableHead className="w-[200px]">Timestamp</TableHead>
             <TableHead>Subgraph</TableHead>
-            <TableHead>Status</TableHead>
+            <TableHead className="text-center">Status</TableHead>
             <TableHead className="text-center">Composable</TableHead>
             <TableHead className="text-center">Non Breaking</TableHead>
             <TableHead className="text-center">Proposed Schema</TableHead>
@@ -202,10 +203,10 @@ const ChecksPage: NextPageWithLayout = () => {
                 return (
                   <TableRow key={id}>
                     <TableCell className="font-medium ">
-                      {format(new Date(timestamp), "dd MMM yyyy HH:mm")}
+                      {formatDateTime(new Date(timestamp))}
                     </TableCell>
                     <TableCell>{subgraphName}</TableCell>
-                    <TableCell>
+                    <TableCell className="text-center">
                       {getCheckBadge(isBreaking, isComposable, isForcedSuccess)}
                     </TableCell>
                     <TableCell>{getCheckIcon(isComposable)}</TableCell>

@@ -1,5 +1,4 @@
 import { IncomingMessage } from 'node:http';
-import * as zlib from 'node:zlib';
 import axios, { AxiosError, AxiosRequestConfig } from 'axios';
 import Pick from 'stream-json/filters/Pick.js';
 import StreamArray from 'stream-json/streamers/StreamArray.js';
@@ -139,7 +138,7 @@ export class ClickHouseClient {
 
     const params = new URLSearchParams(rawParams);
 
-    const requestOptions: AxiosRequestConfig = {
+    return {
       url: this.options?.dsn,
       params,
       responseType: 'stream',
@@ -150,15 +149,8 @@ export class ClickHouseClient {
       maxBodyLength: this.options?.httpConfig?.maxBodyLength,
       maxContentLength: this.options?.httpConfig?.maxContentLength,
       timeout: this.options?.httpConfig?.timeout,
-      transformResponse: (data: IncomingMessage) => {
-        return this.options?.httpConfig?.compression === ClickHouseCompressionMethod.BROTLI
-          ? data.pipe(zlib.createBrotliDecompress())
-          : data;
-      },
       headers: this._getHeaders(),
     };
-
-    return requestOptions;
   }
 
   /**
@@ -188,8 +180,8 @@ export class ClickHouseClient {
    * Promise based query
    * @private
    */
-  private _queryPromise<T = any>(query: string, params?: Record<string, string | number>) {
-    return new Promise<T[] | string>((resolve, reject) => {
+  private _queryPromise<T = string>(query: string, params?: Record<string, string | number>) {
+    return new Promise<T extends string ? string | T[] : T[]>((resolve, reject) => {
       axios
         .request({
           ...this._getRequestOptions(query, params),
@@ -202,7 +194,7 @@ export class ClickHouseClient {
             case ClickHouseDataFormat.JSONCompact:
             case ClickHouseDataFormat.JSONCompactStrings:
             case ClickHouseDataFormat.JSONStrings: {
-              return resolve(JSON.parse(data).data as T[]);
+              return resolve(JSON.parse(data).data);
             }
             default: {
               return resolve(data);

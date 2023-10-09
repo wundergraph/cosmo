@@ -21,7 +21,6 @@ import { OrganizationRepository } from './repositories/OrganizationRepository.js
 import GraphApiTokenAuthenticator from './services/GraphApiTokenAuthenticator.js';
 import AuthUtils from './auth-utils.js';
 import Keycloak from './services/Keycloak.js';
-import PrometheusClient from './prometheus/client.js';
 import { PlatformWebhookService } from './webhooks/PlatformWebhookService.js';
 import AccessTokenAuthenticator from './services/AccessTokenAuthenticator.js';
 import { GitHubRepository } from './repositories/GitHubRepository.js';
@@ -40,9 +39,6 @@ export interface BuildConfig {
   debugSQL?: boolean;
   production?: boolean;
   clickhouseDsn?: string;
-  prometheus: {
-    apiUrl: string;
-  };
   keycloak: {
     loginRealm: string;
     realm: string;
@@ -167,9 +163,6 @@ export default async function build(opts: BuildConfig) {
     webErrorPath: opts.auth.webErrorPath,
   });
 
-  const prometheusClient = new PrometheusClient({
-    apiUrl: opts.prometheus.apiUrl,
-  });
   const organizationRepository = new OrganizationRepository(fastify.db);
   const apiKeyAuth = new ApiKeyAuthenticator(fastify.db, organizationRepository);
   const webAuth = new WebSessionAuthenticator(opts.auth.secret);
@@ -243,7 +236,6 @@ export default async function build(opts: BuildConfig) {
       chClient: fastify.ch,
       authenticator,
       keycloakClient,
-      prometheus: prometheusClient,
       platformWebhooks,
       githubApp,
       webBaseUrl: opts.auth.webBaseUrl,

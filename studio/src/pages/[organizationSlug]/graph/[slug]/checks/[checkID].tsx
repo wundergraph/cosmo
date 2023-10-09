@@ -3,7 +3,7 @@ import { EmptyState } from "@/components/empty-state";
 import { GraphContext, getGraphLayout } from "@/components/layout/graph-layout";
 import { PageHeader } from "@/components/layout/head";
 import { TitleLayout } from "@/components/layout/title-layout";
-import { SchemaViewer } from "@/components/schmea-viewer";
+import { SchemaViewer } from "@/components/schema-viewer";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,6 +13,17 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Loader } from "@/components/ui/loader";
 import {
   Table,
@@ -24,6 +35,7 @@ import {
 } from "@/components/ui/table";
 import { useToast } from "@/components/ui/use-toast";
 import { useSessionStorage } from "@/hooks/use-session-storage";
+import { formatDateTime } from "@/lib/format-date";
 import { NextPageWithLayout } from "@/lib/page";
 import { cn } from "@/lib/utils";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
@@ -121,8 +133,7 @@ const CheckDetailsPage: NextPageWithLayout = () => {
         <CardHeader>
           <CardTitle>Check details</CardTitle>
           <CardDescription>
-            Created At:{" "}
-            {format(new Date(data.check.timestamp), "dd MMM yyyy HH:mm")}
+            Created At: {formatDateTime(new Date(data.check.timestamp))}
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-y-2 text-sm">
@@ -149,19 +160,38 @@ const CheckDetailsPage: NextPageWithLayout = () => {
           {!data.check.isForcedSuccess &&
             data.check.isBreaking &&
             data.check.isComposable && (
-              <Button
-                variant="secondary"
-                isLoading={isForcingSuccess}
-                onClick={() =>
-                  forceSuccess({
-                    checkId: id,
-                    graphName: graphContext.graph?.name,
-                  })
-                }
-                className="mt-4 md:ml-auto md:mt-0 md:w-max"
-              >
-                Force Success
-              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    className="mt-4 md:ml-auto md:mt-0 md:w-max"
+                    variant="secondary"
+                  >
+                    Force Success
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This action cannot be undone. This will forcefully mark
+                      the check as successful.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => {
+                        forceSuccess({
+                          checkId: id,
+                          graphName: graphContext.graph?.name,
+                        });
+                      }}
+                    >
+                      Force Success
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             )}
         </CardContent>
       </Card>

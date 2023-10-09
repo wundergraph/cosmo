@@ -179,6 +179,7 @@ message GetFederatedGraphByNameResponse {
   Response response = 1;
   FederatedGraph graph = 2;
   repeated Subgraph subgraphs = 3;
+  string graphToken = 4;
 }
 
 message GetFederatedGraphSDLByNameRequest {
@@ -317,10 +318,16 @@ message Pagination {
   int32 offset = 2;
 }
 
+message Sort {
+  string id = 1;
+  bool desc = 2; 
+}
+
 message AnalyticsConfig {
   DateRange date_range = 1;
   repeated AnalyticsFilter filters = 2;
   Pagination pagination = 3;
+  optional Sort sort = 4;
 }
 
 message AnalyticsFilter {
@@ -749,21 +756,13 @@ message LeaveOrganizationResponse {
   Response response = 1;
 }
 
-message UpdateOrganizationNameRequest {
+message UpdateOrganizationDetailsRequest {
   string userID = 1;
   string organizationName = 2;
+  string organizationSlug = 3;
 }
 
-message UpdateOrganizationNameResponse {
-  Response response = 1;
-}
-
-message UpdateOrganizationSlugRequest {
-  string userID = 1;
-  string organizationSlug = 2;
-}
-
-message UpdateOrganizationSlugResponse {
+message UpdateOrganizationDetailsResponse {
   Response response = 1;
 }
 
@@ -780,12 +779,12 @@ message UpdateOrgMemberRoleResponse {
 /**
  * MetricsDashboard
  */
- message GetMetricsDashboardRequest {
+ message GetGraphMetricsRequest {
   string federatedGraphName = 1;
   int32 range = 2;
 }
 
-message GetMetricsDashboardResponse {
+message GetGraphMetricsResponse {
   Response response = 1;
   MetricsDashboardMetric requests = 2;
   MetricsDashboardMetric latency = 3;
@@ -827,8 +826,13 @@ message GetMetricsErrorRateRequest {
 
 message GetMetricsErrorRateResponse {
   Response response = 1;
-  repeated MetricsSeriesItem series = 2;
-  repeated MetricsSeriesItem errorSeries = 3;
+  repeated MetricsErrorRateSeriesItem series = 2;
+}
+
+message MetricsErrorRateSeriesItem {
+  string timestamp = 1;
+  float requestRate = 2;
+  float errorRate = 3;
 }
 
 message ForceCheckSuccessRequest {
@@ -932,10 +936,8 @@ service PlatformService {
   rpc DeleteOrganization(DeleteOrganizationRequest) returns (DeleteOrganizationResponse) {}
   // LeaveOrganization removes a member from the organization
   rpc LeaveOrganization(LeaveOrganizationRequest) returns (LeaveOrganizationResponse) {}
-  // UpdateOrganizationName updates the name of the organization
-  rpc UpdateOrganizationName(UpdateOrganizationNameRequest) returns (UpdateOrganizationNameResponse) {}
-  // UpdateOrganizationSlug updates the slug of the organization
-  rpc UpdateOrganizationSlug(UpdateOrganizationSlugRequest) returns (UpdateOrganizationSlugResponse) {}
+  // UpdateOrganizationDetails updates the name and slug of the organization
+  rpc UpdateOrganizationDetails(UpdateOrganizationDetailsRequest) returns (UpdateOrganizationDetailsResponse) {}
   // UpdateOrgMemberRole updates the role of an org member
   rpc UpdateOrgMemberRole(UpdateOrgMemberRoleRequest) returns (UpdateOrgMemberRoleResponse) {}
 
@@ -951,7 +953,7 @@ service PlatformService {
 
   rpc GetTrace(GetTraceRequest) returns (GetTraceResponse) {}
 
-  rpc GetMetricsDashboard(GetMetricsDashboardRequest) returns (GetMetricsDashboardResponse) {
+  rpc GetGraphMetrics(GetGraphMetricsRequest) returns (GetGraphMetricsResponse) {
     option idempotency_level = NO_SIDE_EFFECTS;
   }
 

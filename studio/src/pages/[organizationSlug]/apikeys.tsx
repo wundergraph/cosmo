@@ -35,6 +35,7 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
 import { docsBaseURL } from "@/lib/constants";
+import { formatDateTime } from "@/lib/format-date";
 import { NextPageWithLayout } from "@/lib/page";
 import {
   EllipsisVerticalIcon,
@@ -51,7 +52,6 @@ import {
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { ExpiresAt } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import copy from "copy-to-clipboard";
-import { format } from "date-fns";
 import Link from "next/link";
 import {
   Dispatch,
@@ -476,7 +476,7 @@ const APIKeysPage: NextPageWithLayout = () => {
   const apiKeys = data.apiKeys;
 
   return (
-    <div className="mt-4 flex flex-col gap-y-6">
+    <div className="flex flex-col gap-y-6">
       {apiKeys.length === 0 ? (
         <Empty
           apiKey={apiKey}
@@ -538,17 +538,17 @@ const APIKeysPage: NextPageWithLayout = () => {
                         <TableCell>{createdBy}</TableCell>
                         <TableCell>
                           {expiresAt
-                            ? format(new Date(expiresAt), "MMM dd yyyy, HH:mm")
+                            ? formatDateTime(new Date(expiresAt))
                             : "Never"}
                         </TableCell>
                         <TableCell>
                           {createdAt
-                            ? format(new Date(createdAt), "MMM dd yyyy, HH:mm")
+                            ? formatDateTime(new Date(createdAt))
                             : "Never"}
                         </TableCell>
                         <TableCell>
                           {lastUsedAt
-                            ? format(new Date(lastUsedAt), "MMM dd yyyy, HH:mm")
+                            ? formatDateTime(new Date(lastUsedAt))
                             : "Never"}
                         </TableCell>
                         <TableCell>
