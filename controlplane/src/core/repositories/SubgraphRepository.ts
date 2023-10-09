@@ -97,21 +97,18 @@ export class SubgraphRepository {
       const fedGraphRepo = new FederatedGraphRepository(db, this.organizationId);
       const subgraphRepo = new SubgraphRepository(db, this.organizationId);
 
-      const oldGraphs: FederatedGraphDTO[] = [];
-      const newGraphs: FederatedGraphDTO[] = [];
-
       // update routing URL
       if (data.routingUrl !== '') {
         await db.update(subgraphs).set({ routingUrl }).where(eq(subgraphs.id, subgraph.id)).execute();
         const result = await subgraphRepo.byName(data.name);
         if (result) {
-          newGraphs.push(...(await fedGraphRepo.bySubgraphLabels(result.labels)));
+          updatedFederatedGraphs.push(...(await fedGraphRepo.bySubgraphLabels(result.labels)));
         }
       }
 
       // update labels
       if (data.labels.length > 0) {
-        oldGraphs.push(...(await fedGraphRepo.bySubgraphLabels(uniqueLabels)));
+        const oldGraphs = await fedGraphRepo.bySubgraphLabels(uniqueLabels);
 
         await db
           .update(targets)
@@ -120,14 +117,7 @@ export class SubgraphRepository {
           })
           .where(eq(targets.id, subgraph.targetId));
 
-        const graphs = await fedGraphRepo.bySubgraphLabels(uniqueLabels);
-        for (const graph of graphs) {
-          const idx = newGraphs.findIndex((g) => g.id === graph.id);
-          if (idx !== -1) {
-            continue;
-          }
-          newGraphs.push(graph);
-        }
+        const newGraphs = await fedGraphRepo.bySubgraphLabels(uniqueLabels);
 
         let deleteCondition: SQL<unknown> | undefined = eq(subgraphsToFederatedGraph.subgraphId, subgraph.id);
 
@@ -155,16 +145,23 @@ export class SubgraphRepository {
             .execute();
         });
 
+        const changedGraphs = [
+          ...oldGraphs.filter((b) => !newGraphs.some((a) => a.id === b.id)),
+          ...newGraphs.filter((a) => !oldGraphs.some((b) => a.id === b.id)),
+        ];
+        for (const graph of changedGraphs) {
+          const idx = updatedFederatedGraphs.findIndex((g) => g.id === graph.id);
+          if (idx !== -1) {
+            continue;
+          }
+          updatedFederatedGraphs.push(graph);
+        }
+
         await Promise.all(insertOps);
       }
 
       // update schema and router config of graphs which were affected
-      const changedGraphs = [
-        ...oldGraphs.filter((b) => !newGraphs.some((a) => a.id === b.id)),
-        ...newGraphs.filter((a) => !oldGraphs.some((b) => a.id === b.id)),
-      ];
-      updatedFederatedGraphs.push(...changedGraphs);
-      for (const federatedGraph of changedGraphs) {
+      for (const federatedGraph of updatedFederatedGraphs) {
         const ce = await updateComposedSchema({
           federatedGraph,
           fedGraphRepo,
