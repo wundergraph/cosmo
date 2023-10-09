@@ -2,8 +2,9 @@ package trace
 
 import (
 	"context"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 
 	"go.uber.org/zap"
 )
@@ -36,11 +37,11 @@ func TestStartAgent(t *testing.T) {
 	log := zap.NewNop()
 
 	_, err := StartAgent(context.Background(), log, c1)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	_, err = StartAgent(context.Background(), log, c2)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	_, err = StartAgent(context.Background(), log, c3)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 }
