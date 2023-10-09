@@ -12,6 +12,10 @@ interface FederatedGraphSchemaUpdate {
     id: string;
     name: string;
   };
+  organization: {
+    id: string;
+    slug: string;
+  };
   errors: boolean;
   actor_id?: string;
 }
@@ -137,24 +141,17 @@ export class OrganizationWebhookService {
         data = {
           blocks: [
             {
-              type: 'header',
+              type: 'section',
               text: {
-                type: 'plain_text',
-                text: `Schema of the federated graph ${eventPayload.federated_graph.name} has been updated`,
+                type: 'mrkdwn',
+                text: `🚀 Schema of the federated graph *<https://cosmo.wundergraph.com/${eventPayload.organization.slug}/graph/${eventPayload.federated_graph.name} | ${eventPayload.federated_graph.name}>* has been updated 🎉`,
               },
             },
             {
               type: 'section',
               text: {
                 type: 'mrkdwn',
-                text: `*Has composition errors*: ${eventPayload.errors}`,
-              },
-            },
-            {
-              type: 'section',
-              text: {
-                type: 'mrkdwn',
-                text: '<https://wundergraph.com|View schema>',
+                text: `> Click <https://cosmo.wundergraph.com/${eventPayload.organization.slug}/graph/${eventPayload.federated_graph.name}/schema| here> to view the schema.`,
               },
             },
           ],

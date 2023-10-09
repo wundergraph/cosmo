@@ -95,6 +95,7 @@ export class Authentication implements Authenticator {
       const userContext: AuthContext = {
         userId: user.userId,
         organizationId: organization.id,
+        organizationSlug: organization.slug,
       };
 
       this.#cache.set(cacheKey, userContext);

@@ -9,6 +9,7 @@ import { calLink } from './Authentication.js';
 
 export type ApiKeyAuthContext = {
   organizationId: string;
+  organizationSlug: string;
 };
 
 export default class ApiKeyAuthenticator {
@@ -62,6 +63,7 @@ export default class ApiKeyAuthenticator {
 
     return {
       organizationId: apiKeyModel.organizationId,
+      organizationSlug: organization.slug
     };
   }
 }

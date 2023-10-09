@@ -135,6 +135,19 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           subgraphRepo,
         });
 
+        orgWebhooks.send(OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED, {
+          federated_graph: {
+            id: federatedGraph.id,
+            name: federatedGraph.name,
+          },
+          organization: {
+            id: authContext.organizationId,
+            slug: authContext.organizationSlug,
+          },
+          errors: compositionErrors.length > 0,
+          actor_id: authContext.userId,
+        });
+
         if (compositionErrors.length > 0) {
           return {
             response: {
@@ -143,15 +156,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             compositionErrors,
           };
         }
-
-        orgWebhooks.send(OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED, {
-          federated_graph: {
-            id: federatedGraph.id,
-            name: federatedGraph.name,
-          },
-          errors: compositionErrors.length > 0,
-          actor_id: authContext.userId,
-        });
 
         return {
           response: {
@@ -761,6 +765,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
                 id: federatedGraph.id,
                 name: federatedGraph.name,
               },
+              organization: {
+                id: authContext.organizationId,
+                slug: authContext.organizationSlug,
+              },
               errors: hasErrors,
               actor_id: authContext.userId,
             });
@@ -1110,6 +1118,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
                 id: federatedGraph.id,
                 name: federatedGraph.name,
               },
+              organization: {
+                id: authContext.organizationId,
+                slug: authContext.organizationSlug,
+              },
               errors: hasErrors,
               actor_id: authContext.userId,
             });
@@ -1161,6 +1173,20 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           labelMatchers: req.labelMatchers,
           routingUrl: req.routingUrl,
         });
+
+        orgWebhooks.send(OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED, {
+          federated_graph: {
+            id: federatedGraph.id,
+            name: federatedGraph.name,
+          },
+          organization: {
+            id: authContext.organizationId,
+            slug: authContext.organizationSlug,
+          },
+          errors: compositionErrors.length > 0,
+          actor_id: authContext.userId,
+        });
+
         if (compositionErrors.length > 0) {
           return {
             response: {
@@ -1169,15 +1195,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             compositionErrors,
           };
         }
-
-        orgWebhooks.send(OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED, {
-          federated_graph: {
-            id: federatedGraph.id,
-            name: federatedGraph.name,
-          },
-          errors: compositionErrors.length > 0,
-          actor_id: authContext.userId,
-        });
 
         return {
           response: {
@@ -1239,6 +1256,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             federated_graph: {
               id: graph.id,
               name: graph.name,
+            },
+            organization: {
+              id: authContext.organizationId,
+              slug: authContext.organizationSlug,
             },
             errors: compositionErrors.length > 0,
             actor_id: authContext.userId,
@@ -2142,6 +2163,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           federated_graph: {
             id: federatedGraph.id,
             name: federatedGraph.name,
+          },
+          organization: {
+            id: authContext.organizationId,
+            slug: authContext.organizationSlug,
           },
           errors: compositionErrors.length > 0,
           actor_id: authContext.userId,

@@ -229,6 +229,7 @@ export type UserInfoEndpointResponse = {
 
 export type AuthContext = {
   organizationId: string;
+  organizationSlug: string;
   userId?: string;
 };
 
