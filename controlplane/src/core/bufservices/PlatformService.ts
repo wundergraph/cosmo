@@ -27,7 +27,6 @@ import {
   GetFederatedGraphChangelogResponse,
   GetFederatedGraphSDLByNameResponse,
   GetFederatedGraphsResponse,
-  GetMetricsDashboardResponse,
   GetOrganizationMembersResponse,
   GetOrganizationWebhookConfigsResponse,
   GetOrganizationWebhookMetaResponse,
@@ -45,6 +44,8 @@ import {
   UpdateOrganizationWebhookConfigResponse,
   UpdateSubgraphResponse,
   WhoAmIResponse,
+  GetGraphMetricsResponse,
+  GetMetricsErrorRateResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { PlatformEventName, OrganizationEventName } from '@wundergraph/cosmo-connect/dist/webhooks/events_pb';
 import { OpenAIGraphql, buildRouterConfig } from '@wundergraph/cosmo-shared';
@@ -66,7 +67,7 @@ import { TraceRepository } from '../repositories/analytics/TraceRepository.js';
 import type { RouterOptions } from '../routes.js';
 import { ApiKeyGenerator } from '../services/ApiGenerator.js';
 import ApolloMigrator from '../services/ApolloMigrator.js';
-import { MetricsDashboardRepository } from '../repositories/analytics/MetricsDashboardRepository.js';
+import { MetricsRepository } from '../repositories/analytics/MetricsRepository.js';
 import { handleError, isValidLabelMatchers, isValidLabels } from '../util.js';
 import { OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
 import { GitHubRepository } from '../repositories/GitHubRepository.js';
@@ -1335,6 +1336,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const metricsRepository = new MetricsRepository(opts.chClient);
         const analyticsDashRepo = new AnalyticsDashboardViewRepository(opts.chClient);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
 
@@ -1365,13 +1367,13 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    getMetricsDashboard: (req, ctx) => {
+    getGraphMetrics: (req, ctx) => {
       const logger = opts.logger.child({
         service: ctx.service.typeName,
         method: ctx.method.name,
       });
 
-      return handleError<PlainMessage<GetMetricsDashboardResponse>>(logger, async () => {
+      return handleError<PlainMessage<GetGraphMetricsResponse>>(logger, async () => {
         if (!opts.chClient) {
           return {
             response: {
@@ -1380,7 +1382,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const repo = new MetricsDashboardRepository(opts.chClient);
+        const repo = new MetricsRepository(opts.chClient);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
 
         const graph = await fedGraphRepo.byName(req.federatedGraphName);
@@ -1423,16 +1425,17 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         method: ctx.method.name,
       });
 
-      return handleError<PlainMessage<GetMetricsDashboardResponse>>(logger, async () => {
+      return handleError<PlainMessage<GetMetricsErrorRateResponse>>(logger, async () => {
         if (!opts.chClient) {
           return {
             response: {
               code: EnumStatusCode.ERR_ANALYTICS_DISABLED,
             },
+            series: [],
           };
         }
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const repo = new MetricsDashboardRepository(opts.chClient);
+        const repo = new MetricsRepository(opts.chClient);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
 
         const graph = await fedGraphRepo.byName(req.federatedGraphName);
@@ -1442,6 +1445,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               code: EnumStatusCode.ERR_NOT_FOUND,
               details: `Federated graph '${req.federatedGraphName}' not found`,
             },
+            series: [],
           };
         }
 
@@ -1458,7 +1462,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           response: {
             code: EnumStatusCode.OK,
           },
-          ...metrics.data,
+          series: metrics.data.series,
         };
       });
     },

@@ -91,7 +91,7 @@ interface GetMetricsProps {
   params: MetricsParams;
 }
 
-export class MetricsDashboardRepository {
+export class MetricsRepository {
   constructor(private chClient: ClickHouseClient) {}
 
   /**
@@ -105,7 +105,7 @@ export class MetricsDashboardRepository {
 
     const multiplier = range * 60;
 
-    // get total request rate in last [range]h
+    // get request rate in last [range]h
     const queryRate = (start: number, end: number) => {
       return this.chClient.queryPromise<{ value: number | null }>(`
         SELECT round(sum(total) / ${multiplier}, 4) AS value FROM (
@@ -121,8 +121,8 @@ export class MetricsDashboardRepository {
       )
     `);
     };
-    const medianRate = queryRate(start, end);
-    const prevMedianRate = queryRate(prevStart, prevEnd);
+    const requestRate = queryRate(start, end);
+    const prevRequestRate = queryRate(prevStart, prevEnd);
 
     // get top 5 operations in last [range] hours
     const top5 = this.chClient.queryPromise<{ name: string; value: string }>(`
@@ -168,8 +168,8 @@ export class MetricsDashboardRepository {
     const prevSeries = querySeries(prevStart, prevEnd);
 
     const [medianResponse, prevMedianResponse, top5Response, seriesResponse, prevSeriesResponse] = await Promise.all([
-      medianRate,
-      prevMedianRate,
+      requestRate,
+      prevRequestRate,
       top5,
       series,
       prevSeries,
@@ -318,7 +318,7 @@ export class MetricsDashboardRepository {
     const [start, end] = getDateRange(endDate, range);
     const [prevStart, prevEnd] = getDateRange(endDate, range, range);
 
-    // get median request rate in last [range]h
+    // get request rate in last [range]h
     const queryPercentage = (start: number, end: number) => {
       return this.chClient.queryPromise<{ errorPercentage: number }>(`
       WITH
@@ -418,15 +418,7 @@ export class MetricsDashboardRepository {
   /**
    * Get error rate metrics
    */
-  public async getErrorRateMetrics({
-    range = 24,
-    endDate = getEndDate(),
-    params,
-  }: {
-    range?: number;
-    endDate?: number;
-    params: MetricsParams;
-  }) {
+  public async getErrorRateMetrics({ range = 24, endDate = getEndDate(), params }: GetMetricsProps) {
     const granule = getGranularity(range);
 
     const [start, end] = getDateRange(endDate, range);

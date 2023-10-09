@@ -45,7 +45,7 @@ const getLayoutedElements = (
 ) => {
   dagreGraph.setGraph({
     rankdir: "TB",
-    nodesep: 15,
+    nodesep: 12,
     ranksep: 10,
   });
 

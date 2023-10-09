@@ -11,29 +11,28 @@ export class AnalyticsDashboardViewRepository {
     organizationId: string,
   ): Promise<PlainMessage<RequestSeriesItem>[]> {
     const query = `
-        SELECT
-            toDate(Timestamp) as timestamp,
-            COUNT(*) as totalRequests,
-            SUM(if(StatusCode = 'STATUS_CODE_ERROR' OR position(SpanAttributes['http.status_code'],'4') = 1, 1, 0)) as erroredRequests
-        FROM
-            ${this.client.database}.otel_traces
-        WHERE
-        -- Only root spans(spans which have no parent span) and has no condition on SpanKind as a span can start from either the server or the client
-            empty(ParentSpanId)
-            AND SpanAttributes['wg.federated_graph.id'] = '${federatedGraphId}'
-            AND SpanAttributes['wg.organization.id'] = '${organizationId}'
-        AND toDate(Timestamp) >= toDate(now()) - interval 6 day
-        GROUP BY
-            timestamp
-        ORDER BY
-            timestamp DESC
+    SELECT toDate(timestamp) as timestamp, totalRequests, erroredRequests
+      FROM (
+      SELECT
+        toStartOfDay(Timestamp) as timestamp,
+        sum(TotalRequests) as totalRequests,
+        sum(TotalErrors) as erroredRequests
+      FROM ${this.client.database}.operation_request_metrics_5_30_mv
+      WHERE Timestamp >= toDate(now()) - interval 6 day
+        AND FederatedGraphID = '${federatedGraphId}'
+        AND OrganizationID = '${organizationId}'
+      GROUP BY timestamp
+      ORDER BY
+        timestamp WITH FILL
+      FROM
+        toStartOfInterval(NOW() - interval 6 day, INTERVAL 1 DAY, 'UTC') TO NOW() STEP toIntervalDay(1)
+      )
     `;
-
     const seriesRes = await this.client.queryPromise(query);
+
     if (Array.isArray(seriesRes)) {
-      const padded = padMissingDates(seriesRes);
-      return padded.map((p) => ({
-        ...p,
+      return seriesRes.map((p) => ({
+        timestamp: p.timestamp,
         totalRequests: Number(p.totalRequests),
         erroredRequests: Number(p.erroredRequests),
       }));
@@ -47,22 +46,16 @@ export class AnalyticsDashboardViewRepository {
   ): Promise<Record<string, PlainMessage<RequestSeriesItem>[]>> {
     const query = `
         SELECT
-            toDate(Timestamp) as timestamp,
-            COUNT(*) as totalRequests,
-            SUM(if(StatusCode = 'STATUS_CODE_ERROR' OR position(SpanAttributes['http.status_code'],'4') = 1, 1, 0)) as erroredRequests,
-            SpanAttributes['wg.federated_graph.id'] as graphId
-        FROM
-            ${this.client.database}.otel_traces
-        WHERE
-        -- Only root spans(spans which have no parent span) and has no condition on SpanKind as a span can start from either the server or the client
-            empty(ParentSpanId)
-            AND SpanAttributes['wg.organization.id'] = '${organizationId}'
-        AND toDate(Timestamp) >= toDate(now()) - interval 6 day
-        GROUP BY
-            timestamp,
-            SpanAttributes['wg.federated_graph.id']
+          toDate(toStartOfDay(Timestamp)) as timestamp,
+          sum(TotalRequests) as totalRequests,
+          sum(TotalErrors) as erroredRequests,
+          FederatedGraphID as graphId
+        FROM ${this.client.database}.operation_request_metrics_5_30_mv
+        WHERE Timestamp >= toDate(now()) - interval 6 day
+          AND OrganizationID = '${organizationId}'
+        GROUP BY FederatedGraphID, timestamp
         ORDER BY
-            timestamp DESC
+          timestamp DESC
     `;
 
     const seriesResWithGraphId = await this.client.queryPromise(query);
@@ -101,21 +94,13 @@ export class AnalyticsDashboardViewRepository {
   ): Promise<PlainMessage<OperationRequestCount>[]> {
     const query = `
         SELECT
-            COALESCE(NULLIF(SpanAttributes['wg.operation.name'], ''), 'unknown') as operationName,
-            COUNT(*) as totalRequests
-        FROM
-            ${this.client.database}.otel_traces
-        WHERE
-        -- Only root spans(spans which have no parent span) and has no condition on SpanKind as a span can start from either the server or the client
-            empty(ParentSpanId)
-            AND toDate(Timestamp) >= toDate(now()) - interval 6 day
-            AND SpanAttributes['wg.federated_graph.id'] = '${federatedGraphId}'
-            AND SpanAttributes['wg.organization.id'] = '${organizationId}'
-        GROUP BY
-            operationName
-        ORDER BY
-            totalRequests DESC
-        LIMIT 5
+          COALESCE(NULLIF(OperationName, ''), 'unknown')  as operationName,
+          sum(TotalRequests) as totalRequests
+        FROM ${this.client.database}.operation_request_metrics_5_30_mv
+        WHERE toDate(Timestamp) >= toDate(now()) - interval 6 day
+          AND OrganizationID = '${organizationId}'
+          AND FederatedGraphID = '${federatedGraphId}'
+        GROUP BY OperationName ORDER BY totalRequests DESC LIMIT 5
     `;
 
     const res = await this.client.queryPromise(query);
@@ -130,9 +115,8 @@ export class AnalyticsDashboardViewRepository {
     return [];
   }
 
-  public async getListView(organizationId: string): Promise<Record<string, PlainMessage<RequestSeriesItem>[]>> {
-    const requestSeriesList = await this.getAllWeeklyRequestSeries(organizationId);
-    return requestSeriesList;
+  public getListView(organizationId: string): Promise<Record<string, PlainMessage<RequestSeriesItem>[]>> {
+    return this.getAllWeeklyRequestSeries(organizationId);
   }
 
   public async getView(federatedGraphId: string, organizationId: string) {
