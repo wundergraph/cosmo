@@ -1,7 +1,6 @@
 package core
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -16,6 +15,9 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/astnormalization"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/postprocess"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/zap"
 	"golang.org/x/sync/singleflight"
 
@@ -99,7 +101,6 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	operationContext := getOperationContext(r.Context())
 
 	// Update the resolveCtx with the latest request context so user modules can access it
-	operationContext.plan.Ctx = operationContext.plan.Ctx.WithContext(r.Context())
 
 	requestOperationNameBytes := unsafebytes.StringToBytes(operationContext.Name())
 
@@ -112,7 +113,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// prepare a new plan using single flight
 		// this ensures that we only prepare the plan once for this operation ID
 		sharedPreparedPlan, err, _ := h.sf.Do(strconv.FormatUint(operationContext.hash, 10), func() (interface{}, error) {
-			prepared, err := h.preparePlan(requestOperationNameBytes, operationContext.plan)
+			prepared, err := h.preparePlan(requestOperationNameBytes, operationContext.Content())
 			if err != nil {
 				return nil, err
 			}
@@ -121,14 +122,9 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return prepared, nil
 		})
 		if err != nil {
-			if operationContext.plan.Report.HasErrors() {
-				w.WriteHeader(http.StatusBadRequest)
-				writeRequestErrorsFromReport(operationContext.plan.Report, w, requestLogger)
-			} else {
-				requestLogger.Error("prepare plan failed", zap.Error(err))
-				w.WriteHeader(http.StatusInternalServerError)
-				writeRequestErrors(graphql.RequestErrorsFromError(internalServerErrorErr), w, requestLogger)
-			}
+			requestLogger.Error("prepare plan failed", zap.Error(err))
+			w.WriteHeader(http.StatusInternalServerError)
+			writeRequestErrors(graphql.RequestErrorsFromError(internalServerErrorErr), w, requestLogger)
 			return
 		}
 
@@ -140,9 +136,21 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		preparedPlan = sharedPreparedPlan.(planWithExtractedVariables)
 	}
 
+	vars := make([]byte, len(preparedPlan.variables))
+	copy(vars, preparedPlan.variables)
+
 	if len(preparedPlan.variables) != 0 {
-		operationContext.plan.Ctx.Variables = MergeJsonRightIntoLeft(operationContext.plan.Ctx.Variables, preparedPlan.variables)
+		vars = MergeJsonRightIntoLeft(operationContext.Variables(), vars)
 	}
+
+	ctx := &resolve.Context{
+		Variables: vars,
+		Request: resolve.Request{
+			Header: r.Header,
+		},
+		RenameTypeNames: h.executor.RenameTypeNames,
+	}
+	ctx = ctx.WithContext(r.Context())
 
 	switch p := preparedPlan.preparedPlan.(type) {
 	case *plan.SynchronousResponsePlan:
@@ -151,7 +159,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		executionBuf := pool.GetBytesBuffer()
 		defer pool.PutBytesBuffer(executionBuf)
 
-		err := h.executor.Resolver.ResolveGraphQLResponse(operationContext.plan.Ctx, p.Response, nil, executionBuf)
+		err := h.executor.Resolver.ResolveGraphQLResponse(ctx, p.Response, nil, executionBuf)
 		if err != nil {
 			if errors.Is(err, context.Canceled) {
 				return
@@ -178,14 +186,14 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			flushWriter *HttpFlushWriter
 			ok          bool
 		)
-		operationContext.plan.Ctx, flushWriter, ok = GetFlushWriter(operationContext.plan.Ctx, operationContext.plan.Ctx.Variables, r, w)
+		ctx, flushWriter, ok = GetFlushWriter(ctx, ctx.Variables, r, w)
 		if !ok {
 			requestLogger.Error("connection not flushable")
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
-		err := h.executor.Resolver.ResolveGraphQLSubscription(operationContext.plan.Ctx, p.Response, flushWriter)
+		err := h.executor.Resolver.ResolveGraphQLSubscription(ctx, p.Response, flushWriter)
 		if err != nil {
 			if errors.Is(err, context.Canceled) {
 				return
@@ -202,44 +210,39 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *GraphQLHandler) preparePlan(requestOperationName []byte, shared *pool.Shared) (planWithExtractedVariables, error) {
-	// copy the extracted variables from the shared document
-	// this is necessary because the shared document is reused across requests
-	variables := make([]byte, len(shared.Doc.Input.Variables))
-	copy(variables, shared.Doc.Input.Variables)
-
-	// print the shared document into a buffer and reparse it
-	// this is necessary because the shared document will be re-used across requests
-	// as the plan is cached, and will have references to the document, it cannot be re-used
-	buf := &bytes.Buffer{}
-	err := shared.Printer.Print(shared.Doc, h.executor.Definition, buf)
-	if err != nil {
-		return planWithExtractedVariables{}, fmt.Errorf(ErrMsgOperationParseFailed, err)
-	}
-
-	// parse the document again into a non-shared document, which will be used for planning
-	// this will be cached, so it's insignificant that reparsing causes overhead
-	doc, report := astparser.ParseGraphqlDocumentBytes(buf.Bytes())
+func (h *GraphQLHandler) preparePlan(requestOperationName []byte, requestOperationContent string) (planWithExtractedVariables, error) {
+	doc, report := astparser.ParseGraphqlDocumentString(requestOperationContent)
 	if report.HasErrors() {
-		return planWithExtractedVariables{}, fmt.Errorf(ErrMsgOperationParseFailed, err)
+		return planWithExtractedVariables{}, fmt.Errorf(ErrMsgOperationParseFailed, report)
 	}
+
+	validation := astvalidation.DefaultOperationValidator()
+
+	norm := astnormalization.NewNormalizer(true, true)
+	norm.NormalizeOperation(&doc, h.executor.Definition, &report)
 
 	// validate the document before planning
-	state := shared.Validation.Validate(&doc, h.executor.Definition, shared.Report)
+	state := validation.Validate(&doc, h.executor.Definition, &report)
 	if state != astvalidation.Valid {
 		return planWithExtractedVariables{}, fmt.Errorf(ErrMsgOperationValidationFailed, state.String())
 	}
 
+	planner := plan.NewPlanner(context.Background(), h.executor.PlanConfig)
+
 	// create and postprocess the plan
-	preparedPlan := shared.Planner.Plan(&doc, h.executor.Definition, unsafebytes.BytesToString(requestOperationName), shared.Report)
-	if shared.Report.HasErrors() {
-		return planWithExtractedVariables{}, fmt.Errorf(ErrMsgOperationParseFailed, err)
+	preparedPlan := planner.Plan(&doc, h.executor.Definition, unsafebytes.BytesToString(requestOperationName), &report)
+	if report.HasErrors() {
+		return planWithExtractedVariables{}, fmt.Errorf(ErrMsgOperationParseFailed, report)
 	}
-	shared.Postprocess.Process(preparedPlan)
+	post := postprocess.DefaultProcessor()
+	post.Process(preparedPlan)
+
+	extractedVariables := make([]byte, len(doc.Input.Variables))
+	copy(extractedVariables, doc.Input.Variables)
 
 	return planWithExtractedVariables{
 		preparedPlan: preparedPlan,
-		variables:    variables,
+		variables:    extractedVariables,
 	}, nil
 }
 

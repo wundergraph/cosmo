@@ -2,12 +2,12 @@ package core
 
 import (
 	"context"
-	"github.com/wundergraph/cosmo/router/internal/pool"
-	"go.uber.org/zap"
 	"net/http"
 	"net/url"
 	"sync"
 	"time"
+
+	"go.uber.org/zap"
 )
 
 type key string
@@ -311,9 +311,8 @@ type operationContext struct {
 	// Hash is the hash of the operation
 	hash uint64
 	// Content is the content of the operation
-	content string
-	// plan is the execution plan of the operation
-	plan *pool.Shared
+	content   string
+	variables []byte
 }
 
 func (o *operationContext) Name() string {
@@ -330,6 +329,10 @@ func (o *operationContext) Hash() uint64 {
 
 func (o *operationContext) Content() string {
 	return o.content
+}
+
+func (o *operationContext) Variables() []byte {
+	return o.variables
 }
 
 func withOperationContext(ctx context.Context, operation *operationContext) context.Context {
