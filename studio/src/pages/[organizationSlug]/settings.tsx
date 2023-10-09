@@ -150,7 +150,7 @@ const OrganizationDetails = () => {
               </FormControl>
               <FormDescription>
                 This is the URL namespace of the organization within WunderGraph
-                Cosmo
+                Cosmo.
               </FormDescription>
               <FormMessage />
             </FormItem>
