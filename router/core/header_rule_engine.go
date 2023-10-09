@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"regexp"
 
-	"github.com/wundergraph/cosmo/router/internal/config"
+	"github.com/wundergraph/cosmo/router/config"
 )
 
 var (

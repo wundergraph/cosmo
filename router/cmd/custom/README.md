@@ -40,13 +40,7 @@ docker build -f custom.Dockerfile -t router-custom:latest .
 
 ## Run tests
 
-In order to run the tests, you need to run the example subgraph first. We use the demo subgraph for this.
-
-```
-make dc-subgraphs-demo
-```
-
-In practice, you would create a custom router config and mock the subgraph dependencies in your tests.
+Tests for this module can be found within the [integration tests](../router-tests/module_test.go).
 
 _All commands are run from the root of the router directory._
 
