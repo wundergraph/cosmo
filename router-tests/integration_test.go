@@ -18,6 +18,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/wundergraph/cosmo/router/cmd/custom/module"
 	"github.com/wundergraph/cosmo/router/config"
 	"github.com/wundergraph/cosmo/router/core"
 	"go.uber.org/zap"
@@ -141,6 +142,11 @@ func setupServer(tb testing.TB) *core.Server {
 		Graph: config.Graph{
 			Name: "production",
 		},
+		Modules: map[string]interface{}{
+			"myModule": module.MyModule{
+				Value: 1,
+			},
+		},
 	}
 
 	routerConfig, err := core.SerializeConfigFromFile(filepath.Join("testdata", "config.json"))
@@ -160,17 +166,18 @@ func setupServer(tb testing.TB) *core.Server {
 	rs, err := core.NewRouter(
 		core.WithFederatedGraphName(cfg.Graph.Name),
 		core.WithStaticRouterConfig(routerConfig),
+		core.WithModulesConfig(cfg.Modules),
 		core.WithLogger(zapLogger),
 		core.WithListenerAddr("http://localhost:3002"),
 	)
-	require.Nil(tb, err)
+	require.NoError(tb, err)
 
 	tb.Cleanup(func() {
 		assert.Nil(tb, rs.Shutdown(ctx))
 	})
 
 	server, err := rs.NewTestServer(ctx)
-	require.Nil(tb, err)
+	require.NoError(tb, err)
 	return server
 }
 
