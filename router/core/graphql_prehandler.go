@@ -2,13 +2,20 @@ package core
 
 import (
 	"errors"
-	"github.com/wundergraph/cosmo/router/internal/metric"
-	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"io"
 	"net/http"
 	"strconv"
+	"sync"
 	"time"
+
+	"github.com/cespare/xxhash/v2"
+	"github.com/wundergraph/cosmo/router/internal/metric"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/astnormalization"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/astprinter"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
+	"go.opentelemetry.io/otel/attribute"
+	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 
 	"github.com/buger/jsonparser"
 	"github.com/go-chi/chi/middleware"
@@ -34,6 +41,7 @@ type PreHandler struct {
 	log            *zap.Logger
 	executor       *Executor
 	requestMetrics *metric.Metrics
+	documentPool   *sync.Pool
 }
 
 func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
@@ -41,6 +49,11 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 		log:            opts.Logger,
 		executor:       opts.Executor,
 		requestMetrics: opts.requestMetrics,
+		documentPool: &sync.Pool{
+			New: func() interface{} {
+				return ast.NewSmallDocument()
+			},
+		},
 	}
 }
 
@@ -96,24 +109,32 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			metricBaseFields = append(metricBaseFields, otel.WgOperationName.String(requestOperationName))
 		}
 
-		shared := h.executor.Pool.GetSharedFromRequest(r, h.executor.PlanConfig, pool.Config{
-			RenameTypeNames: h.executor.RenameTypeNames,
-		})
-		defer h.executor.Pool.PutShared(shared)
-		shared.Ctx.Variables = requestVariables
-		shared.Doc.Input.ResetInputString(requestQuery)
-		shared.Parser.Parse(shared.Doc, shared.Report)
+		doc := h.documentPool.Get().(*ast.Document)
+		doc.Reset()
+		defer h.documentPool.Put(doc)
+		doc.Input.ResetInputString(requestQuery)
+		parser := astparser.NewParser()
+		report := &operationreport.Report{}
+		parser.Parse(doc, report)
+
+		if report.HasErrors() {
+			statusCode = http.StatusBadRequest
+			logInternalErrors(report, requestLogger)
+			w.WriteHeader(statusCode)
+			writeRequestErrorsFromReport(report, w, requestLogger)
+			return
+		}
 
 		// If the operationName is not set, we try to get it from the named operation in the document
 		if requestOperationName == "" {
-			if len(shared.Doc.OperationDefinitions) == 1 {
-				requestOperationName = string(shared.Doc.OperationDefinitionNameBytes(0))
+			if len(doc.OperationDefinitions) == 1 {
+				requestOperationName = string(doc.OperationDefinitionNameBytes(0))
 			}
 		}
 
 		// Extract the operation type from the first operation that matches the operationName
-		for _, op := range shared.Doc.OperationDefinitions {
-			if shared.Doc.Input.ByteSlice(op.Name).String() == requestOperationName {
+		for _, op := range doc.OperationDefinitions {
+			if doc.Input.ByteSlice(op.Name).String() == requestOperationName {
 				switch op.OperationType {
 				case ast.OperationTypeQuery:
 					requestOperationType = "query"
@@ -140,19 +161,11 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		span.SetAttributes(otel.WgOperationContent.String(requestQuery))
 
 		// If multiple operations are defined, but no operationName is set, we return an error
-		if len(shared.Doc.OperationDefinitions) > 1 && requestOperationName == "" {
+		if len(doc.OperationDefinitions) > 1 && requestOperationName == "" {
 			statusCode = http.StatusBadRequest
 			requestLogger.Error("operation name is required when multiple operations are defined")
 			w.WriteHeader(statusCode)
 			w.Write([]byte("operation name is required when multiple operations are defined"))
-			return
-		}
-
-		if shared.Report.HasErrors() {
-			statusCode = http.StatusBadRequest
-			logInternalErrors(shared.Report, requestLogger)
-			w.WriteHeader(statusCode)
-			writeRequestErrorsFromReport(shared.Report, w, requestLogger)
 			return
 		}
 
@@ -164,24 +177,28 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 		requestOperationNameBytes := unsafebytes.StringToBytes(requestOperationName)
 
+		normalizer := astnormalization.NewNormalizer(true, false)
+
 		if requestOperationName == "" {
-			shared.Normalizer.NormalizeOperation(shared.Doc, h.executor.Definition, shared.Report)
+			normalizer.NormalizeOperation(doc, h.executor.Definition, report)
 		} else {
-			shared.Normalizer.NormalizeNamedOperation(shared.Doc, h.executor.Definition, requestOperationNameBytes, shared.Report)
+			normalizer.NormalizeNamedOperation(doc, h.executor.Definition, requestOperationNameBytes, report)
 		}
 
-		if shared.Report.HasErrors() {
+		if report.HasErrors() {
 			statusCode = http.StatusBadRequest
-			logInternalErrors(shared.Report, requestLogger)
+			logInternalErrors(report, requestLogger)
 			w.WriteHeader(statusCode)
-			writeRequestErrorsFromReport(shared.Report, w, requestLogger)
+			writeRequestErrorsFromReport(report, w, requestLogger)
 			return
 		}
+
+		hash := xxhash.New()
 
 		// add the operation name to the hash
 		// this is important for multi operation documents to have a different hash for each operation
 		// otherwise, the prepared plan cache would return the same plan for all operations
-		_, err = shared.Hash.Write(requestOperationNameBytes)
+		_, err = hash.Write(requestOperationNameBytes)
 		if err != nil {
 			statusCode = http.StatusInternalServerError
 			requestLogger.Error("hash write failed", zap.Error(err))
@@ -189,10 +206,12 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			return
 		}
 
+		printer := &astprinter.Printer{}
+
 		// create a hash of the query to use as a key for the prepared plan cache
 		// in this hash, we include the printed operation
 		// and the extracted variables (see below)
-		err = shared.Printer.Print(shared.Doc, h.executor.Definition, shared.Hash)
+		err = printer.Print(doc, h.executor.Definition, hash)
 		if err != nil {
 			statusCode = http.StatusInternalServerError
 			requestLogger.Error("unable to print document", zap.Error(err))
@@ -201,31 +220,31 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			return
 		}
 
-		// add the extracted variables to the hash
-		_, err = shared.Hash.Write(shared.Doc.Input.Variables)
+		operationID := hash.Sum64() // generate the operation ID
+
+		normalizedOperation := pool.GetBytesBuffer()
+		defer pool.PutBytesBuffer(normalizedOperation)
+		err = printer.Print(doc, h.executor.Definition, normalizedOperation)
 		if err != nil {
-			requestLogger.Error("hash write failed", zap.Error(err))
 			statusCode = http.StatusInternalServerError
+			requestLogger.Error("unable to print document", zap.Error(err))
 			w.WriteHeader(statusCode)
 			writeRequestErrors(graphql.RequestErrorsFromError(internalServerErrorErr), w, requestLogger)
 			return
 		}
 
-		operationID := shared.Hash.Sum64() // generate the operation ID
-		shared.Hash.Reset()
+		variablesCopy := make([]byte, len(requestVariables))
+		copy(variablesCopy, requestVariables)
 
 		ctxWithOperation := withOperationContext(r.Context(),
 			&operationContext{
-				name:    requestOperationName,
-				opType:  requestOperationType,
-				content: requestQuery,
-				hash:    operationID,
-				plan:    shared,
+				name:      requestOperationName,
+				opType:    requestOperationType,
+				content:   normalizedOperation.String(),
+				hash:      operationID,
+				variables: variablesCopy,
 			},
 		)
-
-		// Add the operation to the context, so we can access it later in custom transports etc.
-		shared.Ctx = shared.Ctx.WithContext(ctxWithOperation)
 
 		// Add the operation hash to the trace span attributes
 		opHashID := otel.WgOperationHash.String(strconv.FormatUint(operationID, 10))
