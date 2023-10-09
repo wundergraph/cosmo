@@ -16,6 +16,8 @@ import {
 } from "../ui/dropdown-menu";
 import { Tabs, TabsList, TabsTrigger } from "../ui/tabs";
 import { PartialMessage } from "@bufbuild/protobuf";
+import { PiWebhooksLogo } from "react-icons/pi";
+import { FaSlack } from "react-icons/fa";
 
 export type EventsMeta = Array<PartialMessage<EventMeta>>;
 
@@ -138,7 +140,9 @@ export const NotificationTabs = ({ tab }: { tab: NotificationTab }) => {
             href={{
               pathname: `/${router.query.organizationSlug}/webhooks`,
             }}
+            className="flex gap-x-[6px]"
           >
+            <PiWebhooksLogo />
             Webhooks
           </Link>
         </TabsTrigger>
@@ -147,8 +151,10 @@ export const NotificationTabs = ({ tab }: { tab: NotificationTab }) => {
             href={{
               pathname: `/${router.query.organizationSlug}/integrations`,
             }}
+            className="flex gap-x-2"
           >
-            Integrations
+            <FaSlack />
+            Slack Integration
           </Link>
         </TabsTrigger>
       </TabsList>
