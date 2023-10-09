@@ -4,6 +4,14 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.23.0](https://github.com/wundergraph/cosmo/compare/router@0.22.1...router@0.23.0) (2023-10-06)
+
+### Features
+
+* support subgraph router url override ([#152](https://github.com/wundergraph/cosmo/issues/152)) ([25cbf83](https://github.com/wundergraph/cosmo/commit/25cbf83f307a2c0986ad4bcdfa723cdd5dfd3f02)) (@StarpTech)
+* use clickhouse as metric storage ([#137](https://github.com/wundergraph/cosmo/issues/137)) ([c5e9bf4](https://github.com/wundergraph/cosmo/commit/c5e9bf4b74d32f3cae7da27b6170300c1a462e52)) (@StarpTech)
+* version metric meter ([#160](https://github.com/wundergraph/cosmo/issues/160)) ([1cdb5d5](https://github.com/wundergraph/cosmo/commit/1cdb5d5f62a9e49d2950b37144e547a153285038)) (@StarpTech)
+
 ## [0.22.1](https://github.com/wundergraph/cosmo/compare/router@0.22.0...router@0.22.1) (2023-09-30)
 
 ### Bug Fixes

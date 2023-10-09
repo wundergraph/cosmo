@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.9.1](https://github.com/wundergraph/cosmo/compare/otelcollector@0.9.0...otelcollector@0.9.1) (2023-10-09)
+
+**Note:** Version bump only for package otelcollector
+
+# [0.9.0](https://github.com/wundergraph/cosmo/compare/otelcollector@0.8.2...otelcollector@0.9.0) (2023-10-06)
+
+### Features
+
+* use clickhouse as metric storage ([#137](https://github.com/wundergraph/cosmo/issues/137)) ([c5e9bf4](https://github.com/wundergraph/cosmo/commit/c5e9bf4b74d32f3cae7da27b6170300c1a462e52)) (@StarpTech)
+
 ## [0.8.2](https://github.com/wundergraph/cosmo/compare/otelcollector@0.8.1...otelcollector@0.8.2) (2023-09-15)
 
 ### Bug Fixes

@@ -25,7 +25,7 @@ import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { useIsFetching, useQuery, useQueryClient } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
-  getMetricsDashboard,
+  getGraphMetrics,
   getMetricsErrorRate,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { MetricsDashboardMetric } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
@@ -110,7 +110,7 @@ const AnalyticsPage: NextPageWithLayout = () => {
   const range = useRange();
 
   let { data, isLoading, error, refetch } = useQuery({
-    ...getMetricsDashboard.useQuery({
+    ...getGraphMetrics.useQuery({
       federatedGraphName: graphContext?.graph?.name,
       range,
     }),
@@ -739,7 +739,7 @@ const OverviewToolbar = () => {
     });
   };
 
-  const metrics = getMetricsDashboard.useQuery({
+  const metrics = getGraphMetrics.useQuery({
     federatedGraphName: graphContext?.graph?.name,
     range,
   });

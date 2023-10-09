@@ -130,6 +130,4 @@ probes:
 collectorConfigOverride:
 
 configuration:
-  promUsername: "admin"
-  promPassword: "test"
   clickhouseDsn: "http://default:changeme@cosmo-clickhouse:8123?database=cosmo&dial_timeout=15s&compress=lz4"

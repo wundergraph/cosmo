@@ -8,7 +8,7 @@
     "lib": ["ESNext", "DOM"],
     "sourceMap": true,
     "outDir": "./dist",
-    "module": "esnext"
+    "module": "NodeNext"
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules"]
