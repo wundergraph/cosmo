@@ -1,8 +1,11 @@
-package integration_test
+package runner
 
 import (
 	"context"
+	"net"
 	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs"
 )
@@ -66,4 +69,22 @@ func (r externalSubgraphsRunner) Ports() []int {
 
 func NewExternalSubgraphsRunner() (SubgraphsRunner, error) {
 	return externalSubgraphsRunner{}, nil
+}
+
+func Wait(ctx context.Context, r SubgraphsRunner) error {
+	for _, port := range r.Ports() {
+		for {
+			_, err := net.Dial("tcp", "127.0.0.1:"+strconv.Itoa(port))
+			if err == nil {
+				break
+			}
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			default:
+			}
+			time.Sleep(100 * time.Millisecond)
+		}
+	}
+	return nil
 }

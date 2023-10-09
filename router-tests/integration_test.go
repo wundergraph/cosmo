@@ -7,18 +7,16 @@ import (
 	"flag"
 	"fmt"
 	"math/rand"
-	"net"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
-	"strconv"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/wundergraph/cosmo/router/cmd/custom/module"
+	"github.com/wundergraph/cosmo/router-tests/runner"
 	"github.com/wundergraph/cosmo/router/config"
 	"github.com/wundergraph/cosmo/router/core"
 	"go.uber.org/zap"
@@ -35,15 +33,15 @@ var (
 func TestMain(m *testing.M) {
 	flag.Parse()
 	ctx := context.Background()
-	var runner SubgraphsRunner
+	var r runner.SubgraphsRunner
 	var err error
 	switch *subgraphsMode {
 	case "in-process":
-		runner, err = NewInProcessSubgraphsRunner()
+		r, err = runner.NewInProcessSubgraphsRunner()
 	case "subprocess":
-		runner, err = NewSubprocessSubgraphsRunner()
+		r, err = runner.NewSubprocessSubgraphsRunner()
 	case "external":
-		runner, err = NewExternalSubgraphsRunner()
+		r, err = runner.NewExternalSubgraphsRunner()
 	default:
 		panic(fmt.Errorf("unknown subgraphs mode %q", *subgraphsMode))
 	}
@@ -52,13 +50,13 @@ func TestMain(m *testing.M) {
 	}
 	// defer this in case we panic, then call it manually before os.Exit()
 	stop := func() {
-		if err := runner.Stop(ctx); err != nil {
+		if err := r.Stop(ctx); err != nil {
 			panic(err)
 		}
 	}
 	defer stop()
 	go func() {
-		err := runner.Start(ctx)
+		err := r.Start(ctx)
 		if err != nil {
 			panic(err)
 		}
@@ -66,20 +64,11 @@ func TestMain(m *testing.M) {
 
 	const maxRetries = 10
 
+	timeoutCtx, cancelFunc := context.WithTimeout(ctx, 1*time.Second)
+	defer cancelFunc()
 	// Wait until the ports are open
-	for _, port := range runner.Ports() {
-		retries := 0
-		for {
-			_, err := net.Dial("tcp", "127.0.0.1:"+strconv.Itoa(port))
-			if err == nil {
-				break
-			}
-			retries++
-			if retries > maxRetries {
-				panic(fmt.Errorf("could not connect to port %d after %d retries", port, maxRetries))
-			}
-			time.Sleep(100 * time.Millisecond)
-		}
+	if err := runner.Wait(timeoutCtx, r); err != nil {
+		panic(err)
 	}
 
 	res := m.Run()
@@ -141,11 +130,6 @@ func setupServer(tb testing.TB) *core.Server {
 	cfg := config.Config{
 		Graph: config.Graph{
 			Name: "production",
-		},
-		Modules: map[string]interface{}{
-			"myModule": module.MyModule{
-				Value: 1,
-			},
 		},
 	}
 

@@ -1,4 +1,4 @@
-package integration_test
+package module_test
 
 import (
 	"bytes"
@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/wundergraph/cosmo/router-tests/runner"
 	"github.com/wundergraph/cosmo/router/cmd/custom/module"
 	"github.com/wundergraph/cosmo/router/config"
 	"github.com/wundergraph/cosmo/router/core"
@@ -28,7 +29,7 @@ func TestMyModule(t *testing.T) {
 		},
 	}
 
-	routerConfig, err := core.SerializeConfigFromFile(filepath.Join("testdata", "config.json"))
+	routerConfig, err := core.SerializeConfigFromFile(filepath.Join("..", "testdata", "config.json"))
 	require.NoError(t, err)
 
 	rs, err := core.NewRouter(
@@ -43,6 +44,19 @@ func TestMyModule(t *testing.T) {
 	})
 
 	server, err := rs.NewTestServer(ctx)
+	require.NoError(t, err)
+
+	r, err := runner.NewInProcessSubgraphsRunner()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		assert.Nil(t, r.Stop(ctx))
+	})
+	go func() {
+		err := r.Start(ctx)
+		assert.NoError(t, err)
+	}()
+
+	err = runner.Wait(ctx, r)
 	require.NoError(t, err)
 
 	rr := httptest.NewRecorder()

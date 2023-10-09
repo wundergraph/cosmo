@@ -60,4 +60,4 @@ jobs:
 
       - name: Run Integration tests
         working-directory: ./router-tests
-        run: go test -race
+        run: go test -race ./...
