@@ -58,4 +58,6 @@ jobs:
         working-directory: ./router
         run: make build
 
-
+      - name: Run Integration tests
+        working-directory: ./router-tests
+        run: go test -race
