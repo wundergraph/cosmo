@@ -126,7 +126,7 @@ const OrganizationDetails = () => {
           defaultValue={user?.currentOrganization.name}
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Name</FormLabel>
+              <FormLabel>Organization Name</FormLabel>
               <FormControl>
                 <Input {...field} />
               </FormControl>
@@ -144,13 +144,13 @@ const OrganizationDetails = () => {
           defaultValue={user?.currentOrganization.slug}
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Slug</FormLabel>
+              <FormLabel>Organization Slug</FormLabel>
               <FormControl>
                 <Input {...field} />
               </FormControl>
               <FormDescription>
-                This is the visible name of your organization within WunderGraph
-                Cosmo.
+                This is the URL namespace of the organization within WunderGraph
+                Cosmo
               </FormDescription>
               <FormMessage />
             </FormItem>
