@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.20.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.19.0...@wundergraph/cosmo-connect@0.20.0) (2023-10-09)
+
+### Bug Fixes
+
+* ui improvements ([#170](https://github.com/wundergraph/cosmo/issues/170)) ([fffd3e2](https://github.com/wundergraph/cosmo/commit/fffd3e2b7d9a82e7b809214a7ce836cce83f54b9)) (@thisisnithin)
+
+### Features
+
+* use metric data for dashboard stats ([#169](https://github.com/wundergraph/cosmo/issues/169)) ([e25fe32](https://github.com/wundergraph/cosmo/commit/e25fe32cdc053d658b0b0cdcd819b039be3341e6)) (@StarpTech)
+
 # [0.19.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.18.0...@wundergraph/cosmo-connect@0.19.0) (2023-10-06)
 
 ### Features
