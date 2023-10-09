@@ -97,9 +97,21 @@ export class SubgraphRepository {
       const fedGraphRepo = new FederatedGraphRepository(db, this.organizationId);
       const subgraphRepo = new SubgraphRepository(db, this.organizationId);
 
+      const oldGraphs: FederatedGraphDTO[] = [];
+      const newGraphs: FederatedGraphDTO[] = [];
+
+      // update routing URL
+      if (data.routingUrl !== '') {
+        await db.update(subgraphs).set({ routingUrl }).where(eq(subgraphs.id, subgraph.id)).execute();
+        const result = await subgraphRepo.byName(data.name);
+        if (result) {
+          newGraphs.push(...(await fedGraphRepo.bySubgraphLabels(result.labels)));
+        }
+      }
+
       // update labels
       if (data.labels.length > 0) {
-        const oldGraphs = await fedGraphRepo.bySubgraphLabels(uniqueLabels);
+        oldGraphs.push(...(await fedGraphRepo.bySubgraphLabels(uniqueLabels)));
 
         await db
           .update(targets)
@@ -108,7 +120,7 @@ export class SubgraphRepository {
           })
           .where(eq(targets.id, subgraph.targetId));
 
-        const newGraphs = await fedGraphRepo.bySubgraphLabels(uniqueLabels);
+        newGraphs.push(...(await fedGraphRepo.bySubgraphLabels(uniqueLabels)));
 
         let deleteCondition: SQL<unknown> | undefined = eq(subgraphsToFederatedGraph.subgraphId, subgraph.id);
 
@@ -137,26 +149,21 @@ export class SubgraphRepository {
         });
 
         await Promise.all(insertOps);
-
-        // update schema of graphs which were changed since subgraphs would have changed
-        const changedGraphs = [
-          ...oldGraphs.filter((b) => !newGraphs.some((a) => a.id === b.id)),
-          ...newGraphs.filter((a) => !oldGraphs.some((b) => a.id === b.id)),
-        ];
-        updatedFederatedGraphs.push(...changedGraphs);
-        changedGraphs.map(async (federatedGraph) => {
-          const ce = await updateComposedSchema({
-            federatedGraph,
-            fedGraphRepo,
-            subgraphRepo,
-          });
-          compositionErrors.push(...ce);
-        });
       }
 
-      // update routing URL
-      if (data.routingUrl !== '') {
-        await db.update(subgraphs).set({ routingUrl }).where(eq(subgraphs.id, subgraph.id)).execute();
+      // update schema and router config of graphs which were affected
+      const changedGraphs = [
+        ...oldGraphs.filter((b) => !newGraphs.some((a) => a.id === b.id)),
+        ...newGraphs.filter((a) => !oldGraphs.some((b) => a.id === b.id)),
+      ];
+      updatedFederatedGraphs.push(...changedGraphs);
+      for (const federatedGraph of changedGraphs) {
+        const ce = await updateComposedSchema({
+          federatedGraph,
+          fedGraphRepo,
+          subgraphRepo,
+        });
+        compositionErrors.push(...ce);
       }
     });
 
