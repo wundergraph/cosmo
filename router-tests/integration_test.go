@@ -150,7 +150,6 @@ func setupServer(tb testing.TB) *core.Server {
 	rs, err := core.NewRouter(
 		core.WithFederatedGraphName(cfg.Graph.Name),
 		core.WithStaticRouterConfig(routerConfig),
-		core.WithModulesConfig(cfg.Modules),
 		core.WithLogger(zapLogger),
 		core.WithListenerAddr("http://localhost:3002"),
 	)
