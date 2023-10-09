@@ -319,7 +319,7 @@ const Integration = ({
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>
-            {mode === "create" ? "Create" : "Update"} slack integration
+            {mode === "create" ? "Set up" : "Update"} slack integration
           </DialogTitle>
           <DialogDescription>
             A message will be sent to the provided slack channel.

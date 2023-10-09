@@ -524,18 +524,26 @@ export const gitInstallations = pgTable('git_installations', {
 
 export const integrationTypeEnum = pgEnum('integration_type', ['slack']);
 
-export const organizationIntegrations = pgTable('organization_integrations', {
-  id: uuid('id').notNull().primaryKey().defaultRandom(),
-  organizationId: uuid('organization_id')
-    .notNull()
-    .references(() => organizations.id, {
-      onDelete: 'cascade',
-    }),
-  name: text('name').notNull(),
-  events: text('events').array(),
-  type: integrationTypeEnum('type').notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-});
+export const organizationIntegrations = pgTable(
+  'organization_integrations',
+  {
+    id: uuid('id').notNull().primaryKey().defaultRandom(),
+    organizationId: uuid('organization_id')
+      .notNull()
+      .references(() => organizations.id, {
+        onDelete: 'cascade',
+      }),
+    name: text('name').notNull(),
+    events: text('events').array(),
+    type: integrationTypeEnum('type').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => {
+    return {
+      nameIndex: uniqueIndex('organization_integration_idx').on(t.organizationId, t.name),
+    };
+  },
+);
 
 export const slackIntegrationConfigs = pgTable('slack_integration_configs', {
   id: uuid('id').notNull().primaryKey().defaultRandom(),
@@ -555,7 +563,19 @@ export const slackIntegrationEventConfigs = pgTable('slack_integration_event_con
       onDelete: 'cascade',
     }),
   event: text('event').notNull(),
-  federatedGraphIds: uuid('federated_graph_ids').array(),
+});
+
+export const slackEventGraphIds = pgTable('slack_event_graph_ids', {
+  slackIntegrationEventConfigId: uuid('slack_integration_event_config_id')
+    .notNull()
+    .references(() => slackIntegrationEventConfigs.id, {
+      onDelete: 'cascade',
+    }),
+  federatedGraphId: uuid('federated_graph_id')
+    .notNull()
+    .references(() => federatedGraphs.id, {
+      onDelete: 'cascade',
+    }),
 });
 
 export const organizationIntegrationRelations = relations(organizationIntegrations, ({ one }) => ({
@@ -565,4 +585,19 @@ export const organizationIntegrationRelations = relations(organizationIntegratio
 
 export const slackIntegrationConfigsRelations = relations(slackIntegrationConfigs, ({ many }) => ({
   slackIntegrationEventConfigs: many(slackIntegrationEventConfigs),
+}));
+
+export const slackIntegrationEventConfigsRelations = relations(slackIntegrationEventConfigs, ({ many }) => ({
+  slackEventGraphIds: many(slackEventGraphIds),
+}));
+
+export const slackEventGraphIdsRelations = relations(slackEventGraphIds, ({ one }) => ({
+  slackIntegrationEventConfig: one(slackIntegrationEventConfigs, {
+    fields: [slackEventGraphIds.slackIntegrationEventConfigId],
+    references: [slackIntegrationEventConfigs.id],
+  }),
+  federatedGraph: one(federatedGraphs, {
+    fields: [slackEventGraphIds.federatedGraphId],
+    references: [federatedGraphs.id],
+  }),
 }));

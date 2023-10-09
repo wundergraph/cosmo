@@ -1,7 +1,7 @@
 {
   "version": "5",
   "dialect": "pg",
-  "id": "578bbc13-72ea-4afe-b406-079183a261aa",
+  "id": "2e975eed-6d7f-46dd-bed7-7e179fafe9e4",
   "prevId": "3a205106-9469-4914-a3bb-ce1486abf8d3",
   "tables": {
     "api_keys": {
@@ -371,7 +371,16 @@
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "organization_integration_idx": {
+          "name": "organization_integration_idx",
+          "columns": [
+            "organization_id",
+            "name"
+          ],
+          "isUnique": true
+        }
+      },
       "foreignKeys": {
         "organization_integrations_organization_id_organizations_id_fk": {
           "name": "organization_integrations_organization_id_organizations_id_fk",
@@ -1091,6 +1100,55 @@
         }
       }
     },
+    "slack_event_graph_ids": {
+      "name": "slack_event_graph_ids",
+      "schema": "",
+      "columns": {
+        "slack_integration_event_config_id": {
+          "name": "slack_integration_event_config_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "federated_graph_id": {
+          "name": "federated_graph_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "slack_event_graph_ids_slack_integration_event_config_id_slack_integration_event_configs_id_fk": {
+          "name": "slack_event_graph_ids_slack_integration_event_config_id_slack_integration_event_configs_id_fk",
+          "tableFrom": "slack_event_graph_ids",
+          "tableTo": "slack_integration_event_configs",
+          "columnsFrom": [
+            "slack_integration_event_config_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "slack_event_graph_ids_federated_graph_id_federated_graphs_id_fk": {
+          "name": "slack_event_graph_ids_federated_graph_id_federated_graphs_id_fk",
+          "tableFrom": "slack_event_graph_ids",
+          "tableTo": "federated_graphs",
+          "columnsFrom": [
+            "federated_graph_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
     "slack_integration_configs": {
       "name": "slack_integration_configs",
       "schema": "",
@@ -1156,12 +1214,6 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
-        },
-        "federated_graph_ids": {
-          "name": "federated_graph_ids",
-          "type": "uuid[]",
-          "primaryKey": false,
-          "notNull": false
         }
       },
       "indexes": {},
