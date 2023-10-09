@@ -199,6 +199,13 @@ export class AnalyticsRequestViewRepository {
       title: 'Client Name',
       options: [],
     },
+    clientVersion: {
+      dbField: 'ClientVersion',
+      dbClause: 'where',
+      columnName: 'clientVersion',
+      title: 'Client Version',
+      options: [],
+    },
     httpStatusCode: {
       dbField: 'HttpStatusCode',
       dbClause: 'where',
@@ -456,6 +463,48 @@ export class AnalyticsRequestViewRepository {
     return clientNames;
   }
 
+  private async getAllClientVersions(
+    federatedGraphId: string,
+    client: string[],
+    shouldExecute: boolean,
+  ): Promise<string[]> {
+    if (!shouldExecute) {
+      return [];
+    }
+
+    let whereSql = '';
+    if (client.length === 1) {
+      whereSql = `AND (${client.map((c) => `SpanAttributes [ 'wg.client.name' ] = '${c}'`).join(' OR ')})`;
+    }
+
+    const query = `
+      SELECT DISTINCT SpanAttributes [ 'wg.client.version' ] as clientVersion
+      FROM ${this.client.database}.otel_traces
+      WHERE 
+      -- Only root spans(spans which have no parent span) and has no condition on SpanKind as a span can start from either the server or the client
+        empty(ParentSpanId)
+        AND SpanAttributes['wg.federated_graph.id'] = '${federatedGraphId}'
+        ${whereSql}
+      LIMIT 100
+    `;
+
+    const result = await this.client?.queryPromise(query);
+
+    const clientVersions: string[] = [];
+    if (Array.isArray(result)) {
+      clientVersions.push(
+        ...result.map((c) => {
+          if (c.clientVersion === 'missing') {
+            return 'unknown';
+          }
+          return c.clientVersion;
+        }),
+      );
+    }
+
+    return clientVersions;
+  }
+
   private async getAllHttpStatusCodes(federatedGraphId: string, shouldExecute: boolean): Promise<string[]> {
     if (!shouldExecute) {
       return [];
@@ -485,6 +534,7 @@ export class AnalyticsRequestViewRepository {
     name: AnalyticsViewGroupName,
     operationNames: string[],
     clientNames: string[],
+    clientVersions: string[],
     httpStatusCodes: string[],
   ): Record<string, PlainMessage<AnalyticsViewResultFilter>> {
     const filters = { ...this.baseFilters };
@@ -503,6 +553,15 @@ export class AnalyticsRequestViewRepository {
     filters.clientName = {
       ...filters.clientName,
       options: clientNames.map((c) => ({
+        operator: AnalyticsViewFilterOperator.EQUALS,
+        label: c || '-',
+        value: c,
+      })),
+    };
+
+    filters.clientVersion = {
+      ...filters.clientVersion,
+      options: clientVersions.map((c) => ({
         operator: AnalyticsViewFilterOperator.EQUALS,
         label: c || '-',
         value: c,
@@ -528,8 +587,8 @@ export class AnalyticsRequestViewRepository {
         return rest;
       }
       case AnalyticsViewGroupName.Client: {
-        const { clientName, p95 } = filters;
-        return { clientName, p95 };
+        const { clientName, p95, clientVersion } = filters;
+        return { clientName, p95, clientVersion };
       }
       case AnalyticsViewGroupName.HttpStatusCode: {
         const { p95, httpStatusCode } = filters;
@@ -590,14 +649,31 @@ export class AnalyticsRequestViewRepository {
     const hasColumn = (name: string) =>
       Array.isArray(result) && result.length > 0 && Object.keys(result[0]).includes(name);
 
+    const clientNames: string[] = [];
+    if (name === AnalyticsViewGroupName.Client) {
+      const entries = Object.entries(coercedQueryParams);
+      for (const [key, value] of entries) {
+        if (key.endsWith('clientName')) {
+          clientNames.push(String(value));
+        }
+      }
+    }
+
     // We shall execute these only when we have desired results
-    const [allOperationNames, allClientNames, allStatusMessages] = await Promise.all([
+    const [allOperationNames, allClientNames, allClientVersions, allStatusMessages] = await Promise.all([
       this.getAllOperationNames(federatedGraphId, hasColumn('operationName')),
       this.getAllClients(federatedGraphId, hasColumn('clientName')),
+      this.getAllClientVersions(federatedGraphId, clientNames, hasColumn('clientVersion')),
       this.getAllHttpStatusCodes(federatedGraphId, hasColumn('httpStatusCode')),
     ]);
 
-    const columnFilters = this.getFilters(name, allOperationNames, allClientNames, allStatusMessages);
+    const columnFilters = this.getFilters(
+      name,
+      allOperationNames,
+      allClientNames,
+      allClientVersions,
+      allStatusMessages,
+    );
 
     let pages = 0;
     if (totalCount > 0 && opts?.pagination?.limit) {
