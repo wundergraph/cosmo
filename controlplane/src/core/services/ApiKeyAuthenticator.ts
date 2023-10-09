@@ -63,7 +63,7 @@ export default class ApiKeyAuthenticator {
 
     return {
       organizationId: apiKeyModel.organizationId,
-      organizationSlug: organization.slug
+      organizationSlug: organization.slug,
     };
   }
 }
