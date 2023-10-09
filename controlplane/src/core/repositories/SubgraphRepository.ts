@@ -97,6 +97,15 @@ export class SubgraphRepository {
       const fedGraphRepo = new FederatedGraphRepository(db, this.organizationId);
       const subgraphRepo = new SubgraphRepository(db, this.organizationId);
 
+      // update routing URL
+      if (data.routingUrl !== '') {
+        await db.update(subgraphs).set({ routingUrl }).where(eq(subgraphs.id, subgraph.id)).execute();
+        const result = await subgraphRepo.byName(data.name);
+        if (result) {
+          updatedFederatedGraphs.push(...(await fedGraphRepo.bySubgraphLabels(result.labels)));
+        }
+      }
+
       // update labels
       if (data.labels.length > 0) {
         const oldGraphs = await fedGraphRepo.bySubgraphLabels(uniqueLabels);
@@ -136,27 +145,29 @@ export class SubgraphRepository {
             .execute();
         });
 
-        await Promise.all(insertOps);
-
-        // update schema of graphs which were changed since subgraphs would have changed
         const changedGraphs = [
           ...oldGraphs.filter((b) => !newGraphs.some((a) => a.id === b.id)),
           ...newGraphs.filter((a) => !oldGraphs.some((b) => a.id === b.id)),
         ];
-        updatedFederatedGraphs.push(...changedGraphs);
-        changedGraphs.map(async (federatedGraph) => {
-          const ce = await updateComposedSchema({
-            federatedGraph,
-            fedGraphRepo,
-            subgraphRepo,
-          });
-          compositionErrors.push(...ce);
-        });
+        for (const graph of changedGraphs) {
+          const idx = updatedFederatedGraphs.findIndex((g) => g.id === graph.id);
+          if (idx !== -1) {
+            continue;
+          }
+          updatedFederatedGraphs.push(graph);
+        }
+
+        await Promise.all(insertOps);
       }
 
-      // update routing URL
-      if (data.routingUrl !== '') {
-        await db.update(subgraphs).set({ routingUrl }).where(eq(subgraphs.id, subgraph.id)).execute();
+      // update schema and router config of graphs which were affected
+      for (const federatedGraph of updatedFederatedGraphs) {
+        const ce = await updateComposedSchema({
+          federatedGraph,
+          fedGraphRepo,
+          subgraphRepo,
+        });
+        compositionErrors.push(...ce);
       }
     });
 
