@@ -172,8 +172,14 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		// Add client info to trace span
 		clientName := ctrace.GetClientInfo(r.Header, "graphql-client-name", "apollographql-client-name", "unknown")
 		clientVersion := ctrace.GetClientInfo(r.Header, "graphql-client-version", "apollographql-client-version", "missing")
+
+		// Add client info to trace span attributes
 		span.SetAttributes(otel.WgClientName.String(clientName))
 		span.SetAttributes(otel.WgClientVersion.String(clientVersion))
+
+		// Add client info to metrics base fields
+		metricBaseFields = append(metricBaseFields, otel.WgClientName.String(clientName))
+		metricBaseFields = append(metricBaseFields, otel.WgClientVersion.String(clientVersion))
 
 		requestOperationNameBytes := unsafebytes.StringToBytes(requestOperationName)
 
