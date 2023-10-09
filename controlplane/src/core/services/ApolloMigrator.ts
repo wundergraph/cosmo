@@ -11,21 +11,30 @@ export default class ApolloMigrator {
   organizationSlug = '';
   variantName = '';
   logger: pino.Logger<LoggerOptions>;
+  userId = '';
+  userEmail = '';
+
   constructor({
     apiKey,
     organizationSlug,
     variantName,
     logger,
+    userId,
+    userEmail,
   }: {
     apiKey: string;
     organizationSlug: string;
     variantName: string;
     logger: pino.Logger<LoggerOptions>;
+    userId: string;
+    userEmail: string;
   }) {
     this.apiKey = apiKey;
     this.organizationSlug = organizationSlug;
     this.variantName = variantName;
     this.logger = logger;
+    this.userEmail = userEmail;
+    this.userId = userId;
   }
 
   public async fetchGraphID(): Promise<{ success: boolean; id: string; name: string }> {
@@ -54,7 +63,10 @@ export default class ApolloMigrator {
       body: graphql,
     });
     if (response.status !== 200) {
-      this.logger.error(response, 'Could not fetch the graph from apollo, status code returned is non 200.');
+      this.logger.error(
+        { response, user: { id: this.userId, email: this.userEmail } },
+        'Could not fetch the graph from apollo, status code returned is non 200.',
+      );
       return {
         success: false,
         id: '',
@@ -65,7 +77,10 @@ export default class ApolloMigrator {
     const data = body.data;
 
     if (!data.me) {
-      this.logger.error(data, 'Could not fetch the graph from apollo.');
+      this.logger.error(
+        { data, user: { id: this.userId, email: this.userEmail } },
+        'Could not fetch the graph from apollo.',
+      );
       return {
         success: false,
         id: '',
@@ -125,7 +140,10 @@ export default class ApolloMigrator {
       body: graphql,
     });
     if (response.status !== 200) {
-      this.logger.error(response, 'Could not fetch the graph details from apollo, status code returned is non 200.');
+      this.logger.error(
+        { response, user: { id: this.userId, email: this.userEmail } },
+        'Could not fetch the graph details from apollo, status code returned is non 200.',
+      );
       return {
         success: false,
         fedGraphRoutingURL: '',
@@ -140,7 +158,10 @@ export default class ApolloMigrator {
     const variant = variants.find((v: { name: string }) => v.name === this.variantName);
 
     if (!variant) {
-      this.logger.error(data, 'Could not find the requested variant of the graph.');
+      this.logger.error(
+        { data, user: { id: this.userId, email: this.userEmail } },
+        'Could not find the requested variant of the graph.',
+      );
       return {
         success: false,
         fedGraphRoutingURL: '',
@@ -151,7 +172,10 @@ export default class ApolloMigrator {
     const subgraphs: any[] = variant.subgraphs;
 
     if (!subgraphs || subgraphs.length === 0) {
-      this.logger.error(data, `Could not fetch the subgraphs of the ${this.variantName} variant.`);
+      this.logger.error(
+        { data, user: { id: this.userId, email: this.userEmail } },
+        `Could not fetch the subgraphs of the ${this.variantName} variant.`,
+      );
       return {
         success: false,
         fedGraphRoutingURL: '',

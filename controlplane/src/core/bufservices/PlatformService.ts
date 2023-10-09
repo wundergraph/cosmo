@@ -2076,6 +2076,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
       return handleError<PlainMessage<MigrateFromApolloResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const userRepo = new UserRepository(opts.db);
         const orgRepo = new OrganizationRepository(opts.db);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
@@ -2096,11 +2097,15 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
+        const user = await userRepo.byId(authContext.userId || '');
+
         const apolloMigrator = new ApolloMigrator({
           apiKey: req.apiKey,
           organizationSlug: org.slug,
           variantName: req.variantName,
           logger,
+          userEmail: user?.email || '',
+          userId: user?.id || '',
         });
 
         const graph = await apolloMigrator.fetchGraphID();
