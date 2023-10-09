@@ -12,8 +12,8 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
 	"go.opentelemetry.io/otel/exporters/prometheus"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/metric"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
@@ -127,8 +127,7 @@ func startAgent(ctx context.Context, log *zap.Logger, c *Config) (*sdkmetric.Met
 	r, err := resource.New(ctx,
 		resource.WithAttributes(semconv.ServiceNameKey.String(c.Name)),
 		resource.WithProcessPID(),
-		resource.WithFromEnv(),
-		resource.WithHostID(),
+		resource.WithTelemetrySDK(),
 		resource.WithHost(),
 	)
 	if err != nil {
@@ -150,7 +149,7 @@ func startAgent(ctx context.Context, log *zap.Logger, c *Config) (*sdkmetric.Met
 
 			// Please version this meter name if you change the buckets.
 
-			msBucketHistogram := aggregation.ExplicitBucketHistogram{
+			msBucketHistogram := metric.AggregationExplicitBucketHistogram{
 				// 0ms-10s
 				Boundaries: []float64{
 					0, 5, 7, 10, 15, 25, 50, 75, 100, 125, 150, 175, 200, 225,
@@ -158,7 +157,7 @@ func startAgent(ctx context.Context, log *zap.Logger, c *Config) (*sdkmetric.Met
 					1500, 1750, 2000, 2250, 2500, 2750, 3000, 3500, 4000, 5000, 10000,
 				},
 			}
-			bytesBucketHistogram := aggregation.ExplicitBucketHistogram{
+			bytesBucketHistogram := metric.AggregationExplicitBucketHistogram{
 				// 0kb-20MB
 				Boundaries: []float64{
 					0, 50, 100, 300, 500, 1000, 3000, 5000, 10000, 15000,
