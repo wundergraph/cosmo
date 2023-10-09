@@ -1,7 +1,7 @@
 {
   "version": "5",
   "dialect": "pg",
-  "id": "a9ad9766-d563-457f-a35a-747b27f11174",
+  "id": "578bbc13-72ea-4afe-b406-079183a261aa",
   "prevId": "3a205106-9469-4914-a3bb-ce1486abf8d3",
   "tables": {
     "api_keys": {
@@ -328,6 +328,68 @@
         }
       }
     },
+    "organization_integrations": {
+      "name": "organization_integrations",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "organization_id": {
+          "name": "organization_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "events": {
+          "name": "events",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "type": {
+          "name": "type",
+          "type": "integration_type",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "organization_integrations_organization_id_organizations_id_fk": {
+          "name": "organization_integrations_organization_id_organizations_id_fk",
+          "tableFrom": "organization_integrations",
+          "tableTo": "organizations",
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
     "organization_member_roles": {
       "name": "organization_member_roles",
       "schema": "",
@@ -405,13 +467,6 @@
           "type": "text[]",
           "primaryKey": false,
           "notNull": false
-        },
-        "type": {
-          "name": "type",
-          "type": "webhook_type",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'webhook'"
         },
         "created_at": {
           "name": "created_at",
@@ -1036,6 +1091,98 @@
         }
       }
     },
+    "slack_integration_configs": {
+      "name": "slack_integration_configs",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "integration_id": {
+          "name": "integration_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "endpoint": {
+          "name": "endpoint",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "slack_integration_configs_integration_id_organization_integrations_id_fk": {
+          "name": "slack_integration_configs_integration_id_organization_integrations_id_fk",
+          "tableFrom": "slack_integration_configs",
+          "tableTo": "organization_integrations",
+          "columnsFrom": [
+            "integration_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
+    "slack_integration_event_configs": {
+      "name": "slack_integration_event_configs",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "slack_integration_config_id": {
+          "name": "slack_integration_config_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "event": {
+          "name": "event",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "federated_graph_ids": {
+          "name": "federated_graph_ids",
+          "type": "uuid[]",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "slack_integration_event_configs_slack_integration_config_id_slack_integration_configs_id_fk": {
+          "name": "slack_integration_event_configs_slack_integration_config_id_slack_integration_configs_id_fk",
+          "tableFrom": "slack_integration_event_configs",
+          "tableTo": "slack_integration_configs",
+          "columnsFrom": [
+            "slack_integration_config_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
     "subgraphs": {
       "name": "subgraphs",
       "schema": "",
@@ -1365,6 +1512,12 @@
         "ORGANIZATION": "ORGANIZATION"
       }
     },
+    "integration_type": {
+      "name": "integration_type",
+      "values": {
+        "slack": "slack"
+      }
+    },
     "member_role": {
       "name": "member_role",
       "values": {
@@ -1435,13 +1588,6 @@
         "federated": "federated",
         "subgraph": "subgraph",
         "graph": "graph"
-      }
-    },
-    "webhook_type": {
-      "name": "webhook_type",
-      "values": {
-        "webhook": "webhook",
-        "slack": "slack"
       }
     }
   },

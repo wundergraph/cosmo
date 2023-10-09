@@ -1,5 +1,5 @@
 import { PlainMessage } from '@bufbuild/protobuf';
-import { PlatformEventName } from '@wundergraph/cosmo-connect/dist/webhooks/events_pb';
+import { PlatformEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import pino from 'pino';
 import { post } from './utils.js';
 

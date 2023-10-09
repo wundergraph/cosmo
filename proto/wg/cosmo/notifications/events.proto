@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package wg.cosmo.webhooks;
+package wg.cosmo.notifications;
 
 enum PlatformEventName {
   USER_REGISTER_SUCCESS = 0;

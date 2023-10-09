@@ -8,7 +8,7 @@
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3, protoInt64 } from "@bufbuild/protobuf";
 import { EnumStatusCode } from "../../common/common_pb.js";
-import { EventMeta } from "../../webhooks/events_pb.js";
+import { EventMeta } from "../../notifications/events_pb.js";
 
 /**
  * @generated from enum wg.cosmo.platform.v1.AnalyticsViewGroupName
@@ -217,23 +217,17 @@ proto3.util.setEnumType(ExpiresAt, "wg.cosmo.platform.v1.ExpiresAt", [
 ]);
 
 /**
- * @generated from enum wg.cosmo.platform.v1.WebhookType
+ * @generated from enum wg.cosmo.platform.v1.IntegrationType
  */
-export enum WebhookType {
+export enum IntegrationType {
   /**
-   * @generated from enum value: WEBHOOK = 0;
+   * @generated from enum value: SLACK = 0;
    */
-  WEBHOOK = 0,
-
-  /**
-   * @generated from enum value: SLACK = 1;
-   */
-  SLACK = 1,
+  SLACK = 0,
 }
-// Retrieve enum metadata with: proto3.getEnumType(WebhookType)
-proto3.util.setEnumType(WebhookType, "wg.cosmo.platform.v1.WebhookType", [
-  { no: 0, name: "WEBHOOK" },
-  { no: 1, name: "SLACK" },
+// Retrieve enum metadata with: proto3.getEnumType(IntegrationType)
+proto3.util.setEnumType(IntegrationType, "wg.cosmo.platform.v1.IntegrationType", [
+  { no: 0, name: "SLACK" },
 ]);
 
 /**
@@ -4818,14 +4812,9 @@ export class CreateOrganizationWebhookConfigRequest extends Message<CreateOrgani
   events: string[] = [];
 
   /**
-   * @generated from field: repeated wg.cosmo.webhooks.EventMeta events_meta = 4;
+   * @generated from field: repeated wg.cosmo.notifications.EventMeta events_meta = 4;
    */
   eventsMeta: EventMeta[] = [];
-
-  /**
-   * @generated from field: wg.cosmo.platform.v1.WebhookType type = 5;
-   */
-  type = WebhookType.WEBHOOK;
 
   constructor(data?: PartialMessage<CreateOrganizationWebhookConfigRequest>) {
     super();
@@ -4839,7 +4828,6 @@ export class CreateOrganizationWebhookConfigRequest extends Message<CreateOrgani
     { no: 2, name: "key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "events", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 4, name: "events_meta", kind: "message", T: EventMeta, repeated: true },
-    { no: 5, name: "type", kind: "enum", T: proto3.getEnumType(WebhookType) },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateOrganizationWebhookConfigRequest {
@@ -4989,11 +4977,6 @@ export class GetOrganizationWebhookConfigsResponse_Config extends Message<GetOrg
    */
   events: string[] = [];
 
-  /**
-   * @generated from field: string type = 4;
-   */
-  type = "";
-
   constructor(data?: PartialMessage<GetOrganizationWebhookConfigsResponse_Config>) {
     super();
     proto3.util.initPartial(data, this);
@@ -5005,7 +4988,6 @@ export class GetOrganizationWebhookConfigsResponse_Config extends Message<GetOrg
     { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "endpoint", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "events", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 4, name: "type", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetOrganizationWebhookConfigsResponse_Config {
@@ -5072,7 +5054,7 @@ export class GetOrganizationWebhookMetaResponse extends Message<GetOrganizationW
   response?: Response;
 
   /**
-   * @generated from field: repeated wg.cosmo.webhooks.EventMeta events_meta = 2;
+   * @generated from field: repeated wg.cosmo.notifications.EventMeta events_meta = 2;
    */
   eventsMeta: EventMeta[] = [];
 
@@ -5130,7 +5112,7 @@ export class UpdateOrganizationWebhookConfigRequest extends Message<UpdateOrgani
   events: string[] = [];
 
   /**
-   * @generated from field: repeated wg.cosmo.webhooks.EventMeta events_meta = 5;
+   * @generated from field: repeated wg.cosmo.notifications.EventMeta events_meta = 5;
    */
   eventsMeta: EventMeta[] = [];
 
@@ -5280,6 +5262,503 @@ export class DeleteOrganizationWebhookConfigResponse extends Message<DeleteOrgan
 
   static equals(a: DeleteOrganizationWebhookConfigResponse | PlainMessage<DeleteOrganizationWebhookConfigResponse> | undefined, b: DeleteOrganizationWebhookConfigResponse | PlainMessage<DeleteOrganizationWebhookConfigResponse> | undefined): boolean {
     return proto3.util.equals(DeleteOrganizationWebhookConfigResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.CreateIntegrationRequest
+ */
+export class CreateIntegrationRequest extends Message<CreateIntegrationRequest> {
+  /**
+   * @generated from field: string endpoint = 1;
+   */
+  endpoint = "";
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name = "";
+
+  /**
+   * @generated from field: string type = 3;
+   */
+  type = "";
+
+  /**
+   * @generated from field: repeated string events = 4;
+   */
+  events: string[] = [];
+
+  /**
+   * @generated from field: repeated wg.cosmo.notifications.EventMeta eventsMeta = 5;
+   */
+  eventsMeta: EventMeta[] = [];
+
+  constructor(data?: PartialMessage<CreateIntegrationRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.CreateIntegrationRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "endpoint", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "type", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "events", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 5, name: "eventsMeta", kind: "message", T: EventMeta, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateIntegrationRequest {
+    return new CreateIntegrationRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateIntegrationRequest {
+    return new CreateIntegrationRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateIntegrationRequest {
+    return new CreateIntegrationRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CreateIntegrationRequest | PlainMessage<CreateIntegrationRequest> | undefined, b: CreateIntegrationRequest | PlainMessage<CreateIntegrationRequest> | undefined): boolean {
+    return proto3.util.equals(CreateIntegrationRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.CreateIntegrationResponse
+ */
+export class CreateIntegrationResponse extends Message<CreateIntegrationResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  constructor(data?: PartialMessage<CreateIntegrationResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.CreateIntegrationResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateIntegrationResponse {
+    return new CreateIntegrationResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateIntegrationResponse {
+    return new CreateIntegrationResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateIntegrationResponse {
+    return new CreateIntegrationResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CreateIntegrationResponse | PlainMessage<CreateIntegrationResponse> | undefined, b: CreateIntegrationResponse | PlainMessage<CreateIntegrationResponse> | undefined): boolean {
+    return proto3.util.equals(CreateIntegrationResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetOrganizationIntegrationsRequest
+ */
+export class GetOrganizationIntegrationsRequest extends Message<GetOrganizationIntegrationsRequest> {
+  constructor(data?: PartialMessage<GetOrganizationIntegrationsRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetOrganizationIntegrationsRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetOrganizationIntegrationsRequest {
+    return new GetOrganizationIntegrationsRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetOrganizationIntegrationsRequest {
+    return new GetOrganizationIntegrationsRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetOrganizationIntegrationsRequest {
+    return new GetOrganizationIntegrationsRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetOrganizationIntegrationsRequest | PlainMessage<GetOrganizationIntegrationsRequest> | undefined, b: GetOrganizationIntegrationsRequest | PlainMessage<GetOrganizationIntegrationsRequest> | undefined): boolean {
+    return proto3.util.equals(GetOrganizationIntegrationsRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.SlackIntegrationConfig
+ */
+export class SlackIntegrationConfig extends Message<SlackIntegrationConfig> {
+  /**
+   * @generated from field: string endpoint = 1;
+   */
+  endpoint = "";
+
+  constructor(data?: PartialMessage<SlackIntegrationConfig>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.SlackIntegrationConfig";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "endpoint", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SlackIntegrationConfig {
+    return new SlackIntegrationConfig().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SlackIntegrationConfig {
+    return new SlackIntegrationConfig().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SlackIntegrationConfig {
+    return new SlackIntegrationConfig().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: SlackIntegrationConfig | PlainMessage<SlackIntegrationConfig> | undefined, b: SlackIntegrationConfig | PlainMessage<SlackIntegrationConfig> | undefined): boolean {
+    return proto3.util.equals(SlackIntegrationConfig, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.IntegrationConfig
+ */
+export class IntegrationConfig extends Message<IntegrationConfig> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.IntegrationType type = 1;
+   */
+  type = IntegrationType.SLACK;
+
+  /**
+   * @generated from oneof wg.cosmo.platform.v1.IntegrationConfig.config
+   */
+  config: {
+    /**
+     * @generated from field: wg.cosmo.platform.v1.SlackIntegrationConfig slackIntegrationConfig = 2;
+     */
+    value: SlackIntegrationConfig;
+    case: "slackIntegrationConfig";
+  } | { case: undefined; value?: undefined } = { case: undefined };
+
+  constructor(data?: PartialMessage<IntegrationConfig>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.IntegrationConfig";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "type", kind: "enum", T: proto3.getEnumType(IntegrationType) },
+    { no: 2, name: "slackIntegrationConfig", kind: "message", T: SlackIntegrationConfig, oneof: "config" },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): IntegrationConfig {
+    return new IntegrationConfig().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): IntegrationConfig {
+    return new IntegrationConfig().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): IntegrationConfig {
+    return new IntegrationConfig().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: IntegrationConfig | PlainMessage<IntegrationConfig> | undefined, b: IntegrationConfig | PlainMessage<IntegrationConfig> | undefined): boolean {
+    return proto3.util.equals(IntegrationConfig, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.Integration
+ */
+export class Integration extends Message<Integration> {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id = "";
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name = "";
+
+  /**
+   * @generated from field: string type = 3;
+   */
+  type = "";
+
+  /**
+   * @generated from field: repeated string events = 4;
+   */
+  events: string[] = [];
+
+  /**
+   * @generated from field: wg.cosmo.platform.v1.IntegrationConfig integrationConfig = 5;
+   */
+  integrationConfig?: IntegrationConfig;
+
+  /**
+   * @generated from field: repeated wg.cosmo.notifications.EventMeta eventsMeta = 6;
+   */
+  eventsMeta: EventMeta[] = [];
+
+  constructor(data?: PartialMessage<Integration>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.Integration";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "type", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "events", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 5, name: "integrationConfig", kind: "message", T: IntegrationConfig },
+    { no: 6, name: "eventsMeta", kind: "message", T: EventMeta, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Integration {
+    return new Integration().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Integration {
+    return new Integration().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Integration {
+    return new Integration().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: Integration | PlainMessage<Integration> | undefined, b: Integration | PlainMessage<Integration> | undefined): boolean {
+    return proto3.util.equals(Integration, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetOrganizationIntegrationsResponse
+ */
+export class GetOrganizationIntegrationsResponse extends Message<GetOrganizationIntegrationsResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.Integration integrations = 2;
+   */
+  integrations: Integration[] = [];
+
+  constructor(data?: PartialMessage<GetOrganizationIntegrationsResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetOrganizationIntegrationsResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "integrations", kind: "message", T: Integration, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetOrganizationIntegrationsResponse {
+    return new GetOrganizationIntegrationsResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetOrganizationIntegrationsResponse {
+    return new GetOrganizationIntegrationsResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetOrganizationIntegrationsResponse {
+    return new GetOrganizationIntegrationsResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetOrganizationIntegrationsResponse | PlainMessage<GetOrganizationIntegrationsResponse> | undefined, b: GetOrganizationIntegrationsResponse | PlainMessage<GetOrganizationIntegrationsResponse> | undefined): boolean {
+    return proto3.util.equals(GetOrganizationIntegrationsResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.UpdateIntegrationConfigRequest
+ */
+export class UpdateIntegrationConfigRequest extends Message<UpdateIntegrationConfigRequest> {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id = "";
+
+  /**
+   * @generated from field: string endpoint = 2;
+   */
+  endpoint = "";
+
+  /**
+   * @generated from field: string name = 3;
+   */
+  name = "";
+
+  /**
+   * @generated from field: repeated string events = 4;
+   */
+  events: string[] = [];
+
+  /**
+   * @generated from field: repeated wg.cosmo.notifications.EventMeta events_meta = 5;
+   */
+  eventsMeta: EventMeta[] = [];
+
+  constructor(data?: PartialMessage<UpdateIntegrationConfigRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.UpdateIntegrationConfigRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "endpoint", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "events", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 5, name: "events_meta", kind: "message", T: EventMeta, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateIntegrationConfigRequest {
+    return new UpdateIntegrationConfigRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateIntegrationConfigRequest {
+    return new UpdateIntegrationConfigRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateIntegrationConfigRequest {
+    return new UpdateIntegrationConfigRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateIntegrationConfigRequest | PlainMessage<UpdateIntegrationConfigRequest> | undefined, b: UpdateIntegrationConfigRequest | PlainMessage<UpdateIntegrationConfigRequest> | undefined): boolean {
+    return proto3.util.equals(UpdateIntegrationConfigRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.UpdateIntegrationConfigResponse
+ */
+export class UpdateIntegrationConfigResponse extends Message<UpdateIntegrationConfigResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  constructor(data?: PartialMessage<UpdateIntegrationConfigResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.UpdateIntegrationConfigResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateIntegrationConfigResponse {
+    return new UpdateIntegrationConfigResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateIntegrationConfigResponse {
+    return new UpdateIntegrationConfigResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateIntegrationConfigResponse {
+    return new UpdateIntegrationConfigResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateIntegrationConfigResponse | PlainMessage<UpdateIntegrationConfigResponse> | undefined, b: UpdateIntegrationConfigResponse | PlainMessage<UpdateIntegrationConfigResponse> | undefined): boolean {
+    return proto3.util.equals(UpdateIntegrationConfigResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.DeleteIntegrationRequest
+ */
+export class DeleteIntegrationRequest extends Message<DeleteIntegrationRequest> {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id = "";
+
+  constructor(data?: PartialMessage<DeleteIntegrationRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.DeleteIntegrationRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteIntegrationRequest {
+    return new DeleteIntegrationRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteIntegrationRequest {
+    return new DeleteIntegrationRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteIntegrationRequest {
+    return new DeleteIntegrationRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DeleteIntegrationRequest | PlainMessage<DeleteIntegrationRequest> | undefined, b: DeleteIntegrationRequest | PlainMessage<DeleteIntegrationRequest> | undefined): boolean {
+    return proto3.util.equals(DeleteIntegrationRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.DeleteIntegrationResponse
+ */
+export class DeleteIntegrationResponse extends Message<DeleteIntegrationResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  constructor(data?: PartialMessage<DeleteIntegrationResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.DeleteIntegrationResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteIntegrationResponse {
+    return new DeleteIntegrationResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteIntegrationResponse {
+    return new DeleteIntegrationResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteIntegrationResponse {
+    return new DeleteIntegrationResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DeleteIntegrationResponse | PlainMessage<DeleteIntegrationResponse> | undefined, b: DeleteIntegrationResponse | PlainMessage<DeleteIntegrationResponse> | undefined): boolean {
+    return proto3.util.equals(DeleteIntegrationResponse, a, b);
   }
 }
 

@@ -1,9 +1,10 @@
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { eq } from 'drizzle-orm';
-import { EventMeta, OrganizationEventName } from '@wundergraph/cosmo-connect/dist/webhooks/events_pb';
+import { EventMeta, OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import pino from 'pino';
 import { PartialMessage } from '@bufbuild/protobuf';
 import * as schema from '../../db/schema.js';
+import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import { post } from './utils.js';
 
 interface FederatedGraphSchemaUpdate {
@@ -42,6 +43,7 @@ export class OrganizationWebhookService {
   }
 
   private async syncOrganizationSettings() {
+    const orgRepo = new OrganizationRepository(this.db);
     const orgConfigs = await this.db.query.organizationWebhooks.findMany({
       where: eq(schema.organizationWebhooks.organizationId, this.organizationId),
       with: {
@@ -66,8 +68,23 @@ export class OrganizationWebhookService {
         url: config?.endpoint ?? '',
         key: config?.key ?? '',
         allowedUserEvents: config?.events ?? [],
-        type: config.type,
+        type: 'webhook',
         meta,
+      });
+    }
+
+    const integrations = await orgRepo.getIntegrations(this.organizationId);
+    for (const integration of integrations) {
+      if (integration.type !== 'slack') {
+        continue;
+      }
+
+      this.configs?.push({
+        url: integration.integrationConfig?.config.value?.endpoint ?? '',
+        key: '',
+        allowedUserEvents: integration.events ?? [],
+        type: 'slack',
+        meta: integration.eventsMeta,
       });
     }
 
@@ -116,13 +133,7 @@ export class OrganizationWebhookService {
       }
 
       let data = {};
-      if (config.type === 'webhook') {
-        data = {
-          version: 1,
-          event: OrganizationEventName[eventName],
-          payload: eventPayload,
-        };
-      } else {
+      if (config.type === 'slack') {
         data = {
           blocks: [
             {
@@ -147,6 +158,12 @@ export class OrganizationWebhookService {
               },
             },
           ],
+        };
+      } else {
+        data = {
+          version: 1,
+          event: OrganizationEventName[eventName],
+          payload: eventPayload,
         };
       }
 

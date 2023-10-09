@@ -11,10 +11,12 @@ import {
   CreateFederatedGraphResponse,
   CreateFederatedGraphTokenResponse,
   CreateFederatedSubgraphResponse,
+  CreateIntegrationResponse,
   CreateOrganizationWebhookConfigResponse,
   DeleteAPIKeyResponse,
   DeleteFederatedGraphResponse,
   DeleteFederatedSubgraphResponse,
+  DeleteIntegrationResponse,
   DeleteRouterTokenResponse,
   FixSubgraphSchemaResponse,
   ForceCheckSuccessResponse,
@@ -28,6 +30,7 @@ import {
   GetFederatedGraphSDLByNameResponse,
   GetFederatedGraphsResponse,
   GetMetricsDashboardResponse,
+  GetOrganizationIntegrationsResponse,
   GetOrganizationMembersResponse,
   GetOrganizationWebhookConfigsResponse,
   GetOrganizationWebhookMetaResponse,
@@ -41,11 +44,12 @@ import {
   RemoveInvitationResponse,
   RequestSeriesItem,
   UpdateFederatedGraphResponse,
+  UpdateIntegrationConfigResponse,
   UpdateOrganizationWebhookConfigResponse,
   UpdateSubgraphResponse,
   WhoAmIResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { PlatformEventName, OrganizationEventName } from '@wundergraph/cosmo-connect/dist/webhooks/events_pb';
+import { PlatformEventName, OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import { OpenAIGraphql, buildRouterConfig } from '@wundergraph/cosmo-shared';
 import { parse } from 'graphql';
 import { GraphApiKeyJwtPayload } from '../../types/index.js';
@@ -2812,6 +2816,110 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           federatedGraphId: federatedGraph.id,
           organizationId: authContext.organizationId,
           tokenName: req.tokenName,
+        });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+        };
+      });
+    },
+
+    createIntegration: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<CreateIntegrationResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const orgRepo = new OrganizationRepository(opts.db);
+
+        const integration = await orgRepo.getIntegrationByName(authContext.organizationId, req.name);
+        if (integration) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_ALREADY_EXISTS,
+              details: `Itegration with name ${req.name} already exists`,
+            },
+          };
+        }
+
+        await orgRepo.createIntegration({
+          organizationId: authContext.organizationId,
+          endpoint: req.endpoint,
+          events: req.events,
+          eventsMeta: req.eventsMeta,
+          name: req.name,
+          type: req.type,
+        });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+        };
+      });
+    },
+
+    getOrganizationIntegrations: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetOrganizationIntegrationsResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const orgRepo = new OrganizationRepository(opts.db);
+
+        const integrations = await orgRepo.getIntegrations(authContext.organizationId);
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          integrations,
+        };
+      });
+    },
+
+    updateIntegrationConfig: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<UpdateIntegrationConfigResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const orgRepo = new OrganizationRepository(opts.db);
+
+        await orgRepo.updateIntegrationConfig({
+          organizationId: authContext.organizationId,
+          ...req,
+        });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+        };
+      });
+    },
+
+    deleteIntegration: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<DeleteIntegrationResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const orgRepo = new OrganizationRepository(opts.db);
+
+        await orgRepo.deleteIntegration({
+          organizationId: authContext.organizationId,
+          id: req.id,
         });
 
         return {

@@ -116,7 +116,6 @@ export interface WebhooksConfigDTO {
   id: string;
   endpoint: string;
   events: string[];
-  type: string;
 }
 
 export interface ResponseMessage {

@@ -459,8 +459,6 @@ export const organizationMemberRolesRelations = relations(organizationMemberRole
   }),
 }));
 
-export const webhookTypeEnum = pgEnum('webhook_type', ['webhook', 'slack']);
-
 export const organizationWebhooks = pgTable('organization_webhook_configs', {
   id: uuid('id').notNull().primaryKey().defaultRandom(),
   organizationId: uuid('organization_id')
@@ -471,7 +469,6 @@ export const organizationWebhooks = pgTable('organization_webhook_configs', {
   endpoint: text('endpoint'),
   key: text('key'),
   events: text('events').array(),
-  type: webhookTypeEnum('type').notNull().default('webhook'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -524,3 +521,48 @@ export const gitInstallations = pgTable('git_installations', {
   providerName: text('provider_name').notNull(),
   oauthToken: text('oauth_token'),
 });
+
+export const integrationTypeEnum = pgEnum('integration_type', ['slack']);
+
+export const organizationIntegrations = pgTable('organization_integrations', {
+  id: uuid('id').notNull().primaryKey().defaultRandom(),
+  organizationId: uuid('organization_id')
+    .notNull()
+    .references(() => organizations.id, {
+      onDelete: 'cascade',
+    }),
+  name: text('name').notNull(),
+  events: text('events').array(),
+  type: integrationTypeEnum('type').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const slackIntegrationConfigs = pgTable('slack_integration_configs', {
+  id: uuid('id').notNull().primaryKey().defaultRandom(),
+  integrationId: uuid('integration_id')
+    .notNull()
+    .references(() => organizationIntegrations.id, {
+      onDelete: 'cascade',
+    }),
+  endpoint: text('endpoint').notNull(),
+});
+
+export const slackIntegrationEventConfigs = pgTable('slack_integration_event_configs', {
+  id: uuid('id').notNull().primaryKey().defaultRandom(),
+  slackIntegrationConfigId: uuid('slack_integration_config_id')
+    .notNull()
+    .references(() => slackIntegrationConfigs.id, {
+      onDelete: 'cascade',
+    }),
+  event: text('event').notNull(),
+  federatedGraphIds: uuid('federated_graph_ids').array(),
+});
+
+export const organizationIntegrationRelations = relations(organizationIntegrations, ({ one }) => ({
+  organization: one(organizations),
+  slackIntegrationConfigs: one(slackIntegrationConfigs),
+}));
+
+export const slackIntegrationConfigsRelations = relations(slackIntegrationConfigs, ({ many }) => ({
+  slackIntegrationEventConfigs: many(slackIntegrationEventConfigs),
+}));
