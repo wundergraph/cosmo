@@ -165,7 +165,13 @@ export const Nav = ({ children, links }: SideNavLayoutProps) => {
           <div className="flex items-center justify-between gap-x-4">
             <div className="flex w-full items-center gap-x-4 gap-y-8 lg:flex-col lg:items-start">
               <div className="flex w-full items-center space-x-2">
-                <Link href="/">
+                <Link
+                  href={
+                    user?.currentOrganization
+                      ? `/${user.currentOrganization.slug}`
+                      : `/`
+                  }
+                >
                   <Logo />
                 </Link>
                 <Organizations />
