@@ -181,7 +181,7 @@ const ChecksPage: NextPageWithLayout = () => {
           <TableRow>
             <TableHead className="w-[200px]">Timestamp</TableHead>
             <TableHead>Subgraph</TableHead>
-            <TableHead>Status</TableHead>
+            <TableHead className="text-center">Status</TableHead>
             <TableHead className="text-center">Composable</TableHead>
             <TableHead className="text-center">Non Breaking</TableHead>
             <TableHead className="text-center">Proposed Schema</TableHead>
@@ -206,7 +206,7 @@ const ChecksPage: NextPageWithLayout = () => {
                       {formatDateTime(new Date(timestamp))}
                     </TableCell>
                     <TableCell>{subgraphName}</TableCell>
-                    <TableCell>
+                    <TableCell className="text-center">
                       {getCheckBadge(isBreaking, isComposable, isForcedSuccess)}
                     </TableCell>
                     <TableCell>{getCheckIcon(isComposable)}</TableCell>

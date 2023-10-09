@@ -1,7 +1,24 @@
 import { UserContext } from "@/components/app-provider";
 import { getDashboardLayout } from "@/components/layout/dashboard-layout";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Button, buttonVariants } from "@/components/ui/button";
+import {
+  Card,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -9,7 +26,17 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
 import { NextPageWithLayout } from "@/lib/page";
@@ -19,14 +46,13 @@ import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb
 import {
   deleteOrganization,
   leaveOrganization,
-  updateOrganizationName,
-  updateOrganizationSlug,
+  updateOrganizationDetails,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { useRouter } from "next/router";
 import { useContext, useState } from "react";
 import { z } from "zod";
 
-const OrganizationName = () => {
+const OrganizationDetails = () => {
   const user = useContext(UserContext);
   const router = useRouter();
 
@@ -37,136 +63,40 @@ const OrganizationName = () => {
         message: "Organization name must be a minimum of 3 characters",
       })
       .max(32, { message: "Organization name must be maximum 32 characters" }),
+    organizationSlug: z
+      .string()
+      .min(3, {
+        message: "Organization slug must be a minimum of 3 characters",
+      })
+      .max(24, { message: "Organization slug must be maximum 24 characters" }),
   });
 
-  type OrganizationNameInput = z.infer<typeof schema>;
+  type OrganizationDetailsInput = z.infer<typeof schema>;
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isValid },
-  } = useZodForm<OrganizationNameInput>({
+  const form = useZodForm<OrganizationDetailsInput>({
     schema,
     mode: "onChange",
   });
 
   const { mutate, isLoading } = useMutation(
-    updateOrganizationName.useMutation()
+    updateOrganizationDetails.useMutation()
   );
 
   const { toast } = useToast();
 
-  const handleChangeOrgName: SubmitHandler<OrganizationNameInput> = (data) => {
+  const onSubmit: SubmitHandler<OrganizationDetailsInput> = (data) => {
     mutate(
       {
         userID: user?.id,
         organizationName: data.organizationName,
-      },
-      {
-        onSuccess: (d) => {
-          if (d.response?.code === EnumStatusCode.OK) {
-            router.reload();
-            toast({
-              description: "Organization name updated succesfully.",
-              duration: 3000,
-            });
-          } else if (d.response?.details) {
-            toast({ description: d.response.details, duration: 3000 });
-          }
-        },
-        onError: (error) => {
-          toast({
-            description:
-              "Could not update the organization name. Please try again.",
-            duration: 3000,
-          });
-        },
-      }
-    );
-  };
-
-  return (
-    <Card className="flex flex-col gap-y-2 p-4">
-      <h1 className="text-lg font-semibold text-primary-foreground">
-        Organization Name
-      </h1>
-      <p className="text-sm text-muted-foreground">
-        {`This is your organization's visible name within WunderGraph Cosmo. For
-        example, the name of your company or department.`}
-      </p>
-
-      <form onSubmit={handleSubmit(handleChangeOrgName)} className="mt-4">
-        <div className="flex flex-col gap-y-2">
-          <Input
-            type="text"
-            defaultValue={user?.currentOrganization.name}
-            {...register("organizationName")}
-          />
-          {errors.organizationName && (
-            <span className="px-2 text-xs text-destructive">
-              {errors.organizationName.message}
-            </span>
-          )}
-          <div className="mt-2 flex justify-end">
-            <Button
-              variant="default"
-              isLoading={isLoading}
-              type="submit"
-              disabled={
-                !isValid || !user?.currentOrganization.roles.includes("admin")
-              }
-            >
-              Save
-            </Button>
-          </div>
-        </div>
-      </form>
-    </Card>
-  );
-};
-
-const OrganizationSlug = () => {
-  const user = useContext(UserContext);
-  const router = useRouter();
-
-  const schema = z.object({
-    organizationSlug: z
-      .string()
-      .min(3, {
-        message: "Organization name must be a minimum of 3 characters",
-      })
-      .max(24, { message: "Organization name must be maximum 24 characters" }),
-  });
-
-  type OrganizationSlugInput = z.infer<typeof schema>;
-
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isValid },
-  } = useZodForm<OrganizationSlugInput>({
-    schema,
-    mode: "onChange",
-  });
-
-  const { mutate, isLoading } = useMutation(
-    updateOrganizationSlug.useMutation()
-  );
-
-  const { toast } = useToast();
-
-  const handleChangeOrgSlug: SubmitHandler<OrganizationSlugInput> = (data) => {
-    mutate(
-      {
-        userID: user?.id,
         organizationSlug: data.organizationSlug,
       },
       {
         onSuccess: (d) => {
           if (d.response?.code === EnumStatusCode.OK) {
-            router.reload();
+            router.replace(`/${data.organizationSlug}/settings`);
             toast({
-              description: "Organization slug updated succesfully.",
+              description: "Organization details updated successfully.",
               duration: 3000,
             });
           } else if (d.response?.details) {
@@ -176,7 +106,7 @@ const OrganizationSlug = () => {
         onError: (error) => {
           toast({
             description:
-              "Could not update the organization slug. Please try again.",
+              "Could not update the organization details. Please try again.",
             duration: 3000,
           });
         },
@@ -185,41 +115,60 @@ const OrganizationSlug = () => {
   };
 
   return (
-    <Card className="flex flex-col gap-y-1  p-4">
-      <h1 className="text-lg font-semibold text-primary-foreground">
-        Organization Slug
-      </h1>
-      <p className="text-sm text-muted-foreground">
-        {`This is your organization's URL namespace on WunderGraph Cosmo. Within it, your members can inspect their projects, check out any recent activity, or configure settings to their liking.`}
-      </p>
-
-      <form onSubmit={handleSubmit(handleChangeOrgSlug)} className="mt-4">
-        <div className="flex flex-col gap-y-2">
-          <Input
-            type="text"
-            defaultValue={user?.currentOrganization.slug}
-            {...register("organizationSlug")}
-          />
-          {errors.organizationSlug && (
-            <span className="px-2 text-xs text-destructive">
-              {errors.organizationSlug.message}
-            </span>
+    <Form {...form}>
+      <form
+        onSubmit={form.handleSubmit(onSubmit)}
+        className="flex flex-col gap-y-4"
+      >
+        <FormField
+          control={form.control}
+          name="organizationName"
+          defaultValue={user?.currentOrganization.name}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Organization Name</FormLabel>
+              <FormControl>
+                <Input {...field} />
+              </FormControl>
+              <FormDescription>
+                This is the visible name of your organization within WunderGraph
+                Cosmo.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
           )}
-          <div className="mt-2 flex justify-end">
-            <Button
-              variant="default"
-              isLoading={isLoading}
-              type="submit"
-              disabled={
-                !isValid || !user?.currentOrganization.roles.includes("admin")
-              }
-            >
-              Save
-            </Button>
-          </div>
-        </div>
+        />
+        <FormField
+          control={form.control}
+          name="organizationSlug"
+          defaultValue={user?.currentOrganization.slug}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Organization Slug</FormLabel>
+              <FormControl>
+                <Input {...field} />
+              </FormControl>
+              <FormDescription>
+                This is the URL namespace of the organization within WunderGraph
+                Cosmo.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <Button
+          className="ml-auto"
+          isLoading={isLoading}
+          type="submit"
+          disabled={
+            !form.formState.isValid ||
+            !user?.currentOrganization.roles.includes("admin")
+          }
+        >
+          Save
+        </Button>
       </form>
-    </Card>
+    </Form>
   );
 };
 
@@ -227,24 +176,6 @@ const LeaveOrganization = () => {
   const user = useContext(UserContext);
   const router = useRouter();
   const [open, setOpen] = useState(false);
-
-  const regex = new RegExp(`^${user?.currentOrganization.name}$`);
-  const schema = z.object({
-    organizationName: z.string().regex(regex, {
-      message: "Please enter the organization name as requested.",
-    }),
-  });
-
-  type LeaveOrgInput = z.infer<typeof schema>;
-
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isValid },
-  } = useZodForm<LeaveOrgInput>({
-    schema,
-    mode: "onChange",
-  });
 
   const { mutate, isLoading } = useMutation(leaveOrganization.useMutation());
 
@@ -260,7 +191,7 @@ const LeaveOrganization = () => {
           if (d.response?.code === EnumStatusCode.OK) {
             router.reload();
             toast({
-              description: "Left the organization succesfully.",
+              description: "Left the organization successfully.",
               duration: 3000,
             });
           } else if (d.response?.details) {
@@ -279,64 +210,42 @@ const LeaveOrganization = () => {
   };
 
   return (
-    <Card className="flex flex-col gap-y-1 border border-destructive p-4">
-      <h1 className="text-lg font-semibold text-primary-foreground">
-        Leave Organization
-      </h1>
-      <p className="text-sm text-muted-foreground">
-        Revoke your access to this organization. Any contributions you have
-        added to the organization will persist.
-      </p>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogTrigger className="mt-2 flex justify-end" asChild>
-          <div>
-            <Button type="submit" variant="destructive">
+    <Card>
+      <CardHeader className="gap-y-6 md:flex-row">
+        <div className="space-y-1.5">
+          <CardTitle>Leave Organization</CardTitle>
+          <CardDescription>
+            Revokes your access to this organization.
+          </CardDescription>
+        </div>
+        <AlertDialog open={open} onOpenChange={setOpen}>
+          <AlertDialogTrigger asChild>
+            <Button className="md:ml-auto" type="submit" variant="secondary">
               Leave organization
             </Button>
-          </div>
-        </DialogTrigger>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              Are you sure you want to delete this organization?
-            </DialogTitle>
-            <span className="text-sm text-muted-foreground">
-              This action cannot be undone.
-            </span>
-          </DialogHeader>
-          <form onSubmit={handleSubmit(handleLeaveOrg)} className="mt-2">
-            <div className="flex flex-col gap-y-3">
-              <span className="text-sm">
-                Enter <strong>{user?.currentOrganization.name}</strong> to
-                confirm you want to delete this organization.
-              </span>
-              <Input
-                type="text"
-                {...register("organizationName")}
-                autoFocus={true}
-              />
-              {errors.organizationName && (
-                <span className="px-2 text-xs text-destructive">
-                  {errors.organizationName.message}
-                </span>
-              )}
-              <div className="mt-2 flex justify-end gap-x-4">
-                <Button variant="outline" onClick={() => setOpen(false)}>
-                  Cancel
-                </Button>
-                <Button
-                  variant="destructive"
-                  isLoading={isLoading}
-                  type="submit"
-                  disabled={!isValid}
-                >
-                  Leave
-                </Button>
-              </div>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                Are you sure you want to leave this organization?
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                className={buttonVariants({ variant: "destructive" })}
+                type="button"
+                onClick={handleLeaveOrg}
+              >
+                Leave
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </CardHeader>
     </Card>
   );
 };
@@ -397,80 +306,80 @@ const DeleteOrganization = () => {
   };
 
   return (
-    <Card className="flex flex-col gap-y-1 border border-destructive p-4">
-      <h1 className="text-lg font-semibold text-primary-foreground">
-        Delete Organization
-      </h1>
-      <p className="text-sm text-muted-foreground">
-        The organization will be permanently deleted. This action is
-        irreversible and can not be undone.
-      </p>
-      <Dialog
-        open={user?.currentOrganization.roles.includes("admin") ? open : false}
-        onOpenChange={setOpen}
-      >
-        <DialogTrigger
-          className={cn(
-            {
+    <Card className="border-destructive">
+      <CardHeader>
+        <CardTitle>Delete Organization</CardTitle>
+        <CardDescription className="text-sm text-muted-foreground">
+          The organization will be permanently deleted. This action is
+          irreversible and can not be undone.
+        </CardDescription>
+      </CardHeader>
+      <CardFooter>
+        <Dialog
+          open={
+            user?.currentOrganization.roles.includes("admin") ? open : false
+          }
+          onOpenChange={setOpen}
+        >
+          <DialogTrigger
+            className={cn({
               "cursor-not-allowed":
                 !user?.currentOrganization.roles.includes("admin"),
-            },
-            "mt-2 flex justify-end"
-          )}
-          asChild
-        >
-          <div>
+            })}
+            asChild
+          >
             <Button
               type="submit"
               variant="destructive"
+              className="w-full md:ml-auto md:w-max"
               disabled={!user?.currentOrganization.roles.includes("admin")}
             >
               Delete organization
             </Button>
-          </div>
-        </DialogTrigger>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              Are you sure you want to delete this organization?
-            </DialogTitle>
-            <span className="text-sm text-muted-foreground">
-              This action cannot be undone.
-            </span>
-          </DialogHeader>
-          <form onSubmit={handleSubmit(handleDeleteOrg)} className="mt-2">
-            <div className="flex flex-col gap-y-3">
-              <span className="text-sm">
-                Enter <strong>{user?.currentOrganization.name}</strong> to
-                confirm you want to delete this organization.
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
+                Are you sure you want to delete this organization?
+              </DialogTitle>
+              <span className="text-sm text-muted-foreground">
+                This action cannot be undone.
               </span>
-              <Input
-                type="text"
-                {...register("organizationName")}
-                autoFocus={true}
-              />
-              {errors.organizationName && (
-                <span className="px-2 text-xs text-destructive">
-                  {errors.organizationName.message}
+            </DialogHeader>
+            <form onSubmit={handleSubmit(handleDeleteOrg)} className="mt-2">
+              <div className="flex flex-col gap-y-3">
+                <span className="text-sm">
+                  Enter <strong>{user?.currentOrganization.name}</strong> to
+                  confirm you want to delete this organization.
                 </span>
-              )}
-              <div className="mt-2 flex justify-end gap-x-4">
-                <Button variant="outline" onClick={() => setOpen(false)}>
-                  Cancel
-                </Button>
-                <Button
-                  variant="destructive"
-                  isLoading={isLoading}
-                  type="submit"
-                  disabled={!isValid}
-                >
-                  Delete
-                </Button>
+                <Input
+                  type="text"
+                  {...register("organizationName")}
+                  autoFocus={true}
+                />
+                {errors.organizationName && (
+                  <span className="px-2 text-xs text-destructive">
+                    {errors.organizationName.message}
+                  </span>
+                )}
+                <div className="mt-2 flex justify-end gap-x-4">
+                  <Button variant="outline" onClick={() => setOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    isLoading={isLoading}
+                    type="submit"
+                    disabled={!isValid}
+                  >
+                    Delete
+                  </Button>
+                </div>
               </div>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </CardFooter>
     </Card>
   );
 };
@@ -479,11 +388,11 @@ const SettingsDashboardPage: NextPageWithLayout = () => {
   const user = useContext(UserContext);
 
   return (
-    <div className="mt-4 flex flex-col gap-y-4">
-      <OrganizationName />
-      <OrganizationSlug />
-      {!user?.currentOrganization.isPersonal && (
+    <div className="flex flex-col gap-y-4">
+      <OrganizationDetails />
+      {user && !user.currentOrganization.isPersonal && (
         <>
+          <Separator className="my-2" />
           <LeaveOrganization />
           <DeleteOrganization />
         </>

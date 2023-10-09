@@ -13,6 +13,17 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Loader } from "@/components/ui/loader";
 import {
   Table,
@@ -149,19 +160,38 @@ const CheckDetailsPage: NextPageWithLayout = () => {
           {!data.check.isForcedSuccess &&
             data.check.isBreaking &&
             data.check.isComposable && (
-              <Button
-                variant="secondary"
-                isLoading={isForcingSuccess}
-                onClick={() =>
-                  forceSuccess({
-                    checkId: id,
-                    graphName: graphContext.graph?.name,
-                  })
-                }
-                className="mt-4 md:ml-auto md:mt-0 md:w-max"
-              >
-                Force Success
-              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    className="mt-4 md:ml-auto md:mt-0 md:w-max"
+                    variant="secondary"
+                  >
+                    Force Success
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This action cannot be undone. This will forcefully mark
+                      the check as successful.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => {
+                        forceSuccess({
+                          checkId: id,
+                          graphName: graphContext.graph?.name,
+                        });
+                      }}
+                    >
+                      Force Success
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             )}
         </CardContent>
       </Card>

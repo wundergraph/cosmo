@@ -291,7 +291,7 @@ const MembersPage: NextPageWithLayout = () => {
   const isAdmin = currentUser?.roles.includes("admin");
 
   return (
-    <div className="mt-4 flex flex-col gap-y-6">
+    <div className="flex flex-col gap-y-6">
       {isAdmin && !user.currentOrganization.isFreeTrial && (
         <InviteForm refresh={() => refetch()} />
       )}

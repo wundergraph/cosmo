@@ -476,7 +476,7 @@ const APIKeysPage: NextPageWithLayout = () => {
   const apiKeys = data.apiKeys;
 
   return (
-    <div className="mt-4 flex flex-col gap-y-6">
+    <div className="flex flex-col gap-y-6">
       {apiKeys.length === 0 ? (
         <Empty
           apiKey={apiKey}

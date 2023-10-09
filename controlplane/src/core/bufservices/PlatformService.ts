@@ -41,6 +41,7 @@ import {
   RemoveInvitationResponse,
   RequestSeriesItem,
   UpdateFederatedGraphResponse,
+  UpdateOrganizationDetailsResponse,
   UpdateOrganizationWebhookConfigResponse,
   UpdateSubgraphResponse,
   WhoAmIResponse,
@@ -2482,13 +2483,13 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    updateOrganizationName: (req, ctx) => {
+    updateOrganizationDetails: (req, ctx) => {
       const logger = opts.logger.child({
         service: ctx.service.typeName,
         method: ctx.method.name,
       });
 
-      return handleError<PlainMessage<UpdateOrganizationWebhookConfigResponse>>(logger, async () => {
+      return handleError<PlainMessage<UpdateOrganizationDetailsResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db);
 
@@ -2526,92 +2527,44 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        await orgRepo.updateOrganization({ id: authContext.organizationId, name: req.organizationName });
+        if (org.slug !== req.organizationSlug) {
+          // checking if the provided orgSlug is available
+          const newOrg = await orgRepo.bySlug(req.organizationSlug);
+          if (newOrg) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR_ALREADY_EXISTS,
+                details: `Organization with slug ${req.organizationSlug} already exists.`,
+              },
+            };
+          }
 
-        return {
-          response: {
-            code: EnumStatusCode.OK,
-          },
-        };
-      });
-    },
+          await opts.keycloakClient.authenticateClient();
 
-    updateOrganizationSlug: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
-
-      return handleError<PlainMessage<UpdateOrganizationWebhookConfigResponse>>(logger, async () => {
-        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const orgRepo = new OrganizationRepository(opts.db);
-
-        const org = await orgRepo.byId(authContext.organizationId);
-        if (!org) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_NOT_FOUND,
-              details: `Organization not found`,
-            },
-          };
-        }
-
-        const orgMember = await orgRepo.getOrganizationMember({
-          organizationID: authContext.organizationId,
-          userID: authContext.userId || req.userID,
-        });
-
-        if (!orgMember) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR,
-              details: 'User is not a part of this organization.',
-            },
-          };
-        }
-
-        // non admins cannot update the organization name
-        if (!orgMember.roles.includes('admin')) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR,
-              details: 'User does not have the permissions to update the organization slug.',
-            },
-          };
-        }
-
-        // checking if the provided orgSlug is available
-        const newOrg = await orgRepo.bySlug(req.organizationSlug);
-        if (newOrg) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_ALREADY_EXISTS,
-              details: `Organization with slug ${req.organizationSlug} already exists.`,
-            },
-          };
-        }
-
-        await opts.keycloakClient.authenticateClient();
-
-        const organizationGroup = await opts.keycloakClient.client.groups.find({
-          max: 1,
-          search: org.slug,
-          realm: opts.keycloakRealm,
-        });
-
-        if (organizationGroup.length === 0) {
-          throw new Error(`Organization group '${org.slug}' not found`);
-        }
-
-        await opts.keycloakClient.client.groups.update(
-          {
-            id: organizationGroup[0].id!,
+          const organizationGroup = await opts.keycloakClient.client.groups.find({
+            max: 1,
+            search: org.slug,
             realm: opts.keycloakRealm,
-          },
-          { name: req.organizationSlug },
-        );
+          });
 
-        await orgRepo.updateOrganization({ id: authContext.organizationId, slug: req.organizationSlug });
+          if (organizationGroup.length === 0) {
+            throw new Error(`Organization group '${org.slug}' not found`);
+          }
+
+          await opts.keycloakClient.client.groups.update(
+            {
+              id: organizationGroup[0].id!,
+              realm: opts.keycloakRealm,
+            },
+            { name: req.organizationSlug },
+          );
+        }
+
+        await orgRepo.updateOrganization({
+          id: authContext.organizationId,
+          name: req.organizationName,
+          slug: req.organizationSlug,
+        });
 
         return {
           response: {
