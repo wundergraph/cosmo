@@ -19,7 +19,7 @@ wgc subgraph create products --label team=B env=production --routing-url http://
 SUBGRAPHS="employees family hobbies products"
 
 for subgraph in $SUBGRAPHS; do
-  pnpm wgc subgraph publish $subgraph --schema demo/pkg/subgraphs/$subgraph/subgraph/schema.graphqls
+  wgc subgraph publish $subgraph --schema ../demo/pkg/subgraphs/$subgraph/subgraph/schema.graphqls
 done
 
 wgc router token create mytoken --graph-name production
