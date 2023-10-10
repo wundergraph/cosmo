@@ -1,0 +1,60 @@
+// https://protobuf.dev/programming-guides/style/
+
+syntax = "proto3";
+
+package wg.cosmo.graphqlmetrics.v1;
+
+import "wg/cosmo/common/common.proto";
+
+message GraphQLRequestMetrics {
+  string Document = 1;
+  repeated TypeFieldMetric TypeFieldMetrics = 2;
+  RequestInfo RequestInfo = 3;
+}
+
+message RequestInfo {
+
+}
+
+message TypeFieldMetric {
+  string TypeName = 1;
+  string FieldName = 2;
+  bool IsAbstract = 3;
+  string SpecificTypeName = 4;
+  bool IsList = 5;
+  int32 ReturnedObjectCount = 6;
+  TypeFieldSource Source = 7;
+}
+
+message TypeFieldSource {
+  string SubgraphID = 1;
+}
+
+message PublishGraphQLRequestMetricsRequest {
+  repeated GraphQLRequestMetrics metrics = 1;
+}
+
+message PublishOperationCoverageReportResponse {
+}
+
+service GraphQLMetricsService {
+  rpc PublishGraphQLMetrics(PublishGraphQLRequestMetricsRequest) returns (PublishOperationCoverageReportResponse) {}
+}
+
+// SingleFetch makes a single request for one single object
+message SingleFetch {}
+
+// ParallelFetch makes multiple requests in parallel for one single object
+message ParallelFetch {}
+
+// BatchFetch makes a single batch request for multiple objects
+// It is expected to be used only within a list or lists of lists
+message BatchFetch {}
+
+// SerialFetch makes multiple requests in series for one single object
+message SerialFetch {}
+
+// ParallelListItemFetch makes multiple requests in parallel, one for each item in a list
+// It is expected to be used only within a list or lists of lists
+// Use this over BatchFetch when the data source does not support batching
+message ParallelListItemFetch {}

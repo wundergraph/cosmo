@@ -57,8 +57,8 @@ generate:
 	make generate-go
 
 generate-go:
-	rm -rf router/gen && buf generate --path proto/wg/cosmo/node --path proto/wg/cosmo/common --path proto/wg/cosmo/coverage --template buf.router.go.gen.yaml
-	rm -rf rstatscollector/gen && buf generate --path proto/wg/cosmo/coverage --path proto/wg/cosmo/common --template buf.rstatscollector.go.gen.yaml
+	rm -rf router/gen && buf generate --path proto/wg/cosmo/node --path proto/wg/cosmo/common --path proto/wg/cosmo/graphqlmetrics --template buf.router.go.gen.yaml
+	rm -rf graphqlmetrics/gen && buf generate --path proto/wg/cosmo/graphqlmetrics --path proto/wg/cosmo/common --template buf.graphqlmetrics.go.gen.yaml
 
 start-cp:
 	pnpm -r run --filter './controlplane' dev
