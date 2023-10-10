@@ -6,19 +6,15 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"time"
 
 	"github.com/99designs/gqlgen/graphql"
-	"github.com/99designs/gqlgen/graphql/handler"
-	"github.com/99designs/gqlgen/graphql/handler/extension"
-	"github.com/99designs/gqlgen/graphql/handler/transport"
+	"github.com/99designs/gqlgen/graphql/handler/debug"
 	"github.com/99designs/gqlgen/graphql/playground"
-	"github.com/gorilla/websocket"
 	"github.com/ravilushqa/otelgqlgen"
 	"github.com/rs/cors"
 	"github.com/wundergraph/cosmo/demo/pkg/otel"
-	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/family/subgraph"
-	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/family/subgraph/generated"
+	"github.com/wundergraph/cosmo/demo/pkg/subgraphs"
+	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/family"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
@@ -34,18 +30,9 @@ func main() {
 		port = defaultPort
 	}
 
-	srv := handler.New(generated.NewExecutableSchema(generated.Config{Resolvers: &subgraph.Resolver{}}))
-	srv.AddTransport(transport.POST{})
-	srv.AddTransport(transport.Websocket{
-		KeepAlivePingInterval: 10 * time.Second,
-		Upgrader: websocket.Upgrader{
-			CheckOrigin: func(r *http.Request) bool {
-				return true
-			},
-		},
-	})
-	srv.Use(extension.Introspection{})
+	srv := subgraphs.NewDemoServer(family.NewSchema())
 
+	srv.Use(&debug.Tracer{})
 	srv.Use(otelgqlgen.Middleware(otelgqlgen.WithCreateSpanFromFields(func(ctx *graphql.FieldContext) bool {
 		return true
 	})))
