@@ -1379,6 +1379,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             response: {
               code: EnumStatusCode.ERR_ANALYTICS_DISABLED,
             },
+            filters: [],
           };
         }
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -1392,6 +1393,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               code: EnumStatusCode.ERR_NOT_FOUND,
               details: `Federated graph '${req.federatedGraphName}' not found`,
             },
+            filters: [],
           };
         }
 
@@ -1407,11 +1409,13 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const requests = await repo.getRequestRateMetrics(params);
         const latency = await repo.getLatencyMetrics(params);
         const errors = await repo.getErrorMetrics(params);
+        const filters = await repo.getMetricFilters(params);
 
         return {
           response: {
             code: EnumStatusCode.OK,
           },
+          filters,
           requests: requests.data,
           latency: latency.data,
           errors: errors.data,

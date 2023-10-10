@@ -1,4 +1,6 @@
 import { ClickHouseClient } from 'src/core/clickhouse/index.js';
+import { AnalyticsViewFilterOperator } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { BaseFilters, buildAnalyticsViewFilters } from './util.js';
 
 const getEndDate = () => {
   const now = new Date();
@@ -455,6 +457,81 @@ export class MetricsRepository {
         }),
       },
     };
+  }
+
+  private baseFilters: BaseFilters = {
+    operationName: {
+      dbField: 'OperationName',
+      dbClause: 'where',
+      columnName: 'operationName',
+      title: 'Operation Name',
+      options: [],
+    },
+    clientName: {
+      dbField: 'ClientName',
+      dbClause: 'where',
+      columnName: 'clientName',
+      title: 'Client Name',
+      options: [],
+    },
+    clientVersion: {
+      dbField: 'ClientVersion',
+      dbClause: 'where',
+      columnName: 'clientVersion',
+      title: 'Client Version',
+      options: [],
+    },
+  };
+
+  public async getMetricFilters({ range = 24, endDate = getEndDate(), params }: GetMetricsProps) {
+    const [start, end] = getDateRange(endDate, range);
+
+    const filters = { ...this.baseFilters };
+
+    const query = `
+      WITH
+        toDateTime('${start}') AS startDate,
+        toDateTime('${end}') AS endDate
+      SELECT
+        OperationName as operationName,
+        ClientName as clientName,
+        ClientVersion as clientVersion
+      FROM operation_request_metrics_5_30_mv
+      WHERE Timestamp >= startDate AND Timestamp <= endDate
+        AND OrganizationID = '${params.organizationId}'
+        AND FederatedGraphID = '${params.graphId}'
+      GROUP BY OperationName, ClientName, ClientVersion
+    `;
+
+    const res = await this.chClient.queryPromise(query);
+
+    for (const row of res) {
+      if (row.operationName) {
+        filters.operationName.options.push({
+          label: row.operationName,
+          operator: AnalyticsViewFilterOperator.EQUALS,
+          value: row.operationName,
+        });
+      }
+      if (row.clientName) {
+        filters.clientName.options.push({
+          label: row.clientName,
+          operator: AnalyticsViewFilterOperator.EQUALS,
+          value: row.clientName,
+        });
+      }
+      if (row.clientVersion) {
+        filters.clientVersion.options.push({
+          label: row.clientVersion,
+          operator: AnalyticsViewFilterOperator.EQUALS,
+          value: row.clientVersion,
+        });
+      }
+    }
+
+    const parsedFilters = buildAnalyticsViewFilters({ operationName: '', clientName: '', clientVersion: '' }, filters);
+    console.log(parsedFilters);
+    return parsedFilters;
   }
 
   /**

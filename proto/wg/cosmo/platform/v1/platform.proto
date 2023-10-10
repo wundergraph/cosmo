@@ -726,7 +726,7 @@ message GetGraphMetricsResponse {
   MetricsDashboardMetric requests = 2;
   MetricsDashboardMetric latency = 3;
   MetricsDashboardMetric errors = 4;
-  optional string json = 5;
+  repeated AnalyticsViewResultFilter filters = 5;
 }
 
 message MetricsDashboardMetric {

@@ -5697,9 +5697,9 @@ export class GetGraphMetricsResponse extends Message<GetGraphMetricsResponse> {
   errors?: MetricsDashboardMetric;
 
   /**
-   * @generated from field: optional string json = 5;
+   * @generated from field: repeated wg.cosmo.platform.v1.AnalyticsViewResultFilter filters = 5;
    */
-  json?: string;
+  filters: AnalyticsViewResultFilter[] = [];
 
   constructor(data?: PartialMessage<GetGraphMetricsResponse>) {
     super();
@@ -5713,7 +5713,7 @@ export class GetGraphMetricsResponse extends Message<GetGraphMetricsResponse> {
     { no: 2, name: "requests", kind: "message", T: MetricsDashboardMetric },
     { no: 3, name: "latency", kind: "message", T: MetricsDashboardMetric },
     { no: 4, name: "errors", kind: "message", T: MetricsDashboardMetric },
-    { no: 5, name: "json", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 5, name: "filters", kind: "message", T: AnalyticsViewResultFilter, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetGraphMetricsResponse {
