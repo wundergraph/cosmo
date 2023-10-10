@@ -2,20 +2,14 @@ package main
 
 import (
 	"context"
-	"errors"
 	"github.com/wundergraph/cosmo/graphqlmetrics"
 	"github.com/wundergraph/cosmo/graphqlmetrics/config"
-	"github.com/wundergraph/cosmo/graphqlmetrics/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
 	"github.com/wundergraph/cosmo/graphqlmetrics/internal/logging"
 	"go.uber.org/zap"
-	"golang.org/x/net/http2"
-	"golang.org/x/net/http2/h2c"
 	"log"
-	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 )
 
 func main() {
@@ -44,24 +38,13 @@ func main() {
 	)
 	defer stop()
 
-	ms := graphqlmetrics.NewMetricsService()
-	mux := http.NewServeMux()
-	path, handler := graphqlmetricsv1connect.NewGraphQLMetricsServiceHandler(ms)
-	mux.Handle(path, handler)
-
-	svr := http.Server{
-		Addr: cfg.ListenAddr,
-		// https://ieftimov.com/posts/make-resilient-golang-net-http-servers-using-timeouts-deadlines-context-cancellation/
-		ReadTimeout:       1 * time.Minute,
-		WriteTimeout:      2 * time.Minute,
-		ReadHeaderTimeout: 20 * time.Second,
-		// Use h2c so we can serve HTTP/2 without TLS.
-		Handler:  h2c.NewHandler(mux, &http2.Server{}),
-		ErrorLog: zap.NewStdLog(logger),
-	}
+	svr := graphqlmetrics.NewServer(
+		graphqlmetrics.NewMetricsService(logger),
+		graphqlmetrics.WithLogger(logger),
+	)
 
 	go func() {
-		if err := svr.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		if err := svr.Start(); err != nil {
 			logger.Error("Could not start server", zap.Error(err))
 			stop()
 		}

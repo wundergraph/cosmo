@@ -4,12 +4,17 @@ import (
 	"context"
 	"github.com/bufbuild/connect-go"
 	graphqlmetricsv1 "github.com/wundergraph/cosmo/graphqlmetrics/gen/proto/wg/cosmo/graphqlmetrics/v1"
+	"go.uber.org/zap"
 )
 
-type MetricsService struct{}
+type MetricsService struct {
+	logger *zap.Logger
+}
 
-func NewMetricsService() *MetricsService {
-	return &MetricsService{}
+func NewMetricsService(logger *zap.Logger) *MetricsService {
+	return &MetricsService{
+		logger: logger,
+	}
 }
 
 func (s *MetricsService) PublishGraphQLMetrics(
