@@ -5,6 +5,7 @@ import pino from 'pino';
 import { PartialMessage } from '@bufbuild/protobuf';
 import * as schema from '../../db/schema.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
+import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
 import { post } from './utils.js';
 
 interface FederatedGraphSchemaUpdate {
@@ -126,7 +127,94 @@ export class OrganizationWebhookService {
     }
   }
 
-  private sendEvent<T extends keyof EventMap>(eventName: T, eventPayload: EventMap[T]) {
+  private async constructSlackBody<T extends keyof EventMap>(eventPayload: EventMap[T]) {
+    const fedRepo = new FederatedGraphRepository(this.db, eventPayload.organization.id);
+    const latestChangelogs = await fedRepo.fetchLatestFederatedGraphChangelog(eventPayload.federated_graph.id);
+    const tempData: { blocks: any[]; attachments: any[] } = {
+      blocks: [
+        {
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: `🚀 Schema of the federated graph *<https://cosmo.wundergraph.com/${eventPayload.organization.slug}/graph/${eventPayload.federated_graph.name} | ${eventPayload.federated_graph.name}>* has been updated 🎉`,
+          },
+        },
+      ],
+      attachments: [
+        {
+          color: '#fafafa',
+          blocks: [
+            {
+              type: 'section',
+              text: {
+                type: 'mrkdwn',
+                text: `Click <https://cosmo.wundergraph.com/${eventPayload.organization.slug}/graph/${eventPayload.federated_graph.name}| here> for more details.`,
+              },
+            },
+          ],
+        },
+      ],
+    };
+    if (latestChangelogs) {
+      const addedChanges = latestChangelogs.changelogs.filter(
+        (c) => c.changeType.includes('ADDED') || c.changeType.includes('CHANGED'),
+      );
+      const removedChanges = latestChangelogs.changelogs.filter((c) => c.changeType.includes('REMOVED'));
+      if (removedChanges.length > 0) {
+        tempData.attachments.unshift({
+          color: '#e11d48',
+          blocks: [
+            {
+              type: 'rich_text',
+              elements: [
+                {
+                  type: 'rich_text_list',
+                  style: 'bullet',
+                  elements: removedChanges.map((r) => ({
+                    type: 'rich_text_section',
+                    elements: [
+                      {
+                        type: 'text',
+                        text: r.changeMessage,
+                      },
+                    ],
+                  })),
+                },
+              ],
+            },
+          ],
+        });
+      }
+      if (addedChanges.length > 0) {
+        tempData.attachments.unshift({
+          color: '#22c55e',
+          blocks: [
+            {
+              type: 'rich_text',
+              elements: [
+                {
+                  type: 'rich_text_list',
+                  style: 'bullet',
+                  elements: addedChanges.map((r) => ({
+                    type: 'rich_text_section',
+                    elements: [
+                      {
+                        type: 'text',
+                        text: r.changeMessage,
+                      },
+                    ],
+                  })),
+                },
+              ],
+            },
+          ],
+        });
+      }
+    }
+    return tempData;
+  }
+
+  private async sendEvent<T extends keyof EventMap>(eventName: T, eventPayload: EventMap[T]) {
     if (!this.configs) {
       return;
     }
@@ -138,24 +226,7 @@ export class OrganizationWebhookService {
 
       let data = {};
       if (config.type === 'slack') {
-        data = {
-          blocks: [
-            {
-              type: 'section',
-              text: {
-                type: 'mrkdwn',
-                text: `🚀 Schema of the federated graph *<https://cosmo.wundergraph.com/${eventPayload.organization.slug}/graph/${eventPayload.federated_graph.name} | ${eventPayload.federated_graph.name}>* has been updated 🎉`,
-              },
-            },
-            {
-              type: 'section',
-              text: {
-                type: 'mrkdwn',
-                text: `> Click <https://cosmo.wundergraph.com/${eventPayload.organization.slug}/graph/${eventPayload.federated_graph.name}/schema| here> to view the schema.`,
-              },
-            },
-          ],
-        };
+        data = await this.constructSlackBody(eventPayload);
       } else {
         data = {
           version: 1,
