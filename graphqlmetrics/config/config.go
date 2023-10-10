@@ -1,0 +1,44 @@
+package config
+
+import (
+	b64 "encoding/base64"
+	"fmt"
+	"time"
+
+	"github.com/joho/godotenv"
+	"github.com/kelseyhightower/envconfig"
+)
+
+type Base64Decoder []byte
+
+func (ipd *Base64Decoder) Decode(value string) error {
+	decoded, err := b64.StdEncoding.DecodeString(value)
+	if err != nil {
+		return fmt.Errorf("could not decode base64 string: %w", err)
+	}
+
+	*ipd = decoded
+
+	return nil
+}
+
+type Config struct {
+	ListenAddr    string        `yaml:"listen_addr" default:"localhost:4005" validate:"hostname_port" envconfig:"LISTEN_ADDR"`
+	LogLevel      string        `yaml:"log_level" default:"info" envconfig:"LOG_LEVEL" validate:"oneof=debug info warning error fatal panic"`
+	JSONLog       bool          `yaml:"json_log" default:"true" envconfig:"JSON_LOG"`
+	ShutdownDelay time.Duration `yaml:"shutdown_delay" default:"30s" validate:"required,min=5s" envconfig:"SHUTDOWN_DELAY"`
+}
+
+func LoadConfig() (*Config, error) {
+	godotenv.Load(".env.local")
+	godotenv.Load()
+
+	var c Config
+
+	err := envconfig.Process("", &c)
+	if err != nil {
+		return nil, err
+	}
+
+	return &c, nil
+}
