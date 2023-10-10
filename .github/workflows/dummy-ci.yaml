@@ -1,0 +1,12 @@
+# This job is used to satisfy PR checks for parts of the codebase
+# that are not tested during CI
+name: Dummy CI
+on:
+  pull_request:
+    paths:
+      - 'scripts/**'
+jobs:
+  build_test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo Nothing to do

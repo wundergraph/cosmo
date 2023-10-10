@@ -16,7 +16,7 @@ pnpm wgc subgraph create products --label team=B env=production --routing-url ht
 
 cd "../scripts"
 
-./update-docker-demo.sh
+./update-demo.sh
 
 cd "../cli"
 
