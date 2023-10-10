@@ -1399,6 +1399,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const params = {
           range: req.range,
+          filters: req.filters,
           params: {
             organizationId: authContext.organizationId,
             graphId: graph.id,

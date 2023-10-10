@@ -719,6 +719,7 @@ message UpdateOrgMemberRoleResponse {
  message GetGraphMetricsRequest {
   string federatedGraphName = 1;
   int32 range = 2;
+  repeated AnalyticsFilter filters = 3;
 }
 
 message GetGraphMetricsResponse {

@@ -28,9 +28,12 @@ import {
   getGraphMetrics,
   getMetricsErrorRate,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { MetricsDashboardMetric } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
+import {
+  AnalyticsViewResultFilter,
+  MetricsDashboardMetric,
+} from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { useRouter } from "next/router";
-import React, { useContext, useEffect, useId } from "react";
+import React, { useCallback, useContext, useEffect, useId } from "react";
 import {
   Area,
   AreaChart,
@@ -50,6 +53,13 @@ import {
   formatMetric,
   formatPercentMetric,
 } from "@/lib/format-metric";
+import {
+  AnalyticsFilter,
+  AnalyticsFilters,
+  AnalyticsSelectedFilters,
+} from "@/components/analytics/filters";
+import { useAnalyticsQueryState } from "@/components/analytics/useAnalyticsQueryState";
+import { optionConstructor } from "@/components/analytics/getDataTableFilters";
 
 export type OperationAnalytics = {
   name: string;
@@ -104,15 +114,114 @@ const getInfoTip = (range: number) => {
   }
 };
 
+const useMetricsFilters = (filters: AnalyticsViewResultFilter[]) => {
+  const router = useRouter();
+
+  const applyNewParams = useCallback(
+    (newParams: Record<string, string | null>, unset?: string[]) => {
+      const q = Object.fromEntries(
+        Object.entries(router.query).filter(([key]) => !unset?.includes(key))
+      );
+      router.push({
+        query: {
+          ...q,
+          ...newParams,
+        },
+      });
+    },
+    [router]
+  );
+
+  const selectedFilters = React.useMemo(() => {
+    try {
+      return JSON.parse(router.query.filterState?.toString() ?? "[]");
+    } catch {
+      return [];
+    }
+  }, [router.query.filterState]);
+
+  const filtersList = (filters ?? []).map((filter) => {
+    return {
+      ...filter,
+      id: filter.columnName,
+      onSelect: (value) => {
+        const newSelected = [...selectedFilters];
+        const index = newSelected.findIndex((f) => f.id === filter.columnName);
+        if (index > -1) {
+          newSelected.splice(index, 1);
+        } else {
+          newSelected.push({
+            id: filter.columnName,
+            value: value ?? [],
+          });
+        }
+
+        let stringifiedFilters;
+        try {
+          stringifiedFilters = JSON.stringify(newSelected);
+        } catch {
+          stringifiedFilters = "[]";
+        }
+        applyNewParams({
+          filterState: stringifiedFilters,
+        });
+      },
+      selectedOptions:
+        selectedFilters.find(
+          (f: { id: string; value: string[] }) => f.id === filter.columnName
+        )?.value ?? [],
+      options: filter.options.map((each) =>
+        optionConstructor({
+          label: each.label,
+          operator: each.operator as unknown as string,
+          value: each.value as unknown as string,
+        })
+      ),
+    } as AnalyticsFilter;
+  });
+
+  const resetFilters = () => {
+    // setSelectedFilters([]);
+    applyNewParams({
+      filterState: null,
+    });
+  };
+
+  return {
+    filtersList,
+    selectedFilters,
+    resetFilters,
+  };
+};
+
+interface MetricsFiltersProps {
+  filters: AnalyticsViewResultFilter[];
+}
+
+const MetricsFilters: React.FC<MetricsFiltersProps> = (props) => {
+  const { filters } = props;
+
+  const { filtersList } = useMetricsFilters(filters);
+
+  return (
+    <>
+      <AnalyticsFilters filters={filtersList} />
+    </>
+  );
+};
+
 const AnalyticsPage: NextPageWithLayout = () => {
   const graphContext = useContext(GraphContext);
 
   const range = useRange();
 
+  const { filters } = useAnalyticsQueryState();
+
   let { data, isLoading, error, refetch } = useQuery({
     ...getGraphMetrics.useQuery({
       federatedGraphName: graphContext?.graph?.name,
       range,
+      filters,
     }),
     keepPreviousData: true,
     refetchOnWindowFocus: false,
@@ -137,6 +246,7 @@ const AnalyticsPage: NextPageWithLayout = () => {
 
   return (
     <div className="w-full space-y-4">
+      <OverviewToolbar />
       <div className="flex flex-col gap-4 lg:grid lg:grid-cols-3">
         <RequestMetricsCard data={data?.requests} />
         <LatencyMetricsCard data={data?.latency} />
@@ -751,32 +861,58 @@ const OverviewToolbar = () => {
 
   const isFetching = useIsFetching();
 
+  const { filters } = useAnalyticsQueryState();
+
+  let { data } = useQuery({
+    ...getGraphMetrics.useQuery({
+      federatedGraphName: graphContext?.graph?.name,
+      range,
+      filters,
+    }),
+    keepPreviousData: true,
+    refetchOnWindowFocus: false,
+  });
+
+  const { filtersList, selectedFilters, resetFilters } = useMetricsFilters(
+    data?.filters ?? []
+  );
+
   return (
-    <AnalyticsToolbar tab="overview">
-      <Spacer />
-      <Button
-        isLoading={!!isFetching}
-        onClick={() => {
-          client.invalidateQueries(metrics.queryKey);
-          client.invalidateQueries(errorRate.queryKey);
-        }}
-        variant="outline"
-      >
-        <UpdateIcon />
-      </Button>
-      <Select value={String(range)} onValueChange={onRangeChange}>
-        <SelectTrigger className="w-[180px]">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="1">Last hour</SelectItem>
-          <SelectItem value="4">Last 4 hours</SelectItem>
-          <SelectItem value="24">Last day</SelectItem>
-          <SelectItem value="72">Last 3 days</SelectItem>
-          <SelectItem value="168">Last week</SelectItem>
-        </SelectContent>
-      </Select>
-    </AnalyticsToolbar>
+    <div className="flex flex-col gap-2 space-y-2">
+      <AnalyticsToolbar tab="overview">
+        <MetricsFilters filters={data?.filters ?? []} />
+        <Spacer />
+        <Button
+          isLoading={!!isFetching}
+          onClick={() => {
+            client.invalidateQueries(metrics.queryKey);
+            client.invalidateQueries(errorRate.queryKey);
+          }}
+          variant="outline"
+          className="px-3"
+        >
+          <UpdateIcon />
+        </Button>
+        <Select value={String(range)} onValueChange={onRangeChange}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="1">Last hour</SelectItem>
+            <SelectItem value="4">Last 4 hours</SelectItem>
+            <SelectItem value="24">Last day</SelectItem>
+            <SelectItem value="72">Last 3 days</SelectItem>
+            <SelectItem value="168">Last week</SelectItem>
+          </SelectContent>
+        </Select>
+      </AnalyticsToolbar>
+
+      <AnalyticsSelectedFilters
+        filters={filtersList}
+        selectedFilters={selectedFilters}
+        onReset={() => resetFilters()}
+      />
+    </div>
   );
 };
 
@@ -786,7 +922,6 @@ AnalyticsPage.getLayout = (page) =>
       <TitleLayout
         title="Analytics"
         subtitle="Comprehensive view into Federated GraphQL Performance"
-        toolbar={<OverviewToolbar />}
       >
         {page}
       </TitleLayout>

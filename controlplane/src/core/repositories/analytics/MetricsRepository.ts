@@ -505,32 +505,40 @@ export class MetricsRepository {
 
     const res = await this.chClient.queryPromise(query);
 
+    const addFilterOption = (filter: string, option: string) => {
+      if (!filters[filter].options) {
+        filters[filter].options = [];
+      }
+
+      let label = option;
+      if (filter === 'clientVersion' && option === 'missing') {
+        label = 'Unknown version';
+      } else if (filter === 'clientName' && option === 'unknown') {
+        label = 'Unknown client';
+      }
+
+      filters[filter].options.push({
+        label,
+        operator: AnalyticsViewFilterOperator.EQUALS,
+        value: option,
+      });
+    };
+
+    const filterNames = Object.keys(filters);
+    const filterOptions: Record<string, string[]> = {};
+
     for (const row of res) {
-      if (row.operationName) {
-        filters.operationName.options.push({
-          label: row.operationName,
-          operator: AnalyticsViewFilterOperator.EQUALS,
-          value: row.operationName,
-        });
-      }
-      if (row.clientName) {
-        filters.clientName.options.push({
-          label: row.clientName,
-          operator: AnalyticsViewFilterOperator.EQUALS,
-          value: row.clientName,
-        });
-      }
-      if (row.clientVersion) {
-        filters.clientVersion.options.push({
-          label: row.clientVersion,
-          operator: AnalyticsViewFilterOperator.EQUALS,
-          value: row.clientVersion,
-        });
+      for (const filterName of filterNames) {
+        if (row[filterName] && !filterOptions[filterName]?.includes(row[filterName])) {
+          filterOptions[filterName] = filterOptions[filterName] || [];
+          filterOptions[filterName].push(row[filterName]);
+          addFilterOption(filterName, row[filterName]);
+        }
       }
     }
 
     const parsedFilters = buildAnalyticsViewFilters({ operationName: '', clientName: '', clientVersion: '' }, filters);
-    console.log(parsedFilters);
+
     return parsedFilters;
   }
 

@@ -51,6 +51,7 @@ import { getColumnData } from "./getColumnData";
 import { getDataTableFilters } from "./getDataTableFilters";
 import { getDefaultSort, useSyncTableWithQuery } from "./useSyncTableWithQuery";
 import { useSessionStorage } from "@/hooks/use-session-storage";
+import { AnalyticsFilters, AnalyticsSelectedFilters } from "./filters";
 
 export const refreshIntervals = [
   {
@@ -261,10 +262,7 @@ export function AnalyticsDataTable<T>({
   };
 
   const filtersList = getDataTableFilters(table, filters);
-
   const selectedFilters = table.getState().columnFilters;
-
-  const isFiltered = selectedFilters.length > 0;
 
   useSyncTableWithQuery({
     table,
@@ -284,8 +282,7 @@ export function AnalyticsDataTable<T>({
     const newQueryParams: Record<string, string> = {};
 
     const setFilterOn = (columnName: string) => {
-      const filter = filtersList.find((f) => f.id === columnName);
-      const col = filter?.column;
+      const col = table.getColumn(columnName);
       const val = row.getValue(col?.id ?? "") as string;
 
       const stringifiedFilters = JSON.stringify([
@@ -338,7 +335,7 @@ export function AnalyticsDataTable<T>({
 
   return (
     <div>
-      <div className="flex flex-row flex-wrap items-start gap-y-2 py-4">
+      <div className="flex flex-row flex-wrap items-start gap-y-2">
         <div className="flex flex-1 flex-row flex-wrap items-center gap-y-2">
           <DataTableGroupMenu
             value={selectedGroup}
@@ -363,57 +360,17 @@ export function AnalyticsDataTable<T>({
               },
             ]}
           />
-          {filtersList.length > 0 && (
-            <DataTablePrimaryFilterMenu filters={filtersList} />
-          )}
-          {filtersList.map((filter, index) => {
-            const isSelected = !!selectedFilters.find(
-              (each) => each.id === filter.id
-            );
-
-            const selectedIndex = selectedFilters.findIndex(
-              (each) => each.id === filter.id
-            );
-
-            if (!isSelected) {
-              return null;
-            }
-
-            return (
-              <div
-                key={index.toString()}
-                className={cn(
-                  "pr-1 lg:px-1",
-                  selectedIndex === 0 ? "lg:pl-2" : ""
-                )}
-              >
-                <DataTableFacetedFilter
-                  column={filter.column}
-                  title={filter.title}
-                  options={filter.options}
-                />
-              </div>
-            );
-          })}
-          {isFiltered && (
-            <Button
-              onClick={() => table.resetColumnFilters()}
-              variant="outline"
-              className="mr-1 border-dashed lg:ml-1"
-            >
-              <Cross2Icon className="mr-2 h-4 w-4" />
-              Reset
-            </Button>
-          )}
+          <AnalyticsFilters filters={filtersList} />
         </div>
         <div className="flex flex-row flex-wrap items-start gap-2">
           <DatePickerWithRange
             selectedDateRange={selectedDateRange}
             onDateRangeChange={onDateRangeChange}
+            size="sm"
           />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline">
+              <Button variant="outline" size="sm">
                 Columns <ChevronDownIcon className="ml-2 h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -439,7 +396,7 @@ export function AnalyticsDataTable<T>({
           </DropdownMenu>
           <Button
             isLoading={isLoading || isFetching}
-            size="icon"
+            size="icon-sm"
             variant="outline"
             onClick={() => refresh()}
           >
@@ -447,7 +404,7 @@ export function AnalyticsDataTable<T>({
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline">
+              <Button variant="outline" size="sm">
                 <ClockIcon className="mr-2" />
                 {refreshInterval.label}
               </Button>
@@ -467,6 +424,13 @@ export function AnalyticsDataTable<T>({
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
+      </div>
+      <div className="flex flex-row flex-wrap items-start gap-y-2 py-2">
+        <AnalyticsSelectedFilters
+          filters={filtersList}
+          selectedFilters={selectedFilters}
+          onReset={() => table.resetColumnFilters()}
+        />
       </div>
       <Table>
         <TableHeader>

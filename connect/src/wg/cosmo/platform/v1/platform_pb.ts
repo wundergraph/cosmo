@@ -5643,6 +5643,11 @@ export class GetGraphMetricsRequest extends Message<GetGraphMetricsRequest> {
    */
   range = 0;
 
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.AnalyticsFilter filters = 3;
+   */
+  filters: AnalyticsFilter[] = [];
+
   constructor(data?: PartialMessage<GetGraphMetricsRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -5653,6 +5658,7 @@ export class GetGraphMetricsRequest extends Message<GetGraphMetricsRequest> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "federatedGraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "range", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 3, name: "filters", kind: "message", T: AnalyticsFilter, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetGraphMetricsRequest {
