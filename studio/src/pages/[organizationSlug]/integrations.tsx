@@ -326,6 +326,19 @@ const Integration = ({
           </DialogDescription>
         </DialogHeader>
 
+        <p className="text-sm text-muted-foreground">
+          Click{" "}
+          <Link
+            href={docsBaseURL + "/studio/slack-integration"}
+            className="text-primary"
+            target="_blank"
+            rel="noreferrer"
+          >
+            here
+          </Link>{" "}
+          to learn how to configure the WunderGraph Cosmo Slack app and get the webhook url.
+        </p>
+
         {(existing?.meta !== undefined || mode === "create") && (
           <Form {...form}>
             <form
@@ -503,9 +516,10 @@ const IntegrationsPage: NextPageWithLayout = () => {
     <div className="flex flex-col gap-y-6">
       <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
         <p className="ml-1 text-sm text-muted-foreground">
-          Integrations are used to receive notifications on certain events from the platform.{" "}
+          Integrations are used to receive notifications on certain events from
+          the platform.{" "}
           <Link
-            href={docsBaseURL + "/studio/webhooks"}
+            href={docsBaseURL + "/studio/slack-integration"}
             className="text-primary"
             target="_blank"
             rel="noreferrer"
