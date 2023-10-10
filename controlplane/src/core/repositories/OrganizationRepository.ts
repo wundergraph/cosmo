@@ -11,6 +11,7 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema.js';
 import {
   apiKeys,
+  integrationTypeEnum,
   organizationIntegrations,
   organizationMemberRoles,
   organizationWebhooks,
@@ -680,7 +681,7 @@ export class OrganizationRepository {
     }
 
     switch (res.type) {
-      case 'slack': {
+      case integrationTypeEnum.enumValues[0]: {
         const slackIntegrationConfig = await this.db.query.slackIntegrationConfigs.findFirst({
           where: eq(slackIntegrationConfigs.integrationId, res.id),
         });
@@ -725,6 +726,9 @@ export class OrganizationRepository {
           ),
         } as Integration;
       }
+      default: {
+        throw new Error('The type of the integration doesnt exist');
+      }
     }
   }
 
@@ -738,7 +742,7 @@ export class OrganizationRepository {
 
     for (const r of res) {
       switch (r.type) {
-        case 'slack': {
+        case integrationTypeEnum.enumValues[0]: {
           const slackIntegrationConfig = await this.db.query.slackIntegrationConfigs.findFirst({
             where: eq(slackIntegrationConfigs.integrationId, r.id),
           });
@@ -779,6 +783,11 @@ export class OrganizationRepository {
               },
             })),
           } as Integration);
+
+          break;
+        }
+        default: {
+          throw new Error('The type of the integration doesnt exist');
         }
       }
     }
