@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -41,6 +42,30 @@ var (
 	couldNotResolveResponseErr = errors.New("could not resolve response")
 	internalServerErrorErr     = errors.New("internal server error")
 )
+
+type ReportError interface {
+	error
+	Report() *operationreport.Report
+}
+
+type reportError struct {
+	report *operationreport.Report
+}
+
+func (e *reportError) Error() string {
+	if len(e.report.InternalErrors) > 0 {
+		return errors.Join(e.report.InternalErrors...).Error()
+	}
+	var messages []string
+	for _, e := range e.report.ExternalErrors {
+		messages = append(messages, e.Message)
+	}
+	return strings.Join(messages, ", ")
+}
+
+func (e *reportError) Report() *operationreport.Report {
+	return e.report
+}
 
 type planWithExtractedVariables struct {
 	preparedPlan plan.Plan
@@ -122,9 +147,15 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return prepared, nil
 		})
 		if err != nil {
-			requestLogger.Error("prepare plan failed", zap.Error(err))
-			w.WriteHeader(http.StatusInternalServerError)
-			writeRequestErrors(graphql.RequestErrorsFromError(internalServerErrorErr), w, requestLogger)
+			var reportErr ReportError
+			if errors.As(err, &reportErr) {
+				w.WriteHeader(http.StatusBadRequest)
+				writeRequestErrorsFromReport(reportErr.Report(), w, requestLogger)
+			} else {
+				requestLogger.Error("prepare plan failed", zap.Error(err))
+				w.WriteHeader(http.StatusInternalServerError)
+				writeRequestErrors(graphql.RequestErrorsFromError(internalServerErrorErr), w, requestLogger)
+			}
 			return
 		}
 
@@ -213,7 +244,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (h *GraphQLHandler) preparePlan(requestOperationName []byte, requestOperationContent string) (planWithExtractedVariables, error) {
 	doc, report := astparser.ParseGraphqlDocumentString(requestOperationContent)
 	if report.HasErrors() {
-		return planWithExtractedVariables{}, fmt.Errorf(ErrMsgOperationParseFailed, report)
+		return planWithExtractedVariables{}, &reportError{report: &report}
 	}
 
 	validation := astvalidation.DefaultOperationValidator()
@@ -224,7 +255,7 @@ func (h *GraphQLHandler) preparePlan(requestOperationName []byte, requestOperati
 	// validate the document before planning
 	state := validation.Validate(&doc, h.executor.Definition, &report)
 	if state != astvalidation.Valid {
-		return planWithExtractedVariables{}, fmt.Errorf(ErrMsgOperationValidationFailed, state.String())
+		return planWithExtractedVariables{}, &reportError{report: &report}
 	}
 
 	planner := plan.NewPlanner(context.Background(), h.executor.PlanConfig)

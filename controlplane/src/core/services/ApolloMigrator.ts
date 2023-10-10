@@ -1,4 +1,5 @@
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import pino, { LoggerOptions } from 'pino';
 import * as schema from '../../db/schema.js';
 import { FederatedGraphDTO, MigrationSubgraph } from '../../types/index.js';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
@@ -9,21 +10,34 @@ export default class ApolloMigrator {
   apiKey = '';
   organizationSlug = '';
   variantName = '';
+  logger: pino.Logger<LoggerOptions>;
+  userId = '';
+  userEmail = '';
+
   constructor({
     apiKey,
     organizationSlug,
     variantName,
+    logger,
+    userId,
+    userEmail,
   }: {
     apiKey: string;
     organizationSlug: string;
     variantName: string;
+    logger: pino.Logger<LoggerOptions>;
+    userId: string;
+    userEmail: string;
   }) {
     this.apiKey = apiKey;
     this.organizationSlug = organizationSlug;
     this.variantName = variantName;
+    this.logger = logger;
+    this.userEmail = userEmail;
+    this.userId = userId;
   }
 
-  public async fetchGraphID(): Promise<{ id: string; name: string }> {
+  public async fetchGraphID(): Promise<{ success: boolean; id: string; name: string }> {
     const headers = new Headers();
     headers.append('X-API-KEY', this.apiKey);
     headers.append('apollographql-client-name', this.organizationSlug);
@@ -49,11 +63,33 @@ export default class ApolloMigrator {
       body: graphql,
     });
     if (response.status !== 200) {
-      throw new Error('Could not fetch the graph from apollo.');
+      this.logger.error(
+        { response, user: { id: this.userId, email: this.userEmail } },
+        'Could not fetch the graph from apollo, status code returned is non 200.',
+      );
+      return {
+        success: false,
+        id: '',
+        name: '',
+      };
     }
     const body = await response.json();
     const data = body.data;
+
+    if (!data.me) {
+      this.logger.error(
+        { data, user: { id: this.userId, email: this.userEmail } },
+        'Could not fetch the graph from apollo.',
+      );
+      return {
+        success: false,
+        id: '',
+        name: '',
+      };
+    }
+
     return {
+      success: true,
       id: data.me.id,
       name: data.me.name,
     };
@@ -104,11 +140,15 @@ export default class ApolloMigrator {
       body: graphql,
     });
     if (response.status !== 200) {
+      this.logger.error(
+        { response, user: { id: this.userId, email: this.userEmail } },
+        'Could not fetch the graph details from apollo, status code returned is non 200.',
+      );
       return {
         success: false,
         fedGraphRoutingURL: '',
         subgraphs: [],
-        errorMessage: 'Could not fetch the graphs from apollo.',
+        errorMessage: 'Could not fetch the graph details from apollo.',
       };
     }
     const body = await response.json();
@@ -118,6 +158,10 @@ export default class ApolloMigrator {
     const variant = variants.find((v: { name: string }) => v.name === this.variantName);
 
     if (!variant) {
+      this.logger.error(
+        { data, user: { id: this.userId, email: this.userEmail } },
+        'Could not find the requested variant of the graph.',
+      );
       return {
         success: false,
         fedGraphRoutingURL: '',
@@ -127,16 +171,30 @@ export default class ApolloMigrator {
     }
     const subgraphs: any[] = variant.subgraphs;
 
+    if (!subgraphs || subgraphs.length === 0) {
+      this.logger.error(
+        { data, user: { id: this.userId, email: this.userEmail } },
+        `Could not fetch the subgraphs of the ${this.variantName} variant.`,
+      );
+      return {
+        success: false,
+        fedGraphRoutingURL: '',
+        subgraphs: [],
+        errorMessage: `Could not fetch the subgraphs of the ${this.variantName} variant.`,
+      };
+    }
+
     return {
       success: true,
       fedGraphRoutingURL: variant.url,
-      subgraphs: subgraphs.map((subgraph) => {
-        return {
-          name: subgraph.name,
-          routingURL: subgraph.url,
-          schema: subgraph.activePartialSchema.sdl,
-        } as MigrationSubgraph;
-      }),
+      subgraphs:
+        subgraphs.map((subgraph) => {
+          return {
+            name: subgraph.name,
+            routingURL: subgraph.url,
+            schema: subgraph.activePartialSchema.sdl,
+          } as MigrationSubgraph;
+        }) || [],
     };
   }
 
