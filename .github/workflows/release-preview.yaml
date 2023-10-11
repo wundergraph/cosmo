@@ -37,7 +37,7 @@ jobs:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Install
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --filter='wundergraph-cosmo'
 
       - name: Generate next release (dry-run)
         run: pnpm run release-preview --yes
