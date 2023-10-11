@@ -6,14 +6,14 @@ import (
 	"os"
 	"time"
 
-	"github.com/wundergraph/cosmo/router/internal/logging"
-	"github.com/wundergraph/cosmo/router/internal/otel/otelconfig"
-	"go.uber.org/zap"
-
 	"github.com/go-playground/validator/v10"
 	"github.com/goccy/go-yaml"
 	"github.com/joho/godotenv"
 	"github.com/kelseyhightower/envconfig"
+	"go.uber.org/zap"
+
+	"github.com/wundergraph/cosmo/router/internal/logging"
+	"github.com/wundergraph/cosmo/router/internal/otel/otelconfig"
 )
 
 const defaultConfigPath = "config.yaml"
@@ -143,6 +143,7 @@ type EngineDebugConfiguration struct {
 	PrintOperationWithRequiredFields bool `envconfig:"ENGINE_DEBUG_PRINT_OPERATION_WITH_REQUIRED_FIELDS"`
 	PrintPlanningPaths               bool `envconfig:"ENGINE_DEBUG_PRINT_PLANNING_PATHS"`
 	PrintQueryPlans                  bool `envconfig:"ENGINE_DEBUG_PRINT_QUERY_PLANS"`
+	PrintNodeSuggestions             bool `envconfig:"ENGINE_DEBUG_PRINT_NODE_SUGGESTIONS"`
 	ConfigurationVisitor             bool `envconfig:"ENGINE_DEBUG_CONFIGURATION_VISITOR"`
 	PlanningVisitor                  bool `envconfig:"ENGINE_DEBUG_PLANNING_VISITOR"`
 	DatasourceVisitor                bool `envconfig:"ENGINE_DEBUG_DATASOURCE_VISITOR"`
