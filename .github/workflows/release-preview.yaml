@@ -26,7 +26,15 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: ./.github/actions/node
+      - uses: pnpm/action-setup@v2.2.4
+        id: pnpm-install
+        with:
+          version: 8.6.10
+          run_install: false
+
+      - name: setup pnpm config registry
+        run: pnpm config set registry https://registry.npmjs.org
+        shell: bash
 
       - name: Install
         run: |
