@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/wundergraph/cosmo/graphqlmetrics"
 	"github.com/wundergraph/cosmo/graphqlmetrics/config"
 	"github.com/wundergraph/cosmo/graphqlmetrics/internal/logging"
@@ -10,6 +11,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 )
 
 func main() {
@@ -38,8 +40,52 @@ func main() {
 	)
 	defer stop()
 
+	options, err := clickhouse.ParseDSN(cfg.ClickHouseDSN)
+	if err != nil {
+		log.Fatal("Could not parse dsn", zap.Error(err))
+	}
+
+	chConn, err := clickhouse.Open(&clickhouse.Options{
+		Addr: options.Addr,
+		Auth: clickhouse.Auth{
+			Database: options.Auth.Database,
+			Username: options.Auth.Username,
+			Password: options.Auth.Password,
+		},
+		Settings: clickhouse.Settings{
+			"max_execution_time": 60,
+		},
+		Compression: &clickhouse.Compression{
+			Method: clickhouse.CompressionLZ4,
+		},
+		DialTimeout:          time.Second * 30,
+		ConnMaxLifetime:      time.Duration(10) * time.Minute,
+		ConnOpenStrategy:     clickhouse.ConnOpenInOrder,
+		BlockBufferSize:      10,
+		MaxCompressionBuffer: 10240,
+		ClientInfo: clickhouse.ClientInfo{ // optional, please see Client info section in the README.md
+			Products: []struct {
+				Name    string
+				Version string
+			}{
+				{Name: "graphqlmetrics", Version: graphqlmetrics.Version},
+			},
+		},
+	})
+
+	if err != nil {
+		log.Fatal("Could not connect to clickhouse", zap.Error(err))
+
+	}
+
+	if err := chConn.Ping(ctx); err != nil {
+		log.Fatal("Could not ping clickhouse", zap.Error(err))
+	} else {
+		logger.Info("Connected to clickhouse")
+	}
+
 	svr := graphqlmetrics.NewServer(
-		graphqlmetrics.NewMetricsService(logger),
+		graphqlmetrics.NewMetricsService(logger, chConn),
 		graphqlmetrics.WithLogger(logger),
 	)
 

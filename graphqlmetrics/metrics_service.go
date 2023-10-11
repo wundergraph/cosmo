@@ -2,6 +2,7 @@ package graphqlmetrics
 
 import (
 	"context"
+	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/bufbuild/connect-go"
 	graphqlmetricsv1 "github.com/wundergraph/cosmo/graphqlmetrics/gen/proto/wg/cosmo/graphqlmetrics/v1"
 	"go.uber.org/zap"
@@ -9,11 +10,13 @@ import (
 
 type MetricsService struct {
 	logger *zap.Logger
+	chConn clickhouse.Conn
 }
 
-func NewMetricsService(logger *zap.Logger) *MetricsService {
+func NewMetricsService(logger *zap.Logger, chConn clickhouse.Conn) *MetricsService {
 	return &MetricsService{
 		logger: logger,
+		chConn: chConn,
 	}
 }
 

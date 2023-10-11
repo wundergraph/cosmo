@@ -3,6 +3,7 @@ package config
 import (
 	b64 "encoding/base64"
 	"fmt"
+	"github.com/go-playground/validator/v10"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -23,10 +24,11 @@ func (ipd *Base64Decoder) Decode(value string) error {
 }
 
 type Config struct {
-	ListenAddr    string        `yaml:"listen_addr" default:"localhost:4005" validate:"hostname_port" envconfig:"LISTEN_ADDR"`
-	LogLevel      string        `yaml:"log_level" default:"info" envconfig:"LOG_LEVEL" validate:"oneof=debug info warning error fatal panic"`
-	JSONLog       bool          `yaml:"json_log" default:"true" envconfig:"JSON_LOG"`
-	ShutdownDelay time.Duration `yaml:"shutdown_delay" default:"30s" validate:"required,min=5s" envconfig:"SHUTDOWN_DELAY"`
+	ListenAddr    string        `default:"localhost:4005" validate:"hostname_port" envconfig:"LISTEN_ADDR"`
+	LogLevel      string        `default:"info" envconfig:"LOG_LEVEL" validate:"oneof=debug info warning error fatal panic"`
+	ClickHouseDSN string        `envconfig:"DATABASE_URL" validate:"required,url"`
+	JSONLog       bool          `default:"true" envconfig:"JSON_LOG"`
+	ShutdownDelay time.Duration `default:"30s" validate:"required,min=5s" envconfig:"SHUTDOWN_DELAY"`
 }
 
 func LoadConfig() (*Config, error) {
@@ -36,6 +38,11 @@ func LoadConfig() (*Config, error) {
 	var c Config
 
 	err := envconfig.Process("", &c)
+	if err != nil {
+		return nil, err
+	}
+
+	err = validator.New().Struct(c)
 	if err != nil {
 		return nil, err
 	}
