@@ -25,20 +25,19 @@ jobs:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
+          token: ${{ secrets.GH_TOKEN_WORKFLOW_PUBLISH }}
 
-      - uses: pnpm/action-setup@v2.2.4
-        id: pnpm-install
+      - uses: ./.github/actions/node
         with:
-          version: 8.6.10
-          run_install: false
+          working-directory: ${{ env.WORKING_DIRECTORY }}
 
-      - name: setup pnpm config registry
-        run: pnpm config set registry https://registry.npmjs.org
+      - run: npm config set //registry.npmjs.org/:_authToken $NPM_TOKEN
         shell: bash
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Install
-        run: |
-          pnpm add -g @lerna-lite/cli@2.5.1 @lerna-lite/publish@2.5.1 @lerna-lite/version@2.5.1 @commitlint/config-conventional@17.6.6
+        run: pnpm install --frozen-lockfile
 
       - name: Generate next release (dry-run)
         run: pnpm run release-preview --yes
