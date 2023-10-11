@@ -1397,29 +1397,18 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const params = {
+        const view = await repo.getMetricsView({
           range: req.range,
           filters: req.filters,
-          params: {
-            organizationId: authContext.organizationId,
-            graphId: graph.id,
-            graphName: req.federatedGraphName,
-          },
-        };
-
-        const requests = await repo.getRequestRateMetrics(params);
-        const latency = await repo.getLatencyMetrics(params);
-        const errors = await repo.getErrorMetrics(params);
-        const filters = await repo.getMetricFilters(params);
+          organizationId: authContext.organizationId,
+          graphId: graph.id,
+        });
 
         return {
           response: {
             code: EnumStatusCode.OK,
           },
-          filters,
-          requests: requests.data,
-          latency: latency.data,
-          errors: errors.data,
+          ...view,
         };
       });
     },
@@ -1454,20 +1443,18 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const metrics = await repo.getErrorRateMetrics({
+        const metrics = await repo.getErrorsView({
           range: req.range,
-          params: {
-            organizationId: authContext.organizationId,
-            graphId: graph.id,
-            graphName: req.federatedGraphName,
-          },
+          filters: req.filters,
+          organizationId: authContext.organizationId,
+          graphId: graph.id,
         });
 
         return {
           response: {
             code: EnumStatusCode.OK,
           },
-          series: metrics.data.series,
+          series: metrics.errorRate.series,
         };
       });
     },

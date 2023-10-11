@@ -19,7 +19,7 @@ export const useAnalyticsQueryState = () => {
     const { filterState, pageSize, page, group, refreshInterval } = query;
 
     let filterStateObject = parse(filterState as string, []);
-    console.log("state", filterStateObject);
+
     const filters = filterStateObject
       .map((each: { id: string; value: string[] }) => {
         return each.value.map((eachValue) => {

@@ -21,7 +21,11 @@ import { Spacer } from "@/components/ui/spacer";
 import { useChartData } from "@/lib/insights-helpers";
 import { NextPageWithLayout } from "@/lib/page";
 import { cn } from "@/lib/utils";
-import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
+import {
+  ChevronDownIcon,
+  ChevronRightIcon,
+  ExclamationTriangleIcon,
+} from "@heroicons/react/24/outline";
 import { useIsFetching, useQuery, useQueryClient } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
@@ -31,6 +35,7 @@ import {
 import {
   AnalyticsViewResultFilter,
   MetricsDashboardMetric,
+  MetricsTopItem,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { useRouter } from "next/router";
 import React, { useCallback, useContext, useEffect, useId } from "react";
@@ -60,6 +65,19 @@ import {
 } from "@/components/analytics/filters";
 import { useAnalyticsQueryState } from "@/components/analytics/useAnalyticsQueryState";
 import { optionConstructor } from "@/components/analytics/getDataTableFilters";
+import Link from "next/link";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export type OperationAnalytics = {
   name: string;
@@ -114,6 +132,20 @@ const getInfoTip = (range: number) => {
   }
 };
 
+const useSelectedFilters = () => {
+  const router = useRouter();
+
+  const selectedFilters = React.useMemo(() => {
+    try {
+      return JSON.parse(router.query.filterState?.toString() ?? "[]");
+    } catch {
+      return [];
+    }
+  }, [router.query.filterState]);
+
+  return selectedFilters as { id: string; value: string[] }[];
+};
+
 const useMetricsFilters = (filters: AnalyticsViewResultFilter[]) => {
   const router = useRouter();
 
@@ -132,13 +164,7 @@ const useMetricsFilters = (filters: AnalyticsViewResultFilter[]) => {
     [router]
   );
 
-  const selectedFilters = React.useMemo(() => {
-    try {
-      return JSON.parse(router.query.filterState?.toString() ?? "[]");
-    } catch {
-      return [];
-    }
-  }, [router.query.filterState]);
+  const selectedFilters = useSelectedFilters();
 
   const filtersList = (filters ?? []).map((filter) => {
     return {
@@ -146,9 +172,13 @@ const useMetricsFilters = (filters: AnalyticsViewResultFilter[]) => {
       id: filter.columnName,
       onSelect: (value) => {
         const newSelected = [...selectedFilters];
+
         const index = newSelected.findIndex((f) => f.id === filter.columnName);
-        if (index > -1) {
+
+        if (!value || value.length === 0) {
           newSelected.splice(index, 1);
+        } else if (newSelected[index]) {
+          newSelected[index].value = value;
         } else {
           newSelected.push({
             id: filter.columnName,
@@ -181,7 +211,6 @@ const useMetricsFilters = (filters: AnalyticsViewResultFilter[]) => {
   });
 
   const resetFilters = () => {
-    // setSelectedFilters([]);
     applyNewParams({
       filterState: null,
     });
@@ -203,11 +232,11 @@ const MetricsFilters: React.FC<MetricsFiltersProps> = (props) => {
 
   const { filtersList } = useMetricsFilters(filters);
 
-  return (
-    <>
-      <AnalyticsFilters filters={filtersList} />
-    </>
-  );
+  if (filtersList.filter((f) => f.options.length > 0).length === 0) {
+    return null;
+  }
+
+  return <AnalyticsFilters filters={filtersList} />;
 };
 
 const AnalyticsPage: NextPageWithLayout = () => {
@@ -318,8 +347,96 @@ const Change = ({
   );
 };
 
-const RequestMetricsCard = (props: { data?: MetricsDashboardMetric }) => {
+const TopList: React.FC<{
+  title: string;
+  items: MetricsTopItem[];
+  formatter: (value: number) => string;
+  queryParams?: Record<string, string | number>;
+}> = ({ title, items, formatter, queryParams = {} }) => {
   const router = useRouter();
+  const range = useRange();
+  const selectedFilters = useSelectedFilters();
+
+  const operationNameFilter = selectedFilters?.filter(
+    ({ id }) => id === "operationName"
+  );
+  if (operationNameFilter.length === 1 && items.length <= 1) {
+    return (
+      <CardContent className="group p-0 text-sm transition-all hover:bg-accent/60">
+        <Link
+          href={{
+            pathname: `${router.pathname}/traces`,
+            query: {
+              organizationSlug: router.query.organizationSlug,
+              slug: router.query.slug,
+              filterState: router.query.filterState || "[]",
+              dateRange: createDateRange(range),
+              ...queryParams,
+            },
+          }}
+          className="flex px-4 py-3"
+        >
+          View all traces
+          <ChevronRightIcon className="h4 ml-1 w-4 transition-all group-hover:ml-2" />
+        </Link>
+      </CardContent>
+    );
+  }
+
+  return (
+    <CardContent className="pt-6">
+      <div className="mb-2 flex space-x-2 text-sm">
+        <Tooltip delayDuration={200}>
+          <TooltipTrigger asChild>
+            <h5 className="group text-sm font-medium">
+              <Link
+                href={{
+                  pathname: `${router.pathname}/traces`,
+                  query: {
+                    organizationSlug: router.query.organizationSlug,
+                    slug: router.query.slug,
+                    filterState: router.query.filterState || "[]",
+                    dateRange: createDateRange(range),
+                    ...queryParams,
+                  },
+                }}
+                className="inline-flex rounded-md px-2 py-1 hover:bg-muted"
+              >
+                {title}
+                <ChevronRightIcon className="h4 ml-1 w-4 transition-all group-hover:ml-2" />
+              </Link>
+            </h5>
+          </TooltipTrigger>
+          <TooltipContent>View all operations</TooltipContent>
+        </Tooltip>
+      </div>
+      <BarList
+        data={items.map((row) => ({
+          ...row,
+          value: Number.parseFloat(row.value ?? "0"),
+          name: row.name === "" ? "unknown" : row.name,
+          href: {
+            pathname: `${router.pathname}/traces`,
+            query: {
+              organizationSlug: router.query.organizationSlug,
+              slug: router.query.slug,
+              filterState: createFilterState({
+                operationName: row.name === "" ? "unknown" : row.name,
+              }),
+              dateRange: createDateRange(range),
+              ...queryParams,
+            },
+          },
+        }))}
+        valueFormatter={formatter}
+        rowHeight={4}
+        rowClassName="bg-muted text-muted-foreground hover:text-foreground"
+      />
+    </CardContent>
+  );
+};
+
+const RequestMetricsCard = (props: { data?: MetricsDashboardMetric }) => {
   const range = useRange();
   const { data } = props;
 
@@ -369,38 +486,17 @@ const RequestMetricsCard = (props: { data?: MetricsDashboardMetric }) => {
           timeRange={range}
         />
       </CardContent>
-      <CardContent className="pt-6">
-        <div className="mb-2 flex space-x-2 px-2 text-sm">
-          <h5 className="text-sm font-medium">Highest RPM</h5>
-        </div>
-        <BarList
-          data={top.map((row) => ({
-            ...row,
-            value: Number.parseFloat(row.value ?? "0"),
-            name: row.name === "" ? "unknown" : row.name,
-            href: {
-              pathname: `${router.pathname}/traces`,
-              query: {
-                organizationSlug: router.query.organizationSlug,
-                slug: router.query.slug,
-                filterState: createFilterState({
-                  operationName: row.name === "" ? "unknown" : row.name,
-                }),
-                dateRange: createDateRange(range),
-              },
-            },
-          }))}
-          valueFormatter={formatter}
-          rowHeight={4}
-          rowClassName="bg-muted text-muted-foreground hover:text-foreground"
-        />
-      </CardContent>
+      <TopList
+        title="Highest RPM"
+        items={top}
+        formatter={formatter}
+        queryParams={{ group: "OperationName" }}
+      />
     </Card>
   );
 };
 
 const LatencyMetricsCard = (props: { data?: MetricsDashboardMetric }) => {
-  const router = useRouter();
   const range = useRange();
   const { data } = props;
 
@@ -439,38 +535,17 @@ const LatencyMetricsCard = (props: { data?: MetricsDashboardMetric }) => {
           timeRange={range}
         />
       </CardContent>
-      <CardContent className="pt-6">
-        <div className="mb-2 flex space-x-2 px-2 text-sm">
-          <h5 className="text-sm font-medium">Highest latency</h5>
-        </div>
-        <BarList
-          data={top.map((row) => ({
-            ...row,
-            name: row.name === "" ? "unknown" : row.name,
-            value: Number.parseFloat(row.value ?? "0"),
-            href: {
-              pathname: `${router.pathname}/traces`,
-              query: {
-                organizationSlug: router.query.organizationSlug,
-                slug: router.query.slug,
-                filterState: createFilterState({
-                  operationName: row.name === "" ? "unknown" : row.name,
-                }),
-                dateRange: createDateRange(range),
-              },
-            },
-          }))}
-          valueFormatter={formatter}
-          rowHeight={4}
-          rowClassName="bg-muted text-muted-foreground hover:text-foreground"
-        />
-      </CardContent>
+      <TopList
+        title="Highest latency"
+        items={top}
+        formatter={formatter}
+        queryParams={{ group: "OperationName", sort: "p95", sortDir: "desc" }}
+      />
     </Card>
   );
 };
 
 const ErrorMetricsCard = (props: { data?: MetricsDashboardMetric }) => {
-  const router = useRouter();
   const range = useRange();
   const { data } = props;
 
@@ -506,32 +581,12 @@ const ErrorMetricsCard = (props: { data?: MetricsDashboardMetric }) => {
           timeRange={range}
         />
       </CardContent>
-      <CardContent className="pt-6">
-        <div className="mb-2 flex space-x-2 px-2 text-sm">
-          <h5 className="text-sm font-medium">Highest error precentage</h5>
-        </div>
-        <BarList
-          data={top.map((row) => ({
-            ...row,
-            name: row.name === "" ? "unknown" : row.name,
-            value: Number.parseFloat(row.value ?? "0"),
-            href: {
-              pathname: `${router.pathname}/traces`,
-              query: {
-                organizationSlug: router.query.organizationSlug,
-                slug: router.query.slug,
-                filterState: createFilterState({
-                  operationName: row.name === "" ? "unknown" : row.name,
-                }),
-                dateRange: createDateRange(range),
-              },
-            },
-          }))}
-          valueFormatter={formatter}
-          rowHeight={4}
-          rowClassName="bg-muted text-muted-foreground hover:text-foreground"
-        />
-      </CardContent>
+      <TopList
+        title="Highest error percentage"
+        items={top}
+        formatter={formatter}
+        queryParams={{ group: "OperationName", sort: "errorsWithRate" }}
+      />
     </Card>
   );
 };
@@ -714,6 +769,8 @@ const ErrorRateOverTimeCard = () => {
 
   const { isMobile } = useWindowSize();
 
+  const { filters } = useAnalyticsQueryState();
+
   let {
     data: responseData,
     isLoading,
@@ -723,6 +780,7 @@ const ErrorRateOverTimeCard = () => {
     ...getMetricsErrorRate.useQuery({
       federatedGraphName: graphContext?.graph?.name,
       range,
+      filters,
     }),
     keepPreviousData: true,
     refetchOnWindowFocus: false,
@@ -877,11 +935,77 @@ const OverviewToolbar = () => {
     data?.filters ?? []
   );
 
+  const rangeLabels: Record<number, string> = {
+    1: "Last hour",
+    4: "Last 4 hours",
+    24: "Last day",
+    72: "Last 3 days",
+    168: "Last week",
+  };
+
+  const handleCheckedChanged = (id: string) => {
+    return (checked: boolean) => {
+      if (checked) {
+        onRangeChange(id);
+      }
+    };
+  };
+
   return (
     <div className="flex flex-col gap-2 space-y-2">
-      <AnalyticsToolbar tab="overview">
-        <MetricsFilters filters={data?.filters ?? []} />
+      <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <MetricsFilters filters={data?.filters ?? []} />
+          <AnalyticsSelectedFilters
+            filters={filtersList}
+            selectedFilters={selectedFilters}
+            onReset={() => resetFilters()}
+          />
+        </div>
+
         <Spacer />
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline">
+              <span className="inline-block w-[100px] text-left">
+                {rangeLabels[range]}
+              </span>
+              <ChevronDownIcon className="ml-2 h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            <DropdownMenuCheckboxItem
+              checked={range === 1}
+              onCheckedChange={handleCheckedChanged("1")}
+            >
+              Last hour
+            </DropdownMenuCheckboxItem>
+            <DropdownMenuCheckboxItem
+              checked={range === 4}
+              onCheckedChange={handleCheckedChanged("4")}
+            >
+              Last 4 hours
+            </DropdownMenuCheckboxItem>
+            <DropdownMenuCheckboxItem
+              checked={range === 24}
+              onCheckedChange={handleCheckedChanged("24")}
+            >
+              Last day
+            </DropdownMenuCheckboxItem>
+            <DropdownMenuCheckboxItem
+              checked={range === 72}
+              onCheckedChange={handleCheckedChanged("72")}
+            >
+              Last 3 days
+            </DropdownMenuCheckboxItem>
+            <DropdownMenuCheckboxItem
+              checked={range === 168}
+              onCheckedChange={handleCheckedChanged("168")}
+            >
+              Last week
+            </DropdownMenuCheckboxItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
         <Button
           isLoading={!!isFetching}
           onClick={() => {
@@ -893,25 +1017,7 @@ const OverviewToolbar = () => {
         >
           <UpdateIcon />
         </Button>
-        <Select value={String(range)} onValueChange={onRangeChange}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="1">Last hour</SelectItem>
-            <SelectItem value="4">Last 4 hours</SelectItem>
-            <SelectItem value="24">Last day</SelectItem>
-            <SelectItem value="72">Last 3 days</SelectItem>
-            <SelectItem value="168">Last week</SelectItem>
-          </SelectContent>
-        </Select>
-      </AnalyticsToolbar>
-
-      <AnalyticsSelectedFilters
-        filters={filtersList}
-        selectedFilters={selectedFilters}
-        onReset={() => resetFilters()}
-      />
+      </div>
     </div>
   );
 };
@@ -922,6 +1028,7 @@ AnalyticsPage.getLayout = (page) =>
       <TitleLayout
         title="Analytics"
         subtitle="Comprehensive view into Federated GraphQL Performance"
+        toolbar={<AnalyticsToolbar tab="overview" />}
       >
         {page}
       </TitleLayout>

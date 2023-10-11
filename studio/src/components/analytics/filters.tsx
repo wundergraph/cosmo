@@ -1,7 +1,6 @@
-import { cn } from "@/lib/utils";
 import { DataTableFacetedFilter } from "./data-table-faceted-filter";
 import { DataTablePrimaryFilterMenu } from "./data-table-primary-filter-menu";
-import { Column, ColumnFiltersState } from "@tanstack/react-table";
+import { ColumnFiltersState } from "@tanstack/react-table";
 import { Button } from "../ui/button";
 import { Cross2Icon } from "@radix-ui/react-icons";
 import React from "react";
@@ -54,10 +53,6 @@ export const AnalyticsSelectedFilters: React.FC<
           (each) => each.id === filter.id
         );
 
-        const selectedIndex = selectedFilters.findIndex(
-          (each) => each.id === filter.id
-        );
-
         if (!isSelected) {
           return null;
         }
@@ -72,10 +67,9 @@ export const AnalyticsSelectedFilters: React.FC<
         <Button
           onClick={() => onReset?.()}
           variant="outline"
-          size="sm"
-          className="mr-1 border-dashed lg:ml-1"
+          className="mr-1 border-dashed px-3 lg:ml-1"
         >
-          <Cross2Icon className="h-4 w-4" />
+          <Cross2Icon className="mr-2 h-4 w-4" />
           Reset
         </Button>
       )}

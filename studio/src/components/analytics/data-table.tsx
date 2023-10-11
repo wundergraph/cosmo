@@ -135,7 +135,7 @@ export function AnalyticsDataTable<T>({
   const [{ pageIndex, pageSize }, setPagination] =
     React.useState<PaginationState>({
       pageIndex: 0,
-      pageSize: 10,
+      pageSize: 20,
     });
 
   const pagination = React.useMemo(
@@ -336,11 +336,11 @@ export function AnalyticsDataTable<T>({
   return (
     <div>
       <div className="flex flex-row flex-wrap items-start gap-y-2">
-        <div className="flex flex-1 flex-row flex-wrap items-center gap-y-2">
+        <div className="flex flex-1 flex-row flex-wrap items-center gap-2">
+          <AnalyticsFilters filters={filtersList} />
           <DataTableGroupMenu
             value={selectedGroup}
             onChange={onGroupChange}
-            className="mr-2"
             items={[
               {
                 label: "None",
@@ -360,17 +360,15 @@ export function AnalyticsDataTable<T>({
               },
             ]}
           />
-          <AnalyticsFilters filters={filtersList} />
         </div>
         <div className="flex flex-row flex-wrap items-start gap-2">
           <DatePickerWithRange
             selectedDateRange={selectedDateRange}
             onDateRangeChange={onDateRangeChange}
-            size="sm"
           />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
+              <Button variant="outline">
                 Columns <ChevronDownIcon className="ml-2 h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -396,7 +394,7 @@ export function AnalyticsDataTable<T>({
           </DropdownMenu>
           <Button
             isLoading={isLoading || isFetching}
-            size="icon-sm"
+            size="icon"
             variant="outline"
             onClick={() => refresh()}
           >
@@ -404,7 +402,7 @@ export function AnalyticsDataTable<T>({
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
+              <Button variant="outline">
                 <ClockIcon className="mr-2" />
                 {refreshInterval.label}
               </Button>

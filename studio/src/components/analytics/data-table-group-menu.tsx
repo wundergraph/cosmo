@@ -26,7 +26,7 @@ export function DataTableGroupMenu({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" className={className}>
+        <Button variant="outline" className={className}>
           Group By: {items.find((each) => each.value === value)?.label ?? ""}
           <ChevronDownIcon className="ml-2" />
         </Button>

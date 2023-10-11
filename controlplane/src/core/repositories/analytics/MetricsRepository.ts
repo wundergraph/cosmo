@@ -1,6 +1,6 @@
 import { ClickHouseClient } from 'src/core/clickhouse/index.js';
-import { AnalyticsViewFilterOperator } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { BaseFilters, buildAnalyticsViewFilters } from './util.js';
+import { AnalyticsFilter, AnalyticsViewFilterOperator } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { BaseFilters, buildAnalyticsViewFilters, buildCoercedFilterSqlStatement, coerceFilterValues } from './util.js';
 
 const getEndDate = () => {
   const now = new Date();
@@ -81,16 +81,29 @@ const parseValue = (value?: string | number | null) => {
   return value || '0';
 };
 
-interface MetricsParams {
+interface GetMetricsViewProps {
+  range?: number;
+  endDate?: number;
+  filters: AnalyticsFilter[];
   organizationId: string;
   graphId: string;
-  graphName: string;
 }
 
 interface GetMetricsProps {
-  range?: number;
-  endDate?: number;
-  params: MetricsParams;
+  granule: string;
+  range: number;
+  dateRange: {
+    start: number;
+    end: number;
+  };
+  prevDateRange: {
+    start: number;
+    end: number;
+  };
+  whereSql?: string;
+  organizationId: string;
+  graphId: string;
+  queryParams?: Record<string, string | number>;
 }
 
 export class MetricsRepository {
@@ -99,17 +112,22 @@ export class MetricsRepository {
   /**
    * Get request rate metrics
    */
-  public async getRequestRateMetrics({ range = 24, endDate = getEndDate(), params }: GetMetricsProps) {
-    const granule = getGranularity(range);
-
-    const [start, end] = getDateRange(endDate, range);
-    const [prevStart, prevEnd] = getDateRange(endDate, range, range);
-
+  public async getRequestRateMetrics({
+    range = 24,
+    granule,
+    dateRange,
+    prevDateRange,
+    organizationId,
+    graphId,
+    whereSql,
+    queryParams,
+  }: GetMetricsProps) {
     const multiplier = range * 60;
 
     // get request rate in last [range]h
     const queryRate = (start: number, end: number) => {
-      return this.chClient.queryPromise<{ value: number | null }>(`
+      return this.chClient.queryPromise<{ value: number | null }>(
+        `
         SELECT round(sum(total) / ${multiplier}, 4) AS value FROM (
         SELECT
           toDateTime('${start}') AS startDate,
@@ -117,20 +135,24 @@ export class MetricsRepository {
           sum(TotalRequests) AS total
         FROM operation_request_metrics_5_30_mv
         WHERE Timestamp >= startDate AND Timestamp <= endDate
-          AND OrganizationID = '${params.organizationId}'
-          AND FederatedGraphID = '${params.graphId}'
+          AND OrganizationID = '${organizationId}'
+          AND FederatedGraphID = '${graphId}'
+          ${whereSql ? `AND ${whereSql}` : ''}
         GROUP BY Timestamp 
       )
-    `);
+    `,
+        queryParams,
+      );
     };
-    const requestRate = queryRate(start, end);
-    const prevRequestRate = queryRate(prevStart, prevEnd);
+    const requestRate = queryRate(dateRange.start, dateRange.end);
+    const prevRequestRate = queryRate(prevDateRange.start, prevDateRange.end);
 
     // get top 5 operations in last [range] hours
-    const top5 = this.chClient.queryPromise<{ name: string; value: string }>(`
+    const top5 = this.chClient.queryPromise<{ name: string; value: string }>(
+      `
       WITH
-        toDateTime('${start}') AS startDate,
-        toDateTime('${end}') AS endDate
+        toDateTime('${dateRange.start}') AS startDate,
+        toDateTime('${dateRange.end}') AS endDate
       SELECT name, round(sum(total) / ${multiplier}, 4) AS value FROM (
         SELECT
           Timestamp as timestamp,
@@ -138,15 +160,19 @@ export class MetricsRepository {
           sum(TotalRequests) as total
         FROM operation_request_metrics_5_30_mv
         WHERE Timestamp >= startDate AND Timestamp <= endDate
-          AND OrganizationID = '${params.organizationId}'
-          AND FederatedGraphID = '${params.graphId}'
+          AND OrganizationID = '${organizationId}'
+          AND FederatedGraphID = '${graphId}'
+          ${whereSql ? `AND ${whereSql}` : ''}
         GROUP BY Timestamp, OperationName 
       ) GROUP BY name ORDER BY value DESC LIMIT 5
-    `);
+    `,
+      queryParams,
+    );
 
     // get time series of last [range] hours
     const querySeries = (start: number, end: number) => {
-      return this.chClient.queryPromise<{ value: number | null }[]>(`
+      return this.chClient.queryPromise<{ value: number | null }[]>(
+        `
       WITH
         toStartOfInterval(toDateTime('${start}'), INTERVAL ${granule} MINUTE) AS startDate,
         toDateTime('${end}') AS endDate
@@ -155,19 +181,22 @@ export class MetricsRepository {
           round(sum(TotalRequests) / ${granule}, 4) AS value
       FROM operation_request_metrics_5_30_mv
       WHERE timestamp >= startDate AND timestamp <= endDate
-        AND OrganizationID = '${params.organizationId}'
-        AND FederatedGraphID = '${params.graphId}'
+        AND OrganizationID = '${organizationId}'
+        AND FederatedGraphID = '${graphId}'
+        ${whereSql ? `AND ${whereSql}` : ''}
       GROUP BY timestamp
       ORDER BY timestamp ASC WITH FILL FROM 
         toStartOfInterval(toDateTime('${start}'), INTERVAL ${granule} MINUTE)
       TO
         toDateTime('${end}')
       STEP INTERVAL ${granule} minute
-    `);
+    `,
+        queryParams,
+      );
     };
 
-    const series = querySeries(start, end);
-    const prevSeries = querySeries(prevStart, prevEnd);
+    const series = querySeries(dateRange.start, dateRange.end);
+    const prevSeries = querySeries(prevDateRange.start, prevDateRange.end);
 
     const [medianResponse, prevMedianResponse, top5Response, seriesResponse, prevSeriesResponse] = await Promise.all([
       requestRate,
@@ -193,14 +222,19 @@ export class MetricsRepository {
   /**
    * Get latency metrics
    */
-  public async getLatencyMetrics({ range = 24, endDate = getEndDate(), params }: GetMetricsProps) {
-    const granule = getGranularity(range);
-
-    const [start, end] = getDateRange(endDate, range);
-    const [prevStart, prevEnd] = getDateRange(endDate, range, range);
-
+  public async getLatencyMetrics({
+    range = 24,
+    granule,
+    dateRange,
+    prevDateRange,
+    organizationId,
+    graphId,
+    whereSql,
+    queryParams,
+  }: GetMetricsProps) {
     const queryLatency = (quantile: string, start: number, end: number) => {
-      return this.chClient.queryPromise<{ value: number }>(`
+      return this.chClient.queryPromise<{ value: number }>(
+        `
         WITH
           toDateTime('${start}') AS startDate,
           toDateTime('${end}') AS endDate
@@ -218,17 +252,21 @@ export class MetricsRepository {
           sumForEachMerge(BucketCounts) as BucketCounts
         FROM operation_latency_metrics_5_30_mv
         WHERE Timestamp >= startDate AND Timestamp <= endDate
-          AND OrganizationID = '${params.organizationId}'
-          AND FederatedGraphID = '${params.graphId}'
-    `);
+          AND OrganizationID = '${organizationId}'
+          AND FederatedGraphID = '${graphId}'
+          ${whereSql ? `AND ${whereSql}` : ''}
+    `,
+        queryParams,
+      );
     };
 
-    const p95 = queryLatency('0.95', start, end);
-    const prevP95 = queryLatency('0.95', prevStart, prevEnd);
+    const p95 = queryLatency('0.95', dateRange.start, dateRange.end);
+    const prevP95 = queryLatency('0.95', prevDateRange.start, prevDateRange.end);
 
     // get top 5 operations in last [range] hours
     const queryTop5 = (quantile: string, start: number, end: number) => {
-      return this.chClient.queryPromise<{ name: string; value: string }>(`
+      return this.chClient.queryPromise<{ name: string; value: string }>(
+        `
         WITH
           toDateTime('${start}') AS startDate,
           toDateTime('${end}') AS endDate
@@ -247,17 +285,21 @@ export class MetricsRepository {
           sumForEachMerge(BucketCounts) as BucketCounts
         FROM operation_latency_metrics_5_30_mv
         WHERE Timestamp >= startDate AND Timestamp <= endDate
-          AND OrganizationID = '${params.organizationId}'
-          AND FederatedGraphID = '${params.graphId}'
+          AND OrganizationID = '${organizationId}'
+          AND FederatedGraphID = '${graphId}'
+          ${whereSql ? `AND ${whereSql}` : ''}
         GROUP BY OperationName ORDER BY value DESC LIMIT 5
-    `);
+    `,
+        queryParams,
+      );
     };
 
-    const top5 = queryTop5('0.95', start, end);
+    const top5 = queryTop5('0.95', dateRange.start, dateRange.end);
 
     // get time series of last [range] hours
     const querySeries = (quantile: string, start: number, end: number) => {
-      return this.chClient.queryPromise<{ value: number | null }[]>(`
+      return this.chClient.queryPromise<{ value: number | null }[]>(
+        `
         WITH
           toStartOfInterval(toDateTime('${start}'), INTERVAL ${granule} MINUTE) AS startDate,
           toDateTime('${end}') AS endDate
@@ -276,19 +318,22 @@ export class MetricsRepository {
             sumForEachMerge(BucketCounts) as BucketCounts
         FROM operation_latency_metrics_5_30_mv
         WHERE timestamp >= startDate AND timestamp <= endDate
-          AND OrganizationID = '${params.organizationId}'
-          AND FederatedGraphID = '${params.graphId}'
+          AND OrganizationID = '${organizationId}'
+          AND FederatedGraphID = '${graphId}'
+          ${whereSql ? `AND ${whereSql}` : ''}
         GROUP BY timestamp, ExplicitBounds
         ORDER BY timestamp ASC WITH FILL FROM
           toStartOfInterval(toDateTime('${start}'), INTERVAL ${granule} MINUTE)
         TO
           toDateTime('${end}')
         STEP INTERVAL ${granule} minute
-      `);
+      `,
+        queryParams,
+      );
     };
 
-    const series = querySeries('0.95', start, end);
-    const prevSeries = querySeries('0.95', prevStart, prevEnd);
+    const series = querySeries('0.95', dateRange.start, dateRange.end);
+    const prevSeries = querySeries('0.95', prevDateRange.start, prevDateRange.end);
 
     const [p95Response, prevP95Response, top5Response, seriesResponse, prevSeriesResponse] = await Promise.all([
       p95,
@@ -314,15 +359,20 @@ export class MetricsRepository {
   /**
    * Get error metrics
    */
-  public async getErrorMetrics({ range = 24, endDate = getEndDate(), params }: GetMetricsProps) {
-    const granule = getGranularity(range);
-
-    const [start, end] = getDateRange(endDate, range);
-    const [prevStart, prevEnd] = getDateRange(endDate, range, range);
-
+  public async getErrorMetrics({
+    range = 24,
+    granule,
+    dateRange,
+    prevDateRange,
+    organizationId,
+    graphId,
+    whereSql,
+    queryParams,
+  }: GetMetricsProps) {
     // get request rate in last [range]h
     const queryPercentage = (start: number, end: number) => {
-      return this.chClient.queryPromise<{ errorPercentage: number }>(`
+      return this.chClient.queryPromise<{ errorPercentage: number }>(
+        `
       WITH
         toDateTime('${start}') AS startDate,
         toDateTime('${end}') AS endDate
@@ -336,21 +386,25 @@ export class MetricsRepository {
             sum(TotalErrors) as totalErrors
           FROM operation_request_metrics_5_30_mv
           WHERE Timestamp >= startDate AND Timestamp <= endDate
-            AND OrganizationID = '${params.organizationId}'
-            AND FederatedGraphID = '${params.graphId}'
+            AND OrganizationID = '${organizationId}'
+            AND FederatedGraphID = '${graphId}'
+            ${whereSql ? `AND ${whereSql}` : ''}
           GROUP BY Timestamp, OperationName 
         )
-    `);
+    `,
+        queryParams,
+      );
     };
 
-    const value = queryPercentage(start, end);
-    const prevValue = queryPercentage(prevStart, prevEnd);
+    const value = queryPercentage(dateRange.start, dateRange.end);
+    const prevValue = queryPercentage(prevDateRange.start, prevDateRange.end);
 
     // get top 5 operations in last [range] hours
-    const top5 = this.chClient.queryPromise<{ name: string; value: string }>(`
+    const top5 = this.chClient.queryPromise<{ name: string; value: string }>(
+      `
       WITH
-        toDateTime('${start}') AS startDate,
-        toDateTime('${end}') AS endDate
+        toDateTime('${dateRange.start}') AS startDate,
+        toDateTime('${dateRange.end}') AS endDate
       SELECT
         name,
         median(errorPercentage) as value
@@ -363,15 +417,19 @@ export class MetricsRepository {
           if(totalErrors > 0, round(totalErrors / totalRequests * 100, 2), 0) AS errorPercentage
         FROM operation_request_metrics_5_30_mv
         WHERE Timestamp >= startDate AND Timestamp <= endDate
-          AND OrganizationID = '${params.organizationId}'
-          AND FederatedGraphID = '${params.graphId}'
+          AND OrganizationID = '${organizationId}'
+          AND FederatedGraphID = '${graphId}'
+          ${whereSql ? `AND ${whereSql}` : ''}
         GROUP BY Timestamp, OperationName 
       ) GROUP BY name ORDER BY value DESC LIMIT 5
-    `);
+    `,
+      queryParams,
+    );
 
     // get time series of last [range] hours
     const getSeries = (start: number, end: number) => {
-      return this.chClient.queryPromise<{ value: number | null }[]>(`
+      return this.chClient.queryPromise<{ value: number | null }[]>(
+        `
       WITH
         toStartOfInterval(toDateTime('${start}'), INTERVAL ${granule} MINUTE) AS startDate,
         toDateTime('${end}') AS endDate
@@ -382,19 +440,22 @@ export class MetricsRepository {
           if(errors > 0, round(errors / requests * 100, 2), 0) AS value
       FROM operation_request_metrics_5_30_mv
       WHERE timestamp >= startDate AND timestamp <= endDate
-        AND OrganizationID = '${params.organizationId}'
-        AND FederatedGraphID = '${params.graphId}'
+        AND OrganizationID = '${organizationId}'
+        AND FederatedGraphID = '${graphId}'
+        ${whereSql ? `AND ${whereSql}` : ''}
       GROUP BY timestamp
       ORDER BY timestamp ASC WITH FILL FROM 
         toStartOfInterval(toDateTime('${start}'), INTERVAL ${granule} MINUTE)
       TO
         toDateTime('${end}')
       STEP INTERVAL ${granule} minute
-    `);
+    `,
+        queryParams,
+      );
     };
 
-    const series = getSeries(start, end);
-    const prevSeries = getSeries(prevStart, prevEnd);
+    const series = getSeries(dateRange.start, dateRange.end);
+    const prevSeries = getSeries(prevDateRange.start, prevDateRange.end);
 
     const [valueResponse, prevValueResponse, top5Response, seriesResponse, prevSeriesResponse] = await Promise.all([
       value,
@@ -420,31 +481,35 @@ export class MetricsRepository {
   /**
    * Get error rate metrics
    */
-  public async getErrorRateMetrics({ range = 24, endDate = getEndDate(), params }: GetMetricsProps) {
+  public async getErrorRateMetrics({ range = 24, organizationId, graphId, whereSql, queryParams }: GetMetricsProps) {
+    const [start, end] = getDateRange(getEndDate(), range);
     const granule = getGranularity(range);
-
-    const [start, end] = getDateRange(endDate, range);
+    const dateRange = { start, end };
 
     // get requests in last [range] hours in series of [step]
-    const series = await this.chClient.queryPromise<{ timestamp: string; requestRate: string; errorRate: string }>(`
+    const series = await this.chClient.queryPromise<{ timestamp: string; requestRate: string; errorRate: string }>(
+      `
       WITH
-        toStartOfInterval(toDateTime('${start}'), INTERVAL ${granule} MINUTE) AS startDate,
-        toDateTime('${end}') AS endDate
+        toStartOfInterval(toDateTime('${dateRange.start}'), INTERVAL ${granule} MINUTE) AS startDate,
+        toDateTime('${dateRange.end}') AS endDate
       SELECT
           toStartOfInterval(Timestamp, INTERVAL ${granule} MINUTE) AS timestamp,
           round(sum(TotalRequests) / ${granule}, 4) AS requestRate,
           round(sum(TotalErrors) / ${granule}, 4) AS errorRate
       FROM operation_request_metrics_5_30_mv
       WHERE timestamp >= startDate AND timestamp <= endDate
-        AND OrganizationID = '${params.organizationId}'
-        AND FederatedGraphID = '${params.graphId}'
+        AND OrganizationID = '${organizationId}'
+        AND FederatedGraphID = '${graphId}'
+        ${whereSql ? `AND ${whereSql}` : ''}
       GROUP BY timestamp
       ORDER BY timestamp ASC WITH FILL FROM
-        toStartOfInterval(toDateTime('${start}'), INTERVAL ${granule} MINUTE)
+        toStartOfInterval(toDateTime('${dateRange.start}'), INTERVAL ${granule} MINUTE)
       TO
-        toDateTime('${end}')
+        toDateTime('${dateRange.end}')
       STEP INTERVAL ${granule} MINUTE
-    `);
+    `,
+      queryParams,
+    );
 
     return {
       data: {
@@ -456,6 +521,63 @@ export class MetricsRepository {
           };
         }),
       },
+    };
+  }
+
+  public async getMetricsView(props: GetMetricsViewProps) {
+    const metricsProps = this.getMetricsProps(props);
+
+    const [requests, latency, errors, filters] = await Promise.all([
+      this.getRequestRateMetrics(metricsProps),
+      this.getLatencyMetrics(metricsProps),
+      this.getErrorMetrics(metricsProps),
+      this.getMetricFilters(metricsProps),
+    ]);
+
+    return {
+      requests: requests.data,
+      latency: latency.data,
+      errors: errors.data,
+      filters,
+    };
+  }
+
+  public async getErrorsView(props: GetMetricsViewProps) {
+    const metricsProps = this.getMetricsProps(props);
+
+    const [errorRate] = await Promise.all([this.getErrorRateMetrics(metricsProps)]);
+
+    return {
+      errorRate: errorRate.data,
+    };
+  }
+
+  protected getMetricsProps(props: GetMetricsViewProps): GetMetricsProps {
+    const { range = 24, endDate = getEndDate(), filters: selectedFilters, organizationId, graphId } = props;
+
+    const granule = getGranularity(range);
+    const [start, end] = getDateRange(endDate, range);
+    const [prevStart, prevEnd] = getDateRange(endDate, range, range);
+
+    const coercedFilters = coerceFilterValues({}, selectedFilters, this.baseFilters);
+
+    const { whereSql } = buildCoercedFilterSqlStatement({}, coercedFilters.result, coercedFilters.filterMapper);
+
+    return {
+      granule,
+      range,
+      dateRange: {
+        start,
+        end,
+      },
+      prevDateRange: {
+        start: prevStart,
+        end: prevEnd,
+      },
+      organizationId,
+      graphId,
+      whereSql,
+      queryParams: coercedFilters.result,
     };
   }
 
@@ -483,23 +605,21 @@ export class MetricsRepository {
     },
   };
 
-  public async getMetricFilters({ range = 24, endDate = getEndDate(), params }: GetMetricsProps) {
-    const [start, end] = getDateRange(endDate, range);
-
+  public async getMetricFilters({ dateRange, organizationId, graphId }: GetMetricsProps) {
     const filters = { ...this.baseFilters };
 
     const query = `
       WITH
-        toDateTime('${start}') AS startDate,
-        toDateTime('${end}') AS endDate
+        toDateTime('${dateRange.start}') AS startDate,
+        toDateTime('${dateRange.end}') AS endDate
       SELECT
         OperationName as operationName,
         ClientName as clientName,
         ClientVersion as clientVersion
       FROM operation_request_metrics_5_30_mv
       WHERE Timestamp >= startDate AND Timestamp <= endDate
-        AND OrganizationID = '${params.organizationId}'
-        AND FederatedGraphID = '${params.graphId}'
+        AND OrganizationID = '${organizationId}'
+        AND FederatedGraphID = '${graphId}'
       GROUP BY OperationName, ClientName, ClientVersion
     `;
 
