@@ -7,7 +7,6 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/wundergraph/cosmo/router/config"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/asttransform"
@@ -15,6 +14,7 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 
+	"github.com/wundergraph/cosmo/router/config"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/internal/pool"
 )
@@ -118,6 +118,7 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(routerCfg *node
 		PrintOperationWithRequiredFields: engineDebugConfig.PrintOperationWithRequiredFields,
 		PrintPlanningPaths:               engineDebugConfig.PrintPlanningPaths,
 		PrintQueryPlans:                  engineDebugConfig.PrintQueryPlans,
+		PrintNodeSuggestions:             engineDebugConfig.PrintNodeSuggestions,
 		ConfigurationVisitor:             engineDebugConfig.ConfigurationVisitor,
 		PlanningVisitor:                  engineDebugConfig.PlanningVisitor,
 		DatasourceVisitor:                engineDebugConfig.DatasourceVisitor,
