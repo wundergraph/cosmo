@@ -1,6 +1,6 @@
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { SlackAccessTokenResponse } from 'src/types/index.js';
 import * as schema from '../../db/schema.js';
+import { SlackAccessTokenResponse } from '../../types/index.js';
 
 export default class Slack {
   clientID = '';
