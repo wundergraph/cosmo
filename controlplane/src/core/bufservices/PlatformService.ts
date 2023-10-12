@@ -75,6 +75,7 @@ import { MetricsRepository } from '../repositories/analytics/MetricsRepository.j
 import { handleError, isValidLabelMatchers, isValidLabels } from '../util.js';
 import { OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
 import { GitHubRepository } from '../repositories/GitHubRepository.js';
+import Slack from '../services/Slack.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -2869,14 +2870,40 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           return {
             response: {
               code: EnumStatusCode.ERR_ALREADY_EXISTS,
-              details: `Itegration with name ${req.name} already exists`,
+              details: `Integration with name ${req.name} already exists`,
             },
           };
         }
 
+        const slack = new Slack(opts.slack);
+
+        const accessTokenResp = await slack.fetchAccessToken(
+          req.code,
+          `${opts.webBaseUrl}/${authContext.organizationSlug}/integrations`,
+        );
+        if (!accessTokenResp) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: 'The code is already used',
+            },
+          };
+        }
+
+        await slack.addSlackInstallations({
+          accessToken: accessTokenResp.accessToken,
+          db: opts.db,
+          organizationId: authContext.organizationId,
+          slackChannelId: accessTokenResp.slackChannelId,
+          slackChannelName: accessTokenResp.slackChannelName,
+          slackOrganizationId: accessTokenResp.slackOrgId,
+          slackOrganizationName: accessTokenResp.slackOrgName,
+          slackUserId: accessTokenResp.slackUserId,
+        });
+
         await orgRepo.createIntegration({
           organizationId: authContext.organizationId,
-          endpoint: req.endpoint,
+          endpoint: accessTokenResp.webhookURL,
           events: req.events,
           eventsMeta: req.eventsMeta,
           name: req.name,

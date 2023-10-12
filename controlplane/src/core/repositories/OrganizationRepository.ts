@@ -799,7 +799,6 @@ export class OrganizationRepository {
     id: string;
     organizationId: string;
     endpoint: string;
-    name: string;
     events: string[];
     eventsMeta: EventMeta[];
   }) {
@@ -808,7 +807,6 @@ export class OrganizationRepository {
         .update(organizationIntegrations)
         .set({
           events: input.events,
-          name: input.name,
         })
         .where(eq(organizationIntegrations.id, input.id))
         .returning();

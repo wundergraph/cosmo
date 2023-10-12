@@ -5325,9 +5325,9 @@ export class DeleteOrganizationWebhookConfigResponse extends Message<DeleteOrgan
  */
 export class CreateIntegrationRequest extends Message<CreateIntegrationRequest> {
   /**
-   * @generated from field: string endpoint = 1;
+   * @generated from field: string type = 1;
    */
-  endpoint = "";
+  type = "";
 
   /**
    * @generated from field: string name = 2;
@@ -5335,9 +5335,9 @@ export class CreateIntegrationRequest extends Message<CreateIntegrationRequest> 
   name = "";
 
   /**
-   * @generated from field: string type = 3;
+   * @generated from field: string code = 3;
    */
-  type = "";
+  code = "";
 
   /**
    * @generated from field: repeated string events = 4;
@@ -5357,9 +5357,9 @@ export class CreateIntegrationRequest extends Message<CreateIntegrationRequest> 
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "wg.cosmo.platform.v1.CreateIntegrationRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "endpoint", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "type", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "type", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "code", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "events", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 5, name: "eventsMeta", kind: "message", T: EventMeta, repeated: true },
   ]);
@@ -5660,17 +5660,12 @@ export class UpdateIntegrationConfigRequest extends Message<UpdateIntegrationCon
   endpoint = "";
 
   /**
-   * @generated from field: string name = 3;
-   */
-  name = "";
-
-  /**
-   * @generated from field: repeated string events = 4;
+   * @generated from field: repeated string events = 3;
    */
   events: string[] = [];
 
   /**
-   * @generated from field: repeated wg.cosmo.notifications.EventMeta events_meta = 5;
+   * @generated from field: repeated wg.cosmo.notifications.EventMeta events_meta = 4;
    */
   eventsMeta: EventMeta[] = [];
 
@@ -5684,9 +5679,8 @@ export class UpdateIntegrationConfigRequest extends Message<UpdateIntegrationCon
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "endpoint", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 4, name: "events", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 5, name: "events_meta", kind: "message", T: EventMeta, repeated: true },
+    { no: 3, name: "events", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 4, name: "events_meta", kind: "message", T: EventMeta, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateIntegrationConfigRequest {

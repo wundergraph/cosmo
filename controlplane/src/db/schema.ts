@@ -601,3 +601,28 @@ export const slackEventGraphIdsRelations = relations(slackEventGraphIds, ({ one 
     references: [federatedGraphs.id],
   }),
 }));
+
+export const slackInstallations = pgTable(
+  'slack_installations',
+  {
+    id: uuid('id').notNull().primaryKey().defaultRandom(),
+    organizationId: uuid('organization_id')
+      .notNull()
+      .references(() => organizations.id, {
+        onDelete: 'cascade',
+      }),
+    slackOrganizationId: text('slack_organization_id').notNull(),
+    slackOrganizationName: text('slack_organization_name').notNull(),
+    slackChannelId: text('slack_channel_id').notNull(),
+    slackChannelName: text('slack_channel_name').notNull(),
+    slackUserId: text('slack_user_id').notNull(),
+    accessToken: text('access_token').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }),
+  },
+  (t) => {
+    return {
+      nameIndex: uniqueIndex('slack_installations_idx').on(t.organizationId, t.slackOrganizationId, t.slackChannelId),
+    };
+  },
+);

@@ -678,9 +678,9 @@ message DeleteOrganizationWebhookConfigResponse {
 }
 
 message CreateIntegrationRequest {
-  string endpoint = 1;
+  string type = 1;
   string name = 2;
-  string type = 3;
+  string code = 3;
   repeated string events = 4;
   repeated wg.cosmo.notifications.EventMeta eventsMeta = 5;
 }
@@ -723,9 +723,8 @@ message GetOrganizationIntegrationsResponse {
 message UpdateIntegrationConfigRequest {
   string id = 1;
   string endpoint = 2;
-  string name = 3;
-  repeated string events = 4;
-  repeated wg.cosmo.notifications.EventMeta events_meta = 5;
+  repeated string events = 3;
+  repeated wg.cosmo.notifications.EventMeta events_meta = 4;
 }
 
 message UpdateIntegrationConfigResponse {

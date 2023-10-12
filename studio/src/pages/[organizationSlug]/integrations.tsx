@@ -42,11 +42,9 @@ import { useToast } from "@/components/ui/use-toast";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
 import { docsBaseURL } from "@/lib/constants";
 import { NextPageWithLayout } from "@/lib/page";
-import { cn } from "@/lib/utils";
 import {
   ExclamationTriangleIcon,
   Pencil1Icon,
-  PlusIcon,
   TrashIcon,
 } from "@radix-ui/react-icons";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -61,21 +59,11 @@ import {
 import { IntegrationConfig } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { useContext, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { FiSlack } from "react-icons/fi";
 import { z } from "zod";
 
 const CreateIntegrationFormSchema = z.object({
-  endpoint: z
-    .string()
-    .url()
-    .refine(
-      (url) =>
-        process.env.NODE_ENV === "production"
-          ? url.startsWith("https://")
-          : true,
-      "The endpoint must use https"
-    ),
   name: z.string(),
   events: z.array(z.string()).optional(),
 });
@@ -93,7 +81,6 @@ const UpdateIntegrationFormSchema = z.object({
           : true,
       "The endpoint must use https"
     ),
-  name: z.string(),
   events: z.array(z.string()).optional(),
 });
 
@@ -175,10 +162,11 @@ const Integration = ({
   mode,
   refresh,
   existing,
+  open,
+  code,
 }: {
   mode: "create" | "update";
   refresh: () => void;
-  buttonText?: React.ReactNode;
   existing?: {
     id: string;
     name: string;
@@ -186,9 +174,12 @@ const Integration = ({
     events: string[];
     meta: EventsMeta;
   };
+  open?: boolean;
+  code?: string;
 }) => {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(open || false);
   const { toast } = useToast();
+  const router = useRouter();
 
   const { mutate: create, isLoading: isCreating } = useMutation(
     createIntegration.useMutation()
@@ -198,12 +189,14 @@ const Integration = ({
     updateIntegrationConfig.useMutation()
   );
 
-  const form = useZodForm<CreateIntegrationInput | UpdateIntegrationInput>({
+  const createForm = useZodForm<CreateIntegrationInput>({
     mode: "onBlur",
-    schema:
-      mode === "create"
-        ? CreateIntegrationFormSchema
-        : UpdateIntegrationFormSchema,
+    schema: CreateIntegrationFormSchema,
+  });
+
+  const updateForm = useZodForm<UpdateIntegrationInput>({
+    mode: "onBlur",
+    schema: UpdateIntegrationFormSchema,
   });
 
   const [meta, setMeta] = useState<EventsMeta>(existing?.meta || []);
@@ -213,7 +206,7 @@ const Integration = ({
 
   const endpoint = existing?.integrationConfig?.config.value?.endpoint || "";
 
-  const onSubmit: SubmitHandler<CreateIntegrationInput> = (data) => {
+  const onSubmitOfCreate: SubmitHandler<CreateIntegrationInput> = (data) => {
     const compiledMeta: EventsMeta = [];
 
     if (data?.events && data.events.length !== 0) {
@@ -224,44 +217,60 @@ const Integration = ({
       }
     }
 
-    if (mode === "create") {
-      create(
-        {
-          endpoint: data.endpoint,
-          name: data.name,
-          events: data.events ?? [],
-          eventsMeta: compiledMeta,
-          type: "slack",
-        },
-        {
-          onSuccess: (d) => {
-            if (d.response?.code === EnumStatusCode.OK) {
-              toast({ description: "Integration created", duration: 3000 });
-              refresh();
-              setIsOpen(false);
-            } else {
-              toast({
-                description:
-                  d.response?.details ??
-                  "Could not create integration. Please try again.",
-                duration: 3000,
-              });
-            }
-          },
-          onError: () => {
+    create(
+      {
+        name: data.name,
+        code,
+        events: data.events ?? [],
+        eventsMeta: compiledMeta,
+        type: "slack",
+      },
+      {
+        onSuccess: (d) => {
+          if (d.response?.code === EnumStatusCode.OK) {
+            toast({ description: "Integration created", duration: 3000 });
+            refresh();
+          } else {
             toast({
-              description: "Could not create integration. Please try again.",
+              description:
+                d.response?.details ??
+                "Could not create integration. Please try again.",
               duration: 3000,
             });
-          },
+          }
+          router.replace(router.asPath.split("?")[0], undefined, {
+            shallow: true,
+          });
+        },
+        onError: () => {
+          toast({
+            description: "Could not create integration. Please try again.",
+            duration: 3000,
+          });
+          router.replace(router.asPath.split("?")[0], undefined, {
+            shallow: true,
+          });
+        },
+      }
+    );
+  };
+
+  const onSubmitOfUpdate: SubmitHandler<UpdateIntegrationInput> = (data) => {
+    const compiledMeta: EventsMeta = [];
+
+    if (data?.events && data.events.length !== 0) {
+      for (const m of meta) {
+        if (data.events.includes(OrganizationEventName[m.eventName!] || "")) {
+          compiledMeta.push(m);
         }
-      );
-    } else if (mode === "update" && existing?.id) {
+      }
+    }
+
+    if (mode === "update" && existing?.id) {
       update(
         {
           id: existing.id,
           endpoint: data.endpoint,
-          name: data.name,
           events: data.events ?? [],
           eventsMeta: compiledMeta,
         },
@@ -302,20 +311,13 @@ const Integration = ({
         setIsOpen(state);
       }}
     >
-      <DialogTrigger asChild>
-        <Button
-          variant={mode === "create" ? "default" : "secondary"}
-          size={mode === "create" ? "default" : "icon"}
-        >
-          {mode === "create" ? (
-            <>
-              <PlusIcon className="mr-2" /> Create
-            </>
-          ) : (
+      {mode === "update" && (
+        <DialogTrigger asChild>
+          <Button variant="secondary" size="icon">
             <Pencil1Icon />
-          )}
-        </Button>
-      </DialogTrigger>
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>
@@ -326,53 +328,18 @@ const Integration = ({
           </DialogDescription>
         </DialogHeader>
 
-        <p className="text-sm text-muted-foreground">
-          Click{" "}
-          <Link
-            href={docsBaseURL + "/studio/slack-integration"}
-            className="text-primary"
-            target="_blank"
-            rel="noreferrer"
-          >
-            here
-          </Link>{" "}
-          to learn how to configure the WunderGraph Cosmo Slack app and get the webhook url.
-        </p>
-
-        {(existing?.meta !== undefined || mode === "create") && (
-          <Form {...form}>
+        {mode === "create" && (
+          <Form {...createForm}>
             <form
               className="flex w-full flex-col gap-y-6"
-              onSubmit={form.handleSubmit(onSubmit)}
+              onSubmit={createForm.handleSubmit(onSubmitOfCreate)}
             >
               <FormField
-                defaultValue={endpoint}
-                control={form.control}
-                name="endpoint"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Endpoint</FormLabel>
-                    <FormControl>
-                      <CreateIntegrationInput
-                        placeholder="https://hooks.slack.com/..."
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
                 defaultValue={existing?.name}
-                control={form.control}
+                control={createForm.control}
                 name="name"
                 render={({ field }) => (
-                  <FormItem
-                    className={cn({
-                      hidden: mode === "update",
-                    })}
-                  >
+                  <FormItem>
                     <FormLabel>Integration Name</FormLabel>
                     <FormControl>
                       <CreateIntegrationInput
@@ -390,7 +357,7 @@ const Integration = ({
 
               <FormField
                 defaultValue={existingEvents}
-                control={form.control}
+                control={createForm.control}
                 name="events"
                 render={() => (
                   <FormItem>
@@ -403,7 +370,7 @@ const Integration = ({
                     {notificationEvents.map((event) => (
                       <FormField
                         key={event.id}
-                        control={form.control}
+                        control={createForm.control}
                         name="events"
                         render={({ field }) => {
                           return (
@@ -453,11 +420,110 @@ const Integration = ({
               <Button
                 className="mt-2"
                 type="submit"
-                disabled={!form.formState.isValid}
+                disabled={!createForm.formState.isValid}
                 variant="default"
-                isLoading={mode === "create" ? isCreating : isUpdating}
+                isLoading={isCreating}
               >
-                {mode === "create" ? "Create" : "Save"}
+                Create
+              </Button>
+            </form>
+          </Form>
+        )}
+
+        {mode === "update" && (
+          <Form {...updateForm}>
+            <form
+              className="flex w-full flex-col gap-y-6"
+              onSubmit={updateForm.handleSubmit(onSubmitOfUpdate)}
+            >
+              <FormField
+                defaultValue={endpoint}
+                control={updateForm.control}
+                name="endpoint"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Endpoint</FormLabel>
+                    <FormControl>
+                      <CreateIntegrationInput
+                        placeholder="https://hooks.slack.com/..."
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                defaultValue={existingEvents}
+                control={updateForm.control}
+                name="events"
+                render={() => (
+                  <FormItem>
+                    <div className="mb-4">
+                      <FormLabel className="text-base">Events</FormLabel>
+                      <FormDescription>
+                        Select the events for which you want webhooks to fire.
+                      </FormDescription>
+                    </div>
+                    {notificationEvents.map((event) => (
+                      <FormField
+                        key={event.id}
+                        control={updateForm.control}
+                        name="events"
+                        render={({ field }) => {
+                          return (
+                            <div className="flex flex-col gap-y-1">
+                              <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                                <FormControl>
+                                  <Checkbox
+                                    checked={field.value?.includes(event.name)}
+                                    onCheckedChange={(checked) => {
+                                      return checked
+                                        ? field.onChange([
+                                            ...(field.value ?? []),
+                                            event.name,
+                                          ])
+                                        : field.onChange(
+                                            field.value?.filter(
+                                              (value) => value !== event.name
+                                            )
+                                          );
+                                    }}
+                                  />
+                                </FormControl>
+                                <FormLabel className="text-sm font-normal">
+                                  {event.label}
+                                  <FormDescription>
+                                    {event.description}
+                                  </FormDescription>
+                                </FormLabel>
+                              </FormItem>
+                              <div className="ml-7">
+                                <Meta
+                                  id={event.id}
+                                  meta={meta}
+                                  setMeta={setMeta}
+                                />
+                              </div>
+                            </div>
+                          );
+                        }}
+                      />
+                    ))}
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <Button
+                className="mt-2"
+                type="submit"
+                disabled={!updateForm.formState.isValid}
+                variant="default"
+                isLoading={isUpdating}
+              >
+                Save
               </Button>
             </form>
           </Form>
@@ -470,10 +536,26 @@ const Integration = ({
 const IntegrationsPage: NextPageWithLayout = () => {
   const user = useContext(UserContext);
   const router = useRouter();
+
+  const organizationSlug = router.query.organizationSlug as string;
+  const code = router.query.code as string;
+  const slackRedirectURL = `${process.env.NEXT_PUBLIC_COSMO_STUDIO_URL}/${organizationSlug}/integrations`;
+  const [shouldCreate, setShouldCreate] = useState(false);
+
   const { data, isLoading, error, refetch } = useQuery({
     ...getOrganizationIntegrations.useQuery(),
     queryKey: [user?.currentOrganization.slug || "", router.asPath, {}],
   });
+
+  useEffect(() => {
+    if (!code) {
+      setShouldCreate(false);
+      return;
+    }
+    if (!shouldCreate) {
+      setShouldCreate(true);
+    }
+  }, [code, shouldCreate]);
 
   if (isLoading) return <Loader fullscreen />;
 
@@ -481,7 +563,7 @@ const IntegrationsPage: NextPageWithLayout = () => {
     return (
       <EmptyState
         icon={<ExclamationTriangleIcon />}
-        title="Could not retrieve webhooks"
+        title="Could not retrieve integrations."
         description={
           data?.response?.details || error?.message || "Please try again"
         }
@@ -500,14 +582,32 @@ const IntegrationsPage: NextPageWithLayout = () => {
             <a
               target="_blank"
               rel="noreferrer"
-              href={docsBaseURL + "/studio/webhooks"}
+              href={docsBaseURL + "/studio/slack-integration"}
               className="text-primary"
             >
               Learn more.
             </a>
           </>
         }
-        actions={<Integration mode="create" refresh={() => refetch()} />}
+        actions={
+          <>
+            <Button variant="default" size="default" asChild>
+              <Link
+                href={`https://slack.com/oauth/v2/authorize?scope=incoming-webhook%2Cchat%3Awrite&user_scope=&redirect_uri=${slackRedirectURL}&client_id=${process.env.NEXT_PUBLIC_SLACK_CLIENT_ID}`}
+              >
+                Integrate
+              </Link>
+            </Button>
+            {shouldCreate && (
+              <Integration
+                mode="create"
+                refresh={() => refetch()}
+                open={true}
+                code={code}
+              />
+            )}
+          </>
+        }
       />
     );
   }
@@ -527,7 +627,23 @@ const IntegrationsPage: NextPageWithLayout = () => {
             Learn more
           </Link>
         </p>
-        <Integration mode="create" refresh={() => refetch()} />
+        <>
+          <Button variant="default" size="default" asChild>
+            <Link
+              href={`https://slack.com/oauth/v2/authorize?scope=incoming-webhook%2Cchat%3Awrite&user_scope=&redirect_uri=${slackRedirectURL}&client_id=${process.env.NEXT_PUBLIC_SLACK_CLIENT_ID}`}
+            >
+              Integrate
+            </Link>
+          </Button>
+          {shouldCreate && (
+            <Integration
+              mode="create"
+              refresh={() => refetch()}
+              open={true}
+              code={code}
+            />
+          )}
+        </>
       </div>
       <Table>
         <TableHeader>

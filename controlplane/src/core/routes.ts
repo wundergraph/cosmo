@@ -24,6 +24,7 @@ export interface RouterOptions {
   platformWebhooks: IPlatformWebhookService;
   webBaseUrl: string;
   githubApp?: App;
+  slack: { clientID: string; clientSecret: string };
 }
 const handlerOptions: Partial<ConnectRouterOptions> = {
   maxTimeoutMs: 5000,

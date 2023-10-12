@@ -244,3 +244,13 @@ export interface GraphApiKeyDTO {
   token: string;
   createdAt: string;
 }
+
+export interface SlackAccessTokenResponse {
+  slackUserId: string;
+  accessToken: string;
+  slackOrgId: string;
+  slackOrgName: string;
+  slackChannelId: string;
+  slackChannelName: string;
+  webhookURL: string;
+}
