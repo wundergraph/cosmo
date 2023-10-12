@@ -6,24 +6,32 @@ package wg.cosmo.graphqlmetrics.v1;
 
 import "wg/cosmo/common/common.proto";
 
-message GraphQLRequestMetrics {
-  string Document = 1;
-  repeated TypeFieldMetric TypeFieldMetrics = 2;
-  RequestInfo RequestInfo = 3;
+message SchemaUsageInfo {
+  string OperationDocument = 1;
+  repeated TypeFieldUsageInfo TypeFieldMetrics = 2;
+  OperationInfo OperationInfo = 3;
+  RequestInfo RequestInfo = 4;
+  map<string,string> Attributes = 6;
+}
+
+message OperationInfo {
+  string OperationHash = 1;
+  string OperationName = 2;
+  string OperationType = 3;
 }
 
 message RequestInfo {
-
+  string FederatedGraphID = 1;
+  string OrganizationID = 2;
+  string RouterConfigVersion = 3;
 }
 
-message TypeFieldMetric {
-  string TypeName = 1;
-  string FieldName = 2;
-  bool IsAbstract = 3;
-  string SpecificTypeName = 4;
-  bool IsList = 5;
-  int32 ReturnedObjectCount = 6;
+message TypeFieldUsageInfo {
+  string OperationType = 1;
+  repeated string Path = 2;
+  repeated string TypeNames = 3;
   TypeFieldSource Source = 7;
+  uint64 Count = 8;
 }
 
 message TypeFieldSource {
@@ -31,7 +39,7 @@ message TypeFieldSource {
 }
 
 message PublishGraphQLRequestMetricsRequest {
-  repeated GraphQLRequestMetrics metrics = 1;
+  repeated SchemaUsageInfo SchemaUsage = 1;
 }
 
 message PublishOperationCoverageReportResponse {
@@ -40,21 +48,3 @@ message PublishOperationCoverageReportResponse {
 service GraphQLMetricsService {
   rpc PublishGraphQLMetrics(PublishGraphQLRequestMetricsRequest) returns (PublishOperationCoverageReportResponse) {}
 }
-
-// SingleFetch makes a single request for one single object
-message SingleFetch {}
-
-// ParallelFetch makes multiple requests in parallel for one single object
-message ParallelFetch {}
-
-// BatchFetch makes a single batch request for multiple objects
-// It is expected to be used only within a list or lists of lists
-message BatchFetch {}
-
-// SerialFetch makes multiple requests in series for one single object
-message SerialFetch {}
-
-// ParallelListItemFetch makes multiple requests in parallel, one for each item in a list
-// It is expected to be used only within a list or lists of lists
-// Use this over BatchFetch when the data source does not support batching
-message ParallelListItemFetch {}

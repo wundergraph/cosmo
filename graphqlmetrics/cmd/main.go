@@ -45,7 +45,7 @@ func main() {
 		log.Fatal("Could not parse dsn", zap.Error(err))
 	}
 
-	chConn, err := clickhouse.Open(&clickhouse.Options{
+	db := clickhouse.OpenDB(&clickhouse.Options{
 		Addr: options.Addr,
 		Auth: clickhouse.Auth{
 			Database: options.Auth.Database,
@@ -58,12 +58,9 @@ func main() {
 		Compression: &clickhouse.Compression{
 			Method: clickhouse.CompressionLZ4,
 		},
-		DialTimeout:          time.Second * 30,
-		ConnMaxLifetime:      time.Duration(10) * time.Minute,
-		ConnOpenStrategy:     clickhouse.ConnOpenInOrder,
-		BlockBufferSize:      10,
-		MaxCompressionBuffer: 10240,
-		ClientInfo: clickhouse.ClientInfo{ // optional, please see Client info section in the README.md
+		Protocol:    options.Protocol,
+		DialTimeout: time.Second * 30,
+		ClientInfo: clickhouse.ClientInfo{
 			Products: []struct {
 				Name    string
 				Version string
@@ -73,19 +70,14 @@ func main() {
 		},
 	})
 
-	if err != nil {
-		log.Fatal("Could not connect to clickhouse", zap.Error(err))
-
-	}
-
-	if err := chConn.Ping(ctx); err != nil {
+	if err := db.PingContext(ctx); err != nil {
 		log.Fatal("Could not ping clickhouse", zap.Error(err))
 	} else {
 		logger.Info("Connected to clickhouse")
 	}
 
 	svr := graphqlmetrics.NewServer(
-		graphqlmetrics.NewMetricsService(logger, chConn),
+		graphqlmetrics.NewMetricsService(logger, db),
 		graphqlmetrics.WithLogger(logger),
 	)
 
