@@ -45,7 +45,7 @@ type MetricsService struct {
 
 // NewMetricsService creates a new metrics service
 func NewMetricsService(logger *zap.Logger, chConn *sql.DB, jwtSecret string) *MetricsService {
-	c, err := lru.New[string, struct{}](10000)
+	c, err := lru.New[string, struct{}](25000)
 	if err != nil {
 		panic(err)
 	}
