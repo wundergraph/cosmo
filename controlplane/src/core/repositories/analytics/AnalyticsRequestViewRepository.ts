@@ -650,12 +650,13 @@ export class AnalyticsRequestViewRepository {
       coercedQueryParams.endDate = Math.floor(new Date(opts.dateRange.end).getTime() / 1000);
     }
 
-    let { havingSql, whereSql } = buildCoercedFilterSqlStatement(
+    const { havingSql, ...rest } = buildCoercedFilterSqlStatement(
       columnMetaData,
       coercedQueryParams,
       filterMapper,
       opts?.dateRange,
     );
+    let { whereSql } = rest;
 
     // Important: This is the only place where we scope the data to a particular organization and graph.
     // We can only filter for data that is part of the JWT token otherwise a user could send us whatever they want.
