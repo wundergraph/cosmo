@@ -231,10 +231,6 @@ export function AnalyticsDataTable<T>({
   });
 
   const onGroupChange = (val: AnalyticsViewGroupName) => {
-    if (val === AnalyticsViewGroupName.None) {
-      return applyNewParams({}, ["group", "sort", "sortDir"]);
-    }
-
     applyNewParams(
       {
         group: AnalyticsViewGroupName[val],
