@@ -24,3 +24,4 @@ data:
   webhookUrl: "{{ .Values.configuration.webhookUrl }}"
   githubAppClientId: "{{ .Values.configuration.githubAppClientId }}"
   githubAppId: "{{ .Values.configuration.githubAppId }}"
+  slackAppClientId: "{{ .Values.configuration.slackAppClientId }}"

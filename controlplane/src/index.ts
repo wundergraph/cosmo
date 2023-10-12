@@ -34,8 +34,8 @@ const {
   GITHUB_APP_CLIENT_SECRET,
   GITHUB_APP_ID,
   GITHUB_APP_PRIVATE_KEY,
-  SLACK_CLIENT_ID,
-  SLACK_CLIENT_SECRET,
+  SLACK_APP_CLIENT_ID,
+  SLACK_APP_CLIENT_SECRET,
 } = envVariables.parse(process.env);
 
 const options: BuildConfig = {
@@ -77,8 +77,8 @@ const options: BuildConfig = {
   },
   debugSQL: DEBUG_SQL,
   slack: {
-    clientID: SLACK_CLIENT_ID,
-    clientSecret: SLACK_CLIENT_SECRET,
+    clientID: SLACK_APP_CLIENT_ID,
+    clientSecret: SLACK_APP_CLIENT_SECRET,
   },
 };
 
