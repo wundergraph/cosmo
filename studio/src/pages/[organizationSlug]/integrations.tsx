@@ -318,7 +318,14 @@ const Integration = ({
           </Button>
         </DialogTrigger>
       )}
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent
+        className="sm:max-w-[425px]"
+        onInteractOutside={(event) => {
+          if (mode === "create") {
+            event.preventDefault();
+          }
+        }}
+      >
         <DialogHeader>
           <DialogTitle>
             {mode === "create" ? "Set up a" : "Update"} slack integration
