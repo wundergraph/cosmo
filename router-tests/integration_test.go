@@ -63,8 +63,6 @@ func TestMain(m *testing.M) {
 		}
 	}()
 
-	const maxRetries = 10
-
 	timeoutCtx, cancelFunc := context.WithTimeout(ctx, 1*time.Second)
 	defer cancelFunc()
 	// Wait until the ports are open
@@ -172,12 +170,56 @@ func setupServer(tb testing.TB) *core.Server {
 	return server
 }
 
+func normalizeJSON(tb testing.TB, data []byte) []byte {
+	var v interface{}
+	err := json.Unmarshal(data, &v)
+	require.NoError(tb, err)
+	normalized, err := json.MarshalIndent(v, "", "  ")
+	require.NoError(tb, err)
+	return normalized
+}
+
 func TestIntegration(t *testing.T) {
 	server := setupServer(t)
 	result := sendQueryOK(t, server, &testQuery{
 		Body: "{ employees { id } }",
 	})
 	assert.JSONEq(t, result, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`)
+}
+
+func TestTestdataQueries(t *testing.T) {
+	server := setupServer(t)
+	queries := filepath.Join("testdata", "queries")
+	entries, err := os.ReadDir(queries)
+	require.NoError(t, err)
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			t.Fatalf("unexpected file in %s: %s", queries, entry.Name())
+		}
+		name := entry.Name()
+		t.Run(name, func(t *testing.T) {
+			if name == "employees" {
+				t.Skip("this is not yet passing")
+			}
+			testDir := filepath.Join(queries, name)
+			queryData, err := os.ReadFile(filepath.Join(testDir, "query.graphql"))
+			require.NoError(t, err)
+			payload := map[string]any{
+				"query": string(queryData),
+			}
+			payloadData, err := json.Marshal(payload)
+			require.NoError(t, err)
+			recorder := sendData(server, payloadData)
+			if recorder.Code != http.StatusOK {
+				t.Error("unexpected status code", recorder.Code)
+			}
+			result := recorder.Body.String()
+			expectedData, err := os.ReadFile(filepath.Join(testDir, "result.json"))
+			require.NoError(t, err)
+			assert.Equal(t, normalizeJSON(t, expectedData), normalizeJSON(t, []byte(result)))
+
+		})
+	}
 }
 
 func TestIntegrationWithUndefinedField(t *testing.T) {

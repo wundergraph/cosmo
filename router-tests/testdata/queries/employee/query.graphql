@@ -1,0 +1,20 @@
+query {
+  # can return null
+  employee(id: 1) {
+    # resolved through employees subgraph
+    id
+    details {
+      forename
+      location
+    }
+  }
+  team_mates(team: OPERATIONS) {
+    # resolved through employees subgraph
+    id
+    details {
+      forename
+    }
+    # resolved through products subgraph
+    products
+  }
+}
