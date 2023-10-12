@@ -5,6 +5,9 @@ import { randomString } from 'https://jslib.k6.io/k6-utils/1.2.0/index.js';
 export default function () {
   let headers = {
     'Content-Type': 'application/json',
+    // Graph API token
+    Authorization:
+      'Bearer eyJhbGciOiJIUzI1NiJ9.eyJmZWRlcmF0ZWRfZ3JhcGhfaWQiOiI3N2U0MDBjYy01NmQ2LTQ5ZTctODc4My0zMzExY2U1MzU5YzIiLCJvcmdhbml6YXRpb25faWQiOiJhNzdkNzRkZC05YTE1LTQxZDItOGU0My01NjBhYzMxNTA5NDAiLCJpYXQiOjE2OTcxMTEzNjF9.8E4UO_tDFM-VYNeAAGIotHHu0TjNoxB3bX12sHUz-ns',
   };
 
   const randomHash = randomString(32);
