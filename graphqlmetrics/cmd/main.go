@@ -70,6 +70,9 @@ func main() {
 		},
 	})
 
+	db.SetMaxIdleConns(10)
+	db.SetMaxOpenConns(15)
+
 	if err := db.PingContext(ctx); err != nil {
 		log.Fatal("Could not ping clickhouse", zap.Error(err))
 	} else {
