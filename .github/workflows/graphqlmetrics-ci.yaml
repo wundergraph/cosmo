@@ -13,7 +13,6 @@ concurrency:
 
 env:
   CI: true
-  DATABASE_URL: "clickhouse://default:changeme@localhost:9000/cosmo"
 
 jobs:
   build_test:
