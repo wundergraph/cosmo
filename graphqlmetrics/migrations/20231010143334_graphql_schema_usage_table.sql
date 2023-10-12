@@ -1,6 +1,6 @@
 -- migrate:up
 
-create table cosmo.graphql_schema_field_usage_reports
+create table graphql_schema_field_usage_reports
 (
     Timestamp DateTime64(9) CODEC(Delta, ZSTD(1)),
 
@@ -40,4 +40,4 @@ create table cosmo.graphql_schema_field_usage_reports
 
 -- migrate:down
 
-DROP TABLE cosmo.graphql_schema_field_usage_reports;
+DROP TABLE graphql_schema_field_usage_reports;

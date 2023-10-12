@@ -109,13 +109,13 @@ func (s *MetricsService) PublishGraphQLMetrics(
 	// Important: Wait for completion of all queries before returning to guarantee that all data is written
 	ctx = clickhouse.Context(ctx, clickhouse.WithStdAsync(true))
 
-	batchOperationStmts, err := scopeOperationBatch.PrepareContext(ctx, `INSERT INTO cosmo.graphql_operations`)
+	batchOperationStmts, err := scopeOperationBatch.PrepareContext(ctx, `INSERT INTO graphql_operations`)
 	if err != nil {
 		s.logger.Error("Failed to prepare operation batch statement", zap.Error(err))
 		return nil, errOperationWriteFailed
 	}
 
-	batchSchemaUsageStmts, err := scopeFieldUsageBatch.PrepareContext(ctx, `INSERT INTO cosmo.graphql_schema_field_usage_reports`)
+	batchSchemaUsageStmts, err := scopeFieldUsageBatch.PrepareContext(ctx, `INSERT INTO graphql_schema_field_usage_reports`)
 	if err != nil {
 		s.logger.Error("Failed to prepare field usage batch statement", zap.Error(err))
 		return nil, errMetricWriteFailed

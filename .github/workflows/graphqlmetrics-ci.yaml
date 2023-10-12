@@ -13,7 +13,7 @@ concurrency:
 
 env:
   CI: true
-  DATABASE_URL: "clickhouse://default:changeme@localhost:9000?database=cosmo"
+  DATABASE_URL: "clickhouse://default:changeme@localhost:9000/cosmo"
 
 jobs:
   build_test:
@@ -50,7 +50,7 @@ jobs:
           cache-dependency-path: graphqlmetrics/go.sum
 
       - name: Install tools
-        run: make setup-dev-tools
+        run: make setup-build-tools
 
       - name: Generate code
         run: rm -rf graphqlmetrics/gen && buf generate --path proto/wg/cosmo/graphqlmetrics --path proto/wg/cosmo/common --template buf.graphqlmetrics.go.gen.yaml
@@ -61,14 +61,6 @@ jobs:
       - name: Install dependencies
         working-directory: ./graphqlmetrics
         run: go mod download
-
-      - name: Wait for Clickhouse to be ready
-        working-directory: ./graphqlmetrics
-        run: dbmate wait
-
-      - name: Migration
-        working-directory: ./graphqlmetrics
-        run: make migrate
 
       - name: Test
         working-directory: ./graphqlmetrics

@@ -1,6 +1,6 @@
 -- migrate:up
 
-create table cosmo.graphql_operations
+create table graphql_operations
 (
     Timestamp DateTime64(9) CODEC(Delta, ZSTD(1)),
     OperationHash LowCardinality(String) CODEC(ZSTD(1)),
@@ -22,4 +22,4 @@ create table cosmo.graphql_operations
 
 -- migrate:down
 
-DROP TABLE cosmo.graphql_operations;
+DROP TABLE graphql_operations;
