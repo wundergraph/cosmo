@@ -75,10 +75,12 @@ func (s *MetricsService) PublishGraphQLMetrics(
 		return s.jwtSecret, nil
 	})
 	if err != nil {
+		s.logger.Debug("Failed to parse token", zap.Error(err))
 		return nil, errNotAuthenticated
 	}
 
 	if !token.Valid {
+		s.logger.Debug("Token is invalid", zap.Bool("valid", token.Valid))
 		return nil, errJWTInvalid
 	}
 
