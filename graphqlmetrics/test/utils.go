@@ -14,7 +14,7 @@ import (
 var (
 	defaultURL      = os.Getenv("CLICKHOUSE_URL")
 	defaultDatabase = os.Getenv("CLICKHOUSE_DATABASE")
-	defaultUsername = os.Getenv("CLICKHOUSE_USERNAME")
+	defaultUsername = os.Getenv("CLICKHOUSE_USER")
 	defaultPassword = os.Getenv("CLICKHOUSE_PASSWORD")
 )
 
