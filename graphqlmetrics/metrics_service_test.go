@@ -13,7 +13,7 @@ import (
 
 var jwtSecret = []byte("secret")
 
-func TestName(t *testing.T) {
+func TestPublishGraphQLMetrics(t *testing.T) {
 	db := test.GetTestDatabase()
 
 	msvc := NewMetricsService(zap.NewNop(), db, jwtSecret)
@@ -82,4 +82,47 @@ func TestName(t *testing.T) {
 	`).Scan(&fieldUsageCount)
 
 	assert.Greater(t, fieldUsageCount, 0)
+}
+
+func TestAuthentication(t *testing.T) {
+	db := test.GetTestDatabase()
+
+	msvc := NewMetricsService(zap.NewNop(), db, jwtSecret)
+
+	req := &graphqlmetricsv1.PublishGraphQLRequestMetricsRequest{
+		SchemaUsage: []*graphqlmetricsv1.SchemaUsageInfo{
+			{
+				OperationDocument: "query Hello { hello }",
+				TypeFieldMetrics: []*graphqlmetricsv1.TypeFieldUsageInfo{
+					{
+						Path:      []string{"hello"},
+						TypeNames: []string{"Query"},
+						Source:    nil,
+						Count:     1,
+					},
+				},
+				OperationInfo: &graphqlmetricsv1.OperationInfo{
+					OperationHash: "hash123",
+					OperationName: "Hello",
+					OperationType: "query",
+				},
+				RequestInfo: &graphqlmetricsv1.RequestInfo{
+					RouterConfigVersion: "v1",
+				},
+				Attributes: map[string]string{
+					"test": "test123",
+				},
+			},
+		},
+	}
+
+	// Request without jwt token
+	pReq := connect.NewRequest[graphqlmetricsv1.PublishGraphQLRequestMetricsRequest](req)
+
+	_, err := msvc.PublishGraphQLMetrics(
+		context.Background(),
+		pReq,
+	)
+	assert.NotEmpty(t, err)
+	assert.Error(t, err, errNotAuthenticated)
 }
