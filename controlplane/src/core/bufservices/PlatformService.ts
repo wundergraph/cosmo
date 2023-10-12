@@ -2885,7 +2885,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           return {
             response: {
               code: EnumStatusCode.ERR,
-              details: 'The code is already used',
+              details: 'Could not set up the integration. Please try again.',
             },
           };
         }

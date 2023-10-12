@@ -555,20 +555,10 @@ export const slackIntegrationConfigs = pgTable('slack_integration_configs', {
   endpoint: text('endpoint').notNull(),
 });
 
-export const slackIntegrationEventConfigs = pgTable('slack_integration_event_configs', {
-  id: uuid('id').notNull().primaryKey().defaultRandom(),
+export const slackSchemaUpdateEventConfigs = pgTable('slack_schema_update_event_configs', {
   slackIntegrationConfigId: uuid('slack_integration_config_id')
     .notNull()
     .references(() => slackIntegrationConfigs.id, {
-      onDelete: 'cascade',
-    }),
-  event: text('event').notNull(),
-});
-
-export const slackEventGraphIds = pgTable('slack_event_graph_ids', {
-  slackIntegrationEventConfigId: uuid('slack_integration_event_config_id')
-    .notNull()
-    .references(() => slackIntegrationEventConfigs.id, {
       onDelete: 'cascade',
     }),
   federatedGraphId: uuid('federated_graph_id')
@@ -584,20 +574,16 @@ export const organizationIntegrationRelations = relations(organizationIntegratio
 }));
 
 export const slackIntegrationConfigsRelations = relations(slackIntegrationConfigs, ({ many }) => ({
-  slackIntegrationEventConfigs: many(slackIntegrationEventConfigs),
+  slackSchemUpdateEventConfigs: many(slackSchemaUpdateEventConfigs),
 }));
 
-export const slackIntegrationEventConfigsRelations = relations(slackIntegrationEventConfigs, ({ many }) => ({
-  slackEventGraphIds: many(slackEventGraphIds),
-}));
-
-export const slackEventGraphIdsRelations = relations(slackEventGraphIds, ({ one }) => ({
-  slackIntegrationEventConfig: one(slackIntegrationEventConfigs, {
-    fields: [slackEventGraphIds.slackIntegrationEventConfigId],
-    references: [slackIntegrationEventConfigs.id],
+export const slackSchemaUpdateEventConfigRelations = relations(slackSchemaUpdateEventConfigs, ({ one }) => ({
+  slackIntegrationEventConfig: one(slackIntegrationConfigs, {
+    fields: [slackSchemaUpdateEventConfigs.slackIntegrationConfigId],
+    references: [slackIntegrationConfigs.id],
   }),
   federatedGraph: one(federatedGraphs, {
-    fields: [slackEventGraphIds.federatedGraphId],
+    fields: [slackSchemaUpdateEventConfigs.federatedGraphId],
     references: [federatedGraphs.id],
   }),
 }));

@@ -6,7 +6,7 @@ import {
   IntegrationConfig,
   IntegrationType,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, eq, desc } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema.js';
 import {
@@ -17,9 +17,8 @@ import {
   organizationWebhooks,
   organizations,
   organizationsMembers,
-  slackEventGraphIds,
+  slackSchemaUpdateEventConfigs,
   slackIntegrationConfigs,
-  slackIntegrationEventConfigs,
   targets,
   users,
 } from '../../db/schema.js';
@@ -643,23 +642,16 @@ export class OrganizationRepository {
             switch (eventMeta.meta.case) {
               case 'federatedGraphSchemaUpdated': {
                 const ids = eventMeta.meta.value.graphIds;
-                const slackIntegrationEventConfig = await db
-                  .insert(slackIntegrationEventConfigs)
-                  .values({
-                    event: eventMeta.meta.case,
-                    slackIntegrationConfigId: slackIntegrationConfig[0].id,
-                  })
-                  .returning()
-                  .execute();
-
-                await db.insert(slackEventGraphIds).values(
+                await db.insert(slackSchemaUpdateEventConfigs).values(
                   ids.map((id) => ({
-                    slackIntegrationEventConfigId: slackIntegrationEventConfig[0].id,
+                    slackIntegrationConfigId: slackIntegrationConfig[0].id,
                     federatedGraphId: id,
                   })),
                 );
-
                 break;
+              }
+              default: {
+                throw new Error(`This event ${eventMeta.meta.case} doesnt exist`);
               }
             }
           }
@@ -684,7 +676,11 @@ export class OrganizationRepository {
       case integrationTypeEnum.enumValues[0]: {
         const slackIntegrationConfig = await this.db.query.slackIntegrationConfigs.findFirst({
           where: eq(slackIntegrationConfigs.integrationId, res.id),
+          with: {
+            slackSchemUpdateEventConfigs: true,
+          },
         });
+
         if (!slackIntegrationConfig) {
           return undefined;
         }
@@ -699,31 +695,23 @@ export class OrganizationRepository {
           },
         };
 
-        const integrationEventConfigs = await this.db.query.slackIntegrationEventConfigs.findMany({
-          where: eq(slackIntegrationEventConfigs.slackIntegrationConfigId, slackIntegrationConfig.id),
-          with: {
-            slackEventGraphIds: true,
-          },
-        });
-
         return {
           id: res.id,
           name: res.name,
           type: res.type,
           events: res.events || [],
           integrationConfig: config,
-          eventsMeta: integrationEventConfigs.map(
-            (ic) =>
-              ({
-                eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
-                meta: {
-                  case: 'federatedGraphSchemaUpdated',
-                  value: {
-                    graphIds: ic.slackEventGraphIds.map((i) => i.federatedGraphId),
-                  },
+          eventsMeta: [
+            {
+              eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
+              meta: {
+                case: 'federatedGraphSchemaUpdated',
+                value: {
+                  graphIds: slackIntegrationConfig.slackSchemUpdateEventConfigs.map((i) => i.federatedGraphId),
                 },
-              } as EventMeta),
-          ),
+              },
+            },
+          ],
         } as Integration;
       }
       default: {
@@ -745,6 +733,9 @@ export class OrganizationRepository {
         case integrationTypeEnum.enumValues[0]: {
           const slackIntegrationConfig = await this.db.query.slackIntegrationConfigs.findFirst({
             where: eq(slackIntegrationConfigs.integrationId, r.id),
+            with: {
+              slackSchemUpdateEventConfigs: true,
+            },
           });
           if (!slackIntegrationConfig) {
             continue;
@@ -760,28 +751,23 @@ export class OrganizationRepository {
             },
           };
 
-          const integrationEventConfigs = await this.db.query.slackIntegrationEventConfigs.findMany({
-            where: eq(slackIntegrationEventConfigs.slackIntegrationConfigId, slackIntegrationConfig.id),
-            with: {
-              slackEventGraphIds: true,
-            },
-          });
-
           orgIntegrations.push({
             id: r.id,
             name: r.name,
             type: r.type,
             events: r.events || [],
             integrationConfig: config,
-            eventsMeta: integrationEventConfigs.map((ic) => ({
-              eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
-              meta: {
-                case: 'federatedGraphSchemaUpdated',
-                value: {
-                  graphIds: ic.slackEventGraphIds.map((i) => i.federatedGraphId),
+            eventsMeta: [
+              {
+                eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
+                meta: {
+                  case: 'federatedGraphSchemaUpdated',
+                  value: {
+                    graphIds: slackIntegrationConfig.slackSchemUpdateEventConfigs.map((i) => i.federatedGraphId),
+                  },
                 },
               },
-            })),
+            ],
           } as Integration);
 
           break;
@@ -821,42 +807,28 @@ export class OrganizationRepository {
             .returning()
             .execute();
 
-          // if the meta is not sent, we delete the existing event configs
+          // if the meta is not sent, we delete all the existing event configs
           if (input.eventsMeta.length === 0) {
             await db
-              .delete(slackIntegrationEventConfigs)
-              .where(eq(slackIntegrationEventConfigs.slackIntegrationConfigId, slackIntegrationConfig[0].id));
+              .delete(slackSchemaUpdateEventConfigs)
+              .where(and(eq(slackSchemaUpdateEventConfigs.slackIntegrationConfigId, slackIntegrationConfig[0].id)));
           }
 
           for (const eventMeta of input.eventsMeta) {
             switch (eventMeta.meta.case) {
               case 'federatedGraphSchemaUpdated': {
                 await db
-                  .delete(slackIntegrationEventConfigs)
-                  .where(
-                    and(
-                      eq(slackIntegrationEventConfigs.slackIntegrationConfigId, slackIntegrationConfig[0].id),
-                      eq(slackIntegrationEventConfigs.event, eventMeta.meta.case),
-                    ),
-                  );
+                  .delete(slackSchemaUpdateEventConfigs)
+                  .where(and(eq(slackSchemaUpdateEventConfigs.slackIntegrationConfigId, slackIntegrationConfig[0].id)));
 
                 const ids = eventMeta.meta.value.graphIds;
                 if (ids.length === 0) {
                   break;
                 }
 
-                const slackIntegrationEventConfig = await db
-                  .insert(slackIntegrationEventConfigs)
-                  .values({
-                    event: eventMeta.meta.case,
-                    slackIntegrationConfigId: slackIntegrationConfig[0].id,
-                  })
-                  .returning()
-                  .execute();
-
-                await db.insert(slackEventGraphIds).values(
+                await db.insert(slackSchemaUpdateEventConfigs).values(
                   ids.map((id) => ({
-                    slackIntegrationEventConfigId: slackIntegrationEventConfig[0].id,
+                    slackIntegrationConfigId: slackIntegrationConfig[0].id,
                     federatedGraphId: id,
                   })),
                 );
