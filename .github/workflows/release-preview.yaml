@@ -25,12 +25,19 @@ jobs:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
+          token: ${{ secrets.GH_TOKEN_WORKFLOW_PUBLISH }}
 
       - uses: ./.github/actions/node
+        with:
+          working-directory: ${{ env.WORKING_DIRECTORY }}
+
+      - run: npm config set //registry.npmjs.org/:_authToken $NPM_TOKEN
+        shell: bash
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Install
-        run: |
-          pnpm add -g @lerna-lite/cli@2.5.0 @lerna-lite/publish@2.5.0 @lerna-lite/version@2.5.0 @commitlint/config-conventional@17.6.6
+        run: pnpm install --frozen-lockfile --filter='wundergraph-cosmo'
 
       - name: Generate next release (dry-run)
         run: pnpm run release-preview --yes
