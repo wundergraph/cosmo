@@ -5,6 +5,7 @@ on:
       - main
     paths:
       - "router/**/*"
+      - "router-tests/**/*"
       - "connect/**/*"
       - ".github/workflows/router-ci.yaml"
 

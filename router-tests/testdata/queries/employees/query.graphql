@@ -1,0 +1,70 @@
+query {
+  employees {
+    # resolved through employees subgraph
+    id
+    details {
+      # resolved through either employees or family subgraph
+      forename
+      surname
+      # resolved through employees subgraph
+      location
+      # resolved through family subgraph
+      hasChildren
+      # maritalStatus can return null
+      maritalStatus
+      nationality
+      # pets can return null
+      pets {
+        class
+        gender
+        name
+        ... on Cat {
+          type
+        }
+        ... on Dog {
+          breed
+        }
+        ... on Alligator {
+          dangerous
+        }
+      }
+    }
+    # resolved through employees subgraph
+    role {
+      department
+      title
+      ... on Engineer {
+        engineerType
+      }
+      ... on Operator {
+        operatorType
+      }
+    }
+    # resolved through hobbies subgraph
+    hobbies {
+      ... on Exercise {
+        category
+      }
+      ... on Flying {
+        planeModels
+        yearsOfExperience
+      }
+      ... on Gaming {
+        genres
+        name
+        yearsOfExperience
+      }
+      ... on Other {
+        name
+      }
+      ... on Programming {
+        languages
+      }
+      ... on Travelling {
+        countriesLived
+      }
+    }
+    # resolved through products subgraph
+    products
+  }
+}
