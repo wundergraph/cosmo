@@ -715,7 +715,7 @@ export class OrganizationRepository {
         } as Integration;
       }
       default: {
-        throw new Error('The type of the integration doesnt exist');
+        throw new Error(`The type of the integration ${res.type} doesnt exist`);
       }
     }
   }
@@ -773,7 +773,7 @@ export class OrganizationRepository {
           break;
         }
         default: {
-          throw new Error('The type of the integration doesnt exist');
+          throw new Error(`The type of the integration ${r.type} doesnt exist`);
         }
       }
     }

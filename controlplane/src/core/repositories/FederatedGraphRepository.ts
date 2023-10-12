@@ -554,7 +554,8 @@ export class FederatedGraphRepository {
     const federatedGraph = await this.db
       .select({ schemaVersionId: federatedGraphs.composedSchemaVersionId })
       .from(federatedGraphs)
-      .where(eq(federatedGraphs.id, federatedGraphId));
+      .innerJoin(targets, eq(targets.id, federatedGraphs.targetId))
+      .where(and(eq(federatedGraphs.id, federatedGraphId), eq(targets.organizationId, this.organizationId)));
 
     if (federatedGraph.length === 0) {
       return undefined;
