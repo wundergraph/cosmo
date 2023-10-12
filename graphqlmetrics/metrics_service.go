@@ -12,8 +12,12 @@ import (
 )
 
 type MetricsService struct {
-	logger       *zap.Logger
-	db           *sql.DB
+	logger *zap.Logger
+
+	// db is the clickhouse connection
+	db *sql.DB
+
+	// opGuardCache is used to prevent duplicate writes of the same operation
 	opGuardCache *lru.Cache[string, struct{}]
 }
 
@@ -104,7 +108,8 @@ func (s *MetricsService) PublishGraphQLMetrics(
 		return nil, err
 	}
 
-	// Update the cache with the operations we just wrote
+	// Update the cache with the operations we just wrote. Due to asynchronicity, it possibly happens
+	// that we still write some operations twice, but that's fine since clickhouse will deduplicate them anyway
 	for _, schemaUsage := range req.Msg.SchemaUsage {
 		s.opGuardCache.Add(schemaUsage.OperationInfo.OperationHash, struct{}{})
 	}
