@@ -22,7 +22,7 @@ func GetTestDatabase(t *testing.T) *sql.DB {
 	databaseName := xid.New().String()
 
 	if defaultURL == "" {
-		defaultURL = "localhost:9000"
+		defaultURL = "localhost:8123"
 	}
 	if defaultDatabase == "" {
 		defaultDatabase = "default"
@@ -35,7 +35,7 @@ func GetTestDatabase(t *testing.T) *sql.DB {
 	}
 
 	rootDB := clickhouse.OpenDB(&clickhouse.Options{
-		Addr:     []string{"localhost:8123"},
+		Addr:     []string{defaultURL},
 		Protocol: clickhouse.HTTP,
 		Settings: map[string]any{
 			"insert_quorum":                 "1",
