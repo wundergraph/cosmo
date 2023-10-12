@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.24.0](https://github.com/wundergraph/cosmo/compare/router@0.23.1...router@0.24.0) (2023-10-11)
+
+### Bug Fixes
+
+* usage of variables ([#179](https://github.com/wundergraph/cosmo/issues/179)) ([07d484b](https://github.com/wundergraph/cosmo/commit/07d484b076591e904c6b3a6eee3ff6c39596897e)) (@jensneuse)
+
+### Features
+
+* add graphql client info to metric attributes ([#176](https://github.com/wundergraph/cosmo/issues/176)) ([3f929a8](https://github.com/wundergraph/cosmo/commit/3f929a813435c8f7b198588ee465227058fa0b68)) (@StarpTech)
+
 ## [0.23.1](https://github.com/wundergraph/cosmo/compare/router@0.23.0...router@0.23.1) (2023-10-09)
 
 ### Bug Fixes
