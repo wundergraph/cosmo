@@ -64,7 +64,9 @@ func TestName(t *testing.T) {
 	var opCount int
 	db.QueryRow(`
 		SELECT COUNT(*) FROM cosmo.graphql_operations
-    	WHERE OperationHash = 'hash123' GROUP BY OperationHash LIMIT 1
+    	WHERE OperationHash = 'hash123' AND
+    	OperationContent = 'query Hello { hello }'
+    	GROUP BY OperationHash LIMIT 1
 	`).Scan(&opCount)
 
 	assert.Greater(t, opCount, 0)
