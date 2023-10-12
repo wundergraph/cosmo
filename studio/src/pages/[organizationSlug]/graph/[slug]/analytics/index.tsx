@@ -490,7 +490,7 @@ const RequestMetricsCard = (props: { data?: MetricsDashboardMetric }) => {
         title="Highest RPM"
         items={top}
         formatter={formatter}
-        queryParams={{ group: "OperationName" }}
+        queryParams={top.length > 1 ? { group: "OperationName" } : {}}
       />
     </Card>
   );
@@ -539,7 +539,11 @@ const LatencyMetricsCard = (props: { data?: MetricsDashboardMetric }) => {
         title="Highest latency"
         items={top}
         formatter={formatter}
-        queryParams={{ group: "OperationName", sort: "p95", sortDir: "desc" }}
+        queryParams={
+          top.length > 1
+            ? { group: "OperationName", sort: "p95", sortDir: "desc" }
+            : {}
+        }
       />
     </Card>
   );
@@ -585,7 +589,11 @@ const ErrorMetricsCard = (props: { data?: MetricsDashboardMetric }) => {
         title="Highest error percentage"
         items={top}
         formatter={formatter}
-        queryParams={{ group: "OperationName", sort: "errorsWithRate" }}
+        queryParams={
+          top.length > 1
+            ? { group: "OperationName", sort: "errorsWithRate" }
+            : {}
+        }
       />
     </Card>
   );

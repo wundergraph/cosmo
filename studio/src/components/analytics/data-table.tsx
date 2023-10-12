@@ -95,7 +95,7 @@ export function AnalyticsDataTable<T>({
 }) {
   const router = useRouter();
 
-  const [, setRouteCache] = useSessionStorage("analytics.route", router.asPath);
+  const [, setRouteCache] = useSessionStorage("analytics.route", router.query);
 
   const [refreshInterval, setRefreshInterval] = useState(refreshIntervals[0]);
 
@@ -306,7 +306,7 @@ export function AnalyticsDataTable<T>({
         const { organizationSlug } = router.query;
 
         // Save the current route in sessionStorage so we can go back to it
-        setRouteCache(router.asPath);
+        setRouteCache(router.query);
 
         router.push(
           `/${organizationSlug}/graph/${slug}/analytics/${row.getValue(

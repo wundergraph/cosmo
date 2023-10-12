@@ -1,6 +1,7 @@
 import { PlainMessage } from '@bufbuild/protobuf';
 import {
   AnalyticsConfig,
+  AnalyticsFilter,
   AnalyticsViewFilterOperator,
   AnalyticsViewGroupName,
   AnalyticsViewResult,
@@ -597,6 +598,27 @@ export class AnalyticsRequestViewRepository {
     }
   }
 
+  // Omit fields that are not supported in the grouped views to prevent errors
+  // in the generated sql queries
+  private omitGroupedFilters(name: AnalyticsViewGroupName, filters: AnalyticsFilter[]) {
+    switch (name) {
+      case AnalyticsViewGroupName.None: {
+        return filters.filter((f) => f.field !== 'p95');
+      }
+      case AnalyticsViewGroupName.OperationName: {
+        return filters.filter((f) => !['durationInNano', 'clientName', 'statusMessages'].includes(f.field));
+      }
+      case AnalyticsViewGroupName.Client: {
+        return filters.filter((f) => ['clientName', 'p95', 'clientVersion'].includes(f.field));
+      }
+      case AnalyticsViewGroupName.HttpStatusCode: {
+        return filters.filter((f) => ['p95', 'httpStatusCode'].includes(f.field));
+      }
+    }
+
+    return [];
+  }
+
   private getSortOrder = (id?: string, desc?: boolean) => {
     const allowedColumns = Object.keys(this.columnMetadata);
 
@@ -611,7 +633,7 @@ export class AnalyticsRequestViewRepository {
     name: AnalyticsViewGroupName,
     opts?: AnalyticsConfig,
   ): Promise<PlainMessage<AnalyticsViewResult>> {
-    const inputFilters = opts?.filters ?? [];
+    const inputFilters = this.omitGroupedFilters(name, opts?.filters ?? []);
     const columnMetaData = fillColumnMetaData(this.columnMetadata);
     const paginationSql = `LIMIT {limit:Int16} OFFSET {offset:Int16}`;
     const orderSql = this.getSortOrder(opts?.sort?.id, opts?.sort?.desc);
@@ -628,13 +650,12 @@ export class AnalyticsRequestViewRepository {
       coercedQueryParams.endDate = Math.floor(new Date(opts.dateRange.end).getTime() / 1000);
     }
 
-    const { havingSql, ...rest } = buildCoercedFilterSqlStatement(
+    let { havingSql, whereSql } = buildCoercedFilterSqlStatement(
       columnMetaData,
       coercedQueryParams,
       filterMapper,
       opts?.dateRange,
     );
-    let { whereSql } = rest;
 
     // Important: This is the only place where we scope the data to a particular organization and graph.
     // We can only filter for data that is part of the JWT token otherwise a user could send us whatever they want.
