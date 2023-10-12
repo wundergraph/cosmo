@@ -60,4 +60,24 @@ func TestName(t *testing.T) {
 		pReq,
 	)
 	assert.Nil(t, err)
+
+	var opCount int
+	db.QueryRow(`
+		SELECT COUNT(*) FROM cosmo.graphql_operations
+    	WHERE OperationHash = 'hash123' GROUP BY OperationHash LIMIT 1
+	`).Scan(&opCount)
+
+	assert.Greater(t, opCount, 0)
+
+	var fieldUsageCount int
+	db.QueryRow(`
+		SELECT COUNT(*) FROM cosmo.graphql_schema_field_usage_reports
+		WHERE OperationHash = 'hash123' AND
+		RouterConfigVersion = 'v1' AND
+		Attributes['test'] = 'test123' AND
+		hasAny(TypeNames, ['Query']) AND
+		startsWith(Path, ['hello'])
+	`).Scan(&fieldUsageCount)
+
+	assert.Greater(t, fieldUsageCount, 0)
 }
