@@ -49,6 +49,12 @@ dev-setup: prerequisites
 	make infra-up
 	pnpm -r run --filter '!studio' build
 
+dev-setup-no-infra: prerequisites
+	pnpm install
+	pnpm generate
+	make generate-go
+	pnpm -r run --filter '!studio' build
+
 migrate:
 	pnpm -r run --filter './controlplane' migrate
 
