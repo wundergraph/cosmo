@@ -94,7 +94,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration) (*plan.Configura
 	var (
 		outConfig plan.Configuration
 	)
-
+	outConfig.IncludeInfo = true
 	outConfig.DefaultFlushIntervalMillis = engineConfig.DefaultFlushInterval
 	for _, configuration := range engineConfig.FieldConfigurations {
 		var args []plan.ArgumentConfiguration
@@ -133,6 +133,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration) (*plan.Configura
 			continue
 		}
 		out := plan.DataSourceConfiguration{
+			ID:      in.Id,
 			Factory: factory,
 		}
 		switch in.Kind {

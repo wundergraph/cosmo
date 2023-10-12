@@ -67,9 +67,10 @@ func (e *reportError) Report() *operationreport.Report {
 	return e.report
 }
 
-type planWithExtractedVariables struct {
-	preparedPlan plan.Plan
-	variables    []byte
+type planWithMetaData struct {
+	preparedPlan    plan.Plan
+	variables       []byte
+	schemaUsageInfo plan.SchemaUsageInfo
 }
 
 func MergeJsonRightIntoLeft(left, right []byte) []byte {
@@ -97,7 +98,7 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 	graphQLHandler := &GraphQLHandler{
 		log:         opts.Log,
 		sf:          &singleflight.Group{},
-		prepared:    map[uint64]planWithExtractedVariables{},
+		prepared:    map[uint64]planWithMetaData{},
 		preparedMux: &sync.RWMutex{},
 		planCache:   opts.Cache,
 		executor:    opts.Executor,
@@ -109,7 +110,7 @@ type GraphQLHandler struct {
 	log      *zap.Logger
 	executor *Executor
 
-	prepared    map[uint64]planWithExtractedVariables
+	prepared    map[uint64]planWithMetaData
 	preparedMux *sync.RWMutex
 
 	sf        *singleflight.Group
@@ -119,7 +120,7 @@ type GraphQLHandler struct {
 func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	var (
-		preparedPlan planWithExtractedVariables
+		preparedPlan planWithMetaData
 	)
 
 	requestLogger := h.log.With(logging.WithRequestID(middleware.GetReqID(r.Context())))
@@ -133,7 +134,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	cachedPlan, ok := h.planCache.Get(operationContext.Hash())
 	if ok && cachedPlan != nil {
 		// re-use a prepared plan
-		preparedPlan = cachedPlan.(planWithExtractedVariables)
+		preparedPlan = cachedPlan.(planWithMetaData)
 	} else {
 		// prepare a new plan using single flight
 		// this ensures that we only prepare the plan once for this operation ID
@@ -164,13 +165,20 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		preparedPlan = sharedPreparedPlan.(planWithExtractedVariables)
+		preparedPlan = sharedPreparedPlan.(planWithMetaData)
 	}
 
 	extractedVariables := make([]byte, len(preparedPlan.variables))
 	copy(extractedVariables, preparedPlan.variables)
 	requestVariables := operationContext.Variables()
 	combinedVariables := MergeJsonRightIntoLeft(requestVariables, extractedVariables)
+
+	/*
+		preparedPlan.schemaUsageInfo.OperationType.String()
+		for i := range preparedPlan.schemaUsageInfo.TypeFields {
+			fmt.Printf("TypeFields: %+v\n", preparedPlan.schemaUsageInfo.TypeFields[i])
+		}
+	*/
 
 	ctx := &resolve.Context{
 		Variables: combinedVariables,
@@ -239,10 +247,10 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *GraphQLHandler) preparePlan(requestOperationName []byte, requestOperationContent string) (planWithExtractedVariables, error) {
+func (h *GraphQLHandler) preparePlan(requestOperationName []byte, requestOperationContent string) (planWithMetaData, error) {
 	doc, report := astparser.ParseGraphqlDocumentString(requestOperationContent)
 	if report.HasErrors() {
-		return planWithExtractedVariables{}, &reportError{report: &report}
+		return planWithMetaData{}, &reportError{report: &report}
 	}
 
 	validation := astvalidation.DefaultOperationValidator()
@@ -253,7 +261,7 @@ func (h *GraphQLHandler) preparePlan(requestOperationName []byte, requestOperati
 	// validate the document before planning
 	state := validation.Validate(&doc, h.executor.Definition, &report)
 	if state != astvalidation.Valid {
-		return planWithExtractedVariables{}, &reportError{report: &report}
+		return planWithMetaData{}, &reportError{report: &report}
 	}
 
 	planner := plan.NewPlanner(context.Background(), h.executor.PlanConfig)
@@ -261,7 +269,7 @@ func (h *GraphQLHandler) preparePlan(requestOperationName []byte, requestOperati
 	// create and postprocess the plan
 	preparedPlan := planner.Plan(&doc, h.executor.Definition, unsafebytes.BytesToString(requestOperationName), &report)
 	if report.HasErrors() {
-		return planWithExtractedVariables{}, fmt.Errorf(ErrMsgOperationParseFailed, report)
+		return planWithMetaData{}, fmt.Errorf(ErrMsgOperationParseFailed, report)
 	}
 	post := postprocess.DefaultProcessor()
 	post.Process(preparedPlan)
@@ -269,9 +277,12 @@ func (h *GraphQLHandler) preparePlan(requestOperationName []byte, requestOperati
 	extractedVariables := make([]byte, len(doc.Input.Variables))
 	copy(extractedVariables, doc.Input.Variables)
 
-	return planWithExtractedVariables{
-		preparedPlan: preparedPlan,
-		variables:    extractedVariables,
+	schemaUsageInfo := plan.GetSchemaUsageInfo(preparedPlan)
+
+	return planWithMetaData{
+		preparedPlan:    preparedPlan,
+		variables:       extractedVariables,
+		schemaUsageInfo: schemaUsageInfo,
 	}, nil
 }
 
