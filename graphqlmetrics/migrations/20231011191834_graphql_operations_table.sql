@@ -16,7 +16,9 @@ create table cosmo.graphql_operations
         ORDER BY (OperationHash)
         -- We store operations for 90 days
         TTL toDateTime(Timestamp) + toIntervalDay(90)
-        SETTINGS index_granularity = 1024, ttl_only_drop_parts = 1;
+        -- Keep index_granularity low to avoid too many parts on disk which will slow down point queries
+        -- MergeTree works with sparse indexes. The index can't point to specific row, but to the block of rows.
+        SETTINGS index_granularity = 512, ttl_only_drop_parts = 1;
 
 -- migrate:down
 

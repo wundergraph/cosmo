@@ -5,20 +5,27 @@ import (
 	"database/sql"
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/bufbuild/connect-go"
+	lru "github.com/hashicorp/golang-lru/v2"
 	graphqlmetricsv1 "github.com/wundergraph/cosmo/graphqlmetrics/gen/proto/wg/cosmo/graphqlmetrics/v1"
 	"go.uber.org/zap"
 	"time"
 )
 
 type MetricsService struct {
-	logger *zap.Logger
-	db     *sql.DB
+	logger       *zap.Logger
+	db           *sql.DB
+	opGuardCache *lru.Cache[string, struct{}]
 }
 
 func NewMetricsService(logger *zap.Logger, chConn *sql.DB) *MetricsService {
+	c, err := lru.New[string, struct{}](10000)
+	if err != nil {
+		panic(err)
+	}
 	return &MetricsService{
-		logger: logger,
-		db:     chConn,
+		logger:       logger,
+		db:           chConn,
+		opGuardCache: c,
 	}
 }
 
@@ -59,13 +66,17 @@ func (s *MetricsService) PublishGraphQLMetrics(
 	insertTime := time.Now()
 
 	for _, schemaUsage := range req.Msg.SchemaUsage {
-		_, err := batchOperationStmts.ExecContext(ctx,
-			insertTime,
-			schemaUsage.OperationInfo.OperationHash,
-			schemaUsage.OperationDocument,
-		)
-		if err != nil {
-			return nil, err
+
+		// If the operation is already in the cache, we can skip it and don't write it again
+		if _, ok := s.opGuardCache.Get(schemaUsage.OperationInfo.OperationHash); !ok {
+			_, err := batchOperationStmts.ExecContext(ctx,
+				insertTime,
+				schemaUsage.OperationInfo.OperationHash,
+				schemaUsage.OperationDocument,
+			)
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		for _, fieldUsage := range schemaUsage.TypeFieldMetrics {
@@ -91,6 +102,11 @@ func (s *MetricsService) PublishGraphQLMetrics(
 	err = scopeOperationBatch.Commit()
 	if err != nil {
 		return nil, err
+	}
+
+	// Update the cache with the operations we just wrote
+	for _, schemaUsage := range req.Msg.SchemaUsage {
+		s.opGuardCache.Add(schemaUsage.OperationInfo.OperationHash, struct{}{})
 	}
 
 	err = scopeFieldUsageBatch.Commit()
