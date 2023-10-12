@@ -50,7 +50,7 @@ jobs:
           cache-dependency-path: graphqlmetrics/go.sum
 
       - name: Install tools
-        run: make setup-build-tools
+        run: make setup-dev-tools
 
       - name: Generate code
         run: rm -rf graphqlmetrics/gen && buf generate --path proto/wg/cosmo/graphqlmetrics --path proto/wg/cosmo/common --template buf.graphqlmetrics.go.gen.yaml
