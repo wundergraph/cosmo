@@ -84,3 +84,9 @@ func WithLogger(logger *zap.Logger) Option {
 		s.logger = logger
 	}
 }
+
+func WithListenAddr(addr string) Option {
+	return func(s *Server) {
+		s.listenAddr = addr
+	}
+}

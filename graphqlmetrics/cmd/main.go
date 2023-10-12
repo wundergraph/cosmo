@@ -80,7 +80,8 @@ func main() {
 	}
 
 	svr := graphqlmetrics.NewServer(
-		graphqlmetrics.NewMetricsService(logger, db, cfg.IngestJWTSecret),
+		graphqlmetrics.NewMetricsService(logger, db, []byte(cfg.IngestJWTSecret)),
+		graphqlmetrics.WithListenAddr(cfg.ListenAddr),
 		graphqlmetrics.WithLogger(logger),
 	)
 

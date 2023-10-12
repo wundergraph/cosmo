@@ -13,10 +13,22 @@ concurrency:
 
 env:
   CI: true
+  DATABASE_URL: "clickhouse://default:changeme@localhost:9000?database=cosmo"
 
 jobs:
   build_test:
     runs-on: ubuntu-latest
+    services:
+      clickhouse:
+        # Docker Hub image
+        image: clickhouse/clickhouse-server:23
+        ports:
+          - "8123:8123"
+        env:
+          CLICKHOUSE_DB: cosmo
+          CLICKHOUSE_USER: default
+          CLICKHOUSE_PASSWORD: changeme
+          CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
     steps:
       - uses: actions/checkout@v3
         with:
@@ -48,6 +60,14 @@ jobs:
       - name: Install dependencies
         working-directory: ./graphqlmetrics
         run: go mod download
+
+      - name: Wait for Clickhouse to be ready
+        working-directory: ./graphqlmetrics
+        run: dbmate wait
+
+      - name: Migration
+        working-directory: ./graphqlmetrics
+        run: make migrate
 
       - name: Test
         working-directory: ./graphqlmetrics

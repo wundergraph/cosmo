@@ -26,11 +26,10 @@ message RequestInfo {
 }
 
 message TypeFieldUsageInfo {
-  string OperationType = 1;
-  repeated string Path = 2;
-  repeated string TypeNames = 3;
-  TypeFieldSource Source = 7;
-  uint64 Count = 8;
+  repeated string Path = 1;
+  repeated string TypeNames = 2;
+  TypeFieldSource Source = 3;
+  uint64 Count = 4;
 }
 
 message TypeFieldSource {
