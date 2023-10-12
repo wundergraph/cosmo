@@ -66,7 +66,7 @@ export interface BuildConfig {
     id?: string;
     privateKey?: string;
   };
-  slack: { clientID: string; clientSecret: string };
+  slack: { clientID?: string; clientSecret?: string };
 }
 
 const developmentLoggerOpts: PinoLoggerOptions = {

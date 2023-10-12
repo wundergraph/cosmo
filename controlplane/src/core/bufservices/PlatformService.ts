@@ -2865,6 +2865,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db);
 
+        if (!opts.slack || !opts.slack.clientID || !opts.slack.clientSecret) {
+          throw new Error('Slack env variables must be set to use this feature.');
+        }
+
         const integration = await orgRepo.getIntegrationByName(authContext.organizationId, req.name);
         if (integration) {
           return {
@@ -2875,7 +2879,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const slack = new Slack(opts.slack);
+        const slack = new Slack({ clientID: opts.slack.clientID, clientSecret: opts.slack.clientSecret });
 
         const accessTokenResp = await slack.fetchAccessToken(
           req.code,
