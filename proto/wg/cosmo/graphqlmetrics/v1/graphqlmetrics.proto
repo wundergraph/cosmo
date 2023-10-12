@@ -21,8 +21,7 @@ message OperationInfo {
 }
 
 message RequestInfo {
-  string FederatedGraphID = 1;
-  string OrganizationID = 2;
+  // FederatedGraphID and OrganizationID are transport over JWT
   string RouterConfigVersion = 3;
 }
 

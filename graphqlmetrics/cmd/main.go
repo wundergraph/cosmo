@@ -77,7 +77,7 @@ func main() {
 	}
 
 	svr := graphqlmetrics.NewServer(
-		graphqlmetrics.NewMetricsService(logger, db),
+		graphqlmetrics.NewMetricsService(logger, db, cfg.IngestJWTSecret),
 		graphqlmetrics.WithLogger(logger),
 	)
 

@@ -3,13 +3,32 @@ package graphqlmetrics
 import (
 	"context"
 	"database/sql"
+	"errors"
+	"fmt"
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/bufbuild/connect-go"
+	"github.com/golang-jwt/jwt/v5"
 	lru "github.com/hashicorp/golang-lru/v2"
 	graphqlmetricsv1 "github.com/wundergraph/cosmo/graphqlmetrics/gen/proto/wg/cosmo/graphqlmetrics/v1"
 	"go.uber.org/zap"
+	"strings"
 	"time"
 )
+
+var (
+	errJWTInvalid                        = errors.New("the JWT is invalid")
+	errInvalidAuthenticationHeaderFormat = errors.New("invalid authorization header format")
+	errNotAuthenticated                  = errors.New("authentication didn't succeed")
+	errMetricWriteFailed                 = errors.New("failed to write metrics")
+	errOperationWriteFailed              = errors.New("operation write failed")
+	errPublishFailed                     = errors.New("publish failed")
+)
+
+type GraphAPITokenClaims struct {
+	OrganizationID   string `json:"organization_id"`
+	FederatedGraphID string `json:"federated_graph_id"`
+	jwt.RegisteredClaims
+}
 
 type MetricsService struct {
 	logger *zap.Logger
@@ -19,9 +38,13 @@ type MetricsService struct {
 
 	// opGuardCache is used to prevent duplicate writes of the same operation
 	opGuardCache *lru.Cache[string, struct{}]
+
+	// jwtSecret is the secret used to validate the JWT
+	jwtSecret []byte
 }
 
-func NewMetricsService(logger *zap.Logger, chConn *sql.DB) *MetricsService {
+// NewMetricsService creates a new metrics service
+func NewMetricsService(logger *zap.Logger, chConn *sql.DB, jwtSecret string) *MetricsService {
 	c, err := lru.New[string, struct{}](10000)
 	if err != nil {
 		panic(err)
@@ -30,6 +53,7 @@ func NewMetricsService(logger *zap.Logger, chConn *sql.DB) *MetricsService {
 		logger:       logger,
 		db:           chConn,
 		opGuardCache: c,
+		jwtSecret:    []byte(jwtSecret),
 	}
 }
 
@@ -39,17 +63,43 @@ func (s *MetricsService) PublishGraphQLMetrics(
 ) (*connect.Response[graphqlmetricsv1.PublishOperationCoverageReportResponse], error) {
 	res := connect.NewResponse(&graphqlmetricsv1.PublishOperationCoverageReportResponse{})
 
+	parts := strings.Split(req.Header().Get("Authorization"), " ")
+	if len(parts) != 2 {
+		return nil, errInvalidAuthenticationHeaderFormat
+	}
+
+	token, err := jwt.ParseWithClaims(parts[1], &GraphAPITokenClaims{}, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return s.jwtSecret, nil
+	})
+	if err != nil {
+		return nil, errNotAuthenticated
+	}
+
+	if !token.Valid {
+		return nil, errJWTInvalid
+	}
+
+	claims, ok := token.Claims.(*GraphAPITokenClaims)
+	if !ok {
+		return nil, errJWTInvalid
+	}
+
 	ctx = clickhouse.Context(ctx, clickhouse.WithStdAsync(true))
 
 	scopeOperationBatch, err := s.db.Begin()
 	if err != nil {
-		return nil, err
+		s.logger.Error("Failed to begin operation batch", zap.Error(err))
+		return nil, errPublishFailed
 	}
 	defer scopeOperationBatch.Rollback()
 
 	scopeFieldUsageBatch, err := s.db.Begin()
 	if err != nil {
-		return nil, err
+		s.logger.Error("Failed to begin field usage batch", zap.Error(err))
+		return nil, errPublishFailed
 	}
 	defer scopeOperationBatch.Rollback()
 
@@ -59,12 +109,14 @@ func (s *MetricsService) PublishGraphQLMetrics(
 
 	batchOperationStmts, err := scopeOperationBatch.PrepareContext(ctx, `INSERT INTO cosmo.graphql_operations`)
 	if err != nil {
-		return nil, err
+		s.logger.Error("Failed to prepare operation batch statement", zap.Error(err))
+		return nil, errOperationWriteFailed
 	}
 
 	batchSchemaUsageStmts, err := scopeFieldUsageBatch.PrepareContext(ctx, `INSERT INTO cosmo.graphql_schema_field_usage_reports`)
 	if err != nil {
-		return nil, err
+		s.logger.Error("Failed to prepare field usage batch statement", zap.Error(err))
+		return nil, errMetricWriteFailed
 	}
 
 	insertTime := time.Now()
@@ -79,15 +131,16 @@ func (s *MetricsService) PublishGraphQLMetrics(
 				schemaUsage.OperationDocument,
 			)
 			if err != nil {
-				return nil, err
+				s.logger.Error("Failed to write operation", zap.Error(err))
+				return nil, errOperationWriteFailed
 			}
 		}
 
 		for _, fieldUsage := range schemaUsage.TypeFieldMetrics {
 			_, err := batchSchemaUsageStmts.ExecContext(ctx,
 				insertTime,
-				schemaUsage.RequestInfo.OrganizationID,
-				schemaUsage.RequestInfo.FederatedGraphID,
+				claims.OrganizationID,
+				claims.FederatedGraphID,
 				schemaUsage.RequestInfo.RouterConfigVersion,
 				schemaUsage.OperationInfo.OperationHash,
 				schemaUsage.OperationInfo.OperationType,
@@ -97,7 +150,8 @@ func (s *MetricsService) PublishGraphQLMetrics(
 				schemaUsage.Attributes,
 			)
 			if err != nil {
-				return nil, err
+				s.logger.Error("Failed to write metrics", zap.Error(err))
+				return nil, errMetricWriteFailed
 			}
 		}
 
@@ -105,7 +159,8 @@ func (s *MetricsService) PublishGraphQLMetrics(
 
 	err = scopeOperationBatch.Commit()
 	if err != nil {
-		return nil, err
+		s.logger.Error("Failed to commit operation batch", zap.Error(err))
+		return nil, errOperationWriteFailed
 	}
 
 	// Update the cache with the operations we just wrote. Due to asynchronicity, it possibly happens
@@ -116,7 +171,8 @@ func (s *MetricsService) PublishGraphQLMetrics(
 
 	err = scopeFieldUsageBatch.Commit()
 	if err != nil {
-		return nil, err
+		s.logger.Error("Failed to commit field usage batch", zap.Error(err))
+		return nil, errMetricWriteFailed
 	}
 
 	return res, nil
