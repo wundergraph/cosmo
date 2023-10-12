@@ -68,6 +68,7 @@ func GetTestDatabase(t *testing.T) *sql.DB {
 	u, _ := url.Parse(dbUrl)
 	migrator := dbmate.New(u)
 	migrator.MigrationsDir = []string{"migrations"}
+	migrator.AutoDumpSchema = false
 
 	require.NoError(t, migrator.Wait())
 
