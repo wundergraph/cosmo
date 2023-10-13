@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.24.1](https://github.com/wundergraph/cosmo/compare/router@0.24.0...router@0.24.1) (2023-10-13)
+
+### Bug Fixes
+
+* normalization error when querying location in demo ([#178](https://github.com/wundergraph/cosmo/issues/178)) ([c0b6f92](https://github.com/wundergraph/cosmo/commit/c0b6f92d97bea7c74dfd625159136abba428a5a0)) (@devsergiy)
+* swallowed errors in Router.Shutdown() ([#180](https://github.com/wundergraph/cosmo/issues/180)) ([b1bb006](https://github.com/wundergraph/cosmo/commit/b1bb0067bc73c23a3256a0c950e4e4fa2ee325c6)) (@fiam)
+
 # [0.24.0](https://github.com/wundergraph/cosmo/compare/router@0.23.1...router@0.24.0) (2023-10-11)
 
 ### Bug Fixes
