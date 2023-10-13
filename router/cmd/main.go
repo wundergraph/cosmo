@@ -48,7 +48,7 @@ func Main() {
 	logger := logging.New(!cfg.JSONLog, cfg.LogLevel == "debug", logLevel).
 		With(
 			zap.String("component", "@wundergraph/router"),
-			zap.String("router_version", core.Version),
+			zap.String("service_version", core.Version),
 		)
 
 	cp := controlplane.New(
@@ -125,7 +125,7 @@ func Main() {
 
 	<-ctx.Done()
 
-	logger.Info("Graceful shutdown ...", zap.String("shutdownDelay", cfg.ShutdownDelay.String()))
+	logger.Info("Graceful shutdown ...", zap.String("shutdown_delay", cfg.ShutdownDelay.String()))
 
 	// enforce a maximum shutdown delay
 	ctx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownDelay)

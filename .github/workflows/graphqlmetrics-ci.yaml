@@ -1,13 +1,11 @@
-name: Router CI
+name: GraphQLMetrics CI
 on:
   pull_request:
     branches:
       - main
     paths:
-      - "router/**/*"
-      - "router-tests/**/*"
-      - "connect/**/*"
-      - ".github/workflows/router-ci.yaml"
+      - "graphqlmetrics/**/*"
+      - ".github/workflows/graphqlmetrics-ci.yaml"
 
 concurrency:
   group: ${{github.workflow}}-${{github.head_ref}}
@@ -19,6 +17,18 @@ env:
 jobs:
   build_test:
     runs-on: ubuntu-latest
+    services:
+      clickhouse:
+        # Docker Hub image
+        image: clickhouse/clickhouse-server:23
+        ports:
+          - "8123:8123"
+          - "9000:9000"
+        env:
+          CLICKHOUSE_DB: cosmo
+          CLICKHOUSE_USER: default
+          CLICKHOUSE_PASSWORD: changeme
+          CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
     steps:
       - uses: actions/checkout@v3
         with:
@@ -30,35 +40,31 @@ jobs:
             ~/.cache/go-build
             ~/go/pkg/mod
           # The go install / version instructions are inside the Makefile, so we need to cache the Makefile.
-          key: ${{ runner.os }}-go-${{ hashFiles('router/go.sum') }}-makefile-${{ hashFiles('Makefile') }}
+          key: ${{ runner.os }}-go-${{ hashFiles('graphqlmetrics/go.sum') }}-makefile-${{ hashFiles('Makefile') }}
           restore-keys: |
             ${{ runner.os }}-go-
 
       - uses: ./.github/actions/go
         with:
-          cache-dependency-path: router/go.sum
+          cache-dependency-path: graphqlmetrics/go.sum
 
       - name: Install tools
         run: make setup-build-tools
 
       - name: Generate code
-        run: make generate-go
+        run: rm -rf graphqlmetrics/gen && buf generate --path proto/wg/cosmo/graphqlmetrics --path proto/wg/cosmo/common --template buf.graphqlmetrics.go.gen.yaml
 
       - name: Check if git is not dirty after generating files
         run: git diff --no-ext-diff --exit-code
 
       - name: Install dependencies
-        working-directory: ./router
+        working-directory: ./graphqlmetrics
         run: go mod download
 
       - name: Test
-        working-directory: ./router
+        working-directory: ./graphqlmetrics
         run: make test
 
       - name: Build
-        working-directory: ./router
+        working-directory: ./graphqlmetrics
         run: make build
-
-      - name: Run Integration tests
-        working-directory: ./router-tests
-        run: go test -race ./...
