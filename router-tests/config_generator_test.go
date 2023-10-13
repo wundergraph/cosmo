@@ -52,6 +52,7 @@ func SerializeConfigFile(subgraphs []Subgraph) (string, error) {
 	}
 	var args []string
 	var dir string
+	// Optionally, use a locally installed wgc
 	if wgcDist := os.Getenv("WGC_DIST_PATH"); wgcDist != "" {
 		args = []string{"node", "index.js"}
 		dir = wgcDist
