@@ -1,12 +1,12 @@
 package graphqlmetrics
 
 import (
+	"connectrpc.com/connect"
 	"context"
 	"database/sql"
 	"errors"
 	"fmt"
 	"github.com/ClickHouse/clickhouse-go/v2"
-	"github.com/bufbuild/connect-go"
 	"github.com/golang-jwt/jwt/v5"
 	lru "github.com/hashicorp/golang-lru/v2"
 	graphqlmetricsv1 "github.com/wundergraph/cosmo/graphqlmetrics/gen/proto/wg/cosmo/graphqlmetrics/v1"

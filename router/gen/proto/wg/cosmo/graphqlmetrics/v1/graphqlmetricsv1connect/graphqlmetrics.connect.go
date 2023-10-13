@@ -7,9 +7,9 @@
 package graphqlmetricsv1connect
 
 import (
+	connect "connectrpc.com/connect"
 	context "context"
 	errors "errors"
-	connect_go "github.com/bufbuild/connect-go"
 	v1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
 	http "net/http"
 	strings "strings"
@@ -20,7 +20,7 @@ import (
 // generated with a version of connect newer than the one compiled into your binary. You can fix the
 // problem by either regenerating this code with an older version of connect or updating the connect
 // version compiled into your binary.
-const _ = connect_go.IsAtLeastVersion0_1_0
+const _ = connect.IsAtLeastVersion0_1_0
 
 const (
 	// GraphQLMetricsServiceName is the fully-qualified name of the GraphQLMetricsService service.
@@ -43,7 +43,7 @@ const (
 // GraphQLMetricsServiceClient is a client for the wg.cosmo.graphqlmetrics.v1.GraphQLMetricsService
 // service.
 type GraphQLMetricsServiceClient interface {
-	PublishGraphQLMetrics(context.Context, *connect_go.Request[v1.PublishGraphQLRequestMetricsRequest]) (*connect_go.Response[v1.PublishOperationCoverageReportResponse], error)
+	PublishGraphQLMetrics(context.Context, *connect.Request[v1.PublishGraphQLRequestMetricsRequest]) (*connect.Response[v1.PublishOperationCoverageReportResponse], error)
 }
 
 // NewGraphQLMetricsServiceClient constructs a client for the
@@ -54,10 +54,10 @@ type GraphQLMetricsServiceClient interface {
 //
 // The URL supplied here should be the base URL for the Connect or gRPC server (for example,
 // http://api.acme.com or https://acme.com/grpc).
-func NewGraphQLMetricsServiceClient(httpClient connect_go.HTTPClient, baseURL string, opts ...connect_go.ClientOption) GraphQLMetricsServiceClient {
+func NewGraphQLMetricsServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) GraphQLMetricsServiceClient {
 	baseURL = strings.TrimRight(baseURL, "/")
 	return &graphQLMetricsServiceClient{
-		publishGraphQLMetrics: connect_go.NewClient[v1.PublishGraphQLRequestMetricsRequest, v1.PublishOperationCoverageReportResponse](
+		publishGraphQLMetrics: connect.NewClient[v1.PublishGraphQLRequestMetricsRequest, v1.PublishOperationCoverageReportResponse](
 			httpClient,
 			baseURL+GraphQLMetricsServicePublishGraphQLMetricsProcedure,
 			opts...,
@@ -67,19 +67,19 @@ func NewGraphQLMetricsServiceClient(httpClient connect_go.HTTPClient, baseURL st
 
 // graphQLMetricsServiceClient implements GraphQLMetricsServiceClient.
 type graphQLMetricsServiceClient struct {
-	publishGraphQLMetrics *connect_go.Client[v1.PublishGraphQLRequestMetricsRequest, v1.PublishOperationCoverageReportResponse]
+	publishGraphQLMetrics *connect.Client[v1.PublishGraphQLRequestMetricsRequest, v1.PublishOperationCoverageReportResponse]
 }
 
 // PublishGraphQLMetrics calls
 // wg.cosmo.graphqlmetrics.v1.GraphQLMetricsService.PublishGraphQLMetrics.
-func (c *graphQLMetricsServiceClient) PublishGraphQLMetrics(ctx context.Context, req *connect_go.Request[v1.PublishGraphQLRequestMetricsRequest]) (*connect_go.Response[v1.PublishOperationCoverageReportResponse], error) {
+func (c *graphQLMetricsServiceClient) PublishGraphQLMetrics(ctx context.Context, req *connect.Request[v1.PublishGraphQLRequestMetricsRequest]) (*connect.Response[v1.PublishOperationCoverageReportResponse], error) {
 	return c.publishGraphQLMetrics.CallUnary(ctx, req)
 }
 
 // GraphQLMetricsServiceHandler is an implementation of the
 // wg.cosmo.graphqlmetrics.v1.GraphQLMetricsService service.
 type GraphQLMetricsServiceHandler interface {
-	PublishGraphQLMetrics(context.Context, *connect_go.Request[v1.PublishGraphQLRequestMetricsRequest]) (*connect_go.Response[v1.PublishOperationCoverageReportResponse], error)
+	PublishGraphQLMetrics(context.Context, *connect.Request[v1.PublishGraphQLRequestMetricsRequest]) (*connect.Response[v1.PublishOperationCoverageReportResponse], error)
 }
 
 // NewGraphQLMetricsServiceHandler builds an HTTP handler from the service implementation. It
@@ -87,8 +87,8 @@ type GraphQLMetricsServiceHandler interface {
 //
 // By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
 // and JSON codecs. They also support gzip compression.
-func NewGraphQLMetricsServiceHandler(svc GraphQLMetricsServiceHandler, opts ...connect_go.HandlerOption) (string, http.Handler) {
-	graphQLMetricsServicePublishGraphQLMetricsHandler := connect_go.NewUnaryHandler(
+func NewGraphQLMetricsServiceHandler(svc GraphQLMetricsServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
+	graphQLMetricsServicePublishGraphQLMetricsHandler := connect.NewUnaryHandler(
 		GraphQLMetricsServicePublishGraphQLMetricsProcedure,
 		svc.PublishGraphQLMetrics,
 		opts...,
@@ -106,6 +106,6 @@ func NewGraphQLMetricsServiceHandler(svc GraphQLMetricsServiceHandler, opts ...c
 // UnimplementedGraphQLMetricsServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedGraphQLMetricsServiceHandler struct{}
 
-func (UnimplementedGraphQLMetricsServiceHandler) PublishGraphQLMetrics(context.Context, *connect_go.Request[v1.PublishGraphQLRequestMetricsRequest]) (*connect_go.Response[v1.PublishOperationCoverageReportResponse], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("wg.cosmo.graphqlmetrics.v1.GraphQLMetricsService.PublishGraphQLMetrics is not implemented"))
+func (UnimplementedGraphQLMetricsServiceHandler) PublishGraphQLMetrics(context.Context, *connect.Request[v1.PublishGraphQLRequestMetricsRequest]) (*connect.Response[v1.PublishOperationCoverageReportResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.graphqlmetrics.v1.GraphQLMetricsService.PublishGraphQLMetrics is not implemented"))
 }

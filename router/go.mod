@@ -3,7 +3,8 @@ module github.com/wundergraph/cosmo/router
 go 1.20
 
 require (
-	github.com/bufbuild/connect-go v1.9.0
+	connectrpc.com/connect v1.11.1
+	github.com/andybalholm/brotli v1.0.5
 	github.com/buger/jsonparser v1.1.1
 	github.com/cespare/xxhash/v2 v2.2.0
 	github.com/cloudflare/backoff v0.0.0-20161212185259-647f3cdfc87a
@@ -84,6 +85,7 @@ require (
 	go.opentelemetry.io/proto/otlp v1.0.0 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
+	go.withmatt.com/connect-brotli v0.4.0 // indirect
 	golang.org/x/arch v0.4.0 // indirect
 	golang.org/x/crypto v0.13.0 // indirect
 	golang.org/x/exp v0.0.0-20230203172020-98cc5a0785f9 // indirect

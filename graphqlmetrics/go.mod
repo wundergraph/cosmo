@@ -17,6 +17,7 @@ require (
 )
 
 require (
+	connectrpc.com/connect v1.11.1 // indirect
 	github.com/ClickHouse/ch-go v0.58.2 // indirect
 	github.com/amacneil/dbmate/v2 v2.6.0 // indirect
 	github.com/andybalholm/brotli v1.0.5 // indirect
@@ -26,6 +27,7 @@ require (
 	github.com/go-faster/errors v0.6.1 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
+	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/google/uuid v1.3.1 // indirect
 	github.com/klauspost/compress v1.17.0 // indirect
 	github.com/leodido/go-urn v1.2.4 // indirect
@@ -39,6 +41,7 @@ require (
 	go.opentelemetry.io/otel v1.19.0 // indirect
 	go.opentelemetry.io/otel/trace v1.19.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
+	go.withmatt.com/connect-brotli v0.4.0 // indirect
 	golang.org/x/crypto v0.14.0 // indirect
 	golang.org/x/sys v0.13.0 // indirect
 	golang.org/x/text v0.13.0 // indirect

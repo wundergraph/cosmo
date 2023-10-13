@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/wundergraph/cosmo/graphqlmetrics/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
 	"go.uber.org/zap"
+	brotli "go.withmatt.com/connect-brotli"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 	"net/http"
@@ -40,7 +41,11 @@ func NewServer(metricsService graphqlmetricsv1connect.GraphQLMetricsServiceHandl
 
 func (s *Server) bootstrap() {
 	mux := http.NewServeMux()
-	path, handler := graphqlmetricsv1connect.NewGraphQLMetricsServiceHandler(s.metricsService)
+	path, handler := graphqlmetricsv1connect.NewGraphQLMetricsServiceHandler(
+		s.metricsService,
+		// Compress responses with Brotli.
+		brotli.WithCompression(),
+	)
 	mux.Handle(path, handler)
 
 	s.server = &http.Server{

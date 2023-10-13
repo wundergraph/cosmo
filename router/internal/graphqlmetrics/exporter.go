@@ -1,18 +1,16 @@
 package graphqlmetrics
 
 import (
-	"github.com/bufbuild/connect-go"
-	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
-	"go.uber.org/zap"
-	"net/http"
-	"sync"
-	"time"
-)
-
-import (
+	"connectrpc.com/connect"
 	"context"
 	"errors"
 	graphqlmetricsv12 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
+	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
+	"go.uber.org/zap"
+	brotli "go.withmatt.com/connect-brotli"
+	"net/http"
+	"sync"
+	"time"
 )
 
 type Exporter struct {
@@ -56,7 +54,9 @@ func NewExporter(logger *zap.Logger, collectorEndpoint string, apiToken string, 
 	client := graphqlmetricsv1connect.NewGraphQLMetricsServiceClient(
 		http.DefaultClient,
 		collectorEndpoint,
-		connect.WithSendGzip(),
+		brotli.WithCompression(),
+		// Compress requests with Brotli.
+		connect.WithSendCompression(brotli.Name),
 	)
 
 	return &Exporter{
