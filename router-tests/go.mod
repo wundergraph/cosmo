@@ -4,9 +4,7 @@ replace github.com/wundergraph/cosmo/router => ../router
 
 replace github.com/wundergraph/cosmo/demo => ../demo
 
-go 1.21
-
-toolchain go1.21.0
+go 1.20
 
 require (
 	github.com/stretchr/testify v1.8.4
