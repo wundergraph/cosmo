@@ -1,12 +1,15 @@
 package graphqlmetrics
 
 import (
-	"context"
-	"errors"
-	graphqlmetricsv12 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
 	"go.uber.org/zap"
 	"sync"
 	"time"
+)
+
+import (
+	"context"
+	"errors"
+	graphqlmetricsv12 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
 )
 
 type Exporter struct {
@@ -29,8 +32,8 @@ type ExporterSettings struct {
 func NewDefaultExporterSettings() *ExporterSettings {
 	return &ExporterSettings{
 		NumConsumers: 3,
-		BatchSize:    1024,
-		QueueSize:    1024,
+		BatchSize:    defaultMaxBatchItems,
+		QueueSize:    defaultMaxQueueSize,
 	}
 }
 
@@ -73,7 +76,8 @@ func (e *Exporter) Record(item *graphqlmetricsv12.SchemaUsageInfo) bool {
 
 // send sends the batch to the configured endpoint.
 func (e *Exporter) send(items []*graphqlmetricsv12.SchemaUsageInfo) error {
-	// TODO: send to metrics server
+	time.Sleep(1 * time.Second)
+	e.logger.Info("sending batch", zap.Int("size", len(items)))
 	return nil
 }
 

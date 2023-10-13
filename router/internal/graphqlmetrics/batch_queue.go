@@ -1,9 +1,12 @@
 package graphqlmetrics
 
+import "time"
+
+// Inspired by https://github.com/wind-c/bqueue
+
 import (
 	"context"
 	"sync/atomic"
-	"time"
 )
 
 const (
@@ -49,6 +52,9 @@ type BatchQueue struct {
 }
 
 // NewBatchQueue returns an initialized instance of BatchQueue.
+// Items are enqueued without blocking.
+// The queue is dispatched by time intervals or immediately after the batching limit is met.
+// Batches can be read from the OutQueue channel.
 func NewBatchQueue(config *BatchQueueOptions) *BatchQueue {
 	if config == nil {
 		config = new(BatchQueueOptions)
@@ -68,6 +74,7 @@ func NewBatchQueue(config *BatchQueueOptions) *BatchQueue {
 	return bq
 }
 
+// Enqueue adds an item to the queue. Returns false if the queue is stopped or not ready to accept items
 func (b *BatchQueue) Enqueue(item any) bool {
 	if b.stopped.Load() {
 		return false
@@ -85,7 +92,7 @@ func (b *BatchQueue) tick() {
 	b.timer.Reset(b.config.Interval)
 }
 
-// dispatch sends items to the OutQueue.
+// dispatch sends items to the OutQueue. Only one dispatch must be active at a time.
 func (b *BatchQueue) dispatch() {
 	for {
 		select {
