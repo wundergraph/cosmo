@@ -726,8 +726,8 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			if err := r.prometheusServer.Close(); err != nil {
-				err = errors.Join(err, fmt.Errorf("failed to shutdown prometheus server: %w", err))
+			if subErr := r.prometheusServer.Close(); subErr != nil {
+				err = errors.Join(err, fmt.Errorf("failed to shutdown prometheus server: %w", subErr))
 			}
 		}()
 	}
@@ -738,11 +738,11 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 		go func() {
 			defer wg.Done()
 
-			if err := r.tracerProvider.ForceFlush(ctx); err != nil {
-				err = errors.Join(err, fmt.Errorf("failed to force flush tracer: %w", err))
+			if subErr := r.tracerProvider.ForceFlush(ctx); subErr != nil {
+				err = errors.Join(err, fmt.Errorf("failed to force flush tracer: %w", subErr))
 			}
-			if err := r.tracerProvider.Shutdown(ctx); err != nil {
-				err = errors.Join(err, fmt.Errorf("failed to shutdown tracer: %w", err))
+			if subErr := r.tracerProvider.Shutdown(ctx); subErr != nil {
+				err = errors.Join(err, fmt.Errorf("failed to shutdown tracer: %w", subErr))
 			}
 		}()
 	}
@@ -753,8 +753,8 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 
 		for _, module := range r.modules {
 			if cleaner, ok := module.(Cleaner); ok {
-				if err := cleaner.Cleanup(); err != nil {
-					err = errors.Join(err, fmt.Errorf("failed to clean module %s: %w", module.Module().ID, err))
+				if subErr := cleaner.Cleanup(); subErr != nil {
+					err = errors.Join(err, fmt.Errorf("failed to clean module %s: %w", module.Module().ID, subErr))
 				}
 			}
 		}
@@ -763,8 +763,8 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 	wg.Wait()
 
 	if r.activeRouter != nil {
-		if err := r.activeRouter.Shutdown(ctx); err != nil {
-			err = errors.Join(err, fmt.Errorf("failed to shutdown primary server: %w", err))
+		if subErr := r.activeRouter.Shutdown(ctx); subErr != nil {
+			err = errors.Join(err, fmt.Errorf("failed to shutdown primary server: %w", subErr))
 		}
 	}
 

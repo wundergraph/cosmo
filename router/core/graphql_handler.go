@@ -187,15 +187,13 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		preparedPlan = sharedPreparedPlan.(planWithExtractedVariables)
 	}
 
-	vars := make([]byte, len(preparedPlan.variables))
-	copy(vars, preparedPlan.variables)
-
-	if len(preparedPlan.variables) != 0 {
-		vars = MergeJsonRightIntoLeft(operationContext.Variables(), vars)
-	}
+	extractedVariables := make([]byte, len(preparedPlan.variables))
+	copy(extractedVariables, preparedPlan.variables)
+	requestVariables := operationContext.Variables()
+	combinedVariables := MergeJsonRightIntoLeft(requestVariables, extractedVariables)
 
 	ctx := &resolve.Context{
-		Variables: vars,
+		Variables: combinedVariables,
 		Request: resolve.Request{
 			Header: r.Header,
 		},
