@@ -29,20 +29,21 @@ const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 var (
 	subgraphsMode = flag.String("subgraphs", "in-process", "How to run the subgraphs: in-process | subprocess | external")
 	workers       = flag.Int("workers", 4, "Number of workers to use for parallel benchmarks")
+
+	subgraphsRunner runner.SubgraphsRunner
 )
 
 func TestMain(m *testing.M) {
 	flag.Parse()
 	ctx := context.Background()
-	var r runner.SubgraphsRunner
 	var err error
 	switch *subgraphsMode {
 	case "in-process":
-		r, err = runner.NewInProcessSubgraphsRunner()
+		subgraphsRunner, err = runner.NewInProcessSubgraphsRunner(nil)
 	case "subprocess":
-		r, err = runner.NewSubprocessSubgraphsRunner()
+		subgraphsRunner, err = runner.NewSubprocessSubgraphsRunner(nil)
 	case "external":
-		r, err = runner.NewExternalSubgraphsRunner()
+		subgraphsRunner, err = runner.NewExternalSubgraphsRunner()
 	default:
 		panic(fmt.Errorf("unknown subgraphs mode %q", *subgraphsMode))
 	}
@@ -51,22 +52,22 @@ func TestMain(m *testing.M) {
 	}
 	// defer this in case we panic, then call it manually before os.Exit()
 	stop := func() {
-		if err := r.Stop(ctx); err != nil {
+		if err := subgraphsRunner.Stop(ctx); err != nil {
 			panic(err)
 		}
 	}
 	defer stop()
 	go func() {
-		err := r.Start(ctx)
+		err := subgraphsRunner.Start(ctx)
 		if err != nil {
 			panic(err)
 		}
 	}()
 
-	timeoutCtx, cancelFunc := context.WithTimeout(ctx, 1*time.Second)
+	timeoutCtx, cancelFunc := context.WithTimeout(ctx, 50*time.Second)
 	defer cancelFunc()
 	// Wait until the ports are open
-	if err := runner.Wait(timeoutCtx, r); err != nil {
+	if err := runner.Wait(timeoutCtx, subgraphsRunner); err != nil {
 		panic(err)
 	}
 
@@ -139,8 +140,32 @@ func setupServer(tb testing.TB) *core.Server {
 		},
 	}
 
-	routerConfig, err := core.SerializeConfigFromFile(filepath.Join("testdata", "config.json"))
-	require.Nil(tb, err)
+	ports := subgraphsRunner.Ports()
+
+	subgraphs := []Subgraph{
+		{
+			Name:       "employees",
+			RoutingURL: fmt.Sprintf("http://localhost:%d/graphql", ports.Employees),
+		},
+		{
+			Name:       "family",
+			RoutingURL: fmt.Sprintf("http://localhost:%d/graphql", ports.Family),
+		},
+		{
+			Name:       "hobbies",
+			RoutingURL: fmt.Sprintf("http://localhost:%d/graphql", ports.Hobbies),
+		},
+		{
+			Name:       "products",
+			RoutingURL: fmt.Sprintf("http://localhost:%d/graphql", ports.Products),
+		},
+	}
+
+	configFile, err := SerializeConfigFile(subgraphs)
+	require.NoError(tb, err)
+
+	routerConfig, err := core.SerializeConfigFromFile(configFile)
+	require.NoError(tb, err)
 
 	ec := zap.NewProductionEncoderConfig()
 	ec.EncodeDuration = zapcore.SecondsDurationEncoder

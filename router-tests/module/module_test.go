@@ -46,7 +46,7 @@ func TestMyModule(t *testing.T) {
 	server, err := rs.NewTestServer(ctx)
 	require.NoError(t, err)
 
-	r, err := runner.NewInProcessSubgraphsRunner()
+	r, err := runner.NewInProcessSubgraphsRunner(nil)
 	require.NoError(t, err)
 	t.Cleanup(func() {
 		assert.Nil(t, r.Stop(ctx))
