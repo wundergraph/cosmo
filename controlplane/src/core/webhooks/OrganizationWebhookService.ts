@@ -38,11 +38,11 @@ export class OrganizationWebhookService {
 
   private synced?: boolean;
 
-  constructor(
-    private db: PostgresJsDatabase<typeof schema>,
-    private organizationId: string,
-    private logger: pino.Logger,
-  ) {
+  private logger: pino.Logger;
+
+  constructor(private db: PostgresJsDatabase<typeof schema>, private organizationId: string, logger: pino.Logger) {
+    this.logger = logger.child({ organizationId });
+
     this.configs = [];
     this.synced = false;
   }
@@ -241,7 +241,13 @@ export class OrganizationWebhookService {
 
   send<T extends keyof EventMap>(eventName: T, data: EventMap[T]) {
     if (!this.synced) {
-      this.syncOrganizationSettings().then(() => this.sendEvent(eventName, data));
+      this.syncOrganizationSettings()
+        .then(() => this.sendEvent(eventName, data))
+        .catch((e) => {
+          const logger = this.logger.child({ eventName: OrganizationEventName[eventName] });
+          logger.child({ message: e.message });
+          logger.error(`Could not send webhook event`);
+        });
       return;
     }
 
