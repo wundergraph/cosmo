@@ -300,6 +300,14 @@ type OperationContext interface {
 	Content() string
 }
 
+// client contains information about the GraphQL client that made the request
+type client struct {
+	// Name is the name of the client
+	name string
+	// Version is the version of the client
+	version string
+}
+
 var _ OperationContext = (*operationContext)(nil)
 
 // operationContext contains information about the current GraphQL operation
@@ -313,6 +321,7 @@ type operationContext struct {
 	// Content is the content of the operation
 	content   string
 	variables []byte
+	client    *client
 }
 
 func (o *operationContext) Name() string {

@@ -28,7 +28,7 @@ message RequestInfo {
 message TypeFieldUsageInfo {
   repeated string Path = 1;
   repeated string TypeNames = 2;
-  TypeFieldSource Source = 3;
+  repeated string SourceIDs = 3;
   uint64 Count = 4;
 }
 

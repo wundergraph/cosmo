@@ -109,6 +109,10 @@ type GlobalSubgraphRequestRule struct {
 	KeepAliveProbeInterval time.Duration `yaml:"keep_alive_probe_interval" default:"30s"`
 }
 
+type OperationChecks struct {
+	Enabled bool `yaml:"enabled" default:"true" envconfig:"OPERATION_CHECKS_ENABLED"`
+}
+
 type BackoffJitterRetry struct {
 	Enabled     bool          `yaml:"enabled" default:"true" envconfig:"RETRY_ENABLED"`
 	Algorithm   string        `yaml:"algorithm" default:"backoff_jitter" validate:"oneof=backoff_jitter"`
@@ -161,9 +165,10 @@ type OverrideRoutingURLConfiguration struct {
 type Config struct {
 	Version string `yaml:"version"`
 
-	Graph     Graph     `yaml:"graph"`
-	Telemetry Telemetry `yaml:"telemetry"`
-	CORS      CORS      `yaml:"cors"`
+	Graph           Graph           `yaml:"graph"`
+	Telemetry       Telemetry       `yaml:"telemetry"`
+	OperationChecks OperationChecks `yaml:"operation_checks"`
+	CORS            CORS            `yaml:"cors"`
 
 	Modules        map[string]interface{} `yaml:"modules"`
 	Headers        HeaderRules            `yaml:"headers"`

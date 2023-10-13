@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/internal/graphqlmetrics"
 	"net"
 	"net/http"
 	"net/url"
@@ -68,6 +69,7 @@ type (
 		metricConfig             *metric.Config
 		tracerProvider           *sdktrace.TracerProvider
 		meterProvider            *sdkmetric.MeterProvider
+		gqlMetricsExporter       *graphqlmetrics.Exporter
 		corsOptions              *cors.Config
 		configFetcher            controlplane.ConfigFetcher
 		routerConfig             *nodev1.RouterConfig
@@ -92,6 +94,7 @@ type (
 		headerRuleEngine         *HeaderRuleEngine
 		headerRules              config.HeaderRules
 		subgraphTransportOptions *SubgraphTransportOptions
+		enableGraphQLMetrics     bool
 
 		retryOptions retrytransport.RetryOptions
 
@@ -447,6 +450,17 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		}
 	}
 
+	if r.enableGraphQLMetrics {
+		r.gqlMetricsExporter = graphqlmetrics.NewExporter(r.logger, graphqlmetrics.NewDefaultExporterSettings())
+		if err := r.gqlMetricsExporter.Validate(); err != nil {
+			return fmt.Errorf("failed to validate graphql metrics exporter: %w", err)
+		}
+
+		go r.gqlMetricsExporter.Start(ctx)
+
+		r.logger.Info("GraphQL schema coverage metrics enabled")
+	}
+
 	// Modules are only initialized once and not on every config change
 	if err := r.initModules(ctx); err != nil {
 		return fmt.Errorf("failed to init user modules: %w", err)
@@ -598,9 +612,10 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	}
 
 	graphqlHandler := NewGraphQLHandler(HandlerOptions{
-		Executor: executor,
-		Cache:    planCache,
-		Log:      r.logger,
+		Executor:           executor,
+		Cache:              planCache,
+		Log:                r.logger,
+		GqlMetricsExporter: r.gqlMetricsExporter,
 	})
 
 	var metricStore *metric.Metrics
@@ -750,6 +765,10 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 		}()
 	}
 
+	if r.gqlMetricsExporter != nil {
+		r.gqlMetricsExporter.Stop()
+	}
+
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -812,7 +831,7 @@ func createPrometheus(logger *zap.Logger, listenAddr, path string) *http.Server 
 		Handler:           r,
 	}
 
-	logger.Info("Serve Prometheus metrics", zap.String("listen_addr", svr.Addr), zap.String("endpoint", path))
+	logger.Info("Prometheus metrics enabled", zap.String("listen_addr", svr.Addr), zap.String("endpoint", path))
 
 	return svr
 }
@@ -977,5 +996,11 @@ func DefaultSubgraphTransportOptions() *SubgraphTransportOptions {
 		KeepAliveProbeInterval: 30 * time.Second,
 		KeepAliveIdleTimeout:   0 * time.Second,
 		DialTimeout:            30 * time.Second,
+	}
+}
+
+func WithGraphQLMetrics(enabled bool) Option {
+	return func(r *Router) {
+		r.enableGraphQLMetrics = enabled
 	}
 }

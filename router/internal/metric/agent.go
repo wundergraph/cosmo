@@ -106,7 +106,7 @@ func createOTELExporter(log *zap.Logger, exp *OpenTelemetryExporter) (sdkmetric.
 			opts = append(opts, otlpmetricgrpc.WithHeaders(exp.Headers))
 		}
 		if len(exp.HTTPPath) > 0 {
-			log.Warn("otlpmetricgrpc exporter doesn't support arbitrary paths", zap.String("path", exp.HTTPPath))
+			log.Warn("Otlpmetricgrpc exporter doesn't support arbitrary paths", zap.String("path", exp.HTTPPath))
 		}
 
 		exporter, err = otlpmetricgrpc.New(
@@ -119,7 +119,7 @@ func createOTELExporter(log *zap.Logger, exp *OpenTelemetryExporter) (sdkmetric.
 	if err != nil {
 		return nil, err
 	}
-	log.Info("using metrics exporter", zap.String("exporter", string(exp.Exporter)), zap.String("endpoint", exp.Endpoint), zap.String("path", exp.HTTPPath))
+	log.Info("Metrics enabled", zap.String("exporter", string(exp.Exporter)), zap.String("endpoint", exp.Endpoint), zap.String("path", exp.HTTPPath))
 	return exporter, nil
 }
 

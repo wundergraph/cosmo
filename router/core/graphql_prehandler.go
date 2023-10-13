@@ -249,6 +249,10 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 				content:   normalizedOperation.String(),
 				hash:      operationID,
 				variables: variablesCopy,
+				client: &client{
+					name:    clientName,
+					version: clientVersion,
+				},
 			},
 		)
 

@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	graphqlmetricsv1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
+	"github.com/wundergraph/cosmo/router/internal/graphqlmetrics"
 	"net"
 	"net/http"
 	"strconv"
@@ -89,19 +91,21 @@ func MergeJsonRightIntoLeft(left, right []byte) []byte {
 }
 
 type HandlerOptions struct {
-	Executor *Executor
-	Cache    *ristretto.Cache
-	Log      *zap.Logger
+	Executor           *Executor
+	Cache              *ristretto.Cache
+	Log                *zap.Logger
+	GqlMetricsExporter *graphqlmetrics.Exporter
 }
 
 func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 	graphQLHandler := &GraphQLHandler{
-		log:         opts.Log,
-		sf:          &singleflight.Group{},
-		prepared:    map[uint64]planWithMetaData{},
-		preparedMux: &sync.RWMutex{},
-		planCache:   opts.Cache,
-		executor:    opts.Executor,
+		log:                opts.Log,
+		sf:                 &singleflight.Group{},
+		prepared:           map[uint64]planWithMetaData{},
+		preparedMux:        &sync.RWMutex{},
+		planCache:          opts.Cache,
+		executor:           opts.Executor,
+		gqlMetricsExporter: opts.GqlMetricsExporter,
 	}
 	return graphQLHandler
 }
@@ -113,8 +117,9 @@ type GraphQLHandler struct {
 	prepared    map[uint64]planWithMetaData
 	preparedMux *sync.RWMutex
 
-	sf        *singleflight.Group
-	planCache *ristretto.Cache
+	sf                 *singleflight.Group
+	planCache          *ristretto.Cache
+	gqlMetricsExporter *graphqlmetrics.Exporter
 }
 
 func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -129,22 +134,23 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Update the resolveCtx with the latest request context so user modules can access it
 
 	requestOperationNameBytes := unsafebytes.StringToBytes(operationContext.Name())
+	operationID := strconv.FormatUint(operationContext.Hash(), 10)
 
 	// try to get a prepared plan for this operation ID from the cache
-	cachedPlan, ok := h.planCache.Get(operationContext.Hash())
+	cachedPlan, ok := h.planCache.Get(operationID)
 	if ok && cachedPlan != nil {
 		// re-use a prepared plan
 		preparedPlan = cachedPlan.(planWithMetaData)
 	} else {
 		// prepare a new plan using single flight
 		// this ensures that we only prepare the plan once for this operation ID
-		sharedPreparedPlan, err, _ := h.sf.Do(strconv.FormatUint(operationContext.hash, 10), func() (interface{}, error) {
+		sharedPreparedPlan, err, _ := h.sf.Do(operationID, func() (interface{}, error) {
 			prepared, err := h.preparePlan(requestOperationNameBytes, operationContext.Content())
 			if err != nil {
 				return nil, err
 			}
 			// cache the prepared plan for 1 hour
-			h.planCache.SetWithTTL(operationContext.hash, prepared, 1, time.Hour)
+			h.planCache.SetWithTTL(operationID, prepared, 1, time.Hour)
 			return prepared, nil
 		})
 		if err != nil {
@@ -160,25 +166,47 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if sharedPreparedPlan == nil {
-			requestLogger.Error("prepare plan is nil", zap.Error(err))
+		preparedPlan, ok = sharedPreparedPlan.(planWithMetaData)
+		if !ok {
+			requestLogger.Error("unexpected prepared plan type")
 			w.WriteHeader(http.StatusInternalServerError)
+			writeRequestErrors(graphql.RequestErrorsFromError(internalServerErrorErr), w, requestLogger)
 			return
 		}
-		preparedPlan = sharedPreparedPlan.(planWithMetaData)
 	}
+
+	fieldUsageInfos := make([]*graphqlmetricsv1.TypeFieldUsageInfo, len(preparedPlan.schemaUsageInfo.TypeFields))
+
+	for i := range preparedPlan.schemaUsageInfo.TypeFields {
+		fieldUsageInfos[i] = &graphqlmetricsv1.TypeFieldUsageInfo{
+			Count:     1,
+			Path:      preparedPlan.schemaUsageInfo.TypeFields[i].Path,
+			TypeNames: preparedPlan.schemaUsageInfo.TypeFields[i].TypeNames,
+			SourceIDs: preparedPlan.schemaUsageInfo.TypeFields[i].Source.IDs,
+		}
+	}
+
+	h.gqlMetricsExporter.Record(&graphqlmetricsv1.SchemaUsageInfo{
+		OperationDocument: operationContext.content,
+		TypeFieldMetrics:  fieldUsageInfos,
+		OperationInfo: &graphqlmetricsv1.OperationInfo{
+			OperationType: operationContext.opType,
+			OperationHash: operationID,
+			OperationName: operationContext.name,
+		},
+		RequestInfo: &graphqlmetricsv1.RequestInfo{
+			RouterConfigVersion: Version,
+		},
+		Attributes: map[string]string{
+			"client_name":    operationContext.client.name,
+			"client_version": operationContext.client.version,
+		},
+	})
 
 	extractedVariables := make([]byte, len(preparedPlan.variables))
 	copy(extractedVariables, preparedPlan.variables)
 	requestVariables := operationContext.Variables()
 	combinedVariables := MergeJsonRightIntoLeft(requestVariables, extractedVariables)
-
-	/*
-		preparedPlan.schemaUsageInfo.OperationType.String()
-		for i := range preparedPlan.schemaUsageInfo.TypeFields {
-			fmt.Printf("TypeFields: %+v\n", preparedPlan.schemaUsageInfo.TypeFields[i])
-		}
-	*/
 
 	ctx := &resolve.Context{
 		Variables: combinedVariables,
