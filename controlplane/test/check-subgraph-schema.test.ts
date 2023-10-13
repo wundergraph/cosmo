@@ -75,6 +75,10 @@ describe('CheckSubgraphSchema', (ctx) => {
         keycloakClient,
         platformWebhooks,
         webBaseUrl,
+        slack: {
+          clientID: '',
+          clientSecret: '',
+        },
       }),
     });
 
@@ -174,6 +178,10 @@ describe('CheckSubgraphSchema', (ctx) => {
         keycloakClient,
         platformWebhooks,
         webBaseUrl,
+        slack: {
+          clientID: '',
+          clientSecret: '',
+        },
       }),
     });
 
@@ -271,6 +279,10 @@ describe('CheckSubgraphSchema', (ctx) => {
         keycloakClient,
         platformWebhooks,
         webBaseUrl,
+        slack: {
+          clientID: '',
+          clientSecret: '',
+        },
       }),
     });
 

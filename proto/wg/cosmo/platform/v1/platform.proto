@@ -6,7 +6,7 @@ package wg.cosmo.platform.v1;
 
 import "wg/cosmo/common/common.proto";
 import "wg/cosmo/node/v1/node.proto";
-import "wg/cosmo/webhooks/events.proto";
+import "wg/cosmo/notifications/events.proto";
 
 message Label {
   string key = 1;
@@ -628,7 +628,7 @@ message CreateOrganizationWebhookConfigRequest {
   string endpoint = 1;
   string key = 2;
   repeated string events = 3;
-  repeated wg.cosmo.webhooks.EventMeta events_meta = 4;
+  repeated wg.cosmo.notifications.EventMeta events_meta = 4;
 }
 
 message CreateOrganizationWebhookConfigResponse {
@@ -653,7 +653,7 @@ message GetOrganizationWebhookMetaRequest {
 
 message GetOrganizationWebhookMetaResponse {
   Response response = 1;
-  repeated wg.cosmo.webhooks.EventMeta events_meta = 2;
+  repeated wg.cosmo.notifications.EventMeta events_meta = 2;
 }
 
 message UpdateOrganizationWebhookConfigRequest {
@@ -661,7 +661,7 @@ message UpdateOrganizationWebhookConfigRequest {
   string endpoint = 2;
   string key = 3;
   repeated string events = 4;
-  repeated wg.cosmo.webhooks.EventMeta events_meta = 5;
+  repeated wg.cosmo.notifications.EventMeta events_meta = 5;
   bool should_update_key = 6;
 }
 
@@ -674,6 +674,68 @@ message DeleteOrganizationWebhookConfigRequest {
 }
 
 message DeleteOrganizationWebhookConfigResponse {
+  Response response = 1;
+}
+
+message CreateIntegrationRequest {
+  string type = 1;
+  string name = 2;
+  string code = 3;
+  repeated string events = 4;
+  repeated wg.cosmo.notifications.EventMeta eventsMeta = 5;
+}
+
+message CreateIntegrationResponse {
+  Response response = 1;
+}
+
+message GetOrganizationIntegrationsRequest {}
+
+enum IntegrationType {
+  SLACK = 0;
+}
+
+message SlackIntegrationConfig {
+  string endpoint = 1;
+}
+
+message IntegrationConfig{
+  IntegrationType type = 1;
+  oneof config{
+    SlackIntegrationConfig slackIntegrationConfig = 2;
+  }
+}
+
+message Integration {
+  string id = 1;
+  string name = 2;
+  string type = 3;
+  repeated string events = 4;
+  IntegrationConfig integrationConfig = 5;
+  repeated wg.cosmo.notifications.EventMeta eventsMeta = 6;
+}
+
+message GetOrganizationIntegrationsResponse {
+  Response response = 1;
+  repeated Integration integrations = 2;
+}
+
+message UpdateIntegrationConfigRequest {
+  string id = 1;
+  string endpoint = 2;
+  repeated string events = 3;
+  repeated wg.cosmo.notifications.EventMeta events_meta = 4;
+}
+
+message UpdateIntegrationConfigResponse {
+  Response response = 1;
+}
+
+message DeleteIntegrationRequest {
+  string id = 1;
+}
+
+message DeleteIntegrationResponse {
   Response response = 1;
 }
 
@@ -859,6 +921,15 @@ service PlatformService {
   rpc UpdateOrganizationWebhookConfig(UpdateOrganizationWebhookConfigRequest) returns (UpdateOrganizationWebhookConfigResponse) {}
   // DeleteOrganizationWebhookConfig deletes an organization webhook
   rpc DeleteOrganizationWebhookConfig(DeleteOrganizationWebhookConfigRequest) returns (DeleteOrganizationWebhookConfigResponse) {}
+
+  // CreateIntegration create a new integration for the organization
+  rpc CreateIntegration(CreateIntegrationRequest) returns (CreateIntegrationResponse) {}
+  // GetOrganizationIntegrations returns all integrations of the organization
+  rpc GetOrganizationIntegrations(GetOrganizationIntegrationsRequest) returns (GetOrganizationIntegrationsResponse) {}
+  // UpdateIntegrationConfig updates an existing integration of the organization
+  rpc UpdateIntegrationConfig(UpdateIntegrationConfigRequest) returns (UpdateIntegrationConfigResponse) {}
+  // DeleteIntegration deletes an organization webhintegrationook
+  rpc DeleteIntegration(DeleteIntegrationRequest) returns (DeleteIntegrationResponse) {}
 
   // DeleteOrganization deletes an organization 
   rpc DeleteOrganization(DeleteOrganizationRequest) returns (DeleteOrganizationResponse) {}

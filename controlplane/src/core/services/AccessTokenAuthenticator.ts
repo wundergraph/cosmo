@@ -8,6 +8,7 @@ import { calLink } from './Authentication.js';
 export type AccessTokenAuthContext = {
   userId: string;
   organizationId: string;
+  organizationSlug: string;
 };
 
 export default class AccessTokenAuthenticator {
@@ -49,6 +50,7 @@ export default class AccessTokenAuthenticator {
 
     return {
       organizationId: organization.id,
+      organizationSlug: organization.slug,
       userId: userInfoData.sub,
     };
   }

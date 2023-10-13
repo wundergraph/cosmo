@@ -177,6 +177,16 @@ spec:
                 secretKeyRef:
                   name: {{ include "controlplane.fullname" . }}-secret
                   key: githubAppWebhookSecret
+            - name: SLACK_APP_CLIENT_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-configmap
+                  key: slackAppClientId
+            - name: SLACK_APP_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-secret
+                  key: slackAppClientSecret
           ports:
             - name: http
               containerPort: {{ .Values.service.port }}

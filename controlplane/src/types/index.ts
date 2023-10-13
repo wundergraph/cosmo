@@ -229,6 +229,7 @@ export type UserInfoEndpointResponse = {
 
 export type AuthContext = {
   organizationId: string;
+  organizationSlug: string;
   userId?: string;
 };
 
@@ -242,4 +243,14 @@ export interface GraphApiKeyDTO {
   name: string;
   token: string;
   createdAt: string;
+}
+
+export interface SlackAccessTokenResponse {
+  slackUserId: string;
+  accessToken: string;
+  slackOrgId: string;
+  slackOrgName: string;
+  slackChannelId: string;
+  slackChannelName: string;
+  webhookURL: string;
 }

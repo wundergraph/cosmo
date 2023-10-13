@@ -45,6 +45,10 @@ describe('Authentication', (ctx) => {
         frontendUrl: 'http://localhost:8080',
         clientId: 'studio',
       },
+      slack: {
+        clientID: '',
+        clientSecret: '',
+      },
     });
 
     testContext.onTestFailed(async () => {

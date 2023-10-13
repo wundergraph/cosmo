@@ -91,6 +91,8 @@ controlplane:
     githubAppId: ""
     githubAppPrivateKey: ""
     githubAppWebhookSecret: ""
+    slackAppClientId: ""
+    slackAppClientSecret: ""
 
 # Cosmo Router
 router:

@@ -548,6 +548,51 @@ export class FederatedGraphRepository {
     });
   }
 
+  public async fetchLatestFederatedGraphChangelog(
+    federatedGraphId: string,
+  ): Promise<FederatedGraphChangelogDTO | undefined> {
+    const federatedGraph = await this.db
+      .select({ schemaVersionId: federatedGraphs.composedSchemaVersionId })
+      .from(federatedGraphs)
+      .innerJoin(targets, eq(targets.id, federatedGraphs.targetId))
+      .where(and(eq(federatedGraphs.id, federatedGraphId), eq(targets.organizationId, this.organizationId)));
+
+    if (federatedGraph.length === 0) {
+      return undefined;
+    }
+
+    if (!federatedGraph[0].schemaVersionId) {
+      return undefined;
+    }
+
+    const changelogs = await this.db
+      .select({
+        id: schemaVersionChangeAction.id,
+        path: schemaVersionChangeAction.path,
+        changeType: schemaVersionChangeAction.changeType,
+        changeMessage: schemaVersionChangeAction.changeMessage,
+        createdAt: schemaVersionChangeAction.createdAt,
+      })
+      .from(schemaVersionChangeAction)
+      .where(eq(schemaVersionChangeAction.schemaVersionId, federatedGraph[0].schemaVersionId));
+
+    if (changelogs.length === 0) {
+      return undefined;
+    }
+
+    return {
+      schemaVersionId: federatedGraph[0].schemaVersionId,
+      createdAt: changelogs[0].createdAt.toString(),
+      changelogs: changelogs.map((c) => ({
+        id: c.id,
+        path: c.path || '',
+        changeType: c.changeType,
+        changeMessage: c.changeMessage,
+        createdAt: c.createdAt.toString(),
+      })),
+    };
+  }
+
   public delete(targetID: string, subgraphsTargetIDs: string[]) {
     return this.db.transaction(async (db) => {
       await db.delete(targets).where(eq(targets.id, targetID)).execute();
