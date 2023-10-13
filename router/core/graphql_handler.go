@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"strconv"
@@ -88,26 +89,31 @@ func MergeJsonRightIntoLeft(left, right []byte) []byte {
 }
 
 type HandlerOptions struct {
-	Executor *Executor
-	Cache    *ristretto.Cache
-	Log      *zap.Logger
+	Executor   *Executor
+	Cache      *ristretto.Cache
+	Playground http.Handler
+	Log        *zap.Logger
 }
 
 func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 	graphQLHandler := &GraphQLHandler{
 		log:         opts.Log,
 		sf:          &singleflight.Group{},
+		playground:  opts.Playground,
 		prepared:    map[uint64]planWithExtractedVariables{},
 		preparedMux: &sync.RWMutex{},
 		planCache:   opts.Cache,
 		executor:    opts.Executor,
 	}
+
 	return graphQLHandler
 }
 
 type GraphQLHandler struct {
 	log      *zap.Logger
 	executor *Executor
+
+	playground http.Handler
 
 	prepared    map[uint64]planWithExtractedVariables
 	preparedMux *sync.RWMutex
@@ -116,7 +122,21 @@ type GraphQLHandler struct {
 	planCache *ristretto.Cache
 }
 
+func (h *GraphQLHandler) serveNonPost(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodGet && h.playground != nil {
+		h.playground.ServeHTTP(w, r)
+		return
+	}
+	w.WriteHeader(http.StatusMethodNotAllowed)
+	_, _ = io.WriteString(w, http.StatusText(http.StatusMethodNotAllowed))
+}
+
 func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+
+	if r.Method != http.MethodPost {
+		h.serveNonPost(w, r)
+		return
+	}
 
 	var (
 		preparedPlan planWithExtractedVariables
@@ -214,7 +234,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	case *plan.SubscriptionResponsePlan:
 		var (
-			flushWriter *HttpFlushWriter
+			flushWriter resolve.FlushWriter
 			ok          bool
 		)
 		ctx, flushWriter, ok = GetFlushWriter(ctx, ctx.Variables, r, w)

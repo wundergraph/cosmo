@@ -7,6 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"math/rand"
+	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
@@ -125,6 +126,8 @@ func sendData(tb testing.TB, server *core.Server, data []byte) string {
 	return rr.Body.String()
 }
 
+// setupServer sets up the router server without making it listen on a local
+// port, allowing tests by calling the server directly via server.Server.Handler.ServeHTTP
 func setupServer(tb testing.TB) *core.Server {
 	ctx := context.Background()
 	cfg := config.Config{
@@ -151,7 +154,7 @@ func setupServer(tb testing.TB) *core.Server {
 		core.WithFederatedGraphName(cfg.Graph.Name),
 		core.WithStaticRouterConfig(routerConfig),
 		core.WithLogger(zapLogger),
-		core.WithListenerAddr("http://localhost:3002"),
+		core.WithListenerAddr(":3002"),
 	)
 	require.NoError(tb, err)
 
@@ -161,6 +164,23 @@ func setupServer(tb testing.TB) *core.Server {
 
 	server, err := rs.NewTestServer(ctx)
 	require.NoError(tb, err)
+	return server
+}
+
+// setupListeningServer calls setupServer to set up the server but makes it listen
+// on the network, automatically registering a cleanup function to shut it down
+func setupListeningServer(tb testing.TB) *core.Server {
+	server := setupServer(tb)
+	go func() {
+		err := server.Server.ListenAndServe()
+		if err != http.ErrServerClosed {
+			require.NoError(tb, err)
+		}
+	}()
+	tb.Cleanup(func() {
+		err := server.Shutdown(context.Background())
+		assert.NoError(tb, err)
+	})
 	return server
 }
 

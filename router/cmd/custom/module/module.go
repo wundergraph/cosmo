@@ -2,9 +2,10 @@ package module
 
 import (
 	"fmt"
+	"net/http"
+
 	"github.com/wundergraph/cosmo/router/core"
 	"go.uber.org/zap"
-	"net/http"
 )
 
 func init() {

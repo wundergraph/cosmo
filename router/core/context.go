@@ -7,12 +7,15 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-chi/chi/middleware"
+	"github.com/wundergraph/cosmo/router/internal/logging"
 	"go.uber.org/zap"
 )
 
 type key string
 
 const requestContextKey = key("request")
+const subgraphsContextKey = key("subgraphs")
 
 var _ RequestContext = (*requestContext)(nil)
 
@@ -120,6 +123,22 @@ func (c *requestContext) Operation() OperationContext {
 
 func (c *requestContext) Request() *http.Request {
 	return c.request
+}
+
+func requestWithAttachedContext(w http.ResponseWriter, r *http.Request, logger *zap.Logger) *http.Request {
+	operationContext := getOperationContext(r.Context())
+	// TODO: Avoid this duplication
+	subgraphs := subgraphsFromContext(r.Context())
+	requestContext := &requestContext{
+		logger:         logger.With(logging.WithRequestID(middleware.GetReqID(r.Context()))),
+		keys:           map[string]any{},
+		responseWriter: w,
+		request:        r,
+		operation:      operationContext,
+		subgraphs:      subgraphs,
+	}
+	ctx := withRequestContext(r.Context(), requestContext)
+	return r.WithContext(ctx)
 }
 
 func withRequestContext(ctx context.Context, operation *requestContext) context.Context {
@@ -335,8 +354,18 @@ func (o *operationContext) Variables() []byte {
 	return o.variables
 }
 
-func withOperationContext(ctx context.Context, operation *operationContext) context.Context {
-	return context.WithValue(ctx, operationContextKey, operation)
+func withOperationContext(ctx context.Context, operation *ParsedOperation) context.Context {
+	variablesCopy := make([]byte, len(operation.Variables))
+	copy(variablesCopy, operation.Variables)
+
+	opContext := &operationContext{
+		name:      operation.Name,
+		opType:    operation.Type,
+		content:   operation.NormalizedRepresentation,
+		hash:      operation.ID,
+		variables: variablesCopy,
+	}
+	return context.WithValue(ctx, operationContextKey, opContext)
 }
 
 // getOperationContext returns the request context.
@@ -360,4 +389,13 @@ func isMutationRequest(ctx context.Context) bool {
 		return false
 	}
 	return op.Operation().Type() == "mutation"
+}
+
+func withSubgraphs(ctx context.Context, subgraphs []Subgraph) context.Context {
+	return context.WithValue(ctx, subgraphsContextKey, subgraphs)
+}
+
+func subgraphsFromContext(ctx context.Context) []Subgraph {
+	subgraphs, _ := ctx.Value(subgraphsContextKey).([]Subgraph)
+	return subgraphs
 }
