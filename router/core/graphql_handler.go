@@ -91,21 +91,23 @@ func MergeJsonRightIntoLeft(left, right []byte) []byte {
 }
 
 type HandlerOptions struct {
-	Executor           *Executor
-	Cache              *ristretto.Cache
-	Log                *zap.Logger
-	GqlMetricsExporter *graphqlmetrics.Exporter
+	Executor            *Executor
+	Cache               *ristretto.Cache
+	Log                 *zap.Logger
+	GqlMetricsExporter  *graphqlmetrics.Exporter
+	RouterConfigVersion string
 }
 
 func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 	graphQLHandler := &GraphQLHandler{
-		log:                opts.Log,
-		sf:                 &singleflight.Group{},
-		prepared:           map[uint64]planWithMetaData{},
-		preparedMux:        &sync.RWMutex{},
-		planCache:          opts.Cache,
-		executor:           opts.Executor,
-		gqlMetricsExporter: opts.GqlMetricsExporter,
+		log:                 opts.Log,
+		sf:                  &singleflight.Group{},
+		prepared:            map[uint64]planWithMetaData{},
+		preparedMux:         &sync.RWMutex{},
+		planCache:           opts.Cache,
+		executor:            opts.Executor,
+		gqlMetricsExporter:  opts.GqlMetricsExporter,
+		routerConfigVersion: opts.RouterConfigVersion,
 	}
 	return graphQLHandler
 }
@@ -117,9 +119,10 @@ type GraphQLHandler struct {
 	prepared    map[uint64]planWithMetaData
 	preparedMux *sync.RWMutex
 
-	sf                 *singleflight.Group
-	planCache          *ristretto.Cache
-	gqlMetricsExporter *graphqlmetrics.Exporter
+	sf                  *singleflight.Group
+	planCache           *ristretto.Cache
+	gqlMetricsExporter  *graphqlmetrics.Exporter
+	routerConfigVersion string
 }
 
 func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -175,33 +178,35 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	fieldUsageInfos := make([]*graphqlmetricsv1.TypeFieldUsageInfo, len(preparedPlan.schemaUsageInfo.TypeFields))
+	if h.gqlMetricsExporter != nil {
+		fieldUsageInfos := make([]*graphqlmetricsv1.TypeFieldUsageInfo, len(preparedPlan.schemaUsageInfo.TypeFields))
 
-	for i := range preparedPlan.schemaUsageInfo.TypeFields {
-		fieldUsageInfos[i] = &graphqlmetricsv1.TypeFieldUsageInfo{
-			Count:     1,
-			Path:      preparedPlan.schemaUsageInfo.TypeFields[i].Path,
-			TypeNames: preparedPlan.schemaUsageInfo.TypeFields[i].TypeNames,
-			SourceIDs: preparedPlan.schemaUsageInfo.TypeFields[i].Source.IDs,
+		for i := range preparedPlan.schemaUsageInfo.TypeFields {
+			fieldUsageInfos[i] = &graphqlmetricsv1.TypeFieldUsageInfo{
+				Count:     1,
+				Path:      preparedPlan.schemaUsageInfo.TypeFields[i].Path,
+				TypeNames: preparedPlan.schemaUsageInfo.TypeFields[i].TypeNames,
+				SourceIDs: preparedPlan.schemaUsageInfo.TypeFields[i].Source.IDs,
+			}
 		}
-	}
 
-	h.gqlMetricsExporter.Record(&graphqlmetricsv1.SchemaUsageInfo{
-		OperationDocument: operationContext.content,
-		TypeFieldMetrics:  fieldUsageInfos,
-		OperationInfo: &graphqlmetricsv1.OperationInfo{
-			OperationType: operationContext.opType,
-			OperationHash: operationID,
-			OperationName: operationContext.name,
-		},
-		RequestInfo: &graphqlmetricsv1.RequestInfo{
-			RouterConfigVersion: Version,
-		},
-		Attributes: map[string]string{
-			"client_name":    operationContext.client.name,
-			"client_version": operationContext.client.version,
-		},
-	})
+		h.gqlMetricsExporter.Record(&graphqlmetricsv1.SchemaUsageInfo{
+			OperationDocument: operationContext.content,
+			TypeFieldMetrics:  fieldUsageInfos,
+			OperationInfo: &graphqlmetricsv1.OperationInfo{
+				OperationType: operationContext.opType,
+				OperationHash: operationID,
+				OperationName: operationContext.name,
+			},
+			RequestInfo: &graphqlmetricsv1.RequestInfo{
+				RouterConfigVersion: h.routerConfigVersion,
+			},
+			Attributes: map[string]string{
+				"client_name":    operationContext.client.name,
+				"client_version": operationContext.client.version,
+			},
+		})
+	}
 
 	extractedVariables := make([]byte, len(preparedPlan.variables))
 	copy(extractedVariables, preparedPlan.variables)

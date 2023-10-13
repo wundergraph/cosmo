@@ -61,6 +61,11 @@ type (
 		KeepAliveProbeInterval time.Duration
 	}
 
+	GraphQLMetricsConfig struct {
+		Enabled           bool
+		CollectorEndpoint string
+	}
+
 	// Config defines the configuration options for the Router.
 	Config struct {
 		transport                *http.Transport
@@ -95,6 +100,7 @@ type (
 		headerRules              config.HeaderRules
 		subgraphTransportOptions *SubgraphTransportOptions
 		enableGraphQLMetrics     bool
+		graphqlMetricsConfig     *GraphQLMetricsConfig
 
 		retryOptions retrytransport.RetryOptions
 
@@ -149,6 +155,10 @@ func NewRouter(opts ...Option) (*Router, error) {
 
 	if r.subgraphTransportOptions == nil {
 		r.subgraphTransportOptions = DefaultSubgraphTransportOptions()
+	}
+
+	if r.graphqlMetricsConfig == nil {
+		r.graphqlMetricsConfig = DefaultGraphQLMetricsConfig()
 	}
 
 	// Default values for health check paths
@@ -450,8 +460,13 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		}
 	}
 
-	if r.enableGraphQLMetrics {
-		r.gqlMetricsExporter = graphqlmetrics.NewExporter(r.logger, graphqlmetrics.NewDefaultExporterSettings())
+	if r.graphqlMetricsConfig.Enabled {
+		r.gqlMetricsExporter = graphqlmetrics.NewExporter(
+			r.logger,
+			r.graphqlMetricsConfig.CollectorEndpoint,
+			r.graphApiToken,
+			graphqlmetrics.NewDefaultExporterSettings(),
+		)
 		if err := r.gqlMetricsExporter.Validate(); err != nil {
 			return fmt.Errorf("failed to validate graphql metrics exporter: %w", err)
 		}
@@ -612,10 +627,11 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	}
 
 	graphqlHandler := NewGraphQLHandler(HandlerOptions{
-		Executor:           executor,
-		Cache:              planCache,
-		Log:                r.logger,
-		GqlMetricsExporter: r.gqlMetricsExporter,
+		Executor:            executor,
+		Cache:               planCache,
+		Log:                 r.logger,
+		GqlMetricsExporter:  r.gqlMetricsExporter,
+		RouterConfigVersion: routerConfig.GetVersion(),
 	})
 
 	var metricStore *metric.Metrics
@@ -999,8 +1015,15 @@ func DefaultSubgraphTransportOptions() *SubgraphTransportOptions {
 	}
 }
 
-func WithGraphQLMetrics(enabled bool) Option {
+func DefaultGraphQLMetricsConfig() *GraphQLMetricsConfig {
+	return &GraphQLMetricsConfig{
+		Enabled:           false,
+		CollectorEndpoint: "",
+	}
+}
+
+func WithGraphQLMetrics(cfg *GraphQLMetricsConfig) Option {
 	return func(r *Router) {
-		r.enableGraphQLMetrics = enabled
+		r.graphqlMetricsConfig = cfg
 	}
 }

@@ -1,7 +1,10 @@
 package graphqlmetrics
 
 import (
+	"github.com/bufbuild/connect-go"
+	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
 	"go.uber.org/zap"
+	"net/http"
 	"sync"
 	"time"
 )
@@ -18,6 +21,8 @@ type Exporter struct {
 	logger   *zap.Logger
 	outQueue chan []any
 	stopWG   sync.WaitGroup
+	client   graphqlmetricsv1connect.GraphQLMetricsServiceClient
+	apiToken string
 }
 
 type ExporterSettings struct {
@@ -27,6 +32,8 @@ type ExporterSettings struct {
 	BatchSize int
 	// QueueSize is the maximum number of batches allowed in queue at a given time.
 	QueueSize int
+	// Interval is the interval at which the queue is flushed.
+	Interval time.Duration
 }
 
 func NewDefaultExporterSettings() *ExporterSettings {
@@ -34,22 +41,31 @@ func NewDefaultExporterSettings() *ExporterSettings {
 		NumConsumers: 3,
 		BatchSize:    defaultMaxBatchItems,
 		QueueSize:    defaultMaxQueueSize,
+		Interval:     time.Duration(5) * time.Second,
 	}
 }
 
-func NewExporter(logger *zap.Logger, settings *ExporterSettings) *Exporter {
+func NewExporter(logger *zap.Logger, collectorEndpoint string, apiToken string, settings *ExporterSettings) *Exporter {
 
 	bq := NewBatchQueue(&BatchQueueOptions{
-		Interval:      time.Duration(5) * time.Second,
+		Interval:      settings.Interval,
 		MaxBatchItems: settings.BatchSize,
 		MaxQueueSize:  settings.QueueSize,
 	})
 
+	client := graphqlmetricsv1connect.NewGraphQLMetricsServiceClient(
+		http.DefaultClient,
+		collectorEndpoint,
+		connect.WithSendGzip(),
+	)
+
 	return &Exporter{
 		queue:    bq,
 		outQueue: bq.OutQueue,
-		logger:   logger,
+		logger:   logger.With(zap.String("component", "graphqlmetrics_exporter")),
 		settings: settings,
+		client:   client,
+		apiToken: apiToken,
 	}
 }
 
@@ -76,17 +92,29 @@ func (e *Exporter) Record(item *graphqlmetricsv12.SchemaUsageInfo) bool {
 
 // send sends the batch to the configured endpoint.
 func (e *Exporter) send(items []*graphqlmetricsv12.SchemaUsageInfo) error {
-	time.Sleep(1 * time.Second)
-	e.logger.Info("sending batch", zap.Int("size", len(items)))
+	e.logger.Debug("sending batch", zap.Int("size", len(items)))
+
+	req := connect.NewRequest(&graphqlmetricsv12.PublishGraphQLRequestMetricsRequest{
+		SchemaUsage: items,
+	})
+
+	req.Header().Set("Authorization", "Bearer "+e.apiToken)
+
+	_, err := e.client.PublishGraphQLMetrics(context.Background(), req)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
 // Start starts the exporter.
 func (e *Exporter) Start(ctx context.Context) {
-
+	var startWG sync.WaitGroup
 	go e.queue.Start(ctx)
 
 	for i := 0; i < e.settings.NumConsumers; i++ {
+		startWG.Add(1)
 		e.stopWG.Add(1)
 
 		go func() {
@@ -107,31 +135,30 @@ func (e *Exporter) Start(ctx context.Context) {
 			}
 		}()
 	}
+
+	startWG.Wait()
 }
 
 // Aggregate aggregates the same operation metrics into a single metric with the sum of the counts.
 func (e *Exporter) Aggregate(items []any) []*graphqlmetricsv12.SchemaUsageInfo {
-	aggregatedMap := make(map[string]*graphqlmetricsv12.SchemaUsageInfo)
+	hashBuckets := make(map[string][]*graphqlmetricsv12.SchemaUsageInfo)
 
 	for _, item := range items {
 		m, ok := item.(*graphqlmetricsv12.SchemaUsageInfo)
 		if !ok {
 			continue
 		}
-		if existing, ok := aggregatedMap[m.OperationInfo.OperationHash]; ok {
-			for _, metric := range existing.TypeFieldMetrics {
-				// Just sum it up because both are the same
-				metric.Count += metric.Count
-			}
-		} else {
-			aggregatedMap[m.OperationInfo.OperationHash] = m
-		}
+		hashBuckets[m.OperationInfo.OperationHash] = append(hashBuckets[m.OperationInfo.OperationHash], m)
 	}
 
-	aggregated := make([]*graphqlmetricsv12.SchemaUsageInfo, 0, len(aggregatedMap))
+	aggregated := make([]*graphqlmetricsv12.SchemaUsageInfo, 0, len(hashBuckets))
 
-	for _, item := range aggregatedMap {
-		aggregated = append(aggregated, item)
+	for _, hashBucket := range hashBuckets {
+		first := hashBucket[0]
+		for _, metric := range first.TypeFieldMetrics {
+			metric.Count = uint64(len(hashBucket))
+		}
+		aggregated = append(aggregated, first)
 	}
 
 	return aggregated

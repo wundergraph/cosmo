@@ -82,7 +82,10 @@ func Main() {
 		core.WithGracePeriod(cfg.GracePeriod),
 		core.WithHealthCheckPath(cfg.HealthCheckPath),
 		core.WithLivenessCheckPath(cfg.LivenessCheckPath),
-		core.WithGraphQLMetrics(cfg.OperationChecks.Enabled),
+		core.WithGraphQLMetrics(&core.GraphQLMetricsConfig{
+			Enabled:           cfg.OperationChecks.Enabled,
+			CollectorEndpoint: cfg.OperationChecks.CollectorEndpoint,
+		}),
 		core.WithReadinessCheckPath(cfg.ReadinessCheckPath),
 		core.WithHeaderRules(cfg.Headers),
 		core.WithStaticRouterConfig(routerConfig),

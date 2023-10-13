@@ -28,7 +28,7 @@ func TestPublishGraphQLMetrics(t *testing.T) {
 					{
 						Path:      []string{"hello"},
 						TypeNames: []string{"Query"},
-						Source:    nil,
+						SourceIDs: nil,
 						Count:     1,
 					},
 				},

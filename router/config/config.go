@@ -110,7 +110,8 @@ type GlobalSubgraphRequestRule struct {
 }
 
 type OperationChecks struct {
-	Enabled bool `yaml:"enabled" default:"true" envconfig:"OPERATION_CHECKS_ENABLED"`
+	Enabled           bool   `yaml:"enabled" default:"true" envconfig:"OPERATION_CHECKS_ENABLED"`
+	CollectorEndpoint string `yaml:"collector_endpoint" default:"https://cosmo-metrics.wundergraph.com" envconfig:"OPERATION_CHECKS_COLLECTOR_ENDPOINT"`
 }
 
 type BackoffJitterRetry struct {
