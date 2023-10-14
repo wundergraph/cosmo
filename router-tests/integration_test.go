@@ -7,10 +7,12 @@ import (
 	"flag"
 	"fmt"
 	"math/rand"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -131,9 +133,7 @@ func sendData(server *core.Server, data []byte) *httptest.ResponseRecorder {
 	return rr
 }
 
-// setupServer sets up the router server without making it listen on a local
-// port, allowing tests by calling the server directly via server.Server.Handler.ServeHTTP
-func setupServer(tb testing.TB) *core.Server {
+func prepareServer(tb testing.TB, listeningPort int) *core.Server {
 	ctx := context.Background()
 	cfg := config.Config{
 		Graph: config.Graph{
@@ -159,7 +159,7 @@ func setupServer(tb testing.TB) *core.Server {
 		core.WithFederatedGraphName(cfg.Graph.Name),
 		core.WithStaticRouterConfig(routerConfig),
 		core.WithLogger(zapLogger),
-		core.WithListenerAddr(":3002"),
+		core.WithListenerAddr(":"+strconv.Itoa(listeningPort)),
 	)
 	require.NoError(tb, err)
 
@@ -172,10 +172,21 @@ func setupServer(tb testing.TB) *core.Server {
 	return server
 }
 
+// setupServer sets up the router server without making it listen on a local
+// port, allowing tests by calling the server directly via server.Server.Handler.ServeHTTP
+func setupServer(tb testing.TB) *core.Server {
+	return prepareServer(tb, 0)
+}
+
 // setupListeningServer calls setupServer to set up the server but makes it listen
-// on the network, automatically registering a cleanup function to shut it down
-func setupListeningServer(tb testing.TB) *core.Server {
-	server := setupServer(tb)
+// on the network, automatically registering a cleanup function to shut it down.
+// It returns both the server and the local port where the server is listening.
+func setupListeningServer(tb testing.TB) (*core.Server, int) {
+	listener, err := net.Listen("tcp", ":0")
+	require.NoError(tb, err)
+	port := listener.Addr().(*net.TCPAddr).Port
+	listener.Close()
+	server := prepareServer(tb, port)
 	go func() {
 		err := server.Server.ListenAndServe()
 		if err != http.ErrServerClosed {
@@ -186,7 +197,7 @@ func setupListeningServer(tb testing.TB) *core.Server {
 		err := server.Shutdown(context.Background())
 		assert.NoError(tb, err)
 	})
-	return server
+	return server, port
 }
 
 func normalizeJSON(tb testing.TB, data []byte) []byte {

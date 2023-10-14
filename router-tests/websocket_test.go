@@ -2,6 +2,7 @@ package integration_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"net"
 	"testing"
 	"time"
@@ -23,11 +24,11 @@ func connReadJSON(conn *websocket.Conn, v interface{}) error {
 	return conn.ReadJSON(v)
 }
 
-func connectedWebsocket(tb testing.TB) *websocket.Conn {
+func connectedWebsocket(tb testing.TB, serverPort int) *websocket.Conn {
 	dialer := websocket.Dialer{
 		Subprotocols: []string{"graphql-transport-ws"},
 	}
-	conn, _, err := dialer.Dial("ws://localhost:3002/graphql", nil)
+	conn, _, err := dialer.Dial(fmt.Sprintf("ws://localhost:%d/graphql", serverPort), nil)
 	require.NoError(tb, err)
 	err = conn.WriteJSON(&wsMessage{
 		Type: "connection_init",
@@ -37,10 +38,10 @@ func connectedWebsocket(tb testing.TB) *websocket.Conn {
 	err = connReadJSON(conn, &msg)
 	require.NoError(tb, err)
 	require.Equal(tb, "connection_ack", msg.Type)
-	// tb.Cleanup(func() {
-	// 	err := conn.Close()
-	// 	assert.NoError(tb, err)
-	// })
+	tb.Cleanup(func() {
+		err := conn.Close()
+		assert.NoError(tb, err)
+	})
 
 	return conn
 }
@@ -50,8 +51,8 @@ func TestQueryOverWebsocket(t *testing.T) {
 		query           = `{ employees { id } }`
 		expectedPayload = `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`
 	)
-	setupListeningServer(t)
-	conn := connectedWebsocket(t)
+	_, port := setupListeningServer(t)
+	conn := connectedWebsocket(t, port)
 	var err error
 	q := &testQuery{
 		Body: query,
@@ -68,7 +69,14 @@ func TestQueryOverWebsocket(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "next", msg.Type)
 	assert.Equal(t, messageID, msg.ID)
-	assert.Equal(t, expectedPayload, string(msg.Payload))
+	// Delete any "extensions" field from the payload, we don't care about it for now
+	var payload map[string]json.RawMessage
+	err = json.Unmarshal(msg.Payload, &payload)
+	require.NoError(t, err)
+	delete(payload, "extensions")
+	payloadBytes, err := json.Marshal(payload)
+	require.NoError(t, err)
+	assert.Equal(t, expectedPayload, string(payloadBytes))
 	err = connReadJSON(conn, &msg)
 	require.NoError(t, err)
 	assert.Equal(t, "complete", msg.Type)
@@ -84,8 +92,8 @@ func TestSubscriptionOverWebsocket(t *testing.T) {
 			} `json:"currentTime"`
 		} `json:"data"`
 	}
-	setupListeningServer(t)
-	conn := connectedWebsocket(t)
+	_, port := setupListeningServer(t)
+	conn := connectedWebsocket(t, port)
 	var err error
 	const messageID = "1"
 	err = conn.WriteJSON(&wsMessage{
@@ -137,8 +145,8 @@ type graphqlError struct {
 }
 
 func TestErrorOverWebsocket(t *testing.T) {
-	setupListeningServer(t)
-	conn := connectedWebsocket(t)
+	_, port := setupListeningServer(t)
+	conn := connectedWebsocket(t, port)
 	var err error
 	const messageID = "1"
 	err = conn.WriteJSON(&wsMessage{
