@@ -102,9 +102,13 @@ type (
 	// Server is the main router instance.
 	Server struct {
 		Config
-		Server       *http.Server
-		routerConfig *nodev1.RouterConfig
-		healthChecks *health.Checks
+		Server *http.Server
+		// rootContext that all services depending on the router should
+		// use as a parent context
+		rootContext       context.Context
+		rootContextCancel func()
+		routerConfig      *nodev1.RouterConfig
+		healthChecks      *health.Checks
 	}
 
 	// Option defines the method to customize Server.
@@ -517,9 +521,12 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		return nil, err
 	}
 
+	rootContext, rootContextCancel := context.WithCancel(ctx)
 	ro := &Server{
-		routerConfig: routerConfig,
-		Config:       r.Config,
+		rootContext:       rootContext,
+		rootContextCancel: rootContextCancel,
+		routerConfig:      routerConfig,
+		Config:            r.Config,
 	}
 
 	recoveryHandler := recovery.New(recovery.WithLogger(r.logger), recovery.WithPrintStack())
@@ -668,7 +675,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 			subChiRouter.Use(traceHandler.Handler)
 		}
 
-		subChiRouter.Use(NewWebsocketMiddleware(WebsocketMiddlewareOptions{
+		subChiRouter.Use(NewWebsocketMiddleware(rootContext, WebsocketMiddlewareOptions{
 			Parser:         operationParser,
 			GraphQLHandler: graphqlHandler,
 			Logger:         r.logger,
@@ -777,6 +784,8 @@ func (r *Server) Shutdown(ctx context.Context) (err error) {
 		zap.String("config_version", r.routerConfig.GetVersion()),
 		zap.String("grace_period", r.gracePeriod.String()),
 	)
+
+	r.rootContextCancel()
 
 	if r.gracePeriod > 0 {
 		ctxWithTimer, cancel := context.WithTimeout(ctx, r.gracePeriod)

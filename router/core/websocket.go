@@ -37,19 +37,17 @@ type wsMessage struct {
 	Payload json.RawMessage `json:"payload,omitempty"`
 }
 
-type wsSubscribePayload struct {
-}
-
 type WebsocketMiddlewareOptions struct {
 	Parser         *OperationParser
 	GraphQLHandler *GraphQLHandler
 	Logger         *zap.Logger
 }
 
-func NewWebsocketMiddleware(opts WebsocketMiddlewareOptions) func(http.Handler) http.Handler {
+func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions) func(http.Handler) http.Handler {
 	ids := newGlobalIDStorage()
 	return func(next http.Handler) http.Handler {
 		return &WebsocketHandler{
+			ctx:            ctx,
 			next:           next,
 			ids:            ids,
 			parser:         opts.Parser,
@@ -98,6 +96,7 @@ func (s *globalIDStorage) Remove(id string) bool {
 }
 
 type WebsocketHandler struct {
+	ctx            context.Context
 	next           http.Handler
 	ids            *globalIDStorage
 	parser         *OperationParser
@@ -125,7 +124,7 @@ func (h *WebsocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			h.logger.Warn("upgrading websocket", zap.Error(err))
 			return
 		}
-		connectionHandler := NewWebsocketConnectionHandler(WebSocketConnectionHandlerOptions{
+		connectionHandler := NewWebsocketConnectionHandler(h.ctx, WebSocketConnectionHandlerOptions{
 			IDs:            h.ids,
 			Parser:         h.parser,
 			GraphQLHandler: h.graphqlHandler,
@@ -272,6 +271,7 @@ type WebSocketConnectionHandlerOptions struct {
 }
 
 type WebSocketConnectionHandler struct {
+	ctx            context.Context
 	globalIDs      *globalIDStorage
 	subscriptions  *subscriptionStorage
 	parser         *OperationParser
@@ -283,8 +283,9 @@ type WebSocketConnectionHandler struct {
 	logger         *zap.Logger
 }
 
-func NewWebsocketConnectionHandler(opts WebSocketConnectionHandlerOptions) *WebSocketConnectionHandler {
+func NewWebsocketConnectionHandler(ctx context.Context, opts WebSocketConnectionHandlerOptions) *WebSocketConnectionHandler {
 	return &WebSocketConnectionHandler{
+		ctx:            ctx,
 		globalIDs:      opts.IDs,
 		subscriptions:  newSubscriptionStorage(),
 		parser:         opts.Parser,
@@ -313,10 +314,24 @@ func (h *WebSocketConnectionHandler) writeErrorMessage(operationID string, err e
 	return h.conn.WriteJSON(wsMessage{ID: operationID, Type: wsMessageTypeError, Payload: payload})
 }
 
+func (h *WebSocketConnectionHandler) readJSON(v interface{}) error {
+	ech := make(chan error, 1)
+	go func() {
+		ech <- h.conn.ReadJSON(v)
+	}()
+	select {
+	case <-h.ctx.Done():
+		h.Close()
+		return h.ctx.Err()
+	case err := <-ech:
+		return err
+	}
+}
+
 func (h *WebSocketConnectionHandler) sessionInit() error {
 	var msg wsMessage
 	// First message must be a connection_init
-	if err := h.conn.ReadJSON(&msg); err != nil {
+	if err := h.readJSON(&msg); err != nil {
 		return fmt.Errorf("error reading connection_init: %w", err)
 	}
 	if msg.Type != wsMessageTypeConnectionInit {
@@ -394,7 +409,7 @@ func (h *WebSocketConnectionHandler) Serve() {
 	}
 	var msg wsMessage
 	for {
-		if err := h.conn.ReadJSON(&msg); err != nil {
+		if err := h.readJSON(&msg); err != nil {
 			h.requestError(fmt.Errorf("error decoding message: %w", err))
 			return
 		}

@@ -1,6 +1,7 @@
 package integration_test
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -165,4 +166,29 @@ func TestErrorOverWebsocket(t *testing.T) {
 	require.NoError(t, err)
 	assert.Len(t, errors, 1)
 	assert.Equal(t, errors[0].Message, `field: does_not_exist not defined on type: Subscription`)
+}
+
+func TestShutdownWithActiveWebsocket(t *testing.T) {
+	server, port := setupListeningServer(t)
+	conn := connectedWebsocket(t, port)
+	var err error
+	const messageID = "1"
+	err = conn.WriteJSON(&wsMessage{
+		ID:      messageID,
+		Type:    "subscribe",
+		Payload: []byte(`{"query":"subscription { does_not_exist }"}`),
+	})
+	require.NoError(t, err)
+	// Discard the first message
+	var msg wsMessage
+	err = connReadJSON(conn, &msg)
+	require.NoError(t, err)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	require.NoError(t, server.Shutdown(ctx))
+	_, _, err = conn.NextReader()
+	// Check that the WS client error indicates the connection was unexpectedly closed
+	cerr, ok := err.(*websocket.CloseError)
+	require.True(t, ok)
+	assert.Equal(t, 1006, cerr.Code)
 }
