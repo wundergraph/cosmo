@@ -3,8 +3,12 @@ import { Component2Icon } from "@radix-ui/react-icons";
 import { addDays, formatDistance } from "date-fns";
 import { useRouter } from "next/router";
 import { useContext, useMemo } from "react";
-import { IoKeyOutline, IoPeopleOutline } from "react-icons/io5";
-import { PiGear, PiGraphLight, PiWebhooksLogo } from "react-icons/pi";
+import {
+  IoKeyOutline,
+  IoNotificationsOutline,
+  IoPeopleOutline,
+} from "react-icons/io5";
+import { PiGear, PiGraphLight } from "react-icons/pi";
 import { UserContext } from "../app-provider";
 import { PageHeader } from "./head";
 import { LayoutProps } from "./layout";
@@ -43,9 +47,9 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
         icon: <IoKeyOutline />,
       },
       {
-        title: "Webhooks",
+        title: "Notifications",
         href: basePath + "/webhooks",
-        icon: <PiWebhooksLogo />,
+        icon: <IoNotificationsOutline />,
       },
       {
         title: "Settings",

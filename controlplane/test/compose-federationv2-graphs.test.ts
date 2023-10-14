@@ -77,6 +77,10 @@ describe('ComposeFederationV2Graphs', (ctx) => {
         keycloakClient,
         platformWebhooks,
         webBaseUrl,
+        slack: {
+          clientID: '',
+          clientSecret: '',
+        },
       }),
     });
 

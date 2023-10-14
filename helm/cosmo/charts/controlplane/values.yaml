@@ -158,3 +158,5 @@ configuration:
   githubAppId: ""
   githubAppPrivateKey: ""
   githubAppWebhookSecret: ""
+  slackAppClientId: ""
+  slackAppClientSecret: ""
