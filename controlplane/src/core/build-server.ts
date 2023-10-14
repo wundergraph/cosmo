@@ -66,6 +66,7 @@ export interface BuildConfig {
     id?: string;
     privateKey?: string;
   };
+  slack: { clientID?: string; clientSecret?: string };
 }
 
 const developmentLoggerOpts: PinoLoggerOptions = {
@@ -239,6 +240,7 @@ export default async function build(opts: BuildConfig) {
       platformWebhooks,
       githubApp,
       webBaseUrl: opts.auth.webBaseUrl,
+      slack: opts.slack,
     }),
     logLevel: opts.logger.level as pino.LevelWithSilent,
     // Avoid compression for small requests
