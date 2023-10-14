@@ -107,12 +107,12 @@ func Wait(ctx context.Context, r SubgraphsRunner) error {
 
 func randomFreePorts() *subgraphs.Ports {
 	ports := make([]int, 4)
-	for ii := range ports {
+	for i := range ports {
 		listener, err := net.Listen("tcp", ":0")
 		if err != nil {
 			panic(err)
 		}
-		ports[ii] = listener.Addr().(*net.TCPAddr).Port
+		ports[i] = listener.Addr().(*net.TCPAddr).Port
 		listener.Close()
 
 	}
