@@ -4,6 +4,8 @@ import (
 	"connectrpc.com/connect"
 	"context"
 	"errors"
+	"fmt"
+	"github.com/cloudflare/backoff"
 	graphqlmetricsv12 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
 	"go.uber.org/zap"
@@ -23,6 +25,13 @@ type Exporter struct {
 	apiToken string
 }
 
+type RetryOptions struct {
+	Enabled     bool
+	MaxDuration time.Duration
+	Interval    time.Duration
+	MaxRetry    int
+}
+
 type ExporterSettings struct {
 	// NumConsumers is the number of consumers from the queue.
 	NumConsumers int
@@ -32,6 +41,8 @@ type ExporterSettings struct {
 	QueueSize int
 	// Interval is the interval at which the queue is flushed.
 	Interval time.Duration
+	// Retry is the retry options for the exporter.
+	Retry RetryOptions
 }
 
 func NewDefaultExporterSettings() *ExporterSettings {
@@ -40,9 +51,18 @@ func NewDefaultExporterSettings() *ExporterSettings {
 		BatchSize:    defaultMaxBatchItems,
 		QueueSize:    defaultMaxQueueSize,
 		Interval:     time.Duration(5) * time.Second,
+		Retry: RetryOptions{
+			Enabled:     true,
+			MaxRetry:    3,
+			MaxDuration: time.Duration(15) * time.Second,
+			Interval:    time.Duration(3) * time.Second,
+		},
 	}
 }
 
+// NewExporter creates a new GraphQL metrics exporter. The collectorEndpoint is the endpoint to which the metrics
+// are sent. The apiToken is the token used to authenticate with the collector. The collector supports Brotli compression
+// and retries on failure. Underling queue implementation sends batches of metrics at the specified interval and batch size.
 func NewExporter(logger *zap.Logger, collectorEndpoint string, apiToken string, settings *ExporterSettings) *Exporter {
 
 	bq := NewBatchQueue(&BatchQueueOptions{
@@ -92,7 +112,11 @@ func (e *Exporter) Record(item *graphqlmetricsv12.SchemaUsageInfo) bool {
 
 // send sends the batch to the configured endpoint.
 func (e *Exporter) send(items []*graphqlmetricsv12.SchemaUsageInfo) error {
-	e.logger.Debug("sending batch", zap.Int("size", len(items)))
+	b := backoff.New(e.settings.Retry.MaxDuration, e.settings.Retry.Interval)
+	defer b.Reset()
+
+	batchSize := len(items)
+	e.logger.Debug("sending batch", zap.Int("size", batchSize))
 
 	req := connect.NewRequest(&graphqlmetricsv12.PublishGraphQLRequestMetricsRequest{
 		SchemaUsage: items,
@@ -101,9 +125,53 @@ func (e *Exporter) send(items []*graphqlmetricsv12.SchemaUsageInfo) error {
 	req.Header().Set("Authorization", "Bearer "+e.apiToken)
 
 	_, err := e.client.PublishGraphQLMetrics(context.Background(), req)
-	if err != nil {
-		return err
+	if err == nil {
+		return nil
 	}
+
+	e.logger.Debug("Failed to export batch", zap.Error(err), zap.Int("batch_size", batchSize))
+
+	var retry int
+	var lastErr error
+
+	for retry <= e.settings.Retry.MaxRetry {
+
+		retry++
+
+		// Wait for the specified backoff period
+		sleepDuration := b.Duration()
+
+		e.logger.Debug(fmt.Sprintf("Retrying export in %s ...", sleepDuration.String()),
+			zap.Int("batch_size", batchSize),
+			zap.Int("retry", retry),
+			zap.Duration("sleep", sleepDuration),
+		)
+
+		// Wait for the specified backoff period
+		time.Sleep(sleepDuration)
+
+		req := connect.NewRequest(&graphqlmetricsv12.PublishGraphQLRequestMetricsRequest{
+			SchemaUsage: items,
+		})
+
+		req.Header().Set("Authorization", "Bearer "+e.apiToken)
+
+		_, lastErr = e.client.PublishGraphQLMetrics(context.Background(), req)
+		if lastErr == nil {
+			return nil
+		}
+		e.logger.Debug("Failed to export batch",
+			zap.Error(lastErr),
+			zap.Int("retry", retry),
+			zap.Int("batch_size", batchSize),
+		)
+	}
+
+	e.logger.Error("Failed to export batch after retries",
+		zap.Error(lastErr),
+		zap.Int("batch_size", batchSize),
+		zap.Int("retries", retry),
+	)
 
 	return nil
 }
