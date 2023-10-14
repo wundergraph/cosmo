@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.25.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.24.2...controlplane@0.25.0) (2023-10-13)
+
+### Features
+
+* implement slack notifications ([#175](https://github.com/wundergraph/cosmo/issues/175)) ([87c30ec](https://github.com/wundergraph/cosmo/commit/87c30ec86fcd7090b33cbf274bd126534992857f)) (@JivusAyrus)
+
 ## [0.24.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.24.1...controlplane@0.24.2) (2023-10-11)
 
 ### Bug Fixes

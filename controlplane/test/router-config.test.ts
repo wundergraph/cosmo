@@ -78,6 +78,10 @@ describe('Router Config', (ctx) => {
         keycloakClient,
         platformWebhooks,
         webBaseUrl,
+        slack: {
+          clientID: '',
+          clientSecret: '',
+        },
       }),
     });
 
@@ -309,6 +313,10 @@ describe('Router Config', (ctx) => {
         keycloakClient,
         platformWebhooks,
         webBaseUrl,
+        slack: {
+          clientID: '',
+          clientSecret: '',
+        },
       }),
     });
 

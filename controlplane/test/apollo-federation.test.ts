@@ -76,6 +76,10 @@ describe('Apollo Federated Graph', (ctx) => {
         keycloakClient,
         platformWebhooks,
         webBaseUrl,
+        slack: {
+          clientID: '',
+          clientSecret: '',
+        },
       }),
     });
 
