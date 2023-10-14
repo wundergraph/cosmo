@@ -43,7 +43,7 @@ func (s *Server) bootstrap() {
 	mux := http.NewServeMux()
 	path, handler := graphqlmetricsv1connect.NewGraphQLMetricsServiceHandler(
 		s.metricsService,
-		// Compress responses with Brotli.
+		// Brotli compression support.
 		brotli.WithCompression(),
 	)
 	mux.Handle(path, handler)
