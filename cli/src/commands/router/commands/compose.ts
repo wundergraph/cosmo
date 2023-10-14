@@ -4,7 +4,7 @@ import { buildRouterConfig, normalizeURL } from '@wundergraph/cosmo-shared';
 import { Command, program } from 'commander';
 import { parse, printSchema } from 'graphql';
 import * as yaml from 'js-yaml';
-import { resolve, dirname, join } from 'pathe';
+import { resolve, dirname } from 'pathe';
 import pc from 'picocolors';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { composeSubgraphs, introspectSubgraph } from '../../../utils.js';
@@ -99,7 +99,7 @@ export default (opts: BaseCommandOptions) => {
     });
 
     if (options.out) {
-      await writeFile(join(process.cwd(), options.out), routerConfig.toJsonString());
+      await writeFile(options.out, routerConfig.toJsonString());
     } else {
       console.log(routerConfig.toJsonString());
     }
