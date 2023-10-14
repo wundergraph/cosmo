@@ -173,7 +173,7 @@ func (e *Exporter) send(items []*graphqlmetricsv12.SchemaUsageInfo) error {
 		zap.Int("retries", retry),
 	)
 
-	return nil
+	return lastErr
 }
 
 // Start starts the exporter.
@@ -192,9 +192,7 @@ func (e *Exporter) Start(ctx context.Context) {
 				select {
 				case batch, more := <-e.outQueue:
 					if more {
-						if err := e.send(e.Aggregate(batch)); err != nil {
-							e.logger.Error("failed to send batch", zap.Error(err))
-						}
+						_ = e.send(e.Aggregate(batch))
 					} else {
 						// Close current exporter when queues was closed from producer side
 						return
