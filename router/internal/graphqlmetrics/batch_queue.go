@@ -6,7 +6,6 @@ import "time"
 
 import (
 	"context"
-	"sync/atomic"
 )
 
 const (
@@ -43,7 +42,6 @@ type BatchQueue struct {
 	ctx             context.Context
 	cancel          context.CancelFunc
 	doWork          chan struct{}
-	stopped         *atomic.Bool
 	timer           *time.Timer
 	inQueue         chan any
 	midQueue        chan any
@@ -67,7 +65,6 @@ func NewBatchQueue(config *BatchQueueOptions) *BatchQueue {
 		inQueue:         make(chan any, config.MaxQueueSize/2),
 		midQueue:        make(chan any, config.MaxQueueSize/2),
 		OutQueue:        make(chan []any, config.MaxQueueSize/config.MaxBatchItems),
-		stopped:         &atomic.Bool{},
 		dispatchedCount: 0,
 	}
 
@@ -76,10 +73,6 @@ func NewBatchQueue(config *BatchQueueOptions) *BatchQueue {
 
 // Enqueue adds an item to the queue. Returns false if the queue is stopped or not ready to accept items
 func (b *BatchQueue) Enqueue(item any) bool {
-	if b.stopped.Load() {
-		return false
-	}
-
 	select {
 	case b.inQueue <- item:
 		return true
@@ -154,7 +147,6 @@ func (b *BatchQueue) Start(ctx context.Context) {
 
 // Stop stops the internal dispatch and listen scheduler.
 func (b *BatchQueue) Stop() {
-	b.stopped.Store(true) // disable producer
 	b.cancel()
 }
 
