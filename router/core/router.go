@@ -334,7 +334,7 @@ func (r *Router) updateServer(ctx context.Context, cfg *nodev1.RouterConfig) err
 
 		r.activeRouter.healthChecks.SetReady(true)
 
-		// This is r blocking call
+		// This is a blocking call
 		if err := r.activeRouter.listenAndServe(); err != nil {
 			r.activeRouter.healthChecks.SetReady(true)
 			r.logger.Error("Failed to start new server", zap.Error(err))
