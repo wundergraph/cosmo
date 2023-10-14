@@ -4,9 +4,7 @@ replace github.com/wundergraph/cosmo/router => ../router
 
 replace github.com/wundergraph/cosmo/demo => ../demo
 
-go 1.21
-
-toolchain go1.21.2
+go 1.20
 
 require (
 	github.com/gorilla/websocket v1.5.0
