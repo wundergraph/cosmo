@@ -1,9 +1,9 @@
 package graphqlmetrics
 
 import (
+	"connectrpc.com/connect"
 	"context"
 	_ "github.com/amacneil/dbmate/v2/pkg/driver/clickhouse"
-	"github.com/bufbuild/connect-go"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
