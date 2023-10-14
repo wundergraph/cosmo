@@ -41,6 +41,8 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		var writtenBytes int
 		var metrics *OperationMetrics
 
+		clientInfo := NewClientInfoFromRequest(r)
+
 		if h.requestMetrics != nil {
 			metrics = StartOperationMetrics(r.Context(), h.requestMetrics, r.ContentLength)
 
@@ -48,7 +50,6 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 				metrics.Finish(r.Context(), statusCode, int64(writtenBytes))
 			}()
 
-			clientInfo := NewClientMetricsInfoFromRequest(r)
 			metrics.AddClientInfo(r.Context(), clientInfo)
 		}
 
@@ -82,7 +83,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			metrics.AddOperation(r.Context(), operation)
 		}
 
-		ctxWithOperation := withOperationContext(r.Context(), operation)
+		ctxWithOperation := withOperationContext(r.Context(), operation, clientInfo)
 		ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
 
 		newReq := r.WithContext(ctxWithOperation)

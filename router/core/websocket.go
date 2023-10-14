@@ -279,6 +279,7 @@ type WebSocketConnectionHandler struct {
 	w              http.ResponseWriter
 	r              *http.Request
 	conn           *websocket.Conn
+	clientInfo     *ClientInfo
 	logger         *zap.Logger
 }
 
@@ -291,6 +292,7 @@ func NewWebsocketConnectionHandler(opts WebSocketConnectionHandlerOptions) *WebS
 		w:              opts.ResponseWriter,
 		r:              opts.Request,
 		conn:           opts.Connection,
+		clientInfo:     NewClientInfoFromRequest(opts.Request),
 		logger:         opts.Logger,
 	}
 }
@@ -346,7 +348,7 @@ func (h *WebSocketConnectionHandler) handleSubscribe(msg *wsMessage) error {
 	// This gets removed by WebSocketConnectionHandler.Complete()
 	h.subscriptions.Insert(msg.ID, cancel)
 
-	ctxWithOperation := withOperationContext(cancellableContext, operation)
+	ctxWithOperation := withOperationContext(cancellableContext, operation, h.clientInfo)
 	r := h.r.WithContext(ctxWithOperation)
 	rw := newWebsocketResponseWriter(msg.ID, h.conn, h.logger)
 	r = requestWithAttachedContext(rw, r, h.logger)

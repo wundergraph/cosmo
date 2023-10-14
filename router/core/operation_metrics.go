@@ -2,31 +2,15 @@ package core
 
 import (
 	"context"
-	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/wundergraph/cosmo/router/internal/metric"
 	"github.com/wundergraph/cosmo/router/internal/otel"
-	ctrace "github.com/wundergraph/cosmo/router/internal/trace"
 	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"go.opentelemetry.io/otel/trace"
 )
-
-type ClientMetricsInfo struct {
-	Name    string
-	Version string
-}
-
-func NewClientMetricsInfoFromRequest(r *http.Request) *ClientMetricsInfo {
-	clientName := ctrace.GetClientInfo(r.Header, "graphql-client-name", "apollographql-client-name", "unknown")
-	clientVersion := ctrace.GetClientInfo(r.Header, "graphql-client-version", "apollographql-client-version", "missing")
-	return &ClientMetricsInfo{
-		Name:    clientName,
-		Version: clientVersion,
-	}
-}
 
 type OperationMetrics struct {
 	requestContentLength int64
@@ -76,7 +60,7 @@ func (m *OperationMetrics) AddOperation(ctx context.Context, operation *ParsedOp
 	m.metricBaseFields = append(m.metricBaseFields, opHashID)
 }
 
-func (m *OperationMetrics) AddClientInfo(ctx context.Context, info *ClientMetricsInfo) {
+func (m *OperationMetrics) AddClientInfo(ctx context.Context, info *ClientInfo) {
 	span := trace.SpanFromContext(ctx)
 
 	// Add client info to trace span attributes

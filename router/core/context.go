@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-chi/chi/middleware"
 	"github.com/wundergraph/cosmo/router/internal/logging"
+	ctrace "github.com/wundergraph/cosmo/router/internal/trace"
 	"go.uber.org/zap"
 )
 
@@ -23,6 +24,22 @@ type Subgraph struct {
 	Id   string
 	Name string
 	Url  *url.URL
+}
+
+type ClientInfo struct {
+	// Name contains the client name, derived from the request headers
+	Name string
+	// Version contains the client version, derived from the request headers
+	Version string
+}
+
+func NewClientInfoFromRequest(r *http.Request) *ClientInfo {
+	clientName := ctrace.GetClientInfo(r.Header, "graphql-client-name", "apollographql-client-name", "unknown")
+	clientVersion := ctrace.GetClientInfo(r.Header, "graphql-client-version", "apollographql-client-version", "missing")
+	return &ClientInfo{
+		Name:    clientName,
+		Version: clientVersion,
+	}
 }
 
 type RequestContext interface {
@@ -317,6 +334,8 @@ type OperationContext interface {
 	Hash() uint64
 	// Content is the content of the operation
 	Content() string
+	// ClientInfo returns information about the client that initiated this operation
+	ClientInfo() ClientInfo
 }
 
 var _ OperationContext = (*operationContext)(nil)
@@ -330,8 +349,9 @@ type operationContext struct {
 	// Hash is the hash of the operation
 	hash uint64
 	// Content is the content of the operation
-	content   string
-	variables []byte
+	content    string
+	variables  []byte
+	clientInfo *ClientInfo
 }
 
 func (o *operationContext) Name() string {
@@ -354,16 +374,21 @@ func (o *operationContext) Variables() []byte {
 	return o.variables
 }
 
-func withOperationContext(ctx context.Context, operation *ParsedOperation) context.Context {
+func (o *operationContext) ClientInfo() ClientInfo {
+	return *o.clientInfo
+}
+
+func withOperationContext(ctx context.Context, operation *ParsedOperation, clientInfo *ClientInfo) context.Context {
 	variablesCopy := make([]byte, len(operation.Variables))
 	copy(variablesCopy, operation.Variables)
 
 	opContext := &operationContext{
-		name:      operation.Name,
-		opType:    operation.Type,
-		content:   operation.NormalizedRepresentation,
-		hash:      operation.ID,
-		variables: variablesCopy,
+		name:       operation.Name,
+		opType:     operation.Type,
+		content:    operation.NormalizedRepresentation,
+		hash:       operation.ID,
+		variables:  variablesCopy,
+		clientInfo: clientInfo,
 	}
 	return context.WithValue(ctx, operationContextKey, opContext)
 }
