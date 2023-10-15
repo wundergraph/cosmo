@@ -23,11 +23,19 @@ export interface Input {
   subgraphs: Subgraph[];
 }
 
+export type SubscriptionProtocol = 'graphql-ws' | 'sse';
+
 export interface Subgraph {
   id: string;
   name: string;
   sdl: string;
   url: string;
+  subscriptions?: {
+    /**
+     * The protocol to use for subscriptions. If not set, defaults to graphql-ws.
+     */
+    protocol?: SubscriptionProtocol;
+  }
 }
 
 export const internString = (config: EngineConfiguration, str: string): InternedString => {
@@ -97,7 +105,7 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
             kind: ConfigurationVariableKind.STATIC_CONFIGURATION_VARIABLE,
             staticVariableContent: subgraph.url,
           }),
-          useSSE: false,
+          useSSE: subgraph.subscriptions?.protocol === 'sse',
         },
       },
       directives: [],

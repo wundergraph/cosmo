@@ -17,6 +17,9 @@ type Config = {
     schema?: {
       file: string;
     };
+    subscriptions?: {
+      protocol?: 'graphql-ws' | 'sse';
+    },
     introspection?: {
       url: string;
       headers?: {
@@ -95,6 +98,7 @@ export default (opts: BaseCommandOptions) => {
         name: s.name,
         url: normalizeURL(s.routing_url),
         sdl: sdls[index],
+        subscriptions: s.subscriptions,
       })),
     });
 
