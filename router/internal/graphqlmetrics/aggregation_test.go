@@ -25,9 +25,9 @@ func TestAggregateCount(t *testing.T) {
 				},
 			},
 			OperationInfo: &graphqlmetricsv1.OperationInfo{
-				OperationType: "query",
-				OperationHash: "123",
-				OperationName: "user",
+				Type: graphqlmetricsv1.OperationType_QUERY,
+				Hash: "123",
+				Name: "user",
 			},
 			RequestInfo: &graphqlmetricsv1.RequestInfo{
 				RouterConfigVersion: "1",
@@ -53,9 +53,9 @@ func TestAggregateCount(t *testing.T) {
 				},
 			},
 			OperationInfo: &graphqlmetricsv1.OperationInfo{
-				OperationType: "query",
-				OperationHash: "123",
-				OperationName: "user",
+				Type: graphqlmetricsv1.OperationType_QUERY,
+				Hash: "123",
+				Name: "user",
 			},
 			RequestInfo: &graphqlmetricsv1.RequestInfo{
 				RouterConfigVersion: "1",
@@ -85,9 +85,9 @@ func TestAggregateWithDifferentOperationInfo(t *testing.T) {
 				},
 			},
 			OperationInfo: &graphqlmetricsv1.OperationInfo{
-				OperationType: "query",
-				OperationHash: "123456", // different hash
-				OperationName: "user",
+				Type: graphqlmetricsv1.OperationType_QUERY,
+				Hash: "123456", // different hash
+				Name: "user",
 			},
 			RequestInfo: &graphqlmetricsv1.RequestInfo{
 				RouterConfigVersion: "1",
@@ -107,9 +107,9 @@ func TestAggregateWithDifferentOperationInfo(t *testing.T) {
 				},
 			},
 			OperationInfo: &graphqlmetricsv1.OperationInfo{
-				OperationType: "query",
-				OperationHash: "123",
-				OperationName: "user",
+				Type: graphqlmetricsv1.OperationType_QUERY,
+				Hash: "123",
+				Name: "user",
 			},
 			RequestInfo: &graphqlmetricsv1.RequestInfo{
 				RouterConfigVersion: "1",
@@ -139,9 +139,9 @@ func TestAggregateWithDifferentClientInfo(t *testing.T) {
 				},
 			},
 			OperationInfo: &graphqlmetricsv1.OperationInfo{
-				OperationType: "query",
-				OperationHash: "123",
-				OperationName: "user",
+				Type: graphqlmetricsv1.OperationType_QUERY,
+				Hash: "123",
+				Name: "user",
 			},
 			RequestInfo: &graphqlmetricsv1.RequestInfo{
 				RouterConfigVersion: "1",
@@ -161,9 +161,9 @@ func TestAggregateWithDifferentClientInfo(t *testing.T) {
 				},
 			},
 			OperationInfo: &graphqlmetricsv1.OperationInfo{
-				OperationType: "query",
-				OperationHash: "123",
-				OperationName: "user",
+				Type: graphqlmetricsv1.OperationType_QUERY,
+				Hash: "123",
+				Name: "user",
 			},
 			RequestInfo: &graphqlmetricsv1.RequestInfo{
 				RouterConfigVersion: "1",
@@ -199,9 +199,9 @@ func TestAggregateWithDifferentFields(t *testing.T) {
 				},
 			},
 			OperationInfo: &graphqlmetricsv1.OperationInfo{
-				OperationType: "query",
-				OperationHash: "123",
-				OperationName: "user",
+				Type: graphqlmetricsv1.OperationType_QUERY,
+				Hash: "123",
+				Name: "user",
 			},
 			RequestInfo: &graphqlmetricsv1.RequestInfo{
 				RouterConfigVersion: "1",
@@ -221,9 +221,9 @@ func TestAggregateWithDifferentFields(t *testing.T) {
 				},
 			},
 			OperationInfo: &graphqlmetricsv1.OperationInfo{
-				OperationType: "query",
-				OperationHash: "123",
-				OperationName: "user",
+				Type: graphqlmetricsv1.OperationType_QUERY,
+				Hash: "123",
+				Name: "user",
 			},
 			RequestInfo: &graphqlmetricsv1.RequestInfo{
 				RouterConfigVersion: "1",

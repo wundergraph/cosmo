@@ -125,11 +125,11 @@ func (b *BatchQueue[T]) dispatch() {
 			continue
 		}
 
-		// dispatch
-		b.OutQueue <- items
-
 		// reset timer
 		b.tick()
+
+		// dispatch
+		b.OutQueue <- items
 
 		// stop after last batch
 		if stopped {
