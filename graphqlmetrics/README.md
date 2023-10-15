@@ -1,4 +1,4 @@
 # GraphQLMetrics
 
-GraphQLMetrics is a service that collects, process and exposes operation, schema metrics about the Cosmo Router.
-It allows to efficiently track the usage of the schema in terms of operations and fields.
+GraphQLMetrics is a service that collects, process and exports operation schema metrics for GraphQL APIs.
+It allows to efficiently track and store metrics to ClickHouse database.
