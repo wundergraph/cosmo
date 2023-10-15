@@ -44,6 +44,9 @@ func (s *Server) bootstrap() {
 		// Brotli compression support.
 		brotli.WithCompression(),
 	)
+	mux.Handle("/health", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
 	mux.Handle(path, handler)
 
 	s.server = &http.Server{

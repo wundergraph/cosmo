@@ -10,12 +10,18 @@ import (
 	graphqlmetricsv1 "github.com/wundergraph/cosmo/graphqlmetrics/gen/proto/wg/cosmo/graphqlmetrics/v1"
 	"github.com/wundergraph/cosmo/graphqlmetrics/test"
 	"go.uber.org/zap"
+	"os"
 	"testing"
 )
 
 var jwtSecret = []byte("secret")
 
 func TestPublishGraphQLMetrics(t *testing.T) {
+
+	if os.Getenv("INT_TESTS") != "true" {
+		t.Skip("Skipping integration tests")
+	}
+
 	db := test.GetTestDatabase(t)
 
 	msvc := NewMetricsService(zap.NewNop(), db, jwtSecret)
@@ -93,6 +99,10 @@ func TestPublishGraphQLMetrics(t *testing.T) {
 }
 
 func TestAuthentication(t *testing.T) {
+	if os.Getenv("INT_TESTS") != "true" {
+		t.Skip("Skipping integration tests")
+	}
+
 	db := test.GetTestDatabase(t)
 
 	msvc := NewMetricsService(zap.NewNop(), db, jwtSecret)

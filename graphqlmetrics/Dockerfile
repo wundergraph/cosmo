@@ -15,8 +15,6 @@ RUN go mod download
 # Copy the rest of the files
 COPY . .
 
-WORKDIR /app/router
-
 # Run tests
 RUN make test
 

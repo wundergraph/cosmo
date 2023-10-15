@@ -13,6 +13,7 @@ concurrency:
 
 env:
   CI: true
+  INT_TESTS: true
 
 jobs:
   build_test:
