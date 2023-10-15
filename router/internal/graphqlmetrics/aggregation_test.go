@@ -72,7 +72,7 @@ func TestAggregateCount(t *testing.T) {
 	require.Equal(t, uint64(2), result[0].TypeFieldMetrics[1].Count)
 }
 
-func TestNoAggregateForDifferentSchemaUsages(t *testing.T) {
+func TestAggregateWithDifferentOperationInfo(t *testing.T) {
 
 	result := Aggregate([]*graphqlmetricsv1.SchemaUsageInfo{
 		{
@@ -124,8 +124,11 @@ func TestNoAggregateForDifferentSchemaUsages(t *testing.T) {
 	require.Equal(t, 2, len(result))
 	require.Equal(t, uint64(2), result[0].TypeFieldMetrics[0].Count)
 	require.Equal(t, uint64(1), result[1].TypeFieldMetrics[0].Count)
+}
 
-	result = Aggregate([]*graphqlmetricsv1.SchemaUsageInfo{
+func TestAggregateWithDifferentClientInfo(t *testing.T) {
+
+	result := Aggregate([]*graphqlmetricsv1.SchemaUsageInfo{
 		{
 			TypeFieldMetrics: []*graphqlmetricsv1.TypeFieldUsageInfo{
 				{
@@ -174,5 +177,66 @@ func TestNoAggregateForDifferentSchemaUsages(t *testing.T) {
 
 	require.Equal(t, 2, len(result))
 	require.Equal(t, uint64(2), result[0].TypeFieldMetrics[0].Count)
+	require.Equal(t, uint64(1), result[1].TypeFieldMetrics[0].Count)
+}
+
+func TestAggregateWithDifferentFields(t *testing.T) {
+
+	result := Aggregate([]*graphqlmetricsv1.SchemaUsageInfo{
+		{
+			TypeFieldMetrics: []*graphqlmetricsv1.TypeFieldUsageInfo{
+				{
+					Path:      []string{"user", "id"},
+					TypeNames: []string{"User", "ID"},
+					SourceIDs: []string{"1", "2"},
+					Count:     2,
+				},
+				{
+					Path:      []string{"user", "name"},
+					TypeNames: []string{"User", "String"},
+					SourceIDs: []string{"1", "2"},
+					Count:     6,
+				},
+			},
+			OperationInfo: &graphqlmetricsv1.OperationInfo{
+				OperationType: "query",
+				OperationHash: "123",
+				OperationName: "user",
+			},
+			RequestInfo: &graphqlmetricsv1.RequestInfo{
+				RouterConfigVersion: "1",
+			},
+			Attributes: map[string]string{
+				"client_name":    "wundergraph",
+				"client_version": "1.0.1", // different client version
+			},
+		},
+		{
+			TypeFieldMetrics: []*graphqlmetricsv1.TypeFieldUsageInfo{
+				{
+					Path:      []string{"user", "id"},
+					TypeNames: []string{"User", "ID"},
+					SourceIDs: []string{"1", "2"},
+					Count:     1,
+				},
+			},
+			OperationInfo: &graphqlmetricsv1.OperationInfo{
+				OperationType: "query",
+				OperationHash: "123",
+				OperationName: "user",
+			},
+			RequestInfo: &graphqlmetricsv1.RequestInfo{
+				RouterConfigVersion: "1",
+			},
+			Attributes: map[string]string{
+				"client_name":    "wundergraph",
+				"client_version": "1.0.0",
+			},
+		},
+	})
+
+	require.Equal(t, 2, len(result))
+	require.Equal(t, uint64(2), result[0].TypeFieldMetrics[0].Count)
+	require.Equal(t, uint64(6), result[0].TypeFieldMetrics[1].Count)
 	require.Equal(t, uint64(1), result[1].TypeFieldMetrics[0].Count)
 }
