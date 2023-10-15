@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestAggregateCount(t *testing.T) {
+func TestAggregateCountWithEqualUsages(t *testing.T) {
 
 	result := Aggregate([]*graphqlmetricsv1.SchemaUsageInfo{
 		{
