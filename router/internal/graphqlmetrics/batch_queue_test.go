@@ -14,7 +14,7 @@ func printf(s string, a ...interface{}) {
 	}
 }
 
-func produce(q chan any, numItems, numGoroutines int, out chan []string) {
+func produce(q chan string, numItems, numGoroutines int, out chan []string) {
 	printf("=== Producing %d items.\n", numItems*numGoroutines)
 	done := make(chan bool, 1)
 	msgs := make(chan string)
@@ -53,7 +53,7 @@ L:
 // - No items should be dropped in the dispatch-receive process.
 // - When a receiver blocks, the rest of the items should be delivered.
 func TestDispatchOrder(t *testing.T) {
-	b := NewBatchQueue(&BatchQueueOptions{
+	b := NewBatchQueue[string](&BatchQueueOptions{
 		Interval:      time.Duration(1) * time.Second,
 		MaxBatchItems: 500,
 		MaxQueueSize:  10240,
@@ -79,8 +79,7 @@ L:
 		select {
 		case batch := <-b.OutQueue:
 			for _, b := range batch {
-				m := b.(string)
-				dispatched = append(dispatched, m)
+				dispatched = append(dispatched, b)
 			}
 		case <-breakout:
 			break L

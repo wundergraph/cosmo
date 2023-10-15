@@ -36,8 +36,7 @@ import (
 )
 
 const (
-	ErrMsgOperationParseFailed      = "failed to parse operation: %w"
-	ErrMsgOperationValidationFailed = "operation validation failed: %s"
+	ErrMsgOperationParseFailed = "failed to parse operation: %w"
 )
 
 var (
@@ -178,35 +177,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if h.gqlMetricsExporter != nil {
-		fieldUsageInfos := make([]*graphqlmetricsv1.TypeFieldUsageInfo, len(preparedPlan.schemaUsageInfo.TypeFields))
-
-		for i := range preparedPlan.schemaUsageInfo.TypeFields {
-			fieldUsageInfos[i] = &graphqlmetricsv1.TypeFieldUsageInfo{
-				Count:     1,
-				Path:      preparedPlan.schemaUsageInfo.TypeFields[i].Path,
-				TypeNames: preparedPlan.schemaUsageInfo.TypeFields[i].TypeNames,
-				SourceIDs: preparedPlan.schemaUsageInfo.TypeFields[i].Source.IDs,
-			}
-		}
-
-		h.gqlMetricsExporter.Record(&graphqlmetricsv1.SchemaUsageInfo{
-			OperationDocument: operationContext.content,
-			TypeFieldMetrics:  fieldUsageInfos,
-			OperationInfo: &graphqlmetricsv1.OperationInfo{
-				OperationType: operationContext.opType,
-				OperationHash: operationID,
-				OperationName: operationContext.name,
-			},
-			RequestInfo: &graphqlmetricsv1.RequestInfo{
-				RouterConfigVersion: h.routerConfigVersion,
-			},
-			Attributes: map[string]string{
-				"client_name":    operationContext.client.name,
-				"client_version": operationContext.client.version,
-			},
-		})
-	}
+	h.exportSchemaUsageInfo(operationID, preparedPlan.schemaUsageInfo, operationContext)
 
 	extractedVariables := make([]byte, len(preparedPlan.variables))
 	copy(extractedVariables, preparedPlan.variables)
@@ -278,6 +249,41 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		requestLogger.Error("unsupported plan kind")
 		w.WriteHeader(http.StatusInternalServerError)
 	}
+}
+
+func (h *GraphQLHandler) exportSchemaUsageInfo(operationID string, schemaUsageInfo plan.SchemaUsageInfo, operationContext *operationContext) {
+	if h.gqlMetricsExporter == nil {
+		return
+	}
+
+	fieldUsageInfos := make([]*graphqlmetricsv1.TypeFieldUsageInfo, len(schemaUsageInfo.TypeFields))
+
+	for i := range schemaUsageInfo.TypeFields {
+		fieldUsageInfos[i] = &graphqlmetricsv1.TypeFieldUsageInfo{
+			Count:     1,
+			Path:      schemaUsageInfo.TypeFields[i].Path,
+			TypeNames: schemaUsageInfo.TypeFields[i].TypeNames,
+			SourceIDs: schemaUsageInfo.TypeFields[i].Source.IDs,
+		}
+	}
+
+	h.gqlMetricsExporter.Record(&graphqlmetricsv1.SchemaUsageInfo{
+		OperationDocument: operationContext.content,
+		TypeFieldMetrics:  fieldUsageInfos,
+		OperationInfo: &graphqlmetricsv1.OperationInfo{
+			OperationType: operationContext.opType,
+			OperationHash: operationID,
+			OperationName: operationContext.name,
+		},
+		RequestInfo: &graphqlmetricsv1.RequestInfo{
+			RouterConfigVersion: h.routerConfigVersion,
+		},
+		Attributes: map[string]string{
+			"client_name":    operationContext.client.name,
+			"client_version": operationContext.client.version,
+		},
+	})
+
 }
 
 func (h *GraphQLHandler) preparePlan(requestOperationName []byte, requestOperationContent string) (planWithMetaData, error) {

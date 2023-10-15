@@ -6,8 +6,6 @@ import (
 	"github.com/wundergraph/cosmo/graphqlmetrics/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
 	"go.uber.org/zap"
 	brotli "go.withmatt.com/connect-brotli"
-	"golang.org/x/net/http2"
-	"golang.org/x/net/http2/h2c"
 	"net/http"
 	"time"
 )
@@ -54,9 +52,8 @@ func (s *Server) bootstrap() {
 		ReadTimeout:       1 * time.Minute,
 		WriteTimeout:      2 * time.Minute,
 		ReadHeaderTimeout: 20 * time.Second,
-		// Use h2c so we can serve HTTP/2 without TLS.
-		Handler:  h2c.NewHandler(mux, &http2.Server{}),
-		ErrorLog: zap.NewStdLog(s.logger),
+		Handler:           mux,
+		ErrorLog:          zap.NewStdLog(s.logger),
 	}
 }
 

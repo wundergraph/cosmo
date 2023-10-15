@@ -181,7 +181,7 @@ type Config struct {
 	IntrospectionEnabled bool          `yaml:"introspection_enabled" default:"true" envconfig:"INTROSPECTION_ENABLED"`
 	LogLevel             string        `yaml:"log_level" default:"info" envconfig:"LOG_LEVEL" validate:"oneof=debug info warning error fatal panic"`
 	JSONLog              bool          `yaml:"json_log" default:"true" envconfig:"JSON_LOG"`
-	ShutdownDelay        time.Duration `yaml:"shutdown_delay" default:"30s" validate:"required,min=5s" envconfig:"SHUTDOWN_DELAY"`
+	ShutdownDelay        time.Duration `yaml:"shutdown_delay" default:"60s" validate:"required,min=5s" envconfig:"SHUTDOWN_DELAY"`
 	GracePeriod          time.Duration `yaml:"grace_period" default:"20s" validate:"required" envconfig:"GRACE_PERIOD"`
 	PollInterval         time.Duration `yaml:"poll_interval" default:"10s" validate:"required,min=5s" envconfig:"POLL_INTERVAL"`
 	HealthCheckPath      string        `yaml:"health_check_path" default:"/health" envconfig:"HEALTH_CHECK_PATH" validate:"uri"`

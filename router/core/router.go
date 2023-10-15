@@ -348,7 +348,7 @@ func (r *Router) updateServer(ctx context.Context, cfg *nodev1.RouterConfig) err
 
 		r.activeRouter.healthChecks.SetReady(true)
 
-		// This is r blocking call
+		// This is a blocking call
 		if err := r.activeRouter.listenAndServe(); err != nil {
 			r.activeRouter.healthChecks.SetReady(true)
 			r.logger.Error("Failed to start new server", zap.Error(err))
@@ -754,6 +754,12 @@ func (r *Server) listenAndServe() error {
 func (r *Router) Shutdown(ctx context.Context) (err error) {
 	r.shutdown = true
 
+	if r.activeRouter != nil {
+		if subErr := r.activeRouter.Shutdown(ctx); subErr != nil {
+			err = errors.Join(err, fmt.Errorf("failed to shutdown primary server: %w", subErr))
+		}
+	}
+
 	var wg sync.WaitGroup
 
 	if r.prometheusServer != nil {
@@ -772,9 +778,6 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 		go func() {
 			defer wg.Done()
 
-			if subErr := r.tracerProvider.ForceFlush(ctx); subErr != nil {
-				err = errors.Join(err, fmt.Errorf("failed to force flush tracer: %w", subErr))
-			}
 			if subErr := r.tracerProvider.Shutdown(ctx); subErr != nil {
 				err = errors.Join(err, fmt.Errorf("failed to shutdown tracer: %w", subErr))
 			}
@@ -782,7 +785,15 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 	}
 
 	if r.gqlMetricsExporter != nil {
-		r.gqlMetricsExporter.Stop()
+		wg.Add(1)
+
+		go func() {
+			defer wg.Done()
+
+			if subErr := r.gqlMetricsExporter.Shutdown(ctx); subErr != nil {
+				err = errors.Join(err, fmt.Errorf("failed to stop graphql metrics exporter: %w", subErr))
+			}
+		}()
 	}
 
 	wg.Add(1)
@@ -799,12 +810,6 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 	}()
 
 	wg.Wait()
-
-	if r.activeRouter != nil {
-		if subErr := r.activeRouter.Shutdown(ctx); subErr != nil {
-			err = errors.Join(err, fmt.Errorf("failed to shutdown primary server: %w", subErr))
-		}
-	}
 
 	return err
 }

@@ -1,16 +1,16 @@
 package graphqlmetrics
 
-import "time"
-
-// Inspired by https://github.com/wind-c/bqueue
+import (
+	"time"
+)
 
 import (
 	"context"
 )
 
 const (
-	defaultInterval      = time.Duration(5) * time.Second
-	defaultMaxBatchItems = 1024
+	defaultBatchInterval = time.Duration(10) * time.Second
+	defaultMaxBatchItems = 64
 	defaultMaxQueueSize  = 1024
 )
 
@@ -23,7 +23,7 @@ type BatchQueueOptions struct {
 
 func (o *BatchQueueOptions) ensureDefaults() {
 	if o.Interval == 0 {
-		o.Interval = defaultInterval
+		o.Interval = defaultBatchInterval
 	}
 
 	if o.MaxBatchItems == 0 {
@@ -37,42 +37,36 @@ func (o *BatchQueueOptions) ensureDefaults() {
 
 // BatchQueue coordinates dispatching of queue items by time intervals
 // or immediately after the batching limit is met.
-type BatchQueue struct {
-	config          *BatchQueueOptions
-	ctx             context.Context
-	cancel          context.CancelFunc
-	doWork          chan struct{}
-	timer           *time.Timer
-	inQueue         chan any
-	midQueue        chan any
-	OutQueue        chan []any
-	dispatchedCount int
+type BatchQueue[T any] struct {
+	config   *BatchQueueOptions
+	ctx      context.Context
+	cancel   context.CancelFunc
+	timer    *time.Timer
+	inQueue  chan T
+	OutQueue chan []T
 }
 
 // NewBatchQueue returns an initialized instance of BatchQueue.
 // Items are enqueued without blocking.
 // The queue is dispatched by time intervals or immediately after the batching limit is met.
 // Batches can be read from the OutQueue channel.
-func NewBatchQueue(config *BatchQueueOptions) *BatchQueue {
+func NewBatchQueue[T any](config *BatchQueueOptions) *BatchQueue[T] {
 	if config == nil {
 		config = new(BatchQueueOptions)
 	}
 	config.ensureDefaults()
 
-	bq := &BatchQueue{
-		config:          config,
-		doWork:          make(chan struct{}),
-		inQueue:         make(chan any, config.MaxQueueSize/2),
-		midQueue:        make(chan any, config.MaxQueueSize/2),
-		OutQueue:        make(chan []any, config.MaxQueueSize/config.MaxBatchItems),
-		dispatchedCount: 0,
+	bq := &BatchQueue[T]{
+		config:   config,
+		inQueue:  make(chan T, config.MaxQueueSize),
+		OutQueue: make(chan []T, config.MaxQueueSize/config.MaxBatchItems),
 	}
 
 	return bq
 }
 
 // Enqueue adds an item to the queue. Returns false if the queue is stopped or not ready to accept items
-func (b *BatchQueue) Enqueue(item any) bool {
+func (b *BatchQueue[T]) Enqueue(item T) bool {
 	select {
 	case b.inQueue <- item:
 		return true
@@ -81,75 +75,69 @@ func (b *BatchQueue) Enqueue(item any) bool {
 	}
 }
 
-func (b *BatchQueue) tick() {
+func (b *BatchQueue[T]) tick() {
 	b.timer.Reset(b.config.Interval)
 }
 
-// dispatch sends items to the OutQueue. Only one dispatch must be active at a time.
-func (b *BatchQueue) dispatch() {
+// dispatch sends items to the OutQueue. Only one dispatcher must be active at a time.
+func (b *BatchQueue[T]) dispatch() {
 	for {
-		select {
-		case <-b.doWork:
-			var items []any
-			for b := range b.midQueue {
-				if b == struct{}{} {
-					break
+		var items []T
+		var stopped bool
+
+		for {
+			select {
+			case <-b.timer.C:
+				goto done
+			case item, ok := <-b.inQueue:
+				if !ok {
+					stopped = true
+					goto done
 				}
-				items = append(items, b)
+
+				items = append(items, item)
+				// batch limit reached, dispatch
+				if len(items) == b.config.MaxBatchItems {
+					goto done
+				}
+			case <-b.ctx.Done():
+				b.timer.Stop()
+				stopped = true
+				goto done
 			}
-			if len(items) == 0 {
-				b.tick()
-				continue
-			}
-			// dispatch
-			b.dispatchedCount += len(items)
-			b.OutQueue <- items
-			b.tick()
-		case <-b.ctx.Done():
-			return
 		}
-	}
-}
 
-// Start begins item dispatching.
-func (b *BatchQueue) Start(ctx context.Context) {
-	b.ctx, b.cancel = context.WithCancel(ctx)
-	// start dispatcher
-	go b.dispatch()
+	done:
+		// skip empty batches
+		if len(items) == 0 {
+			// reset timer
+			b.tick()
+			continue
+		}
 
-	// start timer
-	b.timer = time.AfterFunc(b.config.Interval, func() {
-		// add split flag
-		b.midQueue <- struct{}{}
-		// do work
-		b.doWork <- struct{}{}
-	})
+		// dispatch
+		b.OutQueue <- items
+		// reset timer
+		b.tick()
 
-	// batch take
-	for {
-		select {
-		case m := <-b.inQueue:
-			b.midQueue <- m
-			if len(b.midQueue) == b.config.MaxBatchItems {
-				// add split flag
-				b.midQueue <- struct{}{}
-				// do work
-				b.doWork <- struct{}{}
-			}
-		case <-b.ctx.Done():
-			b.timer.Stop()
-			b.dispatchedCount = 0
+		if stopped {
+			// signal the consumers no more items are coming
 			close(b.OutQueue)
 			return
 		}
 	}
 }
 
-// Stop stops the internal dispatch and listen scheduler.
-func (b *BatchQueue) Stop() {
-	b.cancel()
+// Start begins item dispatching. Should be called only once from a single goroutine.
+func (b *BatchQueue[T]) Start(ctx context.Context) {
+	b.ctx, b.cancel = context.WithCancel(ctx)
+	// start timer
+	b.timer = time.NewTimer(b.config.Interval)
+	// start dispatcher
+	go b.dispatch()
 }
 
-func (b *BatchQueue) GetDispatchedCount() int {
-	return b.dispatchedCount
+// Stop stops the internal dispatch and listen scheduler.
+func (b *BatchQueue[T]) Stop() {
+	b.cancel()
 }

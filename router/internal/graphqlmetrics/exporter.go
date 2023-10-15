@@ -16,13 +16,14 @@ import (
 )
 
 type Exporter struct {
-	queue    *BatchQueue
-	settings *ExporterSettings
-	logger   *zap.Logger
-	outQueue chan []any
-	stopWG   sync.WaitGroup
-	client   graphqlmetricsv1connect.GraphQLMetricsServiceClient
-	apiToken string
+	queue          *BatchQueue[*graphqlmetricsv12.SchemaUsageInfo]
+	settings       *ExporterSettings
+	logger         *zap.Logger
+	outQueue       <-chan []*graphqlmetricsv12.SchemaUsageInfo
+	stopWG         sync.WaitGroup
+	client         graphqlmetricsv1connect.GraphQLMetricsServiceClient
+	apiToken       string
+	cancelShutdown context.CancelFunc
 }
 
 type RetryOptions struct {
@@ -31,6 +32,13 @@ type RetryOptions struct {
 	Interval    time.Duration
 	MaxRetry    int
 }
+
+const (
+	defaultExportTimeout          = time.Duration(10) * time.Second
+	defaultExportRetryMaxDuration = time.Duration(10) * time.Second
+	defaultExportRetryInterval    = time.Duration(1) * time.Second
+	defaultNumConsumers           = 3
+)
 
 type ExporterSettings struct {
 	// NumConsumers is the number of consumers from the queue.
@@ -43,19 +51,22 @@ type ExporterSettings struct {
 	Interval time.Duration
 	// Retry is the retry options for the exporter.
 	Retry RetryOptions
+	// ExportTimeout is the timeout for the export request.
+	ExportTimeout time.Duration
 }
 
 func NewDefaultExporterSettings() *ExporterSettings {
 	return &ExporterSettings{
-		NumConsumers: 3,
-		BatchSize:    defaultMaxBatchItems,
-		QueueSize:    defaultMaxQueueSize,
-		Interval:     time.Duration(5) * time.Second,
+		NumConsumers:  defaultNumConsumers,
+		BatchSize:     defaultMaxBatchItems,
+		QueueSize:     defaultMaxQueueSize,
+		Interval:      defaultBatchInterval,
+		ExportTimeout: defaultExportTimeout,
 		Retry: RetryOptions{
 			Enabled:     true,
 			MaxRetry:    3,
-			MaxDuration: time.Duration(15) * time.Second,
-			Interval:    time.Duration(3) * time.Second,
+			MaxDuration: defaultExportRetryMaxDuration,
+			Interval:    defaultExportRetryInterval,
 		},
 	}
 }
@@ -65,7 +76,7 @@ func NewDefaultExporterSettings() *ExporterSettings {
 // and retries on failure. Underling queue implementation sends batches of metrics at the specified interval and batch size.
 func NewExporter(logger *zap.Logger, collectorEndpoint string, apiToken string, settings *ExporterSettings) *Exporter {
 
-	bq := NewBatchQueue(&BatchQueueOptions{
+	bq := NewBatchQueue[*graphqlmetricsv12.SchemaUsageInfo](&BatchQueueOptions{
 		Interval:      settings.Interval,
 		MaxBatchItems: settings.BatchSize,
 		MaxQueueSize:  settings.QueueSize,
@@ -110,10 +121,12 @@ func (e *Exporter) Record(item *graphqlmetricsv12.SchemaUsageInfo) bool {
 	return e.queue.Enqueue(item)
 }
 
-// send sends the batch to the configured endpoint.
-func (e *Exporter) send(items []*graphqlmetricsv12.SchemaUsageInfo) error {
-	b := backoff.New(e.settings.Retry.MaxDuration, e.settings.Retry.Interval)
-	defer b.Reset()
+func (e *Exporter) send(ctx context.Context, items []*graphqlmetricsv12.SchemaUsageInfo) error {
+	if e.settings.ExportTimeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, e.settings.ExportTimeout)
+		defer cancel()
+	}
 
 	batchSize := len(items)
 	e.logger.Debug("sending batch", zap.Int("size", batchSize))
@@ -124,12 +137,26 @@ func (e *Exporter) send(items []*graphqlmetricsv12.SchemaUsageInfo) error {
 
 	req.Header().Set("Authorization", "Bearer "+e.apiToken)
 
-	_, err := e.client.PublishGraphQLMetrics(context.Background(), req)
+	_, err := e.client.PublishGraphQLMetrics(ctx, req)
+	if err != nil {
+		e.logger.Debug("Failed to export batch", zap.Error(err), zap.Int("batch_size", batchSize))
+		return err
+	}
+
+	return err
+}
+
+// export sends the batch to the configured endpoint.
+func (e *Exporter) export(ctx context.Context, batch []*graphqlmetricsv12.SchemaUsageInfo) error {
+	b := backoff.New(e.settings.Retry.MaxDuration, e.settings.Retry.Interval)
+	defer b.Reset()
+
+	batchSize := len(batch)
+
+	err := e.send(ctx, batch)
 	if err == nil {
 		return nil
 	}
-
-	e.logger.Debug("Failed to export batch", zap.Error(err), zap.Int("batch_size", batchSize))
 
 	var retry int
 	var lastErr error
@@ -150,21 +177,10 @@ func (e *Exporter) send(items []*graphqlmetricsv12.SchemaUsageInfo) error {
 		// Wait for the specified backoff period
 		time.Sleep(sleepDuration)
 
-		req := connect.NewRequest(&graphqlmetricsv12.PublishGraphQLRequestMetricsRequest{
-			SchemaUsage: items,
-		})
-
-		req.Header().Set("Authorization", "Bearer "+e.apiToken)
-
-		_, lastErr = e.client.PublishGraphQLMetrics(context.Background(), req)
-		if lastErr == nil {
+		err := e.send(ctx, batch)
+		if err == nil {
 			return nil
 		}
-		e.logger.Debug("Failed to export batch",
-			zap.Error(lastErr),
-			zap.Int("retry", retry),
-			zap.Int("batch_size", batchSize),
-		)
 	}
 
 	e.logger.Error("Failed to export batch after retries",
@@ -181,6 +197,10 @@ func (e *Exporter) Start(ctx context.Context) {
 	var startWG sync.WaitGroup
 	go e.queue.Start(ctx)
 
+	shutdownCtx, cancel := context.WithCancel(context.Background())
+	e.cancelShutdown = cancel
+	defer cancel()
+
 	for i := 0; i < e.settings.NumConsumers; i++ {
 		startWG.Add(1)
 		e.stopWG.Add(1)
@@ -190,9 +210,11 @@ func (e *Exporter) Start(ctx context.Context) {
 
 			for {
 				select {
+				case <-shutdownCtx.Done():
+					return
 				case batch, more := <-e.outQueue:
 					if more {
-						_ = e.send(e.Aggregate(batch))
+						_ = e.export(shutdownCtx, Aggregate(batch))
 					} else {
 						// Close current exporter when queues was closed from producer side
 						return
@@ -205,35 +227,22 @@ func (e *Exporter) Start(ctx context.Context) {
 	startWG.Wait()
 }
 
-// Aggregate aggregates the same operation metrics into a single metric with the sum of the counts.
-func (e *Exporter) Aggregate(items []any) []*graphqlmetricsv12.SchemaUsageInfo {
-	hashBuckets := make(map[string][]*graphqlmetricsv12.SchemaUsageInfo)
+// Shutdown the exporter but waits until all export jobs has been finished or timeout.
+func (e *Exporter) Shutdown(ctx context.Context) error {
 
-	for _, item := range items {
-		m, ok := item.(*graphqlmetricsv12.SchemaUsageInfo)
-		if !ok {
-			continue
-		}
-		hashBuckets[m.OperationInfo.OperationHash] = append(hashBuckets[m.OperationInfo.OperationHash], m)
-	}
-
-	aggregated := make([]*graphqlmetricsv12.SchemaUsageInfo, 0, len(hashBuckets))
-
-	for _, hashBucket := range hashBuckets {
-		first := hashBucket[0]
-		for _, metric := range first.TypeFieldMetrics {
-			metric.Count = uint64(len(hashBucket))
-		}
-		aggregated = append(aggregated, first)
-	}
-
-	return aggregated
-}
-
-// Stop the exporter but waits until all export jobs has been finished
-func (e *Exporter) Stop() {
 	// stop dispatching new items
 	e.queue.Stop()
+
+	go func() {
+		select {
+		// cancel consumers and work immediately
+		case <-ctx.Done():
+			e.cancelShutdown()
+		}
+	}()
+
 	// wait for all items to be processed
 	e.stopWG.Wait()
+
+	return nil
 }
