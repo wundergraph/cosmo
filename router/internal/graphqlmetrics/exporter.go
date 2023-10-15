@@ -113,6 +113,26 @@ func (e *Exporter) Validate() error {
 		return errors.New("number of queue consumers must be positive")
 	}
 
+	if e.settings.Interval <= 0 {
+		return errors.New("interval must be positive")
+	}
+
+	if e.settings.ExportTimeout <= 0 {
+		return errors.New("export timeout must be positive")
+	}
+
+	if e.settings.Retry.MaxDuration <= 0 {
+		return errors.New("retry max duration must be positive")
+	}
+
+	if e.settings.Retry.Interval <= 0 {
+		return errors.New("retry interval must be positive")
+	}
+
+	if e.settings.Retry.MaxRetry <= 0 {
+		return errors.New("retry max retry must be positive")
+	}
+
 	return nil
 }
 
