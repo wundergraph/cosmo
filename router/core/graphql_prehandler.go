@@ -80,7 +80,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		}
 
 		if metrics != nil {
-			metrics.AddOperation(r.Context(), operation)
+			metrics.AddOperation(r.Context(), operation, OperationProtocolHTTP)
 		}
 
 		ctxWithOperation := withOperationContext(r.Context(), operation, clientInfo)

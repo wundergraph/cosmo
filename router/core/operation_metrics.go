@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"time"
 
@@ -11,6 +12,24 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"go.opentelemetry.io/otel/trace"
 )
+
+type OperationProtocol int
+
+const (
+	OperationProtocolHTTP OperationProtocol = iota + 1
+	OperationProtocolGraphQLWS
+)
+
+func (p OperationProtocol) String() string {
+	switch p {
+	case OperationProtocolHTTP:
+		return "http"
+	case OperationProtocolGraphQLWS:
+		return "graphql-ws"
+	default:
+		return fmt.Sprintf("unknown operation protocol %d", int(p))
+	}
+}
 
 type OperationMetrics struct {
 	requestContentLength int64
@@ -33,7 +52,7 @@ func (m *OperationMetrics) Finish(ctx context.Context, statusCode int, responseS
 	m.metrics.MeasureResponseSize(ctx, int64(responseSize), m.metricBaseFields...)
 }
 
-func (m *OperationMetrics) AddOperation(ctx context.Context, operation *ParsedOperation) {
+func (m *OperationMetrics) AddOperation(ctx context.Context, operation *ParsedOperation, protocol OperationProtocol) {
 	if operation.Name != "" {
 		m.metricBaseFields = append(m.metricBaseFields, otel.WgOperationName.String(operation.Name))
 	}
@@ -45,12 +64,13 @@ func (m *OperationMetrics) AddOperation(ctx context.Context, operation *ParsedOp
 	// Add the operation to the trace span
 	span := trace.SpanFromContext(ctx)
 	// Set the span name to the operation name after we figured it out
-	// TODO: DO NOT HARDCODE THIS
-	span.SetName(GetSpanName(operation.Name, "POST"))
+	// TODO: Ask Dustin about this name
+	span.SetName(GetSpanName(operation.Name, protocol.String()))
 
 	span.SetAttributes(otel.WgOperationName.String(operation.Name))
 	span.SetAttributes(otel.WgOperationType.String(operation.Type))
 	span.SetAttributes(otel.WgOperationContent.String(operation.Query))
+	span.SetAttributes(otel.WgOperationProtocol.String(protocol.String()))
 
 	// Add the operation hash to the trace span attributes
 	opHashID := otel.WgOperationHash.String(strconv.FormatUint(operation.ID, 10))

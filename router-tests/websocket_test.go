@@ -190,5 +190,5 @@ func TestShutdownWithActiveWebsocket(t *testing.T) {
 	// Check that the WS client error indicates the connection was unexpectedly closed
 	cerr, ok := err.(*websocket.CloseError)
 	require.True(t, ok)
-	assert.Equal(t, 1006, cerr.Code)
+	assert.Equal(t, websocket.CloseAbnormalClosure, cerr.Code)
 }

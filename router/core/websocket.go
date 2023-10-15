@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"sync"
 	"time"
@@ -12,6 +14,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
+	"github.com/wundergraph/cosmo/router/internal/metric"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/zap"
 )
@@ -40,6 +43,7 @@ type wsMessage struct {
 type WebsocketMiddlewareOptions struct {
 	Parser         *OperationParser
 	GraphQLHandler *GraphQLHandler
+	Metrics        *metric.Metrics
 	Logger         *zap.Logger
 }
 
@@ -52,6 +56,7 @@ func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions
 			ids:            ids,
 			parser:         opts.Parser,
 			graphqlHandler: opts.GraphQLHandler,
+			metrics:        opts.Metrics,
 			logger:         opts.Logger,
 		}
 	}
@@ -101,6 +106,7 @@ type WebsocketHandler struct {
 	ids            *globalIDStorage
 	parser         *OperationParser
 	graphqlHandler *GraphQLHandler
+	metrics        *metric.Metrics
 	logger         *zap.Logger
 }
 
@@ -128,6 +134,7 @@ func (h *WebsocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			IDs:            h.ids,
 			Parser:         h.parser,
 			GraphQLHandler: h.graphqlHandler,
+			Metrics:        h.metrics,
 			ResponseWriter: w,
 			Request:        r,
 			Connection:     c,
@@ -142,11 +149,12 @@ func (h *WebsocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 type websocketResponseWriter struct {
-	id     string
-	conn   *websocket.Conn
-	header http.Header
-	buf    bytes.Buffer
-	logger *zap.Logger
+	id           string
+	conn         *websocket.Conn
+	header       http.Header
+	buf          bytes.Buffer
+	writtenBytes int
+	logger       *zap.Logger
 }
 
 var _ http.ResponseWriter = (*websocketResponseWriter)(nil)
@@ -170,6 +178,7 @@ func (rw *websocketResponseWriter) WriteHeader(statusCode int) {
 }
 
 func (rw *websocketResponseWriter) Write(data []byte) (int, error) {
+	rw.writtenBytes += len(data)
 	return rw.buf.Write(data)
 }
 
@@ -264,6 +273,7 @@ type WebSocketConnectionHandlerOptions struct {
 	IDs            *globalIDStorage
 	Parser         *OperationParser
 	GraphQLHandler *GraphQLHandler
+	Metrics        *metric.Metrics
 	ResponseWriter http.ResponseWriter
 	Request        *http.Request
 	Connection     *websocket.Conn
@@ -276,6 +286,7 @@ type WebSocketConnectionHandler struct {
 	subscriptions  *subscriptionStorage
 	parser         *OperationParser
 	graphqlHandler *GraphQLHandler
+	metrics        *metric.Metrics
 	w              http.ResponseWriter
 	r              *http.Request
 	conn           *websocket.Conn
@@ -290,6 +301,7 @@ func NewWebsocketConnectionHandler(ctx context.Context, opts WebSocketConnection
 		subscriptions:  newSubscriptionStorage(),
 		parser:         opts.Parser,
 		graphqlHandler: opts.GraphQLHandler,
+		metrics:        opts.Metrics,
 		w:              opts.ResponseWriter,
 		r:              opts.Request,
 		conn:           opts.Connection,
@@ -299,19 +311,25 @@ func NewWebsocketConnectionHandler(ctx context.Context, opts WebSocketConnection
 }
 
 func (h *WebSocketConnectionHandler) requestError(err error) error {
+	var wsErr *websocket.CloseError
+	if errors.As(err, &wsErr) && wsErr.Code == websocket.CloseNormalClosure {
+		// We closed the connection ourselves in response to an event, stopping
+		// the event loop
+		return nil
+	}
 	h.logger.Warn("handling websocket connection", zap.Error(err))
 	return h.conn.WriteMessage(websocket.TextMessage, []byte(err.Error()))
 }
 
-func (h *WebSocketConnectionHandler) writeErrorMessage(operationID string, err error) error {
+func (h *WebSocketConnectionHandler) writeErrorMessage(operationID string, err error) (int, error) {
 	errors := []graphqlError{
 		{Message: err.Error()},
 	}
 	payload, err := json.Marshal(errors)
 	if err != nil {
-		return fmt.Errorf("encoding GraphQL errors: %w", err)
+		return 0, fmt.Errorf("encoding GraphQL errors: %w", err)
 	}
-	return h.conn.WriteJSON(wsMessage{ID: operationID, Type: wsMessageTypeError, Payload: payload})
+	return h.writeJSON(wsMessage{ID: operationID, Type: wsMessageTypeError, Payload: payload})
 }
 
 func (h *WebSocketConnectionHandler) readJSON(v interface{}) error {
@@ -326,6 +344,33 @@ func (h *WebSocketConnectionHandler) readJSON(v interface{}) error {
 	case err := <-ech:
 		return err
 	}
+}
+
+type countingWriter struct {
+	n int
+	w io.Writer
+}
+
+func (w *countingWriter) Write(data []byte) (int, error) {
+	n, err := w.w.Write(data)
+	w.n += n
+	return n, err
+}
+
+func (h *WebSocketConnectionHandler) writeJSON(v interface{}) (int, error) {
+
+	w, err := h.conn.NextWriter(websocket.TextMessage)
+	if err != nil {
+		return 0, err
+	}
+	cw := &countingWriter{w: w}
+	err1 := json.NewEncoder(cw).Encode(v)
+	err2 := w.Close()
+	if err1 != nil {
+		return cw.n, err1
+	}
+	return cw.n, err2
+
 }
 
 func (h *WebSocketConnectionHandler) sessionInit() error {
@@ -343,38 +388,63 @@ func (h *WebSocketConnectionHandler) sessionInit() error {
 	return nil
 }
 
-func (h *WebSocketConnectionHandler) handleSubscribe(msg *wsMessage) error {
-	if msg.ID == "" {
-		return fmt.Errorf("missing id in %s", wsMessageTypeSubscribe)
+func (h *WebSocketConnectionHandler) executeSubscription(ctx context.Context, msg *wsMessage) error {
+	var metrics *OperationMetrics
+
+	statusCode := http.StatusOK
+	responseSize := int64(0)
+
+	if h.metrics != nil {
+		metrics = StartOperationMetrics(ctx, h.metrics, int64(len(msg.Payload)))
+		metrics.AddClientInfo(ctx, h.clientInfo)
+
+		defer func() {
+			metrics.Finish(ctx, statusCode, responseSize)
+		}()
 	}
 
 	// If the operation is invalid, send an error message immediately without
 	// bothering to try to check if the ID is unique
 	operation, err := h.parser.Parse(msg.Payload)
 	if err != nil {
-		return h.writeErrorMessage(msg.ID, err)
+		statusCode = http.StatusBadRequest
+		n, werr := h.writeErrorMessage(msg.ID, err)
+		if werr != nil {
+			h.logger.Warn("writing error message", zap.Error(werr))
+		}
+		responseSize = int64(n)
+		return werr
+	}
+
+	if metrics != nil {
+		metrics.AddOperation(ctx, operation, OperationProtocolGraphQLWS)
 	}
 
 	if !h.globalIDs.Insert(msg.ID) {
 		return fmt.Errorf("4409: Subscriber for %s already exists", msg.ID)
 	}
+	defer h.globalIDs.Remove(msg.ID)
 
-	cancellableContext, cancel := context.WithCancel(h.r.Context())
+	cancellableCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
 	// This gets removed by WebSocketConnectionHandler.Complete()
 	h.subscriptions.Insert(msg.ID, cancel)
 
-	ctxWithOperation := withOperationContext(cancellableContext, operation, h.clientInfo)
+	ctxWithOperation := withOperationContext(cancellableCtx, operation, h.clientInfo)
 	r := h.r.WithContext(ctxWithOperation)
 	rw := newWebsocketResponseWriter(msg.ID, h.conn, h.logger)
+	defer h.Complete(rw)
 	r = requestWithAttachedContext(rw, r, h.logger)
-	r.Method = http.MethodPost
-	go func() {
-		defer cancel()
-		// Remove IDs
-		defer h.globalIDs.Remove(msg.ID)
-		defer h.Complete(rw)
-		h.graphqlHandler.ServeHTTP(rw, r)
-	}()
+	h.graphqlHandler.ServeHTTP(rw, r)
+	responseSize = int64(rw.writtenBytes)
+	return nil
+}
+
+func (h *WebSocketConnectionHandler) handleSubscribe(msg *wsMessage) error {
+	if msg.ID == "" {
+		return fmt.Errorf("missing id in %s", wsMessageTypeSubscribe)
+	}
+	go h.executeSubscription(h.r.Context(), msg)
 	return nil
 }
 
