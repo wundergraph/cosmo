@@ -23,7 +23,7 @@ func TestPublishGraphQLMetrics(t *testing.T) {
 	req := &graphqlmetricsv1.PublishGraphQLRequestMetricsRequest{
 		SchemaUsage: []*graphqlmetricsv1.SchemaUsageInfo{
 			{
-				OperationDocument: "query Hello { hello }",
+				RequestDocument: "query Hello { hello }",
 				TypeFieldMetrics: []*graphqlmetricsv1.TypeFieldUsageInfo{
 					{
 						Path:      []string{"hello"},
@@ -33,12 +33,16 @@ func TestPublishGraphQLMetrics(t *testing.T) {
 					},
 				},
 				OperationInfo: &graphqlmetricsv1.OperationInfo{
-					OperationHash: "hash123",
-					OperationName: "Hello",
-					OperationType: "query",
+					Hash: "hash123",
+					Name: "Hello",
+					Type: graphqlmetricsv1.OperationType_QUERY,
 				},
-				RequestInfo: &graphqlmetricsv1.RequestInfo{
-					RouterConfigVersion: "v1",
+				SchemaInfo: &graphqlmetricsv1.SchemaInfo{
+					Version: "v1",
+				},
+				ClientInfo: &graphqlmetricsv1.ClientInfo{
+					Name:    "wundergraph",
+					Version: "1.0.0",
 				},
 				Attributes: map[string]string{
 					"test": "test123",
@@ -79,6 +83,8 @@ func TestPublishGraphQLMetrics(t *testing.T) {
 		WHERE OperationHash = 'hash123' AND
 		RouterConfigVersion = 'v1' AND
 		Attributes['test'] = 'test123' AND
+		ClientName = 'wundergraph' AND
+		ClientVersion = '1.0.0' AND
 		hasAny(TypeNames, ['Query']) AND
 		startsWith(Path, ['hello'])
 	`).Scan(&fieldUsageCount))
