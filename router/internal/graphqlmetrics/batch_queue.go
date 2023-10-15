@@ -10,8 +10,8 @@ import (
 
 const (
 	defaultBatchInterval = time.Duration(10) * time.Second
-	defaultMaxBatchItems = 64
-	defaultMaxQueueSize  = 1024
+	defaultMaxBatchItems = 256
+	defaultMaxQueueSize  = 4096
 )
 
 // BatchQueueOptions configure time interval and set a batch limit.
