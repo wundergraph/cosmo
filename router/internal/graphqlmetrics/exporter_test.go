@@ -245,3 +245,78 @@ func TestExportBatchInterval(t *testing.T) {
 	require.Equal(t, 1, len(c.publishedBatches))
 	require.Equal(t, 5, len(c.publishedBatches[0]))
 }
+
+func TestExportFullQueue(t *testing.T) {
+	c := &MyClient{
+		t:                t,
+		publishedBatches: make([][]*graphqlmetricsv1.SchemaUsageInfo, 0),
+	}
+
+	// limits are too low, so queue will be blocked
+	queueSize := 2
+	totalItems := 100
+	batchSize := 1
+
+	e := NewExporter(
+		zap.NewNop(),
+		c,
+		"secret",
+		&ExporterSettings{
+			NumConsumers: 1,
+			BatchSize:    batchSize,
+			QueueSize:    queueSize,
+			Interval:     500 * time.Millisecond,
+			Retry: RetryOptions{
+				Enabled:     false,
+				MaxDuration: 300 * time.Millisecond,
+				Interval:    100 * time.Millisecond,
+				MaxRetry:    3,
+			},
+			ExportTimeout: 100 * time.Millisecond,
+		},
+	)
+
+	require.Nil(t, e.Validate())
+
+	e.Start()
+
+	var dispatched int
+
+	for i := 0; i < totalItems; i++ {
+
+		usage := &graphqlmetricsv1.SchemaUsageInfo{
+			TypeFieldMetrics: []*graphqlmetricsv1.TypeFieldUsageInfo{
+				{
+					Path:      []string{"user", "name"},
+					TypeNames: []string{"User", "String"},
+					SourceIDs: []string{"1", "2"},
+					Count:     1,
+				},
+			},
+			OperationInfo: &graphqlmetricsv1.OperationInfo{
+				Type: graphqlmetricsv1.OperationType_QUERY,
+				Hash: "hash",
+				Name: "user",
+			},
+			ClientInfo: &graphqlmetricsv1.ClientInfo{
+				Name:    "wundergraph",
+				Version: "1.0.0",
+			},
+			SchemaInfo: &graphqlmetricsv1.SchemaInfo{
+				Version: "1",
+			},
+			Attributes: map[string]string{
+				"client_name":    "wundergraph",
+				"client_version": "1.0.0",
+			},
+		}
+
+		if e.Record(usage) {
+			dispatched++
+		}
+	}
+
+	require.Nil(t, e.Shutdown(context.Background()))
+
+	require.Lessf(t, dispatched, 20, "expect way less than 100 batches, because queue is full")
+}

@@ -129,7 +129,7 @@ func (e *Exporter) Validate() error {
 // Record records the items as potential metrics to be exported.
 func (e *Exporter) Record(item *graphqlmetricsv12.SchemaUsageInfo) bool {
 	if !e.queue.Enqueue(item) {
-		e.logger.Warn("Drop schema usage due to blocking queue. Please increase the queue size or decrease the batch size.")
+		e.logger.Warn("Drop tracking schema usage due to full queue. Please increase the queue size or decrease the batch size.")
 		return false
 	}
 
