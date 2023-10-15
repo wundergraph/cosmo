@@ -54,7 +54,7 @@ L:
 // - When a receiver blocks, the rest of the items should be delivered.
 func TestDispatchOrder(t *testing.T) {
 	b := NewBatchQueue[string](&BatchQueueOptions{
-		Interval:      time.Duration(1) * time.Second,
+		Interval:      time.Duration(10) * time.Millisecond,
 		MaxBatchItems: 500,
 		MaxQueueSize:  10240,
 	})
@@ -71,7 +71,7 @@ func TestDispatchOrder(t *testing.T) {
 
 	var dispatched []string
 	breakout := make(chan bool)
-	time.AfterFunc(time.Duration(3)*time.Second, func() {
+	time.AfterFunc(time.Duration(30)*time.Millisecond, func() {
 		breakout <- true
 	})
 L:
