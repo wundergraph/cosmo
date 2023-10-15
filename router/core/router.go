@@ -1,10 +1,13 @@
 package core
 
 import (
+	"connectrpc.com/connect"
 	"context"
 	"errors"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
 	"github.com/wundergraph/cosmo/router/internal/graphqlmetrics"
+	brotli "go.withmatt.com/connect-brotli"
 	"net"
 	"net/http"
 	"net/url"
@@ -461,9 +464,16 @@ func (r *Router) bootstrap(ctx context.Context) error {
 	}
 
 	if r.graphqlMetricsConfig.Enabled {
+		client := graphqlmetricsv1connect.NewGraphQLMetricsServiceClient(
+			http.DefaultClient,
+			r.graphqlMetricsConfig.CollectorEndpoint,
+			brotli.WithCompression(),
+			// Compress requests with Brotli.
+			connect.WithSendCompression(brotli.Name),
+		)
 		r.gqlMetricsExporter = graphqlmetrics.NewExporter(
 			r.logger,
-			r.graphqlMetricsConfig.CollectorEndpoint,
+			client,
 			r.graphApiToken,
 			graphqlmetrics.NewDefaultExporterSettings(),
 		)
@@ -471,7 +481,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 			return fmt.Errorf("failed to validate graphql metrics exporter: %w", err)
 		}
 
-		go r.gqlMetricsExporter.Start(ctx)
+		r.gqlMetricsExporter.Start()
 
 		r.logger.Info("GraphQL schema coverage metrics enabled")
 	}

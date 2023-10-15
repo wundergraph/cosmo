@@ -1,7 +1,6 @@
 package graphqlmetrics
 
 import (
-	"context"
 	"fmt"
 	"sync"
 	"testing"
@@ -59,7 +58,7 @@ func TestDispatchOrder(t *testing.T) {
 		MaxQueueSize:  10240,
 	})
 	defer b.Stop()
-	go b.Start(context.Background())
+	b.Start()
 
 	var (
 		numItems      = 10

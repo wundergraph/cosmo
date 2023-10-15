@@ -4,10 +4,6 @@ import (
 	"time"
 )
 
-import (
-	"context"
-)
-
 const (
 	defaultBatchInterval = time.Duration(10) * time.Second
 	defaultMaxBatchItems = 256
@@ -36,11 +32,10 @@ func (o *BatchQueueOptions) ensureDefaults() {
 }
 
 // BatchQueue coordinates dispatching of queue items by time intervals
-// or immediately after the batching limit is met.
+// or immediately after the batching limit is met. Items are enqueued without blocking
+// and all items are buffered unless the queue is stopped forcefully with the stop() context.
 type BatchQueue[T any] struct {
 	config   *BatchQueueOptions
-	ctx      context.Context
-	cancel   context.CancelFunc
 	timer    *time.Timer
 	inQueue  chan T
 	OutQueue chan []T
@@ -98,14 +93,11 @@ func (b *BatchQueue[T]) dispatch() {
 				}
 
 				items = append(items, item)
+
 				// batch limit reached, dispatch
 				if len(items) == b.config.MaxBatchItems {
 					goto done
 				}
-			case <-b.ctx.Done():
-				b.timer.Stop()
-				stopped = true
-				goto done
 			}
 		}
 
@@ -115,7 +107,7 @@ func (b *BatchQueue[T]) dispatch() {
 			// reset timer
 			b.tick()
 
-			// stop while queue is empty
+			// stop after empty batch
 			if stopped {
 				// signal the consumers no more items are coming
 				close(b.OutQueue)
@@ -141,8 +133,8 @@ func (b *BatchQueue[T]) dispatch() {
 }
 
 // Start begins item dispatching. Should be called only once from a single goroutine.
-func (b *BatchQueue[T]) Start(ctx context.Context) {
-	b.ctx, b.cancel = context.WithCancel(ctx)
+// The queue can be stopped by calling Stop().
+func (b *BatchQueue[T]) Start() {
 	// start timer
 	b.timer = time.NewTimer(b.config.Interval)
 	// start dispatcher
@@ -151,5 +143,5 @@ func (b *BatchQueue[T]) Start(ctx context.Context) {
 
 // Stop stops the internal dispatch and listen scheduler.
 func (b *BatchQueue[T]) Stop() {
-	b.cancel()
+	close(b.inQueue)
 }

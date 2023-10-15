@@ -9,8 +9,6 @@ import (
 	graphqlmetricsv12 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
 	"go.uber.org/zap"
-	brotli "go.withmatt.com/connect-brotli"
-	"net/http"
 	"sync"
 	"time"
 )
@@ -74,21 +72,13 @@ func NewDefaultExporterSettings() *ExporterSettings {
 // NewExporter creates a new GraphQL metrics exporter. The collectorEndpoint is the endpoint to which the metrics
 // are sent. The apiToken is the token used to authenticate with the collector. The collector supports Brotli compression
 // and retries on failure. Underling queue implementation sends batches of metrics at the specified interval and batch size.
-func NewExporter(logger *zap.Logger, collectorEndpoint string, apiToken string, settings *ExporterSettings) *Exporter {
+func NewExporter(logger *zap.Logger, client graphqlmetricsv1connect.GraphQLMetricsServiceClient, apiToken string, settings *ExporterSettings) *Exporter {
 
 	bq := NewBatchQueue[*graphqlmetricsv12.SchemaUsageInfo](&BatchQueueOptions{
 		Interval:      settings.Interval,
 		MaxBatchItems: settings.BatchSize,
 		MaxQueueSize:  settings.QueueSize,
 	})
-
-	client := graphqlmetricsv1connect.NewGraphQLMetricsServiceClient(
-		http.DefaultClient,
-		collectorEndpoint,
-		brotli.WithCompression(),
-		// Compress requests with Brotli.
-		connect.WithSendCompression(brotli.Name),
-	)
 
 	return &Exporter{
 		queue:    bq,
@@ -138,7 +128,12 @@ func (e *Exporter) Validate() error {
 
 // Record records the items as potential metrics to be exported.
 func (e *Exporter) Record(item *graphqlmetricsv12.SchemaUsageInfo) bool {
-	return e.queue.Enqueue(item)
+	if !e.queue.Enqueue(item) {
+		e.logger.Warn("Drop schema usage due to blocking queue. Please increase the queue size or decrease the batch size.")
+		return false
+	}
+
+	return true
 }
 
 func (e *Exporter) send(ctx context.Context, items []*graphqlmetricsv12.SchemaUsageInfo) error {
@@ -178,6 +173,14 @@ func (e *Exporter) export(ctx context.Context, batch []*graphqlmetricsv12.Schema
 		return nil
 	}
 
+	if !e.settings.Retry.Enabled {
+		e.logger.Error("Failed to export batch",
+			zap.Error(err),
+			zap.Int("batch_size", batchSize),
+		)
+		return err
+	}
+
 	var retry int
 	var lastErr error
 
@@ -213,25 +216,25 @@ func (e *Exporter) export(ctx context.Context, batch []*graphqlmetricsv12.Schema
 }
 
 // Start starts the exporter.
-func (e *Exporter) Start(ctx context.Context) {
-	var startWG sync.WaitGroup
+func (e *Exporter) Start() {
 
-	go e.queue.Start(ctx)
+	var startWG sync.WaitGroup
+	e.queue.Start()
 
 	shutdownCtx, cancel := context.WithCancel(context.Background())
 	e.cancelShutdown = cancel
-	defer cancel()
 
 	for i := 0; i < e.settings.NumConsumers; i++ {
 		startWG.Add(1)
 		e.stopWG.Add(1)
 
 		go func() {
+			startWG.Done()
 			defer e.stopWG.Done()
 
 			for {
 				select {
-				// Exit consumer when shutdown context is done
+				// Exit consumer forcefully when shutdown is called
 				case <-shutdownCtx.Done():
 					return
 				case batch, more := <-e.outQueue:
@@ -250,6 +253,7 @@ func (e *Exporter) Start(ctx context.Context) {
 }
 
 // Shutdown the exporter but waits until all export jobs has been finished or timeout.
+// If the context is canceled, the exporter will be shutdown immediately.
 func (e *Exporter) Shutdown(ctx context.Context) error {
 
 	// stop dispatching new items
