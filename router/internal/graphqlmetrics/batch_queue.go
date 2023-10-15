@@ -81,6 +81,7 @@ func (b *BatchQueue[T]) tick() {
 
 // dispatch sends items to the OutQueue. Only one dispatcher must be active at a time.
 func (b *BatchQueue[T]) dispatch() {
+
 	for {
 		var items []T
 		var stopped bool
@@ -90,6 +91,7 @@ func (b *BatchQueue[T]) dispatch() {
 			case <-b.timer.C:
 				goto done
 			case item, ok := <-b.inQueue:
+				// queue is stopped
 				if !ok {
 					stopped = true
 					goto done
@@ -112,14 +114,24 @@ func (b *BatchQueue[T]) dispatch() {
 		if len(items) == 0 {
 			// reset timer
 			b.tick()
+
+			// stop while queue is empty
+			if stopped {
+				// signal the consumers no more items are coming
+				close(b.OutQueue)
+				return
+			}
+
 			continue
 		}
 
 		// dispatch
 		b.OutQueue <- items
+
 		// reset timer
 		b.tick()
 
+		// stop after last batch
 		if stopped {
 			// signal the consumers no more items are coming
 			close(b.OutQueue)
