@@ -215,6 +215,7 @@ func (e *Exporter) export(ctx context.Context, batch []*graphqlmetricsv12.Schema
 // Start starts the exporter.
 func (e *Exporter) Start(ctx context.Context) {
 	var startWG sync.WaitGroup
+
 	go e.queue.Start(ctx)
 
 	shutdownCtx, cancel := context.WithCancel(context.Background())
@@ -230,6 +231,7 @@ func (e *Exporter) Start(ctx context.Context) {
 
 			for {
 				select {
+				// Exit consumer when shutdown context is done
 				case <-shutdownCtx.Done():
 					return
 				case batch, more := <-e.outQueue:
@@ -255,7 +257,7 @@ func (e *Exporter) Shutdown(ctx context.Context) error {
 
 	go func() {
 		select {
-		// cancel consumers and work immediately
+		// cancel consumers immediately without waiting for the queue to be empty
 		case <-ctx.Done():
 			e.cancelShutdown()
 		}
