@@ -37,7 +37,7 @@ func Aggregate(items []*graphqlmetricsv12.SchemaUsageInfo) []*graphqlmetricsv12.
 
 func isSchemaUsageInfoEqual(a, b *graphqlmetricsv12.SchemaUsageInfo) bool {
 	// Different hash imply different query type, name and fields
-	if a.OperationInfo.OperationHash != b.OperationInfo.OperationHash {
+	if a.OperationInfo.Hash != b.OperationInfo.Hash {
 		return false
 	}
 

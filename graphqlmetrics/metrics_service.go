@@ -126,11 +126,11 @@ func (s *MetricsService) PublishGraphQLMetrics(
 	for _, schemaUsage := range req.Msg.SchemaUsage {
 
 		// If the operation is already in the cache, we can skip it and don't write it again
-		if _, ok := s.opGuardCache.Get(schemaUsage.OperationInfo.OperationHash); !ok {
+		if _, ok := s.opGuardCache.Get(schemaUsage.OperationInfo.Hash); !ok {
 			_, err := batchOperationStmts.ExecContext(ctx,
 				insertTime,
-				schemaUsage.OperationInfo.OperationHash,
-				schemaUsage.OperationDocument,
+				schemaUsage.OperationInfo.Hash,
+				schemaUsage.RequestDocument,
 			)
 			if err != nil {
 				s.logger.Error("Failed to write operation", zap.Error(err))
@@ -144,8 +144,8 @@ func (s *MetricsService) PublishGraphQLMetrics(
 				claims.OrganizationID,
 				claims.FederatedGraphID,
 				schemaUsage.RequestInfo.RouterConfigVersion,
-				schemaUsage.OperationInfo.OperationHash,
-				schemaUsage.OperationInfo.OperationType,
+				schemaUsage.OperationInfo.Hash,
+				strings.ToLower(schemaUsage.OperationInfo.Type.String()),
 				fieldUsage.Count,
 				fieldUsage.Path,
 				fieldUsage.TypeNames,
@@ -168,7 +168,7 @@ func (s *MetricsService) PublishGraphQLMetrics(
 	// Update the cache with the operations we just wrote. Due to asynchronicity, it possibly happens
 	// that we still write some operations twice, but that's fine since clickhouse will deduplicate them anyway
 	for _, schemaUsage := range req.Msg.SchemaUsage {
-		s.opGuardCache.Add(schemaUsage.OperationInfo.OperationHash, struct{}{})
+		s.opGuardCache.Add(schemaUsage.OperationInfo.Hash, struct{}{})
 	}
 
 	err = scopeFieldUsageBatch.Commit()

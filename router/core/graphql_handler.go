@@ -267,13 +267,23 @@ func (h *GraphQLHandler) exportSchemaUsageInfo(operationID string, schemaUsageIn
 		}
 	}
 
+	var opType graphqlmetricsv1.OperationType
+	switch operationContext.opType {
+	case "query":
+		opType = graphqlmetricsv1.OperationType_QUERY
+	case "mutation":
+		opType = graphqlmetricsv1.OperationType_MUTATION
+	case "subscription":
+		opType = graphqlmetricsv1.OperationType_SUBSCRIPTION
+	}
+
 	h.gqlMetricsExporter.Record(&graphqlmetricsv1.SchemaUsageInfo{
-		OperationDocument: operationContext.content,
-		TypeFieldMetrics:  fieldUsageInfos,
+		RequestDocument:  operationContext.content,
+		TypeFieldMetrics: fieldUsageInfos,
 		OperationInfo: &graphqlmetricsv1.OperationInfo{
-			OperationType: operationContext.opType,
-			OperationHash: operationID,
-			OperationName: operationContext.name,
+			Type: opType,
+			Hash: operationID,
+			Name: operationContext.name,
 		},
 		RequestInfo: &graphqlmetricsv1.RequestInfo{
 			RouterConfigVersion: h.routerConfigVersion,

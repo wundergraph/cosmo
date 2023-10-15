@@ -43,6 +43,7 @@ const (
 // GraphQLMetricsServiceClient is a client for the wg.cosmo.graphqlmetrics.v1.GraphQLMetricsService
 // service.
 type GraphQLMetricsServiceClient interface {
+	// PublishGraphQLMetrics publishes the GraphQL metrics to the metrics service
 	PublishGraphQLMetrics(context.Context, *connect.Request[v1.PublishGraphQLRequestMetricsRequest]) (*connect.Response[v1.PublishOperationCoverageReportResponse], error)
 }
 
@@ -79,6 +80,7 @@ func (c *graphQLMetricsServiceClient) PublishGraphQLMetrics(ctx context.Context,
 // GraphQLMetricsServiceHandler is an implementation of the
 // wg.cosmo.graphqlmetrics.v1.GraphQLMetricsService service.
 type GraphQLMetricsServiceHandler interface {
+	// PublishGraphQLMetrics publishes the GraphQL metrics to the metrics service
 	PublishGraphQLMetrics(context.Context, *connect.Request[v1.PublishGraphQLRequestMetricsRequest]) (*connect.Response[v1.PublishOperationCoverageReportResponse], error)
 }
 
