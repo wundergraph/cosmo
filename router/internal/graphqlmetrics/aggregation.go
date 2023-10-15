@@ -6,7 +6,8 @@ import graphqlmetricsv12 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo
 // A schema usage info item is considered equal to another if:
 // - The operation hash is equal which means that the same query, same fields was executed
 // - The request info is equal which means that the same router config version was used
-// - The attributes are equal which means e.g. the same client was used
+// - The client info is equal which means that the same client was used
+// - The attributes are equal
 
 func Aggregate(items []*graphqlmetricsv12.SchemaUsageInfo) []*graphqlmetricsv12.SchemaUsageInfo {
 	aggregated := make([]*graphqlmetricsv12.SchemaUsageInfo, 0, len(items))
@@ -41,7 +42,15 @@ func isSchemaUsageInfoEqual(a, b *graphqlmetricsv12.SchemaUsageInfo) bool {
 		return false
 	}
 
-	if a.RequestInfo.RouterConfigVersion != b.RequestInfo.RouterConfigVersion {
+	if a.SchemaInfo.Version != b.SchemaInfo.Version {
+		return false
+	}
+
+	if a.ClientInfo.Name != b.ClientInfo.Name {
+		return false
+	}
+
+	if a.ClientInfo.Version != b.ClientInfo.Version {
 		return false
 	}
 

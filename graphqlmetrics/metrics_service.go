@@ -143,12 +143,14 @@ func (s *MetricsService) PublishGraphQLMetrics(
 				insertTime,
 				claims.OrganizationID,
 				claims.FederatedGraphID,
-				schemaUsage.RequestInfo.RouterConfigVersion,
+				schemaUsage.SchemaInfo.Version,
 				schemaUsage.OperationInfo.Hash,
 				strings.ToLower(schemaUsage.OperationInfo.Type.String()),
 				fieldUsage.Count,
 				fieldUsage.Path,
 				fieldUsage.TypeNames,
+				schemaUsage.ClientInfo.Name,
+				schemaUsage.ClientInfo.Version,
 				schemaUsage.Attributes,
 			)
 			if err != nil {

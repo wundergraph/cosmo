@@ -22,7 +22,11 @@ create table graphql_schema_field_usage_reports
     Path Array(String) CODEC(ZSTD(1)),
     TypeNames Array(String) CODEC(ZSTD(1)),
 
-    -- Additional information like client name, client version, etc.
+    -- Client information
+    ClientName LowCardinality(String) CODEC(ZSTD(1)),
+    ClientVersion LowCardinality(String) CODEC(ZSTD(1)),
+
+    -- Additional information
     Attributes Map(LowCardinality(String), String) CODEC(ZSTD(1)),
 
     INDEX idx_operation_hash OperationHash TYPE bloom_filter(0.001) GRANULARITY 1,
@@ -33,7 +37,7 @@ create table graphql_schema_field_usage_reports
     INDEX idx_count Count TYPE minmax GRANULARITY 1
 )
     engine = MergeTree PARTITION BY toDate(Timestamp)
-        ORDER BY (OrganizationID, FederatedGraphID, RouterConfigVersion, OperationHash, toUnixTimestamp(Timestamp))
+        ORDER BY (OrganizationID, FederatedGraphID, ClientName, ClientVersion, RouterConfigVersion, OperationHash, toUnixTimestamp(Timestamp))
         -- We keep 3 days of data as rolling window
         TTL toDateTime(Timestamp) + toIntervalDay(3)
         SETTINGS index_granularity = 8192, ttl_only_drop_parts = 1;

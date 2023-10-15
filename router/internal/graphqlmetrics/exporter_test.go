@@ -76,8 +76,12 @@ func TestExportAggregationSameSchemaUsages(t *testing.T) {
 				Hash: hash,
 				Name: "user",
 			},
-			RequestInfo: &graphqlmetricsv1.RequestInfo{
-				RouterConfigVersion: "1",
+			ClientInfo: &graphqlmetricsv1.ClientInfo{
+				Name:    "wundergraph",
+				Version: "1.0.0",
+			},
+			SchemaInfo: &graphqlmetricsv1.SchemaInfo{
+				Version: "1",
 			},
 			Attributes: map[string]string{
 				"client_name":    "wundergraph",
@@ -150,13 +154,14 @@ func TestExportBatchesWithUniqueSchemaUsages(t *testing.T) {
 				Hash: fmt.Sprintf("hash-%d", i),
 				Name: "user",
 			},
-			RequestInfo: &graphqlmetricsv1.RequestInfo{
-				RouterConfigVersion: "1",
+			ClientInfo: &graphqlmetricsv1.ClientInfo{
+				Name:    "wundergraph",
+				Version: "1.0.0",
 			},
-			Attributes: map[string]string{
-				"client_name":    "wundergraph",
-				"client_version": "1.0.0",
+			SchemaInfo: &graphqlmetricsv1.SchemaInfo{
+				Version: "1",
 			},
+			Attributes: map[string]string{},
 		}
 
 		require.True(t, e.Record(usage))
@@ -222,13 +227,14 @@ func TestExportBatchInterval(t *testing.T) {
 				Hash: fmt.Sprintf("hash-%d", i),
 				Name: "user",
 			},
-			RequestInfo: &graphqlmetricsv1.RequestInfo{
-				RouterConfigVersion: "1",
+			ClientInfo: &graphqlmetricsv1.ClientInfo{
+				Name:    "wundergraph",
+				Version: "1.0.0",
 			},
-			Attributes: map[string]string{
-				"client_name":    "wundergraph",
-				"client_version": "1.0.0",
+			SchemaInfo: &graphqlmetricsv1.SchemaInfo{
+				Version: "1",
 			},
+			Attributes: map[string]string{},
 		}
 
 		require.True(t, e.Record(usage))

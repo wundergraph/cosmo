@@ -29,13 +29,14 @@ func TestAggregateCountWithEqualUsages(t *testing.T) {
 				Hash: "123",
 				Name: "user",
 			},
-			RequestInfo: &graphqlmetricsv1.RequestInfo{
-				RouterConfigVersion: "1",
+			SchemaInfo: &graphqlmetricsv1.SchemaInfo{
+				Version: "1",
 			},
-			Attributes: map[string]string{
-				"client_name":    "wundergraph",
-				"client_version": "1.0.0",
+			ClientInfo: &graphqlmetricsv1.ClientInfo{
+				Name:    "wundergraph",
+				Version: "1.0.0",
 			},
+			Attributes: map[string]string{},
 		},
 		{
 			TypeFieldMetrics: []*graphqlmetricsv1.TypeFieldUsageInfo{
@@ -57,13 +58,14 @@ func TestAggregateCountWithEqualUsages(t *testing.T) {
 				Hash: "123",
 				Name: "user",
 			},
-			RequestInfo: &graphqlmetricsv1.RequestInfo{
-				RouterConfigVersion: "1",
+			SchemaInfo: &graphqlmetricsv1.SchemaInfo{
+				Version: "1",
 			},
-			Attributes: map[string]string{
-				"client_name":    "wundergraph",
-				"client_version": "1.0.0",
+			ClientInfo: &graphqlmetricsv1.ClientInfo{
+				Name:    "wundergraph",
+				Version: "1.0.0",
 			},
+			Attributes: map[string]string{},
 		},
 	})
 
@@ -89,13 +91,14 @@ func TestAggregateWithDifferentOperationInfo(t *testing.T) {
 				Hash: "123456", // different hash
 				Name: "user",
 			},
-			RequestInfo: &graphqlmetricsv1.RequestInfo{
-				RouterConfigVersion: "1",
+			SchemaInfo: &graphqlmetricsv1.SchemaInfo{
+				Version: "1",
 			},
-			Attributes: map[string]string{
-				"client_name":    "wundergraph",
-				"client_version": "1.0.0",
+			ClientInfo: &graphqlmetricsv1.ClientInfo{
+				Name:    "wundergraph",
+				Version: "1.0.0",
 			},
+			Attributes: map[string]string{},
 		},
 		{
 			TypeFieldMetrics: []*graphqlmetricsv1.TypeFieldUsageInfo{
@@ -111,13 +114,14 @@ func TestAggregateWithDifferentOperationInfo(t *testing.T) {
 				Hash: "123",
 				Name: "user",
 			},
-			RequestInfo: &graphqlmetricsv1.RequestInfo{
-				RouterConfigVersion: "1",
+			SchemaInfo: &graphqlmetricsv1.SchemaInfo{
+				Version: "1",
 			},
-			Attributes: map[string]string{
-				"client_name":    "wundergraph",
-				"client_version": "1.0.0",
+			ClientInfo: &graphqlmetricsv1.ClientInfo{
+				Name:    "wundergraph",
+				Version: "1.0.0",
 			},
+			Attributes: map[string]string{},
 		},
 	})
 
@@ -143,13 +147,14 @@ func TestAggregateWithDifferentClientInfo(t *testing.T) {
 				Hash: "123",
 				Name: "user",
 			},
-			RequestInfo: &graphqlmetricsv1.RequestInfo{
-				RouterConfigVersion: "1",
+			SchemaInfo: &graphqlmetricsv1.SchemaInfo{
+				Version: "1",
 			},
-			Attributes: map[string]string{
-				"client_name":    "wundergraph",
-				"client_version": "1.0.1", // different client version
+			ClientInfo: &graphqlmetricsv1.ClientInfo{
+				Name:    "wundergraph",
+				Version: "1.0.0",
 			},
+			Attributes: map[string]string{},
 		},
 		{
 			TypeFieldMetrics: []*graphqlmetricsv1.TypeFieldUsageInfo{
@@ -165,13 +170,14 @@ func TestAggregateWithDifferentClientInfo(t *testing.T) {
 				Hash: "123",
 				Name: "user",
 			},
-			RequestInfo: &graphqlmetricsv1.RequestInfo{
-				RouterConfigVersion: "1",
+			SchemaInfo: &graphqlmetricsv1.SchemaInfo{
+				Version: "1",
 			},
-			Attributes: map[string]string{
-				"client_name":    "wundergraph",
-				"client_version": "1.0.0",
+			ClientInfo: &graphqlmetricsv1.ClientInfo{
+				Name:    "wundergraph",
+				Version: "1.0.1", // different client version
 			},
+			Attributes: map[string]string{},
 		},
 	})
 
@@ -180,7 +186,7 @@ func TestAggregateWithDifferentClientInfo(t *testing.T) {
 	require.Equal(t, uint64(1), result[1].TypeFieldMetrics[0].Count)
 }
 
-func TestAggregateWithDifferentFields(t *testing.T) {
+func TestAggregateWithDifferentHash(t *testing.T) {
 
 	result := Aggregate([]*graphqlmetricsv1.SchemaUsageInfo{
 		{
@@ -200,16 +206,17 @@ func TestAggregateWithDifferentFields(t *testing.T) {
 			},
 			OperationInfo: &graphqlmetricsv1.OperationInfo{
 				Type: graphqlmetricsv1.OperationType_QUERY,
-				Hash: "123",
+				Hash: "123456", // emulate different hash because of different fields
 				Name: "user",
 			},
-			RequestInfo: &graphqlmetricsv1.RequestInfo{
-				RouterConfigVersion: "1",
+			SchemaInfo: &graphqlmetricsv1.SchemaInfo{
+				Version: "1",
 			},
-			Attributes: map[string]string{
-				"client_name":    "wundergraph",
-				"client_version": "1.0.1", // different client version
+			ClientInfo: &graphqlmetricsv1.ClientInfo{
+				Name:    "wundergraph",
+				Version: "1.0.0",
 			},
+			Attributes: map[string]string{},
 		},
 		{
 			TypeFieldMetrics: []*graphqlmetricsv1.TypeFieldUsageInfo{
@@ -225,13 +232,14 @@ func TestAggregateWithDifferentFields(t *testing.T) {
 				Hash: "123",
 				Name: "user",
 			},
-			RequestInfo: &graphqlmetricsv1.RequestInfo{
-				RouterConfigVersion: "1",
+			SchemaInfo: &graphqlmetricsv1.SchemaInfo{
+				Version: "1",
 			},
-			Attributes: map[string]string{
-				"client_name":    "wundergraph",
-				"client_version": "1.0.0",
+			ClientInfo: &graphqlmetricsv1.ClientInfo{
+				Name:    "wundergraph",
+				Version: "1.0.0",
 			},
+			Attributes: map[string]string{},
 		},
 	})
 

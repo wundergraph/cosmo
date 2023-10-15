@@ -285,12 +285,12 @@ func (h *GraphQLHandler) exportSchemaUsageInfo(operationID string, schemaUsageIn
 			Hash: operationID,
 			Name: operationContext.name,
 		},
-		RequestInfo: &graphqlmetricsv1.RequestInfo{
-			RouterConfigVersion: h.routerConfigVersion,
+		SchemaInfo: &graphqlmetricsv1.SchemaInfo{
+			Version: h.routerConfigVersion,
 		},
-		Attributes: map[string]string{
-			"client_name":    operationContext.client.name,
-			"client_version": operationContext.client.version,
+		ClientInfo: &graphqlmetricsv1.ClientInfo{
+			Name:    operationContext.client.name,
+			Version: operationContext.client.version,
 		},
 	})
 
