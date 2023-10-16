@@ -223,9 +223,6 @@ func TestTestdataQueries(t *testing.T) {
 		}
 		name := entry.Name()
 		t.Run(name, func(t *testing.T) {
-			if name == "employees" {
-				t.Skip("this is not yet passing")
-			}
 			testDir := filepath.Join(queries, name)
 			queryData, err := os.ReadFile(filepath.Join(testDir, "query.graphql"))
 			require.NoError(t, err)
