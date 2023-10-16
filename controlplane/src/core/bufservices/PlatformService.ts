@@ -3021,11 +3021,20 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
+        if (!req.gitInfo) {
+          return {
+            response: {
+              code: EnumStatusCode.OK,
+            },
+            isInstalled: false,
+          };
+        }
+
         const githubRepository = new GitHubRepository(opts.db, opts.githubApp);
         const isInstalled = await githubRepository.isAppInstalledOnRepo({
-          accountId: req.gitInfo?.accountId ?? '',
-          repoSlug: req.gitInfo?.repositorySlug ?? '',
-          ownerSlug: req.gitInfo?.ownerSlug ?? '',
+          accountId: req.gitInfo.accountId,
+          repoSlug: req.gitInfo.repositorySlug,
+          ownerSlug: req.gitInfo.ownerSlug,
         });
 
         return {

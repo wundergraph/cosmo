@@ -52,6 +52,11 @@ export default (opts: BaseCommandOptions) => {
         },
       );
       ignoreErrors = integrationCheckResponse.isInstalled;
+      if (ignoreErrors) {
+        console.log(
+          'GitHub integration detected. The command will succeed and any errors detected will be reflected on commit status instead.',
+        );
+      }
     }
 
     const resp = await opts.client.platform.checkSubgraphSchema(
