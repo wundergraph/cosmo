@@ -177,7 +177,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration) (*plan.Configura
 			var subscriptionUseSSE bool
 			var subscriptionSSEMethodPost bool
 			switch in.CustomGraphql.Subscription.Protocol {
-			case nodev1.GraphQLSubscriptionProtocol_GRAPHQL_SUBSCRIPTION_PROTOCOL_GRAPHQL_WS:
+			case nodev1.GraphQLSubscriptionProtocol_GRAPHQL_SUBSCRIPTION_PROTOCOL_WS:
 				subscriptionUseSSE = false
 				subscriptionSSEMethodPost = false
 			case nodev1.GraphQLSubscriptionProtocol_GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE:

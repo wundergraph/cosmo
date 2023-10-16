@@ -13,32 +13,11 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/tidwall/gjson"
-	"github.com/tidwall/sjson"
+	"github.com/wundergraph/cosmo/router/core/wsproto"
 	"github.com/wundergraph/cosmo/router/internal/metric"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/zap"
 )
-
-// See protocol at https://github.com/enisdenjo/graphql-ws/blob/master/PROTOCOL.md
-
-type wsMessageType string
-
-const (
-	wsMessageTypeConnectionInit = wsMessageType("connection_init")
-	wsMessageTypeConnectionAck  = wsMessageType("connection_ack")
-	wsMessageTypePing           = wsMessageType("ping")
-	wsMessageTypePong           = wsMessageType("pong")
-	wsMessageTypeSubscribe      = wsMessageType("subscribe")
-	wsMessageTypeNext           = wsMessageType("next")
-	wsMessageTypeError          = wsMessageType("error")
-	wsMessageTypeComplete       = wsMessageType("complete")
-)
-
-type wsMessage struct {
-	ID      string          `json:"id,omitempty"`
-	Type    wsMessageType   `json:"type"`
-	Payload json.RawMessage `json:"payload,omitempty"`
-}
 
 type WebsocketMiddlewareOptions struct {
 	Parser         *OperationParser
@@ -100,6 +79,79 @@ func (s *globalIDStorage) Remove(id string) bool {
 	return found
 }
 
+// wsConnectionWrapper is a wrapper around websocket.Conn that allows
+// writing from multiple goroutines
+type wsConnectionWrapper struct {
+	ctx  context.Context
+	conn *websocket.Conn
+	mu   sync.Mutex
+}
+
+func newWSConnectionWrapper(ctx context.Context, conn *websocket.Conn) *wsConnectionWrapper {
+	return &wsConnectionWrapper{
+		ctx:  ctx,
+		conn: conn,
+	}
+}
+
+func (c *wsConnectionWrapper) ReadJSON(v interface{}) error {
+	ech := make(chan error, 1)
+	go func() {
+		ech <- c.conn.ReadJSON(v)
+	}()
+	select {
+	case <-c.ctx.Done():
+		c.conn.Close()
+		return c.ctx.Err()
+	case err := <-ech:
+		return err
+	}
+}
+
+type countingWriter struct {
+	n int
+	w io.Writer
+}
+
+func (w *countingWriter) Write(data []byte) (int, error) {
+	n, err := w.w.Write(data)
+	w.n += n
+	return n, err
+}
+
+func (c *wsConnectionWrapper) WriteText(text string) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	w, err := c.conn.NextWriter(websocket.TextMessage)
+	if err != nil {
+		return err
+	}
+	_, err = io.WriteString(w, text)
+	return err
+}
+
+func (c *wsConnectionWrapper) WriteJSON(v interface{}) (int, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	w, err := c.conn.NextWriter(websocket.TextMessage)
+	if err != nil {
+		return 0, err
+	}
+	cw := &countingWriter{w: w}
+	err1 := json.NewEncoder(cw).Encode(v)
+	err2 := w.Close()
+	if err1 != nil {
+		return cw.n, err1
+	}
+	return cw.n, err2
+}
+
+func (c *wsConnectionWrapper) Close() error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.conn.Close()
+}
+
 type WebsocketHandler struct {
 	ctx            context.Context
 	next           http.Handler
@@ -122,12 +174,19 @@ func (h *WebsocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			HandshakeTimeout: 5 * time.Second,
 			// TODO: WriteBufferPool,
 			EnableCompression: true,
-			Subprotocols:      []string{"graphql-transport-ws"},
+			Subprotocols:      wsproto.Subprotocols(),
 		}
 		c, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
 			// Upgrade() sends an error response already, just log the error
 			h.logger.Warn("upgrading websocket", zap.Error(err))
+			return
+		}
+		conn := newWSConnectionWrapper(h.ctx, c)
+		protocol, err := wsproto.NewProtocol(c.Subprotocol(), conn)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			c.Close()
 			return
 		}
 		connectionHandler := NewWebsocketConnectionHandler(h.ctx, WebSocketConnectionHandlerOptions{
@@ -137,7 +196,8 @@ func (h *WebsocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			Metrics:        h.metrics,
 			ResponseWriter: w,
 			Request:        r,
-			Connection:     c,
+			Connection:     conn,
+			Protocol:       protocol,
 			Logger:         h.logger,
 		})
 		defer connectionHandler.Close()
@@ -150,7 +210,7 @@ func (h *WebsocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 type websocketResponseWriter struct {
 	id           string
-	conn         *websocket.Conn
+	protocol     wsproto.Proto
 	header       http.Header
 	buf          bytes.Buffer
 	writtenBytes int
@@ -160,12 +220,12 @@ type websocketResponseWriter struct {
 var _ http.ResponseWriter = (*websocketResponseWriter)(nil)
 var _ resolve.FlushWriter = (*websocketResponseWriter)(nil)
 
-func newWebsocketResponseWriter(id string, conn *websocket.Conn, logger *zap.Logger) *websocketResponseWriter {
+func newWebsocketResponseWriter(id string, protocol wsproto.Proto, logger *zap.Logger) *websocketResponseWriter {
 	return &websocketResponseWriter{
-		id:     id,
-		conn:   conn,
-		header: make(http.Header),
-		logger: logger.With(zap.String("subscription_id", id)),
+		id:       id,
+		protocol: protocol,
+		header:   make(http.Header),
+		logger:   logger.With(zap.String("subscription_id", id)),
 	}
 }
 
@@ -186,35 +246,26 @@ func (rw *websocketResponseWriter) Flush() {
 	if rw.buf.Len() > 0 {
 		rw.logger.Debug("flushing", zap.Int("bytes", rw.buf.Len()))
 		payload := rw.buf.Bytes()
-		var msg *wsMessage
-		// Check if the result is an error
-		result := gjson.GetBytes(payload, "errors")
-		if result.Type == gjson.JSON {
-			msg = &wsMessage{
-				ID:      rw.id,
-				Type:    wsMessageTypeError,
-				Payload: json.RawMessage(result.Raw),
-			}
-		} else {
-			msg = &wsMessage{
-				ID:      rw.id,
-				Type:    wsMessageTypeNext,
-				Payload: payload,
-			}
-		}
+		var extensions []byte
+		var err error
 		if len(rw.header) > 0 {
-			headers, err := json.Marshal(rw.header)
+			extensions, err = json.Marshal(map[string]any{
+				"response_headers": rw.header,
+			})
 			if err != nil {
 				rw.logger.Warn("serializing response headers", zap.Error(err))
-			} else {
-				msg.Payload, err = sjson.SetBytes(msg.Payload, "extensions.response_headers", headers)
-				if err != nil {
-					rw.logger.Warn("setting response_headers", zap.Error(err))
-				}
 			}
 		}
-		if err := rw.conn.WriteJSON(&msg); err != nil {
-			rw.logger.Warn("writing JSON on websocket flush", zap.Error(err))
+
+		// Check if the result is an error
+		errorsResult := gjson.GetBytes(payload, "errors")
+		if errorsResult.Type == gjson.JSON {
+			_, err = rw.protocol.GraphQLErrors(rw.id, json.RawMessage(errorsResult.Raw), extensions)
+		} else {
+			_, err = rw.protocol.GraphQLData(rw.id, payload, extensions)
+		}
+		if err != nil {
+			rw.logger.Warn("sending response on websocket flush", zap.Error(err))
 		}
 		rw.buf.Reset()
 	}
@@ -276,7 +327,8 @@ type WebSocketConnectionHandlerOptions struct {
 	Metrics        *metric.Metrics
 	ResponseWriter http.ResponseWriter
 	Request        *http.Request
-	Connection     *websocket.Conn
+	Connection     *wsConnectionWrapper
+	Protocol       wsproto.Proto
 	Logger         *zap.Logger
 }
 
@@ -289,7 +341,8 @@ type WebSocketConnectionHandler struct {
 	metrics        *metric.Metrics
 	w              http.ResponseWriter
 	r              *http.Request
-	conn           *websocket.Conn
+	conn           *wsConnectionWrapper
+	protocol       wsproto.Proto
 	clientInfo     *ClientInfo
 	logger         *zap.Logger
 }
@@ -305,6 +358,7 @@ func NewWebsocketConnectionHandler(ctx context.Context, opts WebSocketConnection
 		w:              opts.ResponseWriter,
 		r:              opts.Request,
 		conn:           opts.Connection,
+		protocol:       opts.Protocol,
 		clientInfo:     NewClientInfoFromRequest(opts.Request),
 		logger:         opts.Logger,
 	}
@@ -318,7 +372,7 @@ func (h *WebSocketConnectionHandler) requestError(err error) error {
 		return nil
 	}
 	h.logger.Warn("handling websocket connection", zap.Error(err))
-	return h.conn.WriteMessage(websocket.TextMessage, []byte(err.Error()))
+	return h.conn.WriteText(err.Error())
 }
 
 func (h *WebSocketConnectionHandler) writeErrorMessage(operationID string, err error) (int, error) {
@@ -329,7 +383,7 @@ func (h *WebSocketConnectionHandler) writeErrorMessage(operationID string, err e
 	if err != nil {
 		return 0, fmt.Errorf("encoding GraphQL errors: %w", err)
 	}
-	return h.writeJSON(wsMessage{ID: operationID, Type: wsMessageTypeError, Payload: payload})
+	return h.protocol.GraphQLErrors(operationID, payload, nil)
 }
 
 func (h *WebSocketConnectionHandler) readJSON(v interface{}) error {
@@ -346,49 +400,7 @@ func (h *WebSocketConnectionHandler) readJSON(v interface{}) error {
 	}
 }
 
-type countingWriter struct {
-	n int
-	w io.Writer
-}
-
-func (w *countingWriter) Write(data []byte) (int, error) {
-	n, err := w.w.Write(data)
-	w.n += n
-	return n, err
-}
-
-func (h *WebSocketConnectionHandler) writeJSON(v interface{}) (int, error) {
-
-	w, err := h.conn.NextWriter(websocket.TextMessage)
-	if err != nil {
-		return 0, err
-	}
-	cw := &countingWriter{w: w}
-	err1 := json.NewEncoder(cw).Encode(v)
-	err2 := w.Close()
-	if err1 != nil {
-		return cw.n, err1
-	}
-	return cw.n, err2
-
-}
-
-func (h *WebSocketConnectionHandler) sessionInit() error {
-	var msg wsMessage
-	// First message must be a connection_init
-	if err := h.readJSON(&msg); err != nil {
-		return fmt.Errorf("error reading connection_init: %w", err)
-	}
-	if msg.Type != wsMessageTypeConnectionInit {
-		return fmt.Errorf("connections should start with %s, got %s", wsMessageTypeConnectionInit, msg.Type)
-	}
-	if err := h.conn.WriteJSON(wsMessage{Type: wsMessageTypeConnectionAck}); err != nil {
-		return fmt.Errorf("sending %s: %w", wsMessageTypeConnectionAck, err)
-	}
-	return nil
-}
-
-func (h *WebSocketConnectionHandler) executeSubscription(ctx context.Context, msg *wsMessage) error {
+func (h *WebSocketConnectionHandler) executeSubscription(ctx context.Context, msg *wsproto.Message) error {
 	var metrics *OperationMetrics
 
 	statusCode := http.StatusOK
@@ -432,7 +444,7 @@ func (h *WebSocketConnectionHandler) executeSubscription(ctx context.Context, ms
 
 	ctxWithOperation := withOperationContext(cancellableCtx, operation, h.clientInfo)
 	r := h.r.WithContext(ctxWithOperation)
-	rw := newWebsocketResponseWriter(msg.ID, h.conn, h.logger)
+	rw := newWebsocketResponseWriter(msg.ID, h.protocol, h.logger)
 	defer h.Complete(rw)
 	r = requestWithAttachedContext(rw, r, h.logger)
 	h.graphqlHandler.ServeHTTP(rw, r)
@@ -440,30 +452,31 @@ func (h *WebSocketConnectionHandler) executeSubscription(ctx context.Context, ms
 	return nil
 }
 
-func (h *WebSocketConnectionHandler) handleSubscribe(msg *wsMessage) error {
+func (h *WebSocketConnectionHandler) handleSubscribe(msg *wsproto.Message) error {
 	if msg.ID == "" {
-		return fmt.Errorf("missing id in %s", wsMessageTypeSubscribe)
+		return fmt.Errorf("missing id in subscribe")
 	}
 	go h.executeSubscription(h.r.Context(), msg)
 	return nil
 }
 
-func (h *WebSocketConnectionHandler) handleComplete(msg *wsMessage) error {
+func (h *WebSocketConnectionHandler) handleComplete(msg *wsproto.Message) error {
 	if !h.subscriptions.Remove(msg.ID) {
 		return h.requestError(fmt.Errorf("no subscription was registered for ID %q", msg.ID))
 	}
 	return nil
 }
 
-func (h *WebSocketConnectionHandler) handleConnectedMessage(msg *wsMessage) (stop bool, err error) {
+func (h *WebSocketConnectionHandler) handleConnectedMessage(msg *wsproto.Message) (stop bool, err error) {
 	switch msg.Type {
-	case wsMessageTypePing:
-		return false, h.conn.WriteJSON(wsMessage{Type: wsMessageTypePong})
-	case wsMessageTypePong:
+	case wsproto.MessageTypePing:
+		_, err := h.protocol.Pong(msg)
+		return false, err
+	case wsproto.MessageTypePong:
 		// "Furthermore, the Pong message may even be sent unsolicited as an unidirectional heartbeat"
-	case wsMessageTypeSubscribe:
+	case wsproto.MessageTypeSubscribe:
 		return false, h.handleSubscribe(msg)
-	case wsMessageTypeComplete:
+	case wsproto.MessageTypeComplete:
 		return false, h.handleComplete(msg)
 	}
 	// "Receiving a message of a type or format which is not specified in this document will result in an immediate socket closure"
@@ -471,19 +484,19 @@ func (h *WebSocketConnectionHandler) handleConnectedMessage(msg *wsMessage) (sto
 }
 
 func (h *WebSocketConnectionHandler) Serve() {
-	h.logger.Debug("websocket connection", zap.String("remote_addr", h.conn.RemoteAddr().String()))
+	h.logger.Debug("websocket connection", zap.String("protocol", h.protocol.Subprotocol()))
 
-	if err := h.sessionInit(); err != nil {
+	if err := h.protocol.Initialize(); err != nil {
 		h.requestError(fmt.Errorf("error initializing session: %w", err))
 		return
 	}
-	var msg wsMessage
 	for {
-		if err := h.readJSON(&msg); err != nil {
-			h.requestError(fmt.Errorf("error decoding message: %w", err))
+		msg, err := h.protocol.ReadMessage()
+		if err != nil {
+			h.requestError(fmt.Errorf("error reading message: %w", err))
 			return
 		}
-		stop, err := h.handleConnectedMessage(&msg)
+		stop, err := h.handleConnectedMessage(msg)
 		if err != nil {
 			h.requestError(fmt.Errorf("error handling message type %q: %w", msg.Type, err))
 		}
@@ -496,11 +509,8 @@ func (h *WebSocketConnectionHandler) Serve() {
 func (h *WebSocketConnectionHandler) Complete(rw *websocketResponseWriter) error {
 	rw.Flush()
 	if h.subscriptions.Remove(rw.id) {
-		msg := wsMessage{
-			ID:   rw.id,
-			Type: wsMessageTypeComplete,
-		}
-		return rw.conn.WriteJSON(&msg)
+		_, err := rw.protocol.Done(rw.id)
+		return err
 	}
 	// If the subscription was already removed, we shouldn't send the complete back
 	return nil

@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/hasura/go-graphql-client"
+	"github.com/hasura/go-graphql-client/pkg/jsonutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -93,6 +95,7 @@ func TestSubscriptionOverWebsocket(t *testing.T) {
 			} `json:"currentTime"`
 		} `json:"data"`
 	}
+
 	_, port := setupListeningServer(t)
 	conn := connectedWebsocket(t, port)
 	var err error
@@ -191,4 +194,46 @@ func TestShutdownWithActiveWebsocket(t *testing.T) {
 	cerr, ok := err.(*websocket.CloseError)
 	require.True(t, ok)
 	assert.Equal(t, websocket.CloseAbnormalClosure, cerr.Code)
+}
+
+func TestSubscriptionsOverWebsocketLibrary(t *testing.T) {
+	var subscription struct {
+		CurrentTime struct {
+			UnixTime  float64 `graphql:"unixTime"`
+			Timestamp string  `graphql:"timeStamp"`
+		} `graphql:"currentTime"`
+	}
+	_, port := setupListeningServer(t)
+	subscriptionURL := fmt.Sprintf("ws://localhost:%d/graphql", port)
+	protocols := []graphql.SubscriptionProtocolType{
+		graphql.GraphQLWS,
+		graphql.SubscriptionsTransportWS,
+	}
+	for _, p := range protocols {
+		p := p
+		t.Run(string(p), func(t *testing.T) {
+			client := graphql.NewSubscriptionClient(subscriptionURL).WithProtocol(p)
+			t.Cleanup(func() {
+				err := client.Close()
+				assert.NoError(t, err)
+			})
+			var firstTime float64
+			subscriptionID, err := client.Subscribe(&subscription, nil, func(dataValue []byte, errValue error) error {
+				require.NoError(t, errValue)
+				data := subscription
+				err := jsonutil.UnmarshalGraphQL(dataValue, &data)
+				require.NoError(t, err)
+				if firstTime == 0 {
+					firstTime = data.CurrentTime.UnixTime
+				} else {
+					assert.Equal(t, firstTime+1, data.CurrentTime.UnixTime)
+					return graphql.ErrSubscriptionStopped
+				}
+				return nil
+			})
+			require.NoError(t, err)
+			require.NotEqual(t, "", subscriptionID)
+			require.NoError(t, client.Run())
+		})
+	}
 }

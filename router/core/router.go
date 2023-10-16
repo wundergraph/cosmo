@@ -17,7 +17,7 @@ import (
 	"github.com/go-chi/chi/middleware"
 	"github.com/mitchellh/mapstructure"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	graphiql2 "github.com/wundergraph/cosmo/router/internal/graphiql"
+	"github.com/wundergraph/cosmo/router/internal/graphiql"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -610,9 +610,9 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 
 	if r.playground {
 		r.logger.Debug("enabling GraphQL playground", zap.String("path", r.graphqlPath))
-		graphqlPlaygroundHandler = graphiql2.NewPlayground(&graphiql2.PlaygroundOptions{
+		graphqlPlaygroundHandler = graphiql.NewPlayground(&graphiql.PlaygroundOptions{
 			Log:        r.logger,
-			Html:       graphiql2.GetGraphiqlPlaygroundHTML(),
+			Html:       graphiql.PlaygroundHTML(),
 			GraphqlURL: r.graphqlPath,
 		})
 	}
