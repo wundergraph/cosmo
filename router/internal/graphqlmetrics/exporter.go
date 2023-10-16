@@ -261,11 +261,9 @@ func (e *Exporter) Shutdown(ctx context.Context) error {
 	e.queue.Stop()
 
 	go func() {
-		select {
 		// cancel consumers immediately without waiting for the queue to be empty
-		case <-ctx.Done():
-			e.cancelShutdown()
-		}
+		<-ctx.Done()
+		e.cancelShutdown()
 	}()
 
 	// wait for all items to be processed
