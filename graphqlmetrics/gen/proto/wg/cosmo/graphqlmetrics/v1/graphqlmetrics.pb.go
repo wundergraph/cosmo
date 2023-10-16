@@ -345,7 +345,7 @@ type TypeFieldUsageInfo struct {
 	Path []string `protobuf:"bytes,1,rep,name=Path,proto3" json:"Path,omitempty"`
 	// TypeNames is the list of type names that the field is used as
 	TypeNames []string `protobuf:"bytes,2,rep,name=TypeNames,proto3" json:"TypeNames,omitempty"`
-	// SourceIDs is the list of datasource IDs (e.g subgraph ID) that the field is used from
+	// SubgraphIDs is the list of datasource IDs (e.g subgraph ID) that the field is used from
 	SubgraphIDs []string `protobuf:"bytes,3,rep,name=SubgraphIDs,proto3" json:"SubgraphIDs,omitempty"`
 	// Count is the number of times the field is used
 	Count uint64 `protobuf:"varint,4,opt,name=Count,proto3" json:"Count,omitempty"`
