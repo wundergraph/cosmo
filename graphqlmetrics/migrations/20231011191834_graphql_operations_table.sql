@@ -18,6 +18,8 @@ CREATE TABLE IF NOT EXISTS gql_metrics_operations
     -- https://altinity.com/blog/clickhouse-replacingmergetree-explained-the-good-the-bad-and-the-ugly
     -- Use FINAL as setting https://kb.altinity.com/engines/mergetree-table-engine-family/replacingmergetree/#final
     engine = ReplacingMergeTree(Timestamp) PARTITION BY toDate(Timestamp)
+        -- Optimized for querying by OperationHash. If performance is bad for querying by OperationName, we can add
+        -- a materialized view with the same data but with OperationName as the first sorting key.
         ORDER BY (OperationHash, OperationName, OperationType)
         -- We store operations for 90 days
         TTL toDateTime(Timestamp) + toIntervalDay(90)
