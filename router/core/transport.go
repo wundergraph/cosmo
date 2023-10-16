@@ -42,8 +42,7 @@ func (ct *CustomTransport) RoundTrip(req *http.Request) (*http.Response, error) 
 
 	reqContext := getRequestContext(req.Context())
 
-	// TODO: Make this run over WS
-	if reqContext != nil && ct.preHandlers != nil {
+	if ct.preHandlers != nil {
 		for _, preHandler := range ct.preHandlers {
 			r, resp := preHandler(req, reqContext)
 			// Non nil response means the handler decided to skip sending the request
@@ -61,8 +60,7 @@ func (ct *CustomTransport) RoundTrip(req *http.Request) (*http.Response, error) 
 		reqContext.sendError = err
 	}
 
-	// TODO: Make this run over WS
-	if reqContext != nil && ct.postHandlers != nil {
+	if ct.postHandlers != nil {
 		for _, postHandler := range ct.postHandlers {
 			newResp := postHandler(resp, reqContext)
 			// Abort with the first handler that returns a non-nil response
