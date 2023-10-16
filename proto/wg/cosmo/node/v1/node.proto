@@ -195,10 +195,18 @@ message MTLSConfiguration {
   bool insecureSkipVerify = 3;
 }
 
+enum GraphQLSubscriptionProtocol {
+  GRAPHQL_SUBSCRIPTION_PROTOCOL_GRAPHQL_WS = 0;
+  GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE = 1;
+  GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE_POST = 2;
+}
+
 message GraphQLSubscriptionConfiguration {
   bool enabled = 1;
   ConfigurationVariable url = 2;
-  bool useSSE = 3;
+  /* @deprecated - Kept for backwards compatibility when decoding. Use protocol instead. */
+  optional bool useSSE = 3;
+  GraphQLSubscriptionProtocol protocol = 4;
 }
 
 message GraphQLFederationConfiguration {

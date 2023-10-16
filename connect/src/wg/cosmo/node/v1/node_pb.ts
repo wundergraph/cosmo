@@ -138,6 +138,32 @@ proto3.util.setEnumType(HTTPMethod, "wg.cosmo.node.v1.HTTPMethod", [
 ]);
 
 /**
+ * @generated from enum wg.cosmo.node.v1.GraphQLSubscriptionProtocol
+ */
+export enum GraphQLSubscriptionProtocol {
+  /**
+   * @generated from enum value: GRAPHQL_SUBSCRIPTION_PROTOCOL_GRAPHQL_WS = 0;
+   */
+  GRAPHQL_SUBSCRIPTION_PROTOCOL_GRAPHQL_WS = 0,
+
+  /**
+   * @generated from enum value: GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE = 1;
+   */
+  GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE = 1,
+
+  /**
+   * @generated from enum value: GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE_POST = 2;
+   */
+  GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE_POST = 2,
+}
+// Retrieve enum metadata with: proto3.getEnumType(GraphQLSubscriptionProtocol)
+proto3.util.setEnumType(GraphQLSubscriptionProtocol, "wg.cosmo.node.v1.GraphQLSubscriptionProtocol", [
+  { no: 0, name: "GRAPHQL_SUBSCRIPTION_PROTOCOL_GRAPHQL_WS" },
+  { no: 1, name: "GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE" },
+  { no: 2, name: "GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE_POST" },
+]);
+
+/**
  * @generated from message wg.cosmo.node.v1.Subgraph
  */
 export class Subgraph extends Message<Subgraph> {
@@ -1310,9 +1336,16 @@ export class GraphQLSubscriptionConfiguration extends Message<GraphQLSubscriptio
   url?: ConfigurationVariable;
 
   /**
-   * @generated from field: bool useSSE = 3;
+   * @deprecated - Kept for backwards compatibility when decoding. Use protocol instead. 
+   *
+   * @generated from field: optional bool useSSE = 3;
    */
-  useSSE = false;
+  useSSE?: boolean;
+
+  /**
+   * @generated from field: wg.cosmo.node.v1.GraphQLSubscriptionProtocol protocol = 4;
+   */
+  protocol = GraphQLSubscriptionProtocol.GRAPHQL_SUBSCRIPTION_PROTOCOL_GRAPHQL_WS;
 
   constructor(data?: PartialMessage<GraphQLSubscriptionConfiguration>) {
     super();
@@ -1324,7 +1357,8 @@ export class GraphQLSubscriptionConfiguration extends Message<GraphQLSubscriptio
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "enabled", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 2, name: "url", kind: "message", T: ConfigurationVariable },
-    { no: 3, name: "useSSE", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 3, name: "useSSE", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 4, name: "protocol", kind: "enum", T: proto3.getEnumType(GraphQLSubscriptionProtocol) },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GraphQLSubscriptionConfiguration {

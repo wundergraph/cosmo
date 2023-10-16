@@ -11,6 +11,7 @@ import {
   HTTPMethod,
   InternedString,
   RouterConfig,
+  GraphQLSubscriptionProtocol
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import {
   argumentConfigurationDatasToFieldConfigurations,
@@ -23,7 +24,14 @@ export interface Input {
   subgraphs: Subgraph[];
 }
 
-export type SubscriptionProtocol = 'graphql-ws' | 'sse';
+/**
+ * Protocol used when subscribing to a subgraph.
+ * 
+ * graphql-ws: Uses the graphql-ws protocol
+ * sse: Uses the Server-Sent Events protocol with a GET request
+ * sse-post: Uses the Server-Sent Events protocol with a POST request
+ */
+export type SubscriptionProtocol = 'graphql-ws' | 'sse' | 'sse-post';
 
 export interface Subgraph {
   id: string;
@@ -71,6 +79,21 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
     const { childNodes, rootNodes, keys, provides, requires } = configurationDataMapToDataSourceConfiguration(
       normalizationResult!.configurationDataMap,
     );
+    let subscriptionProtocol: GraphQLSubscriptionProtocol;
+    switch (subgraph.subscriptions?.protocol ?? '') {
+      case '':
+      case 'graphql-ws':
+        subscriptionProtocol = GraphQLSubscriptionProtocol.GRAPHQL_SUBSCRIPTION_PROTOCOL_GRAPHQL_WS;
+        break;
+      case 'sse':
+        subscriptionProtocol = GraphQLSubscriptionProtocol.GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE;
+        break;
+      case 'sse-post':
+        subscriptionProtocol = GraphQLSubscriptionProtocol.GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE_POST;
+        break;
+      default:
+        throw new Error(`unknown subscription protocol ${subgraph.subscriptions?.protocol} in subgraph ${subgraph.name}`);
+    }
     const datasourceConfig = new DataSourceConfiguration({
       // When changing this, please do it in the router subgraph override as well
       id: subgraph.url,
@@ -105,7 +128,7 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
             kind: ConfigurationVariableKind.STATIC_CONFIGURATION_VARIABLE,
             staticVariableContent: subgraph.url,
           }),
-          useSSE: subgraph.subscriptions?.protocol === 'sse',
+          protocol: subscriptionProtocol,
         },
       },
       directives: [],

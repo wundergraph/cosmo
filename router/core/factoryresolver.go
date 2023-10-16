@@ -168,6 +168,19 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration) (*plan.Configura
 				return nil, fmt.Errorf("could not load GraphQL schema for data source %s: %w", in.Id, err)
 			}
 
+			var subscriptionUseSSE bool
+			var subscriptionSSEMethodPost bool
+			switch in.CustomGraphql.Subscription.Protocol {
+			case nodev1.GraphQLSubscriptionProtocol_GRAPHQL_SUBSCRIPTION_PROTOCOL_GRAPHQL_WS:
+				subscriptionUseSSE = false
+				subscriptionSSEMethodPost = false
+			case nodev1.GraphQLSubscriptionProtocol_GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE:
+				subscriptionUseSSE = true
+				subscriptionSSEMethodPost = false
+			case nodev1.GraphQLSubscriptionProtocol_GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE_POST:
+				subscriptionUseSSE = true
+				subscriptionSSEMethodPost = true
+			}
 			out.Custom = graphql_datasource.ConfigJson(graphql_datasource.Configuration{
 				Fetch: graphql_datasource.FetchConfiguration{
 					URL:    fetchUrl,
@@ -179,8 +192,9 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration) (*plan.Configura
 					ServiceSDL: in.CustomGraphql.Federation.ServiceSdl,
 				},
 				Subscription: graphql_datasource.SubscriptionConfiguration{
-					URL:    subscriptionUrl,
-					UseSSE: in.CustomGraphql.Subscription.UseSSE,
+					URL:           subscriptionUrl,
+					UseSSE:        subscriptionUseSSE,
+					SSEMethodPost: subscriptionSSEMethodPost,
 				},
 				UpstreamSchema:         graphqlSchema,
 				CustomScalarTypeFields: customScalarTypeFields,

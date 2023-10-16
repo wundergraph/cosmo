@@ -618,10 +618,9 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	}
 
 	graphqlHandler := NewGraphQLHandler(HandlerOptions{
-		Executor:   executor,
-		Cache:      planCache,
-		Playground: graphqlPlaygroundHandler,
-		Log:        r.logger,
+		Executor: executor,
+		Cache:    planCache,
+		Log:      r.logger,
 	})
 
 	var metricStore *metric.Metrics
