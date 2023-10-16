@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"context"
 	"net/http/httptest"
-	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/wundergraph/cosmo/router-tests/routerconfig"
 	"github.com/wundergraph/cosmo/router-tests/runner"
 	"github.com/wundergraph/cosmo/router/cmd/custom/module"
 	"github.com/wundergraph/cosmo/router/config"
@@ -18,6 +18,20 @@ import (
 func TestMyModule(t *testing.T) {
 
 	ctx := context.Background()
+
+	r, err := runner.NewInProcessSubgraphsRunner(nil)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		assert.Nil(t, r.Stop(ctx))
+	})
+	go func() {
+		err := r.Start(ctx)
+		assert.NoError(t, err)
+	}()
+
+	err = runner.Wait(ctx, r)
+	require.NoError(t, err)
+
 	cfg := config.Config{
 		Graph: config.Graph{
 			Name: "production",
@@ -29,7 +43,10 @@ func TestMyModule(t *testing.T) {
 		},
 	}
 
-	routerConfig, err := core.SerializeConfigFromFile(filepath.Join("..", "testdata", "config.json"))
+	configFile, err := routerconfig.SerializeRunner(r)
+	require.NoError(t, err)
+
+	routerConfig, err := core.SerializeConfigFromFile(configFile)
 	require.NoError(t, err)
 
 	rs, err := core.NewRouter(
@@ -44,19 +61,6 @@ func TestMyModule(t *testing.T) {
 	})
 
 	server, err := rs.NewTestServer(ctx)
-	require.NoError(t, err)
-
-	r, err := runner.NewInProcessSubgraphsRunner(nil)
-	require.NoError(t, err)
-	t.Cleanup(func() {
-		assert.Nil(t, r.Stop(ctx))
-	})
-	go func() {
-		err := r.Start(ctx)
-		assert.NoError(t, err)
-	}()
-
-	err = runner.Wait(ctx, r)
 	require.NoError(t, err)
 
 	rr := httptest.NewRecorder()

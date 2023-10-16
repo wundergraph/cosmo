@@ -1,4 +1,4 @@
-package integration_test
+package routerconfig
 
 import (
 	"errors"
@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 
+	"github.com/wundergraph/cosmo/router-tests/runner"
 	"gopkg.in/yaml.v3"
 )
 
@@ -19,7 +20,8 @@ type Config struct {
 	Subgraphs []Subgraph `yaml:"subgraphs"`
 }
 
-func SerializeConfigFile(subgraphs []Subgraph) (string, error) {
+// SerializeSubgraphs creates a static router configuration from the given subgraphs
+func SerializeSubgraphs(subgraphs []Subgraph) (string, error) {
 	cfg := &Config{
 		Version:   "1",
 		Subgraphs: subgraphs,
@@ -68,4 +70,29 @@ func SerializeConfigFile(subgraphs []Subgraph) (string, error) {
 		return "", fmt.Errorf("running wgc: %w", err)
 	}
 	return outputFilename, nil
+}
+
+// SerializeRunner creates a static router configuration from the given SubgraphsRunner
+func SerializeRunner(sg runner.SubgraphsRunner) (string, error) {
+	ports := sg.Ports()
+
+	subgraphs := []Subgraph{
+		{
+			Name:       "employees",
+			RoutingURL: fmt.Sprintf("http://localhost:%d/graphql", ports.Employees),
+		},
+		{
+			Name:       "family",
+			RoutingURL: fmt.Sprintf("http://localhost:%d/graphql", ports.Family),
+		},
+		{
+			Name:       "hobbies",
+			RoutingURL: fmt.Sprintf("http://localhost:%d/graphql", ports.Hobbies),
+		},
+		{
+			Name:       "products",
+			RoutingURL: fmt.Sprintf("http://localhost:%d/graphql", ports.Products),
+		},
+	}
+	return SerializeSubgraphs(subgraphs)
 }

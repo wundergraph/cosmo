@@ -17,6 +17,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/wundergraph/cosmo/router-tests/routerconfig"
 	"github.com/wundergraph/cosmo/router-tests/runner"
 	"github.com/wundergraph/cosmo/router/config"
 	"github.com/wundergraph/cosmo/router/core"
@@ -140,28 +141,7 @@ func setupServer(tb testing.TB) *core.Server {
 		},
 	}
 
-	ports := subgraphsRunner.Ports()
-
-	subgraphs := []Subgraph{
-		{
-			Name:       "employees",
-			RoutingURL: fmt.Sprintf("http://localhost:%d/graphql", ports.Employees),
-		},
-		{
-			Name:       "family",
-			RoutingURL: fmt.Sprintf("http://localhost:%d/graphql", ports.Family),
-		},
-		{
-			Name:       "hobbies",
-			RoutingURL: fmt.Sprintf("http://localhost:%d/graphql", ports.Hobbies),
-		},
-		{
-			Name:       "products",
-			RoutingURL: fmt.Sprintf("http://localhost:%d/graphql", ports.Products),
-		},
-	}
-
-	configFile, err := SerializeConfigFile(subgraphs)
+	configFile, err := routerconfig.SerializeRunner(subgraphsRunner)
 	require.NoError(tb, err)
 
 	routerConfig, err := core.SerializeConfigFromFile(configFile)
