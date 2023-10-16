@@ -1,0 +1,33 @@
+{
+    "data": {
+      "employee": {
+        "id": 1,
+        "details": {
+          "forename": "Jens",
+          "location": "GERMANY"
+        }
+      },
+      "team_mates": [
+        {
+          "id": 4,
+          "details": {
+            "forename": "Björn"
+          },
+          "products": [
+            "FINANCE",
+            "HUMAN_RESOURCES",
+            "MARKETING"
+          ]
+        },
+        {
+          "id": 11,
+          "details": {
+            "forename": "Alexandra"
+          },
+          "products": [
+            "FINANCE"
+          ]
+        }
+      ]
+    }
+  }
