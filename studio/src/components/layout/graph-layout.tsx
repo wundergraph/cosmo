@@ -78,7 +78,7 @@ const GraphLayout = ({ children }: LayoutProps) => {
         href: basePath + "/subgraphs",
         icon: <Component2Icon />,
       },
-      { title: "Explorer", href: basePath + "/explorer", icon: <PlayIcon /> },
+      { title: "Playground", href: basePath + "/playground", icon: <PlayIcon /> },
       {
         title: "Schema",
         href: basePath + "/schema",

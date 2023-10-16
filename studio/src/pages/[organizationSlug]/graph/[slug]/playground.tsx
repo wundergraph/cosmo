@@ -31,7 +31,7 @@ const graphiQLFetch: typeof fetch = async (...args) => {
   }
 };
 
-const ExplorerPage: NextPageWithLayout = () => {
+const PlaygroundPage: NextPageWithLayout = () => {
   const router = useRouter();
 
   const { data, isLoading, error, refetch } = useQuery(
@@ -129,7 +129,7 @@ const ExplorerPage: NextPageWithLayout = () => {
   if (!data?.graph) return null;
 
   return (
-    <PageHeader title="Studio | Explorer">
+    <PageHeader title="Studio | Playground">
       <div className="hidden h-[100%] flex-1 md:flex">
         <GraphiQL
           fetcher={fetcher}
@@ -143,7 +143,7 @@ const ExplorerPage: NextPageWithLayout = () => {
           <MobileIcon className="h-4 w-4" />
           <AlertTitle>Heads up!</AlertTitle>
           <AlertDescription>
-            Cosmo GraphQL Explorer is not available on mobile devices. Please
+            Cosmo GraphQL Playground is not available on mobile devices. Please
             open this page on your desktop.
           </AlertDescription>
         </Alert>
@@ -152,6 +152,6 @@ const ExplorerPage: NextPageWithLayout = () => {
   );
 };
 
-ExplorerPage.getLayout = getGraphLayout;
+PlaygroundPage.getLayout = getGraphLayout;
 
-export default ExplorerPage;
+export default PlaygroundPage;

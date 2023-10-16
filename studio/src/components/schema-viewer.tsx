@@ -78,7 +78,7 @@ export const SchemaViewer = ({
       {({ style, tokens, getLineProps, getTokenProps }) => (
         <pre
           style={{ ...style, background: "", backgroundColor: "" }}
-          className="py-4 text-xs"
+          className="h-0 w-0 py-4 text-xs"
         >
           {tokens.map((line, i, allLines) => {
             const numberSectionWidth =

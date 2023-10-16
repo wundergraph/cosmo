@@ -1,0 +1,3057 @@
+directive @synthetics(
+  """
+  The synthetic timeout configured for the field.
+  """
+  timeout: Int
+
+  """
+  The synthetic error rate configured for the field.
+  """
+  errorRate: ErrorRate
+
+  """
+  Enable or disable synthetics for the field.
+  """
+  enabled: Boolean = true
+) on FIELD
+
+enum Action {
+  INTERRUPTING_PLAYBACK
+  PAUSING
+  RESUMING
+  SEEKING
+  SKIPPING_NEXT
+  SKIPPING_PREV
+  TOGGLING_REPEAT_CONTEXT
+  TOGGLING_SHUFFLE
+  TOGGLING_REPEAT_TRACK
+  TRANSFERRING_PLAYBACK
+}
+
+type Actions {
+  disallows: [Action!]!
+}
+
+input AddItemsToPlaylistInput {
+  """
+  The [Spotify ID](https://developer.spotify.com/documentation/web-api/#spotify-uris-and-ids)
+  of the playlist.
+  """
+  playlistId: ID!
+
+  """
+  A comma-separated list of [Spotify URIs](https://developer.spotify.com/documentation/web-api/#spotify-uris-and-ids)
+  to add, can be track or episode URIs. A maximum of 100 items can be added in
+  one request.
+  """
+  uris: [String!]!
+
+  """
+  The position to insert the items, a zero-based index. For example, to insert
+  the items in the first position: **position=0**; to insert the items in the
+  third position: **position=2**. If omitted, the items will be appended to the
+  playlist. Items are added in the order they are listed in the query string or
+  request body.
+  """
+  position: Int
+}
+
+type AddItemsToPlaylistPayload {
+  """
+  The playlist that contains the newly added items
+  """
+  playlist: Playlist
+}
+
+input AddItemToPlaybackQueueInput {
+  """
+  The uri of the item to add to the queue. Must be a track or an episode uri.
+  """
+  uri: String!
+
+  """
+  The id of the device this command is targeting. If not supplied, the user's
+  currently active device is the target.
+  """
+  deviceId: ID
+}
+
+type AddItemToPlaybackQueuePayload {
+  playbackQueue: PlaybackQueue
+}
+
+"""
+Spotify catalog information for an album.
+"""
+type Album {
+  """
+  The type of the album.
+  """
+  albumType: AlbumType!
+
+  """
+  The artists of the album.
+  """
+  artists: [Artist!]!
+
+  """
+  The copyrights for the album.
+  """
+  copyrights: [Copyright!]!
+
+  """
+  Known external URLs for this album.
+  """
+  externalUrls: ExternalUrl!
+
+  """
+  Genres for the album.
+  """
+  genres: [String!]!
+
+  """
+  A link to the Web API endpoint providing full details of the album.
+  """
+  href: String!
+
+  """
+  The [Spotify ID](https://developer.spotify.com/documentation/web-api/#spotify-uris-and-ids)
+  for the album.
+  """
+  id: ID!
+
+  """
+  The cover art for the album in various sizes, widest first.
+  """
+  images: [Image!]!
+
+  """
+  The label the album was released under.
+  """
+  label: String
+
+  """
+  The name of the album. In case of an album takedown, the value may be an empty
+  string.
+  """
+  name: String!
+
+  """
+  The date the album was first released.
+  """
+  releaseDate: ReleaseDate!
+
+  """
+  The number of tracks in the album.
+  """
+  totalTracks: Int!
+
+  """
+  The tracks of the album.
+  """
+  tracks(
+    """
+    The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
+    """
+    limit: Int
+
+    """
+    The index of the first playlist to return. Default: 0 (the first object).
+
+    Use with `limit` to get the next set of tracks.
+    """
+    offset: Int
+  ): AlbumTrackConnection
+
+  """
+  The [Spotify URI](https://developer.spotify.com/documentation/web-api/#spotify-uris-and-ids)
+  for the album.
+  """
+  uri: String!
+}
+
+enum AlbumGroup {
+  ALBUM
+  SINGLE
+  APPEARS_ON
+  COMPILATION
+}
+
+type AlbumTrackConnection {
+  """
+  The set of tracks.
+  """
+  edges: [AlbumTrackEdge!]!
+
+  """
+  Pagination information for the set of tracks.
+  """
+  pageInfo: PageInfo!
+}
+
+type AlbumTrackEdge {
+  """
+  The track on the album
+  """
+  node: Track!
+}
+
+enum AlbumType {
+  ALBUM
+  SINGLE
+  COMPILATION
+}
+
+"""
+Spotify catalog information for an artist.
+"""
+type Artist {
+  """
+  Spotify catalog information about an artist's albums.
+  """
+  albums(
+    """
+    Used to filter the response. If not supplied, all album types will be
+    returned.
+    """
+    includeGroups: [AlbumGroup!]
+
+    """
+    The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
+    """
+    limit: Int
+
+    """
+    The index of the first item to return. Default: 0 (the first item). Use
+    with `limit` to get the next set of items.
+    """
+    offset: Int
+  ): ArtistAlbumsConnection
+
+  """
+  Known external URLs for this artist.
+  """
+  externalUrls: ExternalUrl!
+
+  """
+  Information about the followers of the artist.
+  """
+  followers: Followers!
+
+  """
+  A list of the genres the artist is associated with. If not yet classified, the
+  array is empty.
+  """
+  genres: [String!]!
+
+  """
+  A link to the Web API endpoint providing full details of the artist.
+  """
+  href: String!
+
+  """
+  The [Spotify ID](https://developer.spotify.com/documentation/web-api/#spotify-uris-and-ids)
+  for the artist.
+  """
+  id: ID!
+
+  """
+  Images of the artist in various sizes, widest first.
+  """
+  images: [Image!]!
+
+  """
+  The name of the artist.
+  """
+  name: String!
+
+  """
+  The popularity of the artist. The value will be between 0 and 100, with 100
+  being the most popular. The artist's popularity is calculated from the
+  popularity of all the artist's tracks.
+  """
+  popularity: Int!
+
+  """
+  Spotify catalog information about artists similar to a given artist.
+  Similarity is based on analysis of the Spotify community's
+  [listening history](http://news.spotify.com/se/2010/02/03/related-artists/).
+  """
+  relatedArtists: [Artist!]!
+
+  """
+  Spotify catalog information about an artist's top tracks.
+  """
+  topTracks: [Track!]!
+
+  """
+  The [Spotify URI](https://developer.spotify.com/documentation/web-api/#spotify-uris-and-ids)
+  for the artist.
+  """
+  uri: String!
+}
+
+type ArtistAlbumEdge {
+  """
+  Spotify catalog information for the album.
+  """
+  node: Album!
+}
+
+type ArtistAlbumsConnection {
+  """
+  A list of albums that belong to the artist.
+  """
+  edges: [ArtistAlbumEdge!]
+
+  """
+  "Pagination information for the set of albums"
+  """
+  pageInfo: PageInfo!
+}
+
+type Contains {
+  """
+  List of booleans in order of albums requested. `true` means the album is in
+  the Spotify user's library. This field is `null` if omitted in the request.
+  """
+  albums: [Boolean!]
+
+  """
+  List of booleans in order of episodes requested. `true` means the episode is in
+  the Spotify user's library. This field is `null` if omitted in the request.
+  """
+  episodes: [Boolean!]
+
+  """
+  List of booleans in order of shows requested. `true` means the show is in
+  the Spotify user's library. This field is `null` if omitted in the request.
+  """
+  shows: [Boolean!]
+
+  """
+  List of booleans in order of tracks requested. `true` means the track is in
+  the Spotify user's library. This field is `null` if omitted in the request.
+  """
+  tracks: [Boolean!]
+}
+
+type Copyright {
+  """
+  The copyright text for this content.
+  """
+  text: String!
+
+  """
+  The type of copyright: `C` = the copyright, `P` = the sound recording
+  (performance) copyright.
+  """
+  type: CopyrightType
+}
+
+enum CopyrightType {
+  """
+  The copyright
+  """
+  C
+
+  """
+  The sound recording (performance) copyright.
+  """
+  P
+}
+
+scalar CountryCode
+
+type CurrentlyPlaying {
+  """
+  Allows to update the user interface based on which playback actions are
+  available within the current context.
+  """
+  actions: Actions!
+
+  """
+  A context object.
+  """
+  context: PlaybackContext
+
+  """
+  If something is currently playing, return `true`.
+  """
+  isPlaying: Boolean!
+
+  """
+  The currently playing track or episode
+  """
+  item: PlaybackItem
+
+  """
+  Progress into the currently playing track or episode. Can be `null`
+  """
+  progressMs: Int
+
+  """
+  Unix Millisecond Timestamp when data was fetched.
+  """
+  timestamp: Timestamp!
+}
+
+type CurrentUser {
+  """
+  Get a list of the albums saved in the current Spotify user's 'Your Music'
+  library.
+  """
+  albums(
+    """
+    The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
+    """
+    limit: Int
+
+    """
+    The index of the first item to return. Default: 0 (the first item). Use with
+    limit to get the next set of items.
+    """
+    offset: Int
+  ): SavedAlbumsConnection
+
+  """
+  Check if one or more albums is already saved in the current Spotify user's
+  'Your Music' library.
+  """
+  albumsContains(
+    """
+    A comma-separated list of the [Spotify IDs](https://developer.spotify.com/documentation/web-api/#spotify-uris-and-ids)
+    for the albums. Maximum: 20 IDs.
+    """
+    ids: [ID!]!
+  ): [Boolean!]
+  episodes(
+    """
+    The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
+    """
+    limit: Int
+
+    """
+    The index of the first item to return. Default: 0 (the first item). Use with `limit` to get the next set of items.
+    """
+    offset: Int
+  ): SavedEpisodesConnection
+
+  """
+  Check if one or more episodes is already saved in the current Spotify user's
+  'Your Episodes' library.
+  """
+  episodesContains(
+    """
+    A comma-separated list of the [Spotify IDs](https://developer.spotify.com/documentation/web-api/#spotify-uris-and-ids)
+    for the episodes. Maximum: 50 IDs.
+    """
+    ids: [ID!]!
+  ): [Boolean!]
+
+  """
+  Get the current user's followed artists.
+  """
+  followedArtists(
+    """
+    The last artist ID retrieved from the previous request.
+    """
+    after: String
+
+    """
+    The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
+    """
+    limit: Int
+  ): FollowedArtistsConnection
+
+  """
+  Detailed profile information about the current user.
+  """
+  user: User! @deprecated(reason: "Use the profile field instead which provides richer current user information.")
+
+  """
+  Information about the user's current playback state
+  """
+  player: Player!
+
+  """
+  Playlists owned or followed by the current Spotify user.
+  """
+  playlists(
+    """
+    The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
+    """
+    limit: Int
+
+    """
+    The index of the first playlist to return. Default: 0 (the first object).
+
+    Use with `limit` to get the next set of playlists.
+    """
+    offset: Int
+  ): PlaylistConnection
+
+  """
+  Get detailed profile information about the current user (including the current user's username).
+  """
+  profile: CurrentUserProfile!
+
+  """
+  Get a list of the albums saved in the current Spotify user's 'Your Music' library.
+  """
+  shows(
+    """
+    The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
+    """
+    limit: Int
+
+    """
+    The index of the first item to return. Default: 0 (the first item). Use with `limit` to get the next set of items.
+    """
+    offset: Int
+  ): SavedShowsConnection
+
+  """
+  Check if one or more shows is already saved in the current Spotify user's
+  library.
+  """
+  showsContains(
+    """
+    A comma-separated list of the [Spotify IDs](https://developer.spotify.com/documentation/web-api/#spotify-uris-and-ids)
+    for the shows. Maximum: 50 IDs.
+    """
+    ids: [ID!]!
+  ): [Boolean!]
+
+  """
+  Get the current user's top artists based on calculated affinity.
+  """
+  topArtists(
+    """
+    The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
+    """
+    limit: Int
+
+    """
+    The index of the first item to return. Default: 0 (the first item). Use with limit to get the next set of items.
+    """
+    offset: Int
+
+    """
+    Over what time frame the affinities are computed. Valid values: `LONG_TERM` (calculated from several years of data and including all new data as it becomes available), `MEDIUM_TERM` (approximately last 6 months), `SHORT_TERM` (approximately last 4 weeks). Default: `MEDIUM_TERM`
+    """
+    timeRange: TimeRange
+  ): TopArtistsConnection
+
+  """
+  Get the current user's top tracks based on calculated affinity.
+  """
+  topTracks(
+    """
+    The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
+    """
+    limit: Int
+
+    """
+    The index of the first item to return. Default: 0 (the first item). Use with limit to get the next set of items.
+    """
+    offset: Int
+
+    """
+    Over what time frame the affinities are computed. Valid values: `LONG_TERM` (calculated from several years of data and including all new data as it becomes available), `MEDIUM_TERM` (approximately last 6 months), `SHORT_TERM` (approximately last 4 weeks). Default: `MEDIUM_TERM`
+    """
+    timeRange: TimeRange
+  ): TopTracksConnection
+  tracks(
+    """
+    The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
+    """
+    limit: Int
+
+    """
+    The index of the first track to return. Default: 0 (the first object).
+
+    Use with `limit` to get the next set of tracks.
+    """
+    offset: Int
+  ): SavedTracksConnection
+
+  """
+  Check if one or more tracks is already saved in the current Spotify user's
+  'Your Music' library.
+  """
+  tracksContains(
+    """
+    A comma-separated list of the [Spotify IDs](https://developer.spotify.com/documentation/web-api/#spotify-uris-and-ids)
+    for the tracks. Maximum: 50 IDs.
+    """
+    ids: [ID!]!
+  ): [Boolean!]
+}
+
+type CurrentUserProfile implements UserProfile {
+  """
+  The country of the user, as set in the user's account profile. An ISO 3166-1
+  alpha-2 country code.
+  """
+  country: CountryCode
+
+  """
+  The name displayed on the user's profile. `null` if not available.
+  """
+  displayName: String
+
+  """
+  The user's email address, as entered by the user when creating their account.
+  _**Important!** This email address is unverified; there is no proof that it
+  actually belongs to the user._
+  """
+  email: String!
+
+  """
+  The user's explicit content settings.
+  """
+  explicitContent: ExplicitContentSettings!
+
+  """
+  Information about the followers of the user.
+  """
+  followers: Followers!
+
+  """
+  A link to the Web API endpoint for this user.
+  """
+  href: String!
+
+  """
+  The [Spotify user ID](https://developer.spotify.com/documentation/web-api/concepts/spotify-uris-ids)
+  for the user.
+  """
+  id: ID!
+
+  """
+  The user's profile image.
+  """
+  images: [Image!]
+
+  """
+  The user's Spotify subscription level: "premium", "free", etc. (The
+  subscription level "open" can be considered the same as "free".)
+  """
+  product: String!
+
+  """
+  The [Spotify URI](https://developer.spotify.com/documentation/web-api/concepts/spotify-uris-ids)
+  for the user.
+  """
+  uri: String!
+}
+
+type Cursors {
+  """
+  The cursor to use as key to find the next page of items.
+  """
+  after: String
+
+  """
+  The ursor to use as key to find the previous page of items.
+  """
+  before: String
+}
+
+scalar DateTime
+
+type Developer {
+  """
+  A list of configured GraphQL fields. Only fields that have non-zero timeouts
+  and error rates will be listed.
+  """
+  fieldConfigs: [FieldConfig!]!
+}
+
+type Device {
+  """
+  The device ID
+  """
+  id: ID
+
+  """
+  If this device is the currently active device.
+  """
+  isActive: Boolean!
+
+  """
+  If this device is currently in a private session.
+  """
+  isPrivateSession: Boolean!
+
+  """
+  Whether controlling this device is restricted. At present if this is "true",
+  then no Web API commands will be accepted by this device.
+  """
+  isRestricted: Boolean!
+
+  """
+  A human-readable name for the device. Some devices have a name that the user
+  can configure (e.g. "Loudest speaker") and some devices have a generic name
+  associated with the manufacturer or device model.
+  """
+  name: String!
+
+  """
+  Device type, such as "computer", "smartphone" or "speaker".
+  """
+  type: String!
+
+  """
+  The current volume in percent.
+
+  >= 0    <= 100
+  """
+  volumePercent: Int!
+}
+
+"""
+Spotify catalog information for an episode.
+"""
+type Episode implements PlaylistTrack & PlaybackItem {
+  """
+  The [Spotify ID](https://developer.spotify.com/documentation/web-api/#spotify-uris-and-ids) for the episode.
+  """
+  id: ID!
+
+  """
+  A URL to a 30 second preview (MP3 format) of the episode. `null` if not available.
+  """
+  audioPreviewUrl: String
+
+  """
+  A description of the episode
+  """
+  description(format: TextFormat = PLAIN): String!
+
+  """
+  The episode length in milliseconds.
+  """
+  durationMs: Int!
+
+  """
+  Whether or not the episode has explicit content (`true` = yes it does;
+  `false` = no it does not OR unknown).
+  """
+  explicit: Boolean!
+
+  """
+  External URLs for this episode.
+  """
+  externalUrls: ExternalUrl!
+
+  """
+  A link to the Web API endpoint providing full details of the episode.
+  """
+  href: String!
+
+  """
+  The cover art for the episode in various sizes, widest first.
+  """
+  images: [Image!]!
+
+  """
+  `true` if the episode is hosted outside of Spotify's CDN.
+  """
+  isExternallyHosted: Boolean!
+
+  """
+  `true` if the episode is playable in the given market. Otherwise `false`.
+  """
+  isPlayable: Boolean!
+
+  """
+  A list of the languages used in the episode, identified by their
+  [ISO 639-1](https://en.wikipedia.org/wiki/ISO_639) code.
+  """
+  languages: [String!]!
+
+  """
+  The name of the episode.
+  """
+  name: String!
+
+  """
+  The date the episode was first released
+  """
+  releaseDate: ReleaseDate!
+
+  """
+  The user's most recent position in the episode.
+  """
+  resumePoint: ResumePoint!
+
+  """
+  The show containing the episode.
+  """
+  show: Show!
+
+  """
+  The [Spotify URI](https://developer.spotify.com/documentation/web-api/#spotify-uris-and-ids)
+  for the episode.
+  """
+  uri: String!
+}
+
+scalar ErrorRate
+
+type ExplicitContentSettings {
+  """
+  When `true`, indicates that explicit content should not be played.
+  """
+  filterEnabled: Boolean!
+
+  """
+  When `true`, indicates that the explicit content setting is locked and can't
+  be changed by the user.
+  """
+  filterLocked: Boolean!
+}
+
+type ExternalUrl {
+  """
+  The [Spotify URL](https://developer.spotify.com/documentation/web-api/#spotify-uris-and-ids)
+  for the object.
+  """
+  spotify: String
+}
+
+type FeaturedPlaylistConnection {
+  message: String!
+
+  """
+  A list of Spotify featured playlists (shown, for example, on a Spotify player's
+  'Browse' tab).
+  """
+  edges: [FeaturedPlaylistEdge!]!
+
+  """
+  Pagination information for the set of playlists
+  """
+  pageInfo: PageInfo!
+}
+
+type FeaturedPlaylistEdge {
+  node: Playlist!
+}
+
+type FieldConfig {
+  """
+  The schema field that includes this config
+  """
+  schemaField: SchemaField!
+
+  """
+  The synthetic timeout configured for the field.
+  """
+  timeout: Int!
+
+  """
+  The synthetic error rate configured for the field.
+  """
+  errorRate: ErrorRate!
+}
+
+input FieldConfigInput {
+  """
+  The synthetic timeout configured for a field. Set to `null` to reset the value
+  back to its default. Omit this field to maintain its value. Defaults to `0`.
+  """
+  timeout: Int
+
+  """
+  The synthetic error rate configured for a field. This should be a value
+  between `0` and `1` where `0` means no synthetic errors should be thrown and
+  `1` means errors should be thrown 100% of the time. Set to `null` to reset the
+  value back to its default. Omit this field to maintain its value. Defaults to
+  `0`.
+  """
+  errorRate: ErrorRate
+}
+
+input FieldInput {
+  """
+  Configure a field by its type in the schema. This will apply the config to all
+  fields of the given type regardless of where it is queried in the scheam.
+
+  One of `path` or `schema` is required. If both are provided, `schema` will
+  take precendence as it has broader impact.
+  """
+  schemaField: SchemaFieldInput
+}
+
+type FollowedArtistEdge {
+  """
+  The followed artist
+  """
+  node: Artist!
+}
+
+type FollowedArtistsConnection {
+  """
+  The list of followed artists.
+  """
+  edges: [FollowedArtistEdge!]!
+
+  """
+  Pagination information for the set of followed artists.
+  """
+  pageInfo: PageInfoCursorBased!
+}
+
+type Followers {
+  """
+  The total number of followers.
+  """
+  total: Int!
+}
+
+type Image {
+  """
+  The source URL of the image.
+  """
+  url: String!
+
+  """
+  The image height in pixels.
+  """
+  height: Int
+
+  """
+  The image width in pixels.
+  """
+  width: Int
+}
+
+type Mutation {
+  """
+  Start a new context or resume current playback on the user's active device.
+  """
+  resumePlayback(input: ResumePlaybackInput): ResumePlaybackPayload
+
+  """
+  Pause playback on the user's account.
+  """
+  pausePlayback(
+    """
+    Additional context when pausing playback. Omit to pause playback on the
+    current device.
+    """
+    context: PausePlaybackContextInput
+  ): PausePlaybackResponse
+
+  """
+  Seeks to the given position in the user’s currently playing track.
+  """
+  seekToPosition(
+    """
+    The position in milliseconds to seek to. Must be a positive number. Passing
+    in a position that is greater than the length of the track will cause the
+    player to start playing the next song.
+    """
+    positionMs: Int!
+
+    """
+    Additional context to determine the device where the action should occur.
+    """
+    context: SeekToPositionContextInput
+  ): SeekToPositionResponse
+
+  """
+  Set the repeat mode for the user's playback.
+  """
+  setRepeatMode(
+    """
+    `track`, `context` or `off`.
+    `track` will repeat the current track.
+    `context` will repeat the current context.
+    `off` will turn repeat off.
+    """
+    state: RepeatMode!
+
+    """
+    Additional context to determine the device where the action should occur.
+    """
+    context: SetRepeatModeContextInput
+  ): SetRepeatModeResponse
+
+  """
+  Set the volume for the user’s current playback device.
+  """
+  setVolume(
+    """
+    The volume to set. Must be a value from 0 to 100 inclusive.
+    """
+    volumePercent: Int!
+
+    """
+    Additional context to determine the device where the action should occur.
+    """
+    context: SetVolumeContextInput
+  ): SetVolumeResponse
+
+  """
+  Toggle shuffle on or off for user’s playback.
+  """
+  shufflePlayback(
+    """
+    `true`: Shuffle user's playback.
+    `false`: Do not shuffle user's playback.
+    """
+    state: Boolean!
+
+    """
+    Additional context to determine the device where the action should occur.
+    """
+    context: ShufflePlaybackContextInput
+  ): ShufflePlaybackResponse
+
+  """
+  Skips to next track in the user’s queue.
+  """
+  skipToNext(
+    """
+    Additional context to determine the device where the action should occur.
+    """
+    context: SkipToNextContextInput
+  ): SkipToNextResponse
+
+  """
+  Skips to previous track in the user’s queue.
+  """
+  skipToPrevious(context: SkipToPreviousContextInput): SkipToPreviousResponse
+
+  """
+  Transfer playback to a new device and determine if it should start playing.
+  """
+  transferPlayback(input: TransferPlaybackInput!): TransferPlaybackPayload
+
+  """
+  Add an item to the end of the user's current playback queue.
+  """
+  addItemToPlaybackQueue(input: AddItemToPlaybackQueueInput!): AddItemToPlaybackQueuePayload
+
+  """
+  Add one or more items to a user's playlist.
+  """
+  addItemsToPlaylist(input: AddItemsToPlaylistInput!): AddItemsToPlaylistPayload
+
+  """
+  Update configuration for a field in the schema. Allows tweaks to the
+  synthetic timeouts and error rates associated with the field. By default, both
+  the timeout and error rate are set to 0.
+  """
+  updateFieldConfig(input: UpdateFieldConfigInput!): UpdateFieldConfigPayload
+
+  """
+  Remove one or more items from a user's playlist.
+  """
+  removeItemFromPlaylist(input: RemoveItemFromPlaylistInput!): RemoveItemFromPlaylistPayload
+
+  """
+  Remove one or more albums from the current user's 'Your Music' library.
+  """
+  removeSavedAlbums(input: RemoveSavedAlbumsInput!): RemoveSavedAlbumsPayload
+
+  """
+  Remove one or more episodes from the current user's library.
+  """
+  removeSavedEpisodes(input: RemoveSavedEpisodesInput!): RemoveSavedEpisodesPayload
+
+  """
+  Delete one or more shows from current Spotify user's library.
+  """
+  removeSavedShows(input: RemoveSavedShowsInput!): RemoveSavedShowsPayload
+
+  """
+  Remove one or more tracks from the current user's 'Your Music' library.
+  """
+  removeSavedTracks(input: RemoveSavedTracksInput!): RemoveSavedTracksPayload
+
+  """
+  Reset a field's config back to its default values.
+  """
+  resetFieldConfig(input: ResetFieldConfigInput!): ResetFieldConfigPayload
+
+  """
+  Save one or more albums to the current user's 'Your Music' library.
+  """
+  saveAlbums(input: SaveAlbumsInput!): SaveAlbumsPayload
+
+  """
+  Save one or more episodes to the current user's library.
+  """
+  saveEpisodes(input: SaveEpisodesInput!): SaveEpisodesPayload
+
+  """
+  Save one or more shows to current Spotify user's library.
+  """
+  saveShows(input: SaveShowsInput!): SaveShowsPayload
+
+  """
+  Save one or more tracks to the current user's 'Your Music' library.
+  """
+  saveTracks(input: SaveTracksInput!): SaveTracksPayload
+}
+
+type NewReleaseEdge {
+  """
+  The newly released album
+  """
+  node: Album!
+}
+
+type NewReleasesConnection {
+  """
+  The list of new releases
+  """
+  edges: [NewReleaseEdge!]!
+
+  """
+  Pagination information for the new releases
+  """
+  pageInfo: PageInfo!
+}
+
+type PageInfo {
+  """
+  Whether there is a next page of items.
+  """
+  hasNextPage: Boolean!
+
+  """
+  Whether there is a previous page of items.
+  """
+  hasPreviousPage: Boolean!
+
+  """
+  The maximum number of items in the response (as set in the query or default)
+  """
+  limit: Int!
+
+  """
+  The offset of the items returned (as set in the query or default)
+  """
+  offset: Int!
+
+  """
+  The total number of items returned for the page.
+  """
+  total: Int!
+}
+
+type PageInfoCursorBased {
+  """
+  A link to the Web API endpoint returning the full result of the request.
+  """
+  href: String!
+
+  """
+  The maximum number of items in the response (as set in the query or default)
+  """
+  limit: Int!
+
+  """
+  URL to the next page of items. (`null` if none)
+  """
+  next: String
+
+  """
+  The cursors used to find the next set of items.
+  """
+  cursors: Cursors
+
+  """
+  The total number of items available to return.
+  """
+  total: Int!
+}
+
+input PausePlaybackContextInput {
+  """
+  The id of the device this command is targeting. If not supplied, the user's
+  currently active device is the target.
+  """
+  deviceId: String
+}
+
+type PausePlaybackResponse {
+  """
+  The updated playback state
+  """
+  playbackState: PlaybackState
+}
+
+type PlaybackContext {
+  """
+  A link to the Web API endpoint providing full details of the track.
+  """
+  href: String!
+
+  """
+  The object type, e.g. "artist", "playlist", "album", "show".
+  """
+  type: PlaybackContextType!
+
+  """
+  External URLs for this context.
+  """
+  externalUrls: ExternalUrl!
+
+  """
+  The [Spotify URI](https://developer.spotify.com/documentation/web-api/#spotify-uris-and-ids)
+  for the context.
+  """
+  uri: String!
+}
+
+enum PlaybackContextType {
+  ALBUM
+  ARTIST
+  AUDIO_FEATURES
+  COLLECTION
+  COLLECTION_YOUR_EPISODES
+  EPISODE
+  GENRE
+  PLAYLIST
+  SHOW
+  TRACK
+  USER
+}
+
+interface PlaybackItem {
+  """
+  The [Spotify ID](https://developer.spotify.com/documentation/web-api/#spotify-uris-and-ids)
+  for the playback item.
+  """
+  id: ID!
+
+  """
+  The duration for the playback item in milliseconds.
+  """
+  durationMs: Int!
+
+  """
+  Known external URLs for this playback item.
+  """
+  externalUrls: ExternalUrl!
+
+  """
+  A link to the Web API endpoint providing full details of the playlist item.
+  """
+  href: String!
+
+  """
+  The name of the playlist item.
+  """
+  name: String!
+
+  """
+  The [Spotify URI](https://developer.spotify.com/documentation/web-api/#spotify-uris-and-ids)
+  for the episode.
+  """
+  uri: String!
+}
+
+type PlaybackQueue {
+  currentlyPlaying: PlaybackItem
+  queue: [PlaybackItem!]!
+}
+
+type PlaybackState {
+  """
+  Allows to update the user interface based on which playback actions are
+  available within the current context.
+  """
+  actions: Actions!
+
+  """
+  A context object.
+  """
+  context: PlaybackContext
+
+  """
+  The device that is currently active.
+  """
+  device: Device!
+
+  """
+  If something is currently playing, return `true`.
+  """
+  isPlaying: Boolean!
+
+  """
+  The currently playing track or episode
+  """
+  item: PlaybackItem
+
+  """
+  Progress into the currently playing track or episode. Can be `null`
+  """
+  progressMs: Int
+
+  """
+  off, track, context
+  """
+  repeatState: RepeatMode!
+
+  """
+  If shuffle is on or off.
+  """
+  shuffleState: Boolean!
+
+  """
+  Unix Millisecond Timestamp when data was fetched.
+  """
+  timestamp: Timestamp!
+}
+
+type Player {
+  """
+  Information about the object currently being played on the user's Spotify account.
+  """
+  currentlyPlaying: CurrentlyPlaying
+
+  """
+  Information about a user's available devices.
+  """
+  devices: [Device!]
+
+  """
+  Get the list of objects that make up the user's queue.
+  """
+  playbackQueue: PlaybackQueue
+
+  """
+  Information about the user's current playback state, including track or
+  episode, progress, and active device.
+  """
+  playbackState: PlaybackState
+
+  """
+  Get tracks from the current user's recently played tracks. **Note**: Currently
+  doesn't support podcast episodes.
+  """
+  recentlyPlayed(
+    """
+    A Unix timestamp in milliseconds. Returns all items after (but not
+    including) this cursor position. If after is specified, before must not be
+    specified.
+    """
+    after: Int
+
+    """
+    A Unix timestamp in milliseconds. Returns all items before (but not
+    including) this cursor position. If before is specified, after must not be
+    specified.
+    """
+    before: Int
+
+    """
+    The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
+    """
+    limit: Int
+  ): RecentlyPlayedConnection
+}
+
+"""
+Information about a playlist owned by a Spotify user
+"""
+type Playlist {
+  """
+  The [Spotify ID](https://developer.spotify.com/documentation/web-api/#spotify-uris-and-ids)
+  for the playlist.
+  """
+  id: ID!
+
+  """
+  `true` if the owner allows other users to modify the playlist.
+  """
+  collaborative: Boolean!
+
+  """
+  The playlist description. _Only returned for modified, verified playlists,
+  otherwise `null`_.
+  """
+  description: String
+
+  """
+  Known external URLs for this playlist.
+  """
+  externalUrls: ExternalUrl!
+
+  """
+  Images for the playlist. The array may be empty or contain up to three images.
+  The images are returned by size in descending order.
+  See [Working with Playlists](https://developer.spotify.com/documentation/general/guides/working-with-playlists/).
+  **Note**: If returned, the source URL for the image (`url`) is temporary and
+  will expire in less than a day.
+  """
+  images: [Image!]!
+
+  """
+  The name of the playlist.
+  """
+  name: String!
+
+  """
+  The user who owns the playlist.
+  """
+  owner: User!
+
+  """
+  The playlist's public/private status: `true` the playlist is public, `false`
+  the playlist is private, `null` the playlist status is not relevant. For more
+  about public/private status, see [Working with Playlists](https://developer.spotify.com/documentation/general/guides/working-with-playlists/)
+  """
+  public: Boolean
+
+  """
+  The tracks of the playlist.
+  """
+  tracks(
+    """
+    The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
+    """
+    limit: Int
+
+    """
+    The index of the first item to return. Default: 0 (the first item).
+
+    Use with `limit` to get the next set of items.
+    """
+    offset: Int
+  ): PlaylistTrackConnection!
+
+  """
+  The [Spotify URI](https://developer.spotify.com/documentation/web-api/#spotify-uris-and-ids) */
+  for the playlist.
+  """
+  uri: String!
+}
+
+"""
+A paged set of playlists
+"""
+type PlaylistConnection {
+  """
+  The set of playlists.
+  """
+  edges: [PlaylistEdge!]!
+
+  """
+  Pagination information for the set of playlists
+  """
+  pageInfo: PageInfo!
+}
+
+type PlaylistEdge {
+  """
+  The playlist
+  """
+  node: Playlist!
+}
+
+interface PlaylistTrack {
+  """
+  The playlist track length in milliseconds.
+  """
+  durationMs: Int!
+
+  """
+  External URLs for this episode.
+  """
+  externalUrls: ExternalUrl!
+
+  """
+  A link to the Web API endpoint providing full details of the episode.
+  """
+  href: String!
+
+  """
+  The [Spotify ID](https://developer.spotify.com/documentation/web-api/#spotify-uris-and-ids) for the playlist track.
+  """
+  id: ID!
+
+  """
+  The name of the episode.
+  """
+  name: String!
+
+  """
+  The [Spotify URI](https://developer.spotify.com/documentation/web-api/#spotify-uris-and-ids)
+  for the playlist track.
+  """
+  uri: String!
+}
+
+"""
+A paged set of tracks for a playlist
+"""
+type PlaylistTrackConnection {
+  """
+  Pagination information for the tracks belonging to a playlist
+  """
+  edges: [PlaylistTrackEdge!]!
+
+  """
+  Pagination information for the tracks belonging to a playlist
+  """
+  pageInfo: PageInfo!
+}
+
+type PlaylistTrackEdge {
+  """
+  The date and time the track was added to the playlist
+  """
+  addedAt: DateTime
+
+  """
+  The user that added the track to the playlist
+  """
+  addedBy: User!
+
+  """
+  The playlist track
+  """
+  node: PlaylistTrack!
+}
+
+type Query {
+  """
+  Spotify catalog information for an album.
+  """
+  album(id: ID!): Album
+
+  """
+  Get Spotify catalog information for multiple albums identified by their Spotify IDs.
+  """
+  albums(ids: [ID!]!): [Album!]
+
+  """
+  Spotify catalog information for an artist.
+  """
+  artist(id: ID!): Artist
+
+  """
+  Get Spotify catalog information for several artists based on their Spotify IDs.
+  """
+  artists(ids: [ID!]!): [Artist!]
+
+  """
+  Get a list of developer-specific settings, such as GraphQL field configuration.
+  """
+  developer: Developer!
+
+  """
+  Get Spotify catalog information for a single episode identified by its unique
+  Spotify ID.
+  """
+  episode(id: ID!): Episode
+
+  """
+  Get Spotify catalog information for several episodes based on their Spotify IDs.
+  """
+  episodes(
+    """
+    A list of the [Spotify IDs](https://developer.spotify.com/documentation/web-api/#spotify-uris-and-ids) for the episodes. Maximum: 50 IDs.
+    """
+    ids: [ID!]!
+  ): [Episode!]
+
+  """
+  A list of available genres seed parameter values for
+  [recommendations](https://developer.spotify.com/documentation/web-api/reference/#/operations/get-recommendations).
+  """
+  genres: [String!]!
+
+  """
+  Recommendations for the current user.
+
+  Recommendations are generated based on the available information for a given
+  seed entity and matched against similar artists and tracks. If there is
+  sufficient information about the provided seeds, a list of tracks will be
+  returned together with pool size details.
+
+  For artists and tracks that are very new or obscure there might not be enough
+  data to generate a list of tracks.
+  """
+  recommendations(
+    seeds: RecommendationSeedInput!
+    acousticness: RecommendationAcousticnessInput
+    danceability: RecommendationDanceabilityInput
+    durationMs: RecommendationDurationMsInput
+    energy: RecommendationEnergyInput
+    instrumentalness: RecommendationInstrumentalnessInput
+    key: RecommendationKeyInput
+    liveness: RecommendationLivenessInput
+    loudness: RecommendationLoudnessInput
+    mode: RecommendationModeInput
+    popularity: RecommendationPopularityInput
+    speechiness: RecommendationSpeechinessInput
+    tempo: RecommendationTempoInput
+    timeSignature: RecommendationTimeSignatureInput
+    valence: RecommendationValenceInput
+
+    """
+    The target size of the list of recommended tracks. For seeds with unusually
+    small pools or when highly restrictive filtering is applied, it may be
+    impossible to generate the requested number of recommended tracks. Debugging
+    information for such cases is available in the response.
+
+    Default value: 20.
+    Minimum value: 1.
+    Maximum value: 100.
+    """
+    limit: Int
+  ): Recommendations
+
+  """
+  Information about the current logged-in user.
+  """
+  me: CurrentUser
+
+  """
+  Get a list of new album releases featured in Spotify (shown, for example, on a Spotify player’s “Browse” tab).
+  """
+  newReleases(
+    """
+    A country: an [ISO 3166-1 alpha-2 country code](http://en.wikipedia.org/wiki/ISO_3166-1_alpha-2). Provide this parameter if you want the list of returned items to be relevant to a particular country. If omitted, the returned items will be relevant to all countries.
+    """
+    country: CountryCode
+
+    """
+    The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
+    """
+    limit: Int
+
+    """
+    The index of the first item to return. Default: 0 (the first item). Use with `limit` to get the next set of items.
+    """
+    offset: Int
+  ): NewReleasesConnection
+
+  """
+  A playlist owned by a Spotify user.
+  """
+  playlist(id: ID!): Playlist
+
+  """
+  A list of Spotify featured playlists (shown, for example, on a Spotify
+  player's 'Browse' tab).
+  """
+  featuredPlaylists(
+    """
+    The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
+    """
+    limit: Int
+
+    """
+    The index of the first playlist to return. Default: 0 (the first object).
+
+    Use with `limit` to get the next set of playlists.
+    """
+    offset: Int
+
+    """
+    Specify the local time to get results tailored for that specific date and
+    time in the day. If not provided, the response defaults to the current UTC
+    time. If there were no featured playlists (or there is no data) at the
+    specified time, the response will revert to the current UTC time.
+    """
+    timestamp: DateTime
+  ): FeaturedPlaylistConnection
+
+  """
+  Get Spotify catalog information about albums, artists, playlists, tracks, shows, episodes or audiobooks that match a keyword string.
+
+  **Note: Audiobooks are only available for the US, UK, Ireland, New Zealand and Australia markets.**
+  """
+  search(
+    """
+    Your search query.
+
+    You can narrow down your search using field filters. The available filters are album, artist, track, year, upc, tag:hipster, tag:new, isrc, and genre. Each field filter only applies to certain result types.
+
+    The artist and year filters can be used while searching albums, artists and tracks. You can filter on a single year or a range (e.g. 1955-1960).
+    The album filter can be used while searching albums and tracks.
+    The genre filter can be used while searching artists and tracks.
+    The isrc and track filters can be used while searching tracks.
+    The upc, tag:new and tag:hipster filters can only be used while searching albums. The tag:new filter will return albums released in the past two weeks and tag:hipster can be used to return only albums with the lowest 10% popularity.
+    """
+    q: String!
+
+    """
+    If `includeExternal=audio` is specified it signals that the client can play externally hosted audio content, and marks the content as playable in the response. By default externally hosted audio content is marked as unplayable in the response.
+    """
+    includeExternal: SearchExternalValue
+
+    """
+    The maximum number of results to return in each item type.
+    """
+    limit: Int
+
+    """
+    The index of the first result to return. Use with `limit` to get the next page of search results.
+    """
+    offset: Int
+
+    """
+    A list of item types to search across. Search results include hits from all the specified item types.
+    """
+    type: [SearchType!]!
+  ): SearchResults
+
+  """
+  Get Spotify catalog information for a single show identified by its unique
+  Spotify ID.
+  """
+  show(id: ID!): Show
+
+  """
+  Get Spotify catalog information for several shows based on their Spotify IDs.
+  """
+  shows(
+    """
+    A list of the [Spotify IDs](https://developer.spotify.com/documentation/web-api/#spotify-uris-and-ids) for the shows. Maximum: 50 IDs.
+    """
+    ids: [ID!]!
+  ): [Show!]
+
+  """
+  Get Spotify catalog information for a single track identified by its unique
+  Spotify ID.
+  """
+  track(
+    """
+    The [Spotify ID](https://developer.spotify.com/documentation/web-api/#spotify-uris-and-ids)
+    for the track.
+    """
+    id: ID!
+  ): Track
+
+  """
+  Get Spotify catalog information for multiple tracks based on their Spotify IDs.
+  """
+  tracks(
+    """
+    A list of the [Spotify IDs](https://developer.spotify.com/documentation/web-api/#spotify-uris-and-ids) for the tracks. Maximum: 50 IDs.
+    """
+    ids: [ID!]!
+  ): [Track!]
+
+  """
+  Get audio features for multiple tracks based on their Spotify IDs.
+  """
+  tracksAudioFeatures(
+    """
+    A list of the [Spotify IDs](https://developer.spotify.com/documentation/web-api/#spotify-uris-and-ids) for the tracks. Maximum: 100 IDs.
+    """
+    ids: [ID!]!
+  ): [TrackAudioFeatures!]!
+  user(id: ID!): User
+}
+
+type RecentlyPlayedConnection {
+  """
+  The list of recently played items.
+  """
+  edges: [RecentlyPlayedEdge!]!
+}
+
+type RecentlyPlayedEdge {
+  """
+  The date and time the track was played at.
+  """
+  playedAt: DateTime!
+
+  """
+  The item that was recently played.
+  """
+  node: PlaybackItem!
+
+  """
+  The playback context for the track
+  """
+  context: PlaybackContext
+}
+
+input RecommendationAcousticnessInput {
+  min: Float
+  max: Float
+  target: Float
+}
+
+input RecommendationDanceabilityInput {
+  min: Float
+  max: Float
+  target: Float
+}
+
+input RecommendationDurationMsInput {
+  min: Int
+  max: Int
+  target: Int
+}
+
+input RecommendationEnergyInput {
+  min: Float
+  max: Float
+  target: Float
+}
+
+input RecommendationInstrumentalnessInput {
+  min: Float
+  max: Float
+  target: Float
+}
+
+input RecommendationKeyInput {
+  min: Int
+  max: Int
+  target: Int
+}
+
+input RecommendationLivenessInput {
+  min: Float
+  max: Float
+  target: Float
+}
+
+input RecommendationLoudnessInput {
+  min: Float
+  max: Float
+  target: Float
+}
+
+input RecommendationModeInput {
+  min: Int
+  max: Int
+  target: Int
+}
+
+input RecommendationPopularityInput {
+  min: Float
+  max: Float
+  target: Float
+}
+
+"""
+Information about recommendations for the current user
+"""
+type Recommendations {
+  """
+  An array of recommendation [seed objects](https://developer.spotify.com/documentation/web-api/reference/#object-recommendationseedobject).
+  """
+  seeds: [RecommendationSeed!]!
+
+  """
+  An array of [track object (simplified)](https://developer.spotify.com/documentation/web-api/reference/#object-simplifiedtrackobject)
+  ordered according to the parameters supplied.
+  """
+  tracks: [Track!]!
+}
+
+"""
+Information about a recommendation [seed object](https://developer.spotify.com/documentation/web-api/reference/#object-recommendationseedobject).
+"""
+type RecommendationSeed {
+  """
+  The id used to select this seed. This will be the same as the string used in
+  the `seedArtists`, `seedTracks` or `seedGenres` parameter.
+  """
+  id: ID!
+
+  """
+  The number of tracks available after min_* and max_* filters have been
+  applied.
+  """
+  afterFilteringSize: Int!
+
+  """
+  The number of tracks available after relinking for regional availability.
+  """
+  afterRelinkingSize: Int!
+
+  """
+  A link to the full track or artist data for this seed. For tracks this will
+  be a link to a [Track Object](https://developer.spotify.com/documentation/web-api/reference/#object-trackobject).
+  For artists a link to an [Artist Object](https://developer.spotify.com/documentation/web-api/reference/#object-artistobject).
+  For genre seeds, this value will be `null`.
+  """
+  href: String
+
+  """
+  The number of recommended tracks available for this seed.
+  """
+  initialPoolSize: Int!
+
+  """
+  The entity type of this seed.
+  """
+  type: RecommendationSeedType!
+}
+
+input RecommendationSeedInput {
+  """
+  A list of [Spotify IDs](https://developer.spotify.com/documentation/web-api/#spotify-uris-and-ids) for seed artists. Up to 5 seed values may be provided in any combination of `seedArtists`, `seedTracks` and `seedGenres`.
+
+  Example value: ["4NHQUGzhtTLFvgF5SZesLK"]
+  """
+  seedArtists: [ID!]
+
+  """
+  A list of any genres in the set of available genre seeds. Up to 5 seed values may be provided in any combination of `seedArtists`, `seedTracks` and `seedGenres`.
+
+  Example value: ["classical", "country"]
+  """
+  seedGenres: [String!]
+
+  """
+  A list of [Spotify IDs](https://developer.spotify.com/documentation/web-api/#spotify-uris-and-ids)
+  for a seed track. Up to 5 seed values may be provided in any combination of
+  `seedArtists`, `seedTracks` and `seedGenres`.
+
+  Example value: ["0c6xIDDpzE81m2q797ordA"]
+  """
+  seedTracks: [ID!]
+}
+
+"""
+Available entity types for recommendation seeds.
+"""
+enum RecommendationSeedType {
+  ARTIST
+  TRACK
+  GENRE
+}
+
+input RecommendationSpeechinessInput {
+  min: Float
+  max: Float
+  target: Float
+}
+
+input RecommendationTempoInput {
+  min: Float
+  max: Float
+  target: Float
+}
+
+input RecommendationTimeSignatureInput {
+  min: Int
+  max: Int
+  target: Int
+}
+
+input RecommendationValenceInput {
+  min: Float
+  max: Float
+  target: Float
+}
+
+type ReleaseDate {
+  """
+  The date the item was first released, for example `1981-12-15`. Depending on
+  the precision, it might be shown as `1981-12`, or `1981-12-15`.
+  """
+  date: String!
+
+  """
+  The precision with which the `date` value is known.
+  """
+  precision: ReleaseDatePrecision!
+}
+
+enum ReleaseDatePrecision {
+  YEAR
+  MONTH
+  DAY
+}
+
+input RemoveItemFromPlaylistInput {
+  """
+  The [Spotify ID](https://developer.spotify.com/documentation/web-api/#spotify-uris-and-ids)
+  of the playlist.
+  """
+  playlistId: ID!
+
+  """
+  The playlist's snapshot ID against which you want to make the changes. The API
+  will validate that the specified items exist and in the specified positions
+  and make the changes, even if more recent changes have been made to the
+  playlist.
+  """
+  snapshotId: ID
+
+  """
+  An array of objects containing [Spotify URIs](https://developer.spotify.com/documentation/web-api/#spotify-uris-and-ids)
+  of the tracks or episodes to remove.
+  """
+  tracks: [RemoveItemFromPlaylistTrackInput!]!
+}
+
+type RemoveItemFromPlaylistPayload {
+  """
+  A snapshot ID for the playlist
+  """
+  snapshotId: ID
+
+  """
+  The playlist after the item was removed
+  """
+  playlist: Playlist
+}
+
+input RemoveItemFromPlaylistTrackInput {
+  uri: String!
+}
+
+input RemoveSavedAlbumsInput {
+  """
+  A list of the [Spotify IDs](https://developer.spotify.com/documentation/web-api/#spotify-uris-and-ids).
+  Maximum 20 IDs.
+  """
+  ids: [ID!]!
+}
+
+type RemoveSavedAlbumsPayload {
+  """
+  The albums that were removed from the Spotify user's library.
+  """
+  removedAlbums: [Album!]
+}
+
+input RemoveSavedEpisodesInput {
+  """
+  A list of the [Spotify IDs](https://developer.spotify.com/documentation/web-api/#spotify-uris-and-ids).
+  Maximum 50 IDs.
+  """
+  ids: [ID!]!
+}
+
+type RemoveSavedEpisodesPayload {
+  """
+  The episodes that were removed from the Spotify user's library.
+  """
+  removedEpisodes: [Episode!]
+}
+
+input RemoveSavedShowsInput {
+  """
+  A list of the [Spotify IDs](https://developer.spotify.com/documentation/web-api/#spotify-uris-and-ids).
+  for the shows. Maximum 50 IDs.
+  """
+  ids: [ID!]!
+}
+
+type RemoveSavedShowsPayload {
+  """
+  The shows that were removed from the Spotify user's library.
+  """
+  removedShows: [Show!]
+}
+
+input RemoveSavedTracksInput {
+  """
+  A comma-separated list of the [Spotify IDs](https://developer.spotify.com/documentation/web-api/#spotify-uris-and-ids).
+  Maximum 50 IDs.
+  """
+  ids: [ID!]!
+}
+
+type RemoveSavedTracksPayload {
+  """
+  The tracks that were removed from the Spotify user's library.
+  """
+  removedTracks: [Track!]
+}
+
+enum RepeatMode {
+  CONTEXT
+  OFF
+  TRACK
+}
+
+input ResetFieldConfigInput {
+  """
+  The field that will be reset to its default values
+  """
+  field: FieldInput!
+}
+
+type ResetFieldConfigPayload {
+  """
+  The updated field config
+  """
+  fieldConfig: FieldConfig
+}
+
+input ResumePlaybackInput {
+  """
+  Spotify URI of the context to play. Valid contexts are albums, artists &
+  playlists.
+  """
+  contextUri: String
+
+  """
+  The id of the device this command is targeting. If not supplied, the user's
+  currently active device is the target.
+  """
+  deviceId: ID
+
+  """
+  Indicates from where in the context playback should start. Only available when
+  contextUri corresponds to an album or playlist object.
+  """
+  offset: ResumePlaybackOffsetInput
+
+  """
+  Indicates the position where playback should occur in milliseconds.
+  """
+  positionMs: Int
+
+  """
+  An array of the Spotify track URIs to play.
+  """
+  uris: [String!]
+}
+
+input ResumePlaybackOffsetInput {
+  """
+  Non-negative, zero-based value that corresponds to the numeric position in the
+  album or playlist
+  """
+  position: Int
+
+  """
+  Spotify URI of the item in the album or playlist
+  """
+  uri: String
+}
+
+type ResumePlaybackPayload {
+  playbackState: PlaybackState
+}
+
+type ResumePoint {
+  """
+  Whether or not the episode has been fully played by the user.
+  """
+  fullyPlayed: Boolean!
+
+  """
+  The user's most recent position in the episode in milliseconds.
+  """
+  resumePositionMs: Int!
+}
+
+input SaveAlbumsInput {
+  """
+  A list of the [Spotify IDs](https://developer.spotify.com/documentation/web-api/#spotify-uris-and-ids)
+  for the albums. Maximum: 20 IDs
+  """
+  ids: [ID!]!
+}
+
+type SaveAlbumsPayload {
+  """
+  The albums that were saved to the Spotify user's library
+  """
+  savedAlbums: [Album!]
+}
+
+type SavedAlbumEdge {
+  """
+  The date the album was saved.
+  """
+  addedAt: DateTime!
+
+  """
+  The album object.
+  """
+  node: Album!
+}
+
+type SavedAlbumsConnection {
+  """
+  The list of saved albums.
+  """
+  edges: [SavedAlbumEdge!]!
+
+  """
+  Pagination information for the set of playlists
+  """
+  pageInfo: PageInfo!
+}
+
+type SavedEpisodeEdge {
+  """
+  The date the episode was saved.
+  """
+  addedAt: DateTime!
+
+  """
+  The saved episode.
+  """
+  node: Episode!
+}
+
+type SavedEpisodesConnection {
+  """
+  The list of saved episodes.
+  """
+  edges: [SavedEpisodeEdge!]!
+
+  """
+  Pagination information for the set of episodes
+  """
+  pageInfo: PageInfo!
+}
+
+type SavedShowEdge {
+  """
+  The date the show was saved.
+  """
+  addedAt: DateTime!
+
+  """
+  The show
+  """
+  node: Show!
+}
+
+type SavedShowsConnection {
+  """
+  A list of saved shows.
+  """
+  edges: [SavedShowEdge!]!
+
+  """
+  "Pagination information for the set of saved shows"
+  """
+  pageInfo: PageInfo!
+}
+
+type SavedTrackEdge {
+  """
+  The date the track was saved.
+  """
+  addedAt: DateTime!
+
+  """
+  The track
+  """
+  node: Track!
+}
+
+type SavedTracksConnection {
+  """
+  A list of saved tracks.
+  """
+  edges: [SavedTrackEdge!]!
+
+  """
+  "Pagination information for the set of playlists"
+  """
+  pageInfo: PageInfo!
+}
+
+input SaveEpisodesInput {
+  """
+  An list of the [Spotify IDs](https://developer.spotify.com/documentation/web-api/#spotify-uris-and-ids).
+  Maximum: 50 IDs
+  """
+  ids: [ID!]!
+}
+
+type SaveEpisodesPayload {
+  """
+  The episodes that were saved to the Spotify user's library
+  """
+  savedEpisodes: [Episode!]
+}
+
+input SaveShowsInput {
+  """
+  An list of the [Spotify IDs](https://developer.spotify.com/documentation/web-api/#spotify-uris-and-ids).
+  for the shows. Maximum: 50 IDs
+  """
+  ids: [ID!]!
+}
+
+type SaveShowsPayload {
+  """
+  The shows that were saved to the Spotify user's library
+  """
+  savedShows: [Show!]
+}
+
+input SaveTracksInput {
+  """
+  A list of the [Spotify IDs](https://developer.spotify.com/documentation/web-api/#spotify-uris-and-ids).
+  Maximum: 50 IDs
+  """
+  ids: [ID!]!
+}
+
+type SaveTracksPayload {
+  """
+  The tracks that were saved to the Spotify user's library
+  """
+  savedTracks: [Track!]
+}
+
+type SchemaField {
+  """
+  The parent type name in the schema (ex: `User`)
+  """
+  typename: String!
+
+  """
+  The name of the field in the type (ex: `firstName`)
+  """
+  fieldName: String!
+}
+
+input SchemaFieldInput {
+  """
+  The parent type name in the schema (ex: `User`)
+  """
+  typename: String!
+
+  """
+  The name of the field in the type (ex: `firstName`)
+  """
+  fieldName: String!
+}
+
+type SearchAlbumEdge {
+  """
+  The album returned from the search
+  """
+  node: Album!
+}
+
+type SearchAlbumsConnection {
+  """
+  The list of albums returned from the search
+  """
+  edges: [SearchAlbumEdge!]!
+
+  """
+  Pagination information for albums in a search
+  """
+  pageInfo: PageInfo!
+}
+
+type SearchArtistEdge {
+  """
+  The artist returned from the search
+  """
+  node: Artist!
+}
+
+type SearchArtistsConnection {
+  """
+  The list of artists returned from the search
+  """
+  edges: [SearchArtistEdge!]!
+
+  """
+  Pagination information for artists in a search
+  """
+  pageInfo: PageInfo!
+}
+
+type SearchEpisodeEdge {
+  """
+  The episode returned from the search
+  """
+  node: Episode!
+}
+
+type SearchEpisodesConnection {
+  """
+  The list of episodes returned from the search
+  """
+  edges: [SearchEpisodeEdge!]!
+
+  """
+  Pagination information for episodes in a search
+  """
+  pageInfo: PageInfo!
+}
+
+enum SearchExternalValue {
+  AUDIO
+}
+
+type SearchPlaylistEdge {
+  """
+  The playlist returned from the search
+  """
+  node: Playlist!
+}
+
+type SearchPlaylistsConnection {
+  """
+  The list of playlists returned from the search
+  """
+  edges: [SearchPlaylistEdge!]!
+
+  """
+  Pagination information for playlists in a search
+  """
+  pageInfo: PageInfo!
+}
+
+type SearchResults {
+  """
+  The set of albums returned from the search query. Only available if the search `type` includes `ALBUM`.
+  """
+  albums: SearchAlbumsConnection
+
+  """
+  The set of artists returned from the search query. Only available if the search `type` includes `ARTIST`.
+  """
+  artists: SearchArtistsConnection
+
+  """
+  The set of episodes returned from the search query. Only available if the search `type` includes `EPISODE`.
+  """
+  episodes: SearchEpisodesConnection
+
+  """
+  The set of playlists returned from the search query. Only available if the search `type` includes `PLAYLIST`.
+  """
+  playlists: SearchPlaylistsConnection
+
+  """
+  The set of shows returned from the search query. Only available if the search `type` includes `SHOW`.
+  """
+  shows: SearchShowsConnection
+
+  """
+  The set of tracks returned from the search query. Only available if the search `type` includes `TRACK`.
+  """
+  tracks: SearchTracksConnection
+}
+
+type SearchShowEdge {
+  """
+  The show returned from the search
+  """
+  node: Show!
+}
+
+type SearchShowsConnection {
+  """
+  The list of shows returned from the search
+  """
+  edges: [SearchShowEdge!]!
+
+  """
+  Pagination information for shows in a search
+  """
+  pageInfo: PageInfo!
+}
+
+type SearchTrackEdge {
+  """
+  The track returned in the search
+  """
+  node: Track!
+}
+
+type SearchTracksConnection {
+  """
+  The list of tracks returned from the search
+  """
+  edges: [SearchTrackEdge!]!
+
+  """
+  Pagination information for tracks in a search
+  """
+  pageInfo: PageInfo!
+}
+
+enum SearchType {
+  ALBUM
+  ARTIST
+  EPISODE
+  PLAYLIST
+  TRACK
+  SHOW
+}
+
+input SeekToPositionContextInput {
+  """
+  The id of the device this command is targeting. If not supplied, the user's currently active device is the target.
+  """
+  deviceId: ID
+}
+
+type SeekToPositionResponse {
+  """
+  The updated state of playback after seeking to a position.
+  """
+  playbackState: PlaybackState
+}
+
+input SetRepeatModeContextInput {
+  """
+  The id of the device this command is targeting. If not supplied, the user's currently active device is the target.
+  """
+  deviceId: ID
+}
+
+type SetRepeatModeResponse {
+  """
+  The updated state of playback after setting a repeat mode.
+  """
+  playbackState: PlaybackState
+}
+
+input SetVolumeContextInput {
+  """
+  The id of the device this command is targeting. If not supplied, the user's currently active device is the target.
+  """
+  deviceId: ID
+}
+
+type SetVolumeResponse {
+  """
+  The state of playback after the volume has been set.
+  """
+  playbackState: PlaybackState
+}
+
+"""
+Spotify catalog information for a show.
+"""
+type Show {
+  """
+  A description of the show.
+  """
+  description(format: TextFormat = PLAIN): String!
+
+  """
+  Spotify catalog information about an show’s episodes.
+  """
+  episodes(
+    """
+    The maximum number of episodes to return. Default: 20. Minimum: 1. Maximum: 50.
+    """
+    limit: Int
+
+    """
+    The index of the first playlist to return. Default: 0 (the first object).
+
+    Use with `limit` to get the next set of episodes.
+    """
+    offset: Int
+  ): ShowEpisodesConnection
+
+  """
+  Whether or not the show has explicit content (`true` = yes it does; `false`
+  = no it does not OR unknown).
+  """
+  explicit: Boolean!
+
+  """
+  External URLs for this show.
+  """
+  externalUrls: ExternalUrl!
+
+  """
+  A link to the Web API endpoint providing full details of the show.
+  """
+  href: String!
+
+  """
+  The [Spotify ID](https://developer.spotify.com/documentation/web-api/#spotify-uris-and-ids)
+  for the show.
+  """
+  id: ID!
+
+  """
+  The cover art for the show in various sizes, widest first.
+  """
+  images: [Image!]!
+
+  """
+  `true` if all of the shows episodes are hosted outside of Spotify's CDN. This
+  field might be `null` in some cases.
+  """
+  isExternallyHosted: Boolean
+
+  """
+  A list of the languages used in the show, identified by their [ISO 639](https://en.wikipedia.org/wiki/ISO_639) code.
+  """
+  languages: [String!]!
+
+  """
+  The media type of the show.
+  """
+  mediaType: String!
+
+  """
+  The name of the episode.
+  """
+  name: String!
+
+  """
+  The publisher of the show.
+  """
+  publisher: String!
+
+  """
+  The [Spotify URI](https://developer.spotify.com/documentation/web-api/#spotify-uris-and-ids) for the show.
+  """
+  uri: String!
+}
+
+type ShowEpisodeEdge {
+  """
+  The episode
+  """
+  node: Episode!
+}
+
+type ShowEpisodesConnection {
+  """
+  A list of episodes for the show.
+  """
+  edges: [ShowEpisodeEdge!]!
+
+  """
+  Pagination information for the set of episodes
+  """
+  pageInfo: PageInfo!
+}
+
+input ShufflePlaybackContextInput {
+  """
+  The id of the device this command is targeting. If not supplied, the user's
+  currently active device is the target.
+  """
+  deviceId: ID
+}
+
+type ShufflePlaybackResponse {
+  """
+  The state of playback after shuffling playback.
+  """
+  playbackState: PlaybackState
+}
+
+input SkipToNextContextInput {
+  """
+  The id of the device this command is targeting. If not supplied, the user's
+  currently active device is the target.
+  """
+  deviceId: ID
+}
+
+type SkipToNextResponse {
+  """
+  The updated state of playback after skipping to next.
+  """
+  playbackState: PlaybackState
+}
+
+input SkipToPreviousContextInput {
+  """
+  The id of the device this command is targeting. If not supplied, the user's
+  currently active device is the target.
+  """
+  deviceId: ID
+}
+
+type SkipToPreviousResponse {
+  """
+  The updated state of playback after skipping to previous.
+  """
+  playbackState: PlaybackState
+}
+
+type Subscription {
+  playbackStateChanged: PlaybackState
+}
+
+enum TextFormat {
+  PLAIN
+  HTML
+}
+
+enum TimeRange {
+  LONG_TERM
+  MEDIUM_TERM
+  SHORT_TERM
+}
+
+scalar Timestamp
+
+type TopArtistEdge {
+  """
+  The artist.
+  """
+  node: Artist!
+}
+
+type TopArtistsConnection {
+  """
+  The list of top tracks.
+  """
+  edges: [TopArtistEdge!]!
+
+  """
+  Pagination information for the set of top tracks.
+  """
+  pageInfo: PageInfo!
+}
+
+type TopTrackEdge {
+  """
+  The track.
+  """
+  node: Track!
+}
+
+type TopTracksConnection {
+  """
+  The list of top tracks.
+  """
+  edges: [TopTrackEdge!]!
+
+  """
+  Pagination information for the set of top tracks.
+  """
+  pageInfo: PageInfo!
+}
+
+"""
+Spotify catalog information for a track.
+"""
+type Track implements PlaylistTrack & PlaybackItem {
+  """
+  The [Spotify ID](https://developer.spotify.com/documentation/web-api/#spotify-uris-and-ids) for the track.
+  """
+  id: ID!
+
+  """
+  The album on which the track appears.
+  """
+  album: Album!
+
+  """
+  The artists who performed the track.
+  """
+  artists: [Artist!]!
+
+  """
+  The track's audio feature information
+  """
+  audioFeatures: TrackAudioFeatures
+
+  """
+  The disc number (usually `1` unless the album consists of more than one disc).
+  """
+  discNumber: Int!
+
+  """
+  The track length in milliseconds
+  """
+  durationMs: Int!
+
+  """
+  Whether or not the track has explicit lyrics (`true` = yes it does;
+  `false` = no it does not OR unknown)
+  """
+  explicit: Boolean!
+
+  """
+  Known external IDs for the track.
+  """
+  externalIds: TrackExternalIds
+
+  """
+  Known external URLs for this track.
+  """
+  externalUrls: ExternalUrl!
+
+  """
+  A link to the Web API endpoint providing full details of the track.
+  """
+  href: String!
+
+  """
+  Whether or not the track is from a local file.
+  """
+  isLocal: Boolean!
+
+  """
+  Part of the response when [Track Relinking](https://developer.spotify.com/documentation/general/guides/track-relinking-guide/)
+  is applied. If `true`, the track is playable in the given market.
+  Otherwise `false`.
+  """
+  isPlayable: Boolean!
+
+  """
+  The name of the track
+  """
+  name: String!
+
+  """
+  The popularity of the track. The value will be between 0 and 100, with 100
+  being the most popular.
+
+  The popularity of a track is a value between 0 and 100, with 100 being the
+  most popular. The popularity is calculated by algorithm and is based, in the
+  most part, on the total number of plays the track has had and how recent those
+  plays are.
+
+  Generally speaking, songs that are being played a lot now will have a higher
+  popularity than songs that were played a lot in the past. Duplicate tracks
+  (e.g. the same track from a single and an album) are rated independently.
+  Artist and album popularity is derived mathematically from track popularity.
+  Note: the popularity value may lag actual popularity by a few days: the value
+  is not updated in real time.
+  """
+  popularity: Int!
+
+  """
+  A link to a 30 second preview (MP3 format) of the track. Can be `null`
+  """
+  previewUrl: String
+
+  """
+  The number of the track. If an album has several discs, the track number is
+  the number on the specified disc.
+  """
+  trackNumber: Int
+
+  """
+  The [Spotify URI](https://developer.spotify.com/documentation/web-api/#spotify-uris-and-ids)
+  for the track.
+  """
+  uri: String!
+}
+
+type TrackAudioFeatures {
+  """
+  A confidence measure from 0.0 to 1.0 of whether the track is acoustic. 1.0 represents high confidence the track is acoustic.
+  """
+  acousticness: Float!
+
+  """
+  A URL to access the full audio analysis of this track. An access token is required to access this data.
+  """
+  analysisUrl: String!
+
+  """
+  Danceability describes how suitable a track is for dancing based on a combination of musical elements including tempo, rhythm stability, beat strength, and overall regularity. A value of 0.0 is least danceable and 1.0 is most danceable.
+  """
+  danceability: Float!
+
+  """
+  The duration of the track in milliseconds.
+  """
+  durationMs: Int!
+
+  """
+  Energy is a measure from 0.0 to 1.0 and represents a perceptual measure of intensity and activity. Typically, energetic tracks feel fast, loud, and noisy. For example, death metal has high energy, while a Bach prelude scores low on the scale. Perceptual features contributing to this attribute include dynamic range, perceived loudness, timbre, onset rate, and general entropy.
+  """
+  energy: Float!
+
+  """
+  The Spotify ID for the track.
+  """
+  id: ID!
+
+  """
+  Predicts whether a track contains no vocals. "Ooh" and "aah" sounds are treated as instrumental in this context. Rap or spoken word tracks are clearly "vocal". The closer the instrumentalness value is to 1.0, the greater likelihood the track contains no vocal content. Values above 0.5 are intended to represent instrumental tracks, but confidence is higher as the value approaches 1.0.
+  """
+  instrumentalness: Float!
+
+  """
+  The key the track is in. Integers map to pitches using standard [Pitch Class notation](https://en.wikipedia.org/wiki/Pitch_class). E.g. 0 = C, 1 = C♯/D♭, 2 = D, and so on. If no key was detected, the value is -1.
+  """
+  key: Int!
+
+  """
+  Detects the presence of an audience in the recording. Higher liveness values represent an increased probability that the track was performed live. A value above 0.8 provides strong likelihood that the track is live.
+  """
+  liveness: Float!
+
+  """
+  The overall loudness of a track in decibels (dB). Loudness values are averaged across the entire track and are useful for comparing relative loudness of tracks. Loudness is the quality of a sound that is the primary psychological correlate of physical strength (amplitude). Values typically range between -60 and 0 db.
+  """
+  loudness: Float!
+
+  """
+  Mode indicates the modality (major or minor) of a track, the type of scale from which its melodic content is derived. Major is represented by 1 and minor is 0.
+  """
+  mode: Int!
+
+  """
+  Speechiness detects the presence of spoken words in a track. The more exclusively speech-like the recording (e.g. talk show, audio book, poetry), the closer to 1.0 the attribute value. Values above 0.66 describe tracks that are probably made entirely of spoken words. Values between 0.33 and 0.66 describe tracks that may contain both music and speech, either in sections or layered, including such cases as rap music. Values below 0.33 most likely represent music and other non-speech-like tracks.
+  """
+  speechiness: Float!
+
+  """
+  The overall estimated tempo of a track in beats per minute (BPM). In musical terminology, tempo is the speed or pace of a given piece and derives directly from the average beat duration.
+  """
+  tempo: Float!
+
+  """
+  An estimated time signature. The time signature (meter) is a notational convention to specify how many beats are in each bar (or measure). The time signature ranges from 3 to 7 indicating time signatures of "3/4", to "7/4".
+  """
+  timeSignature: Int!
+
+  """
+  A link to the Web API endpoint providing full details of the track.
+  """
+  trackHref: String!
+
+  """
+  The Spotify URI for the track.
+  """
+  uri: String!
+
+  """
+  A measure from 0.0 to 1.0 describing the musical positiveness conveyed by a track. Tracks with high valence sound more positive (e.g. happy, cheerful, euphoric), while tracks with low valence sound more negative (e.g. sad, depressed, angry).
+  """
+  valence: Float!
+}
+
+type TrackExternalIds {
+  """
+  [International Standard Recording Code](http://en.wikipedia.org/wiki/International_Standard_Recording_Code)
+  """
+  isrc: String
+
+  """
+  [International Article Number](http://en.wikipedia.org/wiki/International_Article_Number_%28EAN%29)
+  """
+  ean: String
+
+  """
+  [Universal Product Code](http://en.wikipedia.org/wiki/Universal_Product_Code)
+  """
+  upc: String
+}
+
+input TransferPlaybackInput {
+  """
+  A list containing the ID of the device on which playback should be
+  started/transferred.
+  """
+  deviceIds: [ID!]!
+
+  """
+  `true`: ensure playback happens on new device.
+  `false` or not provided: keep the current playback state.
+  """
+  play: Boolean
+}
+
+type TransferPlaybackPayload {
+  """
+  The state of playback after transferring devices.
+  """
+  playbackState: PlaybackState
+}
+
+input UpdateFieldConfigInput {
+  config: FieldConfigInput!
+  field: FieldInput!
+}
+
+type UpdateFieldConfigPayload {
+  """
+  The updated field config
+  """
+  fieldConfig: FieldConfig
+}
+
+"""
+Public profile information about a Spotify user.
+"""
+type User implements UserProfile {
+  """
+  The [Spotify user ID](https://developer.spotify.com/documentation/web-api/#spotify-uris-and-ids) for this user.
+  """
+  id: ID!
+
+  """
+  The name displayed on the user's profile. `null` if not available.
+  """
+  displayName: String
+
+  """
+  Known public external URLs for this user.
+  """
+  externalUrls: ExternalUrl!
+
+  """
+  Information about the followers of this user.
+  """
+  followers: Followers!
+
+  """
+  A link to the Web API endpoint for this user.
+  """
+  href: String!
+
+  """
+  The user's profile image.
+  """
+  images: [Image!]
+
+  """
+  The [Spotify URI](https://developer.spotify.com/documentation/web-api/#spotify-uris-and-ids)
+  for this user.
+  """
+  uri: String!
+}
+
+interface UserProfile {
+  """
+  The [Spotify user ID](https://developer.spotify.com/documentation/web-api/#spotify-uris-and-ids) for this user.
+  """
+  id: ID!
+
+  """
+  The name displayed on the user's profile. `null` if not available.
+  """
+  displayName: String
+
+  """
+  Information about the followers of this user.
+  """
+  followers: Followers!
+
+  """
+  A link to the Web API endpoint for this user.
+  """
+  href: String!
+
+  """
+  The user's profile image.
+  """
+  images: [Image!]
+
+  """
+  The [Spotify URI](https://developer.spotify.com/documentation/web-api/#spotify-uris-and-ids)
+  for this user.
+  """
+  uri: String!
+}
