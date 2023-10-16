@@ -1,15 +1,21 @@
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { eq } from 'drizzle-orm';
-import { EventMeta, OrganizationEventName } from '@wundergraph/cosmo-connect/dist/webhooks/events_pb';
+import { EventMeta, OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import pino from 'pino';
 import { PartialMessage } from '@bufbuild/protobuf';
 import * as schema from '../../db/schema.js';
+import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
+import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
 import { post } from './utils.js';
 
 interface FederatedGraphSchemaUpdate {
   federated_graph: {
     id: string;
     name: string;
+  };
+  organization: {
+    id: string;
+    slug: string;
   };
   errors: boolean;
   actor_id?: string;
@@ -24,6 +30,7 @@ type Config = {
   key?: string;
   allowedUserEvents?: string[];
   meta: PartialMessage<EventMeta>[];
+  type: string;
 };
 
 export class OrganizationWebhookService {
@@ -31,16 +38,17 @@ export class OrganizationWebhookService {
 
   private synced?: boolean;
 
-  constructor(
-    private db: PostgresJsDatabase<typeof schema>,
-    private organizationId: string,
-    private logger: pino.Logger,
-  ) {
+  private logger: pino.Logger;
+
+  constructor(private db: PostgresJsDatabase<typeof schema>, private organizationId: string, logger: pino.Logger) {
+    this.logger = logger.child({ organizationId });
+
     this.configs = [];
     this.synced = false;
   }
 
   private async syncOrganizationSettings() {
+    const orgRepo = new OrganizationRepository(this.db);
     const orgConfigs = await this.db.query.organizationWebhooks.findMany({
       where: eq(schema.organizationWebhooks.organizationId, this.organizationId),
       with: {
@@ -65,7 +73,23 @@ export class OrganizationWebhookService {
         url: config?.endpoint ?? '',
         key: config?.key ?? '',
         allowedUserEvents: config?.events ?? [],
+        type: 'webhook',
         meta,
+      });
+    }
+
+    const integrations = await orgRepo.getIntegrations(this.organizationId);
+    for (const integration of integrations) {
+      if (integration.type !== 'slack') {
+        continue;
+      }
+
+      this.configs?.push({
+        url: integration.integrationConfig?.config.value?.endpoint ?? '',
+        key: '',
+        allowedUserEvents: integration.events ?? [],
+        type: 'slack',
+        meta: integration.eventsMeta,
       });
     }
 
@@ -103,7 +127,94 @@ export class OrganizationWebhookService {
     }
   }
 
-  private sendEvent<T extends keyof EventMap>(eventName: T, eventPayload: EventMap[T]) {
+  private async constructSlackBody<T extends keyof EventMap>(eventPayload: EventMap[T]) {
+    const fedRepo = new FederatedGraphRepository(this.db, eventPayload.organization.id);
+    const latestChangelogs = await fedRepo.fetchLatestFederatedGraphChangelog(eventPayload.federated_graph.id);
+    const tempData: { blocks: any[]; attachments: any[] } = {
+      blocks: [
+        {
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: `🚀 Schema of the federated graph *<https://cosmo.wundergraph.com/${eventPayload.organization.slug}/graph/${eventPayload.federated_graph.name} | ${eventPayload.federated_graph.name}>* has been updated 🎉`,
+          },
+        },
+      ],
+      attachments: [
+        {
+          color: '#fafafa',
+          blocks: [
+            {
+              type: 'section',
+              text: {
+                type: 'mrkdwn',
+                text: `Click <https://cosmo.wundergraph.com/${eventPayload.organization.slug}/graph/${eventPayload.federated_graph.name}| here> for more details.`,
+              },
+            },
+          ],
+        },
+      ],
+    };
+    if (latestChangelogs) {
+      const addedChanges = latestChangelogs.changelogs.filter(
+        (c) => c.changeType.includes('ADDED') || c.changeType.includes('CHANGED'),
+      );
+      const removedChanges = latestChangelogs.changelogs.filter((c) => c.changeType.includes('REMOVED'));
+      if (removedChanges.length > 0) {
+        tempData.attachments.unshift({
+          color: '#e11d48',
+          blocks: [
+            {
+              type: 'rich_text',
+              elements: [
+                {
+                  type: 'rich_text_list',
+                  style: 'bullet',
+                  elements: removedChanges.map((r) => ({
+                    type: 'rich_text_section',
+                    elements: [
+                      {
+                        type: 'text',
+                        text: r.changeMessage,
+                      },
+                    ],
+                  })),
+                },
+              ],
+            },
+          ],
+        });
+      }
+      if (addedChanges.length > 0) {
+        tempData.attachments.unshift({
+          color: '#22c55e',
+          blocks: [
+            {
+              type: 'rich_text',
+              elements: [
+                {
+                  type: 'rich_text_list',
+                  style: 'bullet',
+                  elements: addedChanges.map((r) => ({
+                    type: 'rich_text_section',
+                    elements: [
+                      {
+                        type: 'text',
+                        text: r.changeMessage,
+                      },
+                    ],
+                  })),
+                },
+              ],
+            },
+          ],
+        });
+      }
+    }
+    return tempData;
+  }
+
+  private async sendEvent<T extends keyof EventMap>(eventName: T, eventPayload: EventMap[T]) {
     if (!this.configs) {
       return;
     }
@@ -113,11 +224,16 @@ export class OrganizationWebhookService {
         continue;
       }
 
-      const data = {
-        version: 1,
-        event: OrganizationEventName[eventName],
-        payload: eventPayload,
-      };
+      let data = {};
+      if (config.type === 'slack') {
+        data = await this.constructSlackBody(eventPayload);
+      } else {
+        data = {
+          version: 1,
+          event: OrganizationEventName[eventName],
+          payload: eventPayload,
+        };
+      }
 
       post(OrganizationEventName[eventName], data, this.logger, 'debug', config.url!, config.key);
     }
@@ -125,7 +241,13 @@ export class OrganizationWebhookService {
 
   send<T extends keyof EventMap>(eventName: T, data: EventMap[T]) {
     if (!this.synced) {
-      this.syncOrganizationSettings().then(() => this.sendEvent(eventName, data));
+      this.syncOrganizationSettings()
+        .then(() => this.sendEvent(eventName, data))
+        .catch((e) => {
+          const logger = this.logger.child({ eventName: OrganizationEventName[eventName] });
+          logger.child({ message: e.message });
+          logger.error(`Could not send webhook event`);
+        });
       return;
     }
 

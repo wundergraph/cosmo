@@ -68,6 +68,10 @@ describe('CheckFederatedGraph', (ctx) => {
         keycloakClient,
         platformWebhooks,
         webBaseUrl,
+        slack: {
+          clientID: '',
+          clientSecret: '',
+        },
       }),
     });
 

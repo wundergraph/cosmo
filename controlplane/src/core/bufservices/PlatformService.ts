@@ -11,10 +11,12 @@ import {
   CreateFederatedGraphResponse,
   CreateFederatedGraphTokenResponse,
   CreateFederatedSubgraphResponse,
+  CreateIntegrationResponse,
   CreateOrganizationWebhookConfigResponse,
   DeleteAPIKeyResponse,
   DeleteFederatedGraphResponse,
   DeleteFederatedSubgraphResponse,
+  DeleteIntegrationResponse,
   DeleteRouterTokenResponse,
   FixSubgraphSchemaResponse,
   ForceCheckSuccessResponse,
@@ -27,6 +29,7 @@ import {
   GetFederatedGraphChangelogResponse,
   GetFederatedGraphSDLByNameResponse,
   GetFederatedGraphsResponse,
+  GetOrganizationIntegrationsResponse,
   GetOrganizationMembersResponse,
   GetOrganizationWebhookConfigsResponse,
   GetOrganizationWebhookMetaResponse,
@@ -40,6 +43,7 @@ import {
   RemoveInvitationResponse,
   RequestSeriesItem,
   UpdateFederatedGraphResponse,
+  UpdateIntegrationConfigResponse,
   UpdateOrganizationDetailsResponse,
   UpdateOrganizationWebhookConfigResponse,
   UpdateSubgraphResponse,
@@ -47,7 +51,7 @@ import {
   GetGraphMetricsResponse,
   GetMetricsErrorRateResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { PlatformEventName, OrganizationEventName } from '@wundergraph/cosmo-connect/dist/webhooks/events_pb';
+import { PlatformEventName, OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import { OpenAIGraphql, buildRouterConfig } from '@wundergraph/cosmo-shared';
 import { parse } from 'graphql';
 import { GraphApiKeyDTO, GraphApiKeyJwtPayload } from '../../types/index.js';
@@ -71,6 +75,7 @@ import { MetricsRepository } from '../repositories/analytics/MetricsRepository.j
 import { handleError, isValidLabelMatchers, isValidLabels } from '../util.js';
 import { OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
 import { GitHubRepository } from '../repositories/GitHubRepository.js';
+import Slack from '../services/Slack.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -133,6 +138,19 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           subgraphRepo,
         });
 
+        orgWebhooks.send(OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED, {
+          federated_graph: {
+            id: federatedGraph.id,
+            name: federatedGraph.name,
+          },
+          organization: {
+            id: authContext.organizationId,
+            slug: authContext.organizationSlug,
+          },
+          errors: compositionErrors.length > 0,
+          actor_id: authContext.userId,
+        });
+
         if (compositionErrors.length > 0) {
           return {
             response: {
@@ -141,15 +159,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             compositionErrors,
           };
         }
-
-        orgWebhooks.send(OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED, {
-          federated_graph: {
-            id: federatedGraph.id,
-            name: federatedGraph.name,
-          },
-          errors: compositionErrors.length > 0,
-          actor_id: authContext.userId,
-        });
 
         return {
           response: {
@@ -789,6 +798,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
                 id: federatedGraph.id,
                 name: federatedGraph.name,
               },
+              organization: {
+                id: authContext.organizationId,
+                slug: authContext.organizationSlug,
+              },
               errors: hasErrors,
               actor_id: authContext.userId,
             });
@@ -1138,6 +1151,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
                 id: federatedGraph.id,
                 name: federatedGraph.name,
               },
+              organization: {
+                id: authContext.organizationId,
+                slug: authContext.organizationSlug,
+              },
               errors: hasErrors,
               actor_id: authContext.userId,
             });
@@ -1189,6 +1206,20 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           labelMatchers: req.labelMatchers,
           routingUrl: req.routingUrl,
         });
+
+        orgWebhooks.send(OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED, {
+          federated_graph: {
+            id: federatedGraph.id,
+            name: federatedGraph.name,
+          },
+          organization: {
+            id: authContext.organizationId,
+            slug: authContext.organizationSlug,
+          },
+          errors: compositionErrors.length > 0,
+          actor_id: authContext.userId,
+        });
+
         if (compositionErrors.length > 0) {
           return {
             response: {
@@ -1197,15 +1228,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             compositionErrors,
           };
         }
-
-        orgWebhooks.send(OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED, {
-          federated_graph: {
-            id: federatedGraph.id,
-            name: federatedGraph.name,
-          },
-          errors: compositionErrors.length > 0,
-          actor_id: authContext.userId,
-        });
 
         return {
           response: {
@@ -1267,6 +1289,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             federated_graph: {
               id: graph.id,
               name: graph.name,
+            },
+            organization: {
+              id: authContext.organizationId,
+              slug: authContext.organizationSlug,
             },
             errors: compositionErrors.length > 0,
             actor_id: authContext.userId,
@@ -2182,6 +2208,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             id: federatedGraph.id,
             name: federatedGraph.name,
           },
+          organization: {
+            id: authContext.organizationId,
+            slug: authContext.organizationSlug,
+          },
           errors: compositionErrors.length > 0,
           actor_id: authContext.userId,
         });
@@ -2807,6 +2837,140 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           federatedGraphId: federatedGraph.id,
           organizationId: authContext.organizationId,
           tokenName: req.tokenName,
+        });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+        };
+      });
+    },
+
+    createIntegration: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<CreateIntegrationResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const orgRepo = new OrganizationRepository(opts.db);
+
+        if (!opts.slack || !opts.slack.clientID || !opts.slack.clientSecret) {
+          throw new Error('Slack env variables must be set to use this feature.');
+        }
+
+        const integration = await orgRepo.getIntegrationByName(authContext.organizationId, req.name);
+        if (integration) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_ALREADY_EXISTS,
+              details: `Integration with name ${req.name} already exists`,
+            },
+          };
+        }
+
+        const slack = new Slack({ clientID: opts.slack.clientID, clientSecret: opts.slack.clientSecret });
+
+        const accessTokenResp = await slack.fetchAccessToken(
+          req.code,
+          `${opts.webBaseUrl}/${authContext.organizationSlug}/integrations`,
+        );
+        if (!accessTokenResp) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: 'Could not set up the integration. Please try again.',
+            },
+          };
+        }
+
+        await slack.addSlackInstallations({
+          accessToken: accessTokenResp.accessToken,
+          db: opts.db,
+          organizationId: authContext.organizationId,
+          slackChannelId: accessTokenResp.slackChannelId,
+          slackChannelName: accessTokenResp.slackChannelName,
+          slackOrganizationId: accessTokenResp.slackOrgId,
+          slackOrganizationName: accessTokenResp.slackOrgName,
+          slackUserId: accessTokenResp.slackUserId,
+        });
+
+        await orgRepo.createIntegration({
+          organizationId: authContext.organizationId,
+          endpoint: accessTokenResp.webhookURL,
+          events: req.events,
+          eventsMeta: req.eventsMeta,
+          name: req.name,
+          type: req.type,
+        });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+        };
+      });
+    },
+
+    getOrganizationIntegrations: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetOrganizationIntegrationsResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const orgRepo = new OrganizationRepository(opts.db);
+
+        const integrations = await orgRepo.getIntegrations(authContext.organizationId);
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          integrations,
+        };
+      });
+    },
+
+    updateIntegrationConfig: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<UpdateIntegrationConfigResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const orgRepo = new OrganizationRepository(opts.db);
+
+        await orgRepo.updateIntegrationConfig({
+          organizationId: authContext.organizationId,
+          ...req,
+        });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+        };
+      });
+    },
+
+    deleteIntegration: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<DeleteIntegrationResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const orgRepo = new OrganizationRepository(opts.db);
+
+        await orgRepo.deleteIntegration({
+          organizationId: authContext.organizationId,
+          id: req.id,
         });
 
         return {

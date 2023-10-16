@@ -1,8 +1,10 @@
-import { useRouter } from "next/router";
-import { Tabs, TabsList, TabsTrigger } from "../ui/tabs";
 import { useSessionStorage } from "@/hooks/use-session-storage";
 import Link from "next/link";
 import { ParsedUrlQueryInput } from "querystring";
+import { useRouter } from "next/router";
+import { BiAnalyse } from "react-icons/bi";
+import { IoBarcodeSharp } from "react-icons/io5";
+import { Tabs, TabsList, TabsTrigger } from "../ui/tabs";
 
 export const AnalyticsToolbar: React.FC<{
   tab: string;
@@ -40,7 +42,9 @@ export const AnalyticsToolbar: React.FC<{
                 query: tracesRoute || query,
               }}
               onClick={updateRoute}
+              className="flex gap-x-2"
             >
+              <BiAnalyse />
               Metrics
             </Link>
           </TabsTrigger>
@@ -51,7 +55,18 @@ export const AnalyticsToolbar: React.FC<{
                 query: props.tab === "overview" ? query : tracesRoute,
               }}
               onClick={updateRoute}
+              href={
+                props.tab === "overview" || !tracesRoute
+                  ? {
+                      pathname:
+                        "/[organizationSlug]/graph/[slug]/analytics/traces",
+                      query,
+                    }
+                  : tracesRoute
+              }
+              className="flex gap-x-2"
             >
+              <IoBarcodeSharp size="18px" />
               Traces
             </Link>
           </TabsTrigger>
