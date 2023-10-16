@@ -82,17 +82,21 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
     let subscriptionProtocol: GraphQLSubscriptionProtocol;
     switch (subgraph.subscriptions?.protocol ?? '') {
       case '':
-      case 'graphql-ws':
+      case 'graphql-ws': {
         subscriptionProtocol = GraphQLSubscriptionProtocol.GRAPHQL_SUBSCRIPTION_PROTOCOL_GRAPHQL_WS;
         break;
-      case 'sse':
+      }
+      case 'sse': {
         subscriptionProtocol = GraphQLSubscriptionProtocol.GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE;
         break;
-      case 'sse-post':
+      }
+      case 'sse-post': {
         subscriptionProtocol = GraphQLSubscriptionProtocol.GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE_POST;
         break;
-      default:
+      }
+      default: {
         throw new Error(`unknown subscription protocol ${subgraph.subscriptions?.protocol} in subgraph ${subgraph.name}`);
+      }
     }
     const datasourceConfig = new DataSourceConfiguration({
       // When changing this, please do it in the router subgraph override as well
