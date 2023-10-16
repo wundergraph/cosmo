@@ -77,6 +77,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 				w.WriteHeader(statusCode)
 				writeRequestErrors(graphql.RequestErrorsFromError(internalServerErrorErr), w, requestLogger)
 			}
+			return
 		}
 
 		if metrics != nil {
