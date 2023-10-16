@@ -22,29 +22,12 @@ import {
 import { NextPageWithLayout } from "@/lib/page";
 import { GraphQLField, parseSchema } from "@/lib/schemaParser";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
-import { TooltipArrow } from "@radix-ui/react-tooltip";
 import { useQuery } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { getFederatedGraphSDLByName } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useState } from "react";
-
-const WarningTooltip = ({ children }: { children?: React.ReactNode }) => {
-  return (
-    <Tooltip delayDuration={50}>
-      <TooltipTrigger>
-        <span className="text-sm text-muted-foreground">
-          <ExclamationTriangleIcon className="h-4 w-4 text-destructive/40" />
-        </span>
-      </TooltipTrigger>
-      <TooltipContent>
-        <TooltipArrow />
-        {children}
-      </TooltipContent>
-    </Tooltip>
-  );
-};
 
 const Fields = (props: { fields: GraphQLField[] }) => {
   return (
