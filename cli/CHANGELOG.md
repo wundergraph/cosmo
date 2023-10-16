@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.20.2](https://github.com/wundergraph/cosmo/compare/wgc@0.20.1...wgc@0.20.2) (2023-10-16)
+
+### Bug Fixes
+
+* allow absolute paths for the wgc compose output file ([#187](https://github.com/wundergraph/cosmo/issues/187)) ([7cc8b7f](https://github.com/wundergraph/cosmo/commit/7cc8b7f72722e15f67a2a24a8c19ec1d5f916b80)) (@fiam)
+
 ## [0.20.1](https://github.com/wundergraph/cosmo/compare/wgc@0.20.0...wgc@0.20.1) (2023-10-13)
 
 **Note:** Version bump only for package wgc

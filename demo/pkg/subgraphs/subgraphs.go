@@ -29,6 +29,11 @@ type Config struct {
 
 type Subgraphs struct {
 	servers []*http.Server
+	ports   Ports
+}
+
+func (s *Subgraphs) Ports() Ports {
+	return s.ports
 }
 
 func (s *Subgraphs) Shutdown(ctx context.Context) error {
@@ -78,5 +83,6 @@ func New(config *Config) (*Subgraphs, error) {
 	}
 	return &Subgraphs{
 		servers: servers,
+		ports:   config.Ports,
 	}, nil
 }
