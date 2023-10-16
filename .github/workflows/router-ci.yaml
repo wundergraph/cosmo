@@ -59,6 +59,9 @@ jobs:
         working-directory: ./router
         run: make build
 
+      - name: Install latest wgc to run composition in integration tests
+        run: npm install -y -g wgc@latest
+
       - name: Run Integration tests
         working-directory: ./router-tests
         run: go test -race ./...
