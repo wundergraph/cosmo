@@ -693,13 +693,23 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 
 		subChiRouter.Use(r.routerMiddlewares...)
 		subChiRouter.Post("/", graphqlHandler.ServeHTTP)
-		subChiRouter.Get("/", graphqlPlaygroundHandler.ServeHTTP)
+		if r.playground {
+			subChiRouter.Get("/", graphqlPlaygroundHandler.ServeHTTP)
+		}
 	})
 
 	r.logger.Debug("GraphQLHandler registered",
 		zap.String("method", http.MethodPost),
 		zap.String("path", r.graphqlPath),
 	)
+
+	if r.playground {
+		httpRouter.Get("/", graphqlPlaygroundHandler.ServeHTTP)
+		r.logger.Debug("GraphQLHandler playground registered",
+			zap.String("method", http.MethodGet),
+			zap.String("path", "/"),
+		)
+	}
 
 	ro.Server = &http.Server{
 		Addr: r.listenAddr,
