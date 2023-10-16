@@ -11,6 +11,7 @@ require (
 	github.com/wundergraph/cosmo/demo v0.0.0-00010101000000-000000000000
 	github.com/wundergraph/cosmo/router v0.0.0-00010101000000-000000000000
 	go.uber.org/zap v1.24.0
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
@@ -111,6 +112,5 @@ require (
 	google.golang.org/grpc v1.58.2 // indirect
 	google.golang.org/protobuf v1.31.0 // indirect
 	gopkg.in/cenkalti/backoff.v1 v1.1.0 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 	nhooyr.io/websocket v1.8.7 // indirect
 )
