@@ -38,17 +38,19 @@ type PreHandlerOptions struct {
 }
 
 type PreHandler struct {
-	log            *zap.Logger
-	executor       *Executor
-	requestMetrics *metric.Metrics
-	documentPool   *sync.Pool
+	log               *zap.Logger
+	executor          *Executor
+	requestMetrics    *metric.Metrics
+	documentPool      *sync.Pool
+	maxBodyByteLength int64
 }
 
 func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 	return &PreHandler{
-		log:            opts.Logger,
-		executor:       opts.Executor,
-		requestMetrics: opts.requestMetrics,
+		log:               opts.Logger,
+		executor:          opts.Executor,
+		requestMetrics:    opts.requestMetrics,
+		maxBodyByteLength: 5 * 1024 * 1024, // 5 MB,
 		documentPool: &sync.Pool{
 			New: func() interface{} {
 				return ast.NewSmallDocument()
@@ -88,8 +90,10 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		requestLogger := h.log.With(logging.WithRequestID(middleware.GetReqID(r.Context())))
 
 		buf := pool.GetBytesBuffer()
+		limitedReader := &io.LimitedReader{R: r.Body, N: h.maxBodyByteLength}
 		defer pool.PutBytesBuffer(buf)
-		_, err := io.Copy(buf, r.Body)
+
+		_, err := io.Copy(buf, limitedReader)
 		if err != nil {
 			statusCode = http.StatusInternalServerError
 			requestLogger.Error("failed to read request body", zap.Error(err))
