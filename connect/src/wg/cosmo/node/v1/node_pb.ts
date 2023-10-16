@@ -142,9 +142,9 @@ proto3.util.setEnumType(HTTPMethod, "wg.cosmo.node.v1.HTTPMethod", [
  */
 export enum GraphQLSubscriptionProtocol {
   /**
-   * @generated from enum value: GRAPHQL_SUBSCRIPTION_PROTOCOL_GRAPHQL_WS = 0;
+   * @generated from enum value: GRAPHQL_SUBSCRIPTION_PROTOCOL_WS = 0;
    */
-  GRAPHQL_SUBSCRIPTION_PROTOCOL_GRAPHQL_WS = 0,
+  GRAPHQL_SUBSCRIPTION_PROTOCOL_WS = 0,
 
   /**
    * @generated from enum value: GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE = 1;
@@ -158,7 +158,7 @@ export enum GraphQLSubscriptionProtocol {
 }
 // Retrieve enum metadata with: proto3.getEnumType(GraphQLSubscriptionProtocol)
 proto3.util.setEnumType(GraphQLSubscriptionProtocol, "wg.cosmo.node.v1.GraphQLSubscriptionProtocol", [
-  { no: 0, name: "GRAPHQL_SUBSCRIPTION_PROTOCOL_GRAPHQL_WS" },
+  { no: 0, name: "GRAPHQL_SUBSCRIPTION_PROTOCOL_WS" },
   { no: 1, name: "GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE" },
   { no: 2, name: "GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE_POST" },
 ]);
@@ -1345,7 +1345,7 @@ export class GraphQLSubscriptionConfiguration extends Message<GraphQLSubscriptio
   /**
    * @generated from field: wg.cosmo.node.v1.GraphQLSubscriptionProtocol protocol = 4;
    */
-  protocol = GraphQLSubscriptionProtocol.GRAPHQL_SUBSCRIPTION_PROTOCOL_GRAPHQL_WS;
+  protocol = GraphQLSubscriptionProtocol.GRAPHQL_SUBSCRIPTION_PROTOCOL_WS;
 
   constructor(data?: PartialMessage<GraphQLSubscriptionConfiguration>) {
     super();

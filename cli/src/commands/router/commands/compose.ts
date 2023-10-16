@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs';
 import { readFile, writeFile } from 'node:fs/promises';
-import { SubscriptionProtocol, buildRouterConfig, normalizeURL } from '@wundergraph/cosmo-shared';
+import { buildRouterConfig, normalizeURL } from '@wundergraph/cosmo-shared';
 import { Command, program } from 'commander';
 import { parse, printSchema } from 'graphql';
 import * as yaml from 'js-yaml';
@@ -18,8 +18,8 @@ type Config = {
       file: string;
     };
     subscriptions?: {
-      protocol?: SubscriptionProtocol;
-    },
+      protocol?: 'ws' | 'sse' | 'sse-post';
+    };
     introspection?: {
       url: string;
       headers?: {

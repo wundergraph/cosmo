@@ -27,11 +27,11 @@ export interface Input {
 /**
  * Protocol used when subscribing to a subgraph.
  *
- * graphql-ws: Uses the graphql-ws protocol
+ * ws: Negotiates an appropriate protocol over websockets. Both https://github.com/enisdenjo/graphql-ws/blob/master/PROTOCOL.md and https://github.com/apollographql/subscriptions-transport-ws/blob/master/PROTOCOL.md are supported
  * sse: Uses the Server-Sent Events protocol with a GET request
  * sse-post: Uses the Server-Sent Events protocol with a POST request
  */
-export type SubscriptionProtocol = 'graphql-ws' | 'sse' | 'sse-post';
+export type SubscriptionProtocol = 'ws' | 'sse' | 'sse-post';
 
 export interface Subgraph {
   id: string;
@@ -82,8 +82,8 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
     let subscriptionProtocol: GraphQLSubscriptionProtocol;
     switch (subgraph.subscriptions?.protocol ?? '') {
       case '':
-      case 'graphql-ws': {
-        subscriptionProtocol = GraphQLSubscriptionProtocol.GRAPHQL_SUBSCRIPTION_PROTOCOL_GRAPHQL_WS;
+      case 'ws': {
+        subscriptionProtocol = GraphQLSubscriptionProtocol.GRAPHQL_SUBSCRIPTION_PROTOCOL_WS;
         break;
       }
       case 'sse': {
