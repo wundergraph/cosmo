@@ -1,6 +1,7 @@
 import { UserContext } from "@/components/app-provider";
 import { EmptyState } from "@/components/empty-state";
 import { getDashboardLayout } from "@/components/layout/dashboard-layout";
+import { EventsMeta, Meta, NotificationTabs, notificationEvents } from "@/components/notifications/components";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,12 +15,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   Form,
   FormControl,
@@ -44,7 +39,6 @@ import { SubmitHandler, useZodForm } from "@/hooks/use-form";
 import { docsBaseURL } from "@/lib/constants";
 import { NextPageWithLayout } from "@/lib/page";
 import { cn } from "@/lib/utils";
-import { PartialMessage } from "@bufbuild/protobuf";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { Pencil1Icon, PlusIcon, TrashIcon } from "@radix-ui/react-icons";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -52,21 +46,16 @@ import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb
 import {
   createOrganizationWebhookConfig,
   deleteOrganizationWebhookConfig,
-  getFederatedGraphs,
   getOrganizationWebhookConfigs,
   getOrganizationWebhookMeta,
-  updateOrganizationWebhookConfig,
+  updateOrganizationWebhookConfig
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import {
-  EventMeta,
-  OrganizationEventName,
-} from "@wundergraph/cosmo-connect/dist/webhooks/events_pb";
 import Link from "next/link";
-import { useContext, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/router";
+import { useContext, useEffect, useState } from "react";
 import { PiWebhooksLogo } from "react-icons/pi";
 import { z } from "zod";
 
-type EventsMeta = Array<PartialMessage<EventMeta>>;
 
 const DeleteWebhook = ({
   id,
@@ -142,101 +131,6 @@ const DeleteWebhook = ({
   );
 };
 
-const SelectFederatedGraphs = ({
-  meta,
-  setMeta,
-}: {
-  meta: EventsMeta;
-  setMeta: (meta: EventsMeta) => void;
-}) => {
-  const { data } = useQuery(getFederatedGraphs.useQuery());
-
-  const graphIds = useMemo(() => {
-    const entry = meta.find(
-      (m) =>
-        m.eventName === OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED
-    );
-    if (entry?.meta?.case !== "federatedGraphSchemaUpdated") return [];
-    return entry.meta.value.graphIds ?? [];
-  }, [meta]);
-
-  const onCheckedChange = (val: boolean, graphId: string) => {
-    const tempMeta: EventsMeta = [...meta];
-    const newGraphIds: string[] = [];
-
-    if (val) {
-      newGraphIds.push(...Array.from(new Set([...graphIds, graphId])));
-    } else {
-      newGraphIds.push(...graphIds.filter((g) => g !== graphId));
-    }
-
-    const entry: EventsMeta[number] = {
-      eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
-      meta: {
-        case: "federatedGraphSchemaUpdated",
-        value: {
-          graphIds: newGraphIds,
-        },
-      },
-    };
-
-    const idx = tempMeta.findIndex(
-      (v) =>
-        v.eventName === OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED
-    );
-
-    if (idx === -1) {
-      tempMeta.push(entry);
-    } else {
-      tempMeta[idx] = entry;
-    }
-
-    setMeta(tempMeta);
-  };
-
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button size="sm" variant="outline">
-          {graphIds.length > 0
-            ? `${graphIds.length} selected`
-            : "Select graphs"}
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="">
-        {data?.graphs?.map((graph) => {
-          return (
-            <DropdownMenuCheckboxItem
-              key={graph.id}
-              checked={graphIds.includes(graph.id)}
-              onCheckedChange={(val) => onCheckedChange(val, graph.id)}
-              onSelect={(e) => e.preventDefault()}
-            >
-              {graph.name}
-            </DropdownMenuCheckboxItem>
-          );
-        })}
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-};
-
-const Meta = ({
-  id,
-  meta,
-  setMeta,
-}: {
-  id: OrganizationEventName;
-  meta: EventsMeta;
-  setMeta: (meta: EventsMeta) => void;
-}) => {
-  if (id == OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED) {
-    return <SelectFederatedGraphs meta={meta} setMeta={setMeta} />;
-  }
-
-  return null;
-};
-
 const FormSchema = z.object({
   endpoint: z
     .string()
@@ -253,17 +147,6 @@ const FormSchema = z.object({
 });
 
 type Input = z.infer<typeof FormSchema>;
-
-const webhookEvents = [
-  {
-    id: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
-    name: OrganizationEventName[
-      OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED
-    ],
-    label: "Federated Graph Schema Update",
-    description: "An update to the schema of any federated graph",
-  },
-] as const;
 
 const Webhook = ({
   mode,
@@ -512,7 +395,7 @@ const Webhook = ({
                         Select the events for which you want webhooks to fire
                       </FormDescription>
                     </div>
-                    {webhookEvents.map((event) => (
+                    {notificationEvents.map((event) => (
                       <FormField
                         key={event.id}
                         control={form.control}
@@ -580,13 +463,10 @@ const Webhook = ({
 
 const WebhooksPage: NextPageWithLayout = () => {
   const user = useContext(UserContext);
+  const router = useRouter();
   const { data, isLoading, error, refetch } = useQuery({
     ...getOrganizationWebhookConfigs.useQuery(),
-    queryKey: [
-      user?.currentOrganization.slug || "",
-      "GetOrganizationWebhookConfigs",
-      {},
-    ],
+    queryKey: [user?.currentOrganization.slug || "", router.asPath || "", {}],
   });
 
   if (isLoading) return <Loader fullscreen />;
@@ -629,7 +509,7 @@ const WebhooksPage: NextPageWithLayout = () => {
   return (
     <div className="flex flex-col gap-y-6">
       <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
-        <p className="text-sm text-muted-foreground">
+        <p className="ml-1 text-sm text-muted-foreground">
           Webhooks are used to receive certain events from the platform.{" "}
           <Link
             href={docsBaseURL + "/studio/webhooks"}
@@ -690,7 +570,10 @@ const WebhooksPage: NextPageWithLayout = () => {
 
 WebhooksPage.getLayout = (page) => {
   return getDashboardLayout(
-    page,
+    <div className="flex flex-col gap-y-4">
+      <NotificationTabs tab="webhooks" />
+      <>{page}</>
+    </div>,
     "Webhooks",
     "Configure webhooks for your organization"
   );
