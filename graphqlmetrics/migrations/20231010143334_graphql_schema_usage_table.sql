@@ -1,6 +1,6 @@
 -- migrate:up
 
-create table graphql_schema_field_usage_reports
+CREATE TABLE IF NOT EXISTS gql_metrics_schema_usage
 (
     Timestamp DateTime64(9) CODEC(Delta, ZSTD(1)),
 
@@ -13,6 +13,7 @@ create table graphql_schema_field_usage_reports
 
     -- Operation
     OperationHash String CODEC(ZSTD(1)),
+    OperationName LowCardinality(String) CODEC(ZSTD(1)),
     OperationType LowCardinality(String) CODEC(ZSTD(1)), -- query, mutation, subscription
 
     -- Define how often a field is used. Useful for batching at the collection layer.
@@ -48,4 +49,4 @@ create table graphql_schema_field_usage_reports
 
 -- migrate:down
 
-DROP TABLE graphql_schema_field_usage_reports;
+DROP TABLE gql_metrics_schema_usage;

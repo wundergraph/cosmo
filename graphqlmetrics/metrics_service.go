@@ -109,13 +109,13 @@ func (s *MetricsService) PublishGraphQLMetrics(
 	// Important: Wait for completion of all queries before returning to guarantee that all data is written
 	ctx = clickhouse.Context(ctx, clickhouse.WithStdAsync(true))
 
-	batchOperationStmts, err := scopeOperationBatch.PrepareContext(ctx, `INSERT INTO graphql_operations`)
+	batchOperationStmts, err := scopeOperationBatch.PrepareContext(ctx, `INSERT INTO gql_metrics_operations`)
 	if err != nil {
 		s.logger.Error("Failed to prepare operation batch statement", zap.Error(err))
 		return nil, errOperationWriteFailed
 	}
 
-	batchSchemaUsageStmts, err := scopeFieldUsageBatch.PrepareContext(ctx, `INSERT INTO graphql_schema_field_usage_reports`)
+	batchSchemaUsageStmts, err := scopeFieldUsageBatch.PrepareContext(ctx, `INSERT INTO gql_metrics_schema_usage`)
 	if err != nil {
 		s.logger.Error("Failed to prepare field usage batch statement", zap.Error(err))
 		return nil, errMetricWriteFailed
@@ -125,11 +125,15 @@ func (s *MetricsService) PublishGraphQLMetrics(
 
 	for _, schemaUsage := range req.Msg.SchemaUsage {
 
+		operationType := strings.ToLower(schemaUsage.OperationInfo.Type.String())
+
 		// If the operation is already in the cache, we can skip it and don't write it again
 		if _, ok := s.opGuardCache.Get(schemaUsage.OperationInfo.Hash); !ok {
 			_, err := batchOperationStmts.ExecContext(ctx,
 				insertTime,
 				schemaUsage.OperationInfo.Hash,
+				schemaUsage.OperationInfo.Name,
+				operationType,
 				schemaUsage.RequestDocument,
 			)
 			if err != nil {
@@ -145,7 +149,8 @@ func (s *MetricsService) PublishGraphQLMetrics(
 				claims.FederatedGraphID,
 				schemaUsage.SchemaInfo.Version,
 				schemaUsage.OperationInfo.Hash,
-				strings.ToLower(schemaUsage.OperationInfo.Type.String()),
+				schemaUsage.OperationInfo.Name,
+				operationType,
 				fieldUsage.Count,
 				fieldUsage.Path,
 				fieldUsage.TypeNames,
@@ -159,7 +164,6 @@ func (s *MetricsService) PublishGraphQLMetrics(
 				return nil, errMetricWriteFailed
 			}
 		}
-
 	}
 
 	err = scopeOperationBatch.Commit()

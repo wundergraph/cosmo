@@ -3,11 +3,14 @@ package main
 import (
 	"context"
 	"github.com/ClickHouse/clickhouse-go/v2"
+	"github.com/amacneil/dbmate/v2/pkg/dbmate"
+	_ "github.com/amacneil/dbmate/v2/pkg/driver/clickhouse"
 	"github.com/wundergraph/cosmo/graphqlmetrics"
 	"github.com/wundergraph/cosmo/graphqlmetrics/config"
 	"github.com/wundergraph/cosmo/graphqlmetrics/internal/logging"
 	"go.uber.org/zap"
 	"log"
+	"net/url"
 	"os"
 	"os/signal"
 	"syscall"
@@ -40,7 +43,7 @@ func main() {
 	)
 	defer stop()
 
-	options, err := clickhouse.ParseDSN(cfg.ClickHouseDSN)
+	options, err := clickhouse.ParseDSN(cfg.ClickHouseHttpDSN)
 	if err != nil {
 		log.Fatal("Could not parse dsn", zap.Error(err))
 	}
@@ -77,6 +80,20 @@ func main() {
 		log.Fatal("Could not ping clickhouse", zap.Error(err))
 	} else {
 		logger.Info("Connected to clickhouse")
+	}
+
+	// Database migrations
+
+	chDNS, _ := url.Parse(cfg.ClickHouseDSN)
+	migrator := dbmate.New(chDNS)
+	migrator.MigrationsDir = []string{"migrations"}
+	migrator.AutoDumpSchema = false
+	migrator.Log = zap.NewStdLog(logger).Writer()
+	migrator.MigrationsTableName = "graphqlmetrics_schema_migrations"
+	if err := migrator.Migrate(); err != nil {
+		log.Fatal("Could not migrate", zap.Error(err))
+	} else {
+		logger.Info("Migration is up to date")
 	}
 
 	svr := graphqlmetrics.NewServer(

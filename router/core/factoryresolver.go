@@ -97,6 +97,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration) (*plan.Configura
 	var (
 		outConfig plan.Configuration
 	)
+	// attach field usage information to the plan
 	outConfig.IncludeInfo = l.includeInfo
 	outConfig.DefaultFlushIntervalMillis = engineConfig.DefaultFlushInterval
 	for _, configuration := range engineConfig.FieldConfigurations {

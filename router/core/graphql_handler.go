@@ -293,7 +293,6 @@ func (h *GraphQLHandler) exportSchemaUsageInfo(operationID string, schemaUsageIn
 			Version: operationContext.client.version,
 		},
 	})
-
 }
 
 func (h *GraphQLHandler) preparePlan(requestOperationName []byte, requestOperationContent string) (planWithMetaData, error) {

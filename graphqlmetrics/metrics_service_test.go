@@ -75,7 +75,7 @@ func TestPublishGraphQLMetrics(t *testing.T) {
 
 	var opCount int
 	require.NoError(t, db.QueryRow(`
-		SELECT COUNT(*) FROM graphql_operations
+		SELECT COUNT(*) FROM gql_metrics_operations
     	WHERE OperationHash = 'hash123' AND
     	OperationContent = 'query Hello { hello }'
     	GROUP BY OperationHash LIMIT 1
@@ -85,7 +85,7 @@ func TestPublishGraphQLMetrics(t *testing.T) {
 
 	var fieldUsageCount int
 	require.NoError(t, db.QueryRow(`
-		SELECT COUNT(*) FROM graphql_schema_field_usage_reports
+		SELECT COUNT(*) FROM gql_metrics_schema_usage
 		WHERE OperationHash = 'hash123' AND
 		RouterConfigVersion = 'v1' AND
 		Attributes['test'] = 'test123' AND

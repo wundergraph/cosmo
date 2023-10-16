@@ -170,8 +170,8 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		}
 
 		// Add client info to trace span
-		clientName := ctrace.GetClientInfo(r.Header, "graphql-client-name", "apollographql-client-name", "unknown")
-		clientVersion := ctrace.GetClientInfo(r.Header, "graphql-client-version", "apollographql-client-version", "missing")
+		clientName := ctrace.GetClientInfo(r.Header, "graphql-client-name", "apollographql-client-name", "")
+		clientVersion := ctrace.GetClientInfo(r.Header, "graphql-client-version", "apollographql-client-version", "")
 
 		// Add client info to trace span attributes
 		span.SetAttributes(otel.WgClientName.String(clientName))

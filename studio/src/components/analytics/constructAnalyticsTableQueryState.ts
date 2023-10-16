@@ -21,7 +21,7 @@ export const createFilterState = ({
     filterState.push({
       id: "operationName",
       value:
-        operationName === "unknown"
+        operationName === "" // empty string means "unknown operation"
           ? [
               `{"label":"-","operator":${AnalyticsViewFilterOperator.EQUALS},"value":""}`,
             ]
