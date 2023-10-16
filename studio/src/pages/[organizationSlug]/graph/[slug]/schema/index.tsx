@@ -48,7 +48,7 @@ const WarningTooltip = ({ children }: { children?: React.ReactNode }) => {
 
 const Fields = (props: { fields: GraphQLField[] }) => {
   return (
-    <Table className="min-w-[1200px]">
+    <Table className="min-w-[1100px]">
       <TableHeader>
         <TableRow>
           <TableHead className="w-3/12">Field</TableHead>
