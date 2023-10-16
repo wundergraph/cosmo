@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/jensneuse/abstractlogger"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/staticdatasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
@@ -63,9 +64,14 @@ func NewDefaultFactoryResolver(transportFactory ApiTransportFactory, baseTranspo
 func (d *DefaultFactoryResolver) Resolve(ds *nodev1.DataSourceConfiguration) (plan.PlannerFactory, error) {
 	switch ds.Kind {
 	case nodev1.DataSourceKind_GRAPHQL:
+		var logger abstractlogger.Logger
+		if d.log != nil {
+			logger = abstractlogger.NewZapLogger(d.log, abstractlogger.DebugLevel)
+		}
 		factory := &graphql_datasource.Factory{
 			HTTPClient:      d.graphql.HTTPClient,
 			StreamingClient: d.graphql.StreamingClient,
+			Logger:          logger,
 		}
 		return factory, nil
 	case nodev1.DataSourceKind_STATIC:
