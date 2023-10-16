@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS gql_metrics_schema_usage
     RouterConfigVersion LowCardinality(String) CODEC(ZSTD(1)), -- running schema version
 
     -- Operation
-    OperationHash String CODEC(ZSTD(1)),
+    OperationHash LowCardinality(String) CODEC(ZSTD(1)),
     OperationName LowCardinality(String) CODEC(ZSTD(1)),
     OperationType LowCardinality(String) CODEC(ZSTD(1)), -- query, mutation, subscription
 
