@@ -11,7 +11,7 @@ import {
   HTTPMethod,
   InternedString,
   RouterConfig,
-  GraphQLSubscriptionProtocol
+  GraphQLSubscriptionProtocol,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import {
   argumentConfigurationDatasToFieldConfigurations,
@@ -26,7 +26,7 @@ export interface Input {
 
 /**
  * Protocol used when subscribing to a subgraph.
- * 
+ *
  * graphql-ws: Uses the graphql-ws protocol
  * sse: Uses the Server-Sent Events protocol with a GET request
  * sse-post: Uses the Server-Sent Events protocol with a POST request
@@ -43,7 +43,7 @@ export interface Subgraph {
      * The protocol to use for subscriptions. If not set, defaults to graphql-ws.
      */
     protocol?: SubscriptionProtocol;
-  }
+  };
 }
 
 export const internString = (config: EngineConfiguration, str: string): InternedString => {
@@ -95,7 +95,9 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
         break;
       }
       default: {
-        throw new Error(`unknown subscription protocol ${subgraph.subscriptions?.protocol} in subgraph ${subgraph.name}`);
+        throw new Error(
+          `unknown subscription protocol ${subgraph.subscriptions?.protocol} in subgraph ${subgraph.name}`,
+        );
       }
     }
     const datasourceConfig = new DataSourceConfiguration({
