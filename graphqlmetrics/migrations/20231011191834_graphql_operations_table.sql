@@ -2,11 +2,12 @@
 
 CREATE TABLE IF NOT EXISTS gql_metrics_operations
 (
-    Timestamp DateTime64(9) CODEC(Delta, ZSTD(1)),
-    OperationName LowCardinality(String) CODEC(ZSTD(1)),
-    OperationHash LowCardinality(String) CODEC(ZSTD(1)),
-    OperationType LowCardinality(String) CODEC(ZSTD(1)), -- query, mutation, subscription
-    OperationContent String CODEC(ZSTD(1)),
+    -- See https://github.com/PostHog/posthog/issues/10616 why ZSTD(3) is used
+    Timestamp DateTime64(9) CODEC(Delta, ZSTD(3)),
+    OperationName LowCardinality(String) CODEC(ZSTD(3)),
+    OperationHash LowCardinality(String) CODEC(ZSTD(3)),
+    OperationType LowCardinality(String) CODEC(ZSTD(3)), -- query, mutation, subscription
+    OperationContent String CODEC(ZSTD(3)),
 
     INDEX idx_operation_hash OperationHash TYPE bloom_filter(0.001) GRANULARITY 1,
     INDEX idx_operation_name OperationName TYPE bloom_filter(0.001) GRANULARITY 1,
