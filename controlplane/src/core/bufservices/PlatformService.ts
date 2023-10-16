@@ -50,6 +50,7 @@ import {
   WhoAmIResponse,
   GetGraphMetricsResponse,
   GetMetricsErrorRateResponse,
+  IsGitHubAppInstalledResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { PlatformEventName, OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import { OpenAIGraphql, buildRouterConfig } from '@wundergraph/cosmo-shared';
@@ -2985,6 +2986,62 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           response: {
             code: EnumStatusCode.OK,
           },
+        };
+      });
+    },
+
+    isGitHubAppInstalled: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<IsGitHubAppInstalledResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const orgRepository = new OrganizationRepository(opts.db);
+
+        if (!opts.githubApp) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: 'GitHub app integration is disabled',
+            },
+            isInstalled: false,
+          };
+        }
+
+        const org = orgRepository.byId(authContext.organizationId);
+        if (!org) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: 'Organization not found',
+            },
+            isInstalled: false,
+          };
+        }
+
+        if (!req.gitInfo) {
+          return {
+            response: {
+              code: EnumStatusCode.OK,
+            },
+            isInstalled: false,
+          };
+        }
+
+        const githubRepository = new GitHubRepository(opts.db, opts.githubApp);
+        const isInstalled = await githubRepository.isAppInstalledOnRepo({
+          accountId: req.gitInfo.accountId,
+          repoSlug: req.gitInfo.repositorySlug,
+          ownerSlug: req.gitInfo.ownerSlug,
+        });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          isInstalled,
         };
       });
     },

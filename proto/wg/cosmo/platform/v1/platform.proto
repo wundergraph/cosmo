@@ -843,6 +843,15 @@ message ForceCheckSuccessResponse {
   Response response = 1;
 }
 
+message IsGitHubAppInstalledRequest {
+  GitInfo git_info = 1;
+}
+
+message IsGitHubAppInstalledResponse {
+  Response response = 1;
+  bool is_installed = 2;
+}
+
 service PlatformService {
   // CreateFederatedGraph creates a federated graph on the control plane.
   rpc CreateFederatedGraph(CreateFederatedGraphRequest) returns (CreateFederatedGraphResponse) {}
@@ -939,6 +948,9 @@ service PlatformService {
   rpc UpdateOrganizationDetails(UpdateOrganizationDetailsRequest) returns (UpdateOrganizationDetailsResponse) {}
   // UpdateOrgMemberRole updates the role of an org member
   rpc UpdateOrgMemberRole(UpdateOrgMemberRoleRequest) returns (UpdateOrgMemberRoleResponse) {}
+
+  // IsGitHubAppInstalled checks if the cosmo github app is installed to a repository
+  rpc IsGitHubAppInstalled(IsGitHubAppInstalledRequest) returns (IsGitHubAppInstalledResponse) {}
 
   // Analytics
 
