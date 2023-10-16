@@ -77,6 +77,8 @@ func TestPublishGraphQLMetrics(t *testing.T) {
 	require.NoError(t, db.QueryRow(`
 		SELECT COUNT(*) FROM gql_metrics_operations
     	WHERE OperationHash = 'hash123' AND
+		OperationName = 'Hello' AND
+		OperationType = 'query' AND
     	OperationContent = 'query Hello { hello }'
     	GROUP BY OperationHash LIMIT 1
 	`).Scan(&opCount))

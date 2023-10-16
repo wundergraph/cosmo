@@ -131,8 +131,8 @@ func (s *MetricsService) PublishGraphQLMetrics(
 		if _, ok := s.opGuardCache.Get(schemaUsage.OperationInfo.Hash); !ok {
 			_, err := batchOperationStmts.ExecContext(ctx,
 				insertTime,
-				schemaUsage.OperationInfo.Hash,
 				schemaUsage.OperationInfo.Name,
+				schemaUsage.OperationInfo.Hash,
 				operationType,
 				schemaUsage.RequestDocument,
 			)
