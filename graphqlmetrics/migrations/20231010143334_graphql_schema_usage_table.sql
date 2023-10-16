@@ -43,8 +43,8 @@ CREATE TABLE IF NOT EXISTS gql_metrics_schema_usage
 )
     engine = MergeTree PARTITION BY toDate(Timestamp)
         ORDER BY (OrganizationID, FederatedGraphID, ClientName, ClientVersion, RouterConfigVersion, OperationHash, toUnixTimestamp(Timestamp))
-        -- We keep 3 days of data as rolling window
-        TTL toDateTime(Timestamp) + toIntervalDay(3)
+        -- We keep 90 days of data as rolling window
+        TTL toDateTime(Timestamp) + toIntervalDay(90)
         SETTINGS index_granularity = 8192, ttl_only_drop_parts = 1;
 
 -- migrate:down
