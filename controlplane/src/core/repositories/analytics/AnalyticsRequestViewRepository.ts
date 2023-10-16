@@ -451,6 +451,7 @@ export class AnalyticsRequestViewRepository {
       -- Only root spans(spans which have no parent span) and has no condition on SpanKind as a span can start from either the server or the client
         empty(ParentSpanId)
         AND SpanAttributes['wg.federated_graph.id'] = '${federatedGraphId}'
+      ORDER BY Timestamp DESC
       LIMIT 100
     `;
 
@@ -486,6 +487,7 @@ export class AnalyticsRequestViewRepository {
         empty(ParentSpanId)
         AND SpanAttributes['wg.federated_graph.id'] = '${federatedGraphId}'
         ${whereSql}
+      ORDER BY Timestamp DESC
       LIMIT 100
     `;
 
