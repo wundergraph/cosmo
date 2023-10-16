@@ -12,7 +12,6 @@ import (
 )
 
 const (
-	// logger field name must be aligned with fastify
 	requestIDField = "reqId"
 )
 

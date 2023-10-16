@@ -109,9 +109,9 @@ type GlobalSubgraphRequestRule struct {
 	KeepAliveProbeInterval time.Duration `yaml:"keep_alive_probe_interval" default:"30s"`
 }
 
-type OperationChecks struct {
-	Enabled           bool   `yaml:"enabled" default:"true" envconfig:"OPERATION_CHECKS_ENABLED"`
-	CollectorEndpoint string `yaml:"collector_endpoint" default:"https://cosmo-metrics.wundergraph.com" envconfig:"OPERATION_CHECKS_COLLECTOR_ENDPOINT"`
+type GraphqlMetrics struct {
+	Enabled           bool   `yaml:"enabled" default:"true" envconfig:"GRAPHQL_METRICS_ENABLED"`
+	CollectorEndpoint string `yaml:"collector_endpoint" default:"https://cosmo-metrics.wundergraph.com" envconfig:"GRAPHQL_METRICS_COLLECTOR_ENDPOINT" validate:"required,uri"`
 }
 
 type BackoffJitterRetry struct {
@@ -166,22 +166,22 @@ type OverrideRoutingURLConfiguration struct {
 type Config struct {
 	Version string `yaml:"version"`
 
-	Graph           Graph           `yaml:"graph"`
-	Telemetry       Telemetry       `yaml:"telemetry"`
-	OperationChecks OperationChecks `yaml:"operation_checks"`
-	CORS            CORS            `yaml:"cors"`
+	Graph          Graph          `yaml:"graph"`
+	Telemetry      Telemetry      `yaml:"telemetry"`
+	GraphqlMetrics GraphqlMetrics `yaml:"graphql_metrics"`
+	CORS           CORS           `yaml:"cors"`
 
 	Modules        map[string]interface{} `yaml:"modules"`
 	Headers        HeaderRules            `yaml:"headers"`
 	TrafficShaping TrafficShapingRules    `yaml:"traffic_shaping"`
 
 	ListenAddr           string        `yaml:"listen_addr" default:"localhost:3002" validate:"hostname_port" envconfig:"LISTEN_ADDR"`
-	ControlplaneURL      string        `yaml:"controlplane_url" validate:"required" default:"https://cosmo-cp.wundergraph.com" envconfig:"CONTROLPLANE_URL" validate:"uri"`
+	ControlplaneURL      string        `yaml:"controlplane_url" default:"https://cosmo-cp.wundergraph.com" envconfig:"CONTROLPLANE_URL" validate:"required,uri"`
 	PlaygroundEnabled    bool          `yaml:"playground_enabled" default:"true" envconfig:"PLAYGROUND_ENABLED"`
 	IntrospectionEnabled bool          `yaml:"introspection_enabled" default:"true" envconfig:"INTROSPECTION_ENABLED"`
 	LogLevel             string        `yaml:"log_level" default:"info" envconfig:"LOG_LEVEL" validate:"oneof=debug info warning error fatal panic"`
 	JSONLog              bool          `yaml:"json_log" default:"true" envconfig:"JSON_LOG"`
-	ShutdownDelay        time.Duration `yaml:"shutdown_delay" default:"60s" validate:"required,min=5s" envconfig:"SHUTDOWN_DELAY"`
+	ShutdownDelay        time.Duration `yaml:"shutdown_delay" default:"60s" validate:"required,min=15s" envconfig:"SHUTDOWN_DELAY"`
 	GracePeriod          time.Duration `yaml:"grace_period" default:"20s" validate:"required" envconfig:"GRACE_PERIOD"`
 	PollInterval         time.Duration `yaml:"poll_interval" default:"10s" validate:"required,min=5s" envconfig:"POLL_INTERVAL"`
 	HealthCheckPath      string        `yaml:"health_check_path" default:"/health" envconfig:"HEALTH_CHECK_PATH" validate:"uri"`

@@ -49,7 +49,7 @@ exports[`Router Config Builder > Build Subgraph schema > router.config.json 1`] 
           }
         },
         \\"requestTimeoutSeconds\\": \\"10\\",
-        \\"id\\": \\"https://wg-federation-demo-accounts.fly.dev/graphql\\",
+        \\"id\\": \\"0\\",
         \\"keys\\": [
           {
             \\"typeName\\": \\"User\\",
@@ -114,7 +114,7 @@ exports[`Router Config Builder > Build Subgraph schema > router.config.json 1`] 
           }
         },
         \\"requestTimeoutSeconds\\": \\"10\\",
-        \\"id\\": \\"https://wg-federation-demo-products.fly.dev/graphql\\",
+        \\"id\\": \\"1\\",
         \\"keys\\": [
           {
             \\"typeName\\": \\"Product\\",
@@ -175,7 +175,7 @@ exports[`Router Config Builder > Build Subgraph schema > router.config.json 1`] 
           }
         },
         \\"requestTimeoutSeconds\\": \\"10\\",
-        \\"id\\": \\"https://wg-federation-demo-reviews.fly.dev/graphql\\",
+        \\"id\\": \\"2\\",
         \\"keys\\": [
           {
             \\"typeName\\": \\"User\\",
@@ -236,7 +236,7 @@ exports[`Router Config Builder > Build Subgraph schema > router.config.json 1`] 
           }
         },
         \\"requestTimeoutSeconds\\": \\"10\\",
-        \\"id\\": \\"https://wg-federation-demo-inventory.fly.dev/graphql\\",
+        \\"id\\": \\"3\\",
         \\"keys\\": [
           {
             \\"typeName\\": \\"Product\\",

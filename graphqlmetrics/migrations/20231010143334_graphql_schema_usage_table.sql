@@ -26,11 +26,15 @@ create table graphql_schema_field_usage_reports
     ClientName LowCardinality(String) CODEC(ZSTD(1)),
     ClientVersion LowCardinality(String) CODEC(ZSTD(1)),
 
+    -- SubgraphIDs identify the subgraphs that were used to resolve the field
+    SubgraphIDs Array(LowCardinality(String)) CODEC(ZSTD(1)),
+
     -- Additional information
     Attributes Map(LowCardinality(String), String) CODEC(ZSTD(1)),
 
     INDEX idx_operation_hash OperationHash TYPE bloom_filter(0.001) GRANULARITY 1,
     INDEX idx_path Path TYPE bloom_filter(0.01) GRANULARITY 1,
+    INDEX idx_source_ids SubgraphIDs TYPE bloom_filter(0.01) GRANULARITY 1,
     INDEX idx_type_names TypeNames TYPE bloom_filter(0.01) GRANULARITY 1,
     INDEX idx_attr_key mapKeys(Attributes) TYPE bloom_filter(0.01) GRANULARITY 1,
     INDEX idx_attr_value mapValues(Attributes) TYPE bloom_filter(0.01) GRANULARITY 1,

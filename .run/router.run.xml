@@ -1,0 +1,10 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="router" type="GoApplicationRunConfiguration" factoryName="Go Application">
+    <module name="cosmo" />
+    <working_directory value="$PROJECT_DIR$/router" />
+    <kind value="FILE" />
+    <directory value="$PROJECT_DIR$" />
+    <filePath value="$PROJECT_DIR$/router/cmd/router/main.go" />
+    <method v="2" />
+  </configuration>
+</component>

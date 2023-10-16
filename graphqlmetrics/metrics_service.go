@@ -151,6 +151,7 @@ func (s *MetricsService) PublishGraphQLMetrics(
 				fieldUsage.TypeNames,
 				schemaUsage.ClientInfo.Name,
 				schemaUsage.ClientInfo.Version,
+				fieldUsage.SubgraphIDs,
 				schemaUsage.Attributes,
 			)
 			if err != nil {

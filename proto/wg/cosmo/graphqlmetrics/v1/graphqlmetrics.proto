@@ -55,8 +55,8 @@ message TypeFieldUsageInfo {
   repeated string Path = 1;
   // TypeNames is the list of type names that the field is used as
   repeated string TypeNames = 2;
-  // SourceIDs is the list of datasource IDs (e.g subgraph ID) that the field is used as
-  repeated string SourceIDs = 3;
+  // SubgraphIDs is the list of datasource IDs (e.g subgraph ID) that the field is used from
+  repeated string SubgraphIDs = 3;
   // Count is the number of times the field is used
   uint64 Count = 4;
 }

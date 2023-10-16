@@ -63,9 +63,10 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
     const { childNodes, rootNodes, keys, provides, requires } = configurationDataMapToDataSourceConfiguration(
       normalizationResult!.configurationDataMap,
     );
+
     const datasourceConfig = new DataSourceConfiguration({
       // When changing this, please do it in the router subgraph override as well
-      id: subgraph.url,
+      id: subgraph.id,
       childNodes,
       rootNodes,
       keys,

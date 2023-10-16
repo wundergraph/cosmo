@@ -102,7 +102,6 @@ type (
 		headerRuleEngine         *HeaderRuleEngine
 		headerRules              config.HeaderRules
 		subgraphTransportOptions *SubgraphTransportOptions
-		enableGraphQLMetrics     bool
 		graphqlMetricsConfig     *GraphQLMetricsConfig
 
 		retryOptions retrytransport.RetryOptions
@@ -284,13 +283,7 @@ func (r *Router) configureSubgraphOverwrites(cfg *nodev1.RouterConfig) ([]Subgra
 
 			// Override datasource urls
 			for _, conf := range cfg.EngineConfig.DatasourceConfigurations {
-				fetchURL := conf.CustomGraphql.Fetch.Url
-				subgraphURL := config.LoadStringVariable(fetchURL)
-
-				// Identify the datasource by the previous subgraph url
-				// Override datasource id, url and subgraph url
-				if subgraphURL == sg.RoutingUrl {
-					conf.Id = overrideURL
+				if conf.Id == sg.Id {
 					conf.CustomGraphql.Fetch.Url.StaticVariableContent = overrideURL
 					conf.CustomGraphql.Subscription.Url.StaticVariableContent = overrideURL
 					sg.RoutingUrl = overrideURL
@@ -614,6 +607,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		baseURL:       r.baseURL,
 		transport:     r.transport,
 		logger:        r.logger,
+		includeInfo:   r.graphqlMetricsConfig.Enabled,
 		transportOptions: &TransportOptions{
 			requestTimeout: r.subgraphTransportOptions.RequestTimeout,
 			preHandlers:    r.preOriginHandlers,

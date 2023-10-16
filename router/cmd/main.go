@@ -83,8 +83,8 @@ func Main() {
 		core.WithHealthCheckPath(cfg.HealthCheckPath),
 		core.WithLivenessCheckPath(cfg.LivenessCheckPath),
 		core.WithGraphQLMetrics(&core.GraphQLMetricsConfig{
-			Enabled:           cfg.OperationChecks.Enabled,
-			CollectorEndpoint: cfg.OperationChecks.CollectorEndpoint,
+			Enabled:           cfg.GraphqlMetrics.Enabled,
+			CollectorEndpoint: cfg.GraphqlMetrics.CollectorEndpoint,
 		}),
 		core.WithReadinessCheckPath(cfg.ReadinessCheckPath),
 		core.WithHeaderRules(cfg.Headers),

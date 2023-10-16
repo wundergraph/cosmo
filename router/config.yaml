@@ -1,3 +1,7 @@
 # config.yaml
 
 # See pkg/config/config.go for the full list of configuration options.
+
+override_routing_url:
+  subgraphs:
+    employees: http://router:3002/graphql

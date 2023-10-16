@@ -260,10 +260,10 @@ func (h *GraphQLHandler) exportSchemaUsageInfo(operationID string, schemaUsageIn
 
 	for i := range schemaUsageInfo.TypeFields {
 		fieldUsageInfos[i] = &graphqlmetricsv1.TypeFieldUsageInfo{
-			Count:     1,
-			Path:      schemaUsageInfo.TypeFields[i].Path,
-			TypeNames: schemaUsageInfo.TypeFields[i].TypeNames,
-			SourceIDs: schemaUsageInfo.TypeFields[i].Source.IDs,
+			Count:       1,
+			Path:        schemaUsageInfo.TypeFields[i].Path,
+			TypeNames:   schemaUsageInfo.TypeFields[i].TypeNames,
+			SubgraphIDs: schemaUsageInfo.TypeFields[i].Source.IDs,
 		}
 	}
 

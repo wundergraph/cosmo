@@ -32,10 +32,10 @@ func TestPublishGraphQLMetrics(t *testing.T) {
 				RequestDocument: "query Hello { hello }",
 				TypeFieldMetrics: []*graphqlmetricsv1.TypeFieldUsageInfo{
 					{
-						Path:      []string{"hello"},
-						TypeNames: []string{"Query"},
-						SourceIDs: nil,
-						Count:     1,
+						Path:        []string{"hello"},
+						TypeNames:   []string{"Query"},
+						SubgraphIDs: []string{"sub123"},
+						Count:       1,
 					},
 				},
 				OperationInfo: &graphqlmetricsv1.OperationInfo{
