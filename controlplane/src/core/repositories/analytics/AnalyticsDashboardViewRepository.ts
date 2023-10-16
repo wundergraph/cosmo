@@ -94,7 +94,7 @@ export class AnalyticsDashboardViewRepository {
   ): Promise<PlainMessage<OperationRequestCount>[]> {
     const query = `
         SELECT
-          COALESCE(NULLIF(OperationName, ''), 'unknown')  as operationName,
+          OperationName as operationName,
           sum(TotalRequests) as totalRequests
         FROM ${this.client.database}.operation_request_metrics_5_30_mv
         WHERE toDate(Timestamp) >= toDate(now()) - interval 6 day
