@@ -1,11 +1,11 @@
-# Default values for otelcollector.
+# Default values for graphqlmetrics.
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
 replicaCount: 1
 
 image:
-  repository: wundergraph/cosmo/otelcollector
+  repository: wundergraph/cosmo/graphqlmetrics
   registry: ghcr.io
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
@@ -47,7 +47,7 @@ securityContext: {}
 
 service:
   type: ClusterIP
-  port: 4318
+  port: 4005
 
 ingress:
 #  enabled: true
@@ -56,7 +56,7 @@ ingress:
     # kubernetes.io/ingress.class: nginx
     # kubernetes.io/tls-acme: "true"
   hosts:
-#    - host: otelcollector.wundergraph.local
+#    - host: graphqlmetrics.wundergraph.local
 #      paths:
 #        - path: /
 #          pathType: ImplementationSpecific
@@ -125,9 +125,6 @@ probes:
 # Application configuration #
 #############################
 
-# The name of the configmap to use for the otelcollector configuration
-# The key must be "otel-config.yaml: ..."
-collectorConfigOverride:
-
 configuration:
   clickhouseDsn: "clickhouse://default:changeme@cosmo-clickhouse:9000/cosmo?dial_timeout=15s&compress=lz4"
+  clickhouseHttpDsn: "http://default:changeme@cosmo-clickhouse:8123/cosmo"

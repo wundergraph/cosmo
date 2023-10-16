@@ -34,8 +34,9 @@ type RetryOptions struct {
 const (
 	defaultExportTimeout          = time.Duration(10) * time.Second
 	defaultExportRetryMaxDuration = time.Duration(10) * time.Second
-	defaultExportRetryInterval    = time.Duration(1) * time.Second
+	defaultExportRetryInterval    = time.Duration(5) * time.Second
 	defaultNumConsumers           = 3
+	defaultExportMaxRetryAttempts = 5
 )
 
 type ExporterSettings struct {
@@ -62,7 +63,7 @@ func NewDefaultExporterSettings() *ExporterSettings {
 		ExportTimeout: defaultExportTimeout,
 		Retry: RetryOptions{
 			Enabled:     true,
-			MaxRetry:    3,
+			MaxRetry:    defaultExportMaxRetryAttempts,
 			MaxDuration: defaultExportRetryMaxDuration,
 			Interval:    defaultExportRetryInterval,
 		},

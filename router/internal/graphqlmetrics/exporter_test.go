@@ -65,10 +65,10 @@ func TestExportAggregationSameSchemaUsages(t *testing.T) {
 		usage := &graphqlmetricsv1.SchemaUsageInfo{
 			TypeFieldMetrics: []*graphqlmetricsv1.TypeFieldUsageInfo{
 				{
-					Path:      []string{"user", "name"},
-					TypeNames: []string{"User", "String"},
-					SourceIDs: []string{"1", "2"},
-					Count:     1,
+					Path:        []string{"user", "name"},
+					TypeNames:   []string{"User", "String"},
+					SubgraphIDs: []string{"1", "2"},
+					Count:       1,
 				},
 			},
 			OperationInfo: &graphqlmetricsv1.OperationInfo{
@@ -137,16 +137,16 @@ func TestExportBatchesWithUniqueSchemaUsages(t *testing.T) {
 		usage := &graphqlmetricsv1.SchemaUsageInfo{
 			TypeFieldMetrics: []*graphqlmetricsv1.TypeFieldUsageInfo{
 				{
-					Path:      []string{"user", "id"},
-					TypeNames: []string{"User", "ID"},
-					SourceIDs: []string{"1", "2"},
-					Count:     2,
+					Path:        []string{"user", "id"},
+					TypeNames:   []string{"User", "ID"},
+					SubgraphIDs: []string{"1", "2"},
+					Count:       2,
 				},
 				{
-					Path:      []string{"user", "name"},
-					TypeNames: []string{"User", "String"},
-					SourceIDs: []string{"1", "2"},
-					Count:     1,
+					Path:        []string{"user", "name"},
+					TypeNames:   []string{"User", "String"},
+					SubgraphIDs: []string{"1", "2"},
+					Count:       1,
 				},
 			},
 			OperationInfo: &graphqlmetricsv1.OperationInfo{
@@ -210,16 +210,16 @@ func TestExportBatchInterval(t *testing.T) {
 		usage := &graphqlmetricsv1.SchemaUsageInfo{
 			TypeFieldMetrics: []*graphqlmetricsv1.TypeFieldUsageInfo{
 				{
-					Path:      []string{"user", "id"},
-					TypeNames: []string{"User", "ID"},
-					SourceIDs: []string{"1", "2"},
-					Count:     2,
+					Path:        []string{"user", "id"},
+					TypeNames:   []string{"User", "ID"},
+					SubgraphIDs: []string{"1", "2"},
+					Count:       2,
 				},
 				{
-					Path:      []string{"user", "name"},
-					TypeNames: []string{"User", "String"},
-					SourceIDs: []string{"1", "2"},
-					Count:     1,
+					Path:        []string{"user", "name"},
+					TypeNames:   []string{"User", "String"},
+					SubgraphIDs: []string{"1", "2"},
+					Count:       1,
 				},
 			},
 			OperationInfo: &graphqlmetricsv1.OperationInfo{
@@ -287,10 +287,10 @@ func TestExportFullQueue(t *testing.T) {
 		usage := &graphqlmetricsv1.SchemaUsageInfo{
 			TypeFieldMetrics: []*graphqlmetricsv1.TypeFieldUsageInfo{
 				{
-					Path:      []string{"user", "name"},
-					TypeNames: []string{"User", "String"},
-					SourceIDs: []string{"1", "2"},
-					Count:     1,
+					Path:        []string{"user", "name"},
+					TypeNames:   []string{"User", "String"},
+					SubgraphIDs: []string{"1", "2"},
+					Count:       1,
 				},
 			},
 			OperationInfo: &graphqlmetricsv1.OperationInfo{
