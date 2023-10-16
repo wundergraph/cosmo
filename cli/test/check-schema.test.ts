@@ -16,6 +16,14 @@ export const mockPlatformTransport = () =>
           },
         };
       },
+      isGitHubAppInstalled: (ctx) => {
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          isInstalled: false,
+        };
+      },
     });
   });
 
