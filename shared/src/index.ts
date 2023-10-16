@@ -1,3 +1,3 @@
-export * from './utils/util.js';
-export * from './router-config/builder.js';
-export * from './openai-graphql/index.js';
+export * from './utils/util';
+export * from './router-config/builder';
+export * from './openai-graphql/index';
