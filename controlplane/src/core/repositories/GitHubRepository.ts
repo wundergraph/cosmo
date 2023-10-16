@@ -165,4 +165,29 @@ export class GitHubRepository {
       conclusion: 'success',
     });
   }
+
+  async isAppInstalledOnRepo(input: { accountId: string; ownerSlug: string; repoSlug: string }): Promise<boolean> {
+    const installation = await this.db.query.gitInstallations.findFirst({
+      where: eq(schema.gitInstallations.providerAccountId, Number.parseInt(input.accountId)),
+    });
+
+    if (!installation) {
+      return false;
+    }
+
+    const app = await this.githubApp.getInstallationOctokit(installation.providerInstallationId);
+
+    try {
+      const repoInstallation = await app.rest.apps.getRepoInstallation({
+        owner: input.ownerSlug,
+        repo: input.repoSlug,
+      });
+      return !!repoInstallation.data;
+    } catch (e: any) {
+      if (e.status === 404) {
+        return false;
+      }
+      throw e;
+    }
+  }
 }
