@@ -4,7 +4,7 @@ import { PartialMessage } from '@bufbuild/protobuf';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { GitInfo } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import Table from 'cli-table3';
-import { Command } from 'commander';
+import { Command, program } from 'commander';
 import logSymbols from 'log-symbols';
 import { resolve } from 'pathe';
 import pc from 'picocolors';
@@ -13,12 +13,12 @@ import { BaseCommandOptions } from '../../../core/types/types.js';
 import { useGitHub } from '../../../github.js';
 
 export default (opts: BaseCommandOptions) => {
-  const schemaCheck = new Command('check');
-  schemaCheck.description('Checks for breaking changes and composition errors with all connected federated graphs.');
-  schemaCheck.argument('<name>', 'The name of the subgraph on which the check operation is to be performed.');
-  schemaCheck.requiredOption('--schema <path-to-schema>', 'The path of the new schema file.');
+  const command = new Command('check');
+  command.description('Checks for breaking changes and composition errors with all connected federated graphs.');
+  command.argument('<name>', 'The name of the subgraph on which the check operation is to be performed.');
+  command.requiredOption('--schema <path-to-schema>', 'The path of the new schema file.');
 
-  schemaCheck.action(async (name, options) => {
+  command.action(async (name, options) => {
     const schemaFile = resolve(process.cwd(), options.schema);
     if (!existsSync(schemaFile)) {
       console.log(
@@ -39,6 +39,24 @@ export default (opts: BaseCommandOptions) => {
         ownerSlug,
         repositorySlug,
       };
+    }
+
+    let ignoreErrors = false;
+    if (gitInfo) {
+      const integrationCheckResponse = await opts.client.platform.isGitHubAppInstalled(
+        {
+          gitInfo,
+        },
+        {
+          headers: baseHeaders,
+        },
+      );
+      ignoreErrors = integrationCheckResponse.isInstalled;
+      if (ignoreErrors) {
+        console.log(
+          'GitHub integration detected. The command will succeed and any errors detected will be reflected on commit status instead.',
+        );
+      }
     }
 
     const resp = await opts.client.platform.checkSubgraphSchema(
@@ -117,7 +135,6 @@ export default (opts: BaseCommandOptions) => {
         } else {
           console.log('\n' + logSymbols.error + pc.red(' Schema check failed.'));
         }
-
         break;
       }
       case EnumStatusCode.ERR_INVALID_SUBGRAPH_SCHEMA: {
@@ -127,7 +144,7 @@ export default (opts: BaseCommandOptions) => {
         if (resp.response?.details) {
           console.log(pc.red(pc.bold(resp.response?.details)));
         }
-        console.log(logSymbols.error + pc.red(' Schema check failed.'));
+        program.error(logSymbols.error + pc.red(' Schema check failed.'));
         break;
       }
       default: {
@@ -135,14 +152,14 @@ export default (opts: BaseCommandOptions) => {
         if (resp.response?.details) {
           console.log(pc.red(pc.bold(resp.response?.details)));
         }
-        console.log(logSymbols.error + pc.red(' Schema check failed.'));
+        program.error(logSymbols.error + pc.red(' Schema check failed.'));
       }
     }
 
-    if (!success) {
+    if (!success && !ignoreErrors) {
       process.exit(1);
     }
   });
 
-  return schemaCheck;
+  return command;
 };

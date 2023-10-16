@@ -8,10 +8,12 @@ go 1.20
 
 require (
 	github.com/gorilla/websocket v1.5.0
+	github.com/hasura/go-graphql-client v0.10.0
 	github.com/stretchr/testify v1.8.4
 	github.com/wundergraph/cosmo/demo v0.0.0-00010101000000-000000000000
 	github.com/wundergraph/cosmo/router v0.0.0-00010101000000-000000000000
 	go.uber.org/zap v1.24.0
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
@@ -48,7 +50,6 @@ require (
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.3 // indirect
-	github.com/hasura/go-graphql-client v0.10.0 // indirect
 	github.com/jensneuse/abstractlogger v0.0.4 // indirect
 	github.com/jensneuse/byte-template v0.0.0-20200214152254-4f3cf06e5c68 // indirect
 	github.com/joho/godotenv v1.5.1 // indirect
@@ -110,6 +111,5 @@ require (
 	google.golang.org/grpc v1.58.2 // indirect
 	google.golang.org/protobuf v1.31.0 // indirect
 	gopkg.in/cenkalti/backoff.v1 v1.1.0 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 	nhooyr.io/websocket v1.8.7 // indirect
 )
