@@ -6667,3 +6667,83 @@ export class ForceCheckSuccessResponse extends Message<ForceCheckSuccessResponse
   }
 }
 
+/**
+ * @generated from message wg.cosmo.platform.v1.IsGitHubAppInstalledRequest
+ */
+export class IsGitHubAppInstalledRequest extends Message<IsGitHubAppInstalledRequest> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.GitInfo git_info = 1;
+   */
+  gitInfo?: GitInfo;
+
+  constructor(data?: PartialMessage<IsGitHubAppInstalledRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.IsGitHubAppInstalledRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "git_info", kind: "message", T: GitInfo },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): IsGitHubAppInstalledRequest {
+    return new IsGitHubAppInstalledRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): IsGitHubAppInstalledRequest {
+    return new IsGitHubAppInstalledRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): IsGitHubAppInstalledRequest {
+    return new IsGitHubAppInstalledRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: IsGitHubAppInstalledRequest | PlainMessage<IsGitHubAppInstalledRequest> | undefined, b: IsGitHubAppInstalledRequest | PlainMessage<IsGitHubAppInstalledRequest> | undefined): boolean {
+    return proto3.util.equals(IsGitHubAppInstalledRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.IsGitHubAppInstalledResponse
+ */
+export class IsGitHubAppInstalledResponse extends Message<IsGitHubAppInstalledResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: bool is_installed = 2;
+   */
+  isInstalled = false;
+
+  constructor(data?: PartialMessage<IsGitHubAppInstalledResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.IsGitHubAppInstalledResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "is_installed", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): IsGitHubAppInstalledResponse {
+    return new IsGitHubAppInstalledResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): IsGitHubAppInstalledResponse {
+    return new IsGitHubAppInstalledResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): IsGitHubAppInstalledResponse {
+    return new IsGitHubAppInstalledResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: IsGitHubAppInstalledResponse | PlainMessage<IsGitHubAppInstalledResponse> | undefined, b: IsGitHubAppInstalledResponse | PlainMessage<IsGitHubAppInstalledResponse> | undefined): boolean {
+    return proto3.util.equals(IsGitHubAppInstalledResponse, a, b);
+  }
+}
+

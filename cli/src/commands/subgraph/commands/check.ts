@@ -17,7 +17,6 @@ export default (opts: BaseCommandOptions) => {
   command.description('Checks for breaking changes and composition errors with all connected federated graphs.');
   command.argument('<name>', 'The name of the subgraph on which the check operation is to be performed.');
   command.requiredOption('--schema <path-to-schema>', 'The path of the new schema file.');
-  command.option('--ignore-errors', 'Do not error out when there are composition errors or breaking changes');
 
   command.action(async (name, options) => {
     const schemaFile = resolve(process.cwd(), options.schema);
@@ -40,6 +39,19 @@ export default (opts: BaseCommandOptions) => {
         ownerSlug,
         repositorySlug,
       };
+    }
+
+    let ignoreErrors = false;
+    if (gitInfo) {
+      const integrationCheckResponse = await opts.client.platform.isGitHubAppInstalled(
+        {
+          gitInfo,
+        },
+        {
+          headers: baseHeaders,
+        },
+      );
+      ignoreErrors = integrationCheckResponse.isInstalled;
     }
 
     const resp = await opts.client.platform.checkSubgraphSchema(
@@ -139,7 +151,7 @@ export default (opts: BaseCommandOptions) => {
       }
     }
 
-    if (!success && !options.ignoreErrors) {
+    if (!success && !ignoreErrors) {
       process.exit(1);
     }
   });
