@@ -7,16 +7,35 @@ import {
   GraphQLSchema,
   GraphQLUnionType,
   buildASTSchema,
+  isInterfaceType,
+  isObjectType,
   parse,
 } from "graphql";
-import { Maybe } from "graphql/jsutils/Maybe";
+
+export const graphqlTypeCategories = [
+  "objects",
+  "scalars",
+  "interfaces",
+  "enums",
+  "inputs",
+] as const;
+
+export const graphqlRootCategories = [
+  "query",
+  "mutation",
+  "subscription",
+] as const;
+
+export type GraphQLTypeCategory =
+  | (typeof graphqlRootCategories)[number]
+  | (typeof graphqlTypeCategories)[number];
 
 export type GraphQLField = {
   name: string;
   description: string;
   deprecationReason: string;
   type: string;
-  args: Array<{
+  args?: Array<{
     name: string;
     description: string;
     defaultValue: any;
@@ -26,22 +45,32 @@ export type GraphQLField = {
 };
 
 export type GraphQLTypeDefinition = {
-  kind: "object" | "interface";
+  category: GraphQLTypeCategory;
   name: string;
   description: string;
   interfaces: string[];
   fields: GraphQLField[];
+  members: {
+    name: string;
+  }[];
 };
 
-const mapObjectOrInterfaceGraphQLType = (
-  graphqlType: Maybe<GraphQLObjectType | GraphQLInterfaceType>
-): GraphQLTypeDefinition | null => {
-  if (!graphqlType) {
-    return null;
-  }
+export type GraphQLObjectTypeDefinition = Omit<
+  GraphQLTypeDefinition,
+  "members"
+>;
 
+export type GraphQLInputTypeDefinition = Omit<
+  GraphQLTypeDefinition,
+  "interfaces" | "members"
+>;
+
+export const mapObjectOrInterfaceGraphQLType = (
+  graphqlType: GraphQLObjectType | GraphQLInterfaceType
+): GraphQLObjectTypeDefinition => {
   return {
-    kind: graphqlType instanceof GraphQLObjectType ? "object" : "interface",
+    category:
+      graphqlType instanceof GraphQLObjectType ? "objects" : "interfaces",
     name: graphqlType.name,
     description: graphqlType.description || "",
     interfaces: graphqlType.getInterfaces().map((iface) => iface.name),
@@ -57,6 +86,23 @@ const mapObjectOrInterfaceGraphQLType = (
         type: arg.type.toString(),
         deprecationReason: arg.deprecationReason || "",
       })),
+    })),
+  };
+};
+
+export const mapInputGraphQLType = (
+  graphqlType: GraphQLInputObjectType
+): GraphQLInputTypeDefinition => {
+  return {
+    category: "inputs",
+    name: graphqlType.name,
+    description: graphqlType.description || "",
+    fields: Object.values(graphqlType.getFields()).map((field) => ({
+      name: field.name,
+      description: field.description || "",
+      deprecationReason: field.deprecationReason || "",
+      defaultValue: field.defaultValue,
+      type: field.type.toString(),
     })),
   };
 };
@@ -93,20 +139,6 @@ const mapGraphQLType = (graphqlType: any) => {
     };
   }
 
-  if (graphqlType instanceof GraphQLInputObjectType) {
-    return {
-      ...base,
-      kind: "input-object",
-      fields: Object.values(graphqlType.getFields()).map((field) => ({
-        name: field.name,
-        description: field.description,
-        deprecationReason: field.deprecationReason,
-        defaultValue: field.defaultValue,
-        type: field.type.toString(),
-      })),
-    };
-  }
-
   if (graphqlType instanceof GraphQLScalarType) {
     return {
       ...base,
@@ -117,14 +149,7 @@ const mapGraphQLType = (graphqlType: any) => {
   return null;
 };
 
-type GraphQLTypeCategory =
-  | "objects"
-  | "scalars"
-  | "interfaces"
-  | "enums"
-  | "inputs";
-
-const getTypesByCategory = (
+export const getTypesByCategory = (
   astSchema: GraphQLSchema,
   category: GraphQLTypeCategory
 ) => {
@@ -152,7 +177,49 @@ const getTypesByCategory = (
   }
 };
 
-const getTypeCounts = (astSchema: GraphQLSchema) => {
+export const getCategoryForType = (
+  astSchema: GraphQLSchema,
+  typename: string
+): GraphQLTypeCategory | null => {
+  const astType = astSchema.getType(typename);
+
+  if (!astType) {
+    return null;
+  }
+
+  if (isObjectType(astType)) {
+    if (astType === astSchema.getQueryType()) {
+      return "query";
+    }
+    if (astType === astSchema.getMutationType()) {
+      return "mutation";
+    }
+    if (astType === astSchema.getSubscriptionType()) {
+      return "subscription";
+    }
+    return "objects";
+  }
+
+  if (astType instanceof GraphQLScalarType) {
+    return "scalars";
+  }
+
+  if (astType instanceof GraphQLInterfaceType) {
+    return "interfaces";
+  }
+
+  if (astType instanceof GraphQLEnumType) {
+    return "enums";
+  }
+
+  if (astType instanceof GraphQLInputObjectType) {
+    return "inputs";
+  }
+
+  return null;
+};
+
+export const getTypeCounts = (astSchema: GraphQLSchema) => {
   const allTypes = Object.values(astSchema.getTypeMap());
 
   const counts = {
@@ -172,7 +239,7 @@ const getTypeCounts = (astSchema: GraphQLSchema) => {
   return counts;
 };
 
-const parseSchema = (schema: string) => {
+export const parseSchema = (schema: string) => {
   const doc = parse(schema);
 
   const ast = buildASTSchema(doc, {
@@ -180,24 +247,15 @@ const parseSchema = (schema: string) => {
     assumeValidSDL: true,
   });
 
-  return {
-    ast,
-    query: mapObjectOrInterfaceGraphQLType(ast.getQueryType()),
-    mutation: mapObjectOrInterfaceGraphQLType(ast.getMutationType()),
-    subscription: mapObjectOrInterfaceGraphQLType(ast.getSubscriptionType()),
-  };
+  return ast;
 };
 
-const parseType = (astSchema: GraphQLSchema, type: string) => {
-  const astType = astSchema.getType(type);
+export const parseType = (astSchema: GraphQLSchema, typename: string) => {
+  const astType = astSchema.getType(typename);
+
+  if (isObjectType(astType) || isInterfaceType(astType)) {
+    return mapObjectOrInterfaceGraphQLType(astType);
+  }
 
   return mapGraphQLType(astType);
-};
-
-export {
-  parseSchema,
-  parseType,
-  getTypeCounts,
-  getTypesByCategory,
-  mapObjectOrInterfaceGraphQLType,
 };
