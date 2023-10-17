@@ -31,9 +31,9 @@ export type GraphQLTypeCategory =
 
 export type GraphQLField = {
   name: string;
-  description: string;
-  deprecationReason: string;
-  type: string;
+  description?: string;
+  deprecationReason?: string;
+  type?: string;
   args?: Array<{
     name: string;
     description: string;
@@ -47,105 +47,94 @@ export type GraphQLTypeDefinition = {
   category: GraphQLTypeCategory;
   name: string;
   description: string;
-  interfaces: string[];
-  fields: GraphQLField[];
-  members: {
-    name: string;
-  }[];
+  interfaces?: string[];
+  fields?: GraphQLField[];
 };
 
-export type GraphQLObjectTypeDefinition = Omit<
-  GraphQLTypeDefinition,
-  "members"
->;
-
-export type GraphQLInputTypeDefinition = Omit<
-  GraphQLTypeDefinition,
-  "interfaces" | "members"
->;
-
-export const mapObjectOrInterfaceGraphQLType = (
-  graphqlType: GraphQLObjectType | GraphQLInterfaceType
-): GraphQLObjectTypeDefinition => {
-  return {
-    category:
-      graphqlType instanceof GraphQLObjectType ? "objects" : "interfaces",
+export const mapGraphQLType = (
+  graphqlType:
+    | GraphQLObjectType
+    | GraphQLInterfaceType
+    | GraphQLInputObjectType
+    | GraphQLEnumType
+    | GraphQLScalarType
+    | GraphQLUnionType
+): GraphQLTypeDefinition => {
+  const common = {
     name: graphqlType.name,
-    description: graphqlType.description || "",
-    interfaces: graphqlType.getInterfaces().map((iface) => iface.name),
-    fields: Object.values(graphqlType.getFields()).map((field) => ({
-      name: field.name,
-      description: field.description || "",
-      deprecationReason: field.deprecationReason || "",
-      type: field.type.toString(),
-      args: field.args.map((arg) => ({
-        name: arg.name,
-        description: arg.description || "",
-        defaultValue: arg.defaultValue,
-        type: arg.type.toString(),
-        deprecationReason: arg.deprecationReason || "",
-      })),
-    })),
-  };
-};
-
-export const mapInputGraphQLType = (
-  graphqlType: GraphQLInputObjectType
-): GraphQLInputTypeDefinition => {
-  return {
-    category: "inputs",
-    name: graphqlType.name,
-    description: graphqlType.description || "",
-    fields: Object.values(graphqlType.getFields()).map((field) => ({
-      name: field.name,
-      description: field.description || "",
-      deprecationReason: field.deprecationReason || "",
-      defaultValue: field.defaultValue,
-      type: field.type.toString(),
-    })),
-  };
-};
-
-const mapGraphQLType = (graphqlType: any) => {
-  if (!graphqlType) {
-    return null;
-  }
-
-  const base = {
-    name: graphqlType.name,
-    description: graphqlType.description,
+    description: graphqlType.description || "No description provided",
   };
 
-  if (graphqlType instanceof GraphQLEnumType) {
+  if (
+    graphqlType instanceof GraphQLObjectType ||
+    graphqlType instanceof GraphQLInterfaceType
+  ) {
     return {
-      ...base,
-      kind: "enum",
-      values: graphqlType.getValues().map((value) => ({
-        name: value.name,
-        description: value.description,
-        deprecationReason: value.deprecationReason,
+      ...common,
+      category:
+        graphqlType instanceof GraphQLObjectType ? "objects" : "interfaces",
+      interfaces:
+        graphqlType.getInterfaces?.().map((iface) => iface.name) || [],
+      fields: Object.values(graphqlType.getFields()).map((field) => ({
+        name: field.name,
+        description: field.description || "",
+        deprecationReason: field.deprecationReason || "",
+        type: field.type.toString(),
+        args: field.args.map((arg) => ({
+          name: arg.name,
+          description: arg.description || "",
+          defaultValue: arg.defaultValue,
+          type: arg.type.toString(),
+          deprecationReason: arg.deprecationReason || "",
+        })),
       })),
     };
   }
 
-  if (graphqlType instanceof GraphQLUnionType) {
+  if (graphqlType instanceof GraphQLInputObjectType) {
     return {
-      ...base,
-      kind: "union",
-      members: graphqlType.getTypes().map((type) => ({
-        name: type.name,
+      ...common,
+      category: "inputs",
+      fields: Object.values(graphqlType.getFields()).map((field) => ({
+        name: field.name,
+        description: field.description || "",
+        deprecationReason: field.deprecationReason || "",
+        defaultValue: field.defaultValue,
+        type: field.type.toString(),
+      })),
+    };
+  }
+
+  if (graphqlType instanceof GraphQLEnumType) {
+    return {
+      ...common,
+      category: "enums",
+      fields: graphqlType.getValues().map((value) => ({
+        name: value.name,
+        description: value.description || "",
+        deprecationReason: value.deprecationReason || "",
       })),
     };
   }
 
   if (graphqlType instanceof GraphQLScalarType) {
     return {
-      ...base,
-      kind: "scalar",
+      ...common,
+      category: "scalars",
     };
   }
 
-  return null;
+  if (graphqlType instanceof GraphQLUnionType) {
+    return {
+      ...common,
+      category: "objects",
+      fields: graphqlType.getTypes().map((type) => ({
+        name: type.name,
+      })),
+    };
+  }
+
+  throw new Error("Unsupported GraphQL type");
 };
 
 export const getTypesByCategory = (

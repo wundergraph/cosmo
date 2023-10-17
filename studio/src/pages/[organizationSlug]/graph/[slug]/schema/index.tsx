@@ -34,9 +34,10 @@ import {
   GraphQLTypeCategory,
   getCategoryForType,
   getTypeCounts,
+  getTypesByCategory,
   graphqlRootCategories,
   graphqlTypeCategories,
-  mapObjectOrInterfaceGraphQLType,
+  mapGraphQLType,
   parseSchema,
 } from "@/lib/schema-helpers";
 import { cn } from "@/lib/utils";
@@ -48,7 +49,7 @@ import { useQuery } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { getFederatedGraphSDLByName } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { sentenceCase } from "change-case";
-import { GraphQLSchema, isInterfaceType, isObjectType } from "graphql";
+import { GraphQLSchema } from "graphql";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
@@ -75,7 +76,9 @@ const Fields = (props: { fields: GraphQLField[]; ast: GraphQLSchema }) => {
             <TableCell className="align-top font-semibold">
               <p className="mt-2 flex flex-wrap items-center gap-x-1">
                 <span>{field.name}</span>
-                <TypeLink ast={props.ast} name={`: ${field.type}`} />
+                {field.type && (
+                  <TypeLink ast={props.ast} name={`: ${field.type}`} />
+                )}
               </p>
             </TableCell>
             {hasArgs && (
@@ -167,8 +170,8 @@ const Type = (props: {
   name: string;
   category: GraphQLTypeCategory;
   description: string;
-  interfaces: string[];
-  fields: GraphQLField[];
+  interfaces?: string[];
+  fields?: GraphQLField[];
   ast: GraphQLSchema;
 }) => {
   return (
@@ -176,23 +179,24 @@ const Type = (props: {
       <div className="flex items-center gap-x-4">
         <div className="flex items-center gap-x-2 text-xl font-semibold tracking-tight">
           <h3>{props.name}</h3>
-          {props.interfaces.length > 0 && (
+          {props.interfaces && props.interfaces.length > 0 && (
             <div className="font-normal text-muted-foreground">implements</div>
           )}
-          {props.interfaces.map((t, index) => (
-            <>
-              <TypeLink key={index} ast={props.ast} name={t} isHeading />
-              {index !== props.interfaces.length - 1 && (
-                <p className="font-normal text-muted-foreground">&</p>
-              )}
-            </>
-          ))}
+          {props.interfaces &&
+            props.interfaces.map((t, index) => (
+              <>
+                <TypeLink key={index} ast={props.ast} name={t} isHeading />
+                {index !== props.interfaces!.length - 1 && (
+                  <p className="font-normal text-muted-foreground">&</p>
+                )}
+              </>
+            ))}
         </div>
         <Badge className="w-max">{props.category}</Badge>
       </div>
       <p className="mt-2 text-muted-foreground">{props.description}</p>
       <div className="mt-6">
-        <Fields fields={props.fields} ast={props.ast} />
+        {props.fields && <Fields fields={props.fields} ast={props.ast} />}
       </div>
     </div>
   );
@@ -205,7 +209,29 @@ const TypeWrapper = ({ ast }: { ast: GraphQLSchema }) => {
   let typename = router.query.typename as string;
 
   if (category && !typename) {
-    return <div>{category}</div>;
+    const list = getTypesByCategory(ast, category as GraphQLTypeCategory);
+    return (
+      <div className="flex flex-col gap-y-2">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Type</TableHead>
+              <TableHead>Description</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {list.map((l) => (
+              <TableRow key={l.name}>
+                <TableCell>
+                  <TypeLink ast={ast} name={l.name} />
+                </TableCell>
+                <TableCell>{l.description || "-"}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    );
   }
 
   if (!typename) {
@@ -224,11 +250,10 @@ const TypeWrapper = ({ ast }: { ast: GraphQLSchema }) => {
       />
     );
 
-  let content: React.ReactNode;
+  const type = mapGraphQLType(astType);
 
-  if (isObjectType(astType) || isInterfaceType(astType)) {
-    const type = mapObjectOrInterfaceGraphQLType(astType);
-    content = (
+  return (
+    <div className="mt-2 flex-1">
       <Type
         name={type.name}
         category={type.category}
@@ -237,10 +262,8 @@ const TypeWrapper = ({ ast }: { ast: GraphQLSchema }) => {
         fields={type.fields}
         ast={ast}
       />
-    );
-  }
-
-  return <div className="mt-2 flex-1">{content}</div>;
+    </div>
+  );
 };
 
 const SchemaExplorerPage: NextPageWithLayout = () => {
