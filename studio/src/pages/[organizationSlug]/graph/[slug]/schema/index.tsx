@@ -253,7 +253,7 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
     })
   );
 
-  const ast = parseSchema(data?.sdl ?? "");
+  const ast = parseSchema(data?.sdl);
 
   return (
     <PageHeader title="Studio | SDL">
@@ -266,7 +266,6 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
         {!isLoading &&
           (error || data?.response?.code !== EnumStatusCode.OK) && (
             <EmptyState
-              className="order-2 h-72 border lg:order-last"
               icon={<ExclamationTriangleIcon />}
               title="Could not retrieve schema"
               description={
@@ -275,17 +274,24 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
               actions={<Button onClick={() => refetch()}>Retry</Button>}
             />
           )}
-        <TypeWrapper ast={ast} />
+        {!isLoading && !ast && (
+          <EmptyState
+            icon={<ExclamationTriangleIcon />}
+            title="Could not retrieve schema"
+            description="Chances are the schema is invalid or does not exist"
+          />
+        )}
+        {ast && <TypeWrapper ast={ast} />}
       </TitleLayout>
     </PageHeader>
   );
 };
 
-const Toolbar = ({ ast }: { ast: GraphQLSchema }) => {
+const Toolbar = ({ ast }: { ast: GraphQLSchema | null }) => {
   const router = useRouter();
   const [selectedCategory, setSelectedCategory] = useState("query");
 
-  const typeCounts = getTypeCounts(ast);
+  const typeCounts = ast ? getTypeCounts(ast) : undefined;
 
   useEffect(() => {
     setSelectedCategory((router.query.category || "query") as string);
@@ -319,9 +325,11 @@ const Toolbar = ({ ast }: { ast: GraphQLSchema }) => {
             {graphqlRootCategories.map((category) => (
               <SelectItem key={category} value={category}>
                 {sentenceCase(category)}
-                <Badge variant="secondary" className="ml-2">
-                  {typeCounts[category]}
-                </Badge>
+                {typeCounts && (
+                  <Badge variant="secondary" className="ml-2">
+                    {typeCounts[category]}
+                  </Badge>
+                )}
               </SelectItem>
             ))}
           </SelectGroup>
@@ -331,9 +339,11 @@ const Toolbar = ({ ast }: { ast: GraphQLSchema }) => {
               return (
                 <SelectItem key={gType} value={gType}>
                   <span>{sentenceCase(gType)}</span>
-                  <Badge variant="secondary" className="ml-2">
-                    {typeCounts[gType]}
-                  </Badge>
+                  {typeCounts && (
+                    <Badge variant="secondary" className="ml-2">
+                      {typeCounts[gType]}
+                    </Badge>
+                  )}
                 </SelectItem>
               );
             })}

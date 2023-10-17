@@ -245,13 +245,21 @@ export const getTypeCounts = (astSchema: GraphQLSchema) => {
   return counts;
 };
 
-export const parseSchema = (schema: string) => {
-  const doc = parse(schema);
+export const parseSchema = (schema?: string) => {
+  if (!schema) {
+    return null;
+  }
 
-  const ast = buildASTSchema(doc, {
-    assumeValid: true,
-    assumeValidSDL: true,
-  });
+  try {
+    const doc = parse(schema);
 
-  return ast;
+    const ast = buildASTSchema(doc, {
+      assumeValid: true,
+      assumeValidSDL: true,
+    });
+
+    return ast;
+  } catch {
+    return null;
+  }
 };
