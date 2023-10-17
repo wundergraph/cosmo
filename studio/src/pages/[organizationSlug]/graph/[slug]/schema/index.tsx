@@ -216,6 +216,18 @@ const TypeWrapper = ({ ast }: { ast: GraphQLSchema }) => {
 
   if (category && !typename) {
     const list = getTypesByCategory(ast, category as GraphQLTypeCategory);
+
+    if (list.length === 0) {
+      return (
+        <EmptyState
+          className="order-2 h-72 border lg:order-last"
+          icon={<InformationCircleIcon />}
+          title="No data found"
+          description="There is no data for this type or category. Please adjust your filters."
+        />
+      );
+    }
+
     return (
       <div className="mt-2 flex flex-col">
         <h3 className="text-xl font-semibold tracking-tight">
