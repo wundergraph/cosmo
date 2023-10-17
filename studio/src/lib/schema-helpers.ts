@@ -7,7 +7,6 @@ import {
   GraphQLSchema,
   GraphQLUnionType,
   buildASTSchema,
-  isInterfaceType,
   isObjectType,
   parse,
 } from "graphql";
@@ -223,17 +222,24 @@ export const getTypeCounts = (astSchema: GraphQLSchema) => {
   const allTypes = Object.values(astSchema.getTypeMap());
 
   const counts = {
-    object: allTypes.filter(
+    query: Object.keys(astSchema.getQueryType()?.getFields() ?? {}).length,
+    mutation: Object.keys(astSchema.getMutationType()?.getFields() ?? {})
+      .length,
+    subscription: Object.keys(
+      astSchema.getSubscriptionType()?.getFields() ?? {}
+    ).length,
+    objects: allTypes.filter(
       (t) =>
         t instanceof GraphQLObjectType &&
         t !== astSchema.getQueryType() &&
         t !== astSchema.getMutationType() &&
         t !== astSchema.getSubscriptionType()
     ).length,
-    scalar: allTypes.filter((t) => t instanceof GraphQLScalarType).length,
-    interface: allTypes.filter((t) => t instanceof GraphQLInterfaceType).length,
-    enum: allTypes.filter((t) => t instanceof GraphQLEnumType).length,
-    input: allTypes.filter((t) => t instanceof GraphQLInputObjectType).length,
+    scalars: allTypes.filter((t) => t instanceof GraphQLScalarType).length,
+    interfaces: allTypes.filter((t) => t instanceof GraphQLInterfaceType)
+      .length,
+    enums: allTypes.filter((t) => t instanceof GraphQLEnumType).length,
+    inputs: allTypes.filter((t) => t instanceof GraphQLInputObjectType).length,
   };
 
   return counts;
@@ -248,14 +254,4 @@ export const parseSchema = (schema: string) => {
   });
 
   return ast;
-};
-
-export const parseType = (astSchema: GraphQLSchema, typename: string) => {
-  const astType = astSchema.getType(typename);
-
-  if (isObjectType(astType) || isInterfaceType(astType)) {
-    return mapObjectOrInterfaceGraphQLType(astType);
-  }
-
-  return mapGraphQLType(astType);
 };

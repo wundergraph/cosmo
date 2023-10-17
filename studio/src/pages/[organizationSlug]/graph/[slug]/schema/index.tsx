@@ -33,11 +33,12 @@ import {
   GraphQLField,
   GraphQLTypeCategory,
   getCategoryForType,
+  getTypeCounts,
   graphqlRootCategories,
   graphqlTypeCategories,
   mapObjectOrInterfaceGraphQLType,
   parseSchema,
-} from "@/lib/schemaParser";
+} from "@/lib/schema-helpers";
 import { cn } from "@/lib/utils";
 import {
   ExclamationTriangleIcon,
@@ -50,6 +51,7 @@ import { sentenceCase } from "change-case";
 import { GraphQLSchema, isInterfaceType, isObjectType } from "graphql";
 import Link from "next/link";
 import { useRouter } from "next/router";
+import { useEffect, useState } from "react";
 
 const Fields = (props: { fields: GraphQLField[]; ast: GraphQLSchema }) => {
   const hasArgs = props.fields.some((f) => !!f.args);
@@ -196,9 +198,8 @@ const Type = (props: {
   );
 };
 
-const TypeWrapper = ({ sdl }: { sdl: string }) => {
+const TypeWrapper = ({ ast }: { ast: GraphQLSchema }) => {
   const router = useRouter();
-  const ast = parseSchema(sdl);
 
   const category = router.query.category as string;
   let typename = router.query.typename as string;
@@ -252,34 +253,48 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
     })
   );
 
-  if (isLoading) {
-    return <Loader fullscreen />;
-  }
+  const ast = parseSchema(data?.sdl ?? "");
 
-  if (error || data?.response?.code !== EnumStatusCode.OK) {
-    return (
-      <EmptyState
-        className="order-2 h-72 border lg:order-last"
-        icon={<ExclamationTriangleIcon />}
-        title="Could not retrieve schema"
-        description={
-          data?.response?.details || error?.message || "Please try again"
-        }
-        actions={<Button onClick={() => refetch()}>Retry</Button>}
-      />
-    );
-  }
-
-  return <TypeWrapper sdl={data.sdl ?? ""} />;
+  return (
+    <PageHeader title="Studio | SDL">
+      <TitleLayout
+        title="Schema Explorer"
+        subtitle="Explore schema and field level metrics of your federated graph"
+        toolbar={<Toolbar ast={ast} />}
+      >
+        {isLoading && <Loader fullscreen />}
+        {!isLoading &&
+          (error || data?.response?.code !== EnumStatusCode.OK) && (
+            <EmptyState
+              className="order-2 h-72 border lg:order-last"
+              icon={<ExclamationTriangleIcon />}
+              title="Could not retrieve schema"
+              description={
+                data?.response?.details || error?.message || "Please try again"
+              }
+              actions={<Button onClick={() => refetch()}>Retry</Button>}
+            />
+          )}
+        <TypeWrapper ast={ast} />
+      </TitleLayout>
+    </PageHeader>
+  );
 };
 
-const Toolbar = () => {
+const Toolbar = ({ ast }: { ast: GraphQLSchema }) => {
   const router = useRouter();
-  const selectedCategory = (router.query.category || "query") as string;
+  const [selectedCategory, setSelectedCategory] = useState("query");
+
+  const typeCounts = getTypeCounts(ast);
+
+  useEffect(() => {
+    setSelectedCategory((router.query.category || "query") as string);
+  }, [router.query.category]);
 
   return (
     <SchemaToolbar tab="explorer">
       <Select
+        value={selectedCategory}
         onValueChange={(category) => {
           const newQuery = { ...router.query };
           newQuery.category = category;
@@ -294,10 +309,7 @@ const Toolbar = () => {
           });
         }}
       >
-        <SelectTrigger
-          value={selectedCategory}
-          className="w-full md:ml-auto md:w-[200px]"
-        >
+        <SelectTrigger className="w-full md:ml-auto md:w-[200px]">
           <SelectValue aria-label={selectedCategory}>
             {sentenceCase(selectedCategory)}
           </SelectValue>
@@ -307,6 +319,9 @@ const Toolbar = () => {
             {graphqlRootCategories.map((category) => (
               <SelectItem key={category} value={category}>
                 {sentenceCase(category)}
+                <Badge variant="secondary" className="ml-2">
+                  {typeCounts[category]}
+                </Badge>
               </SelectItem>
             ))}
           </SelectGroup>
@@ -315,7 +330,10 @@ const Toolbar = () => {
             {graphqlTypeCategories.map((gType) => {
               return (
                 <SelectItem key={gType} value={gType}>
-                  {sentenceCase(gType)}
+                  <span>{sentenceCase(gType)}</span>
+                  <Badge variant="secondary" className="ml-2">
+                    {typeCounts[gType]}
+                  </Badge>
                 </SelectItem>
               );
             })}
@@ -326,17 +344,6 @@ const Toolbar = () => {
   );
 };
 
-SchemaExplorerPage.getLayout = (page) =>
-  getGraphLayout(
-    <PageHeader title="Studio | SDL">
-      <TitleLayout
-        title="Schema Explorer"
-        subtitle="Explore schema and field level metrics of your federated graph"
-        toolbar={<Toolbar />}
-      >
-        {page}
-      </TitleLayout>
-    </PageHeader>
-  );
+SchemaExplorerPage.getLayout = (page) => getGraphLayout(page);
 
 export default SchemaExplorerPage;
