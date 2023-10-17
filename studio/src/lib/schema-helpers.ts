@@ -1,3 +1,4 @@
+import { noCase } from "change-case";
 import {
   GraphQLEnumType,
   GraphQLInputObjectType,
@@ -62,7 +63,7 @@ export const mapGraphQLType = (
 ): GraphQLTypeDefinition => {
   const common = {
     name: graphqlType.name,
-    description: graphqlType.description || "No description provided",
+    description: graphqlType.description || "",
   };
 
   if (
@@ -232,6 +233,37 @@ export const getTypeCounts = (astSchema: GraphQLSchema) => {
   };
 
   return counts;
+};
+
+export const getCategoryDescription = (category: GraphQLTypeCategory) => {
+  switch (category) {
+    case "objects":
+      return "Object types define a set of fields and are the building blocks of the schema.";
+    case "scalars":
+      return "Scalar types represent primitive leaf values in the schema.";
+    case "interfaces":
+      return "Interface types define a set of fields but do not implement them.";
+    case "enums":
+      return "Enum types are a special kind of scalar restricted to a set of allowed values.";
+    case "inputs":
+      return "Input types define the input of operations and are used in arguments.";
+    case "query":
+      return "The query root type which fetches data based on its fields.";
+    case "mutation":
+      return "The mutation root type which modifies data based on its fields.";
+    case "subscription":
+      return "The subscription root type which subscribes to data changes based on its fields.";
+    default:
+      return "Unknown type category.";
+  }
+};
+
+export const getRootDescription = (name: string) => {
+  if (!["Query", "Mutation", "Subscription"].includes(name)) {
+    return;
+  }
+
+  return getCategoryDescription(noCase(name) as GraphQLTypeCategory);
 };
 
 export const parseSchema = (schema?: string) => {

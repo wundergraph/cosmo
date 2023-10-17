@@ -32,7 +32,9 @@ import { NextPageWithLayout } from "@/lib/page";
 import {
   GraphQLField,
   GraphQLTypeCategory,
+  getCategoryDescription,
   getCategoryForType,
+  getRootDescription,
   getTypeCounts,
   getTypesByCategory,
   graphqlRootCategories,
@@ -194,7 +196,11 @@ const Type = (props: {
         </div>
         <Badge className="w-max">{props.category}</Badge>
       </div>
-      <p className="mt-2 text-muted-foreground">{props.description}</p>
+      <p className="mt-2 text-muted-foreground">
+        {props.description || getRootDescription(props.name) || (
+          <span className="italic">No Description provided</span>
+        )}
+      </p>
       <div className="mt-6">
         {props.fields && <Fields fields={props.fields} ast={props.ast} />}
       </div>
@@ -206,39 +212,43 @@ const TypeWrapper = ({ ast }: { ast: GraphQLSchema }) => {
   const router = useRouter();
 
   const category = router.query.category as string;
-  let typename = router.query.typename as string;
+  const typename = router.query.typename as string;
 
   if (category && !typename) {
     const list = getTypesByCategory(ast, category as GraphQLTypeCategory);
     return (
-      <div className="flex flex-col gap-y-2">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Type</TableHead>
-              <TableHead>Description</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {list.map((l) => (
-              <TableRow key={l.name}>
-                <TableCell>
-                  <TypeLink ast={ast} name={l.name} />
-                </TableCell>
-                <TableCell>{l.description || "-"}</TableCell>
+      <div className="mt-2 flex flex-col">
+        <h3 className="text-xl font-semibold tracking-tight">
+          {sentenceCase(category)}
+        </h3>
+        <p className="mt-2 text-muted-foreground">
+          {getCategoryDescription(category as GraphQLTypeCategory)}
+        </p>
+        <div className="mt-6">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Type</TableHead>
+                <TableHead>Description</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {list.map((l) => (
+                <TableRow key={l.name}>
+                  <TableCell>
+                    <TypeLink ast={ast} name={l.name} />
+                  </TableCell>
+                  <TableCell>{l.description || "-"}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </div>
     );
   }
 
-  if (!typename) {
-    typename = "Query";
-  }
-
-  const astType = ast.getType(typename);
+  const astType = ast.getType(typename || "Query");
 
   if (!astType)
     return (
