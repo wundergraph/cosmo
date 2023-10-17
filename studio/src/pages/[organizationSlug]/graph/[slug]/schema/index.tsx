@@ -198,7 +198,7 @@ const Type = (props: {
       </div>
       <p className="mt-2 text-muted-foreground">
         {props.description || getRootDescription(props.name) || (
-          <span className="italic">No Description provided</span>
+          <span className="italic">No description provided</span>
         )}
       </p>
       <div className="mt-6">
