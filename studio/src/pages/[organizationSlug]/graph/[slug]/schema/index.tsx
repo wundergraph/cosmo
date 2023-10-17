@@ -220,7 +220,6 @@ const TypeWrapper = ({ ast }: { ast: GraphQLSchema }) => {
     if (list.length === 0) {
       return (
         <EmptyState
-          className="order-2 h-72 border lg:order-last"
           icon={<InformationCircleIcon />}
           title="No data found"
           description="There is no data for this type or category. Please adjust your filters."
@@ -265,7 +264,6 @@ const TypeWrapper = ({ ast }: { ast: GraphQLSchema }) => {
   if (!astType)
     return (
       <EmptyState
-        className="order-2 h-72 border lg:order-last"
         icon={<InformationCircleIcon />}
         title="No data found"
         description="There is no data for this type or category. Please adjust your filters."
