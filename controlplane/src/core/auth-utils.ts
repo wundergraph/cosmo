@@ -152,7 +152,7 @@ export default class AuthUtils {
     };
   }
 
-  async handleLoginRequest() {
+  async handleLoginRequest(finalRedirectURL?: string) {
     const codeVerifier = await generateRandomCodeVerifier();
     const codeChallenge = await calculatePKCECodeChallenge(codeVerifier);
 
@@ -160,7 +160,10 @@ export default class AuthUtils {
     authorizationUrl.searchParams.set('client_id', this.opts.oauth.clientID);
     authorizationUrl.searchParams.set('code_challenge', codeChallenge);
     authorizationUrl.searchParams.set('code_challenge_method', pkceCodeAlgorithm);
-    authorizationUrl.searchParams.set('redirect_uri', this.opts.oauth.redirectUri);
+    authorizationUrl.searchParams.set(
+      'redirect_uri',
+      finalRedirectURL ? `${this.opts.oauth.redirectUri}?redirectURL=${finalRedirectURL}` : this.opts.oauth.redirectUri,
+    );
     authorizationUrl.searchParams.set('response_type', 'code');
     authorizationUrl.searchParams.set('scope', scope);
 
@@ -186,7 +189,7 @@ export default class AuthUtils {
 
   async handleAuthCallbackRequest(
     req: FastifyRequest<{
-      Querystring: { code: string; code_verifier: string };
+      Querystring: { code: string; code_verifier: string; redirectURL?: string };
     }>,
   ): Promise<{
     accessToken: string;
@@ -197,6 +200,7 @@ export default class AuthUtils {
     sessionState: string;
   }> {
     const code = req.query.code;
+    const redirectURL = req.query?.redirectURL;
 
     const cookies = cookie.parse(req.headers.cookie || '');
 
@@ -224,7 +228,9 @@ export default class AuthUtils {
         client_id: this.opts.oauth.clientID,
         code_verifier: codeChallenge?.codeVerifier,
         code,
-        redirect_uri: this.opts.oauth.redirectUri,
+        redirect_uri: redirectURL
+          ? `${this.opts.oauth.redirectUri}?redirectURL=${redirectURL}`
+          : this.opts.oauth.redirectUri,
       }),
     });
 
