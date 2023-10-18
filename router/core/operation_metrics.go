@@ -2,7 +2,6 @@ package core
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 	"time"
 
@@ -13,22 +12,15 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-type OperationProtocol int
+type OperationProtocol string
 
 const (
-	OperationProtocolHTTP OperationProtocol = iota + 1
-	OperationProtocolGraphQLWS
+	OperationProtocolHTTP      = OperationProtocol("http")
+	OperationProtocolGraphQLWS = OperationProtocol("graphql-ws")
 )
 
 func (p OperationProtocol) String() string {
-	switch p {
-	case OperationProtocolHTTP:
-		return "http"
-	case OperationProtocolGraphQLWS:
-		return "graphql-ws"
-	default:
-		return fmt.Sprintf("unknown operation protocol %d", int(p))
-	}
+	return string(p)
 }
 
 type OperationMetrics struct {
