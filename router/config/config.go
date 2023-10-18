@@ -123,7 +123,7 @@ type TrafficShapingRules struct {
 
 type RouterTrafficConfiguration struct {
 	// MaxRequestBodyBytes is the maximum size of the request body in bytes
-	MaxRequestBodyBytes BytesString `yaml:"max_request_body_bytes" default:"5MB" validate:"min=1048576"`
+	MaxRequestBodyBytes BytesString `yaml:"max_request_body_size" default:"5MB" validate:"min=1048576"`
 }
 
 type GlobalSubgraphRequestRule struct {
