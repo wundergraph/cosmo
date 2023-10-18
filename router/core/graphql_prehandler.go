@@ -32,25 +32,26 @@ import (
 )
 
 type PreHandlerOptions struct {
-	Logger         *zap.Logger
-	Executor       *Executor
-	requestMetrics *metric.Metrics
+	Logger                *zap.Logger
+	Executor              *Executor
+	requestMetrics        *metric.Metrics
+	maxRequestSizeInBytes int64
 }
 
 type PreHandler struct {
-	log               *zap.Logger
-	executor          *Executor
-	requestMetrics    *metric.Metrics
-	documentPool      *sync.Pool
-	maxBodyByteLength int64
+	log                   *zap.Logger
+	executor              *Executor
+	requestMetrics        *metric.Metrics
+	documentPool          *sync.Pool
+	maxRequestSizeInBytes int64
 }
 
 func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 	return &PreHandler{
-		log:               opts.Logger,
-		executor:          opts.Executor,
-		requestMetrics:    opts.requestMetrics,
-		maxBodyByteLength: 5 * 1024 * 1024, // 5 MB,
+		log:                   opts.Logger,
+		executor:              opts.Executor,
+		requestMetrics:        opts.requestMetrics,
+		maxRequestSizeInBytes: opts.maxRequestSizeInBytes,
 		documentPool: &sync.Pool{
 			New: func() interface{} {
 				return ast.NewSmallDocument()
@@ -90,15 +91,23 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		requestLogger := h.log.With(logging.WithRequestID(middleware.GetReqID(r.Context())))
 
 		buf := pool.GetBytesBuffer()
-		limitedReader := &io.LimitedReader{R: r.Body, N: h.maxBodyByteLength}
+		limitedReader := &io.LimitedReader{R: r.Body, N: h.maxRequestSizeInBytes}
 		defer pool.PutBytesBuffer(buf)
 
-		_, err := io.Copy(buf, limitedReader)
+		copiedBytes, err := io.Copy(buf, limitedReader)
 		if err != nil {
 			statusCode = http.StatusInternalServerError
 			requestLogger.Error("failed to read request body", zap.Error(err))
-			writeRequestErrors(graphql.RequestErrorsFromError(errors.New("bad request")), w, requestLogger)
 			w.WriteHeader(statusCode)
+			writeRequestErrors(graphql.RequestErrorsFromError(internalServerErrorErr), w, requestLogger)
+			return
+		}
+
+		if copiedBytes < r.ContentLength {
+			statusCode = http.StatusRequestEntityTooLarge
+			requestLogger.Error("request body too large")
+			w.WriteHeader(statusCode)
+			writeRequestErrors(graphql.RequestErrorsFromError(errors.New("request body too large")), w, requestLogger)
 			return
 		}
 
@@ -169,7 +178,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			statusCode = http.StatusBadRequest
 			requestLogger.Error("operation name is required when multiple operations are defined")
 			w.WriteHeader(statusCode)
-			w.Write([]byte("operation name is required when multiple operations are defined"))
+			writeRequestErrors(graphql.RequestErrorsFromError(errors.New("operation name is required when multiple operations are defined")), w, requestLogger)
 			return
 		}
 
@@ -210,9 +219,10 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		// otherwise, the prepared plan cache would return the same plan for all operations
 		_, err = hash.Write(requestOperationNameBytes)
 		if err != nil {
-			statusCode = http.StatusInternalServerError
 			requestLogger.Error("hash write failed", zap.Error(err))
+			statusCode = http.StatusInternalServerError
 			w.WriteHeader(statusCode)
+			writeRequestErrors(graphql.RequestErrorsFromError(internalServerErrorErr), w, requestLogger)
 			return
 		}
 
@@ -223,8 +233,8 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		// and the extracted variables (see below)
 		err = printer.Print(doc, h.executor.Definition, hash)
 		if err != nil {
-			statusCode = http.StatusInternalServerError
 			requestLogger.Error("unable to print document", zap.Error(err))
+			statusCode = http.StatusInternalServerError
 			w.WriteHeader(statusCode)
 			writeRequestErrors(graphql.RequestErrorsFromError(internalServerErrorErr), w, requestLogger)
 			return

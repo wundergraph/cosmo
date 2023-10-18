@@ -34,8 +34,7 @@ import (
 )
 
 const (
-	ErrMsgOperationParseFailed      = "failed to parse operation: %w"
-	ErrMsgOperationValidationFailed = "operation validation failed: %s"
+	ErrMsgOperationParseFailed = "failed to parse operation: %w"
 )
 
 var (

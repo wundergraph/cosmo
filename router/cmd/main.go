@@ -85,6 +85,7 @@ func Main() {
 		core.WithReadinessCheckPath(cfg.ReadinessCheckPath),
 		core.WithHeaderRules(cfg.Headers),
 		core.WithStaticRouterConfig(routerConfig),
+		core.WithRouterTrafficConfig(&cfg.TrafficShaping.Router),
 		core.WithSubgraphTransportOptions(&core.SubgraphTransportOptions{
 			RequestTimeout:         cfg.TrafficShaping.All.RequestTimeout,
 			ResponseHeaderTimeout:  cfg.TrafficShaping.All.ResponseHeaderTimeout,
