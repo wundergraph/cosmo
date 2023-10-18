@@ -2,9 +2,11 @@ package core
 
 import (
 	"errors"
+	"io"
 	"net/http"
 
 	"github.com/wundergraph/cosmo/router/internal/metric"
+	"github.com/wundergraph/cosmo/router/internal/pool"
 
 	"github.com/go-chi/chi/middleware"
 	"go.uber.org/zap"
@@ -14,22 +16,27 @@ import (
 )
 
 type PreHandlerOptions struct {
-	Logger         *zap.Logger
-	Parser         *OperationParser
-	requestMetrics *metric.Metrics
+	Logger                *zap.Logger
+	Parser                *OperationParser
+	RequestMetrics        *metric.Metrics
+	MaxRequestSizeInBytes int64
 }
 
 type PreHandler struct {
-	log            *zap.Logger
-	requestMetrics *metric.Metrics
-	parser         *OperationParser
+	log                   *zap.Logger
+	requestMetrics        *metric.Metrics
+	parser                *OperationParser
+	Logger                *zap.Logger
+	Executor              *Executor
+	maxRequestSizeInBytes int64
 }
 
 func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 	return &PreHandler{
-		log:            opts.Logger,
-		requestMetrics: opts.requestMetrics,
-		parser:         opts.Parser,
+		log:                   opts.Logger,
+		requestMetrics:        opts.RequestMetrics,
+		parser:                opts.Parser,
+		maxRequestSizeInBytes: opts.MaxRequestSizeInBytes,
 	}
 }
 
@@ -55,7 +62,30 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 		requestLogger := h.log.With(logging.WithRequestID(middleware.GetReqID(r.Context())))
 
-		operation, err := h.parser.ParseReader(r.Body)
+		limitedReader := &io.LimitedReader{R: r.Body, N: h.maxRequestSizeInBytes}
+		buf := pool.GetBytesBuffer()
+		defer pool.PutBytesBuffer(buf)
+
+		copiedBytes, err := io.Copy(buf, limitedReader)
+		if err != nil {
+			statusCode = http.StatusInternalServerError
+			requestLogger.Error("failed to read request body", zap.Error(err))
+			w.WriteHeader(statusCode)
+			writeRequestErrors(graphql.RequestErrorsFromError(internalServerErrorErr), w, requestLogger)
+			return
+		}
+
+		// If the request body is larger than the limit, limit reader will truncate the body
+		// We check here if it was truncated and return an error
+		if copiedBytes < r.ContentLength {
+			statusCode = http.StatusRequestEntityTooLarge
+			requestLogger.Error("request body too large")
+			w.WriteHeader(statusCode)
+			writeRequestErrors(graphql.RequestErrorsFromError(errors.New("request body too large")), w, requestLogger)
+			return
+		}
+
+		operation, err := h.parser.Parse(buf.Bytes())
 		if err != nil {
 			var reportErr ReportError
 			var inputErr *inputError

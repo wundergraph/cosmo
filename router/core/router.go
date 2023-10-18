@@ -91,6 +91,7 @@ type (
 		headerRuleEngine         *HeaderRuleEngine
 		headerRules              config.HeaderRules
 		subgraphTransportOptions *SubgraphTransportOptions
+		routerTrafficConfig      *config.RouterTrafficConfiguration
 
 		retryOptions retrytransport.RetryOptions
 
@@ -149,6 +150,10 @@ func NewRouter(opts ...Option) (*Router, error) {
 
 	if r.subgraphTransportOptions == nil {
 		r.subgraphTransportOptions = DefaultSubgraphTransportOptions()
+	}
+
+	if r.routerTrafficConfig == nil {
+		r.routerTrafficConfig = DefaultRouterTrafficConfig()
 	}
 
 	// Default values for health check paths
@@ -644,9 +649,10 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	}
 
 	graphqlPreHandler := NewPreHandler(&PreHandlerOptions{
-		Parser:         operationParser,
-		Logger:         r.logger,
-		requestMetrics: metricStore,
+		Parser:                operationParser,
+		Logger:                r.logger,
+		RequestMetrics:        metricStore,
+		MaxRequestSizeInBytes: int64(r.routerTrafficConfig.MaxRequestBodyBytes),
 	})
 
 	var traceHandler *trace.Middleware
@@ -981,6 +987,18 @@ func WithSubgraphRetryOptions(enabled bool, maxRetryCount int, retryMaxDuration,
 			MaxDuration:   retryMaxDuration,
 			Interval:      retryInterval,
 		}
+	}
+}
+
+func WithRouterTrafficConfig(cfg *config.RouterTrafficConfiguration) Option {
+	return func(r *Router) {
+		r.routerTrafficConfig = cfg
+	}
+}
+
+func DefaultRouterTrafficConfig() *config.RouterTrafficConfiguration {
+	return &config.RouterTrafficConfiguration{
+		MaxRequestBodyBytes: 1000 * 1000 * 5, // 5 MB
 	}
 }
 
