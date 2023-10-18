@@ -56,17 +56,28 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 
-const Fields = (props: { fields: GraphQLField[]; ast: GraphQLSchema }) => {
+const Fields = (props: {
+  category: GraphQLTypeCategory;
+  fields: GraphQLField[];
+  ast: GraphQLSchema;
+}) => {
   const hasArgs = props.fields.some((f) => !!f.args);
+  const hasDetails = props.fields.some(
+    (f) => !!f.description || !!f.deprecationReason
+  );
+  const hasUsage = !(
+    ["scalars", "enums", "inputs", "unions"] as GraphQLTypeCategory[]
+  ).includes(props.category);
 
   return (
     <Table className="min-w-[1100px] lg:min-w-full">
       <TableHeader>
         <TableRow>
           <TableHead className="w-3/12">Field</TableHead>
-          {hasArgs && <TableHead className="w-4/12">Input</TableHead>}
-          <TableHead className="w-2/12">Requests</TableHead>
-          <TableHead className="w-1/12">Actions</TableHead>
+          {(hasArgs || hasDetails) && (
+            <TableHead className="w-8/12">Details</TableHead>
+          )}
+          {hasUsage && <TableHead className="w-1/12">Actions</TableHead>}
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -76,60 +87,78 @@ const Fields = (props: { fields: GraphQLField[]; ast: GraphQLSchema }) => {
             key={field.name}
           >
             <TableCell className="align-top font-semibold">
-              <p className="mt-2 flex flex-wrap items-center gap-x-1">
-                <span>{field.name}</span>
+              <p className="my-2 flex flex-wrap items-center gap-x-1">
+                {props.category !== "unions" ? (
+                  <span>{field.name}</span>
+                ) : (
+                  <TypeLink ast={props.ast} name={field.name} />
+                )}
                 {field.type && (
                   <TypeLink ast={props.ast} name={`: ${field.type}`} />
                 )}
               </p>
             </TableCell>
-            {hasArgs && (
-              <TableCell className="flex flex-col gap-y-2 py-4">
-                {(!field.args || field.args?.length === 0) && <span>-</span>}
-                {field.args?.map((arg) => {
-                  return (
-                    <div
-                      key={arg.name}
-                      className="flex flex-wrap items-center gap-x-1"
-                    >
-                      <Tooltip
-                        delayDuration={200}
-                        open={
-                          !arg.description && !arg.deprecationReason
-                            ? false
-                            : undefined
-                        }
-                      >
-                        <TooltipTrigger>
-                          <Badge variant="secondary">{arg.name}</Badge>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <div className="flex w-96 flex-col gap-y-4">
-                            {arg.description && <p>{arg.description}</p>}
-                            {arg.deprecationReason && (
-                              <p className="flex flex-col items-start gap-x-1">
-                                <span className="flex items-center gap-x-1 font-semibold">
-                                  <ExclamationTriangleIcon className="h-3 w-3 flex-shrink-0" />
-                                  Deprecated
-                                </span>{" "}
-                                {arg.deprecationReason}
-                              </p>
-                            )}
-                          </div>
-                        </TooltipContent>
-                      </Tooltip>
-                      <TypeLink ast={props.ast} name={`: ${arg.type}`} />
-                    </div>
-                  );
+            {(hasDetails || hasArgs) && (
+              <TableCell
+                className={cn("flex flex-col py-4", {
+                  "gap-y-4": hasDetails && field.args && field.args.length > 0,
                 })}
+              >
+                {(!field.args || field.args?.length === 0) && !hasDetails && (
+                  <span>-</span>
+                )}
+                {hasDetails && (
+                  <p className="text-muted-foreground">{field.description}</p>
+                )}
+                {field.args && (
+                  <div className="flex flex-col gap-y-2">
+                    {field.args.map((arg) => {
+                      return (
+                        <div
+                          key={arg.name}
+                          className="flex flex-wrap items-center gap-x-1"
+                        >
+                          <Tooltip
+                            delayDuration={200}
+                            open={
+                              !arg.description && !arg.deprecationReason
+                                ? false
+                                : undefined
+                            }
+                          >
+                            <TooltipTrigger>
+                              <Badge variant="secondary">{arg.name}</Badge>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <div className="flex w-96 flex-col gap-y-4">
+                                {arg.description && <p>{arg.description}</p>}
+                                {arg.deprecationReason && (
+                                  <p className="flex flex-col items-start gap-x-1">
+                                    <span className="flex items-center gap-x-1 font-semibold">
+                                      <ExclamationTriangleIcon className="h-3 w-3 flex-shrink-0" />
+                                      Deprecated
+                                    </span>{" "}
+                                    {arg.deprecationReason}
+                                  </p>
+                                )}
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                          <TypeLink ast={props.ast} name={`: ${arg.type}`} />
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </TableCell>
             )}
-            <TableCell></TableCell>
-            <TableCell className="align-top text-primary">
-              <Link href={`#`}>
-                <p className="mt-2">View Usage</p>
-              </Link>
-            </TableCell>
+            {hasUsage && (
+              <TableCell className="align-top text-primary">
+                <Link href={`#`}>
+                  <p className="my-2">View Usage</p>
+                </Link>
+              </TableCell>
+            )}
           </TableRow>
         ))}
       </TableBody>
@@ -141,10 +170,12 @@ const TypeLink = ({
   name,
   ast,
   isHeading = false,
+  isPrimary = false,
 }: {
   name: string;
   ast: GraphQLSchema;
   isHeading?: boolean;
+  isPrimary?: boolean;
 }) => {
   const router = useRouter();
   const cleanName = name.replace(/[\[\]!: ]/g, "");
@@ -156,9 +187,10 @@ const TypeLink = ({
     <Link href={href}>
       <span
         className={cn(
-          "font-semibold text-muted-foreground underline-offset-2 hover:underline",
+          "font-semibold text-primary underline-offset-2 hover:underline",
           {
             "text-xl text-primary-foreground": isHeading,
+            "text-primary-foreground": isPrimary,
           }
         )}
       >
@@ -202,7 +234,13 @@ const Type = (props: {
         )}
       </p>
       <div className="mt-6">
-        {props.fields && <Fields fields={props.fields} ast={props.ast} />}
+        {props.fields && (
+          <Fields
+            category={props.category}
+            fields={props.fields}
+            ast={props.ast}
+          />
+        )}
       </div>
     </div>
   );
@@ -312,7 +350,9 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
               icon={<ExclamationTriangleIcon />}
               title="Could not retrieve schema"
               description={
-                data?.response?.details || error?.message || "Please try again"
+                data?.response?.details ||
+                error?.message ||
+                "Please try again. The schema might be invalid or does not exist"
               }
               actions={<Button onClick={() => refetch()}>Retry</Button>}
             />
@@ -321,7 +361,7 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
           <EmptyState
             icon={<ExclamationTriangleIcon />}
             title="Could not retrieve schema"
-            description="Chances are the schema is invalid or does not exist"
+            description="The schema might be invalid or does not exist"
           />
         )}
         {ast && <TypeWrapper ast={ast} />}

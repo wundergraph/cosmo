@@ -18,6 +18,7 @@ export const graphqlTypeCategories = [
   "interfaces",
   "enums",
   "inputs",
+  "unions",
 ] as const;
 
 export const graphqlRootCategories = [
@@ -128,7 +129,7 @@ export const mapGraphQLType = (
   if (graphqlType instanceof GraphQLUnionType) {
     return {
       ...common,
-      category: "objects",
+      category: "unions",
       fields: graphqlType.getTypes().map((type) => ({
         name: type.name,
       })),
@@ -142,7 +143,9 @@ export const getTypesByCategory = (
   astSchema: GraphQLSchema,
   category: GraphQLTypeCategory
 ) => {
-  const allTypes = Object.values(astSchema.getTypeMap());
+  const allTypes = Object.values(astSchema.getTypeMap()).filter(
+    (type) => !type.name.startsWith("__")
+  );
 
   switch (category) {
     case "objects":
@@ -161,6 +164,8 @@ export const getTypesByCategory = (
       return allTypes.filter((t) => t instanceof GraphQLEnumType);
     case "inputs":
       return allTypes.filter((t) => t instanceof GraphQLInputObjectType);
+    case "unions":
+      return allTypes.filter((t) => t instanceof GraphQLUnionType);
     default:
       return [];
   }
@@ -205,11 +210,17 @@ export const getCategoryForType = (
     return "inputs";
   }
 
+  if (astType instanceof GraphQLUnionType) {
+    return "unions";
+  }
+
   return null;
 };
 
 export const getTypeCounts = (astSchema: GraphQLSchema) => {
-  const allTypes = Object.values(astSchema.getTypeMap());
+  const allTypes = Object.values(astSchema.getTypeMap()).filter(
+    (type) => !type.name.startsWith("__")
+  );
 
   const counts = {
     query: Object.keys(astSchema.getQueryType()?.getFields() ?? {}).length,
@@ -230,6 +241,7 @@ export const getTypeCounts = (astSchema: GraphQLSchema) => {
       .length,
     enums: allTypes.filter((t) => t instanceof GraphQLEnumType).length,
     inputs: allTypes.filter((t) => t instanceof GraphQLInputObjectType).length,
+    unions: allTypes.filter((t) => t instanceof GraphQLUnionType).length,
   };
 
   return counts;
@@ -253,6 +265,8 @@ export const getCategoryDescription = (category: GraphQLTypeCategory) => {
       return "The mutation root type which modifies data based on its fields.";
     case "subscription":
       return "The subscription root type which subscribes to data changes based on its fields.";
+    case "unions":
+      return "Union types represent one of multiple possible object types, but don't specify any common fields between those types.";
     default:
       return "Unknown type category.";
   }
