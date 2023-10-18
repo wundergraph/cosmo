@@ -95,153 +95,163 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
     opts.authUtils.logout(res, userSessions[0].idToken);
   });
 
-  fastify.get<{ Querystring: { code: string; code_verifier: string } }>('/callback', async (req, res) => {
-    try {
-      const { accessToken, refreshToken, idToken } = await opts.authUtils.handleAuthCallbackRequest(req);
+  fastify.get<{ Querystring: { code: string; code_verifier: string; redirectURL?: string } }>(
+    '/callback',
+    async (req, res) => {
+      try {
+        const redirectURL = req.query?.redirectURL;
+        const { accessToken, refreshToken, idToken } = await opts.authUtils.handleAuthCallbackRequest(req);
 
-      // decodeJWT will throw an error if the token is invalid or expired
-      const accessTokenPayload = decodeJWT<CustomAccessTokenClaims>(accessToken);
+        // decodeJWT will throw an error if the token is invalid or expired
+        const accessTokenPayload = decodeJWT<CustomAccessTokenClaims>(accessToken);
 
-      // Clear the PKCE cookie
-      opts.authUtils.clearCookie(res, opts.pkce.cookieName);
+        // Clear the PKCE cookie
+        opts.authUtils.clearCookie(res, opts.pkce.cookieName);
 
-      const sessionExpiresIn = DEFAULT_SESSION_MAX_AGE_SEC;
-      const sessionExpiresDate = new Date(Date.now() + 1000 * sessionExpiresIn);
+        const sessionExpiresIn = DEFAULT_SESSION_MAX_AGE_SEC;
+        const sessionExpiresDate = new Date(Date.now() + 1000 * sessionExpiresIn);
 
-      const userId = accessTokenPayload.sub!;
-      const userEmail = accessTokenPayload.email!;
+        const userId = accessTokenPayload.sub!;
+        const userEmail = accessTokenPayload.email!;
 
-      const insertedSession = await opts.db.transaction(async (db) => {
-        // Upsert the user
-        await db
-          .insert(users)
-          .values({
-            id: userId,
-            email: accessTokenPayload.email,
-          })
-          .onConflictDoUpdate({
-            target: users.id,
-            // Update the fields when the user already exists
-            set: {
+        const insertedSession = await opts.db.transaction(async (db) => {
+          // Upsert the user
+          await db
+            .insert(users)
+            .values({
+              id: userId,
               email: accessTokenPayload.email,
-            },
-          })
-          .execute();
+            })
+            .onConflictDoUpdate({
+              target: users.id,
+              // Update the fields when the user already exists
+              set: {
+                email: accessTokenPayload.email,
+              },
+            })
+            .execute();
 
-        // update the organizationMember table to indicate that the user has accepted the invite
-        await db
-          .update(organizationsMembers)
-          .set({ acceptedInvite: true })
-          .where(eq(organizationsMembers.userId, userId))
-          .execute();
+          // update the organizationMember table to indicate that the user has accepted the invite
+          await db
+            .update(organizationsMembers)
+            .set({ acceptedInvite: true })
+            .where(eq(organizationsMembers.userId, userId))
+            .execute();
 
-        // If there is already a session for this user, update it.
-        // Otherwise, insert a new session. Because we use an Idp like keycloak,
-        // we can assume that the user will have only one session per client at a time.
-        const insertedSessions = await db
-          .insert(sessions)
-          .values({
-            userId,
-            idToken,
-            accessToken,
-            refreshToken,
-            expiresAt: sessionExpiresDate,
-          })
-          .onConflictDoUpdate({
-            target: sessions.userId,
-            // Update the fields when the session already exists
-            set: {
+          // If there is already a session for this user, update it.
+          // Otherwise, insert a new session. Because we use an Idp like keycloak,
+          // we can assume that the user will have only one session per client at a time.
+          const insertedSessions = await db
+            .insert(sessions)
+            .values({
+              userId,
               idToken,
               accessToken,
               refreshToken,
               expiresAt: sessionExpiresDate,
-              updatedAt: new Date(),
-            },
-          })
-          .returning({
-            id: sessions.id,
-            userId: sessions.userId,
-          })
-          .execute();
+            })
+            .onConflictDoUpdate({
+              target: sessions.userId,
+              // Update the fields when the session already exists
+              set: {
+                idToken,
+                accessToken,
+                refreshToken,
+                expiresAt: sessionExpiresDate,
+                updatedAt: new Date(),
+              },
+            })
+            .returning({
+              id: sessions.id,
+              userId: sessions.userId,
+            })
+            .execute();
 
-        return insertedSessions[0];
-      });
-
-      const orgs = await opts.organizationRepository.memberships({
-        userId,
-      });
-
-      const personalOrg = orgs.find((org) => org.isPersonal === true);
-
-      if (orgs.length === 0 || !personalOrg) {
-        await opts.keycloakClient.authenticateClient();
-
-        const organizationSlug = uid(8);
-
-        await opts.keycloakClient.seedGroup({ userID: userId, organizationSlug, realm: opts.keycloakRealm });
-
-        await opts.db.transaction(async (db) => {
-          const orgRepo = new OrganizationRepository(db);
-
-          const insertedOrg = await orgRepo.createOrganization({
-            organizationName: userEmail.split('@')[0],
-            organizationSlug,
-            ownerID: userId,
-            isFreeTrial: true,
-            isPersonal: true,
-          });
-
-          const orgMember = await orgRepo.addOrganizationMember({
-            organizationID: insertedOrg.id,
-            userID: userId,
-            acceptedInvite: true,
-          });
-
-          await orgRepo.addOrganizationMemberRoles({
-            memberID: orgMember.id,
-            roles: ['admin'],
-          });
+          return insertedSessions[0];
         });
 
-        opts.platformWebhooks.send(PlatformEventName.USER_REGISTER_SUCCESS, {
-          user_id: userId,
-          user_email: userEmail,
+        const orgs = await opts.organizationRepository.memberships({
+          userId,
         });
-      }
 
-      // Create a JWT token containing the session id and user id.
-      const jwt = await encrypt<UserSession>({
-        maxAge: sessionExpiresIn,
-        token: {
-          iss: userId,
-          sessionId: insertedSession.id,
-        },
-        secret: opts.jwtSecret,
-      });
+        const personalOrg = orgs.find((org) => org.isPersonal === true);
 
-      // Set the session cookie. The cookie value is encrypted.
-      opts.authUtils.createSessionCookie(res, jwt, sessionExpiresDate);
+        if (orgs.length === 0 || !personalOrg) {
+          await opts.keycloakClient.authenticateClient();
 
-      if (orgs.length === 0) {
-        res.redirect(opts.webBaseUrl + '?migrate=true');
-      } else {
+          const organizationSlug = uid(8);
+
+          await opts.keycloakClient.seedGroup({ userID: userId, organizationSlug, realm: opts.keycloakRealm });
+
+          await opts.db.transaction(async (db) => {
+            const orgRepo = new OrganizationRepository(db);
+
+            const insertedOrg = await orgRepo.createOrganization({
+              organizationName: userEmail.split('@')[0],
+              organizationSlug,
+              ownerID: userId,
+              isFreeTrial: true,
+              isPersonal: true,
+            });
+
+            const orgMember = await orgRepo.addOrganizationMember({
+              organizationID: insertedOrg.id,
+              userID: userId,
+              acceptedInvite: true,
+            });
+
+            await orgRepo.addOrganizationMemberRoles({
+              memberID: orgMember.id,
+              roles: ['admin'],
+            });
+          });
+
+          opts.platformWebhooks.send(PlatformEventName.USER_REGISTER_SUCCESS, {
+            user_id: userId,
+            user_email: userEmail,
+          });
+        }
+
+        // Create a JWT token containing the session id and user id.
+        const jwt = await encrypt<UserSession>({
+          maxAge: sessionExpiresIn,
+          token: {
+            iss: userId,
+            sessionId: insertedSession.id,
+          },
+          secret: opts.jwtSecret,
+        });
+
+        // Set the session cookie. The cookie value is encrypted.
+        opts.authUtils.createSessionCookie(res, jwt, sessionExpiresDate);
+
+        if (orgs.length === 0) {
+          res.redirect(opts.webBaseUrl + '?migrate=true');
+        } else {
+          if (redirectURL) {
+            res.redirect(redirectURL);
+          }
+          res.redirect(opts.webBaseUrl);
+        }
+      } catch (err: any) {
+        if (err instanceof AuthenticationError) {
+          req.log.debug(err);
+        } else {
+          req.log.error(err);
+        }
+
+        req.log.debug('Redirecting to home due to error in /callback route');
+
         res.redirect(opts.webBaseUrl);
       }
-    } catch (err: any) {
-      if (err instanceof AuthenticationError) {
-        req.log.debug(err);
-      } else {
-        req.log.error(err);
-      }
+    },
+  );
 
-      req.log.debug('Redirecting to home due to error in /callback route');
-
-      res.redirect(opts.webBaseUrl);
-    }
-  });
-
-  fastify.get('/login', async (req, res) => {
-    const { authorizationUrl, pkceCookie } = await opts.authUtils.handleLoginRequest();
+  fastify.get<{
+    Querystring: { redirectURL?: string };
+  }>('/login', async (req, res) => {
+    const redirectURL = req.query?.redirectURL;
+    const { authorizationUrl, pkceCookie } = await opts.authUtils.handleLoginRequest(redirectURL);
 
     res.header('Set-Cookie', pkceCookie);
 
