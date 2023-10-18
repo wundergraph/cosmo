@@ -3,6 +3,7 @@ package config
 import (
 	b64 "encoding/base64"
 	"fmt"
+	"github.com/dustin/go-humanize"
 	"os"
 	"time"
 
@@ -29,6 +30,27 @@ func (ipd *Base64Decoder) Decode(value string) error {
 	*ipd = decoded
 
 	return nil
+}
+
+type BytesString uint64
+
+func (b *BytesString) Decode(value string) error {
+	decoded, err := humanize.ParseBytes(value)
+	if err != nil {
+		return fmt.Errorf("could not parse bytes string: %w", err)
+	}
+
+	*b = BytesString(decoded)
+
+	return nil
+}
+
+func (b *BytesString) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var s string
+	if err := unmarshal(&s); err != nil {
+		return err
+	}
+	return b.Decode(s)
 }
 
 type Graph struct {
@@ -95,6 +117,13 @@ type CORS struct {
 type TrafficShapingRules struct {
 	// All is a set of rules that apply to all requests
 	All GlobalSubgraphRequestRule `yaml:"all"`
+	// Apply to requests from clients to the router
+	Router RouterTrafficConfiguration `yaml:"router"`
+}
+
+type RouterTrafficConfiguration struct {
+	// MaxRequestBodyBytes is the maximum size of the request body in bytes
+	MaxRequestBodyBytes BytesString `yaml:"max_request_body_size" default:"5MB" validate:"min=1000000"`
 }
 
 type GlobalSubgraphRequestRule struct {
