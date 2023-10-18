@@ -1,11 +1,15 @@
-import { AuthLayout } from '@/components/layout/auth-layout';
-import { Logo } from '@/components/logo';
-import { Button } from '@/components/ui/button';
-import { docsBaseURL } from '@/lib/constants';
-import { NextPageWithLayout } from '@/lib/page';
-import Link from 'next/link';
+import { AuthLayout } from "@/components/layout/auth-layout";
+import { Logo } from "@/components/logo";
+import { Button } from "@/components/ui/button";
+import { docsBaseURL } from "@/lib/constants";
+import { NextPageWithLayout } from "@/lib/page";
+import Link from "next/link";
+import { useRouter } from "next/router";
 
 const LoginPage: NextPageWithLayout = () => {
+  const router = useRouter();
+  const redirectURL = router.query.redirectURL;
+
   return (
     <>
       <div className="-mt-[230px] flex flex-col items-center gap-y-4 text-center text-white">
@@ -24,17 +28,17 @@ const LoginPage: NextPageWithLayout = () => {
               asChild
             >
               <Link
-                href={process.env.NEXT_PUBLIC_COSMO_CP_URL + "/v1/auth/login"}
+                href={
+                  redirectURL
+                    ? `${process.env.NEXT_PUBLIC_COSMO_CP_URL}/v1/auth/login?redirectURL=${redirectURL}`
+                    : `${process.env.NEXT_PUBLIC_COSMO_CP_URL}/v1/auth/login`
+                }
               >
                 Login
               </Link>
             </Button>
             <Button variant="outline" size="lg" className="px-8 py-6" asChild>
-              <Link
-                href={docsBaseURL}
-                target="blank"
-                rel="noreferrer"
-              >
+              <Link href={docsBaseURL} target="blank" rel="noreferrer">
                 Documentation
               </Link>
             </Button>
