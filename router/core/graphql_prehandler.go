@@ -103,6 +103,8 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			return
 		}
 
+		// If the request body is larger than the limit, limit reader will truncate the body
+		// We check here if it was truncated and return an error
 		if copiedBytes < r.ContentLength {
 			statusCode = http.StatusRequestEntityTooLarge
 			requestLogger.Error("request body too large")
