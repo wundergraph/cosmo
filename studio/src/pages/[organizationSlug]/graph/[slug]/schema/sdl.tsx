@@ -159,7 +159,10 @@ const SDLPage: NextPageWithLayout = () => {
             id="schema-container"
             className="scrollbar-custom flex-1 overflow-auto rounded border"
           >
-            <SchemaViewer sdl={activeGraphWithSDL.sdl ?? ""} />
+            <SchemaViewer
+              className="h-0 w-0"
+              sdl={activeGraphWithSDL.sdl ?? ""}
+            />
           </div>
           <div className="flex w-full flex-col items-center justify-end gap-x-8 gap-y-1 rounded border bg-card p-2 text-xs md:flex-row md:border-none md:bg-transparent md:p-0">
             <p className="flex items-center gap-x-1">
