@@ -5,6 +5,14 @@ import { TitleLayout } from "@/components/layout/title-layout";
 import { SchemaToolbar } from "@/components/schema/toolbar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  CommandDialog,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { Loader } from "@/components/ui/loader";
 import {
   Select,
@@ -47,14 +55,16 @@ import {
   ExclamationTriangleIcon,
   InformationCircleIcon,
 } from "@heroicons/react/24/outline";
+import { MagnifyingGlassIcon } from "@radix-ui/react-icons";
 import { useQuery } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { getFederatedGraphSDLByName } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { sentenceCase } from "change-case";
+import { useCommandState } from "cmdk";
 import { GraphQLSchema } from "graphql";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { useEffect, useState } from "react";
+import { Dispatch, SetStateAction, useEffect, useState } from "react";
 
 const Fields = (props: {
   category: GraphQLTypeCategory;
@@ -197,6 +207,97 @@ const TypeLink = ({
         {name}
       </span>
     </Link>
+  );
+};
+
+const SearchDescription = ({ ast }: { ast: GraphQLSchema }) => {
+  const activeValue = useCommandState((state) => state.value);
+
+  if (!activeValue) {
+    return null;
+  }
+
+  const [category, index, _] = activeValue?.split("-");
+  const types = getTypesByCategory(ast, category as any);
+  const type = types[Number(index)];
+
+  return (
+    <div className="hidden w-64 flex-shrink-0 flex-col p-4 md:flex">
+      <Badge className="w-max">{category}</Badge>
+      <p className="mt-4 break-words text-sm text-muted-foreground">
+        {type.description || (
+          <span className="italic">No description provided</span>
+        )}
+      </p>
+    </div>
+  );
+};
+
+const SearchType = ({
+  ast,
+  open,
+  setOpen,
+}: {
+  ast: GraphQLSchema;
+  open: boolean;
+  setOpen: Dispatch<SetStateAction<boolean>>;
+}) => {
+  const router = useRouter();
+
+  useEffect(() => {
+    const down = (e: KeyboardEvent) => {
+      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        setOpen((open) => !open);
+      }
+    };
+    document.addEventListener("keydown", down);
+    return () => document.removeEventListener("keydown", down);
+  }, [setOpen]);
+
+  const counts = getTypeCounts(ast);
+
+  return (
+    <CommandDialog className="max-w-2xl" open={open} onOpenChange={setOpen}>
+      <CommandInput placeholder="Search for a type" />
+      <div className="flex divide-x">
+        <CommandList className="scrollbar-custom w-full">
+          <CommandEmpty>No results found.</CommandEmpty>
+          {graphqlTypeCategories.map((category) => {
+            if (counts[category] === 0) {
+              return null;
+            }
+
+            const types = getTypesByCategory(ast, category);
+
+            return (
+              <CommandGroup key={category} heading={sentenceCase(category)}>
+                {types.map((t, i) => {
+                  return (
+                    <CommandItem
+                      onSelect={() => {
+                        const newQuery = { ...router.query };
+                        newQuery.category = category;
+                        newQuery.typename = t.name;
+                        setOpen(false);
+                        router.push({
+                          query: newQuery,
+                        });
+                      }}
+                      key={t.name}
+                      value={`${category}-${i}-${t}`}
+                    >
+                      {t.name}
+                    </CommandItem>
+                  );
+                })}
+              </CommandGroup>
+            );
+          })}
+        </CommandList>
+        <SearchDescription ast={ast} />
+      </div>
+    </CommandDialog>
   );
 };
 
@@ -373,6 +474,7 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
 const Toolbar = ({ ast }: { ast: GraphQLSchema | null }) => {
   const router = useRouter();
   const [selectedCategory, setSelectedCategory] = useState("query");
+  const [open, setOpen] = useState(false);
 
   const typeCounts = ast ? getTypeCounts(ast) : undefined;
 
@@ -382,6 +484,22 @@ const Toolbar = ({ ast }: { ast: GraphQLSchema | null }) => {
 
   return (
     <SchemaToolbar tab="explorer">
+      {ast && (
+        <>
+          <SearchType ast={ast} open={open} setOpen={setOpen} />
+          <Button
+            onClick={() => setOpen(true)}
+            variant="outline"
+            className="gap-x-2 text-muted-foreground shadow-none md:ml-auto"
+          >
+            <MagnifyingGlassIcon />
+            Search{" "}
+            <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
+              Cmd K
+            </kbd>
+          </Button>
+        </>
+      )}
       <Select
         value={selectedCategory}
         onValueChange={(category) => {
@@ -398,7 +516,7 @@ const Toolbar = ({ ast }: { ast: GraphQLSchema | null }) => {
           });
         }}
       >
-        <SelectTrigger className="w-full md:ml-auto md:w-[200px]">
+        <SelectTrigger className="flex-1 md:w-[200px] md:flex-none">
           <SelectValue aria-label={selectedCategory}>
             {sentenceCase(selectedCategory)}
           </SelectValue>
