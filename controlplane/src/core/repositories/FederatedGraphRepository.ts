@@ -1,5 +1,5 @@
 import { JsonValue } from '@bufbuild/protobuf';
-import { and, asc, desc, eq, exists, gt, inArray, lt, not, notExists, notInArray, SQL, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, inArray, lt, not, notExists, notInArray, SQL, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { RouterConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { CompositionError, SchemaChange } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';

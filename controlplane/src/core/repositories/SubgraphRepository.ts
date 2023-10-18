@@ -419,6 +419,10 @@ export class SubgraphRepository {
       published: true,
     });
 
+    if (subgraphs.length === 0) {
+      return 0;
+    }
+
     let conditions: SQL<unknown> | undefined;
 
     if (startDate && endDate) {
