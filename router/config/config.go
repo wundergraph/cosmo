@@ -24,7 +24,7 @@ type Base64Decoder []byte
 func (ipd *Base64Decoder) Decode(value string) error {
 	decoded, err := b64.StdEncoding.DecodeString(value)
 	if err != nil {
-		return fmt.Errorf("could not parse bytes string: %w", err)
+		return fmt.Errorf("could not decode base64 string: %w", err)
 	}
 
 	*ipd = decoded
