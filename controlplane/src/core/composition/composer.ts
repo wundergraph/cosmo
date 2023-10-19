@@ -10,12 +10,12 @@ export type CompositionResult = {
 };
 
 interface ComposedSubgraph {
-    id: string;
-    name: string;
-    sdl: string;
-    url: string;
-    subscriptionUrl: string;
-    subscriptionProtocol: 'ws' | 'sse' | 'sse_post';
+  id: string;
+  name: string;
+  sdl: string;
+  url: string;
+  subscriptionUrl: string;
+  subscriptionProtocol: 'ws' | 'sse' | 'sse_post';
 }
 export interface ComposedFederatedGraph {
   argumentConfigurations: ArgumentConfigurationData[];

@@ -16,13 +16,12 @@ import { updateComposedSchema } from '../composition/updateComposedSchema.js';
 import { normalizeLabels } from '../util.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 
-
 type SubscriptionProtocol = 'ws' | 'sse' | 'sse_post';
 
 export interface Subgraph {
   name: string;
   routingUrl: string;
-  labels: Label[]
+  labels: Label[];
   subscriptionUrl?: string;
   subscriptionProtocol?: SubscriptionProtocol;
 }
@@ -94,7 +93,9 @@ export class SubgraphRepository {
     });
   }
 
-  public async update(data: Subgraph): Promise<{ compositionErrors: CompositionError[]; updatedFederatedGraphs: FederatedGraphDTO[] }> {
+  public async update(
+    data: Subgraph,
+  ): Promise<{ compositionErrors: CompositionError[]; updatedFederatedGraphs: FederatedGraphDTO[] }> {
     const uniqueLabels = normalizeLabels(data.labels);
     const routingUrl = normalizeURL(data.routingUrl);
 
@@ -125,8 +126,12 @@ export class SubgraphRepository {
         }
 
         if (data.subscriptionProtocol !== undefined) {
-          await db.update(subgraphs).set({ subscriptionProtocol: data.subscriptionProtocol }).where(eq(subgraphs.id, subgraph.id)).execute();
-        }  
+          await db
+            .update(subgraphs)
+            .set({ subscriptionProtocol: data.subscriptionProtocol })
+            .where(eq(subgraphs.id, subgraph.id))
+            .execute();
+        }
 
         const result = await subgraphRepo.byName(data.name);
         if (result) {

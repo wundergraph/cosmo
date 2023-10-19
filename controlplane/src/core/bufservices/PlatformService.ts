@@ -90,8 +90,8 @@ const formatSubscriptionProtocol = (protocol: GraphQLSubscriptionProtocol) => {
       return 'sse_post';
     }
   }
-  throw new Error(`Unknown GraphQLSubscriptionProtocol ${protocol}`)
-}
+  throw new Error(`Unknown GraphQLSubscriptionProtocol ${protocol}`);
+};
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -219,7 +219,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           labels: req.labels,
           routingUrl: req.routingUrl,
           subscriptionUrl: req.subscriptionUrl,
-          subscriptionProtocol: req.subscriptionProtocol ? formatSubscriptionProtocol(req.subscriptionProtocol) : undefined,
+          subscriptionProtocol: req.subscriptionProtocol
+            ? formatSubscriptionProtocol(req.subscriptionProtocol)
+            : undefined,
         });
 
         return {
