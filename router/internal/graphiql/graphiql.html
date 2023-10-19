@@ -5,118 +5,79 @@
  *  This source code is licensed under the license found in the
  *  LICENSE file in the root directory of this source tree.
 -->
-<!DOCTYPE html>
-<html>
-	<head>
-		<style>
-			body {
-				height: 100%;
-				margin: 0;
-				width: 100%;
-				overflow: hidden;
-			}
+<!doctype html>
+<html lang="en">
+  <head>
+    <title>GraphiQL</title>
+    <style>
+      body {
+        height: 100%;
+        margin: 0;
+        width: 100%;
+        overflow: hidden;
+      }
 
-			#graphiql {
-				height: 100vh;
-			}
-		</style>
+      #graphiql {
+        height: 100vh;
+      }
+    </style>
+    <!--
+      This GraphiQL example depends on Promise and fetch, which are available in
+      modern browsers, but can be "polyfilled" for older browsers.
+      GraphiQL itself depends on React DOM.
+      If you do not want to rely on a CDN, you can host these files locally or
+      include them directly in your favored resource bundler.
+    -->
+    <script
+      crossorigin
+      src="https://unpkg.com/react@18/umd/react.development.js"
+    ></script>
+    <script
+      crossorigin
+      src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"
+    ></script>
+    <!--
+      These two files can be found in the npm module, however you may wish to
+      copy them directly into your environment, or perhaps include them in your
+      favored resource bundler.
+     -->
+    <script
+      src="https://unpkg.com/graphiql/graphiql.min.js"
+      type="application/javascript"
+    ></script>
+    <link rel="stylesheet" href="https://unpkg.com/graphiql/graphiql.min.css" />
+    <!-- 
+      These are imports for the GraphIQL Explorer plugin.
+     -->
+    <script
+      src="https://unpkg.com/@graphiql/plugin-explorer/dist/index.umd.js"
+      crossorigin
+    ></script>
 
-		<!--
-			This GraphiQL example depends on Promise and fetch, which are available in
-			modern browsers, but can be "polyfilled" for older browsers.
-			GraphiQL itself depends on React DOM.
-			If you do not want to rely on a CDN, you can host these files locally or
-			include them directly in your favored resource bundler.
-		-->
-		<script
-			crossorigin
-			src="https://unpkg.com/react@17/umd/react.development.js"
-		></script>
-		<script
-			crossorigin
-			src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"
-		></script>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/@graphiql/plugin-explorer/dist/style.css"
+    />
+  </head>
 
-		<!--
-			These two files can be found in the npm module, however you may wish to
-			copy them directly into your environment, or perhaps include them in your
-			favored resource bundler.
-		 -->
-		<link rel="stylesheet" href="https://unpkg.com/graphiql/graphiql.min.css" />
-	</head>
-
-	<body>
-		<div id="graphiql">Loading...</div>
-		<script src="https://unpkg.com/graphiql/graphiql.min.js" type="application/javascript"></script>
-		<script>
-			function graphQLFetcher(graphQLParams,config) {
-				const { operationName } = graphQLParams;
-				const isSubscription = config.documentAST !== undefined ? config.documentAST.definitions.length === 1 ?
-					config.documentAST.definitions[0].operation === 'subscription' :
-					(config.documentAST.definitions.find(d=>d.name.value === operationName) || {}).operation === 'subscription' :
-					false;
-				if (isSubscription) {
-					const generator = async function* () {
-						const abort = new AbortController();
-						try {
-							const res = await fetch('{{graphqlURL}}', {
-								method: 'post',
-								headers: {
-									...config.headers || {},
-									Accept: 'application/json',
-									'Content-Type': 'application/json',
-								},
-								body: JSON.stringify(graphQLParams),
-								credentials: 'include',
-								signal: abort.signal,
-							});
-							if (res.status !== 200 || !res.body) {
-								throw new Error('Bad response' + JSON.stringify(res));
-							}
-							const reader = res.body.getReader();
-							const decoder = new TextDecoder();
-							let message = '';
-							while (true) {
-								const { value, done } = await reader.read();
-								if (done) return;
-								if (!value) continue;
-								message += decoder.decode(value);
-								if (message.endsWith('\n\n')) {
-									const jsonResp = JSON.parse(message.substring(0, message.length - 2));
-									yield jsonResp;
-									message = '';
-								}
-							}
-						} finally {
-							abort.abort();
-						}
-					};
-					return generator();
-				}
-				return fetch('{{graphqlURL}}', {
-					method: 'post',
-					headers: {
-						...config.headers || {},
-						Accept: 'application/json',
-						'Content-Type': 'application/json',
-					},
-					body: JSON.stringify(graphQLParams),
-					credentials: 'include',
-				}).then(function (response) {
-					return response.json().catch(function (e) {
-						return response.text();
-					});
-				});
-			}
-
-			ReactDOM.render(
-				React.createElement(GraphiQL, {
-					fetcher: graphQLFetcher,
-					defaultEditorToolsVisibility: true,
-					defaultVariableEditorOpen: true,
-				}),
-				document.getElementById('graphiql')
-			);
-		</script>
-	</body>
+  <body>
+    <div id="graphiql">Loading...</div>
+    <script>
+      const url = '{{graphqlURL}}';
+      const subscriptionUrl = window.location.protocol.replace('http', 'ws') + '//' + window.location.host + url;
+      const root = ReactDOM.createRoot(document.getElementById('graphiql'));
+      const fetcher = GraphiQL.createFetcher({
+        url: url,
+        subscriptionUrl: subscriptionUrl
+      });
+      const explorerPlugin = GraphiQLPluginExplorer.explorerPlugin();
+      root.render(
+        React.createElement(GraphiQL, {
+          fetcher,
+          defaultEditorToolsVisibility: true,
+          plugins: [explorerPlugin],
+        }),
+      );
+    </script>
+  </body>
 </html>

@@ -85,3 +85,35 @@ proto3.util.setEnumType(EnumStatusCode, "wg.cosmo.common.EnumStatusCode", [
   { no: 11, name: "ERR_FREE_TRIAL_EXPIRED" },
 ]);
 
+/**
+ * @generated from enum wg.cosmo.common.GraphQLSubscriptionProtocol
+ */
+export enum GraphQLSubscriptionProtocol {
+  /**
+   * Subscribe with a websocket, automatically negotiating the subprotocol
+   *
+   * @generated from enum value: GRAPHQL_SUBSCRIPTION_PROTOCOL_WS = 0;
+   */
+  GRAPHQL_SUBSCRIPTION_PROTOCOL_WS = 0,
+
+  /**
+   * Subscribe via SSE with a GET request
+   *
+   * @generated from enum value: GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE = 1;
+   */
+  GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE = 1,
+
+  /**
+   * Subscribe via SSE with a POST request
+   *
+   * @generated from enum value: GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE_POST = 2;
+   */
+  GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE_POST = 2,
+}
+// Retrieve enum metadata with: proto3.getEnumType(GraphQLSubscriptionProtocol)
+proto3.util.setEnumType(GraphQLSubscriptionProtocol, "wg.cosmo.common.GraphQLSubscriptionProtocol", [
+  { no: 0, name: "GRAPHQL_SUBSCRIPTION_PROTOCOL_WS" },
+  { no: 1, name: "GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE" },
+  { no: 2, name: "GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE_POST" },
+]);
+

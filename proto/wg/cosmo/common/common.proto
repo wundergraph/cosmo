@@ -16,3 +16,12 @@ enum EnumStatusCode {
   ERR_OPENAI_DISABLED = 10;
   ERR_FREE_TRIAL_EXPIRED = 11;
 }
+
+enum GraphQLSubscriptionProtocol {
+  // Subscribe with a websocket, automatically negotiating the subprotocol
+  GRAPHQL_SUBSCRIPTION_PROTOCOL_WS = 0;
+  // Subscribe via SSE with a GET request
+  GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE = 1;
+  // Subscribe via SSE with a POST request
+  GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE_POST = 2;
+}

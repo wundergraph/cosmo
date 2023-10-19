@@ -27,9 +27,13 @@ export const federatedGraphs = pgTable('federated_graphs', {
   }),
 });
 
+export const subscriptionProtocolEnum = pgEnum('subscription_protocol', ['ws', 'sse', 'sse_post']);
+
 export const subgraphs = pgTable('subgraphs', {
   id: uuid('id').primaryKey().defaultRandom(),
   routingUrl: text('routing_url').notNull(),
+  subscriptionUrl: text('subscription_url'),
+  subscriptionProtocol: subscriptionProtocolEnum('subscription_protocol').notNull().default('ws'),
   // This is the latest valid schema of the subgraph.
   schemaVersionId: uuid('schema_version_id').references(() => schemaVersion.id, {
     onDelete: 'no action',

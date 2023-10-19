@@ -198,7 +198,9 @@ message MTLSConfiguration {
 message GraphQLSubscriptionConfiguration {
   bool enabled = 1;
   ConfigurationVariable url = 2;
-  bool useSSE = 3;
+  /* @deprecated - Kept for backwards compatibility when decoding. Use protocol instead. */
+  optional bool useSSE = 3;
+  optional wg.cosmo.common.GraphQLSubscriptionProtocol protocol = 4;
 }
 
 message GraphQLFederationConfiguration {

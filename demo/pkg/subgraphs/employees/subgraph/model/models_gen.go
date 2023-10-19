@@ -92,6 +92,11 @@ func (this Operator) GetTitle() []string {
 	return interfaceSlice
 }
 
+type Time struct {
+	UnixTime  int    `json:"unixTime"`
+	TimeStamp string `json:"timeStamp"`
+}
+
 type Country string
 
 const (

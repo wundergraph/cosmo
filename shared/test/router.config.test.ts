@@ -16,6 +16,8 @@ describe('Router Config Builder', () => {
         encoding: 'utf8',
       }),
       url: 'https://wg-federation-demo-accounts.fly.dev/graphql',
+      subscriptionUrl: '',
+      subscriptionProtocol: 'ws',
     };
     const products: Subgraph = {
       id: '1',
@@ -24,6 +26,8 @@ describe('Router Config Builder', () => {
         encoding: 'utf8',
       }),
       url: 'https://wg-federation-demo-products.fly.dev/graphql',
+      subscriptionUrl: '',
+      subscriptionProtocol: 'ws',
     };
     const reviews: Subgraph = {
       id: '2',
@@ -32,6 +36,8 @@ describe('Router Config Builder', () => {
         encoding: 'utf8',
       }),
       url: 'https://wg-federation-demo-reviews.fly.dev/graphql',
+      subscriptionUrl: '',
+      subscriptionProtocol: 'ws',
     };
     const inventory: Subgraph = {
       id: '3',
@@ -40,6 +46,8 @@ describe('Router Config Builder', () => {
         encoding: 'utf8',
       }),
       url: 'https://wg-federation-demo-inventory.fly.dev/graphql',
+      subscriptionUrl: '',
+      subscriptionProtocol: 'ws',
     };
     const routerConfig = buildRouterConfig({
       argumentConfigurations: [],
@@ -56,13 +64,15 @@ describe('Router Config Builder', () => {
   });
 
   test('that builder config throws an error if the graph fails normalization', () => {
-    const subgraph = {
+    const subgraph:Subgraph = {
       id: '',
       name: '',
       sdl: `extend input Human {
         name: String!
       }`,
       url: '',
+      subscriptionUrl: '',
+      subscriptionProtocol: 'ws',
     };
     let error;
     try {

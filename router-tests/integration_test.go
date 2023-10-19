@@ -7,10 +7,12 @@ import (
 	"flag"
 	"fmt"
 	"math/rand"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -118,14 +120,6 @@ func sendQueryOK(tb testing.TB, server *core.Server, query *testQuery) string {
 	return rr.Body.String()
 }
 
-func sendQueryBadRequest(tb testing.TB, server *core.Server, query *testQuery) string {
-	rr := sendData(server, query.Data())
-	if rr.Code != http.StatusBadRequest {
-		tb.Error("unexpected status code", rr.Code)
-	}
-	return rr.Body.String()
-}
-
 func sendData(server *core.Server, data []byte) *httptest.ResponseRecorder {
 	rr := httptest.NewRecorder()
 	req := httptest.NewRequest("POST", "/graphql", bytes.NewBuffer(data))
@@ -133,7 +127,7 @@ func sendData(server *core.Server, data []byte) *httptest.ResponseRecorder {
 	return rr
 }
 
-func setupServer(tb testing.TB) *core.Server {
+func prepareServer(tb testing.TB, listeningPort int) *core.Server {
 	ctx := context.Background()
 	cfg := config.Config{
 		Graph: config.Graph{
@@ -162,7 +156,7 @@ func setupServer(tb testing.TB) *core.Server {
 		core.WithFederatedGraphName(cfg.Graph.Name),
 		core.WithStaticRouterConfig(routerConfig),
 		core.WithLogger(zapLogger),
-		core.WithListenerAddr("http://localhost:3002"),
+		core.WithListenerAddr(":"+strconv.Itoa(listeningPort)),
 	)
 	require.NoError(tb, err)
 
@@ -173,6 +167,34 @@ func setupServer(tb testing.TB) *core.Server {
 	server, err := rs.NewTestServer(ctx)
 	require.NoError(tb, err)
 	return server
+}
+
+// setupServer sets up the router server without making it listen on a local
+// port, allowing tests by calling the server directly via server.Server.Handler.ServeHTTP
+func setupServer(tb testing.TB) *core.Server {
+	return prepareServer(tb, 0)
+}
+
+// setupListeningServer calls setupServer to set up the server but makes it listen
+// on the network, automatically registering a cleanup function to shut it down.
+// It returns both the server and the local port where the server is listening.
+func setupListeningServer(tb testing.TB) (*core.Server, int) {
+	listener, err := net.Listen("tcp", ":0")
+	require.NoError(tb, err)
+	port := listener.Addr().(*net.TCPAddr).Port
+	listener.Close()
+	server := prepareServer(tb, port)
+	go func() {
+		err := server.Server.ListenAndServe()
+		if err != http.ErrServerClosed {
+			require.NoError(tb, err)
+		}
+	}()
+	tb.Cleanup(func() {
+		err := server.Shutdown(context.Background())
+		assert.NoError(tb, err)
+	})
+	return server, port
 }
 
 func normalizeJSON(tb testing.TB, data []byte) []byte {
@@ -226,7 +248,7 @@ func TestTestdataQueries(t *testing.T) {
 
 func TestIntegrationWithUndefinedField(t *testing.T) {
 	server := setupServer(t)
-	result := sendQueryBadRequest(t, server, &testQuery{
+	result := sendQueryOK(t, server, &testQuery{
 		Body: "{ employees { id notDefined } }",
 	})
 	assert.JSONEq(t, `{"errors":[{"message":"field: notDefined not defined on type: Employee","path":["query","employees","notDefined"]}]}`, result)

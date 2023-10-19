@@ -69,3 +69,15 @@ type Employee implements Identifiable @key(fields: "id") {
   id: Int!
   role: RoleType!
 }
+
+type Time {
+  unixTime: Int!
+  timeStamp: String!
+}
+
+type Subscription {
+  """
+  `currentTime` will return a stream of `Time` objects.
+  """
+  currentTime: Time!
+}
