@@ -175,6 +175,10 @@ func (h *WebsocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			// TODO: WriteBufferPool,
 			EnableCompression: true,
 			Subprotocols:      wsproto.Subprotocols(),
+			CheckOrigin: func(_ *http.Request) bool {
+				// Allow any origin to subscribe via WS
+				return true
+			},
 		}
 		c, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
