@@ -17,8 +17,8 @@ type Config = {
     schema?: {
       file: string;
     };
-    subscriptions?: {
-      protocol?: 'ws' | 'sse' | 'sse-post';
+    subscription?: {
+      protocol?: 'ws' | 'sse' | 'sse_post';
     };
     introspection?: {
       url: string;
@@ -98,7 +98,7 @@ export default (opts: BaseCommandOptions) => {
         name: s.name,
         url: normalizeURL(s.routing_url),
         sdl: sdls[index],
-        subscriptions: s.subscriptions,
+        subscriptionProtocol: s.subscription?.protocol ?? 'ws',
       })),
     });
 

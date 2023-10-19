@@ -13,6 +13,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/wundergraph/cosmo/router/config"
+	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 )
 
@@ -177,13 +178,13 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration) (*plan.Configura
 			var subscriptionUseSSE bool
 			var subscriptionSSEMethodPost bool
 			switch in.CustomGraphql.Subscription.Protocol {
-			case nodev1.GraphQLSubscriptionProtocol_GRAPHQL_SUBSCRIPTION_PROTOCOL_WS:
+			case common.GraphQLSubscriptionProtocol_GRAPHQL_SUBSCRIPTION_PROTOCOL_WS:
 				subscriptionUseSSE = false
 				subscriptionSSEMethodPost = false
-			case nodev1.GraphQLSubscriptionProtocol_GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE:
+			case common.GraphQLSubscriptionProtocol_GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE:
 				subscriptionUseSSE = true
 				subscriptionSSEMethodPost = false
-			case nodev1.GraphQLSubscriptionProtocol_GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE_POST:
+			case common.GraphQLSubscriptionProtocol_GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE_POST:
 				subscriptionUseSSE = true
 				subscriptionSSEMethodPost = true
 			}

@@ -5,7 +5,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3, protoInt64 } from "@bufbuild/protobuf";
-import { EnumStatusCode } from "../../common/common_pb.js";
+import { EnumStatusCode, GraphQLSubscriptionProtocol } from "../../common/common_pb.js";
 
 /**
  * @generated from enum wg.cosmo.node.v1.ArgumentRenderConfiguration
@@ -135,32 +135,6 @@ proto3.util.setEnumType(HTTPMethod, "wg.cosmo.node.v1.HTTPMethod", [
   { no: 2, name: "PUT" },
   { no: 3, name: "DELETE" },
   { no: 4, name: "OPTIONS" },
-]);
-
-/**
- * @generated from enum wg.cosmo.node.v1.GraphQLSubscriptionProtocol
- */
-export enum GraphQLSubscriptionProtocol {
-  /**
-   * @generated from enum value: GRAPHQL_SUBSCRIPTION_PROTOCOL_WS = 0;
-   */
-  GRAPHQL_SUBSCRIPTION_PROTOCOL_WS = 0,
-
-  /**
-   * @generated from enum value: GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE = 1;
-   */
-  GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE = 1,
-
-  /**
-   * @generated from enum value: GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE_POST = 2;
-   */
-  GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE_POST = 2,
-}
-// Retrieve enum metadata with: proto3.getEnumType(GraphQLSubscriptionProtocol)
-proto3.util.setEnumType(GraphQLSubscriptionProtocol, "wg.cosmo.node.v1.GraphQLSubscriptionProtocol", [
-  { no: 0, name: "GRAPHQL_SUBSCRIPTION_PROTOCOL_WS" },
-  { no: 1, name: "GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE" },
-  { no: 2, name: "GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE_POST" },
 ]);
 
 /**
@@ -1343,7 +1317,7 @@ export class GraphQLSubscriptionConfiguration extends Message<GraphQLSubscriptio
   useSSE?: boolean;
 
   /**
-   * @generated from field: wg.cosmo.node.v1.GraphQLSubscriptionProtocol protocol = 4;
+   * @generated from field: wg.cosmo.common.GraphQLSubscriptionProtocol protocol = 4;
    */
   protocol = GraphQLSubscriptionProtocol.GRAPHQL_SUBSCRIPTION_PROTOCOL_WS;
 

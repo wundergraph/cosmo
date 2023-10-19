@@ -2,7 +2,7 @@ import Table from 'cli-table3';
 import { Command } from 'commander';
 import pc from 'picocolors';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { splitLabel } from '@wundergraph/cosmo-shared';
+import { splitLabel, parseGraphQLSubscriptionProtocol } from '@wundergraph/cosmo-shared';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { baseHeaders } from '../../../core/config.js';
 
@@ -22,6 +22,10 @@ export default (opts: BaseCommandOptions) => {
     '--header [headers...]',
     'The headers to apply when the subgraph is introspected. This is used for authentication and authorization.',
   );
+  command.option(
+    '--subscription-protocol <protocol>',
+    'The protocol to use when subscribing to the subgraph. The supported protocols are ws, sse, and sse-post.'
+  );
   command.action(async (name, options) => {
     const resp = await opts.client.platform.updateSubgraph(
       {
@@ -35,6 +39,7 @@ export default (opts: BaseCommandOptions) => {
             };
           }) ?? [],
         routingUrl: options.routingUrl,
+        subscriptionProtocol: options.subscriptionProtocol ? parseGraphQLSubscriptionProtocol(options.subscriptionProtocol) : undefined,
         headers: options.header,
       },
       {

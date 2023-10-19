@@ -1,9 +1,7 @@
-import { readFile } from 'node:fs/promises';
 import { Command } from 'commander';
 import pc from 'picocolors';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { splitLabel } from '@wundergraph/cosmo-shared';
-import { join } from 'pathe';
+import { splitLabel, parseGraphQLSubscriptionProtocol } from '@wundergraph/cosmo-shared';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { baseHeaders } from '../../../core/config.js';
 
@@ -26,6 +24,10 @@ export default (opts: BaseCommandOptions) => {
     '--header [headers...]',
     'The headers to apply when the subgraph is introspected. This is used for authentication and authorization.',
   );
+  schemaPush.option(
+    '--subscription-protocol <protocol>',
+    'The protocol to use when subscribing to the subgraph. The supported protocols are ws, sse, and sse-post.'
+  )
   schemaPush.action(async (name, options) => {
     const resp = await opts.client.platform.createFederatedSubgraph(
       {
@@ -39,6 +41,7 @@ export default (opts: BaseCommandOptions) => {
         }),
         routingUrl: options.routingUrl,
         headers: options.header,
+        subscriptionProtocol: parseGraphQLSubscriptionProtocol(options.subscriptionProtocol),
       },
       {
         headers: baseHeaders,

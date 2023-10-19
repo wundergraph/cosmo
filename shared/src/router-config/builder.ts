@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import { printSchemaWithDirectives } from '@graphql-tools/utils';
 import { ArgumentConfigurationData, normalizeSubgraphFromString } from '@wundergraph/composition';
 import { GraphQLSchema, lexicographicSortSchema } from 'graphql';
+import { GraphQLSubscriptionProtocol } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   ConfigurationVariable,
   ConfigurationVariableKind,
@@ -10,8 +11,7 @@ import {
   EngineConfiguration,
   HTTPMethod,
   InternedString,
-  RouterConfig,
-  GraphQLSubscriptionProtocol,
+  RouterConfig
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import {
   argumentConfigurationDatasToFieldConfigurations,
@@ -31,19 +31,14 @@ export interface Input {
  * sse: Uses the Server-Sent Events protocol with a GET request
  * sse-post: Uses the Server-Sent Events protocol with a POST request
  */
-export type SubscriptionProtocol = 'ws' | 'sse' | 'sse-post';
+export type SubscriptionProtocol = 'ws' | 'sse' | 'sse_post';
 
 export interface Subgraph {
   id: string;
   name: string;
   sdl: string;
   url: string;
-  subscriptions?: {
-    /**
-     * The protocol to use for subscriptions. If not set, defaults to graphql-ws.
-     */
-    protocol?: SubscriptionProtocol;
-  };
+  subscriptionProtocol: SubscriptionProtocol;
 }
 
 export const internString = (config: EngineConfiguration, str: string): InternedString => {
@@ -52,6 +47,21 @@ export const internString = (config: EngineConfiguration, str: string): Interned
   return new InternedString({
     key,
   });
+};
+
+export const parseGraphQLSubscriptionProtocol = (protocolName: string): GraphQLSubscriptionProtocol => {
+  switch (protocolName) {
+    case 'ws': {
+      return GraphQLSubscriptionProtocol.GRAPHQL_SUBSCRIPTION_PROTOCOL_WS;
+    }
+    case 'sse': {
+      return GraphQLSubscriptionProtocol.GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE;
+    }
+    case 'sse-post': {
+      return GraphQLSubscriptionProtocol.GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE_POST;
+    }
+  }
+  throw new Error(`Unsupported subscription protocol '${protocolName}'`);
 };
 
 export const buildRouterConfig = function (input: Input): RouterConfig {
@@ -79,27 +89,7 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
     const { childNodes, rootNodes, keys, provides, requires } = configurationDataMapToDataSourceConfiguration(
       normalizationResult!.configurationDataMap,
     );
-    let subscriptionProtocol: GraphQLSubscriptionProtocol;
-    switch (subgraph.subscriptions?.protocol ?? '') {
-      case '':
-      case 'ws': {
-        subscriptionProtocol = GraphQLSubscriptionProtocol.GRAPHQL_SUBSCRIPTION_PROTOCOL_WS;
-        break;
-      }
-      case 'sse': {
-        subscriptionProtocol = GraphQLSubscriptionProtocol.GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE;
-        break;
-      }
-      case 'sse-post': {
-        subscriptionProtocol = GraphQLSubscriptionProtocol.GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE_POST;
-        break;
-      }
-      default: {
-        throw new Error(
-          `unknown subscription protocol ${subgraph.subscriptions?.protocol} in subgraph ${subgraph.name}`,
-        );
-      }
-    }
+    const subscriptionProtocol = parseGraphQLSubscriptionProtocol(subgraph.subscriptionProtocol);
     const datasourceConfig = new DataSourceConfiguration({
       // When changing this, please do it in the router subgraph override as well
       id: subgraph.url,
