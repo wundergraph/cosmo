@@ -681,9 +681,10 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		}
 
 		subChiRouter.Use(NewWebsocketMiddleware(rootContext, WebsocketMiddlewareOptions{
-			Parser:         operationParser,
-			GraphQLHandler: graphqlHandler,
-			Logger:         r.logger,
+			Parser:                operationParser,
+			MaxRequestSizeInBytes: int64(r.routerTrafficConfig.MaxRequestBodyBytes),
+			GraphQLHandler:        graphqlHandler,
+			Logger:                r.logger,
 		}))
 
 		subChiRouter.Use(graphqlPreHandler.Handler)

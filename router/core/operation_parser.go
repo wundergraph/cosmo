@@ -2,7 +2,6 @@ package core
 
 import (
 	"fmt"
-	"io"
 	"sync"
 
 	"github.com/buger/jsonparser"
@@ -50,16 +49,6 @@ func NewOperationParser(executor *Executor) *OperationParser {
 			},
 		},
 	}
-}
-
-func (p *OperationParser) ParseReader(r io.Reader) (*ParsedOperation, error) {
-	buf := pool.GetBytesBuffer()
-	defer pool.PutBytesBuffer(buf)
-	if _, err := io.Copy(buf, r); err != nil {
-		return nil, fmt.Errorf("failed to read request body: %w", err)
-	}
-	body := buf.Bytes()
-	return p.Parse(body)
 }
 
 func (p *OperationParser) Parse(body []byte) (*ParsedOperation, error) {
