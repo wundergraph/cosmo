@@ -88,7 +88,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		operation, err := h.parser.Parse(buf.Bytes())
 		if err != nil {
 			var reportErr ReportError
-			var inputErr *inputError
+			var inputErr InputError
 			switch {
 			case errors.As(err, &inputErr):
 				statusCode = http.StatusBadRequest
