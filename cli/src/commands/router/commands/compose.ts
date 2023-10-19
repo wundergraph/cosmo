@@ -18,6 +18,7 @@ type Config = {
       file: string;
     };
     subscription?: {
+      url?: string;
       protocol?: 'ws' | 'sse' | 'sse_post';
     };
     introspection?: {
@@ -98,6 +99,7 @@ export default (opts: BaseCommandOptions) => {
         name: s.name,
         url: normalizeURL(s.routing_url),
         sdl: sdls[index],
+        subscriptionUrl: s.subscription?.url ?? s.routing_url,
         subscriptionProtocol: s.subscription?.protocol ?? 'ws',
       })),
     });
