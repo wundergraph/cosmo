@@ -177,16 +177,23 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration) (*plan.Configura
 
 			var subscriptionUseSSE bool
 			var subscriptionSSEMethodPost bool
-			switch in.CustomGraphql.Subscription.Protocol {
-			case common.GraphQLSubscriptionProtocol_GRAPHQL_SUBSCRIPTION_PROTOCOL_WS:
-				subscriptionUseSSE = false
-				subscriptionSSEMethodPost = false
-			case common.GraphQLSubscriptionProtocol_GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE:
-				subscriptionUseSSE = true
-				subscriptionSSEMethodPost = false
-			case common.GraphQLSubscriptionProtocol_GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE_POST:
-				subscriptionUseSSE = true
-				subscriptionSSEMethodPost = true
+			if in.CustomGraphql.Subscription.Protocol != nil {
+				switch *in.CustomGraphql.Subscription.Protocol {
+				case common.GraphQLSubscriptionProtocol_GRAPHQL_SUBSCRIPTION_PROTOCOL_WS:
+					subscriptionUseSSE = false
+					subscriptionSSEMethodPost = false
+				case common.GraphQLSubscriptionProtocol_GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE:
+					subscriptionUseSSE = true
+					subscriptionSSEMethodPost = false
+				case common.GraphQLSubscriptionProtocol_GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE_POST:
+					subscriptionUseSSE = true
+					subscriptionSSEMethodPost = true
+				}
+			} else {
+				// Old style config
+				if in.CustomGraphql.Subscription.UseSSE != nil {
+					subscriptionUseSSE = *in.CustomGraphql.Subscription.UseSSE
+				}
 			}
 			out.Custom = graphql_datasource.ConfigJson(graphql_datasource.Configuration{
 				Fetch: graphql_datasource.FetchConfiguration{

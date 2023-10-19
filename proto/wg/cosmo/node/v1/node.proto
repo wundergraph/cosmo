@@ -200,7 +200,7 @@ message GraphQLSubscriptionConfiguration {
   ConfigurationVariable url = 2;
   /* @deprecated - Kept for backwards compatibility when decoding. Use protocol instead. */
   optional bool useSSE = 3;
-  wg.cosmo.common.GraphQLSubscriptionProtocol protocol = 4;
+  optional wg.cosmo.common.GraphQLSubscriptionProtocol protocol = 4;
 }
 
 message GraphQLFederationConfiguration {

@@ -1317,9 +1317,9 @@ export class GraphQLSubscriptionConfiguration extends Message<GraphQLSubscriptio
   useSSE?: boolean;
 
   /**
-   * @generated from field: wg.cosmo.common.GraphQLSubscriptionProtocol protocol = 4;
+   * @generated from field: optional wg.cosmo.common.GraphQLSubscriptionProtocol protocol = 4;
    */
-  protocol = GraphQLSubscriptionProtocol.GRAPHQL_SUBSCRIPTION_PROTOCOL_WS;
+  protocol?: GraphQLSubscriptionProtocol;
 
   constructor(data?: PartialMessage<GraphQLSubscriptionConfiguration>) {
     super();
@@ -1332,7 +1332,7 @@ export class GraphQLSubscriptionConfiguration extends Message<GraphQLSubscriptio
     { no: 1, name: "enabled", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 2, name: "url", kind: "message", T: ConfigurationVariable },
     { no: 3, name: "useSSE", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
-    { no: 4, name: "protocol", kind: "enum", T: proto3.getEnumType(GraphQLSubscriptionProtocol) },
+    { no: 4, name: "protocol", kind: "enum", T: proto3.getEnumType(GraphQLSubscriptionProtocol), opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GraphQLSubscriptionConfiguration {
