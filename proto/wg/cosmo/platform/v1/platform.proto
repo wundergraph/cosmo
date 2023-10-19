@@ -79,6 +79,8 @@ message CreateFederatedSubgraphRequest {
   repeated string headers = 4;
   // subscription protocol to use when subscribing to this subgraph
   optional wg.cosmo.common.GraphQLSubscriptionProtocol subscription_protocol = 5;
+    // url used for subscriptions
+  optional string subscription_url = 6;
 }
 
 message DeleteFederatedGraphRequest {
@@ -287,6 +289,8 @@ message UpdateSubgraphRequest {
   repeated string headers = 4;
   // subscription protocol to use when subscribing to this subgraph
   optional wg.cosmo.common.GraphQLSubscriptionProtocol subscription_protocol = 5;
+  // url used for subscriptions
+  optional string subscription_url = 6;
 }
 
 message UpdateSubgraphResponse {

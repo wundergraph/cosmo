@@ -14,6 +14,7 @@ interface ComposedSubgraph {
     name: string;
     sdl: string;
     url: string;
+    subscriptionUrl: string;
     subscriptionProtocol: 'ws' | 'sse' | 'sse_post';
 }
 export interface ComposedFederatedGraph {
@@ -69,6 +70,7 @@ export class Composer {
           name: s.name,
           url: s.routingUrl,
           sdl: s.schemaSDL,
+          subscriptionUrl: s.subscriptionUrl,
           subscriptionProtocol: s.subscriptionProtocol,
         })),
       };
@@ -123,6 +125,7 @@ export class Composer {
             id: s.id,
             name: s.name,
             url: s.routingUrl,
+            subscriptionUrl: s.subscriptionUrl,
             subscriptionProtocol: s.subscriptionProtocol,
             sdl: s.schemaSDL,
           })),

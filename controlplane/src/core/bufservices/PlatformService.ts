@@ -218,6 +218,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           name: req.name,
           labels: req.labels,
           routingUrl: req.routingUrl,
+          subscriptionUrl: req.subscriptionUrl,
           subscriptionProtocol: req.subscriptionProtocol ? formatSubscriptionProtocol(req.subscriptionProtocol) : undefined,
         });
 
@@ -1290,6 +1291,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const update: Subgraph = {
           name: req.name,
           labels: req.labels,
+          subscriptionUrl: req.subscriptionUrl,
           routingUrl: req.routingUrl,
         };
         if (req.subscriptionProtocol !== undefined) {

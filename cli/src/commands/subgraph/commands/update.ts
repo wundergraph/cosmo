@@ -23,6 +23,10 @@ export default (opts: BaseCommandOptions) => {
     'The headers to apply when the subgraph is introspected. This is used for authentication and authorization.',
   );
   command.option(
+    '--subscription-url [url]',
+    'The url used for subscriptions. If empty, it defaults to same url used for routing.'
+  )
+  command.option(
     '--subscription-protocol <protocol>',
     'The protocol to use when subscribing to the subgraph. The supported protocols are ws, sse, and sse-post.'
   );
@@ -38,6 +42,8 @@ export default (opts: BaseCommandOptions) => {
               value,
             };
           }) ?? [],
+        // If the argument is provided but the URL is not, clear it
+        subscriptionUrl: options.subscriptionUrl === true ? '' : options.subscriptionUrl,
         routingUrl: options.routingUrl,
         subscriptionProtocol: options.subscriptionProtocol ? parseGraphQLSubscriptionProtocol(options.subscriptionProtocol) : undefined,
         headers: options.header,

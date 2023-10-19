@@ -700,6 +700,13 @@ export class CreateFederatedSubgraphRequest extends Message<CreateFederatedSubgr
    */
   subscriptionProtocol?: GraphQLSubscriptionProtocol;
 
+  /**
+   * url used for subscriptions
+   *
+   * @generated from field: optional string subscription_url = 6;
+   */
+  subscriptionUrl?: string;
+
   constructor(data?: PartialMessage<CreateFederatedSubgraphRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -713,6 +720,7 @@ export class CreateFederatedSubgraphRequest extends Message<CreateFederatedSubgr
     { no: 3, name: "labels", kind: "message", T: Label, repeated: true },
     { no: 4, name: "headers", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 5, name: "subscription_protocol", kind: "enum", T: proto3.getEnumType(GraphQLSubscriptionProtocol), opt: true },
+    { no: 6, name: "subscription_url", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateFederatedSubgraphRequest {
@@ -2395,6 +2403,13 @@ export class UpdateSubgraphRequest extends Message<UpdateSubgraphRequest> {
    */
   subscriptionProtocol?: GraphQLSubscriptionProtocol;
 
+  /**
+   * url used for subscriptions
+   *
+   * @generated from field: optional string subscription_url = 6;
+   */
+  subscriptionUrl?: string;
+
   constructor(data?: PartialMessage<UpdateSubgraphRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -2408,6 +2423,7 @@ export class UpdateSubgraphRequest extends Message<UpdateSubgraphRequest> {
     { no: 3, name: "labels", kind: "message", T: Label, repeated: true },
     { no: 4, name: "headers", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 5, name: "subscription_protocol", kind: "enum", T: proto3.getEnumType(GraphQLSubscriptionProtocol), opt: true },
+    { no: 6, name: "subscription_url", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateSubgraphRequest {

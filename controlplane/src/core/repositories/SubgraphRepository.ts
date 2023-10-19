@@ -23,6 +23,7 @@ export interface Subgraph {
   name: string;
   routingUrl: string;
   labels: Label[]
+  subscriptionUrl?: string;
   subscriptionProtocol?: SubscriptionProtocol;
 }
 
@@ -35,6 +36,10 @@ export class SubgraphRepository {
   public create(data: Subgraph): Promise<SubgraphDTO | undefined> {
     const uniqueLabels = normalizeLabels(data.labels);
     const routingUrl = normalizeURL(data.routingUrl);
+    let subscriptionUrl = data.subscriptionUrl ? normalizeURL(data.subscriptionUrl) : undefined;
+    if (subscriptionUrl === routingUrl) {
+      subscriptionUrl = undefined;
+    }
 
     return this.db.transaction(async (db) => {
       /**
@@ -60,6 +65,7 @@ export class SubgraphRepository {
         .values({
           targetId: insertedTarget[0].id,
           routingUrl,
+          subscriptionUrl,
           subscriptionProtocol: data.subscriptionProtocol ?? 'ws',
         })
         .returning()
@@ -105,9 +111,17 @@ export class SubgraphRepository {
       const subgraphRepo = new SubgraphRepository(db, this.organizationId);
 
       // update graph attributes
-      if (data.routingUrl !== '' || data.subscriptionProtocol !== undefined) {
+      if (data.routingUrl !== '' || data.subscriptionUrl !== undefined || data.subscriptionProtocol !== undefined) {
         if (data.routingUrl !== '') {
           await db.update(subgraphs).set({ routingUrl }).where(eq(subgraphs.id, subgraph.id)).execute();
+        }
+
+        if (data.subscriptionUrl !== undefined) {
+          let subscriptionUrl: string | null = normalizeURL(data.subscriptionUrl);
+          if (!subscriptionUrl || subscriptionUrl === routingUrl) {
+            subscriptionUrl = null;
+          }
+          await db.update(subgraphs).set({ subscriptionUrl }).where(eq(subgraphs.id, subgraph.id)).execute();
         }
 
         if (data.subscriptionProtocol !== undefined) {
@@ -222,6 +236,7 @@ export class SubgraphRepository {
         schemaSDL: subgraphSchema,
         targetId: subgraph.targetId,
         routingUrl: subgraph.routingUrl,
+        subscriptionUrl: subgraph.subscriptionUrl,
         subscriptionProtocol: subgraph.subscriptionProtocol,
         lastUpdatedAt: insertedVersion[0].createdAt.toISOString() ?? '',
         name: subgraphName,
@@ -350,6 +365,7 @@ export class SubgraphRepository {
       id: resp.subgraph.id,
       targetId: resp.id,
       routingUrl: resp.subgraph.routingUrl,
+      subscriptionUrl: resp.subgraph.subscriptionUrl ?? '',
       subscriptionProtocol: resp.subgraph.subscriptionProtocol ?? 'ws',
       name: resp.name,
       schemaSDL,
