@@ -47,7 +47,9 @@ export default (opts: BaseCommandOptions) => {
         headers: options.header,
         // If the argument is provided but the URL is not, clear it
         subscriptionUrl: options.subscriptionUrl === true ? '' : options.subscriptionUrl,
-        subscriptionProtocol: parseGraphQLSubscriptionProtocol(options.subscriptionProtocol),
+        subscriptionProtocol: options.subscriptionProtocol
+          ? parseGraphQLSubscriptionProtocol(options.subscriptionProtocol)
+          : undefined,
       },
       {
         headers: baseHeaders,
