@@ -13,7 +13,7 @@ import (
 
 func NewDemoServer(schema graphql.ExecutableSchema) *handler.Server {
 	srv := handler.New(schema)
-	// SSE needs to be the first transport
+	// gqlgen requires SSE to be the first transport, see https://gqlgen.com/recipes/subscriptions/
 	srv.AddTransport(transport.SSE{})
 	srv.AddTransport(transport.Options{})
 	srv.AddTransport(transport.GET{})
