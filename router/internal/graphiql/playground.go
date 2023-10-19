@@ -7,6 +7,6 @@ import (
 //go:embed graphiql.html
 var s string
 
-func GetGraphiqlPlaygroundHTML() string {
+func PlaygroundHTML() string {
 	return s
 }

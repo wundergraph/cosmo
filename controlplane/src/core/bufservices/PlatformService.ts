@@ -1,6 +1,6 @@
 import { JsonValue, PlainMessage } from '@bufbuild/protobuf';
 import { ServiceImpl } from '@connectrpc/connect';
-import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { EnumStatusCode, GraphQLSubscriptionProtocol } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { GetConfigResponse } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
 import {
@@ -64,7 +64,7 @@ import { signJwt } from '../crypto/jwt.js';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import { SchemaCheckRepository } from '../repositories/SchemaCheckRepository.js';
-import { SubgraphRepository } from '../repositories/SubgraphRepository.js';
+import { Subgraph, SubgraphRepository } from '../repositories/SubgraphRepository.js';
 import { UserRepository } from '../repositories/UserRepository.js';
 import { AnalyticsDashboardViewRepository } from '../repositories/analytics/AnalyticsDashboardViewRepository.js';
 import { AnalyticsRequestViewRepository } from '../repositories/analytics/AnalyticsRequestViewRepository.js';
@@ -77,6 +77,21 @@ import { handleError, isValidLabelMatchers, isValidLabels } from '../util.js';
 import { OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
 import { GitHubRepository } from '../repositories/GitHubRepository.js';
 import Slack from '../services/Slack.js';
+
+const formatSubscriptionProtocol = (protocol: GraphQLSubscriptionProtocol) => {
+  switch (protocol) {
+    case GraphQLSubscriptionProtocol.GRAPHQL_SUBSCRIPTION_PROTOCOL_WS: {
+      return 'ws';
+    }
+    case GraphQLSubscriptionProtocol.GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE: {
+      return 'sse';
+    }
+    case GraphQLSubscriptionProtocol.GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE_POST: {
+      return 'sse_post';
+    }
+  }
+  throw new Error(`Unknown GraphQLSubscriptionProtocol ${protocol}`);
+};
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -203,6 +218,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           name: req.name,
           labels: req.labels,
           routingUrl: req.routingUrl,
+          subscriptionUrl: req.subscriptionUrl,
+          subscriptionProtocol: req.subscriptionProtocol
+            ? formatSubscriptionProtocol(req.subscriptionProtocol)
+            : undefined,
         });
 
         return {
@@ -1271,11 +1290,16 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const { compositionErrors, updatedFederatedGraphs } = await repo.update({
+        const update: Subgraph = {
           name: req.name,
           labels: req.labels,
+          subscriptionUrl: req.subscriptionUrl,
           routingUrl: req.routingUrl,
-        });
+        };
+        if (req.subscriptionProtocol !== undefined) {
+          update.subscriptionProtocol = formatSubscriptionProtocol(req.subscriptionProtocol);
+        }
+        const { compositionErrors, updatedFederatedGraphs } = await repo.update(update);
         if (compositionErrors.length > 0) {
           return {
             response: {

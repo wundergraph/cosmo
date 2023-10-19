@@ -104,7 +104,13 @@ func (f *HttpFlushWriter) Flush() {
 	f.flusher.Flush()
 }
 
-func GetFlushWriter(ctx *resolve.Context, variables []byte, r *http.Request, w http.ResponseWriter) (*resolve.Context, *HttpFlushWriter, bool) {
+func GetFlushWriter(ctx *resolve.Context, variables []byte, r *http.Request, w http.ResponseWriter) (*resolve.Context, resolve.FlushWriter, bool) {
+	type withFlushWriter interface {
+		FlushWriter() resolve.FlushWriter
+	}
+	if wfw, ok := w.(withFlushWriter); ok {
+		return ctx, wfw.FlushWriter(), true
+	}
 	wgParams := NewWgRequestParams(r)
 
 	flusher, ok := w.(http.Flusher)
@@ -115,8 +121,6 @@ func GetFlushWriter(ctx *resolve.Context, variables []byte, r *http.Request, w h
 	if !wgParams.SubscribeOnce {
 		setSubscriptionHeaders(w)
 	}
-
-	flusher.Flush()
 
 	flushWriter := &HttpFlushWriter{
 		writer:       w,

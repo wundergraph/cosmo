@@ -16,15 +16,29 @@ import { updateComposedSchema } from '../composition/updateComposedSchema.js';
 import { normalizeLabels } from '../util.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 
+type SubscriptionProtocol = 'ws' | 'sse' | 'sse_post';
+
+export interface Subgraph {
+  name: string;
+  routingUrl: string;
+  labels: Label[];
+  subscriptionUrl?: string;
+  subscriptionProtocol?: SubscriptionProtocol;
+}
+
 /**
  * Repository for managing subgraphs.
  */
 export class SubgraphRepository {
   constructor(private db: PostgresJsDatabase<typeof schema>, private organizationId: string) {}
 
-  public create(data: { name: string; routingUrl: string; labels: Label[] }): Promise<SubgraphDTO | undefined> {
+  public create(data: Subgraph): Promise<SubgraphDTO | undefined> {
     const uniqueLabels = normalizeLabels(data.labels);
     const routingUrl = normalizeURL(data.routingUrl);
+    let subscriptionUrl = data.subscriptionUrl ? normalizeURL(data.subscriptionUrl) : undefined;
+    if (subscriptionUrl === routingUrl) {
+      subscriptionUrl = undefined;
+    }
 
     return this.db.transaction(async (db) => {
       /**
@@ -50,6 +64,8 @@ export class SubgraphRepository {
         .values({
           targetId: insertedTarget[0].id,
           routingUrl,
+          subscriptionUrl,
+          subscriptionProtocol: data.subscriptionProtocol ?? 'ws',
         })
         .returning()
         .execute();
@@ -77,11 +93,9 @@ export class SubgraphRepository {
     });
   }
 
-  public async update(data: {
-    name: string;
-    routingUrl: string;
-    labels: Label[];
-  }): Promise<{ compositionErrors: CompositionError[]; updatedFederatedGraphs: FederatedGraphDTO[] }> {
+  public async update(
+    data: Subgraph,
+  ): Promise<{ compositionErrors: CompositionError[]; updatedFederatedGraphs: FederatedGraphDTO[] }> {
     const uniqueLabels = normalizeLabels(data.labels);
     const routingUrl = normalizeURL(data.routingUrl);
 
@@ -97,9 +111,28 @@ export class SubgraphRepository {
       const fedGraphRepo = new FederatedGraphRepository(db, this.organizationId);
       const subgraphRepo = new SubgraphRepository(db, this.organizationId);
 
-      // update routing URL
-      if (data.routingUrl !== '') {
-        await db.update(subgraphs).set({ routingUrl }).where(eq(subgraphs.id, subgraph.id)).execute();
+      // update graph attributes
+      if (data.routingUrl !== '' || data.subscriptionUrl !== undefined || data.subscriptionProtocol !== undefined) {
+        if (data.routingUrl !== '') {
+          await db.update(subgraphs).set({ routingUrl }).where(eq(subgraphs.id, subgraph.id)).execute();
+        }
+
+        if (data.subscriptionUrl !== undefined) {
+          let subscriptionUrl: string | null = normalizeURL(data.subscriptionUrl);
+          if (!subscriptionUrl || subscriptionUrl === routingUrl) {
+            subscriptionUrl = null;
+          }
+          await db.update(subgraphs).set({ subscriptionUrl }).where(eq(subgraphs.id, subgraph.id)).execute();
+        }
+
+        if (data.subscriptionProtocol !== undefined) {
+          await db
+            .update(subgraphs)
+            .set({ subscriptionProtocol: data.subscriptionProtocol })
+            .where(eq(subgraphs.id, subgraph.id))
+            .execute();
+        }
+
         const result = await subgraphRepo.byName(data.name);
         if (result) {
           updatedFederatedGraphs.push(...(await fedGraphRepo.bySubgraphLabels(result.labels)));
@@ -208,6 +241,8 @@ export class SubgraphRepository {
         schemaSDL: subgraphSchema,
         targetId: subgraph.targetId,
         routingUrl: subgraph.routingUrl,
+        subscriptionUrl: subgraph.subscriptionUrl,
+        subscriptionProtocol: subgraph.subscriptionProtocol,
         lastUpdatedAt: insertedVersion[0].createdAt.toISOString() ?? '',
         name: subgraphName,
         labels: subgraph.labels,
@@ -335,6 +370,8 @@ export class SubgraphRepository {
       id: resp.subgraph.id,
       targetId: resp.id,
       routingUrl: resp.subgraph.routingUrl,
+      subscriptionUrl: resp.subgraph.subscriptionUrl ?? '',
+      subscriptionProtocol: resp.subgraph.subscriptionProtocol ?? 'ws',
       name: resp.name,
       schemaSDL,
       lastUpdatedAt,

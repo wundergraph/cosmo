@@ -230,6 +230,7 @@ export default class ApolloMigrator {
             { key: 'name', value: sanitizedGraphName },
           ],
           routingUrl: subgraph.routingURL,
+          subscriptionProtocol: 'ws',
         });
 
         await subgraphRepo.updateSchema(subgraph.name, subgraph.schema);
