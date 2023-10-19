@@ -26,12 +26,12 @@ export default (opts: BaseCommandOptions) => {
   );
   schemaPush.option(
     '--subscription-url [url]',
-    'The url used for subscriptions. If empty, it defaults to same url used for routing.'
-  )
+    'The url used for subscriptions. If empty, it defaults to same url used for routing.',
+  );
   schemaPush.option(
     '--subscription-protocol <protocol>',
-    'The protocol to use when subscribing to the subgraph. The supported protocols are ws, sse, and sse-post.'
-  )
+    'The protocol to use when subscribing to the subgraph. The supported protocols are ws, sse, and sse-post.',
+  );
   schemaPush.action(async (name, options) => {
     const resp = await opts.client.platform.createFederatedSubgraph(
       {

@@ -11,7 +11,7 @@ import {
   EngineConfiguration,
   HTTPMethod,
   InternedString,
-  RouterConfig
+  RouterConfig,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import {
   argumentConfigurationDatasToFieldConfigurations,
