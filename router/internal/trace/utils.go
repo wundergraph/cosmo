@@ -26,6 +26,10 @@ func RequestFilter(r *http.Request) bool {
 	if r.URL.Path == "/health" || r.URL.Path == "/favicon.ico" || r.Method == "OPTIONS" {
 		return false
 	}
+	// Ignore websocket connections
+	if r.Header.Get("Upgrade") != "" {
+		return false
+	}
 	return true
 }
 
