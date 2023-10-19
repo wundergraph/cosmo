@@ -97,7 +97,14 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 				w.Write([]byte(inputErr.Error()))
 			case errors.As(err, &reportErr):
 				report := reportErr.Report()
-				statusCode = http.StatusBadRequest
+				// according to the graphql-over-http spec, internal errors should
+				// use a 500 as status code, while external errors should use 200.
+				// If we have both, we use 500.
+				if len(report.InternalErrors) == 0 {
+					statusCode = http.StatusOK
+				} else {
+					statusCode = http.StatusInternalServerError
+				}
 				logInternalErrors(report, requestLogger)
 				w.WriteHeader(statusCode)
 				writeRequestErrorsFromReport(report, w, requestLogger)
