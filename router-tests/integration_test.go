@@ -120,14 +120,6 @@ func sendQueryOK(tb testing.TB, server *core.Server, query *testQuery) string {
 	return rr.Body.String()
 }
 
-func sendQueryBadRequest(tb testing.TB, server *core.Server, query *testQuery) string {
-	rr := sendData(server, query.Data())
-	if rr.Code != http.StatusBadRequest {
-		tb.Error("unexpected status code", rr.Code)
-	}
-	return rr.Body.String()
-}
-
 func sendData(server *core.Server, data []byte) *httptest.ResponseRecorder {
 	rr := httptest.NewRecorder()
 	req := httptest.NewRequest("POST", "/graphql", bytes.NewBuffer(data))
@@ -256,7 +248,7 @@ func TestTestdataQueries(t *testing.T) {
 
 func TestIntegrationWithUndefinedField(t *testing.T) {
 	server := setupServer(t)
-	result := sendQueryBadRequest(t, server, &testQuery{
+	result := sendQueryOK(t, server, &testQuery{
 		Body: "{ employees { id notDefined } }",
 	})
 	assert.JSONEq(t, `{"errors":[{"message":"field: notDefined not defined on type: Employee","path":["query","employees","notDefined"]}]}`, result)
