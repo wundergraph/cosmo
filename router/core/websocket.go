@@ -13,8 +13,8 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/tidwall/gjson"
-	"github.com/wundergraph/cosmo/router/core/wsproto"
 	"github.com/wundergraph/cosmo/router/internal/metric"
+	"github.com/wundergraph/cosmo/router/internal/wsproto"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/zap"
 )
