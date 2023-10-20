@@ -73,18 +73,24 @@ export class SubgraphRepository {
 
       await Promise.all(ops);
 
-      return this.byName(data.name);
+      return {
+        id: insertedGraph[0].id,
+        name: data.name,
+        targetId: insertedTarget[0].id,
+        labels: uniqueLabels,
+        routingUrl,
+        // Populated when first schema is pushed
+        schemaSDL: '',
+        lastUpdatedAt: '',
+      } as SubgraphDTO;
     });
   }
 
   public async update(data: {
     name: string;
-    routingUrl: string;
+    routingUrl?: string;
     labels: Label[];
   }): Promise<{ compositionErrors: CompositionError[]; updatedFederatedGraphs: FederatedGraphDTO[] }> {
-    const uniqueLabels = normalizeLabels(data.labels);
-    const routingUrl = normalizeURL(data.routingUrl);
-
     const compositionErrors: CompositionError[] = [];
     const updatedFederatedGraphs: FederatedGraphDTO[] = [];
 
@@ -93,13 +99,14 @@ export class SubgraphRepository {
       return { compositionErrors, updatedFederatedGraphs };
     }
 
-    await this.db.transaction(async (db) => {
-      const fedGraphRepo = new FederatedGraphRepository(db, this.organizationId);
-      const subgraphRepo = new SubgraphRepository(db, this.organizationId);
+    await this.db.transaction(async (tx) => {
+      const fedGraphRepo = new FederatedGraphRepository(tx, this.organizationId);
+      const subgraphRepo = new SubgraphRepository(tx, this.organizationId);
 
       // update routing URL
-      if (data.routingUrl !== '') {
-        await db.update(subgraphs).set({ routingUrl }).where(eq(subgraphs.id, subgraph.id)).execute();
+      if (data.routingUrl) {
+        const routingUrl = normalizeURL(data.routingUrl);
+        await tx.update(subgraphs).set({ routingUrl }).where(eq(subgraphs.id, subgraph.id)).execute();
         const result = await subgraphRepo.byName(data.name);
         if (result) {
           updatedFederatedGraphs.push(...(await fedGraphRepo.bySubgraphLabels(result.labels)));
@@ -108,9 +115,10 @@ export class SubgraphRepository {
 
       // update labels
       if (data.labels.length > 0) {
+        const uniqueLabels = normalizeLabels(data.labels);
         const oldGraphs = await fedGraphRepo.bySubgraphLabels(uniqueLabels);
 
-        await db
+        await tx
           .update(targets)
           .set({
             labels: uniqueLabels.map((ul) => joinLabel(ul)),
@@ -132,10 +140,10 @@ export class SubgraphRepository {
           );
         }
 
-        await db.delete(subgraphsToFederatedGraph).where(deleteCondition);
+        await tx.delete(subgraphsToFederatedGraph).where(deleteCondition);
 
         const insertOps = newGraphs.map((federatedGraph) => {
-          return db
+          return tx
             .insert(subgraphsToFederatedGraph)
             .values({
               federatedGraphId: federatedGraph.id,
@@ -248,7 +256,7 @@ export class SubgraphRepository {
    * Even if they have not been published yet. Optionally, you can set the `published` flag to true
    * to only return subgraphs that have been published with a version.
    */
-  public async listByGraph(federatedGraphName: string, opts?: { published: boolean }): Promise<SubgraphDTO[]> {
+  public async listByFederatedGraph(federatedGraphName: string, opts?: { published: boolean }): Promise<SubgraphDTO[]> {
     const target = await this.db.query.targets.findFirst({
       where: and(
         eq(schema.targets.name, federatedGraphName),
@@ -355,7 +363,7 @@ export class SubgraphRepository {
     startDate: string;
     endDate: string;
   }): Promise<GetChecksResponse> {
-    const subgraphs = await this.listByGraph(federatedGraphName, {
+    const subgraphs = await this.listByFederatedGraph(federatedGraphName, {
       published: true,
     });
 
@@ -415,7 +423,7 @@ export class SubgraphRepository {
     startDate?: string;
     endDate?: string;
   }): Promise<number> {
-    const subgraphs = await this.listByGraph(federatedGraphName, {
+    const subgraphs = await this.listByFederatedGraph(federatedGraphName, {
       published: true,
     });
 
@@ -494,7 +502,7 @@ export class SubgraphRepository {
       return;
     }
 
-    const subgraphs = await this.listByGraph(federatedGraphName, {
+    const subgraphs = await this.listByFederatedGraph(federatedGraphName, {
       published: true,
     });
 

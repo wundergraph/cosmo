@@ -118,7 +118,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           routingUrl: req.routingUrl,
         });
 
-        const subgraphs = await subgraphRepo.listByGraph(req.name, {
+        const subgraphs = await subgraphRepo.listByFederatedGraph(req.name, {
           published: true,
         });
 
@@ -178,16 +178,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
       return handleError<PlainMessage<CreateFederatedSubgraphResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const repo = new SubgraphRepository(opts.db, authContext.organizationId);
 
-        if (await repo.exists(req.name)) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_ALREADY_EXISTS,
-              details: `Subgraph '${req.name}' already exists`,
-            },
-          };
-        }
+        const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
+        const exists = await subgraphRepo.exists(req.name);
 
         if (!isValidLabels(req.labels)) {
           return {
@@ -199,11 +192,22 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        await repo.create({
-          name: req.name,
-          labels: req.labels,
-          routingUrl: req.routingUrl,
-        });
+        if (!exists) {
+          const subgraph = await subgraphRepo.create({
+            name: req.name,
+            labels: req.labels,
+            routingUrl: req.routingUrl,
+          });
+
+          if (!subgraph) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR,
+                details: `Subgraph '${req.name}' could not be created`,
+              },
+            };
+          }
+        }
 
         return {
           response: {
@@ -399,7 +403,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           requestSeries = graphResponse.requestSeries;
         }
 
-        const list = await subgraphRepo.listByGraph(req.name);
+        const list = await subgraphRepo.listByFederatedGraph(req.name);
 
         const tokens = await fedRepo.getRouterTokens({
           organizationId: authContext.organizationId,
@@ -702,18 +706,88 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const compChecker = new Composer(fedGraphRepo, subgraphRepo);
-        const subgraph = await subgraphRepo.byName(req.name);
         const orgWebhooks = new OrganizationWebhookService(opts.db, authContext.organizationId, opts.logger);
 
+        let subgraph = await subgraphRepo.byName(req.name);
+
         if (!subgraph) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_NOT_FOUND,
-              details: `Subgraph '${req.name}' not found`,
-            },
-            compositionErrors: [],
-          };
+          if (!isValidLabels(req.labels)) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR_INVALID_LABELS,
+                details: `One ore more labels were found to be invalid`,
+              },
+              compositionErrors: [],
+            };
+          }
+
+          if (!req.routingUrl) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR,
+                details: `Routing URL is required to create a new subgraph`,
+              },
+              compositionErrors: [],
+            };
+          }
+
+          if (req.labels.length === 0) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR,
+                details: `At least one label is required to create a new subgraph`,
+              },
+              compositionErrors: [],
+            };
+          }
+
+          // Create the subgraph if it doesn't exist
+          subgraph = await subgraphRepo.create({
+            name: req.name,
+            labels: req.labels,
+            routingUrl: req.routingUrl,
+          });
+
+          if (!subgraph) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR,
+                details: `Subgraph '${req.name}' could not be created`,
+              },
+              compositionErrors: [],
+            };
+          }
         }
+
+        // Update subgraph metadata like routingUrl and labels
+
+        if (req.routingUrl || req.labels) {
+          const compResult = await subgraphRepo.update({
+            name: req.name,
+            labels: req.labels,
+            routingUrl: req.routingUrl,
+          });
+
+          // We ignore composition errors, because the user might fix it with next subgraph update
+          // Don't worry, a subgraph with composition errors will not be published to the federated graph
+
+          for (const graph of compResult.updatedFederatedGraphs) {
+            orgWebhooks.send(OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED, {
+              federated_graph: {
+                id: graph.id,
+                name: graph.name,
+              },
+              organization: {
+                id: authContext.organizationId,
+                slug: authContext.organizationSlug,
+              },
+              errors: compResult.compositionErrors.length > 0,
+              actor_id: authContext.userId,
+            });
+          }
+        }
+
+        // Update the subgraph schema
 
         const subgraphSchemaSDL = new TextDecoder().decode(req.schema);
 
@@ -741,7 +815,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         // We store the schema in the database, only when the schema is valid
         // Update it before composing the federated graph to include the latest schema
-        const updatedSubgraph = await subgraphRepo.updateSchema(subgraph.name, subgraphSchemaSDL);
+        const updatedSubgraph = await subgraphRepo.updateSchema(req.name, subgraphSchemaSDL);
         if (!updatedSubgraph) {
           return {
             response: {
@@ -753,61 +827,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         }
 
         const result = await compChecker.compose(updatedSubgraph.labels);
-        for await (const composedGraph of result.compositions) {
-          const currentFederatedSDL = await fedGraphRepo.getLatestSdlOfFederatedGraph(composedGraph.name);
 
-          /**
-           * Build router config when composed schema is valid
-           */
-          const hasErrors = composedGraph.errors.length > 0;
-
-          let routerConfigJson: JsonValue = null;
-          if (!hasErrors && composedGraph.composedSchema) {
-            const routerConfig = buildRouterConfig({
-              argumentConfigurations: composedGraph.argumentConfigurations,
-              federatedSDL: composedGraph.composedSchema,
-              subgraphs: composedGraph.subgraphs,
-            });
-            routerConfigJson = routerConfig.toJson();
-          }
-
-          // We always create a new version in the database, but
-          // we might mark versions with compositions errors as not composable
-          // The routerConfig is stored along with the valid composed schema
-          const federatedGraph = await fedGraphRepo.updateSchema({
-            graphName: composedGraph.name,
-            // passing the old schema if the current composed schema is empty due to composition errors
-            composedSDL: composedGraph.composedSchema || currentFederatedSDL || undefined,
-            compositionErrors: composedGraph.errors,
-            routerConfig: routerConfigJson,
-          });
-
-          if (composedGraph.composedSchema && federatedGraph?.composedSchemaVersionId) {
-            const schemaChanges = await getDiffBetweenGraphs(currentFederatedSDL || '', composedGraph.composedSchema);
-
-            if (schemaChanges.kind !== 'failure') {
-              await fedGraphRepo.createFederatedGraphChangelog({
-                schemaVersionID: federatedGraph.composedSchemaVersionId,
-                changes: schemaChanges.changes,
-              });
-            }
-          }
-
-          if (federatedGraph) {
-            orgWebhooks.send(OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED, {
-              federated_graph: {
-                id: federatedGraph.id,
-                name: federatedGraph.name,
-              },
-              organization: {
-                id: authContext.organizationId,
-                slug: authContext.organizationSlug,
-              },
-              errors: hasErrors,
-              actor_id: authContext.userId,
-            });
-          }
-        }
+        // store the composition in the database
+        await compChecker.applyComposition(result);
 
         // pass the composition errors and show it to the user
         const compositionErrors: CompositionError[] = [];
@@ -820,8 +842,24 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               } as CompositionError);
             }
           }
+
+          // Notify the organization webhook about the schema update
+          orgWebhooks.send(OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED, {
+            federated_graph: {
+              id: composition.targetID,
+              name: composition.name,
+            },
+            organization: {
+              id: authContext.organizationId,
+              slug: authContext.organizationSlug,
+            },
+            errors: composition.errors.length > 0,
+            actor_id: authContext.userId,
+          });
         }
 
+        // We return the composition errors to the user, so they can fix it but the subgraph is still updated
+        // but not published to the federated graph
         if (compositionErrors.length > 0) {
           return {
             response: {
@@ -1063,7 +1101,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         }
 
         const subgraphsTargetIDs: string[] = [];
-        const subgraphs = await subgraphRepo.listByGraph(req.name);
+        const subgraphs = await subgraphRepo.listByFederatedGraph(req.name);
         for (const subgraph of subgraphs) {
           subgraphsTargetIDs.push(subgraph.targetId);
         }

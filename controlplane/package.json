@@ -10,7 +10,7 @@
     "email": "info@wundergraph.com"
   },
   "scripts": {
-    "dev": "tsc-watch --onSuccess \"node dist/index.js\"",
+    "dev": "tsx watch src/index.ts",
     "build": "del dist && tsc",
     "seed": "API_KEY=cosmo_669b576aaadc10ee1ae81d9193425705 tsx src/bin/seed.ts",
     "db:generate": "drizzle-kit generate:pg --config=drizzle.config.ts",
@@ -63,7 +63,7 @@
     "postgres": "^3.3.5",
     "rxjs": "^7.8.1",
     "stream-json": "^1.8.0",
-    "tiny-lru": "^11.2.2",
+    "tiny-lru": "^11.2.3",
     "uid": "^2.0.2",
     "zod": "^3.22.3"
   },
@@ -82,9 +82,8 @@
     "eslint-config-unjs": "^0.2.1",
     "pino-pretty": "^10.2.0",
     "prettier": "^2.8.8",
-    "tsc-watch": "^6.0.4",
-    "tsx": "^3.12.7",
+    "tsx": "^3.14.0",
     "typescript": "^5.2.2",
-    "vitest": "^0.34.1"
+    "vitest": "^0.34.6"
   }
 }

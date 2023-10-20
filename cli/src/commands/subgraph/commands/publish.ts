@@ -7,15 +7,33 @@ import pc from 'picocolors';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { baseHeaders } from '../../../core/config.js';
+import { splitLabel } from '@wundergraph/cosmo-shared';
 
 export default (opts: BaseCommandOptions) => {
   const schemaPush = new Command('publish');
-  schemaPush.description('Publishes a subgraph on the control plane.');
+  schemaPush.description(
+    "Publishes a subgraph on the control plane. If the subgraph doesn't exists, it will be created. If the schema can't be composed the subgraph will still be created but not published.",
+  );
   schemaPush.argument(
     '<name>',
     'The name of the subgraph to push the schema to. It is usually in the format of <org>.<service.name> and is used to uniquely identify your subgraph.',
   );
   schemaPush.requiredOption('--schema <path-to-schema>', 'The schema file to upload to the subgraph.');
+  schemaPush.option(
+    '-r, --routing-url <url>',
+    'The routing url of your subgraph. This is the url that the subgraph will be accessible at. Required if the subgraph does not exist.',
+  );
+  schemaPush.option('-u --upsert', 'Creates the subgraph if it does not exist.');
+  schemaPush.option(
+    '--label [labels...]',
+    'The labels to apply to the subgraph. The labels are passed in the format <key>=<value> <key>=<value>.',
+    [],
+  );
+  schemaPush.option(
+    '--header [headers...]',
+    'The headers to apply when the subgraph is introspected. This is used for authentication and authorization.',
+    [],
+  );
   schemaPush.action(async (name, options) => {
     const schemaFile = resolve(process.cwd(), options.schema);
     if (!existsSync(schemaFile)) {
@@ -31,6 +49,16 @@ export default (opts: BaseCommandOptions) => {
       {
         name,
         schema: await readFile(schemaFile),
+        // Optional to upsert the subgraph
+        routingUrl: options.routingUrl,
+        headers: options.header,
+        labels: options.label.map((label: string) => {
+          const { key, value } = splitLabel(label);
+          return {
+            key,
+            value,
+          };
+        }),
       },
       {
         headers: baseHeaders,

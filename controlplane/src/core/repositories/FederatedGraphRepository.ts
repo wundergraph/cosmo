@@ -440,20 +440,17 @@ export class FederatedGraphRepository {
   }
 
   public createFederatedGraphChangelog(data: { schemaVersionID: string; changes: SchemaChange[] }) {
-    return this.db.transaction(async (db) => {
-      const ops = data.changes.map((change) => {
-        return db
-          .insert(schemaVersionChangeAction)
-          .values({
-            schemaVersionId: data.schemaVersionID,
-            changeType: change.changeType as SchemaChangeType,
-            changeMessage: change.message,
-            path: change.path,
-          })
-          .execute();
-      });
-      await Promise.all(ops);
-    });
+    return this.db
+      .insert(schemaVersionChangeAction)
+      .values(
+        data.changes.map((change) => ({
+          schemaVersionId: data.schemaVersionID,
+          changeType: change.changeType as SchemaChangeType,
+          changeMessage: change.message,
+          path: change.path,
+        })),
+      )
+      .execute();
   }
 
   public fetchFederatedGraphChangelog(
