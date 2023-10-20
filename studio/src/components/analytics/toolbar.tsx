@@ -55,15 +55,6 @@ export const AnalyticsToolbar: React.FC<{
                 query: props.tab === "overview" ? query : tracesRoute,
               }}
               onClick={updateRoute}
-              href={
-                props.tab === "overview" || !tracesRoute
-                  ? {
-                      pathname:
-                        "/[organizationSlug]/graph/[slug]/analytics/traces",
-                      query,
-                    }
-                  : tracesRoute
-              }
               className="flex gap-x-2"
             >
               <IoBarcodeSharp size="18px" />
