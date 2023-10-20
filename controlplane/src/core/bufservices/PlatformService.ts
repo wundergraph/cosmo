@@ -1430,6 +1430,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             response: {
               code: EnumStatusCode.ERR_ANALYTICS_DISABLED,
             },
+            filters: [],
           };
         }
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -1443,29 +1444,22 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               code: EnumStatusCode.ERR_NOT_FOUND,
               details: `Federated graph '${req.federatedGraphName}' not found`,
             },
+            filters: [],
           };
         }
 
-        const params = {
+        const view = await repo.getMetricsView({
           range: req.range,
-          params: {
-            organizationId: authContext.organizationId,
-            graphId: graph.id,
-            graphName: req.federatedGraphName,
-          },
-        };
-
-        const requests = await repo.getRequestRateMetrics(params);
-        const latency = await repo.getLatencyMetrics(params);
-        const errors = await repo.getErrorMetrics(params);
+          filters: req.filters,
+          organizationId: authContext.organizationId,
+          graphId: graph.id,
+        });
 
         return {
           response: {
             code: EnumStatusCode.OK,
           },
-          requests: requests.data,
-          latency: latency.data,
-          errors: errors.data,
+          ...view,
         };
       });
     },
@@ -1500,20 +1494,18 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const metrics = await repo.getErrorRateMetrics({
+        const metrics = await repo.getErrorsView({
           range: req.range,
-          params: {
-            organizationId: authContext.organizationId,
-            graphId: graph.id,
-            graphName: req.federatedGraphName,
-          },
+          filters: req.filters,
+          organizationId: authContext.organizationId,
+          graphId: graph.id,
         });
 
         return {
           response: {
             code: EnumStatusCode.OK,
           },
-          series: metrics.data.series,
+          series: metrics.errorRate.series,
         };
       });
     },

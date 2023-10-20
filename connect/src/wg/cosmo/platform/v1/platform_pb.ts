@@ -6180,6 +6180,11 @@ export class GetGraphMetricsRequest extends Message<GetGraphMetricsRequest> {
    */
   range = 0;
 
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.AnalyticsFilter filters = 3;
+   */
+  filters: AnalyticsFilter[] = [];
+
   constructor(data?: PartialMessage<GetGraphMetricsRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -6190,6 +6195,7 @@ export class GetGraphMetricsRequest extends Message<GetGraphMetricsRequest> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "federatedGraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "range", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 3, name: "filters", kind: "message", T: AnalyticsFilter, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetGraphMetricsRequest {
@@ -6234,9 +6240,9 @@ export class GetGraphMetricsResponse extends Message<GetGraphMetricsResponse> {
   errors?: MetricsDashboardMetric;
 
   /**
-   * @generated from field: optional string json = 5;
+   * @generated from field: repeated wg.cosmo.platform.v1.AnalyticsViewResultFilter filters = 5;
    */
-  json?: string;
+  filters: AnalyticsViewResultFilter[] = [];
 
   constructor(data?: PartialMessage<GetGraphMetricsResponse>) {
     super();
@@ -6250,7 +6256,7 @@ export class GetGraphMetricsResponse extends Message<GetGraphMetricsResponse> {
     { no: 2, name: "requests", kind: "message", T: MetricsDashboardMetric },
     { no: 3, name: "latency", kind: "message", T: MetricsDashboardMetric },
     { no: 4, name: "errors", kind: "message", T: MetricsDashboardMetric },
-    { no: 5, name: "json", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 5, name: "filters", kind: "message", T: AnalyticsViewResultFilter, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetGraphMetricsResponse {
@@ -6498,6 +6504,11 @@ export class GetMetricsErrorRateRequest extends Message<GetMetricsErrorRateReque
    */
   range = 0;
 
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.AnalyticsFilter filters = 3;
+   */
+  filters: AnalyticsFilter[] = [];
+
   constructor(data?: PartialMessage<GetMetricsErrorRateRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -6508,6 +6519,7 @@ export class GetMetricsErrorRateRequest extends Message<GetMetricsErrorRateReque
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "federatedGraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "range", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 3, name: "filters", kind: "message", T: AnalyticsFilter, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetMetricsErrorRateRequest {

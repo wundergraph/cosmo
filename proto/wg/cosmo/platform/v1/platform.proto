@@ -789,6 +789,7 @@ message UpdateOrgMemberRoleResponse {
  message GetGraphMetricsRequest {
   string federatedGraphName = 1;
   int32 range = 2;
+  repeated AnalyticsFilter filters = 3;
 }
 
 message GetGraphMetricsResponse {
@@ -796,7 +797,7 @@ message GetGraphMetricsResponse {
   MetricsDashboardMetric requests = 2;
   MetricsDashboardMetric latency = 3;
   MetricsDashboardMetric errors = 4;
-  optional string json = 5;
+  repeated AnalyticsViewResultFilter filters = 5;
 }
 
 message MetricsDashboardMetric {
@@ -829,6 +830,7 @@ message MetricsDashboard {
 message GetMetricsErrorRateRequest {
   string federatedGraphName = 1;
   int32 range = 2;
+  repeated AnalyticsFilter filters = 3;
 }
 
 message GetMetricsErrorRateResponse {
