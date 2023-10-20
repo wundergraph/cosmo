@@ -51,6 +51,7 @@ import { getColumnData } from "./getColumnData";
 import { getDataTableFilters } from "./getDataTableFilters";
 import { getDefaultSort, useSyncTableWithQuery } from "./useSyncTableWithQuery";
 import { useSessionStorage } from "@/hooks/use-session-storage";
+import { AnalyticsFilters, AnalyticsSelectedFilters } from "./filters";
 
 export const refreshIntervals = [
   {
@@ -94,7 +95,7 @@ export function AnalyticsDataTable<T>({
 }) {
   const router = useRouter();
 
-  const [, setRouteCache] = useSessionStorage("analytics.route", router.asPath);
+  const [, setRouteCache] = useSessionStorage("analytics.route", router.query);
 
   const [refreshInterval, setRefreshInterval] = useState(refreshIntervals[0]);
 
@@ -134,7 +135,7 @@ export function AnalyticsDataTable<T>({
   const [{ pageIndex, pageSize }, setPagination] =
     React.useState<PaginationState>({
       pageIndex: 0,
-      pageSize: 10,
+      pageSize: 20,
     });
 
   const pagination = React.useMemo(
@@ -230,10 +231,6 @@ export function AnalyticsDataTable<T>({
   });
 
   const onGroupChange = (val: AnalyticsViewGroupName) => {
-    if (val === AnalyticsViewGroupName.None) {
-      return applyNewParams({}, ["group", "sort", "sortDir"]);
-    }
-
     applyNewParams(
       {
         group: AnalyticsViewGroupName[val],
@@ -261,10 +258,7 @@ export function AnalyticsDataTable<T>({
   };
 
   const filtersList = getDataTableFilters(table, filters);
-
   const selectedFilters = table.getState().columnFilters;
-
-  const isFiltered = selectedFilters.length > 0;
 
   useSyncTableWithQuery({
     table,
@@ -284,8 +278,7 @@ export function AnalyticsDataTable<T>({
     const newQueryParams: Record<string, string> = {};
 
     const setFilterOn = (columnName: string) => {
-      const filter = filtersList.find((f) => f.id === columnName);
-      const col = filter?.column;
+      const col = table.getColumn(columnName);
       const val = row.getValue(col?.id ?? "") as string;
 
       const stringifiedFilters = JSON.stringify([
@@ -309,7 +302,7 @@ export function AnalyticsDataTable<T>({
         const { organizationSlug } = router.query;
 
         // Save the current route in sessionStorage so we can go back to it
-        setRouteCache(router.asPath);
+        setRouteCache(router.query);
 
         router.push(
           `/${organizationSlug}/graph/${slug}/analytics/${row.getValue(
@@ -338,12 +331,12 @@ export function AnalyticsDataTable<T>({
 
   return (
     <div>
-      <div className="flex flex-row flex-wrap items-start gap-y-2 py-4">
-        <div className="flex flex-1 flex-row flex-wrap items-center gap-y-2">
+      <div className="flex flex-row flex-wrap items-start gap-y-2">
+        <div className="flex flex-1 flex-row flex-wrap items-center gap-2">
+          <AnalyticsFilters filters={filtersList} />
           <DataTableGroupMenu
             value={selectedGroup}
             onChange={onGroupChange}
-            className="mr-2"
             items={[
               {
                 label: "None",
@@ -363,48 +356,6 @@ export function AnalyticsDataTable<T>({
               },
             ]}
           />
-          {filtersList.length > 0 && (
-            <DataTablePrimaryFilterMenu filters={filtersList} />
-          )}
-          {filtersList.map((filter, index) => {
-            const isSelected = !!selectedFilters.find(
-              (each) => each.id === filter.id
-            );
-
-            const selectedIndex = selectedFilters.findIndex(
-              (each) => each.id === filter.id
-            );
-
-            if (!isSelected) {
-              return null;
-            }
-
-            return (
-              <div
-                key={index.toString()}
-                className={cn(
-                  "pr-1 lg:px-1",
-                  selectedIndex === 0 ? "lg:pl-2" : ""
-                )}
-              >
-                <DataTableFacetedFilter
-                  column={filter.column}
-                  title={filter.title}
-                  options={filter.options}
-                />
-              </div>
-            );
-          })}
-          {isFiltered && (
-            <Button
-              onClick={() => table.resetColumnFilters()}
-              variant="outline"
-              className="mr-1 border-dashed lg:ml-1"
-            >
-              <Cross2Icon className="mr-2 h-4 w-4" />
-              Reset
-            </Button>
-          )}
         </div>
         <div className="flex flex-row flex-wrap items-start gap-2">
           <DatePickerWithRange
@@ -467,6 +418,13 @@ export function AnalyticsDataTable<T>({
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
+      </div>
+      <div className="flex flex-row flex-wrap items-start gap-y-2 py-2">
+        <AnalyticsSelectedFilters
+          filters={filtersList}
+          selectedFilters={selectedFilters}
+          onReset={() => table.resetColumnFilters()}
+        />
       </div>
       <Table>
         <TableHeader>

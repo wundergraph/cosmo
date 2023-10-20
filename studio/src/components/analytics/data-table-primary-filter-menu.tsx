@@ -9,7 +9,6 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Column } from "@tanstack/react-table";
 import { DataTableFilterCommands } from "./data-table-faceted-filter";
 import { ChevronDownIcon } from "@radix-ui/react-icons";
 import {
@@ -19,19 +18,12 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import useWindowSize from "@/hooks/use-window-size";
-import { Fragment } from "react";
+import { AnalyticsFilter } from "./filters";
 
 export function DataTablePrimaryFilterMenu<T>({
   filters,
 }: {
-  filters: {
-    column?: Column<T, unknown> | undefined;
-    title: string;
-    options: {
-      label: string;
-      value: string;
-    }[];
-  }[];
+  filters: AnalyticsFilter[];
 }) {
   const { isMobile } = useWindowSize();
 
@@ -39,7 +31,7 @@ export function DataTablePrimaryFilterMenu<T>({
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="outline">
-          Filters <ChevronDownIcon className="ml-2" />
+          Filter <ChevronDownIcon className="ml-2" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align={isMobile ? "end" : "start"} className="w-56">
@@ -61,11 +53,7 @@ export function DataTablePrimaryFilterMenu<T>({
                       <span>{filter.title}</span>
                     </AccordionTrigger>
                     <AccordionContent>
-                      <DataTableFilterCommands
-                        title={filter.title}
-                        column={filter.column}
-                        options={filter.options}
-                      />
+                      <DataTableFilterCommands {...filter} />
                     </AccordionContent>
                   </AccordionItem>
                 );
@@ -83,11 +71,7 @@ export function DataTablePrimaryFilterMenu<T>({
                     </DropdownMenuSubTrigger>
                     <DropdownMenuPortal>
                       <DropdownMenuSubContent>
-                        <DataTableFilterCommands
-                          title={filter.title}
-                          column={filter.column}
-                          options={filter.options}
-                        />
+                        <DataTableFilterCommands {...filter} />
                       </DropdownMenuSubContent>
                     </DropdownMenuPortal>
                   </DropdownMenuSub>

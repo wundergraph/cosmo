@@ -1,7 +1,8 @@
-import { Column, Table } from "@tanstack/react-table";
+import { Table } from "@tanstack/react-table";
 import { AnalyticsViewResultFilter } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
+import { AnalyticsFilter } from "./filters";
 
-const optionConstructor = ({
+export const optionConstructor = ({
   label,
   operator,
   value,
@@ -25,21 +26,17 @@ export const getDataTableFilters = <T>(
   table: Table<T>,
   filters: Array<AnalyticsViewResultFilter>
 ) => {
-  const filtersList: Array<{
-    id: string;
-    column?: Column<T, unknown>;
-    title: string;
-    options: Array<{
-      label: string;
-      value: string;
-    }>;
-  }> = [];
+  const filtersList: Array<AnalyticsFilter> = [];
 
   filters.forEach((filter) => {
+    const column = table.getColumn(filter.columnName);
     filtersList.push({
       id: filter.columnName,
       title: filter.title,
-      column: table.getColumn(filter.columnName),
+      selectedOptions: (column?.getFilterValue() as string[]) || [],
+      onSelect: (value) => {
+        return column?.setFilterValue(value);
+      },
       options: filter.options.map((each) =>
         optionConstructor({
           label: each.label,

@@ -24,7 +24,7 @@ export type OperationAnalytics = {
 // The useSyncTableWithQuery is responsible to read from the query and set local state
 // This way we avoid race conditions and repeated network calls
 
-const AnalyticsPage: NextPageWithLayout = () => {
+const TracesPage: NextPageWithLayout = () => {
   const graphContext = useContext(GraphContext);
 
   const { name, filters, pagination, dateRange, page, refreshInterval, sort } =
@@ -38,7 +38,7 @@ const AnalyticsPage: NextPageWithLayout = () => {
         filters,
         dateRange,
         pagination,
-        sort
+        sort,
       },
     }),
     keepPreviousData: true,
@@ -89,7 +89,7 @@ const AnalyticsPage: NextPageWithLayout = () => {
   );
 };
 
-AnalyticsPage.getLayout = (page) =>
+TracesPage.getLayout = (page) =>
   getGraphLayout(
     <PageHeader title="Studio | Analytics">
       <TitleLayout
@@ -101,4 +101,5 @@ AnalyticsPage.getLayout = (page) =>
       </TitleLayout>
     </PageHeader>
   );
-export default AnalyticsPage;
+
+export default TracesPage;

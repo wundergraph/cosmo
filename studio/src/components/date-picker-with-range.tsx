@@ -3,7 +3,7 @@ import { addDays, addYears } from "date-fns";
 import { DateRange } from "react-day-picker";
 
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
+import { Button, ButtonProps } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
@@ -19,10 +19,12 @@ export function DatePickerWithRange({
   onDateRangeChange,
   className,
   align = "start",
+  size,
 }: React.HTMLAttributes<HTMLDivElement> & {
   selectedDateRange: DateRange;
   onDateRangeChange: (newVal: DateRange) => unknown;
   align?: "start" | "center" | "end";
+  size?: ButtonProps["size"];
 }) {
   const { isMobile } = useWindowSize();
 
@@ -32,6 +34,7 @@ export function DatePickerWithRange({
         <Button
           id="date"
           variant={"outline"}
+          size={size}
           className={cn(
             "w-[240px] justify-center text-left font-normal",
             className,
