@@ -5,9 +5,9 @@ import { Command } from 'commander';
 import { resolve } from 'pathe';
 import pc from 'picocolors';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { parseGraphQLSubscriptionProtocol, splitLabel } from '@wundergraph/cosmo-shared';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { baseHeaders } from '../../../core/config.js';
-import { parseGraphQLSubscriptionProtocol, splitLabel } from '@wundergraph/cosmo-shared';
 
 export default (opts: BaseCommandOptions) => {
   const schemaPush = new Command('publish');
