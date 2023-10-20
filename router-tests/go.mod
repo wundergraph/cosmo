@@ -10,7 +10,6 @@ require (
 	github.com/gorilla/websocket v1.5.0
 	github.com/hasura/go-graphql-client v0.10.0
 	github.com/stretchr/testify v1.8.4
-	github.com/wundergraph/cosmo/demo v0.0.0-00010101000000-000000000000
 	github.com/wundergraph/cosmo/router v0.0.0-00010101000000-000000000000
 	go.uber.org/zap v1.24.0
 	gopkg.in/yaml.v3 v3.0.1
@@ -79,7 +78,7 @@ require (
 	github.com/tidwall/sjson v1.2.5 // indirect
 	github.com/urfave/cli/v2 v2.25.5 // indirect
 	github.com/vektah/gqlparser/v2 v2.5.10 // indirect
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.2.0.20231016113935-acb45e205f63 // indirect
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.2.0.20231020141204-40537587ba35 // indirect
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.45.0 // indirect
 	go.opentelemetry.io/otel v1.19.0 // indirect
