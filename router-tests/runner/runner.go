@@ -13,7 +13,7 @@ import (
 type SubgraphsRunner interface {
 	Start(ctx context.Context) error
 	Stop(ctx context.Context) error
-	Ports() []int
+	Ports() subgraphs.Ports
 }
 
 type inProcessSubgraphsRunner struct {
@@ -32,17 +32,20 @@ func (r *inProcessSubgraphsRunner) Stop(ctx context.Context) error {
 	return r.subgraphs.Shutdown(ctx)
 }
 
-func (r *inProcessSubgraphsRunner) Ports() []int {
-	return []int{4001, 4002, 4003, 4004}
+func (r *inProcessSubgraphsRunner) Ports() subgraphs.Ports {
+	return r.subgraphs.Ports()
 }
 
-func NewInProcessSubgraphsRunner() (SubgraphsRunner, error) {
+func NewInProcessSubgraphsRunner(ports *subgraphs.Ports) (SubgraphsRunner, error) {
+	if ports == nil {
+		ports = randomFreePorts()
+	}
 	sg, err := subgraphs.New(&subgraphs.Config{
 		Ports: subgraphs.Ports{
-			Employees: 4001,
-			Family:    4002,
-			Hobbies:   4003,
-			Products:  4004,
+			Employees: ports.Employees,
+			Family:    ports.Family,
+			Hobbies:   ports.Hobbies,
+			Products:  ports.Products,
 		},
 	})
 	if err != nil {
@@ -63,8 +66,14 @@ func (r externalSubgraphsRunner) Stop(ctx context.Context) error {
 	return nil
 }
 
-func (r externalSubgraphsRunner) Ports() []int {
-	return []int{4001, 4002, 4003, 4004}
+func (r externalSubgraphsRunner) Ports() subgraphs.Ports {
+	// External subgraphs runner always uses the default ports
+	return subgraphs.Ports{
+		Employees: 4001,
+		Family:    4002,
+		Hobbies:   4003,
+		Products:  4004,
+	}
 }
 
 func NewExternalSubgraphsRunner() (SubgraphsRunner, error) {
@@ -72,7 +81,14 @@ func NewExternalSubgraphsRunner() (SubgraphsRunner, error) {
 }
 
 func Wait(ctx context.Context, r SubgraphsRunner) error {
-	for _, port := range r.Ports() {
+	pp := r.Ports()
+	ports := []int{
+		pp.Employees,
+		pp.Family,
+		pp.Hobbies,
+		pp.Products,
+	}
+	for _, port := range ports {
 		for {
 			_, err := net.Dial("tcp", "127.0.0.1:"+strconv.Itoa(port))
 			if err == nil {
@@ -87,4 +103,23 @@ func Wait(ctx context.Context, r SubgraphsRunner) error {
 		}
 	}
 	return nil
+}
+
+func randomFreePorts() *subgraphs.Ports {
+	ports := make([]int, 4)
+	for i := range ports {
+		listener, err := net.Listen("tcp", ":0")
+		if err != nil {
+			panic(err)
+		}
+		ports[i] = listener.Addr().(*net.TCPAddr).Port
+		listener.Close()
+
+	}
+	return &subgraphs.Ports{
+		Employees: ports[0],
+		Family:    ports[1],
+		Hobbies:   ports[2],
+		Products:  ports[3],
+	}
 }

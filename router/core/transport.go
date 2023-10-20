@@ -38,11 +38,18 @@ func NewCustomTransport(logger *zap.Logger, roundTripper http.RoundTripper, retr
 	}
 }
 
+func (ct *CustomTransport) requestIsIgnoredByMiddleware(r *http.Request) bool {
+	// Intentionally ignore websocket requests
+	return r.Header.Get("Upgrade") != ""
+}
+
 func (ct *CustomTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 
 	reqContext := getRequestContext(req.Context())
 
-	if ct.preHandlers != nil {
+	isIgnored := ct.requestIsIgnoredByMiddleware(req)
+
+	if !isIgnored && ct.preHandlers != nil {
 		for _, preHandler := range ct.preHandlers {
 			r, resp := preHandler(req, reqContext)
 			// Non nil response means the handler decided to skip sending the request
@@ -60,7 +67,7 @@ func (ct *CustomTransport) RoundTrip(req *http.Request) (*http.Response, error) 
 		reqContext.sendError = err
 	}
 
-	if ct.postHandlers != nil {
+	if !isIgnored && ct.postHandlers != nil {
 		for _, postHandler := range ct.postHandlers {
 			newResp := postHandler(resp, reqContext)
 			// Abort with the first handler that returns a non-nil response

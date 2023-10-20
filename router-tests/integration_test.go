@@ -7,16 +7,19 @@ import (
 	"flag"
 	"fmt"
 	"math/rand"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strconv"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/wundergraph/cosmo/router-tests/routerconfig"
 	"github.com/wundergraph/cosmo/router-tests/runner"
 	"github.com/wundergraph/cosmo/router/config"
 	"github.com/wundergraph/cosmo/router/core"
@@ -29,20 +32,21 @@ const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 var (
 	subgraphsMode = flag.String("subgraphs", "in-process", "How to run the subgraphs: in-process | subprocess | external")
 	workers       = flag.Int("workers", 4, "Number of workers to use for parallel benchmarks")
+
+	subgraphsRunner runner.SubgraphsRunner
 )
 
 func TestMain(m *testing.M) {
 	flag.Parse()
 	ctx := context.Background()
-	var r runner.SubgraphsRunner
 	var err error
 	switch *subgraphsMode {
 	case "in-process":
-		r, err = runner.NewInProcessSubgraphsRunner()
+		subgraphsRunner, err = runner.NewInProcessSubgraphsRunner(nil)
 	case "subprocess":
-		r, err = runner.NewSubprocessSubgraphsRunner()
+		subgraphsRunner, err = runner.NewSubprocessSubgraphsRunner(nil)
 	case "external":
-		r, err = runner.NewExternalSubgraphsRunner()
+		subgraphsRunner, err = runner.NewExternalSubgraphsRunner()
 	default:
 		panic(fmt.Errorf("unknown subgraphs mode %q", *subgraphsMode))
 	}
@@ -51,22 +55,22 @@ func TestMain(m *testing.M) {
 	}
 	// defer this in case we panic, then call it manually before os.Exit()
 	stop := func() {
-		if err := r.Stop(ctx); err != nil {
+		if err := subgraphsRunner.Stop(ctx); err != nil {
 			panic(err)
 		}
 	}
 	defer stop()
 	go func() {
-		err := r.Start(ctx)
+		err := subgraphsRunner.Start(ctx)
 		if err != nil {
 			panic(err)
 		}
 	}()
 
-	timeoutCtx, cancelFunc := context.WithTimeout(ctx, 1*time.Second)
+	timeoutCtx, cancelFunc := context.WithTimeout(ctx, 50*time.Second)
 	defer cancelFunc()
 	// Wait until the ports are open
-	if err := runner.Wait(timeoutCtx, r); err != nil {
+	if err := runner.Wait(timeoutCtx, subgraphsRunner); err != nil {
 		panic(err)
 	}
 
@@ -116,14 +120,6 @@ func sendQueryOK(tb testing.TB, server *core.Server, query *testQuery) string {
 	return rr.Body.String()
 }
 
-func sendQueryBadRequest(tb testing.TB, server *core.Server, query *testQuery) string {
-	rr := sendData(server, query.Data())
-	if rr.Code != http.StatusBadRequest {
-		tb.Error("unexpected status code", rr.Code)
-	}
-	return rr.Body.String()
-}
-
 func sendData(server *core.Server, data []byte) *httptest.ResponseRecorder {
 	rr := httptest.NewRecorder()
 	req := httptest.NewRequest("POST", "/graphql", bytes.NewBuffer(data))
@@ -131,7 +127,7 @@ func sendData(server *core.Server, data []byte) *httptest.ResponseRecorder {
 	return rr
 }
 
-func setupServer(tb testing.TB) *core.Server {
+func prepareServer(tb testing.TB, listeningPort int) *core.Server {
 	ctx := context.Background()
 	cfg := config.Config{
 		Graph: config.Graph{
@@ -139,8 +135,11 @@ func setupServer(tb testing.TB) *core.Server {
 		},
 	}
 
-	routerConfig, err := core.SerializeConfigFromFile(filepath.Join("testdata", "config.json"))
-	require.Nil(tb, err)
+	configFile, err := routerconfig.SerializeRunner(subgraphsRunner)
+	require.NoError(tb, err)
+
+	routerConfig, err := core.SerializeConfigFromFile(configFile)
+	require.NoError(tb, err)
 
 	ec := zap.NewProductionEncoderConfig()
 	ec.EncodeDuration = zapcore.SecondsDurationEncoder
@@ -157,7 +156,7 @@ func setupServer(tb testing.TB) *core.Server {
 		core.WithFederatedGraphName(cfg.Graph.Name),
 		core.WithStaticRouterConfig(routerConfig),
 		core.WithLogger(zapLogger),
-		core.WithListenerAddr("http://localhost:3002"),
+		core.WithListenerAddr(":"+strconv.Itoa(listeningPort)),
 	)
 	require.NoError(tb, err)
 
@@ -168,6 +167,34 @@ func setupServer(tb testing.TB) *core.Server {
 	server, err := rs.NewTestServer(ctx)
 	require.NoError(tb, err)
 	return server
+}
+
+// setupServer sets up the router server without making it listen on a local
+// port, allowing tests by calling the server directly via server.Server.Handler.ServeHTTP
+func setupServer(tb testing.TB) *core.Server {
+	return prepareServer(tb, 0)
+}
+
+// setupListeningServer calls setupServer to set up the server but makes it listen
+// on the network, automatically registering a cleanup function to shut it down.
+// It returns both the server and the local port where the server is listening.
+func setupListeningServer(tb testing.TB) (*core.Server, int) {
+	listener, err := net.Listen("tcp", ":0")
+	require.NoError(tb, err)
+	port := listener.Addr().(*net.TCPAddr).Port
+	listener.Close()
+	server := prepareServer(tb, port)
+	go func() {
+		err := server.Server.ListenAndServe()
+		if err != http.ErrServerClosed {
+			require.NoError(tb, err)
+		}
+	}()
+	tb.Cleanup(func() {
+		err := server.Shutdown(context.Background())
+		assert.NoError(tb, err)
+	})
+	return server, port
 }
 
 func normalizeJSON(tb testing.TB, data []byte) []byte {
@@ -198,9 +225,6 @@ func TestTestdataQueries(t *testing.T) {
 		}
 		name := entry.Name()
 		t.Run(name, func(t *testing.T) {
-			if name == "employees" {
-				t.Skip("this is not yet passing")
-			}
 			testDir := filepath.Join(queries, name)
 			queryData, err := os.ReadFile(filepath.Join(testDir, "query.graphql"))
 			require.NoError(t, err)
@@ -224,7 +248,7 @@ func TestTestdataQueries(t *testing.T) {
 
 func TestIntegrationWithUndefinedField(t *testing.T) {
 	server := setupServer(t)
-	result := sendQueryBadRequest(t, server, &testQuery{
+	result := sendQueryOK(t, server, &testQuery{
 		Body: "{ employees { id notDefined } }",
 	})
 	assert.JSONEq(t, `{"errors":[{"message":"field: notDefined not defined on type: Employee","path":["query","employees","notDefined"]}]}`, result)

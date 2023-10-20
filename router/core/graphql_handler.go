@@ -34,8 +34,7 @@ import (
 )
 
 const (
-	ErrMsgOperationParseFailed      = "failed to parse operation: %w"
-	ErrMsgOperationValidationFailed = "operation validation failed: %s"
+	ErrMsgOperationParseFailed = "failed to parse operation: %w"
 )
 
 var (
@@ -102,6 +101,7 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 		planCache:   opts.Cache,
 		executor:    opts.Executor,
 	}
+
 	return graphQLHandler
 }
 
@@ -117,7 +117,6 @@ type GraphQLHandler struct {
 }
 
 func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-
 	var (
 		preparedPlan planWithExtractedVariables
 	)
@@ -212,7 +211,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	case *plan.SubscriptionResponsePlan:
 		var (
-			flushWriter *HttpFlushWriter
+			flushWriter resolve.FlushWriter
 			ok          bool
 		)
 		ctx, flushWriter, ok = GetFlushWriter(ctx, ctx.Variables, r, w)

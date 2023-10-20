@@ -7,7 +7,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3, protoInt64 } from "@bufbuild/protobuf";
-import { EnumStatusCode } from "../../common/common_pb.js";
+import { EnumStatusCode, GraphQLSubscriptionProtocol } from "../../common/common_pb.js";
 import { EventMeta } from "../../notifications/events_pb.js";
 
 /**
@@ -693,6 +693,20 @@ export class CreateFederatedSubgraphRequest extends Message<CreateFederatedSubgr
    */
   headers: string[] = [];
 
+  /**
+   * subscription protocol to use when subscribing to this subgraph
+   *
+   * @generated from field: optional wg.cosmo.common.GraphQLSubscriptionProtocol subscription_protocol = 5;
+   */
+  subscriptionProtocol?: GraphQLSubscriptionProtocol;
+
+  /**
+   * url used for subscriptions
+   *
+   * @generated from field: optional string subscription_url = 6;
+   */
+  subscriptionUrl?: string;
+
   constructor(data?: PartialMessage<CreateFederatedSubgraphRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -705,6 +719,8 @@ export class CreateFederatedSubgraphRequest extends Message<CreateFederatedSubgr
     { no: 2, name: "routing_url", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "labels", kind: "message", T: Label, repeated: true },
     { no: 4, name: "headers", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 5, name: "subscription_protocol", kind: "enum", T: proto3.getEnumType(GraphQLSubscriptionProtocol), opt: true },
+    { no: 6, name: "subscription_url", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateFederatedSubgraphRequest {
@@ -2380,6 +2396,20 @@ export class UpdateSubgraphRequest extends Message<UpdateSubgraphRequest> {
    */
   headers: string[] = [];
 
+  /**
+   * subscription protocol to use when subscribing to this subgraph
+   *
+   * @generated from field: optional wg.cosmo.common.GraphQLSubscriptionProtocol subscription_protocol = 5;
+   */
+  subscriptionProtocol?: GraphQLSubscriptionProtocol;
+
+  /**
+   * url used for subscriptions
+   *
+   * @generated from field: optional string subscription_url = 6;
+   */
+  subscriptionUrl?: string;
+
   constructor(data?: PartialMessage<UpdateSubgraphRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -2392,6 +2422,8 @@ export class UpdateSubgraphRequest extends Message<UpdateSubgraphRequest> {
     { no: 2, name: "routing_url", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "labels", kind: "message", T: Label, repeated: true },
     { no: 4, name: "headers", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 5, name: "subscription_protocol", kind: "enum", T: proto3.getEnumType(GraphQLSubscriptionProtocol), opt: true },
+    { no: 6, name: "subscription_url", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateSubgraphRequest {
@@ -6676,6 +6708,86 @@ export class ForceCheckSuccessResponse extends Message<ForceCheckSuccessResponse
 
   static equals(a: ForceCheckSuccessResponse | PlainMessage<ForceCheckSuccessResponse> | undefined, b: ForceCheckSuccessResponse | PlainMessage<ForceCheckSuccessResponse> | undefined): boolean {
     return proto3.util.equals(ForceCheckSuccessResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.IsGitHubAppInstalledRequest
+ */
+export class IsGitHubAppInstalledRequest extends Message<IsGitHubAppInstalledRequest> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.GitInfo git_info = 1;
+   */
+  gitInfo?: GitInfo;
+
+  constructor(data?: PartialMessage<IsGitHubAppInstalledRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.IsGitHubAppInstalledRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "git_info", kind: "message", T: GitInfo },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): IsGitHubAppInstalledRequest {
+    return new IsGitHubAppInstalledRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): IsGitHubAppInstalledRequest {
+    return new IsGitHubAppInstalledRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): IsGitHubAppInstalledRequest {
+    return new IsGitHubAppInstalledRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: IsGitHubAppInstalledRequest | PlainMessage<IsGitHubAppInstalledRequest> | undefined, b: IsGitHubAppInstalledRequest | PlainMessage<IsGitHubAppInstalledRequest> | undefined): boolean {
+    return proto3.util.equals(IsGitHubAppInstalledRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.IsGitHubAppInstalledResponse
+ */
+export class IsGitHubAppInstalledResponse extends Message<IsGitHubAppInstalledResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: bool is_installed = 2;
+   */
+  isInstalled = false;
+
+  constructor(data?: PartialMessage<IsGitHubAppInstalledResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.IsGitHubAppInstalledResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "is_installed", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): IsGitHubAppInstalledResponse {
+    return new IsGitHubAppInstalledResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): IsGitHubAppInstalledResponse {
+    return new IsGitHubAppInstalledResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): IsGitHubAppInstalledResponse {
+    return new IsGitHubAppInstalledResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: IsGitHubAppInstalledResponse | PlainMessage<IsGitHubAppInstalledResponse> | undefined, b: IsGitHubAppInstalledResponse | PlainMessage<IsGitHubAppInstalledResponse> | undefined): boolean {
+    return proto3.util.equals(IsGitHubAppInstalledResponse, a, b);
   }
 }
 

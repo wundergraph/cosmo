@@ -1,6 +1,6 @@
 import { JsonValue, PlainMessage } from '@bufbuild/protobuf';
 import { ServiceImpl } from '@connectrpc/connect';
-import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { EnumStatusCode, GraphQLSubscriptionProtocol } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { GetConfigResponse } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
 import {
@@ -50,6 +50,7 @@ import {
   WhoAmIResponse,
   GetGraphMetricsResponse,
   GetMetricsErrorRateResponse,
+  IsGitHubAppInstalledResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { PlatformEventName, OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import { OpenAIGraphql, buildRouterConfig } from '@wundergraph/cosmo-shared';
@@ -63,7 +64,7 @@ import { signJwt } from '../crypto/jwt.js';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import { SchemaCheckRepository } from '../repositories/SchemaCheckRepository.js';
-import { SubgraphRepository } from '../repositories/SubgraphRepository.js';
+import { Subgraph, SubgraphRepository } from '../repositories/SubgraphRepository.js';
 import { UserRepository } from '../repositories/UserRepository.js';
 import { AnalyticsDashboardViewRepository } from '../repositories/analytics/AnalyticsDashboardViewRepository.js';
 import { AnalyticsRequestViewRepository } from '../repositories/analytics/AnalyticsRequestViewRepository.js';
@@ -76,6 +77,21 @@ import { handleError, isValidLabelMatchers, isValidLabels } from '../util.js';
 import { OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
 import { GitHubRepository } from '../repositories/GitHubRepository.js';
 import Slack from '../services/Slack.js';
+
+const formatSubscriptionProtocol = (protocol: GraphQLSubscriptionProtocol) => {
+  switch (protocol) {
+    case GraphQLSubscriptionProtocol.GRAPHQL_SUBSCRIPTION_PROTOCOL_WS: {
+      return 'ws';
+    }
+    case GraphQLSubscriptionProtocol.GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE: {
+      return 'sse';
+    }
+    case GraphQLSubscriptionProtocol.GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE_POST: {
+      return 'sse_post';
+    }
+  }
+  throw new Error(`Unknown GraphQLSubscriptionProtocol ${protocol}`);
+};
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -202,6 +218,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           name: req.name,
           labels: req.labels,
           routingUrl: req.routingUrl,
+          subscriptionUrl: req.subscriptionUrl,
+          subscriptionProtocol: req.subscriptionProtocol
+            ? formatSubscriptionProtocol(req.subscriptionProtocol)
+            : undefined,
         });
 
         return {
@@ -1270,11 +1290,16 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const { compositionErrors, updatedFederatedGraphs } = await repo.update({
+        const update: Subgraph = {
           name: req.name,
           labels: req.labels,
+          subscriptionUrl: req.subscriptionUrl,
           routingUrl: req.routingUrl,
-        });
+        };
+        if (req.subscriptionProtocol !== undefined) {
+          update.subscriptionProtocol = formatSubscriptionProtocol(req.subscriptionProtocol);
+        }
+        const { compositionErrors, updatedFederatedGraphs } = await repo.update(update);
         if (compositionErrors.length > 0) {
           return {
             response: {
@@ -2977,6 +3002,62 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           response: {
             code: EnumStatusCode.OK,
           },
+        };
+      });
+    },
+
+    isGitHubAppInstalled: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<IsGitHubAppInstalledResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const orgRepository = new OrganizationRepository(opts.db);
+
+        if (!opts.githubApp) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: 'GitHub app integration is disabled',
+            },
+            isInstalled: false,
+          };
+        }
+
+        const org = orgRepository.byId(authContext.organizationId);
+        if (!org) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: 'Organization not found',
+            },
+            isInstalled: false,
+          };
+        }
+
+        if (!req.gitInfo) {
+          return {
+            response: {
+              code: EnumStatusCode.OK,
+            },
+            isInstalled: false,
+          };
+        }
+
+        const githubRepository = new GitHubRepository(opts.db, opts.githubApp);
+        const isInstalled = await githubRepository.isAppInstalledOnRepo({
+          accountId: req.gitInfo.accountId,
+          repoSlug: req.gitInfo.repositorySlug,
+          ownerSlug: req.gitInfo.ownerSlug,
+        });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          isInstalled,
         };
       });
     },

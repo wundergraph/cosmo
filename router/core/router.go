@@ -17,6 +17,7 @@ import (
 	"github.com/go-chi/chi/middleware"
 	"github.com/mitchellh/mapstructure"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/wundergraph/cosmo/router/internal/graphiql"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -28,12 +29,10 @@ import (
 	"github.com/wundergraph/cosmo/router/config"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/internal/controlplane"
-	graphiql2 "github.com/wundergraph/cosmo/router/internal/graphiql"
 	"github.com/wundergraph/cosmo/router/internal/handler/cors"
 	"github.com/wundergraph/cosmo/router/internal/handler/health"
 	"github.com/wundergraph/cosmo/router/internal/handler/recovery"
 	"github.com/wundergraph/cosmo/router/internal/handler/requestlogger"
-	"github.com/wundergraph/cosmo/router/internal/logging"
 	"github.com/wundergraph/cosmo/router/internal/metric"
 	"github.com/wundergraph/cosmo/router/internal/otel"
 	"github.com/wundergraph/cosmo/router/internal/retrytransport"
@@ -92,6 +91,7 @@ type (
 		headerRuleEngine         *HeaderRuleEngine
 		headerRules              config.HeaderRules
 		subgraphTransportOptions *SubgraphTransportOptions
+		routerTrafficConfig      *config.RouterTrafficConfiguration
 
 		retryOptions retrytransport.RetryOptions
 
@@ -103,9 +103,13 @@ type (
 	// Server is the main router instance.
 	Server struct {
 		Config
-		Server       *http.Server
-		routerConfig *nodev1.RouterConfig
-		healthChecks *health.Checks
+		Server *http.Server
+		// rootContext that all services depending on the router should
+		// use as a parent context
+		rootContext       context.Context
+		rootContextCancel func()
+		routerConfig      *nodev1.RouterConfig
+		healthChecks      *health.Checks
 	}
 
 	// Option defines the method to customize Server.
@@ -146,6 +150,10 @@ func NewRouter(opts ...Option) (*Router, error) {
 
 	if r.subgraphTransportOptions == nil {
 		r.subgraphTransportOptions = DefaultSubgraphTransportOptions()
+	}
+
+	if r.routerTrafficConfig == nil {
+		r.routerTrafficConfig = DefaultRouterTrafficConfig()
 	}
 
 	// Default values for health check paths
@@ -329,13 +337,13 @@ func (r *Router) updateServer(ctx context.Context, cfg *nodev1.RouterConfig) err
 			)
 
 			if r.playground && r.introspection {
-				r.logger.Info("Playground available at", zap.String("url", r.baseURL+"/graphql"))
+				r.logger.Info("Playground available at", zap.String("url", r.baseURL+r.graphqlPath))
 			}
 		}
 
 		r.activeRouter.healthChecks.SetReady(true)
 
-		// This is r blocking call
+		// This is a blocking call
 		if err := r.activeRouter.listenAndServe(); err != nil {
 			r.activeRouter.healthChecks.SetReady(true)
 			r.logger.Error("Failed to start new server", zap.Error(err))
@@ -461,8 +469,6 @@ func (r *Router) Start(ctx context.Context) error {
 		return fmt.Errorf("router is closed. Create r new instance with router.NewRouter()")
 	}
 
-	eg, ctx := errgroup.WithContext(ctx)
-
 	if err := r.bootstrap(ctx); err != nil {
 		return fmt.Errorf("failed to bootstrap application: %w", err)
 	}
@@ -471,12 +477,7 @@ func (r *Router) Start(ctx context.Context) error {
 	if r.routerConfig != nil {
 
 		r.logger.Info("Static router config provided. Polling is disabled.")
-
-		eg.Go(func() error {
-			return r.updateServer(ctx, r.routerConfig)
-		})
-
-		return eg.Wait()
+		return r.updateServer(ctx, r.routerConfig)
 	}
 
 	if r.configFetcher == nil {
@@ -484,6 +485,8 @@ func (r *Router) Start(ctx context.Context) error {
 	}
 
 	initCh := make(chan *nodev1.RouterConfig, 1)
+
+	eg, ctx := errgroup.WithContext(ctx)
 
 	eg.Go(func() error {
 		for {
@@ -523,9 +526,12 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		return nil, err
 	}
 
+	rootContext, rootContextCancel := context.WithCancel(ctx)
 	ro := &Server{
-		routerConfig: routerConfig,
-		Config:       r.Config,
+		rootContext:       rootContext,
+		rootContextCancel: rootContextCancel,
+		routerConfig:      routerConfig,
+		Config:            r.Config,
 	}
 
 	recoveryHandler := recovery.New(recovery.WithLogger(r.logger), recovery.WithPrintStack())
@@ -542,6 +548,12 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	)
 
 	httpRouter := chi.NewRouter()
+	httpRouter.Use(func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			r = r.WithContext(withSubgraphs(r.Context(), subgraphs))
+			h.ServeHTTP(w, r)
+		})
+	})
 	httpRouter.Use(recoveryHandler)
 	httpRouter.Use(middleware.RequestID)
 	httpRouter.Use(middleware.RealIP)
@@ -597,6 +609,19 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		return nil, fmt.Errorf("failed to build plan configuration: %w", err)
 	}
 
+	operationParser := NewOperationParser(executor)
+
+	var graphqlPlaygroundHandler http.Handler
+
+	if r.playground {
+		r.logger.Debug("enabling GraphQL playground", zap.String("path", r.graphqlPath))
+		graphqlPlaygroundHandler = graphiql.NewPlayground(&graphiql.PlaygroundOptions{
+			Log:        r.logger,
+			Html:       graphiql.PlaygroundHTML(),
+			GraphqlURL: r.graphqlPath,
+		})
+	}
+
 	graphqlHandler := NewGraphQLHandler(HandlerOptions{
 		Executor: executor,
 		Cache:    planCache,
@@ -624,9 +649,10 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	}
 
 	graphqlPreHandler := NewPreHandler(&PreHandlerOptions{
-		Executor:       executor,
-		Logger:         r.logger,
-		requestMetrics: metricStore,
+		Parser:                operationParser,
+		Logger:                r.logger,
+		RequestMetrics:        metricStore,
+		MaxRequestSizeInBytes: int64(r.routerTrafficConfig.MaxRequestBodyBytes),
 	})
 
 	var traceHandler *trace.Middleware
@@ -654,28 +680,29 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 			subChiRouter.Use(traceHandler.Handler)
 		}
 
+		subChiRouter.Use(NewWebsocketMiddleware(rootContext, WebsocketMiddlewareOptions{
+			Parser:                operationParser,
+			MaxRequestSizeInBytes: int64(r.routerTrafficConfig.MaxRequestBodyBytes),
+			GraphQLHandler:        graphqlHandler,
+			Logger:                r.logger,
+		}))
+
 		subChiRouter.Use(graphqlPreHandler.Handler)
 
 		// Create custom request context that provides access to the request and response.
 		// It is used by custom modules and handlers. It must be added before custom user middlewares
 		subChiRouter.Use(func(handler http.Handler) http.Handler {
 			return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-				operationContext := getOperationContext(request.Context())
-				requestContext := &requestContext{
-					logger:         r.logger.With(logging.WithRequestID(middleware.GetReqID(request.Context()))),
-					mu:             sync.RWMutex{},
-					keys:           map[string]any{},
-					responseWriter: writer,
-					request:        request,
-					operation:      operationContext,
-					subgraphs:      subgraphs,
-				}
-				handler.ServeHTTP(writer, request.WithContext(withRequestContext(request.Context(), requestContext)))
+				requestWithContext := requestWithAttachedContext(writer, request, r.logger)
+				handler.ServeHTTP(writer, requestWithContext)
 			})
 		})
 
 		subChiRouter.Use(r.routerMiddlewares...)
 		subChiRouter.Post("/", graphqlHandler.ServeHTTP)
+		if r.playground {
+			subChiRouter.Get("/", graphqlPlaygroundHandler.ServeHTTP)
+		}
 	})
 
 	r.logger.Debug("GraphQLHandler registered",
@@ -684,16 +711,10 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	)
 
 	if r.playground {
-		graphqlPlaygroundHandler := graphiql2.NewPlayground(&graphiql2.PlaygroundOptions{
-			Log:  r.logger,
-			Html: graphiql2.GetGraphiqlPlaygroundHTML(),
-			// Empty url to use the same url (relatively) as the playground
-			GraphqlURL: "",
-		})
-		httpRouter.Get(r.graphqlPath, graphqlPlaygroundHandler)
-		r.logger.Debug("PlaygroundHandler registered",
+		httpRouter.Get("/", graphqlPlaygroundHandler.ServeHTTP)
+		r.logger.Debug("GraphQLHandler playground registered",
 			zap.String("method", http.MethodGet),
-			zap.String("path", r.graphqlPath),
+			zap.String("path", "/"),
 		)
 	}
 
@@ -780,6 +801,8 @@ func (r *Server) Shutdown(ctx context.Context) (err error) {
 		zap.String("config_version", r.routerConfig.GetVersion()),
 		zap.String("grace_period", r.gracePeriod.String()),
 	)
+
+	r.rootContextCancel()
 
 	if r.gracePeriod > 0 {
 		ctxWithTimer, cancel := context.WithTimeout(ctx, r.gracePeriod)
@@ -965,6 +988,18 @@ func WithSubgraphRetryOptions(enabled bool, maxRetryCount int, retryMaxDuration,
 			MaxDuration:   retryMaxDuration,
 			Interval:      retryInterval,
 		}
+	}
+}
+
+func WithRouterTrafficConfig(cfg *config.RouterTrafficConfiguration) Option {
+	return func(r *Router) {
+		r.routerTrafficConfig = cfg
+	}
+}
+
+func DefaultRouterTrafficConfig() *config.RouterTrafficConfiguration {
+	return &config.RouterTrafficConfiguration{
+		MaxRequestBodyBytes: 1000 * 1000 * 5, // 5 MB
 	}
 }
 

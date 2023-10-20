@@ -6,13 +6,15 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/99designs/gqlgen/graphql"
+	"github.com/99designs/gqlgen/graphql/handler/debug"
 	"github.com/99designs/gqlgen/graphql/playground"
 	"golang.org/x/sync/errgroup"
 
-	employees "github.com/wundergraph/cosmo/demo/pkg/subgraphs/employees/subgraph"
-	family "github.com/wundergraph/cosmo/demo/pkg/subgraphs/family/subgraph"
-	hobbies "github.com/wundergraph/cosmo/demo/pkg/subgraphs/hobbies/subgraph"
-	products "github.com/wundergraph/cosmo/demo/pkg/subgraphs/products/subgraph"
+	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/employees"
+	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/family"
+	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/hobbies"
+	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/products"
 )
 
 type Ports struct {
@@ -29,6 +31,11 @@ type Config struct {
 
 type Subgraphs struct {
 	servers []*http.Server
+	ports   Ports
+}
+
+func (s *Subgraphs) Ports() Ports {
+	return s.ports
 }
 
 func (s *Subgraphs) Shutdown(ctx context.Context) error {
@@ -48,14 +55,18 @@ func (s *Subgraphs) ListenAndServe(ctx context.Context) error {
 	return group.Wait()
 }
 
-func newServer(name string, port int, graphQLHandler http.Handler) *http.Server {
+func newServer(name string, enableDebug bool, port int, schema graphql.ExecutableSchema) *http.Server {
 	if port == 0 {
 		return nil
+	}
+	srv := NewDemoServer(schema)
+	if enableDebug {
+		srv.Use(&debug.Tracer{})
 	}
 	log.Printf("%s listening at to http://localhost:%d/", name, port)
 	mux := http.NewServeMux()
 	mux.Handle("/", playground.Handler("GraphQL playground", "/graphql"))
-	mux.Handle("/graphql", graphQLHandler)
+	mux.Handle("/graphql", srv)
 	return &http.Server{
 		Addr:    ":" + strconv.Itoa(port),
 		Handler: mux,
@@ -64,19 +75,20 @@ func newServer(name string, port int, graphQLHandler http.Handler) *http.Server 
 
 func New(config *Config) (*Subgraphs, error) {
 	var servers []*http.Server
-	if srv := newServer("employees", config.Ports.Employees, employees.GraphQLEndpointHandler(employees.EndpointOptions{EnableDebug: config.EnableDebug})); srv != nil {
+	if srv := newServer("employees", config.EnableDebug, config.Ports.Employees, employees.NewSchema()); srv != nil {
 		servers = append(servers, srv)
 	}
-	if srv := newServer("family", config.Ports.Family, family.GraphQLEndpointHandler(family.EndpointOptions{EnableDebug: config.EnableDebug})); srv != nil {
+	if srv := newServer("family", config.EnableDebug, config.Ports.Family, family.NewSchema()); srv != nil {
 		servers = append(servers, srv)
 	}
-	if srv := newServer("hobbies", config.Ports.Hobbies, hobbies.GraphQLEndpointHandler(hobbies.EndpointOptions{EnableDebug: config.EnableDebug})); srv != nil {
+	if srv := newServer("hobbies", config.EnableDebug, config.Ports.Hobbies, hobbies.NewSchema()); srv != nil {
 		servers = append(servers, srv)
 	}
-	if srv := newServer("products", config.Ports.Products, products.GraphQLEndpointHandler(products.EndpointOptions{EnableDebug: config.EnableDebug})); srv != nil {
+	if srv := newServer("products", config.EnableDebug, config.Ports.Products, products.NewSchema()); srv != nil {
 		servers = append(servers, srv)
 	}
 	return &Subgraphs{
 		servers: servers,
+		ports:   config.Ports,
 	}, nil
 }
