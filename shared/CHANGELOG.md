@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.10.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.9.2...@wundergraph/cosmo-shared@0.10.0) (2023-10-20)
+
+### Features
+
+* add support for subscriptions ([#185](https://github.com/wundergraph/cosmo/issues/185)) ([5a78aa0](https://github.com/wundergraph/cosmo/commit/5a78aa01f60ac4184ac69b0bd72aa1ce467bff93)) (@fiam)
+
 ## [0.9.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.9.1...@wundergraph/cosmo-shared@0.9.2) (2023-10-13)
 
 **Note:** Version bump only for package @wundergraph/cosmo-shared
