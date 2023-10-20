@@ -83,8 +83,10 @@ const ExplorerPage: NextPageWithLayout = () => {
   }, [query, isGraphiqlRendered]);
 
   const fetcher = useMemo(() => {
+    const url = data?.graph?.routingURL ?? "";
     return createGraphiQLFetcher({
-      url: data?.graph?.routingURL ?? "",
+      url: url,
+      subscriptionUrl: url.replace("http", "ws"),
       fetch: graphiQLFetch,
     });
   }, [data?.graph?.routingURL]);

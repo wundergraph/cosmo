@@ -5,7 +5,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3, protoInt64 } from "@bufbuild/protobuf";
-import { EnumStatusCode } from "../../common/common_pb.js";
+import { EnumStatusCode, GraphQLSubscriptionProtocol } from "../../common/common_pb.js";
 
 /**
  * @generated from enum wg.cosmo.node.v1.ArgumentRenderConfiguration
@@ -1310,9 +1310,16 @@ export class GraphQLSubscriptionConfiguration extends Message<GraphQLSubscriptio
   url?: ConfigurationVariable;
 
   /**
-   * @generated from field: bool useSSE = 3;
+   * @deprecated - Kept for backwards compatibility when decoding. Use protocol instead. 
+   *
+   * @generated from field: optional bool useSSE = 3;
    */
-  useSSE = false;
+  useSSE?: boolean;
+
+  /**
+   * @generated from field: optional wg.cosmo.common.GraphQLSubscriptionProtocol protocol = 4;
+   */
+  protocol?: GraphQLSubscriptionProtocol;
 
   constructor(data?: PartialMessage<GraphQLSubscriptionConfiguration>) {
     super();
@@ -1324,7 +1331,8 @@ export class GraphQLSubscriptionConfiguration extends Message<GraphQLSubscriptio
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "enabled", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 2, name: "url", kind: "message", T: ConfigurationVariable },
-    { no: 3, name: "useSSE", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 3, name: "useSSE", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 4, name: "protocol", kind: "enum", T: proto3.getEnumType(GraphQLSubscriptionProtocol), opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GraphQLSubscriptionConfiguration {

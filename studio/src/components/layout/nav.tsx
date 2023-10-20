@@ -153,7 +153,7 @@ export const Nav = ({ children, links }: SideNavLayoutProps) => {
     <div className="flex min-h-screen flex-1 flex-col lg:grid lg:grid-cols-[auto_1fr] lg:divide-x">
       <aside
         className={cn(
-          "sticky top-[0] z-40 flex min-w-[248px] flex-col bg-background pt-4 lg:px-6 lg:pb-4",
+          "sticky top-[0] z-40 flex min-w-[248px] flex-shrink-0 flex-col bg-background pt-4 lg:min-w-[280px] lg:px-6 lg:pb-4",
           {
             "top-7 lg:h-[calc(100vh-28px)]":
               user?.currentOrganization.isFreeTrial,
@@ -205,7 +205,7 @@ export const Nav = ({ children, links }: SideNavLayoutProps) => {
                       <span
                         className={cn(
                           "group flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground",
-                          isCurrent ? "bg-accent" : "transparent"
+                          isCurrent ? "bg-accent/80" : "transparent"
                         )}
                       >
                         {item.icon}

@@ -83,6 +83,10 @@ message CreateFederatedSubgraphRequest {
   repeated Label labels = 3;
   // headers are the headers which will be used to route the requests to the subgraph.
   repeated string headers = 4;
+  // subscription protocol to use when subscribing to this subgraph
+  optional wg.cosmo.common.GraphQLSubscriptionProtocol subscription_protocol = 5;
+    // url used for subscriptions
+  optional string subscription_url = 6;
 }
 
 message DeleteFederatedGraphRequest {
@@ -289,6 +293,10 @@ message UpdateSubgraphRequest {
   string routing_url = 2;
   repeated Label labels = 3;
   repeated string headers = 4;
+  // subscription protocol to use when subscribing to this subgraph
+  optional wg.cosmo.common.GraphQLSubscriptionProtocol subscription_protocol = 5;
+  // url used for subscriptions
+  optional string subscription_url = 6;
 }
 
 message UpdateSubgraphResponse {
@@ -787,6 +795,7 @@ message UpdateOrgMemberRoleResponse {
  message GetGraphMetricsRequest {
   string federatedGraphName = 1;
   int32 range = 2;
+  repeated AnalyticsFilter filters = 3;
 }
 
 message GetGraphMetricsResponse {
@@ -794,7 +803,7 @@ message GetGraphMetricsResponse {
   MetricsDashboardMetric requests = 2;
   MetricsDashboardMetric latency = 3;
   MetricsDashboardMetric errors = 4;
-  optional string json = 5;
+  repeated AnalyticsViewResultFilter filters = 5;
 }
 
 message MetricsDashboardMetric {
@@ -827,6 +836,7 @@ message MetricsDashboard {
 message GetMetricsErrorRateRequest {
   string federatedGraphName = 1;
   int32 range = 2;
+  repeated AnalyticsFilter filters = 3;
 }
 
 message GetMetricsErrorRateResponse {

@@ -13,14 +13,20 @@ import { DateRange } from "react-day-picker";
 import { refreshIntervals } from "./data-table";
 
 export const getDefaultSort = (group?: string) => {
-  return group ? [{
-    id: 'totalRequests',
-    desc: true
-  }] : [{
-    id: 'unixTimestamp',
-    desc: true
-  }]
-}
+  return group
+    ? [
+        {
+          id: "totalRequests",
+          desc: true,
+        },
+      ]
+    : [
+        {
+          id: "unixTimestamp",
+          desc: true,
+        },
+      ];
+};
 
 export const useSyncTableWithQuery = <T>({
   table,
@@ -49,7 +55,7 @@ export const useSyncTableWithQuery = <T>({
 }) => {
   const router = useRouter();
 
-  const initial = useRef(true)
+  const initial = useRef(true);
 
   const selectedFilters = table.getState().columnFilters;
 
@@ -138,12 +144,17 @@ export const useSyncTableWithQuery = <T>({
       }
 
       if (router.query.sort) {
-        setSorting([{ id: router.query.sort.toString(), desc: router.query.sortDir?.toString() !== 'asc'}])
-      } else if (!initial.current) {
-        setSorting([])
+        setSorting([
+          {
+            id: router.query.sort.toString(),
+            desc: router.query.sortDir?.toString() !== "asc",
+          },
+        ]);
+      } else {
+        setSorting([]);
       }
 
-      initial.current = false
+      initial.current = false;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
@@ -155,6 +166,6 @@ export const useSyncTableWithQuery = <T>({
     router.query.dateRange,
     router.query.refreshInterval,
     router.query.sort,
-    router.query.sortDir
+    router.query.sortDir,
   ]);
 };
