@@ -105,12 +105,9 @@ describe('CompositionErrors', (ctx) => {
 
     const pandasSchema = await readFile(join(process.cwd(), 'test/graphql/federationV1/pandas.graphql'));
     const productsSchema = await readFile(join(process.cwd(), 'test/graphql/federationV1/products.graphql'));
-    const inventorySchema = await readFile(join(process.cwd(), 'test/graphql/federationV1/inventory.graphql'));
-    const usersSchema = await readFile(join(process.cwd(), 'test/graphql/federationV1/users.graphql'));
 
     const client = createPromiseClient(PlatformService, transport);
-    const federatedGraphName = genID();
-    const subgraphName = genID();
+    const federatedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
 
     const createFederatedGraphResp = await client.createFederatedGraph({

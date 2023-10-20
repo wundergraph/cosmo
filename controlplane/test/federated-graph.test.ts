@@ -93,8 +93,8 @@ describe('Federated Graph', (ctx) => {
     });
 
     const client = createPromiseClient(PlatformService, transport);
-    const subgraph1Name = genID();
-    const fedGraphName = genID();
+    const subgraph1Name = genID('subgraph1');
+    const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
 
     const createSubraph1Res = await client.createFederatedSubgraph({
@@ -194,8 +194,8 @@ describe('Federated Graph', (ctx) => {
     });
 
     const client = createPromiseClient(PlatformService, transport);
-    const subgraph1Name = genID();
-    const fedGraphName = genID();
+    const subgraph1Name = genID('subgraph1');
+    const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
 
     const createFedGraphRes = await client.createFederatedGraph({
@@ -295,9 +295,9 @@ describe('Federated Graph', (ctx) => {
     });
 
     const client = createPromiseClient(PlatformService, transport);
-    const subgraph1Name = genID();
-    const subgraph2Name = genID();
-    const fedGraphName = genID();
+    const subgraph1Name = genID('subgraph1');
+    const subgraph2Name = genID('subgraph2');
+    const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
 
     const createSubraph1Res = await client.createFederatedSubgraph({
@@ -396,9 +396,9 @@ describe('Federated Graph', (ctx) => {
     });
 
     const client = createPromiseClient(PlatformService, transport);
-    const subgraph1Name = genID();
-    const subgraph2Name = genID();
-    const fedGraphName = genID();
+    const subgraph1Name = genID('subgraph1');
+    const subgraph2Name = genID('subgraph2');
+    const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
 
     const createSubraph1Res = await client.createFederatedSubgraph({
@@ -526,9 +526,9 @@ describe('Federated Graph', (ctx) => {
     });
 
     const client = createPromiseClient(PlatformService, transport);
-    const subgraph1Name = genID();
-    const subgraph2Name = genID();
-    const fedGraphName = genID();
+    const subgraph1Name = genID('subgraph1');
+    const subgraph2Name = genID('subgraph2');
+    const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
 
     const createSubraph1Res = await client.createFederatedSubgraph({

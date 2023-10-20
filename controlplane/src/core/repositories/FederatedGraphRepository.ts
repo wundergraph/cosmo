@@ -22,8 +22,8 @@ import {
   ListFilterOptions,
   SchemaChangeType,
 } from '../../types/index.js';
-import { updateComposedSchema } from '../composition/updateComposedSchema.js';
 import { normalizeLabelMatchers, normalizeLabels } from '../util.js';
+import { Composer } from '../composition/composer.js';
 import { SubgraphRepository } from './SubgraphRepository.js';
 
 /**
@@ -33,13 +33,13 @@ export class FederatedGraphRepository {
   constructor(private db: PostgresJsDatabase<typeof schema>, private organizationId: string) {}
 
   public create(data: { name: string; routingUrl: string; labelMatchers: string[] }): Promise<FederatedGraphDTO> {
-    return this.db.transaction(async (db) => {
-      const subgraphRepo = new SubgraphRepository(db, this.organizationId);
+    return this.db.transaction(async (tx) => {
+      const subgraphRepo = new SubgraphRepository(tx, this.organizationId);
 
       const labelMatchers = normalizeLabelMatchers(data.labelMatchers);
       const routingUrl = normalizeURL(data.routingUrl);
 
-      const insertedTarget = await db
+      const insertedTarget = await tx
         .insert(targets)
         .values({
           organizationId: this.organizationId,
@@ -49,7 +49,7 @@ export class FederatedGraphRepository {
         .returning()
         .execute();
 
-      const insertedGraph = await db
+      const insertedGraph = await tx
         .insert(federatedGraphs)
         .values({
           targetId: insertedTarget[0].id,
@@ -58,7 +58,7 @@ export class FederatedGraphRepository {
         .returning()
         .execute();
 
-      await db
+      await tx
         .insert(schema.targetLabelMatchers)
         .values(
           labelMatchers.map((s) => ({
@@ -70,17 +70,17 @@ export class FederatedGraphRepository {
 
       const subgraphs = await subgraphRepo.byGraphLabelMatchers(data.labelMatchers);
 
-      const ops = subgraphs.map((sg) => {
-        return db
+      if (subgraphs.length > 0) {
+        await tx
           .insert(schema.subgraphsToFederatedGraph)
-          .values({
-            subgraphId: sg.id,
-            federatedGraphId: insertedGraph[0].id,
-          })
+          .values(
+            subgraphs.map((sg) => ({
+              subgraphId: sg.id,
+              federatedGraphId: insertedGraph[0].id,
+            })),
+          )
           .execute();
-      });
-
-      await Promise.all(ops);
+      }
 
       return {
         id: insertedGraph[0].id,
@@ -111,22 +111,22 @@ export class FederatedGraphRepository {
     const labelMatchers = normalizeLabelMatchers(data.labelMatchers);
     const routingUrl = normalizeURL(data.routingUrl);
 
-    await this.db.transaction(async (db) => {
-      const fedGraphRepo = new FederatedGraphRepository(db, this.organizationId);
-      const subgraphRepo = new SubgraphRepository(db, this.organizationId);
+    await this.db.transaction(async (tx) => {
+      const fedGraphRepo = new FederatedGraphRepository(tx, this.organizationId);
+      const subgraphRepo = new SubgraphRepository(tx, this.organizationId);
 
       if (labelMatchers.length > 0) {
         // update label matchers
-        await db
+        await tx
           .delete(schema.targetLabelMatchers)
           .where(eq(schema.targetLabelMatchers.targetId, federatedGraph.targetId));
 
-        await db
+        await tx
           .insert(schema.targetLabelMatchers)
           .values(
-            labelMatchers.map((s) => ({
+            labelMatchers.map((labelMatcher) => ({
               targetId: federatedGraph.targetId,
-              labelMatcher: s.split(','),
+              labelMatcher: labelMatcher.split(','),
             })),
           )
           .execute();
@@ -144,39 +144,35 @@ export class FederatedGraphRepository {
             deleteCondition,
             notInArray(
               schema.subgraphsToFederatedGraph.subgraphId,
-              subgraphs.map((sg) => sg.id),
+              subgraphs.map((subgraph) => subgraph.id),
             ),
           );
         }
 
-        await db.delete(schema.subgraphsToFederatedGraph).where(deleteCondition);
+        await tx.delete(schema.subgraphsToFederatedGraph).where(deleteCondition);
 
-        const ops = subgraphs.map((sg) => {
-          return db
+        if (subgraphs.length > 0) {
+          await tx
             .insert(schema.subgraphsToFederatedGraph)
-            .values({
-              subgraphId: sg.id,
-              federatedGraphId: federatedGraph.id,
-            })
+            .values(
+              subgraphs.map((sg) => ({
+                subgraphId: sg.id,
+                federatedGraphId: federatedGraph.id,
+              })),
+            )
             .onConflictDoNothing()
             .execute();
-        });
+        }
 
-        await Promise.all(ops);
-
-        // update schema since subgraphs would have changed
-        const errors = await updateComposedSchema({
-          federatedGraph,
-          fedGraphRepo,
-          subgraphRepo,
-        });
-
+        const composer = new Composer(fedGraphRepo, subgraphRepo);
+        const composedGraph = await composer.composeFederatedGraph(federatedGraph.name, federatedGraph.targetId);
+        const errors = await composer.updateComposedSchema(composedGraph);
         compositionErrors.push(...errors);
       }
 
       // update routing URL
       if (data.routingUrl !== '') {
-        await db.update(federatedGraphs).set({ routingUrl }).where(eq(federatedGraphs.id, federatedGraph.id)).execute();
+        await tx.update(federatedGraphs).set({ routingUrl }).where(eq(federatedGraphs.id, federatedGraph.id)).execute();
       }
     });
 
@@ -322,8 +318,8 @@ export class FederatedGraphRepository {
     compositionErrors?: Error[];
     routerConfig?: JsonValue;
   }) {
-    return this.db.transaction<FederatedGraphDTO | undefined>(async (db) => {
-      const fedGraphRepo = new FederatedGraphRepository(db, this.organizationId);
+    return this.db.transaction<FederatedGraphDTO | undefined>(async (tx) => {
+      const fedGraphRepo = new FederatedGraphRepository(tx, this.organizationId);
       const fedGraph = await fedGraphRepo.byName(graphName);
       if (fedGraph === undefined) {
         return undefined;
@@ -335,7 +331,7 @@ export class FederatedGraphRepository {
         compositionErrorString = compositionErrors.map((e) => e.toString()).join('\n');
       }
 
-      const insertedVersion = await db
+      const insertedVersion = await tx
         .insert(schemaVersion)
         .values({
           targetId: fedGraph.targetId,
@@ -348,7 +344,7 @@ export class FederatedGraphRepository {
           insertedId: schemaVersion.id,
         });
 
-      await db
+      await tx
         .update(federatedGraphs)
         .set({
           // Update the schema of the federated graph with a valid schema version.
@@ -466,7 +462,7 @@ export class FederatedGraphRepository {
   ): Promise<{ federatedGraphChangelog: FederatedGraphChangelogDTO[]; hasNextPage: boolean } | undefined> {
     return this.db.transaction<
       { federatedGraphChangelog: FederatedGraphChangelogDTO[]; hasNextPage: boolean } | undefined
-    >(async (db) => {
+    >(async (tx) => {
       const federatedGraphChangelog: FederatedGraphChangelogDTO[] = [];
 
       const { offset, limit } = pagination;
@@ -474,7 +470,7 @@ export class FederatedGraphRepository {
 
       // Get all schema version ids which have changelogs
       const schemaVersionIds = (
-        await db
+        await tx
           .select({
             id: schemaVersion.id,
           })
@@ -497,7 +493,7 @@ export class FederatedGraphRepository {
         return { federatedGraphChangelog, hasNextPage: false };
       }
 
-      const schemaVersions = await db.query.schemaVersion.findMany({
+      const schemaVersions = await tx.query.schemaVersion.findMany({
         where: (sv) => inArray(sv.id, schemaVersionIds),
         columns: {
           id: true,
@@ -511,7 +507,7 @@ export class FederatedGraphRepository {
         orderBy: desc(schemaVersion.createdAt),
       });
 
-      const entriesAfterCurrentPage = await db
+      const entriesAfterCurrentPage = await tx
         .select({ id: schemaVersion.id })
         .from(schemaVersion)
         .innerJoin(schemaVersionChangeAction, eq(schemaVersionChangeAction.schemaVersionId, schemaVersion.id))
@@ -591,10 +587,10 @@ export class FederatedGraphRepository {
   }
 
   public delete(targetID: string, subgraphsTargetIDs: string[]) {
-    return this.db.transaction(async (db) => {
-      await db.delete(targets).where(eq(targets.id, targetID)).execute();
+    return this.db.transaction(async (tx) => {
+      await tx.delete(targets).where(eq(targets.id, targetID)).execute();
       if (subgraphsTargetIDs.length > 0) {
-        await db.delete(schemaChecks).where(inArray(schemaChecks.targetId, subgraphsTargetIDs)).execute();
+        await tx.delete(schemaChecks).where(inArray(schemaChecks.targetId, subgraphsTargetIDs)).execute();
       }
     });
   }

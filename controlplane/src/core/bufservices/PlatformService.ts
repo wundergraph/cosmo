@@ -52,6 +52,7 @@ import {
   GetMetricsErrorRateResponse,
   IsGitHubAppInstalledResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+
 import { PlatformEventName, OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import { OpenAIGraphql, buildRouterConfig } from '@wundergraph/cosmo-shared';
 import { parse } from 'graphql';
@@ -59,7 +60,6 @@ import { GraphApiKeyDTO, GraphApiKeyJwtPayload } from '../../types/index.js';
 import { Composer } from '../composition/composer.js';
 import { buildSchema, composeSubgraphs } from '../composition/composition.js';
 import { getDiffBetweenGraphs } from '../composition/schemaCheck.js';
-import { updateComposedSchema } from '../composition/updateComposedSchema.js';
 import { signJwt } from '../crypto/jwt.js';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
@@ -74,7 +74,7 @@ import { ApiKeyGenerator } from '../services/ApiGenerator.js';
 import ApolloMigrator from '../services/ApolloMigrator.js';
 import { MetricsRepository } from '../repositories/analytics/MetricsRepository.js';
 import { handleError, isValidLabelMatchers, isValidLabels } from '../util.js';
-import { OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
+import { FederatedGraphSchemaUpdate, OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
 import { GitHubRepository } from '../repositories/GitHubRepository.js';
 import Slack from '../services/Slack.js';
 
@@ -133,11 +133,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const compositionErrors = await updateComposedSchema({
-          federatedGraph,
-          fedGraphRepo,
-          subgraphRepo,
-        });
+        const compChecker = new Composer(fedGraphRepo, subgraphRepo);
+        const composedGraph = await compChecker.composeFederatedGraph(federatedGraph.name, federatedGraph.targetId);
+        const compositionErrors = await compChecker.updateComposedSchema(composedGraph);
 
         orgWebhooks.send(OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED, {
           federated_graph: {
@@ -486,7 +484,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         }
 
         const subgraph = await subgraphRepo.byName(req.subgraphName);
-        const compChecker = new Composer(fedGraphRepo, subgraphRepo);
+
         if (!subgraph) {
           return {
             response: {
@@ -534,7 +532,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           });
         }
 
-        const result = await compChecker.composeWithProposedSDL(subgraph.labels, subgraph.name, newSchemaSDL);
+        const composer = new Composer(fedGraphRepo, subgraphRepo);
+        const result = await composer.composeWithProposedSDL(subgraph.labels, subgraph.name, newSchemaSDL);
 
         await schemaCheckRepo.createSchemaCheckCompositions({
           schemaCheckID,
@@ -705,7 +704,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
-        const compChecker = new Composer(fedGraphRepo, subgraphRepo);
         const orgWebhooks = new OrganizationWebhookService(opts.db, authContext.organizationId, opts.logger);
 
         let subgraph = await subgraphRepo.byName(req.name);
@@ -759,8 +757,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           }
         }
 
-        // Update subgraph metadata like routingUrl and labels
+        const updatedFederatedGraphs: Map<string, FederatedGraphSchemaUpdate> = new Map();
 
+        // Update subgraph metadata
         if (req.routingUrl || req.labels) {
           const compResult = await subgraphRepo.update({
             name: req.name,
@@ -771,17 +770,17 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           // We ignore composition errors, because the user might fix it with next subgraph update
           // Don't worry, a subgraph with composition errors will not be published to the federated graph
 
-          for (const graph of compResult.updatedFederatedGraphs) {
-            orgWebhooks.send(OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED, {
+          for (const federatedGraph of compResult.updatedFederatedGraphs) {
+            updatedFederatedGraphs.set(federatedGraph.targetId, {
               federated_graph: {
-                id: graph.id,
-                name: graph.name,
+                id: federatedGraph.targetId,
+                name: federatedGraph.name,
               },
               organization: {
                 id: authContext.organizationId,
                 slug: authContext.organizationSlug,
               },
-              errors: compResult.compositionErrors.length > 0,
+              errors: !!federatedGraph.compositionErrors,
               actor_id: authContext.userId,
             });
           }
@@ -826,36 +825,32 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const result = await compChecker.compose(updatedSubgraph.labels);
-
-        // store the composition in the database
-        await compChecker.applyComposition(result);
-
-        // pass the composition errors and show it to the user
         const compositionErrors: CompositionError[] = [];
-        for (const composition of result.compositions) {
-          if (composition.errors.length > 0) {
-            for (const error of composition.errors) {
-              compositionErrors.push({
-                message: error.message,
-                federatedGraphName: composition.name,
-              } as CompositionError);
-            }
-          }
+        const composer = new Composer(fedGraphRepo, subgraphRepo);
+        const compositionResult = await composer.compose(updatedSubgraph.labels);
 
-          // Notify the organization webhook about the schema update
-          orgWebhooks.send(OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED, {
+        for (const federatedGraph of compositionResult.compositions) {
+          const composedGraph = await composer.composeFederatedGraph(federatedGraph.name, federatedGraph.targetID);
+          const cErrors = await composer.updateComposedSchema(composedGraph);
+          compositionErrors.push(...cErrors);
+
+          updatedFederatedGraphs.set(federatedGraph.targetID, {
             federated_graph: {
-              id: composition.targetID,
-              name: composition.name,
+              id: federatedGraph.targetID,
+              name: federatedGraph.name,
             },
             organization: {
               id: authContext.organizationId,
               slug: authContext.organizationSlug,
             },
-            errors: composition.errors.length > 0,
+            errors: cErrors.length > 0,
             actor_id: authContext.userId,
           });
+        }
+
+        // Notify the organization webhook about the schema update
+        for (const [_, federatedGraphUpdate] of updatedFederatedGraphs) {
+          orgWebhooks.send(OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED, federatedGraphUpdate);
         }
 
         // We return the composition errors to the user, so they can fix it but the subgraph is still updated
@@ -1141,60 +1136,24 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         await subgraphRepo.delete(subgraph.targetId);
 
-        const result = await compChecker.compose(subgraph.labels);
-        for await (const composedGraph of result.compositions) {
-          let currentFederatedSDL: string | undefined | null;
-          if (composedGraph.composedSchema) {
-            currentFederatedSDL = await fedGraphRepo.getLatestSdlOfFederatedGraph(composedGraph.name);
-          }
+        const composer = new Composer(fedGraphRepo, subgraphRepo);
+        const compositionResult = await compChecker.compose(subgraph.labels);
 
-          /**
-           * Build router config when composed schema is valid
-           */
-          const hasErrors = composedGraph.errors.length > 0;
-
-          let routerConfigJson: JsonValue = null;
-          if (!hasErrors && composedGraph.composedSchema) {
-            const routerConfig = buildRouterConfig({
-              argumentConfigurations: composedGraph.argumentConfigurations,
-              subgraphs: composedGraph.subgraphs,
-              federatedSDL: composedGraph.composedSchema,
-            });
-            routerConfigJson = routerConfig.toJson();
-          }
-
-          // We always create a new version in the database, but
-          // we might mark versions with compositions errors as not composable
-          // The routerConfig is stored along with the valid composed schema
-          const federatedGraph = await fedGraphRepo.updateSchema({
-            graphName: composedGraph.name,
-            composedSDL: composedGraph.composedSchema || undefined,
-            compositionErrors: composedGraph.errors,
-            routerConfig: routerConfigJson,
-          });
-
-          if (composedGraph.composedSchema && federatedGraph?.composedSchemaVersionId) {
-            const schemaChanges = await getDiffBetweenGraphs(currentFederatedSDL || '', composedGraph.composedSchema);
-
-            if (schemaChanges.kind !== 'failure') {
-              await fedGraphRepo.createFederatedGraphChangelog({
-                schemaVersionID: federatedGraph.composedSchemaVersionId,
-                changes: schemaChanges.changes,
-              });
-            }
-          }
+        for await (const federatedGraph of compositionResult.compositions) {
+          const composedGraph = await composer.composeFederatedGraph(federatedGraph.name, federatedGraph.targetID);
+          const compositionErrors = await composer.updateComposedSchema(composedGraph);
 
           if (federatedGraph) {
             orgWebhooks.send(OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED, {
               federated_graph: {
-                id: federatedGraph.id,
+                id: federatedGraph.targetID,
                 name: federatedGraph.name,
               },
               organization: {
                 id: authContext.organizationId,
                 slug: authContext.organizationSlug,
               },
-              errors: hasErrors,
+              errors: compositionErrors.length > 0,
               actor_id: authContext.userId,
             });
           }
@@ -2228,11 +2187,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           db: opts.db,
         });
 
-        const compositionErrors = await updateComposedSchema({
-          federatedGraph,
-          fedGraphRepo,
-          subgraphRepo,
-        });
+        const composer = new Composer(fedGraphRepo, subgraphRepo);
+        const composedGraph = await composer.composeFederatedGraph(federatedGraph.name, federatedGraph.targetId);
+        const compositionErrors = await composer.updateComposedSchema(composedGraph);
 
         const tokenValue = await signJwt<GraphApiKeyJwtPayload>({
           secret: opts.jwtSecret,

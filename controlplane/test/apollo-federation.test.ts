@@ -95,11 +95,11 @@ describe('Apollo Federated Graph', (ctx) => {
     });
 
     const client = createPromiseClient(PlatformService, transport);
-    const investorySubgraph = genID();
-    const pandasSubgraph = genID();
-    const usersSubgraph = genID();
-    const productsSubgraph = genID();
-    const fedGraphName = genID();
+    const inventorySubgraph = genID('inventory');
+    const pandasSubgraph = genID('pandas');
+    const usersSubgraph = genID('users');
+    const productsSubgraph = genID('products');
+    const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
 
     const createPandasSubgraph = await client.createFederatedSubgraph({
@@ -157,7 +157,7 @@ describe('Apollo Federated Graph', (ctx) => {
     expect(publishUsersResp.response?.code).toBe(EnumStatusCode.OK);
 
     const createInvetorySubgraph = await client.createFederatedSubgraph({
-      name: investorySubgraph,
+      name: inventorySubgraph,
       labels: [label],
       routingUrl: 'http://localhost:8083',
     });
@@ -165,7 +165,7 @@ describe('Apollo Federated Graph', (ctx) => {
     expect(createInvetorySubgraph.response?.code).toBe(EnumStatusCode.OK);
 
     const publishInventoryResp = await client.publishFederatedSubgraph({
-      name: investorySubgraph,
+      name: inventorySubgraph,
       schema: Uint8Array.from(
         Buffer.from(`
           directive @tag(name: String!) repeatable on FIELD_DEFINITION
@@ -271,7 +271,7 @@ describe('Apollo Federated Graph', (ctx) => {
     expect(graph.subgraphs[1]?.lastUpdatedAt).toBeTruthy();
     expect(graph.subgraphs[1]?.routingURL).toEqual('http://localhost:8082');
 
-    expect(graph.subgraphs[2]?.name).toEqual(investorySubgraph);
+    expect(graph.subgraphs[2]?.name).toEqual(inventorySubgraph);
     expect(graph.subgraphs[2]?.labels).toEqual([label]);
     expect(graph.subgraphs[2]?.lastUpdatedAt).toBeTruthy();
     expect(graph.subgraphs[2]?.routingURL).toEqual('http://localhost:8083');

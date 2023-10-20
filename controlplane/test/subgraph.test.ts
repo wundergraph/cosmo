@@ -94,7 +94,7 @@ describe('Subgraph', (ctx) => {
     });
 
     const client = createPromiseClient(PlatformService, transport);
-    const subgraphName = genID();
+    const subgraphName = genID('subgraph1');
     const label = genUniqueLabel();
 
     let resp = await client.createFederatedSubgraph({
@@ -177,7 +177,7 @@ describe('Subgraph', (ctx) => {
     });
 
     const client = createPromiseClient(PlatformService, transport);
-    const subgraphName = genID();
+    const subgraphName = genID('subgraph1');
     const label = genUniqueLabel();
 
     let resp = await client.createFederatedSubgraph({

@@ -114,9 +114,9 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
         const userId = accessTokenPayload.sub!;
         const userEmail = accessTokenPayload.email!;
 
-        const insertedSession = await opts.db.transaction(async (db) => {
+        const insertedSession = await opts.db.transaction(async (tx) => {
           // Upsert the user
-          await db
+          await tx
             .insert(users)
             .values({
               id: userId,
@@ -132,7 +132,7 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
             .execute();
 
           // update the organizationMember table to indicate that the user has accepted the invite
-          await db
+          await tx
             .update(organizationsMembers)
             .set({ acceptedInvite: true })
             .where(eq(organizationsMembers.userId, userId))
@@ -141,7 +141,7 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
           // If there is already a session for this user, update it.
           // Otherwise, insert a new session. Because we use an Idp like keycloak,
           // we can assume that the user will have only one session per client at a time.
-          const insertedSessions = await db
+          const insertedSessions = await tx
             .insert(sessions)
             .values({
               userId,
@@ -183,8 +183,8 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
 
           await opts.keycloakClient.seedGroup({ userID: userId, organizationSlug, realm: opts.keycloakRealm });
 
-          await opts.db.transaction(async (db) => {
-            const orgRepo = new OrganizationRepository(db);
+          await opts.db.transaction(async (tx) => {
+            const orgRepo = new OrganizationRepository(tx);
 
             const insertedOrg = await orgRepo.createOrganization({
               organizationName: userEmail.split('@')[0],

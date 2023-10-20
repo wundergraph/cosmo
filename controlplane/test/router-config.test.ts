@@ -99,11 +99,11 @@ describe('Router Config', (ctx) => {
     const platformClient = createPromiseClient(PlatformService, transport);
     const nodeClient = createPromiseClient(NodeService, transport);
 
-    const investorySubgraph = genID();
-    const pandasSubgraph = genID();
-    const usersSubgraph = genID();
-    const productsSubgraph = genID();
-    const fedGraphName = genID();
+    const inventorySubgraph = genID('inventory');
+    const pandasSubgraph = genID('pandas');
+    const usersSubgraph = genID('users');
+    const productsSubgraph = genID('products');
+    const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
 
     const createPandasSubgraph = await platformClient.createFederatedSubgraph({
@@ -161,7 +161,7 @@ describe('Router Config', (ctx) => {
     expect(publishUsersResp.response?.code).toBe(EnumStatusCode.OK);
 
     const createInvetorySubgraph = await platformClient.createFederatedSubgraph({
-      name: investorySubgraph,
+      name: inventorySubgraph,
       labels: [label],
       routingUrl: 'http://localhost:8083',
     });
@@ -169,7 +169,7 @@ describe('Router Config', (ctx) => {
     expect(createInvetorySubgraph.response?.code).toBe(EnumStatusCode.OK);
 
     const publishInventoryResp = await platformClient.publishFederatedSubgraph({
-      name: investorySubgraph,
+      name: inventorySubgraph,
       schema: Uint8Array.from(
         Buffer.from(`
           directive @tag(name: String!) repeatable on FIELD_DEFINITION
@@ -334,9 +334,9 @@ describe('Router Config', (ctx) => {
     const platformClient = createPromiseClient(PlatformService, transport);
     const nodeClient = createPromiseClient(NodeService, transport);
 
-    const pandasSubgraph = genID();
-    const usersSubgraph = genID();
-    const fedGraphName = genID();
+    const pandasSubgraph = genID('pandas');
+    const usersSubgraph = genID('users');
+    const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
 
     const createFedGraphRes = await platformClient.createFederatedGraph({

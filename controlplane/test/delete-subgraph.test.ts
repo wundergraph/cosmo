@@ -93,8 +93,8 @@ describe('DeleteSubgraph', (ctx) => {
     });
 
     const client = createPromiseClient(PlatformService, transport);
-    const federatedGraphName = genID();
-    const subgraphName = genID();
+    const federatedGraphName = genID('fedGraph');
+    const subgraphName = genID('subgraph');
     const label = genUniqueLabel();
 
     const createFederatedGraphResp = await client.createFederatedGraph({

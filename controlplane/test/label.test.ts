@@ -96,11 +96,11 @@ describe('Labels', (ctx) => {
     });
 
     const client = createPromiseClient(PlatformService, transport);
-    const subgraph1Name = genID();
-    const subgraph2Name = genID();
-    const fedGraphName = genID();
-    const label1 = genUniqueLabel();
-    const label2 = genUniqueLabel();
+    const subgraph1Name = genID('subgraph1');
+    const subgraph2Name = genID('subgraph2');
+    const fedGraphName = genID('fedGraph1');
+    const label1 = genUniqueLabel('label1');
+    const label2 = genUniqueLabel('label2');
 
     const createSubgraph = async (name: string, labels: Label[], routingUrl: string) => {
       const createRes = await client.createFederatedSubgraph({
@@ -211,12 +211,14 @@ describe('Labels', (ctx) => {
     });
 
     const client = createPromiseClient(PlatformService, transport);
-    const fedGraph1Name = genID();
-    const fedGraph2Name = genID();
-    const subgraph1Name = genID();
-    const subgraph2Name = genID();
-    const label1 = genUniqueLabel();
-    const label2 = genUniqueLabel();
+    const fedGraph1Name = genID('fedGraph1');
+    const fedGraph2Name = genID('fedGraph2');
+    const fedGraph3Name = genID('fedGraph3');
+    const subgraph1Name = genID('subgraph1');
+    const subgraph2Name = genID('subgraph2');
+    const label1 = genUniqueLabel('label1');
+    const label2 = genUniqueLabel('label2');
+    const label3 = genUniqueLabel('label3');
 
     const createFederatedGraph = async (name: string, labelMatchers: string[], routingUrl: string) => {
       const createFedGraphRes = await client.createFederatedGraph({
@@ -229,6 +231,9 @@ describe('Labels', (ctx) => {
 
     await createFederatedGraph(fedGraph1Name, [joinLabel(label1)], 'http://localhost:8081');
     await createFederatedGraph(fedGraph2Name, [joinLabel(label2)], 'http://localhost:8082');
+
+    // This federated graph should be unaffected by the label changes in the tests
+    await createFederatedGraph(fedGraph3Name, [joinLabel(label3)], 'http://localhost:8083');
 
     const createSubgraph = async (name: string, labels: Label[], routingUrl: string) => {
       const createRes = await client.createFederatedSubgraph({
@@ -251,21 +256,34 @@ describe('Labels', (ctx) => {
     const graph1 = await client.getFederatedGraphByName({
       name: fedGraph1Name,
     });
-    const graph2 = await client.getFederatedGraphByName({
-      name: fedGraph2Name,
-    });
     expect(graph1.response?.code).toBe(EnumStatusCode.OK);
     expect(graph1.subgraphs.length).toBe(1);
     expect(graph1.subgraphs[0].name).toBe(subgraph1Name);
+
+    const graph2 = await client.getFederatedGraphByName({
+      name: fedGraph2Name,
+    });
+
     expect(graph2.response?.code).toBe(EnumStatusCode.OK);
     expect(graph2.subgraphs.length).toBe(1);
     expect(graph2.subgraphs[0].name).toBe(subgraph2Name);
 
+    // This will remove the subgraph1 from fedGraph1 and add subgraph1 to fedGraph2
+    // This will fail because a federated graph requires at least one subgraph
     const updateRes1 = await client.updateSubgraph({
       name: subgraph1Name,
       labels: [label2],
     });
-    expect(updateRes1.response?.code).toBe(EnumStatusCode.OK);
+    expect(updateRes1.response?.code).toBe(EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED);
+    expect(updateRes1.compositionErrors.length).gt(0);
+
+    let updatedGraph1 = await client.getFederatedGraphByName({
+      name: fedGraph1Name,
+    });
+    expect(updatedGraph1.response?.code).toBe(EnumStatusCode.OK);
+    expect(updatedGraph1.graph?.isComposable).toBeFalsy();
+
+    // This will remove the subgraph2 from fedGraph2 and add subgraph1 to fedGraph2
     const updateRes2 = await client.updateSubgraph({
       name: subgraph2Name,
       labels: [label1],
@@ -273,18 +291,25 @@ describe('Labels', (ctx) => {
     expect(updateRes2.response?.code).toBe(EnumStatusCode.OK);
 
     // fedGraph1 should have subgraph2 and fedGraph2 should have subgraph1
-    const updatedGraph1 = await client.getFederatedGraphByName({
+    updatedGraph1 = await client.getFederatedGraphByName({
       name: fedGraph1Name,
-    });
-    const updatedGraph2 = await client.getFederatedGraphByName({
-      name: fedGraph2Name,
     });
     expect(updatedGraph1.response?.code).toBe(EnumStatusCode.OK);
     expect(updatedGraph1.subgraphs.length).toBe(1);
     expect(updatedGraph1.subgraphs[0].name).toBe(subgraph2Name);
+
+    const updatedGraph2 = await client.getFederatedGraphByName({
+      name: fedGraph2Name,
+    });
     expect(updatedGraph2.response?.code).toBe(EnumStatusCode.OK);
     expect(updatedGraph2.subgraphs.length).toBe(1);
     expect(updatedGraph2.subgraphs[0].name).toBe(subgraph1Name);
+
+    const federatedGraph3 = await client.getFederatedGraphByName({
+      name: fedGraph3Name,
+    });
+    expect(federatedGraph3.response?.code).toBe(EnumStatusCode.OK);
+    expect(federatedGraph3.subgraphs.length).toBe(0);
 
     await server.close();
   });
@@ -351,16 +376,16 @@ describe('Labels', (ctx) => {
     });
 
     const client = createPromiseClient(PlatformService, transport);
-    const subgraph1Name = genID();
-    const subgraph2Name = genID();
-    const subgraph3Name = genID();
-    const fedGraphName = genID();
-    const labelTeamA = genUniqueLabel();
-    const labelTeamB = genUniqueLabel();
-    const labelTeamC = genUniqueLabel();
-    const labelEnvProd = genUniqueLabel();
-    const labelEnvDev = genUniqueLabel();
-    const labelProviderAWS = genUniqueLabel();
+    const subgraph1Name = genID('subgraph1');
+    const subgraph2Name = genID('subgraph2');
+    const subgraph3Name = genID('subgraph3');
+    const fedGraphName = genID('fedGraph1');
+    const labelTeamA = genUniqueLabel('teamA');
+    const labelTeamB = genUniqueLabel('teamB');
+    const labelTeamC = genUniqueLabel('teamC');
+    const labelEnvProd = genUniqueLabel('envProd');
+    const labelEnvDev = genUniqueLabel('envDev');
+    const labelProviderAWS = genUniqueLabel('providerAWS');
 
     // Federated Graph
     // --label-matcher team=A,team=B,team=C --label-matcher env=prod

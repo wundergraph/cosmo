@@ -87,7 +87,7 @@ describe('CheckFederatedGraph', (ctx) => {
     });
 
     const client = createPromiseClient(PlatformService, transport);
-    const federatedGraphName = genID();
+    const federatedGraphName = genID('fedGraph');
 
     const pandasSchema = await readFile(join(process.cwd(), 'test/graphql/federationV1/pandas.graphql'));
     const productsSchema = await readFile(join(process.cwd(), 'test/graphql/federationV1/products.graphql'));

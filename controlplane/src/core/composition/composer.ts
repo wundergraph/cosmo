@@ -1,6 +1,7 @@
 import { parse, printSchema } from 'graphql';
 import { JsonValue } from '@bufbuild/protobuf';
 import { buildRouterConfig } from '@wundergraph/cosmo-shared';
+import { CompositionError } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { ArgumentConfigurationData } from '@wundergraph/composition';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
 import { SubgraphRepository } from '../repositories/SubgraphRepository.js';
@@ -47,6 +48,62 @@ export class Composer {
   }
 
   /**
+   * Build and store the final router config and federated schema. If the composition is valid, it stores the
+   * changes between the previous and the new schema in the changelog table. In all cases, it updates the
+   * federated graph table with the new schema, but it might mark the graph as not composable if there are errors.
+   * This has to be checked before we promote the new schema to the production router.
+   */
+  async updateComposedSchema(composedGraph: ComposedFederatedGraph) {
+    const compositionErrors: CompositionError[] = [];
+
+    const hasErrors = composedGraph.errors.length > 0;
+
+    // Build router config when composed schema is valid
+    let routerConfigJson: JsonValue = null;
+    if (!hasErrors && composedGraph.composedSchema) {
+      const routerConfig = buildRouterConfig({
+        argumentConfigurations: composedGraph.argumentConfigurations,
+        subgraphs: composedGraph.subgraphs,
+        federatedSDL: composedGraph.composedSchema,
+      });
+      routerConfigJson = routerConfig.toJson();
+    }
+
+    const prevFederatedSDL = await this.federatedGraphRepo.getLatestSdlOfFederatedGraph(composedGraph.name);
+
+    // We always create a new version in the database, but
+    // we might mark versions with compositions errors as not composable
+    // The routerConfig is stored along with the valid composed schema
+    const updatedFederatedGraph = await this.federatedGraphRepo.updateSchema({
+      graphName: composedGraph.name,
+      composedSDL: composedGraph.composedSchema,
+      compositionErrors: composedGraph.errors,
+      routerConfig: routerConfigJson,
+    });
+
+    // If the composed schema is valid, we store the changes between the previous and the new schema
+    if (!hasErrors && composedGraph.composedSchema && updatedFederatedGraph?.composedSchemaVersionId) {
+      const schemaChanges = await getDiffBetweenGraphs(prevFederatedSDL || '', composedGraph.composedSchema);
+
+      if (schemaChanges.kind !== 'failure' && schemaChanges.changes.length > 0) {
+        await this.federatedGraphRepo.createFederatedGraphChangelog({
+          schemaVersionID: updatedFederatedGraph.composedSchemaVersionId,
+          changes: schemaChanges.changes,
+        });
+      }
+    }
+
+    for (const error of composedGraph.errors) {
+      compositionErrors.push({
+        message: error.message,
+        federatedGraphName: composedGraph.name,
+      } as CompositionError);
+    }
+
+    return compositionErrors;
+  }
+
+  /**
    * Composes all subgraphs of a federated graph into a single federated graph.
    */
   async composeFederatedGraph(name: string, targetID: string): Promise<ComposedFederatedGraph> {
@@ -54,6 +111,17 @@ export class Composer {
       const subgraphs = await this.subgraphRepo.listByFederatedGraph(name, {
         published: true,
       });
+
+      if (subgraphs.length === 0) {
+        return {
+          argumentConfigurations: [],
+          name,
+          targetID,
+          errors: [new Error('No published subgraphs to compose.')],
+          subgraphs: [],
+        };
+      }
+
       const { errors, federationResult: result } = composeSubgraphs(
         subgraphs.map((s) => ({
           name: s.name,
@@ -86,7 +154,9 @@ export class Composer {
     }
   }
 
-  // same as compose, but the proposed schemaSDL of the subgraph is not updated to the table so it is passed to the function
+  /**
+   * Same as compose, but the proposed schemaSDL of the subgraph is not updated to the table so it is passed to the function
+   */
   async composeWithProposedSDL(
     subgraphLabels: Label[],
     subgraphName: string,
@@ -142,53 +212,5 @@ export class Composer {
     return {
       compositions: composedGraphs,
     };
-  }
-
-  /**
-   * Applies the composition result to the database. That includes updating the composed schema of
-   * the federated graph and the router config. It also stores the schema diff between the old and
-   * the new schema as a changelog.
-   */
-  public async applyComposition(compositionResult: CompositionResult) {
-    for await (const composedGraph of compositionResult.compositions) {
-      const currentFederatedSDL = await this.federatedGraphRepo.getLatestSdlOfFederatedGraph(composedGraph.name);
-
-      /**
-       * Build router config when composed schema is valid
-       */
-      const hasErrors = composedGraph.errors.length > 0;
-
-      let routerConfigJson: JsonValue = null;
-      if (!hasErrors && composedGraph.composedSchema) {
-        const routerConfig = buildRouterConfig({
-          argumentConfigurations: composedGraph.argumentConfigurations,
-          federatedSDL: composedGraph.composedSchema,
-          subgraphs: composedGraph.subgraphs,
-        });
-        routerConfigJson = routerConfig.toJson();
-      }
-
-      // We always create a new version in the database, but
-      // we might mark versions with compositions errors as not composable
-      // The routerConfig is stored along with the valid composed schema
-      const federatedGraph = await this.federatedGraphRepo.updateSchema({
-        graphName: composedGraph.name,
-        // passing the old schema if the current composed schema is empty due to composition errors
-        composedSDL: composedGraph.composedSchema || currentFederatedSDL || undefined,
-        compositionErrors: composedGraph.errors,
-        routerConfig: routerConfigJson,
-      });
-
-      if (composedGraph.composedSchema && federatedGraph?.composedSchemaVersionId) {
-        const schemaChanges = await getDiffBetweenGraphs(currentFederatedSDL || '', composedGraph.composedSchema);
-
-        if (schemaChanges.kind !== 'failure') {
-          await this.federatedGraphRepo.createFederatedGraphChangelog({
-            schemaVersionID: federatedGraph.composedSchemaVersionId,
-            changes: schemaChanges.changes,
-          });
-        }
-      }
-    }
   }
 }

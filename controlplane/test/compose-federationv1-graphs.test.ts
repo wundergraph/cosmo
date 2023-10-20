@@ -101,8 +101,7 @@ describe('ComposeFederationV1Graphs', (ctx) => {
     const usersSchema = await readFile(join(process.cwd(), 'test/graphql/federationV1/users.graphql'));
 
     const client = createPromiseClient(PlatformService, transport);
-    const federatedGraphName = genID();
-    const subgraphName = genID();
+    const federatedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
 
     const createFederatedGraphResp = await client.createFederatedGraph({
