@@ -232,6 +232,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         return {
           graphs: list.map((g) => ({
+            id: g.id,
             name: g.name,
             routingURL: g.routingUrl,
             lastUpdatedAt: g.lastUpdatedAt,
@@ -267,6 +268,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         return {
           graph: {
+            id: subgraph.id,
             name: subgraph.name,
             lastUpdatedAt: subgraph.lastUpdatedAt,
             routingURL: subgraph.routingUrl,
@@ -444,6 +446,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             requestSeries,
           },
           subgraphs: list.map((g) => ({
+            id: g.id,
             name: g.name,
             routingURL: g.routingUrl,
             lastUpdatedAt: g.lastUpdatedAt,
@@ -1533,6 +1536,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const subgraphs = await subgraphRepo.byGraphLabelMatchers(req.labelMatchers);
 
         const subgraphsDetails = subgraphs.map((s) => ({
+          id: s.id,
           name: s.name,
           routingURL: s.routingUrl,
           labels: s.labels,
@@ -1541,6 +1545,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const result = composeSubgraphs(
           subgraphs.map((s) => ({
+            id: s.id,
             name: s.name,
             url: s.routingUrl,
             definitions: parse(s.schemaSDL),

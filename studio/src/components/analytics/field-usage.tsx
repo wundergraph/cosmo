@@ -1,18 +1,39 @@
 import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import useWindowSize from "@/hooks/use-window-size";
+import { formatMetric } from "@/lib/format-metric";
+import { createDateRange, useChartData } from "@/lib/insights-helpers";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
+import { CubeIcon } from "@radix-ui/react-icons";
 import { useQuery } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { getFieldUsage } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { GetFieldUsageResponse } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
+import { format, fromUnixTime } from "date-fns";
+import Link from "next/link";
 import { useRouter } from "next/router";
 import { useContext, useId, useMemo } from "react";
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { EmptyState } from "../empty-state";
 import { GraphContext } from "../layout/graph-layout";
+import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Loader } from "../ui/loader";
 import {
@@ -22,26 +43,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
-import { useChartData } from "@/lib/insights-helpers";
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  XAxis,
-  YAxis,
-} from "recharts";
 import { ChartTooltip } from "./charts";
-import useWindowSize from "@/hooks/use-window-size";
-import { formatMetric } from "@/lib/format-metric";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import { Badge } from "../ui/badge";
-import Link from "next/link";
+import { createFilterState } from "./constructAnalyticsTableQueryState";
 
 export const FieldUsage = ({
   usageData,
@@ -161,25 +164,6 @@ export const FieldUsage = ({
           </AreaChart>
         </ResponsiveContainer>
       </div>
-      {usageData.meta && (
-        <div>
-          <h2 className="text-lg font-semibold">Subgraphs</h2>
-          <div className="flex flex-col gap-y-2"></div>
-          {usageData.meta.subgraphIds.map((id) => {
-            const subgraph = subgraphs.find((s) => s.name === id);
-            if (!subgraph) return null;
-
-            return (
-              <Link
-                key={id}
-                href={`/${organizationSlug}/graph/${slug}/schema/sdl?subgraph=${subgraph.name}`}
-              >
-                {subgraph.name}
-              </Link>
-            );
-          })}
-        </div>
-      )}
       <div>
         <h2 className="text-lg font-semibold">Clients and Operations</h2>
         <p className="mt-2 text-muted-foreground">
@@ -188,7 +172,7 @@ export const FieldUsage = ({
           operation
           {totalOpsCount === 1 ? "" : "s"}
         </p>
-        <Accordion type="single" collapsible className="mt-4 w-full">
+        <Accordion type="single" collapsible className="mt-2 w-full">
           {usageData.clients.map((client) => {
             const clientName = client.name || "unknown";
             const clientVersion = client.version || "unknown";
@@ -210,17 +194,97 @@ export const FieldUsage = ({
                         (version: {clientVersion})
                       </span>
                     </span>
-                    <Badge className="mr-4">{totalRequests} Requests</Badge>
+                    <Badge variant="secondary" className="mr-4">
+                      {totalRequests} Requests
+                    </Badge>
                   </div>
                 </AccordionTrigger>
-                <AccordionContent className="">
-                  Yes. It adheres to the WAI-ARIA design pattern.
+                <AccordionContent className="mt-2">
+                  <div className="flex flex-col gap-y-2">
+                    {client.operations.map((op) => {
+                      return (
+                        <div className="flex items-center" key={op.latestHash}>
+                          <span className="text-muted-foreground">
+                            {op.latestHash.slice(0, 6)}
+                          </span>
+                          <Link
+                            href={{
+                              pathname: `/[organizationSlug]/graph/[slug]/analytics/traces`,
+                              query: {
+                                organizationSlug: router.query.organizationSlug,
+                                slug: router.query.slug,
+                                filterState: createFilterState({
+                                  operationName:
+                                    op.name === "" ? "unknown" : op.name,
+                                }),
+                                dateRange: createDateRange(Number(range)),
+                              },
+                            }}
+                            className="ml-2 text-primary"
+                          >
+                            {op.name}
+                          </Link>
+                          <Badge variant="secondary" className="ml-auto mr-8">
+                            {op.count}
+                          </Badge>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </AccordionContent>
               </AccordionItem>
             );
           })}
         </Accordion>
       </div>
+      {usageData.meta && (
+        <div className="flex flex-col gap-y-12">
+          {usageData.meta.subgraphIds.length > 0 && (
+            <div className="flex items-start gap-x-4">
+              <h2 className="text-lg font-semibold">Subgraphs: </h2>
+              <div className="mt-[2px] grid w-max grid-cols-3 gap-x-8">
+                {usageData.meta.subgraphIds.map((id) => {
+                  const subgraph = subgraphs.find((s) => s.id === id);
+                  if (!subgraph) return null;
+
+                  return (
+                    <Link
+                      key={id}
+                      href={`/${organizationSlug}/graph/${slug}/schema/sdl?subgraph=${subgraph.name}`}
+                      className="text-primary"
+                    >
+                      <div className="flex items-center gap-x-1">
+                        <CubeIcon className="" />
+                        {subgraph.name}
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          {usageData.meta.firstSeenTimestamp !== "0" &&
+            usageData.meta.latestSeenTimestamp !== "0" && (
+              <div>
+                <h2 className="text-lg font-semibold">Timestamps</h2>
+                <p className="mt-2 text-muted-foreground">
+                  First used:{" "}
+                  {format(
+                    fromUnixTime(Number(usageData.meta.firstSeenTimestamp)),
+                    "MMM dd yyyy HH:mm:ss"
+                  )}{" "}
+                </p>
+                <p className=" text-muted-foreground">
+                  Latest used:{" "}
+                  {format(
+                    fromUnixTime(Number(usageData.meta.latestSeenTimestamp)),
+                    "MMM dd yyyy HH:mm:ss"
+                  )}
+                </p>
+              </div>
+            )}
+        </div>
+      )}
     </div>
   );
 };
