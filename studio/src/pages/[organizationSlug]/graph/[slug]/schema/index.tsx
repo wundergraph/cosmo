@@ -1,3 +1,4 @@
+import { FieldUsageSheet } from "@/components/analytics/field-usage";
 import { EmptyState } from "@/components/empty-state";
 import { getGraphLayout } from "@/components/layout/graph-layout";
 import { PageHeader } from "@/components/layout/head";
@@ -71,6 +72,8 @@ const Fields = (props: {
   fields: GraphQLField[];
   ast: GraphQLSchema;
 }) => {
+  const router = useRouter();
+
   const hasArgs = props.fields.some((f) => !!f.args);
   const hasDetails = props.fields.some(
     (f) => !!f.description || !!f.deprecationReason
@@ -79,8 +82,19 @@ const Fields = (props: {
     ["scalars", "enums", "inputs", "unions"] as GraphQLTypeCategory[]
   ).includes(props.category);
 
+  const openUsage = (fieldName: string) => {
+    router.replace({
+      pathname: router.pathname,
+      query: {
+        ...router.query,
+        field: fieldName,
+        typename: router.query.typename || "Query",
+      },
+    });
+  };
+
   return (
-    <Table className="min-w-[1100px] lg:min-w-full">
+    <Table className="min-w-[1150px] lg:min-w-full">
       <TableHeader>
         <TableRow>
           <TableHead className="w-3/12">Field</TableHead>
@@ -164,9 +178,13 @@ const Fields = (props: {
             )}
             {hasUsage && (
               <TableCell className="align-top text-primary">
-                <Link href={`#`}>
-                  <p className="my-2">View Usage</p>
-                </Link>
+                <Button
+                  onClick={() => openUsage(field.name)}
+                  className="p-0"
+                  variant="link"
+                >
+                  View usage
+                </Button>
               </TableCell>
             )}
           </TableRow>
@@ -466,6 +484,7 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
           />
         )}
         {ast && <TypeWrapper ast={ast} />}
+        <FieldUsageSheet />
       </TitleLayout>
     </PageHeader>
   );
