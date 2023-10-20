@@ -1,7 +1,16 @@
 package core
 
 import (
+	"context"
 	"errors"
+	"fmt"
+	"github.com/dgraph-io/ristretto"
+	graphqlmetricsv1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
+	"github.com/wundergraph/cosmo/router/internal/graphqlmetrics"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/astvalidation"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/postprocess"
+	"golang.org/x/sync/singleflight"
 	"io"
 	"net/http"
 	"strconv"
@@ -32,23 +41,34 @@ import (
 )
 
 type PreHandlerOptions struct {
-	Logger         *zap.Logger
-	Executor       *Executor
-	requestMetrics *metric.Metrics
+	Logger              *zap.Logger
+	Executor            *Executor
+	requestMetrics      *metric.Metrics
+	Cache               *ristretto.Cache
+	GqlMetricsExporter  *graphqlmetrics.Exporter
+	RouterConfigVersion string
 }
 
 type PreHandler struct {
-	log            *zap.Logger
-	executor       *Executor
-	requestMetrics *metric.Metrics
-	documentPool   *sync.Pool
+	log                 *zap.Logger
+	executor            *Executor
+	requestMetrics      *metric.Metrics
+	documentPool        *sync.Pool
+	planCache           *ristretto.Cache
+	sf                  *singleflight.Group
+	gqlMetricsExporter  *graphqlmetrics.Exporter
+	routerConfigVersion string
 }
 
 func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 	return &PreHandler{
-		log:            opts.Logger,
-		executor:       opts.Executor,
-		requestMetrics: opts.requestMetrics,
+		log:                 opts.Logger,
+		executor:            opts.Executor,
+		requestMetrics:      opts.requestMetrics,
+		sf:                  &singleflight.Group{},
+		planCache:           opts.Cache,
+		gqlMetricsExporter:  opts.GqlMetricsExporter,
+		routerConfigVersion: opts.RouterConfigVersion,
 		documentPool: &sync.Pool{
 			New: func() interface{} {
 				return ast.NewSmallDocument()
@@ -57,11 +77,52 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 	}
 }
 
+func (h *PreHandler) preparePlan(requestOperationName []byte, requestOperationContent string) (planWithMetaData, error) {
+	doc, report := astparser.ParseGraphqlDocumentString(requestOperationContent)
+	if report.HasErrors() {
+		return planWithMetaData{}, &reportError{report: &report}
+	}
+
+	validation := astvalidation.DefaultOperationValidator()
+
+	norm := astnormalization.NewNormalizer(true, true)
+	norm.NormalizeOperation(&doc, h.executor.Definition, &report)
+
+	// validate the document before planning
+	state := validation.Validate(&doc, h.executor.Definition, &report)
+	if state != astvalidation.Valid {
+		return planWithMetaData{}, &reportError{report: &report}
+	}
+
+	planner := plan.NewPlanner(context.Background(), h.executor.PlanConfig)
+
+	// create and postprocess the plan
+	preparedPlan := planner.Plan(&doc, h.executor.Definition, unsafebytes.BytesToString(requestOperationName), &report)
+	if report.HasErrors() {
+		return planWithMetaData{}, fmt.Errorf(ErrMsgOperationParseFailed, report)
+	}
+	post := postprocess.DefaultProcessor()
+	post.Process(preparedPlan)
+
+	extractedVariables := make([]byte, len(doc.Input.Variables))
+	copy(extractedVariables, doc.Input.Variables)
+
+	schemaUsageInfo := plan.GetSchemaUsageInfo(preparedPlan)
+
+	return planWithMetaData{
+		preparedPlan:    preparedPlan,
+		variables:       extractedVariables,
+		schemaUsageInfo: schemaUsageInfo,
+	}, nil
+}
+
 func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 	fn := func(w http.ResponseWriter, r *http.Request) {
+		requestLogger := h.log.With(logging.WithRequestID(middleware.GetReqID(r.Context())))
 
 		var metricBaseFields []attribute.KeyValue
+		var opContext operationContext
 		var statusCode int
 		var writtenBytes int
 
@@ -71,6 +132,8 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			inflightMetric := h.requestMetrics.MeasureInFlight(r)
 
 			defer func() {
+				// export request metrics
+
 				inflightMetric()
 
 				metricBaseFields = append(metricBaseFields, semconv.HTTPStatusCode(statusCode))
@@ -82,10 +145,14 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 					metricBaseFields...,
 				)
 				h.requestMetrics.MeasureResponseSize(r, int64(writtenBytes), metricBaseFields...)
+
+				// export schema usage info
+
+				h.exportSchemaUsageInfo(opContext, graphqlmetrics.Attributes{
+					graphqlmetrics.HTTPStatusCodeAttribute: strconv.Itoa(statusCode),
+				})
 			}()
 		}
-
-		requestLogger := h.log.With(logging.WithRequestID(middleware.GetReqID(r.Context())))
 
 		buf := pool.GetBytesBuffer()
 		defer pool.PutBytesBuffer(buf)
@@ -242,30 +309,69 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		variablesCopy := make([]byte, len(requestVariables))
 		copy(variablesCopy, requestVariables)
 
-		ctxWithOperation := withOperationContext(r.Context(),
-			&operationContext{
-				name:      requestOperationName,
-				opType:    requestOperationType,
-				content:   normalizedOperation.String(),
-				hash:      operationID,
-				variables: variablesCopy,
-				client: &client{
-					name:    clientName,
-					version: clientVersion,
-				},
+		opContext = operationContext{
+			name:      requestOperationName,
+			opType:    requestOperationType,
+			content:   normalizedOperation.String(),
+			hash:      operationID,
+			variables: variablesCopy,
+			client: client{
+				name:    clientName,
+				version: clientVersion,
 			},
-		)
+		}
+
+		operationIDStr := strconv.FormatUint(operationID, 10)
 
 		// Add the operation hash to the trace span attributes
-		opHashID := otel.WgOperationHash.String(strconv.FormatUint(operationID, 10))
-		span.SetAttributes(opHashID)
+		opHashIDAttr := otel.WgOperationHash.String(operationIDStr)
+		span.SetAttributes(opHashIDAttr)
 
 		// Add hash to metrics base fields
-		metricBaseFields = append(metricBaseFields, opHashID)
+		metricBaseFields = append(metricBaseFields, opHashIDAttr)
 
 		ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
 
-		newReq := r.WithContext(ctxWithOperation)
+		// try to get a prepared plan for this operation ID from the cache
+		cachedPlan, ok := h.planCache.Get(operationID)
+		if ok && cachedPlan != nil {
+			// re-use a prepared plan
+			opContext.preparedPlan = cachedPlan.(planWithMetaData)
+		} else {
+			// prepare a new plan using single flight
+			// this ensures that we only prepare the plan once for this operation ID
+			sharedPreparedPlan, err, _ := h.sf.Do(operationIDStr, func() (interface{}, error) {
+				prepared, err := h.preparePlan(requestOperationNameBytes, opContext.Content())
+				if err != nil {
+					return nil, err
+				}
+				// cache the prepared plan for 1 hour
+				h.planCache.SetWithTTL(operationID, prepared, 1, time.Hour)
+				return prepared, nil
+			})
+			if err != nil {
+				var reportErr ReportError
+				if errors.As(err, &reportErr) {
+					w.WriteHeader(http.StatusBadRequest)
+					writeRequestErrorsFromReport(reportErr.Report(), w, requestLogger)
+				} else {
+					requestLogger.Error("prepare plan failed", zap.Error(err))
+					w.WriteHeader(http.StatusInternalServerError)
+					writeRequestErrors(graphql.RequestErrorsFromError(internalServerErrorErr), w, requestLogger)
+				}
+				return
+			}
+
+			opContext.preparedPlan, ok = sharedPreparedPlan.(planWithMetaData)
+			if !ok {
+				requestLogger.Error("unexpected prepared plan type")
+				w.WriteHeader(http.StatusInternalServerError)
+				writeRequestErrors(graphql.RequestErrorsFromError(internalServerErrorErr), w, requestLogger)
+				return
+			}
+		}
+
+		newReq := r.WithContext(withOperationContext(r.Context(), &opContext))
 
 		// Call the final handler that resolves the operation
 		// and enrich the context to make it available in the request context as well for metrics etc.
@@ -276,4 +382,50 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 	}
 
 	return http.HandlerFunc(fn)
+}
+
+func (h *PreHandler) exportSchemaUsageInfo(operationContext operationContext, attributes graphqlmetrics.Attributes) {
+	if h.gqlMetricsExporter == nil {
+		return
+	}
+
+	fieldUsageInfos := make([]*graphqlmetricsv1.TypeFieldUsageInfo, len(operationContext.preparedPlan.schemaUsageInfo.TypeFields))
+
+	for i := range operationContext.preparedPlan.schemaUsageInfo.TypeFields {
+		fieldUsageInfos[i] = &graphqlmetricsv1.TypeFieldUsageInfo{
+			Count:       1,
+			Path:        operationContext.preparedPlan.schemaUsageInfo.TypeFields[i].Path,
+			TypeNames:   operationContext.preparedPlan.schemaUsageInfo.TypeFields[i].TypeNames,
+			SubgraphIDs: operationContext.preparedPlan.schemaUsageInfo.TypeFields[i].Source.IDs,
+		}
+	}
+
+	var opType graphqlmetricsv1.OperationType
+	switch operationContext.opType {
+	case "query":
+		opType = graphqlmetricsv1.OperationType_QUERY
+	case "mutation":
+		opType = graphqlmetricsv1.OperationType_MUTATION
+	case "subscription":
+		opType = graphqlmetricsv1.OperationType_SUBSCRIPTION
+	}
+
+	// Non-blocking
+	h.gqlMetricsExporter.Record(&graphqlmetricsv1.SchemaUsageInfo{
+		RequestDocument:  operationContext.content,
+		TypeFieldMetrics: fieldUsageInfos,
+		OperationInfo: &graphqlmetricsv1.OperationInfo{
+			Type: opType,
+			Hash: strconv.FormatUint(operationContext.hash, 10),
+			Name: operationContext.name,
+		},
+		SchemaInfo: &graphqlmetricsv1.SchemaInfo{
+			Version: h.routerConfigVersion,
+		},
+		ClientInfo: &graphqlmetricsv1.ClientInfo{
+			Name:    operationContext.client.name,
+			Version: operationContext.client.version,
+		},
+		Attributes: attributes,
+	})
 }

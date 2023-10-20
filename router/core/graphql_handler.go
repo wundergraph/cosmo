@@ -3,29 +3,17 @@ package core
 import (
 	"context"
 	"errors"
-	"fmt"
-	graphqlmetricsv1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
-	"github.com/wundergraph/cosmo/router/internal/graphqlmetrics"
-	"net"
-	"net/http"
-	"strconv"
-	"strings"
-	"sync"
-	"time"
-
-	"github.com/dgraph-io/ristretto"
 	"github.com/go-chi/chi/middleware"
 	"github.com/hashicorp/go-multierror"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/astnormalization"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/postprocess"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/zap"
-	"golang.org/x/sync/singleflight"
+	"net"
+	"net/http"
+	"strings"
+	"sync"
 
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/astvalidation"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphql"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
@@ -90,23 +78,16 @@ func MergeJsonRightIntoLeft(left, right []byte) []byte {
 }
 
 type HandlerOptions struct {
-	Executor            *Executor
-	Cache               *ristretto.Cache
-	Log                 *zap.Logger
-	GqlMetricsExporter  *graphqlmetrics.Exporter
-	RouterConfigVersion string
+	Executor *Executor
+	Log      *zap.Logger
 }
 
 func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 	graphQLHandler := &GraphQLHandler{
-		log:                 opts.Log,
-		sf:                  &singleflight.Group{},
-		prepared:            map[uint64]planWithMetaData{},
-		preparedMux:         &sync.RWMutex{},
-		planCache:           opts.Cache,
-		executor:            opts.Executor,
-		gqlMetricsExporter:  opts.GqlMetricsExporter,
-		routerConfigVersion: opts.RouterConfigVersion,
+		log:         opts.Log,
+		prepared:    map[uint64]planWithMetaData{},
+		preparedMux: &sync.RWMutex{},
+		executor:    opts.Executor,
 	}
 	return graphQLHandler
 }
@@ -117,70 +98,14 @@ type GraphQLHandler struct {
 
 	prepared    map[uint64]planWithMetaData
 	preparedMux *sync.RWMutex
-
-	sf                  *singleflight.Group
-	planCache           *ristretto.Cache
-	gqlMetricsExporter  *graphqlmetrics.Exporter
-	routerConfigVersion string
 }
 
 func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-
-	var (
-		preparedPlan planWithMetaData
-	)
-
 	requestLogger := h.log.With(logging.WithRequestID(middleware.GetReqID(r.Context())))
 	operationContext := getOperationContext(r.Context())
 
-	// Update the resolveCtx with the latest request context so user modules can access it
-
-	requestOperationNameBytes := unsafebytes.StringToBytes(operationContext.Name())
-	operationID := strconv.FormatUint(operationContext.Hash(), 10)
-
-	// try to get a prepared plan for this operation ID from the cache
-	cachedPlan, ok := h.planCache.Get(operationID)
-	if ok && cachedPlan != nil {
-		// re-use a prepared plan
-		preparedPlan = cachedPlan.(planWithMetaData)
-	} else {
-		// prepare a new plan using single flight
-		// this ensures that we only prepare the plan once for this operation ID
-		sharedPreparedPlan, err, _ := h.sf.Do(operationID, func() (interface{}, error) {
-			prepared, err := h.preparePlan(requestOperationNameBytes, operationContext.Content())
-			if err != nil {
-				return nil, err
-			}
-			// cache the prepared plan for 1 hour
-			h.planCache.SetWithTTL(operationID, prepared, 1, time.Hour)
-			return prepared, nil
-		})
-		if err != nil {
-			var reportErr ReportError
-			if errors.As(err, &reportErr) {
-				w.WriteHeader(http.StatusBadRequest)
-				writeRequestErrorsFromReport(reportErr.Report(), w, requestLogger)
-			} else {
-				requestLogger.Error("prepare plan failed", zap.Error(err))
-				w.WriteHeader(http.StatusInternalServerError)
-				writeRequestErrors(graphql.RequestErrorsFromError(internalServerErrorErr), w, requestLogger)
-			}
-			return
-		}
-
-		preparedPlan, ok = sharedPreparedPlan.(planWithMetaData)
-		if !ok {
-			requestLogger.Error("unexpected prepared plan type")
-			w.WriteHeader(http.StatusInternalServerError)
-			writeRequestErrors(graphql.RequestErrorsFromError(internalServerErrorErr), w, requestLogger)
-			return
-		}
-	}
-
-	h.exportSchemaUsageInfo(operationID, preparedPlan.schemaUsageInfo, operationContext)
-
-	extractedVariables := make([]byte, len(preparedPlan.variables))
-	copy(extractedVariables, preparedPlan.variables)
+	extractedVariables := make([]byte, len(operationContext.preparedPlan.variables))
+	copy(extractedVariables, operationContext.preparedPlan.variables)
 	requestVariables := operationContext.Variables()
 	combinedVariables := MergeJsonRightIntoLeft(requestVariables, extractedVariables)
 
@@ -193,7 +118,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx = ctx.WithContext(r.Context())
 
-	switch p := preparedPlan.preparedPlan.(type) {
+	switch p := operationContext.preparedPlan.preparedPlan.(type) {
 	case *plan.SynchronousResponsePlan:
 		w.Header().Set("Content-Type", "application/json")
 
@@ -249,89 +174,6 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		requestLogger.Error("unsupported plan kind")
 		w.WriteHeader(http.StatusInternalServerError)
 	}
-}
-
-func (h *GraphQLHandler) exportSchemaUsageInfo(operationID string, schemaUsageInfo plan.SchemaUsageInfo, operationContext *operationContext) {
-	if h.gqlMetricsExporter == nil {
-		return
-	}
-
-	fieldUsageInfos := make([]*graphqlmetricsv1.TypeFieldUsageInfo, len(schemaUsageInfo.TypeFields))
-
-	for i := range schemaUsageInfo.TypeFields {
-		fieldUsageInfos[i] = &graphqlmetricsv1.TypeFieldUsageInfo{
-			Count:       1,
-			Path:        schemaUsageInfo.TypeFields[i].Path,
-			TypeNames:   schemaUsageInfo.TypeFields[i].TypeNames,
-			SubgraphIDs: schemaUsageInfo.TypeFields[i].Source.IDs,
-		}
-	}
-
-	var opType graphqlmetricsv1.OperationType
-	switch operationContext.opType {
-	case "query":
-		opType = graphqlmetricsv1.OperationType_QUERY
-	case "mutation":
-		opType = graphqlmetricsv1.OperationType_MUTATION
-	case "subscription":
-		opType = graphqlmetricsv1.OperationType_SUBSCRIPTION
-	}
-
-	h.gqlMetricsExporter.Record(&graphqlmetricsv1.SchemaUsageInfo{
-		RequestDocument:  operationContext.content,
-		TypeFieldMetrics: fieldUsageInfos,
-		OperationInfo: &graphqlmetricsv1.OperationInfo{
-			Type: opType,
-			Hash: operationID,
-			Name: operationContext.name,
-		},
-		SchemaInfo: &graphqlmetricsv1.SchemaInfo{
-			Version: h.routerConfigVersion,
-		},
-		ClientInfo: &graphqlmetricsv1.ClientInfo{
-			Name:    operationContext.client.name,
-			Version: operationContext.client.version,
-		},
-	})
-}
-
-func (h *GraphQLHandler) preparePlan(requestOperationName []byte, requestOperationContent string) (planWithMetaData, error) {
-	doc, report := astparser.ParseGraphqlDocumentString(requestOperationContent)
-	if report.HasErrors() {
-		return planWithMetaData{}, &reportError{report: &report}
-	}
-
-	validation := astvalidation.DefaultOperationValidator()
-
-	norm := astnormalization.NewNormalizer(true, true)
-	norm.NormalizeOperation(&doc, h.executor.Definition, &report)
-
-	// validate the document before planning
-	state := validation.Validate(&doc, h.executor.Definition, &report)
-	if state != astvalidation.Valid {
-		return planWithMetaData{}, &reportError{report: &report}
-	}
-
-	planner := plan.NewPlanner(context.Background(), h.executor.PlanConfig)
-
-	// create and postprocess the plan
-	preparedPlan := planner.Plan(&doc, h.executor.Definition, unsafebytes.BytesToString(requestOperationName), &report)
-	if report.HasErrors() {
-		return planWithMetaData{}, fmt.Errorf(ErrMsgOperationParseFailed, report)
-	}
-	post := postprocess.DefaultProcessor()
-	post.Process(preparedPlan)
-
-	extractedVariables := make([]byte, len(doc.Input.Variables))
-	copy(extractedVariables, doc.Input.Variables)
-
-	schemaUsageInfo := plan.GetSchemaUsageInfo(preparedPlan)
-
-	return planWithMetaData{
-		preparedPlan:    preparedPlan,
-		variables:       extractedVariables,
-		schemaUsageInfo: schemaUsageInfo,
-	}, nil
 }
 
 func logInternalErrors(report *operationreport.Report, requestLogger *zap.Logger) {
