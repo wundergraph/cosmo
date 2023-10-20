@@ -7,7 +7,7 @@ import pc from 'picocolors';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { baseHeaders } from '../../../core/config.js';
-import { splitLabel } from '@wundergraph/cosmo-shared';
+import { parseGraphQLSubscriptionProtocol, splitLabel } from '@wundergraph/cosmo-shared';
 
 export default (opts: BaseCommandOptions) => {
   const schemaPush = new Command('publish');
@@ -26,7 +26,7 @@ export default (opts: BaseCommandOptions) => {
   schemaPush.option('-u --upsert', 'Creates the subgraph if it does not exist.');
   schemaPush.option(
     '--label [labels...]',
-    'The labels to apply to the subgraph. The labels are passed in the format <key>=<value> <key>=<value>.',
+    'The labels to apply to the subgraph. The labels are passed in the format <key>=<value> <key>=<value>. Required if the subgraph does not exist.',
     [],
   );
   schemaPush.option(
@@ -34,6 +34,15 @@ export default (opts: BaseCommandOptions) => {
     'The headers to apply when the subgraph is introspected. This is used for authentication and authorization.',
     [],
   );
+  schemaPush.option(
+    '--subscription-url [url]',
+    'The url used for subscriptions. If empty, it defaults to same url used for routing.',
+  );
+  schemaPush.option(
+    '--subscription-protocol <protocol>',
+    'The protocol to use when subscribing to the subgraph. The supported protocols are ws, sse, and sse-post.',
+  );
+
   schemaPush.action(async (name, options) => {
     const schemaFile = resolve(process.cwd(), options.schema);
     if (!existsSync(schemaFile)) {
@@ -48,17 +57,16 @@ export default (opts: BaseCommandOptions) => {
     const resp = await opts.client.platform.publishFederatedSubgraph(
       {
         name,
+        // Publish schema only
         schema: await readFile(schemaFile),
-        // Optional to upsert the subgraph
+        // Optional when subgraph does not exist yet
         routingUrl: options.routingUrl,
         headers: options.header,
-        labels: options.label.map((label: string) => {
-          const { key, value } = splitLabel(label);
-          return {
-            key,
-            value,
-          };
-        }),
+        subscriptionUrl: options.subscriptionUrl,
+        subscriptionProtocol: options.subscriptionProtocol
+          ? parseGraphQLSubscriptionProtocol(options.subscriptionProtocol)
+          : undefined,
+        labels: options.label.map((label: string) => splitLabel(label)),
       },
       {
         headers: baseHeaders,
