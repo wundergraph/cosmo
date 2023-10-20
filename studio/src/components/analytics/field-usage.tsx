@@ -265,7 +265,7 @@ export const FieldUsage = ({
           )}
           {usageData.meta.firstSeenTimestamp !== "0" &&
             usageData.meta.latestSeenTimestamp !== "0" && (
-              <div>
+              <div className="text-sm">
                 <h2 className="text-lg font-semibold">Timestamps</h2>
                 <p className="mt-2 text-muted-foreground">
                   First used:{" "}
