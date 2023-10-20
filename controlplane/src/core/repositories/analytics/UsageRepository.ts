@@ -16,13 +16,19 @@ type ParsedFilters = {
   };
   organizationId: string;
   federatedGraphId: string;
+  latestRouterConfigVersion: string;
 };
 
 export class UsageRepository {
   constructor(private client: ClickHouseClient) {}
 
-  private parseFilters(filters: { range: number; organizationId: string; federatedGraphId: string }): ParsedFilters {
-    const { range, organizationId, federatedGraphId } = filters;
+  private parseFilters(filters: {
+    range: number;
+    organizationId: string;
+    federatedGraphId: string;
+    latestRouterConfigVersion: string;
+  }): ParsedFilters {
+    const { range, organizationId, federatedGraphId, latestRouterConfigVersion } = filters;
     const granule = getGranularity(range);
     const [start, end] = getDateRange(getEndDate(), range);
 
@@ -35,6 +41,7 @@ export class UsageRepository {
       },
       organizationId,
       federatedGraphId,
+      latestRouterConfigVersion,
     };
   }
 
@@ -46,6 +53,7 @@ export class UsageRepository {
     const {
       federatedGraphId,
       organizationId,
+      latestRouterConfigVersion,
       dateRange: { start, end },
       granule,
     } = filters;
@@ -63,6 +71,7 @@ export class UsageRepository {
         AND endsWith(Path, ['${field}'])
         AND FederatedGraphID = '${federatedGraphId}'
         AND OrganizationID = '${organizationId}'
+        AND RouterConfigVersion = '${latestRouterConfigVersion}'
     GROUP BY timestamp
     ORDER BY timestamp WITH FILL 
     FROM toStartOfInterval(toDateTime('${start}'), INTERVAL ${granule} MINUTE)
@@ -91,6 +100,7 @@ export class UsageRepository {
     const {
       federatedGraphId,
       organizationId,
+      latestRouterConfigVersion,
       dateRange: { start, end },
     } = filters;
 
@@ -115,6 +125,7 @@ export class UsageRepository {
               AND endsWith(Path, ['${field}'])
               AND FederatedGraphID = '${federatedGraphId}'
               AND OrganizationID = '${organizationId}'
+              AND RouterConfigVersion = '${latestRouterConfigVersion}'
           GROUP BY clientName, clientVersion, operationName
       )
     GROUP BY clientName, clientVersion
@@ -146,6 +157,7 @@ export class UsageRepository {
     const {
       federatedGraphId,
       organizationId,
+      latestRouterConfigVersion,
       dateRange: { start, end },
     } = filters;
 
@@ -163,6 +175,7 @@ export class UsageRepository {
       AND endsWith(Path, ['${field}'])
       AND FederatedGraphID = '${federatedGraphId}'
       AND OrganizationID = '${organizationId}'
+      AND RouterConfigVersion = '${latestRouterConfigVersion}'
     `;
 
     const res = await this.client.queryPromise(query);
@@ -178,6 +191,7 @@ export class UsageRepository {
     range: number;
     organizationId: string;
     federatedGraphId: string;
+    latestRouterConfigVersion: string;
   }) {
     const filters = this.parseFilters(input);
 
