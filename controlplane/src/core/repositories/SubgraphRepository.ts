@@ -26,6 +26,14 @@ export interface Subgraph {
   subscriptionProtocol?: SubscriptionProtocol;
 }
 
+export interface UpdateSubgraphOptions {
+  name: string;
+  routingUrl?: string;
+  labels?: Label[];
+  subscriptionUrl?: string;
+  subscriptionProtocol?: SubscriptionProtocol;
+}
+
 /**
  * Repository for managing subgraphs.
  */
@@ -103,125 +111,136 @@ export class SubgraphRepository {
   }
 
   public async update(
-    data: Subgraph,
+    data: UpdateSubgraphOptions,
   ): Promise<{ compositionErrors: CompositionError[]; updatedFederatedGraphs: FederatedGraphDTO[] }> {
-      const compositionErrors: CompositionError[] = [];
-      const updatedFederatedGraphs: FederatedGraphDTO[] = [];
+    const compositionErrors: CompositionError[] = [];
+    const updatedFederatedGraphs: FederatedGraphDTO[] = [];
 
-      const subgraph = await this.byName(data.name);
-      if (!subgraph) {
-          return { compositionErrors, updatedFederatedGraphs };
+    const subgraph = await this.byName(data.name);
+    if (!subgraph) {
+      return { compositionErrors, updatedFederatedGraphs };
+    }
+
+    await this.db.transaction(async (tx) => {
+      const fedGraphRepo = new FederatedGraphRepository(tx, this.organizationId);
+      const subgraphRepo = new SubgraphRepository(tx, this.organizationId);
+      let subgraphConfigChanged = false;
+
+      if (data.routingUrl && data.routingUrl !== subgraph.routingUrl) {
+        const url = normalizeURL(data.routingUrl);
+        await tx
+          .update(subgraphs)
+          .set({
+            routingUrl: url,
+          })
+          .where(eq(subgraphs.id, subgraph.id))
+          .execute();
+        subgraphConfigChanged = true;
       }
 
-      await this.db.transaction(async (tx) => {
-          const fedGraphRepo = new FederatedGraphRepository(tx, this.organizationId);
-          const subgraphRepo = new SubgraphRepository(tx, this.organizationId);
-          let metadataChanged = false
+      if (data.subscriptionUrl && data.subscriptionUrl !== subgraph.subscriptionUrl) {
+        const url = normalizeURL(data.subscriptionUrl);
+        await tx
+          .update(subgraphs)
+          .set({
+            subscriptionUrl: url,
+          })
+          .where(eq(subgraphs.id, subgraph.id))
+          .execute();
+        subgraphConfigChanged = true;
+      }
 
-          if (data.routingUrl !== subgraph.routingUrl) {
-              const url = normalizeURL(data.routingUrl);
-              await tx.update(subgraphs).set({
-                  routingUrl: url
-              }).where(eq(subgraphs.id, subgraph.id)).execute();
-              metadataChanged = true;
+      if (data.subscriptionProtocol && data.subscriptionProtocol !== subgraph.subscriptionProtocol) {
+        await tx
+          .update(subgraphs)
+          .set({
+            subscriptionProtocol: data.subscriptionProtocol,
+          })
+          .where(eq(subgraphs.id, subgraph.id))
+          .execute();
+        subgraphConfigChanged = true;
+      }
+
+      if (subgraphConfigChanged) {
+        const result = await subgraphRepo.byName(data.name);
+        if (result) {
+          updatedFederatedGraphs.push(...(await fedGraphRepo.bySubgraphLabels(result.labels)));
+        }
+      }
+
+      // update labels
+      if (data.labels && data.labels.length > 0) {
+        const newLabels = normalizeLabels(data.labels);
+
+        // find all federated graphs that match with the current subgraph labels
+        const oldFederatedGraphs = await fedGraphRepo.bySubgraphLabels(subgraph.labels);
+
+        // update labels of the subgraph
+        await tx
+          .update(targets)
+          .set({
+            // labels are stored as a string array in the database
+            labels: newLabels.map((ul) => joinLabel(ul)),
+          })
+          .where(eq(targets.id, subgraph.targetId));
+
+        // find all federated graphs that match with the new subgraph labels
+        const newFederatedGraphs = await fedGraphRepo.bySubgraphLabels(newLabels);
+
+        // delete all subgraphsToFederatedGraphs that are not in the newFederatedGraphs array
+        let deleteCondition: SQL<unknown> | undefined = eq(subgraphsToFederatedGraph.subgraphId, subgraph.id);
+
+        // we do this conditionally because notInArray cannot take empty value
+        if (newFederatedGraphs.length > 0) {
+          deleteCondition = and(
+            deleteCondition,
+            notInArray(
+              subgraphsToFederatedGraph.federatedGraphId,
+              newFederatedGraphs.map((g) => g.id),
+            ),
+          );
+        }
+
+        await tx.delete(subgraphsToFederatedGraph).where(deleteCondition);
+
+        // we create new connections between the federated graphs and the subgraph
+        if (newFederatedGraphs.length > 0) {
+          await tx
+            .insert(subgraphsToFederatedGraph)
+            .values(
+              newFederatedGraphs.map((federatedGraph) => ({
+                federatedGraphId: federatedGraph.id,
+                subgraphId: subgraph.id,
+              })),
+            )
+            .onConflictDoNothing()
+            .execute();
+        }
+
+        // let's find all federated graphs that were affected by the label change
+        const changedFederatedGraphs = [
+          ...oldFederatedGraphs.filter((b) => !newFederatedGraphs.some((a) => a.id === b.id)),
+          ...newFederatedGraphs.filter((a) => !oldFederatedGraphs.some((b) => a.id === b.id)),
+        ];
+        for (const graph of changedFederatedGraphs) {
+          const idx = updatedFederatedGraphs.findIndex((g) => g.id === graph.id);
+          if (idx !== -1) {
+            continue;
           }
+          updatedFederatedGraphs.push(graph);
+        }
+      }
 
-          if (data.subscriptionUrl !== subgraph.subscriptionUrl) {
-              const url = normalizeURL(data.subscriptionUrl);
-              await tx.update(subgraphs).set({
-                  subscriptionUrl: url
-              }).where(eq(subgraphs.id, subgraph.id)).execute();
-              metadataChanged = true;
-          }
-
-          if (data.subscriptionProtocol !== subgraph.subscriptionProtocol) {
-              await tx.update(subgraphs).set({
-                  subscriptionProtocol: data.subscriptionProtocol
-              }).where(eq(subgraphs.id, subgraph.id)).execute();
-              metadataChanged = true;
-          }
-
-          if (metadataChanged) {
-              const result = await subgraphRepo.byName(data.name);
-              if (result) {
-                  updatedFederatedGraphs.push(...(await fedGraphRepo.bySubgraphLabels(result.labels)));
-              }
-          }
-
-          // update labels
-          if (data.labels.length > 0) {
-              const newLabels = normalizeLabels(data.labels);
-
-              // find all federated graphs that match with the current subgraph labels
-              const oldFederatedGraphs = await fedGraphRepo.bySubgraphLabels(subgraph.labels);
-
-              // update labels of the subgraph
-              await tx
-                  .update(targets)
-                  .set({
-                      // labels are stored as a string array in the database
-                      labels: newLabels.map((ul) => joinLabel(ul)),
-                  })
-                  .where(eq(targets.id, subgraph.targetId));
-
-              // find all federated graphs that match with the new subgraph labels
-              const newFederatedGraphs = await fedGraphRepo.bySubgraphLabels(newLabels);
-
-              // delete all subgraphsToFederatedGraphs that are not in the newFederatedGraphs array
-              let deleteCondition: SQL<unknown> | undefined = eq(subgraphsToFederatedGraph.subgraphId, subgraph.id);
-
-              // we do this conditionally because notInArray cannot take empty value
-              if (newFederatedGraphs.length > 0) {
-                  deleteCondition = and(
-                      deleteCondition,
-                      notInArray(
-                          subgraphsToFederatedGraph.federatedGraphId,
-                          newFederatedGraphs.map((g) => g.id),
-                      ),
-                  );
-              }
-
-              await tx.delete(subgraphsToFederatedGraph).where(deleteCondition);
-
-              // we create new connections between the federated graphs and the subgraph
-              if (newFederatedGraphs.length > 0) {
-                  await tx
-                      .insert(subgraphsToFederatedGraph)
-                      .values(
-                          newFederatedGraphs.map((federatedGraph) => ({
-                              federatedGraphId: federatedGraph.id,
-                              subgraphId: subgraph.id,
-                          })),
-                      )
-                      .onConflictDoNothing()
-                      .execute();
-              }
-
-              // let's find all federated graphs that were affected by the label change
-              const changedFederatedGraphs = [
-                  ...oldFederatedGraphs.filter((b) => !newFederatedGraphs.some((a) => a.id === b.id)),
-                  ...newFederatedGraphs.filter((a) => !oldFederatedGraphs.some((b) => a.id === b.id)),
-              ];
-              for (const graph of changedFederatedGraphs) {
-                  const idx = updatedFederatedGraphs.findIndex((g) => g.id === graph.id);
-                  if (idx !== -1) {
-                      continue;
-                  }
-                  updatedFederatedGraphs.push(graph);
-              }
-          }
-
-          const composer = new Composer(fedGraphRepo, subgraphRepo);
-          // update schema and router config of graphs which were affected
-          for (const federatedGraph of updatedFederatedGraphs) {
-              const composedGraph = await composer.composeFederatedGraph(federatedGraph.name, federatedGraph.targetId);
-              const errors = await composer.updateComposedSchema(composedGraph);
-              compositionErrors.push(...errors);
       const composer = new Composer(fedGraphRepo, subgraphRepo);
-          }
-      });
+      // update schema and router config of graphs which were affected
+      for await (const federatedGraph of updatedFederatedGraphs) {
+        const composedGraph = await composer.composeFederatedGraph(federatedGraph.name, federatedGraph.targetId);
+        const errors = await composer.updateComposedSchema(composedGraph);
+        compositionErrors.push(...errors);
+      }
+    });
 
-      return { compositionErrors, updatedFederatedGraphs };
+    return { compositionErrors, updatedFederatedGraphs };
   }
 
   public updateSchema(subgraphName: string, subgraphSchema: string): Promise<SubgraphDTO | undefined> {

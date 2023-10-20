@@ -35,6 +35,10 @@ message PublishFederatedSubgraphRequest {
   repeated Label labels = 4;
   // headers are the headers which will be used to route the requests to the subgraph.
   repeated string headers = 5;
+  // subscription protocol to use when subscribing to this subgraph
+  optional wg.cosmo.common.GraphQLSubscriptionProtocol subscription_protocol = 6;
+  // url used for subscriptions
+  optional string subscription_url = 7;
 
 }
 

@@ -207,13 +207,13 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         if (!exists) {
           const subgraph = await subgraphRepo.create({
-              name: req.name,
-              labels: req.labels,
-              routingUrl: req.routingUrl,
-              subscriptionUrl: req.subscriptionUrl,
-              subscriptionProtocol: req.subscriptionProtocol
-                  ? formatSubscriptionProtocol(req.subscriptionProtocol)
-                  : undefined,
+            name: req.name,
+            labels: req.labels,
+            routingUrl: req.routingUrl,
+            subscriptionUrl: req.subscriptionUrl,
+            subscriptionProtocol: req.subscriptionProtocol
+              ? formatSubscriptionProtocol(req.subscriptionProtocol)
+              : undefined,
           });
 
           if (!subgraph) {
@@ -758,11 +758,25 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             };
           }
 
+          if (req.labels.length === 0) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR,
+                details: `At least one label is required to create a new subgraph`,
+              },
+              compositionErrors: [],
+            };
+          }
+
           // Create the subgraph if it doesn't exist
           subgraph = await subgraphRepo.create({
             name: req.name,
             labels: req.labels,
             routingUrl: req.routingUrl,
+            subscriptionUrl: req.subscriptionUrl,
+            subscriptionProtocol: req.subscriptionProtocol
+              ? formatSubscriptionProtocol(req.subscriptionProtocol)
+              : undefined,
           });
 
           if (!subgraph) {
@@ -778,31 +792,32 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const updatedFederatedGraphs: Map<string, FederatedGraphSchemaUpdate> = new Map();
 
-        // Update subgraph metadata
-        if (req.routingUrl || req.labels) {
-          const compResult = await subgraphRepo.update({
-            name: req.name,
-            labels: req.labels,
-            routingUrl: req.routingUrl,
+        const compResult = await subgraphRepo.update({
+          name: req.name,
+          labels: req.labels,
+          routingUrl: req.routingUrl,
+          subscriptionUrl: req.subscriptionUrl,
+          subscriptionProtocol: req.subscriptionProtocol
+            ? formatSubscriptionProtocol(req.subscriptionProtocol)
+            : undefined,
+        });
+
+        // We ignore composition errors, because the user might fix it with next subgraph update
+        // Don't worry, a subgraph with composition errors will not be published to the federated graph
+
+        for (const federatedGraph of compResult.updatedFederatedGraphs) {
+          updatedFederatedGraphs.set(federatedGraph.targetId, {
+            federated_graph: {
+              id: federatedGraph.targetId,
+              name: federatedGraph.name,
+            },
+            organization: {
+              id: authContext.organizationId,
+              slug: authContext.organizationSlug,
+            },
+            errors: !!federatedGraph.compositionErrors,
+            actor_id: authContext.userId,
           });
-
-          // We ignore composition errors, because the user might fix it with next subgraph update
-          // Don't worry, a subgraph with composition errors will not be published to the federated graph
-
-          for (const federatedGraph of compResult.updatedFederatedGraphs) {
-            updatedFederatedGraphs.set(federatedGraph.targetId, {
-              federated_graph: {
-                id: federatedGraph.targetId,
-                name: federatedGraph.name,
-              },
-              organization: {
-                id: authContext.organizationId,
-                slug: authContext.organizationSlug,
-              },
-              errors: !!federatedGraph.compositionErrors,
-              actor_id: authContext.userId,
-            });
-          }
         }
 
         // Update the subgraph schema

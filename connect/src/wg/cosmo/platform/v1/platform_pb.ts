@@ -400,6 +400,20 @@ export class PublishFederatedSubgraphRequest extends Message<PublishFederatedSub
    */
   headers: string[] = [];
 
+  /**
+   * subscription protocol to use when subscribing to this subgraph
+   *
+   * @generated from field: optional wg.cosmo.common.GraphQLSubscriptionProtocol subscription_protocol = 6;
+   */
+  subscriptionProtocol?: GraphQLSubscriptionProtocol;
+
+  /**
+   * url used for subscriptions
+   *
+   * @generated from field: optional string subscription_url = 7;
+   */
+  subscriptionUrl?: string;
+
   constructor(data?: PartialMessage<PublishFederatedSubgraphRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -413,6 +427,8 @@ export class PublishFederatedSubgraphRequest extends Message<PublishFederatedSub
     { no: 3, name: "routing_url", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 4, name: "labels", kind: "message", T: Label, repeated: true },
     { no: 5, name: "headers", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 6, name: "subscription_protocol", kind: "enum", T: proto3.getEnumType(GraphQLSubscriptionProtocol), opt: true },
+    { no: 7, name: "subscription_url", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PublishFederatedSubgraphRequest {
