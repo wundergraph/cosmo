@@ -630,14 +630,6 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		return nil, fmt.Errorf("failed to build plan configuration: %w", err)
 	}
 
-	graphqlHandler := NewGraphQLHandler(HandlerOptions{
-		Executor:            executor,
-		Cache:               planCache,
-		Log:                 r.logger,
-		GqlMetricsExporter:  r.gqlMetricsExporter,
-		RouterConfigVersion: routerConfig.GetVersion(),
-	})
-
 	var metricStore *metric.Metrics
 
 	// Prometheus metrics rely on OTLP metrics
@@ -659,9 +651,17 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	}
 
 	graphqlPreHandler := NewPreHandler(&PreHandlerOptions{
-		Executor:       executor,
-		Logger:         r.logger,
-		requestMetrics: metricStore,
+		Executor:            executor,
+		Logger:              r.logger,
+		requestMetrics:      metricStore,
+		Cache:               planCache,
+		GqlMetricsExporter:  r.gqlMetricsExporter,
+		RouterConfigVersion: routerConfig.GetVersion(),
+	})
+
+	graphqlHandler := NewGraphQLHandler(HandlerOptions{
+		Executor: executor,
+		Log:      r.logger,
 	})
 
 	var traceHandler *trace.Middleware

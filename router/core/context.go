@@ -312,16 +312,20 @@ var _ OperationContext = (*operationContext)(nil)
 
 // operationContext contains information about the current GraphQL operation
 type operationContext struct {
-	// Name is the name of the operation
+	// name is the name of the operation
 	name string
 	// opType is the type of the operation (query, mutation, subscription)
 	opType string
-	// Hash is the hash of the operation
+	// hash is the hash of the operation
 	hash uint64
-	// Content is the content of the operation
-	content   string
+	// content is the content of the operation
+	content string
+	// variables is the variables of the operation
 	variables []byte
-	client    *client
+	// client is the client info that made the request
+	client client
+	// preparedPlan is the prepared plan of the operation
+	preparedPlan planWithMetaData
 }
 
 func (o *operationContext) Name() string {
