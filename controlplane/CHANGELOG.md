@@ -4,6 +4,19 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.26.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.25.0...controlplane@0.26.0) (2023-10-20)
+
+### Bug Fixes
+
+* **controlplane:** check array length ([#193](https://github.com/wundergraph/cosmo/issues/193)) ([51fd191](https://github.com/wundergraph/cosmo/commit/51fd19140c5a037baab7ca32b1d0877485c0848c)) (@StarpTech)
+* redirect the user to the correct page after login ([#192](https://github.com/wundergraph/cosmo/issues/192)) ([c5e28ed](https://github.com/wundergraph/cosmo/commit/c5e28edc0495c45497a5dd1373bf9f7784cf84a1)) (@JivusAyrus)
+
+### Features
+
+* add client name client version filter for analytics and ([#181](https://github.com/wundergraph/cosmo/issues/181)) ([6180f4d](https://github.com/wundergraph/cosmo/commit/6180f4d621c383e72883c3cfa10ac1119da91761)) (@Pagebakers)
+* add support for subscriptions ([#185](https://github.com/wundergraph/cosmo/issues/185)) ([5a78aa0](https://github.com/wundergraph/cosmo/commit/5a78aa01f60ac4184ac69b0bd72aa1ce467bff93)) (@fiam)
+* auto ignore schema errors for check command if github is integrated ([#184](https://github.com/wundergraph/cosmo/issues/184)) ([05d1b4a](https://github.com/wundergraph/cosmo/commit/05d1b4a4fcb836013c8db49796c174eba0c96744)) (@thisisnithin)
+
 # [0.25.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.24.2...controlplane@0.25.0) (2023-10-13)
 
 ### Features
