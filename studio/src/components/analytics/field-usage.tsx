@@ -175,7 +175,7 @@ export const FieldUsage = ({
         <Accordion type="single" collapsible className="mt-2 w-full">
           {usageData.clients.map((client) => {
             const clientName = client.name || "unknown";
-            const clientVersion = client.version || "unknown";
+            const clientVersion = client.version || "n/a";
             const totalRequests = client.operations.reduce((acc, op) => {
               acc += op.count;
               return acc;
@@ -345,7 +345,7 @@ export const FieldUsageSheet = () => {
       }}
     >
       <SheetContent
-        className="scrollbar-custom overflow-y-auto sm:max-w-2xl"
+        className="scrollbar-custom w-full max-w-full overflow-y-auto sm:max-w-full md:max-w-2xl lg:max-w-3xl"
         onPointerDownOutside={(e) => e.preventDefault()}
       >
         <SheetHeader className="mb-12">
