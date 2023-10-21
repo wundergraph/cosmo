@@ -21,10 +21,7 @@ import {
 import { CLI } from "@/components/ui/cli";
 import { formatDateTime } from "@/lib/format-date";
 import { NextPageWithLayout } from "@/lib/page";
-import {
-  ExclamationCircleIcon,
-  ExclamationTriangleIcon,
-} from "@heroicons/react/24/outline";
+import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { RocketIcon } from "@radix-ui/react-icons";
 import { useRouter } from "next/router";
 import { useContext, useState } from "react";
@@ -36,18 +33,10 @@ const Details = () => {
 
   if (!graphData?.graph) return null;
 
-  const {
-    lastUpdatedAt,
-    routingURL,
-    labelMatchers,
-    connectedSubgraphs,
-    isComposable,
-    compositionErrors,
-    name,
-  } = graphData.graph;
+  const { lastUpdatedAt, routingURL, labelMatchers, connectedSubgraphs, name } =
+    graphData.graph;
 
-  const validGraph = isComposable && !!lastUpdatedAt;
-  const emptyGraph = !lastUpdatedAt && !isComposable;
+  const publishedGraph = !!lastUpdatedAt;
 
   return (
     <div className="flex flex-col flex-wrap items-stretch gap-y-4 pb-4 lg:flex-row lg:gap-x-4">
@@ -81,7 +70,7 @@ const Details = () => {
             </div>
             <div className="flex items-center gap-x-4">
               <span className="w-28">Schema Check</span> :
-              <ComposeStatus validGraph={validGraph} emptyGraph={emptyGraph} />
+              <ComposeStatus publishedGraph={publishedGraph} />
             </div>
           </CardContent>
           <CardFooter className="flex-col items-start">
@@ -101,29 +90,19 @@ const Details = () => {
           </CardFooter>
         </Card>
         <Alert
-          variant={
-            emptyGraph ? "default" : validGraph ? "default" : "destructive"
-          }
+          variant={publishedGraph ? "default" : "destructive"}
           className="scrollbar-custom max-h-[5rem] w-full overflow-auto"
         >
-          {emptyGraph ? (
-            <ExclamationCircleIcon className="h-5 w-5" />
-          ) : validGraph ? (
+          {publishedGraph ? (
             <RocketIcon className="h-5 w-5" />
           ) : (
             <ExclamationTriangleIcon className="h-5 w-5" />
           )}
           <AlertTitle>
-            {emptyGraph
-              ? "Heads up!"
-              : validGraph
-              ? "All good!"
-              : "Needs Attention!"}
+            {publishedGraph ? "All good!" : "Needs Attention!"}
           </AlertTitle>
           <AlertDescription>
             <ComposeStatusMessage
-              errors={compositionErrors}
-              isComposable={isComposable}
               lastUpdatedAt={lastUpdatedAt}
               subgraphsCount={connectedSubgraphs}
             />

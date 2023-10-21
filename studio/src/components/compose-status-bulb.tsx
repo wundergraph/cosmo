@@ -1,21 +1,15 @@
 import clsx from "clsx";
 
 export const ComposeStatusBulb = ({
-  validGraph,
-  emptyGraph,
+  publishedGraph,
 }: {
-  validGraph: boolean;
-  emptyGraph: boolean;
+  publishedGraph: boolean;
 }) => {
   return (
     <div
       className={clsx(
         "inline-flex h-2 w-2 items-center rounded-full",
-        validGraph
-          ? "bg-green-400"
-          : emptyGraph
-          ? "bg-yellow-400"
-          : "bg-red-400"
+        publishedGraph ? "bg-green-400" : "bg-gray-400"
       )}
     />
   );

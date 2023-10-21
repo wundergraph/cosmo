@@ -4,6 +4,7 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import inquirer from 'inquirer';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { baseHeaders } from '../../../core/config.js';
+import Table from 'cli-table3';
 
 export default (opts: BaseCommandOptions) => {
   const deleteSubgraph = new Command('delete');
@@ -32,9 +33,28 @@ export default (opts: BaseCommandOptions) => {
     );
 
     if (resp.response?.code === EnumStatusCode.OK) {
-      console.log(pc.dim(pc.green(`A subgraph called '${name}' was deleted.`)));
+      console.log(pc.dim(pc.green(`Subgraph '${name}' was deleted.`)));
+    } else if (resp.response?.code === EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED) {
+      const compositionErrorsTable = new Table({
+        head: [pc.bold(pc.white('FEDERATED_GRAPH_NAME')), pc.bold(pc.white('ERROR_MESSAGE'))],
+        colWidths: [30, 120],
+        wordWrap: true,
+      });
+
+      console.log(
+        pc.red(
+          `We found composition errors, while composing the federated graph.\nThe graph will not be updated until the errors are fixed. The router will continue to work with the latest valid schema.\n${pc.bold(
+            'Please check the errors below:',
+          )}`,
+        ),
+      );
+      for (const compositionError of resp.compositionErrors) {
+        compositionErrorsTable.push([compositionError.federatedGraphName, compositionError.message]);
+      }
+      // Don't exit here with 1 because the change was still applied
+      console.log(compositionErrorsTable.toString());
     } else {
-      console.log(`Failed to delete subgraph ${pc.bold(name)}.`);
+      console.log(pc.red(`Failed to delete subgraph ${pc.bold(name)}.`));
       if (resp.response?.details) {
         console.log(pc.red(pc.bold(resp.response?.details)));
       }

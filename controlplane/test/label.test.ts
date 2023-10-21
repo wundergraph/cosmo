@@ -269,19 +269,17 @@ describe('Labels', (ctx) => {
     expect(graph2.subgraphs[0].name).toBe(subgraph2Name);
 
     // This will remove the subgraph1 from fedGraph1 and add subgraph1 to fedGraph2
-    // This will fail because a federated graph requires at least one subgraph
+    // Result in a federated graph with no subgraphs
     const updateRes1 = await client.updateSubgraph({
       name: subgraph1Name,
       labels: [label2],
     });
-    expect(updateRes1.response?.code).toBe(EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED);
-    expect(updateRes1.compositionErrors.length).gt(0);
+    expect(updateRes1.response?.code).toBe(EnumStatusCode.OK);
 
     let updatedGraph1 = await client.getFederatedGraphByName({
       name: fedGraph1Name,
     });
     expect(updatedGraph1.response?.code).toBe(EnumStatusCode.OK);
-    expect(updatedGraph1.graph?.isComposable).toBeFalsy();
 
     // This will remove the subgraph2 from fedGraph2 and add subgraph1 to fedGraph2
     const updateRes2 = await client.updateSubgraph({

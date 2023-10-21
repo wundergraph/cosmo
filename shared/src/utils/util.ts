@@ -33,3 +33,12 @@ export function normalizeURL(url: string): string {
   const port = parsedUrl.port ? `:${parsedUrl.port}` : '';
   return `${parsedUrl.protocol}//${parsedUrl.hostname}${port}${path}`;
 }
+
+export function isValidUrl(url: string) {
+  try {
+    new URL(url);
+    return true;
+  } catch (err) {
+    return false;
+  }
+}

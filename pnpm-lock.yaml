@@ -262,7 +262,7 @@ importers:
         version: 16.3.1
       drizzle-orm:
         specifier: ^0.28.6
-        version: 0.28.6(pg@8.11.3)(postgres@3.3.5)
+        version: 0.28.6(pg@8.11.3)(postgres@3.4.0)
       fastify:
         specifier: ^4.23.2
         version: 4.23.2
@@ -291,8 +291,8 @@ importers:
         specifier: ^8.15.6
         version: 8.15.6
       postgres:
-        specifier: ^3.3.5
-        version: 3.3.5
+        specifier: ^3.4.0
+        version: 3.4.0
       rxjs:
         specifier: ^7.8.1
         version: 7.8.1
@@ -6925,7 +6925,7 @@ packages:
       - supports-color
     dev: true
 
-  /drizzle-orm@0.28.6(pg@8.11.3)(postgres@3.3.5):
+  /drizzle-orm@0.28.6(pg@8.11.3)(postgres@3.4.0):
     resolution: {integrity: sha512-yBe+F9htrlYER7uXgDJUQsTHFoIrI5yMm5A0bg0GiZ/kY5jNXTWoEy4KQtg35cE27sw1VbgzoMWHAgCckUUUww==}
     peerDependencies:
       '@aws-sdk/client-rds-data': '>=3'
@@ -6988,7 +6988,7 @@ packages:
         optional: true
     dependencies:
       pg: 8.11.3
-      postgres: 3.3.5
+      postgres: 3.4.0
     dev: false
 
   /duplexer@0.1.2:
@@ -11158,8 +11158,8 @@ packages:
       xtend: 4.0.2
     dev: false
 
-  /postgres@3.3.5:
-    resolution: {integrity: sha512-+JD93VELV9gHkqpV5gdL5/70HdGtEw4/XE1S4BC8f1mcPmdib3K5XsKVbnR1XcAyC41zOnifJ+9YRKxdIsXiUw==}
+  /postgres@3.4.0:
+    resolution: {integrity: sha512-d7UtSoCg4hUtzxM9aRi3J8BrM6t0h4bQmgAHG96cDCNpP9CnnWQRdRl7WWNvKs0oOaQU2InGoOi1jETmdZK02g==}
     dev: false
 
   /prelude-ls@1.2.1:

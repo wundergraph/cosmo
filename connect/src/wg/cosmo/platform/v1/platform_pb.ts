@@ -1147,6 +1147,11 @@ export class DeleteFederatedSubgraphResponse extends Message<DeleteFederatedSubg
    */
   response?: Response;
 
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.CompositionError compositionErrors = 2;
+   */
+  compositionErrors: CompositionError[] = [];
+
   constructor(data?: PartialMessage<DeleteFederatedSubgraphResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1156,6 +1161,7 @@ export class DeleteFederatedSubgraphResponse extends Message<DeleteFederatedSubg
   static readonly typeName = "wg.cosmo.platform.v1.DeleteFederatedSubgraphResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "compositionErrors", kind: "message", T: CompositionError, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteFederatedSubgraphResponse {
@@ -1291,16 +1297,6 @@ export class FederatedGraph extends Message<FederatedGraph> {
   lastUpdatedAt = "";
 
   /**
-   * @generated from field: bool isComposable = 6;
-   */
-  isComposable = false;
-
-  /**
-   * @generated from field: string compositionErrors = 7;
-   */
-  compositionErrors = "";
-
-  /**
    * @generated from field: int32 connectedSubgraphs = 8;
    */
   connectedSubgraphs = 0;
@@ -1323,8 +1319,6 @@ export class FederatedGraph extends Message<FederatedGraph> {
     { no: 3, name: "routingURL", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "label_matchers", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 5, name: "lastUpdatedAt", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 6, name: "isComposable", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 7, name: "compositionErrors", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 8, name: "connectedSubgraphs", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 9, name: "requestSeries", kind: "message", T: RequestSeriesItem, repeated: true },
   ]);

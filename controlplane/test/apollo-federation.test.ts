@@ -255,8 +255,6 @@ describe('Apollo Federated Graph', (ctx) => {
 
     expect(graph.subgraphs.length).toBe(4);
     expect(graph.graph?.name).toEqual(fedGraphName);
-    expect(graph.graph?.isComposable).toEqual(true);
-    expect(graph.graph?.compositionErrors).toEqual('');
     expect(graph.graph?.labelMatchers).toEqual([joinLabel(label)]);
     expect(graph.graph?.lastUpdatedAt).toBeTruthy();
     expect(graph.graph?.routingURL).toEqual('http://localhost:8080');

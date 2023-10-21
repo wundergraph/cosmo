@@ -52,7 +52,6 @@ export default (opts: BaseCommandOptions) => {
             name: g.name,
             labelMatchers: g.labelMatchers,
             routingURL: g.routingURL,
-            isComposable: g.isComposable,
             lastUpdatedAt: g.lastUpdatedAt,
           } as OutputFile[number]),
       );
@@ -79,13 +78,7 @@ export default (opts: BaseCommandOptions) => {
     });
 
     for (const graph of resp.graphs) {
-      graphsTable.push([
-        graph.name,
-        graph.labelMatchers.join(','),
-        graph.routingURL,
-        graph.isComposable ? logSymbols.success : logSymbols.error,
-        graph.lastUpdatedAt,
-      ]);
+      graphsTable.push([graph.name, graph.labelMatchers.join(','), graph.routingURL, graph.lastUpdatedAt]);
     }
     console.log(graphsTable.toString());
   });
