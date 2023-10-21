@@ -129,6 +129,7 @@ export class SubgraphRepository {
         return { compositionErrors, updatedFederatedGraphs };
       }
 
+      // TODO: avoid downloading the schema use hash instead
       if (data.schemaSDL && data.schemaSDL !== subgraph.schemaSDL) {
         subgraphChanged = true;
         const updatedSubgraph = await subgraphRepo.addSchemaVersion(subgraph.name, data.schemaSDL);
@@ -172,26 +173,24 @@ export class SubgraphRepository {
           .execute();
       }
 
-      // We need to compose and build a new router config on metadata changes
-      // We add all federated graphs that use this subgraph
-      if (subgraphChanged) {
+      let labelChanged = false;
+      if (data.labels && data.labels.length > 0) {
+        if (data.labels.length === subgraph.labels.length) {
+          // check if the labels are the same
+          labelChanged = data.labels.some((l1) => !subgraph.labels.some((l2) => joinLabel(l1) === joinLabel(l2)));
+        } else {
+          labelChanged = true;
+        }
+      }
+
+      // We need to compose and build a new router config also on routingUrl and labels changes
+      if (subgraphChanged || labelChanged) {
+        // find all federated graphs that use this subgraph. We need evaluate them again.
         updatedFederatedGraphs.push(...(await fedGraphRepo.bySubgraphLabels(subgraph.labels)));
       }
 
-      // update labels
-      if (data.labels && data.labels.length > 0) {
+      if (labelChanged && data.labels) {
         const newLabels = normalizeLabels(data.labels);
-
-        // find all federated graphs that match with the current subgraph labels
-        const oldFederatedGraphs = await fedGraphRepo.bySubgraphLabels(subgraph.labels);
-
-        // add them to the updatedFederatedGraphs array without duplicates
-        for (const federatedGraph of oldFederatedGraphs) {
-          const exists = updatedFederatedGraphs.find((g) => g.name === federatedGraph.name);
-          if (!exists) {
-            updatedFederatedGraphs.push(federatedGraph);
-          }
-        }
 
         // update labels of the subgraph
         await tx
