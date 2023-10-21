@@ -1297,6 +1297,16 @@ export class FederatedGraph extends Message<FederatedGraph> {
   lastUpdatedAt = "";
 
   /**
+   * @generated from field: bool isComposable = 6;
+   */
+  isComposable = false;
+
+  /**
+   * @generated from field: string compositionErrors = 7;
+   */
+  compositionErrors = "";
+
+  /**
    * @generated from field: int32 connectedSubgraphs = 8;
    */
   connectedSubgraphs = 0;
@@ -1319,6 +1329,8 @@ export class FederatedGraph extends Message<FederatedGraph> {
     { no: 3, name: "routingURL", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "label_matchers", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 5, name: "lastUpdatedAt", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 6, name: "isComposable", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 7, name: "compositionErrors", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 8, name: "connectedSubgraphs", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 9, name: "requestSeries", kind: "message", T: RequestSeriesItem, repeated: true },
   ]);

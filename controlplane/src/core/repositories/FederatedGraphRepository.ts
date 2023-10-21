@@ -96,11 +96,11 @@ export class FederatedGraphRepository {
     });
   }
 
-  public async update(data: { name: string; routingUrl: string; labelMatchers: string[] }) {
+  public update(data: { name: string; routingUrl: string; labelMatchers: string[] }) {
     const labelMatchers = normalizeLabelMatchers(data.labelMatchers);
     const routingUrl = normalizeURL(data.routingUrl);
 
-    await this.db.transaction(async (tx) => {
+    return this.db.transaction(async (tx) => {
       const fedGraphRepo = new FederatedGraphRepository(tx, this.organizationId);
       const subgraphRepo = new SubgraphRepository(tx, this.organizationId);
 
@@ -166,14 +166,35 @@ export class FederatedGraphRepository {
         const composer = new Composer(fedGraphRepo, subgraphRepo);
         const composedGraph = await composer.composeFederatedGraph(federatedGraph.name, federatedGraph.targetId);
 
-        if (composedGraph.errors.length === 0) {
-          await composer.updateComposedSchema(composedGraph);
-        } else {
-          // Rollback transaction if there are composition errors
-          throw new CompositionErrors('Graph could not be composed', federatedGraph.name, composedGraph.errors);
-        }
+        await composer.deployComposition(composedGraph);
+
+        return composedGraph.errors;
       }
     });
+  }
+
+  public async getLatestFederatedGraphComposability(targetId: string) {
+    const latestVersion = await this.db.query.schemaVersion.findFirst({
+      columns: {
+        compositionErrors: true,
+        isComposable: true,
+        createdAt: true,
+        id: true,
+      },
+      where: eq(schema.schemaVersion.targetId, targetId),
+      orderBy: desc(schema.schemaVersion.createdAt),
+    });
+
+    if (!latestVersion) {
+      return undefined;
+    }
+
+    return {
+      schemaVersionId: latestVersion.id,
+      isComposable: latestVersion.isComposable ?? false,
+      compositionErrors: latestVersion.compositionErrors ?? '',
+      createdAt: latestVersion.createdAt.toISOString(),
+    };
   }
 
   public async list(opts: ListFilterOptions): Promise<FederatedGraphDTO[]> {
@@ -210,6 +231,8 @@ export class FederatedGraphRepository {
               // Don't load the schema SDL, since it can be very large.
               columns: {
                 id: true,
+                isComposable: true,
+                compositionErrors: true,
                 createdAt: true,
               },
             },
@@ -234,6 +257,8 @@ export class FederatedGraphRepository {
       id: resp.federatedGraph.id,
       name: resp.name,
       routingUrl: resp.federatedGraph.routingUrl,
+      isComposable: resp.federatedGraph.composedSchemaVersion?.isComposable ?? false,
+      compositionErrors: resp.federatedGraph.composedSchemaVersion?.compositionErrors ?? '',
       lastUpdatedAt: resp.federatedGraph.composedSchemaVersion?.createdAt?.toISOString() ?? '',
       targetId: resp.id,
       schemaVersionId: resp.federatedGraph.composedSchemaVersionId ?? undefined,
@@ -300,7 +325,12 @@ export class FederatedGraphRepository {
     return graphsDTOs;
   }
 
-  public updateSchema({
+  /**
+   * addSchemaVersion adds a new schema version to the given federated graph. When
+   * the schema version is not composable the errors are stored in the compositionErrors
+   * but the composedSchemaVersionId is not updated.
+   */
+  public addSchemaVersion({
     composedSDL,
     graphName,
     compositionErrors,
@@ -330,20 +360,22 @@ export class FederatedGraphRepository {
           targetId: fedGraph.targetId,
           schemaSDL: composedSDL,
           routerConfig: routerConfig || null,
+          isComposable: compositionErrorString === '',
+          compositionErrors: compositionErrorString,
         })
         .returning({
           insertedId: schemaVersion.id,
         });
 
-      // Only update the "current" federated schema when composition was successfully
-      if (!(compositionErrors && compositionErrors.length > 0)) {
-        await tx
-          .update(federatedGraphs)
-          .set({
-            composedSchemaVersionId: insertedVersion[0].insertedId,
-          })
-          .where(eq(federatedGraphs.id, fedGraph.id));
-      }
+      // Always update the federated schema after composing, even if the schema is not composable.
+      // That allows us to display the latest schema version in the UI. The router will only fetch
+      // the latest composable schema version.
+      await tx
+        .update(federatedGraphs)
+        .set({
+          composedSchemaVersionId: insertedVersion[0].insertedId,
+        })
+        .where(eq(federatedGraphs.id, fedGraph.id));
 
       return {
         id: fedGraph.id,
@@ -351,6 +383,7 @@ export class FederatedGraphRepository {
         name: fedGraph.name,
         labelMatchers: fedGraph.labelMatchers,
         compositionErrors: compositionErrorString,
+        isComposable: fedGraph.isComposable,
         lastUpdatedAt: fedGraph.lastUpdatedAt,
         routingUrl: fedGraph.routingUrl,
         subgraphsCount: fedGraph.subgraphsCount,
@@ -364,39 +397,25 @@ export class FederatedGraphRepository {
     return res !== undefined;
   }
 
-  public async isLatestVersion(name: string, version: string) {
-    const res = await this.byName(name);
-    return res?.schemaVersionId === version;
-  }
-
-  public async getLatestValidRouterConfig(name: string): Promise<
+  public async getLatestValidRouterConfig(targetId: string): Promise<
     | {
         config: RouterConfig;
         version: string;
       }
     | undefined
   > {
-    const validVersion = await this.db
-      .select({
-        versionId: schemaVersion.id,
-        routerConfig: schemaVersion.routerConfig,
-      })
-      .from(targets)
-      .innerJoin(federatedGraphs, eq(federatedGraphs.targetId, targets.id))
-      .innerJoin(schemaVersion, eq(schemaVersion.id, federatedGraphs.composedSchemaVersionId))
-      .where(
-        and(eq(targets.type, 'federated'), eq(targets.organizationId, this.organizationId), eq(targets.name, name)),
-      )
-      .limit(1)
-      .execute();
+    const latestVersion = await this.db.query.schemaVersion.findFirst({
+      where: and(eq(schema.schemaVersion.targetId, targetId), eq(schema.schemaVersion.isComposable, true)),
+      orderBy: desc(schema.schemaVersion.createdAt),
+    });
 
-    if (validVersion.length === 0) {
+    if (!latestVersion) {
       return undefined;
     }
 
     return {
-      config: RouterConfig.fromJson(validVersion[0].routerConfig as JsonValue),
-      version: validVersion[0].versionId ?? '',
+      config: RouterConfig.fromJson(latestVersion.routerConfig as JsonValue),
+      version: latestVersion.id ?? '',
     };
   }
 

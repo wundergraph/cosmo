@@ -296,13 +296,7 @@ export const RunRouterCommand = ({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       {triggerLabel && (
-        <DialogTrigger
-          asChild={true}
-          className={triggerClassName}
-          onClick={() => {
-            setOpen(true);
-          }}
-        >
+        <DialogTrigger className={triggerClassName} asChild={true}>
           <Button
             className="w-full"
             onClick={() => {
@@ -472,7 +466,8 @@ const GraphCard = ({ graph }: { graph: FederatedGraph }) => {
                   <Tooltip delayDuration={200}>
                     <TooltipTrigger>
                       <ComposeStatusBulb
-                        publishedGraph={!!graph.lastUpdatedAt}
+                        validGraph={graph.isComposable && !!graph.lastUpdatedAt}
+                        emptyGraph={!graph.lastUpdatedAt && !graph.isComposable}
                       />
                       <span className="ml-2">
                         {graph.lastUpdatedAt ? (
@@ -487,6 +482,8 @@ const GraphCard = ({ graph }: { graph: FederatedGraph }) => {
                     </TooltipTrigger>
                     <TooltipContent>
                       <ComposeStatusMessage
+                        errors={graph.compositionErrors}
+                        isComposable={graph.isComposable}
                         lastUpdatedAt={graph.lastUpdatedAt}
                         subgraphsCount={graph.connectedSubgraphs}
                       />

@@ -47,14 +47,12 @@ export class Composer {
    * Build and store the final router config and federated schema to the database. A diff between the
    * previous and current schema is stored as changelog.
    */
-  async updateComposedSchema(composedGraph: ComposedFederatedGraph) {
-    if (composedGraph.errors.length > 0) {
-      return;
-    }
+  async deployComposition(composedGraph: ComposedFederatedGraph) {
+    const hasCompositionErrors = composedGraph.errors.length > 0;
 
     // Build router config when composed schema is valid
     let routerConfigJson: JsonValue = null;
-    if (composedGraph.composedSchema) {
+    if (!hasCompositionErrors && composedGraph.composedSchema) {
       const routerConfig = buildRouterConfig({
         argumentConfigurations: composedGraph.argumentConfigurations,
         subgraphs: composedGraph.subgraphs,
@@ -63,15 +61,16 @@ export class Composer {
       routerConfigJson = routerConfig.toJson();
     }
 
-    const prevFederatedSDL = await this.federatedGraphRepo.getLatestSdlOfFederatedGraph(composedGraph.name);
-    const updatedFederatedGraph = await this.federatedGraphRepo.updateSchema({
+    const updatedFederatedGraph = await this.federatedGraphRepo.addSchemaVersion({
       graphName: composedGraph.name,
       composedSDL: composedGraph.composedSchema,
       compositionErrors: composedGraph.errors,
       routerConfig: routerConfigJson,
     });
 
-    if (composedGraph.composedSchema && updatedFederatedGraph?.composedSchemaVersionId) {
+    const prevFederatedSDL = await this.federatedGraphRepo.getLatestSdlOfFederatedGraph(composedGraph.name);
+
+    if (!hasCompositionErrors && composedGraph.composedSchema && updatedFederatedGraph?.composedSchemaVersionId) {
       const schemaChanges = await getDiffBetweenGraphs(prevFederatedSDL || '', composedGraph.composedSchema);
 
       if (schemaChanges.kind !== 'failure' && schemaChanges.changes.length > 0) {

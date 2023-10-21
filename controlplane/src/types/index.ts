@@ -16,6 +16,8 @@ export interface FederatedGraphDTO {
   name: string;
   routingUrl: string;
   lastUpdatedAt: string;
+  isComposable: boolean;
+  compositionErrors?: string;
   schemaVersionId?: string;
   labelMatchers: string[];
   subgraphsCount: number;

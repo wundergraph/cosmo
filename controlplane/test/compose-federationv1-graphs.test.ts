@@ -168,6 +168,8 @@ describe('ComposeFederationV1Graphs', (ctx) => {
     });
 
     expect(graph.response?.code).toBe(EnumStatusCode.OK);
+    expect(graph.graph?.compositionErrors).toBe('');
+    expect(graph.graph?.isComposable).toBe(true);
 
     const fetchSchemaResp = await client.getFederatedGraphSDLByName({
       name: federatedGraphName,

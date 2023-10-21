@@ -19,8 +19,18 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof NodeSe
         const authContext = await opts.authenticator.authenticateRouter(ctx.requestHeader);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
 
+        const federatedGraph = await fedGraphRepo.byName(req.graphName);
+        if (!federatedGraph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: 'Federated graph not found',
+            },
+          };
+        }
+
         if (req.version) {
-          const isLatest = await fedGraphRepo.isLatestVersion(req.graphName, req.version);
+          const isLatest = federatedGraph.schemaVersionId === req.version;
           if (isLatest) {
             return {
               response: {
@@ -30,12 +40,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof NodeSe
           }
         }
 
-        const config = await fedGraphRepo.getLatestValidRouterConfig(req.graphName);
-
+        const config = await fedGraphRepo.getLatestValidRouterConfig(federatedGraph?.targetId);
         if (!config) {
           return {
             response: {
               code: EnumStatusCode.ERR_NOT_FOUND,
+              details: 'No valid router config found',
             },
           };
         }

@@ -157,6 +157,8 @@ message FederatedGraph {
   string routingURL = 3;
   repeated string label_matchers = 4;
   string lastUpdatedAt = 5;
+  bool isComposable = 6;
+  string compositionErrors = 7;
   int32 connectedSubgraphs = 8;
   repeated RequestSeriesItem requestSeries = 9;
 }

@@ -233,7 +233,7 @@ export default class ApolloMigrator {
           subscriptionProtocol: 'ws',
         });
 
-        await subgraphRepo.updateSchema(subgraph.name, subgraph.schema);
+        await subgraphRepo.addSchemaVersion(subgraph.name, subgraph.schema);
       }
 
       return federatedGraph;

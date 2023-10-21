@@ -257,6 +257,9 @@ describe('Router Config', (ctx) => {
 
     expect(graph.response?.code).toBe(EnumStatusCode.OK);
 
+    expect(graph.graph?.isComposable).toBe(true);
+    expect(graph.graph?.compositionErrors).toBe('');
+
     const resp = await nodeClient.getLatestValidRouterConfig({
       graphName: fedGraphName,
     });
@@ -397,6 +400,10 @@ describe('Router Config', (ctx) => {
     });
 
     expect(graph.response?.code).toBe(EnumStatusCode.OK);
+    expect(graph.graph?.compositionErrors).toBe(
+      'Error: Extension error:\n' + ' Could not extend the type "User" because no base definition exists.',
+    );
+    expect(graph.graph?.isComposable).toBe(false);
 
     const resp = await nodeClient.getLatestValidRouterConfig({
       graphName: fedGraphName,

@@ -1,4 +1,3 @@
-import { CompositionError } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { joinLabel, normalizeURL, splitLabel } from '@wundergraph/cosmo-shared';
 import { and, asc, desc, eq, gt, inArray, lt, notInArray, SQL, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
@@ -13,7 +12,6 @@ import {
   SubgraphDTO,
 } from '../../types/index.js';
 import { normalizeLabels } from '../util.js';
-import { Composer } from '../composition/composer.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 
 type SubscriptionProtocol = 'ws' | 'sse' | 'sse_post';
@@ -213,7 +211,7 @@ export class SubgraphRepository {
     });
   }
 
-  public updateSchema(subgraphName: string, subgraphSchema: string): Promise<SubgraphDTO | undefined> {
+  public addSchemaVersion(subgraphName: string, subgraphSchema: string): Promise<SubgraphDTO | undefined> {
     return this.db.transaction(async (db) => {
       const subgraph = await this.byName(subgraphName);
       if (subgraph === undefined) {
