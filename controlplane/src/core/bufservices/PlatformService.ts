@@ -1885,7 +1885,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           config: {
             subgraphs: config.config.subgraphs,
             engineConfig: config.config.engineConfig,
-            version: config.version,
+            version: config.schemaVersionId,
           },
         };
       });

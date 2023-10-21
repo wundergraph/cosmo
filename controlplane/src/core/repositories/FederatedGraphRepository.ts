@@ -400,7 +400,7 @@ export class FederatedGraphRepository {
   public async getLatestValidRouterConfig(targetId: string): Promise<
     | {
         config: RouterConfig;
-        version: string;
+        schemaVersionId: string;
       }
     | undefined
   > {
@@ -415,7 +415,7 @@ export class FederatedGraphRepository {
 
     return {
       config: RouterConfig.fromJson(latestVersion.routerConfig as JsonValue),
-      version: latestVersion.id ?? '',
+      schemaVersionId: latestVersion.id,
     };
   }
 

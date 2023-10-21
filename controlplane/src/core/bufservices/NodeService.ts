@@ -29,8 +29,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof NodeSe
           };
         }
 
+        const config = await fedGraphRepo.getLatestValidRouterConfig(federatedGraph?.targetId);
+
         if (req.version) {
-          const isLatest = federatedGraph.schemaVersionId === req.version;
+          const isLatest = config?.schemaVersionId === req.version;
           if (isLatest) {
             return {
               response: {
@@ -40,7 +42,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof NodeSe
           }
         }
 
-        const config = await fedGraphRepo.getLatestValidRouterConfig(federatedGraph?.targetId);
         if (!config) {
           return {
             response: {
@@ -57,7 +58,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof NodeSe
           config: {
             subgraphs: config.config.subgraphs,
             engineConfig: config.config.engineConfig,
-            version: config.version,
+            version: config.schemaVersionId,
           },
         };
       });

@@ -10,7 +10,7 @@
     "email": "info@wundergraph.com"
   },
   "scripts": {
-    "dev": "tsx watch src/index.ts",
+    "dev": "tsc-watch --onSuccess \"node dist/index.js\"",
     "build": "del dist && tsc",
     "seed": "API_KEY=cosmo_669b576aaadc10ee1ae81d9193425705 tsx src/bin/seed.ts",
     "db:generate": "drizzle-kit generate:pg --config=drizzle.config.ts",
@@ -76,6 +76,7 @@
     "@types/prettier": "^2.7.3",
     "@types/stream-json": "^1.7.3",
     "@types/uuid": "^9.0.2",
+    "tsc-watch": "^6.0.4",
     "del-cli": "^5.0.0",
     "drizzle-kit": "^0.19.13",
     "eslint": "^8.44.0",
