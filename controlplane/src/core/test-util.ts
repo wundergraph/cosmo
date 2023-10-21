@@ -34,11 +34,11 @@ export async function afterAllSetup(dbname: string) {
   await sql.end({ timeout: 3 });
 }
 
-export function genID(prefix?: string) {
+export function genID(prefix = 'prefix') {
   return prefix + '-' + nuid.next();
 }
 
-export function genUniqueLabel(prefix?: string): Label {
+export function genUniqueLabel(prefix = 'prefix'): Label {
   return { key: prefix + '-' + genID(), value: genID() };
 }
 
