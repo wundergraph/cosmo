@@ -84,7 +84,7 @@ export default (opts: BaseCommandOptions) => {
 
       console.log(
         pc.red(
-          `We found composition errors, while composing the federated graph.\nThe graph will not be updated until the errors are fixed. The router will continue to work with the latest valid schema.\n${pc.bold(
+          `We found composition errors, while composing the federated graph.\nThe router will continue to work with the latest valid schema.\n${pc.bold(
             'Please check the errors below:',
           )}`,
         ),
