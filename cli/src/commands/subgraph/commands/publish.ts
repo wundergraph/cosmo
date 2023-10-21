@@ -21,12 +21,12 @@ export default (opts: BaseCommandOptions) => {
   schemaPush.requiredOption('--schema <path-to-schema>', 'The schema file to upload to the subgraph.');
   schemaPush.option(
     '-r, --routing-url <url>',
-    'The routing url of your subgraph. This is the url that the subgraph will be accessible at. Required if the subgraph does not exist.',
+    'The routing url of your subgraph. This is the url that the subgraph will be accessible at. Required to create the subgraph.',
   );
   schemaPush.option('-u --upsert', 'Creates the subgraph if it does not exist.');
   schemaPush.option(
     '--label [labels...]',
-    'The labels to apply to the subgraph. The labels are passed in the format <key>=<value> <key>=<value>. Required if the subgraph does not exist.',
+    'The labels to apply to the subgraph. The labels are passed in the format <key>=<value> <key>=<value>. Required to create the subgraph.',
     [],
   );
   schemaPush.option(

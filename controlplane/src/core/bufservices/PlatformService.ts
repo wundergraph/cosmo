@@ -1116,56 +1116,53 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const federatedGraphSchemaUpdates: FederatedGraphSchemaUpdate[] = [];
         const compositionErrors: PlainMessage<CompositionError>[] = [];
 
-        await opts.db.transaction(async (tx) => {
-          const fedGraphRepo = new FederatedGraphRepository(tx, authContext.organizationId);
-          const subgraphRepo = new SubgraphRepository(tx, authContext.organizationId);
-          const composer = new Composer(fedGraphRepo, subgraphRepo);
+        const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+        const composer = new Composer(fedGraphRepo, subgraphRepo);
 
-          // Collect all federated graphs that used this subgraph before deleting subgraph to include them in the composition
-          const affectedFederatedGraphs = await fedGraphRepo.bySubgraphLabels(subgraph.labels);
+        // Collect all federated graphs that used this subgraph before deleting subgraph to include them in the composition
+        const affectedFederatedGraphs = await fedGraphRepo.bySubgraphLabels(subgraph.labels);
 
-          await subgraphRepo.delete(subgraph.targetId);
+        await subgraphRepo.delete(subgraph.targetId);
 
-          // Collect all federated graphs that use this subgraph after deleting the subgraph
-          const currentFederatedGraphs = await fedGraphRepo.bySubgraphLabels(subgraph.labels);
+        // Collect all federated graphs that use this subgraph after deleting the subgraph
+        const currentFederatedGraphs = await fedGraphRepo.bySubgraphLabels(subgraph.labels);
 
-          // Remove duplicates
-          for (const federatedGraph of currentFederatedGraphs) {
-            const exists = affectedFederatedGraphs.find((g) => g.name === federatedGraph.name);
-            if (!exists) {
-              affectedFederatedGraphs.push(federatedGraph);
-            }
+        // Remove duplicates
+        for (const federatedGraph of currentFederatedGraphs) {
+          const exists = affectedFederatedGraphs.find((g) => g.name === federatedGraph.name);
+          if (!exists) {
+            affectedFederatedGraphs.push(federatedGraph);
           }
+        }
 
-          // Validate all federated graphs that use this subgraph.
-          for (const federatedGraph of affectedFederatedGraphs) {
-            const composition = await composer.composeFederatedGraph(federatedGraph.name, federatedGraph.targetId);
+        // Validate all federated graphs that use this subgraph.
+        for (const federatedGraph of affectedFederatedGraphs) {
+          const composition = await composer.composeFederatedGraph(federatedGraph.name, federatedGraph.targetId);
 
-            await composer.deployComposition(composition);
+          await composer.deployComposition(composition);
 
-            // Collect all composition errors
+          // Collect all composition errors
 
-            compositionErrors.push(
-              ...composition.errors.map((e) => ({
-                federatedGraphName: composition.name,
-                message: e.message,
-              })),
-            );
+          compositionErrors.push(
+            ...composition.errors.map((e) => ({
+              federatedGraphName: composition.name,
+              message: e.message,
+            })),
+          );
 
-            federatedGraphSchemaUpdates.push({
-              federated_graph: {
-                id: composition.targetID,
-                name: composition.name,
-              },
-              organization: {
-                id: authContext.organizationId,
-                slug: authContext.organizationSlug,
-              },
-              errors: composition.errors.length > 0,
-              actor_id: authContext.userId,
-            });
-          }
-        });
+          federatedGraphSchemaUpdates.push({
+            federated_graph: {
+              id: composition.targetID,
+              name: composition.name,
+            },
+            organization: {
+              id: authContext.organizationId,
+              slug: authContext.organizationSlug,
+            },
+            errors: composition.errors.length > 0,
+            actor_id: authContext.userId,
+          });
+        }
 
         for (const update of federatedGraphSchemaUpdates) {
           orgWebhooks.send(OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED, update);
