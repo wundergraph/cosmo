@@ -2,9 +2,9 @@ import { Command } from 'commander';
 import pc from 'picocolors';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import inquirer from 'inquirer';
+import Table from 'cli-table3';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { baseHeaders } from '../../../core/config.js';
-import Table from 'cli-table3';
 
 export default (opts: BaseCommandOptions) => {
   const deleteSubgraph = new Command('delete');
