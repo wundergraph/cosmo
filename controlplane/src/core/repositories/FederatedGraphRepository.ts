@@ -23,7 +23,7 @@ import {
   SchemaChangeType,
 } from '../../types/index.js';
 import { normalizeLabelMatchers, normalizeLabels } from '../util.js';
-import { Composer, CompositionErrors } from '../composition/composer.js';
+import { Composer } from '../composition/composer.js';
 import { SubgraphRepository } from './SubgraphRepository.js';
 
 /**

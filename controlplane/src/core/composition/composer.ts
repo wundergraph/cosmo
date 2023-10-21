@@ -12,16 +12,6 @@ export type CompositionResult = {
   compositions: ComposedFederatedGraph[];
 };
 
-export class CompositionErrors extends Error {
-  constructor(public message: string, public federatedGraphName: string, public errors: Error[], cause?: Error) {
-    super(message);
-    this.federatedGraphName = federatedGraphName;
-    this.name = this.constructor.name;
-    this.cause = cause;
-    this.errors = errors;
-  }
-}
-
 interface ComposedSubgraph {
   id: string;
   name: string;
