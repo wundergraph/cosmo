@@ -29,7 +29,7 @@ export const CompositionErrorsDialog = ({ errors }: { errors: string }) => {
             </p>
           </div>
           <div className="mt-6 space-y-2">
-            <pre className="scrollbar-custom overflow-auto whitespace-pre-wrap rounded-md bg-secondary p-4 text-sm text-secondary-foreground">
+            <pre className="scrollbar-custom max-h-[500px] overflow-auto whitespace-pre-wrap rounded-md bg-secondary p-4 text-sm text-secondary-foreground">
               {errors}
             </pre>
           </div>
