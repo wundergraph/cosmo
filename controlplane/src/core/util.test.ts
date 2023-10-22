@@ -1,7 +1,89 @@
 import { describe, expect, test } from 'vitest';
-import { hasLabelsChanged } from './util.js';
+import { hasLabelsChanged, isValidLabels } from './util.js';
 
-describe('SubgraphRepository', (ctx) => {
+describe('Util', (ctx) => {
+  test('Should validate label', () => {
+    expect(
+      isValidLabels([
+        {
+          key: 'key1',
+          value: 'val1',
+        },
+      ]),
+    ).toBe(true);
+    expect(
+      isValidLabels([
+        {
+          key: '',
+          value: 'val1',
+        },
+      ]),
+    ).toBe(false);
+    expect(
+      isValidLabels([
+        {
+          key: 'key1',
+          value: '',
+        },
+      ]),
+    ).toBe(false);
+    expect(
+      isValidLabels([
+        {
+          key: 'key1,',
+          value: 'val1',
+        },
+      ]),
+    ).toBe(false);
+    expect(
+      isValidLabels([
+        {
+          key: 'key1',
+          value: 'val1,',
+        },
+      ]),
+    ).toBe(false);
+    expect(
+      isValidLabels([
+        {
+          key: 'key1*',
+          value: 'val1',
+        },
+      ]),
+    ).toBe(false);
+    expect(
+      isValidLabels([
+        {
+          key: 'a'.repeat(64),
+          value: 'val1',
+        },
+      ]),
+    ).toBe(false);
+    expect(
+      isValidLabels([
+        {
+          key: 'key1',
+          value: 'a'.repeat(64),
+        },
+      ]),
+    ).toBe(false);
+    expect(
+      isValidLabels([
+        {
+          key: '-key1',
+          value: 'val1,',
+        },
+      ]),
+    ).toBe(false);
+    expect(
+      isValidLabels([
+        {
+          key: 'key1',
+          value: '-val1,',
+        },
+      ]),
+    ).toBe(false);
+  });
   test('Should identify if labels has changed', () => {
     expect(
       hasLabelsChanged(
