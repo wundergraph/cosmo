@@ -45,12 +45,10 @@ export const ComposeStatus = ({
 export const ComposeStatusMessage = ({
   lastUpdatedAt,
   isComposable,
-  errors,
   subgraphsCount,
 }: {
   lastUpdatedAt?: string;
   isComposable: boolean;
-  errors: string;
   subgraphsCount: number;
 }) => {
   return lastUpdatedAt ? (
@@ -58,11 +56,9 @@ export const ComposeStatusMessage = ({
       <span>Ready to be fetched from the router</span>
     ) : (
       <span className="whitespace-pre-line">
-        <div className="pb-4 pt-1 text-xs">
-          This version of the graph is not ready to be fetched from the router
-          because the composition failed:
+        <div className="pt-1 text-xs">
+          This version of the graph is not ready because the composition failed.
         </div>
-        <div className="text-slate-500 dark:text-slate-300">{errors}</div>
       </span>
     )
   ) : subgraphsCount ? (

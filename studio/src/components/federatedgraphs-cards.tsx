@@ -482,7 +482,6 @@ const GraphCard = ({ graph }: { graph: FederatedGraph }) => {
                     </TooltipTrigger>
                     <TooltipContent>
                       <ComposeStatusMessage
-                        errors={graph.compositionErrors}
                         isComposable={graph.isComposable}
                         lastUpdatedAt={graph.lastUpdatedAt}
                         subgraphsCount={graph.connectedSubgraphs}

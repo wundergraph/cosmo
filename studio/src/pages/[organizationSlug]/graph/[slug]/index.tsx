@@ -29,6 +29,7 @@ import { RocketIcon } from "@radix-ui/react-icons";
 import { useRouter } from "next/router";
 import { useContext, useState } from "react";
 import { ReactFlowProvider } from "reactflow";
+import { CompositionErrorsDialog } from "@/components/composition-errors-dialog";
 
 const Details = () => {
   const graphData = useContext(GraphContext);
@@ -120,14 +121,18 @@ const Details = () => {
               ? "All good!"
               : "Needs Attention!"}
           </AlertTitle>
-          <AlertDescription>
+          <div className="flex items-center justify-between space-x-2.5">
             <ComposeStatusMessage
-              errors={compositionErrors}
-              isComposable={isComposable}
               lastUpdatedAt={lastUpdatedAt}
+              isComposable={isComposable}
               subgraphsCount={connectedSubgraphs}
             />
-          </AlertDescription>
+            {compositionErrors && (
+              <AlertDescription>
+                <CompositionErrorsDialog errors={compositionErrors} />
+              </AlertDescription>
+            )}
+          </div>
         </Alert>
       </div>
       <div className="order-3 lg:order-2 lg:w-2/3 lg:flex-1">

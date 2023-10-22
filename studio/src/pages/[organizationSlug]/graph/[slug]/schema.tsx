@@ -26,6 +26,7 @@ import {
 import React, { useContext, useEffect, useState } from "react";
 import { PiGraphLight } from "react-icons/pi";
 import { formatDateTime } from "@/lib/format-date";
+import { CompositionErrorsDialog } from "@/components/composition-errors-dialog";
 
 const useScrollIntoView = (lineNo: string) => {
   const [isMounted, setIsMounted] = useState(false);
@@ -117,20 +118,21 @@ const SchemaPage: NextPageWithLayout = () => {
   return (
     <div>
       {!validGraph && (
-        <div className="mb-3 flex items-center space-x-2.5 rounded-lg border border-red-600 p-3 px-4 text-red-600 dark:border-red-900">
-          <div>
-            <BoltSlashIcon className="h-5 w-5 text-red-500" />
+        <div className="mb-3 flex items-center justify-between space-x-2.5 rounded-lg border border-red-600 p-2 px-4 text-red-600 dark:border-red-900">
+          <div className="flex items-center justify-between space-x-2.5">
+            <div>
+              <BoltSlashIcon className="h-5 w-5 text-red-500" />
+            </div>
+            <div className="text-xs">
+              This version of the graph is not ready because the composition
+              failed. Please check the composition errors.
+            </div>
           </div>
-          <div className="text-xs">
-            This version of the graph is not ready to be fetched from the router
-            because the composition failed.{" "}
-            <Link
-              href={`/${router.query.organizationSlug}/graph/${router.query.slug}`}
-              className={"font-bold underline"}
-            >
-              See details.
-            </Link>
-          </div>
+          {graphData?.graph?.compositionErrors && (
+            <CompositionErrorsDialog
+              errors={graphData?.graph?.compositionErrors}
+            />
+          )}
         </div>
       )}
       <div className="relative flex flex-col gap-y-6">
