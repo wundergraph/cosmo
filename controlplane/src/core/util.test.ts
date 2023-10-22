@@ -69,6 +69,30 @@ describe('SubgraphRepository', (ctx) => {
     expect(
       hasLabelsChanged(
         [
+          { key: 'key2', value: 'val2' },
+          { key: 'key2', value: 'val1' },
+        ],
+        [
+          { key: 'key2', value: 'val2' },
+          { key: 'key123', value: 'val1' },
+        ],
+      ),
+    ).toBe(true);
+    expect(
+      hasLabelsChanged(
+        [
+          { key: 'key2', value: 'val2' },
+          { key: 'key1', value: 'val1234' },
+        ],
+        [
+          { key: 'key2', value: 'val2' },
+          { key: 'key2', value: 'val2' },
+        ],
+      ),
+    ).toBe(true);
+    expect(
+      hasLabelsChanged(
+        [
           { key: 'key1', value: 'val1' },
           { key: 'key2', value: 'val2' },
         ],
