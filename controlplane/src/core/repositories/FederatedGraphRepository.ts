@@ -173,30 +173,6 @@ export class FederatedGraphRepository {
     });
   }
 
-  public async getLatestFederatedGraphComposability(targetId: string) {
-    const latestVersion = await this.db.query.schemaVersion.findFirst({
-      columns: {
-        compositionErrors: true,
-        isComposable: true,
-        createdAt: true,
-        id: true,
-      },
-      where: eq(schema.schemaVersion.targetId, targetId),
-      orderBy: desc(schema.schemaVersion.createdAt),
-    });
-
-    if (!latestVersion) {
-      return undefined;
-    }
-
-    return {
-      schemaVersionId: latestVersion.id,
-      isComposable: latestVersion.isComposable ?? false,
-      compositionErrors: latestVersion.compositionErrors ?? '',
-      createdAt: latestVersion.createdAt.toISOString(),
-    };
-  }
-
   public async list(opts: ListFilterOptions): Promise<FederatedGraphDTO[]> {
     const targets = await this.db.query.targets.findMany({
       where: and(eq(schema.targets.type, 'federated'), eq(schema.targets.organizationId, this.organizationId)),

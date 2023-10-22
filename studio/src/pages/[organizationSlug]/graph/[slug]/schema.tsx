@@ -124,8 +124,8 @@ const SchemaPage: NextPageWithLayout = () => {
               <BoltSlashIcon className="h-5 w-5 text-red-500" />
             </div>
             <div className="text-xs">
-              This version of the graph is not ready because the composition
-              failed. Please check the composition errors.
+              This version of the API schema does not include the latest from
+              some of your subgraphs because the composition failed.
             </div>
           </div>
           {graphData?.graph?.compositionErrors && (
