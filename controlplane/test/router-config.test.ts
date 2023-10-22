@@ -1,26 +1,8 @@
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
-import Fastify from 'fastify';
-import { createConnectTransport } from '@connectrpc/connect-node';
-import { createPromiseClient } from '@connectrpc/connect';
-import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
-import { fastifyConnectPlugin } from '@connectrpc/connect-fastify';
-import { pino } from 'pino';
-import { NodeService } from '@wundergraph/cosmo-connect/dist/node/v1/node_connect';
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { noQueryRootTypeError } from '@wundergraph/composition';
-import routes from '../src/core/routes';
-import database from '../src/core/plugins/database';
-import {
-  afterAllSetup,
-  beforeAllSetup,
-  createTestAuthenticator,
-  genID,
-  genUniqueLabel,
-  seedTest,
-} from '../src/core/test-util';
-import Keycloak from '../src/core/services/Keycloak';
-import { MockPlatformWebhookService } from '../src/core/webhooks/PlatformWebhookService';
+import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util';
 import { SetupTest } from './test-util';
 
 let dbname = '';
@@ -209,75 +191,14 @@ describe('Router Config', (ctx) => {
   });
 
   test('Should not return routerConfig if an invalid schema version is available', async (testContext) => {
-    const databaseConnectionUrl = `postgresql://postgres:changeme@localhost:5432/${dbname}`;
-    const server = Fastify();
-
-    await server.register(database, {
-      databaseConnectionUrl,
-      debugSQL: false,
-      runMigration: true,
-    });
-
-    testContext.onTestFailed(async () => {
-      await server.close();
-    });
-
-    const { authenticator, userTestData } = createTestAuthenticator();
-
-    const realm = 'test';
-    const apiUrl = 'http://localhost:8080';
-    const webBaseUrl = 'http://localhost:3000';
-    const clientId = 'studio';
-    const adminUser = 'admin';
-    const adminPassword = 'changeme';
-
-    const keycloakClient = new Keycloak({
-      apiUrl,
-      realm,
-      clientId,
-      adminUser,
-      adminPassword,
-    });
-
-    const platformWebhooks = new MockPlatformWebhookService();
-
-    await server.register(fastifyConnectPlugin, {
-      routes: routes({
-        db: server.db,
-        logger: pino(),
-        authenticator,
-        jwtSecret: 'secret',
-        keycloakRealm: realm,
-        keycloakClient,
-        platformWebhooks,
-        webBaseUrl,
-        slack: {
-          clientID: '',
-          clientSecret: '',
-        },
-      }),
-    });
-
-    const addr = await server.listen({
-      port: 0,
-    });
-
-    await seedTest(databaseConnectionUrl, userTestData);
-
-    const transport = createConnectTransport({
-      httpVersion: '1.1',
-      baseUrl: addr,
-    });
-
-    const platformClient = createPromiseClient(PlatformService, transport);
-    const nodeClient = createPromiseClient(NodeService, transport);
+    const { client, nodeClient, server } = await SetupTest(testContext, dbname);
 
     const pandasSubgraph = genID('pandas');
     const usersSubgraph = genID('users');
     const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
 
-    const createFedGraphRes = await platformClient.createFederatedGraph({
+    const createFedGraphRes = await client.createFederatedGraph({
       name: fedGraphName,
       routingUrl: 'http://localhost:8080',
       labelMatchers: [joinLabel(label)],
@@ -285,7 +206,7 @@ describe('Router Config', (ctx) => {
 
     expect(createFedGraphRes.response?.code).toBe(EnumStatusCode.OK);
 
-    const createPandasSubgraph = await platformClient.createFederatedSubgraph({
+    const createPandasSubgraph = await client.createFederatedSubgraph({
       name: pandasSubgraph,
       labels: [label],
       routingUrl: 'http://localhost:8081',
@@ -293,7 +214,7 @@ describe('Router Config', (ctx) => {
 
     expect(createPandasSubgraph.response?.code).toBe(EnumStatusCode.OK);
 
-    const publishPandaResp = await platformClient.publishFederatedSubgraph({
+    const publishPandaResp = await client.publishFederatedSubgraph({
       name: pandasSubgraph,
       schema: Uint8Array.from(
         Buffer.from(`
@@ -309,7 +230,7 @@ describe('Router Config', (ctx) => {
     expect(publishPandaResp.compositionErrors).toHaveLength(1);
     expect(publishPandaResp.compositionErrors[0].message).toStrictEqual(noQueryRootTypeError.message);
 
-    const createUsersSubgraph = await platformClient.createFederatedSubgraph({
+    const createUsersSubgraph = await client.createFederatedSubgraph({
       name: usersSubgraph,
       labels: [label],
       routingUrl: 'http://localhost:8082',
@@ -317,7 +238,7 @@ describe('Router Config', (ctx) => {
 
     expect(createUsersSubgraph.response?.code).toBe(EnumStatusCode.OK);
 
-    const publishUsersResp = await platformClient.publishFederatedSubgraph({
+    let publishUsersResp = await client.publishFederatedSubgraph({
       name: pandasSubgraph,
       schema: Uint8Array.from(
         Buffer.from(`
@@ -333,7 +254,7 @@ describe('Router Config', (ctx) => {
 
     expect(publishUsersResp.response?.code).toBe(EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED);
 
-    const graph = await platformClient.getFederatedGraphByName({
+    const graph = await client.getFederatedGraphByName({
       name: fedGraphName,
     });
 
@@ -343,12 +264,40 @@ describe('Router Config', (ctx) => {
     );
     expect(graph.graph?.isComposable).toBe(false);
 
-    const resp = await nodeClient.getLatestValidRouterConfig({
+    let resp = await nodeClient.getLatestValidRouterConfig({
       graphName: fedGraphName,
     });
 
     expect(resp.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
     expect(resp.config).toBeUndefined();
+
+    // This will fix the schema
+
+    publishUsersResp = await client.publishFederatedSubgraph({
+      name: usersSubgraph,
+      schema: Uint8Array.from(
+        Buffer.from(`
+        type User @key(fields: "email") {
+          email: ID!
+          name: String
+          totalProductsCreated: Int
+        }
+        
+        type Query {
+          user: User
+        }
+      `),
+      ),
+    });
+
+    expect(publishUsersResp.response?.code).toBe(EnumStatusCode.OK);
+
+    resp = await nodeClient.getLatestValidRouterConfig({
+      graphName: fedGraphName,
+    });
+
+    expect(resp.response?.code).toBe(EnumStatusCode.OK);
+    expect(resp.config).toBeDefined();
 
     await server.close();
   });

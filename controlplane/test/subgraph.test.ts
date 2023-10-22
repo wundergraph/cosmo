@@ -1,26 +1,9 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
-import Fastify from 'fastify';
-import { createConnectTransport } from '@connectrpc/connect-node';
-import { createPromiseClient } from '@connectrpc/connect';
-import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
-import { fastifyConnectPlugin } from '@connectrpc/connect-fastify';
 import { EnumStatusCode, GraphQLSubscriptionProtocol } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { pino } from 'pino';
 import { joinLabel } from '@wundergraph/cosmo-shared';
-import routes from '../src/core/routes';
-import database from '../src/core/plugins/database';
-import {
-  afterAllSetup,
-  beforeAllSetup,
-  createTestAuthenticator,
-  genID,
-  genUniqueLabel,
-  seedTest,
-} from '../src/core/test-util';
-import Keycloak from '../src/core/services/Keycloak';
-import { MockPlatformWebhookService } from '../src/core/webhooks/PlatformWebhookService';
+import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util';
 import { SetupTest } from './test-util';
 
 let dbname = '';
@@ -36,7 +19,7 @@ describe('Subgraph', (ctx) => {
 
   test('Should be able to create a subgraph and publish the schema', async (testContext) => {
     const { client, server } = await SetupTest(testContext, dbname);
-    
+
     const subgraphName = genID('subgraph1');
     const label = genUniqueLabel();
 
@@ -59,69 +42,10 @@ describe('Subgraph', (ctx) => {
   });
 
   test('Should create a subgraph when subgraph did not exist before on publish', async (testContext) => {
-    const databaseConnectionUrl = `postgresql://postgres:changeme@localhost:5432/${dbname}`;
-    const server = Fastify();
-
-    await server.register(database, {
-      databaseConnectionUrl,
-      debugSQL: false,
-      runMigration: true,
-    });
-
-    testContext.onTestFailed(async () => {
-      await server.close();
-    });
-
-    const { authenticator, userTestData } = createTestAuthenticator();
-
-    const realm = 'test';
-    const apiUrl = 'http://localhost:8080';
-    const webBaseUrl = 'http://localhost:3000';
-    const clientId = 'studio';
-    const adminUser = 'admin';
-    const adminPassword = 'changeme';
-
-    const keycloakClient = new Keycloak({
-      apiUrl,
-      realm,
-      clientId,
-      adminUser,
-      adminPassword,
-    });
-
-    const platformWebhooks = new MockPlatformWebhookService();
-
-    await server.register(fastifyConnectPlugin, {
-      routes: routes({
-        db: server.db,
-        logger: pino(),
-        authenticator,
-        jwtSecret: 'secret',
-        keycloakRealm: realm,
-        keycloakClient,
-        platformWebhooks,
-        webBaseUrl,
-        slack: {
-          clientID: '',
-          clientSecret: '',
-        },
-      }),
-    });
-
-    const addr = await server.listen({
-      port: 0,
-    });
-
-    await seedTest(databaseConnectionUrl, userTestData);
-
-    const transport = createConnectTransport({
-      httpVersion: '1.1',
-      baseUrl: addr,
-    });
+    const { client, server } = await SetupTest(testContext, dbname);
 
     const pandasSchema = await readFile(join(process.cwd(), 'test/graphql/federationV1/pandas.graphql'));
 
-    const client = createPromiseClient(PlatformService, transport);
     const federatedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
 
@@ -154,69 +78,10 @@ describe('Subgraph', (ctx) => {
   });
 
   test('Should update subgraph when subgraph already exists on publish', async (testContext) => {
-    const databaseConnectionUrl = `postgresql://postgres:changeme@localhost:5432/${dbname}`;
-    const server = Fastify();
-
-    await server.register(database, {
-      databaseConnectionUrl,
-      debugSQL: false,
-      runMigration: true,
-    });
-
-    testContext.onTestFailed(async () => {
-      await server.close();
-    });
-
-    const { authenticator, userTestData } = createTestAuthenticator();
-
-    const realm = 'test';
-    const apiUrl = 'http://localhost:8080';
-    const webBaseUrl = 'http://localhost:3000';
-    const clientId = 'studio';
-    const adminUser = 'admin';
-    const adminPassword = 'changeme';
-
-    const keycloakClient = new Keycloak({
-      apiUrl,
-      realm,
-      clientId,
-      adminUser,
-      adminPassword,
-    });
-
-    const platformWebhooks = new MockPlatformWebhookService();
-
-    await server.register(fastifyConnectPlugin, {
-      routes: routes({
-        db: server.db,
-        logger: pino(),
-        authenticator,
-        jwtSecret: 'secret',
-        keycloakRealm: realm,
-        keycloakClient,
-        platformWebhooks,
-        webBaseUrl,
-        slack: {
-          clientID: '',
-          clientSecret: '',
-        },
-      }),
-    });
-
-    const addr = await server.listen({
-      port: 0,
-    });
-
-    await seedTest(databaseConnectionUrl, userTestData);
-
-    const transport = createConnectTransport({
-      httpVersion: '1.1',
-      baseUrl: addr,
-    });
+    const { client, nodeClient, server } = await SetupTest(testContext, dbname);
 
     const pandasSchema = await readFile(join(process.cwd(), 'test/graphql/federationV1/pandas.graphql'));
 
-    const client = createPromiseClient(PlatformService, transport);
     const federatedGraphName = genID('fedGraph');
     const label1 = genUniqueLabel('label1');
     const label2 = genUniqueLabel('label2');
