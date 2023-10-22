@@ -395,26 +395,32 @@ export class FederatedGraphRepository {
     };
   }
 
-  public async getLatestSdlOfFederatedGraph(name: string) {
-    const latestVersion = await this.db
+  public async getLatestValidSdlOfFederatedGraph(name: string) {
+    const latestValidVersion = await this.db
       .select({
         name: targets.name,
         schemaSDL: schemaVersion.schemaSDL,
       })
       .from(targets)
       .innerJoin(federatedGraphs, eq(federatedGraphs.targetId, targets.id))
-      .leftJoin(schemaVersion, eq(schemaVersion.id, federatedGraphs.composedSchemaVersionId))
+      .innerJoin(schemaVersion, eq(schema.schemaVersion.targetId, targets.id))
       .where(
-        and(eq(targets.type, 'federated'), eq(targets.organizationId, this.organizationId), eq(targets.name, name)),
+        and(
+          eq(targets.type, 'federated'),
+          eq(targets.organizationId, this.organizationId),
+          eq(targets.name, name),
+          eq(schemaVersion.isComposable, true),
+        ),
       )
+      .orderBy(desc(schemaVersion.createdAt))
       .limit(1)
       .execute();
 
-    if (latestVersion.length === 0) {
+    if (latestValidVersion.length === 0) {
       return undefined;
     }
 
-    return latestVersion[0].schemaSDL;
+    return latestValidVersion[0].schemaSDL;
   }
 
   public createFederatedGraphChangelog(data: { schemaVersionID: string; changes: SchemaChange[] }) {

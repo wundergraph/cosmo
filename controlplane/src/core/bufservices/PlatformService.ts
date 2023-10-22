@@ -350,7 +350,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<GetFederatedGraphSDLByNameResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const repo = new FederatedGraphRepository(opts.db, authContext.organizationId);
-        const sdl = await repo.getLatestSdlOfFederatedGraph(req.name);
+        const sdl = await repo.getLatestValidSdlOfFederatedGraph(req.name);
         if (sdl) {
           return {
             response: {
