@@ -1,12 +1,22 @@
-import { docsBaseURL } from '@/lib/constants';
-import { CommandLineIcon } from '@heroicons/react/24/outline';
-import { formatDistanceToNow } from 'date-fns';
-import Link from 'next/link';
-import { FederatedGraph, Subgraph } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { EmptyState } from './empty-state';
-import { Badge } from './ui/badge';
-import { CLISteps } from './ui/cli';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
+import { docsBaseURL } from "@/lib/constants";
+import { CommandLineIcon } from "@heroicons/react/24/outline";
+import { formatDistanceToNow } from "date-fns";
+import Link from "next/link";
+import {
+  FederatedGraph,
+  Subgraph,
+} from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
+import { EmptyState } from "./empty-state";
+import { Badge } from "./ui/badge";
+import { CLISteps } from "./ui/cli";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "./ui/table";
 
 export const Empty = ({ graph }: { graph?: FederatedGraph }) => {
   let label = "team=A";
@@ -34,12 +44,9 @@ export const Empty = ({ graph }: { graph?: FederatedGraph }) => {
         <CLISteps
           steps={[
             {
-              description: "Create a subgraph",
-              command: `npx wgc subgraph create users --label ${label} --routing-url http://localhost:4003/graphql`,
-            },
-            {
-              description: "Publish schema to the subgraph",
-              command: "npx wgc subgraph publish users --schema users.graphql",
+              description:
+                "Publish a subgraph. If the subgraph does not exist, it will be created.",
+              command: `npx wgc subgraph publish users --schema users.graphql --label ${label} --routing-url http://localhost:4003/graphql`,
             },
           ]}
         />

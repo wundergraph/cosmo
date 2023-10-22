@@ -45,11 +45,11 @@ describe('DeleteSubgraph', (ctx) => {
 
     expect(publishFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
 
-    // delete the subgraph
+    // delete the subgraph because it was the only one it produced a composition error
     const deleteFederatedSubgraphResp = await client.deleteFederatedSubgraph({
       subgraphName,
     });
-    expect(deleteFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
+    expect(deleteFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED);
 
     // after deletion of subgraph verify if the subgraph was deleted
     const getSubgraphResp = await client.getSubgraphByName({
@@ -124,11 +124,11 @@ describe('DeleteSubgraph', (ctx) => {
     expect(getGraph2Resp.subgraphs.length).toBe(1);
     expect(getGraph2Resp.subgraphs[0].name).toBe(subgraphName);
 
-    // delete the subgraph
+    // delete the subgraph because it was the only one it produced a composition error
     const deleteFederatedSubgraphResp = await client.deleteFederatedSubgraph({
       subgraphName,
     });
-    expect(deleteFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
+    expect(deleteFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED);
 
     // after deletion of subgraph verify if the subgraph was deleted
     // and don't exist on both federated graphs

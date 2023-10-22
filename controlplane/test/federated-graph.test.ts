@@ -34,7 +34,7 @@ describe('Federated Graph', (ctx) => {
 
   test('Should be able to create a federated graph from subgraphs with matching labels', async (testContext) => {
     const { client, server } = await SetupTest(testContext, dbname);
-    
+
     const subgraph1Name = genID('subgraph1');
     const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
@@ -539,18 +539,19 @@ describe('Federated Graph', (ctx) => {
     expect(graph.sdl).toBeDefined();
     expect(graph.sdl).not.toBe('');
 
-    // deleting the subgraph
+    // delete the subgraph because it was the only one it produced a composition error
     deleteSubgraphResp = await client.deleteFederatedSubgraph({
       subgraphName: subgraph2Name,
     });
-    expect(deleteSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
+    expect(deleteSubgraphResp.response?.code).toBe(EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED);
 
     // fetching the federated schema after deleting both the subgraphs
+    // because a federated graph with no subgraphs is not allowed the last valid schema should be returned
     graph = await client.getFederatedGraphSDLByName({
       name: fedGraphName,
     });
-    expect(graph.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
-    expect(graph.sdl).not.toBeDefined();
+    expect(graph.response?.code).toBe(EnumStatusCode.OK);
+    expect(graph.sdl).toBeDefined();
 
     await server.close();
   });

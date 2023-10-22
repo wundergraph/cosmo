@@ -112,6 +112,14 @@ export class SubgraphRepository {
     });
   }
 
+  public static LabelChanged(prev: Label[], cur: Label[]): boolean {
+    if (prev.length !== cur.length) {
+      return true;
+    }
+    // check if the labels are the same
+    return prev.some((l1) => !cur.some((l2) => joinLabel(l1) === joinLabel(l2)));
+  }
+
   public async update(
     data: UpdateSubgraphOptions,
   ): Promise<{ compositionErrors: PlainMessage<CompositionError>[]; updatedFederatedGraphs: FederatedGraphDTO[] }> {
@@ -175,12 +183,7 @@ export class SubgraphRepository {
 
       let labelChanged = false;
       if (data.labels && data.labels.length > 0) {
-        if (data.labels.length === subgraph.labels.length) {
-          // check if the labels are the same
-          labelChanged = data.labels.some((l1) => !subgraph.labels.some((l2) => joinLabel(l1) === joinLabel(l2)));
-        } else {
-          labelChanged = true;
-        }
+        labelChanged = SubgraphRepository.LabelChanged(subgraph.labels, data.labels);
       }
 
       // We need to compose and build a new router config also on routingUrl and labels changes
