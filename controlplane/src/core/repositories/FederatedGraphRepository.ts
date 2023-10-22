@@ -336,7 +336,7 @@ export class FederatedGraphRepository {
           targetId: fedGraph.targetId,
           schemaSDL: composedSDL,
           routerConfig: routerConfig || null,
-          isComposable: compositionErrorString === '',
+          isComposable: compositionErrorString === '' && !!composedSDL,
           compositionErrors: compositionErrorString,
         })
         .returning({

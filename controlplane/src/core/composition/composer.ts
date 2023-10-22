@@ -84,15 +84,7 @@ export class Composer {
         published: true,
       });
 
-      if (subgraphs.length === 0) {
-        return {
-          argumentConfigurations: [],
-          name,
-          targetID,
-          errors: [],
-          subgraphs: [],
-        };
-      }
+      // A federated graph must have at least one subgraph. Let the composition fail if there are none.
 
       const { errors, federationResult: result } = composeSubgraphs(
         subgraphs.map((s) => ({
