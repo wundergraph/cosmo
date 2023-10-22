@@ -12,7 +12,7 @@ import { baseHeaders } from '../../../core/config.js';
 export default (opts: BaseCommandOptions) => {
   const schemaPush = new Command('publish');
   schemaPush.description(
-    "Publishes a subgraph on the control plane. If the subgraph doesn't exists, it will be created.\nIf the schema leads to composition errors, the errors will be visible in the Studio.\nThe router will continue to work with the latest valid schema.",
+    "Publishes a subgraph on the control plane. If the subgraph doesn't exists, it will be created.\nIf the schema leads to composition errors, the errors will be visible in the Studio.\nThe router will continue to work with the latest valid schema.\nConsider using the 'wgc subgraph check' command to check for composition errors before publishing.",
   );
   schemaPush.argument(
     '<name>',
