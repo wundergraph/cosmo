@@ -116,8 +116,19 @@ export class SubgraphRepository {
     if (prev.length !== cur.length) {
       return true;
     }
-    // check if the labels are the same
-    return prev.some((l1) => !cur.some((l2) => joinLabel(l1) === joinLabel(l2)));
+
+    // This works fine because we don't allow comma in the label key or value
+    // so we can use it as a separator to compare the labels
+    return (
+      prev
+        .map((p) => joinLabel(p))
+        .sort()
+        .join(',') !==
+      cur
+        .map((c) => joinLabel(c))
+        .sort()
+        .join(',')
+    );
   }
 
   public async update(

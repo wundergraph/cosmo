@@ -30,29 +30,42 @@ describe('SubgraphRepository', (ctx) => {
     expect(
       SubgraphRepository.LabelChanged(
         [
+          { key: 'key3', value: 'val3' },
           { key: 'key1', value: 'val1' },
           { key: 'key2', value: 'val2' },
         ],
         [
           { key: 'key2', value: 'val2' },
           { key: 'key1', value: 'val1' },
+          { key: 'key3', value: 'val3' },
         ],
       ),
     ).toBe(false);
+
     expect(
       SubgraphRepository.LabelChanged(
         [
-          { key: 'key3', value: 'val3' },
-          { key: 'key1', value: 'val1' },
+          { key: 'key1', value: 'val1234' },
           { key: 'key2', value: 'val2' },
         ],
         [
           { key: 'key2', value: 'val2' },
           { key: 'key1', value: 'val1' },
-          { key: 'key3', value: 'val3' },
         ],
       ),
-    ).toBe(false);
+    ).toBe(true);
+    expect(
+      SubgraphRepository.LabelChanged(
+        [
+          { key: 'key2', value: 'val2' },
+          { key: 'key2', value: 'val2' },
+        ],
+        [
+          { key: 'key2', value: 'val2' },
+          { key: 'key1', value: 'val1234' },
+        ],
+      ),
+    ).toBe(true);
     expect(
       SubgraphRepository.LabelChanged(
         [
