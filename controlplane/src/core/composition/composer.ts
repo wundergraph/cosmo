@@ -40,8 +40,9 @@ export class Composer {
   async deployComposition(composedGraph: ComposedFederatedGraph) {
     const hasCompositionErrors = composedGraph.errors.length > 0;
 
-    // Build router config when composed schema is valid
     let routerConfigJson: JsonValue = null;
+
+    // Build router config when composed schema is valid
     if (!hasCompositionErrors && composedGraph.composedSchema) {
       const routerConfig = buildRouterConfig({
         argumentConfigurations: composedGraph.argumentConfigurations,
@@ -60,6 +61,7 @@ export class Composer {
 
     const prevFederatedSDL = await this.federatedGraphRepo.getLatestSdlOfFederatedGraph(composedGraph.name);
 
+    // Only create changelog when the composed schema is valid
     if (!hasCompositionErrors && composedGraph.composedSchema && updatedFederatedGraph?.composedSchemaVersionId) {
       const schemaChanges = await getDiffBetweenGraphs(prevFederatedSDL || '', composedGraph.composedSchema);
 
