@@ -51,6 +51,7 @@ import {
   UpdateOrganizationWebhookConfigResponse,
   UpdateSubgraphResponse,
   WhoAmIResponse,
+  GetFederatedSubgraphSDLByNameResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 
 import { OrganizationEventName, PlatformEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
@@ -372,7 +373,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         service: ctx.service.typeName,
         method: ctx.method.name,
       });
-      return handleError<PlainMessage<GetFederatedGraphSDLByNameResponse>>(logger, async () => {
+      return handleError<PlainMessage<GetFederatedSubgraphSDLByNameResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const subgraph = await subgraphRepo.byName(req.name);

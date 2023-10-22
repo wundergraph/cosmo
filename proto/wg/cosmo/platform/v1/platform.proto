@@ -906,7 +906,7 @@ service PlatformService {
   rpc GetFederatedGraphs(GetFederatedGraphsRequest) returns (GetFederatedGraphsResponse) {}
   // GetFederatedGraphByName returns the federated graph by name.
   rpc GetFederatedGraphByName(GetFederatedGraphByNameRequest) returns (GetFederatedGraphByNameResponse) {}
-  // GetFederatedGraphSDLByName returns the SDL of the federated graph by name.
+  // GetFederatedGraphSDLByName returns the latest valid SDL of the federated graph by name.
   rpc GetFederatedGraphSDLByName(GetFederatedGraphSDLByNameRequest) returns (GetFederatedGraphSDLByNameResponse) {}
   // GetSubgraphs returns the list of subgraphs.
   rpc GetSubgraphs(GetSubgraphsRequest) returns (GetSubgraphsResponse) {}
