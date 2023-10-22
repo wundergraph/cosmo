@@ -76,22 +76,8 @@ import type { RouterOptions } from '../routes.js';
 import { ApiKeyGenerator } from '../services/ApiGenerator.js';
 import ApolloMigrator from '../services/ApolloMigrator.js';
 import Slack from '../services/Slack.js';
-import { handleError, isValidLabelMatchers, isValidLabels } from '../util.js';
+import { formatSubscriptionProtocol, handleError, isValidLabelMatchers, isValidLabels } from '../util.js';
 import { FederatedGraphSchemaUpdate, OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
-
-const formatSubscriptionProtocol = (protocol: GraphQLSubscriptionProtocol) => {
-  switch (protocol) {
-    case GraphQLSubscriptionProtocol.GRAPHQL_SUBSCRIPTION_PROTOCOL_WS: {
-      return 'ws';
-    }
-    case GraphQLSubscriptionProtocol.GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE: {
-      return 'sse';
-    }
-    case GraphQLSubscriptionProtocol.GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE_POST: {
-      return 'sse_post';
-    }
-  }
-};
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {

@@ -1,10 +1,10 @@
 import { describe, expect, test } from 'vitest';
-import { SubgraphRepository } from './SubgraphRepository.js';
+import { hasLabelsChanged } from './util.js';
 
 describe('SubgraphRepository', (ctx) => {
   test('Should identify if labels has changed', () => {
     expect(
-      SubgraphRepository.LabelChanged(
+      hasLabelsChanged(
         [
           { key: 'key1', value: 'val1' },
           { key: 'key2', value: 'val2' },
@@ -16,7 +16,7 @@ describe('SubgraphRepository', (ctx) => {
       ),
     ).toBe(false);
     expect(
-      SubgraphRepository.LabelChanged(
+      hasLabelsChanged(
         [
           { key: 'key2', value: 'val2' },
           { key: 'key1', value: 'val1' },
@@ -28,7 +28,7 @@ describe('SubgraphRepository', (ctx) => {
       ),
     ).toBe(false);
     expect(
-      SubgraphRepository.LabelChanged(
+      hasLabelsChanged(
         [
           { key: 'key3', value: 'val3' },
           { key: 'key1', value: 'val1' },
@@ -43,7 +43,7 @@ describe('SubgraphRepository', (ctx) => {
     ).toBe(false);
 
     expect(
-      SubgraphRepository.LabelChanged(
+      hasLabelsChanged(
         [
           { key: 'key1', value: 'val1234' },
           { key: 'key2', value: 'val2' },
@@ -55,7 +55,7 @@ describe('SubgraphRepository', (ctx) => {
       ),
     ).toBe(true);
     expect(
-      SubgraphRepository.LabelChanged(
+      hasLabelsChanged(
         [
           { key: 'key2', value: 'val2' },
           { key: 'key2', value: 'val2' },
@@ -67,7 +67,7 @@ describe('SubgraphRepository', (ctx) => {
       ),
     ).toBe(true);
     expect(
-      SubgraphRepository.LabelChanged(
+      hasLabelsChanged(
         [
           { key: 'key1', value: 'val1' },
           { key: 'key2', value: 'val2' },
@@ -76,7 +76,7 @@ describe('SubgraphRepository', (ctx) => {
       ),
     ).toBe(true);
     expect(
-      SubgraphRepository.LabelChanged(
+      hasLabelsChanged(
         [],
         [
           { key: 'key1', value: 'val1' },

@@ -13,7 +13,7 @@ import {
   SchemaCheckDetailsDTO,
   SubgraphDTO,
 } from '../../types/index.js';
-import { normalizeLabels } from '../util.js';
+import { hasLabelsChanged, normalizeLabels } from '../util.js';
 import { Composer } from '../composition/composer.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 
@@ -112,25 +112,6 @@ export class SubgraphRepository {
     });
   }
 
-  public static LabelChanged(prev: Label[], cur: Label[]): boolean {
-    if (prev.length !== cur.length) {
-      return true;
-    }
-
-    // This works fine because we don't allow comma in the label key or value,
-    // so we can use it as a separator to compare the labels
-    return (
-      prev
-        .map((p) => joinLabel(p))
-        .sort()
-        .join(',') !==
-      cur
-        .map((c) => joinLabel(c))
-        .sort()
-        .join(',')
-    );
-  }
-
   public async update(
     data: UpdateSubgraphOptions,
   ): Promise<{ compositionErrors: PlainMessage<CompositionError>[]; updatedFederatedGraphs: FederatedGraphDTO[] }> {
@@ -194,7 +175,7 @@ export class SubgraphRepository {
 
       let labelChanged = false;
       if (data.labels && data.labels.length > 0) {
-        labelChanged = SubgraphRepository.LabelChanged(subgraph.labels, data.labels);
+        labelChanged = hasLabelsChanged(subgraph.labels, data.labels);
       }
 
       // We need to compose and build a new router config also on routingUrl and labels changes
