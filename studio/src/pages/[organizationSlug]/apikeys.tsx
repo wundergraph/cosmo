@@ -503,22 +503,25 @@ const APIKeysPage: NextPageWithLayout = () => {
                 Learn more
               </Link>
             </p>
-            <CreateAPIKey
-              apiKey={apiKey}
-              setApiKey={setApiKey}
-              open={openApiKeyCreatedDialog}
-              setOpen={setOpenApiKeyCreatedDialog}
-            />
+            {!user?.currentOrganization.roles.includes("viewer") && (
+              <CreateAPIKey
+                apiKey={apiKey}
+                setApiKey={setApiKey}
+                open={openApiKeyCreatedDialog}
+                setOpen={setOpenApiKeyCreatedDialog}
+              />
+            )}
           </div>
-          {deleteApiKeyName && (
-            <DeleteAPIKeyDialog
-              apiKeyName={deleteApiKeyName}
-              refresh={refetch}
-              open={openDeleteDialog}
-              setOpen={setOpenDeleteDialog}
-              setDeleteApiKeyName={setDeleteApiKeyName}
-            />
-          )}
+          {deleteApiKeyName &&
+            !user?.currentOrganization.roles.includes("viewer") && (
+              <DeleteAPIKeyDialog
+                apiKeyName={deleteApiKeyName}
+                refresh={refetch}
+                open={openDeleteDialog}
+                setOpen={setOpenDeleteDialog}
+                setDeleteApiKeyName={setDeleteApiKeyName}
+              />
+            )}
           <Table>
             <TableHeader>
               <TableRow>
@@ -527,9 +530,11 @@ const APIKeysPage: NextPageWithLayout = () => {
                 <TableHead>Expires At</TableHead>
                 <TableHead>Created At</TableHead>
                 <TableHead>Last Used At</TableHead>
-                <TableHead className="flex items-center justify-center">
-                  Actions
-                </TableHead>
+                {!user?.currentOrganization.roles.includes("viewer") && (
+                  <TableHead className="flex items-center justify-center">
+                    Actions
+                  </TableHead>
+                )}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -555,27 +560,31 @@ const APIKeysPage: NextPageWithLayout = () => {
                             ? formatDateTime(new Date(lastUsedAt))
                             : "Never"}
                         </TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <div className="flex justify-center">
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon">
-                                  <EllipsisVerticalIcon className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                            </div>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  setDeleteApiKeyName(name);
-                                  setOpenDeleteDialog(true);
-                                }}
-                              >
-                                Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
+                        {!user?.currentOrganization.roles.includes(
+                          "viewer"
+                        ) && (
+                          <TableCell>
+                            <DropdownMenu>
+                              <div className="flex justify-center">
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon">
+                                    <EllipsisVerticalIcon className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                              </div>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    setDeleteApiKeyName(name);
+                                    setOpenDeleteDialog(true);
+                                  }}
+                                >
+                                  Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        )}
                       </TableRow>
                     );
                   }

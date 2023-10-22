@@ -265,10 +265,10 @@ export class OrganizationRepository {
     return insertedMember[0];
   }
 
-  public async addOrganizationMemberRoles(input: { memberID: string; roles: ('admin' | 'member')[] }) {
+  public async addOrganizationMemberRoles(input: { memberID: string; roles: MemberRole[] }) {
     const values: {
       organizationMemberId: string;
-      role: 'admin' | 'member';
+      role: MemberRole;
     }[] = [];
 
     for (const role of input.roles) {
@@ -293,10 +293,7 @@ export class OrganizationRepository {
       .execute();
   }
 
-  public async getOrganizationMemberRoles(input: {
-    userID: string;
-    organizationID: string;
-  }): Promise<('admin' | 'member')[]> {
+  public async getOrganizationMemberRoles(input: { userID: string; organizationID: string }): Promise<MemberRole[]> {
     const userRoles = await this.db
       .select({
         role: organizationMemberRoles.role,

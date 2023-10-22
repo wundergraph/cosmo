@@ -89,6 +89,28 @@ try {
     },
   );
 
+  const devGroup = await keycloakClient.client.groups.createChildGroup(
+    {
+      realm,
+      id: organizationGroup.id,
+    },
+    {
+      name: 'dev',
+      realmRoles: ['dev'],
+    },
+  );
+
+  const viewerGroup = await keycloakClient.client.groups.createChildGroup(
+    {
+      realm,
+      id: organizationGroup.id,
+    },
+    {
+      name: 'viewer',
+      realmRoles: ['viewer'],
+    },
+  );
+
   const keycloakUserID = await keycloakClient.addKeycloakUser({
     realm,
     email: user.email,

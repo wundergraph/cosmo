@@ -28,6 +28,8 @@ export default class Keycloak {
       password: this.adminPassword,
       clientId: 'admin-cli',
     });
+
+    // this.client.identityProviders.creat
   }
 
   public async roleExists({ realm, roleName }: { realm?: string; roleName: string }): Promise<boolean> {

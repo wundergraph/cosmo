@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema.js';
 import { users } from '../../db/schema.js';
-import { UserDTO } from '../../types/index.js';
+import { MemberRole, UserDTO } from '../../types/index.js';
 import { OrganizationRepository } from './OrganizationRepository.js';
 
 /**
@@ -84,5 +84,25 @@ export class UserRepository {
 
       await orgRepo.addOrganizationMemberRoles({ memberID: insertedMember.id, roles: ['member'] });
     });
+  }
+
+  // checks if the user has the right roles to perform the operation
+  public async checkUserAccess(input: { userID?: string; organizationID: string; rolesToBe: MemberRole[] }) {
+    const orgRepo = new OrganizationRepository(this.db);
+
+    if (!input.userID) {
+      return true;
+    }
+
+    const roles = await orgRepo.getOrganizationMemberRoles({
+      userID: input.userID,
+      organizationID: input.organizationID,
+    });
+    for (const role of input.rolesToBe) {
+      if (roles.includes(role)) {
+        return true;
+      }
+    }
+    return false;
   }
 }

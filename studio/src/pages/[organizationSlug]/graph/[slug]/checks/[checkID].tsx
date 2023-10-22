@@ -1,3 +1,4 @@
+import { UserContext } from "@/components/app-provider";
 import { getCheckBadge, getCheckIcon } from "@/components/check-badge-icon";
 import { EmptyState } from "@/components/empty-state";
 import { GraphContext, getGraphLayout } from "@/components/layout/graph-layout";
@@ -5,14 +6,6 @@ import { PageHeader } from "@/components/layout/head";
 import { TitleLayout } from "@/components/layout/title-layout";
 import { SchemaViewer } from "@/components/schema-viewer";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,6 +17,14 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Loader } from "@/components/ui/loader";
 import {
   Table,
@@ -46,7 +47,6 @@ import {
   forceCheckSuccess,
   getCheckDetails,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { format } from "date-fns";
 import { useRouter } from "next/router";
 import { useCallback, useContext } from "react";
 
@@ -54,6 +54,7 @@ const CheckDetailsPage: NextPageWithLayout = () => {
   const graphContext = useContext(GraphContext);
   const router = useRouter();
   const { toast } = useToast();
+  const user = useContext(UserContext);
 
   const id = router.query.checkID as string;
 
@@ -159,7 +160,8 @@ const CheckDetailsPage: NextPageWithLayout = () => {
           </div>
           {!data.check.isForcedSuccess &&
             data.check.isBreaking &&
-            data.check.isComposable && (
+            data.check.isComposable &&
+            !user?.currentOrganization.roles.includes("viewer") && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button

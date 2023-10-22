@@ -106,6 +106,23 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const orgWebhooks = new OrganizationWebhookService(opts.db, authContext.organizationId, opts.logger);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
+        const userRepo = new UserRepository(opts.db);
+
+        const hasAccess = await userRepo.checkUserAccess({
+          userID: authContext.userId,
+          organizationID: authContext.organizationId,
+          rolesToBe: ['admin', 'member'],
+        });
+
+        if (!hasAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+            compositionErrors: [],
+          };
+        }
 
         if (await fedGraphRepo.exists(req.name)) {
           return {
@@ -194,6 +211,22 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<CreateFederatedSubgraphResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const repo = new SubgraphRepository(opts.db, authContext.organizationId);
+        const userRepo = new UserRepository(opts.db);
+
+        const hasAccess = await userRepo.checkUserAccess({
+          userID: authContext.userId,
+          organizationID: authContext.organizationId,
+          rolesToBe: ['admin', 'member'],
+        });
+
+        if (!hasAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+          };
+        }
 
         if (await repo.exists(req.name)) {
           return {
@@ -486,6 +519,25 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const orgRepo = new OrganizationRepository(opts.db);
         const schemaCheckRepo = new SchemaCheckRepository(opts.db);
+        const userRepo = new UserRepository(opts.db);
+
+        const hasAccess = await userRepo.checkUserAccess({
+          userID: authContext.userId,
+          organizationID: authContext.organizationId,
+          rolesToBe: ['admin', 'member'],
+        });
+
+        if (!hasAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+            breakingChanges: [],
+            nonBreakingChanges: [],
+            compositionErrors: [],
+          };
+        }
 
         const org = await orgRepo.byId(authContext.organizationId);
         if (!org) {
@@ -604,6 +656,24 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const subgraph = await subgraphRepo.byName(req.subgraphName);
         const compChecker = new Composer(fedGraphRepo, subgraphRepo);
+        const userRepo = new UserRepository(opts.db);
+
+        const hasAccess = await userRepo.checkUserAccess({
+          userID: authContext.userId,
+          organizationID: authContext.organizationId,
+          rolesToBe: ['admin', 'member'],
+        });
+
+        if (!hasAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+            modified: false,
+            schema: '',
+          };
+        }
 
         if (!process.env.OPENAI_API_KEY) {
           return {
@@ -723,6 +793,23 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const compChecker = new Composer(fedGraphRepo, subgraphRepo);
         const subgraph = await subgraphRepo.byName(req.name);
         const orgWebhooks = new OrganizationWebhookService(opts.db, authContext.organizationId, opts.logger);
+        const userRepo = new UserRepository(opts.db);
+
+        const hasAccess = await userRepo.checkUserAccess({
+          userID: authContext.userId,
+          organizationID: authContext.organizationId,
+          rolesToBe: ['admin', 'member'],
+        });
+
+        if (!hasAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+            compositionErrors: [],
+          };
+        }
 
         if (!subgraph) {
           return {
@@ -1016,6 +1103,24 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+        const userRepo = new UserRepository(opts.db);
+
+        const hasAccess = await userRepo.checkUserAccess({
+          userID: authContext.userId,
+          organizationID: authContext.organizationId,
+          rolesToBe: ['admin', 'member'],
+        });
+
+        if (!hasAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+            changes: [],
+            compositionErrors: [],
+          };
+        }
 
         const graph = await fedGraphRepo.byName(req.graphName);
 
@@ -1070,6 +1175,22 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const fedgraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
+        const userRepo = new UserRepository(opts.db);
+
+        const hasAccess = await userRepo.checkUserAccess({
+          userID: authContext.userId,
+          organizationID: authContext.organizationId,
+          rolesToBe: ['admin', 'member'],
+        });
+
+        if (!hasAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+          };
+        }
 
         const federatedGraph = await fedgraphRepo.byName(req.name);
         if (!federatedGraph) {
@@ -1109,6 +1230,22 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const compChecker = new Composer(fedGraphRepo, subgraphRepo);
         const orgWebhooks = new OrganizationWebhookService(opts.db, authContext.organizationId, opts.logger);
+        const userRepo = new UserRepository(opts.db);
+
+        const hasAccess = await userRepo.checkUserAccess({
+          userID: authContext.userId,
+          organizationID: authContext.organizationId,
+          rolesToBe: ['admin', 'member'],
+        });
+
+        if (!hasAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+          };
+        }
 
         const subgraph = await subgraphRepo.byName(req.subgraphName);
         if (!subgraph) {
@@ -1199,6 +1336,23 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const orgWebhooks = new OrganizationWebhookService(opts.db, authContext.organizationId, opts.logger);
+        const userRepo = new UserRepository(opts.db);
+
+        const hasAccess = await userRepo.checkUserAccess({
+          userID: authContext.userId,
+          organizationID: authContext.organizationId,
+          rolesToBe: ['admin', 'member'],
+        });
+
+        if (!hasAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+            compositionErrors: [],
+          };
+        }
 
         const federatedGraph = await fedGraphRepo.byName(req.name);
         if (!federatedGraph) {
@@ -1268,6 +1422,23 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const repo = new SubgraphRepository(opts.db, authContext.organizationId);
         const orgWebhooks = new OrganizationWebhookService(opts.db, authContext.organizationId, opts.logger);
+        const userRepo = new UserRepository(opts.db);
+
+        const hasAccess = await userRepo.checkUserAccess({
+          userID: authContext.userId,
+          organizationID: authContext.organizationId,
+          rolesToBe: ['admin', 'member'],
+        });
+
+        if (!hasAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+            compositionErrors: [],
+          };
+        }
 
         const exists = await repo.exists(req.name);
         if (!exists) {
@@ -1520,6 +1691,24 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
+        const userRepo = new UserRepository(opts.db);
+
+        const hasAccess = await userRepo.checkUserAccess({
+          userID: authContext.userId,
+          organizationID: authContext.organizationId,
+          rolesToBe: ['admin', 'member'],
+        });
+
+        if (!hasAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+            compositionErrors: [],
+            subgraphs: [],
+          };
+        }
 
         const exists = await fedGraphRepo.exists(req.name);
         if (!exists) {
@@ -1600,6 +1789,23 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<CreateFederatedGraphTokenResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+        const userRepo = new UserRepository(opts.db);
+
+        const hasAccess = await userRepo.checkUserAccess({
+          userID: authContext.userId,
+          organizationID: authContext.organizationId,
+          rolesToBe: ['admin', 'member'],
+        });
+
+        if (!hasAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+            token: '',
+          };
+        }
 
         const graph = await fedGraphRepo.byName(req.graphName);
         if (!graph) {
@@ -1712,6 +1918,21 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const userRepo = new UserRepository(opts.db);
         const orgRepo = new OrganizationRepository(opts.db);
+
+        const hasAccess = await userRepo.checkUserAccess({
+          userID: authContext.userId,
+          organizationID: authContext.organizationId,
+          rolesToBe: ['admin', 'member'],
+        });
+
+        if (!hasAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+          };
+        }
 
         await opts.keycloakClient.authenticateClient();
 
@@ -1902,6 +2123,24 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<CreateAPIKeyResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db);
+        const userRepo = new UserRepository(opts.db);
+
+        const hasAccess = await userRepo.checkUserAccess({
+          userID: authContext.userId,
+          organizationID: authContext.organizationId,
+          rolesToBe: ['admin', 'member'],
+        });
+
+        if (!hasAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+            apiKey: '',
+          };
+        }
+
         const keyName = req.name.trim();
 
         const apiKeyModel = await orgRepo.getAPIKeyByName({
@@ -1986,6 +2225,22 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<DeleteAPIKeyResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db);
+        const userRepo = new UserRepository(opts.db);
+
+        const hasAccess = await userRepo.checkUserAccess({
+          userID: authContext.userId,
+          organizationID: authContext.organizationId,
+          rolesToBe: ['admin', 'member'],
+        });
+
+        if (!hasAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+          };
+        }
 
         const apiKey = await orgRepo.getAPIKeyByName({ organizationID: authContext.organizationId, name: req.name });
         if (!apiKey) {
@@ -2034,6 +2289,21 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db);
         const userRepo = new UserRepository(opts.db);
+
+        const hasAccess = await userRepo.checkUserAccess({
+          userID: authContext.userId,
+          organizationID: authContext.organizationId,
+          rolesToBe: ['admin', 'member'],
+        });
+
+        if (!hasAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+          };
+        }
 
         const user = await userRepo.byEmail(req.email);
         if (!user) {
@@ -2124,6 +2394,22 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const orgWebhooks = new OrganizationWebhookService(opts.db, authContext.organizationId, opts.logger);
+
+        const hasAccess = await userRepo.checkUserAccess({
+          userID: authContext.userId,
+          organizationID: authContext.organizationId,
+          rolesToBe: ['admin', 'member'],
+        });
+
+        if (!hasAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+            token: '',
+          };
+        }
 
         opts.platformWebhooks.send(PlatformEventName.APOLLO_MIGRATE_INIT, {
           actor_id: authContext.userId,
@@ -2276,6 +2562,22 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<CreateOrganizationWebhookConfigResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db);
+        const userRepo = new UserRepository(opts.db);
+
+        const hasAccess = await userRepo.checkUserAccess({
+          userID: authContext.userId,
+          organizationID: authContext.organizationId,
+          rolesToBe: ['admin', 'member'],
+        });
+
+        if (!hasAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+          };
+        }
 
         await orgRepo.createWebhookConfig({
           organizationId: authContext.organizationId,
@@ -2341,6 +2643,22 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<UpdateOrganizationWebhookConfigResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db);
+        const userRepo = new UserRepository(opts.db);
+
+        const hasAccess = await userRepo.checkUserAccess({
+          userID: authContext.userId,
+          organizationID: authContext.organizationId,
+          rolesToBe: ['admin', 'member'],
+        });
+
+        if (!hasAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+          };
+        }
 
         await orgRepo.updateWebhookConfig({
           organizationId: authContext.organizationId,
@@ -2364,6 +2682,22 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<UpdateOrganizationWebhookConfigResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db);
+        const userRepo = new UserRepository(opts.db);
+
+        const hasAccess = await userRepo.checkUserAccess({
+          userID: authContext.userId,
+          organizationID: authContext.organizationId,
+          rolesToBe: ['admin', 'member'],
+        });
+
+        if (!hasAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+          };
+        }
 
         await orgRepo.deleteWebhookConfig({
           organizationId: authContext.organizationId,
@@ -2831,6 +3165,22 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<DeleteRouterTokenResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+        const userRepo = new UserRepository(opts.db);
+
+        const hasAccess = await userRepo.checkUserAccess({
+          userID: authContext.userId,
+          organizationID: authContext.organizationId,
+          rolesToBe: ['admin', 'member'],
+        });
+
+        if (!hasAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+          };
+        }
 
         const federatedGraph = await fedGraphRepo.byName(req.fedGraphName);
         if (!federatedGraph) {
@@ -2881,6 +3231,22 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<CreateIntegrationResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db);
+        const userRepo = new UserRepository(opts.db);
+
+        const hasAccess = await userRepo.checkUserAccess({
+          userID: authContext.userId,
+          organizationID: authContext.organizationId,
+          rolesToBe: ['admin', 'member'],
+        });
+
+        if (!hasAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+          };
+        }
 
         if (!opts.slack || !opts.slack.clientID || !opts.slack.clientSecret) {
           throw new Error('Slack env variables must be set to use this feature.');
@@ -2969,6 +3335,22 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<UpdateIntegrationConfigResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db);
+        const userRepo = new UserRepository(opts.db);
+
+        const hasAccess = await userRepo.checkUserAccess({
+          userID: authContext.userId,
+          organizationID: authContext.organizationId,
+          rolesToBe: ['admin', 'member'],
+        });
+
+        if (!hasAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+          };
+        }
 
         await orgRepo.updateIntegrationConfig({
           organizationId: authContext.organizationId,
@@ -2992,6 +3374,22 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<DeleteIntegrationResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db);
+        const userRepo = new UserRepository(opts.db);
+
+        const hasAccess = await userRepo.checkUserAccess({
+          userID: authContext.userId,
+          organizationID: authContext.organizationId,
+          rolesToBe: ['admin', 'member'],
+        });
+
+        if (!hasAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+          };
+        }
 
         await orgRepo.deleteIntegration({
           organizationId: authContext.organizationId,

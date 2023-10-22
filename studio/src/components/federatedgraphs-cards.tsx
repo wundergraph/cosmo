@@ -371,6 +371,8 @@ export const Empty = ({
   isMigrating: boolean;
   setIsMigrating: Dispatch<SetStateAction<boolean>>;
 }) => {
+  const user = useContext(UserContext);
+
   let labels = "team=A";
   return (
     <EmptyState
@@ -394,15 +396,19 @@ export const Empty = ({
           <CLI
             command={`npx wgc federated-graph create production --label-matcher ${labels} --routing-url http://localhost:4000/graphql`}
           />
-          <span className="text-sm font-bold">OR</span>
-          <MigrationDialog
-            refetch={refetch}
-            setIsMigrationSuccess={setIsMigrationSuccess}
-            isEmptyState={true}
-            setToken={setToken}
-            isMigrating={isMigrating}
-            setIsMigrating={setIsMigrating}
-          />
+          {!user?.currentOrganization.roles.includes("viewer") && (
+            <>
+              <span className="text-sm font-bold">OR</span>
+              <MigrationDialog
+                refetch={refetch}
+                setIsMigrationSuccess={setIsMigrationSuccess}
+                isEmptyState={true}
+                setToken={setToken}
+                isMigrating={isMigrating}
+                setIsMigrating={setIsMigrating}
+              />
+            </>
+          )}
         </div>
       }
     />
@@ -517,6 +523,7 @@ export const FederatedGraphsCards = ({
   const [isMigrationSuccess, setIsMigrationSuccess] = useState(false);
   const [token, setToken] = useState<string | undefined>();
   const [isMigrating, setIsMigrating] = useState(false);
+  const user = useContext(UserContext);
 
   useEffect(() => {
     if (isMigrationSuccess) {
@@ -556,13 +563,15 @@ export const FederatedGraphsCards = ({
         {graphs.map((graph, graphIndex) => {
           return <GraphCard key={graphIndex.toString()} graph={graph} />;
         })}
-        <MigrationDialog
-          refetch={refetch}
-          setIsMigrationSuccess={setIsMigrationSuccess}
-          setToken={setToken}
-          isMigrating={isMigrating}
-          setIsMigrating={setIsMigrating}
-        />
+        {!user?.currentOrganization.roles.includes("viewer") && (
+          <MigrationDialog
+            refetch={refetch}
+            setIsMigrationSuccess={setIsMigrationSuccess}
+            setToken={setToken}
+            isMigrating={isMigrating}
+            setIsMigrating={setIsMigrating}
+          />
+        )}
       </div>
     </>
   );

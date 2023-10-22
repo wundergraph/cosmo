@@ -1,7 +1,12 @@
 import { UserContext } from "@/components/app-provider";
 import { EmptyState } from "@/components/empty-state";
 import { getDashboardLayout } from "@/components/layout/dashboard-layout";
-import { EventsMeta, Meta, NotificationTabs, notificationEvents } from "@/components/notifications/components";
+import {
+  EventsMeta,
+  Meta,
+  NotificationTabs,
+  notificationEvents,
+} from "@/components/notifications/components";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -48,14 +53,13 @@ import {
   deleteOrganizationWebhookConfig,
   getOrganizationWebhookConfigs,
   getOrganizationWebhookMeta,
-  updateOrganizationWebhookConfig
+  updateOrganizationWebhookConfig,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useContext, useEffect, useState } from "react";
 import { PiWebhooksLogo } from "react-icons/pi";
 import { z } from "zod";
-
 
 const DeleteWebhook = ({
   id,
@@ -501,7 +505,11 @@ const WebhooksPage: NextPageWithLayout = () => {
             </a>
           </>
         }
-        actions={<Webhook mode="create" refresh={() => refetch()} />}
+        actions={
+          !user?.currentOrganization.roles.includes("viewer") && (
+            <Webhook mode="create" refresh={() => refetch()} />
+          )
+        }
       />
     );
   }
@@ -520,14 +528,18 @@ const WebhooksPage: NextPageWithLayout = () => {
             Learn more
           </Link>
         </p>
-        <Webhook mode="create" refresh={() => refetch()} />
+        {!user?.currentOrganization.roles.includes("viewer") && (
+          <Webhook mode="create" refresh={() => refetch()} />
+        )}
       </div>
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead>Endpoint</TableHead>
             <TableHead>Events</TableHead>
-            <TableHead aria-label="Actions"></TableHead>
+            {!user?.currentOrganization.roles.includes("viewer") && (
+              <TableHead aria-label="Actions"></TableHead>
+            )}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -547,18 +559,20 @@ const WebhooksPage: NextPageWithLayout = () => {
                     {events.length === 0 && <p className="italic">No events</p>}
                   </div>
                 </TableCell>
-                <TableCell className="flex justify-end space-x-2">
-                  <Webhook
-                    mode="update"
-                    refresh={() => refetch()}
-                    existing={{
-                      id,
-                      endpoint,
-                      events,
-                    }}
-                  />
-                  <DeleteWebhook id={id} refresh={() => refetch()} />
-                </TableCell>
+                {!user?.currentOrganization.roles.includes("viewer") && (
+                  <TableCell className="flex justify-end space-x-2">
+                    <Webhook
+                      mode="update"
+                      refresh={() => refetch()}
+                      existing={{
+                        id,
+                        endpoint,
+                        events,
+                      }}
+                    />
+                    <DeleteWebhook id={id} refresh={() => refetch()} />
+                  </TableCell>
+                )}
               </TableRow>
             );
           })}

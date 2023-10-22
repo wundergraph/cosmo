@@ -127,7 +127,7 @@ export interface ResponseMessage {
   };
 }
 
-export type MemberRole = 'admin' | 'member';
+export type MemberRole = 'admin' | 'member' | 'viewer';
 
 // https://github.com/kamilkisiela/graphql-inspector/blob/f3b9ed7e277f1a4928da7d0fdc212685ff77752a/packages/core/src/diff/changes/change.ts
 export enum SchemaChangeType {
