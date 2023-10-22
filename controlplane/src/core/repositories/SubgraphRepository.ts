@@ -117,7 +117,7 @@ export class SubgraphRepository {
       return true;
     }
 
-    // This works fine because we don't allow comma in the label key or value
+    // This works fine because we don't allow comma in the label key or value,
     // so we can use it as a separator to compare the labels
     return (
       prev
