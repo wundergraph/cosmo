@@ -15,7 +15,6 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
 import { NextPageWithLayout } from "@/lib/page";
 import { Component2Icon } from "@radix-ui/react-icons";
-import { BoltSlashIcon } from "@heroicons/react/24/outline";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/router";
@@ -26,7 +25,7 @@ import {
 import React, { useContext, useEffect, useState } from "react";
 import { PiGraphLight } from "react-icons/pi";
 import { formatDateTime } from "@/lib/format-date";
-import { CompositionErrorsDialog } from "@/components/composition-errors-dialog";
+import { CompositionErrorsBanner } from "@/components/composition-errors-banner";
 
 const useScrollIntoView = (lineNo: string) => {
   const [isMounted, setIsMounted] = useState(false);
@@ -118,22 +117,7 @@ const SchemaPage: NextPageWithLayout = () => {
   return (
     <div>
       {!validGraph && (
-        <div className="mb-3 flex items-center justify-between space-x-2.5 rounded-lg border border-red-600 p-2 px-4 text-red-600 dark:border-red-900">
-          <div className="flex items-center justify-between space-x-2.5">
-            <div>
-              <BoltSlashIcon className="h-5 w-5 text-red-500" />
-            </div>
-            <div className="text-xs">
-              This version of the API schema does not include the latest from
-              some of your subgraphs because the composition failed.
-            </div>
-          </div>
-          {graphData?.graph?.compositionErrors && (
-            <CompositionErrorsDialog
-              errors={graphData?.graph?.compositionErrors}
-            />
-          )}
-        </div>
+        <CompositionErrorsBanner errors={graphData?.graph?.compositionErrors} />
       )}
       <div className="relative flex flex-col gap-y-6">
         <div className="order-1 flex flex-row flex-wrap gap-y-4">
