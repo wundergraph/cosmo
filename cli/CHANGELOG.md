@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.21.0](https://github.com/wundergraph/cosmo/compare/wgc@0.20.2...wgc@0.21.0) (2023-10-20)
+
+### Features
+
+* add support for subscriptions ([#185](https://github.com/wundergraph/cosmo/issues/185)) ([5a78aa0](https://github.com/wundergraph/cosmo/commit/5a78aa01f60ac4184ac69b0bd72aa1ce467bff93)) (@fiam)
+* auto ignore schema errors for check command if github is integrated ([#184](https://github.com/wundergraph/cosmo/issues/184)) ([05d1b4a](https://github.com/wundergraph/cosmo/commit/05d1b4a4fcb836013c8db49796c174eba0c96744)) (@thisisnithin)
+
 ## [0.20.2](https://github.com/wundergraph/cosmo/compare/wgc@0.20.1...wgc@0.20.2) (2023-10-16)
 
 ### Bug Fixes

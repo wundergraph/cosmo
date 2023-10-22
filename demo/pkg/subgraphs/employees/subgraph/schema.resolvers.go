@@ -6,6 +6,8 @@ package subgraph
 
 import (
 	"context"
+	"fmt"
+	"time"
 
 	generated1 "github.com/wundergraph/cosmo/demo/pkg/subgraphs/employees/subgraph/generated"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/employees/subgraph/model"
@@ -44,7 +46,47 @@ func (r *queryResolver) TeamMates(ctx context.Context, team model.Department) ([
 	}
 }
 
+// CurrentTime is the resolver for the currentTime field.
+func (r *subscriptionResolver) CurrentTime(ctx context.Context) (<-chan *model.Time, error) {
+	ch := make(chan *model.Time)
+
+	go func() {
+		defer close(ch)
+
+		for {
+			// In our example we'll send the current time every second.
+			time.Sleep(1 * time.Second)
+			fmt.Println("Tick")
+
+			currentTime := time.Now()
+			t := &model.Time{
+				UnixTime:  int(currentTime.Unix()),
+				TimeStamp: currentTime.Format(time.RFC3339),
+			}
+
+			// The subscription may have got closed due to the client disconnecting.
+			// Hence we do send in a select block with a check for context cancellation.
+			// This avoids goroutine getting blocked forever or panicking,
+			select {
+			case <-ctx.Done(): // This runs when context gets cancelled. Subscription closes.
+				fmt.Println("Subscription Closed")
+				// Handle deregistration of the channel here. `close(ch)`
+				return // Remember to return to end the routine.
+
+			case ch <- t: // This is the actual send.
+				// Our message went through, do nothing
+			}
+		}
+	}()
+
+	return ch, nil
+}
+
 // Query returns generated1.QueryResolver implementation.
 func (r *Resolver) Query() generated1.QueryResolver { return &queryResolver{r} }
 
+// Subscription returns generated1.SubscriptionResolver implementation.
+func (r *Resolver) Subscription() generated1.SubscriptionResolver { return &subscriptionResolver{r} }
+
 type queryResolver struct{ *Resolver }
+type subscriptionResolver struct{ *Resolver }

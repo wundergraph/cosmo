@@ -9,18 +9,21 @@ export type CompositionResult = {
   compositions: ComposedFederatedGraph[];
 };
 
+interface ComposedSubgraph {
+  id: string;
+  name: string;
+  sdl: string;
+  url: string;
+  subscriptionUrl: string;
+  subscriptionProtocol: 'ws' | 'sse' | 'sse_post';
+}
 export interface ComposedFederatedGraph {
   argumentConfigurations: ArgumentConfigurationData[];
   name: string;
   targetID: string;
   composedSchema?: string;
   errors: Error[];
-  subgraphs: {
-    id: string;
-    name: string;
-    sdl: string;
-    url: string;
-  }[];
+  subgraphs: ComposedSubgraph[];
 }
 
 export class Composer {
@@ -67,6 +70,8 @@ export class Composer {
           name: s.name,
           url: s.routingUrl,
           sdl: s.schemaSDL,
+          subscriptionUrl: s.subscriptionUrl,
+          subscriptionProtocol: s.subscriptionProtocol,
         })),
       };
     } catch (e: any) {
@@ -120,6 +125,8 @@ export class Composer {
             id: s.id,
             name: s.name,
             url: s.routingUrl,
+            subscriptionUrl: s.subscriptionUrl,
+            subscriptionProtocol: s.subscriptionProtocol,
             sdl: s.schemaSDL,
           })),
         });

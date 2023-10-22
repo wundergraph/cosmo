@@ -1,12 +1,13 @@
 package metric
 
 import (
+	"context"
 	"fmt"
+	"time"
+
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/metric"
-	"net/http"
-	"time"
 )
 
 // Server HTTP metrics.
@@ -116,21 +117,21 @@ func (h *Metrics) createMeasures() error {
 	return nil
 }
 
-func (h *Metrics) MeasureInFlight(r *http.Request) func() {
+func (h *Metrics) MeasureInFlight(ctx context.Context) func() {
 	var baseKeys []attribute.KeyValue
 
 	baseKeys = append(baseKeys, h.baseFields...)
 
 	baseAttributes := otelmetric.WithAttributes(baseKeys...)
 
-	h.upDownCounters[InFlightRequestsUpDownCounter].Add(r.Context(), 1, baseAttributes)
+	h.upDownCounters[InFlightRequestsUpDownCounter].Add(ctx, 1, baseAttributes)
 
 	return func() {
-		h.upDownCounters[InFlightRequestsUpDownCounter].Add(r.Context(), -1, baseAttributes)
+		h.upDownCounters[InFlightRequestsUpDownCounter].Add(ctx, -1, baseAttributes)
 	}
 }
 
-func (h *Metrics) MeasureRequestCount(r *http.Request, attr ...attribute.KeyValue) {
+func (h *Metrics) MeasureRequestCount(ctx context.Context, attr ...attribute.KeyValue) {
 	var baseKeys []attribute.KeyValue
 
 	baseKeys = append(baseKeys, h.baseFields...)
@@ -138,10 +139,10 @@ func (h *Metrics) MeasureRequestCount(r *http.Request, attr ...attribute.KeyValu
 
 	baseAttributes := otelmetric.WithAttributes(baseKeys...)
 
-	h.counters[RequestCounter].Add(r.Context(), 1, baseAttributes)
+	h.counters[RequestCounter].Add(ctx, 1, baseAttributes)
 }
 
-func (h *Metrics) MeasureRequestSize(r *http.Request, attr ...attribute.KeyValue) {
+func (h *Metrics) MeasureRequestSize(ctx context.Context, contentLength int64, attr ...attribute.KeyValue) {
 	var baseKeys []attribute.KeyValue
 
 	baseKeys = append(baseKeys, h.baseFields...)
@@ -149,10 +150,10 @@ func (h *Metrics) MeasureRequestSize(r *http.Request, attr ...attribute.KeyValue
 
 	baseAttributes := otelmetric.WithAttributes(baseKeys...)
 
-	h.counters[RequestContentLengthCounter].Add(r.Context(), r.ContentLength, baseAttributes)
+	h.counters[RequestContentLengthCounter].Add(ctx, contentLength, baseAttributes)
 }
 
-func (h *Metrics) MeasureResponseSize(r *http.Request, size int64, attr ...attribute.KeyValue) {
+func (h *Metrics) MeasureResponseSize(ctx context.Context, size int64, attr ...attribute.KeyValue) {
 	var baseKeys []attribute.KeyValue
 
 	baseKeys = append(baseKeys, h.baseFields...)
@@ -160,12 +161,10 @@ func (h *Metrics) MeasureResponseSize(r *http.Request, size int64, attr ...attri
 
 	baseAttributes := otelmetric.WithAttributes(baseKeys...)
 
-	h.counters[ResponseContentLengthCounter].Add(r.Context(), size, baseAttributes)
+	h.counters[ResponseContentLengthCounter].Add(ctx, size, baseAttributes)
 }
 
-func (h *Metrics) MeasureLatency(r *http.Request, requestStartTime time.Time, attr ...attribute.KeyValue) {
-	ctx := r.Context()
-
+func (h *Metrics) MeasureLatency(ctx context.Context, requestStartTime time.Time, attr ...attribute.KeyValue) {
 	var baseKeys []attribute.KeyValue
 
 	baseKeys = append(baseKeys, h.baseFields...)

@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.25.0](https://github.com/wundergraph/cosmo/compare/studio@0.24.0...studio@0.25.0) (2023-10-20)
+
+### Bug Fixes
+
+* graphql-ws module not found ([#189](https://github.com/wundergraph/cosmo/issues/189)) ([81722e7](https://github.com/wundergraph/cosmo/commit/81722e7507bcf30aadb1c2ac3703a735278f6272)) (@JivusAyrus)
+* redirect the user to the correct page after login ([#192](https://github.com/wundergraph/cosmo/issues/192)) ([c5e28ed](https://github.com/wundergraph/cosmo/commit/c5e28edc0495c45497a5dd1373bf9f7784cf84a1)) (@JivusAyrus)
+
+### Features
+
+* add client name client version filter for analytics and ([#181](https://github.com/wundergraph/cosmo/issues/181)) ([6180f4d](https://github.com/wundergraph/cosmo/commit/6180f4d621c383e72883c3cfa10ac1119da91761)) (@Pagebakers)
+* add support for subscriptions ([#185](https://github.com/wundergraph/cosmo/issues/185)) ([5a78aa0](https://github.com/wundergraph/cosmo/commit/5a78aa01f60ac4184ac69b0bd72aa1ce467bff93)) (@fiam)
+
 # [0.24.0](https://github.com/wundergraph/cosmo/compare/studio@0.23.1...studio@0.24.0) (2023-10-13)
 
 ### Features

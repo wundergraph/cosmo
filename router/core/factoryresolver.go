@@ -6,12 +6,14 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/jensneuse/abstractlogger"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/staticdatasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"go.uber.org/zap"
 
 	"github.com/wundergraph/cosmo/router/config"
+	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 )
 
@@ -65,9 +67,14 @@ func NewDefaultFactoryResolver(transportFactory ApiTransportFactory, baseTranspo
 func (d *DefaultFactoryResolver) Resolve(ds *nodev1.DataSourceConfiguration) (plan.PlannerFactory, error) {
 	switch ds.Kind {
 	case nodev1.DataSourceKind_GRAPHQL:
+		var logger abstractlogger.Logger
+		if d.log != nil {
+			logger = abstractlogger.NewZapLogger(d.log, abstractlogger.DebugLevel)
+		}
 		factory := &graphql_datasource.Factory{
 			HTTPClient:      d.graphql.HTTPClient,
 			StreamingClient: d.graphql.StreamingClient,
+			Logger:          logger,
 		}
 		return factory, nil
 	case nodev1.DataSourceKind_STATIC:
@@ -173,6 +180,26 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration) (*plan.Configura
 				return nil, fmt.Errorf("could not load GraphQL schema for data source %s: %w", in.Id, err)
 			}
 
+			var subscriptionUseSSE bool
+			var subscriptionSSEMethodPost bool
+			if in.CustomGraphql.Subscription.Protocol != nil {
+				switch *in.CustomGraphql.Subscription.Protocol {
+				case common.GraphQLSubscriptionProtocol_GRAPHQL_SUBSCRIPTION_PROTOCOL_WS:
+					subscriptionUseSSE = false
+					subscriptionSSEMethodPost = false
+				case common.GraphQLSubscriptionProtocol_GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE:
+					subscriptionUseSSE = true
+					subscriptionSSEMethodPost = false
+				case common.GraphQLSubscriptionProtocol_GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE_POST:
+					subscriptionUseSSE = true
+					subscriptionSSEMethodPost = true
+				}
+			} else {
+				// Old style config
+				if in.CustomGraphql.Subscription.UseSSE != nil {
+					subscriptionUseSSE = *in.CustomGraphql.Subscription.UseSSE
+				}
+			}
 			out.Custom = graphql_datasource.ConfigJson(graphql_datasource.Configuration{
 				Fetch: graphql_datasource.FetchConfiguration{
 					URL:    fetchUrl,
@@ -184,8 +211,9 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration) (*plan.Configura
 					ServiceSDL: in.CustomGraphql.Federation.ServiceSdl,
 				},
 				Subscription: graphql_datasource.SubscriptionConfiguration{
-					URL:    subscriptionUrl,
-					UseSSE: in.CustomGraphql.Subscription.UseSSE,
+					URL:           subscriptionUrl,
+					UseSSE:        subscriptionUseSSE,
+					SSEMethodPost: subscriptionSSEMethodPost,
 				},
 				UpstreamSchema:         graphqlSchema,
 				CustomScalarTypeFields: customScalarTypeFields,

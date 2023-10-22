@@ -4,6 +4,17 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.25.1](https://github.com/wundergraph/cosmo/compare/router@0.25.0...router@0.25.1) (2023-10-20)
+
+**Note:** Version bump only for package router
+
+# [0.25.0](https://github.com/wundergraph/cosmo/compare/router@0.24.1...router@0.25.0) (2023-10-20)
+
+### Features
+
+* add support for subscriptions ([#185](https://github.com/wundergraph/cosmo/issues/185)) ([5a78aa0](https://github.com/wundergraph/cosmo/commit/5a78aa01f60ac4184ac69b0bd72aa1ce467bff93)) (@fiam)
+* **router:** support limiting request body size ([#190](https://github.com/wundergraph/cosmo/issues/190)) ([9021dde](https://github.com/wundergraph/cosmo/commit/9021dde603197af422190db16aa5ae8a2a263073)) (@StarpTech)
+
 ## [0.24.1](https://github.com/wundergraph/cosmo/compare/router@0.24.0...router@0.24.1) (2023-10-13)
 
 ### Bug Fixes
