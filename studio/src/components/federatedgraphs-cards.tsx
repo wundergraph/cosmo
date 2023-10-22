@@ -131,6 +131,7 @@ const MigrationDialog = ({
             setIsMigrationSuccess(true);
             setToken(d.token);
           } else if (d.response?.details) {
+            setIsMigrating(false);
             toast({ description: d.response.details, duration: 3000 });
           }
           router.replace(`/${organizationSlug}/graphs`);

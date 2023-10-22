@@ -29,6 +29,8 @@ import {
   GetFederatedGraphChangelogResponse,
   GetFederatedGraphSDLByNameResponse,
   GetFederatedGraphsResponse,
+  GetGraphMetricsResponse,
+  GetMetricsErrorRateResponse,
   GetOrganizationIntegrationsResponse,
   GetOrganizationMembersResponse,
   GetOrganizationWebhookConfigsResponse,
@@ -38,6 +40,7 @@ import {
   GetSubgraphsResponse,
   GetTraceResponse,
   InviteUserResponse,
+  IsGitHubAppInstalledResponse,
   MigrateFromApolloResponse,
   PublishFederatedSubgraphResponse,
   RemoveInvitationResponse,
@@ -48,13 +51,10 @@ import {
   UpdateOrganizationWebhookConfigResponse,
   UpdateSubgraphResponse,
   WhoAmIResponse,
-  GetGraphMetricsResponse,
-  GetMetricsErrorRateResponse,
-  IsGitHubAppInstalledResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 
-import { PlatformEventName, OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
-import { isValidUrl, OpenAIGraphql } from '@wundergraph/cosmo-shared';
+import { OrganizationEventName, PlatformEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
+import { OpenAIGraphql, isValidUrl } from '@wundergraph/cosmo-shared';
 import { parse } from 'graphql';
 import { GraphApiKeyDTO, GraphApiKeyJwtPayload } from '../../types/index.js';
 import { Composer } from '../composition/composer.js';
@@ -62,21 +62,21 @@ import { buildSchema, composeSubgraphs } from '../composition/composition.js';
 import { getDiffBetweenGraphs } from '../composition/schemaCheck.js';
 import { signJwt } from '../crypto/jwt.js';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
+import { GitHubRepository } from '../repositories/GitHubRepository.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import { SchemaCheckRepository } from '../repositories/SchemaCheckRepository.js';
-import { Subgraph, SubgraphRepository } from '../repositories/SubgraphRepository.js';
+import { SubgraphRepository } from '../repositories/SubgraphRepository.js';
 import { UserRepository } from '../repositories/UserRepository.js';
 import { AnalyticsDashboardViewRepository } from '../repositories/analytics/AnalyticsDashboardViewRepository.js';
 import { AnalyticsRequestViewRepository } from '../repositories/analytics/AnalyticsRequestViewRepository.js';
+import { MetricsRepository } from '../repositories/analytics/MetricsRepository.js';
 import { TraceRepository } from '../repositories/analytics/TraceRepository.js';
 import type { RouterOptions } from '../routes.js';
 import { ApiKeyGenerator } from '../services/ApiGenerator.js';
 import ApolloMigrator from '../services/ApolloMigrator.js';
-import { MetricsRepository } from '../repositories/analytics/MetricsRepository.js';
+import Slack from '../services/Slack.js';
 import { handleError, isValidLabelMatchers, isValidLabels } from '../util.js';
 import { FederatedGraphSchemaUpdate, OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
-import { GitHubRepository } from '../repositories/GitHubRepository.js';
-import Slack from '../services/Slack.js';
 
 const formatSubscriptionProtocol = (protocol: GraphQLSubscriptionProtocol) => {
   switch (protocol) {
@@ -2190,9 +2190,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const federatedGraph = await fedGraphRepo.byName(graph.name);
-
-        if (!federatedGraph) {
+        if (await fedGraphRepo.exists(graph.name)) {
           return {
             response: {
               code: EnumStatusCode.ERR_ALREADY_EXISTS,
@@ -2234,10 +2232,21 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           await composer.deployComposition(composition);
         });
 
+        const migratedGraph = await fedGraphRepo.byName(graph.name);
+        if (!migratedGraph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: 'Could not complete the migration. Please try again.',
+            },
+            token: '',
+          };
+        }
+
         orgWebhooks.send(OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED, {
           federated_graph: {
-            id: federatedGraph.id,
-            name: federatedGraph.name,
+            id: migratedGraph.id,
+            name: migratedGraph.name,
           },
           organization: {
             id: authContext.organizationId,
@@ -2251,22 +2260,22 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           secret: opts.jwtSecret,
           token: {
             iss: authContext.userId,
-            federated_graph_id: federatedGraph.id,
+            federated_graph_id: migratedGraph.id,
             organization_id: authContext.organizationId,
           },
         });
 
         const token = await fedGraphRepo.createToken({
           token: tokenValue,
-          federatedGraphId: federatedGraph.id,
-          tokenName: federatedGraph.name,
+          federatedGraphId: migratedGraph.id,
+          tokenName: migratedGraph.name,
           organizationId: authContext.organizationId,
         });
 
         opts.platformWebhooks.send(PlatformEventName.APOLLO_MIGRATE_SUCCESS, {
           federated_graph: {
-            id: federatedGraph.id,
-            name: federatedGraph.name,
+            id: migratedGraph.id,
+            name: migratedGraph.name,
           },
           actor_id: authContext.userId,
         });
