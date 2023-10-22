@@ -59,8 +59,8 @@ export const ComposeStatusMessage = ({
     ) : (
       <span className="whitespace-pre-line">
         <div className="pb-4 pt-1 text-xs">
-          The latest version of the graph does not include the latest updates
-          from some of your subgraphs because the composition failed:
+          This version of the graph is not ready to be fetched from the router
+          because the composition failed:
         </div>
         <div className="text-slate-500 dark:text-slate-300">{errors}</div>
       </span>
