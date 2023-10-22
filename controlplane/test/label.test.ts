@@ -2,13 +2,8 @@ import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { Label } from '../src/types';
-import {
-  afterAllSetup,
-  beforeAllSetup,
-  genID,
-  genUniqueLabel,
-} from '../src/core/test-util';
-import { SetupTest } from './test-util';
+import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util';
+import { createFederatedGraph, createSubgraph, SetupTest } from './test-util';
 
 let dbname = '';
 
@@ -30,22 +25,10 @@ describe('Labels', (ctx) => {
     const label1 = genUniqueLabel('label1');
     const label2 = genUniqueLabel('label2');
 
-    const createSubgraph = async (name: string, labels: Label[], routingUrl: string) => {
-      const createRes = await client.createFederatedSubgraph({
-        name,
-        labels,
-        routingUrl,
-      });
-      expect(createRes.response?.code).toBe(EnumStatusCode.OK);
-      const publishResp = await client.publishFederatedSubgraph({
-        name,
-        schema: Uint8Array.from(Buffer.from('type Query { hello: String! }')),
-      });
-      expect(publishResp.response?.code).toBe(EnumStatusCode.OK);
-    };
+    const subgraphSchemaSDL = 'type Query { hello: String! }';
 
-    await createSubgraph(subgraph1Name, [label1], 'http://localhost:8081');
-    await createSubgraph(subgraph2Name, [label2], 'http://localhost:8082');
+    await createSubgraph(client, subgraph1Name, subgraphSchemaSDL, [label1], 'http://localhost:8081');
+    await createSubgraph(client, subgraph2Name, subgraphSchemaSDL, [label2], 'http://localhost:8082');
 
     const createFedGraphRes = await client.createFederatedGraph({
       name: fedGraphName,
@@ -57,10 +40,13 @@ describe('Labels', (ctx) => {
     const graph = await client.getFederatedGraphByName({
       name: fedGraphName,
     });
+
+    // Only the subgraph1 should be assigned to the federated graph
     expect(graph.response?.code).toBe(EnumStatusCode.OK);
     expect(graph.subgraphs.length).toBe(1);
     expect(graph.subgraphs[0].name).toBe(subgraph1Name);
 
+    // This will exclude subgraph1 from the federated graph and add subgraph2
     const updateRes = await client.updateFederatedGraph({
       name: fedGraphName,
       labelMatchers: [joinLabel(label2)],
@@ -71,6 +57,8 @@ describe('Labels', (ctx) => {
       name: fedGraphName,
     });
     expect(updatedGraph.response?.code).toBe(EnumStatusCode.OK);
+
+    // Only the subgraph2 should be assigned to the federated graph
     expect(updatedGraph.subgraphs.length).toBe(1);
     expect(updatedGraph.subgraphs[0].name).toBe(subgraph2Name);
 
@@ -89,20 +77,11 @@ describe('Labels', (ctx) => {
     const label2 = genUniqueLabel('label2');
     const label3 = genUniqueLabel('label3');
 
-    const createFederatedGraph = async (name: string, labelMatchers: string[], routingUrl: string) => {
-      const createFedGraphRes = await client.createFederatedGraph({
-        name,
-        routingUrl,
-        labelMatchers,
-      });
-      expect(createFedGraphRes.response?.code).toBe(EnumStatusCode.OK);
-    };
-
-    await createFederatedGraph(fedGraph1Name, [joinLabel(label1)], 'http://localhost:8081');
-    await createFederatedGraph(fedGraph2Name, [joinLabel(label2)], 'http://localhost:8082');
+    await createFederatedGraph(client, fedGraph1Name, [joinLabel(label1)], 'http://localhost:8081');
+    await createFederatedGraph(client, fedGraph2Name, [joinLabel(label2)], 'http://localhost:8082');
 
     // This federated graph should be unaffected by the label changes in the tests
-    await createFederatedGraph(fedGraph3Name, [joinLabel(label3)], 'http://localhost:8083');
+    await createFederatedGraph(client, fedGraph3Name, [joinLabel(label3)], 'http://localhost:8083');
 
     const createSubgraph = async (name: string, labels: Label[], routingUrl: string) => {
       const createRes = await client.createFederatedSubgraph({
@@ -138,7 +117,7 @@ describe('Labels', (ctx) => {
     expect(graph2.subgraphs[0].name).toBe(subgraph2Name);
 
     // This will remove the subgraph1 from fedGraph1 and add subgraph1 to fedGraph2
-    // Result in a federated graph with no subgraphs
+    // This results in a federated graph with no subgraphs
     const updateRes1 = await client.updateSubgraph({
       name: subgraph1Name,
       labels: [label2],
@@ -149,6 +128,7 @@ describe('Labels', (ctx) => {
       name: fedGraph1Name,
     });
     expect(updatedGraph1.response?.code).toBe(EnumStatusCode.OK);
+    expect(updatedGraph1.subgraphs.length).toBe(0);
 
     // This will remove the subgraph2 from fedGraph2 and add subgraph1 to fedGraph2
     const updateRes2 = await client.updateSubgraph({
@@ -203,23 +183,17 @@ describe('Labels', (ctx) => {
     // 3. --labels team=C,env=dev
     // This will create a federated graph consists of subgraphs 1 and 2 with labels team=A,team=B and env=prod
 
-    const createSubgraph = async (name: string, labels: Label[], routingUrl: string) => {
-      const createRes = await client.createFederatedSubgraph({
-        name,
-        labels,
-        routingUrl,
-      });
-      expect(createRes.response?.code).toBe(EnumStatusCode.OK);
-      const publishResp = await client.publishFederatedSubgraph({
-        name,
-        schema: Uint8Array.from(Buffer.from('type Query { hello: String! }')),
-      });
-      expect(publishResp.response?.code).toBe(EnumStatusCode.OK);
-    };
+    const subgraphSchemaSDL = 'type Query { hello: String! }';
 
-    await createSubgraph(subgraph1Name, [labelTeamA, labelProviderAWS, labelEnvProd], 'http://localhost:8081');
-    await createSubgraph(subgraph2Name, [labelTeamB, labelEnvProd], 'http://localhost:8082');
-    await createSubgraph(subgraph3Name, [labelTeamC, labelEnvDev], 'http://localhost:8082');
+    await createSubgraph(
+      client,
+      subgraph1Name,
+      subgraphSchemaSDL,
+      [labelTeamA, labelProviderAWS, labelEnvProd],
+      'http://localhost:8081',
+    );
+    await createSubgraph(client, subgraph2Name, subgraphSchemaSDL, [labelTeamB, labelEnvProd], 'http://localhost:8082');
+    await createSubgraph(client, subgraph3Name, subgraphSchemaSDL, [labelTeamC, labelEnvDev], 'http://localhost:8082');
 
     const createFedGraphRes = await client.createFederatedGraph({
       name: fedGraphName,

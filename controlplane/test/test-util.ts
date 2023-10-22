@@ -1,16 +1,18 @@
 import Fastify from 'fastify';
 import { pino } from 'pino';
-import { TestContext } from 'vitest';
+import { expect, TestContext } from 'vitest';
 import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
 import { fastifyConnectPlugin } from '@connectrpc/connect-fastify';
 import { createConnectTransport } from '@connectrpc/connect-node';
-import { createPromiseClient } from '@connectrpc/connect';
+import { createPromiseClient, PromiseClient } from '@connectrpc/connect';
 import { NodeService } from '@wundergraph/cosmo-connect/dist/node/v1/node_connect';
 import database from '../src/core/plugins/database';
 import { createTestAuthenticator, seedTest } from '../src/core/test-util';
 import Keycloak from '../src/core/services/Keycloak';
 import { MockPlatformWebhookService } from '../src/core/webhooks/PlatformWebhookService';
 import routes from '../src/core/routes';
+import { Label } from '../src/types';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 
 export const SetupTest = async function (testContext: TestContext, dbname: string) {
   const databaseConnectionUrl = `postgresql://postgres:changeme@localhost:5432/${dbname}`;
@@ -77,4 +79,41 @@ export const SetupTest = async function (testContext: TestContext, dbname: strin
   const nodeClient = createPromiseClient(NodeService, transport);
 
   return { client: platformClient, nodeClient, server, userTestData };
+};
+
+export const createSubgraph = async (
+  client: PromiseClient<typeof PlatformService>,
+  name: string,
+  schemaSDL: string,
+  labels: Label[],
+  routingUrl: string,
+) => {
+  const createRes = await client.createFederatedSubgraph({
+    name,
+    labels,
+    routingUrl,
+  });
+  expect(createRes.response?.code).toBe(EnumStatusCode.OK);
+  const publishResp = await client.publishFederatedSubgraph({
+    name,
+    schema: Uint8Array.from(Buffer.from(schemaSDL)),
+  });
+  expect(publishResp.response?.code).toBe(EnumStatusCode.OK);
+
+  return publishResp;
+};
+
+export const createFederatedGraph = async (
+  client: PromiseClient<typeof PlatformService>,
+  name: string,
+  labelMatchers: string[],
+  routingUrl: string,
+) => {
+  const createFedGraphRes = await client.createFederatedGraph({
+    name,
+    routingUrl,
+    labelMatchers,
+  });
+  expect(createFedGraphRes.response?.code).toBe(EnumStatusCode.OK);
+  return createFedGraphRes;
 };
