@@ -20,6 +20,7 @@ import {
 } from '../src/core/test-util';
 import Keycloak from '../src/core/services/Keycloak';
 import { MockPlatformWebhookService } from '../src/core/webhooks/PlatformWebhookService';
+import { SetupTest } from './test-util';
 
 let dbname = '';
 
@@ -33,68 +34,9 @@ describe('CheckSubgraphSchema', (ctx) => {
   });
 
   test('Should be able to create a subgraph, publish the schema and then check with new schema', async (testContext) => {
-    const databaseConnectionUrl = `postgresql://postgres:changeme@localhost:5432/${dbname}`;
-    const server = Fastify();
-
-    await server.register(database, {
-      databaseConnectionUrl,
-      debugSQL: false,
-      runMigration: true,
-    });
-
-    testContext.onTestFailed(async () => {
-      await server.close();
-    });
-
-    const { authenticator, userTestData } = createTestAuthenticator();
-
-    const realm = 'test';
-    const apiUrl = 'http://localhost:8080';
-    const webBaseUrl = 'http://localhost:3000';
-    const clientId = 'studio';
-    const adminUser = 'admin';
-    const adminPassword = 'changeme';
-
-    const keycloakClient = new Keycloak({
-      apiUrl,
-      realm,
-      clientId,
-      adminUser,
-      adminPassword,
-    });
-
-    const platformWebhooks = new MockPlatformWebhookService();
-
-    await server.register(fastifyConnectPlugin, {
-      routes: routes({
-        db: server.db,
-        logger: pino(),
-        authenticator,
-        jwtSecret: 'secret',
-        keycloakRealm: realm,
-        keycloakClient,
-        platformWebhooks,
-        webBaseUrl,
-        slack: {
-          clientID: '',
-          clientSecret: '',
-        },
-      }),
-    });
-
-    const addr = await server.listen({
-      port: 0,
-    });
-
-    await seedTest(databaseConnectionUrl, userTestData);
-
-    const transport = createConnectTransport({
-      httpVersion: '1.1',
-      baseUrl: addr,
-    });
-
-    const client = createPromiseClient(PlatformService, transport);
-    const subgraphName = genID();
+    const { client, server } = await SetupTest(testContext, dbname);
+    
+    const subgraphName = genID('subgraph1');
     const label = genUniqueLabel();
 
     let resp = await client.createFederatedSubgraph({
@@ -197,8 +139,8 @@ describe('CheckSubgraphSchema', (ctx) => {
     });
 
     const client = createPromiseClient(PlatformService, transport);
-    const federatedGraphName = genID();
-    const subgraphName = genID();
+    const federatedGraphName = genID('fedGraph');
+    const subgraphName = genID('subgraph1');
     const label = genUniqueLabel();
 
     const createFederatedGraphResp = await client.createFederatedGraph({
@@ -298,8 +240,8 @@ describe('CheckSubgraphSchema', (ctx) => {
     });
 
     const client = createPromiseClient(PlatformService, transport);
-    const federatedGraphName = genID();
-    const subgraphName = genID();
+    const federatedGraphName = genID('fedGraph');
+    const subgraphName = genID('subgraph1');
     const label = genUniqueLabel();
 
     const createFederatedGraphResp = await client.createFederatedGraph({
