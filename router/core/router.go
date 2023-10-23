@@ -269,13 +269,13 @@ func (r *Router) configureSubgraphOverwrites(cfg *nodev1.RouterConfig) ([]Subgra
 		if ok && override.URL != "" {
 			parsedURL, err := url.Parse(override.URL)
 			if err != nil {
-				return nil, fmt.Errorf("failed to parse override url '%s': %w", override, err)
+				return nil, fmt.Errorf("failed to parse override url '%s': %w", override.URL, err)
 			}
 
 			if override.SubscriptionURL != "" {
 				_, err := url.Parse(override.SubscriptionURL)
 				if err != nil {
-					return nil, fmt.Errorf("failed to parse override subscription url '%s': %w", override, err)
+					return nil, fmt.Errorf("failed to parse override subscription url '%s': %w", override.SubscriptionURL, err)
 				}
 			}
 
