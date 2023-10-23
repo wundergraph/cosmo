@@ -163,10 +163,11 @@ message GetSubgraphsRequest {
 }
 
 message Subgraph {
-  string name = 1;
-  string routingURL = 2;
-  string lastUpdatedAt = 3;
-  repeated Label labels = 4;
+  string id = 1;
+  string name = 2;
+  string routingURL = 3;
+  string lastUpdatedAt = 4;
+  repeated Label labels = 5;
 }
 
 message GetSubgraphsResponse {
@@ -862,6 +863,38 @@ message IsGitHubAppInstalledResponse {
   bool is_installed = 2;
 }
 
+message GetFieldUsageRequest {
+  string graph_name = 1;
+  string typename = 2;
+  string field = 3; 
+  int32 range = 4;
+}
+
+message ClientWithOperations {
+  message Operation {
+    string latest_hash = 1;
+    string name = 2;
+    int32 count = 3;
+  }
+
+  string name = 1;
+  string version = 2;
+  repeated Operation operations = 3;
+}
+
+message FieldUsageMeta {
+  repeated string subgraph_ids = 1;
+  string firstSeenTimestamp = 2;
+  string latestSeenTimestamp = 3;
+}
+
+message GetFieldUsageResponse {
+  Response response = 1;
+  repeated RequestSeriesItem request_series = 2;
+  repeated ClientWithOperations clients = 3;
+  FieldUsageMeta meta = 4;
+}
+
 service PlatformService {
   // CreateFederatedGraph creates a federated graph on the control plane.
   rpc CreateFederatedGraph(CreateFederatedGraphRequest) returns (CreateFederatedGraphResponse) {}
@@ -979,6 +1012,10 @@ service PlatformService {
   }
 
   rpc GetMetricsErrorRate(GetMetricsErrorRateRequest) returns (GetMetricsErrorRateResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
+  rpc GetFieldUsage(GetFieldUsageRequest) returns (GetFieldUsageResponse) {
     option idempotency_level = NO_SIDE_EFFECTS;
   }
 }

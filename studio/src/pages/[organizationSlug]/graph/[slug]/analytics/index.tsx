@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Spacer } from "@/components/ui/spacer";
-import { useChartData } from "@/lib/insights-helpers";
+import { createDateRange, useChartData } from "@/lib/insights-helpers";
 import { NextPageWithLayout } from "@/lib/page";
 import { cn } from "@/lib/utils";
 import {
@@ -111,13 +111,6 @@ const useRange = () => {
     default:
       return Math.min(24, range);
   }
-};
-
-const createDateRange = (range: number) => {
-  return JSON.stringify({
-    start: formatISO(startOfDay(subHours(new Date(), range))),
-    end: formatISO(endOfDay(new Date())),
-  });
 };
 
 const getInfoTip = (range: number) => {

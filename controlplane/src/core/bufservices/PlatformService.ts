@@ -51,6 +51,7 @@ import {
   GetGraphMetricsResponse,
   GetMetricsErrorRateResponse,
   IsGitHubAppInstalledResponse,
+  GetFieldUsageResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { PlatformEventName, OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import { OpenAIGraphql, buildRouterConfig } from '@wundergraph/cosmo-shared';
@@ -77,6 +78,7 @@ import { handleError, isValidLabelMatchers, isValidLabels } from '../util.js';
 import { OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
 import { GitHubRepository } from '../repositories/GitHubRepository.js';
 import Slack from '../services/Slack.js';
+import { UsageRepository } from '../repositories/analytics/UsageRepository.js';
 
 const formatSubscriptionProtocol = (protocol: GraphQLSubscriptionProtocol) => {
   switch (protocol) {
@@ -249,6 +251,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         return {
           graphs: list.map((g) => ({
+            id: g.id,
             name: g.name,
             routingURL: g.routingUrl,
             lastUpdatedAt: g.lastUpdatedAt,
@@ -284,6 +287,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         return {
           graph: {
+            id: subgraph.id,
             name: subgraph.name,
             lastUpdatedAt: subgraph.lastUpdatedAt,
             routingURL: subgraph.routingUrl,
@@ -461,6 +465,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             requestSeries,
           },
           subgraphs: list.map((g) => ({
+            id: g.id,
             name: g.name,
             routingURL: g.routingUrl,
             lastUpdatedAt: g.lastUpdatedAt,
@@ -1547,6 +1552,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const subgraphs = await subgraphRepo.byGraphLabelMatchers(req.labelMatchers);
 
         const subgraphsDetails = subgraphs.map((s) => ({
+          id: s.id,
           name: s.name,
           routingURL: s.routingUrl,
           labels: s.labels,
@@ -1555,6 +1561,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const result = composeSubgraphs(
           subgraphs.map((s) => ({
+            id: s.id,
             name: s.name,
             url: s.routingUrl,
             definitions: parse(s.schemaSDL),
@@ -3058,6 +3065,59 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             code: EnumStatusCode.OK,
           },
           isInstalled,
+        };
+      });
+    },
+
+    getFieldUsage: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetFieldUsageResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const federatedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+
+        if (!opts.chClient) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_ANALYTICS_DISABLED,
+            },
+            clients: [],
+            requestSeries: [],
+          };
+        }
+
+        const usageRepo = new UsageRepository(opts.chClient);
+
+        const graph = await federatedGraphRepo.byName(req.graphName);
+        if (!graph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: 'Requested graph does not exist',
+            },
+            clients: [],
+            requestSeries: [],
+          };
+        }
+
+        const { clients, requestSeries, meta } = await usageRepo.getFieldUsage({
+          federatedGraphId: graph.id,
+          organizationId: authContext.organizationId,
+          typename: req.typename,
+          field: req.field,
+          range: req.range,
+        });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          clients,
+          requestSeries,
+          meta,
         };
       });
     },

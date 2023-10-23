@@ -64,7 +64,7 @@ export ROUTER_TOKEN=...
 make dc-federation-demo
 ```
 
-3. Navigate to the [Studio explorer](http://localhost:3000/wundergraph/graph/production/explorer) and query the router. Login with the default credentials:
+3. Navigate to the [Studio Playground](http://localhost:3000/wundergraph/graph/production/playground) and query the router. Login with the default credentials:
 
 ```
 Username: foo@wundergraph.com
