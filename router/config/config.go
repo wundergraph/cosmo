@@ -3,9 +3,10 @@ package config
 import (
 	b64 "encoding/base64"
 	"fmt"
-	"github.com/dustin/go-humanize"
 	"os"
 	"time"
+
+	"github.com/dustin/go-humanize"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/goccy/go-yaml"
@@ -183,8 +184,13 @@ type EngineExecutionConfiguration struct {
 	EnableSingleFlight bool `default:"true" envconfig:"ENGINE_ENABLE_SINGLE_FLIGHT"`
 }
 
+type RoutingURLConfig struct {
+	URL             string `yaml:"url" validate:"required,url"`
+	SubscriptionURL string `yaml:"subscription_url" validate:"url"`
+}
+
 type OverrideRoutingURLConfiguration struct {
-	Subgraphs map[string]string `yaml:"subgraphs" validate:"dive,required,url"`
+	Subgraphs map[string]RoutingURLConfig `yaml:"subgraphs" validate:"dive,required"`
 }
 
 type Config struct {

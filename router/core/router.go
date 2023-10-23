@@ -263,13 +263,20 @@ func (r *Router) configureSubgraphOverwrites(cfg *nodev1.RouterConfig) ([]Subgra
 
 		subgraph.Url = parsedURL
 
-		overrideURL, ok := r.overrideRoutingURLConfiguration.Subgraphs[sg.Name]
+		override, ok := r.overrideRoutingURLConfiguration.Subgraphs[sg.Name]
 
 		// check if the subgraph is overridden
-		if ok && overrideURL != "" {
-			parsedURL, err := url.Parse(overrideURL)
+		if ok && override.URL != "" {
+			parsedURL, err := url.Parse(override.URL)
 			if err != nil {
-				return nil, fmt.Errorf("failed to parse override url '%s': %w", overrideURL, err)
+				return nil, fmt.Errorf("failed to parse override url '%s': %w", override, err)
+			}
+
+			if override.SubscriptionURL != "" {
+				_, err := url.Parse(override.SubscriptionURL)
+				if err != nil {
+					return nil, fmt.Errorf("failed to parse override subscription url '%s': %w", override, err)
+				}
 			}
 
 			subgraph.Url = parsedURL
@@ -282,10 +289,18 @@ func (r *Router) configureSubgraphOverwrites(cfg *nodev1.RouterConfig) ([]Subgra
 				// Identify the datasource by the previous subgraph url
 				// Override datasource id, url and subgraph url
 				if subgraphURL == sg.RoutingUrl {
-					conf.Id = overrideURL
-					conf.CustomGraphql.Fetch.Url.StaticVariableContent = overrideURL
-					conf.CustomGraphql.Subscription.Url.StaticVariableContent = overrideURL
-					sg.RoutingUrl = overrideURL
+					conf.Id = override.URL
+					conf.CustomGraphql.Fetch.Url.StaticVariableContent = override.URL
+
+					// If there is a subscription url, override it as well
+					if override.SubscriptionURL != "" {
+						conf.CustomGraphql.Subscription.Url.StaticVariableContent = override.SubscriptionURL
+					} else {
+						// If there is no subscription url, default to the fetch url
+						conf.CustomGraphql.Subscription.Url.StaticVariableContent = override.URL
+					}
+
+					sg.RoutingUrl = override.URL
 					break
 				}
 			}
