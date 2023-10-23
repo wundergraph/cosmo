@@ -8,7 +8,7 @@ import { OrganizationRepository } from '../repositories/OrganizationRepository.j
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
 import { post } from './utils.js';
 
-interface FederatedGraphSchemaUpdate {
+export interface FederatedGraphSchemaUpdate {
   federated_graph: {
     id: string;
     name: string;
