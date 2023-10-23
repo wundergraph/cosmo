@@ -22,14 +22,14 @@ CREATE TABLE IF NOT EXISTS gql_metrics_schema_usage
 
     -- Schema usage
     Path Array(String) CODEC(ZSTD(3)),
-    TypeNames Array(String) CODEC(ZSTD(3)),
+    TypeNames Array(String) CODEC(ZSTD(3)), -- Sorted before insertion
 
     -- Client information
     ClientName LowCardinality(String) CODEC(ZSTD(3)),
     ClientVersion LowCardinality(String) CODEC(ZSTD(3)),
 
     -- SubgraphIDs identify the subgraphs that were used to resolve the field
-    SubgraphIDs Array(LowCardinality(String)) CODEC(ZSTD(3)),
+    SubgraphIDs Array(LowCardinality(String)) CODEC(ZSTD(3)), -- Sorted before insertion
 
     -- Additional information
     Attributes Map(LowCardinality(String), String) CODEC(ZSTD(3)),
@@ -44,8 +44,8 @@ CREATE TABLE IF NOT EXISTS gql_metrics_schema_usage
 )
     engine = MergeTree PARTITION BY toDate(Timestamp)
         ORDER BY (OrganizationID, FederatedGraphID, ClientName, ClientVersion, RouterConfigVersion, OperationHash, toUnixTimestamp(Timestamp))
-        -- We keep 90 days of data as rolling window
-        TTL toDateTime(Timestamp) + toIntervalDay(90)
+        -- We keep 3 days of data as rolling window
+        TTL toDateTime(Timestamp) + toIntervalDay(3)
         SETTINGS index_granularity = 8192, ttl_only_drop_parts = 1;
 
 -- migrate:down

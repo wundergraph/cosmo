@@ -11,6 +11,7 @@ import (
 	lru "github.com/hashicorp/golang-lru/v2"
 	graphqlmetricsv1 "github.com/wundergraph/cosmo/graphqlmetrics/gen/proto/wg/cosmo/graphqlmetrics/v1"
 	"go.uber.org/zap"
+	"sort"
 	"strings"
 	"time"
 )
@@ -143,6 +144,17 @@ func (s *MetricsService) PublishGraphQLMetrics(
 		}
 
 		for _, fieldUsage := range schemaUsage.TypeFieldMetrics {
+
+			// Sort stable for fields where the order doesn't matter
+			// This archive better compression in clickhouse
+
+			sort.SliceStable(fieldUsage.SubgraphIDs, func(i, j int) bool {
+				return fieldUsage.SubgraphIDs[i] < fieldUsage.SubgraphIDs[j]
+			})
+			sort.SliceStable(fieldUsage.TypeNames, func(i, j int) bool {
+				return fieldUsage.TypeNames[i] < fieldUsage.TypeNames[j]
+			})
+
 			_, err := batchSchemaUsageStmts.ExecContext(ctx,
 				insertTime,
 				claims.OrganizationID,
