@@ -56,7 +56,14 @@ export class UsageRepository {
         toDateTime('${end}') AS endDate
     SELECT
         toStartOfInterval(Timestamp, INTERVAL ${granule} MINUTE) AS timestamp,
-        sum(Count) as totalRequests
+        sum(Count) as totalRequests,
+        sum(
+          CASE
+            WHEN Attributes['http.status_code'] >= '400' AND Attributes['http.status_code'] < '600'
+            THEN Count
+            ELSE 0
+          END
+        ) as erroredRequests
     FROM ${this.client.database}.gql_metrics_schema_usage
     WHERE timestamp >= startDate AND timestamp <= endDate
         AND hasAny(TypeNames, ['${typename}'])
@@ -76,7 +83,7 @@ export class UsageRepository {
       return res.map((p) => ({
         timestamp: new Date(p.timestamp + 'Z').getTime().toString(),
         totalRequests: Number(p.totalRequests),
-        erroredRequests: 0,
+        erroredRequests: Number(p.erroredRequests),
       }));
     }
 
