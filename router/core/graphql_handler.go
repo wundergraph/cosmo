@@ -57,12 +57,6 @@ func (e *reportError) Report() *operationreport.Report {
 	return e.report
 }
 
-type planWithMetaData struct {
-	preparedPlan    plan.Plan
-	variables       []byte
-	schemaUsageInfo plan.SchemaUsageInfo
-}
-
 func MergeJsonRightIntoLeft(left, right []byte) []byte {
 	if len(left) == 0 {
 		return right

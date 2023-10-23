@@ -641,7 +641,8 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		return nil, fmt.Errorf("failed to build plan configuration: %w", err)
 	}
 
-	operationParser := NewOperationParser(executor)
+	operationParser := NewOperationParser(executor, int64(r.routerTrafficConfig.MaxRequestBodyBytes))
+	operationPlanner := NewOperationPlanner(executor, planCache)
 
 	var graphqlPlaygroundHandler http.Handler
 
@@ -679,13 +680,14 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		metricStore = m
 	}
 
+	routerMetrics := NewRouterMetrics(metricStore, r.gqlMetricsExporter, routerConfig.GetVersion())
+
 	graphqlPreHandler := NewPreHandler(&PreHandlerOptions{
-		Executor:            executor,
-		Logger:              r.logger,
-		RequestMetrics:      metricStore,
-		Cache:               planCache,
-		GqlMetricsExporter:  r.gqlMetricsExporter,
-		RouterConfigVersion: routerConfig.GetVersion(),
+		Executor: executor,
+		Logger:   r.logger,
+		Metrics:  routerMetrics,
+		Parser:   operationParser,
+		Planner:  operationPlanner,
 	})
 
 	var traceHandler *trace.Middleware
@@ -714,10 +716,11 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		}
 
 		subChiRouter.Use(NewWebsocketMiddleware(rootContext, WebsocketMiddlewareOptions{
-			Parser:                operationParser,
-			MaxRequestSizeInBytes: int64(r.routerTrafficConfig.MaxRequestBodyBytes),
-			GraphQLHandler:        graphqlHandler,
-			Logger:                r.logger,
+			Parser:         operationParser,
+			Planner:        operationPlanner,
+			GraphQLHandler: graphqlHandler,
+			Metrics:        routerMetrics,
+			Logger:         r.logger,
 		}))
 
 		subChiRouter.Use(graphqlPreHandler.Handler)

@@ -334,6 +334,8 @@ type OperationContext interface {
 	Hash() uint64
 	// Content is the content of the operation
 	Content() string
+	// Variables is the variables of the operation
+	Variables() []byte
 	// ClientInfo returns information about the client that initiated this operation
 	ClientInfo() ClientInfo
 }
@@ -390,18 +392,7 @@ func (o *operationContext) ClientInfo() ClientInfo {
 	return *o.clientInfo
 }
 
-func withOperationContext(ctx context.Context, operation *ParsedOperation, clientInfo *ClientInfo) context.Context {
-	variablesCopy := make([]byte, len(operation.Variables))
-	copy(variablesCopy, operation.Variables)
-
-	opContext := &operationContext{
-		name:       operation.Name,
-		opType:     operation.Type,
-		content:    operation.NormalizedRepresentation,
-		hash:       operation.ID,
-		variables:  variablesCopy,
-		clientInfo: clientInfo,
-	}
+func withOperationContext(ctx context.Context, opContext *operationContext) context.Context {
 	return context.WithValue(ctx, operationContextKey, opContext)
 }
 
