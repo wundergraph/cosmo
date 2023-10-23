@@ -212,9 +212,9 @@ export default class ApolloMigrator {
     organizationID: string;
     db: PostgresJsDatabase<typeof schema>;
   }): Promise<FederatedGraphDTO> {
-    return db.transaction<FederatedGraphDTO>(async (db) => {
-      const fedGraphRepo = new FederatedGraphRepository(db, organizationID);
-      const subgraphRepo = new SubgraphRepository(db, organizationID);
+    return db.transaction<FederatedGraphDTO>(async (tx) => {
+      const fedGraphRepo = new FederatedGraphRepository(tx, organizationID);
+      const subgraphRepo = new SubgraphRepository(tx, organizationID);
       const sanitizedGraphName = sanitizeMigratedGraphName(fedGraph.name);
       const federatedGraph = await fedGraphRepo.create({
         name: fedGraph.name,
@@ -233,7 +233,7 @@ export default class ApolloMigrator {
           subscriptionProtocol: 'ws',
         });
 
-        await subgraphRepo.updateSchema(subgraph.name, subgraph.schema);
+        await subgraphRepo.addSchemaVersion(subgraph.name, subgraph.schema);
       }
 
       return federatedGraph;

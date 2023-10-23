@@ -2,6 +2,7 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { App } from 'octokit';
 import { eq } from 'drizzle-orm';
 import { CompositionError, GitInfo } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { PlainMessage } from '@bufbuild/protobuf';
 import * as schema from '../../db/schema.js';
 
 export class GitHubRepository {
@@ -56,7 +57,7 @@ export class GitHubRepository {
   async createCommitCheck(input: {
     schemaCheckID: string;
     gitInfo: GitInfo;
-    compositionErrors: CompositionError[];
+    compositionErrors: PlainMessage<CompositionError>[];
     breakingChangesCount: number;
     subgraphName: string;
     composedGraphs: string[];

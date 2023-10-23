@@ -33,3 +33,13 @@ export function normalizeURL(url: string): string {
   const port = parsedUrl.port ? `:${parsedUrl.port}` : '';
   return `${parsedUrl.protocol}//${parsedUrl.hostname}${port}${path}`;
 }
+
+export function isValidUrl(url: string) {
+  try {
+    // eslint-disable-next-line no-new
+    new URL(url);
+    return true;
+  } catch {
+    return false;
+  }
+}

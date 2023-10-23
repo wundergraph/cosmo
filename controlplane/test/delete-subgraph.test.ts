@@ -1,24 +1,8 @@
-import { createPromiseClient } from '@connectrpc/connect';
-import { fastifyConnectPlugin } from '@connectrpc/connect-fastify';
-import { createConnectTransport } from '@connectrpc/connect-node';
-import Fastify from 'fastify';
-import pino from 'pino';
-import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
-import database from '../src/core/plugins/database';
-import routes from '../src/core/routes';
-import {
-  afterAllSetup,
-  beforeAllSetup,
-  createTestAuthenticator,
-  genID,
-  genUniqueLabel,
-  seedTest,
-} from '../src/core/test-util';
-import Keycloak from '../src/core/services/Keycloak';
-import { MockPlatformWebhookService } from '../src/core/webhooks/PlatformWebhookService';
+import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util';
+import { SetupTest } from './test-util';
 
 let dbname = '';
 
@@ -32,69 +16,10 @@ describe('DeleteSubgraph', (ctx) => {
   });
 
   test('Should be able to create a subgraph, publish the schema, create a federated graph and then delete a subgraph', async (testContext) => {
-    const databaseConnectionUrl = `postgresql://postgres:changeme@localhost:5432/${dbname}`;
-    const server = Fastify();
+    const { client, server } = await SetupTest(testContext, dbname);
 
-    await server.register(database, {
-      databaseConnectionUrl,
-      debugSQL: false,
-      runMigration: true,
-    });
-
-    testContext.onTestFailed(async () => {
-      await server.close();
-    });
-
-    const { authenticator, userTestData } = createTestAuthenticator();
-
-    const realm = 'test';
-    const apiUrl = 'http://localhost:8080';
-    const webBaseUrl = 'http://localhost:3000';
-    const clientId = 'studio';
-    const adminUser = 'admin';
-    const adminPassword = 'changeme';
-
-    const keycloakClient = new Keycloak({
-      apiUrl,
-      realm,
-      clientId,
-      adminUser,
-      adminPassword,
-    });
-
-    const platformWebhooks = new MockPlatformWebhookService();
-
-    await server.register(fastifyConnectPlugin, {
-      routes: routes({
-        db: server.db,
-        logger: pino(),
-        authenticator,
-        jwtSecret: 'secret',
-        keycloakRealm: realm,
-        keycloakClient,
-        platformWebhooks,
-        webBaseUrl,
-        slack: {
-          clientID: '',
-          clientSecret: '',
-        },
-      }),
-    });
-
-    const addr = await server.listen({
-      port: 0,
-    });
-
-    await seedTest(databaseConnectionUrl, userTestData);
-
-    const transport = createConnectTransport({
-      httpVersion: '1.1',
-      baseUrl: addr,
-    });
-
-    const client = createPromiseClient(PlatformService, transport);
-    const federatedGraphName = genID();
-    const subgraphName = genID();
+    const federatedGraphName = genID('fedGraph');
+    const subgraphName = genID('subgraph');
     const label = genUniqueLabel();
 
     const createFederatedGraphResp = await client.createFederatedGraph({
@@ -120,11 +45,11 @@ describe('DeleteSubgraph', (ctx) => {
 
     expect(publishFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
 
-    // delete the subgraph
+    // delete the subgraph because it was the only one it produced a composition error
     const deleteFederatedSubgraphResp = await client.deleteFederatedSubgraph({
       subgraphName,
     });
-    expect(deleteFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
+    expect(deleteFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED);
 
     // after deletion of subgraph verify if the subgraph was deleted
     const getSubgraphResp = await client.getSubgraphByName({
@@ -137,6 +62,94 @@ describe('DeleteSubgraph', (ctx) => {
       name: federatedGraphName,
     });
     expect(getFederatedGraphResp.response?.code).toBe(EnumStatusCode.OK);
+    expect(getFederatedGraphResp.subgraphs.length).toBe(0);
+
+    await server.close();
+  });
+
+  test('Should be able to delete a subgraph from multiple federated graphs', async (testContext) => {
+    const { client, server } = await SetupTest(testContext, dbname);
+
+    const federatedGraph1Name = genID('fedGraph1');
+    const federatedGraph2Name = genID('fedGraph2');
+
+    const subgraphName = genID('subgraph');
+    const label = genUniqueLabel();
+
+    const createFederatedGraph1Resp = await client.createFederatedGraph({
+      name: federatedGraph1Name,
+      labelMatchers: [joinLabel(label)],
+      routingUrl: 'http://localhost:4000',
+    });
+
+    expect(createFederatedGraph1Resp.response?.code).toBe(EnumStatusCode.OK);
+
+    const createFederatedGraph2Resp = await client.createFederatedGraph({
+      name: federatedGraph2Name,
+      labelMatchers: [joinLabel(label)],
+      routingUrl: 'http://localhost:4000',
+    });
+
+    expect(createFederatedGraph2Resp.response?.code).toBe(EnumStatusCode.OK);
+
+    const createFederatedSubgraphResp = await client.createFederatedSubgraph({
+      name: subgraphName,
+      labels: [label],
+      routingUrl: 'http://localhost:8080',
+    });
+
+    expect(createFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
+
+    const publishFederatedSubgraphResp = await client.publishFederatedSubgraph({
+      name: subgraphName,
+      schema: Uint8Array.from(Buffer.from('type Query { hello: String! }')),
+    });
+
+    expect(publishFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
+
+    // Check if subgraph exists on both federated graphs
+    let getGraph1Resp = await client.getFederatedGraphByName({
+      name: federatedGraph1Name,
+    });
+
+    expect(getGraph1Resp.response?.code).toBe(EnumStatusCode.OK);
+    expect(getGraph1Resp.subgraphs.length).toBe(1);
+    expect(getGraph1Resp.subgraphs[0].name).toBe(subgraphName);
+
+    let getGraph2Resp = await client.getFederatedGraphByName({
+      name: federatedGraph1Name,
+    });
+
+    expect(getGraph2Resp.response?.code).toBe(EnumStatusCode.OK);
+    expect(getGraph2Resp.subgraphs.length).toBe(1);
+    expect(getGraph2Resp.subgraphs[0].name).toBe(subgraphName);
+
+    // delete the subgraph because it was the only one it produced a composition error
+    const deleteFederatedSubgraphResp = await client.deleteFederatedSubgraph({
+      subgraphName,
+    });
+    expect(deleteFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED);
+
+    // after deletion of subgraph verify if the subgraph was deleted
+    // and don't exist on both federated graphs
+    const getSubgraphResp = await client.getSubgraphByName({
+      name: subgraphName,
+    });
+    expect(getSubgraphResp.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
+
+    getGraph1Resp = await client.getFederatedGraphByName({
+      name: federatedGraph1Name,
+    });
+
+    expect(getGraph1Resp.response?.code).toBe(EnumStatusCode.OK);
+    expect(getGraph1Resp.subgraphs.length).toBe(0);
+
+    getGraph2Resp = await client.getFederatedGraphByName({
+      name: federatedGraph1Name,
+    });
+
+    expect(getGraph2Resp.response?.code).toBe(EnumStatusCode.OK);
+    expect(getGraph2Resp.subgraphs.length).toBe(0);
 
     await server.close();
   });

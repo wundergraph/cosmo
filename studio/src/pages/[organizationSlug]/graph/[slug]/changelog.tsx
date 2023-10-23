@@ -1,7 +1,7 @@
 import { UserContext } from "@/components/app-provider";
 import { DatePickerWithRange } from "@/components/date-picker-with-range";
 import { EmptyState } from "@/components/empty-state";
-import { getGraphLayout } from "@/components/layout/graph-layout";
+import { getGraphLayout, GraphContext } from "@/components/layout/graph-layout";
 import { PageHeader } from "@/components/layout/head";
 import { TitleLayout } from "@/components/layout/title-layout";
 import { Badge } from "@/components/ui/badge";
@@ -32,6 +32,7 @@ import { endOfDay, formatISO, startOfDay, subDays } from "date-fns";
 import { useRouter } from "next/router";
 import { useCallback, useContext, useEffect, useState } from "react";
 import { DateRange } from "react-day-picker";
+import { CompositionErrorsBanner } from "@/components/composition-errors-banner";
 
 const Toolbar = () => {
   const router = useRouter();
@@ -202,6 +203,13 @@ const ChangelogPage: NextPageWithLayout = () => {
   const [items, setItems] = useState<FederatedGraphChangelogOutput[]>([]);
   const [offset, setOffset] = useState(0);
 
+  const graphData = useContext(GraphContext);
+
+  const validGraph =
+    graphData?.graph?.isComposable && !!graphData?.graph?.lastUpdatedAt;
+  const emptyGraph =
+    !graphData?.graph?.lastUpdatedAt && !graphData?.graph?.isComposable;
+
   const dateRange = router.query.dateRange
     ? JSON.parse(router.query.dateRange as string)
     : {
@@ -302,6 +310,9 @@ const ChangelogPage: NextPageWithLayout = () => {
 
   return (
     <div className="relative h-full w-full">
+      {!validGraph && (
+        <CompositionErrorsBanner errors={graphData?.graph?.compositionErrors} />
+      )}
       <div
         className={cn("sticky top-[184px] z-20 h-0 overflow-visible", {
           "top-[216px]": user?.currentOrganization.isFreeTrial,

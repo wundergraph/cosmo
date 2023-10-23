@@ -19,6 +19,7 @@ import {
 } from '../src/core/test-util';
 import Keycloak from '../src/core/services/Keycloak';
 import { MockPlatformWebhookService } from '../src/core/webhooks/PlatformWebhookService';
+import { SetupTest } from './test-util';
 
 let dbname = '';
 
@@ -32,69 +33,10 @@ describe('Federated Graph', (ctx) => {
   });
 
   test('Should be able to create a federated graph from subgraphs with matching labels', async (testContext) => {
-    const databaseConnectionUrl = `postgresql://postgres:changeme@localhost:5432/${dbname}`;
-    const server = Fastify();
+    const { client, server } = await SetupTest(testContext, dbname);
 
-    await server.register(database, {
-      databaseConnectionUrl,
-      debugSQL: false,
-      runMigration: true,
-    });
-
-    testContext.onTestFailed(async () => {
-      await server.close();
-    });
-
-    const { authenticator, userTestData } = createTestAuthenticator();
-
-    const realm = 'test';
-    const apiUrl = 'http://localhost:8080';
-    const webBaseUrl = 'http://localhost:3000';
-    const clientId = 'studio';
-    const adminUser = 'admin';
-    const adminPassword = 'changeme';
-
-    const keycloakClient = new Keycloak({
-      apiUrl,
-      realm,
-      clientId,
-      adminUser,
-      adminPassword,
-    });
-
-    const platformWebhooks = new MockPlatformWebhookService();
-
-    await server.register(fastifyConnectPlugin, {
-      routes: routes({
-        db: server.db,
-        logger: pino(),
-        authenticator,
-        jwtSecret: 'secret',
-        keycloakRealm: realm,
-        keycloakClient,
-        platformWebhooks,
-        webBaseUrl,
-        slack: {
-          clientID: '',
-          clientSecret: '',
-        },
-      }),
-    });
-
-    const addr = await server.listen({
-      port: 0,
-    });
-
-    await seedTest(databaseConnectionUrl, userTestData);
-
-    const transport = createConnectTransport({
-      httpVersion: '1.1',
-      baseUrl: addr,
-    });
-
-    const client = createPromiseClient(PlatformService, transport);
-    const subgraph1Name = genID();
-    const fedGraphName = genID();
+    const subgraph1Name = genID('subgraph1');
+    const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
 
     const createSubraph1Res = await client.createFederatedSubgraph({
@@ -194,8 +136,8 @@ describe('Federated Graph', (ctx) => {
     });
 
     const client = createPromiseClient(PlatformService, transport);
-    const subgraph1Name = genID();
-    const fedGraphName = genID();
+    const subgraph1Name = genID('subgraph1');
+    const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
 
     const createFedGraphRes = await client.createFederatedGraph({
@@ -295,9 +237,9 @@ describe('Federated Graph', (ctx) => {
     });
 
     const client = createPromiseClient(PlatformService, transport);
-    const subgraph1Name = genID();
-    const subgraph2Name = genID();
-    const fedGraphName = genID();
+    const subgraph1Name = genID('subgraph1');
+    const subgraph2Name = genID('subgraph2');
+    const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
 
     const createSubraph1Res = await client.createFederatedSubgraph({
@@ -396,9 +338,9 @@ describe('Federated Graph', (ctx) => {
     });
 
     const client = createPromiseClient(PlatformService, transport);
-    const subgraph1Name = genID();
-    const subgraph2Name = genID();
-    const fedGraphName = genID();
+    const subgraph1Name = genID('subgraph1');
+    const subgraph2Name = genID('subgraph2');
+    const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
 
     const createSubraph1Res = await client.createFederatedSubgraph({
@@ -526,9 +468,9 @@ describe('Federated Graph', (ctx) => {
     });
 
     const client = createPromiseClient(PlatformService, transport);
-    const subgraph1Name = genID();
-    const subgraph2Name = genID();
-    const fedGraphName = genID();
+    const subgraph1Name = genID('subgraph1');
+    const subgraph2Name = genID('subgraph2');
+    const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
 
     const createSubraph1Res = await client.createFederatedSubgraph({
@@ -597,18 +539,19 @@ describe('Federated Graph', (ctx) => {
     expect(graph.sdl).toBeDefined();
     expect(graph.sdl).not.toBe('');
 
-    // deleting the subgraph
+    // delete the subgraph because it was the only one it produced a composition error
     deleteSubgraphResp = await client.deleteFederatedSubgraph({
       subgraphName: subgraph2Name,
     });
-    expect(deleteSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
+    expect(deleteSubgraphResp.response?.code).toBe(EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED);
 
     // fetching the federated schema after deleting both the subgraphs
+    // because a federated graph with no subgraphs is not allowed the last valid schema should be returned
     graph = await client.getFederatedGraphSDLByName({
       name: fedGraphName,
     });
-    expect(graph.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
-    expect(graph.sdl).not.toBeDefined();
+    expect(graph.response?.code).toBe(EnumStatusCode.OK);
+    expect(graph.sdl).toBeDefined();
 
     await server.close();
   });

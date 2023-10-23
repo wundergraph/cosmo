@@ -34,12 +34,12 @@ export async function afterAllSetup(dbname: string) {
   await sql.end({ timeout: 3 });
 }
 
-export function genID() {
-  return nuid.next();
+export function genID(prefix = 'prefix') {
+  return prefix + '-' + nuid.next();
 }
 
-export function genUniqueLabel(): Label {
-  return { key: 'key-' + genID(), value: 'value-' + genID() };
+export function genUniqueLabel(prefix = 'prefix'): Label {
+  return { key: prefix + '-' + genID(), value: genID() };
 }
 
 export async function seedTest(databaseConnectionUrl: string, userTestData: UserTestData) {

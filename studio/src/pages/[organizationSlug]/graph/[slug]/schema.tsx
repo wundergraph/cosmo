@@ -16,16 +16,16 @@ import { useToast } from "@/components/ui/use-toast";
 import { NextPageWithLayout } from "@/lib/page";
 import { Component2Icon } from "@radix-ui/react-icons";
 import { useQuery } from "@tanstack/react-query";
-import { format } from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import {
   getFederatedGraphSDLByName,
   getFederatedSubgraphSDLByName,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import { PiGraphLight } from "react-icons/pi";
 import { formatDateTime } from "@/lib/format-date";
+import { CompositionErrorsBanner } from "@/components/composition-errors-banner";
 
 const useScrollIntoView = (lineNo: string) => {
   const [isMounted, setIsMounted] = useState(false);
@@ -74,6 +74,11 @@ const SchemaPage: NextPageWithLayout = () => {
 
   const graphData = useContext(GraphContext);
 
+  const validGraph =
+    graphData?.graph?.isComposable && !!graphData?.graph?.lastUpdatedAt;
+  const emptyGraph =
+    !graphData?.graph?.lastUpdatedAt && !graphData?.graph?.isComposable;
+
   const { data: subGraphSdl } = useQuery({
     ...getFederatedSubgraphSDLByName.useQuery({
       name: activeSubgraph,
@@ -110,69 +115,74 @@ const SchemaPage: NextPageWithLayout = () => {
       };
 
   return (
-    <div className="relative flex flex-col gap-y-6">
-      <div className="order-1 flex flex-row flex-wrap gap-y-4">
-        <Select onValueChange={(query) => router.push(pathname + query)}>
-          <SelectTrigger
-            value={activeGraphWithSDL.title}
-            className="w-full md:w-[200px]"
-          >
-            <SelectValue aria-label={activeGraphWithSDL.title}>
-              {activeGraphWithSDL.title}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              <SelectLabel className="mb-1 flex flex-row items-center justify-start gap-x-1 text-[0.7rem] uppercase tracking-wider">
-                <PiGraphLight className="h-3 w-3" /> Graph
-              </SelectLabel>
-              <SelectItem value="">{graphName}</SelectItem>
-            </SelectGroup>
-            <Separator className="my-2" />
-            <SelectGroup>
-              <SelectLabel className="mb-1 flex flex-row items-center justify-start gap-x-1 text-[0.7rem] uppercase tracking-wider">
-                <Component2Icon className="h-3 w-3" /> Subgraphs
-              </SelectLabel>
-              {subgraphs.map(({ name, query }) => {
-                return (
-                  <SelectItem key={name} value={query}>
-                    {name}
-                  </SelectItem>
-                );
-              })}
-            </SelectGroup>
-          </SelectContent>
-        </Select>
-        <SchemaViewerActions
-          sdl={activeGraphWithSDL.sdl ?? ""}
-          subgraphName={activeGraphWithSDL.title}
-        />
-      </div>
+    <div>
+      {!validGraph && (
+        <CompositionErrorsBanner errors={graphData?.graph?.compositionErrors} />
+      )}
+      <div className="relative flex flex-col gap-y-6">
+        <div className="order-1 flex flex-row flex-wrap gap-y-4">
+          <Select onValueChange={(query) => router.push(pathname + query)}>
+            <SelectTrigger
+              value={activeGraphWithSDL.title}
+              className="w-full md:w-[200px]"
+            >
+              <SelectValue aria-label={activeGraphWithSDL.title}>
+                {activeGraphWithSDL.title}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectLabel className="mb-1 flex flex-row items-center justify-start gap-x-1 text-[0.7rem] uppercase tracking-wider">
+                  <PiGraphLight className="h-3 w-3" /> Graph
+                </SelectLabel>
+                <SelectItem value="">{graphName}</SelectItem>
+              </SelectGroup>
+              <Separator className="my-2" />
+              <SelectGroup>
+                <SelectLabel className="mb-1 flex flex-row items-center justify-start gap-x-1 text-[0.7rem] uppercase tracking-wider">
+                  <Component2Icon className="h-3 w-3" /> Subgraphs
+                </SelectLabel>
+                {subgraphs.map(({ name, query }) => {
+                  return (
+                    <SelectItem key={name} value={query}>
+                      {name}
+                    </SelectItem>
+                  );
+                })}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+          <SchemaViewerActions
+            sdl={activeGraphWithSDL.sdl ?? ""}
+            subgraphName={activeGraphWithSDL.title}
+          />
+        </div>
 
-      <div
-        id="schema-container"
-        className="scrollbar-custom absolute left-0 right-0 top-48 order-3 h-[70vh] overflow-auto rounded border md:top-24 md:order-2"
-      >
-        <SchemaViewer sdl={activeGraphWithSDL.sdl ?? ""} />
-      </div>
-      <div className="order-2 flex w-full flex-col items-center justify-end gap-x-8 gap-y-1 rounded border bg-card p-2 text-xs md:order-3 md:flex-row md:border-none md:bg-transparent md:p-0">
-        <p className="flex items-center gap-x-1">
-          Routing URL :
-          <Link
-            className="hover:underline"
-            target="_blank"
-            rel="noreferrer"
-            href={activeGraphWithSDL.routingUrl}
-          >
-            {activeGraphWithSDL.routingUrl}
-          </Link>
-        </p>
-        {activeGraphWithSDL.time && (
+        <div
+          id="schema-container"
+          className="scrollbar-custom absolute left-0 right-0 top-48 order-3 h-[70vh] overflow-auto rounded border md:top-24 md:order-2"
+        >
+          <SchemaViewer sdl={activeGraphWithSDL.sdl ?? ""} />
+        </div>
+        <div className="order-2 flex w-full flex-col items-center justify-end gap-x-8 gap-y-1 rounded border bg-card p-2 text-xs md:order-3 md:flex-row md:border-none md:bg-transparent md:p-0">
           <p className="flex items-center gap-x-1">
-            Last updated :
-            <span>{formatDateTime(new Date(activeGraphWithSDL.time))}</span>
+            Routing URL :
+            <Link
+              className="hover:underline"
+              target="_blank"
+              rel="noreferrer"
+              href={activeGraphWithSDL.routingUrl}
+            >
+              {activeGraphWithSDL.routingUrl}
+            </Link>
           </p>
-        )}
+          {activeGraphWithSDL.time && (
+            <p className="flex items-center gap-x-1">
+              Last updated :
+              <span>{formatDateTime(new Date(activeGraphWithSDL.time))}</span>
+            </p>
+          )}
+        </div>
       </div>
     </div>
   );

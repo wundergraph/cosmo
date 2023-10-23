@@ -68,7 +68,7 @@ describe('Authentication', (ctx) => {
     const nodeClient = createPromiseClient(NodeService, transport);
 
     const createPandasSubgraph = await platformClient.createFederatedSubgraph({
-      name: genID(),
+      name: genID('fedGraph'),
       labels: [genUniqueLabel()],
       routingUrl: 'http://localhost:8081',
     });

@@ -52,7 +52,7 @@ export const CLISteps = ({ steps }: { steps: CLIStep[] }) => {
         return (
           <div className="flex flex-col items-start gap-y-2" key={index}>
             <p>
-              {index + 1}. {step.description}
+              {steps.length > 1 && `${index + 1}.`} {step.description}
             </p>
             <CLI
               command={step.command}

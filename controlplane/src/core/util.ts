@@ -2,6 +2,7 @@ import { randomFill } from 'node:crypto';
 import pino from 'pino';
 import { joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
 import { uid } from 'uid/secure';
+import { GraphQLSubscriptionProtocol } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { Label, ResponseMessage } from '../types/index.js';
 import { isAuthenticationError, isFreeTrialExpiredError, isPublicError } from './errors/errors.js';
 
@@ -126,3 +127,36 @@ export function sanitizeMigratedGraphName(input: string): string {
   }
   return `migrated_graph_${uid(12)}`;
 }
+
+export const formatSubscriptionProtocol = (protocol: GraphQLSubscriptionProtocol) => {
+  switch (protocol) {
+    case GraphQLSubscriptionProtocol.GRAPHQL_SUBSCRIPTION_PROTOCOL_WS: {
+      return 'ws';
+    }
+    case GraphQLSubscriptionProtocol.GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE: {
+      return 'sse';
+    }
+    case GraphQLSubscriptionProtocol.GRAPHQL_SUBSCRIPTION_PROTOCOL_SSE_POST: {
+      return 'sse_post';
+    }
+  }
+};
+
+export const hasLabelsChanged = (prev: Label[], cur: Label[]): boolean => {
+  if (prev.length !== cur.length) {
+    return true;
+  }
+
+  // This works fine because we don't allow comma in the label key or value,
+  // so we can use it as a separator to compare the labels
+  return (
+    prev
+      .map((p) => joinLabel(p))
+      .sort()
+      .join(',') !==
+    cur
+      .map((c) => joinLabel(c))
+      .sort()
+      .join(',')
+  );
+};

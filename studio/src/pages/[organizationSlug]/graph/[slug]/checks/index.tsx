@@ -40,7 +40,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { getChecksByFederatedGraphName } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { endOfDay, format, formatISO, startOfDay, subDays } from "date-fns";
+import { endOfDay, formatISO, startOfDay, subDays } from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useCallback, useContext } from "react";

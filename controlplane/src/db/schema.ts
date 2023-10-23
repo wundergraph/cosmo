@@ -178,7 +178,7 @@ export const schemaVersion = pgTable('schema_versions', {
   // For a monolithic GraphQL, it is the SDL.
   // For a federated Graph, this is the composition result.
   schemaSDL: text('schema_sdl'),
-  // Determines if the composed schema is valid. This is the current state available for serving to routers.
+  // Determines if the schema is valid.
   isComposable: boolean('is_composable').default(false),
   // The errors that occurred during the composition of the schema. This is only set when isComposable is false.
   compositionErrors: text('composition_errors'),
