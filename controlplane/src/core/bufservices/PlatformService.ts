@@ -3093,7 +3093,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           typename: req.typename,
           field: req.field,
           range: req.range,
-          latestRouterConfigVersion: graph.schemaVersionId ?? '',
         });
 
         return {
