@@ -186,7 +186,7 @@ type EngineExecutionConfiguration struct {
 
 type RoutingURLConfig struct {
 	URL             string `yaml:"url" validate:"required,url"`
-	SubscriptionURL string `yaml:"subscription_url" validate:"url"`
+	SubscriptionURL string `yaml:"subscription_url" validate:"omitempty,url"`
 }
 
 type OverrideRoutingURLConfiguration struct {
