@@ -4,6 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/internal/otel"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 	"net"
 	"net/http"
 	"strconv"
@@ -39,6 +42,8 @@ const (
 
 var (
 	couldNotResolveResponseErr = errors.New("could not resolve response")
+	serverTimeoutErr           = errors.New("server timeout")
+	serverCanceledErr          = errors.New("server canceled")
 	internalServerErrorErr     = errors.New("internal server error")
 )
 
@@ -105,6 +110,17 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 	return graphQLHandler
 }
 
+//
+// Error and Status Code handling
+//
+// When a server receives a well-formed GraphQL-over-HTTP request, it must return a
+// well‐formed GraphQL response. The server's response describes the result of validating
+// and executing the requested operation if successful, and describes any errors encountered
+// during the request. This means working errors should be returned as part of the response body.
+// Only in cases where the request is malformed or invalid GraphQL should the server return an HTTP 4xx or 5xx error code.
+// That also implies parsing or validation errors. They should be returned as part of the response body.
+// https://github.com/graphql/graphql-over-http/blob/main/spec/GraphQLOverHTTP.md#response
+
 type GraphQLHandler struct {
 	log      *zap.Logger
 	executor *Executor
@@ -146,15 +162,16 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return prepared, nil
 		})
 		if err != nil {
+			w.Header().Set("Content-Type", "application/json")
+
 			var reportErr ReportError
 			if errors.As(err, &reportErr) {
-				w.WriteHeader(http.StatusBadRequest)
-				writeRequestErrorsFromReport(reportErr.Report(), w, requestLogger)
-			} else {
-				requestLogger.Error("prepare plan failed", zap.Error(err))
-				w.WriteHeader(http.StatusInternalServerError)
-				writeRequestErrors(graphql.RequestErrorsFromError(internalServerErrorErr), w, requestLogger)
+				logInternalErrorsFromReport(reportErr.Report(), requestLogger)
+				writeRequestErrors(r, graphql.RequestErrorsFromOperationReport(*reportErr.Report()), w, requestLogger)
+				return
 			}
+			requestLogger.Error("prepare plan failed", zap.Error(err))
+			writeRequestErrors(r, graphql.RequestErrorsFromError(internalServerErrorErr), w, requestLogger)
 			return
 		}
 
@@ -189,18 +206,16 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		err := h.executor.Resolver.ResolveGraphQLResponse(ctx, p.Response, nil, executionBuf)
 		if err != nil {
-			if errors.Is(err, context.Canceled) {
-				return
-			}
-
 			var nErr net.Error
-			if errors.As(err, &nErr) && nErr.Timeout() {
-				w.WriteHeader(http.StatusGatewayTimeout)
+
+			if errors.Is(err, context.Canceled) {
+				writeRequestErrors(r, graphql.RequestErrorsFromError(serverCanceledErr), w, requestLogger)
+			} else if errors.As(err, &nErr) && nErr.Timeout() {
+				writeRequestErrors(r, graphql.RequestErrorsFromError(serverTimeoutErr), w, requestLogger)
 			} else {
-				w.WriteHeader(http.StatusInternalServerError)
+				writeRequestErrors(r, graphql.RequestErrorsFromError(couldNotResolveResponseErr), w, requestLogger)
 			}
 
-			writeRequestErrors(graphql.RequestErrorsFromError(couldNotResolveResponseErr), w, requestLogger)
 			requestLogger.Error("unable to resolve GraphQL response", zap.Error(err))
 			return
 		}
@@ -224,12 +239,13 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		err := h.executor.Resolver.ResolveGraphQLSubscription(ctx, p.Response, flushWriter)
 		if err != nil {
 			if errors.Is(err, context.Canceled) {
+				requestLogger.Error("context canceled: unable to resolve subscription response", zap.Error(err))
+				writeRequestErrors(r, graphql.RequestErrorsFromError(couldNotResolveResponseErr), w, requestLogger)
 				return
 			}
 
-			w.WriteHeader(http.StatusInternalServerError)
-			writeRequestErrors(graphql.RequestErrorsFromError(couldNotResolveResponseErr), w, requestLogger)
 			requestLogger.Error("unable to resolve subscription response", zap.Error(err))
+			writeRequestErrors(r, graphql.RequestErrorsFromError(couldNotResolveResponseErr), w, requestLogger)
 			return
 		}
 	default:
@@ -274,7 +290,7 @@ func (h *GraphQLHandler) preparePlan(requestOperationName []byte, requestOperati
 	}, nil
 }
 
-func logInternalErrors(report *operationreport.Report, requestLogger *zap.Logger) {
+func logInternalErrorsFromReport(report *operationreport.Report, requestLogger *zap.Logger) {
 	var internalErr error
 	for _, err := range report.InternalErrors {
 		internalErr = multierror.Append(internalErr, err)
@@ -285,21 +301,18 @@ func logInternalErrors(report *operationreport.Report, requestLogger *zap.Logger
 	}
 }
 
-func writeRequestErrorsFromReport(report *operationreport.Report, w http.ResponseWriter, requestLogger *zap.Logger) {
-	requestErrors := graphql.RequestErrorsFromOperationReport(*report)
-	writeRequestErrors(requestErrors, w, requestLogger)
+func writeRequestErrors(r *http.Request, requestErrors graphql.RequestErrors, w http.ResponseWriter, requestLogger *zap.Logger) {
+	ctx := getRequestContext(r.Context())
+	span := trace.SpanFromContext(r.Context())
 
-	// log internal errors
-	logInternalErrors(report, requestLogger)
-
-	// write internal server error if there are no external errors but there are internal errors
-	if len(report.ExternalErrors) == 0 && len(report.InternalErrors) > 0 {
-		writeRequestErrors(graphql.RequestErrorsFromError(internalServerErrorErr), w, requestLogger)
-	}
-}
-
-func writeRequestErrors(requestErrors graphql.RequestErrors, w http.ResponseWriter, requestLogger *zap.Logger) {
 	if requestErrors != nil {
+		ctx.hasError = true
+
+		// set the span status to error
+		span.SetStatus(codes.Error, requestErrors.Error())
+		// set the span attribute to indicate that the request had an error
+		span.SetAttributes(otel.WgRequestError.Bool(ctx.hasError))
+
 		if _, err := requestErrors.WriteResponse(w); err != nil {
 			requestLogger.Error("error writing response", zap.Error(err))
 		}

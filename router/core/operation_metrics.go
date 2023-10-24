@@ -2,13 +2,13 @@ package core
 
 import (
 	"context"
+	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"strconv"
 	"time"
 
 	"github.com/wundergraph/cosmo/router/internal/metric"
 	"github.com/wundergraph/cosmo/router/internal/otel"
 	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -31,8 +31,12 @@ type OperationMetrics struct {
 	inflightMetric       func()
 }
 
-func (m *OperationMetrics) Finish(ctx context.Context, statusCode int, responseSize int64) {
+func (m *OperationMetrics) Finish(ctx context.Context, hasErrored bool, statusCode int, responseSize int64) {
 	m.inflightMetric()
+
+	if hasErrored {
+		m.metricBaseFields = append(m.metricBaseFields, otel.WgRequestError.Bool(hasErrored))
+	}
 
 	m.metricBaseFields = append(m.metricBaseFields, semconv.HTTPStatusCode(statusCode))
 	m.metrics.MeasureRequestCount(ctx, m.metricBaseFields...)
@@ -41,7 +45,7 @@ func (m *OperationMetrics) Finish(ctx context.Context, statusCode int, responseS
 		m.operationStartTime,
 		m.metricBaseFields...,
 	)
-	m.metrics.MeasureResponseSize(ctx, int64(responseSize), m.metricBaseFields...)
+	m.metrics.MeasureResponseSize(ctx, responseSize, m.metricBaseFields...)
 }
 
 func (m *OperationMetrics) AddOperation(ctx context.Context, operation *ParsedOperation, protocol OperationProtocol) {

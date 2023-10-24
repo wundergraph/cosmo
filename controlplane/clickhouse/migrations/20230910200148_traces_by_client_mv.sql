@@ -28,8 +28,8 @@ SELECT
     SpanAttributes ['wg.organization.id'] as OrganizationID,
     SpanAttributes [ 'wg.federated_graph.id'] as FederatedGraphID,
     count() AS TotalRequests,
-    countIf(StatusCode = 'STATUS_CODE_ERROR' OR position(SpanAttributes['http.status_code'],'5') = 1) AS TotalRequestsError,
-    countIf(StatusCode != 'STATUS_CODE_ERROR' OR position(SpanAttributes['http.status_code'],'5') != 1) AS TotalRequestsOk,
+    countIf(StatusMessage == 'STATUS_CODE_ERROR' OR position(SpanAttributes['http.status_code'],'5') = 1 OR position(SpanAttributes['http.status_code'],'4') = 1 OR mapContains(SpanAttributes, 'wg.request.error')) AS TotalRequestsError,
+    countIf(not(StatusMessage == 'STATUS_CODE_ERROR' OR position(SpanAttributes['http.status_code'],'5') = 1 OR position(SpanAttributes['http.status_code'],'4') = 1 OR mapContains(SpanAttributes, 'wg.request.error'))) AS TotalRequestsOk,
     quantilesState(0.5, 0.75, 0.9, 0.95, 0.99)(Duration) AS DurationQuantiles,
     toUnixTimestamp(MAX(Timestamp)) as LastCalled
 FROM

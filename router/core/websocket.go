@@ -414,6 +414,10 @@ func (h *WebSocketConnectionHandler) readJSON(v interface{}) error {
 func (h *WebSocketConnectionHandler) executeSubscription(ctx context.Context, msg *wsproto.Message) error {
 	var metrics *OperationMetrics
 
+	// In GraphQL the statusCode does not always express the error state of the request
+	// we use this flag to determine if we have an error or not for the request metrics
+	hasRequestError := false
+
 	statusCode := http.StatusOK
 	responseSize := int64(0)
 
@@ -422,14 +426,15 @@ func (h *WebSocketConnectionHandler) executeSubscription(ctx context.Context, ms
 		metrics.AddClientInfo(ctx, h.clientInfo)
 
 		defer func() {
-			metrics.Finish(ctx, statusCode, responseSize)
+			metrics.Finish(ctx, hasRequestError, statusCode, responseSize)
 		}()
 	}
 
 	if len(msg.Payload) > int(h.maxRequestSizeInBytes) {
 		statusCode = http.StatusRequestEntityTooLarge
-		n, werr := h.writeErrorMessage(msg.ID, fmt.Errorf("4408: request too large"))
+		n, werr := h.writeErrorMessage(msg.ID, fmt.Errorf("request too large"))
 		if werr != nil {
+			hasRequestError = true
 			h.logger.Warn("writing error message", zap.Error(werr))
 		}
 		responseSize = int64(n)
@@ -443,6 +448,7 @@ func (h *WebSocketConnectionHandler) executeSubscription(ctx context.Context, ms
 		statusCode = http.StatusBadRequest
 		n, werr := h.writeErrorMessage(msg.ID, err)
 		if werr != nil {
+			hasRequestError = true
 			h.logger.Warn("writing error message", zap.Error(werr))
 		}
 		responseSize = int64(n)
@@ -454,6 +460,7 @@ func (h *WebSocketConnectionHandler) executeSubscription(ctx context.Context, ms
 	}
 
 	if !h.globalIDs.Insert(msg.ID) {
+		hasRequestError = true
 		return fmt.Errorf("4409: Subscriber for %s already exists", msg.ID)
 	}
 	defer h.globalIDs.Remove(msg.ID)
@@ -463,13 +470,42 @@ func (h *WebSocketConnectionHandler) executeSubscription(ctx context.Context, ms
 	// This gets removed by WebSocketConnectionHandler.Complete()
 	h.subscriptions.Insert(msg.ID, cancel)
 
-	ctxWithOperation := withOperationContext(cancellableCtx, operation, h.clientInfo)
+	variablesCopy := make([]byte, len(operation.Variables))
+	copy(variablesCopy, operation.Variables)
+
+	opContext := &operationContext{
+		name:       operation.Name,
+		opType:     operation.Type,
+		content:    operation.NormalizedRepresentation,
+		hash:       operation.ID,
+		variables:  variablesCopy,
+		clientInfo: h.clientInfo,
+	}
+
+	ctxWithOperation := withOperationContext(cancellableCtx, opContext)
 	r := h.r.WithContext(ctxWithOperation)
 	rw := newWebsocketResponseWriter(msg.ID, h.protocol, h.logger)
+
+	subgraphs := subgraphsFromContext(r.Context())
+	requestContext := &requestContext{
+		logger:         h.logger,
+		keys:           map[string]any{},
+		responseWriter: rw,
+		request:        r,
+		operation:      opContext,
+		subgraphs:      subgraphs,
+	}
+
 	defer h.Complete(rw)
-	r = requestWithAttachedContext(rw, r, h.logger)
+
+	r = r.WithContext(withRequestContext(r.Context(), requestContext))
 	h.graphqlHandler.ServeHTTP(rw, r)
+
 	responseSize = int64(rw.writtenBytes)
+
+	// Evaluate the request after the request has been handled by the engine
+	hasRequestError = requestContext.hasError
+
 	return nil
 }
 

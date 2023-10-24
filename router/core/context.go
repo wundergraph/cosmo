@@ -7,8 +7,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/go-chi/chi/middleware"
-	"github.com/wundergraph/cosmo/router/internal/logging"
 	ctrace "github.com/wundergraph/cosmo/router/internal/trace"
 	"go.uber.org/zap"
 )
@@ -120,6 +118,10 @@ type requestContext struct {
 	keys map[string]any
 	// responseWriter is the original response writer received by the router.
 	responseWriter http.ResponseWriter
+	// hasError indicates if the request / response has an error independent of the status code.
+	hasError bool
+	// hasGraphQLErrors indicates if the response returns GraphQL errors. Means the request was accepted by the server.
+	hasGraphQLError bool
 	// request is the original request received by the router.
 	request *http.Request
 	// operation is the GraphQL operation context
@@ -140,22 +142,6 @@ func (c *requestContext) Operation() OperationContext {
 
 func (c *requestContext) Request() *http.Request {
 	return c.request
-}
-
-func requestWithAttachedContext(w http.ResponseWriter, r *http.Request, logger *zap.Logger) *http.Request {
-	operationContext := getOperationContext(r.Context())
-	// TODO: Avoid this duplication
-	subgraphs := subgraphsFromContext(r.Context())
-	requestContext := &requestContext{
-		logger:         logger.With(logging.WithRequestID(middleware.GetReqID(r.Context()))),
-		keys:           map[string]any{},
-		responseWriter: w,
-		request:        r,
-		operation:      operationContext,
-		subgraphs:      subgraphs,
-	}
-	ctx := withRequestContext(r.Context(), requestContext)
-	return r.WithContext(ctx)
 }
 
 func withRequestContext(ctx context.Context, operation *requestContext) context.Context {
@@ -378,19 +364,8 @@ func (o *operationContext) ClientInfo() ClientInfo {
 	return *o.clientInfo
 }
 
-func withOperationContext(ctx context.Context, operation *ParsedOperation, clientInfo *ClientInfo) context.Context {
-	variablesCopy := make([]byte, len(operation.Variables))
-	copy(variablesCopy, operation.Variables)
-
-	opContext := &operationContext{
-		name:       operation.Name,
-		opType:     operation.Type,
-		content:    operation.NormalizedRepresentation,
-		hash:       operation.ID,
-		variables:  variablesCopy,
-		clientInfo: clientInfo,
-	}
-	return context.WithValue(ctx, operationContextKey, opContext)
+func withOperationContext(ctx context.Context, operation *operationContext) context.Context {
+	return context.WithValue(ctx, operationContextKey, operation)
 }
 
 // getOperationContext returns the request context.

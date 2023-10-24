@@ -1,5 +1,7 @@
 -- migrate:up
 
+select * from traces_mv limit 1;
+
 CREATE MATERIALIZED VIEW IF NOT EXISTS cosmo.traces_mv (
    TraceId String CODEC (ZSTD(1)),
    Timestamp DateTime('UTC') CODEC (Delta(4), ZSTD(1)),
@@ -13,6 +15,7 @@ CREATE MATERIALIZED VIEW IF NOT EXISTS cosmo.traces_mv (
    OperationHash String CODEC (ZSTD(1)),
    OperationContent String CODEC (ZSTD(1)),
    HttpStatusCode String CODEC (ZSTD(1)),
+   HttpRequestError Bool CODEC (ZSTD(1)),
    HttpHost String CODEC (ZSTD(1)),
    HttpUserAgent String CODEC (ZSTD(1)),
    HttpMethod String CODEC (ZSTD(1)),
@@ -39,6 +42,7 @@ SELECT
     SpanAttributes [ 'wg.operation.hash' ] as OperationHash,
     SpanAttributes [ 'wg.operation.content' ] as OperationContent,
     SpanAttributes [ 'http.status_code' ] as HttpStatusCode,
+    if(StatusMessage == 'STATUS_CODE_ERROR' OR position(SpanAttributes['http.status_code'],'5') = 1 OR position(SpanAttributes['http.status_code'],'4') = 1 OR mapContains(SpanAttributes, 'wg.request.error'), true, false) as HttpRequestError,
     SpanAttributes [ 'http.host' ] as HttpHost,
     SpanAttributes [ 'http.user_agent' ] as HttpUserAgent,
     SpanAttributes [ 'http.method' ] as HttpMethod,
