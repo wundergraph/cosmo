@@ -240,8 +240,6 @@ export function buildCoercedFilterSqlStatement(
 
 /**
  * Coerces filter values to the correct type.
- * @param columnMetadata
- * @param filters
  */
 export function coerceFilterValues(
   columnMetadata: ColumnMetaData,

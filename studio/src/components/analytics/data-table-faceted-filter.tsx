@@ -96,7 +96,7 @@ export function DataTableFilterCommands<TData, TValue>({
                 onSelect={() => onSelect?.(undefined)}
                 className="justify-center text-center"
               >
-                Clear filters
+                Clear filter
               </CommandItem>
             </CommandGroup>
           </>

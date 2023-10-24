@@ -68,15 +68,18 @@ export const useAnalyticsQueryState = () => {
       refreshIntervals[0]
     );
 
-    let sort = group
-      ? {
-          id: "totalRequests",
-          desc: true,
-        }
-      : {
-          id: "unixTimestamp",
-          desc: true,
-        };
+    let sort =
+      group === "OperationName" ||
+      group === "HttpStatusCode" ||
+      group === "Client"
+        ? {
+            id: "totalRequests",
+            desc: true,
+          }
+        : {
+            id: "unixTimestamp",
+            desc: true,
+          };
 
     if (query.sort) {
       sort.id = query.sort.toString();

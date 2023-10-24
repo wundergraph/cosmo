@@ -28,6 +28,8 @@ import {
 export class AnalyticsRequestViewRepository {
   constructor(private client: ClickHouseClient) {}
 
+  // columnMetadata is the list if columns that are available for the analytics view
+  // across all views
   public columnMetadata: ColumnMetaData = {
     durationInNano: {
       name: 'durationInNano',
@@ -412,95 +414,75 @@ export class AnalyticsRequestViewRepository {
     return 0;
   }
 
-  private async getAllOperationNames(federatedGraphId: string, shouldExecute: boolean): Promise<string[]> {
-    if (!shouldExecute) {
-      return [];
-    }
-
+  private async getAllOperationNames(
+    whereSql: string,
+    queryParams: Record<string, string | number>,
+  ): Promise<string[]> {
     // We need to get all operation names for the operationName filter options
     const allOperationNamesQuery = `
-      SELECT DISTINCT SpanAttributes['wg.operation.name'] as operationName
-      FROM ${this.client.database}.otel_traces
-      WHERE
-      -- Only root spans(spans which have no parent span) and has no condition on SpanKind as a span can start from either the server or the client
-        empty(ParentSpanId)
-        AND SpanAttributes['wg.federated_graph.id'] = '${federatedGraphId}'
+      SELECT DISTINCT OperationName, OrganizationID, FederatedGraphID
+      FROM ${this.client.database}.traces_by_operation_quarter_hourly_mv
+      WHERE ${whereSql}
       ORDER BY Timestamp DESC
-      LIMIT 1000
+      LIMIT 100
     `;
 
-    const operationNamesResult = await this.client?.queryPromise(allOperationNamesQuery);
+    const operationNamesResult = await this.client?.queryPromise(allOperationNamesQuery, queryParams);
 
     const allOperationNames: string[] = [];
     if (Array.isArray(operationNamesResult)) {
-      allOperationNames.push(...operationNamesResult.map((o) => o.operationName));
+      allOperationNames.push(...operationNamesResult.map((o) => o.OperationName));
     }
 
     return allOperationNames;
   }
 
-  private async getAllClients(federatedGraphId: string, shouldExecute: boolean): Promise<string[]> {
-    if (!shouldExecute) {
-      return [];
-    }
-
+  private async getAllClients(whereSql: string, queryParams: Record<string, string | number>): Promise<string[]> {
     const query = `
-      SELECT DISTINCT SpanAttributes [ 'wg.client.name' ] as clientName
-      FROM ${this.client.database}.otel_traces
-      WHERE 
-      -- Only root spans(spans which have no parent span) and has no condition on SpanKind as a span can start from either the server or the client
-        empty(ParentSpanId)
-        AND SpanAttributes['wg.federated_graph.id'] = '${federatedGraphId}'
+      SELECT DISTINCT ClientName, OrganizationID, FederatedGraphID
+      FROM ${this.client.database}.traces_by_client_quarter_hourly_mv
+      WHERE ${whereSql}
       ORDER BY Timestamp DESC
       LIMIT 100
     `;
 
-    const result = await this.client?.queryPromise(query);
+    const result = await this.client?.queryPromise(query, queryParams);
 
     const clientNames: string[] = [];
     if (Array.isArray(result)) {
-      clientNames.push(...result.map((c) => c.clientName));
+      clientNames.push(...result.map((c) => c.ClientName));
     }
 
     return clientNames;
   }
 
   private async getAllClientVersions(
-    federatedGraphId: string,
     client: string[],
-    shouldExecute: boolean,
+    whereSql: string,
+    queryParams: Record<string, string | number>,
   ): Promise<string[]> {
-    if (!shouldExecute) {
-      return [];
-    }
-
-    let whereSql = '';
     if (client.length === 1) {
-      whereSql = `AND (${client.map((c) => `SpanAttributes [ 'wg.client.name' ] = '${c}'`).join(' OR ')})`;
+      whereSql += `AND (${client.map((c) => `ClientName = '${c}'`).join(' OR ')})`;
     }
 
     const query = `
-      SELECT DISTINCT SpanAttributes [ 'wg.client.version' ] as clientVersion
-      FROM ${this.client.database}.otel_traces
-      WHERE 
-      -- Only root spans(spans which have no parent span) and has no condition on SpanKind as a span can start from either the server or the client
-        empty(ParentSpanId)
-        AND SpanAttributes['wg.federated_graph.id'] = '${federatedGraphId}'
-        ${whereSql}
+      SELECT DISTINCT ClientVersion, OrganizationID, FederatedGraphID
+      FROM ${this.client.database}.traces_by_client_quarter_hourly_mv
+      WHERE ${whereSql}
       ORDER BY Timestamp DESC
       LIMIT 100
     `;
 
-    const result = await this.client?.queryPromise(query);
+    const result = await this.client?.queryPromise(query, queryParams);
 
     const clientVersions: string[] = [];
     if (Array.isArray(result)) {
       clientVersions.push(
         ...result.map((c) => {
-          if (c.clientVersion === 'missing') {
+          if (!c.ClientVersion) {
             return 'unknown';
           }
-          return c.clientVersion;
+          return c.ClientVersion;
         }),
       );
     }
@@ -508,26 +490,23 @@ export class AnalyticsRequestViewRepository {
     return clientVersions;
   }
 
-  private async getAllHttpStatusCodes(federatedGraphId: string, shouldExecute: boolean): Promise<string[]> {
-    if (!shouldExecute) {
-      return [];
-    }
-
+  private async getAllHttpStatusCodes(
+    whereSql: string,
+    queryParams: Record<string, string | number>,
+  ): Promise<string[]> {
     const query = `
-      SELECT DISTINCT SpanAttributes [ 'http.status_code' ] as httpStatusCode
-      FROM ${this.client.database}.otel_traces
-      WHERE 
-      -- Only root spans(spans which have no parent span) and has no condition on SpanKind as a span can start from either the server or the client
-        empty(ParentSpanId)
-        AND SpanAttributes['wg.federated_graph.id'] = '${federatedGraphId}'
+      SELECT HttpStatusCode
+      FROM ${this.client.database}.traces_mv
+      WHERE ${whereSql}
+      GROUP BY HttpStatusCode
       LIMIT 100
     `;
 
-    const result = await this.client?.queryPromise(query);
+    const result = await this.client?.queryPromise(query, queryParams);
 
     const httpStatusCodes: string[] = [];
     if (Array.isArray(result)) {
-      httpStatusCodes.push(...result.map((s) => s.httpStatusCode));
+      httpStatusCodes.push(...result.map((s) => s.HttpStatusCode));
     }
 
     return httpStatusCodes;
@@ -600,27 +579,6 @@ export class AnalyticsRequestViewRepository {
     }
   }
 
-  // Omit fields that are not supported in the grouped views to prevent errors
-  // in the generated sql queries
-  private omitGroupedFilters(name: AnalyticsViewGroupName, filters: AnalyticsFilter[]) {
-    switch (name) {
-      case AnalyticsViewGroupName.None: {
-        return filters.filter((f) => f.field !== 'p95');
-      }
-      case AnalyticsViewGroupName.OperationName: {
-        return filters.filter((f) => !['durationInNano', 'clientName', 'statusMessages'].includes(f.field));
-      }
-      case AnalyticsViewGroupName.Client: {
-        return filters.filter((f) => ['clientName', 'p95', 'clientVersion'].includes(f.field));
-      }
-      case AnalyticsViewGroupName.HttpStatusCode: {
-        return filters.filter((f) => ['p95', 'httpStatusCode'].includes(f.field));
-      }
-    }
-
-    return [];
-  }
-
   private getSortOrder = (id?: string, desc?: boolean) => {
     const allowedColumns = Object.keys(this.columnMetadata);
 
@@ -635,7 +593,7 @@ export class AnalyticsRequestViewRepository {
     name: AnalyticsViewGroupName,
     opts?: AnalyticsConfig,
   ): Promise<PlainMessage<AnalyticsViewResult>> {
-    const inputFilters = this.omitGroupedFilters(name, opts?.filters ?? []);
+    const inputFilters = opts?.filters ?? [];
     const columnMetaData = fillColumnMetaData(this.columnMetadata);
     const paginationSql = `LIMIT {limit:Int16} OFFSET {offset:Int16}`;
     const orderSql = this.getSortOrder(opts?.sort?.id, opts?.sort?.desc);
@@ -658,20 +616,18 @@ export class AnalyticsRequestViewRepository {
       filterMapper,
       opts?.dateRange,
     );
+
+    let baseWhereSql = `FederatedGraphID = '${federatedGraphId}' AND OrganizationID = '${organizationId}'`;
     let { whereSql } = rest;
 
     // Important: This is the only place where we scope the data to a particular organization and graph.
     // We can only filter for data that is part of the JWT token otherwise a user could send us whatever they want.
-    whereSql += ` AND FederatedGraphID = '${federatedGraphId}'`;
-    whereSql += ` AND OrganizationID = '${organizationId}'`;
+    whereSql += ` AND ${baseWhereSql}`;
 
     const [result, totalCount] = await Promise.all([
       this.getViewData(name, whereSql, havingSql, paginationSql, coercedQueryParams, orderSql),
       this.getTotalCount(name, whereSql, havingSql, coercedQueryParams),
     ]);
-
-    const hasColumn = (name: string) =>
-      Array.isArray(result) && result.length > 0 && Object.keys(result[0]).includes(name);
 
     const clientNames: string[] = [];
     if (name === AnalyticsViewGroupName.Client) {
@@ -685,10 +641,10 @@ export class AnalyticsRequestViewRepository {
 
     // We shall execute these only when we have desired results
     const [allOperationNames, allClientNames, allClientVersions, allStatusMessages] = await Promise.all([
-      this.getAllOperationNames(federatedGraphId, hasColumn('operationName')),
-      this.getAllClients(federatedGraphId, hasColumn('clientName')),
-      this.getAllClientVersions(federatedGraphId, clientNames, hasColumn('clientVersion')),
-      this.getAllHttpStatusCodes(federatedGraphId, hasColumn('httpStatusCode')),
+      this.getAllOperationNames(baseWhereSql, coercedQueryParams),
+      this.getAllClients(baseWhereSql, coercedQueryParams),
+      this.getAllClientVersions(clientNames, baseWhereSql, coercedQueryParams),
+      this.getAllHttpStatusCodes(baseWhereSql, coercedQueryParams),
     ]);
 
     const columnFilters = this.getFilters(

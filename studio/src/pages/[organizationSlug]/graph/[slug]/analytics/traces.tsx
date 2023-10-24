@@ -13,12 +13,6 @@ import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb
 import { getAnalyticsView } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { useContext } from "react";
 
-export type OperationAnalytics = {
-  name: string;
-  content: string;
-  operationType: number;
-};
-
 // For the network call we read purely from the query with useAnalyticsQueryState
 // The data table should only set url params and not the state for filters and pagination
 // The useSyncTableWithQuery is responsible to read from the query and set local state

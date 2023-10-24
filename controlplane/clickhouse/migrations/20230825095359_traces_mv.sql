@@ -18,6 +18,7 @@ CREATE MATERIALIZED VIEW IF NOT EXISTS cosmo.traces_mv (
    HttpMethod String CODEC (ZSTD(1)),
    HttpTarget String CODEC (ZSTD(1)),
    ClientName String CODEC (ZSTD(1)),
+   ClientVersion String CODEC (ZSTD(1)),
    Subscription Bool CODEC(ZSTD(1))
 )
 ENGINE = SummingMergeTree
@@ -44,6 +45,7 @@ SELECT
     SpanAttributes [ 'http.method' ] as HttpMethod,
     SpanAttributes [ 'http.target' ] as HttpTarget,
     SpanAttributes [ 'wg.client.name' ] as ClientName,
+    SpanAttributes [ 'wg.client.version' ] as ClientVersion,
     mapContains(SpanAttributes, 'wg.subscription') as Subscription
 FROM
     cosmo.otel_traces

@@ -13,9 +13,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { cn } from "@/lib/utils";
-import { ChevronDownIcon, ChevronUpIcon } from "@heroicons/react/24/outline";
-import { ClockIcon, Cross2Icon, UpdateIcon } from "@radix-ui/react-icons";
+import { ChevronDownIcon } from "@heroicons/react/24/outline";
+import { ClockIcon, UpdateIcon } from "@radix-ui/react-icons";
 import {
   ColumnFiltersState,
   PaginationState,
@@ -43,10 +42,8 @@ import { DateRange } from "react-day-picker";
 import useDeepCompareEffect from "use-deep-compare-effect";
 import { DatePickerWithRange } from "../date-picker-with-range";
 import { Loader } from "../ui/loader";
-import { DataTableFacetedFilter } from "./data-table-faceted-filter";
 import { DataTableGroupMenu } from "./data-table-group-menu";
 import { DataTablePagination } from "./data-table-pagination";
-import { DataTablePrimaryFilterMenu } from "./data-table-primary-filter-menu";
 import { getColumnData } from "./getColumnData";
 import { getDataTableFilters } from "./getDataTableFilters";
 import { getDefaultSort, useSyncTableWithQuery } from "./useSyncTableWithQuery";
@@ -154,6 +151,36 @@ export function AnalyticsDataTable<T>({
     pagination,
   };
 
+  const resetParams = useCallback(
+    (groupId: number) => {
+      let group = "";
+      const { organizationSlug, slug } = router.query;
+
+      switch (groupId) {
+        case AnalyticsViewGroupName.None: {
+          group = "None";
+          break;
+        }
+        case AnalyticsViewGroupName.OperationName: {
+          group = "OperationName";
+          break;
+        }
+        case AnalyticsViewGroupName.Client: {
+          group = "Client";
+          break;
+        }
+      }
+
+      router.push({
+        query: {
+          organizationSlug,
+          group,
+          slug,
+        },
+      });
+    },
+    [router]
+  );
   const applyNewParams = useCallback(
     (newParams: Record<string, string | null>, unset?: string[]) => {
       const q = Object.fromEntries(
@@ -210,6 +237,7 @@ export function AnalyticsDataTable<T>({
       if (typeof t === "function") {
         const newVal = functionalUpdate(t, state.sorting);
         const defaultSort = getDefaultSort();
+
         if (newVal.length) {
           applyNewParams({
             sort: newVal[0]?.id,
@@ -231,12 +259,7 @@ export function AnalyticsDataTable<T>({
   });
 
   const onGroupChange = (val: AnalyticsViewGroupName) => {
-    applyNewParams(
-      {
-        group: AnalyticsViewGroupName[val],
-      },
-      ["sort", "sortDir"]
-    );
+    resetParams(val);
   };
 
   const onDateRangeChange = (val: DateRange) => {

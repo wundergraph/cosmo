@@ -13,7 +13,9 @@ import { DateRange } from "react-day-picker";
 import { refreshIntervals } from "./data-table";
 
 export const getDefaultSort = (group?: string) => {
-  return group
+  return group === "OperationName" ||
+    group === "HttpStatusCode" ||
+    group === "Client"
     ? [
         {
           id: "totalRequests",
