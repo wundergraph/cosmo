@@ -308,6 +308,7 @@ func writeRequestErrors(r *http.Request, requestErrors graphql.RequestErrors, w 
 	if requestErrors != nil {
 
 		// can be nil if an error occurred before the context was created e.g. in the pre-handler
+		// in that case hasError has to be set in the pre-handler manually
 		if ctx != nil {
 			ctx.hasError = true
 		}
@@ -315,6 +316,8 @@ func writeRequestErrors(r *http.Request, requestErrors graphql.RequestErrors, w 
 		// set the span status to error
 		span.SetStatus(codes.Error, requestErrors.Error())
 		// set the span attribute to indicate that the request had an error
+		// do it only when there is an error to avoid storing the attribute in the span
+		// in queries we use mapContains to check if the attribute is set
 		span.SetAttributes(otel.WgRequestError.Bool(true))
 
 		if _, err := requestErrors.WriteResponse(w); err != nil {
