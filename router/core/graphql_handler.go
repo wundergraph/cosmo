@@ -306,12 +306,16 @@ func writeRequestErrors(r *http.Request, requestErrors graphql.RequestErrors, w 
 	span := trace.SpanFromContext(r.Context())
 
 	if requestErrors != nil {
-		ctx.hasError = true
+
+		// can be nil if an error occurred before the context was created e.g. in the pre-handler
+		if ctx != nil {
+			ctx.hasError = true
+		}
 
 		// set the span status to error
 		span.SetStatus(codes.Error, requestErrors.Error())
 		// set the span attribute to indicate that the request had an error
-		span.SetAttributes(otel.WgRequestError.Bool(ctx.hasError))
+		span.SetAttributes(otel.WgRequestError.Bool(true))
 
 		if _, err := requestErrors.WriteResponse(w); err != nil {
 			requestLogger.Error("error writing response", zap.Error(err))

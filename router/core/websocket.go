@@ -485,6 +485,7 @@ func (h *WebSocketConnectionHandler) executeSubscription(ctx context.Context, ms
 	ctxWithOperation := withOperationContext(cancellableCtx, opContext)
 	r := h.r.WithContext(ctxWithOperation)
 	rw := newWebsocketResponseWriter(msg.ID, h.protocol, h.logger)
+	defer h.Complete(rw)
 
 	subgraphs := subgraphsFromContext(r.Context())
 	requestContext := &requestContext{
@@ -495,8 +496,6 @@ func (h *WebSocketConnectionHandler) executeSubscription(ctx context.Context, ms
 		operation:      opContext,
 		subgraphs:      subgraphs,
 	}
-
-	defer h.Complete(rw)
 
 	r = r.WithContext(withRequestContext(r.Context(), requestContext))
 	h.graphqlHandler.ServeHTTP(rw, r)
@@ -530,14 +529,14 @@ func (h *WebSocketConnectionHandler) handleConnectedMessage(msg *wsproto.Message
 		_, err := h.protocol.Pong(msg)
 		return false, err
 	case wsproto.MessageTypePong:
-		// "Furthermore, the Pong message may even be sent unsolicited as an unidirectional heartbeat"
+		// "Furthermore, the Pong message may even be sent unsolicited as a unidirectional heartbeat"
 	case wsproto.MessageTypeSubscribe:
 		return false, h.handleSubscribe(msg)
 	case wsproto.MessageTypeComplete:
 		return false, h.handleComplete(msg)
 	}
 	// "Receiving a message of a type or format which is not specified in this document will result in an immediate socket closure"
-	return true, h.requestError(fmt.Errorf("4400: unknown message type %q", msg.Type))
+	return true, h.requestError(fmt.Errorf("unknown message type %q", msg.Type))
 }
 
 func (h *WebSocketConnectionHandler) Serve() {
