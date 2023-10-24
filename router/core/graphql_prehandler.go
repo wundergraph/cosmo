@@ -113,8 +113,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 				report := reportErr.Report()
 				logInternalErrorsFromReport(reportErr.Report(), requestLogger)
 				writeRequestErrors(r, graphql.RequestErrorsFromOperationReport(*report), w, requestLogger)
-			// If we have an unknown error, we log it and return an internal server error
-			default:
+			default: // If we have an unknown error, we log it and return an internal server error
 				requestLogger.Error(err.Error())
 				writeRequestErrors(r, graphql.RequestErrorsFromError(internalServerErrorErr), w, requestLogger)
 			}
