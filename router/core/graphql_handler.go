@@ -3,16 +3,17 @@ package core
 import (
 	"context"
 	"errors"
+	"net"
+	"net/http"
+	"strings"
+	"sync"
+
 	"github.com/go-chi/chi/middleware"
 	"github.com/hashicorp/go-multierror"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/zap"
-	"net"
-	"net/http"
-	"strings"
-	"sync"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphql"
@@ -56,12 +57,6 @@ func (e *reportError) Report() *operationreport.Report {
 	return e.report
 }
 
-type planWithMetaData struct {
-	preparedPlan    plan.Plan
-	variables       []byte
-	schemaUsageInfo plan.SchemaUsageInfo
-}
-
 func MergeJsonRightIntoLeft(left, right []byte) []byte {
 	if len(left) == 0 {
 		return right
@@ -89,6 +84,7 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 		preparedMux: &sync.RWMutex{},
 		executor:    opts.Executor,
 	}
+
 	return graphQLHandler
 }
 
@@ -149,7 +145,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	case *plan.SubscriptionResponsePlan:
 		var (
-			flushWriter *HttpFlushWriter
+			flushWriter resolve.FlushWriter
 			ok          bool
 		)
 		ctx, flushWriter, ok = GetFlushWriter(ctx, ctx.Variables, r, w)

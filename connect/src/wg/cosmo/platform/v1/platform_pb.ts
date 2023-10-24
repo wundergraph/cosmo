@@ -7,7 +7,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3, protoInt64 } from "@bufbuild/protobuf";
-import { EnumStatusCode } from "../../common/common_pb.js";
+import { EnumStatusCode, GraphQLSubscriptionProtocol } from "../../common/common_pb.js";
 import { EventMeta } from "../../notifications/events_pb.js";
 
 /**
@@ -693,6 +693,20 @@ export class CreateFederatedSubgraphRequest extends Message<CreateFederatedSubgr
    */
   headers: string[] = [];
 
+  /**
+   * subscription protocol to use when subscribing to this subgraph
+   *
+   * @generated from field: optional wg.cosmo.common.GraphQLSubscriptionProtocol subscription_protocol = 5;
+   */
+  subscriptionProtocol?: GraphQLSubscriptionProtocol;
+
+  /**
+   * url used for subscriptions
+   *
+   * @generated from field: optional string subscription_url = 6;
+   */
+  subscriptionUrl?: string;
+
   constructor(data?: PartialMessage<CreateFederatedSubgraphRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -705,6 +719,8 @@ export class CreateFederatedSubgraphRequest extends Message<CreateFederatedSubgr
     { no: 2, name: "routing_url", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "labels", kind: "message", T: Label, repeated: true },
     { no: 4, name: "headers", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 5, name: "subscription_protocol", kind: "enum", T: proto3.getEnumType(GraphQLSubscriptionProtocol), opt: true },
+    { no: 6, name: "subscription_url", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateFederatedSubgraphRequest {
@@ -2386,6 +2402,20 @@ export class UpdateSubgraphRequest extends Message<UpdateSubgraphRequest> {
    */
   headers: string[] = [];
 
+  /**
+   * subscription protocol to use when subscribing to this subgraph
+   *
+   * @generated from field: optional wg.cosmo.common.GraphQLSubscriptionProtocol subscription_protocol = 5;
+   */
+  subscriptionProtocol?: GraphQLSubscriptionProtocol;
+
+  /**
+   * url used for subscriptions
+   *
+   * @generated from field: optional string subscription_url = 6;
+   */
+  subscriptionUrl?: string;
+
   constructor(data?: PartialMessage<UpdateSubgraphRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -2398,6 +2428,8 @@ export class UpdateSubgraphRequest extends Message<UpdateSubgraphRequest> {
     { no: 2, name: "routing_url", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "labels", kind: "message", T: Label, repeated: true },
     { no: 4, name: "headers", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 5, name: "subscription_protocol", kind: "enum", T: proto3.getEnumType(GraphQLSubscriptionProtocol), opt: true },
+    { no: 6, name: "subscription_url", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateSubgraphRequest {
@@ -6154,6 +6186,11 @@ export class GetGraphMetricsRequest extends Message<GetGraphMetricsRequest> {
    */
   range = 0;
 
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.AnalyticsFilter filters = 3;
+   */
+  filters: AnalyticsFilter[] = [];
+
   constructor(data?: PartialMessage<GetGraphMetricsRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -6164,6 +6201,7 @@ export class GetGraphMetricsRequest extends Message<GetGraphMetricsRequest> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "federatedGraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "range", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 3, name: "filters", kind: "message", T: AnalyticsFilter, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetGraphMetricsRequest {
@@ -6208,9 +6246,9 @@ export class GetGraphMetricsResponse extends Message<GetGraphMetricsResponse> {
   errors?: MetricsDashboardMetric;
 
   /**
-   * @generated from field: optional string json = 5;
+   * @generated from field: repeated wg.cosmo.platform.v1.AnalyticsViewResultFilter filters = 5;
    */
-  json?: string;
+  filters: AnalyticsViewResultFilter[] = [];
 
   constructor(data?: PartialMessage<GetGraphMetricsResponse>) {
     super();
@@ -6224,7 +6262,7 @@ export class GetGraphMetricsResponse extends Message<GetGraphMetricsResponse> {
     { no: 2, name: "requests", kind: "message", T: MetricsDashboardMetric },
     { no: 3, name: "latency", kind: "message", T: MetricsDashboardMetric },
     { no: 4, name: "errors", kind: "message", T: MetricsDashboardMetric },
-    { no: 5, name: "json", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 5, name: "filters", kind: "message", T: AnalyticsViewResultFilter, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetGraphMetricsResponse {
@@ -6472,6 +6510,11 @@ export class GetMetricsErrorRateRequest extends Message<GetMetricsErrorRateReque
    */
   range = 0;
 
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.AnalyticsFilter filters = 3;
+   */
+  filters: AnalyticsFilter[] = [];
+
   constructor(data?: PartialMessage<GetMetricsErrorRateRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -6482,6 +6525,7 @@ export class GetMetricsErrorRateRequest extends Message<GetMetricsErrorRateReque
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "federatedGraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "range", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 3, name: "filters", kind: "message", T: AnalyticsFilter, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetMetricsErrorRateRequest {

@@ -1,8 +1,6 @@
 name: GraphQLMetrics CI
 on:
   pull_request:
-    branches:
-      - main
     paths:
       - "graphqlmetrics/**/*"
       - ".github/workflows/graphqlmetrics-ci.yaml"

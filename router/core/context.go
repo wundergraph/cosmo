@@ -7,12 +7,16 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-chi/chi/middleware"
+	"github.com/wundergraph/cosmo/router/internal/logging"
+	ctrace "github.com/wundergraph/cosmo/router/internal/trace"
 	"go.uber.org/zap"
 )
 
 type key string
 
 const requestContextKey = key("request")
+const subgraphsContextKey = key("subgraphs")
 
 var _ RequestContext = (*requestContext)(nil)
 
@@ -20,6 +24,22 @@ type Subgraph struct {
 	Id   string
 	Name string
 	Url  *url.URL
+}
+
+type ClientInfo struct {
+	// Name contains the client name, derived from the request headers
+	Name string
+	// Version contains the client version, derived from the request headers
+	Version string
+}
+
+func NewClientInfoFromRequest(r *http.Request) *ClientInfo {
+	clientName := ctrace.GetClientInfo(r.Header, "graphql-client-name", "apollographql-client-name", "unknown")
+	clientVersion := ctrace.GetClientInfo(r.Header, "graphql-client-version", "apollographql-client-version", "missing")
+	return &ClientInfo{
+		Name:    clientName,
+		Version: clientVersion,
+	}
 }
 
 type RequestContext interface {
@@ -120,6 +140,22 @@ func (c *requestContext) Operation() OperationContext {
 
 func (c *requestContext) Request() *http.Request {
 	return c.request
+}
+
+func requestWithAttachedContext(w http.ResponseWriter, r *http.Request, logger *zap.Logger) *http.Request {
+	operationContext := getOperationContext(r.Context())
+	// TODO: Avoid this duplication
+	subgraphs := subgraphsFromContext(r.Context())
+	requestContext := &requestContext{
+		logger:         logger.With(logging.WithRequestID(middleware.GetReqID(r.Context()))),
+		keys:           map[string]any{},
+		responseWriter: w,
+		request:        r,
+		operation:      operationContext,
+		subgraphs:      subgraphs,
+	}
+	ctx := withRequestContext(r.Context(), requestContext)
+	return r.WithContext(ctx)
 }
 
 func withRequestContext(ctx context.Context, operation *requestContext) context.Context {
@@ -298,6 +334,10 @@ type OperationContext interface {
 	Hash() uint64
 	// Content is the content of the operation
 	Content() string
+	// Variables is the variables of the operation
+	Variables() []byte
+	// ClientInfo returns information about the client that initiated this operation
+	ClientInfo() ClientInfo
 }
 
 // client contains information about the GraphQL client that made the request
@@ -322,8 +362,8 @@ type operationContext struct {
 	content string
 	// variables is the variables of the operation
 	variables []byte
-	// client is the client info that made the request
-	client client
+	// clientInfo is the client info that made the request
+	clientInfo *ClientInfo
 	// preparedPlan is the prepared plan of the operation
 	preparedPlan planWithMetaData
 }
@@ -348,8 +388,12 @@ func (o *operationContext) Variables() []byte {
 	return o.variables
 }
 
-func withOperationContext(ctx context.Context, operation *operationContext) context.Context {
-	return context.WithValue(ctx, operationContextKey, operation)
+func (o *operationContext) ClientInfo() ClientInfo {
+	return *o.clientInfo
+}
+
+func withOperationContext(ctx context.Context, opContext *operationContext) context.Context {
+	return context.WithValue(ctx, operationContextKey, opContext)
 }
 
 // getOperationContext returns the request context.
@@ -373,4 +417,13 @@ func isMutationRequest(ctx context.Context) bool {
 		return false
 	}
 	return op.Operation().Type() == "mutation"
+}
+
+func withSubgraphs(ctx context.Context, subgraphs []Subgraph) context.Context {
+	return context.WithValue(ctx, subgraphsContextKey, subgraphs)
+}
+
+func subgraphsFromContext(ctx context.Context) []Subgraph {
+	subgraphs, _ := ctx.Value(subgraphsContextKey).([]Subgraph)
+	return subgraphs
 }

@@ -4,6 +4,14 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.22.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.21.0...@wundergraph/cosmo-connect@0.22.0) (2023-10-20)
+
+### Features
+
+* add client name client version filter for analytics and ([#181](https://github.com/wundergraph/cosmo/issues/181)) ([6180f4d](https://github.com/wundergraph/cosmo/commit/6180f4d621c383e72883c3cfa10ac1119da91761)) (@Pagebakers)
+* add support for subscriptions ([#185](https://github.com/wundergraph/cosmo/issues/185)) ([5a78aa0](https://github.com/wundergraph/cosmo/commit/5a78aa01f60ac4184ac69b0bd72aa1ce467bff93)) (@fiam)
+* auto ignore schema errors for check command if github is integrated ([#184](https://github.com/wundergraph/cosmo/issues/184)) ([05d1b4a](https://github.com/wundergraph/cosmo/commit/05d1b4a4fcb836013c8db49796c174eba0c96744)) (@thisisnithin)
+
 # [0.21.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.20.0...@wundergraph/cosmo-connect@0.21.0) (2023-10-13)
 
 ### Features

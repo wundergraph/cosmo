@@ -7,6 +7,8 @@ replace github.com/wundergraph/cosmo/demo => ../demo
 go 1.20
 
 require (
+	github.com/gorilla/websocket v1.5.0
+	github.com/hasura/go-graphql-client v0.10.0
 	github.com/stretchr/testify v1.8.4
 	github.com/wundergraph/cosmo/demo v0.0.0-00010101000000-000000000000
 	github.com/wundergraph/cosmo/router v0.0.0-00010101000000-000000000000
@@ -43,8 +45,7 @@ require (
 	github.com/goccy/go-yaml v1.11.0 // indirect
 	github.com/golang/glog v1.1.1 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
-	github.com/google/uuid v1.3.0 // indirect
-	github.com/gorilla/websocket v1.5.0 // indirect
+	github.com/google/uuid v1.3.1 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.16.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
@@ -54,7 +55,7 @@ require (
 	github.com/jensneuse/byte-template v0.0.0-20200214152254-4f3cf06e5c68 // indirect
 	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/kelseyhightower/envconfig v1.4.0 // indirect
-	github.com/klauspost/compress v1.15.15 // indirect
+	github.com/klauspost/compress v1.17.1 // indirect
 	github.com/leodido/go-urn v1.2.4 // indirect
 	github.com/logrusorgru/aurora/v3 v3.0.0 // indirect
 	github.com/mattbaird/jsonpatch v0.0.0-20230413205102-771768614e91 // indirect
@@ -79,7 +80,7 @@ require (
 	github.com/tidwall/sjson v1.2.5 // indirect
 	github.com/urfave/cli/v2 v2.25.5 // indirect
 	github.com/vektah/gqlparser/v2 v2.5.10 // indirect
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.2.0.20231016190217-b6c63d00e451 // indirect
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.2.0.20231020141204-40537587ba35 // indirect
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.45.0 // indirect
 	go.opentelemetry.io/otel v1.19.0 // indirect

@@ -92,13 +92,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     if (isFetching) return;
-
     if (
       error &&
       error instanceof UnauthorizedError &&
       router.pathname !== "/login"
     ) {
-      router.replace("/login");
+      const redirectURL = `${process.env.NEXT_PUBLIC_COSMO_STUDIO_URL}${router.asPath}`;
+      router.replace(`/login?redirectURL=${redirectURL}`);
     } else if (data && !error) {
       const currentOrg = data.organizations.find(
         (org) => org.slug === currentOrgSlug
