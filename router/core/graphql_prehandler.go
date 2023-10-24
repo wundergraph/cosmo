@@ -2,14 +2,12 @@ package core
 
 import (
 	"errors"
-	"io"
-	"net/http"
-
+	"github.com/go-chi/chi/middleware"
 	"github.com/wundergraph/cosmo/router/internal/metric"
 	"github.com/wundergraph/cosmo/router/internal/pool"
-
-	"github.com/go-chi/chi/middleware"
 	"go.uber.org/zap"
+	"io"
+	"net/http"
 
 	"github.com/wundergraph/cosmo/router/internal/logging"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphql"
@@ -120,8 +118,11 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			return
 		}
 
-		if metrics != nil {
-			metrics.AddOperation(r.Context(), operation, OperationProtocolHTTP)
+		// Set the operation attributes as early as possible, so they are available in the trace
+		baseMetricAttributeValues := SetSpanOperationAttributes(r.Context(), operation)
+
+		if h.requestMetrics != nil {
+			metrics.AddSpanAttributes(baseMetricAttributeValues...)
 		}
 
 		variablesCopy := make([]byte, len(operation.Variables))

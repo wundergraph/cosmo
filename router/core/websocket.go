@@ -455,8 +455,11 @@ func (h *WebSocketConnectionHandler) executeSubscription(ctx context.Context, ms
 		return werr
 	}
 
+	// Set the operation attributes as early as possible, so they are available in the trace
+	baseMetricAttributeValues := SetSpanOperationAttributes(ctx, operation)
+
 	if metrics != nil {
-		metrics.AddOperation(ctx, operation, OperationProtocolGraphQLWS)
+		metrics.AddSpanAttributes(baseMetricAttributeValues...)
 	}
 
 	if !h.globalIDs.Insert(msg.ID) {
