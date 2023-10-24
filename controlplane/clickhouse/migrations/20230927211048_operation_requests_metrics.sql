@@ -23,4 +23,4 @@ TTL toDateTime(Timestamp) + toIntervalDay(30) SETTINGS index_granularity = 8192,
 
 -- migrate:down
 
-DROP TABLE IF EXISTS cosmo.operation_request_metrics_5_30
+DROP TABLE cosmo.operation_request_metrics_5_30

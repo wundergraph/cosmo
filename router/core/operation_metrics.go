@@ -76,7 +76,7 @@ func StartOperationMetrics(ctx context.Context, mtr *metric.Metrics, requestCont
 	}
 }
 
-func SetSpanOperationAttributes(ctx context.Context, operation *ParsedOperation) []attribute.KeyValue {
+func SetSpanOperationAttributes(ctx context.Context, operation *ParsedOperation, protocol OperationProtocol) []attribute.KeyValue {
 	var baseMetricAttributeValues []attribute.KeyValue
 
 	// Set the operation name as early as possible so that it is available in the trace
@@ -85,7 +85,7 @@ func SetSpanOperationAttributes(ctx context.Context, operation *ParsedOperation)
 	baseMetricAttributeValues = append(baseMetricAttributeValues, otel.WgOperationName.String(operation.Name))
 	baseMetricAttributeValues = append(baseMetricAttributeValues, otel.WgOperationType.String(operation.Type))
 	baseMetricAttributeValues = append(baseMetricAttributeValues, otel.WgOperationContent.String(operation.Query))
-	baseMetricAttributeValues = append(baseMetricAttributeValues, otel.WgOperationProtocol.String(OperationProtocolHTTP.String()))
+	baseMetricAttributeValues = append(baseMetricAttributeValues, otel.WgOperationProtocol.String(protocol.String()))
 
 	// Add the operation hash to the trace span attributes
 	opHashID := otel.WgOperationHash.String(strconv.FormatUint(operation.ID, 10))

@@ -21,4 +21,4 @@ TTL toDateTime(Timestamp) + toIntervalDay(30) SETTINGS index_granularity = 8192,
 
 -- migrate:down
 
-DROP VIEW IF EXISTS cosmo.traces_by_operation_quarter_hourly
+DROP TABLE cosmo.traces_by_operation_quarter_hourly

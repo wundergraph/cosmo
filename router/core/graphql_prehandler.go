@@ -119,37 +119,13 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		}
 
 		// Set the operation attributes as early as possible, so they are available in the trace
-		baseMetricAttributeValues := SetSpanOperationAttributes(r.Context(), operation)
+		baseMetricAttributeValues := SetSpanOperationAttributes(r.Context(), operation, OperationProtocolHTTP)
 
 		if h.requestMetrics != nil {
 			metrics.AddSpanAttributes(baseMetricAttributeValues...)
 		}
 
-		variablesCopy := make([]byte, len(operation.Variables))
-		copy(variablesCopy, operation.Variables)
-
-		// OperationContext was added to the request as early as possible
-		// to modify the context in the middleware chain
-
-		opContext := &operationContext{
-			name:       operation.Name,
-			opType:     operation.Type,
-			content:    operation.NormalizedRepresentation,
-			hash:       operation.ID,
-			variables:  variablesCopy,
-			clientInfo: clientInfo,
-		}
-
-		subgraphs := subgraphsFromContext(r.Context())
-		requestContext := &requestContext{
-			logger:         requestLogger,
-			keys:           map[string]any{},
-			responseWriter: w,
-			request:        r,
-			operation:      opContext,
-			subgraphs:      subgraphs,
-		}
-
+		requestContext, opContext := buildRequestContext(w, r, clientInfo, operation, requestLogger)
 		ctxWithRequest := withRequestContext(r.Context(), requestContext)
 		ctxWithOperation := withOperationContext(ctxWithRequest, opContext)
 		ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)

@@ -397,3 +397,29 @@ func subgraphsFromContext(ctx context.Context) []Subgraph {
 	subgraphs, _ := ctx.Value(subgraphsContextKey).([]Subgraph)
 	return subgraphs
 }
+
+func buildRequestContext(w http.ResponseWriter, r *http.Request, clientInfo *ClientInfo, operation *ParsedOperation, requestLogger *zap.Logger) (*requestContext, *operationContext) {
+	variablesCopy := make([]byte, len(operation.Variables))
+	copy(variablesCopy, operation.Variables)
+
+	opContext := &operationContext{
+		name:       operation.Name,
+		opType:     operation.Type,
+		content:    operation.NormalizedRepresentation,
+		hash:       operation.ID,
+		variables:  variablesCopy,
+		clientInfo: clientInfo,
+	}
+
+	subgraphs := subgraphsFromContext(r.Context())
+	requestContext := &requestContext{
+		logger:         requestLogger,
+		keys:           map[string]any{},
+		responseWriter: w,
+		request:        r,
+		operation:      opContext,
+		subgraphs:      subgraphs,
+	}
+
+	return requestContext, opContext
+}

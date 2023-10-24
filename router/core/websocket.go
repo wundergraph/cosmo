@@ -456,7 +456,7 @@ func (h *WebSocketConnectionHandler) executeSubscription(ctx context.Context, ms
 	}
 
 	// Set the operation attributes as early as possible, so they are available in the trace
-	baseMetricAttributeValues := SetSpanOperationAttributes(ctx, operation)
+	baseMetricAttributeValues := SetSpanOperationAttributes(ctx, operation, OperationProtocolGraphQLWS)
 
 	if metrics != nil {
 		metrics.AddSpanAttributes(baseMetricAttributeValues...)
@@ -473,32 +473,13 @@ func (h *WebSocketConnectionHandler) executeSubscription(ctx context.Context, ms
 	// This gets removed by WebSocketConnectionHandler.Complete()
 	h.subscriptions.Insert(msg.ID, cancel)
 
-	variablesCopy := make([]byte, len(operation.Variables))
-	copy(variablesCopy, operation.Variables)
-
-	opContext := &operationContext{
-		name:       operation.Name,
-		opType:     operation.Type,
-		content:    operation.NormalizedRepresentation,
-		hash:       operation.ID,
-		variables:  variablesCopy,
-		clientInfo: h.clientInfo,
-	}
-
-	ctxWithOperation := withOperationContext(cancellableCtx, opContext)
-	r := h.r.WithContext(ctxWithOperation)
 	rw := newWebsocketResponseWriter(msg.ID, h.protocol, h.logger)
 	defer h.Complete(rw)
 
-	subgraphs := subgraphsFromContext(r.Context())
-	requestContext := &requestContext{
-		logger:         h.logger,
-		keys:           map[string]any{},
-		responseWriter: rw,
-		request:        r,
-		operation:      opContext,
-		subgraphs:      subgraphs,
-	}
+	requestContext, opContext := buildRequestContext(rw, h.r, h.clientInfo, operation, h.logger)
+
+	ctxWithOperation := withOperationContext(cancellableCtx, opContext)
+	r := h.r.WithContext(ctxWithOperation)
 
 	r = r.WithContext(withRequestContext(r.Context(), requestContext))
 	h.graphqlHandler.ServeHTTP(rw, r)
