@@ -239,6 +239,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		err := h.executor.Resolver.ResolveGraphQLSubscription(ctx, p.Response, flushWriter)
 		if err != nil {
 			if errors.Is(err, context.Canceled) {
+				requestLogger.Debug("context canceled: unable to resolve subscription response", zap.Error(err))
 				writeRequestErrors(r, graphql.RequestErrorsFromError(couldNotResolveResponseErr), w, requestLogger)
 				return
 			}
