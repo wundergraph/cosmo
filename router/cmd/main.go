@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/wundergraph/cosmo/router/authentication"
 	"github.com/wundergraph/cosmo/router/config"
 	"github.com/wundergraph/cosmo/router/core"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
@@ -68,6 +69,17 @@ func Main() {
 		}
 	}
 
+	var authenticators []authentication.Authenticator
+	for name, auth := range cfg.Authentication.Providers {
+		if auth.JWKS != nil {
+			authenticator, err := authentication.NewJWKSAuthenticator(auth.JWKS.URL)
+			if err != nil {
+				logger.Fatal("Could not create JWKS authenticator", zap.Error(err), zap.String("name", name))
+			}
+			authenticators = append(authenticators, authenticator)
+		}
+	}
+
 	router, err := core.NewRouter(
 		core.WithFederatedGraphName(cfg.Graph.Name),
 		core.WithListenerAddr(cfg.ListenAddr),
@@ -111,6 +123,7 @@ func Main() {
 		core.WithTracing(traceConfig(&cfg.Telemetry)),
 		core.WithMetrics(metricsConfig(&cfg.Telemetry)),
 		core.WithEngineExecutionConfig(cfg.EngineExecutionConfiguration),
+		core.WithAuthenticators(authenticators),
 	)
 
 	if err != nil {

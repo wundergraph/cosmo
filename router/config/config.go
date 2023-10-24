@@ -3,9 +3,10 @@ package config
 import (
 	b64 "encoding/base64"
 	"fmt"
-	"github.com/dustin/go-humanize"
 	"os"
 	"time"
+
+	"github.com/dustin/go-humanize"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/goccy/go-yaml"
@@ -187,6 +188,18 @@ type OverrideRoutingURLConfiguration struct {
 	Subgraphs map[string]string `yaml:"subgraphs" validate:"dive,required,url"`
 }
 
+type AuthenticationProviderJWKS struct {
+	URL string `yaml:"url" validate:"url"`
+}
+
+type AuthenticationProvider struct {
+	JWKS *AuthenticationProviderJWKS `yaml:"jwks"`
+}
+
+type AuthenticationConfiguration struct {
+	Providers map[string]AuthenticationProvider `yaml:"providers"`
+}
+
 type Config struct {
 	Version string `yaml:"version"`
 
@@ -198,19 +211,20 @@ type Config struct {
 	Headers        HeaderRules            `yaml:"headers"`
 	TrafficShaping TrafficShapingRules    `yaml:"traffic_shaping"`
 
-	ListenAddr           string        `yaml:"listen_addr" default:"localhost:3002" validate:"hostname_port" envconfig:"LISTEN_ADDR"`
-	ControlplaneURL      string        `yaml:"controlplane_url" validate:"required" default:"https://cosmo-cp.wundergraph.com" envconfig:"CONTROLPLANE_URL" validate:"uri"`
-	PlaygroundEnabled    bool          `yaml:"playground_enabled" default:"true" envconfig:"PLAYGROUND_ENABLED"`
-	IntrospectionEnabled bool          `yaml:"introspection_enabled" default:"true" envconfig:"INTROSPECTION_ENABLED"`
-	LogLevel             string        `yaml:"log_level" default:"info" envconfig:"LOG_LEVEL" validate:"oneof=debug info warning error fatal panic"`
-	JSONLog              bool          `yaml:"json_log" default:"true" envconfig:"JSON_LOG"`
-	ShutdownDelay        time.Duration `yaml:"shutdown_delay" default:"30s" validate:"required,min=5s" envconfig:"SHUTDOWN_DELAY"`
-	GracePeriod          time.Duration `yaml:"grace_period" default:"20s" validate:"required" envconfig:"GRACE_PERIOD"`
-	PollInterval         time.Duration `yaml:"poll_interval" default:"10s" validate:"required,min=5s" envconfig:"POLL_INTERVAL"`
-	HealthCheckPath      string        `yaml:"health_check_path" default:"/health" envconfig:"HEALTH_CHECK_PATH" validate:"uri"`
-	ReadinessCheckPath   string        `yaml:"readiness_check_path" default:"/health/ready" envconfig:"READINESS_CHECK_PATH" validate:"uri"`
-	LivenessCheckPath    string        `yaml:"liveness_check_path" default:"/health/live" envconfig:"LIVENESS_CHECK_PATH" validate:"uri"`
-	GraphQLPath          string        `yaml:"graphql_path" default:"/graphql" envconfig:"GRAPHQL_PATH"`
+	ListenAddr           string                      `yaml:"listen_addr" default:"localhost:3002" validate:"hostname_port" envconfig:"LISTEN_ADDR"`
+	ControlplaneURL      string                      `yaml:"controlplane_url" validate:"required" default:"https://cosmo-cp.wundergraph.com" envconfig:"CONTROLPLANE_URL" validate:"uri"`
+	PlaygroundEnabled    bool                        `yaml:"playground_enabled" default:"true" envconfig:"PLAYGROUND_ENABLED"`
+	IntrospectionEnabled bool                        `yaml:"introspection_enabled" default:"true" envconfig:"INTROSPECTION_ENABLED"`
+	LogLevel             string                      `yaml:"log_level" default:"info" envconfig:"LOG_LEVEL" validate:"oneof=debug info warning error fatal panic"`
+	JSONLog              bool                        `yaml:"json_log" default:"true" envconfig:"JSON_LOG"`
+	ShutdownDelay        time.Duration               `yaml:"shutdown_delay" default:"30s" validate:"required,min=5s" envconfig:"SHUTDOWN_DELAY"`
+	GracePeriod          time.Duration               `yaml:"grace_period" default:"20s" validate:"required" envconfig:"GRACE_PERIOD"`
+	PollInterval         time.Duration               `yaml:"poll_interval" default:"10s" validate:"required,min=5s" envconfig:"POLL_INTERVAL"`
+	HealthCheckPath      string                      `yaml:"health_check_path" default:"/health" envconfig:"HEALTH_CHECK_PATH" validate:"uri"`
+	ReadinessCheckPath   string                      `yaml:"readiness_check_path" default:"/health/ready" envconfig:"READINESS_CHECK_PATH" validate:"uri"`
+	LivenessCheckPath    string                      `yaml:"liveness_check_path" default:"/health/live" envconfig:"LIVENESS_CHECK_PATH" validate:"uri"`
+	GraphQLPath          string                      `yaml:"graphql_path" default:"/graphql" envconfig:"GRAPHQL_PATH"`
+	Authentication       AuthenticationConfiguration `yaml:"authentication"`
 
 	ConfigPath       string `envconfig:"CONFIG_PATH" validate:"omitempty,filepath"`
 	RouterConfigPath string `yaml:"router_config_path" envconfig:"ROUTER_CONFIG_PATH" validate:"omitempty,filepath"`

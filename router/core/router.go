@@ -4,12 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"net/url"
 	"sync"
 	"time"
 
+	"github.com/wundergraph/cosmo/router/authentication"
 	"github.com/wundergraph/cosmo/router/internal/otel/otelconfig"
 
 	"github.com/dgraph-io/ristretto"
@@ -92,6 +94,7 @@ type (
 		headerRules              config.HeaderRules
 		subgraphTransportOptions *SubgraphTransportOptions
 		routerTrafficConfig      *config.RouterTrafficConfiguration
+		authenticators           []authentication.Authenticator
 
 		retryOptions retrytransport.RetryOptions
 
@@ -680,6 +683,26 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 			subChiRouter.Use(traceHandler.Handler)
 		}
 
+		if authenticators := r.authenticators; len(authenticators) > 0 {
+			subChiRouter.Use(func(next http.Handler) http.Handler {
+				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					for _, auth := range authenticators {
+						authenticated, err := authentication.AuthenticateHTTPRequest(rootContext, auth, r)
+						if err != nil {
+							w.WriteHeader(http.StatusForbidden)
+							_, _ = io.WriteString(w, http.StatusText(http.StatusForbidden))
+							return
+						}
+						if authenticated {
+							w.Header().Set("X-Authenticated", "true")
+							break
+						}
+					}
+					next.ServeHTTP(w, r)
+				})
+			})
+		}
+
 		subChiRouter.Use(NewWebsocketMiddleware(rootContext, WebsocketMiddlewareOptions{
 			Parser:                operationParser,
 			MaxRequestSizeInBytes: int64(r.routerTrafficConfig.MaxRequestBodyBytes),
@@ -994,6 +1017,12 @@ func WithSubgraphRetryOptions(enabled bool, maxRetryCount int, retryMaxDuration,
 func WithRouterTrafficConfig(cfg *config.RouterTrafficConfiguration) Option {
 	return func(r *Router) {
 		r.routerTrafficConfig = cfg
+	}
+}
+
+func WithAuthenticators(authenticators []authentication.Authenticator) Option {
+	return func(r *Router) {
+		r.authenticators = authenticators
 	}
 }
 

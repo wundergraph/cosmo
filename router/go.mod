@@ -3,6 +3,7 @@ module github.com/wundergraph/cosmo/router
 go 1.20
 
 require (
+	github.com/MicahParks/keyfunc/v2 v2.1.0
 	github.com/bufbuild/connect-go v1.9.0
 	github.com/buger/jsonparser v1.1.1
 	github.com/cespare/xxhash/v2 v2.2.0
@@ -12,6 +13,7 @@ require (
 	github.com/go-chi/chi v1.5.4
 	github.com/go-playground/validator/v10 v10.15.3
 	github.com/goccy/go-yaml v1.11.0
+	github.com/golang-jwt/jwt/v5 v5.0.0
 	github.com/gorilla/websocket v1.5.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/jensneuse/abstractlogger v0.0.4
