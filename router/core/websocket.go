@@ -415,7 +415,7 @@ func (h *WebSocketConnectionHandler) executeSubscription(ctx context.Context, ms
 	var metrics *OperationMetrics
 
 	// In GraphQL the statusCode does not always express the error state of the request
-	// we use this flag to determine if we have an error or not for the request metrics
+	// we use this flag to determine if we have an error and mark the metrics
 	hasRequestError := false
 
 	statusCode := http.StatusOK
