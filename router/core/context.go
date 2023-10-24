@@ -118,10 +118,8 @@ type requestContext struct {
 	keys map[string]any
 	// responseWriter is the original response writer received by the router.
 	responseWriter http.ResponseWriter
-	// hasError indicates if the request / response has an error independent of the status code.
+	// hasError indicates if the request / response has an error
 	hasError bool
-	// hasGraphQLErrors indicates if the response returns GraphQL errors. Means the request was accepted by the server.
-	hasGraphQLError bool
 	// request is the original request received by the router.
 	request *http.Request
 	// operation is the GraphQL operation context
