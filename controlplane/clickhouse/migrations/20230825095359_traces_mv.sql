@@ -1,7 +1,5 @@
 -- migrate:up
 
-select * from traces_mv limit 1;
-
 CREATE MATERIALIZED VIEW IF NOT EXISTS cosmo.traces_mv (
    TraceId String CODEC (ZSTD(1)),
    Timestamp DateTime('UTC') CODEC (Delta(4), ZSTD(1)),
