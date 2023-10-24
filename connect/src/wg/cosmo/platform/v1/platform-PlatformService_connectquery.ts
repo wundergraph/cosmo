@@ -296,7 +296,7 @@ export const getFederatedGraphByName = createQueryService({
 }).getFederatedGraphByName;
 
 /**
- * GetFederatedGraphSDLByName returns the SDL of the federated graph by name.
+ * GetFederatedGraphSDLByName returns the latest valid SDL of the federated graph by name.
  *
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetFederatedGraphSDLByName
  */

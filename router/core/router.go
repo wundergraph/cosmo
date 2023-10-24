@@ -683,8 +683,8 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	routerMetrics := NewRouterMetrics(metricStore, r.gqlMetricsExporter, routerConfig.GetVersion())
 
 	graphqlPreHandler := NewPreHandler(&PreHandlerOptions{
-		Executor: executor,
 		Logger:   r.logger,
+		Executor: executor,
 		Metrics:  routerMetrics,
 		Parser:   operationParser,
 		Planner:  operationPlanner,
@@ -718,8 +718,8 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		subChiRouter.Use(NewWebsocketMiddleware(rootContext, WebsocketMiddlewareOptions{
 			Parser:         operationParser,
 			Planner:        operationPlanner,
-			GraphQLHandler: graphqlHandler,
 			Metrics:        routerMetrics,
+			GraphQLHandler: graphqlHandler,
 			Logger:         r.logger,
 		}))
 

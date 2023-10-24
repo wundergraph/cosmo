@@ -29,6 +29,16 @@ message PublishFederatedSubgraphRequest {
   string name = 1;
   // The binary representation of the schema, the content of the file
   bytes schema = 2;
+  // routing_url is the URL of the service which will be used to route the requests to the subgraph.
+  optional string routing_url = 3;
+  // labels are the labels of the services which will form the federated graph. If the proposed is not valid, the service will be rejected.
+  repeated Label labels = 4;
+  // headers are the headers which will be used to route the requests to the subgraph.
+  repeated string headers = 5;
+  // subscription protocol to use when subscribing to this subgraph
+  optional wg.cosmo.common.GraphQLSubscriptionProtocol subscription_protocol = 6;
+  // url used for subscriptions
+  optional string subscription_url = 7;
 
 }
 
@@ -128,6 +138,7 @@ message CreateFederatedSubgraphResponse {
 
 message DeleteFederatedSubgraphResponse {
   Response response = 1;
+  repeated CompositionError compositionErrors = 2;
 }
 
 message DeleteFederatedGraphResponse {
@@ -928,7 +939,7 @@ service PlatformService {
   rpc GetFederatedGraphs(GetFederatedGraphsRequest) returns (GetFederatedGraphsResponse) {}
   // GetFederatedGraphByName returns the federated graph by name.
   rpc GetFederatedGraphByName(GetFederatedGraphByNameRequest) returns (GetFederatedGraphByNameResponse) {}
-  // GetFederatedGraphSDLByName returns the SDL of the federated graph by name.
+  // GetFederatedGraphSDLByName returns the latest valid SDL of the federated graph by name.
   rpc GetFederatedGraphSDLByName(GetFederatedGraphSDLByNameRequest) returns (GetFederatedGraphSDLByNameResponse) {}
   // GetSubgraphs returns the list of subgraphs.
   rpc GetSubgraphs(GetSubgraphsRequest) returns (GetSubgraphsResponse) {}

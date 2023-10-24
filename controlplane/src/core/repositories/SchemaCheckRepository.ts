@@ -44,46 +44,57 @@ export class SchemaCheckRepository {
   }
 
   public createSchemaCheckChanges(data: { schemaCheckID: string; changes: SchemaChange[] }) {
-    return this.db.transaction(async (db) => {
-      const ops = data.changes.map((change) => {
-        return db
-          .insert(schemaCheckChangeAction)
-          .values({
+    if (data.changes.length === 0) {
+      return;
+    }
+
+    return this.db.transaction(async (tx) => {
+      await tx
+        .insert(schemaCheckChangeAction)
+        .values(
+          data.changes.map((change) => ({
             schemaCheckId: data.schemaCheckID,
             changeType: change.changeType as SchemaChangeType,
             changeMessage: change.message,
             path: change.path,
             isBreaking: change.isBreaking,
-          })
-          .execute();
-      });
-      await Promise.all(ops);
+          })),
+        )
+        .execute();
     });
   }
 
   public createSchemaCheckCompositions(data: { schemaCheckID: string; compositions: ComposedFederatedGraph[] }) {
-    let hasCompositionErrors = false;
-    return this.db.transaction(async (db) => {
-      const ops = data.compositions.map((composition) => {
-        if (composition.errors.length > 0) {
-          hasCompositionErrors = true;
-        }
-        return db
-          .insert(schemaCheckComposition)
-          .values({
+    if (data.compositions.length === 0) {
+      return;
+    }
+
+    return this.db.transaction(async (tx) => {
+      // let's check if the subgraph change has produced any composition error.
+      // In that case, we will mark all checks as not composable
+      const hasCompositionErrors = data.compositions.some((composition) => composition.errors.length > 0);
+
+      await tx
+        .insert(schemaCheckComposition)
+        .values(
+          data.compositions.map((composition) => ({
             federatedTargetId: composition.targetID,
             schemaCheckId: data.schemaCheckID,
             composedSchemaSDL: composition.composedSchema,
             compositionErrors: composition.errors?.map((e) => e.toString()).join('\n'),
-          })
-          .execute();
-      });
-      await Promise.all(ops);
+          })),
+        )
+        .execute();
+
       // update the isComposable column in schema_checks table
-      await this.update({
-        schemaCheckID: data.schemaCheckID,
-        isComposable: !hasCompositionErrors,
-      });
+      await tx
+        .update(schemaChecks)
+        .set({
+          isComposable: !hasCompositionErrors,
+        })
+        .where(eq(schemaChecks.id, data.schemaCheckID))
+        .returning()
+        .execute();
     });
   }
 }
