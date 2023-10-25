@@ -282,7 +282,14 @@ const SearchType = ({
   const counts = getTypeCounts(ast);
 
   return (
-    <CommandDialog className="max-w-2xl" open={open} onOpenChange={setOpen}>
+    <CommandDialog
+      commandProps={{
+        loop: true,
+      }}
+      className="max-w-2xl"
+      open={open}
+      onOpenChange={setOpen}
+    >
       <CommandInput placeholder="Search for a type" />
       <div className="flex divide-x">
         <CommandList className="scrollbar-custom w-full">
