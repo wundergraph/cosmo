@@ -10,6 +10,14 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import useWindowSize from "@/hooks/use-window-size";
 import { formatMetric } from "@/lib/format-metric";
 import { createDateRange, useChartData } from "@/lib/insights-helpers";
@@ -201,35 +209,48 @@ export const FieldUsage = ({
                 </AccordionTrigger>
                 <AccordionContent className="mt-2">
                   <div className="flex flex-col gap-y-2">
-                    {client.operations.map((op) => {
-                      return (
-                        <div className="flex items-center" key={op.latestHash}>
-                          <span className="text-muted-foreground">
-                            {op.latestHash.slice(0, 6)}
-                          </span>
-                          <Link
-                            href={{
-                              pathname: `/[organizationSlug]/graph/[slug]/analytics/traces`,
-                              query: {
-                                organizationSlug: router.query.organizationSlug,
-                                slug: router.query.slug,
-                                filterState: createFilterState({
-                                  operationName:
-                                    op.name === "" ? "unknown" : op.name,
-                                }),
-                                dateRange: createDateRange(Number(range)),
-                              },
-                            }}
-                            className="ml-2 text-primary"
-                          >
-                            {op.name}
-                          </Link>
-                          <Badge variant="secondary" className="ml-auto mr-8">
-                            {op.count}
-                          </Badge>
-                        </div>
-                      );
-                    })}
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-24">Hash</TableHead>
+                          <TableHead>Operation Name</TableHead>
+                          <TableHead className="w-24 text-center">
+                            Requests
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {client.operations.map((op) => {
+                          return (
+                            <TableRow key={op.latestHash}>
+                              <TableCell>{op.latestHash.slice(0, 6)}</TableCell>
+                              <TableCell>
+                                <Link
+                                  href={{
+                                    pathname: `/[organizationSlug]/graph/[slug]/analytics/traces`,
+                                    query: {
+                                      organizationSlug:
+                                        router.query.organizationSlug,
+                                      slug: router.query.slug,
+                                      filterState: createFilterState({
+                                        operationName: op.name,
+                                      }),
+                                      dateRange: createDateRange(Number(range)),
+                                    },
+                                  }}
+                                  className="text-primary"
+                                >
+                                  {op.name || "-"}
+                                </Link>
+                              </TableCell>
+                              <TableCell className="text-center">
+                                {op.count}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
                   </div>
                 </AccordionContent>
               </AccordionItem>

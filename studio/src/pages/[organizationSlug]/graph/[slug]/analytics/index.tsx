@@ -407,14 +407,14 @@ const TopList: React.FC<{
         data={items.map((row) => ({
           ...row,
           value: Number.parseFloat(row.value ?? "0"),
-          name: row.name === "" ? "unknown" : row.name,
+          name: row.name === "" ? "-" : row.name,
           href: {
             pathname: `${router.pathname}/traces`,
             query: {
               organizationSlug: router.query.organizationSlug,
               slug: router.query.slug,
               filterState: createFilterState({
-                operationName: row.name === "" ? "unknown" : row.name,
+                operationName: row.name,
               }),
               dateRange: createDateRange(range),
               ...queryParams,

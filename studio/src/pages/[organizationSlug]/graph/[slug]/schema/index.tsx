@@ -113,7 +113,13 @@ const Fields = (props: {
             <TableCell className="align-top font-semibold">
               <p className="my-2 flex flex-wrap items-center gap-x-1">
                 {props.category !== "unions" ? (
-                  <span>{field.name}</span>
+                  <button
+                    disabled={!hasUsage}
+                    onClick={() => openUsage(field.name)}
+                    className={cn(hasUsage && "hover:underline")}
+                  >
+                    {field.name}
+                  </button>
                 ) : (
                   <TypeLink ast={props.ast} name={field.name} />
                 )}
@@ -304,6 +310,7 @@ const SearchType = ({
                       }}
                       key={t.name}
                       value={`${category}-${i}-${t}`}
+                      className="subpixel-antialiased"
                     >
                       {t.name}
                     </CommandItem>
@@ -337,12 +344,12 @@ const Type = (props: {
           )}
           {props.interfaces &&
             props.interfaces.map((t, index) => (
-              <>
-                <TypeLink key={index} ast={props.ast} name={t} isHeading />
+              <div key={index} className="flex items-center gap-x-2">
+                <TypeLink ast={props.ast} name={t} isHeading />
                 {index !== props.interfaces!.length - 1 && (
                   <p className="font-normal text-muted-foreground">&</p>
                 )}
-              </>
+              </div>
             ))}
         </div>
         <Badge className="w-max">{props.category}</Badge>
@@ -464,7 +471,7 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
       >
         {isLoading && <Loader fullscreen />}
         {!isLoading &&
-          (error || data?.response?.code !== EnumStatusCode.OK) && (
+          (error || data?.response?.code !== EnumStatusCode.OK || !ast) && (
             <EmptyState
               icon={<ExclamationTriangleIcon />}
               title="Could not retrieve schema"
@@ -476,13 +483,6 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
               actions={<Button onClick={() => refetch()}>Retry</Button>}
             />
           )}
-        {!isLoading && !ast && (
-          <EmptyState
-            icon={<ExclamationTriangleIcon />}
-            title="Could not retrieve schema"
-            description="The schema might be invalid or does not exist"
-          />
-        )}
         {ast && <TypeWrapper ast={ast} />}
         <FieldUsageSheet />
       </TitleLayout>
@@ -503,13 +503,14 @@ const Toolbar = ({ ast }: { ast: GraphQLSchema | null }) => {
 
   return (
     <SchemaToolbar tab="explorer">
+      <div className="hidden md:ml-auto md:block" />
       {ast && (
         <>
           <SearchType ast={ast} open={open} setOpen={setOpen} />
           <Button
             onClick={() => setOpen(true)}
             variant="outline"
-            className="gap-x-2 text-muted-foreground shadow-none md:ml-auto"
+            className="gap-x-2 text-muted-foreground shadow-none"
           >
             <MagnifyingGlassIcon />
             Search{" "}
