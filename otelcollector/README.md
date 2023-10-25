@@ -15,11 +15,11 @@ Ensure you have the latest version of the [OpenTelemetry Collector Builder](http
 
 ## Production checklist
 
-Change the TTL of the metrics table to 3 days. In that way, raw metrics will be deleted after 3 days but the materialized view will still be available for 30 days in a compressed format.
+Change the TTL of the otel_metrics_* table to 3 days. In that way, raw metrics will be deleted after 3 days but the materialized view will still be available for 30 days in a compressed format.
 
 Run this for each metrics table:
 
 ```sql
-ALTER TABLE otel_metrics_histogram MODIFY TTL toDateTime(TimeUnix) + toIntervalDay(3);
+ALTER TABLE otel_metrics_histogram MODIFY TTL toDateTime(TimeUnix) + toIntervalDay(7);
 OPTIMIZE TABLE otel_metrics_histogram FINAL;
 ```

@@ -2,14 +2,12 @@ package core
 
 import (
 	"errors"
-	"io"
-	"net/http"
-
+	"github.com/go-chi/chi/middleware"
 	"github.com/wundergraph/cosmo/router/internal/metric"
 	"github.com/wundergraph/cosmo/router/internal/pool"
-
-	"github.com/go-chi/chi/middleware"
 	"go.uber.org/zap"
+	"io"
+	"net/http"
 
 	"github.com/wundergraph/cosmo/router/internal/logging"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphql"
@@ -40,10 +38,23 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 	}
 }
 
+// Error and Status Code handling
+//
+// When a server receives a well-formed GraphQL-over-HTTP request, it must return a
+// well‐formed GraphQL response. The server's response describes the result of validating
+// and executing the requested operation if successful, and describes any errors encountered
+// during the request. This means working errors should be returned as part of the response body.
+// That also implies parsing or validation errors. They should be returned as part of the response body.
+// Only in cases where the request is malformed or invalid GraphQL should the server return an HTTP 4xx or 5xx error code.
+// https://github.com/graphql/graphql-over-http/blob/main/spec/GraphQLOverHTTP.md#response
+
 func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 	fn := func(w http.ResponseWriter, r *http.Request) {
 
+		// In GraphQL the statusCode does not always express the error state of the request
+		// we use this flag to determine if we have an error for the request metrics
+		var hasRequestError bool
 		var statusCode int
 		var writtenBytes int
 		var metrics *OperationMetrics
@@ -54,7 +65,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			metrics = StartOperationMetrics(r.Context(), h.requestMetrics, r.ContentLength)
 
 			defer func() {
-				metrics.Finish(r.Context(), statusCode, int64(writtenBytes))
+				metrics.Finish(r.Context(), hasRequestError, statusCode, int64(writtenBytes))
 			}()
 
 			metrics.AddClientInfo(r.Context(), clientInfo)
@@ -68,60 +79,54 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 		copiedBytes, err := io.Copy(buf, limitedReader)
 		if err != nil {
-			statusCode = http.StatusInternalServerError
+			hasRequestError = true
 			requestLogger.Error("failed to read request body", zap.Error(err))
-			w.WriteHeader(statusCode)
-			writeRequestErrors(graphql.RequestErrorsFromError(internalServerErrorErr), w, requestLogger)
+			writeRequestErrors(r, graphql.RequestErrorsFromError(internalServerErrorErr), w, requestLogger)
 			return
 		}
 
 		// If the request body is larger than the limit, limit reader will truncate the body
 		// We check here if it was truncated and return an error
 		if copiedBytes < r.ContentLength {
-			statusCode = http.StatusRequestEntityTooLarge
+			hasRequestError = true
+			err := errors.New("request body too large")
 			requestLogger.Error("request body too large")
-			w.WriteHeader(statusCode)
-			writeRequestErrors(graphql.RequestErrorsFromError(errors.New("request body too large")), w, requestLogger)
+			writeRequestErrors(r, graphql.RequestErrorsFromError(err), w, requestLogger)
 			return
 		}
 
 		operation, err := h.parser.Parse(buf.Bytes())
 		if err != nil {
+			hasRequestError = true
+
 			var reportErr ReportError
 			var inputErr InputError
 			switch {
 			case errors.As(err, &inputErr):
-				statusCode = http.StatusBadRequest
+				statusCode = http.StatusUnprocessableEntity
 				requestLogger.Error(inputErr.Error())
-				w.WriteHeader(statusCode)
-				w.Write([]byte(inputErr.Error()))
+				writeRequestErrors(r, graphql.RequestErrorsFromError(err), w, requestLogger)
 			case errors.As(err, &reportErr):
 				report := reportErr.Report()
-				// according to the graphql-over-http spec, internal errors should
-				// use a 500 as status code, while external errors should use 200.
-				// If we have both, we use 500.
-				if len(report.InternalErrors) == 0 {
-					statusCode = http.StatusOK
-				} else {
-					statusCode = http.StatusInternalServerError
-				}
-				logInternalErrors(report, requestLogger)
-				w.WriteHeader(statusCode)
-				writeRequestErrorsFromReport(report, w, requestLogger)
-			default:
-				statusCode = http.StatusInternalServerError
+				logInternalErrorsFromReport(reportErr.Report(), requestLogger)
+				writeRequestErrors(r, graphql.RequestErrorsFromOperationReport(*report), w, requestLogger)
+			default: // If we have an unknown error, we log it and return an internal server error
 				requestLogger.Error(err.Error())
-				w.WriteHeader(statusCode)
-				writeRequestErrors(graphql.RequestErrorsFromError(internalServerErrorErr), w, requestLogger)
+				writeRequestErrors(r, graphql.RequestErrorsFromError(internalServerErrorErr), w, requestLogger)
 			}
 			return
 		}
 
-		if metrics != nil {
-			metrics.AddOperation(r.Context(), operation, OperationProtocolHTTP)
+		// Set the operation attributes as early as possible, so they are available in the trace
+		baseMetricAttributeValues := SetSpanOperationAttributes(r.Context(), operation, OperationProtocolHTTP)
+
+		if h.requestMetrics != nil {
+			metrics.AddSpanAttributes(baseMetricAttributeValues...)
 		}
 
-		ctxWithOperation := withOperationContext(r.Context(), operation, clientInfo)
+		requestContext, opContext := buildRequestContext(w, r, clientInfo, operation, requestLogger)
+		ctxWithRequest := withRequestContext(r.Context(), requestContext)
+		ctxWithOperation := withOperationContext(ctxWithRequest, opContext)
 		ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
 
 		newReq := r.WithContext(ctxWithOperation)
@@ -132,6 +137,9 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 		statusCode = ww.Status()
 		writtenBytes = ww.BytesWritten()
+
+		// Evaluate the request after the request has been handled by the engine
+		hasRequestError = requestContext.hasError
 	}
 
 	return http.HandlerFunc(fn)
