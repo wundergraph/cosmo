@@ -5,6 +5,7 @@ import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { Kind, parse } from 'graphql';
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import {
+  federationRequiredInputFieldError,
   ImplementationErrors,
   incompatibleParentKindFatalError,
   InvalidFieldImplementation,
@@ -12,12 +13,7 @@ import {
   unimplementedInterfaceFieldsError,
 } from '@wundergraph/composition';
 import { composeSubgraphs } from '../src/core/composition/composition';
-import {
-  afterAllSetup,
-  beforeAllSetup,
-  genID,
-  genUniqueLabel,
-} from '../src/core/test-util';
+import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util';
 import { SetupTest } from './test-util';
 
 let dbname = '';
@@ -384,7 +380,7 @@ describe('CompositionErrors', (ctx) => {
     );
   });
 
-  test.skip('Should cause composition errors if a mandatory input field is not in all subgraphs', () => {
+  test('that a required input field must always be present', () => {
     const subgraph1 = {
       definitions: parse(`
         type Query {
@@ -417,8 +413,6 @@ describe('CompositionErrors', (ctx) => {
     const result = composeSubgraphs([subgraph1, subgraph2]);
 
     expect(result.errors).toBeDefined();
-    expect(result.errors?.[0].message).toBe(
-      'Input object field "InputA.b" is required in some subgraphs but does not appear in all subgraphs: it is required in subgraph "subgraph2" but does not appear in subgraph "subgraph1"',
-    );
+    expect(result.errors?.[0]).toStrictEqual(federationRequiredInputFieldError('InputA', 'b'));
   });
 });

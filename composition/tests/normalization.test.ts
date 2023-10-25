@@ -1175,7 +1175,7 @@ describe('Normalization tests', () => {
     expect(errors).toBeDefined();
   });
 
-  test.skip('Should give errors if the provides directive points to a field that does not exist ', () => {
+  test('that an error is returned if @provides refers to a non-existent field', () => {
     const { errors } = normalizeSubgraphFromString(`
      type Review @key(fields : "id") {
       id: String!
@@ -1188,6 +1188,11 @@ describe('Normalization tests', () => {
     }
     `);
     expect(errors).toBeDefined();
+    expect(errors![0].message)
+      .toStrictEqual(
+        `The following "provides" directive is invalid:\n On "Review.user" —`
+        + undefinedFieldInFieldSetErrorMessage('age', 'User', 'age')
+      );
   });
 
   test('that declaring the @provides directive without the required fields argument returns an error', () => {
@@ -1271,12 +1276,11 @@ describe('Normalization tests', () => {
     );
   });
 
-  // Requires directive TODO
-  test.skip('Should normalize schemas with requires directives', () => {
+  test('that a valid @requires directive composes', () => {
     const { errors } = normalizeSubgraphFromString(`
        type Product @key(fields : "id") {
         id: String!
-        shippingCost: String! @requires(fields : "weight")
+        shippingCost: String! @requires(fields: "weight")
         weight: Float! @external
       }
     `);
