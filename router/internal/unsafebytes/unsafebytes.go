@@ -6,6 +6,9 @@ import (
 
 // BytesToString converts a byte slice to a string without a memory allocation.
 func BytesToString(bytes []byte) string {
+	if len(bytes) == 0 {
+		return ""
+	}
 	return unsafe.String(unsafe.SliceData(bytes), len(bytes))
 }
 
