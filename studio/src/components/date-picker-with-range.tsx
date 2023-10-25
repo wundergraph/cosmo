@@ -1,8 +1,3 @@
-import * as React from "react";
-import { addDays, addYears } from "date-fns";
-import { DateRange } from "react-day-picker";
-
-import { cn } from "@/lib/utils";
 import { Button, ButtonProps } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -10,9 +5,13 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import CalendarIcon from "@heroicons/react/24/outline/CalendarIcon";
 import useWindowSize from "@/hooks/use-window-size";
 import { formatDate } from "@/lib/format-date";
+import { cn } from "@/lib/utils";
+import CalendarIcon from "@heroicons/react/24/outline/CalendarIcon";
+import { addDays, addYears } from "date-fns";
+import * as React from "react";
+import { DateRange } from "react-day-picker";
 
 export function DatePickerWithRange({
   selectedDateRange,
@@ -27,6 +26,20 @@ export function DatePickerWithRange({
   size?: ButtonProps["size"];
 }) {
   const { isMobile } = useWindowSize();
+
+  const [selected, setSelected] = React.useState(selectedDateRange);
+
+  const isDayBetween = (day: Date, from: Date, to: Date) => {
+    return day > from && day < to;
+  };
+
+  const handleDayClick = (day: Date) => {
+    const { from, to } = selectedDateRange;
+
+    if (from && to && isDayBetween(day, from, to)) {
+      setSelected({ from: day, to: undefined });
+    }
+  };
 
   return (
     <Popover>
@@ -61,10 +74,22 @@ export function DatePickerWithRange({
           initialFocus
           mode="range"
           defaultMonth={selectedDateRange?.from}
-          selected={selectedDateRange}
-          onSelect={(range) => {
-            if (range) onDateRangeChange(range);
+          selected={selected}
+          onSelect={(range, day) => {
+            if (range) {
+              if (
+                selected.from &&
+                selected.to &&
+                isDayBetween(day, selected.from, selected.to)
+              ) {
+                setSelected({ from: day, to: undefined });
+                return;
+              }
+              setSelected(range);
+              onDateRangeChange(range);
+            }
           }}
+          onDayClick={handleDayClick}
           min={2}
           numberOfMonths={isMobile ? 1 : 2}
           showOutsideDays={false}
