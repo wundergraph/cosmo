@@ -90,6 +90,7 @@ jobs:
           push: false
           file: ${{ matrix.dockerfile }}
           context: ${{ matrix.context_path }}
+          platforms: linux/arm64,linux/amd64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
