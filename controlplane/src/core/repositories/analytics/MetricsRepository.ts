@@ -1,6 +1,6 @@
 import { AnalyticsFilter, AnalyticsViewFilterOperator } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { BaseFilters, buildAnalyticsViewFilters, buildCoercedFilterSqlStatement, coerceFilterValues } from './util.js';
 import { ClickHouseClient } from 'src/core/clickhouse/index.js';
+import { BaseFilters, buildAnalyticsViewFilters, buildCoercedFilterSqlStatement, coerceFilterValues } from './util.js';
 
 const getEndDate = () => {
   const now = new Date();
@@ -649,7 +649,7 @@ export class MetricsRepository {
 
     for (const row of res) {
       for (const filterName of filterNames) {
-        if (row[filterName] && !filterOptions[filterName]?.includes(row[filterName])) {
+        if (row[filterName] !== undefined && !filterOptions[filterName]?.includes(row[filterName])) {
           filterOptions[filterName] = filterOptions[filterName] || [];
           filterOptions[filterName].push(row[filterName]);
           addFilterOption(filterName, row[filterName]);
