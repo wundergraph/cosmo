@@ -1,5 +1,5 @@
 import { AnalyticsFilter, AnalyticsViewFilterOperator } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { ClickHouseClient } from 'src/core/clickhouse/index.js';
+import { ClickHouseClient } from '../../clickhouse/index.js';
 import { BaseFilters, buildAnalyticsViewFilters, buildCoercedFilterSqlStatement, coerceFilterValues } from './util.js';
 
 const getEndDate = () => {
