@@ -95,6 +95,7 @@ type (
 		subgraphTransportOptions *SubgraphTransportOptions
 		routerTrafficConfig      *config.RouterTrafficConfiguration
 		authenticators           []authentication.Authenticator
+		authenticationRequired   bool
 
 		retryOptions retrytransport.RetryOptions
 
@@ -466,6 +467,37 @@ func (r *Router) bootstrap(ctx context.Context) error {
 	return nil
 }
 
+func (r *Router) authenticationMiddleware(ctx context.Context) func(http.Handler) http.Handler {
+	if len(r.authenticators) == 0 && !r.authenticationRequired {
+		return nil
+	}
+	authenticators := r.authenticators
+	if len(authenticators) == 0 {
+		// r.authenticationRequired must be true at this point
+		r.logger.Warn("authentication is required but no authenticators are configured")
+	}
+	authenticationRequired := r.authenticationRequired
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			auth, err := authentication.AuthenticateHTTPRequest(ctx, authenticators, r)
+			if err != nil {
+				w.WriteHeader(http.StatusForbidden)
+				_, _ = io.WriteString(w, http.StatusText(http.StatusForbidden))
+				return
+			}
+			if auth != nil {
+				r = r.WithContext(authentication.NewContext(r.Context(), auth))
+				w.Header().Set("X-Authenticated-By", auth.Authenticator())
+			} else if authenticationRequired {
+				w.WriteHeader(http.StatusUnauthorized)
+				_, _ = io.WriteString(w, http.StatusText(http.StatusUnauthorized))
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
 // Start starts the Server. It blocks until the context is cancelled or when the initial config could not be fetched.
 func (r *Router) Start(ctx context.Context) error {
 	if r.shutdown {
@@ -683,24 +715,8 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 			subChiRouter.Use(traceHandler.Handler)
 		}
 
-		if authenticators := r.authenticators; len(authenticators) > 0 {
-			subChiRouter.Use(func(next http.Handler) http.Handler {
-				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					for _, auth := range authenticators {
-						authenticated, err := authentication.AuthenticateHTTPRequest(rootContext, auth, r)
-						if err != nil {
-							w.WriteHeader(http.StatusForbidden)
-							_, _ = io.WriteString(w, http.StatusText(http.StatusForbidden))
-							return
-						}
-						if authenticated {
-							w.Header().Set("X-Authenticated", "true")
-							break
-						}
-					}
-					next.ServeHTTP(w, r)
-				})
-			})
+		if auth := r.authenticationMiddleware(rootContext); auth != nil {
+			subChiRouter.Use(auth)
 		}
 
 		subChiRouter.Use(NewWebsocketMiddleware(rootContext, WebsocketMiddlewareOptions{
@@ -1023,6 +1039,12 @@ func WithRouterTrafficConfig(cfg *config.RouterTrafficConfiguration) Option {
 func WithAuthenticators(authenticators []authentication.Authenticator) Option {
 	return func(r *Router) {
 		r.authenticators = authenticators
+	}
+}
+
+func WithAuthenticationRequired(required bool) Option {
+	return func(r *Router) {
+		r.authenticationRequired = required
 	}
 }
 

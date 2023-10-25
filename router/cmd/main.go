@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -70,9 +71,20 @@ func Main() {
 	}
 
 	var authenticators []authentication.Authenticator
-	for name, auth := range cfg.Authentication.Providers {
+	for i, auth := range cfg.Authentication.Providers {
 		if auth.JWKS != nil {
-			authenticator, err := authentication.NewJWKSAuthenticator(auth.JWKS.URL)
+			name := auth.Name
+			if name == "" {
+				name = fmt.Sprintf("jwks-#%d", i)
+			}
+			opts := authentication.JWKSAuthenticatorOptions{
+				Name:              name,
+				URL:               auth.JWKS.URL,
+				HeaderName:        auth.JWKS.HeaderName,
+				HeaderValuePrefix: auth.JWKS.HeaderValuePrefix,
+				RefreshInterval:   auth.JWKS.RefreshInterval,
+			}
+			authenticator, err := authentication.NewJWKSAuthenticator(opts)
 			if err != nil {
 				logger.Fatal("Could not create JWKS authenticator", zap.Error(err), zap.String("name", name))
 			}
@@ -124,6 +136,7 @@ func Main() {
 		core.WithMetrics(metricsConfig(&cfg.Telemetry)),
 		core.WithEngineExecutionConfig(cfg.EngineExecutionConfiguration),
 		core.WithAuthenticators(authenticators),
+		core.WithAuthenticationRequired(cfg.Authorization.RequireAuthentication),
 	)
 
 	if err != nil {

@@ -189,15 +189,23 @@ type OverrideRoutingURLConfiguration struct {
 }
 
 type AuthenticationProviderJWKS struct {
-	URL string `yaml:"url" validate:"url"`
+	URL               string        `yaml:"url" validate:"url"`
+	HeaderName        string        `yaml:"header_name" default:"Authorization"`
+	HeaderValuePrefix string        `yaml:"header_value_prefix" default:"Bearer"`
+	RefreshInterval   time.Duration `yaml:"refresh_interval" default:"1m" validate:"required,min=5s,max=1h"`
 }
 
 type AuthenticationProvider struct {
+	Name string                      `yaml:"name"`
 	JWKS *AuthenticationProviderJWKS `yaml:"jwks"`
 }
 
 type AuthenticationConfiguration struct {
-	Providers map[string]AuthenticationProvider `yaml:"providers"`
+	Providers []AuthenticationProvider `yaml:"providers"`
+}
+
+type AuthorizationConfiguration struct {
+	RequireAuthentication bool `yaml:"require_authentication" default:"false" envconfig:"REQUIRE_AUTHENTICATION"`
 }
 
 type Config struct {
@@ -225,6 +233,7 @@ type Config struct {
 	LivenessCheckPath    string                      `yaml:"liveness_check_path" default:"/health/live" envconfig:"LIVENESS_CHECK_PATH" validate:"uri"`
 	GraphQLPath          string                      `yaml:"graphql_path" default:"/graphql" envconfig:"GRAPHQL_PATH"`
 	Authentication       AuthenticationConfiguration `yaml:"authentication"`
+	Authorization        AuthorizationConfiguration  `yaml:"authorization"`
 
 	ConfigPath       string `envconfig:"CONFIG_PATH" validate:"omitempty,filepath"`
 	RouterConfigPath string `yaml:"router_config_path" envconfig:"ROUTER_CONFIG_PATH" validate:"omitempty,filepath"`
