@@ -14,7 +14,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 )
 
 func main() {
@@ -48,31 +47,19 @@ func main() {
 		log.Fatal("Could not parse dsn", zap.Error(err))
 	}
 
-	db := clickhouse.OpenDB(&clickhouse.Options{
-		Addr: options.Addr,
-		Auth: clickhouse.Auth{
-			Database: options.Auth.Database,
-			Username: options.Auth.Username,
-			Password: options.Auth.Password,
+	options.Compression = &clickhouse.Compression{
+		Method: clickhouse.CompressionLZ4,
+	}
+	options.ClientInfo = clickhouse.ClientInfo{
+		Products: []struct {
+			Name    string
+			Version string
+		}{
+			{Name: "graphqlmetrics", Version: graphqlmetrics.Version},
 		},
-		Settings: clickhouse.Settings{
-			"max_execution_time": 60,
-		},
-		Compression: &clickhouse.Compression{
-			Method: clickhouse.CompressionLZ4,
-		},
-		Protocol:    options.Protocol,
-		DialTimeout: time.Second * 30,
-		ClientInfo: clickhouse.ClientInfo{
-			Products: []struct {
-				Name    string
-				Version string
-			}{
-				{Name: "graphqlmetrics", Version: graphqlmetrics.Version},
-			},
-		},
-	})
+	}
 
+	db := clickhouse.OpenDB(options)
 	db.SetMaxIdleConns(10)
 	db.SetMaxOpenConns(15)
 
