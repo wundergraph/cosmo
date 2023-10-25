@@ -1,3 +1,4 @@
+import { CompositionErrorsBanner } from "@/components/composition-errors-banner";
 import { GraphContext, getGraphLayout } from "@/components/layout/graph-layout";
 import { PageHeader } from "@/components/layout/head";
 import { TitleLayout } from "@/components/layout/title-layout";
@@ -70,6 +71,9 @@ const SDLPage: NextPageWithLayout = () => {
   );
 
   const graphData = useContext(GraphContext);
+
+  const validGraph =
+    graphData?.graph?.isComposable && !!graphData?.graph?.lastUpdatedAt;
 
   const { data: subGraphSdl } = useQuery({
     ...getFederatedSubgraphSDLByName.useQuery({
@@ -154,7 +158,12 @@ const SDLPage: NextPageWithLayout = () => {
           </SchemaToolbar>
         }
       >
-        <div className="relative flex h-full flex-col gap-y-4">
+        {!validGraph && (
+          <CompositionErrorsBanner
+            errors={graphData?.graph?.compositionErrors}
+          />
+        )}
+        <div className="relative flex h-full min-h-[60vh] flex-col-reverse gap-y-4 md:flex-col">
           <div
             id="schema-container"
             className="scrollbar-custom flex-1 overflow-auto rounded border"
