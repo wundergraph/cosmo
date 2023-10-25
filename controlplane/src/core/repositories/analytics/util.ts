@@ -358,7 +358,7 @@ export const getGranularity = (range: number) => {
       return '15'; // 15m
     }
     case 4: {
-      return '5'; // 10m
+      return '10'; // 10m
     }
     case 1: {
       // 1 hour

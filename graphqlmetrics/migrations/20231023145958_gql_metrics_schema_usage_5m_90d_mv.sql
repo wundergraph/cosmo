@@ -1,7 +1,7 @@
 
 -- migrate:up
 
-CREATE MATERIALIZED VIEW IF NOT EXISTS gql_metrics_schema_usage_1h_90d_mv (
+CREATE MATERIALIZED VIEW IF NOT EXISTS gql_metrics_schema_usage_5m_90d_mv (
     Timestamp DateTime64(9) CODEC(Delta, ZSTD(3)),
 
     -- Organization
@@ -44,10 +44,10 @@ PARTITION BY toDate(Timestamp)
 ORDER BY (OrganizationID, FederatedGraphID, ClientName, ClientVersion, RouterConfigVersion, OperationHash, Path, TypeNames, SubgraphIDs, toUnixTimestamp(Timestamp))
 -- We store 90 days of data in this table.
 TTL toDateTime(Timestamp) + toIntervalDay(90) SETTINGS index_granularity = 8192, ttl_only_drop_parts = 1 POPULATE AS
--- Aggregate histogram buckets into a 1h minute window, Counts are summed.
+-- Aggregate histogram buckets into a 5 minute window, Counts are summed.
 SELECT
-    -- We aggregate into 1h buckets because this is the smallest resolution we need for the dashboard.
-    toStartOfHour(Timestamp) as Timestamp,
+    -- We aggregate into 5m buckets because this is the smallest resolution we need for the dashboard.
+    toStartOfFiveMinute(Timestamp) as Timestamp,
     OrganizationID,
     FederatedGraphID,
     RouterConfigVersion,
@@ -81,4 +81,4 @@ ORDER BY
 
 -- migrate:down
 
-DROP VIEW IF EXISTS gql_metrics_schema_usage_1h_90d_mv
+DROP VIEW IF EXISTS gql_metrics_schema_usage_5m_90d_mv

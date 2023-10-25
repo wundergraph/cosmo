@@ -51,30 +51,24 @@ export class UsageRepository {
     } = filters;
 
     const query = `
-    WITH
+      WITH 
         toStartOfInterval(toDateTime('${start}'), INTERVAL ${granule} MINUTE) AS startDate,
         toDateTime('${end}') AS endDate
-    SELECT
-        toStartOfInterval(Timestamp, INTERVAL ${granule} MINUTE) AS timestamp,
-        sum(Count) as totalRequests,
-        sum(
-          CASE
-            WHEN Attributes['http.status_code'] >= '400' AND Attributes['http.status_code'] < '600'
-            THEN Count
-            ELSE 0
-          END
-        ) as erroredRequests
-    FROM ${this.client.database}.gql_metrics_schema_usage
-    WHERE timestamp >= startDate AND timestamp <= endDate
-        AND hasAny(TypeNames, ['${typename}'])
-        AND endsWith(Path, ['${field}'])
-        AND FederatedGraphID = '${federatedGraphId}'
-        AND OrganizationID = '${organizationId}'
-    GROUP BY timestamp
-    ORDER BY timestamp WITH FILL 
-    FROM toStartOfInterval(toDateTime('${start}'), INTERVAL ${granule} MINUTE)
-    TO toDateTime('${end}')
-    STEP INTERVAL ${granule} minute
+      SELECT
+          toStartOfInterval(Timestamp, INTERVAL ${granule} MINUTE) AS timestamp,
+          SUM(TotalUsages) AS totalRequests,
+          SUM(TotalErrors) AS erroredRequests
+      FROM ${this.client.database}.gql_metrics_schema_usage_5m_90d_mv
+      WHERE Timestamp >= startDate AND Timestamp <= endDate
+          AND hasAny(TypeNames, ['${typename}'])
+          AND endsWith(Path, ['${field}'])
+          AND FederatedGraphID = '${federatedGraphId}'
+          AND OrganizationID = '${organizationId}'
+      GROUP BY timestamp
+      ORDER BY timestamp WITH FILL 
+      FROM toStartOfInterval(toDateTime('${start}'), INTERVAL ${granule} MINUTE)
+      TO toDateTime('${end}')
+      STEP INTERVAL ${granule} minute
     `;
 
     const res = await this.client.queryPromise(query);
@@ -102,30 +96,31 @@ export class UsageRepository {
     } = filters;
 
     const query = `
-    WITH
-      toDateTime('${start}') AS startDate,
-      toDateTime('${end}') AS endDate
-    SELECT
-      clientName,
-      clientVersion,
-      groupArray((latestOperationHash, operationName, requestCount)) AS operations
-      FROM (
-          SELECT
-              ClientName as clientName,
-              ClientVersion as clientVersion,
-              OperationName as operationName,
-              argMax(OperationHash, Timestamp) as latestOperationHash,
-              sum(Count) as requestCount
-          FROM ${this.client.database}.gql_metrics_schema_usage
-          WHERE Timestamp >= startDate AND Timestamp <= endDate
-              AND hasAny(TypeNames, ['${typename}'])
-              AND endsWith(Path, ['${field}'])
-              AND FederatedGraphID = '${federatedGraphId}'
-              AND OrganizationID = '${organizationId}'
-          GROUP BY clientName, clientVersion, operationName
-      )
-    GROUP BY clientName, clientVersion
-    ORDER BY clientName, clientVersion
+      WITH
+        toDateTime('${start}') AS startDate,
+        toDateTime('${end}') AS endDate
+      SELECT
+        ClientName AS clientName,
+        ClientVersion AS clientVersion,
+        groupArray((latestOperationHash, OperationName, requestCount)) AS operations
+      FROM 
+        (
+            SELECT
+                ClientName,
+                ClientVersion,
+                OperationName,
+                argMax(OperationHash, Timestamp) AS latestOperationHash,
+                sum(TotalUsages) AS requestCount
+            FROM ${this.client.database}.gql_metrics_schema_usage_5m_90d_mv
+            WHERE Timestamp >= startDate AND Timestamp <= endDate
+                AND hasAny(TypeNames, ['${typename}'])
+                AND endsWith(arrayElement(Path, -1), '${field}')
+                AND FederatedGraphID = '${federatedGraphId}'
+                AND OrganizationID = '${organizationId}'
+            GROUP BY ClientName, ClientVersion, OperationName
+        )
+      GROUP BY ClientName, ClientVersion
+      ORDER BY ClientName, ClientVersion
     `;
 
     const res = await this.client.queryPromise(query);
@@ -164,10 +159,10 @@ export class UsageRepository {
       arrayReduce('groupUniqArray', arrayFlatten(groupArray(SubgraphIDs))) as subgraphIds,
       toString(toUnixTimestamp(min(Timestamp))) as firstSeenTimestamp,
       toString(toUnixTimestamp(max(Timestamp))) as latestSeenTimestamp
-    FROM gql_metrics_schema_usage
+    FROM ${this.client.database}.gql_metrics_schema_usage_5m_90d_mv
       WHERE Timestamp >= startDate AND Timestamp <= endDate
       AND hasAny(TypeNames, ['${typename}'])
-      AND endsWith(Path, ['${field}'])
+      AND endsWith(arrayElement(Path, -1), '${field}')
       AND FederatedGraphID = '${federatedGraphId}'
       AND OrganizationID = '${organizationId}'
     `;
