@@ -3,7 +3,7 @@
 CREATE MATERIALIZED VIEW IF NOT EXISTS cosmo.traces_mv TO cosmo.traces AS
 SELECT
     TraceId,
-    Timestamp,
+    toDateTime(Timestamp, 'UTC') as Timestamp,
     SpanAttributes [ 'wg.operation.name' ] as OperationName,
     SpanAttributes [ 'wg.operation.type' ] as OperationType,
     SpanAttributes [ 'wg.federated_graph.id'] as FederatedGraphID,
