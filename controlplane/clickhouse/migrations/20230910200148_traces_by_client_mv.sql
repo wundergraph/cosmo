@@ -1,6 +1,6 @@
 -- migrate:up
 
-CREATE MATERIALIZED VIEW cosmo.traces_by_client_quarter_hourly_mv TO cosmo.traces_by_client_quarter_hourly AS
+CREATE MATERIALIZED VIEW IF NOT EXISTS cosmo.traces_by_client_quarter_hourly_mv TO cosmo.traces_by_client_quarter_hourly AS
 SELECT
     toDateTime(
         toStartOfInterval(Timestamp, INTERVAL 15 Minute),
@@ -11,8 +11,8 @@ SELECT
     SpanAttributes ['wg.organization.id'] as OrganizationID,
     SpanAttributes [ 'wg.federated_graph.id'] as FederatedGraphID,
     count() AS TotalRequests,
-    countIf(StatusMessage == 'STATUS_CODE_ERROR' OR position(SpanAttributes['http.status_code'],'5') = 1 OR position(SpanAttributes['http.status_code'],'4') = 1 OR mapContains(SpanAttributes, 'wg.http_request_error')) AS TotalRequestsError,
-    countIf(not(StatusMessage == 'STATUS_CODE_ERROR' OR position(SpanAttributes['http.status_code'],'5') = 1 OR position(SpanAttributes['http.status_code'],'4') = 1 OR mapContains(SpanAttributes, 'wg.http_request_error'))) AS TotalRequestsOk,
+    countIf(StatusMessage == 'STATUS_CODE_ERROR' OR position(SpanAttributes['http.status_code'],'5') = 1 OR position(SpanAttributes['http.status_code'],'4') = 1 OR mapContains(SpanAttributes, 'wg.request.error')) AS TotalRequestsError,
+    countIf(not(StatusMessage == 'STATUS_CODE_ERROR' OR position(SpanAttributes['http.status_code'],'5') = 1 OR position(SpanAttributes['http.status_code'],'4') = 1 OR mapContains(SpanAttributes, 'wg.request.error'))) AS TotalRequestsOk,
     quantilesState(0.5, 0.75, 0.9, 0.95, 0.99)(Duration) AS DurationQuantiles,
     toDateTime(MAX(Timestamp), 'UTC') as LastCalled
 FROM

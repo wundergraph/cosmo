@@ -1,7 +1,7 @@
 
 -- migrate:up
 
-CREATE MATERIALIZED VIEW cosmo.operation_latency_metrics_5_30_mv TO cosmo.operation_latency_metrics_5_30 AS
+CREATE MATERIALIZED VIEW IF NOT EXISTS cosmo.operation_latency_metrics_5_30_mv TO cosmo.operation_latency_metrics_5_30 AS
 -- Aggregate histogram buckets into a 5 minute window, Counts are summed, Min/Max are taken
 SELECT
     toStartOfFiveMinute(TimeUnix) as Timestamp,

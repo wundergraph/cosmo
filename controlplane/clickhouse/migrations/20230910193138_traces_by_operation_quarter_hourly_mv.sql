@@ -1,6 +1,6 @@
 -- migrate:up
 
-CREATE MATERIALIZED VIEW cosmo.traces_by_operation_quarter_hourly_mv TO cosmo.traces_by_operation_quarter_hourly (
+CREATE MATERIALIZED VIEW IF NOT EXISTS cosmo.traces_by_operation_quarter_hourly_mv TO cosmo.traces_by_operation_quarter_hourly (
    Timestamp DateTime('UTC') CODEC (Delta(4), ZSTD(1)),
    OperationName String CODEC (ZSTD(1)),
    OperationType String CODEC (ZSTD(1)),
@@ -23,8 +23,8 @@ CREATE MATERIALIZED VIEW cosmo.traces_by_operation_quarter_hourly_mv TO cosmo.tr
     SpanAttributes ['wg.organization.id'] as OrganizationID,
     mapContains(SpanAttributes, 'wg.subscription') as IsSubscription,
     count() AS TotalRequests,
-    countIf(StatusMessage == 'STATUS_CODE_ERROR' OR position(SpanAttributes['http.status_code'],'5') = 1 OR position(SpanAttributes['http.status_code'],'4') = 1 OR mapContains(SpanAttributes, 'wg.http_request_error')) AS TotalRequestsError,
-    countIf(not(StatusMessage == 'STATUS_CODE_ERROR' OR position(SpanAttributes['http.status_code'],'5') = 1 OR position(SpanAttributes['http.status_code'],'4') = 1 OR mapContains(SpanAttributes, 'wg.http_request_error'))) AS TotalRequestsOk,
+    countIf(StatusMessage == 'STATUS_CODE_ERROR' OR position(SpanAttributes['http.status_code'],'5') = 1 OR position(SpanAttributes['http.status_code'],'4') = 1 OR mapContains(SpanAttributes, 'wg.request.error')) AS TotalRequestsError,
+    countIf(not(StatusMessage == 'STATUS_CODE_ERROR' OR position(SpanAttributes['http.status_code'],'5') = 1 OR position(SpanAttributes['http.status_code'],'4') = 1 OR mapContains(SpanAttributes, 'wg.request.error'))) AS TotalRequestsOk,
     quantilesState(0.5, 0.75, 0.9, 0.95, 0.99)(Duration) AS DurationQuantiles,
     toUnixTimestamp(MAX(Timestamp)) as LastCalled
 FROM

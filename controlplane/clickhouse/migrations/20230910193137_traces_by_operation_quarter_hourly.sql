@@ -1,6 +1,6 @@
 -- migrate:up
 
-CREATE TABLE cosmo.traces_by_operation_quarter_hourly (
+CREATE TABLE IF NOT EXISTS cosmo.traces_by_operation_quarter_hourly (
    Timestamp DateTime('UTC') CODEC (Delta(4), ZSTD(1)),
    OperationName String CODEC (ZSTD(1)),
    OperationType String CODEC (ZSTD(1)),
@@ -21,4 +21,4 @@ TTL toDateTime(Timestamp) + toIntervalDay(30) SETTINGS index_granularity = 8192,
 
 -- migrate:down
 
-DROP TABLE cosmo.traces_by_operation_quarter_hourly
+DROP TABLE IF EXISTS cosmo.traces_by_operation_quarter_hourly

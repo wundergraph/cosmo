@@ -1,12 +1,12 @@
 -- migrate:up
 
-CREATE MATERIALIZED VIEW cosmo.operation_request_metrics_5_30_mv TO cosmo.operation_request_metrics_5_30 AS
+CREATE MATERIALIZED VIEW IF NOT EXISTS cosmo.operation_request_metrics_5_30_mv TO cosmo.operation_request_metrics_5_30 AS
 SELECT
     toStartOfFiveMinute(TimeUnix) AS Timestamp,
     toLowCardinality(Attributes [ 'wg.operation.name' ]) AS OperationName,
     Attributes [ 'wg.operation.hash' ] AS OperationHash,
     toUInt64(sum(Value)) as TotalRequests,
-    toUInt64(sumIf(Value, position(Attributes['http.status_code'],'5') = 1 OR position(Attributes['http.status_code'],'4') = 1 OR mapContains(Attributes, 'wg.http_request_error'))) as TotalErrors,
+    toUInt64(sumIf(Value, position(Attributes['http.status_code'],'5') = 1 OR position(Attributes['http.status_code'],'4') = 1 OR mapContains(Attributes, 'wg.request.error'))) as TotalErrors,
     toUInt64(sumIf(Value, position(Attributes['http.status_code'],'4') = 1)) AS TotalClientErrors,
     toLowCardinality(Attributes [ 'wg.operation.type' ]) AS OperationType,
     toLowCardinality(Attributes [ 'wg.federated_graph.id']) AS FederatedGraphID,
