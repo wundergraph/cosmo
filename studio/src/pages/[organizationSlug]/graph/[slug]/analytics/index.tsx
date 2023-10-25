@@ -330,33 +330,6 @@ const TopList: React.FC<{
 }> = ({ title, items, formatter, queryParams = {} }) => {
   const router = useRouter();
   const range = useRange();
-  const selectedFilters = useSelectedFilters();
-
-  const operationNameFilter = selectedFilters?.filter(
-    ({ id }) => id === "operationName"
-  );
-  if (operationNameFilter.length === 1 && items.length <= 1) {
-    return (
-      <CardContent className="group p-0 text-sm transition-all hover:bg-accent/60">
-        <Link
-          href={{
-            pathname: `${router.pathname}/traces`,
-            query: {
-              organizationSlug: router.query.organizationSlug,
-              slug: router.query.slug,
-              filterState: router.query.filterState || "[]",
-              dateRange: createDateRange(range),
-              ...queryParams,
-            },
-          }}
-          className="flex px-4 py-3"
-        >
-          View all traces
-          <ChevronRightIcon className="h4 ml-1 w-4 transition-all group-hover:ml-2" />
-        </Link>
-      </CardContent>
-    );
-  }
 
   return (
     <CardContent className="pt-6">
