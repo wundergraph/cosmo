@@ -45,6 +45,9 @@ jobs:
           - container_name: otelcollector
             dockerfile: otelcollector/Dockerfile
             context_path: otelcollector
+          - container_name: graphqlmetrics
+            dockerfile: graphqlmetrics/Dockerfile
+            context_path: graphqlmetrics
 
     runs-on: ubuntu-latest
     permissions:
