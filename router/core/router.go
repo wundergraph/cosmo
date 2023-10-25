@@ -728,15 +728,6 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 
 		subChiRouter.Use(graphqlPreHandler.Handler)
 
-		// Create custom request context that provides access to the request and response.
-		// It is used by custom modules and handlers. It must be added before custom user middlewares
-		subChiRouter.Use(func(handler http.Handler) http.Handler {
-			return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-				requestWithContext := requestWithAttachedContext(writer, request, r.logger)
-				handler.ServeHTTP(writer, requestWithContext)
-			})
-		})
-
 		subChiRouter.Use(r.routerMiddlewares...)
 		subChiRouter.Post("/", graphqlHandler.ServeHTTP)
 		if r.playground {

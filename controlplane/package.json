@@ -1,6 +1,6 @@
 {
   "name": "controlplane",
-  "version": "0.27.0",
+  "version": "0.27.1",
   "private": true,
   "description": "WunderGraph Cosmo Controlplane",
   "type": "module",
@@ -22,6 +22,7 @@
     "lint": "eslint --cache --ext .ts,.mjs,.cjs . && prettier -c src",
     "lint:fix": "eslint --cache --fix --ext .ts,.mjs,.cjs . && prettier --write -c src",
     "migrate": "pnpm db:migrate && pnpm ch:migrate",
+    "ch:down": "dbmate -d \"./clickhouse/migrations\" down",
     "db:migrate": "tsx src/bin/db-migrate.ts",
     "ch:migrate": "tsx src/bin/ch-migrate.ts",
     "ch:new-migration": "dbmate -d \"./clickhouse/migrations\" new",
