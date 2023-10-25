@@ -5,9 +5,9 @@
 package nodev1connect
 
 import (
+	connect "connectrpc.com/connect"
 	context "context"
 	errors "errors"
-	connect_go "github.com/bufbuild/connect-go"
 	v1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	http "net/http"
 	strings "strings"
@@ -18,7 +18,7 @@ import (
 // generated with a version of connect newer than the one compiled into your binary. You can fix the
 // problem by either regenerating this code with an older version of connect or updating the connect
 // version compiled into your binary.
-const _ = connect_go.IsAtLeastVersion0_1_0
+const _ = connect.IsAtLeastVersion0_1_0
 
 const (
 	// NodeServiceName is the fully-qualified name of the NodeService service.
@@ -40,7 +40,7 @@ const (
 
 // NodeServiceClient is a client for the wg.cosmo.node.v1.NodeService service.
 type NodeServiceClient interface {
-	GetLatestValidRouterConfig(context.Context, *connect_go.Request[v1.GetConfigRequest]) (*connect_go.Response[v1.GetConfigResponse], error)
+	GetLatestValidRouterConfig(context.Context, *connect.Request[v1.GetConfigRequest]) (*connect.Response[v1.GetConfigResponse], error)
 }
 
 // NewNodeServiceClient constructs a client for the wg.cosmo.node.v1.NodeService service. By
@@ -50,10 +50,10 @@ type NodeServiceClient interface {
 //
 // The URL supplied here should be the base URL for the Connect or gRPC server (for example,
 // http://api.acme.com or https://acme.com/grpc).
-func NewNodeServiceClient(httpClient connect_go.HTTPClient, baseURL string, opts ...connect_go.ClientOption) NodeServiceClient {
+func NewNodeServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) NodeServiceClient {
 	baseURL = strings.TrimRight(baseURL, "/")
 	return &nodeServiceClient{
-		getLatestValidRouterConfig: connect_go.NewClient[v1.GetConfigRequest, v1.GetConfigResponse](
+		getLatestValidRouterConfig: connect.NewClient[v1.GetConfigRequest, v1.GetConfigResponse](
 			httpClient,
 			baseURL+NodeServiceGetLatestValidRouterConfigProcedure,
 			opts...,
@@ -63,17 +63,17 @@ func NewNodeServiceClient(httpClient connect_go.HTTPClient, baseURL string, opts
 
 // nodeServiceClient implements NodeServiceClient.
 type nodeServiceClient struct {
-	getLatestValidRouterConfig *connect_go.Client[v1.GetConfigRequest, v1.GetConfigResponse]
+	getLatestValidRouterConfig *connect.Client[v1.GetConfigRequest, v1.GetConfigResponse]
 }
 
 // GetLatestValidRouterConfig calls wg.cosmo.node.v1.NodeService.GetLatestValidRouterConfig.
-func (c *nodeServiceClient) GetLatestValidRouterConfig(ctx context.Context, req *connect_go.Request[v1.GetConfigRequest]) (*connect_go.Response[v1.GetConfigResponse], error) {
+func (c *nodeServiceClient) GetLatestValidRouterConfig(ctx context.Context, req *connect.Request[v1.GetConfigRequest]) (*connect.Response[v1.GetConfigResponse], error) {
 	return c.getLatestValidRouterConfig.CallUnary(ctx, req)
 }
 
 // NodeServiceHandler is an implementation of the wg.cosmo.node.v1.NodeService service.
 type NodeServiceHandler interface {
-	GetLatestValidRouterConfig(context.Context, *connect_go.Request[v1.GetConfigRequest]) (*connect_go.Response[v1.GetConfigResponse], error)
+	GetLatestValidRouterConfig(context.Context, *connect.Request[v1.GetConfigRequest]) (*connect.Response[v1.GetConfigResponse], error)
 }
 
 // NewNodeServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -81,8 +81,8 @@ type NodeServiceHandler interface {
 //
 // By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
 // and JSON codecs. They also support gzip compression.
-func NewNodeServiceHandler(svc NodeServiceHandler, opts ...connect_go.HandlerOption) (string, http.Handler) {
-	nodeServiceGetLatestValidRouterConfigHandler := connect_go.NewUnaryHandler(
+func NewNodeServiceHandler(svc NodeServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
+	nodeServiceGetLatestValidRouterConfigHandler := connect.NewUnaryHandler(
 		NodeServiceGetLatestValidRouterConfigProcedure,
 		svc.GetLatestValidRouterConfig,
 		opts...,
@@ -100,6 +100,6 @@ func NewNodeServiceHandler(svc NodeServiceHandler, opts ...connect_go.HandlerOpt
 // UnimplementedNodeServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedNodeServiceHandler struct{}
 
-func (UnimplementedNodeServiceHandler) GetLatestValidRouterConfig(context.Context, *connect_go.Request[v1.GetConfigRequest]) (*connect_go.Response[v1.GetConfigResponse], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("wg.cosmo.node.v1.NodeService.GetLatestValidRouterConfig is not implemented"))
+func (UnimplementedNodeServiceHandler) GetLatestValidRouterConfig(context.Context, *connect.Request[v1.GetConfigRequest]) (*connect.Response[v1.GetConfigResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.node.v1.NodeService.GetLatestValidRouterConfig is not implemented"))
 }

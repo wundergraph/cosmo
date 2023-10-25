@@ -21,6 +21,7 @@ import (
 
 type ExecutorConfigurationBuilder struct {
 	introspection bool
+	includeInfo   bool
 	baseURL       string
 	transport     *http.Transport
 	logger        *zap.Logger
@@ -103,7 +104,7 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(routerCfg *node
 	// the plan config is what the engine uses to turn a GraphQL Request into an execution plan
 	// the plan config is stateful as it carries connection pools and other things
 
-	loader := NewLoader(NewDefaultFactoryResolver(
+	loader := NewLoader(b.includeInfo, NewDefaultFactoryResolver(
 		NewTransport(b.transportOptions),
 		b.transport,
 		b.logger,

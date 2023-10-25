@@ -49,6 +49,9 @@ dependencies:
   - name: otelcollector
     version: "^0"
     condition: global.otelcollector.enabled
+  - name: graphqlmetrics
+    version: "^0"
+    condition: global.graphqlmetrics.enabled
     # Only for development. For production use a managed Postgres / Keycloak / ClickHouse instance
   - name: postgresql
     version: "12.8.0"

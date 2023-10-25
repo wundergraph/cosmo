@@ -43,6 +43,11 @@ global:
     port: 4318
     webUrl: "http://otelcollector.wundergraph.local"
 
+  graphqlmetrics:
+    enabled: true
+    port: 4005
+    webUrl: "http://graphqlmetrics.wundergraph.local"
+
   keycloak:
     enabled: true
     # Shared configuration e.g. seed, controlplane
@@ -110,7 +115,13 @@ router:
 # Cosmo Open Telemetry Collector
 otelcollector:
   configuration:
-    clickhouseDsn: "http://default:changeme@cosmo-clickhouse:8123?database=cosmo&dial_timeout=15s&compress=lz4"
+    clickhouseDsn: "clickhouse://default:changeme@cosmo-clickhouse:9000/cosmo?dial_timeout=15s&compress=lz4"
+
+# Cosmo GraphQL Metrics Collector
+graphqlmetrics:
+  configuration:
+    clickhouseDsn: "clickhouse://default:changeme@cosmo-clickhouse:9000/cosmo?dial_timeout=15s&compress=lz4"
+    clickhouseHttpDsn: "http://default:changeme@cosmo-clickhouse:8123/cosmo"
 
 # The following configuration enables the stateful services of the Cosmo Platform
 # The charts aren't production ready and are intended for development and testing purposes

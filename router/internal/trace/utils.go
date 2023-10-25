@@ -8,9 +8,6 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-// unnamed is the default operation name used when no operation name is provided
-const unnamed = "unnamed"
-
 // TracerFromContext returns a tracer in ctx, otherwise returns a global tracer.
 func TracerFromContext(ctx context.Context) (tracer trace.Tracer) {
 	if span := trace.SpanFromContext(ctx); span.SpanContext().IsValid() {

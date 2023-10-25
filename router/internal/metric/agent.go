@@ -12,7 +12,6 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
 	"go.opentelemetry.io/otel/exporters/prometheus"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/metric"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -106,7 +105,7 @@ func createOTELExporter(log *zap.Logger, exp *OpenTelemetryExporter) (sdkmetric.
 			opts = append(opts, otlpmetricgrpc.WithHeaders(exp.Headers))
 		}
 		if len(exp.HTTPPath) > 0 {
-			log.Warn("otlpmetricgrpc exporter doesn't support arbitrary paths", zap.String("path", exp.HTTPPath))
+			log.Warn("Otlpmetricgrpc exporter doesn't support arbitrary paths", zap.String("path", exp.HTTPPath))
 		}
 
 		exporter, err = otlpmetricgrpc.New(
@@ -119,7 +118,7 @@ func createOTELExporter(log *zap.Logger, exp *OpenTelemetryExporter) (sdkmetric.
 	if err != nil {
 		return nil, err
 	}
-	log.Info("using metrics exporter", zap.String("exporter", string(exp.Exporter)), zap.String("endpoint", exp.Endpoint), zap.String("path", exp.HTTPPath))
+	log.Info("Metrics enabled", zap.String("exporter", string(exp.Exporter)), zap.String("endpoint", exp.Endpoint), zap.String("path", exp.HTTPPath))
 	return exporter, nil
 }
 
@@ -149,7 +148,7 @@ func startAgent(ctx context.Context, log *zap.Logger, c *Config) (*sdkmetric.Met
 
 			// Please version this meter name if you change the buckets.
 
-			msBucketHistogram := metric.AggregationExplicitBucketHistogram{
+			msBucketHistogram := sdkmetric.AggregationExplicitBucketHistogram{
 				// 0ms-10s
 				Boundaries: []float64{
 					0, 5, 7, 10, 15, 25, 50, 75, 100, 125, 150, 175, 200, 225,
@@ -157,7 +156,7 @@ func startAgent(ctx context.Context, log *zap.Logger, c *Config) (*sdkmetric.Met
 					1500, 1750, 2000, 2250, 2500, 2750, 3000, 3500, 4000, 5000, 10000,
 				},
 			}
-			bytesBucketHistogram := metric.AggregationExplicitBucketHistogram{
+			bytesBucketHistogram := sdkmetric.AggregationExplicitBucketHistogram{
 				// 0kb-20MB
 				Boundaries: []float64{
 					0, 50, 100, 300, 500, 1000, 3000, 5000, 10000, 15000,

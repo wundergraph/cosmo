@@ -20,6 +20,10 @@ Define subcharts full names
 {{- printf "%s-%s" .Release.Name "otelcollector" | replace "+" "_" | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 
+{{- define "graphqlmetrics.fullname" -}}
+{{- printf "%s-%s" .Release.Name "graphqlmetrics" | replace "+" "_" | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+
 {{- define "router.fullname" -}}
 {{- printf "%s-%s" .Release.Name "router" | replace "+" "_" | trunc 63 | trimSuffix "-" -}}
 {{- end -}}

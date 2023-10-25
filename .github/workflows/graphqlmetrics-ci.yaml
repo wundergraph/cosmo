@@ -1,0 +1,69 @@
+name: GraphQLMetrics CI
+on:
+  pull_request:
+    paths:
+      - "graphqlmetrics/**/*"
+      - ".github/workflows/graphqlmetrics-ci.yaml"
+
+concurrency:
+  group: ${{github.workflow}}-${{github.head_ref}}
+  cancel-in-progress: true
+
+env:
+  CI: true
+  INT_TESTS: true
+
+jobs:
+  build_test:
+    runs-on: ubuntu-latest
+    services:
+      clickhouse:
+        # Docker Hub image
+        image: clickhouse/clickhouse-server:23
+        ports:
+          - "8123:8123"
+          - "9000:9000"
+        env:
+          CLICKHOUSE_DB: cosmo
+          CLICKHOUSE_USER: default
+          CLICKHOUSE_PASSWORD: changeme
+          CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          # The go install / version instructions are inside the Makefile, so we need to cache the Makefile.
+          key: ${{ runner.os }}-go-${{ hashFiles('graphqlmetrics/go.sum') }}-makefile-${{ hashFiles('Makefile') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - uses: ./.github/actions/go
+        with:
+          cache-dependency-path: graphqlmetrics/go.sum
+
+      - name: Install tools
+        run: make setup-build-tools
+
+      - name: Generate code
+        run: rm -rf graphqlmetrics/gen && buf generate --path proto/wg/cosmo/graphqlmetrics --path proto/wg/cosmo/common --template buf.graphqlmetrics.go.gen.yaml
+
+      - name: Check if git is not dirty after generating files
+        run: git diff --no-ext-diff --exit-code
+
+      - name: Install dependencies
+        working-directory: ./graphqlmetrics
+        run: go mod download
+
+      - name: Test
+        working-directory: ./graphqlmetrics
+        run: make test
+
+      - name: Build
+        working-directory: ./graphqlmetrics
+        run: make build

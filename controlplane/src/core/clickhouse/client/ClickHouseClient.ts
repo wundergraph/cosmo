@@ -39,7 +39,8 @@ export class ClickHouseClient {
     }
 
     const url = new URL(this.options.dsn);
-    this.database = url.searchParams.get('database') || '';
+    // get database from query or path. Query has precedence over path
+    this.database = url.searchParams.get('database') || url.pathname.replace('/', '') || '';
     this.endpoint = url.origin;
   }
 

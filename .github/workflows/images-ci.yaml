@@ -12,8 +12,6 @@ on:
       - 'scripts/**'
 
   pull_request:
-    branches:
-      - main
     paths-ignore:
       - 'docs/*/**'
       - 'helm/**'
