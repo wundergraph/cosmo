@@ -10,7 +10,7 @@ import { formatDate } from "@/lib/format-date";
 import { cn } from "@/lib/utils";
 import CalendarIcon from "@heroicons/react/24/outline/CalendarIcon";
 import { addDays, addYears } from "date-fns";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { DateRange } from "react-day-picker";
 
 export function DatePickerWithRange({
@@ -28,6 +28,10 @@ export function DatePickerWithRange({
   const { isMobile } = useWindowSize();
 
   const [selected, setSelected] = useState(selectedDateRange);
+
+  useEffect(() => {
+    setSelected(selectedDateRange);
+  }, [selectedDateRange]);
 
   const isDayBetween = (day: Date, from: Date, to: Date) => {
     return day > from && day < to;
