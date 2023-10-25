@@ -79,17 +79,9 @@ export type OperationAnalytics = {
 const useRange = () => {
   const router = useRouter();
 
-  const [storedRange, setRange] = useSessionStorage("analytics.range", 24);
-
   const range = router.query.range
-    ? parseInt(router.query.range?.toString()) || storedRange
-    : storedRange;
-
-  useEffect(() => {
-    if (range !== storedRange) {
-      setRange(range);
-    }
-  }, [range, setRange, storedRange]);
+    ? parseInt(router.query.range?.toString())
+    : 168;
 
   switch (range) {
     case 24:
@@ -407,7 +399,6 @@ const TopList: React.FC<{
                 operationName: row.name,
               }),
               dateRange: createDateRange(range),
-              ...queryParams,
             },
           },
         }))}
