@@ -3,6 +3,7 @@ package graphqlmetrics
 import (
 	"github.com/stretchr/testify/require"
 	graphqlmetricsv1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
+	"net/http"
 	"testing"
 )
 
@@ -36,7 +37,13 @@ func TestAggregateCountWithEqualUsages(t *testing.T) {
 				Name:    "wundergraph",
 				Version: "1.0.0",
 			},
-			Attributes: map[string]string{},
+			RequestInfo: &graphqlmetricsv1.RequestInfo{
+				Error:      false,
+				StatusCode: http.StatusOK,
+			},
+			Attributes: map[string]string{
+				"foo": "bar",
+			},
 		},
 		{
 			TypeFieldMetrics: []*graphqlmetricsv1.TypeFieldUsageInfo{
@@ -65,7 +72,13 @@ func TestAggregateCountWithEqualUsages(t *testing.T) {
 				Name:    "wundergraph",
 				Version: "1.0.0",
 			},
-			Attributes: map[string]string{},
+			RequestInfo: &graphqlmetricsv1.RequestInfo{
+				Error:      false,
+				StatusCode: http.StatusOK,
+			},
+			Attributes: map[string]string{
+				"foo": "bar",
+			},
 		},
 	})
 
@@ -98,6 +111,10 @@ func TestAggregateWithDifferentOperationInfo(t *testing.T) {
 				Name:    "wundergraph",
 				Version: "1.0.0",
 			},
+			RequestInfo: &graphqlmetricsv1.RequestInfo{
+				Error:      false,
+				StatusCode: http.StatusOK,
+			},
 			Attributes: map[string]string{},
 		},
 		{
@@ -120,6 +137,10 @@ func TestAggregateWithDifferentOperationInfo(t *testing.T) {
 			ClientInfo: &graphqlmetricsv1.ClientInfo{
 				Name:    "wundergraph",
 				Version: "1.0.0",
+			},
+			RequestInfo: &graphqlmetricsv1.RequestInfo{
+				Error:      false,
+				StatusCode: http.StatusOK,
 			},
 			Attributes: map[string]string{},
 		},
@@ -154,6 +175,10 @@ func TestAggregateWithDifferentClientInfo(t *testing.T) {
 				Name:    "wundergraph",
 				Version: "1.0.0",
 			},
+			RequestInfo: &graphqlmetricsv1.RequestInfo{
+				Error:      false,
+				StatusCode: http.StatusOK,
+			},
 			Attributes: map[string]string{},
 		},
 		{
@@ -176,6 +201,74 @@ func TestAggregateWithDifferentClientInfo(t *testing.T) {
 			ClientInfo: &graphqlmetricsv1.ClientInfo{
 				Name:    "wundergraph",
 				Version: "1.0.1", // different client version
+			},
+			RequestInfo: &graphqlmetricsv1.RequestInfo{
+				Error:      false,
+				StatusCode: http.StatusOK,
+			},
+			Attributes: map[string]string{},
+		},
+	})
+
+	require.Equal(t, 2, len(result))
+	require.Equal(t, uint64(2), result[0].TypeFieldMetrics[0].Count)
+	require.Equal(t, uint64(1), result[1].TypeFieldMetrics[0].Count)
+}
+
+func TestAggregateWithDifferentRequestInfo(t *testing.T) {
+
+	result := Aggregate([]*graphqlmetricsv1.SchemaUsageInfo{
+		{
+			TypeFieldMetrics: []*graphqlmetricsv1.TypeFieldUsageInfo{
+				{
+					Path:        []string{"user", "id"},
+					TypeNames:   []string{"User", "ID"},
+					SubgraphIDs: []string{"1", "2"},
+					Count:       2,
+				},
+			},
+			OperationInfo: &graphqlmetricsv1.OperationInfo{
+				Type: graphqlmetricsv1.OperationType_QUERY,
+				Hash: "123",
+				Name: "user",
+			},
+			SchemaInfo: &graphqlmetricsv1.SchemaInfo{
+				Version: "1",
+			},
+			ClientInfo: &graphqlmetricsv1.ClientInfo{
+				Name:    "wundergraph",
+				Version: "1.0.0",
+			},
+			RequestInfo: &graphqlmetricsv1.RequestInfo{
+				Error:      false,
+				StatusCode: http.StatusOK,
+			},
+			Attributes: map[string]string{},
+		},
+		{
+			TypeFieldMetrics: []*graphqlmetricsv1.TypeFieldUsageInfo{
+				{
+					Path:        []string{"user", "id"},
+					TypeNames:   []string{"User", "ID"},
+					SubgraphIDs: []string{"1", "2"},
+					Count:       1,
+				},
+			},
+			OperationInfo: &graphqlmetricsv1.OperationInfo{
+				Type: graphqlmetricsv1.OperationType_QUERY,
+				Hash: "123",
+				Name: "user",
+			},
+			SchemaInfo: &graphqlmetricsv1.SchemaInfo{
+				Version: "1",
+			},
+			ClientInfo: &graphqlmetricsv1.ClientInfo{
+				Name:    "wundergraph",
+				Version: "1.0.1", // different client version
+			},
+			RequestInfo: &graphqlmetricsv1.RequestInfo{
+				Error:      true,
+				StatusCode: http.StatusOK,
 			},
 			Attributes: map[string]string{},
 		},

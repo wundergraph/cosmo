@@ -54,6 +54,14 @@ func isSchemaUsageInfoEqual(a, b *graphqlmetricsv12.SchemaUsageInfo) bool {
 		return false
 	}
 
+	if a.RequestInfo.Error != b.RequestInfo.Error {
+		return false
+	}
+
+	if a.RequestInfo.StatusCode != b.RequestInfo.StatusCode {
+		return false
+	}
+
 	if !areAttributesEqual(a.Attributes, b.Attributes) {
 		return false
 	}
