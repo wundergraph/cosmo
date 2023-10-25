@@ -2,6 +2,8 @@ package core
 
 import (
 	"fmt"
+	"io"
+	"net/http"
 	"sync"
 
 	"github.com/buger/jsonparser"
@@ -36,13 +38,15 @@ type ParsedOperation struct {
 }
 
 type OperationParser struct {
-	executor     *Executor
-	documentPool *sync.Pool
+	executor                *Executor
+	maxOperationSizeInBytes int64
+	documentPool            *sync.Pool
 }
 
-func NewOperationParser(executor *Executor) *OperationParser {
+func NewOperationParser(executor *Executor, maxOperationSizeInBytes int64) *OperationParser {
 	return &OperationParser{
-		executor: executor,
+		executor:                executor,
+		maxOperationSizeInBytes: maxOperationSizeInBytes,
 		documentPool: &sync.Pool{
 			New: func() interface{} {
 				return ast.NewSmallDocument()
@@ -51,7 +55,38 @@ func NewOperationParser(executor *Executor) *OperationParser {
 	}
 }
 
-func (p *OperationParser) Parse(body []byte) (*ParsedOperation, error) {
+func (p *OperationParser) entityTooLarge() error {
+	return &inputError{
+		message:    "request body too large",
+		statusCode: http.StatusRequestEntityTooLarge,
+	}
+}
+
+func (p *OperationParser) ParseReader(r io.Reader) (*ParsedOperation, error) {
+	// Use an extra byte for the max size. This way we can check if N became
+	// zero to detect if the request body was too large.
+	limitedReader := &io.LimitedReader{R: r, N: p.maxOperationSizeInBytes + 1}
+	buf := pool.GetBytesBuffer()
+	defer pool.PutBytesBuffer(buf)
+
+	if _, err := io.Copy(buf, limitedReader); err != nil {
+		return nil, fmt.Errorf("failed to read request body: %w", err)
+	}
+
+	if limitedReader.N == 0 {
+		return nil, p.entityTooLarge()
+	}
+	return p.parse(buf.Bytes())
+}
+
+func (p *OperationParser) Parse(data []byte) (*ParsedOperation, error) {
+	if len(data) > int(p.maxOperationSizeInBytes) {
+		return nil, p.entityTooLarge()
+	}
+	return p.parse(data)
+}
+
+func (p *OperationParser) parse(body []byte) (*ParsedOperation, error) {
 	requestQuery, _ := jsonparser.GetString(body, "query")
 	requestOperationName, _ := jsonparser.GetString(body, "operationName")
 	requestVariables, _, _, _ := jsonparser.Get(body, "variables")
@@ -94,7 +129,8 @@ func (p *OperationParser) Parse(body []byte) (*ParsedOperation, error) {
 	// If multiple operations are defined, but no operationName is set, we return an error
 	if len(doc.OperationDefinitions) > 1 && requestOperationName == "" {
 		return nil, &inputError{
-			message: "operation name is required when multiple operations are defined",
+			message:    "operation name is required when multiple operations are defined",
+			statusCode: http.StatusBadRequest,
 		}
 	}
 

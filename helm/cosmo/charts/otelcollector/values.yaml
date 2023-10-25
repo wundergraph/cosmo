@@ -130,4 +130,4 @@ probes:
 collectorConfigOverride:
 
 configuration:
-  clickhouseDsn: "http://default:changeme@cosmo-clickhouse:8123?database=cosmo&dial_timeout=15s&compress=lz4"
+  clickhouseDsn: "clickhouse://default:changeme@cosmo-clickhouse:9000/cosmo?dial_timeout=15s&compress=lz4"

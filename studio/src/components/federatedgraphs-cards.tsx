@@ -158,7 +158,7 @@ const MigrationDialog = ({
           "h-52": !isEmptyState,
         })}
       >
-        <Card className="flex h-full w-64 flex-col justify-center gap-y-2  p-4 group-hover:border-ring dark:hover:border-input">
+        <Card className="flex h-full flex-col justify-center gap-y-2  p-4 group-hover:border-ring dark:hover:border-input">
           <div className="flex items-center justify-center gap-x-5">
             <SiApollographql className="h-10 w-10" />
             <ChevronDoubleRightIcon className="animation h-8 w-8" />

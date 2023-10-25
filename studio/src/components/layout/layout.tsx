@@ -6,7 +6,7 @@ export interface LayoutProps {
 
 export const Layout = ({ children }: LayoutProps) => {
   return (
-    <div className="mx-auto min-h-screen max-w-screen-2xl bg-background font-sans antialiased">
+    <div className="mx-auto min-h-screen w-full max-w-screen-4xl bg-background font-sans antialiased">
       <Nav>{children}</Nav>
     </div>
   );

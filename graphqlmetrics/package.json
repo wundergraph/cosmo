@@ -1,0 +1,19 @@
+{
+  "name": "graphqlmetrics",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Placeholder package to simplify versioning and releasing with lerna.",
+  "keywords": [
+    "wundergraph",
+    "graphqlmetrics",
+    "cosmo"
+  ],
+  "scripts": {
+    "postversion": "name=\"$(node -p \"var a = require('./package.json');process.stdout.write(a.name);process.exit(0)\")\"; version=\"$(node -p \"var a = require('./package.json');process.stdout.write(a.version);process.exit(0)\")\"; gh workflow run image-release.yml -F name=$name -F tag=$version -F dockerContext=."
+  },
+  "author": {
+    "name": "WunderGraph Maintainers",
+    "email": "info@wundergraph.com"
+  },
+  "license": "Apache-2.0"
+}

@@ -307,3 +307,75 @@ export function timestampToNanoseconds(timestamp: string): bigint {
   const nanoseconds = BigInt(date.getTime()) * BigInt(1e6);
   return nanoseconds + BigInt(fractionalSeconds);
 }
+
+const getUnixTimeInSeconds = (timestamp: Date | number, offset?: number) => {
+  let date: number;
+  if (timestamp instanceof Date) {
+    date = timestamp.getTime();
+  } else {
+    date = timestamp;
+  }
+
+  if (offset) {
+    date = date - offset * 60 * 60 * 1000;
+  }
+
+  return Math.round(date / 1000);
+};
+
+export const getEndDate = () => {
+  const now = new Date();
+
+  now.setSeconds(59);
+  now.setMilliseconds(999);
+
+  return Math.round(now.getTime() / 1000) * 1000;
+};
+
+export const getDateRange = (endDate: Date | number, range: number, offset = 0) => {
+  const start = getUnixTimeInSeconds(endDate, range + offset);
+  const end = getUnixTimeInSeconds(endDate, offset);
+
+  return [start, end];
+};
+
+export const getGranularity = (range: number) => {
+  switch (range) {
+    case 168: {
+      // 7 days
+      return '240'; // 4H
+    }
+    case 72: {
+      // 3 days
+      return '60'; // 60 min
+    }
+    case 48: {
+      // 2 days
+      return '15'; // 15min
+    }
+    case 24: {
+      // 1 day
+      return '15'; // 15m
+    }
+    case 4: {
+      return '10'; // 10m
+    }
+    case 1: {
+      // 1 hour
+      return '5'; // 5m
+    }
+  }
+
+  return '5';
+};
+
+// parse a Date to ISO9075 format in UTC, as used by Clickhouse
+export const toISO9075 = (date: Date): string => {
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(date.getUTCDate()).padStart(2, '0');
+  const hours = String(date.getUTCHours()).padStart(2, '0');
+  const minutes = String(date.getUTCMinutes()).padStart(2, '0');
+  const seconds = String(date.getUTCSeconds()).padStart(2, '0');
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+};

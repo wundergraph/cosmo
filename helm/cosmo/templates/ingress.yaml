@@ -75,6 +75,19 @@ spec:
                   number: {{ .Values.global.otelcollector.port }}
     {{- end }}
 
+    {{- if .Values.global.graphqlmetrics.enabled }}
+    - host: {{ (urlParse .Values.global.graphqlmetrics.webUrl).host | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "graphqlmetrics.fullname" . }}
+                port:
+                  number: {{ .Values.global.graphqlmetrics.port }}
+    {{- end }}
+
     {{- if .Values.global.studio.enabled }}
     - host: {{ (urlParse .Values.global.studio.webUrl).host | quote }}
       http:

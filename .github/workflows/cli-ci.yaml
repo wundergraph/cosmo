@@ -1,8 +1,6 @@
 name: Cli CI
 on:
   pull_request:
-    branches:
-      - main
     paths:
       - "cli/**/*"
       - "connect/**/*"

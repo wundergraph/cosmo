@@ -1,8 +1,6 @@
 name: Controlplane CI
 on:
   pull_request:
-    branches:
-      - main
     paths:
       - "controlplane/**/*"
       - "connect/**/*"

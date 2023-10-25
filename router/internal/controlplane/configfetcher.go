@@ -1,9 +1,9 @@
 package controlplane
 
 import (
+	"connectrpc.com/connect"
 	"context"
 	"fmt"
-	"github.com/bufbuild/connect-go"
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1/nodev1connect"
@@ -31,7 +31,6 @@ type client struct {
 	mu                   sync.Mutex
 	configCh             chan *nodev1.RouterConfig
 	pollInterval         time.Duration
-	configFilePath       string
 }
 
 func New(opts ...Option) ConfigFetcher {

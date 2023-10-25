@@ -59,9 +59,11 @@ export const SchemaViewerActions = ({
 export const SchemaViewer = ({
   sdl,
   disableLinking,
+  className,
 }: {
   sdl: string;
   disableLinking?: boolean;
+  className?: string;
 }) => {
   const router = useRouter();
   const pathname = router.asPath.split("#")[0];
@@ -78,7 +80,7 @@ export const SchemaViewer = ({
       {({ style, tokens, getLineProps, getTokenProps }) => (
         <pre
           style={{ ...style, background: "", backgroundColor: "" }}
-          className="py-4 text-xs"
+          className={cn("py-4 text-xs", className)}
         >
           {tokens.map((line, i, allLines) => {
             const numberSectionWidth =

@@ -1,78 +1,15 @@
 import { AnalyticsFilter, AnalyticsViewFilterOperator } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { BaseFilters, buildAnalyticsViewFilters, buildCoercedFilterSqlStatement, coerceFilterValues } from './util.js';
-import { ClickHouseClient } from 'src/core/clickhouse/index.js';
-
-const getEndDate = () => {
-  const now = new Date();
-
-  now.setSeconds(59);
-  now.setMilliseconds(999);
-
-  return Math.round(now.getTime() / 1000) * 1000;
-};
-
-// parse a Date to ISO9075 format in UTC, as used by Clickhouse
-const toISO9075 = (date: Date): string => {
-  const year = date.getUTCFullYear();
-  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(date.getUTCDate()).padStart(2, '0');
-  const hours = String(date.getUTCHours()).padStart(2, '0');
-  const minutes = String(date.getUTCMinutes()).padStart(2, '0');
-  const seconds = String(date.getUTCSeconds()).padStart(2, '0');
-  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-};
-
-const getUnixTimeInSeconds = (timestamp: Date | number, offset?: number) => {
-  let date: number;
-  if (timestamp instanceof Date) {
-    date = timestamp.getTime();
-  } else {
-    date = timestamp;
-  }
-
-  if (offset) {
-    date = date - offset * 60 * 60 * 1000;
-  }
-
-  return Math.round(date / 1000);
-};
-
-const getDateRange = (endDate: Date | number, range: number, offset = 0) => {
-  const start = getUnixTimeInSeconds(endDate, range + offset);
-  const end = getUnixTimeInSeconds(endDate, offset);
-
-  return [start, end];
-};
-
-const getGranularity = (range: number) => {
-  switch (range) {
-    case 168: {
-      // 7 days
-      return '240'; // 4H
-    }
-    case 72: {
-      // 3 days
-      return '60'; // 60 min
-    }
-    case 48: {
-      // 2 days
-      return '15'; // 15min
-    }
-    case 24: {
-      // 1 day
-      return '15'; // 15m
-    }
-    case 4: {
-      return '5'; // 10m
-    }
-    case 1: {
-      // 1 hour
-      return '5'; // 5m
-    }
-  }
-
-  return '5';
-};
+import { ClickHouseClient } from '../../clickhouse/index.js';
+import {
+  BaseFilters,
+  buildAnalyticsViewFilters,
+  buildCoercedFilterSqlStatement,
+  coerceFilterValues,
+  getDateRange,
+  getEndDate,
+  getGranularity,
+  toISO9075,
+} from './util.js';
 
 const parseValue = (value?: string | number | null) => {
   if (typeof value === 'number') {
@@ -649,7 +586,7 @@ export class MetricsRepository {
 
     for (const row of res) {
       for (const filterName of filterNames) {
-        if (row[filterName] && !filterOptions[filterName]?.includes(row[filterName])) {
+        if (row[filterName] !== undefined && !filterOptions[filterName]?.includes(row[filterName])) {
           filterOptions[filterName] = filterOptions[filterName] || [];
           filterOptions[filterName].push(row[filterName]);
           addFilterOption(filterName, row[filterName]);

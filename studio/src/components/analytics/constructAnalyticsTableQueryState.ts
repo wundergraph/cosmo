@@ -17,11 +17,11 @@ export const createFilterState = ({
 }) => {
   const filterState = [];
 
-  if (operationName) {
+  if (operationName !== undefined) {
     filterState.push({
       id: "operationName",
       value:
-        operationName === "unknown"
+        operationName === "" // empty string means "unknown operation"
           ? [
               `{"label":"-","operator":${AnalyticsViewFilterOperator.EQUALS},"value":""}`,
             ]

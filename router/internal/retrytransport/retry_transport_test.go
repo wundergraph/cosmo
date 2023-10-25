@@ -10,8 +10,7 @@ import (
 )
 
 type MockTransport struct {
-	roundTripper http.RoundTripper
-	handler      func(req *http.Request) (*http.Response, error)
+	handler func(req *http.Request) (*http.Response, error)
 }
 
 func (dt *MockTransport) RoundTrip(req *http.Request) (*http.Response, error) {

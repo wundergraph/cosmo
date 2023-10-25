@@ -41,6 +41,11 @@ global:
     port: 4318
     webUrl: "http://otelcollector.wundergraph.local"
 
+  graphqlmetrics:
+    enabled: false
+    port: 4005
+    webUrl: "http://graphqlmetrics.wundergraph.local"
+
   keycloak:
     enabled: false
     realm: "cosmo"

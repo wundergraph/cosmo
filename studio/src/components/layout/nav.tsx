@@ -193,7 +193,7 @@ export const Nav = ({ children, links }: SideNavLayoutProps) => {
           <nav className="flex items-center gap-2 overflow-x-auto scrollbar-none lg:grid lg:items-start">
             {links?.map((item, index) => {
               const isCurrent = isActive(
-                item.href,
+                encodeURI(item.href),
                 router.asPath.split("?")[0],
                 item.matchExact
               );

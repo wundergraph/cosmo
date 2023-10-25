@@ -1,0 +1,10 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="graphqlmetrics" type="GoApplicationRunConfiguration" factoryName="Go Application">
+    <module name="cosmo" />
+    <working_directory value="$PROJECT_DIR$/graphqlmetrics" />
+    <kind value="FILE" />
+    <directory value="$PROJECT_DIR$" />
+    <filePath value="$PROJECT_DIR$/graphqlmetrics/cmd/main.go" />
+    <method v="2" />
+  </configuration>
+</component>

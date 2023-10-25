@@ -29,7 +29,7 @@ type MyModule struct {
 	Logger *zap.Logger
 }
 
-func (m MyModule) Provision(ctx *core.ModuleContext) error {
+func (m *MyModule) Provision(ctx *core.ModuleContext) error {
 	// Provision your module here, validate config etc.
 
 	if m.Value == 0 {
@@ -43,13 +43,13 @@ func (m MyModule) Provision(ctx *core.ModuleContext) error {
 	return nil
 }
 
-func (m MyModule) Cleanup() error {
+func (m *MyModule) Cleanup() error {
 	// Shutdown your module here, close connections etc.
 
 	return nil
 }
 
-func (m MyModule) OnOriginResponse(response *http.Response, ctx core.RequestContext) *http.Response {
+func (m *MyModule) OnOriginResponse(response *http.Response, ctx core.RequestContext) *http.Response {
 	// Return a new response or nil if you want to pass it to the next handler
 	// If you want to modify the response, return a new response
 
@@ -59,7 +59,7 @@ func (m MyModule) OnOriginResponse(response *http.Response, ctx core.RequestCont
 	return nil
 }
 
-func (m MyModule) OnOriginRequest(request *http.Request, ctx core.RequestContext) (*http.Request, *http.Response) {
+func (m *MyModule) OnOriginRequest(request *http.Request, ctx core.RequestContext) (*http.Request, *http.Response) {
 	// Return the modified request or nil if you want to pass it to the next handler
 	// Return a new response if you want to abort the request and return a custom response
 
@@ -72,7 +72,7 @@ func (m MyModule) OnOriginRequest(request *http.Request, ctx core.RequestContext
 	return request, nil
 }
 
-func (m MyModule) Middleware(ctx core.RequestContext, next http.Handler) {
+func (m *MyModule) Middleware(ctx core.RequestContext, next http.Handler) {
 
 	operation := ctx.Operation()
 
@@ -88,12 +88,12 @@ func (m MyModule) Middleware(ctx core.RequestContext, next http.Handler) {
 	next.ServeHTTP(ctx.ResponseWriter(), ctx.Request())
 }
 
-func (m MyModule) Module() core.ModuleInfo {
+func (m *MyModule) Module() core.ModuleInfo {
 	return core.ModuleInfo{
 		// This is the ID of your module, it must be unique
 		ID: myModuleID,
 		New: func() core.Module {
-			return MyModule{}
+			return &MyModule{}
 		},
 	}
 }

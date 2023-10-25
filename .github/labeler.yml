@@ -15,3 +15,5 @@ protocol:
   - "proto/**/*"
 controlplane:
   - "controlplane/**/*"
+graphqlmetrics:
+  - "graphqlmetrics/**/*"

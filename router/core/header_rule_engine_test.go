@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"github.com/stretchr/testify/require"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -29,6 +30,7 @@ func TestNamedPropagateHeaderRule(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	clientReq, err := http.NewRequest("POST", "http://localhost", nil)
+	require.NoError(t, err)
 	clientReq.Header.Set("X-Test-1", "test1")
 	clientReq.Header.Set("X-Test-2", "test2")
 
@@ -63,6 +65,7 @@ func TestRegexPropagateHeaderRule(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	clientReq, err := http.NewRequest("POST", "http://localhost", nil)
+	require.NoError(t, err)
 	clientReq.Header.Set("X-Test-1", "test1")
 	clientReq.Header.Set("X-Test-2", "test2")
 	clientReq.Header.Set("Y-Test", "test3")
@@ -100,6 +103,7 @@ func TestNamedPropagateDefaultValue(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	clientReq, err := http.NewRequest("POST", "http://localhost", nil)
+	require.NoError(t, err)
 
 	originReq, err := http.NewRequest("POST", "http://localhost", nil)
 	assert.Nil(t, err)
@@ -131,6 +135,7 @@ func TestSkipHopHeadersRegex(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	clientReq, err := http.NewRequest("POST", "http://localhost", nil)
+	require.NoError(t, err)
 	clientReq.Header.Set("X-Test-1", "test1")
 
 	for i, header := range hopHeaders {
@@ -197,6 +202,7 @@ func TestSubgraphNamedHeaderRule(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	clientReq, err := http.NewRequest("POST", "http://localhost", nil)
+	require.NoError(t, err)
 	clientReq.Header.Set("X-Test-Subgraph-2", "Test-Value-2")
 
 	sg1Url, _ := url.Parse("http://subgraph-1.local")

@@ -85,12 +85,11 @@ func (ct *CustomTransport) RoundTrip(req *http.Request) (*http.Response, error) 
 }
 
 type TransportFactory struct {
-	customTransport *CustomTransport
-	preHandlers     []TransportPreHandler
-	postHandlers    []TransportPostHandler
-	retryOptions    retrytransport.RetryOptions
-	requestTimeout  time.Duration
-	logger          *zap.Logger
+	preHandlers    []TransportPreHandler
+	postHandlers   []TransportPostHandler
+	retryOptions   retrytransport.RetryOptions
+	requestTimeout time.Duration
+	logger         *zap.Logger
 }
 
 var _ ApiTransportFactory = TransportFactory{}

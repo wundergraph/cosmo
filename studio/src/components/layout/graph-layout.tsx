@@ -78,7 +78,11 @@ const GraphLayout = ({ children }: LayoutProps) => {
         href: basePath + "/subgraphs",
         icon: <Component2Icon />,
       },
-      { title: "Explorer", href: basePath + "/explorer", icon: <PlayIcon /> },
+      {
+        title: "Playground",
+        href: basePath + "/playground",
+        icon: <PlayIcon />,
+      },
       {
         title: "Schema",
         href: basePath + "/schema",
@@ -132,7 +136,7 @@ const GraphLayout = ({ children }: LayoutProps) => {
 
   return (
     <div className="2xl:flex 2xl:flex-1 2xl:flex-col 2xl:items-center">
-      <div className="min-h-screen bg-background font-sans antialiased 2xl:min-w-[1536px] 2xl:max-w-screen-2xl">
+      <div className="min-h-screen w-full max-w-screen-4xl bg-background font-sans antialiased">
         {user?.currentOrganization.isFreeTrial && (
           <div
             className="sticky top-0 z-50 flex cursor-pointer justify-center rounded bg-primary px-2 py-1 text-sm text-secondary-foreground"
