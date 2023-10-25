@@ -14,6 +14,17 @@ services:
         GITHUB_SHA: ${GITHUB_SHA:-latest}
         GITHUB_REF: ${GITHUB_REF:-latest}
 
+  graphqlmetrics:
+    image: ghcr.io/wundergraph/cosmo/graphqlmetrics:${DC_GRAPHQLMETRICS_VERSION:-latest}
+    build:
+      context: graphqlmetrics
+      dockerfile: Dockerfile
+      cache_from:
+        - ghcr.io/wundergraph/cosmo/graphqlmetrics:buildcache
+      args:
+        GITHUB_SHA: ${GITHUB_SHA:-latest}
+        GITHUB_REF: ${GITHUB_REF:-latest}
+
   otelcollector:
     image: ghcr.io/wundergraph/cosmo/otelcollector:${DC_OTELCOLLECTOR_VERSION:-latest}
     build:

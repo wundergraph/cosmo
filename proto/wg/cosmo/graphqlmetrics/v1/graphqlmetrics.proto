@@ -1,0 +1,81 @@
+// https://protobuf.dev/programming-guides/style/
+
+syntax = "proto3";
+
+package wg.cosmo.graphqlmetrics.v1;
+
+import "wg/cosmo/common/common.proto";
+
+enum OperationType {
+  QUERY = 0;
+  MUTATION = 1;
+  SUBSCRIPTION = 2;
+}
+
+message RequestInfo {
+  int32 StatusCode = 1;
+  bool error = 2;
+}
+
+message SchemaUsageInfo {
+  // RequestDocument is the GraphQL request document
+  string RequestDocument = 1;
+  // TypeFieldMetrics is the list of used fields in the request document
+  repeated TypeFieldUsageInfo TypeFieldMetrics = 2;
+  // OperationInfo is the operation info
+  OperationInfo OperationInfo = 3;
+  // SchemaInfo is the schema info
+  SchemaInfo SchemaInfo = 4;
+  // ClientInfo is the client info
+  ClientInfo ClientInfo = 5;
+ // RequestInfo is the request info
+  RequestInfo RequestInfo = 6;
+  // Attributes is a map of attributes that can be used to filter the metrics
+  map<string,string> Attributes = 7;
+}
+
+message ClientInfo {
+  // Name is the GraphQL client name obtained from the request header
+  string Name = 1;
+  // Version is the GraphQL client version obtained from the request header
+  string Version = 2;
+}
+
+message OperationInfo {
+  // Hash is the hash of the request document and the operation name
+  string Hash = 1;
+  // Name is the operation name
+  string Name = 2;
+  // Type is the operation type
+  OperationType Type = 3;
+}
+
+message SchemaInfo {
+  // FederatedGraphID and OrganizationID are transport over JWT
+
+  // Version is the schema version
+  string Version = 3;
+}
+
+message TypeFieldUsageInfo {
+  // Path is the path to the field in the request document but without the root type query, mutation, or subscription
+  repeated string Path = 1;
+  // TypeNames is the list of type names that the field is used as
+  repeated string TypeNames = 2;
+  // SubgraphIDs is the list of datasource IDs (e.g subgraph ID) that the field is used from
+  repeated string SubgraphIDs = 3;
+  // Count is the number of times the field is used
+  uint64 Count = 4;
+}
+
+message PublishGraphQLRequestMetricsRequest {
+  repeated SchemaUsageInfo SchemaUsage = 1;
+}
+
+message PublishOperationCoverageReportResponse {
+}
+
+service GraphQLMetricsService {
+  // PublishGraphQLMetrics publishes the GraphQL metrics to the metrics service
+  rpc PublishGraphQLMetrics(PublishGraphQLRequestMetricsRequest) returns (PublishOperationCoverageReportResponse) {}
+}

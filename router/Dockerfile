@@ -23,7 +23,7 @@ COPY . /app/
 RUN make setup-build-tools
 
 # Generate code
-RUN buf generate --template buf.go.gen.yaml
+RUN buf generate --template buf.router.go.gen.yaml
 
 WORKDIR /app/router
 

@@ -20,6 +20,7 @@ body:
         - studio
         - composition
         - otelcollector
+        - graphqlmetrics
         - helm
         - cli
   - type: textarea

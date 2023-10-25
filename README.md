@@ -15,12 +15,19 @@
 <br/>
 
 WunderGraph Cosmo is the On-Premise Platform for building, maintaining, and collaborating on GraphQL Federation. A drop-in replacement for Apollo GraphOS.
-The repository consists of the following components:
+The repository consists of the following core components:
+
+Core:
 
 - [CLI](./cli): The cosmo CLI tool `wgc`. Used to manage the cosmo platform e.g. pushing schema, check schemas, creating new projects, managing users, etc. It interacts with the control plane.
 - [Control Plane](./controlplane): The control plane is the central component of the cosmo platform. It consists of a platform API and a node API. The platform API is used by the cosmo `CLI` tool and the `Studio` to manage the platform.
 - [Router](./router): The router is the component that understands the GraphQL Federation protocol. It is responsible for routing requests to the correct service and for aggregating the responses. It is in connection with the control plane to register itself for advanced fleet management.
 - [Studio](./studio): The studio is the web interface for the cosmo platform. It is used to manage the platform and to collaborate on GraphQL Federation. It is in connection with the control plane through the Platform API to manage the platform.
+
+Collectors:
+
+- [OpenTelemetry Collector](./otelcollector): The OpenTelemetry Collector is used to collect and export metrics and traces from the platform. It is configured to collect metrics and traces from the `router` and instrumented `subgraphs`.
+- [GraphQLMetrics Collector](./graphqlmetrics): The GraphQLMetrics collector is used to collect and export metrics from the platform that doesn't fit into the OpenTelemetry model. Primarily, it is used to collect operation usage metrics from the `router` to allow advanced breaking changes analysis of client applications.
 
 ## Migrate from Apollo GraphOS / Apollo Federation
 
@@ -57,7 +64,7 @@ export ROUTER_TOKEN=...
 make dc-federation-demo
 ```
 
-3. Navigate to the [Studio explorer](http://localhost:3000/wundergraph/graph/production/explorer) and query the router. Login with the default credentials:
+3. Navigate to the [Studio Playground](http://localhost:3000/wundergraph/graph/production/playground) and query the router. Login with the default credentials:
 
 ```
 Username: foo@wundergraph.com

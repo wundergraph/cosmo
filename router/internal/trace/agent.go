@@ -76,7 +76,7 @@ func createExporter(log *zap.Logger, exp *Exporter) (sdktrace.SpanExporter, erro
 			opts = append(opts, otlptracegrpc.WithHeaders(exp.Headers))
 		}
 		if len(exp.HTTPPath) > 0 {
-			log.Warn("otlptracegrpc exporter doesn't support arbitrary paths", zap.String("path", exp.HTTPPath))
+			log.Warn("Otlptracegrpc exporter doesn't support arbitrary paths", zap.String("path", exp.HTTPPath))
 		}
 		exporter, err = otlptracegrpc.New(
 			context.Background(),
@@ -90,7 +90,7 @@ func createExporter(log *zap.Logger, exp *Exporter) (sdktrace.SpanExporter, erro
 		return nil, err
 	}
 
-	log.Info("using trace exporter", zap.String("exporter", string(exp.Exporter)), zap.String("endpoint", exp.Endpoint), zap.String("path", exp.HTTPPath))
+	log.Info("Tracer enabled", zap.String("exporter", string(exp.Exporter)), zap.String("endpoint", exp.Endpoint), zap.String("path", exp.HTTPPath))
 
 	return exporter, nil
 }
