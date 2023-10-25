@@ -3,6 +3,10 @@ package core
 import (
 	"context"
 	"errors"
+	"fmt"
+	"github.com/wundergraph/cosmo/router/internal/otel"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 	"net"
 	"net/http"
 	"strings"
@@ -12,8 +16,12 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/zap"
+	"golang.org/x/sync/singleflight"
+
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/astnormalization"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/postprocess"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphql"
@@ -25,11 +33,13 @@ import (
 )
 
 const (
-	ErrMsgOperationParseFailed = "failed to parse operation: %w"
+	ErrMsgOperationPlanningFailed = "failed to plan operation: %w"
 )
 
 var (
 	couldNotResolveResponseErr = errors.New("could not resolve response")
+	serverTimeoutErr           = errors.New("server timeout")
+	serverCanceledErr          = errors.New("server canceled")
 	internalServerErrorErr     = errors.New("internal server error")
 )
 
@@ -57,6 +67,11 @@ func (e *reportError) Report() *operationreport.Report {
 	return e.report
 }
 
+type planWithExtractedVariables struct {
+	preparedPlan plan.Plan
+	variables    []byte
+}
+
 func MergeJsonRightIntoLeft(left, right []byte) []byte {
 	if len(left) == 0 {
 		return right
@@ -74,34 +89,97 @@ func MergeJsonRightIntoLeft(left, right []byte) []byte {
 
 type HandlerOptions struct {
 	Executor *Executor
+	Cache    *ristretto.Cache
 	Log      *zap.Logger
 }
 
 func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 	graphQLHandler := &GraphQLHandler{
 		log:         opts.Log,
-		prepared:    map[uint64]planWithMetaData{},
+		sf:          &singleflight.Group{},
+		prepared:    map[uint64]planWithExtractedVariables{},
 		preparedMux: &sync.RWMutex{},
+		planCache:   opts.Cache,
 		executor:    opts.Executor,
 	}
 
 	return graphQLHandler
 }
 
+// Error and Status Code handling
+//
+// When a server receives a well-formed GraphQL-over-HTTP request, it must return a
+// well‐formed GraphQL response. The server's response describes the result of validating
+// and executing the requested operation if successful, and describes any errors encountered
+// during the request. This means working errors should be returned as part of the response body.
+// That also implies parsing or validation errors. They should be returned as part of the response body.
+// Only in cases where the request is malformed or invalid GraphQL should the server return an HTTP 4xx or 5xx error code.
+// https://github.com/graphql/graphql-over-http/blob/main/spec/GraphQLOverHTTP.md#response
+
 type GraphQLHandler struct {
 	log      *zap.Logger
 	executor *Executor
 
-	prepared    map[uint64]planWithMetaData
+	prepared    map[uint64]planWithExtractedVariables
 	preparedMux *sync.RWMutex
+
+	sf        *singleflight.Group
+	planCache *ristretto.Cache
 }
 
 func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	var (
+		preparedPlan planWithExtractedVariables
+	)
+
 	requestLogger := h.log.With(logging.WithRequestID(middleware.GetReqID(r.Context())))
 	operationContext := getOperationContext(r.Context())
 
-	extractedVariables := make([]byte, len(operationContext.preparedPlan.variables))
-	copy(extractedVariables, operationContext.preparedPlan.variables)
+	// Update the resolveCtx with the latest request context so user modules can access it
+
+	requestOperationNameBytes := unsafebytes.StringToBytes(operationContext.Name())
+
+	// try to get a prepared plan for this operation ID from the cache
+	cachedPlan, ok := h.planCache.Get(operationContext.Hash())
+	if ok && cachedPlan != nil {
+		// re-use a prepared plan
+		preparedPlan = cachedPlan.(planWithExtractedVariables)
+	} else {
+		// prepare a new plan using single flight
+		// this ensures that we only prepare the plan once for this operation ID
+		sharedPreparedPlan, err, _ := h.sf.Do(strconv.FormatUint(operationContext.hash, 10), func() (interface{}, error) {
+			prepared, err := h.preparePlan(requestOperationNameBytes, operationContext.Content())
+			if err != nil {
+				return nil, err
+			}
+			// cache the prepared plan for 1 hour
+			h.planCache.SetWithTTL(operationContext.hash, prepared, 1, time.Hour)
+			return prepared, nil
+		})
+		if err != nil {
+			w.Header().Set("Content-Type", "application/json")
+
+			var reportErr ReportError
+			if errors.As(err, &reportErr) {
+				logInternalErrorsFromReport(reportErr.Report(), requestLogger)
+				writeRequestErrors(r, graphql.RequestErrorsFromOperationReport(*reportErr.Report()), w, requestLogger)
+				return
+			}
+			requestLogger.Error("prepare plan failed", zap.Error(err))
+			writeRequestErrors(r, graphql.RequestErrorsFromError(internalServerErrorErr), w, requestLogger)
+			return
+		}
+
+		if sharedPreparedPlan == nil {
+			requestLogger.Error("prepare plan is nil", zap.Error(err))
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		preparedPlan = sharedPreparedPlan.(planWithExtractedVariables)
+	}
+
+	extractedVariables := make([]byte, len(preparedPlan.variables))
+	copy(extractedVariables, preparedPlan.variables)
 	requestVariables := operationContext.Variables()
 	combinedVariables := MergeJsonRightIntoLeft(requestVariables, extractedVariables)
 
@@ -114,7 +192,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx = ctx.WithContext(r.Context())
 
-	switch p := operationContext.preparedPlan.preparedPlan.(type) {
+	switch p := preparedPlan.preparedPlan.(type) {
 	case *plan.SynchronousResponsePlan:
 		w.Header().Set("Content-Type", "application/json")
 
@@ -123,18 +201,16 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		err := h.executor.Resolver.ResolveGraphQLResponse(ctx, p.Response, nil, executionBuf)
 		if err != nil {
-			if errors.Is(err, context.Canceled) {
-				return
-			}
-
 			var nErr net.Error
-			if errors.As(err, &nErr) && nErr.Timeout() {
-				w.WriteHeader(http.StatusGatewayTimeout)
+
+			if errors.Is(err, context.Canceled) {
+				writeRequestErrors(r, graphql.RequestErrorsFromError(serverCanceledErr), w, requestLogger)
+			} else if errors.As(err, &nErr) && nErr.Timeout() {
+				writeRequestErrors(r, graphql.RequestErrorsFromError(serverTimeoutErr), w, requestLogger)
 			} else {
-				w.WriteHeader(http.StatusInternalServerError)
+				writeRequestErrors(r, graphql.RequestErrorsFromError(couldNotResolveResponseErr), w, requestLogger)
 			}
 
-			writeRequestErrors(graphql.RequestErrorsFromError(couldNotResolveResponseErr), w, requestLogger)
 			requestLogger.Error("unable to resolve GraphQL response", zap.Error(err))
 			return
 		}
@@ -158,12 +234,13 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		err := h.executor.Resolver.ResolveGraphQLSubscription(ctx, p.Response, flushWriter)
 		if err != nil {
 			if errors.Is(err, context.Canceled) {
+				requestLogger.Debug("context canceled: unable to resolve subscription response", zap.Error(err))
+				writeRequestErrors(r, graphql.RequestErrorsFromError(couldNotResolveResponseErr), w, requestLogger)
 				return
 			}
 
-			w.WriteHeader(http.StatusInternalServerError)
-			writeRequestErrors(graphql.RequestErrorsFromError(couldNotResolveResponseErr), w, requestLogger)
 			requestLogger.Error("unable to resolve subscription response", zap.Error(err))
+			writeRequestErrors(r, graphql.RequestErrorsFromError(couldNotResolveResponseErr), w, requestLogger)
 			return
 		}
 	default:
@@ -172,7 +249,43 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func logInternalErrors(report *operationreport.Report, requestLogger *zap.Logger) {
+func (h *GraphQLHandler) preparePlan(requestOperationName []byte, requestOperationContent string) (planWithExtractedVariables, error) {
+	doc, report := astparser.ParseGraphqlDocumentString(requestOperationContent)
+	if report.HasErrors() {
+		return planWithExtractedVariables{}, &reportError{report: &report}
+	}
+
+	validation := astvalidation.DefaultOperationValidator()
+
+	norm := astnormalization.NewNormalizer(true, true)
+	norm.NormalizeOperation(&doc, h.executor.Definition, &report)
+
+	// validate the document before planning
+	state := validation.Validate(&doc, h.executor.Definition, &report)
+	if state != astvalidation.Valid {
+		return planWithExtractedVariables{}, &reportError{report: &report}
+	}
+
+	planner := plan.NewPlanner(context.Background(), h.executor.PlanConfig)
+
+	// create and postprocess the plan
+	preparedPlan := planner.Plan(&doc, h.executor.Definition, unsafebytes.BytesToString(requestOperationName), &report)
+	if report.HasErrors() {
+		return planWithExtractedVariables{}, fmt.Errorf(ErrMsgOperationPlanningFailed, report)
+	}
+	post := postprocess.DefaultProcessor()
+	post.Process(preparedPlan)
+
+	extractedVariables := make([]byte, len(doc.Input.Variables))
+	copy(extractedVariables, doc.Input.Variables)
+
+	return planWithExtractedVariables{
+		preparedPlan: preparedPlan,
+		variables:    extractedVariables,
+	}, nil
+}
+
+func logInternalErrorsFromReport(report *operationreport.Report, requestLogger *zap.Logger) {
 	var internalErr error
 	for _, err := range report.InternalErrors {
 		internalErr = multierror.Append(internalErr, err)
@@ -183,21 +296,25 @@ func logInternalErrors(report *operationreport.Report, requestLogger *zap.Logger
 	}
 }
 
-func writeRequestErrorsFromReport(report *operationreport.Report, w http.ResponseWriter, requestLogger *zap.Logger) {
-	requestErrors := graphql.RequestErrorsFromOperationReport(*report)
-	writeRequestErrors(requestErrors, w, requestLogger)
+func writeRequestErrors(r *http.Request, requestErrors graphql.RequestErrors, w http.ResponseWriter, requestLogger *zap.Logger) {
+	ctx := getRequestContext(r.Context())
+	span := trace.SpanFromContext(r.Context())
 
-	// log internal errors
-	logInternalErrors(report, requestLogger)
-
-	// write internal server error if there are no external errors but there are internal errors
-	if len(report.ExternalErrors) == 0 && len(report.InternalErrors) > 0 {
-		writeRequestErrors(graphql.RequestErrorsFromError(internalServerErrorErr), w, requestLogger)
-	}
-}
-
-func writeRequestErrors(requestErrors graphql.RequestErrors, w http.ResponseWriter, requestLogger *zap.Logger) {
 	if requestErrors != nil {
+
+		// can be nil if an error occurred before the context was created e.g. in the pre-handler
+		// in that case hasError has to be set in the pre-handler manually
+		if ctx != nil {
+			ctx.hasError = true
+		}
+
+		// set the span status to error
+		span.SetStatus(codes.Error, requestErrors.Error())
+		// set the span attribute to indicate that the request had an error
+		// do it only when there is an error to avoid storing the attribute in the span
+		// in queries we use mapContains to check if the attribute is set
+		span.SetAttributes(otel.WgRequestError.Bool(true))
+
 		if _, err := requestErrors.WriteResponse(w); err != nil {
 			requestLogger.Error("error writing response", zap.Error(err))
 		}

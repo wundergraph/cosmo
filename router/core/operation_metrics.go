@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"strconv"
 	"time"
 
@@ -10,7 +11,6 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/metric"
 	"github.com/wundergraph/cosmo/router/internal/otel"
 	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -82,74 +82,34 @@ func (m *OperationMetrics) exportSchemaUsageInfo(operationContext *operationCont
 	})
 }
 
-func (m *OperationMetrics) Finish(ctx context.Context, statusCode *int, responseSize *int64) {
+func (m *OperationMetrics) Finish(ctx context.Context, hasErrored bool, statusCode int, responseSize int64) {
 	if m == nil {
 		return
 	}
 	m.inflightMetric()
 
-	if statusCode == nil {
-		statusCode = new(int)
-		*statusCode = -1
+	if hasErrored {
+		m.metricBaseFields = append(m.metricBaseFields, otel.WgRequestError.Bool(hasErrored))
 	}
 
-	if responseSize == nil {
-		responseSize = new(int64)
-		*responseSize = -1
-	}
-
-	m.metricBaseFields = append(m.metricBaseFields, semconv.HTTPStatusCode(*statusCode))
+	m.metricBaseFields = append(m.metricBaseFields, semconv.HTTPStatusCode(statusCode))
 	m.metrics.MeasureRequestCount(ctx, m.metricBaseFields...)
 	m.metrics.MeasureRequestSize(ctx, m.requestContentLength, m.metricBaseFields...)
 	m.metrics.MeasureLatency(ctx,
 		m.operationStartTime,
 		m.metricBaseFields...,
 	)
-	m.metrics.MeasureResponseSize(ctx, *responseSize, m.metricBaseFields...)
+	m.metrics.MeasureResponseSize(ctx, responseSize, m.metricBaseFields...)
 
 	if m.opContext != nil {
 		m.exportSchemaUsageInfo(m.opContext, graphqlmetrics.Attributes{
-			graphqlmetrics.HTTPStatusCodeAttribute: strconv.Itoa(*statusCode),
+			graphqlmetrics.HTTPStatusCodeAttribute: strconv.Itoa(statusCode),
 		})
 	}
 }
 
-func (m *OperationMetrics) AddOperation(ctx context.Context, operation *ParsedOperation, protocol OperationProtocol) {
-	if m == nil {
-		return
-	}
-	if operation.Name != "" {
-		m.metricBaseFields = append(m.metricBaseFields, otel.WgOperationName.String(operation.Name))
-	}
-
-	if operation.Type != "" {
-		m.metricBaseFields = append(m.metricBaseFields, otel.WgOperationType.String(operation.Type))
-	}
-
-	// Add the operation to the trace span
-	span := trace.SpanFromContext(ctx)
-	// Set the span name to the operation name after we figured it out
-	// TODO: Ask Dustin about this name
-	span.SetName(GetSpanName(operation.Name, protocol.String()))
-
-	span.SetAttributes(otel.WgOperationName.String(operation.Name))
-	span.SetAttributes(otel.WgOperationType.String(operation.Type))
-	span.SetAttributes(otel.WgOperationContent.String(operation.Query))
-	span.SetAttributes(otel.WgOperationProtocol.String(protocol.String()))
-
-	// Add the operation hash to the trace span attributes
-	opHashID := otel.WgOperationHash.String(strconv.FormatUint(operation.ID, 10))
-	span.SetAttributes(opHashID)
-
-	// Add hash to metrics base fields
-	m.metricBaseFields = append(m.metricBaseFields, opHashID)
-}
-
-func (m *OperationMetrics) AddOperationContext(opContext *operationContext) {
-	if m == nil {
-		return
-	}
-	m.opContext = opContext
+func (m *OperationMetrics) AddSpanAttributes(kv ...attribute.KeyValue) {
+	m.metricBaseFields = append(m.metricBaseFields, kv...)
 }
 
 // AddClientInfo adds the client info to the operation metrics. If OperationMetrics
@@ -183,4 +143,24 @@ func startOperationMetrics(ctx context.Context, mtr *metric.Metrics, requestCont
 		gqlMetricsExporter:   gqlMetricsExporter,
 		routerConfigVersion:  routerConfigVersion,
 	}
+}
+
+func SetSpanOperationAttributes(ctx context.Context, operation *ParsedOperation, protocol OperationProtocol) []attribute.KeyValue {
+	var baseMetricAttributeValues []attribute.KeyValue
+
+	// Set the operation name as early as possible so that it is available in the trace
+	span := trace.SpanFromContext(ctx)
+	span.SetName(GetSpanName(operation.Name, operation.Type))
+	baseMetricAttributeValues = append(baseMetricAttributeValues, otel.WgOperationName.String(operation.Name))
+	baseMetricAttributeValues = append(baseMetricAttributeValues, otel.WgOperationType.String(operation.Type))
+	baseMetricAttributeValues = append(baseMetricAttributeValues, otel.WgOperationContent.String(operation.Query))
+	baseMetricAttributeValues = append(baseMetricAttributeValues, otel.WgOperationProtocol.String(protocol.String()))
+
+	// Add the operation hash to the trace span attributes
+	opHashID := otel.WgOperationHash.String(strconv.FormatUint(operation.ID, 10))
+	baseMetricAttributeValues = append(baseMetricAttributeValues, opHashID)
+
+	span.SetAttributes(baseMetricAttributeValues...)
+
+	return baseMetricAttributeValues
 }

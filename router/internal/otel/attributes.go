@@ -16,6 +16,7 @@ const (
 	WgRouterConfigVersion = attribute.Key("wg.router.config.version")
 	WgSubgraphID          = attribute.Key("wg.subgraph.id")
 	WgSubgraphName        = attribute.Key("wg.subgraph.name")
+	WgRequestError        = attribute.Key("wg.request.error")
 )
 
 var (

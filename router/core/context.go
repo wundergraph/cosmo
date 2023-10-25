@@ -7,8 +7,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/go-chi/chi/middleware"
-	"github.com/wundergraph/cosmo/router/internal/logging"
 	ctrace "github.com/wundergraph/cosmo/router/internal/trace"
 	"go.uber.org/zap"
 )
@@ -120,6 +118,8 @@ type requestContext struct {
 	keys map[string]any
 	// responseWriter is the original response writer received by the router.
 	responseWriter http.ResponseWriter
+	// hasError indicates if the request / response has an error
+	hasError bool
 	// request is the original request received by the router.
 	request *http.Request
 	// operation is the GraphQL operation context
@@ -140,22 +140,6 @@ func (c *requestContext) Operation() OperationContext {
 
 func (c *requestContext) Request() *http.Request {
 	return c.request
-}
-
-func requestWithAttachedContext(w http.ResponseWriter, r *http.Request, logger *zap.Logger) *http.Request {
-	operationContext := getOperationContext(r.Context())
-	// TODO: Avoid this duplication
-	subgraphs := subgraphsFromContext(r.Context())
-	requestContext := &requestContext{
-		logger:         logger.With(logging.WithRequestID(middleware.GetReqID(r.Context()))),
-		keys:           map[string]any{},
-		responseWriter: w,
-		request:        r,
-		operation:      operationContext,
-		subgraphs:      subgraphs,
-	}
-	ctx := withRequestContext(r.Context(), requestContext)
-	return r.WithContext(ctx)
 }
 
 func withRequestContext(ctx context.Context, operation *requestContext) context.Context {
@@ -352,17 +336,15 @@ var _ OperationContext = (*operationContext)(nil)
 
 // operationContext contains information about the current GraphQL operation
 type operationContext struct {
-	// name is the name of the operation
+	// Name is the name of the operation
 	name string
 	// opType is the type of the operation (query, mutation, subscription)
 	opType string
-	// hash is the hash of the operation
+	// Hash is the hash of the operation
 	hash uint64
-	// content is the content of the operation
-	content string
-	// variables is the variables of the operation
-	variables []byte
-	// clientInfo is the client info that made the request
+	// Content is the content of the operation
+	content    string
+	variables  []byte
 	clientInfo *ClientInfo
 	// preparedPlan is the prepared plan of the operation
 	preparedPlan planWithMetaData
@@ -392,8 +374,8 @@ func (o *operationContext) ClientInfo() ClientInfo {
 	return *o.clientInfo
 }
 
-func withOperationContext(ctx context.Context, opContext *operationContext) context.Context {
-	return context.WithValue(ctx, operationContextKey, opContext)
+func withOperationContext(ctx context.Context, operation *operationContext) context.Context {
+	return context.WithValue(ctx, operationContextKey, operation)
 }
 
 // getOperationContext returns the request context.
@@ -426,4 +408,30 @@ func withSubgraphs(ctx context.Context, subgraphs []Subgraph) context.Context {
 func subgraphsFromContext(ctx context.Context) []Subgraph {
 	subgraphs, _ := ctx.Value(subgraphsContextKey).([]Subgraph)
 	return subgraphs
+}
+
+func buildRequestContext(w http.ResponseWriter, r *http.Request, clientInfo *ClientInfo, operation *ParsedOperation, requestLogger *zap.Logger) (*requestContext, *operationContext) {
+	variablesCopy := make([]byte, len(operation.Variables))
+	copy(variablesCopy, operation.Variables)
+
+	opContext := &operationContext{
+		name:       operation.Name,
+		opType:     operation.Type,
+		content:    operation.NormalizedRepresentation,
+		hash:       operation.ID,
+		variables:  variablesCopy,
+		clientInfo: clientInfo,
+	}
+
+	subgraphs := subgraphsFromContext(r.Context())
+	requestContext := &requestContext{
+		logger:         requestLogger,
+		keys:           map[string]any{},
+		responseWriter: w,
+		request:        r,
+		operation:      opContext,
+		subgraphs:      subgraphs,
+	}
+
+	return requestContext, opContext
 }

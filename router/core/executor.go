@@ -116,13 +116,14 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(routerCfg *node
 		return nil, fmt.Errorf("failed to load configuration: %w", err)
 	}
 	planConfig.Debug = plan.DebugConfiguration{
-		PrintOperationWithRequiredFields: engineDebugConfig.PrintOperationWithRequiredFields,
-		PrintPlanningPaths:               engineDebugConfig.PrintPlanningPaths,
-		PrintQueryPlans:                  engineDebugConfig.PrintQueryPlans,
-		PrintNodeSuggestions:             engineDebugConfig.PrintNodeSuggestions,
-		ConfigurationVisitor:             engineDebugConfig.ConfigurationVisitor,
-		PlanningVisitor:                  engineDebugConfig.PlanningVisitor,
-		DatasourceVisitor:                engineDebugConfig.DatasourceVisitor,
+		PrintOperationTransformations: engineDebugConfig.PrintOperationTransformations,
+		PrintOperationEnableASTRefs:   engineDebugConfig.PrintOperationEnableASTRefs,
+		PrintPlanningPaths:            engineDebugConfig.PrintPlanningPaths,
+		PrintQueryPlans:               engineDebugConfig.PrintQueryPlans,
+		PrintNodeSuggestions:          engineDebugConfig.PrintNodeSuggestions,
+		ConfigurationVisitor:          engineDebugConfig.ConfigurationVisitor,
+		PlanningVisitor:               engineDebugConfig.PlanningVisitor,
+		DatasourceVisitor:             engineDebugConfig.DatasourceVisitor,
 	}
 	return planConfig, nil
 }

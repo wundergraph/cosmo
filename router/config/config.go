@@ -174,13 +174,14 @@ type RequestHeaderRule struct {
 }
 
 type EngineDebugConfiguration struct {
-	PrintOperationWithRequiredFields bool `envconfig:"ENGINE_DEBUG_PRINT_OPERATION_WITH_REQUIRED_FIELDS"`
-	PrintPlanningPaths               bool `envconfig:"ENGINE_DEBUG_PRINT_PLANNING_PATHS"`
-	PrintQueryPlans                  bool `envconfig:"ENGINE_DEBUG_PRINT_QUERY_PLANS"`
-	PrintNodeSuggestions             bool `envconfig:"ENGINE_DEBUG_PRINT_NODE_SUGGESTIONS"`
-	ConfigurationVisitor             bool `envconfig:"ENGINE_DEBUG_CONFIGURATION_VISITOR"`
-	PlanningVisitor                  bool `envconfig:"ENGINE_DEBUG_PLANNING_VISITOR"`
-	DatasourceVisitor                bool `envconfig:"ENGINE_DEBUG_DATASOURCE_VISITOR"`
+	PrintOperationTransformations bool `envconfig:"ENGINE_DEBUG_PRINT_OPERATION_TRANSFORMATIONS"`
+	PrintOperationEnableASTRefs   bool `envconfig:"ENGINE_DEBUG_PRINT_OPERATION_ENABLE_AST_REFS"`
+	PrintPlanningPaths            bool `envconfig:"ENGINE_DEBUG_PRINT_PLANNING_PATHS"`
+	PrintQueryPlans               bool `envconfig:"ENGINE_DEBUG_PRINT_QUERY_PLANS"`
+	PrintNodeSuggestions          bool `envconfig:"ENGINE_DEBUG_PRINT_NODE_SUGGESTIONS"`
+	ConfigurationVisitor          bool `envconfig:"ENGINE_DEBUG_CONFIGURATION_VISITOR"`
+	PlanningVisitor               bool `envconfig:"ENGINE_DEBUG_PLANNING_VISITOR"`
+	DatasourceVisitor             bool `envconfig:"ENGINE_DEBUG_DATASOURCE_VISITOR"`
 }
 
 type EngineExecutionConfiguration struct {
