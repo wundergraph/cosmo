@@ -533,52 +533,8 @@ export class AnalyticsRequestViewRepository {
     return httpStatusCodes;
   }
 
-  private getFilters(
-    name: AnalyticsViewGroupName,
-    operationNames: string[],
-    clientNames: string[],
-    clientVersions: string[],
-    httpStatusCodes: string[],
-  ): Record<string, PlainMessage<AnalyticsViewResultFilter>> {
+  private getBaseFiltersForGroup = (name: AnalyticsViewGroupName) => {
     const filters = { ...this.baseFilters };
-    filters.operationName = {
-      ...filters.operationName,
-      options: [
-        ...filters.operationName.options,
-        ...operationNames.map((op) => ({
-          operator: AnalyticsViewFilterOperator.EQUALS,
-          label: op || '-',
-          value: op,
-        })),
-      ],
-    };
-
-    filters.clientName = {
-      ...filters.clientName,
-      options: clientNames.map((c) => ({
-        operator: AnalyticsViewFilterOperator.EQUALS,
-        label: c || '-',
-        value: c,
-      })),
-    };
-
-    filters.clientVersion = {
-      ...filters.clientVersion,
-      options: clientVersions.map((c) => ({
-        operator: AnalyticsViewFilterOperator.EQUALS,
-        label: c || '-',
-        value: c,
-      })),
-    };
-
-    filters.httpStatusCode = {
-      ...filters.httpStatusCode,
-      options: httpStatusCodes.map((sc) => ({
-        operator: AnalyticsViewFilterOperator.EQUALS,
-        label: sc || '-',
-        value: sc,
-      })),
-    };
 
     switch (name) {
       case AnalyticsViewGroupName.None: {
@@ -598,6 +554,65 @@ export class AnalyticsRequestViewRepository {
         return { p95, httpStatusCode };
       }
     }
+  };
+
+  private getFilters(
+    name: AnalyticsViewGroupName,
+    operationNames: string[],
+    clientNames: string[],
+    clientVersions: string[],
+    httpStatusCodes: string[],
+  ): Record<string, PlainMessage<AnalyticsViewResultFilter>> {
+    const filters = this.getBaseFiltersForGroup(name);
+
+    if (filters.operationName) {
+      filters.operationName = {
+        ...filters.operationName,
+        options: [
+          ...filters.operationName.options,
+          ...operationNames.map((op) => ({
+            operator: AnalyticsViewFilterOperator.EQUALS,
+            label: op || '-',
+            value: op,
+          })),
+        ],
+      };
+    }
+
+    if (filters.clientName) {
+      filters.clientName = {
+        ...filters.clientName,
+        options: clientNames.map((c) => ({
+          operator: AnalyticsViewFilterOperator.EQUALS,
+          label: c || '-',
+          value: c,
+        })),
+      };
+    }
+
+    if (filters.clientVersion) {
+      filters.clientVersion = {
+        ...filters.clientVersion,
+        options: clientVersions.map((c) => ({
+          operator: AnalyticsViewFilterOperator.EQUALS,
+          label: c || '-',
+          value: c,
+        })),
+      };
+    }
+
+    if (filters.httpStatusCode) {
+      filters.httpStatusCode = {
+        ...filters.httpStatusCode,
+        options: httpStatusCodes.map((sc) => ({
+          operator: AnalyticsViewFilterOperator.EQUALS,
+          label: sc || '-',
+          value: sc,
+        })),
+      };
+    }
+
+    return filters;
   }
 
   // Omit fields that are not supported in the grouped views to prevent errors
@@ -670,9 +685,6 @@ export class AnalyticsRequestViewRepository {
       this.getTotalCount(name, whereSql, havingSql, coercedQueryParams),
     ]);
 
-    const hasColumn = (name: string) =>
-      Array.isArray(result) && result.length > 0 && Object.keys(result[0]).includes(name);
-
     const clientNames: string[] = [];
     if (name === AnalyticsViewGroupName.Client) {
       const entries = Object.entries(coercedQueryParams);
@@ -683,12 +695,15 @@ export class AnalyticsRequestViewRepository {
       }
     }
 
+    const baseFiltersForGroup = this.getBaseFiltersForGroup(name);
+    const shouldExecute = (columnName: string) => Object.keys(baseFiltersForGroup).includes(columnName);
+
     // We shall execute these only when we have desired results
     const [allOperationNames, allClientNames, allClientVersions, allStatusMessages] = await Promise.all([
-      this.getAllOperationNames(federatedGraphId, hasColumn('operationName')),
-      this.getAllClients(federatedGraphId, hasColumn('clientName')),
-      this.getAllClientVersions(federatedGraphId, clientNames, hasColumn('clientVersion')),
-      this.getAllHttpStatusCodes(federatedGraphId, hasColumn('httpStatusCode')),
+      this.getAllOperationNames(federatedGraphId, shouldExecute('operationName')),
+      this.getAllClients(federatedGraphId, shouldExecute('clientName')),
+      this.getAllClientVersions(federatedGraphId, clientNames, shouldExecute('clientVersion')),
+      this.getAllHttpStatusCodes(federatedGraphId, shouldExecute('httpStatusCode')),
     ]);
 
     const columnFilters = this.getFilters(

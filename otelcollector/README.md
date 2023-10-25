@@ -1,6 +1,6 @@
 # OTEL Collector
 
-The OpenTelemetry Collector is a vendor-agnostic service that allows to receive, process and export telemetry data. It is based on the OpenTelemetry Collector project.
+This is a custom build of the official [OpenTelemetry Collector](https://github.com/open-telemetry/opentelemetry-collector) a vendor-agnostic service that allows to receive, process and export telemetry data.
 
 ## Build
 

@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 export const CompositionErrorsDialog = ({ errors }: { errors: string }) => {
   return (
     <Dialog>
-      <DialogTrigger>
+      <DialogTrigger asChild>
         <Button className="w-full" variant={"destructive"} size={"sm"}>
           Details
         </Button>

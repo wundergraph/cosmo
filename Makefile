@@ -2,8 +2,9 @@ all: dev-setup
 
 setup-build-tools:
 	go install github.com/bufbuild/buf/cmd/buf@latest
-	go install github.com/bufbuild/connect-go/cmd/protoc-gen-connect-go@latest
+	go install honnef.co/go/tools/cmd/staticcheck@latest
 	go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+	go install connectrpc.com/connect/cmd/protoc-gen-connect-go@latest
 
 setup-dev-tools: setup-build-tools
 	go install github.com/amacneil/dbmate/v2@v2.6.0
@@ -63,7 +64,8 @@ generate:
 	make generate-go
 
 generate-go:
-	rm -rf router/gen && buf generate --path proto/wg/cosmo/node --path proto/wg/cosmo/common --template buf.go.gen.yaml
+	rm -rf router/gen && buf generate --path proto/wg/cosmo/node --path proto/wg/cosmo/common --path proto/wg/cosmo/graphqlmetrics --template buf.router.go.gen.yaml
+	rm -rf graphqlmetrics/gen && buf generate --path proto/wg/cosmo/graphqlmetrics --path proto/wg/cosmo/common --template buf.graphqlmetrics.go.gen.yaml
 
 start-cp:
 	pnpm -r run --filter './controlplane' dev
@@ -109,5 +111,6 @@ docker-build-minikube: docker-build-local
 	minikube image load ghcr.io/wundergraph/cosmo/controlplane:latest & \
 	minikube image load ghcr.io/wundergraph/cosmo/otelcollector:latest & \
 	minikube image load ghcr.io/wundergraph/cosmo/router:latest & \
+	minikube image load ghcr.io/wundergraph/cosmo/graphqlmetrics:latest & \
 	minikube image load ghcr.io/wundergraph/cosmo/keycloak:latest
 	minikube cache reload

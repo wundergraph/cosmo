@@ -1,8 +1,3 @@
-import * as React from "react";
-import { addDays, addYears } from "date-fns";
-import { DateRange } from "react-day-picker";
-
-import { cn } from "@/lib/utils";
 import { Button, ButtonProps } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -10,9 +5,13 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import CalendarIcon from "@heroicons/react/24/outline/CalendarIcon";
 import useWindowSize from "@/hooks/use-window-size";
 import { formatDate } from "@/lib/format-date";
+import { cn } from "@/lib/utils";
+import CalendarIcon from "@heroicons/react/24/outline/CalendarIcon";
+import { addDays, addYears } from "date-fns";
+import { useEffect, useState } from "react";
+import { DateRange } from "react-day-picker";
 
 export function DatePickerWithRange({
   selectedDateRange,
@@ -28,6 +27,24 @@ export function DatePickerWithRange({
 }) {
   const { isMobile } = useWindowSize();
 
+  const [selected, setSelected] = useState(selectedDateRange);
+
+  useEffect(() => {
+    setSelected(selectedDateRange);
+  }, [selectedDateRange]);
+
+  const isDayBetween = (day: Date, from: Date, to: Date) => {
+    return day > from && day < to;
+  };
+
+  const handleDayClick = (day: Date) => {
+    const { from, to } = selectedDateRange;
+
+    if (from && to && isDayBetween(day, from, to)) {
+      setSelected({ from: day, to: undefined });
+    }
+  };
+
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -38,18 +55,17 @@ export function DatePickerWithRange({
           className={cn(
             "w-[240px] justify-center text-left font-normal",
             className,
-            !selectedDateRange && "text-muted-foreground"
+            !selected && "text-muted-foreground"
           )}
         >
           <CalendarIcon className="mr-2 h-4 w-4" />
-          {selectedDateRange?.from ? (
-            selectedDateRange.to ? (
+          {selected?.from ? (
+            selected.to ? (
               <>
-                {formatDate(selectedDateRange.from)} -{" "}
-                {formatDate(selectedDateRange.to)}
+                {formatDate(selected.from)} - {formatDate(selected.to)}
               </>
             ) : (
-              formatDate(selectedDateRange.from)
+              <>{formatDate(selected.from)} - </>
             )
           ) : (
             <span>Pick a date</span>
@@ -60,11 +76,23 @@ export function DatePickerWithRange({
         <Calendar
           initialFocus
           mode="range"
-          defaultMonth={selectedDateRange?.from}
-          selected={selectedDateRange}
-          onSelect={(range) => {
-            if (range) onDateRangeChange(range);
+          defaultMonth={selected?.from}
+          selected={selected}
+          onSelect={(range, day) => {
+            if (range) {
+              if (
+                selected.from &&
+                selected.to &&
+                isDayBetween(day, selected.from, selected.to)
+              ) {
+                setSelected({ from: day, to: undefined });
+                return;
+              }
+              setSelected(range);
+              onDateRangeChange(range);
+            }
           }}
+          onDayClick={handleDayClick}
           min={2}
           numberOfMonths={isMobile ? 1 : 2}
           showOutsideDays={false}

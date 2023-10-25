@@ -20,7 +20,6 @@ interface ComposedSubgraph {
   subscriptionUrl: string;
   subscriptionProtocol: 'ws' | 'sse' | 'sse_post';
 }
-
 export interface ComposedFederatedGraph {
   argumentConfigurations: ArgumentConfigurationData[];
   name: string;
