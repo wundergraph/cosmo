@@ -38,15 +38,14 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 	}
 }
 
-//
 // Error and Status Code handling
 //
 // When a server receives a well-formed GraphQL-over-HTTP request, it must return a
 // well‐formed GraphQL response. The server's response describes the result of validating
 // and executing the requested operation if successful, and describes any errors encountered
 // during the request. This means working errors should be returned as part of the response body.
-// Only in cases where the request is malformed or invalid GraphQL should the server return an HTTP 4xx or 5xx error code.
 // That also implies parsing or validation errors. They should be returned as part of the response body.
+// Only in cases where the request is malformed or invalid GraphQL should the server return an HTTP 4xx or 5xx error code.
 // https://github.com/graphql/graphql-over-http/blob/main/spec/GraphQLOverHTTP.md#response
 
 func (h *PreHandler) Handler(next http.Handler) http.Handler {
