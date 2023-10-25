@@ -10,7 +10,7 @@ import { formatDate } from "@/lib/format-date";
 import { cn } from "@/lib/utils";
 import CalendarIcon from "@heroicons/react/24/outline/CalendarIcon";
 import { addDays, addYears } from "date-fns";
-import * as React from "react";
+import { useState } from "react";
 import { DateRange } from "react-day-picker";
 
 export function DatePickerWithRange({
@@ -27,7 +27,7 @@ export function DatePickerWithRange({
 }) {
   const { isMobile } = useWindowSize();
 
-  const [selected, setSelected] = React.useState(selectedDateRange);
+  const [selected, setSelected] = useState(selectedDateRange);
 
   const isDayBetween = (day: Date, from: Date, to: Date) => {
     return day > from && day < to;
@@ -51,18 +51,17 @@ export function DatePickerWithRange({
           className={cn(
             "w-[240px] justify-center text-left font-normal",
             className,
-            !selectedDateRange && "text-muted-foreground"
+            !selected && "text-muted-foreground"
           )}
         >
           <CalendarIcon className="mr-2 h-4 w-4" />
-          {selectedDateRange?.from ? (
-            selectedDateRange.to ? (
+          {selected?.from ? (
+            selected.to ? (
               <>
-                {formatDate(selectedDateRange.from)} -{" "}
-                {formatDate(selectedDateRange.to)}
+                {formatDate(selected.from)} - {formatDate(selected.to)}
               </>
             ) : (
-              formatDate(selectedDateRange.from)
+              <>{formatDate(selected.from)} - </>
             )
           ) : (
             <span>Pick a date</span>
@@ -73,7 +72,7 @@ export function DatePickerWithRange({
         <Calendar
           initialFocus
           mode="range"
-          defaultMonth={selectedDateRange?.from}
+          defaultMonth={selected?.from}
           selected={selected}
           onSelect={(range, day) => {
             if (range) {
