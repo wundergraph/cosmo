@@ -150,3 +150,62 @@ func TestAuthorization(t *testing.T) {
 		assert.Equal(t, employeesExpectedData, rr.Body.String())
 	})
 }
+
+func TestAuthenticationMultipleProviders(t *testing.T) {
+	authServer1, err := jwks.NewServer()
+	require.NoError(t, err)
+	t.Cleanup(authServer1.Close)
+
+	authServer2, err := jwks.NewServer()
+	require.NoError(t, err)
+	t.Cleanup(authServer2.Close)
+
+	authenticator1, err := authentication.NewJWKSAuthenticator(authentication.JWKSAuthenticatorOptions{
+		Name: "1",
+		URL:  authServer1.JWKSURL(),
+	})
+	require.NoError(t, err)
+
+	authenticator2, err := authentication.NewJWKSAuthenticator(authentication.JWKSAuthenticatorOptions{
+		Name: "2",
+		URL:  authServer2.JWKSURL(),
+	})
+	require.NoError(t, err)
+
+	server := prepareServer(t, core.WithAuthenticators([]authentication.Authenticator{authenticator1, authenticator2}))
+
+	t.Run("authenticate with first provider", func(t *testing.T) {
+		token, err := authServer1.Token(nil)
+		require.NoError(t, err)
+		rr := httptest.NewRecorder()
+		req := httptest.NewRequest("POST", "/graphql", strings.NewReader(employeesQuery))
+		req.Header.Add("Authorization", "Bearer "+token)
+		server.Server.Handler.ServeHTTP(rr, req)
+		assert.Equal(t, http.StatusOK, rr.Code)
+		assert.Equal(t, "1", rr.Header().Get(xAuthenticatedByHeader))
+		assert.Equal(t, employeesExpectedData, rr.Body.String())
+	})
+
+	t.Run("authenticate with second provider", func(t *testing.T) {
+		token, err := authServer2.Token(nil)
+		require.NoError(t, err)
+		rr := httptest.NewRecorder()
+		req := httptest.NewRequest("POST", "/graphql", strings.NewReader(employeesQuery))
+		req.Header.Add("Authorization", "Bearer "+token)
+		server.Server.Handler.ServeHTTP(rr, req)
+		assert.Equal(t, http.StatusOK, rr.Code)
+		assert.Equal(t, "2", rr.Header().Get(xAuthenticatedByHeader))
+		assert.Equal(t, employeesExpectedData, rr.Body.String())
+	})
+
+	t.Run("invalid token", func(t *testing.T) {
+		rr := httptest.NewRecorder()
+		req := httptest.NewRequest("POST", "/graphql", strings.NewReader(employeesQuery))
+		req.Header.Set("Authorization", "Bearer invalid")
+		server.Server.Handler.ServeHTTP(rr, req)
+
+		assert.Equal(t, http.StatusForbidden, rr.Code)
+		assert.Equal(t, "", rr.Header().Get(xAuthenticatedByHeader))
+		assert.NotEqual(t, employeesExpectedData, rr.Body.String())
+	})
+}

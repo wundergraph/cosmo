@@ -2,6 +2,7 @@ package authentication
 
 import (
 	"context"
+	"errors"
 	"net/http"
 )
 
@@ -44,11 +45,20 @@ func (a *authentication) Claims() Claims {
 	return a.claims
 }
 
+// Authenticate tries to authenticate the given Provider using the given authenticators. If any of
+// the authenticators succeeds, the Authentication result is returned with no error. If the Provider
+// has no authentication information, the Authentication result is nil with no error. If the authentication
+// information is present but some or all of the authenticators fail to validate it, then a non-nil error
+// will be produced.
 func Authenticate(ctx context.Context, authenticators []Authenticator, p Provider) (Authentication, error) {
+	var joinedErrors error
 	for _, auth := range authenticators {
 		claims, err := auth.Authenticate(ctx, p)
 		if err != nil {
-			return nil, err
+			// If authentication fails for one provider, we try the
+			// rest before returning an error.
+			joinedErrors = errors.Join(joinedErrors, err)
+			continue
 		}
 		if claims != nil {
 			return &authentication{
@@ -57,5 +67,7 @@ func Authenticate(ctx context.Context, authenticators []Authenticator, p Provide
 			}, nil
 		}
 	}
-	return nil, nil
+	// If no authentication failed error will be nil here,
+	// even if to claims were found.
+	return nil, joinedErrors
 }
