@@ -414,6 +414,10 @@ func (h *WebSocketConnectionHandler) readJSON(v interface{}) error {
 func (h *WebSocketConnectionHandler) executeSubscription(ctx context.Context, msg *wsproto.Message) error {
 	var metrics *OperationMetrics
 
+	// In GraphQL the statusCode does not always express the error state of the request
+	// we use this flag to determine if we have an error and mark the metrics
+	hasRequestError := false
+
 	statusCode := http.StatusOK
 	responseSize := int64(0)
 
@@ -422,14 +426,15 @@ func (h *WebSocketConnectionHandler) executeSubscription(ctx context.Context, ms
 		metrics.AddClientInfo(ctx, h.clientInfo)
 
 		defer func() {
-			metrics.Finish(ctx, statusCode, responseSize)
+			metrics.Finish(ctx, hasRequestError, statusCode, responseSize)
 		}()
 	}
 
 	if len(msg.Payload) > int(h.maxRequestSizeInBytes) {
 		statusCode = http.StatusRequestEntityTooLarge
-		n, werr := h.writeErrorMessage(msg.ID, fmt.Errorf("4408: request too large"))
+		n, werr := h.writeErrorMessage(msg.ID, fmt.Errorf("request too large"))
 		if werr != nil {
+			hasRequestError = true
 			h.logger.Warn("writing error message", zap.Error(werr))
 		}
 		responseSize = int64(n)
@@ -443,17 +448,22 @@ func (h *WebSocketConnectionHandler) executeSubscription(ctx context.Context, ms
 		statusCode = http.StatusBadRequest
 		n, werr := h.writeErrorMessage(msg.ID, err)
 		if werr != nil {
+			hasRequestError = true
 			h.logger.Warn("writing error message", zap.Error(werr))
 		}
 		responseSize = int64(n)
 		return werr
 	}
 
+	// Set the operation attributes as early as possible, so they are available in the trace
+	baseMetricAttributeValues := SetSpanOperationAttributes(ctx, operation, OperationProtocolGraphQLWS)
+
 	if metrics != nil {
-		metrics.AddOperation(ctx, operation, OperationProtocolGraphQLWS)
+		metrics.AddSpanAttributes(baseMetricAttributeValues...)
 	}
 
 	if !h.globalIDs.Insert(msg.ID) {
+		hasRequestError = true
 		return fmt.Errorf("4409: Subscriber for %s already exists", msg.ID)
 	}
 	defer h.globalIDs.Remove(msg.ID)
@@ -463,13 +473,22 @@ func (h *WebSocketConnectionHandler) executeSubscription(ctx context.Context, ms
 	// This gets removed by WebSocketConnectionHandler.Complete()
 	h.subscriptions.Insert(msg.ID, cancel)
 
-	ctxWithOperation := withOperationContext(cancellableCtx, operation, h.clientInfo)
-	r := h.r.WithContext(ctxWithOperation)
 	rw := newWebsocketResponseWriter(msg.ID, h.protocol, h.logger)
 	defer h.Complete(rw)
-	r = requestWithAttachedContext(rw, r, h.logger)
+
+	requestContext, opContext := buildRequestContext(rw, h.r, h.clientInfo, operation, h.logger)
+
+	ctxWithOperation := withOperationContext(cancellableCtx, opContext)
+	r := h.r.WithContext(ctxWithOperation)
+
+	r = r.WithContext(withRequestContext(r.Context(), requestContext))
 	h.graphqlHandler.ServeHTTP(rw, r)
+
 	responseSize = int64(rw.writtenBytes)
+
+	// Evaluate the request after the request has been handled by the engine
+	hasRequestError = requestContext.hasError
+
 	return nil
 }
 
@@ -494,14 +513,14 @@ func (h *WebSocketConnectionHandler) handleConnectedMessage(msg *wsproto.Message
 		_, err := h.protocol.Pong(msg)
 		return false, err
 	case wsproto.MessageTypePong:
-		// "Furthermore, the Pong message may even be sent unsolicited as an unidirectional heartbeat"
+		// "Furthermore, the Pong message may even be sent unsolicited as a unidirectional heartbeat"
 	case wsproto.MessageTypeSubscribe:
 		return false, h.handleSubscribe(msg)
 	case wsproto.MessageTypeComplete:
 		return false, h.handleComplete(msg)
 	}
 	// "Receiving a message of a type or format which is not specified in this document will result in an immediate socket closure"
-	return true, h.requestError(fmt.Errorf("4400: unknown message type %q", msg.Type))
+	return true, h.requestError(fmt.Errorf("unknown message type %q", msg.Type))
 }
 
 func (h *WebSocketConnectionHandler) Serve() {
