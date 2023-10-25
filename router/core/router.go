@@ -344,7 +344,7 @@ func (r *Router) updateServer(ctx context.Context, cfg *nodev1.RouterConfig) err
 			)
 
 			if r.playground && r.introspection {
-				r.logger.Info("Playground available at", zap.String("url", r.baseURL+r.graphqlPath))
+				r.logger.Info("Playground available at", zap.String("url", r.baseURL))
 			}
 		}
 
