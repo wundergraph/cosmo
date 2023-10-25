@@ -16,11 +16,12 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
+	"go.uber.org/zap"
+	"golang.org/x/sync/singleflight"
+
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astnormalization"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/postprocess"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
-	"go.uber.org/zap"
-	"golang.org/x/sync/singleflight"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astvalidation"
@@ -34,7 +35,7 @@ import (
 )
 
 const (
-	ErrMsgOperationParseFailed = "failed to parse operation: %w"
+	ErrMsgOperationPlanningFailed = "failed to plan operation: %w"
 )
 
 var (
@@ -260,7 +261,7 @@ func (h *GraphQLHandler) preparePlan(requestOperationName []byte, requestOperati
 	// create and postprocess the plan
 	preparedPlan := planner.Plan(&doc, h.executor.Definition, unsafebytes.BytesToString(requestOperationName), &report)
 	if report.HasErrors() {
-		return planWithExtractedVariables{}, fmt.Errorf(ErrMsgOperationParseFailed, report)
+		return planWithExtractedVariables{}, fmt.Errorf(ErrMsgOperationPlanningFailed, report)
 	}
 	post := postprocess.DefaultProcessor()
 	post.Process(preparedPlan)
