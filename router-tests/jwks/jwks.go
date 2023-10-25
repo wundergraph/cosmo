@@ -33,8 +33,7 @@ func (s *Server) Close() {
 }
 
 func (s *Server) Token(claims map[string]any) (string, error) {
-	tokenClaims := make(jwt.MapClaims)
-	token := jwt.NewWithClaims(signingMethod, tokenClaims)
+	token := jwt.NewWithClaims(signingMethod, jwt.MapClaims(claims))
 	token.Header["kid"] = jwtKeyID
 	return token.SignedString(s.privateKey)
 }

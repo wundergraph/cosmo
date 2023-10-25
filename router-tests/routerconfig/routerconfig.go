@@ -10,9 +10,14 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+type SubgraphSchema struct {
+	File string `yaml:"file"`
+}
+
 type Subgraph struct {
-	Name       string `yaml:"name"`
-	RoutingURL string `yaml:"routing_url"`
+	Name       string          `yaml:"name"`
+	RoutingURL string          `yaml:"routing_url"`
+	Schema     *SubgraphSchema `yaml:"schema,omitempty"`
 }
 
 type Config struct {
