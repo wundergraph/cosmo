@@ -326,7 +326,7 @@ export function AnalyticsDataTable<T>({
     newQueryParams["group"] =
       AnalyticsViewGroupName[AnalyticsViewGroupName.None];
 
-    applyNewParams(newQueryParams);
+    applyNewParams(newQueryParams, ["sort", "sortDir"]);
   };
 
   return (
