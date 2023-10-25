@@ -370,8 +370,11 @@ export const FieldUsageSheet = () => {
         onPointerDownOutside={(e) => e.preventDefault()}
       >
         <SheetHeader className="mb-12">
-          <SheetTitle>
-            Field Usage for {typename}.{field}
+          <SheetTitle className="flex flex-wrap items-center gap-x-1.5">
+            Field Usage for{" "}
+            <code className="break-all rounded bg-secondary px-1.5 text-left text-secondary-foreground">
+              {typename}.{field}{" "}
+            </code>
           </SheetTitle>
         </SheetHeader>
         {content}

@@ -99,9 +99,15 @@ const Fields = (props: {
         <TableRow>
           <TableHead className="w-3/12">Field</TableHead>
           {(hasArgs || hasDetails) && (
-            <TableHead className="w-8/12">Details</TableHead>
+            <TableHead className="w-8/12 lg:w-7/12 2xl:w-8/12">
+              Details
+            </TableHead>
           )}
-          {hasUsage && <TableHead className="w-1/12">Actions</TableHead>}
+          {hasUsage && (
+            <TableHead className="w-1/12 lg:w-2/12 2xl:w-1/12">
+              Actions
+            </TableHead>
+          )}
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -344,7 +350,7 @@ const Type = (props: {
   return (
     <div className="flex flex-col">
       <div className="flex items-center gap-x-4">
-        <div className="flex items-center gap-x-2 text-xl font-semibold tracking-tight">
+        <div className="flex flex-wrap items-center gap-x-2 text-xl font-semibold tracking-tight">
           <h3>{props.name}</h3>
           {props.interfaces && props.interfaces.length > 0 && (
             <div className="font-normal text-muted-foreground">implements</div>
