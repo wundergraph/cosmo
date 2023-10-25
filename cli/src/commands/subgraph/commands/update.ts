@@ -67,8 +67,10 @@ export default (opts: BaseCommandOptions) => {
       });
 
       console.log(
-        pc.yellow(
-          'But we found composition errors, while composing the federated graph.\nThe graph will not be updated until the errors are fixed. Please check the errors below:',
+        pc.red(
+          `We found composition errors, while composing the federated graph.\nThe router will continue to work with the latest valid schema.\n${pc.bold(
+            'Please check the errors below:',
+          )}`,
         ),
       );
       for (const compositionError of resp.compositionErrors) {
@@ -77,7 +79,7 @@ export default (opts: BaseCommandOptions) => {
       // Don't exit here with 1 because the change was still applied
       console.log(compositionErrorsTable.toString());
     } else {
-      console.log(`Failed to update subgraph ${pc.bold(name)}.`);
+      console.log(pc.red(`Failed to update subgraph ${pc.bold(name)}.`));
       if (resp.response?.details) {
         console.log(pc.red(pc.bold(resp.response?.details)));
       }

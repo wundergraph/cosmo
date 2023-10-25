@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.26.0](https://github.com/wundergraph/cosmo/compare/studio@0.25.0...studio@0.26.0) (2023-10-23)
+
+### Features
+
+* allow to upsert a subgraph on publish ([#196](https://github.com/wundergraph/cosmo/issues/196)) ([27a1630](https://github.com/wundergraph/cosmo/commit/27a1630574e817412a6d5fb2b304da645a31d481)) (@StarpTech)
+
 # [0.25.0](https://github.com/wundergraph/cosmo/compare/studio@0.24.0...studio@0.25.0) (2023-10-20)
 
 ### Bug Fixes

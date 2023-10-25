@@ -379,6 +379,41 @@ export class PublishFederatedSubgraphRequest extends Message<PublishFederatedSub
    */
   schema = new Uint8Array(0);
 
+  /**
+   * routing_url is the URL of the service which will be used to route the requests to the subgraph.
+   *
+   * @generated from field: optional string routing_url = 3;
+   */
+  routingUrl?: string;
+
+  /**
+   * labels are the labels of the services which will form the federated graph. If the proposed is not valid, the service will be rejected.
+   *
+   * @generated from field: repeated wg.cosmo.platform.v1.Label labels = 4;
+   */
+  labels: Label[] = [];
+
+  /**
+   * headers are the headers which will be used to route the requests to the subgraph.
+   *
+   * @generated from field: repeated string headers = 5;
+   */
+  headers: string[] = [];
+
+  /**
+   * subscription protocol to use when subscribing to this subgraph
+   *
+   * @generated from field: optional wg.cosmo.common.GraphQLSubscriptionProtocol subscription_protocol = 6;
+   */
+  subscriptionProtocol?: GraphQLSubscriptionProtocol;
+
+  /**
+   * url used for subscriptions
+   *
+   * @generated from field: optional string subscription_url = 7;
+   */
+  subscriptionUrl?: string;
+
   constructor(data?: PartialMessage<PublishFederatedSubgraphRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -389,6 +424,11 @@ export class PublishFederatedSubgraphRequest extends Message<PublishFederatedSub
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "schema", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
+    { no: 3, name: "routing_url", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 4, name: "labels", kind: "message", T: Label, repeated: true },
+    { no: 5, name: "headers", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 6, name: "subscription_protocol", kind: "enum", T: proto3.getEnumType(GraphQLSubscriptionProtocol), opt: true },
+    { no: 7, name: "subscription_url", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PublishFederatedSubgraphRequest {
@@ -1107,6 +1147,11 @@ export class DeleteFederatedSubgraphResponse extends Message<DeleteFederatedSubg
    */
   response?: Response;
 
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.CompositionError compositionErrors = 2;
+   */
+  compositionErrors: CompositionError[] = [];
+
   constructor(data?: PartialMessage<DeleteFederatedSubgraphResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1116,6 +1161,7 @@ export class DeleteFederatedSubgraphResponse extends Message<DeleteFederatedSubg
   static readonly typeName = "wg.cosmo.platform.v1.DeleteFederatedSubgraphResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "compositionErrors", kind: "message", T: CompositionError, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteFederatedSubgraphResponse {

@@ -1,4 +1,8 @@
-import { BoltIcon, BoltSlashIcon, CircleStackIcon } from '@heroicons/react/24/outline';
+import {
+  BoltIcon,
+  BoltSlashIcon,
+  CircleStackIcon,
+} from "@heroicons/react/24/outline";
 
 export const ComposeStatus = ({
   validGraph,
@@ -41,19 +45,21 @@ export const ComposeStatus = ({
 export const ComposeStatusMessage = ({
   lastUpdatedAt,
   isComposable,
-  errors,
   subgraphsCount,
 }: {
   lastUpdatedAt?: string;
   isComposable: boolean;
-  errors: string;
   subgraphsCount: number;
 }) => {
   return lastUpdatedAt ? (
     isComposable ? (
       <span>Ready to be fetched from the router</span>
     ) : (
-      <span className="whitespace-pre-line">{errors}</span>
+      <span className="whitespace-pre-line">
+        <div className="pt-1 text-xs">
+          This version of the graph is not ready because the composition failed.
+        </div>
+      </span>
     )
   ) : subgraphsCount ? (
     <span>Please publish a subgraph.</span>

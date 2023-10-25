@@ -32,17 +32,12 @@ export default (opts: BaseCommandOptions) => {
     '--subscription-protocol <protocol>',
     'The protocol to use when subscribing to the subgraph. The supported protocols are ws, sse, and sse-post.',
   );
+
   schemaPush.action(async (name, options) => {
     const resp = await opts.client.platform.createFederatedSubgraph(
       {
         name,
-        labels: options.label.map((label: string) => {
-          const { key, value } = splitLabel(label);
-          return {
-            key,
-            value,
-          };
-        }),
+        labels: options.label.map((label: string) => splitLabel(label)),
         routingUrl: options.routingUrl,
         headers: options.header,
         // If the argument is provided but the URL is not, clear it

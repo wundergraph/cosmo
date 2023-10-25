@@ -131,6 +131,7 @@ const MigrationDialog = ({
             setIsMigrationSuccess(true);
             setToken(d.token);
           } else if (d.response?.details) {
+            setIsMigrating(false);
             toast({ description: d.response.details, duration: 3000 });
           }
           router.replace(`/${organizationSlug}/graphs`);
@@ -296,7 +297,7 @@ export const RunRouterCommand = ({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       {triggerLabel && (
-        <DialogTrigger className={triggerClassName}>
+        <DialogTrigger className={triggerClassName} asChild={true}>
           <Button
             className="w-full"
             onClick={() => {
@@ -482,7 +483,6 @@ const GraphCard = ({ graph }: { graph: FederatedGraph }) => {
                     </TooltipTrigger>
                     <TooltipContent>
                       <ComposeStatusMessage
-                        errors={graph.compositionErrors}
                         isComposable={graph.isComposable}
                         lastUpdatedAt={graph.lastUpdatedAt}
                         subgraphsCount={graph.connectedSubgraphs}

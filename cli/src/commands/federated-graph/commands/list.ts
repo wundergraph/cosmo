@@ -81,7 +81,7 @@ export default (opts: BaseCommandOptions) => {
     for (const graph of resp.graphs) {
       graphsTable.push([
         graph.name,
-        graph.labelMatchers.join(','),
+        graph.labelMatchers.map((l) => `(${l})`).join(','),
         graph.routingURL,
         graph.isComposable ? logSymbols.success : logSymbols.error,
         graph.lastUpdatedAt,
