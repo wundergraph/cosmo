@@ -7,7 +7,7 @@ describe('Health endpoint', () => {
     const server = Fastify();
     await server.register(health);
 
-    testContext.onTestFailed(async () => await server.close());
+    testContext.onTestFailed(() => server.close());
 
     const resp = await server.inject({
       method: 'GET',
