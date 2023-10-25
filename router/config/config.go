@@ -253,6 +253,9 @@ func LoadConfig(envOverride string) (*Config, error) {
 
 	// Configuration from environment variables. We don't have the config here.
 	logLevel, err := logging.ZapLogLevelFromString(c.LogLevel)
+	if err != nil {
+		return nil, err
+	}
 	logger := logging.New(!c.JSONLog, c.LogLevel == "debug", logLevel).
 		With(zap.String("component", "@wundergraph/router"))
 

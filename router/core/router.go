@@ -88,7 +88,6 @@ type (
 		graphqlPath              string
 		playground               bool
 		introspection            bool
-		production               bool
 		federatedGraphName       string
 		graphApiToken            string
 		healthCheckPath          string

@@ -3,7 +3,6 @@ package core
 import (
 	"context"
 	"errors"
-	"fmt"
 	"strconv"
 	"time"
 
@@ -14,7 +13,6 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astvalidation"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/postprocess"
-	"go.uber.org/zap"
 	"golang.org/x/sync/singleflight"
 )
 
@@ -59,7 +57,7 @@ func (p *OperationPlanner) preparePlan(requestOperationName []byte, requestOpera
 	// create and postprocess the plan
 	preparedPlan := planner.Plan(&doc, p.executor.Definition, unsafebytes.BytesToString(requestOperationName), &report)
 	if report.HasErrors() {
-		return planWithMetaData{}, fmt.Errorf(ErrMsgOperationParseFailed, report)
+		return planWithMetaData{}, errors.Join(errMsgOperationParseFailed, report)
 	}
 	post := postprocess.DefaultProcessor()
 	post.Process(preparedPlan)
@@ -76,7 +74,7 @@ func (p *OperationPlanner) preparePlan(requestOperationName []byte, requestOpera
 	}, nil
 }
 
-func (p *OperationPlanner) Plan(operation *ParsedOperation, clientInfo *ClientInfo, logger *zap.Logger) (*operationContext, error) {
+func (p *OperationPlanner) Plan(operation *ParsedOperation, clientInfo *ClientInfo) (*operationContext, error) {
 	variablesCopy := make([]byte, len(operation.Variables))
 	copy(variablesCopy, operation.Variables)
 

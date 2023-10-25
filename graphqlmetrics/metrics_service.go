@@ -12,6 +12,7 @@ import (
 	graphqlmetricsv1 "github.com/wundergraph/cosmo/graphqlmetrics/gen/proto/wg/cosmo/graphqlmetrics/v1"
 	"go.uber.org/zap"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -168,6 +169,8 @@ func (s *MetricsService) PublishGraphQLMetrics(
 				fieldUsage.TypeNames,
 				schemaUsage.ClientInfo.Name,
 				schemaUsage.ClientInfo.Version,
+				strconv.FormatInt(int64(schemaUsage.RequestInfo.StatusCode), 10),
+				schemaUsage.RequestInfo.Error,
 				fieldUsage.SubgraphIDs,
 				schemaUsage.Attributes,
 			)

@@ -166,7 +166,7 @@ func (c *requestContext) Logger() *zap.Logger {
 }
 
 // Set is used to store a new key/value pair exclusively for this context.
-// It also lazy initializes  c.keys if it was not used previously.
+// It also lazy initializes c.keys if it was not used previously.
 func (c *requestContext) Set(key string, value any) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -318,18 +318,8 @@ type OperationContext interface {
 	Hash() uint64
 	// Content is the content of the operation
 	Content() string
-	// Variables is the variables of the operation
-	Variables() []byte
 	// ClientInfo returns information about the client that initiated this operation
 	ClientInfo() ClientInfo
-}
-
-// client contains information about the GraphQL client that made the request
-type client struct {
-	// Name is the name of the client
-	name string
-	// Version is the version of the client
-	version string
 }
 
 var _ OperationContext = (*operationContext)(nil)
@@ -410,18 +400,9 @@ func subgraphsFromContext(ctx context.Context) []Subgraph {
 	return subgraphs
 }
 
-func buildRequestContext(w http.ResponseWriter, r *http.Request, clientInfo *ClientInfo, operation *ParsedOperation, requestLogger *zap.Logger) (*requestContext, *operationContext) {
+func buildRequestContext(w http.ResponseWriter, r *http.Request, opContext *operationContext, operation *ParsedOperation, requestLogger *zap.Logger) *requestContext {
 	variablesCopy := make([]byte, len(operation.Variables))
 	copy(variablesCopy, operation.Variables)
-
-	opContext := &operationContext{
-		name:       operation.Name,
-		opType:     operation.Type,
-		content:    operation.NormalizedRepresentation,
-		hash:       operation.ID,
-		variables:  variablesCopy,
-		clientInfo: clientInfo,
-	}
 
 	subgraphs := subgraphsFromContext(r.Context())
 	requestContext := &requestContext{
@@ -433,5 +414,5 @@ func buildRequestContext(w http.ResponseWriter, r *http.Request, clientInfo *Cli
 		subgraphs:      subgraphs,
 	}
 
-	return requestContext, opContext
+	return requestContext
 }

@@ -1,8 +1,8 @@
-
 -- migrate:up
 
-CREATE MATERIALIZED VIEW IF NOT EXISTS gql_metrics_schema_usage_5m_90d_mv (
-    Timestamp DateTime64(9) CODEC(Delta, ZSTD(3)),
+CREATE TABLE IF NOT EXISTS gql_metrics_schema_usage_5m_90d
+(
+    Timestamp DateTime('UTC') CODEC(Delta, ZSTD(3)),
 
     -- Organization
     OrganizationID LowCardinality(String) CODEC(ZSTD(3)),
@@ -27,6 +27,7 @@ CREATE MATERIALIZED VIEW IF NOT EXISTS gql_metrics_schema_usage_5m_90d_mv (
     -- SubgraphIDs identify the subgraphs that were used to resolve the field
     SubgraphIDs Array(LowCardinality(String)) CODEC(ZSTD(3)),
 
+    --- Total usages
     TotalUsages UInt64 CODEC(ZSTD(3)),
     TotalErrors UInt64 CODEC(ZSTD(3)),
     TotalClientErrors UInt64 CODEC(ZSTD(3)),
@@ -43,42 +44,8 @@ ENGINE = SummingMergeTree
 PARTITION BY toDate(Timestamp)
 ORDER BY (OrganizationID, FederatedGraphID, ClientName, ClientVersion, RouterConfigVersion, OperationHash, Path, TypeNames, SubgraphIDs, toUnixTimestamp(Timestamp))
 -- We store 90 days of data in this table.
-TTL toDateTime(Timestamp) + toIntervalDay(90) SETTINGS index_granularity = 8192, ttl_only_drop_parts = 1 POPULATE AS
--- Aggregate histogram buckets into a 5 minute window, Counts are summed.
-SELECT
-    -- We aggregate into 5m buckets because this is the smallest resolution we need for the dashboard.
-    toStartOfFiveMinute(Timestamp) as Timestamp,
-    OrganizationID,
-    FederatedGraphID,
-    RouterConfigVersion,
-    OperationHash,
-    -- Already part of the hash. Therefore we don't need to group by it.
-    last_value(OperationName),
-    last_value(OperationType),
-    Path,
-    TypeNames,
-    ClientName,
-    ClientVersion,
-    SubgraphIDs,
-    sum(Count) as TotalUsages,
-    sumIf(Count, position(Attributes['http.status_code'],'5') = 1 OR position(Attributes['http.status_code'],'4') = 1) as TotalErrors,
-    sumIf(Count, position(Attributes['http.status_code'],'4') = 1) AS TotalClientErrors
-FROM gql_metrics_schema_usage
-GROUP BY
-    Timestamp,
-    OperationHash,
-    FederatedGraphID,
-    RouterConfigVersion,
-    OrganizationID,
-    OperationType,
-    ClientName,
-    ClientVersion,
-    Path,
-    TypeNames,
-    SubgraphIDs
-ORDER BY
-    Timestamp;
+TTL toDateTime(Timestamp) + toIntervalDay(90) SETTINGS index_granularity = 8192, ttl_only_drop_parts = 1
 
 -- migrate:down
 
-DROP VIEW IF EXISTS gql_metrics_schema_usage_5m_90d_mv
+DROP TABLE IF EXISTS gql_metrics_schema_usage_5m_90d;

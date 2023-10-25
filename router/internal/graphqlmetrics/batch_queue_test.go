@@ -77,9 +77,7 @@ L:
 	for {
 		select {
 		case batch := <-b.OutQueue:
-			for _, b := range batch {
-				dispatched = append(dispatched, b)
-			}
+			dispatched = append(dispatched, batch...)
 		case <-breakout:
 			break L
 		}

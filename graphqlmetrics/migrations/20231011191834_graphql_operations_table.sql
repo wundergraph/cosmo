@@ -3,7 +3,7 @@
 CREATE TABLE IF NOT EXISTS gql_metrics_operations
 (
     -- See https://github.com/PostHog/posthog/issues/10616 why ZSTD(3) is used
-    Timestamp DateTime64(9) CODEC(Delta, ZSTD(3)),
+    Timestamp DateTime('UTC') CODEC(Delta, ZSTD(3)),
     OperationName LowCardinality(String) CODEC(ZSTD(3)),
     OperationHash LowCardinality(String) CODEC(ZSTD(3)),
     OperationType LowCardinality(String) CODEC(ZSTD(3)), -- query, mutation, subscription

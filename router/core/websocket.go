@@ -388,28 +388,14 @@ func (h *WebSocketConnectionHandler) requestError(err error) error {
 }
 
 func (h *WebSocketConnectionHandler) writeErrorMessage(operationID string, err error) (int, error) {
-	errors := []graphqlError{
+	gqlErrors := []graphqlError{
 		{Message: err.Error()},
 	}
-	payload, err := json.Marshal(errors)
+	payload, err := json.Marshal(gqlErrors)
 	if err != nil {
 		return 0, fmt.Errorf("encoding GraphQL errors: %w", err)
 	}
 	return h.protocol.GraphQLErrors(operationID, payload, nil)
-}
-
-func (h *WebSocketConnectionHandler) readJSON(v interface{}) error {
-	ech := make(chan error, 1)
-	go func() {
-		ech <- h.conn.ReadJSON(v)
-	}()
-	select {
-	case <-h.ctx.Done():
-		h.Close()
-		return h.ctx.Err()
-	case err := <-ech:
-		return err
-	}
 }
 
 func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperation, *operationContext, error) {
@@ -417,7 +403,7 @@ func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperat
 	if err != nil {
 		return nil, nil, err
 	}
-	opContext, err := h.planner.Plan(operation, h.clientInfo, h.logger)
+	opContext, err := h.planner.Plan(operation, h.clientInfo)
 	if err != nil {
 		return operation, nil, err
 	}
@@ -425,45 +411,24 @@ func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperat
 }
 
 func (h *WebSocketConnectionHandler) executeSubscription(ctx context.Context, msg *wsproto.Message) error {
-	var metrics *OperationMetrics
-
 	// In GraphQL the statusCode does not always express the error state of the request
 	// we use this flag to determine if we have an error and mark the metrics
 	hasRequestError := false
 
 	statusCode := http.StatusOK
-	responseSize := int64(0)
+	responseSize := 0
 
 	metrics := h.metrics.StartOperation(ctx, h.clientInfo, int64(len(msg.Payload)))
-	defer metrics.Finish(ctx, &statusCode, &responseSize)
-	if h.metrics != nil {
-		metrics = StartOperationMetrics(ctx, h.metrics, int64(len(msg.Payload)))
-		metrics.AddClientInfo(ctx, h.clientInfo)
-
-		defer func() {
-			metrics.Finish(ctx, hasRequestError, statusCode, responseSize)
-		}()
-	}
-
-	if len(msg.Payload) > int(h.maxRequestSizeInBytes) {
-		statusCode = http.StatusRequestEntityTooLarge
-		n, werr := h.writeErrorMessage(msg.ID, fmt.Errorf("request too large"))
-		if werr != nil {
-			hasRequestError = true
-			h.logger.Warn("writing error message", zap.Error(werr))
-		}
-		responseSize = int64(n)
-		return werr
-	}
+	defer func() {
+		metrics.Finish(ctx, hasRequestError, statusCode, responseSize)
+	}()
 
 	// If the operation is invalid, send an error message immediately without
 	// bothering to try to check if the ID is unique
 	operation, opContext, err := h.parseAndPlan(msg.Payload)
-	// We might have a non-nil operation even if err is nil
-	if operation != nil {
-		metrics.AddOperation(ctx, operation, OperationProtocolGraphQLWS)
-	}
 	if err != nil {
+		hasRequestError = true
+
 		var inputErr InputError
 		if errors.As(err, &inputErr) {
 			statusCode = inputErr.StatusCode()
@@ -472,20 +437,16 @@ func (h *WebSocketConnectionHandler) executeSubscription(ctx context.Context, ms
 		}
 		n, werr := h.writeErrorMessage(msg.ID, err)
 		if werr != nil {
-			hasRequestError = true
 			h.logger.Warn("writing error message", zap.Error(werr))
 		}
-		responseSize = int64(n)
+		responseSize = n
 		return werr
 	}
 
 	metrics.AddOperationContext(opContext)
-	// Set the operation attributes as early as possible, so they are available in the trace
-	baseMetricAttributeValues := SetSpanOperationAttributes(ctx, operation, OperationProtocolGraphQLWS)
 
-	if metrics != nil {
-		metrics.AddSpanAttributes(baseMetricAttributeValues...)
-	}
+	baseMetricAttributeValues := SetSpanOperationAttributes(ctx, operation, OperationProtocolGraphQLWS)
+	metrics.AddAttributes(baseMetricAttributeValues...)
 
 	if !h.globalIDs.Insert(msg.ID) {
 		hasRequestError = true
@@ -501,17 +462,16 @@ func (h *WebSocketConnectionHandler) executeSubscription(ctx context.Context, ms
 	rw := newWebsocketResponseWriter(msg.ID, h.protocol, h.logger)
 	defer h.Complete(rw)
 
-	requestContext, opContext := buildRequestContext(rw, h.r, h.clientInfo, operation, h.logger)
-
+	requestContext := buildRequestContext(rw, h.r, opContext, operation, h.logger)
 	ctxWithOperation := withOperationContext(cancellableCtx, opContext)
 	r := h.r.WithContext(ctxWithOperation)
 
 	r = r.WithContext(withRequestContext(r.Context(), requestContext))
 	h.graphqlHandler.ServeHTTP(rw, r)
 
-	responseSize = int64(rw.writtenBytes)
-
-	// Evaluate the request after the request has been handled by the engine
+	// Evaluate the request status and written response
+	// after the request has been handled by the engine
+	responseSize = rw.writtenBytes
 	hasRequestError = requestContext.hasError
 
 	return nil

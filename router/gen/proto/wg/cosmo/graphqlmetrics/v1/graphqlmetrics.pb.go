@@ -72,6 +72,61 @@ func (OperationType) EnumDescriptor() ([]byte, []int) {
 	return file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_rawDescGZIP(), []int{0}
 }
 
+type RequestInfo struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	StatusCode int32 `protobuf:"varint,1,opt,name=StatusCode,proto3" json:"StatusCode,omitempty"`
+	Error      bool  `protobuf:"varint,2,opt,name=error,proto3" json:"error,omitempty"`
+}
+
+func (x *RequestInfo) Reset() {
+	*x = RequestInfo{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_msgTypes[0]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *RequestInfo) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RequestInfo) ProtoMessage() {}
+
+func (x *RequestInfo) ProtoReflect() protoreflect.Message {
+	mi := &file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_msgTypes[0]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RequestInfo.ProtoReflect.Descriptor instead.
+func (*RequestInfo) Descriptor() ([]byte, []int) {
+	return file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *RequestInfo) GetStatusCode() int32 {
+	if x != nil {
+		return x.StatusCode
+	}
+	return 0
+}
+
+func (x *RequestInfo) GetError() bool {
+	if x != nil {
+		return x.Error
+	}
+	return false
+}
+
 type SchemaUsageInfo struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -87,14 +142,16 @@ type SchemaUsageInfo struct {
 	SchemaInfo *SchemaInfo `protobuf:"bytes,4,opt,name=SchemaInfo,proto3" json:"SchemaInfo,omitempty"`
 	// ClientInfo is the client info
 	ClientInfo *ClientInfo `protobuf:"bytes,5,opt,name=ClientInfo,proto3" json:"ClientInfo,omitempty"`
+	// RequestInfo is the request info
+	RequestInfo *RequestInfo `protobuf:"bytes,6,opt,name=RequestInfo,proto3" json:"RequestInfo,omitempty"`
 	// Attributes is a map of attributes that can be used to filter the metrics
-	Attributes map[string]string `protobuf:"bytes,6,rep,name=Attributes,proto3" json:"Attributes,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	Attributes map[string]string `protobuf:"bytes,7,rep,name=Attributes,proto3" json:"Attributes,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 }
 
 func (x *SchemaUsageInfo) Reset() {
 	*x = SchemaUsageInfo{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_msgTypes[0]
+		mi := &file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_msgTypes[1]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -107,7 +164,7 @@ func (x *SchemaUsageInfo) String() string {
 func (*SchemaUsageInfo) ProtoMessage() {}
 
 func (x *SchemaUsageInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_msgTypes[0]
+	mi := &file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_msgTypes[1]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -120,7 +177,7 @@ func (x *SchemaUsageInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SchemaUsageInfo.ProtoReflect.Descriptor instead.
 func (*SchemaUsageInfo) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_rawDescGZIP(), []int{0}
+	return file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *SchemaUsageInfo) GetRequestDocument() string {
@@ -158,6 +215,13 @@ func (x *SchemaUsageInfo) GetClientInfo() *ClientInfo {
 	return nil
 }
 
+func (x *SchemaUsageInfo) GetRequestInfo() *RequestInfo {
+	if x != nil {
+		return x.RequestInfo
+	}
+	return nil
+}
+
 func (x *SchemaUsageInfo) GetAttributes() map[string]string {
 	if x != nil {
 		return x.Attributes
@@ -179,7 +243,7 @@ type ClientInfo struct {
 func (x *ClientInfo) Reset() {
 	*x = ClientInfo{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_msgTypes[1]
+		mi := &file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_msgTypes[2]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -192,7 +256,7 @@ func (x *ClientInfo) String() string {
 func (*ClientInfo) ProtoMessage() {}
 
 func (x *ClientInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_msgTypes[1]
+	mi := &file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_msgTypes[2]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -205,7 +269,7 @@ func (x *ClientInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClientInfo.ProtoReflect.Descriptor instead.
 func (*ClientInfo) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_rawDescGZIP(), []int{1}
+	return file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *ClientInfo) GetName() string {
@@ -238,7 +302,7 @@ type OperationInfo struct {
 func (x *OperationInfo) Reset() {
 	*x = OperationInfo{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_msgTypes[2]
+		mi := &file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_msgTypes[3]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -251,7 +315,7 @@ func (x *OperationInfo) String() string {
 func (*OperationInfo) ProtoMessage() {}
 
 func (x *OperationInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_msgTypes[2]
+	mi := &file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_msgTypes[3]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -264,7 +328,7 @@ func (x *OperationInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OperationInfo.ProtoReflect.Descriptor instead.
 func (*OperationInfo) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_rawDescGZIP(), []int{2}
+	return file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *OperationInfo) GetHash() string {
@@ -300,7 +364,7 @@ type SchemaInfo struct {
 func (x *SchemaInfo) Reset() {
 	*x = SchemaInfo{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_msgTypes[3]
+		mi := &file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_msgTypes[4]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -313,7 +377,7 @@ func (x *SchemaInfo) String() string {
 func (*SchemaInfo) ProtoMessage() {}
 
 func (x *SchemaInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_msgTypes[3]
+	mi := &file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_msgTypes[4]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -326,7 +390,7 @@ func (x *SchemaInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SchemaInfo.ProtoReflect.Descriptor instead.
 func (*SchemaInfo) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_rawDescGZIP(), []int{3}
+	return file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *SchemaInfo) GetVersion() string {
@@ -354,7 +418,7 @@ type TypeFieldUsageInfo struct {
 func (x *TypeFieldUsageInfo) Reset() {
 	*x = TypeFieldUsageInfo{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_msgTypes[4]
+		mi := &file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_msgTypes[5]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -367,7 +431,7 @@ func (x *TypeFieldUsageInfo) String() string {
 func (*TypeFieldUsageInfo) ProtoMessage() {}
 
 func (x *TypeFieldUsageInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_msgTypes[4]
+	mi := &file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_msgTypes[5]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -380,7 +444,7 @@ func (x *TypeFieldUsageInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TypeFieldUsageInfo.ProtoReflect.Descriptor instead.
 func (*TypeFieldUsageInfo) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_rawDescGZIP(), []int{4}
+	return file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *TypeFieldUsageInfo) GetPath() []string {
@@ -422,7 +486,7 @@ type PublishGraphQLRequestMetricsRequest struct {
 func (x *PublishGraphQLRequestMetricsRequest) Reset() {
 	*x = PublishGraphQLRequestMetricsRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_msgTypes[5]
+		mi := &file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_msgTypes[6]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -435,7 +499,7 @@ func (x *PublishGraphQLRequestMetricsRequest) String() string {
 func (*PublishGraphQLRequestMetricsRequest) ProtoMessage() {}
 
 func (x *PublishGraphQLRequestMetricsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_msgTypes[5]
+	mi := &file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_msgTypes[6]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -448,7 +512,7 @@ func (x *PublishGraphQLRequestMetricsRequest) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use PublishGraphQLRequestMetricsRequest.ProtoReflect.Descriptor instead.
 func (*PublishGraphQLRequestMetricsRequest) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_rawDescGZIP(), []int{5}
+	return file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *PublishGraphQLRequestMetricsRequest) GetSchemaUsage() []*SchemaUsageInfo {
@@ -467,7 +531,7 @@ type PublishOperationCoverageReportResponse struct {
 func (x *PublishOperationCoverageReportResponse) Reset() {
 	*x = PublishOperationCoverageReportResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_msgTypes[6]
+		mi := &file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_msgTypes[7]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -480,7 +544,7 @@ func (x *PublishOperationCoverageReportResponse) String() string {
 func (*PublishOperationCoverageReportResponse) ProtoMessage() {}
 
 func (x *PublishOperationCoverageReportResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_msgTypes[6]
+	mi := &file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_msgTypes[7]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -493,7 +557,7 @@ func (x *PublishOperationCoverageReportResponse) ProtoReflect() protoreflect.Mes
 
 // Deprecated: Use PublishOperationCoverageReportResponse.ProtoReflect.Descriptor instead.
 func (*PublishOperationCoverageReportResponse) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_rawDescGZIP(), []int{6}
+	return file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_rawDescGZIP(), []int{7}
 }
 
 var File_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto protoreflect.FileDescriptor
@@ -505,32 +569,41 @@ var file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_rawDesc = []byte{
 	0x6f, 0x12, 0x1a, 0x77, 0x67, 0x2e, 0x63, 0x6f, 0x73, 0x6d, 0x6f, 0x2e, 0x67, 0x72, 0x61, 0x70,
 	0x68, 0x71, 0x6c, 0x6d, 0x65, 0x74, 0x72, 0x69, 0x63, 0x73, 0x2e, 0x76, 0x31, 0x1a, 0x1c, 0x77,
 	0x67, 0x2f, 0x63, 0x6f, 0x73, 0x6d, 0x6f, 0x2f, 0x63, 0x6f, 0x6d, 0x6d, 0x6f, 0x6e, 0x2f, 0x63,
-	0x6f, 0x6d, 0x6d, 0x6f, 0x6e, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x22, 0x94, 0x04, 0x0a, 0x0f,
-	0x53, 0x63, 0x68, 0x65, 0x6d, 0x61, 0x55, 0x73, 0x61, 0x67, 0x65, 0x49, 0x6e, 0x66, 0x6f, 0x12,
-	0x28, 0x0a, 0x0f, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x44, 0x6f, 0x63, 0x75, 0x6d, 0x65,
-	0x6e, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0f, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73,
-	0x74, 0x44, 0x6f, 0x63, 0x75, 0x6d, 0x65, 0x6e, 0x74, 0x12, 0x5a, 0x0a, 0x10, 0x54, 0x79, 0x70,
-	0x65, 0x46, 0x69, 0x65, 0x6c, 0x64, 0x4d, 0x65, 0x74, 0x72, 0x69, 0x63, 0x73, 0x18, 0x02, 0x20,
-	0x03, 0x28, 0x0b, 0x32, 0x2e, 0x2e, 0x77, 0x67, 0x2e, 0x63, 0x6f, 0x73, 0x6d, 0x6f, 0x2e, 0x67,
-	0x72, 0x61, 0x70, 0x68, 0x71, 0x6c, 0x6d, 0x65, 0x74, 0x72, 0x69, 0x63, 0x73, 0x2e, 0x76, 0x31,
-	0x2e, 0x54, 0x79, 0x70, 0x65, 0x46, 0x69, 0x65, 0x6c, 0x64, 0x55, 0x73, 0x61, 0x67, 0x65, 0x49,
-	0x6e, 0x66, 0x6f, 0x52, 0x10, 0x54, 0x79, 0x70, 0x65, 0x46, 0x69, 0x65, 0x6c, 0x64, 0x4d, 0x65,
-	0x74, 0x72, 0x69, 0x63, 0x73, 0x12, 0x4f, 0x0a, 0x0d, 0x4f, 0x70, 0x65, 0x72, 0x61, 0x74, 0x69,
-	0x6f, 0x6e, 0x49, 0x6e, 0x66, 0x6f, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x29, 0x2e, 0x77,
-	0x67, 0x2e, 0x63, 0x6f, 0x73, 0x6d, 0x6f, 0x2e, 0x67, 0x72, 0x61, 0x70, 0x68, 0x71, 0x6c, 0x6d,
-	0x65, 0x74, 0x72, 0x69, 0x63, 0x73, 0x2e, 0x76, 0x31, 0x2e, 0x4f, 0x70, 0x65, 0x72, 0x61, 0x74,
-	0x69, 0x6f, 0x6e, 0x49, 0x6e, 0x66, 0x6f, 0x52, 0x0d, 0x4f, 0x70, 0x65, 0x72, 0x61, 0x74, 0x69,
-	0x6f, 0x6e, 0x49, 0x6e, 0x66, 0x6f, 0x12, 0x46, 0x0a, 0x0a, 0x53, 0x63, 0x68, 0x65, 0x6d, 0x61,
-	0x49, 0x6e, 0x66, 0x6f, 0x18, 0x04, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x26, 0x2e, 0x77, 0x67, 0x2e,
-	0x63, 0x6f, 0x73, 0x6d, 0x6f, 0x2e, 0x67, 0x72, 0x61, 0x70, 0x68, 0x71, 0x6c, 0x6d, 0x65, 0x74,
-	0x72, 0x69, 0x63, 0x73, 0x2e, 0x76, 0x31, 0x2e, 0x53, 0x63, 0x68, 0x65, 0x6d, 0x61, 0x49, 0x6e,
-	0x66, 0x6f, 0x52, 0x0a, 0x53, 0x63, 0x68, 0x65, 0x6d, 0x61, 0x49, 0x6e, 0x66, 0x6f, 0x12, 0x46,
-	0x0a, 0x0a, 0x43, 0x6c, 0x69, 0x65, 0x6e, 0x74, 0x49, 0x6e, 0x66, 0x6f, 0x18, 0x05, 0x20, 0x01,
-	0x28, 0x0b, 0x32, 0x26, 0x2e, 0x77, 0x67, 0x2e, 0x63, 0x6f, 0x73, 0x6d, 0x6f, 0x2e, 0x67, 0x72,
-	0x61, 0x70, 0x68, 0x71, 0x6c, 0x6d, 0x65, 0x74, 0x72, 0x69, 0x63, 0x73, 0x2e, 0x76, 0x31, 0x2e,
-	0x43, 0x6c, 0x69, 0x65, 0x6e, 0x74, 0x49, 0x6e, 0x66, 0x6f, 0x52, 0x0a, 0x43, 0x6c, 0x69, 0x65,
-	0x6e, 0x74, 0x49, 0x6e, 0x66, 0x6f, 0x12, 0x5b, 0x0a, 0x0a, 0x41, 0x74, 0x74, 0x72, 0x69, 0x62,
-	0x75, 0x74, 0x65, 0x73, 0x18, 0x06, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x3b, 0x2e, 0x77, 0x67, 0x2e,
+	0x6f, 0x6d, 0x6d, 0x6f, 0x6e, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x22, 0x43, 0x0a, 0x0b, 0x52,
+	0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x49, 0x6e, 0x66, 0x6f, 0x12, 0x1e, 0x0a, 0x0a, 0x53, 0x74,
+	0x61, 0x74, 0x75, 0x73, 0x43, 0x6f, 0x64, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x05, 0x52, 0x0a,
+	0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x43, 0x6f, 0x64, 0x65, 0x12, 0x14, 0x0a, 0x05, 0x65, 0x72,
+	0x72, 0x6f, 0x72, 0x18, 0x02, 0x20, 0x01, 0x28, 0x08, 0x52, 0x05, 0x65, 0x72, 0x72, 0x6f, 0x72,
+	0x22, 0xdf, 0x04, 0x0a, 0x0f, 0x53, 0x63, 0x68, 0x65, 0x6d, 0x61, 0x55, 0x73, 0x61, 0x67, 0x65,
+	0x49, 0x6e, 0x66, 0x6f, 0x12, 0x28, 0x0a, 0x0f, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x44,
+	0x6f, 0x63, 0x75, 0x6d, 0x65, 0x6e, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0f, 0x52,
+	0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x44, 0x6f, 0x63, 0x75, 0x6d, 0x65, 0x6e, 0x74, 0x12, 0x5a,
+	0x0a, 0x10, 0x54, 0x79, 0x70, 0x65, 0x46, 0x69, 0x65, 0x6c, 0x64, 0x4d, 0x65, 0x74, 0x72, 0x69,
+	0x63, 0x73, 0x18, 0x02, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x2e, 0x2e, 0x77, 0x67, 0x2e, 0x63, 0x6f,
+	0x73, 0x6d, 0x6f, 0x2e, 0x67, 0x72, 0x61, 0x70, 0x68, 0x71, 0x6c, 0x6d, 0x65, 0x74, 0x72, 0x69,
+	0x63, 0x73, 0x2e, 0x76, 0x31, 0x2e, 0x54, 0x79, 0x70, 0x65, 0x46, 0x69, 0x65, 0x6c, 0x64, 0x55,
+	0x73, 0x61, 0x67, 0x65, 0x49, 0x6e, 0x66, 0x6f, 0x52, 0x10, 0x54, 0x79, 0x70, 0x65, 0x46, 0x69,
+	0x65, 0x6c, 0x64, 0x4d, 0x65, 0x74, 0x72, 0x69, 0x63, 0x73, 0x12, 0x4f, 0x0a, 0x0d, 0x4f, 0x70,
+	0x65, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x49, 0x6e, 0x66, 0x6f, 0x18, 0x03, 0x20, 0x01, 0x28,
+	0x0b, 0x32, 0x29, 0x2e, 0x77, 0x67, 0x2e, 0x63, 0x6f, 0x73, 0x6d, 0x6f, 0x2e, 0x67, 0x72, 0x61,
+	0x70, 0x68, 0x71, 0x6c, 0x6d, 0x65, 0x74, 0x72, 0x69, 0x63, 0x73, 0x2e, 0x76, 0x31, 0x2e, 0x4f,
+	0x70, 0x65, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x49, 0x6e, 0x66, 0x6f, 0x52, 0x0d, 0x4f, 0x70,
+	0x65, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x49, 0x6e, 0x66, 0x6f, 0x12, 0x46, 0x0a, 0x0a, 0x53,
+	0x63, 0x68, 0x65, 0x6d, 0x61, 0x49, 0x6e, 0x66, 0x6f, 0x18, 0x04, 0x20, 0x01, 0x28, 0x0b, 0x32,
+	0x26, 0x2e, 0x77, 0x67, 0x2e, 0x63, 0x6f, 0x73, 0x6d, 0x6f, 0x2e, 0x67, 0x72, 0x61, 0x70, 0x68,
+	0x71, 0x6c, 0x6d, 0x65, 0x74, 0x72, 0x69, 0x63, 0x73, 0x2e, 0x76, 0x31, 0x2e, 0x53, 0x63, 0x68,
+	0x65, 0x6d, 0x61, 0x49, 0x6e, 0x66, 0x6f, 0x52, 0x0a, 0x53, 0x63, 0x68, 0x65, 0x6d, 0x61, 0x49,
+	0x6e, 0x66, 0x6f, 0x12, 0x46, 0x0a, 0x0a, 0x43, 0x6c, 0x69, 0x65, 0x6e, 0x74, 0x49, 0x6e, 0x66,
+	0x6f, 0x18, 0x05, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x26, 0x2e, 0x77, 0x67, 0x2e, 0x63, 0x6f, 0x73,
+	0x6d, 0x6f, 0x2e, 0x67, 0x72, 0x61, 0x70, 0x68, 0x71, 0x6c, 0x6d, 0x65, 0x74, 0x72, 0x69, 0x63,
+	0x73, 0x2e, 0x76, 0x31, 0x2e, 0x43, 0x6c, 0x69, 0x65, 0x6e, 0x74, 0x49, 0x6e, 0x66, 0x6f, 0x52,
+	0x0a, 0x43, 0x6c, 0x69, 0x65, 0x6e, 0x74, 0x49, 0x6e, 0x66, 0x6f, 0x12, 0x49, 0x0a, 0x0b, 0x52,
+	0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x49, 0x6e, 0x66, 0x6f, 0x18, 0x06, 0x20, 0x01, 0x28, 0x0b,
+	0x32, 0x27, 0x2e, 0x77, 0x67, 0x2e, 0x63, 0x6f, 0x73, 0x6d, 0x6f, 0x2e, 0x67, 0x72, 0x61, 0x70,
+	0x68, 0x71, 0x6c, 0x6d, 0x65, 0x74, 0x72, 0x69, 0x63, 0x73, 0x2e, 0x76, 0x31, 0x2e, 0x52, 0x65,
+	0x71, 0x75, 0x65, 0x73, 0x74, 0x49, 0x6e, 0x66, 0x6f, 0x52, 0x0b, 0x52, 0x65, 0x71, 0x75, 0x65,
+	0x73, 0x74, 0x49, 0x6e, 0x66, 0x6f, 0x12, 0x5b, 0x0a, 0x0a, 0x41, 0x74, 0x74, 0x72, 0x69, 0x62,
+	0x75, 0x74, 0x65, 0x73, 0x18, 0x07, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x3b, 0x2e, 0x77, 0x67, 0x2e,
 	0x63, 0x6f, 0x73, 0x6d, 0x6f, 0x2e, 0x67, 0x72, 0x61, 0x70, 0x68, 0x71, 0x6c, 0x6d, 0x65, 0x74,
 	0x72, 0x69, 0x63, 0x73, 0x2e, 0x76, 0x31, 0x2e, 0x53, 0x63, 0x68, 0x65, 0x6d, 0x61, 0x55, 0x73,
 	0x61, 0x67, 0x65, 0x49, 0x6e, 0x66, 0x6f, 0x2e, 0x41, 0x74, 0x74, 0x72, 0x69, 0x62, 0x75, 0x74,
@@ -620,33 +693,35 @@ func file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_rawDescGZIP() []byte {
 }
 
 var file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
+var file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_goTypes = []interface{}{
 	(OperationType)(0),                             // 0: wg.cosmo.graphqlmetrics.v1.OperationType
-	(*SchemaUsageInfo)(nil),                        // 1: wg.cosmo.graphqlmetrics.v1.SchemaUsageInfo
-	(*ClientInfo)(nil),                             // 2: wg.cosmo.graphqlmetrics.v1.ClientInfo
-	(*OperationInfo)(nil),                          // 3: wg.cosmo.graphqlmetrics.v1.OperationInfo
-	(*SchemaInfo)(nil),                             // 4: wg.cosmo.graphqlmetrics.v1.SchemaInfo
-	(*TypeFieldUsageInfo)(nil),                     // 5: wg.cosmo.graphqlmetrics.v1.TypeFieldUsageInfo
-	(*PublishGraphQLRequestMetricsRequest)(nil),    // 6: wg.cosmo.graphqlmetrics.v1.PublishGraphQLRequestMetricsRequest
-	(*PublishOperationCoverageReportResponse)(nil), // 7: wg.cosmo.graphqlmetrics.v1.PublishOperationCoverageReportResponse
-	nil, // 8: wg.cosmo.graphqlmetrics.v1.SchemaUsageInfo.AttributesEntry
+	(*RequestInfo)(nil),                            // 1: wg.cosmo.graphqlmetrics.v1.RequestInfo
+	(*SchemaUsageInfo)(nil),                        // 2: wg.cosmo.graphqlmetrics.v1.SchemaUsageInfo
+	(*ClientInfo)(nil),                             // 3: wg.cosmo.graphqlmetrics.v1.ClientInfo
+	(*OperationInfo)(nil),                          // 4: wg.cosmo.graphqlmetrics.v1.OperationInfo
+	(*SchemaInfo)(nil),                             // 5: wg.cosmo.graphqlmetrics.v1.SchemaInfo
+	(*TypeFieldUsageInfo)(nil),                     // 6: wg.cosmo.graphqlmetrics.v1.TypeFieldUsageInfo
+	(*PublishGraphQLRequestMetricsRequest)(nil),    // 7: wg.cosmo.graphqlmetrics.v1.PublishGraphQLRequestMetricsRequest
+	(*PublishOperationCoverageReportResponse)(nil), // 8: wg.cosmo.graphqlmetrics.v1.PublishOperationCoverageReportResponse
+	nil, // 9: wg.cosmo.graphqlmetrics.v1.SchemaUsageInfo.AttributesEntry
 }
 var file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_depIdxs = []int32{
-	5, // 0: wg.cosmo.graphqlmetrics.v1.SchemaUsageInfo.TypeFieldMetrics:type_name -> wg.cosmo.graphqlmetrics.v1.TypeFieldUsageInfo
-	3, // 1: wg.cosmo.graphqlmetrics.v1.SchemaUsageInfo.OperationInfo:type_name -> wg.cosmo.graphqlmetrics.v1.OperationInfo
-	4, // 2: wg.cosmo.graphqlmetrics.v1.SchemaUsageInfo.SchemaInfo:type_name -> wg.cosmo.graphqlmetrics.v1.SchemaInfo
-	2, // 3: wg.cosmo.graphqlmetrics.v1.SchemaUsageInfo.ClientInfo:type_name -> wg.cosmo.graphqlmetrics.v1.ClientInfo
-	8, // 4: wg.cosmo.graphqlmetrics.v1.SchemaUsageInfo.Attributes:type_name -> wg.cosmo.graphqlmetrics.v1.SchemaUsageInfo.AttributesEntry
-	0, // 5: wg.cosmo.graphqlmetrics.v1.OperationInfo.Type:type_name -> wg.cosmo.graphqlmetrics.v1.OperationType
-	1, // 6: wg.cosmo.graphqlmetrics.v1.PublishGraphQLRequestMetricsRequest.SchemaUsage:type_name -> wg.cosmo.graphqlmetrics.v1.SchemaUsageInfo
-	6, // 7: wg.cosmo.graphqlmetrics.v1.GraphQLMetricsService.PublishGraphQLMetrics:input_type -> wg.cosmo.graphqlmetrics.v1.PublishGraphQLRequestMetricsRequest
-	7, // 8: wg.cosmo.graphqlmetrics.v1.GraphQLMetricsService.PublishGraphQLMetrics:output_type -> wg.cosmo.graphqlmetrics.v1.PublishOperationCoverageReportResponse
-	8, // [8:9] is the sub-list for method output_type
-	7, // [7:8] is the sub-list for method input_type
-	7, // [7:7] is the sub-list for extension type_name
-	7, // [7:7] is the sub-list for extension extendee
-	0, // [0:7] is the sub-list for field type_name
+	6, // 0: wg.cosmo.graphqlmetrics.v1.SchemaUsageInfo.TypeFieldMetrics:type_name -> wg.cosmo.graphqlmetrics.v1.TypeFieldUsageInfo
+	4, // 1: wg.cosmo.graphqlmetrics.v1.SchemaUsageInfo.OperationInfo:type_name -> wg.cosmo.graphqlmetrics.v1.OperationInfo
+	5, // 2: wg.cosmo.graphqlmetrics.v1.SchemaUsageInfo.SchemaInfo:type_name -> wg.cosmo.graphqlmetrics.v1.SchemaInfo
+	3, // 3: wg.cosmo.graphqlmetrics.v1.SchemaUsageInfo.ClientInfo:type_name -> wg.cosmo.graphqlmetrics.v1.ClientInfo
+	1, // 4: wg.cosmo.graphqlmetrics.v1.SchemaUsageInfo.RequestInfo:type_name -> wg.cosmo.graphqlmetrics.v1.RequestInfo
+	9, // 5: wg.cosmo.graphqlmetrics.v1.SchemaUsageInfo.Attributes:type_name -> wg.cosmo.graphqlmetrics.v1.SchemaUsageInfo.AttributesEntry
+	0, // 6: wg.cosmo.graphqlmetrics.v1.OperationInfo.Type:type_name -> wg.cosmo.graphqlmetrics.v1.OperationType
+	2, // 7: wg.cosmo.graphqlmetrics.v1.PublishGraphQLRequestMetricsRequest.SchemaUsage:type_name -> wg.cosmo.graphqlmetrics.v1.SchemaUsageInfo
+	7, // 8: wg.cosmo.graphqlmetrics.v1.GraphQLMetricsService.PublishGraphQLMetrics:input_type -> wg.cosmo.graphqlmetrics.v1.PublishGraphQLRequestMetricsRequest
+	8, // 9: wg.cosmo.graphqlmetrics.v1.GraphQLMetricsService.PublishGraphQLMetrics:output_type -> wg.cosmo.graphqlmetrics.v1.PublishOperationCoverageReportResponse
+	9, // [9:10] is the sub-list for method output_type
+	8, // [8:9] is the sub-list for method input_type
+	8, // [8:8] is the sub-list for extension type_name
+	8, // [8:8] is the sub-list for extension extendee
+	0, // [0:8] is the sub-list for field type_name
 }
 
 func init() { file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_init() }
@@ -656,7 +731,7 @@ func file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_init() {
 	}
 	if !protoimpl.UnsafeEnabled {
 		file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_msgTypes[0].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*SchemaUsageInfo); i {
+			switch v := v.(*RequestInfo); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -668,7 +743,7 @@ func file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_init() {
 			}
 		}
 		file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ClientInfo); i {
+			switch v := v.(*SchemaUsageInfo); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -680,7 +755,7 @@ func file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_init() {
 			}
 		}
 		file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*OperationInfo); i {
+			switch v := v.(*ClientInfo); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -692,7 +767,7 @@ func file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_init() {
 			}
 		}
 		file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*SchemaInfo); i {
+			switch v := v.(*OperationInfo); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -704,7 +779,7 @@ func file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_init() {
 			}
 		}
 		file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*TypeFieldUsageInfo); i {
+			switch v := v.(*SchemaInfo); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -716,7 +791,7 @@ func file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_init() {
 			}
 		}
 		file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_msgTypes[5].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*PublishGraphQLRequestMetricsRequest); i {
+			switch v := v.(*TypeFieldUsageInfo); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -728,6 +803,18 @@ func file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_init() {
 			}
 		}
 		file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_msgTypes[6].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*PublishGraphQLRequestMetricsRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*PublishOperationCoverageReportResponse); i {
 			case 0:
 				return &v.state
@@ -746,7 +833,7 @@ func file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto_rawDesc,
 			NumEnums:      1,
-			NumMessages:   8,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

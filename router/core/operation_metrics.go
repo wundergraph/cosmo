@@ -36,7 +36,7 @@ type OperationMetrics struct {
 	opContext            *operationContext
 }
 
-func (m *OperationMetrics) exportSchemaUsageInfo(operationContext *operationContext, attributes graphqlmetrics.Attributes) {
+func (m *OperationMetrics) exportSchemaUsageInfo(operationContext *operationContext, statusCode int, hasError bool) {
 	if m.gqlMetricsExporter == nil {
 		return
 	}
@@ -78,11 +78,21 @@ func (m *OperationMetrics) exportSchemaUsageInfo(operationContext *operationCont
 			Name:    operationContext.clientInfo.Name,
 			Version: operationContext.clientInfo.Version,
 		},
-		Attributes: attributes,
+		RequestInfo: &graphqlmetricsv1.RequestInfo{
+			Error:      hasError,
+			StatusCode: int32(statusCode),
+		},
 	})
 }
 
-func (m *OperationMetrics) Finish(ctx context.Context, hasErrored bool, statusCode int, responseSize int64) {
+func (m *OperationMetrics) AddOperationContext(opContext *operationContext) {
+	if m == nil {
+		return
+	}
+	m.opContext = opContext
+}
+
+func (m *OperationMetrics) Finish(ctx context.Context, hasErrored bool, statusCode int, responseSize int) {
 	if m == nil {
 		return
 	}
@@ -99,16 +109,17 @@ func (m *OperationMetrics) Finish(ctx context.Context, hasErrored bool, statusCo
 		m.operationStartTime,
 		m.metricBaseFields...,
 	)
-	m.metrics.MeasureResponseSize(ctx, responseSize, m.metricBaseFields...)
+	m.metrics.MeasureResponseSize(ctx, int64(responseSize), m.metricBaseFields...)
 
 	if m.opContext != nil {
-		m.exportSchemaUsageInfo(m.opContext, graphqlmetrics.Attributes{
-			graphqlmetrics.HTTPStatusCodeAttribute: strconv.Itoa(statusCode),
-		})
+		m.exportSchemaUsageInfo(m.opContext, statusCode, hasErrored)
 	}
 }
 
-func (m *OperationMetrics) AddSpanAttributes(kv ...attribute.KeyValue) {
+func (m *OperationMetrics) AddAttributes(kv ...attribute.KeyValue) {
+	if m == nil {
+		return
+	}
 	m.metricBaseFields = append(m.metricBaseFields, kv...)
 }
 
@@ -146,6 +157,10 @@ func startOperationMetrics(ctx context.Context, mtr *metric.Metrics, requestCont
 }
 
 func SetSpanOperationAttributes(ctx context.Context, operation *ParsedOperation, protocol OperationProtocol) []attribute.KeyValue {
+	if operation == nil {
+		return nil
+	}
+
 	var baseMetricAttributeValues []attribute.KeyValue
 
 	// Set the operation name as early as possible so that it is available in the trace

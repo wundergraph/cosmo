@@ -31,7 +31,6 @@ type client struct {
 	mu                   sync.Mutex
 	configCh             chan *nodev1.RouterConfig
 	pollInterval         time.Duration
-	configFilePath       string
 }
 
 func New(opts ...Option) ConfigFetcher {

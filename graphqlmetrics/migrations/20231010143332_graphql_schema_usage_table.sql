@@ -3,7 +3,7 @@
 CREATE TABLE IF NOT EXISTS gql_metrics_schema_usage
 (
     -- See https://github.com/PostHog/posthog/issues/10616 why ZSTD(3) is used
-    Timestamp DateTime64(9) CODEC(Delta, ZSTD(3)),
+    Timestamp DateTime('UTC') CODEC(Delta, ZSTD(3)),
 
     -- Organization
     OrganizationID LowCardinality(String) CODEC(ZSTD(3)),
@@ -28,6 +28,10 @@ CREATE TABLE IF NOT EXISTS gql_metrics_schema_usage
     ClientName LowCardinality(String) CODEC(ZSTD(3)),
     ClientVersion LowCardinality(String) CODEC(ZSTD(3)),
 
+    --- Request information
+    HttpStatusCode String CODEC (ZSTD(3)),
+    HasError bool CODEC(ZSTD(3)), -- Whether the operation has an error of any kind
+
     -- SubgraphIDs identify the subgraphs that were used to resolve the field
     SubgraphIDs Array(LowCardinality(String)) CODEC(ZSTD(3)), -- Sorted before insertion
 
@@ -43,11 +47,11 @@ CREATE TABLE IF NOT EXISTS gql_metrics_schema_usage
     INDEX idx_count Count TYPE minmax GRANULARITY 1
 )
     engine = MergeTree PARTITION BY toDate(Timestamp)
-        ORDER BY (OrganizationID, FederatedGraphID, ClientName, ClientVersion, RouterConfigVersion, OperationHash, toUnixTimestamp(Timestamp))
-        -- We keep 3 days of data as rolling window
-        TTL toDateTime(Timestamp) + toIntervalDay(3)
+        ORDER BY (OrganizationID, FederatedGraphID, ClientName, ClientVersion, RouterConfigVersion, OperationHash, HttpStatusCode, HasError, toUnixTimestamp(Timestamp))
+        -- We keep 7 days of data as rolling window
+        TTL toDateTime(Timestamp) + toIntervalDay(7)
         SETTINGS index_granularity = 8192, ttl_only_drop_parts = 1;
 
 -- migrate:down
 
-DROP TABLE gql_metrics_schema_usage;
+DROP TABLE IF EXISTS gql_metrics_schema_usage;

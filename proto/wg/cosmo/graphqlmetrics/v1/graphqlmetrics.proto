@@ -12,6 +12,11 @@ enum OperationType {
   SUBSCRIPTION = 2;
 }
 
+message RequestInfo {
+  int32 StatusCode = 1;
+  bool error = 2;
+}
+
 message SchemaUsageInfo {
   // RequestDocument is the GraphQL request document
   string RequestDocument = 1;
@@ -23,8 +28,10 @@ message SchemaUsageInfo {
   SchemaInfo SchemaInfo = 4;
   // ClientInfo is the client info
   ClientInfo ClientInfo = 5;
+ // RequestInfo is the request info
+  RequestInfo RequestInfo = 6;
   // Attributes is a map of attributes that can be used to filter the metrics
-  map<string,string> Attributes = 6;
+  map<string,string> Attributes = 7;
 }
 
 message ClientInfo {
