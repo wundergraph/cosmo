@@ -60,6 +60,17 @@ jobs:
         working-directory: ./graphqlmetrics
         run: go mod download
 
+      - name: Run go vet
+        run: "go vet ./..."
+        working-directory: ./graphqlmetrics
+
+      - name: Run staticcheck linter
+        uses: dominikh/staticcheck-action@v1.3.0
+        with:
+          version: "2023.1.6"
+          install-go: false
+          working-directory: ./graphqlmetrics
+
       - name: Test
         working-directory: ./graphqlmetrics
         run: make test
