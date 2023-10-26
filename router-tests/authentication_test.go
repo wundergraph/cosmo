@@ -1,11 +1,14 @@
 package integration_test
 
 import (
+	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
+	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/jwks"
@@ -20,7 +23,7 @@ const (
 	xAuthenticatedByHeader = "X-Authenticated-By"
 )
 
-func setupServerWithJWKS(tb testing.TB, jwksOpts *authentication.JWKSAuthenticatorOptions, opts ...core.Option) (*core.Server, *jwks.Server) {
+func setupServerWithJWKS(tb testing.TB, jwksOpts *authentication.JWKSAuthenticatorOptions, authRequired bool, opts ...core.Option) (*core.Server, *jwks.Server) {
 	authServer, err := jwks.NewServer()
 	require.NoError(tb, err)
 	tb.Cleanup(authServer.Close)
@@ -31,15 +34,22 @@ func setupServerWithJWKS(tb testing.TB, jwksOpts *authentication.JWKSAuthenticat
 	jwksOpts.URL = authServer.JWKSURL()
 	authenticator, err := authentication.NewJWKSAuthenticator(*jwksOpts)
 	require.NoError(tb, err)
+	authenticators := []authentication.Authenticator{authenticator}
 	serverOpts := []core.Option{
-		core.WithAuthenticators([]authentication.Authenticator{authenticator}),
+		core.WithAccessController(core.NewAccessController(authenticators, authRequired)),
 	}
 	serverOpts = append(serverOpts, opts...)
 	return prepareServer(tb, serverOpts...), authServer
 }
 
+func assertHasGraphQLErrors(t *testing.T, rr *httptest.ResponseRecorder) {
+	var m map[string]interface{}
+	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &m))
+	assert.NotNil(t, m["errors"])
+}
+
 func TestAuthentication(t *testing.T) {
-	server, jwksServer := setupServerWithJWKS(t, nil)
+	server, jwksServer := setupServerWithJWKS(t, nil, false)
 
 	t.Run("no token", func(t *testing.T) {
 		// Operations without token should work succeed
@@ -58,7 +68,7 @@ func TestAuthentication(t *testing.T) {
 		req.Header.Set("Authorization", "Bearer invalid")
 		server.Server.Handler.ServeHTTP(rr, req)
 
-		assert.Equal(t, http.StatusForbidden, rr.Code)
+		assert.Equal(t, http.StatusOK, rr.Code)
 		assert.Equal(t, "", rr.Header().Get(xAuthenticatedByHeader))
 		assert.NotEqual(t, employeesExpectedData, rr.Body.String())
 	})
@@ -87,7 +97,7 @@ func TestAuthenticationWithCustomHeaders(t *testing.T) {
 		HeaderNames:         []string{headerName},
 		HeaderValuePrefixes: []string{headerValuePrefix},
 	}
-	server, jwksServer := setupServerWithJWKS(t, jwksOpts)
+	server, jwksServer := setupServerWithJWKS(t, jwksOpts, false)
 	token, err := jwksServer.Token(nil)
 	require.NoError(t, err)
 
@@ -112,16 +122,16 @@ func TestAuthenticationWithCustomHeaders(t *testing.T) {
 }
 
 func TestAuthorization(t *testing.T) {
-	server, jwksServer := setupServerWithJWKS(t, nil, core.WithAuthenticationRequired(true))
+	server, jwksServer := setupServerWithJWKS(t, nil, true)
 
 	t.Run("no token", func(t *testing.T) {
 		// Operations without token should work succeed
 		rr := httptest.NewRecorder()
 		req := httptest.NewRequest("POST", "/graphql", strings.NewReader(employeesQuery))
 		server.Server.Handler.ServeHTTP(rr, req)
-		assert.Equal(t, http.StatusUnauthorized, rr.Code)
+		assert.Equal(t, http.StatusOK, rr.Code)
 		assert.Equal(t, "", rr.Header().Get(xAuthenticatedByHeader))
-		assert.NotEqual(t, employeesExpectedData, rr.Body.String())
+		assert.JSONEq(t, `{"errors":[{"message":"unauthorized"}]}`, rr.Body.String())
 	})
 
 	t.Run("invalid token", func(t *testing.T) {
@@ -131,9 +141,9 @@ func TestAuthorization(t *testing.T) {
 		req.Header.Set("Authorization", "Bearer invalid")
 		server.Server.Handler.ServeHTTP(rr, req)
 
-		assert.Equal(t, http.StatusForbidden, rr.Code)
+		assert.Equal(t, http.StatusOK, rr.Code)
 		assert.Equal(t, "", rr.Header().Get(xAuthenticatedByHeader))
-		assert.NotEqual(t, employeesExpectedData, rr.Body.String())
+		assertHasGraphQLErrors(t, rr)
 	})
 
 	t.Run("valid token", func(t *testing.T) {
@@ -175,8 +185,9 @@ func TestAuthenticationMultipleProviders(t *testing.T) {
 		URL:                 authServer2.JWKSURL(),
 	})
 	require.NoError(t, err)
-
-	server := prepareServer(t, core.WithAuthenticators([]authentication.Authenticator{authenticator1, authenticator2}))
+	authenticators := []authentication.Authenticator{authenticator1, authenticator2}
+	accessController := core.NewAccessController(authenticators, false)
+	server := prepareServer(t, core.WithAccessController(accessController))
 
 	t.Run("authenticate with first provider", func(t *testing.T) {
 		for _, prefix := range authenticator1HeaderValuePrefixes {
@@ -218,8 +229,42 @@ func TestAuthenticationMultipleProviders(t *testing.T) {
 		req.Header.Set("Authorization", "Bearer invalid")
 		server.Server.Handler.ServeHTTP(rr, req)
 
-		assert.Equal(t, http.StatusForbidden, rr.Code)
+		assert.Equal(t, http.StatusOK, rr.Code)
 		assert.Equal(t, "", rr.Header().Get(xAuthenticatedByHeader))
-		assert.NotEqual(t, employeesExpectedData, rr.Body.String())
+		assertHasGraphQLErrors(t, rr)
 	})
+}
+
+func TestAuthenticationOverWebsocket(t *testing.T) {
+	authServer, err := jwks.NewServer()
+	require.NoError(t, err)
+	defer authServer.Close()
+
+	jwksOpts := authentication.JWKSAuthenticatorOptions{
+		Name: jwksName,
+		URL:  authServer.JWKSURL(),
+	}
+
+	authenticator, err := authentication.NewJWKSAuthenticator(jwksOpts)
+	require.NoError(t, err)
+	authenticators := []authentication.Authenticator{authenticator}
+	serverOpts := []core.Option{
+		core.WithAccessController(core.NewAccessController(authenticators, true)),
+	}
+	_, serverPort := setupListeningServer(t, serverOpts...)
+
+	dialer := websocket.Dialer{
+		Subprotocols: []string{"graphql-transport-ws"},
+	}
+	_, _, err = dialer.Dial(fmt.Sprintf("ws://localhost:%d/graphql", serverPort), nil)
+	require.Error(t, err)
+
+	token, err := authServer.Token(nil)
+	require.NoError(t, err)
+	headers := http.Header{
+		"Authorization": []string{"Bearer " + token},
+	}
+	_, _, err = dialer.Dial(fmt.Sprintf("ws://localhost:%d/graphql", serverPort), headers)
+	require.NoError(t, err)
+
 }

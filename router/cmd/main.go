@@ -139,8 +139,7 @@ func Main() {
 		core.WithTracing(traceConfig(&cfg.Telemetry)),
 		core.WithMetrics(metricsConfig(&cfg.Telemetry)),
 		core.WithEngineExecutionConfig(cfg.EngineExecutionConfiguration),
-		core.WithAuthenticators(authenticators),
-		core.WithAuthenticationRequired(cfg.Authorization.RequireAuthentication),
+		core.WithAccessController(core.NewAccessController(authenticators, cfg.Authorization.RequireAuthentication)),
 	)
 
 	if err != nil {

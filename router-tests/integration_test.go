@@ -180,13 +180,16 @@ func setupServer(tb testing.TB) *core.Server {
 // setupListeningServer calls setupServer to set up the server but makes it listen
 // on the network, automatically registering a cleanup function to shut it down.
 // It returns both the server and the local port where the server is listening.
-func setupListeningServer(tb testing.TB) (*core.Server, int) {
+func setupListeningServer(tb testing.TB, opts ...core.Option) (*core.Server, int) {
 	listener, err := net.Listen("tcp", ":0")
 	require.NoError(tb, err)
 	port := listener.Addr().(*net.TCPAddr).Port
 	listener.Close()
 
-	server := prepareServer(tb, core.WithListenerAddr(":"+strconv.Itoa(port)))
+	serverOpts := append([]core.Option{
+		core.WithListenerAddr(":" + strconv.Itoa(port)),
+	}, opts...)
+	server := prepareServer(tb, serverOpts...)
 	go func() {
 		err := server.Server.ListenAndServe()
 		if err != http.ErrServerClosed {
