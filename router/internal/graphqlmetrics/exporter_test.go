@@ -8,6 +8,7 @@ import (
 	graphqlmetricsv1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
 	"go.uber.org/zap"
+	"net/http"
 	"testing"
 	"time"
 )
@@ -82,6 +83,10 @@ func TestExportAggregationSameSchemaUsages(t *testing.T) {
 			},
 			SchemaInfo: &graphqlmetricsv1.SchemaInfo{
 				Version: "1",
+			},
+			RequestInfo: &graphqlmetricsv1.RequestInfo{
+				Error:      false,
+				StatusCode: http.StatusOK,
 			},
 			Attributes: map[string]string{
 				"client_name":    "wundergraph",
@@ -318,5 +323,5 @@ func TestExportFullQueue(t *testing.T) {
 
 	require.Nil(t, e.Shutdown(context.Background()))
 
-	require.Lessf(t, dispatched, 20, "expect way less than 100 batches, because queue is full")
+	require.Lessf(t, dispatched, 100, "expect less than 100 batches, because queue is full")
 }

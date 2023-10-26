@@ -348,7 +348,7 @@ func (r *Router) updateServer(ctx context.Context, cfg *nodev1.RouterConfig) err
 			)
 
 			if r.playground && r.introspection {
-				r.logger.Info("Playground available at", zap.String("url", r.baseURL+r.graphqlPath))
+				r.logger.Info("Playground available at", zap.String("url", r.baseURL))
 			}
 		}
 
@@ -765,9 +765,6 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 
 		subChiRouter.Use(r.routerMiddlewares...)
 		subChiRouter.Post("/", graphqlHandler.ServeHTTP)
-		if r.playground {
-			subChiRouter.Get("/", graphqlPlaygroundHandler.ServeHTTP)
-		}
 	})
 
 	r.logger.Debug("GraphQLHandler registered",

@@ -60,6 +60,10 @@ jobs:
         working-directory: ./graphqlmetrics
         run: go mod download
 
+      - uses: ./.github/actions/go-linter
+        with:
+          working-directory: ./graphqlmetrics
+
       - name: Test
         working-directory: ./graphqlmetrics
         run: make test
