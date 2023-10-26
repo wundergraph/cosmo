@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/internal/otel"
+	"go.opentelemetry.io/otel/trace"
 	"io"
 	"net/http"
 	"sync"
@@ -445,8 +447,14 @@ func (h *WebSocketConnectionHandler) executeSubscription(ctx context.Context, ms
 
 	metrics.AddOperationContext(opContext)
 
-	baseMetricAttributeValues := SetSpanOperationAttributes(ctx, operation, OperationProtocolGraphQLWS)
-	metrics.AddAttributes(baseMetricAttributeValues...)
+	commonAttributeValues := commonMetricAttributes(operation, OperationProtocolGraphQLWS)
+	metrics.AddAttributes(commonAttributeValues...)
+
+	span := trace.SpanFromContext(ctx)
+	span.SetName(GetSpanName(operation.Name, operation.Type))
+	span.SetAttributes(commonAttributeValues...)
+	// Only set the query content on the span
+	span.SetAttributes(otel.WgOperationContent.String(operation.Query))
 
 	if !h.globalIDs.Insert(msg.ID) {
 		hasRequestError = true

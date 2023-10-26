@@ -78,9 +78,11 @@ type Tracing struct {
 }
 
 type Prometheus struct {
-	Enabled    bool   `yaml:"enabled" default:"true" envconfig:"PROMETHEUS_ENABLED"`
-	Path       string `yaml:"path" default:"/metrics" validate:"uri" envconfig:"PROMETHEUS_HTTP_PATH"`
-	ListenAddr string `yaml:"listen_addr" default:"127.0.0.1:8088" validate:"hostname_port" envconfig:"PROMETHEUS_LISTEN_ADDR"`
+	Enabled             bool     `yaml:"enabled" default:"true" envconfig:"PROMETHEUS_ENABLED"`
+	Path                string   `yaml:"path" default:"/metrics" validate:"uri" envconfig:"PROMETHEUS_HTTP_PATH"`
+	ListenAddr          string   `yaml:"listen_addr" default:"127.0.0.1:8088" validate:"hostname_port" envconfig:"PROMETHEUS_LISTEN_ADDR"`
+	ExcludeMetrics      []string `yaml:"exclude_metrics" envconfig:"PROMETHEUS_EXCLUDE_METRICS"`
+	ExcludeMetricLabels []string `yaml:"exclude_metric_labels" envconfig:"PROMETHEUS_EXCLUDE_METRIC_LABELS"`
 }
 
 type MetricsOTLPExporter struct {

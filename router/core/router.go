@@ -437,7 +437,7 @@ func (r *Router) NewTestServer(ctx context.Context) (*Server, error) {
 
 func (r *Router) bootstrap(ctx context.Context) error {
 	if r.traceConfig.Enabled {
-		tp, err := trace.StartAgent(ctx, r.logger, r.traceConfig)
+		tp, err := trace.NewTracerProvider(ctx, r.logger, r.traceConfig)
 		if err != nil {
 			return fmt.Errorf("failed to start trace agent: %w", err)
 		}
@@ -446,14 +446,14 @@ func (r *Router) bootstrap(ctx context.Context) error {
 
 	// Prometheus metrics rely on OTLP metrics
 	if r.metricConfig.IsEnabled() {
-		mp, err := metric.StartAgent(ctx, r.logger, r.metricConfig)
+		mp, pr, err := metric.NewMeterProvider(ctx, r.logger, r.metricConfig)
 		if err != nil {
 			return fmt.Errorf("failed to start trace agent: %w", err)
 		}
 		r.meterProvider = mp
 
-		if r.metricConfig.Prometheus.Enabled {
-			promSvr := createPrometheus(r.logger, r.metricConfig.Prometheus.ListenAddr, r.metricConfig.Prometheus.Path)
+		if pr != nil && r.metricConfig.Prometheus.Enabled {
+			promSvr := createPrometheus(r.logger, pr, r.metricConfig.Prometheus.ListenAddr, r.metricConfig.Prometheus.Path)
 			go func() {
 				if err := promSvr.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 					r.logger.Error("Failed to start Prometheus server", zap.Error(err))
@@ -853,10 +853,15 @@ func (r *Server) Shutdown(ctx context.Context) (err error) {
 	return err
 }
 
-func createPrometheus(logger *zap.Logger, listenAddr, path string) *http.Server {
+func createPrometheus(logger *zap.Logger, registry *metric.PromRegistry, listenAddr, path string) *http.Server {
 	r := chi.NewRouter()
 	r.Use(middleware.Recoverer)
-	r.Handle(path, promhttp.Handler())
+	r.Handle(path, promhttp.HandlerFor(registry, promhttp.HandlerOpts{
+		EnableOpenMetrics: true,
+		ErrorLog:          zap.NewStdLog(logger),
+		Registry:          registry,
+		Timeout:           time.Second * 2,
+	}))
 
 	svr := &http.Server{
 		Addr:              listenAddr,

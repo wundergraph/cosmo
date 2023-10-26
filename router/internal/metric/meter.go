@@ -3,14 +3,17 @@ package metric
 import (
 	"context"
 	"fmt"
+	"github.com/prometheus/client_golang/prometheus/collectors"
+	wgotel "github.com/wundergraph/cosmo/router/internal/otel"
 	"net/url"
 	"time"
 
+	prom "github.com/prometheus/client_golang/prometheus"
 	"github.com/wundergraph/cosmo/router/internal/otel/otelconfig"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
-	"go.opentelemetry.io/otel/exporters/prometheus"
+	otelprom "go.opentelemetry.io/otel/exporters/prometheus"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -22,6 +25,9 @@ import (
 
 var (
 	mp *sdkmetric.MeterProvider
+	// Excluded by default from Prometheus export because of high cardinality
+	// This would produce a metric series for each unique operation
+	defaultExcludedPromMetricLabels = []string{string(wgotel.WgOperationHash)}
 )
 
 const (
@@ -29,17 +35,23 @@ const (
 	defaultExportInterval = 15 * time.Second
 )
 
-// StartAgent starts an opentelemetry metric agent.
-func StartAgent(ctx context.Context, log *zap.Logger, c *Config) (*sdkmetric.MeterProvider, error) {
-	return startAgent(ctx, log, c)
-}
-
-func createPromExporter() (*prometheus.Exporter, error) {
-	prometheusExporter, err := prometheus.New(prometheus.WithoutUnits())
+func createPromExporter(excludeMetrics, excludeMetricLabels []string) (*otelprom.Exporter, *PromRegistry, error) {
+	excludeMetricLabels = append(excludeMetricLabels, defaultExcludedPromMetricLabels...)
+	registry, err := NewPromRegistry(prom.NewRegistry(), excludeMetrics, excludeMetricLabels)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return prometheusExporter, nil
+	registry.MustRegister(collectors.NewGoCollector())
+	registry.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
+
+	prometheusExporter, err := otelprom.New(
+		otelprom.WithoutUnits(),
+		otelprom.WithRegisterer(registry),
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+	return prometheusExporter, registry, nil
 }
 
 func createOTELExporter(log *zap.Logger, exp *OpenTelemetryExporter) (sdkmetric.Exporter, error) {
@@ -122,7 +134,7 @@ func createOTELExporter(log *zap.Logger, exp *OpenTelemetryExporter) (sdkmetric.
 	return exporter, nil
 }
 
-func startAgent(ctx context.Context, log *zap.Logger, c *Config) (*sdkmetric.MeterProvider, error) {
+func NewMeterProvider(ctx context.Context, log *zap.Logger, c *Config) (*sdkmetric.MeterProvider, *PromRegistry, error) {
 	r, err := resource.New(ctx,
 		resource.WithAttributes(semconv.ServiceNameKey.String(c.Name)),
 		resource.WithProcessPID(),
@@ -130,7 +142,7 @@ func startAgent(ctx context.Context, log *zap.Logger, c *Config) (*sdkmetric.Met
 		resource.WithHost(),
 	)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	opts := []sdkmetric.Option{
@@ -138,12 +150,14 @@ func startAgent(ctx context.Context, log *zap.Logger, c *Config) (*sdkmetric.Met
 		sdkmetric.WithResource(r),
 	}
 
+	var registry *PromRegistry
+
 	if c.OpenTelemetry.Enabled {
 		for _, exp := range c.OpenTelemetry.Exporters {
 			exporter, err := createOTELExporter(log, exp)
 			if err != nil {
 				log.Error("creating OTEL metrics exporter", zap.Error(err))
-				return nil, err
+				return nil, nil, err
 			}
 
 			// Please version this meter name if you change the buckets.
@@ -194,10 +208,15 @@ func startAgent(ctx context.Context, log *zap.Logger, c *Config) (*sdkmetric.Met
 	}
 
 	if c.Prometheus.Enabled {
-		promExp, err := createPromExporter()
+		promExp, promReg, err := createPromExporter(
+			c.Prometheus.ExcludeMetrics,
+			c.Prometheus.ExcludeMetricLabels,
+		)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
+
+		registry = promReg
 
 		opts = append(opts, sdkmetric.WithReader(promExp))
 	}
@@ -206,5 +225,5 @@ func startAgent(ctx context.Context, log *zap.Logger, c *Config) (*sdkmetric.Met
 	// Set the global MeterProvider to the SDK metric provider.
 	otel.SetMeterProvider(mp)
 
-	return mp, nil
+	return mp, registry, nil
 }

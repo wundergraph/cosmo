@@ -1,6 +1,8 @@
 package metric
 
-import "github.com/wundergraph/cosmo/router/internal/otel/otelconfig"
+import (
+	"github.com/wundergraph/cosmo/router/internal/otel/otelconfig"
+)
 
 // ServerName Default resource name.
 const ServerName = "cosmo-router"
@@ -9,6 +11,10 @@ type Prometheus struct {
 	Enabled    bool
 	ListenAddr string
 	Path       string
+	// OTEL metrics to exclude from Prometheus exporter
+	ExcludeMetrics []string
+	// OTEL attributes to exclude from Prometheus exporter
+	ExcludeMetricLabels []string
 }
 
 type OpenTelemetryExporter struct {
@@ -57,9 +63,11 @@ func DefaultConfig() *Config {
 			},
 		},
 		Prometheus: Prometheus{
-			Enabled:    false,
-			ListenAddr: "0.0.0.0:9090",
-			Path:       "/metrics",
+			Enabled:             false,
+			ListenAddr:          "0.0.0.0:9090",
+			Path:                "/metrics",
+			ExcludeMetrics:      []string{},
+			ExcludeMetricLabels: []string{},
 		},
 	}
 }
