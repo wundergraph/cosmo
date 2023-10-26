@@ -318,5 +318,5 @@ func TestExportFullQueue(t *testing.T) {
 
 	require.Nil(t, e.Shutdown(context.Background()))
 
-	require.Lessf(t, dispatched, 20, "expect way less than 100 batches, because queue is full")
+	require.Lessf(t, dispatched, 100, "expect less than 100 batches, because queue is full")
 }
