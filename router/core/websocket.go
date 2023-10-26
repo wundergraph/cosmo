@@ -19,25 +19,27 @@ import (
 )
 
 type WebsocketMiddlewareOptions struct {
-	Parser         *OperationParser
-	Planner        *OperationPlanner
-	GraphQLHandler *GraphQLHandler
-	Metrics        *RouterMetrics
-	Logger         *zap.Logger
+	Parser           *OperationParser
+	Planner          *OperationPlanner
+	GraphQLHandler   *GraphQLHandler
+	Metrics          *RouterMetrics
+	AccessController *AccessController
+	Logger           *zap.Logger
 }
 
 func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions) func(http.Handler) http.Handler {
 	ids := newGlobalIDStorage()
 	return func(next http.Handler) http.Handler {
 		return &WebsocketHandler{
-			ctx:            ctx,
-			next:           next,
-			ids:            ids,
-			parser:         opts.Parser,
-			planner:        opts.Planner,
-			graphqlHandler: opts.GraphQLHandler,
-			metrics:        opts.Metrics,
-			logger:         opts.Logger,
+			ctx:              ctx,
+			next:             next,
+			ids:              ids,
+			parser:           opts.Parser,
+			planner:          opts.Planner,
+			graphqlHandler:   opts.GraphQLHandler,
+			metrics:          opts.Metrics,
+			accessController: opts.AccessController,
+			logger:           opts.Logger,
 		}
 	}
 }
@@ -154,14 +156,15 @@ func (c *wsConnectionWrapper) Close() error {
 }
 
 type WebsocketHandler struct {
-	ctx            context.Context
-	next           http.Handler
-	ids            *globalIDStorage
-	parser         *OperationParser
-	planner        *OperationPlanner
-	graphqlHandler *GraphQLHandler
-	metrics        *RouterMetrics
-	logger         *zap.Logger
+	ctx              context.Context
+	next             http.Handler
+	ids              *globalIDStorage
+	parser           *OperationParser
+	planner          *OperationPlanner
+	graphqlHandler   *GraphQLHandler
+	metrics          *RouterMetrics
+	accessController *AccessController
+	logger           *zap.Logger
 }
 
 func (h *WebsocketHandler) requestLooksLikeWebsocket(r *http.Request) bool {
@@ -172,6 +175,18 @@ func (h *WebsocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Don't call upgrader.Upgrade unless the request looks like a websocket
 	// because if Upgrade() fails it sends an error response
 	if h.requestLooksLikeWebsocket(r) {
+		// Check access control before upgrading the connection
+		validatedReq, err := h.accessController.Access(w, r)
+		if err != nil {
+			statusCode := http.StatusForbidden
+			if err == ErrUnauthorized {
+				statusCode = http.StatusUnauthorized
+			}
+			http.Error(w, http.StatusText(statusCode), statusCode)
+			return
+		}
+		r = validatedReq
+
 		upgrader := websocket.Upgrader{
 			HandshakeTimeout: 5 * time.Second,
 			// TODO: WriteBufferPool,
