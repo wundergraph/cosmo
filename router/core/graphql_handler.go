@@ -3,18 +3,19 @@ package core
 import (
 	"context"
 	"errors"
-	"github.com/dgraph-io/ristretto"
-	"github.com/wundergraph/cosmo/router/internal/otel"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/astvalidation"
-	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/trace"
 	"net"
 	"net/http"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/dgraph-io/ristretto"
+	"github.com/wundergraph/cosmo/router/internal/otel"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/astvalidation"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/go-chi/chi/middleware"
 	"github.com/hashicorp/go-multierror"
@@ -318,7 +319,9 @@ func writeRequestErrors(r *http.Request, requestErrors graphql.RequestErrors, w 
 		span.SetAttributes(otel.WgRequestError.Bool(true))
 
 		if _, err := requestErrors.WriteResponse(w); err != nil {
-			requestLogger.Error("error writing response", zap.Error(err))
+			if requestLogger != nil {
+				requestLogger.Error("error writing response", zap.Error(err))
+			}
 		}
 	}
 }

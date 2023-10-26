@@ -4,6 +4,7 @@ go 1.20
 
 require (
 	connectrpc.com/connect v1.11.1
+	github.com/MicahParks/keyfunc/v2 v2.1.0
 	github.com/buger/jsonparser v1.1.1
 	github.com/cespare/xxhash/v2 v2.2.0
 	github.com/cloudflare/backoff v0.0.0-20161212185259-647f3cdfc87a
@@ -12,6 +13,7 @@ require (
 	github.com/go-chi/chi v1.5.4
 	github.com/go-playground/validator/v10 v10.15.3
 	github.com/goccy/go-yaml v1.11.0
+	github.com/golang-jwt/jwt/v5 v5.0.0
 	github.com/gorilla/websocket v1.5.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/jensneuse/abstractlogger v0.0.4
@@ -44,7 +46,7 @@ require (
 
 require (
 	github.com/99designs/gqlgen v0.17.39 // indirect
-	github.com/andybalholm/brotli v1.0.5 // indirect
+	github.com/andybalholm/brotli v1.0.4 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bytedance/sonic v1.9.2 // indirect
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
