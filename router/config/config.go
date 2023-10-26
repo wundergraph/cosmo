@@ -195,10 +195,10 @@ type OverrideRoutingURLConfiguration struct {
 }
 
 type AuthenticationProviderJWKS struct {
-	URL               string        `yaml:"url" validate:"url"`
-	HeaderName        string        `yaml:"header_name" default:"Authorization"`
-	HeaderValuePrefix string        `yaml:"header_value_prefix" default:"Bearer"`
-	RefreshInterval   time.Duration `yaml:"refresh_interval" default:"1m" validate:"required,min=5s,max=1h"`
+	URL                 string        `yaml:"url" validate:"url"`
+	HeaderNames         []string      `yaml:"header_names"`
+	HeaderValuePrefixes []string      `yaml:"header_value_prefixes"`
+	RefreshInterval     time.Duration `yaml:"refresh_interval" default:"1m" validate:"required,min=5s,max=1h"`
 }
 
 type AuthenticationProvider struct {

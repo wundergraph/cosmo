@@ -2,6 +2,7 @@ package authentication
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -18,10 +19,10 @@ const (
 type jwksAuthenticator struct {
 	// JSON Web Key Set, automatically updated in the background
 	// by keyfunc.
-	jwks              *keyfunc.JWKS
-	name              string
-	headerName        string
-	headerValuePrefix string
+	jwks                *keyfunc.JWKS
+	name                string
+	headerNames         []string
+	headerValuePrefixes []string
 }
 
 func (a *jwksAuthenticator) Name() string {
@@ -30,20 +31,23 @@ func (a *jwksAuthenticator) Name() string {
 
 func (a *jwksAuthenticator) Authenticate(ctx context.Context, p Provider) (Claims, error) {
 	headers := p.AuthenticationHeaders()
-	if len(headers) == 0 {
-		return nil, nil
+	var errs error
+	for _, header := range a.headerNames {
+		authorization := headers.Get(header)
+		for _, prefix := range a.headerValuePrefixes {
+			if strings.HasPrefix(authorization, prefix) {
+				tokenString := strings.TrimSpace(authorization[len(prefix):])
+				token, err := jwt.Parse(tokenString, a.jwks.Keyfunc)
+				if err != nil {
+					errs = errors.Join(errs, fmt.Errorf("could not validate token: %w", err))
+					continue
+				}
+				claims := token.Claims.(jwt.MapClaims)
+				return Claims(claims), nil
+			}
+		}
 	}
-	authorization := headers.Get(a.headerName)
-	if !strings.HasPrefix(authorization, a.headerValuePrefix) {
-		return nil, nil
-	}
-	tokenString := strings.TrimSpace(authorization[len(a.headerValuePrefix):])
-	token, err := jwt.Parse(tokenString, a.jwks.Keyfunc)
-	if err != nil {
-		return nil, fmt.Errorf("could not authenticate: %w", err)
-	}
-	claims := token.Claims.(jwt.MapClaims)
-	return Claims(claims), nil
+	return nil, errs
 }
 
 // JWKSAuthenticatorOptions contains the available options for the JWKS authenticator
@@ -52,12 +56,12 @@ type JWKSAuthenticatorOptions struct {
 	Name string
 	// URL is the URL of the JWKS endpoint, it is mandatory.
 	URL string
-	// HeaderName is the header to use for retrieving the token. It defaults to
+	// HeaderNames are the header names to use for retrieving the token. It defaults to
 	// Authorization
-	HeaderName string
-	// HeaderValuePrefix is the prefix to use for retrieving the token. It defaults to
+	HeaderNames []string
+	// HeaderValuePrefixes are the prefixes to use for retrieving the token. It defaults to
 	// Bearer
-	HeaderValuePrefix string
+	HeaderValuePrefixes []string
 	// RefreshInterval is the minimum time interval between two JWKS refreshes. It
 	// defaults to 1 minute.
 	RefreshInterval time.Duration
@@ -76,19 +80,19 @@ func NewJWKSAuthenticator(opts JWKSAuthenticatorOptions) (Authenticator, error) 
 		return nil, fmt.Errorf("error initializing JWKS from %q: %w", opts.URL, err)
 	}
 
-	headerName := opts.HeaderName
-	if headerName == "" {
-		headerName = defaultHeaderName
+	headerNames := opts.HeaderNames
+	if len(headerNames) == 0 {
+		headerNames = []string{defaultHeaderName}
 	}
-	headerValuePrefix := opts.HeaderValuePrefix
-	if headerValuePrefix == "" {
-		headerValuePrefix = defaultHeaderValuePrefix
+	headerValuePrefixes := opts.HeaderValuePrefixes
+	if len(headerValuePrefixes) == 0 {
+		headerValuePrefixes = []string{defaultHeaderValuePrefix}
 	}
 
 	return &jwksAuthenticator{
-		jwks:              jwks,
-		name:              opts.Name,
-		headerName:        headerName,
-		headerValuePrefix: headerValuePrefix,
+		jwks:                jwks,
+		name:                opts.Name,
+		headerNames:         headerNames,
+		headerValuePrefixes: headerValuePrefixes,
 	}, nil
 }

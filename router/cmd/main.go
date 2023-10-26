@@ -78,11 +78,11 @@ func Main() {
 				name = fmt.Sprintf("jwks-#%d", i)
 			}
 			opts := authentication.JWKSAuthenticatorOptions{
-				Name:              name,
-				URL:               auth.JWKS.URL,
-				HeaderName:        auth.JWKS.HeaderName,
-				HeaderValuePrefix: auth.JWKS.HeaderValuePrefix,
-				RefreshInterval:   auth.JWKS.RefreshInterval,
+				Name:                name,
+				URL:                 auth.JWKS.URL,
+				HeaderNames:         auth.JWKS.HeaderNames,
+				HeaderValuePrefixes: auth.JWKS.HeaderValuePrefixes,
+				RefreshInterval:     auth.JWKS.RefreshInterval,
 			}
 			authenticator, err := authentication.NewJWKSAuthenticator(opts)
 			if err != nil {
