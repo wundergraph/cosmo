@@ -22,6 +22,10 @@ const ModuleID = "com.example.custom-jwt"
 // JWTModule is a module that signs outgoing requests with a JWT token
 // based on the authentication information of the received request
 type JWTModule struct {
+	// Properties that are set by the config file are automatically populated based on the `mapstructure` tag
+	// Create a new section under `modules.<name>` in the config file with the same name as your module.
+	// Don't forget in Go the first letter of a property must be uppercase to be exported
+
 	SecretKey string `mapstructure:"secret_key"`
 
 	Logger *zap.Logger
@@ -53,11 +57,13 @@ func (m *JWTModule) OnOriginRequest(request *http.Request, ctx core.RequestConte
 		t := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 		signed, err := t.SignedString([]byte(m.SecretKey))
 		if err != nil {
+			body := fmt.Sprintf(`{"errors":[{"message":"signing token: %s"}]}`, err)
 			return nil, &http.Response{
-				StatusCode: http.StatusInternalServerError,
-				Body:       io.NopCloser(strings.NewReader(fmt.Sprintf("signing token: %s", err))),
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(strings.NewReader(body)),
 			}
 		}
+		// This adds the Authorization header to the outgoing request
 		request.Header.Add("Authorization", "Bearer "+signed)
 	}
 	return request, nil
