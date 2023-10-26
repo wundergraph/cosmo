@@ -2,9 +2,7 @@ package module
 
 import (
 	"fmt"
-	"io"
 	"net/http"
-	"strings"
 
 	"github.com/golang-jwt/jwt/v5"
 	"go.uber.org/zap"
@@ -17,7 +15,10 @@ func init() {
 	core.RegisterModule(&JWTModule{})
 }
 
-const ModuleID = "com.example.custom-jwt"
+const (
+	ModuleID        = "com.example.custom-jwt"
+	tokenContextKey = "jwt-token"
+)
 
 // JWTModule is a module that signs outgoing requests with a JWT token
 // based on the authentication information of the received request
@@ -43,10 +44,10 @@ func (m *JWTModule) Provision(ctx *core.ModuleContext) error {
 	return nil
 }
 
-func (m *JWTModule) OnOriginRequest(request *http.Request, ctx core.RequestContext) (*http.Request, *http.Response) {
+func (m *JWTModule) Middleware(ctx core.RequestContext, next http.Handler) {
 	// Check if the incoming request is authenticated. In that case, we
 	// generate a new JWT with the shared secret key and add it to the
-	// outgoing request.
+	// request context
 	auth := ctx.Authentication()
 	if auth != nil {
 		claims := jwt.MapClaims(auth.Claims())
@@ -57,14 +58,18 @@ func (m *JWTModule) OnOriginRequest(request *http.Request, ctx core.RequestConte
 		t := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 		signed, err := t.SignedString([]byte(m.SecretKey))
 		if err != nil {
-			body := fmt.Sprintf(`{"errors":[{"message":"signing token: %s"}]}`, err)
-			return nil, &http.Response{
-				StatusCode: http.StatusOK,
-				Body:       io.NopCloser(strings.NewReader(body)),
-			}
+			core.WriteResponseError(ctx, fmt.Errorf("error signing token: %w", err))
+			return
 		}
-		// This adds the Authorization header to the outgoing request
-		request.Header.Add("Authorization", "Bearer "+signed)
+		ctx.Set(tokenContextKey, signed)
+	}
+	next.ServeHTTP(ctx.ResponseWriter(), ctx.Request())
+}
+
+func (m *JWTModule) OnOriginRequest(request *http.Request, ctx core.RequestContext) (*http.Request, *http.Response) {
+	// Get the token, if any, from the request context and add it to the outgoing request
+	if token := ctx.GetString(tokenContextKey); token != "" {
+		request.Header.Add("Authorization", "Bearer "+token)
 	}
 	return request, nil
 }
@@ -79,7 +84,8 @@ func (m *JWTModule) Module() core.ModuleInfo {
 	}
 }
 
-var (
-	_ core.EnginePreOriginHandler = (*JWTModule)(nil)
-	_ core.Provisioner            = (*JWTModule)(nil)
-)
+var _ interface {
+	core.EnginePreOriginHandler
+	core.RouterMiddlewareHandler
+	core.Provisioner
+} = (*JWTModule)(nil)
