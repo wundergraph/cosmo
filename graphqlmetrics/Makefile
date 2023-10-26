@@ -11,6 +11,7 @@ migrate:
 	dbmate -d "./migrations" up
 
 lint:
+	go vet ./...
 	staticcheck ./...
 
 VERSION?=dev
