@@ -11,9 +11,9 @@ type Prometheus struct {
 	Enabled    bool
 	ListenAddr string
 	Path       string
-	// OTEL metrics to exclude from Prometheus exporter
+	// Metrics to exclude from Prometheus exporter
 	ExcludeMetrics []string
-	// OTEL attributes to exclude from Prometheus exporter
+	// Metric labels to exclude from Prometheus exporter
 	ExcludeMetricLabels []string
 }
 
