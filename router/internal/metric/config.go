@@ -64,7 +64,7 @@ func DefaultConfig() *Config {
 		},
 		Prometheus: Prometheus{
 			Enabled:             false,
-			ListenAddr:          "0.0.0.0:9090",
+			ListenAddr:          "0.0.0.0:8088",
 			Path:                "/metrics",
 			ExcludeMetrics:      []string{},
 			ExcludeMetricLabels: []string{},
