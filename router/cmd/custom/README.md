@@ -40,7 +40,7 @@ docker build -f custom.Dockerfile -t router-custom:latest .
 
 ## Run tests
 
-Tests for this module can be found within the [integration tests](../router-tests/module_test.go).
+Tests for this module can be found within the [integration tests](../router-tests/module).
 
 _All commands are run from the root of the router directory._
 

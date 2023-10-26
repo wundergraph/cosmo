@@ -127,7 +127,7 @@ func sendData(server *core.Server, data []byte) *httptest.ResponseRecorder {
 	return rr
 }
 
-func prepareServer(tb testing.TB, listeningPort int) *core.Server {
+func prepareServer(tb testing.TB, opts ...core.Option) *core.Server {
 	ctx := context.Background()
 	cfg := config.Config{
 		Graph: config.Graph{
@@ -152,12 +152,14 @@ func prepareServer(tb testing.TB, listeningPort int) *core.Server {
 		syncer,
 		zapcore.ErrorLevel,
 	))
-	rs, err := core.NewRouter(
+
+	routerOpts := []core.Option{
 		core.WithFederatedGraphName(cfg.Graph.Name),
 		core.WithStaticRouterConfig(routerConfig),
 		core.WithLogger(zapLogger),
-		core.WithListenerAddr(":"+strconv.Itoa(listeningPort)),
-	)
+	}
+	routerOpts = append(routerOpts, opts...)
+	rs, err := core.NewRouter(routerOpts...)
 	require.NoError(tb, err)
 
 	tb.Cleanup(func() {
@@ -172,18 +174,22 @@ func prepareServer(tb testing.TB, listeningPort int) *core.Server {
 // setupServer sets up the router server without making it listen on a local
 // port, allowing tests by calling the server directly via server.Server.Handler.ServeHTTP
 func setupServer(tb testing.TB) *core.Server {
-	return prepareServer(tb, 0)
+	return prepareServer(tb)
 }
 
 // setupListeningServer calls setupServer to set up the server but makes it listen
 // on the network, automatically registering a cleanup function to shut it down.
 // It returns both the server and the local port where the server is listening.
-func setupListeningServer(tb testing.TB) (*core.Server, int) {
+func setupListeningServer(tb testing.TB, opts ...core.Option) (*core.Server, int) {
 	listener, err := net.Listen("tcp", ":0")
 	require.NoError(tb, err)
 	port := listener.Addr().(*net.TCPAddr).Port
 	listener.Close()
-	server := prepareServer(tb, port)
+
+	serverOpts := append([]core.Option{
+		core.WithListenerAddr(":" + strconv.Itoa(port)),
+	}, opts...)
+	server := prepareServer(tb, serverOpts...)
 	go func() {
 		err := server.Server.ListenAndServe()
 		if err != http.ErrServerClosed {

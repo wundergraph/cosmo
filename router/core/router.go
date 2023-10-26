@@ -103,6 +103,7 @@ type (
 		subgraphTransportOptions *SubgraphTransportOptions
 		graphqlMetricsConfig     *GraphQLMetricsConfig
 		routerTrafficConfig      *config.RouterTrafficConfiguration
+		accessController         *AccessController
 		retryOptions             retrytransport.RetryOptions
 
 		engineExecutionConfiguration config.EngineExecutionConfiguration
@@ -167,6 +168,14 @@ func NewRouter(opts ...Option) (*Router, error) {
 	}
 	if r.routerTrafficConfig == nil {
 		r.routerTrafficConfig = DefaultRouterTrafficConfig()
+	}
+	if r.accessController == nil {
+		r.accessController = DefaultAccessController()
+	} else {
+		if len(r.accessController.authenticators) == 0 && r.accessController.authenticationRequired {
+			r.logger.Warn("authentication is required but no authenticators are configured")
+		}
+
 	}
 
 	// Default values for health check paths
@@ -682,11 +691,12 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	routerMetrics := NewRouterMetrics(metricStore, r.gqlMetricsExporter, routerConfig.GetVersion())
 
 	graphqlPreHandler := NewPreHandler(&PreHandlerOptions{
-		Logger:   r.logger,
-		Executor: executor,
-		Metrics:  routerMetrics,
-		Parser:   operationParser,
-		Planner:  operationPlanner,
+		Logger:           r.logger,
+		Executor:         executor,
+		Metrics:          routerMetrics,
+		Parser:           operationParser,
+		Planner:          operationPlanner,
+		AccessController: r.accessController,
 	})
 
 	var traceHandler *trace.Middleware
@@ -715,11 +725,12 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		}
 
 		subChiRouter.Use(NewWebsocketMiddleware(rootContext, WebsocketMiddlewareOptions{
-			Parser:         operationParser,
-			Planner:        operationPlanner,
-			Metrics:        routerMetrics,
-			GraphQLHandler: graphqlHandler,
-			Logger:         r.logger,
+			Parser:           operationParser,
+			Planner:          operationPlanner,
+			Metrics:          routerMetrics,
+			GraphQLHandler:   graphqlHandler,
+			AccessController: r.accessController,
+			Logger:           r.logger,
 		}))
 
 		subChiRouter.Use(graphqlPreHandler.Handler)
@@ -1026,6 +1037,12 @@ func WithSubgraphRetryOptions(enabled bool, maxRetryCount int, retryMaxDuration,
 func WithRouterTrafficConfig(cfg *config.RouterTrafficConfiguration) Option {
 	return func(r *Router) {
 		r.routerTrafficConfig = cfg
+	}
+}
+
+func WithAccessController(controller *AccessController) Option {
+	return func(r *Router) {
+		r.accessController = controller
 	}
 }
 

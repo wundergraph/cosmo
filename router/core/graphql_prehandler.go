@@ -12,28 +12,31 @@ import (
 )
 
 type PreHandlerOptions struct {
-	Logger   *zap.Logger
-	Executor *Executor
-	Metrics  *RouterMetrics
-	Parser   *OperationParser
-	Planner  *OperationPlanner
+	Logger           *zap.Logger
+	Executor         *Executor
+	Metrics          *RouterMetrics
+	Parser           *OperationParser
+	Planner          *OperationPlanner
+	AccessController *AccessController
 }
 
 type PreHandler struct {
-	log      *zap.Logger
-	executor *Executor
-	metrics  *RouterMetrics
-	parser   *OperationParser
-	planner  *OperationPlanner
+	log              *zap.Logger
+	executor         *Executor
+	metrics          *RouterMetrics
+	parser           *OperationParser
+	planner          *OperationPlanner
+	accessController *AccessController
 }
 
 func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 	return &PreHandler{
-		log:      opts.Logger,
-		executor: opts.Executor,
-		metrics:  opts.Metrics,
-		parser:   opts.Parser,
-		planner:  opts.Planner,
+		log:              opts.Logger,
+		executor:         opts.Executor,
+		metrics:          opts.Metrics,
+		parser:           opts.Parser,
+		planner:          opts.Planner,
+		accessController: opts.AccessController,
 	}
 }
 
@@ -64,6 +67,15 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		defer func() {
 			metrics.Finish(r.Context(), hasRequestError, statusCode, writtenBytes)
 		}()
+
+		validatedReq, err := h.accessController.Access(w, r)
+		if err != nil {
+			hasRequestError = true
+			requestLogger.Error(err.Error())
+			writeRequestErrors(r, graphql.RequestErrorsFromError(err), w, requestLogger)
+			return
+		}
+		r = validatedReq
 
 		buf := pool.GetBytesBuffer()
 		defer pool.PutBytesBuffer(buf)

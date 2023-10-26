@@ -7,6 +7,7 @@ replace github.com/wundergraph/cosmo/demo => ../demo
 go 1.20
 
 require (
+	github.com/golang-jwt/jwt/v5 v5.0.0
 	github.com/gorilla/websocket v1.5.0
 	github.com/hasura/go-graphql-client v0.10.0
 	github.com/stretchr/testify v1.8.4
@@ -19,6 +20,7 @@ require (
 require (
 	connectrpc.com/connect v1.11.1 // indirect
 	github.com/99designs/gqlgen v0.17.39 // indirect
+	github.com/MicahParks/keyfunc/v2 v2.1.0 // indirect
 	github.com/agnivade/levenshtein v1.1.1 // indirect
 	github.com/andybalholm/brotli v1.0.5 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect

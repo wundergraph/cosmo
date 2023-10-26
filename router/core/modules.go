@@ -3,9 +3,11 @@ package core
 import (
 	stdContext "context"
 	"fmt"
-	"go.uber.org/zap"
 	"net/http"
 	"sync"
+
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphql"
+	"go.uber.org/zap"
 )
 
 var (
@@ -95,4 +97,10 @@ type ModuleContext struct {
 	stdContext.Context
 	Module Module
 	Logger *zap.Logger
+}
+
+// WriteResponseError writes the given error as a GraphQL error response to the http.ResponseWriter
+// associated with the given RequestContext
+func WriteResponseError(ctx RequestContext, err error) {
+	writeRequestErrors(ctx.Request(), graphql.RequestErrorsFromError(err), ctx.ResponseWriter(), ctx.Logger())
 }
