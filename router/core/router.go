@@ -860,7 +860,7 @@ func createPrometheus(logger *zap.Logger, registry *metric.PromRegistry, listenA
 		EnableOpenMetrics: true,
 		ErrorLog:          zap.NewStdLog(logger),
 		Registry:          registry,
-		Timeout:           time.Second * 2,
+		Timeout:           0,
 	}))
 
 	svr := &http.Server{
