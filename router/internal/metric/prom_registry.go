@@ -14,6 +14,7 @@ type PromRegistry struct {
 }
 
 // NewPromRegistry creates a new Prometheus registry with the given exclude metrics and exclude metric labels.
+// The exclude metrics and exclude metric labels are regular expressions.
 func NewPromRegistry(promRegistry *prom.Registry, excludeMetrics, excludeLabels []string) (*PromRegistry, error) {
 
 	excludeMetricsRegexp, err := stringArrayToRegexpArray(excludeMetrics)
