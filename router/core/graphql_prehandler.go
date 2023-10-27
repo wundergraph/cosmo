@@ -3,38 +3,39 @@ package core
 import (
 	"errors"
 	"github.com/go-chi/chi/middleware"
-	"github.com/wundergraph/cosmo/router/internal/metric"
-	"github.com/wundergraph/cosmo/router/internal/pool"
-	"go.uber.org/zap"
-	"io"
-	"net/http"
-
 	"github.com/wundergraph/cosmo/router/internal/logging"
+	"github.com/wundergraph/cosmo/router/internal/pool"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphql"
+	"go.uber.org/zap"
+	"net/http"
 )
 
 type PreHandlerOptions struct {
-	Logger                *zap.Logger
-	Parser                *OperationParser
-	RequestMetrics        *metric.Metrics
-	MaxRequestSizeInBytes int64
+	Logger           *zap.Logger
+	Executor         *Executor
+	Metrics          *RouterMetrics
+	Parser           *OperationParser
+	Planner          *OperationPlanner
+	AccessController *AccessController
 }
 
 type PreHandler struct {
-	log                   *zap.Logger
-	requestMetrics        *metric.Metrics
-	parser                *OperationParser
-	Logger                *zap.Logger
-	Executor              *Executor
-	maxRequestSizeInBytes int64
+	log              *zap.Logger
+	executor         *Executor
+	metrics          *RouterMetrics
+	parser           *OperationParser
+	planner          *OperationPlanner
+	accessController *AccessController
 }
 
 func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 	return &PreHandler{
-		log:                   opts.Logger,
-		requestMetrics:        opts.RequestMetrics,
-		parser:                opts.Parser,
-		maxRequestSizeInBytes: opts.MaxRequestSizeInBytes,
+		log:              opts.Logger,
+		executor:         opts.Executor,
+		metrics:          opts.Metrics,
+		parser:           opts.Parser,
+		planner:          opts.Planner,
+		accessController: opts.AccessController,
 	}
 }
 
@@ -51,51 +52,34 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 	fn := func(w http.ResponseWriter, r *http.Request) {
+		requestLogger := h.log.With(logging.WithRequestID(middleware.GetReqID(r.Context())))
 
 		// In GraphQL the statusCode does not always express the error state of the request
 		// we use this flag to determine if we have an error for the request metrics
 		var hasRequestError bool
-		var statusCode int
+		statusCode := http.StatusOK
 		var writtenBytes int
-		var metrics *OperationMetrics
 
 		clientInfo := NewClientInfoFromRequest(r)
+		metrics := h.metrics.StartOperation(r.Context(), clientInfo, r.ContentLength)
 
-		if h.requestMetrics != nil {
-			metrics = StartOperationMetrics(r.Context(), h.requestMetrics, r.ContentLength)
+		defer func() {
+			metrics.Finish(r.Context(), hasRequestError, statusCode, writtenBytes)
+		}()
 
-			defer func() {
-				metrics.Finish(r.Context(), hasRequestError, statusCode, int64(writtenBytes))
-			}()
-
-			metrics.AddClientInfo(r.Context(), clientInfo)
-		}
-
-		requestLogger := h.log.With(logging.WithRequestID(middleware.GetReqID(r.Context())))
-
-		limitedReader := &io.LimitedReader{R: r.Body, N: h.maxRequestSizeInBytes}
-		buf := pool.GetBytesBuffer()
-		defer pool.PutBytesBuffer(buf)
-
-		copiedBytes, err := io.Copy(buf, limitedReader)
+		validatedReq, err := h.accessController.Access(w, r)
 		if err != nil {
 			hasRequestError = true
-			requestLogger.Error("failed to read request body", zap.Error(err))
-			writeRequestErrors(r, graphql.RequestErrorsFromError(internalServerErrorErr), w, requestLogger)
-			return
-		}
-
-		// If the request body is larger than the limit, limit reader will truncate the body
-		// We check here if it was truncated and return an error
-		if copiedBytes < r.ContentLength {
-			hasRequestError = true
-			err := errors.New("request body too large")
-			requestLogger.Error("request body too large")
+			requestLogger.Error(err.Error())
 			writeRequestErrors(r, graphql.RequestErrorsFromError(err), w, requestLogger)
 			return
 		}
+		r = validatedReq
 
-		operation, err := h.parser.Parse(buf.Bytes())
+		buf := pool.GetBytesBuffer()
+		defer pool.PutBytesBuffer(buf)
+
+		operation, err := h.parser.ParseReader(r.Body)
 		if err != nil {
 			hasRequestError = true
 
@@ -103,7 +87,6 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			var inputErr InputError
 			switch {
 			case errors.As(err, &inputErr):
-				statusCode = http.StatusUnprocessableEntity
 				requestLogger.Error(inputErr.Error())
 				writeRequestErrors(r, graphql.RequestErrorsFromError(err), w, requestLogger)
 			case errors.As(err, &reportErr):
@@ -112,19 +95,28 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 				writeRequestErrors(r, graphql.RequestErrorsFromOperationReport(*report), w, requestLogger)
 			default: // If we have an unknown error, we log it and return an internal server error
 				requestLogger.Error(err.Error())
-				writeRequestErrors(r, graphql.RequestErrorsFromError(internalServerErrorErr), w, requestLogger)
+				writeRequestErrors(r, graphql.RequestErrorsFromError(errInternalServer), w, requestLogger)
 			}
 			return
 		}
 
-		// Set the operation attributes as early as possible, so they are available in the trace
-		baseMetricAttributeValues := SetSpanOperationAttributes(r.Context(), operation, OperationProtocolHTTP)
+		commonAttributeValues := commonMetricAttributes(operation, OperationProtocolHTTP)
 
-		if h.requestMetrics != nil {
-			metrics.AddSpanAttributes(baseMetricAttributeValues...)
+		metrics.AddAttributes(commonAttributeValues...)
+
+		initializeSpan(r.Context(), operation, commonAttributeValues)
+
+		opContext, err := h.planner.Plan(operation, clientInfo)
+		if err != nil {
+			hasRequestError = true
+			requestLogger.Error("failed to plan operation", zap.Error(err))
+			writeRequestErrors(r, graphql.RequestErrorsFromError(errMsgOperationParseFailed), w, requestLogger)
+			return
 		}
 
-		requestContext, opContext := buildRequestContext(w, r, clientInfo, operation, requestLogger)
+		requestContext := buildRequestContext(w, r, opContext, operation, requestLogger)
+		metrics.AddOperationContext(opContext)
+
 		ctxWithRequest := withRequestContext(r.Context(), requestContext)
 		ctxWithOperation := withOperationContext(ctxWithRequest, opContext)
 		ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)

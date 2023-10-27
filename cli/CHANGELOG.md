@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.23.1](https://github.com/wundergraph/cosmo/compare/wgc@0.23.0...wgc@0.23.1) (2023-10-26)
+
+**Note:** Version bump only for package wgc
+
+# [0.23.0](https://github.com/wundergraph/cosmo/compare/wgc@0.22.0...wgc@0.23.0) (2023-10-25)
+
+### Features
+
+* schema field level usage analytics ([#174](https://github.com/wundergraph/cosmo/issues/174)) ([4f257a7](https://github.com/wundergraph/cosmo/commit/4f257a71984e991be2304b09a083c69da65200d2)) (@StarpTech)
+
 # [0.22.0](https://github.com/wundergraph/cosmo/compare/wgc@0.21.0...wgc@0.22.0) (2023-10-23)
 
 ### Features

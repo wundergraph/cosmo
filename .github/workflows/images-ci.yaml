@@ -12,8 +12,6 @@ on:
       - 'scripts/**'
 
   pull_request:
-    branches:
-      - main
     paths-ignore:
       - 'docs/*/**'
       - 'helm/**'
@@ -47,6 +45,9 @@ jobs:
           - container_name: otelcollector
             dockerfile: otelcollector/Dockerfile
             context_path: otelcollector
+          - container_name: graphqlmetrics
+            dockerfile: graphqlmetrics/Dockerfile
+            context_path: graphqlmetrics
 
     runs-on: ubuntu-latest
     permissions:

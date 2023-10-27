@@ -1,24 +1,43 @@
 import BarList from "@/components/analytics/barlist";
+import { ChartTooltip } from "@/components/analytics/charts";
 import { createFilterState } from "@/components/analytics/constructAnalyticsTableQueryState";
+import { DeltaBadge } from "@/components/analytics/delta-badge";
+import {
+  AnalyticsFilter,
+  AnalyticsFilters,
+  AnalyticsSelectedFilters,
+} from "@/components/analytics/filters";
+import { optionConstructor } from "@/components/analytics/getDataTableFilters";
 import { AnalyticsToolbar } from "@/components/analytics/toolbar";
+import { useAnalyticsQueryState } from "@/components/analytics/useAnalyticsQueryState";
 import { EmptyState } from "@/components/empty-state";
+import { InfoTooltip } from "@/components/info-tooltip";
 import { getGraphLayout, GraphContext } from "@/components/layout/graph-layout";
 import { PageHeader } from "@/components/layout/head";
 import { TitleLayout } from "@/components/layout/title-layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-
-import { DeltaBadge } from "@/components/analytics/delta-badge";
-import { Loader } from "@/components/ui/loader";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Loader } from "@/components/ui/loader";
 import { Spacer } from "@/components/ui/spacer";
-import { useChartData } from "@/lib/insights-helpers";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { useSessionStorage } from "@/hooks/use-session-storage";
+import useWindowSize from "@/hooks/use-window-size";
+import {
+  formatDurationMetric,
+  formatMetric,
+  formatPercentMetric,
+} from "@/lib/format-metric";
+import { createDateRange, useChartData } from "@/lib/insights-helpers";
 import { NextPageWithLayout } from "@/lib/page";
 import { cn } from "@/lib/utils";
 import {
@@ -26,6 +45,7 @@ import {
   ChevronRightIcon,
   ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
+import { UpdateIcon } from "@radix-ui/react-icons";
 import { useIsFetching, useQuery, useQueryClient } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
@@ -37,6 +57,7 @@ import {
   MetricsDashboardMetric,
   MetricsTopItem,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
+import Link from "next/link";
 import { useRouter } from "next/router";
 import React, { useCallback, useContext, useEffect, useId } from "react";
 import {
@@ -47,37 +68,6 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { ChartTooltip } from "@/components/analytics/charts";
-import { InfoTooltip } from "@/components/info-tooltip";
-import useWindowSize from "@/hooks/use-window-size";
-import { endOfDay, formatISO, startOfDay, subHours } from "date-fns";
-import { UpdateIcon } from "@radix-ui/react-icons";
-import { useSessionStorage } from "@/hooks/use-session-storage";
-import {
-  formatDurationMetric,
-  formatMetric,
-  formatPercentMetric,
-} from "@/lib/format-metric";
-import {
-  AnalyticsFilter,
-  AnalyticsFilters,
-  AnalyticsSelectedFilters,
-} from "@/components/analytics/filters";
-import { useAnalyticsQueryState } from "@/components/analytics/useAnalyticsQueryState";
-import { optionConstructor } from "@/components/analytics/getDataTableFilters";
-import Link from "next/link";
-import {
-  Tooltip,
-  TooltipTrigger,
-  TooltipContent,
-} from "@/components/ui/tooltip";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 export type OperationAnalytics = {
   name: string;
@@ -89,17 +79,9 @@ export type OperationAnalytics = {
 const useRange = () => {
   const router = useRouter();
 
-  const [storedRange, setRange] = useSessionStorage("analytics.range", 24);
-
   const range = router.query.range
-    ? parseInt(router.query.range?.toString()) || storedRange
-    : storedRange;
-
-  useEffect(() => {
-    if (range !== storedRange) {
-      setRange(range);
-    }
-  }, [range, storedRange]);
+    ? parseInt(router.query.range?.toString())
+    : 168;
 
   switch (range) {
     case 24:
@@ -111,13 +93,6 @@ const useRange = () => {
     default:
       return Math.min(24, range);
   }
-};
-
-const createDateRange = (range: number) => {
-  return JSON.stringify({
-    start: formatISO(startOfDay(subHours(new Date(), range))),
-    end: formatISO(endOfDay(new Date())),
-  });
 };
 
 const getInfoTip = (range: number) => {
@@ -202,7 +177,7 @@ const useMetricsFilters = (filters: AnalyticsViewResultFilter[]) => {
         )?.value ?? [],
       options: filter.options.map((each) =>
         optionConstructor({
-          label: each.label,
+          label: each.label || "-",
           operator: each.operator as unknown as string,
           value: each.value as unknown as string,
         })
@@ -387,17 +362,16 @@ const TopList: React.FC<{
         data={items.map((row) => ({
           ...row,
           value: Number.parseFloat(row.value ?? "0"),
-          name: row.name === "" ? "unknown" : row.name,
+          name: row.name === "" ? "-" : row.name,
           href: {
             pathname: `${router.pathname}/traces`,
             query: {
               organizationSlug: router.query.organizationSlug,
               slug: router.query.slug,
               filterState: createFilterState({
-                operationName: row.name === "" ? "unknown" : row.name,
+                operationName: row.name,
               }),
               dateRange: createDateRange(range),
-              ...queryParams,
             },
           },
         }))}

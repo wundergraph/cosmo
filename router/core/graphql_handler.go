@@ -3,10 +3,6 @@ package core
 import (
 	"context"
 	"errors"
-	"fmt"
-	"github.com/wundergraph/cosmo/router/internal/otel"
-	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/trace"
 	"net"
 	"net/http"
 	"strconv"
@@ -15,6 +11,12 @@ import (
 	"time"
 
 	"github.com/dgraph-io/ristretto"
+	"github.com/wundergraph/cosmo/router/internal/otel"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/astvalidation"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
+
 	"github.com/go-chi/chi/middleware"
 	"github.com/hashicorp/go-multierror"
 	"github.com/tidwall/gjson"
@@ -26,8 +28,6 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/postprocess"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/astvalidation"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphql"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
@@ -37,15 +37,13 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/unsafebytes"
 )
 
-const (
-	ErrMsgOperationPlanningFailed = "failed to plan operation: %w"
-)
-
 var (
-	couldNotResolveResponseErr = errors.New("could not resolve response")
-	serverTimeoutErr           = errors.New("server timeout")
-	serverCanceledErr          = errors.New("server canceled")
-	internalServerErrorErr     = errors.New("internal server error")
+	errMsgOperationPlanningFailed = errors.New("failed to plan operation")
+	errMsgOperationParseFailed    = errors.New("failed to parse operation")
+	errCouldNotResolveResponse    = errors.New("could not resolve response")
+	errServerTimeout              = errors.New("server timeout")
+	errServerCanceled             = errors.New("server canceled")
+	errInternalServer             = errors.New("internal server error")
 )
 
 type ReportError interface {
@@ -171,7 +169,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			requestLogger.Error("prepare plan failed", zap.Error(err))
-			writeRequestErrors(r, graphql.RequestErrorsFromError(internalServerErrorErr), w, requestLogger)
+			writeRequestErrors(r, graphql.RequestErrorsFromError(errInternalServer), w, requestLogger)
 			return
 		}
 
@@ -209,11 +207,11 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			var nErr net.Error
 
 			if errors.Is(err, context.Canceled) {
-				writeRequestErrors(r, graphql.RequestErrorsFromError(serverCanceledErr), w, requestLogger)
+				writeRequestErrors(r, graphql.RequestErrorsFromError(errServerCanceled), w, requestLogger)
 			} else if errors.As(err, &nErr) && nErr.Timeout() {
-				writeRequestErrors(r, graphql.RequestErrorsFromError(serverTimeoutErr), w, requestLogger)
+				writeRequestErrors(r, graphql.RequestErrorsFromError(errServerTimeout), w, requestLogger)
 			} else {
-				writeRequestErrors(r, graphql.RequestErrorsFromError(couldNotResolveResponseErr), w, requestLogger)
+				writeRequestErrors(r, graphql.RequestErrorsFromError(errCouldNotResolveResponse), w, requestLogger)
 			}
 
 			requestLogger.Error("unable to resolve GraphQL response", zap.Error(err))
@@ -240,12 +238,12 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			if errors.Is(err, context.Canceled) {
 				requestLogger.Debug("context canceled: unable to resolve subscription response", zap.Error(err))
-				writeRequestErrors(r, graphql.RequestErrorsFromError(couldNotResolveResponseErr), w, requestLogger)
+				writeRequestErrors(r, graphql.RequestErrorsFromError(errCouldNotResolveResponse), w, requestLogger)
 				return
 			}
 
 			requestLogger.Error("unable to resolve subscription response", zap.Error(err))
-			writeRequestErrors(r, graphql.RequestErrorsFromError(couldNotResolveResponseErr), w, requestLogger)
+			writeRequestErrors(r, graphql.RequestErrorsFromError(errCouldNotResolveResponse), w, requestLogger)
 			return
 		}
 	default:
@@ -276,7 +274,7 @@ func (h *GraphQLHandler) preparePlan(requestOperationName []byte, requestOperati
 	// create and postprocess the plan
 	preparedPlan := planner.Plan(&doc, h.executor.Definition, unsafebytes.BytesToString(requestOperationName), &report)
 	if report.HasErrors() {
-		return planWithExtractedVariables{}, fmt.Errorf(ErrMsgOperationPlanningFailed, report)
+		return planWithExtractedVariables{}, errors.Join(errMsgOperationPlanningFailed, report)
 	}
 	post := postprocess.DefaultProcessor()
 	post.Process(preparedPlan)
@@ -321,7 +319,9 @@ func writeRequestErrors(r *http.Request, requestErrors graphql.RequestErrors, w 
 		span.SetAttributes(otel.WgRequestError.Bool(true))
 
 		if _, err := requestErrors.WriteResponse(w); err != nil {
-			requestLogger.Error("error writing response", zap.Error(err))
+			if requestLogger != nil {
+				requestLogger.Error("error writing response", zap.Error(err))
+			}
 		}
 	}
 }
