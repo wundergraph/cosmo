@@ -3,6 +3,7 @@ package metric
 import (
 	prom "github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/require"
+	"regexp"
 	"testing"
 )
 
@@ -29,7 +30,7 @@ func TestExcludeMetrics(t *testing.T) {
 	httpReqs.WithLabelValues("404", "POST").Add(5)
 	httpInFlight.WithLabelValues("404", "POST").Add(42)
 
-	ct, err := NewPromRegistry(r, []string{"^http_requests_total$"}, []string{})
+	ct, err := NewPromRegistry(r, []*regexp.Regexp{regexp.MustCompile("^http_requests_total$")}, nil)
 	require.NoError(t, err)
 
 	a, err := ct.Gather()
@@ -62,7 +63,7 @@ func TestExcludeMetricLabels(t *testing.T) {
 	httpReqs.WithLabelValues("404", "POST").Add(5)
 	httpInFlight.WithLabelValues("404", "POST").Add(42)
 
-	ct, err := NewPromRegistry(r, []string{}, []string{"^code$"})
+	ct, err := NewPromRegistry(r, nil, []*regexp.Regexp{regexp.MustCompile("^code$")})
 	require.NoError(t, err)
 
 	a, err := ct.Gather()

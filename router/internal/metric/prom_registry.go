@@ -1,7 +1,6 @@
 package metric
 
 import (
-	"fmt"
 	prom "github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
 	"regexp"
@@ -85,19 +84,4 @@ func (wr *PromRegistry) MustRegister(collector ...prom.Collector) {
 
 func (wr *PromRegistry) Unregister(collector prom.Collector) bool {
 	return wr.promRegistry.Unregister(collector)
-}
-
-func stringArrayToRegexpArray(stringArray []string) ([]regexp.Regexp, error) {
-	var regexpArray []regexp.Regexp
-	for _, s := range stringArray {
-		if s == "" {
-			continue
-		}
-		r, err := regexp.Compile(s)
-		if err != nil {
-			return nil, fmt.Errorf("invalid regex '%s': %w", s, err)
-		}
-		regexpArray = append(regexpArray, *r)
-	}
-	return regexpArray, nil
 }
