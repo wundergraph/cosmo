@@ -36,12 +36,12 @@ func TestStartAgent(t *testing.T) {
 
 	log := zap.NewNop()
 
-	_, err := StartAgent(context.Background(), log, c1)
+	_, err := NewTracerProvider(context.Background(), log, c1)
 	assert.NoError(t, err)
 
-	_, err = StartAgent(context.Background(), log, c2)
+	_, err = NewTracerProvider(context.Background(), log, c2)
 	assert.NoError(t, err)
 
-	_, err = StartAgent(context.Background(), log, c3)
+	_, err = NewTracerProvider(context.Background(), log, c3)
 	assert.NoError(t, err)
 }

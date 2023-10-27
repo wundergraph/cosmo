@@ -179,7 +179,7 @@ func (h *WebsocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		validatedReq, err := h.accessController.Access(w, r)
 		if err != nil {
 			statusCode := http.StatusForbidden
-			if err == ErrUnauthorized {
+			if errors.Is(err, ErrUnauthorized) {
 				statusCode = http.StatusUnauthorized
 			}
 			http.Error(w, http.StatusText(statusCode), statusCode)
@@ -287,7 +287,7 @@ func (rw *websocketResponseWriter) Flush() {
 			_, err = rw.protocol.GraphQLData(rw.id, payload, extensions)
 		}
 		// if err is websocket.ErrCloseSent, it means we got a Complete from
-		// the client and we closed the WS from a different goroutine
+		// the client, and we closed the WS from a different goroutine
 		if err != nil && err != websocket.ErrCloseSent {
 			rw.logger.Warn("sending response on websocket flush", zap.Error(err))
 		}
@@ -460,8 +460,10 @@ func (h *WebSocketConnectionHandler) executeSubscription(ctx context.Context, ms
 
 	metrics.AddOperationContext(opContext)
 
-	baseMetricAttributeValues := SetSpanOperationAttributes(ctx, operation, OperationProtocolGraphQLWS)
-	metrics.AddAttributes(baseMetricAttributeValues...)
+	commonAttributeValues := commonMetricAttributes(operation, OperationProtocolGraphQLWS)
+	metrics.AddAttributes(commonAttributeValues...)
+
+	initializeSpan(ctx, operation, commonAttributeValues)
 
 	if !h.globalIDs.Insert(msg.ID) {
 		hasRequestError = true
