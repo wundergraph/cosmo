@@ -2,15 +2,11 @@
 
 package model
 
-import (
-	"time"
-)
-
 type TimestampedString struct {
 	// The value of the string.
 	Value string `json:"value"`
 	// The timestamp when the response was generated.
-	Time time.Time `json:"time"`
+	UnixTime int `json:"unixTime"`
 	// Sequence number
 	Seq int `json:"seq"`
 	// Total number of responses to be sent

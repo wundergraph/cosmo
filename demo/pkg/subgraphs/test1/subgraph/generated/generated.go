@@ -11,7 +11,6 @@ import (
 	"strconv"
 	"sync"
 	"sync/atomic"
-	"time"
 
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/99designs/gqlgen/graphql/introspection"
@@ -50,21 +49,21 @@ type DirectiveRoot struct {
 
 type ComplexityRoot struct {
 	Query struct {
-		HeaderValue        func(childComplexity int, headerName string) int
+		HeaderValue        func(childComplexity int, name string) int
 		InitPayloadValue   func(childComplexity int, key string) int
 		__resolve__service func(childComplexity int) int
 	}
 
 	Subscription struct {
-		HeaderValue      func(childComplexity int, headerName string, repeat *int) int
+		HeaderValue      func(childComplexity int, name string, repeat *int) int
 		InitPayloadValue func(childComplexity int, key string, repeat *int) int
 	}
 
 	TimestampedString struct {
-		Seq   func(childComplexity int) int
-		Time  func(childComplexity int) int
-		Total func(childComplexity int) int
-		Value func(childComplexity int) int
+		Seq      func(childComplexity int) int
+		Total    func(childComplexity int) int
+		UnixTime func(childComplexity int) int
+		Value    func(childComplexity int) int
 	}
 
 	_Service struct {
@@ -73,11 +72,11 @@ type ComplexityRoot struct {
 }
 
 type QueryResolver interface {
-	HeaderValue(ctx context.Context, headerName string) (string, error)
+	HeaderValue(ctx context.Context, name string) (string, error)
 	InitPayloadValue(ctx context.Context, key string) (string, error)
 }
 type SubscriptionResolver interface {
-	HeaderValue(ctx context.Context, headerName string, repeat *int) (<-chan *model.TimestampedString, error)
+	HeaderValue(ctx context.Context, name string, repeat *int) (<-chan *model.TimestampedString, error)
 	InitPayloadValue(ctx context.Context, key string, repeat *int) (<-chan *model.TimestampedString, error)
 }
 
@@ -110,7 +109,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Query.HeaderValue(childComplexity, args["headerName"].(string)), true
+		return e.complexity.Query.HeaderValue(childComplexity, args["name"].(string)), true
 
 	case "Query.initPayloadValue":
 		if e.complexity.Query.InitPayloadValue == nil {
@@ -141,7 +140,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Subscription.HeaderValue(childComplexity, args["headerName"].(string), args["repeat"].(*int)), true
+		return e.complexity.Subscription.HeaderValue(childComplexity, args["name"].(string), args["repeat"].(*int)), true
 
 	case "Subscription.initPayloadValue":
 		if e.complexity.Subscription.InitPayloadValue == nil {
@@ -162,19 +161,19 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.TimestampedString.Seq(childComplexity), true
 
-	case "TimestampedString.time":
-		if e.complexity.TimestampedString.Time == nil {
-			break
-		}
-
-		return e.complexity.TimestampedString.Time(childComplexity), true
-
 	case "TimestampedString.total":
 		if e.complexity.TimestampedString.Total == nil {
 			break
 		}
 
 		return e.complexity.TimestampedString.Total(childComplexity), true
+
+	case "TimestampedString.unixTime":
+		if e.complexity.TimestampedString.UnixTime == nil {
+			break
+		}
+
+		return e.complexity.TimestampedString.UnixTime(childComplexity), true
 
 	case "TimestampedString.value":
 		if e.complexity.TimestampedString.Value == nil {
@@ -296,11 +295,9 @@ func (ec *executionContext) introspectType(name string) (*introspection.Type, er
 }
 
 var sources = []*ast.Source{
-	{Name: "../schema.graphqls", Input: `scalar Time
-
-type Query {
+	{Name: "../schema.graphqls", Input: `type Query {
   "Returns the value of the received HTTP header."
-  headerValue(headerName: String!): String!
+  headerValue(name: String!): String!
   "Returns the value of the given key in the WS initial payload."
   initPayloadValue(key: String!): String!
 }
@@ -309,7 +306,7 @@ type TimestampedString {
   "The value of the string."
   value: String!
   "The timestamp when the response was generated."
-  time: Time!
+  unixTime: Int! 
   "Sequence number"
   seq: Int!
   "Total number of responses to be sent"
@@ -318,7 +315,7 @@ type TimestampedString {
 
 type Subscription {
   "Returns a stream with the value of the received HTTP header."
-  headerValue(headerName: String!, repeat: Int): TimestampedString!
+  headerValue(name: String!, repeat: Int): TimestampedString!
   "Returns a stream with the value of value of the given key in the WS initial payload."
   initPayloadValue(key: String!, repeat: Int): TimestampedString!
 }
@@ -402,14 +399,14 @@ func (ec *executionContext) field_Query_headerValue_args(ctx context.Context, ra
 	var err error
 	args := map[string]interface{}{}
 	var arg0 string
-	if tmp, ok := rawArgs["headerName"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("headerName"))
+	if tmp, ok := rawArgs["name"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
 		arg0, err = ec.unmarshalNString2string(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["headerName"] = arg0
+	args["name"] = arg0
 	return args, nil
 }
 
@@ -432,14 +429,14 @@ func (ec *executionContext) field_Subscription_headerValue_args(ctx context.Cont
 	var err error
 	args := map[string]interface{}{}
 	var arg0 string
-	if tmp, ok := rawArgs["headerName"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("headerName"))
+	if tmp, ok := rawArgs["name"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
 		arg0, err = ec.unmarshalNString2string(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["headerName"] = arg0
+	args["name"] = arg0
 	var arg1 *int
 	if tmp, ok := rawArgs["repeat"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("repeat"))
@@ -528,7 +525,7 @@ func (ec *executionContext) _Query_headerValue(ctx context.Context, field graphq
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().HeaderValue(rctx, fc.Args["headerName"].(string))
+		return ec.resolvers.Query().HeaderValue(rctx, fc.Args["name"].(string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -815,7 +812,7 @@ func (ec *executionContext) _Subscription_headerValue(ctx context.Context, field
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Subscription().HeaderValue(rctx, fc.Args["headerName"].(string), fc.Args["repeat"].(*int))
+		return ec.resolvers.Subscription().HeaderValue(rctx, fc.Args["name"].(string), fc.Args["repeat"].(*int))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -856,8 +853,8 @@ func (ec *executionContext) fieldContext_Subscription_headerValue(ctx context.Co
 			switch field.Name {
 			case "value":
 				return ec.fieldContext_TimestampedString_value(ctx, field)
-			case "time":
-				return ec.fieldContext_TimestampedString_time(ctx, field)
+			case "unixTime":
+				return ec.fieldContext_TimestampedString_unixTime(ctx, field)
 			case "seq":
 				return ec.fieldContext_TimestampedString_seq(ctx, field)
 			case "total":
@@ -935,8 +932,8 @@ func (ec *executionContext) fieldContext_Subscription_initPayloadValue(ctx conte
 			switch field.Name {
 			case "value":
 				return ec.fieldContext_TimestampedString_value(ctx, field)
-			case "time":
-				return ec.fieldContext_TimestampedString_time(ctx, field)
+			case "unixTime":
+				return ec.fieldContext_TimestampedString_unixTime(ctx, field)
 			case "seq":
 				return ec.fieldContext_TimestampedString_seq(ctx, field)
 			case "total":
@@ -1003,8 +1000,8 @@ func (ec *executionContext) fieldContext_TimestampedString_value(ctx context.Con
 	return fc, nil
 }
 
-func (ec *executionContext) _TimestampedString_time(ctx context.Context, field graphql.CollectedField, obj *model.TimestampedString) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_TimestampedString_time(ctx, field)
+func (ec *executionContext) _TimestampedString_unixTime(ctx context.Context, field graphql.CollectedField, obj *model.TimestampedString) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_TimestampedString_unixTime(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -1017,7 +1014,7 @@ func (ec *executionContext) _TimestampedString_time(ctx context.Context, field g
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Time, nil
+		return obj.UnixTime, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1029,19 +1026,19 @@ func (ec *executionContext) _TimestampedString_time(ctx context.Context, field g
 		}
 		return graphql.Null
 	}
-	res := resTmp.(time.Time)
+	res := resTmp.(int)
 	fc.Result = res
-	return ec.marshalNTime2timeᚐTime(ctx, field.Selections, res)
+	return ec.marshalNInt2int(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_TimestampedString_time(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_TimestampedString_unixTime(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "TimestampedString",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Time does not have child fields")
+			return nil, errors.New("field of type Int does not have child fields")
 		},
 	}
 	return fc, nil
@@ -3111,8 +3108,8 @@ func (ec *executionContext) _TimestampedString(ctx context.Context, sel ast.Sele
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "time":
-			out.Values[i] = ec._TimestampedString_time(ctx, field, obj)
+		case "unixTime":
+			out.Values[i] = ec._TimestampedString_unixTime(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -3563,21 +3560,6 @@ func (ec *executionContext) unmarshalNString2string(ctx context.Context, v inter
 
 func (ec *executionContext) marshalNString2string(ctx context.Context, sel ast.SelectionSet, v string) graphql.Marshaler {
 	res := graphql.MarshalString(v)
-	if res == graphql.Null {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
-		}
-	}
-	return res
-}
-
-func (ec *executionContext) unmarshalNTime2timeᚐTime(ctx context.Context, v interface{}) (time.Time, error) {
-	res, err := graphql.UnmarshalTime(v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalNTime2timeᚐTime(ctx context.Context, sel ast.SelectionSet, v time.Time) graphql.Marshaler {
-	res := graphql.MarshalTime(v)
 	if res == graphql.Null {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
