@@ -93,6 +93,10 @@ func SerializeRunner(sg runner.SubgraphsRunner) (string, error) {
 			Name:       "products",
 			RoutingURL: fmt.Sprintf("http://localhost:%d/graphql", ports.Products),
 		},
+		{
+			Name:       "test1",
+			RoutingURL: fmt.Sprintf("http://localhost:%d/graphql", ports.Test1),
+		},
 	}
 	return SerializeSubgraphs(subgraphs)
 }
