@@ -10,6 +10,7 @@ import {
 import { optionConstructor } from "@/components/analytics/getDataTableFilters";
 import { AnalyticsToolbar } from "@/components/analytics/toolbar";
 import { useAnalyticsQueryState } from "@/components/analytics/useAnalyticsQueryState";
+import { DatePickerWithRange } from "@/components/date-picker-with-range";
 import { EmptyState } from "@/components/empty-state";
 import { InfoTooltip } from "@/components/info-tooltip";
 import { getGraphLayout, GraphContext } from "@/components/layout/graph-layout";
@@ -57,9 +58,11 @@ import {
   MetricsDashboardMetric,
   MetricsTopItem,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
+import { formatISO, subHours } from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import React, { useCallback, useContext, useEffect, useId } from "react";
+import { DateRange } from "react-day-picker";
 import {
   Area,
   AreaChart,
@@ -852,6 +855,11 @@ const OverviewToolbar = () => {
   const client = useQueryClient();
   const range = useRange();
 
+  const [selectedDateRange, setDateRange] = React.useState<DateRange>({
+    from: subHours(new Date(), range),
+    to: new Date(),
+  });
+
   const onRangeChange = (value: string) => {
     router.push({
       pathname: router.pathname,
@@ -898,6 +906,17 @@ const OverviewToolbar = () => {
     168: "Last week",
   };
 
+  const onDateRangeChange = (val: DateRange) => {
+    const stringifiedDateRange = JSON.stringify({
+      start: formatISO(val.from as Date),
+      end: formatISO((val.to as Date) ?? (val.from as Date)),
+    });
+
+    // applyNewParams({
+    //   dateRange: stringifiedDateRange,
+    // });
+  };
+
   const handleCheckedChanged = (id: string) => {
     return (checked: boolean) => {
       if (checked) {
@@ -910,6 +929,11 @@ const OverviewToolbar = () => {
     <div className="flex flex-col gap-2 space-y-2">
       <div className="flex gap-2">
         <div className="flex flex-wrap gap-2">
+          <DatePickerWithRange
+            selectedDateRange={selectedDateRange}
+            onDateRangeChange={onDateRangeChange}
+          />
+
           <MetricsFilters filters={data?.filters ?? []} />
           <AnalyticsSelectedFilters
             filters={filtersList}
@@ -919,48 +943,6 @@ const OverviewToolbar = () => {
         </div>
 
         <Spacer />
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline">
-              <span className="inline-block w-[100px] text-left">
-                {rangeLabels[range]}
-              </span>
-              <ChevronDownIcon className="ml-2 h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start">
-            <DropdownMenuCheckboxItem
-              checked={range === 1}
-              onCheckedChange={handleCheckedChanged("1")}
-            >
-              Last hour
-            </DropdownMenuCheckboxItem>
-            <DropdownMenuCheckboxItem
-              checked={range === 4}
-              onCheckedChange={handleCheckedChanged("4")}
-            >
-              Last 4 hours
-            </DropdownMenuCheckboxItem>
-            <DropdownMenuCheckboxItem
-              checked={range === 24}
-              onCheckedChange={handleCheckedChanged("24")}
-            >
-              Last day
-            </DropdownMenuCheckboxItem>
-            <DropdownMenuCheckboxItem
-              checked={range === 72}
-              onCheckedChange={handleCheckedChanged("72")}
-            >
-              Last 3 days
-            </DropdownMenuCheckboxItem>
-            <DropdownMenuCheckboxItem
-              checked={range === 168}
-              onCheckedChange={handleCheckedChanged("168")}
-            >
-              Last week
-            </DropdownMenuCheckboxItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
         <Button
           isLoading={!!isFetching}
           onClick={() => {

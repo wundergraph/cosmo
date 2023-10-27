@@ -333,7 +333,13 @@ export function AnalyticsDataTable<T>({
     <div>
       <div className="flex flex-row flex-wrap items-start gap-y-2">
         <div className="flex flex-1 flex-row flex-wrap items-center gap-2">
+          <DatePickerWithRange
+            selectedDateRange={selectedDateRange}
+            onDateRangeChange={onDateRangeChange}
+          />
           <AnalyticsFilters filters={filtersList} />
+        </div>
+        <div className="flex flex-row flex-wrap items-start gap-2">
           <DataTableGroupMenu
             value={selectedGroup}
             onChange={onGroupChange}
@@ -355,12 +361,6 @@ export function AnalyticsDataTable<T>({
                 value: AnalyticsViewGroupName.HttpStatusCode,
               },
             ]}
-          />
-        </div>
-        <div className="flex flex-row flex-wrap items-start gap-2">
-          <DatePickerWithRange
-            selectedDateRange={selectedDateRange}
-            onDateRangeChange={onDateRangeChange}
           />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

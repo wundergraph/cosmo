@@ -9,9 +9,18 @@ import useWindowSize from "@/hooks/use-window-size";
 import { formatDate } from "@/lib/format-date";
 import { cn } from "@/lib/utils";
 import CalendarIcon from "@heroicons/react/24/outline/CalendarIcon";
-import { addDays, addYears } from "date-fns";
+import { addDays, addYears, differenceInHours, subHours } from "date-fns";
 import { useEffect, useState } from "react";
 import { DateRange } from "react-day-picker";
+
+const ranges: Record<number, string> = {
+  1: "Last hour",
+  4: "Last 4 hours",
+  24: "Last day",
+  72: "Last 3 days",
+  168: "Last week",
+  720: "Last month",
+};
 
 export function DatePickerWithRange({
   selectedDateRange,
@@ -27,11 +36,29 @@ export function DatePickerWithRange({
 }) {
   const { isMobile } = useWindowSize();
 
+  const diff =
+    selectedDateRange?.to &&
+    selectedDateRange?.from &&
+    differenceInHours(selectedDateRange.to, selectedDateRange.from);
+
   const [selected, setSelected] = useState(selectedDateRange);
+
+  const [range, setRange] = useState(diff);
+
+  const rangeLabel = diff ? ranges[diff] : undefined;
 
   useEffect(() => {
     setSelected(selectedDateRange);
   }, [selectedDateRange]);
+
+  const setSelectedRange = (range: number) => {
+    const from = subHours(new Date(), range);
+    const to = new Date();
+
+    setSelected({ from, to });
+    setRange(range);
+    onDateRangeChange({ from, to });
+  };
 
   const isDayBetween = (day: Date, from: Date, to: Date) => {
     return day > from && day < to;
@@ -53,26 +80,45 @@ export function DatePickerWithRange({
           variant={"outline"}
           size={size}
           className={cn(
-            "w-[240px] justify-center text-left font-normal",
+            "w-[200px] justify-start px-2.5 text-left font-normal",
             className,
             !selected && "text-muted-foreground"
           )}
         >
           <CalendarIcon className="mr-2 h-4 w-4" />
-          {selected?.from ? (
-            selected.to ? (
-              <>
-                {formatDate(selected.from)} - {formatDate(selected.to)}
-              </>
+
+          <span className="truncate text-sm">
+            {rangeLabel ? (
+              rangeLabel
+            ) : selected?.from ? (
+              selected.to ? (
+                <>
+                  {formatDate(selected.from)} - {formatDate(selected.to)}
+                </>
+              ) : (
+                <>{formatDate(selected.from)} - </>
+              )
             ) : (
-              <>{formatDate(selected.from)} - </>
-            )
-          ) : (
-            <span>Pick a date</span>
-          )}
+              <>Pick a date</>
+            )}
+          </span>
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align={align}>
+      <PopoverContent className="flex w-auto flex-row p-0" align={align}>
+        <ul className="w-[140px] space-y-[1px] p-2">
+          {Object.entries(ranges).map(([id, label]) => (
+            <li key={id}>
+              <Button
+                variant="ghost"
+                className="w-full justify-start"
+                data-active={range === Number(id) ? "" : undefined}
+                onClick={() => setSelectedRange(Number(id))}
+              >
+                {label}
+              </Button>
+            </li>
+          ))}
+        </ul>
         <Calendar
           initialFocus
           mode="range"
