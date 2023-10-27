@@ -13,6 +13,7 @@ type PromRegistry struct {
 	excludeLabels  []regexp.Regexp
 }
 
+// NewPromRegistry creates a new Prometheus registry with the given exclude metrics and exclude metric labels.
 func NewPromRegistry(promRegistry *prom.Registry, excludeMetrics, excludeLabels []string) (*PromRegistry, error) {
 
 	excludeMetricsRegexp, err := stringArrayToRegexpArray(excludeMetrics)
@@ -32,6 +33,7 @@ func NewPromRegistry(promRegistry *prom.Registry, excludeMetrics, excludeLabels 
 	}, nil
 }
 
+// Gather returns all metrics in the registry. It is called every time the Prometheus endpoint is scraped.
 func (wr *PromRegistry) Gather() ([]*dto.MetricFamily, error) {
 	return wr.Filter()
 }
