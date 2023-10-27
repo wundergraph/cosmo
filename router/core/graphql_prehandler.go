@@ -4,10 +4,8 @@ import (
 	"errors"
 	"github.com/go-chi/chi/middleware"
 	"github.com/wundergraph/cosmo/router/internal/logging"
-	"github.com/wundergraph/cosmo/router/internal/otel"
 	"github.com/wundergraph/cosmo/router/internal/pool"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphql"
-	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 	"net/http"
 )
@@ -106,11 +104,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 		metrics.AddAttributes(commonAttributeValues...)
 
-		span := trace.SpanFromContext(r.Context())
-		span.SetName(GetSpanName(operation.Name, operation.Type))
-		span.SetAttributes(commonAttributeValues...)
-		// Only set the query content on the span
-		span.SetAttributes(otel.WgOperationContent.String(operation.Query))
+		initializeSpan(r.Context(), operation, commonAttributeValues)
 
 		opContext, err := h.planner.Plan(operation, clientInfo)
 		if err != nil {

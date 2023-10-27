@@ -9,28 +9,17 @@ import (
 
 type PromRegistry struct {
 	promRegistry   *prom.Registry
-	excludeMetrics []regexp.Regexp
-	excludeLabels  []regexp.Regexp
+	excludeMetrics []*regexp.Regexp
+	excludeLabels  []*regexp.Regexp
 }
 
 // NewPromRegistry creates a new Prometheus registry with the given exclude metrics and exclude metric labels.
 // The exclude metrics and exclude metric labels are regular expressions.
-func NewPromRegistry(promRegistry *prom.Registry, excludeMetrics, excludeLabels []string) (*PromRegistry, error) {
-
-	excludeMetricsRegexp, err := stringArrayToRegexpArray(excludeMetrics)
-	if err != nil {
-		return nil, fmt.Errorf("invalid regex for exclude metrics: %w", err)
-	}
-
-	excludeLabelsRegexp, err := stringArrayToRegexpArray(excludeLabels)
-	if err != nil {
-		return nil, fmt.Errorf("invalid regex for exclude metric labels: %w", err)
-	}
-
+func NewPromRegistry(promRegistry *prom.Registry, excludeMetrics, excludeLabels []*regexp.Regexp) (*PromRegistry, error) {
 	return &PromRegistry{
 		promRegistry:   promRegistry,
-		excludeMetrics: excludeMetricsRegexp,
-		excludeLabels:  excludeLabelsRegexp,
+		excludeMetrics: excludeMetrics,
+		excludeLabels:  excludeLabels,
 	}, nil
 }
 

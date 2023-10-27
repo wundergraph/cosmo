@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 	"github.com/prometheus/client_golang/prometheus/collectors"
-	wgotel "github.com/wundergraph/cosmo/router/internal/otel"
 	"net/url"
+	"regexp"
 	"time"
 
 	prom "github.com/prometheus/client_golang/prometheus"
@@ -27,7 +27,8 @@ var (
 	mp *sdkmetric.MeterProvider
 	// Excluded by default from Prometheus export because of high cardinality
 	// This would produce a metric series for each unique operation
-	defaultExcludedPromMetricLabels = []string{string(wgotel.WgOperationHash)}
+	// Metric must be in snake case because that's how the Prometheus exporter converts them
+	defaultExcludedPromMetricLabels = []*regexp.Regexp{regexp.MustCompile("wg_operation_hash")}
 )
 
 const (
@@ -35,7 +36,7 @@ const (
 	defaultExportInterval = 15 * time.Second
 )
 
-func createPromExporter(excludeMetrics, excludeMetricLabels []string) (*otelprom.Exporter, *PromRegistry, error) {
+func createPromExporter(excludeMetrics, excludeMetricLabels []*regexp.Regexp) (*otelprom.Exporter, *PromRegistry, error) {
 	excludeMetricLabels = append(excludeMetricLabels, defaultExcludedPromMetricLabels...)
 	registry, err := NewPromRegistry(prom.NewRegistry(), excludeMetrics, excludeMetricLabels)
 	if err != nil {

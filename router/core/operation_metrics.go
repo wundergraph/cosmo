@@ -172,3 +172,16 @@ func commonMetricAttributes(operation *ParsedOperation, protocol OperationProtoc
 
 	return baseMetricAttributeValues
 }
+
+// initializeSpan sets the correct span name and attributes for the operation on the current span.
+func initializeSpan(ctx context.Context, operation *ParsedOperation, commonAttributeValues []attribute.KeyValue) {
+	if operation == nil {
+		return
+	}
+
+	span := trace.SpanFromContext(ctx)
+	span.SetName(GetSpanName(operation.Name, operation.Type))
+	span.SetAttributes(commonAttributeValues...)
+	// Only set the query content on the span
+	span.SetAttributes(otel.WgOperationContent.String(operation.Query))
+}

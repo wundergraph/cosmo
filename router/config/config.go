@@ -1,12 +1,9 @@
 package config
 
 import (
-	b64 "encoding/base64"
 	"fmt"
 	"os"
 	"time"
-
-	"github.com/dustin/go-humanize"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/goccy/go-yaml"
@@ -19,40 +16,6 @@ import (
 )
 
 const defaultConfigPath = "config.yaml"
-
-type Base64Decoder []byte
-
-func (ipd *Base64Decoder) Decode(value string) error {
-	decoded, err := b64.StdEncoding.DecodeString(value)
-	if err != nil {
-		return fmt.Errorf("could not decode base64 string: %w", err)
-	}
-
-	*ipd = decoded
-
-	return nil
-}
-
-type BytesString uint64
-
-func (b *BytesString) Decode(value string) error {
-	decoded, err := humanize.ParseBytes(value)
-	if err != nil {
-		return fmt.Errorf("could not parse bytes string: %w", err)
-	}
-
-	*b = BytesString(decoded)
-
-	return nil
-}
-
-func (b *BytesString) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	var s string
-	if err := unmarshal(&s); err != nil {
-		return err
-	}
-	return b.Decode(s)
-}
 
 type Graph struct {
 	Name  string `yaml:"name" envconfig:"FEDERATED_GRAPH_NAME" validate:"required"`
@@ -79,11 +42,11 @@ type Tracing struct {
 }
 
 type Prometheus struct {
-	Enabled             bool     `yaml:"enabled" default:"true" envconfig:"PROMETHEUS_ENABLED"`
-	Path                string   `yaml:"path" default:"/metrics" validate:"uri" envconfig:"PROMETHEUS_HTTP_PATH"`
-	ListenAddr          string   `yaml:"listen_addr" default:"127.0.0.1:8088" validate:"hostname_port" envconfig:"PROMETHEUS_LISTEN_ADDR"`
-	ExcludeMetrics      []string `yaml:"exclude_metrics" envconfig:"PROMETHEUS_EXCLUDE_METRICS"`
-	ExcludeMetricLabels []string `yaml:"exclude_metric_labels" envconfig:"PROMETHEUS_EXCLUDE_METRIC_LABELS"`
+	Enabled             bool       `yaml:"enabled" default:"true" envconfig:"PROMETHEUS_ENABLED"`
+	Path                string     `yaml:"path" default:"/metrics" validate:"uri" envconfig:"PROMETHEUS_HTTP_PATH"`
+	ListenAddr          string     `yaml:"listen_addr" default:"127.0.0.1:8088" validate:"hostname_port" envconfig:"PROMETHEUS_LISTEN_ADDR"`
+	ExcludeMetrics      RegExArray `yaml:"exclude_metrics" envconfig:"PROMETHEUS_EXCLUDE_METRICS"`
+	ExcludeMetricLabels RegExArray `yaml:"exclude_metric_labels" envconfig:"PROMETHEUS_EXCLUDE_METRIC_LABELS"`
 }
 
 type MetricsOTLPExporter struct {
