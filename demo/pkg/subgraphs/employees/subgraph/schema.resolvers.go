@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"time"
 
-	generated1 "github.com/wundergraph/cosmo/demo/pkg/subgraphs/employees/subgraph/generated"
+	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/employees/subgraph/generated"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/employees/subgraph/model"
 )
 
@@ -41,7 +41,7 @@ func (r *queryResolver) TeamMates(ctx context.Context, team model.Department) ([
 		return []*model.Employee{
 			employees[0], employees[1], employees[4],
 			employees[5], employees[6], employees[7],
-			employees[8], employees[10], employees[11],
+			employees[8], employees[10],
 		}, nil
 	}
 }
@@ -82,11 +82,11 @@ func (r *subscriptionResolver) CurrentTime(ctx context.Context) (<-chan *model.T
 	return ch, nil
 }
 
-// Query returns generated1.QueryResolver implementation.
-func (r *Resolver) Query() generated1.QueryResolver { return &queryResolver{r} }
+// Query returns generated.QueryResolver implementation.
+func (r *Resolver) Query() generated.QueryResolver { return &queryResolver{r} }
 
-// Subscription returns generated1.SubscriptionResolver implementation.
-func (r *Resolver) Subscription() generated1.SubscriptionResolver { return &subscriptionResolver{r} }
+// Subscription returns generated.SubscriptionResolver implementation.
+func (r *Resolver) Subscription() generated.SubscriptionResolver { return &subscriptionResolver{r} }
 
 type queryResolver struct{ *Resolver }
 type subscriptionResolver struct{ *Resolver }

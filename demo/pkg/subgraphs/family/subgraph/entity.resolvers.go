@@ -6,13 +6,12 @@ package subgraph
 
 import (
 	"context"
-
-	generated1 "github.com/wundergraph/cosmo/demo/pkg/subgraphs/family/subgraph/generated"
-	model1 "github.com/wundergraph/cosmo/demo/pkg/subgraphs/family/subgraph/model"
+	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/family/subgraph/generated"
+	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/family/subgraph/model"
 )
 
 // FindEmployeeByID is the resolver for the findEmployeeByID field.
-func (r *entityResolver) FindEmployeeByID(ctx context.Context, id int) (*model1.Employee, error) {
+func (r *entityResolver) FindEmployeeByID(ctx context.Context, id int) (*model.Employee, error) {
 	switch id {
 	case 1, 2, 3, 4, 5:
 		return employees[id-1], nil
@@ -24,6 +23,6 @@ func (r *entityResolver) FindEmployeeByID(ctx context.Context, id int) (*model1.
 }
 
 // Entity returns generated1.EntityResolver implementation.
-func (r *Resolver) Entity() generated1.EntityResolver { return &entityResolver{r} }
+func (r *Resolver) Entity() generated.EntityResolver { return &entityResolver{r} }
 
 type entityResolver struct{ *Resolver }
