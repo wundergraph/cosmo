@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.27.0](https://github.com/wundergraph/cosmo/compare/router@0.26.2...router@0.27.0) (2023-10-27)
+
+### Features
+
+* add support for authentication via JWKS ([#200](https://github.com/wundergraph/cosmo/issues/200)) ([cc59f9f](https://github.com/wundergraph/cosmo/commit/cc59f9f29b7b4ecf9360720f1c2478ae87f0f0be)) (@fiam)
+* allow to exclude certain OTEL metrics and labels from prometheus export ([#209](https://github.com/wundergraph/cosmo/issues/209)) ([d20074c](https://github.com/wundergraph/cosmo/commit/d20074c4174d3e3591de8b4f31791ed511d8b357)) (@StarpTech)
+
 ## [0.26.2](https://github.com/wundergraph/cosmo/compare/router@0.26.1...router@0.26.2) (2023-10-26)
 
 **Note:** Version bump only for package router
