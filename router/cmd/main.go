@@ -207,9 +207,11 @@ func metricsConfig(cfg *config.Telemetry) *metric.Config {
 			Exporters: openTelemetryExporters,
 		},
 		Prometheus: metric.Prometheus{
-			Enabled:    cfg.Metrics.Prometheus.Enabled,
-			ListenAddr: cfg.Metrics.Prometheus.ListenAddr,
-			Path:       cfg.Metrics.Prometheus.Path,
+			Enabled:             cfg.Metrics.Prometheus.Enabled,
+			ListenAddr:          cfg.Metrics.Prometheus.ListenAddr,
+			Path:                cfg.Metrics.Prometheus.Path,
+			ExcludeMetrics:      cfg.Metrics.Prometheus.ExcludeMetrics,
+			ExcludeMetricLabels: cfg.Metrics.Prometheus.ExcludeMetricLabels,
 		},
 	}
 }

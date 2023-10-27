@@ -2,13 +2,12 @@ package core
 
 import (
 	"errors"
-	"net/http"
-
 	"github.com/go-chi/chi/middleware"
 	"github.com/wundergraph/cosmo/router/internal/logging"
 	"github.com/wundergraph/cosmo/router/internal/pool"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphql"
 	"go.uber.org/zap"
+	"net/http"
 )
 
 type PreHandlerOptions struct {
@@ -101,10 +100,11 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			return
 		}
 
-		// Set the operation attributes as early as possible, so they are available in the trace
-		baseMetricAttributeValues := SetSpanOperationAttributes(r.Context(), operation, OperationProtocolHTTP)
+		commonAttributeValues := commonMetricAttributes(operation, OperationProtocolHTTP)
 
-		metrics.AddAttributes(baseMetricAttributeValues...)
+		metrics.AddAttributes(commonAttributeValues...)
+
+		initializeSpan(r.Context(), operation, commonAttributeValues)
 
 		opContext, err := h.planner.Plan(operation, clientInfo)
 		if err != nil {
