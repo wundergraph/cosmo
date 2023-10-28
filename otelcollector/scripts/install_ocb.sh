@@ -22,4 +22,4 @@ else
 fi
 
 OCB_URL="https://github.com/open-telemetry/opentelemetry-collector/releases/download/cmd%2Fbuilder%2Fv${OCB_VERSION}/ocb_${OCB_VERSION}_linux_${OCB_ARCH}"
-curl -LJO ${OCB_URL} && mv ocb_${OCB_VERSION}_linux_${OCH_ARCH} ocb && chmod +x ocb
+curl -LJO ${OCB_URL} && mv ocb_${OCB_VERSION}_linux_${OCB_ARCH} ocb && chmod +x ocb
