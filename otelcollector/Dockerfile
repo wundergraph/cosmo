@@ -2,10 +2,8 @@ FROM golang:1.20 as builder
 
 WORKDIR /app
 
-# Download binary from github
-RUN curl -LJO https://github.com/open-telemetry/opentelemetry-collector/releases/download/cmd%2Fbuilder%2Fv0.84.0/ocb_0.84.0_linux_amd64 \
-    && chmod +x ocb_0.84.0_linux_amd64 \
-    && mv ocb_0.84.0_linux_amd64 ocb
+COPY ./scripts/intall_ocb.sh ./install_ocb.sh
+RUN ./install_ocb.sh
 
 COPY ./otelcol-builder.yaml ./otelcol-builder.yaml
 
