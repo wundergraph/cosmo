@@ -29,6 +29,9 @@ jobs:
   build-and-push-image:
     strategy:
       matrix:
+        platform:
+          - linux/amd64
+          - linux/arm64
         include:
           - container_name: controlplane
             dockerfile: controlplane/Dockerfile
@@ -91,6 +94,7 @@ jobs:
           push: false
           file: ${{ matrix.dockerfile }}
           context: ${{ matrix.context_path }}
+          platforms: ${{ matrix.platform }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
