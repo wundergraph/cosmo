@@ -4,6 +4,15 @@ dev:
 test:
 	go test -race ./...
 
+test-norace:
+	go test ./...
+
+docker-test-linux/amd64: test
+# Race detector fails on linux/arm64 with
+#13 388.6 FATAL: ThreadSanitizer: unsupported VMA range
+#13 388.6 FATAL: Found 39 - Supported 48
+docker-test-linux/arm64: test-norace
+
 lint:
 	go vet ./...
 	staticcheck ./...
