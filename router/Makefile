@@ -8,15 +8,14 @@ test-norace:
 	go test ./...
 
 ARCH := $(shell uname -m)
-
-docker-test:
+# Tests to run while building the docker image
 # Race detector fails while building on docker for linux/arm64 with
 #13 388.6 FATAL: ThreadSanitizer: unsupported VMA range
 #13 388.6 FATAL: Found 39 - Supported 48
 ifeq ($(ARCH),aarch64)
-	$(MAKE) test-norace
+test-from-docker-build: test-norace
 else
-	$(MAKE) test
+test-from-docker-build: test
 endif
 
 lint:

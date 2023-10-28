@@ -4,6 +4,20 @@ dev:
 test:
 	go test -race ./...
 
+test-norace:
+	go test ./...
+
+ARCH := $(shell uname -m)
+# Tests to run while building the docker image
+# Race detector fails while building on docker for linux/arm64 with
+#13 388.6 FATAL: ThreadSanitizer: unsupported VMA range
+#13 388.6 FATAL: Found 39 - Supported 48
+ifeq ($(ARCH),aarch64)
+test-from-docker-build: test-norace
+else
+test-from-docker-build: test
+endif
+
 new-migration:
 	dbmate -d "./migrations" new $(name)
 

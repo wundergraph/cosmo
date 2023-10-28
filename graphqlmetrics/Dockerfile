@@ -16,7 +16,7 @@ RUN go mod download
 COPY . .
 
 # Run tests
-RUN make test
+RUN make test-from-docker-build
 
 # Build router
 RUN make build VERSION=${VERSION}
