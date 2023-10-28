@@ -28,7 +28,7 @@ RUN buf generate --template buf.router.go.gen.yaml
 WORKDIR /app/router
 
 # Run tests
-RUN make docker-test-${TARGETPLATFORM}
+RUN make docker-test
 
 # Build router
 RUN make build VERSION=${VERSION}
