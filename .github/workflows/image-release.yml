@@ -73,6 +73,7 @@ jobs:
           push: true
           file: ${{ inputs.name }}/Dockerfile
           context: ${{ inputs.dockerContext }}
+          platforms: linux/amd64,linux/arm64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ github.repository }}/${{ inputs.name }}:buildcache

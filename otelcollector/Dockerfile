@@ -2,7 +2,7 @@ FROM golang:1.20 as builder
 
 WORKDIR /app
 
-COPY ./scripts/intall_ocb.sh ./install_ocb.sh
+COPY ./scripts/install_ocb.sh ./install_ocb.sh
 RUN ./install_ocb.sh
 
 COPY ./otelcol-builder.yaml ./otelcol-builder.yaml
