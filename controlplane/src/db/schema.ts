@@ -1,7 +1,8 @@
 import { relations } from 'drizzle-orm';
 import {
-  bigint,
   boolean,
+  integer,
+  bigint,
   json,
   jsonb,
   pgEnum,
@@ -25,6 +26,16 @@ export const federatedGraphs = pgTable('federated_graphs', {
   composedSchemaVersionId: uuid('composed_schema_version_id').references(() => schemaVersion.id, {
     onDelete: 'no action',
   }),
+});
+
+export const federatedGraphConfigs = pgTable('federated_graph_configs', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  federatedGraphId: uuid('federated_graph_id')
+    .notNull()
+    .references(() => federatedGraphs.id, {
+      onDelete: 'cascade',
+    }),
+  traffic_check_days: integer('traffic_check_days').notNull().default(7),
 });
 
 export const subscriptionProtocolEnum = pgEnum('subscription_protocol', ['ws', 'sse', 'sse_post']);
@@ -53,6 +64,10 @@ export const federatedGraphRelations = relations(federatedGraphs, ({ many, one }
   composedSchemaVersion: one(schemaVersion, {
     fields: [federatedGraphs.composedSchemaVersionId],
     references: [schemaVersion.id],
+  }),
+  config: one(federatedGraphConfigs, {
+    fields: [federatedGraphs.id],
+    references: [federatedGraphConfigs.federatedGraphId],
   }),
   subgraphs: many(subgraphsToFederatedGraph),
 }));
@@ -276,6 +291,7 @@ export const schemaChecks = pgTable('schema_checks', {
     }),
   isComposable: boolean('is_composable').default(false),
   hasBreakingChanges: boolean('has_breaking_changes').default(false),
+  hasClientTraffic: boolean('has_client_traffic').default(false),
   proposedSubgraphSchemaSDL: text('proposed_subgraph_schema_sdl'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   ghDetails: json('gh_details').$type<{
@@ -286,6 +302,19 @@ export const schemaChecks = pgTable('schema_checks', {
     commitSha: string;
   }>(),
   forcedSuccess: boolean('forced_success').default(false),
+});
+
+export const schemaCheckChangeActionOperationUsage = pgTable('schema_check_change_operation_usage', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  schemaCheckChangeActionId: uuid('schema_check_change_action_id')
+    .notNull()
+    .references(() => schemaCheckChangeAction.id, {
+      onDelete: 'cascade',
+    }),
+  name: text('name'),
+  hash: text('hash'),
+  type: text('type'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const schemaCheckChangeAction = pgTable('schema_check_change_action', {
@@ -301,6 +330,10 @@ export const schemaCheckChangeAction = pgTable('schema_check_change_action', {
   path: text('path'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+export const schemaCheckChangeActionRelations = relations(schemaChecks, ({ many }) => ({
+  operationUsage: many(schemaCheckChangeActionOperationUsage),
+}));
 
 export const schemaCheckComposition = pgTable('schema_check_composition', {
   id: uuid('id').primaryKey().defaultRandom(),

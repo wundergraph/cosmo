@@ -114,11 +114,18 @@ message CompositionError{
   string federatedGraphName = 2;
 }
 
+message CheckOperationUsageStats {
+  uint32 totalOperations = 1;
+  string firstSeenAt = 2;
+  string lastSeenAt = 3;
+}
+
 message CheckSubgraphSchemaResponse {
   Response response = 1;
   repeated SchemaChange breakingChanges = 2;
   repeated SchemaChange nonBreakingChanges = 3;
   repeated CompositionError compositionErrors = 4;
+  CheckOperationUsageStats operationUsageStats = 5;
 }
 
 message FixSubgraphSchemaResponse {

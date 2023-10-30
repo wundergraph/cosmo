@@ -955,6 +955,55 @@ export class CompositionError extends Message<CompositionError> {
 }
 
 /**
+ * @generated from message wg.cosmo.platform.v1.CheckOperationUsageStats
+ */
+export class CheckOperationUsageStats extends Message<CheckOperationUsageStats> {
+  /**
+   * @generated from field: uint32 totalOperations = 1;
+   */
+  totalOperations = 0;
+
+  /**
+   * @generated from field: string firstSeenAt = 2;
+   */
+  firstSeenAt = "";
+
+  /**
+   * @generated from field: string lastSeenAt = 3;
+   */
+  lastSeenAt = "";
+
+  constructor(data?: PartialMessage<CheckOperationUsageStats>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.CheckOperationUsageStats";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "totalOperations", kind: "scalar", T: 13 /* ScalarType.UINT32 */ },
+    { no: 2, name: "firstSeenAt", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "lastSeenAt", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CheckOperationUsageStats {
+    return new CheckOperationUsageStats().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CheckOperationUsageStats {
+    return new CheckOperationUsageStats().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CheckOperationUsageStats {
+    return new CheckOperationUsageStats().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CheckOperationUsageStats | PlainMessage<CheckOperationUsageStats> | undefined, b: CheckOperationUsageStats | PlainMessage<CheckOperationUsageStats> | undefined): boolean {
+    return proto3.util.equals(CheckOperationUsageStats, a, b);
+  }
+}
+
+/**
  * @generated from message wg.cosmo.platform.v1.CheckSubgraphSchemaResponse
  */
 export class CheckSubgraphSchemaResponse extends Message<CheckSubgraphSchemaResponse> {
@@ -978,6 +1027,11 @@ export class CheckSubgraphSchemaResponse extends Message<CheckSubgraphSchemaResp
    */
   compositionErrors: CompositionError[] = [];
 
+  /**
+   * @generated from field: wg.cosmo.platform.v1.CheckOperationUsageStats operationUsageStats = 5;
+   */
+  operationUsageStats?: CheckOperationUsageStats;
+
   constructor(data?: PartialMessage<CheckSubgraphSchemaResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -990,6 +1044,7 @@ export class CheckSubgraphSchemaResponse extends Message<CheckSubgraphSchemaResp
     { no: 2, name: "breakingChanges", kind: "message", T: SchemaChange, repeated: true },
     { no: 3, name: "nonBreakingChanges", kind: "message", T: SchemaChange, repeated: true },
     { no: 4, name: "compositionErrors", kind: "message", T: CompositionError, repeated: true },
+    { no: 5, name: "operationUsageStats", kind: "message", T: CheckOperationUsageStats },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CheckSubgraphSchemaResponse {

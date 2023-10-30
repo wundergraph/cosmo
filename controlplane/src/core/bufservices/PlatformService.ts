@@ -1,6 +1,6 @@
 import { PlainMessage } from '@bufbuild/protobuf';
 import { ServiceImpl } from '@connectrpc/connect';
-import { EnumStatusCode, GraphQLSubscriptionProtocol } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { GetConfigResponse } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
 import {
@@ -53,6 +53,7 @@ import {
   WhoAmIResponse,
   GetFieldUsageResponse,
   GetFederatedSubgraphSDLByNameResponse,
+  CheckOperationUsageStats,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 
 import { OrganizationEventName, PlatformEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
@@ -67,7 +68,7 @@ import { FederatedGraphRepository } from '../repositories/FederatedGraphReposito
 import { GitHubRepository } from '../repositories/GitHubRepository.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import { SchemaCheckRepository } from '../repositories/SchemaCheckRepository.js';
-import { Subgraph, SubgraphRepository } from '../repositories/SubgraphRepository.js';
+import { SubgraphRepository } from '../repositories/SubgraphRepository.js';
 import { UserRepository } from '../repositories/UserRepository.js';
 import { AnalyticsDashboardViewRepository } from '../repositories/analytics/AnalyticsDashboardViewRepository.js';
 import { AnalyticsRequestViewRepository } from '../repositories/analytics/AnalyticsRequestViewRepository.js';
@@ -80,6 +81,11 @@ import Slack from '../services/Slack.js';
 import { UsageRepository } from '../repositories/analytics/UsageRepository.js';
 import { formatSubscriptionProtocol, handleError, isValidLabelMatchers, isValidLabels } from '../util.js';
 import { FederatedGraphSchemaUpdate, OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
+import {
+  collectOperationUsageStats,
+  InspectorOperationResult,
+  SchemaUsageTrafficInspector,
+} from '../services/SchemaUsageTrafficInspector.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -121,6 +127,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           routingUrl: req.routingUrl,
         });
 
+        await fedGraphRepo.createConfig(federatedGraph.id, 7);
+
         const subgraphs = await subgraphRepo.listByFederatedGraph(req.name, {
           published: true,
         });
@@ -142,7 +150,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           const fedGraphRepo = new FederatedGraphRepository(tx, authContext.organizationId);
           const subgraphRepo = new SubgraphRepository(tx, authContext.organizationId);
           const compChecker = new Composer(fedGraphRepo, subgraphRepo);
-          const composition = await compChecker.composeFederatedGraph(federatedGraph.name, federatedGraph.targetId);
+          const composition = await compChecker.composeFederatedGraph(federatedGraph);
 
           compositionErrors.push(
             ...composition.errors.map((e) => ({
@@ -527,7 +535,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         });
 
         const schemaChanges = await getDiffBetweenGraphs(subgraph.schemaSDL, newSchemaSDL);
-
         if (schemaChanges.kind === 'failure') {
           logger.debug(`Error finding diff between graphs: ${schemaChanges.error}`);
           return {
@@ -541,18 +548,17 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        // add the changes to the db
+        const hasBreakingChanges = schemaChanges.breakingChanges.length > 0;
+
         await schemaCheckRepo.createSchemaCheckChanges({
-          changes: [...schemaChanges.breakingChanges, ...schemaChanges.nonBreakingChanges],
+          changes: schemaChanges.nonBreakingChanges,
           schemaCheckID,
         });
 
-        if (schemaChanges.breakingChanges.length > 0) {
-          await schemaCheckRepo.update({
-            schemaCheckID,
-            hasBreakingChanges: true,
-          });
-        }
+        const storedBreakingChanges = await schemaCheckRepo.createSchemaCheckChanges({
+          changes: schemaChanges.breakingChanges,
+          schemaCheckID,
+        });
 
         const composer = new Composer(fedGraphRepo, subgraphRepo);
         const result = await composer.composeWithProposedSDL(subgraph.labels, subgraph.name, newSchemaSDL);
@@ -562,8 +568,20 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           compositions: result.compositions,
         });
 
+        let hasClientTraffic = false;
+
+        const trafficInspector = new SchemaUsageTrafficInspector(opts.chClient!);
+        let inspectedOperations: InspectorOperationResult[] = [];
         const compositionErrors: PlainMessage<CompositionError>[] = [];
+
+        // For operations checks we only consider breaking changes
+        const inspectorChanges = trafficInspector.schemaChangesToInspectorChanges(
+          schemaChanges.breakingChanges,
+          storedBreakingChanges,
+        );
+
         for (const composition of result.compositions) {
+          // We collect composition errors for all federated graphs
           if (composition.errors.length > 0) {
             for (const error of composition.errors) {
               compositionErrors.push({
@@ -572,7 +590,51 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               });
             }
           }
+
+          // We don't collect operation usage when we have composition errors
+          if (composition.errors.length === 0) {
+            if (inspectorChanges.inspectable && inspectorChanges.changes.length > 0) {
+              const graphConfig = await fedGraphRepo.getConfig(composition.id);
+              if (!graphConfig) {
+                continue;
+              }
+
+              if (graphConfig.trafficCheckDays <= 0) {
+                continue;
+              }
+
+              const result = await trafficInspector.inspect(inspectorChanges.changes, {
+                daysToConsider: graphConfig.trafficCheckDays,
+                federatedGraphId: composition.id,
+                organizationId: authContext.organizationId,
+              });
+
+              if (result.size > 0) {
+                // If we have at least one operation with traffic, we consider this schema change as breaking
+                // and skip the rest of the federated graphs
+                hasClientTraffic = true;
+
+                // Store operation usage
+                await schemaCheckRepo.createOperationUsage(result);
+
+                // Collect all inspected operations for later aggregation
+                for (const resultElement of result.values()) {
+                  inspectedOperations.push(...resultElement);
+                }
+              }
+            }
+          }
         }
+
+        const operationUsageStats: PlainMessage<CheckOperationUsageStats> =
+          collectOperationUsageStats(inspectedOperations);
+
+        // Update the overall schema check with the results
+        await schemaCheckRepo.update({
+          schemaCheckID,
+          hasClientTraffic: hasClientTraffic,
+          hasBreakingChanges: hasBreakingChanges,
+        });
 
         if (req.gitInfo && opts.githubApp) {
           const githubRepo = new GitHubRepository(opts.db, opts.githubApp);
@@ -594,6 +656,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           },
           breakingChanges: schemaChanges.breakingChanges,
           nonBreakingChanges: schemaChanges.nonBreakingChanges,
+          operationUsageStats,
           compositionErrors,
         };
       });
@@ -1142,7 +1205,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
           // Validate all federated graphs that use this subgraph.
           for (const federatedGraph of affectedFederatedGraphs) {
-            const composition = await composer.composeFederatedGraph(federatedGraph.name, federatedGraph.targetId);
+            const composition = await composer.composeFederatedGraph(federatedGraph);
 
             await composer.deployComposition(composition);
 
@@ -2235,7 +2298,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             db: tx,
           });
 
-          const composition = await composer.composeFederatedGraph(federatedGraph.name, federatedGraph.targetId);
+          const composition = await composer.composeFederatedGraph(federatedGraph);
 
           await composer.deployComposition(composition);
         });

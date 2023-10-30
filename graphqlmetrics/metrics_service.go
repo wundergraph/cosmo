@@ -167,6 +167,7 @@ func (s *MetricsService) PublishGraphQLMetrics(
 				fieldUsage.Count,
 				fieldUsage.Path,
 				fieldUsage.TypeNames,
+				fieldUsage.NamedType,
 				schemaUsage.ClientInfo.Name,
 				schemaUsage.ClientInfo.Version,
 				strconv.FormatInt(int64(schemaUsage.RequestInfo.StatusCode), 10),

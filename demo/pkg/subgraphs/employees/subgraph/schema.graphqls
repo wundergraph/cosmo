@@ -7,11 +7,10 @@ type Query {
 enum Department {
   ENGINEERING
   MARKETING
-  OPERATIONS
 }
 
 interface RoleType {
-  department: Department!
+  department: Department
   title: [String!]!
 }
 

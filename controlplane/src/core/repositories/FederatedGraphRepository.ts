@@ -2,10 +2,10 @@ import { JsonValue } from '@bufbuild/protobuf';
 import { and, asc, desc, eq, gt, inArray, lt, not, notExists, notInArray, SQL, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { RouterConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
-import { CompositionError, SchemaChange } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { joinLabel, normalizeURL } from '@wundergraph/cosmo-shared';
 import * as schema from '../../db/schema.js';
 import {
+  federatedGraphConfigs,
   federatedGraphs,
   graphApiTokens,
   schemaChecks,
@@ -20,17 +20,24 @@ import {
   GraphApiKeyDTO,
   Label,
   ListFilterOptions,
-  SchemaChangeType,
 } from '../../types/index.js';
 import { normalizeLabelMatchers, normalizeLabels } from '../util.js';
 import { Composer } from '../composition/composer.js';
 import { SubgraphRepository } from './SubgraphRepository.js';
+import { SchemaDiff } from '../composition/schemaCheck.js';
+
+export interface FederatedGraphConfig {
+  trafficCheckDays: number;
+}
 
 /**
  * Repository for managing V1 federated graphs.
  */
 export class FederatedGraphRepository {
-  constructor(private db: PostgresJsDatabase<typeof schema>, private organizationId: string) {}
+  constructor(
+    private db: PostgresJsDatabase<typeof schema>,
+    private organizationId: string,
+  ) {}
 
   public create(data: { name: string; routingUrl: string; labelMatchers: string[] }): Promise<FederatedGraphDTO> {
     return this.db.transaction(async (tx) => {
@@ -94,6 +101,28 @@ export class FederatedGraphRepository {
         subgraphsCount: subgraphs.length,
       };
     });
+  }
+
+  public async createConfig(federatedGraphId: string, trafficCheckDays: number) {
+    return this.db
+      .insert(federatedGraphConfigs)
+      .values({ federatedGraphId, traffic_check_days: trafficCheckDays })
+      .execute();
+  }
+
+  public async getConfig(federatedGraphId: string): Promise<FederatedGraphConfig | undefined> {
+    const config = await this.db.query.federatedGraphConfigs.findFirst({
+      columns: {
+        traffic_check_days: true,
+      },
+      where: eq(schema.federatedGraphConfigs.federatedGraphId, federatedGraphId),
+    });
+    if (!config) {
+      return undefined;
+    }
+    return {
+      trafficCheckDays: config.traffic_check_days,
+    };
   }
 
   public update(data: { name: string; routingUrl: string; labelMatchers: string[] }) {
@@ -164,7 +193,7 @@ export class FederatedGraphRepository {
         }
 
         const composer = new Composer(fedGraphRepo, subgraphRepo);
-        const composedGraph = await composer.composeFederatedGraph(federatedGraph.name, federatedGraph.targetId);
+        const composedGraph = await composer.composeFederatedGraph(federatedGraph);
 
         await composer.deployComposition(composedGraph);
 
@@ -423,13 +452,13 @@ export class FederatedGraphRepository {
     return latestValidVersion[0].schemaSDL;
   }
 
-  public createFederatedGraphChangelog(data: { schemaVersionID: string; changes: SchemaChange[] }) {
+  public createFederatedGraphChangelog(data: { schemaVersionID: string; changes: SchemaDiff[] }) {
     return this.db
       .insert(schemaVersionChangeAction)
       .values(
         data.changes.map((change) => ({
           schemaVersionId: data.schemaVersionID,
-          changeType: change.changeType as SchemaChangeType,
+          changeType: change.changeType,
           changeMessage: change.message,
           path: change.path,
         })),
@@ -685,7 +714,7 @@ export class FederatedGraphRepository {
           name: token.name,
           createdAt: token.createdAt.toISOString(),
           token: token.token,
-        } as GraphApiKeyDTO),
+        }) as GraphApiKeyDTO,
     );
   }
 }

@@ -114,7 +114,7 @@ export class UsageRepository {
             FROM ${this.client.database}.gql_metrics_schema_usage_5m_90d_mv
             WHERE Timestamp >= startDate AND Timestamp <= endDate
                 AND hasAny(TypeNames, ['${typename}'])
-                AND endsWith(arrayElement(Path, -1), '${field}')
+                AND FieldName = '${field}'
                 AND FederatedGraphID = '${federatedGraphId}'
                 AND OrganizationID = '${organizationId}'
             GROUP BY ClientName, ClientVersion, OperationName
@@ -162,7 +162,7 @@ export class UsageRepository {
     FROM ${this.client.database}.gql_metrics_schema_usage_5m_90d_mv
       WHERE Timestamp >= startDate AND Timestamp <= endDate
       AND hasAny(TypeNames, ['${typename}'])
-      AND endsWith(arrayElement(Path, -1), '${field}')
+      AND FieldName = '${field}'
       AND FederatedGraphID = '${federatedGraphId}'
       AND OrganizationID = '${organizationId}'
     `;

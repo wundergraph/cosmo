@@ -240,7 +240,7 @@ export class SubgraphRepository {
 
       // Validate all federated graphs that use this subgraph.
       for (const federatedGraph of updatedFederatedGraphs) {
-        const composition = await composer.composeFederatedGraph(federatedGraph.name, federatedGraph.targetId);
+        const composition = await composer.composeFederatedGraph(federatedGraph);
 
         await composer.deployComposition(composition);
 
