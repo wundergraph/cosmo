@@ -19,6 +19,8 @@ import (
 
 type Loader struct {
 	resolvers []FactoryResolver
+	// includeInfo controls whether additional information like type usage and field usage is included in the plan
+	includeInfo bool
 }
 
 type FactoryResolver interface {
@@ -82,9 +84,10 @@ func (d *DefaultFactoryResolver) Resolve(ds *nodev1.DataSourceConfiguration) (pl
 	}
 }
 
-func NewLoader(resolvers ...FactoryResolver) *Loader {
+func NewLoader(includeInfo bool, resolvers ...FactoryResolver) *Loader {
 	return &Loader{
-		resolvers: resolvers,
+		resolvers:   resolvers,
+		includeInfo: includeInfo,
 	}
 }
 
@@ -101,7 +104,8 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration) (*plan.Configura
 	var (
 		outConfig plan.Configuration
 	)
-
+	// attach field usage information to the plan
+	outConfig.IncludeInfo = l.includeInfo
 	outConfig.DefaultFlushIntervalMillis = engineConfig.DefaultFlushInterval
 	for _, configuration := range engineConfig.FieldConfigurations {
 		var args []plan.ArgumentConfiguration
@@ -140,6 +144,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration) (*plan.Configura
 			continue
 		}
 		out := plan.DataSourceConfiguration{
+			ID:      in.Id,
 			Factory: factory,
 		}
 		switch in.Kind {

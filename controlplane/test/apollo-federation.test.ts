@@ -1,26 +1,13 @@
-import Fastify from 'fastify';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
-
-import { createPromiseClient } from '@connectrpc/connect';
-import { fastifyConnectPlugin } from '@connectrpc/connect-fastify';
-import { createConnectTransport } from '@connectrpc/connect-node';
-import { pino } from 'pino';
-import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
-
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import database from '../src/core/plugins/database';
-import routes from '../src/core/routes';
 import {
   afterAllSetup,
   beforeAllSetup,
-  createTestAuthenticator,
   genID,
   genUniqueLabel,
-  seedTest,
 } from '../src/core/test-util';
-import Keycloak from '../src/core/services/Keycloak';
-import { MockPlatformWebhookService } from '../src/core/webhooks/PlatformWebhookService';
+import { SetupTest } from './test-util';
 
 let dbname = '';
 
@@ -34,72 +21,13 @@ describe('Apollo Federated Graph', (ctx) => {
   });
 
   test('Should be able to create a Apollo Federated Graph', async (testContext) => {
-    const databaseConnectionUrl = `postgresql://postgres:changeme@localhost:5432/${dbname}`;
-    const server = Fastify();
-
-    await server.register(database, {
-      databaseConnectionUrl,
-      debugSQL: false,
-      runMigration: true,
-    });
-
-    testContext.onTestFailed(async () => {
-      await server.close();
-    });
-
-    const { authenticator, userTestData } = createTestAuthenticator();
-
-    const realm = 'test';
-    const apiUrl = 'http://localhost:8080';
-    const webBaseUrl = 'http://localhost:3000';
-    const clientId = 'studio';
-    const adminUser = 'admin';
-    const adminPassword = 'changeme';
-
-    const keycloakClient = new Keycloak({
-      apiUrl,
-      realm,
-      clientId,
-      adminUser,
-      adminPassword,
-    });
-
-    const platformWebhooks = new MockPlatformWebhookService();
-
-    await server.register(fastifyConnectPlugin, {
-      routes: routes({
-        db: server.db,
-        logger: pino(),
-        authenticator,
-        jwtSecret: 'secret',
-        keycloakRealm: realm,
-        keycloakClient,
-        platformWebhooks,
-        webBaseUrl,
-        slack: {
-          clientID: '',
-          clientSecret: '',
-        },
-      }),
-    });
-
-    const addr = await server.listen({
-      port: 0,
-    });
-
-    await seedTest(databaseConnectionUrl, userTestData);
-
-    const transport = createConnectTransport({
-      httpVersion: '1.1',
-      baseUrl: addr,
-    });
-
-    const client = createPromiseClient(PlatformService, transport);
-    const investorySubgraph = genID();
-    const pandasSubgraph = genID();
-    const usersSubgraph = genID();
-    const productsSubgraph = genID();
-    const fedGraphName = genID();
+    const { client, server } = await SetupTest(testContext, dbname);
+    
+    const inventorySubgraph = genID('inventory');
+    const pandasSubgraph = genID('pandas');
+    const usersSubgraph = genID('users');
+    const productsSubgraph = genID('products');
+    const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
 
     const createPandasSubgraph = await client.createFederatedSubgraph({
@@ -157,7 +85,7 @@ describe('Apollo Federated Graph', (ctx) => {
     expect(publishUsersResp.response?.code).toBe(EnumStatusCode.OK);
 
     const createInvetorySubgraph = await client.createFederatedSubgraph({
-      name: investorySubgraph,
+      name: inventorySubgraph,
       labels: [label],
       routingUrl: 'http://localhost:8083',
     });
@@ -165,7 +93,7 @@ describe('Apollo Federated Graph', (ctx) => {
     expect(createInvetorySubgraph.response?.code).toBe(EnumStatusCode.OK);
 
     const publishInventoryResp = await client.publishFederatedSubgraph({
-      name: investorySubgraph,
+      name: inventorySubgraph,
       schema: Uint8Array.from(
         Buffer.from(`
           directive @tag(name: String!) repeatable on FIELD_DEFINITION
@@ -271,7 +199,7 @@ describe('Apollo Federated Graph', (ctx) => {
     expect(graph.subgraphs[1]?.lastUpdatedAt).toBeTruthy();
     expect(graph.subgraphs[1]?.routingURL).toEqual('http://localhost:8082');
 
-    expect(graph.subgraphs[2]?.name).toEqual(investorySubgraph);
+    expect(graph.subgraphs[2]?.name).toEqual(inventorySubgraph);
     expect(graph.subgraphs[2]?.labels).toEqual([label]);
     expect(graph.subgraphs[2]?.lastUpdatedAt).toBeTruthy();
     expect(graph.subgraphs[2]?.routingURL).toEqual('http://localhost:8083');

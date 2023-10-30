@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.10.0](https://github.com/wundergraph/cosmo/compare/otelcollector@0.9.2...otelcollector@0.10.0) (2023-10-25)
+
+### Features
+
+* schema field level usage analytics ([#174](https://github.com/wundergraph/cosmo/issues/174)) ([4f257a7](https://github.com/wundergraph/cosmo/commit/4f257a71984e991be2304b09a083c69da65200d2)) (@StarpTech)
+
+## [0.9.2](https://github.com/wundergraph/cosmo/compare/otelcollector@0.9.1...otelcollector@0.9.2) (2023-10-25)
+
+### Bug Fixes
+
+* follow GraphQL over HTTP in error handling ([#199](https://github.com/wundergraph/cosmo/issues/199)) ([8006267](https://github.com/wundergraph/cosmo/commit/800626773929923299ed88af44c50b187287cd25)) (@StarpTech)
+
 ## [0.9.1](https://github.com/wundergraph/cosmo/compare/otelcollector@0.9.0...otelcollector@0.9.1) (2023-10-09)
 
 **Note:** Version bump only for package otelcollector

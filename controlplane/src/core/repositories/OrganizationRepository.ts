@@ -430,8 +430,8 @@ export class OrganizationRepository {
     events: string[];
     eventsMeta: EventMeta[];
   }) {
-    await this.db.transaction(async (db) => {
-      const createWebhookResult = await db
+    await this.db.transaction(async (tx) => {
+      const createWebhookResult = await tx
         .insert(organizationWebhooks)
         .values({
           organizationId: input.organizationId,
@@ -452,7 +452,7 @@ export class OrganizationRepository {
             if (ids.length === 0) {
               break;
             }
-            await db.insert(schema.webhookGraphSchemaUpdate).values(
+            await tx.insert(schema.webhookGraphSchemaUpdate).values(
               ids.map((id) => ({
                 webhookId: createWebhookResult[0].id,
                 federatedGraphId: id,
@@ -519,7 +519,7 @@ export class OrganizationRepository {
     eventsMeta: EventMeta[];
     shouldUpdateKey: boolean;
   }) {
-    await this.db.transaction(async (db) => {
+    await this.db.transaction(async (tx) => {
       const set: Partial<typeof organizationWebhooks.$inferInsert> = {
         endpoint: input.endpoint,
         events: input.events,
@@ -528,7 +528,7 @@ export class OrganizationRepository {
         set.key = input.key;
       }
 
-      await db.update(organizationWebhooks).set(set).where(eq(organizationWebhooks.id, input.id));
+      await tx.update(organizationWebhooks).set(set).where(eq(organizationWebhooks.id, input.id));
 
       if (!input.eventsMeta) {
         return;
@@ -537,17 +537,17 @@ export class OrganizationRepository {
       for (const eventMeta of input.eventsMeta) {
         switch (eventMeta.meta.case) {
           case 'federatedGraphSchemaUpdated': {
-            const ids = eventMeta.meta.value.graphIds;
-            await db
+            const graphIds = eventMeta.meta.value.graphIds;
+            await tx
               .delete(schema.webhookGraphSchemaUpdate)
               .where(and(eq(schema.webhookGraphSchemaUpdate.webhookId, input.id)));
-            if (ids.length === 0) {
+            if (graphIds.length === 0) {
               break;
             }
-            await db
+            await tx
               .insert(schema.webhookGraphSchemaUpdate)
               .values(
-                ids.map((id: any) => ({
+                graphIds.map((id) => ({
                   webhookId: input.id,
                   federatedGraphId: id,
                 })),
@@ -568,12 +568,12 @@ export class OrganizationRepository {
   }
 
   public async deleteOrganization(organizationID: string) {
-    await this.db.transaction(async (db) => {
-      const orgRepo = new OrganizationRepository(db);
+    await this.db.transaction(async (tx) => {
+      const orgRepo = new OrganizationRepository(tx);
 
       await orgRepo.deleteOrganizationResources(organizationID);
 
-      await db.delete(organizations).where(eq(organizations.id, organizationID)).execute();
+      await tx.delete(organizations).where(eq(organizations.id, organizationID)).execute();
     });
   }
 
@@ -598,9 +598,9 @@ export class OrganizationRepository {
   }
 
   public async deleteOrganizationResources(organizationID: string) {
-    await this.db.transaction(async (db) => {
-      await db.delete(apiKeys).where(eq(apiKeys.organizationId, organizationID)).execute();
-      await db.delete(targets).where(eq(targets.organizationId, organizationID)).execute();
+    await this.db.transaction(async (tx) => {
+      await tx.delete(apiKeys).where(eq(apiKeys.organizationId, organizationID)).execute();
+      await tx.delete(targets).where(eq(targets.organizationId, organizationID)).execute();
     });
   }
 
@@ -612,10 +612,10 @@ export class OrganizationRepository {
     events: string[];
     eventsMeta: EventMeta[];
   }) {
-    await this.db.transaction(async (db) => {
+    await this.db.transaction(async (tx) => {
       switch (input.type) {
         case 'slack': {
-          const createSlackIntegrationResult = await db
+          const createSlackIntegrationResult = await tx
             .insert(organizationIntegrations)
             .values({
               organizationId: input.organizationId,
@@ -626,7 +626,7 @@ export class OrganizationRepository {
             .returning()
             .execute();
 
-          const slackIntegrationConfig = await db
+          const slackIntegrationConfig = await tx
             .insert(slackIntegrationConfigs)
             .values({
               integrationId: createSlackIntegrationResult[0].id,
@@ -639,7 +639,7 @@ export class OrganizationRepository {
             switch (eventMeta.meta.case) {
               case 'federatedGraphSchemaUpdated': {
                 const ids = eventMeta.meta.value.graphIds;
-                await db.insert(slackSchemaUpdateEventConfigs).values(
+                await tx.insert(slackSchemaUpdateEventConfigs).values(
                   ids.map((id) => ({
                     slackIntegrationConfigId: slackIntegrationConfig[0].id,
                     federatedGraphId: id,
@@ -785,8 +785,8 @@ export class OrganizationRepository {
     events: string[];
     eventsMeta: EventMeta[];
   }) {
-    await this.db.transaction(async (db) => {
-      const integration = await db
+    await this.db.transaction(async (tx) => {
+      const integration = await tx
         .update(organizationIntegrations)
         .set({
           events: input.events,
@@ -796,7 +796,7 @@ export class OrganizationRepository {
 
       switch (integration[0].type) {
         case 'slack': {
-          const slackIntegrationConfig = await db
+          const slackIntegrationConfig = await tx
             .update(slackIntegrationConfigs)
             .set({
               endpoint: input.endpoint,
@@ -806,7 +806,7 @@ export class OrganizationRepository {
 
           // if the meta is not sent, we delete all the existing event configs
           if (input.eventsMeta.length === 0) {
-            await db
+            await tx
               .delete(slackSchemaUpdateEventConfigs)
               .where(and(eq(slackSchemaUpdateEventConfigs.slackIntegrationConfigId, slackIntegrationConfig[0].id)));
           }
@@ -814,7 +814,7 @@ export class OrganizationRepository {
           for (const eventMeta of input.eventsMeta) {
             switch (eventMeta.meta.case) {
               case 'federatedGraphSchemaUpdated': {
-                await db
+                await tx
                   .delete(slackSchemaUpdateEventConfigs)
                   .where(and(eq(slackSchemaUpdateEventConfigs.slackIntegrationConfigId, slackIntegrationConfig[0].id)));
 
@@ -823,7 +823,7 @@ export class OrganizationRepository {
                   break;
                 }
 
-                await db.insert(slackSchemaUpdateEventConfigs).values(
+                await tx.insert(slackSchemaUpdateEventConfigs).values(
                   ids.map((id) => ({
                     slackIntegrationConfigId: slackIntegrationConfig[0].id,
                     federatedGraphId: id,

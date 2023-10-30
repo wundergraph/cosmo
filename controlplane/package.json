@@ -1,6 +1,6 @@
 {
   "name": "controlplane",
-  "version": "0.26.0",
+  "version": "0.28.1",
   "private": true,
   "description": "WunderGraph Cosmo Controlplane",
   "type": "module",
@@ -22,6 +22,7 @@
     "lint": "eslint --cache --ext .ts,.mjs,.cjs . && prettier -c src",
     "lint:fix": "eslint --cache --fix --ext .ts,.mjs,.cjs . && prettier --write -c src",
     "migrate": "pnpm db:migrate && pnpm ch:migrate",
+    "ch:down": "dbmate -d \"./clickhouse/migrations\" down",
     "db:migrate": "tsx src/bin/db-migrate.ts",
     "ch:migrate": "tsx src/bin/ch-migrate.ts",
     "ch:new-migration": "dbmate -d \"./clickhouse/migrations\" new",
@@ -60,10 +61,10 @@
     "octokit": "^3.1.1",
     "pg-boss": "^9.0.3",
     "pino": "^8.15.6",
-    "postgres": "^3.3.5",
+    "postgres": "^3.4.0",
     "rxjs": "^7.8.1",
     "stream-json": "^1.8.0",
-    "tiny-lru": "^11.2.2",
+    "tiny-lru": "^11.2.3",
     "uid": "^2.0.2",
     "zod": "^3.22.3"
   },
@@ -78,13 +79,13 @@
     "@types/uuid": "^9.0.2",
     "del-cli": "^5.0.0",
     "drizzle-kit": "^0.19.13",
-    "eslint": "^8.44.0",
+    "eslint": "^8.52.0",
     "eslint-config-unjs": "^0.2.1",
     "pino-pretty": "^10.2.0",
     "prettier": "^2.8.8",
     "tsc-watch": "^6.0.4",
-    "tsx": "^3.12.7",
+    "tsx": "^3.14.0",
     "typescript": "^5.2.2",
-    "vitest": "^0.34.1"
+    "vitest": "^0.34.6"
   }
 }

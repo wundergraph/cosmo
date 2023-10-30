@@ -3,7 +3,8 @@ module github.com/wundergraph/cosmo/router
 go 1.20
 
 require (
-	github.com/bufbuild/connect-go v1.9.0
+	connectrpc.com/connect v1.11.1
+	github.com/MicahParks/keyfunc/v2 v2.1.0
 	github.com/buger/jsonparser v1.1.1
 	github.com/cespare/xxhash/v2 v2.2.0
 	github.com/cloudflare/backoff v0.0.0-20161212185259-647f3cdfc87a
@@ -12,6 +13,7 @@ require (
 	github.com/go-chi/chi v1.5.4
 	github.com/go-playground/validator/v10 v10.15.3
 	github.com/goccy/go-yaml v1.11.0
+	github.com/golang-jwt/jwt/v5 v5.0.0
 	github.com/gorilla/websocket v1.5.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/jensneuse/abstractlogger v0.0.4
@@ -23,7 +25,7 @@ require (
 	github.com/stretchr/testify v1.8.4
 	github.com/tidwall/gjson v1.14.4
 	github.com/tidwall/sjson v1.2.5
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.2.0.20231020141204-40537587ba35
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.2.0.20231025090854-b4e3ab1d5e4a
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.45.0
 	go.opentelemetry.io/otel v1.19.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v0.42.0
@@ -36,6 +38,7 @@ require (
 	go.opentelemetry.io/otel/sdk/metric v1.19.0
 	go.opentelemetry.io/otel/trace v1.19.0
 	go.uber.org/zap v1.24.0
+	go.withmatt.com/connect-brotli v0.4.0
 	golang.org/x/sync v0.3.0
 	google.golang.org/grpc v1.58.2
 	google.golang.org/protobuf v1.31.0
@@ -43,6 +46,7 @@ require (
 
 require (
 	github.com/99designs/gqlgen v0.17.39 // indirect
+	github.com/andybalholm/brotli v1.0.4 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bytedance/sonic v1.9.2 // indirect
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect

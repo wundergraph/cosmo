@@ -12,6 +12,7 @@ on:
           - otelcollector
           - controlplane
           - studio
+          - graphqlmetrics
           - router
       tag:
         description: 'Tag to release'

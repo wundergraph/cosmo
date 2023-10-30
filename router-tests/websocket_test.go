@@ -139,7 +139,7 @@ func TestSubscriptionOverWebsocket(t *testing.T) {
 	// This should timeout because no more data is coming
 	_, _, err = conn.NextReader()
 	netErr, ok := err.(net.Error)
-	require.True(t, ok)
+	require.True(t, ok, "error is not a net.Error, got %T = %v", err, err)
 	assert.True(t, netErr.Timeout())
 	conn.SetReadDeadline(time.Time{})
 }

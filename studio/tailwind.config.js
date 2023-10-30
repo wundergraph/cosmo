@@ -19,6 +19,10 @@ module.exports = {
       },
     },
     extend: {
+      screens: {
+        "3xl": "1792px",
+        "4xl": "2048px",
+      },
       fontFamily: {
         sans: ["Inter", ...defaultTheme.fontFamily.sans],
       },

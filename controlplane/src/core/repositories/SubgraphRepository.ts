@@ -1,7 +1,8 @@
-import { CompositionError } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { joinLabel, normalizeURL, splitLabel } from '@wundergraph/cosmo-shared';
 import { and, asc, desc, eq, gt, inArray, lt, notInArray, SQL, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { PlainMessage } from '@bufbuild/protobuf';
+import { CompositionError } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import * as schema from '../../db/schema.js';
 import { schemaChecks, schemaVersion, subgraphs, subgraphsToFederatedGraph, targets } from '../../db/schema.js';
 import {
@@ -12,8 +13,8 @@ import {
   SchemaCheckDetailsDTO,
   SubgraphDTO,
 } from '../../types/index.js';
-import { updateComposedSchema } from '../composition/updateComposedSchema.js';
-import { normalizeLabels } from '../util.js';
+import { hasLabelsChanged, normalizeLabels } from '../util.js';
+import { Composer } from '../composition/composer.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 
 type SubscriptionProtocol = 'ws' | 'sse' | 'sse_post';
@@ -23,6 +24,15 @@ export interface Subgraph {
   routingUrl: string;
   labels: Label[];
   subscriptionUrl?: string;
+  subscriptionProtocol?: SubscriptionProtocol;
+}
+
+export interface UpdateSubgraphOptions {
+  name: string;
+  routingUrl?: string;
+  labels?: Label[];
+  subscriptionUrl?: string;
+  schemaSDL?: string;
   subscriptionProtocol?: SubscriptionProtocol;
 }
 
@@ -40,12 +50,12 @@ export class SubgraphRepository {
       subscriptionUrl = undefined;
     }
 
-    return this.db.transaction(async (db) => {
+    return this.db.transaction(async (tx) => {
       /**
        * 1. Create a new target of type subgraph.
        * The name is the name of the subgraph.
        */
-      const insertedTarget = await db
+      const insertedTarget = await tx
         .insert(targets)
         .values({
           name: data.name,
@@ -57,9 +67,9 @@ export class SubgraphRepository {
         .execute();
 
       /**
-       * 2. Create the subgraph with the initial schema version.
+       * 2. Create the subgraph with the initial metadata without a schema version.
        */
-      const insertedGraph = await db
+      const insertedSubgraph = await tx
         .insert(subgraphs)
         .values({
           targetId: insertedTarget[0].id,
@@ -74,140 +84,181 @@ export class SubgraphRepository {
        * 3. Insert into federatedSubgraphs by matching labels
        */
 
-      const fedGraphRepo = new FederatedGraphRepository(db, this.organizationId);
-      const graphs = await fedGraphRepo.bySubgraphLabels(uniqueLabels);
+      const fedGraphRepo = new FederatedGraphRepository(tx, this.organizationId);
+      const federatedGraphs = await fedGraphRepo.bySubgraphLabels(uniqueLabels);
 
-      const ops = graphs.map((federatedGraph) => {
-        return db
+      if (federatedGraphs.length > 0) {
+        await tx
           .insert(subgraphsToFederatedGraph)
-          .values({
-            federatedGraphId: federatedGraph.id,
-            subgraphId: insertedGraph[0].id,
-          })
+          .values(
+            federatedGraphs.map((federatedGraph) => ({
+              federatedGraphId: federatedGraph.id,
+              subgraphId: insertedSubgraph[0].id,
+            })),
+          )
           .execute();
-      });
+      }
 
-      await Promise.all(ops);
-
-      return this.byName(data.name);
+      return {
+        id: insertedSubgraph[0].id,
+        name: data.name,
+        targetId: insertedTarget[0].id,
+        labels: uniqueLabels,
+        routingUrl,
+        // Populated when first schema is pushed
+        schemaSDL: '',
+        lastUpdatedAt: '',
+      } as SubgraphDTO;
     });
   }
 
   public async update(
-    data: Subgraph,
-  ): Promise<{ compositionErrors: CompositionError[]; updatedFederatedGraphs: FederatedGraphDTO[] }> {
-    const uniqueLabels = normalizeLabels(data.labels);
-    const routingUrl = normalizeURL(data.routingUrl);
-
-    const compositionErrors: CompositionError[] = [];
+    data: UpdateSubgraphOptions,
+  ): Promise<{ compositionErrors: PlainMessage<CompositionError>[]; updatedFederatedGraphs: FederatedGraphDTO[] }> {
+    const compositionErrors: PlainMessage<CompositionError>[] = [];
     const updatedFederatedGraphs: FederatedGraphDTO[] = [];
 
-    const subgraph = await this.byName(data.name);
-    if (!subgraph) {
-      return { compositionErrors, updatedFederatedGraphs };
-    }
+    await this.db.transaction(async (tx) => {
+      const fedGraphRepo = new FederatedGraphRepository(tx, this.organizationId);
+      const subgraphRepo = new SubgraphRepository(tx, this.organizationId);
+      const composer = new Composer(fedGraphRepo, subgraphRepo);
+      let subgraphChanged = false;
 
-    await this.db.transaction(async (db) => {
-      const fedGraphRepo = new FederatedGraphRepository(db, this.organizationId);
-      const subgraphRepo = new SubgraphRepository(db, this.organizationId);
+      const subgraph = await subgraphRepo.byName(data.name);
+      if (!subgraph) {
+        return { compositionErrors, updatedFederatedGraphs };
+      }
 
-      // update graph attributes
-      if (data.routingUrl !== '' || data.subscriptionUrl !== undefined || data.subscriptionProtocol !== undefined) {
-        if (data.routingUrl !== '') {
-          await db.update(subgraphs).set({ routingUrl }).where(eq(subgraphs.id, subgraph.id)).execute();
-        }
-
-        if (data.subscriptionUrl !== undefined) {
-          let subscriptionUrl: string | null = normalizeURL(data.subscriptionUrl);
-          if (!subscriptionUrl || subscriptionUrl === routingUrl) {
-            subscriptionUrl = null;
-          }
-          await db.update(subgraphs).set({ subscriptionUrl }).where(eq(subgraphs.id, subgraph.id)).execute();
-        }
-
-        if (data.subscriptionProtocol !== undefined) {
-          await db
-            .update(subgraphs)
-            .set({ subscriptionProtocol: data.subscriptionProtocol })
-            .where(eq(subgraphs.id, subgraph.id))
-            .execute();
-        }
-
-        const result = await subgraphRepo.byName(data.name);
-        if (result) {
-          updatedFederatedGraphs.push(...(await fedGraphRepo.bySubgraphLabels(result.labels)));
+      // TODO: avoid downloading the schema use hash instead
+      if (data.schemaSDL && data.schemaSDL !== subgraph.schemaSDL) {
+        subgraphChanged = true;
+        const updatedSubgraph = await subgraphRepo.addSchemaVersion(subgraph.name, data.schemaSDL);
+        if (!updatedSubgraph) {
+          throw new Error(`Subgraph ${subgraph.name} not found`);
         }
       }
 
-      // update labels
-      if (data.labels.length > 0) {
-        const oldGraphs = await fedGraphRepo.bySubgraphLabels(uniqueLabels);
+      if (data.routingUrl && data.routingUrl !== subgraph.routingUrl) {
+        subgraphChanged = true;
+        const url = normalizeURL(data.routingUrl);
+        await tx
+          .update(subgraphs)
+          .set({
+            routingUrl: url,
+          })
+          .where(eq(subgraphs.id, subgraph.id))
+          .execute();
+      }
 
-        await db
+      if (data.subscriptionUrl && data.subscriptionUrl !== subgraph.subscriptionUrl) {
+        subgraphChanged = true;
+        const url = normalizeURL(data.subscriptionUrl);
+        await tx
+          .update(subgraphs)
+          .set({
+            subscriptionUrl: url,
+          })
+          .where(eq(subgraphs.id, subgraph.id))
+          .execute();
+      }
+
+      if (data.subscriptionProtocol && data.subscriptionProtocol !== subgraph.subscriptionProtocol) {
+        subgraphChanged = true;
+        await tx
+          .update(subgraphs)
+          .set({
+            subscriptionProtocol: data.subscriptionProtocol,
+          })
+          .where(eq(subgraphs.id, subgraph.id))
+          .execute();
+      }
+
+      let labelChanged = false;
+      if (data.labels && data.labels.length > 0) {
+        labelChanged = hasLabelsChanged(subgraph.labels, data.labels);
+      }
+
+      // We need to compose and build a new router config also on routingUrl and labels changes
+      if (subgraphChanged || labelChanged) {
+        // find all federated graphs that use this subgraph. We need evaluate them again.
+        updatedFederatedGraphs.push(...(await fedGraphRepo.bySubgraphLabels(subgraph.labels)));
+      }
+
+      if (labelChanged && data.labels) {
+        const newLabels = normalizeLabels(data.labels);
+
+        // update labels of the subgraph
+        await tx
           .update(targets)
           .set({
-            labels: uniqueLabels.map((ul) => joinLabel(ul)),
+            // labels are stored as a string array in the database
+            labels: newLabels.map((ul) => joinLabel(ul)),
           })
           .where(eq(targets.id, subgraph.targetId));
 
-        const newGraphs = await fedGraphRepo.bySubgraphLabels(uniqueLabels);
+        // find all federated graphs that match with the new subgraph labels
+        const newFederatedGraphs = await fedGraphRepo.bySubgraphLabels(newLabels);
 
+        // add them to the updatedFederatedGraphs array without duplicates
+        for (const federatedGraph of newFederatedGraphs) {
+          const exists = updatedFederatedGraphs.find((g) => g.name === federatedGraph.name);
+          if (!exists) {
+            updatedFederatedGraphs.push(federatedGraph);
+          }
+        }
+
+        // delete all subgraphsToFederatedGraphs that are not in the newFederatedGraphs array
         let deleteCondition: SQL<unknown> | undefined = eq(subgraphsToFederatedGraph.subgraphId, subgraph.id);
 
         // we do this conditionally because notInArray cannot take empty value
-        if (newGraphs.length > 0) {
+        if (newFederatedGraphs.length > 0) {
           deleteCondition = and(
             deleteCondition,
             notInArray(
               subgraphsToFederatedGraph.federatedGraphId,
-              newGraphs.map((g) => g.id),
+              newFederatedGraphs.map((g) => g.id),
             ),
           );
         }
 
-        await db.delete(subgraphsToFederatedGraph).where(deleteCondition);
+        await tx.delete(subgraphsToFederatedGraph).where(deleteCondition);
 
-        const insertOps = newGraphs.map((federatedGraph) => {
-          return db
+        // we create new connections between the new federated graphs and the subgraph
+        if (newFederatedGraphs.length > 0) {
+          await tx
             .insert(subgraphsToFederatedGraph)
-            .values({
-              federatedGraphId: federatedGraph.id,
-              subgraphId: subgraph.id,
-            })
+            .values(
+              newFederatedGraphs.map((federatedGraph) => ({
+                federatedGraphId: federatedGraph.id,
+                subgraphId: subgraph.id,
+              })),
+            )
             .onConflictDoNothing()
             .execute();
-        });
-
-        const changedGraphs = [
-          ...oldGraphs.filter((b) => !newGraphs.some((a) => a.id === b.id)),
-          ...newGraphs.filter((a) => !oldGraphs.some((b) => a.id === b.id)),
-        ];
-        for (const graph of changedGraphs) {
-          const idx = updatedFederatedGraphs.findIndex((g) => g.id === graph.id);
-          if (idx !== -1) {
-            continue;
-          }
-          updatedFederatedGraphs.push(graph);
         }
-
-        await Promise.all(insertOps);
       }
 
-      // update schema and router config of graphs which were affected
+      // Validate all federated graphs that use this subgraph.
       for (const federatedGraph of updatedFederatedGraphs) {
-        const ce = await updateComposedSchema({
-          federatedGraph,
-          fedGraphRepo,
-          subgraphRepo,
-        });
-        compositionErrors.push(...ce);
+        const composition = await composer.composeFederatedGraph(federatedGraph.name, federatedGraph.targetId);
+
+        await composer.deployComposition(composition);
+
+        // Collect all composition errors
+
+        compositionErrors.push(
+          ...composition.errors.map((e) => ({
+            federatedGraphName: composition.name,
+            message: e.message,
+          })),
+        );
       }
     });
 
     return { compositionErrors, updatedFederatedGraphs };
   }
 
-  public updateSchema(subgraphName: string, subgraphSchema: string): Promise<SubgraphDTO | undefined> {
+  public addSchemaVersion(subgraphName: string, subgraphSchema: string): Promise<SubgraphDTO | undefined> {
     return this.db.transaction(async (db) => {
       const subgraph = await this.byName(subgraphName);
       if (subgraph === undefined) {
@@ -224,8 +275,6 @@ export class SubgraphRepository {
           insertedId: schemaVersion.id,
           createdAt: schemaVersion.createdAt,
         });
-
-      // TODO add changes to changelog table
 
       await db
         .update(subgraphs)
@@ -283,7 +332,7 @@ export class SubgraphRepository {
    * Even if they have not been published yet. Optionally, you can set the `published` flag to true
    * to only return subgraphs that have been published with a version.
    */
-  public async listByGraph(federatedGraphName: string, opts?: { published: boolean }): Promise<SubgraphDTO[]> {
+  public async listByFederatedGraph(federatedGraphName: string, opts?: { published: boolean }): Promise<SubgraphDTO[]> {
     const target = await this.db.query.targets.findFirst({
       where: and(
         eq(schema.targets.name, federatedGraphName),
@@ -392,7 +441,7 @@ export class SubgraphRepository {
     startDate: string;
     endDate: string;
   }): Promise<GetChecksResponse> {
-    const subgraphs = await this.listByGraph(federatedGraphName, {
+    const subgraphs = await this.listByFederatedGraph(federatedGraphName, {
       published: true,
     });
 
@@ -452,7 +501,7 @@ export class SubgraphRepository {
     startDate?: string;
     endDate?: string;
   }): Promise<number> {
-    const subgraphs = await this.listByGraph(federatedGraphName, {
+    const subgraphs = await this.listByFederatedGraph(federatedGraphName, {
       published: true,
     });
 
@@ -531,7 +580,7 @@ export class SubgraphRepository {
       return;
     }
 
-    const subgraphs = await this.listByGraph(federatedGraphName, {
+    const subgraphs = await this.listByFederatedGraph(federatedGraphName, {
       published: true,
     });
 

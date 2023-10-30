@@ -3,11 +3,13 @@ package cmd
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
 
+	"github.com/wundergraph/cosmo/router/authentication"
 	"github.com/wundergraph/cosmo/router/config"
 	"github.com/wundergraph/cosmo/router/core"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
@@ -48,7 +50,7 @@ func Main() {
 	logger := logging.New(!cfg.JSONLog, cfg.LogLevel == "debug", logLevel).
 		With(
 			zap.String("component", "@wundergraph/router"),
-			zap.String("router_version", core.Version),
+			zap.String("service_version", core.Version),
 		)
 
 	cp := controlplane.New(
@@ -68,6 +70,28 @@ func Main() {
 		}
 	}
 
+	var authenticators []authentication.Authenticator
+	for i, auth := range cfg.Authentication.Providers {
+		if auth.JWKS != nil {
+			name := auth.Name
+			if name == "" {
+				name = fmt.Sprintf("jwks-#%d", i)
+			}
+			opts := authentication.JWKSAuthenticatorOptions{
+				Name:                name,
+				URL:                 auth.JWKS.URL,
+				HeaderNames:         auth.JWKS.HeaderNames,
+				HeaderValuePrefixes: auth.JWKS.HeaderValuePrefixes,
+				RefreshInterval:     auth.JWKS.RefreshInterval,
+			}
+			authenticator, err := authentication.NewJWKSAuthenticator(opts)
+			if err != nil {
+				logger.Fatal("Could not create JWKS authenticator", zap.Error(err), zap.String("name", name))
+			}
+			authenticators = append(authenticators, authenticator)
+		}
+	}
+
 	router, err := core.NewRouter(
 		core.WithFederatedGraphName(cfg.Graph.Name),
 		core.WithListenerAddr(cfg.ListenAddr),
@@ -82,6 +106,10 @@ func Main() {
 		core.WithGracePeriod(cfg.GracePeriod),
 		core.WithHealthCheckPath(cfg.HealthCheckPath),
 		core.WithLivenessCheckPath(cfg.LivenessCheckPath),
+		core.WithGraphQLMetrics(&core.GraphQLMetricsConfig{
+			Enabled:           cfg.GraphqlMetrics.Enabled,
+			CollectorEndpoint: cfg.GraphqlMetrics.CollectorEndpoint,
+		}),
 		core.WithReadinessCheckPath(cfg.ReadinessCheckPath),
 		core.WithHeaderRules(cfg.Headers),
 		core.WithStaticRouterConfig(routerConfig),
@@ -111,6 +139,7 @@ func Main() {
 		core.WithTracing(traceConfig(&cfg.Telemetry)),
 		core.WithMetrics(metricsConfig(&cfg.Telemetry)),
 		core.WithEngineExecutionConfig(cfg.EngineExecutionConfiguration),
+		core.WithAccessController(core.NewAccessController(authenticators, cfg.Authorization.RequireAuthentication)),
 	)
 
 	if err != nil {
@@ -126,7 +155,7 @@ func Main() {
 
 	<-ctx.Done()
 
-	logger.Info("Graceful shutdown ...", zap.String("shutdownDelay", cfg.ShutdownDelay.String()))
+	logger.Info("Graceful shutdown ...", zap.String("shutdown_delay", cfg.ShutdownDelay.String()))
 
 	// enforce a maximum shutdown delay
 	ctx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownDelay)
@@ -178,9 +207,11 @@ func metricsConfig(cfg *config.Telemetry) *metric.Config {
 			Exporters: openTelemetryExporters,
 		},
 		Prometheus: metric.Prometheus{
-			Enabled:    cfg.Metrics.Prometheus.Enabled,
-			ListenAddr: cfg.Metrics.Prometheus.ListenAddr,
-			Path:       cfg.Metrics.Prometheus.Path,
+			Enabled:             cfg.Metrics.Prometheus.Enabled,
+			ListenAddr:          cfg.Metrics.Prometheus.ListenAddr,
+			Path:                cfg.Metrics.Prometheus.Path,
+			ExcludeMetrics:      cfg.Metrics.Prometheus.ExcludeMetrics,
+			ExcludeMetricLabels: cfg.Metrics.Prometheus.ExcludeMetricLabels,
 		},
 	}
 }

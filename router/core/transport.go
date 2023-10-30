@@ -85,12 +85,11 @@ func (ct *CustomTransport) RoundTrip(req *http.Request) (*http.Response, error) 
 }
 
 type TransportFactory struct {
-	customTransport *CustomTransport
-	preHandlers     []TransportPreHandler
-	postHandlers    []TransportPostHandler
-	retryOptions    retrytransport.RetryOptions
-	requestTimeout  time.Duration
-	logger          *zap.Logger
+	preHandlers    []TransportPreHandler
+	postHandlers   []TransportPostHandler
+	retryOptions   retrytransport.RetryOptions
+	requestTimeout time.Duration
+	logger         *zap.Logger
 }
 
 var _ ApiTransportFactory = TransportFactory{}
@@ -166,22 +165,18 @@ func (t TransportFactory) DefaultHTTPProxyURL() *url.URL {
 }
 
 // SpanNameFormatter formats the span name based on the http request
-func SpanNameFormatter(operation string, r *http.Request) string {
-	if operation != "" {
-		return operation
-	}
-
+func SpanNameFormatter(_ string, r *http.Request) string {
 	opCtx := getOperationContext(r.Context())
 	if opCtx != nil {
-		return GetSpanName(opCtx.Name(), r.Method)
+		return GetSpanName(opCtx.Name(), opCtx.Type())
 	}
 
 	return fmt.Sprintf("%s %s", r.Method, r.URL.Path)
 }
 
-func GetSpanName(operationName string, method string) string {
+func GetSpanName(operationName string, operationType string) string {
 	if operationName != "" {
-		return fmt.Sprintf("%s %s", method, operationName)
+		return fmt.Sprintf("%s %s", operationType, operationName)
 	}
-	return fmt.Sprintf("%s %s", method, "unnamed")
+	return fmt.Sprintf("%s %s", operationType, "unnamed")
 }

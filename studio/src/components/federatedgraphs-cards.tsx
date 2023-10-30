@@ -131,6 +131,7 @@ const MigrationDialog = ({
             setIsMigrationSuccess(true);
             setToken(d.token);
           } else if (d.response?.details) {
+            setIsMigrating(false);
             toast({ description: d.response.details, duration: 3000 });
           }
           router.replace(`/${organizationSlug}/graphs`);
@@ -157,7 +158,7 @@ const MigrationDialog = ({
           "h-52": !isEmptyState,
         })}
       >
-        <Card className="flex h-full w-64 flex-col justify-center gap-y-2  p-4 group-hover:border-ring dark:hover:border-input">
+        <Card className="flex h-full flex-col justify-center gap-y-2  p-4 group-hover:border-ring dark:hover:border-input">
           <div className="flex items-center justify-center gap-x-5">
             <SiApollographql className="h-10 w-10" />
             <ChevronDoubleRightIcon className="animation h-8 w-8" />
@@ -296,7 +297,7 @@ export const RunRouterCommand = ({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       {triggerLabel && (
-        <DialogTrigger className={triggerClassName}>
+        <DialogTrigger className={triggerClassName} asChild={true}>
           <Button
             className="w-full"
             onClick={() => {
@@ -488,7 +489,6 @@ const GraphCard = ({ graph }: { graph: FederatedGraph }) => {
                     </TooltipTrigger>
                     <TooltipContent>
                       <ComposeStatusMessage
-                        errors={graph.compositionErrors}
                         isComposable={graph.isComposable}
                         lastUpdatedAt={graph.lastUpdatedAt}
                         subgraphsCount={graph.connectedSubgraphs}

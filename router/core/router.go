@@ -10,6 +10,11 @@ import (
 	"sync"
 	"time"
 
+	"connectrpc.com/connect"
+	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
+	"github.com/wundergraph/cosmo/router/internal/graphqlmetrics"
+	brotli "go.withmatt.com/connect-brotli"
+
 	"github.com/wundergraph/cosmo/router/internal/otel/otelconfig"
 
 	"github.com/dgraph-io/ristretto"
@@ -59,6 +64,11 @@ type (
 		KeepAliveProbeInterval time.Duration
 	}
 
+	GraphQLMetricsConfig struct {
+		Enabled           bool
+		CollectorEndpoint string
+	}
+
 	// Config defines the configuration options for the Router.
 	Config struct {
 		transport                *http.Transport
@@ -67,6 +77,7 @@ type (
 		metricConfig             *metric.Config
 		tracerProvider           *sdktrace.TracerProvider
 		meterProvider            *sdkmetric.MeterProvider
+		gqlMetricsExporter       *graphqlmetrics.Exporter
 		corsOptions              *cors.Config
 		configFetcher            controlplane.ConfigFetcher
 		routerConfig             *nodev1.RouterConfig
@@ -77,7 +88,6 @@ type (
 		graphqlPath              string
 		playground               bool
 		introspection            bool
-		production               bool
 		federatedGraphName       string
 		graphApiToken            string
 		healthCheckPath          string
@@ -91,9 +101,10 @@ type (
 		headerRuleEngine         *HeaderRuleEngine
 		headerRules              config.HeaderRules
 		subgraphTransportOptions *SubgraphTransportOptions
+		graphqlMetricsConfig     *GraphQLMetricsConfig
 		routerTrafficConfig      *config.RouterTrafficConfiguration
-
-		retryOptions retrytransport.RetryOptions
+		accessController         *AccessController
+		retryOptions             retrytransport.RetryOptions
 
 		engineExecutionConfiguration config.EngineExecutionConfiguration
 
@@ -152,8 +163,19 @@ func NewRouter(opts ...Option) (*Router, error) {
 		r.subgraphTransportOptions = DefaultSubgraphTransportOptions()
 	}
 
+	if r.graphqlMetricsConfig == nil {
+		r.graphqlMetricsConfig = DefaultGraphQLMetricsConfig()
+	}
 	if r.routerTrafficConfig == nil {
 		r.routerTrafficConfig = DefaultRouterTrafficConfig()
+	}
+	if r.accessController == nil {
+		r.accessController = DefaultAccessController()
+	} else {
+		if len(r.accessController.authenticators) == 0 && r.accessController.authenticationRequired {
+			r.logger.Warn("authentication is required but no authenticators are configured")
+		}
+
 	}
 
 	// Default values for health check paths
@@ -276,13 +298,7 @@ func (r *Router) configureSubgraphOverwrites(cfg *nodev1.RouterConfig) ([]Subgra
 
 			// Override datasource urls
 			for _, conf := range cfg.EngineConfig.DatasourceConfigurations {
-				fetchURL := conf.CustomGraphql.Fetch.Url
-				subgraphURL := config.LoadStringVariable(fetchURL)
-
-				// Identify the datasource by the previous subgraph url
-				// Override datasource id, url and subgraph url
-				if subgraphURL == sg.RoutingUrl {
-					conf.Id = overrideURL
+				if conf.Id == sg.Id {
 					conf.CustomGraphql.Fetch.Url.StaticVariableContent = overrideURL
 					conf.CustomGraphql.Subscription.Url.StaticVariableContent = overrideURL
 					sg.RoutingUrl = overrideURL
@@ -337,7 +353,7 @@ func (r *Router) updateServer(ctx context.Context, cfg *nodev1.RouterConfig) err
 			)
 
 			if r.playground && r.introspection {
-				r.logger.Info("Playground available at", zap.String("url", r.baseURL+r.graphqlPath))
+				r.logger.Info("Playground available at", zap.String("url", r.baseURL))
 			}
 		}
 
@@ -430,7 +446,7 @@ func (r *Router) NewTestServer(ctx context.Context) (*Server, error) {
 
 func (r *Router) bootstrap(ctx context.Context) error {
 	if r.traceConfig.Enabled {
-		tp, err := trace.StartAgent(ctx, r.logger, r.traceConfig)
+		tp, err := trace.NewTracerProvider(ctx, r.logger, r.traceConfig)
 		if err != nil {
 			return fmt.Errorf("failed to start trace agent: %w", err)
 		}
@@ -439,20 +455,43 @@ func (r *Router) bootstrap(ctx context.Context) error {
 
 	// Prometheus metrics rely on OTLP metrics
 	if r.metricConfig.IsEnabled() {
-		mp, err := metric.StartAgent(ctx, r.logger, r.metricConfig)
+		mp, pr, err := metric.NewMeterProvider(ctx, r.logger, r.metricConfig)
 		if err != nil {
 			return fmt.Errorf("failed to start trace agent: %w", err)
 		}
 		r.meterProvider = mp
 
-		if r.metricConfig.Prometheus.Enabled {
-			promSvr := createPrometheus(r.logger, r.metricConfig.Prometheus.ListenAddr, r.metricConfig.Prometheus.Path)
+		if pr != nil && r.metricConfig.Prometheus.Enabled {
+			promSvr := createPrometheus(r.logger, pr, r.metricConfig.Prometheus.ListenAddr, r.metricConfig.Prometheus.Path)
 			go func() {
 				if err := promSvr.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 					r.logger.Error("Failed to start Prometheus server", zap.Error(err))
 				}
 			}()
 		}
+	}
+
+	if r.graphqlMetricsConfig.Enabled {
+		client := graphqlmetricsv1connect.NewGraphQLMetricsServiceClient(
+			http.DefaultClient,
+			r.graphqlMetricsConfig.CollectorEndpoint,
+			brotli.WithCompression(),
+			// Compress requests with Brotli.
+			connect.WithSendCompression(brotli.Name),
+		)
+		r.gqlMetricsExporter = graphqlmetrics.NewExporter(
+			r.logger,
+			client,
+			r.graphApiToken,
+			graphqlmetrics.NewDefaultExporterSettings(),
+		)
+		if err := r.gqlMetricsExporter.Validate(); err != nil {
+			return fmt.Errorf("failed to validate graphql metrics exporter: %w", err)
+		}
+
+		r.gqlMetricsExporter.Start()
+
+		r.logger.Info("GraphQL schema coverage metrics enabled")
 	}
 
 	// Modules are only initialized once and not on every config change
@@ -587,6 +626,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		baseURL:       r.baseURL,
 		transport:     r.transport,
 		logger:        r.logger,
+		includeInfo:   r.graphqlMetricsConfig.Enabled,
 		transportOptions: &TransportOptions{
 			requestTimeout: r.subgraphTransportOptions.RequestTimeout,
 			preHandlers:    r.preOriginHandlers,
@@ -609,7 +649,8 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		return nil, fmt.Errorf("failed to build plan configuration: %w", err)
 	}
 
-	operationParser := NewOperationParser(executor)
+	operationParser := NewOperationParser(executor, int64(r.routerTrafficConfig.MaxRequestBodyBytes))
+	operationPlanner := NewOperationPlanner(executor, planCache)
 
 	var graphqlPlaygroundHandler http.Handler
 
@@ -624,7 +665,6 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 
 	graphqlHandler := NewGraphQLHandler(HandlerOptions{
 		Executor: executor,
-		Cache:    planCache,
 		Log:      r.logger,
 	})
 
@@ -648,11 +688,15 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		metricStore = m
 	}
 
+	routerMetrics := NewRouterMetrics(metricStore, r.gqlMetricsExporter, routerConfig.GetVersion())
+
 	graphqlPreHandler := NewPreHandler(&PreHandlerOptions{
-		Parser:                operationParser,
-		Logger:                r.logger,
-		RequestMetrics:        metricStore,
-		MaxRequestSizeInBytes: int64(r.routerTrafficConfig.MaxRequestBodyBytes),
+		Logger:           r.logger,
+		Executor:         executor,
+		Metrics:          routerMetrics,
+		Parser:           operationParser,
+		Planner:          operationPlanner,
+		AccessController: r.accessController,
 	})
 
 	var traceHandler *trace.Middleware
@@ -681,28 +725,18 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		}
 
 		subChiRouter.Use(NewWebsocketMiddleware(rootContext, WebsocketMiddlewareOptions{
-			Parser:                operationParser,
-			MaxRequestSizeInBytes: int64(r.routerTrafficConfig.MaxRequestBodyBytes),
-			GraphQLHandler:        graphqlHandler,
-			Logger:                r.logger,
+			Parser:           operationParser,
+			Planner:          operationPlanner,
+			Metrics:          routerMetrics,
+			GraphQLHandler:   graphqlHandler,
+			AccessController: r.accessController,
+			Logger:           r.logger,
 		}))
 
 		subChiRouter.Use(graphqlPreHandler.Handler)
 
-		// Create custom request context that provides access to the request and response.
-		// It is used by custom modules and handlers. It must be added before custom user middlewares
-		subChiRouter.Use(func(handler http.Handler) http.Handler {
-			return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-				requestWithContext := requestWithAttachedContext(writer, request, r.logger)
-				handler.ServeHTTP(writer, requestWithContext)
-			})
-		})
-
 		subChiRouter.Use(r.routerMiddlewares...)
 		subChiRouter.Post("/", graphqlHandler.ServeHTTP)
-		if r.playground {
-			subChiRouter.Get("/", graphqlPlaygroundHandler.ServeHTTP)
-		}
 	})
 
 	r.logger.Debug("GraphQLHandler registered",
@@ -744,6 +778,12 @@ func (r *Server) listenAndServe() error {
 func (r *Router) Shutdown(ctx context.Context) (err error) {
 	r.shutdown = true
 
+	if r.activeRouter != nil {
+		if subErr := r.activeRouter.Shutdown(ctx); subErr != nil {
+			err = errors.Join(err, fmt.Errorf("failed to shutdown primary server: %w", subErr))
+		}
+	}
+
 	var wg sync.WaitGroup
 
 	if r.prometheusServer != nil {
@@ -762,11 +802,20 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 		go func() {
 			defer wg.Done()
 
-			if subErr := r.tracerProvider.ForceFlush(ctx); subErr != nil {
-				err = errors.Join(err, fmt.Errorf("failed to force flush tracer: %w", subErr))
-			}
 			if subErr := r.tracerProvider.Shutdown(ctx); subErr != nil {
 				err = errors.Join(err, fmt.Errorf("failed to shutdown tracer: %w", subErr))
+			}
+		}()
+	}
+
+	if r.gqlMetricsExporter != nil {
+		wg.Add(1)
+
+		go func() {
+			defer wg.Done()
+
+			if subErr := r.gqlMetricsExporter.Shutdown(ctx); subErr != nil {
+				err = errors.Join(err, fmt.Errorf("failed to stop graphql metrics exporter: %w", subErr))
 			}
 		}()
 	}
@@ -785,12 +834,6 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 	}()
 
 	wg.Wait()
-
-	if r.activeRouter != nil {
-		if subErr := r.activeRouter.Shutdown(ctx); subErr != nil {
-			err = errors.Join(err, fmt.Errorf("failed to shutdown primary server: %w", subErr))
-		}
-	}
 
 	return err
 }
@@ -821,10 +864,15 @@ func (r *Server) Shutdown(ctx context.Context) (err error) {
 	return err
 }
 
-func createPrometheus(logger *zap.Logger, listenAddr, path string) *http.Server {
+func createPrometheus(logger *zap.Logger, registry *metric.PromRegistry, listenAddr, path string) *http.Server {
 	r := chi.NewRouter()
 	r.Use(middleware.Recoverer)
-	r.Handle(path, promhttp.Handler())
+	r.Handle(path, promhttp.HandlerFor(registry, promhttp.HandlerOpts{
+		EnableOpenMetrics: true,
+		ErrorLog:          zap.NewStdLog(logger),
+		Registry:          registry,
+		Timeout:           0,
+	}))
 
 	svr := &http.Server{
 		Addr:              listenAddr,
@@ -835,7 +883,7 @@ func createPrometheus(logger *zap.Logger, listenAddr, path string) *http.Server 
 		Handler:           r,
 	}
 
-	logger.Info("Serve Prometheus metrics", zap.String("listen_addr", svr.Addr), zap.String("endpoint", path))
+	logger.Info("Prometheus metrics enabled", zap.String("listen_addr", svr.Addr), zap.String("endpoint", path))
 
 	return svr
 }
@@ -997,6 +1045,12 @@ func WithRouterTrafficConfig(cfg *config.RouterTrafficConfiguration) Option {
 	}
 }
 
+func WithAccessController(controller *AccessController) Option {
+	return func(r *Router) {
+		r.accessController = controller
+	}
+}
+
 func DefaultRouterTrafficConfig() *config.RouterTrafficConfiguration {
 	return &config.RouterTrafficConfiguration{
 		MaxRequestBodyBytes: 1000 * 1000 * 5, // 5 MB
@@ -1012,5 +1066,18 @@ func DefaultSubgraphTransportOptions() *SubgraphTransportOptions {
 		KeepAliveProbeInterval: 30 * time.Second,
 		KeepAliveIdleTimeout:   0 * time.Second,
 		DialTimeout:            30 * time.Second,
+	}
+}
+
+func DefaultGraphQLMetricsConfig() *GraphQLMetricsConfig {
+	return &GraphQLMetricsConfig{
+		Enabled:           false,
+		CollectorEndpoint: "",
+	}
+}
+
+func WithGraphQLMetrics(cfg *GraphQLMetricsConfig) Option {
+	return func(r *Router) {
+		r.graphqlMetricsConfig = cfg
 	}
 }

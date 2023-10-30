@@ -27,11 +27,6 @@ var (
 	tp *sdktrace.TracerProvider
 )
 
-// StartAgent starts an opentelemetry agent.
-func StartAgent(ctx context.Context, log *zap.Logger, c *Config) (*sdktrace.TracerProvider, error) {
-	return startAgent(ctx, log, c)
-}
-
 func createExporter(log *zap.Logger, exp *Exporter) (sdktrace.SpanExporter, error) {
 	u, err := url.Parse(exp.Endpoint)
 	if err != nil {
@@ -76,7 +71,7 @@ func createExporter(log *zap.Logger, exp *Exporter) (sdktrace.SpanExporter, erro
 			opts = append(opts, otlptracegrpc.WithHeaders(exp.Headers))
 		}
 		if len(exp.HTTPPath) > 0 {
-			log.Warn("otlptracegrpc exporter doesn't support arbitrary paths", zap.String("path", exp.HTTPPath))
+			log.Warn("Otlptracegrpc exporter doesn't support arbitrary paths", zap.String("path", exp.HTTPPath))
 		}
 		exporter, err = otlptracegrpc.New(
 			context.Background(),
@@ -90,12 +85,12 @@ func createExporter(log *zap.Logger, exp *Exporter) (sdktrace.SpanExporter, erro
 		return nil, err
 	}
 
-	log.Info("using trace exporter", zap.String("exporter", string(exp.Exporter)), zap.String("endpoint", exp.Endpoint), zap.String("path", exp.HTTPPath))
+	log.Info("Tracer enabled", zap.String("exporter", string(exp.Exporter)), zap.String("endpoint", exp.Endpoint), zap.String("path", exp.HTTPPath))
 
 	return exporter, nil
 }
 
-func startAgent(ctx context.Context, log *zap.Logger, c *Config) (*sdktrace.TracerProvider, error) {
+func NewTracerProvider(ctx context.Context, log *zap.Logger, c *Config) (*sdktrace.TracerProvider, error) {
 	r, err := resource.New(ctx,
 		resource.WithAttributes(semconv.ServiceNameKey.String(c.Name)),
 		resource.WithProcessPID(),
