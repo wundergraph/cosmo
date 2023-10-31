@@ -1,4 +1,4 @@
-import { CriticalityLevel, diff, ChangeType } from '@graphql-inspector/core';
+import { CriticalityLevel, diff, ChangeType, DiffRule } from '@graphql-inspector/core';
 import { GraphQLSchema } from 'graphql';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { buildSchema } from './composition.js';
@@ -53,13 +53,18 @@ export async function getDiffBetweenGraphs(
       newSchema = normalizationResult.schema;
     }
 
-    const changes = await diff(oldSchema, newSchema);
+    const changes = await diff(oldSchema, newSchema, [DiffRule.considerUsage], {
+      async checkUsage(input: { type: string; field?: string; argument?: string }[]): Promise<boolean[]> {
+        return [true];
+      },
+    });
 
     const schemaChanges: SchemaDiff[] = changes.map((change) => {
       return {
         message: change.message,
         changeType: change.type,
         path: change.path,
+        // We consider dangerous changes to be breaking changes e.g. remove an enum value
         isBreaking: change.criticality.level !== CriticalityLevel.NonBreaking,
       } as SchemaDiff;
     });
