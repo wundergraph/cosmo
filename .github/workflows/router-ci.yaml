@@ -2,6 +2,7 @@ name: Router CI
 on:
   pull_request:
     paths:
+      - "composition-go/**/*"
       - "demos/**/*"
       - "router/**/*"
       - "router-tests/**/*"
