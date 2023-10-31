@@ -113,7 +113,7 @@ export default (opts: BaseCommandOptions) => {
 
             console.log(
               logSymbols.warning +
-                ` Compared ${pc.bold(resp.breakingChanges.length)} breaking change's against ${pc.bold(
+                ` Compared ${pc.bold(resp.breakingChanges.length)} breaking change's impacting ${pc.bold(
                   resp.operationUsageStats.totalOperations,
                 )} operations.\nFound client activity between ` +
                 pc.underline(new Date(resp.operationUsageStats.firstSeenAt).toLocaleString()) +

@@ -24,7 +24,7 @@ interface Identifiable {
   id: Int!
 }
 
-type Engineer implements RoleType {
+type Engineer {
   department: Department!
   engineerType: EngineerType!
   title: [String!]!

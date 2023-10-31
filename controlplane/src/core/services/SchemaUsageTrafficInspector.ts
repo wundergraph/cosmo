@@ -15,6 +15,11 @@ export interface InspectorFilter {
   daysToConsider: number;
 }
 
+export interface InspectorChanges {
+  inspectable: boolean;
+  changes: InspectorSchemaChange[];
+}
+
 export interface InspectorOperationResult {
   schemaChangeId: string;
   hash: string;
@@ -126,10 +131,7 @@ export class SchemaUsageTrafficInspector {
   public schemaChangesToInspectorChanges(
     schemaChanges: SchemaDiff[],
     schemaCheckActions: SchemaCheckChangeAction[],
-  ): {
-    inspectable: boolean;
-    changes: InspectorSchemaChange[];
-  } {
+  ): InspectorChanges {
     const inspectable = this.isInspectable(schemaChanges);
     if (!inspectable) {
       return { inspectable: false, changes: [] };
@@ -181,7 +183,7 @@ export class SchemaUsageTrafficInspector {
           }
           default: {
             // ignore all other changes
-            return null;
+            throw new Error(`Unsupported change type ${change.changeType}`);
           }
         }
       })
