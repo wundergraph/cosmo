@@ -149,22 +149,18 @@ export class SchemaUsageTrafficInspector {
         }
 
         switch (change.changeType) {
-          // When a type is removed we know the exact type name e.g. 'Engineer'. We have no field name.
+          // 1. When a type is removed we know the exact type name e.g. 'Engineer'. We have no field name.
+          // 2. When an interface type is removed or added we know the interface 'RoleType'. We have no field name.
           case 'TYPE_REMOVED':
+          case 'OBJECT_TYPE_INTERFACE_ADDED':
           case 'OBJECT_TYPE_INTERFACE_REMOVED': {
             return {
               schemaChangeId: schemaCheckAction.id,
               typeName: path[0],
             } as InspectorSchemaChange;
           }
-          case 'UNION_MEMBER_REMOVED': {
-            return {
-              schemaChangeId: schemaCheckAction.id,
-              namedType: path[0],
-            };
-          }
-          // When a field is removed or the type has changed in a breaking way,
-          // we know the exact type and field name e.g. 'Engineer.name'
+          // 1. When a field is removed we know the exact type and field name e.g. 'Engineer.name'
+          // 2. When a field type has changed in a breaking way, we know the exact type name and field name e.g. 'Engineer.name'
           case 'FIELD_REMOVED':
           case 'FIELD_TYPE_CHANGED': {
             return {
@@ -173,8 +169,9 @@ export class SchemaUsageTrafficInspector {
               fieldName: path[1],
             } as InspectorSchemaChange;
           }
-          // When an enum value is added or removed, we only know the exact node type
-          // e.g. 'Department' not the enum value. This is fine because any change to an enum value is breaking.
+          // 1. When an enum value is added or removed, we only know the affected type. This is fine because any change to an enum value is breaking.
+          // 2. When a union member is removed, we only know the affected parent type. We use namedType to check for the usage of the union member.
+          case 'UNION_MEMBER_REMOVED':
           case 'ENUM_VALUE_ADDED':
           case 'ENUM_VALUE_REMOVED': {
             return {
