@@ -1,4 +1,4 @@
-import { CriticalityLevel, diff, ChangeType, DiffRule } from '@graphql-inspector/core';
+import { CriticalityLevel, diff, ChangeType } from '@graphql-inspector/core';
 import { GraphQLSchema } from 'graphql';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { buildSchema } from './composition.js';
@@ -53,11 +53,7 @@ export async function getDiffBetweenGraphs(
       newSchema = normalizationResult.schema;
     }
 
-    const changes = await diff(oldSchema, newSchema, [DiffRule.considerUsage], {
-      async checkUsage(input: { type: string; field?: string; argument?: string }[]): Promise<boolean[]> {
-        return [true];
-      },
-    });
+    const changes = await diff(oldSchema, newSchema);
 
     const schemaChanges: SchemaDiff[] = changes.map((change) => {
       return {
