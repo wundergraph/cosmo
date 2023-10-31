@@ -571,7 +571,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         let hasClientTraffic = false;
 
         const trafficInspector = new SchemaUsageTrafficInspector(opts.chClient!);
-        let inspectedOperations: InspectorOperationResult[] = [];
+        const inspectedOperations: InspectorOperationResult[] = [];
         const compositionErrors: PlainMessage<CompositionError>[] = [];
 
         // For operations checks we only consider breaking changes
@@ -592,35 +592,33 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           }
 
           // We don't collect operation usage when we have composition errors
-          if (composition.errors.length === 0) {
-            if (inspectorChanges.inspectable && inspectorChanges.changes.length > 0) {
-              const graphConfig = await fedGraphRepo.getConfig(composition.id);
-              if (!graphConfig) {
-                continue;
-              }
+          if (composition.errors.length === 0 && inspectorChanges.inspectable && inspectorChanges.changes.length > 0) {
+            const graphConfig = await fedGraphRepo.getConfig(composition.id);
+            if (!graphConfig) {
+              continue;
+            }
 
-              if (graphConfig.trafficCheckDays <= 0) {
-                continue;
-              }
+            if (graphConfig.trafficCheckDays <= 0) {
+              continue;
+            }
 
-              const result = await trafficInspector.inspect(inspectorChanges.changes, {
-                daysToConsider: graphConfig.trafficCheckDays,
-                federatedGraphId: composition.id,
-                organizationId: authContext.organizationId,
-              });
+            const result = await trafficInspector.inspect(inspectorChanges.changes, {
+              daysToConsider: graphConfig.trafficCheckDays,
+              federatedGraphId: composition.id,
+              organizationId: authContext.organizationId,
+            });
 
-              if (result.size > 0) {
-                // If we have at least one operation with traffic, we consider this schema change as breaking
-                // and skip the rest of the federated graphs
-                hasClientTraffic = true;
+            if (result.size > 0) {
+              // If we have at least one operation with traffic, we consider this schema change as breaking
+              // and skip the rest of the federated graphs
+              hasClientTraffic = true;
 
-                // Store operation usage
-                await schemaCheckRepo.createOperationUsage(result);
+              // Store operation usage
+              await schemaCheckRepo.createOperationUsage(result);
 
-                // Collect all inspected operations for later aggregation
-                for (const resultElement of result.values()) {
-                  inspectedOperations.push(...resultElement);
-                }
+              // Collect all inspected operations for later aggregation
+              for (const resultElement of result.values()) {
+                inspectedOperations.push(...resultElement);
               }
             }
           }
@@ -632,8 +630,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         // Update the overall schema check with the results
         await schemaCheckRepo.update({
           schemaCheckID,
-          hasClientTraffic: hasClientTraffic,
-          hasBreakingChanges: hasBreakingChanges,
+          hasClientTraffic,
+          hasBreakingChanges,
         });
 
         if (req.gitInfo && opts.githubApp) {

@@ -38,7 +38,7 @@ export class SchemaUsageTrafficInspector {
     const results: Map<string, InspectorOperationResult[]> = new Map();
 
     for (const change of changes) {
-      let where: string[] = [];
+      const where: string[] = [];
       // Only for enum value changes
       if (change.namedType) {
         where.push(`NamedType = '${change.namedType}'`);
@@ -110,10 +110,12 @@ export class SchemaUsageTrafficInspector {
         case 'DIRECTIVE_REMOVED':
         case 'DIRECTIVE_ARGUMENT_REMOVED':
         case 'DIRECTIVE_ARGUMENT_DEFAULT_VALUE_CHANGED':
-        case 'DIRECTIVE_LOCATION_REMOVED':
+        case 'DIRECTIVE_LOCATION_REMOVED': {
           return false;
-        default:
+        }
+        default: {
           return true;
+        }
       }
     });
   }
@@ -149,32 +151,41 @@ export class SchemaUsageTrafficInspector {
         switch (change.changeType) {
           // When a type is removed we know the exact type name e.g. 'Engineer'. We have no field name.
           case 'TYPE_REMOVED':
-          case 'UNION_MEMBER_REMOVED':
-          case 'OBJECT_TYPE_INTERFACE_REMOVED':
+          case 'OBJECT_TYPE_INTERFACE_REMOVED': {
             return {
               schemaChangeId: schemaCheckAction.id,
               typeName: path[0],
             } as InspectorSchemaChange;
+          }
+          case 'UNION_MEMBER_REMOVED': {
+            return {
+              schemaChangeId: schemaCheckAction.id,
+              namedType: path[0],
+            };
+          }
           // When a field is removed or the type has changed in a breaking way,
           // we know the exact type and field name e.g. 'Engineer.name'
           case 'FIELD_REMOVED':
-          case 'FIELD_TYPE_CHANGED':
+          case 'FIELD_TYPE_CHANGED': {
             return {
               schemaChangeId: schemaCheckAction.id,
               typeName: path[0],
               fieldName: path[1],
             } as InspectorSchemaChange;
+          }
           // When an enum value is added or removed, we only know the exact node type
           // e.g. 'Department' not the enum value. This is fine because any change to an enum value is breaking.
           case 'ENUM_VALUE_ADDED':
-          case 'ENUM_VALUE_REMOVED':
+          case 'ENUM_VALUE_REMOVED': {
             return {
               schemaChangeId: schemaCheckAction.id,
               namedType: path[0],
             } as InspectorSchemaChange;
-          default:
+          }
+          default: {
             // ignore all other changes
             return null;
+          }
         }
       })
       .filter((change) => change !== null) as InspectorSchemaChange[];
@@ -184,13 +195,34 @@ export class SchemaUsageTrafficInspector {
 }
 
 export function collectOperationUsageStats(inspectorResult: InspectorOperationResult[]) {
+  if (inspectorResult.length === 0) {
+    return {
+      totalOperations: 0,
+      firstSeenAt: new Date().toUTCString(),
+      lastSeenAt: new Date().toUTCString(),
+    };
+  }
+
+  const totalOperations = inspectorResult.length;
+  let firstSeenAt = new Date(inspectorResult[0].firstSeenAt);
+  let lastSeenAt = new Date(inspectorResult[0].lastSeenAt);
+
+  for (let i = 1; i < inspectorResult.length; i++) {
+    const currentFirstSeenAt = new Date(inspectorResult[i].firstSeenAt);
+    const currentLastSeenAt = new Date(inspectorResult[i].lastSeenAt);
+
+    if (currentFirstSeenAt < firstSeenAt) {
+      firstSeenAt = currentFirstSeenAt;
+    }
+
+    if (currentLastSeenAt > lastSeenAt) {
+      lastSeenAt = currentLastSeenAt;
+    }
+  }
+
   return {
-    totalOperations: inspectorResult.length,
-    firstSeenAt: inspectorResult
-      .reduce((acc, curr) => (acc < new Date(curr.firstSeenAt) ? acc : new Date(curr.firstSeenAt)), new Date())
-      .toUTCString(),
-    lastSeenAt: inspectorResult
-      .reduce((acc, curr) => (acc > new Date(curr.lastSeenAt) ? acc : new Date(curr.lastSeenAt)), new Date())
-      .toUTCString(),
+    totalOperations,
+    firstSeenAt: firstSeenAt.toUTCString(),
+    lastSeenAt: lastSeenAt.toUTCString(),
   };
 }
