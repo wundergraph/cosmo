@@ -51,7 +51,7 @@ export class SchemaCheckRepository {
     return updatedSchemaCheck[0].id;
   }
 
-  public async createSchemaCheckChanges(data: { schemaCheckID: string; changes: SchemaDiff[] }) {
+  public createSchemaCheckChanges(data: { schemaCheckID: string; changes: SchemaDiff[] }) {
     if (data.changes.length === 0) {
       return [];
     }
@@ -70,7 +70,7 @@ export class SchemaCheckRepository {
   }
 
   public async createOperationUsage(schemaCheckActionOperations: Map<string, InspectorOperationResult[]>) {
-    let values: NewSchemaChangeOperationUsage[] = [];
+    const values: NewSchemaChangeOperationUsage[] = [];
 
     for (const [schemaCheckChangeActionId, operations] of schemaCheckActionOperations.entries()) {
       values.push(

@@ -23,8 +23,8 @@ import {
 } from '../../types/index.js';
 import { normalizeLabelMatchers, normalizeLabels } from '../util.js';
 import { Composer } from '../composition/composer.js';
-import { SubgraphRepository } from './SubgraphRepository.js';
 import { SchemaDiff } from '../composition/schemaCheck.js';
+import { SubgraphRepository } from './SubgraphRepository.js';
 
 export interface FederatedGraphConfig {
   trafficCheckDays: number;
