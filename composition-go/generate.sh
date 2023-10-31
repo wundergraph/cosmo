@@ -6,6 +6,7 @@
 
 set -e
 
+pnpm generate
 pnpm --filter='@wundergraph/composition' --filter='@wundergraph/cosmo-shared' build
 pnpm --filter='@wundergraph/composition-shim' install
 pnpm --filter='@wundergraph/composition-shim' build
