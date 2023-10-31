@@ -81,7 +81,14 @@ func updateSchemas(subgraphs []*Subgraph) ([]*Subgraph, error) {
 			} `json:"errors"`
 		}
 		if err := json.NewDecoder(resp.Body).Decode(&sdlResult); err != nil {
-			return nil, fmt.Errorf("could decode SDL response for subgraph %s: %w", subgraph.Name, err)
+			return nil, fmt.Errorf("could not decode SDL response for subgraph %s: %w", subgraph.Name, err)
+		}
+		if len(sdlResult.Errors) > 0 {
+			var errorMessages []string
+			for _, err := range sdlResult.Errors {
+				errorMessages = append(errorMessages, err.Message)
+			}
+			return nil, fmt.Errorf("error retrieving SDL for subgraph %s: %s", subgraph.Name, strings.Join(errorMessages, ", "))
 		}
 		cpy := *subgraph
 		cpy.Schema = sdlResult.Data.Service.SDL
