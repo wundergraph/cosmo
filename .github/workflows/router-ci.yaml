@@ -51,7 +51,8 @@ jobs:
         working-directory: ./router
         run: go mod download
 
-      - uses: ./.github/actions/go-linter
+      - name: Run linters on router
+        uses: ./.github/actions/go-linter
         with:
           working-directory: ./router
 
@@ -63,10 +64,8 @@ jobs:
         working-directory: ./router
         run: make build
 
-      - name: Install latest wgc to run composition in integration tests
-        run: npm install -y -g wgc@latest
-
-      - uses: ./.github/actions/go-linter
+      - name: Run linters on router-tests
+        uses: ./.github/actions/go-linter
         with:
           working-directory: ./router-tests
 

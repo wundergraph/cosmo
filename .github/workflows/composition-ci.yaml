@@ -46,6 +46,11 @@ jobs:
       - name: Test
         run: pnpm run --filter composition test
 
+      - name: Run linter on composition-go
+        uses: ./.github/actions/go-linter
+        with:
+          working-directory: ./composition-go
+
       - name: Test Go library
         run: go test
         working-directory: composition-go
