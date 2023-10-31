@@ -174,6 +174,7 @@ export default (opts: BaseCommandOptions) => {
           console.log(pc.red(pc.bold(resp.response?.details)));
         }
         program.error(logSymbols.error + pc.red(' Schema check failed.'));
+        break;
       }
       default: {
         console.log('\nFailed to perform the check operation.');
