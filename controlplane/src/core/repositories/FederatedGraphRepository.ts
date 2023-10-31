@@ -103,7 +103,7 @@ export class FederatedGraphRepository {
     });
   }
 
-  public async createConfig(federatedGraphId: string, trafficCheckDays: number) {
+  public createConfig(federatedGraphId: string, trafficCheckDays: number) {
     return this.db
       .insert(federatedGraphConfigs)
       .values({ federatedGraphId, traffic_check_days: trafficCheckDays })
