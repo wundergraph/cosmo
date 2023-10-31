@@ -75,7 +75,7 @@
     "@connectrpc/protoc-gen-connect-es": "^0.13.0",
     "@types/cookie": "^0.5.1",
     "@types/node": "^18.17.0",
-    "@types/prettier": "^2.7.3",
+    "@types/prettier": "^3.0.0",
     "@types/stream-json": "^1.7.3",
     "@types/uuid": "^9.0.2",
     "del-cli": "^5.0.0",
