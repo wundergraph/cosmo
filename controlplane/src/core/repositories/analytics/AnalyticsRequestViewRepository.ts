@@ -730,7 +730,7 @@ export class AnalyticsRequestViewRepository {
             columnName: f.columnName,
             title: f.title,
             options: f.options,
-          } as PlainMessage<AnalyticsViewResultFilter>),
+          }) as PlainMessage<AnalyticsViewResultFilter>,
       );
 
       return {
