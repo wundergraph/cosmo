@@ -2,9 +2,11 @@ import { PlainMessage } from '@bufbuild/protobuf';
 import { ServiceImpl } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { GetConfigResponse } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+import { OrganizationEventName, PlatformEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
 import {
   CheckFederatedGraphResponse,
+  CheckOperationUsageStats,
   CheckSubgraphSchemaResponse,
   CompositionError,
   CreateAPIKeyResponse,
@@ -23,12 +25,15 @@ import {
   GetAPIKeysResponse,
   GetAnalyticsViewResponse,
   GetCheckDetailsResponse,
+  GetCheckSummaryResponse,
   GetChecksByFederatedGraphNameResponse,
   GetDashboardAnalyticsViewResponse,
   GetFederatedGraphByNameResponse,
   GetFederatedGraphChangelogResponse,
   GetFederatedGraphSDLByNameResponse,
   GetFederatedGraphsResponse,
+  GetFederatedSubgraphSDLByNameResponse,
+  GetFieldUsageResponse,
   GetGraphMetricsResponse,
   GetMetricsErrorRateResponse,
   GetOrganizationIntegrationsResponse,
@@ -51,12 +56,7 @@ import {
   UpdateOrganizationWebhookConfigResponse,
   UpdateSubgraphResponse,
   WhoAmIResponse,
-  GetFieldUsageResponse,
-  GetFederatedSubgraphSDLByNameResponse,
-  CheckOperationUsageStats,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-
-import { OrganizationEventName, PlatformEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import { OpenAIGraphql, isValidUrl } from '@wundergraph/cosmo-shared';
 import { parse } from 'graphql';
 import { GraphApiKeyDTO, GraphApiKeyJwtPayload } from '../../types/index.js';
@@ -74,18 +74,18 @@ import { AnalyticsDashboardViewRepository } from '../repositories/analytics/Anal
 import { AnalyticsRequestViewRepository } from '../repositories/analytics/AnalyticsRequestViewRepository.js';
 import { MetricsRepository } from '../repositories/analytics/MetricsRepository.js';
 import { TraceRepository } from '../repositories/analytics/TraceRepository.js';
+import { UsageRepository } from '../repositories/analytics/UsageRepository.js';
 import type { RouterOptions } from '../routes.js';
 import { ApiKeyGenerator } from '../services/ApiGenerator.js';
 import ApolloMigrator from '../services/ApolloMigrator.js';
-import Slack from '../services/Slack.js';
-import { UsageRepository } from '../repositories/analytics/UsageRepository.js';
-import { formatSubscriptionProtocol, handleError, isValidLabelMatchers, isValidLabels } from '../util.js';
-import { FederatedGraphSchemaUpdate, OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
 import {
-  collectOperationUsageStats,
   InspectorOperationResult,
   SchemaUsageTrafficInspector,
+  collectOperationUsageStats,
 } from '../services/SchemaUsageTrafficInspector.js';
+import Slack from '../services/Slack.js';
+import { formatSubscriptionProtocol, handleError, isValidLabelMatchers, isValidLabels } from '../util.js';
+import { FederatedGraphSchemaUpdate, OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -659,6 +659,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         };
       });
     },
+
     fixSubgraphSchema: (req, ctx) => {
       const logger = opts.logger.child({
         service: ctx.service.typeName,
@@ -1017,6 +1018,61 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
+    getCheckSummary: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetCheckSummaryResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+        const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
+        const schemaCheckRepo = new SchemaCheckRepository(opts.db);
+
+        const graph = await fedGraphRepo.byName(req.graphName);
+
+        if (!graph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: 'Requested graph does not exist',
+            },
+            changes: [],
+            compositionErrors: [],
+          };
+        }
+
+        const check = await subgraphRepo.checkById(req.checkId, graph.name);
+
+        if (!check) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: 'Requested check not found',
+            },
+            changes: [],
+            compositionErrors: [],
+          };
+        }
+
+        const inspectedOperations: InspectorOperationResult[] = await schemaCheckRepo.getAffectedOperationsByCheckId(
+          check.id,
+        );
+
+        const operationUsageStats: PlainMessage<CheckOperationUsageStats> =
+          collectOperationUsageStats(inspectedOperations);
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          check,
+          operationUsageStats,
+        };
+      });
+    },
+
     getCheckDetails: (req, ctx) => {
       const logger = opts.logger.child({
         service: ctx.service.typeName,
@@ -1041,7 +1097,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const details = await subgraphRepo.checkDetails(req.checkID, graph.targetId, graph.name);
+        const details = await subgraphRepo.checkDetails(req.checkId, graph.targetId);
 
         if (!details) {
           return {
@@ -1087,9 +1143,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const details = await subgraphRepo.checkDetails(req.checkId, graph.targetId, graph.name);
+        const check = await subgraphRepo.checkById(req.checkId, graph.name);
 
-        if (!details) {
+        if (!check) {
           return {
             response: {
               code: EnumStatusCode.ERR_NOT_FOUND,
@@ -1100,7 +1156,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const githubDetails = await subgraphRepo.forceCheckSuccess(details.check.id);
+        const githubDetails = await subgraphRepo.forceCheckSuccess(check.id);
 
         if (githubDetails && opts.githubApp) {
           const githubRepo = new GitHubRepository(opts.db, opts.githubApp);

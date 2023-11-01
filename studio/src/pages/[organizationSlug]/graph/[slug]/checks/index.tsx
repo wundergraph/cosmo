@@ -16,6 +16,13 @@ import {
 } from "@/components/ui/dialog";
 import { Loader } from "@/components/ui/loader";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Table,
   TableBody,
   TableCell,
@@ -46,6 +53,24 @@ import { useRouter } from "next/router";
 import { useCallback, useContext } from "react";
 import { DateRange } from "react-day-picker";
 
+const useDateRange = () => {
+  const router = useRouter();
+
+  const dateRange = router.query.dateRange
+    ? JSON.parse(router.query.dateRange as string)
+    : {
+        start: subDays(new Date(), 2),
+        end: new Date(),
+      };
+  const startDate = new Date(dateRange.start);
+  const endDate = new Date(dateRange.end);
+
+  return {
+    startDate,
+    endDate,
+  };
+};
+
 const ProposedSchema = ({
   sdl,
   subgraphName,
@@ -75,27 +100,9 @@ const ChecksPage: NextPageWithLayout = () => {
     ? parseInt(router.query.page as string)
     : 1;
 
-  const limit = 10;
+  const limit = Number.parseInt((router.query.pageSize as string) || "10");
 
-  const dateRange = router.query.dateRange
-    ? JSON.parse(router.query.dateRange as string)
-    : {
-        start: subDays(new Date(), 2),
-        end: new Date(),
-      };
-  const startDate = new Date(dateRange.start);
-  const endDate = new Date(dateRange.end);
-
-  const onDateRangeChange = (val: DateRange) => {
-    const stringifiedDateRange = JSON.stringify({
-      start: val.from as Date,
-      end: (val.to as Date) ?? (val.from as Date),
-    });
-
-    applyNewParams({
-      dateRange: stringifiedDateRange,
-    });
-  };
+  const { startDate, endDate } = useDateRange();
 
   const graphContext = useContext(GraphContext);
 
@@ -108,7 +115,7 @@ const ChecksPage: NextPageWithLayout = () => {
       offset: (pageNumber - 1) * limit,
       startDate: formatISO(startOfDay(startDate)),
       endDate: formatISO(endOfDay(endDate)),
-    })
+    }),
   );
 
   const applyNewParams = useCallback(
@@ -120,7 +127,7 @@ const ChecksPage: NextPageWithLayout = () => {
         },
       });
     },
-    [router]
+    [router],
   );
 
   if (isLoading) return <Loader fullscreen />;
@@ -146,8 +153,7 @@ const ChecksPage: NextPageWithLayout = () => {
         title="Run checks using the CLI"
         description={
           <>
-            No checks found. Use the CLI tool to run one or adjust the date
-            range.{" "}
+            No checks found. Use the CLI tool to run one{" "}
             <a
               target="_blank"
               rel="noreferrer"
@@ -166,16 +172,12 @@ const ChecksPage: NextPageWithLayout = () => {
       />
     );
 
-  const noOfPages =
-    Math.floor(parseInt(data.checksCountBasedOnDateRange) / limit) + 1;
+  const noOfPages = Math.ceil(
+    parseInt(data.checksCountBasedOnDateRange) / limit,
+  );
 
   return (
     <div className="flex flex-col gap-y-3">
-      <DatePickerWithRange
-        className="ml-auto"
-        selectedDateRange={{ from: startDate, to: endDate }}
-        onDateRangeChange={onDateRangeChange}
-      />
       <Table>
         <TableHeader>
           <TableRow>
@@ -231,7 +233,7 @@ const ChecksPage: NextPageWithLayout = () => {
                     </TableCell>
                   </TableRow>
                 );
-              }
+              },
             )
           ) : (
             <TableRow>
@@ -243,6 +245,26 @@ const ChecksPage: NextPageWithLayout = () => {
         </TableBody>
       </Table>
       <div className="mr-2 flex justify-end">
+        <div className="flex items-center space-x-2">
+          <p className="text-sm font-medium">Rows per page</p>
+          <Select
+            value={`${limit}`}
+            onValueChange={(value) => {
+              applyNewParams({ pageSize: value });
+            }}
+          >
+            <SelectTrigger className="h-8 w-[70px]">
+              <SelectValue placeholder={`${limit}`} />
+            </SelectTrigger>
+            <SelectContent side="top">
+              {[10, 20, 30, 40, 50].map((pageSize) => (
+                <SelectItem key={pageSize} value={`${pageSize}`}>
+                  {pageSize}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         <div className="flex w-[100px] items-center justify-center text-sm font-medium">
           Page {pageNumber} of {noOfPages}
         </div>
@@ -297,16 +319,47 @@ const ChecksPage: NextPageWithLayout = () => {
   );
 };
 
+const Toolbar = () => {
+  const router = useRouter();
+
+  const { startDate, endDate } = useDateRange();
+
+  const onDateRangeChange = (val: DateRange) => {
+    const stringifiedDateRange = JSON.stringify({
+      start: val.from as Date,
+      end: (val.to as Date) ?? (val.from as Date),
+    });
+
+    router.push({
+      query: {
+        ...router.query,
+        dateRange: stringifiedDateRange,
+      },
+    });
+  };
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 border-b px-4 py-2">
+      <DatePickerWithRange
+        className="ml-auto"
+        selectedDateRange={{ from: startDate, to: endDate }}
+        onDateRangeChange={onDateRangeChange}
+      />
+    </div>
+  );
+};
+
 ChecksPage.getLayout = (page) =>
   getGraphLayout(
     <PageHeader title="Studio | Checks">
       <TitleLayout
         title="Checks"
-        subtitle="Summary of composition and schema checks"
+        subtitle="A record of composition and schema checks"
+        toolbar={<Toolbar />}
       >
         {page}
       </TitleLayout>
-    </PageHeader>
+    </PageHeader>,
   );
 
 export default ChecksPage;

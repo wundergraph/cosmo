@@ -7,10 +7,12 @@ CREATE TABLE IF NOT EXISTS "federated_graph_configs" (
 CREATE TABLE IF NOT EXISTS "schema_check_change_operation_usage" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"schema_check_change_action_id" uuid NOT NULL,
-	"name" text,
-	"hash" text,
-	"type" text,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+	"name" text NOT NULL,
+	"hash" text NOT NULL,
+	"type" text NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"first_seen_at" timestamp with time zone NOT NULL,
+	"last_seen_at" timestamp with time zone NOT NULL
 );
 --> statement-breakpoint
 ALTER TABLE "schema_checks" ADD COLUMN "has_client_traffic" boolean DEFAULT false;--> statement-breakpoint

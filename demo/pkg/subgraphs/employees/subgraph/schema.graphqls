@@ -10,7 +10,7 @@ enum Department {
 }
 
 interface RoleType {
-  department: Department
+  department: Department!
   title: [String!]!
 }
 
@@ -24,13 +24,13 @@ interface Identifiable {
   id: Int!
 }
 
-type Engineer {
+type Engineer implements RoleType {
   department: Department!
   engineerType: EngineerType!
   title: [String!]!
 }
 
-type Marketer implements RoleType{
+type Marketer implements RoleType {
   department: Department!
   title: [String!]!
 }

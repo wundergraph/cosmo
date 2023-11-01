@@ -78,7 +78,6 @@ export interface SchemaCheckDetailsDTO {
     isBreaking: boolean;
   }[];
   compositionErrors: string[];
-  check: SchemaCheckDTO;
 }
 
 export interface OrganizationDTO {

@@ -1,7 +1,7 @@
 {
   "version": "5",
   "dialect": "pg",
-  "id": "83635542-37e6-41a1-8eeb-6e6fdcaaedd0",
+  "id": "ab95ed63-a93d-443d-baeb-7f3c95fd073d",
   "prevId": "695d6370-665b-4f35-87c7-92339032f5ca",
   "tables": {
     "api_keys": {
@@ -800,19 +800,19 @@
           "name": "name",
           "type": "text",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "hash": {
           "name": "hash",
           "type": "text",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "type": {
           "name": "type",
           "type": "text",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "created_at": {
           "name": "created_at",
@@ -820,6 +820,18 @@
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
+        },
+        "first_seen_at": {
+          "name": "first_seen_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "last_seen_at": {
+          "name": "last_seen_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
         }
       },
       "indexes": {},

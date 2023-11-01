@@ -1,18 +1,10 @@
 import { getCheckBadge, getCheckIcon } from "@/components/check-badge-icon";
+import { ChecksToolbar } from "@/components/checks/toolbar";
 import { EmptyState } from "@/components/empty-state";
 import { GraphContext, getGraphLayout } from "@/components/layout/graph-layout";
 import { PageHeader } from "@/components/layout/head";
 import { TitleLayout } from "@/components/layout/title-layout";
 import { SchemaViewer } from "@/components/schema-viewer";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,42 +16,38 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Loader } from "@/components/ui/loader";
+import { Button } from "@/components/ui/button";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "@/components/ui/card";
+import { Loader } from "@/components/ui/loader";
 import { useToast } from "@/components/ui/use-toast";
-import { useSessionStorage } from "@/hooks/use-session-storage";
 import { formatDateTime } from "@/lib/format-date";
 import { NextPageWithLayout } from "@/lib/page";
-import { cn } from "@/lib/utils";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
-import { ChevronLeftIcon } from "@radix-ui/react-icons";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   forceCheckSuccess,
-  getCheckDetails,
+  getCheckSummary,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { format } from "date-fns";
 import { useRouter } from "next/router";
-import { useCallback, useContext } from "react";
+import { useContext } from "react";
 
-const CheckDetailsPage: NextPageWithLayout = () => {
+const CheckOverviewPage: NextPageWithLayout = () => {
   const graphContext = useContext(GraphContext);
   const router = useRouter();
   const { toast } = useToast();
 
-  const id = router.query.checkID as string;
+  const id = router.query.checkId as string;
 
   const { data, isLoading, error, refetch } = useQuery({
-    ...getCheckDetails.useQuery({
-      checkID: id,
+    ...getCheckSummary.useQuery({
+      checkId: id,
       graphName: graphContext?.graph?.name,
     }),
     enabled: !!graphContext?.graph?.name,
@@ -86,27 +74,13 @@ const CheckDetailsPage: NextPageWithLayout = () => {
     },
   });
 
-  const [checksRoute] = useSessionStorage<string | undefined>(
-    "checks.route",
-    undefined
-  );
-
-  const handleViewAll = useCallback(() => {
-    if (checksRoute) {
-      router.back();
-      return;
-    }
-    const parts = router.asPath.split("/");
-    router.push(parts.slice(0, parts.length - 1).join("/"));
-  }, [checksRoute, router]);
-
   if (isLoading) return <Loader fullscreen />;
 
   if (error || data.response?.code !== EnumStatusCode.OK)
     return (
       <EmptyState
         icon={<ExclamationTriangleIcon />}
-        title="Could not retrieve details"
+        title="Could not retrieve check summary"
         description={
           data?.response?.details || error?.message || "Please try again"
         }
@@ -119,51 +93,70 @@ const CheckDetailsPage: NextPageWithLayout = () => {
   const sdl = data.check.proposedSubgraphSchemaSDL ?? "";
 
   return (
-    <div>
-      <Button
-        onClick={() => handleViewAll()}
-        variant="link"
-        size="sm"
-        className="p-0"
-      >
-        <ChevronLeftIcon />
-        View all checks
-      </Button>
-      <Card className="mt-4 flex grow flex-col justify-between">
+    <div className="space-y-4">
+      <Card className="relative flex grow flex-col justify-between">
         <CardHeader>
-          <CardTitle>Check details</CardTitle>
           <CardDescription>
             Created At: {formatDateTime(new Date(data.check.timestamp))}
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-y-2 text-sm">
+          <div className="flex items-center gap-x-4">
+            <span className="w-28">Status</span> :
+            {getCheckBadge(
+              data.check.isBreaking,
+              data.check.isComposable,
+              data.check.isForcedSuccess,
+            )}
+          </div>
           <div className="flex gap-x-4">
             <span className="w-28">Subgraph</span> :
             <span className="w-32">{data.check.subgraphName}</span>
           </div>
           <div className="flex gap-x-4">
             <span className="w-28">Composable</span> :
-            <span className="">{getCheckIcon(data.check.isComposable)}</span>
+            <span>{getCheckIcon(data.check.isComposable)}</span>
           </div>
           <div className="flex gap-x-4">
             <span className="w-28">Non Breaking</span> :
-            <span className="">{getCheckIcon(!data.check.isBreaking)}</span>
+            <span>{getCheckIcon(!data.check.isBreaking)}</span>
           </div>
-          <div className="flex items-center gap-x-4">
-            <span className="w-28">Status</span> :
-            {getCheckBadge(
-              data.check.isBreaking,
-              data.check.isComposable,
-              data.check.isForcedSuccess
+          <div className="flex gap-x-4">
+            <span className="w-28">Operations</span> :
+            <span className="flex items-center gap-x-2">
+              {getCheckIcon(
+                (data.operationUsageStats?.totalOperations ?? 0) === 0,
+              )}
+              ( {data.operationUsageStats?.totalOperations} affected )
+            </span>
+          </div>
+          {data.operationUsageStats &&
+            data.operationUsageStats.totalOperations > 0 && (
+              <div className="flex gap-x-4">
+                <span className="w-28 flex-shrink-0">Timeframe</span> :
+                <div className="flex flex-col">
+                  <span>
+                    First seen at{" "}
+                    {formatDateTime(
+                      new Date(data.operationUsageStats.firstSeenAt),
+                    )}{" "}
+                  </span>
+                  <span>
+                    Last seen at{" "}
+                    {formatDateTime(
+                      new Date(data.operationUsageStats.lastSeenAt),
+                    )}
+                  </span>
+                </div>
+              </div>
             )}
-          </div>
           {!data.check.isForcedSuccess &&
             data.check.isBreaking &&
             data.check.isComposable && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button
-                    className="mt-4 md:ml-auto md:mt-0 md:w-max"
+                    className="right-6 top-6 mt-4 md:absolute md:ml-auto md:mt-0 md:w-max"
                     variant="secondary"
                   >
                     Force Success
@@ -195,78 +188,29 @@ const CheckDetailsPage: NextPageWithLayout = () => {
             )}
         </CardContent>
       </Card>
-      <div className="mt-6 space-y-2">
-        <h3 className="font-semibold">Proposed Schema</h3>
+
+      <div className="space-y-2">
         <div className="scrollbar-custom relative h-96 overflow-auto rounded border">
           <div className="absolute left-0 right-0 h-full">
             <SchemaViewer sdl={sdl} disableLinking />
           </div>
         </div>
       </div>
-
-      {data.changes.length === 0 && data.compositionErrors.length == 0 && (
-        <Alert className="mt-6">
-          <AlertTitle>All good!</AlertTitle>
-          <AlertDescription>
-            No changes or composition errors to show
-          </AlertDescription>
-        </Alert>
-      )}
-      {data.changes.length > 0 && (
-        <div className="mt-6 space-y-2">
-          <h3 className="font-semibold">Changes</h3>
-          <div className="scrollbar-custom max-h-[70vh] overflow-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[200px]">Change</TableHead>
-                  <TableHead className="w-[200px]">Type</TableHead>
-                  <TableHead>Description</TableHead>
-                </TableRow>
-              </TableHeader>
-
-              <TableBody>
-                {data.changes.map(({ changeType, message, isBreaking }) => {
-                  return (
-                    <TableRow
-                      key={changeType + message}
-                      className={cn(isBreaking && "text-destructive")}
-                    >
-                      <TableCell>
-                        {isBreaking ? "Breaking" : "Non-Breaking"}
-                      </TableCell>
-                      <TableCell>{changeType}</TableCell>
-                      <TableCell>{message}</TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </div>
-        </div>
-      )}
-      {data.compositionErrors.length > 0 && (
-        <div className="mt-6 space-y-2">
-          <h3 className="font-semibold">Composition Errors</h3>
-          <pre className="overflow-auto rounded-md bg-secondary p-4 text-sm text-secondary-foreground">
-            {data.compositionErrors.join("\n")}
-          </pre>
-        </div>
-      )}
     </div>
   );
 };
 
-CheckDetailsPage.getLayout = (page) =>
+CheckOverviewPage.getLayout = (page) =>
   getGraphLayout(
     <PageHeader title="Studio | Checks">
       <TitleLayout
-        title="Checks"
-        subtitle="Summary of composition and schema checks"
+        title="Check Overview"
+        subtitle="Summary for this check run"
+        toolbar={<ChecksToolbar tab="overview" />}
       >
         {page}
       </TitleLayout>
-    </PageHeader>
+    </PageHeader>,
   );
 
-export default CheckDetailsPage;
+export default CheckOverviewPage;

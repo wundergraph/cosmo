@@ -10,6 +10,7 @@ import {
   GetChecksResponse,
   Label,
   ListFilterOptions,
+  SchemaCheckDTO,
   SchemaCheckDetailsDTO,
   SubgraphDTO,
 } from '../../types/index.js';
@@ -543,11 +544,32 @@ export class SubgraphRepository {
     return checksCount[0].count;
   }
 
-  public async checkDetails(
-    id: string,
-    federatedTargetID: string,
-    federatedGraphName: string,
-  ): Promise<SchemaCheckDetailsDTO | undefined> {
+  public async checkById(id: string, federatedGraphName: string): Promise<SchemaCheckDTO | undefined> {
+    const check = await this.db.query.schemaChecks.findFirst({
+      where: eq(schema.schemaChecks.id, id),
+    });
+
+    if (!check) {
+      return;
+    }
+
+    const subgraphs = await this.listByFederatedGraph(federatedGraphName, {
+      published: true,
+    });
+
+    return {
+      id: check.id,
+      targetID: check.targetId,
+      subgraphName: subgraphs.find((s) => s.targetId === check.targetId)?.name ?? '',
+      timestamp: check.createdAt.toISOString(),
+      isBreaking: check.hasBreakingChanges ?? false,
+      isComposable: check.isComposable ?? false,
+      proposedSubgraphSchemaSDL: check.proposedSubgraphSchemaSDL ?? undefined,
+      isForcedSuccess: check.forcedSuccess ?? false,
+    };
+  }
+
+  public async checkDetails(id: string, federatedTargetID: string): Promise<SchemaCheckDetailsDTO | undefined> {
     const changes = await this.db.query.schemaCheckChangeAction.findMany({
       columns: {
         changeType: true,
@@ -575,29 +597,7 @@ export class SubgraphRepository {
       .split('\n')
       .filter((m) => !!m);
 
-    const check = await this.db.query.schemaChecks.findFirst({
-      where: eq(schema.schemaChecks.id, id),
-    });
-
-    if (!check) {
-      return;
-    }
-
-    const subgraphs = await this.listByFederatedGraph(federatedGraphName, {
-      published: true,
-    });
-
     return {
-      check: {
-        id: check.id,
-        targetID: check.targetId,
-        subgraphName: subgraphs.find((s) => s.targetId === check.targetId)?.name ?? '',
-        timestamp: check.createdAt.toISOString(),
-        isBreaking: check.hasBreakingChanges ?? false,
-        isComposable: check.isComposable ?? false,
-        proposedSubgraphSchemaSDL: check.proposedSubgraphSchemaSDL ?? undefined,
-        isForcedSuccess: check.forcedSuccess ?? false,
-      },
       changes: changes.map((c) => ({
         changeType: c.changeType ?? '',
         message: c.changeMessage ?? '',

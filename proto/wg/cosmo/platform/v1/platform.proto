@@ -247,8 +247,8 @@ message SchemaCheck {
   string timestamp = 4;
   bool isComposable = 5;
   bool isBreaking = 6;
-  optional string proposedSubgraphSchemaSDL = 7;
-  bool isForcedSuccess = 8;
+  bool isForcedSuccess = 7;
+  optional string proposedSubgraphSchemaSDL = 8;
 }
 
 message GetChecksByFederatedGraphNameResponse {
@@ -258,16 +258,26 @@ message GetChecksByFederatedGraphNameResponse {
   string totalChecksCount = 4;
 }
 
+message GetCheckSummaryRequest {
+  string check_id = 1;
+  string graph_name = 2;
+}
+
+message GetCheckSummaryResponse {
+  Response response = 1;
+  SchemaCheck check = 2;
+  CheckOperationUsageStats operationUsageStats = 3;
+}
+
 message GetCheckDetailsRequest {
-  string checkID = 1;
-  string graphName = 2;
+  string check_id = 1;
+  string graph_name = 2;
 }
 
 message GetCheckDetailsResponse {
   Response response = 1;
   repeated SchemaChange changes = 2;
   repeated string compositionErrors = 3;
-  SchemaCheck check = 4;
 }
 
 message GetFederatedGraphChangelogRequest {
@@ -957,6 +967,8 @@ service PlatformService {
   rpc GetFederatedSubgraphSDLByName(GetFederatedSubgraphSDLByNameRequest) returns (GetFederatedSubgraphSDLByNameResponse) {}
   // GetChecksByFederatedGraphName return schema and composition checks that concern a federated graph
   rpc GetChecksByFederatedGraphName(GetChecksByFederatedGraphNameRequest) returns (GetChecksByFederatedGraphNameResponse) {}
+  // GetCheckSummary returns top level information about a schema check
+  rpc GetCheckSummary(GetCheckSummaryRequest) returns (GetCheckSummaryResponse) {}
   // GetCheckDetails returns changes and composition errors recorded for a check
   rpc GetCheckDetails(GetCheckDetailsRequest) returns (GetCheckDetailsResponse) {}
   // ForceCheckSuccess forces a failed check to be marked as successful

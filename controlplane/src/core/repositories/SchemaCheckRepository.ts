@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema.js';
 import {
@@ -79,6 +79,8 @@ export class SchemaCheckRepository {
           name: op.name,
           type: op.type,
           hash: op.hash,
+          firstSeenAt: op.firstSeenAt,
+          lastSeenAt: op.lastSeenAt,
         })),
       );
     }
@@ -88,6 +90,42 @@ export class SchemaCheckRepository {
     }
 
     await this.db.insert(schemaCheckChangeActionOperationUsage).values(values).execute();
+  }
+
+  public async getAffectedOperationsByCheckId(checkId: string) {
+    const changeActionIds = (
+      await this.db.query.schemaCheckChangeAction.findMany({
+        where: and(
+          eq(schema.schemaCheckChangeAction.schemaCheckId, checkId),
+          eq(schema.schemaCheckChangeAction.isBreaking, true),
+        ),
+        columns: {
+          id: true,
+        },
+      })
+    ).map((r) => r.id);
+
+    if (changeActionIds.length > 0) {
+      const ops = await this.db
+        .selectDistinctOn([schema.schemaCheckChangeActionOperationUsage.hash], {
+          schemaChangeId: schema.schemaCheckChangeActionOperationUsage.schemaCheckChangeActionId,
+          hash: schema.schemaCheckChangeActionOperationUsage.hash,
+          name: schema.schemaCheckChangeActionOperationUsage.name,
+          type: schema.schemaCheckChangeActionOperationUsage.type,
+          firstSeenAt: sql`min(${schema.schemaCheckChangeActionOperationUsage.firstSeenAt})`,
+          lastSeenAt: sql`max(${schema.schemaCheckChangeActionOperationUsage.lastSeenAt})`,
+        })
+        .from(schema.schemaCheckChangeActionOperationUsage)
+        .where(inArray(schema.schemaCheckChangeActionOperationUsage.schemaCheckChangeActionId, changeActionIds))
+        .groupBy(({ hash, schemaChangeId, name, type }) => [hash, schemaChangeId, name, type]);
+      return ops.map((op) => ({
+        ...op,
+        firstSeenAt: new Date(op.firstSeenAt as string),
+        lastSeenAt: new Date(op.lastSeenAt as string),
+      }));
+    }
+
+    return [];
   }
 
   public createSchemaCheckCompositions(data: { schemaCheckID: string; compositions: ComposedFederatedGraph[] }) {

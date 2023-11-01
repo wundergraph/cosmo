@@ -311,10 +311,12 @@ export const schemaCheckChangeActionOperationUsage = pgTable('schema_check_chang
     .references(() => schemaCheckChangeAction.id, {
       onDelete: 'cascade',
     }),
-  name: text('name'),
-  hash: text('hash'),
-  type: text('type'),
+  name: text('name').notNull(),
+  hash: text('hash').notNull(),
+  type: text('type').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  firstSeenAt: timestamp('first_seen_at', { withTimezone: true }).notNull(),
+  lastSeenAt: timestamp('last_seen_at', { withTimezone: true }).notNull(),
 });
 
 export const schemaCheckChangeAction = pgTable('schema_check_change_action', {
