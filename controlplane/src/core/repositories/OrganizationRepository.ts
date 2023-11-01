@@ -309,7 +309,7 @@ export class OrganizationRepository {
       )
       .execute();
 
-    return userRoles.map((role) => role.role);
+    return [...new Set(userRoles.map((role) => role.role))];
   }
 
   public async addAPIKey(input: {

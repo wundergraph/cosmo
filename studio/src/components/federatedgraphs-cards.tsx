@@ -2,7 +2,7 @@ import { useFireworks } from "@/hooks/use-fireworks";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
 import { docsBaseURL } from "@/lib/constants";
 import { useChartData } from "@/lib/insights-helpers";
-import { cn } from "@/lib/utils";
+import { checkUserAccess, cn } from "@/lib/utils";
 import {
   ChevronDoubleRightIcon,
   CommandLineIcon,
@@ -397,7 +397,10 @@ export const Empty = ({
           <CLI
             command={`npx wgc federated-graph create production --label-matcher ${labels} --routing-url http://localhost:4000/graphql`}
           />
-          {!user?.currentOrganization.roles.includes("viewer") && (
+          {checkUserAccess({
+            rolesToBe: ["admin", "member"],
+            userRoles: user?.currentOrganization.roles || [],
+          }) && (
             <>
               <span className="text-sm font-bold">OR</span>
               <MigrationDialog
@@ -563,7 +566,10 @@ export const FederatedGraphsCards = ({
         {graphs.map((graph, graphIndex) => {
           return <GraphCard key={graphIndex.toString()} graph={graph} />;
         })}
-        {!user?.currentOrganization.roles.includes("viewer") && (
+        {checkUserAccess({
+          rolesToBe: ["admin", "member"],
+          userRoles: user?.currentOrganization.roles || [],
+        }) && (
           <MigrationDialog
             refetch={refetch}
             setIsMigrationSuccess={setIsMigrationSuccess}

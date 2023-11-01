@@ -38,7 +38,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { useSessionStorage } from "@/hooks/use-session-storage";
 import { formatDateTime } from "@/lib/format-date";
 import { NextPageWithLayout } from "@/lib/page";
-import { cn } from "@/lib/utils";
+import { checkUserAccess, cn } from "@/lib/utils";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { ChevronLeftIcon } from "@radix-ui/react-icons";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -161,7 +161,10 @@ const CheckDetailsPage: NextPageWithLayout = () => {
           {!data.check.isForcedSuccess &&
             data.check.isBreaking &&
             data.check.isComposable &&
-            !user?.currentOrganization.roles.includes("viewer") && (
+            checkUserAccess({
+              rolesToBe: ["admin", "member"],
+              userRoles: user?.currentOrganization.roles || [],
+            }) && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button

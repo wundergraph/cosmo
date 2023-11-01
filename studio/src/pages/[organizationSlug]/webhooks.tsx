@@ -43,7 +43,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
 import { docsBaseURL } from "@/lib/constants";
 import { NextPageWithLayout } from "@/lib/page";
-import { cn } from "@/lib/utils";
+import { checkUserAccess, cn } from "@/lib/utils";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { Pencil1Icon, PlusIcon, TrashIcon } from "@radix-ui/react-icons";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -506,9 +506,10 @@ const WebhooksPage: NextPageWithLayout = () => {
           </>
         }
         actions={
-          !user?.currentOrganization.roles.includes("viewer") && (
-            <Webhook mode="create" refresh={() => refetch()} />
-          )
+          checkUserAccess({
+            rolesToBe: ["admin", "member"],
+            userRoles: user?.currentOrganization.roles || [],
+          }) && <Webhook mode="create" refresh={() => refetch()} />
         }
       />
     );
@@ -528,18 +529,20 @@ const WebhooksPage: NextPageWithLayout = () => {
             Learn more
           </Link>
         </p>
-        {!user?.currentOrganization.roles.includes("viewer") && (
-          <Webhook mode="create" refresh={() => refetch()} />
-        )}
+        {checkUserAccess({
+          rolesToBe: ["admin", "member"],
+          userRoles: user?.currentOrganization.roles || [],
+        }) && <Webhook mode="create" refresh={() => refetch()} />}
       </div>
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead>Endpoint</TableHead>
             <TableHead>Events</TableHead>
-            {!user?.currentOrganization.roles.includes("viewer") && (
-              <TableHead aria-label="Actions"></TableHead>
-            )}
+            {checkUserAccess({
+              rolesToBe: ["admin", "member"],
+              userRoles: user?.currentOrganization.roles || [],
+            }) && <TableHead aria-label="Actions"></TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -559,7 +562,10 @@ const WebhooksPage: NextPageWithLayout = () => {
                     {events.length === 0 && <p className="italic">No events</p>}
                   </div>
                 </TableCell>
-                {!user?.currentOrganization.roles.includes("viewer") && (
+                {checkUserAccess({
+                  rolesToBe: ["admin", "member"],
+                  userRoles: user?.currentOrganization.roles || [],
+                }) && (
                   <TableCell className="flex justify-end space-x-2">
                     <Webhook
                       mode="update"

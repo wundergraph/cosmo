@@ -9,12 +9,10 @@ import {
 import { addDays } from "date-fns";
 import { useRouter } from "next/router";
 import {
-  createContext,
-  Dispatch,
   ReactNode,
-  SetStateAction,
+  createContext,
   useEffect,
-  useState,
+  useState
 } from "react";
 
 interface User {

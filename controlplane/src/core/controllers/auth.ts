@@ -118,8 +118,6 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
           userId,
         });
 
-        const currentOrganizationsSlugs = currentOrganizations.map((c) => c.slug);
-
         const insertedSession = await opts.db.transaction(async (tx) => {
           // Upsert the user
           await tx
@@ -136,31 +134,31 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
               },
             })
             .execute();
+
           if (accessTokenPayload.groups && accessTokenPayload.groups.length > 0) {
-            const keycloakGroups = accessTokenPayload.groups.map((grp) => grp.split('/')[1]);
+            const keycloakGroups = new Set(accessTokenPayload.groups.map((grp) => grp.split('/')[1]));
+            const orgRepo = new OrganizationRepository(tx);
 
-            // eslint-disable-next-line unicorn/prefer-set-has
-            const membershipsToBeAdded = keycloakGroups.filter((a) => !currentOrganizationsSlugs.includes(a));
-            const membershipsToBeRemoved = currentOrganizationsSlugs.filter((a) => !keycloakGroups.includes(a));
-
-            for (const slug of membershipsToBeRemoved) {
-              const orgRepo = new OrganizationRepository(tx);
+            // delete all the org member roles
+            for (const slug of keycloakGroups) {
               const dbOrg = await orgRepo.bySlug(slug);
-              // if the org slug exists in the memberships to be added also,
-              // it means that the role of the user is being changed, so need not remove the member
-              if (!dbOrg || membershipsToBeAdded.includes(slug)) {
+
+              if (!dbOrg) {
                 continue;
               }
 
-              await orgRepo.removeOrganizationMember({
-                userID: userId,
-                organizationID: dbOrg.id,
-              });
+              const orgMember = await orgRepo.getOrganizationMember({ organizationID: dbOrg.id, userID: userId });
+              if (!orgMember) {
+                continue;
+              }
+
+              await tx
+                .delete(organizationMemberRoles)
+                .where(eq(organizationMemberRoles.organizationMemberId, orgMember.orgMemberID));
             }
 
-            // upserting the members into the orgs and upseting their roles.
+            // upserting the members into the orgs and inserting their roles.
             for (const kcGroup of accessTokenPayload.groups) {
-              const orgRepo = new OrganizationRepository(tx);
               const slug = kcGroup.split('/')[1];
               const dbOrg = await orgRepo.bySlug(slug);
               if (!dbOrg) {
@@ -210,14 +208,6 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
                 .values({
                   organizationMemberId: insertedMember[0].id,
                   role,
-                })
-                .onConflictDoUpdate({
-                  target: [organizationMemberRoles.organizationMemberId, organizationMemberRoles.role],
-                  // Update the fields only when the org member role already exists
-                  set: {
-                    organizationMemberId: insertedMember[0].id,
-                    role,
-                  },
                 })
                 .execute();
             }

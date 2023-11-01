@@ -16,3 +16,18 @@ export const showCal = async (e: any) => {
     calLink: "stefan-avram-wundergraph/wundergraph-introduction",
   });
 };
+
+export const checkUserAccess = ({
+  rolesToBe,
+  userRoles,
+}: {
+  rolesToBe: string[];
+  userRoles: string[];
+}) => {
+  for (const role of rolesToBe) {
+    if (userRoles.includes(role)) {
+      return true;
+    }
+  }
+  return false;
+};

@@ -42,6 +42,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
 import { docsBaseURL } from "@/lib/constants";
 import { NextPageWithLayout } from "@/lib/page";
+import { checkUserAccess } from "@/lib/utils";
 import {
   ExclamationTriangleIcon,
   Pencil1Icon,
@@ -597,7 +598,10 @@ const IntegrationsPage: NextPageWithLayout = () => {
           </>
         }
         actions={
-          !user?.currentOrganization.roles.includes("viewer") && (
+          checkUserAccess({
+            rolesToBe: ["admin", "member"],
+            userRoles: user?.currentOrganization.roles || [],
+          }) && (
             <>
               <Button variant="default" size="default" asChild>
                 <Link
@@ -636,7 +640,10 @@ const IntegrationsPage: NextPageWithLayout = () => {
             Learn more
           </Link>
         </p>
-        {!user?.currentOrganization.roles.includes("viewer") && (
+        {checkUserAccess({
+          rolesToBe: ["admin", "member"],
+          userRoles: user?.currentOrganization.roles || [],
+        }) && (
           <>
             <Button variant="default" size="default" asChild>
               <Link
@@ -661,9 +668,10 @@ const IntegrationsPage: NextPageWithLayout = () => {
           <TableRow>
             <TableHead>Name</TableHead>
             <TableHead>Events</TableHead>
-            {!user?.currentOrganization.roles.includes("viewer") && (
-              <TableHead aria-label="Actions"></TableHead>
-            )}
+            {checkUserAccess({
+              rolesToBe: ["admin", "member"],
+              userRoles: user?.currentOrganization.roles || [],
+            }) && <TableHead aria-label="Actions"></TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -686,7 +694,10 @@ const IntegrationsPage: NextPageWithLayout = () => {
                       )}
                     </div>
                   </TableCell>
-                  {!user?.currentOrganization.roles.includes("viewer") && (
+                  {checkUserAccess({
+                    rolesToBe: ["admin", "member"],
+                    userRoles: user?.currentOrganization.roles || [],
+                  }) && (
                     <TableCell className="flex justify-end space-x-2">
                       <Integration
                         mode="update"

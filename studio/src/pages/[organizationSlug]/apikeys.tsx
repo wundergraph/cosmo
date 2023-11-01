@@ -37,6 +37,7 @@ import { SubmitHandler, useZodForm } from "@/hooks/use-form";
 import { docsBaseURL } from "@/lib/constants";
 import { formatDateTime } from "@/lib/format-date";
 import { NextPageWithLayout } from "@/lib/page";
+import { checkUserAccess } from "@/lib/utils";
 import {
   EllipsisVerticalIcon,
   ExclamationTriangleIcon,
@@ -503,7 +504,10 @@ const APIKeysPage: NextPageWithLayout = () => {
                 Learn more
               </Link>
             </p>
-            {!user?.currentOrganization.roles.includes("viewer") && (
+            {checkUserAccess({
+              rolesToBe: ["admin", "member"],
+              userRoles: user?.currentOrganization.roles || [],
+            }) && (
               <CreateAPIKey
                 apiKey={apiKey}
                 setApiKey={setApiKey}
@@ -513,7 +517,10 @@ const APIKeysPage: NextPageWithLayout = () => {
             )}
           </div>
           {deleteApiKeyName &&
-            !user?.currentOrganization.roles.includes("viewer") && (
+            checkUserAccess({
+              rolesToBe: ["admin", "member"],
+              userRoles: user?.currentOrganization.roles || [],
+            }) && (
               <DeleteAPIKeyDialog
                 apiKeyName={deleteApiKeyName}
                 refresh={refetch}
@@ -530,7 +537,10 @@ const APIKeysPage: NextPageWithLayout = () => {
                 <TableHead>Expires At</TableHead>
                 <TableHead>Created At</TableHead>
                 <TableHead>Last Used At</TableHead>
-                {!user?.currentOrganization.roles.includes("viewer") && (
+                {checkUserAccess({
+                  rolesToBe: ["admin", "member"],
+                  userRoles: user?.currentOrganization.roles || [],
+                }) && (
                   <TableHead className="flex items-center justify-center">
                     Actions
                   </TableHead>
@@ -560,9 +570,10 @@ const APIKeysPage: NextPageWithLayout = () => {
                             ? formatDateTime(new Date(lastUsedAt))
                             : "Never"}
                         </TableCell>
-                        {!user?.currentOrganization.roles.includes(
-                          "viewer"
-                        ) && (
+                        {checkUserAccess({
+                          rolesToBe: ["admin", "member"],
+                          userRoles: user?.currentOrganization.roles || [],
+                        }) && (
                           <TableCell>
                             <DropdownMenu>
                               <div className="flex justify-center">
