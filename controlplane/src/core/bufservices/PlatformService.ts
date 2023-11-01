@@ -624,8 +624,17 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           }
         }
 
+        const uniqueHashes: { [key: string]: boolean } = {};
+        const uniqueInspectedOperations: InspectorOperationResult[] = [];
+        for (const result of inspectedOperations) {
+          if (!uniqueHashes[result.hash]) {
+            uniqueHashes[result.hash] = true;
+            uniqueInspectedOperations.push(result);
+          }
+        }
+
         const operationUsageStats: PlainMessage<CheckOperationUsageStats> =
-          collectOperationUsageStats(inspectedOperations);
+          collectOperationUsageStats(uniqueInspectedOperations);
 
         // Update the overall schema check with the results
         await schemaCheckRepo.update({
