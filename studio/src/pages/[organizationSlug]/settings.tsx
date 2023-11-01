@@ -14,6 +14,7 @@ import {
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
+  CardContent,
   CardDescription,
   CardFooter,
   CardHeader,
@@ -717,6 +718,20 @@ const OpenIDConnectProvider = ({
           </Dialog>
         )}
       </CardHeader>
+      {providerData && providerData.name && (
+        <CardContent className="flex flex-col gap-y-3">
+          <div className="flex flex-col gap-y-2">
+            <span className="px-1">OIDC provider</span>
+            <CLI command={`https://${providerData.endpoint}`} />
+          </div>
+          <div className="flex flex-col gap-y-2">
+            <span className="px-1">Login URL</span>
+            <CLI
+              command={`${process.env.NEXT_PUBLIC_COSMO_STUDIO_URL}/login?hint=${organizationSlug}`}
+            />
+          </div>
+        </CardContent>
+      )}
     </Card>
   );
 };
