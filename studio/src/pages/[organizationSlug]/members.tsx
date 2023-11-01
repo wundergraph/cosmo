@@ -13,7 +13,7 @@ import { Loader } from "@/components/ui/loader";
 import { useToast } from "@/components/ui/use-toast";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
 import { NextPageWithLayout } from "@/lib/page";
-import { cn, showCal } from "@/lib/utils";
+import { cn, getHighestPriorityRole, showCal } from "@/lib/utils";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
@@ -317,7 +317,7 @@ const MembersPage: NextPageWithLayout = () => {
             <MemberCard
               key={member.userID}
               email={member.email}
-              role={member.roles[0]}
+              role={getHighestPriorityRole({ userRoles: member.roles })}
               memberUserID={member.userID}
               acceptedInvite={member.acceptedInvite}
               isAdmin={isAdmin || false}

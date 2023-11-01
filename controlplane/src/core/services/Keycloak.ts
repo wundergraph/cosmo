@@ -115,6 +115,23 @@ export default class Keycloak {
     });
   }
 
+  public async getKeycloakUsers({ realm, orgSlug }: { realm?: string; orgSlug: string }) {
+    const users = await this.client.users.find({
+      exact: true,
+      idpAlias: orgSlug,
+      realm: realm || this.realm,
+    });
+    return users;
+  }
+
+  public async getKeycloakUserGroups({ realm, userID }: { realm?: string; userID: string }) {
+    const groups = await this.client.users.listGroups({
+      id: userID,
+      realm: realm || this.realm,
+    });
+    return groups;
+  }
+
   public async createOIDCProvider({
     realm,
     clientId,

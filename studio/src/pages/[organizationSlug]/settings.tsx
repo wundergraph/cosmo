@@ -527,6 +527,7 @@ const OpenIDConnectProvider = ({
               setOpen(!open);
               if (open) {
                 setMode("create");
+                refetch();
               }
             }}
           >

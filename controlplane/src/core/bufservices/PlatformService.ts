@@ -2364,6 +2364,15 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
+        if (org.creatorUserId === user.id) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The creator of this organization ${req.email} cannot be removed from the organization.`,
+            },
+          };
+        }
+
         await opts.keycloakClient.authenticateClient();
 
         const organizationGroup = await opts.keycloakClient.client.groups.find({
@@ -3688,6 +3697,47 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         }
 
         await opts.keycloakClient.authenticateClient();
+
+        const organization = await orgRepo.byId(authContext.organizationId);
+        if (!organization) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Organization not found`,
+            },
+          };
+        }
+
+        const keycloakUsers = await opts.keycloakClient.getKeycloakUsers({
+          realm: opts.keycloakRealm,
+          orgSlug: authContext.organizationSlug,
+        });
+
+        for (const user of keycloakUsers) {
+          if (user.id === organization.creatorUserId) {
+            continue;
+          }
+          const keycloakUserGroups = await opts.keycloakClient.getKeycloakUserGroups({
+            realm: opts.keycloakRealm,
+            userID: user.id || '',
+          });
+
+          for (const group of keycloakUserGroups) {
+            if (!group.path?.includes(authContext.organizationSlug) || group.path?.includes('viewer')) {
+              continue;
+            }
+            await opts.keycloakClient.client.users.delFromGroup({
+              id: user.id || '',
+              groupId: group.id || '',
+              realm: opts.keycloakRealm,
+            });
+          }
+
+          await opts.keycloakClient.client.users.logout({
+            id: user.id || '',
+            realm: opts.keycloakRealm,
+          });
+        }
 
         await opts.keycloakClient.deleteOIDCProvider({
           realm: opts.keycloakRealm,

@@ -31,3 +31,17 @@ export const checkUserAccess = ({
   }
   return false;
 };
+
+export const getHighestPriorityRole = ({
+  userRoles,
+}: {
+  userRoles: string[];
+}) => {
+  if (userRoles.includes("admin")) {
+    return "admin";
+  }
+  if (userRoles.includes("member")) {
+    return "member";
+  }
+  return "viewer";
+};

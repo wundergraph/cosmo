@@ -95,8 +95,8 @@ try {
       id: organizationGroup.id,
     },
     {
-      name: 'dev',
-      realmRoles: ['dev'],
+      name: 'member',
+      realmRoles: ['member'],
     },
   );
 
