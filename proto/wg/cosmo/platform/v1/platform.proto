@@ -883,9 +883,10 @@ message IsGitHubAppInstalledResponse {
 
 message GetFieldUsageRequest {
   string graph_name = 1;
-  string typename = 2;
-  string field = 3; 
-  int32 range = 4;
+  optional string namedType = 2;
+  optional string typename = 3;
+  optional string field = 4; 
+  int32 range = 5;
 }
 
 message ClientWithOperations {

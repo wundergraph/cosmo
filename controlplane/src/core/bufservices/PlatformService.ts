@@ -3192,6 +3192,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           organizationId: authContext.organizationId,
           typename: req.typename,
           field: req.field,
+          namedType: req.namedType,
           range: req.range,
         });
 

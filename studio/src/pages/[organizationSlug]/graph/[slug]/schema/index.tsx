@@ -67,6 +67,40 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
 
+const TypeLink = ({
+  name,
+  ast,
+  isHeading = false,
+  isPrimary = false,
+}: {
+  name: string;
+  ast: GraphQLSchema;
+  isHeading?: boolean;
+  isPrimary?: boolean;
+}) => {
+  const router = useRouter();
+  const cleanName = name.replace(/[\[\]!: ]/g, "");
+  const category = getCategoryForType(ast, cleanName);
+  const href =
+    router.asPath.split("?")[0] + `?category=${category}&typename=${cleanName}`;
+
+  return (
+    <Link href={href}>
+      <span
+        className={cn(
+          "font-semibold text-primary underline-offset-2 hover:underline",
+          {
+            "text-xl text-primary-foreground": isHeading,
+            "text-primary-foreground": isPrimary,
+          },
+        )}
+      >
+        {name}
+      </span>
+    </Link>
+  );
+};
+
 const Fields = (props: {
   category: GraphQLTypeCategory;
   fields: GraphQLField[];
@@ -76,19 +110,25 @@ const Fields = (props: {
 
   const hasArgs = props.fields.some((f) => !!f.args);
   const hasDetails = props.fields.some(
-    (f) => !!f.description || !!f.deprecationReason
+    (f) => !!f.description || !!f.deprecationReason,
   );
   const hasUsage = !(
-    ["scalars", "enums", "inputs", "unions"] as GraphQLTypeCategory[]
+    ["scalars", "enums", "inputs"] as GraphQLTypeCategory[]
   ).includes(props.category);
 
   const openUsage = (fieldName: string) => {
+    const query: Record<string, string> = {};
+    if (props.category === "unions") {
+      query.showUsage = fieldName;
+    } else {
+      query.showUsage = `${router.query.typename || "Query"}.${fieldName}`;
+    }
+
     router.replace({
       pathname: router.pathname,
       query: {
         ...router.query,
-        field: fieldName,
-        typename: router.query.typename || "Query",
+        ...query,
       },
     });
   };
@@ -206,37 +246,173 @@ const Fields = (props: {
   );
 };
 
-const TypeLink = ({
-  name,
-  ast,
-  isHeading = false,
-  isPrimary = false,
-}: {
+const Type = (props: {
   name: string;
+  category: GraphQLTypeCategory;
+  description: string;
+  interfaces?: string[];
+  fields?: GraphQLField[];
   ast: GraphQLSchema;
-  isHeading?: boolean;
-  isPrimary?: boolean;
 }) => {
   const router = useRouter();
-  const cleanName = name.replace(/[\[\]!: ]/g, "");
-  const category = getCategoryForType(ast, cleanName);
-  const href =
-    router.asPath.split("?")[0] + `?category=${category}&typename=${cleanName}`;
 
   return (
-    <Link href={href}>
-      <span
-        className={cn(
-          "font-semibold text-primary underline-offset-2 hover:underline",
-          {
-            "text-xl text-primary-foreground": isHeading,
-            "text-primary-foreground": isPrimary,
-          }
+    <div className="flex flex-col">
+      <div className="flex items-center gap-x-4">
+        <div className="flex flex-wrap items-center gap-x-2 text-xl font-semibold tracking-tight">
+          <h3>{props.name}</h3>
+          {props.interfaces && props.interfaces.length > 0 && (
+            <div className="font-normal text-muted-foreground">implements</div>
+          )}
+          {props.interfaces &&
+            props.interfaces.map((t, index) => (
+              <div key={index} className="flex items-center gap-x-2">
+                <TypeLink ast={props.ast} name={t} isHeading />
+                {index !== props.interfaces!.length - 1 && (
+                  <p className="font-normal text-muted-foreground">&</p>
+                )}
+              </div>
+            ))}
+        </div>
+        <Badge className="w-max">
+          <Link
+            href={{
+              pathname: `/[organizationSlug]/graph/[slug]/schema`,
+              query: {
+                organizationSlug: router.query.organizationSlug,
+                slug: router.query.slug,
+                category: props.category,
+              },
+            }}
+          >
+            {props.category}
+          </Link>
+        </Badge>
+      </div>
+      <p className="mt-2 text-muted-foreground">
+        {props.description || getRootDescription(props.name) || (
+          <span className="italic">No description provided</span>
         )}
-      >
-        {name}
-      </span>
-    </Link>
+      </p>
+      <div className="mt-6">
+        {props.fields && (
+          <Fields
+            category={props.category}
+            fields={props.fields}
+            ast={props.ast}
+          />
+        )}
+      </div>
+    </div>
+  );
+};
+
+const TypeWrapper = ({ ast }: { ast: GraphQLSchema }) => {
+  const router = useRouter();
+
+  const category = router.query.category as GraphQLTypeCategory;
+  const typename = router.query.typename as string;
+
+  if (category && !typename) {
+    const list = getTypesByCategory(ast, category);
+    const hasUsage = category !== "inputs";
+
+    const openUsage = (type: string) => {
+      router.replace({
+        pathname: router.pathname,
+        query: {
+          ...router.query,
+          showUsage: type,
+          isNamedType: category !== "objects",
+        },
+      });
+    };
+
+    if (list.length === 0) {
+      return (
+        <EmptyState
+          icon={<InformationCircleIcon />}
+          title="No data found"
+          description="There is no data for this type or category. Please adjust your filters."
+        />
+      );
+    }
+
+    return (
+      <div className="mt-2 flex flex-col">
+        <h3 className="text-xl font-semibold tracking-tight">
+          {sentenceCase(category)}
+        </h3>
+        <p className="mt-2 text-muted-foreground">
+          {getCategoryDescription(category)}
+        </p>
+        <div className="mt-6">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Type</TableHead>
+                <TableHead className="w-8/12 lg:w-7/12 2xl:w-8/12">
+                  Description
+                </TableHead>
+                {hasUsage && (
+                  <TableHead className="w-1/12 lg:w-2/12 2xl:w-1/12">
+                    Actions
+                  </TableHead>
+                )}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {list.map((l) => (
+                <TableRow key={l.name}>
+                  <TableCell>
+                    <TypeLink ast={ast} name={l.name} />
+                  </TableCell>
+                  <TableCell>{l.description || "-"}</TableCell>
+                  {hasUsage && (
+                    <TableCell className="align-top text-primary">
+                      <Button
+                        onClick={() => openUsage(l.name)}
+                        className="p-0"
+                        variant="link"
+                      >
+                        View usage
+                      </Button>
+                    </TableCell>
+                  )}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+    );
+  }
+
+  const astType = ast.getType(typename || "Query");
+
+  if (!astType) {
+    return (
+      <EmptyState
+        icon={<InformationCircleIcon />}
+        title="No data found"
+        description="There is no data for this type or category. Please adjust your filters."
+      />
+    );
+  }
+
+  const type = mapGraphQLType(astType);
+
+  return (
+    <div className="mt-2 flex-1">
+      <Type
+        name={type.name}
+        category={type.category}
+        description={type.description}
+        interfaces={type.interfaces}
+        fields={type.fields}
+        ast={ast}
+      />
+    </div>
   );
 };
 
@@ -339,170 +515,6 @@ const SearchType = ({
   );
 };
 
-const Type = (props: {
-  name: string;
-  category: GraphQLTypeCategory;
-  description: string;
-  interfaces?: string[];
-  fields?: GraphQLField[];
-  ast: GraphQLSchema;
-}) => {
-  return (
-    <div className="flex flex-col">
-      <div className="flex items-center gap-x-4">
-        <div className="flex flex-wrap items-center gap-x-2 text-xl font-semibold tracking-tight">
-          <h3>{props.name}</h3>
-          {props.interfaces && props.interfaces.length > 0 && (
-            <div className="font-normal text-muted-foreground">implements</div>
-          )}
-          {props.interfaces &&
-            props.interfaces.map((t, index) => (
-              <div key={index} className="flex items-center gap-x-2">
-                <TypeLink ast={props.ast} name={t} isHeading />
-                {index !== props.interfaces!.length - 1 && (
-                  <p className="font-normal text-muted-foreground">&</p>
-                )}
-              </div>
-            ))}
-        </div>
-        <Badge className="w-max">{props.category}</Badge>
-      </div>
-      <p className="mt-2 text-muted-foreground">
-        {props.description || getRootDescription(props.name) || (
-          <span className="italic">No description provided</span>
-        )}
-      </p>
-      <div className="mt-6">
-        {props.fields && (
-          <Fields
-            category={props.category}
-            fields={props.fields}
-            ast={props.ast}
-          />
-        )}
-      </div>
-    </div>
-  );
-};
-
-const TypeWrapper = ({ ast }: { ast: GraphQLSchema }) => {
-  const router = useRouter();
-
-  const category = router.query.category as string;
-  const typename = router.query.typename as string;
-
-  if (category && !typename) {
-    const list = getTypesByCategory(ast, category as GraphQLTypeCategory);
-
-    if (list.length === 0) {
-      return (
-        <EmptyState
-          icon={<InformationCircleIcon />}
-          title="No data found"
-          description="There is no data for this type or category. Please adjust your filters."
-        />
-      );
-    }
-
-    return (
-      <div className="mt-2 flex flex-col">
-        <h3 className="text-xl font-semibold tracking-tight">
-          {sentenceCase(category)}
-        </h3>
-        <p className="mt-2 text-muted-foreground">
-          {getCategoryDescription(category as GraphQLTypeCategory)}
-        </p>
-        <div className="mt-6">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Type</TableHead>
-                <TableHead>Description</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {list.map((l) => (
-                <TableRow key={l.name}>
-                  <TableCell>
-                    <TypeLink ast={ast} name={l.name} />
-                  </TableCell>
-                  <TableCell>{l.description || "-"}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </div>
-    );
-  }
-
-  const astType = ast.getType(typename || "Query");
-
-  if (!astType)
-    return (
-      <EmptyState
-        icon={<InformationCircleIcon />}
-        title="No data found"
-        description="There is no data for this type or category. Please adjust your filters."
-      />
-    );
-
-  const type = mapGraphQLType(astType);
-
-  return (
-    <div className="mt-2 flex-1">
-      <Type
-        name={type.name}
-        category={type.category}
-        description={type.description}
-        interfaces={type.interfaces}
-        fields={type.fields}
-        ast={ast}
-      />
-    </div>
-  );
-};
-
-const SchemaExplorerPage: NextPageWithLayout = () => {
-  const router = useRouter();
-  const graphName = router.query.slug as string;
-
-  const { data, isLoading, error, refetch } = useQuery(
-    getFederatedGraphSDLByName.useQuery({
-      name: graphName,
-    })
-  );
-
-  const ast = parseSchema(data?.sdl);
-
-  return (
-    <PageHeader title="Studio | SDL">
-      <TitleLayout
-        title="Schema Explorer"
-        subtitle="Explore schema and field level metrics of your federated graph"
-        toolbar={<Toolbar ast={ast} />}
-      >
-        {isLoading && <Loader fullscreen />}
-        {!isLoading &&
-          (error || data?.response?.code !== EnumStatusCode.OK || !ast) && (
-            <EmptyState
-              icon={<ExclamationTriangleIcon />}
-              title="Could not retrieve schema"
-              description={
-                data?.response?.details ||
-                error?.message ||
-                "Please try again. The schema might be invalid or does not exist"
-              }
-              actions={<Button onClick={() => refetch()}>Retry</Button>}
-            />
-          )}
-        {ast && <TypeWrapper ast={ast} />}
-        <FieldUsageSheet />
-      </TitleLayout>
-    </PageHeader>
-  );
-};
-
 const Toolbar = ({ ast }: { ast: GraphQLSchema | null }) => {
   const router = useRouter();
   const [selectedCategory, setSelectedCategory] = useState("query");
@@ -585,6 +597,46 @@ const Toolbar = ({ ast }: { ast: GraphQLSchema | null }) => {
         </SelectContent>
       </Select>
     </SchemaToolbar>
+  );
+};
+
+const SchemaExplorerPage: NextPageWithLayout = () => {
+  const router = useRouter();
+  const graphName = router.query.slug as string;
+
+  const { data, isLoading, error, refetch } = useQuery(
+    getFederatedGraphSDLByName.useQuery({
+      name: graphName,
+    }),
+  );
+
+  const ast = parseSchema(data?.sdl);
+
+  return (
+    <PageHeader title="Studio | SDL">
+      <TitleLayout
+        title="Schema Explorer"
+        subtitle="Explore schema and field level metrics of your federated graph"
+        toolbar={<Toolbar ast={ast} />}
+      >
+        {isLoading && <Loader fullscreen />}
+        {!isLoading &&
+          (error || data?.response?.code !== EnumStatusCode.OK || !ast) && (
+            <EmptyState
+              icon={<ExclamationTriangleIcon />}
+              title="Could not retrieve schema"
+              description={
+                data?.response?.details ||
+                error?.message ||
+                "Please try again. The schema might be invalid or does not exist"
+              }
+              actions={<Button onClick={() => refetch()}>Retry</Button>}
+            />
+          )}
+        {ast && <TypeWrapper ast={ast} />}
+        <FieldUsageSheet />
+      </TitleLayout>
+    </PageHeader>
   );
 };
 

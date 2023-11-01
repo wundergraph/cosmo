@@ -29,6 +29,7 @@ import { getFieldUsage } from "@wundergraph/cosmo-connect/dist/platform/v1/platf
 import { GetFieldUsageResponse } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { format, fromUnixTime } from "date-fns";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useRouter } from "next/router";
 import { useContext, useId, useMemo } from "react";
 import {
@@ -68,7 +69,7 @@ export const FieldUsage = ({
 
   const { data, ticks, domain, timeFormatter } = useChartData(
     Number(range),
-    usageData.requestSeries
+    usageData.requestSeries,
   );
 
   const color1 = useId();
@@ -292,14 +293,14 @@ export const FieldUsage = ({
                   First used:{" "}
                   {format(
                     fromUnixTime(Number(usageData.meta.firstSeenTimestamp)),
-                    "MMM dd yyyy HH:mm:ss"
+                    "MMM dd yyyy HH:mm:ss",
                   )}{" "}
                 </p>
                 <p className=" text-muted-foreground">
                   Latest used:{" "}
                   {format(
                     fromUnixTime(Number(usageData.meta.latestSeenTimestamp)),
-                    "MMM dd yyyy HH:mm:ss"
+                    "MMM dd yyyy HH:mm:ss",
                   )}
                 </p>
               </div>
@@ -313,20 +314,25 @@ export const FieldUsage = ({
 export const FieldUsageSheet = () => {
   const router = useRouter();
 
-  const typename = router.query.typename as string;
-  const field = router.query.field as string;
-  const range = router.query.range as string;
+  const searchParams = useSearchParams();
+
+  const range = searchParams.get("range");
+  const isNamedType = searchParams.get("isNamedType") === "true";
+  const showUsage = searchParams.get("showUsage");
+
+  const [type, field] = showUsage?.split(".") ?? [];
 
   const graph = useContext(GraphContext);
 
   const { data, error, isLoading, refetch } = useQuery({
     ...getFieldUsage.useQuery({
       field,
-      typename,
+      typename: isNamedType ? undefined : type,
+      namedType: isNamedType ? type : undefined,
       graphName: graph?.graph?.name,
       range: Number(range) || 24,
     }),
-    enabled: !!typename && !!field && !!graph?.graph?.name,
+    enabled: !!showUsage && !!graph?.graph?.name,
   });
 
   let content: React.ReactNode;
@@ -353,12 +359,13 @@ export const FieldUsageSheet = () => {
   return (
     <Sheet
       modal
-      open={!!typename && !!field}
+      open={!!showUsage}
       onOpenChange={(isOpen) => {
         if (!isOpen) {
           const newQuery = { ...router.query };
-          delete newQuery["field"];
           delete newQuery["range"];
+          delete newQuery["showUsage"];
+          delete newQuery["isNamedType"];
           router.replace({
             query: newQuery,
           });
@@ -373,7 +380,8 @@ export const FieldUsageSheet = () => {
           <SheetTitle className="flex flex-wrap items-center gap-x-1.5">
             Field Usage for{" "}
             <code className="break-all rounded bg-secondary px-1.5 text-left text-secondary-foreground">
-              {typename}.{field}{" "}
+              {type}
+              {field && `.${field}`}
             </code>
           </SheetTitle>
         </SheetHeader>

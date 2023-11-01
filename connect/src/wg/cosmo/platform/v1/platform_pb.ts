@@ -6908,17 +6908,22 @@ export class GetFieldUsageRequest extends Message<GetFieldUsageRequest> {
   graphName = "";
 
   /**
-   * @generated from field: string typename = 2;
+   * @generated from field: optional string namedType = 2;
    */
-  typename = "";
+  namedType?: string;
 
   /**
-   * @generated from field: string field = 3;
+   * @generated from field: optional string typename = 3;
    */
-  field = "";
+  typename?: string;
 
   /**
-   * @generated from field: int32 range = 4;
+   * @generated from field: optional string field = 4;
+   */
+  field?: string;
+
+  /**
+   * @generated from field: int32 range = 5;
    */
   range = 0;
 
@@ -6931,9 +6936,10 @@ export class GetFieldUsageRequest extends Message<GetFieldUsageRequest> {
   static readonly typeName = "wg.cosmo.platform.v1.GetFieldUsageRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "graph_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "typename", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "field", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 4, name: "range", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 2, name: "namedType", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 3, name: "typename", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 4, name: "field", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 5, name: "range", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetFieldUsageRequest {
