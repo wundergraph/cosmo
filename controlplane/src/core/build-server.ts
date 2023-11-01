@@ -234,6 +234,7 @@ export default async function build(opts: BuildConfig) {
       logger: log,
       jwtSecret: opts.auth.secret,
       keycloakRealm: opts.keycloak.realm,
+      keycloakApiUrl: opts.keycloak.apiUrl,
       chClient: fastify.ch,
       authenticator,
       keycloakClient,

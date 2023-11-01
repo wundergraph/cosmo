@@ -28,8 +28,6 @@ export default class Keycloak {
       password: this.adminPassword,
       clientId: 'admin-cli',
     });
-
-    // this.client.identityProviders.creat
   }
 
   public async roleExists({ realm, roleName }: { realm?: string; roleName: string }): Promise<boolean> {
@@ -115,6 +113,87 @@ export default class Keycloak {
       realm: realm || this.realm,
       clientId: this.clientId,
     });
+  }
+
+  public async createOIDCProvider({
+    realm,
+    clientId,
+    clientSecret,
+    name,
+    orgSlug,
+    discoveryEndpoint,
+  }: {
+    realm?: string;
+    clientId: string;
+    clientSecret: string;
+    name: string;
+    orgSlug: string;
+    discoveryEndpoint: string;
+  }) {
+    const oidcUrls = await this.client.identityProviders.importFromUrl({
+      realm: realm || this.realm,
+      fromUrl: discoveryEndpoint,
+      providerId: 'oidc',
+    });
+
+    await this.client.identityProviders.create({
+      alias: orgSlug,
+      displayName: name,
+      enabled: true,
+      config: {
+        clientId,
+        clientSecret,
+        hideOnLoginPage: true,
+        syncMode: 'FORCE',
+        validateSignature: 'true',
+        tokenUrl: oidcUrls.tokenUrl,
+        authorizationUrl: oidcUrls.authorizationUrl,
+        jwksUrl: oidcUrls.jwksUrl,
+        logoutUrl: oidcUrls.logoutUrl,
+        issuer: oidcUrls.issuer,
+        useJwksUrl: 'true',
+        defaultScope: 'openid email',
+      },
+      realm: realm || this.realm,
+      providerId: 'oidc',
+    });
+  }
+
+  public async deleteOIDCProvider({ realm, orgSlug }: { realm?: string; orgSlug: string }) {
+    await this.client.identityProviders.del({ alias: orgSlug, realm: realm || this.realm });
+  }
+
+  public async createIDPMapper({
+    realm,
+    claims,
+    orgSlug,
+    keycloakGroupName,
+  }: {
+    realm?: string;
+    claims: string;
+    orgSlug: string;
+    keycloakGroupName: string;
+  }) {
+    try {
+      const a = await this.client.identityProviders.createMapper({
+        alias: orgSlug,
+        realm: realm || this.realm,
+        identityProviderMapper: {
+          name: uid(10),
+          identityProviderMapper: 'oidc-advanced-group-idp-mapper',
+          identityProviderAlias: orgSlug,
+          config: {
+            claims,
+            syncMode: 'INHERIT',
+            group: keycloakGroupName,
+            'are.claim.values.regex': true,
+          },
+        },
+      });
+      console.log(a);
+    } catch (e) {
+      console.log(e);
+    }
   }
 
   public async seedGroup({

@@ -431,6 +431,7 @@ export const organizationsMembers = pgTable(
   (t) => {
     return {
       nameIndex: uniqueIndex('organization_member_idx').on(t.id),
+      memberIndex: uniqueIndex('unique_organization_member_idx').on(t.userId, t.organizationId),
     };
   },
 );
@@ -442,15 +443,23 @@ export const organizationRelations = relations(organizations, ({ many }) => ({
 
 export const memberRoleEnum = pgEnum('member_role', ['admin', 'member', 'viewer']);
 
-export const organizationMemberRoles = pgTable('organization_member_roles', {
-  id: uuid('id').notNull().primaryKey().defaultRandom(),
-  organizationMemberId: uuid('organization_member_id')
-    .notNull()
-    .references(() => organizationsMembers.id, {
-      onDelete: 'cascade',
-    }),
-  role: memberRoleEnum('role').notNull(),
-});
+export const organizationMemberRoles = pgTable(
+  'organization_member_roles',
+  {
+    id: uuid('id').notNull().primaryKey().defaultRandom(),
+    organizationMemberId: uuid('organization_member_id')
+      .notNull()
+      .references(() => organizationsMembers.id, {
+        onDelete: 'cascade',
+      }),
+    role: memberRoleEnum('role').notNull(),
+  },
+  (t) => {
+    return {
+      nameIndex: uniqueIndex('organization_member_role_idx').on(t.organizationMemberId, t.role),
+    };
+  },
+);
 
 export const organizationMembersRelations = relations(organizationsMembers, ({ many }) => ({
   memberRoles: many(organizationMemberRoles),
@@ -616,3 +625,14 @@ export const slackInstallations = pgTable(
     };
   },
 );
+
+export const oidcProviders = pgTable('oidc_providers', {
+  id: uuid('id').notNull().primaryKey().defaultRandom(),
+  organizationId: uuid('organization_id')
+    .notNull()
+    .references(() => organizations.id, {
+      onDelete: 'cascade',
+    }),
+  name: text('name').notNull(),
+  endpoint: text("endpoint").notNull()
+});

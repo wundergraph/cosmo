@@ -21,6 +21,7 @@ import {
   slackIntegrationConfigs,
   targets,
   users,
+  oidcProviders,
 } from '../../db/schema.js';
 import { APIKeyDTO, MemberRole, OrganizationDTO, OrganizationMemberDTO, WebhooksConfigDTO } from '../../types/index.js';
 
@@ -848,5 +849,29 @@ export class OrganizationRepository {
           eq(organizationIntegrations.organizationId, input.organizationId),
         ),
       );
+  }
+
+  public async addOidcProvider(input: { name: string; organizationId: string; endpoint: string }) {
+    await this.db
+      .insert(oidcProviders)
+      .values({ name: input.name, organizationId: input.organizationId, endpoint: input.endpoint })
+      .execute();
+  }
+
+  public async getOidcProvider(input: { organizationId: string }) {
+    const providers = await this.db
+      .select({ id: oidcProviders.id, name: oidcProviders.name, endpoint: oidcProviders.endpoint })
+      .from(oidcProviders)
+      .where(eq(oidcProviders.organizationId, input.organizationId))
+      .execute();
+    if (providers.length === 0) {
+      return undefined;
+    }
+    // as only one provider per organization
+    return providers[0];
+  }
+
+  public async deleteOidcProvider(input: { organizationId: string }) {
+    await this.db.delete(oidcProviders).where(eq(oidcProviders.organizationId, input.organizationId)).execute();
   }
 }

@@ -6,9 +6,9 @@ import { lru } from 'tiny-lru';
 import { uid } from 'uid';
 import { PlatformEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import { decodeJWT, DEFAULT_SESSION_MAX_AGE_SEC, encrypt } from '../crypto/jwt.js';
-import { CustomAccessTokenClaims, UserInfoEndpointResponse, UserSession } from '../../types/index.js';
+import { CustomAccessTokenClaims, MemberRole, UserInfoEndpointResponse, UserSession } from '../../types/index.js';
 import * as schema from '../../db/schema.js';
-import { organizationsMembers, sessions, users } from '../../db/schema.js';
+import { organizationMemberRoles, organizations, organizationsMembers, sessions, users } from '../../db/schema.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import AuthUtils from '../auth-utils.js';
 import WebSessionAuthenticator from '../services/WebSessionAuthenticator.js';
@@ -114,6 +114,12 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
         const userId = accessTokenPayload.sub!;
         const userEmail = accessTokenPayload.email!;
 
+        const currentOrganizations = await opts.organizationRepository.memberships({
+          userId,
+        });
+
+        const currentOrganizationsSlugs = currentOrganizations.map((c) => c.slug);
+
         const insertedSession = await opts.db.transaction(async (tx) => {
           // Upsert the user
           await tx
@@ -130,6 +136,92 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
               },
             })
             .execute();
+          if (accessTokenPayload.groups && accessTokenPayload.groups.length > 0) {
+            const keycloakGroups = accessTokenPayload.groups.map((grp) => grp.split('/')[1]);
+
+            // eslint-disable-next-line unicorn/prefer-set-has
+            const membershipsToBeAdded = keycloakGroups.filter((a) => !currentOrganizationsSlugs.includes(a));
+            const membershipsToBeRemoved = currentOrganizationsSlugs.filter((a) => !keycloakGroups.includes(a));
+
+            for (const slug of membershipsToBeRemoved) {
+              const orgRepo = new OrganizationRepository(tx);
+              const dbOrg = await orgRepo.bySlug(slug);
+              // if the org slug exists in the memberships to be added also,
+              // it means that the role of the user is being changed, so need not remove the member
+              if (!dbOrg || membershipsToBeAdded.includes(slug)) {
+                continue;
+              }
+
+              await orgRepo.removeOrganizationMember({
+                userID: userId,
+                organizationID: dbOrg.id,
+              });
+            }
+
+            // upserting the members into the orgs and upseting their roles.
+            for (const kcGroup of accessTokenPayload.groups) {
+              const orgRepo = new OrganizationRepository(tx);
+              const slug = kcGroup.split('/')[1];
+              const dbOrg = await orgRepo.bySlug(slug);
+              if (!dbOrg) {
+                continue;
+              }
+
+              const insertedMember = await tx
+                .insert(organizationsMembers)
+                .values({
+                  userId,
+                  organizationId: dbOrg.id,
+                  acceptedInvite: true,
+                })
+                .onConflictDoUpdate({
+                  target: [organizationsMembers.userId, organizationsMembers.organizationId],
+                  // Update the fields only when the org member already exists
+                  set: {
+                    userId,
+                    organizationId: dbOrg.id,
+                    acceptedInvite: true,
+                  },
+                })
+                .returning()
+                .execute();
+
+              const stringRole = kcGroup.split('/')?.[2] || 'member';
+              let role: MemberRole;
+              switch (stringRole) {
+                case 'admin': {
+                  role = 'admin';
+                  break;
+                }
+                case 'member': {
+                  role = 'member';
+                  break;
+                }
+                case 'viewer': {
+                  role = 'viewer';
+                  break;
+                }
+                default: {
+                  throw new Error(`Role ${stringRole} does not exist.`);
+                }
+              }
+              await tx
+                .insert(organizationMemberRoles)
+                .values({
+                  organizationMemberId: insertedMember[0].id,
+                  role,
+                })
+                .onConflictDoUpdate({
+                  target: [organizationMemberRoles.organizationMemberId, organizationMemberRoles.role],
+                  // Update the fields only when the org member role already exists
+                  set: {
+                    organizationMemberId: insertedMember[0].id,
+                    role,
+                  },
+                })
+                .execute();
+            }
+          }
 
           // update the organizationMember table to indicate that the user has accepted the invite
           await tx
@@ -248,10 +340,11 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
   );
 
   fastify.get<{
-    Querystring: { redirectURL?: string };
+    Querystring: { redirectURL?: string; hint?: string };
   }>('/login', async (req, res) => {
     const redirectURL = req.query?.redirectURL;
-    const { authorizationUrl, pkceCookie } = await opts.authUtils.handleLoginRequest(redirectURL);
+    const hint = req.query?.hint;
+    const { authorizationUrl, pkceCookie } = await opts.authUtils.handleLoginRequest(redirectURL, hint);
 
     res.header('Set-Cookie', pkceCookie);
 

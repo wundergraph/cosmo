@@ -5,10 +5,25 @@ import { docsBaseURL } from "@/lib/constants";
 import { NextPageWithLayout } from "@/lib/page";
 import Link from "next/link";
 import { useRouter } from "next/router";
+import { BsBuildingLock } from "react-icons/bs";
+import { RiLoginBoxLine } from "react-icons/ri";
 
 const LoginPage: NextPageWithLayout = () => {
   const router = useRouter();
   const redirectURL = router.query.redirectURL;
+  const hint = router.query.hint;
+
+  const constructLoginURL = () => {
+    if (redirectURL && hint) {
+      return `${process.env.NEXT_PUBLIC_COSMO_CP_URL}/v1/auth/login?redirectURL=${redirectURL}&hint=${hint}`;
+    } else if (redirectURL) {
+      return `${process.env.NEXT_PUBLIC_COSMO_CP_URL}/v1/auth/login?redirectURL=${redirectURL}`;
+    } else if (hint) {
+      return `${process.env.NEXT_PUBLIC_COSMO_CP_URL}/v1/auth/login?hint=${hint}`;
+    } else {
+      return `${process.env.NEXT_PUBLIC_COSMO_CP_URL}/v1/auth/login`;
+    }
+  };
 
   return (
     <>
@@ -27,14 +42,13 @@ const LoginPage: NextPageWithLayout = () => {
               className="text-md px-12 py-6"
               asChild
             >
-              <Link
-                href={
-                  redirectURL
-                    ? `${process.env.NEXT_PUBLIC_COSMO_CP_URL}/v1/auth/login?redirectURL=${redirectURL}`
-                    : `${process.env.NEXT_PUBLIC_COSMO_CP_URL}/v1/auth/login`
-                }
-              >
-                Login
+              <Link href={constructLoginURL()} className="flex gap-x-2">
+                {hint ? (
+                  <BsBuildingLock className="h-5 w-5" />
+                ) : (
+                  <RiLoginBoxLine className="h-5 w-5" />
+                )}
+                {hint ? "Login with SSO" : "Login"}
               </Link>
             </Button>
             <Button variant="outline" size="lg" className="px-8 py-6" asChild>

@@ -53,6 +53,9 @@ import {
   WhoAmIResponse,
   GetFieldUsageResponse,
   GetFederatedSubgraphSDLByNameResponse,
+  CreateOIDCProviderResponse,
+  GetOIDCProviderResponse,
+  DeleteOIDCProviderResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 
 import { OrganizationEventName, PlatformEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
@@ -1238,6 +1241,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               code: EnumStatusCode.ERR,
               details: `The user doesnt have the permissions to perform this operation`,
             },
+            compositionErrors: [],
           };
         }
 
@@ -3537,6 +3541,165 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           clients,
           requestSeries,
           meta,
+        };
+      });
+    },
+
+    createOIDCProvider: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<CreateOIDCProviderResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const orgRepo = new OrganizationRepository(opts.db);
+        const userRepo = new UserRepository(opts.db);
+
+        const hasAccess = await userRepo.checkUserAccess({
+          userID: authContext.userId,
+          organizationID: authContext.organizationId,
+          rolesToBe: ['admin', 'member'],
+        });
+
+        if (!hasAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+            signInURL: '',
+            signOutURL: '',
+          };
+        }
+
+        await opts.keycloakClient.authenticateClient();
+
+        await opts.keycloakClient.createOIDCProvider({
+          clientId: req.clientID,
+          clientSecret: req.clientSecrect,
+          discoveryEndpoint: req.discoveryEndpoint,
+          name: req.name,
+          realm: opts.keycloakRealm,
+          orgSlug: authContext.organizationSlug,
+        });
+
+        const endpoint = req.discoveryEndpoint.split('/')[2];
+
+        await orgRepo.addOidcProvider({ name: req.name, organizationId: authContext.organizationId, endpoint });
+
+        for (const mapper of req.mappers) {
+          const claims = `[{ "key": "groups", "value": "${mapper.ssoGroup}" }]`;
+          let keycloakGroupName;
+
+          switch (mapper.role) {
+            case 'Admin': {
+              keycloakGroupName = `/${authContext.organizationSlug}/admin`;
+              break;
+            }
+            case 'Member': {
+              keycloakGroupName = `/${authContext.organizationSlug}`;
+              break;
+            }
+            case 'Viewer': {
+              keycloakGroupName = `/${authContext.organizationSlug}/viewer`;
+              break;
+            }
+            default: {
+              throw new Error(`The role ${mapper.role} doesn't exist `);
+            }
+          }
+
+          await opts.keycloakClient.createIDPMapper({
+            realm: opts.keycloakRealm,
+            orgSlug: authContext.organizationSlug,
+            claims,
+            keycloakGroupName,
+          });
+        }
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          signInURL: `${opts.keycloakApiUrl}/realms/${opts.keycloakRealm}/broker/${authContext.organizationSlug}/endpoint`,
+          signOutURL: `${opts.keycloakApiUrl}/realms/${opts.keycloakRealm}/broker/${authContext.organizationSlug}/endpoint/logout_response`,
+        };
+      });
+    },
+
+    getOIDCProvider: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetOIDCProviderResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const orgRepo = new OrganizationRepository(opts.db);
+
+        await opts.keycloakClient.authenticateClient();
+
+        const provider = await orgRepo.getOidcProvider({ organizationId: authContext.organizationId });
+        if (!provider) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+            },
+            name: '',
+            endpoint: '',
+          };
+        }
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          name: provider.name,
+          endpoint: provider.endpoint,
+        };
+      });
+    },
+
+    deleteOIDCProvider: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<DeleteOIDCProviderResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const orgRepo = new OrganizationRepository(opts.db);
+        const userRepo = new UserRepository(opts.db);
+
+        const hasAccess = await userRepo.checkUserAccess({
+          userID: authContext.userId,
+          organizationID: authContext.organizationId,
+          rolesToBe: ['admin', 'member'],
+        });
+
+        if (!hasAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+          };
+        }
+
+        await opts.keycloakClient.authenticateClient();
+
+        await opts.keycloakClient.deleteOIDCProvider({
+          realm: opts.keycloakRealm,
+          orgSlug: authContext.organizationSlug,
+        });
+
+        await orgRepo.deleteOidcProvider({ organizationId: authContext.organizationId });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
         };
       });
     },

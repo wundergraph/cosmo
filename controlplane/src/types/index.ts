@@ -216,6 +216,7 @@ export type PKCECodeChallenge = {
 export type CustomAccessTokenClaims = {
   email: string;
   preferred_username: string;
+  groups?: string[];
 };
 
 export type UserInfoEndpointResponse = {

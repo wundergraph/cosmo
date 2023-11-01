@@ -152,7 +152,7 @@ export default class AuthUtils {
     };
   }
 
-  async handleLoginRequest(finalRedirectURL?: string) {
+  async handleLoginRequest(finalRedirectURL?: string, kcHint?: string) {
     const codeVerifier = await generateRandomCodeVerifier();
     const codeChallenge = await calculatePKCECodeChallenge(codeVerifier);
 
@@ -166,6 +166,9 @@ export default class AuthUtils {
     );
     authorizationUrl.searchParams.set('response_type', 'code');
     authorizationUrl.searchParams.set('scope', scope);
+    if (kcHint) {
+      authorizationUrl.searchParams.set('kc_idp_hint', kcHint);
+    }
 
     const jwt = await encrypt<PKCECodeChallenge>({
       maxAge: pkceMaxAgeSec,
