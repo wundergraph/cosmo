@@ -33,6 +33,17 @@ type FederatedGraph struct {
 	SDL                    string                   `goja:"sdl"`
 }
 
+type sdlResponse struct {
+	Data struct {
+		Service struct {
+			SDL string `json:"sdl"`
+		} `json:"_service"`
+	} `json:"data"`
+	Errors []struct {
+		Message string `json:"message"`
+	} `json:"errors"`
+}
+
 const (
 	// This is required because the polyfill for events
 	// expects a browser environment and references navigator
@@ -50,6 +61,37 @@ var (
 	pool sync.Pool
 )
 
+func introspectSubgraph(URL string) (string, error) {
+	if URL == "" {
+		return "", fmt.Errorf("no URL provided")
+	}
+	req, err := http.NewRequest("POST", URL, strings.NewReader(sdlQuery))
+	if err != nil {
+		return "", fmt.Errorf("could not create request: %w", err)
+	}
+	req.Header.Add("Content-Type", "application/json")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("could not retrieve schema: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("could not retrieve schema: unexpected status code %d", resp.StatusCode)
+	}
+	var response sdlResponse
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		return "", fmt.Errorf("could not decode SDL response: %w", err)
+	}
+	if len(response.Errors) > 0 {
+		var errorMessages []string
+		for _, err := range response.Errors {
+			errorMessages = append(errorMessages, err.Message)
+		}
+		return "", fmt.Errorf("SDL query returned errors: %s", strings.Join(errorMessages, ", "))
+	}
+	return response.Data.Service.SDL, nil
+}
+
 func updateSchemas(subgraphs []*Subgraph) ([]*Subgraph, error) {
 	updatedSubgraphs := make([]*Subgraph, 0, len(subgraphs))
 	for _, subgraph := range subgraphs {
@@ -57,41 +99,12 @@ func updateSchemas(subgraphs []*Subgraph) ([]*Subgraph, error) {
 			updatedSubgraphs = append(updatedSubgraphs, subgraph)
 			continue
 		}
-		req, err := http.NewRequest("POST", subgraph.URL, strings.NewReader(sdlQuery))
+		sdl, err := introspectSubgraph(subgraph.URL)
 		if err != nil {
-			return nil, fmt.Errorf("could not create request retrieving schema for subgraph %s: %w", subgraph.Name, err)
-		}
-		req.Header.Add("Content-Type", "application/json")
-		resp, err := http.DefaultClient.Do(req)
-		if err != nil {
-			return nil, fmt.Errorf("could not retrieve schema for subgraph %s: %w", subgraph.Name, err)
-		}
-		defer resp.Body.Close()
-		if resp.StatusCode != http.StatusOK {
-			return nil, fmt.Errorf("could not retrieve schema for subgraph %s: unexpected status code %d", subgraph.Name, resp.StatusCode)
-		}
-		var sdlResult struct {
-			Data struct {
-				Service struct {
-					SDL string `json:"sdl"`
-				} `json:"_service"`
-			} `json:"data"`
-			Errors []struct {
-				Message string `json:"message"`
-			} `json:"errors"`
-		}
-		if err := json.NewDecoder(resp.Body).Decode(&sdlResult); err != nil {
-			return nil, fmt.Errorf("could not decode SDL response for subgraph %s: %w", subgraph.Name, err)
-		}
-		if len(sdlResult.Errors) > 0 {
-			var errorMessages []string
-			for _, err := range sdlResult.Errors {
-				errorMessages = append(errorMessages, err.Message)
-			}
-			return nil, fmt.Errorf("error retrieving SDL for subgraph %s: %s", subgraph.Name, strings.Join(errorMessages, ", "))
+			return nil, fmt.Errorf("error introspecting subgraph %s: %w", subgraph.Name, err)
 		}
 		cpy := *subgraph
-		cpy.Schema = sdlResult.Data.Service.SDL
+		cpy.Schema = sdl
 		updatedSubgraphs = append(updatedSubgraphs, &cpy)
 	}
 	return updatedSubgraphs, nil
