@@ -58,12 +58,10 @@ export async function getDiffBetweenGraphs(
     });
 
     const breakingChanges: Change[] = changes.filter(
-      (change) =>
-        change.criticality.level === CriticalityLevel.Breaking ||
-        change.criticality.level === CriticalityLevel.Dangerous,
+      (change) => change.criticality.level === CriticalityLevel.Breaking,
     );
     const nonBreakingChanges: Change[] = changes.filter(
-      (change) => change.criticality.level === CriticalityLevel.NonBreaking,
+      (change) => change.criticality.level !== CriticalityLevel.Breaking,
     );
 
     const breakingSchemaChanges: SchemaChange[] = breakingChanges.map((breakingChange) => {
