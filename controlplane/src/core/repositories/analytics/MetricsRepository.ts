@@ -500,7 +500,7 @@ export class MetricsRepository {
   protected getMetricsProps(props: GetMetricsViewProps): GetMetricsProps {
     const { range, dateRange, filters: selectedFilters, organizationId, graphId } = props;
 
-    let parsedDateRange = isoDateRangeToTimestamps(dateRange, range);
+    const parsedDateRange = isoDateRangeToTimestamps(dateRange, range);
     const [start, end] = getDateRange(parsedDateRange);
 
     // diff in hours
