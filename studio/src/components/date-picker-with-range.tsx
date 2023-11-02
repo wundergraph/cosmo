@@ -9,13 +9,7 @@ import useWindowSize from "@/hooks/use-window-size";
 import { formatDate } from "@/lib/format-date";
 import { cn } from "@/lib/utils";
 import CalendarIcon from "@heroicons/react/24/outline/CalendarIcon";
-import {
-  addDays,
-  addYears,
-  differenceInHours,
-  isBefore,
-  subHours,
-} from "date-fns";
+import { addDays, addYears, subHours } from "date-fns";
 import { useEffect, useState } from "react";
 import { Input } from "./ui/input";
 
@@ -117,6 +111,8 @@ export function DatePickerWithRange({
     setSelectedRange(range);
     if (dateRange) {
       setSelectedDateTime(dateRange, undefined, false);
+      setStartTime(getFormattedTime(dateRange.start));
+      setEndTime(dateRange.end ? getFormattedTime(dateRange.end) : "");
     }
   };
 
@@ -135,6 +131,7 @@ export function DatePickerWithRange({
     };
 
     setSelectedDateRange(dateRange);
+
     if (resetRange) {
       setSelectedRange(undefined);
     }
@@ -235,10 +232,8 @@ export function DatePickerWithRange({
               }}
               onSelect={(range, day) => {
                 if (range) {
-                  if (!startTime || !endTime) {
-                    setStartTime("00:00");
-                    setEndTime("23:59");
-                  }
+                  setStartTime(range.from ? "00:00" : "");
+                  setEndTime(range.to ? "23:59" : "");
 
                   if (selected?.start && selected?.end) {
                     setSelectedDateRange({ start: day, end: undefined });

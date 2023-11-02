@@ -228,7 +228,6 @@ export function AnalyticsDataTable<T>({
         start: formatISO(dateRange.start as Date),
         end: formatISO((dateRange.end as Date) ?? (dateRange.start as Date)),
       });
-
       applyNewParams({
         dateRange: stringifiedDateRange,
         range: null,
