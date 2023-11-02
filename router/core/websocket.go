@@ -433,9 +433,9 @@ func (h *WebSocketConnectionHandler) executeSubscription(ctx context.Context, ms
 	statusCode := http.StatusOK
 	responseSize := 0
 
-	metrics := h.metrics.StartOperation(ctx, h.clientInfo, int64(len(msg.Payload)))
+	metrics := h.metrics.StartOperation(h.clientInfo, int64(len(msg.Payload)))
 	defer func() {
-		metrics.Finish(ctx, hasRequestError, statusCode, responseSize)
+		metrics.Finish(hasRequestError, statusCode, responseSize)
 	}()
 
 	// If the operation is invalid, send an error message immediately without
@@ -463,7 +463,7 @@ func (h *WebSocketConnectionHandler) executeSubscription(ctx context.Context, ms
 	commonAttributeValues := commonMetricAttributes(operation, OperationProtocolGraphQLWS)
 	metrics.AddAttributes(commonAttributeValues...)
 
-	initializeSpan(ctx, operation, commonAttributeValues)
+	initializeSpan(ctx, operation, opContext.clientInfo, commonAttributeValues)
 
 	if !h.globalIDs.Insert(msg.ID) {
 		hasRequestError = true

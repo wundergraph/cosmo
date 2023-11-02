@@ -56,6 +56,26 @@ services:
     networks:
       - primary
 
+  # Only to test prometheus integration
+  prometheus:
+    image: prom/prometheus:v2.47.2
+    command:
+      - --web.enable-remote-write-receiver
+      - --enable-feature=native-histograms
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --web.config.file=/etc/prometheus/web.yml
+    networks:
+      - primary
+    volumes:
+      - prometheus:/prometheus
+      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./docker/prometheus/web.yml:/etc/prometheus/web.yml
+    extra_hosts:
+      # https://medium.com/@TimvanBaarsen/how-to-connect-to-the-docker-host-from-inside-a-docker-container-112b4c71bc66
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "9090:9090"
+
   graphqlmetrics:
     image: ghcr.io/wundergraph/cosmo/graphqlmetrics:${DC_GRAPHQLMETRICS_VERSION:-latest}
     build:
