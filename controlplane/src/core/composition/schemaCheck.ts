@@ -61,7 +61,7 @@ export async function getDiffBetweenGraphs(
         changeType: change.type,
         path: change.path,
         // We consider dangerous changes to be breaking changes e.g. remove an enum value
-        isBreaking: change.criticality.level !== CriticalityLevel.NonBreaking,
+        isBreaking: change.criticality.level === CriticalityLevel.Breaking
       } as SchemaDiff;
     });
 
