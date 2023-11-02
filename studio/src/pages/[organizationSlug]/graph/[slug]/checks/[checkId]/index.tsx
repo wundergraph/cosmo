@@ -51,7 +51,7 @@ import {
 import { subDays } from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { useContext } from "react";
+import React, { useContext } from "react";
 import { PiGraphLight } from "react-icons/pi";
 
 const ProposedSchema = ({
@@ -222,19 +222,44 @@ const CheckOverviewPage: NextPageWithLayout = () => {
           <Table>
             <TableBody>
               <TableRow>
-                <TableCell>Composable</TableCell>
+                <TableCell>
+                  <div>
+                    <div>Composable</div>
+                    <p className="pt-1 text-xs text-muted-foreground">
+                      Describes if the proposed schema can be composed with all
+                      other subgraphs in the federated graph.
+                    </p>
+                  </div>
+                </TableCell>
+
                 <TableCell className="border-l text-center">
                   {getCheckIcon(data.check.isComposable)}
                 </TableCell>
               </TableRow>
               <TableRow>
-                <TableCell>No breaking changes</TableCell>
+                <TableCell>
+                  <div>
+                    <div>No breaking changes</div>
+                    <p className="pt-1 text-xs text-muted-foreground">
+                      Describes if the proposed schema is free of changes that
+                      break existing client operations.
+                    </p>
+                  </div>
+                </TableCell>
                 <TableCell className="border-l text-center">
-                  {getCheckIcon(!data.check.isBreaking)}
+                  {getCheckIcon(data.check.isBreaking)}
                 </TableCell>
               </TableRow>
               <TableRow>
-                <TableCell>No affected operations</TableCell>
+                <TableCell>
+                  <div>
+                    <div>No affected operations</div>
+                    <p className="pt-1 text-xs text-muted-foreground">
+                      Describes if the proposed schema affects any client
+                      operations based on real usage data.
+                    </p>
+                  </div>
+                </TableCell>
                 <TableCell className="border-l text-center">
                   {getCheckIcon(!data.check.hasClientTraffic)}
                 </TableCell>
