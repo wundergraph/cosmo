@@ -30,7 +30,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { formatISO, subDays } from "date-fns";
+import { formatISO, subDays, subHours } from "date-fns";
 import { useRouter } from "next/router";
 import {
   AnalyticsViewColumn,
@@ -39,9 +39,14 @@ import {
   AnalyticsViewResultFilter,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import React, { useCallback, useState } from "react";
-import { DateRange } from "react-day-picker";
+
 import useDeepCompareEffect from "use-deep-compare-effect";
-import { DatePickerWithRange } from "../date-picker-with-range";
+import {
+  DatePickerWithRange,
+  Range,
+  DateRange,
+  DateRangePickerChangeHandler,
+} from "../date-picker-with-range";
 import { Loader } from "../ui/loader";
 import { DataTableFacetedFilter } from "./data-table-faceted-filter";
 import { DataTableGroupMenu } from "./data-table-group-menu";
@@ -52,29 +57,8 @@ import { getDataTableFilters } from "./getDataTableFilters";
 import { getDefaultSort, useSyncTableWithQuery } from "./useSyncTableWithQuery";
 import { useSessionStorage } from "@/hooks/use-session-storage";
 import { AnalyticsFilters, AnalyticsSelectedFilters } from "./filters";
-
-export const refreshIntervals = [
-  {
-    label: "Off",
-    value: undefined,
-  },
-  {
-    label: "10s",
-    value: 10 * 1000,
-  },
-  {
-    label: "30s",
-    value: 30 * 1000,
-  },
-  {
-    label: "1m",
-    value: 60 * 1000,
-  },
-  {
-    label: "5m",
-    value: 5 * 60 * 1000,
-  },
-];
+import { useApplyParams } from "./use-apply-params";
+import { RefreshInterval, refreshIntervals } from "./refresh-interval";
 
 export function AnalyticsDataTable<T>({
   data,
@@ -97,7 +81,9 @@ export function AnalyticsDataTable<T>({
 
   const [, setRouteCache] = useSessionStorage("analytics.route", router.query);
 
-  const [refreshInterval, setRefreshInterval] = useState(refreshIntervals[0]);
+  const [refreshInterval, setRefreshInterval] = useState(
+    refreshIntervals[0].value
+  );
 
   const [sorting, setSorting] = React.useState<SortingState>(
     getDefaultSort(router.query.group?.toString())
@@ -108,9 +94,11 @@ export function AnalyticsDataTable<T>({
   );
   const [selectedGroup, setSelectedGroup] =
     React.useState<AnalyticsViewGroupName>(AnalyticsViewGroupName.None);
+
+  const [selectedRange, setRange] = React.useState<Range | undefined>();
   const [selectedDateRange, setDateRange] = React.useState<DateRange>({
-    from: subDays(new Date(), 1),
-    to: new Date(),
+    start: subHours(new Date(), Number(router.query.range ?? 24)),
+    end: new Date(),
   });
 
   const columns = getColumnData(columnsList);
@@ -154,20 +142,7 @@ export function AnalyticsDataTable<T>({
     pagination,
   };
 
-  const applyNewParams = useCallback(
-    (newParams: Record<string, string | null>, unset?: string[]) => {
-      const q = Object.fromEntries(
-        Object.entries(router.query).filter(([key]) => !unset?.includes(key))
-      );
-      router.push({
-        query: {
-          ...q,
-          ...newParams,
-        },
-      });
-    },
-    [router]
-  );
+  const applyNewParams = useApplyParams();
 
   const table = useReactTable({
     data,
@@ -239,20 +214,31 @@ export function AnalyticsDataTable<T>({
     );
   };
 
-  const onDateRangeChange = (val: DateRange) => {
-    const stringifiedDateRange = JSON.stringify({
-      start: formatISO(val.from as Date),
-      end: formatISO((val.to as Date) ?? (val.from as Date)),
-    });
+  const onDateRangeChange: DateRangePickerChangeHandler = ({
+    range,
+    dateRange,
+  }) => {
+    if (range) {
+      applyNewParams({
+        dateRange: null,
+        range: range.toString(),
+      });
+    } else if (dateRange) {
+      const stringifiedDateRange = JSON.stringify({
+        start: formatISO(dateRange.start as Date),
+        end: formatISO((dateRange.end as Date) ?? (dateRange.start as Date)),
+      });
 
-    applyNewParams({
-      dateRange: stringifiedDateRange,
-    });
+      applyNewParams({
+        dateRange: stringifiedDateRange,
+        range: null,
+      });
+    }
   };
 
-  const onRefreshIntervalChange = (val: (typeof refreshIntervals)[number]) => {
+  const onRefreshIntervalChange = (val?: number) => {
     applyNewParams({
-      refreshInterval: JSON.stringify(val),
+      refreshInterval: val ? String(val) : null,
     });
     setRefreshInterval(val);
   };
@@ -264,6 +250,8 @@ export function AnalyticsDataTable<T>({
     table,
     selectedGroup,
     setSelectedGroup,
+    selectedRange,
+    setRange,
     selectedDateRange,
     setDateRange,
     setColumnFilters,
@@ -334,8 +322,9 @@ export function AnalyticsDataTable<T>({
       <div className="flex flex-row flex-wrap items-start gap-y-2">
         <div className="flex flex-1 flex-row flex-wrap items-center gap-2">
           <DatePickerWithRange
-            selectedDateRange={selectedDateRange}
-            onDateRangeChange={onDateRangeChange}
+            range={selectedRange}
+            dateRange={selectedDateRange}
+            onChange={onDateRangeChange}
           />
           <AnalyticsFilters filters={filtersList} />
         </div>
@@ -396,27 +385,10 @@ export function AnalyticsDataTable<T>({
           >
             <UpdateIcon />
           </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline">
-                <ClockIcon className="mr-2" />
-                {refreshInterval.label}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              {refreshIntervals.map((ri) => {
-                return (
-                  <DropdownMenuCheckboxItem
-                    key={ri.label}
-                    checked={refreshInterval.value === ri.value}
-                    onCheckedChange={() => onRefreshIntervalChange(ri)}
-                  >
-                    {ri.label}
-                  </DropdownMenuCheckboxItem>
-                );
-              })}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <RefreshInterval
+            value={refreshInterval}
+            onChange={onRefreshIntervalChange}
+          />
         </div>
       </div>
       <div className="flex flex-row flex-wrap items-start gap-y-2 py-2">

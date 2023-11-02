@@ -1,4 +1,8 @@
-import { AnalyticsFilter, AnalyticsViewFilterOperator } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import {
+  AnalyticsFilter,
+  AnalyticsViewFilterOperator,
+  DateRange,
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { ClickHouseClient } from '../../clickhouse/index.js';
 import {
   BaseFilters,
@@ -8,6 +12,7 @@ import {
   getDateRange,
   getEndDate,
   getGranularity,
+  isoDateRangeToTimestamps,
   toISO9075,
 } from './util.js';
 
@@ -20,7 +25,7 @@ const parseValue = (value?: string | number | null) => {
 
 interface GetMetricsViewProps {
   range?: number;
-  endDate?: number;
+  dateRange?: DateRange;
   filters: AnalyticsFilter[];
   organizationId: string;
   graphId: string;
@@ -63,6 +68,25 @@ export class MetricsRepository {
 
     // get request rate in last [range]h
     const queryRate = (start: number, end: number) => {
+      console.log(
+        'requests',
+        dateRange,
+        prevDateRange,
+        `
+      SELECT round(sum(total) / ${multiplier}, 4) AS value FROM (
+      SELECT
+        toDateTime('${start}') AS startDate,
+        toDateTime('${end}') AS endDate,
+        sum(TotalRequests) AS total
+      FROM operation_request_metrics_5_30_mv
+      WHERE Timestamp >= startDate AND Timestamp <= endDate
+        AND OrganizationID = '${organizationId}'
+        AND FederatedGraphID = '${graphId}'
+        ${whereSql ? `AND ${whereSql}` : ''}
+      GROUP BY Timestamp 
+    )
+  `,
+      );
       return this.chClient.queryPromise<{ value: number | null }>(
         `
         SELECT round(sum(total) / ${multiplier}, 4) AS value FROM (
@@ -418,11 +442,14 @@ export class MetricsRepository {
   /**
    * Get error rate metrics
    */
-  public async getErrorRateMetrics({ range = 24, organizationId, graphId, whereSql, queryParams }: GetMetricsProps) {
-    const [start, end] = getDateRange(getEndDate(), range);
-    const granule = getGranularity(range);
-    const dateRange = { start, end };
-
+  public async getErrorRateMetrics({
+    dateRange,
+    granule,
+    organizationId,
+    graphId,
+    whereSql,
+    queryParams,
+  }: GetMetricsProps) {
     // get requests in last [range] hours in series of [step]
     const series = await this.chClient.queryPromise<{ timestamp: string; requestRate: string; errorRate: string }>(
       `
@@ -490,11 +517,16 @@ export class MetricsRepository {
   }
 
   protected getMetricsProps(props: GetMetricsViewProps): GetMetricsProps {
-    const { range = 24, endDate = getEndDate(), filters: selectedFilters, organizationId, graphId } = props;
+    const { range, dateRange, filters: selectedFilters, organizationId, graphId } = props;
 
-    const granule = getGranularity(range);
-    const [start, end] = getDateRange(endDate, range);
-    const [prevStart, prevEnd] = getDateRange(endDate, range, range);
+    let parsedDateRange = isoDateRangeToTimestamps(dateRange, range);
+    const [start, end] = getDateRange(parsedDateRange, range);
+
+    // diff in hours
+    const diff = (parsedDateRange.end - parsedDateRange.start) / 60 / 60 / 1000;
+    const granule = getGranularity(diff);
+
+    const [prevStart, prevEnd] = getDateRange(parsedDateRange, diff);
 
     const coercedFilters = coerceFilterValues({}, selectedFilters, this.baseFilters);
 
@@ -502,7 +534,7 @@ export class MetricsRepository {
 
     return {
       granule,
-      range,
+      range: (diff / 60) * 60,
       dateRange: {
         start,
         end,
@@ -601,15 +633,15 @@ export class MetricsRepository {
 
   /**
    * Merges series and previous series into one array, @todo could be handled in query directly.
-   * @param range
+   * @param diff
    * @param series
    * @param previousSeries
    * @returns
    */
-  protected mapSeries(range: number, series: any[] = [], previousSeries?: any[]) {
+  protected mapSeries(diff: number, series: any[] = [], previousSeries?: any[]) {
     return series.map((s) => {
       const timestamp = new Date(s.timestamp + 'Z').getTime();
-      const prevTimestamp = toISO9075(new Date(timestamp - range * 60 * 60 * 1000));
+      const prevTimestamp = toISO9075(new Date(timestamp - diff * 60 * 60 * 1000));
 
       return {
         timestamp: String(timestamp),

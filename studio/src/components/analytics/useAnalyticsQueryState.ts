@@ -1,8 +1,9 @@
-import { endOfDay, formatISO, startOfDay, subDays } from "date-fns";
+import { endOfDay, formatISO, startOfDay, subDays, subHours } from "date-fns";
 import { useRouter } from "next/router";
 import { AnalyticsViewGroupName } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { useMemo } from "react";
-import { refreshIntervals } from "./data-table";
+import { refreshIntervals } from "./refresh-interval";
+import { getRange, Range } from "../date-picker-with-range";
 
 const parse = (value: string, fallback: any) => {
   try {
@@ -46,26 +47,32 @@ export const useAnalyticsQueryState = () => {
         ]
       : AnalyticsViewGroupName.None;
 
+    let range: Range | undefined = undefined;
+
+    const parsedRange = getRange(query.range?.toString());
+
     let dateRange = {
-      start: formatISO(startOfDay(subDays(new Date(), 1))),
-      end: formatISO(endOfDay(new Date())),
+      start: startOfDay(subHours(new Date(), parsedRange)),
+      end: endOfDay(new Date()),
     };
 
     if (query.dateRange) {
       let tempRange = parse(query.dateRange as string, {
-        start: subDays(new Date(), 1),
+        start: subHours(new Date(), parsedRange),
         end: new Date(),
       });
 
       dateRange = {
-        start: formatISO(startOfDay(new Date(tempRange.start))),
-        end: formatISO(endOfDay(new Date(tempRange.end))),
+        start: startOfDay(new Date(tempRange.start)),
+        end: endOfDay(new Date(tempRange.end)),
       };
+    } else if (!range) {
+      range = parsedRange;
     }
 
     let refreshIntervalObject = parse(
       refreshInterval as string,
-      refreshIntervals[0]
+      refreshIntervals[0].value
     );
 
     let sort =
@@ -89,6 +96,7 @@ export const useAnalyticsQueryState = () => {
       filters,
       pagination: { limit, offset },
       dateRange,
+      range,
       page,
       refreshInterval: refreshIntervalObject,
       sort,
