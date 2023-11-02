@@ -79,7 +79,7 @@ _Clean up all containers and volumes by running `make full-demo-down`._
 ### Prerequisites
 
 - [Docker](https://docs.docker.com/get-docker/)
-- [Docker Compose](https://docs.docker.com/compose/install/)
+- [Docker Compose V2](https://docs.docker.com/compose/install/)
 - [NodeJS 18+](https://nodejs.org/en/download/)
 - [PNPM 8+](https://pnpm.io/installation)
 - [Go 1.20+](https://golang.org/doc/install)
