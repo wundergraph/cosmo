@@ -57,8 +57,9 @@ They might restart a few times until the database is ready. You can check the st
 # Create the demo project
 make create-cli-demo
 
-# Copy the Router token from the previous log output
+# Copy the Router token from the previous log output and set it as environment variables
 export ROUTER_TOKEN=...
+export OTEL_AUTH_TOKEN=...
 
 # Start the subgraphs + router
 make dc-federation-demo
