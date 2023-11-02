@@ -53,6 +53,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import React, { useContext } from "react";
 import { PiGraphLight } from "react-icons/pi";
+import { InfoTooltip } from "@/components/info-tooltip";
 
 const ProposedSchema = ({
   sdl,
@@ -223,12 +224,12 @@ const CheckOverviewPage: NextPageWithLayout = () => {
             <TableBody>
               <TableRow>
                 <TableCell>
-                  <div>
+                  <div className="flex items-center space-x-1.5">
                     <div>Composable</div>
-                    <p className="pt-1 text-xs text-muted-foreground">
+                    <InfoTooltip>
                       Describes if the proposed schema can be composed with all
                       other subgraphs in the federated graph.
-                    </p>
+                    </InfoTooltip>
                   </div>
                 </TableCell>
 
@@ -238,12 +239,12 @@ const CheckOverviewPage: NextPageWithLayout = () => {
               </TableRow>
               <TableRow>
                 <TableCell>
-                  <div>
+                  <div className="flex items-center space-x-1.5">
                     <div>No breaking changes</div>
-                    <p className="pt-1 text-xs text-muted-foreground">
+                    <InfoTooltip>
                       Describes if the proposed schema is free of changes that
                       break existing client operations.
-                    </p>
+                    </InfoTooltip>
                   </div>
                 </TableCell>
                 <TableCell className="border-l text-center">
@@ -252,12 +253,12 @@ const CheckOverviewPage: NextPageWithLayout = () => {
               </TableRow>
               <TableRow>
                 <TableCell>
-                  <div>
+                  <div className="flex items-center space-x-1.5">
                     <div>No affected operations</div>
-                    <p className="pt-1 text-xs text-muted-foreground">
+                    <InfoTooltip>
                       Describes if the proposed schema affects any client
                       operations based on real usage data.
-                    </p>
+                    </InfoTooltip>
                   </div>
                 </TableCell>
                 <TableCell className="border-l text-center">
