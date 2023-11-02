@@ -55,7 +55,7 @@ export class MetricsRepository {
    * Get request rate metrics
    */
   public async getRequestRateMetrics({
-    range = 24,
+    range,
     granule,
     dateRange,
     prevDateRange,
@@ -68,25 +68,6 @@ export class MetricsRepository {
 
     // get request rate in last [range]h
     const queryRate = (start: number, end: number) => {
-      console.log(
-        'requests',
-        dateRange,
-        prevDateRange,
-        `
-      SELECT round(sum(total) / ${multiplier}, 4) AS value FROM (
-      SELECT
-        toDateTime('${start}') AS startDate,
-        toDateTime('${end}') AS endDate,
-        sum(TotalRequests) AS total
-      FROM operation_request_metrics_5_30_mv
-      WHERE Timestamp >= startDate AND Timestamp <= endDate
-        AND OrganizationID = '${organizationId}'
-        AND FederatedGraphID = '${graphId}'
-        ${whereSql ? `AND ${whereSql}` : ''}
-      GROUP BY Timestamp 
-    )
-  `,
-      );
       return this.chClient.queryPromise<{ value: number | null }>(
         `
         SELECT round(sum(total) / ${multiplier}, 4) AS value FROM (
@@ -184,7 +165,7 @@ export class MetricsRepository {
    * Get latency metrics
    */
   public async getLatencyMetrics({
-    range = 24,
+    range,
     granule,
     dateRange,
     prevDateRange,
@@ -321,7 +302,7 @@ export class MetricsRepository {
    * Get error metrics
    */
   public async getErrorMetrics({
-    range = 24,
+    range,
     granule,
     dateRange,
     prevDateRange,
@@ -520,7 +501,7 @@ export class MetricsRepository {
     const { range, dateRange, filters: selectedFilters, organizationId, graphId } = props;
 
     let parsedDateRange = isoDateRangeToTimestamps(dateRange, range);
-    const [start, end] = getDateRange(parsedDateRange, range);
+    const [start, end] = getDateRange(parsedDateRange);
 
     // diff in hours
     const diff = (parsedDateRange.end - parsedDateRange.start) / 60 / 60 / 1000;
@@ -626,9 +607,7 @@ export class MetricsRepository {
       }
     }
 
-    const parsedFilters = buildAnalyticsViewFilters({ operationName: '', clientName: '', clientVersion: '' }, filters);
-
-    return parsedFilters;
+    return buildAnalyticsViewFilters({ operationName: '', clientName: '', clientVersion: '' }, filters);
   }
 
   /**
