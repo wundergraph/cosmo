@@ -18,7 +18,8 @@ type Subgraph struct {
 	Name string `goja:"name"`
 	// URL is the URL of the subgraph used for sending operations
 	URL string `goja:"url"`
-	// Schema is the SDL of the subgraph as a string
+	// Schema is the SDL of the subgraph as a string. If empty, the schema
+	// is retrieved from the URL using the _service query.
 	Schema string `goja:"schema"`
 }
 
@@ -129,6 +130,9 @@ func Federate(subgraphs ...*Subgraph) (*FederatedGraph, error) {
 	return vm.FederateSubgraphs(updatedSubgraphs)
 }
 
+// BuildRouterConfiguration produces a federated router configuration
+// as a string that can be saved to a file and used to configure the
+// router data sources.
 func BuildRouterConfiguration(subgraphs ...*Subgraph) (string, error) {
 	updatedSubgraphs, err := updateSchemas(subgraphs)
 	if err != nil {
