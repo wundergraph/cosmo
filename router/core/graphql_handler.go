@@ -5,15 +5,9 @@ import (
 	"errors"
 	"net"
 	"net/http"
-	"strconv"
 	"strings"
-	"sync"
-	"time"
 
-	"github.com/dgraph-io/ristretto"
 	"github.com/wundergraph/cosmo/router/internal/otel"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/astvalidation"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 
@@ -24,8 +18,6 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/sync/singleflight"
 
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/astnormalization"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/postprocess"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
@@ -38,12 +30,11 @@ import (
 )
 
 var (
-	errMsgOperationPlanningFailed = errors.New("failed to plan operation")
-	errMsgOperationParseFailed    = errors.New("failed to parse operation")
-	errCouldNotResolveResponse    = errors.New("could not resolve response")
-	errServerTimeout              = errors.New("server timeout")
-	errServerCanceled             = errors.New("server canceled")
-	errInternalServer             = errors.New("internal server error")
+	errMsgOperationParseFailed = errors.New("failed to parse operation")
+	errCouldNotResolveResponse = errors.New("could not resolve response")
+	errServerTimeout           = errors.New("server timeout")
+	errServerCanceled          = errors.New("server canceled")
+	errInternalServer          = errors.New("internal server error")
 )
 
 type ReportError interface {
@@ -70,11 +61,6 @@ func (e *reportError) Report() *operationreport.Report {
 	return e.report
 }
 
-type planWithExtractedVariables struct {
-	preparedPlan plan.Plan
-	variables    []byte
-}
-
 func MergeJsonRightIntoLeft(left, right []byte) []byte {
 	if len(left) == 0 {
 		return right
@@ -92,18 +78,14 @@ func MergeJsonRightIntoLeft(left, right []byte) []byte {
 
 type HandlerOptions struct {
 	Executor *Executor
-	Cache    *ristretto.Cache
 	Log      *zap.Logger
 }
 
 func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 	graphQLHandler := &GraphQLHandler{
-		log:         opts.Log,
-		sf:          &singleflight.Group{},
-		prepared:    map[uint64]planWithExtractedVariables{},
-		preparedMux: &sync.RWMutex{},
-		planCache:   opts.Cache,
-		executor:    opts.Executor,
+		log:      opts.Log,
+		sf:       &singleflight.Group{},
+		executor: opts.Executor,
 	}
 
 	return graphQLHandler
@@ -122,68 +104,16 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 type GraphQLHandler struct {
 	log      *zap.Logger
 	executor *Executor
-
-	prepared    map[uint64]planWithExtractedVariables
-	preparedMux *sync.RWMutex
-
-	sf        *singleflight.Group
-	planCache *ristretto.Cache
+	sf       *singleflight.Group
 }
 
 func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	var (
-		preparedPlan planWithExtractedVariables
-	)
-
 	requestLogger := h.log.With(logging.WithRequestID(middleware.GetReqID(r.Context())))
-	operationContext := getOperationContext(r.Context())
+	operationCtx := getOperationContext(r.Context())
 
-	// Update the resolveCtx with the latest request context so user modules can access it
-
-	requestOperationNameBytes := unsafebytes.StringToBytes(operationContext.Name())
-
-	// try to get a prepared plan for this operation ID from the cache
-	cachedPlan, ok := h.planCache.Get(operationContext.Hash())
-	if ok && cachedPlan != nil {
-		// re-use a prepared plan
-		preparedPlan = cachedPlan.(planWithExtractedVariables)
-	} else {
-		// prepare a new plan using single flight
-		// this ensures that we only prepare the plan once for this operation ID
-		sharedPreparedPlan, err, _ := h.sf.Do(strconv.FormatUint(operationContext.hash, 10), func() (interface{}, error) {
-			prepared, err := h.preparePlan(requestOperationNameBytes, operationContext.Content())
-			if err != nil {
-				return nil, err
-			}
-			// cache the prepared plan for 1 hour
-			h.planCache.SetWithTTL(operationContext.hash, prepared, 1, time.Hour)
-			return prepared, nil
-		})
-		if err != nil {
-			w.Header().Set("Content-Type", "application/json")
-
-			var reportErr ReportError
-			if errors.As(err, &reportErr) {
-				logInternalErrorsFromReport(reportErr.Report(), requestLogger)
-				writeRequestErrors(r, graphql.RequestErrorsFromOperationReport(*reportErr.Report()), w, requestLogger)
-				return
-			}
-			requestLogger.Error("prepare plan failed", zap.Error(err))
-			writeRequestErrors(r, graphql.RequestErrorsFromError(errInternalServer), w, requestLogger)
-			return
-		}
-
-		if sharedPreparedPlan == nil {
-			requestLogger.Error("prepare plan is nil", zap.Error(err))
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		preparedPlan = sharedPreparedPlan.(planWithExtractedVariables)
-	}
-
-	extractedVariables := make([]byte, len(preparedPlan.variables))
-	copy(extractedVariables, preparedPlan.variables)
-	requestVariables := operationContext.Variables()
+	extractedVariables := make([]byte, len(operationCtx.preparedPlan.variables))
+	copy(extractedVariables, operationCtx.preparedPlan.variables)
+	requestVariables := operationCtx.Variables()
 	combinedVariables := MergeJsonRightIntoLeft(requestVariables, extractedVariables)
 
 	ctx := &resolve.Context{
@@ -195,7 +125,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx = ctx.WithContext(r.Context())
 
-	switch p := preparedPlan.preparedPlan.(type) {
+	switch p := operationCtx.preparedPlan.preparedPlan.(type) {
 	case *plan.SynchronousResponsePlan:
 		w.Header().Set("Content-Type", "application/json")
 
@@ -250,42 +180,6 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		requestLogger.Error("unsupported plan kind")
 		w.WriteHeader(http.StatusInternalServerError)
 	}
-}
-
-func (h *GraphQLHandler) preparePlan(requestOperationName []byte, requestOperationContent string) (planWithExtractedVariables, error) {
-	doc, report := astparser.ParseGraphqlDocumentString(requestOperationContent)
-	if report.HasErrors() {
-		return planWithExtractedVariables{}, &reportError{report: &report}
-	}
-
-	validation := astvalidation.DefaultOperationValidator()
-
-	norm := astnormalization.NewNormalizer(true, true)
-	norm.NormalizeOperation(&doc, h.executor.Definition, &report)
-
-	// validate the document before planning
-	state := validation.Validate(&doc, h.executor.Definition, &report)
-	if state != astvalidation.Valid {
-		return planWithExtractedVariables{}, &reportError{report: &report}
-	}
-
-	planner := plan.NewPlanner(context.Background(), h.executor.PlanConfig)
-
-	// create and postprocess the plan
-	preparedPlan := planner.Plan(&doc, h.executor.Definition, unsafebytes.BytesToString(requestOperationName), &report)
-	if report.HasErrors() {
-		return planWithExtractedVariables{}, errors.Join(errMsgOperationPlanningFailed, report)
-	}
-	post := postprocess.DefaultProcessor()
-	post.Process(preparedPlan)
-
-	extractedVariables := make([]byte, len(doc.Input.Variables))
-	copy(extractedVariables, doc.Input.Variables)
-
-	return planWithExtractedVariables{
-		preparedPlan: preparedPlan,
-		variables:    extractedVariables,
-	}, nil
 }
 
 func logInternalErrorsFromReport(report *operationreport.Report, requestLogger *zap.Logger) {

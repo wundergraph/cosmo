@@ -220,6 +220,41 @@ func TestIntegration(t *testing.T) {
 	assert.JSONEq(t, result, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`)
 }
 
+func TestAnonymousQuery(t *testing.T) {
+	server := setupServer(t)
+	result := sendData(server, []byte(`{"query":"{ employees { id } }"}`))
+	assert.Equal(t, http.StatusOK, result.Code)
+	assert.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`, result.Body.String())
+}
+
+func TestMultipleAnonymousQueries(t *testing.T) {
+	server := setupServer(t)
+	result := sendData(server, []byte(`{"query":"{ employees { id } } { employees { id } }"}`))
+	assert.Equal(t, http.StatusOK, result.Result().StatusCode)
+	assert.Equal(t, `{"errors":[{"message":"operation name is required when multiple operations are defined"}]}`, result.Body.String())
+}
+
+func TestMultipleNamedOperations(t *testing.T) {
+	server := setupServer(t)
+	result := sendData(server, []byte(`{"query":"query A { employees { id } } query B { employees { id details { forename surname } } }","operationName":"A"}`))
+	assert.Equal(t, http.StatusOK, result.Result().StatusCode)
+	assert.Equal(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`, result.Body.String())
+}
+
+func TestMultipleNamedOperationsB(t *testing.T) {
+	server := setupServer(t)
+	result := sendData(server, []byte(`{"query":"query A { employees { id } } query B { employees { id details { forename surname } } }","operationName":"B"}`))
+	assert.Equal(t, http.StatusOK, result.Result().StatusCode)
+	assert.Equal(t, `{"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"}},{"id":2,"details":{"forename":"Dustin","surname":"Deus"}},{"id":3,"details":{"forename":"Stefan","surname":"Avram"}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"}},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"}},{"id":7,"details":{"forename":"Suvij","surname":"Surya"}},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"}},{"id":9,"details":{"forename":"Alberto","surname":"Garcia Hierro"}},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"}},{"id":12,"details":{"forename":"David","surname":"Stutt"}}]}}`, result.Body.String())
+}
+
+func TestMultipleNamedOperationsC(t *testing.T) {
+	server := setupServer(t)
+	result := sendData(server, []byte(`{"query":"query A { employees { id } } query B { employees { id details { forename surname } } }","operationName":"C"}`))
+	assert.Equal(t, http.StatusOK, result.Result().StatusCode)
+	assert.Equal(t, `{"errors":[{"message":"operation with name 'C' not found"}]}`, result.Body.String())
+}
+
 func TestTestdataQueries(t *testing.T) {
 	server := setupServer(t)
 	queries := filepath.Join("testdata", "queries")
@@ -282,6 +317,7 @@ func TestIntegrationWithInlineVariables(t *testing.T) {
 func BenchmarkSequential(b *testing.B) {
 	server := setupServer(b)
 	q := &testQuery{
+		Name:      "Employee",
 		Body:      "($n:Int!) { employee(id:$n) { id details { forename surname } } }",
 		Variables: map[string]interface{}{"n": 1},
 	}

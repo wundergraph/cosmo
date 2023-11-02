@@ -2,9 +2,10 @@ package core
 
 import (
 	"context"
-	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"strconv"
 	"time"
+
+	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 
 	graphqlmetricsv1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
 	"github.com/wundergraph/cosmo/router/internal/graphqlmetrics"
@@ -180,7 +181,7 @@ func initializeSpan(ctx context.Context, operation *ParsedOperation, clientInfo 
 	span.SetName(GetSpanName(operation.Name, operation.Type))
 	span.SetAttributes(commonAttributeValues...)
 	// Only set the query content on the span
-	span.SetAttributes(otel.WgOperationContent.String(operation.Query))
+	span.SetAttributes(otel.WgOperationContent.String(operation.NormalizedRepresentation))
 
 	// Add client info to trace span attributes
 	span.SetAttributes(otel.WgClientName.String(clientInfo.Name))
