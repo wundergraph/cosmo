@@ -572,6 +572,7 @@ export class SubgraphRepository {
   public async checkDetails(id: string, federatedTargetID: string): Promise<SchemaCheckDetailsDTO | undefined> {
     const changes = await this.db.query.schemaCheckChangeAction.findMany({
       columns: {
+        id: true,
         changeType: true,
         changeMessage: true,
         path: true,
@@ -599,6 +600,7 @@ export class SubgraphRepository {
 
     return {
       changes: changes.map((c) => ({
+        id: c.id,
         changeType: c.changeType ?? '',
         message: c.changeMessage ?? '',
         path: c.path ?? undefined,

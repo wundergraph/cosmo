@@ -25,6 +25,7 @@ import {
   GetAPIKeysResponse,
   GetAnalyticsViewResponse,
   GetCheckDetailsResponse,
+  GetCheckOperationsResponse,
   GetCheckSummaryResponse,
   GetChecksByFederatedGraphNameResponse,
   GetDashboardAnalyticsViewResponse,
@@ -36,6 +37,7 @@ import {
   GetFieldUsageResponse,
   GetGraphMetricsResponse,
   GetMetricsErrorRateResponse,
+  GetOperationContentResponse,
   GetOrganizationIntegrationsResponse,
   GetOrganizationMembersResponse,
   GetOrganizationWebhookConfigsResponse,
@@ -1047,8 +1049,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               code: EnumStatusCode.ERR_NOT_FOUND,
               details: 'Requested graph does not exist',
             },
-            changes: [],
-            compositionErrors: [],
           };
         }
 
@@ -1060,14 +1060,15 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               code: EnumStatusCode.ERR_NOT_FOUND,
               details: 'Requested check not found',
             },
-            changes: [],
-            compositionErrors: [],
           };
         }
 
-        const inspectedOperations: InspectorOperationResult[] = await schemaCheckRepo.getAffectedOperationsByCheckId(
-          check.id,
-        );
+        const affectedOperations = await schemaCheckRepo.getAffectedOperationsByCheckId(check.id);
+
+        const inspectedOperations: InspectorOperationResult[] = affectedOperations.map((operation) => ({
+          ...operation,
+          schemaChangeId: operation.schemaChangeIds[0],
+        }));
 
         const operationUsageStats: PlainMessage<CheckOperationUsageStats> =
           collectOperationUsageStats(inspectedOperations);
@@ -1078,6 +1079,59 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           },
           check,
           operationUsageStats,
+        };
+      });
+    },
+
+    getCheckOperations: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetCheckOperationsResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+        const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
+        const schemaCheckRepo = new SchemaCheckRepository(opts.db);
+
+        const graph = await fedGraphRepo.byName(req.graphName);
+
+        if (!graph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: 'Requested graph does not exist',
+            },
+            operations: [],
+          };
+        }
+
+        const check = await subgraphRepo.checkById(req.checkId, graph.name);
+        const checkDetails = await subgraphRepo.checkDetails(req.checkId, graph.targetId);
+
+        if (!check || !checkDetails) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: 'Requested check not found',
+            },
+            operations: [],
+          };
+        }
+
+        const affectedOperations = await schemaCheckRepo.getAffectedOperationsByCheckId(check.id);
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          operations: affectedOperations.map((operation) => ({
+            ...operation,
+            firstSeenAt: operation.firstSeenAt.toUTCString(),
+            lastSeenAt: operation.lastSeenAt.toUTCString(),
+            impactingChanges: checkDetails.changes.filter(({ id }) => operation.schemaChangeIds.includes(id)),
+          })),
         };
       });
     },
@@ -3268,6 +3322,52 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           clients,
           requestSeries,
           meta,
+        };
+      });
+    },
+
+    getOperationContent: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetOperationContentResponse>>(logger, async () => {
+        await opts.authenticator.authenticate(ctx.requestHeader);
+
+        if (!opts.chClient) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_ANALYTICS_DISABLED,
+            },
+            operationContent: '',
+          };
+        }
+
+        const query = `
+          SELECT OperationContent as operationContent
+          FROM ${opts.chClient?.database}.gql_metrics_operations
+          WHERE OperationHash = '${req.hash}'
+          LIMIT 1
+        `;
+
+        const result = await opts.chClient.queryPromise(query);
+
+        if (!Array.isArray(result)) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: 'Requested operation not found',
+            },
+            operationContent: '',
+          };
+        }
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          operationContent: result[0].operationContent,
         };
       });
     },

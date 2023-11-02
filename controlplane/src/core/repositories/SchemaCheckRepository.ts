@@ -106,23 +106,20 @@ export class SchemaCheckRepository {
     ).map((r) => r.id);
 
     if (changeActionIds.length > 0) {
-      const ops = await this.db
+      return await this.db
         .selectDistinctOn([schema.schemaCheckChangeActionOperationUsage.hash], {
-          schemaChangeId: schema.schemaCheckChangeActionOperationUsage.schemaCheckChangeActionId,
           hash: schema.schemaCheckChangeActionOperationUsage.hash,
           name: schema.schemaCheckChangeActionOperationUsage.name,
           type: schema.schemaCheckChangeActionOperationUsage.type,
-          firstSeenAt: sql`min(${schema.schemaCheckChangeActionOperationUsage.firstSeenAt})`,
-          lastSeenAt: sql`max(${schema.schemaCheckChangeActionOperationUsage.lastSeenAt})`,
+          firstSeenAt: sql<Date>`min(${schema.schemaCheckChangeActionOperationUsage.firstSeenAt})`,
+          lastSeenAt: sql<Date>`max(${schema.schemaCheckChangeActionOperationUsage.lastSeenAt})`,
+          schemaChangeIds: sql<
+            string[]
+          >`array_agg(${schema.schemaCheckChangeActionOperationUsage.schemaCheckChangeActionId})`,
         })
         .from(schema.schemaCheckChangeActionOperationUsage)
         .where(inArray(schema.schemaCheckChangeActionOperationUsage.schemaCheckChangeActionId, changeActionIds))
-        .groupBy(({ hash, schemaChangeId, name, type }) => [hash, schemaChangeId, name, type]);
-      return ops.map((op) => ({
-        ...op,
-        firstSeenAt: new Date(op.firstSeenAt as string),
-        lastSeenAt: new Date(op.lastSeenAt as string),
-      }));
+        .groupBy(({ hash, name, type }) => [hash, name, type]);
     }
 
     return [];

@@ -280,6 +280,34 @@ message GetCheckDetailsResponse {
   repeated string compositionErrors = 3;
 }
 
+message GetCheckOperationsRequest {
+  string check_id = 1;
+  string graph_name = 2;
+}
+
+message GetCheckOperationsResponse {
+  message CheckOperation {
+    string hash = 1;
+    string name = 2;
+    string type = 3;
+    string first_seen_at = 4;
+    string last_seen_at = 5;
+    repeated SchemaChange impacting_changes = 6;
+  }
+
+  Response response = 1;
+  repeated CheckOperation operations = 2;
+}
+
+message GetOperationContentRequest {
+  string hash = 1;
+}
+
+message GetOperationContentResponse {
+  Response response = 1;
+  string operation_content = 2;
+}
+
 message GetFederatedGraphChangelogRequest {
   string name = 1;
   Pagination pagination = 2;
@@ -965,14 +993,22 @@ service PlatformService {
   rpc GetSubgraphByName(GetSubgraphByNameRequest) returns (GetSubgraphByNameResponse) {}
   // GetFederatedSubgraphSDLByName returns the SDL of the subgraph by name.
   rpc GetFederatedSubgraphSDLByName(GetFederatedSubgraphSDLByNameRequest) returns (GetFederatedSubgraphSDLByNameResponse) {}
+
+
   // GetChecksByFederatedGraphName return schema and composition checks that concern a federated graph
   rpc GetChecksByFederatedGraphName(GetChecksByFederatedGraphNameRequest) returns (GetChecksByFederatedGraphNameResponse) {}
   // GetCheckSummary returns top level information about a schema check
   rpc GetCheckSummary(GetCheckSummaryRequest) returns (GetCheckSummaryResponse) {}
   // GetCheckDetails returns changes and composition errors recorded for a check
   rpc GetCheckDetails(GetCheckDetailsRequest) returns (GetCheckDetailsResponse) {}
+  // GetCheckOperations returns affected operations for a check
+  rpc GetCheckOperations(GetCheckOperationsRequest) returns (GetCheckOperationsResponse) {}
   // ForceCheckSuccess forces a failed check to be marked as successful
   rpc ForceCheckSuccess(ForceCheckSuccessRequest) returns (ForceCheckSuccessResponse) {}
+
+  // GetOperationContent returns the operation body by searching using the hash
+  rpc GetOperationContent(GetOperationContentRequest) returns (GetOperationContentResponse) {}
+
   // GetFederatedGraphChangelog returns the changelog of the federated graph.
   rpc GetFederatedGraphChangelog(GetFederatedGraphChangelogRequest) returns (GetFederatedGraphChangelogResponse) {}
   // CreateFederatedGraphToken creates a federated graph token that is consumed by the router to authenticate requests.

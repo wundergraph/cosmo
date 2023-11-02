@@ -64,6 +64,7 @@
     "dagre": "^0.8.5",
     "date-fns": "^2.30.0",
     "date-fns-tz": "^2.0.0",
+    "fuse.js": "^7.0.0",
     "graphiql": "^2.4.7",
     "graphql": "^16.7.1",
     "graphql-ws": "^5.14.1",

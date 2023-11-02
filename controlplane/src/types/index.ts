@@ -72,6 +72,7 @@ export interface GetChecksResponse {
 
 export interface SchemaCheckDetailsDTO {
   changes: {
+    id: string;
     changeType: string;
     message: string;
     path?: string;

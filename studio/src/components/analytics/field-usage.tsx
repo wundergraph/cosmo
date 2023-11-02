@@ -372,10 +372,7 @@ export const FieldUsageSheet = () => {
         }
       }}
     >
-      <SheetContent
-        className="scrollbar-custom w-full max-w-full overflow-y-auto sm:max-w-full md:max-w-2xl lg:max-w-3xl"
-        onPointerDownOutside={(e) => e.preventDefault()}
-      >
+      <SheetContent className="scrollbar-custom w-full max-w-full overflow-y-scroll sm:max-w-full md:max-w-2xl lg:max-w-3xl">
         <SheetHeader className="mb-12">
           <SheetTitle className="flex flex-wrap items-center gap-x-1.5">
             Field Usage for{" "}

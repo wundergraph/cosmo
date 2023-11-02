@@ -71,12 +71,10 @@ const TypeLink = ({
   name,
   ast,
   isHeading = false,
-  isPrimary = false,
 }: {
   name: string;
   ast: GraphQLSchema;
   isHeading?: boolean;
-  isPrimary?: boolean;
 }) => {
   const router = useRouter();
   const cleanName = name.replace(/[\[\]!: ]/g, "");
@@ -90,8 +88,7 @@ const TypeLink = ({
         className={cn(
           "font-semibold text-primary underline-offset-2 hover:underline",
           {
-            "text-xl text-primary-foreground": isHeading,
-            "text-primary-foreground": isPrimary,
+            "text-xl text-foreground": isHeading,
           },
         )}
       >
