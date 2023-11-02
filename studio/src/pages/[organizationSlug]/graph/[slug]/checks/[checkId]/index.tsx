@@ -289,7 +289,7 @@ const CheckOverviewPage: NextPageWithLayout = () => {
       )}
       {currentAffectedGraph && (
         <div className="flex flex-col">
-          <h3 className="mb-4 text-xl font-semibold">Timeframe</h3>
+          <h3 className="mb-4 text-xl font-semibold">Timeframe checked</h3>
           <p className="flex items-center gap-x-2 text-muted-foreground">
             {formatDateTime(
               subDays(
