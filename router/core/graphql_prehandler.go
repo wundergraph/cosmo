@@ -8,7 +8,6 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphql"
 	"go.uber.org/zap"
 	"net/http"
-	"time"
 )
 
 type PreHandlerOptions struct {
@@ -79,8 +78,6 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 		buf := pool.GetBytesBuffer()
 		defer pool.PutBytesBuffer(buf)
-
-		time.Sleep(1 * time.Second)
 
 		operation, err := h.parser.ParseReader(r.Body)
 		if err != nil {
