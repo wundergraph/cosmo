@@ -1,3 +1,15 @@
 global:
-  scrape_interval:     10s
+  scrape_interval:     15s
   evaluation_interval: 10s
+
+scrape_configs:
+  # The job name is added as a label `job=<job_name>` to any timeseries scraped from this config.
+  - job_name: "router"
+    scrape_interval: 2s
+
+    # metrics_path defaults to '/metrics'
+    # scheme defaults to 'http'.
+    static_configs:
+      # Allows to scrape metrics from the host machine
+      # https://docs.docker.com/desktop/networking/#i-cannot-ping-my-containers
+      - targets: ["host.docker.internal:8088"]
