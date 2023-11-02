@@ -204,7 +204,7 @@ const createMapperSchema = z.object({
 
 const saveSchema = z.array(createMapperSchema).min(1);
 
-const NewVariable = ({
+const NewMapper = ({
   remove,
   onChange,
   mapper,
@@ -292,7 +292,7 @@ const NewVariable = ({
   );
 };
 
-const AddNewVariables = ({
+const AddNewMappers = ({
   mappers,
   updateMappers,
 }: {
@@ -302,7 +302,7 @@ const AddNewVariables = ({
   return (
     <>
       {mappers.map((mapper, index) => (
-        <NewVariable
+        <NewMapper
           key={mapper.id}
           mapper={mapper}
           remove={() => {
@@ -665,7 +665,11 @@ const OpenIDConnectProvider = ({
                       )}
                       {mode === "map" && (
                         <>
-                          <AddNewVariables
+                          <div className="px-1 flex text-sm font-bold justify-between">
+                            <span>Role in cosmo</span>
+                            <span className="pr-12">Group in the provider</span>
+                          </div>
+                          <AddNewMappers
                             mappers={mappers}
                             updateMappers={updateMappers}
                           />
