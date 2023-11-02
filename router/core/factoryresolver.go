@@ -52,6 +52,11 @@ func NewDefaultFactoryResolver(transportFactory ApiTransportFactory, baseTranspo
 		Transport: transportFactory.RoundTripper(baseTransport, true),
 	}
 
+	var factoryLogger abstractlogger.Logger
+	if log != nil {
+		factoryLogger = abstractlogger.NewZapLogger(log, abstractlogger.DebugLevel)
+	}
+
 	return &DefaultFactoryResolver{
 		baseTransport:    baseTransport,
 		transportFactory: transportFactory,
@@ -59,6 +64,7 @@ func NewDefaultFactoryResolver(transportFactory ApiTransportFactory, baseTranspo
 		graphql: &graphql_datasource.Factory{
 			HTTPClient:      defaultHttpClient,
 			StreamingClient: streamingClient,
+			Logger:          factoryLogger,
 		},
 		log: log,
 	}
@@ -67,14 +73,10 @@ func NewDefaultFactoryResolver(transportFactory ApiTransportFactory, baseTranspo
 func (d *DefaultFactoryResolver) Resolve(ds *nodev1.DataSourceConfiguration) (plan.PlannerFactory, error) {
 	switch ds.Kind {
 	case nodev1.DataSourceKind_GRAPHQL:
-		var logger abstractlogger.Logger
-		if d.log != nil {
-			logger = abstractlogger.NewZapLogger(d.log, abstractlogger.DebugLevel)
-		}
 		factory := &graphql_datasource.Factory{
 			HTTPClient:      d.graphql.HTTPClient,
 			StreamingClient: d.graphql.StreamingClient,
-			Logger:          logger,
+			Logger:          d.graphql.Logger,
 		}
 		return factory, nil
 	case nodev1.DataSourceKind_STATIC:
@@ -100,11 +102,17 @@ func (l *Loader) LoadInternedString(engineConfig *nodev1.EngineConfiguration, st
 	return s, nil
 }
 
-func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration) (*plan.Configuration, error) {
+type RouterEngineConfiguration struct {
+	Execution config.EngineExecutionConfiguration
+	Headers   config.HeaderRules
+}
+
+func (l *Loader) Load(routerConfig *nodev1.RouterConfig, routerEngineConfig *RouterEngineConfiguration) (*plan.Configuration, error) {
 	var (
 		outConfig plan.Configuration
 	)
 	// attach field usage information to the plan
+	engineConfig := routerConfig.EngineConfig
 	outConfig.IncludeInfo = l.includeInfo
 	outConfig.DefaultFlushIntervalMillis = engineConfig.DefaultFlushInterval
 	for _, configuration := range engineConfig.FieldConfigurations {
@@ -200,6 +208,9 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration) (*plan.Configura
 					subscriptionUseSSE = *in.CustomGraphql.Subscription.UseSSE
 				}
 			}
+			var forwardedClientHeaders []string
+			for _, header := range routerEngineConfig.Headers.All.Request {
+			}
 			out.Custom = graphql_datasource.ConfigJson(graphql_datasource.Configuration{
 				Fetch: graphql_datasource.FetchConfiguration{
 					URL:    fetchUrl,
@@ -211,9 +222,10 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration) (*plan.Configura
 					ServiceSDL: in.CustomGraphql.Federation.ServiceSdl,
 				},
 				Subscription: graphql_datasource.SubscriptionConfiguration{
-					URL:           subscriptionUrl,
-					UseSSE:        subscriptionUseSSE,
-					SSEMethodPost: subscriptionSSEMethodPost,
+					URL:                    subscriptionUrl,
+					UseSSE:                 subscriptionUseSSE,
+					SSEMethodPost:          subscriptionSSEMethodPost,
+					ForwardedClientHeaders: forwardedClientHeaders,
 				},
 				UpstreamSchema:         graphqlSchema,
 				CustomScalarTypeFields: customScalarTypeFields,

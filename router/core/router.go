@@ -644,7 +644,12 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		},
 	}
 
-	executor, err := ecb.Build(ctx, routerConfig, r.engineExecutionConfiguration)
+	routerEngineConfig := &RouterEngineConfiguration{
+		Execution: r.engineExecutionConfiguration,
+		Headers:   r.headerRules,
+	}
+
+	executor, err := ecb.Build(ctx, routerConfig, routerEngineConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build plan configuration: %w", err)
 	}
