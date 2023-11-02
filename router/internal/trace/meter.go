@@ -27,11 +27,6 @@ var (
 	tp *sdktrace.TracerProvider
 )
 
-// StartAgent starts an opentelemetry agent.
-func StartAgent(ctx context.Context, log *zap.Logger, c *Config) (*sdktrace.TracerProvider, error) {
-	return startAgent(ctx, log, c)
-}
-
 func createExporter(log *zap.Logger, exp *Exporter) (sdktrace.SpanExporter, error) {
 	u, err := url.Parse(exp.Endpoint)
 	if err != nil {
@@ -95,7 +90,7 @@ func createExporter(log *zap.Logger, exp *Exporter) (sdktrace.SpanExporter, erro
 	return exporter, nil
 }
 
-func startAgent(ctx context.Context, log *zap.Logger, c *Config) (*sdktrace.TracerProvider, error) {
+func NewTracerProvider(ctx context.Context, log *zap.Logger, c *Config) (*sdktrace.TracerProvider, error) {
 	r, err := resource.New(ctx,
 		resource.WithAttributes(semconv.ServiceNameKey.String(c.Name)),
 		resource.WithProcessPID(),
