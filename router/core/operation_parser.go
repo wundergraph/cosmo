@@ -141,6 +141,9 @@ func (p *OperationParser) parse(body []byte) (*ParsedOperation, error) {
 	defer p.freeKit(kit)
 
 	jsonparser.EachKey(body, func(i int, value []byte, valueType jsonparser.ValueType, err error) {
+		if err != nil {
+			return
+		}
 		switch i {
 		case 0:
 			requestDocumentBytes, err = jsonparser.Unescape(value, kit.unescapedDocument)
