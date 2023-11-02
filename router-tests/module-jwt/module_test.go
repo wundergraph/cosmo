@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -64,13 +65,13 @@ func TestJWTModule(t *testing.T) {
 
 	schemaPath, err := filepath.Abs(filepath.Join("testdata", "schema.graphqls"))
 	require.NoError(t, err)
-	subgraphs := []routerconfig.Subgraph{
+	schema, err := os.ReadFile(schemaPath)
+	require.NoError(t, err)
+	subgraphs := []*routerconfig.Subgraph{
 		{
-			Name:       "employees",
-			RoutingURL: srv.URL,
-			Schema: &routerconfig.SubgraphSchema{
-				File: schemaPath,
-			},
+			Name:   "employees",
+			URL:    srv.URL,
+			Schema: string(schema),
 		},
 	}
 

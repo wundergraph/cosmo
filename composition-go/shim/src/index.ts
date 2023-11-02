@@ -1,10 +1,13 @@
 import { ArgumentConfigurationData, federateSubgraphs as realFederateSubgraphs } from '@wundergraph/composition';
-import { DocumentNode, parse, print } from 'graphql';
+import { buildRouterConfig, normalizeURL } from '@wundergraph/cosmo-shared';
+import { DocumentNode, parse, print, printSchema } from 'graphql';
 
 export type Subgraph = {
   schema: string;
   name: string;
   url: string;
+  subscription_url?: string;
+  subscription_protocol?: 'ws' | 'sse' | 'sse_post';
 };
 
 export type FederatedGraph = {
@@ -12,22 +15,23 @@ export type FederatedGraph = {
   sdl: string;
 };
 
+function createFederableSubgraph(subgraph: Subgraph) {
+  let definitions: DocumentNode;
+  try {
+    definitions = parse(subgraph.schema);
+  } catch (e: any) {
+    throw new Error(`could not parse schema for Graph ${subgraph.name}: ${e}`);
+  }
+  return {
+    definitions,
+    name: subgraph.name,
+    url: subgraph.url,
+  };
+
+}
+
 export function federateSubgraphs(subgraphs: Subgraph[]): FederatedGraph {
-  const { federationResult, errors } = realFederateSubgraphs(
-    subgraphs.map(({ schema, name, url }) => {
-      let definitions: DocumentNode;
-      try {
-        definitions = parse(schema);
-      } catch (e: any) {
-        throw new Error(`could not parse schema for Graph ${name}: ${e}`);
-      }
-      return {
-        definitions,
-        name,
-        url,
-      };
-    }),
-  );
+  const { federationResult, errors } = realFederateSubgraphs(subgraphs.map(createFederableSubgraph));
   if (errors && errors.length > 0) {
     throw new Error(`could not federate schema: ${errors.map((e) => e.message).join(', ')}`);
   }
@@ -35,4 +39,27 @@ export function federateSubgraphs(subgraphs: Subgraph[]): FederatedGraph {
     argumentConfigurations: federationResult!.argumentConfigurations,
     sdl: print(federationResult!.federatedGraphAST),
   };
+}
+
+export function buildRouterConfiguration(subgraphs: Subgraph[]): string {
+  const result = realFederateSubgraphs(subgraphs.map(createFederableSubgraph));
+  if (result.errors && result.errors.length > 0) {
+    throw new Error(`could not federate schema: ${result.errors.map((e) => e.message).join(', ')}`);
+  }
+  if (result.federationResult === undefined) {
+    throw new Error(`could not federate subgraphs`);
+  }
+  const config = buildRouterConfig({
+    argumentConfigurations: result.federationResult.argumentConfigurations,
+    federatedSDL: printSchema(result.federationResult.federatedGraphSchema),
+    subgraphs: subgraphs.map((s, index) => ({
+      id: `${index}`,
+      name: s.name,
+      url: normalizeURL(s.url),
+      sdl: s.schema,
+      subscriptionUrl: normalizeURL(s.subscription_url ?? s.url),
+      subscriptionProtocol: s.subscription_protocol ?? 'ws',
+    })),
+  });
+  return config.toJsonString();
 }

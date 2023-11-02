@@ -11,8 +11,9 @@ import (
 )
 
 type gojaVm struct {
-	runtime           *goja.Runtime
-	federateSubgraphs goja.Callable
+	runtime                  *goja.Runtime
+	federateSubgraphs        goja.Callable
+	buildRouterConfiguration goja.Callable
 }
 
 func (m *gojaVm) Dispose() {}
@@ -28,7 +29,14 @@ func (m *gojaVm) FederateSubgraphs(subgraphs []*Subgraph) (*FederatedGraph, erro
 		return nil, err
 	}
 	return &federated, nil
+}
 
+func (m *gojaVm) BuildRouterConfiguration(subgraphs []*Subgraph) (string, error) {
+	result, err := m.buildRouterConfiguration(goja.Undefined(), m.runtime.ToValue(subgraphs))
+	if err != nil {
+		return "", err
+	}
+	return result.String(), nil
 }
 
 func newVM() (*gojaVm, error) {
@@ -58,9 +66,20 @@ func newVM() (*gojaVm, error) {
 	if err != nil {
 		return nil, err
 	}
+	buildRouterConfiguration, err := shimFunc("buildRouterConfiguration")
+	if err != nil {
+		return nil, err
+	}
+	if err := runtime.Set("stringHash", stringHash); err != nil {
+		return nil, err
+	}
+	if err := runtime.Set("urlParse", urlParse); err != nil {
+		return nil, err
+	}
 	return &gojaVm{
-		runtime:           runtime,
-		federateSubgraphs: federateSubgraphs,
+		runtime:                  runtime,
+		federateSubgraphs:        federateSubgraphs,
+		buildRouterConfiguration: buildRouterConfiguration,
 	}, nil
 }
 

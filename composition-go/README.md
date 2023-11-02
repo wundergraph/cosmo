@@ -1,8 +1,12 @@
 Composition
 ===========
 
-This packages implements federation composition for GraphQL. To compose a federated graph
-use `Federate` e.g.:
+This packages implements federation composition for GraphQL and static router configuration generation.
+
+## Composition
+
+
+Use `Federate` to produce a federated subgraph from the a set of subgraphs:
 
 ```go
 
@@ -66,6 +70,78 @@ func main() {
 }
 
 ```
+
+## Router configuration generation
+
+Use `BuildRouterConfiguration` to produce generate a static data source configuration for the router:
+
+```go
+
+package main
+
+import (
+	"fmt"
+	"log"
+
+	"github.com/wundergraph/cosmo/composition-go"
+)
+
+func main() {
+	config, err := composition.BuildRouterConfiguration(&composition.Subgraph{
+		Name: "A",
+		Schema: `type Query {
+			query: Nested @shareable
+		  }
+
+		  type Nested @shareable {
+			nest: Nested2
+		  }
+
+		  type Nested2 @shareable {
+			nest: Nested3
+		  }
+
+		  type Nested3 @shareable {
+			nest: Nested4
+		  }
+
+		  type Nested4 {
+			name: String
+		  }`,
+	}, &composition.Subgraph{
+		Name: "B",
+		Schema: `type Query {
+			query: Nested @shareable
+		  }
+
+		  type Nested @shareable {
+			nest: Nested2
+		  }
+
+		  type Nested2 @shareable {
+			nest: Nested3
+		  }
+
+		  type Nested3 @shareable {
+			nest: Nested4
+		  }
+
+		  type Nested4 {
+			age: Int
+		  }`,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(config)
+}
+```
+
+## Contributing
+
+The composition-go library uses code from [composition](../composition) and [shared](../shared), which
+is bundled into [index.global.js](index.global.js). To keep this code up to date, run `go generate`
+within this package.
 
 ## Performance considerations
 
