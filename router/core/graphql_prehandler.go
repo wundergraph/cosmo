@@ -61,10 +61,10 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		var writtenBytes int
 
 		clientInfo := NewClientInfoFromRequest(r)
-		metrics := h.metrics.StartOperation(r.Context(), clientInfo, r.ContentLength)
+		metrics := h.metrics.StartOperation(clientInfo, r.ContentLength)
 
 		defer func() {
-			metrics.Finish(r.Context(), hasRequestError, statusCode, writtenBytes)
+			metrics.Finish(hasRequestError, statusCode, writtenBytes)
 		}()
 
 		validatedReq, err := h.accessController.Access(w, r)
@@ -104,7 +104,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 		metrics.AddAttributes(commonAttributeValues...)
 
-		initializeSpan(r.Context(), operation, commonAttributeValues)
+		initializeSpan(r.Context(), operation, clientInfo, commonAttributeValues)
 
 		opContext, err := h.planner.Plan(operation, clientInfo)
 		if err != nil {

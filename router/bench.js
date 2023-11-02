@@ -12,6 +12,8 @@ export default function () {
 
   let headers = {
     'Content-Type': 'application/json',
+    'GraphQL-Client-Name': 'k6',
+    'GraphQL-Client-Version': '0.0.1',
   };
 
   let res = http.post('http://localhost:3002/graphql', JSON.stringify({ query: query }), { headers: headers });
