@@ -207,7 +207,8 @@ services:
       CORS_ALLOW_CREDENTIALS: true
       LISTEN_ADDR: "0.0.0.0:3002"
       CONTROLPLANE_URL: http://controlplane:3001
-      TELEMETRY_ENDPOINT: http://otelcollector:4318
+      DEFAULT_TELEMETRY_ENDPOINT: http://otelcollector:4318
+      GRAPHQL_METRICS_COLLECTOR_ENDPOINT: http://graphqlmetrics:4005
       GRAPH_API_TOKEN: ${ROUTER_TOKEN}
     restart: on-failure
     networks:
