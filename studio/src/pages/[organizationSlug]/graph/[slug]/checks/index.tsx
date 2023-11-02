@@ -1,19 +1,15 @@
-import { getCheckBadge, getCheckIcon } from "@/components/check-badge-icon";
+import {
+  getCheckBadge,
+  getCheckIcon,
+  isCheckSuccessful,
+} from "@/components/check-badge-icon";
 import { DatePickerWithRange } from "@/components/date-picker-with-range";
 import { EmptyState } from "@/components/empty-state";
 import { GraphContext, getGraphLayout } from "@/components/layout/graph-layout";
 import { PageHeader } from "@/components/layout/head";
 import { TitleLayout } from "@/components/layout/title-layout";
-import { SchemaViewer, SchemaViewerActions } from "@/components/schema-viewer";
 import { Button } from "@/components/ui/button";
 import { CLI } from "@/components/ui/cli";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { Loader } from "@/components/ui/loader";
 import {
   Select,
@@ -69,29 +65,6 @@ const useDateRange = () => {
     startDate,
     endDate,
   };
-};
-
-const ProposedSchema = ({
-  sdl,
-  subgraphName,
-}: {
-  sdl: string;
-  subgraphName: string;
-}) => {
-  return (
-    <Dialog>
-      <DialogTrigger className="text-primary">View</DialogTrigger>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>Schema</DialogTitle>
-        </DialogHeader>
-        <div className="scrollbar-custom h-[70vh] overflow-auto rounded border">
-          <SchemaViewer sdl={sdl} disableLinking />
-        </div>
-        <SchemaViewerActions sdl={sdl} subgraphName={subgraphName} />
-      </DialogContent>
-    </Dialog>
-  );
 };
 
 const ChecksPage: NextPageWithLayout = () => {
@@ -186,7 +159,7 @@ const ChecksPage: NextPageWithLayout = () => {
             <TableHead className="text-center">Status</TableHead>
             <TableHead className="text-center">Composable</TableHead>
             <TableHead className="text-center">Non Breaking</TableHead>
-            <TableHead className="text-center">Proposed Schema</TableHead>
+            <TableHead className="text-center">Operations</TableHead>
             <TableHead className="text-center">Details</TableHead>
           </TableRow>
         </TableHeader>
@@ -195,13 +168,19 @@ const ChecksPage: NextPageWithLayout = () => {
             data.checks.map(
               ({
                 id,
-                isBreaking,
                 isComposable,
+                isBreaking,
+                hasClientTraffic,
+                isForcedSuccess,
                 subgraphName,
                 timestamp,
-                proposedSubgraphSchemaSDL,
-                isForcedSuccess,
               }) => {
+                const isSuccessful = isCheckSuccessful(
+                  isComposable,
+                  isBreaking,
+                  hasClientTraffic,
+                );
+
                 return (
                   <TableRow key={id}>
                     <TableCell className="font-medium ">
@@ -209,20 +188,11 @@ const ChecksPage: NextPageWithLayout = () => {
                     </TableCell>
                     <TableCell>{subgraphName}</TableCell>
                     <TableCell className="text-center">
-                      {getCheckBadge(isBreaking, isComposable, isForcedSuccess)}
+                      {getCheckBadge(isSuccessful, isForcedSuccess)}
                     </TableCell>
                     <TableCell>{getCheckIcon(isComposable)}</TableCell>
                     <TableCell>{getCheckIcon(!isBreaking)}</TableCell>
-                    <TableCell className="text-center">
-                      {proposedSubgraphSchemaSDL ? (
-                        <ProposedSchema
-                          sdl={proposedSubgraphSchemaSDL}
-                          subgraphName={subgraphName}
-                        />
-                      ) : (
-                        "-"
-                      )}
-                    </TableCell>
+                    <TableCell>{getCheckIcon(!hasClientTraffic)}</TableCell>
                     <TableCell className="text-center text-primary">
                       <Link
                         onClick={() => setRouteCache(router.asPath)}

@@ -604,6 +604,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               continue;
             }
 
+            await schemaCheckRepo.createCheckedFederatedGraph(
+              schemaCheckID,
+              composition.id,
+              graphConfig.trafficCheckDays,
+            );
+
             const result = await trafficInspector.inspect(inspectorChanges.changes, {
               daysToConsider: graphConfig.trafficCheckDays,
               federatedGraphId: composition.id,
@@ -1049,36 +1055,47 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               code: EnumStatusCode.ERR_NOT_FOUND,
               details: 'Requested graph does not exist',
             },
+            affectedGraphs: [],
           };
         }
 
         const check = await subgraphRepo.checkById(req.checkId, graph.name);
+        const checkDetails = await subgraphRepo.checkDetails(req.checkId, graph.targetId);
 
-        if (!check) {
+        if (!check || !checkDetails) {
           return {
             response: {
               code: EnumStatusCode.ERR_NOT_FOUND,
               details: 'Requested check not found',
             },
+            affectedGraphs: [],
           };
         }
 
-        const affectedOperations = await schemaCheckRepo.getAffectedOperationsByCheckId(check.id);
-
-        const inspectedOperations: InspectorOperationResult[] = affectedOperations.map((operation) => ({
-          ...operation,
-          schemaChangeId: operation.schemaChangeIds[0],
-        }));
-
-        const operationUsageStats: PlainMessage<CheckOperationUsageStats> =
-          collectOperationUsageStats(inspectedOperations);
+        let addCount = 0;
+        let minusCount = 0;
+        for (const log of checkDetails.changes) {
+          if (log.changeType.includes('REMOVED')) {
+            minusCount += 1;
+          } else if (log.changeType.includes('ADDED')) {
+            addCount += 1;
+          } else if (log.changeType.includes('CHANGED')) {
+            addCount += 1;
+            minusCount += 1;
+          }
+        }
 
         return {
           response: {
             code: EnumStatusCode.OK,
           },
           check,
-          operationUsageStats,
+          affectedGraphs: check.affectedGraphs,
+          proposedSubgraphSchemaSDL: check.proposedSubgraphSchemaSDL,
+          changeCounts: {
+            additions: addCount,
+            deletions: minusCount,
+          },
         };
       });
     },
@@ -1107,10 +1124,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const check = await subgraphRepo.checkById(req.checkId, graph.name);
         const checkDetails = await subgraphRepo.checkDetails(req.checkId, graph.targetId);
 
-        if (!check || !checkDetails) {
+        if (!checkDetails) {
           return {
             response: {
               code: EnumStatusCode.ERR_NOT_FOUND,
@@ -1120,7 +1136,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const affectedOperations = await schemaCheckRepo.getAffectedOperationsByCheckId(check.id);
+        const affectedOperations = await schemaCheckRepo.getAffectedOperationsByCheckId(req.checkId);
 
         return {
           response: {

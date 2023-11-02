@@ -1,3 +1,4 @@
+import { FieldUsageSheet } from "@/components/analytics/field-usage";
 import { ChangesTable } from "@/components/checks/changes-table";
 import { ChecksToolbar } from "@/components/checks/toolbar";
 import { EmptyState } from "@/components/empty-state";
@@ -39,9 +40,9 @@ import {
 import copy from "copy-to-clipboard";
 import Fuse from "fuse.js";
 import { useRouter } from "next/router";
-import { useContext, useEffect, useState } from "react";
-import * as prettier from "prettier/standalone";
 import graphQLPlugin from "prettier/plugins/graphql";
+import * as prettier from "prettier/standalone";
+import { useContext, useEffect, useState } from "react";
 
 const OperationContent = ({
   hash,
@@ -106,7 +107,7 @@ const OperationContentDialog = ({ hash }: { hash: string }) => {
     <Dialog open={open} onOpenChange={(val) => setOpen(val)}>
       <DialogTrigger asChild>
         <Button size="sm" className="flex-1 md:flex-none" variant="secondary">
-          View body
+          View Operation Content
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-2xl">
@@ -232,29 +233,11 @@ const CheckOperationsPage: NextPageWithLayout = () => {
                   </div>
                 </AccordionTrigger>
                 <AccordionContent>
-                  <div className="flex flex-col gap-y-6 p-2">
-                    <div className="flex flex-col justify-between gap-x-4 gap-y-6 md:flex-row md:items-center">
-                      <div className="flex flex-col gap-x-4 md:flex-row md:items-center">
-                        <p>
-                          First seen =&gt;{" "}
-                          {formatDateTime(new Date(firstSeenAt))}
-                        </p>
-                        <p>
-                          Last seen =&gt; {formatDateTime(new Date(lastSeenAt))}{" "}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-x-2">
-                        <OperationContentDialog hash={hash} />
-                        <Button
-                          size="sm"
-                          className="flex-1 md:flex-none"
-                          variant="secondary"
-                          onClick={() => copyLink(hash)}
-                        >
-                          Share link
-                        </Button>
-                      </div>
-                    </div>
+                  <div className="flex flex-col gap-y-6 px-2">
+                    <p className="text-muted-foreground">
+                      First seen at {formatDateTime(new Date(firstSeenAt))} and
+                      last seen at {formatDateTime(new Date(lastSeenAt))}
+                    </p>
                     <ChangesTable
                       changes={impactingChanges}
                       caption={
@@ -264,6 +247,17 @@ const CheckOperationsPage: NextPageWithLayout = () => {
                         </>
                       }
                     />
+                    <div className="justify-s flex items-center gap-x-2">
+                      <OperationContentDialog hash={hash} />
+                      <Button
+                        size="sm"
+                        className="flex-1 md:flex-none"
+                        variant="secondary"
+                        onClick={() => copyLink(hash)}
+                      >
+                        Share link
+                      </Button>
+                    </div>
                   </div>
                 </AccordionContent>
               </AccordionItem>
@@ -271,6 +265,7 @@ const CheckOperationsPage: NextPageWithLayout = () => {
           },
         )}
       </Accordion>
+      <FieldUsageSheet />
     </div>
   );
 };

@@ -1,8 +1,8 @@
-import { joinLabel, normalizeURL, splitLabel } from '@wundergraph/cosmo-shared';
-import { and, asc, desc, eq, gt, inArray, lt, notInArray, SQL, sql } from 'drizzle-orm';
-import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { PlainMessage } from '@bufbuild/protobuf';
 import { CompositionError } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { joinLabel, normalizeURL, splitLabel } from '@wundergraph/cosmo-shared';
+import { SQL, and, asc, desc, eq, gt, inArray, lt, notInArray, sql } from 'drizzle-orm';
+import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema.js';
 import { schemaChecks, schemaVersion, subgraphs, subgraphsToFederatedGraph, targets } from '../../db/schema.js';
 import {
@@ -10,12 +10,12 @@ import {
   GetChecksResponse,
   Label,
   ListFilterOptions,
-  SchemaCheckDTO,
   SchemaCheckDetailsDTO,
+  SchemaCheckSummaryDTO,
   SubgraphDTO,
 } from '../../types/index.js';
-import { hasLabelsChanged, normalizeLabels } from '../util.js';
 import { Composer } from '../composition/composer.js';
+import { hasLabelsChanged, normalizeLabels } from '../util.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 
 type SubscriptionProtocol = 'ws' | 'sse' | 'sse_post';
@@ -463,7 +463,7 @@ export class SubgraphRepository {
         createdAt: true,
         isComposable: true,
         hasBreakingChanges: true,
-        proposedSubgraphSchemaSDL: true,
+        hasClientTraffic: true,
         forcedSuccess: true,
       },
       limit,
@@ -489,7 +489,7 @@ export class SubgraphRepository {
         timestamp: c.createdAt.toISOString(),
         isBreaking: c.hasBreakingChanges ?? false,
         isComposable: c.isComposable ?? false,
-        proposedSubgraphSchemaSDL: c.proposedSubgraphSchemaSDL ?? undefined,
+        hasClientTraffic: c.hasClientTraffic ?? false,
         isForcedSuccess: c.forcedSuccess ?? false,
       })),
       checksCount,
@@ -544,9 +544,12 @@ export class SubgraphRepository {
     return checksCount[0].count;
   }
 
-  public async checkById(id: string, federatedGraphName: string): Promise<SchemaCheckDTO | undefined> {
+  public async checkById(id: string, federatedGraphName: string): Promise<SchemaCheckSummaryDTO | undefined> {
     const check = await this.db.query.schemaChecks.findFirst({
       where: eq(schema.schemaChecks.id, id),
+      with: {
+        affectedGraphs: true,
+      },
     });
 
     if (!check) {
@@ -564,8 +567,13 @@ export class SubgraphRepository {
       timestamp: check.createdAt.toISOString(),
       isBreaking: check.hasBreakingChanges ?? false,
       isComposable: check.isComposable ?? false,
+      hasClientTraffic: check.hasClientTraffic ?? false,
       proposedSubgraphSchemaSDL: check.proposedSubgraphSchemaSDL ?? undefined,
       isForcedSuccess: check.forcedSuccess ?? false,
+      affectedGraphs: check.affectedGraphs.map(({ federatedGraphId, trafficCheckDays }) => ({
+        id: federatedGraphId,
+        trafficCheckDays,
+      })),
     };
   }
 

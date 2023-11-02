@@ -61,8 +61,16 @@ export interface SchemaCheckDTO {
   timestamp: string;
   isComposable: boolean;
   isBreaking: boolean;
-  proposedSubgraphSchemaSDL?: string;
+  hasClientTraffic: boolean;
   isForcedSuccess: boolean;
+}
+
+export interface SchemaCheckSummaryDTO extends SchemaCheckDTO {
+  proposedSubgraphSchemaSDL?: string;
+  affectedGraphs: {
+    id: string;
+    trafficCheckDays: number;
+  }[];
 }
 
 export interface GetChecksResponse {

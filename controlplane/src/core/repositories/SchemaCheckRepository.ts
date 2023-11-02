@@ -92,6 +92,17 @@ export class SchemaCheckRepository {
     await this.db.insert(schemaCheckChangeActionOperationUsage).values(values).execute();
   }
 
+  public async createCheckedFederatedGraph(schemaCheckId: string, federatedGraphId: string, trafficCheckDays: number) {
+    await this.db
+      .insert(schema.schemaCheckFederatedGraphs)
+      .values({
+        checkId: schemaCheckId,
+        federatedGraphId,
+        trafficCheckDays,
+      })
+      .execute();
+  }
+
   public async getAffectedOperationsByCheckId(checkId: string) {
     const changeActionIds = (
       await this.db.query.schemaCheckChangeAction.findMany({

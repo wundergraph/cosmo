@@ -2031,14 +2031,14 @@ export class SchemaCheck extends Message<SchemaCheck> {
   isBreaking = false;
 
   /**
-   * @generated from field: bool isForcedSuccess = 7;
+   * @generated from field: bool hasClientTraffic = 7;
    */
-  isForcedSuccess = false;
+  hasClientTraffic = false;
 
   /**
-   * @generated from field: optional string proposedSubgraphSchemaSDL = 8;
+   * @generated from field: bool isForcedSuccess = 8;
    */
-  proposedSubgraphSchemaSDL?: string;
+  isForcedSuccess = false;
 
   constructor(data?: PartialMessage<SchemaCheck>) {
     super();
@@ -2054,8 +2054,8 @@ export class SchemaCheck extends Message<SchemaCheck> {
     { no: 4, name: "timestamp", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "isComposable", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 6, name: "isBreaking", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 7, name: "isForcedSuccess", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 8, name: "proposedSubgraphSchemaSDL", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 7, name: "hasClientTraffic", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 8, name: "isForcedSuccess", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SchemaCheck {
@@ -2188,9 +2188,19 @@ export class GetCheckSummaryResponse extends Message<GetCheckSummaryResponse> {
   check?: SchemaCheck;
 
   /**
-   * @generated from field: wg.cosmo.platform.v1.CheckOperationUsageStats operationUsageStats = 3;
+   * @generated from field: repeated wg.cosmo.platform.v1.GetCheckSummaryResponse.AffectedGraph affected_graphs = 3;
    */
-  operationUsageStats?: CheckOperationUsageStats;
+  affectedGraphs: GetCheckSummaryResponse_AffectedGraph[] = [];
+
+  /**
+   * @generated from field: optional string proposedSubgraphSchemaSDL = 4;
+   */
+  proposedSubgraphSchemaSDL?: string;
+
+  /**
+   * @generated from field: wg.cosmo.platform.v1.GetCheckSummaryResponse.ChangeCounts changeCounts = 5;
+   */
+  changeCounts?: GetCheckSummaryResponse_ChangeCounts;
 
   constructor(data?: PartialMessage<GetCheckSummaryResponse>) {
     super();
@@ -2202,7 +2212,9 @@ export class GetCheckSummaryResponse extends Message<GetCheckSummaryResponse> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "check", kind: "message", T: SchemaCheck },
-    { no: 3, name: "operationUsageStats", kind: "message", T: CheckOperationUsageStats },
+    { no: 3, name: "affected_graphs", kind: "message", T: GetCheckSummaryResponse_AffectedGraph, repeated: true },
+    { no: 4, name: "proposedSubgraphSchemaSDL", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 5, name: "changeCounts", kind: "message", T: GetCheckSummaryResponse_ChangeCounts },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCheckSummaryResponse {
@@ -2219,6 +2231,92 @@ export class GetCheckSummaryResponse extends Message<GetCheckSummaryResponse> {
 
   static equals(a: GetCheckSummaryResponse | PlainMessage<GetCheckSummaryResponse> | undefined, b: GetCheckSummaryResponse | PlainMessage<GetCheckSummaryResponse> | undefined): boolean {
     return proto3.util.equals(GetCheckSummaryResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetCheckSummaryResponse.ChangeCounts
+ */
+export class GetCheckSummaryResponse_ChangeCounts extends Message<GetCheckSummaryResponse_ChangeCounts> {
+  /**
+   * @generated from field: int32 additions = 1;
+   */
+  additions = 0;
+
+  /**
+   * @generated from field: int32 deletions = 2;
+   */
+  deletions = 0;
+
+  constructor(data?: PartialMessage<GetCheckSummaryResponse_ChangeCounts>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetCheckSummaryResponse.ChangeCounts";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "additions", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 2, name: "deletions", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCheckSummaryResponse_ChangeCounts {
+    return new GetCheckSummaryResponse_ChangeCounts().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetCheckSummaryResponse_ChangeCounts {
+    return new GetCheckSummaryResponse_ChangeCounts().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetCheckSummaryResponse_ChangeCounts {
+    return new GetCheckSummaryResponse_ChangeCounts().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetCheckSummaryResponse_ChangeCounts | PlainMessage<GetCheckSummaryResponse_ChangeCounts> | undefined, b: GetCheckSummaryResponse_ChangeCounts | PlainMessage<GetCheckSummaryResponse_ChangeCounts> | undefined): boolean {
+    return proto3.util.equals(GetCheckSummaryResponse_ChangeCounts, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetCheckSummaryResponse.AffectedGraph
+ */
+export class GetCheckSummaryResponse_AffectedGraph extends Message<GetCheckSummaryResponse_AffectedGraph> {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id = "";
+
+  /**
+   * @generated from field: int32 traffic_check_days = 2;
+   */
+  trafficCheckDays = 0;
+
+  constructor(data?: PartialMessage<GetCheckSummaryResponse_AffectedGraph>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetCheckSummaryResponse.AffectedGraph";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "traffic_check_days", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCheckSummaryResponse_AffectedGraph {
+    return new GetCheckSummaryResponse_AffectedGraph().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetCheckSummaryResponse_AffectedGraph {
+    return new GetCheckSummaryResponse_AffectedGraph().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetCheckSummaryResponse_AffectedGraph {
+    return new GetCheckSummaryResponse_AffectedGraph().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetCheckSummaryResponse_AffectedGraph | PlainMessage<GetCheckSummaryResponse_AffectedGraph> | undefined, b: GetCheckSummaryResponse_AffectedGraph | PlainMessage<GetCheckSummaryResponse_AffectedGraph> | undefined): boolean {
+    return proto3.util.equals(GetCheckSummaryResponse_AffectedGraph, a, b);
   }
 }
 

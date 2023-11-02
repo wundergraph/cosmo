@@ -1,3 +1,4 @@
+import { FieldUsageSheet } from "@/components/analytics/field-usage";
 import { ChangesTable } from "@/components/checks/changes-table";
 import { ChecksToolbar } from "@/components/checks/toolbar";
 import { EmptyState } from "@/components/empty-state";
@@ -44,21 +45,22 @@ const CheckDetailsPage: NextPageWithLayout = () => {
 
   return (
     <div className="flex flex-col gap-y-6">
-      <div className="flex flex-col gap-y-2">
-        <h3 className="font-semibold">Changes</h3>
+      <div className="flex flex-col gap-y-4">
+        <h3 className="text-xl font-semibold">Changes</h3>
         <ChangesTable
           changes={data.changes}
           caption={`${data.changes.length} changes found`}
         />
       </div>
-      <div className="flex flex-col gap-y-2">
-        <h3 className="font-semibold">Composition Errors</h3>
+      <div className="flex flex-col gap-y-4">
+        <h3 className="text-xl font-semibold">Composition Errors</h3>
         <pre className="overflow-auto rounded-md bg-secondary p-4 text-sm text-secondary-foreground">
           {data.compositionErrors.length > 0
             ? data.compositionErrors.join("\n")
             : "No composition errors"}
         </pre>
       </div>
+      <FieldUsageSheet />
     </div>
   );
 };

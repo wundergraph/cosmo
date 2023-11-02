@@ -1,18 +1,17 @@
 import { cn } from "@/lib/utils";
-import {
-  Table,
-  TableHeader,
-  TableRow,
-  TableHead,
-  TableBody,
-  TableCell,
-  TableCaption,
-} from "../ui/table";
-import { Button } from "../ui/button";
 import { SchemaChange } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { useRouter } from "next/router";
+import { Button } from "../ui/button";
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../ui/table";
 import { useToast } from "../ui/use-toast";
-import { FieldUsageSheet } from "../analytics/field-usage";
 
 export const ChangesTable = ({
   changes,
@@ -45,6 +44,7 @@ export const ChangesTable = ({
       ].includes(changeType)
     ) {
       query.isNamedType = true;
+      query.showUsage = path.split(".")[0];
     }
 
     router.replace({
@@ -57,46 +57,40 @@ export const ChangesTable = ({
   };
 
   return (
-    <>
-      <div className="scrollbar-custom max-h-[70vh] overflow-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[200px]">Change</TableHead>
-              <TableHead className="w-[200px]">Type</TableHead>
-              <TableHead>Description</TableHead>
-              <TableHead className="w-2/12 2xl:w-1/12">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {changes.map(({ changeType, message, isBreaking, path }) => {
-              return (
-                <TableRow
-                  key={changeType + message}
-                  className={cn(isBreaking && "text-destructive")}
-                >
-                  <TableCell>
-                    {isBreaking ? "Breaking" : "Non-Breaking"}
-                  </TableCell>
-                  <TableCell>{changeType}</TableCell>
-                  <TableCell>{message}</TableCell>
-                  <TableCell>
-                    <Button
-                      onClick={() => openUsage(changeType, path)}
-                      className="p-0"
-                      variant="link"
-                    >
-                      View usage
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-          <TableCaption>{caption}</TableCaption>
-        </Table>
-      </div>
-      <FieldUsageSheet />
-    </>
+    <div className="scrollbar-custom max-h-[70vh] overflow-auto">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-[200px]">Change</TableHead>
+            <TableHead className="w-[200px]">Type</TableHead>
+            <TableHead>Description</TableHead>
+            <TableHead className="w-2/12 2xl:w-1/12">Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {changes.map(({ changeType, message, isBreaking, path }) => {
+            return (
+              <TableRow key={changeType + message}>
+                <TableCell className={cn(isBreaking && "text-destructive")}>
+                  {isBreaking ? "Breaking" : "Non-Breaking"}
+                </TableCell>
+                <TableCell>{changeType}</TableCell>
+                <TableCell>{message}</TableCell>
+                <TableCell>
+                  <Button
+                    onClick={() => openUsage(changeType, path)}
+                    className="p-0"
+                    variant="link"
+                  >
+                    View usage
+                  </Button>
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+        <TableCaption>{caption}</TableCaption>
+      </Table>
+    </div>
   );
 };
