@@ -327,6 +327,65 @@ func BenchmarkParallel(b *testing.B) {
 	wg.Wait()
 }
 
+const (
+	bigEmployeesQuery = `{
+  employees {
+    id
+    details {
+      forename
+      surname
+      hasChildren
+    }
+    role {
+      title
+      department
+    }
+    hobbies {
+      ... on Exercise {
+        category
+      }
+      ... on Flying {
+        planeModels
+        yearsOfExperience
+      }
+      ... on Gaming {
+        name
+        genres
+        yearsOfExperience
+      }
+      ... on Programming {
+        languages
+      }
+      ... on Travelling {
+        countriesLived
+      }
+      ... on Other {
+        name
+      }
+    }
+  }
+}`
+	bigEmployeesResponse = `{"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse","hasChildren":true},"role":{"title":["Founder","CEO"],"department":"ENGINEERING"},"hobbies":[{"category":"SPORT"},{"name":"Counter Strike","genres":["FPS"],"yearsOfExperience":20},{"name":"WunderGraph"},{"languages":["GO","TYPESCRIPT"]},{"countriesLived":["ENGLAND","GERMANY"]}]},{"id":2,"details":{"forename":"Dustin","surname":"Deus","hasChildren":false},"role":{"title":["Co-founder","Tech Lead"],"department":"ENGINEERING"},"hobbies":[{"category":"STRENGTH_TRAINING"},{"name":"Counter Strike","genres":["FPS"],"yearsOfExperience":0.5},{"languages":["GO","RUST"]}]},{"id":3,"details":{"forename":"Stefan","surname":"Avram","hasChildren":false},"role":{"title":["Co-founder","Head of Growth"],"department":"MARKETING"},"hobbies":[{"category":"HIKING"},{"category":"SPORT"},{"name":"Reading"},{"countriesLived":["AMERICA","SERBIA"]}]},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer","hasChildren":true},"role":{"title":["Co-founder","COO"],"department":"OPERATIONS"},"hobbies":[{"category":"HIKING"},{"planeModels":["Aquila AT01","Cessna C172","Cessna C206","Cirrus SR20","Cirrus SR22","Diamond DA40","Diamond HK36","Diamond DA20","Piper Cub","Pitts Special","Robin DR400"],"yearsOfExperience":20},{"countriesLived":["AMERICA","GERMANY"]}]},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin","hasChildren":false},"role":{"title":["Senior GO Engineer"],"department":"ENGINEERING"},"hobbies":[{"name":"Building a house"},{"name":"Forumla 1"},{"name":"Raising cats"}]},{"id":7,"details":{"forename":"Suvij","surname":"Surya","hasChildren":false},"role":{"title":["Software Engineer"],"department":"ENGINEERING"},"hobbies":[{"name":"Chess","genres":["BOARD"],"yearsOfExperience":9.5},{"name":"Watching anime"}]},{"id":8,"details":{"forename":"Nithin","surname":"Kumar","hasChildren":false},"role":{"title":["Software Engineer"],"department":"ENGINEERING"},"hobbies":[{"category":"STRENGTH_TRAINING"},{"name":"Miscellaneous","genres":["ADVENTURE","RPG","SIMULATION","STRATEGY"],"yearsOfExperience":17},{"name":"Watching anime"}]},{"id":9,"details":{"forename":"Alberto","surname":"Garcia Hierro","hasChildren":true},"role":{"title":["Senior Backend Engineer"],"department":"ENGINEERING"},"hobbies":[{"category":"CALISTHENICS"},{"name":"Chess","genres":["BOARD"],"yearsOfExperience":2},{"languages":["RUST"]}]},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma","hasChildren":false},"role":{"title":["Senior Frontend Engineer"],"department":"ENGINEERING"},"hobbies":[{"languages":["TYPESCRIPT"]},{"category":"CALISTHENICS"},{"category":"HIKING"},{"category":"STRENGTH_TRAINING"},{"name":"saas-ui"},{"countriesLived":["GERMANY","INDONESIA","NETHERLANDS","PORTUGAL","SPAIN","THAILAND"]}]},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse","hasChildren":true},"role":{"title":["Accounting \\u0026 Finance"],"department":"OPERATIONS"},"hobbies":[{"name":"Spending time with the family"}]},{"id":12,"details":{"forename":"David","surname":"Stutt","hasChildren":false},"role":{"title":["Software Engineer"],"department":"ENGINEERING"},"hobbies":[{"languages":["CSHARP","GO","RUST","TYPESCRIPT"]},{"category":"STRENGTH_TRAINING"},{"name":"Miscellaneous","genres":["ADVENTURE","BOARD","CARD","ROGUELITE","RPG","SIMULATION","STRATEGY"],"yearsOfExperience":25.5},{"countriesLived":["ENGLAND","KOREA","TAIWAN"]}]}]}}`
+)
+
+func BenchmarkPb(b *testing.B) {
+	server := setupServer(b)
+	q := &testQuery{
+		Body: bigEmployeesQuery,
+	}
+	b.SetBytes(int64(len(bigEmployeesResponse)))
+	b.ReportAllocs()
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			got := sendQueryOK(b, server, q)
+			if len(got) < 3000 {
+				b.Errorf("unexpected result %q, expecting \n\n%q", got, bigEmployeesResponse)
+			}
+		}
+	})
+}
+
 func BenchmarkParallelInlineVariables(b *testing.B) {
 	server := setupServer(b)
 	q := &testQuery{

@@ -1,6 +1,7 @@
 package composition
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -97,6 +98,17 @@ func TestFederateSubgraphs(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, normalizeWhiteSpace(expectedSDL), normalizeWhiteSpace(federated.SDL))
 	assert.Len(t, federated.ArgumentConfigurations, 0)
+}
+
+func TestBuildRouterConfiguration(t *testing.T) {
+	federated, err := BuildRouterConfiguration(subgraphs...)
+	require.NoError(t, err)
+	// Since the configuration format might change, we don't
+	// test the whole payload, just that it contains valid
+	// JSON and the engineConfig key
+	var m map[string]any
+	require.NoError(t, json.Unmarshal([]byte(federated), &m))
+	assert.NotNil(t, m["engineConfig"])
 }
 
 func BenchmarkFederateSubgraphs(b *testing.B) {
