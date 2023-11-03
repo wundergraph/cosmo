@@ -248,23 +248,25 @@ const CheckOverviewPage: NextPageWithLayout = () => {
                   </div>
                 </TableCell>
                 <TableCell className="border-l text-center">
-                  {getCheckIcon(data.check.isBreaking)}
+                  {getCheckIcon(!data.check.isBreaking)}
                 </TableCell>
               </TableRow>
-              <TableRow>
-                <TableCell>
-                  <div className="flex items-center space-x-1.5">
-                    <div>No affected operations</div>
-                    <InfoTooltip>
-                      Describes if the proposed schema affects any client
-                      operations based on real usage data.
-                    </InfoTooltip>
-                  </div>
-                </TableCell>
-                <TableCell className="border-l text-center">
-                  {getCheckIcon(!data.check.hasClientTraffic)}
-                </TableCell>
-              </TableRow>
+              {data.check.isBreaking && (
+                <TableRow>
+                  <TableCell>
+                    <div className="flex items-center space-x-1.5">
+                      <div>No affected operations</div>
+                      <InfoTooltip>
+                        Describes if the proposed schema affects any client
+                        operations based on real usage data.
+                      </InfoTooltip>
+                    </div>
+                  </TableCell>
+                  <TableCell className="border-l text-center">
+                    {getCheckIcon(!data.check.hasClientTraffic)}
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </div>

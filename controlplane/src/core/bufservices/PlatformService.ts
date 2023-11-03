@@ -583,6 +583,14 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         );
 
         for (const composition of result.compositions) {
+          const graphConfig = await fedGraphRepo.getConfig(composition.id);
+
+          await schemaCheckRepo.createCheckedFederatedGraph(
+            schemaCheckID,
+            composition.id,
+            graphConfig.trafficCheckDays,
+          );
+
           // We collect composition errors for all federated graphs
           if (composition.errors.length > 0) {
             for (const error of composition.errors) {
@@ -595,20 +603,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
           // We don't collect operation usage when we have composition errors
           if (composition.errors.length === 0 && inspectorChanges.inspectable && inspectorChanges.changes.length > 0) {
-            const graphConfig = await fedGraphRepo.getConfig(composition.id);
-            if (!graphConfig) {
-              continue;
-            }
-
             if (graphConfig.trafficCheckDays <= 0) {
               continue;
             }
-
-            await schemaCheckRepo.createCheckedFederatedGraph(
-              schemaCheckID,
-              composition.id,
-              graphConfig.trafficCheckDays,
-            );
 
             const result = await trafficInspector.inspect(inspectorChanges.changes, {
               daysToConsider: graphConfig.trafficCheckDays,
@@ -632,24 +629,15 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           }
         }
 
-        const uniqueHashes: { [key: string]: boolean } = {};
-        const uniqueInspectedOperations: InspectorOperationResult[] = [];
-        for (const result of inspectedOperations) {
-          if (!uniqueHashes[result.hash]) {
-            uniqueHashes[result.hash] = true;
-            uniqueInspectedOperations.push(result);
-          }
-        }
-
-        const operationUsageStats: PlainMessage<CheckOperationUsageStats> =
-          collectOperationUsageStats(uniqueInspectedOperations);
-
         // Update the overall schema check with the results
         await schemaCheckRepo.update({
           schemaCheckID,
           hasClientTraffic,
           hasBreakingChanges,
         });
+
+        const operationUsageStats: PlainMessage<CheckOperationUsageStats> =
+          collectOperationUsageStats(inspectedOperations);
 
         if (req.gitInfo && opts.githubApp) {
           const githubRepo = new GitHubRepository(opts.db, opts.githubApp);

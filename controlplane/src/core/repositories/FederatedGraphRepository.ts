@@ -107,16 +107,21 @@ export class FederatedGraphRepository {
     return this.db.insert(federatedGraphConfigs).values({ federatedGraphId, trafficCheckDays }).execute();
   }
 
-  public async getConfig(federatedGraphId: string): Promise<FederatedGraphConfig | undefined> {
+  public async getConfig(federatedGraphId: string): Promise<FederatedGraphConfig> {
     const config = await this.db.query.federatedGraphConfigs.findFirst({
       columns: {
         trafficCheckDays: true,
       },
       where: eq(schema.federatedGraphConfigs.federatedGraphId, federatedGraphId),
     });
+
+    // return default config
     if (!config) {
-      return undefined;
+      return {
+        trafficCheckDays: 7,
+      };
     }
+
     return {
       trafficCheckDays: config.trafficCheckDays,
     };

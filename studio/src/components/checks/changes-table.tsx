@@ -1,5 +1,7 @@
 import { cn } from "@/lib/utils";
+import { BarChartIcon, GlobeIcon } from "@radix-ui/react-icons";
 import { SchemaChange } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
+import Link from "next/link";
 import { useRouter } from "next/router";
 import { Button } from "../ui/button";
 import {
@@ -11,6 +13,12 @@ import {
   TableHeader,
   TableRow,
 } from "../ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "../ui/tooltip";
 import { useToast } from "../ui/use-toast";
 
 export const ChangesTable = ({
@@ -77,13 +85,57 @@ export const ChangesTable = ({
                 <TableCell>{changeType}</TableCell>
                 <TableCell>{message}</TableCell>
                 <TableCell>
-                  <Button
-                    onClick={() => openUsage(changeType, path)}
-                    className="p-0"
-                    variant="link"
-                  >
-                    View usage
-                  </Button>
+                  <div className="flex items-center gap-x-2">
+                    <TooltipProvider>
+                      <Tooltip delayDuration={100}>
+                        <TooltipTrigger>
+                          <Button
+                            disabled={!path}
+                            variant="secondary"
+                            size="icon-sm"
+                            asChild
+                          >
+                            <Link
+                              href={
+                                path
+                                  ? {
+                                      pathname: `/[organizationSlug]/graph/[slug]/schema`,
+                                      query: {
+                                        organizationSlug:
+                                          router.query.organizationSlug,
+                                        slug: router.query.slug,
+                                        typename: path?.split(".")?.[0],
+                                      },
+                                    }
+                                  : "#"
+                              }
+                            >
+                              <GlobeIcon />
+                            </Link>
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {path
+                            ? "Open in Explorer"
+                            : "Cannot open in explorer. Path to type unavailable"}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    <TooltipProvider>
+                      <Tooltip delayDuration={100}>
+                        <TooltipTrigger>
+                          <Button
+                            onClick={() => openUsage(changeType, path)}
+                            variant="secondary"
+                            size="icon-sm"
+                          >
+                            <BarChartIcon />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>View Usage</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
                 </TableCell>
               </TableRow>
             );

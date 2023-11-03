@@ -194,7 +194,18 @@ export class SchemaUsageTrafficInspector {
 }
 
 export function collectOperationUsageStats(inspectorResult: InspectorOperationResult[]) {
-  if (inspectorResult.length === 0) {
+  // Only consider unique hashes
+  const inspectedOperations: InspectorOperationResult[] = [];
+
+  const uniqueHashes: { [key: string]: boolean } = {};
+  for (const result of inspectorResult) {
+    if (!uniqueHashes[result.hash]) {
+      uniqueHashes[result.hash] = true;
+      inspectedOperations.push(result);
+    }
+  }
+
+  if (inspectedOperations.length === 0) {
     return {
       totalOperations: 0,
       firstSeenAt: new Date().toUTCString(),
@@ -202,13 +213,13 @@ export function collectOperationUsageStats(inspectorResult: InspectorOperationRe
     };
   }
 
-  const totalOperations = inspectorResult.length;
-  let firstSeenAt = new Date(inspectorResult[0].firstSeenAt);
-  let lastSeenAt = new Date(inspectorResult[0].lastSeenAt);
+  const totalOperations = inspectedOperations.length;
+  let firstSeenAt = new Date(inspectedOperations[0].firstSeenAt);
+  let lastSeenAt = new Date(inspectedOperations[0].lastSeenAt);
 
-  for (let i = 1; i < inspectorResult.length; i++) {
-    const currentFirstSeenAt = new Date(inspectorResult[i].firstSeenAt);
-    const currentLastSeenAt = new Date(inspectorResult[i].lastSeenAt);
+  for (let i = 1; i < inspectedOperations.length; i++) {
+    const currentFirstSeenAt = new Date(inspectedOperations[i].firstSeenAt);
+    const currentLastSeenAt = new Date(inspectedOperations[i].lastSeenAt);
 
     if (currentFirstSeenAt < firstSeenAt) {
       firstSeenAt = currentFirstSeenAt;
