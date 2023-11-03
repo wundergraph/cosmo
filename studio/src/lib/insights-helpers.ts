@@ -2,9 +2,7 @@ import {
   differenceInDays,
   differenceInHours,
   differenceInMinutes,
-  endOfDay,
   formatISO,
-  startOfDay,
   subHours,
 } from "date-fns";
 import { formatDateTime } from "./format-date";
@@ -66,9 +64,9 @@ export const viewOptions: { label: string; value: TimeSetting }[] = [
 ];
 
 export const useChartData = (
-  timeRange: number,
+  timeRange = 24,
   rawData: { timestamp: number | string | Date }[],
-  timeSetting: TimeSetting | undefined = "local"
+  timeSetting: TimeSetting | undefined = "local",
 ) => {
   let suffix = "h";
   let timeDifference = differenceInHours;
@@ -168,7 +166,7 @@ export const nsToTime = (ns: bigint) => {
 
 export const createDateRange = (range: number) => {
   return JSON.stringify({
-    start: formatISO(startOfDay(subHours(new Date(), range))),
-    end: formatISO(endOfDay(new Date())),
+    start: formatISO(subHours(new Date(), range)),
+    end: formatISO(new Date()),
   });
 };

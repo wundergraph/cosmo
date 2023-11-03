@@ -3,11 +3,11 @@ package core
 import (
 	"context"
 	"errors"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/astnormalization"
 	"strconv"
 
 	"github.com/dgraph-io/ristretto"
 	"github.com/wundergraph/cosmo/router/internal/unsafebytes"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/astnormalization"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astvalidation"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
