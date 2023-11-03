@@ -89,11 +89,31 @@ func (s *MetricsService) PublishGraphQLMetrics(
 		return nil, errJWTInvalid
 	}
 
+	var sentMetrics, sentOps = 0, 0
 	insertTime := time.Now()
 
+	defer func() {
+		s.logger.Debug("metric write finished",
+			zap.Duration("duration", time.Since(insertTime)),
+			zap.Int("metrics", sentMetrics),
+			zap.Int("operations", sentOps),
+		)
+	}()
+
 	// TODO: Do async batching once it is supported by native protocol in clickhouse-go
-	// We don't use std HTTP async batching because it hasn't been proven to be stable yet
-	// We see bad connection errors regularly without recovery
+	// TODO: Think about a thresholds for batching once it becomes a problem
+
+	opBatch, err := s.conn.PrepareBatch(ctx, `INSERT INTO gql_metrics_operations`)
+	if err != nil {
+		s.logger.Error("Failed to prepare batch for operations", zap.Error(err))
+		return nil, errOperationWriteFailed
+	}
+
+	metricBatch, err := s.conn.PrepareBatch(ctx, `INSERT INTO gql_metrics_schema_usage`)
+	if err != nil {
+		s.logger.Error("Failed to prepare batch for metrics", zap.Error(err))
+		return nil, errMetricWriteFailed
+	}
 
 	for _, schemaUsage := range req.Msg.SchemaUsage {
 
@@ -101,9 +121,7 @@ func (s *MetricsService) PublishGraphQLMetrics(
 
 		// If the operation is already in the cache, we can skip it and don't write it again
 		if _, ok := s.opGuardCache.Get(schemaUsage.OperationInfo.Hash); !ok {
-			err := s.conn.AsyncInsert(ctx, `INSERT INTO gql_metrics_operations VALUES (
-				?, ?, ?, ?, ?
-			)`, true,
+			err := opBatch.Append(
 				insertTime,
 				schemaUsage.OperationInfo.Name,
 				schemaUsage.OperationInfo.Hash,
@@ -111,12 +129,9 @@ func (s *MetricsService) PublishGraphQLMetrics(
 				schemaUsage.RequestDocument,
 			)
 			if err != nil {
-				s.logger.Error("Failed to write operation", zap.Error(err))
+				s.logger.Error("Failed to append operation to batch", zap.Error(err))
 				return nil, errOperationWriteFailed
 			}
-
-			// Add the operation to the cache once it has been written
-			s.opGuardCache.Add(schemaUsage.OperationInfo.Hash, struct{}{})
 		}
 
 		for _, fieldUsage := range schemaUsage.TypeFieldMetrics {
@@ -131,9 +146,7 @@ func (s *MetricsService) PublishGraphQLMetrics(
 				return fieldUsage.TypeNames[i] < fieldUsage.TypeNames[j]
 			})
 
-			err := s.conn.AsyncInsert(ctx, `INSERT INTO gql_metrics_schema_usage VALUES (
-				?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
-			)`, true,
+			err := metricBatch.Append(
 				insertTime,
 				claims.OrganizationID,
 				claims.FederatedGraphID,
@@ -153,11 +166,30 @@ func (s *MetricsService) PublishGraphQLMetrics(
 				schemaUsage.Attributes,
 			)
 			if err != nil {
-				s.logger.Error("Failed to write metrics", zap.Error(err))
+				s.logger.Error("Failed to append metric to batch", zap.Error(err))
 				return nil, errMetricWriteFailed
 			}
 		}
 	}
+
+	if err := opBatch.Send(); err != nil {
+		s.logger.Error("Failed to send operation batch", zap.Error(err))
+		return nil, errOperationWriteFailed
+	}
+
+	sentOps = opBatch.Rows()
+
+	for _, schemaUsage := range req.Msg.SchemaUsage {
+		// Add the operation to the cache once it has been written
+		s.opGuardCache.Add(schemaUsage.OperationInfo.Hash, struct{}{})
+	}
+
+	if err := metricBatch.Send(); err != nil {
+		s.logger.Error("Failed to send metrics batch", zap.Error(err))
+		return nil, errOperationWriteFailed
+	}
+
+	sentMetrics = metricBatch.Rows()
 
 	return res, nil
 }
