@@ -1,5 +1,5 @@
 import { AnalyticsViewGroupName } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { endOfDay, startOfDay, subHours } from "date-fns";
+import { subHours } from "date-fns";
 import { useRouter } from "next/router";
 import { useMemo } from "react";
 import { Range, getRange } from "../date-picker-with-range";
@@ -52,8 +52,8 @@ export const useAnalyticsQueryState = () => {
     const parsedRange = getRange(query.range?.toString());
 
     let dateRange = {
-      start: startOfDay(subHours(new Date(), parsedRange)),
-      end: endOfDay(new Date()),
+      start: subHours(new Date(), parsedRange),
+      end: new Date(),
     };
 
     if (query.dateRange) {
@@ -63,8 +63,8 @@ export const useAnalyticsQueryState = () => {
       });
 
       dateRange = {
-        start: startOfDay(new Date(tempRange.start)),
-        end: endOfDay(new Date(tempRange.end)),
+        start: new Date(tempRange.start),
+        end: new Date(tempRange.end),
       };
     } else if (!range) {
       range = parsedRange;

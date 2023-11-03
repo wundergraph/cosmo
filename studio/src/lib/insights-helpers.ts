@@ -2,9 +2,7 @@ import {
   differenceInDays,
   differenceInHours,
   differenceInMinutes,
-  endOfDay,
   formatISO,
-  startOfDay,
   subHours,
 } from "date-fns";
 import { formatDateTime } from "./format-date";
@@ -168,7 +166,7 @@ export const nsToTime = (ns: bigint) => {
 
 export const createDateRange = (range: number) => {
   return JSON.stringify({
-    start: formatISO(startOfDay(subHours(new Date(), range))),
-    end: formatISO(endOfDay(new Date())),
+    start: formatISO(subHours(new Date(), range)),
+    end: formatISO(new Date()),
   });
 };
