@@ -40,7 +40,7 @@ That's it, migrate over with a single click!
 ### Prerequisites
 
 - [Docker](https://docs.docker.com/get-docker/)
-- [Docker Compose](https://docs.docker.com/compose/install/)
+- [Docker Compose](https://docs.docker.com/compose/install/) (version 2+ only)
 
 Running cosmo is as easy as running a single command:
 
