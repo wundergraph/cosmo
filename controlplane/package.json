@@ -1,6 +1,6 @@
 {
   "name": "controlplane",
-  "version": "0.28.2",
+  "version": "0.30.0",
   "private": true,
   "description": "WunderGraph Cosmo Controlplane",
   "type": "module",
@@ -11,6 +11,7 @@
   },
   "scripts": {
     "dev": "tsc-watch --onSuccess \"node dist/index.js\"",
+    "debug": "tsx watch src/index.ts",
     "build": "del dist && tsc",
     "seed": "API_KEY=cosmo_669b576aaadc10ee1ae81d9193425705 tsx src/bin/seed.ts",
     "db:generate": "drizzle-kit generate:pg --config=drizzle.config.ts",
@@ -74,7 +75,7 @@
     "@connectrpc/protoc-gen-connect-es": "^0.13.0",
     "@types/cookie": "^0.5.1",
     "@types/node": "^18.17.0",
-    "@types/prettier": "^2.7.3",
+    "@types/prettier": "^3.0.0",
     "@types/stream-json": "^1.7.3",
     "@types/uuid": "^9.0.2",
     "del-cli": "^5.0.0",
@@ -82,7 +83,7 @@
     "eslint": "^8.52.0",
     "eslint-config-unjs": "^0.2.1",
     "pino-pretty": "^10.2.0",
-    "prettier": "^2.8.8",
+    "prettier": "^3.0.3",
     "tsc-watch": "^6.0.4",
     "tsx": "^3.14.0",
     "typescript": "^5.2.2",

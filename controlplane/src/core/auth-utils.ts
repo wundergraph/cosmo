@@ -45,7 +45,10 @@ export default class AuthUtils {
   private readonly webDomain: string;
   private readonly secureCookie: boolean = false;
 
-  constructor(private db: PostgresJsDatabase<typeof schema>, private opts: AuthUtilsOptions) {
+  constructor(
+    private db: PostgresJsDatabase<typeof schema>,
+    private opts: AuthUtilsOptions,
+  ) {
     this.webUrl = new URL(opts.webBaseUrl);
     this.webDomain = this.webUrl.hostname.replace(/^[^.]+\./g, '');
     this.secureCookie = this.webUrl.protocol === 'https:';

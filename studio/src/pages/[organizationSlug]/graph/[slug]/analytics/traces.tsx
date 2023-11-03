@@ -11,6 +11,7 @@ import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { useQuery } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { getAnalyticsView } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+import { formatISO } from "date-fns";
 import { useContext } from "react";
 
 export type OperationAnalytics = {
@@ -27,8 +28,16 @@ export type OperationAnalytics = {
 const TracesPage: NextPageWithLayout = () => {
   const graphContext = useContext(GraphContext);
 
-  const { name, filters, pagination, dateRange, page, refreshInterval, sort } =
-    useAnalyticsQueryState();
+  const {
+    name,
+    filters,
+    pagination,
+    range,
+    dateRange,
+    page,
+    refreshInterval,
+    sort,
+  } = useAnalyticsQueryState();
 
   let { data, isFetching, isLoading, error, refetch } = useQuery({
     ...getAnalyticsView.useQuery({
@@ -36,14 +45,18 @@ const TracesPage: NextPageWithLayout = () => {
       name,
       config: {
         filters,
-        dateRange,
+        range,
+        dateRange: {
+          start: formatISO(dateRange.start),
+          end: formatISO(dateRange.end),
+        },
         pagination,
         sort,
       },
     }),
     keepPreviousData: true,
     refetchOnWindowFocus: false,
-    refetchInterval: refreshInterval.value,
+    refetchInterval: refreshInterval,
   });
 
   const rowData =
