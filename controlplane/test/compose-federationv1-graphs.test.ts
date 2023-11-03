@@ -4,12 +4,7 @@ import * as prettier from 'prettier';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
-import {
-  afterAllSetup,
-  beforeAllSetup,
-  genID,
-  genUniqueLabel,
-} from '../src/core/test-util';
+import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util';
 import { SetupTest } from './test-util';
 
 let dbname = '';
@@ -112,7 +107,7 @@ describe('ComposeFederationV1Graphs', (ctx) => {
     );
     let formattedFederatedSchemaSDL = '';
     if (fetchSchemaResp.sdl) {
-      formattedFederatedSchemaSDL = prettier.format(fetchSchemaResp.sdl, {
+      formattedFederatedSchemaSDL = await prettier.format(fetchSchemaResp.sdl, {
         parser: 'graphql',
       });
     }

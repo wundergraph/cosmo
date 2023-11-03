@@ -1,10 +1,12 @@
 import { PlainMessage } from '@bufbuild/protobuf';
 import { ServiceImpl } from '@connectrpc/connect';
-import { EnumStatusCode, GraphQLSubscriptionProtocol } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { GetConfigResponse } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+import { OrganizationEventName, PlatformEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
 import {
   CheckFederatedGraphResponse,
+  CheckOperationUsageStats,
   CheckSubgraphSchemaResponse,
   CompositionError,
   CreateAPIKeyResponse,
@@ -23,14 +25,19 @@ import {
   GetAPIKeysResponse,
   GetAnalyticsViewResponse,
   GetCheckDetailsResponse,
+  GetCheckOperationsResponse,
+  GetCheckSummaryResponse,
   GetChecksByFederatedGraphNameResponse,
   GetDashboardAnalyticsViewResponse,
   GetFederatedGraphByNameResponse,
   GetFederatedGraphChangelogResponse,
   GetFederatedGraphSDLByNameResponse,
   GetFederatedGraphsResponse,
+  GetFederatedSubgraphSDLByNameResponse,
+  GetFieldUsageResponse,
   GetGraphMetricsResponse,
   GetMetricsErrorRateResponse,
+  GetOperationContentResponse,
   GetOrganizationIntegrationsResponse,
   GetOrganizationMembersResponse,
   GetOrganizationWebhookConfigsResponse,
@@ -51,11 +58,7 @@ import {
   UpdateOrganizationWebhookConfigResponse,
   UpdateSubgraphResponse,
   WhoAmIResponse,
-  GetFieldUsageResponse,
-  GetFederatedSubgraphSDLByNameResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-
-import { OrganizationEventName, PlatformEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import { OpenAIGraphql, isValidUrl } from '@wundergraph/cosmo-shared';
 import { parse } from 'graphql';
 import { GraphApiKeyDTO, GraphApiKeyJwtPayload } from '../../types/index.js';
@@ -67,17 +70,22 @@ import { FederatedGraphRepository } from '../repositories/FederatedGraphReposito
 import { GitHubRepository } from '../repositories/GitHubRepository.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import { SchemaCheckRepository } from '../repositories/SchemaCheckRepository.js';
-import { Subgraph, SubgraphRepository } from '../repositories/SubgraphRepository.js';
+import { SubgraphRepository } from '../repositories/SubgraphRepository.js';
 import { UserRepository } from '../repositories/UserRepository.js';
 import { AnalyticsDashboardViewRepository } from '../repositories/analytics/AnalyticsDashboardViewRepository.js';
 import { AnalyticsRequestViewRepository } from '../repositories/analytics/AnalyticsRequestViewRepository.js';
 import { MetricsRepository } from '../repositories/analytics/MetricsRepository.js';
 import { TraceRepository } from '../repositories/analytics/TraceRepository.js';
+import { UsageRepository } from '../repositories/analytics/UsageRepository.js';
 import type { RouterOptions } from '../routes.js';
 import { ApiKeyGenerator } from '../services/ApiGenerator.js';
 import ApolloMigrator from '../services/ApolloMigrator.js';
+import {
+  InspectorOperationResult,
+  SchemaUsageTrafficInspector,
+  collectOperationUsageStats,
+} from '../services/SchemaUsageTrafficInspector.js';
 import Slack from '../services/Slack.js';
-import { UsageRepository } from '../repositories/analytics/UsageRepository.js';
 import { formatSubscriptionProtocol, handleError, isValidLabelMatchers, isValidLabels } from '../util.js';
 import { FederatedGraphSchemaUpdate, OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
 
@@ -121,6 +129,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           routingUrl: req.routingUrl,
         });
 
+        await fedGraphRepo.createConfig(federatedGraph.id, 7);
+
         const subgraphs = await subgraphRepo.listByFederatedGraph(req.name, {
           published: true,
         });
@@ -142,7 +152,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           const fedGraphRepo = new FederatedGraphRepository(tx, authContext.organizationId);
           const subgraphRepo = new SubgraphRepository(tx, authContext.organizationId);
           const compChecker = new Composer(fedGraphRepo, subgraphRepo);
-          const composition = await compChecker.composeFederatedGraph(federatedGraph.name, federatedGraph.targetId);
+          const composition = await compChecker.composeFederatedGraph(federatedGraph);
 
           compositionErrors.push(
             ...composition.errors.map((e) => ({
@@ -527,7 +537,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         });
 
         const schemaChanges = await getDiffBetweenGraphs(subgraph.schemaSDL, newSchemaSDL);
-
         if (schemaChanges.kind === 'failure') {
           logger.debug(`Error finding diff between graphs: ${schemaChanges.error}`);
           return {
@@ -541,18 +550,17 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        // add the changes to the db
+        const hasBreakingChanges = schemaChanges.breakingChanges.length > 0;
+
         await schemaCheckRepo.createSchemaCheckChanges({
-          changes: [...schemaChanges.breakingChanges, ...schemaChanges.nonBreakingChanges],
+          changes: schemaChanges.nonBreakingChanges,
           schemaCheckID,
         });
 
-        if (schemaChanges.breakingChanges.length > 0) {
-          await schemaCheckRepo.update({
-            schemaCheckID,
-            hasBreakingChanges: true,
-          });
-        }
+        const storedBreakingChanges = await schemaCheckRepo.createSchemaCheckChanges({
+          changes: schemaChanges.breakingChanges,
+          schemaCheckID,
+        });
 
         const composer = new Composer(fedGraphRepo, subgraphRepo);
         const result = await composer.composeWithProposedSDL(subgraph.labels, subgraph.name, newSchemaSDL);
@@ -562,8 +570,28 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           compositions: result.compositions,
         });
 
+        let hasClientTraffic = false;
+
+        const trafficInspector = new SchemaUsageTrafficInspector(opts.chClient!);
+        const inspectedOperations: InspectorOperationResult[] = [];
         const compositionErrors: PlainMessage<CompositionError>[] = [];
+
+        // For operations checks we only consider breaking changes
+        const inspectorChanges = trafficInspector.schemaChangesToInspectorChanges(
+          schemaChanges.breakingChanges,
+          storedBreakingChanges,
+        );
+
         for (const composition of result.compositions) {
+          const graphConfig = await fedGraphRepo.getConfig(composition.id);
+
+          await schemaCheckRepo.createCheckedFederatedGraph(
+            schemaCheckID,
+            composition.id,
+            graphConfig.trafficCheckDays,
+          );
+
+          // We collect composition errors for all federated graphs
           if (composition.errors.length > 0) {
             for (const error of composition.errors) {
               compositionErrors.push({
@@ -572,7 +600,44 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               });
             }
           }
+
+          // We don't collect operation usage when we have composition errors
+          if (composition.errors.length === 0 && inspectorChanges.inspectable && inspectorChanges.changes.length > 0) {
+            if (graphConfig.trafficCheckDays <= 0) {
+              continue;
+            }
+
+            const result = await trafficInspector.inspect(inspectorChanges.changes, {
+              daysToConsider: graphConfig.trafficCheckDays,
+              federatedGraphId: composition.id,
+              organizationId: authContext.organizationId,
+            });
+
+            if (result.size > 0) {
+              // If we have at least one operation with traffic, we consider this schema change as breaking
+              // and skip the rest of the federated graphs
+              hasClientTraffic = true;
+
+              // Store operation usage
+              await schemaCheckRepo.createOperationUsage(result);
+
+              // Collect all inspected operations for later aggregation
+              for (const resultElement of result.values()) {
+                inspectedOperations.push(...resultElement);
+              }
+            }
+          }
         }
+
+        // Update the overall schema check with the results
+        await schemaCheckRepo.update({
+          schemaCheckID,
+          hasClientTraffic,
+          hasBreakingChanges,
+        });
+
+        const operationUsageStats: PlainMessage<CheckOperationUsageStats> =
+          collectOperationUsageStats(inspectedOperations);
 
         if (req.gitInfo && opts.githubApp) {
           const githubRepo = new GitHubRepository(opts.db, opts.githubApp);
@@ -581,6 +646,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             gitInfo: req.gitInfo,
             compositionErrors,
             breakingChangesCount: schemaChanges.breakingChanges.length,
+            hasClientTraffic,
             subgraphName: subgraph.name,
             organizationSlug: org.slug,
             webBaseUrl: opts.webBaseUrl,
@@ -594,10 +660,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           },
           breakingChanges: schemaChanges.breakingChanges,
           nonBreakingChanges: schemaChanges.nonBreakingChanges,
+          operationUsageStats,
           compositionErrors,
         };
       });
     },
+
     fixSubgraphSchema: (req, ctx) => {
       const logger = opts.logger.child({
         service: ctx.service.typeName,
@@ -956,6 +1024,132 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
+    getCheckSummary: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetCheckSummaryResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+        const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
+        const schemaCheckRepo = new SchemaCheckRepository(opts.db);
+
+        const graph = await fedGraphRepo.byName(req.graphName);
+
+        if (!graph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: 'Requested graph does not exist',
+            },
+            affectedGraphs: [],
+          };
+        }
+
+        const check = await subgraphRepo.checkById(req.checkId, graph.name);
+        const checkDetails = await subgraphRepo.checkDetails(req.checkId, graph.targetId);
+
+        if (!check || !checkDetails) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: 'Requested check not found',
+            },
+            affectedGraphs: [],
+          };
+        }
+
+        let addCount = 0;
+        let minusCount = 0;
+        for (const log of checkDetails.changes) {
+          if (log.changeType.includes('REMOVED')) {
+            minusCount += 1;
+          } else if (log.changeType.includes('ADDED')) {
+            addCount += 1;
+          } else if (log.changeType.includes('CHANGED')) {
+            addCount += 1;
+            minusCount += 1;
+          }
+        }
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          check,
+          affectedGraphs: check.affectedGraphs,
+          proposedSubgraphSchemaSDL: check.proposedSubgraphSchemaSDL,
+          changeCounts: {
+            additions: addCount,
+            deletions: minusCount,
+          },
+        };
+      });
+    },
+
+    getCheckOperations: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetCheckOperationsResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+        const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
+        const schemaCheckRepo = new SchemaCheckRepository(opts.db);
+
+        const graph = await fedGraphRepo.byName(req.graphName);
+
+        if (!graph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: 'Requested graph does not exist',
+            },
+            operations: [],
+            trafficCheckDays: 0,
+            createdAt: '',
+          };
+        }
+
+        const check = await subgraphRepo.checkById(req.checkId, graph.name);
+        const checkDetails = await subgraphRepo.checkDetails(req.checkId, graph.targetId);
+
+        if (!check || !checkDetails) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: 'Requested check not found',
+            },
+            operations: [],
+            trafficCheckDays: 0,
+            createdAt: '',
+          };
+        }
+
+        const affectedOperations = await schemaCheckRepo.getAffectedOperationsByCheckId(req.checkId);
+
+        const { trafficCheckDays } = await schemaCheckRepo.getFederatedGraphConfigForCheckId(req.checkId, graph.id);
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          operations: affectedOperations.map((operation) => ({
+            ...operation,
+            firstSeenAt: operation.firstSeenAt.toUTCString(),
+            lastSeenAt: operation.lastSeenAt.toUTCString(),
+            impactingChanges: checkDetails.changes.filter(({ id }) => operation.schemaChangeIds.includes(id)),
+          })),
+          trafficCheckDays,
+          createdAt: check.timestamp,
+        };
+      });
+    },
+
     getCheckDetails: (req, ctx) => {
       const logger = opts.logger.child({
         service: ctx.service.typeName,
@@ -966,6 +1160,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
+        const schemaCheckRepo = new SchemaCheckRepository(opts.db);
 
         const graph = await fedGraphRepo.byName(req.graphName);
 
@@ -977,12 +1172,15 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             },
             changes: [],
             compositionErrors: [],
+            trafficCheckDays: 0,
+            createdAt: '',
           };
         }
 
-        const details = await subgraphRepo.checkDetails(req.checkID, graph.targetId, graph.name);
+        const check = await subgraphRepo.checkById(req.checkId, graph.name);
+        const details = await subgraphRepo.checkDetails(req.checkId, graph.targetId);
 
-        if (!details) {
+        if (!check || !details) {
           return {
             response: {
               code: EnumStatusCode.ERR_NOT_FOUND,
@@ -990,14 +1188,20 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             },
             changes: [],
             compositionErrors: [],
+            trafficCheckDays: 0,
+            createdAt: '',
           };
         }
+
+        const { trafficCheckDays } = await schemaCheckRepo.getFederatedGraphConfigForCheckId(req.checkId, graph.id);
 
         return {
           response: {
             code: EnumStatusCode.OK,
           },
           ...details,
+          trafficCheckDays,
+          createdAt: check?.timestamp,
         };
       });
     },
@@ -1026,9 +1230,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const details = await subgraphRepo.checkDetails(req.checkId, graph.targetId, graph.name);
+        const check = await subgraphRepo.checkById(req.checkId, graph.name);
 
-        if (!details) {
+        if (!check) {
           return {
             response: {
               code: EnumStatusCode.ERR_NOT_FOUND,
@@ -1039,7 +1243,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const githubDetails = await subgraphRepo.forceCheckSuccess(details.check.id);
+        const githubDetails = await subgraphRepo.forceCheckSuccess(check.id);
 
         if (githubDetails && opts.githubApp) {
           const githubRepo = new GitHubRepository(opts.db, opts.githubApp);
@@ -1142,7 +1346,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
           // Validate all federated graphs that use this subgraph.
           for (const federatedGraph of affectedFederatedGraphs) {
-            const composition = await composer.composeFederatedGraph(federatedGraph.name, federatedGraph.targetId);
+            const composition = await composer.composeFederatedGraph(federatedGraph);
 
             await composer.deployComposition(composition);
 
@@ -2238,7 +2442,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             db: tx,
           });
 
-          const composition = await composer.composeFederatedGraph(federatedGraph.name, federatedGraph.targetId);
+          const composition = await composer.composeFederatedGraph(federatedGraph);
 
           await composer.deployComposition(composition);
         });
@@ -3134,7 +3338,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           organizationId: authContext.organizationId,
           typename: req.typename,
           field: req.field,
+          namedType: req.namedType,
           range: req.range,
+          dateRange: req.dateRange,
         });
 
         return {
@@ -3144,6 +3350,52 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           clients,
           requestSeries,
           meta,
+        };
+      });
+    },
+
+    getOperationContent: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetOperationContentResponse>>(logger, async () => {
+        await opts.authenticator.authenticate(ctx.requestHeader);
+
+        if (!opts.chClient) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_ANALYTICS_DISABLED,
+            },
+            operationContent: '',
+          };
+        }
+
+        const query = `
+          SELECT OperationContent as operationContent
+          FROM ${opts.chClient?.database}.gql_metrics_operations
+          WHERE OperationHash = '${req.hash}'
+          LIMIT 1
+        `;
+
+        const result = await opts.chClient.queryPromise(query);
+
+        if (!Array.isArray(result)) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: 'Requested operation not found',
+            },
+            operationContent: '',
+          };
+        }
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          operationContent: result[0].operationContent,
         };
       });
     },

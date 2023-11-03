@@ -127,4 +127,3 @@ probes:
 
 configuration:
   clickhouseDsn: "clickhouse://default:changeme@cosmo-clickhouse:9000/cosmo?dial_timeout=15s&compress=lz4"
-  clickhouseHttpDsn: "http://default:changeme@cosmo-clickhouse:8123/cosmo"

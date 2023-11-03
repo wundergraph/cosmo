@@ -54,7 +54,7 @@ export default (opts: BaseCommandOptions) => {
             routingURL: g.routingURL,
             isComposable: g.isComposable,
             lastUpdatedAt: g.lastUpdatedAt,
-          } as OutputFile[number]),
+          }) as OutputFile[number],
       );
       await writeFile(join(process.cwd(), options.out), JSON.stringify(output));
       process.exit(0);

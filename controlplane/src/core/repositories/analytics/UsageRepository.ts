@@ -1,54 +1,46 @@
 import { PlainMessage } from '@bufbuild/protobuf';
 import {
   ClientWithOperations,
+  DateRange,
   FieldUsageMeta,
   RequestSeriesItem,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { ClickHouseClient } from '../../clickhouse/index.js';
-import { getDateRange, getEndDate, getGranularity } from './util.js';
+import { getDateRange, getEndDate, getGranularity, isoDateRangeToTimestamps } from './util.js';
 
-type ParsedFilters = {
+type TimeFilters = {
   granule: string;
-  range: number;
   dateRange: {
     start: number;
     end: number;
   };
-  organizationId: string;
-  federatedGraphId: string;
 };
 
 export class UsageRepository {
   constructor(private client: ClickHouseClient) {}
 
-  private parseFilters(filters: { range: number; organizationId: string; federatedGraphId: string }): ParsedFilters {
-    const { range, organizationId, federatedGraphId } = filters;
+  private parseTimeFilters(dateRange?: DateRange, range?: number): TimeFilters {
     const granule = getGranularity(range);
-    const [start, end] = getDateRange({ end: getEndDate() }, range);
+    const parsedDateRange = isoDateRangeToTimestamps(dateRange, range);
+    const [start, end] = getDateRange(parsedDateRange);
 
     return {
       granule,
-      range,
       dateRange: {
         start,
         end,
       },
-      organizationId,
-      federatedGraphId,
     };
   }
 
   private async getUsageRequestSeries(
-    typename: string,
-    field: string,
-    filters: ParsedFilters,
+    whereSql: string,
+    timeFilters: TimeFilters,
   ): Promise<PlainMessage<RequestSeriesItem>[]> {
     const {
-      federatedGraphId,
-      organizationId,
       dateRange: { start, end },
       granule,
-    } = filters;
+    } = timeFilters;
 
     const query = `
       WITH 
@@ -59,11 +51,7 @@ export class UsageRepository {
           SUM(TotalUsages) AS totalRequests,
           SUM(TotalErrors) AS erroredRequests
       FROM ${this.client.database}.gql_metrics_schema_usage_5m_90d_mv
-      WHERE Timestamp >= startDate AND Timestamp <= endDate
-          AND hasAny(TypeNames, ['${typename}'])
-          AND endsWith(Path, ['${field}'])
-          AND FederatedGraphID = '${federatedGraphId}'
-          AND OrganizationID = '${organizationId}'
+      WHERE Timestamp >= startDate AND Timestamp <= endDate AND ${whereSql}
       GROUP BY timestamp
       ORDER BY timestamp WITH FILL 
       FROM toStartOfInterval(toDateTime('${start}'), INTERVAL ${granule} MINUTE)
@@ -85,15 +73,12 @@ export class UsageRepository {
   }
 
   private async getClientsWithOperations(
-    typename: string,
-    field: string,
-    filters: ParsedFilters,
+    whereSql: string,
+    timeFilters: TimeFilters,
   ): Promise<PlainMessage<ClientWithOperations>[]> {
     const {
-      federatedGraphId,
-      organizationId,
       dateRange: { start, end },
-    } = filters;
+    } = timeFilters;
 
     const query = `
       WITH
@@ -112,11 +97,7 @@ export class UsageRepository {
                 argMax(OperationHash, Timestamp) AS latestOperationHash,
                 sum(TotalUsages) AS requestCount
             FROM ${this.client.database}.gql_metrics_schema_usage_5m_90d_mv
-            WHERE Timestamp >= startDate AND Timestamp <= endDate
-                AND hasAny(TypeNames, ['${typename}'])
-                AND endsWith(arrayElement(Path, -1), '${field}')
-                AND FederatedGraphID = '${federatedGraphId}'
-                AND OrganizationID = '${organizationId}'
+            WHERE Timestamp >= startDate AND Timestamp <= endDate AND ${whereSql}
             GROUP BY ClientName, ClientVersion, OperationName
         )
       GROUP BY ClientName, ClientVersion
@@ -140,16 +121,10 @@ export class UsageRepository {
     return [];
   }
 
-  private async getMeta(
-    typename: string,
-    field: string,
-    filters: ParsedFilters,
-  ): Promise<PlainMessage<FieldUsageMeta> | undefined> {
+  private async getMeta(whereSql: string, timeFilters: TimeFilters): Promise<PlainMessage<FieldUsageMeta> | undefined> {
     const {
-      federatedGraphId,
-      organizationId,
       dateRange: { start, end },
-    } = filters;
+    } = timeFilters;
 
     const query = `
     WITH
@@ -160,11 +135,7 @@ export class UsageRepository {
       toString(toUnixTimestamp(min(Timestamp))) as firstSeenTimestamp,
       toString(toUnixTimestamp(max(Timestamp))) as latestSeenTimestamp
     FROM ${this.client.database}.gql_metrics_schema_usage_5m_90d_mv
-      WHERE Timestamp >= startDate AND Timestamp <= endDate
-      AND hasAny(TypeNames, ['${typename}'])
-      AND endsWith(arrayElement(Path, -1), '${field}')
-      AND FederatedGraphID = '${federatedGraphId}'
-      AND OrganizationID = '${organizationId}'
+    WHERE Timestamp >= startDate AND Timestamp <= endDate AND ${whereSql}
     `;
 
     const res = await this.client.queryPromise(query);
@@ -175,18 +146,31 @@ export class UsageRepository {
   }
 
   public async getFieldUsage(input: {
-    typename: string;
-    field: string;
-    range: number;
+    typename?: string;
+    field?: string;
+    namedType?: string;
+    range?: number;
+    dateRange?: DateRange;
     organizationId: string;
     federatedGraphId: string;
   }) {
-    const filters = this.parseFilters(input);
+    const timeFilters = this.parseTimeFilters(input.dateRange, input.range);
+
+    let whereSql = `FederatedGraphID = '${input.federatedGraphId}' AND OrganizationID = '${input.organizationId}'`;
+    if (input.typename) {
+      whereSql += ` AND hasAny(TypeNames, ['${input.typename}'])`;
+    }
+    if (input.field) {
+      whereSql += ` AND FieldName = '${input.field}'`;
+    }
+    if (input.namedType) {
+      whereSql += ` AND NamedType = '${input.namedType}'`;
+    }
 
     const [requestSeries, clients, meta] = await Promise.all([
-      this.getUsageRequestSeries(input.typename, input.field, filters),
-      this.getClientsWithOperations(input.typename, input.field, filters),
-      this.getMeta(input.typename, input.field, filters),
+      this.getUsageRequestSeries(whereSql, timeFilters),
+      this.getClientsWithOperations(whereSql, timeFilters),
+      this.getMeta(whereSql, timeFilters),
     ]);
 
     return {

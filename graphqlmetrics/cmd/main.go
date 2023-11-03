@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/amacneil/dbmate/v2/pkg/dbmate"
 	_ "github.com/amacneil/dbmate/v2/pkg/driver/clickhouse"
@@ -42,13 +43,17 @@ func main() {
 	)
 	defer stop()
 
-	options, err := clickhouse.ParseDSN(cfg.ClickHouseHttpDSN)
+	options, err := clickhouse.ParseDSN(cfg.ClickHouseDSN)
 	if err != nil {
 		log.Fatal("Could not parse dsn", zap.Error(err))
 	}
 
 	options.Compression = &clickhouse.Compression{
 		Method: clickhouse.CompressionLZ4,
+	}
+	options.Debug = true
+	options.Debugf = func(format string, v ...any) {
+		fmt.Printf(format, v...)
 	}
 	options.ClientInfo = clickhouse.ClientInfo{
 		Products: []struct {
@@ -58,12 +63,15 @@ func main() {
 			{Name: "graphqlmetrics", Version: graphqlmetrics.Version},
 		},
 	}
+	options.MaxIdleConns = 10
+	options.MaxOpenConns = 20
 
-	db := clickhouse.OpenDB(options)
-	db.SetMaxIdleConns(10)
-	db.SetMaxOpenConns(15)
+	conn, err := clickhouse.Open(options)
+	if err != nil {
+		log.Fatal("Could not open clickhouse", zap.Error(err))
+	}
 
-	if err := db.PingContext(ctx); err != nil {
+	if err := conn.Ping(ctx); err != nil {
 		log.Fatal("Could not ping clickhouse", zap.Error(err))
 	} else {
 		logger.Info("Connected to clickhouse")
@@ -84,7 +92,7 @@ func main() {
 	}
 
 	svr := graphqlmetrics.NewServer(
-		graphqlmetrics.NewMetricsService(logger, db, []byte(cfg.IngestJWTSecret)),
+		graphqlmetrics.NewMetricsService(logger, conn, []byte(cfg.IngestJWTSecret)),
 		graphqlmetrics.WithListenAddr(cfg.ListenAddr),
 		graphqlmetrics.WithLogger(logger),
 	)

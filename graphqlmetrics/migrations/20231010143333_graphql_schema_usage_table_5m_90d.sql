@@ -18,7 +18,9 @@ CREATE TABLE IF NOT EXISTS gql_metrics_schema_usage_5m_90d
 
     -- Schema usage
     Path Array(String) CODEC(ZSTD(3)),
+    FieldName LowCardinality(String) CODEC(ZSTD(3)),
     TypeNames Array(String) CODEC(ZSTD(3)),
+    NamedType LowCardinality(String) CODEC(ZSTD(3)),
 
     -- Client information
     ClientName LowCardinality(String) CODEC(ZSTD(3)),
@@ -42,7 +44,7 @@ CREATE TABLE IF NOT EXISTS gql_metrics_schema_usage_5m_90d
 )
 ENGINE = SummingMergeTree
 PARTITION BY toDate(Timestamp)
-ORDER BY (OrganizationID, FederatedGraphID, ClientName, ClientVersion, RouterConfigVersion, OperationHash, Path, TypeNames, SubgraphIDs, toUnixTimestamp(Timestamp))
+ORDER BY (OrganizationID, FederatedGraphID, ClientName, ClientVersion, RouterConfigVersion, OperationHash, Path, FieldName, NamedType, TypeNames, SubgraphIDs, toUnixTimestamp(Timestamp))
 -- We store 90 days of data in this table.
 TTL toDateTime(Timestamp) + toIntervalDay(90) SETTINGS index_granularity = 8192, ttl_only_drop_parts = 1
 

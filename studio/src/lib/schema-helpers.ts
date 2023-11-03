@@ -60,7 +60,7 @@ export const mapGraphQLType = (
     | GraphQLInputObjectType
     | GraphQLEnumType
     | GraphQLScalarType
-    | GraphQLUnionType
+    | GraphQLUnionType,
 ): GraphQLTypeDefinition => {
   const common = {
     name: graphqlType.name,
@@ -141,11 +141,11 @@ export const mapGraphQLType = (
 
 export const getTypesByCategory = (
   astSchema: GraphQLSchema,
-  category: GraphQLTypeCategory
+  category: GraphQLTypeCategory,
 ) => {
-  const allTypes = Object.values(astSchema.getTypeMap()).filter(
-    (type) => !type.name.startsWith("__")
-  );
+  const allTypes = Object.values(astSchema.getTypeMap())
+    .filter((type) => !type.name.startsWith("__"))
+    .sort();
 
   switch (category) {
     case "objects":
@@ -154,7 +154,7 @@ export const getTypesByCategory = (
           t instanceof GraphQLObjectType &&
           t !== astSchema.getQueryType() &&
           t !== astSchema.getMutationType() &&
-          t !== astSchema.getSubscriptionType()
+          t !== astSchema.getSubscriptionType(),
       );
     case "scalars":
       return allTypes.filter((t) => t instanceof GraphQLScalarType);
@@ -173,7 +173,7 @@ export const getTypesByCategory = (
 
 export const getCategoryForType = (
   astSchema: GraphQLSchema,
-  typename: string
+  typename: string,
 ): GraphQLTypeCategory | null => {
   const astType = astSchema.getType(typename);
 
@@ -219,7 +219,7 @@ export const getCategoryForType = (
 
 export const getTypeCounts = (astSchema: GraphQLSchema) => {
   const allTypes = Object.values(astSchema.getTypeMap()).filter(
-    (type) => !type.name.startsWith("__")
+    (type) => !type.name.startsWith("__"),
   );
 
   const counts = {
@@ -227,14 +227,14 @@ export const getTypeCounts = (astSchema: GraphQLSchema) => {
     mutation: Object.keys(astSchema.getMutationType()?.getFields() ?? {})
       .length,
     subscription: Object.keys(
-      astSchema.getSubscriptionType()?.getFields() ?? {}
+      astSchema.getSubscriptionType()?.getFields() ?? {},
     ).length,
     objects: allTypes.filter(
       (t) =>
         t instanceof GraphQLObjectType &&
         t !== astSchema.getQueryType() &&
         t !== astSchema.getMutationType() &&
-        t !== astSchema.getSubscriptionType()
+        t !== astSchema.getSubscriptionType(),
     ).length,
     scalars: allTypes.filter((t) => t instanceof GraphQLScalarType).length,
     interfaces: allTypes.filter((t) => t instanceof GraphQLInterfaceType)

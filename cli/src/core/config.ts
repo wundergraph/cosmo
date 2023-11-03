@@ -28,6 +28,7 @@ export const config = {
   baseURL: process.env.COSMO_API_URL || 'https://cosmo-cp.wundergraph.com',
   apiKey: getLoginDetails()?.accessToken || process.env.COSMO_API_KEY,
   kcApiURL: process.env.KC_API_URL || 'https://accounts.wundergraph.com/auth',
+  webURL: process.env.COSMO_WEB_URL || 'https://cosmo.wundergraph.com',
   kcClientId: process.env.KC_CLIENT_ID || 'cosmo-cli',
   kcRealm: process.env.KC_REALM || 'cosmo',
   version: info.version,

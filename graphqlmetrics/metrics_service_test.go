@@ -77,10 +77,12 @@ func TestPublishGraphQLMetrics(t *testing.T) {
 	)
 	require.NoError(t, err)
 
+	ctx := context.Background()
+
 	// Validate insert
 
-	var opCount int
-	require.NoError(t, db.QueryRow(`
+	var opCount uint64
+	require.NoError(t, db.QueryRow(ctx, `
 		SELECT COUNT(*) FROM gql_metrics_operations
     	WHERE OperationHash = 'hash123' AND
 		OperationName = 'Hello' AND
@@ -89,12 +91,12 @@ func TestPublishGraphQLMetrics(t *testing.T) {
     	GROUP BY OperationHash LIMIT 1
 	`).Scan(&opCount))
 
-	assert.Greater(t, opCount, 0)
+	assert.Greater(t, opCount, uint64(0))
 
 	// Validate insert
 
-	var fieldUsageCount int
-	require.NoError(t, db.QueryRow(`
+	var fieldUsageCount uint64
+	require.NoError(t, db.QueryRow(ctx, `
 		SELECT COUNT(*) FROM gql_metrics_schema_usage
 		WHERE OperationHash = 'hash123' AND
 		OrganizationID = 'org123' AND
@@ -111,8 +113,8 @@ func TestPublishGraphQLMetrics(t *testing.T) {
 
 	// Validate materialized view
 
-	var fieldUsageCountMv int
-	require.NoError(t, db.QueryRow(`
+	var fieldUsageCountMv uint64
+	require.NoError(t, db.QueryRow(ctx, `
 		SELECT COUNT(*) FROM gql_metrics_schema_usage_5m_90d_mv
 		WHERE OperationHash = 'hash123' AND
 		OrganizationID = 'org123' AND
@@ -127,7 +129,7 @@ func TestPublishGraphQLMetrics(t *testing.T) {
 		startsWith(Path, ['hello'])
 	`).Scan(&fieldUsageCountMv))
 
-	assert.Greater(t, fieldUsageCountMv, 0)
+	assert.Greater(t, fieldUsageCountMv, uint64(0))
 }
 
 func TestAuthentication(t *testing.T) {

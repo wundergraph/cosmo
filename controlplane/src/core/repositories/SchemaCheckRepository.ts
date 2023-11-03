@@ -1,10 +1,17 @@
-import { eq } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { SchemaChange } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import * as schema from '../../db/schema.js';
-import { schemaCheckChangeAction, schemaCheckComposition, schemaChecks } from '../../db/schema.js';
-import { SchemaChangeType } from '../../types/index.js';
+import {
+  schemaCheckChangeAction,
+  schemaCheckChangeActionOperationUsage,
+  schemaCheckComposition,
+  schemaChecks,
+} from '../../db/schema.js';
 import { ComposedFederatedGraph } from '../composition/composer.js';
+import { SchemaDiff } from '../composition/schemaCheck.js';
+import { NewSchemaChangeOperationUsage } from '../../db/models.js';
+import { InspectorOperationResult } from '../services/SchemaUsageTrafficInspector.js';
+import { FederatedGraphConfig } from './FederatedGraphRepository.js';
 
 export class SchemaCheckRepository {
   constructor(private db: PostgresJsDatabase<typeof schema>) {}
@@ -29,6 +36,7 @@ export class SchemaCheckRepository {
   public async update(data: {
     schemaCheckID: string;
     isComposable?: boolean;
+    hasClientTraffic?: boolean;
     hasBreakingChanges?: boolean;
   }): Promise<string | undefined> {
     const updatedSchemaCheck = await this.db
@@ -36,6 +44,7 @@ export class SchemaCheckRepository {
       .set({
         isComposable: data.isComposable,
         hasBreakingChanges: data.hasBreakingChanges,
+        hasClientTraffic: data.hasClientTraffic,
       })
       .where(eq(schemaChecks.id, data.schemaCheckID))
       .returning()
@@ -43,25 +52,89 @@ export class SchemaCheckRepository {
     return updatedSchemaCheck[0].id;
   }
 
-  public createSchemaCheckChanges(data: { schemaCheckID: string; changes: SchemaChange[] }) {
+  public createSchemaCheckChanges(data: { schemaCheckID: string; changes: SchemaDiff[] }) {
     if (data.changes.length === 0) {
+      return [];
+    }
+    return this.db
+      .insert(schemaCheckChangeAction)
+      .values(
+        data.changes.map((change) => ({
+          schemaCheckId: data.schemaCheckID,
+          changeType: change.changeType,
+          changeMessage: change.message,
+          path: change.path,
+          isBreaking: change.isBreaking,
+        })),
+      )
+      .returning();
+  }
+
+  public async createOperationUsage(schemaCheckActionOperations: Map<string, InspectorOperationResult[]>) {
+    const values: NewSchemaChangeOperationUsage[] = [];
+
+    for (const [schemaCheckChangeActionId, operations] of schemaCheckActionOperations.entries()) {
+      values.push(
+        ...operations.map((op) => ({
+          schemaCheckChangeActionId,
+          name: op.name,
+          type: op.type,
+          hash: op.hash,
+          firstSeenAt: op.firstSeenAt,
+          lastSeenAt: op.lastSeenAt,
+        })),
+      );
+    }
+
+    if (values.length === 0) {
       return;
     }
 
-    return this.db.transaction(async (tx) => {
-      await tx
-        .insert(schemaCheckChangeAction)
-        .values(
-          data.changes.map((change) => ({
-            schemaCheckId: data.schemaCheckID,
-            changeType: change.changeType as SchemaChangeType,
-            changeMessage: change.message,
-            path: change.path,
-            isBreaking: change.isBreaking,
-          })),
-        )
-        .execute();
-    });
+    await this.db.insert(schemaCheckChangeActionOperationUsage).values(values).execute();
+  }
+
+  public async createCheckedFederatedGraph(schemaCheckId: string, federatedGraphId: string, trafficCheckDays: number) {
+    await this.db
+      .insert(schema.schemaCheckFederatedGraphs)
+      .values({
+        checkId: schemaCheckId,
+        federatedGraphId,
+        trafficCheckDays,
+      })
+      .execute();
+  }
+
+  public async getAffectedOperationsByCheckId(checkId: string) {
+    const changeActionIds = (
+      await this.db.query.schemaCheckChangeAction.findMany({
+        where: and(
+          eq(schema.schemaCheckChangeAction.schemaCheckId, checkId),
+          eq(schema.schemaCheckChangeAction.isBreaking, true),
+        ),
+        columns: {
+          id: true,
+        },
+      })
+    ).map((r) => r.id);
+
+    if (changeActionIds.length > 0) {
+      return await this.db
+        .selectDistinctOn([schema.schemaCheckChangeActionOperationUsage.hash], {
+          hash: schema.schemaCheckChangeActionOperationUsage.hash,
+          name: schema.schemaCheckChangeActionOperationUsage.name,
+          type: schema.schemaCheckChangeActionOperationUsage.type,
+          firstSeenAt: sql<Date>`min(${schema.schemaCheckChangeActionOperationUsage.firstSeenAt})`,
+          lastSeenAt: sql<Date>`max(${schema.schemaCheckChangeActionOperationUsage.lastSeenAt})`,
+          schemaChangeIds: sql<
+            string[]
+          >`array_agg(${schema.schemaCheckChangeActionOperationUsage.schemaCheckChangeActionId})`,
+        })
+        .from(schema.schemaCheckChangeActionOperationUsage)
+        .where(inArray(schema.schemaCheckChangeActionOperationUsage.schemaCheckChangeActionId, changeActionIds))
+        .groupBy(({ hash, name, type }) => [hash, name, type]);
+    }
+
+    return [];
   }
 
   public createSchemaCheckCompositions(data: { schemaCheckID: string; compositions: ComposedFederatedGraph[] }) {
@@ -96,5 +169,21 @@ export class SchemaCheckRepository {
         .returning()
         .execute();
     });
+  }
+
+  public async getFederatedGraphConfigForCheckId(
+    checkId: string,
+    federatedGraphId: string,
+  ): Promise<FederatedGraphConfig> {
+    const result = await this.db.query.schemaCheckFederatedGraphs.findFirst({
+      where: and(
+        eq(schema.schemaCheckFederatedGraphs.checkId, checkId),
+        eq(schema.schemaCheckFederatedGraphs.federatedGraphId, federatedGraphId),
+      ),
+    });
+
+    return {
+      trafficCheckDays: result?.trafficCheckDays ?? 7,
+    };
   }
 }

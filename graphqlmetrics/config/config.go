@@ -24,13 +24,12 @@ func (ipd *Base64Decoder) Decode(value string) error {
 }
 
 type Config struct {
-	ListenAddr        string        `default:"localhost:4005" validate:"hostname_port" envconfig:"LISTEN_ADDR"`
-	LogLevel          string        `default:"info" envconfig:"LOG_LEVEL" validate:"oneof=debug info warning error fatal panic"`
-	IngestJWTSecret   string        `envconfig:"INGEST_JWT_SECRET" validate:"required"`
-	ClickHouseDSN     string        `envconfig:"CLICKHOUSE_DSN" validate:"required,url"`
-	ClickHouseHttpDSN string        `envconfig:"CLICKHOUSE_HTTP_DSN" validate:"required,url"`
-	JSONLog           bool          `default:"true" envconfig:"JSON_LOG"`
-	ShutdownDelay     time.Duration `default:"30s" validate:"required,min=5s" envconfig:"SHUTDOWN_DELAY"`
+	ListenAddr      string        `default:"localhost:4005" validate:"hostname_port" envconfig:"LISTEN_ADDR"`
+	LogLevel        string        `default:"info" envconfig:"LOG_LEVEL" validate:"oneof=debug info warning error fatal panic"`
+	IngestJWTSecret string        `envconfig:"INGEST_JWT_SECRET" validate:"required"`
+	ClickHouseDSN   string        `envconfig:"CLICKHOUSE_DSN" validate:"required,url"`
+	JSONLog         bool          `default:"true" envconfig:"JSON_LOG"`
+	ShutdownDelay   time.Duration `default:"30s" validate:"required,min=5s" envconfig:"SHUTDOWN_DELAY"`
 }
 
 func LoadConfig() (*Config, error) {

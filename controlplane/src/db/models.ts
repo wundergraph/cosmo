@@ -1,11 +1,14 @@
-import { InferModel } from 'drizzle-orm';
-import { federatedGraphs, subgraphs, targets } from './schema.js';
+import {
+  federatedGraphs,
+  schemaCheckChangeAction,
+  schemaCheckChangeActionOperationUsage,
+  subgraphs,
+  targets,
+} from './schema.js';
 
-export type FederatedGraph = InferModel<typeof federatedGraphs>; // return type when queried
-export type NewFederatedGraph = InferModel<typeof federatedGraphs, 'insert'>; // insert type
-
-export type Subgraph = InferModel<typeof subgraphs>;
-export type NewSubgraph = InferModel<typeof subgraphs, 'insert'>;
-
-export type Target = InferModel<typeof targets>;
-export type NewTarget = InferModel<typeof targets, 'insert'>;
+export type FederatedGraph = typeof federatedGraphs.$inferSelect;
+export type Subgraph = typeof subgraphs.$inferSelect;
+export type Target = typeof targets.$inferSelect;
+export type SchemaCheckChangeAction = typeof schemaCheckChangeAction.$inferSelect;
+export type NewSchemaChangeOperationUsage = typeof schemaCheckChangeActionOperationUsage.$inferInsert;
+export type NewTarget = typeof targets.$inferInsert;

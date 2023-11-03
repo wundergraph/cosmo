@@ -1,7 +1,8 @@
 import { relations } from 'drizzle-orm';
 import {
-  bigint,
   boolean,
+  integer,
+  bigint,
   json,
   jsonb,
   pgEnum,
@@ -25,6 +26,16 @@ export const federatedGraphs = pgTable('federated_graphs', {
   composedSchemaVersionId: uuid('composed_schema_version_id').references(() => schemaVersion.id, {
     onDelete: 'no action',
   }),
+});
+
+export const federatedGraphConfigs = pgTable('federated_graph_configs', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  federatedGraphId: uuid('federated_graph_id')
+    .notNull()
+    .references(() => federatedGraphs.id, {
+      onDelete: 'cascade',
+    }),
+  trafficCheckDays: integer('traffic_check_days').notNull().default(7),
 });
 
 export const subscriptionProtocolEnum = pgEnum('subscription_protocol', ['ws', 'sse', 'sse_post']);
@@ -53,6 +64,10 @@ export const federatedGraphRelations = relations(federatedGraphs, ({ many, one }
   composedSchemaVersion: one(schemaVersion, {
     fields: [federatedGraphs.composedSchemaVersionId],
     references: [schemaVersion.id],
+  }),
+  config: one(federatedGraphConfigs, {
+    fields: [federatedGraphs.id],
+    references: [federatedGraphConfigs.federatedGraphId],
   }),
   subgraphs: many(subgraphsToFederatedGraph),
 }));
@@ -276,6 +291,7 @@ export const schemaChecks = pgTable('schema_checks', {
     }),
   isComposable: boolean('is_composable').default(false),
   hasBreakingChanges: boolean('has_breaking_changes').default(false),
+  hasClientTraffic: boolean('has_client_traffic').default(false),
   proposedSubgraphSchemaSDL: text('proposed_subgraph_schema_sdl'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   ghDetails: json('gh_details').$type<{
@@ -287,6 +303,46 @@ export const schemaChecks = pgTable('schema_checks', {
   }>(),
   forcedSuccess: boolean('forced_success').default(false),
 });
+
+export const schemaCheckChangeActionOperationUsage = pgTable('schema_check_change_operation_usage', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  schemaCheckChangeActionId: uuid('schema_check_change_action_id')
+    .notNull()
+    .references(() => schemaCheckChangeAction.id, {
+      onDelete: 'cascade',
+    }),
+  name: text('name').notNull(),
+  hash: text('hash').notNull(),
+  type: text('type').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  firstSeenAt: timestamp('first_seen_at', { withTimezone: true }).notNull(),
+  lastSeenAt: timestamp('last_seen_at', { withTimezone: true }).notNull(),
+});
+
+export const schemaCheckFederatedGraphs = pgTable('schema_check_federated_graphs', {
+  checkId: uuid('check_id')
+    .notNull()
+    .references(() => schemaChecks.id, {
+      onDelete: 'cascade',
+    }),
+  federatedGraphId: uuid('federated_graph_id')
+    .notNull()
+    .references(() => federatedGraphs.id, {
+      onDelete: 'cascade',
+    }),
+  trafficCheckDays: integer('traffic_check_days').notNull(),
+});
+
+export const schemaCheckFederatedGraphsRelations = relations(schemaCheckFederatedGraphs, ({ one }) => ({
+  schemaCheck: one(schemaChecks, {
+    fields: [schemaCheckFederatedGraphs.checkId],
+    references: [schemaChecks.id],
+  }),
+  federatedGraph: one(federatedGraphs, {
+    fields: [schemaCheckFederatedGraphs.federatedGraphId],
+    references: [federatedGraphs.id],
+  }),
+}));
 
 export const schemaCheckChangeAction = pgTable('schema_check_change_action', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -301,6 +357,10 @@ export const schemaCheckChangeAction = pgTable('schema_check_change_action', {
   path: text('path'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+export const schemaCheckChangeActionRelations = relations(schemaCheckChangeAction, ({ many }) => ({
+  operationUsage: many(schemaCheckChangeActionOperationUsage),
+}));
 
 export const schemaCheckComposition = pgTable('schema_check_composition', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -322,6 +382,7 @@ export const schemaCheckComposition = pgTable('schema_check_composition', {
 export const schemaCheckRelations = relations(schemaChecks, ({ many }) => ({
   changes: many(schemaCheckChangeAction),
   compositions: many(schemaCheckComposition),
+  affectedGraphs: many(schemaCheckFederatedGraphs),
 }));
 
 export const users = pgTable('users', {

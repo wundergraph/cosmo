@@ -27,8 +27,9 @@ import { useQuery } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { getFieldUsage } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { GetFieldUsageResponse } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { format, fromUnixTime } from "date-fns";
+import { format, formatISO, fromUnixTime } from "date-fns";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useRouter } from "next/router";
 import { useContext, useId, useMemo } from "react";
 import {
@@ -39,20 +40,20 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import {
+  DatePickerWithRange,
+  DateRangePickerChangeHandler,
+  getRange,
+} from "../date-picker-with-range";
 import { EmptyState } from "../empty-state";
 import { GraphContext } from "../layout/graph-layout";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Loader } from "../ui/loader";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../ui/select";
 import { ChartTooltip } from "./charts";
 import { createFilterState } from "./constructAnalyticsTableQueryState";
+import { useApplyParams } from "./use-apply-params";
+import { useAnalyticsQueryState } from "./useAnalyticsQueryState";
 
 export const FieldUsage = ({
   usageData,
@@ -64,11 +65,11 @@ export const FieldUsage = ({
 
   const subgraphs = useContext(GraphContext)?.subgraphs ?? [];
 
-  const range = (router.query.range as string) || "24";
+  const { range, dateRange } = useAnalyticsQueryState();
 
   const { data, ticks, domain, timeFormatter } = useChartData(
-    Number(range),
-    usageData.requestSeries
+    range,
+    usageData.requestSeries,
   );
 
   const color1 = useId();
@@ -76,14 +77,28 @@ export const FieldUsage = ({
 
   const { isMobile } = useWindowSize();
 
-  const onRangeChange = (value: string) => {
-    router.push({
-      pathname: router.pathname,
-      query: {
-        ...router.query,
-        range: value,
-      },
-    });
+  const applyParams = useApplyParams();
+
+  const onDateRangeChange: DateRangePickerChangeHandler = ({
+    range,
+    dateRange,
+  }) => {
+    if (range) {
+      applyParams({
+        range: range.toString(),
+        dateRange: null,
+      });
+    } else if (dateRange) {
+      const stringifiedDateRange = JSON.stringify({
+        start: formatISO(dateRange.start),
+        end: formatISO(dateRange.end ?? dateRange.start),
+      });
+
+      applyParams({
+        range: null,
+        dateRange: stringifiedDateRange,
+      });
+    }
   };
 
   const valueFormatter = (number: number) => `${formatMetric(number)}`;
@@ -100,18 +115,11 @@ export const FieldUsage = ({
     <div className="flex flex-col gap-y-12">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold">Requests</h2>
-        <Select value={range} onValueChange={onRangeChange}>
-          <SelectTrigger className="ml-auto w-[180px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="1">Last hour</SelectItem>
-            <SelectItem value="4">Last 4 hours</SelectItem>
-            <SelectItem value="24">Last day</SelectItem>
-            <SelectItem value="72">Last 3 days</SelectItem>
-            <SelectItem value="168">Last week</SelectItem>
-          </SelectContent>
-        </Select>
+        <DatePickerWithRange
+          range={range}
+          dateRange={dateRange}
+          onChange={onDateRangeChange}
+        />
       </div>
       <div className="h-64">
         <ResponsiveContainer width="100%" height="100%">
@@ -235,7 +243,12 @@ export const FieldUsage = ({
                                       filterState: createFilterState({
                                         operationName: op.name,
                                       }),
-                                      dateRange: createDateRange(Number(range)),
+                                      dateRange: range
+                                        ? createDateRange(getRange(range))
+                                        : JSON.stringify({
+                                            start: formatISO(dateRange.start),
+                                            end: formatISO(dateRange.end),
+                                          }),
                                     },
                                   }}
                                   className="text-primary"
@@ -292,14 +305,14 @@ export const FieldUsage = ({
                   First used:{" "}
                   {format(
                     fromUnixTime(Number(usageData.meta.firstSeenTimestamp)),
-                    "MMM dd yyyy HH:mm:ss"
+                    "MMM dd yyyy HH:mm:ss",
                   )}{" "}
                 </p>
                 <p className=" text-muted-foreground">
                   Latest used:{" "}
                   {format(
                     fromUnixTime(Number(usageData.meta.latestSeenTimestamp)),
-                    "MMM dd yyyy HH:mm:ss"
+                    "MMM dd yyyy HH:mm:ss",
                   )}
                 </p>
               </div>
@@ -313,20 +326,29 @@ export const FieldUsage = ({
 export const FieldUsageSheet = () => {
   const router = useRouter();
 
-  const typename = router.query.typename as string;
-  const field = router.query.field as string;
-  const range = router.query.range as string;
+  const searchParams = useSearchParams();
+
+  const { range, dateRange } = useAnalyticsQueryState();
+  const isNamedType = searchParams.get("isNamedType") === "true";
+  const showUsage = searchParams.get("showUsage");
+
+  const [type, field] = showUsage?.split(".") ?? [];
 
   const graph = useContext(GraphContext);
 
   const { data, error, isLoading, refetch } = useQuery({
     ...getFieldUsage.useQuery({
       field,
-      typename,
+      typename: isNamedType ? undefined : type,
+      namedType: isNamedType ? type : undefined,
       graphName: graph?.graph?.name,
-      range: Number(range) || 24,
+      range: range,
+      dateRange: {
+        start: formatISO(dateRange.start),
+        end: formatISO(dateRange.end),
+      },
     }),
-    enabled: !!typename && !!field && !!graph?.graph?.name,
+    enabled: !!showUsage && !!graph?.graph?.name,
   });
 
   let content: React.ReactNode;
@@ -353,27 +375,26 @@ export const FieldUsageSheet = () => {
   return (
     <Sheet
       modal
-      open={!!typename && !!field}
+      open={!!showUsage}
       onOpenChange={(isOpen) => {
         if (!isOpen) {
           const newQuery = { ...router.query };
-          delete newQuery["field"];
           delete newQuery["range"];
+          delete newQuery["showUsage"];
+          delete newQuery["isNamedType"];
           router.replace({
             query: newQuery,
           });
         }
       }}
     >
-      <SheetContent
-        className="scrollbar-custom w-full max-w-full overflow-y-auto sm:max-w-full md:max-w-2xl lg:max-w-3xl"
-        onPointerDownOutside={(e) => e.preventDefault()}
-      >
+      <SheetContent className="scrollbar-custom w-full max-w-full overflow-y-scroll sm:max-w-full md:max-w-2xl lg:max-w-3xl">
         <SheetHeader className="mb-12">
           <SheetTitle className="flex flex-wrap items-center gap-x-1.5">
             Field Usage for{" "}
             <code className="break-all rounded bg-secondary px-1.5 text-left text-secondary-foreground">
-              {typename}.{field}{" "}
+              {type}
+              {field && `.${field}`}
             </code>
           </SheetTitle>
         </SheetHeader>

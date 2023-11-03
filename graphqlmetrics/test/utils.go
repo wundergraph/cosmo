@@ -1,7 +1,7 @@
 package test
 
 import (
-	"database/sql"
+	"context"
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/amacneil/dbmate/v2/pkg/dbmate"
 	"github.com/rs/xid"
@@ -18,11 +18,11 @@ var (
 	defaultPassword = os.Getenv("CLICKHOUSE_PASSWORD")
 )
 
-func GetTestDatabase(t *testing.T) *sql.DB {
+func GetTestDatabase(t *testing.T) clickhouse.Conn {
 	databaseName := xid.New().String()
 
 	if defaultURL == "" {
-		defaultURL = "localhost:8123"
+		defaultURL = "localhost:9000"
 	}
 	if defaultDatabase == "" {
 		defaultDatabase = "default"
@@ -34,9 +34,9 @@ func GetTestDatabase(t *testing.T) *sql.DB {
 		defaultPassword = "changeme"
 	}
 
-	rootDB := clickhouse.OpenDB(&clickhouse.Options{
+	adminConn, err := clickhouse.Open(&clickhouse.Options{
 		Addr:     []string{defaultURL},
-		Protocol: clickhouse.HTTP,
+		Protocol: clickhouse.Native,
 		Settings: map[string]any{
 			"insert_quorum":                 "1",
 			"insert_quorum_parallel":        "0",
@@ -48,20 +48,23 @@ func GetTestDatabase(t *testing.T) *sql.DB {
 			Password: defaultPassword,
 		},
 	})
-
-	_, err := rootDB.Exec("CREATE ROLE " + databaseName)
 	require.NoError(t, err)
 
-	_, err = rootDB.Exec("CREATE DATABASE " + databaseName)
+	ctx := context.Background()
+
+	err = adminConn.Exec(ctx, "CREATE ROLE "+databaseName)
 	require.NoError(t, err)
 
-	_, err = rootDB.Exec("GRANT ALL ON " + databaseName + ".* TO " + databaseName)
+	err = adminConn.Exec(ctx, "CREATE DATABASE "+databaseName)
 	require.NoError(t, err)
 
-	_, err = rootDB.Exec("CREATE USER " + databaseName + " IDENTIFIED with no_password")
+	err = adminConn.Exec(ctx, "GRANT ALL ON "+databaseName+".* TO "+databaseName)
 	require.NoError(t, err)
 
-	_, err = rootDB.Exec("GRANT " + databaseName + " to " + databaseName)
+	err = adminConn.Exec(ctx, "CREATE USER "+databaseName+" IDENTIFIED with no_password")
+	require.NoError(t, err)
+
+	err = adminConn.Exec(ctx, "GRANT "+databaseName+" to "+databaseName)
 	require.NoError(t, err)
 
 	dbUrl := "clickhouse://" + databaseName + "@localhost:9000/" + databaseName
@@ -75,19 +78,19 @@ func GetTestDatabase(t *testing.T) *sql.DB {
 	require.NoError(t, migrator.Migrate())
 
 	t.Cleanup(func() {
-		_, err := rootDB.Exec("DROP DATABASE " + databaseName)
+		err := adminConn.Exec(ctx, "DROP DATABASE "+databaseName)
 		require.NoError(t, err)
 
-		_, err = rootDB.Exec("DROP USER " + databaseName)
+		err = adminConn.Exec(ctx, "DROP USER "+databaseName)
 		require.NoError(t, err)
 
-		_, err = rootDB.Exec("DROP ROLE " + databaseName)
+		err = adminConn.Exec(ctx, "DROP ROLE "+databaseName)
 		require.NoError(t, err)
 	})
 
-	testDB := clickhouse.OpenDB(&clickhouse.Options{
-		Addr:     []string{"localhost:8123"},
-		Protocol: clickhouse.HTTP,
+	testConn, err := clickhouse.Open(&clickhouse.Options{
+		Addr:     []string{defaultURL},
+		Protocol: clickhouse.Native,
 		Settings: map[string]any{
 			"insert_quorum":                 "1",
 			"insert_quorum_parallel":        "0",
@@ -98,6 +101,7 @@ func GetTestDatabase(t *testing.T) *sql.DB {
 			Username: databaseName,
 		},
 	})
+	require.NoError(t, err)
 
-	return testDB
+	return testConn
 }

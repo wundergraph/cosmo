@@ -49,6 +49,7 @@ func (m *OperationMetrics) exportSchemaUsageInfo(operationContext *operationCont
 			Path:        operationContext.preparedPlan.schemaUsageInfo.TypeFields[i].Path,
 			TypeNames:   operationContext.preparedPlan.schemaUsageInfo.TypeFields[i].TypeNames,
 			SubgraphIDs: operationContext.preparedPlan.schemaUsageInfo.TypeFields[i].Source.IDs,
+			NamedType:   operationContext.preparedPlan.schemaUsageInfo.TypeFields[i].NamedType,
 		}
 	}
 
