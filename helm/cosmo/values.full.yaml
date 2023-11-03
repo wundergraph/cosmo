@@ -121,7 +121,6 @@ otelcollector:
 graphqlmetrics:
   configuration:
     clickhouseDsn: "clickhouse://default:changeme@cosmo-clickhouse:9000/cosmo?dial_timeout=15s&compress=lz4"
-    clickhouseHttpDsn: "http://default:changeme@cosmo-clickhouse:8123/cosmo"
 
 # The following configuration enables the stateful services of the Cosmo Platform
 # The charts aren't production ready and are intended for development and testing purposes

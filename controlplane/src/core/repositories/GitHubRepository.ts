@@ -6,7 +6,10 @@ import { PlainMessage } from '@bufbuild/protobuf';
 import * as schema from '../../db/schema.js';
 
 export class GitHubRepository {
-  constructor(private db: PostgresJsDatabase<typeof schema>, private githubApp: App) {}
+  constructor(
+    private db: PostgresJsDatabase<typeof schema>,
+    private githubApp: App,
+  ) {}
 
   async verifyAppInstall(input: { code: string; installationId: number }): Promise<{ error?: string }> {
     try {
@@ -59,6 +62,7 @@ export class GitHubRepository {
     gitInfo: GitInfo;
     compositionErrors: PlainMessage<CompositionError>[];
     breakingChangesCount: number;
+    hasClientTraffic: boolean;
     subgraphName: string;
     composedGraphs: string[];
     organizationSlug: string;
@@ -69,6 +73,7 @@ export class GitHubRepository {
       gitInfo,
       compositionErrors,
       breakingChangesCount,
+      hasClientTraffic,
       subgraphName,
       organizationSlug,
       webBaseUrl,
@@ -85,21 +90,18 @@ export class GitHubRepository {
 
     const app = await this.githubApp.getInstallationOctokit(installation.providerInstallationId);
 
-    let title = 'Composed successfully';
+    let title = 'Composed successfully without breaking changes';
     let conclusion: 'success' | 'failure' = 'success';
 
     if (compositionErrors.length > 0) {
-      title = `Found ${compositionErrors.length} composition error`;
-      if (compositionErrors.length > 1) {
-        title += 's';
-      }
+      title = `Found ${compositionErrors.length} composition errors`;
       conclusion = 'failure';
-    } else if (breakingChangesCount > 0) {
-      title = `Found ${breakingChangesCount} breaking change`;
-      if (breakingChangesCount > 1) {
-        title += 's';
-      }
+    } else if (breakingChangesCount > 0 && hasClientTraffic) {
+      title = `Found ${breakingChangesCount} breaking changes affecting client traffic`;
       conclusion = 'failure';
+    } else if (breakingChangesCount > 0 && !hasClientTraffic) {
+      title = `Composed successfully with ${breakingChangesCount} breaking changes affecting no operations`;
+      conclusion = 'success';
     }
 
     let summary = `**Breaking Changes:** ${breakingChangesCount}\n\n**Composition Errors:** ${compositionErrors.length}`;

@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS gql_metrics_schema_usage
     -- Schema usage
     Path Array(String) CODEC(ZSTD(3)),
     TypeNames Array(String) CODEC(ZSTD(3)), -- Sorted before insertion
+    NamedType String CODEC(ZSTD(3)),
 
     -- Client information
     ClientName LowCardinality(String) CODEC(ZSTD(3)),

@@ -64,9 +64,9 @@ export const viewOptions: { label: string; value: TimeSetting }[] = [
 ];
 
 export const useChartData = (
-  timeRange: number,
+  timeRange = 24,
   rawData: { timestamp: number | string | Date }[],
-  timeSetting: TimeSetting | undefined = "local"
+  timeSetting: TimeSetting | undefined = "local",
 ) => {
   let suffix = "h";
   let timeDifference = differenceInHours;
