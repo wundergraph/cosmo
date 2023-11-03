@@ -176,7 +176,7 @@ const CheckOperationsPage: NextPageWithLayout = () => {
       <EmptyState
         icon={<CheckCircleIcon className="text-success" />}
         title="Operations Check Successful"
-        description="There are no operations that are affected by the proposed changes"
+        description="There are no operations that are affected by breaking changes"
       />
     );
   }
