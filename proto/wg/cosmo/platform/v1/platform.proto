@@ -266,7 +266,7 @@ message GetCheckDetailsResponse {
 message GetFederatedGraphChangelogRequest {
   string name = 1;
   Pagination pagination = 2;
-  DateRange date_range = 3;
+  DateRange dateRange = 3;
 }
 
 message FederatedGraphChangelog{
@@ -344,10 +344,11 @@ message Sort {
 }
 
 message AnalyticsConfig {
-  DateRange date_range = 1;
-  repeated AnalyticsFilter filters = 2;
-  Pagination pagination = 3;
-  optional Sort sort = 4;
+  DateRange dateRange = 1;
+  optional int32 range = 2;
+  repeated AnalyticsFilter filters = 3;
+  Pagination pagination = 4;
+  optional Sort sort = 5;
 }
 
 message AnalyticsFilter {
@@ -801,7 +802,8 @@ message UpdateOrgMemberRoleResponse {
  message GetGraphMetricsRequest {
   string federatedGraphName = 1;
   int32 range = 2;
-  repeated AnalyticsFilter filters = 3;
+  DateRange dateRange = 3;
+  repeated AnalyticsFilter filters = 4;
 }
 
 message GetGraphMetricsResponse {
@@ -842,7 +844,8 @@ message MetricsDashboard {
 message GetMetricsErrorRateRequest {
   string federatedGraphName = 1;
   int32 range = 2;
-  repeated AnalyticsFilter filters = 3;
+  DateRange dateRange = 3;
+  repeated AnalyticsFilter filters = 4;
 }
 
 message GetMetricsErrorRateResponse {

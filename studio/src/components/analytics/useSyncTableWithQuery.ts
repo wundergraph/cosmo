@@ -4,13 +4,13 @@ import {
   SortingState,
   Table,
 } from "@tanstack/react-table";
-import { endOfDay, formatISO, startOfDay, subDays } from "date-fns";
+import { endOfDay, formatISO, startOfDay, subDays, subHours } from "date-fns";
 import isEqual from "lodash/isEqual";
 import { useRouter } from "next/router";
 import { AnalyticsViewGroupName } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { useEffect, useRef } from "react";
-import { DateRange } from "react-day-picker";
-import { refreshIntervals } from "./data-table";
+import { refreshIntervals } from "./refresh-interval";
+import { DateRange, Range, getRange } from "../date-picker-with-range";
 
 export const getDefaultSort = (group?: string) => {
   return group
@@ -32,6 +32,8 @@ export const useSyncTableWithQuery = <T>({
   table,
   selectedGroup,
   setSelectedGroup,
+  selectedRange,
+  setRange,
   selectedDateRange,
   setDateRange,
   setColumnFilters,
@@ -44,14 +46,16 @@ export const useSyncTableWithQuery = <T>({
   table: Table<T>;
   selectedGroup: AnalyticsViewGroupName;
   setSelectedGroup: (val: AnalyticsViewGroupName) => void;
+  selectedRange?: Range;
+  setRange: (val?: Range) => void;
   selectedDateRange: DateRange;
-  setDateRange: (newVal: DateRange) => unknown;
+  setDateRange: (newVal: DateRange) => void;
   setColumnFilters: (newVal: ColumnFiltersState) => void;
   setSorting: (state: SortingState) => void;
   pagination: PaginationState;
   setPagination: (newVal: PaginationState) => void;
-  refreshInterval: (typeof refreshIntervals)[number];
-  onRefreshIntervalChange: (ri: (typeof refreshIntervals)[number]) => void;
+  refreshInterval?: number;
+  onRefreshIntervalChange: (ri?: number) => void;
 }) => {
   const router = useRouter();
 
@@ -63,12 +67,12 @@ export const useSyncTableWithQuery = <T>({
 
   const pageSize = table.getState().pagination.pageSize;
 
-  const stringifiedDateRange = JSON.stringify({
-    from: formatISO(selectedDateRange.from as Date),
-    to: formatISO(
-      (selectedDateRange.to as Date) ?? (selectedDateRange.from as Date)
-    ),
-  });
+  const stringifiedDateRange = selectedDateRange
+    ? JSON.stringify({
+        from: formatISO(selectedDateRange.start),
+        to: formatISO(selectedDateRange.end ?? selectedDateRange.start),
+      })
+    : undefined;
 
   useEffect(() => {
     if (router.isReady) {
@@ -103,12 +107,15 @@ export const useSyncTableWithQuery = <T>({
       }
       setPagination(newPagination);
 
+      const range = router.query.range?.toString();
+      const parsedRange = getRange(range);
+
       if (
         router.query.dateRange &&
         router.query.dateRange !== stringifiedDateRange
       ) {
         let dateRangeObjectISO = {
-          start: formatISO(startOfDay(subDays(new Date(), 30))),
+          start: formatISO(startOfDay(subHours(new Date(), parsedRange))),
           end: formatISO(endOfDay(new Date())),
         };
 
@@ -123,24 +130,21 @@ export const useSyncTableWithQuery = <T>({
         const end = new Date(dateRangeObjectISO.end);
 
         setDateRange({
-          from: start,
-          to: end,
+          start,
+          end,
         });
+        setRange();
+      } else if (!router.query.dateRange) {
+        setRange(parsedRange);
       }
 
       if (
         router.query.refreshInterval &&
-        router.query.refreshInterval !== JSON.stringify(refreshInterval)
+        Number(router.query.refreshInterval) !== refreshInterval
       ) {
-        let refreshIntervalObject = refreshIntervals[0];
-        try {
-          refreshIntervalObject = JSON.parse(
-            router.query.refreshInterval as string
-          );
-        } catch (e) {
-          console.error(e);
-        }
-        onRefreshIntervalChange(refreshIntervalObject);
+        onRefreshIntervalChange(
+          Number(router.query.refreshInterval) || refreshIntervals[0].value
+        );
       }
 
       if (router.query.sort) {
@@ -163,6 +167,7 @@ export const useSyncTableWithQuery = <T>({
     router.query.group,
     router.query.page,
     router.query.pageSize,
+    router.query.range,
     router.query.dateRange,
     router.query.refreshInterval,
     router.query.sort,

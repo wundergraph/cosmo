@@ -18,6 +18,9 @@ module.exports = {
         "2xl": "1400px",
       },
     },
+    data: {
+      active: 'active=""',
+    },
     extend: {
       screens: {
         "3xl": "1792px",

@@ -1,5 +1,5 @@
 import { getCheckBadge, getCheckIcon } from "@/components/check-badge-icon";
-import { DatePickerWithRange } from "@/components/date-picker-with-range";
+import { DateRangePicker } from "@/components/date-range-picker";
 import { EmptyState } from "@/components/empty-state";
 import { GraphContext, getGraphLayout } from "@/components/layout/graph-layout";
 import { PageHeader } from "@/components/layout/head";
@@ -171,7 +171,7 @@ const ChecksPage: NextPageWithLayout = () => {
 
   return (
     <div className="flex flex-col gap-y-3">
-      <DatePickerWithRange
+      <DateRangePicker
         className="ml-auto"
         selectedDateRange={{ from: startDate, to: endDate }}
         onDateRangeChange={onDateRangeChange}
