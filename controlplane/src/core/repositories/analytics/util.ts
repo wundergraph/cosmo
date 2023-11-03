@@ -308,6 +308,27 @@ export function timestampToNanoseconds(timestamp: string): bigint {
   return nanoseconds + BigInt(fractionalSeconds);
 }
 
+export function isoDateRangeToTimestamps(dateRange?: { start: string; end: string }, range?: number) {
+  if ((range && !dateRange) || !dateRange) {
+    const endDate = getEndDate();
+    return {
+      end: endDate,
+      start: endDate - (range || 24) * 60 * 60 * 1000,
+    };
+  }
+
+  return {
+    start: Math.round(new Date(dateRange.start).getTime() / 1000) * 1000,
+    end: Math.round(new Date(dateRange.end).getTime() / 1000) * 1000,
+  };
+}
+
+/**
+ * Get unix time in seconds
+ * @param timestamp Date or unix timestamp in milliseconds
+ * @param offset Offset in hours
+ * @returns
+ */
 const getUnixTimeInSeconds = (timestamp: Date | number, offset?: number) => {
   let date: number;
   if (timestamp instanceof Date) {
@@ -332,38 +353,38 @@ export const getEndDate = () => {
   return Math.round(now.getTime() / 1000) * 1000;
 };
 
-export const getDateRange = (endDate: Date | number, range: number, offset = 0) => {
-  const start = getUnixTimeInSeconds(endDate, range + offset);
+/**
+ * Returns a date range in seconds
+ * @param dateRange
+ * @param offset Offset in hours
+ * @returns
+ */
+export const getDateRange = (dateRange?: { start?: number; end?: number }, offset = 0) => {
+  if (dateRange?.start && dateRange?.end) {
+    return [getUnixTimeInSeconds(dateRange.start, offset * 2), getUnixTimeInSeconds(dateRange.end, offset)];
+  }
+
+  const endDate = dateRange?.end || getEndDate();
+
+  const start = getUnixTimeInSeconds(endDate, offset * 2);
   const end = getUnixTimeInSeconds(endDate, offset);
 
   return [start, end];
 };
 
 export const getGranularity = (range: number) => {
-  switch (range) {
-    case 168: {
-      // 7 days
-      return '240'; // 4H
-    }
-    case 72: {
-      // 3 days
-      return '60'; // 60 min
-    }
-    case 48: {
-      // 2 days
-      return '15'; // 15min
-    }
-    case 24: {
-      // 1 day
-      return '15'; // 15m
-    }
-    case 4: {
-      return '10'; // 10m
-    }
-    case 1: {
-      // 1 hour
-      return '5'; // 5m
-    }
+  if (range === 1) {
+    return '5';
+  } else if (range <= 4) {
+    return '10';
+  } else if (range <= 24) {
+    return '15';
+  } else if (range <= 48) {
+    return '15';
+  } else if (range <= 72) {
+    return '60';
+  } else if (range <= 168) {
+    return '240';
   }
 
   return '5';

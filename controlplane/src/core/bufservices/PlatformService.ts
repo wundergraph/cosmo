@@ -1646,6 +1646,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const view = await repo.getMetricsView({
           range: req.range,
+          dateRange: req.dateRange,
           filters: req.filters,
           organizationId: authContext.organizationId,
           graphId: graph.id,
@@ -1692,6 +1693,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const metrics = await repo.getErrorsView({
           range: req.range,
+          dateRange: req.dateRange,
           filters: req.filters,
           organizationId: authContext.organizationId,
           graphId: graph.id,

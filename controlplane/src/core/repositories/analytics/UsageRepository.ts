@@ -24,7 +24,7 @@ export class UsageRepository {
   private parseFilters(filters: { range: number; organizationId: string; federatedGraphId: string }): ParsedFilters {
     const { range, organizationId, federatedGraphId } = filters;
     const granule = getGranularity(range);
-    const [start, end] = getDateRange(getEndDate(), range);
+    const [start, end] = getDateRange({ end: getEndDate() }, range);
 
     return {
       granule,

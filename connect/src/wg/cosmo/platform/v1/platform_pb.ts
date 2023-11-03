@@ -2188,7 +2188,7 @@ export class GetFederatedGraphChangelogRequest extends Message<GetFederatedGraph
   pagination?: Pagination;
 
   /**
-   * @generated from field: wg.cosmo.platform.v1.DateRange date_range = 3;
+   * @generated from field: wg.cosmo.platform.v1.DateRange dateRange = 3;
    */
   dateRange?: DateRange;
 
@@ -2202,7 +2202,7 @@ export class GetFederatedGraphChangelogRequest extends Message<GetFederatedGraph
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "pagination", kind: "message", T: Pagination },
-    { no: 3, name: "date_range", kind: "message", T: DateRange },
+    { no: 3, name: "dateRange", kind: "message", T: DateRange },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetFederatedGraphChangelogRequest {
@@ -2813,22 +2813,27 @@ export class Sort extends Message<Sort> {
  */
 export class AnalyticsConfig extends Message<AnalyticsConfig> {
   /**
-   * @generated from field: wg.cosmo.platform.v1.DateRange date_range = 1;
+   * @generated from field: wg.cosmo.platform.v1.DateRange dateRange = 1;
    */
   dateRange?: DateRange;
 
   /**
-   * @generated from field: repeated wg.cosmo.platform.v1.AnalyticsFilter filters = 2;
+   * @generated from field: optional int32 range = 2;
+   */
+  range?: number;
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.AnalyticsFilter filters = 3;
    */
   filters: AnalyticsFilter[] = [];
 
   /**
-   * @generated from field: wg.cosmo.platform.v1.Pagination pagination = 3;
+   * @generated from field: wg.cosmo.platform.v1.Pagination pagination = 4;
    */
   pagination?: Pagination;
 
   /**
-   * @generated from field: optional wg.cosmo.platform.v1.Sort sort = 4;
+   * @generated from field: optional wg.cosmo.platform.v1.Sort sort = 5;
    */
   sort?: Sort;
 
@@ -2840,10 +2845,11 @@ export class AnalyticsConfig extends Message<AnalyticsConfig> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "wg.cosmo.platform.v1.AnalyticsConfig";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "date_range", kind: "message", T: DateRange },
-    { no: 2, name: "filters", kind: "message", T: AnalyticsFilter, repeated: true },
-    { no: 3, name: "pagination", kind: "message", T: Pagination },
-    { no: 4, name: "sort", kind: "message", T: Sort, opt: true },
+    { no: 1, name: "dateRange", kind: "message", T: DateRange },
+    { no: 2, name: "range", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
+    { no: 3, name: "filters", kind: "message", T: AnalyticsFilter, repeated: true },
+    { no: 4, name: "pagination", kind: "message", T: Pagination },
+    { no: 5, name: "sort", kind: "message", T: Sort, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AnalyticsConfig {
@@ -6233,7 +6239,12 @@ export class GetGraphMetricsRequest extends Message<GetGraphMetricsRequest> {
   range = 0;
 
   /**
-   * @generated from field: repeated wg.cosmo.platform.v1.AnalyticsFilter filters = 3;
+   * @generated from field: wg.cosmo.platform.v1.DateRange dateRange = 3;
+   */
+  dateRange?: DateRange;
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.AnalyticsFilter filters = 4;
    */
   filters: AnalyticsFilter[] = [];
 
@@ -6247,7 +6258,8 @@ export class GetGraphMetricsRequest extends Message<GetGraphMetricsRequest> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "federatedGraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "range", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
-    { no: 3, name: "filters", kind: "message", T: AnalyticsFilter, repeated: true },
+    { no: 3, name: "dateRange", kind: "message", T: DateRange },
+    { no: 4, name: "filters", kind: "message", T: AnalyticsFilter, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetGraphMetricsRequest {
@@ -6557,7 +6569,12 @@ export class GetMetricsErrorRateRequest extends Message<GetMetricsErrorRateReque
   range = 0;
 
   /**
-   * @generated from field: repeated wg.cosmo.platform.v1.AnalyticsFilter filters = 3;
+   * @generated from field: wg.cosmo.platform.v1.DateRange dateRange = 3;
+   */
+  dateRange?: DateRange;
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.AnalyticsFilter filters = 4;
    */
   filters: AnalyticsFilter[] = [];
 
@@ -6571,7 +6588,8 @@ export class GetMetricsErrorRateRequest extends Message<GetMetricsErrorRateReque
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "federatedGraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "range", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
-    { no: 3, name: "filters", kind: "message", T: AnalyticsFilter, repeated: true },
+    { no: 3, name: "dateRange", kind: "message", T: DateRange },
+    { no: 4, name: "filters", kind: "message", T: AnalyticsFilter, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetMetricsErrorRateRequest {

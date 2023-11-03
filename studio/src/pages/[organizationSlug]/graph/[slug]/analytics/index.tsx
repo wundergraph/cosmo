@@ -8,8 +8,16 @@ import {
   AnalyticsSelectedFilters,
 } from "@/components/analytics/filters";
 import { optionConstructor } from "@/components/analytics/getDataTableFilters";
+import { RefreshInterval } from "@/components/analytics/refresh-interval";
 import { AnalyticsToolbar } from "@/components/analytics/toolbar";
+import { useApplyParams } from "@/components/analytics/use-apply-params";
+import { useRange } from "@/components/analytics/use-range";
 import { useAnalyticsQueryState } from "@/components/analytics/useAnalyticsQueryState";
+import {
+  DatePickerWithRange,
+  DateRange,
+  DateRangePickerChangeHandler,
+} from "@/components/date-picker-with-range";
 import { EmptyState } from "@/components/empty-state";
 import { InfoTooltip } from "@/components/info-tooltip";
 import { getGraphLayout, GraphContext } from "@/components/layout/graph-layout";
@@ -41,7 +49,6 @@ import { createDateRange, useChartData } from "@/lib/insights-helpers";
 import { NextPageWithLayout } from "@/lib/page";
 import { cn } from "@/lib/utils";
 import {
-  ChevronDownIcon,
   ChevronRightIcon,
   ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
@@ -57,9 +64,10 @@ import {
   MetricsDashboardMetric,
   MetricsTopItem,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
+import { formatISO } from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import React, { useCallback, useContext, useEffect, useId } from "react";
+import React, { useCallback, useContext, useId } from "react";
 import {
   Area,
   AreaChart,
@@ -75,32 +83,14 @@ export type OperationAnalytics = {
   operationType: number;
 };
 
-// This is now static, but at some point we can introduce a date range picker for custom ranges.
-const useRange = () => {
-  const router = useRouter();
-
-  const range = router.query.range
-    ? parseInt(router.query.range?.toString())
-    : 168;
-
-  switch (range) {
-    case 24:
-      return 24;
-    case 72:
-      return 72;
-    case 168:
-      return 168;
-    default:
-      return Math.min(24, range);
-  }
-};
-
 const getInfoTip = (range: number) => {
   switch (range) {
     case 72:
       return "3 day";
     case 168:
       return "1 week";
+    case 720:
+      return "1 month";
     case 24:
     default:
       return `${range} hour`;
@@ -207,10 +197,6 @@ const MetricsFilters: React.FC<MetricsFiltersProps> = (props) => {
 
   const { filtersList } = useMetricsFilters(filters);
 
-  if (filtersList.filter((f) => f.options.length > 0).length === 0) {
-    return null;
-  }
-
   return <AnalyticsFilters filters={filtersList} />;
 };
 
@@ -219,16 +205,21 @@ const AnalyticsPage: NextPageWithLayout = () => {
 
   const range = useRange();
 
-  const { filters } = useAnalyticsQueryState();
+  const { filters, dateRange, refreshInterval } = useAnalyticsQueryState();
 
   let { data, isLoading, error, refetch } = useQuery({
     ...getGraphMetrics.useQuery({
       federatedGraphName: graphContext?.graph?.name,
       range,
+      dateRange: {
+        start: formatISO(dateRange.start),
+        end: formatISO(dateRange.end),
+      },
       filters,
     }),
     keepPreviousData: true,
     refetchOnWindowFocus: false,
+    refetchInterval: refreshInterval,
   });
 
   if (!isLoading && (error || data?.response?.code !== EnumStatusCode.OK)) {
@@ -724,7 +715,7 @@ const ErrorRateOverTimeCard = () => {
 
   const { isMobile } = useWindowSize();
 
-  const { filters } = useAnalyticsQueryState();
+  const { filters, refreshInterval } = useAnalyticsQueryState();
 
   let {
     data: responseData,
@@ -739,6 +730,7 @@ const ErrorRateOverTimeCard = () => {
     }),
     keepPreviousData: true,
     refetchOnWindowFocus: false,
+    refetchInterval: refreshInterval,
   });
 
   const { data, ticks, domain, timeFormatter } = useChartData(
@@ -848,19 +840,10 @@ const ErrorRateOverTimeCard = () => {
 
 const OverviewToolbar = () => {
   const graphContext = useContext(GraphContext);
-  const router = useRouter();
   const client = useQueryClient();
-  const range = useRange();
 
-  const onRangeChange = (value: string) => {
-    router.push({
-      pathname: router.pathname,
-      query: {
-        ...router.query,
-        range: value,
-      },
-    });
-  };
+  const { filters, range, dateRange, refreshInterval } =
+    useAnalyticsQueryState();
 
   const metrics = getGraphMetrics.useQuery({
     federatedGraphName: graphContext?.graph?.name,
@@ -873,8 +856,6 @@ const OverviewToolbar = () => {
   });
 
   const isFetching = useIsFetching();
-
-  const { filters } = useAnalyticsQueryState();
 
   let { data } = useQuery({
     ...getGraphMetrics.useQuery({
@@ -890,26 +871,46 @@ const OverviewToolbar = () => {
     data?.filters ?? []
   );
 
-  const rangeLabels: Record<number, string> = {
-    1: "Last hour",
-    4: "Last 4 hours",
-    24: "Last day",
-    72: "Last 3 days",
-    168: "Last week",
+  const applyParams = useApplyParams();
+
+  const onDateRangeChange: DateRangePickerChangeHandler = ({
+    range,
+    dateRange,
+  }) => {
+    if (range) {
+      applyParams({
+        range: range.toString(),
+        dateRange: null,
+      });
+    } else if (dateRange) {
+      const stringifiedDateRange = JSON.stringify({
+        start: formatISO(dateRange.start),
+        end: formatISO(dateRange.end ?? dateRange.start),
+      });
+
+      applyParams({
+        range: null,
+        dateRange: stringifiedDateRange,
+      });
+    }
   };
 
-  const handleCheckedChanged = (id: string) => {
-    return (checked: boolean) => {
-      if (checked) {
-        onRangeChange(id);
-      }
-    };
+  const onRefreshIntervalChange = (value?: number) => {
+    applyParams({
+      refreshInterval: value ? value.toString() : null,
+    });
   };
 
   return (
     <div className="flex flex-col gap-2 space-y-2">
       <div className="flex gap-2">
         <div className="flex flex-wrap gap-2">
+          <DatePickerWithRange
+            range={range}
+            dateRange={dateRange}
+            onChange={onDateRangeChange}
+          />
+
           <MetricsFilters filters={data?.filters ?? []} />
           <AnalyticsSelectedFilters
             filters={filtersList}
@@ -919,48 +920,6 @@ const OverviewToolbar = () => {
         </div>
 
         <Spacer />
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline">
-              <span className="inline-block w-[100px] text-left">
-                {rangeLabels[range]}
-              </span>
-              <ChevronDownIcon className="ml-2 h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start">
-            <DropdownMenuCheckboxItem
-              checked={range === 1}
-              onCheckedChange={handleCheckedChanged("1")}
-            >
-              Last hour
-            </DropdownMenuCheckboxItem>
-            <DropdownMenuCheckboxItem
-              checked={range === 4}
-              onCheckedChange={handleCheckedChanged("4")}
-            >
-              Last 4 hours
-            </DropdownMenuCheckboxItem>
-            <DropdownMenuCheckboxItem
-              checked={range === 24}
-              onCheckedChange={handleCheckedChanged("24")}
-            >
-              Last day
-            </DropdownMenuCheckboxItem>
-            <DropdownMenuCheckboxItem
-              checked={range === 72}
-              onCheckedChange={handleCheckedChanged("72")}
-            >
-              Last 3 days
-            </DropdownMenuCheckboxItem>
-            <DropdownMenuCheckboxItem
-              checked={range === 168}
-              onCheckedChange={handleCheckedChanged("168")}
-            >
-              Last week
-            </DropdownMenuCheckboxItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
         <Button
           isLoading={!!isFetching}
           onClick={() => {
@@ -972,6 +931,10 @@ const OverviewToolbar = () => {
         >
           <UpdateIcon />
         </Button>
+        <RefreshInterval
+          value={refreshInterval}
+          onChange={onRefreshIntervalChange}
+        />
       </div>
     </div>
   );
