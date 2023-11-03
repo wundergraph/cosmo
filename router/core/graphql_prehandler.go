@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-chi/chi/middleware"
 	"github.com/wundergraph/cosmo/router/internal/logging"
+	"github.com/wundergraph/cosmo/router/internal/pool"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphql"
 	"go.uber.org/zap"
 )
@@ -51,11 +52,6 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 
 func (h *PreHandler) Handler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
-		var (
-			err error
-		)
-
 		requestLogger := h.log.With(logging.WithRequestID(middleware.GetReqID(r.Context())))
 
 		// In GraphQL the statusCode does not always express the error state of the request
@@ -71,13 +67,17 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			metrics.Finish(hasRequestError, statusCode, writtenBytes)
 		}()
 
-		r, err = h.accessController.Access(w, r)
+		validatedReq, err := h.accessController.Access(w, r)
 		if err != nil {
 			hasRequestError = true
 			requestLogger.Error(err.Error())
 			writeRequestErrors(r, graphql.RequestErrorsFromError(err), w, requestLogger)
 			return
 		}
+		r = validatedReq
+
+		buf := pool.GetBytesBuffer()
+		defer pool.PutBytesBuffer(buf)
 
 		operation, err := h.parser.ParseReader(r.Body)
 		if err != nil {
