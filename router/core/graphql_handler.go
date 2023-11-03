@@ -15,10 +15,8 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
-	"go.uber.org/zap"
-	"golang.org/x/sync/singleflight"
-
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
+	"go.uber.org/zap"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphql"
@@ -103,7 +101,6 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 type GraphQLHandler struct {
 	log      *zap.Logger
 	executor *Executor
-	sf       singleflight.Group
 }
 
 func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
