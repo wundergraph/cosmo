@@ -27,10 +27,12 @@ export function DataTablePrimaryFilterMenu<T>({
 }) {
   const { isMobile } = useWindowSize();
 
+  const isDisabled = filters.filter((f) => f.options.length > 0).length === 0;
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline">
+        <Button variant="outline" disabled={isDisabled}>
           Filter <ChevronDownIcon className="ml-2" />
         </Button>
       </DropdownMenuTrigger>
