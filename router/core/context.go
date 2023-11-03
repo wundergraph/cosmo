@@ -346,7 +346,7 @@ type operationContext struct {
 	variables  []byte
 	clientInfo *ClientInfo
 	// preparedPlan is the prepared plan of the operation
-	preparedPlan planWithMetaData
+	preparedPlan *planWithMetaData
 }
 
 func (o *operationContext) Name() string {

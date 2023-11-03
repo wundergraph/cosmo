@@ -5,7 +5,6 @@ import (
 	"errors"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astnormalization"
 	"strconv"
-	"time"
 
 	"github.com/dgraph-io/ristretto"
 	"github.com/wundergraph/cosmo/router/internal/unsafebytes"
@@ -92,7 +91,7 @@ func (p *OperationPlanner) Plan(operation *ParsedOperation, clientInfo *ClientIn
 	cachedPlan, ok := p.planCache.Get(operationID)
 	if ok && cachedPlan != nil {
 		// re-use a prepared plan
-		opContext.preparedPlan = cachedPlan.(planWithMetaData)
+		opContext.preparedPlan = cachedPlan.(*planWithMetaData)
 	} else {
 		// prepare a new plan using single flight
 		// this ensures that we only prepare the plan once for this operation ID
@@ -103,15 +102,13 @@ func (p *OperationPlanner) Plan(operation *ParsedOperation, clientInfo *ClientIn
 			if err != nil {
 				return nil, err
 			}
-			// cache the prepared plan for 1 hour
-			p.planCache.SetWithTTL(operationID, prepared, 1, time.Hour)
-			return prepared, nil
+			p.planCache.Set(operationID, &prepared, 1)
+			return &prepared, nil
 		})
 		if err != nil {
 			return nil, err
 		}
-
-		opContext.preparedPlan, ok = sharedPreparedPlan.(planWithMetaData)
+		opContext.preparedPlan, ok = sharedPreparedPlan.(*planWithMetaData)
 		if !ok {
 			return nil, errors.New("unexpected prepared plan type")
 		}
