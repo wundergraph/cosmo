@@ -291,6 +291,7 @@ message GetCheckDetailsResponse {
   repeated SchemaChange changes = 2;
   repeated string compositionErrors = 3;
   int32 traffic_check_days = 4;
+  string created_at = 5;
 }
 
 message GetCheckOperationsRequest {
@@ -311,6 +312,7 @@ message GetCheckOperationsResponse {
   Response response = 1;
   repeated CheckOperation operations = 2;
   int32 traffic_check_days = 3;
+  string created_at = 4;
 }
 
 message GetOperationContentRequest {

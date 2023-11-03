@@ -51,6 +51,7 @@ const CheckDetailsPage: NextPageWithLayout = () => {
           changes={data.changes}
           caption={`${data.changes.length} changes found`}
           trafficCheckDays={data.trafficCheckDays}
+          createdAt={data.createdAt}
         />
       </div>
       <div className="flex flex-col gap-y-4">

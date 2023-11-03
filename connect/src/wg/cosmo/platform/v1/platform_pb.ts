@@ -2387,6 +2387,11 @@ export class GetCheckDetailsResponse extends Message<GetCheckDetailsResponse> {
    */
   trafficCheckDays = 0;
 
+  /**
+   * @generated from field: string created_at = 5;
+   */
+  createdAt = "";
+
   constructor(data?: PartialMessage<GetCheckDetailsResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -2399,6 +2404,7 @@ export class GetCheckDetailsResponse extends Message<GetCheckDetailsResponse> {
     { no: 2, name: "changes", kind: "message", T: SchemaChange, repeated: true },
     { no: 3, name: "compositionErrors", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 4, name: "traffic_check_days", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 5, name: "created_at", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCheckDetailsResponse {
@@ -2480,6 +2486,11 @@ export class GetCheckOperationsResponse extends Message<GetCheckOperationsRespon
    */
   trafficCheckDays = 0;
 
+  /**
+   * @generated from field: string created_at = 4;
+   */
+  createdAt = "";
+
   constructor(data?: PartialMessage<GetCheckOperationsResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -2491,6 +2502,7 @@ export class GetCheckOperationsResponse extends Message<GetCheckOperationsRespon
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "operations", kind: "message", T: GetCheckOperationsResponse_CheckOperation, repeated: true },
     { no: 3, name: "traffic_check_days", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 4, name: "created_at", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCheckOperationsResponse {

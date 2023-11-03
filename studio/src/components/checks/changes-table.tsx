@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import { BarChartIcon, GlobeIcon } from "@radix-ui/react-icons";
 import { SchemaChange } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
+import { formatISO, subHours } from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { Button } from "../ui/button";
@@ -20,17 +21,17 @@ import {
   TooltipTrigger,
 } from "../ui/tooltip";
 import { useToast } from "../ui/use-toast";
-import { createDateRange } from "@/lib/insights-helpers";
-import { getRange } from "../date-picker-with-range";
 
 export const ChangesTable = ({
   changes,
   caption,
   trafficCheckDays,
+  createdAt,
 }: {
   changes: SchemaChange[];
   caption: React.ReactNode;
   trafficCheckDays: number;
+  createdAt: string;
 }) => {
   const router = useRouter();
   const { toast } = useToast();
@@ -60,7 +61,10 @@ export const ChangesTable = ({
     }
 
     if (trafficCheckDays) {
-      query.dateRange = createDateRange(getRange(trafficCheckDays * 24));
+      query.dateRange = JSON.stringify({
+        start: formatISO(subHours(new Date(createdAt), 24 * trafficCheckDays)),
+        end: formatISO(new Date(createdAt)),
+      });
     }
 
     router.replace({

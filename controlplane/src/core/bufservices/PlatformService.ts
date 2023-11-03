@@ -1111,12 +1111,14 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             },
             operations: [],
             trafficCheckDays: 0,
+            createdAt: '',
           };
         }
 
+        const check = await subgraphRepo.checkById(req.checkId, graph.name);
         const checkDetails = await subgraphRepo.checkDetails(req.checkId, graph.targetId);
 
-        if (!checkDetails) {
+        if (!check || !checkDetails) {
           return {
             response: {
               code: EnumStatusCode.ERR_NOT_FOUND,
@@ -1124,6 +1126,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             },
             operations: [],
             trafficCheckDays: 0,
+            createdAt: '',
           };
         }
 
@@ -1142,6 +1145,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             impactingChanges: checkDetails.changes.filter(({ id }) => operation.schemaChangeIds.includes(id)),
           })),
           trafficCheckDays,
+          createdAt: check.timestamp,
         };
       });
     },
@@ -1169,12 +1173,14 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             changes: [],
             compositionErrors: [],
             trafficCheckDays: 0,
+            createdAt: '',
           };
         }
 
+        const check = await subgraphRepo.checkById(req.checkId, graph.name);
         const details = await subgraphRepo.checkDetails(req.checkId, graph.targetId);
 
-        if (!details) {
+        if (!check || !details) {
           return {
             response: {
               code: EnumStatusCode.ERR_NOT_FOUND,
@@ -1183,6 +1189,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             changes: [],
             compositionErrors: [],
             trafficCheckDays: 0,
+            createdAt: '',
           };
         }
 
@@ -1194,6 +1201,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           },
           ...details,
           trafficCheckDays,
+          createdAt: check?.timestamp,
         };
       });
     },

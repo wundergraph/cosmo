@@ -228,7 +228,7 @@ const CheckOverviewPage: NextPageWithLayout = () => {
               <TableRow>
                 <TableCell>
                   <div className="flex items-center space-x-1.5">
-                    <div>Composable</div>
+                    <div>Composition Check</div>
                     <InfoTooltip>
                       Describes if the proposed schema can be composed with all
                       other subgraphs in the federated graph.
@@ -243,7 +243,7 @@ const CheckOverviewPage: NextPageWithLayout = () => {
               <TableRow>
                 <TableCell>
                   <div className="flex items-center space-x-1.5">
-                    <div>No breaking changes</div>
+                    <div>Breaking Change Detection</div>
                     <InfoTooltip>
                       Describes if the proposed schema is free of changes that
                       break existing client operations.
@@ -258,7 +258,7 @@ const CheckOverviewPage: NextPageWithLayout = () => {
                 <TableRow>
                   <TableCell>
                     <div className="flex items-center space-x-1.5">
-                      <div>No affected operations</div>
+                      <div>Operations Check</div>
                       <InfoTooltip>
                         Describes if the proposed schema affects any client
                         operations based on real usage data.

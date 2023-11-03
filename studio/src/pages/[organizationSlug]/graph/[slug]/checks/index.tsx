@@ -157,9 +157,11 @@ const ChecksPage: NextPageWithLayout = () => {
             <TableHead className="w-[200px]">Timestamp</TableHead>
             <TableHead>Subgraph</TableHead>
             <TableHead className="text-center">Status</TableHead>
-            <TableHead className="text-center">Composable</TableHead>
-            <TableHead className="text-center">Non Breaking</TableHead>
-            <TableHead className="text-center">Operations</TableHead>
+            <TableHead className="text-center">Composition Check</TableHead>
+            <TableHead className="text-center">
+              Breaking Change Detection
+            </TableHead>
+            <TableHead className="text-center">Operations Check</TableHead>
             <TableHead className="text-center">Details</TableHead>
           </TableRow>
         </TableHeader>
