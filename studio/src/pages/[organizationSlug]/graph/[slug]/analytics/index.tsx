@@ -15,7 +15,6 @@ import { useRange } from "@/components/analytics/use-range";
 import { useAnalyticsQueryState } from "@/components/analytics/useAnalyticsQueryState";
 import {
   DatePickerWithRange,
-  DateRange,
   DateRangePickerChangeHandler,
 } from "@/components/date-picker-with-range";
 import { EmptyState } from "@/components/empty-state";
@@ -25,12 +24,6 @@ import { PageHeader } from "@/components/layout/head";
 import { TitleLayout } from "@/components/layout/title-layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Loader } from "@/components/ui/loader";
 import { Spacer } from "@/components/ui/spacer";
 import {
@@ -38,7 +31,6 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useSessionStorage } from "@/hooks/use-session-storage";
 import useWindowSize from "@/hooks/use-window-size";
 import {
   formatDurationMetric,
@@ -64,7 +56,7 @@ import {
   MetricsDashboardMetric,
   MetricsTopItem,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { formatISO } from "date-fns";
+import { differenceInHours, formatISO } from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import React, { useCallback, useContext, useId } from "react";
@@ -83,17 +75,18 @@ export type OperationAnalytics = {
   operationType: number;
 };
 
-const getInfoTip = (range: number) => {
+const getInfoTip = (range?: number) => {
   switch (range) {
     case 72:
-      return "3 day";
+      return "last 3 day";
     case 168:
-      return "1 week";
+      return "last 1 week";
     case 720:
-      return "1 month";
+      return "last 1 month";
     case 24:
+      return "last 1 day";
     default:
-      return `${range} hour`;
+      return "selected period";
   }
 };
 
@@ -203,18 +196,19 @@ const MetricsFilters: React.FC<MetricsFiltersProps> = (props) => {
 const AnalyticsPage: NextPageWithLayout = () => {
   const graphContext = useContext(GraphContext);
 
-  const range = useRange();
-
-  const { filters, dateRange, refreshInterval } = useAnalyticsQueryState();
+  const { filters, range, dateRange, refreshInterval } =
+    useAnalyticsQueryState();
 
   let { data, isLoading, error, refetch } = useQuery({
     ...getGraphMetrics.useQuery({
       federatedGraphName: graphContext?.graph?.name,
       range,
-      dateRange: {
-        start: formatISO(dateRange.start),
-        end: formatISO(dateRange.end),
-      },
+      dateRange: range
+        ? undefined
+        : {
+            start: formatISO(dateRange.start),
+            end: formatISO(dateRange.end),
+          },
       filters,
     }),
     keepPreviousData: true,
@@ -320,7 +314,9 @@ const TopList: React.FC<{
   queryParams?: Record<string, string | number>;
 }> = ({ title, items, formatter, queryParams = {} }) => {
   const router = useRouter();
-  const range = useRange();
+
+  const range = router.query.range;
+  const dateRange = router.query.dateRange;
 
   return (
     <CardContent className="pt-6">
@@ -335,7 +331,8 @@ const TopList: React.FC<{
                     organizationSlug: router.query.organizationSlug,
                     slug: router.query.slug,
                     filterState: router.query.filterState || "[]",
-                    dateRange: createDateRange(range),
+                    range,
+                    dateRange,
                     ...queryParams,
                   },
                 }}
@@ -362,7 +359,8 @@ const TopList: React.FC<{
               filterState: createFilterState({
                 operationName: row.name,
               }),
-              dateRange: createDateRange(range),
+              range,
+              dateRange,
             },
           },
         }))}
@@ -455,7 +453,7 @@ const LatencyMetricsCard = (props: { data?: MetricsDashboardMetric }) => {
         <div className="flex-1">
           <div className="flex space-x-2 text-sm">
             <h4>P95 Latency</h4>
-            <InfoTooltip>P95 latency in last {getInfoTip(range)}</InfoTooltip>
+            <InfoTooltip>P95 latency in {getInfoTip(range)}</InfoTooltip>
           </div>
           <p className="text-xl font-semibold">{formatter(value)}</p>
 
@@ -504,9 +502,7 @@ const ErrorMetricsCard = (props: { data?: MetricsDashboardMetric }) => {
         <div className="flex-1">
           <div className="flex space-x-2 text-sm">
             <h4>Error Percentage</h4>
-            <InfoTooltip>
-              Error percentage in last {getInfoTip(range)}
-            </InfoTooltip>
+            <InfoTooltip>Error percentage in {getInfoTip(range)}</InfoTooltip>
           </div>
           <p className="text-xl font-semibold">{formatter(value)}</p>
           <p className="text-sm text-muted-foreground">
@@ -694,7 +690,6 @@ const ErrorPercentChart: React.FC<SparklineProps> = (props) => {
 
 const ErrorRateOverTimeCard = () => {
   const id = useId();
-  const range = useRange();
   const graphContext = useContext(GraphContext);
 
   const formatter = (value: number) => {
@@ -715,7 +710,8 @@ const ErrorRateOverTimeCard = () => {
 
   const { isMobile } = useWindowSize();
 
-  const { filters, refreshInterval } = useAnalyticsQueryState();
+  const { filters, range, dateRange, refreshInterval } =
+    useAnalyticsQueryState();
 
   let {
     data: responseData,
@@ -726,6 +722,12 @@ const ErrorRateOverTimeCard = () => {
     ...getMetricsErrorRate.useQuery({
       federatedGraphName: graphContext?.graph?.name,
       range,
+      dateRange: range
+        ? undefined
+        : {
+            start: formatISO(dateRange.start),
+            end: formatISO(dateRange.end),
+          },
       filters,
     }),
     keepPreviousData: true,
@@ -734,7 +736,7 @@ const ErrorRateOverTimeCard = () => {
   });
 
   const { data, ticks, domain, timeFormatter } = useChartData(
-    range,
+    differenceInHours(dateRange.end, dateRange.start) ?? 24,
     responseData?.series ?? []
   );
 
@@ -828,7 +830,7 @@ const ErrorRateOverTimeCard = () => {
         <div className="flex space-x-2">
           <CardTitle>Error rate over time</CardTitle>
           <InfoTooltip>
-            Error rate per minute in last {getInfoTip(range)}
+            Error rate per minute in {getInfoTip(range)}
           </InfoTooltip>
         </div>
       </CardHeader>
@@ -860,6 +862,12 @@ const OverviewToolbar = () => {
   let { data } = useQuery({
     ...getGraphMetrics.useQuery({
       federatedGraphName: graphContext?.graph?.name,
+      dateRange: range
+        ? undefined
+        : {
+            start: formatISO(dateRange.start),
+            end: formatISO(dateRange.end),
+          },
       range,
       filters,
     }),

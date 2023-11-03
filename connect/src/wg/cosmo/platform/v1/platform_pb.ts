@@ -6308,6 +6308,11 @@ export class GetGraphMetricsResponse extends Message<GetGraphMetricsResponse> {
    */
   filters: AnalyticsViewResultFilter[] = [];
 
+  /**
+   * @generated from field: optional string resolution = 6;
+   */
+  resolution?: string;
+
   constructor(data?: PartialMessage<GetGraphMetricsResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -6321,6 +6326,7 @@ export class GetGraphMetricsResponse extends Message<GetGraphMetricsResponse> {
     { no: 3, name: "latency", kind: "message", T: MetricsDashboardMetric },
     { no: 4, name: "errors", kind: "message", T: MetricsDashboardMetric },
     { no: 5, name: "filters", kind: "message", T: AnalyticsViewResultFilter, repeated: true },
+    { no: 6, name: "resolution", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetGraphMetricsResponse {
@@ -6623,6 +6629,11 @@ export class GetMetricsErrorRateResponse extends Message<GetMetricsErrorRateResp
    */
   series: MetricsErrorRateSeriesItem[] = [];
 
+  /**
+   * @generated from field: optional string resolution = 3;
+   */
+  resolution?: string;
+
   constructor(data?: PartialMessage<GetMetricsErrorRateResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -6633,6 +6644,7 @@ export class GetMetricsErrorRateResponse extends Message<GetMetricsErrorRateResp
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "series", kind: "message", T: MetricsErrorRateSeriesItem, repeated: true },
+    { no: 3, name: "resolution", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetMetricsErrorRateResponse {

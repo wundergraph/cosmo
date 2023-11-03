@@ -109,10 +109,16 @@ export function DatePickerWithRange({
 
   const reset = () => {
     setSelectedRange(range);
-    if (dateRange) {
-      setSelectedDateTime(dateRange, undefined, false);
+    if (!range) {
       setStartTime(getFormattedTime(dateRange.start));
       setEndTime(dateRange.end ? getFormattedTime(dateRange.end) : "");
+    } else {
+      const end = new Date();
+      setStartTime(getFormattedTime(subHours(end, range)));
+      setEndTime(getFormattedTime(end));
+    }
+    if (dateRange) {
+      setSelectedDateTime(dateRange, undefined, false);
     }
   };
 
@@ -153,8 +159,8 @@ export function DatePickerWithRange({
     const start = subHours(new Date(), range);
     const end = new Date();
 
-    setStartTime("");
-    setEndTime("");
+    setStartTime(getFormattedTime(start));
+    setEndTime(getFormattedTime(end));
 
     setSelectedRange(range);
     setSelectedDateRange({ start, end });
@@ -165,6 +171,10 @@ export function DatePickerWithRange({
     (e) => {
       const time = e.target.value;
       setTime(field, time);
+      if (time) {
+        // if time is set, then we need to reset the range to 'custom'
+        setSelectedRange(undefined);
+      }
     };
 
   return (
@@ -220,6 +230,20 @@ export function DatePickerWithRange({
                 </Button>
               </li>
             ))}
+            <li>
+              <Button
+                variant="ghost"
+                className="w-full justify-start"
+                data-active={!selectedRange ? "" : undefined}
+                onClick={() => {
+                  setSelectedRange(undefined);
+                  setStartTime("00:00");
+                  setEndTime("23:59");
+                }}
+              >
+                Custom
+              </Button>
+            </li>
           </ul>
           <div>
             <Calendar
@@ -299,6 +323,8 @@ export function DatePickerWithRange({
               setIsOpen(false);
 
               const dateRange = getValue();
+
+              setSelectedDateRange(dateRange);
 
               onChange?.({
                 range: selectedRange,

@@ -1531,6 +1531,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             code: EnumStatusCode.OK,
           },
           series: metrics.errorRate.series,
+          resolution: metrics.resolution,
         };
       });
     },
