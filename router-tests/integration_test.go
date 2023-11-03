@@ -157,11 +157,13 @@ func prepareServer(tb testing.TB, opts ...core.Option) *core.Server {
 		core.WithFederatedGraphName(cfg.Graph.Name),
 		core.WithStaticRouterConfig(routerConfig),
 		core.WithLogger(zapLogger),
+		core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
+			EnableSingleFlight: true,
+		}),
 	}
 	routerOpts = append(routerOpts, opts...)
 	rs, err := core.NewRouter(routerOpts...)
 	require.NoError(tb, err)
-
 	tb.Cleanup(func() {
 		assert.Nil(tb, rs.Shutdown(ctx))
 	})

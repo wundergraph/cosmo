@@ -115,6 +115,8 @@ func (p *OperationParser) Parse(data []byte) (*ParsedOperation, error) {
 }
 
 var (
+	// staticOperationName is used to replace the operation name in the document when generating the operation ID
+	// this ensures that the operation ID is the same for the same operation regardless of the operation name
 	staticOperationName = []byte("O")
 	parseOperationKeys  = [][]string{
 		{"query"},

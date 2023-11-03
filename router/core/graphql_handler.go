@@ -84,7 +84,6 @@ type HandlerOptions struct {
 func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 	graphQLHandler := &GraphQLHandler{
 		log:      opts.Log,
-		sf:       &singleflight.Group{},
 		executor: opts.Executor,
 	}
 
@@ -104,7 +103,7 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 type GraphQLHandler struct {
 	log      *zap.Logger
 	executor *Executor
-	sf       *singleflight.Group
+	sf       singleflight.Group
 }
 
 func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
