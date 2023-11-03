@@ -71,41 +71,42 @@ type (
 
 	// Config defines the configuration options for the Router.
 	Config struct {
-		transport                      *http.Transport
-		logger                         *zap.Logger
-		traceConfig                    *trace.Config
-		metricConfig                   *metric.Config
-		tracerProvider                 *sdktrace.TracerProvider
-		meterProvider                  *sdkmetric.MeterProvider
-		gqlMetricsExporter             *graphqlmetrics.Exporter
-		corsOptions                    *cors.Config
-		configFetcher                  controlplane.ConfigFetcher
-		routerConfig                   *nodev1.RouterConfig
-		gracePeriod                    time.Duration
-		shutdown                       bool
-		listenAddr                     string
-		baseURL                        string
-		graphqlPath                    string
-		playground                     bool
-		introspection                  bool
-		federatedGraphName             string
-		graphApiToken                  string
-		healthCheckPath                string
-		readinessCheckPath             string
-		livenessCheckPath              string
-		prometheusServer               *http.Server
-		modulesConfig                  map[string]interface{}
-		routerMiddlewares              []func(http.Handler) http.Handler
-		preOriginHandlers              []TransportPreHandler
-		postOriginHandlers             []TransportPostHandler
-		headerRuleEngine               *HeaderRuleEngine
-		headerRules                    config.HeaderRules
-		subgraphTransportOptions       *SubgraphTransportOptions
-		graphqlMetricsConfig           *GraphQLMetricsConfig
-		routerTrafficConfig            *config.RouterTrafficConfiguration
-		accessController               *AccessController
-		retryOptions                   retrytransport.RetryOptions
-		translateLocalhostInsideDocker bool
+		transport                *http.Transport
+		logger                   *zap.Logger
+		traceConfig              *trace.Config
+		metricConfig             *metric.Config
+		tracerProvider           *sdktrace.TracerProvider
+		meterProvider            *sdkmetric.MeterProvider
+		gqlMetricsExporter       *graphqlmetrics.Exporter
+		corsOptions              *cors.Config
+		configFetcher            controlplane.ConfigFetcher
+		routerConfig             *nodev1.RouterConfig
+		gracePeriod              time.Duration
+		shutdown                 bool
+		listenAddr               string
+		baseURL                  string
+		graphqlPath              string
+		playground               bool
+		introspection            bool
+		federatedGraphName       string
+		graphApiToken            string
+		healthCheckPath          string
+		readinessCheckPath       string
+		livenessCheckPath        string
+		prometheusServer         *http.Server
+		modulesConfig            map[string]interface{}
+		routerMiddlewares        []func(http.Handler) http.Handler
+		preOriginHandlers        []TransportPreHandler
+		postOriginHandlers       []TransportPostHandler
+		headerRuleEngine         *HeaderRuleEngine
+		headerRules              config.HeaderRules
+		subgraphTransportOptions *SubgraphTransportOptions
+		graphqlMetricsConfig     *GraphQLMetricsConfig
+		routerTrafficConfig      *config.RouterTrafficConfiguration
+		accessController         *AccessController
+		retryOptions             retrytransport.RetryOptions
+		// If connecting to localhost inside Docker fails, fallback to the docker internal address for the host
+		localhostFallbackInsideDocker bool
 
 		engineExecutionConfiguration config.EngineExecutionConfiguration
 
@@ -641,8 +642,8 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 					return retrytransport.IsRetryableError(err, resp) && !isMutationRequest(req.Context())
 				},
 			},
-			TranslateLocalhostInsideDocker: r.translateLocalhostInsideDocker,
-			Logger:                         r.logger,
+			LocalhostFallbackInsideDocker: r.localhostFallbackInsideDocker,
+			Logger:                        r.logger,
 		},
 	}
 
@@ -1053,9 +1054,9 @@ func WithAccessController(controller *AccessController) Option {
 	}
 }
 
-func WithTranslateLocalhostInsideDocker(translate bool) Option {
+func WithLocalhostFallbackInsideDocker(fallback bool) Option {
 	return func(r *Router) {
-		r.translateLocalhostInsideDocker = translate
+		r.localhostFallbackInsideDocker = fallback
 	}
 }
 
