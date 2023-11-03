@@ -646,6 +646,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             gitInfo: req.gitInfo,
             compositionErrors,
             breakingChangesCount: schemaChanges.breakingChanges.length,
+            hasClientTraffic,
             subgraphName: subgraph.name,
             organizationSlug: org.slug,
             webBaseUrl: opts.webBaseUrl,
