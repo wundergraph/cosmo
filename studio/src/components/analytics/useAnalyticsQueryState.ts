@@ -1,9 +1,9 @@
-import { endOfDay, formatISO, startOfDay, subDays, subHours } from "date-fns";
-import { useRouter } from "next/router";
 import { AnalyticsViewGroupName } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
+import { endOfDay, startOfDay, subHours } from "date-fns";
+import { useRouter } from "next/router";
 import { useMemo } from "react";
+import { Range, getRange } from "../date-picker-with-range";
 import { refreshIntervals } from "./refresh-interval";
-import { getRange, Range } from "../date-picker-with-range";
 
 const parse = (value: string, fallback: any) => {
   try {
@@ -72,7 +72,7 @@ export const useAnalyticsQueryState = () => {
 
     let refreshIntervalObject = parse(
       refreshInterval as string,
-      refreshIntervals[0].value
+      refreshIntervals[0].value,
     );
 
     let sort =

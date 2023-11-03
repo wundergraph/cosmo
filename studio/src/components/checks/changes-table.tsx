@@ -20,13 +20,17 @@ import {
   TooltipTrigger,
 } from "../ui/tooltip";
 import { useToast } from "../ui/use-toast";
+import { createDateRange } from "@/lib/insights-helpers";
+import { getRange } from "../date-picker-with-range";
 
 export const ChangesTable = ({
   changes,
   caption,
+  trafficCheckDays,
 }: {
   changes: SchemaChange[];
   caption: React.ReactNode;
+  trafficCheckDays: number;
 }) => {
   const router = useRouter();
   const { toast } = useToast();
@@ -53,6 +57,10 @@ export const ChangesTable = ({
     ) {
       query.isNamedType = true;
       query.showUsage = path.split(".")[0];
+    }
+
+    if (trafficCheckDays) {
+      query.dateRange = createDateRange(getRange(trafficCheckDays * 24));
     }
 
     router.replace({

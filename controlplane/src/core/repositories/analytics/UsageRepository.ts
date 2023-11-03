@@ -1,15 +1,15 @@
 import { PlainMessage } from '@bufbuild/protobuf';
 import {
   ClientWithOperations,
+  DateRange,
   FieldUsageMeta,
   RequestSeriesItem,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { ClickHouseClient } from '../../clickhouse/index.js';
-import { getDateRange, getEndDate, getGranularity } from './util.js';
+import { getDateRange, getEndDate, getGranularity, isoDateRangeToTimestamps } from './util.js';
 
 type TimeFilters = {
   granule: string;
-  range: number;
   dateRange: {
     start: number;
     end: number;
@@ -19,13 +19,13 @@ type TimeFilters = {
 export class UsageRepository {
   constructor(private client: ClickHouseClient) {}
 
-  private parseRange(range: number): TimeFilters {
+  private parseTimeFilters(dateRange?: DateRange, range?: number): TimeFilters {
     const granule = getGranularity(range);
-    const [start, end] = getDateRange({ end: getEndDate() }, range);
+    const parsedDateRange = isoDateRangeToTimestamps(dateRange, range);
+    const [start, end] = getDateRange(parsedDateRange);
 
     return {
       granule,
-      range,
       dateRange: {
         start,
         end,
@@ -149,11 +149,12 @@ export class UsageRepository {
     typename?: string;
     field?: string;
     namedType?: string;
-    range: number;
+    range?: number;
+    dateRange?: DateRange;
     organizationId: string;
     federatedGraphId: string;
   }) {
-    const timeFilters = this.parseRange(input.range);
+    const timeFilters = this.parseTimeFilters(input.dateRange, input.range);
 
     let whereSql = `FederatedGraphID = '${input.federatedGraphId}' AND OrganizationID = '${input.organizationId}'`;
     if (input.typename) {

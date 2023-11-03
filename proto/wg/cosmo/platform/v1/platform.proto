@@ -290,6 +290,7 @@ message GetCheckDetailsResponse {
   Response response = 1;
   repeated SchemaChange changes = 2;
   repeated string compositionErrors = 3;
+  int32 traffic_check_days = 4;
 }
 
 message GetCheckOperationsRequest {
@@ -309,6 +310,7 @@ message GetCheckOperationsResponse {
 
   Response response = 1;
   repeated CheckOperation operations = 2;
+  int32 traffic_check_days = 3;
 }
 
 message GetOperationContentRequest {
@@ -939,7 +941,8 @@ message GetFieldUsageRequest {
   optional string namedType = 2;
   optional string typename = 3;
   optional string field = 4; 
-  int32 range = 5;
+  optional int32 range = 5;
+  DateRange dateRange = 6;
 }
 
 message ClientWithOperations {

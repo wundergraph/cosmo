@@ -246,6 +246,7 @@ const CheckOperationsPage: NextPageWithLayout = () => {
                           {impactingChanges.length === 1 ? "" : "s"}
                         </>
                       }
+                      trafficCheckDays={data.trafficCheckDays}
                     />
                     <div className="justify-s flex items-center gap-x-2">
                       <OperationContentDialog hash={hash} />

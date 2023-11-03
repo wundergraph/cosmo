@@ -15,22 +15,16 @@ import { useRange } from "@/components/analytics/use-range";
 import { useAnalyticsQueryState } from "@/components/analytics/useAnalyticsQueryState";
 import {
   DatePickerWithRange,
-  DateRange,
   DateRangePickerChangeHandler,
+  getRange,
 } from "@/components/date-picker-with-range";
 import { EmptyState } from "@/components/empty-state";
 import { InfoTooltip } from "@/components/info-tooltip";
-import { getGraphLayout, GraphContext } from "@/components/layout/graph-layout";
+import { GraphContext, getGraphLayout } from "@/components/layout/graph-layout";
 import { PageHeader } from "@/components/layout/head";
 import { TitleLayout } from "@/components/layout/title-layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Loader } from "@/components/ui/loader";
 import { Spacer } from "@/components/ui/spacer";
 import {
@@ -38,7 +32,6 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useSessionStorage } from "@/hooks/use-session-storage";
 import useWindowSize from "@/hooks/use-window-size";
 import {
   formatDurationMetric,
@@ -117,7 +110,7 @@ const useMetricsFilters = (filters: AnalyticsViewResultFilter[]) => {
   const applyNewParams = useCallback(
     (newParams: Record<string, string | null>, unset?: string[]) => {
       const q = Object.fromEntries(
-        Object.entries(router.query).filter(([key]) => !unset?.includes(key))
+        Object.entries(router.query).filter(([key]) => !unset?.includes(key)),
       );
       router.push({
         query: {
@@ -126,7 +119,7 @@ const useMetricsFilters = (filters: AnalyticsViewResultFilter[]) => {
         },
       });
     },
-    [router]
+    [router],
   );
 
   const selectedFilters = useSelectedFilters();
@@ -163,14 +156,14 @@ const useMetricsFilters = (filters: AnalyticsViewResultFilter[]) => {
       },
       selectedOptions:
         selectedFilters.find(
-          (f: { id: string; value: string[] }) => f.id === filter.columnName
+          (f: { id: string; value: string[] }) => f.id === filter.columnName,
         )?.value ?? [],
       options: filter.options.map((each) =>
         optionConstructor({
           label: each.label || "-",
           operator: each.operator as unknown as string,
           value: each.value as unknown as string,
-        })
+        }),
       ),
     } as AnalyticsFilter;
   });
@@ -257,7 +250,7 @@ const AnalyticsPage: NextPageWithLayout = () => {
 
 const getDeltaType = (
   value: number,
-  { invert, neutral }: { invert?: boolean; neutral?: boolean }
+  { invert, neutral }: { invert?: boolean; neutral?: boolean },
 ) => {
   if (value === 0) {
     return "neutral";
@@ -320,7 +313,9 @@ const TopList: React.FC<{
   queryParams?: Record<string, string | number>;
 }> = ({ title, items, formatter, queryParams = {} }) => {
   const router = useRouter();
-  const range = useRange();
+  const { range, dateRange } = useAnalyticsQueryState();
+
+  console.log({ dateRange });
 
   return (
     <CardContent className="pt-6">
@@ -335,7 +330,12 @@ const TopList: React.FC<{
                     organizationSlug: router.query.organizationSlug,
                     slug: router.query.slug,
                     filterState: router.query.filterState || "[]",
-                    dateRange: createDateRange(range),
+                    dateRange: range
+                      ? createDateRange(getRange(range))
+                      : JSON.stringify({
+                          start: formatISO(dateRange.start),
+                          end: formatISO(dateRange.end),
+                        }),
                     ...queryParams,
                   },
                 }}
@@ -362,7 +362,12 @@ const TopList: React.FC<{
               filterState: createFilterState({
                 operationName: row.name,
               }),
-              dateRange: createDateRange(range),
+              dateRange: range
+                ? createDateRange(getRange(range))
+                : JSON.stringify({
+                    start: formatISO(dateRange.start),
+                    end: formatISO(dateRange.end),
+                  }),
             },
           },
         }))}
@@ -550,7 +555,7 @@ const Sparkline: React.FC<SparklineProps> = (props) => {
 
   const { data, ticks, domain, timeFormatter } = useChartData(
     timeRange,
-    props.series
+    props.series,
   );
 
   const strokeColor = "hsl(var(--chart-primary))";
@@ -631,7 +636,7 @@ const ErrorPercentChart: React.FC<SparklineProps> = (props) => {
   const id = useId();
   const { data, ticks, domain, timeFormatter } = useChartData(
     timeRange,
-    props.series
+    props.series,
   );
 
   return (
@@ -735,7 +740,7 @@ const ErrorRateOverTimeCard = () => {
 
   const { data, ticks, domain, timeFormatter } = useChartData(
     range,
-    responseData?.series ?? []
+    responseData?.series ?? [],
   );
 
   let content;
@@ -868,7 +873,7 @@ const OverviewToolbar = () => {
   });
 
   const { filtersList, selectedFilters, resetFilters } = useMetricsFilters(
-    data?.filters ?? []
+    data?.filters ?? [],
   );
 
   const applyParams = useApplyParams();
@@ -950,6 +955,6 @@ AnalyticsPage.getLayout = (page) =>
       >
         {page}
       </TitleLayout>
-    </PageHeader>
+    </PageHeader>,
   );
 export default AnalyticsPage;

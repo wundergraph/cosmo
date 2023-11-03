@@ -27,7 +27,7 @@ import { useQuery } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { getFieldUsage } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { GetFieldUsageResponse } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { format, fromUnixTime } from "date-fns";
+import { format, formatISO, fromUnixTime } from "date-fns";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useRouter } from "next/router";
@@ -40,20 +40,20 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import {
+  DatePickerWithRange,
+  DateRangePickerChangeHandler,
+  getRange,
+} from "../date-picker-with-range";
 import { EmptyState } from "../empty-state";
 import { GraphContext } from "../layout/graph-layout";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Loader } from "../ui/loader";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../ui/select";
 import { ChartTooltip } from "./charts";
 import { createFilterState } from "./constructAnalyticsTableQueryState";
+import { useApplyParams } from "./use-apply-params";
+import { useAnalyticsQueryState } from "./useAnalyticsQueryState";
 
 export const FieldUsage = ({
   usageData,
@@ -65,10 +65,10 @@ export const FieldUsage = ({
 
   const subgraphs = useContext(GraphContext)?.subgraphs ?? [];
 
-  const range = (router.query.range as string) || "24";
+  const { range, dateRange } = useAnalyticsQueryState();
 
   const { data, ticks, domain, timeFormatter } = useChartData(
-    Number(range),
+    range,
     usageData.requestSeries,
   );
 
@@ -77,14 +77,28 @@ export const FieldUsage = ({
 
   const { isMobile } = useWindowSize();
 
-  const onRangeChange = (value: string) => {
-    router.push({
-      pathname: router.pathname,
-      query: {
-        ...router.query,
-        range: value,
-      },
-    });
+  const applyParams = useApplyParams();
+
+  const onDateRangeChange: DateRangePickerChangeHandler = ({
+    range,
+    dateRange,
+  }) => {
+    if (range) {
+      applyParams({
+        range: range.toString(),
+        dateRange: null,
+      });
+    } else if (dateRange) {
+      const stringifiedDateRange = JSON.stringify({
+        start: formatISO(dateRange.start),
+        end: formatISO(dateRange.end ?? dateRange.start),
+      });
+
+      applyParams({
+        range: null,
+        dateRange: stringifiedDateRange,
+      });
+    }
   };
 
   const valueFormatter = (number: number) => `${formatMetric(number)}`;
@@ -101,18 +115,11 @@ export const FieldUsage = ({
     <div className="flex flex-col gap-y-12">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold">Requests</h2>
-        <Select value={range} onValueChange={onRangeChange}>
-          <SelectTrigger className="ml-auto w-[180px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="1">Last hour</SelectItem>
-            <SelectItem value="4">Last 4 hours</SelectItem>
-            <SelectItem value="24">Last day</SelectItem>
-            <SelectItem value="72">Last 3 days</SelectItem>
-            <SelectItem value="168">Last week</SelectItem>
-          </SelectContent>
-        </Select>
+        <DatePickerWithRange
+          range={range}
+          dateRange={dateRange}
+          onChange={onDateRangeChange}
+        />
       </div>
       <div className="h-64">
         <ResponsiveContainer width="100%" height="100%">
@@ -236,7 +243,12 @@ export const FieldUsage = ({
                                       filterState: createFilterState({
                                         operationName: op.name,
                                       }),
-                                      dateRange: createDateRange(Number(range)),
+                                      dateRange: range
+                                        ? createDateRange(getRange(range))
+                                        : JSON.stringify({
+                                            start: formatISO(dateRange.start),
+                                            end: formatISO(dateRange.end),
+                                          }),
                                     },
                                   }}
                                   className="text-primary"
@@ -316,7 +328,7 @@ export const FieldUsageSheet = () => {
 
   const searchParams = useSearchParams();
 
-  const range = searchParams.get("range");
+  const { range, dateRange } = useAnalyticsQueryState();
   const isNamedType = searchParams.get("isNamedType") === "true";
   const showUsage = searchParams.get("showUsage");
 
@@ -330,7 +342,11 @@ export const FieldUsageSheet = () => {
       typename: isNamedType ? undefined : type,
       namedType: isNamedType ? type : undefined,
       graphName: graph?.graph?.name,
-      range: Number(range) || 24,
+      range: range,
+      dateRange: {
+        start: formatISO(dateRange.start),
+        end: formatISO(dateRange.end),
+      },
     }),
     enabled: !!showUsage && !!graph?.graph?.name,
   });

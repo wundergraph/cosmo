@@ -50,6 +50,7 @@ const CheckDetailsPage: NextPageWithLayout = () => {
         <ChangesTable
           changes={data.changes}
           caption={`${data.changes.length} changes found`}
+          trafficCheckDays={data.trafficCheckDays}
         />
       </div>
       <div className="flex flex-col gap-y-4">

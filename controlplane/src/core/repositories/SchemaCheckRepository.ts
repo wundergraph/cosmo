@@ -11,6 +11,7 @@ import { ComposedFederatedGraph } from '../composition/composer.js';
 import { SchemaDiff } from '../composition/schemaCheck.js';
 import { NewSchemaChangeOperationUsage } from '../../db/models.js';
 import { InspectorOperationResult } from '../services/SchemaUsageTrafficInspector.js';
+import { FederatedGraphConfig } from './FederatedGraphRepository.js';
 
 export class SchemaCheckRepository {
   constructor(private db: PostgresJsDatabase<typeof schema>) {}
@@ -168,5 +169,21 @@ export class SchemaCheckRepository {
         .returning()
         .execute();
     });
+  }
+
+  public async getFederatedGraphConfigForCheckId(
+    checkId: string,
+    federatedGraphId: string,
+  ): Promise<FederatedGraphConfig> {
+    const result = await this.db.query.schemaCheckFederatedGraphs.findFirst({
+      where: and(
+        eq(schema.schemaCheckFederatedGraphs.checkId, checkId),
+        eq(schema.schemaCheckFederatedGraphs.federatedGraphId, federatedGraphId),
+      ),
+    });
+
+    return {
+      trafficCheckDays: result?.trafficCheckDays ?? 7,
+    };
   }
 }

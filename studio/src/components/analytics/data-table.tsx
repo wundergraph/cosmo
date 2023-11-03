@@ -13,9 +13,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { cn } from "@/lib/utils";
-import { ChevronDownIcon, ChevronUpIcon } from "@heroicons/react/24/outline";
-import { ClockIcon, Cross2Icon, UpdateIcon } from "@radix-ui/react-icons";
+import { useSessionStorage } from "@/hooks/use-session-storage";
+import { ChevronDownIcon } from "@heroicons/react/24/outline";
+import { UpdateIcon } from "@radix-ui/react-icons";
 import {
   ColumnFiltersState,
   PaginationState,
@@ -30,35 +30,33 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { formatISO, subDays, subHours } from "date-fns";
-import { useRouter } from "next/router";
 import {
   AnalyticsViewColumn,
   AnalyticsViewFilterOperator,
   AnalyticsViewGroupName,
   AnalyticsViewResultFilter,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import React, { useCallback, useState } from "react";
-
+import { formatISO, subHours } from "date-fns";
+import { useRouter } from "next/router";
+import { useMemo, useState } from "react";
 import useDeepCompareEffect from "use-deep-compare-effect";
 import {
   DatePickerWithRange,
-  Range,
   DateRange,
   DateRangePickerChangeHandler,
+  Range,
+  getRange,
 } from "../date-picker-with-range";
 import { Loader } from "../ui/loader";
-import { DataTableFacetedFilter } from "./data-table-faceted-filter";
 import { DataTableGroupMenu } from "./data-table-group-menu";
 import { DataTablePagination } from "./data-table-pagination";
-import { DataTablePrimaryFilterMenu } from "./data-table-primary-filter-menu";
+import { AnalyticsFilters, AnalyticsSelectedFilters } from "./filters";
 import { getColumnData } from "./getColumnData";
 import { getDataTableFilters } from "./getDataTableFilters";
-import { getDefaultSort, useSyncTableWithQuery } from "./useSyncTableWithQuery";
-import { useSessionStorage } from "@/hooks/use-session-storage";
-import { AnalyticsFilters, AnalyticsSelectedFilters } from "./filters";
-import { useApplyParams } from "./use-apply-params";
 import { RefreshInterval, refreshIntervals } from "./refresh-interval";
+import { useApplyParams } from "./use-apply-params";
+import { getDefaultSort, useSyncTableWithQuery } from "./useSyncTableWithQuery";
+import { useAnalyticsQueryState } from "./useAnalyticsQueryState";
 
 export function AnalyticsDataTable<T>({
   data,
@@ -82,21 +80,20 @@ export function AnalyticsDataTable<T>({
   const [, setRouteCache] = useSessionStorage("analytics.route", router.query);
 
   const [refreshInterval, setRefreshInterval] = useState(
-    refreshIntervals[0].value
+    refreshIntervals[0].value,
   );
 
-  const [sorting, setSorting] = React.useState<SortingState>(
-    getDefaultSort(router.query.group?.toString())
+  const [sorting, setSorting] = useState<SortingState>(
+    getDefaultSort(router.query.group?.toString()),
   );
 
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
-    []
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [selectedGroup, setSelectedGroup] = useState<AnalyticsViewGroupName>(
+    AnalyticsViewGroupName.None,
   );
-  const [selectedGroup, setSelectedGroup] =
-    React.useState<AnalyticsViewGroupName>(AnalyticsViewGroupName.None);
 
-  const [selectedRange, setRange] = React.useState<Range | undefined>();
-  const [selectedDateRange, setDateRange] = React.useState<DateRange>({
+  const [selectedRange, setRange] = useState<Range | undefined>();
+  const [selectedDateRange, setDateRange] = useState<DateRange>({
     start: subHours(new Date(), Number(router.query.range ?? 24)),
     end: new Date(),
   });
@@ -112,26 +109,25 @@ export function AnalyticsDataTable<T>({
     }, {});
 
   const [columnVisibility, setColumnVisibility] =
-    React.useState<VisibilityState>(defaultHiddenColumns);
+    useState<VisibilityState>(defaultHiddenColumns);
 
   useDeepCompareEffect(() => {
     setColumnVisibility(defaultHiddenColumns);
   }, [defaultHiddenColumns]);
 
-  const [rowSelection, setRowSelection] = React.useState({});
+  const [rowSelection, setRowSelection] = useState({});
 
-  const [{ pageIndex, pageSize }, setPagination] =
-    React.useState<PaginationState>({
-      pageIndex: 0,
-      pageSize: 10,
-    });
+  const [{ pageIndex, pageSize }, setPagination] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: 10,
+  });
 
-  const pagination = React.useMemo(
+  const pagination = useMemo(
     () => ({
       pageIndex,
       pageSize,
     }),
-    [pageIndex, pageSize]
+    [pageIndex, pageSize],
   );
 
   const state = {
@@ -196,7 +192,7 @@ export function AnalyticsDataTable<T>({
               sort: defaultSort[0].id,
               sortDir: defaultSort[0]?.desc ? "asc" : "desc",
             },
-            ["sort", "sortDir"]
+            ["sort", "sortDir"],
           );
         } else {
           applyNewParams({}, ["sort", "sortDir"]);
@@ -210,7 +206,7 @@ export function AnalyticsDataTable<T>({
       {
         group: AnalyticsViewGroupName[val],
       },
-      ["sort", "sortDir"]
+      ["sort", "sortDir"],
     );
   };
 
@@ -293,8 +289,8 @@ export function AnalyticsDataTable<T>({
 
         router.push(
           `/${organizationSlug}/graph/${slug}/analytics/${row.getValue(
-            "traceId"
-          )}`
+            "traceId",
+          )}`,
         );
         return;
       }
@@ -408,7 +404,7 @@ export function AnalyticsDataTable<T>({
                       ? null
                       : flexRender(
                           header.column.columnDef.header,
-                          header.getContext()
+                          header.getContext(),
                         )}
                   </TableHead>
                 );

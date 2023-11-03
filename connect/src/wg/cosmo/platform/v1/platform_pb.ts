@@ -2382,6 +2382,11 @@ export class GetCheckDetailsResponse extends Message<GetCheckDetailsResponse> {
    */
   compositionErrors: string[] = [];
 
+  /**
+   * @generated from field: int32 traffic_check_days = 4;
+   */
+  trafficCheckDays = 0;
+
   constructor(data?: PartialMessage<GetCheckDetailsResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -2393,6 +2398,7 @@ export class GetCheckDetailsResponse extends Message<GetCheckDetailsResponse> {
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "changes", kind: "message", T: SchemaChange, repeated: true },
     { no: 3, name: "compositionErrors", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 4, name: "traffic_check_days", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCheckDetailsResponse {
@@ -2469,6 +2475,11 @@ export class GetCheckOperationsResponse extends Message<GetCheckOperationsRespon
    */
   operations: GetCheckOperationsResponse_CheckOperation[] = [];
 
+  /**
+   * @generated from field: int32 traffic_check_days = 3;
+   */
+  trafficCheckDays = 0;
+
   constructor(data?: PartialMessage<GetCheckOperationsResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -2479,6 +2490,7 @@ export class GetCheckOperationsResponse extends Message<GetCheckOperationsRespon
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "operations", kind: "message", T: GetCheckOperationsResponse_CheckOperation, repeated: true },
+    { no: 3, name: "traffic_check_days", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCheckOperationsResponse {
@@ -7358,9 +7370,14 @@ export class GetFieldUsageRequest extends Message<GetFieldUsageRequest> {
   field?: string;
 
   /**
-   * @generated from field: int32 range = 5;
+   * @generated from field: optional int32 range = 5;
    */
-  range = 0;
+  range?: number;
+
+  /**
+   * @generated from field: wg.cosmo.platform.v1.DateRange dateRange = 6;
+   */
+  dateRange?: DateRange;
 
   constructor(data?: PartialMessage<GetFieldUsageRequest>) {
     super();
@@ -7374,7 +7391,8 @@ export class GetFieldUsageRequest extends Message<GetFieldUsageRequest> {
     { no: 2, name: "namedType", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "typename", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 4, name: "field", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 5, name: "range", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 5, name: "range", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
+    { no: 6, name: "dateRange", kind: "message", T: DateRange },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetFieldUsageRequest {

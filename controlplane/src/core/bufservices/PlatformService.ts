@@ -1110,6 +1110,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               details: 'Requested graph does not exist',
             },
             operations: [],
+            trafficCheckDays: 0,
           };
         }
 
@@ -1122,10 +1123,13 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               details: 'Requested check not found',
             },
             operations: [],
+            trafficCheckDays: 0,
           };
         }
 
         const affectedOperations = await schemaCheckRepo.getAffectedOperationsByCheckId(req.checkId);
+
+        const { trafficCheckDays } = await schemaCheckRepo.getFederatedGraphConfigForCheckId(req.checkId, graph.id);
 
         return {
           response: {
@@ -1137,6 +1141,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             lastSeenAt: operation.lastSeenAt.toUTCString(),
             impactingChanges: checkDetails.changes.filter(({ id }) => operation.schemaChangeIds.includes(id)),
           })),
+          trafficCheckDays,
         };
       });
     },
@@ -1151,6 +1156,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
+        const schemaCheckRepo = new SchemaCheckRepository(opts.db);
 
         const graph = await fedGraphRepo.byName(req.graphName);
 
@@ -1162,6 +1168,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             },
             changes: [],
             compositionErrors: [],
+            trafficCheckDays: 0,
           };
         }
 
@@ -1175,14 +1182,18 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             },
             changes: [],
             compositionErrors: [],
+            trafficCheckDays: 0,
           };
         }
+
+        const { trafficCheckDays } = await schemaCheckRepo.getFederatedGraphConfigForCheckId(req.checkId, graph.id);
 
         return {
           response: {
             code: EnumStatusCode.OK,
           },
           ...details,
+          trafficCheckDays,
         };
       });
     },
@@ -3320,6 +3331,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           field: req.field,
           namedType: req.namedType,
           range: req.range,
+          dateRange: req.dateRange,
         });
 
         return {
