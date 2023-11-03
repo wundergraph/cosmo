@@ -3,6 +3,7 @@ package core
 import (
 	"context"
 	"errors"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/astnormalization"
 	"strconv"
 	"time"
 
@@ -41,6 +42,9 @@ func (p *OperationPlanner) preparePlan(requestOperationName []byte, requestOpera
 	}
 
 	validation := astvalidation.DefaultOperationValidator()
+
+	norm := astnormalization.NewNormalizer(true, true)
+	norm.NormalizeOperation(&doc, p.executor.Definition, &report)
 
 	// validate the document before planning
 	state := validation.Validate(&doc, p.executor.Definition, &report)
