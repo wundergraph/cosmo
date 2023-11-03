@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.28.1](https://github.com/wundergraph/cosmo/compare/studio@0.28.0...studio@0.28.1) (2023-11-03)
+
+### Bug Fixes
+
+* remove cal package ([#225](https://github.com/wundergraph/cosmo/issues/225)) ([4965c72](https://github.com/wundergraph/cosmo/commit/4965c7270fcd403ee2297d90fb2d30afb3443b75)) (@JivusAyrus)
+
 # [0.28.0](https://github.com/wundergraph/cosmo/compare/studio@0.27.0...studio@0.28.0) (2023-11-03)
 
 ### Bug Fixes
