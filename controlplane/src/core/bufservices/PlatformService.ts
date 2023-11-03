@@ -3600,7 +3600,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         await orgRepo.addOidcProvider({ name: req.name, organizationId: authContext.organizationId, endpoint });
 
         for (const mapper of req.mappers) {
-          const claims = `[{ "key": "groups", "value": "${mapper.ssoGroup}" }]`;
+          const claims = `[{ "key": "ssoGroups", "value": "${mapper.ssoGroup}" }]`;
           let keycloakGroupName;
 
           switch (mapper.role) {
