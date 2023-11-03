@@ -71,40 +71,41 @@ type (
 
 	// Config defines the configuration options for the Router.
 	Config struct {
-		transport                *http.Transport
-		logger                   *zap.Logger
-		traceConfig              *trace.Config
-		metricConfig             *metric.Config
-		tracerProvider           *sdktrace.TracerProvider
-		meterProvider            *sdkmetric.MeterProvider
-		gqlMetricsExporter       *graphqlmetrics.Exporter
-		corsOptions              *cors.Config
-		configFetcher            controlplane.ConfigFetcher
-		routerConfig             *nodev1.RouterConfig
-		gracePeriod              time.Duration
-		shutdown                 bool
-		listenAddr               string
-		baseURL                  string
-		graphqlPath              string
-		playground               bool
-		introspection            bool
-		federatedGraphName       string
-		graphApiToken            string
-		healthCheckPath          string
-		readinessCheckPath       string
-		livenessCheckPath        string
-		prometheusServer         *http.Server
-		modulesConfig            map[string]interface{}
-		routerMiddlewares        []func(http.Handler) http.Handler
-		preOriginHandlers        []TransportPreHandler
-		postOriginHandlers       []TransportPostHandler
-		headerRuleEngine         *HeaderRuleEngine
-		headerRules              config.HeaderRules
-		subgraphTransportOptions *SubgraphTransportOptions
-		graphqlMetricsConfig     *GraphQLMetricsConfig
-		routerTrafficConfig      *config.RouterTrafficConfiguration
-		accessController         *AccessController
-		retryOptions             retrytransport.RetryOptions
+		transport                      *http.Transport
+		logger                         *zap.Logger
+		traceConfig                    *trace.Config
+		metricConfig                   *metric.Config
+		tracerProvider                 *sdktrace.TracerProvider
+		meterProvider                  *sdkmetric.MeterProvider
+		gqlMetricsExporter             *graphqlmetrics.Exporter
+		corsOptions                    *cors.Config
+		configFetcher                  controlplane.ConfigFetcher
+		routerConfig                   *nodev1.RouterConfig
+		gracePeriod                    time.Duration
+		shutdown                       bool
+		listenAddr                     string
+		baseURL                        string
+		graphqlPath                    string
+		playground                     bool
+		introspection                  bool
+		federatedGraphName             string
+		graphApiToken                  string
+		healthCheckPath                string
+		readinessCheckPath             string
+		livenessCheckPath              string
+		prometheusServer               *http.Server
+		modulesConfig                  map[string]interface{}
+		routerMiddlewares              []func(http.Handler) http.Handler
+		preOriginHandlers              []TransportPreHandler
+		postOriginHandlers             []TransportPostHandler
+		headerRuleEngine               *HeaderRuleEngine
+		headerRules                    config.HeaderRules
+		subgraphTransportOptions       *SubgraphTransportOptions
+		graphqlMetricsConfig           *GraphQLMetricsConfig
+		routerTrafficConfig            *config.RouterTrafficConfiguration
+		accessController               *AccessController
+		retryOptions                   retrytransport.RetryOptions
+		translateLocalhostInsideDocker bool
 
 		engineExecutionConfiguration config.EngineExecutionConfiguration
 
@@ -628,10 +629,10 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		logger:        r.logger,
 		includeInfo:   r.graphqlMetricsConfig.Enabled,
 		transportOptions: &TransportOptions{
-			requestTimeout: r.subgraphTransportOptions.RequestTimeout,
-			preHandlers:    r.preOriginHandlers,
-			postHandlers:   r.postOriginHandlers,
-			retryOptions: retrytransport.RetryOptions{
+			RequestTimeout: r.subgraphTransportOptions.RequestTimeout,
+			PreHandlers:    r.preOriginHandlers,
+			PostHandlers:   r.postOriginHandlers,
+			RetryOptions: retrytransport.RetryOptions{
 				Enabled:       r.retryOptions.Enabled,
 				MaxRetryCount: r.retryOptions.MaxRetryCount,
 				MaxDuration:   r.retryOptions.MaxDuration,
@@ -640,7 +641,8 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 					return retrytransport.IsRetryableError(err, resp) && !isMutationRequest(req.Context())
 				},
 			},
-			logger: r.logger,
+			TranslateLocalhostInsideDocker: r.translateLocalhostInsideDocker,
+			Logger:                         r.logger,
 		},
 	}
 
@@ -1048,6 +1050,12 @@ func WithRouterTrafficConfig(cfg *config.RouterTrafficConfiguration) Option {
 func WithAccessController(controller *AccessController) Option {
 	return func(r *Router) {
 		r.accessController = controller
+	}
+}
+
+func WithTranslateLocalhostInsideDocker(translate bool) Option {
+	return func(r *Router) {
+		r.translateLocalhostInsideDocker = translate
 	}
 }
 

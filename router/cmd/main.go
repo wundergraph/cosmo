@@ -140,6 +140,7 @@ func Main() {
 		core.WithMetrics(metricsConfig(&cfg.Telemetry)),
 		core.WithEngineExecutionConfig(cfg.EngineExecutionConfiguration),
 		core.WithAccessController(core.NewAccessController(authenticators, cfg.Authorization.RequireAuthentication)),
+		core.WithTranslateLocalhostInsideDocker(cfg.TranslateLocalhostInsideDocker),
 	)
 
 	if err != nil {

@@ -1,10 +1,16 @@
 package core
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
+	"io"
+	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
+	"syscall"
 	"time"
 
 	"github.com/wundergraph/cosmo/router/internal/otel"
@@ -13,6 +19,12 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	otrace "go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
+)
+
+const (
+	// dockerInternalHost is the hostnamed used by docker to access the host machine.
+	// We use it for automatic fallbacks when requests to localhost fail
+	dockerInternalHost = "host.docker.internal"
 )
 
 type TransportPreHandler func(req *http.Request, ctx RequestContext) (*http.Request, *http.Response)
@@ -84,68 +96,159 @@ func (ct *CustomTransport) RoundTrip(req *http.Request) (*http.Response, error) 
 	return resp, err
 }
 
+func isRunningInsideDocker() bool {
+	// Check if we are running inside docker by
+	// testing by checking if /.dockerenv exists
+	st, err := os.Stat("/.dockerenv")
+	return err == nil && !st.IsDir()
+}
+
+// localhostFallbackRoundTripper is an http.RoundTripper that will retry failed
+// requests to localhost by rewriting the request to use is targetHost. Only
+// requests that fail with ECONNREFUSED will be retried.
+type localhostFallbackRoundTripper struct {
+	targetHost string
+	transport  http.RoundTripper
+}
+
+func (*localhostFallbackRoundTripper) pointsToLocalhost(r *http.Request) bool {
+	host, _, err := net.SplitHostPort(r.Host)
+	if err != nil {
+		host = r.Host
+	}
+	ip := net.ParseIP(host)
+	if ip != nil {
+		return ip.IsLoopback()
+	}
+	return host == "localhost"
+}
+
+func (t *localhostFallbackRoundTripper) rewriteToTargetHost(r *http.Request) (*http.Request, error) {
+	var newHost string
+	_, port, err := net.SplitHostPort(r.Host)
+	if err == nil {
+		newHost = t.targetHost + ":" + port
+	} else {
+		newHost = t.targetHost
+	}
+	newReq, err := http.NewRequestWithContext(r.Context(), r.Method, fmt.Sprintf("%s://%s%s", r.URL.Scheme, newHost, r.URL.Path), r.Body)
+	if err != nil {
+		return nil, err
+	}
+	newReq.Header = r.Header
+	return newReq, nil
+}
+
+func (t *localhostFallbackRoundTripper) RoundTrip(r *http.Request) (*http.Response, error) {
+	// If the request has a body, we need to buffer it, otherwise it will
+	// get consumed
+	var bodyData []byte
+	if r.Body != nil {
+		var err error
+		bodyData, err = io.ReadAll(r.Body)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read request body: %w", err)
+		}
+		r.Body.Close()
+		r.Body = io.NopCloser(bytes.NewReader(bodyData))
+	}
+	resp, err := t.transport.RoundTrip(r)
+	if err != nil && t.pointsToLocalhost(r) && errors.Is(err, syscall.ECONNREFUSED) {
+		// Retry the request
+		if bodyData != nil {
+			r.Body = io.NopCloser(bytes.NewReader(bodyData))
+		}
+		redirected, err := t.rewriteToTargetHost(r)
+		if err != nil {
+			return nil, fmt.Errorf("error creating redirected request to %s: %w", t.targetHost, err)
+		}
+		resp2, err2 := t.transport.RoundTrip(redirected)
+		if err2 == nil {
+			return resp2, nil
+		}
+	}
+	// If the redirect fails, return the original error
+	return resp, err
+}
+
 type TransportFactory struct {
-	preHandlers    []TransportPreHandler
-	postHandlers   []TransportPostHandler
-	retryOptions   retrytransport.RetryOptions
-	requestTimeout time.Duration
-	logger         *zap.Logger
+	preHandlers                    []TransportPreHandler
+	postHandlers                   []TransportPostHandler
+	retryOptions                   retrytransport.RetryOptions
+	requestTimeout                 time.Duration
+	translateLocalhostInsideDocker bool
+	logger                         *zap.Logger
 }
 
 var _ ApiTransportFactory = TransportFactory{}
 
 type TransportOptions struct {
-	preHandlers    []TransportPreHandler
-	postHandlers   []TransportPostHandler
-	retryOptions   retrytransport.RetryOptions
-	requestTimeout time.Duration
-	logger         *zap.Logger
+	PreHandlers                    []TransportPreHandler
+	PostHandlers                   []TransportPostHandler
+	RetryOptions                   retrytransport.RetryOptions
+	RequestTimeout                 time.Duration
+	TranslateLocalhostInsideDocker bool
+	Logger                         *zap.Logger
 }
 
 func NewTransport(opts *TransportOptions) *TransportFactory {
+	if opts.TranslateLocalhostInsideDocker && isRunningInsideDocker() {
+		if opts.Logger != nil {
+			opts.Logger.Debug("transport: translating localhost to host.docker.internal")
+		}
+	}
+
 	return &TransportFactory{
-		preHandlers:    opts.preHandlers,
-		postHandlers:   opts.postHandlers,
-		logger:         opts.logger,
-		retryOptions:   opts.retryOptions,
-		requestTimeout: opts.requestTimeout,
+		preHandlers:                    opts.PreHandlers,
+		postHandlers:                   opts.PostHandlers,
+		retryOptions:                   opts.RetryOptions,
+		requestTimeout:                 opts.RequestTimeout,
+		translateLocalhostInsideDocker: opts.TranslateLocalhostInsideDocker,
+		logger:                         opts.Logger,
 	}
 }
 
 func (t TransportFactory) RoundTripper(transport http.RoundTripper, enableStreamingMode bool) http.RoundTripper {
+	if t.translateLocalhostInsideDocker && isRunningInsideDocker() {
+		transport = &localhostFallbackRoundTripper{
+			transport:  transport,
+			targetHost: dockerInternalHost,
+		}
+	}
+	traceTransport := trace.NewTransport(
+		transport,
+		[]otelhttp.Option{
+			otelhttp.WithSpanNameFormatter(SpanNameFormatter),
+			otelhttp.WithSpanOptions(otrace.WithAttributes(otel.EngineTransportAttribute)),
+		},
+		trace.WithPreHandler(func(r *http.Request) {
+			span := otrace.SpanFromContext(r.Context())
+			reqContext := getRequestContext(r.Context())
+			operation := reqContext.operation
+
+			if operation != nil {
+				if operation.name != "" {
+					span.SetAttributes(otel.WgOperationName.String(operation.name))
+				}
+				if operation.opType != "" {
+					span.SetAttributes(otel.WgOperationType.String(operation.opType))
+				}
+				if operation.hash != 0 {
+					span.SetAttributes(otel.WgOperationHash.String(strconv.FormatUint(operation.hash, 10)))
+				}
+			}
+
+			subgraph := reqContext.ActiveSubgraph(r)
+			if subgraph != nil {
+				span.SetAttributes(otel.WgSubgraphID.String(subgraph.Id))
+				span.SetAttributes(otel.WgSubgraphName.String(subgraph.Name))
+			}
+
+		}),
+	)
 	tp := NewCustomTransport(
 		t.logger,
-		trace.NewTransport(
-			transport,
-			[]otelhttp.Option{
-				otelhttp.WithSpanNameFormatter(SpanNameFormatter),
-				otelhttp.WithSpanOptions(otrace.WithAttributes(otel.EngineTransportAttribute)),
-			},
-			trace.WithPreHandler(func(r *http.Request) {
-				span := otrace.SpanFromContext(r.Context())
-				reqContext := getRequestContext(r.Context())
-				operation := reqContext.operation
-
-				if operation != nil {
-					if operation.name != "" {
-						span.SetAttributes(otel.WgOperationName.String(operation.name))
-					}
-					if operation.opType != "" {
-						span.SetAttributes(otel.WgOperationType.String(operation.opType))
-					}
-					if operation.hash != 0 {
-						span.SetAttributes(otel.WgOperationHash.String(strconv.FormatUint(operation.hash, 10)))
-					}
-				}
-
-				subgraph := reqContext.ActiveSubgraph(r)
-				if subgraph != nil {
-					span.SetAttributes(otel.WgSubgraphID.String(subgraph.Id))
-					span.SetAttributes(otel.WgSubgraphName.String(subgraph.Name))
-				}
-
-			}),
-		),
+		traceTransport,
 		t.retryOptions,
 	)
 
