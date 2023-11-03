@@ -7,6 +7,7 @@ type Query {
 enum Department {
   ENGINEERING
   MARKETING
+  OPERATIONS
 }
 
 interface RoleType {
@@ -30,7 +31,7 @@ type Engineer implements RoleType {
   title: [String!]!
 }
 
-type Marketer implements RoleType {
+type Marketer implements RoleType{
   department: Department!
   title: [String!]!
 }
