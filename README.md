@@ -57,8 +57,9 @@ They might restart a few times until the database is ready. You can check the st
 # Create the demo project
 make create-cli-demo
 
-# Copy the Router token from the previous log output
+# Copy the Router token from the previous log output and set it as environment variables
 export ROUTER_TOKEN=...
+export OTEL_AUTH_TOKEN=...
 
 # Start the subgraphs + router
 make dc-federation-demo
@@ -78,7 +79,7 @@ _Clean up all containers and volumes by running `make full-demo-down`._
 ### Prerequisites
 
 - [Docker](https://docs.docker.com/get-docker/)
-- [Docker Compose](https://docs.docker.com/compose/install/)
+- [Docker Compose V2](https://docs.docker.com/compose/install/)
 - [NodeJS 18+](https://nodejs.org/en/download/)
 - [PNPM 8+](https://pnpm.io/installation)
 - [Go 1.20+](https://golang.org/doc/install)
