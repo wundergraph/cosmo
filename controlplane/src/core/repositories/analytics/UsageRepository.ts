@@ -21,7 +21,7 @@ export class UsageRepository {
 
   private parseRange(range: number): TimeFilters {
     const granule = getGranularity(range);
-    const [start, end] = getDateRange(getEndDate(), range);
+    const [start, end] = getDateRange({ end: getEndDate() }, range);
 
     return {
       granule,

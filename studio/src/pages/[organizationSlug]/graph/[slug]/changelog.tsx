@@ -1,5 +1,5 @@
 import { UserContext } from "@/components/app-provider";
-import { DatePickerWithRange } from "@/components/date-picker-with-range";
+import { DateRangePicker } from "@/components/date-range-picker";
 import { EmptyState } from "@/components/empty-state";
 import { getGraphLayout, GraphContext } from "@/components/layout/graph-layout";
 import { PageHeader } from "@/components/layout/head";
@@ -71,7 +71,7 @@ const Toolbar = () => {
 
   return (
     <div className="flex w-full justify-center border-b px-4 py-2 md:justify-start lg:justify-end">
-      <DatePickerWithRange
+      <DateRangePicker
         selectedDateRange={{ from: startDate, to: endDate }}
         onDateRangeChange={onDateRangeChange}
         align="end"

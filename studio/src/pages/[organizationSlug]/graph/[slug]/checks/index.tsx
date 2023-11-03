@@ -3,7 +3,7 @@ import {
   getCheckIcon,
   isCheckSuccessful,
 } from "@/components/check-badge-icon";
-import { DatePickerWithRange } from "@/components/date-picker-with-range";
+import { DateRangePicker } from "@/components/date-range-picker";
 import { EmptyState } from "@/components/empty-state";
 import { GraphContext, getGraphLayout } from "@/components/layout/graph-layout";
 import { PageHeader } from "@/components/layout/head";
@@ -310,7 +310,7 @@ const Toolbar = () => {
 
   return (
     <div className="flex flex-wrap items-center gap-2 border-b px-4 py-2">
-      <DatePickerWithRange
+      <DateRangePicker
         className="ml-auto"
         selectedDateRange={{ from: startDate, to: endDate }}
         onDateRangeChange={onDateRangeChange}
