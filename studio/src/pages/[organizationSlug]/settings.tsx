@@ -348,6 +348,7 @@ const OpenIDConnectProvider = ({
   const user = useContext(UserContext);
   const organizationSlug = router.query.organizationSlug as string;
   const [open, setOpen] = useState(false);
+  const [alertOpen, setAlertOpen] = useState(false);
   const [mode, setMode] = useState(currentMode);
 
   const { data: providerData, refetch } = useQuery(getOIDCProvider.useQuery());
@@ -457,9 +458,11 @@ const OpenIDConnectProvider = ({
         {providerData && providerData.name ? (
           <AlertDialog
             open={
-              user?.currentOrganization.roles.includes("admin") ? open : false
+              user?.currentOrganization.roles.includes("admin")
+                ? alertOpen
+                : false
             }
-            onOpenChange={setOpen}
+            onOpenChange={setAlertOpen}
           >
             <AlertDialogTrigger asChild>
               <Button
@@ -665,7 +668,7 @@ const OpenIDConnectProvider = ({
                       )}
                       {mode === "map" && (
                         <>
-                          <div className="px-1 flex text-sm font-bold justify-between">
+                          <div className="flex justify-between px-1 text-sm font-bold">
                             <span>Role in cosmo</span>
                             <span className="pr-12">Group in the provider</span>
                           </div>
