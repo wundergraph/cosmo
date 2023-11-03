@@ -665,6 +665,10 @@ export class AnalyticsRequestViewRepository {
     if (opts?.dateRange) {
       coercedQueryParams.startDate = Math.floor(new Date(opts.dateRange.start).getTime() / 1000);
       coercedQueryParams.endDate = Math.floor(new Date(opts.dateRange.end).getTime() / 1000);
+    } else if (opts?.range) {
+      const endDate = Math.floor(Date.now() / 1000);
+      coercedQueryParams.startDate = Math.floor(new Date(endDate).getTime() / 1000) - opts?.range * 60 * 60 * 1000;
+      coercedQueryParams.endDate = endDate;
     }
 
     const { havingSql, ...rest } = buildCoercedFilterSqlStatement(
@@ -730,7 +734,7 @@ export class AnalyticsRequestViewRepository {
             columnName: f.columnName,
             title: f.title,
             options: f.options,
-          } as PlainMessage<AnalyticsViewResultFilter>),
+          }) as PlainMessage<AnalyticsViewResultFilter>,
       );
 
       return {
