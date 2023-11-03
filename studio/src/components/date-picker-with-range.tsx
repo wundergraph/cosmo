@@ -12,7 +12,6 @@ import CalendarIcon from "@heroicons/react/24/outline/CalendarIcon";
 import { addDays, addYears, subHours } from "date-fns";
 import { useEffect, useState } from "react";
 import { Input } from "./ui/input";
-import { set } from "lodash";
 
 const ranges = {
   1: "Last hour",
@@ -269,7 +268,6 @@ export function DatePickerWithRange({
                     start: range.from!,
                     end: range.to,
                   });
-
                   setSelectedRange(undefined);
                 }
               }}

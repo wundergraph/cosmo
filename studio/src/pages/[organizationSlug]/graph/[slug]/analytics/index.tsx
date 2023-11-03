@@ -84,6 +84,7 @@ const getInfoTip = (range?: number) => {
     case 720:
       return "last 1 month";
     case 24:
+      return "last 1 day";
     default:
       return "selected period";
   }
