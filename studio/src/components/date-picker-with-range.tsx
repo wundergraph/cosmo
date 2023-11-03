@@ -153,18 +153,8 @@ export function DatePickerWithRange({
     const start = subHours(new Date(), range);
     const end = new Date();
 
-    setStartTime(
-      `${start.getHours().toString().padStart(2, "0")}:${start
-        .getMinutes()
-        .toString()
-        .padStart(2, "0")}`,
-    );
-    setEndTime(
-      `${end.getHours().toString().padStart(2, "0")}:${end
-        .getMinutes()
-        .toString()
-        .padStart(2, "0")}`,
-    );
+    setStartTime(getFormattedTime(start));
+    setEndTime(getFormattedTime(end));
 
     setSelectedRange(range);
     setSelectedDateRange({ start, end });
