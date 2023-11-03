@@ -12,8 +12,9 @@ import { Input } from "@/components/ui/input";
 import { Loader } from "@/components/ui/loader";
 import { useToast } from "@/components/ui/use-toast";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
+import { calURL } from "@/lib/constants";
 import { NextPageWithLayout } from "@/lib/page";
-import { cn, showCal } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
@@ -296,14 +297,16 @@ const MembersPage: NextPageWithLayout = () => {
         <InviteForm refresh={() => refetch()} />
       )}
       {user.currentOrganization.isFreeTrial && (
-        <div className="flex cursor-pointer items-center justify-center gap-x-2 rounded bg-secondary px-2 py-1 text-secondary-foreground">
+        <div className="flex items-center justify-center gap-x-2 rounded bg-secondary px-2 py-1 text-secondary-foreground">
           <IoInformationCircle size={20} className="text-primary" />
           <span>
             {"Your organization's plan does not allow you to invite members. "}
             Please{" "}
             <a
               className="text-primary underline underline-offset-2"
-              onClick={showCal}
+              href={calURL}
+              target="_blank"
+              rel="noreferrer"
             >
               contact us
             </a>{" "}
