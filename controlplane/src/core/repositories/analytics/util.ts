@@ -385,6 +385,8 @@ export const getGranularity = (range = 24) => {
     return '60';
   } else if (range <= 168) {
     return '240';
+  } else if (range > 168) {
+    return '480';
   }
 
   return '5';

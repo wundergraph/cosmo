@@ -871,6 +871,7 @@ message GetGraphMetricsResponse {
   MetricsDashboardMetric latency = 3;
   MetricsDashboardMetric errors = 4;
   repeated AnalyticsViewResultFilter filters = 5;
+  optional string resolution = 6;
 }
 
 message MetricsDashboardMetric {
@@ -910,6 +911,7 @@ message GetMetricsErrorRateRequest {
 message GetMetricsErrorRateResponse {
   Response response = 1;
   repeated MetricsErrorRateSeriesItem series = 2;
+  optional string resolution = 3;
 }
 
 message MetricsErrorRateSeriesItem {
