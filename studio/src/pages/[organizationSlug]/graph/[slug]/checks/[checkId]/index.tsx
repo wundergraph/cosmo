@@ -183,29 +183,32 @@ const CheckOverviewPage: NextPageWithLayout = () => {
           </Link>
         </div>
 
-        <div className="flex items-start gap-x-4">
-          <span className="w-24 flex-shrink-0 md:w-36">Affected Graphs</span> :
-          <div className="flex flex-wrap items-center gap-2">
-            {data.affectedGraphs.map((ag) => {
-              const graph = allGraphsData?.graphs.find((g) => g.id === ag.id);
+        {data.affectedGraphs.length > 0 && (
+          <div className="flex items-start gap-x-4">
+            <span className="w-24 flex-shrink-0 md:w-36">Affected Graphs</span>{" "}
+            :
+            <div className="flex flex-wrap items-center gap-2">
+              {data.affectedGraphs.map((ag) => {
+                const graph = allGraphsData?.graphs.find((g) => g.id === ag.id);
 
-              if (!graph) return null;
+                if (!graph) return null;
 
-              return (
-                <Link
-                  key={id}
-                  href={`/${organizationSlug}/graph/${graph.name}`}
-                  className="text-primary"
-                >
-                  <div className="flex items-center gap-x-1">
-                    <PiGraphLight />
-                    {graph.name}
-                  </div>
-                </Link>
-              );
-            })}
+                return (
+                  <Link
+                    key={id}
+                    href={`/${organizationSlug}/graph/${graph.name}`}
+                    className="text-primary"
+                  >
+                    <div className="flex items-center gap-x-1">
+                      <PiGraphLight />
+                      {graph.name}
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="flex items-center gap-x-4">
           <span className="w-24 flex-shrink-0 md:w-36">Proposed Schema</span> :
