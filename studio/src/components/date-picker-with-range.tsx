@@ -10,7 +10,7 @@ import { formatDate } from "@/lib/format-date";
 import { cn } from "@/lib/utils";
 import CalendarIcon from "@heroicons/react/24/outline/CalendarIcon";
 import { addDays, addYears, subHours } from "date-fns";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Input } from "./ui/input";
 
 const ranges = {
@@ -44,7 +44,7 @@ const getFromDate = (from: Date, time = "00:00") => {
     from.getMonth(),
     from.getDate(),
     hours,
-    minutes
+    minutes,
   );
 };
 
@@ -55,7 +55,7 @@ const getToDate = (to: Date, time = "23:59") => {
     to.getMonth(),
     to.getDate(),
     hours,
-    minutes
+    minutes,
   );
 };
 
@@ -107,7 +107,7 @@ export function DatePickerWithRange({
 
   const rangeLabel = range ? ranges[range] : undefined;
 
-  const reset = () => {
+  const reset = useCallback(() => {
     setSelectedRange(range);
     if (!range) {
       setStartTime(getFormattedTime(dateRange.start));
@@ -120,16 +120,16 @@ export function DatePickerWithRange({
     if (dateRange) {
       setSelectedDateTime(dateRange, undefined, false);
     }
-  };
+  }, [dateRange, range]);
 
   useEffect(() => {
     reset();
-  }, [range, dateRange]);
+  }, [range, dateRange, reset]);
 
   const setSelectedDateTime = (
     { start, end }: { start: Date; end?: Date },
     { startTime, endTime }: { startTime?: string; endTime?: string } = {},
-    resetRange = true
+    resetRange = true,
   ) => {
     const dateRange = {
       start: getFromDate(start, startTime || getFormattedTime(start)),
@@ -147,7 +147,7 @@ export function DatePickerWithRange({
     return {
       start: getFromDate(
         selected.start,
-        startTime === "" ? "00:00" : startTime
+        startTime === "" ? "00:00" : startTime,
       ),
       end:
         selected?.end &&
@@ -191,9 +191,9 @@ export function DatePickerWithRange({
           variant={"outline"}
           size={size}
           className={cn(
-            "w-[200px] justify-start px-2.5 text-left font-normal",
+            "w-[220px] justify-start px-2.5 text-left font-normal",
             className,
-            !selected && "text-muted-foreground"
+            !selected && "text-muted-foreground",
           )}
         >
           <CalendarIcon className="mr-2 h-4 w-4" />

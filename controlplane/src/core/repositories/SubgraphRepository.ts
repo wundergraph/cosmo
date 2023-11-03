@@ -1,8 +1,8 @@
-import { joinLabel, normalizeURL, splitLabel } from '@wundergraph/cosmo-shared';
-import { and, asc, desc, eq, gt, inArray, lt, notInArray, SQL, sql } from 'drizzle-orm';
-import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { PlainMessage } from '@bufbuild/protobuf';
 import { CompositionError } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { joinLabel, normalizeURL, splitLabel } from '@wundergraph/cosmo-shared';
+import { SQL, and, asc, desc, eq, gt, inArray, lt, notInArray, sql } from 'drizzle-orm';
+import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema.js';
 import { schemaChecks, schemaVersion, subgraphs, subgraphsToFederatedGraph, targets } from '../../db/schema.js';
 import {
@@ -11,10 +11,11 @@ import {
   Label,
   ListFilterOptions,
   SchemaCheckDetailsDTO,
+  SchemaCheckSummaryDTO,
   SubgraphDTO,
 } from '../../types/index.js';
-import { hasLabelsChanged, normalizeLabels } from '../util.js';
 import { Composer } from '../composition/composer.js';
+import { hasLabelsChanged, normalizeLabels } from '../util.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 
 type SubscriptionProtocol = 'ws' | 'sse' | 'sse_post';
@@ -40,7 +41,10 @@ export interface UpdateSubgraphOptions {
  * Repository for managing subgraphs.
  */
 export class SubgraphRepository {
-  constructor(private db: PostgresJsDatabase<typeof schema>, private organizationId: string) {}
+  constructor(
+    private db: PostgresJsDatabase<typeof schema>,
+    private organizationId: string,
+  ) {}
 
   public create(data: Subgraph): Promise<SubgraphDTO | undefined> {
     const uniqueLabels = normalizeLabels(data.labels);
@@ -240,7 +244,7 @@ export class SubgraphRepository {
 
       // Validate all federated graphs that use this subgraph.
       for (const federatedGraph of updatedFederatedGraphs) {
-        const composition = await composer.composeFederatedGraph(federatedGraph.name, federatedGraph.targetId);
+        const composition = await composer.composeFederatedGraph(federatedGraph);
 
         await composer.deployComposition(composition);
 
@@ -459,7 +463,7 @@ export class SubgraphRepository {
         createdAt: true,
         isComposable: true,
         hasBreakingChanges: true,
-        proposedSubgraphSchemaSDL: true,
+        hasClientTraffic: true,
         forcedSuccess: true,
       },
       limit,
@@ -485,7 +489,7 @@ export class SubgraphRepository {
         timestamp: c.createdAt.toISOString(),
         isBreaking: c.hasBreakingChanges ?? false,
         isComposable: c.isComposable ?? false,
-        proposedSubgraphSchemaSDL: c.proposedSubgraphSchemaSDL ?? undefined,
+        hasClientTraffic: c.hasClientTraffic ?? false,
         isForcedSuccess: c.forcedSuccess ?? false,
       })),
       checksCount,
@@ -540,13 +544,43 @@ export class SubgraphRepository {
     return checksCount[0].count;
   }
 
-  public async checkDetails(
-    id: string,
-    federatedTargetID: string,
-    federatedGraphName: string,
-  ): Promise<SchemaCheckDetailsDTO | undefined> {
+  public async checkById(id: string, federatedGraphName: string): Promise<SchemaCheckSummaryDTO | undefined> {
+    const check = await this.db.query.schemaChecks.findFirst({
+      where: eq(schema.schemaChecks.id, id),
+      with: {
+        affectedGraphs: true,
+      },
+    });
+
+    if (!check) {
+      return;
+    }
+
+    const subgraphs = await this.listByFederatedGraph(federatedGraphName, {
+      published: true,
+    });
+
+    return {
+      id: check.id,
+      targetID: check.targetId,
+      subgraphName: subgraphs.find((s) => s.targetId === check.targetId)?.name ?? '',
+      timestamp: check.createdAt.toISOString(),
+      isBreaking: check.hasBreakingChanges ?? false,
+      isComposable: check.isComposable ?? false,
+      hasClientTraffic: check.hasClientTraffic ?? false,
+      proposedSubgraphSchemaSDL: check.proposedSubgraphSchemaSDL ?? undefined,
+      isForcedSuccess: check.forcedSuccess ?? false,
+      affectedGraphs: check.affectedGraphs.map(({ federatedGraphId, trafficCheckDays }) => ({
+        id: federatedGraphId,
+        trafficCheckDays,
+      })),
+    };
+  }
+
+  public async checkDetails(id: string, federatedTargetID: string): Promise<SchemaCheckDetailsDTO | undefined> {
     const changes = await this.db.query.schemaCheckChangeAction.findMany({
       columns: {
+        id: true,
         changeType: true,
         changeMessage: true,
         path: true,
@@ -572,30 +606,9 @@ export class SubgraphRepository {
       .split('\n')
       .filter((m) => !!m);
 
-    const check = await this.db.query.schemaChecks.findFirst({
-      where: eq(schema.schemaChecks.id, id),
-    });
-
-    if (!check) {
-      return;
-    }
-
-    const subgraphs = await this.listByFederatedGraph(federatedGraphName, {
-      published: true,
-    });
-
     return {
-      check: {
-        id: check.id,
-        targetID: check.targetId,
-        subgraphName: subgraphs.find((s) => s.targetId === check.targetId)?.name ?? '',
-        timestamp: check.createdAt.toISOString(),
-        isBreaking: check.hasBreakingChanges ?? false,
-        isComposable: check.isComposable ?? false,
-        proposedSubgraphSchemaSDL: check.proposedSubgraphSchemaSDL ?? undefined,
-        isForcedSuccess: check.forcedSuccess ?? false,
-      },
       changes: changes.map((c) => ({
+        id: c.id,
         changeType: c.changeType ?? '',
         message: c.changeMessage ?? '',
         path: c.path ?? undefined,
