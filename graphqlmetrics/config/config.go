@@ -30,7 +30,6 @@ type Config struct {
 	ClickHouseDSN   string        `envconfig:"CLICKHOUSE_DSN" validate:"required,url"`
 	JSONLog         bool          `default:"true" envconfig:"JSON_LOG"`
 	ShutdownDelay   time.Duration `default:"30s" validate:"required,min=5s" envconfig:"SHUTDOWN_DELAY"`
-	Debug           bool          `default:"false" envconfig:"DEBUG"`
 }
 
 func LoadConfig() (*Config, error) {

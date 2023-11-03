@@ -27,7 +27,8 @@ func main() {
 		log.Fatal("Could not parse log level", zap.Error(err))
 	}
 
-	logger := logging.New(!cfg.JSONLog, cfg.LogLevel == "debug", logLevel).
+	isDebug := cfg.LogLevel == "debug"
+	logger := logging.New(!cfg.JSONLog, isDebug, logLevel).
 		With(
 			zap.String("component", "@wundergraph/graphqlmetrics"),
 			zap.String("service_version", graphqlmetrics.Version),
@@ -50,7 +51,7 @@ func main() {
 	options.Compression = &clickhouse.Compression{
 		Method: clickhouse.CompressionLZ4,
 	}
-	if cfg.Debug {
+	if isDebug {
 		options.Debug = true
 		options.Debugf = func(format string, v ...any) {
 			logger.Sugar().With(zap.String("subsystem", "clickhouse-go")).Debugf(format, v...)
