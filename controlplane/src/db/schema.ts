@@ -695,5 +695,5 @@ export const oidcProviders = pgTable('oidc_providers', {
       onDelete: 'cascade',
     }),
   name: text('name').notNull(),
-  endpoint: text("endpoint").notNull()
+  endpoint: text('endpoint').notNull(),
 });
