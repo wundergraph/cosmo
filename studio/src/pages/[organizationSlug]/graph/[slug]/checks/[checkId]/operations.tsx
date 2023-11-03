@@ -233,11 +233,24 @@ const CheckOperationsPage: NextPageWithLayout = () => {
                   </div>
                 </AccordionTrigger>
                 <AccordionContent>
-                  <div className="flex flex-col gap-y-6 px-2">
-                    <p className="text-muted-foreground">
-                      First seen at {formatDateTime(new Date(firstSeenAt))} and
-                      last seen at {formatDateTime(new Date(lastSeenAt))}
-                    </p>
+                  <div className="mt-2 flex flex-col gap-y-6 px-2">
+                    <div className="items-center justify-between space-y-6 md:flex md:flex-row md:space-y-0">
+                      <p className="text-muted-foreground">
+                        First seen at {formatDateTime(new Date(firstSeenAt))}{" "}
+                        and last seen at {formatDateTime(new Date(lastSeenAt))}
+                      </p>
+                      <div className="justify-s flex items-center gap-x-2">
+                        <OperationContentDialog hash={hash} />
+                        <Button
+                          size="sm"
+                          className="flex-1 md:flex-none"
+                          variant="secondary"
+                          onClick={() => copyLink(hash)}
+                        >
+                          Share link
+                        </Button>
+                      </div>
+                    </div>
                     <ChangesTable
                       changes={impactingChanges}
                       caption={
@@ -248,17 +261,6 @@ const CheckOperationsPage: NextPageWithLayout = () => {
                       }
                       trafficCheckDays={data.trafficCheckDays}
                     />
-                    <div className="justify-s flex items-center gap-x-2">
-                      <OperationContentDialog hash={hash} />
-                      <Button
-                        size="sm"
-                        className="flex-1 md:flex-none"
-                        variant="secondary"
-                        onClick={() => copyLink(hash)}
-                      >
-                        Share link
-                      </Button>
-                    </div>
                   </div>
                 </AccordionContent>
               </AccordionItem>

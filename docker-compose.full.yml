@@ -137,7 +137,6 @@ services:
     platform: linux/amd64
     environment:
       CLICKHOUSE_DSN: "clickhouse://${CLICKHOUSE_USER:-default}:${CLICKHOUSE_PASSWORD:-changeme}@clickhouse:9000/${CLICKHOUSE_DATABASE:-cosmo}"
-      CLICKHOUSE_HTTP_DSN: "http://${CLICKHOUSE_USER:-default}:${CLICKHOUSE_PASSWORD:-changeme}@clickhouse:8123/${CLICKHOUSE_DATABASE:-cosmo}"
       INGEST_JWT_SECRET: ${INGEST_JWT_SECRET:-fkczyomvdprgvtmvkuhvprxuggkbgwld}
       LISTEN_ADDR: "0.0.0.0:4005"
     ports:

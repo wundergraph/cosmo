@@ -58,11 +58,6 @@ spec:
                 secretKeyRef:
                   name: {{ include "graphqlmetrics.fullname" . }}
                   key: clickhouseDsn
-            - name: CLICKHOUSE_HTTP_DSN
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "graphqlmetrics.fullname" . }}
-                  key: clickhouseHttpDsn
             - name: INGEST_JWT_SECRET
               valueFrom:
                 secretKeyRef:
