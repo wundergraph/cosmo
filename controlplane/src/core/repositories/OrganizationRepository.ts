@@ -420,7 +420,7 @@ export class OrganizationRepository {
           expiresAt: key.expiresAt?.toISOString() ?? '',
           createdBy: key.createdBy,
           creatorUserID: key.creatorUserID,
-        } as APIKeyDTO),
+        }) as APIKeyDTO,
     );
   }
 

@@ -308,12 +308,12 @@ export function timestampToNanoseconds(timestamp: string): bigint {
   return nanoseconds + BigInt(fractionalSeconds);
 }
 
-export function isoDateRangeToTimestamps(dateRange?: { start: string; end: string }, range?: number) {
-  if ((range && !dateRange) || !dateRange) {
+export function isoDateRangeToTimestamps(dateRange?: { start: string; end: string }, range = 24) {
+  if (!dateRange) {
     const endDate = getEndDate();
     return {
       end: endDate,
-      start: endDate - (range || 24) * 60 * 60 * 1000,
+      start: endDate - range * 60 * 60 * 1000,
     };
   }
 
@@ -372,7 +372,7 @@ export const getDateRange = (dateRange?: { start?: number; end?: number }, offse
   return [start, end];
 };
 
-export const getGranularity = (range: number) => {
+export const getGranularity = (range = 24) => {
   if (range === 1) {
     return '5';
   } else if (range <= 4) {
@@ -385,6 +385,8 @@ export const getGranularity = (range: number) => {
     return '60';
   } else if (range <= 168) {
     return '240';
+  } else if (range > 168) {
+    return '480';
   }
 
   return '5';

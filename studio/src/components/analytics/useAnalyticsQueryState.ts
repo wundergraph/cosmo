@@ -1,9 +1,9 @@
-import { endOfDay, formatISO, startOfDay, subDays, subHours } from "date-fns";
-import { useRouter } from "next/router";
 import { AnalyticsViewGroupName } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
+import { subHours } from "date-fns";
+import { useRouter } from "next/router";
 import { useMemo } from "react";
+import { Range, getRange } from "../date-picker-with-range";
 import { refreshIntervals } from "./refresh-interval";
-import { getRange, Range } from "../date-picker-with-range";
 
 const parse = (value: string, fallback: any) => {
   try {
@@ -52,8 +52,8 @@ export const useAnalyticsQueryState = () => {
     const parsedRange = getRange(query.range?.toString());
 
     let dateRange = {
-      start: startOfDay(subHours(new Date(), parsedRange)),
-      end: endOfDay(new Date()),
+      start: subHours(new Date(), parsedRange),
+      end: new Date(),
     };
 
     if (query.dateRange) {
@@ -63,8 +63,8 @@ export const useAnalyticsQueryState = () => {
       });
 
       dateRange = {
-        start: startOfDay(new Date(tempRange.start)),
-        end: endOfDay(new Date(tempRange.end)),
+        start: new Date(tempRange.start),
+        end: new Date(tempRange.end),
       };
     } else if (!range) {
       range = parsedRange;
@@ -72,7 +72,7 @@ export const useAnalyticsQueryState = () => {
 
     let refreshIntervalObject = parse(
       refreshInterval as string,
-      refreshIntervals[0].value
+      refreshIntervals[0].value,
     );
 
     let sort =

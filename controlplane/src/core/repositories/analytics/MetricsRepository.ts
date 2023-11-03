@@ -10,7 +10,6 @@ import {
   buildCoercedFilterSqlStatement,
   coerceFilterValues,
   getDateRange,
-  getEndDate,
   getGranularity,
   isoDateRangeToTimestamps,
   toISO9075,
@@ -480,6 +479,7 @@ export class MetricsRepository {
     ]);
 
     return {
+      resolution: metricsProps.granule,
       requests: requests.data,
       latency: latency.data,
       errors: errors.data,
@@ -493,6 +493,7 @@ export class MetricsRepository {
     const [errorRate] = await Promise.all([this.getErrorRateMetrics(metricsProps)]);
 
     return {
+      resolution: metricsProps.granule,
       errorRate: errorRate.data,
     };
   }

@@ -13,7 +13,9 @@ SELECT
     toLowCardinality(OperationName) as OperationName,
     toLowCardinality(OperationType) as OperationType,
     Path as Path,
+    toLowCardinality(arrayElement(Path, -1)) as FieldName,
     TypeNames as TypeNames,
+    toLowCardinality(NamedType) as NamedType,
     toLowCardinality(ClientName) as ClientName,
     toLowCardinality(ClientVersion) as ClientVersion,
     SubgraphIDs as SubgraphIDs,
@@ -33,6 +35,8 @@ GROUP BY
     ClientName,
     ClientVersion,
     Path,
+    FieldName,
+    NamedType,
     TypeNames,
     SubgraphIDs
 ORDER BY

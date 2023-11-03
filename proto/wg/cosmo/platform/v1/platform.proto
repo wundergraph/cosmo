@@ -114,11 +114,18 @@ message CompositionError{
   string federatedGraphName = 2;
 }
 
+message CheckOperationUsageStats {
+  uint32 totalOperations = 1;
+  string firstSeenAt = 2;
+  string lastSeenAt = 3;
+}
+
 message CheckSubgraphSchemaResponse {
   Response response = 1;
   repeated SchemaChange breakingChanges = 2;
   repeated SchemaChange nonBreakingChanges = 3;
   repeated CompositionError compositionErrors = 4;
+  CheckOperationUsageStats operationUsageStats = 5;
 }
 
 message FixSubgraphSchemaResponse {
@@ -240,7 +247,7 @@ message SchemaCheck {
   string timestamp = 4;
   bool isComposable = 5;
   bool isBreaking = 6;
-  optional string proposedSubgraphSchemaSDL = 7;
+  bool hasClientTraffic = 7;
   bool isForcedSuccess = 8;
 }
 
@@ -251,16 +258,70 @@ message GetChecksByFederatedGraphNameResponse {
   string totalChecksCount = 4;
 }
 
+message GetCheckSummaryRequest {
+  string check_id = 1;
+  string graph_name = 2;
+}
+
+message GetCheckSummaryResponse {
+  message ChangeCounts {
+    int32 additions = 1;
+    int32 deletions = 2;
+  }
+
+  message AffectedGraph {
+    string id = 1;
+    int32 traffic_check_days = 2;
+  }
+
+  Response response = 1;
+  SchemaCheck check = 2;
+  repeated AffectedGraph affected_graphs = 3;
+  optional string proposedSubgraphSchemaSDL = 4;
+  ChangeCounts changeCounts = 5;
+}
+
 message GetCheckDetailsRequest {
-  string checkID = 1;
-  string graphName = 2;
+  string check_id = 1;
+  string graph_name = 2;
 }
 
 message GetCheckDetailsResponse {
   Response response = 1;
   repeated SchemaChange changes = 2;
   repeated string compositionErrors = 3;
-  SchemaCheck check = 4;
+  int32 traffic_check_days = 4;
+  string created_at = 5;
+}
+
+message GetCheckOperationsRequest {
+  string check_id = 1;
+  string graph_name = 2;
+}
+
+message GetCheckOperationsResponse {
+  message CheckOperation {
+    string hash = 1;
+    string name = 2;
+    string type = 3;
+    string first_seen_at = 4;
+    string last_seen_at = 5;
+    repeated SchemaChange impacting_changes = 6;
+  }
+
+  Response response = 1;
+  repeated CheckOperation operations = 2;
+  int32 traffic_check_days = 3;
+  string created_at = 4;
+}
+
+message GetOperationContentRequest {
+  string hash = 1;
+}
+
+message GetOperationContentResponse {
+  Response response = 1;
+  string operation_content = 2;
 }
 
 message GetFederatedGraphChangelogRequest {
@@ -812,6 +873,7 @@ message GetGraphMetricsResponse {
   MetricsDashboardMetric latency = 3;
   MetricsDashboardMetric errors = 4;
   repeated AnalyticsViewResultFilter filters = 5;
+  optional string resolution = 6;
 }
 
 message MetricsDashboardMetric {
@@ -851,6 +913,7 @@ message GetMetricsErrorRateRequest {
 message GetMetricsErrorRateResponse {
   Response response = 1;
   repeated MetricsErrorRateSeriesItem series = 2;
+  optional string resolution = 3;
 }
 
 message MetricsErrorRateSeriesItem {
@@ -912,9 +975,11 @@ message DeleteOIDCProviderResponse {
 
 message GetFieldUsageRequest {
   string graph_name = 1;
-  string typename = 2;
-  string field = 3; 
-  int32 range = 4;
+  optional string namedType = 2;
+  optional string typename = 3;
+  optional string field = 4; 
+  optional int32 range = 5;
+  DateRange dateRange = 6;
 }
 
 message ClientWithOperations {
@@ -983,12 +1048,22 @@ service PlatformService {
   rpc GetSubgraphByName(GetSubgraphByNameRequest) returns (GetSubgraphByNameResponse) {}
   // GetFederatedSubgraphSDLByName returns the SDL of the subgraph by name.
   rpc GetFederatedSubgraphSDLByName(GetFederatedSubgraphSDLByNameRequest) returns (GetFederatedSubgraphSDLByNameResponse) {}
+
+
   // GetChecksByFederatedGraphName return schema and composition checks that concern a federated graph
   rpc GetChecksByFederatedGraphName(GetChecksByFederatedGraphNameRequest) returns (GetChecksByFederatedGraphNameResponse) {}
+  // GetCheckSummary returns top level information about a schema check
+  rpc GetCheckSummary(GetCheckSummaryRequest) returns (GetCheckSummaryResponse) {}
   // GetCheckDetails returns changes and composition errors recorded for a check
   rpc GetCheckDetails(GetCheckDetailsRequest) returns (GetCheckDetailsResponse) {}
+  // GetCheckOperations returns affected operations for a check
+  rpc GetCheckOperations(GetCheckOperationsRequest) returns (GetCheckOperationsResponse) {}
   // ForceCheckSuccess forces a failed check to be marked as successful
   rpc ForceCheckSuccess(ForceCheckSuccessRequest) returns (ForceCheckSuccessResponse) {}
+
+  // GetOperationContent returns the operation body by searching using the hash
+  rpc GetOperationContent(GetOperationContentRequest) returns (GetOperationContentResponse) {}
+
   // GetFederatedGraphChangelog returns the changelog of the federated graph.
   rpc GetFederatedGraphChangelog(GetFederatedGraphChangelogRequest) returns (GetFederatedGraphChangelogResponse) {}
   // CreateFederatedGraphToken creates a federated graph token that is consumed by the router to authenticate requests.

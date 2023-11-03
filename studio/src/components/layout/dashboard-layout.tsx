@@ -1,4 +1,3 @@
-import { showCal } from "@/lib/utils";
 import { Component2Icon } from "@radix-ui/react-icons";
 import { addDays, formatDistance } from "date-fns";
 import { useRouter } from "next/router";
@@ -14,6 +13,8 @@ import { PageHeader } from "./head";
 import { LayoutProps } from "./layout";
 import { Nav, NavLink } from "./nav";
 import { TitleLayout } from "./title-layout";
+import Link from "next/link";
+import { calURL } from "@/lib/constants";
 
 export const DashboardLayout = ({ children }: LayoutProps) => {
   const router = useRouter();
@@ -63,9 +64,11 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
     <div className="2xl:flex 2xl:flex-1 2xl:flex-col 2xl:items-center">
       <div className="min-h-screen w-full max-w-screen-4xl bg-background font-sans antialiased">
         {user?.currentOrganization.isFreeTrial && (
-          <div
+          <Link
             className="sticky top-0 z-50 flex cursor-pointer justify-center rounded bg-primary px-2 py-1 text-sm text-secondary-foreground"
-            onClick={showCal}
+            href={calURL}
+            target="_blank"
+            rel="noreferrer"
           >
             {!user.currentOrganization.isFreeTrialExpired ? (
               <span>
@@ -87,7 +90,7 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
                 to contact us and upgrade your plan for continued usage.
               </span>
             )}
-          </div>
+          </Link>
         )}
         <Nav links={links}>{children}</Nav>
       </div>
