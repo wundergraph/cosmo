@@ -78,8 +78,8 @@ const OrganizationDetails = () => {
     mode: "onChange",
   });
 
-  const { mutate, isLoading } = useMutation(
-    updateOrganizationDetails.useMutation()
+  const { mutate, isPending } = useMutation(
+    updateOrganizationDetails.useMutation(),
   );
 
   const { toast } = useToast();
@@ -110,7 +110,7 @@ const OrganizationDetails = () => {
             duration: 3000,
           });
         },
-      }
+      },
     );
   };
 
@@ -158,7 +158,7 @@ const OrganizationDetails = () => {
         />
         <Button
           className="ml-auto"
-          isLoading={isLoading}
+          isLoading={isPending}
           type="submit"
           disabled={
             !form.formState.isValid ||
@@ -177,7 +177,7 @@ const LeaveOrganization = () => {
   const router = useRouter();
   const [open, setOpen] = useState(false);
 
-  const { mutate, isLoading } = useMutation(leaveOrganization.useMutation());
+  const { mutate } = useMutation(leaveOrganization.useMutation());
 
   const { toast } = useToast();
 
@@ -204,7 +204,7 @@ const LeaveOrganization = () => {
             duration: 3000,
           });
         },
-      }
+      },
     );
     setOpen(false);
   };
@@ -273,7 +273,7 @@ const DeleteOrganization = () => {
     mode: "onChange",
   });
 
-  const { mutate, isLoading } = useMutation(deleteOrganization.useMutation());
+  const { mutate, isPending } = useMutation(deleteOrganization.useMutation());
 
   const { toast } = useToast();
 
@@ -300,7 +300,7 @@ const DeleteOrganization = () => {
             duration: 3000,
           });
         },
-      }
+      },
     );
     setOpen(false);
   };
@@ -368,7 +368,7 @@ const DeleteOrganization = () => {
                   </Button>
                   <Button
                     variant="destructive"
-                    isLoading={isLoading}
+                    isLoading={isPending}
                     type="submit"
                     disabled={!isValid}
                   >
@@ -405,7 +405,7 @@ SettingsDashboardPage.getLayout = (page) => {
   return getDashboardLayout(
     page,
     "Settings",
-    "Settings for this organization."
+    "Settings for this organization.",
   );
 };
 
