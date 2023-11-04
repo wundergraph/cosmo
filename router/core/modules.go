@@ -109,6 +109,8 @@ func WriteResponseError(ctx RequestContext, err error) {
 
 	if err != nil {
 		rErrors = graphql.RequestErrorsFromError(err)
+	} else {
+		ctx.Logger().Warn("No error provided as argument to WriteResponseError. Falling back to empty error array.")
 	}
 
 	writeRequestErrors(ctx.Request(), rErrors, ctx.ResponseWriter(), ctx.Logger())
