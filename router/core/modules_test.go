@@ -28,7 +28,7 @@ func TestNoError(t *testing.T) {
 	body, err := io.ReadAll(rr.Result().Body)
 	require.NoError(t, err)
 
-	require.Equal(t, `{"errors":[]}`, string(body))
+	require.Equal(t, `{"errors":[{"message":"Internal Error"}]}`, string(body))
 }
 
 func TestSingleError(t *testing.T) {

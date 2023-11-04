@@ -3,6 +3,7 @@ package core
 import (
 	stdContext "context"
 	"fmt"
+	"github.com/pkg/errors"
 	"net/http"
 	"sync"
 
@@ -110,7 +111,9 @@ func WriteResponseError(ctx RequestContext, err error) {
 	if err != nil {
 		rErrors = graphql.RequestErrorsFromError(err)
 	} else {
-		ctx.Logger().Warn("No error provided as argument to WriteResponseError. Falling back to empty error array.")
+		err = errors.WithStack(errors.New("Internal Error"))
+		rErrors = graphql.RequestErrorsFromError(err)
+		ctx.Logger().Warn("No error provided as argument to WriteResponseError. Fallback to internal error.", zap.Error(err))
 	}
 
 	writeRequestErrors(ctx.Request(), rErrors, ctx.ResponseWriter(), ctx.Logger())
