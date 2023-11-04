@@ -101,7 +101,7 @@ type ModuleContext struct {
 }
 
 // WriteResponseError writes the given error as a GraphQL error response to the http.ResponseWriter
-// associated with the given RequestContext. If err is nil, a generic "Internal Error" is written.
+// associated with the given RequestContext. If err is nil, a generic "Internal Error" error is returned.
 // Please never write errors directly to the http.ResponseWriter. The function takes care of logging and tracking
 // the error in the underlying telemetry system.
 func WriteResponseError(ctx RequestContext, err error) {
