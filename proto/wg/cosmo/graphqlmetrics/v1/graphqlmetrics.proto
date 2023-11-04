@@ -11,8 +11,8 @@ enum OperationType {
   MUTATION = 1;
   SUBSCRIPTION = 2;
 }
-
 message RequestInfo {
+
   int32 StatusCode = 1;
   bool error = 2;
 }
@@ -66,6 +66,8 @@ message TypeFieldUsageInfo {
   repeated string SubgraphIDs = 3;
   // Count is the number of times the field is used
   uint64 Count = 4;
+  // NamedType is the underlying type of the field
+  string NamedType = 5;
 }
 
 message PublishGraphQLRequestMetricsRequest {

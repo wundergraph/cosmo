@@ -49,7 +49,7 @@ export default (opts: BaseCommandOptions) => {
             name: g.name,
             token: g.token,
             createdAt: g.createdAt,
-          } as OutputFile[number]),
+          }) as OutputFile[number],
       );
       await writeFile(join(process.cwd(), options.out), JSON.stringify(output));
       process.exit(0);

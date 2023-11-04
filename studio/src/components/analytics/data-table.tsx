@@ -13,9 +13,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { cn } from "@/lib/utils";
-import { ChevronDownIcon, ChevronUpIcon } from "@heroicons/react/24/outline";
-import { ClockIcon, Cross2Icon, UpdateIcon } from "@radix-ui/react-icons";
+import { useSessionStorage } from "@/hooks/use-session-storage";
+import { ChevronDownIcon } from "@heroicons/react/24/outline";
+import { UpdateIcon } from "@radix-ui/react-icons";
 import {
   ColumnFiltersState,
   PaginationState,
@@ -30,51 +30,33 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { formatISO, subDays } from "date-fns";
-import { useRouter } from "next/router";
 import {
   AnalyticsViewColumn,
   AnalyticsViewFilterOperator,
   AnalyticsViewGroupName,
   AnalyticsViewResultFilter,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import React, { useCallback, useState } from "react";
-import { DateRange } from "react-day-picker";
+import { formatISO, subHours } from "date-fns";
+import { useRouter } from "next/router";
+import { useMemo, useState } from "react";
 import useDeepCompareEffect from "use-deep-compare-effect";
-import { DatePickerWithRange } from "../date-picker-with-range";
+import {
+  DatePickerWithRange,
+  DateRange,
+  DateRangePickerChangeHandler,
+  Range,
+  getRange,
+} from "../date-picker-with-range";
 import { Loader } from "../ui/loader";
-import { DataTableFacetedFilter } from "./data-table-faceted-filter";
 import { DataTableGroupMenu } from "./data-table-group-menu";
 import { DataTablePagination } from "./data-table-pagination";
-import { DataTablePrimaryFilterMenu } from "./data-table-primary-filter-menu";
+import { AnalyticsFilters, AnalyticsSelectedFilters } from "./filters";
 import { getColumnData } from "./getColumnData";
 import { getDataTableFilters } from "./getDataTableFilters";
+import { RefreshInterval, refreshIntervals } from "./refresh-interval";
+import { useApplyParams } from "./use-apply-params";
 import { getDefaultSort, useSyncTableWithQuery } from "./useSyncTableWithQuery";
-import { useSessionStorage } from "@/hooks/use-session-storage";
-import { AnalyticsFilters, AnalyticsSelectedFilters } from "./filters";
-
-export const refreshIntervals = [
-  {
-    label: "Off",
-    value: undefined,
-  },
-  {
-    label: "10s",
-    value: 10 * 1000,
-  },
-  {
-    label: "30s",
-    value: 30 * 1000,
-  },
-  {
-    label: "1m",
-    value: 60 * 1000,
-  },
-  {
-    label: "5m",
-    value: 5 * 60 * 1000,
-  },
-];
+import { useAnalyticsQueryState } from "./useAnalyticsQueryState";
 
 export function AnalyticsDataTable<T>({
   data,
@@ -97,20 +79,23 @@ export function AnalyticsDataTable<T>({
 
   const [, setRouteCache] = useSessionStorage("analytics.route", router.query);
 
-  const [refreshInterval, setRefreshInterval] = useState(refreshIntervals[0]);
-
-  const [sorting, setSorting] = React.useState<SortingState>(
-    getDefaultSort(router.query.group?.toString())
+  const [refreshInterval, setRefreshInterval] = useState(
+    refreshIntervals[0].value,
   );
 
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
-    []
+  const [sorting, setSorting] = useState<SortingState>(
+    getDefaultSort(router.query.group?.toString()),
   );
-  const [selectedGroup, setSelectedGroup] =
-    React.useState<AnalyticsViewGroupName>(AnalyticsViewGroupName.None);
-  const [selectedDateRange, setDateRange] = React.useState<DateRange>({
-    from: subDays(new Date(), 1),
-    to: new Date(),
+
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [selectedGroup, setSelectedGroup] = useState<AnalyticsViewGroupName>(
+    AnalyticsViewGroupName.None,
+  );
+
+  const [selectedRange, setRange] = useState<Range | undefined>();
+  const [selectedDateRange, setDateRange] = useState<DateRange>({
+    start: subHours(new Date(), Number(router.query.range ?? 24)),
+    end: new Date(),
   });
 
   const columns = getColumnData(columnsList);
@@ -124,26 +109,25 @@ export function AnalyticsDataTable<T>({
     }, {});
 
   const [columnVisibility, setColumnVisibility] =
-    React.useState<VisibilityState>(defaultHiddenColumns);
+    useState<VisibilityState>(defaultHiddenColumns);
 
   useDeepCompareEffect(() => {
     setColumnVisibility(defaultHiddenColumns);
   }, [defaultHiddenColumns]);
 
-  const [rowSelection, setRowSelection] = React.useState({});
+  const [rowSelection, setRowSelection] = useState({});
 
-  const [{ pageIndex, pageSize }, setPagination] =
-    React.useState<PaginationState>({
-      pageIndex: 0,
-      pageSize: 10,
-    });
+  const [{ pageIndex, pageSize }, setPagination] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: 10,
+  });
 
-  const pagination = React.useMemo(
+  const pagination = useMemo(
     () => ({
       pageIndex,
       pageSize,
     }),
-    [pageIndex, pageSize]
+    [pageIndex, pageSize],
   );
 
   const state = {
@@ -154,20 +138,7 @@ export function AnalyticsDataTable<T>({
     pagination,
   };
 
-  const applyNewParams = useCallback(
-    (newParams: Record<string, string | null>, unset?: string[]) => {
-      const q = Object.fromEntries(
-        Object.entries(router.query).filter(([key]) => !unset?.includes(key))
-      );
-      router.push({
-        query: {
-          ...q,
-          ...newParams,
-        },
-      });
-    },
-    [router]
-  );
+  const applyNewParams = useApplyParams();
 
   const table = useReactTable({
     data,
@@ -221,7 +192,7 @@ export function AnalyticsDataTable<T>({
               sort: defaultSort[0].id,
               sortDir: defaultSort[0]?.desc ? "asc" : "desc",
             },
-            ["sort", "sortDir"]
+            ["sort", "sortDir"],
           );
         } else {
           applyNewParams({}, ["sort", "sortDir"]);
@@ -235,24 +206,34 @@ export function AnalyticsDataTable<T>({
       {
         group: AnalyticsViewGroupName[val],
       },
-      ["sort", "sortDir"]
+      ["sort", "sortDir"],
     );
   };
 
-  const onDateRangeChange = (val: DateRange) => {
-    const stringifiedDateRange = JSON.stringify({
-      start: formatISO(val.from as Date),
-      end: formatISO((val.to as Date) ?? (val.from as Date)),
-    });
-
-    applyNewParams({
-      dateRange: stringifiedDateRange,
-    });
+  const onDateRangeChange: DateRangePickerChangeHandler = ({
+    range,
+    dateRange,
+  }) => {
+    if (range) {
+      applyNewParams({
+        dateRange: null,
+        range: range.toString(),
+      });
+    } else if (dateRange) {
+      const stringifiedDateRange = JSON.stringify({
+        start: formatISO(dateRange.start as Date),
+        end: formatISO((dateRange.end as Date) ?? (dateRange.start as Date)),
+      });
+      applyNewParams({
+        dateRange: stringifiedDateRange,
+        range: null,
+      });
+    }
   };
 
-  const onRefreshIntervalChange = (val: (typeof refreshIntervals)[number]) => {
+  const onRefreshIntervalChange = (val?: number) => {
     applyNewParams({
-      refreshInterval: JSON.stringify(val),
+      refreshInterval: val ? String(val) : null,
     });
     setRefreshInterval(val);
   };
@@ -264,6 +245,8 @@ export function AnalyticsDataTable<T>({
     table,
     selectedGroup,
     setSelectedGroup,
+    selectedRange,
+    setRange,
     selectedDateRange,
     setDateRange,
     setColumnFilters,
@@ -306,8 +289,8 @@ export function AnalyticsDataTable<T>({
 
         router.push(
           `/${organizationSlug}/graph/${slug}/analytics/${row.getValue(
-            "traceId"
-          )}`
+            "traceId",
+          )}`,
         );
         return;
       }
@@ -333,7 +316,14 @@ export function AnalyticsDataTable<T>({
     <div>
       <div className="flex flex-row flex-wrap items-start gap-y-2">
         <div className="flex flex-1 flex-row flex-wrap items-center gap-2">
+          <DatePickerWithRange
+            range={selectedRange}
+            dateRange={selectedDateRange}
+            onChange={onDateRangeChange}
+          />
           <AnalyticsFilters filters={filtersList} />
+        </div>
+        <div className="flex flex-row flex-wrap items-start gap-2">
           <DataTableGroupMenu
             value={selectedGroup}
             onChange={onGroupChange}
@@ -355,12 +345,6 @@ export function AnalyticsDataTable<T>({
                 value: AnalyticsViewGroupName.HttpStatusCode,
               },
             ]}
-          />
-        </div>
-        <div className="flex flex-row flex-wrap items-start gap-2">
-          <DatePickerWithRange
-            selectedDateRange={selectedDateRange}
-            onDateRangeChange={onDateRangeChange}
           />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -396,27 +380,10 @@ export function AnalyticsDataTable<T>({
           >
             <UpdateIcon />
           </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline">
-                <ClockIcon className="mr-2" />
-                {refreshInterval.label}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              {refreshIntervals.map((ri) => {
-                return (
-                  <DropdownMenuCheckboxItem
-                    key={ri.label}
-                    checked={refreshInterval.value === ri.value}
-                    onCheckedChange={() => onRefreshIntervalChange(ri)}
-                  >
-                    {ri.label}
-                  </DropdownMenuCheckboxItem>
-                );
-              })}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <RefreshInterval
+            value={refreshInterval}
+            onChange={onRefreshIntervalChange}
+          />
         </div>
       </div>
       <div className="flex flex-row flex-wrap items-start gap-y-2 py-2">
@@ -437,7 +404,7 @@ export function AnalyticsDataTable<T>({
                       ? null
                       : flexRender(
                           header.column.columnDef.header,
-                          header.getContext()
+                          header.getContext(),
                         )}
                   </TableHead>
                 );

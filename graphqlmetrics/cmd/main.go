@@ -27,7 +27,8 @@ func main() {
 		log.Fatal("Could not parse log level", zap.Error(err))
 	}
 
-	logger := logging.New(!cfg.JSONLog, cfg.LogLevel == "debug", logLevel).
+	isDebug := cfg.LogLevel == "debug"
+	logger := logging.New(!cfg.JSONLog, isDebug, logLevel).
 		With(
 			zap.String("component", "@wundergraph/graphqlmetrics"),
 			zap.String("service_version", graphqlmetrics.Version),
@@ -42,13 +43,19 @@ func main() {
 	)
 	defer stop()
 
-	options, err := clickhouse.ParseDSN(cfg.ClickHouseHttpDSN)
+	options, err := clickhouse.ParseDSN(cfg.ClickHouseDSN)
 	if err != nil {
 		log.Fatal("Could not parse dsn", zap.Error(err))
 	}
 
 	options.Compression = &clickhouse.Compression{
 		Method: clickhouse.CompressionLZ4,
+	}
+	if isDebug {
+		options.Debug = true
+		options.Debugf = func(format string, v ...any) {
+			logger.Sugar().With(zap.String("subsystem", "clickhouse-go")).Debugf(format, v...)
+		}
 	}
 	options.ClientInfo = clickhouse.ClientInfo{
 		Products: []struct {
@@ -58,12 +65,15 @@ func main() {
 			{Name: "graphqlmetrics", Version: graphqlmetrics.Version},
 		},
 	}
+	options.MaxIdleConns = 10
+	options.MaxOpenConns = 20
 
-	db := clickhouse.OpenDB(options)
-	db.SetMaxIdleConns(10)
-	db.SetMaxOpenConns(15)
+	conn, err := clickhouse.Open(options)
+	if err != nil {
+		log.Fatal("Could not open clickhouse", zap.Error(err))
+	}
 
-	if err := db.PingContext(ctx); err != nil {
+	if err := conn.Ping(ctx); err != nil {
 		log.Fatal("Could not ping clickhouse", zap.Error(err))
 	} else {
 		logger.Info("Connected to clickhouse")
@@ -84,7 +94,7 @@ func main() {
 	}
 
 	svr := graphqlmetrics.NewServer(
-		graphqlmetrics.NewMetricsService(logger, db, []byte(cfg.IngestJWTSecret)),
+		graphqlmetrics.NewMetricsService(logger, conn, []byte(cfg.IngestJWTSecret)),
 		graphqlmetrics.WithListenAddr(cfg.ListenAddr),
 		graphqlmetrics.WithLogger(logger),
 	)

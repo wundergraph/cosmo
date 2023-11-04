@@ -83,6 +83,7 @@ export default (opts: BaseCommandOptions) => {
     });
 
     let success = false;
+    let finalStatement = '';
 
     switch (resp.response?.code) {
       case EnumStatusCode.OK: {
@@ -91,25 +92,46 @@ export default (opts: BaseCommandOptions) => {
           resp.breakingChanges.length === 0 &&
           resp.compositionErrors.length === 0
         ) {
-          console.log('\nDetected no changes.');
+          console.log('\nDetected no changes.\n');
 
           success = true;
 
           break;
         }
 
-        success = resp.breakingChanges.length === 0 && resp.compositionErrors.length === 0;
+        console.log(`\nChecking the proposed schema for subgraph ${pc.bold(name)}.`);
+
+        // No operations imply no clients and no subgraphs
+        if (resp.operationUsageStats) {
+          if (resp.operationUsageStats?.totalOperations === 0) {
+            // Composition errors are still considered failures
+            success = resp.compositionErrors.length === 0;
+            console.log(`No operations were affected by this schema change.`);
+            finalStatement = `This schema change didn't affect any operations from existing client traffic.`;
+          } else {
+            success = resp.breakingChanges.length === 0 && resp.compositionErrors.length === 0;
+
+            console.log(
+              logSymbols.warning +
+                ` Compared ${pc.bold(resp.breakingChanges.length)} breaking change's impacting ${pc.bold(
+                  resp.operationUsageStats.totalOperations,
+                )} operations.\nFound client activity between ` +
+                pc.underline(new Date(resp.operationUsageStats.firstSeenAt).toLocaleString()) +
+                ` and ` +
+                pc.underline(new Date(resp.operationUsageStats.lastSeenAt).toLocaleString()),
+            );
+            finalStatement = `This check has encountered ${pc.bold(
+              `${resp.breakingChanges.length}`,
+            )} breaking change's that would break operations from existing client traffic.`;
+          }
+        }
 
         if (resp.nonBreakingChanges.length > 0 || resp.breakingChanges.length > 0) {
-          console.log('\nDetected the following changes.');
+          console.log('\nDetected the following changes:');
 
           if (resp.breakingChanges.length > 0) {
             for (const breakingChange of resp.breakingChanges) {
-              changesTable.push([
-                pc.red('BREAKING'),
-                pc.red(breakingChange.changeType),
-                pc.red(breakingChange.message),
-              ]);
+              changesTable.push([pc.red('BREAKING'), breakingChange.changeType, breakingChange.message]);
             }
           }
 
@@ -123,7 +145,7 @@ export default (opts: BaseCommandOptions) => {
         }
 
         if (resp.compositionErrors.length > 0) {
-          console.log(pc.red('\nDetected composition errors.'));
+          console.log(pc.red('\nDetected composition errors:'));
           for (const compositionError of resp.compositionErrors) {
             compositionErrorsTable.push([compositionError.federatedGraphName, compositionError.message]);
           }
@@ -131,9 +153,16 @@ export default (opts: BaseCommandOptions) => {
         }
 
         if (success) {
-          console.log('\n' + logSymbols.success + pc.green(' Schema check passed.'));
+          console.log('\n' + logSymbols.success + pc.green(` Schema check passed. ${finalStatement}`) + '\n');
         } else {
-          console.log('\n' + logSymbols.error + pc.red(' Schema check failed.'));
+          program.error(
+            '\n' +
+              logSymbols.error +
+              pc.red(
+                ` Schema check failed. ${finalStatement}\nSee https://cosmo-docs.wundergraph.com/studio/schema-checks for more information on resolving operation check errors.`,
+              ) +
+              '\n',
+          );
         }
         break;
       }
