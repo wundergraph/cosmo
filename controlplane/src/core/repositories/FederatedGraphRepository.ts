@@ -404,7 +404,7 @@ export class FederatedGraphRepository {
     return res !== undefined;
   }
 
-  public async isLatestValidRouterConfig(targetId: string, schemaVersionId: string): Promise<boolean> {
+  public async isLatestValidRouterConfigVersion(targetId: string, schemaVersionId: string): Promise<boolean> {
     const latestVersion = await this.db.query.schemaVersion.findFirst({
       columns: {
         id: true,
