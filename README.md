@@ -147,7 +147,7 @@ If you need help with the deployment, please contact us [here](https://form.type
 ## Managed Service
 
 If you don't want to manage the platform yourself, you can use our managed service [WunderGraph Cosmo Cloud](https://cosmo.wundergraph.com). It is a fully managed platform that don't make you worry about infrastructure, so you can focus on building.
-The managed service is General Available (GA). You can use every feature for 10 days. If you want to extend the trial or have question, please contact us [here](https://form.typeform.com/to/oC6XATf4).
+The managed service is General Available (GA). You can use every feature for 10 days. If you want to extend the trial or have questions, please contact us [here](https://form.typeform.com/to/oC6XATf4).
 After contacting us, we will hook you up and help you to get the most out of Cosmo.
 
 ## License
