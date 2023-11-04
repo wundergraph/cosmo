@@ -43,7 +43,7 @@ That's it, migrate over with a single click!
 - [Docker Compose](https://docs.docker.com/compose/install/) (version 2+ only)
 
 Running cosmo is as easy as running a single command. It can take a few seconds (~30s) until all services are up and running. A seed container and few migrations are running in the background to bootstrap the platform.
-They might restart a few times until the database is ready. You can check the status of the services by running `make full-demo-status`. Once this command returns no services you proceed to the next step.
+They might restart a few times until the database is ready. You can check the status of the services by running `make full-demo-status`. Once this command returns no services you can proceed to the next step.
 
 ```shell
 make full-demo-up
@@ -147,8 +147,8 @@ If you need help with the deployment, please contact us [here](https://form.type
 ## Managed Service
 
 If you don't want to manage the platform yourself, you can use our managed service [WunderGraph Cosmo Cloud](https://cosmo.wundergraph.com). It is a fully managed platform that don't make you worry about infrastructure, so you can focus on building.
-The managed service is currently in private beta. If you want to participate, please contact us [here](https://form.typeform.com/to/oC6XATf4).
-After contacting us, we will hook you up with a free trial and help you to get started.
+The managed service is General Available (GA). You can use every feature for 10 days. If you want to extend the trial or have question, please contact us [here](https://form.typeform.com/to/oC6XATf4).
+After contacting us, we will hook you up and help you to get the most out of Cosmo.
 
 ## License
 
