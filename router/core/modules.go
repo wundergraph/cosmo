@@ -100,7 +100,8 @@ type ModuleContext struct {
 }
 
 // WriteResponseError writes the given error as a GraphQL error response to the http.ResponseWriter
-// associated with the given RequestContext
+// associated with the given RequestContext. It also takes care of logging and tracking the error in the
+// underlying telemetry system. Please never write errors directly to the http.ResponseWriter.
 func WriteResponseError(ctx RequestContext, err error) {
 
 	// Ensure empty array is written if no errors are present
