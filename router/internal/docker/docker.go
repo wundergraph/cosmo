@@ -1,4 +1,5 @@
 // Package docker implements helper functions we use while running under Docker.
+// This should only be used for development purposes.
 package docker
 
 import (
