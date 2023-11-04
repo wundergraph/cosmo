@@ -42,7 +42,7 @@ That's it, migrate over with a single click!
 - [Docker](https://docs.docker.com/get-docker/)
 - [Docker Compose](https://docs.docker.com/compose/install/) (version 2+ only)
 
-Running cosmo is as easy as running a single command. It can take a few seconds (~30s) until all services are up and running. A seed container and few migrations are running in the background to bootstrap the platform.
+1. Running cosmo is as easy as running a single command. It can take a few seconds (~30s) until all services are up and running. A seed container and few migrations are running in the background to bootstrap the platform.
 They might restart a few times until the database is ready. You can check the status of the services by running `make full-demo-status`. Once this command returns no services you can proceed with the next step.
 
 ```shell
