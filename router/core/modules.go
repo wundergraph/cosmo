@@ -106,7 +106,6 @@ type ModuleContext struct {
 // the error in the underlying telemetry system.
 func WriteResponseError(ctx RequestContext, err error) {
 
-	// Ensure empty array is written if no errors are present
 	rErrors := graphql.RequestErrors{}
 
 	if err != nil {
