@@ -4,7 +4,7 @@ import { buildRouterConfig } from '@wundergraph/cosmo-shared';
 import { ArgumentConfigurationData } from '@wundergraph/composition';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
 import { SubgraphRepository } from '../repositories/SubgraphRepository.js';
-import { Label } from '../../types/index.js';
+import { FederatedGraphDTO, Label } from '../../types/index.js';
 import { composeSubgraphs } from './composition.js';
 import { getDiffBetweenGraphs } from './schemaCheck.js';
 
@@ -21,16 +21,20 @@ interface ComposedSubgraph {
   subscriptionProtocol: 'ws' | 'sse' | 'sse_post';
 }
 export interface ComposedFederatedGraph {
-  argumentConfigurations: ArgumentConfigurationData[];
-  name: string;
+  id: string;
   targetID: string;
+  name: string;
   composedSchema?: string;
   errors: Error[];
   subgraphs: ComposedSubgraph[];
+  argumentConfigurations: ArgumentConfigurationData[];
 }
 
 export class Composer {
-  constructor(private federatedGraphRepo: FederatedGraphRepository, private subgraphRepo: SubgraphRepository) {}
+  constructor(
+    private federatedGraphRepo: FederatedGraphRepository,
+    private subgraphRepo: SubgraphRepository,
+  ) {}
 
   /**
    * Build and store the final router config and federated schema to the database. A diff between the
@@ -77,9 +81,9 @@ export class Composer {
    * Composes all subgraphs of a federated graph into a single federated graph.
    * Optionally, you can pass extra subgraphs to include them in the composition.
    */
-  async composeFederatedGraph(name: string, targetID: string): Promise<ComposedFederatedGraph> {
+  async composeFederatedGraph(federatedGraph: FederatedGraphDTO): Promise<ComposedFederatedGraph> {
     try {
-      const subgraphs = await this.subgraphRepo.listByFederatedGraph(name, {
+      const subgraphs = await this.subgraphRepo.listByFederatedGraph(federatedGraph.name, {
         published: true,
       });
 
@@ -94,11 +98,12 @@ export class Composer {
       );
 
       return {
-        argumentConfigurations: result?.argumentConfigurations || [],
-        name,
-        targetID,
+        id: federatedGraph.id,
+        name: federatedGraph.name,
+        targetID: federatedGraph.targetId,
         composedSchema: result?.federatedGraphSchema ? printSchema(result.federatedGraphSchema) : undefined,
         errors: errors || [],
+        argumentConfigurations: result?.argumentConfigurations || [],
         subgraphs: subgraphs.map((s) => ({
           id: s.id,
           name: s.name,
@@ -110,9 +115,10 @@ export class Composer {
       };
     } catch (e: any) {
       return {
+        id: federatedGraph.id,
+        name: federatedGraph.name,
+        targetID: federatedGraph.targetId,
         argumentConfigurations: [],
-        name,
-        targetID,
         errors: [e],
         subgraphs: [],
       };
@@ -152,9 +158,10 @@ export class Composer {
 
         const { errors, federationResult: result } = composeSubgraphs(subgraphsToBeComposed);
         composedGraphs.push({
-          argumentConfigurations: result?.argumentConfigurations || [],
+          id: graph.id,
           name: graph.name,
           targetID: graph.targetId,
+          argumentConfigurations: result?.argumentConfigurations || [],
           composedSchema: result?.federatedGraphSchema ? printSchema(result.federatedGraphSchema) : undefined,
           errors: errors || [],
           subgraphs: subgraphs.map((s) => ({
@@ -168,9 +175,10 @@ export class Composer {
         });
       } catch (e: any) {
         composedGraphs.push({
-          argumentConfigurations: [],
+          id: graph.id,
           name: graph.name,
           targetID: graph.targetId,
+          argumentConfigurations: [],
           errors: [e],
           subgraphs: [],
         });

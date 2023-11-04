@@ -21,25 +21,35 @@ export const AnalyticsToolbar: React.FC<{
     query.filterState = router.query.filterState;
   }
 
+  if (router.query.range) {
+    query.range = router.query.range;
+  }
+
+  if (router.query.dateRange) {
+    query.dateRange = router.query.dateRange;
+  }
+
   const [tracesRoute, setTracesRoute] = useSessionStorage<
     ParsedUrlQueryInput | undefined
   >("analytics.route", query);
 
+  const isTracePage = router.query.traceID;
+
   const updateRoute = () => {
-    if (!router.query.traceID) {
+    if (!isTracePage) {
       setTracesRoute(query);
     }
   };
 
   return (
     <div className="flex items-center gap-2 border-b px-4 py-2">
-      <Tabs value={props.tab}>
-        <TabsList>
+      <Tabs value={props.tab} className="w-full md:w-auto">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="overview" asChild>
             <Link
               href={{
                 pathname: "/[organizationSlug]/graph/[slug]/analytics",
-                query: tracesRoute || query,
+                query: isTracePage ? tracesRoute : query,
               }}
               onClick={updateRoute}
               className="flex gap-x-2"
@@ -52,7 +62,7 @@ export const AnalyticsToolbar: React.FC<{
             <Link
               href={{
                 pathname: "/[organizationSlug]/graph/[slug]/analytics/traces",
-                query: props.tab === "overview" ? query : tracesRoute,
+                query: isTracePage ? tracesRoute : query,
               }}
               onClick={updateRoute}
               className="flex gap-x-2"

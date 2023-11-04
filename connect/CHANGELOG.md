@@ -4,6 +4,17 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.25.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.24.0...@wundergraph/cosmo-connect@0.25.0) (2023-11-03)
+
+### Bug Fixes
+
+* date picker improvements ([#226](https://github.com/wundergraph/cosmo/issues/226)) ([9b784cf](https://github.com/wundergraph/cosmo/commit/9b784cf2180fb59f152ab9d8296e7026e1461c9c)) (@Pagebakers)
+
+### Features
+
+* add ranges to date picker ([#210](https://github.com/wundergraph/cosmo/issues/210)) ([3dac117](https://github.com/wundergraph/cosmo/commit/3dac1179b6e78f2bf2ee5f40c735463e96ef980d)) (@Pagebakers)
+* operation checks (breaking change detection) ([#214](https://github.com/wundergraph/cosmo/issues/214)) ([0935413](https://github.com/wundergraph/cosmo/commit/093541305866327c5c44637603621e4a8053640d)) (@StarpTech)
+
 # [0.24.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.23.0...@wundergraph/cosmo-connect@0.24.0) (2023-10-25)
 
 ### Features

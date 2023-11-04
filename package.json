@@ -53,6 +53,7 @@
     "del-cli": "^5.0.0",
     "husky": "^8.0.3",
     "lint-staged": "^12.5.0",
+    "prettier": "^3.0.3",
     "@connectrpc/protoc-gen-connect-es": "^0.13.2",
     "@connectrpc/connect-query": "^0.4.2",
     "@connectrpc/protoc-gen-connect-query": "^0.4.2"
