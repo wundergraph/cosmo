@@ -34,10 +34,7 @@ export interface FederatedGraphConfig {
  * Repository for managing V1 federated graphs.
  */
 export class FederatedGraphRepository {
-  constructor(
-    private db: PostgresJsDatabase<typeof schema>,
-    private organizationId: string,
-  ) {}
+  constructor(private db: PostgresJsDatabase<typeof schema>, private organizationId: string) {}
 
   public create(data: { name: string; routingUrl: string; labelMatchers: string[] }): Promise<FederatedGraphDTO> {
     return this.db.transaction(async (tx) => {
@@ -424,6 +421,10 @@ export class FederatedGraphRepository {
     | undefined
   > {
     const latestVersion = await this.db.query.schemaVersion.findFirst({
+      columns: {
+        id: true,
+        routerConfig: true,
+      },
       where: and(eq(schema.schemaVersion.targetId, targetId), eq(schema.schemaVersion.isComposable, true)),
       orderBy: desc(schema.schemaVersion.createdAt),
     });
@@ -728,7 +729,7 @@ export class FederatedGraphRepository {
           name: token.name,
           createdAt: token.createdAt.toISOString(),
           token: token.token,
-        }) as GraphApiKeyDTO,
+        } as GraphApiKeyDTO),
     );
   }
 }
