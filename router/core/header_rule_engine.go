@@ -45,7 +45,8 @@ func NewHeaderTransformer(rules config.HeaderRules) (*HeaderRuleEngine, error) {
 	}
 
 	for i, rule := range rhrs {
-		if rule.Operation == "propagate" {
+		switch rule.Operation {
+		case config.HeaderRuleOperationPropagate:
 			if rule.Matching != "" {
 				regex, err := regexp.Compile(rule.Matching)
 				if err != nil {
@@ -53,6 +54,8 @@ func NewHeaderTransformer(rules config.HeaderRules) (*HeaderRuleEngine, error) {
 				}
 				hf.regex[rule.Matching] = *regex
 			}
+		default:
+			return nil, fmt.Errorf("unhandled operation '%s' for all request header rule %+v", rule)
 		}
 	}
 
@@ -71,7 +74,7 @@ func (h HeaderRuleEngine) OnOriginRequest(request *http.Request, ctx RequestCont
 
 	for _, rule := range requestRules {
 		// Forwards the matching client request header to the upstream
-		if rule.Operation == "propagate" {
+		if rule.Operation == config.HeaderRuleOperationPropagate {
 
 			// Exact match
 			if rule.Named != "" {
