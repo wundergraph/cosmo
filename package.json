@@ -20,7 +20,7 @@
   "scripts": {
     "build": "pnpm -r run build",
     "test": "pnpm run -r --parallel test",
-    "generate": "pnpm buf generate --path proto/wg/cosmo/platform --path proto/wg/cosmo/common --path proto/wg/cosmo/node --template buf.ts.gen.yaml && pnpm -r run --filter './connect' build",
+    "generate": "pnpm buf generate --path proto/wg/cosmo/platform --path proto/wg/cosmo/notifications --path proto/wg/cosmo/common --path proto/wg/cosmo/node --template buf.ts.gen.yaml && pnpm -r run --filter './connect' build",
     "husky": "husky install",
     "lint:fix": "pnpm run -r --parallel lint:fix",
     "clean": "del-cli '**/node_modules/' '**/**/dist/' '**/**/gen/' '**/**/.next' '**/**/tsconfig.tsbuildinfo' '**/**/.eslintcache'",
