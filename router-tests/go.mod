@@ -6,6 +6,8 @@ replace github.com/wundergraph/cosmo/demo => ../demo
 
 replace github.com/wundergraph/cosmo/composition-go => ../composition-go
 
+//replace github.com/wundergraph/graphql-go-tools/v2 => ../../../graphql-go-tools/v2
+
 go 1.20
 
 require (
@@ -88,7 +90,7 @@ require (
 	github.com/tidwall/sjson v1.2.5 // indirect
 	github.com/urfave/cli/v2 v2.25.5 // indirect
 	github.com/vektah/gqlparser/v2 v2.5.10 // indirect
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.2.0.20231101084634-25af8cf347a4 // indirect
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.2.0.20231102210712-00eb5935cafb // indirect
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.45.0 // indirect
 	go.opentelemetry.io/otel v1.19.0 // indirect

@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"runtime/pprof"
 	"syscall"
 
 	"github.com/wundergraph/cosmo/router/authentication"
@@ -23,12 +24,27 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/logging"
 )
 
+var (
+	overrideEnv = flag.String("override-env", "", "env file name to override env variables")
+	memprofile  = flag.String("memprofile", "", "write memory profile to this file")
+	cpuprofile  = flag.String("cpuprofile", "", "write cpu profile to file")
+)
+
 func Main() {
-	var overrideEnv string
-	flag.StringVar(&overrideEnv, "override-env", "", "env file name to override env variables")
 	flag.Parse()
 
-	cfg, err := config.LoadConfig(overrideEnv)
+	if *cpuprofile != "" {
+		f, err := os.Create(*cpuprofile)
+		if err != nil {
+			log.Fatal("Could not create CPU profile", err)
+		}
+		defer f.Close()
+		if err := pprof.StartCPUProfile(f); err != nil {
+			log.Fatal("Could not start CPU profile", err)
+		}
+	}
+
+	cfg, err := config.LoadConfig(*overrideEnv)
 	if err != nil {
 		log.Fatal("Could not load config", zap.Error(err))
 	}
@@ -166,8 +182,26 @@ func Main() {
 		logger.Error("Could not shutdown server", zap.Error(err))
 	}
 
+	if *cpuprofile != "" {
+		pprof.StopCPUProfile()
+	}
+	createMemprofile()
+
 	logger.Debug("Server exiting")
 	os.Exit(0)
+}
+
+func createMemprofile() {
+	if *memprofile != "" {
+		f, err := os.Create(*memprofile)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer f.Close()
+		if err := pprof.WriteHeapProfile(f); err != nil {
+			log.Fatal(err)
+		}
+	}
 }
 
 func traceConfig(cfg *config.Telemetry) *trace.Config {
