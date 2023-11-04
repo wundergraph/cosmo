@@ -19,8 +19,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof NodeSe
         const authContext = await opts.authenticator.authenticateRouter(ctx.requestHeader);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
 
-        const federatedGraph = await fedGraphRepo.byName(req.graphName);
-        if (!federatedGraph) {
+        const target = await fedGraphRepo.targetByName(req.graphName);
+        if (!target) {
           return {
             response: {
               code: EnumStatusCode.ERR_NOT_FOUND,
@@ -31,10 +31,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof NodeSe
 
         // Avoid downloading the config to check if it's the latest version
         if (req.version) {
-          const isLatestVersion = await fedGraphRepo.isLatestValidRouterConfigVersion(
-            federatedGraph.targetId,
-            req.version,
-          );
+          const isLatestVersion = await fedGraphRepo.isLatestValidRouterConfigVersion(target.id, req.version);
 
           if (isLatestVersion) {
             return {
@@ -46,7 +43,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof NodeSe
         }
 
         // Now, download the config and return it
-        const routerConfig = await fedGraphRepo.getLatestValidRouterConfig(federatedGraph?.targetId);
+        const routerConfig = await fedGraphRepo.getLatestValidRouterConfig(target?.id);
 
         if (!routerConfig) {
           return {

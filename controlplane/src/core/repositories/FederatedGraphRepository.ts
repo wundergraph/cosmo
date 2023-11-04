@@ -3,6 +3,7 @@ import { and, asc, desc, eq, gt, inArray, lt, not, notExists, notInArray, SQL, s
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { RouterConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { joinLabel, normalizeURL } from '@wundergraph/cosmo-shared';
+import { Target } from 'src/db/models.js';
 import * as schema from '../../db/schema.js';
 import {
   federatedGraphConfigs,
@@ -34,10 +35,7 @@ export interface FederatedGraphConfig {
  * Repository for managing V1 federated graphs.
  */
 export class FederatedGraphRepository {
-  constructor(
-    private db: PostgresJsDatabase<typeof schema>,
-    private organizationId: string,
-  ) {}
+  constructor(private db: PostgresJsDatabase<typeof schema>, private organizationId: string) {}
 
   public create(data: { name: string; routingUrl: string; labelMatchers: string[] }): Promise<FederatedGraphDTO> {
     return this.db.transaction(async (tx) => {
@@ -222,6 +220,22 @@ export class FederatedGraphRepository {
     }
 
     return federatedGraphs;
+  }
+
+  public async targetByName(name: string): Promise<Target | undefined> {
+    const resp = await this.db.query.targets.findFirst({
+      where: and(
+        eq(schema.targets.name, name),
+        eq(schema.targets.organizationId, this.organizationId),
+        eq(schema.targets.type, 'federated'),
+      ),
+    });
+
+    if (!resp) {
+      return undefined;
+    }
+
+    return resp;
   }
 
   public async byName(name: string): Promise<FederatedGraphDTO | undefined> {
@@ -732,7 +746,7 @@ export class FederatedGraphRepository {
           name: token.name,
           createdAt: token.createdAt.toISOString(),
           token: token.token,
-        }) as GraphApiKeyDTO,
+        } as GraphApiKeyDTO),
     );
   }
 }
