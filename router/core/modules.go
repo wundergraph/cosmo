@@ -111,9 +111,7 @@ func WriteResponseError(ctx RequestContext, err error) {
 	if err != nil {
 		rErrors = graphql.RequestErrorsFromError(err)
 	} else {
-		err = errors.WithStack(errors.New("Internal Error"))
-		rErrors = graphql.RequestErrorsFromError(err)
-		ctx.Logger().Warn("No error provided as argument to WriteResponseError. Fallback to internal error.", zap.Error(err))
+		rErrors = graphql.RequestErrorsFromError(errors.New("Internal Error"))
 	}
 
 	writeRequestErrors(ctx.Request(), rErrors, ctx.ResponseWriter(), ctx.Logger())
