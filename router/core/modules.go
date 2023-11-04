@@ -102,5 +102,13 @@ type ModuleContext struct {
 // WriteResponseError writes the given error as a GraphQL error response to the http.ResponseWriter
 // associated with the given RequestContext
 func WriteResponseError(ctx RequestContext, err error) {
-	writeRequestErrors(ctx.Request(), graphql.RequestErrorsFromError(err), ctx.ResponseWriter(), ctx.Logger())
+
+	// Ensure empty array is written if no errors are present
+	rErrors := graphql.RequestErrors{}
+
+	if err != nil {
+		rErrors = graphql.RequestErrorsFromError(err)
+	}
+
+	writeRequestErrors(ctx.Request(), rErrors, ctx.ResponseWriter(), ctx.Logger())
 }
