@@ -106,12 +106,6 @@ type TransportOptions struct {
 }
 
 func NewTransport(opts *TransportOptions) *TransportFactory {
-	if opts.LocalhostFallbackInsideDocker && docker.Inside() {
-		if opts.Logger != nil {
-			opts.Logger.Info("localhost fallback enabled, connections that fail to connect to localhost will be retried using host.docker.internal")
-		}
-	}
-
 	return &TransportFactory{
 		preHandlers:                   opts.PreHandlers,
 		postHandlers:                  opts.PostHandlers,

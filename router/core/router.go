@@ -12,6 +12,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
+	"github.com/wundergraph/cosmo/router/internal/docker"
 	"github.com/wundergraph/cosmo/router/internal/graphqlmetrics"
 	brotli "go.withmatt.com/connect-brotli"
 
@@ -621,6 +622,10 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create planner cache: %w", err)
+	}
+
+	if r.localhostFallbackInsideDocker && docker.Inside() {
+		r.logger.Info("localhost fallback enabled, connections that fail to connect to localhost will be retried using host.docker.internal")
 	}
 
 	ecb := &ExecutorConfigurationBuilder{
