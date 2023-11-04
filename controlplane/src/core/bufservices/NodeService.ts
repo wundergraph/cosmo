@@ -29,10 +29,14 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof NodeSe
           };
         }
 
-        const config = await fedGraphRepo.getLatestValidRouterConfig(federatedGraph?.targetId);
+        // Avoid downloading the config to check if it's the latest version
+        const latestVersion = await fedGraphRepo.getLatestValidRouterConfigVersion(federatedGraph?.targetId);
+  
 
-        if (req.version) {
-          const isLatest = config?.schemaVersionId === req.version;
+        if (latestVersion) {
+          const isLatest = latestVersion === req.version;
+
+          // If the version is the latest, we can return early
           if (isLatest) {
             return {
               response: {
@@ -40,9 +44,20 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof NodeSe
               },
             };
           }
+        } else {
+          // If there is no valid version, we can return early
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: 'No valid router config found',
+            },
+          };
         }
 
-        if (!config) {
+        // Now, download the config and return it
+        const routerConfig = await fedGraphRepo.getLatestValidRouterConfig(federatedGraph?.targetId);
+
+        if (!routerConfig) {
           return {
             response: {
               code: EnumStatusCode.ERR_NOT_FOUND,
@@ -56,9 +71,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof NodeSe
             code: EnumStatusCode.OK,
           },
           config: {
-            subgraphs: config.config.subgraphs,
-            engineConfig: config.config.engineConfig,
-            version: config.schemaVersionId,
+            subgraphs: routerConfig.config.subgraphs,
+            engineConfig: routerConfig.config.engineConfig,
+            version: routerConfig.schemaVersionId,
           },
         };
       });

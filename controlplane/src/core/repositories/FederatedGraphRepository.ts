@@ -404,6 +404,18 @@ export class FederatedGraphRepository {
     return res !== undefined;
   }
 
+  public async getLatestValidRouterConfigVersion(targetId: string): Promise<string> {
+    const latestVersion = await this.db.query.schemaVersion.findFirst({
+      columns: {
+        id: true,
+      },
+      where: and(eq(schema.schemaVersion.targetId, targetId), eq(schema.schemaVersion.isComposable, true)),
+      orderBy: desc(schema.schemaVersion.createdAt),
+    });
+
+    return latestVersion?.id ?? '';
+  }
+
   public async getLatestValidRouterConfig(targetId: string): Promise<
     | {
         config: RouterConfig;
