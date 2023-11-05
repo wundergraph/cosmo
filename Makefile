@@ -88,6 +88,9 @@ dc-stack-build:
 full-demo-up:
 	docker compose -f docker-compose.full.yml --profile default up --build --remove-orphans --detach
 
+full-demo-status:
+	docker compose -f docker-compose.full.yml ps --status exited --status restarting --status dead
+
 full-demo-down:
 	docker compose -f docker-compose.full.yml --profile default --profile router --profile subgraphs down --remove-orphans -v
 
