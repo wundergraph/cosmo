@@ -4,7 +4,6 @@ use (
 	./composition-go
 	./demo
 	./graphqlmetrics
-	./otelcollector/otelcol-dev
 	./router
 	./router-tests
 )

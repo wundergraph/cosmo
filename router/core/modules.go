@@ -3,9 +3,10 @@ package core
 import (
 	stdContext "context"
 	"fmt"
-	"github.com/pkg/errors"
 	"net/http"
 	"sync"
+
+	"github.com/pkg/errors"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphql"
 	"go.uber.org/zap"
@@ -105,14 +106,13 @@ type ModuleContext struct {
 // Please never write errors directly to the http.ResponseWriter. The function takes care of logging and tracking
 // the error in the underlying telemetry system.
 func WriteResponseError(ctx RequestContext, err error) {
-
-	rErrors := graphql.RequestErrors{}
+	var errs graphql.RequestErrors
 
 	if err != nil {
-		rErrors = graphql.RequestErrorsFromError(err)
+		errs = graphql.RequestErrorsFromError(err)
 	} else {
-		rErrors = graphql.RequestErrorsFromError(errors.New("Internal Error"))
+		errs = graphql.RequestErrorsFromError(errors.New("Internal Error"))
 	}
 
-	writeRequestErrors(ctx.Request(), rErrors, ctx.ResponseWriter(), ctx.Logger())
+	writeRequestErrors(ctx.Request(), errs, ctx.ResponseWriter(), ctx.Logger())
 }
