@@ -3,7 +3,6 @@ import { and, asc, desc, eq, gt, inArray, lt, not, notExists, notInArray, SQL, s
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { RouterConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { joinLabel, normalizeURL } from '@wundergraph/cosmo-shared';
-import { Target } from 'src/db/models.js';
 import * as schema from '../../db/schema.js';
 import {
   federatedGraphConfigs,
@@ -26,6 +25,7 @@ import { normalizeLabelMatchers, normalizeLabels } from '../util.js';
 import { Composer } from '../composition/composer.js';
 import { SchemaDiff } from '../composition/schemaCheck.js';
 import { SubgraphRepository } from './SubgraphRepository.js';
+import { Target } from 'src/db/models.js';
 
 export interface FederatedGraphConfig {
   trafficCheckDays: number;
@@ -35,7 +35,10 @@ export interface FederatedGraphConfig {
  * Repository for managing V1 federated graphs.
  */
 export class FederatedGraphRepository {
-  constructor(private db: PostgresJsDatabase<typeof schema>, private organizationId: string) {}
+  constructor(
+    private db: PostgresJsDatabase<typeof schema>,
+    private organizationId: string,
+  ) {}
 
   public create(data: { name: string; routingUrl: string; labelMatchers: string[] }): Promise<FederatedGraphDTO> {
     return this.db.transaction(async (tx) => {
@@ -746,7 +749,7 @@ export class FederatedGraphRepository {
           name: token.name,
           createdAt: token.createdAt.toISOString(),
           token: token.token,
-        } as GraphApiKeyDTO),
+        }) as GraphApiKeyDTO,
     );
   }
 }
