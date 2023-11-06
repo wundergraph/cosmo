@@ -4,6 +4,19 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.3.0](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.2.0...graphqlmetrics@0.3.0) (2023-11-03)
+
+### Features
+
+* provide debug mode in gql collector ([#229](https://github.com/wundergraph/cosmo/issues/229)) ([136fe36](https://github.com/wundergraph/cosmo/commit/136fe36cd8c882b925b097ff19cea040a89248f4)) (@StarpTech)
+* provide debug mode in gql collector ([#230](https://github.com/wundergraph/cosmo/issues/230)) ([c1903d0](https://github.com/wundergraph/cosmo/commit/c1903d027b7ea7fb1e695e58641ed9ad24b640f8)) (@StarpTech)
+
+# [0.2.0](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.1.2...graphqlmetrics@0.2.0) (2023-11-03)
+
+### Features
+
+* operation checks (breaking change detection) ([#214](https://github.com/wundergraph/cosmo/issues/214)) ([0935413](https://github.com/wundergraph/cosmo/commit/093541305866327c5c44637603621e4a8053640d)) (@StarpTech)
+
 ## [0.1.2](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.1.1...graphqlmetrics@0.1.2) (2023-10-26)
 
 **Note:** Version bump only for package graphqlmetrics

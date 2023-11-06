@@ -20,7 +20,7 @@
   "scripts": {
     "build": "pnpm -r run build",
     "test": "pnpm run -r --parallel test",
-    "generate": "pnpm buf generate --path proto/wg/cosmo/platform --path proto/wg/cosmo/common --path proto/wg/cosmo/node --template buf.ts.gen.yaml && pnpm -r run --filter './connect' build",
+    "generate": "pnpm buf generate --path proto/wg/cosmo/platform --path proto/wg/cosmo/notifications --path proto/wg/cosmo/common --path proto/wg/cosmo/node --template buf.ts.gen.yaml && pnpm -r run --filter './connect' build",
     "husky": "husky install",
     "lint:fix": "pnpm run -r --parallel lint:fix",
     "clean": "del-cli '**/node_modules/' '**/**/dist/' '**/**/gen/' '**/**/.next' '**/**/tsconfig.tsbuildinfo' '**/**/.eslintcache'",
@@ -43,8 +43,8 @@
     ]
   },
   "devDependencies": {
-    "@bufbuild/buf": "^1.23.1",
-    "@bufbuild/protoc-gen-es": "^1.3.0",
+    "@bufbuild/buf": "^1.27.2",
+    "@bufbuild/protoc-gen-es": "^1.4.1",
     "@commitlint/cli": "17.6.6",
     "@commitlint/config-conventional": "17.6.6",
     "@lerna-lite/cli": "2.5.1",
@@ -53,9 +53,10 @@
     "del-cli": "^5.0.0",
     "husky": "^8.0.3",
     "lint-staged": "^12.5.0",
-    "@connectrpc/protoc-gen-connect-es": "^0.13.2",
-    "@connectrpc/connect-query": "^0.4.2",
-    "@connectrpc/protoc-gen-connect-query": "^0.4.2"
+    "prettier": "^3.0.3",
+    "@connectrpc/protoc-gen-connect-es": "^1.1.3",
+    "@connectrpc/connect-query": "^0.6.0",
+    "@connectrpc/protoc-gen-connect-query": "^0.6.0"
   },
   "packageManager": "pnpm@8.7.0"
 }

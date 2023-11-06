@@ -1,5 +1,5 @@
 import { UserContext } from "@/components/app-provider";
-import { DatePickerWithRange } from "@/components/date-picker-with-range";
+import { DateRangePicker } from "@/components/date-range-picker";
 import { EmptyState } from "@/components/empty-state";
 import { getGraphLayout, GraphContext } from "@/components/layout/graph-layout";
 import { PageHeader } from "@/components/layout/head";
@@ -66,12 +66,12 @@ const Toolbar = () => {
         },
       });
     },
-    [router]
+    [router],
   );
 
   return (
-    <div className="flex w-full justify-center border-b px-4 py-2 md:justify-start lg:justify-end lg:px-6 lg:py-4">
-      <DatePickerWithRange
+    <div className="flex w-full justify-center border-b px-4 py-2 md:justify-start lg:justify-end">
+      <DateRangePicker
         selectedDateRange={{ from: startDate, to: endDate }}
         onDateRangeChange={onDateRangeChange}
         align="end"
@@ -87,7 +87,7 @@ interface StructuredChangelog {
 }
 
 const structureChangelogs = (
-  changes: FederatedGraphChangelog[]
+  changes: FederatedGraphChangelog[],
 ): StructuredChangelog[] => {
   let parentNodeName = "";
   const structuredChangelogs: StructuredChangelog[] = [];
@@ -190,7 +190,7 @@ const Changes = ({ changes }: { changes: FederatedGraphChangelog[] }) => {
               </span>
             </div>
           );
-        }
+        },
       )}
     </div>
   );
@@ -219,7 +219,7 @@ const ChangelogPage: NextPageWithLayout = () => {
   const startDate = new Date(dateRange.from);
   const endDate = new Date(dateRange.to);
 
-  const { data, isLoading, error, refetch } = useQuery({
+  const { data, isLoading, isSuccess, error, refetch } = useQuery({
     ...getFederatedGraphChangelog.useQuery({
       name: router.query.slug as string,
       pagination: {
@@ -232,11 +232,13 @@ const ChangelogPage: NextPageWithLayout = () => {
       },
     }),
     enabled: false,
-    onSuccess: (data) => {
-      if (!data) return;
-      setItems((prev) => [...prev, ...data.federatedGraphChangelogOutput]);
-    },
   });
+
+  useEffect(() => {
+    if (isSuccess && data) {
+      setItems((prev) => [...prev, ...data.federatedGraphChangelogOutput]);
+    }
+  }, [data]);
 
   useEffect(() => {
     // We need to fetch from scratch on date change
@@ -403,7 +405,7 @@ ChangelogPage.getLayout = (page) =>
       >
         {page}
       </TitleLayout>
-    </PageHeader>
+    </PageHeader>,
   );
 
 export default ChangelogPage;

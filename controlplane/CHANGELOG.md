@@ -4,6 +4,29 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.30.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.29.0...controlplane@0.30.0) (2023-11-03)
+
+### Features
+
+* use ch query cache for point query ([#228](https://github.com/wundergraph/cosmo/issues/228)) ([03a34e4](https://github.com/wundergraph/cosmo/commit/03a34e482cbbd24570be8dbc574e186d1680f62c)) (@StarpTech)
+
+# [0.29.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.28.2...controlplane@0.29.0) (2023-11-03)
+
+### Bug Fixes
+
+* date picker improvements ([#226](https://github.com/wundergraph/cosmo/issues/226)) ([9b784cf](https://github.com/wundergraph/cosmo/commit/9b784cf2180fb59f152ab9d8296e7026e1461c9c)) (@Pagebakers)
+
+### Features
+
+* add ranges to date picker ([#210](https://github.com/wundergraph/cosmo/issues/210)) ([3dac117](https://github.com/wundergraph/cosmo/commit/3dac1179b6e78f2bf2ee5f40c735463e96ef980d)) (@Pagebakers)
+* operation checks (breaking change detection) ([#214](https://github.com/wundergraph/cosmo/issues/214)) ([0935413](https://github.com/wundergraph/cosmo/commit/093541305866327c5c44637603621e4a8053640d)) (@StarpTech)
+
+## [0.28.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.28.1...controlplane@0.28.2) (2023-11-02)
+
+### Bug Fixes
+
+* don't consider dangerous change as breaking ([#222](https://github.com/wundergraph/cosmo/issues/222)) ([6d4bdc0](https://github.com/wundergraph/cosmo/commit/6d4bdc0261484426408db81f6ad11842563e8054)) (@StarpTech)
+
 ## [0.28.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.28.0...controlplane@0.28.1) (2023-10-26)
 
 **Note:** Version bump only for package controlplane

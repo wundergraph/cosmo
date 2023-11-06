@@ -12,8 +12,9 @@ import { Input } from "@/components/ui/input";
 import { Loader } from "@/components/ui/loader";
 import { useToast } from "@/components/ui/use-toast";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
+import { calURL } from "@/lib/constants";
 import { NextPageWithLayout } from "@/lib/page";
-import { cn, showCal } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
@@ -46,7 +47,7 @@ const InviteForm = ({ refresh }: { refresh: () => void }) => {
     schema: emailInputSchema,
   });
 
-  const { mutate, isLoading } = useMutation(inviteUser.useMutation());
+  const { mutate, isPending } = useMutation(inviteUser.useMutation());
 
   const { toast } = useToast();
 
@@ -66,7 +67,7 @@ const InviteForm = ({ refresh }: { refresh: () => void }) => {
         onError: (error) => {
           sendToast("Could not invite the member. Please try again.");
         },
-      }
+      },
     );
   };
 
@@ -89,7 +90,7 @@ const InviteForm = ({ refresh }: { refresh: () => void }) => {
         type="submit"
         disabled={!isValid}
         variant="default"
-        isLoading={isLoading}
+        isLoading={isPending}
       >
         Invite
       </Button>
@@ -118,10 +119,10 @@ const MemberCard = ({
 
   const { mutate: resendInvitation } = useMutation(inviteUser.useMutation());
   const { mutate: revokeInvitation } = useMutation(
-    removeInvitation.useMutation()
+    removeInvitation.useMutation(),
   );
   const { mutate: updateUserRole } = useMutation(
-    updateOrgMemberRole.useMutation()
+    updateOrgMemberRole.useMutation(),
   );
 
   const { toast, update } = useToast();
@@ -177,7 +178,7 @@ const MemberCard = ({
                               id: id,
                             });
                           },
-                        }
+                        },
                       );
                     }}
                   >
@@ -208,7 +209,7 @@ const MemberCard = ({
                             duration: 3000,
                           });
                         },
-                      }
+                      },
                     );
                   }}
                 >
@@ -243,7 +244,7 @@ const MemberCard = ({
                             duration: 3000,
                           });
                         },
-                      }
+                      },
                     );
                   }}
                 >
@@ -271,7 +272,7 @@ const MembersPage: NextPageWithLayout = () => {
 
   if (isLoading) return <Loader fullscreen />;
 
-  if (error || data.response?.code !== EnumStatusCode.OK || !user)
+  if (error || data?.response?.code !== EnumStatusCode.OK || !user)
     return (
       <EmptyState
         icon={<ExclamationTriangleIcon />}
@@ -286,7 +287,7 @@ const MembersPage: NextPageWithLayout = () => {
   if (!data?.members) return null;
 
   const currentUser = data.members.find(
-    (member) => member.email === user.email
+    (member) => member.email === user.email,
   );
   const isAdmin = currentUser?.roles.includes("admin");
 
@@ -296,14 +297,16 @@ const MembersPage: NextPageWithLayout = () => {
         <InviteForm refresh={() => refetch()} />
       )}
       {user.currentOrganization.isFreeTrial && (
-        <div className="flex cursor-pointer items-center justify-center gap-x-2 rounded bg-secondary px-2 py-1 text-secondary-foreground">
+        <div className="flex items-center justify-center gap-x-2 rounded bg-secondary px-2 py-1 text-secondary-foreground">
           <IoInformationCircle size={20} className="text-primary" />
           <span>
             {"Your organization's plan does not allow you to invite members. "}
             Please{" "}
             <a
               className="text-primary underline underline-offset-2"
-              onClick={showCal}
+              href={calURL}
+              target="_blank"
+              rel="noreferrer"
             >
               contact us
             </a>{" "}
@@ -335,7 +338,7 @@ MembersPage.getLayout = (page) => {
   return getDashboardLayout(
     page,
     "Members",
-    "Manage all the members of your organization"
+    "Manage all the members of your organization",
   );
 };
 

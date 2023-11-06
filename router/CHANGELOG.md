@@ -4,6 +4,33 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.28.2](https://github.com/wundergraph/cosmo/compare/router@0.28.1...router@0.28.2) (2023-11-06)
+
+### Bug Fixes
+
+* ensure proper graphql error response when passing nil error ([#233](https://github.com/wundergraph/cosmo/issues/233)) ([459f94d](https://github.com/wundergraph/cosmo/commit/459f94df65ca8a07447c29142b0f7f16473b708e)) (@StarpTech)
+* resolve issue single entity result in root ([#237](https://github.com/wundergraph/cosmo/issues/237)) ([7902a55](https://github.com/wundergraph/cosmo/commit/7902a55722748e684bc63668b04d768427223d81)) (@jensneuse)
+
+## [0.28.1](https://github.com/wundergraph/cosmo/compare/router@0.28.0...router@0.28.1) (2023-11-03)
+
+**Note:** Version bump only for package router
+
+# [0.28.0](https://github.com/wundergraph/cosmo/compare/router@0.27.2...router@0.28.0) (2023-11-03)
+
+### Features
+
+* operation checks (breaking change detection) ([#214](https://github.com/wundergraph/cosmo/issues/214)) ([0935413](https://github.com/wundergraph/cosmo/commit/093541305866327c5c44637603621e4a8053640d)) (@StarpTech)
+
+## [0.27.2](https://github.com/wundergraph/cosmo/compare/router@0.27.1...router@0.27.2) (2023-11-02)
+
+### Bug Fixes
+
+* don't cancel metric collection on request cancellation ([#221](https://github.com/wundergraph/cosmo/issues/221)) ([888fc85](https://github.com/wundergraph/cosmo/commit/888fc8545637dc7aecde186f4e71fdb4f3fbd39a)) (@StarpTech)
+
+## [0.27.1](https://github.com/wundergraph/cosmo/compare/router@0.27.0...router@0.27.1) (2023-11-01)
+
+**Note:** Version bump only for package router
+
 # [0.27.0](https://github.com/wundergraph/cosmo/compare/router@0.26.2...router@0.27.0) (2023-10-27)
 
 ### Features

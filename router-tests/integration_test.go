@@ -157,11 +157,13 @@ func prepareServer(tb testing.TB, opts ...core.Option) *core.Server {
 		core.WithFederatedGraphName(cfg.Graph.Name),
 		core.WithStaticRouterConfig(routerConfig),
 		core.WithLogger(zapLogger),
+		core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
+			EnableSingleFlight: true,
+		}),
 	}
 	routerOpts = append(routerOpts, opts...)
 	rs, err := core.NewRouter(routerOpts...)
 	require.NoError(tb, err)
-
 	tb.Cleanup(func() {
 		assert.Nil(tb, rs.Shutdown(ctx))
 	})
@@ -218,6 +220,41 @@ func TestIntegration(t *testing.T) {
 		Body: "{ employees { id } }",
 	})
 	assert.JSONEq(t, result, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`)
+}
+
+func TestAnonymousQuery(t *testing.T) {
+	server := setupServer(t)
+	result := sendData(server, []byte(`{"query":"{ employees { id } }"}`))
+	assert.Equal(t, http.StatusOK, result.Code)
+	assert.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`, result.Body.String())
+}
+
+func TestMultipleAnonymousQueries(t *testing.T) {
+	server := setupServer(t)
+	result := sendData(server, []byte(`{"query":"{ employees { id } } { employees { id } }"}`))
+	assert.Equal(t, http.StatusOK, result.Result().StatusCode)
+	assert.Equal(t, `{"errors":[{"message":"operation name is required when multiple operations are defined"}]}`, result.Body.String())
+}
+
+func TestMultipleNamedOperations(t *testing.T) {
+	server := setupServer(t)
+	result := sendData(server, []byte(`{"query":"query A { employees { id } } query B { employees { id details { forename surname } } }","operationName":"A"}`))
+	assert.Equal(t, http.StatusOK, result.Result().StatusCode)
+	assert.Equal(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`, result.Body.String())
+}
+
+func TestMultipleNamedOperationsB(t *testing.T) {
+	server := setupServer(t)
+	result := sendData(server, []byte(`{"query":"query A { employees { id } } query B { employees { id details { forename surname } } }","operationName":"B"}`))
+	assert.Equal(t, http.StatusOK, result.Result().StatusCode)
+	assert.Equal(t, `{"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"}},{"id":2,"details":{"forename":"Dustin","surname":"Deus"}},{"id":3,"details":{"forename":"Stefan","surname":"Avram"}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"}},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"}},{"id":7,"details":{"forename":"Suvij","surname":"Surya"}},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"}},{"id":9,"details":{"forename":"Alberto","surname":"Garcia Hierro"}},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"}},{"id":12,"details":{"forename":"David","surname":"Stutt"}}]}}`, result.Body.String())
+}
+
+func TestMultipleNamedOperationsC(t *testing.T) {
+	server := setupServer(t)
+	result := sendData(server, []byte(`{"query":"query A { employees { id } } query B { employees { id details { forename surname } } }","operationName":"C"}`))
+	assert.Equal(t, http.StatusOK, result.Result().StatusCode)
+	assert.Equal(t, `{"errors":[{"message":"operation with name 'C' not found"}]}`, result.Body.String())
 }
 
 func TestTestdataQueries(t *testing.T) {
@@ -282,6 +319,7 @@ func TestIntegrationWithInlineVariables(t *testing.T) {
 func BenchmarkSequential(b *testing.B) {
 	server := setupServer(b)
 	q := &testQuery{
+		Name:      "Employee",
 		Body:      "($n:Int!) { employee(id:$n) { id details { forename surname } } }",
 		Variables: map[string]interface{}{"n": 1},
 	}
@@ -325,6 +363,65 @@ func BenchmarkParallel(b *testing.B) {
 	}
 	close(ch)
 	wg.Wait()
+}
+
+const (
+	bigEmployeesQuery = `{
+  employees {
+    id
+    details {
+      forename
+      surname
+      hasChildren
+    }
+    role {
+      title
+      department
+    }
+    hobbies {
+      ... on Exercise {
+        category
+      }
+      ... on Flying {
+        planeModels
+        yearsOfExperience
+      }
+      ... on Gaming {
+        name
+        genres
+        yearsOfExperience
+      }
+      ... on Programming {
+        languages
+      }
+      ... on Travelling {
+        countriesLived
+      }
+      ... on Other {
+        name
+      }
+    }
+  }
+}`
+	bigEmployeesResponse = `{"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse","hasChildren":true},"role":{"title":["Founder","CEO"],"department":"ENGINEERING"},"hobbies":[{"category":"SPORT"},{"name":"Counter Strike","genres":["FPS"],"yearsOfExperience":20},{"name":"WunderGraph"},{"languages":["GO","TYPESCRIPT"]},{"countriesLived":["ENGLAND","GERMANY"]}]},{"id":2,"details":{"forename":"Dustin","surname":"Deus","hasChildren":false},"role":{"title":["Co-founder","Tech Lead"],"department":"ENGINEERING"},"hobbies":[{"category":"STRENGTH_TRAINING"},{"name":"Counter Strike","genres":["FPS"],"yearsOfExperience":0.5},{"languages":["GO","RUST"]}]},{"id":3,"details":{"forename":"Stefan","surname":"Avram","hasChildren":false},"role":{"title":["Co-founder","Head of Growth"],"department":"MARKETING"},"hobbies":[{"category":"HIKING"},{"category":"SPORT"},{"name":"Reading"},{"countriesLived":["AMERICA","SERBIA"]}]},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer","hasChildren":true},"role":{"title":["Co-founder","COO"],"department":"OPERATIONS"},"hobbies":[{"category":"HIKING"},{"planeModels":["Aquila AT01","Cessna C172","Cessna C206","Cirrus SR20","Cirrus SR22","Diamond DA40","Diamond HK36","Diamond DA20","Piper Cub","Pitts Special","Robin DR400"],"yearsOfExperience":20},{"countriesLived":["AMERICA","GERMANY"]}]},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin","hasChildren":false},"role":{"title":["Senior GO Engineer"],"department":"ENGINEERING"},"hobbies":[{"name":"Building a house"},{"name":"Forumla 1"},{"name":"Raising cats"}]},{"id":7,"details":{"forename":"Suvij","surname":"Surya","hasChildren":false},"role":{"title":["Software Engineer"],"department":"ENGINEERING"},"hobbies":[{"name":"Chess","genres":["BOARD"],"yearsOfExperience":9.5},{"name":"Watching anime"}]},{"id":8,"details":{"forename":"Nithin","surname":"Kumar","hasChildren":false},"role":{"title":["Software Engineer"],"department":"ENGINEERING"},"hobbies":[{"category":"STRENGTH_TRAINING"},{"name":"Miscellaneous","genres":["ADVENTURE","RPG","SIMULATION","STRATEGY"],"yearsOfExperience":17},{"name":"Watching anime"}]},{"id":9,"details":{"forename":"Alberto","surname":"Garcia Hierro","hasChildren":true},"role":{"title":["Senior Backend Engineer"],"department":"ENGINEERING"},"hobbies":[{"category":"CALISTHENICS"},{"name":"Chess","genres":["BOARD"],"yearsOfExperience":2},{"languages":["RUST"]}]},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma","hasChildren":false},"role":{"title":["Senior Frontend Engineer"],"department":"ENGINEERING"},"hobbies":[{"languages":["TYPESCRIPT"]},{"category":"CALISTHENICS"},{"category":"HIKING"},{"category":"STRENGTH_TRAINING"},{"name":"saas-ui"},{"countriesLived":["GERMANY","INDONESIA","NETHERLANDS","PORTUGAL","SPAIN","THAILAND"]}]},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse","hasChildren":true},"role":{"title":["Accounting \\u0026 Finance"],"department":"OPERATIONS"},"hobbies":[{"name":"Spending time with the family"}]},{"id":12,"details":{"forename":"David","surname":"Stutt","hasChildren":false},"role":{"title":["Software Engineer"],"department":"ENGINEERING"},"hobbies":[{"languages":["CSHARP","GO","RUST","TYPESCRIPT"]},{"category":"STRENGTH_TRAINING"},{"name":"Miscellaneous","genres":["ADVENTURE","BOARD","CARD","ROGUELITE","RPG","SIMULATION","STRATEGY"],"yearsOfExperience":25.5},{"countriesLived":["ENGLAND","KOREA","TAIWAN"]}]}]}}`
+)
+
+func BenchmarkPb(b *testing.B) {
+	server := setupServer(b)
+	q := &testQuery{
+		Body: bigEmployeesQuery,
+	}
+	b.SetBytes(int64(len(bigEmployeesResponse)))
+	b.ReportAllocs()
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			got := sendQueryOK(b, server, q)
+			if len(got) < 3000 {
+				b.Errorf("unexpected result %q, expecting \n\n%q", got, bigEmployeesResponse)
+			}
+		}
+	})
 }
 
 func BenchmarkParallelInlineVariables(b *testing.B) {

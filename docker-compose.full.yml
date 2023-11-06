@@ -137,7 +137,6 @@ services:
     platform: linux/amd64
     environment:
       CLICKHOUSE_DSN: "clickhouse://${CLICKHOUSE_USER:-default}:${CLICKHOUSE_PASSWORD:-changeme}@clickhouse:9000/${CLICKHOUSE_DATABASE:-cosmo}"
-      CLICKHOUSE_HTTP_DSN: "http://${CLICKHOUSE_USER:-default}:${CLICKHOUSE_PASSWORD:-changeme}@clickhouse:8123/${CLICKHOUSE_DATABASE:-cosmo}"
       INGEST_JWT_SECRET: ${INGEST_JWT_SECRET:-fkczyomvdprgvtmvkuhvprxuggkbgwld}
       LISTEN_ADDR: "0.0.0.0:4005"
     ports:
@@ -207,9 +206,15 @@ services:
       CORS_ALLOW_CREDENTIALS: true
       LISTEN_ADDR: "0.0.0.0:3002"
       CONTROLPLANE_URL: http://controlplane:3001
-      TELEMETRY_ENDPOINT: http://otelcollector:4318
+      DEFAULT_TELEMETRY_ENDPOINT: http://otelcollector:4318
+      GRAPHQL_METRICS_COLLECTOR_ENDPOINT: http://graphqlmetrics:4005
       GRAPH_API_TOKEN: ${ROUTER_TOKEN}
     restart: on-failure
+    volumes:
+      # Mount the example config from the repo into the working dir of the router binary location
+      # In order apply changes to the config, you need to restart the router container
+      # docker compose -f docker-compose.full.yml --profile router restart router
+      - ./router/config.yaml:/config.yaml
     networks:
       - primary
     profiles:
