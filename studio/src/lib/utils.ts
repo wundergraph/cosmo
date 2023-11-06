@@ -27,8 +27,8 @@ export const getHighestPriorityRole = ({
   if (userRoles.includes("admin")) {
     return "admin";
   }
-  if (userRoles.includes("member")) {
-    return "member";
+  if (userRoles.includes("developer")) {
+    return "developer";
   }
   return "viewer";
 };

@@ -3221,7 +3221,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           await orgRepo.updateUserRole({
             organizationID: authContext.organizationId,
             orgMemberID: orgMember.orgMemberID,
-            role: 'member',
+            role: 'developer',
           });
         }
 

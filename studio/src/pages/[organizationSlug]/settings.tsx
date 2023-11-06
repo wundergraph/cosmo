@@ -196,7 +196,7 @@ type MapperInput = Mapper & {
   id: number;
 };
 
-const dbRoleOptions = ["Admin", "Member", "Viewer"];
+const dbRoleOptions = ["Admin", "Developer", "Viewer"];
 const createMapperSchema = z.object({
   dbRole: z.string().min(1).default(dbRoleOptions[0]),
   ssoGroup: z.string().min(1, { message: "Please enter a value" }),

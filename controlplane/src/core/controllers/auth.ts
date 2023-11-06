@@ -180,15 +180,15 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
                 .returning()
                 .execute();
 
-              const stringRole = kcGroup.split('/')?.[2] || 'member';
+              const stringRole = kcGroup.split('/')?.[2] || 'developer';
               let role: MemberRole;
               switch (stringRole) {
                 case 'admin': {
                   role = 'admin';
                   break;
                 }
-                case 'member': {
-                  role = 'member';
+                case 'developer': {
+                  role = 'developer';
                   break;
                 }
                 case 'viewer': {

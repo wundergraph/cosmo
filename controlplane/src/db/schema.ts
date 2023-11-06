@@ -502,7 +502,7 @@ export const organizationRelations = relations(organizations, ({ many }) => ({
   graphApiTokens: many(graphApiTokens),
 }));
 
-export const memberRoleEnum = pgEnum('member_role', ['admin', 'member', 'viewer']);
+export const memberRoleEnum = pgEnum('member_role', ['admin', 'developer', 'viewer']);
 
 export const organizationMemberRoles = pgTable(
   'organization_member_roles',

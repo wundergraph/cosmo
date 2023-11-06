@@ -599,7 +599,7 @@ const IntegrationsPage: NextPageWithLayout = () => {
         }
         actions={
           checkUserAccess({
-            rolesToBe: ["admin", "member"],
+            rolesToBe: ["admin", "developer"],
             userRoles: user?.currentOrganization.roles || [],
           }) && (
             <>
@@ -641,7 +641,7 @@ const IntegrationsPage: NextPageWithLayout = () => {
           </Link>
         </p>
         {checkUserAccess({
-          rolesToBe: ["admin", "member"],
+          rolesToBe: ["admin", "developer"],
           userRoles: user?.currentOrganization.roles || [],
         }) && (
           <>
@@ -669,7 +669,7 @@ const IntegrationsPage: NextPageWithLayout = () => {
             <TableHead>Name</TableHead>
             <TableHead>Events</TableHead>
             {checkUserAccess({
-              rolesToBe: ["admin", "member"],
+              rolesToBe: ["admin", "developer"],
               userRoles: user?.currentOrganization.roles || [],
             }) && <TableHead aria-label="Actions"></TableHead>}
           </TableRow>
@@ -695,7 +695,7 @@ const IntegrationsPage: NextPageWithLayout = () => {
                     </div>
                   </TableCell>
                   {checkUserAccess({
-                    rolesToBe: ["admin", "member"],
+                    rolesToBe: ["admin", "developer"],
                     userRoles: user?.currentOrganization.roles || [],
                   }) && (
                     <TableCell className="flex justify-end space-x-2">

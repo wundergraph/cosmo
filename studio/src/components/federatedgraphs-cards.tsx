@@ -398,7 +398,7 @@ export const Empty = ({
             command={`npx wgc federated-graph create production --label-matcher ${labels} --routing-url http://localhost:4000/graphql`}
           />
           {checkUserAccess({
-            rolesToBe: ["admin", "member"],
+            rolesToBe: ["admin", "developer"],
             userRoles: user?.currentOrganization.roles || [],
           }) && (
             <>
@@ -567,7 +567,7 @@ export const FederatedGraphsCards = ({
           return <GraphCard key={graphIndex.toString()} graph={graph} />;
         })}
         {checkUserAccess({
-          rolesToBe: ["admin", "member"],
+          rolesToBe: ["admin", "developer"],
           userRoles: user?.currentOrganization.roles || [],
         }) && (
           <MigrationDialog

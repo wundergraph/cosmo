@@ -47,7 +47,7 @@ export default class OidcProvider {
           keycloakGroupName = `/${organizationSlug}/admin`;
           break;
         }
-        case 'Member': {
+        case 'Developer': {
           keycloakGroupName = `/${organizationSlug}`;
           break;
         }

@@ -507,7 +507,7 @@ const WebhooksPage: NextPageWithLayout = () => {
         }
         actions={
           checkUserAccess({
-            rolesToBe: ["admin", "member"],
+            rolesToBe: ["admin", "developer"],
             userRoles: user?.currentOrganization.roles || [],
           }) && <Webhook mode="create" refresh={() => refetch()} />
         }
@@ -530,7 +530,7 @@ const WebhooksPage: NextPageWithLayout = () => {
           </Link>
         </p>
         {checkUserAccess({
-          rolesToBe: ["admin", "member"],
+          rolesToBe: ["admin", "developer"],
           userRoles: user?.currentOrganization.roles || [],
         }) && <Webhook mode="create" refresh={() => refetch()} />}
       </div>
@@ -540,7 +540,7 @@ const WebhooksPage: NextPageWithLayout = () => {
             <TableHead>Endpoint</TableHead>
             <TableHead>Events</TableHead>
             {checkUserAccess({
-              rolesToBe: ["admin", "member"],
+              rolesToBe: ["admin", "developer"],
               userRoles: user?.currentOrganization.roles || [],
             }) && <TableHead aria-label="Actions"></TableHead>}
           </TableRow>
@@ -563,7 +563,7 @@ const WebhooksPage: NextPageWithLayout = () => {
                   </div>
                 </TableCell>
                 {checkUserAccess({
-                  rolesToBe: ["admin", "member"],
+                  rolesToBe: ["admin", "developer"],
                   userRoles: user?.currentOrganization.roles || [],
                 }) && (
                   <TableCell className="flex justify-end space-x-2">

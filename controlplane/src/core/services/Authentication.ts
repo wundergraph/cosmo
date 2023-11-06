@@ -1,14 +1,14 @@
-import { lru } from 'tiny-lru';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { addDays } from 'date-fns';
+import { lru } from 'tiny-lru';
 import { AuthContext } from '../../types/index.js';
-import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import { AuthenticationError, FreeTrialExpiredError, isFreeTrialExpiredError } from '../errors/errors.js';
+import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import { checkUserAccess } from '../util.js';
-import WebSessionAuthenticator from './WebSessionAuthenticator.js';
+import AccessTokenAuthenticator from './AccessTokenAuthenticator.js';
 import ApiKeyAuthenticator from './ApiKeyAuthenticator.js';
 import GraphApiTokenAuthenticator, { GraphKeyAuthContext } from './GraphApiTokenAuthenticator.js';
-import AccessTokenAuthenticator from './AccessTokenAuthenticator.js';
+import WebSessionAuthenticator from './WebSessionAuthenticator.js';
 
 // The maximum time to cache the user auth context for the web session authentication.
 const maxAuthCacheTtl = 30 * 1000; // 30 seconds
@@ -102,7 +102,7 @@ export class Authentication implements Authenticator {
         userId: user.userId,
         organizationId: organization.id,
         organizationSlug: organization.slug,
-        hasWriteAccess: checkUserAccess({ rolesToBe: ['admin', 'member'], userRoles }),
+        hasWriteAccess: checkUserAccess({ rolesToBe: ['admin', 'developer'], userRoles }),
         isAdmin: userRoles.includes('admin'),
       };
 

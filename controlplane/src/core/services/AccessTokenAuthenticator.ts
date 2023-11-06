@@ -63,7 +63,7 @@ export default class AccessTokenAuthenticator {
       organizationId: organization.id,
       organizationSlug: organization.slug,
       userId: userInfoData.sub,
-      hasWriteAccess: checkUserAccess({ rolesToBe: ['admin', 'member'], userRoles }),
+      hasWriteAccess: checkUserAccess({ rolesToBe: ['admin', 'developer'], userRoles }),
       isAdmin: userRoles.includes('admin'),
     };
   }

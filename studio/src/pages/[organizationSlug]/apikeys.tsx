@@ -505,7 +505,7 @@ const APIKeysPage: NextPageWithLayout = () => {
               </Link>
             </p>
             {checkUserAccess({
-              rolesToBe: ["admin", "member"],
+              rolesToBe: ["admin", "developer"],
               userRoles: user?.currentOrganization.roles || [],
             }) && (
               <CreateAPIKey
@@ -518,7 +518,7 @@ const APIKeysPage: NextPageWithLayout = () => {
           </div>
           {deleteApiKeyName &&
             checkUserAccess({
-              rolesToBe: ["admin", "member"],
+              rolesToBe: ["admin", "developer"],
               userRoles: user?.currentOrganization.roles || [],
             }) && (
               <DeleteAPIKeyDialog
@@ -538,7 +538,7 @@ const APIKeysPage: NextPageWithLayout = () => {
                 <TableHead>Created At</TableHead>
                 <TableHead>Last Used At</TableHead>
                 {checkUserAccess({
-                  rolesToBe: ["admin", "member"],
+                  rolesToBe: ["admin", "developer"],
                   userRoles: user?.currentOrganization.roles || [],
                 }) && (
                   <TableHead className="flex items-center justify-center">
@@ -571,7 +571,7 @@ const APIKeysPage: NextPageWithLayout = () => {
                             : "Never"}
                         </TableCell>
                         {checkUserAccess({
-                          rolesToBe: ["admin", "member"],
+                          rolesToBe: ["admin", "developer"],
                           userRoles: user?.currentOrganization.roles || [],
                         }) && (
                           <TableCell>
