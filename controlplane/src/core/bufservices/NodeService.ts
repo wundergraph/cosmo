@@ -19,8 +19,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof NodeSe
         const authContext = await opts.authenticator.authenticateRouter(ctx.requestHeader);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
 
-        const federatedGraph = await fedGraphRepo.byName(req.graphName);
-        if (!federatedGraph) {
+        const target = await fedGraphRepo.targetByName(req.graphName);
+        if (!target) {
           return {
             response: {
               code: EnumStatusCode.ERR_NOT_FOUND,
@@ -29,11 +29,11 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof NodeSe
           };
         }
 
-        const config = await fedGraphRepo.getLatestValidRouterConfig(federatedGraph?.targetId);
-
+        // Avoid downloading the config to check if it's the latest version
         if (req.version) {
-          const isLatest = config?.schemaVersionId === req.version;
-          if (isLatest) {
+          const isLatestVersion = await fedGraphRepo.isLatestValidRouterConfigVersion(target.id, req.version);
+
+          if (isLatestVersion) {
             return {
               response: {
                 code: EnumStatusCode.OK,
@@ -42,7 +42,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof NodeSe
           }
         }
 
-        if (!config) {
+        // Now, download the config and return it
+        const routerConfig = await fedGraphRepo.getLatestValidRouterConfig(target?.id);
+
+        if (!routerConfig) {
           return {
             response: {
               code: EnumStatusCode.ERR_NOT_FOUND,
@@ -56,9 +59,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof NodeSe
             code: EnumStatusCode.OK,
           },
           config: {
-            subgraphs: config.config.subgraphs,
-            engineConfig: config.config.engineConfig,
-            version: config.schemaVersionId,
+            subgraphs: routerConfig.config.subgraphs,
+            engineConfig: routerConfig.config.engineConfig,
+            version: routerConfig.schemaVersionId,
           },
         };
       });
