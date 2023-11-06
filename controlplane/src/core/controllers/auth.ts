@@ -114,10 +114,6 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
         const userId = accessTokenPayload.sub!;
         const userEmail = accessTokenPayload.email!;
 
-        const currentOrganizations = await opts.organizationRepository.memberships({
-          userId,
-        });
-
         const insertedSession = await opts.db.transaction(async (tx) => {
           // Upsert the user
           await tx
@@ -136,11 +132,11 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
             .execute();
 
           if (accessTokenPayload.groups && accessTokenPayload.groups.length > 0) {
-            const keycloakGroups = new Set(accessTokenPayload.groups.map((grp) => grp.split('/')[1]));
+            const keycloakOrgs = new Set(accessTokenPayload.groups.map((grp) => grp.split('/')[1]));
             const orgRepo = new OrganizationRepository(tx);
 
             // delete all the org member roles
-            for (const slug of keycloakGroups) {
+            for (const slug of keycloakOrgs) {
               const dbOrg = await orgRepo.bySlug(slug);
 
               if (!dbOrg) {

@@ -4,6 +4,7 @@ import { addDays } from 'date-fns';
 import { AuthContext } from '../../types/index.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import { AuthenticationError, FreeTrialExpiredError, isFreeTrialExpiredError } from '../errors/errors.js';
+import { checkUserAccess } from '../util.js';
 import WebSessionAuthenticator from './WebSessionAuthenticator.js';
 import ApiKeyAuthenticator from './ApiKeyAuthenticator.js';
 import GraphApiTokenAuthenticator, { GraphKeyAuthContext } from './GraphApiTokenAuthenticator.js';
@@ -92,10 +93,17 @@ export class Authentication implements Authenticator {
         throw new Error('User is not a member of the organization');
       }
 
+      const userRoles = await this.orgRepo.getOrganizationMemberRoles({
+        userID: user.userId,
+        organizationID: organization.id,
+      });
+
       const userContext: AuthContext = {
         userId: user.userId,
         organizationId: organization.id,
         organizationSlug: organization.slug,
+        hasWriteAccess: checkUserAccess({ rolesToBe: ['admin', 'member'], userRoles }),
+        isAdmin: userRoles.includes('admin'),
       };
 
       this.#cache.set(cacheKey, userContext);

@@ -3,12 +3,15 @@ import { addDays } from 'date-fns';
 import AuthUtils from '../auth-utils.js';
 import { AuthenticationError, FreeTrialExpiredError } from '../errors/errors.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
+import { checkUserAccess } from '../util.js';
 import { calLink } from './Authentication.js';
 
 export type AccessTokenAuthContext = {
   userId: string;
   organizationId: string;
   organizationSlug: string;
+  hasWriteAccess: boolean;
+  isAdmin: boolean;
 };
 
 export default class AccessTokenAuthenticator {
@@ -51,10 +54,17 @@ export default class AccessTokenAuthenticator {
       throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, 'User is not a member of the organization');
     }
 
+    const userRoles = await this.orgRepo.getOrganizationMemberRoles({
+      userID: userInfoData.sub,
+      organizationID: organization.id,
+    });
+
     return {
       organizationId: organization.id,
       organizationSlug: organization.slug,
       userId: userInfoData.sub,
+      hasWriteAccess: checkUserAccess({ rolesToBe: ['admin', 'member'], userRoles }),
+      isAdmin: userRoles.includes('admin'),
     };
   }
 }

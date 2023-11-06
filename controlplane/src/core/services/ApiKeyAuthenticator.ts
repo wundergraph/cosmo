@@ -1,15 +1,17 @@
-import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { eq } from 'drizzle-orm';
-import { addDays } from 'date-fns';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { addDays } from 'date-fns';
+import { eq } from 'drizzle-orm';
+import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema.js';
-import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import { AuthenticationError, FreeTrialExpiredError } from '../errors/errors.js';
+import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import { calLink } from './Authentication.js';
 
 export type ApiKeyAuthContext = {
   organizationId: string;
   organizationSlug: string;
+  hasWriteAccess: boolean;
+  isAdmin: boolean;
 };
 
 export default class ApiKeyAuthenticator {
@@ -67,6 +69,9 @@ export default class ApiKeyAuthenticator {
     return {
       organizationId: apiKeyModel.organizationId,
       organizationSlug: organization.slug,
+      // sending true as the api key has admin permissions
+      isAdmin: true,
+      hasWriteAccess: true
     };
   }
 }

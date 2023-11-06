@@ -105,19 +105,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const orgWebhooks = new OrganizationWebhookService(opts.db, authContext.organizationId, opts.logger);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
-        const userRepo = new UserRepository(opts.db);
 
-        const hasAccess = await userRepo.checkUserAccess({
-          userID: authContext.userId,
-          organizationID: authContext.organizationId,
-          rolesToBe: ['admin', 'member'],
-        });
-
-        if (!hasAccess) {
+        if (!authContext.hasWriteAccess) {
           return {
             response: {
               code: EnumStatusCode.ERR,
-              details: `The user doesnt have the permissions to perform this operation`,
+              details: `The user doesn't have the permissions to perform this operation`,
             },
             compositionErrors: [],
           };
@@ -224,15 +217,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<CreateFederatedSubgraphResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
-        const userRepo = new UserRepository(opts.db);
 
-        const hasAccess = await userRepo.checkUserAccess({
-          userID: authContext.userId,
-          organizationID: authContext.organizationId,
-          rolesToBe: ['admin', 'member'],
-        });
-
-        if (!hasAccess) {
+        if (!authContext.hasWriteAccess) {
           return {
             response: {
               code: EnumStatusCode.ERR,
@@ -537,15 +523,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const orgRepo = new OrganizationRepository(opts.db);
         const schemaCheckRepo = new SchemaCheckRepository(opts.db);
-        const userRepo = new UserRepository(opts.db);
 
-        const hasAccess = await userRepo.checkUserAccess({
-          userID: authContext.userId,
-          organizationID: authContext.organizationId,
-          rolesToBe: ['admin', 'member'],
-        });
-
-        if (!hasAccess) {
+        if (!authContext.hasWriteAccess) {
           return {
             response: {
               code: EnumStatusCode.ERR,
@@ -733,15 +712,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const subgraph = await subgraphRepo.byName(req.subgraphName);
         const compChecker = new Composer(fedGraphRepo, subgraphRepo);
-        const userRepo = new UserRepository(opts.db);
 
-        const hasAccess = await userRepo.checkUserAccess({
-          userID: authContext.userId,
-          organizationID: authContext.organizationId,
-          rolesToBe: ['admin', 'member'],
-        });
-
-        if (!hasAccess) {
+        if (!authContext.hasWriteAccess) {
           return {
             response: {
               code: EnumStatusCode.ERR,
@@ -866,15 +838,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<PublishFederatedSubgraphResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgWebhooks = new OrganizationWebhookService(opts.db, authContext.organizationId, opts.logger);
-        const userRepo = new UserRepository(opts.db);
 
-        const hasAccess = await userRepo.checkUserAccess({
-          userID: authContext.userId,
-          organizationID: authContext.organizationId,
-          rolesToBe: ['admin', 'member'],
-        });
-
-        if (!hasAccess) {
+        if (!authContext.hasWriteAccess) {
           return {
             response: {
               code: EnumStatusCode.ERR,
@@ -1124,7 +1089,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
-        const schemaCheckRepo = new SchemaCheckRepository(opts.db);
 
         const graph = await fedGraphRepo.byName(req.graphName);
 
@@ -1306,15 +1270,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
-        const userRepo = new UserRepository(opts.db);
 
-        const hasAccess = await userRepo.checkUserAccess({
-          userID: authContext.userId,
-          organizationID: authContext.organizationId,
-          rolesToBe: ['admin', 'member'],
-        });
-
-        if (!hasAccess) {
+        if (!authContext.hasWriteAccess) {
           return {
             response: {
               code: EnumStatusCode.ERR,
@@ -1378,15 +1335,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
-        const userRepo = new UserRepository(opts.db);
 
-        const hasAccess = await userRepo.checkUserAccess({
-          userID: authContext.userId,
-          organizationID: authContext.organizationId,
-          rolesToBe: ['admin', 'member'],
-        });
-
-        if (!hasAccess) {
+        if (!authContext.hasWriteAccess) {
           return {
             response: {
               code: EnumStatusCode.ERR,
@@ -1431,15 +1381,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const orgWebhooks = new OrganizationWebhookService(opts.db, authContext.organizationId, opts.logger);
-        const userRepo = new UserRepository(opts.db);
 
-        const hasAccess = await userRepo.checkUserAccess({
-          userID: authContext.userId,
-          organizationID: authContext.organizationId,
-          rolesToBe: ['admin', 'member'],
-        });
-
-        if (!hasAccess) {
+        if (!authContext.hasWriteAccess) {
           return {
             response: {
               code: EnumStatusCode.ERR,
@@ -1547,15 +1490,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const orgWebhooks = new OrganizationWebhookService(opts.db, authContext.organizationId, opts.logger);
-        const userRepo = new UserRepository(opts.db);
 
-        const hasAccess = await userRepo.checkUserAccess({
-          userID: authContext.userId,
-          organizationID: authContext.organizationId,
-          rolesToBe: ['admin', 'member'],
-        });
-
-        if (!hasAccess) {
+        if (!authContext.hasWriteAccess) {
           return {
             response: {
               code: EnumStatusCode.ERR,
@@ -1642,15 +1578,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const orgWebhooks = new OrganizationWebhookService(opts.db, authContext.organizationId, opts.logger);
-        const userRepo = new UserRepository(opts.db);
 
-        const hasAccess = await userRepo.checkUserAccess({
-          userID: authContext.userId,
-          organizationID: authContext.organizationId,
-          rolesToBe: ['admin', 'member'],
-        });
-
-        if (!hasAccess) {
+        if (!authContext.hasWriteAccess) {
           return {
             response: {
               code: EnumStatusCode.ERR,
@@ -1923,15 +1852,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
-        const userRepo = new UserRepository(opts.db);
 
-        const hasAccess = await userRepo.checkUserAccess({
-          userID: authContext.userId,
-          organizationID: authContext.organizationId,
-          rolesToBe: ['admin', 'member'],
-        });
-
-        if (!hasAccess) {
+        if (!authContext.hasWriteAccess) {
           return {
             response: {
               code: EnumStatusCode.ERR,
@@ -2023,15 +1945,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<CreateFederatedGraphTokenResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
-        const userRepo = new UserRepository(opts.db);
 
-        const hasAccess = await userRepo.checkUserAccess({
-          userID: authContext.userId,
-          organizationID: authContext.organizationId,
-          rolesToBe: ['admin', 'member'],
-        });
-
-        if (!hasAccess) {
+        if (!authContext.hasWriteAccess) {
           return {
             response: {
               code: EnumStatusCode.ERR,
@@ -2153,13 +2068,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const userRepo = new UserRepository(opts.db);
         const orgRepo = new OrganizationRepository(opts.db);
 
-        const hasAccess = await userRepo.checkUserAccess({
-          userID: authContext.userId,
-          organizationID: authContext.organizationId,
-          rolesToBe: ['admin', 'member'],
-        });
-
-        if (!hasAccess) {
+        if (!authContext.hasWriteAccess) {
           return {
             response: {
               code: EnumStatusCode.ERR,
@@ -2356,15 +2265,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<CreateAPIKeyResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db);
-        const userRepo = new UserRepository(opts.db);
 
-        const hasAccess = await userRepo.checkUserAccess({
-          userID: authContext.userId,
-          organizationID: authContext.organizationId,
-          rolesToBe: ['admin', 'member'],
-        });
-
-        if (!hasAccess) {
+        if (!authContext.hasWriteAccess) {
           return {
             response: {
               code: EnumStatusCode.ERR,
@@ -2458,15 +2360,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<DeleteAPIKeyResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db);
-        const userRepo = new UserRepository(opts.db);
 
-        const hasAccess = await userRepo.checkUserAccess({
-          userID: authContext.userId,
-          organizationID: authContext.organizationId,
-          rolesToBe: ['admin', 'member'],
-        });
-
-        if (!hasAccess) {
+        if (!authContext.hasWriteAccess) {
           return {
             response: {
               code: EnumStatusCode.ERR,
@@ -2523,13 +2418,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const orgRepo = new OrganizationRepository(opts.db);
         const userRepo = new UserRepository(opts.db);
 
-        const hasAccess = await userRepo.checkUserAccess({
-          userID: authContext.userId,
-          organizationID: authContext.organizationId,
-          rolesToBe: ['admin', 'member'],
-        });
-
-        if (!hasAccess) {
+        if (!authContext.hasWriteAccess) {
           return {
             response: {
               code: EnumStatusCode.ERR,
@@ -2637,13 +2526,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const orgWebhooks = new OrganizationWebhookService(opts.db, authContext.organizationId, opts.logger);
 
-        const hasAccess = await userRepo.checkUserAccess({
-          userID: authContext.userId,
-          organizationID: authContext.organizationId,
-          rolesToBe: ['admin', 'member'],
-        });
-
-        if (!hasAccess) {
+        if (!authContext.hasWriteAccess) {
           return {
             response: {
               code: EnumStatusCode.ERR,
@@ -2810,15 +2693,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<CreateOrganizationWebhookConfigResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db);
-        const userRepo = new UserRepository(opts.db);
 
-        const hasAccess = await userRepo.checkUserAccess({
-          userID: authContext.userId,
-          organizationID: authContext.organizationId,
-          rolesToBe: ['admin', 'member'],
-        });
-
-        if (!hasAccess) {
+        if (!authContext.hasWriteAccess) {
           return {
             response: {
               code: EnumStatusCode.ERR,
@@ -2891,15 +2767,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<UpdateOrganizationWebhookConfigResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db);
-        const userRepo = new UserRepository(opts.db);
 
-        const hasAccess = await userRepo.checkUserAccess({
-          userID: authContext.userId,
-          organizationID: authContext.organizationId,
-          rolesToBe: ['admin', 'member'],
-        });
-
-        if (!hasAccess) {
+        if (!authContext.hasWriteAccess) {
           return {
             response: {
               code: EnumStatusCode.ERR,
@@ -2930,15 +2799,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<UpdateOrganizationWebhookConfigResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db);
-        const userRepo = new UserRepository(opts.db);
 
-        const hasAccess = await userRepo.checkUserAccess({
-          userID: authContext.userId,
-          organizationID: authContext.organizationId,
-          rolesToBe: ['admin', 'member'],
-        });
-
-        if (!hasAccess) {
+        if (!authContext.hasWriteAccess) {
           return {
             response: {
               code: EnumStatusCode.ERR,
@@ -3413,15 +3275,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<DeleteRouterTokenResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
-        const userRepo = new UserRepository(opts.db);
 
-        const hasAccess = await userRepo.checkUserAccess({
-          userID: authContext.userId,
-          organizationID: authContext.organizationId,
-          rolesToBe: ['admin', 'member'],
-        });
-
-        if (!hasAccess) {
+        if (!authContext.hasWriteAccess) {
           return {
             response: {
               code: EnumStatusCode.ERR,
@@ -3479,15 +3334,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<CreateIntegrationResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db);
-        const userRepo = new UserRepository(opts.db);
 
-        const hasAccess = await userRepo.checkUserAccess({
-          userID: authContext.userId,
-          organizationID: authContext.organizationId,
-          rolesToBe: ['admin', 'member'],
-        });
-
-        if (!hasAccess) {
+        if (!authContext.hasWriteAccess) {
           return {
             response: {
               code: EnumStatusCode.ERR,
@@ -3583,15 +3431,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<UpdateIntegrationConfigResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db);
-        const userRepo = new UserRepository(opts.db);
 
-        const hasAccess = await userRepo.checkUserAccess({
-          userID: authContext.userId,
-          organizationID: authContext.organizationId,
-          rolesToBe: ['admin', 'member'],
-        });
-
-        if (!hasAccess) {
+        if (!authContext.hasWriteAccess) {
           return {
             response: {
               code: EnumStatusCode.ERR,
@@ -3622,15 +3463,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<DeleteIntegrationResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db);
-        const userRepo = new UserRepository(opts.db);
 
-        const hasAccess = await userRepo.checkUserAccess({
-          userID: authContext.userId,
-          organizationID: authContext.organizationId,
-          rolesToBe: ['admin', 'member'],
-        });
-
-        if (!hasAccess) {
+        if (!authContext.hasWriteAccess) {
           return {
             response: {
               code: EnumStatusCode.ERR,
@@ -3818,15 +3652,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<CreateOIDCProviderResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db);
-        const userRepo = new UserRepository(opts.db);
 
-        const hasAccess = await userRepo.checkUserAccess({
-          userID: authContext.userId,
-          organizationID: authContext.organizationId,
-          rolesToBe: ['admin', 'member'],
-        });
-
-        if (!hasAccess) {
+        if (!authContext.isAdmin) {
           return {
             response: {
               code: EnumStatusCode.ERR,
@@ -3934,15 +3761,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<DeleteOIDCProviderResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db);
-        const userRepo = new UserRepository(opts.db);
 
-        const hasAccess = await userRepo.checkUserAccess({
-          userID: authContext.userId,
-          organizationID: authContext.organizationId,
-          rolesToBe: ['admin', 'member'],
-        });
-
-        if (!hasAccess) {
+        if (!authContext.isAdmin) {
           return {
             response: {
               code: EnumStatusCode.ERR,

@@ -160,3 +160,13 @@ export const hasLabelsChanged = (prev: Label[], cur: Label[]): boolean => {
       .join(',')
   );
 };
+
+// checks if the user has the right roles to perform the operation.
+export const checkUserAccess = ({ rolesToBe, userRoles }: { rolesToBe: string[]; userRoles: string[] }) => {
+  for (const role of rolesToBe) {
+    if (userRoles.includes(role)) {
+      return true;
+    }
+  }
+  return false;
+};

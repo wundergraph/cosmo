@@ -241,6 +241,8 @@ export type UserInfoEndpointResponse = {
 export type AuthContext = {
   organizationId: string;
   organizationSlug: string;
+  hasWriteAccess: boolean;
+  isAdmin: boolean;
   userId?: string;
 };
 

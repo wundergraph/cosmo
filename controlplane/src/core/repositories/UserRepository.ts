@@ -85,24 +85,4 @@ export class UserRepository {
       await orgRepo.addOrganizationMemberRoles({ memberID: insertedMember.id, roles: ['member'] });
     });
   }
-
-  // checks if the user has the right roles to perform the operation
-  public async checkUserAccess(input: { userID?: string; organizationID: string; rolesToBe: MemberRole[] }) {
-    const orgRepo = new OrganizationRepository(this.db);
-
-    if (!input.userID) {
-      return true;
-    }
-
-    const roles = await orgRepo.getOrganizationMemberRoles({
-      userID: input.userID,
-      organizationID: input.organizationID,
-    });
-    for (const role of input.rolesToBe) {
-      if (roles.includes(role)) {
-        return true;
-      }
-    }
-    return false;
-  }
 }
