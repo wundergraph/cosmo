@@ -47,19 +47,10 @@ func (t *localhostFallbackRoundTripper) rewriteToTargetHost(r *http.Request) (*h
 func (t *localhostFallbackRoundTripper) RoundTrip(r *http.Request) (*http.Response, error) {
 	// If the request has a body, we need to buffer it, otherwise it will
 	// get consumed
-	var body *rewindableReader
-	if r.Body != nil {
-		body = &rewindableReader{
-			body: r.Body,
-		}
-		r.Body = body
-	}
 	resp, err := t.transport.RoundTrip(r)
 	if err != nil && t.pointsToLocalhost(r) && errors.Is(err, syscall.ECONNREFUSED) {
-		// Retry the request
-		if body != nil {
-			body.Rewind()
-		}
+		// Retry the request. If the error was ECONNREFUSED, the body
+		// will not have been consumed, so we can send the request again.
 		redirected, err := t.rewriteToTargetHost(r)
 		if err != nil {
 			return nil, fmt.Errorf("error creating redirected request to %s: %w", t.targetHost, err)
