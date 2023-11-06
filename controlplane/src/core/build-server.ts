@@ -2,8 +2,7 @@ import Fastify from 'fastify';
 import { fastifyConnectPlugin } from '@connectrpc/connect-fastify';
 import { cors } from '@connectrpc/connect';
 import fastifyCors from '@fastify/cors';
-import { PinoLoggerOptions } from 'fastify/types/logger.js';
-import { pino, stdTimeFunctions } from 'pino';
+import { pino, stdTimeFunctions, LoggerOptions } from 'pino';
 import { compressionBrotli, compressionGzip } from '@connectrpc/connect-node';
 import fastifyGracefulShutdown from 'fastify-graceful-shutdown';
 import { App } from 'octokit';
@@ -26,7 +25,7 @@ import AccessTokenAuthenticator from './services/AccessTokenAuthenticator.js';
 import { GitHubRepository } from './repositories/GitHubRepository.js';
 
 export interface BuildConfig {
-  logger: PinoLoggerOptions;
+  logger: LoggerOptions;
   database: {
     url: string;
     ssl?: {
@@ -69,7 +68,7 @@ export interface BuildConfig {
   slack: { clientID?: string; clientSecret?: string };
 }
 
-const developmentLoggerOpts: PinoLoggerOptions = {
+const developmentLoggerOpts: LoggerOptions = {
   transport: {
     target: 'pino-pretty',
     options: {

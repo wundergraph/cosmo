@@ -219,7 +219,7 @@ const ChangelogPage: NextPageWithLayout = () => {
   const startDate = new Date(dateRange.from);
   const endDate = new Date(dateRange.to);
 
-  const { data, isLoading, error, refetch } = useQuery({
+  const { data, isLoading, isSuccess, error, refetch } = useQuery({
     ...getFederatedGraphChangelog.useQuery({
       name: router.query.slug as string,
       pagination: {
@@ -232,11 +232,13 @@ const ChangelogPage: NextPageWithLayout = () => {
       },
     }),
     enabled: false,
-    onSuccess: (data) => {
-      if (!data) return;
-      setItems((prev) => [...prev, ...data.federatedGraphChangelogOutput]);
-    },
   });
+
+  useEffect(() => {
+    if (isSuccess && data) {
+      setItems((prev) => [...prev, ...data.federatedGraphChangelogOutput]);
+    }
+  }, [data]);
 
   useEffect(() => {
     // We need to fetch from scratch on date change

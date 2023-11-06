@@ -105,7 +105,7 @@ const ChecksPage: NextPageWithLayout = () => {
 
   if (isLoading) return <Loader fullscreen />;
 
-  if (error || data.response?.code !== EnumStatusCode.OK)
+  if (error || data?.response?.code !== EnumStatusCode.OK)
     return (
       <EmptyState
         icon={<ExclamationTriangleIcon />}
