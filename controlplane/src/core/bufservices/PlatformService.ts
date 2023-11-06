@@ -3619,7 +3619,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           SELECT OperationContent as operationContent
           FROM ${opts.chClient?.database}.gql_metrics_operations
           WHERE OperationHash = '${req.hash}'
-          LIMIT 1
+          LIMIT 1 SETTINGS use_query_cache = true, query_cache_ttl = 2629800
         `;
 
         const result = await opts.chClient.queryPromise(query);
