@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.26.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.25.0...@wundergraph/cosmo-connect@0.26.0) (2023-11-06)
+
+### Features
+
+* upgrade to stable connect & react-query 5 ([#231](https://github.com/wundergraph/cosmo/issues/231)) ([0c434eb](https://github.com/wundergraph/cosmo/commit/0c434eb41b357f596d19607cd2c8572f6a9899a1)) (@StarpTech)
+
 # [0.25.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.24.0...@wundergraph/cosmo-connect@0.25.0) (2023-11-03)
 
 ### Bug Fixes
