@@ -50,12 +50,12 @@ func NewHeaderTransformer(rules config.HeaderRules) (*HeaderRuleEngine, error) {
 			if rule.Matching != "" {
 				regex, err := regexp.Compile(rule.Matching)
 				if err != nil {
-					return nil, fmt.Errorf("invalid regex '%s' for all request header rule %d: %w", rule.Matching, i, err)
+					return nil, fmt.Errorf("invalid regex '%s' for header rule %d: %w", rule.Matching, i, err)
 				}
 				hf.regex[rule.Matching] = *regex
 			}
 		default:
-			return nil, fmt.Errorf("unhandled operation '%s' for all request header rule %+v", rule)
+			return nil, fmt.Errorf("unhandled operation '%s' for header rule %+v", rule.Operation, rule)
 		}
 	}
 
