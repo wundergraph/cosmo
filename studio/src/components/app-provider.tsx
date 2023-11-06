@@ -8,12 +8,7 @@ import {
 } from "@tanstack/react-query";
 import { addDays } from "date-fns";
 import { useRouter } from "next/router";
-import {
-  ReactNode,
-  createContext,
-  useEffect,
-  useState
-} from "react";
+import { createContext, ReactNode, useEffect, useState } from "react";
 
 interface User {
   id: string;
@@ -58,7 +53,7 @@ const fetchSession = async () => {
         method: "GET",
         mode: "cors",
         credentials: "include",
-      }
+      },
     );
     if (response.status === 200) {
       const body = await response.json();
@@ -78,8 +73,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const { data, error, isFetching } = useQuery<
     Session | null,
     UnauthorizedError | Error
-  >(["user", router.asPath], () => fetchSession(), {
-    refetchOnWindowFocus: true,
+  >({
+    queryKey: ["user", router.asPath],
+    queryFn: () => fetchSession(),
     retry(failureCount, error) {
       if (error instanceof UnauthorizedError) return false;
       return failureCount < 3;
@@ -99,7 +95,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       router.replace(`/login?redirectURL=${redirectURL}`);
     } else if (data && !error) {
       const currentOrg = data.organizations.find(
-        (org) => org.slug === currentOrgSlug
+        (org) => org.slug === currentOrgSlug,
       );
 
       const organization = currentOrg || data.organizations[0];
@@ -129,7 +125,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           ],
           // Allow cookies to be sent to the server
           credentials: "include",
-        })
+        }),
       );
 
       if (
@@ -138,13 +134,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         !currentOrg
       ) {
         const url = new URL(
-          window.location.origin + router.basePath + router.asPath
+          window.location.origin + router.basePath + router.asPath,
         );
         const params = new URLSearchParams(url.search);
         router.replace(
           params.size !== 0
             ? `/${organizationSlug}?${params}`
-            : `/${organizationSlug}`
+            : `/${organizationSlug}`,
         );
       }
     }

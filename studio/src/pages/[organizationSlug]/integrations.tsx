@@ -80,7 +80,7 @@ const UpdateIntegrationFormSchema = z.object({
         process.env.NODE_ENV === "production"
           ? url.startsWith("https://")
           : true,
-      "The endpoint must use https"
+      "The endpoint must use https",
     ),
   events: z.array(z.string()).optional(),
 });
@@ -97,7 +97,7 @@ const DeleteIntegration = ({
   const [isOpen, setIsOpen] = useState(false);
   const { toast } = useToast();
 
-  const { mutate, isLoading } = useMutation(deleteIntegration.useMutation());
+  const { mutate, isPending } = useMutation(deleteIntegration.useMutation());
 
   const onDelete = () => {
     mutate(
@@ -125,7 +125,7 @@ const DeleteIntegration = ({
             duration: 3000,
           });
         },
-      }
+      },
     );
   };
 
@@ -149,7 +149,7 @@ const DeleteIntegration = ({
             variant="destructive"
             type="button"
             onClick={onDelete}
-            isLoading={isLoading}
+            isLoading={isPending}
           >
             Delete
           </Button>
@@ -182,12 +182,12 @@ const Integration = ({
   const { toast } = useToast();
   const router = useRouter();
 
-  const { mutate: create, isLoading: isCreating } = useMutation(
-    createIntegration.useMutation()
+  const { mutate: create, isPending: isCreating } = useMutation(
+    createIntegration.useMutation(),
   );
 
-  const { mutate: update, isLoading: isUpdating } = useMutation(
-    updateIntegrationConfig.useMutation()
+  const { mutate: update, isPending: isUpdating } = useMutation(
+    updateIntegrationConfig.useMutation(),
   );
 
   const createForm = useZodForm<CreateIntegrationInput>({
@@ -202,7 +202,7 @@ const Integration = ({
 
   const [meta, setMeta] = useState<EventsMeta>(existing?.meta || []);
   const [existingEvents, setExistingEvents] = useState<string[]>(
-    existing?.events || []
+    existing?.events || [],
   );
 
   const endpoint = existing?.integrationConfig?.config.value?.endpoint || "";
@@ -252,7 +252,7 @@ const Integration = ({
             shallow: true,
           });
         },
-      }
+      },
     );
   };
 
@@ -296,7 +296,7 @@ const Integration = ({
               duration: 3000,
             });
           },
-        }
+        },
       );
     }
   };
@@ -395,8 +395,8 @@ const Integration = ({
                                           ])
                                         : field.onChange(
                                             field.value?.filter(
-                                              (value) => value !== event.name
-                                            )
+                                              (value) => value !== event.name,
+                                            ),
                                           );
                                     }}
                                   />
@@ -494,8 +494,8 @@ const Integration = ({
                                           ])
                                         : field.onChange(
                                             field.value?.filter(
-                                              (value) => value !== event.name
-                                            )
+                                              (value) => value !== event.name,
+                                            ),
                                           );
                                     }}
                                   />
@@ -567,7 +567,7 @@ const IntegrationsPage: NextPageWithLayout = () => {
 
   if (isLoading) return <Loader fullscreen />;
 
-  if (error || data.response?.code !== EnumStatusCode.OK)
+  if (error || data?.response?.code !== EnumStatusCode.OK)
     return (
       <EmptyState
         icon={<ExclamationTriangleIcon />}
@@ -715,7 +715,7 @@ const IntegrationsPage: NextPageWithLayout = () => {
                   )}
                 </TableRow>
               );
-            }
+            },
           )}
         </TableBody>
       </Table>
@@ -730,7 +730,7 @@ IntegrationsPage.getLayout = (page) => {
       <>{page}</>
     </div>,
     "Integrations",
-    "Configure integrations for your organization"
+    "Configure integrations for your organization",
   );
 };
 

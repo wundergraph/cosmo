@@ -47,7 +47,7 @@ const InviteForm = ({ refresh }: { refresh: () => void }) => {
     schema: emailInputSchema,
   });
 
-  const { mutate, isLoading } = useMutation(inviteUser.useMutation());
+  const { mutate, isPending } = useMutation(inviteUser.useMutation());
 
   const { toast } = useToast();
 
@@ -67,7 +67,7 @@ const InviteForm = ({ refresh }: { refresh: () => void }) => {
         onError: (error) => {
           sendToast("Could not invite the member. Please try again.");
         },
-      }
+      },
     );
   };
 
@@ -90,7 +90,7 @@ const InviteForm = ({ refresh }: { refresh: () => void }) => {
         type="submit"
         disabled={!isValid}
         variant="default"
-        isLoading={isLoading}
+        isLoading={isPending}
       >
         Invite
       </Button>
@@ -119,10 +119,10 @@ const MemberCard = ({
 
   const { mutate: resendInvitation } = useMutation(inviteUser.useMutation());
   const { mutate: revokeInvitation } = useMutation(
-    removeInvitation.useMutation()
+    removeInvitation.useMutation(),
   );
   const { mutate: updateUserRole } = useMutation(
-    updateOrgMemberRole.useMutation()
+    updateOrgMemberRole.useMutation(),
   );
 
   const { toast, update } = useToast();
@@ -178,7 +178,7 @@ const MemberCard = ({
                               id: id,
                             });
                           },
-                        }
+                        },
                       );
                     }}
                   >
@@ -209,7 +209,7 @@ const MemberCard = ({
                             duration: 3000,
                           });
                         },
-                      }
+                      },
                     );
                   }}
                 >
@@ -244,7 +244,7 @@ const MemberCard = ({
                             duration: 3000,
                           });
                         },
-                      }
+                      },
                     );
                   }}
                 >
@@ -272,7 +272,7 @@ const MembersPage: NextPageWithLayout = () => {
 
   if (isLoading) return <Loader fullscreen />;
 
-  if (error || data.response?.code !== EnumStatusCode.OK || !user)
+  if (error || data?.response?.code !== EnumStatusCode.OK || !user)
     return (
       <EmptyState
         icon={<ExclamationTriangleIcon />}
@@ -287,7 +287,7 @@ const MembersPage: NextPageWithLayout = () => {
   if (!data?.members) return null;
 
   const currentUser = data.members.find(
-    (member) => member.email === user.email
+    (member) => member.email === user.email,
   );
   const isAdmin = currentUser?.roles.includes("admin");
 
@@ -338,7 +338,7 @@ MembersPage.getLayout = (page) => {
   return getDashboardLayout(
     page,
     "Members",
-    "Manage all the members of your organization"
+    "Manage all the members of your organization",
   );
 };
 

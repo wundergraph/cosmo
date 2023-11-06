@@ -2,12 +2,13 @@ package core
 
 import (
 	"errors"
+	"net/http"
+
 	"github.com/go-chi/chi/middleware"
 	"github.com/wundergraph/cosmo/router/internal/logging"
 	"github.com/wundergraph/cosmo/router/internal/pool"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphql"
 	"go.uber.org/zap"
-	"net/http"
 )
 
 type PreHandlerOptions struct {
@@ -50,8 +51,7 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 // https://github.com/graphql/graphql-over-http/blob/main/spec/GraphQLOverHTTP.md#response
 
 func (h *PreHandler) Handler(next http.Handler) http.Handler {
-
-	fn := func(w http.ResponseWriter, r *http.Request) {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		requestLogger := h.log.With(logging.WithRequestID(middleware.GetReqID(r.Context())))
 
 		// In GraphQL the statusCode does not always express the error state of the request
@@ -132,7 +132,5 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 		// Evaluate the request after the request has been handled by the engine
 		hasRequestError = requestContext.hasError
-	}
-
-	return http.HandlerFunc(fn)
+	})
 }

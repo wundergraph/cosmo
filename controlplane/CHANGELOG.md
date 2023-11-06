@@ -4,6 +4,19 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.31.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.30.0...controlplane@0.31.0) (2023-11-06)
+
+### Features
+
+* **controlplane:** avoid downloading config for latest check ([#236](https://github.com/wundergraph/cosmo/issues/236)) ([1929554](https://github.com/wundergraph/cosmo/commit/1929554e158548972cddacd3a59bca81133434a1)) (@StarpTech)
+* upgrade to stable connect & react-query 5 ([#231](https://github.com/wundergraph/cosmo/issues/231)) ([0c434eb](https://github.com/wundergraph/cosmo/commit/0c434eb41b357f596d19607cd2c8572f6a9899a1)) (@StarpTech)
+
+# [0.30.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.29.0...controlplane@0.30.0) (2023-11-03)
+
+### Features
+
+* use ch query cache for point query ([#228](https://github.com/wundergraph/cosmo/issues/228)) ([03a34e4](https://github.com/wundergraph/cosmo/commit/03a34e482cbbd24570be8dbc574e186d1680f62c)) (@StarpTech)
+
 # [0.29.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.28.2...controlplane@0.29.0) (2023-11-03)
 
 ### Bug Fixes

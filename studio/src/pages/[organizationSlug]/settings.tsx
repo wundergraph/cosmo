@@ -64,7 +64,7 @@ import {
   updateOrganizationDetails,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { useRouter } from "next/router";
-import { Dispatch, SetStateAction, useContext, useState } from "react";
+import { Dispatch, SetStateAction, useContext, useEffect, useState } from "react";
 import { z } from "zod";
 
 const OrganizationDetails = () => {
@@ -93,8 +93,15 @@ const OrganizationDetails = () => {
     mode: "onChange",
   });
 
-  const { mutate, isLoading } = useMutation(
-    updateOrganizationDetails.useMutation()
+  useEffect(() => {
+    if (!user?.currentOrganization) return;
+
+    form.setValue("organizationName", user.currentOrganization.name);
+    form.setValue("organizationSlug", user.currentOrganization.slug);
+  }, [form, user?.currentOrganization]);
+
+  const { mutate, isPending } = useMutation(
+    updateOrganizationDetails.useMutation(),
   );
 
   const { toast } = useToast();
@@ -125,7 +132,7 @@ const OrganizationDetails = () => {
             duration: 3000,
           });
         },
-      }
+      },
     );
   };
 
@@ -173,7 +180,7 @@ const OrganizationDetails = () => {
         />
         <Button
           className="ml-auto"
-          isLoading={isLoading}
+          isLoading={isPending}
           type="submit"
           disabled={
             !form.formState.isValid ||
@@ -353,7 +360,7 @@ const OpenIDConnectProvider = ({
 
   const { data: providerData, refetch } = useQuery(getOIDCProvider.useQuery());
 
-  const { mutate, isLoading, data } = useMutation(
+  const { mutate, isPending, data } = useMutation(
     createOIDCProvider.useMutation()
   );
 
@@ -514,7 +521,7 @@ const OpenIDConnectProvider = ({
                             duration: 3000,
                           });
                         },
-                      }
+                      },
                     );
                   }}
                 >
@@ -544,7 +551,7 @@ const OpenIDConnectProvider = ({
                 event.preventDefault();
               }}
             >
-              {isLoading ? (
+              {isPending ? (
                 <Loader />
               ) : (
                 <>
@@ -660,7 +667,7 @@ const OpenIDConnectProvider = ({
                             }}
                             disabled={!isValid}
                             variant="default"
-                            isLoading={isLoading}
+                            isLoading={isPending}
                           >
                             Connect
                           </Button>
@@ -749,7 +756,7 @@ const LeaveOrganization = () => {
   const router = useRouter();
   const [open, setOpen] = useState(false);
 
-  const { mutate, isLoading } = useMutation(leaveOrganization.useMutation());
+  const { mutate } = useMutation(leaveOrganization.useMutation());
 
   const { toast } = useToast();
 
@@ -776,7 +783,7 @@ const LeaveOrganization = () => {
             duration: 3000,
           });
         },
-      }
+      },
     );
     setOpen(false);
   };
@@ -845,7 +852,7 @@ const DeleteOrganization = () => {
     mode: "onChange",
   });
 
-  const { mutate, isLoading } = useMutation(deleteOrganization.useMutation());
+  const { mutate, isPending } = useMutation(deleteOrganization.useMutation());
 
   const { toast } = useToast();
 
@@ -872,7 +879,7 @@ const DeleteOrganization = () => {
             duration: 3000,
           });
         },
-      }
+      },
     );
     setOpen(false);
   };
@@ -940,7 +947,7 @@ const DeleteOrganization = () => {
                   </Button>
                   <Button
                     variant="destructive"
-                    isLoading={isLoading}
+                    isLoading={isPending}
                     type="submit"
                     disabled={!isValid}
                   >
@@ -979,7 +986,7 @@ SettingsDashboardPage.getLayout = (page) => {
   return getDashboardLayout(
     page,
     "Settings",
-    "Settings for this organization."
+    "Settings for this organization.",
   );
 };
 

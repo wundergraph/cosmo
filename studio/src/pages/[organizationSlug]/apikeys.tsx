@@ -74,7 +74,7 @@ const CreateAPIKeyDialog = ({
   const user = useContext(UserContext);
   const { toast } = useToast();
 
-  const { mutate, isLoading } = useMutation(createAPIKey.useMutation());
+  const { mutate, isPending } = useMutation(createAPIKey.useMutation());
 
   const expiresOptions = ["Never", "30 days", "6 months", "1 year"];
   const expiresOptionsMappingToEnum: {
@@ -133,7 +133,7 @@ const CreateAPIKeyDialog = ({
           });
           reset();
         },
-      }
+      },
     );
     setOpen(false);
   };
@@ -190,7 +190,7 @@ const CreateAPIKeyDialog = ({
             type="submit"
             disabled={!isValid}
             variant="default"
-            isLoading={isLoading}
+            isLoading={isPending}
           >
             Generate API key
           </Button>
@@ -215,7 +215,7 @@ const DeleteAPIKeyDialog = ({
 }) => {
   const { toast } = useToast();
 
-  const { mutate, isLoading } = useMutation(deleteAPIKey.useMutation());
+  const { mutate, isPending } = useMutation(deleteAPIKey.useMutation());
 
   const regex = new RegExp(`^${apiKeyName}$`);
   const schema = z.object({
@@ -257,7 +257,7 @@ const DeleteAPIKeyDialog = ({
           reset();
           setDeleteApiKeyName(undefined);
         },
-      }
+      },
     );
     setOpen(false);
   };
@@ -296,7 +296,7 @@ const DeleteAPIKeyDialog = ({
             type="submit"
             disabled={!isValid}
             variant="destructive"
-            isLoading={isLoading}
+            isLoading={isPending}
           >
             Delete API key
           </Button>
@@ -466,7 +466,7 @@ const APIKeysPage: NextPageWithLayout = () => {
 
   if (isLoading) return <Loader fullscreen />;
 
-  if (error || data.response?.code !== EnumStatusCode.OK)
+  if (error || data?.response?.code !== EnumStatusCode.OK)
     return (
       <EmptyState
         icon={<ExclamationTriangleIcon />}
@@ -598,7 +598,7 @@ const APIKeysPage: NextPageWithLayout = () => {
                         )}
                       </TableRow>
                     );
-                  }
+                  },
                 )}
               </>
             </TableBody>
@@ -613,7 +613,7 @@ APIKeysPage.getLayout = (page) => {
   return getDashboardLayout(
     page,
     "API Keys",
-    "Manage all the API keys of your organization"
+    "Manage all the API keys of your organization",
   );
 };
 

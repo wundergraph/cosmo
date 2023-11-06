@@ -97,7 +97,7 @@ const CheckOverviewPage: NextPageWithLayout = () => {
 
   const { data: allGraphsData } = useQuery(getFederatedGraphs.useQuery());
 
-  const { mutate: forceSuccess, isLoading: isForcingSuccess } = useMutation({
+  const { mutate: forceSuccess } = useMutation({
     ...forceCheckSuccess.useMutation(),
     onSuccess: (data) => {
       if (data.response?.code === EnumStatusCode.OK) {
@@ -120,7 +120,7 @@ const CheckOverviewPage: NextPageWithLayout = () => {
 
   if (isLoading) return <Loader fullscreen />;
 
-  if (error || data.response?.code !== EnumStatusCode.OK)
+  if (error || data?.response?.code !== EnumStatusCode.OK)
     return (
       <EmptyState
         icon={<ExclamationTriangleIcon />}

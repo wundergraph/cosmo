@@ -38,7 +38,7 @@ import {
   formatMetric,
   formatPercentMetric,
 } from "@/lib/format-metric";
-import { createDateRange, useChartData } from "@/lib/insights-helpers";
+import { useChartData } from "@/lib/insights-helpers";
 import { NextPageWithLayout } from "@/lib/page";
 import { cn } from "@/lib/utils";
 import {
@@ -46,7 +46,12 @@ import {
   ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
 import { UpdateIcon } from "@radix-ui/react-icons";
-import { useIsFetching, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useIsFetching,
+  useQuery,
+  useQueryClient,
+  keepPreviousData,
+} from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   getGraphMetrics,
@@ -212,7 +217,7 @@ const AnalyticsPage: NextPageWithLayout = () => {
           },
       filters,
     }),
-    keepPreviousData: true,
+    placeholderData: keepPreviousData,
     refetchOnWindowFocus: false,
     refetchInterval: refreshInterval,
   });
@@ -731,7 +736,7 @@ const ErrorRateOverTimeCard = () => {
           },
       filters,
     }),
-    keepPreviousData: true,
+    placeholderData: keepPreviousData,
     refetchOnWindowFocus: false,
     refetchInterval: refreshInterval,
   });
@@ -872,7 +877,7 @@ const OverviewToolbar = () => {
       range,
       filters,
     }),
-    keepPreviousData: true,
+    placeholderData: keepPreviousData,
     refetchOnWindowFocus: false,
   });
 
@@ -932,8 +937,12 @@ const OverviewToolbar = () => {
         <Button
           isLoading={!!isFetching}
           onClick={() => {
-            client.invalidateQueries(metrics.queryKey);
-            client.invalidateQueries(errorRate.queryKey);
+            client.invalidateQueries({
+              queryKey: metrics.queryKey,
+            });
+            client.invalidateQueries({
+              queryKey: errorRate.queryKey,
+            });
           }}
           variant="outline"
           className="px-3"
