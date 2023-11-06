@@ -26,7 +26,7 @@ const GraphsDashboardPage: NextPageWithLayout = () => {
 
   if (isLoading) return <Loader fullscreen />;
 
-  if (error || data.response?.code !== EnumStatusCode.OK)
+  if (error || data?.response?.code !== EnumStatusCode.OK)
     return (
       <EmptyState
         icon={<ExclamationTriangleIcon />}
@@ -45,7 +45,7 @@ GraphsDashboardPage.getLayout = (page) => {
   return getDashboardLayout(
     page,
     "Federated Graphs",
-    "View all your federated graphs"
+    "View all your federated graphs",
   );
 };
 

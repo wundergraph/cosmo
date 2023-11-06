@@ -163,7 +163,7 @@ const CheckOperationsPage: NextPageWithLayout = () => {
 
   if (isLoading) return <Loader fullscreen />;
 
-  if (error || data.response?.code !== EnumStatusCode.OK)
+  if (error || data?.response?.code !== EnumStatusCode.OK)
     return (
       <EmptyState
         icon={<ExclamationTriangleIcon />}
@@ -175,7 +175,7 @@ const CheckOperationsPage: NextPageWithLayout = () => {
       />
     );
 
-  if (data.operations.length === 0) {
+  if (data && data.operations.length === 0) {
     return (
       <EmptyState
         icon={<CheckCircleIcon className="text-success" />}

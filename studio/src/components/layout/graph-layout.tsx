@@ -43,7 +43,7 @@ export interface GraphContextProps {
 }
 
 export const GraphContext = createContext<GraphContextProps | undefined>(
-  undefined
+  undefined,
 );
 
 const GraphLayout = ({ children }: LayoutProps) => {
@@ -55,7 +55,7 @@ const GraphLayout = ({ children }: LayoutProps) => {
   const { data, isLoading, error, refetch } = useQuery(
     getFederatedGraphByName.useQuery({
       name: slug,
-    })
+    }),
   );
 
   const graphContextData = useMemo(() => {
@@ -114,7 +114,7 @@ const GraphLayout = ({ children }: LayoutProps) => {
 
   if (isLoading) {
     render = <Loader fullscreen />;
-  } else if (error || data.response?.code !== EnumStatusCode.OK) {
+  } else if (error || data?.response?.code !== EnumStatusCode.OK) {
     render = (
       <div className="my-auto">
         <EmptyState
@@ -150,7 +150,7 @@ const GraphLayout = ({ children }: LayoutProps) => {
                 Limited trial version (
                 {formatDistance(
                   addDays(new Date(user.currentOrganization.createdAt), 10),
-                  new Date()
+                  new Date(),
                 )}{" "}
                 left).{" "}
                 <span className="underline underline-offset-2">
