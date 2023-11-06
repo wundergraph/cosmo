@@ -115,7 +115,7 @@ export default class Keycloak {
     });
   }
 
-  public async getKeycloakUsers({ realm, orgSlug }: { realm?: string; orgSlug: string }) {
+  public async getKeycloakSsoLoggedInUsers({ realm, orgSlug }: { realm?: string; orgSlug: string }) {
     const users = await this.client.users.find({
       exact: true,
       idpAlias: orgSlug,
@@ -191,26 +191,21 @@ export default class Keycloak {
     orgSlug: string;
     keycloakGroupName: string;
   }) {
-    try {
-      const a = await this.client.identityProviders.createMapper({
-        alias: orgSlug,
-        realm: realm || this.realm,
-        identityProviderMapper: {
-          name: uid(10),
-          identityProviderMapper: 'oidc-advanced-group-idp-mapper',
-          identityProviderAlias: orgSlug,
-          config: {
-            claims,
-            syncMode: 'INHERIT',
-            group: keycloakGroupName,
-            'are.claim.values.regex': true,
-          },
+    await this.client.identityProviders.createMapper({
+      alias: orgSlug,
+      realm: realm || this.realm,
+      identityProviderMapper: {
+        name: uid(10),
+        identityProviderMapper: 'oidc-advanced-group-idp-mapper',
+        identityProviderAlias: orgSlug,
+        config: {
+          claims,
+          syncMode: 'INHERIT',
+          group: keycloakGroupName,
+          'are.claim.values.regex': true,
         },
-      });
-      console.log(a);
-    } catch (e) {
-      console.log(e);
-    }
+      },
+    });
   }
 
   public async seedGroup({

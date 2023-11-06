@@ -91,6 +91,8 @@ import {
 import Slack from '../services/Slack.js';
 import { formatSubscriptionProtocol, handleError, isValidLabelMatchers, isValidLabels } from '../util.js';
 import { FederatedGraphSchemaUpdate, OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
+import { OidcRepository } from '../repositories/OidcRepository.js';
+import OidcProvider from '../services/OidcProvider.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -3651,7 +3653,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
       return handleError<PlainMessage<CreateOIDCProviderResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const orgRepo = new OrganizationRepository(opts.db);
+        const oidcProvider = new OidcProvider();
 
         if (!authContext.isAdmin) {
           return {
@@ -3666,48 +3668,14 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         await opts.keycloakClient.authenticateClient();
 
-        await opts.keycloakClient.createOIDCProvider({
-          clientId: req.clientID,
-          clientSecret: req.clientSecrect,
-          discoveryEndpoint: req.discoveryEndpoint,
-          name: req.name,
-          realm: opts.keycloakRealm,
-          orgSlug: authContext.organizationSlug,
+        await oidcProvider.createOidcProvider({
+          kcClient: opts.keycloakClient,
+          kcRealm: opts.keycloakRealm,
+          organizationId: authContext.organizationId,
+          organizationSlug: authContext.organizationSlug,
+          db: opts.db,
+          input: req,
         });
-
-        const endpoint = req.discoveryEndpoint.split('/')[2];
-
-        await orgRepo.addOidcProvider({ name: req.name, organizationId: authContext.organizationId, endpoint });
-
-        for (const mapper of req.mappers) {
-          const claims = `[{ "key": "ssoGroups", "value": "${mapper.ssoGroup}" }]`;
-          let keycloakGroupName;
-
-          switch (mapper.role) {
-            case 'Admin': {
-              keycloakGroupName = `/${authContext.organizationSlug}/admin`;
-              break;
-            }
-            case 'Member': {
-              keycloakGroupName = `/${authContext.organizationSlug}`;
-              break;
-            }
-            case 'Viewer': {
-              keycloakGroupName = `/${authContext.organizationSlug}/viewer`;
-              break;
-            }
-            default: {
-              throw new Error(`The role ${mapper.role} doesn't exist `);
-            }
-          }
-
-          await opts.keycloakClient.createIDPMapper({
-            realm: opts.keycloakRealm,
-            orgSlug: authContext.organizationSlug,
-            claims,
-            keycloakGroupName,
-          });
-        }
 
         return {
           response: {
@@ -3727,11 +3695,11 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
       return handleError<PlainMessage<GetOIDCProviderResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const orgRepo = new OrganizationRepository(opts.db);
+        const oidcRepo = new OidcRepository(opts.db);
 
         await opts.keycloakClient.authenticateClient();
 
-        const provider = await orgRepo.getOidcProvider({ organizationId: authContext.organizationId });
+        const provider = await oidcRepo.getOidcProvider({ organizationId: authContext.organizationId });
         if (!provider) {
           return {
             response: {
@@ -3761,6 +3729,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<DeleteOIDCProviderResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db);
+        const oidcProvider = new OidcProvider();
 
         if (!authContext.isAdmin) {
           return {
@@ -3783,43 +3752,14 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const keycloakUsers = await opts.keycloakClient.getKeycloakUsers({
-          realm: opts.keycloakRealm,
-          orgSlug: authContext.organizationSlug,
+        await oidcProvider.deleteOidcProvider({
+          kcClient: opts.keycloakClient,
+          kcRealm: opts.keycloakRealm,
+          organizationId: authContext.organizationId,
+          organizationSlug: authContext.organizationSlug,
+          orgCreatorUserId: organization.creatorUserId,
+          db: opts.db,
         });
-
-        for (const user of keycloakUsers) {
-          if (user.id === organization.creatorUserId) {
-            continue;
-          }
-          const keycloakUserGroups = await opts.keycloakClient.getKeycloakUserGroups({
-            realm: opts.keycloakRealm,
-            userID: user.id || '',
-          });
-
-          for (const group of keycloakUserGroups) {
-            if (!group.path?.includes(authContext.organizationSlug) || group.path?.includes('viewer')) {
-              continue;
-            }
-            await opts.keycloakClient.client.users.delFromGroup({
-              id: user.id || '',
-              groupId: group.id || '',
-              realm: opts.keycloakRealm,
-            });
-          }
-
-          await opts.keycloakClient.client.users.logout({
-            id: user.id || '',
-            realm: opts.keycloakRealm,
-          });
-        }
-
-        await opts.keycloakClient.deleteOIDCProvider({
-          realm: opts.keycloakRealm,
-          orgSlug: authContext.organizationSlug,
-        });
-
-        await orgRepo.deleteOidcProvider({ organizationId: authContext.organizationId });
 
         return {
           response: {
