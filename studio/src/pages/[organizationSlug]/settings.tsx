@@ -36,6 +36,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Loader } from "@/components/ui/loader";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
@@ -49,7 +50,7 @@ import {
   updateOrganizationDetails,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { useRouter } from "next/router";
-import { useContext, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { z } from "zod";
 
 const OrganizationDetails = () => {
@@ -77,6 +78,13 @@ const OrganizationDetails = () => {
     schema,
     mode: "onChange",
   });
+
+  useEffect(() => {
+    if (!user?.currentOrganization) return;
+
+    form.setValue("organizationName", user.currentOrganization.name);
+    form.setValue("organizationSlug", user.currentOrganization.slug);
+  }, [form, user?.currentOrganization]);
 
   const { mutate, isPending } = useMutation(
     updateOrganizationDetails.useMutation(),
