@@ -736,14 +736,13 @@ export class AnalyticsRequestViewRepository {
      */
     if (!Array.isArray(result) || result.length === 0) {
       const defaultColumns = buildColumnsFromNames(Object.keys(columnFilters), columnMetaData);
-      const defaultFilters = Object.values(columnFilters).map(
-        (f) =>
-          ({
-            columnName: f.columnName,
-            title: f.title,
-            options: f.options,
-          } as PlainMessage<AnalyticsViewResultFilter>),
-      );
+      const defaultFilters = Object.values(columnFilters).map((f) => {
+        return {
+          columnName: f.columnName,
+          title: f.title,
+          options: f.options,
+        } as PlainMessage<AnalyticsViewResultFilter>;
+      });
 
       return {
         columns: defaultColumns,
