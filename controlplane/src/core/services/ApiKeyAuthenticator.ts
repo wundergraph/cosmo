@@ -71,7 +71,7 @@ export default class ApiKeyAuthenticator {
       organizationSlug: organization.slug,
       // sending true as the api key has admin permissions
       isAdmin: true,
-      hasWriteAccess: true
+      hasWriteAccess: true,
     };
   }
 }
