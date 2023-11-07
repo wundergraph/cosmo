@@ -38,7 +38,7 @@ export const federatedGraphConfigs = pgTable('federated_graph_configs', {
   trafficCheckDays: integer('traffic_check_days').notNull().default(7),
 });
 
-export const subscriptionProtocolEnum = pgEnum('subscription_protocol', ['ws', 'sse', 'sse_post']);
+export const subscriptionProtocolEnum = pgEnum('subscription_protocol', ['ws', 'sse', 'sse_post'] as const);
 
 export const subgraphs = pgTable('subgraphs', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -116,7 +116,7 @@ export const federatedGraphToSubgraphsRelations = relations(subgraphsToFederated
   }),
 }));
 
-export const targetTypeEnum = pgEnum('target_type', ['federated', 'subgraph', 'graph']);
+export const targetTypeEnum = pgEnum('target_type', ['federated', 'subgraph', 'graph'] as const);
 
 export const targets = pgTable(
   'targets',
@@ -256,7 +256,7 @@ export const schemaChangeTypeEnum = pgEnum('schema_change_type', [
   'TYPE_DESCRIPTION_ADDED',
   'UNION_MEMBER_REMOVED',
   'UNION_MEMBER_ADDED',
-]);
+] as const);
 
 export const schemaVersionChangeAction = pgTable('schema_version_change_action', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -502,7 +502,7 @@ export const organizationRelations = relations(organizations, ({ many }) => ({
   graphApiTokens: many(graphApiTokens),
 }));
 
-export const memberRoleEnum = pgEnum('member_role', ['admin', 'developer', 'viewer']);
+export const memberRoleEnum = pgEnum('member_role', ['admin', 'developer', 'viewer'] as const);
 
 export const organizationMemberRoles = pgTable(
   'organization_member_roles',
@@ -583,7 +583,7 @@ export const organizationWebhookRelations = relations(organizationWebhooks, ({ m
   webhookGraphSchemaUpdate: many(webhookGraphSchemaUpdate),
 }));
 
-export const gitInstallationTypeEnum = pgEnum('git_installation_type', ['PERSONAL', 'ORGANIZATION']);
+export const gitInstallationTypeEnum = pgEnum('git_installation_type', ['PERSONAL', 'ORGANIZATION'] as const);
 
 export const gitInstallations = pgTable('git_installations', {
   id: uuid('id').notNull().primaryKey().defaultRandom(),
@@ -596,7 +596,7 @@ export const gitInstallations = pgTable('git_installations', {
   oauthToken: text('oauth_token'),
 });
 
-export const integrationTypeEnum = pgEnum('integration_type', ['slack']);
+export const integrationTypeEnum = pgEnum('integration_type', ['slack'] as const);
 
 export const organizationIntegrations = pgTable(
   'organization_integrations',

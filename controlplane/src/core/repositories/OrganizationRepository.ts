@@ -6,8 +6,9 @@ import {
   IntegrationConfig,
   IntegrationType,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { and, asc, eq, desc } from 'drizzle-orm';
+import { and, asc, eq } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { MemberRole } from 'src/db/models.js';
 import * as schema from '../../db/schema.js';
 import {
   apiKeys,
@@ -17,13 +18,12 @@ import {
   organizationWebhooks,
   organizations,
   organizationsMembers,
-  slackSchemaUpdateEventConfigs,
   slackIntegrationConfigs,
+  slackSchemaUpdateEventConfigs,
   targets,
-  users,
-  oidcProviders,
+  users
 } from '../../db/schema.js';
-import { APIKeyDTO, MemberRole, OrganizationDTO, OrganizationMemberDTO, WebhooksConfigDTO } from '../../types/index.js';
+import { APIKeyDTO, OrganizationDTO, OrganizationMemberDTO, WebhooksConfigDTO } from '../../types/index.js';
 
 /**
  * Repository for organization related operations.

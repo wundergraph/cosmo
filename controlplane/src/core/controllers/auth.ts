@@ -5,8 +5,9 @@ import { eq } from 'drizzle-orm';
 import { lru } from 'tiny-lru';
 import { uid } from 'uid';
 import { PlatformEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
+import { MemberRole } from 'src/db/models.js';
 import { decodeJWT, DEFAULT_SESSION_MAX_AGE_SEC, encrypt } from '../crypto/jwt.js';
-import { CustomAccessTokenClaims, MemberRole, UserInfoEndpointResponse, UserSession } from '../../types/index.js';
+import { CustomAccessTokenClaims, UserInfoEndpointResponse, UserSession } from '../../types/index.js';
 import * as schema from '../../db/schema.js';
 import { organizationMemberRoles, organizations, organizationsMembers, sessions, users } from '../../db/schema.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
@@ -180,30 +181,13 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
                 .returning()
                 .execute();
 
-              const stringRole = kcGroup.split('/')?.[2] || 'developer';
-              let role: MemberRole;
-              switch (stringRole) {
-                case 'admin': {
-                  role = 'admin';
-                  break;
-                }
-                case 'developer': {
-                  role = 'developer';
-                  break;
-                }
-                case 'viewer': {
-                  role = 'viewer';
-                  break;
-                }
-                default: {
-                  throw new Error(`Role ${stringRole} does not exist.`);
-                }
-              }
+              const role = kcGroup.split('/')?.[2] || 'developer';
+          
               await tx
                 .insert(organizationMemberRoles)
                 .values({
                   organizationMemberId: insertedMember[0].id,
-                  role,
+                  role: role as MemberRole,
                 })
                 .execute();
             }
