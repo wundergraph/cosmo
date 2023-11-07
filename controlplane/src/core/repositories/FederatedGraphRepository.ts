@@ -25,6 +25,7 @@ import { normalizeLabelMatchers, normalizeLabels } from '../util.js';
 import { Composer } from '../composition/composer.js';
 import { SchemaDiff } from '../composition/schemaCheck.js';
 import { SubgraphRepository } from './SubgraphRepository.js';
+import { Target } from 'src/db/models.js';
 
 export interface FederatedGraphConfig {
   trafficCheckDays: number;
@@ -224,6 +225,22 @@ export class FederatedGraphRepository {
     return federatedGraphs;
   }
 
+  public async targetByName(name: string): Promise<Target | undefined> {
+    const resp = await this.db.query.targets.findFirst({
+      where: and(
+        eq(schema.targets.name, name),
+        eq(schema.targets.organizationId, this.organizationId),
+        eq(schema.targets.type, 'federated'),
+      ),
+    });
+
+    if (!resp) {
+      return undefined;
+    }
+
+    return resp;
+  }
+
   public async byName(name: string): Promise<FederatedGraphDTO | undefined> {
     const resp = await this.db.query.targets.findFirst({
       where: and(
@@ -404,6 +421,18 @@ export class FederatedGraphRepository {
     return res !== undefined;
   }
 
+  public async isLatestValidRouterConfigVersion(targetId: string, schemaVersionId: string): Promise<boolean> {
+    const latestVersion = await this.db.query.schemaVersion.findFirst({
+      columns: {
+        id: true,
+      },
+      where: and(eq(schema.schemaVersion.targetId, targetId), eq(schema.schemaVersion.isComposable, true)),
+      orderBy: desc(schema.schemaVersion.createdAt),
+    });
+
+    return latestVersion?.id === schemaVersionId;
+  }
+
   public async getLatestValidRouterConfig(targetId: string): Promise<
     | {
         config: RouterConfig;
@@ -412,6 +441,10 @@ export class FederatedGraphRepository {
     | undefined
   > {
     const latestVersion = await this.db.query.schemaVersion.findFirst({
+      columns: {
+        id: true,
+        routerConfig: true,
+      },
       where: and(eq(schema.schemaVersion.targetId, targetId), eq(schema.schemaVersion.isComposable, true)),
       orderBy: desc(schema.schemaVersion.createdAt),
     });
