@@ -22,6 +22,12 @@ interface DataTablePaginationProps<TData> {
 export function DataTablePagination<TData>({
   table,
 }: DataTablePaginationProps<TData>) {
+  const pageIndex = table.getState().pagination.pageIndex ?? 0
+  const total = table.getPageCount()
+  if (!total) {
+    return null
+  }
+
   return (
     <div className="flex items-center justify-between px-2 py-4">
       <div className="flex-1"></div>
@@ -49,7 +55,7 @@ export function DataTablePagination<TData>({
         <div className="flex w-[100px] items-center justify-center text-sm font-medium">
           Page{" "}
           {Math.min(
-            table.getState().pagination.pageIndex + 1,
+            pageIndex + 1,
             table.getPageCount()
           )}{" "}
           of {table.getPageCount()}
