@@ -84,7 +84,7 @@ Password: bar
 - [Docker Compose V2](https://docs.docker.com/compose/install/)
 - [NodeJS 18+](https://nodejs.org/en/download/)
 - [PNPM 8+](https://pnpm.io/installation)
-- [Go 1.20+](https://golang.org/doc/install)
+- [Go 1.21+](https://golang.org/doc/install)
 
 Bootstrapping your development environment is easy. Just run the following commands in order:
 
