@@ -423,9 +423,9 @@ export class AnalyticsRequestViewRepository {
 
     const allOperationNamesQuery = `
       SELECT DISTINCT OperationName, OrganizationID, FederatedGraphID
-      FROM ${this.client.database}.traces_by_operation_quarter_hourly_mv
+        FROM ${this.client.database}.traces_by_operation_quarter_hourly_mv
       WHERE ${whereSql}
-      ORDER BY Timestamp DESC
+        ORDER BY Timestamp DESC
       LIMIT 100
     `;
 
@@ -701,12 +701,21 @@ export class AnalyticsRequestViewRepository {
     const baseFiltersForGroup = this.getBaseFiltersForGroup(name);
     const shouldExecute = (columnName: string) => Object.keys(baseFiltersForGroup).includes(columnName);
 
+    // we can't use the same whereSql as we need all values for the filters.
+    // @todo include counts for each filter value.
+    const { whereSql: filterWhereSql } = buildCoercedFilterSqlStatement(
+      columnMetaData,
+      coercedQueryParams,
+      {},
+      opts?.dateRange,
+    );
+
     // We shall execute these only when we have desired results
     const [allOperationNames, allClientNames, allClientVersions, allStatusMessages] = await Promise.all([
-      this.getAllOperationNames(whereSql, coercedQueryParams, shouldExecute('operationName')),
-      this.getAllClients(whereSql, coercedQueryParams, shouldExecute('clientName')),
-      this.getAllClientVersions(clientNames, whereSql, coercedQueryParams, shouldExecute('clientVersion')),
-      this.getAllHttpStatusCodes(whereSql, coercedQueryParams, shouldExecute('httpStatusCode')),
+      this.getAllOperationNames(filterWhereSql, coercedQueryParams, shouldExecute('operationName')),
+      this.getAllClients(filterWhereSql, coercedQueryParams, shouldExecute('clientName')),
+      this.getAllClientVersions(clientNames, filterWhereSql, coercedQueryParams, shouldExecute('clientVersion')),
+      this.getAllHttpStatusCodes(filterWhereSql, coercedQueryParams, shouldExecute('httpStatusCode')),
     ]);
 
     const columnFilters = this.getFilters(
