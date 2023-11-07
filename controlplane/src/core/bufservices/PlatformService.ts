@@ -2108,9 +2108,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               },
             };
           }
-          const userMemberships = await orgRepo.memberships({
-            userId: user.id,
-          });
         }
 
         const organization = await orgRepo.byId(authContext.organizationId);
@@ -2125,15 +2122,21 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const groupName = organization.slug;
 
-        const organizationGroup = await opts.keycloakClient.client.groups.find({
+        const organizationGroups = await opts.keycloakClient.client.groups.find({
           max: 1,
           search: groupName,
           realm: opts.keycloakRealm,
         });
 
-        if (organizationGroup.length === 0) {
+        if (organizationGroups.length === 0) {
           throw new Error(`Organization group '${groupName}' not found`);
         }
+
+        const devGroup = await opts.keycloakClient.fetchDevChildGroup({
+          realm: opts.keycloakRealm,
+          kcGroupId: organizationGroups[0].id!,
+          orgSlug: groupName,
+        });
 
         const keycloakUser = await opts.keycloakClient.client.users.find({
           max: 1,
@@ -2162,11 +2165,11 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         });
 
         if (userGroups.length === 0) {
-          // By default, all invited users are added to the top-level organization group
+          // By default, all invited users are added to the developer group of the org
           // This is the at least privilege approach
           await opts.keycloakClient.client.users.addToGroup({
             id: keycloakUserID!,
-            groupId: organizationGroup[0].id!,
+            groupId: devGroup.id!,
             realm: opts.keycloakRealm,
           });
         }
@@ -3107,6 +3110,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
+        // fetching the user who is updating the other member's role.
         const user = await orgRepo.getOrganizationMember({
           organizationID: authContext.organizationId,
           userID: authContext.userId || req.userID,
@@ -3131,6 +3135,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
+        // fetching the user whose role isbeing updated.
         const orgMember = await orgRepo.getOrganizationMember({
           organizationID: authContext.organizationId,
           userID: req.orgMemberUserID,
@@ -3150,6 +3155,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const users = await opts.keycloakClient.client.users.find({
           realm: opts.keycloakRealm,
           email: orgMember.email,
+          exact: true,
         });
 
         if (users.length === 0) {
@@ -3161,43 +3167,70 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const organizationGroup = await opts.keycloakClient.client.groups.find({
+        // checking if the user has logged in using the sso
+        const ssoUser = await opts.keycloakClient.client.users.find({
+          realm: opts.keycloakRealm,
+          email: orgMember.email,
+          exact: true,
+          idpAlias: org.slug,
+        });
+
+        if (ssoUser.length > 0) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: 'User has logged in using the OIDC provider. Please update the role using the provider.',
+            },
+          };
+        }
+
+        const organizationGroups = await opts.keycloakClient.client.groups.find({
           max: 1,
           search: org.slug,
           realm: opts.keycloakRealm,
           briefRepresentation: false,
         });
 
-        if (organizationGroup.length === 0) {
+        if (organizationGroups.length === 0) {
           throw new Error(`Organization group '${org.slug}' not found`);
         }
 
-        const childGroups = await opts.keycloakClient.client.groups.find({
-          search: 'admin',
+        const adminChildGroup = await opts.keycloakClient.fetchAdminChildGroup({
           realm: opts.keycloakRealm,
+          orgSlug: org.slug,
+          kcGroupId: organizationGroups[0].id!,
         });
 
-        if (childGroups.length === 0) {
-          throw new Error(`Organization group '${org.slug}' does not have any child groups`);
-        }
+        const devChildGroup = await opts.keycloakClient.fetchDevChildGroup({
+          realm: opts.keycloakRealm,
+          orgSlug: org.slug,
+          kcGroupId: organizationGroups[0].id!,
+        });
 
-        const childGroup = childGroups.find((group) => group.id === organizationGroup[0].id)?.subGroups?.[0];
-
-        if (!childGroup) {
-          throw new Error(`Organization group '${org.slug}' does not have any child groups`);
-        }
+        const viewerChildGroup = await opts.keycloakClient.fetchViewerChildGroup({
+          realm: opts.keycloakRealm,
+          orgSlug: org.slug,
+          kcGroupId: organizationGroups[0].id!,
+        });
 
         if (req.role === 'admin') {
-          await opts.keycloakClient.client.users.delFromGroup({
-            id: users[0].id!,
-            realm: opts.keycloakRealm,
-            groupId: organizationGroup[0].id!,
-          });
-
+          if (req.currentRole === 'developer') {
+            await opts.keycloakClient.client.users.delFromGroup({
+              id: users[0].id!,
+              realm: opts.keycloakRealm,
+              groupId: devChildGroup.id!,
+            });
+          } else if (req.currentRole === 'viewer') {
+            await opts.keycloakClient.client.users.delFromGroup({
+              id: users[0].id!,
+              realm: opts.keycloakRealm,
+              groupId: viewerChildGroup.id!,
+            });
+          }
           await opts.keycloakClient.client.users.addToGroup({
             id: users[0].id!,
             realm: opts.keycloakRealm,
-            groupId: childGroup.id!,
+            groupId: adminChildGroup.id!,
           });
 
           await orgRepo.updateUserRole({
@@ -3209,13 +3242,13 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           await opts.keycloakClient.client.users.addToGroup({
             id: users[0].id!,
             realm: opts.keycloakRealm,
-            groupId: organizationGroup[0].id!,
+            groupId: devChildGroup.id!,
           });
 
           await opts.keycloakClient.client.users.delFromGroup({
             id: users[0].id!,
             realm: opts.keycloakRealm,
-            groupId: childGroup.id!,
+            groupId: adminChildGroup.id!,
           });
 
           await orgRepo.updateUserRole({

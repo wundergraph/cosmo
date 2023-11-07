@@ -239,4 +239,88 @@ export default class Keycloak {
       groupId: adminGroup.id,
     });
   }
+
+  public async fetchAdminChildGroup({
+    realm,
+    orgSlug,
+    kcGroupId,
+  }: {
+    realm?: string;
+    orgSlug: string;
+    kcGroupId: string;
+  }) {
+    const orgGroups = await this.client.groups.find({
+      search: 'admin',
+      realm: realm || this.realm,
+    });
+
+    if (orgGroups.length === 0) {
+      throw new Error(`Organization group '${orgSlug}' does not have any child groups`);
+    }
+
+    const adminOrgGroup = orgGroups.find((group) => group.id === kcGroupId);
+    const adminChildGroup = adminOrgGroup?.subGroups?.find((group) => group.path === `/${orgSlug}/admin`);
+
+    if (!adminChildGroup) {
+      throw new Error(`Organization child group '/${orgSlug}/admin' not found`);
+    }
+
+    return adminChildGroup;
+  }
+
+  public async fetchDevChildGroup({
+    realm,
+    orgSlug,
+    kcGroupId,
+  }: {
+    realm?: string;
+    orgSlug: string;
+    kcGroupId: string;
+  }) {
+    const orgGroups = await this.client.groups.find({
+      search: 'developer',
+      realm: realm || this.realm,
+    });
+
+    if (orgGroups.length === 0) {
+      throw new Error(`Organization group '${orgSlug}' does not have any child groups`);
+    }
+
+    const devOrgGroup = orgGroups.find((group) => group.id === kcGroupId);
+    const devChildGroup = devOrgGroup?.subGroups?.find((group) => group.path === `/${orgSlug}/developer`);
+
+    if (!devChildGroup) {
+      throw new Error(`Organization child group '/${orgSlug}/developer' not found`);
+    }
+
+    return devChildGroup;
+  }
+
+  public async fetchViewerChildGroup({
+    realm,
+    orgSlug,
+    kcGroupId,
+  }: {
+    realm?: string;
+    orgSlug: string;
+    kcGroupId: string;
+  }) {
+    const orgGroups = await this.client.groups.find({
+      search: 'viewer',
+      realm: realm || this.realm,
+    });
+
+    if (orgGroups.length === 0) {
+      throw new Error(`Organization group '${orgSlug}' does not have any child groups`);
+    }
+
+    const viewerOrgGroup = orgGroups.find((group) => group.id === kcGroupId);
+    const viewerChildGroup = viewerOrgGroup?.subGroups?.find((group) => group.path === `/${orgSlug}/viewer`);
+
+    if (!viewerChildGroup) {
+      throw new Error(`Organization child group '/${orgSlug}/viewer' not found`);
+    }
+
+    return viewerChildGroup;
+  }
 }

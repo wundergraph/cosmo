@@ -66,13 +66,6 @@ try {
     process.exit(0);
   }
 
-  if (!(await keycloakClient.roleExists({ realm, roleName: 'admin' }))) {
-    await keycloakClient.createRole({
-      realm,
-      roleName: 'admin',
-    });
-  }
-
   const organizationGroup = await keycloakClient.client.groups.create({
     realm,
     name: user.organization.slug,

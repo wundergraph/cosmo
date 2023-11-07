@@ -222,6 +222,7 @@ const MemberCard = ({
                         userID: user?.id,
                         orgMemberUserID: memberUserID,
                         role: role === "admin" ? "developer" : "admin",
+                        currentRole: role,
                       },
                       {
                         onSuccess: (d) => {
@@ -248,7 +249,9 @@ const MemberCard = ({
                     );
                   }}
                 >
-                  {role === "admin" ? "Demote to developer" : "Promote to admin"}
+                  {role === "admin"
+                    ? "Demote to developer"
+                    : "Promote to admin"}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

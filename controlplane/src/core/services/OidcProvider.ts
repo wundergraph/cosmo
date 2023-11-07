@@ -48,7 +48,7 @@ export default class OidcProvider {
           break;
         }
         case 'Developer': {
-          keycloakGroupName = `/${organizationSlug}`;
+          keycloakGroupName = `/${organizationSlug}/developer`;
           break;
         }
         case 'Viewer': {
@@ -56,7 +56,7 @@ export default class OidcProvider {
           break;
         }
         default: {
-          throw new Error(`The role ${mapper.role} doesn't exist `);
+          throw new Error(`The role ${mapper.role} doesn't exist.`);
         }
       }
 
