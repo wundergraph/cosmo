@@ -680,8 +680,9 @@ export class AnalyticsRequestViewRepository {
 
     // Important: This is the only place where we scope the data to a particular organization and graph.
     // We can only filter for data that is part of the JWT token otherwise a user could send us whatever they want.
-    whereSql += ` AND FederatedGraphID = '${federatedGraphId}'`;
-    whereSql += ` AND OrganizationID = '${organizationId}'`;
+    const scopedSql = ` AND FederatedGraphID = '${federatedGraphId}' AND OrganizationID = '${organizationId}'`;
+
+    whereSql += scopedSql;
 
     const [result, totalCount] = await Promise.all([
       this.getViewData(name, whereSql, havingSql, paginationSql, coercedQueryParams, orderSql),
@@ -703,12 +704,14 @@ export class AnalyticsRequestViewRepository {
 
     // we can't use the same whereSql as we need all values for the filters.
     // @todo include counts for each filter value.
-    const { whereSql: filterWhereSql } = buildCoercedFilterSqlStatement(
+    let { whereSql: filterWhereSql } = buildCoercedFilterSqlStatement(
       columnMetaData,
       coercedQueryParams,
       {},
       opts?.dateRange,
     );
+
+    filterWhereSql += scopedSql;
 
     // We shall execute these only when we have desired results
     const [allOperationNames, allClientNames, allClientVersions, allStatusMessages] = await Promise.all([
