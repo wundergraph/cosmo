@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/wundergraph/cosmo/router/internal/docker"
 	"github.com/wundergraph/cosmo/router/internal/otel"
 	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"github.com/wundergraph/cosmo/router/internal/trace"
@@ -78,67 +79,74 @@ func (ct *CustomTransport) RoundTrip(req *http.Request) (*http.Response, error) 
 }
 
 type TransportFactory struct {
-	preHandlers    []TransportPreHandler
-	postHandlers   []TransportPostHandler
-	retryOptions   retrytransport.RetryOptions
-	requestTimeout time.Duration
-	logger         *zap.Logger
+	preHandlers                   []TransportPreHandler
+	postHandlers                  []TransportPostHandler
+	retryOptions                  retrytransport.RetryOptions
+	requestTimeout                time.Duration
+	localhostFallbackInsideDocker bool
+	logger                        *zap.Logger
 }
 
 var _ ApiTransportFactory = TransportFactory{}
 
 type TransportOptions struct {
-	preHandlers    []TransportPreHandler
-	postHandlers   []TransportPostHandler
-	retryOptions   retrytransport.RetryOptions
-	requestTimeout time.Duration
-	logger         *zap.Logger
+	PreHandlers                   []TransportPreHandler
+	PostHandlers                  []TransportPostHandler
+	RetryOptions                  retrytransport.RetryOptions
+	RequestTimeout                time.Duration
+	LocalhostFallbackInsideDocker bool
+	Logger                        *zap.Logger
 }
 
 func NewTransport(opts *TransportOptions) *TransportFactory {
 	return &TransportFactory{
-		preHandlers:    opts.preHandlers,
-		postHandlers:   opts.postHandlers,
-		logger:         opts.logger,
-		retryOptions:   opts.retryOptions,
-		requestTimeout: opts.requestTimeout,
+		preHandlers:                   opts.PreHandlers,
+		postHandlers:                  opts.PostHandlers,
+		retryOptions:                  opts.RetryOptions,
+		requestTimeout:                opts.RequestTimeout,
+		localhostFallbackInsideDocker: opts.LocalhostFallbackInsideDocker,
+		logger:                        opts.Logger,
 	}
 }
 
 func (t TransportFactory) RoundTripper(transport http.RoundTripper, enableStreamingMode bool) http.RoundTripper {
+	if t.localhostFallbackInsideDocker && docker.Inside() {
+		transport = docker.NewLocalhostFallbackRoundTripper(transport)
+	}
+	traceTransport := trace.NewTransport(
+		transport,
+		[]otelhttp.Option{
+			otelhttp.WithSpanNameFormatter(SpanNameFormatter),
+			otelhttp.WithSpanOptions(otrace.WithAttributes(otel.EngineTransportAttribute)),
+		},
+		trace.WithPreHandler(func(r *http.Request) {
+			span := otrace.SpanFromContext(r.Context())
+			reqContext := getRequestContext(r.Context())
+			operation := reqContext.operation
+
+			if operation != nil {
+				if operation.name != "" {
+					span.SetAttributes(otel.WgOperationName.String(operation.name))
+				}
+				if operation.opType != "" {
+					span.SetAttributes(otel.WgOperationType.String(operation.opType))
+				}
+				if operation.hash != 0 {
+					span.SetAttributes(otel.WgOperationHash.String(strconv.FormatUint(operation.hash, 10)))
+				}
+			}
+
+			subgraph := reqContext.ActiveSubgraph(r)
+			if subgraph != nil {
+				span.SetAttributes(otel.WgSubgraphID.String(subgraph.Id))
+				span.SetAttributes(otel.WgSubgraphName.String(subgraph.Name))
+			}
+
+		}),
+	)
 	tp := NewCustomTransport(
 		t.logger,
-		trace.NewTransport(
-			transport,
-			[]otelhttp.Option{
-				otelhttp.WithSpanNameFormatter(SpanNameFormatter),
-				otelhttp.WithSpanOptions(otrace.WithAttributes(otel.EngineTransportAttribute)),
-			},
-			trace.WithPreHandler(func(r *http.Request) {
-				span := otrace.SpanFromContext(r.Context())
-				reqContext := getRequestContext(r.Context())
-				operation := reqContext.operation
-
-				if operation != nil {
-					if operation.name != "" {
-						span.SetAttributes(otel.WgOperationName.String(operation.name))
-					}
-					if operation.opType != "" {
-						span.SetAttributes(otel.WgOperationType.String(operation.opType))
-					}
-					if operation.hash != 0 {
-						span.SetAttributes(otel.WgOperationHash.String(strconv.FormatUint(operation.hash, 10)))
-					}
-				}
-
-				subgraph := reqContext.ActiveSubgraph(r)
-				if subgraph != nil {
-					span.SetAttributes(otel.WgSubgraphID.String(subgraph.Id))
-					span.SetAttributes(otel.WgSubgraphName.String(subgraph.Name))
-				}
-
-			}),
-		),
+		traceTransport,
 		t.retryOptions,
 	)
 
