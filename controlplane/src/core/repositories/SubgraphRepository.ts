@@ -41,7 +41,10 @@ export interface UpdateSubgraphOptions {
  * Repository for managing subgraphs.
  */
 export class SubgraphRepository {
-  constructor(private db: PostgresJsDatabase<typeof schema>, private organizationId: string) {}
+  constructor(
+    private db: PostgresJsDatabase<typeof schema>,
+    private organizationId: string,
+  ) {}
 
   public create(data: Subgraph): Promise<SubgraphDTO | undefined> {
     const uniqueLabels = normalizeLabels(data.labels);

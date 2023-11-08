@@ -35,7 +35,10 @@ export interface FederatedGraphConfig {
  * Repository for managing V1 federated graphs.
  */
 export class FederatedGraphRepository {
-  constructor(private db: PostgresJsDatabase<typeof schema>, private organizationId: string) {}
+  constructor(
+    private db: PostgresJsDatabase<typeof schema>,
+    private organizationId: string,
+  ) {}
 
   public create(data: { name: string; routingUrl: string; labelMatchers: string[] }): Promise<FederatedGraphDTO> {
     return this.db.transaction(async (tx) => {
@@ -746,7 +749,7 @@ export class FederatedGraphRepository {
           name: token.name,
           createdAt: token.createdAt.toISOString(),
           token: token.token,
-        } as GraphApiKeyDTO),
+        }) as GraphApiKeyDTO,
     );
   }
 }
