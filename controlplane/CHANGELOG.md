@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.31.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.31.0...controlplane@0.31.1) (2023-11-07)
+
+### Bug Fixes
+
+* optimize analytics filter queries ([#242](https://github.com/wundergraph/cosmo/issues/242)) ([23bc1f4](https://github.com/wundergraph/cosmo/commit/23bc1f4cdafcb0d0559a06e827992186d9d4f4c0)) (@Pagebakers)
+
 # [0.31.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.30.0...controlplane@0.31.0) (2023-11-06)
 
 ### Features
