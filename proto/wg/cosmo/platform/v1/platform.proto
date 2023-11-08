@@ -940,6 +940,41 @@ message IsGitHubAppInstalledResponse {
   bool is_installed = 2;
 }
 
+message GroupMapper {
+  string role = 1;
+  string ssoGroup = 2;
+}
+
+message CreateOIDCProviderRequest {
+  string name = 1;
+  string discoveryEndpoint = 2;
+  string clientID = 3;
+  string clientSecrect = 4;
+  repeated GroupMapper mappers = 5;
+}
+
+message CreateOIDCProviderResponse {
+  Response response = 1;
+  string signInURL = 2;
+  string signOutURL = 3;
+  string loginURL = 4;
+}
+
+message GetOIDCProviderRequest {}
+
+message GetOIDCProviderResponse {
+  Response response = 1;
+  string name = 2;
+  string endpoint = 3;
+  string loginURL = 4;
+}
+
+message DeleteOIDCProviderRequest {}
+
+message DeleteOIDCProviderResponse {
+  Response response = 1;
+}
+
 message GetFieldUsageRequest {
   string graph_name = 1;
   optional string namedType = 2;
@@ -1083,6 +1118,13 @@ service PlatformService {
 
   // IsGitHubAppInstalled checks if the cosmo github app is installed to a repository
   rpc IsGitHubAppInstalled(IsGitHubAppInstalledRequest) returns (IsGitHubAppInstalledResponse) {}
+
+  // CreateOIDCProvider adds an oidc provider to the organization
+  rpc CreateOIDCProvider(CreateOIDCProviderRequest) returns (CreateOIDCProviderResponse) {}
+  // GetOIDCProvider gets the oidc provider connected the organization
+  rpc GetOIDCProvider(GetOIDCProviderRequest) returns (GetOIDCProviderResponse) {}
+  // DeleteOIDCProvider deletes the oidc provider connected the organization
+  rpc DeleteOIDCProvider(DeleteOIDCProviderRequest) returns (DeleteOIDCProviderResponse) {}
 
   // Analytics
 

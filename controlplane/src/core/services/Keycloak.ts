@@ -115,6 +115,99 @@ export default class Keycloak {
     });
   }
 
+  public async getKeycloakSsoLoggedInUsers({ realm, alias }: { realm?: string; alias: string }) {
+    const users = await this.client.users.find({
+      exact: true,
+      idpAlias: alias,
+      realm: realm || this.realm,
+    });
+    return users;
+  }
+
+  public async getKeycloakUserGroups({ realm, userID }: { realm?: string; userID: string }) {
+    const groups = await this.client.users.listGroups({
+      id: userID,
+      realm: realm || this.realm,
+    });
+    return groups;
+  }
+
+  public async createOIDCProvider({
+    realm,
+    clientId,
+    clientSecret,
+    name,
+    alias,
+    discoveryEndpoint,
+  }: {
+    realm?: string;
+    clientId: string;
+    clientSecret: string;
+    name: string;
+    alias: string;
+    discoveryEndpoint: string;
+  }) {
+    const oidcUrls = await this.client.identityProviders.importFromUrl({
+      realm: realm || this.realm,
+      fromUrl: discoveryEndpoint,
+      providerId: 'oidc',
+    });
+
+    await this.client.identityProviders.create({
+      alias,
+      displayName: name,
+      enabled: true,
+      config: {
+        clientId,
+        clientSecret,
+        hideOnLoginPage: true,
+        syncMode: 'FORCE',
+        validateSignature: 'true',
+        tokenUrl: oidcUrls.tokenUrl,
+        authorizationUrl: oidcUrls.authorizationUrl,
+        jwksUrl: oidcUrls.jwksUrl,
+        logoutUrl: oidcUrls.logoutUrl,
+        issuer: oidcUrls.issuer,
+        useJwksUrl: 'true',
+        defaultScope: 'openid email profile',
+      },
+      realm: realm || this.realm,
+      providerId: 'oidc',
+    });
+  }
+
+  public async deleteOIDCProvider({ realm, alias }: { realm?: string; alias: string }) {
+    await this.client.identityProviders.del({ alias, realm: realm || this.realm });
+  }
+
+  public async createIDPMapper({
+    realm,
+    claims,
+    alias,
+    keycloakGroupName,
+  }: {
+    realm?: string;
+    claims: string;
+    alias: string;
+    keycloakGroupName: string;
+  }) {
+    await this.client.identityProviders.createMapper({
+      alias,
+      realm: realm || this.realm,
+      identityProviderMapper: {
+        name: uid(10),
+        identityProviderMapper: 'oidc-advanced-group-idp-mapper',
+        identityProviderAlias: alias,
+        config: {
+          claims,
+          syncMode: 'INHERIT',
+          group: keycloakGroupName,
+          'are.claim.values.regex': true,
+        },
+      },
+    });
+  }
+
   public async seedGroup({
     realm,
     userID,
@@ -145,5 +238,89 @@ export default class Keycloak {
       realm: realm || this.realm,
       groupId: adminGroup.id,
     });
+  }
+
+  public async fetchAdminChildGroup({
+    realm,
+    orgSlug,
+    kcGroupId,
+  }: {
+    realm?: string;
+    orgSlug: string;
+    kcGroupId: string;
+  }) {
+    const orgGroups = await this.client.groups.find({
+      search: 'admin',
+      realm: realm || this.realm,
+    });
+
+    if (orgGroups.length === 0) {
+      throw new Error(`Organization group '${orgSlug}' does not have any child groups`);
+    }
+
+    const adminOrgGroup = orgGroups.find((group) => group.id === kcGroupId);
+    const adminChildGroup = adminOrgGroup?.subGroups?.find((group) => group.path === `/${orgSlug}/admin`);
+
+    if (!adminChildGroup) {
+      throw new Error(`Organization child group '/${orgSlug}/admin' not found`);
+    }
+
+    return adminChildGroup;
+  }
+
+  public async fetchDevChildGroup({
+    realm,
+    orgSlug,
+    kcGroupId,
+  }: {
+    realm?: string;
+    orgSlug: string;
+    kcGroupId: string;
+  }) {
+    const orgGroups = await this.client.groups.find({
+      search: 'developer',
+      realm: realm || this.realm,
+    });
+
+    if (orgGroups.length === 0) {
+      throw new Error(`Organization group '${orgSlug}' does not have any child groups`);
+    }
+
+    const devOrgGroup = orgGroups.find((group) => group.id === kcGroupId);
+    const devChildGroup = devOrgGroup?.subGroups?.find((group) => group.path === `/${orgSlug}/developer`);
+
+    if (!devChildGroup) {
+      throw new Error(`Organization child group '/${orgSlug}/developer' not found`);
+    }
+
+    return devChildGroup;
+  }
+
+  public async fetchViewerChildGroup({
+    realm,
+    orgSlug,
+    kcGroupId,
+  }: {
+    realm?: string;
+    orgSlug: string;
+    kcGroupId: string;
+  }) {
+    const orgGroups = await this.client.groups.find({
+      search: 'viewer',
+      realm: realm || this.realm,
+    });
+
+    if (orgGroups.length === 0) {
+      throw new Error(`Organization group '${orgSlug}' does not have any child groups`);
+    }
+
+    const viewerOrgGroup = orgGroups.find((group) => group.id === kcGroupId);
+    const viewerChildGroup = viewerOrgGroup?.subGroups?.find((group) => group.path === `/${orgSlug}/viewer`);
+
+    if (!viewerChildGroup) {
+      throw new Error(`Organization child group '/${orgSlug}/viewer' not found`);
+    }
+
+    return viewerChildGroup;
   }
 }
