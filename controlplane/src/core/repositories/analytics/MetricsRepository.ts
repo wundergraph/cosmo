@@ -547,6 +547,14 @@ export class MetricsRepository {
       title: 'Operation Name',
       options: [],
     },
+    operationHash: {
+      dbField: 'OperationHash',
+      dbClause: 'where',
+      columnName: 'operationHash',
+      title: 'Operation Hash',
+      options: [],
+      customOptions: true,
+    },
     clientName: {
       dbField: 'ClientName',
       dbClause: 'where',
@@ -615,7 +623,10 @@ export class MetricsRepository {
       }
     }
 
-    return buildAnalyticsViewFilters({ operationName: '', clientName: '', clientVersion: '' }, filters);
+    return buildAnalyticsViewFilters(
+      { operationName: '', operationHash: '', clientName: '', clientVersion: '' },
+      filters,
+    );
   }
 
   /**

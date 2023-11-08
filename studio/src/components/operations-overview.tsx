@@ -176,7 +176,7 @@ const MostRequested = ({ data }: { data: OperationRequestCount[] }) => {
         hash: d.operationHash,
         name: d.operationName || "-",
         value: d.totalRequests,
-        href: `${currentPath}/analytics/traces${filterQueryParam}`,
+        href: `${currentPath}/analytics${filterQueryParam}`,
       };
     });
   }, [data, asPath]);
