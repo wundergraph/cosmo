@@ -2,7 +2,11 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as url from 'node:url';
 import { describe, expect, test } from 'vitest';
+import { buildSchema, GraphQLSchema, parse } from 'graphql';
+import { ConfigurationData } from '@wundergraph/composition';
 import { buildRouterConfig, Subgraph } from '../src';
+import { normalizationFailureError } from '../src/router-config/errors';
+import { reviver } from './testdata/subgraphConfigGenerator';
 
 // @ts-ignore-next-line
 const __dirname = url.fileURLToPath(new URL('.', import.meta.url));
@@ -18,6 +22,14 @@ describe('Router Config Builder', () => {
       url: 'https://wg-federation-demo-accounts.fly.dev/graphql',
       subscriptionUrl: '',
       subscriptionProtocol: 'ws',
+      schema: buildSchema(
+        fs.readFileSync(path.join(__dirname, 'testdata', 'subgraphConfigs', 'normalized-accounts.graphql')).toString(),
+      ),
+      configurationDataMap: new Map<string, ConfigurationData>(JSON.parse(
+        fs.readFileSync(path.join(__dirname, 'testdata', 'subgraphConfigs', 'accounts-configuration-data-map.json'))
+          .toString(),
+        reviver,
+      )),
     };
     const products: Subgraph = {
       id: '1',
@@ -28,6 +40,14 @@ describe('Router Config Builder', () => {
       url: 'https://wg-federation-demo-products.fly.dev/graphql',
       subscriptionUrl: '',
       subscriptionProtocol: 'ws',
+      schema: buildSchema(
+        fs.readFileSync(path.join(__dirname, 'testdata', 'subgraphConfigs', 'normalized-products.graphql')).toString()
+      ),
+      configurationDataMap: new Map<string, ConfigurationData>(JSON.parse(
+        fs.readFileSync(path.join(__dirname, 'testdata', 'subgraphConfigs', 'products-configuration-data-map.json'))
+          .toString(),
+        reviver,
+      )),
     };
     const reviews: Subgraph = {
       id: '2',
@@ -38,6 +58,14 @@ describe('Router Config Builder', () => {
       url: 'https://wg-federation-demo-reviews.fly.dev/graphql',
       subscriptionUrl: '',
       subscriptionProtocol: 'ws',
+      schema: buildSchema(
+        fs.readFileSync(path.join(__dirname, 'testdata', 'subgraphConfigs', 'normalized-reviews.graphql')).toString()
+      ),
+      configurationDataMap: new Map<string, ConfigurationData>(JSON.parse(
+        fs.readFileSync(path.join(__dirname, 'testdata', 'subgraphConfigs', 'reviews-configuration-data-map.json'))
+          .toString(),
+        reviver,
+      )),
     };
     const inventory: Subgraph = {
       id: '3',
@@ -48,6 +76,14 @@ describe('Router Config Builder', () => {
       url: 'https://wg-federation-demo-inventory.fly.dev/graphql',
       subscriptionUrl: '',
       subscriptionProtocol: 'ws',
+      schema: buildSchema(
+        fs.readFileSync(path.join(__dirname, 'testdata', 'subgraphConfigs', 'normalized-inventory.graphql')).toString()
+      ),
+      configurationDataMap: new Map<string, ConfigurationData>(JSON.parse(
+        fs.readFileSync(path.join(__dirname, 'testdata', 'subgraphConfigs', 'inventory-configuration-data-map.json'))
+          .toString(),
+        reviver,
+      )),
     };
     const routerConfig = buildRouterConfig({
       argumentConfigurations: [],
@@ -63,7 +99,7 @@ describe('Router Config Builder', () => {
     expect(out).matchSnapshot('router.config.json');
   });
 
-  test('that builder config throws an error if the graph fails normalization', () => {
+  test('that the builder config throws an error if normalization has failed', () => {
     const subgraph:Subgraph = {
       id: '',
       name: '',
@@ -85,9 +121,6 @@ describe('Router Config Builder', () => {
       error = e;
     }
     expect(error).toBeDefined();
-    expect(error.message).toBe('Normalization failed');
-    expect(error.cause.message).toBe(
-      'Extension error:\n' + ' Could not extend the type "Human" because no base definition exists.',
-    );
+    expect(error).toStrictEqual(normalizationFailureError('ConfigurationDataMap'));
   });
 });
