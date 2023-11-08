@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.31.0](https://github.com/wundergraph/cosmo/compare/router@0.30.0...router@0.31.0) (2023-11-08)
+
+### Features
+
+* add support for header forwarding with websocket requests ([#212](https://github.com/wundergraph/cosmo/issues/212)) ([5bc07dc](https://github.com/wundergraph/cosmo/commit/5bc07dc368ea2689f79bf9f7af971b8468df619a)) (@fiam)
+
 # [0.30.0](https://github.com/wundergraph/cosmo/compare/router@0.29.0...router@0.30.0) (2023-11-07)
 
 ### Features
