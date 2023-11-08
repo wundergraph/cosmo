@@ -5,7 +5,7 @@ import { eq } from 'drizzle-orm';
 import { lru } from 'tiny-lru';
 import { uid } from 'uid';
 import { PlatformEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
-import { decodeJWT, DEFAULT_SESSION_MAX_AGE_SEC, encrypt } from '../crypto/jwt.js';
+import { cosmoIdpHintCookieName, decodeJWT, DEFAULT_SESSION_MAX_AGE_SEC, encrypt } from '../crypto/jwt.js';
 import { CustomAccessTokenClaims, UserInfoEndpointResponse, UserSession } from '../../types/index.js';
 import * as schema from '../../db/schema.js';
 import { organizationMemberRoles, organizations, organizationsMembers, sessions, users } from '../../db/schema.js';
@@ -110,7 +110,7 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
         // Clear the PKCE cookie
         opts.authUtils.clearCookie(res, opts.pkce.cookieName);
         // Clear the sso cookie
-        opts.authUtils.clearCookie(res, 'ssoSlug');
+        opts.authUtils.clearCookie(res, cosmoIdpHintCookieName);
 
         const sessionExpiresIn = DEFAULT_SESSION_MAX_AGE_SEC;
         const sessionExpiresDate = new Date(Date.now() + 1000 * sessionExpiresIn);

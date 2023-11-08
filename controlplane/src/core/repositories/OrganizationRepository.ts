@@ -578,11 +578,21 @@ export class OrganizationRepository {
     });
   }
 
-  public async updateUserRole(input: { orgMemberID: string; organizationID: string; role: MemberRole }) {
+  public async updateUserRole(input: {
+    orgMemberID: string;
+    organizationID: string;
+    role: MemberRole;
+    previousRole: MemberRole;
+  }) {
     await this.db
       .update(organizationMemberRoles)
       .set({ role: input.role })
-      .where(eq(organizationMemberRoles.organizationMemberId, input.orgMemberID));
+      .where(
+        and(
+          eq(organizationMemberRoles.organizationMemberId, input.orgMemberID),
+          eq(organizationMemberRoles.role, input.previousRole),
+        ),
+      );
   }
 
   public async getOrganizationAdmins(input: { organizationID: string }): Promise<OrganizationMemberDTO[]> {

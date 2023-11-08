@@ -171,3 +171,13 @@ export const checkUserAccess = ({ rolesToBe, userRoles }: { rolesToBe: MemberRol
   }
   return false;
 };
+
+export const getHighestPriorityRole = ({ userRoles }: { userRoles: string[] }) => {
+  if (userRoles.includes('admin')) {
+    return 'admin';
+  }
+  if (userRoles.includes('developer')) {
+    return 'developer';
+  }
+  return 'viewer';
+};

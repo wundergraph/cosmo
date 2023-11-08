@@ -6650,11 +6650,6 @@ export class UpdateOrgMemberRoleRequest extends Message<UpdateOrgMemberRoleReque
    */
   role = "";
 
-  /**
-   * @generated from field: string currentRole = 4;
-   */
-  currentRole = "";
-
   constructor(data?: PartialMessage<UpdateOrgMemberRoleRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -6666,7 +6661,6 @@ export class UpdateOrgMemberRoleRequest extends Message<UpdateOrgMemberRoleReque
     { no: 1, name: "userID", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "orgMemberUserID", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "role", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 4, name: "currentRole", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateOrgMemberRoleRequest {

@@ -851,7 +851,6 @@ message UpdateOrgMemberRoleRequest {
   string userID = 1;
   string orgMemberUserID = 2;
   string role = 3;
-  string currentRole = 4;
 }
 
 message UpdateOrgMemberRoleResponse {

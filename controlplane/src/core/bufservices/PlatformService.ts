@@ -61,6 +61,9 @@ import {
   CreateOIDCProviderResponse,
   GetOIDCProviderResponse,
   DeleteOIDCProviderResponse,
+  LeaveOrganizationResponse,
+  DeleteOrganizationResponse,
+  UpdateOrgMemberRoleResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { OpenAIGraphql, isValidUrl } from '@wundergraph/cosmo-shared';
 import { parse } from 'graphql';
@@ -90,7 +93,13 @@ import {
   collectOperationUsageStats,
 } from '../services/SchemaUsageTrafficInspector.js';
 import Slack from '../services/Slack.js';
-import { formatSubscriptionProtocol, handleError, isValidLabelMatchers, isValidLabels } from '../util.js';
+import {
+  formatSubscriptionProtocol,
+  getHighestPriorityRole,
+  handleError,
+  isValidLabelMatchers,
+  isValidLabels,
+} from '../util.js';
 import { FederatedGraphSchemaUpdate, OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
 import { OidcRepository } from '../repositories/OidcRepository.js';
 import OidcProvider from '../services/OidcProvider.js';
@@ -2834,7 +2843,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         method: ctx.method.name,
       });
 
-      return handleError<PlainMessage<UpdateOrganizationWebhookConfigResponse>>(logger, async () => {
+      return handleError<PlainMessage<DeleteOrganizationResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db);
 
@@ -2915,7 +2924,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         method: ctx.method.name,
       });
 
-      return handleError<PlainMessage<UpdateOrganizationWebhookConfigResponse>>(logger, async () => {
+      return handleError<PlainMessage<LeaveOrganizationResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db);
 
@@ -3097,7 +3106,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         method: ctx.method.name,
       });
 
-      return handleError<PlainMessage<UpdateOrganizationWebhookConfigResponse>>(logger, async () => {
+      return handleError<PlainMessage<UpdateOrgMemberRoleResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db);
 
@@ -3136,7 +3145,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        // fetching the user whose role isbeing updated.
+        // fetching the user whose role is being updated.
         const orgMember = await orgRepo.getOrganizationMember({
           organizationID: authContext.organizationId,
           userID: req.orgMemberUserID,
@@ -3196,6 +3205,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           throw new Error(`Organization group '${org.slug}' not found`);
         }
 
+        const userRoles = await orgRepo.getOrganizationMemberRoles({
+          userID: orgMember.userID,
+          organizationID: authContext.organizationId,
+        });
+        const highPriorityRole = getHighestPriorityRole({ userRoles });
+
         const adminChildGroup = await opts.keycloakClient.fetchAdminChildGroup({
           realm: opts.keycloakRealm,
           orgSlug: org.slug,
@@ -3215,13 +3230,13 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         });
 
         if (req.role === 'admin') {
-          if (req.currentRole === 'developer') {
+          if (highPriorityRole === 'developer') {
             await opts.keycloakClient.client.users.delFromGroup({
               id: users[0].id!,
               realm: opts.keycloakRealm,
               groupId: devChildGroup.id!,
             });
-          } else if (req.currentRole === 'viewer') {
+          } else if (highPriorityRole === 'viewer') {
             await opts.keycloakClient.client.users.delFromGroup({
               id: users[0].id!,
               realm: opts.keycloakRealm,
@@ -3238,6 +3253,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             organizationID: authContext.organizationId,
             orgMemberID: orgMember.orgMemberID,
             role: 'admin',
+            previousRole: highPriorityRole,
           });
         } else {
           await opts.keycloakClient.client.users.addToGroup({
@@ -3256,6 +3272,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             organizationID: authContext.organizationId,
             orgMemberID: orgMember.orgMemberID,
             role: 'developer',
+            previousRole: 'admin',
           });
         }
 

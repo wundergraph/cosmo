@@ -372,6 +372,13 @@
       "when": 1699467908204,
       "tag": "0052_cool_deathstrike",
       "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "5",
+      "when": 1699472077441,
+      "tag": "0053_natural_goblin_queen",
+      "breakpoints": true
     }
   ]
 }

@@ -9,6 +9,7 @@ import * as schema from '../db/schema.js';
 import { sessions } from '../db/schema.js';
 import {
   calculatePKCECodeChallenge,
+  cosmoIdpHintCookieName,
   decodeJWT,
   decrypt,
   DEFAULT_SESSION_MAX_AGE_SEC,
@@ -110,7 +111,7 @@ export default class AuthUtils {
 
   createSsoCookie(res: FastifyReply, ssoSlug: string) {
     const currentDate = new Date();
-    const userSsoCookie = cookie.serialize('ssoSlug', ssoSlug, {
+    const userSsoCookie = cookie.serialize(cosmoIdpHintCookieName, ssoSlug, {
       domain: this.webDomain,
       sameSite: 'lax',
       expires: new Date(currentDate.setFullYear(currentDate.getFullYear() + 1)),

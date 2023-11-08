@@ -222,7 +222,6 @@ const MemberCard = ({
                         userID: user?.id,
                         orgMemberUserID: memberUserID,
                         role: role === "admin" ? "developer" : "admin",
-                        currentRole: role,
                       },
                       {
                         onSuccess: (d) => {
