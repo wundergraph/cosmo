@@ -208,8 +208,6 @@ func (l *Loader) Load(routerConfig *nodev1.RouterConfig, routerEngineConfig *Rou
 					subscriptionUseSSE = *in.CustomGraphql.Subscription.UseSSE
 				}
 			}
-			// Header rewrite rules are specified by subgraph name, but data source
-			// only has routing and subscription URLs, so we must manually match them
 			dataSourceRules := FetchURLRules(&routerEngineConfig.Headers, routerConfig.Subgraphs, subscriptionUrl)
 			forwardedClientHeaders, forwardedClientRegexps, err := PropagatedHeaders(dataSourceRules)
 			if err != nil {
