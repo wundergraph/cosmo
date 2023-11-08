@@ -49,6 +49,10 @@ func SerializeRunner(sg runner.SubgraphsRunner) (string, error) {
 			Name: "products",
 			URL:  fmt.Sprintf("http://localhost:%d/graphql", ports.Products),
 		},
+		{
+			Name: "test1",
+			URL:  fmt.Sprintf("http://localhost:%d/graphql", ports.Test1),
+		},
 	}
 	return SerializeSubgraphs(subgraphs)
 }

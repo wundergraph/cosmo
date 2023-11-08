@@ -9,6 +9,7 @@ import (
 	"github.com/99designs/gqlgen/graphql/handler/extension"
 	"github.com/99designs/gqlgen/graphql/handler/transport"
 	"github.com/gorilla/websocket"
+	"github.com/wundergraph/cosmo/demo/pkg/injector"
 )
 
 func NewDemoServer(schema graphql.ExecutableSchema) *handler.Server {
@@ -26,6 +27,7 @@ func NewDemoServer(schema graphql.ExecutableSchema) *handler.Server {
 				return true
 			},
 		},
+		InitFunc: injector.InitPayloadFunc,
 	})
 	srv.Use(extension.Introspection{})
 

@@ -45,8 +45,6 @@ func (t *localhostFallbackRoundTripper) rewriteToTargetHost(r *http.Request) (*h
 }
 
 func (t *localhostFallbackRoundTripper) RoundTrip(r *http.Request) (*http.Response, error) {
-	// If the request has a body, we need to buffer it, otherwise it will
-	// get consumed
 	resp, err := t.transport.RoundTrip(r)
 	if err != nil && t.pointsToLocalhost(r) && errors.Is(err, syscall.ECONNREFUSED) {
 		// Retry the request. If the error was ECONNREFUSED, the body
