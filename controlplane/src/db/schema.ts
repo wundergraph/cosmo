@@ -687,17 +687,14 @@ export const slackInstallations = pgTable(
   },
 );
 
-export const oidcProviders = pgTable(
-  'oidc_providers',
-  {
-    id: uuid('id').notNull().primaryKey().defaultRandom(),
-    organizationId: uuid('organization_id')
-      .notNull()
-      .references(() => organizations.id, {
-        onDelete: 'cascade',
-      }),
-    name: text('name').notNull(),
-    alias: text('alias').notNull().unique(),
-    endpoint: text('endpoint').notNull(),
-  },
-);
+export const oidcProviders = pgTable('oidc_providers', {
+  id: uuid('id').notNull().primaryKey().defaultRandom(),
+  organizationId: uuid('organization_id')
+    .notNull()
+    .references(() => organizations.id, {
+      onDelete: 'cascade',
+    }),
+  name: text('name').notNull(),
+  alias: text('alias').notNull().unique(),
+  endpoint: text('endpoint').notNull(),
+});
