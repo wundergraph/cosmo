@@ -115,10 +115,10 @@ export default class Keycloak {
     });
   }
 
-  public async getKeycloakSsoLoggedInUsers({ realm, orgSlug }: { realm?: string; orgSlug: string }) {
+  public async getKeycloakSsoLoggedInUsers({ realm, alias }: { realm?: string; alias: string }) {
     const users = await this.client.users.find({
       exact: true,
-      idpAlias: orgSlug,
+      idpAlias: alias,
       realm: realm || this.realm,
     });
     return users;
@@ -137,14 +137,14 @@ export default class Keycloak {
     clientId,
     clientSecret,
     name,
-    orgSlug,
+    alias,
     discoveryEndpoint,
   }: {
     realm?: string;
     clientId: string;
     clientSecret: string;
     name: string;
-    orgSlug: string;
+    alias: string;
     discoveryEndpoint: string;
   }) {
     const oidcUrls = await this.client.identityProviders.importFromUrl({
@@ -154,7 +154,7 @@ export default class Keycloak {
     });
 
     await this.client.identityProviders.create({
-      alias: orgSlug,
+      alias,
       displayName: name,
       enabled: true,
       config: {
@@ -169,35 +169,35 @@ export default class Keycloak {
         logoutUrl: oidcUrls.logoutUrl,
         issuer: oidcUrls.issuer,
         useJwksUrl: 'true',
-        defaultScope: 'openid email',
+        defaultScope: 'openid email profile',
       },
       realm: realm || this.realm,
       providerId: 'oidc',
     });
   }
 
-  public async deleteOIDCProvider({ realm, orgSlug }: { realm?: string; orgSlug: string }) {
-    await this.client.identityProviders.del({ alias: orgSlug, realm: realm || this.realm });
+  public async deleteOIDCProvider({ realm, alias }: { realm?: string; alias: string }) {
+    await this.client.identityProviders.del({ alias, realm: realm || this.realm });
   }
 
   public async createIDPMapper({
     realm,
     claims,
-    orgSlug,
+    alias,
     keycloakGroupName,
   }: {
     realm?: string;
     claims: string;
-    orgSlug: string;
+    alias: string;
     keycloakGroupName: string;
   }) {
     await this.client.identityProviders.createMapper({
-      alias: orgSlug,
+      alias,
       realm: realm || this.realm,
       identityProviderMapper: {
         name: uid(10),
         identityProviderMapper: 'oidc-advanced-group-idp-mapper',
-        identityProviderAlias: orgSlug,
+        identityProviderAlias: alias,
         config: {
           claims,
           syncMode: 'INHERIT',

@@ -5,7 +5,6 @@ import { eq } from 'drizzle-orm';
 import { lru } from 'tiny-lru';
 import { uid } from 'uid';
 import { PlatformEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
-import { MemberRole } from 'src/db/models.js';
 import { decodeJWT, DEFAULT_SESSION_MAX_AGE_SEC, encrypt } from '../crypto/jwt.js';
 import { CustomAccessTokenClaims, UserInfoEndpointResponse, UserSession } from '../../types/index.js';
 import * as schema from '../../db/schema.js';
@@ -16,6 +15,7 @@ import WebSessionAuthenticator from '../services/WebSessionAuthenticator.js';
 import Keycloak from '../services/Keycloak.js';
 import { IPlatformWebhookService } from '../webhooks/PlatformWebhookService.js';
 import { AuthenticationError } from '../errors/errors.js';
+import { MemberRole } from '../../db/models.js';
 
 export type AuthControllerOptions = {
   db: PostgresJsDatabase<typeof schema>;
@@ -96,11 +96,12 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
     opts.authUtils.logout(res, userSessions[0].idToken);
   });
 
-  fastify.get<{ Querystring: { code: string; code_verifier: string; redirectURL?: string } }>(
+  fastify.get<{ Querystring: { code: string; code_verifier: string; redirectURL?: string; ssoSlug?: string } }>(
     '/callback',
     async (req, res) => {
       try {
         const redirectURL = req.query?.redirectURL;
+        const ssoSlug = req.query?.ssoSlug;
         const { accessToken, refreshToken, idToken } = await opts.authUtils.handleAuthCallbackRequest(req);
 
         // decodeJWT will throw an error if the token is invalid or expired
@@ -108,6 +109,8 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
 
         // Clear the PKCE cookie
         opts.authUtils.clearCookie(res, opts.pkce.cookieName);
+        // Clear the sso cookie
+        opts.authUtils.clearCookie(res, 'ssoSlug');
 
         const sessionExpiresIn = DEFAULT_SESSION_MAX_AGE_SEC;
         const sessionExpiresDate = new Date(Date.now() + 1000 * sessionExpiresIn);
@@ -182,7 +185,7 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
                 .execute();
 
               const role = kcGroup.split('/')?.[2] || 'developer';
-          
+
               await tx
                 .insert(organizationMemberRoles)
                 .values({
@@ -286,6 +289,10 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
 
         // Set the session cookie. The cookie value is encrypted.
         opts.authUtils.createSessionCookie(res, jwt, sessionExpiresDate);
+        if (ssoSlug) {
+          // Set the sso cookie.
+          opts.authUtils.createSsoCookie(res, ssoSlug);
+        }
 
         if (orgs.length === 0) {
           res.redirect(opts.webBaseUrl + '?migrate=true');

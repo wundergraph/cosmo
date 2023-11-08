@@ -3,8 +3,8 @@ import pino from 'pino';
 import { joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
 import { uid } from 'uid/secure';
 import { GraphQLSubscriptionProtocol } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { MemberRole } from 'src/db/models.js';
 import { Label, ResponseMessage } from '../types/index.js';
+import { MemberRole } from '../db/models.js';
 import { isAuthenticationError, isFreeTrialExpiredError, isPublicError } from './errors/errors.js';
 
 const labelRegex = /^[\dA-Za-z](?:[\w.-]{0,61}[\dA-Za-z])?$/;

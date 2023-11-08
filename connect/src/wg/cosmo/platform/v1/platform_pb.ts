@@ -7498,6 +7498,11 @@ export class CreateOIDCProviderResponse extends Message<CreateOIDCProviderRespon
    */
   signOutURL = "";
 
+  /**
+   * @generated from field: string loginURL = 4;
+   */
+  loginURL = "";
+
   constructor(data?: PartialMessage<CreateOIDCProviderResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -7509,6 +7514,7 @@ export class CreateOIDCProviderResponse extends Message<CreateOIDCProviderRespon
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "signInURL", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "signOutURL", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "loginURL", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateOIDCProviderResponse {
@@ -7578,6 +7584,11 @@ export class GetOIDCProviderResponse extends Message<GetOIDCProviderResponse> {
    */
   endpoint = "";
 
+  /**
+   * @generated from field: string loginURL = 4;
+   */
+  loginURL = "";
+
   constructor(data?: PartialMessage<GetOIDCProviderResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -7589,6 +7600,7 @@ export class GetOIDCProviderResponse extends Message<GetOIDCProviderResponse> {
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "endpoint", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "loginURL", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetOIDCProviderResponse {

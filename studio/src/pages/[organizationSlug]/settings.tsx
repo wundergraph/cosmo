@@ -64,7 +64,13 @@ import {
   updateOrganizationDetails,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { useRouter } from "next/router";
-import { Dispatch, SetStateAction, useContext, useEffect, useState } from "react";
+import {
+  Dispatch,
+  SetStateAction,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 import { z } from "zod";
 
 const OrganizationDetails = () => {
@@ -361,11 +367,11 @@ const OpenIDConnectProvider = ({
   const { data: providerData, refetch } = useQuery(getOIDCProvider.useQuery());
 
   const { mutate, isPending, data } = useMutation(
-    createOIDCProvider.useMutation()
+    createOIDCProvider.useMutation(),
   );
 
   const { mutate: deleteOidcProvider } = useMutation(
-    deleteOIDCProvider.useMutation()
+    deleteOIDCProvider.useMutation(),
   );
 
   const { toast } = useToast();
@@ -440,7 +446,7 @@ const OpenIDConnectProvider = ({
           setMode("create");
           setOpen(false);
         },
-      }
+      },
     );
     reset();
     updateMappers([
@@ -721,7 +727,7 @@ const OpenIDConnectProvider = ({
                           below url.
                         </span>
                         <CLI
-                          command={`${process.env.NEXT_PUBLIC_COSMO_STUDIO_URL}/login?hint=${organizationSlug}`}
+                          command={data?.loginURL || ""}
                           spanClassName="w-96"
                         />
                       </div>
@@ -741,9 +747,7 @@ const OpenIDConnectProvider = ({
           </div>
           <div className="flex flex-col gap-y-2">
             <span className="px-1">Login URL</span>
-            <CLI
-              command={`${process.env.NEXT_PUBLIC_COSMO_STUDIO_URL}/login?hint=${organizationSlug}`}
-            />
+            <CLI command={providerData?.loginURL || ""} />
           </div>
         </CardContent>
       )}

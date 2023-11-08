@@ -1,6 +1,5 @@
 import { eq } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { MemberRole } from 'src/db/models.js';
 import * as schema from '../../db/schema.js';
 import { users } from '../../db/schema.js';
 import { UserDTO } from '../../types/index.js';

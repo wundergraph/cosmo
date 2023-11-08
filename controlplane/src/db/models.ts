@@ -14,4 +14,4 @@ export type Target = typeof targets.$inferSelect;
 export type SchemaCheckChangeAction = typeof schemaCheckChangeAction.$inferSelect;
 export type NewSchemaChangeOperationUsage = typeof schemaCheckChangeActionOperationUsage.$inferInsert;
 export type NewTarget = typeof targets.$inferInsert;
-export type MemberRole = typeof memberRoleEnum.enumValues[number];
+export type MemberRole = (typeof memberRoleEnum.enumValues)[number];

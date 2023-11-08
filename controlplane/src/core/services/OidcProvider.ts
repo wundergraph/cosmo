@@ -1,5 +1,6 @@
 import { CreateOIDCProviderRequest } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { uid } from 'uid';
 import * as schema from '../../db/schema.js';
 import { OidcRepository } from '../repositories/OidcRepository.js';
 import Keycloak from './Keycloak.js';
@@ -13,6 +14,7 @@ export default class OidcProvider {
     kcRealm,
     organizationId,
     organizationSlug,
+    alias,
     db,
     input,
   }: {
@@ -20,6 +22,7 @@ export default class OidcProvider {
     kcRealm: string;
     organizationId: string;
     organizationSlug: string;
+    alias: string;
     db: PostgresJsDatabase<typeof schema>;
     input: CreateOIDCProviderRequest;
   }) {
@@ -31,12 +34,12 @@ export default class OidcProvider {
       discoveryEndpoint: input.discoveryEndpoint,
       name: input.name,
       realm: kcRealm,
-      orgSlug: organizationSlug,
+      alias,
     });
 
     const endpoint = input.discoveryEndpoint.split('/')[2];
 
-    await oidcRepo.addOidcProvider({ name: input.name, organizationId, endpoint });
+    await oidcRepo.addOidcProvider({ name: input.name, organizationId, endpoint, alias });
 
     for (const mapper of input.mappers) {
       const claims = `[{ "key": "ssoGroups", "value": "${mapper.ssoGroup}" }]`;
@@ -62,7 +65,7 @@ export default class OidcProvider {
 
       await kcClient.createIDPMapper({
         realm: kcRealm,
-        orgSlug: organizationSlug,
+        alias,
         claims,
         keycloakGroupName,
       });
@@ -77,6 +80,7 @@ export default class OidcProvider {
     organizationId,
     organizationSlug,
     orgCreatorUserId,
+    alias,
     db,
   }: {
     kcClient: Keycloak;
@@ -84,13 +88,14 @@ export default class OidcProvider {
     organizationId: string;
     organizationSlug: string;
     orgCreatorUserId: string;
+    alias: string;
     db: PostgresJsDatabase<typeof schema>;
   }) {
     const oidcRepo = new OidcRepository(db);
 
     const keycloakUsers = await kcClient.getKeycloakSsoLoggedInUsers({
       realm: kcRealm,
-      orgSlug: organizationSlug,
+      alias,
     });
 
     for (const user of keycloakUsers) {
@@ -121,7 +126,7 @@ export default class OidcProvider {
 
     await kcClient.deleteOIDCProvider({
       realm: kcRealm,
-      orgSlug: organizationSlug,
+      alias,
     });
 
     await oidcRepo.deleteOidcProvider({ organizationId });

@@ -958,6 +958,7 @@ message CreateOIDCProviderResponse {
   Response response = 1;
   string signInURL = 2;
   string signOutURL = 3;
+  string loginURL = 4;
 }
 
 message GetOIDCProviderRequest {}
@@ -966,6 +967,7 @@ message GetOIDCProviderResponse {
   Response response = 1;
   string name = 2;
   string endpoint = 3;
+  string loginURL = 4;
 }
 
 message DeleteOIDCProviderRequest {}

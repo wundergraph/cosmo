@@ -64,6 +64,7 @@ import {
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { OpenAIGraphql, isValidUrl } from '@wundergraph/cosmo-shared';
 import { parse } from 'graphql';
+import { uid } from 'uid';
 import { GraphApiKeyDTO, GraphApiKeyJwtPayload } from '../../types/index.js';
 import { Composer } from '../composition/composer.js';
 import { buildSchema, composeSubgraphs } from '../composition/composition.js';
@@ -3696,16 +3697,20 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             },
             signInURL: '',
             signOutURL: '',
+            loginURL: '',
           };
         }
 
         await opts.keycloakClient.authenticateClient();
+
+        const alias = `${authContext.organizationSlug}_${uid(3)}`;
 
         await oidcProvider.createOidcProvider({
           kcClient: opts.keycloakClient,
           kcRealm: opts.keycloakRealm,
           organizationId: authContext.organizationId,
           organizationSlug: authContext.organizationSlug,
+          alias,
           db: opts.db,
           input: req,
         });
@@ -3714,8 +3719,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           response: {
             code: EnumStatusCode.OK,
           },
-          signInURL: `${opts.keycloakApiUrl}/realms/${opts.keycloakRealm}/broker/${authContext.organizationSlug}/endpoint`,
-          signOutURL: `${opts.keycloakApiUrl}/realms/${opts.keycloakRealm}/broker/${authContext.organizationSlug}/endpoint/logout_response`,
+          signInURL: `${opts.keycloakApiUrl}/realms/${opts.keycloakRealm}/broker/${alias}/endpoint`,
+          signOutURL: `${opts.keycloakApiUrl}/realms/${opts.keycloakRealm}/broker/${alias}/endpoint/logout_response`,
+          loginURL: `${opts.webBaseUrl}/login?hint=${alias}`,
         };
       });
     },
@@ -3740,6 +3746,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             },
             name: '',
             endpoint: '',
+            loginURL: '',
           };
         }
 
@@ -3749,6 +3756,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           },
           name: provider.name,
           endpoint: provider.endpoint,
+          loginURL: `${opts.webBaseUrl}/login?hint=${provider.alias}`,
         };
       });
     },
@@ -3762,6 +3770,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<DeleteOIDCProviderResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db);
+        const oidcRepo = new OidcRepository(opts.db);
         const oidcProvider = new OidcProvider();
 
         if (!authContext.isAdmin) {
@@ -3785,12 +3794,23 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
+        const provider = await oidcRepo.getOidcProvider({ organizationId: authContext.organizationId });
+        if (!provider) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Organization ${authContext.organizationSlug} doesn't have an oidc identity provider `,
+            },
+          };
+        }
+
         await oidcProvider.deleteOidcProvider({
           kcClient: opts.keycloakClient,
           kcRealm: opts.keycloakRealm,
           organizationId: authContext.organizationId,
           organizationSlug: authContext.organizationSlug,
           orgCreatorUserId: organization.creatorUserId,
+          alias: provider.alias,
           db: opts.db,
         });
 
