@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.4.0](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.3.0...graphqlmetrics@0.4.0) (2023-11-07)
+
+### Features
+
+* upgrade minimum required Go version to 1.21 ([#239](https://github.com/wundergraph/cosmo/issues/239)) ([d7fe7da](https://github.com/wundergraph/cosmo/commit/d7fe7daf78fceaf3fdb1679bfa3addef8cdfd67a)) (@fiam)
+
 # [0.3.0](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.2.0...graphqlmetrics@0.3.0) (2023-11-03)
 
 ### Features

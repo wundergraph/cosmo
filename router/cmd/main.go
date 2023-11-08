@@ -156,6 +156,7 @@ func Main() {
 		core.WithMetrics(metricsConfig(&cfg.Telemetry)),
 		core.WithEngineExecutionConfig(cfg.EngineExecutionConfiguration),
 		core.WithAccessController(core.NewAccessController(authenticators, cfg.Authorization.RequireAuthentication)),
+		core.WithLocalhostFallbackInsideDocker(cfg.LocalhostFallbackInsideDocker),
 	)
 
 	if err != nil {
