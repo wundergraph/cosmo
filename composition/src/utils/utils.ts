@@ -66,7 +66,7 @@ export function doSetsHaveAnyOverlap<T>(set: Set<T>, other: Set<T>): boolean {
   return false;
 }
 
-export function removeEntriesFromSet<T>(set: Set<T>, other: Set<T>) {
+export function removeMutualSourceEntriesFromTargetSet<T>(set: Set<T>, other: Set<T>) {
   for (const entry of set) {
     if (other.has(entry)) {
       other.delete(entry);
