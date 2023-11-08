@@ -12,28 +12,31 @@ import (
 )
 
 type PreHandlerOptions struct {
-	Logger   *zap.Logger
-	Executor *Executor
-	Metrics  *RouterMetrics
-	Parser   *OperationParser
-	Planner  *OperationPlanner
+	Logger           *zap.Logger
+	Executor         *Executor
+	Metrics          *RouterMetrics
+	Parser           *OperationParser
+	Planner          *OperationPlanner
+	AccessController *AccessController
 }
 
 type PreHandler struct {
-	log      *zap.Logger
-	executor *Executor
-	metrics  *RouterMetrics
-	parser   *OperationParser
-	planner  *OperationPlanner
+	log              *zap.Logger
+	executor         *Executor
+	metrics          *RouterMetrics
+	parser           *OperationParser
+	planner          *OperationPlanner
+	accessController *AccessController
 }
 
 func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 	return &PreHandler{
-		log:      opts.Logger,
-		executor: opts.Executor,
-		metrics:  opts.Metrics,
-		parser:   opts.Parser,
-		planner:  opts.Planner,
+		log:              opts.Logger,
+		executor:         opts.Executor,
+		metrics:          opts.Metrics,
+		parser:           opts.Parser,
+		planner:          opts.Planner,
+		accessController: opts.AccessController,
 	}
 }
 
@@ -48,8 +51,7 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 // https://github.com/graphql/graphql-over-http/blob/main/spec/GraphQLOverHTTP.md#response
 
 func (h *PreHandler) Handler(next http.Handler) http.Handler {
-
-	fn := func(w http.ResponseWriter, r *http.Request) {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		requestLogger := h.log.With(logging.WithRequestID(middleware.GetReqID(r.Context())))
 
 		// In GraphQL the statusCode does not always express the error state of the request
@@ -59,11 +61,20 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		var writtenBytes int
 
 		clientInfo := NewClientInfoFromRequest(r)
-		metrics := h.metrics.StartOperation(r.Context(), clientInfo, r.ContentLength)
+		metrics := h.metrics.StartOperation(clientInfo, r.ContentLength)
 
 		defer func() {
-			metrics.Finish(r.Context(), hasRequestError, statusCode, writtenBytes)
+			metrics.Finish(hasRequestError, statusCode, writtenBytes)
 		}()
+
+		validatedReq, err := h.accessController.Access(w, r)
+		if err != nil {
+			hasRequestError = true
+			requestLogger.Error(err.Error())
+			writeRequestErrors(r, graphql.RequestErrorsFromError(err), w, requestLogger)
+			return
+		}
+		r = validatedReq
 
 		buf := pool.GetBytesBuffer()
 		defer pool.PutBytesBuffer(buf)
@@ -89,10 +100,11 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			return
 		}
 
-		// Set the operation attributes as early as possible, so they are available in the trace
-		baseMetricAttributeValues := SetSpanOperationAttributes(r.Context(), operation, OperationProtocolHTTP)
+		commonAttributeValues := commonMetricAttributes(operation, OperationProtocolHTTP)
 
-		metrics.AddAttributes(baseMetricAttributeValues...)
+		metrics.AddAttributes(commonAttributeValues...)
+
+		initializeSpan(r.Context(), operation, clientInfo, commonAttributeValues)
 
 		opContext, err := h.planner.Plan(operation, clientInfo)
 		if err != nil {
@@ -120,7 +132,5 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 		// Evaluate the request after the request has been handled by the engine
 		hasRequestError = requestContext.hasError
-	}
-
-	return http.HandlerFunc(fn)
+	})
 }

@@ -19,25 +19,27 @@ import (
 )
 
 type WebsocketMiddlewareOptions struct {
-	Parser         *OperationParser
-	Planner        *OperationPlanner
-	GraphQLHandler *GraphQLHandler
-	Metrics        *RouterMetrics
-	Logger         *zap.Logger
+	Parser           *OperationParser
+	Planner          *OperationPlanner
+	GraphQLHandler   *GraphQLHandler
+	Metrics          *RouterMetrics
+	AccessController *AccessController
+	Logger           *zap.Logger
 }
 
 func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions) func(http.Handler) http.Handler {
 	ids := newGlobalIDStorage()
 	return func(next http.Handler) http.Handler {
 		return &WebsocketHandler{
-			ctx:            ctx,
-			next:           next,
-			ids:            ids,
-			parser:         opts.Parser,
-			planner:        opts.Planner,
-			graphqlHandler: opts.GraphQLHandler,
-			metrics:        opts.Metrics,
-			logger:         opts.Logger,
+			ctx:              ctx,
+			next:             next,
+			ids:              ids,
+			parser:           opts.Parser,
+			planner:          opts.Planner,
+			graphqlHandler:   opts.GraphQLHandler,
+			metrics:          opts.Metrics,
+			accessController: opts.AccessController,
+			logger:           opts.Logger,
 		}
 	}
 }
@@ -154,14 +156,15 @@ func (c *wsConnectionWrapper) Close() error {
 }
 
 type WebsocketHandler struct {
-	ctx            context.Context
-	next           http.Handler
-	ids            *globalIDStorage
-	parser         *OperationParser
-	planner        *OperationPlanner
-	graphqlHandler *GraphQLHandler
-	metrics        *RouterMetrics
-	logger         *zap.Logger
+	ctx              context.Context
+	next             http.Handler
+	ids              *globalIDStorage
+	parser           *OperationParser
+	planner          *OperationPlanner
+	graphqlHandler   *GraphQLHandler
+	metrics          *RouterMetrics
+	accessController *AccessController
+	logger           *zap.Logger
 }
 
 func (h *WebsocketHandler) requestLooksLikeWebsocket(r *http.Request) bool {
@@ -172,6 +175,18 @@ func (h *WebsocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Don't call upgrader.Upgrade unless the request looks like a websocket
 	// because if Upgrade() fails it sends an error response
 	if h.requestLooksLikeWebsocket(r) {
+		// Check access control before upgrading the connection
+		validatedReq, err := h.accessController.Access(w, r)
+		if err != nil {
+			statusCode := http.StatusForbidden
+			if errors.Is(err, ErrUnauthorized) {
+				statusCode = http.StatusUnauthorized
+			}
+			http.Error(w, http.StatusText(statusCode), statusCode)
+			return
+		}
+		r = validatedReq
+
 		upgrader := websocket.Upgrader{
 			HandshakeTimeout: 5 * time.Second,
 			// TODO: WriteBufferPool,
@@ -272,7 +287,7 @@ func (rw *websocketResponseWriter) Flush() {
 			_, err = rw.protocol.GraphQLData(rw.id, payload, extensions)
 		}
 		// if err is websocket.ErrCloseSent, it means we got a Complete from
-		// the client and we closed the WS from a different goroutine
+		// the client, and we closed the WS from a different goroutine
 		if err != nil && err != websocket.ErrCloseSent {
 			rw.logger.Warn("sending response on websocket flush", zap.Error(err))
 		}
@@ -418,9 +433,9 @@ func (h *WebSocketConnectionHandler) executeSubscription(ctx context.Context, ms
 	statusCode := http.StatusOK
 	responseSize := 0
 
-	metrics := h.metrics.StartOperation(ctx, h.clientInfo, int64(len(msg.Payload)))
+	metrics := h.metrics.StartOperation(h.clientInfo, int64(len(msg.Payload)))
 	defer func() {
-		metrics.Finish(ctx, hasRequestError, statusCode, responseSize)
+		metrics.Finish(hasRequestError, statusCode, responseSize)
 	}()
 
 	// If the operation is invalid, send an error message immediately without
@@ -445,8 +460,10 @@ func (h *WebSocketConnectionHandler) executeSubscription(ctx context.Context, ms
 
 	metrics.AddOperationContext(opContext)
 
-	baseMetricAttributeValues := SetSpanOperationAttributes(ctx, operation, OperationProtocolGraphQLWS)
-	metrics.AddAttributes(baseMetricAttributeValues...)
+	commonAttributeValues := commonMetricAttributes(operation, OperationProtocolGraphQLWS)
+	metrics.AddAttributes(commonAttributeValues...)
+
+	initializeSpan(ctx, operation, opContext.clientInfo, commonAttributeValues)
 
 	if !h.globalIDs.Insert(msg.ID) {
 		hasRequestError = true

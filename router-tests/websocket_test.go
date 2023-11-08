@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"net/http"
 	"testing"
 	"time"
 
@@ -27,11 +28,11 @@ func connReadJSON(conn *websocket.Conn, v interface{}) error {
 	return conn.ReadJSON(v)
 }
 
-func connectedWebsocket(tb testing.TB, serverPort int) *websocket.Conn {
+func connectedWebsocket(tb testing.TB, serverPort int, header http.Header) *websocket.Conn {
 	dialer := websocket.Dialer{
 		Subprotocols: []string{"graphql-transport-ws"},
 	}
-	conn, _, err := dialer.Dial(fmt.Sprintf("ws://localhost:%d/graphql", serverPort), nil)
+	conn, _, err := dialer.Dial(fmt.Sprintf("ws://localhost:%d/graphql", serverPort), header)
 	require.NoError(tb, err)
 	err = conn.WriteJSON(&wsMessage{
 		Type: "connection_init",
@@ -55,7 +56,7 @@ func TestQueryOverWebsocket(t *testing.T) {
 		expectedPayload = `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`
 	)
 	_, port := setupListeningServer(t)
-	conn := connectedWebsocket(t, port)
+	conn := connectedWebsocket(t, port, nil)
 	var err error
 	q := &testQuery{
 		Body: query,
@@ -97,7 +98,7 @@ func TestSubscriptionOverWebsocket(t *testing.T) {
 	}
 
 	_, port := setupListeningServer(t)
-	conn := connectedWebsocket(t, port)
+	conn := connectedWebsocket(t, port, nil)
 	var err error
 	const messageID = "1"
 	err = conn.WriteJSON(&wsMessage{
@@ -139,7 +140,7 @@ func TestSubscriptionOverWebsocket(t *testing.T) {
 	// This should timeout because no more data is coming
 	_, _, err = conn.NextReader()
 	netErr, ok := err.(net.Error)
-	require.True(t, ok)
+	require.True(t, ok, "error is not a net.Error, got %T = %v", err, err)
 	assert.True(t, netErr.Timeout())
 	conn.SetReadDeadline(time.Time{})
 }
@@ -150,7 +151,7 @@ type graphqlError struct {
 
 func TestErrorOverWebsocket(t *testing.T) {
 	_, port := setupListeningServer(t)
-	conn := connectedWebsocket(t, port)
+	conn := connectedWebsocket(t, port, nil)
 	var err error
 	const messageID = "1"
 	err = conn.WriteJSON(&wsMessage{
@@ -173,7 +174,7 @@ func TestErrorOverWebsocket(t *testing.T) {
 
 func TestShutdownWithActiveWebsocket(t *testing.T) {
 	server, port := setupListeningServer(t)
-	conn := connectedWebsocket(t, port)
+	conn := connectedWebsocket(t, port, nil)
 	var err error
 	const messageID = "1"
 	err = conn.WriteJSON(&wsMessage{
@@ -236,4 +237,7 @@ func TestSubscriptionsOverWebsocketLibrary(t *testing.T) {
 			require.NoError(t, client.Run())
 		})
 	}
+}
+
+func TestHeaderForwardingOverWebsocket(t *testing.T) {
 }

@@ -35,21 +35,21 @@ We've made it super easy for you to migrate from Apollo by using our fully autom
 Log into Cosmo Cloud, enter your Graph API Token and Graph variant, and the Assistant migrates over your Graph in just a few seconds.
 That's it, migrate over with a single click!
 
-## Getting Started
+## Demo Cosmo on your machine in 3 minutes
 
 ### Prerequisites
 
 - [Docker](https://docs.docker.com/get-docker/)
-- [Docker Compose](https://docs.docker.com/compose/install/)
+- [Docker Compose](https://docs.docker.com/compose/install/) (version 2+ only)
 
-Running cosmo is as easy as running a single command:
+Running cosmo is as easy as running a single command. It can take a few seconds (~30s) until all services are up and running. A seed container and few migrations are running in the background to bootstrap the platform.
+They might restart a few times until the database is ready. You can check the status of the services by running `make full-demo-status`. Once this command returns no services you can proceed with the next step.
+
+1. Start the platform:
 
 ```shell
 make full-demo-up
 ```
-
-It can take a few seconds (~30s) until all services are up and running. A seed container and few migrations are running in the background to bootstrap the platform.
-They might restart a few times until the database is ready. You can check the status of the services by running `docker-compose -f docker-compose.full.yml ps`.
 
 2. Now, you can create a small demo project and start the router and subgraphs:
 
@@ -57,12 +57,15 @@ They might restart a few times until the database is ready. You can check the st
 # Create the demo project
 make create-cli-demo
 
-# Copy the Router token from the previous log output
+# Copy the Router token from the previous log output and set it as environment variables
 export ROUTER_TOKEN=...
+export OTEL_AUTH_TOKEN=...
 
 # Start the subgraphs + router
 make dc-federation-demo
 ```
+
+Run `make full-demo-status` once more to see if all subgraphs and your router are up and running.
 
 3. Navigate to the [Studio Playground](http://localhost:3000/wundergraph/graph/production/playground) and query the router. Login with the default credentials:
 
@@ -71,17 +74,17 @@ Username: foo@wundergraph.com
 Password: bar
 ```
 
-_Clean up all containers and volumes by running `make full-demo-down`._
+4. If you are done, you can clean up the demo by running `make full-demo-down`.
 
-## Development
+## Local Development
 
 ### Prerequisites
 
 - [Docker](https://docs.docker.com/get-docker/)
-- [Docker Compose](https://docs.docker.com/compose/install/)
+- [Docker Compose V2](https://docs.docker.com/compose/install/)
 - [NodeJS 18+](https://nodejs.org/en/download/)
 - [PNPM 8+](https://pnpm.io/installation)
-- [Go 1.20+](https://golang.org/doc/install)
+- [Go 1.21+](https://golang.org/doc/install)
 
 Bootstrapping your development environment is easy. Just run the following commands in order:
 
@@ -146,8 +149,8 @@ If you need help with the deployment, please contact us [here](https://form.type
 ## Managed Service
 
 If you don't want to manage the platform yourself, you can use our managed service [WunderGraph Cosmo Cloud](https://cosmo.wundergraph.com). It is a fully managed platform that don't make you worry about infrastructure, so you can focus on building.
-The managed service is currently in private beta. If you want to participate, please contact us [here](https://form.typeform.com/to/oC6XATf4).
-After contacting us, we will hook you up with a free trial and help you to get started.
+The managed service is General Available (GA). You can use every feature for 10 days. If you want to extend the trial or have questions, please contact us [here](https://form.typeform.com/to/oC6XATf4).
+After contacting us, we will hook you up and help you to get the most out of Cosmo.
 
 ## License
 

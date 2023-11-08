@@ -1,9 +1,7 @@
 package config
 
 import (
-	b64 "encoding/base64"
 	"fmt"
-	"github.com/dustin/go-humanize"
 	"os"
 	"time"
 
@@ -18,40 +16,6 @@ import (
 )
 
 const defaultConfigPath = "config.yaml"
-
-type Base64Decoder []byte
-
-func (ipd *Base64Decoder) Decode(value string) error {
-	decoded, err := b64.StdEncoding.DecodeString(value)
-	if err != nil {
-		return fmt.Errorf("could not decode base64 string: %w", err)
-	}
-
-	*ipd = decoded
-
-	return nil
-}
-
-type BytesString uint64
-
-func (b *BytesString) Decode(value string) error {
-	decoded, err := humanize.ParseBytes(value)
-	if err != nil {
-		return fmt.Errorf("could not parse bytes string: %w", err)
-	}
-
-	*b = BytesString(decoded)
-
-	return nil
-}
-
-func (b *BytesString) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	var s string
-	if err := unmarshal(&s); err != nil {
-		return err
-	}
-	return b.Decode(s)
-}
 
 type Graph struct {
 	Name  string `yaml:"name" envconfig:"FEDERATED_GRAPH_NAME" validate:"required"`
@@ -78,9 +42,11 @@ type Tracing struct {
 }
 
 type Prometheus struct {
-	Enabled    bool   `yaml:"enabled" default:"true" envconfig:"PROMETHEUS_ENABLED"`
-	Path       string `yaml:"path" default:"/metrics" validate:"uri" envconfig:"PROMETHEUS_HTTP_PATH"`
-	ListenAddr string `yaml:"listen_addr" default:"127.0.0.1:8088" validate:"hostname_port" envconfig:"PROMETHEUS_LISTEN_ADDR"`
+	Enabled             bool       `yaml:"enabled" default:"true" envconfig:"PROMETHEUS_ENABLED"`
+	Path                string     `yaml:"path" default:"/metrics" validate:"uri" envconfig:"PROMETHEUS_HTTP_PATH"`
+	ListenAddr          string     `yaml:"listen_addr" default:"127.0.0.1:8088" validate:"hostname_port" envconfig:"PROMETHEUS_LISTEN_ADDR"`
+	ExcludeMetrics      RegExArray `yaml:"exclude_metrics" envconfig:"PROMETHEUS_EXCLUDE_METRICS"`
+	ExcludeMetricLabels RegExArray `yaml:"exclude_metric_labels" envconfig:"PROMETHEUS_EXCLUDE_METRIC_LABELS"`
 }
 
 type MetricsOTLPExporter struct {
@@ -162,9 +128,15 @@ type GlobalHeaderRule struct {
 	Request []RequestHeaderRule `yaml:"request" validate:"dive"`
 }
 
+type HeaderRuleOperation string
+
+const (
+	HeaderRuleOperationPropagate HeaderRuleOperation = "propagate"
+)
+
 type RequestHeaderRule struct {
 	// Operation describes the header operation to perform e.g. "propagate"
-	Operation string `yaml:"op" validate:"oneof=propagate"`
+	Operation HeaderRuleOperation `yaml:"op" validate:"oneof=propagate"`
 	// Matching is the regex to match the header name against
 	Matching string `yaml:"matching" validate:"excluded_with=Named"`
 	// Named is the exact header name to match
@@ -193,6 +165,26 @@ type OverrideRoutingURLConfiguration struct {
 	Subgraphs map[string]string `yaml:"subgraphs" validate:"dive,required,url"`
 }
 
+type AuthenticationProviderJWKS struct {
+	URL                 string        `yaml:"url" validate:"url"`
+	HeaderNames         []string      `yaml:"header_names"`
+	HeaderValuePrefixes []string      `yaml:"header_value_prefixes"`
+	RefreshInterval     time.Duration `yaml:"refresh_interval" default:"1m" validate:"required,min=5s,max=1h"`
+}
+
+type AuthenticationProvider struct {
+	Name string                      `yaml:"name"`
+	JWKS *AuthenticationProviderJWKS `yaml:"jwks"`
+}
+
+type AuthenticationConfiguration struct {
+	Providers []AuthenticationProvider `yaml:"providers"`
+}
+
+type AuthorizationConfiguration struct {
+	RequireAuthentication bool `yaml:"require_authentication" default:"false" envconfig:"REQUIRE_AUTHENTICATION"`
+}
+
 type Config struct {
 	Version string `yaml:"version"`
 
@@ -205,19 +197,22 @@ type Config struct {
 	Headers        HeaderRules            `yaml:"headers"`
 	TrafficShaping TrafficShapingRules    `yaml:"traffic_shaping"`
 
-	ListenAddr           string        `yaml:"listen_addr" default:"localhost:3002" validate:"hostname_port" envconfig:"LISTEN_ADDR"`
-	ControlplaneURL      string        `yaml:"controlplane_url" default:"https://cosmo-cp.wundergraph.com" envconfig:"CONTROLPLANE_URL" validate:"required,uri"`
-	PlaygroundEnabled    bool          `yaml:"playground_enabled" default:"true" envconfig:"PLAYGROUND_ENABLED"`
-	IntrospectionEnabled bool          `yaml:"introspection_enabled" default:"true" envconfig:"INTROSPECTION_ENABLED"`
-	LogLevel             string        `yaml:"log_level" default:"info" envconfig:"LOG_LEVEL" validate:"oneof=debug info warning error fatal panic"`
-	JSONLog              bool          `yaml:"json_log" default:"true" envconfig:"JSON_LOG"`
-	ShutdownDelay        time.Duration `yaml:"shutdown_delay" default:"60s" validate:"required,min=15s" envconfig:"SHUTDOWN_DELAY"`
-	GracePeriod          time.Duration `yaml:"grace_period" default:"20s" validate:"required" envconfig:"GRACE_PERIOD"`
-	PollInterval         time.Duration `yaml:"poll_interval" default:"10s" validate:"required,min=5s" envconfig:"POLL_INTERVAL"`
-	HealthCheckPath      string        `yaml:"health_check_path" default:"/health" envconfig:"HEALTH_CHECK_PATH" validate:"uri"`
-	ReadinessCheckPath   string        `yaml:"readiness_check_path" default:"/health/ready" envconfig:"READINESS_CHECK_PATH" validate:"uri"`
-	LivenessCheckPath    string        `yaml:"liveness_check_path" default:"/health/live" envconfig:"LIVENESS_CHECK_PATH" validate:"uri"`
-	GraphQLPath          string        `yaml:"graphql_path" default:"/graphql" envconfig:"GRAPHQL_PATH"`
+	ListenAddr                    string                      `yaml:"listen_addr" default:"localhost:3002" validate:"hostname_port" envconfig:"LISTEN_ADDR"`
+	ControlplaneURL               string                      `yaml:"controlplane_url" default:"https://cosmo-cp.wundergraph.com" envconfig:"CONTROLPLANE_URL" validate:"required,uri"`
+	PlaygroundEnabled             bool                        `yaml:"playground_enabled" default:"true" envconfig:"PLAYGROUND_ENABLED"`
+	IntrospectionEnabled          bool                        `yaml:"introspection_enabled" default:"true" envconfig:"INTROSPECTION_ENABLED"`
+	LogLevel                      string                      `yaml:"log_level" default:"info" envconfig:"LOG_LEVEL" validate:"oneof=debug info warning error fatal panic"`
+	JSONLog                       bool                        `yaml:"json_log" default:"true" envconfig:"JSON_LOG"`
+	ShutdownDelay                 time.Duration               `yaml:"shutdown_delay" default:"60s" validate:"required,min=15s" envconfig:"SHUTDOWN_DELAY"`
+	GracePeriod                   time.Duration               `yaml:"grace_period" default:"20s" validate:"required" envconfig:"GRACE_PERIOD"`
+	PollInterval                  time.Duration               `yaml:"poll_interval" default:"10s" validate:"required,min=5s" envconfig:"POLL_INTERVAL"`
+	HealthCheckPath               string                      `yaml:"health_check_path" default:"/health" envconfig:"HEALTH_CHECK_PATH" validate:"uri"`
+	ReadinessCheckPath            string                      `yaml:"readiness_check_path" default:"/health/ready" envconfig:"READINESS_CHECK_PATH" validate:"uri"`
+	LivenessCheckPath             string                      `yaml:"liveness_check_path" default:"/health/live" envconfig:"LIVENESS_CHECK_PATH" validate:"uri"`
+	GraphQLPath                   string                      `yaml:"graphql_path" default:"/graphql" envconfig:"GRAPHQL_PATH"`
+	Authentication                AuthenticationConfiguration `yaml:"authentication"`
+	Authorization                 AuthorizationConfiguration  `yaml:"authorization"`
+	LocalhostFallbackInsideDocker bool                        `yaml:"localhost_fallback_inside_docker" default:"true" envconfig:"LOCALHOST_FALLBACK_INSIDE_DOCKER"`
 
 	ConfigPath       string `envconfig:"CONFIG_PATH" validate:"omitempty,filepath"`
 	RouterConfigPath string `yaml:"router_config_path" envconfig:"ROUTER_CONFIG_PATH" validate:"omitempty,filepath"`

@@ -3,11 +3,14 @@ package cmd
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
+	"runtime/pprof"
 	"syscall"
 
+	"github.com/wundergraph/cosmo/router/authentication"
 	"github.com/wundergraph/cosmo/router/config"
 	"github.com/wundergraph/cosmo/router/core"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
@@ -21,12 +24,27 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/logging"
 )
 
+var (
+	overrideEnv = flag.String("override-env", "", "env file name to override env variables")
+	memprofile  = flag.String("memprofile", "", "write memory profile to this file")
+	cpuprofile  = flag.String("cpuprofile", "", "write cpu profile to file")
+)
+
 func Main() {
-	var overrideEnv string
-	flag.StringVar(&overrideEnv, "override-env", "", "env file name to override env variables")
 	flag.Parse()
 
-	cfg, err := config.LoadConfig(overrideEnv)
+	if *cpuprofile != "" {
+		f, err := os.Create(*cpuprofile)
+		if err != nil {
+			log.Fatal("Could not create CPU profile", err)
+		}
+		defer f.Close()
+		if err := pprof.StartCPUProfile(f); err != nil {
+			log.Fatal("Could not start CPU profile", err)
+		}
+	}
+
+	cfg, err := config.LoadConfig(*overrideEnv)
 	if err != nil {
 		log.Fatal("Could not load config", zap.Error(err))
 	}
@@ -65,6 +83,28 @@ func Main() {
 		routerConfig, err = core.SerializeConfigFromFile(cfg.RouterConfigPath)
 		if err != nil {
 			logger.Fatal("Could not read router config", zap.Error(err), zap.String("path", cfg.RouterConfigPath))
+		}
+	}
+
+	var authenticators []authentication.Authenticator
+	for i, auth := range cfg.Authentication.Providers {
+		if auth.JWKS != nil {
+			name := auth.Name
+			if name == "" {
+				name = fmt.Sprintf("jwks-#%d", i)
+			}
+			opts := authentication.JWKSAuthenticatorOptions{
+				Name:                name,
+				URL:                 auth.JWKS.URL,
+				HeaderNames:         auth.JWKS.HeaderNames,
+				HeaderValuePrefixes: auth.JWKS.HeaderValuePrefixes,
+				RefreshInterval:     auth.JWKS.RefreshInterval,
+			}
+			authenticator, err := authentication.NewJWKSAuthenticator(opts)
+			if err != nil {
+				logger.Fatal("Could not create JWKS authenticator", zap.Error(err), zap.String("name", name))
+			}
+			authenticators = append(authenticators, authenticator)
 		}
 	}
 
@@ -115,6 +155,8 @@ func Main() {
 		core.WithTracing(traceConfig(&cfg.Telemetry)),
 		core.WithMetrics(metricsConfig(&cfg.Telemetry)),
 		core.WithEngineExecutionConfig(cfg.EngineExecutionConfiguration),
+		core.WithAccessController(core.NewAccessController(authenticators, cfg.Authorization.RequireAuthentication)),
+		core.WithLocalhostFallbackInsideDocker(cfg.LocalhostFallbackInsideDocker),
 	)
 
 	if err != nil {
@@ -140,8 +182,26 @@ func Main() {
 		logger.Error("Could not shutdown server", zap.Error(err))
 	}
 
+	if *cpuprofile != "" {
+		pprof.StopCPUProfile()
+	}
+	createMemprofile()
+
 	logger.Debug("Server exiting")
 	os.Exit(0)
+}
+
+func createMemprofile() {
+	if *memprofile != "" {
+		f, err := os.Create(*memprofile)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer f.Close()
+		if err := pprof.WriteHeapProfile(f); err != nil {
+			log.Fatal(err)
+		}
+	}
 }
 
 func traceConfig(cfg *config.Telemetry) *trace.Config {
@@ -182,9 +242,11 @@ func metricsConfig(cfg *config.Telemetry) *metric.Config {
 			Exporters: openTelemetryExporters,
 		},
 		Prometheus: metric.Prometheus{
-			Enabled:    cfg.Metrics.Prometheus.Enabled,
-			ListenAddr: cfg.Metrics.Prometheus.ListenAddr,
-			Path:       cfg.Metrics.Prometheus.Path,
+			Enabled:             cfg.Metrics.Prometheus.Enabled,
+			ListenAddr:          cfg.Metrics.Prometheus.ListenAddr,
+			Path:                cfg.Metrics.Prometheus.Path,
+			ExcludeMetrics:      cfg.Metrics.Prometheus.ExcludeMetrics,
+			ExcludeMetricLabels: cfg.Metrics.Prometheus.ExcludeMetricLabels,
 		},
 	}
 }

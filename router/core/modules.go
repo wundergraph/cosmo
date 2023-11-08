@@ -3,9 +3,13 @@ package core
 import (
 	stdContext "context"
 	"fmt"
-	"go.uber.org/zap"
 	"net/http"
 	"sync"
+
+	"github.com/pkg/errors"
+
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphql"
+	"go.uber.org/zap"
 )
 
 var (
@@ -95,4 +99,20 @@ type ModuleContext struct {
 	stdContext.Context
 	Module Module
 	Logger *zap.Logger
+}
+
+// WriteResponseError writes the given error as a GraphQL error response to the http.ResponseWriter
+// associated with the given RequestContext. If err is nil, a generic "Internal Error" error is returned.
+// Please never write errors directly to the http.ResponseWriter. The function takes care of logging and tracking
+// the error in the underlying telemetry system.
+func WriteResponseError(ctx RequestContext, err error) {
+	var errs graphql.RequestErrors
+
+	if err != nil {
+		errs = graphql.RequestErrorsFromError(err)
+	} else {
+		errs = graphql.RequestErrorsFromError(errors.New("Internal Error"))
+	}
+
+	writeRequestErrors(ctx.Request(), errs, ctx.ResponseWriter(), ctx.Logger())
 }

@@ -4,6 +4,53 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.30.0](https://github.com/wundergraph/cosmo/compare/router@0.29.0...router@0.30.0) (2023-11-07)
+
+### Features
+
+* automatically translate failed requests to localhost to docker.host.internal ([#224](https://github.com/wundergraph/cosmo/issues/224)) ([936006d](https://github.com/wundergraph/cosmo/commit/936006d8b91eee310768c69dfc9fde5e4c286108)) (@fiam)
+* upgrade minimum required Go version to 1.21 ([#239](https://github.com/wundergraph/cosmo/issues/239)) ([d7fe7da](https://github.com/wundergraph/cosmo/commit/d7fe7daf78fceaf3fdb1679bfa3addef8cdfd67a)) (@fiam)
+
+# [0.29.0](https://github.com/wundergraph/cosmo/compare/router@0.28.2...router@0.29.0) (2023-11-06)
+
+### Features
+
+* **controlplane:** avoid downloading config for latest check ([#236](https://github.com/wundergraph/cosmo/issues/236)) ([1929554](https://github.com/wundergraph/cosmo/commit/1929554e158548972cddacd3a59bca81133434a1)) (@StarpTech)
+
+## [0.28.2](https://github.com/wundergraph/cosmo/compare/router@0.28.1...router@0.28.2) (2023-11-06)
+
+### Bug Fixes
+
+* ensure proper graphql error response when passing nil error ([#233](https://github.com/wundergraph/cosmo/issues/233)) ([459f94d](https://github.com/wundergraph/cosmo/commit/459f94df65ca8a07447c29142b0f7f16473b708e)) (@StarpTech)
+* resolve issue single entity result in root ([#237](https://github.com/wundergraph/cosmo/issues/237)) ([7902a55](https://github.com/wundergraph/cosmo/commit/7902a55722748e684bc63668b04d768427223d81)) (@jensneuse)
+
+## [0.28.1](https://github.com/wundergraph/cosmo/compare/router@0.28.0...router@0.28.1) (2023-11-03)
+
+**Note:** Version bump only for package router
+
+# [0.28.0](https://github.com/wundergraph/cosmo/compare/router@0.27.2...router@0.28.0) (2023-11-03)
+
+### Features
+
+* operation checks (breaking change detection) ([#214](https://github.com/wundergraph/cosmo/issues/214)) ([0935413](https://github.com/wundergraph/cosmo/commit/093541305866327c5c44637603621e4a8053640d)) (@StarpTech)
+
+## [0.27.2](https://github.com/wundergraph/cosmo/compare/router@0.27.1...router@0.27.2) (2023-11-02)
+
+### Bug Fixes
+
+* don't cancel metric collection on request cancellation ([#221](https://github.com/wundergraph/cosmo/issues/221)) ([888fc85](https://github.com/wundergraph/cosmo/commit/888fc8545637dc7aecde186f4e71fdb4f3fbd39a)) (@StarpTech)
+
+## [0.27.1](https://github.com/wundergraph/cosmo/compare/router@0.27.0...router@0.27.1) (2023-11-01)
+
+**Note:** Version bump only for package router
+
+# [0.27.0](https://github.com/wundergraph/cosmo/compare/router@0.26.2...router@0.27.0) (2023-10-27)
+
+### Features
+
+* add support for authentication via JWKS ([#200](https://github.com/wundergraph/cosmo/issues/200)) ([cc59f9f](https://github.com/wundergraph/cosmo/commit/cc59f9f29b7b4ecf9360720f1c2478ae87f0f0be)) (@fiam)
+* allow to exclude certain OTEL metrics and labels from prometheus export ([#209](https://github.com/wundergraph/cosmo/issues/209)) ([d20074c](https://github.com/wundergraph/cosmo/commit/d20074c4174d3e3591de8b4f31791ed511d8b357)) (@StarpTech)
+
 ## [0.26.2](https://github.com/wundergraph/cosmo/compare/router@0.26.1...router@0.26.2) (2023-10-26)
 
 **Note:** Version bump only for package router

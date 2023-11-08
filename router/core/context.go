@@ -7,8 +7,10 @@ import (
 	"sync"
 	"time"
 
-	ctrace "github.com/wundergraph/cosmo/router/internal/trace"
 	"go.uber.org/zap"
+
+	"github.com/wundergraph/cosmo/router/authentication"
+	ctrace "github.com/wundergraph/cosmo/router/internal/trace"
 )
 
 type key string
@@ -106,6 +108,9 @@ type RequestContext interface {
 
 	// ActiveSubgraph returns the current subgraph to which the request is made to
 	ActiveSubgraph(subgraphRequest *http.Request) *Subgraph
+
+	// Authentication returns the authentication information for the request, if any
+	Authentication() authentication.Authentication
 }
 
 // requestContext is the default implementation of RequestContext
@@ -307,6 +312,10 @@ func (c *requestContext) ActiveSubgraph(subgraphRequest *http.Request) *Subgraph
 	return nil
 }
 
+func (c *requestContext) Authentication() authentication.Authentication {
+	return authentication.FromContext(c.request.Context())
+}
+
 const operationContextKey = key("graphql")
 
 type OperationContext interface {
@@ -337,7 +346,7 @@ type operationContext struct {
 	variables  []byte
 	clientInfo *ClientInfo
 	// preparedPlan is the prepared plan of the operation
-	preparedPlan planWithMetaData
+	preparedPlan *planWithMetaData
 }
 
 func (o *operationContext) Name() string {

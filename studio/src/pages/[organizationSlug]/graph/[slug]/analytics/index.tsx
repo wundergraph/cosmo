@@ -8,21 +8,23 @@ import {
   AnalyticsSelectedFilters,
 } from "@/components/analytics/filters";
 import { optionConstructor } from "@/components/analytics/getDataTableFilters";
+import { RefreshInterval } from "@/components/analytics/refresh-interval";
 import { AnalyticsToolbar } from "@/components/analytics/toolbar";
+import { useApplyParams } from "@/components/analytics/use-apply-params";
+import { useRange } from "@/components/analytics/use-range";
 import { useAnalyticsQueryState } from "@/components/analytics/useAnalyticsQueryState";
+import {
+  DatePickerWithRange,
+  DateRangePickerChangeHandler,
+  getRange,
+} from "@/components/date-picker-with-range";
 import { EmptyState } from "@/components/empty-state";
 import { InfoTooltip } from "@/components/info-tooltip";
-import { getGraphLayout, GraphContext } from "@/components/layout/graph-layout";
+import { GraphContext, getGraphLayout } from "@/components/layout/graph-layout";
 import { PageHeader } from "@/components/layout/head";
 import { TitleLayout } from "@/components/layout/title-layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Loader } from "@/components/ui/loader";
 import { Spacer } from "@/components/ui/spacer";
 import {
@@ -30,23 +32,26 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useSessionStorage } from "@/hooks/use-session-storage";
 import useWindowSize from "@/hooks/use-window-size";
 import {
   formatDurationMetric,
   formatMetric,
   formatPercentMetric,
 } from "@/lib/format-metric";
-import { createDateRange, useChartData } from "@/lib/insights-helpers";
+import { useChartData } from "@/lib/insights-helpers";
 import { NextPageWithLayout } from "@/lib/page";
 import { cn } from "@/lib/utils";
 import {
-  ChevronDownIcon,
   ChevronRightIcon,
   ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
 import { UpdateIcon } from "@radix-ui/react-icons";
-import { useIsFetching, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useIsFetching,
+  useQuery,
+  useQueryClient,
+  keepPreviousData,
+} from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   getGraphMetrics,
@@ -57,9 +62,10 @@ import {
   MetricsDashboardMetric,
   MetricsTopItem,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
+import { differenceInHours, formatISO } from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import React, { useCallback, useContext, useEffect, useId } from "react";
+import React, { useCallback, useContext, useId } from "react";
 import {
   Area,
   AreaChart,
@@ -75,35 +81,18 @@ export type OperationAnalytics = {
   operationType: number;
 };
 
-// This is now static, but at some point we can introduce a date range picker for custom ranges.
-const useRange = () => {
-  const router = useRouter();
-
-  const range = router.query.range
-    ? parseInt(router.query.range?.toString())
-    : 168;
-
-  switch (range) {
-    case 24:
-      return 24;
-    case 72:
-      return 72;
-    case 168:
-      return 168;
-    default:
-      return Math.min(24, range);
-  }
-};
-
-const getInfoTip = (range: number) => {
+const getInfoTip = (range?: number) => {
   switch (range) {
     case 72:
-      return "3 day";
+      return "last 3 day";
     case 168:
-      return "1 week";
+      return "last 1 week";
+    case 720:
+      return "last 1 month";
     case 24:
+      return "last 1 day";
     default:
-      return `${range} hour`;
+      return "selected period";
   }
 };
 
@@ -127,7 +116,7 @@ const useMetricsFilters = (filters: AnalyticsViewResultFilter[]) => {
   const applyNewParams = useCallback(
     (newParams: Record<string, string | null>, unset?: string[]) => {
       const q = Object.fromEntries(
-        Object.entries(router.query).filter(([key]) => !unset?.includes(key))
+        Object.entries(router.query).filter(([key]) => !unset?.includes(key)),
       );
       router.push({
         query: {
@@ -136,7 +125,7 @@ const useMetricsFilters = (filters: AnalyticsViewResultFilter[]) => {
         },
       });
     },
-    [router]
+    [router],
   );
 
   const selectedFilters = useSelectedFilters();
@@ -173,14 +162,14 @@ const useMetricsFilters = (filters: AnalyticsViewResultFilter[]) => {
       },
       selectedOptions:
         selectedFilters.find(
-          (f: { id: string; value: string[] }) => f.id === filter.columnName
+          (f: { id: string; value: string[] }) => f.id === filter.columnName,
         )?.value ?? [],
       options: filter.options.map((each) =>
         optionConstructor({
           label: each.label || "-",
           operator: each.operator as unknown as string,
           value: each.value as unknown as string,
-        })
+        }),
       ),
     } as AnalyticsFilter;
   });
@@ -207,28 +196,30 @@ const MetricsFilters: React.FC<MetricsFiltersProps> = (props) => {
 
   const { filtersList } = useMetricsFilters(filters);
 
-  if (filtersList.filter((f) => f.options.length > 0).length === 0) {
-    return null;
-  }
-
   return <AnalyticsFilters filters={filtersList} />;
 };
 
 const AnalyticsPage: NextPageWithLayout = () => {
   const graphContext = useContext(GraphContext);
 
-  const range = useRange();
-
-  const { filters } = useAnalyticsQueryState();
+  const { filters, range, dateRange, refreshInterval } =
+    useAnalyticsQueryState();
 
   let { data, isLoading, error, refetch } = useQuery({
     ...getGraphMetrics.useQuery({
       federatedGraphName: graphContext?.graph?.name,
       range,
+      dateRange: range
+        ? undefined
+        : {
+            start: formatISO(dateRange.start),
+            end: formatISO(dateRange.end),
+          },
       filters,
     }),
-    keepPreviousData: true,
+    placeholderData: keepPreviousData,
     refetchOnWindowFocus: false,
+    refetchInterval: refreshInterval,
   });
 
   if (!isLoading && (error || data?.response?.code !== EnumStatusCode.OK)) {
@@ -266,7 +257,7 @@ const AnalyticsPage: NextPageWithLayout = () => {
 
 const getDeltaType = (
   value: number,
-  { invert, neutral }: { invert?: boolean; neutral?: boolean }
+  { invert, neutral }: { invert?: boolean; neutral?: boolean },
 ) => {
   if (value === 0) {
     return "neutral";
@@ -329,7 +320,9 @@ const TopList: React.FC<{
   queryParams?: Record<string, string | number>;
 }> = ({ title, items, formatter, queryParams = {} }) => {
   const router = useRouter();
-  const range = useRange();
+
+  const range = router.query.range;
+  const dateRange = router.query.dateRange;
 
   return (
     <CardContent className="pt-6">
@@ -344,7 +337,8 @@ const TopList: React.FC<{
                     organizationSlug: router.query.organizationSlug,
                     slug: router.query.slug,
                     filterState: router.query.filterState || "[]",
-                    dateRange: createDateRange(range),
+                    range,
+                    dateRange,
                     ...queryParams,
                   },
                 }}
@@ -371,7 +365,8 @@ const TopList: React.FC<{
               filterState: createFilterState({
                 operationName: row.name,
               }),
-              dateRange: createDateRange(range),
+              range,
+              dateRange,
             },
           },
         }))}
@@ -464,7 +459,7 @@ const LatencyMetricsCard = (props: { data?: MetricsDashboardMetric }) => {
         <div className="flex-1">
           <div className="flex space-x-2 text-sm">
             <h4>P95 Latency</h4>
-            <InfoTooltip>P95 latency in last {getInfoTip(range)}</InfoTooltip>
+            <InfoTooltip>P95 latency in {getInfoTip(range)}</InfoTooltip>
           </div>
           <p className="text-xl font-semibold">{formatter(value)}</p>
 
@@ -513,9 +508,7 @@ const ErrorMetricsCard = (props: { data?: MetricsDashboardMetric }) => {
         <div className="flex-1">
           <div className="flex space-x-2 text-sm">
             <h4>Error Percentage</h4>
-            <InfoTooltip>
-              Error percentage in last {getInfoTip(range)}
-            </InfoTooltip>
+            <InfoTooltip>Error percentage in {getInfoTip(range)}</InfoTooltip>
           </div>
           <p className="text-xl font-semibold">{formatter(value)}</p>
           <p className="text-sm text-muted-foreground">
@@ -559,7 +552,7 @@ const Sparkline: React.FC<SparklineProps> = (props) => {
 
   const { data, ticks, domain, timeFormatter } = useChartData(
     timeRange,
-    props.series
+    props.series,
   );
 
   const strokeColor = "hsl(var(--chart-primary))";
@@ -640,7 +633,7 @@ const ErrorPercentChart: React.FC<SparklineProps> = (props) => {
   const id = useId();
   const { data, ticks, domain, timeFormatter } = useChartData(
     timeRange,
-    props.series
+    props.series,
   );
 
   return (
@@ -703,7 +696,6 @@ const ErrorPercentChart: React.FC<SparklineProps> = (props) => {
 
 const ErrorRateOverTimeCard = () => {
   const id = useId();
-  const range = useRange();
   const graphContext = useContext(GraphContext);
 
   const formatter = (value: number) => {
@@ -724,7 +716,8 @@ const ErrorRateOverTimeCard = () => {
 
   const { isMobile } = useWindowSize();
 
-  const { filters } = useAnalyticsQueryState();
+  const { filters, range, dateRange, refreshInterval } =
+    useAnalyticsQueryState();
 
   let {
     data: responseData,
@@ -735,15 +728,22 @@ const ErrorRateOverTimeCard = () => {
     ...getMetricsErrorRate.useQuery({
       federatedGraphName: graphContext?.graph?.name,
       range,
+      dateRange: range
+        ? undefined
+        : {
+            start: formatISO(dateRange.start),
+            end: formatISO(dateRange.end),
+          },
       filters,
     }),
-    keepPreviousData: true,
+    placeholderData: keepPreviousData,
     refetchOnWindowFocus: false,
+    refetchInterval: refreshInterval,
   });
 
   const { data, ticks, domain, timeFormatter } = useChartData(
-    range,
-    responseData?.series ?? []
+    differenceInHours(dateRange.end, dateRange.start) ?? 24,
+    responseData?.series ?? [],
   );
 
   let content;
@@ -836,7 +836,7 @@ const ErrorRateOverTimeCard = () => {
         <div className="flex space-x-2">
           <CardTitle>Error rate over time</CardTitle>
           <InfoTooltip>
-            Error rate per minute in last {getInfoTip(range)}
+            Error rate per minute in {getInfoTip(range)}
           </InfoTooltip>
         </div>
       </CardHeader>
@@ -848,19 +848,10 @@ const ErrorRateOverTimeCard = () => {
 
 const OverviewToolbar = () => {
   const graphContext = useContext(GraphContext);
-  const router = useRouter();
   const client = useQueryClient();
-  const range = useRange();
 
-  const onRangeChange = (value: string) => {
-    router.push({
-      pathname: router.pathname,
-      query: {
-        ...router.query,
-        range: value,
-      },
-    });
-  };
+  const { filters, range, dateRange, refreshInterval } =
+    useAnalyticsQueryState();
 
   const metrics = getGraphMetrics.useQuery({
     federatedGraphName: graphContext?.graph?.name,
@@ -874,42 +865,66 @@ const OverviewToolbar = () => {
 
   const isFetching = useIsFetching();
 
-  const { filters } = useAnalyticsQueryState();
-
   let { data } = useQuery({
     ...getGraphMetrics.useQuery({
       federatedGraphName: graphContext?.graph?.name,
+      dateRange: range
+        ? undefined
+        : {
+            start: formatISO(dateRange.start),
+            end: formatISO(dateRange.end),
+          },
       range,
       filters,
     }),
-    keepPreviousData: true,
+    placeholderData: keepPreviousData,
     refetchOnWindowFocus: false,
   });
 
   const { filtersList, selectedFilters, resetFilters } = useMetricsFilters(
-    data?.filters ?? []
+    data?.filters ?? [],
   );
 
-  const rangeLabels: Record<number, string> = {
-    1: "Last hour",
-    4: "Last 4 hours",
-    24: "Last day",
-    72: "Last 3 days",
-    168: "Last week",
+  const applyParams = useApplyParams();
+
+  const onDateRangeChange: DateRangePickerChangeHandler = ({
+    range,
+    dateRange,
+  }) => {
+    if (range) {
+      applyParams({
+        range: range.toString(),
+        dateRange: null,
+      });
+    } else if (dateRange) {
+      const stringifiedDateRange = JSON.stringify({
+        start: formatISO(dateRange.start),
+        end: formatISO(dateRange.end ?? dateRange.start),
+      });
+
+      applyParams({
+        range: null,
+        dateRange: stringifiedDateRange,
+      });
+    }
   };
 
-  const handleCheckedChanged = (id: string) => {
-    return (checked: boolean) => {
-      if (checked) {
-        onRangeChange(id);
-      }
-    };
+  const onRefreshIntervalChange = (value?: number) => {
+    applyParams({
+      refreshInterval: value ? value.toString() : null,
+    });
   };
 
   return (
     <div className="flex flex-col gap-2 space-y-2">
       <div className="flex gap-2">
         <div className="flex flex-wrap gap-2">
+          <DatePickerWithRange
+            range={range}
+            dateRange={dateRange}
+            onChange={onDateRangeChange}
+          />
+
           <MetricsFilters filters={data?.filters ?? []} />
           <AnalyticsSelectedFilters
             filters={filtersList}
@@ -919,59 +934,25 @@ const OverviewToolbar = () => {
         </div>
 
         <Spacer />
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline">
-              <span className="inline-block w-[100px] text-left">
-                {rangeLabels[range]}
-              </span>
-              <ChevronDownIcon className="ml-2 h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start">
-            <DropdownMenuCheckboxItem
-              checked={range === 1}
-              onCheckedChange={handleCheckedChanged("1")}
-            >
-              Last hour
-            </DropdownMenuCheckboxItem>
-            <DropdownMenuCheckboxItem
-              checked={range === 4}
-              onCheckedChange={handleCheckedChanged("4")}
-            >
-              Last 4 hours
-            </DropdownMenuCheckboxItem>
-            <DropdownMenuCheckboxItem
-              checked={range === 24}
-              onCheckedChange={handleCheckedChanged("24")}
-            >
-              Last day
-            </DropdownMenuCheckboxItem>
-            <DropdownMenuCheckboxItem
-              checked={range === 72}
-              onCheckedChange={handleCheckedChanged("72")}
-            >
-              Last 3 days
-            </DropdownMenuCheckboxItem>
-            <DropdownMenuCheckboxItem
-              checked={range === 168}
-              onCheckedChange={handleCheckedChanged("168")}
-            >
-              Last week
-            </DropdownMenuCheckboxItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
         <Button
           isLoading={!!isFetching}
           onClick={() => {
-            client.invalidateQueries(metrics.queryKey);
-            client.invalidateQueries(errorRate.queryKey);
+            client.invalidateQueries({
+              queryKey: metrics.queryKey,
+            });
+            client.invalidateQueries({
+              queryKey: errorRate.queryKey,
+            });
           }}
           variant="outline"
           className="px-3"
         >
           <UpdateIcon />
         </Button>
+        <RefreshInterval
+          value={refreshInterval}
+          onChange={onRefreshIntervalChange}
+        />
       </div>
     </div>
   );
@@ -987,6 +968,6 @@ AnalyticsPage.getLayout = (page) =>
       >
         {page}
       </TitleLayout>
-    </PageHeader>
+    </PageHeader>,
   );
 export default AnalyticsPage;

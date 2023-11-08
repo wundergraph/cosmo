@@ -1,7 +1,12 @@
 import { UserContext } from "@/components/app-provider";
 import { EmptyState } from "@/components/empty-state";
 import { getDashboardLayout } from "@/components/layout/dashboard-layout";
-import { EventsMeta, Meta, NotificationTabs, notificationEvents } from "@/components/notifications/components";
+import {
+  EventsMeta,
+  Meta,
+  NotificationTabs,
+  notificationEvents,
+} from "@/components/notifications/components";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -48,14 +53,13 @@ import {
   deleteOrganizationWebhookConfig,
   getOrganizationWebhookConfigs,
   getOrganizationWebhookMeta,
-  updateOrganizationWebhookConfig
+  updateOrganizationWebhookConfig,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useContext, useEffect, useState } from "react";
 import { PiWebhooksLogo } from "react-icons/pi";
 import { z } from "zod";
-
 
 const DeleteWebhook = ({
   id,
@@ -67,8 +71,8 @@ const DeleteWebhook = ({
   const [isOpen, setIsOpen] = useState(false);
   const { toast } = useToast();
 
-  const { mutate, isLoading } = useMutation(
-    deleteOrganizationWebhookConfig.useMutation()
+  const { mutate, isPending } = useMutation(
+    deleteOrganizationWebhookConfig.useMutation(),
   );
 
   const onDelete = () => {
@@ -97,7 +101,7 @@ const DeleteWebhook = ({
             duration: 3000,
           });
         },
-      }
+      },
     );
   };
 
@@ -121,7 +125,7 @@ const DeleteWebhook = ({
             variant="destructive"
             type="button"
             onClick={onDelete}
-            isLoading={isLoading}
+            isLoading={isPending}
           >
             Delete
           </Button>
@@ -140,7 +144,7 @@ const FormSchema = z.object({
         process.env.NODE_ENV === "production"
           ? url.startsWith("https://")
           : true,
-      "The endpoint must use https"
+      "The endpoint must use https",
     ),
   key: z.string().optional(),
   events: z.array(z.string()).optional(),
@@ -165,12 +169,12 @@ const Webhook = ({
   const [isOpen, setIsOpen] = useState(false);
   const { toast } = useToast();
 
-  const { mutate: create, isLoading: isCreating } = useMutation(
-    createOrganizationWebhookConfig.useMutation()
+  const { mutate: create, isPending: isCreating } = useMutation(
+    createOrganizationWebhookConfig.useMutation(),
   );
 
-  const { mutate: update, isLoading: isUpdating } = useMutation(
-    updateOrganizationWebhookConfig.useMutation()
+  const { mutate: update, isPending: isUpdating } = useMutation(
+    updateOrganizationWebhookConfig.useMutation(),
   );
 
   const [shouldUpdateKey, setShouldUpdateKey] = useState(false);
@@ -184,7 +188,7 @@ const Webhook = ({
     ...getOrganizationWebhookMeta.useQuery({
       id: existing?.id ?? "",
     }),
-    cacheTime: 0,
+    gcTime: 0,
     enabled: !!existing?.id && mode === "update" && isOpen,
   });
 
@@ -227,7 +231,7 @@ const Webhook = ({
               duration: 3000,
             });
           },
-        }
+        },
       );
     } else if (mode === "update" && existing?.id) {
       update(
@@ -261,7 +265,7 @@ const Webhook = ({
               duration: 3000,
             });
           },
-        }
+        },
       );
     }
   };
@@ -415,8 +419,8 @@ const Webhook = ({
                                           ])
                                         : field.onChange(
                                             field.value?.filter(
-                                              (value) => value !== event.name
-                                            )
+                                              (value) => value !== event.name,
+                                            ),
                                           );
                                     }}
                                   />
@@ -471,7 +475,7 @@ const WebhooksPage: NextPageWithLayout = () => {
 
   if (isLoading) return <Loader fullscreen />;
 
-  if (error || data.response?.code !== EnumStatusCode.OK)
+  if (error || data?.response?.code !== EnumStatusCode.OK)
     return (
       <EmptyState
         icon={<ExclamationTriangleIcon />}
@@ -575,7 +579,7 @@ WebhooksPage.getLayout = (page) => {
       <>{page}</>
     </div>,
     "Webhooks",
-    "Configure webhooks for your organization"
+    "Configure webhooks for your organization",
   );
 };
 

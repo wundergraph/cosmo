@@ -23,7 +23,8 @@ import { Nav, NavLink } from "./nav";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { addDays, formatDistance } from "date-fns";
 import { UserContext } from "../app-provider";
-import { showCal } from "@/lib/utils";
+import { calURL } from "@/lib/constants";
+import Link from "next/link";
 
 const icons: { [key: string]: ReactNode } = {
   Overview: <HomeIcon />,
@@ -42,7 +43,7 @@ export interface GraphContextProps {
 }
 
 export const GraphContext = createContext<GraphContextProps | undefined>(
-  undefined
+  undefined,
 );
 
 const GraphLayout = ({ children }: LayoutProps) => {
@@ -54,7 +55,7 @@ const GraphLayout = ({ children }: LayoutProps) => {
   const { data, isLoading, error, refetch } = useQuery(
     getFederatedGraphByName.useQuery({
       name: slug,
-    })
+    }),
   );
 
   const graphContextData = useMemo(() => {
@@ -113,7 +114,7 @@ const GraphLayout = ({ children }: LayoutProps) => {
 
   if (isLoading) {
     render = <Loader fullscreen />;
-  } else if (error || data.response?.code !== EnumStatusCode.OK) {
+  } else if (error || data?.response?.code !== EnumStatusCode.OK) {
     render = (
       <div className="my-auto">
         <EmptyState
@@ -138,16 +139,18 @@ const GraphLayout = ({ children }: LayoutProps) => {
     <div className="2xl:flex 2xl:flex-1 2xl:flex-col 2xl:items-center">
       <div className="min-h-screen w-full max-w-screen-4xl bg-background font-sans antialiased">
         {user?.currentOrganization.isFreeTrial && (
-          <div
+          <Link
             className="sticky top-0 z-50 flex cursor-pointer justify-center rounded bg-primary px-2 py-1 text-sm text-secondary-foreground"
-            onClick={showCal}
+            href={calURL}
+            target="_blank"
+            rel="noreferrer"
           >
             {!user.currentOrganization.isFreeTrialExpired ? (
               <span>
                 Limited trial version (
                 {formatDistance(
                   addDays(new Date(user.currentOrganization.createdAt), 10),
-                  new Date()
+                  new Date(),
                 )}{" "}
                 left).{" "}
                 <span className="underline underline-offset-2">
@@ -162,7 +165,7 @@ const GraphLayout = ({ children }: LayoutProps) => {
                 to contact us and upgrade your plan for continued usage.
               </span>
             )}
-          </div>
+          </Link>
         )}
         <Nav links={links}>{render}</Nav>
       </div>

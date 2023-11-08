@@ -12,6 +12,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
+	"github.com/wundergraph/cosmo/router/internal/docker"
 	"github.com/wundergraph/cosmo/router/internal/graphqlmetrics"
 	brotli "go.withmatt.com/connect-brotli"
 
@@ -103,7 +104,10 @@ type (
 		subgraphTransportOptions *SubgraphTransportOptions
 		graphqlMetricsConfig     *GraphQLMetricsConfig
 		routerTrafficConfig      *config.RouterTrafficConfiguration
+		accessController         *AccessController
 		retryOptions             retrytransport.RetryOptions
+		// If connecting to localhost inside Docker fails, fallback to the docker internal address for the host
+		localhostFallbackInsideDocker bool
 
 		engineExecutionConfiguration config.EngineExecutionConfiguration
 
@@ -167,6 +171,14 @@ func NewRouter(opts ...Option) (*Router, error) {
 	}
 	if r.routerTrafficConfig == nil {
 		r.routerTrafficConfig = DefaultRouterTrafficConfig()
+	}
+	if r.accessController == nil {
+		r.accessController = DefaultAccessController()
+	} else {
+		if len(r.accessController.authenticators) == 0 && r.accessController.authenticationRequired {
+			r.logger.Warn("authentication is required but no authenticators are configured")
+		}
+
 	}
 
 	// Default values for health check paths
@@ -437,7 +449,7 @@ func (r *Router) NewTestServer(ctx context.Context) (*Server, error) {
 
 func (r *Router) bootstrap(ctx context.Context) error {
 	if r.traceConfig.Enabled {
-		tp, err := trace.StartAgent(ctx, r.logger, r.traceConfig)
+		tp, err := trace.NewTracerProvider(ctx, r.logger, r.traceConfig)
 		if err != nil {
 			return fmt.Errorf("failed to start trace agent: %w", err)
 		}
@@ -446,14 +458,14 @@ func (r *Router) bootstrap(ctx context.Context) error {
 
 	// Prometheus metrics rely on OTLP metrics
 	if r.metricConfig.IsEnabled() {
-		mp, err := metric.StartAgent(ctx, r.logger, r.metricConfig)
+		mp, pr, err := metric.NewMeterProvider(ctx, r.logger, r.metricConfig)
 		if err != nil {
 			return fmt.Errorf("failed to start trace agent: %w", err)
 		}
 		r.meterProvider = mp
 
-		if r.metricConfig.Prometheus.Enabled {
-			promSvr := createPrometheus(r.logger, r.metricConfig.Prometheus.ListenAddr, r.metricConfig.Prometheus.Path)
+		if pr != nil && r.metricConfig.Prometheus.Enabled {
+			promSvr := createPrometheus(r.logger, pr, r.metricConfig.Prometheus.ListenAddr, r.metricConfig.Prometheus.Path)
 			go func() {
 				if err := promSvr.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 					r.logger.Error("Failed to start Prometheus server", zap.Error(err))
@@ -612,6 +624,10 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		return nil, fmt.Errorf("failed to create planner cache: %w", err)
 	}
 
+	if r.localhostFallbackInsideDocker && docker.Inside() {
+		r.logger.Info("localhost fallback enabled, connections that fail to connect to localhost will be retried using host.docker.internal")
+	}
+
 	ecb := &ExecutorConfigurationBuilder{
 		introspection: r.introspection,
 		baseURL:       r.baseURL,
@@ -619,10 +635,10 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		logger:        r.logger,
 		includeInfo:   r.graphqlMetricsConfig.Enabled,
 		transportOptions: &TransportOptions{
-			requestTimeout: r.subgraphTransportOptions.RequestTimeout,
-			preHandlers:    r.preOriginHandlers,
-			postHandlers:   r.postOriginHandlers,
-			retryOptions: retrytransport.RetryOptions{
+			RequestTimeout: r.subgraphTransportOptions.RequestTimeout,
+			PreHandlers:    r.preOriginHandlers,
+			PostHandlers:   r.postOriginHandlers,
+			RetryOptions: retrytransport.RetryOptions{
 				Enabled:       r.retryOptions.Enabled,
 				MaxRetryCount: r.retryOptions.MaxRetryCount,
 				MaxDuration:   r.retryOptions.MaxDuration,
@@ -631,11 +647,17 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 					return retrytransport.IsRetryableError(err, resp) && !isMutationRequest(req.Context())
 				},
 			},
-			logger: r.logger,
+			LocalhostFallbackInsideDocker: r.localhostFallbackInsideDocker,
+			Logger:                        r.logger,
 		},
 	}
 
-	executor, err := ecb.Build(ctx, routerConfig, r.engineExecutionConfiguration)
+	routerEngineConfig := &RouterEngineConfiguration{
+		Execution: r.engineExecutionConfiguration,
+		Headers:   r.headerRules,
+	}
+
+	executor, err := ecb.Build(ctx, routerConfig, routerEngineConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build plan configuration: %w", err)
 	}
@@ -682,11 +704,12 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	routerMetrics := NewRouterMetrics(metricStore, r.gqlMetricsExporter, routerConfig.GetVersion())
 
 	graphqlPreHandler := NewPreHandler(&PreHandlerOptions{
-		Logger:   r.logger,
-		Executor: executor,
-		Metrics:  routerMetrics,
-		Parser:   operationParser,
-		Planner:  operationPlanner,
+		Logger:           r.logger,
+		Executor:         executor,
+		Metrics:          routerMetrics,
+		Parser:           operationParser,
+		Planner:          operationPlanner,
+		AccessController: r.accessController,
 	})
 
 	var traceHandler *trace.Middleware
@@ -715,11 +738,12 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		}
 
 		subChiRouter.Use(NewWebsocketMiddleware(rootContext, WebsocketMiddlewareOptions{
-			Parser:         operationParser,
-			Planner:        operationPlanner,
-			Metrics:        routerMetrics,
-			GraphQLHandler: graphqlHandler,
-			Logger:         r.logger,
+			Parser:           operationParser,
+			Planner:          operationPlanner,
+			Metrics:          routerMetrics,
+			GraphQLHandler:   graphqlHandler,
+			AccessController: r.accessController,
+			Logger:           r.logger,
 		}))
 
 		subChiRouter.Use(graphqlPreHandler.Handler)
@@ -853,10 +877,15 @@ func (r *Server) Shutdown(ctx context.Context) (err error) {
 	return err
 }
 
-func createPrometheus(logger *zap.Logger, listenAddr, path string) *http.Server {
+func createPrometheus(logger *zap.Logger, registry *metric.PromRegistry, listenAddr, path string) *http.Server {
 	r := chi.NewRouter()
 	r.Use(middleware.Recoverer)
-	r.Handle(path, promhttp.Handler())
+	r.Handle(path, promhttp.HandlerFor(registry, promhttp.HandlerOpts{
+		EnableOpenMetrics: true,
+		ErrorLog:          zap.NewStdLog(logger),
+		Registry:          registry,
+		Timeout:           0,
+	}))
 
 	svr := &http.Server{
 		Addr:              listenAddr,
@@ -1026,6 +1055,18 @@ func WithSubgraphRetryOptions(enabled bool, maxRetryCount int, retryMaxDuration,
 func WithRouterTrafficConfig(cfg *config.RouterTrafficConfiguration) Option {
 	return func(r *Router) {
 		r.routerTrafficConfig = cfg
+	}
+}
+
+func WithAccessController(controller *AccessController) Option {
+	return func(r *Router) {
+		r.accessController = controller
+	}
+}
+
+func WithLocalhostFallbackInsideDocker(fallback bool) Option {
+	return func(r *Router) {
+		r.localhostFallbackInsideDocker = fallback
 	}
 }
 
