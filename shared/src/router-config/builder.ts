@@ -87,7 +87,10 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
     }
 
     // IMPORTANT NOTE: printSchema and printSchemaWithDirectives promotes extension types to "full" types
-    const upstreamSchema = internString(engineConfig, printSchemaWithDirectives(lexicographicSortSchema(subgraph.schema)));
+    const upstreamSchema = internString(
+      engineConfig,
+      printSchemaWithDirectives(lexicographicSortSchema(subgraph.schema)),
+    );
     const { childNodes, rootNodes, keys, provides, requires } = configurationDataMapToDataSourceConfiguration(
       subgraph.configurationDataMap,
     );

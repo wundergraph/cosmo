@@ -69,7 +69,7 @@ export default (opts: BaseCommandOptions) => {
               changeMessage: cl.changeMessage,
               createdAt: cl.createdAt,
             })),
-          }) as OutputFile[number],
+          } as OutputFile[number]),
       );
       await writeFile(join(process.cwd(), options.out), JSON.stringify(output));
     } else {

@@ -13,10 +13,7 @@ export type ApiKeyAuthContext = {
 };
 
 export default class ApiKeyAuthenticator {
-  constructor(
-    private db: PostgresJsDatabase<typeof schema>,
-    private orgRepo: OrganizationRepository,
-  ) {}
+  constructor(private db: PostgresJsDatabase<typeof schema>, private orgRepo: OrganizationRepository) {}
 
   /**
    * Authenticates the user with the given api key. Returns the user's organization ID.

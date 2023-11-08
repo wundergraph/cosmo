@@ -12,10 +12,7 @@ export type AccessTokenAuthContext = {
 };
 
 export default class AccessTokenAuthenticator {
-  constructor(
-    private orgRepo: OrganizationRepository,
-    private authUtils: AuthUtils,
-  ) {}
+  constructor(private orgRepo: OrganizationRepository, private authUtils: AuthUtils) {}
 
   /**
    * Authenticates the user with the given access token. Returns the user's organization ID and user's ID.

@@ -51,7 +51,7 @@ export default (opts: BaseCommandOptions) => {
             labels: g.labels.map((l) => joinLabel(l)),
             routingURL: g.routingURL,
             lastUpdatedAt: g.lastUpdatedAt,
-          }) as OutputFile[number],
+          } as OutputFile[number]),
       );
       await writeFile(join(process.cwd(), options.out), JSON.stringify(output));
       process.exit(0);

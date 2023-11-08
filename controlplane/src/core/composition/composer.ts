@@ -34,10 +34,7 @@ export interface ComposedFederatedGraph {
 }
 
 export class Composer {
-  constructor(
-    private federatedGraphRepo: FederatedGraphRepository,
-    private subgraphRepo: SubgraphRepository,
-  ) {}
+  constructor(private federatedGraphRepo: FederatedGraphRepository, private subgraphRepo: SubgraphRepository) {}
 
   /**
    * Build and store the final router config and federated schema to the database. A diff between the

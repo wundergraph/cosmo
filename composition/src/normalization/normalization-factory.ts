@@ -87,7 +87,7 @@ import {
   InvalidArgument,
   InvalidFieldImplementation,
   kindToTypeString,
-  removeMutualSourceEntriesFromTargetSet,
+  subtractSourceSetFromTargetSet,
 } from '../utils/utils';
 import {
   duplicateArgumentsError,
@@ -1706,7 +1706,7 @@ export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationContain
       if (!configurationData) {
         continue;
       }
-      removeMutualSourceEntriesFromTargetSet(fieldNames, configurationData.fieldNames);
+      subtractSourceSetFromTargetSet(fieldNames, configurationData.fieldNames);
       if (configurationData.fieldNames.size < 1) {
         internalSubgraph.configurationDataMap.delete(parentTypeName);
       }

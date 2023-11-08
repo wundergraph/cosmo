@@ -6,10 +6,7 @@ import { PlainMessage } from '@bufbuild/protobuf';
 import * as schema from '../../db/schema.js';
 
 export class GitHubRepository {
-  constructor(
-    private db: PostgresJsDatabase<typeof schema>,
-    private githubApp: App,
-  ) {}
+  constructor(private db: PostgresJsDatabase<typeof schema>, private githubApp: App) {}
 
   async verifyAppInstall(input: { code: string; installationId: number }): Promise<{ error?: string }> {
     try {
