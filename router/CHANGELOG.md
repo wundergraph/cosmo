@@ -4,6 +4,19 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.30.0](https://github.com/wundergraph/cosmo/compare/router@0.29.0...router@0.30.0) (2023-11-07)
+
+### Features
+
+* automatically translate failed requests to localhost to docker.host.internal ([#224](https://github.com/wundergraph/cosmo/issues/224)) ([936006d](https://github.com/wundergraph/cosmo/commit/936006d8b91eee310768c69dfc9fde5e4c286108)) (@fiam)
+* upgrade minimum required Go version to 1.21 ([#239](https://github.com/wundergraph/cosmo/issues/239)) ([d7fe7da](https://github.com/wundergraph/cosmo/commit/d7fe7daf78fceaf3fdb1679bfa3addef8cdfd67a)) (@fiam)
+
+# [0.29.0](https://github.com/wundergraph/cosmo/compare/router@0.28.2...router@0.29.0) (2023-11-06)
+
+### Features
+
+* **controlplane:** avoid downloading config for latest check ([#236](https://github.com/wundergraph/cosmo/issues/236)) ([1929554](https://github.com/wundergraph/cosmo/commit/1929554e158548972cddacd3a59bca81133434a1)) (@StarpTech)
+
 ## [0.28.2](https://github.com/wundergraph/cosmo/compare/router@0.28.1...router@0.28.2) (2023-11-06)
 
 ### Bug Fixes

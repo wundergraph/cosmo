@@ -145,7 +145,7 @@ const MigrationDialog = ({
           setIsMigrating(false);
           router.replace(`/${organizationSlug}/graphs`);
         },
-      }
+      },
     );
     reset();
   };
@@ -277,9 +277,11 @@ export const RunRouterCommand = ({
 }) => {
   const dockerRunCommand = `docker run \\
   --name cosmo-router \\
+  --rm \\
   -e FEDERATED_GRAPH_NAME="${graphName}" \\
   -e GRAPH_API_TOKEN=${token} \\
   -e LISTEN_ADDR=0.0.0.0:3002 \\
+  --add-host=host.docker.internal:host-gateway \\
   --platform=linux/amd64 \\
   -p 3002:3002 \\
   ghcr.io/wundergraph/cosmo/router:latest`;
@@ -414,22 +416,26 @@ const GraphCard = ({ graph }: { graph: FederatedGraph }) => {
   const user = useContext(UserContext);
   const { data, ticks, domain, timeFormatter } = useChartData(
     7 * 24,
-    graph.requestSeries.length > 0 ? graph.requestSeries : fallbackData
+    graph.requestSeries.length > 0 ? graph.requestSeries : fallbackData,
   );
 
-  let urlObject: URL | undefined;
-  try {
-    urlObject = new URL(graph.routingURL);
-  } catch (e) {
-    console.error(e);
-  }
+  const parsedURL = () => {
+    try {
+      if (!graph.routingURL) {
+        return "No endpoint provided";
+      }
+
+      const { host, pathname } = new URL(graph.routingURL);
+      return host + pathname;
+    } catch {}
+  };
 
   return (
     <Link
       href={`/${user?.currentOrganization?.slug}/graph/${graph.name}`}
       className="project-list-item group"
     >
-      <Card className="py-4 group-hover:border-ring dark:group-hover:border-input">
+      <Card className="flex h-full flex-col py-4 group-hover:border-ring dark:group-hover:border-input">
         <div className="h-20 pb-6">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data}>
@@ -454,45 +460,45 @@ const GraphCard = ({ graph }: { graph: FederatedGraph }) => {
           </ResponsiveContainer>
         </div>
 
-        <div className="px-6">
-          <div className="mt-2 text-base font-semibold">{graph.name}</div>
-          <p className="mb-4 truncate pt-1 text-xs text-gray-500 dark:text-gray-400">
-            {urlObject ? urlObject.host + urlObject.pathname : graph.routingURL}
+        <div className="mt-2 flex flex-1 flex-col items-start px-6">
+          <div className="text-base font-semibold">{graph.name}</div>
+          <p
+            className={cn(
+              "mb-4 truncate pt-1 text-xs text-gray-500 dark:text-gray-400",
+              {
+                italic: !graph.routingURL,
+              },
+            )}
+          >
+            {parsedURL()}
           </p>
-
-          <dl className="grid grid-cols-1 gap-x-2 gap-y-4 sm:grid-cols-2">
-            <div className="sm:col-span-1">
-              <dd className="font-bol mt-1 flex items-center space-x-2 text-sm">
-                <TooltipProvider>
-                  <Tooltip delayDuration={200}>
-                    <TooltipTrigger>
-                      <ComposeStatusBulb
-                        validGraph={graph.isComposable && !!graph.lastUpdatedAt}
-                        emptyGraph={!graph.lastUpdatedAt && !graph.isComposable}
-                      />
-                      <span className="ml-2">
-                        {graph.lastUpdatedAt ? (
-                          <TimeAgo
-                            date={getTime(parseISO(graph.lastUpdatedAt))}
-                            tooltip={false}
-                          />
-                        ) : (
-                          "-"
-                        )}
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <ComposeStatusMessage
-                        isComposable={graph.isComposable}
-                        lastUpdatedAt={graph.lastUpdatedAt}
-                        subgraphsCount={graph.connectedSubgraphs}
-                      />
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </dd>
-            </div>
-          </dl>
+          <TooltipProvider>
+            <Tooltip delayDuration={200}>
+              <TooltipTrigger className="mt-auto text-sm">
+                <ComposeStatusBulb
+                  validGraph={graph.isComposable && !!graph.lastUpdatedAt}
+                  emptyGraph={!graph.lastUpdatedAt && !graph.isComposable}
+                />
+                <span className="ml-2">
+                  {graph.lastUpdatedAt ? (
+                    <TimeAgo
+                      date={getTime(parseISO(graph.lastUpdatedAt))}
+                      tooltip={false}
+                    />
+                  ) : (
+                    "-"
+                  )}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>
+                <ComposeStatusMessage
+                  isComposable={graph.isComposable}
+                  lastUpdatedAt={graph.lastUpdatedAt}
+                  subgraphsCount={graph.connectedSubgraphs}
+                />
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           <style global jsx>{`
             /* Enforce a cursor pointer on the sparkline */
             .project-list-item

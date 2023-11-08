@@ -4,6 +4,23 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.30.0](https://github.com/wundergraph/cosmo/compare/studio@0.29.0...studio@0.30.0) (2023-11-07)
+
+### Bug Fixes
+
+* fixed issue where pagination displayed NaN when there are no res… ([#241](https://github.com/wundergraph/cosmo/issues/241)) ([6a2131a](https://github.com/wundergraph/cosmo/commit/6a2131ac4cb290bb4824b1bfa3eb33db964557f1)) (@Pagebakers)
+* misaligned federated graph cards ([#240](https://github.com/wundergraph/cosmo/issues/240)) ([6920420](https://github.com/wundergraph/cosmo/commit/69204201787a6a8e319bf351a9f38707a19d8e8d)) (@thisisnithin)
+
+### Features
+
+* automatically translate failed requests to localhost to docker.host.internal ([#224](https://github.com/wundergraph/cosmo/issues/224)) ([936006d](https://github.com/wundergraph/cosmo/commit/936006d8b91eee310768c69dfc9fde5e4c286108)) (@fiam)
+
+# [0.29.0](https://github.com/wundergraph/cosmo/compare/studio@0.28.1...studio@0.29.0) (2023-11-06)
+
+### Features
+
+* upgrade to stable connect & react-query 5 ([#231](https://github.com/wundergraph/cosmo/issues/231)) ([0c434eb](https://github.com/wundergraph/cosmo/commit/0c434eb41b357f596d19607cd2c8572f6a9899a1)) (@StarpTech)
+
 ## [0.28.1](https://github.com/wundergraph/cosmo/compare/studio@0.28.0...studio@0.28.1) (2023-11-03)
 
 ### Bug Fixes
