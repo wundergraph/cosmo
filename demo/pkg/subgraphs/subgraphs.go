@@ -11,10 +11,12 @@ import (
 	"github.com/99designs/gqlgen/graphql/playground"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/wundergraph/cosmo/demo/pkg/injector"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/employees"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/family"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/hobbies"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/products"
+	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/test1"
 )
 
 type Ports struct {
@@ -22,6 +24,7 @@ type Ports struct {
 	Family    int
 	Hobbies   int
 	Products  int
+	Test1     int
 }
 
 type Config struct {
@@ -69,7 +72,7 @@ func newServer(name string, enableDebug bool, port int, schema graphql.Executabl
 	mux.Handle("/graphql", srv)
 	return &http.Server{
 		Addr:    ":" + strconv.Itoa(port),
-		Handler: mux,
+		Handler: injector.HTTP(mux),
 	}
 }
 
@@ -85,6 +88,9 @@ func New(config *Config) (*Subgraphs, error) {
 		servers = append(servers, srv)
 	}
 	if srv := newServer("products", config.EnableDebug, config.Ports.Products, products.NewSchema()); srv != nil {
+		servers = append(servers, srv)
+	}
+	if srv := newServer("test1", config.EnableDebug, config.Ports.Test1, test1.NewSchema()); srv != nil {
 		servers = append(servers, srv)
 	}
 	return &Subgraphs{

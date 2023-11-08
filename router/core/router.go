@@ -12,6 +12,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
+	"github.com/wundergraph/cosmo/router/internal/docker"
 	"github.com/wundergraph/cosmo/router/internal/graphqlmetrics"
 	brotli "go.withmatt.com/connect-brotli"
 
@@ -105,6 +106,8 @@ type (
 		routerTrafficConfig      *config.RouterTrafficConfiguration
 		accessController         *AccessController
 		retryOptions             retrytransport.RetryOptions
+		// If connecting to localhost inside Docker fails, fallback to the docker internal address for the host
+		localhostFallbackInsideDocker bool
 
 		engineExecutionConfiguration config.EngineExecutionConfiguration
 
@@ -621,6 +624,10 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		return nil, fmt.Errorf("failed to create planner cache: %w", err)
 	}
 
+	if r.localhostFallbackInsideDocker && docker.Inside() {
+		r.logger.Info("localhost fallback enabled, connections that fail to connect to localhost will be retried using host.docker.internal")
+	}
+
 	ecb := &ExecutorConfigurationBuilder{
 		introspection: r.introspection,
 		baseURL:       r.baseURL,
@@ -628,10 +635,10 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		logger:        r.logger,
 		includeInfo:   r.graphqlMetricsConfig.Enabled,
 		transportOptions: &TransportOptions{
-			requestTimeout: r.subgraphTransportOptions.RequestTimeout,
-			preHandlers:    r.preOriginHandlers,
-			postHandlers:   r.postOriginHandlers,
-			retryOptions: retrytransport.RetryOptions{
+			RequestTimeout: r.subgraphTransportOptions.RequestTimeout,
+			PreHandlers:    r.preOriginHandlers,
+			PostHandlers:   r.postOriginHandlers,
+			RetryOptions: retrytransport.RetryOptions{
 				Enabled:       r.retryOptions.Enabled,
 				MaxRetryCount: r.retryOptions.MaxRetryCount,
 				MaxDuration:   r.retryOptions.MaxDuration,
@@ -640,11 +647,17 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 					return retrytransport.IsRetryableError(err, resp) && !isMutationRequest(req.Context())
 				},
 			},
-			logger: r.logger,
+			LocalhostFallbackInsideDocker: r.localhostFallbackInsideDocker,
+			Logger:                        r.logger,
 		},
 	}
 
-	executor, err := ecb.Build(ctx, routerConfig, r.engineExecutionConfiguration)
+	routerEngineConfig := &RouterEngineConfiguration{
+		Execution: r.engineExecutionConfiguration,
+		Headers:   r.headerRules,
+	}
+
+	executor, err := ecb.Build(ctx, routerConfig, routerEngineConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build plan configuration: %w", err)
 	}
@@ -1048,6 +1061,12 @@ func WithRouterTrafficConfig(cfg *config.RouterTrafficConfiguration) Option {
 func WithAccessController(controller *AccessController) Option {
 	return func(r *Router) {
 		r.accessController = controller
+	}
+}
+
+func WithLocalhostFallbackInsideDocker(fallback bool) Option {
+	return func(r *Router) {
+		r.localhostFallbackInsideDocker = fallback
 	}
 }
 
