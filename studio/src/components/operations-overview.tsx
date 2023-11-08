@@ -58,7 +58,7 @@ const RequestChart = ({
 
   const { data, ticks, domain, timeFormatter } = useChartData(
     7 * 24,
-    requestSeries
+    requestSeries,
   );
 
   const color1 = useId();
@@ -168,13 +168,15 @@ const MostRequested = ({ data }: { data: OperationRequestCount[] }) => {
     return data.map((d) => {
       const filterQueryParam = constructAnalyticsTableQueryState({
         operationName: d.operationName,
+        operationHash: d.operationHash,
       });
       const currentPath = asPath.split?.("#")?.[0]?.split?.("?")?.[0];
 
       return {
+        hash: d.operationHash,
         name: d.operationName || "-",
         value: d.totalRequests,
-        href: `${currentPath}/analytics${filterQueryParam}`,
+        href: `${currentPath}/analytics/traces${filterQueryParam}`,
       };
     });
   }, [data, asPath]);
@@ -187,7 +189,18 @@ const MostRequested = ({ data }: { data: OperationRequestCount[] }) => {
         <span className="text-xs text-muted-foreground">1 Week</span>
       </h2>
       <BarList
-        data={operations}
+        data={operations.map((op) => ({
+          ...op,
+          name: (
+            <div className="flex">
+              <span className="w-16 text-muted-foreground">
+                {op.hash.slice(0, 6)}
+              </span>
+              <span className="truncate">{op.name}</span>
+            </div>
+          ),
+          key: op.name,
+        }))}
         showAnimation={true}
         valueFormatter={valueFormatter}
       />
@@ -203,7 +216,7 @@ export const OperationsOverview = ({
   const { data, isLoading, error, refetch } = useQuery(
     getDashboardAnalyticsView.useQuery({
       federatedGraphName,
-    })
+    }),
   );
 
   if (isLoading) {

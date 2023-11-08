@@ -24,7 +24,7 @@ export const optionConstructor = ({
 
 export const getDataTableFilters = <T>(
   table: Table<T>,
-  filters: Array<AnalyticsViewResultFilter>
+  filters: Array<AnalyticsViewResultFilter>,
 ) => {
   const filtersList: Array<AnalyticsFilter> = [];
 
@@ -42,8 +42,9 @@ export const getDataTableFilters = <T>(
           label: each.label,
           operator: each.operator as unknown as string,
           value: each.value as unknown as string,
-        })
+        }),
       ),
+      customOptions: filter.customOptions || false,
     });
   });
 

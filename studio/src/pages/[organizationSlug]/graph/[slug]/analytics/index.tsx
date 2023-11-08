@@ -16,7 +16,6 @@ import { useAnalyticsQueryState } from "@/components/analytics/useAnalyticsQuery
 import {
   DatePickerWithRange,
   DateRangePickerChangeHandler,
-  getRange,
 } from "@/components/date-picker-with-range";
 import { EmptyState } from "@/components/empty-state";
 import { InfoTooltip } from "@/components/info-tooltip";
@@ -47,10 +46,10 @@ import {
 } from "@heroicons/react/24/outline";
 import { UpdateIcon } from "@radix-ui/react-icons";
 import {
+  keepPreviousData,
   useIsFetching,
   useQuery,
   useQueryClient,
-  keepPreviousData,
 } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
@@ -248,9 +247,7 @@ const AnalyticsPage: NextPageWithLayout = () => {
         <ErrorMetricsCard data={data?.errors} />
       </div>
 
-      <div className="flex flex-col items-stretch">
-        <ErrorRateOverTimeCard />
-      </div>
+      <ErrorRateOverTimeCard />
     </div>
   );
 };
@@ -355,8 +352,16 @@ const TopList: React.FC<{
       <BarList
         data={items.map((row) => ({
           ...row,
+          key: row.hash + row.name,
           value: Number.parseFloat(row.value ?? "0"),
-          name: row.name === "" ? "-" : row.name,
+          name: (
+            <div className="flex">
+              <span className="flex w-16 shrink-0">{row.hash.slice(0, 6)}</span>
+              <span className="truncate">
+                {row.name === "" ? "-" : row.name}
+              </span>
+            </div>
+          ),
           href: {
             pathname: `${router.pathname}/traces`,
             query: {
@@ -364,6 +369,7 @@ const TopList: React.FC<{
               slug: router.query.slug,
               filterState: createFilterState({
                 operationName: row.name,
+                operationHash: row.hash,
               }),
               range,
               dateRange,
@@ -768,7 +774,7 @@ const ErrorRateOverTimeCard = () => {
     content = <Loader fullscreen />;
   } else {
     content = (
-      <ResponsiveContainer width="100%" height="100%">
+      <ResponsiveContainer width="99%" height="100%">
         <AreaChart
           data={data}
           margin={{ top: 8, right: 8, bottom: 8, left: 0 }}
