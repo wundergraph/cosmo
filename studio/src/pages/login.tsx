@@ -14,7 +14,7 @@ const LoginPage: NextPageWithLayout = () => {
   const router = useRouter();
   const redirectURL = router.query.redirectURL;
   const hint = router.query.hint;
-  const [cookies] = useCookies(["ssoSlug"]);
+  const [cookies] = useCookies(["cosmo_idp_hint"]);
 
   const constructLoginURL = () => {
     if (redirectURL && hint) {
@@ -30,8 +30,8 @@ const LoginPage: NextPageWithLayout = () => {
 
   useEffect(() => {
     if (!router || hint) return;
-    if (cookies && cookies.ssoSlug) {
-      router.replace(`/login?hint=${cookies.ssoSlug}`);
+    if (cookies && cookies.cosmo_idp_hint) {
+      router.replace(`/login?hint=${cookies.cosmo_idp_hint}`);
     }
   }, [cookies, hint, router]);
 
