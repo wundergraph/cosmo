@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"regexp"
 	"time"
 
 	"github.com/jensneuse/abstractlogger"
@@ -211,37 +210,10 @@ func (l *Loader) Load(routerConfig *nodev1.RouterConfig, routerEngineConfig *Rou
 			}
 			// Header rewrite rules are specified by subgraph name, but data source
 			// only has routing and subscription URLs, so we must manually match them
-			var dataSourceRules []config.RequestHeaderRule
-			dataSourceRules = append(dataSourceRules, routerEngineConfig.Headers.All.Request...)
-			for name, subgraphRules := range routerEngineConfig.Headers.Subgraphs {
-				var matchingSubgraph *nodev1.Subgraph
-				for _, sub := range routerConfig.Subgraphs {
-					if sub.Name == name {
-						matchingSubgraph = sub
-						break
-					}
-				}
-				if matchingSubgraph != nil && matchingSubgraph.RoutingUrl == fetchUrl {
-					dataSourceRules = append(dataSourceRules, subgraphRules.Request...)
-				}
-			}
-			var forwardedClientHeaders []string
-			var forwardedClientRegexps []*regexp.Regexp
-			for _, rule := range dataSourceRules {
-				switch rule.Operation {
-				case config.HeaderRuleOperationPropagate:
-					if rule.Matching != "" {
-						re, err := regexp.Compile(rule.Matching)
-						if err != nil {
-							return nil, fmt.Errorf("error compiling regular expression %q in header rule %+v: %w", rule.Matching, rule, err)
-						}
-						forwardedClientRegexps = append(forwardedClientRegexps, re)
-					} else if rule.Named != "" {
-						forwardedClientHeaders = append(forwardedClientHeaders, rule.Named)
-					}
-				default:
-					return nil, fmt.Errorf("invalid header rule operation %q in rule %+v", rule.Operation, header)
-				}
+			dataSourceRules := FetchURLRules(&routerEngineConfig.Headers, routerConfig.Subgraphs, subscriptionUrl)
+			forwardedClientHeaders, forwardedClientRegexps, err := PropagatedHeaders(dataSourceRules)
+			if err != nil {
+				return nil, fmt.Errorf("error parsing header rules for data source %s: %w", in.Id, err)
 			}
 			out.Custom = graphql_datasource.ConfigJson(graphql_datasource.Configuration{
 				Fetch: graphql_datasource.FetchConfiguration{
