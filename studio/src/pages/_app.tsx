@@ -29,7 +29,6 @@ function MyApp({ Component, pageProps }: AppPropsWithLayout) {
       window.addEventListener("focus", handleFocus, false);
 
       return () => {
-        console.log("test");
         window.removeEventListener("focus", handleFocus);
       };
     });
