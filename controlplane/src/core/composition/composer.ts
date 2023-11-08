@@ -1,7 +1,7 @@
-import { parse, printSchema } from 'graphql';
+import { GraphQLSchema, parse, printSchema } from 'graphql';
 import { JsonValue } from '@bufbuild/protobuf';
 import { buildRouterConfig } from '@wundergraph/cosmo-shared';
-import { ArgumentConfigurationData } from '@wundergraph/composition';
+import { ArgumentConfigurationData, ConfigurationDataMap } from '@wundergraph/composition';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
 import { SubgraphRepository } from '../repositories/SubgraphRepository.js';
 import { Label } from '../../types/index.js';
@@ -19,7 +19,10 @@ interface ComposedSubgraph {
   url: string;
   subscriptionUrl: string;
   subscriptionProtocol: 'ws' | 'sse' | 'sse_post';
+  configurationDataMap?: ConfigurationDataMap;
+  schema?: GraphQLSchema;
 }
+
 export interface ComposedFederatedGraph {
   argumentConfigurations: ArgumentConfigurationData[];
   name: string;
@@ -99,14 +102,21 @@ export class Composer {
         targetID,
         composedSchema: result?.federatedGraphSchema ? printSchema(result.federatedGraphSchema) : undefined,
         errors: errors || [],
-        subgraphs: subgraphs.map((s) => ({
-          id: s.id,
-          name: s.name,
-          url: s.routingUrl,
-          sdl: s.schemaSDL,
-          subscriptionUrl: s.subscriptionUrl,
-          subscriptionProtocol: s.subscriptionProtocol,
-        })),
+        subgraphs: subgraphs.map((s) => {
+          const subgraphConfig = result?.subgraphConfigBySubgraphName.get(s.name);
+          const schema = subgraphConfig?.schema;
+          const configurationDataMap = subgraphConfig?.configurationDataMap;
+          return {
+            id: s.id,
+            name: s.name,
+            url: s.routingUrl,
+            sdl: s.schemaSDL,
+            subscriptionUrl: s.subscriptionUrl,
+            subscriptionProtocol: s.subscriptionProtocol,
+            configurationDataMap,
+            schema,
+          };
+        }),
       };
     } catch (e: any) {
       return {
@@ -120,7 +130,7 @@ export class Composer {
   }
 
   /**
-   * Same as compose, but the proposed schemaSDL of the subgraph is not updated to the table so it is passed to the function
+   * Same as compose, but the proposed schemaSDL of the subgraph is not updated to the table, so it is passed to the function
    */
   async composeWithProposedSDL(
     subgraphLabels: Label[],

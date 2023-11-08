@@ -15,6 +15,7 @@ var employees = []*model.Employee{
 			EngineerType: model.EngineerTypeBackend,
 			Title:        []string{"Founder", "CEO"},
 		},
+		Notes: "Jens notes resolved by employees",
 	},
 	{
 		Details: &model.Details{
@@ -28,6 +29,7 @@ var employees = []*model.Employee{
 			EngineerType: model.EngineerTypeFullstack,
 			Title:        []string{"Co-founder", "Tech Lead"},
 		},
+		Notes: "Dustin notes resolved by employees",
 	},
 	{
 		Details: &model.Details{
@@ -40,6 +42,7 @@ var employees = []*model.Employee{
 			Department: model.DepartmentMarketing,
 			Title:      []string{"Co-founder", "Head of Growth"},
 		},
+		Notes: "Stefan notes resolved by employees",
 	},
 	{
 		Details: &model.Details{
@@ -55,6 +58,7 @@ var employees = []*model.Employee{
 			},
 			Title: []string{"Co-founder", "COO"},
 		},
+		Notes: "Björn notes resolved by employees",
 	},
 	{
 		ID: 5,
@@ -68,6 +72,7 @@ var employees = []*model.Employee{
 			EngineerType: model.EngineerTypeBackend,
 			Title:        []string{"Senior GO Engineer"},
 		},
+		Notes: "Serigy notes resolved by employees",
 	},
 	{
 		Details: &model.Details{
@@ -81,6 +86,7 @@ var employees = []*model.Employee{
 			EngineerType: model.EngineerTypeFullstack,
 			Title:        []string{"Software Engineer"},
 		},
+		Notes: "Suvij notes resolved by employees",
 	},
 	{
 		Details: &model.Details{
@@ -94,6 +100,7 @@ var employees = []*model.Employee{
 			EngineerType: model.EngineerTypeFullstack,
 			Title:        []string{"Software Engineer"},
 		},
+		Notes: "Nithin notes resolved by employees",
 	},
 	{
 		Details: &model.Details{
@@ -107,6 +114,7 @@ var employees = []*model.Employee{
 			EngineerType: model.EngineerTypeBackend,
 			Title:        []string{"Senior Backend Engineer"},
 		},
+		Notes: "Alberto notes resolved by employees",
 	},
 	{
 		Details: &model.Details{
@@ -120,6 +128,7 @@ var employees = []*model.Employee{
 			EngineerType: model.EngineerTypeFrontend,
 			Title:        []string{"Senior Frontend Engineer"},
 		},
+		Notes: "Eelco notes resolved by employees",
 	},
 	{
 		Details: &model.Details{
@@ -135,6 +144,7 @@ var employees = []*model.Employee{
 			},
 			Title: []string{"Accounting & Finance"},
 		},
+		Notes: "Alexandra notes resolved by employees",
 	},
 	{
 		Details: &model.Details{
@@ -148,5 +158,6 @@ var employees = []*model.Employee{
 			EngineerType: model.EngineerTypeFullstack,
 			Title:        []string{"Software Engineer"},
 		},
+		Notes: "David notes resolved by employees",
 	},
 }
