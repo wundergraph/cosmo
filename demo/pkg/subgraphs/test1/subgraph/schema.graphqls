@@ -1,0 +1,24 @@
+type Query {
+  "Returns the value of the received HTTP header."
+  headerValue(name: String!): String!
+  "Returns the value of the given key in the WS initial payload."
+  initPayloadValue(key: String!): String!
+}
+
+type TimestampedString {
+  "The value of the string."
+  value: String!
+  "The timestamp when the response was generated."
+  unixTime: Int! 
+  "Sequence number"
+  seq: Int!
+  "Total number of responses to be sent"
+  total: Int!
+}
+
+type Subscription {
+  "Returns a stream with the value of the received HTTP header."
+  headerValue(name: String!, repeat: Int): TimestampedString!
+  "Returns a stream with the value of value of the given key in the WS initial payload."
+  initPayloadValue(key: String!, repeat: Int): TimestampedString!
+}

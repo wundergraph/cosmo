@@ -12,6 +12,7 @@ import (
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/ravilushqa/otelgqlgen"
 	"github.com/rs/cors"
+	"github.com/wundergraph/cosmo/demo/pkg/injector"
 	"github.com/wundergraph/cosmo/demo/pkg/otel"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/employees"
@@ -42,9 +43,9 @@ func main() {
 	})
 
 	http.Handle("/", c.Handler(playground.Handler("GraphQL playground", "/graphql")))
-	http.Handle("/graphql", c.Handler(otelhttp.NewHandler(srv, "", otelhttp.WithSpanNameFormatter(func(_operation string, r *http.Request) string {
+	http.Handle("/graphql", injector.HTTP(c.Handler(otelhttp.NewHandler(srv, "", otelhttp.WithSpanNameFormatter(func(_operation string, r *http.Request) string {
 		return fmt.Sprintf("%s %s", r.Method, r.URL.Path)
-	}))))
+	})))))
 
 	log.Printf("connect to http://localhost:%s/ for GraphQL playground", port)
 	log.Fatal(http.ListenAndServe(":"+port, nil))

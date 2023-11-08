@@ -128,9 +128,15 @@ type GlobalHeaderRule struct {
 	Request []RequestHeaderRule `yaml:"request" validate:"dive"`
 }
 
+type HeaderRuleOperation string
+
+const (
+	HeaderRuleOperationPropagate HeaderRuleOperation = "propagate"
+)
+
 type RequestHeaderRule struct {
 	// Operation describes the header operation to perform e.g. "propagate"
-	Operation string `yaml:"op" validate:"oneof=propagate"`
+	Operation HeaderRuleOperation `yaml:"op" validate:"oneof=propagate"`
 	// Matching is the regex to match the header name against
 	Matching string `yaml:"matching" validate:"excluded_with=Named"`
 	// Named is the exact header name to match

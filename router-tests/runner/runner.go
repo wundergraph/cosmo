@@ -41,12 +41,7 @@ func NewInProcessSubgraphsRunner(ports *subgraphs.Ports) (SubgraphsRunner, error
 		ports = randomFreePorts()
 	}
 	sg, err := subgraphs.New(&subgraphs.Config{
-		Ports: subgraphs.Ports{
-			Employees: ports.Employees,
-			Family:    ports.Family,
-			Hobbies:   ports.Hobbies,
-			Products:  ports.Products,
-		},
+		Ports: *ports,
 	})
 	if err != nil {
 		return nil, err
@@ -73,6 +68,7 @@ func (r externalSubgraphsRunner) Ports() subgraphs.Ports {
 		Family:    4002,
 		Hobbies:   4003,
 		Products:  4004,
+		Test1:     4005,
 	}
 }
 
@@ -87,6 +83,7 @@ func Wait(ctx context.Context, r SubgraphsRunner) error {
 		pp.Family,
 		pp.Hobbies,
 		pp.Products,
+		pp.Test1,
 	}
 	for _, port := range ports {
 		for {
@@ -106,7 +103,7 @@ func Wait(ctx context.Context, r SubgraphsRunner) error {
 }
 
 func randomFreePorts() *subgraphs.Ports {
-	ports := make([]int, 4)
+	ports := make([]int, 5)
 	for i := range ports {
 		listener, err := net.Listen("tcp", ":0")
 		if err != nil {
@@ -121,5 +118,6 @@ func randomFreePorts() *subgraphs.Ports {
 		Family:    ports[1],
 		Hobbies:   ports[2],
 		Products:  ports[3],
+		Test1:     ports[4],
 	}
 }

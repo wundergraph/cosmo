@@ -6,6 +6,7 @@ import (
 	"regexp"
 
 	"github.com/wundergraph/cosmo/router/config"
+	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 )
 
 var (
@@ -45,14 +46,17 @@ func NewHeaderTransformer(rules config.HeaderRules) (*HeaderRuleEngine, error) {
 	}
 
 	for i, rule := range rhrs {
-		if rule.Operation == "propagate" {
+		switch rule.Operation {
+		case config.HeaderRuleOperationPropagate:
 			if rule.Matching != "" {
 				regex, err := regexp.Compile(rule.Matching)
 				if err != nil {
-					return nil, fmt.Errorf("invalid regex '%s' for all request header rule %d: %w", rule.Matching, i, err)
+					return nil, fmt.Errorf("invalid regex '%s' for header rule %d: %w", rule.Matching, i, err)
 				}
 				hf.regex[rule.Matching] = *regex
 			}
+		default:
+			return nil, fmt.Errorf("unhandled operation '%s' for header rule %+v", rule.Operation, rule)
 		}
 	}
 
@@ -71,7 +75,7 @@ func (h HeaderRuleEngine) OnOriginRequest(request *http.Request, ctx RequestCont
 
 	for _, rule := range requestRules {
 		// Forwards the matching client request header to the upstream
-		if rule.Operation == "propagate" {
+		if rule.Operation == config.HeaderRuleOperationPropagate {
 
 			// Exact match
 			if rule.Named != "" {
@@ -113,4 +117,48 @@ func contains(list []string, item string) bool {
 		}
 	}
 	return false
+}
+
+// SubgraphRules returns the list of header rules for the subgraph with the given name
+func SubgraphRules(rules *config.HeaderRules, subgraphName string) []config.RequestHeaderRule {
+	var subgraphRules []config.RequestHeaderRule
+	subgraphRules = append(subgraphRules, rules.All.Request...)
+	subgraphRules = append(subgraphRules, rules.Subgraphs[subgraphName].Request...)
+	return subgraphRules
+}
+
+// FetchURLRules returns the list of header rules for first subgraph that matches the given URL
+func FetchURLRules(rules *config.HeaderRules, subgraphs []*nodev1.Subgraph, routingURL string) []config.RequestHeaderRule {
+	var subgraphName string
+	for _, subgraph := range subgraphs {
+		if subgraph.RoutingUrl == routingURL {
+			subgraphName = subgraph.Name
+			break
+		}
+	}
+	return SubgraphRules(rules, subgraphName)
+}
+
+// PropagatedHeaders returns the list of header names and regular expressions
+// that will be propagated when applying the given rules.
+func PropagatedHeaders(rules []config.RequestHeaderRule) (headerNames []string, headerNameRegexps []*regexp.Regexp, err error) {
+	for _, rule := range rules {
+		switch rule.Operation {
+		case config.HeaderRuleOperationPropagate:
+			if rule.Matching != "" {
+				re, err := regexp.Compile(rule.Matching)
+				if err != nil {
+					return nil, nil, fmt.Errorf("error compiling regular expression %q in header rule %+v: %w", rule.Matching, rule, err)
+				}
+				headerNameRegexps = append(headerNameRegexps, re)
+			} else if rule.Named != "" {
+				headerNames = append(headerNames, rule.Named)
+			} else {
+				return nil, nil, fmt.Errorf("invalid header propagation rule %+v, no header name nor regular expression", rule)
+			}
+		default:
+			return nil, nil, fmt.Errorf("invalid header rule operation %q in rule %+v", rule.Operation, rule)
+		}
+	}
+	return headerNames, headerNameRegexps, nil
 }

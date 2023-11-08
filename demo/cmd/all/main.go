@@ -14,6 +14,7 @@ var (
 	family    = flag.Int("family", 4002, "Port for family subgraph")
 	hobbies   = flag.Int("hobbies", 4003, "Port for hobbies subgraph")
 	products  = flag.Int("products", 4004, "Port for products subgraph")
+	test1     = flag.Int("test1", 4005, "Port for test1 subgraph")
 )
 
 func main() {
@@ -24,6 +25,7 @@ func main() {
 			Family:    *family,
 			Hobbies:   *hobbies,
 			Products:  *products,
+			Test1:     *test1,
 		},
 		EnableDebug: *debug,
 	}
