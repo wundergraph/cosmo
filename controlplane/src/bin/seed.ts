@@ -66,13 +66,6 @@ try {
     process.exit(0);
   }
 
-  if (!(await keycloakClient.roleExists({ realm, roleName: 'admin' }))) {
-    await keycloakClient.createRole({
-      realm,
-      roleName: 'admin',
-    });
-  }
-
   const organizationGroup = await keycloakClient.client.groups.create({
     realm,
     name: user.organization.slug,
@@ -86,6 +79,28 @@ try {
     {
       name: 'admin',
       realmRoles: ['admin'],
+    },
+  );
+
+  const devGroup = await keycloakClient.client.groups.createChildGroup(
+    {
+      realm,
+      id: organizationGroup.id,
+    },
+    {
+      name: 'developer',
+      realmRoles: ['developer'],
+    },
+  );
+
+  const viewerGroup = await keycloakClient.client.groups.createChildGroup(
+    {
+      realm,
+      id: organizationGroup.id,
+    },
+    {
+      name: 'viewer',
+      realmRoles: ['viewer'],
     },
   );
 

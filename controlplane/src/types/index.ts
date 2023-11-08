@@ -135,8 +135,6 @@ export interface ResponseMessage {
   };
 }
 
-export type MemberRole = 'admin' | 'member';
-
 // https://github.com/kamilkisiela/graphql-inspector/blob/f3b9ed7e277f1a4928da7d0fdc212685ff77752a/packages/core/src/diff/changes/change.ts
 export enum SchemaChangeType {
   FIELD_ARGUMENT_DESCRIPTION_CHANGED = 'FIELD_ARGUMENT_DESCRIPTION_CHANGED',
@@ -224,6 +222,7 @@ export type PKCECodeChallenge = {
 export type CustomAccessTokenClaims = {
   email: string;
   preferred_username: string;
+  groups?: string[];
 };
 
 export type UserInfoEndpointResponse = {
@@ -240,6 +239,8 @@ export type UserInfoEndpointResponse = {
 export type AuthContext = {
   organizationId: string;
   organizationSlug: string;
+  hasWriteAccess: boolean;
+  isAdmin: boolean;
   userId?: string;
 };
 

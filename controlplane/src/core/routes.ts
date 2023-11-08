@@ -18,6 +18,7 @@ export interface RouterOptions {
   jwtSecret: string;
   authenticator: Authenticator;
   keycloakRealm: string;
+  keycloakApiUrl: string;
   chClient?: ClickHouseClient;
   logger: pino.Logger;
   keycloakClient: Keycloak;

@@ -82,7 +82,7 @@ export class UserRepository {
         acceptedInvite: false,
       });
 
-      await orgRepo.addOrganizationMemberRoles({ memberID: insertedMember.id, roles: ['member'] });
+      await orgRepo.addOrganizationMemberRoles({ memberID: insertedMember.id, roles: ['developer'] });
     });
   }
 }

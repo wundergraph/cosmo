@@ -121,6 +121,7 @@ describe('Federated Graph', (ctx) => {
           clientID: '',
           clientSecret: '',
         },
+        keycloakApiUrl: apiUrl,
       }),
     });
 
@@ -222,6 +223,7 @@ describe('Federated Graph', (ctx) => {
           clientID: '',
           clientSecret: '',
         },
+        keycloakApiUrl: apiUrl,
       }),
     });
 
@@ -323,6 +325,7 @@ describe('Federated Graph', (ctx) => {
           clientID: '',
           clientSecret: '',
         },
+        keycloakApiUrl: apiUrl,
       }),
     });
 
@@ -453,6 +456,7 @@ describe('Federated Graph', (ctx) => {
           clientID: '',
           clientSecret: '',
         },
+        keycloakApiUrl: apiUrl,
       }),
     });
 

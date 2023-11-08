@@ -42,6 +42,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
 import { docsBaseURL } from "@/lib/constants";
 import { NextPageWithLayout } from "@/lib/page";
+import { checkUserAccess } from "@/lib/utils";
 import {
   ExclamationTriangleIcon,
   Pencil1Icon,
@@ -597,23 +598,28 @@ const IntegrationsPage: NextPageWithLayout = () => {
           </>
         }
         actions={
-          <>
-            <Button variant="default" size="default" asChild>
-              <Link
-                href={`https://slack.com/oauth/v2/authorize?scope=incoming-webhook%2Cchat%3Awrite&user_scope=&redirect_uri=${slackRedirectURL}&client_id=${process.env.NEXT_PUBLIC_SLACK_CLIENT_ID}`}
-              >
-                Integrate
-              </Link>
-            </Button>
-            {shouldCreate && (
-              <Integration
-                mode="create"
-                refresh={() => refetch()}
-                open={true}
-                code={code}
-              />
-            )}
-          </>
+          checkUserAccess({
+            rolesToBe: ["admin", "developer"],
+            userRoles: user?.currentOrganization.roles || [],
+          }) && (
+            <>
+              <Button variant="default" size="default" asChild>
+                <Link
+                  href={`https://slack.com/oauth/v2/authorize?scope=incoming-webhook%2Cchat%3Awrite&user_scope=&redirect_uri=${slackRedirectURL}&client_id=${process.env.NEXT_PUBLIC_SLACK_CLIENT_ID}`}
+                >
+                  Integrate
+                </Link>
+              </Button>
+              {shouldCreate && (
+                <Integration
+                  mode="create"
+                  refresh={() => refetch()}
+                  open={true}
+                  code={code}
+                />
+              )}
+            </>
+          )
         }
       />
     );
@@ -634,30 +640,38 @@ const IntegrationsPage: NextPageWithLayout = () => {
             Learn more
           </Link>
         </p>
-        <>
-          <Button variant="default" size="default" asChild>
-            <Link
-              href={`https://slack.com/oauth/v2/authorize?scope=incoming-webhook%2Cchat%3Awrite&user_scope=&redirect_uri=${slackRedirectURL}&client_id=${process.env.NEXT_PUBLIC_SLACK_CLIENT_ID}`}
-            >
-              Integrate
-            </Link>
-          </Button>
-          {shouldCreate && (
-            <Integration
-              mode="create"
-              refresh={() => refetch()}
-              open={true}
-              code={code}
-            />
-          )}
-        </>
+        {checkUserAccess({
+          rolesToBe: ["admin", "developer"],
+          userRoles: user?.currentOrganization.roles || [],
+        }) && (
+          <>
+            <Button variant="default" size="default" asChild>
+              <Link
+                href={`https://slack.com/oauth/v2/authorize?scope=incoming-webhook%2Cchat%3Awrite&user_scope=&redirect_uri=${slackRedirectURL}&client_id=${process.env.NEXT_PUBLIC_SLACK_CLIENT_ID}`}
+              >
+                Integrate
+              </Link>
+            </Button>
+            {shouldCreate && (
+              <Integration
+                mode="create"
+                refresh={() => refetch()}
+                open={true}
+                code={code}
+              />
+            )}
+          </>
+        )}
       </div>
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead>Name</TableHead>
             <TableHead>Events</TableHead>
-            <TableHead aria-label="Actions"></TableHead>
+            {checkUserAccess({
+              rolesToBe: ["admin", "developer"],
+              userRoles: user?.currentOrganization.roles || [],
+            }) && <TableHead aria-label="Actions"></TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -680,20 +694,25 @@ const IntegrationsPage: NextPageWithLayout = () => {
                       )}
                     </div>
                   </TableCell>
-                  <TableCell className="flex justify-end space-x-2">
-                    <Integration
-                      mode="update"
-                      refresh={() => refetch()}
-                      existing={{
-                        id,
-                        name,
-                        integrationConfig,
-                        events,
-                        meta: eventsMeta,
-                      }}
-                    />
-                    <DeleteIntegration id={id} refresh={() => refetch()} />
-                  </TableCell>
+                  {checkUserAccess({
+                    rolesToBe: ["admin", "developer"],
+                    userRoles: user?.currentOrganization.roles || [],
+                  }) && (
+                    <TableCell className="flex justify-end space-x-2">
+                      <Integration
+                        mode="update"
+                        refresh={() => refetch()}
+                        existing={{
+                          id,
+                          name,
+                          integrationConfig,
+                          events,
+                          meta: eventsMeta,
+                        }}
+                      />
+                      <DeleteIntegration id={id} refresh={() => refetch()} />
+                    </TableCell>
+                  )}
                 </TableRow>
               );
             },

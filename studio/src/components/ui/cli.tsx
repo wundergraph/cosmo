@@ -12,9 +12,11 @@ interface CLIStep {
 export const CLI = ({
   command,
   className,
+  spanClassName,
 }: {
   command: string;
   className?: string;
+  spanClassName?: string;
 }) => {
   const [copied, setCopied] = useState(false);
 
@@ -35,7 +37,9 @@ export const CLI = ({
       variant="outline"
       onClick={() => setCopied(true)}
     >
-      <span className="mr-2 truncate font-mono text-xs">{command}</span>
+      <span className={cn("mr-2 truncate font-mono text-xs", spanClassName)}>
+        {command}
+      </span>
       {copied ? (
         <CheckIcon className="h-4 w-4 flex-shrink-0" />
       ) : (

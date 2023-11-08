@@ -61,6 +61,7 @@ export const SetupTest = async function (testContext: TestContext, dbname: strin
         clientID: '',
         clientSecret: '',
       },
+      keycloakApiUrl: apiUrl,
     }),
   });
 

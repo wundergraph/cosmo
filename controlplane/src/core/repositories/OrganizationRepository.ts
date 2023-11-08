@@ -6,7 +6,7 @@ import {
   IntegrationConfig,
   IntegrationType,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { and, asc, eq, desc } from 'drizzle-orm';
+import { and, asc, eq } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema.js';
 import {
@@ -17,12 +17,13 @@ import {
   organizationWebhooks,
   organizations,
   organizationsMembers,
-  slackSchemaUpdateEventConfigs,
   slackIntegrationConfigs,
+  slackSchemaUpdateEventConfigs,
   targets,
   users,
 } from '../../db/schema.js';
-import { APIKeyDTO, MemberRole, OrganizationDTO, OrganizationMemberDTO, WebhooksConfigDTO } from '../../types/index.js';
+import { APIKeyDTO, OrganizationDTO, OrganizationMemberDTO, WebhooksConfigDTO } from '../../types/index.js';
+import { MemberRole } from '../../db/models.js';
 
 /**
  * Repository for organization related operations.
@@ -265,10 +266,10 @@ export class OrganizationRepository {
     return insertedMember[0];
   }
 
-  public async addOrganizationMemberRoles(input: { memberID: string; roles: ('admin' | 'member')[] }) {
+  public async addOrganizationMemberRoles(input: { memberID: string; roles: MemberRole[] }) {
     const values: {
       organizationMemberId: string;
-      role: 'admin' | 'member';
+      role: MemberRole;
     }[] = [];
 
     for (const role of input.roles) {
@@ -293,10 +294,7 @@ export class OrganizationRepository {
       .execute();
   }
 
-  public async getOrganizationMemberRoles(input: {
-    userID: string;
-    organizationID: string;
-  }): Promise<('admin' | 'member')[]> {
+  public async getOrganizationMemberRoles(input: { userID: string; organizationID: string }): Promise<MemberRole[]> {
     const userRoles = await this.db
       .select({
         role: organizationMemberRoles.role,
@@ -580,11 +578,21 @@ export class OrganizationRepository {
     });
   }
 
-  public async updateUserRole(input: { orgMemberID: string; organizationID: string; role: MemberRole }) {
+  public async updateUserRole(input: {
+    orgMemberID: string;
+    organizationID: string;
+    role: MemberRole;
+    previousRole: MemberRole;
+  }) {
     await this.db
       .update(organizationMemberRoles)
       .set({ role: input.role })
-      .where(eq(organizationMemberRoles.organizationMemberId, input.orgMemberID));
+      .where(
+        and(
+          eq(organizationMemberRoles.organizationMemberId, input.orgMemberID),
+          eq(organizationMemberRoles.role, input.previousRole),
+        ),
+      );
   }
 
   public async getOrganizationAdmins(input: { organizationID: string }): Promise<OrganizationMemberDTO[]> {

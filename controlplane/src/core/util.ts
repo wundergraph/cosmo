@@ -4,6 +4,7 @@ import { joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
 import { uid } from 'uid/secure';
 import { GraphQLSubscriptionProtocol } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { Label, ResponseMessage } from '../types/index.js';
+import { MemberRole } from '../db/models.js';
 import { isAuthenticationError, isFreeTrialExpiredError, isPublicError } from './errors/errors.js';
 
 const labelRegex = /^[\dA-Za-z](?:[\w.-]{0,61}[\dA-Za-z])?$/;
@@ -159,4 +160,24 @@ export const hasLabelsChanged = (prev: Label[], cur: Label[]): boolean => {
       .sort()
       .join(',')
   );
+};
+
+// checks if the user has the right roles to perform the operation.
+export const checkUserAccess = ({ rolesToBe, userRoles }: { rolesToBe: MemberRole[]; userRoles: MemberRole[] }) => {
+  for (const role of rolesToBe) {
+    if (userRoles.includes(role)) {
+      return true;
+    }
+  }
+  return false;
+};
+
+export const getHighestPriorityRole = ({ userRoles }: { userRoles: string[] }) => {
+  if (userRoles.includes('admin')) {
+    return 'admin';
+  }
+  if (userRoles.includes('developer')) {
+    return 'developer';
+  }
+  return 'viewer';
 };

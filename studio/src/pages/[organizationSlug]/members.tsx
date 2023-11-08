@@ -14,7 +14,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
 import { calURL } from "@/lib/constants";
 import { NextPageWithLayout } from "@/lib/page";
-import { cn } from "@/lib/utils";
+import { cn, getHighestPriorityRole } from "@/lib/utils";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
@@ -221,7 +221,7 @@ const MemberCard = ({
                       {
                         userID: user?.id,
                         orgMemberUserID: memberUserID,
-                        role: role === "admin" ? "member" : "admin",
+                        role: role === "admin" ? "developer" : "admin",
                       },
                       {
                         onSuccess: (d) => {
@@ -248,7 +248,9 @@ const MemberCard = ({
                     );
                   }}
                 >
-                  {role === "admin" ? "Demote to member" : "Promote to admin"}
+                  {role === "admin"
+                    ? "Demote to developer"
+                    : "Promote to admin"}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -320,7 +322,7 @@ const MembersPage: NextPageWithLayout = () => {
             <MemberCard
               key={member.userID}
               email={member.email}
-              role={member.roles[0]}
+              role={getHighestPriorityRole({ userRoles: member.roles })}
               memberUserID={member.userID}
               acceptedInvite={member.acceptedInvite}
               isAdmin={isAdmin || false}
