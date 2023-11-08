@@ -2,7 +2,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as url from 'node:url';
 import { describe, expect, test } from 'vitest';
-import { buildSchema, GraphQLSchema, parse } from 'graphql';
+import { buildSchema } from 'graphql';
 import { ConfigurationData } from '@wundergraph/composition';
 import { buildRouterConfig, Subgraph } from '../src';
 import { normalizationFailureError } from '../src/router-config/errors';

@@ -67,12 +67,12 @@ if (!federationResult || (errors && errors.length > 0)) {
   // eslint-disable-next-line unicorn/no-process-exit
   process.exit(1);
 }
+
 for (const [subgraphName, subgraphConfig] of federationResult.subgraphConfigBySubgraphName) {
   fs.writeFileSync(
     `test/testdata/subgraphConfigs/normalized-${subgraphName}.graphql`,
     printSchemaWithDirectives(subgraphConfig.schema),
   );
-  const a = JSON.stringify(subgraphConfig.configurationDataMap);
   fs.writeFileSync(
     `test/testdata/subgraphConfigs/${subgraphName}-configuration-data-map.json`,
     JSON.stringify(subgraphConfig.configurationDataMap, replacer),

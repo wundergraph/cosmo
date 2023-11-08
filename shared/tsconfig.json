@@ -9,6 +9,6 @@
     "sourceMap": true,
     "typeRoots": ["./node_modules/@types", "./src/typedefinitions"]
   },
-  "include": ["src/**/*", "test/testdata/*"],
+  "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]
 }
