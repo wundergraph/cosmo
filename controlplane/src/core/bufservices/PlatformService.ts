@@ -3791,7 +3791,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           },
           name: provider.name,
           endpoint: provider.endpoint,
-          loginURL: `${opts.webBaseUrl}/login?hint=${provider.alias}`,
+          loginURL: `${opts.webBaseUrl}/login?sso=${provider.alias}`,
           signInRedirectURL: `${opts.keycloakApiUrl}/realms/${opts.keycloakRealm}/broker/${provider.alias}/endpoint`,
           signOutRedirectURL: `${opts.keycloakApiUrl}/realms/${opts.keycloakRealm}/broker/${provider.alias}/endpoint/logout_response`,
         };
