@@ -13,7 +13,7 @@ export const AuthLayout = ({ children }: LayoutProps) => {
         <Arc className="xl:fade-x -z-9 absolute left-[40%] top-32 hidden overflow-visible lg:block" />
       </div>
 
-      <div className="mx-auto max-w-screen-xl">{children}</div>
+      <div className="mx-auto max-w-screen-2xl">{children}</div>
     </div>
   );
 };
