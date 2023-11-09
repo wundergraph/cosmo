@@ -37,6 +37,7 @@ import { SubmitHandler, useZodForm } from "@/hooks/use-form";
 import { docsBaseURL } from "@/lib/constants";
 import { formatDateTime } from "@/lib/format-date";
 import { NextPageWithLayout } from "@/lib/page";
+import { checkUserAccess } from "@/lib/utils";
 import {
   EllipsisVerticalIcon,
   ExclamationTriangleIcon,
@@ -503,22 +504,31 @@ const APIKeysPage: NextPageWithLayout = () => {
                 Learn more
               </Link>
             </p>
-            <CreateAPIKey
-              apiKey={apiKey}
-              setApiKey={setApiKey}
-              open={openApiKeyCreatedDialog}
-              setOpen={setOpenApiKeyCreatedDialog}
-            />
+            {checkUserAccess({
+              rolesToBe: ["admin", "developer"],
+              userRoles: user?.currentOrganization.roles || [],
+            }) && (
+              <CreateAPIKey
+                apiKey={apiKey}
+                setApiKey={setApiKey}
+                open={openApiKeyCreatedDialog}
+                setOpen={setOpenApiKeyCreatedDialog}
+              />
+            )}
           </div>
-          {deleteApiKeyName && (
-            <DeleteAPIKeyDialog
-              apiKeyName={deleteApiKeyName}
-              refresh={refetch}
-              open={openDeleteDialog}
-              setOpen={setOpenDeleteDialog}
-              setDeleteApiKeyName={setDeleteApiKeyName}
-            />
-          )}
+          {deleteApiKeyName &&
+            checkUserAccess({
+              rolesToBe: ["admin", "developer"],
+              userRoles: user?.currentOrganization.roles || [],
+            }) && (
+              <DeleteAPIKeyDialog
+                apiKeyName={deleteApiKeyName}
+                refresh={refetch}
+                open={openDeleteDialog}
+                setOpen={setOpenDeleteDialog}
+                setDeleteApiKeyName={setDeleteApiKeyName}
+              />
+            )}
           <Table>
             <TableHeader>
               <TableRow>
@@ -527,9 +537,14 @@ const APIKeysPage: NextPageWithLayout = () => {
                 <TableHead>Expires At</TableHead>
                 <TableHead>Created At</TableHead>
                 <TableHead>Last Used At</TableHead>
-                <TableHead className="flex items-center justify-center">
-                  Actions
-                </TableHead>
+                {checkUserAccess({
+                  rolesToBe: ["admin", "developer"],
+                  userRoles: user?.currentOrganization.roles || [],
+                }) && (
+                  <TableHead className="flex items-center justify-center">
+                    Actions
+                  </TableHead>
+                )}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -555,27 +570,32 @@ const APIKeysPage: NextPageWithLayout = () => {
                             ? formatDateTime(new Date(lastUsedAt))
                             : "Never"}
                         </TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <div className="flex justify-center">
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon">
-                                  <EllipsisVerticalIcon className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                            </div>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  setDeleteApiKeyName(name);
-                                  setOpenDeleteDialog(true);
-                                }}
-                              >
-                                Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
+                        {checkUserAccess({
+                          rolesToBe: ["admin", "developer"],
+                          userRoles: user?.currentOrganization.roles || [],
+                        }) && (
+                          <TableCell>
+                            <DropdownMenu>
+                              <div className="flex justify-center">
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon">
+                                    <EllipsisVerticalIcon className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                              </div>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    setDeleteApiKeyName(name);
+                                    setOpenDeleteDialog(true);
+                                  }}
+                                >
+                                  Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        )}
                       </TableRow>
                     );
                   },

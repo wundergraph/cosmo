@@ -58,9 +58,16 @@ import {
   UpdateOrganizationWebhookConfigResponse,
   UpdateSubgraphResponse,
   WhoAmIResponse,
+  CreateOIDCProviderResponse,
+  GetOIDCProviderResponse,
+  DeleteOIDCProviderResponse,
+  LeaveOrganizationResponse,
+  DeleteOrganizationResponse,
+  UpdateOrgMemberRoleResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { OpenAIGraphql, isValidUrl } from '@wundergraph/cosmo-shared';
 import { parse } from 'graphql';
+import { uid } from 'uid';
 import { GraphApiKeyDTO, GraphApiKeyJwtPayload } from '../../types/index.js';
 import { Composer } from '../composition/composer.js';
 import { buildSchema, composeSubgraphs } from '../composition/composition.js';
@@ -86,8 +93,16 @@ import {
   collectOperationUsageStats,
 } from '../services/SchemaUsageTrafficInspector.js';
 import Slack from '../services/Slack.js';
-import { formatSubscriptionProtocol, handleError, isValidLabelMatchers, isValidLabels } from '../util.js';
+import {
+  formatSubscriptionProtocol,
+  getHighestPriorityRole,
+  handleError,
+  isValidLabelMatchers,
+  isValidLabels,
+} from '../util.js';
 import { FederatedGraphSchemaUpdate, OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
+import { OidcRepository } from '../repositories/OidcRepository.js';
+import OidcProvider from '../services/OidcProvider.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -102,6 +117,16 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const orgWebhooks = new OrganizationWebhookService(opts.db, authContext.organizationId, opts.logger);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
+
+        if (!authContext.hasWriteAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesn't have the permissions to perform this operation`,
+            },
+            compositionErrors: [],
+          };
+        }
 
         if (await fedGraphRepo.exists(req.name)) {
           return {
@@ -203,8 +228,17 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
       return handleError<PlainMessage<CreateFederatedSubgraphResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
+
+        if (!authContext.hasWriteAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+          };
+        }
+
         const exists = await subgraphRepo.exists(req.name);
 
         if (!isValidLabels(req.labels)) {
@@ -502,6 +536,18 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const orgRepo = new OrganizationRepository(opts.db);
         const schemaCheckRepo = new SchemaCheckRepository(opts.db);
 
+        if (!authContext.hasWriteAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+            breakingChanges: [],
+            nonBreakingChanges: [],
+            compositionErrors: [],
+          };
+        }
+
         const org = await orgRepo.byId(authContext.organizationId);
         if (!org) {
           return {
@@ -679,6 +725,17 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const subgraph = await subgraphRepo.byName(req.subgraphName);
         const compChecker = new Composer(fedGraphRepo, subgraphRepo);
 
+        if (!authContext.hasWriteAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+            modified: false,
+            schema: '',
+          };
+        }
+
         if (!process.env.OPENAI_API_KEY) {
           return {
             response: {
@@ -793,6 +850,16 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<PublishFederatedSubgraphResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgWebhooks = new OrganizationWebhookService(opts.db, authContext.organizationId, opts.logger);
+
+        if (!authContext.hasWriteAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+            compositionErrors: [],
+          };
+        }
 
         const subgraphSchemaSDL = new TextDecoder().decode(req.schema);
 
@@ -1034,7 +1101,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
-        const schemaCheckRepo = new SchemaCheckRepository(opts.db);
 
         const graph = await fedGraphRepo.byName(req.graphName);
 
@@ -1217,6 +1283,17 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
 
+        if (!authContext.hasWriteAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+            changes: [],
+            compositionErrors: [],
+          };
+        }
+
         const graph = await fedGraphRepo.byName(req.graphName);
 
         if (!graph) {
@@ -1271,6 +1348,15 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
 
+        if (!authContext.hasWriteAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+          };
+        }
+
         const federatedGraph = await fedGraphRepo.byName(req.name);
         if (!federatedGraph) {
           return {
@@ -1307,6 +1393,16 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const orgWebhooks = new OrganizationWebhookService(opts.db, authContext.organizationId, opts.logger);
+
+        if (!authContext.hasWriteAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+            compositionErrors: [],
+          };
+        }
 
         const subgraph = await subgraphRepo.byName(req.subgraphName);
         if (!subgraph) {
@@ -1407,6 +1503,16 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const orgWebhooks = new OrganizationWebhookService(opts.db, authContext.organizationId, opts.logger);
 
+        if (!authContext.hasWriteAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+            compositionErrors: [],
+          };
+        }
+
         const federatedGraph = await fedGraphRepo.byName(req.name);
         if (!federatedGraph) {
           return {
@@ -1482,9 +1588,20 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
       return handleError<PlainMessage<UpdateSubgraphResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const subgraphRepository = new SubgraphRepository(opts.db, authContext.organizationId);
+        const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
+        const orgWebhooks = new OrganizationWebhookService(opts.db, authContext.organizationId, opts.logger);
 
-        const subgraph = await subgraphRepository.byName(req.name);
+        if (!authContext.hasWriteAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+            compositionErrors: [],
+          };
+        }
+
+        const subgraph = await subgraphRepo.byName(req.name);
         if (!subgraph) {
           return {
             response: {
@@ -1514,9 +1631,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             compositionErrors: [],
           };
         }
-
-        const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
-        const orgWebhooks = new OrganizationWebhookService(opts.db, authContext.organizationId, opts.logger);
 
         const { compositionErrors, updatedFederatedGraphs } = await subgraphRepo.update({
           name: req.name,
@@ -1751,6 +1865,17 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
 
+        if (!authContext.hasWriteAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+            compositionErrors: [],
+            subgraphs: [],
+          };
+        }
+
         const exists = await fedGraphRepo.exists(req.name);
         if (!exists) {
           return {
@@ -1832,6 +1957,16 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<CreateFederatedGraphTokenResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+
+        if (!authContext.hasWriteAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+            token: '',
+          };
+        }
 
         const graph = await fedGraphRepo.byName(req.graphName);
         if (!graph) {
@@ -1945,6 +2080,15 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const userRepo = new UserRepository(opts.db);
         const orgRepo = new OrganizationRepository(opts.db);
 
+        if (!authContext.hasWriteAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+          };
+        }
+
         await opts.keycloakClient.authenticateClient();
 
         const user = await userRepo.byEmail(req.email);
@@ -1974,9 +2118,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               },
             };
           }
-          const userMemberships = await orgRepo.memberships({
-            userId: user.id,
-          });
         }
 
         const organization = await orgRepo.byId(authContext.organizationId);
@@ -1991,15 +2132,21 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const groupName = organization.slug;
 
-        const organizationGroup = await opts.keycloakClient.client.groups.find({
+        const organizationGroups = await opts.keycloakClient.client.groups.find({
           max: 1,
           search: groupName,
           realm: opts.keycloakRealm,
         });
 
-        if (organizationGroup.length === 0) {
+        if (organizationGroups.length === 0) {
           throw new Error(`Organization group '${groupName}' not found`);
         }
+
+        const devGroup = await opts.keycloakClient.fetchDevChildGroup({
+          realm: opts.keycloakRealm,
+          kcGroupId: organizationGroups[0].id!,
+          orgSlug: groupName,
+        });
 
         const keycloakUser = await opts.keycloakClient.client.users.find({
           max: 1,
@@ -2028,11 +2175,11 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         });
 
         if (userGroups.length === 0) {
-          // By default, all invited users are added to the top-level organization group
+          // By default, all invited users are added to the developer group of the org
           // This is the at least privilege approach
           await opts.keycloakClient.client.users.addToGroup({
             id: keycloakUserID!,
-            groupId: organizationGroup[0].id!,
+            groupId: devGroup.id!,
             realm: opts.keycloakRealm,
           });
         }
@@ -2133,6 +2280,17 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<CreateAPIKeyResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db);
+
+        if (!authContext.hasWriteAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+            apiKey: '',
+          };
+        }
+
         const keyName = req.name.trim();
 
         const apiKeyModel = await orgRepo.getAPIKeyByName({
@@ -2218,6 +2376,15 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db);
 
+        if (!authContext.hasWriteAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+          };
+        }
+
         const apiKey = await orgRepo.getAPIKeyByName({ organizationID: authContext.organizationId, name: req.name });
         if (!apiKey) {
           return {
@@ -2266,6 +2433,15 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const orgRepo = new OrganizationRepository(opts.db);
         const userRepo = new UserRepository(opts.db);
 
+        if (!authContext.hasWriteAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+          };
+        }
+
         const user = await userRepo.byEmail(req.email);
         if (!user) {
           return {
@@ -2295,6 +2471,15 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             response: {
               code: EnumStatusCode.ERR_NOT_FOUND,
               details: `User ${req.email} is not a part of this organization.`,
+            },
+          };
+        }
+
+        if (org.creatorUserId === user.id) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The creator of this organization ${req.email} cannot be removed from the organization.`,
             },
           };
         }
@@ -2355,6 +2540,16 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const orgWebhooks = new OrganizationWebhookService(opts.db, authContext.organizationId, opts.logger);
+
+        if (!authContext.hasWriteAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+            token: '',
+          };
+        }
 
         opts.platformWebhooks.send(PlatformEventName.APOLLO_MIGRATE_INIT, {
           actor_id: authContext.userId,
@@ -2514,6 +2709,15 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db);
 
+        if (!authContext.hasWriteAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+          };
+        }
+
         await orgRepo.createWebhookConfig({
           organizationId: authContext.organizationId,
           ...req,
@@ -2579,6 +2783,15 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db);
 
+        if (!authContext.hasWriteAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+          };
+        }
+
         await orgRepo.updateWebhookConfig({
           organizationId: authContext.organizationId,
           ...req,
@@ -2602,6 +2815,15 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db);
 
+        if (!authContext.hasWriteAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+          };
+        }
+
         await orgRepo.deleteWebhookConfig({
           organizationId: authContext.organizationId,
           ...req,
@@ -2621,7 +2843,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         method: ctx.method.name,
       });
 
-      return handleError<PlainMessage<UpdateOrganizationWebhookConfigResponse>>(logger, async () => {
+      return handleError<PlainMessage<DeleteOrganizationResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db);
 
@@ -2702,7 +2924,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         method: ctx.method.name,
       });
 
-      return handleError<PlainMessage<UpdateOrganizationWebhookConfigResponse>>(logger, async () => {
+      return handleError<PlainMessage<LeaveOrganizationResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db);
 
@@ -2884,7 +3106,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         method: ctx.method.name,
       });
 
-      return handleError<PlainMessage<UpdateOrganizationWebhookConfigResponse>>(logger, async () => {
+      return handleError<PlainMessage<UpdateOrgMemberRoleResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db);
 
@@ -2898,6 +3120,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
+        // fetching the user who is updating the other member's role.
         const user = await orgRepo.getOrganizationMember({
           organizationID: authContext.organizationId,
           userID: authContext.userId || req.userID,
@@ -2922,6 +3145,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
+        // fetching the user whose role is being updated.
         const orgMember = await orgRepo.getOrganizationMember({
           organizationID: authContext.organizationId,
           userID: req.orgMemberUserID,
@@ -2941,6 +3165,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const users = await opts.keycloakClient.client.users.find({
           realm: opts.keycloakRealm,
           email: orgMember.email,
+          exact: true,
         });
 
         if (users.length === 0) {
@@ -2952,67 +3177,102 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const organizationGroup = await opts.keycloakClient.client.groups.find({
+        // checking if the user has logged in using the sso
+        const ssoUser = await opts.keycloakClient.client.users.find({
+          realm: opts.keycloakRealm,
+          email: orgMember.email,
+          exact: true,
+          idpAlias: org.slug,
+        });
+
+        if (ssoUser.length > 0) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: 'User has logged in using the OIDC provider. Please update the role using the provider.',
+            },
+          };
+        }
+
+        const organizationGroups = await opts.keycloakClient.client.groups.find({
           max: 1,
           search: org.slug,
           realm: opts.keycloakRealm,
           briefRepresentation: false,
         });
 
-        if (organizationGroup.length === 0) {
+        if (organizationGroups.length === 0) {
           throw new Error(`Organization group '${org.slug}' not found`);
         }
 
-        const childGroups = await opts.keycloakClient.client.groups.find({
-          search: 'admin',
+        const userRoles = await orgRepo.getOrganizationMemberRoles({
+          userID: orgMember.userID,
+          organizationID: authContext.organizationId,
+        });
+        const highPriorityRole = getHighestPriorityRole({ userRoles });
+
+        const adminChildGroup = await opts.keycloakClient.fetchAdminChildGroup({
           realm: opts.keycloakRealm,
+          orgSlug: org.slug,
+          kcGroupId: organizationGroups[0].id!,
         });
 
-        if (childGroups.length === 0) {
-          throw new Error(`Organization group '${org.slug}' does not have any child groups`);
-        }
+        const devChildGroup = await opts.keycloakClient.fetchDevChildGroup({
+          realm: opts.keycloakRealm,
+          orgSlug: org.slug,
+          kcGroupId: organizationGroups[0].id!,
+        });
 
-        const childGroup = childGroups.find((group) => group.id === organizationGroup[0].id)?.subGroups?.[0];
-
-        if (!childGroup) {
-          throw new Error(`Organization group '${org.slug}' does not have any child groups`);
-        }
+        const viewerChildGroup = await opts.keycloakClient.fetchViewerChildGroup({
+          realm: opts.keycloakRealm,
+          orgSlug: org.slug,
+          kcGroupId: organizationGroups[0].id!,
+        });
 
         if (req.role === 'admin') {
-          await opts.keycloakClient.client.users.delFromGroup({
-            id: users[0].id!,
-            realm: opts.keycloakRealm,
-            groupId: organizationGroup[0].id!,
-          });
-
+          if (highPriorityRole === 'developer') {
+            await opts.keycloakClient.client.users.delFromGroup({
+              id: users[0].id!,
+              realm: opts.keycloakRealm,
+              groupId: devChildGroup.id!,
+            });
+          } else if (highPriorityRole === 'viewer') {
+            await opts.keycloakClient.client.users.delFromGroup({
+              id: users[0].id!,
+              realm: opts.keycloakRealm,
+              groupId: viewerChildGroup.id!,
+            });
+          }
           await opts.keycloakClient.client.users.addToGroup({
             id: users[0].id!,
             realm: opts.keycloakRealm,
-            groupId: childGroup.id!,
+            groupId: adminChildGroup.id!,
           });
 
           await orgRepo.updateUserRole({
             organizationID: authContext.organizationId,
             orgMemberID: orgMember.orgMemberID,
             role: 'admin',
+            previousRole: highPriorityRole,
           });
         } else {
           await opts.keycloakClient.client.users.addToGroup({
             id: users[0].id!,
             realm: opts.keycloakRealm,
-            groupId: organizationGroup[0].id!,
+            groupId: devChildGroup.id!,
           });
 
           await opts.keycloakClient.client.users.delFromGroup({
             id: users[0].id!,
             realm: opts.keycloakRealm,
-            groupId: childGroup.id!,
+            groupId: adminChildGroup.id!,
           });
 
           await orgRepo.updateUserRole({
             organizationID: authContext.organizationId,
             orgMemberID: orgMember.orgMemberID,
-            role: 'member',
+            role: 'developer',
+            previousRole: 'admin',
           });
         }
 
@@ -3069,6 +3329,15 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
 
+        if (!authContext.hasWriteAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+          };
+        }
+
         const federatedGraph = await fedGraphRepo.byName(req.fedGraphName);
         if (!federatedGraph) {
           return {
@@ -3118,6 +3387,15 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<CreateIntegrationResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db);
+
+        if (!authContext.hasWriteAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+          };
+        }
 
         if (!opts.slack || !opts.slack.clientID || !opts.slack.clientSecret) {
           throw new Error('Slack env variables must be set to use this feature.');
@@ -3207,6 +3485,15 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db);
 
+        if (!authContext.hasWriteAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+          };
+        }
+
         await orgRepo.updateIntegrationConfig({
           organizationId: authContext.organizationId,
           ...req,
@@ -3229,6 +3516,15 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<DeleteIntegrationResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db);
+
+        if (!authContext.hasWriteAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+          };
+        }
 
         await orgRepo.deleteIntegration({
           organizationId: authContext.organizationId,
@@ -3396,6 +3692,149 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             code: EnumStatusCode.OK,
           },
           operationContent: result[0].operationContent,
+        };
+      });
+    },
+
+    createOIDCProvider: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<CreateOIDCProviderResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const oidcProvider = new OidcProvider();
+
+        if (!authContext.isAdmin) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+            signInURL: '',
+            signOutURL: '',
+            loginURL: '',
+          };
+        }
+
+        await opts.keycloakClient.authenticateClient();
+
+        const alias = `${authContext.organizationSlug}_${uid(3)}`;
+
+        await oidcProvider.createOidcProvider({
+          kcClient: opts.keycloakClient,
+          kcRealm: opts.keycloakRealm,
+          organizationId: authContext.organizationId,
+          organizationSlug: authContext.organizationSlug,
+          alias,
+          db: opts.db,
+          input: req,
+        });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          signInURL: `${opts.keycloakApiUrl}/realms/${opts.keycloakRealm}/broker/${alias}/endpoint`,
+          signOutURL: `${opts.keycloakApiUrl}/realms/${opts.keycloakRealm}/broker/${alias}/endpoint/logout_response`,
+          loginURL: `${opts.webBaseUrl}/login?hint=${alias}`,
+        };
+      });
+    },
+
+    getOIDCProvider: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetOIDCProviderResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const oidcRepo = new OidcRepository(opts.db);
+
+        await opts.keycloakClient.authenticateClient();
+
+        const provider = await oidcRepo.getOidcProvider({ organizationId: authContext.organizationId });
+        if (!provider) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+            },
+            name: '',
+            endpoint: '',
+            loginURL: '',
+          };
+        }
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          name: provider.name,
+          endpoint: provider.endpoint,
+          loginURL: `${opts.webBaseUrl}/login?hint=${provider.alias}`,
+        };
+      });
+    },
+
+    deleteOIDCProvider: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<DeleteOIDCProviderResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const orgRepo = new OrganizationRepository(opts.db);
+        const oidcRepo = new OidcRepository(opts.db);
+        const oidcProvider = new OidcProvider();
+
+        if (!authContext.isAdmin) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+          };
+        }
+
+        await opts.keycloakClient.authenticateClient();
+
+        const organization = await orgRepo.byId(authContext.organizationId);
+        if (!organization) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Organization not found`,
+            },
+          };
+        }
+
+        const provider = await oidcRepo.getOidcProvider({ organizationId: authContext.organizationId });
+        if (!provider) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Organization ${authContext.organizationSlug} doesn't have an oidc identity provider `,
+            },
+          };
+        }
+
+        await oidcProvider.deleteOidcProvider({
+          kcClient: opts.keycloakClient,
+          kcRealm: opts.keycloakRealm,
+          organizationId: authContext.organizationId,
+          organizationSlug: authContext.organizationSlug,
+          orgCreatorUserId: organization.creatorUserId,
+          alias: provider.alias,
+          db: opts.db,
+        });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
         };
       });
     },
