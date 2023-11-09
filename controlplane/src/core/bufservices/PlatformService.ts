@@ -99,6 +99,7 @@ import {
   handleError,
   isValidLabelMatchers,
   isValidLabels,
+  isValidOrganizationSlug,
 } from '../util.js';
 import { FederatedGraphSchemaUpdate, OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
 import { OidcRepository } from '../repositories/OidcRepository.js';
@@ -3049,6 +3050,16 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             response: {
               code: EnumStatusCode.ERR,
               details: 'User does not have the permissions to update the organization name.',
+            },
+          };
+        }
+
+        if (!isValidOrganizationSlug(req.organizationSlug)) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details:
+                'Invalid slug. It must of 3-24 characters in length, start and end with an alphanumeric character and may contain hyphens in between.',
             },
           };
         }
