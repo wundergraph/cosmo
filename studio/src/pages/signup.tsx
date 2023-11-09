@@ -27,9 +27,9 @@ const constructSignupURL = ({
   if (redirectURL) q.append("redirectURL", redirectURL);
   if (provider) q.append("provider", provider);
 
-  const queryString = q.size ? "?" + q.toString() : "";
+  const queryString = q.toString();
 
-  return signupUrl + queryString;
+  return signupUrl + (queryString.length ? "?" + queryString : "");
 };
 
 const SignupPage: NextPageWithLayout = () => {

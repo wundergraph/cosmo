@@ -10,7 +10,7 @@ import { FaGoogle } from "react-icons/fa";
 
 import { BsBuildingLock } from "react-icons/bs";
 import { useCookies } from "react-cookie";
-import { useEffect, useRef, useState } from "react";
+import { useEffect } from "react";
 import { z } from "zod";
 
 const loginUrl = `${process.env.NEXT_PUBLIC_COSMO_CP_URL}/v1/auth/login`;
@@ -35,9 +35,9 @@ const constructLoginURL = ({
   if (provider) q.append("provider", provider);
   if (sso) q.append("sso", sso);
 
-  const queryString = q.size ? "?" + q.toString() : "";
+  const queryString = q.toString();
 
-  return loginUrl + queryString;
+  return loginUrl + (queryString.length ? "?" + queryString : "");
 };
 
 const LoginPage: NextPageWithLayout = () => {
