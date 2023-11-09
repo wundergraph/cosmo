@@ -27,7 +27,9 @@ export function DataTablePrimaryFilterMenu<T>({
 }) {
   const { isMobile } = useWindowSize();
 
-  const isDisabled = filters.filter((f) => f.options.length > 0).length === 0;
+  const isDisabled =
+    filters.filter((f) => f.options.length > 0 && !f.customOptions).length ===
+    0;
 
   return (
     <DropdownMenu>
@@ -44,7 +46,7 @@ export function DataTablePrimaryFilterMenu<T>({
             className="max-h-72 w-full overflow-auto"
           >
             {filters
-              .filter((f) => f.options.length > 0)
+              .filter((f) => f.options.length > 0 || f.customOptions)
               .map((filter, index) => {
                 return (
                   <AccordionItem
@@ -64,7 +66,7 @@ export function DataTablePrimaryFilterMenu<T>({
         ) : (
           <DropdownMenuGroup>
             {filters
-              .filter((f) => f.options.length > 0)
+              .filter((f) => f.options.length > 0 || f.customOptions)
               .map((filter, index) => {
                 return (
                   <DropdownMenuSub key={index.toString()}>

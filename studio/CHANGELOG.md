@@ -4,6 +4,17 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.32.0](https://github.com/wundergraph/cosmo/compare/studio@0.31.0...studio@0.32.0) (2023-11-09)
+
+### Bug Fixes
+
+* invalid org slug ([#248](https://github.com/wundergraph/cosmo/issues/248)) ([c6c01a0](https://github.com/wundergraph/cosmo/commit/c6c01a0aa4c81ae54117aef273438fe99e21dcba)) (@thisisnithin)
+* minor issues of sso ([#247](https://github.com/wundergraph/cosmo/issues/247)) ([8bf61a9](https://github.com/wundergraph/cosmo/commit/8bf61a90751cf3b4aed3783cf07bab2560acac10)) (@JivusAyrus)
+
+### Features
+
+* link operations through hash ([#244](https://github.com/wundergraph/cosmo/issues/244)) ([24a7738](https://github.com/wundergraph/cosmo/commit/24a773884947c58183ee56bb9be82e2fae1c0bff)) (@thisisnithin)
+
 # [0.31.0](https://github.com/wundergraph/cosmo/compare/studio@0.30.0...studio@0.31.0) (2023-11-08)
 
 ### Features

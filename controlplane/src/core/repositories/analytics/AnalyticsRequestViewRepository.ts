@@ -13,12 +13,12 @@ import {
 import { ClickHouseClient } from '../../clickhouse/index.js';
 import {
   BaseFilters,
+  ColumnMetaData,
   buildAnalyticsViewColumns,
   buildAnalyticsViewFilters,
   buildCoercedFilterSqlStatement,
   buildColumnsFromNames,
   coerceFilterValues,
-  ColumnMetaData,
   fillColumnMetaData,
 } from './util.js';
 
@@ -123,6 +123,14 @@ export class AnalyticsRequestViewRepository {
       columnName: 'operationName',
       title: 'Operation Name',
       options: [],
+    },
+    operationHash: {
+      dbField: 'OperationHash',
+      dbClause: 'where',
+      columnName: 'operationHash',
+      title: 'Operation Hash',
+      options: [],
+      customOptions: true,
     },
     operationType: {
       dbField: 'OperationType',
@@ -234,18 +242,19 @@ export class AnalyticsRequestViewRepository {
             toString(toUnixTimestamp(Timestamp)) as unixTimestamp,
             -- DateTime64 is returned as a string
             OperationName as operationName,
+            OperationHash as operationHash,
             OperationType as operationType,
             Duration as durationInNano,
             StatusCode as statusCode,
             StatusMessage as statusMessage,
-            OperationHash as operationHash,
             OperationContent as operationContent,
             HttpStatusCode as httpStatusCode,
             HttpHost as httpHost,
             HttpUserAgent as httpUserAgent,
             HttpMethod as httpMethod,
             HttpTarget as httpTarget,
-            ClientName as clientName
+            ClientName as clientName,
+            ClientVersion as clientVersion
           FROM
             ${this.client.database}.traces_mv
           WHERE
@@ -494,9 +503,6 @@ export class AnalyticsRequestViewRepository {
     if (Array.isArray(result)) {
       clientVersions.push(
         ...result.map((c) => {
-          if (c.ClientVersion === 'missing') {
-            return 'unknown';
-          }
           return c.ClientVersion;
         }),
       );
@@ -739,13 +745,9 @@ export class AnalyticsRequestViewRepository {
      */
     if (!Array.isArray(result) || result.length === 0) {
       const defaultColumns = buildColumnsFromNames(Object.keys(columnFilters), columnMetaData);
-      const defaultFilters = Object.values(columnFilters).map((f) => {
-        return {
-          columnName: f.columnName,
-          title: f.title,
-          options: f.options,
-        } as PlainMessage<AnalyticsViewResultFilter>;
-      });
+      const defaultFilters = Object.values(columnFilters).map((f) => ({
+        ...f,
+      }));
 
       return {
         columns: defaultColumns,

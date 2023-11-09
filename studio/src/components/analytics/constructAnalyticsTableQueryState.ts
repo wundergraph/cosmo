@@ -2,6 +2,7 @@ import { AnalyticsViewFilterOperator } from "@wundergraph/cosmo-connect/dist/pla
 
 export const constructAnalyticsTableQueryState = (state: {
   operationName?: string;
+  operationHash?: string;
 }) => {
   const filterState = createFilterState(state);
 
@@ -12,8 +13,10 @@ export const constructAnalyticsTableQueryState = (state: {
 
 export const createFilterState = ({
   operationName,
+  operationHash,
 }: {
   operationName?: string;
+  operationHash?: string;
 }) => {
   const filterState = [];
 
@@ -28,6 +31,15 @@ export const createFilterState = ({
           : [
               `{"label":"${operationName}","operator":${AnalyticsViewFilterOperator.EQUALS},"value":"${operationName}"}`,
             ],
+    });
+  }
+
+  if (operationHash !== undefined) {
+    filterState.push({
+      id: "operationHash",
+      value: [
+        `{"label":"${operationHash}","operator":${AnalyticsViewFilterOperator.EQUALS},"value":"${operationHash}"}`,
+      ],
     });
   }
 

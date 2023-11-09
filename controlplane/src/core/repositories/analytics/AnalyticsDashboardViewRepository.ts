@@ -94,13 +94,14 @@ export class AnalyticsDashboardViewRepository {
   ): Promise<PlainMessage<OperationRequestCount>[]> {
     const query = `
         SELECT
+          OperationHash as operationHash,
           OperationName as operationName,
           sum(TotalRequests) as totalRequests
         FROM ${this.client.database}.operation_request_metrics_5_30_mv
         WHERE toDate(Timestamp) >= toDate(now()) - interval 6 day
           AND OrganizationID = '${organizationId}'
           AND FederatedGraphID = '${federatedGraphId}'
-        GROUP BY OperationName ORDER BY totalRequests DESC LIMIT 5
+        GROUP BY OperationName, OperationHash ORDER BY totalRequests DESC LIMIT 5
     `;
 
     const res = await this.client.queryPromise(query);
