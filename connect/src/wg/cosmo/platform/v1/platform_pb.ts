@@ -7601,6 +7601,16 @@ export class GetOIDCProviderResponse extends Message<GetOIDCProviderResponse> {
    */
   loginURL = "";
 
+  /**
+   * @generated from field: string signInRedirectURL = 5;
+   */
+  signInRedirectURL = "";
+
+  /**
+   * @generated from field: string signOutRedirectURL = 6;
+   */
+  signOutRedirectURL = "";
+
   constructor(data?: PartialMessage<GetOIDCProviderResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -7613,6 +7623,8 @@ export class GetOIDCProviderResponse extends Message<GetOIDCProviderResponse> {
     { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "endpoint", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "loginURL", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "signInRedirectURL", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 6, name: "signOutRedirectURL", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetOIDCProviderResponse {
