@@ -89,7 +89,7 @@ const OrganizationDetails = () => {
       .toLowerCase()
       .regex(
         new RegExp("^[a-z0-9]+(?:-[a-z0-9]+)*$"),
-        "Should start and end with an alphanumeric character. Spaces and special characters other that hyphen not allowed",
+        "Slug should start and end with an alphanumeric character. Spaces and special characters other that hyphen not allowed.",
       )
       .min(3, {
         message: "Organization slug must be a minimum of 3 characters",
