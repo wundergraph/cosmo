@@ -195,7 +195,7 @@ const CheckOverviewPage: NextPageWithLayout = () => {
 
                 return (
                   <Link
-                    key={id}
+                    key={ag.id}
                     href={`/${organizationSlug}/graph/${graph.name}`}
                     className="text-primary"
                   >

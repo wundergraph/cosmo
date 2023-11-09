@@ -461,6 +461,7 @@ message AnalyticsViewResultFilter {
   string columnName = 1;
   string title = 2;
   repeated AnalyticsViewResultFilterOption options = 3;
+  optional bool custom_options = 4;
 }
 
 message AnalyticsViewResultFilterOption {
@@ -528,8 +529,9 @@ message RequestSeriesItem {
 }
 
 message OperationRequestCount {
-  string operationName = 1;
-  int32 totalRequests = 2;
+  string operationHash = 1;
+  string operationName = 2;
+  int32 totalRequests = 3;
 }
 
 message GetDashboardAnalyticsViewResponse {
@@ -884,8 +886,9 @@ message MetricsDashboardMetric {
 }
 
 message MetricsTopItem {
-  string name = 1;
-  string value = 2;
+  string hash = 1;
+  string name = 2;
+  string value = 3;
 }
 
 message MetricsSeriesItem {
@@ -967,6 +970,8 @@ message GetOIDCProviderResponse {
   string name = 2;
   string endpoint = 3;
   string loginURL = 4;
+  string signInRedirectURL = 5;
+  string signOutRedirectURL = 6;
 }
 
 message DeleteOIDCProviderRequest {}
@@ -986,7 +991,7 @@ message GetFieldUsageRequest {
 
 message ClientWithOperations {
   message Operation {
-    string latest_hash = 1;
+    string hash = 1;
     string name = 2;
     int32 count = 3;
   }
