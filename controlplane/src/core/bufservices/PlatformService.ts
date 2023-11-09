@@ -3109,6 +3109,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<UpdateOrgMemberRoleResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db);
+        const oidcRepo = new OidcRepository(opts.db);
 
         const org = await orgRepo.byId(authContext.organizationId);
         if (!org) {
@@ -3177,21 +3178,25 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        // checking if the user has logged in using the sso
-        const ssoUser = await opts.keycloakClient.client.users.find({
-          realm: opts.keycloakRealm,
-          email: orgMember.email,
-          exact: true,
-          idpAlias: org.slug,
-        });
+        const provider = await oidcRepo.getOidcProvider({ organizationId: authContext.organizationId });
 
-        if (ssoUser.length > 0) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR,
-              details: 'User has logged in using the OIDC provider. Please update the role using the provider.',
-            },
-          };
+        if (provider) {
+          // checking if the user has logged in using the sso
+          const ssoUser = await opts.keycloakClient.client.users.find({
+            realm: opts.keycloakRealm,
+            email: orgMember.email,
+            exact: true,
+            idpAlias: provider.alias,
+          });
+
+          if (ssoUser.length > 0) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR,
+                details: 'User has logged in using the OIDC provider. Please update the role using the provider.',
+              },
+            };
+          }
         }
 
         const organizationGroups = await opts.keycloakClient.client.groups.find({
@@ -3764,6 +3769,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             name: '',
             endpoint: '',
             loginURL: '',
+            signInRedirectURL: '',
+            signOutRedirectURL: '',
           };
         }
 
@@ -3774,6 +3781,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           name: provider.name,
           endpoint: provider.endpoint,
           loginURL: `${opts.webBaseUrl}/login?hint=${provider.alias}`,
+          signInRedirectURL: `${opts.keycloakApiUrl}/realms/${opts.keycloakRealm}/broker/${provider.alias}/endpoint`,
+          signOutRedirectURL: `${opts.keycloakApiUrl}/realms/${opts.keycloakRealm}/broker/${provider.alias}/endpoint/logout_response`,
         };
       });
     },
