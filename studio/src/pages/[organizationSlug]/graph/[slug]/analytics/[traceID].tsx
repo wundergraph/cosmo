@@ -14,9 +14,17 @@ import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb
 import { getTrace } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { AnalyticsToolbar } from "@/components/analytics/toolbar";
 import { CopyButton } from "@/components/ui/copy-button";
+import { useEffect, useState } from "react";
+import graphQLPlugin from "prettier/plugins/graphql";
+import * as prettier from "prettier/standalone";
+import { PlayIcon } from "@radix-ui/react-icons";
+import Link from "next/link";
 
 const TracePage: NextPageWithLayout = () => {
   const { query } = useRouter();
+  const organizationSlug = query.organizationSlug as string;
+  const slug = query.slug as string;
+  const [content, setContent] = useState("");
 
   const traceID = query.traceID as string;
 
@@ -26,6 +34,19 @@ const TracePage: NextPageWithLayout = () => {
     }),
     refetchInterval: 10000,
   });
+
+  useEffect(() => {
+    const set = async (source: string) => {
+      const res = await prettier.format(source, {
+        parser: "graphql",
+        plugins: [graphQLPlugin],
+      });
+      setContent(res);
+    };
+
+    if (!data) return;
+    set(data.spans[0].attributes?.operationContent || "");
+  }, [data]);
 
   if (isLoading) {
     return <Loader fullscreen />;
@@ -46,11 +67,19 @@ const TracePage: NextPageWithLayout = () => {
   return (
     <div>
       <Trace spans={data.spans} />
-      <div className="scrollbar-custom !mt-6 max-h-96 overflow-auto rounded border">
-        <SchemaViewer
-          sdl={data.spans[0].attributes?.operationContent ?? ""}
-          disableLinking
-        />
+      <div className="scrollbar-custom !mt-6 flex max-h-96 justify-between overflow-auto rounded border">
+        <SchemaViewer sdl={content} disableLinking />
+        <div className="px-2 py-2">
+          <Button variant="outline" size="icon" asChild>
+            <Link
+              href={`/${organizationSlug}/graph/${slug}/playground?operation=${
+                data.spans[0].attributes?.operationContent || ""
+              }`}
+            >
+              <PlayIcon className="h-5" />
+            </Link>
+          </Button>
+        </div>
       </div>
     </div>
   );
@@ -80,7 +109,7 @@ TracePage.getLayout = (page) =>
       >
         {page}
       </TitleLayout>
-    </PageHeader>
+    </PageHeader>,
   );
 
 export default TracePage;
