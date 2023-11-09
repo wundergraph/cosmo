@@ -14,6 +14,7 @@ export interface AnalyticsFilter {
     label: string;
     value: string;
   }>;
+  customOptions: boolean;
 }
 
 export interface AnalyticsFiltersProps {
@@ -50,7 +51,7 @@ export const AnalyticsSelectedFilters: React.FC<
     <div className="flex flex-wrap gap-1">
       {filters.map((filter, index) => {
         const isSelected = !!selectedFilters.find(
-          (each) => each.id === filter.id
+          (each) => each.id === filter.id,
         );
 
         if (!isSelected) {

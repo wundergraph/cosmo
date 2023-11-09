@@ -87,18 +87,18 @@ export class UsageRepository {
       SELECT
         ClientName AS clientName,
         ClientVersion AS clientVersion,
-        groupArray((latestOperationHash, OperationName, requestCount)) AS operations
+        groupArray((OperationHash, OperationName, requestCount)) AS operations
       FROM 
         (
             SELECT
                 ClientName,
                 ClientVersion,
                 OperationName,
-                argMax(OperationHash, Timestamp) AS latestOperationHash,
+                OperationHash,
                 sum(TotalUsages) AS requestCount
             FROM ${this.client.database}.gql_metrics_schema_usage_5m_90d_mv
             WHERE Timestamp >= startDate AND Timestamp <= endDate AND ${whereSql}
-            GROUP BY ClientName, ClientVersion, OperationName
+            GROUP BY ClientName, ClientVersion, OperationHash, OperationName
         )
       GROUP BY ClientName, ClientVersion
       ORDER BY ClientName, ClientVersion
@@ -111,7 +111,7 @@ export class UsageRepository {
         name: item.clientName,
         version: item.clientVersion,
         operations: item.operations.map((op: any) => ({
-          latestHash: op[0],
+          hash: op[0],
           name: op[1],
           count: Number(op[2]),
         })),

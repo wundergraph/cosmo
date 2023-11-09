@@ -156,7 +156,7 @@ const CheckOperationsPage: NextPageWithLayout = () => {
 
   const copyLink = (hash: string) => {
     const [base, _] = window.location.href.split("?");
-    const link = base + `?search=${hash}`;
+    const link = base + `?search=${hash.slice(0, 6)}`;
     copy(link);
     toast({ description: "Copied link to clipboard" });
   };

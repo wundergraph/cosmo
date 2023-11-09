@@ -37,6 +37,7 @@ export function buildAnalyticsViewFilters(
         columnName: filterTemplate[filtersKey].columnName,
         options: filterTemplate[filtersKey].options,
         title: filterTemplate[filtersKey].title,
+        customOptions: filterTemplate[filtersKey].customOptions,
       });
     }
   }
