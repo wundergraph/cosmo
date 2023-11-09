@@ -8,7 +8,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { FaGoogle } from "react-icons/fa";
 
-const loginUrl = `${process.env.NEXT_PUBLIC_COSMO_CP_URL}/v1/auth/login`;
+const loginUrl = `${process.env.NEXT_PUBLIC_COSMO_CP_URL}/v1/auth/signup`;
 
 const LoginPage: NextPageWithLayout = () => {
   const router = useRouter();
@@ -24,16 +24,16 @@ const LoginPage: NextPageWithLayout = () => {
           <h1 className="text-lg font-bold">Wundergraph Cosmo</h1>
         </div>
         <div className="flex flex-col items-start pt-16">
-          <h2 className="mb-1 text-2xl font-medium">Sign in</h2>
+          <h2 className="mb-1 text-2xl font-medium">Sign up</h2>
           <p className="text-muted-foreground">
-            Don&apos;t have an account yet?{" "}
+            Already have an account?{" "}
             <Link
               href={
-                redirectURL ? `/signup?redirectURL=${redirectURL}` : "/signup"
+                redirectURL ? `/login?redirectURL=${redirectURL}` : "/login"
               }
               className="underline hover:text-foreground"
             >
-              Sign up
+              Sign in
             </Link>
           </p>
 
@@ -46,7 +46,7 @@ const LoginPage: NextPageWithLayout = () => {
             >
               <Link href={loginUrl + `?provider=github&${urlAffix}`}>
                 <GitHubLogoIcon className="me-2" />
-                Sign in with GitHub
+                Sign up with GitHub
               </Link>
             </Button>
             <Button
@@ -57,7 +57,7 @@ const LoginPage: NextPageWithLayout = () => {
             >
               <Link href={loginUrl + `?provider=google&${urlAffix}`}>
                 <FaGoogle className="me-2" />
-                Sign in with Google
+                Sign up with Google
               </Link>
             </Button>
 

@@ -155,20 +155,28 @@ export default class AuthUtils {
     };
   }
 
-  async handleLoginRequest(finalRedirectURL?: string) {
+  async handleLoginRequest(options: { redirectURL?: string; provider?: string; action?: 'login' | 'signup' }) {
+    const { redirectURL, provider, action = 'login' } = options;
+
     const codeVerifier = await generateRandomCodeVerifier();
     const codeChallenge = await calculatePKCECodeChallenge(codeVerifier);
 
-    const authorizationUrl = new URL(this.opts.oauth.openIdFrontendUrl + '/protocol/openid-connect/auth');
+    const authAction = action === 'signup' && !provider ? 'registrations' : 'auth';
+
+    const authorizationUrl = new URL(this.opts.oauth.openIdFrontendUrl + '/protocol/openid-connect/' + authAction);
     authorizationUrl.searchParams.set('client_id', this.opts.oauth.clientID);
     authorizationUrl.searchParams.set('code_challenge', codeChallenge);
     authorizationUrl.searchParams.set('code_challenge_method', pkceCodeAlgorithm);
     authorizationUrl.searchParams.set(
       'redirect_uri',
-      finalRedirectURL ? `${this.opts.oauth.redirectUri}?redirectURL=${finalRedirectURL}` : this.opts.oauth.redirectUri,
+      redirectURL ? `${this.opts.oauth.redirectUri}?redirectURL=${redirectURL}` : this.opts.oauth.redirectUri,
     );
     authorizationUrl.searchParams.set('response_type', 'code');
     authorizationUrl.searchParams.set('scope', scope);
+
+    if (provider) {
+      authorizationUrl.searchParams.set('kc_idp_hint', provider);
+    }
 
     const jwt = await encrypt<PKCECodeChallenge>({
       maxAge: pkceMaxAgeSec,
