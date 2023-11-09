@@ -143,8 +143,8 @@ const LoginPage: NextPageWithLayout = () => {
   }
 
   return (
-    <div className="flex h-full items-start justify-center xl:justify-start">
-      <div className="relative z-10 m-4 mt-20 flex w-full max-w-xl flex-col gap-y-4 rounded-lg border bg-gray-950/60 p-10 text-white shadow-xl backdrop-blur-xl lg:m-10 xl:mt-60">
+    <div className="flex min-h-screen items-center justify-center xl:items-start xl:justify-start">
+      <div className="relative z-10 m-4 flex w-full max-w-xl flex-col gap-y-4 rounded-lg border bg-gray-950/60 p-10 text-white shadow-xl backdrop-blur-xl lg:m-10 lg:mt-20 xl:mt-60">
         <div className="flex items-center gap-2">
           <Logo width={40} height={40} />
           <h1 className="text-lg font-bold">Wundergraph Cosmo</h1>
