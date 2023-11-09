@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.34.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.33.0...controlplane@0.34.0) (2023-11-09)
+
+### Features
+
+* unify and redesign login screen ([#250](https://github.com/wundergraph/cosmo/issues/250)) ([aa02c4a](https://github.com/wundergraph/cosmo/commit/aa02c4a5eb2b85cea811b896494ed5d1f2762416)) (@Pagebakers)
+
 # [0.33.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.32.0...controlplane@0.33.0) (2023-11-09)
 
 ### Bug Fixes
