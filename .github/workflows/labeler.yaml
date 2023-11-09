@@ -8,6 +8,7 @@ concurrency:
 
 jobs:
   label:
+    timeout-minutes: 5
     permissions:
       contents: read
       pull-requests: write

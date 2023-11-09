@@ -67,6 +67,8 @@ const fetchSession = async () => {
   }
 };
 
+const publicPaths = ["/login", "/signup"];
+
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
   const currentOrgSlug = router.query.organizationSlug;
@@ -89,7 +91,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     if (
       error &&
       error instanceof UnauthorizedError &&
-      router.pathname !== "/login"
+      !publicPaths.includes(router.pathname)
     ) {
       const redirectURL = `${process.env.NEXT_PUBLIC_COSMO_STUDIO_URL}${router.asPath}`;
       router.replace(`/login?redirectURL=${redirectURL}`);

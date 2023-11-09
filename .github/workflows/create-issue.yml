@@ -5,6 +5,7 @@ on:
 
 jobs:
   add-disclaimer:
+    timeout-minutes: 5
     runs-on: ubuntu-latest
     permissions:
       issues: write
