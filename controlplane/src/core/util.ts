@@ -8,6 +8,7 @@ import { MemberRole } from '../db/models.js';
 import { isAuthenticationError, isFreeTrialExpiredError, isPublicError } from './errors/errors.js';
 
 const labelRegex = /^[\dA-Za-z](?:[\w.-]{0,61}[\dA-Za-z])?$/;
+const organizationSlugRegex = /^[\da-z]+(?:-[\da-z]+)*$/;
 
 /**
  * Wraps a function with a try/catch block and logs any errors that occur.
@@ -180,4 +181,16 @@ export const getHighestPriorityRole = ({ userRoles }: { userRoles: string[] }) =
     return 'developer';
   }
   return 'viewer';
+};
+
+export const isValidOrganizationSlug = (slug: string): boolean => {
+  if (slug.length < 3 || slug.length > 24) {
+    return false;
+  }
+
+  if (!organizationSlugRegex.test(slug)) {
+    return false;
+  }
+
+  return true;
 };
