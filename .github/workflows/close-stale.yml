@@ -6,6 +6,7 @@ on:
 
 jobs:
   stale:
+    timeout-minutes: 5
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ github.token }}
