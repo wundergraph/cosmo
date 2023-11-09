@@ -351,6 +351,34 @@
       "when": 1698986403698,
       "tag": "0049_skinny_sir_ram",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "5",
+      "when": 1699023546834,
+      "tag": "0050_tough_dark_phoenix",
+      "breakpoints": true
+    },
+    {
+      "idx": 51,
+      "version": "5",
+      "when": 1699302865729,
+      "tag": "0051_brave_steel_serpent",
+      "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "5",
+      "when": 1699467908204,
+      "tag": "0052_cool_deathstrike",
+      "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "5",
+      "when": 1699472077441,
+      "tag": "0053_natural_goblin_queen",
+      "breakpoints": true
     }
   ]
 }

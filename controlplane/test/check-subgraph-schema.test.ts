@@ -124,6 +124,7 @@ describe('CheckSubgraphSchema', (ctx) => {
           clientID: '',
           clientSecret: '',
         },
+        keycloakApiUrl: apiUrl,
       }),
     });
 
@@ -225,6 +226,7 @@ describe('CheckSubgraphSchema', (ctx) => {
           clientID: '',
           clientSecret: '',
         },
+        keycloakApiUrl: apiUrl,
       }),
     });
 
