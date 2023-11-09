@@ -230,8 +230,8 @@ export const FieldUsage = ({
                       <TableBody>
                         {client.operations.map((op) => {
                           return (
-                            <TableRow key={op.latestHash}>
-                              <TableCell>{op.latestHash.slice(0, 6)}</TableCell>
+                            <TableRow key={op.hash}>
+                              <TableCell>{op.hash.slice(0, 6)}</TableCell>
                               <TableCell>
                                 <Link
                                   href={{
@@ -242,6 +242,7 @@ export const FieldUsage = ({
                                       slug: router.query.slug,
                                       filterState: createFilterState({
                                         operationName: op.name,
+                                        operationHash: op.hash,
                                       }),
                                       dateRange: range
                                         ? createDateRange(getRange(range))
