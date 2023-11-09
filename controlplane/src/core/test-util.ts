@@ -110,7 +110,7 @@ export function createTestAuthenticator(): {
         });
       },
       authenticate(headers: Headers): Promise<AuthContext> {
-        return Promise.resolve(userAuthContext);
+        return Promise.resolve({ ...userAuthContext, isAdmin: true, hasWriteAccess: true });
       },
     },
 

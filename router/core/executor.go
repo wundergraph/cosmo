@@ -14,7 +14,6 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 
-	"github.com/wundergraph/cosmo/router/config"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/internal/pool"
 )
@@ -37,14 +36,14 @@ type Executor struct {
 	RenameTypeNames []resolve.RenameTypeName
 }
 
-func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, routerConfig *nodev1.RouterConfig, executionConfiguration config.EngineExecutionConfiguration) (*Executor, error) {
-	planConfig, err := b.buildPlannerConfiguration(routerConfig, executionConfiguration.Debug)
+func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, routerConfig *nodev1.RouterConfig, routerEngineConfig *RouterEngineConfiguration) (*Executor, error) {
+	planConfig, err := b.buildPlannerConfiguration(routerConfig, routerEngineConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build planner configuration: %w", err)
 	}
 
 	// this is the resolver, it's stateful and manages all the client connections, etc...
-	resolver := resolve.New(ctx, executionConfiguration.EnableSingleFlight)
+	resolver := resolve.New(ctx, routerEngineConfig.Execution.EnableSingleFlight)
 
 	// this is the GraphQL Schema that we will expose from our API
 	definition, report := astparser.ParseGraphqlDocumentString(routerConfig.EngineConfig.GraphqlSchema)
@@ -99,7 +98,7 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, routerConfig *
 	}, nil
 }
 
-func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(routerCfg *nodev1.RouterConfig, engineDebugConfig config.EngineDebugConfiguration) (*plan.Configuration, error) {
+func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(routerCfg *nodev1.RouterConfig, routerEngineCfg *RouterEngineConfiguration) (*plan.Configuration, error) {
 	// this loader is used to take the engine config and create a plan config
 	// the plan config is what the engine uses to turn a GraphQL Request into an execution plan
 	// the plan config is stateful as it carries connection pools and other things
@@ -111,19 +110,20 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(routerCfg *node
 	))
 
 	// this generates the plan config using the data source factories from the config package
-	planConfig, err := loader.Load(routerCfg.EngineConfig)
+	planConfig, err := loader.Load(routerCfg, routerEngineCfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load configuration: %w", err)
 	}
+	debug := &routerEngineCfg.Execution.Debug
 	planConfig.Debug = plan.DebugConfiguration{
-		PrintOperationTransformations: engineDebugConfig.PrintOperationTransformations,
-		PrintOperationEnableASTRefs:   engineDebugConfig.PrintOperationEnableASTRefs,
-		PrintPlanningPaths:            engineDebugConfig.PrintPlanningPaths,
-		PrintQueryPlans:               engineDebugConfig.PrintQueryPlans,
-		PrintNodeSuggestions:          engineDebugConfig.PrintNodeSuggestions,
-		ConfigurationVisitor:          engineDebugConfig.ConfigurationVisitor,
-		PlanningVisitor:               engineDebugConfig.PlanningVisitor,
-		DatasourceVisitor:             engineDebugConfig.DatasourceVisitor,
+		PrintOperationTransformations: debug.PrintOperationTransformations,
+		PrintOperationEnableASTRefs:   debug.PrintOperationEnableASTRefs,
+		PrintPlanningPaths:            debug.PrintPlanningPaths,
+		PrintQueryPlans:               debug.PrintQueryPlans,
+		PrintNodeSuggestions:          debug.PrintNodeSuggestions,
+		ConfigurationVisitor:          debug.ConfigurationVisitor,
+		PlanningVisitor:               debug.PlanningVisitor,
+		DatasourceVisitor:             debug.DatasourceVisitor,
 	}
 	return planConfig, nil
 }

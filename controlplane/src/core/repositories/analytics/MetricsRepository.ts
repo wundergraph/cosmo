@@ -89,23 +89,24 @@ export class MetricsRepository {
     const prevRequestRate = queryRate(prevDateRange.start, prevDateRange.end);
 
     // get top 5 operations in last [range] hours
-    const top5 = this.chClient.queryPromise<{ name: string; value: string }>(
+    const top5 = this.chClient.queryPromise<{ hash: string; name: string; value: string }>(
       `
       WITH
         toDateTime('${dateRange.start}') AS startDate,
         toDateTime('${dateRange.end}') AS endDate
-      SELECT name, round(sum(total) / ${multiplier}, 4) AS value FROM (
+      SELECT hash, name, round(sum(total) / ${multiplier}, 4) AS value FROM (
         SELECT
           Timestamp as timestamp,
-        OperationName as name,
+          OperationHash as hash,
+          OperationName as name,
           sum(TotalRequests) as total
         FROM operation_request_metrics_5_30_mv
         WHERE Timestamp >= startDate AND Timestamp <= endDate
           AND OrganizationID = '${organizationId}'
           AND FederatedGraphID = '${graphId}'
           ${whereSql ? `AND ${whereSql}` : ''}
-        GROUP BY Timestamp, OperationName 
-      ) GROUP BY name ORDER BY value DESC LIMIT 5
+        GROUP BY Timestamp, OperationName, OperationHash 
+      ) GROUP BY name, hash ORDER BY value DESC LIMIT 5
     `,
       queryParams,
     );
@@ -152,6 +153,7 @@ export class MetricsRepository {
         value: parseValue(medianResponse[0]?.value),
         previousValue: parseValue(prevMedianResponse[0]?.value),
         top: top5Response.map((v) => ({
+          hash: v.hash,
           name: v.name,
           value: parseValue(v.value),
         })),
@@ -206,12 +208,13 @@ export class MetricsRepository {
 
     // get top 5 operations in last [range] hours
     const queryTop5 = (quantile: string, start: number, end: number) => {
-      return this.chClient.queryPromise<{ name: string; value: string }>(
+      return this.chClient.queryPromise<{ hash: string; name: string; value: string }>(
         `
         WITH
           toDateTime('${start}') AS startDate,
           toDateTime('${end}') AS endDate
         SELECT
+          OperationHash as hash,
           OperationName as name,
           func_rank(${quantile}, BucketCounts) as rank,
           func_rank_bucket_lower_index(rank, BucketCounts) as b,
@@ -229,7 +232,7 @@ export class MetricsRepository {
           AND OrganizationID = '${organizationId}'
           AND FederatedGraphID = '${graphId}'
           ${whereSql ? `AND ${whereSql}` : ''}
-        GROUP BY OperationName ORDER BY value DESC LIMIT 5
+        GROUP BY OperationName, OperationHash ORDER BY value DESC LIMIT 5
     `,
         queryParams,
       );
@@ -288,7 +291,8 @@ export class MetricsRepository {
       data: {
         value: parseValue(p95Response[0]?.value),
         previousValue: parseValue(prevP95Response[0]?.value),
-        top: top5Response.map((v: any) => ({
+        top: top5Response.map((v) => ({
+          hash: v.hash,
           name: v.name,
           value: parseValue(v.value),
         })),
@@ -341,17 +345,19 @@ export class MetricsRepository {
     const prevValue = queryPercentage(prevDateRange.start, prevDateRange.end);
 
     // get top 5 operations in last [range] hours
-    const top5 = this.chClient.queryPromise<{ name: string; value: string }>(
+    const top5 = this.chClient.queryPromise<{ hash: string; name: string; value: string }>(
       `
       WITH
         toDateTime('${dateRange.start}') AS startDate,
         toDateTime('${dateRange.end}') AS endDate
       SELECT
+        hash,
         name,
         median(errorPercentage) as value
       FROM (
         SELECT
           Timestamp as timestamp,
+          OperationHash as hash,
           OperationName as name,
           sum(TotalRequests) as totalRequests,
           sum(TotalErrors) as totalErrors,
@@ -361,8 +367,8 @@ export class MetricsRepository {
           AND OrganizationID = '${organizationId}'
           AND FederatedGraphID = '${graphId}'
           ${whereSql ? `AND ${whereSql}` : ''}
-        GROUP BY Timestamp, OperationName 
-      ) GROUP BY name ORDER BY value DESC LIMIT 5
+        GROUP BY Timestamp, OperationName, OperationHash 
+      ) GROUP BY name, hash ORDER BY value DESC LIMIT 5
     `,
       queryParams,
     );
@@ -411,6 +417,7 @@ export class MetricsRepository {
         value: parseValue(valueResponse[0].errorPercentage),
         previousValue: parseValue(prevValueResponse[0].errorPercentage),
         top: top5Response.map((v) => ({
+          hash: v.hash,
           name: v.name,
           value: parseValue(v.value),
         })),
@@ -540,6 +547,14 @@ export class MetricsRepository {
       title: 'Operation Name',
       options: [],
     },
+    operationHash: {
+      dbField: 'OperationHash',
+      dbClause: 'where',
+      columnName: 'operationHash',
+      title: 'Operation Hash',
+      options: [],
+      customOptions: true,
+    },
     clientName: {
       dbField: 'ClientName',
       dbClause: 'where',
@@ -583,9 +598,9 @@ export class MetricsRepository {
 
       let label = option;
       if (filter === 'clientVersion' && option === 'missing') {
-        label = 'Unknown version';
+        label = 'missing';
       } else if (filter === 'clientName' && option === 'unknown') {
-        label = 'Unknown client';
+        label = 'unknown';
       }
 
       filters[filter].options.push({
@@ -608,7 +623,10 @@ export class MetricsRepository {
       }
     }
 
-    return buildAnalyticsViewFilters({ operationName: '', clientName: '', clientVersion: '' }, filters);
+    return buildAnalyticsViewFilters(
+      { operationName: '', operationHash: '', clientName: '', clientVersion: '' },
+      filters,
+    );
   }
 
   /**

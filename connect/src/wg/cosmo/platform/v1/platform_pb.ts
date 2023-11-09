@@ -3657,6 +3657,11 @@ export class AnalyticsViewResultFilter extends Message<AnalyticsViewResultFilter
    */
   options: AnalyticsViewResultFilterOption[] = [];
 
+  /**
+   * @generated from field: optional bool custom_options = 4;
+   */
+  customOptions?: boolean;
+
   constructor(data?: PartialMessage<AnalyticsViewResultFilter>) {
     super();
     proto3.util.initPartial(data, this);
@@ -3668,6 +3673,7 @@ export class AnalyticsViewResultFilter extends Message<AnalyticsViewResultFilter
     { no: 1, name: "columnName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "title", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "options", kind: "message", T: AnalyticsViewResultFilterOption, repeated: true },
+    { no: 4, name: "custom_options", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AnalyticsViewResultFilter {
@@ -3972,12 +3978,17 @@ export class RequestSeriesItem extends Message<RequestSeriesItem> {
  */
 export class OperationRequestCount extends Message<OperationRequestCount> {
   /**
-   * @generated from field: string operationName = 1;
+   * @generated from field: string operationHash = 1;
+   */
+  operationHash = "";
+
+  /**
+   * @generated from field: string operationName = 2;
    */
   operationName = "";
 
   /**
-   * @generated from field: int32 totalRequests = 2;
+   * @generated from field: int32 totalRequests = 3;
    */
   totalRequests = 0;
 
@@ -3989,8 +4000,9 @@ export class OperationRequestCount extends Message<OperationRequestCount> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "wg.cosmo.platform.v1.OperationRequestCount";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "operationName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "totalRequests", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 1, name: "operationHash", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "operationName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "totalRequests", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): OperationRequestCount {
@@ -6902,12 +6914,17 @@ export class MetricsDashboardMetric extends Message<MetricsDashboardMetric> {
  */
 export class MetricsTopItem extends Message<MetricsTopItem> {
   /**
-   * @generated from field: string name = 1;
+   * @generated from field: string hash = 1;
+   */
+  hash = "";
+
+  /**
+   * @generated from field: string name = 2;
    */
   name = "";
 
   /**
-   * @generated from field: string value = 2;
+   * @generated from field: string value = 3;
    */
   value = "";
 
@@ -6919,8 +6936,9 @@ export class MetricsTopItem extends Message<MetricsTopItem> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "wg.cosmo.platform.v1.MetricsTopItem";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "value", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "hash", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "value", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MetricsTopItem {
@@ -7370,6 +7388,331 @@ export class IsGitHubAppInstalledResponse extends Message<IsGitHubAppInstalledRe
 }
 
 /**
+ * @generated from message wg.cosmo.platform.v1.GroupMapper
+ */
+export class GroupMapper extends Message<GroupMapper> {
+  /**
+   * @generated from field: string role = 1;
+   */
+  role = "";
+
+  /**
+   * @generated from field: string ssoGroup = 2;
+   */
+  ssoGroup = "";
+
+  constructor(data?: PartialMessage<GroupMapper>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GroupMapper";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "role", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "ssoGroup", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GroupMapper {
+    return new GroupMapper().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GroupMapper {
+    return new GroupMapper().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GroupMapper {
+    return new GroupMapper().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GroupMapper | PlainMessage<GroupMapper> | undefined, b: GroupMapper | PlainMessage<GroupMapper> | undefined): boolean {
+    return proto3.util.equals(GroupMapper, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.CreateOIDCProviderRequest
+ */
+export class CreateOIDCProviderRequest extends Message<CreateOIDCProviderRequest> {
+  /**
+   * @generated from field: string name = 1;
+   */
+  name = "";
+
+  /**
+   * @generated from field: string discoveryEndpoint = 2;
+   */
+  discoveryEndpoint = "";
+
+  /**
+   * @generated from field: string clientID = 3;
+   */
+  clientID = "";
+
+  /**
+   * @generated from field: string clientSecrect = 4;
+   */
+  clientSecrect = "";
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.GroupMapper mappers = 5;
+   */
+  mappers: GroupMapper[] = [];
+
+  constructor(data?: PartialMessage<CreateOIDCProviderRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.CreateOIDCProviderRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "discoveryEndpoint", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "clientID", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "clientSecrect", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "mappers", kind: "message", T: GroupMapper, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateOIDCProviderRequest {
+    return new CreateOIDCProviderRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateOIDCProviderRequest {
+    return new CreateOIDCProviderRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateOIDCProviderRequest {
+    return new CreateOIDCProviderRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CreateOIDCProviderRequest | PlainMessage<CreateOIDCProviderRequest> | undefined, b: CreateOIDCProviderRequest | PlainMessage<CreateOIDCProviderRequest> | undefined): boolean {
+    return proto3.util.equals(CreateOIDCProviderRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.CreateOIDCProviderResponse
+ */
+export class CreateOIDCProviderResponse extends Message<CreateOIDCProviderResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: string signInURL = 2;
+   */
+  signInURL = "";
+
+  /**
+   * @generated from field: string signOutURL = 3;
+   */
+  signOutURL = "";
+
+  /**
+   * @generated from field: string loginURL = 4;
+   */
+  loginURL = "";
+
+  constructor(data?: PartialMessage<CreateOIDCProviderResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.CreateOIDCProviderResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "signInURL", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "signOutURL", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "loginURL", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateOIDCProviderResponse {
+    return new CreateOIDCProviderResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateOIDCProviderResponse {
+    return new CreateOIDCProviderResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateOIDCProviderResponse {
+    return new CreateOIDCProviderResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CreateOIDCProviderResponse | PlainMessage<CreateOIDCProviderResponse> | undefined, b: CreateOIDCProviderResponse | PlainMessage<CreateOIDCProviderResponse> | undefined): boolean {
+    return proto3.util.equals(CreateOIDCProviderResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetOIDCProviderRequest
+ */
+export class GetOIDCProviderRequest extends Message<GetOIDCProviderRequest> {
+  constructor(data?: PartialMessage<GetOIDCProviderRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetOIDCProviderRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetOIDCProviderRequest {
+    return new GetOIDCProviderRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetOIDCProviderRequest {
+    return new GetOIDCProviderRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetOIDCProviderRequest {
+    return new GetOIDCProviderRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetOIDCProviderRequest | PlainMessage<GetOIDCProviderRequest> | undefined, b: GetOIDCProviderRequest | PlainMessage<GetOIDCProviderRequest> | undefined): boolean {
+    return proto3.util.equals(GetOIDCProviderRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetOIDCProviderResponse
+ */
+export class GetOIDCProviderResponse extends Message<GetOIDCProviderResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name = "";
+
+  /**
+   * @generated from field: string endpoint = 3;
+   */
+  endpoint = "";
+
+  /**
+   * @generated from field: string loginURL = 4;
+   */
+  loginURL = "";
+
+  /**
+   * @generated from field: string signInRedirectURL = 5;
+   */
+  signInRedirectURL = "";
+
+  /**
+   * @generated from field: string signOutRedirectURL = 6;
+   */
+  signOutRedirectURL = "";
+
+  constructor(data?: PartialMessage<GetOIDCProviderResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetOIDCProviderResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "endpoint", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "loginURL", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "signInRedirectURL", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 6, name: "signOutRedirectURL", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetOIDCProviderResponse {
+    return new GetOIDCProviderResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetOIDCProviderResponse {
+    return new GetOIDCProviderResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetOIDCProviderResponse {
+    return new GetOIDCProviderResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetOIDCProviderResponse | PlainMessage<GetOIDCProviderResponse> | undefined, b: GetOIDCProviderResponse | PlainMessage<GetOIDCProviderResponse> | undefined): boolean {
+    return proto3.util.equals(GetOIDCProviderResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.DeleteOIDCProviderRequest
+ */
+export class DeleteOIDCProviderRequest extends Message<DeleteOIDCProviderRequest> {
+  constructor(data?: PartialMessage<DeleteOIDCProviderRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.DeleteOIDCProviderRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteOIDCProviderRequest {
+    return new DeleteOIDCProviderRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteOIDCProviderRequest {
+    return new DeleteOIDCProviderRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteOIDCProviderRequest {
+    return new DeleteOIDCProviderRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DeleteOIDCProviderRequest | PlainMessage<DeleteOIDCProviderRequest> | undefined, b: DeleteOIDCProviderRequest | PlainMessage<DeleteOIDCProviderRequest> | undefined): boolean {
+    return proto3.util.equals(DeleteOIDCProviderRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.DeleteOIDCProviderResponse
+ */
+export class DeleteOIDCProviderResponse extends Message<DeleteOIDCProviderResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  constructor(data?: PartialMessage<DeleteOIDCProviderResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.DeleteOIDCProviderResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteOIDCProviderResponse {
+    return new DeleteOIDCProviderResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteOIDCProviderResponse {
+    return new DeleteOIDCProviderResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteOIDCProviderResponse {
+    return new DeleteOIDCProviderResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DeleteOIDCProviderResponse | PlainMessage<DeleteOIDCProviderResponse> | undefined, b: DeleteOIDCProviderResponse | PlainMessage<DeleteOIDCProviderResponse> | undefined): boolean {
+    return proto3.util.equals(DeleteOIDCProviderResponse, a, b);
+  }
+}
+
+/**
  * @generated from message wg.cosmo.platform.v1.GetFieldUsageRequest
  */
 export class GetFieldUsageRequest extends Message<GetFieldUsageRequest> {
@@ -7490,9 +7833,9 @@ export class ClientWithOperations extends Message<ClientWithOperations> {
  */
 export class ClientWithOperations_Operation extends Message<ClientWithOperations_Operation> {
   /**
-   * @generated from field: string latest_hash = 1;
+   * @generated from field: string hash = 1;
    */
-  latestHash = "";
+  hash = "";
 
   /**
    * @generated from field: string name = 2;
@@ -7512,7 +7855,7 @@ export class ClientWithOperations_Operation extends Message<ClientWithOperations
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "wg.cosmo.platform.v1.ClientWithOperations.Operation";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "latest_hash", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "hash", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "count", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
   ]);
