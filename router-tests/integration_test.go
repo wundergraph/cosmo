@@ -17,6 +17,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/routerconfig"
@@ -121,13 +122,22 @@ func sendQueryOK(tb testing.TB, server *core.Server, query *testQuery) string {
 }
 
 func sendData(server *core.Server, data []byte) *httptest.ResponseRecorder {
+	return sendDataWithHeader(server, data, nil)
+}
+
+func sendDataWithHeader(server *core.Server, data []byte, header http.Header) *httptest.ResponseRecorder {
 	rr := httptest.NewRecorder()
 	req := httptest.NewRequest("POST", "/graphql", bytes.NewBuffer(data))
+	if header != nil {
+		req.Header = header
+	}
 	server.Server.Handler.ServeHTTP(rr, req)
 	return rr
 }
 
-func prepareServer(tb testing.TB, opts ...core.Option) *core.Server {
+// setupServer sets up the router server without making it listen on a local
+// port, allowing tests by calling the server directly via server.Server.Handler.ServeHTTP
+func setupServer(tb testing.TB, opts ...core.Option) *core.Server {
 	ctx := context.Background()
 	cfg := config.Config{
 		Graph: config.Graph{
@@ -153,10 +163,36 @@ func prepareServer(tb testing.TB, opts ...core.Option) *core.Server {
 		zapcore.ErrorLevel,
 	))
 
+	t := jwt.New(jwt.SigningMethodHS256)
+	t.Claims = jwt.MapClaims{
+		"federated_graph_id": "graph",
+		"organization_id":    "organization",
+	}
+	graphApiToken, err := t.SignedString([]byte("hunter2"))
+
+	cdnFileServer := http.FileServer(http.Dir(filepath.Join("testdata", "cdn")))
+	cdnServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Ensure we have an authorization header with a valid token
+		authorization := r.Header.Get("Authorization")
+		token := authorization[len("Bearer "):]
+		parsedClaims := make(jwt.MapClaims)
+		jwtParser := new(jwt.Parser)
+		_, _, err = jwtParser.ParseUnverified(token, parsedClaims)
+		assert.NoError(tb, err)
+		assert.Equal(tb, t.Claims, parsedClaims)
+		cdnFileServer.ServeHTTP(w, r)
+	}))
+
+	tb.Cleanup(cdnServer.Close)
+
+	require.NoError(tb, err)
+
 	routerOpts := []core.Option{
 		core.WithFederatedGraphName(cfg.Graph.Name),
 		core.WithStaticRouterConfig(routerConfig),
 		core.WithLogger(zapLogger),
+		core.WithGraphApiToken(graphApiToken),
+		core.WithCDNURL(cdnServer.URL),
 		core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
 			EnableSingleFlight: true,
 		}),
@@ -173,12 +209,6 @@ func prepareServer(tb testing.TB, opts ...core.Option) *core.Server {
 	return server
 }
 
-// setupServer sets up the router server without making it listen on a local
-// port, allowing tests by calling the server directly via server.Server.Handler.ServeHTTP
-func setupServer(tb testing.TB) *core.Server {
-	return prepareServer(tb)
-}
-
 // setupListeningServer calls setupServer to set up the server but makes it listen
 // on the network, automatically registering a cleanup function to shut it down.
 // It returns both the server and the local port where the server is listening.
@@ -191,7 +221,7 @@ func setupListeningServer(tb testing.TB, opts ...core.Option) (*core.Server, int
 	serverOpts := append([]core.Option{
 		core.WithListenerAddr(":" + strconv.Itoa(port)),
 	}, opts...)
-	server := prepareServer(tb, serverOpts...)
+	server := setupServer(tb, serverOpts...)
 	go func() {
 		err := server.Server.ListenAndServe()
 		if err != http.ErrServerClosed {

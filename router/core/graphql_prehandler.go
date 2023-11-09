@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/middleware"
+	"github.com/wundergraph/cosmo/router/internal/cdn"
 	"github.com/wundergraph/cosmo/router/internal/logging"
 	"github.com/wundergraph/cosmo/router/internal/pool"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphql"
@@ -79,12 +80,13 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		buf := pool.GetBytesBuffer()
 		defer pool.PutBytesBuffer(buf)
 
-		operation, err := h.parser.ParseReader(r.Body)
+		operation, err := h.parser.ParseReader(r.Context(), clientInfo, r.Body, requestLogger)
 		if err != nil {
 			hasRequestError = true
 
 			var reportErr ReportError
 			var inputErr InputError
+			var poNotFoundErr cdn.PersistentOperationNotFoundError
 			switch {
 			case errors.As(err, &inputErr):
 				requestLogger.Error(inputErr.Error())
@@ -93,6 +95,12 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 				report := reportErr.Report()
 				logInternalErrorsFromReport(reportErr.Report(), requestLogger)
 				writeRequestErrors(r, graphql.RequestErrorsFromOperationReport(*report), w, requestLogger)
+			case errors.As(err, &poNotFoundErr):
+				requestLogger.Warn("persisted operation not found",
+					zap.String("sha256Hash", poNotFoundErr.Sha256Hash()),
+					zap.String("clientName", poNotFoundErr.ClientName()))
+				writeRequestErrors(r, graphql.RequestErrorsFromError(errors.New(cdn.PersistedOperationNotFoundErrorCode)), w, requestLogger)
+
 			default: // If we have an unknown error, we log it and return an internal server error
 				requestLogger.Error(err.Error())
 				writeRequestErrors(r, graphql.RequestErrorsFromError(errInternalServer), w, requestLogger)

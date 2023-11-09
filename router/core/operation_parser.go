@@ -2,6 +2,7 @@ package core
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"hash"
 	"io"
@@ -11,12 +12,14 @@ import (
 	"github.com/buger/jsonparser"
 	"github.com/cespare/xxhash/v2"
 	"github.com/pkg/errors"
+	"github.com/wundergraph/cosmo/router/internal/cdn"
 	"github.com/wundergraph/cosmo/router/internal/pool"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astnormalization"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astprinter"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
+	"go.uber.org/zap"
 )
 
 type ParsedOperation struct {
@@ -39,6 +42,7 @@ type ParsedOperation struct {
 type OperationParser struct {
 	executor                *Executor
 	maxOperationSizeInBytes int64
+	cdn                     *cdn.CDN
 	parseKitPool            *sync.Pool
 }
 
@@ -52,10 +56,17 @@ type parseKit struct {
 	unescapedDocument   []byte
 }
 
-func NewOperationParser(executor *Executor, maxOperationSizeInBytes int64) *OperationParser {
+type OperationParserOptions struct {
+	Executor                *Executor
+	MaxOperationSizeInBytes int64
+	CDN                     *cdn.CDN
+}
+
+func NewOperationParser(opts OperationParserOptions) *OperationParser {
 	return &OperationParser{
-		executor:                executor,
-		maxOperationSizeInBytes: maxOperationSizeInBytes,
+		executor:                opts.Executor,
+		maxOperationSizeInBytes: opts.MaxOperationSizeInBytes,
+		cdn:                     opts.CDN,
 		parseKitPool: &sync.Pool{
 			New: func() interface{} {
 				return &parseKit{
@@ -90,7 +101,7 @@ func (p *OperationParser) entityTooLarge() error {
 	}
 }
 
-func (p *OperationParser) ParseReader(r io.Reader) (*ParsedOperation, error) {
+func (p *OperationParser) ParseReader(ctx context.Context, clientInfo *ClientInfo, r io.Reader, log *zap.Logger) (*ParsedOperation, error) {
 	// Use an extra byte for the max size. This way we can check if N became
 	// zero to detect if the request body was too large.
 	limitedReader := &io.LimitedReader{R: r, N: p.maxOperationSizeInBytes + 1}
@@ -104,14 +115,14 @@ func (p *OperationParser) ParseReader(r io.Reader) (*ParsedOperation, error) {
 	if limitedReader.N == 0 {
 		return nil, p.entityTooLarge()
 	}
-	return p.parse(buf.Bytes())
+	return p.parse(ctx, clientInfo, buf.Bytes(), log)
 }
 
-func (p *OperationParser) Parse(data []byte) (*ParsedOperation, error) {
+func (p *OperationParser) Parse(ctx context.Context, clientInfo *ClientInfo, data []byte, log *zap.Logger) (*ParsedOperation, error) {
 	if len(data) > int(p.maxOperationSizeInBytes) {
 		return nil, p.entityTooLarge()
 	}
-	return p.parse(data)
+	return p.parse(ctx, clientInfo, data, log)
 }
 
 var (
@@ -122,10 +133,28 @@ var (
 		{"query"},
 		{"variables"},
 		{"operationName"},
+		{"extensions"},
+	}
+
+	persistedQueryKeys = [][]string{
+		{"version"},
+		{"sha256Hash"},
 	}
 )
 
-func (p *OperationParser) parse(body []byte) (*ParsedOperation, error) {
+const (
+	parseOperationKeysQueryIndex = iota
+	parseOperationKeysVariablesIndex
+	parseOperationKeysOperationNameIndex
+	parseOperationKeysExtensionsIndex
+)
+
+const (
+	persistedQueryKeysVersionIndex = iota
+	persistedQueryKeysSha256HashIndex
+)
+
+func (p *OperationParser) parse(ctx context.Context, clientInfo *ClientInfo, body []byte, log *zap.Logger) (*ParsedOperation, error) {
 
 	var (
 		requestOperationType            string
@@ -137,27 +166,75 @@ func (p *OperationParser) parse(body []byte) (*ParsedOperation, error) {
 		originalOperationNameRef        ast.ByteSliceReference
 		requestDocumentBytes            []byte
 		requestVariableBytes            []byte
+		persistedQueryVersion           []byte
+		persistedQuerySha256Hash        []byte
 	)
 
 	kit := p.getKit()
 	defer p.freeKit(kit)
 
+	var parseErr error
+
 	jsonparser.EachKey(body, func(i int, value []byte, valueType jsonparser.ValueType, err error) {
 		if err != nil {
+			parseErr = err
 			return
 		}
 		switch i {
-		case 0:
+		case parseOperationKeysQueryIndex:
 			requestDocumentBytes, err = jsonparser.Unescape(value, kit.unescapedDocument)
 			if err != nil {
+				parseErr = fmt.Errorf("error unescaping query: %w", err)
 				return
 			}
-		case 1:
+		case parseOperationKeysVariablesIndex:
 			requestVariableBytes = value
-		case 2:
+		case parseOperationKeysOperationNameIndex:
 			requestOperationNameBytes = value
+		case parseOperationKeysExtensionsIndex:
+			persistedQuery, _, _, err := jsonparser.Get(value, "persistedQuery")
+			if err != nil {
+				parseErr = err
+				return
+			}
+			if len(persistedQuery) > 0 {
+				jsonparser.EachKey(persistedQuery, func(i int, value []byte, valueType jsonparser.ValueType, err error) {
+					if err != nil {
+						parseErr = err
+						return
+					}
+					switch i {
+					case persistedQueryKeysVersionIndex:
+						persistedQueryVersion = value
+					case persistedQueryKeysSha256HashIndex:
+						persistedQuerySha256Hash = value
+					}
+				}, persistedQueryKeys...)
+				if persistedQueryVersion == nil {
+					log.Warn("persistedQuery.version is missing")
+					persistedQuerySha256Hash = nil
+					return
+				}
+				if len(persistedQueryVersion) != 1 || persistedQueryVersion[0] != '1' {
+					log.Warn("unsupported persistedQuery.version", zap.String("version", string(persistedQueryVersion)))
+					persistedQuerySha256Hash = nil
+					return
+				}
+			}
 		}
 	}, parseOperationKeys...)
+
+	if parseErr != nil {
+		return nil, errors.WithStack(parseErr)
+	}
+
+	if len(persistedQuerySha256Hash) > 0 {
+		persistedOperationData, err := p.cdn.PersistentOperation(ctx, clientInfo.Name, persistedQuerySha256Hash)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+		requestDocumentBytes = persistedOperationData
+	}
 
 	requestHasOperationName := requestOperationNameBytes != nil
 

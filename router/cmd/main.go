@@ -157,6 +157,7 @@ func Main() {
 		core.WithEngineExecutionConfig(cfg.EngineExecutionConfiguration),
 		core.WithAccessController(core.NewAccessController(authenticators, cfg.Authorization.RequireAuthentication)),
 		core.WithLocalhostFallbackInsideDocker(cfg.LocalhostFallbackInsideDocker),
+		core.WithCDNURL(cfg.CDN.URL),
 	)
 
 	if err != nil {
