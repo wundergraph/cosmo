@@ -7,14 +7,35 @@ import { ArrowRightIcon, GitHubLogoIcon } from "@radix-ui/react-icons";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { FaGoogle } from "react-icons/fa";
+import { z } from "zod";
 
-const loginUrl = `${process.env.NEXT_PUBLIC_COSMO_CP_URL}/v1/auth/signup`;
+const signupUrl = `${process.env.NEXT_PUBLIC_COSMO_CP_URL}/v1/auth/signup`;
 
-const LoginPage: NextPageWithLayout = () => {
+const querySchema = z.object({
+  redirectURL: z.string().url().optional(),
+});
+
+const constructSignupURL = ({
+  redirectURL,
+  provider,
+}: {
+  redirectURL?: string;
+  provider?: string;
+}) => {
+  const q = new URLSearchParams();
+
+  if (redirectURL) q.append("redirectURL", redirectURL);
+  if (provider) q.append("provider", provider);
+
+  const queryString = q.size ? "?" + q.toString() : "";
+
+  return signupUrl + queryString;
+};
+
+const SignupPage: NextPageWithLayout = () => {
   const router = useRouter();
-  const redirectURL = router.query.redirectURL;
 
-  const urlAffix = redirectURL ? `redirectURL=${redirectURL}` : "";
+  const { redirectURL } = querySchema.parse(router.query);
 
   return (
     <div className="flex h-screen items-start justify-center overflow-hidden xl:justify-start">
@@ -44,7 +65,9 @@ const LoginPage: NextPageWithLayout = () => {
               className="text-md w-full px-12 py-6"
               asChild
             >
-              <Link href={loginUrl + `?provider=github&${urlAffix}`}>
+              <Link
+                href={constructSignupURL({ redirectURL, provider: "github" })}
+              >
                 <GitHubLogoIcon className="me-2" />
                 Sign up with GitHub
               </Link>
@@ -55,7 +78,9 @@ const LoginPage: NextPageWithLayout = () => {
               className="text-md w-full px-12 py-6"
               asChild
             >
-              <Link href={loginUrl + `?provider=google&${urlAffix}`}>
+              <Link
+                href={constructSignupURL({ redirectURL, provider: "google" })}
+              >
                 <FaGoogle className="me-2" />
                 Sign up with Google
               </Link>
@@ -73,7 +98,7 @@ const LoginPage: NextPageWithLayout = () => {
               className="text-md group w-full px-12 py-6"
               asChild
             >
-              <Link href={loginUrl + `?${urlAffix}`}>
+              <Link href={constructSignupURL({ redirectURL })}>
                 Continue with Email{" "}
                 <ArrowRightIcon className="ms-2 transition-all group-hover:translate-x-1" />
               </Link>
@@ -88,8 +113,8 @@ const LoginPage: NextPageWithLayout = () => {
   );
 };
 
-LoginPage.getLayout = (page) => {
+SignupPage.getLayout = (page) => {
   return <AuthLayout>{page}</AuthLayout>;
 };
 
-export default LoginPage;
+export default SignupPage;

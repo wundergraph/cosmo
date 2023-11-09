@@ -169,35 +169,42 @@ export default class AuthUtils {
     };
   }
 
-  getRedirectUri({ redirectURL, kcHint }: { redirectURL?: string; kcHint?: string }) {
-    if (redirectURL && kcHint) {
-      return `${this.opts.oauth.redirectUri}?redirectURL=${redirectURL}&ssoSlug=${kcHint}`;
+  getRedirectUri({ redirectURL, sso }: { redirectURL?: string; sso?: string }) {
+    if (redirectURL && sso) {
+      return `${this.opts.oauth.redirectUri}?redirectURL=${redirectURL}&ssoSlug=${sso}`;
     } else if (redirectURL) {
       return `${this.opts.oauth.redirectUri}?redirectURL=${redirectURL}`;
-    } else if (kcHint) {
-      return `${this.opts.oauth.redirectUri}?ssoSlug=${kcHint}`;
+    } else if (sso) {
+      return `${this.opts.oauth.redirectUri}?ssoSlug=${sso}`;
     } else {
       return this.opts.oauth.redirectUri;
     }
   }
 
-  async handleLoginRequest(options: { redirectURL?: string; hint?: string; action?: 'login' | 'signup' }) {
-    const { redirectURL, hint, action = 'login' } = options;
+  async handleLoginRequest(options: {
+    redirectURL?: string;
+    provider?: string;
+    sso?: string;
+    action?: 'login' | 'signup';
+  }) {
+    const { redirectURL, provider, sso, action = 'login' } = options;
 
     const codeVerifier = await generateRandomCodeVerifier();
     const codeChallenge = await calculatePKCECodeChallenge(codeVerifier);
 
-    const authAction = action === 'signup' && !hint ? 'registrations' : 'auth';
+    const authAction = action === 'signup' && !provider ? 'registrations' : 'auth';
+
+    const idpHint = sso || provider;
 
     const authorizationUrl = new URL(this.opts.oauth.openIdFrontendUrl + '/protocol/openid-connect/' + authAction);
     authorizationUrl.searchParams.set('client_id', this.opts.oauth.clientID);
     authorizationUrl.searchParams.set('code_challenge', codeChallenge);
     authorizationUrl.searchParams.set('code_challenge_method', pkceCodeAlgorithm);
-    authorizationUrl.searchParams.set('redirect_uri', this.getRedirectUri({ redirectURL, kcHint: hint }));
+    authorizationUrl.searchParams.set('redirect_uri', this.getRedirectUri({ redirectURL, sso }));
     authorizationUrl.searchParams.set('response_type', 'code');
     authorizationUrl.searchParams.set('scope', scope);
-    if (hint) {
-      authorizationUrl.searchParams.set('kc_idp_hint', hint);
+    if (idpHint) {
+      authorizationUrl.searchParams.set('kc_idp_hint', idpHint);
     }
 
     const jwt = await encrypt<PKCECodeChallenge>({
@@ -262,7 +269,7 @@ export default class AuthUtils {
         client_id: this.opts.oauth.clientID,
         code_verifier: codeChallenge?.codeVerifier,
         code,
-        redirect_uri: this.getRedirectUri({ redirectURL, kcHint: ssoSlug }),
+        redirect_uri: this.getRedirectUri({ redirectURL, sso: ssoSlug }),
       }),
     });
 

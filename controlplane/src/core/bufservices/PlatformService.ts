@@ -3743,7 +3743,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           },
           signInURL: `${opts.keycloakApiUrl}/realms/${opts.keycloakRealm}/broker/${alias}/endpoint`,
           signOutURL: `${opts.keycloakApiUrl}/realms/${opts.keycloakRealm}/broker/${alias}/endpoint/logout_response`,
-          loginURL: `${opts.webBaseUrl}/login?hint=${alias}`,
+          loginURL: `${opts.webBaseUrl}/login?sso=${alias}`,
         };
       });
     },

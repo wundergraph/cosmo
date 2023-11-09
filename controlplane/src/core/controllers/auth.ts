@@ -317,13 +317,15 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
   );
 
   fastify.get<{
-    Querystring: { redirectURL?: string; hint?: string };
+    Querystring: { redirectURL?: string; provider?: string; sso?: string };
   }>('/login', async (req, res) => {
     const redirectURL = req.query?.redirectURL;
-    const hint = req.query?.hint;
+    const provider = req.query?.provider;
+    const sso = req.query?.sso;
     const { authorizationUrl, pkceCookie } = await opts.authUtils.handleLoginRequest({
       redirectURL,
-      hint,
+      provider,
+      sso,
     });
 
     res.header('Set-Cookie', pkceCookie);
@@ -332,13 +334,13 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
   });
 
   fastify.get<{
-    Querystring: { redirectURL?: string; hint?: string };
+    Querystring: { redirectURL?: string; provider?: string };
   }>('/signup', async (req, res) => {
     const redirectURL = req.query?.redirectURL;
-    const hint = req.query?.hint;
+    const provider = req.query?.provider;
     const { authorizationUrl, pkceCookie } = await opts.authUtils.handleLoginRequest({
       redirectURL,
-      hint,
+      provider,
       action: 'signup',
     });
 

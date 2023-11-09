@@ -539,12 +539,13 @@ export const ProductCosmoStack = () => {
         <div className="relative flex items-center px-4 text-center md:px-8 md:text-left">
           <div className="flex w-full flex-col justify-start md:mt-12">
             <h3 className="hidden max-w-xl text-xl font-semibold text-gray-950 dark:text-white md:block md:text-3xl lg:text-[42px] lg:leading-[52px]">
-              The drop-in open-source Apollo GraphOS alternative
+              Full Lifecycle (Federated) GraphQL API Management
             </h3>
             <p className="mt-4 max-w-xl text-sm font-medium text-muted-foreground  md:text-base">
               Cosmo is a drop-in replacement to other services like Apollo
               GraphOS. It&apos;s the only OSS solution that bundles everything
-              from Router to Schema Registry or Analytics in one package.
+              from Router to Schema Registry, Analytics and Tracing in one
+              package. Perfect for monolithic and Federated GraphQL APIs.
             </p>
             <div className="my-12 flex max-w-2xl flex-col gap-y-6 divide-y text-left dark:divide-gray-800 md:my-16 md:gap-y-8 md:divide-y-0">
               <div className="grid gap-y-6 divide-y dark:divide-gray-800 md:grid-cols-2 md:gap-y-8 md:divide-x md:divide-y-0">
