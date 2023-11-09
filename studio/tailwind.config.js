@@ -81,7 +81,6 @@ module.exports = {
           900: "hsl(var(--gray-900), <alpha-value>)",
           950: "hsl(var(--gray-950), <alpha-value>)",
         },
-        "surface-transparent": "rgba(0, 0, 0, 0.5)",
       },
       borderRadius: {
         lg: "var(--radius)",
