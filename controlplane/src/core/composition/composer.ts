@@ -1,10 +1,10 @@
 import { GraphQLSchema, parse, printSchema } from 'graphql';
 import { JsonValue } from '@bufbuild/protobuf';
 import { buildRouterConfig } from '@wundergraph/cosmo-shared';
-import { ArgumentConfigurationData, ConfigurationDataMap } from '@wundergraph/composition';
+import { ArgumentConfigurationData, ConfigurationDataMap, FederationResult } from '@wundergraph/composition';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
 import { SubgraphRepository } from '../repositories/SubgraphRepository.js';
-import { FederatedGraphDTO, Label } from '../../types/index.js';
+import { FederatedGraphDTO, Label, SubgraphDTO } from '../../types/index.js';
 import { composeSubgraphs } from './composition.js';
 import { getDiffBetweenGraphs } from './schemaCheck.js';
 
@@ -12,15 +12,55 @@ export type CompositionResult = {
   compositions: ComposedFederatedGraph[];
 };
 
+/**
+ * Protocol used when subscribing to a subgraph.
+ *
+ * ws: Negotiates an appropriate protocol over websockets. Both https://github.com/enisdenjo/graphql-ws/blob/master/PROTOCOL.md and https://github.com/apollographql/subscriptions-transport-ws/blob/master/PROTOCOL.md are supported
+ * sse: Uses the Server-Sent Events protocol with a GET request
+ * sse-post: Uses the Server-Sent Events protocol with a POST request
+ */
+type SubscriptionProtocol = 'ws' | 'sse' | 'sse_post';
+
 interface ComposedSubgraph {
   id: string;
   name: string;
   sdl: string;
   url: string;
   subscriptionUrl: string;
-  subscriptionProtocol: 'ws' | 'sse' | 'sse_post';
+  subscriptionProtocol: SubscriptionProtocol;
+  // The intermediate representation of the engine configuration for the subgraph
   configurationDataMap?: ConfigurationDataMap;
+  // The normalized GraphQL schema for the subgraph
   schema?: GraphQLSchema;
+}
+
+export function subgraphDTOsToComposedSubgraphs(
+  subgraphs: SubgraphDTO[],
+  result?: FederationResult,
+): ComposedSubgraph[] {
+  return subgraphs.map((subgraph) => {
+    /* batchNormalize returns an intermediate representation of the engine configuration
+     *  and a normalized schema per subgraph.
+     *  Batch normalization is necessary because validation of certain things such as the @override directive requires
+     *  knowledge of the other subgraphs.
+     *  Each normalized schema and engine configuration is mapped by subgraph name to a SubgraphConfig object wrapper.
+     *  This is passed to the FederationFactory and is returned by federateSubgraphs if federation is successful.
+     *  The normalized schema and engine configuration is used by buildRouterConfig.
+     * */
+    const subgraphConfig = result?.subgraphConfigBySubgraphName.get(subgraph.name);
+    const schema = subgraphConfig?.schema;
+    const configurationDataMap = subgraphConfig?.configurationDataMap;
+    return {
+      id: subgraph.id,
+      name: subgraph.name,
+      url: subgraph.routingUrl,
+      sdl: subgraph.schemaSDL,
+      subscriptionUrl: subgraph.subscriptionUrl,
+      subscriptionProtocol: subgraph.subscriptionProtocol,
+      configurationDataMap,
+      schema,
+    };
+  });
 }
 
 export interface ComposedFederatedGraph {
@@ -107,21 +147,7 @@ export class Composer {
         composedSchema: result?.federatedGraphSchema ? printSchema(result.federatedGraphSchema) : undefined,
         errors: errors || [],
         argumentConfigurations: result?.argumentConfigurations || [],
-        subgraphs: subgraphs.map((s) => {
-          const subgraphConfig = result?.subgraphConfigBySubgraphName.get(s.name);
-          const schema = subgraphConfig?.schema;
-          const configurationDataMap = subgraphConfig?.configurationDataMap;
-          return {
-            id: s.id,
-            name: s.name,
-            url: s.routingUrl,
-            sdl: s.schemaSDL,
-            subscriptionUrl: s.subscriptionUrl,
-            subscriptionProtocol: s.subscriptionProtocol,
-            configurationDataMap,
-            schema,
-          };
-        }),
+        subgraphs: subgraphDTOsToComposedSubgraphs(subgraphs, result),
       };
     } catch (e: any) {
       return {
@@ -174,21 +200,7 @@ export class Composer {
           argumentConfigurations: result?.argumentConfigurations || [],
           composedSchema: result?.federatedGraphSchema ? printSchema(result.federatedGraphSchema) : undefined,
           errors: errors || [],
-          subgraphs: subgraphs.map((s) => {
-            const subgraphConfig = result?.subgraphConfigBySubgraphName.get(s.name);
-            const schema = subgraphConfig?.schema;
-            const configurationDataMap = subgraphConfig?.configurationDataMap;
-            return {
-              id: s.id,
-              name: s.name,
-              url: s.routingUrl,
-              subscriptionUrl: s.subscriptionUrl,
-              subscriptionProtocol: s.subscriptionProtocol,
-              sdl: s.schemaSDL,
-              configurationDataMap,
-              schema,
-            };
-          }),
+          subgraphs: subgraphDTOsToComposedSubgraphs(subgraphs, result),
         });
       } catch (e: any) {
         composedGraphs.push({
