@@ -50,6 +50,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
+import { docsBaseURL } from "@/lib/constants";
 import { NextPageWithLayout } from "@/lib/page";
 import { cn } from "@/lib/utils";
 import { MinusCircledIcon, PlusIcon } from "@radix-ui/react-icons";
@@ -63,6 +64,7 @@ import {
   leaveOrganization,
   updateOrganizationDetails,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+import Link from "next/link";
 import { useRouter } from "next/router";
 import {
   Dispatch,
@@ -362,14 +364,16 @@ const OpenIDConnectProvider = ({
 }: {
   currentMode: "create" | "map" | "result";
 }) => {
-  const router = useRouter();
   const user = useContext(UserContext);
-  const organizationSlug = router.query.organizationSlug as string;
   const [open, setOpen] = useState(false);
   const [alertOpen, setAlertOpen] = useState(false);
   const [mode, setMode] = useState(currentMode);
 
-  const { data: providerData, refetch } = useQuery(getOIDCProvider.useQuery());
+  const {
+    data: providerData,
+    refetch,
+    isLoading,
+  } = useQuery(getOIDCProvider.useQuery());
 
   const { mutate, isPending, data } = useMutation(
     createOIDCProvider.useMutation(),
@@ -470,285 +474,330 @@ const OpenIDConnectProvider = ({
           <CardTitle>Connect OIDC provider</CardTitle>
           <CardDescription>
             Connecting an OIDC provider allows users to automatically log in and
-            be a part of this organization.
+            be a part of this organization.{" "}
+            <Link
+              href={docsBaseURL + "studio/sso"}
+              className="text-sm text-primary"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Learn more
+            </Link>
           </CardDescription>
         </div>
-        {providerData && providerData.name ? (
-          <AlertDialog
-            open={
-              user?.currentOrganization.roles.includes("admin")
-                ? alertOpen
-                : false
-            }
-            onOpenChange={setAlertOpen}
-          >
-            <AlertDialogTrigger asChild>
-              <Button
-                className="md:ml-auto"
-                type="submit"
-                variant="destructive"
-                disabled={!user?.currentOrganization.roles.includes("admin")}
+        {!isLoading && (
+          <>
+            {providerData && providerData.name ? (
+              <AlertDialog
+                open={
+                  user?.currentOrganization.roles.includes("admin")
+                    ? alertOpen
+                    : false
+                }
+                onOpenChange={setAlertOpen}
               >
-                Disconnect
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>
-                  Are you sure you want to disconnect the oidc provider?
-                </AlertDialogTitle>
-                <AlertDialogDescription>
-                  This action cannot be undone.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                  className={buttonVariants({ variant: "destructive" })}
-                  type="button"
-                  onClick={() => {
-                    deleteOidcProvider(
-                      {},
-                      {
-                        onSuccess: (d) => {
-                          if (d.response?.code === EnumStatusCode.OK) {
-                            refetch();
-                            toast({
-                              description:
-                                "OIDC provider disconnected successfully.",
-                              duration: 3000,
-                            });
-                          } else if (d.response?.details) {
-                            toast({
-                              description: d.response.details,
-                              duration: 4000,
-                            });
-                          }
-                        },
-                        onError: (error) => {
-                          toast({
-                            description:
-                              "Could not disconnect the OIDC provider. Please try again.",
-                            duration: 3000,
-                          });
-                        },
-                      },
-                    );
+                <AlertDialogTrigger asChild>
+                  <Button
+                    className="md:ml-auto"
+                    type="submit"
+                    variant="destructive"
+                    disabled={
+                      !user?.currentOrganization.roles.includes("admin")
+                    }
+                  >
+                    Disconnect
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>
+                      Are you sure you want to disconnect the oidc provider?
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This action cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      className={buttonVariants({ variant: "destructive" })}
+                      type="button"
+                      onClick={() => {
+                        deleteOidcProvider(
+                          {},
+                          {
+                            onSuccess: (d) => {
+                              if (d.response?.code === EnumStatusCode.OK) {
+                                refetch();
+                                toast({
+                                  description:
+                                    "OIDC provider disconnected successfully.",
+                                  duration: 3000,
+                                });
+                              } else if (d.response?.details) {
+                                toast({
+                                  description: d.response.details,
+                                  duration: 4000,
+                                });
+                              }
+                            },
+                            onError: (error) => {
+                              toast({
+                                description:
+                                  "Could not disconnect the OIDC provider. Please try again.",
+                                duration: 3000,
+                              });
+                            },
+                          },
+                        );
+                      }}
+                    >
+                      Disconnect
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            ) : (
+              <Dialog
+                open={open}
+                onOpenChange={() => {
+                  setOpen(!open);
+                  if (open) {
+                    setMode("create");
+                    refetch();
+                  }
+                }}
+              >
+                <DialogTrigger asChild>
+                  <Button
+                    className="md:ml-auto"
+                    type="submit"
+                    variant="default"
+                  >
+                    Connect
+                  </Button>
+                </DialogTrigger>
+                <DialogContent
+                  onInteractOutside={(event) => {
+                    event.preventDefault();
                   }}
                 >
-                  Disconnect
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        ) : (
-          <Dialog
-            open={open}
-            onOpenChange={() => {
-              setOpen(!open);
-              if (open) {
-                setMode("create");
-                refetch();
-              }
-            }}
-          >
-            <DialogTrigger asChild>
-              <Button className="md:ml-auto" type="submit" variant="default">
-                Connect
-              </Button>
-            </DialogTrigger>
-            <DialogContent
-              onInteractOutside={(event) => {
-                event.preventDefault();
-              }}
-            >
-              {isPending ? (
-                <Loader />
-              ) : (
-                <>
-                  <DialogHeader>
-                    {mode === "create" && (
-                      <>
-                        <DialogTitle>
-                          Connect OpenID Connect Provider
-                        </DialogTitle>
-                        <DialogDescription className="flex flex-col gap-y-2">
-                          <p>
-                            Connecting an OIDC provider to this organization
-                            allows users to automatically log in and be part of
-                            this organization.
-                          </p>
-                          <p>
-                            Use Okta, Auth0 or any other OAuth2 Open ID Connect
-                            compatible provider.
-                          </p>
-                        </DialogDescription>
-                      </>
-                    )}
-                    {mode === "map" && (
-                      <>
-                        <DialogTitle>Configure group mappers</DialogTitle>
-                        <DialogDescription>
-                          Map your groups to cosmo roles.
-                        </DialogDescription>
-                      </>
-                    )}
-                    {mode === "result" && (
-                      <>
-                        <DialogTitle>
-                          Steps to configure your OIDC provider
-                        </DialogTitle>
-                      </>
-                    )}
-                  </DialogHeader>
-                  {mode !== "result" ? (
-                    <form
-                      className="mt-2 flex flex-col gap-y-3"
-                      onSubmit={handleSubmit(onSubmit)}
-                    >
-                      {mode === "create" && (
-                        <>
-                          <div className="flex flex-col gap-y-2">
-                            <span className="text-sm font-semibold">Name</span>
-                            <Input
-                              className="w-full"
-                              type="text"
-                              {...register("name")}
-                            />
-                            {errors.name && (
-                              <span className="px-2 text-xs text-destructive">
-                                {errors.name.message}
-                              </span>
-                            )}
-                          </div>
-
-                          <div className="flex flex-col gap-y-2">
-                            <span className="text-sm font-semibold">
-                              Discovery Endpoint
-                            </span>
-                            <Input
-                              className="w-full"
-                              type="text"
-                              placeholder="https://hostname/auth/realms/master/.wellknown/openid-configuration"
-                              {...register("discoveryEndpoint")}
-                            />
-                            {errors.discoveryEndpoint && (
-                              <span className="px-2 text-xs text-destructive">
-                                {errors.discoveryEndpoint.message}
-                              </span>
-                            )}
-                          </div>
-
-                          <div className="flex flex-col gap-y-2">
-                            <span className="text-sm font-semibold">
-                              Client ID
-                            </span>
-                            <Input
-                              className="w-full"
-                              type="text"
-                              {...register("clientID")}
-                            />
-                            {errors.clientID && (
-                              <span className="px-2 text-xs text-destructive">
-                                {errors.clientID.message}
-                              </span>
-                            )}
-                          </div>
-
-                          <div className="flex flex-col gap-y-2">
-                            <span className="text-sm font-semibold">
-                              Client Secret
-                            </span>
-                            <Input
-                              className="w-full"
-                              type="password"
-                              {...register("clientSecret")}
-                            />
-                            {errors.clientSecret && (
-                              <span className="px-2 text-xs text-destructive">
-                                {errors.clientSecret.message}
-                              </span>
-                            )}
-                          </div>
-
-                          <Button
-                            className="mt-2"
-                            onClick={() => {
-                              setMode("map");
-                            }}
-                            disabled={!isValid}
-                            variant="default"
-                            isLoading={isPending}
-                          >
-                            Connect
-                          </Button>
-                        </>
-                      )}
-                      {mode === "map" && (
-                        <>
-                          <div className="flex justify-between px-1 text-sm font-bold">
-                            <span>Role in cosmo</span>
-                            <span className="pr-12">Group in the provider</span>
-                          </div>
-                          <AddNewMappers
-                            mappers={mappers}
-                            updateMappers={updateMappers}
-                          />
-                          <Button
-                            disabled={!saveSchema.safeParse(mappers).success}
-                            variant="default"
-                            size="lg"
-                            type="submit"
-                          >
-                            Save
-                          </Button>
-                        </>
-                      )}
-                    </form>
+                  {isPending ? (
+                    <Loader />
                   ) : (
-                    <div className="flex flex-col gap-y-2">
-                      <div className="flex flex-col gap-y-1">
-                        <span>
-                          1. Set your OIDC provider sign-in redirect URI as
-                        </span>
-                        <CLI
-                          command={data?.signInURL || ""}
-                          spanClassName="w-96"
-                        />
-                      </div>
-                      <div className="flex flex-col gap-y-1">
-                        <span>
-                          2. Set your OIDC provider sign-out redirect URI as
-                        </span>
-                        <CLI
-                          command={data?.signOutURL || ""}
-                          spanClassName="w-96"
-                        />
-                      </div>
+                    <>
+                      <DialogHeader>
+                        {mode === "create" && (
+                          <>
+                            <DialogTitle>
+                              Connect OpenID Connect Provider
+                            </DialogTitle>
+                            <DialogDescription className="flex flex-col gap-y-2">
+                              <p>
+                                Connecting an OIDC provider to this organization
+                                allows users to automatically log in and be part
+                                of this organization.
+                              </p>
+                              <p>
+                                Use Okta, Auth0 or any other OAuth2 Open ID
+                                Connect compatible provider.
+                              </p>
+                              <div>
+                                <Link
+                                  href={docsBaseURL + "studio/sso"}
+                                  className="text-sm text-primary"
+                                  target="_blank"
+                                  rel="noreferrer"
+                                >
+                                  Click here{" "}
+                                </Link>
+                                for the step by step guide to configure your
+                                OIDC provider.
+                              </div>
+                            </DialogDescription>
+                          </>
+                        )}
+                        {mode === "map" && (
+                          <>
+                            <DialogTitle>Configure group mappers</DialogTitle>
+                            <DialogDescription>
+                              Map your groups to cosmo roles.
+                            </DialogDescription>
+                          </>
+                        )}
+                        {mode === "result" && (
+                          <>
+                            <DialogTitle>
+                              Steps to configure your OIDC provider
+                            </DialogTitle>
+                          </>
+                        )}
+                      </DialogHeader>
+                      {mode !== "result" ? (
+                        <form
+                          className="mt-2 flex flex-col gap-y-3"
+                          onSubmit={handleSubmit(onSubmit)}
+                        >
+                          {mode === "create" && (
+                            <>
+                              <div className="flex flex-col gap-y-2">
+                                <span className="text-sm font-semibold">
+                                  Name
+                                </span>
+                                <Input
+                                  className="w-full"
+                                  type="text"
+                                  {...register("name")}
+                                />
+                                {errors.name && (
+                                  <span className="px-2 text-xs text-destructive">
+                                    {errors.name.message}
+                                  </span>
+                                )}
+                              </div>
 
-                      <div className="flex flex-col gap-y-1 pt-3">
-                        <span>
-                          Your users can login to the organization using the
-                          below url.
-                        </span>
-                        <CLI
-                          command={data?.loginURL || ""}
-                          spanClassName="w-96"
-                        />
-                      </div>
-                    </div>
+                              <div className="flex flex-col gap-y-2">
+                                <span className="text-sm font-semibold">
+                                  Discovery Endpoint
+                                </span>
+                                <Input
+                                  className="w-full"
+                                  type="text"
+                                  placeholder="https://hostname/auth/realms/master/.wellknown/openid-configuration"
+                                  {...register("discoveryEndpoint")}
+                                />
+                                {errors.discoveryEndpoint && (
+                                  <span className="px-2 text-xs text-destructive">
+                                    {errors.discoveryEndpoint.message}
+                                  </span>
+                                )}
+                              </div>
+
+                              <div className="flex flex-col gap-y-2">
+                                <span className="text-sm font-semibold">
+                                  Client ID
+                                </span>
+                                <Input
+                                  className="w-full"
+                                  type="text"
+                                  {...register("clientID")}
+                                />
+                                {errors.clientID && (
+                                  <span className="px-2 text-xs text-destructive">
+                                    {errors.clientID.message}
+                                  </span>
+                                )}
+                              </div>
+
+                              <div className="flex flex-col gap-y-2">
+                                <span className="text-sm font-semibold">
+                                  Client Secret
+                                </span>
+                                <Input
+                                  className="w-full"
+                                  type="password"
+                                  {...register("clientSecret")}
+                                />
+                                {errors.clientSecret && (
+                                  <span className="px-2 text-xs text-destructive">
+                                    {errors.clientSecret.message}
+                                  </span>
+                                )}
+                              </div>
+
+                              <Button
+                                className="mt-2"
+                                onClick={() => {
+                                  setMode("map");
+                                }}
+                                disabled={!isValid}
+                                variant="default"
+                                isLoading={isPending}
+                              >
+                                Connect
+                              </Button>
+                            </>
+                          )}
+                          {mode === "map" && (
+                            <>
+                              <div className="flex justify-between px-1 text-sm font-bold">
+                                <span>Role in cosmo</span>
+                                <span className="pr-12">
+                                  Group in the provider
+                                </span>
+                              </div>
+                              <AddNewMappers
+                                mappers={mappers}
+                                updateMappers={updateMappers}
+                              />
+                              <Button
+                                disabled={
+                                  !saveSchema.safeParse(mappers).success
+                                }
+                                variant="default"
+                                size="lg"
+                                type="submit"
+                              >
+                                Save
+                              </Button>
+                            </>
+                          )}
+                        </form>
+                      ) : (
+                        <div className="flex flex-col gap-y-2">
+                          <div className="flex flex-col gap-y-1">
+                            <span>
+                              1. Set your OIDC provider sign-in redirect URI as
+                            </span>
+                            <CLI
+                              command={data?.signInURL || ""}
+                              spanClassName="w-96"
+                            />
+                          </div>
+                          <div className="flex flex-col gap-y-1">
+                            <span>
+                              2. Set your OIDC provider sign-out redirect URI as
+                            </span>
+                            <CLI
+                              command={data?.signOutURL || ""}
+                              spanClassName="w-96"
+                            />
+                          </div>
+
+                          <div className="flex flex-col gap-y-1 pt-3">
+                            <span>
+                              Your users can login to the organization using the
+                              below url.
+                            </span>
+                            <CLI
+                              command={data?.loginURL || ""}
+                              spanClassName="w-96"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </>
                   )}
-                </>
-              )}
-            </DialogContent>
-          </Dialog>
+                </DialogContent>
+              </Dialog>
+            )}
+          </>
         )}
       </CardHeader>
-      {providerData && providerData.name && (
+      {isLoading && <Loader />}
+      {!isLoading && providerData && providerData.name && (
         <CardContent className="flex flex-col gap-y-3">
           <div className="flex flex-col gap-y-2">
             <span className="px-1">OIDC provider</span>
             <CLI command={`https://${providerData.endpoint}`} />
+          </div>
+          <div className="flex flex-col gap-y-2">
+            <span className="px-1">Sign in redirect URL</span>
+            <CLI command={providerData?.signInRedirectURL || ""} />
+          </div>
+          <div className="flex flex-col gap-y-2">
+            <span className="px-1">Sign out redirect URL</span>
+            <CLI command={providerData?.signOutRedirectURL || ""} />
           </div>
           <div className="flex flex-col gap-y-2">
             <span className="px-1">Login URL</span>
