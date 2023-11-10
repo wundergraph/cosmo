@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 
 	graphqlmetricsv1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
@@ -42,15 +43,26 @@ func (m *OperationMetrics) exportSchemaUsageInfo(operationContext *operationCont
 		return
 	}
 
-	fieldUsageInfos := make([]*graphqlmetricsv1.TypeFieldUsageInfo, len(operationContext.preparedPlan.schemaUsageInfo.TypeFields))
+	usageInfo, err := plan.GetSchemaUsageInfo(
+		operationContext.preparedPlan.preparedPlan,
+		operationContext.preparedPlan.operationDocument,
+		operationContext.preparedPlan.schemaDocument,
+		operationContext.Variables(),
+	)
+	if err != nil {
+		// TODO: log error
+		return
+	}
 
-	for i := range operationContext.preparedPlan.schemaUsageInfo.TypeFields {
+	fieldUsageInfos := make([]*graphqlmetricsv1.TypeFieldUsageInfo, len(usageInfo.TypeFields))
+
+	for i := range usageInfo.TypeFields {
 		fieldUsageInfos[i] = &graphqlmetricsv1.TypeFieldUsageInfo{
 			Count:       1,
-			Path:        operationContext.preparedPlan.schemaUsageInfo.TypeFields[i].Path,
-			TypeNames:   operationContext.preparedPlan.schemaUsageInfo.TypeFields[i].TypeNames,
-			SubgraphIDs: operationContext.preparedPlan.schemaUsageInfo.TypeFields[i].Source.IDs,
-			NamedType:   operationContext.preparedPlan.schemaUsageInfo.TypeFields[i].NamedType,
+			Path:        usageInfo.TypeFields[i].Path,
+			TypeNames:   usageInfo.TypeFields[i].EnclosingTypeNames,
+			SubgraphIDs: usageInfo.TypeFields[i].Source.IDs,
+			NamedType:   usageInfo.TypeFields[i].FieldTypeName,
 		}
 	}
 

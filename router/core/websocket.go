@@ -479,7 +479,7 @@ func (h *WebSocketConnectionHandler) executeSubscription(ctx context.Context, ms
 	rw := newWebsocketResponseWriter(msg.ID, h.protocol, h.logger)
 	defer h.Complete(rw)
 
-	requestContext := buildRequestContext(rw, h.r, opContext, operation, h.logger)
+	requestContext := buildRequestContext(rw, h.r, opContext, h.logger)
 	ctxWithOperation := withOperationContext(cancellableCtx, opContext)
 	r := h.r.WithContext(ctxWithOperation)
 

@@ -110,7 +110,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			return
 		}
 
-		requestContext := buildRequestContext(w, r, opContext, operation, requestLogger)
+		requestContext := buildRequestContext(w, r, opContext, requestLogger)
 		metrics.AddOperationContext(opContext)
 
 		ctxWithRequest := withRequestContext(r.Context(), requestContext)
