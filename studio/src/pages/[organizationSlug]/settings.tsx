@@ -88,6 +88,11 @@ const OrganizationDetails = () => {
       .max(32, { message: "Organization name must be maximum 32 characters" }),
     organizationSlug: z
       .string()
+      .toLowerCase()
+      .regex(
+        new RegExp("^[a-z0-9]+(?:-[a-z0-9]+)*$"),
+        "Slug should start and end with an alphanumeric character. Spaces and special characters other that hyphen not allowed.",
+      )
       .min(3, {
         message: "Organization slug must be a minimum of 3 characters",
       })
@@ -471,7 +476,7 @@ const OpenIDConnectProvider = ({
             Connecting an OIDC provider allows users to automatically log in and
             be a part of this organization.{" "}
             <Link
-              href={docsBaseURL + "studio/sso"}
+              href={docsBaseURL + "/studio/sso"}
               className="text-sm text-primary"
               target="_blank"
               rel="noreferrer"
@@ -508,8 +513,13 @@ const OpenIDConnectProvider = ({
                     <AlertDialogTitle>
                       Are you sure you want to disconnect the oidc provider?
                     </AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This action cannot be undone.
+                    <AlertDialogDescription className="flex flex-col gap-y-1">
+                      <p>
+                        All members who are connected to the SSO will be logged
+                        out and downgraded to the viewer role.
+                      </p>
+                      <p>Reconnecting will result in a new login url.</p>
+                      <p>This action cannot be undone.</p>
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
@@ -599,7 +609,7 @@ const OpenIDConnectProvider = ({
                               </p>
                               <div>
                                 <Link
-                                  href={docsBaseURL + "studio/sso"}
+                                  href={docsBaseURL + "/studio/sso"}
                                   className="text-sm text-primary"
                                   target="_blank"
                                   rel="noreferrer"

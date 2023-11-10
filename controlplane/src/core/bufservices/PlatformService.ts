@@ -99,6 +99,7 @@ import {
   handleError,
   isValidLabelMatchers,
   isValidLabels,
+  isValidOrganizationSlug,
 } from '../util.js';
 import { FederatedGraphSchemaUpdate, OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
 import { OidcRepository } from '../repositories/OidcRepository.js';
@@ -3053,6 +3054,16 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
+        if (!isValidOrganizationSlug(req.organizationSlug)) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details:
+                'Invalid slug. It must of 3-24 characters in length, start and end with an alphanumeric character and may contain hyphens in between.',
+            },
+          };
+        }
+
         if (org.slug !== req.organizationSlug) {
           // checking if the provided orgSlug is available
           const newOrg = await orgRepo.bySlug(req.organizationSlug);
@@ -3743,7 +3754,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           },
           signInURL: `${opts.keycloakApiUrl}/realms/${opts.keycloakRealm}/broker/${alias}/endpoint`,
           signOutURL: `${opts.keycloakApiUrl}/realms/${opts.keycloakRealm}/broker/${alias}/endpoint/logout_response`,
-          loginURL: `${opts.webBaseUrl}/login?hint=${alias}`,
+          loginURL: `${opts.webBaseUrl}/login?sso=${alias}`,
         };
       });
     },
@@ -3780,7 +3791,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           },
           name: provider.name,
           endpoint: provider.endpoint,
-          loginURL: `${opts.webBaseUrl}/login?hint=${provider.alias}`,
+          loginURL: `${opts.webBaseUrl}/login?sso=${provider.alias}`,
           signInRedirectURL: `${opts.keycloakApiUrl}/realms/${opts.keycloakRealm}/broker/${provider.alias}/endpoint`,
           signOutRedirectURL: `${opts.keycloakApiUrl}/realms/${opts.keycloakRealm}/broker/${provider.alias}/endpoint/logout_response`,
         };
