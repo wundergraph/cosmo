@@ -2,8 +2,6 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as url from 'node:url';
 import { describe, expect, test } from 'vitest';
-import { buildSchema } from 'graphql';
-import { ConfigurationData } from '@wundergraph/composition';
 import { buildRouterConfig, ComposedSubgraph } from '../src';
 import { normalizationFailureError } from '../src/router-config/errors';
 import { federateTestSubgraphs } from './testdata/utils';
