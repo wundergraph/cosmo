@@ -347,6 +347,13 @@ export function duplicateDirectiveArgumentDefinitionErrorMessage(
   );
 }
 
+export function invalidDirectiveArgumentTypeErrorMessage(
+  required: boolean, argumentName: string, expectedKind: Kind, actualKind: Kind,
+): string {
+  return ` The ${required ? 'required ' : ''}argument "${argumentName} must be type` +
+    ` "${expectedKind}" and not type "${actualKind}".`;
+}
+
 export function invalidKeyDirectiveArgumentErrorMessage(directiveKind: Kind): string {
   return ` The required argument named "fields" must be type "String" and not type "${directiveKind}".`;
 }
@@ -450,11 +457,11 @@ export function unexpectedParentKindErrorMessage(parentTypeName: string, expecte
 export function subgraphValidationError(subgraphName: string, errors: Error[]): Error {
   return new Error(
     `The subgraph "${subgraphName}" could not be federated for the following reason`
-    + (errors.length > 1 ? 's:\n' : 's:\n') + errors.map((error) => error.message).join('\n'),
+    + (errors.length > 1 ? 's' : '') + `:\n` + errors.map((error) => error.message).join('\n'),
   );
 }
 
-export const subgraphValidationFailureErrorMessage: Error = new Error(
+export const subgraphValidationFailureError: Error = new Error(
   ` Fatal: Subgraph validation did not return a valid AST.`,
 );
 
@@ -746,4 +753,28 @@ export function invalidSelectionOnUnionErrorMessage(
   return ` The following FieldSet is invalid:\n "${fieldSet}"\n` +
     `  This is because "${fieldPath}" returns "${responseTypeName}", which is type "union".\n` +
     `  Consequently, an inline fragment is required to make a selection on one of the union's members.`;
+}
+
+export function invalidOverrideTargetSubgraphNameError(
+  subgraphName: string, parentTypeName: string, fieldNames: string[],
+): Error {
+  return new Error(
+    ` The object type "${parentTypeName}" defines the directive "@override(from: "${subgraphName})" on the following field` +
+  (fieldNames.length > 1 ? 's' : '') + `: "` + fieldNames.join(QUOTATION_JOIN) + `".\n` +
+    ` The required "from" argument of type "String!" must be provided with an existing subgraph name.\n` +
+    ` However, a subgraph by the name of "${subgraphName}" does not exist.`
+  );
+}
+
+export function duplicateOverriddenFieldErrorMessage(fieldPath: string, subgraphNames: string[]): string {
+    return ` The field "${fieldPath}" declares an @override directive in the following subgraphs: "`
+      + subgraphNames.join(QUOTATION_JOIN) + `".`;
+}
+
+export function duplicateOverriddenFieldsError(errorMessages: string[]): Error {
+  return new Error(
+    `The @override directive must only be declared on one single instance of a field.` +
+    ` However, an @override directive was declared on more than one instance of the following field` +
+    (errorMessages.length > 1 ? 's' : '') + `: "` + errorMessages.join(QUOTATION_JOIN) + `".\n`
+  );
 }

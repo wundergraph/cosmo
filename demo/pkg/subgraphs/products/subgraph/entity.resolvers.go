@@ -22,6 +22,7 @@ func (r *entityResolver) FindEmployeeByID(ctx context.Context, id int) (*model.E
 				model.ProductNamesCosmo,
 				model.ProductNamesSdk,
 			},
+			Notes: "2, 7, 8 notes resolved by products",
 		}, nil
 	// Stefan,
 	case 3:
@@ -29,6 +30,7 @@ func (r *entityResolver) FindEmployeeByID(ctx context.Context, id int) (*model.E
 			Products: []model.ProductNames{
 				model.ProductNamesMarketing,
 			},
+			Notes: "3 notes resolved by products",
 		}, nil
 	// Björn
 	case 4:
@@ -38,6 +40,7 @@ func (r *entityResolver) FindEmployeeByID(ctx context.Context, id int) (*model.E
 				model.ProductNamesHumanResources,
 				model.ProductNamesMarketing,
 			},
+			Notes: "4 notes resolved by products",
 		}, nil
 	// Sergiy
 	case 5:
@@ -46,6 +49,7 @@ func (r *entityResolver) FindEmployeeByID(ctx context.Context, id int) (*model.E
 				model.ProductNamesEngine,
 				model.ProductNamesSdk,
 			},
+			Notes: "5 notes resolved by products",
 		}, nil
 	// Alexandra
 	case 11:
@@ -53,11 +57,13 @@ func (r *entityResolver) FindEmployeeByID(ctx context.Context, id int) (*model.E
 			Products: []model.ProductNames{
 				model.ProductNamesFinance,
 			},
+			Notes: "11 notes resolved by products",
 		}, nil
 	// Alberto, David
 	case 9, 12:
 		return &model.Employee{
 			Products: model.AllProductNames,
+			Notes:    "9, 12 notes Resolved by products",
 		}, nil
 	// Eelco
 	case 10:
@@ -66,6 +72,7 @@ func (r *entityResolver) FindEmployeeByID(ctx context.Context, id int) (*model.E
 				model.ProductNamesCloud,
 				model.ProductNamesSdk,
 			},
+			Notes: "10 notes resolved by products",
 		}, nil
 	// Jens
 	default:
@@ -75,11 +82,12 @@ func (r *entityResolver) FindEmployeeByID(ctx context.Context, id int) (*model.E
 				model.ProductNamesEngine,
 				model.ProductNamesSdk,
 			},
+			Notes: "1 notes resolved by products",
 		}, nil
 	}
 }
 
-// Entity returns generated1.EntityResolver implementation.
+// Entity returns generated.EntityResolver implementation.
 func (r *Resolver) Entity() generated.EntityResolver { return &entityResolver{r} }
 
 type entityResolver struct{ *Resolver }

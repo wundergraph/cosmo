@@ -6,6 +6,7 @@ package subgraph
 
 import (
 	"context"
+
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/family/subgraph/generated"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/family/subgraph/model"
 )
@@ -22,7 +23,7 @@ func (r *entityResolver) FindEmployeeByID(ctx context.Context, id int) (*model.E
 	}
 }
 
-// Entity returns generated1.EntityResolver implementation.
+// Entity returns generated.EntityResolver implementation.
 func (r *Resolver) Entity() generated.EntityResolver { return &entityResolver{r} }
 
 type entityResolver struct{ *Resolver }

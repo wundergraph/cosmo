@@ -1,10 +1,10 @@
 import { parse, printSchema } from 'graphql';
 import { JsonValue } from '@bufbuild/protobuf';
-import { buildRouterConfig } from '@wundergraph/cosmo-shared';
-import { ArgumentConfigurationData } from '@wundergraph/composition';
+import { buildRouterConfig, ComposedSubgraph } from '@wundergraph/cosmo-shared';
+import { ArgumentConfigurationData, FederationResult } from '@wundergraph/composition';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
 import { SubgraphRepository } from '../repositories/SubgraphRepository.js';
-import { FederatedGraphDTO, Label } from '../../types/index.js';
+import { FederatedGraphDTO, Label, SubgraphDTO } from '../../types/index.js';
 import { composeSubgraphs } from './composition.js';
 import { getDiffBetweenGraphs } from './schemaCheck.js';
 
@@ -12,14 +12,35 @@ export type CompositionResult = {
   compositions: ComposedFederatedGraph[];
 };
 
-interface ComposedSubgraph {
-  id: string;
-  name: string;
-  sdl: string;
-  url: string;
-  subscriptionUrl: string;
-  subscriptionProtocol: 'ws' | 'sse' | 'sse_post';
+export function subgraphDTOsToComposedSubgraphs(
+  subgraphs: SubgraphDTO[],
+  result?: FederationResult,
+): ComposedSubgraph[] {
+  return subgraphs.map((subgraph) => {
+    /* batchNormalize returns an intermediate representation of the engine configuration
+     *  and a normalized schema per subgraph.
+     *  Batch normalization is necessary because validation of certain things such as the @override directive requires
+     *  knowledge of the other subgraphs.
+     *  Each normalized schema and engine configuration is mapped by subgraph name to a SubgraphConfig object wrapper.
+     *  This is passed to the FederationFactory and is returned by federateSubgraphs if federation is successful.
+     *  The normalized schema and engine configuration is used by buildRouterConfig.
+     * */
+    const subgraphConfig = result?.subgraphConfigBySubgraphName.get(subgraph.name);
+    const schema = subgraphConfig?.schema;
+    const configurationDataMap = subgraphConfig?.configurationDataMap;
+    return {
+      id: subgraph.id,
+      name: subgraph.name,
+      url: subgraph.routingUrl,
+      sdl: subgraph.schemaSDL,
+      subscriptionUrl: subgraph.subscriptionUrl,
+      subscriptionProtocol: subgraph.subscriptionProtocol,
+      configurationDataMap,
+      schema,
+    };
+  });
 }
+
 export interface ComposedFederatedGraph {
   id: string;
   targetID: string;
@@ -104,14 +125,7 @@ export class Composer {
         composedSchema: result?.federatedGraphSchema ? printSchema(result.federatedGraphSchema) : undefined,
         errors: errors || [],
         argumentConfigurations: result?.argumentConfigurations || [],
-        subgraphs: subgraphs.map((s) => ({
-          id: s.id,
-          name: s.name,
-          url: s.routingUrl,
-          sdl: s.schemaSDL,
-          subscriptionUrl: s.subscriptionUrl,
-          subscriptionProtocol: s.subscriptionProtocol,
-        })),
+        subgraphs: subgraphDTOsToComposedSubgraphs(subgraphs, result),
       };
     } catch (e: any) {
       return {
@@ -126,7 +140,7 @@ export class Composer {
   }
 
   /**
-   * Same as compose, but the proposed schemaSDL of the subgraph is not updated to the table so it is passed to the function
+   * Same as compose, but the proposed schemaSDL of the subgraph is not updated to the table, so it is passed to the function
    */
   async composeWithProposedSDL(
     subgraphLabels: Label[],
@@ -164,14 +178,7 @@ export class Composer {
           argumentConfigurations: result?.argumentConfigurations || [],
           composedSchema: result?.federatedGraphSchema ? printSchema(result.federatedGraphSchema) : undefined,
           errors: errors || [],
-          subgraphs: subgraphs.map((s) => ({
-            id: s.id,
-            name: s.name,
-            url: s.routingUrl,
-            subscriptionUrl: s.subscriptionUrl,
-            subscriptionProtocol: s.subscriptionProtocol,
-            sdl: s.schemaSDL,
-          })),
+          subgraphs: subgraphDTOsToComposedSubgraphs(subgraphs, result),
         });
       } catch (e: any) {
         composedGraphs.push({

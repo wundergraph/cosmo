@@ -25,6 +25,7 @@ import {
   ObjectLikeTypeDefinitionNode,
 } from './ast';
 import {
+  ARGUMENT_DEFINITION_UPPER,
   ENUM_UPPER,
   ENUM_VALUE_UPPER,
   EXTENDS,
@@ -199,6 +200,8 @@ export function setToNamedTypeNodeArray(set: Set<string>): NamedTypeNode[] {
 
 export function nodeKindToDirectiveLocation(kind: Kind): string {
   switch (kind) {
+    case Kind.ARGUMENT:
+      return ARGUMENT_DEFINITION_UPPER;
     case Kind.ENUM_TYPE_DEFINITION:
     // intentional fallthrough
     case Kind.ENUM_TYPE_EXTENSION:

@@ -66,6 +66,14 @@ export function doSetsHaveAnyOverlap<T>(set: Set<T>, other: Set<T>): boolean {
   return false;
 }
 
+export function subtractSourceSetFromTargetSet<T>(source: Set<T>, target: Set<T>) {
+  for (const entry of source) {
+    if (target.has(entry)) {
+      target.delete(entry);
+    }
+  }
+}
+
 export function mapToArrayOfValues<K, V>(map: Map<K, V>): V[] {
   const output: V[] = [];
   for (const value of map.values()) {

@@ -1,8 +1,9 @@
-import { DocumentNode, OperationTypeNode, visit } from 'graphql';
+import { DocumentNode, GraphQLSchema, OperationTypeNode, visit } from 'graphql';
 import { FederationFactory } from '../federation/federation-factory';
 import {
   addConcreteTypesForImplementedInterfaces,
-  addConcreteTypesForUnion, isNodeExternal,
+  addConcreteTypesForUnion,
+  isNodeExternal,
   isNodeShareable,
   isObjectLikeNodeEntity,
   operationTypeNodeToDefaultType,
@@ -10,7 +11,8 @@ import {
 } from '../ast/utils';
 import { getNamedTypeForChild } from '../type-merging/type-merging';
 import { getOrThrowError } from '../utils/utils';
-import { ENTITIES, ENTITIES_FIELD, OPERATION_TO_DEFAULT, SERVICE_OBJECT, SERVICE_FIELD } from '../utils/string-constants';
+import { ENTITIES, ENTITIES_FIELD, OPERATION_TO_DEFAULT, SERVICE_FIELD } from '../utils/string-constants';
+import { ConfigurationDataMap } from './field-configuration';
 
 export type Subgraph = {
   definitions: DocumentNode;
@@ -19,15 +21,23 @@ export type Subgraph = {
 };
 
 export type InternalSubgraph = {
+  overriddenFieldNamesByParentTypeName: Map<string, Set<string>>;
+  configurationDataMap: ConfigurationDataMap;
   definitions: DocumentNode;
   isVersionTwo: boolean;
   keyFieldsByParentTypeName: Map<string, Set<string>>;
   name: string;
   operationTypes: Map<string, OperationTypeNode>;
+  schema: GraphQLSchema;
   url: string;
 };
 
-export function validateSubgraphName(
+export type SubgraphConfig = {
+  configurationDataMap: ConfigurationDataMap;
+  schema: GraphQLSchema;
+};
+
+export function recordSubgraphName(
   subgraphName: string,
   subgraphNames: Set<string>,
   nonUniqueSubgraphNames: Set<string>,
@@ -110,18 +120,21 @@ export function walkSubgraphToCollectObjectLikesAndDirectiveDefinitions(
 
 export function walkSubgraphToCollectFields(
   factory: FederationFactory,
-  subgraph: Subgraph,
+  subgraph: InternalSubgraph,
 ) {
   let isCurrentParentRootType = false;
+  let overriddenFieldNames: Set<string> | undefined;
   visit(subgraph.definitions, {
     ObjectTypeDefinition: {
       enter(node) {
         isCurrentParentRootType = factory.isObjectRootType(node);
         factory.isCurrentParentEntity = isObjectLikeNodeEntity(node);
         factory.parentTypeName = node.name.value;
+        overriddenFieldNames = subgraph.overriddenFieldNamesByParentTypeName.get(factory.parentTypeName);
       },
       leave() {
         isCurrentParentRootType = false;
+        overriddenFieldNames = undefined;
         factory.parentTypeName = '';
         factory.isCurrentParentEntity = false;
       },
@@ -130,8 +143,10 @@ export function walkSubgraphToCollectFields(
       enter(node) {
         factory.isCurrentParentEntity = isObjectLikeNodeEntity(node);
         factory.parentTypeName = node.name.value;
+        overriddenFieldNames = subgraph.overriddenFieldNamesByParentTypeName.get(factory.parentTypeName);
       },
       leave() {
+        overriddenFieldNames = undefined;
         factory.isCurrentParentEntity = false;
         factory.parentTypeName = '';
       },
@@ -139,6 +154,9 @@ export function walkSubgraphToCollectFields(
     FieldDefinition: {
       enter(node) {
         const fieldName = node.name.value;
+        if (overriddenFieldNames?.has(fieldName)) {
+          return false;
+        }
         if (factory.isCurrentParentEntity) {
           const entity = getOrThrowError(factory.entities, factory.parentTypeName, ENTITIES);
           entity.fields.add(fieldName);
@@ -155,7 +173,10 @@ export function walkSubgraphToCollectFields(
   });
 }
 
-export function walkSubgraphToFederate(subgraph: DocumentNode, factory: FederationFactory) {
+export function walkSubgraphToFederate(
+  subgraph: DocumentNode, overriddenFieldNamesByParentTypeName: Map<string, Set<string>>, factory: FederationFactory,
+) {
+  let overriddenFieldNames: Set<string> | undefined;
   visit(subgraph, {
     Directive: {
       enter() {
@@ -183,6 +204,9 @@ export function walkSubgraphToFederate(subgraph: DocumentNode, factory: Federati
     FieldDefinition: {
       enter(node) {
         const fieldName = node.name.value;
+        if (overriddenFieldNames?.has(fieldName)) {
+          return false;
+        }
         const fieldPath = `${factory.parentTypeName}.${fieldName}`;
         const fieldNamedTypeName = getNamedTypeForChild(fieldPath, node.type);
         if (factory.isParentRootType && (fieldName === SERVICE_FIELD || fieldName === ENTITIES_FIELD)) {
@@ -258,8 +282,10 @@ export function walkSubgraphToFederate(subgraph: DocumentNode, factory: Federati
         factory.isParentRootType = factory.isObjectRootType(node);
         factory.parentTypeName = node.name.value;
         factory.upsertParentNode(node);
+        overriddenFieldNames = overriddenFieldNamesByParentTypeName.get(factory.parentTypeName);
       },
       leave() {
+        overriddenFieldNames = undefined;
         factory.areFieldsExternal = false;
         factory.areFieldsShareable = false;
         factory.isCurrentParentEntity = false;
@@ -277,8 +303,10 @@ export function walkSubgraphToFederate(subgraph: DocumentNode, factory: Federati
         factory.parentTypeName = name;
         factory.isParentRootType = factory.isObjectRootType(node);
         factory.upsertExtensionNode(node);
+        overriddenFieldNames = overriddenFieldNamesByParentTypeName.get(factory.parentTypeName);
       },
       leave() {
+        overriddenFieldNames = undefined;
         factory.areFieldsExternal = false;
         factory.areFieldsShareable = false;
         factory.isCurrentParentEntity = false;

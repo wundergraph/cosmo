@@ -29,6 +29,7 @@ type Employee struct {
 	Details *Details `json:"details"`
 	ID      int      `json:"id"`
 	Role    RoleType `json:"role"`
+	Notes   string   `json:"notes"`
 }
 
 func (Employee) IsIdentifiable() {}

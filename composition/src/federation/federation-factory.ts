@@ -37,7 +37,6 @@ import {
   extractExecutableDirectiveLocations,
   extractInterfaces,
   isNodeExternal,
-  isNodeOverridden,
   isNodeShareable,
   mergeExecutableDirectiveLocations,
   pushPersistedDirectivesAndGetNode,
@@ -58,8 +57,6 @@ import {
   incompatibleSharedEnumError,
   invalidDeprecatedDirectiveError,
   invalidRequiredArgumentsError,
-  invalidSubgraphNameErrorMessage,
-  invalidSubgraphNamesError,
   invalidTagDirectiveError,
   invalidUnionError,
   minimumSubgraphRequirementError,
@@ -67,8 +64,6 @@ import {
   noConcreteTypesForAbstractTypeError,
   noQueryRootTypeError,
   shareableFieldDefinitionsError,
-  subgraphValidationError,
-  subgraphValidationFailureErrorMessage,
   undefinedTypeError,
   unexpectedArgumentKindFatalError,
   unexpectedKindFatalError,
@@ -108,7 +103,7 @@ import {
 import {
   InternalSubgraph,
   Subgraph,
-  validateSubgraphName,
+  SubgraphConfig,
   walkSubgraphToCollectFields,
   walkSubgraphToCollectObjectLikesAndDirectiveDefinitions,
   walkSubgraphToFederate,
@@ -144,7 +139,7 @@ import {
 import { printTypeNode } from '@graphql-tools/merge';
 import { ArgumentConfigurationData } from '../subgraph/field-configuration';
 import { BASE_SCALARS } from '../utils/constants';
-import { normalizeSubgraph } from '../normalization/normalization-factory';
+import { batchNormalize } from '../normalization/normalization-factory';
 
 export class FederationFactory {
   abstractToConcreteTypeNames = new Map<string, Set<string>>();
@@ -160,6 +155,7 @@ export class FederationFactory {
   directiveDefinitions: DirectiveMap = new Map<string, DirectiveContainer>();
   entities = new Map<string, EntityContainer>();
   errors: Error[] = [];
+  evaluatedObjectLikesBySubgraph = new Map<string, Set<string>>();
   extensions = new Map<string, ExtensionContainer>();
   graph: MultiGraph = new MultiGraph();
   graphEdges = new Set<string>();
@@ -177,10 +173,11 @@ export class FederationFactory {
   rootTypeNames = new Set<string>([DEFAULT_MUTATION, DEFAULT_QUERY, DEFAULT_SUBSCRIPTION]);
   subgraphs: InternalSubgraph[] = [];
   shareableErrorTypeNames = new Map<string, Set<string>>();
-  evaluatedObjectLikesBySubgraph = new Map<string, Set<string>>();
+  subgraphConfigBySubgraphName: Map<string, SubgraphConfig>;
 
-  constructor(subgraphs: InternalSubgraph[]) {
+  constructor(subgraphs: InternalSubgraph[], subgraphConfigBySubgraphName: Map<string, SubgraphConfig>) {
     this.subgraphs = subgraphs;
+    this.subgraphConfigBySubgraphName = subgraphConfigBySubgraphName;
   }
 
   isObjectRootType(node: ObjectTypeDefinitionNode | ObjectTypeExtensionNode): boolean {
@@ -422,7 +419,6 @@ export class FederationFactory {
       || this.areFieldsShareable
       || this.isFieldEntityKey()
       || isNodeShareable(node)
-      || isNodeOverridden(node)
     );
   }
 
@@ -1322,7 +1318,7 @@ export class FederationFactory {
       this.isCurrentSubgraphVersionTwo = subgraph.isVersionTwo;
       this.currentSubgraphName = subgraph.name;
       this.keyFieldsByParentTypeName = subgraph.keyFieldsByParentTypeName;
-      walkSubgraphToFederate(subgraph.definitions, factory);
+      walkSubgraphToFederate(subgraph.definitions, subgraph.overriddenFieldNamesByParentTypeName, factory);
     }
     const definitions: MutableTypeDefinitionNode[] = [];
     for (const [directiveName, directiveContainer] of this.directiveDefinitions) {
@@ -1549,6 +1545,7 @@ export class FederationFactory {
     return {
       federationResult: {
         argumentConfigurations: this.argumentConfigurations,
+        subgraphConfigBySubgraphName: this.subgraphConfigBySubgraphName,
         federatedGraphAST: newAst,
         federatedGraphSchema: buildASTSchema(newAst),
       },
@@ -1558,47 +1555,21 @@ export class FederationFactory {
 
 export function federateSubgraphs(subgraphs: Subgraph[]): FederationResultContainer {
   if (subgraphs.length < 1) {
-    throw minimumSubgraphRequirementError;
+    return { errors: [minimumSubgraphRequirementError] };
   }
-  const normalizedSubgraphs: InternalSubgraph[] = [];
-  const validationErrors: Error[] = [];
-  const subgraphNames = new Set<string>();
-  const nonUniqueSubgraphNames = new Set<string>();
-  const invalidNameErrorMessages: string[] = [];
-  for (let i = 0; i < subgraphs.length; i++) {
-    const subgraph = subgraphs[i];
-    const name = subgraph.name || `subgraph-${i}-${Date.now()}`;
-    if (!subgraph.name) {
-      invalidNameErrorMessages.push(invalidSubgraphNameErrorMessage(i, name));
-    } else {
-      validateSubgraphName(subgraph.name, subgraphNames, nonUniqueSubgraphNames);
-    }
-    const { errors, normalizationResult } = normalizeSubgraph(subgraph.definitions);
-    if (errors) {
-      validationErrors.push(subgraphValidationError(name, errors));
-      continue;
-    }
-    if (!normalizationResult) {
-      validationErrors.push(subgraphValidationError(name, [subgraphValidationFailureErrorMessage]));
-      continue;
-    }
-    normalizedSubgraphs.push({
-      definitions: normalizationResult.subgraphAST,
-      keyFieldsByParentTypeName: normalizationResult.keyFieldsByParentTypeName,
-      isVersionTwo: normalizationResult.isVersionTwo,
-      name,
-      operationTypes: normalizationResult.operationTypes,
-      url: subgraph.url,
+  const { errors, internalSubgraphsBySubgraphName } = batchNormalize(subgraphs);
+  if (errors) {
+    return { errors };
+  }
+  const internalSubgraphs: InternalSubgraph[] = [];
+  const subgraphConfigBySubgraphName: Map<string, SubgraphConfig> = new Map<string, SubgraphConfig>();
+  for (const [subgraphName, internalSubgraph] of internalSubgraphsBySubgraphName) {
+    internalSubgraphs.push(internalSubgraph);
+    subgraphConfigBySubgraphName.set(subgraphName, {
+      configurationDataMap: internalSubgraph.configurationDataMap,
+      schema: internalSubgraph.schema,
     });
   }
-  const allErrors: Error[] = [];
-  if (invalidNameErrorMessages.length > 0 || nonUniqueSubgraphNames.size > 0) {
-    allErrors.push(invalidSubgraphNamesError([...nonUniqueSubgraphNames], invalidNameErrorMessages));
-  }
-  allErrors.push(...validationErrors);
-  if (allErrors.length > 0) {
-    return { errors: allErrors };
-  }
-  const federationFactory = new FederationFactory(normalizedSubgraphs);
+  const federationFactory = new FederationFactory(internalSubgraphs, subgraphConfigBySubgraphName);
   return federationFactory.federate();
 }

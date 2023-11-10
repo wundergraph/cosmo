@@ -2,6 +2,7 @@ import {
   ConstDirectiveNode,
   DefinitionNode,
   DirectiveDefinitionNode,
+  DirectiveNode,
   DocumentNode,
   EnumValueDefinitionNode,
   FieldDefinitionNode,
@@ -86,14 +87,18 @@ import {
   InvalidArgument,
   InvalidFieldImplementation,
   kindToTypeString,
+  subtractSourceSetFromTargetSet,
 } from '../utils/utils';
 import {
   duplicateArgumentsError,
+  duplicateDirectiveArgumentDefinitionErrorMessage,
   duplicateDirectiveDefinitionError,
   duplicateEnumValueDefinitionError,
   duplicateFieldDefinitionError,
   duplicateInterfaceExtensionError,
   duplicateOperationTypeDefinitionError,
+  duplicateOverriddenFieldErrorMessage,
+  duplicateOverriddenFieldsError,
   duplicateTypeDefinitionError,
   duplicateUnionMemberError,
   duplicateValueExtensionError,
@@ -102,17 +107,23 @@ import {
   incompatibleExtensionKindsError,
   incompatibleParentKindFatalError,
   invalidArgumentsError,
+  invalidDirectiveArgumentTypeErrorMessage,
   invalidDirectiveError,
   invalidDirectiveLocationErrorMessage,
   invalidKeyDirectiveArgumentErrorMessage,
   invalidKeyDirectivesError,
   invalidOperationTypeDefinitionError,
+  invalidOverrideTargetSubgraphNameError,
   invalidRepeatedDirectiveErrorMessage,
   invalidRootTypeDefinitionError,
+  invalidSubgraphNameErrorMessage,
+  invalidSubgraphNamesError,
   noBaseTypeExtensionError,
   noDefinedUnionMembersError,
   operationDefinitionError,
   subgraphInvalidSyntaxError,
+  subgraphValidationError,
+  subgraphValidationFailureError,
   undefinedDirectiveError,
   undefinedObjectParentError,
   undefinedRequiredArgumentsErrorMessage,
@@ -130,8 +141,10 @@ import {
   EXTENSIONS,
   EXTERNAL,
   FIELDS,
+  FROM,
   KEY,
   OPERATION_TO_DEFAULT,
+  OVERRIDE,
   PARENTS,
   PROVIDES,
   REQUIRES,
@@ -145,12 +158,14 @@ import { buildASTSchema } from '../buildASTSchema/buildASTSchema';
 import { ConfigurationData, ConfigurationDataMap } from '../subgraph/field-configuration';
 import { printTypeNode } from '@graphql-tools/merge';
 import { inputValueDefinitionNodeToMutable, MutableInputValueDefinitionNode } from '../ast/ast';
+import { InternalSubgraph, recordSubgraphName, Subgraph } from '../subgraph/subgraph';
 
 export type NormalizationResult = {
   configurationDataMap: ConfigurationDataMap;
   isVersionTwo: boolean;
   keyFieldsByParentTypeName: Map<string, Set<string>>;
   operationTypes: Map<string, OperationTypeNode>;
+  overridesByTargetSubgraphName: Map<string, Map<string, Set<string>>>;
   schema: GraphQLSchema;
   subgraphAST: DocumentNode;
   subgraphString: string;
@@ -161,8 +176,13 @@ export type NormalizationResultContainer = {
   normalizationResult?: NormalizationResult;
 };
 
-export function normalizeSubgraphFromString(subgraph: string): NormalizationResultContainer {
-  const { error, documentNode } = safeParse(subgraph);
+export type BatchNormalizationContainer = {
+  errors?: Error[];
+  internalSubgraphsBySubgraphName: Map<string, InternalSubgraph>;
+}
+
+export function normalizeSubgraphFromString(subgraphSDL: string): NormalizationResultContainer {
+  const { error, documentNode } = safeParse(subgraphSDL);
   if (error || !documentNode) {
     return { errors: [subgraphInvalidSyntaxError(error)] };
   }
@@ -178,20 +198,25 @@ export function normalizeSubgraph(document: DocumentNode): NormalizationResultCo
 export class NormalizationFactory {
   abstractToConcreteTypeNames = new Map<string, Set<string>>();
   allDirectiveDefinitions = new Map<string, DirectiveDefinitionNode>();
+  argumentName = '';
+  childName = '';
   configurationDataMap = new Map<string, ConfigurationData>();
   customDirectiveDefinitions = new Map<string, DirectiveDefinitionNode>();
   errors: Error[] = [];
   entities = new Set<string>();
+  extensions: ExtensionMap = new Map<string, ExtensionContainer>();
+  isCurrentParentExtension = false;
+  isSubgraphVersionTwo = false;
   fieldSetsByParent = new Map<string, FieldSetContainer>();
+  handledRepeatedDirectivesByHostPath = new Map<string, Set<string>>();
+  lastParentNodeKind: Kind = Kind.NULL;
+  lastChildNodeKind: Kind = Kind.NULL;
   keyFieldsByParentTypeName = new Map<string, Set<string>>();
   operationTypeNames = new Map<string, OperationTypeNode>();
   parents: ParentMap = new Map<string, ParentContainer>();
   parentTypeName = '';
   parentsWithChildArguments = new Set<string>();
-  extensions: ExtensionMap = new Map<string, ExtensionContainer>();
-  isChild = false;
-  isCurrentParentExtension = false;
-  isSubgraphVersionTwo = false;
+  overridesByTargetSubgraphName = new Map<string, Map<string, Set<string>>>();
   schemaDefinition: SchemaContainer;
   referencedDirectives = new Set<string>();
   referencedTypeNames = new Set<string>();
@@ -691,6 +716,86 @@ export class NormalizationFactory {
     }
   }
 
+  handleOverride(node: DirectiveNode, fieldName: string) {
+    if (node.name.value !== OVERRIDE) {
+      return;
+    }
+    const errorMessages: string[] = [];
+    let hostPath = `${this.parentTypeName}.${this.childName}`;
+    let kind = this.lastChildNodeKind === Kind.NULL ? this.lastParentNodeKind : this.lastChildNodeKind;
+    if (this.argumentName) {
+      hostPath += `(${this.argumentName}: ...)`;
+      kind = Kind.ARGUMENT;
+    }
+    if (kind !== Kind.FIELD_DEFINITION) {
+      errorMessages.push(invalidDirectiveLocationErrorMessage(hostPath, kind, OVERRIDE));
+    }
+    let targetSubgraphName = '';
+    if (node.arguments && node.arguments.length > 0) {
+      const observedArguments = new Set<string>();
+      const handledDuplicateArguments = new Set<string>();
+      for (const argumentNode of node.arguments) {
+        const argumentName = argumentNode.name.value;
+        if (argumentName !== FROM && !observedArguments.has(argumentName)) {
+          observedArguments.add(argumentName);
+          errorMessages.push(unexpectedDirectiveArgumentErrorMessage(OVERRIDE, argumentName));
+          continue;
+        }
+        // If an argument is observed more than once, it is a duplication error.
+        // However, the error should only propagate once.
+        if (observedArguments.has(argumentName)) {
+          if (!handledDuplicateArguments.has(argumentName)) {
+            errorMessages.push(duplicateDirectiveArgumentDefinitionErrorMessage(OVERRIDE, hostPath, argumentName));
+          }
+          continue;
+        }
+        if (argumentNode.value.kind !== Kind.STRING) {
+          errorMessages.push(
+            invalidDirectiveArgumentTypeErrorMessage(true, FROM, Kind.STRING, argumentNode.value.kind),
+          );
+        } else {
+          observedArguments.add(FROM);
+          targetSubgraphName = argumentNode.value.value;
+        }
+      }
+      if (!observedArguments.has(FROM)) {
+        errorMessages.push(undefinedRequiredArgumentsErrorMessage(
+          OVERRIDE, hostPath, [FROM], [FROM],
+        ));
+      }
+    } else {
+      errorMessages.push(
+        undefinedRequiredArgumentsErrorMessage(OVERRIDE, hostPath, [FROM], []),
+      );
+    }
+    if (errorMessages.length > 0) {
+      this.errors.push(invalidDirectiveError(OVERRIDE, hostPath, errorMessages));
+      return;
+    }
+    const overrideDataForSubgraph = getValueOrDefault(
+      this.overridesByTargetSubgraphName, targetSubgraphName, () => new Map<string, Set<string>>(),
+    );
+    const overriddenFieldNamesForParent = getValueOrDefault(
+      overrideDataForSubgraph, this.parentTypeName, () => new Set<string>(),
+    );
+    if (overriddenFieldNamesForParent.has(this.childName)) {
+      const handledRepeatedDirectives = this.handledRepeatedDirectivesByHostPath.get(hostPath);
+      // If the directive name exists as a value on the host path key, the repeatable error has been handled
+      if (handledRepeatedDirectives && handledRepeatedDirectives.has(OVERRIDE)) {
+        return;
+      }
+      // Add the directive name to the existing set (if other invalid repeated directives exist) or a new set
+      getValueOrDefault(this.handledRepeatedDirectivesByHostPath, hostPath, () => new Set<string>())
+        .add(OVERRIDE);
+      // The invalid repeated directive error should propagate only once per directive per host path
+      this.errors.push(invalidDirectiveError(
+        OVERRIDE, hostPath, [invalidRepeatedDirectiveErrorMessage(OVERRIDE, hostPath)],
+      ));
+      return;
+    }
+    overriddenFieldNamesForParent.add(this.childName);
+  }
+
   normalize(document: DocumentNode) {
     const factory = this;
     /* factory.allDirectiveDefinitions is initialized with v1 directive definitions, and v2 definitions are only added
@@ -698,6 +803,7 @@ export class NormalizationFactory {
     allDirectiveDefinitions cannot be used to check for duplicate definitions, and another set (below) is required */
     const definedDirectives = new Set<string>();
     let isCurrentParentRootType: boolean = false;
+    let fieldName = '';
     visit(document, {
       DirectiveDefinition: {
         enter(node) {
@@ -725,6 +831,7 @@ export class NormalizationFactory {
       Directive: {
         enter(node) {
           const name = node.name.value;
+          factory.handleOverride(node, fieldName);
           if (VERSION_TWO_DIRECTIVES.has(name)) {
             factory.isSubgraphVersionTwo = true;
             return false;
@@ -743,6 +850,7 @@ export class NormalizationFactory {
             return false;
           }
           factory.parentTypeName = name;
+          factory.lastParentNodeKind = node.kind;
           factory.parents.set(name, {
             description: formatDescription(node.description),
             directives: factory.extractDirectives(node, new Map<string, ConstDirectiveNode[]>()),
@@ -753,12 +861,14 @@ export class NormalizationFactory {
         },
         leave() {
           factory.parentTypeName = '';
+          factory.lastParentNodeKind = Kind.NULL;
         },
       },
       EnumTypeExtension: {
         enter(node) {
           const name = node.name.value;
           factory.parentTypeName = name;
+          factory.lastParentNodeKind = node.kind;
           factory.isCurrentParentExtension = true;
           const extension = factory.extensions.get(factory.parentTypeName);
           if (extension) {
@@ -777,13 +887,16 @@ export class NormalizationFactory {
           });
         },
         leave() {
-          factory.isCurrentParentExtension = false;
           factory.parentTypeName = '';
+          factory.lastParentNodeKind = Kind.NULL;
+          factory.isCurrentParentExtension = false;
         },
       },
       EnumValueDefinition: {
         enter(node) {
           const name = node.name.value;
+          factory.childName = name;
+          factory.lastChildNodeKind = node.kind;
           const parent = factory.isCurrentParentExtension
             ? getOrThrowError(factory.extensions, factory.parentTypeName, EXTENSIONS)
             : getOrThrowError(factory.parents, factory.parentTypeName, PARENTS);
@@ -803,6 +916,10 @@ export class NormalizationFactory {
             node: { ...node, description: formatDescription(node.description) },
           });
         },
+        leave() {
+          factory.childName = '';
+          factory.lastChildNodeKind = Kind.NULL;
+        },
       },
       FieldDefinition: {
         enter(node) {
@@ -810,8 +927,10 @@ export class NormalizationFactory {
           if (isCurrentParentRootType && (name === SERVICE_FIELD || name === ENTITIES_FIELD)) {
             return false;
           }
+          factory.childName = name;
+          factory.lastChildNodeKind = node.kind;
           const fieldPath = `${factory.parentTypeName}.${name}`;
-          factory.isChild = true;
+          factory.lastChildNodeKind = node.kind;
           const fieldNamedTypeName = getNamedTypeForChild(fieldPath, node.type);
           if (!BASE_SCALARS.has(fieldNamedTypeName)) {
             factory.referencedTypeNames.add(fieldNamedTypeName);
@@ -869,7 +988,8 @@ export class NormalizationFactory {
           extractFieldSetValue(name, fieldSetContainer.provides, providesDirectives);
         },
         leave() {
-          factory.isChild = false;
+          factory.childName = '';
+          factory.lastChildNodeKind = Kind.NULL;
         },
       },
       InputObjectTypeDefinition: {
@@ -879,6 +999,7 @@ export class NormalizationFactory {
             factory.errors.push(duplicateTypeDefinitionError(kindToTypeString(node.kind), name));
             return false;
           }
+          factory.lastParentNodeKind = node.kind;
           factory.parentTypeName = name;
           factory.parents.set(name, {
             description: formatDescription(node.description),
@@ -889,6 +1010,7 @@ export class NormalizationFactory {
           });
         },
         leave() {
+          factory.lastParentNodeKind = Kind.NULL;
           factory.parentTypeName = '';
         },
       },
@@ -896,6 +1018,7 @@ export class NormalizationFactory {
         enter(node) {
           const name = node.name.value;
           factory.parentTypeName = name;
+          factory.lastParentNodeKind = node.kind;
           factory.isCurrentParentExtension = true;
           const extension = factory.extensions.get(factory.parentTypeName);
           if (extension) {
@@ -914,16 +1037,22 @@ export class NormalizationFactory {
           });
         },
         leave() {
-          factory.isCurrentParentExtension = false;
           factory.parentTypeName = '';
+          factory.lastParentNodeKind = Kind.NULL;
+          factory.isCurrentParentExtension = false;
         },
       },
       InputValueDefinition: {
         enter(node) {
-          if (!factory.parentTypeName || factory.isChild) {
+          const name = node.name.value;
+          // If the parent is not an object type definition/extension, this node is an argument
+          if (factory.lastParentNodeKind !== Kind.INPUT_OBJECT_TYPE_DEFINITION
+            && factory.lastParentNodeKind !== Kind.INPUT_OBJECT_TYPE_EXTENSION) {
+            factory.argumentName = name;
             return;
           }
-          const name = node.name.value;
+          factory.childName = name;
+          factory.lastChildNodeKind = node.kind;
           const valueRootTypeName = getNamedTypeForChild(`${factory.parentTypeName}.${name}`, node.type);
           if (!BASE_SCALARS.has(valueRootTypeName)) {
             factory.referencedTypeNames.add(valueRootTypeName);
@@ -944,11 +1073,20 @@ export class NormalizationFactory {
             node: { ...node, description: formatDescription(node.description) },
           });
         },
+        leave() {
+          factory.argumentName = '';
+          // Only reset childName and lastNodeKind if this input value was NOT an argument
+          if (factory.lastChildNodeKind === Kind.INPUT_VALUE_DEFINITION) {
+            factory.childName = '';
+            factory.lastChildNodeKind = Kind.NULL;
+          }
+        },
       },
       InterfaceTypeDefinition: {
         enter(node) {
           const name = node.name.value;
           factory.parentTypeName = name;
+          factory.lastParentNodeKind = node.kind;
           if (isNodeExtension(node)) {
             return factory.handleObjectLikeExtension(node);
           }
@@ -966,18 +1104,21 @@ export class NormalizationFactory {
           });
         },
         leave() {
-          factory.isCurrentParentExtension = false;
           factory.parentTypeName = '';
+          factory.lastParentNodeKind = Kind.NULL;
+          factory.isCurrentParentExtension = false;
         },
       },
       InterfaceTypeExtension: {
         enter(node) {
           factory.parentTypeName = node.name.value;
+          factory.lastParentNodeKind = node.kind;
           return factory.handleObjectLikeExtension(node);
         },
         leave() {
           factory.isCurrentParentExtension = false;
           factory.parentTypeName = '';
+          factory.lastParentNodeKind = Kind.NULL;
         },
       },
       ObjectTypeDefinition: {
@@ -988,6 +1129,7 @@ export class NormalizationFactory {
           }
           isCurrentParentRootType = ROOT_TYPES.has(name);
           factory.parentTypeName = name;
+          factory.lastParentNodeKind = node.kind;
           addConcreteTypesForImplementedInterfaces(node, factory.abstractToConcreteTypeNames);
           // handling for @extends directive
           if (isNodeExtension(node)) {
@@ -1015,9 +1157,10 @@ export class NormalizationFactory {
           factory.extractKeyFieldSets(node, fieldSets.keys);
         },
         leave() {
-          factory.isCurrentParentExtension = false;
           isCurrentParentRootType = false;
+          factory.isCurrentParentExtension = false;
           factory.parentTypeName = '';
+          factory.lastParentNodeKind = Kind.NULL;
         },
       },
       ObjectTypeExtension: {
@@ -1028,13 +1171,15 @@ export class NormalizationFactory {
           }
           isCurrentParentRootType = ROOT_TYPES.has(name);
           factory.parentTypeName = name;
+          factory.lastParentNodeKind = node.kind;
           addConcreteTypesForImplementedInterfaces(node, factory.abstractToConcreteTypeNames);
           return factory.handleObjectLikeExtension(node);
         },
         leave() {
-          factory.isCurrentParentExtension = false;
           isCurrentParentRootType = false;
+          factory.isCurrentParentExtension = false;
           factory.parentTypeName = '';
+          factory.lastParentNodeKind = Kind.NULL;
         },
       },
       OperationTypeDefinition: {
@@ -1072,12 +1217,18 @@ export class NormalizationFactory {
             factory.errors.push(duplicateTypeDefinitionError(kindToTypeString(node.kind), name));
             return false;
           }
+          factory.parentTypeName = name;
+          factory.lastParentNodeKind = node.kind;
           factory.parents.set(name, {
             description: formatDescription(node.description),
             directives: factory.extractDirectives(node, new Map<string, ConstDirectiveNode[]>()),
             kind: Kind.SCALAR_TYPE_DEFINITION,
             name: node.name,
           });
+        },
+        leave() {
+          factory.parentTypeName = '';
+          factory.lastParentNodeKind = Kind.NULL;
         },
       },
       ScalarTypeExtension: {
@@ -1094,6 +1245,8 @@ export class NormalizationFactory {
             }
             factory.extractDirectives(node, extension.directives);
           } else {
+            factory.parentTypeName = name;
+            factory.lastParentNodeKind = node.kind;
             factory.extensions.set(name, {
               directives: factory.extractDirectives(node, new Map<string, ConstDirectiveNode[]>()),
               kind: node.kind,
@@ -1101,6 +1254,10 @@ export class NormalizationFactory {
             });
           }
           return false;
+        },
+        leave() {
+          factory.parentTypeName = '';
+          factory.lastParentNodeKind = Kind.NULL;
         },
       },
       SchemaDefinition: {
@@ -1130,6 +1287,7 @@ export class NormalizationFactory {
             factory.errors.push(noDefinedUnionMembersError(name));
             return false;
           }
+          factory.lastParentNodeKind = node.kind;
           addConcreteTypesForUnion(node, factory.abstractToConcreteTypeNames);
           factory.parents.set(name, {
             description: formatDescription(node.description),
@@ -1141,6 +1299,7 @@ export class NormalizationFactory {
         },
         leave() {
           factory.parentTypeName = '';
+          factory.lastParentNodeKind = Kind.NULL;
         },
       },
       UnionTypeExtension: {
@@ -1154,6 +1313,7 @@ export class NormalizationFactory {
             factory.errors.push();
             return false;
           }
+          factory.lastParentNodeKind = node.kind;
           addConcreteTypesForUnion(node, factory.abstractToConcreteTypeNames);
           if (extension) {
             if (extension.kind !== Kind.UNION_TYPE_EXTENSION) {
@@ -1170,6 +1330,9 @@ export class NormalizationFactory {
             });
           }
           return false;
+        },
+        leave() {
+          factory.lastParentNodeKind = Kind.NULL;
         },
       },
     });
@@ -1430,10 +1593,124 @@ export class NormalizationFactory {
         isVersionTwo: this.isSubgraphVersionTwo,
         keyFieldsByParentTypeName: this.keyFieldsByParentTypeName,
         operationTypes: this.operationTypeNames,
+        overridesByTargetSubgraphName: this.overridesByTargetSubgraphName,
         subgraphAST: newAST,
         subgraphString: print(newAST),
         schema: buildASTSchema(newAST, { assumeValid: true }),
       },
     };
   }
+}
+
+export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationContainer {
+  const internalSubgraphsBySubgraphName = new Map<string, InternalSubgraph>;
+  const allOverridesByTargetSubgraphName = new Map<string, Map<string, Set<string>>>();
+  const overrideSourceSubgraphNamesByFieldPath = new Map<string, string[]>();
+  const duplicateOverriddenFieldPaths = new Set<string>();
+  const validationErrors: Error[] = [];
+  const subgraphNames = new Set<string>();
+  const nonUniqueSubgraphNames = new Set<string>();
+  const invalidNameErrorMessages: string[] = [];
+  // Record the subgraph names first, so that subgraph references can be validated
+  for (const subgraph of subgraphs) {
+    if (subgraph.name) {
+      recordSubgraphName(subgraph.name, subgraphNames, nonUniqueSubgraphNames);
+    }
+  }
+  for (let i = 0; i < subgraphs.length; i++) {
+    const subgraph = subgraphs[i];
+    const subgraphName = subgraph.name || `subgraph-${i}-${Date.now()}`;
+    if (!subgraph.name) {
+      invalidNameErrorMessages.push(invalidSubgraphNameErrorMessage(i, subgraphName));
+    }
+    const { errors, normalizationResult } = normalizeSubgraph(subgraph.definitions);
+    if (errors) {
+      validationErrors.push(subgraphValidationError(subgraphName, errors));
+      continue;
+    }
+    if (!normalizationResult) {
+      validationErrors.push(subgraphValidationError(subgraphName, [subgraphValidationFailureError]));
+      continue;
+    }
+    if (subgraph.name) {
+      internalSubgraphsBySubgraphName.set(subgraphName, {
+        configurationDataMap: normalizationResult.configurationDataMap,
+        definitions: normalizationResult.subgraphAST,
+        keyFieldsByParentTypeName: normalizationResult.keyFieldsByParentTypeName,
+        isVersionTwo: normalizationResult.isVersionTwo,
+        name: subgraphName,
+        operationTypes: normalizationResult.operationTypes,
+        overriddenFieldNamesByParentTypeName: new Map<string, Set<string>>(),
+        schema: normalizationResult.schema,
+        url: subgraph.url,
+      });
+    }
+    if (normalizationResult.overridesByTargetSubgraphName.size < 1) {
+      continue;
+    }
+    const invalidOverrideTargetSubgraphNameErrors: Error[] = [];
+    for (const [targetSubgraphName, overridesData] of normalizationResult.overridesByTargetSubgraphName) {
+      const isTargetValid = subgraphNames.has(targetSubgraphName);
+      for (const [parentTypeName, fieldNames] of overridesData) {
+        if (!isTargetValid) {
+          invalidOverrideTargetSubgraphNameErrors.push(
+            invalidOverrideTargetSubgraphNameError(targetSubgraphName, parentTypeName, [...fieldNames]),
+          );
+        } else {
+          const overridesData = getValueOrDefault(
+            allOverridesByTargetSubgraphName, targetSubgraphName, () => new Map<string, Set<string>>(),
+          );
+          getValueOrDefault(overridesData, parentTypeName, () => new Set<string>(fieldNames));
+        }
+        for (const fieldName of fieldNames) {
+          const fieldPath = `${parentTypeName}.${fieldName}`;
+          const sourceSubgraphs = overrideSourceSubgraphNamesByFieldPath.get(fieldPath);
+          if (!sourceSubgraphs) {
+            overrideSourceSubgraphNamesByFieldPath.set(fieldPath, [subgraphName]);
+            continue;
+          }
+          sourceSubgraphs.push(subgraphName);
+          duplicateOverriddenFieldPaths.add(fieldPath);
+        }
+      }
+    }
+    if (invalidOverrideTargetSubgraphNameErrors.length > 0) {
+      validationErrors.push(subgraphValidationError(subgraphName, invalidOverrideTargetSubgraphNameErrors));
+    }
+  }
+  const allErrors: Error[] = [];
+  if (invalidNameErrorMessages.length > 0 || nonUniqueSubgraphNames.size > 0) {
+    allErrors.push(invalidSubgraphNamesError([...nonUniqueSubgraphNames], invalidNameErrorMessages));
+  }
+  if (duplicateOverriddenFieldPaths.size > 0) {
+    const duplicateOverriddenFieldErrorMessages: string[] = [];
+    for (const fieldPath of duplicateOverriddenFieldPaths) {
+      const sourceSubgraphNames = getOrThrowError(
+        overrideSourceSubgraphNamesByFieldPath, fieldPath, 'overrideSourceSubgraphNamesByFieldPath',
+      );
+      duplicateOverriddenFieldErrorMessages.push(duplicateOverriddenFieldErrorMessage(fieldPath, sourceSubgraphNames));
+    }
+    allErrors.push(duplicateOverriddenFieldsError(duplicateOverriddenFieldErrorMessages));
+  }
+  allErrors.push(...validationErrors);
+  if (allErrors.length > 0) {
+    return { errors: allErrors, internalSubgraphsBySubgraphName };
+  }
+  for (const [targetSubgraphName, overridesData] of allOverridesByTargetSubgraphName) {
+    const internalSubgraph = getOrThrowError(
+      internalSubgraphsBySubgraphName, targetSubgraphName, 'normalizedSubgraphsByName',
+    );
+    internalSubgraph.overriddenFieldNamesByParentTypeName = overridesData;
+    for (const [parentTypeName, fieldNames] of overridesData) {
+      const configurationData = internalSubgraph.configurationDataMap.get(parentTypeName);
+      if (!configurationData) {
+        continue;
+      }
+      subtractSourceSetFromTargetSet(fieldNames, configurationData.fieldNames);
+      if (configurationData.fieldNames.size < 1) {
+        internalSubgraph.configurationDataMap.delete(parentTypeName);
+      }
+    }
+  }
+  return { internalSubgraphsBySubgraphName: internalSubgraphsBySubgraphName };
 }

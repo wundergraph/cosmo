@@ -11,6 +11,7 @@ import (
 type Employee struct {
 	ID       int            `json:"id"`
 	Products []ProductNames `json:"products"`
+	Notes    string         `json:"notes"`
 }
 
 func (Employee) IsEntity() {}

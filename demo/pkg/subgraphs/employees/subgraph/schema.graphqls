@@ -68,6 +68,7 @@ type Employee implements Identifiable @key(fields: "id") {
   details: Details! @shareable
   id: Int!
   role: RoleType!
+  notes: String!
 }
 
 type Time {
