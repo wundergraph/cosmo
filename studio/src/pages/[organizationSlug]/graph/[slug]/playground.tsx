@@ -41,7 +41,9 @@ const PlaygroundPage: NextPageWithLayout = () => {
     }),
   );
 
-  const [query, setQuery] = useState<string | undefined>(operation);
+  const [query, setQuery] = useState<string | undefined>(
+    operation ? atob(operation) : undefined,
+  );
   const [isGraphiqlRendered, setIsGraphiqlRendered] = useState(false);
 
   useEffect(() => {
