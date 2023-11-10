@@ -56,12 +56,12 @@ const LoginPage: NextPageWithLayout = () => {
 
   return (
     <div className="flex min-h-screen items-center justify-center xl:items-start xl:justify-start">
-      <div className="relative z-10 m-4 flex w-full max-w-xl flex-col gap-y-4 rounded-lg border bg-gray-950/60 p-10 text-white shadow-xl backdrop-blur-xl lg:m-10 lg:mt-20 xl:mt-60">
-        <div className="flex items-center gap-2">
+      <div className="relative z-10 m-4 flex w-full max-w-xl flex-col gap-y-4 rounded-lg border bg-gray-950/60 p-4 text-white shadow-xl backdrop-blur-xl md:p-10 lg:m-10 lg:mt-20 xl:mt-52 2xl:mt-60">
+        <a href="https://wundergraph.com" className="flex items-center gap-2">
           <Logo width={40} height={40} />
           <h1 className="text-lg font-bold">Wundergraph Cosmo</h1>
-        </div>
-        <div className="flex flex-col items-start pt-16">
+        </a>
+        <div className="flex flex-col items-start pt-8 md:pt-16">
           <h2 className="mb-1 text-2xl font-medium">Sign in</h2>
           <div className="w-full">
             <p className="text-muted-foreground">
@@ -92,7 +92,7 @@ const LoginPage: NextPageWithLayout = () => {
               <Button
                 variant="outline"
                 size="lg"
-                className="text-md w-full px-12 py-6"
+                className="text-md w-full truncate px-12 py-6"
                 asChild
               >
                 <Link
@@ -106,7 +106,7 @@ const LoginPage: NextPageWithLayout = () => {
                 <Button
                   variant="outline"
                   size="lg"
-                  className="text-md w-full px-12 py-6"
+                  className="text-md w-full truncate px-12 py-6"
                   asChild
                 >
                   <Link
@@ -124,7 +124,7 @@ const LoginPage: NextPageWithLayout = () => {
               <Button
                 variant="outline"
                 size="lg"
-                className="text-md group w-full px-12 py-6"
+                className="text-md group w-full truncate px-12 py-6"
                 asChild
               >
                 <Link href={constructLoginURL({ redirectURL })}>
@@ -136,7 +136,7 @@ const LoginPage: NextPageWithLayout = () => {
           </div>
         </div>
       </div>
-      <div className="relative hidden flex-1 flex-col items-center gap-y-4 pt-52 text-center text-white xl:flex">
+      <div className="relative hidden flex-1 flex-col items-center gap-y-4 text-center text-white xl:flex xl:pt-40 2xl:pt-52">
         <ProductCosmoStack />
       </div>
     </div>
