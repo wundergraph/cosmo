@@ -1,7 +1,7 @@
 ---
 apiVersion: v2
 name: otelcollector
-description: WunderGraph Cosmo Open Telemetry Collector
+description: WunderGraph Cosmo Open Telemetry Collector.
 
 # A chart can be either an 'application' or a 'library' chart.
 #
