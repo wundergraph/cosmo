@@ -35,6 +35,7 @@ keywords:
 maintainers:
   - name: Dustin Deus
     email: dustin@wundergraph.com
+    url: https://github.com/StarpTech
 
 dependencies:
   - name: controlplane

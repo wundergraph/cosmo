@@ -1,0 +1,44 @@
+name: Helm CI
+on:
+  pull_request:
+    paths:
+      - "helm/**/*"
+      - ".github/workflows/helm-ci.yaml"
+
+concurrency:
+  group: ${{github.workflow}}-${{github.head_ref}}
+  cancel-in-progress: true
+
+env:
+  CI: true
+
+jobs:
+  build_test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          # The go install / version instructions are inside the Makefile, so we need to cache the Makefile.
+          key: ${{ runner.os }}-go-${{ hashFiles('router/go.sum') }}-makefile-${{ hashFiles('Makefile') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - uses: ./.github/actions/go
+
+      - name: Install tools
+        run: go install github.com/norwoodj/helm-docs/cmd/helm-docs@v1.11.3
+
+      - name: Generate Helm docs
+        run: make docs
+        working-directory: ./helm
+
+      - name: Check if git is not dirty after generating files
+        run: git diff --no-ext-diff --exit-code ./helm

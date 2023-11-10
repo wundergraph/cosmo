@@ -8,8 +8,8 @@ You can use it to deploy a fully functional Cosmo stack for development or produ
 ### Prerequisites
 
 - A running Kubernetes cluster, with support for:
-  - PersistentVolume (only development)
-  - Ingress Controller
+    - PersistentVolume (only development)
+    - Ingress Controller
 - [Helm 3.2.0+](https://helm.sh/docs/intro/install/) installed locally
 
 ### Configuring the stack
@@ -19,8 +19,8 @@ Helm offers two primary ways to configure your stack, statically by passing a `v
 
 For your convenience, we included two different value presets:
 
-1. `values.full.yaml` - Ready to deploy configuration. Include all subcharts, including Clickhouse, PostgreSQL and Keycloak. Intended for development use.
-2. `values.yaml`. - Only include the Cosmo stack. You need to provide your own Clickhouse, PostgreSQL, Keycloak and update the configuration accordingly.
+1. [`values.full.yaml`](values.full.yaml) - Ready to deploy configuration. Include all subcharts, including Clickhouse, PostgreSQL and Keycloak. Intended for development use only.
+2. [`values.yaml`](values.yaml). - Only includes the Cosmo Core components. You need to provide your own Clickhouse, PostgreSQL, Keycloak and update the configuration accordingly. See [`values.full.yaml`](values.full.yaml) for an example.
 
 To apply the changes, run:
 
@@ -50,12 +50,12 @@ We ***strongly recommend*** that if you want to ship this helm chart to producti
 ## Configuration and installation details
 
 By default, the chart deploys a production-grade Cosmo stack **without** Clickhouse, PostgreSQL and Keycloak.
-After you have provisioned the databases, you can set the right configuration in the `values.yaml` file.
-The studio, controlplane, router and otelcollector are exposed via ingress. Don't forget to update the public URL in the `values.yaml` file as well.
+After you have provisioned the databases, you can set the right configuration in the `values.yaml` file and do a `helm upgrade` to apply the changes.
+The studio, controlplane, router and collectors are exposed via ingress. Don't forget to update the public URL in the `values.yaml` file as well.
 
 ## Seed your organization and account
 
-The seed is a special component that is used to seed your organization and account. It is only needed once and can be disabled after the initial setup. Ensure that your postgres and keycloak are running before you enable the seed.
+The seed is a special component that is used to seed your organization and admin account. It is only needed once and can be disabled after the initial setup. This user allows you to invite people or configure SSO. Ensure that your postgres and keycloak are running before you enable the seed to avoid any issues.
 Update the `global.seed` values in the `values.yaml` file accordingly and run:
 
 ```shell
@@ -73,8 +73,8 @@ export COSMO_API_URL="http://<your-public-controlplane-url>"
 npx wgc -h
 ```
 
-### Router 
-The router is not enabled by default because it requires an API token. After you have created an API token with the Cosmo CLI `wgc federated-graph create-token <graph-name>`, set the right configurations in the `values.yaml` file.
+### Router
+The router is not enabled by default because it requires an API token to be set and a published federated graph. After you have created an API token with the Cosmo CLI `wgc federated-graph create-token <graph-name>`, set the right configurations in the `values.yaml` file.
 
 ```yaml
 router:
@@ -88,7 +88,7 @@ Run `helm install cosmo` to apply the changes.
 ## Kapp support
 
 The Helm chart is also compatible with [Kapp](https://get-kapp.io/). Kapp is an alternative way to manage Kubernetes resources. We make use of [Versioned Resources](https://carvel.dev/kapp/docs/v0.58.x/diff/#versioned-resources) to ensure that your Pod is restarted when your config changes.
-We also make use of [Apply Ordering](https://carvel.dev/kapp/docs/v0.58.x/apply-ordering/) to avoid uncessary restarts of your Pods when the dependencies are not ready yet.
+We also make use of [Apply Ordering](https://carvel.dev/kapp/docs/v0.58.x/apply-ordering/) to avoid unnecessary restarts of your Pods when the dependencies are not ready yet.
 
 You can render the Helm chart and manage the stack with Kapp with the following command:
 

@@ -88,3 +88,9 @@ Enable ingress addon before deploying the Helm chart:
 ```shell
 minikube addons enable ingress
 ```
+
+## Update the auto-generated documentation
+
+```shell
+make docs
+```
