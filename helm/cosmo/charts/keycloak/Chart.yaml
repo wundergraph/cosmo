@@ -1,7 +1,7 @@
 ---
 apiVersion: v2
 name: keycloak
-description: WunderGraph Cosmo keycloak
+description: WunderGraph Cosmo keycloak. This is the identity provider for the Cosmo platform. Only intended for development and testing purposes. Do not use in production.
 
 # A chart can be either an 'application' or a 'library' chart.
 #

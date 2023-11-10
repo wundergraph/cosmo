@@ -8,8 +8,8 @@ You can use it to deploy a fully functional Cosmo stack for development or produ
 ### Prerequisites
 
 - A running Kubernetes cluster, with support for:
-  - PersistentVolume (only development)
-  - Ingress Controller
+    - PersistentVolume (only development)
+    - Ingress Controller
 - [Helm 3.2.0+](https://helm.sh/docs/intro/install/) installed locally
 
 ### Configuring the stack
@@ -73,7 +73,7 @@ export COSMO_API_URL="http://<your-public-controlplane-url>"
 npx wgc -h
 ```
 
-### Router 
+### Router
 The router is not enabled by default because it requires an API token. After you have created an API token with the Cosmo CLI `wgc federated-graph create-token <graph-name>`, set the right configurations in the `values.yaml` file.
 
 ```yaml
