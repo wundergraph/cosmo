@@ -88,7 +88,7 @@ Run `helm install cosmo` to apply the changes.
 ## Kapp support
 
 The Helm chart is also compatible with [Kapp](https://get-kapp.io/). Kapp is an alternative way to manage Kubernetes resources. We make use of [Versioned Resources](https://carvel.dev/kapp/docs/v0.58.x/diff/#versioned-resources) to ensure that your Pod is restarted when your config changes.
-We also make use of [Apply Ordering](https://carvel.dev/kapp/docs/v0.58.x/apply-ordering/) to avoid uncessary restarts of your Pods when the dependencies are not ready yet.
+We also make use of [Apply Ordering](https://carvel.dev/kapp/docs/v0.58.x/apply-ordering/) to avoid unnecessary restarts of your Pods when the dependencies are not ready yet.
 
 You can render the Helm chart and manage the stack with Kapp with the following command:
 

@@ -37,7 +37,8 @@ jobs:
         run: go install github.com/norwoodj/helm-docs/cmd/helm-docs@v1.11.3
 
       - name: Generate Helm docs
-        run: make generate-doc
+        run: make docs
+        working-directory: ./helm
 
       - name: Check if git is not dirty after generating files
-        run: git diff --no-ext-diff --exit-code
+        run: git diff --no-ext-diff --exit-code ./helm
