@@ -1,1 +1,0 @@
-{"dataType":"Map","value":[["Query",{"fieldNames":{"dataType":"Set","value":["me"]},"isRootNode":true,"typeName":"Query"}],["User",{"fieldNames":{"dataType":"Set","value":["id","name","username"]},"isRootNode":true,"typeName":"User","keys":[{"fieldName":"","selectionSet":"id"}]}]]}

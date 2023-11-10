@@ -4,16 +4,28 @@ import * as url from 'node:url';
 import { describe, expect, test } from 'vitest';
 import { buildSchema } from 'graphql';
 import { ConfigurationData } from '@wundergraph/composition';
-import { buildRouterConfig, Subgraph } from '../src';
+import { buildRouterConfig, ComposedSubgraph } from '../src';
 import { normalizationFailureError } from '../src/router-config/errors';
-import { reviver } from './testdata/subgraphConfigGenerator';
+import { federateTestSubgraphs } from './testdata/utils';
 
 // @ts-ignore-next-line
 const __dirname = url.fileURLToPath(new URL('.', import.meta.url));
 
 describe('Router Config Builder', () => {
   test('Build Subgraph schema', () => {
-    const accounts: Subgraph = {
+    const { errors, federationResult } = federateTestSubgraphs();
+    expect(errors).toBeUndefined();
+    expect(federationResult).toBeDefined();
+    const accountsSubgraphConfig = federationResult.subgraphConfigBySubgraphName.get('accounts');
+    expect(accountsSubgraphConfig).toBeDefined();
+    const productsSubgraphConfig = federationResult.subgraphConfigBySubgraphName.get('products');
+    expect(productsSubgraphConfig).toBeDefined();
+    const reviewsSubgraphConfig = federationResult.subgraphConfigBySubgraphName.get('reviews');
+    expect(reviewsSubgraphConfig).toBeDefined();
+    const inventorySubgraphConfig = federationResult.subgraphConfigBySubgraphName.get('inventory');
+    expect(inventorySubgraphConfig).toBeDefined();
+
+    const accounts: ComposedSubgraph = {
       id: '0',
       name: 'accounts',
       sdl: fs.readFileSync(path.join(__dirname, 'testdata', 'accounts.graphql'), {
@@ -22,16 +34,10 @@ describe('Router Config Builder', () => {
       url: 'https://wg-federation-demo-accounts.fly.dev/graphql',
       subscriptionUrl: '',
       subscriptionProtocol: 'ws',
-      schema: buildSchema(
-        fs.readFileSync(path.join(__dirname, 'testdata', 'subgraphConfigs', 'normalized-accounts.graphql')).toString(),
-      ),
-      configurationDataMap: new Map<string, ConfigurationData>(JSON.parse(
-        fs.readFileSync(path.join(__dirname, 'testdata', 'subgraphConfigs', 'accounts-configuration-data-map.json'))
-          .toString(),
-        reviver,
-      )),
+      schema: accountsSubgraphConfig!.schema,
+      configurationDataMap: accountsSubgraphConfig.configurationDataMap,
     };
-    const products: Subgraph = {
+    const products: ComposedSubgraph = {
       id: '1',
       name: 'products',
       sdl: fs.readFileSync(path.join(__dirname, 'testdata', 'products.graphql'), {
@@ -40,16 +46,10 @@ describe('Router Config Builder', () => {
       url: 'https://wg-federation-demo-products.fly.dev/graphql',
       subscriptionUrl: '',
       subscriptionProtocol: 'ws',
-      schema: buildSchema(
-        fs.readFileSync(path.join(__dirname, 'testdata', 'subgraphConfigs', 'normalized-products.graphql')).toString()
-      ),
-      configurationDataMap: new Map<string, ConfigurationData>(JSON.parse(
-        fs.readFileSync(path.join(__dirname, 'testdata', 'subgraphConfigs', 'products-configuration-data-map.json'))
-          .toString(),
-        reviver,
-      )),
+      schema: productsSubgraphConfig.schema,
+      configurationDataMap: productsSubgraphConfig.configurationDataMap,
     };
-    const reviews: Subgraph = {
+    const reviews: ComposedSubgraph = {
       id: '2',
       name: 'reviews',
       sdl: fs.readFileSync(path.join(__dirname, 'testdata', 'reviews.graphql'), {
@@ -58,16 +58,10 @@ describe('Router Config Builder', () => {
       url: 'https://wg-federation-demo-reviews.fly.dev/graphql',
       subscriptionUrl: '',
       subscriptionProtocol: 'ws',
-      schema: buildSchema(
-        fs.readFileSync(path.join(__dirname, 'testdata', 'subgraphConfigs', 'normalized-reviews.graphql')).toString()
-      ),
-      configurationDataMap: new Map<string, ConfigurationData>(JSON.parse(
-        fs.readFileSync(path.join(__dirname, 'testdata', 'subgraphConfigs', 'reviews-configuration-data-map.json'))
-          .toString(),
-        reviver,
-      )),
+      schema: reviewsSubgraphConfig.schema,
+      configurationDataMap: reviewsSubgraphConfig.configurationDataMap,
     };
-    const inventory: Subgraph = {
+    const inventory: ComposedSubgraph = {
       id: '3',
       name: 'inventory',
       sdl: fs.readFileSync(path.join(__dirname, 'testdata', 'inventory.graphql'), {
@@ -76,14 +70,8 @@ describe('Router Config Builder', () => {
       url: 'https://wg-federation-demo-inventory.fly.dev/graphql',
       subscriptionUrl: '',
       subscriptionProtocol: 'ws',
-      schema: buildSchema(
-        fs.readFileSync(path.join(__dirname, 'testdata', 'subgraphConfigs', 'normalized-inventory.graphql')).toString()
-      ),
-      configurationDataMap: new Map<string, ConfigurationData>(JSON.parse(
-        fs.readFileSync(path.join(__dirname, 'testdata', 'subgraphConfigs', 'inventory-configuration-data-map.json'))
-          .toString(),
-        reviver,
-      )),
+      schema: inventorySubgraphConfig.schema,
+      configurationDataMap: inventorySubgraphConfig.configurationDataMap,
     };
     const routerConfig = buildRouterConfig({
       argumentConfigurations: [],
@@ -100,7 +88,7 @@ describe('Router Config Builder', () => {
   });
 
   test('that the builder config throws an error if normalization has failed', () => {
-    const subgraph:Subgraph = {
+    const subgraph:ComposedSubgraph = {
       id: '',
       name: '',
       sdl: `extend input Human {

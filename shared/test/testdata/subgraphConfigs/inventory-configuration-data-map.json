@@ -1,1 +1,0 @@
-{"dataType":"Map","value":[["Product",{"fieldNames":{"dataType":"Set","value":["inStock","shippingEstimate","upc"]},"isRootNode":true,"typeName":"Product","keys":[{"fieldName":"","selectionSet":"upc"}],"requires":[{"fieldName":"shippingEstimate","selectionSet":"price weight"}]}]]}

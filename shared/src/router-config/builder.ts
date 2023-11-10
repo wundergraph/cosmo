@@ -22,7 +22,7 @@ import { normalizationFailureError } from './errors.js';
 export interface Input {
   argumentConfigurations: ArgumentConfigurationData[];
   federatedSDL: string;
-  subgraphs: Subgraph[];
+  subgraphs: ComposedSubgraph[];
 }
 
 /**
@@ -34,14 +34,16 @@ export interface Input {
  */
 export type SubscriptionProtocol = 'ws' | 'sse' | 'sse_post';
 
-export interface Subgraph {
+export interface ComposedSubgraph {
   id: string;
   name: string;
   sdl: string;
   url: string;
   subscriptionUrl: string;
   subscriptionProtocol: SubscriptionProtocol;
+  // The intermediate representation of the engine configuration for the subgraph
   configurationDataMap?: ConfigurationDataMap;
+  // The normalized GraphQL schema for the subgraph
   schema?: GraphQLSchema;
 }
 

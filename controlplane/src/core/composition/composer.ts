@@ -1,7 +1,7 @@
-import { GraphQLSchema, parse, printSchema } from 'graphql';
+import { parse, printSchema } from 'graphql';
 import { JsonValue } from '@bufbuild/protobuf';
-import { buildRouterConfig } from '@wundergraph/cosmo-shared';
-import { ArgumentConfigurationData, ConfigurationDataMap, FederationResult } from '@wundergraph/composition';
+import { buildRouterConfig, ComposedSubgraph } from '@wundergraph/cosmo-shared';
+import { ArgumentConfigurationData, FederationResult } from '@wundergraph/composition';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
 import { SubgraphRepository } from '../repositories/SubgraphRepository.js';
 import { FederatedGraphDTO, Label, SubgraphDTO } from '../../types/index.js';
@@ -11,28 +11,6 @@ import { getDiffBetweenGraphs } from './schemaCheck.js';
 export type CompositionResult = {
   compositions: ComposedFederatedGraph[];
 };
-
-/**
- * Protocol used when subscribing to a subgraph.
- *
- * ws: Negotiates an appropriate protocol over websockets. Both https://github.com/enisdenjo/graphql-ws/blob/master/PROTOCOL.md and https://github.com/apollographql/subscriptions-transport-ws/blob/master/PROTOCOL.md are supported
- * sse: Uses the Server-Sent Events protocol with a GET request
- * sse-post: Uses the Server-Sent Events protocol with a POST request
- */
-type SubscriptionProtocol = 'ws' | 'sse' | 'sse_post';
-
-interface ComposedSubgraph {
-  id: string;
-  name: string;
-  sdl: string;
-  url: string;
-  subscriptionUrl: string;
-  subscriptionProtocol: SubscriptionProtocol;
-  // The intermediate representation of the engine configuration for the subgraph
-  configurationDataMap?: ConfigurationDataMap;
-  // The normalized GraphQL schema for the subgraph
-  schema?: GraphQLSchema;
-}
 
 export function subgraphDTOsToComposedSubgraphs(
   subgraphs: SubgraphDTO[],
