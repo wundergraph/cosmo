@@ -217,7 +217,7 @@ type Config struct {
 	Authentication                AuthenticationConfiguration `yaml:"authentication"`
 	Authorization                 AuthorizationConfiguration  `yaml:"authorization"`
 	LocalhostFallbackInsideDocker bool                        `yaml:"localhost_fallback_inside_docker" default:"true" envconfig:"LOCALHOST_FALLBACK_INSIDE_DOCKER"`
-	CDN                           CDNConfiguration            `yaml:"cdn""`
+	CDN                           CDNConfiguration            `yaml:"cdn"`
 
 	ConfigPath       string `envconfig:"CONFIG_PATH" validate:"omitempty,filepath"`
 	RouterConfigPath string `yaml:"router_config_path" envconfig:"ROUTER_CONFIG_PATH" validate:"omitempty,filepath"`
