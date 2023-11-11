@@ -12,6 +12,7 @@ import { createTestAuthenticator, seedTest } from '../src/core/test-util';
 import Keycloak from '../src/core/services/Keycloak';
 import { MockPlatformWebhookService } from '../src/core/webhooks/PlatformWebhookService';
 import routes from '../src/core/routes';
+import { NoBlobStorage } from '../src/core/blobstorage';
 import { Label } from '../src/types';
 
 export const SetupTest = async function (testContext: TestContext, dbname: string) {
@@ -62,6 +63,7 @@ export const SetupTest = async function (testContext: TestContext, dbname: strin
         clientSecret: '',
       },
       keycloakApiUrl: apiUrl,
+      blobStorage: new NoBlobStorage(),
     }),
   });
 

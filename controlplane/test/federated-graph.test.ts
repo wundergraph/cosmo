@@ -19,6 +19,7 @@ import {
 } from '../src/core/test-util';
 import Keycloak from '../src/core/services/Keycloak';
 import { MockPlatformWebhookService } from '../src/core/webhooks/PlatformWebhookService';
+import { NoBlobStorage } from '../src/core/blobstorage';
 import { SetupTest } from './test-util';
 
 let dbname = '';
@@ -122,6 +123,7 @@ describe('Federated Graph', (ctx) => {
           clientSecret: '',
         },
         keycloakApiUrl: apiUrl,
+        blobStorage: new NoBlobStorage(),
       }),
     });
 
@@ -224,6 +226,7 @@ describe('Federated Graph', (ctx) => {
           clientSecret: '',
         },
         keycloakApiUrl: apiUrl,
+        blobStorage: new NoBlobStorage(),
       }),
     });
 
@@ -326,6 +329,7 @@ describe('Federated Graph', (ctx) => {
           clientSecret: '',
         },
         keycloakApiUrl: apiUrl,
+        blobStorage: new NoBlobStorage(),
       }),
     });
 
@@ -457,6 +461,7 @@ describe('Federated Graph', (ctx) => {
           clientSecret: '',
         },
         keycloakApiUrl: apiUrl,
+        blobStorage: new NoBlobStorage(),
       }),
     });
 
