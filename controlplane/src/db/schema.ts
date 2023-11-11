@@ -38,6 +38,16 @@ export const federatedGraphConfigs = pgTable('federated_graph_configs', {
   trafficCheckDays: integer('traffic_check_days').notNull().default(7),
 });
 
+export const federatedGraphClients = pgTable('federated_graph_clients', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  federatedGraphId: uuid('federated_graph_id')
+  .notNull()
+  .references(() => federatedGraphs.id, {
+    onDelete: 'cascade',
+  }),
+  name: text('name').notNull().unique(),
+});
+
 export const subscriptionProtocolEnum = pgEnum('subscription_protocol', ['ws', 'sse', 'sse_post']);
 
 export const subgraphs = pgTable('subgraphs', {

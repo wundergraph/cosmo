@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import { PlainMessage } from '@bufbuild/protobuf';
 import { ServiceImpl } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
@@ -50,6 +51,7 @@ import {
   IsGitHubAppInstalledResponse,
   MigrateFromApolloResponse,
   PublishFederatedSubgraphResponse,
+  PublishPersistedOperationsResponse,
   RemoveInvitationResponse,
   RequestSeriesItem,
   UpdateFederatedGraphResponse,
@@ -60,7 +62,8 @@ import {
   WhoAmIResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { OpenAIGraphql, isValidUrl } from '@wundergraph/cosmo-shared';
-import { parse } from 'graphql';
+import { DocumentNode, buildASTSchema, parse } from 'graphql';
+import { validate } from 'graphql/validation/index.js';
 import { GraphApiKeyDTO, GraphApiKeyJwtPayload } from '../../types/index.js';
 import { Composer } from '../composition/composer.js';
 import { buildSchema, composeSubgraphs } from '../composition/composition.js';
@@ -3397,6 +3400,91 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           },
           operationContent: result[0].operationContent,
         };
+      });
+    },
+
+    publishPersistedOperations: (req, ctx) => {
+      /**
+       * Receives a federated graph name and a list of persisted operation contents.
+       * First, it validates that the graph exists and all the operations are valid,
+       * then it stores them. Additionally, if the provided client name for registering
+       * the operations has never been seen before, we create an entry in the database
+       * with it.
+       */
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<PublishPersistedOperationsResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const organizationId = authContext.organizationId;
+        const federatedGraphRepo = new FederatedGraphRepository(opts.db, organizationId);
+
+        // Validate everything before we update any data
+        const graphSDL = await federatedGraphRepo.getLatestValidSdlOfFederatedGraph(req.graphName);
+        const federatedGraph = await federatedGraphRepo.byName(req.graphName);
+        if (!graphSDL || federatedGraph === undefined) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Federated graph '${req.graphName}' does not exist`,
+            },
+            operationIDs: [],
+          }
+        }
+        const graphAST = parse(graphSDL);
+        const graphSchema = buildASTSchema(graphAST);
+       for (const operationContents of req.operations) {
+          let opAST: DocumentNode 
+          try {
+            opAST = parse(operationContents);
+          } catch (e: any) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR,
+                details: `Operation ${operationContents} is not valid: ${e}`,
+              },
+              operationIDs: [],
+            }
+          }
+          const errors = validate(graphSchema, opAST);
+          if (errors.length > 0) {
+            const errorDetails = errors.map(e => `${e.toString()}`).join(', ');
+            return {
+              response: {
+                code: EnumStatusCode.ERR,
+                details: `Operation "${operationContents}" is not valid: ${errorDetails}`,
+              },
+              operationIDs: [],
+            }
+          }
+       }
+       try {
+        await federatedGraphRepo.registerClient(req.graphName, req.clientName)
+       } catch (e: any) {
+        const message = e instanceof Error ? e.message : e.toString();
+        return {
+          response: {
+            code: EnumStatusCode.ERR,
+            details: `Could not register client "${req.clientName}": ${message}`,
+          },
+          operationIDs: [],
+        }
+       }
+       const operationIDs: string[] = [];
+       for (const operationContents of req.operations) {
+        const operationID = crypto.createHash('sha256').update(operationContents).digest('hex');
+        const path = `${organizationId}/${federatedGraph.id}/operations/${req.clientName}/${operationID}.json`;
+        opts.blobStorage.putObject(path, Buffer.from(operationContents, 'utf8'));
+        operationIDs.push(operationID);
+       }
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          operationIDs,
+        }
       });
     },
   };

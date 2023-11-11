@@ -3,6 +3,7 @@ import { and, asc, desc, eq, gt, inArray, lt, not, notExists, notInArray, SQL, s
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { RouterConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { joinLabel, normalizeURL } from '@wundergraph/cosmo-shared';
+import { Target } from 'src/db/models.js';
 import * as schema from '../../db/schema.js';
 import {
   federatedGraphConfigs,
@@ -25,7 +26,6 @@ import { normalizeLabelMatchers, normalizeLabels } from '../util.js';
 import { Composer } from '../composition/composer.js';
 import { SchemaDiff } from '../composition/schemaCheck.js';
 import { SubgraphRepository } from './SubgraphRepository.js';
-import { Target } from 'src/db/models.js';
 
 export interface FederatedGraphConfig {
   trafficCheckDays: number;
@@ -751,5 +751,30 @@ export class FederatedGraphRepository {
           token: token.token,
         }) as GraphApiKeyDTO,
     );
+  }
+
+  public async registerClient(federatedGraphName: string, clientName: string) {
+    if (!clientName) {
+      throw new Error('client name is empty');
+    }
+    const graph = await this.db.query.targets.findFirst({
+      columns: {},
+      with: {
+        federatedGraph: {
+          columns: { id: true },
+        },
+      },
+      where: and(
+        eq(schema.targets.name, federatedGraphName),
+        eq(schema.targets.organizationId, this.organizationId),
+        eq(schema.targets.type, 'federated'),
+      ),
+    });
+    if (graph === undefined) {
+      throw new Error(`could not find graph ${federatedGraphName}`);
+    }
+    await this.db.insert(schema.federatedGraphClients)
+    .values({ federatedGraphId: graph.federatedGraph.id, name: clientName })
+    .onConflictDoNothing({ target: schema.federatedGraphClients.name });
   }
 }

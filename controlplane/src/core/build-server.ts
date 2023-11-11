@@ -1,4 +1,5 @@
 import Fastify from 'fastify';
+import { S3Client } from '@aws-sdk/client-s3';
 import { fastifyConnectPlugin } from '@connectrpc/connect-fastify';
 import { cors } from '@connectrpc/connect';
 import fastifyCors from '@fastify/cors';
@@ -23,6 +24,7 @@ import Keycloak from './services/Keycloak.js';
 import { PlatformWebhookService } from './webhooks/PlatformWebhookService.js';
 import AccessTokenAuthenticator from './services/AccessTokenAuthenticator.js';
 import { GitHubRepository } from './repositories/GitHubRepository.js';
+import { BlobStorage, NoBlobStorage, S3BlobStorage } from './blobstorage/index.js';
 
 export interface BuildConfig {
   logger: LoggerOptions;
@@ -66,6 +68,7 @@ export interface BuildConfig {
     privateKey?: string;
   };
   slack: { clientID?: string; clientSecret?: string };
+  s3StorageUrl?: string;
 }
 
 const developmentLoggerOpts: LoggerOptions = {
@@ -199,6 +202,25 @@ export default async function build(opts: BuildConfig) {
     });
   }
 
+  let blobStorage: BlobStorage | undefined;
+  if (opts.s3StorageUrl) {
+    const url = new URL(opts.s3StorageUrl);
+    const region = url.searchParams.get('region') ?? 'us-west-rack-2';
+    const s3Client = new S3Client({
+      region,
+      endpoint: url.origin,
+      credentials: {
+        accessKeyId: url.username ?? '',
+        secretAccessKey: url.password ?? '',
+      },
+      forcePathStyle: true,
+    });
+    const bucketName = url.pathname.slice(1);
+    blobStorage = new S3BlobStorage(s3Client, bucketName);
+  } else {
+    blobStorage = new NoBlobStorage()
+  }
+
   /**
    * Controllers registration
    */
@@ -240,6 +262,7 @@ export default async function build(opts: BuildConfig) {
       githubApp,
       webBaseUrl: opts.auth.webBaseUrl,
       slack: opts.slack,
+      blobStorage,
     }),
     logLevel: opts.logger.level as pino.LevelWithSilent,
     // Avoid compression for small requests

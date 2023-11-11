@@ -701,6 +701,17 @@ message DeleteRouterTokenResponse {
   Response response = 1;
 }
 
+message PublishPersistedOperationsRequest {
+  string graphName = 1;
+  string clientName = 2;
+  repeated string operations = 3;
+}
+
+message PublishPersistedOperationsResponse {
+  Response response = 1;
+  repeated string operationIDs = 2;
+}
+
 message Header{
   string key = 1;
   string value = 2;
@@ -1000,6 +1011,8 @@ service PlatformService {
   rpc GetRouterTokens(GetRouterTokensRequest) returns (GetRouterTokensResponse) {}
   // DeleteRouterToken deletes the router token of a federated graph.
   rpc DeleteRouterToken(DeleteRouterTokenRequest) returns (DeleteRouterTokenResponse) {}
+  // Add persisted operations
+  rpc PublishPersistedOperations(PublishPersistedOperationsRequest) returns (PublishPersistedOperationsResponse) {}
 
   // For Studio and CLI
 
