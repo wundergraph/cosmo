@@ -3743,12 +3743,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               details: `Federated graph '${req.graphName}' does not exist`,
             },
             operationIDs: [],
-          }
+          };
         }
         const graphAST = parse(graphSDL);
         const graphSchema = buildASTSchema(graphAST);
-       for (const operationContents of req.operations) {
-          let opAST: DocumentNode 
+        for (const operationContents of req.operations) {
+          let opAST: DocumentNode;
           try {
             opAST = parse(operationContents);
           } catch (e: any) {
@@ -3758,49 +3758,49 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
                 details: `Operation ${operationContents} is not valid: ${e}`,
               },
               operationIDs: [],
-            }
+            };
           }
           const errors = validate(graphSchema, opAST);
           if (errors.length > 0) {
-            const errorDetails = errors.map(e => `${e.toString()}`).join(', ');
+            const errorDetails = errors.map((e) => `${e.toString()}`).join(', ');
             return {
               response: {
                 code: EnumStatusCode.ERR,
                 details: `Operation "${operationContents}" is not valid: ${errorDetails}`,
               },
               operationIDs: [],
-            }
+            };
           }
-       }
-       try {
-        await federatedGraphRepo.registerClient(req.graphName, req.clientName)
-       } catch (e: any) {
-        const message = e instanceof Error ? e.message : e.toString();
+        }
+        try {
+          await federatedGraphRepo.registerClient(req.graphName, req.clientName);
+        } catch (e: any) {
+          const message = e instanceof Error ? e.message : e.toString();
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `Could not register client "${req.clientName}": ${message}`,
+            },
+            operationIDs: [],
+          };
+        }
+        const operationIDs: string[] = [];
+        for (const operationContents of req.operations) {
+          const operationID = crypto.createHash('sha256').update(operationContents).digest('hex');
+          const path = `${organizationId}/${federatedGraph.id}/operations/${req.clientName}/${operationID}.json`;
+          opts.blobStorage.putObject(path, Buffer.from(operationContents, 'utf8'));
+          operationIDs.push(operationID);
+        }
+
         return {
           response: {
-            code: EnumStatusCode.ERR,
-            details: `Could not register client "${req.clientName}": ${message}`,
+            code: EnumStatusCode.OK,
           },
-          operationIDs: [],
-        }
-       }
-       const operationIDs: string[] = [];
-       for (const operationContents of req.operations) {
-        const operationID = crypto.createHash('sha256').update(operationContents).digest('hex');
-        const path = `${organizationId}/${federatedGraph.id}/operations/${req.clientName}/${operationID}.json`;
-        opts.blobStorage.putObject(path, Buffer.from(operationContents, 'utf8'));
-        operationIDs.push(operationID);
-       }
-
-       return {
-        response: {
-          code: EnumStatusCode.OK,
-        },
-        operationIDs,
-      }
-    });
-  },
-  createOIDCProvider: (req, ctx) => {
+          operationIDs,
+        };
+      });
+    },
+    createOIDCProvider: (req, ctx) => {
       const logger = opts.logger.child({
         service: ctx.service.typeName,
         method: ctx.method.name,

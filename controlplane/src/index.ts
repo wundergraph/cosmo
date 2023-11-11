@@ -36,7 +36,7 @@ const {
   GITHUB_APP_PRIVATE_KEY,
   SLACK_APP_CLIENT_ID,
   SLACK_APP_CLIENT_SECRET,
-  S3_STORAGE_URL
+  S3_STORAGE_URL,
 } = envVariables.parse(process.env);
 
 const options: BuildConfig = {

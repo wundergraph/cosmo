@@ -3,7 +3,6 @@ import { and, asc, desc, eq, gt, inArray, lt, not, notExists, notInArray, SQL, s
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { RouterConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { joinLabel, normalizeURL } from '@wundergraph/cosmo-shared';
-import { Target } from 'src/db/models.js';
 import * as schema from '../../db/schema.js';
 import {
   federatedGraphConfigs,
@@ -26,6 +25,7 @@ import { normalizeLabelMatchers, normalizeLabels } from '../util.js';
 import { Composer } from '../composition/composer.js';
 import { SchemaDiff } from '../composition/schemaCheck.js';
 import { SubgraphRepository } from './SubgraphRepository.js';
+import { Target } from 'src/db/models.js';
 
 export interface FederatedGraphConfig {
   trafficCheckDays: number;
@@ -773,8 +773,9 @@ export class FederatedGraphRepository {
     if (graph === undefined) {
       throw new Error(`could not find graph ${federatedGraphName}`);
     }
-    await this.db.insert(schema.federatedGraphClients)
-    .values({ federatedGraphId: graph.federatedGraph.id, name: clientName })
-    .onConflictDoNothing({ target: schema.federatedGraphClients.name });
+    await this.db
+      .insert(schema.federatedGraphClients)
+      .values({ federatedGraphId: graph.federatedGraph.id, name: clientName })
+      .onConflictDoNothing({ target: schema.federatedGraphClients.name });
   }
 }

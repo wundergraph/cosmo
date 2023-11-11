@@ -218,7 +218,7 @@ export default async function build(opts: BuildConfig) {
     const bucketName = url.pathname.slice(1);
     blobStorage = new S3BlobStorage(s3Client, bucketName);
   } else {
-    blobStorage = new NoBlobStorage()
+    blobStorage = new NoBlobStorage();
   }
 
   /**

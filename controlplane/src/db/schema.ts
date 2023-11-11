@@ -41,10 +41,10 @@ export const federatedGraphConfigs = pgTable('federated_graph_configs', {
 export const federatedGraphClients = pgTable('federated_graph_clients', {
   id: uuid('id').primaryKey().defaultRandom(),
   federatedGraphId: uuid('federated_graph_id')
-  .notNull()
-  .references(() => federatedGraphs.id, {
-    onDelete: 'cascade',
-  }),
+    .notNull()
+    .references(() => federatedGraphs.id, {
+      onDelete: 'cascade',
+    }),
   name: text('name').notNull().unique(),
 });
 
