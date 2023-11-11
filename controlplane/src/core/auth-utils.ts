@@ -9,6 +9,7 @@ import * as schema from '../db/schema.js';
 import { sessions } from '../db/schema.js';
 import {
   calculatePKCECodeChallenge,
+  cosmoIdpHintCookieName,
   decodeJWT,
   decrypt,
   DEFAULT_SESSION_MAX_AGE_SEC,
@@ -108,6 +109,19 @@ export default class AuthUtils {
     res.header('Set-Cookie', userSessionCookie);
   }
 
+  createSsoCookie(res: FastifyReply, ssoSlug: string) {
+    const currentDate = new Date();
+    const userSsoCookie = cookie.serialize(cosmoIdpHintCookieName, ssoSlug, {
+      domain: this.webDomain,
+      sameSite: 'lax',
+      expires: new Date(currentDate.setFullYear(currentDate.getFullYear() + 1)),
+      path: '/',
+      secure: this.secureCookie,
+    });
+
+    res.header('Set-Cookie', userSsoCookie);
+  }
+
   async getUserInfo(accessToken: string) {
     const res = await axios({
       url: this.opts.oauth.openIdApiBaseUrl + '/protocol/openid-connect/userinfo',
@@ -155,20 +169,43 @@ export default class AuthUtils {
     };
   }
 
-  async handleLoginRequest(finalRedirectURL?: string) {
+  getRedirectUri({ redirectURL, sso }: { redirectURL?: string; sso?: string }) {
+    if (redirectURL && sso) {
+      return `${this.opts.oauth.redirectUri}?redirectURL=${redirectURL}&ssoSlug=${sso}`;
+    } else if (redirectURL) {
+      return `${this.opts.oauth.redirectUri}?redirectURL=${redirectURL}`;
+    } else if (sso) {
+      return `${this.opts.oauth.redirectUri}?ssoSlug=${sso}`;
+    } else {
+      return this.opts.oauth.redirectUri;
+    }
+  }
+
+  async handleLoginRequest(options: {
+    redirectURL?: string;
+    provider?: string;
+    sso?: string;
+    action?: 'login' | 'signup';
+  }) {
+    const { redirectURL, provider, sso, action = 'login' } = options;
+
     const codeVerifier = await generateRandomCodeVerifier();
     const codeChallenge = await calculatePKCECodeChallenge(codeVerifier);
 
-    const authorizationUrl = new URL(this.opts.oauth.openIdFrontendUrl + '/protocol/openid-connect/auth');
+    const authAction = action === 'signup' && !provider ? 'registrations' : 'auth';
+
+    const idpHint = sso || provider;
+
+    const authorizationUrl = new URL(this.opts.oauth.openIdFrontendUrl + '/protocol/openid-connect/' + authAction);
     authorizationUrl.searchParams.set('client_id', this.opts.oauth.clientID);
     authorizationUrl.searchParams.set('code_challenge', codeChallenge);
     authorizationUrl.searchParams.set('code_challenge_method', pkceCodeAlgorithm);
-    authorizationUrl.searchParams.set(
-      'redirect_uri',
-      finalRedirectURL ? `${this.opts.oauth.redirectUri}?redirectURL=${finalRedirectURL}` : this.opts.oauth.redirectUri,
-    );
+    authorizationUrl.searchParams.set('redirect_uri', this.getRedirectUri({ redirectURL, sso }));
     authorizationUrl.searchParams.set('response_type', 'code');
     authorizationUrl.searchParams.set('scope', scope);
+    if (idpHint) {
+      authorizationUrl.searchParams.set('kc_idp_hint', idpHint);
+    }
 
     const jwt = await encrypt<PKCECodeChallenge>({
       maxAge: pkceMaxAgeSec,
@@ -192,7 +229,7 @@ export default class AuthUtils {
 
   async handleAuthCallbackRequest(
     req: FastifyRequest<{
-      Querystring: { code: string; code_verifier: string; redirectURL?: string };
+      Querystring: { code: string; code_verifier: string; redirectURL?: string; ssoSlug?: string };
     }>,
   ): Promise<{
     accessToken: string;
@@ -204,6 +241,7 @@ export default class AuthUtils {
   }> {
     const code = req.query.code;
     const redirectURL = req.query?.redirectURL;
+    const ssoSlug = req.query?.ssoSlug;
 
     const cookies = cookie.parse(req.headers.cookie || '');
 
@@ -231,9 +269,7 @@ export default class AuthUtils {
         client_id: this.opts.oauth.clientID,
         code_verifier: codeChallenge?.codeVerifier,
         code,
-        redirect_uri: redirectURL
-          ? `${this.opts.oauth.redirectUri}?redirectURL=${redirectURL}`
-          : this.opts.oauth.redirectUri,
+        redirect_uri: this.getRedirectUri({ redirectURL, sso: ssoSlug }),
       }),
     });
 

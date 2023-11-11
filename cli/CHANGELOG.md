@@ -4,6 +4,20 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.26.0](https://github.com/wundergraph/cosmo/compare/wgc@0.25.2...wgc@0.26.0) (2023-11-10)
+
+### Features
+
+* implement [@override](https://github.com/override) ([#246](https://github.com/wundergraph/cosmo/issues/246)) ([b6d0448](https://github.com/wundergraph/cosmo/commit/b6d044861e918f7c82931e1d5374fc7f6fc01daa)) (@Aenimus)
+
+## [0.25.2](https://github.com/wundergraph/cosmo/compare/wgc@0.25.1...wgc@0.25.2) (2023-11-09)
+
+**Note:** Version bump only for package wgc
+
+## [0.25.1](https://github.com/wundergraph/cosmo/compare/wgc@0.25.0...wgc@0.25.1) (2023-11-08)
+
+**Note:** Version bump only for package wgc
+
 # [0.25.0](https://github.com/wundergraph/cosmo/compare/wgc@0.24.0...wgc@0.25.0) (2023-11-06)
 
 ### Features

@@ -4,7 +4,7 @@ import { buildRouterConfig, normalizeURL } from '@wundergraph/cosmo-shared';
 import { Command, program } from 'commander';
 import { parse, printSchema } from 'graphql';
 import * as yaml from 'js-yaml';
-import { resolve, dirname } from 'pathe';
+import { dirname, resolve } from 'pathe';
 import pc from 'picocolors';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { composeSubgraphs, introspectSubgraph } from '../../../utils.js';
@@ -94,14 +94,21 @@ export default (opts: BaseCommandOptions) => {
     const routerConfig = buildRouterConfig({
       argumentConfigurations: result.federationResult.argumentConfigurations,
       federatedSDL: printSchema(result.federationResult.federatedGraphSchema),
-      subgraphs: config.subgraphs.map((s, index) => ({
-        id: `${index}`,
-        name: s.name,
-        url: normalizeURL(s.routing_url),
-        sdl: sdls[index],
-        subscriptionUrl: s.subscription?.url ?? s.routing_url,
-        subscriptionProtocol: s.subscription?.protocol ?? 'ws',
-      })),
+      subgraphs: config.subgraphs.map((s, index) => {
+        const subgraphConfig = result.federationResult!.subgraphConfigBySubgraphName.get(s.name);
+        const schema = subgraphConfig?.schema;
+        const configurationDataMap = subgraphConfig?.configurationDataMap;
+        return {
+          id: `${index}`,
+          name: s.name,
+          url: normalizeURL(s.routing_url),
+          sdl: sdls[index],
+          subscriptionUrl: s.subscription?.url ?? s.routing_url,
+          subscriptionProtocol: s.subscription?.protocol ?? 'ws',
+          schema,
+          configurationDataMap,
+        };
+      }),
     });
 
     if (options.out) {

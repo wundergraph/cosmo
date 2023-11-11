@@ -1,6 +1,6 @@
 {
   "name": "studio",
-  "version": "0.30.0",
+  "version": "0.33.2",
   "private": true,
   "license": "Apache-2.0",
   "description": "WunderGraph Cosmo Studio",
@@ -72,6 +72,7 @@
     "next-themes": "^0.2.1",
     "prism-react-renderer": "^2.0.6",
     "react": "^18.2.0",
+    "react-cookie": "^6.1.1",
     "react-date-range": "^1.4.0",
     "react-day-picker": "^8.8.0",
     "react-dom": "^18.2.0",

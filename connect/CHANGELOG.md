@@ -4,6 +4,22 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.28.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.27.0...@wundergraph/cosmo-connect@0.28.0) (2023-11-09)
+
+### Bug Fixes
+
+* minor issues of sso ([#247](https://github.com/wundergraph/cosmo/issues/247)) ([8bf61a9](https://github.com/wundergraph/cosmo/commit/8bf61a90751cf3b4aed3783cf07bab2560acac10)) (@JivusAyrus)
+
+### Features
+
+* link operations through hash ([#244](https://github.com/wundergraph/cosmo/issues/244)) ([24a7738](https://github.com/wundergraph/cosmo/commit/24a773884947c58183ee56bb9be82e2fae1c0bff)) (@thisisnithin)
+
+# [0.27.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.26.0...@wundergraph/cosmo-connect@0.27.0) (2023-11-08)
+
+### Features
+
+* implement sso & basic RBAC in Cosmo ([#220](https://github.com/wundergraph/cosmo/issues/220)) ([55af35b](https://github.com/wundergraph/cosmo/commit/55af35b14068441d1df219599874a575dedb9dc2)) (@JivusAyrus)
+
 # [0.26.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.25.0...@wundergraph/cosmo-connect@0.26.0) (2023-11-06)
 
 ### Features

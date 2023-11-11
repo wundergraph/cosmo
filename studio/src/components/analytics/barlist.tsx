@@ -4,9 +4,9 @@ import Link from "next/link";
 import { Url } from "next/dist/shared/lib/router/router";
 
 type Bar = {
-  key?: string;
+  key: string;
   value: number;
-  name: string;
+  name: React.ReactNode;
   icon?: React.JSXElementConstructor<any>;
   href?: Url;
   target?: string;
@@ -53,12 +53,12 @@ const BarList = React.forwardRef<HTMLDivElement, BarListProps>((props, ref) => {
 
   const widths = getWidthsFromValues(
     data.map((item) => item.value),
-    maxValue
+    maxValue,
   );
 
   if (data.length === 0) {
     return (
-      <div className="flex flex-1 items-center justify-center italic text-muted-foreground text-sm py-2">
+      <div className="flex flex-1 items-center justify-center py-2 text-sm italic text-muted-foreground">
         No data available
       </div>
     );
@@ -76,12 +76,12 @@ const BarList = React.forwardRef<HTMLDivElement, BarListProps>((props, ref) => {
 
           return (
             <div
-              key={item.key ?? item.name}
+              key={item.key}
               className={cn(
                 "flex items-center rounded-sm bg-primary/30 text-secondary-foreground",
                 `h-${rowHeight}`,
                 rowClassName,
-                idx === data.length - 1 ? "mb-0" : "mb-2"
+                idx === data.length - 1 ? "mb-0" : "mb-2",
               )}
               style={{
                 width: `${widths[idx]}%`,
@@ -110,11 +110,11 @@ const BarList = React.forwardRef<HTMLDivElement, BarListProps>((props, ref) => {
       <div className={"min-w-min text-right"}>
         {data.map((item, idx) => (
           <div
-            key={item.key ?? item.name}
+            key={item.key}
             className={cn(
               "flex items-center justify-end",
               `h-${rowHeight}`,
-              idx === data.length - 1 ? "mb-0" : "mb-2"
+              idx === data.length - 1 ? "mb-0" : "mb-2",
             )}
           >
             <p className={cn("whitespace-nowrap text-sm text-foreground")}>

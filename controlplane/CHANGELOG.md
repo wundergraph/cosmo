@@ -4,6 +4,35 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.35.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.34.0...controlplane@0.35.0) (2023-11-10)
+
+### Features
+
+* implement [@override](https://github.com/override) ([#246](https://github.com/wundergraph/cosmo/issues/246)) ([b6d0448](https://github.com/wundergraph/cosmo/commit/b6d044861e918f7c82931e1d5374fc7f6fc01daa)) (@Aenimus)
+
+# [0.34.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.33.0...controlplane@0.34.0) (2023-11-09)
+
+### Features
+
+* unify and redesign login screen ([#250](https://github.com/wundergraph/cosmo/issues/250)) ([aa02c4a](https://github.com/wundergraph/cosmo/commit/aa02c4a5eb2b85cea811b896494ed5d1f2762416)) (@Pagebakers)
+
+# [0.33.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.32.0...controlplane@0.33.0) (2023-11-09)
+
+### Bug Fixes
+
+* invalid org slug ([#248](https://github.com/wundergraph/cosmo/issues/248)) ([c6c01a0](https://github.com/wundergraph/cosmo/commit/c6c01a0aa4c81ae54117aef273438fe99e21dcba)) (@thisisnithin)
+* minor issues of sso ([#247](https://github.com/wundergraph/cosmo/issues/247)) ([8bf61a9](https://github.com/wundergraph/cosmo/commit/8bf61a90751cf3b4aed3783cf07bab2560acac10)) (@JivusAyrus)
+
+### Features
+
+* link operations through hash ([#244](https://github.com/wundergraph/cosmo/issues/244)) ([24a7738](https://github.com/wundergraph/cosmo/commit/24a773884947c58183ee56bb9be82e2fae1c0bff)) (@thisisnithin)
+
+# [0.32.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.31.1...controlplane@0.32.0) (2023-11-08)
+
+### Features
+
+* implement sso & basic RBAC in Cosmo ([#220](https://github.com/wundergraph/cosmo/issues/220)) ([55af35b](https://github.com/wundergraph/cosmo/commit/55af35b14068441d1df219599874a575dedb9dc2)) (@JivusAyrus)
+
 ## [0.31.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.31.0...controlplane@0.31.1) (2023-11-07)
 
 ### Bug Fixes

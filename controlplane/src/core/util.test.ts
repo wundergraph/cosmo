@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { hasLabelsChanged, isValidLabels } from './util.js';
+import { hasLabelsChanged, isValidLabels, isValidOrganizationSlug } from './util.js';
 
 describe('Util', (ctx) => {
   test('Should validate label', () => {
@@ -190,5 +190,21 @@ describe('Util', (ctx) => {
         ],
       ),
     ).toBe(true);
+  });
+  test('Valid organization slug', () => {
+    const slugs = [
+      { slug: 'acme-corp', expected: true },
+      { slug: '1acme-corp2', expected: true },
+      { slug: 'ac', expected: false },
+      { slug: '25CharactersLong123456789', expected: false },
+      { slug: 'acme-', expected: false },
+      { slug: '-acme', expected: false },
+      { slug: 'ac_24', expected: false },
+      { slug: '1a$c', expected: false },
+    ];
+
+    for (const entry of slugs) {
+      expect(isValidOrganizationSlug(entry.slug)).equal(entry.expected);
+    }
   });
 });

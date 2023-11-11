@@ -48,7 +48,7 @@ export const federatedGraphClients = pgTable('federated_graph_clients', {
   name: text('name').notNull().unique(),
 });
 
-export const subscriptionProtocolEnum = pgEnum('subscription_protocol', ['ws', 'sse', 'sse_post']);
+export const subscriptionProtocolEnum = pgEnum('subscription_protocol', ['ws', 'sse', 'sse_post'] as const);
 
 export const subgraphs = pgTable('subgraphs', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -126,7 +126,7 @@ export const federatedGraphToSubgraphsRelations = relations(subgraphsToFederated
   }),
 }));
 
-export const targetTypeEnum = pgEnum('target_type', ['federated', 'subgraph', 'graph']);
+export const targetTypeEnum = pgEnum('target_type', ['federated', 'subgraph', 'graph'] as const);
 
 export const targets = pgTable(
   'targets',
@@ -266,7 +266,7 @@ export const schemaChangeTypeEnum = pgEnum('schema_change_type', [
   'TYPE_DESCRIPTION_ADDED',
   'UNION_MEMBER_REMOVED',
   'UNION_MEMBER_ADDED',
-]);
+] as const);
 
 export const schemaVersionChangeAction = pgTable('schema_version_change_action', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -502,6 +502,7 @@ export const organizationsMembers = pgTable(
   (t) => {
     return {
       nameIndex: uniqueIndex('organization_member_idx').on(t.id),
+      memberIndex: uniqueIndex('unique_organization_member_idx').on(t.userId, t.organizationId),
     };
   },
 );
@@ -511,17 +512,25 @@ export const organizationRelations = relations(organizations, ({ many }) => ({
   graphApiTokens: many(graphApiTokens),
 }));
 
-export const memberRoleEnum = pgEnum('member_role', ['admin', 'member']);
+export const memberRoleEnum = pgEnum('member_role', ['admin', 'developer', 'viewer'] as const);
 
-export const organizationMemberRoles = pgTable('organization_member_roles', {
-  id: uuid('id').notNull().primaryKey().defaultRandom(),
-  organizationMemberId: uuid('organization_member_id')
-    .notNull()
-    .references(() => organizationsMembers.id, {
-      onDelete: 'cascade',
-    }),
-  role: memberRoleEnum('role').notNull(),
-});
+export const organizationMemberRoles = pgTable(
+  'organization_member_roles',
+  {
+    id: uuid('id').notNull().primaryKey().defaultRandom(),
+    organizationMemberId: uuid('organization_member_id')
+      .notNull()
+      .references(() => organizationsMembers.id, {
+        onDelete: 'cascade',
+      }),
+    role: memberRoleEnum('role').notNull(),
+  },
+  (t) => {
+    return {
+      nameIndex: uniqueIndex('organization_member_role_idx').on(t.organizationMemberId, t.role),
+    };
+  },
+);
 
 export const organizationMembersRelations = relations(organizationsMembers, ({ many }) => ({
   memberRoles: many(organizationMemberRoles),
@@ -584,7 +593,7 @@ export const organizationWebhookRelations = relations(organizationWebhooks, ({ m
   webhookGraphSchemaUpdate: many(webhookGraphSchemaUpdate),
 }));
 
-export const gitInstallationTypeEnum = pgEnum('git_installation_type', ['PERSONAL', 'ORGANIZATION']);
+export const gitInstallationTypeEnum = pgEnum('git_installation_type', ['PERSONAL', 'ORGANIZATION'] as const);
 
 export const gitInstallations = pgTable('git_installations', {
   id: uuid('id').notNull().primaryKey().defaultRandom(),
@@ -597,7 +606,7 @@ export const gitInstallations = pgTable('git_installations', {
   oauthToken: text('oauth_token'),
 });
 
-export const integrationTypeEnum = pgEnum('integration_type', ['slack']);
+export const integrationTypeEnum = pgEnum('integration_type', ['slack'] as const);
 
 export const organizationIntegrations = pgTable(
   'organization_integrations',
@@ -687,3 +696,15 @@ export const slackInstallations = pgTable(
     };
   },
 );
+
+export const oidcProviders = pgTable('oidc_providers', {
+  id: uuid('id').notNull().primaryKey().defaultRandom(),
+  organizationId: uuid('organization_id')
+    .notNull()
+    .references(() => organizations.id, {
+      onDelete: 'cascade',
+    }),
+  name: text('name').notNull(),
+  alias: text('alias').notNull().unique(),
+  endpoint: text('endpoint').notNull(),
+});

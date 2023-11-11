@@ -461,6 +461,7 @@ message AnalyticsViewResultFilter {
   string columnName = 1;
   string title = 2;
   repeated AnalyticsViewResultFilterOption options = 3;
+  optional bool custom_options = 4;
 }
 
 message AnalyticsViewResultFilterOption {
@@ -528,8 +529,9 @@ message RequestSeriesItem {
 }
 
 message OperationRequestCount {
-  string operationName = 1;
-  int32 totalRequests = 2;
+  string operationHash = 1;
+  string operationName = 2;
+  int32 totalRequests = 3;
 }
 
 message GetDashboardAnalyticsViewResponse {
@@ -895,8 +897,9 @@ message MetricsDashboardMetric {
 }
 
 message MetricsTopItem {
-  string name = 1;
-  string value = 2;
+  string hash = 1;
+  string name = 2;
+  string value = 3;
 }
 
 message MetricsSeriesItem {
@@ -951,6 +954,43 @@ message IsGitHubAppInstalledResponse {
   bool is_installed = 2;
 }
 
+message GroupMapper {
+  string role = 1;
+  string ssoGroup = 2;
+}
+
+message CreateOIDCProviderRequest {
+  string name = 1;
+  string discoveryEndpoint = 2;
+  string clientID = 3;
+  string clientSecrect = 4;
+  repeated GroupMapper mappers = 5;
+}
+
+message CreateOIDCProviderResponse {
+  Response response = 1;
+  string signInURL = 2;
+  string signOutURL = 3;
+  string loginURL = 4;
+}
+
+message GetOIDCProviderRequest {}
+
+message GetOIDCProviderResponse {
+  Response response = 1;
+  string name = 2;
+  string endpoint = 3;
+  string loginURL = 4;
+  string signInRedirectURL = 5;
+  string signOutRedirectURL = 6;
+}
+
+message DeleteOIDCProviderRequest {}
+
+message DeleteOIDCProviderResponse {
+  Response response = 1;
+}
+
 message GetFieldUsageRequest {
   string graph_name = 1;
   optional string namedType = 2;
@@ -962,7 +1002,7 @@ message GetFieldUsageRequest {
 
 message ClientWithOperations {
   message Operation {
-    string latest_hash = 1;
+    string hash = 1;
     string name = 2;
     int32 count = 3;
   }
@@ -1096,6 +1136,13 @@ service PlatformService {
 
   // IsGitHubAppInstalled checks if the cosmo github app is installed to a repository
   rpc IsGitHubAppInstalled(IsGitHubAppInstalledRequest) returns (IsGitHubAppInstalledResponse) {}
+
+  // CreateOIDCProvider adds an oidc provider to the organization
+  rpc CreateOIDCProvider(CreateOIDCProviderRequest) returns (CreateOIDCProviderResponse) {}
+  // GetOIDCProvider gets the oidc provider connected the organization
+  rpc GetOIDCProvider(GetOIDCProviderRequest) returns (GetOIDCProviderResponse) {}
+  // DeleteOIDCProvider deletes the oidc provider connected the organization
+  rpc DeleteOIDCProvider(DeleteOIDCProviderRequest) returns (DeleteOIDCProviderResponse) {}
 
   // Analytics
 

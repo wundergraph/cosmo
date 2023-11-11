@@ -1,8 +1,8 @@
 {
   "version": "5",
   "dialect": "pg",
-  "id": "78b4bfdb-a2b3-468f-9700-774feeda857f",
-  "prevId": "343cfd0f-eb2a-40c7-abf8-603899d234f1",
+  "id": "ea802783-f867-46d5-b7bd-81e7179359d2",
+  "prevId": "ebef0e52-0204-4395-98eb-238389524286",
   "tables": {
     "api_keys": {
       "name": "api_keys",
@@ -104,57 +104,6 @@
           "nullsNotDistinct": false,
           "columns": [
             "key"
-          ]
-        }
-      }
-    },
-    "federated_graph_clients": {
-      "name": "federated_graph_clients",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "federated_graph_id": {
-          "name": "federated_graph_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "federated_graph_clients_federated_graph_id_federated_graphs_id_fk": {
-          "name": "federated_graph_clients_federated_graph_id_federated_graphs_id_fk",
-          "tableFrom": "federated_graph_clients",
-          "tableTo": "federated_graphs",
-          "columnsFrom": [
-            "federated_graph_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "federated_graph_clients_name_unique": {
-          "name": "federated_graph_clients_name_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "name"
           ]
         }
       }
@@ -423,6 +372,55 @@
         }
       }
     },
+    "oidc_providers": {
+      "name": "oidc_providers",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "organization_id": {
+          "name": "organization_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "endpoint": {
+          "name": "endpoint",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "oidc_providers_organization_id_organizations_id_fk": {
+          "name": "oidc_providers_organization_id_organizations_id_fk",
+          "tableFrom": "oidc_providers",
+          "tableTo": "organizations",
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
     "organization_integrations": {
       "name": "organization_integrations",
       "schema": "",
@@ -518,7 +516,16 @@
           "notNull": true
         }
       },
-      "indexes": {},
+      "indexes": {
+        "organization_member_role_idx": {
+          "name": "organization_member_role_idx",
+          "columns": [
+            "organization_member_id",
+            "role"
+          ],
+          "isUnique": true
+        }
+      },
       "foreignKeys": {
         "organization_member_roles_organization_member_id_organization_members_id_fk": {
           "name": "organization_member_roles_organization_member_id_organization_members_id_fk",
@@ -726,6 +733,14 @@
           "name": "organization_member_idx",
           "columns": [
             "id"
+          ],
+          "isUnique": true
+        },
+        "unique_organization_member_idx": {
+          "name": "unique_organization_member_idx",
+          "columns": [
+            "user_id",
+            "organization_id"
           ],
           "isUnique": true
         }
@@ -1871,7 +1886,8 @@
       "name": "member_role",
       "values": {
         "admin": "admin",
-        "member": "member"
+        "developer": "developer",
+        "viewer": "viewer"
       }
     },
     "schema_change_type": {

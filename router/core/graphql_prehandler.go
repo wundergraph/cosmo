@@ -7,7 +7,6 @@ import (
 	"github.com/go-chi/chi/middleware"
 	"github.com/wundergraph/cosmo/router/internal/cdn"
 	"github.com/wundergraph/cosmo/router/internal/logging"
-	"github.com/wundergraph/cosmo/router/internal/pool"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphql"
 	"go.uber.org/zap"
 )
@@ -76,9 +75,6 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			return
 		}
 		r = validatedReq
-
-		buf := pool.GetBytesBuffer()
-		defer pool.PutBytesBuffer(buf)
 
 		operation, err := h.parser.ParseReader(r.Context(), clientInfo, r.Body, requestLogger)
 		if err != nil {

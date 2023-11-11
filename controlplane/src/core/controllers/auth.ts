@@ -5,16 +5,17 @@ import { eq } from 'drizzle-orm';
 import { lru } from 'tiny-lru';
 import { uid } from 'uid';
 import { PlatformEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
-import { decodeJWT, DEFAULT_SESSION_MAX_AGE_SEC, encrypt } from '../crypto/jwt.js';
+import { cosmoIdpHintCookieName, decodeJWT, DEFAULT_SESSION_MAX_AGE_SEC, encrypt } from '../crypto/jwt.js';
 import { CustomAccessTokenClaims, UserInfoEndpointResponse, UserSession } from '../../types/index.js';
 import * as schema from '../../db/schema.js';
-import { organizationsMembers, sessions, users } from '../../db/schema.js';
+import { organizationMemberRoles, organizations, organizationsMembers, sessions, users } from '../../db/schema.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import AuthUtils from '../auth-utils.js';
 import WebSessionAuthenticator from '../services/WebSessionAuthenticator.js';
 import Keycloak from '../services/Keycloak.js';
 import { IPlatformWebhookService } from '../webhooks/PlatformWebhookService.js';
 import { AuthenticationError } from '../errors/errors.js';
+import { MemberRole } from '../../db/models.js';
 
 export type AuthControllerOptions = {
   db: PostgresJsDatabase<typeof schema>;
@@ -95,11 +96,12 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
     opts.authUtils.logout(res, userSessions[0].idToken);
   });
 
-  fastify.get<{ Querystring: { code: string; code_verifier: string; redirectURL?: string } }>(
+  fastify.get<{ Querystring: { code: string; code_verifier: string; redirectURL?: string; ssoSlug?: string } }>(
     '/callback',
     async (req, res) => {
       try {
         const redirectURL = req.query?.redirectURL;
+        const ssoSlug = req.query?.ssoSlug;
         const { accessToken, refreshToken, idToken } = await opts.authUtils.handleAuthCallbackRequest(req);
 
         // decodeJWT will throw an error if the token is invalid or expired
@@ -107,6 +109,8 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
 
         // Clear the PKCE cookie
         opts.authUtils.clearCookie(res, opts.pkce.cookieName);
+        // Clear the sso cookie
+        opts.authUtils.clearCookie(res, cosmoIdpHintCookieName);
 
         const sessionExpiresIn = DEFAULT_SESSION_MAX_AGE_SEC;
         const sessionExpiresDate = new Date(Date.now() + 1000 * sessionExpiresIn);
@@ -130,6 +134,67 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
               },
             })
             .execute();
+
+          if (accessTokenPayload.groups && accessTokenPayload.groups.length > 0) {
+            const keycloakOrgs = new Set(accessTokenPayload.groups.map((grp) => grp.split('/')[1]));
+            const orgRepo = new OrganizationRepository(tx);
+
+            // delete all the org member roles
+            for (const slug of keycloakOrgs) {
+              const dbOrg = await orgRepo.bySlug(slug);
+
+              if (!dbOrg) {
+                continue;
+              }
+
+              const orgMember = await orgRepo.getOrganizationMember({ organizationID: dbOrg.id, userID: userId });
+              if (!orgMember) {
+                continue;
+              }
+
+              await tx
+                .delete(organizationMemberRoles)
+                .where(eq(organizationMemberRoles.organizationMemberId, orgMember.orgMemberID));
+            }
+
+            // upserting the members into the orgs and inserting their roles.
+            for (const kcGroup of accessTokenPayload.groups) {
+              const slug = kcGroup.split('/')[1];
+              const dbOrg = await orgRepo.bySlug(slug);
+              if (!dbOrg) {
+                continue;
+              }
+
+              const insertedMember = await tx
+                .insert(organizationsMembers)
+                .values({
+                  userId,
+                  organizationId: dbOrg.id,
+                  acceptedInvite: true,
+                })
+                .onConflictDoUpdate({
+                  target: [organizationsMembers.userId, organizationsMembers.organizationId],
+                  // Update the fields only when the org member already exists
+                  set: {
+                    userId,
+                    organizationId: dbOrg.id,
+                    acceptedInvite: true,
+                  },
+                })
+                .returning()
+                .execute();
+
+              const role = kcGroup.split('/')?.[2] || 'developer';
+
+              await tx
+                .insert(organizationMemberRoles)
+                .values({
+                  organizationMemberId: insertedMember[0].id,
+                  role: role as MemberRole,
+                })
+                .execute();
+            }
+          }
 
           // update the organizationMember table to indicate that the user has accepted the invite
           await tx
@@ -224,6 +289,10 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
 
         // Set the session cookie. The cookie value is encrypted.
         opts.authUtils.createSessionCookie(res, jwt, sessionExpiresDate);
+        if (ssoSlug) {
+          // Set the sso cookie.
+          opts.authUtils.createSsoCookie(res, ssoSlug);
+        }
 
         if (orgs.length === 0) {
           res.redirect(opts.webBaseUrl + '?migrate=true');
@@ -248,10 +317,32 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
   );
 
   fastify.get<{
-    Querystring: { redirectURL?: string };
+    Querystring: { redirectURL?: string; provider?: string; sso?: string };
   }>('/login', async (req, res) => {
     const redirectURL = req.query?.redirectURL;
-    const { authorizationUrl, pkceCookie } = await opts.authUtils.handleLoginRequest(redirectURL);
+    const provider = req.query?.provider;
+    const sso = req.query?.sso;
+    const { authorizationUrl, pkceCookie } = await opts.authUtils.handleLoginRequest({
+      redirectURL,
+      provider,
+      sso,
+    });
+
+    res.header('Set-Cookie', pkceCookie);
+
+    res.redirect(authorizationUrl);
+  });
+
+  fastify.get<{
+    Querystring: { redirectURL?: string; provider?: string };
+  }>('/signup', async (req, res) => {
+    const redirectURL = req.query?.redirectURL;
+    const provider = req.query?.provider;
+    const { authorizationUrl, pkceCookie } = await opts.authUtils.handleLoginRequest({
+      redirectURL,
+      provider,
+      action: 'signup',
+    });
 
     res.header('Set-Cookie', pkceCookie);
 

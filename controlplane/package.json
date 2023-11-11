@@ -1,6 +1,6 @@
 {
   "name": "controlplane",
-  "version": "0.31.1",
+  "version": "0.35.0",
   "private": true,
   "description": "WunderGraph Cosmo Controlplane",
   "type": "module",
@@ -19,7 +19,7 @@
     "db:check": "drizzle-kit check:pg --config=drizzle.config.ts",
     "db:drop": "drizzle-kit drop --config=drizzle.config.ts",
     "start": "NODE_ENV=production node dist/index.js",
-    "test": "pnpm lint && tsc -p tsconfig.test.json && vitest run",
+    "test": "pnpm lint && tsc -p tsconfig.test.json && vitest run --reporter=default --reporter=hanging-process",
     "lint": "eslint --cache --ext .ts,.mjs,.cjs . && prettier -c src",
     "lint:fix": "eslint --cache --fix --ext .ts,.mjs,.cjs . && prettier --write -c src",
     "migrate": "pnpm db:migrate && pnpm ch:migrate",

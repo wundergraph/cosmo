@@ -35,7 +35,7 @@ function addRequiredFields(
   }
 }
 
-export function configurationDataMapToDataSourceConfiguration(dataMap: ConfigurationDataMap) {
+export function configurationDataMapToDataSourceConfiguration(dataMap: ConfigurationDataMap): DataSourceConfiguration {
   const output: DataSourceConfiguration = {
     rootNodes: [],
     childNodes: [],
