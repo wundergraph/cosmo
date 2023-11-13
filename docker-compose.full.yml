@@ -139,11 +139,8 @@ services:
       - "10001:9001"
     volumes:
       - minio:/data
-    command:
-      - server
-      - /data
-      - --console-address
-      - :9001
+      - ./docker/minio/entrypoint.sh:/entrypoint.sh
+    entrypoint: /entrypoint.sh
     restart: unless-stopped
     networks:
       - primary
