@@ -2,7 +2,7 @@ import { JWTVerifyResult, jwtVerify } from 'jose';
 import { Context, Hono, Next } from 'hono';
 
 export interface BlobStorage {
-  getObject(key: string): Promise<ReadableStream>
+  getObject(key: string): Promise<ReadableStream>;
 }
 
 interface CdnOptions {
@@ -67,8 +67,8 @@ const persistedOperation = (storage: BlobStorage) => {
     const key = `${organizationId}/${federatedGraphId}/operations/${clientId}/${operation}`;
     const operationStream = await storage.getObject(key);
     return c.stream(async (stream) => {
-        await stream.pipe(operationStream);
-        await stream.close();
+      await stream.pipe(operationStream);
+      await stream.close();
     });
   };
 };
