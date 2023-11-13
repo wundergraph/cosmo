@@ -24,7 +24,7 @@ import Keycloak from './services/Keycloak.js';
 import { PlatformWebhookService } from './webhooks/PlatformWebhookService.js';
 import AccessTokenAuthenticator from './services/AccessTokenAuthenticator.js';
 import { GitHubRepository } from './repositories/GitHubRepository.js';
-import { BlobStorage, NoBlobStorage, S3BlobStorage } from './blobstorage/index.js';
+import { S3BlobStorage } from './blobstorage/index.js';
 
 export interface BuildConfig {
   logger: LoggerOptions;
@@ -202,24 +202,23 @@ export default async function build(opts: BuildConfig) {
     });
   }
 
-  let blobStorage: BlobStorage | undefined;
-  if (opts.s3StorageUrl) {
-    const url = new URL(opts.s3StorageUrl);
-    const region = url.searchParams.get('region') ?? 'us-west-rack-2';
-    const s3Client = new S3Client({
-      region,
-      endpoint: url.origin,
-      credentials: {
-        accessKeyId: url.username ?? '',
-        secretAccessKey: url.password ?? '',
-      },
-      forcePathStyle: true,
-    });
-    const bucketName = url.pathname.slice(1);
-    blobStorage = new S3BlobStorage(s3Client, bucketName);
-  } else {
-    blobStorage = new NoBlobStorage();
+  if (!opts.s3StorageUrl) {
+    throw new Error('S3 storage URL is required');
   }
+
+  const url = new URL(opts.s3StorageUrl);
+  const region = url.searchParams.get('region') ?? 'none';
+  const s3Client = new S3Client({
+    region,
+    endpoint: url.origin,
+    credentials: {
+      accessKeyId: url.username ?? '',
+      secretAccessKey: url.password ?? '',
+    },
+    forcePathStyle: true,
+  });
+  const bucketName = url.pathname.slice(1);
+  const blobStorage = new S3BlobStorage(s3Client, bucketName);
 
   /**
    * Controllers registration
