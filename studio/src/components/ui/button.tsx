@@ -56,12 +56,14 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       asChild = false,
       isLoading,
       children,
-      type = "button",
+      type: typeProp,
       ...props
     },
     ref,
   ) => {
     const Comp = asChild ? Slot : "button";
+
+    const type = typeProp ?? (!asChild ? "button" : undefined);
 
     const isDisabled = props.disabled ?? isLoading;
 
