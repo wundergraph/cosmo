@@ -12,7 +12,7 @@ import { createTestAuthenticator, seedTest } from '../src/core/test-util';
 import Keycloak from '../src/core/services/Keycloak';
 import { MockPlatformWebhookService } from '../src/core/webhooks/PlatformWebhookService';
 import routes from '../src/core/routes';
-import { NoBlobStorage } from '../src/core/blobstorage';
+import { BlobStorage } from '../src/core/blobstorage';
 import { Label } from '../src/types';
 
 export const SetupTest = async function (testContext: TestContext, dbname: string) {
@@ -63,7 +63,7 @@ export const SetupTest = async function (testContext: TestContext, dbname: strin
         clientSecret: '',
       },
       keycloakApiUrl: apiUrl,
-      blobStorage: new NoBlobStorage(),
+      blobStorage: new InMemoryBlobStorage(),
     }),
   });
 
@@ -120,3 +120,11 @@ export const createFederatedGraph = async (
   expect(createFedGraphRes.response?.code).toBe(EnumStatusCode.OK);
   return createFedGraphRes;
 };
+
+export class InMemoryBlobStorage implements BlobStorage {
+  private objects: Map<string, Buffer> = new Map();
+  putObject(key: string, body: Buffer): Promise<void> {
+    this.objects.set(key, body);
+    return Promise.resolve();
+  }
+}

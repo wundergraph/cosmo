@@ -11,9 +11,3 @@ export interface BlobStorage {
    */
   putObject(key: string, body: Buffer): Promise<void>;
 }
-
-export class NoBlobStorage implements BlobStorage {
-  putObject(key: string, body: Buffer): Promise<void> {
-    throw new Error('No blob storage configured');
-  }
-}
