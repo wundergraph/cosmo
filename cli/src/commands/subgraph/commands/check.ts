@@ -16,17 +16,27 @@ export default (opts: BaseCommandOptions) => {
   const command = new Command('check');
   command.description('Checks for breaking changes and composition errors with all connected federated graphs.');
   command.argument('<name>', 'The name of the subgraph on which the check operation is to be performed.');
-  command.requiredOption('--schema <path-to-schema>', 'The path of the new schema file.');
+  command.option('--schema <path-to-schema>', 'The path of the new schema file.');
+  command.option('--delete', 'Run checks in case the subgraph is deleted.');
 
   command.action(async (name, options) => {
-    const schemaFile = resolve(process.cwd(), options.schema);
-    if (!existsSync(schemaFile)) {
-      console.log(
-        pc.red(
-          pc.bold(`The schema file '${pc.bold(schemaFile)}' does not exist. Please check the path and try again.`),
-        ),
-      );
+    let schemaFile;
+
+    if (!options.schema && !options.delete) {
+      console.log(pc.red(pc.bold(`required option '--schema <path-to-schema>' or '--delete' not specified.`)));
       return;
+    }
+
+    if (options.schema) {
+      schemaFile = resolve(process.cwd(), options.schema);
+      if (!existsSync(schemaFile)) {
+        console.log(
+          pc.red(
+            pc.bold(`The schema file '${pc.bold(schemaFile)}' does not exist. Please check the path and try again.`),
+          ),
+        );
+        return;
+      }
     }
 
     let gitInfo: PartialMessage<GitInfo> | undefined;
@@ -59,10 +69,13 @@ export default (opts: BaseCommandOptions) => {
       }
     }
 
+    // submit an empty schema in case of a delete check
+    const schema = schemaFile ? await readFile(schemaFile) : Buffer.from('type Query');
+
     const resp = await opts.client.platform.checkSubgraphSchema(
       {
         subgraphName: name,
-        schema: await readFile(schemaFile),
+        schema,
         gitInfo,
       },
       {
