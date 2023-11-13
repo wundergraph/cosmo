@@ -19,6 +19,11 @@ import graphQLPlugin from "prettier/plugins/graphql";
 import * as prettier from "prettier/standalone";
 import { PlayIcon } from "@radix-ui/react-icons";
 import Link from "next/link";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const TracePage: NextPageWithLayout = () => {
   const { query } = useRouter();
@@ -70,15 +75,20 @@ const TracePage: NextPageWithLayout = () => {
       <div className="scrollbar-custom !mt-6 flex max-h-96 justify-between overflow-auto rounded border">
         <SchemaViewer sdl={content} disableLinking />
         <div className="px-2 py-2">
-          <Button variant="outline" size="icon" asChild>
-            <Link
-              href={`/${organizationSlug}/graph/${slug}/playground?operation=${btoa(
-                content || "",
-              )}`}
-            >
-              <PlayIcon className="h-5" />
-            </Link>
-          </Button>
+          <Tooltip delayDuration={0}>
+            <TooltipTrigger asChild>
+              <Button variant="outline" size="icon" asChild>
+                <Link
+                  href={`/${organizationSlug}/graph/${slug}/playground?operation=${btoa(
+                    content || "",
+                  )}`}
+                >
+                  <PlayIcon className="h-5" />
+                </Link>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Run in playground</TooltipContent>
+          </Tooltip>
         </div>
       </div>
     </div>
