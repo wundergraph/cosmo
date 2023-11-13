@@ -22,6 +22,7 @@ import {
   QUERY_UPPER,
   SUBSCRIPTION_UPPER,
 } from '../utils/string-constants';
+import { SubgraphConfig } from '../subgraph/subgraph';
 
 export type FederationResultContainer = {
   errors?: Error[];
@@ -32,6 +33,7 @@ export type FederationResult = {
   argumentConfigurations: ArgumentConfigurationData[];
   federatedGraphAST: DocumentNode;
   federatedGraphSchema: GraphQLSchema;
+  subgraphConfigBySubgraphName: Map<string, SubgraphConfig>;
 }
 
 export type RootTypeFieldData = {
@@ -68,7 +70,7 @@ export function newPersistedDirectivesContainer(): PersistedDirectivesContainer 
   return {
     deprecated: {},
     directives: new Map<string, ConstDirectiveNode[]>(),
-      tags: new Map<string, ConstDirectiveNode>(),
+    tags: new Map<string, ConstDirectiveNode>(),
   };
 }
 

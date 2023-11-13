@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import { printSchemaWithDirectives } from '@graphql-tools/utils';
-import { ArgumentConfigurationData, normalizeSubgraphFromString } from '@wundergraph/composition';
+import { ArgumentConfigurationData, ConfigurationDataMap } from '@wundergraph/composition';
 import { GraphQLSchema, lexicographicSortSchema } from 'graphql';
 import { GraphQLSubscriptionProtocol } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -17,11 +17,12 @@ import {
   argumentConfigurationDatasToFieldConfigurations,
   configurationDataMapToDataSourceConfiguration,
 } from './graphql-configuration.js';
+import { normalizationFailureError } from './errors.js';
 
 export interface Input {
   argumentConfigurations: ArgumentConfigurationData[];
   federatedSDL: string;
-  subgraphs: Subgraph[];
+  subgraphs: ComposedSubgraph[];
 }
 
 /**
@@ -33,13 +34,17 @@ export interface Input {
  */
 export type SubscriptionProtocol = 'ws' | 'sse' | 'sse_post';
 
-export interface Subgraph {
+export interface ComposedSubgraph {
   id: string;
   name: string;
   sdl: string;
   url: string;
   subscriptionUrl: string;
   subscriptionProtocol: SubscriptionProtocol;
+  // The intermediate representation of the engine configuration for the subgraph
+  configurationDataMap?: ConfigurationDataMap;
+  // The normalized GraphQL schema for the subgraph
+  schema?: GraphQLSchema;
 }
 
 export const internString = (config: EngineConfiguration, str: string): InternedString => {
@@ -76,19 +81,20 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
   });
 
   for (const subgraph of input.subgraphs) {
-    let schema: GraphQLSchema = new GraphQLSchema({});
-    const { errors, normalizationResult } = normalizeSubgraphFromString(subgraph.sdl);
-    if (errors) {
-      throw new Error('Normalization failed', { cause: errors[0] });
+    if (!subgraph.configurationDataMap) {
+      throw normalizationFailureError('ConfigurationDataMap');
     }
-    if (normalizationResult?.schema) {
-      schema = normalizationResult.schema;
+    if (!subgraph.schema) {
+      throw normalizationFailureError('GraphQLSchema');
     }
 
     // IMPORTANT NOTE: printSchema and printSchemaWithDirectives promotes extension types to "full" types
-    const upstreamSchema = internString(engineConfig, printSchemaWithDirectives(lexicographicSortSchema(schema)));
+    const upstreamSchema = internString(
+      engineConfig,
+      printSchemaWithDirectives(lexicographicSortSchema(subgraph.schema)),
+    );
     const { childNodes, rootNodes, keys, provides, requires } = configurationDataMapToDataSourceConfiguration(
-      normalizationResult!.configurationDataMap,
+      subgraph.configurationDataMap,
     );
     const subscriptionProtocol = parseGraphQLSubscriptionProtocol(subgraph.subscriptionProtocol);
     const datasourceConfig = new DataSourceConfiguration({
