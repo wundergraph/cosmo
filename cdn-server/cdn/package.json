@@ -1,0 +1,23 @@
+{
+  "name": "@wundergraph/cdn",
+  "version": "1.0.0",
+  "author": {
+    "name": "WunderGraph Maintainers",
+    "email": "info@wundergraph.com"
+  },
+  "license": "Apache-2.0",
+  "scripts": {
+    "dev": "tsc --watch",
+    "build": "del dist && tsc",
+    "test:watch": "vitest test",
+    "test": "vitest run"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "jose": "^4.15.2"
+  }
+}

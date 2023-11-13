@@ -1,0 +1,25 @@
+{
+  "name": "@wundergraph/cdn-server",
+  "version": "1.0.0",
+  "author": {
+    "name": "WunderGraph Maintainers",
+    "email": "info@wundergraph.com"
+  },
+  "license": "Apache-2.0",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "del dist && tsc",
+    "start": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.445.0",
+    "@hono/node-server": "^1.2.2",
+    "@wundergraph/cdn": "workspace:*",
+    "dotenv": "^16.3.1",
+    "hono": "^3.10.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.9.0",
+    "tsx": "^3.12.2"
+  }
+}
