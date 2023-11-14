@@ -1,12 +1,19 @@
 import { JWTVerifyResult, jwtVerify } from 'jose';
-import { Context, Hono, Next } from 'hono';
+import { Context, Env, Hono, Next, Schema } from 'hono';
 
 export interface BlobStorage {
-  getObject(key: string): Promise<ReadableStream>;
+  getObject(context: Context, key: string): Promise<ReadableStream>;
+}
+
+export class BlobNotFoundError extends Error {
+  constructor(message: string, cause?: Error) {
+    super(message, cause);
+    Object.setPrototypeOf(this, BlobNotFoundError.prototype);
+  }
 }
 
 interface CdnOptions {
-  authJwtSecret: string;
+  authJwtSecret: string | ((c: Context) => string);
   blobStorage: BlobStorage;
 }
 
@@ -17,8 +24,7 @@ declare module 'hono' {
   }
 }
 
-const jwtMiddleware = (secret: string) => {
-  const secretKey = new TextEncoder().encode(secret);
+const jwtMiddleware = (secret: string | ((c: Context) => string)) => {
   return async (c: Context, next: Next) => {
     const authHeader = c.req.header('Authorization');
     if (!authHeader) {
@@ -29,6 +35,7 @@ const jwtMiddleware = (secret: string) => {
       return c.text('Unauthorized', 401);
     }
     let result: JWTVerifyResult;
+    const secretKey = new TextEncoder().encode(typeof secret === 'function' ? secret(c) : secret);
     try {
       result = await jwtVerify(token, secretKey);
     } catch (e: any) {
@@ -65,7 +72,15 @@ const persistedOperation = (storage: BlobStorage) => {
       return c.notFound();
     }
     const key = `${organizationId}/${federatedGraphId}/operations/${clientId}/${operation}`;
-    const operationStream = await storage.getObject(key);
+    let operationStream: ReadableStream;
+    try {
+      operationStream = await storage.getObject(c, key);
+    } catch (e: any) {
+      if (e instanceof BlobNotFoundError) {
+        return c.notFound();
+      }
+      throw e;
+    }
     return c.stream(async (stream) => {
       await stream.pipe(operationStream);
       await stream.close();
@@ -73,7 +88,8 @@ const persistedOperation = (storage: BlobStorage) => {
   };
 };
 
-export const cdn = (hono: Hono, opts: CdnOptions) => {
+// eslint-disable-next-line @typescript-eslint/ban-types
+export const cdn = <E extends Env, S extends Schema = {}, BasePath extends string = "/">(hono: Hono<E, S, BasePath>, opts: CdnOptions) => {
   const operations = '/:organization_id/:federated_graph_id/operations/:client_id/:operation{.+\\.json$}';
   hono.use(operations, jwtMiddleware(opts.authJwtSecret));
 

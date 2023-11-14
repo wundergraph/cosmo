@@ -1,5 +1,6 @@
 import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
-import { BlobStorage } from '@wundergraph/cdn';
+import { BlobNotFoundError, BlobStorage } from '@wundergraph/cdn';
+import { Context } from 'hono';
 
 /**
  * Retrieves objects from S3 given an S3Client and a bucket name
@@ -10,14 +11,14 @@ class S3BlobStorage implements BlobStorage {
     private bucketName: string,
   ) {}
 
-  async getObject(key: string): Promise<ReadableStream> {
+  async getObject(_c: Context, key: string): Promise<ReadableStream> {
     const command = new GetObjectCommand({
       Bucket: this.bucketName,
       Key: key,
     });
     const resp = await this.s3Client.send(command);
     if (resp.$metadata.httpStatusCode !== 200) {
-      throw new Error(`Failed to retrieve object from S3: ${resp}`);
+      throw new BlobNotFoundError(`Failed to retrieve object from S3: ${resp}`);
     }
     return resp.Body!.transformToWebStream();
   }

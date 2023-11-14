@@ -87,6 +87,9 @@ importers:
 
   cdn-server/cdn:
     dependencies:
+      hono:
+        specifier: ^3.10.0
+        version: 3.10.0
       jose:
         specifier: ^4.15.2
         version: 4.15.2
