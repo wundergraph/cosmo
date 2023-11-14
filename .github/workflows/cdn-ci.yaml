@@ -33,4 +33,4 @@ jobs:
         run: pnpm run --filter ./cdn-server --filter ./cdn-server/cdn build
 
       - name: Lint
-        run: pnpm run --filter  --filter ./cdn-server --filter ./cdn-server/cdn test lint
+        run: pnpm run --filter ./cdn-server --filter ./cdn-server/cdn test lint
