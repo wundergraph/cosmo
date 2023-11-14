@@ -5,7 +5,7 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema.js';
 import { AuthenticationError, FreeTrialExpiredError } from '../errors/errors.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
-import { calLink } from './Authentication.js';
+import { contactSalesLink } from './Authentication.js';
 
 export type ApiKeyAuthContext = {
   organizationId: string;
@@ -52,7 +52,7 @@ export default class ApiKeyAuthenticator {
     if (isFreeTrialExpired) {
       throw new FreeTrialExpiredError(
         EnumStatusCode.ERR_FREE_TRIAL_EXPIRED,
-        `Free trial has concluded. Please talk to sales to upgrade your plan.\n${calLink}\n`,
+        `Free trial has concluded. Please talk to sales to upgrade your plan.\n${contactSalesLink}\n`,
       );
     }
 

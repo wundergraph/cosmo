@@ -91,6 +91,7 @@ import {
   InspectorOperationResult,
   SchemaUsageTrafficInspector,
   collectOperationUsageStats,
+  InspectorChanges,
 } from '../services/SchemaUsageTrafficInspector.js';
 import Slack from '../services/Slack.js';
 import {
@@ -623,11 +624,15 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const inspectedOperations: InspectorOperationResult[] = [];
         const compositionErrors: PlainMessage<CompositionError>[] = [];
 
-        // For operations checks we only consider breaking changes
-        const inspectorChanges = trafficInspector.schemaChangesToInspectorChanges(
-          schemaChanges.breakingChanges,
-          storedBreakingChanges,
-        );
+        let inspectorChanges: InspectorChanges | undefined;
+        try {
+          // For operations checks we only consider breaking changes
+          // This method will throw if the schema changes cannot be converted to inspector changes
+          inspectorChanges = trafficInspector.schemaChangesToInspectorChanges(
+            schemaChanges.breakingChanges,
+            storedBreakingChanges,
+          );
+        } catch {}
 
         for (const composition of result.compositions) {
           const graphConfig = await fedGraphRepo.getConfig(composition.id);
@@ -648,8 +653,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             }
           }
 
-          // We don't collect operation usage when we have composition errors
-          if (composition.errors.length === 0 && inspectorChanges.inspectable && inspectorChanges.changes.length > 0) {
+          // We don't collect operation usage when we have composition errors or
+          // when we don't have any inspectable changes. That means any breaking change is really breaking
+          if (composition.errors.length === 0 && inspectorChanges && inspectorChanges.changes.length > 0) {
             if (graphConfig.trafficCheckDays <= 0) {
               continue;
             }
@@ -683,8 +689,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           hasBreakingChanges,
         });
 
-        const operationUsageStats: PlainMessage<CheckOperationUsageStats> =
-          collectOperationUsageStats(inspectedOperations);
+        let operationUsageStats: PlainMessage<CheckOperationUsageStats> | undefined;
+        if (inspectedOperations.length > 0) {
+          operationUsageStats = collectOperationUsageStats(inspectedOperations);
+        }
 
         if (req.gitInfo && opts.githubApp) {
           const githubRepo = new GitHubRepository(opts.db, opts.githubApp);

@@ -433,7 +433,7 @@ func (h *WebSocketConnectionHandler) executeSubscription(ctx context.Context, ms
 	statusCode := http.StatusOK
 	responseSize := 0
 
-	metrics := h.metrics.StartOperation(h.clientInfo, int64(len(msg.Payload)))
+	metrics := h.metrics.StartOperation(h.clientInfo, h.logger, int64(len(msg.Payload)))
 	defer func() {
 		metrics.Finish(hasRequestError, statusCode, responseSize)
 	}()

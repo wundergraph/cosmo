@@ -101,14 +101,16 @@ export default (opts: BaseCommandOptions) => {
 
         console.log(`\nChecking the proposed schema for subgraph ${pc.bold(name)}.`);
 
-        // No operations imply no clients and no subgraphs
+        // No operations usage stats mean the check was not performed against any live traffic
         if (resp.operationUsageStats) {
-          if (resp.operationUsageStats?.totalOperations === 0) {
-            // Composition errors are still considered failures
+          if (resp.operationUsageStats.totalOperations === 0) {
+            // Composition errors are still considered failures, otherwise we can consider this a success
+            // because no operations were affected by the change
             success = resp.compositionErrors.length === 0;
             console.log(`No operations were affected by this schema change.`);
             finalStatement = `This schema change didn't affect any operations from existing client traffic.`;
           } else {
+            // Composition and breaking errors are considered failures because operations were affected by the change
             success = resp.breakingChanges.length === 0 && resp.compositionErrors.length === 0;
 
             console.log(

@@ -13,7 +13,7 @@ import WebSessionAuthenticator from './WebSessionAuthenticator.js';
 // The maximum time to cache the user auth context for the web session authentication.
 const maxAuthCacheTtl = 30 * 1000; // 30 seconds
 
-export const calLink = 'https://cal.com/stefan-avram-wundergraph/wundergraph-introduction';
+export const contactSalesLink = 'https://wundergraph.com/contact/sales';
 
 export interface Authenticator {
   authenticate(headers: Headers): Promise<AuthContext>;
@@ -70,7 +70,7 @@ export class Authentication implements Authenticator {
       if (isFreeTrialExpired) {
         throw new FreeTrialExpiredError(
           EnumStatusCode.ERR_FREE_TRIAL_EXPIRED,
-          `Free trial has concluded. Please talk to sales to upgrade your plan.\n${calLink}\n`,
+          `Free trial has concluded. Please talk to sales to upgrade your plan.\n${contactSalesLink}\n`,
         );
       }
 

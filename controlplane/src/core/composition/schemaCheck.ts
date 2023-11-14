@@ -27,6 +27,24 @@ export interface GetDiffBetweenGraphsFailure {
 
 export type GetDiffBetweenGraphsResult = GetDiffBetweenGraphsSuccess | GetDiffBetweenGraphsFailure;
 
+export async function getSchemaDiff(oldSchemaSDL: GraphQLSchema, newSchemaSDL: GraphQLSchema): Promise<SchemaDiff[]> {
+  const changes = await diff(oldSchemaSDL, newSchemaSDL);
+  return changes.map((change) => {
+    return {
+      message: change.message,
+      changeType: change.type,
+      path: change.path ?? '',
+      isBreaking:
+        change.criticality.level === CriticalityLevel.Breaking ||
+        // We consider enum value changes as breaking changes because it is common to use enums in switch statements
+        // and if a value is removed or added, the switch statement will not be exhaustive anymore and might
+        // lead to unexpected behavior.
+        change.type === ChangeType.EnumValueRemoved ||
+        change.type === ChangeType.EnumValueAdded,
+    };
+  });
+}
+
 export async function getDiffBetweenGraphs(
   oldSchemaSDL: string,
   newSchemaSDL: string,
@@ -53,16 +71,7 @@ export async function getDiffBetweenGraphs(
       newSchema = normalizationResult.schema;
     }
 
-    const changes: Change<ChangeType>[] = await diff(oldSchema, newSchema);
-
-    const schemaChanges: SchemaDiff[] = changes.map((change) => {
-      return {
-        message: change.message,
-        changeType: change.type,
-        path: change.path ?? '',
-        isBreaking: change.criticality.level === CriticalityLevel.Breaking,
-      };
-    });
+    const schemaChanges = await getSchemaDiff(oldSchema, newSchema);
 
     const breakingChanges = schemaChanges.filter((change) => change.isBreaking);
 
