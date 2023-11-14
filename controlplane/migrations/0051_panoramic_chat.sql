@@ -1,1 +1,0 @@
-ALTER TABLE "federated_graph_clients" ADD CONSTRAINT "federated_graph_clients_name_unique" UNIQUE("name");

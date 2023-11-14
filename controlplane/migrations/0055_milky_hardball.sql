@@ -1,2 +1,0 @@
-ALTER TABLE "federated_graph_clients" ADD COLUMN "created_at" timestamp with time zone DEFAULT now() NOT NULL;--> statement-breakpoint
-ALTER TABLE "federated_graph_clients" ADD COLUMN "updated_at" timestamp with time zone;
