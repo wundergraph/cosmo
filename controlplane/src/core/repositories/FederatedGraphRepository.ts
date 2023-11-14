@@ -776,7 +776,13 @@ export class FederatedGraphRepository {
     const updatedAt = new Date();
     await this.db
       .insert(schema.federatedGraphClients)
-      .values({ federatedGraphId: graph.federatedGraph.id, name: clientName, updatedAt, createdBy: userId, updatedBy: userId })
+      .values({
+        federatedGraphId: graph.federatedGraph.id,
+        name: clientName,
+        updatedAt,
+        createdBy: userId,
+        updatedBy: userId,
+      })
       .onConflictDoUpdate({ target: schema.federatedGraphClients.name, set: { updatedAt, updatedBy: userId } });
   }
 }
