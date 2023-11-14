@@ -131,25 +131,30 @@ func New(opts CDNOptions) (*CDN, error) {
 	// that we need to talk to the CDN
 	jwtParser := new(jwt.Parser)
 	claims := make(jwt.MapClaims)
-	_, _, err = jwtParser.ParseUnverified(opts.AuthenticationToken, claims)
-	if err != nil {
-		return nil, fmt.Errorf("invalid CDN authentication token %q: %w", opts.AuthenticationToken, err)
-	}
-	federatedGraphIDValue := claims[FederatedGraphIDClaim]
-	if federatedGraphIDValue == nil {
-		return nil, fmt.Errorf("invalid CDN authentication token claims, missing %q", FederatedGraphIDClaim)
-	}
-	federatedGraphID, ok := federatedGraphIDValue.(string)
-	if !ok {
-		return nil, fmt.Errorf("invalid CDN authentication token claims, %q is not a string, it's %T", FederatedGraphIDClaim, federatedGraphIDValue)
-	}
-	organizationIDValue := claims[OrganizationIDClaim]
-	if organizationIDValue == nil {
-		return nil, fmt.Errorf("invalid CDN authentication token claims, missing %q", OrganizationIDClaim)
-	}
-	organizationID, ok := organizationIDValue.(string)
-	if !ok {
-		return nil, fmt.Errorf("invalid CDN authentication token claims, %q is not a string, it's %T", OrganizationIDClaim, organizationIDValue)
+	var federatedGraphID string
+	var organizationID string
+	if opts.AuthenticationToken != "" {
+		_, _, err = jwtParser.ParseUnverified(opts.AuthenticationToken, claims)
+		if err != nil {
+			return nil, fmt.Errorf("invalid CDN authentication token %q: %w", opts.AuthenticationToken, err)
+		}
+		federatedGraphIDValue := claims[FederatedGraphIDClaim]
+		if federatedGraphIDValue == nil {
+			return nil, fmt.Errorf("invalid CDN authentication token claims, missing %q", FederatedGraphIDClaim)
+		}
+		var ok bool
+		federatedGraphID, ok = federatedGraphIDValue.(string)
+		if !ok {
+			return nil, fmt.Errorf("invalid CDN authentication token claims, %q is not a string, it's %T", FederatedGraphIDClaim, federatedGraphIDValue)
+		}
+		organizationIDValue := claims[OrganizationIDClaim]
+		if organizationIDValue == nil {
+			return nil, fmt.Errorf("invalid CDN authentication token claims, missing %q", OrganizationIDClaim)
+		}
+		organizationID, ok = organizationIDValue.(string)
+		if !ok {
+			return nil, fmt.Errorf("invalid CDN authentication token claims, %q is not a string, it's %T", OrganizationIDClaim, organizationIDValue)
+		}
 	}
 	httpClient := opts.HTTPClient
 	if httpClient == nil {
