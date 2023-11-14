@@ -66,7 +66,7 @@ import {
   UpdateOrgMemberRoleResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { OpenAIGraphql, isValidUrl } from '@wundergraph/cosmo-shared';
-import { GraphQLSchema, parse, printSchema } from 'graphql';
+import { parse } from 'graphql';
 import { uid } from 'uid';
 import { GraphApiKeyDTO, GraphApiKeyJwtPayload } from '../../types/index.js';
 import { Composer } from '../composition/composer.js';
