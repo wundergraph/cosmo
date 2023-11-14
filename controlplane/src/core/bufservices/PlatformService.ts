@@ -66,6 +66,7 @@ import {
   LeaveOrganizationResponse,
   DeleteOrganizationResponse,
   UpdateOrgMemberRoleResponse,
+  GetClientsResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { OpenAIGraphql, isValidUrl } from '@wundergraph/cosmo-shared';
 import { DocumentNode, buildASTSchema, parse } from 'graphql';
@@ -3953,6 +3954,27 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           response: {
             code: EnumStatusCode.OK,
           },
+        };
+      });
+    },
+
+    getClients: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetClientsResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const fedRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+
+        const clients = await fedRepo.getClients(req.fedGraphName);
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          clients,
         };
       });
     },

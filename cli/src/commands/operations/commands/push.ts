@@ -62,7 +62,7 @@ export default (opts: BaseCommandOptions) => {
   const command = new Command('push');
   command.description('Pushes new operations to the registry');
   command.argument('<graph_name>', 'The name of the federated graph on which the check operations are stored.');
-  command.requiredOption('-c, --client-id <client-id>', 'The client identifier to register the operations to');
+  command.requiredOption('-c, --client <client-name>', 'The client identifier to register the operations to');
   command.requiredOption(
     '-f, --file <file>',
     'The file with the operations to push - supports .graphql, .gql and .json manifests from Apollo and Relay',
@@ -86,7 +86,7 @@ export default (opts: BaseCommandOptions) => {
     const result = await opts.client.platform.publishPersistedOperations(
       {
         graphName: name,
-        clientName: options.clientId,
+        clientName: options.client,
         operations,
       },
       { headers: baseHeaders },

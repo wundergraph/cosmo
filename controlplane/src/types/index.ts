@@ -265,3 +265,12 @@ export interface SlackAccessTokenResponse {
   slackChannelName: string;
   webhookURL: string;
 }
+
+export interface ClientDTO {
+  id: string;
+  name: string;
+  createdAt: string;
+  createdBy: string;
+  lastUpdatedAt: string;
+  lastUpdatedBy: string;
+}

@@ -991,6 +991,24 @@ message DeleteOIDCProviderResponse {
   Response response = 1;
 }
 
+message ClientInfo{
+  string name = 1;
+  string id = 2;
+  string createdAt = 3;
+  string lastUpdatedAt = 4;
+  string createdBy = 5;
+  string lastUpdatedBy = 6;
+}
+
+message GetClientsRequest {
+  string fedGraphName = 1;
+}
+
+message GetClientsResponse {
+  Response response = 1;
+  repeated ClientInfo clients = 2;
+}
+
 message GetFieldUsageRequest {
   string graph_name = 1;
   optional string namedType = 2;
@@ -1143,6 +1161,9 @@ service PlatformService {
   rpc GetOIDCProvider(GetOIDCProviderRequest) returns (GetOIDCProviderResponse) {}
   // DeleteOIDCProvider deletes the oidc provider connected the organization
   rpc DeleteOIDCProvider(DeleteOIDCProviderRequest) returns (DeleteOIDCProviderResponse) {}
+  // GetClients returns all the clients of the organization
+  rpc GetClients(GetClientsRequest) returns (GetClientsResponse) {}
+
 
   // Analytics
 
