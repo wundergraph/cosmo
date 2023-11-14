@@ -576,8 +576,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        // `{ deleteSubgraph }` allows us to create a diff on a 'deleted', empty schema.
-        const newSchemaSDL = req.checkDeletion ? '{ deleteSubgraph }' : new TextDecoder().decode(req.schema);
+        const newSchemaSDL = req.checkDeletion ? '' : new TextDecoder().decode(req.schema);
 
         const schemaCheckID = await schemaCheckRepo.create({
           targetId: subgraph.targetId,
