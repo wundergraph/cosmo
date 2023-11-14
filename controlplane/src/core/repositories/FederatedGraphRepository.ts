@@ -773,9 +773,10 @@ export class FederatedGraphRepository {
     if (graph === undefined) {
       throw new Error(`could not find graph ${federatedGraphName}`);
     }
+    const updatedAt = new Date();
     await this.db
       .insert(schema.federatedGraphClients)
-      .values({ federatedGraphId: graph.federatedGraph.id, name: clientName })
-      .onConflictDoNothing({ target: schema.federatedGraphClients.name });
+      .values({ federatedGraphId: graph.federatedGraph.id, name: clientName, updatedAt })
+      .onConflictDoUpdate({ target: schema.federatedGraphClients.name, set: { updatedAt } });
   }
 }

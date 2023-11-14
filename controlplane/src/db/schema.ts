@@ -46,6 +46,8 @@ export const federatedGraphClients = pgTable('federated_graph_clients', {
       onDelete: 'cascade',
     }),
   name: text('name').notNull().unique(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }),
 });
 
 export const subscriptionProtocolEnum = pgEnum('subscription_protocol', ['ws', 'sse', 'sse_post'] as const);
