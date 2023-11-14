@@ -44,6 +44,7 @@ export interface SubgraphDTO {
   subscriptionUrl: string;
   subscriptionProtocol: 'ws' | 'sse' | 'sse_post';
   schemaSDL: string;
+  schemaVersionId: string;
   lastUpdatedAt: string;
   labels: Label[];
 }
@@ -264,4 +265,13 @@ export interface SlackAccessTokenResponse {
   slackChannelId: string;
   slackChannelName: string;
   webhookURL: string;
+}
+
+export interface GraphCompositionDTO {
+  federatedGraphSchemaVersionId: string;
+  subgraphs: {
+    schemaVersionId: string;
+    targetId: string;
+    schema: string;
+  }[];
 }

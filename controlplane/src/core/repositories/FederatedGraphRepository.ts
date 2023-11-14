@@ -24,8 +24,9 @@ import {
 import { normalizeLabelMatchers, normalizeLabels } from '../util.js';
 import { Composer } from '../composition/composer.js';
 import { SchemaDiff } from '../composition/schemaCheck.js';
+import { Target } from '../../db/models.js';
 import { SubgraphRepository } from './SubgraphRepository.js';
-import { Target } from 'src/db/models.js';
+import { GraphCompositionRepository } from './GraphCompositionRepository.js';
 
 export interface FederatedGraphConfig {
   trafficCheckDays: number;
@@ -135,6 +136,7 @@ export class FederatedGraphRepository {
     return this.db.transaction(async (tx) => {
       const fedGraphRepo = new FederatedGraphRepository(tx, this.organizationId);
       const subgraphRepo = new SubgraphRepository(tx, this.organizationId);
+      const compositionRepo = new GraphCompositionRepository(tx);
 
       const federatedGraph = await fedGraphRepo.byName(data.name);
       if (!federatedGraph) {
@@ -195,7 +197,7 @@ export class FederatedGraphRepository {
             .execute();
         }
 
-        const composer = new Composer(fedGraphRepo, subgraphRepo);
+        const composer = new Composer(fedGraphRepo, subgraphRepo, compositionRepo);
         const composedGraph = await composer.composeFederatedGraph(federatedGraph);
 
         await composer.deployComposition(composedGraph);
@@ -459,11 +461,12 @@ export class FederatedGraphRepository {
     };
   }
 
-  public async getLatestValidSdlOfFederatedGraph(name: string) {
+  public async getLatestValidFederatedGraphSchemaVersion(name: string) {
     const latestValidVersion = await this.db
       .select({
         name: targets.name,
         schemaSDL: schemaVersion.schemaSDL,
+        schemaVersionId: schemaVersion.id,
       })
       .from(targets)
       .innerJoin(federatedGraphs, eq(federatedGraphs.targetId, targets.id))
@@ -484,7 +487,10 @@ export class FederatedGraphRepository {
       return undefined;
     }
 
-    return latestValidVersion[0].schemaSDL;
+    return {
+      schema: latestValidVersion[0].schemaSDL,
+      schemaVersionId: latestValidVersion[0].schemaVersionId,
+    };
   }
 
   public createFederatedGraphChangelog(data: { schemaVersionID: string; changes: SchemaDiff[] }) {

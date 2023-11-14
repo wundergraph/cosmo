@@ -17,6 +17,7 @@ import {
 import { Composer } from '../composition/composer.js';
 import { hasLabelsChanged, normalizeLabels } from '../util.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
+import { GraphCompositionRepository } from './GraphCompositionRepository.js';
 
 type SubscriptionProtocol = 'ws' | 'sse' | 'sse_post';
 
@@ -111,6 +112,7 @@ export class SubgraphRepository {
         routingUrl,
         // Populated when first schema is pushed
         schemaSDL: '',
+        schemaVersionId: '',
         lastUpdatedAt: '',
       } as SubgraphDTO;
     });
@@ -125,7 +127,8 @@ export class SubgraphRepository {
     await this.db.transaction(async (tx) => {
       const fedGraphRepo = new FederatedGraphRepository(tx, this.organizationId);
       const subgraphRepo = new SubgraphRepository(tx, this.organizationId);
-      const composer = new Composer(fedGraphRepo, subgraphRepo);
+      const compositionRepo = new GraphCompositionRepository(tx);
+      const composer = new Composer(fedGraphRepo, subgraphRepo, compositionRepo);
       let subgraphChanged = false;
 
       const subgraph = await subgraphRepo.byName(data.name);
@@ -292,6 +295,7 @@ export class SubgraphRepository {
       return {
         id: subgraph.id,
         schemaSDL: subgraphSchema,
+        schemaVersionId: insertedVersion[0].insertedId,
         targetId: subgraph.targetId,
         routingUrl: subgraph.routingUrl,
         subscriptionUrl: subgraph.subscriptionUrl,
@@ -412,11 +416,13 @@ export class SubgraphRepository {
 
     let lastUpdatedAt = '';
     let schemaSDL = '';
+    let schemaVersionId = '';
 
     // Subgraphs are created without a schema version.
     if (resp.subgraph.schemaVersion !== null) {
       lastUpdatedAt = resp.subgraph.schemaVersion.createdAt?.toISOString() ?? '';
       schemaSDL = resp.subgraph.schemaVersion.schemaSDL ?? '';
+      schemaVersionId = resp.subgraph.schemaVersion.id ?? '';
     }
 
     return {
@@ -427,6 +433,7 @@ export class SubgraphRepository {
       subscriptionProtocol: resp.subgraph.subscriptionProtocol ?? 'ws',
       name: resp.name,
       schemaSDL,
+      schemaVersionId,
       lastUpdatedAt,
       labels: resp.labels?.map?.((l) => splitLabel(l)) ?? [],
     };

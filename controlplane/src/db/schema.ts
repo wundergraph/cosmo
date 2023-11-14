@@ -698,3 +698,18 @@ export const oidcProviders = pgTable('oidc_providers', {
   alias: text('alias').notNull().unique(),
   endpoint: text('endpoint').notNull(),
 });
+
+// stores the relation between the fedGraph schema versions and its repstective subgraph schema versions
+export const graphCompositions = pgTable('graph_compositions', {
+  id: uuid('id').notNull().primaryKey().defaultRandom(),
+  federatedGraphSchemaVersionId: uuid('federated_graph_schema_version_id')
+    .notNull()
+    .references(() => schemaVersion.id, {
+      onDelete: 'cascade',
+    }),
+  subgraphSchemaVersionId: uuid('subgraph_schema_version_id')
+    .notNull()
+    .references(() => schemaVersion.id, {
+      onDelete: 'cascade',
+    }),
+});
