@@ -204,11 +204,13 @@ export class Composer {
 
     for await (const graph of await this.federatedGraphRepo.bySubgraphLabels(subgraphLabels)) {
       try {
-        const subgraphs = await this.subgraphRepo.listByFederatedGraph(graph.name);
+        const subgraphs = (await this.subgraphRepo.listByFederatedGraph(graph.name)).filter(
+          ({ name }) => name !== subgraphName,
+        );
         const subgraphsToBeComposed = [];
 
         for (const subgraph of subgraphs) {
-          if (subgraph.name !== subgraphName && subgraph.schemaSDL !== '') {
+          if (subgraph.schemaSDL !== '') {
             subgraphsToBeComposed.push({
               name: subgraph.name,
               url: subgraph.routingUrl,
