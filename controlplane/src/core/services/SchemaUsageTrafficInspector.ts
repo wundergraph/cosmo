@@ -184,6 +184,10 @@ export function collectOperationUsageStats(inspectorResult: InspectorOperationRe
   };
 }
 
+/**
+ * Convert a schema change to an inspector change. Throws an error if the change is not supported.
+ * Only breaking changes should be passed to this function because we only care about breaking changes.
+ */
 export function toInspectorChange(change: SchemaDiff, schemaCheckId: string): InspectorSchemaChange | null {
   /* eslint-disable no-fallthrough */
 
