@@ -125,6 +125,8 @@ message CheckSubgraphSchemaResponse {
   repeated SchemaChange breakingChanges = 2;
   repeated SchemaChange nonBreakingChanges = 3;
   repeated CompositionError compositionErrors = 4;
+  // Contains the operation usage stats for the operations that are impacted by the schema changes.
+  // Can be undefined when the schema changes are not inspectable by real traffic breaking change detection.
   CheckOperationUsageStats operationUsageStats = 5;
 }
 

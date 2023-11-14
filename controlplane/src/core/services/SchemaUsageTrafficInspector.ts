@@ -19,10 +19,6 @@ export interface InspectorFilter {
   daysToConsider: number;
 }
 
-export interface InspectorChanges {
-  changes: InspectorSchemaChange[];
-}
-
 export interface InspectorOperationResult {
   schemaChangeId: string;
   hash: string;
@@ -121,7 +117,7 @@ export class SchemaUsageTrafficInspector {
   public schemaChangesToInspectorChanges(
     schemaChanges: SchemaDiff[],
     schemaCheckActions: SchemaCheckChangeAction[],
-  ): InspectorChanges {
+  ): InspectorSchemaChange[] {
     const operations = schemaChanges
       .map((change) => {
         // find the schema check action that matches the change
@@ -132,11 +128,11 @@ export class SchemaUsageTrafficInspector {
         if (!schemaCheckAction) {
           throw new Error(`Could not find schema check action for change ${change.message}`);
         }
-        return toInspectorChange(change, schemaCheckAction.schemaCheckId);
+        return toInspectorChange(change, schemaCheckAction.id);
       })
       .filter((change) => change !== null) as InspectorSchemaChange[];
 
-    return { changes: operations };
+    return operations;
   }
 }
 

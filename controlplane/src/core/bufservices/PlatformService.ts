@@ -6,7 +6,6 @@ import { OrganizationEventName, PlatformEventName } from '@wundergraph/cosmo-con
 import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
 import {
   CheckFederatedGraphResponse,
-  CheckOperationUsageStats,
   CheckSubgraphSchemaResponse,
   CompositionError,
   CreateAPIKeyResponse,
@@ -91,7 +90,7 @@ import {
   InspectorOperationResult,
   SchemaUsageTrafficInspector,
   collectOperationUsageStats,
-  InspectorChanges,
+  InspectorSchemaChange,
 } from '../services/SchemaUsageTrafficInspector.js';
 import Slack from '../services/Slack.js';
 import {
@@ -598,6 +597,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
+        let isInspectable = true;
         const hasBreakingChanges = schemaChanges.breakingChanges.length > 0;
 
         await schemaCheckRepo.createSchemaCheckChanges({
@@ -624,7 +624,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const inspectedOperations: InspectorOperationResult[] = [];
         const compositionErrors: PlainMessage<CompositionError>[] = [];
 
-        let inspectorChanges: InspectorChanges | undefined;
+        let inspectorChanges: InspectorSchemaChange[] = [];
         try {
           // For operations checks we only consider breaking changes
           // This method will throw if the schema changes cannot be converted to inspector changes
@@ -632,7 +632,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             schemaChanges.breakingChanges,
             storedBreakingChanges,
           );
-        } catch {}
+        } catch {
+          isInspectable = false;
+        }
 
         for (const composition of result.compositions) {
           const graphConfig = await fedGraphRepo.getConfig(composition.id);
@@ -655,12 +657,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
           // We don't collect operation usage when we have composition errors or
           // when we don't have any inspectable changes. That means any breaking change is really breaking
-          if (composition.errors.length === 0 && inspectorChanges && inspectorChanges.changes.length > 0) {
+          if (composition.errors.length === 0 && isInspectable && inspectorChanges.length > 0) {
             if (graphConfig.trafficCheckDays <= 0) {
               continue;
             }
 
-            const result = await trafficInspector.inspect(inspectorChanges.changes, {
+            const result = await trafficInspector.inspect(inspectorChanges, {
               daysToConsider: graphConfig.trafficCheckDays,
               federatedGraphId: composition.id,
               organizationId: authContext.organizationId,
@@ -689,11 +691,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           hasBreakingChanges,
         });
 
-        let operationUsageStats: PlainMessage<CheckOperationUsageStats> | undefined;
-        if (inspectedOperations.length > 0) {
-          operationUsageStats = collectOperationUsageStats(inspectedOperations);
-        }
-
         if (req.gitInfo && opts.githubApp) {
           const githubRepo = new GitHubRepository(opts.db, opts.githubApp);
           await githubRepo.createCommitCheck({
@@ -715,7 +712,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           },
           breakingChanges: schemaChanges.breakingChanges,
           nonBreakingChanges: schemaChanges.nonBreakingChanges,
-          operationUsageStats,
+          operationUsageStats: isInspectable ? collectOperationUsageStats(inspectedOperations) : undefined,
           compositionErrors,
         };
       });
