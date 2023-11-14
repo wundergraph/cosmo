@@ -3730,6 +3730,16 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
       return handleError<PlainMessage<PublishPersistedOperationsResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const userId = authContext.userId;
+        if (!userId) {
+          return {
+            response: {
+              code: EnumStatusCode.ERROR_NOT_AUTHENTICATED,
+              details: `User not found in the authentication context`,
+            },
+            operationIDs: [],
+          };
+        }
         const organizationId = authContext.organizationId;
         const federatedGraphRepo = new FederatedGraphRepository(opts.db, organizationId);
 
@@ -3773,7 +3783,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           }
         }
         try {
-          await federatedGraphRepo.registerClient(req.graphName, req.clientName);
+          await federatedGraphRepo.registerClient(userId, req.graphName, req.clientName);
         } catch (e: any) {
           const message = e instanceof Error ? e.message : e.toString();
           return {

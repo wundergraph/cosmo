@@ -8,6 +8,7 @@ import { OrganizationRepository } from '../repositories/OrganizationRepository.j
 import { calLink } from './Authentication.js';
 
 export type ApiKeyAuthContext = {
+  userId: string;
   organizationId: string;
   organizationSlug: string;
   hasWriteAccess: boolean;
@@ -67,6 +68,7 @@ export default class ApiKeyAuthenticator {
       .where(eq(schema.apiKeys.id, apiKeyModel.id));
 
     return {
+      userId: apiKeyModel.user.id,
       organizationId: apiKeyModel.organizationId,
       organizationSlug: organization.slug,
       // sending true as the api key has admin permissions
