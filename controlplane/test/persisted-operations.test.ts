@@ -1,0 +1,115 @@
+import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { joinLabel } from '@wundergraph/cosmo-shared';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import {
+  afterAllSetup,
+  beforeAllSetup,
+  genID,
+  genUniqueLabel,
+} from '../src/core/test-util';
+import { SetupTest } from './test-util';
+
+let dbname = '';
+
+type Client = Awaited<ReturnType<typeof SetupTest>>['client'];
+
+const setupFederatedGraph = async (fedGraphName: string, client: Client) => {
+  const subgraph1Name = genID('subgraph1');
+  const label = genUniqueLabel();
+
+  const createSubraph1Res = await client.createFederatedSubgraph({
+    name: subgraph1Name,
+    labels: [label],
+    routingUrl: 'http://localhost:8081',
+  });
+
+  expect(createSubraph1Res.response?.code).toBe(EnumStatusCode.OK);
+
+  const publishResp = await client.publishFederatedSubgraph({
+    name: subgraph1Name,
+    labels: [label],
+    routingUrl: 'http://localhost:8081',
+    schema: Uint8Array.from(Buffer.from('type Query { hello: String! }')),
+  });
+
+  expect(publishResp.response?.code).toBe(EnumStatusCode.OK);
+
+  const createFedGraphRes = await client.createFederatedGraph({
+    name: fedGraphName,
+    routingUrl: 'http://localhost:8080',
+    labelMatchers: [joinLabel(label)],
+  });
+
+  expect(createFedGraphRes.response?.code).toBe(EnumStatusCode.OK);
+}
+
+describe('Persisted operations', (ctx) => {
+    beforeAll(async () => {
+      dbname = await beforeAllSetup();
+    });
+  
+    afterAll(async () => {
+      await afterAllSetup(dbname);
+    });
+  
+    test('Should be able to publish persisted operations', async (testContext) => {
+      const { client, server } = await SetupTest(testContext, dbname);
+      const fedGraphName = genID('fedGraph');
+      await setupFederatedGraph(fedGraphName, client);
+
+      const publishOperationsResp = await client.publishPersistedOperations({
+        graphName: fedGraphName,
+        clientName: 'test-client',
+        operations: [`query { hello }`],
+      });
+
+      expect(publishOperationsResp.response?.code).toBe(EnumStatusCode.OK);
+
+      await server.close();
+    });
+
+    test('Should not publish persisted operations without a client ID', async (testContext) => {
+      const { client, server } = await SetupTest(testContext, dbname);
+      const fedGraphName = genID('fedGraph');
+      await setupFederatedGraph(fedGraphName, client);
+
+      const publishOperationsResp = await client.publishPersistedOperations({
+        graphName: fedGraphName,
+        operations: [`query { hello }`],
+      });
+
+      expect(publishOperationsResp.response?.code).not.toBe(EnumStatusCode.OK);
+
+      await server.close();
+    });
+
+    test('Should not publish persisted operations with invalid queries', async (testContext) => {
+      const { client, server } = await SetupTest(testContext, dbname);
+      const fedGraphName = genID('fedGraph');
+      await setupFederatedGraph(fedGraphName, client);
+
+      const publishOperationsResp = await client.publishPersistedOperations({
+        graphName: fedGraphName,
+        operations: [`query { does_not_exist }`],
+      });
+
+      expect(publishOperationsResp.response?.code).not.toBe(EnumStatusCode.OK);
+
+      await server.close();
+    });
+
+    test('Should not publish persisted operations with an invalid federated graph name', async (testContext) => {
+      const { client, server } = await SetupTest(testContext, dbname);
+      const fedGraphName = genID('fedGraph');
+      await setupFederatedGraph(fedGraphName, client);
+
+      const publishOperationsResp = await client.publishPersistedOperations({
+        graphName: `not_${fedGraphName}`,
+        operations: [`query { hello }`],
+      });
+
+      expect(publishOperationsResp.response?.code).not.toBe(EnumStatusCode.OK);
+
+      await server.close();
+    });
+});
