@@ -20,17 +20,6 @@ export const TitleLayout = ({
   const router = useRouter();
   const user = useContext(UserContext);
 
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!ref.current) return;
-    const className = cn("h-auto flex-1 px-4 py-4", {
-      "pointer-events-none blur-lg":
-        user?.currentOrganization.isFreeTrialExpired,
-    });
-
-    ref.current.className = className;
-  }, [router.asPath, user?.currentOrganization.isFreeTrialExpired]);
 
   return (
     <div className="flex h-full flex-col">
@@ -49,7 +38,7 @@ export const TitleLayout = ({
         <Separator className="mt-4" />
         {toolbar}
       </div>
-      <div ref={ref}>{children}</div>
+      <div className="h-auto flex-1 px-4 py-4">{children}</div>
     </div>
   );
 };

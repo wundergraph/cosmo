@@ -145,26 +145,13 @@ const GraphLayout = ({ children }: LayoutProps) => {
             target="_blank"
             rel="noreferrer"
           >
-            {!user.currentOrganization.isFreeTrialExpired ? (
-              <span>
-                Limited trial version (
-                {formatDistance(
-                  addDays(new Date(user.currentOrganization.createdAt), 10),
-                  new Date(),
-                )}{" "}
-                left).{" "}
-                <span className="underline underline-offset-2">
-                  Talk to sales
-                </span>{" "}
-                for Production use.
-              </span>
-            ) : (
-              <span>
-                Limited trial has concluded.{" "}
-                <span className="underline underline-offset-2">Click here</span>{" "}
-                to contact us and upgrade your plan for continued usage.
-              </span>
-            )}
+            <span>
+              Limited trial version.{" "}
+              <span className="underline underline-offset-2">
+                Talk to sales
+              </span>{" "}
+              for Production use.
+            </span>
           </Link>
         )}
         <Nav links={links}>{render}</Nav>
