@@ -36,5 +36,5 @@ export const envVariables = z.object({
   GITHUB_APP_WEBHOOK_SECRET: z.string().optional(),
   SLACK_APP_CLIENT_ID: z.string().optional(),
   SLACK_APP_CLIENT_SECRET: z.string().optional(),
-  S3_STORAGE_URL: z.string().optional(),
+  S3_STORAGE_URL: z.string(),
 });
