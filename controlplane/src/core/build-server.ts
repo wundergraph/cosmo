@@ -207,9 +207,9 @@ export default async function build(opts: BuildConfig) {
   }
 
   const url = new URL(opts.s3StorageUrl);
-  const region = url.searchParams.get('region') ?? 'none';
   const s3Client = new S3Client({
-    region,
+    // For AWS S3, the region can be set via the endpoint
+    region: 'auto',
     endpoint: url.origin,
     credentials: {
       accessKeyId: url.username ?? '',
