@@ -180,15 +180,17 @@ describe('Schema Change converter', (ctx) => {
 
 async function getBreakingChanges(a: GraphQLSchema, b: GraphQLSchema): Promise<InspectorSchemaChange[]> {
   const changes = await getSchemaDiff(a, b);
-  return changes.map((c, i) =>
-    toInspectorChange(
-      {
-        path: c.path!,
-        message: c.message,
-        changeType: c.changeType,
-        isBreaking: c.isBreaking,
-      },
-      i.toString(),
-    ),
-  );
+  return changes
+    .map((c, i) =>
+      toInspectorChange(
+        {
+          path: c.path!,
+          message: c.message,
+          changeType: c.changeType,
+          isBreaking: c.isBreaking,
+        },
+        i.toString(),
+      ),
+    )
+    .filter((c) => c !== null) as InspectorSchemaChange[];
 }

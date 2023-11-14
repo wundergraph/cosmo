@@ -122,17 +122,19 @@ export class SchemaUsageTrafficInspector {
     schemaChanges: SchemaDiff[],
     schemaCheckActions: SchemaCheckChangeAction[],
   ): InspectorChanges {
-    const operations = schemaChanges.map((change) => {
-      // find the schema check action that matches the change
-      const schemaCheckAction = schemaCheckActions.find(
-        (action) => action.path === change.path && action.changeType === change.changeType,
-      );
-      // there must be a schema check action for every change otherwise it is a bug
-      if (!schemaCheckAction) {
-        throw new Error(`Could not find schema check action for change ${change.message}`);
-      }
-      return toInspectorChange(change, schemaCheckAction.schemaCheckId);
-    }) as InspectorSchemaChange[];
+    const operations = schemaChanges
+      .map((change) => {
+        // find the schema check action that matches the change
+        const schemaCheckAction = schemaCheckActions.find(
+          (action) => action.path === change.path && action.changeType === change.changeType,
+        );
+        // there must be a schema check action for every change otherwise it is a bug
+        if (!schemaCheckAction) {
+          throw new Error(`Could not find schema check action for change ${change.message}`);
+        }
+        return toInspectorChange(change, schemaCheckAction.schemaCheckId);
+      })
+      .filter((change) => change !== null) as InspectorSchemaChange[];
 
     return { changes: operations };
   }
@@ -182,7 +184,7 @@ export function collectOperationUsageStats(inspectorResult: InspectorOperationRe
   };
 }
 
-export function toInspectorChange(change: SchemaDiff, schemaCheckId: string): InspectorSchemaChange {
+export function toInspectorChange(change: SchemaDiff, schemaCheckId: string): InspectorSchemaChange | null {
   /* eslint-disable no-fallthrough */
 
   const path = change.path.split('.');
@@ -229,6 +231,7 @@ export function toInspectorChange(change: SchemaDiff, schemaCheckId: string): In
     case ChangeType.TypeAdded:
     case ChangeType.FieldAdded:
     case ChangeType.UnionMemberAdded:
+      return null;
     // 1. When a type is removed we know the exact type name e.g. 'Engineer'. We have no field name.
     // 2. When an interface type is removed or added we know the interface 'RoleType'. We have no field name.
     case ChangeType.TypeRemoved:
