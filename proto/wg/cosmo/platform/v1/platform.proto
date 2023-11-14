@@ -251,6 +251,7 @@ message SchemaCheck {
   bool isBreaking = 6;
   bool hasClientTraffic = 7;
   bool isForcedSuccess = 8;
+  bool isDeleted = 9;
 }
 
 message GetChecksByFederatedGraphNameResponse {

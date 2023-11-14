@@ -2048,6 +2048,11 @@ export class SchemaCheck extends Message<SchemaCheck> {
    */
   isForcedSuccess = false;
 
+  /**
+   * @generated from field: bool isDeleted = 9;
+   */
+  isDeleted = false;
+
   constructor(data?: PartialMessage<SchemaCheck>) {
     super();
     proto3.util.initPartial(data, this);
@@ -2064,6 +2069,7 @@ export class SchemaCheck extends Message<SchemaCheck> {
     { no: 6, name: "isBreaking", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 7, name: "hasClientTraffic", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 8, name: "isForcedSuccess", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 9, name: "isDeleted", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SchemaCheck {

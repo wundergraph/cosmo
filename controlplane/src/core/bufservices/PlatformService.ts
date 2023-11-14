@@ -581,6 +581,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const schemaCheckID = await schemaCheckRepo.create({
           targetId: subgraph.targetId,
+          isDeleted: !!req.checkDeletion,
           proposedSubgraphSchemaSDL: newSchemaSDL,
         });
 
