@@ -10,13 +10,13 @@
     "dev": "tsx watch src/index.ts",
     "build": "del dist && tsc",
     "start": "tsx src/index.ts",
-    "lint": "eslint --cache --ext .ts,.mjs,.cjs . && prettier -c src",
-    "lint:fix": "eslint --cache --fix --ext .ts,.mjs,.cjs . && prettier --write -c src"
+    "lint": "eslint --cache --ignore-pattern *.d.ts --ext .ts,.mjs,.cjs . && prettier -c src",
+    "lint:fix": "eslint --cache --ignore-pattern *.d.ts --fix --ext .ts,.mjs,.cjs . && prettier --write -c src"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.445.0",
     "@hono/node-server": "^1.2.2",
-    "@wundergraph/cdn": "workspace:*",
+    "@wundergraph/cosmo-cdn": "workspace:*",
     "dotenv": "^16.3.1",
     "hono": "^3.10.0"
   },

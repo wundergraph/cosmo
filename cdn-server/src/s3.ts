@@ -1,5 +1,5 @@
 import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
-import { BlobNotFoundError, BlobStorage } from '@wundergraph/cdn';
+import { BlobNotFoundError, BlobStorage } from '@wundergraph/cosmo-cdn';
 import { Context } from 'hono';
 
 /**

@@ -89,7 +89,10 @@ const persistedOperation = (storage: BlobStorage) => {
 };
 
 // eslint-disable-next-line @typescript-eslint/ban-types
-export const cdn = <E extends Env, S extends Schema = {}, BasePath extends string = "/">(hono: Hono<E, S, BasePath>, opts: CdnOptions) => {
+export const cdn = <E extends Env, S extends Schema = {}, BasePath extends string = '/'>(
+  hono: Hono<E, S, BasePath>,
+  opts: CdnOptions,
+) => {
   const operations = '/:organization_id/:federated_graph_id/operations/:client_id/:operation{.+\\.json$}';
   hono.use(operations, jwtMiddleware(opts.authJwtSecret));
 
