@@ -23,19 +23,13 @@ export default (opts: BaseCommandOptions) => {
     let schemaFile;
 
     if (!options.schema && !options.delete) {
-      console.log(pc.red(pc.bold(`required option '--schema <path-to-schema>' or '--delete' not specified.`)));
-      return;
+      program.error("required option '--schema <path-to-schema>' or '--delete' not specified.");
     }
 
     if (options.schema) {
       schemaFile = resolve(process.cwd(), options.schema);
       if (!existsSync(schemaFile)) {
-        console.log(
-          pc.red(
-            pc.bold(`The schema file '${pc.bold(schemaFile)}' does not exist. Please check the path and try again.`),
-          ),
-        );
-        return;
+        program.error(`The schema file '${pc.bold(schemaFile)}' does not exist. Please check the path and try again.`);
       }
     }
 
