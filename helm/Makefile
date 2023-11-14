@@ -14,6 +14,9 @@ prod: build-prod
 delete:
 	kapp delete -a cosmo
 
+docs:
+	helm-docs ./cosmo -o CHART.md
+
 build-dev:
 	mkdir -p generated
 	helm template cosmo -f ./cosmo/values.full.yaml ./cosmo > generated/cosmo.full.yaml

@@ -11,4 +11,5 @@ enum ProductNames {
 type Employee @key(fields: "id") {
   id: Int!
   products: [ProductNames!]!
+  notes: String! @override(from: "employees")
 }

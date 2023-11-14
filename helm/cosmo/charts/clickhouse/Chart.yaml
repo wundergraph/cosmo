@@ -1,7 +1,7 @@
 ---
 apiVersion: v2
 name: clickhouse
-description: WunderGraph Cosmo clickhouse
+description: WunderGraph Cosmo clickhouse. The analytics database. Only intended for development and testing purposes. Do not use in production.
 
 # A chart can be either an 'application' or a 'library' chart.
 #

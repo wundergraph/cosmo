@@ -52,14 +52,21 @@ export function buildRouterConfiguration(subgraphs: Subgraph[]): string {
   const config = buildRouterConfig({
     argumentConfigurations: result.federationResult.argumentConfigurations,
     federatedSDL: printSchema(result.federationResult.federatedGraphSchema),
-    subgraphs: subgraphs.map((s, index) => ({
-      id: `${index}`,
-      name: s.name,
-      url: normalizeURL(s.url),
-      sdl: s.schema,
-      subscriptionUrl: normalizeURL(s.subscription_url ?? s.url),
-      subscriptionProtocol: s.subscription_protocol ?? 'ws',
-    })),
+    subgraphs: subgraphs.map((s, index) => {
+      const subgraphConfig = result.federationResult!.subgraphConfigBySubgraphName.get(s.name);
+      const schema = subgraphConfig?.schema;
+      const configurationDataMap = subgraphConfig?.configurationDataMap;
+      return {
+        id: `${index}`,
+        name: s.name,
+        url: normalizeURL(s.url),
+        sdl: s.schema,
+        subscriptionUrl: normalizeURL(s.subscription_url ?? s.url),
+        subscriptionProtocol: s.subscription_protocol ?? 'ws',
+        schema,
+        configurationDataMap,
+      }
+    }),
   });
   return config.toJsonString();
 }
