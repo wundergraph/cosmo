@@ -5,6 +5,7 @@ import { RouterConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { joinLabel, normalizeURL } from '@wundergraph/cosmo-shared';
 import * as schema from '../../db/schema.js';
 import {
+  federatedGraphClients,
   federatedGraphConfigs,
   federatedGraphs,
   graphApiTokens,
@@ -15,17 +16,20 @@ import {
   targets,
 } from '../../db/schema.js';
 import {
+  ClientDTO,
   FederatedGraphChangelogDTO,
   FederatedGraphDTO,
   GraphApiKeyDTO,
   Label,
   ListFilterOptions,
+  UserDTO,
 } from '../../types/index.js';
 import { normalizeLabelMatchers, normalizeLabels } from '../util.js';
 import { Composer } from '../composition/composer.js';
 import { SchemaDiff } from '../composition/schemaCheck.js';
+import { Target } from '../../db/models.js';
 import { SubgraphRepository } from './SubgraphRepository.js';
-import { Target } from 'src/db/models.js';
+import { UserRepository } from './UserRepository.js';
 
 export interface FederatedGraphConfig {
   trafficCheckDays: number;
@@ -784,5 +788,59 @@ export class FederatedGraphRepository {
         updatedBy: userId,
       })
       .onConflictDoUpdate({ target: schema.federatedGraphClients.name, set: { updatedAt, updatedBy: userId } });
+  }
+
+  public async getClients(federatedGraphName: string): Promise<ClientDTO[]> {
+    const userRepo = new UserRepository(this.db);
+
+    const graph = await this.db.query.targets.findFirst({
+      columns: {},
+      with: {
+        federatedGraph: {
+          columns: { id: true },
+        },
+      },
+      where: and(
+        eq(schema.targets.name, federatedGraphName),
+        eq(schema.targets.organizationId, this.organizationId),
+        eq(schema.targets.type, 'federated'),
+      ),
+    });
+    if (graph === undefined) {
+      throw new Error(`could not find graph ${federatedGraphName}`);
+    }
+
+    const fedGraphClients = await this.db
+      .select({
+        name: federatedGraphClients.name,
+        id: federatedGraphClients.id,
+        createdAt: federatedGraphClients.createdAt,
+        createdBy: federatedGraphClients.createdBy,
+        lastUpdatedAt: federatedGraphClients.updatedAt,
+        lastUpdatedBy: federatedGraphClients.updatedBy,
+      })
+      .from(federatedGraphClients)
+      .where(eq(federatedGraphClients.federatedGraphId, graph.federatedGraph.id));
+
+    const clients: ClientDTO[] = [];
+
+    for (const c of fedGraphClients) {
+      const createdUser = await userRepo.byId(c.createdBy);
+      let updatedUser: UserDTO | null = null;
+      if (c.lastUpdatedBy) {
+        updatedUser = await userRepo.byId(c.lastUpdatedBy);
+      }
+
+      clients.push({
+        id: c.id,
+        name: c.name,
+        createdAt: c.createdAt.toISOString(),
+        lastUpdatedAt: c.lastUpdatedAt?.toISOString() || '',
+        createdBy: createdUser?.email || '',
+        lastUpdatedBy: updatedUser ? updatedUser.email : '',
+      });
+    }
+
+    return clients;
   }
 }

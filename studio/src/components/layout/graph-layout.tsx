@@ -25,6 +25,7 @@ import { addDays, formatDistance } from "date-fns";
 import { UserContext } from "../app-provider";
 import { calURL } from "@/lib/constants";
 import Link from "next/link";
+import { MdDevices } from "react-icons/md";
 
 const icons: { [key: string]: ReactNode } = {
   Overview: <HomeIcon />,
@@ -34,6 +35,7 @@ const icons: { [key: string]: ReactNode } = {
   Changelog: <PiGitBranch />,
   Checks: <CheckCircledIcon />,
   Analytics: <ChartBarIcon className="h-4 w-4" />,
+  Clients: <MdDevices className="h-4 w-4" />,
 };
 
 export interface GraphContextProps {
@@ -89,6 +91,11 @@ const GraphLayout = ({ children }: LayoutProps) => {
         href: basePath + "/schema",
         matchExact: false,
         icon: <FileTextIcon />,
+      },
+      {
+        title: "Clients",
+        href: basePath + "/clients",
+        icon: <MdDevices className="h-4 w-4" />,
       },
       {
         title: "Analytics",
