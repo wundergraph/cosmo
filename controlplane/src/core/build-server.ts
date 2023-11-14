@@ -68,7 +68,7 @@ export interface BuildConfig {
     privateKey?: string;
   };
   slack: { clientID?: string; clientSecret?: string };
-  s3StorageUrl?: string;
+  s3StorageUrl: string;
 }
 
 const developmentLoggerOpts: LoggerOptions = {
