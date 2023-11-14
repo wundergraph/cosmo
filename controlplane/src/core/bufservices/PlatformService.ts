@@ -66,7 +66,7 @@ import {
   UpdateOrgMemberRoleResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { OpenAIGraphql, isValidUrl } from '@wundergraph/cosmo-shared';
-import { parse } from 'graphql';
+import { GraphQLSchema, parse, printSchema } from 'graphql';
 import { uid } from 'uid';
 import { GraphApiKeyDTO, GraphApiKeyJwtPayload } from '../../types/index.js';
 import { Composer } from '../composition/composer.js';
@@ -576,7 +576,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const newSchemaSDL = new TextDecoder().decode(req.schema);
+        // `{ deleteSubgraph }` allows us to create a diff on a 'deleted', empty schema.
+        const newSchemaSDL = req.checkDeletion ? '{ deleteSubgraph }' : new TextDecoder().decode(req.schema);
 
         const schemaCheckID = await schemaCheckRepo.create({
           targetId: subgraph.targetId,
@@ -610,7 +611,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         });
 
         const composer = new Composer(fedGraphRepo, subgraphRepo);
-        const result = await composer.composeWithProposedSDL(subgraph.labels, subgraph.name, newSchemaSDL);
+
+        const result = req.checkDeletion
+          ? await composer.composeWithDeletedSubGraph(subgraph.labels, subgraph.name)
+          : await composer.composeWithProposedSDL(subgraph.labels, subgraph.name, newSchemaSDL);
 
         await schemaCheckRepo.createSchemaCheckCompositions({
           schemaCheckID,

@@ -70,13 +70,14 @@ export default (opts: BaseCommandOptions) => {
     }
 
     // submit an empty schema in case of a delete check
-    const schema = schemaFile ? await readFile(schemaFile) : Buffer.from('type Query');
+    const schema = schemaFile ? await readFile(schemaFile) : Buffer.from('');
 
     const resp = await opts.client.platform.checkSubgraphSchema(
       {
         subgraphName: name,
         schema,
         gitInfo,
+        checkDeletion: options.delete,
       },
       {
         headers: baseHeaders,

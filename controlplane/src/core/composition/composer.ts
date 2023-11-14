@@ -195,4 +195,51 @@ export class Composer {
       compositions: composedGraphs,
     };
   }
+
+  /**
+   * Same as compose, but without the subgraph that is being deleted
+   */
+  async composeWithDeletedSubGraph(subgraphLabels: Label[], subgraphName: string): Promise<CompositionResult> {
+    const composedGraphs: ComposedFederatedGraph[] = [];
+
+    for await (const graph of await this.federatedGraphRepo.bySubgraphLabels(subgraphLabels)) {
+      try {
+        const subgraphs = await this.subgraphRepo.listByFederatedGraph(graph.name);
+        const subgraphsToBeComposed = [];
+
+        for (const subgraph of subgraphs) {
+          if (subgraph.name !== subgraphName && subgraph.schemaSDL !== '') {
+            subgraphsToBeComposed.push({
+              name: subgraph.name,
+              url: subgraph.routingUrl,
+              definitions: parse(subgraph.schemaSDL),
+            });
+          }
+        }
+
+        const { errors, federationResult: result } = composeSubgraphs(subgraphsToBeComposed);
+        composedGraphs.push({
+          id: graph.id,
+          name: graph.name,
+          targetID: graph.targetId,
+          argumentConfigurations: result?.argumentConfigurations || [],
+          composedSchema: result?.federatedGraphSchema ? printSchema(result.federatedGraphSchema) : undefined,
+          errors: errors || [],
+          subgraphs: subgraphDTOsToComposedSubgraphs(subgraphs, result),
+        });
+      } catch (e: any) {
+        composedGraphs.push({
+          id: graph.id,
+          name: graph.name,
+          targetID: graph.targetId,
+          argumentConfigurations: [],
+          errors: [e],
+          subgraphs: [],
+        });
+      }
+    }
+    return {
+      compositions: composedGraphs,
+    };
+  }
 }

@@ -54,6 +54,7 @@ import { useRouter } from "next/router";
 import React, { useContext } from "react";
 import { PiGraphLight } from "react-icons/pi";
 import { InfoTooltip } from "@/components/info-tooltip";
+import { Badge } from "@/components/ui/badge";
 
 const ProposedSchema = ({
   sdl,
@@ -154,6 +155,8 @@ const CheckOverviewPage: NextPageWithLayout = () => {
     ? "No operations were affected by breaking changes"
     : "All tasks were successful";
 
+  const isSubgraphDeletion = sdl.match(`{ deleteSubgraph }`);
+
   return (
     <div className="flex flex-col gap-y-6">
       <div className="flex flex-col gap-y-2">
@@ -167,6 +170,15 @@ const CheckOverviewPage: NextPageWithLayout = () => {
         <div className="flex gap-x-4">
           <span className="w-24 flex-shrink-0 md:w-36">Reason</span> :
           <p>{reason}</p>
+        </div>
+
+        <div className="flex items-center gap-x-4">
+          <span className="w-24 flex-shrink-0 md:w-36">Action</span> :
+          {isSubgraphDeletion ? (
+            <Badge variant="outline">Delete subgraph</Badge>
+          ) : (
+            <Badge variant="outline">Update schema</Badge>
+          )}
         </div>
 
         <div className="flex gap-x-4">
@@ -210,10 +222,13 @@ const CheckOverviewPage: NextPageWithLayout = () => {
           </div>
         )}
 
-        <div className="flex items-center gap-x-4">
-          <span className="w-24 flex-shrink-0 md:w-36">Proposed Schema</span> :
-          <ProposedSchema sdl={sdl} subgraphName={data.check.subgraphName} />
-        </div>
+        {!isSubgraphDeletion && (
+          <div className="flex items-center gap-x-4">
+            <span className="w-24 flex-shrink-0 md:w-36">Proposed Schema</span>{" "}
+            :
+            <ProposedSchema sdl={sdl} subgraphName={data.check.subgraphName} />
+          </div>
+        )}
 
         <div className="flex gap-x-4">
           <span className="w-24 flex-shrink-0 md:w-36">Created At</span> :
