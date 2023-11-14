@@ -83,7 +83,6 @@ func (m *OperationMetrics) exportSchemaUsageInfo(operationContext *operationCont
 		// In that case it is a top level input field usage e.g employee(id: 1)
 		if len(usageInfo.InputTypeFields[i].EnclosingTypeNames) == 0 {
 			inputUsageInfos[i] = &graphqlmetricsv1.InputUsageInfo{
-				Path:      []string{},
 				Count:     uint64(usageInfo.InputTypeFields[i].Count),
 				NamedType: usageInfo.InputTypeFields[i].FieldTypeName,
 			}
