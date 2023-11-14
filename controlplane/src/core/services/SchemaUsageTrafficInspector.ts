@@ -189,8 +189,6 @@ export function collectOperationUsageStats(inspectorResult: InspectorOperationRe
  * Only breaking changes should be passed to this function because we only care about breaking changes.
  */
 export function toInspectorChange(change: SchemaDiff, schemaCheckId: string): InspectorSchemaChange | null {
-  /* eslint-disable no-fallthrough */
-
   const path = change.path.split('.');
 
   switch (change.changeType) {
@@ -234,8 +232,9 @@ export function toInspectorChange(change: SchemaDiff, schemaCheckId: string): In
     case ChangeType.TypeDescriptionAdded:
     case ChangeType.TypeAdded:
     case ChangeType.FieldAdded:
-    case ChangeType.UnionMemberAdded:
+    case ChangeType.UnionMemberAdded: {
       return null;
+    }
     // 1. When a type is removed we know the exact type name e.g. 'Engineer'. We have no field name.
     // 2. When an interface type is removed or added we know the interface 'RoleType'. We have no field name.
     case ChangeType.TypeRemoved:
