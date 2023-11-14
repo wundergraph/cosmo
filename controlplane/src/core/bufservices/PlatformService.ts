@@ -613,7 +613,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const composer = new Composer(fedGraphRepo, subgraphRepo);
 
         const result = req.checkDeletion
-          ? await composer.composeWithDeletedSubGraph(subgraph.labels, subgraph.name)
+          ? await composer.composeWithDeletedSubgraph(subgraph.labels, subgraph.name)
           : await composer.composeWithProposedSDL(subgraph.labels, subgraph.name, newSchemaSDL);
 
         await schemaCheckRepo.createSchemaCheckCompositions({
