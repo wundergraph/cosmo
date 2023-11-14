@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
-import { InspectorSchemaChange, toInspectorChange } from './SchemaUsageTrafficInspector.js';
 import { buildSchema, GraphQLSchema } from 'graphql';
 import { getSchemaDiff } from '../composition/schemaCheck.js';
+import { InspectorSchemaChange, toInspectorChange } from './SchemaUsageTrafficInspector.js';
 
 describe('Schema Change converter', (ctx) => {
   describe('Arguments', (ctx) => {

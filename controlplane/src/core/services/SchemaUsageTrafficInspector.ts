@@ -1,7 +1,7 @@
+import { ChangeType } from '@graphql-inspector/core';
 import { ClickHouseClient } from '../clickhouse/index.js';
 import { SchemaDiff } from '../composition/schemaCheck.js';
 import { SchemaCheckChangeAction } from '../../db/models.js';
-import { ChangeType } from '@graphql-inspector/core';
 
 export interface InspectorSchemaChange {
   schemaChangeId: string;
@@ -183,6 +183,8 @@ export function collectOperationUsageStats(inspectorResult: InspectorOperationRe
 }
 
 export function toInspectorChange(change: SchemaDiff, schemaCheckId: string): InspectorSchemaChange {
+  /* eslint-disable no-fallthrough */
+
   const path = change.path.split('.');
 
   switch (change.changeType) {
@@ -195,8 +197,9 @@ export function toInspectorChange(change: SchemaDiff, schemaCheckId: string): In
     case ChangeType.DirectiveArgumentRemoved:
     case ChangeType.DirectiveArgumentDefaultValueChanged:
     case ChangeType.DirectiveArgumentTypeChanged:
-    case ChangeType.DirectiveLocationRemoved:
+    case ChangeType.DirectiveLocationRemoved: {
       throw new Error(`Directive or schema root type changes are not inspectable`);
+    }
     // Safe to ignore
     case ChangeType.DirectiveAdded:
     case ChangeType.FieldArgumentDescriptionChanged:
@@ -260,24 +263,26 @@ export function toInspectorChange(change: SchemaDiff, schemaCheckId: string): In
     // 1. When the type of input field has changed, we know the exact type name and field name e.g. 'MyInput.name'
     case ChangeType.InputFieldTypeChanged:
     case ChangeType.InputFieldRemoved:
-    case ChangeType.InputFieldAdded:
+    case ChangeType.InputFieldAdded: {
       return {
         schemaChangeId: schemaCheckId,
         fieldName: path[1],
         typeName: path[0],
         isInput: true,
       };
+    }
     // 1. When an argument has changed, we know the exact path to the argument e.g. 'Query.engineer.id'
     // and the type name e.g. 'Query'
     case ChangeType.FieldArgumentRemoved:
     case ChangeType.FieldArgumentAdded: // Only when a required argument is added
-    case ChangeType.FieldArgumentTypeChanged:
+    case ChangeType.FieldArgumentTypeChanged: {
       return {
         schemaChangeId: schemaCheckId,
         path: path.slice(1), // The path to the updated argument e.g. 'engineer.name' of the type names
         typeName: path[0], // Enclosing type e.g. 'Query' or 'Engineer' when the argument is on a field of type Engineer
         isArgument: true,
       };
+    }
   }
   // no return to enforce that all cases are handled
 }
