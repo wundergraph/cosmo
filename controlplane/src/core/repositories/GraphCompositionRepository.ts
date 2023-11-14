@@ -8,15 +8,17 @@ export class GraphCompositionRepository {
   constructor(private db: PostgresJsDatabase<typeof schema>) {}
 
   public async addComposition(input: { fedGraphSchemaVersionId: string; subgraphSchemaVersionIds: string[] }) {
-    await this.db
-      .insert(graphCompositions)
-      .values(
-        input.subgraphSchemaVersionIds.map((subgraphSchemaVersionId) => ({
-          federatedGraphSchemaVersionId: input.fedGraphSchemaVersionId,
-          subgraphSchemaVersionId,
-        })),
-      )
-      .execute();
+    if (input.subgraphSchemaVersionIds.length > 0) {
+      await this.db
+        .insert(graphCompositions)
+        .values(
+          input.subgraphSchemaVersionIds.map((subgraphSchemaVersionId) => ({
+            federatedGraphSchemaVersionId: input.fedGraphSchemaVersionId,
+            subgraphSchemaVersionId,
+          })),
+        )
+        .execute();
+    }
   }
 
   public async getComposition(input: { fedGraphSchemaVersionId: string }): Promise<GraphCompositionDTO | undefined> {

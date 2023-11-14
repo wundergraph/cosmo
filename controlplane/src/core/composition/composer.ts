@@ -90,7 +90,7 @@ export class Composer {
       routerConfig: routerConfigJson,
     });
 
-    if (updatedFederatedGraph?.composedSchemaVersionId) {
+    if (updatedFederatedGraph?.composedSchemaVersionId && composedGraph.subgraphs.length > 0) {
       await this.compositionRepo.addComposition({
         fedGraphSchemaVersionId: updatedFederatedGraph.composedSchemaVersionId!,
         subgraphSchemaVersionIds: composedGraph.subgraphs.map((s) => s.schemaVersionId!),
