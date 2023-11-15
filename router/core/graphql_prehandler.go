@@ -60,7 +60,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		var writtenBytes int
 
 		clientInfo := NewClientInfoFromRequest(r)
-		metrics := h.metrics.StartOperation(clientInfo, r.ContentLength)
+		metrics := h.metrics.StartOperation(clientInfo, requestLogger, r.ContentLength)
 
 		defer func() {
 			metrics.Finish(hasRequestError, statusCode, writtenBytes)
@@ -110,7 +110,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			return
 		}
 
-		requestContext := buildRequestContext(w, r, opContext, operation, requestLogger)
+		requestContext := buildRequestContext(w, r, opContext, requestLogger)
 		metrics.AddOperationContext(opContext)
 
 		ctxWithRequest := withRequestContext(r.Context(), requestContext)

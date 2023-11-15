@@ -27,6 +27,7 @@ const CheckDetailsPage: NextPageWithLayout = () => {
       graphName: graphContext?.graph?.name,
     }),
     enabled: !!graphContext?.graph?.name,
+    refetchOnWindowFocus: false,
   });
 
   if (isLoading) return <Loader fullscreen />;

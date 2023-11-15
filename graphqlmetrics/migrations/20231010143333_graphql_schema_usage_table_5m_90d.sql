@@ -29,6 +29,12 @@ CREATE TABLE IF NOT EXISTS gql_metrics_schema_usage_5m_90d
     -- SubgraphIDs identify the subgraphs that were used to resolve the field
     SubgraphIDs Array(LowCardinality(String)) CODEC(ZSTD(3)),
 
+    -- Indicates if the usage was from an argument or a field
+    IsArgument bool CODEC(ZSTD(3)),
+
+    -- Indicates if the usage was from an input field
+    IsInput bool CODEC(ZSTD(3)),
+
     --- Total usages
     TotalUsages UInt64 CODEC(ZSTD(3)),
     TotalErrors UInt64 CODEC(ZSTD(3)),
@@ -44,7 +50,7 @@ CREATE TABLE IF NOT EXISTS gql_metrics_schema_usage_5m_90d
 )
 ENGINE = SummingMergeTree
 PARTITION BY toDate(Timestamp)
-ORDER BY (OrganizationID, FederatedGraphID, ClientName, ClientVersion, RouterConfigVersion, OperationHash, Path, FieldName, NamedType, TypeNames, SubgraphIDs, toUnixTimestamp(Timestamp))
+ORDER BY (OrganizationID, FederatedGraphID, ClientName, ClientVersion, RouterConfigVersion, OperationHash, Path, FieldName, NamedType, TypeNames, SubgraphIDs, IsArgument, IsInput, toUnixTimestamp(Timestamp))
 -- We store 90 days of data in this table.
 TTL toDateTime(Timestamp) + toIntervalDay(90) SETTINGS index_granularity = 8192, ttl_only_drop_parts = 1
 

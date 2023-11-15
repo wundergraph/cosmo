@@ -349,6 +349,10 @@ type operationContext struct {
 	preparedPlan *planWithMetaData
 }
 
+func (o *operationContext) Variables() []byte {
+	return o.variables
+}
+
 func (o *operationContext) Name() string {
 	return o.name
 }
@@ -363,10 +367,6 @@ func (o *operationContext) Hash() uint64 {
 
 func (o *operationContext) Content() string {
 	return o.content
-}
-
-func (o *operationContext) Variables() []byte {
-	return o.variables
 }
 
 func (o *operationContext) ClientInfo() ClientInfo {
@@ -409,10 +409,7 @@ func subgraphsFromContext(ctx context.Context) []Subgraph {
 	return subgraphs
 }
 
-func buildRequestContext(w http.ResponseWriter, r *http.Request, opContext *operationContext, operation *ParsedOperation, requestLogger *zap.Logger) *requestContext {
-	variablesCopy := make([]byte, len(operation.Variables))
-	copy(variablesCopy, operation.Variables)
-
+func buildRequestContext(w http.ResponseWriter, r *http.Request, opContext *operationContext, requestLogger *zap.Logger) *requestContext {
 	subgraphs := subgraphsFromContext(r.Context())
 	requestContext := &requestContext{
 		logger:         requestLogger,
@@ -422,6 +419,5 @@ func buildRequestContext(w http.ResponseWriter, r *http.Request, opContext *oper
 		operation:      opContext,
 		subgraphs:      subgraphs,
 	}
-
 	return requestContext
 }

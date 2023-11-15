@@ -2,9 +2,11 @@ package core
 
 import (
 	"context"
+	"go.uber.org/zap"
 	"strconv"
 	"time"
 
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 
 	graphqlmetricsv1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
@@ -35,6 +37,7 @@ type OperationMetrics struct {
 	gqlMetricsExporter   *graphqlmetrics.Exporter
 	routerConfigVersion  string
 	opContext            *operationContext
+	logger               *zap.Logger
 }
 
 func (m *OperationMetrics) exportSchemaUsageInfo(operationContext *operationContext, statusCode int, hasError bool) {
@@ -42,15 +45,55 @@ func (m *OperationMetrics) exportSchemaUsageInfo(operationContext *operationCont
 		return
 	}
 
-	fieldUsageInfos := make([]*graphqlmetricsv1.TypeFieldUsageInfo, len(operationContext.preparedPlan.schemaUsageInfo.TypeFields))
+	usageInfo, err := plan.GetSchemaUsageInfo(
+		operationContext.preparedPlan.preparedPlan,
+		operationContext.preparedPlan.operationDocument,
+		operationContext.preparedPlan.schemaDocument,
+		operationContext.Variables(),
+	)
+	if err != nil {
+		m.logger.Error("failed to get schema usage info", zap.Error(err))
+		return
+	}
 
-	for i := range operationContext.preparedPlan.schemaUsageInfo.TypeFields {
+	fieldUsageInfos := make([]*graphqlmetricsv1.TypeFieldUsageInfo, len(usageInfo.TypeFields))
+	argumentUsageInfos := make([]*graphqlmetricsv1.ArgumentUsageInfo, len(usageInfo.Arguments))
+	inputUsageInfos := make([]*graphqlmetricsv1.InputUsageInfo, len(usageInfo.InputTypeFields))
+
+	for i := range usageInfo.TypeFields {
 		fieldUsageInfos[i] = &graphqlmetricsv1.TypeFieldUsageInfo{
 			Count:       1,
-			Path:        operationContext.preparedPlan.schemaUsageInfo.TypeFields[i].Path,
-			TypeNames:   operationContext.preparedPlan.schemaUsageInfo.TypeFields[i].TypeNames,
-			SubgraphIDs: operationContext.preparedPlan.schemaUsageInfo.TypeFields[i].Source.IDs,
-			NamedType:   operationContext.preparedPlan.schemaUsageInfo.TypeFields[i].NamedType,
+			Path:        usageInfo.TypeFields[i].Path,
+			TypeNames:   usageInfo.TypeFields[i].EnclosingTypeNames,
+			SubgraphIDs: usageInfo.TypeFields[i].Source.IDs,
+			NamedType:   usageInfo.TypeFields[i].FieldTypeName,
+		}
+	}
+
+	for i := range usageInfo.Arguments {
+		argumentUsageInfos[i] = &graphqlmetricsv1.ArgumentUsageInfo{
+			Count:     1,
+			Path:      []string{usageInfo.Arguments[i].FieldName, usageInfo.Arguments[i].ArgumentName},
+			TypeName:  usageInfo.Arguments[i].EnclosingTypeName,
+			NamedType: usageInfo.Arguments[i].ArgumentTypeName,
+		}
+	}
+
+	for i := range usageInfo.InputTypeFields {
+		// In that case it is a top level input field usage e.g employee(id: 1)
+		if len(usageInfo.InputTypeFields[i].EnclosingTypeNames) == 0 {
+			inputUsageInfos[i] = &graphqlmetricsv1.InputUsageInfo{
+				Count:     uint64(usageInfo.InputTypeFields[i].Count),
+				NamedType: usageInfo.InputTypeFields[i].FieldTypeName,
+				// Root input fields have no enclosing type name and no path
+			}
+		} else {
+			inputUsageInfos[i] = &graphqlmetricsv1.InputUsageInfo{
+				Path:      []string{usageInfo.InputTypeFields[i].EnclosingTypeNames[0], usageInfo.InputTypeFields[i].FieldName},
+				Count:     uint64(usageInfo.InputTypeFields[i].Count),
+				TypeName:  usageInfo.InputTypeFields[i].EnclosingTypeNames[0],
+				NamedType: usageInfo.InputTypeFields[i].FieldTypeName,
+			}
 		}
 	}
 
@@ -80,6 +123,8 @@ func (m *OperationMetrics) exportSchemaUsageInfo(operationContext *operationCont
 			Name:    operationContext.clientInfo.Name,
 			Version: operationContext.clientInfo.Version,
 		},
+		ArgumentMetrics: argumentUsageInfos,
+		InputMetrics:    inputUsageInfos,
 		RequestInfo: &graphqlmetricsv1.RequestInfo{
 			Error:      hasError,
 			StatusCode: int32(statusCode),
@@ -141,7 +186,7 @@ func (m *OperationMetrics) AddClientInfo(info *ClientInfo) {
 
 // startOperationMetrics starts the metrics for an operation. This should only be called by
 // RouterMetrics.StartOperation()
-func startOperationMetrics(mtr *metric.Metrics, requestContentLength int64, gqlMetricsExporter *graphqlmetrics.Exporter, routerConfigVersion string) *OperationMetrics {
+func startOperationMetrics(mtr *metric.Metrics, logger *zap.Logger, requestContentLength int64, gqlMetricsExporter *graphqlmetrics.Exporter, routerConfigVersion string) *OperationMetrics {
 	operationStartTime := time.Now()
 
 	inflightMetric := mtr.MeasureInFlight(context.Background())
@@ -152,6 +197,7 @@ func startOperationMetrics(mtr *metric.Metrics, requestContentLength int64, gqlM
 		inflightMetric:       inflightMetric,
 		gqlMetricsExporter:   gqlMetricsExporter,
 		routerConfigVersion:  routerConfigVersion,
+		logger:               logger,
 	}
 }
 

@@ -1,7 +1,6 @@
 import {
   federatedGraphs,
   memberRoleEnum,
-  organizationsMembers,
   schemaCheckChangeAction,
   schemaCheckChangeActionOperationUsage,
   subgraphs,

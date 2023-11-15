@@ -3,11 +3,11 @@ package core
 import (
 	"context"
 	"errors"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/astnormalization"
 	"strconv"
 
 	"github.com/dgraph-io/ristretto"
 	"github.com/wundergraph/cosmo/router/internal/unsafebytes"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astvalidation"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
@@ -16,9 +16,8 @@ import (
 )
 
 type planWithMetaData struct {
-	preparedPlan    plan.Plan
-	variables       []byte
-	schemaUsageInfo plan.SchemaUsageInfo
+	preparedPlan                      plan.Plan
+	operationDocument, schemaDocument *ast.Document
 }
 
 type OperationPlanner struct {
@@ -42,9 +41,6 @@ func (p *OperationPlanner) preparePlan(requestOperationName []byte, requestOpera
 
 	validation := astvalidation.DefaultOperationValidator()
 
-	norm := astnormalization.NewNormalizer(true, true)
-	norm.NormalizeOperation(&doc, p.executor.Definition, &report)
-
 	// validate the document before planning
 	state := validation.Validate(&doc, p.executor.Definition, &report)
 	if state != astvalidation.Valid {
@@ -61,29 +57,21 @@ func (p *OperationPlanner) preparePlan(requestOperationName []byte, requestOpera
 	post := postprocess.DefaultProcessor()
 	post.Process(preparedPlan)
 
-	extractedVariables := make([]byte, len(doc.Input.Variables))
-	copy(extractedVariables, doc.Input.Variables)
-
-	schemaUsageInfo := plan.GetSchemaUsageInfo(preparedPlan)
-
 	return planWithMetaData{
-		preparedPlan:    preparedPlan,
-		variables:       extractedVariables,
-		schemaUsageInfo: schemaUsageInfo,
+		preparedPlan:      preparedPlan,
+		operationDocument: &doc,
+		schemaDocument:    p.executor.Definition,
 	}, nil
 }
 
 func (p *OperationPlanner) Plan(operation *ParsedOperation, clientInfo *ClientInfo) (*operationContext, error) {
-	variablesCopy := make([]byte, len(operation.Variables))
-	copy(variablesCopy, operation.Variables)
-
 	opContext := &operationContext{
 		name:       operation.Name,
 		opType:     operation.Type,
 		content:    operation.NormalizedRepresentation,
 		hash:       operation.ID,
-		variables:  variablesCopy,
 		clientInfo: clientInfo,
+		variables:  operation.Variables,
 	}
 
 	operationID := opContext.Hash()

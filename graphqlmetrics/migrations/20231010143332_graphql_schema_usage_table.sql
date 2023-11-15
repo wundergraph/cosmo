@@ -36,6 +36,12 @@ CREATE TABLE IF NOT EXISTS gql_metrics_schema_usage
     -- SubgraphIDs identify the subgraphs that were used to resolve the field
     SubgraphIDs Array(LowCardinality(String)) CODEC(ZSTD(3)), -- Sorted before insertion
 
+    -- Indicates if the usage was from an argument or a field
+    IsArgument bool CODEC(ZSTD(3)),
+
+    -- Indicates if the usage was from an input field
+    IsInput bool CODEC(ZSTD(3)),
+
     -- Additional information
     Attributes Map(LowCardinality(String), String) CODEC(ZSTD(3)),
 
