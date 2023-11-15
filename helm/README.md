@@ -51,6 +51,7 @@ We run several Kubernetes jobs to run migrations. While we provide Helm hook sup
 
 #### 3. Make ingress available locally
 
+##### Linux
 Minikube will automatically expose the ingress controller on your local machine. You can get the IP with `minikube ip`.
 Now, add the following entries to your `/etc/hosts` file and replace the IP with the IP you get from the previous step.
 
@@ -62,6 +63,23 @@ Now, add the following entries to your `/etc/hosts` file and replace the IP with
 192.168.49.2 otelcollector.wundergraph.local
 192.168.49.2 graphqlmetrics.wundergraph.local
 ```
+
+##### macOS
+
+Minikube needs to set up a tunnel to expose the ingress controller in your local machine. Add the following
+entries to `/etc/hosts`:
+
+```
+127.0.0.1 studio.wundergraph.local
+127.0.0.1 controlplane.wundergraph.local
+127.0.0.1 router.wundergraph.local
+127.0.0.1 keycloak.wundergraph.local
+127.0.0.1 otelcollector.wundergraph.local
+127.0.0.1 graphqlmetrics.wundergraph.local
+```
+
+Then start `minikube tunnel` and leave it running. It might ask for your root password in order to open
+the tunnel on privileged ports.
 
 #### 4. Access the Cosmo Studio
 
