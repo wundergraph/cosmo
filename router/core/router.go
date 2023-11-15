@@ -255,6 +255,8 @@ func NewRouter(opts ...Option) (*Router, error) {
 			})
 		}
 	}
+
+	// Add default exporters if none are configured
 	if r.metricConfig.OpenTelemetry.Enabled && len(r.metricConfig.OpenTelemetry.Exporters) == 0 {
 		if endpoint := otelconfig.DefaultEndpoint(); endpoint != "" {
 			r.logger.Debug("using default metrics exporter", zap.String("endpoint", endpoint))

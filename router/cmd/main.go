@@ -82,10 +82,11 @@ func Main() {
 
 		if cfg.Graph.Token == "" {
 			cfg.GraphqlMetrics.Enabled = false
-			cfg.Telemetry.Tracing.Enabled = false
-			cfg.Telemetry.Metrics.OTLP.Enabled = false
+			// Only disable tracing and metrics if no custom OTLP exporter is configured
+			cfg.Telemetry.Tracing.Enabled = len(cfg.Telemetry.Metrics.OTLP.Exporters) != 0
+			cfg.Telemetry.Metrics.OTLP.Enabled = cfg.Telemetry.Tracing.Enabled
 
-			logger.Warn("Static router config file provided, but no graph token. Disabling schema usage tracking, metrics and tracing.")
+			logger.Warn("Static router config file provided, but no graph token. Disabling schema usage tracking, OTLP metrics and tracing.")
 		}
 	} else {
 		cp = controlplane.New(
