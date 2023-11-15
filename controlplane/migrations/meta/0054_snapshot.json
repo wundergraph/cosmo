@@ -1,7 +1,7 @@
 {
   "version": "5",
   "dialect": "pg",
-  "id": "39b24456-fab8-423c-9617-69934b2b239a",
+  "id": "80ed568d-ddfb-46f9-8044-888a050aaa22",
   "prevId": "6dd2238e-9874-4253-88ba-75dc98227718",
   "tables": {
     "api_keys": {
@@ -104,108 +104,6 @@
           "nullsNotDistinct": false,
           "columns": [
             "key"
-          ]
-        }
-      }
-    },
-    "federated_graph_clients": {
-      "name": "federated_graph_clients",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "federated_graph_id": {
-          "name": "federated_graph_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_by": {
-          "name": "created_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "updated_by": {
-          "name": "updated_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "federated_graph_clients_federated_graph_id_federated_graphs_id_fk": {
-          "name": "federated_graph_clients_federated_graph_id_federated_graphs_id_fk",
-          "tableFrom": "federated_graph_clients",
-          "tableTo": "federated_graphs",
-          "columnsFrom": [
-            "federated_graph_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "federated_graph_clients_created_by_users_id_fk": {
-          "name": "federated_graph_clients_created_by_users_id_fk",
-          "tableFrom": "federated_graph_clients",
-          "tableTo": "users",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "federated_graph_clients_updated_by_users_id_fk": {
-          "name": "federated_graph_clients_updated_by_users_id_fk",
-          "tableFrom": "federated_graph_clients",
-          "tableTo": "users",
-          "columnsFrom": [
-            "updated_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "federated_graph_clients_name_unique": {
-          "name": "federated_graph_clients_name_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "name"
           ]
         }
       }
@@ -1184,6 +1082,13 @@
         },
         "is_composable": {
           "name": "is_composable",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "is_deleted": {
+          "name": "is_deleted",
           "type": "boolean",
           "primaryKey": false,
           "notNull": false,

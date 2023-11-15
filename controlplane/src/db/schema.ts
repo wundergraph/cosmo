@@ -312,6 +312,7 @@ export const schemaChecks = pgTable('schema_checks', {
       onDelete: 'cascade',
     }),
   isComposable: boolean('is_composable').default(false),
+  isDeleted: boolean('is_deleted').default(false),
   hasBreakingChanges: boolean('has_breaking_changes').default(false),
   hasClientTraffic: boolean('has_client_traffic').default(false),
   proposedSubgraphSchemaSDL: text('proposed_subgraph_schema_sdl'),
