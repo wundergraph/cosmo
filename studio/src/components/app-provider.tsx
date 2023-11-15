@@ -23,7 +23,6 @@ interface Organization {
   slug: string;
   isPersonal: boolean;
   isFreeTrial: boolean;
-  isFreeTrialExpired: boolean;
   roles: string[];
   createdAt: string;
 }
@@ -107,9 +106,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         email: data.email,
         currentOrganization: {
           ...organization,
-          isFreeTrialExpired:
-            organization.isFreeTrial &&
-            new Date() > addDays(new Date(organization.createdAt), 10),
         },
         organizations: data.organizations,
       });

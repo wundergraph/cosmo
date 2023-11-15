@@ -5,7 +5,7 @@ import { uid } from 'uid/secure';
 import { GraphQLSubscriptionProtocol } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { Label, ResponseMessage } from '../types/index.js';
 import { MemberRole } from '../db/models.js';
-import { isAuthenticationError, isFreeTrialExpiredError, isPublicError } from './errors/errors.js';
+import { isAuthenticationError, isPublicError } from './errors/errors.js';
 
 const labelRegex = /^[\dA-Za-z](?:[\w.-]{0,61}[\dA-Za-z])?$/;
 const organizationSlugRegex = /^[\da-z]+(?:-[\da-z]+)*$/;
@@ -36,14 +36,8 @@ export async function handleError<T extends ResponseMessage>(
           details: error.message,
         },
       } as T;
-    } else if (isFreeTrialExpiredError(error)) {
-      return {
-        response: {
-          code: error.code,
-          details: error.message,
-        },
-      } as T;
     }
+
     logger.error(error);
 
     throw error;
