@@ -63,4 +63,3 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | global.studio.webUrl | string | `"http://studio.wundergraph.local"` |  |
 | ingress.enabled | bool | `false` |  |
 
-----------------------------------------------
