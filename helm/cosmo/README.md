@@ -45,7 +45,7 @@ helm uninstall cosmo
 We ***strongly recommend*** that if you want to ship this helm chart to production you either:
 - Use a hosted version of Clickhouse ([Clickhouse Cloud](https://clickhouse.com/)), PostgreSQL ([Aiven.io](https://aiven.io/postgresql)), Keycloak ([Cloud-IAM](https://www.cloud-iam.com/))
 - Use a dedicated [Clickhouse](https://github.com/Altinity/clickhouse-operator), [Postgres](https://github.com/zalando/postgres-operator), [Keycloak](https://www.keycloak.org/operator/installation) Kubernetes operator of your choice.
-- Use [WunderGraph Cosmo Cloud](https://wundergraph.com/cosmo-cloud) ✨
+- Use [WunderGraph Cosmo Cloud](https://cosmo.wundergraph.com/login) ✨
 
 ## Configuration and installation details
 
