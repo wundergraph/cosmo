@@ -1,10 +1,8 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { addDays } from 'date-fns';
 import AuthUtils from '../auth-utils.js';
 import { AuthenticationError } from '../errors/errors.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import { checkUserAccess } from '../util.js';
-import { calLink } from './Authentication.js';
 
 export type AccessTokenAuthContext = {
   userId: string;

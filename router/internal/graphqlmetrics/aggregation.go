@@ -9,22 +9,28 @@ import graphqlmetricsv12 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo
 // - The client info is equal which means that the same client was used
 // - The attributes are equal
 
-func Aggregate(items []*graphqlmetricsv12.SchemaUsageInfo) []*graphqlmetricsv12.SchemaUsageInfo {
-	aggregated := make([]*graphqlmetricsv12.SchemaUsageInfo, 0, len(items))
-	duplicates := make(map[*graphqlmetricsv12.SchemaUsageInfo]struct{}, len(items))
+func Aggregate(schemaUsageInfos []*graphqlmetricsv12.SchemaUsageInfo) []*graphqlmetricsv12.SchemaUsageInfo {
+	aggregated := make([]*graphqlmetricsv12.SchemaUsageInfo, 0, len(schemaUsageInfos))
+	duplicates := make(map[*graphqlmetricsv12.SchemaUsageInfo]struct{}, len(schemaUsageInfos))
 
 	// check for same schema usage infos and aggregate field metrics
-	for _, a := range items {
+	for _, a := range schemaUsageInfos {
 
-		// skip already aggregated items
+		// skip already aggregated schemaUsageInfos
 		if _, ok := duplicates[a]; ok {
 			continue
 		}
 
-		for _, b := range items {
+		for _, b := range schemaUsageInfos {
 			if a != b && isSchemaUsageInfoEqual(a, b) {
 				for k, metric := range b.TypeFieldMetrics {
 					a.TypeFieldMetrics[k].Count += metric.Count
+				}
+				for k, metric := range b.ArgumentMetrics {
+					a.ArgumentMetrics[k].Count += metric.Count
+				}
+				for k, metric := range b.InputMetrics {
+					a.InputMetrics[k].Count += metric.Count
 				}
 				duplicates[b] = struct{}{}
 			}
@@ -37,7 +43,7 @@ func Aggregate(items []*graphqlmetricsv12.SchemaUsageInfo) []*graphqlmetricsv12.
 }
 
 func isSchemaUsageInfoEqual(a, b *graphqlmetricsv12.SchemaUsageInfo) bool {
-	// Different hash imply different query type, name and fields
+	// Different hash imply already different query type, name, arguments, fields
 	if a.OperationInfo.Hash != b.OperationInfo.Hash {
 		return false
 	}

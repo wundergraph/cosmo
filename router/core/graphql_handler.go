@@ -107,13 +107,8 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	requestLogger := h.log.With(logging.WithRequestID(middleware.GetReqID(r.Context())))
 	operationCtx := getOperationContext(r.Context())
 
-	extractedVariables := make([]byte, len(operationCtx.preparedPlan.variables))
-	copy(extractedVariables, operationCtx.preparedPlan.variables)
-	requestVariables := operationCtx.Variables()
-	combinedVariables := MergeJsonRightIntoLeft(requestVariables, extractedVariables)
-
 	ctx := &resolve.Context{
-		Variables: combinedVariables,
+		Variables: operationCtx.Variables(),
 		Request: resolve.Request{
 			Header: r.Header,
 		},
