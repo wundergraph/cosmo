@@ -86,7 +86,9 @@ func Main() {
 			cfg.Telemetry.Tracing.Enabled = len(cfg.Telemetry.Metrics.OTLP.Exporters) != 0
 			cfg.Telemetry.Metrics.OTLP.Enabled = cfg.Telemetry.Tracing.Enabled
 
-			logger.Warn("Static router config file provided, but no graph token. Disabling schema usage tracking, OTLP metrics and tracing.")
+			if !cfg.Telemetry.Tracing.Enabled {
+				logger.Warn("Static router config file provided, but no graph token. Disabling schema usage tracking, OTLP metrics and tracing. Not recommended for production use.")
+			}
 		}
 	} else {
 		cp = controlplane.New(
