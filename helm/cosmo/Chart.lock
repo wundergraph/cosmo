@@ -23,5 +23,8 @@ dependencies:
 - name: keycloak
   repository: ""
   version: ^0
-digest: sha256:6c047626695442670b1007b66f613e892adecb17ba7a830200a856e3ecf0c80c
-generated: "2023-10-16T18:53:00.64833535+02:00"
+- name: minio
+  repository: https://charts.bitnami.com/bitnami
+  version: 12.10.0
+digest: sha256:dd19db5feaeddc66057d9f2f80520d3185e838ade1b35263914810442e5a80e5
+generated: "2023-11-15T10:20:56.932884Z"

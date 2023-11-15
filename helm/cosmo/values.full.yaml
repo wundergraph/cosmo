@@ -65,6 +65,9 @@ global:
     databaseUsername: "postgres"
     databasePassword: "changeme"
 
+  minio:
+    enabled: true
+
 # Overall Ingress for the Cosmo Platform
 ingress:
   enabled: true
@@ -98,6 +101,7 @@ controlplane:
     githubAppWebhookSecret: ""
     slackAppClientId: ""
     slackAppClientSecret: ""
+    s3StorageUrl: "http://minio:changeme@minio.wundergraph.local:9000/cosmo"
 
 # Cosmo Router
 router:
@@ -166,3 +170,18 @@ postgresql:
         01_init_keycloak.sql: |
           -- Create the database for Keycloak
           CREATE DATABASE "keycloak";
+
+# Minio for the Cosmo Controlplane
+# https://artifacthub.io/packages/helm/bitnami/minio
+minio:
+  commonAnnotations:
+    # Support for k14s.io. This annotation will form a group to coordinate deployments with kapp.
+    kapp.k14s.io/change-group: "cosmo.apps.minio.wundergraph.com/deployment"
+  service:
+    ports:
+      minio: 9000
+      minio_admin: 9001
+  auth:
+    rootUser: minio
+    rootPassword: changeme
+    defaultBuckets: cosmo
