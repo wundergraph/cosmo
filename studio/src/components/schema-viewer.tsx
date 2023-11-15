@@ -41,7 +41,7 @@ export const SchemaViewerActions = ({
     <div
       className={cn(
         "flex w-full items-center gap-x-2 md:ml-auto md:w-auto",
-        className
+        className,
       )}
     >
       <Button variant="secondary" className="flex-1" onClick={() => copySDL()}>
@@ -107,7 +107,7 @@ export const SchemaViewer = ({
                   href={href}
                   className={cn(
                     "sticky left-0 mr-4 inline-block select-none border-r bg-background pr-2 text-right text-muted-foreground",
-                    numberSectionWidth
+                    numberSectionWidth,
                   )}
                 >
                   <span>{i + 1}</span>
