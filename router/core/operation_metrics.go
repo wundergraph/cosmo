@@ -85,6 +85,7 @@ func (m *OperationMetrics) exportSchemaUsageInfo(operationContext *operationCont
 			inputUsageInfos[i] = &graphqlmetricsv1.InputUsageInfo{
 				Count:     uint64(usageInfo.InputTypeFields[i].Count),
 				NamedType: usageInfo.InputTypeFields[i].FieldTypeName,
+				// Root input fields have no enclosing type name and no path
 			}
 		} else {
 			inputUsageInfos[i] = &graphqlmetricsv1.InputUsageInfo{
