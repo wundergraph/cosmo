@@ -3,6 +3,7 @@ package core
 import (
 	"context"
 	"errors"
+	"net/http"
 	"strconv"
 
 	"github.com/dgraph-io/ristretto"
@@ -64,14 +65,27 @@ func (p *OperationPlanner) preparePlan(requestOperationName []byte, requestOpera
 	}, nil
 }
 
-func (p *OperationPlanner) Plan(operation *ParsedOperation, clientInfo *ClientInfo) (*operationContext, error) {
+func (p *OperationPlanner) Plan(r *http.Request, operation *ParsedOperation, clientInfo *ClientInfo) (*operationContext, error) {
+
 	opContext := &operationContext{
-		name:       operation.Name,
-		opType:     operation.Type,
-		content:    operation.NormalizedRepresentation,
-		hash:       operation.ID,
-		clientInfo: clientInfo,
-		variables:  operation.Variables,
+		name:               operation.Name,
+		opType:             operation.Type,
+		content:            operation.NormalizedRepresentation,
+		hash:               operation.ID,
+		clientInfo:         clientInfo,
+		variables:          operation.Variables,
+		enableRequestTrace: enableRequestTrace(r),
+	}
+
+	if opContext.enableRequestTrace {
+		// if we have tracing enabled we always prepare a new plan
+		requestOperationNameBytes := unsafebytes.StringToBytes(opContext.Name())
+		prepared, err := p.preparePlan(requestOperationNameBytes, opContext.Content())
+		if err != nil {
+			return nil, err
+		}
+		opContext.preparedPlan = &prepared
+		return opContext, nil
 	}
 
 	operationID := opContext.Hash()

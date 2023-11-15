@@ -346,7 +346,8 @@ type operationContext struct {
 	variables  []byte
 	clientInfo *ClientInfo
 	// preparedPlan is the prepared plan of the operation
-	preparedPlan *planWithMetaData
+	preparedPlan       *planWithMetaData
+	enableRequestTrace bool
 }
 
 func (o *operationContext) Variables() []byte {
@@ -420,4 +421,8 @@ func buildRequestContext(w http.ResponseWriter, r *http.Request, opContext *oper
 		subgraphs:      subgraphs,
 	}
 	return requestContext
+}
+
+func enableRequestTrace(r *http.Request) bool {
+	return r.URL.Query().Has("wg_trace") || r.Header.Get("X-WG-Trace") == "true"
 }

@@ -102,7 +102,10 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 		initializeSpan(r.Context(), operation, clientInfo, commonAttributeValues)
 
-		opContext, err := h.planner.Plan(operation, clientInfo)
+		// If the request has a query parameter wg_trace=true we skip the cache
+		// and always plan the operation
+		// this allows us to "write" to the plan
+		opContext, err := h.planner.Plan(r, operation, clientInfo)
 		if err != nil {
 			hasRequestError = true
 			requestLogger.Error("failed to plan operation", zap.Error(err))

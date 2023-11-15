@@ -127,6 +127,14 @@ func sendData(server *core.Server, data []byte) *httptest.ResponseRecorder {
 	return rr
 }
 
+func sendCustomData(server *core.Server, data []byte, reqMw func(r *http.Request)) *httptest.ResponseRecorder {
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest("POST", "/graphql", bytes.NewBuffer(data))
+	reqMw(req)
+	server.Server.Handler.ServeHTTP(rr, req)
+	return rr
+}
+
 func prepareServer(tb testing.TB, opts ...core.Option) *core.Server {
 	ctx := context.Background()
 	cfg := config.Config{
@@ -227,6 +235,15 @@ func TestAnonymousQuery(t *testing.T) {
 	result := sendData(server, []byte(`{"query":"{ employees { id } }"}`))
 	assert.Equal(t, http.StatusOK, result.Code)
 	assert.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`, result.Body.String())
+}
+
+func TestTracing(t *testing.T) {
+	server := setupServer(t)
+	result := sendCustomData(server, []byte(`{"query":"{ employees { id } }"}`), func(r *http.Request) {
+		r.Header.Set("X-WG-Trace", "true")
+	})
+	assert.Equal(t, http.StatusOK, result.Result().StatusCode)
+	assert.Equal(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]},"extensions":{"trace":{"fetch":{"type":"single"},"node_type":"object","nullable":true,"fields":[{"name":"employees","value":{"node_type":"array","path":["employees"],"items":[{"node_type":"object","nullable":true,"fields":[{"name":"id","value":{"node_type":"integer","path":["id"]}}]}]}}]}}}`, result.Body.String())
 }
 
 func TestMultipleAnonymousQueries(t *testing.T) {
