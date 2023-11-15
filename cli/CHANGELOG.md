@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.27.0](https://github.com/wundergraph/cosmo/compare/wgc@0.26.0...wgc@0.27.0) (2023-11-15)
+
+### Features
+
+* add check for deleted subgraphs ([#258](https://github.com/wundergraph/cosmo/issues/258)) ([ba87fe5](https://github.com/wundergraph/cosmo/commit/ba87fe51631ece9c2efaea6350dc93590f1846c5)) (@Pagebakers)
+
 # [0.26.0](https://github.com/wundergraph/cosmo/compare/wgc@0.25.2...wgc@0.26.0) (2023-11-10)
 
 ### Features
