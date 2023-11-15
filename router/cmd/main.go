@@ -69,21 +69,29 @@ func Main() {
 			zap.String("service_version", core.Version),
 		)
 
-	cp := controlplane.New(
-		controlplane.WithControlPlaneEndpoint(cfg.ControlplaneURL),
-		controlplane.WithFederatedGraph(cfg.Graph.Name),
-		controlplane.WithLogger(logger),
-		controlplane.WithGraphApiToken(cfg.Graph.Token),
-		controlplane.WithPollInterval(cfg.PollInterval),
-	)
-
 	var routerConfig *nodev1.RouterConfig
+	var cp controlplane.ConfigFetcher
 
 	if cfg.RouterConfigPath != "" {
 		routerConfig, err = core.SerializeConfigFromFile(cfg.RouterConfigPath)
 		if err != nil {
 			logger.Fatal("Could not read router config", zap.Error(err), zap.String("path", cfg.RouterConfigPath))
 		}
+		if cfg.Graph.Token == "" {
+			cfg.GraphqlMetrics.Enabled = false
+			cfg.Telemetry.Tracing.Enabled = false
+			cfg.Telemetry.Metrics.OTLP.Enabled = false
+
+			logger.Warn("Router config file provided, but no graph token. Disabling schema usage tracking, metrics and tracing.")
+		}
+	} else {
+		cp = controlplane.New(
+			controlplane.WithControlPlaneEndpoint(cfg.ControlplaneURL),
+			controlplane.WithFederatedGraph(cfg.Graph.Name),
+			controlplane.WithLogger(logger),
+			controlplane.WithGraphApiToken(cfg.Graph.Token),
+			controlplane.WithPollInterval(cfg.PollInterval),
+		)
 	}
 
 	var authenticators []authentication.Authenticator
