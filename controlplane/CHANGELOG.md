@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.36.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.35.0...controlplane@0.36.0) (2023-11-15)
+
+### Bug Fixes
+
+* remove 10 day limit for free trial ([#260](https://github.com/wundergraph/cosmo/issues/260)) ([9e59f58](https://github.com/wundergraph/cosmo/commit/9e59f583cd7195a74012795e3e2401ae9cae4bfb)) (@JivusAyrus)
+
+### Features
+
+* add check for deleted subgraphs ([#258](https://github.com/wundergraph/cosmo/issues/258)) ([ba87fe5](https://github.com/wundergraph/cosmo/commit/ba87fe51631ece9c2efaea6350dc93590f1846c5)) (@Pagebakers)
+
 # [0.35.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.34.0...controlplane@0.35.0) (2023-11-10)
 
 ### Features
