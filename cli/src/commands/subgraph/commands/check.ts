@@ -71,7 +71,7 @@ export default (opts: BaseCommandOptions) => {
         subgraphName: name,
         schema,
         gitInfo,
-        checkDeletion: options.delete,
+        delete: options.delete,
       },
       {
         headers: baseHeaders,

@@ -576,11 +576,11 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const newSchemaSDL = req.checkDeletion ? '' : new TextDecoder().decode(req.schema);
+        const newSchemaSDL = req.delete ? '' : new TextDecoder().decode(req.schema);
 
         const schemaCheckID = await schemaCheckRepo.create({
           targetId: subgraph.targetId,
-          isDeleted: !!req.checkDeletion,
+          isDeleted: !!req.delete,
           proposedSubgraphSchemaSDL: newSchemaSDL,
         });
 
@@ -612,7 +612,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const composer = new Composer(fedGraphRepo, subgraphRepo);
 
-        const result = req.checkDeletion
+        const result = req.delete
           ? await composer.composeWithDeletedSubgraph(subgraph.labels, subgraph.name)
           : await composer.composeWithProposedSDL(subgraph.labels, subgraph.name, newSchemaSDL);
 

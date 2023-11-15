@@ -1,0 +1,84 @@
+type Query {
+  employee(id: Int!): Employee
+  employees: [Employee!]!
+  team_mates(team: Department!): [Employee!]!
+}
+
+enum Department {
+  ENGINEERING
+  MARKETING
+  OPERATIONS
+}
+
+interface RoleType {
+  department: Department!
+  title: [String!]!
+}
+
+enum EngineerType {
+  FRONTEND
+  BACKEND
+  FULLSTACK
+}
+
+interface Identifiable {
+  id: Int!
+}
+
+type Engineer implements RoleType {
+  department: Department!
+  engineerType: EngineerType!
+  title: [String!]!
+}
+
+type Marketer implements RoleType {
+  department: Department!
+  title: [String!]!
+}
+
+enum OperationType {
+  FINANCE
+  HUMAN_RESOURCES
+}
+
+type Operator implements RoleType {
+  department: Department!
+  operatorType: [OperationType!]!
+  title: [String!]!
+}
+
+enum Country {
+  AMERICA
+  ENGLAND
+  GERMANY
+  INDIA
+  NETHERLANDS
+  PORTUGAL
+  SPAIN
+  UKRAINE
+}
+
+type Details @shareable {
+  forename: String!
+  location: Country!
+  surname: String!
+}
+
+type Employee implements Identifiable @key(fields: "id") {
+  details: Details! @shareable
+  id: Int!
+  role: RoleType!
+  notes: String!
+}
+
+type Time {
+  unixTime: Int!
+  timeStamp: String!
+}
+
+type Subscription {
+  """
+  `currentTime` will return a stream of `Time` objects.
+  """
+  currentTime: Time!
+}

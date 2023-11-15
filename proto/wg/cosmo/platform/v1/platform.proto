@@ -61,7 +61,7 @@ message CheckSubgraphSchemaRequest {
   bytes schema = 2;
   GitInfo gitInfo = 3;
   // Check breaking changes and composition when this subgraph is deleted
-  optional bool check_deletion = 4;
+  optional bool delete = 4;
 }
 
 message FixSubgraphSchemaRequest {

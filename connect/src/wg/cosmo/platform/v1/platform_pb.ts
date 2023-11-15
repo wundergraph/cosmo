@@ -572,9 +572,9 @@ export class CheckSubgraphSchemaRequest extends Message<CheckSubgraphSchemaReque
   /**
    * Check breaking changes and composition when this subgraph is deleted
    *
-   * @generated from field: optional bool check_deletion = 4;
+   * @generated from field: optional bool delete = 4;
    */
-  checkDeletion?: boolean;
+  delete?: boolean;
 
   constructor(data?: PartialMessage<CheckSubgraphSchemaRequest>) {
     super();
@@ -587,7 +587,7 @@ export class CheckSubgraphSchemaRequest extends Message<CheckSubgraphSchemaReque
     { no: 1, name: "subgraph_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "schema", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
     { no: 3, name: "gitInfo", kind: "message", T: GitInfo },
-    { no: 4, name: "check_deletion", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 4, name: "delete", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CheckSubgraphSchemaRequest {
