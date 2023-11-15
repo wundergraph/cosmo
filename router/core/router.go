@@ -517,8 +517,6 @@ func (r *Router) Start(ctx context.Context) error {
 
 	// Start the server with the static config without polling
 	if r.routerConfig != nil {
-
-		r.logger.Info("Static router config provided. Polling is disabled.")
 		return r.updateServer(ctx, r.routerConfig)
 	}
 

@@ -77,6 +77,9 @@ func Main() {
 		if err != nil {
 			logger.Fatal("Could not read router config", zap.Error(err), zap.String("path", cfg.RouterConfigPath))
 		}
+
+		logger.Info("Static router config provided. Polling is disabled. Updating router config is only possible by restarting the router.")
+
 		if cfg.Graph.Token == "" {
 			cfg.GraphqlMetrics.Enabled = false
 			cfg.Telemetry.Tracing.Enabled = false
