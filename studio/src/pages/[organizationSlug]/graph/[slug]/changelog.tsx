@@ -1,4 +1,5 @@
 import { UserContext } from "@/components/app-provider";
+import { CompositionErrorsBanner } from "@/components/composition-errors-banner";
 import { DateRangePicker } from "@/components/date-range-picker";
 import { EmptyState } from "@/components/empty-state";
 import { getGraphLayout, GraphContext } from "@/components/layout/graph-layout";
@@ -32,7 +33,6 @@ import { endOfDay, formatISO, startOfDay, subDays } from "date-fns";
 import { useRouter } from "next/router";
 import { useCallback, useContext, useEffect, useState } from "react";
 import { DateRange } from "react-day-picker";
-import { CompositionErrorsBanner } from "@/components/composition-errors-banner";
 
 const Toolbar = () => {
   const router = useRouter();
@@ -315,11 +315,7 @@ const ChangelogPage: NextPageWithLayout = () => {
       {!validGraph && (
         <CompositionErrorsBanner errors={graphData?.graph?.compositionErrors} />
       )}
-      <div
-        className={cn("sticky top-[184px] z-20 h-0 overflow-visible", {
-          "top-[216px]": user?.currentOrganization.isFreeTrial,
-        })}
-      >
+      <div className="sticky top-[184px] z-20 h-0 overflow-visible">
         <div className="absolute right-0 hidden w-[280px] grid-cols-2 rounded border bg-card px-4 py-2 lg:grid">
           <h2 className="text-sm font-semibold">Jump to log</h2>
           <div className="scrollbar-custom flex max-h-96 flex-col overflow-y-auto text-xs">
