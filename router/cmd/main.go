@@ -100,6 +100,7 @@ func Main() {
 			controlplane.WithGraphApiToken(cfg.Graph.Token),
 			controlplane.WithPollInterval(cfg.PollInterval),
 		)
+		logger.Info("Polling for router config updates", zap.String("interval", cfg.PollInterval.String()))
 	}
 
 	var authenticators []authentication.Authenticator
