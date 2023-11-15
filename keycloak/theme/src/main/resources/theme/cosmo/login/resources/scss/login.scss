@@ -1,9 +1,10 @@
-@import "tailwindcss/base";
-@import "tailwindcss/components";
-@import "tailwindcss/utilities";
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
 
-
-body, .login-pf body, .login-pf {
+body,
+.login-pf body,
+.login-pf {
   @apply bg-gray-950 text-gray-500;
 }
 
@@ -11,7 +12,8 @@ body, .login-pf body, .login-pf {
   @apply min-h-screen bg-gray-950 flex flex-col justify-center py-0 md:py-12 md:px-6 lg:px-8;
 }
 
-#kc-header, .login-pf-page-header {
+#kc-header,
+.login-pf-page-header {
   @apply mb-4;
 }
 
@@ -22,7 +24,7 @@ body, .login-pf body, .login-pf {
 }
 
 #kc-locale-wrapper {
-  @apply mb-2
+  @apply mb-2;
 }
 
 div.kc-logo-text span {
@@ -37,11 +39,12 @@ div.kc-logo-text span {
   @apply block text-sm font-medium text-gray-400 cursor-default pb-1;
 }
 
-.form-group input[type="password"], .form-group input[type="text"] {
-  @apply block w-full flex-1 rounded-md text-sm disabled:cursor-not-allowed border border-gray-600 bg-gray-800 text-gray-100 placeholder-gray-400 focus:border-sky-500 hover:border-gray-500 hover:focus:border-sky-500 disabled:hover:border-gray-600
+.form-group input[type='password'],
+.form-group input[type='text'] {
+  @apply block w-full flex-1 rounded-md text-sm disabled:cursor-not-allowed border border-gray-600 bg-gray-800 text-gray-100 placeholder-gray-400 focus:border-sky-500 hover:border-gray-500 hover:focus:border-sky-500 disabled:hover:border-gray-600;
 }
 
-.form-group input[type="checkbox"] {
+.form-group input[type='checkbox'] {
   @apply rounded border-gray-300 text-purple-600 shadow-sm focus:border-purple-300 focus:ring focus:ring-offset-0 focus:ring-purple-200 focus:ring-opacity-50;
 }
 
@@ -70,12 +73,19 @@ div.kc-logo-text span {
   @apply flex items-baseline;
 }
 
-.login-pf-settings div span a {
+.login-pf-settings div span a,
+.instruction a {
   @apply font-medium text-sky-600 hover:text-sky-700 no-underline text-sm;
 }
 
-.login-pf-settings div span a:hover {
+.login-pf-settings div span a:hover,
+.instruction a:hover {
   @apply no-underline;
+}
+
+.instruction {
+  @apply text-center text-sm text-gray-400;
+  @apply mb-2;
 }
 
 #kc-registration a {
@@ -86,7 +96,7 @@ div.kc-logo-text span {
   @apply no-underline;
 }
 
-.form-group input[type="checkbox"] {
+.form-group input[type='checkbox'] {
   @apply p-0;
 }
 
@@ -94,7 +104,8 @@ div.kc-logo-text span {
   @apply mt-5;
 }
 
-.checkbox, .radio {
+.checkbox,
+.radio {
   position: inherit;
   align-items: center;
   display: flex;
@@ -103,7 +114,7 @@ div.kc-logo-text span {
 }
 
 .card-pf .form-group:last-child {
-  @apply flex flex-col-reverse justify-center items-center
+  @apply flex flex-col-reverse justify-center items-center;
 }
 
 .card-pf #kc-form-options {
@@ -131,7 +142,7 @@ div.kc-logo-text span {
 }
 
 #input-error {
-  @apply text-xs text-red-700
+  @apply text-xs text-red-700;
 }
 
 .pf-c-dropdown__menu {
@@ -151,19 +162,19 @@ div.kc-logo-text span {
 }
 
 #kc-social-providers {
-    @apply text-center;
-    ul {
-      @apply grid grid-cols-2 gap-x-2
-    }
-    a {
-      @apply text-sm font-semibold flex items-center justify-center rounded-md border border-transparent transition-all bg-gray-800 py-2 px-4 text-white no-underline shadow-sm focus:outline-none focus:ring-0 hover:bg-gray-700 active:scale-95
-    }
-    .kc-social-provider-name {
-      @apply pl-3 leading-4 flex items-center;
-    }
-    .kc-social-provider-logo {
-      @apply text-xl;
-    }
+  @apply text-center;
+  ul {
+    @apply grid grid-cols-2 gap-x-2;
+  }
+  a {
+    @apply text-sm font-semibold flex items-center justify-center rounded-md border border-transparent transition-all bg-gray-800 py-2 px-4 text-white no-underline shadow-sm focus:outline-none focus:ring-0 hover:bg-gray-700 active:scale-95;
+  }
+  .kc-social-provider-name {
+    @apply pl-3 leading-4 flex items-center;
+  }
+  .kc-social-provider-logo {
+    @apply text-xl;
+  }
 }
 
 #kc-terms-text {
@@ -185,7 +196,7 @@ div.kc-logo-text span {
 }
 
 .pf-c-button.pf-m-primary {
-  @apply shadow-sm text-white bg-purple-600 hover:bg-purple-700
+  @apply shadow-sm text-white bg-purple-600 hover:bg-purple-700;
 }
 
 .pf-c-button.btn-default {
