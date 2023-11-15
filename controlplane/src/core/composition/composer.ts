@@ -1,4 +1,4 @@
-import { parse, printSchema } from 'graphql';
+import { DocumentNode, parse, printSchema } from 'graphql';
 import { JsonValue } from '@bufbuild/protobuf';
 import { buildRouterConfig, ComposedSubgraph } from '@wundergraph/cosmo-shared';
 import { ArgumentConfigurationData, FederationResult } from '@wundergraph/composition';
@@ -139,36 +139,19 @@ export class Composer {
     }
   }
 
-  /**
-   * Same as compose, but the proposed schemaSDL of the subgraph is not updated to the table, so it is passed to the function
-   */
-  async composeWithProposedSDL(
+  protected async composeWithLabels(
     subgraphLabels: Label[],
-    subgraphName: string,
-    subgraphSchemaSDL: string,
+    mapSubgraphs: (
+      subgraphs: SubgraphDTO[],
+    ) => [SubgraphDTO[], { name: string; url: string; definitions: DocumentNode }[]],
   ): Promise<CompositionResult> {
     const composedGraphs: ComposedFederatedGraph[] = [];
 
     for await (const graph of await this.federatedGraphRepo.bySubgraphLabels(subgraphLabels)) {
       try {
-        const subgraphs = await this.subgraphRepo.listByFederatedGraph(graph.name);
-        const subgraphsToBeComposed = [];
-
-        for (const subgraph of subgraphs) {
-          if (subgraph.name === subgraphName) {
-            subgraphsToBeComposed.push({
-              name: subgraph.name,
-              url: subgraph.routingUrl,
-              definitions: parse(subgraphSchemaSDL),
-            });
-          } else if (subgraph.schemaSDL !== '') {
-            subgraphsToBeComposed.push({
-              name: subgraph.name,
-              url: subgraph.routingUrl,
-              definitions: parse(subgraph.schemaSDL),
-            });
-          }
-        }
+        const [subgraphs, subgraphsToBeComposed] = mapSubgraphs(
+          await this.subgraphRepo.listByFederatedGraph(graph.name),
+        );
 
         const { errors, federationResult: result } = composeSubgraphs(subgraphsToBeComposed);
         composedGraphs.push({
@@ -194,5 +177,52 @@ export class Composer {
     return {
       compositions: composedGraphs,
     };
+  }
+
+  /**
+   * Same as compose, but the proposed schemaSDL of the subgraph is not updated to the table, so it is passed to the function
+   */
+  composeWithProposedSDL(subgraphLabels: Label[], subgraphName: string, subgraphSchemaSDL: string) {
+    return this.composeWithLabels(subgraphLabels, (subgraphs) => {
+      const subgraphsToBeComposed = [];
+
+      for (const subgraph of subgraphs) {
+        if (subgraph.name === subgraphName) {
+          subgraphsToBeComposed.push({
+            name: subgraph.name,
+            url: subgraph.routingUrl,
+            definitions: parse(subgraphSchemaSDL),
+          });
+        } else if (subgraph.schemaSDL !== '') {
+          subgraphsToBeComposed.push({
+            name: subgraph.name,
+            url: subgraph.routingUrl,
+            definitions: parse(subgraph.schemaSDL),
+          });
+        }
+      }
+
+      return [subgraphs, subgraphsToBeComposed];
+    });
+  }
+
+  composeWithDeletedSubgraph(subgraphLabels: Label[], subgraphName: string) {
+    return this.composeWithLabels(subgraphLabels, (subgraphs) => {
+      const subgraphsToBeComposed = [];
+
+      const filteredSubgraphs = subgraphs.filter((s) => s.name !== subgraphName);
+
+      for (const subgraph of subgraphs) {
+        if (subgraph.name !== subgraphName && subgraph.schemaSDL !== '') {
+          subgraphsToBeComposed.push({
+            name: subgraph.name,
+            url: subgraph.routingUrl,
+            definitions: parse(subgraph.schemaSDL),
+          });
+        }
+      }
+
+      return [filteredSubgraphs, subgraphsToBeComposed];
+    });
   }
 }
