@@ -42,7 +42,7 @@ const MobileNav = () => {
   return (
     <div
       className={cn(
-        "fixed inset-0 top-28 z-50 grid h-[calc(100vh-112px)] grid-flow-row auto-rows-max overflow-auto border-t bg-popover shadow-md animate-in slide-in-from-bottom-64 lg:hidden"
+        "fixed inset-0 top-28 z-50 grid h-[calc(100vh-112px)] grid-flow-row auto-rows-max overflow-auto border-t bg-popover shadow-md animate-in slide-in-from-bottom-64 lg:hidden",
       )}
     >
       <div className="relative z-20 grid gap-6 rounded-md p-4 text-popover-foreground">
@@ -110,13 +110,13 @@ const Organizations = () => {
       value={user.currentOrganization.slug}
       onValueChange={(orgSlug) => {
         const currentOrg = user.organizations.find(
-          (org) => org.slug === orgSlug
+          (org) => org.slug === orgSlug,
         );
         if (currentOrg) {
           router.replace(
             currentPage === "graph"
               ? `/${currentOrg.slug}/graphs`
-              : `/${currentOrg.slug}/${currentPage}`
+              : `/${currentOrg.slug}/${currentPage}`,
           );
         }
       }}
@@ -151,16 +151,7 @@ export const Nav = ({ children, links }: SideNavLayoutProps) => {
 
   return (
     <div className="flex min-h-screen flex-1 flex-col lg:grid lg:grid-cols-[auto_1fr] lg:divide-x">
-      <aside
-        className={cn(
-          "sticky top-[0] z-40 flex min-w-[248px] flex-shrink-0 flex-col bg-background pt-4 lg:min-w-[280px] lg:px-6 lg:pb-4",
-          {
-            "top-7 lg:h-[calc(100vh-28px)]":
-              user?.currentOrganization.isFreeTrial,
-            "lg:h-screen": !user?.currentOrganization.isFreeTrial,
-          }
-        )}
-      >
+      <aside className="sticky top-[0] z-40 flex min-w-[248px] flex-shrink-0 flex-col bg-background pt-4 lg:h-screen lg:min-w-[280px] lg:px-6 lg:pb-4">
         <div className="flex flex-col gap-y-4 px-4 lg:gap-y-8 lg:px-0">
           <div className="flex items-center justify-between gap-x-4">
             <div className="flex w-full items-center gap-x-4 gap-y-8 lg:flex-col lg:items-start">
@@ -195,7 +186,7 @@ export const Nav = ({ children, links }: SideNavLayoutProps) => {
               const isCurrent = isActive(
                 encodeURI(item.href),
                 router.asPath.split("?")[0],
-                item.matchExact
+                item.matchExact,
               );
 
               return (
@@ -205,7 +196,7 @@ export const Nav = ({ children, links }: SideNavLayoutProps) => {
                       <span
                         className={cn(
                           "group flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground",
-                          isCurrent ? "bg-accent/80" : "transparent"
+                          isCurrent ? "bg-accent/80" : "transparent",
                         )}
                       >
                         {item.icon}

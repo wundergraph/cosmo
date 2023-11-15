@@ -295,26 +295,8 @@ const MembersPage: NextPageWithLayout = () => {
 
   return (
     <div className="flex flex-col gap-y-6">
-      {isAdmin && !user.currentOrganization.isFreeTrial && (
+      {isAdmin && (
         <InviteForm refresh={() => refetch()} />
-      )}
-      {user.currentOrganization.isFreeTrial && (
-        <div className="flex items-center justify-center gap-x-2 rounded bg-secondary px-2 py-1 text-secondary-foreground">
-          <IoInformationCircle size={20} className="text-primary" />
-          <span>
-            {"Your organization's plan does not allow you to invite members. "}
-            Please{" "}
-            <a
-              className="text-primary underline underline-offset-2"
-              href={calURL}
-              target="_blank"
-              rel="noreferrer"
-            >
-              contact us
-            </a>{" "}
-            to upgrade.
-          </span>
-        </div>
       )}
       <div className="flex flex-col divide-y rounded-md border">
         {data.members?.map((member) => {
