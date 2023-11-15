@@ -12,7 +12,6 @@ enum OperationType {
   SUBSCRIPTION = 2;
 }
 message RequestInfo {
-
   int32 StatusCode = 1;
   bool error = 2;
 }
@@ -32,6 +31,10 @@ message SchemaUsageInfo {
   RequestInfo RequestInfo = 6;
   // Attributes is a map of attributes that can be used to filter the metrics
   map<string,string> Attributes = 7;
+  // ArgumentMetrics is the list of used arguments in the request document
+  repeated ArgumentUsageInfo ArgumentMetrics = 8;
+  // InputMetrics is the list of used input fields in the request document
+  repeated InputUsageInfo InputMetrics = 9;
 }
 
 message ClientInfo {
@@ -60,14 +63,36 @@ message SchemaInfo {
 message TypeFieldUsageInfo {
   // Path is the path to the field in the request document but without the root type query, mutation, or subscription
   repeated string Path = 1;
-  // TypeNames is the list of type names that the field is used as
+  // TypeNames is the list of enclosing type names of the field
   repeated string TypeNames = 2;
   // SubgraphIDs is the list of datasource IDs (e.g subgraph ID) that the field is used from
   repeated string SubgraphIDs = 3;
-  // Count is the number of times the field is used
+  // Count is the number of times the field is used. Useful for batching at client side.
   uint64 Count = 4;
   // NamedType is the underlying type of the field
   string NamedType = 5;
+}
+
+message ArgumentUsageInfo {
+  // Path is the path to the field in the request document but without the root type query, mutation, or subscription
+  repeated string Path = 1;
+  // TypeName is the enclosing type name of the argument
+  string TypeName = 2;
+  // Count is the number of times the argument is used. Useful for batching at client side.
+  uint64 Count = 3;
+  // NamedType is the underlying type of the argument
+  string NamedType = 4;
+}
+
+message InputUsageInfo {
+  // Path is the path to the field in the request document but without the root type query, mutation, or subscription
+  repeated string Path = 1;
+  // TypeName is the enclosing type name of the argument
+  string TypeName = 2;
+  // Count is the number of times the argument is used. Useful for batching at client side.
+  uint64 Count = 3;
+  // NamedType is the underlying type of the input field
+  string NamedType = 4;
 }
 
 message PublishGraphQLRequestMetricsRequest {

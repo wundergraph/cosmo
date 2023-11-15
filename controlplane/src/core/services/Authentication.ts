@@ -1,5 +1,4 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { addDays } from 'date-fns';
 import { lru } from 'tiny-lru';
 import { AuthContext } from '../../types/index.js';
 import { AuthenticationError } from '../errors/errors.js';
@@ -12,8 +11,6 @@ import WebSessionAuthenticator from './WebSessionAuthenticator.js';
 
 // The maximum time to cache the user auth context for the web session authentication.
 const maxAuthCacheTtl = 30 * 1000; // 30 seconds
-
-export const calLink = 'https://cal.com/stefan-avram-wundergraph/wundergraph-introduction';
 
 export interface Authenticator {
   authenticate(headers: Headers): Promise<AuthContext>;

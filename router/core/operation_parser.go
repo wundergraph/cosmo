@@ -15,6 +15,7 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/cdn"
 	"github.com/wundergraph/cosmo/router/internal/pool"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/astjson"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astnormalization"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astprinter"
@@ -70,10 +71,15 @@ func NewOperationParser(opts OperationParserOptions) *OperationParser {
 		parseKitPool: &sync.Pool{
 			New: func() interface{} {
 				return &parseKit{
-					parser:              astparser.NewParser(),
-					doc:                 ast.NewSmallDocument(),
-					keyGen:              xxhash.New(),
-					normalizer:          astnormalization.NewWithOpts(astnormalization.WithInlineFragmentSpreads(), astnormalization.WithRemoveFragmentDefinitions(), astnormalization.WithRemoveNotMatchingOperationDefinitions()),
+					parser: astparser.NewParser(),
+					doc:    ast.NewSmallDocument(),
+					keyGen: xxhash.New(),
+					normalizer: astnormalization.NewWithOpts(
+						astnormalization.WithExtractVariables(),
+						astnormalization.WithInlineFragmentSpreads(),
+						astnormalization.WithRemoveFragmentDefinitions(),
+						astnormalization.WithRemoveNotMatchingOperationDefinitions(),
+					),
 					printer:             &astprinter.Printer{},
 					normalizedOperation: &bytes.Buffer{},
 					unescapedDocument:   make([]byte, 1024),
@@ -319,6 +325,11 @@ func (p *OperationParser) parse(ctx context.Context, clientInfo *ClientInfo, bod
 	if err != nil {
 		return nil, errors.WithStack(fmt.Errorf("failed to print normalized operation: %w", err))
 	}
+	// hash extracted variables
+	_, err = kit.keyGen.Write(kit.doc.Input.Variables)
+	if err != nil {
+		return nil, errors.WithStack(fmt.Errorf("failed to write variables: %w", err))
+	}
 	operationID := kit.keyGen.Sum64() // generate the operation ID
 	// print the operation with the original operation name
 	kit.doc.OperationDefinitions[operationDefinitionRef].Name = originalOperationNameRef
@@ -327,11 +338,33 @@ func (p *OperationParser) parse(ctx context.Context, clientInfo *ClientInfo, bod
 		return nil, errors.WithStack(fmt.Errorf("failed to print normalized operation: %w", err))
 	}
 
+	if requestVariableBytes == nil {
+		requestVariableBytes = []byte("{}")
+	}
+
+	js := &astjson.JSON{}
+	err = js.ParseObject(requestVariableBytes)
+	if err != nil {
+		return nil, errors.WithStack(fmt.Errorf("failed to parse variables: %w", err))
+	}
+	if kit.doc.Input.Variables != nil {
+		extractedVariables, err := js.AppendObject(kit.doc.Input.Variables)
+		if err != nil {
+			return nil, errors.WithStack(fmt.Errorf("failed to append variables: %w", err))
+		}
+		js.MergeNodes(js.RootNode, extractedVariables)
+	}
+	merged := bytes.NewBuffer(make([]byte, 0, len(requestVariableBytes)+len(kit.doc.Input.Variables)))
+	err = js.PrintRoot(merged)
+	if err != nil {
+		return nil, errors.WithStack(fmt.Errorf("failed to print variables: %w", err))
+	}
+
 	return &ParsedOperation{
 		ID:                       operationID,
 		Name:                     string(requestOperationNameBytes),
 		Type:                     requestOperationType,
-		Variables:                requestVariableBytes,
+		Variables:                merged.Bytes(),
 		NormalizedRepresentation: kit.normalizedOperation.String(),
 	}, nil
 }
