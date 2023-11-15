@@ -29,7 +29,7 @@ export type GetDiffBetweenGraphsResult = GetDiffBetweenGraphsSuccess | GetDiffBe
 
 export async function getDiffBetweenGraphs(
   oldSchemaSDL: string,
-  newSchemaSDL: string,
+  newSchemaSDL?: string,
 ): Promise<GetDiffBetweenGraphsResult> {
   try {
     let oldSchema: GraphQLSchema = new GraphQLSchema({});
@@ -40,17 +40,20 @@ export async function getDiffBetweenGraphs(
         oldSchema = normalizationResult.schema;
       }
     }
-    const { errors, normalizationResult } = buildSchema(newSchemaSDL);
-    if (errors && errors.length > 0) {
-      return {
-        kind: 'failure',
-        error: new Error(errors.map((e) => e.toString()).join('\n')),
-        errorCode: EnumStatusCode.ERR_INVALID_SUBGRAPH_SCHEMA,
-        errorMessage: errors.map((e) => e.toString()).join('\n'),
-      };
-    }
-    if (normalizationResult?.schema) {
-      newSchema = normalizationResult.schema;
+
+    if (newSchemaSDL?.length) {
+      const { errors, normalizationResult } = buildSchema(newSchemaSDL);
+      if (errors && errors.length > 0) {
+        return {
+          kind: 'failure',
+          error: new Error(errors.map((e) => e.toString()).join('\n')),
+          errorCode: EnumStatusCode.ERR_INVALID_SUBGRAPH_SCHEMA,
+          errorMessage: errors.map((e) => e.toString()).join('\n'),
+        };
+      }
+      if (normalizationResult?.schema) {
+        newSchema = normalizationResult.schema;
+      }
     }
 
     const changes: Change<ChangeType>[] = await diff(oldSchema, newSchema);

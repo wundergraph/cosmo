@@ -1,0 +1,1 @@
+ALTER TABLE "schema_checks" ADD COLUMN "is_deleted" boolean DEFAULT false;
