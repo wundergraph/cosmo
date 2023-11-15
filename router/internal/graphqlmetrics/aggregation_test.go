@@ -25,6 +25,22 @@ func TestAggregateCountWithEqualUsages(t *testing.T) {
 					Count:       1,
 				},
 			},
+			ArgumentMetrics: []*graphqlmetricsv1.ArgumentUsageInfo{
+				{
+					Path:      []string{"user", "id"},
+					TypeName:  "User",
+					Count:     1,
+					NamedType: "ID",
+				},
+			},
+			InputMetrics: []*graphqlmetricsv1.InputUsageInfo{
+				{
+					Path:      []string{"user", "id"},
+					TypeName:  "User",
+					Count:     1,
+					NamedType: "ID",
+				},
+			},
 			OperationInfo: &graphqlmetricsv1.OperationInfo{
 				Type: graphqlmetricsv1.OperationType_QUERY,
 				Hash: "123",
@@ -58,6 +74,22 @@ func TestAggregateCountWithEqualUsages(t *testing.T) {
 					TypeNames:   []string{"User", "String"},
 					SubgraphIDs: []string{"1", "2"},
 					Count:       1,
+				},
+			},
+			ArgumentMetrics: []*graphqlmetricsv1.ArgumentUsageInfo{
+				{
+					Path:      []string{"user", "id"},
+					TypeName:  "User",
+					Count:     1,
+					NamedType: "ID",
+				},
+			},
+			InputMetrics: []*graphqlmetricsv1.InputUsageInfo{
+				{
+					Path:      []string{"user", "id"},
+					TypeName:  "User",
+					Count:     1,
+					NamedType: "ID",
 				},
 			},
 			OperationInfo: &graphqlmetricsv1.OperationInfo{
@@ -85,6 +117,8 @@ func TestAggregateCountWithEqualUsages(t *testing.T) {
 	require.Equal(t, 1, len(result))
 	require.Equal(t, uint64(3), result[0].TypeFieldMetrics[0].Count)
 	require.Equal(t, uint64(2), result[0].TypeFieldMetrics[1].Count)
+	require.Equal(t, uint64(2), result[0].ArgumentMetrics[0].Count)
+	require.Equal(t, uint64(2), result[0].InputMetrics[0].Count)
 }
 
 func TestAggregateWithDifferentOperationInfo(t *testing.T) {
@@ -103,6 +137,22 @@ func TestAggregateWithDifferentOperationInfo(t *testing.T) {
 				Type: graphqlmetricsv1.OperationType_QUERY,
 				Hash: "123456", // different hash
 				Name: "user",
+			},
+			ArgumentMetrics: []*graphqlmetricsv1.ArgumentUsageInfo{
+				{
+					Path:      []string{"user", "id"},
+					TypeName:  "User",
+					Count:     1,
+					NamedType: "ID",
+				},
+			},
+			InputMetrics: []*graphqlmetricsv1.InputUsageInfo{
+				{
+					Path:      []string{"user", "id"},
+					TypeName:  "User",
+					Count:     1,
+					NamedType: "ID",
+				},
 			},
 			SchemaInfo: &graphqlmetricsv1.SchemaInfo{
 				Version: "1",
@@ -124,6 +174,22 @@ func TestAggregateWithDifferentOperationInfo(t *testing.T) {
 					TypeNames:   []string{"User", "ID"},
 					SubgraphIDs: []string{"1", "2"},
 					Count:       1,
+				},
+			},
+			ArgumentMetrics: []*graphqlmetricsv1.ArgumentUsageInfo{
+				{
+					Path:      []string{"user", "id"},
+					TypeName:  "User",
+					Count:     1,
+					NamedType: "ID",
+				},
+			},
+			InputMetrics: []*graphqlmetricsv1.InputUsageInfo{
+				{
+					Path:      []string{"user", "id"},
+					TypeName:  "User",
+					Count:     1,
+					NamedType: "ID",
 				},
 			},
 			OperationInfo: &graphqlmetricsv1.OperationInfo{
@@ -149,6 +215,10 @@ func TestAggregateWithDifferentOperationInfo(t *testing.T) {
 	require.Equal(t, 2, len(result))
 	require.Equal(t, uint64(2), result[0].TypeFieldMetrics[0].Count)
 	require.Equal(t, uint64(1), result[1].TypeFieldMetrics[0].Count)
+	require.Equal(t, uint64(1), result[0].ArgumentMetrics[0].Count)
+	require.Equal(t, uint64(1), result[1].ArgumentMetrics[0].Count)
+	require.Equal(t, uint64(1), result[0].InputMetrics[0].Count)
+	require.Equal(t, uint64(1), result[1].InputMetrics[0].Count)
 }
 
 func TestAggregateWithDifferentClientInfo(t *testing.T) {
@@ -161,6 +231,22 @@ func TestAggregateWithDifferentClientInfo(t *testing.T) {
 					TypeNames:   []string{"User", "ID"},
 					SubgraphIDs: []string{"1", "2"},
 					Count:       2,
+				},
+			},
+			ArgumentMetrics: []*graphqlmetricsv1.ArgumentUsageInfo{
+				{
+					Path:      []string{"user", "id"},
+					TypeName:  "User",
+					Count:     1,
+					NamedType: "ID",
+				},
+			},
+			InputMetrics: []*graphqlmetricsv1.InputUsageInfo{
+				{
+					Path:      []string{"user", "id"},
+					TypeName:  "User",
+					Count:     1,
+					NamedType: "ID",
 				},
 			},
 			OperationInfo: &graphqlmetricsv1.OperationInfo{
@@ -188,6 +274,22 @@ func TestAggregateWithDifferentClientInfo(t *testing.T) {
 					TypeNames:   []string{"User", "ID"},
 					SubgraphIDs: []string{"1", "2"},
 					Count:       1,
+				},
+			},
+			ArgumentMetrics: []*graphqlmetricsv1.ArgumentUsageInfo{
+				{
+					Path:      []string{"user", "id"},
+					TypeName:  "User",
+					Count:     1,
+					NamedType: "ID",
+				},
+			},
+			InputMetrics: []*graphqlmetricsv1.InputUsageInfo{
+				{
+					Path:      []string{"user", "id"},
+					TypeName:  "User",
+					Count:     1,
+					NamedType: "ID",
 				},
 			},
 			OperationInfo: &graphqlmetricsv1.OperationInfo{
@@ -213,6 +315,10 @@ func TestAggregateWithDifferentClientInfo(t *testing.T) {
 	require.Equal(t, 2, len(result))
 	require.Equal(t, uint64(2), result[0].TypeFieldMetrics[0].Count)
 	require.Equal(t, uint64(1), result[1].TypeFieldMetrics[0].Count)
+	require.Equal(t, uint64(1), result[0].ArgumentMetrics[0].Count)
+	require.Equal(t, uint64(1), result[1].ArgumentMetrics[0].Count)
+	require.Equal(t, uint64(1), result[0].InputMetrics[0].Count)
+	require.Equal(t, uint64(1), result[1].InputMetrics[0].Count)
 }
 
 func TestAggregateWithDifferentRequestInfo(t *testing.T) {
@@ -225,6 +331,22 @@ func TestAggregateWithDifferentRequestInfo(t *testing.T) {
 					TypeNames:   []string{"User", "ID"},
 					SubgraphIDs: []string{"1", "2"},
 					Count:       2,
+				},
+			},
+			ArgumentMetrics: []*graphqlmetricsv1.ArgumentUsageInfo{
+				{
+					Path:      []string{"user", "id"},
+					TypeName:  "User",
+					Count:     1,
+					NamedType: "ID",
+				},
+			},
+			InputMetrics: []*graphqlmetricsv1.InputUsageInfo{
+				{
+					Path:      []string{"user", "id"},
+					TypeName:  "User",
+					Count:     1,
+					NamedType: "ID",
 				},
 			},
 			OperationInfo: &graphqlmetricsv1.OperationInfo{
@@ -252,6 +374,22 @@ func TestAggregateWithDifferentRequestInfo(t *testing.T) {
 					TypeNames:   []string{"User", "ID"},
 					SubgraphIDs: []string{"1", "2"},
 					Count:       1,
+				},
+			},
+			ArgumentMetrics: []*graphqlmetricsv1.ArgumentUsageInfo{
+				{
+					Path:      []string{"user", "id"},
+					TypeName:  "User",
+					Count:     1,
+					NamedType: "ID",
+				},
+			},
+			InputMetrics: []*graphqlmetricsv1.InputUsageInfo{
+				{
+					Path:      []string{"user", "id"},
+					TypeName:  "User",
+					Count:     1,
+					NamedType: "ID",
 				},
 			},
 			OperationInfo: &graphqlmetricsv1.OperationInfo{
@@ -277,6 +415,10 @@ func TestAggregateWithDifferentRequestInfo(t *testing.T) {
 	require.Equal(t, 2, len(result))
 	require.Equal(t, uint64(2), result[0].TypeFieldMetrics[0].Count)
 	require.Equal(t, uint64(1), result[1].TypeFieldMetrics[0].Count)
+	require.Equal(t, uint64(1), result[0].ArgumentMetrics[0].Count)
+	require.Equal(t, uint64(1), result[1].ArgumentMetrics[0].Count)
+	require.Equal(t, uint64(1), result[0].InputMetrics[0].Count)
+	require.Equal(t, uint64(1), result[1].InputMetrics[0].Count)
 }
 
 func TestAggregateWithDifferentHash(t *testing.T) {
@@ -295,6 +437,22 @@ func TestAggregateWithDifferentHash(t *testing.T) {
 					TypeNames:   []string{"User", "String"},
 					SubgraphIDs: []string{"1", "2"},
 					Count:       6,
+				},
+			},
+			ArgumentMetrics: []*graphqlmetricsv1.ArgumentUsageInfo{
+				{
+					Path:      []string{"user", "id"},
+					TypeName:  "User",
+					Count:     1,
+					NamedType: "ID",
+				},
+			},
+			InputMetrics: []*graphqlmetricsv1.InputUsageInfo{
+				{
+					Path:      []string{"user", "id"},
+					TypeName:  "User",
+					Count:     1,
+					NamedType: "ID",
 				},
 			},
 			OperationInfo: &graphqlmetricsv1.OperationInfo{
@@ -320,6 +478,22 @@ func TestAggregateWithDifferentHash(t *testing.T) {
 					Count:       1,
 				},
 			},
+			ArgumentMetrics: []*graphqlmetricsv1.ArgumentUsageInfo{
+				{
+					Path:      []string{"user", "id"},
+					TypeName:  "User",
+					Count:     1,
+					NamedType: "ID",
+				},
+			},
+			InputMetrics: []*graphqlmetricsv1.InputUsageInfo{
+				{
+					Path:      []string{"user", "id"},
+					TypeName:  "User",
+					Count:     1,
+					NamedType: "ID",
+				},
+			},
 			OperationInfo: &graphqlmetricsv1.OperationInfo{
 				Type: graphqlmetricsv1.OperationType_QUERY,
 				Hash: "123",
@@ -340,4 +514,8 @@ func TestAggregateWithDifferentHash(t *testing.T) {
 	require.Equal(t, uint64(2), result[0].TypeFieldMetrics[0].Count)
 	require.Equal(t, uint64(6), result[0].TypeFieldMetrics[1].Count)
 	require.Equal(t, uint64(1), result[1].TypeFieldMetrics[0].Count)
+	require.Equal(t, uint64(1), result[0].ArgumentMetrics[0].Count)
+	require.Equal(t, uint64(1), result[1].ArgumentMetrics[0].Count)
+	require.Equal(t, uint64(1), result[0].InputMetrics[0].Count)
+	require.Equal(t, uint64(1), result[1].InputMetrics[0].Count)
 }

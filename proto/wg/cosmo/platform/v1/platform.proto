@@ -60,6 +60,8 @@ message CheckSubgraphSchemaRequest {
   // The binary representation of the schema, the content of the file
   bytes schema = 2;
   GitInfo gitInfo = 3;
+  // Check breaking changes and composition when this subgraph is deleted
+  optional bool delete = 4;
 }
 
 message FixSubgraphSchemaRequest {
@@ -125,6 +127,8 @@ message CheckSubgraphSchemaResponse {
   repeated SchemaChange breakingChanges = 2;
   repeated SchemaChange nonBreakingChanges = 3;
   repeated CompositionError compositionErrors = 4;
+  // Contains the operation usage stats for the operations that are impacted by the schema changes.
+  // Can be undefined when the schema changes are not inspectable by real traffic breaking change detection.
   CheckOperationUsageStats operationUsageStats = 5;
 }
 
@@ -251,6 +255,7 @@ message SchemaCheck {
   bool isBreaking = 6;
   bool hasClientTraffic = 7;
   bool isForcedSuccess = 8;
+  bool isDeleted = 9;
 }
 
 message GetChecksByFederatedGraphNameResponse {

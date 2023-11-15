@@ -6,7 +6,6 @@ import { OrganizationEventName, PlatformEventName } from '@wundergraph/cosmo-con
 import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
 import {
   CheckFederatedGraphResponse,
-  CheckOperationUsageStats,
   CheckSubgraphSchemaResponse,
   CompositionError,
   CreateAPIKeyResponse,
@@ -91,6 +90,7 @@ import {
   InspectorOperationResult,
   SchemaUsageTrafficInspector,
   collectOperationUsageStats,
+  InspectorSchemaChange,
 } from '../services/SchemaUsageTrafficInspector.js';
 import Slack from '../services/Slack.js';
 import {
@@ -615,10 +615,11 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const newSchemaSDL = new TextDecoder().decode(req.schema);
+        const newSchemaSDL = req.delete ? '' : new TextDecoder().decode(req.schema);
 
         const schemaCheckID = await schemaCheckRepo.create({
           targetId: subgraph.targetId,
+          isDeleted: !!req.delete,
           proposedSubgraphSchemaSDL: newSchemaSDL,
         });
 
@@ -636,6 +637,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
+        let isInspectable = true;
         const hasBreakingChanges = schemaChanges.breakingChanges.length > 0;
 
         await schemaCheckRepo.createSchemaCheckChanges({
@@ -649,7 +651,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         });
 
         const composer = new Composer(fedGraphRepo, subgraphRepo, compositionRepo);
-        const result = await composer.composeWithProposedSDL(subgraph.labels, subgraph.name, newSchemaSDL);
+
+        const result = req.delete
+          ? await composer.composeWithDeletedSubgraph(subgraph.labels, subgraph.name)
+          : await composer.composeWithProposedSDL(subgraph.labels, subgraph.name, newSchemaSDL);
 
         await schemaCheckRepo.createSchemaCheckCompositions({
           schemaCheckID,
@@ -662,11 +667,17 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const inspectedOperations: InspectorOperationResult[] = [];
         const compositionErrors: PlainMessage<CompositionError>[] = [];
 
-        // For operations checks we only consider breaking changes
-        const inspectorChanges = trafficInspector.schemaChangesToInspectorChanges(
-          schemaChanges.breakingChanges,
-          storedBreakingChanges,
-        );
+        let inspectorChanges: InspectorSchemaChange[] = [];
+        try {
+          // For operations checks we only consider breaking changes
+          // This method will throw if the schema changes cannot be converted to inspector changes
+          inspectorChanges = trafficInspector.schemaChangesToInspectorChanges(
+            schemaChanges.breakingChanges,
+            storedBreakingChanges,
+          );
+        } catch {
+          isInspectable = false;
+        }
 
         for (const composition of result.compositions) {
           const graphConfig = await fedGraphRepo.getConfig(composition.id);
@@ -687,13 +698,14 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             }
           }
 
-          // We don't collect operation usage when we have composition errors
-          if (composition.errors.length === 0 && inspectorChanges.inspectable && inspectorChanges.changes.length > 0) {
+          // We don't collect operation usage when we have composition errors or
+          // when we don't have any inspectable changes. That means any breaking change is really breaking
+          if (composition.errors.length === 0 && isInspectable && inspectorChanges.length > 0) {
             if (graphConfig.trafficCheckDays <= 0) {
               continue;
             }
 
-            const result = await trafficInspector.inspect(inspectorChanges.changes, {
+            const result = await trafficInspector.inspect(inspectorChanges, {
               daysToConsider: graphConfig.trafficCheckDays,
               federatedGraphId: composition.id,
               organizationId: authContext.organizationId,
@@ -722,9 +734,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           hasBreakingChanges,
         });
 
-        const operationUsageStats: PlainMessage<CheckOperationUsageStats> =
-          collectOperationUsageStats(inspectedOperations);
-
         if (req.gitInfo && opts.githubApp) {
           const githubRepo = new GitHubRepository(opts.db, opts.githubApp);
           await githubRepo.createCommitCheck({
@@ -746,7 +755,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           },
           breakingChanges: schemaChanges.breakingChanges,
           nonBreakingChanges: schemaChanges.nonBreakingChanges,
-          operationUsageStats,
+          operationUsageStats: isInspectable ? collectOperationUsageStats(inspectedOperations) : undefined,
           compositionErrors,
         };
       });

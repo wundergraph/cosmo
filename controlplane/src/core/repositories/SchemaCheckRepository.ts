@@ -19,6 +19,7 @@ export class SchemaCheckRepository {
   public async create(data: {
     targetId: string;
     isComposable?: boolean;
+    isDeleted?: boolean;
     proposedSubgraphSchemaSDL: string;
   }): Promise<string> {
     const insertedSchemaCheck = await this.db
@@ -26,6 +27,7 @@ export class SchemaCheckRepository {
       .values({
         targetId: data.targetId,
         isComposable: data.isComposable,
+        isDeleted: data.isDeleted,
         proposedSubgraphSchemaSDL: data.proposedSubgraphSchemaSDL,
       })
       .returning()

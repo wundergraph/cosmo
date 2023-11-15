@@ -137,6 +137,7 @@ const CheckOperationsPage: NextPageWithLayout = () => {
       graphName: graphContext?.graph?.name,
     }),
     enabled: !!graphContext?.graph?.name,
+    refetchOnWindowFocus: false,
   });
 
   const [search, setSearch] = useState(router.query.search as string);

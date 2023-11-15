@@ -569,6 +569,13 @@ export class CheckSubgraphSchemaRequest extends Message<CheckSubgraphSchemaReque
    */
   gitInfo?: GitInfo;
 
+  /**
+   * Check breaking changes and composition when this subgraph is deleted
+   *
+   * @generated from field: optional bool delete = 4;
+   */
+  delete?: boolean;
+
   constructor(data?: PartialMessage<CheckSubgraphSchemaRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -580,6 +587,7 @@ export class CheckSubgraphSchemaRequest extends Message<CheckSubgraphSchemaReque
     { no: 1, name: "subgraph_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "schema", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
     { no: 3, name: "gitInfo", kind: "message", T: GitInfo },
+    { no: 4, name: "delete", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CheckSubgraphSchemaRequest {
@@ -1028,6 +1036,9 @@ export class CheckSubgraphSchemaResponse extends Message<CheckSubgraphSchemaResp
   compositionErrors: CompositionError[] = [];
 
   /**
+   * Contains the operation usage stats for the operations that are impacted by the schema changes.
+   * Can be undefined when the schema changes are not inspectable by real traffic breaking change detection.
+   *
    * @generated from field: wg.cosmo.platform.v1.CheckOperationUsageStats operationUsageStats = 5;
    */
   operationUsageStats?: CheckOperationUsageStats;
@@ -2052,6 +2063,11 @@ export class SchemaCheck extends Message<SchemaCheck> {
    */
   isForcedSuccess = false;
 
+  /**
+   * @generated from field: bool isDeleted = 9;
+   */
+  isDeleted = false;
+
   constructor(data?: PartialMessage<SchemaCheck>) {
     super();
     proto3.util.initPartial(data, this);
@@ -2068,6 +2084,7 @@ export class SchemaCheck extends Message<SchemaCheck> {
     { no: 6, name: "isBreaking", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 7, name: "hasClientTraffic", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 8, name: "isForcedSuccess", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 9, name: "isDeleted", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SchemaCheck {

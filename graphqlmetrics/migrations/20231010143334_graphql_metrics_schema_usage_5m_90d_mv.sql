@@ -19,6 +19,8 @@ SELECT
     toLowCardinality(ClientName) as ClientName,
     toLowCardinality(ClientVersion) as ClientVersion,
     SubgraphIDs as SubgraphIDs,
+    IsArgument as IsArgument,
+    IsInput as IsInput,
     sum(Count) as TotalUsages,
     sumIf(Count, HasError OR position(HttpStatusCode,'5') = 1 OR position(HttpStatusCode,'4') = 1) as TotalErrors,
     sumIf(Count, position(HttpStatusCode,'4') = 1) AS TotalClientErrors
@@ -38,7 +40,9 @@ GROUP BY
     FieldName,
     NamedType,
     TypeNames,
-    SubgraphIDs
+    SubgraphIDs,
+    IsArgument,
+    IsInput
 ORDER BY
     Timestamp;
 

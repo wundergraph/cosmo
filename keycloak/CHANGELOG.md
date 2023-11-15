@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.8.2](https://github.com/wundergraph/cosmo/compare/keycloak@0.8.1...keycloak@0.8.2) (2023-11-15)
+
+### Bug Fixes
+
+* improve idp email styling ([#256](https://github.com/wundergraph/cosmo/issues/256)) ([e242019](https://github.com/wundergraph/cosmo/commit/e242019710902761f8df02f6761e40aa2f9b5d6c)) (@Pagebakers)
+
 ## [0.8.1](https://github.com/wundergraph/cosmo/compare/keycloak@0.8.0...keycloak@0.8.1) (2023-09-21)
 
 ### Bug Fixes

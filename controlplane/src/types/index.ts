@@ -64,6 +64,7 @@ export interface SchemaCheckDTO {
   isBreaking: boolean;
   hasClientTraffic: boolean;
   isForcedSuccess: boolean;
+  isDeleted: boolean;
 }
 
 export interface SchemaCheckSummaryDTO extends SchemaCheckDTO {
