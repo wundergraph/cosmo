@@ -95,9 +95,12 @@ export default (opts: BaseCommandOptions) => {
       { headers: baseHeaders },
     );
     if (result.response?.code === EnumStatusCode.OK) {
-      const upToDate = (result.operations?.filter((op) => op.status === PublishedOperationStatus.UP_TO_DATE) ?? []).length;
+      const upToDate = (result.operations?.filter((op) => op.status === PublishedOperationStatus.UP_TO_DATE) ?? [])
+        .length;
       const created = (result.operations?.filter((op) => op.status === PublishedOperationStatus.CREATED) ?? []).length;
-      console.log(pc.green(`pushed ${result.operations?.length ?? 0} operations: ${created} created, ${upToDate} up to date`));  
+      console.log(
+        pc.green(`pushed ${result.operations?.length ?? 0} operations: ${created} created, ${upToDate} up to date`),
+      );
     } else {
       console.log(pc.red(`could not push operations: ${result.response?.details ?? 'unknown error'}`));
     }
