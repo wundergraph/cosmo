@@ -1,5 +1,7 @@
 # Cosmo Helm Chart
 
+[![Helm Deployment](https://github.com/wundergraph/cosmo/actions/workflows/helm-deployment.yaml/badge.svg)](https://github.com/wundergraph/cosmo/actions/workflows/helm-deployment.yaml)
+
 ## Getting started for local development
 
 ### Prerequisites
