@@ -188,4 +188,4 @@ minio:
   auth:
     rootUser: minio
     rootPassword: changeme
-    defaultBuckets: cosmo
+  defaultBuckets: cosmo
