@@ -78,18 +78,23 @@ func Main() {
 			logger.Fatal("Could not read router config", zap.Error(err), zap.String("path", cfg.RouterConfigPath))
 		}
 
-		logger.Info("Static router config provided. Polling is disabled. Updating router config is only possible by restarting the router.")
-
 		if cfg.Graph.Token == "" {
-			cfg.GraphqlMetrics.Enabled = false
 			logger.Warn("Static router config file provided, but no graph token. Disabling schema usage tracking, thus breaking change detection. Not recommended for production use.")
+			cfg.GraphqlMetrics.Enabled = false
 
-			// Only disable tracing and metrics if no custom OTLP exporter is configured
-			cfg.Telemetry.Tracing.Enabled = len(cfg.Telemetry.Metrics.OTLP.Exporters) != 0
-			cfg.Telemetry.Metrics.OTLP.Enabled = cfg.Telemetry.Tracing.Enabled
+			// Only disable default tracing and metrics if no custom OTLP exporter is configured
+			if cfg.Telemetry.Tracing.Enabled && len(cfg.Telemetry.Tracing.Exporters) == 0 {
+				cfg.Telemetry.Tracing.Enabled = false
+			}
+			if cfg.Telemetry.Metrics.OTLP.Enabled && len(cfg.Telemetry.Metrics.OTLP.Exporters) == 0 {
+				cfg.Telemetry.Metrics.OTLP.Enabled = false
+			}
 
-			if !cfg.Telemetry.Tracing.Enabled {
-				logger.Warn("Static router config file provided, but no graph token. Disabling default OTLP metrics and tracing. Not recommended for production use.")
+			if !cfg.Telemetry.Tracing.Enabled && len(cfg.Telemetry.Tracing.Exporters) == 0 {
+				logger.Warn("Static router config file provided, but no graph token. Disabling default tracing. Not recommended for production use.")
+			}
+			if !cfg.Telemetry.Metrics.OTLP.Enabled && len(cfg.Telemetry.Metrics.OTLP.Exporters) == 0 {
+				logger.Warn("Static router config file provided, but no graph token. Disabling default OTLP metrics. Not recommended for production use.")
 			}
 		}
 	} else {
@@ -100,7 +105,6 @@ func Main() {
 			controlplane.WithGraphApiToken(cfg.Graph.Token),
 			controlplane.WithPollInterval(cfg.PollInterval),
 		)
-		logger.Info("Polling for router config updates", zap.String("interval", cfg.PollInterval.String()))
 	}
 
 	var authenticators []authentication.Authenticator
