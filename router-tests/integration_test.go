@@ -138,6 +138,11 @@ func sendDataWithHeader(server *core.Server, data []byte, header http.Header) *h
 // setupServer sets up the router server without making it listen on a local
 // port, allowing tests by calling the server directly via server.Server.Handler.ServeHTTP
 func setupServer(tb testing.TB, opts ...core.Option) *core.Server {
+	server, _ := setupServerConfig(tb, opts...)
+	return server
+}
+
+func setupServerConfig(tb testing.TB, opts ...core.Option) (*core.Server, config.Config) {
 	ctx := context.Background()
 	cfg := config.Config{
 		Graph: config.Graph{
@@ -169,9 +174,19 @@ func setupServer(tb testing.TB, opts ...core.Option) *core.Server {
 		"organization_id":    "organization",
 	}
 	graphApiToken, err := t.SignedString([]byte("hunter2"))
+	require.NoError(tb, err)
 
 	cdnFileServer := http.FileServer(http.Dir(filepath.Join("testdata", "cdn")))
+	var cdnRequestLog []string
 	cdnServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/" {
+			requestLog, err := json.Marshal(cdnRequestLog)
+			require.NoError(tb, err)
+			w.Header().Set("Content-Type", "application/json")
+			w.Write(requestLog)
+			return
+		}
+		cdnRequestLog = append(cdnRequestLog, r.Method+" "+r.URL.Path)
 		// Ensure we have an authorization header with a valid token
 		authorization := r.Header.Get("Authorization")
 		token := authorization[len("Bearer "):]
@@ -185,14 +200,14 @@ func setupServer(tb testing.TB, opts ...core.Option) *core.Server {
 
 	tb.Cleanup(cdnServer.Close)
 
-	require.NoError(tb, err)
+	cfg.CDN.URL = cdnServer.URL
 
 	routerOpts := []core.Option{
 		core.WithFederatedGraphName(cfg.Graph.Name),
 		core.WithStaticRouterConfig(routerConfig),
 		core.WithLogger(zapLogger),
 		core.WithGraphApiToken(graphApiToken),
-		core.WithCDNURL(cdnServer.URL),
+		core.WithCDNURL(cfg.CDN.URL),
 		core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
 			EnableSingleFlight: true,
 		}),
@@ -206,7 +221,7 @@ func setupServer(tb testing.TB, opts ...core.Option) *core.Server {
 
 	server, err := rs.NewTestServer(ctx)
 	require.NoError(tb, err)
-	return server
+	return server, cfg
 }
 
 // setupListeningServer calls setupServer to set up the server but makes it listen
