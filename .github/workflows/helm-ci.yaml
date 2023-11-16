@@ -50,19 +50,30 @@ jobs:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
+      - uses: ./.github/actions/go
+
+      - name: Install tools
+        run: go install github.com/yannh/kubeconform/cmd/kubeconform@v0.6.3
+
+      - name: Install Helm
+        uses: azure/setup-helm@v3
+
       - name: Setup Carvel tools
         uses: carvel-dev/setup-action@v1.3.0
         with:
           only: kapp, kbld
           token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Smoke test if the Carvel tools are working
         run: |
           kapp version
           kbld version
+
       - name: start minikube
         id: minikube
         uses: medyagh/setup-minikube@v0.0.14
         with:
           addons: ingress
+
       - name: Deploy to minikube
         run: make dev
