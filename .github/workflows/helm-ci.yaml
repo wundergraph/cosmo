@@ -76,4 +76,5 @@ jobs:
           addons: ingress
 
       - name: Deploy to minikube
+        working-directory: ./helm
         run: make dev
