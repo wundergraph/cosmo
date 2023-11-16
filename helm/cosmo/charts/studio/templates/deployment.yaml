@@ -59,7 +59,7 @@ spec:
               valueFrom:
                 configMapKeyRef:
                   name: {{ include "studio.fullname" . }}
-                  key: studioWebUrl
+                  key: slackClientId
           ports:
             - name: http
               containerPort: {{ .Values.service.port }}
