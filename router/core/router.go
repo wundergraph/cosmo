@@ -255,6 +255,8 @@ func NewRouter(opts ...Option) (*Router, error) {
 			})
 		}
 	}
+
+	// Add default exporters if none are configured
 	if r.metricConfig.OpenTelemetry.Enabled && len(r.metricConfig.OpenTelemetry.Exporters) == 0 {
 		if endpoint := otelconfig.DefaultEndpoint(); endpoint != "" {
 			r.logger.Debug("using default metrics exporter", zap.String("endpoint", endpoint))
@@ -517,14 +519,15 @@ func (r *Router) Start(ctx context.Context) error {
 
 	// Start the server with the static config without polling
 	if r.routerConfig != nil {
-
-		r.logger.Info("Static router config provided. Polling is disabled.")
+		r.logger.Info("Static router config provided. Polling is disabled. Updating router config is only possible by restarting the router.")
 		return r.updateServer(ctx, r.routerConfig)
 	}
 
 	if r.configFetcher == nil {
 		return fmt.Errorf("config fetcher not provided. Please provide a static router config instead")
 	}
+
+	r.logger.Info("Polling for router config updates in the background", zap.String("interval", r.configFetcher.Interval().String()))
 
 	initCh := make(chan *nodev1.RouterConfig, 1)
 
