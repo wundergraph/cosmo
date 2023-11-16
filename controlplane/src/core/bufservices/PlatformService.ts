@@ -32,7 +32,6 @@ import {
   GetFederatedGraphChangelogResponse,
   GetFederatedGraphSDLByNameResponse,
   GetFederatedGraphsResponse,
-  GetFederatedSubgraphSDLByNameResponse,
   GetFieldUsageResponse,
   GetGraphMetricsResponse,
   GetMetricsErrorRateResponse,
@@ -63,6 +62,7 @@ import {
   LeaveOrganizationResponse,
   DeleteOrganizationResponse,
   UpdateOrgMemberRoleResponse,
+  GetLatestValidSubgraphSDLByNameResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { OpenAIGraphql, isValidUrl } from '@wundergraph/cosmo-shared';
 import { parse } from 'graphql';
@@ -415,15 +415,14 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    getFederatedSubgraphSDLByName: (req, ctx) => {
+    getLatestValidSubgraphSDLByName: (req, ctx) => {
       const logger = opts.logger.child({
         service: ctx.service.typeName,
         method: ctx.method.name,
       });
-      return handleError<PlainMessage<GetFederatedSubgraphSDLByNameResponse>>(logger, async () => {
+      return handleError<PlainMessage<GetLatestValidSubgraphSDLByNameResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
-        const compositionRepo = new GraphCompositionRepository(opts.db);
         const subgraph = await subgraphRepo.byName(req.name);
         if (!subgraph) {
           return {
@@ -446,7 +445,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           response: {
             code: EnumStatusCode.OK,
           },
-          latestValidSdl: schemaVersion.schema || undefined,
+          sdl: schemaVersion.schema || undefined,
         };
       });
     },

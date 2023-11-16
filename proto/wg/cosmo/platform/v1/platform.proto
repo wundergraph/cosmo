@@ -227,13 +227,13 @@ message GetSubgraphByNameResponse {
   Subgraph graph = 2;
 }
 
-message GetFederatedSubgraphSDLByNameRequest {
+message GetLatestValidSubgraphSDLByNameRequest {
   string name = 1;
 }
 
-message GetFederatedSubgraphSDLByNameResponse {
+message GetLatestValidSubgraphSDLByNameResponse {
   Response response = 1;
-  optional string latestValidSdl = 2;
+  optional string sdl = 2;
 }
 
 message GetChecksByFederatedGraphNameRequest {
@@ -1059,7 +1059,7 @@ service PlatformService {
   // GetSubgraphByName returns the subgraph by name.
   rpc GetSubgraphByName(GetSubgraphByNameRequest) returns (GetSubgraphByNameResponse) {}
   // GetFederatedSubgraphSDLByName returns the SDL of the subgraph by name.
-  rpc GetFederatedSubgraphSDLByName(GetFederatedSubgraphSDLByNameRequest) returns (GetFederatedSubgraphSDLByNameResponse) {}
+  rpc GetLatestValidSubgraphSDLByName(GetLatestValidSubgraphSDLByNameRequest) returns (GetLatestValidSubgraphSDLByNameResponse) {}
 
 
   // GetChecksByFederatedGraphName return schema and composition checks that concern a federated graph

@@ -20,7 +20,7 @@ import { Component2Icon } from "@radix-ui/react-icons";
 import { useQuery } from "@tanstack/react-query";
 import {
   getFederatedGraphSDLByName,
-  getFederatedSubgraphSDLByName,
+  getLatestValidSubgraphSDLByName,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import Link from "next/link";
 import { useRouter } from "next/router";
@@ -76,7 +76,7 @@ const SDLPage: NextPageWithLayout = () => {
     graphData?.graph?.isComposable && !!graphData?.graph?.lastUpdatedAt;
 
   const { data: subGraphSdl } = useQuery({
-    ...getFederatedSubgraphSDLByName.useQuery({
+    ...getLatestValidSubgraphSDLByName.useQuery({
       name: activeSubgraph,
     }),
     enabled: !!graphData?.subgraphs && !!activeSubgraph,
@@ -100,7 +100,7 @@ const SDLPage: NextPageWithLayout = () => {
     ? {
         title: activeSubgraphObject?.name ?? "",
         routingUrl: activeSubgraphObject?.routingURL ?? "",
-        sdl: subGraphSdl?.latestValidSdl ?? "",
+        sdl: subGraphSdl?.sdl ?? "",
         time: "",
       }
     : {
