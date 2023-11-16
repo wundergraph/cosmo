@@ -1875,11 +1875,6 @@ export class GetFederatedSubgraphSDLByNameRequest extends Message<GetFederatedSu
    */
   name = "";
 
-  /**
-   * @generated from field: string federatedGraphName = 2;
-   */
-  federatedGraphName = "";
-
   constructor(data?: PartialMessage<GetFederatedSubgraphSDLByNameRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1889,7 +1884,6 @@ export class GetFederatedSubgraphSDLByNameRequest extends Message<GetFederatedSu
   static readonly typeName = "wg.cosmo.platform.v1.GetFederatedSubgraphSDLByNameRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "federatedGraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetFederatedSubgraphSDLByNameRequest {
@@ -1919,14 +1913,9 @@ export class GetFederatedSubgraphSDLByNameResponse extends Message<GetFederatedS
   response?: Response;
 
   /**
-   * @generated from field: optional string latestSdl = 2;
+   * @generated from field: optional string latestValidSdl = 2;
    */
-  latestSdl?: string;
-
-  /**
-   * @generated from field: optional string lastDeployedSdl = 3;
-   */
-  lastDeployedSdl?: string;
+  latestValidSdl?: string;
 
   constructor(data?: PartialMessage<GetFederatedSubgraphSDLByNameResponse>) {
     super();
@@ -1937,8 +1926,7 @@ export class GetFederatedSubgraphSDLByNameResponse extends Message<GetFederatedS
   static readonly typeName = "wg.cosmo.platform.v1.GetFederatedSubgraphSDLByNameResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
-    { no: 2, name: "latestSdl", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 3, name: "lastDeployedSdl", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 2, name: "latestValidSdl", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetFederatedSubgraphSDLByNameResponse {

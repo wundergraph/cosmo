@@ -1,50 +1,61 @@
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { eq } from 'drizzle-orm';
+import { JsonValue } from '@bufbuild/protobuf';
 import * as schema from '../../db/schema.js';
-import { graphCompositions, schemaVersion, targets } from '../../db/schema.js';
-import { GraphCompositionDTO, SubgraphDTO } from '../../types/index.js';
+import { graphCompositionSubgraphs, graphCompositions, schemaVersion, targets } from '../../db/schema.js';
 
 export class GraphCompositionRepository {
   constructor(private db: PostgresJsDatabase<typeof schema>) {}
 
-  public async addComposition(input: { fedGraphSchemaVersionId: string; subgraphSchemaVersionIds: string[] }) {
-    if (input.subgraphSchemaVersionIds.length > 0) {
+  public async addComposition({
+    fedGraphSchemaVersionId,
+    compositionErrorString,
+    routerConfig,
+    subgraphSchemaVersionIds,
+  }: {
+    fedGraphSchemaVersionId: string;
+    compositionErrorString: string;
+    routerConfig?: JsonValue;
+    subgraphSchemaVersionIds: string[];
+  }) {
+    const insertedComposition = await this.db
+      .insert(graphCompositions)
+      .values({
+        schemaVersionId: fedGraphSchemaVersionId,
+        routerConfig: routerConfig || null,
+        compositionErrors: compositionErrorString,
+        isComposable: compositionErrorString === '',
+      })
+      .returning()
+      .execute();
+    if (subgraphSchemaVersionIds.length > 0) {
       await this.db
-        .insert(graphCompositions)
+        .insert(graphCompositionSubgraphs)
         .values(
-          input.subgraphSchemaVersionIds.map((subgraphSchemaVersionId) => ({
-            federatedGraphSchemaVersionId: input.fedGraphSchemaVersionId,
-            subgraphSchemaVersionId,
+          subgraphSchemaVersionIds.map((schemaVersionId) => ({
+            graphCompositionId: insertedComposition[0].id,
+            schemaVersionId,
           })),
         )
         .execute();
     }
   }
 
-  public async getComposition(input: { fedGraphSchemaVersionId: string }): Promise<GraphCompositionDTO | undefined> {
-    const comspositions = await this.db
+  public async getComposition(input: { fedGraphSchemaVersionId: string }) {
+    const compositions = await this.db
       .select({
-        federatedGraphSchemaVersionId: graphCompositions.federatedGraphSchemaVersionId,
-        subgraphSchemaVersionId: graphCompositions.subgraphSchemaVersionId,
-        subgraphTargetId: schemaVersion.targetId,
-        subgraphSchema: schemaVersion.schemaSDL,
+        id: graphCompositions.id,
+        isComposable: graphCompositions.isComposable,
+        compostionErrors: graphCompositions.compositionErrors,
       })
       .from(graphCompositions)
-      .innerJoin(schemaVersion, eq(graphCompositions.subgraphSchemaVersionId, schemaVersion.id))
-      .where(eq(graphCompositions.federatedGraphSchemaVersionId, input.fedGraphSchemaVersionId))
+      .where(eq(graphCompositions.schemaVersionId, input.fedGraphSchemaVersionId))
       .execute();
 
-    if (comspositions.length === 0) {
+    if (compositions.length === 0) {
       return undefined;
     }
 
-    return {
-      federatedGraphSchemaVersionId: comspositions[0].federatedGraphSchemaVersionId,
-      subgraphs: comspositions.map((c) => ({
-        schemaVersionId: c.subgraphSchemaVersionId,
-        targetId: c.subgraphTargetId || '',
-        schema: c.subgraphSchema || '',
-      })),
-    };
+    return compositions[0];
   }
 }

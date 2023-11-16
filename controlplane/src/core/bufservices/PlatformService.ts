@@ -398,7 +398,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<GetFederatedGraphSDLByNameResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const fedRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
-        const schemaVersion = await fedRepo.getLatestValidFederatedGraphSchemaVersion(req.name);
+        const schemaVersion = await fedRepo.getLatestValidSchemaVersion(req.name);
         if (schemaVersion && schemaVersion.schema) {
           return {
             response: {
@@ -422,7 +422,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
       return handleError<PlainMessage<GetFederatedSubgraphSDLByNameResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const fedRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const compositionRepo = new GraphCompositionRepository(opts.db);
         const subgraph = await subgraphRepo.byName(req.name);
@@ -434,35 +433,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const fedGraphSchemaVersion = await fedRepo.getLatestValidFederatedGraphSchemaVersion(req.federatedGraphName);
-        if (!fedGraphSchemaVersion) {
+        const schemaVersion = await subgraphRepo.getLatestValidSchemaVersion(req.name);
+        if (!schemaVersion) {
           return {
             response: {
-              code: EnumStatusCode.OK,
+              code: EnumStatusCode.ERR_NOT_FOUND,
             },
-            latestSdl: subgraph.schemaSDL,
-          };
-        }
-
-        const compostion = await compositionRepo.getComposition({
-          fedGraphSchemaVersionId: fedGraphSchemaVersion.schemaVersionId,
-        });
-        if (!compostion) {
-          return {
-            response: {
-              code: EnumStatusCode.OK,
-            },
-            latestSdl: subgraph.schemaSDL,
-          };
-        }
-
-        const subgraphVersion = compostion.subgraphs.find((s) => s.targetId === subgraph.targetId);
-        if (!subgraphVersion || subgraphVersion.schema === '') {
-          return {
-            response: {
-              code: EnumStatusCode.OK,
-            },
-            latestSdl: subgraph.schemaSDL,
           };
         }
 
@@ -470,8 +446,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           response: {
             code: EnumStatusCode.OK,
           },
-          latestSdl: subgraph.schemaSDL,
-          lastDeployedSdl: subgraphVersion.schema,
+          latestValidSdl: schemaVersion.schema || undefined,
         };
       });
     },

@@ -1,7 +1,7 @@
 {
   "version": "5",
   "dialect": "pg",
-  "id": "c9980c98-eb56-4549-946f-a7cde563d226",
+  "id": "abf1d456-bd53-49eb-a0f9-a7458355aa2c",
   "prevId": "80ed568d-ddfb-46f9-8044-888a050aaa22",
   "tables": {
     "api_keys": {
@@ -372,6 +372,69 @@
         }
       }
     },
+    "graph_composition_subgraphs": {
+      "name": "graph_composition_subgraphs",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "graph_composition_id": {
+          "name": "graph_composition_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "schema_version_id": {
+          "name": "schema_version_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "graph_composition_subgraphs_graph_composition_id_graph_compositions_id_fk": {
+          "name": "graph_composition_subgraphs_graph_composition_id_graph_compositions_id_fk",
+          "tableFrom": "graph_composition_subgraphs",
+          "tableTo": "graph_compositions",
+          "columnsFrom": [
+            "graph_composition_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "graph_composition_subgraphs_schema_version_id_schema_versions_id_fk": {
+          "name": "graph_composition_subgraphs_schema_version_id_schema_versions_id_fk",
+          "tableFrom": "graph_composition_subgraphs",
+          "tableTo": "schema_versions",
+          "columnsFrom": [
+            "schema_version_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
     "graph_compositions": {
       "name": "graph_compositions",
       "schema": "",
@@ -383,27 +446,53 @@
           "notNull": true,
           "default": "gen_random_uuid()"
         },
-        "federated_graph_schema_version_id": {
-          "name": "federated_graph_schema_version_id",
+        "schema_version_id": {
+          "name": "schema_version_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
         },
-        "subgraph_schema_version_id": {
-          "name": "subgraph_schema_version_id",
+        "is_composable": {
+          "name": "is_composable",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "composition_errors": {
+          "name": "composition_errors",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "router_config": {
+          "name": "router_config",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_by": {
+          "name": "created_by",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         }
       },
       "indexes": {},
       "foreignKeys": {
-        "graph_compositions_federated_graph_schema_version_id_schema_versions_id_fk": {
-          "name": "graph_compositions_federated_graph_schema_version_id_schema_versions_id_fk",
+        "graph_compositions_schema_version_id_schema_versions_id_fk": {
+          "name": "graph_compositions_schema_version_id_schema_versions_id_fk",
           "tableFrom": "graph_compositions",
           "tableTo": "schema_versions",
           "columnsFrom": [
-            "federated_graph_schema_version_id"
+            "schema_version_id"
           ],
           "columnsTo": [
             "id"
@@ -411,12 +500,12 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "graph_compositions_subgraph_schema_version_id_schema_versions_id_fk": {
-          "name": "graph_compositions_subgraph_schema_version_id_schema_versions_id_fk",
+        "graph_compositions_created_by_users_id_fk": {
+          "name": "graph_compositions_created_by_users_id_fk",
           "tableFrom": "graph_compositions",
-          "tableTo": "schema_versions",
+          "tableTo": "users",
           "columnsFrom": [
-            "subgraph_schema_version_id"
+            "created_by"
           ],
           "columnsTo": [
             "id"

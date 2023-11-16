@@ -79,23 +79,17 @@ export class Composer {
       routerConfigJson = routerConfig.toJson();
     }
 
-    const prevValidFederatedSDL = await this.federatedGraphRepo.getLatestValidFederatedGraphSchemaVersion(
-      composedGraph.name,
-    );
+    const prevValidFederatedSDL = await this.federatedGraphRepo.getLatestValidSchemaVersion(composedGraph.name);
 
     const updatedFederatedGraph = await this.federatedGraphRepo.addSchemaVersion({
       graphName: composedGraph.name,
       composedSDL: composedGraph.composedSchema,
+      subgraphSchemaVersionIds: composedGraph.subgraphs.map((s) => s.schemaVersionId!),
       compositionErrors: composedGraph.errors,
       routerConfig: routerConfigJson,
     });
 
-    if (updatedFederatedGraph?.composedSchemaVersionId && composedGraph.subgraphs.length > 0) {
-      await this.compositionRepo.addComposition({
-        fedGraphSchemaVersionId: updatedFederatedGraph.composedSchemaVersionId!,
-        subgraphSchemaVersionIds: composedGraph.subgraphs.map((s) => s.schemaVersionId!),
-      });
-    }
+    
 
     // Only create changelog when the composed schema is valid
     if (!hasCompositionErrors && composedGraph.composedSchema && updatedFederatedGraph?.composedSchemaVersionId) {

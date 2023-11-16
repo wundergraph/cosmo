@@ -4,7 +4,15 @@ import { joinLabel, normalizeURL, splitLabel } from '@wundergraph/cosmo-shared';
 import { SQL, and, asc, desc, eq, gt, inArray, lt, notInArray, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema.js';
-import { schemaChecks, schemaVersion, subgraphs, subgraphsToFederatedGraph, targets } from '../../db/schema.js';
+import {
+  graphCompositionSubgraphs,
+  graphCompositions,
+  schemaChecks,
+  schemaVersion,
+  subgraphs,
+  subgraphsToFederatedGraph,
+  targets,
+} from '../../db/schema.js';
 import {
   FederatedGraphDTO,
   GetChecksResponse,
@@ -685,5 +693,39 @@ export class SubgraphRepository {
     }
 
     return subgraphDTOs;
+  }
+
+  // returns the latest valid schema version of a subgraph
+  public async getLatestValidSchemaVersion(subgraphName: string) {
+    const latestValidVersion = await this.db
+      .select({
+        name: targets.name,
+        schemaSDL: schemaVersion.schemaSDL,
+        schemaVersionId: schemaVersion.id,
+      })
+      .from(graphCompositionSubgraphs)
+      .innerJoin(graphCompositions, eq(graphCompositions.id, graphCompositionSubgraphs.graphCompositionId))
+      .innerJoin(schemaVersion, eq(schemaVersion.id, graphCompositionSubgraphs.schemaVersionId))
+      .innerJoin(targets, eq(targets.id, schemaVersion.targetId))
+      .where(
+        and(
+          eq(targets.organizationId, this.organizationId),
+          eq(targets.name, subgraphName),
+          eq(targets.type, 'subgraph'),
+          eq(graphCompositions.isComposable, true),
+        ),
+      )
+      .orderBy(desc(graphCompositions.createdAt))
+      .limit(1)
+      .execute();
+
+    if (latestValidVersion.length === 0) {
+      return undefined;
+    }
+
+    return {
+      schema: latestValidVersion[0].schemaSDL,
+      schemaVersionId: latestValidVersion[0].schemaVersionId,
+    };
   }
 }

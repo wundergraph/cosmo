@@ -229,13 +229,11 @@ message GetSubgraphByNameResponse {
 
 message GetFederatedSubgraphSDLByNameRequest {
   string name = 1;
-  string federatedGraphName = 2;
 }
 
 message GetFederatedSubgraphSDLByNameResponse {
   Response response = 1;
-  optional string latestSdl = 2;
-  optional string lastDeployedSdl = 3;
+  optional string latestValidSdl = 2;
 }
 
 message GetChecksByFederatedGraphNameRequest {

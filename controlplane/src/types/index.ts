@@ -267,12 +267,3 @@ export interface SlackAccessTokenResponse {
   slackChannelName: string;
   webhookURL: string;
 }
-
-export interface GraphCompositionDTO {
-  federatedGraphSchemaVersionId: string;
-  subgraphs: {
-    schemaVersionId: string;
-    targetId: string;
-    schema: string;
-  }[];
-}

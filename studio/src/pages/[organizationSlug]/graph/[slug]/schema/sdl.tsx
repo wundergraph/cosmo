@@ -78,7 +78,6 @@ const SDLPage: NextPageWithLayout = () => {
   const { data: subGraphSdl } = useQuery({
     ...getFederatedSubgraphSDLByName.useQuery({
       name: activeSubgraph,
-      federatedGraphName: graphName,
     }),
     enabled: !!graphData?.subgraphs && !!activeSubgraph,
   });
@@ -101,7 +100,7 @@ const SDLPage: NextPageWithLayout = () => {
     ? {
         title: activeSubgraphObject?.name ?? "",
         routingUrl: activeSubgraphObject?.routingURL ?? "",
-        sdl: subGraphSdl?.lastDeployedSdl ?? subGraphSdl?.latestSdl ?? "",
+        sdl: subGraphSdl?.latestValidSdl ?? "",
         time: "",
       }
     : {
