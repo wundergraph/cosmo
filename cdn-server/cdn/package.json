@@ -11,8 +11,8 @@
     "build": "del dist && tsc",
     "test:watch": "vitest test",
     "test": "vitest run",
-    "lint": "eslint --cache --ignore-pattern *.d.ts --ext .ts,.mjs,.cjs . && prettier -c src",
-    "lint:fix": "eslint --cache --ignore-pattern *.d.ts --fix --ext .ts,.mjs,.cjs . && prettier --write -c src"
+    "lint": "eslint --cache && prettier -c src",
+    "format:fix": "prettier --write -c src"
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

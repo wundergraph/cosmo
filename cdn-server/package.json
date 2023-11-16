@@ -10,8 +10,8 @@
     "dev": "tsx watch src/index.ts",
     "build": "del dist && tsc",
     "start": "tsx src/index.ts",
-    "lint": "eslint --cache --ignore-pattern *.d.ts --ext .ts,.mjs,.cjs . && prettier -c src",
-    "lint:fix": "eslint --cache --ignore-pattern *.d.ts --fix --ext .ts,.mjs,.cjs . && prettier --write -c src"
+    "lint": "eslint --cache && prettier -c src",
+    "format:fix": "prettier --write -c src"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.445.0",
