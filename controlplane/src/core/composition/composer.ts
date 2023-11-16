@@ -89,8 +89,6 @@ export class Composer {
       routerConfig: routerConfigJson,
     });
 
-    
-
     // Only create changelog when the composed schema is valid
     if (!hasCompositionErrors && composedGraph.composedSchema && updatedFederatedGraph?.composedSchemaVersionId) {
       const schemaChanges = await getDiffBetweenGraphs(
