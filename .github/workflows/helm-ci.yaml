@@ -77,4 +77,4 @@ jobs:
 
       - name: Deploy to minikube
         working-directory: ./helm
-        run: make dev
+        run: make KAPP_ARGS=-y deploy
