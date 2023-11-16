@@ -10,3 +10,5 @@ metadata:
     {{- include "studio.labels" . | nindent 4 }}
 data:
   controlplaneWebUrl: "{{ .Values.global.controlplane.webUrl }}"
+  studioWebUrl: "{{ .Values.global.studio.webUrl }}"
+  slackClientId: "{{ .Values.configuration.slackClientId }}"

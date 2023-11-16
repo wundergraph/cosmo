@@ -15,6 +15,7 @@ WunderGraph Cosmo Studio.
 | autoscaling.maxReplicas | int | `100` |  |
 | autoscaling.minReplicas | int | `1` |  |
 | autoscaling.targetCPUUtilizationPercentage | int | `80` |  |
+| configuration.slackClientId | string | `""` | The client ID of the slack app to use for slack app integration |
 | deploymentStrategy | object | `{}` |  |
 | fullnameOverride | string | `""` |  |
 | image.pullPolicy | string | `"IfNotPresent"` |  |
