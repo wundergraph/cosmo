@@ -94,6 +94,7 @@ const CheckOverviewPage: NextPageWithLayout = () => {
       graphName: graphContext?.graph?.name,
     }),
     enabled: !!graphContext?.graph?.name,
+    refetchOnWindowFocus: false,
   });
 
   const { data: allGraphsData } = useQuery(getFederatedGraphs.useQuery());
