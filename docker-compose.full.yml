@@ -227,6 +227,7 @@ services:
     platform: linux/amd64
     environment:
       NEXT_PUBLIC_COSMO_CP_URL: http://localhost:3001
+      NEXT_PUBLIC_COSMO_STUDIO_URL: http://localhost:3000
       HOSTNAME: "0.0.0.0"
     profiles:
       - default

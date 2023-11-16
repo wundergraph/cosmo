@@ -50,6 +50,16 @@ spec:
                 configMapKeyRef:
                   name: {{ include "studio.fullname" . }}
                   key: controlplaneWebUrl
+            - name: NEXT_PUBLIC_COSMO_STUDIO_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "studio.fullname" . }}
+                  key: studioWebUrl
+            - name: NEXT_PUBLIC_SLACK_CLIENT_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "studio.fullname" . }}
+                  key: studioWebUrl
           ports:
             - name: http
               containerPort: {{ .Values.service.port }}
