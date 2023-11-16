@@ -44,7 +44,8 @@ jobs:
         run: git diff --no-ext-diff --exit-code ./helm
 
   minikube:
-    runs-on: ubuntu-latest
+    runs-on:
+      labels: ubuntu-latest-4-cores
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v3
@@ -77,4 +78,4 @@ jobs:
 
       - name: Deploy to minikube
         working-directory: ./helm
-        run: make KAPP_ARGS=-y deploy
+        run: make KAPP_ARGS=-y dev
