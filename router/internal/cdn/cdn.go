@@ -108,7 +108,7 @@ func (cdn *CDN) PersistentOperation(ctx context.Context, clientName string, sha2
 		cdn.organizationID,
 		cdn.federatedGraphID,
 		url.PathEscape(clientName),
-		unsafebytes.BytesToString(sha256Hash))
+		url.PathEscape(unsafebytes.BytesToString(sha256Hash)))
 	operationURL := cdn.cdnURL.ResolveReference(&url.URL{Path: operationPath})
 	req, err := http.NewRequestWithContext(ctx, "GET", operationURL.String(), nil)
 	if err != nil {
