@@ -90,6 +90,8 @@ func Main() {
 				cfg.Telemetry.Metrics.OTLP.Enabled = false
 			}
 
+			// Show warning when no custom OTLP exporter is configured and default tracing/metrics are disabled
+			// due to missing graph token
 			if !cfg.Telemetry.Tracing.Enabled && len(cfg.Telemetry.Tracing.Exporters) == 0 {
 				logger.Warn("Static router config file provided, but no graph token. Disabling default tracing. Not recommended for production use.")
 			}
