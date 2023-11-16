@@ -112,4 +112,28 @@ describe('Persisted operations', (ctx) => {
 
       await server.close();
     });
+
+    test('Should store persisted operations in blob storage', async (testContext) => {
+      const { client, server, blobStorage } = await SetupTest(testContext, dbname);
+      const fedGraphName = genID('fedGraph');
+      await setupFederatedGraph(fedGraphName, client);
+
+      const query = `query { hello }`;
+
+      const publishOperationsResp = await client.publishPersistedOperations({
+        graphName: fedGraphName,
+        clientName: 'test-client',
+        operations: [query],
+      });
+
+      expect(publishOperationsResp.response?.code).toBe(EnumStatusCode.OK);
+
+      const storageKeys = blobStorage.keys();
+      expect(storageKeys.length).toBe(1);
+
+      const stream = await blobStorage.getObject(storageKeys[0]);
+      const text = await new Response(stream).text();
+      expect(JSON.parse(text)).toEqual({ version: 1, body: query });
+      await server.close();
+    });
 });
