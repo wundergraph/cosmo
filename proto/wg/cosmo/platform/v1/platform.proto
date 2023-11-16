@@ -714,9 +714,19 @@ message PublishPersistedOperationsRequest {
   repeated string operations = 3;
 }
 
+enum PublishedOperationStatus {
+  UP_TO_DATE = 0;
+  CREATED = 1;
+}
+
+message PublishedOperation {
+  string hash = 1;
+  PublishedOperationStatus status = 2;
+}
+
 message PublishPersistedOperationsResponse {
   Response response = 1;
-  repeated string operationIDs = 2;
+  repeated PublishedOperation operations = 2;
 }
 
 message Header{

@@ -66,6 +66,8 @@ import {
   DeleteOrganizationResponse,
   UpdateOrgMemberRoleResponse,
   GetClientsResponse,
+  PublishedOperation,
+  PublishedOperationStatus,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { OpenAIGraphql, isValidUrl } from '@wundergraph/cosmo-shared';
 import { DocumentNode, buildASTSchema, parse } from 'graphql';
@@ -108,6 +110,12 @@ import {
 import { FederatedGraphSchemaUpdate, OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
 import { OidcRepository } from '../repositories/OidcRepository.js';
 import OidcProvider from '../services/OidcProvider.js';
+import { BlobNotFoundError } from '../blobstorage/index.js';
+
+interface PublishedOperationData {
+  version: 1;
+  body: string;
+}
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -3747,7 +3755,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               code: EnumStatusCode.ERROR_NOT_AUTHENTICATED,
               details: `User not found in the authentication context`,
             },
-            operationIDs: [],
+            operations: [],
           };
         }
         const organizationId = authContext.organizationId;
@@ -3762,7 +3770,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               code: EnumStatusCode.ERR_NOT_FOUND,
               details: `Federated graph '${req.graphName}' does not exist`,
             },
-            operationIDs: [],
+            operations: [],
           };
         }
         const graphAST = parse(graphSDL);
@@ -3777,7 +3785,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
                 code: EnumStatusCode.ERR,
                 details: `Operation ${operationContents} is not valid: ${e}`,
               },
-              operationIDs: [],
+              operations: [],
             };
           }
           const errors = validate(graphSchema, opAST);
@@ -3788,7 +3796,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
                 code: EnumStatusCode.ERR,
                 details: `Operation "${operationContents}" is not valid: ${errorDetails}`,
               },
-              operationIDs: [],
+              operations: [],
             };
           }
         }
@@ -3801,22 +3809,41 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               code: EnumStatusCode.ERR,
               details: `Could not register client "${req.clientName}": ${message}`,
             },
-            operationIDs: [],
+            operations: [],
           };
         }
-        const operationIDs: string[] = [];
+        const operations: PublishedOperation[] = [];
         for (const operationContents of req.operations) {
-          const operationID = crypto.createHash('sha256').update(operationContents).digest('hex');
-          const path = `${organizationId}/${federatedGraph.id}/operations/${req.clientName}/${operationID}.json`;
-          opts.blobStorage.putObject(path, Buffer.from(operationContents, 'utf8'));
-          operationIDs.push(operationID);
+          const operationHash = crypto.createHash('sha256').update(operationContents).digest('hex');
+          const path = `${organizationId}/${federatedGraph.id}/operations/${req.clientName}/${operationHash}.json`;
+          let status: PublishedOperationStatus;
+          try {
+            await opts.blobStorage.getObject(path);
+            status = PublishedOperationStatus.UP_TO_DATE;
+          } catch (e: any) {
+            if (!(e instanceof BlobNotFoundError)) {
+              throw e;
+            }
+            const data: PublishedOperationData = {
+              version: 1,
+              body: operationContents,
+            };
+            opts.blobStorage.putObject(path, Buffer.from(JSON.stringify(data), 'utf8'));
+            status = PublishedOperationStatus.CREATED;
+          }
+          operations.push(
+            new PublishedOperation({
+              hash: operationHash,
+              status,
+            }),
+          );
         }
 
         return {
           response: {
             code: EnumStatusCode.OK,
           },
-          operationIDs,
+          operations,
         };
       });
     },

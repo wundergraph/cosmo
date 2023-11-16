@@ -5,6 +5,8 @@ import pc from 'picocolors';
 
 import { BaseCommandOptions } from '../../../core/types/types';
 import { baseHeaders } from '../../../core/config.js';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { PublishedOperationStatus } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 
 const collect = (value: string, previous: string[]): string[] => {
   return [...previous, value];
@@ -91,7 +93,13 @@ export default (opts: BaseCommandOptions) => {
       },
       { headers: baseHeaders },
     );
-    console.log('pushing operations', result);
+    if (result.response?.code === EnumStatusCode.OK) {
+      const upToDate = (result.operations?.filter((op) => op.status === PublishedOperationStatus.UP_TO_DATE) ?? []).length;
+      const created = (result.operations?.filter((op) => op.status === PublishedOperationStatus.CREATED) ?? []).length;
+      console.log(pc.green(`pushed ${result.operations?.length ?? 0} operations: ${created} created, ${upToDate} up to date`));  
+    } else {
+      console.log(pc.red(`could not push operations: ${result.response?.details ?? 'unknown error'}`));
+    }
   });
   return command;
 };
