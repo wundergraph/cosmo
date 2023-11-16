@@ -38,8 +38,8 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | global.graphqlmetrics.webUrl | string | `"http://graphqlmetrics.wundergraph.local"` |  |
 | global.helmTests.enabled | bool | `false` |  |
 | global.keycloak.adminPassword | string | `"changeme"` |  |
-| global.keycloak.adminUrl | string | `"http://keycloak.wundergraph.local"` |  |
 | global.keycloak.adminUser | string | `"admin"` |  |
+| global.keycloak.apiUrl | string | `"http://cosmo-keycloak:8080"` |  |
 | global.keycloak.enabled | bool | `false` |  |
 | global.keycloak.port | int | `8080` |  |
 | global.keycloak.realm | string | `"cosmo"` |  |

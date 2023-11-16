@@ -54,7 +54,8 @@ global:
     realm: "cosmo"
     loginRealm: "master"
     webUrl: "http://keycloak.wundergraph.local"
-    apiUrl: "http://keycloak.wundergraph.local"
+    # Use internal DNS name to access Keycloak
+    apiUrl: "http://cosmo-keycloak:8080"
     clientId: "studio"
     adminUser: "admin"
     adminPassword: "changeme"
@@ -86,6 +87,7 @@ controlplane:
       - "http://studio.wundergraph.local"
     debugSQL: false
     authRedirectUri: "http://controlplane.wundergraph.local/v1/auth/callback"
+    # Use internal DNS name to access postgres
     databaseUrl: "postgres://postgres:changeme@cosmo-postgresql:5432/controlplane"
     clickhouseDsn: "http://default:changeme@cosmo-clickhouse:8123?database=cosmo"
     # Migration tool doesn't support HTTP clickhouse protocol yet
@@ -119,11 +121,13 @@ router:
 # Cosmo Open Telemetry Collector
 otelcollector:
   configuration:
+    # Use internal DNS name to access clickhouse
     clickhouseDsn: "clickhouse://default:changeme@cosmo-clickhouse:9000/cosmo?dial_timeout=15s&compress=lz4"
 
 # Cosmo GraphQL Metrics Collector
 graphqlmetrics:
   configuration:
+    # Use internal DNS name to access clickhouse
     clickhouseDsn: "clickhouse://default:changeme@cosmo-clickhouse:9000/cosmo?dial_timeout=15s&compress=lz4"
 
 # The following configuration enables the stateful services of the Cosmo Platform
