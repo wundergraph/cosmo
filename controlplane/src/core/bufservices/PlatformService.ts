@@ -3748,6 +3748,15 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
       return handleError<PlainMessage<PublishPersistedOperationsResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        if (!authContext.hasWriteAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+            operations: [],
+          };
+        }
         const userId = authContext.userId;
         if (!userId) {
           return {
