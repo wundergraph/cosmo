@@ -44,6 +44,7 @@ export interface UpdateSubgraphOptions {
   subscriptionUrl?: string;
   schemaSDL?: string;
   subscriptionProtocol?: SubscriptionProtocol;
+  updatedBy: string;
 }
 
 /**
@@ -257,7 +258,7 @@ export class SubgraphRepository {
       for (const federatedGraph of updatedFederatedGraphs) {
         const composition = await composer.composeFederatedGraph(federatedGraph);
 
-        await composer.deployComposition(composition);
+        await composer.deployComposition(composition, data.updatedBy);
 
         // Collect all composition errors
 
