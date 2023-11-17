@@ -1875,6 +1875,11 @@ export class GetLatestValidSubgraphSDLByNameRequest extends Message<GetLatestVal
    */
   name = "";
 
+  /**
+   * @generated from field: string fedGraphName = 2;
+   */
+  fedGraphName = "";
+
   constructor(data?: PartialMessage<GetLatestValidSubgraphSDLByNameRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1884,6 +1889,7 @@ export class GetLatestValidSubgraphSDLByNameRequest extends Message<GetLatestVal
   static readonly typeName = "wg.cosmo.platform.v1.GetLatestValidSubgraphSDLByNameRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "fedGraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetLatestValidSubgraphSDLByNameRequest {

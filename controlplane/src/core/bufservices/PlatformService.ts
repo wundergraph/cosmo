@@ -432,7 +432,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const schemaVersion = await subgraphRepo.getLatestValidSchemaVersion(req.name);
+        const schemaVersion = await subgraphRepo.getLatestValidSchemaVersion(req.name, req.fedGraphName);
         if (!schemaVersion) {
           return {
             response: {

@@ -229,6 +229,7 @@ message GetSubgraphByNameResponse {
 
 message GetLatestValidSubgraphSDLByNameRequest {
   string name = 1;
+  string fedGraphName = 2;
 }
 
 message GetLatestValidSubgraphSDLByNameResponse {

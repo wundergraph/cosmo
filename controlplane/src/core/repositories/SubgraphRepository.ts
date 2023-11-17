@@ -696,7 +696,13 @@ export class SubgraphRepository {
   }
 
   // returns the latest valid schema version of a subgraph
-  public async getLatestValidSchemaVersion(subgraphName: string) {
+  public async getLatestValidSchemaVersion(subgraphName: string, fedGraphName: string) {
+    const fedRepo = new FederatedGraphRepository(this.db, this.organizationId);
+    const fedGraphSchemaVersion = await fedRepo.getLatestValidSchemaVersion(fedGraphName);
+    if (!fedGraphSchemaVersion) {
+      return undefined;
+    }
+
     const latestValidVersion = await this.db
       .select({
         name: targets.name,
@@ -713,6 +719,7 @@ export class SubgraphRepository {
           eq(targets.name, subgraphName),
           eq(targets.type, 'subgraph'),
           eq(graphCompositions.isComposable, true),
+          eq(graphCompositions.schemaVersionId, fedGraphSchemaVersion.schemaVersionId),
         ),
       )
       .orderBy(desc(graphCompositions.createdAt))

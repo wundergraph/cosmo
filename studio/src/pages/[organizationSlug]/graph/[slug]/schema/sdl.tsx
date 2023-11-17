@@ -78,6 +78,7 @@ const SDLPage: NextPageWithLayout = () => {
   const { data: subGraphSdl } = useQuery({
     ...getLatestValidSubgraphSDLByName.useQuery({
       name: activeSubgraph,
+      fedGraphName: graphName,
     }),
     enabled: !!graphData?.subgraphs && !!activeSubgraph,
   });

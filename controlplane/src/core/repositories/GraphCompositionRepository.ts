@@ -18,27 +18,29 @@ export class GraphCompositionRepository {
     routerConfig?: JsonValue;
     subgraphSchemaVersionIds: string[];
   }) {
-    const insertedComposition = await this.db
-      .insert(graphCompositions)
-      .values({
-        schemaVersionId: fedGraphSchemaVersionId,
-        routerConfig: routerConfig || null,
-        compositionErrors: compositionErrorString,
-        isComposable: compositionErrorString === '',
-      })
-      .returning()
-      .execute();
-    if (subgraphSchemaVersionIds.length > 0) {
-      await this.db
-        .insert(graphCompositionSubgraphs)
-        .values(
-          subgraphSchemaVersionIds.map((schemaVersionId) => ({
-            graphCompositionId: insertedComposition[0].id,
-            schemaVersionId,
-          })),
-        )
+    await this.db.transaction(async (tx) => {
+      const insertedComposition = await tx
+        .insert(graphCompositions)
+        .values({
+          schemaVersionId: fedGraphSchemaVersionId,
+          routerConfig: routerConfig || null,
+          compositionErrors: compositionErrorString,
+          isComposable: compositionErrorString === '',
+        })
+        .returning()
         .execute();
-    }
+      if (subgraphSchemaVersionIds.length > 0) {
+        await tx
+          .insert(graphCompositionSubgraphs)
+          .values(
+            subgraphSchemaVersionIds.map((schemaVersionId) => ({
+              graphCompositionId: insertedComposition[0].id,
+              schemaVersionId,
+            })),
+          )
+          .execute();
+      }
+    });
   }
 
   public async getComposition(input: { fedGraphSchemaVersionId: string }) {

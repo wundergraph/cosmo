@@ -440,7 +440,6 @@ export class FederatedGraphRepository {
     const latestValidVersion = await this.db
       .select({
         id: schemaVersion.id,
-        routerConfig: graphCompositions.routerConfig,
       })
       .from(schemaVersion)
       .innerJoin(graphCompositions, eq(schemaVersion.id, graphCompositions.schemaVersionId))
