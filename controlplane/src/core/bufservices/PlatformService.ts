@@ -64,13 +64,10 @@ import {
   LeaveOrganizationResponse,
   DeleteOrganizationResponse,
   UpdateOrgMemberRoleResponse,
-<<<<<<< HEAD
   GetClientsResponse,
   PublishedOperation,
   PublishedOperationStatus,
-=======
   GetLatestValidSubgraphSDLByNameResponse,
->>>>>>> origin/main
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { OpenAIGraphql, isValidUrl } from '@wundergraph/cosmo-shared';
 import { DocumentNode, buildASTSchema, parse } from 'graphql';
@@ -3790,9 +3787,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const federatedGraphRepo = new FederatedGraphRepository(opts.db, organizationId);
 
         // Validate everything before we update any data
-        const graphSDL = await federatedGraphRepo.getLatestValidSdlOfFederatedGraph(req.graphName);
+        const schema = await federatedGraphRepo.getLatestValidSchemaVersion(req.graphName);
         const federatedGraph = await federatedGraphRepo.byName(req.graphName);
-        if (!graphSDL || federatedGraph === undefined) {
+        if (!schema?.schema || federatedGraph === undefined) {
           return {
             response: {
               code: EnumStatusCode.ERR_NOT_FOUND,
@@ -3801,7 +3798,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             operations: [],
           };
         }
-        const graphAST = parse(graphSDL);
+        const graphAST = parse(schema.schema);
         const graphSchema = buildASTSchema(graphAST);
         for (const operationContents of req.operations) {
           let opAST: DocumentNode;
