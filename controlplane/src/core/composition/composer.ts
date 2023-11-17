@@ -5,6 +5,7 @@ import { ArgumentConfigurationData, FederationResult } from '@wundergraph/compos
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
 import { SubgraphRepository } from '../repositories/SubgraphRepository.js';
 import { FederatedGraphDTO, Label, SubgraphDTO } from '../../types/index.js';
+import { GraphCompositionRepository } from '../repositories/GraphCompositionRepository.js';
 import { composeSubgraphs } from './composition.js';
 import { getDiffBetweenGraphs } from './schemaCheck.js';
 
@@ -33,6 +34,7 @@ export function subgraphDTOsToComposedSubgraphs(
       name: subgraph.name,
       url: subgraph.routingUrl,
       sdl: subgraph.schemaSDL,
+      schemaVersionId: subgraph.schemaVersionId,
       subscriptionUrl: subgraph.subscriptionUrl,
       subscriptionProtocol: subgraph.subscriptionProtocol,
       configurationDataMap,
@@ -55,6 +57,7 @@ export class Composer {
   constructor(
     private federatedGraphRepo: FederatedGraphRepository,
     private subgraphRepo: SubgraphRepository,
+    private compositionRepo: GraphCompositionRepository,
   ) {}
 
   /**
@@ -76,18 +79,22 @@ export class Composer {
       routerConfigJson = routerConfig.toJson();
     }
 
-    const prevValidFederatedSDL = await this.federatedGraphRepo.getLatestValidSdlOfFederatedGraph(composedGraph.name);
+    const prevValidFederatedSDL = await this.federatedGraphRepo.getLatestValidSchemaVersion(composedGraph.name);
 
     const updatedFederatedGraph = await this.federatedGraphRepo.addSchemaVersion({
       graphName: composedGraph.name,
       composedSDL: composedGraph.composedSchema,
+      subgraphSchemaVersionIds: composedGraph.subgraphs.map((s) => s.schemaVersionId!),
       compositionErrors: composedGraph.errors,
       routerConfig: routerConfigJson,
     });
 
     // Only create changelog when the composed schema is valid
     if (!hasCompositionErrors && composedGraph.composedSchema && updatedFederatedGraph?.composedSchemaVersionId) {
-      const schemaChanges = await getDiffBetweenGraphs(prevValidFederatedSDL || '', composedGraph.composedSchema);
+      const schemaChanges = await getDiffBetweenGraphs(
+        prevValidFederatedSDL?.schema || '',
+        composedGraph.composedSchema,
+      );
 
       if (schemaChanges.kind !== 'failure' && schemaChanges.changes.length > 0) {
         await this.federatedGraphRepo.createFederatedGraphChangelog({
