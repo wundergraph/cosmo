@@ -20,7 +20,7 @@ import { Component2Icon } from "@radix-ui/react-icons";
 import { useQuery } from "@tanstack/react-query";
 import {
   getFederatedGraphSDLByName,
-  getFederatedSubgraphSDLByName,
+  getLatestValidSubgraphSDLByName,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import Link from "next/link";
 import { useRouter } from "next/router";
@@ -67,7 +67,7 @@ const SDLPage: NextPageWithLayout = () => {
   const { data: federatedGraphSdl } = useQuery(
     getFederatedGraphSDLByName.useQuery({
       name: graphName,
-    })
+    }),
   );
 
   const graphData = useContext(GraphContext);
@@ -76,8 +76,9 @@ const SDLPage: NextPageWithLayout = () => {
     graphData?.graph?.isComposable && !!graphData?.graph?.lastUpdatedAt;
 
   const { data: subGraphSdl } = useQuery({
-    ...getFederatedSubgraphSDLByName.useQuery({
+    ...getLatestValidSubgraphSDLByName.useQuery({
       name: activeSubgraph,
+      fedGraphName: graphName,
     }),
     enabled: !!graphData?.subgraphs && !!activeSubgraph,
   });

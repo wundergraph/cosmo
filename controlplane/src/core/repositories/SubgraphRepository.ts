@@ -4,7 +4,15 @@ import { joinLabel, normalizeURL, splitLabel } from '@wundergraph/cosmo-shared';
 import { SQL, and, asc, desc, eq, gt, inArray, lt, notInArray, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema.js';
-import { schemaChecks, schemaVersion, subgraphs, subgraphsToFederatedGraph, targets } from '../../db/schema.js';
+import {
+  graphCompositionSubgraphs,
+  graphCompositions,
+  schemaChecks,
+  schemaVersion,
+  subgraphs,
+  subgraphsToFederatedGraph,
+  targets,
+} from '../../db/schema.js';
 import {
   FederatedGraphDTO,
   GetChecksResponse,
@@ -17,6 +25,7 @@ import {
 import { Composer } from '../composition/composer.js';
 import { hasLabelsChanged, normalizeLabels } from '../util.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
+import { GraphCompositionRepository } from './GraphCompositionRepository.js';
 
 type SubscriptionProtocol = 'ws' | 'sse' | 'sse_post';
 
@@ -111,6 +120,7 @@ export class SubgraphRepository {
         routingUrl,
         // Populated when first schema is pushed
         schemaSDL: '',
+        schemaVersionId: '',
         lastUpdatedAt: '',
       } as SubgraphDTO;
     });
@@ -125,7 +135,8 @@ export class SubgraphRepository {
     await this.db.transaction(async (tx) => {
       const fedGraphRepo = new FederatedGraphRepository(tx, this.organizationId);
       const subgraphRepo = new SubgraphRepository(tx, this.organizationId);
-      const composer = new Composer(fedGraphRepo, subgraphRepo);
+      const compositionRepo = new GraphCompositionRepository(tx);
+      const composer = new Composer(fedGraphRepo, subgraphRepo, compositionRepo);
       let subgraphChanged = false;
 
       const subgraph = await subgraphRepo.byName(data.name);
@@ -292,6 +303,7 @@ export class SubgraphRepository {
       return {
         id: subgraph.id,
         schemaSDL: subgraphSchema,
+        schemaVersionId: insertedVersion[0].insertedId,
         targetId: subgraph.targetId,
         routingUrl: subgraph.routingUrl,
         subscriptionUrl: subgraph.subscriptionUrl,
@@ -412,11 +424,13 @@ export class SubgraphRepository {
 
     let lastUpdatedAt = '';
     let schemaSDL = '';
+    let schemaVersionId = '';
 
     // Subgraphs are created without a schema version.
     if (resp.subgraph.schemaVersion !== null) {
       lastUpdatedAt = resp.subgraph.schemaVersion.createdAt?.toISOString() ?? '';
       schemaSDL = resp.subgraph.schemaVersion.schemaSDL ?? '';
+      schemaVersionId = resp.subgraph.schemaVersion.id ?? '';
     }
 
     return {
@@ -427,6 +441,7 @@ export class SubgraphRepository {
       subscriptionProtocol: resp.subgraph.subscriptionProtocol ?? 'ws',
       name: resp.name,
       schemaSDL,
+      schemaVersionId,
       lastUpdatedAt,
       labels: resp.labels?.map?.((l) => splitLabel(l)) ?? [],
     };
@@ -678,5 +693,46 @@ export class SubgraphRepository {
     }
 
     return subgraphDTOs;
+  }
+
+  // returns the latest valid schema version of a subgraph
+  public async getLatestValidSchemaVersion(subgraphName: string, fedGraphName: string) {
+    const fedRepo = new FederatedGraphRepository(this.db, this.organizationId);
+    const fedGraphSchemaVersion = await fedRepo.getLatestValidSchemaVersion(fedGraphName);
+    if (!fedGraphSchemaVersion) {
+      return undefined;
+    }
+
+    const latestValidVersion = await this.db
+      .select({
+        name: targets.name,
+        schemaSDL: schemaVersion.schemaSDL,
+        schemaVersionId: schemaVersion.id,
+      })
+      .from(graphCompositionSubgraphs)
+      .innerJoin(graphCompositions, eq(graphCompositions.id, graphCompositionSubgraphs.graphCompositionId))
+      .innerJoin(schemaVersion, eq(schemaVersion.id, graphCompositionSubgraphs.schemaVersionId))
+      .innerJoin(targets, eq(targets.id, schemaVersion.targetId))
+      .where(
+        and(
+          eq(targets.organizationId, this.organizationId),
+          eq(targets.name, subgraphName),
+          eq(targets.type, 'subgraph'),
+          eq(graphCompositions.isComposable, true),
+          eq(graphCompositions.schemaVersionId, fedGraphSchemaVersion.schemaVersionId),
+        ),
+      )
+      .orderBy(desc(graphCompositions.createdAt))
+      .limit(1)
+      .execute();
+
+    if (latestValidVersion.length === 0) {
+      return undefined;
+    }
+
+    return {
+      schema: latestValidVersion[0].schemaSDL,
+      schemaVersionId: latestValidVersion[0].schemaVersionId,
+    };
   }
 }

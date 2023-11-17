@@ -38,6 +38,7 @@ export interface ComposedSubgraph {
   id: string;
   name: string;
   sdl: string;
+  schemaVersionId?: string;
   url: string;
   subscriptionUrl: string;
   subscriptionProtocol: SubscriptionProtocol;
