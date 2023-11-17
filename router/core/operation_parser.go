@@ -12,6 +12,7 @@ import (
 	"github.com/buger/jsonparser"
 	"github.com/cespare/xxhash/v2"
 	"github.com/pkg/errors"
+
 	"github.com/wundergraph/cosmo/router/internal/cdn"
 	"github.com/wundergraph/cosmo/router/internal/pool"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
@@ -338,7 +339,7 @@ func (p *OperationParser) parse(ctx context.Context, clientInfo *ClientInfo, bod
 		return nil, errors.WithStack(fmt.Errorf("failed to print normalized operation: %w", err))
 	}
 
-	if requestVariableBytes == nil {
+	if requestVariableBytes == nil || bytes.Equal(requestVariableBytes, []byte("null")) {
 		requestVariableBytes = []byte("{}")
 	}
 
