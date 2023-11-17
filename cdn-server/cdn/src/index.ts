@@ -31,7 +31,7 @@ const jwtMiddleware = (secret: string | ((c: Context) => string)) => {
       return c.text('Unauthorized', 401);
     }
     const [type, token] = authHeader.split(' ');
-    if (type !== 'Bearer') {
+    if (type !== 'Bearer' || !token) {
       return c.text('Unauthorized', 401);
     }
     let result: JWTVerifyResult;
@@ -39,7 +39,7 @@ const jwtMiddleware = (secret: string | ((c: Context) => string)) => {
     try {
       result = await jwtVerify(token, secretKey);
     } catch (e: any) {
-      if (e instanceof Error && e.name === 'JWSSignatureVerificationFailed') {
+      if (e instanceof Error && (e.name === 'JWSSignatureVerificationFailed' || e.name === 'JWSInvalid')) {
         return c.text('Forbidden', 403);
       }
       throw e;

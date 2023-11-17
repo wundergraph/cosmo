@@ -34,3 +34,6 @@ jobs:
 
       - name: Lint
         run: pnpm run --filter ./cdn-server --filter ./cdn-server/cdn lint
+
+      - name: Test
+        run: pnpm run --filter ./cdn-server/cdn test

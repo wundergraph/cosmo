@@ -100,6 +100,9 @@ importers:
       eslint-config-unjs:
         specifier: ^0.2.1
         version: 0.2.1(eslint@8.53.0)(typescript@5.2.2)
+      vitest:
+        specifier: ^0.34.6
+        version: 0.34.6
 
   cli:
     dependencies:
@@ -1656,7 +1659,7 @@ packages:
       '@bufbuild/protobuf': ^1.3.3
       '@connectrpc/connect': ^1.1.2
       '@tanstack/react-query': ^5.0.0
-      react: 18.2.0
+      react: ^18.2.0
       react-dom: ^18.2.0
     dependencies:
       '@bufbuild/protobuf': 1.4.1
@@ -5906,7 +5909,7 @@ packages:
   /@tanstack/react-query@5.4.3(react-dom@18.2.0)(react@18.2.0):
     resolution: {integrity: sha512-4aSOrRNa6yEmf7mws5QPTVMn8Lp7L38tFoTZ0c1ZmhIvbr8GIA0WT7X5N3yz/nuK8hUtjw9cAzBr4BPDZZ+tzA==}
     peerDependencies:
-      react: 18.2.0
+      react: ^18.0.0
       react-dom: ^18.0.0
       react-native: '*'
     peerDependenciesMeta:
@@ -10119,7 +10122,6 @@ packages:
 
   /get-func-name@2.0.2:
     resolution: {integrity: sha512-8vXOvuE167CtIc3OyItco7N/dpRtBbYOsPsXCz7X/PMnlGjYjSGuZJgM1Y7mmew7BKf9BqvLX2tnOVy1BBUsxQ==}
-    dev: true
 
   /get-intrinsic@1.2.1:
     resolution: {integrity: sha512-2DcsyfABl+gVHEfCOaTrWgyt+tb6MSEGmKq+kI5HwLbIYgjgmMcV8KQ41uaKz1xxUcn9tJtgFbQUEVcEbd0FYw==}
@@ -11547,7 +11549,7 @@ packages:
   /loupe@2.3.6:
     resolution: {integrity: sha512-RaPMZKiMy8/JruncMU5Bt6na1eftNoo++R4Y+N2FrxkDVTrGvcyzFTsaGif4QTeKESheMGegbhw6iUAq+5A8zA==}
     dependencies:
-      get-func-name: 2.0.0
+      get-func-name: 2.0.2
 
   /lower-case@2.0.2:
     resolution: {integrity: sha512-7fm3l3NAF9WfN6W3JOmf5drwpVqX78JtoGJ3A6W0a6ZnldM41w2fV5D490psKFTpMds8TJse/eHLFFsNHHjHgg==}
@@ -12939,7 +12941,6 @@ packages:
       nanoid: 3.3.6
       picocolors: 1.0.0
       source-map-js: 1.0.2
-    dev: false
 
   /postgres-array@2.0.0:
     resolution: {integrity: sha512-VpZrUqU5A69eQyW2c5CA1jtLecCsN2U/bD6VilrFDWq5+5UIEVO7nazS3TEcHf1zuPYO/sqGvUvW62g86RXZuA==}
@@ -13209,7 +13210,7 @@ packages:
   /react-dom@18.2.0(react@18.2.0):
     resolution: {integrity: sha512-6IMTriUmvsjHUjNtEDudZfuDQUoWXVxKHhlEGSk81n4YFS+r/Kl99wXiwlVXtPBtJenozv2P+hxDsw9eA7Xo6g==}
     peerDependencies:
-      react: 18.2.0
+      react: ^18.2.0
     dependencies:
       loose-envify: 1.4.0
       react: 18.2.0
@@ -15078,7 +15079,7 @@ packages:
       - supports-color
       - terser
 
-  /vite-node@0.34.6(@types/node@20.3.1):
+  /vite-node@0.34.6(@types/node@20.9.0):
     resolution: {integrity: sha512-nlBMJ9x6n7/Amaz6F3zJ97EBwR2FkzhBRxF5e+jE6LA3yi6Wtc2lyTij1OnDMIr34v5g/tVQtsVAzhT0jc5ygA==}
     engines: {node: '>=v14.18.0'}
     hasBin: true
@@ -15088,7 +15089,7 @@ packages:
       mlly: 1.4.0
       pathe: 1.1.1
       picocolors: 1.0.0
-      vite: 4.3.9(@types/node@20.3.1)
+      vite: 4.3.9(@types/node@20.9.0)
     transitivePeerDependencies:
       - '@types/node'
       - less
@@ -15130,6 +15131,39 @@ packages:
       rollup: 3.26.3
     optionalDependencies:
       fsevents: 2.3.3
+
+  /vite@4.3.9(@types/node@20.9.0):
+    resolution: {integrity: sha512-qsTNZjO9NoJNW7KnOrgYwczm0WctJ8m/yqYAMAK9Lxt4SoySUfS5S8ia9K7JHpa3KEeMfyF8LoJ3c5NeBJy6pg==}
+    engines: {node: ^14.18.0 || >=16.0.0}
+    hasBin: true
+    peerDependencies:
+      '@types/node': '>= 14'
+      less: '*'
+      sass: '*'
+      stylus: '*'
+      sugarss: '*'
+      terser: ^5.4.0
+    peerDependenciesMeta:
+      '@types/node':
+        optional: true
+      less:
+        optional: true
+      sass:
+        optional: true
+      stylus:
+        optional: true
+      sugarss:
+        optional: true
+      terser:
+        optional: true
+    dependencies:
+      '@types/node': 20.9.0
+      esbuild: 0.17.19
+      postcss: 8.4.31
+      rollup: 3.26.3
+    optionalDependencies:
+      fsevents: 2.3.3
+    dev: true
 
   /vitest@0.34.1:
     resolution: {integrity: sha512-G1PzuBEq9A75XSU88yO5G4vPT20UovbC/2osB2KEuV/FisSIIsw7m5y2xMdB7RsAGHAfg2lPmp2qKr3KWliVlQ==}
@@ -15227,7 +15261,7 @@ packages:
     dependencies:
       '@types/chai': 4.3.5
       '@types/chai-subset': 1.3.3
-      '@types/node': 20.3.1
+      '@types/node': 20.9.0
       '@vitest/expect': 0.34.6
       '@vitest/runner': 0.34.6
       '@vitest/snapshot': 0.34.6
@@ -15246,8 +15280,8 @@ packages:
       strip-literal: 1.0.1
       tinybench: 2.5.0
       tinypool: 0.7.0
-      vite: 4.3.9(@types/node@20.3.1)
-      vite-node: 0.34.6(@types/node@20.3.1)
+      vite: 4.3.9(@types/node@20.9.0)
+      vite-node: 0.34.6(@types/node@20.9.0)
       why-is-node-running: 2.2.2
     transitivePeerDependencies:
       - less
