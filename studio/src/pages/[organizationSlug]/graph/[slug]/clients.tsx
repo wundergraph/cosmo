@@ -102,7 +102,7 @@ const ClientsPage: NextPageWithLayout = () => {
           }
           actions={
             <CLI
-              command={`npx wgc operations push production -c <client-name> -f <path-to-file>`}
+              command={`npx wgc operations push ${slug} -c <client-name> -f <path-to-file>`}
             />
           }
         />
