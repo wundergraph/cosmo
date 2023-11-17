@@ -92,7 +92,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 				logInternalErrorsFromReport(reportErr.Report(), requestLogger)
 				writeRequestErrors(r, graphql.RequestErrorsFromOperationReport(*report), w, requestLogger)
 			case errors.As(err, &poNotFoundErr):
-				requestLogger.Warn("persisted operation not found",
+				requestLogger.Debug("persisted operation not found",
 					zap.String("sha256Hash", poNotFoundErr.Sha256Hash()),
 					zap.String("clientName", poNotFoundErr.ClientName()))
 				writeRequestErrors(r, graphql.RequestErrorsFromError(errors.New(cdn.PersistedOperationNotFoundErrorCode)), w, requestLogger)

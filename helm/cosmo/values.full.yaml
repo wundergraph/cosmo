@@ -179,7 +179,7 @@ postgresql:
 # https://artifacthub.io/packages/helm/bitnami/minio
 minio:
   commonAnnotations:
-    # Support for k14s.io. This annotation will form a group to coordinate deployments with kapp.
+    # Support for Kapp. This annotation will form a group to coordinate deployments with kapp.
     kapp.k14s.io/change-group: "cosmo.apps.minio.wundergraph.com/deployment"
   service:
     ports:

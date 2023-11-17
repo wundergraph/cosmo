@@ -3788,7 +3788,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               operations: [],
             };
           }
-          const errors = validate(graphSchema, opAST);
+          const errors = validate(graphSchema, opAST, undefined, { maxErrors: 1 });
           if (errors.length > 0) {
             const errorDetails = errors.map((e) => `${e.toString()}`).join(', ');
             return {
