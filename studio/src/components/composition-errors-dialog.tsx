@@ -11,7 +11,7 @@ export const CompositionErrorsDialog = ({ errors }: { errors: string }) => {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button className="w-full" variant={"destructive"} size={"sm"}>
+        <Button variant={"destructive"} size={"sm"}>
           Details
         </Button>
       </DialogTrigger>
