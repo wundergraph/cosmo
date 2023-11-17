@@ -139,6 +139,12 @@ export class InMemoryBlobStorage implements BlobStorage {
     if (!obj) {
       return Promise.reject(new BlobNotFoundError(`Object with key ${key} not found`));
     }
-    return Promise.resolve(obj as any);
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(obj);
+        controller.close();
+      },
+    });
+    return Promise.resolve(stream);
   }
 }
