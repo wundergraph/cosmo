@@ -31,8 +31,8 @@ Collectors:
 
 ## Migrate from Apollo GraphOS / Apollo Federation
 
-We've made it super easy for you to migrate from Apollo by using our fully automatic [Migration Assistant](https://cosmo-cp.wundergraph.com/v1/auth/login).
-Log into Cosmo Cloud, enter your Graph API Token and Graph variant, and the Assistant migrates over your Graph in just a few seconds.
+We've made it super easy for you to migrate from Apollo by using our fully automatic [Migration Assistant](https://cosmo-docs.wundergraph.com/studio/migrate-from-apollo).
+[Signup](https://cosmo.wundergraph.com/login) to Cosmo Cloud, enter your Graph API Token and Graph variant, and the Assistant migrates over your Graph in just a few seconds.
 That's it, migrate over with a single click!
 
 ## Demo Cosmo on your machine in 3 minutes
@@ -148,9 +148,7 @@ If you need help with the deployment, please contact us [here](https://form.type
 
 ## Managed Service
 
-If you don't want to manage the platform yourself, you can use our managed service [WunderGraph Cosmo Cloud](https://cosmo.wundergraph.com). It is a fully managed platform that don't make you worry about infrastructure, so you can focus on building.
-The managed service is General Available (GA). You can use every feature for 10 days. If you want to extend the trial or have questions, please contact us [here](https://form.typeform.com/to/oC6XATf4).
-After contacting us, we will hook you up and help you to get the most out of Cosmo.
+If you don't want to manage the platform yourself, you can use our managed service [WunderGraph Cosmo Cloud](https://cosmo.wundergraph.com/). It is a fully managed platform that eliminates your worries about infrastructure, allowing you to concentrate on building. This managed service includes a generous free tier of 10 million monthly requests. If you require extended data retention or are subject to strict compliance requirements, please [contact us](https://wundergraph.com/contact/sales). We offer custom plans for Hybrid SaaS and On-Premises deployments.
 
 ## License
 
