@@ -74,3 +74,8 @@ type Employee @key(fields: "id") {
   id: Int!
   hobbies: [Hobby!]!
 }
+
+type SDK @key(fields: "upc") {
+  upc: ID!
+  clientLanguages: [ProgrammingLanguage!]!
+}

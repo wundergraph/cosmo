@@ -7,6 +7,7 @@ var married = model.MaritalStatusMarried
 
 var employees = []*model.Employee{
 	{
+		ID: 1,
 		Details: &model.Details{
 			Forename:      "Jens",
 			Surname:       "Neuse",
@@ -16,6 +17,7 @@ var employees = []*model.Employee{
 		},
 	},
 	{
+		ID: 2,
 		Details: &model.Details{
 			Forename:      "Dustin",
 			Surname:       "Deus",
@@ -25,6 +27,7 @@ var employees = []*model.Employee{
 		},
 	},
 	{
+		ID: 3,
 		Details: &model.Details{
 			Forename:      "Stefan",
 			Surname:       "Avram",
@@ -42,6 +45,7 @@ var employees = []*model.Employee{
 		},
 	},
 	{
+		ID: 4,
 		Details: &model.Details{
 			Forename:      "Björn",
 			Surname:       "Schwenzer",
@@ -64,6 +68,7 @@ var employees = []*model.Employee{
 		},
 	},
 	{
+		ID: 5,
 		Details: &model.Details{
 			Forename:      "Sergiy",
 			Surname:       "Petrunin",
@@ -135,6 +140,7 @@ var employees = []*model.Employee{
 		},
 	},
 	{
+		ID: 7,
 		Details: &model.Details{
 			Forename:    "Suvij",
 			Surname:     "Surya",
@@ -143,6 +149,7 @@ var employees = []*model.Employee{
 		},
 	},
 	{
+		ID: 8,
 		Details: &model.Details{
 			Forename:    "Nithin",
 			Surname:     "Kumar",
@@ -151,6 +158,7 @@ var employees = []*model.Employee{
 		},
 	},
 	{
+		ID: 9,
 		Details: &model.Details{
 			Forename:      "Alberto",
 			Surname:       "Garcia Hierro",
@@ -168,6 +176,7 @@ var employees = []*model.Employee{
 		},
 	},
 	{
+		ID: 10,
 		Details: &model.Details{
 			Forename:    "Eelco",
 			Surname:     "Wiersma",
@@ -183,6 +192,7 @@ var employees = []*model.Employee{
 		},
 	},
 	{
+		ID: 11,
 		Details: &model.Details{
 			Forename:      "Alexandra",
 			Surname:       "Neuse",
@@ -192,6 +202,7 @@ var employees = []*model.Employee{
 		},
 	},
 	{
+		ID: 12,
 		Details: &model.Details{
 			Forename:      "David",
 			Surname:       "Stutt",
