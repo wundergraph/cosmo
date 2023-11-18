@@ -19,7 +19,7 @@
       "default": "./dist/*.js"
     }
   },
-  "devDependencies": {
+  "dependencies": {
     "@bufbuild/protobuf": "^1.4.1",
     "@connectrpc/connect-query": "^0.6.0",
     "del-cli": "^5.0.0",
