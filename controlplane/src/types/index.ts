@@ -44,6 +44,7 @@ export interface SubgraphDTO {
   subscriptionUrl: string;
   subscriptionProtocol: 'ws' | 'sse' | 'sse_post';
   schemaSDL: string;
+  schemaVersionId: string;
   lastUpdatedAt: string;
   labels: Label[];
 }
