@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.8.3](https://github.com/wundergraph/cosmo/compare/keycloak@0.8.2...keycloak@0.8.3) (2023-11-20)
+
+### Bug Fixes
+
+* move to bitnami charts and exit 1 on migration issues ([#275](https://github.com/wundergraph/cosmo/issues/275)) ([90d9d93](https://github.com/wundergraph/cosmo/commit/90d9d938cefdc78a9f34d69387f306b4d691c7f0)) (@StarpTech)
+
 ## [0.8.2](https://github.com/wundergraph/cosmo/compare/keycloak@0.8.1...keycloak@0.8.2) (2023-11-15)
 
 ### Bug Fixes
