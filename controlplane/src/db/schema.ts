@@ -81,8 +81,8 @@ export const federatedGraphPersistedOperations = pgTable(
       .references(() => federatedGraphClients.id, {
         onDelete: 'cascade',
       }),
-    hash: text('hash').notNull().unique(),
-    filePath: text('file_path').notNull().unique(),
+    hash: text('hash').notNull(),
+    filePath: text('file_path').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }),
     createdBy: uuid('created_by')

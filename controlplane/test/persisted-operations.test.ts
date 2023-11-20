@@ -136,4 +136,30 @@ describe('Persisted operations', (ctx) => {
       expect(JSON.parse(text)).toEqual({ version: 1, body: query });
       await server.close();
     });
+
+    test('Should delete persisted operations from blob storage when the federated graph is deleted', async (testContext) => {
+      const { client, server, blobStorage } = await SetupTest(testContext, dbname);
+      const fedGraphName = genID('fedGraph');
+      await setupFederatedGraph(fedGraphName, client);
+
+      const query = `query { hello }`;
+
+      const publishOperationsResp = await client.publishPersistedOperations({
+        graphName: fedGraphName,
+        clientName: 'test-client',
+        operations: [query],
+      });
+
+      expect(publishOperationsResp.response?.code).toBe(EnumStatusCode.OK);
+
+      expect(blobStorage.keys().length).toBe(1);
+
+      const deleteFederatedGraphResp = await client.deleteFederatedGraph({
+        name: fedGraphName,
+      });
+      expect(deleteFederatedGraphResp.response?.code).toBe(EnumStatusCode.OK);
+      expect(blobStorage.keys().length).toBe(0);
+
+      await server.close();
+    });
 });

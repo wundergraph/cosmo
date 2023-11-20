@@ -19,8 +19,6 @@ CREATE TABLE IF NOT EXISTS "federated_graph_persisted_operations" (
 	"updated_at" timestamp with time zone,
 	"created_by" uuid NOT NULL,
 	"updated_by" uuid NOT NULL,
-	CONSTRAINT "federated_graph_persisted_operations_hash_unique" UNIQUE("hash"),
-	CONSTRAINT "federated_graph_persisted_operations_file_path_unique" UNIQUE("file_path"),
 	CONSTRAINT "federated_graph_operation_hash" UNIQUE("federated_graph_id","hash"),
 	CONSTRAINT "federated_graph_operation_file_hash" UNIQUE("federated_graph_id","file_path")
 );

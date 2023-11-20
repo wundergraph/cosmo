@@ -1,7 +1,7 @@
 {
   "version": "5",
   "dialect": "pg",
-  "id": "45bd23a5-e55d-4fa8-9389-2dd1a18cc15c",
+  "id": "ecfb96d9-61e7-4aff-ac91-74c0a2b1b2ea",
   "prevId": "cb19aae4-6a6d-4124-845d-64c80aed06a2",
   "tables": {
     "api_keys": {
@@ -373,20 +373,6 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "federated_graph_persisted_operations_hash_unique": {
-          "name": "federated_graph_persisted_operations_hash_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "hash"
-          ]
-        },
-        "federated_graph_persisted_operations_file_path_unique": {
-          "name": "federated_graph_persisted_operations_file_path_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "file_path"
-          ]
-        },
         "federated_graph_operation_hash": {
           "name": "federated_graph_operation_hash",
           "nullsNotDistinct": false,
