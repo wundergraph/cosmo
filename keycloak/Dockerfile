@@ -12,11 +12,9 @@ COPY ./theme .
 
 RUN ./build.sh
 
-FROM quay.io/keycloak/keycloak:22.0
+FROM bitnami/keycloak:22.0.5
 
-COPY --from=0 /app/target/*.jar /opt/keycloak/providers/
+COPY --from=0 /app/target/*.jar /opt/bitnami/keycloak/providers/
 
 EXPOSE 8080
 EXPOSE 8443
-
-ENTRYPOINT ["/opt/keycloak/bin/kc.sh"]

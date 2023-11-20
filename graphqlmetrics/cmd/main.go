@@ -8,6 +8,7 @@ import (
 	"github.com/wundergraph/cosmo/graphqlmetrics"
 	"github.com/wundergraph/cosmo/graphqlmetrics/config"
 	"github.com/wundergraph/cosmo/graphqlmetrics/internal/logging"
+	_ "go.uber.org/automaxprocs" // Automatically set GOMAXPROCS to avoid CPU throttling on containerized environments
 	"go.uber.org/zap"
 	"log"
 	"net/url"
@@ -87,7 +88,7 @@ func main() {
 	migrator.AutoDumpSchema = false
 	migrator.Log = zap.NewStdLog(logger).Writer()
 	migrator.MigrationsTableName = "graphqlmetrics_schema_migrations"
-	if err := migrator.Migrate(); err != nil {
+	if err := migrator.CreateAndMigrate(); err != nil {
 		log.Fatal("Could not migrate", zap.Error(err))
 	} else {
 		logger.Info("Migration is up to date")
