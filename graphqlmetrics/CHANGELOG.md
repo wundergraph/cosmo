@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.6.0](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.5.1...graphqlmetrics@0.6.0) (2023-11-20)
+
+### Features
+
+* auto set GOMAXPROCS to avoid CPU throttling on cont envs ([#276](https://github.com/wundergraph/cosmo/issues/276)) ([757a60a](https://github.com/wundergraph/cosmo/commit/757a60ab6d64d25e65a5ad9c5bb5ffe9edd5e649)) (@StarpTech)
+
 ## [0.5.1](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.5.0...graphqlmetrics@0.5.1) (2023-11-20)
 
 ### Bug Fixes
