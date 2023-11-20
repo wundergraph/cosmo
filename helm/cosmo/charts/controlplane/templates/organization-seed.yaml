@@ -10,9 +10,11 @@ metadata:
     "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
     # Support for k14s.io. This annotation ensure that the job is run after the postgresql and keycloak deployment
     kapp.k14s.io/change-rule.postgres: "upsert after upserting cosmo.apps.postgresql.wundergraph.com/deployment"
+    {{- if .Values.global.keycloak.enabled }}
     kapp.k14s.io/change-rule.keycloak: "upsert after upserting cosmo.apps.keycloak.wundergraph.com/deployment"
+    {{- end }}
 spec:
-  backoffLimit: 5
+  backoffLimit: 10
   parallelism: 1
   ttlSecondsAfterFinished: 360
   template:

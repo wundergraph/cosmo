@@ -86,9 +86,9 @@ controlplane:
     authRedirectUri: "http://controlplane.wundergraph.local/v1/auth/callback"
     # Use internal DNS name to access postgres
     databaseUrl: "postgres://postgres:changeme@cosmo-postgresql:5432/controlplane"
-    clickhouseDsn: "http://default:changeme@cosmo-clickhouse:8123?database=cosmo"
+    clickhouseDsn: "http://default:changeme@cosmo-clickhouse:8123/?database=cosmo"
     # Migration tool doesn't support HTTP clickhouse protocol yet
-    clickhouseMigrationDsn: "clickhouse://default:changeme@cosmo-clickhouse:9000?database=cosmo"
+    clickhouseMigrationDsn: "clickhouse://default:changeme@cosmo-clickhouse:9000/cosmo?dial_timeout=15s&max_execution_time=60"
     postgres:
       database: "controlplane"
     webhookUrl: ""
@@ -132,15 +132,75 @@ graphqlmetrics:
 # For more information, please refer to the README.md
 
 keycloak:
+  # Production requires TLS
+  production: false
+  image:
+    repository: wundergraph/cosmo/keycloak
+    registry: ghcr.io
+    pullPolicy: IfNotPresent
+    tag: "latest"
   service:
-    http: 8080
+    ports:
+      http: 8080
+  replicaCount: 1
+  podAnnotations:
+    # Support for k14s.io. This annotation will form a group to coordinate deployments with kapp.
+    kapp.k14s.io/change-group: "cosmo.apps.keycloak.wundergraph.com/deployment"
+    # Support for k14s.io. This annotation will wait for the postgresql deployments to be ready before deploying.
+    kapp.k14s.io/change-rule.postgresql: "upsert after upserting cosmo.apps.postgresql.wundergraph.com/deployment"
+  auth:
+    adminUser: "admin"
+    adminPassword: "changeme"
+  startupProbe:
+    enabled: true
+  cache:
+    enabled: false
+  postgresql:
+    enabled: false
+  extraEnvVars:
+    - name: KEYCLOAK_EXTRA_ARGS
+      value: "--import-realm --health-enabled=true"
+    - name: KEYCLOAK_DATABASE_PASSWORD
+      value: "changeme"
+  extraVolumeMounts:
+    - mountPath: /opt/bitnami/keycloak/data/import/realm.json
+      name: realm-config-volume
+      readOnly: true
+      subPath: realm.json
+  extraVolumes:
+    - name: realm-config-volume
+      configMap:
+        name: keycloak-realm
+  externalDatabase:
+    host: "cosmo-postgresql"
+    port: 5432
+    user: "postgres"
+    database: keycloak
 
 clickhouse:
-  configuration:
-    database: "cosmo"
-    auth:
-      username: "default"
-      password: "changeme"
+  image:
+    tag: "23.8.3"
+  shards: 1
+  # 1 replica for development
+  replicaCount: 1
+  # 1 replica for development
+  zookeeper:
+    enabled: false
+  persistence:
+   # 2Gi for development
+   size: 2Gi
+   annotations:
+     # Support for k14s.io. This annotation will allow kapp to delete the PVCs.
+     kapp.k14s.io/owned-for-deletion: ""
+  commonAnnotations:
+    # Support for k14s.io. This annotation will form a group to coordinate deployments with kapp.
+    kapp.k14s.io/change-group: "cosmo.apps.clickhouse.wundergraph.com/deployment"
+  auth:
+    username: "default"
+    password: "changeme"
+  initdbScripts:
+    db-init.sql: |
+      CREATE DATABASE cosmo;
 
 # Postgres for the Cosmo Controlplane
 # https://artifacthub.io/packages/helm/bitnami/postgresql
@@ -158,7 +218,7 @@ postgresql:
     password: "changeme"
   primary:
     persistence:
-      size: 2Gi
+      size: 1Gi
       annotations:
         # Support for k14s.io. This annotation will allow kapp to delete the PVCs.
         kapp.k14s.io/owned-for-deletion: ""

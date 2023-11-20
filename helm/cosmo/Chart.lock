@@ -17,11 +17,11 @@ dependencies:
 - name: postgresql
   repository: https://charts.bitnami.com/bitnami
   version: 12.8.0
-- name: clickhouse
-  repository: ""
-  version: ^0
 - name: keycloak
-  repository: ""
-  version: ^0
-digest: sha256:6c047626695442670b1007b66f613e892adecb17ba7a830200a856e3ecf0c80c
-generated: "2023-10-16T18:53:00.64833535+02:00"
+  repository: https://charts.bitnami.com/bitnami
+  version: 17.3.1
+- name: clickhouse
+  repository: https://charts.bitnami.com/bitnami
+  version: 4.1.5
+digest: sha256:29b383d0573b51532a262fbf0ec65c78c5e78c754aa6fcad02fc520a38c4268a
+generated: "2023-11-20T10:48:23.4318274+01:00"

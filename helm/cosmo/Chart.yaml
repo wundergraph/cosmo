@@ -53,14 +53,16 @@ dependencies:
   - name: graphqlmetrics
     version: "^0"
     condition: global.graphqlmetrics.enabled
-    # Only for development. For production use a managed Postgres / Keycloak / ClickHouse instance
+    # Only designed for development. For production use a managed Postgres / Keycloak / ClickHouse instance
   - name: postgresql
     version: "12.8.0"
     condition: global.postgresql.enabled
     repository: "https://charts.bitnami.com/bitnami"
-  - name: clickhouse
-    version: "^0"
-    condition: global.clickhouse.enabled
   - name: keycloak
-    version: "^0"
+    version: "^17.3.1"
+    repository: "https://charts.bitnami.com/bitnami"
     condition: global.keycloak.enabled
+  - name: clickhouse
+    version: "^4.1.5"
+    condition: global.clickhouse.enabled
+    repository: "https://charts.bitnami.com/bitnami"
