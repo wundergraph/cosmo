@@ -2,6 +2,8 @@ query {
   employees {
     # resolved through employees subgraph
     id
+    # overridden by the products subgraph
+    notes
     details {
       # resolved through either employees or family subgraph
       forename
