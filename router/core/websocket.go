@@ -418,7 +418,7 @@ func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperat
 	if err != nil {
 		return nil, nil, err
 	}
-	opContext, err := h.planner.Plan(h.r, operation, h.clientInfo)
+	opContext, err := h.planner.Plan(operation, h.clientInfo, ParseRequestTraceOptions(h.r))
 	if err != nil {
 		return operation, nil, err
 	}

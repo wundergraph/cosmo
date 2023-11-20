@@ -12,6 +12,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"sync"
 	"testing"
@@ -239,11 +240,31 @@ func TestAnonymousQuery(t *testing.T) {
 
 func TestTracing(t *testing.T) {
 	server := setupServer(t)
-	result := sendCustomData(server, []byte(`{"query":"{ employees { id } }"}`), func(r *http.Request) {
-		r.Header.Set("X-WG-Trace", "true")
+	result := sendCustomData(server, []byte(fmt.Sprintf(`{"query":"%s"}`, bigEmployeesQuery)), func(r *http.Request) {
+		r.Header.Add("X-WG-Trace", "true")
+		r.Header.Add("X-WG-Trace", "enable_predictable_debug_timings")
 	})
 	assert.Equal(t, http.StatusOK, result.Result().StatusCode)
-	assert.Equal(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]},"extensions":{"trace":{"fetch":{"type":"single"},"node_type":"object","nullable":true,"fields":[{"name":"employees","value":{"node_type":"array","path":["employees"],"items":[{"node_type":"object","nullable":true,"fields":[{"name":"id","value":{"node_type":"integer","path":["id"]}}]}]}}]}}}`, result.Body.String())
+	tracingJsonBytes, err := os.ReadFile("testdata/tracing.json")
+	require.NoError(t, err)
+	// we generate a random port for the test server, so we need to replace the port in the tracing json
+	rex, err := regexp.Compile("http://localhost:\\d+/graphql")
+	require.NoError(t, err)
+	tracingJson := string(rex.ReplaceAll(tracingJsonBytes, []byte("http://localhost/graphql")))
+	resultBody := rex.ReplaceAllString(result.Body.String(), "http://localhost/graphql")
+	assert.Equal(t, prettifyJSON(t, tracingJson), prettifyJSON(t, resultBody))
+	if t.Failed() {
+		t.Log(resultBody)
+	}
+}
+
+func prettifyJSON(t *testing.T, jsonStr string) string {
+	var v interface{}
+	err := json.Unmarshal([]byte(jsonStr), &v)
+	require.NoError(t, err)
+	normalized, err := json.MarshalIndent(v, "", "  ")
+	require.NoError(t, err)
+	return string(normalized)
 }
 
 func TestMultipleAnonymousQueries(t *testing.T) {

@@ -3,9 +3,11 @@ package core
 import (
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/middleware"
 	"github.com/wundergraph/cosmo/router/internal/logging"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphql"
 	"go.uber.org/zap"
 )
@@ -55,12 +57,19 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 		// In GraphQL the statusCode does not always express the error state of the request
 		// we use this flag to determine if we have an error for the request metrics
-		var hasRequestError bool
-		statusCode := http.StatusOK
-		var writtenBytes int
+		var (
+			hasRequestError bool
+			writtenBytes    int
+			statusCode      = http.StatusOK
+			traceOptions    = ParseRequestTraceOptions(r)
+			tracePlanStart  int64
+		)
 
 		clientInfo := NewClientInfoFromRequest(r)
 		metrics := h.metrics.StartOperation(clientInfo, requestLogger, r.ContentLength)
+		if traceOptions.Enable {
+			r = r.WithContext(resolve.SetTraceStart(r.Context(), traceOptions.EnablePredictableDebugTimings))
+		}
 
 		defer func() {
 			metrics.Finish(hasRequestError, statusCode, writtenBytes)
@@ -105,12 +114,24 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		// If the request has a query parameter wg_trace=true we skip the cache
 		// and always plan the operation
 		// this allows us to "write" to the plan
-		opContext, err := h.planner.Plan(r, operation, clientInfo)
+		if !traceOptions.ExcludePlannerStats {
+			tracePlanStart = resolve.GetDurationNanoSinceTraceStart(r.Context())
+		}
+		opContext, err := h.planner.Plan(operation, clientInfo, traceOptions)
 		if err != nil {
 			hasRequestError = true
 			requestLogger.Error("failed to plan operation", zap.Error(err))
 			writeRequestErrors(r, graphql.RequestErrorsFromError(errMsgOperationParseFailed), w, requestLogger)
 			return
+		}
+		if traceOptions.ExcludePlannerStats {
+			planningTime := resolve.GetDurationNanoSinceTraceStart(r.Context()) - tracePlanStart
+			resolve.SetPlannerStats(r.Context(), resolve.PlannerStats{
+				DurationSinceStartNano:   tracePlanStart,
+				DurationSinceStartPretty: time.Duration(tracePlanStart).String(),
+				PlanningTimeNano:         planningTime,
+				PlanningTimePretty:       time.Duration(planningTime).String(),
+			})
 		}
 
 		requestContext := buildRequestContext(w, r, opContext, requestLogger)
