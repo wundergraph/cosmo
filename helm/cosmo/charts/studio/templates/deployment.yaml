@@ -61,7 +61,7 @@ spec:
                   name: {{ include "studio.fullname" . }}
                   key: slackClientId
             - name: CUSTOM_HEAD_SCRIPTS
-              valueFrom
+              valueFrom:
                 configMapKeyRef:
                   name: {{ include "studio.fullname" . }}
                   key: customHeadScripts
