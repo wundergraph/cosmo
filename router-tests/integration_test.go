@@ -18,6 +18,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/buger/jsonparser"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/routerconfig"
@@ -256,6 +257,21 @@ func TestTracing(t *testing.T) {
 	if t.Failed() {
 		t.Log(resultBody)
 	}
+	// make the request again, but with "enable_predictable_debug_timings" disabled
+	// compare the result and ensure that the timings are different
+	result2 := sendCustomData(server, []byte(fmt.Sprintf(`{"query":"%s"}`, bigEmployeesQuery)), func(r *http.Request) {
+		r.Header.Add("X-WG-Trace", "true")
+	})
+	assert.Equal(t, http.StatusOK, result2.Result().StatusCode)
+	body := result2.Body.Bytes()
+	data, _, _, err := jsonparser.Get(body, "data")
+	require.NoError(t, err)
+	assert.NotNilf(t, data, "data should not be nil: %s", body)
+	tracing, _, _, err := jsonparser.Get(body, "extensions", "trace")
+	require.NoError(t, err)
+	assert.NotNilf(t, tracing, "tracing should not be nil: %s", body)
+	cleanedBody := rex.ReplaceAllString(string(body), "http://localhost/graphql")
+	assert.NotEqual(t, prettifyJSON(t, tracingJson), prettifyJSON(t, cleanedBody))
 }
 
 func prettifyJSON(t *testing.T, jsonStr string) string {

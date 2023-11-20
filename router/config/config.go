@@ -159,9 +159,9 @@ type EngineDebugConfiguration struct {
 }
 
 type EngineExecutionConfiguration struct {
-	Debug                 EngineDebugConfiguration
-	EnableSingleFlight    bool `default:"true" envconfig:"ENGINE_ENABLE_SINGLE_FLIGHT"`
-	DisableRequestTracing bool `default:"false" envconfig:"ENGINE_DISABLE_REQUEST_TRACING"`
+	Debug                EngineDebugConfiguration
+	EnableSingleFlight   bool `default:"true" envconfig:"ENGINE_ENABLE_SINGLE_FLIGHT"`
+	EnableRequestTracing bool `default:"true" envconfig:"ENGINE_DISABLE_REQUEST_TRACING"`
 }
 
 type OverrideRoutingURLConfiguration struct {
