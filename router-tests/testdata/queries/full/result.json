@@ -1,0 +1,655 @@
+{
+  "data": {
+    "employees": [
+      {
+        "id": 1,
+        "notes": "1 notes resolved by products",
+        "details": {
+          "forename": "Jens",
+          "surname": "Neuse",
+          "location": "GERMANY",
+          "hasChildren": true,
+          "maritalStatus": "MARRIED",
+          "nationality": "GERMAN",
+          "pets": null
+        },
+        "role": {
+          "department": "ENGINEERING",
+          "title": [
+            "Founder",
+            "CEO"
+          ],
+          "engineerType": "BACKEND"
+        },
+        "hobbies": [
+          {
+            "category": "SPORT"
+          },
+          {
+            "genres": [
+              "FPS"
+            ],
+            "name": "Counter Strike",
+            "yearsOfExperience": 20
+          },
+          {
+            "name": "WunderGraph"
+          },
+          {
+            "languages": [
+              "GO",
+              "TYPESCRIPT"
+            ]
+          },
+          {
+            "countriesLived": [
+              "ENGLAND",
+              "GERMANY"
+            ]
+          }
+        ],
+        "products": [
+          "COSMO",
+          "ENGINE",
+          "SDK"
+        ]
+      },
+      {
+        "id": 2,
+        "notes": "2, 7, 8 notes resolved by products",
+        "details": {
+          "forename": "Dustin",
+          "surname": "Deus",
+          "location": "GERMANY",
+          "hasChildren": false,
+          "maritalStatus": "ENGAGED",
+          "nationality": "GERMAN",
+          "pets": null
+        },
+        "role": {
+          "department": "ENGINEERING",
+          "title": [
+            "Co-founder",
+            "Tech Lead"
+          ],
+          "engineerType": "FULLSTACK"
+        },
+        "hobbies": [
+          {
+            "category": "STRENGTH_TRAINING"
+          },
+          {
+            "genres": [
+              "FPS"
+            ],
+            "name": "Counter Strike",
+            "yearsOfExperience": 0.5
+          },
+          {
+            "languages": [
+              "GO",
+              "RUST"
+            ]
+          }
+        ],
+        "products": [
+          "COSMO",
+          "SDK"
+        ]
+      },
+      {
+        "id": 3,
+        "notes": "3 notes resolved by products",
+        "details": {
+          "forename": "Stefan",
+          "surname": "Avram",
+          "location": "AMERICA",
+          "hasChildren": false,
+          "maritalStatus": "ENGAGED",
+          "nationality": "AMERICAN",
+          "pets": [
+            {
+              "class": "Reptile",
+              "gender": "UNKNOWN",
+              "name": "Snappy",
+              "dangerous": "yes"
+            }
+          ]
+        },
+        "role": {
+          "department": "MARKETING",
+          "title": [
+            "Co-founder",
+            "Head of Growth"
+          ]
+        },
+        "hobbies": [
+          {
+            "category": "HIKING"
+          },
+          {
+            "category": "SPORT"
+          },
+          {
+            "name": "Reading"
+          },
+          {
+            "countriesLived": [
+              "AMERICA",
+              "SERBIA"
+            ]
+          }
+        ],
+        "products": [
+          "MARKETING"
+        ]
+      },
+      {
+        "id": 4,
+        "notes": "4 notes resolved by products",
+        "details": {
+          "forename": "Björn",
+          "surname": "Schwenzer",
+          "location": "GERMANY",
+          "hasChildren": true,
+          "maritalStatus": "MARRIED",
+          "nationality": "GERMAN",
+          "pets": [
+            {
+              "class": "Mammal",
+              "gender": "FEMALE",
+              "name": "Abby",
+              "breed": "GOLDEN_RETRIEVER"
+            },
+            {
+              "class": "Mammal",
+              "gender": "MALE",
+              "name": "Survivor"
+            }
+          ]
+        },
+        "role": {
+          "department": "OPERATIONS",
+          "title": [
+            "Co-founder",
+            "COO"
+          ],
+          "operatorType": [
+            "HUMAN_RESOURCES",
+            "FINANCE"
+          ]
+        },
+        "hobbies": [
+          {
+            "category": "HIKING"
+          },
+          {
+            "planeModels": [
+              "Aquila AT01",
+              "Cessna C172",
+              "Cessna C206",
+              "Cirrus SR20",
+              "Cirrus SR22",
+              "Diamond DA40",
+              "Diamond HK36",
+              "Diamond DA20",
+              "Piper Cub",
+              "Pitts Special",
+              "Robin DR400"
+            ],
+            "yearsOfExperience": 20
+          },
+          {
+            "countriesLived": [
+              "AMERICA",
+              "GERMANY"
+            ]
+          }
+        ],
+        "products": [
+          "FINANCE",
+          "HUMAN_RESOURCES",
+          "MARKETING"
+        ]
+      },
+      {
+        "id": 5,
+        "notes": "5 notes resolved by products",
+        "details": {
+          "forename": "Sergiy",
+          "surname": "Petrunin",
+          "location": "UKRAINE",
+          "hasChildren": false,
+          "maritalStatus": "ENGAGED",
+          "nationality": "UKRAINIAN",
+          "pets": [
+            {
+              "class": "Mammal",
+              "gender": "FEMALE",
+              "name": "Blotch",
+              "type": "STREET"
+            },
+            {
+              "class": "Mammal",
+              "gender": "MALE",
+              "name": "Grayone",
+              "type": "STREET"
+            },
+            {
+              "class": "Mammal",
+              "gender": "MALE",
+              "name": "Rusty",
+              "type": "STREET"
+            },
+            {
+              "class": "Mammal",
+              "gender": "FEMALE",
+              "name": "Manya",
+              "type": "HOME"
+            },
+            {
+              "class": "Mammal",
+              "gender": "MALE",
+              "name": "Peach",
+              "type": "STREET"
+            },
+            {
+              "class": "Mammal",
+              "gender": "MALE",
+              "name": "Panda",
+              "type": "HOME"
+            },
+            {
+              "class": "Mammal",
+              "gender": "FEMALE",
+              "name": "Mommy",
+              "type": "STREET"
+            },
+            {
+              "class": "Mammal",
+              "gender": "FEMALE",
+              "name": "Terry",
+              "type": "HOME"
+            },
+            {
+              "class": "Mammal",
+              "gender": "FEMALE",
+              "name": "Tilda",
+              "type": "HOME"
+            },
+            {
+              "class": "Mammal",
+              "gender": "MALE",
+              "name": "Vasya",
+              "type": "HOME"
+            }
+          ]
+        },
+        "role": {
+          "department": "ENGINEERING",
+          "title": [
+            "Senior GO Engineer"
+          ],
+          "engineerType": "BACKEND"
+        },
+        "hobbies": [
+          {
+            "name": "Building a house"
+          },
+          {
+            "name": "Forumla 1"
+          },
+          {
+            "name": "Raising cats"
+          }
+        ],
+        "products": [
+          "ENGINE",
+          "SDK"
+        ]
+      },
+      {
+        "id": 7,
+        "notes": "2, 7, 8 notes resolved by products",
+        "details": {
+          "forename": "Suvij",
+          "surname": "Surya",
+          "location": "INDIA",
+          "hasChildren": false,
+          "maritalStatus": null,
+          "nationality": "INDIAN",
+          "pets": null
+        },
+        "role": {
+          "department": "ENGINEERING",
+          "title": [
+            "Software Engineer"
+          ],
+          "engineerType": "FULLSTACK"
+        },
+        "hobbies": [
+          {
+            "genres": [
+              "BOARD"
+            ],
+            "name": "Chess",
+            "yearsOfExperience": 9.5
+          },
+          {
+            "name": "Watching anime"
+          }
+        ],
+        "products": [
+          "COSMO",
+          "SDK"
+        ]
+      },
+      {
+        "id": 8,
+        "notes": "2, 7, 8 notes resolved by products",
+        "details": {
+          "forename": "Nithin",
+          "surname": "Kumar",
+          "location": "INDIA",
+          "hasChildren": false,
+          "maritalStatus": null,
+          "nationality": "INDIAN",
+          "pets": null
+        },
+        "role": {
+          "department": "ENGINEERING",
+          "title": [
+            "Software Engineer"
+          ],
+          "engineerType": "FULLSTACK"
+        },
+        "hobbies": [
+          {
+            "category": "STRENGTH_TRAINING"
+          },
+          {
+            "genres": [
+              "ADVENTURE",
+              "RPG",
+              "SIMULATION",
+              "STRATEGY"
+            ],
+            "name": "Miscellaneous",
+            "yearsOfExperience": 17
+          },
+          {
+            "name": "Watching anime"
+          }
+        ],
+        "products": [
+          "COSMO",
+          "SDK"
+        ]
+      },
+      {
+        "id": 9,
+        "notes": "9, 12 notes resolved by products",
+        "details": {
+          "forename": "Alberto",
+          "surname": "Garcia Hierro",
+          "location": "PORTUGAL",
+          "hasChildren": true,
+          "maritalStatus": "MARRIED",
+          "nationality": "SPANISH",
+          "pets": [
+            {
+              "class": "Mammal",
+              "gender": "MALE",
+              "name": "Thor",
+              "type": "HOME"
+            }
+          ]
+        },
+        "role": {
+          "department": "ENGINEERING",
+          "title": [
+            "Senior Backend Engineer"
+          ],
+          "engineerType": "BACKEND"
+        },
+        "hobbies": [
+          {
+            "category": "CALISTHENICS"
+          },
+          {
+            "genres": [
+              "BOARD"
+            ],
+            "name": "Chess",
+            "yearsOfExperience": 2
+          },
+          {
+            "languages": [
+              "RUST"
+            ]
+          }
+        ],
+        "products": [
+          "COSMO",
+          "ENGINE",
+          "SDK"
+        ]
+      },
+      {
+        "id": 10,
+        "notes": "10 notes resolved by products",
+        "details": {
+          "forename": "Eelco",
+          "surname": "Wiersma",
+          "location": "NETHERLANDS",
+          "hasChildren": false,
+          "maritalStatus": null,
+          "nationality": "DUTCH",
+          "pets": [
+            {
+              "class": "Mammal",
+              "gender": "UNKNOWN",
+              "name": "Vanson"
+            }
+          ]
+        },
+        "role": {
+          "department": "ENGINEERING",
+          "title": [
+            "Senior Frontend Engineer"
+          ],
+          "engineerType": "FRONTEND"
+        },
+        "hobbies": [
+          {
+            "languages": [
+              "TYPESCRIPT"
+            ]
+          },
+          {
+            "category": "CALISTHENICS"
+          },
+          {
+            "category": "HIKING"
+          },
+          {
+            "category": "STRENGTH_TRAINING"
+          },
+          {
+            "name": "saas-ui"
+          },
+          {
+            "countriesLived": [
+              "GERMANY",
+              "INDONESIA",
+              "NETHERLANDS",
+              "PORTUGAL",
+              "SPAIN",
+              "THAILAND"
+            ]
+          }
+        ],
+        "products": [
+          "COSMO",
+          "SDK"
+        ]
+      },
+      {
+        "id": 11,
+        "notes": "11 notes resolved by products",
+        "details": {
+          "forename": "Alexandra",
+          "surname": "Neuse",
+          "location": "GERMANY",
+          "hasChildren": true,
+          "maritalStatus": "MARRIED",
+          "nationality": "GERMAN",
+          "pets": null
+        },
+        "role": {
+          "department": "OPERATIONS",
+          "title": [
+            "Accounting & Finance"
+          ],
+          "operatorType": [
+            "FINANCE"
+          ]
+        },
+        "hobbies": [
+          {
+            "name": "Spending time with the family"
+          }
+        ],
+        "products": [
+          "FINANCE"
+        ]
+      },
+      {
+        "id": 12,
+        "notes": "9, 12 notes resolved by products",
+        "details": {
+          "forename": "David",
+          "surname": "Stutt",
+          "location": "ENGLAND",
+          "hasChildren": false,
+          "maritalStatus": "MARRIED",
+          "nationality": "ENGLISH",
+          "pets": [
+            {
+              "class": "Mammal",
+              "gender": "FEMALE",
+              "name": "Pepper",
+              "type": "HOME"
+            }
+          ]
+        },
+        "role": {
+          "department": "ENGINEERING",
+          "title": [
+            "Software Engineer"
+          ],
+          "engineerType": "FULLSTACK"
+        },
+        "hobbies": [
+          {
+            "languages": [
+              "CSHARP",
+              "GO",
+              "RUST",
+              "TYPESCRIPT"
+            ]
+          },
+          {
+            "category": "STRENGTH_TRAINING"
+          },
+          {
+            "genres": [
+              "ADVENTURE",
+              "BOARD",
+              "CARD",
+              "ROGUELITE",
+              "RPG",
+              "SIMULATION",
+              "STRATEGY"
+            ],
+            "name": "Miscellaneous",
+            "yearsOfExperience": 25.5
+          },
+          {
+            "countriesLived": [
+              "ENGLAND",
+              "KOREA",
+              "TAIWAN"
+            ]
+          }
+        ],
+        "products": [
+          "COSMO",
+          "ENGINE",
+          "SDK"
+        ]
+      }
+    ],
+    "employee": {
+      "id": 1,
+      "details": {
+        "forename": "Jens",
+        "location": "GERMANY"
+      }
+    },
+    "team_mates": [
+      {
+        "id": 4,
+        "details": {
+          "forename": "Björn"
+        },
+        "products": [
+          "FINANCE",
+          "HUMAN_RESOURCES",
+          "MARKETING"
+        ]
+      },
+      {
+        "id": 11,
+        "details": {
+          "forename": "Alexandra"
+        },
+        "products": [
+          "FINANCE"
+        ]
+      }
+    ],
+    "productTypes": [
+      {},
+      {
+        "lead": {
+          "details": {
+            "forename": "Jens"
+          }
+        },
+        "name": "CONSULTANCY"
+      },
+      {
+        "url": "https://docs.wundergraph.com/",
+        "urls": [
+          "https://cosmo-docs.wundergraph.com/",
+          "https://wundergraph.com/pricing"
+        ]
+      }
+    ],
+    "a": [
+      {
+        "details": {
+          "forename": "Sergiy"
+        }
+      }
+    ],
+    "b": [
+      {
+        "details": {
+          "forename": "Björn"
+        }
+      }
+    ]
+  }
+}

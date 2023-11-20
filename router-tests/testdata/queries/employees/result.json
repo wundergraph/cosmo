@@ -3,6 +3,7 @@
       "employees": [
         {
           "id": 1,
+          "notes": "1 notes resolved by products",
           "details": {
             "forename": "Jens",
             "surname": "Neuse",
@@ -55,6 +56,7 @@
         },
         {
           "id": 2,
+          "notes": "2, 7, 8 notes resolved by products",
           "details": {
             "forename": "Dustin",
             "surname": "Deus",
@@ -91,13 +93,13 @@
             }
           ],
           "products": [
-            "CLOUD",
             "COSMO",
             "SDK"
           ]
         },
         {
           "id": 3,
+          "notes": "3 notes resolved by products",
           "details": {
             "forename": "Stefan",
             "surname": "Avram",
@@ -144,6 +146,7 @@
         },
         {
           "id": 4,
+          "notes": "4 notes resolved by products",
           "details": {
             "forename": "Björn",
             "surname": "Schwenzer",
@@ -211,6 +214,7 @@
         },
         {
           "id": 5,
+          "notes": "5 notes resolved by products",
           "details": {
             "forename": "Sergiy",
             "surname": "Petrunin",
@@ -306,6 +310,7 @@
         },
         {
           "id": 7,
+          "notes": "2, 7, 8 notes resolved by products",
           "details": {
             "forename": "Suvij",
             "surname": "Surya",
@@ -335,13 +340,13 @@
             }
           ],
           "products": [
-            "CLOUD",
             "COSMO",
             "SDK"
           ]
         },
         {
           "id": 8,
+          "notes": "2, 7, 8 notes resolved by products",
           "details": {
             "forename": "Nithin",
             "surname": "Kumar",
@@ -377,13 +382,13 @@
             }
           ],
           "products": [
-            "CLOUD",
             "COSMO",
             "SDK"
           ]
         },
         {
           "id": 9,
+          "notes": "9, 12 notes resolved by products",
           "details": {
             "forename": "Alberto",
             "surname": "Garcia Hierro",
@@ -425,17 +430,14 @@
             }
           ],
           "products": [
-            "CLOUD",
             "COSMO",
             "ENGINE",
-            "FINANCE",
-            "HUMAN_RESOURCES",
-            "MARKETING",
             "SDK"
           ]
         },
         {
           "id": 10,
+          "notes": "10 notes resolved by products",
           "details": {
             "forename": "Eelco",
             "surname": "Wiersma",
@@ -488,12 +490,13 @@
             }
           ],
           "products": [
-            "CLOUD",
+            "COSMO",
             "SDK"
           ]
         },
         {
           "id": 11,
+          "notes": "11 notes resolved by products",
           "details": {
             "forename": "Alexandra",
             "surname": "Neuse",
@@ -523,6 +526,7 @@
         },
         {
           "id": 12,
+          "notes": "9, 12 notes resolved by products",
           "details": {
             "forename": "David",
             "surname": "Stutt",
@@ -580,12 +584,8 @@
             }
           ],
           "products": [
-            "CLOUD",
             "COSMO",
             "ENGINE",
-            "FINANCE",
-            "HUMAN_RESOURCES",
-            "MARKETING",
             "SDK"
           ]
         }

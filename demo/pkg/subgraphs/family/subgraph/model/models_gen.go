@@ -93,6 +93,11 @@ func (this Mouse) GetName() string   { return this.Name }
 
 func (Mouse) IsAnimal() {}
 
+type NestedSearchInput struct {
+	MaritalStatus *MaritalStatus `json:"maritalStatus,omitempty"`
+	HasChildren   *bool          `json:"hasChildren,omitempty"`
+}
+
 type Pony struct {
 	Class  Class  `json:"class"`
 	Gender Gender `json:"gender"`
@@ -105,6 +110,12 @@ func (this Pony) GetGender() Gender { return this.Gender }
 func (this Pony) GetName() string   { return this.Name }
 
 func (Pony) IsAnimal() {}
+
+type SearchInput struct {
+	HasPets     *bool              `json:"hasPets,omitempty"`
+	Nationality *Nationality       `json:"nationality,omitempty"`
+	Nested      *NestedSearchInput `json:"nested,omitempty"`
+}
 
 type CatType string
 

@@ -284,7 +284,6 @@ func TestTestdataQueries(t *testing.T) {
 			expectedData, err := os.ReadFile(filepath.Join(testDir, "result.json"))
 			require.NoError(t, err)
 			assert.Equal(t, normalizeJSON(t, expectedData), normalizeJSON(t, []byte(result)))
-
 		})
 	}
 }

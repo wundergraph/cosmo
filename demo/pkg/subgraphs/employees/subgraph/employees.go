@@ -161,3 +161,7 @@ var employees = []*model.Employee{
 		Notes: "David notes resolved by employees",
 	},
 }
+
+var engineers = []*model.Employee{
+	employees[0], employees[1], employees[4], employees[5], employees[6], employees[7], employees[8], employees[10],
+}

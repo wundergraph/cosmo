@@ -38,12 +38,13 @@ func (r *queryResolver) TeamMates(ctx context.Context, team model.Department) ([
 	case model.DepartmentMarketing:
 		return []*model.Employee{employees[0], employees[2], employees[3]}, nil
 	default:
-		return []*model.Employee{
-			employees[0], employees[1], employees[4],
-			employees[5], employees[6], employees[7],
-			employees[8], employees[10],
-		}, nil
+		return engineers, nil
 	}
+}
+
+// Products is the resolver for the products field.
+func (r *queryResolver) Products(ctx context.Context) ([]model.Products, error) {
+	return products, nil
 }
 
 // CurrentTime is the resolver for the currentTime field.
@@ -65,7 +66,7 @@ func (r *subscriptionResolver) CurrentTime(ctx context.Context) (<-chan *model.T
 			}
 
 			// The subscription may have got closed due to the client disconnecting.
-			// Hence we do send in a select block with a check for context cancellation.
+			// Hence, we do send in a select block with a check for context cancellation.
 			// This avoids goroutine getting blocked forever or panicking,
 			select {
 			case <-ctx.Done(): // This runs when context gets cancelled. Subscription closes.

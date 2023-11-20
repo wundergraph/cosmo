@@ -1,3 +1,7 @@
+type Query {
+  findEmployees(criteria: SearchInput): [Employee!]!
+}
+
 enum Class {
   Fish
   Mammal
@@ -93,4 +97,15 @@ type Details  {
 type Employee @key(fields: "id") {
   details: Details @shareable
   id: Int!
+}
+
+input SearchInput {
+  hasPets: Boolean
+  nationality: Nationality
+  nested: NestedSearchInput
+}
+
+input NestedSearchInput {
+  maritalStatus: MaritalStatus
+  hasChildren: Boolean
 }

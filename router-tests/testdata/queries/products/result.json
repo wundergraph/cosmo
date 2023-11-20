@@ -1,0 +1,49 @@
+{
+  "data": {
+    "products": [
+      {},
+      {
+        "upc": "cosmo",
+        "name": "COSMO",
+        "lead": {
+          "details": {
+            "forename": "Dustin"
+          }
+        },
+        "repositoryURL": ""
+      },
+      {
+        "upc": "sdk",
+        "owner": {
+          "details": {
+            "forename": "Jens"
+          }
+        },
+        "clientLanguages": [
+          "RUST",
+          "TYPESCRIPT"
+        ]
+      }
+    ],
+    "productTypes": [
+      {},
+      {
+        "lead": {
+          "details": {
+            "forename": "Jens"
+          }
+        },
+        "name": "CONSULTANCY"
+      },
+      {
+        "url": "https://cosmo-docs.wundergraph.com/",
+        "urls": [
+          "https://cal.com/stefan-avram-wundergraph/wundergraph-introduction",
+          "https://github.com/wundergraph/graphql-go-tools/blob/master/README.md",
+          "N/A",
+          "https://docs.wundergraph.com/"
+        ]
+      }
+    ]
+  }
+}

@@ -1,5 +1,13 @@
-enum ProductNames {
-  CLOUD
+schema {
+  query: Queries
+}
+
+type Queries {
+  productTypes: [Products!]!
+}
+
+enum ProductName {
+  CONSULTANCY
   COSMO
   ENGINE
   FINANCE
@@ -10,6 +18,24 @@ enum ProductNames {
 
 type Employee @key(fields: "id") {
   id: Int!
-  products: [ProductNames!]!
+  products: [ProductName!]!
   notes: String! @override(from: "employees")
+}
+
+union Products = Consultancy | Cosmo | Documentation
+
+type Consultancy @key(fields: "upc") {
+  upc: ID!
+  name: ProductName!
+}
+
+type Cosmo @key(fields: "upc") {
+  upc: ID!
+  name: ProductName!
+  repositoryURL: String!
+}
+
+type Documentation {
+  url(product: ProductName!): String!
+  urls(products: [ProductName!]!): [String!]!
 }
