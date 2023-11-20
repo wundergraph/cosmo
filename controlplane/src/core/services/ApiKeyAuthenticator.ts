@@ -6,7 +6,6 @@ import { AuthenticationError } from '../errors/errors.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 
 export type ApiKeyAuthContext = {
-  userId: string;
   organizationId: string;
   organizationSlug: string;
   hasWriteAccess: boolean;
