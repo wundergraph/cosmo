@@ -118,7 +118,7 @@ probes:
 configuration:
   # -- The client ID of the slack app to use for slack app integration
   slackClientId: ""
-  # --- Custom scripts injected into the head of the studio, eg for analytics
+  # -- Custom scripts injected into the head of the studio, eg for analytics
   #customHeadScripts: [{"id": "hello-world", "src": "console.log('hello world')", "inline": true}]
 
 #global:
