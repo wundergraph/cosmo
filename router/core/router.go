@@ -707,12 +707,13 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	routerMetrics := NewRouterMetrics(metricStore, r.gqlMetricsExporter, routerConfig.GetVersion())
 
 	graphqlPreHandler := NewPreHandler(&PreHandlerOptions{
-		Logger:           r.logger,
-		Executor:         executor,
-		Metrics:          routerMetrics,
-		Parser:           operationParser,
-		Planner:          operationPlanner,
-		AccessController: r.accessController,
+		Logger:                r.logger,
+		Executor:              executor,
+		Metrics:               routerMetrics,
+		Parser:                operationParser,
+		Planner:               operationPlanner,
+		AccessController:      r.accessController,
+		DisableRequestTracing: routerEngineConfig.Execution.DisableRequestTracing,
 	})
 
 	var traceHandler *trace.Middleware

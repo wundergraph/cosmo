@@ -248,7 +248,7 @@ func TestTracing(t *testing.T) {
 	tracingJsonBytes, err := os.ReadFile("testdata/tracing.json")
 	require.NoError(t, err)
 	// we generate a random port for the test server, so we need to replace the port in the tracing json
-	rex, err := regexp.Compile("http://localhost:\\d+/graphql")
+	rex, err := regexp.Compile(`http://localhost:\d+/graphql`)
 	require.NoError(t, err)
 	tracingJson := string(rex.ReplaceAll(tracingJsonBytes, []byte("http://localhost/graphql")))
 	resultBody := rex.ReplaceAllString(result.Body.String(), "http://localhost/graphql")

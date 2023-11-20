@@ -13,31 +13,34 @@ import (
 )
 
 type PreHandlerOptions struct {
-	Logger           *zap.Logger
-	Executor         *Executor
-	Metrics          *RouterMetrics
-	Parser           *OperationParser
-	Planner          *OperationPlanner
-	AccessController *AccessController
+	Logger                *zap.Logger
+	Executor              *Executor
+	Metrics               *RouterMetrics
+	Parser                *OperationParser
+	Planner               *OperationPlanner
+	AccessController      *AccessController
+	DisableRequestTracing bool
 }
 
 type PreHandler struct {
-	log              *zap.Logger
-	executor         *Executor
-	metrics          *RouterMetrics
-	parser           *OperationParser
-	planner          *OperationPlanner
-	accessController *AccessController
+	log                   *zap.Logger
+	executor              *Executor
+	metrics               *RouterMetrics
+	parser                *OperationParser
+	planner               *OperationPlanner
+	accessController      *AccessController
+	disableRequestTracing bool
 }
 
 func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 	return &PreHandler{
-		log:              opts.Logger,
-		executor:         opts.Executor,
-		metrics:          opts.Metrics,
-		parser:           opts.Parser,
-		planner:          opts.Planner,
-		accessController: opts.AccessController,
+		log:                   opts.Logger,
+		executor:              opts.Executor,
+		metrics:               opts.Metrics,
+		parser:                opts.Parser,
+		planner:               opts.Planner,
+		accessController:      opts.AccessController,
+		disableRequestTracing: opts.DisableRequestTracing,
 	}
 }
 
@@ -61,7 +64,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			hasRequestError bool
 			writtenBytes    int
 			statusCode      = http.StatusOK
-			traceOptions    = ParseRequestTraceOptions(r)
+			traceOptions    = ParseRequestTraceOptions(r, h.disableRequestTracing)
 			tracePlanStart  int64
 		)
 
