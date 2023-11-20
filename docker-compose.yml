@@ -22,21 +22,18 @@ services:
       context: keycloak
       dockerfile: Dockerfile
     environment:
+      KEYCLOAK_EXTRA_ARGS: "--import-realm --health-enabled=true"
       KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
       KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-changeme}
-      KC_DB: postgres
-      KC_DB_URL_HOST: postgres
-      KC_DB_URL_DATABASE: ${POSTGRES_DB:-keycloak}
-      KC_DB_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
-      KC_DB_USERNAME: ${POSTGRES_USER:-postgres}
-      KC_DB_SCHEMA: public
-    command:
-      - "start-dev"
-      - "--import-realm"
+      KEYCLOAK_DATABASE_PORT: ${POSTGRES_PORT:-5432}
+      KEYCLOAK_DATABASE_HOST: ${POSTGRES_HOST:-postgres}
+      KEYCLOAK_DATABASE_NAME: ${POSTGRES_DB_NAME:-keycloak}
+      KEYCLOAK_DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      KEYCLOAK_DATABASE_USER: ${POSTGRES_USER:-postgres}
     ports:
       - "8080:8080"
     volumes:
-      - ./docker/keycloak/realm.json:/opt/keycloak/data/import/realm.json:ro
+      - ./docker/keycloak/realm.json:/opt/bitnami/keycloak/data/import/realm.json:ro
     restart: unless-stopped
     depends_on:
       - postgres
