@@ -23,6 +23,17 @@ func (r *entityResolver) FindEmployeeByID(ctx context.Context, id int) (*model.E
 	}
 }
 
+// FindSDKByUpc is the resolver for the findSDKByUpc field.
+func (r *entityResolver) FindSDKByUpc(ctx context.Context, upc string) (*model.Sdk, error) {
+	return &model.Sdk{
+		Upc: "sdk",
+		ClientLanguages: []model.ProgrammingLanguage{
+			model.ProgrammingLanguageRust,
+			model.ProgrammingLanguageTypescript,
+		},
+	}, nil
+}
+
 // Entity returns generated.EntityResolver implementation.
 func (r *Resolver) Entity() generated.EntityResolver { return &entityResolver{r} }
 
