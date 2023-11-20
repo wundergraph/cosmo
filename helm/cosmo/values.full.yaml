@@ -151,6 +151,10 @@ keycloak:
   auth:
     adminUser: "admin"
     adminPassword: "changeme"
+  startupProbe:
+    enabled: true
+  cache:
+    enabled: false
   postgresql:
     enabled: false
   extraEnvVars:
@@ -214,7 +218,7 @@ postgresql:
     password: "changeme"
   primary:
     persistence:
-      size: 2Gi
+      size: 1Gi
       annotations:
         # Support for k14s.io. This annotation will allow kapp to delete the PVCs.
         kapp.k14s.io/owned-for-deletion: ""

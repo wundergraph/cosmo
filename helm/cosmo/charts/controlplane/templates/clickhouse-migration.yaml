@@ -22,7 +22,7 @@ metadata:
     # Create a new change-group so the controlplane can be deployed after the clickhouse migration
     kapp.k14s.io/change-group: "cosmo.apps.controlplane.wundergraph.com/ch-migration"
 spec:
-  backoffLimit: 5
+  backoffLimit: 10
   parallelism: 1
   template:
     metadata:
