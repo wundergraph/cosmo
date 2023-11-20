@@ -18,5 +18,6 @@ try {
   console.log(`ClickHouse database migrated`);
 } catch (error: any) {
   console.error(`ClickHouse database migration failed with exit code ${error.status}\n\tDetails: ${error.message}`);
+  // eslint-disable-next-line unicorn/no-process-exit
   process.exit(1);
 }

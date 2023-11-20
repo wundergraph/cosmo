@@ -146,7 +146,7 @@ keycloak:
   podAnnotations:
     # Support for k14s.io. This annotation will form a group to coordinate deployments with kapp.
     kapp.k14s.io/change-group: "cosmo.apps.keycloak.wundergraph.com/deployment"
-    # Support for k14s.io. This annotation will wait for the postgres and postgresql deployments to be ready before deploying.
+    # Support for k14s.io. This annotation will wait for the postgresql deployments to be ready before deploying.
     kapp.k14s.io/change-rule.postgresql: "upsert after upserting cosmo.apps.postgresql.wundergraph.com/deployment"
   auth:
     adminUser: "admin"
