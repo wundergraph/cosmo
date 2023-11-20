@@ -8,6 +8,7 @@ import (
 	"github.com/wundergraph/cosmo/graphqlmetrics"
 	"github.com/wundergraph/cosmo/graphqlmetrics/config"
 	"github.com/wundergraph/cosmo/graphqlmetrics/internal/logging"
+	_ "go.uber.org/automaxprocs" // Automatically set GOMAXPROCS to avoid CPU throttling on containerized environments
 	"go.uber.org/zap"
 	"log"
 	"net/url"
