@@ -819,7 +819,7 @@ export class FederatedGraphRepository {
         createdBy: userId,
         updatedBy: userId,
       })
-      .onConflictDoUpdate({ target: federatedGraphClients.name, set: { updatedAt, updatedBy: userId } });
+      .onConflictDoUpdate({ target: [federatedGraphClients.federatedGraphId, federatedGraphClients.name], set: { updatedAt, updatedBy: userId } });
 
     // To avoid depending on postgres, we do a second query to get the inserted client
     const result = await this.db.query.federatedGraphClients.findFirst({
