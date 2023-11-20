@@ -1,6 +1,21 @@
 import { Head, Html, Main, NextScript } from "next/document";
+import Script from "next/script";
+
+const getCustomScripts = ():
+  | { src: string; id: string; inline?: boolean }[]
+  | undefined => {
+  try {
+    return process.env.CUSTOM_HEAD_SCRIPTS
+      ? JSON.parse(process.env.CUSTOM_HEAD_SCRIPTS)
+      : [];
+  } catch {
+    // ignore
+  }
+};
 
 export default function Document() {
+  const scripts = getCustomScripts();
+
   return (
     <Html className="antialiased [font-feature-settings:'ss01']" lang="en">
       <Head>
@@ -80,6 +95,21 @@ export default function Document() {
           content="/favicon/ms-icon-144x144.png"
         />
         <meta name="theme-color" content="#ffffff" />
+
+        {scripts?.map((script, i) =>
+          script.inline ? (
+            <Script key={script.id} id={script.id} strategy="afterInteractive">
+              {script.src}
+            </Script>
+          ) : (
+            <Script
+              key={i}
+              id={script.id}
+              src={script.src}
+              strategy="afterInteractive"
+            />
+          ),
+        )}
       </Head>
       <body>
         <Main />

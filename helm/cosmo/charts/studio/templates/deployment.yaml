@@ -60,6 +60,11 @@ spec:
                 configMapKeyRef:
                   name: {{ include "studio.fullname" . }}
                   key: slackClientId
+            - name: CUSTOM_HEAD_SCRIPTS
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "studio.fullname" . }}
+                  key: customHeadScripts
           ports:
             - name: http
               containerPort: {{ .Values.service.port }}

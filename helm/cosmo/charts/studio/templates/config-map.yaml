@@ -12,3 +12,4 @@ data:
   controlplaneWebUrl: "{{ .Values.global.controlplane.webUrl }}"
   studioWebUrl: "{{ .Values.global.studio.webUrl }}"
   slackClientId: "{{ .Values.configuration.slackClientId }}"
+  customHeadScripts: "{{ .Values.configuration.customHeadScripts }}"
