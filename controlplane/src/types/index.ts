@@ -44,6 +44,7 @@ export interface SubgraphDTO {
   subscriptionUrl: string;
   subscriptionProtocol: 'ws' | 'sse' | 'sse_post';
   schemaSDL: string;
+  schemaVersionId: string;
   lastUpdatedAt: string;
   labels: Label[];
 }
@@ -242,7 +243,7 @@ export type AuthContext = {
   organizationSlug: string;
   hasWriteAccess: boolean;
   isAdmin: boolean;
-  userId?: string;
+  userId: string;
 };
 
 export interface GraphApiKeyJwtPayload extends JWTPayload {

@@ -4,6 +4,22 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.35.3](https://github.com/wundergraph/cosmo/compare/studio@0.35.2...studio@0.35.3) (2023-11-20)
+
+**Note:** Version bump only for package studio
+
+## [0.35.2](https://github.com/wundergraph/cosmo/compare/studio@0.35.1...studio@0.35.2) (2023-11-17)
+
+### Bug Fixes
+
+* show latest valid subgraph schema ([#259](https://github.com/wundergraph/cosmo/issues/259)) ([d954b91](https://github.com/wundergraph/cosmo/commit/d954b91bd212ae1a33257c662a4ff8a2ac8c2b56)) (@JivusAyrus)
+
+## [0.35.1](https://github.com/wundergraph/cosmo/compare/studio@0.35.0...studio@0.35.1) (2023-11-16)
+
+### Bug Fixes
+
+* populate studio build with all envs ([#266](https://github.com/wundergraph/cosmo/issues/266)) ([4a827c8](https://github.com/wundergraph/cosmo/commit/4a827c88141a5f9f8d999c94861f37642970ef27)) (@StarpTech)
+
 # [0.35.0](https://github.com/wundergraph/cosmo/compare/studio@0.34.0...studio@0.35.0) (2023-11-15)
 
 ### Features

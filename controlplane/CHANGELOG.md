@@ -4,6 +4,19 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.37.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.37.1...controlplane@0.37.2) (2023-11-20)
+
+### Bug Fixes
+
+* move to bitnami charts and exit 1 on migration issues ([#275](https://github.com/wundergraph/cosmo/issues/275)) ([90d9d93](https://github.com/wundergraph/cosmo/commit/90d9d938cefdc78a9f34d69387f306b4d691c7f0)) (@StarpTech)
+* remove unnecessary fields and add populate the createdBy for compositions ([#272](https://github.com/wundergraph/cosmo/issues/272)) ([82b716c](https://github.com/wundergraph/cosmo/commit/82b716cb629e4c84e5cf45461951594abab9df6b)) (@JivusAyrus)
+
+## [0.37.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.37.0...controlplane@0.37.1) (2023-11-17)
+
+### Bug Fixes
+
+* show latest valid subgraph schema ([#259](https://github.com/wundergraph/cosmo/issues/259)) ([d954b91](https://github.com/wundergraph/cosmo/commit/d954b91bd212ae1a33257c662a4ff8a2ac8c2b56)) (@JivusAyrus)
+
 # [0.37.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.36.0...controlplane@0.37.0) (2023-11-15)
 
 ### Features

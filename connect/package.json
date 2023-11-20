@@ -1,6 +1,6 @@
 {
   "name": "@wundergraph/cosmo-connect",
-  "version": "0.30.0",
+  "version": "0.30.2",
   "description": "TypeScript Connect client for WunderGraph Cosmo",
   "scripts": {
     "build": "del dist && tsc"
@@ -19,9 +19,11 @@
       "default": "./dist/*.js"
     }
   },
-  "devDependencies": {
+  "dependencies": {
     "@bufbuild/protobuf": "^1.4.1",
-    "@connectrpc/connect-query": "^0.6.0",
+    "@connectrpc/connect-query": "^0.6.0"
+  },
+  "devDependencies": {
     "del-cli": "^5.0.0",
     "typescript": "^5.2.2"
   },

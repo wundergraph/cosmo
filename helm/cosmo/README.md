@@ -25,9 +25,11 @@ For your convenience, we included two different value presets:
 To apply the changes, run:
 
 ```shell
-# Install the helm dependencies (Only needed once)
+# Add bitnami repo to install dependencies like postgresql, keycloak and clickhouse
+helm repo add bitnami https://charts.bitnami.com/bitnami
+# Install the helm dependencies
 helm dependency build
-# Install the helm chart with the release name e.g "cosmo"
+# Install the helm chart with the release name "cosmo" the name is important it used to reference services in values file.
 helm install cosmo -f values.full.yaml ./cosmo
 ```
 
