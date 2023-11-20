@@ -276,3 +276,13 @@ export interface ClientDTO {
   lastUpdatedAt: string;
   lastUpdatedBy: string;
 }
+
+export interface PersistedOperationDTO {
+  id: string;
+  hash: string;
+  filePath: string;
+  createdAt: string;
+  createdBy: string;
+  lastUpdatedAt: string;
+  lastUpdatedBy: string;
+}

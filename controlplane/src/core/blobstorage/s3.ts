@@ -1,4 +1,4 @@
-import { GetObjectCommand, NoSuchKey, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { DeleteObjectsCommand, GetObjectCommand, ListObjectsV2Command, NoSuchKey, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { BlobNotFoundError, type BlobStorage } from './index.js';
 
 /**
@@ -40,4 +40,27 @@ export class S3BlobStorage implements BlobStorage {
       throw e;
     }
   }
+
+  async removeDirectory(key: string): Promise<number> {
+    const listCommand = new ListObjectsV2Command({
+      Bucket: this.bucketName,
+      Prefix: key,
+    });
+    const entries = await this.s3Client.send(listCommand);
+    const objectsToDelete = entries.Contents?.map((item) => ({ Key: item.Key }));
+    if (objectsToDelete && objectsToDelete.length > 0) {
+      const deleteCommand = new DeleteObjectsCommand({
+        Bucket: this.bucketName,
+        Delete: {
+          Objects: objectsToDelete,
+          Quiet: false,
+        },
+      });
+      const deleted = await this.s3Client.send(deleteCommand);
+      if (deleted.Errors) {
+        throw new Error(`could not delete files: ${deleted.Errors}`);
+      }
+  }
+  return objectsToDelete?.length ?? 0;
+}
 }

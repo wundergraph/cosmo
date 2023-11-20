@@ -7,6 +7,7 @@ import * as schema from '../../db/schema.js';
 import {
   federatedGraphClients,
   federatedGraphConfigs,
+  federatedGraphPersistedOperations,
   federatedGraphs,
   graphApiTokens,
   graphCompositions,
@@ -23,6 +24,7 @@ import {
   GraphApiKeyDTO,
   Label,
   ListFilterOptions,
+  PersistedOperationDTO,
   UserDTO,
 } from '../../types/index.js';
 import { normalizeLabelMatchers, normalizeLabels } from '../util.js';
@@ -787,7 +789,7 @@ export class FederatedGraphRepository {
     );
   }
 
-  public async registerClient(userId: string, federatedGraphName: string, clientName: string) {
+  public async registerClient(userId: string, federatedGraphName: string, clientName: string): Promise<string> {
     if (!clientName) {
       throw new Error('client name is empty');
     }
@@ -817,7 +819,17 @@ export class FederatedGraphRepository {
         createdBy: userId,
         updatedBy: userId,
       })
-      .onConflictDoUpdate({ target: schema.federatedGraphClients.name, set: { updatedAt, updatedBy: userId } });
+      .onConflictDoUpdate({ target: federatedGraphClients.name, set: { updatedAt, updatedBy: userId } });
+
+    // To avoid depending on postgres, we do a second query to get the inserted client
+    const result = await this.db.query.federatedGraphClients.findFirst({
+      columns: { id: true },
+      where: and(
+        eq(schema.federatedGraphClients.name, clientName),
+        eq(schema.federatedGraphClients.federatedGraphId, graph.federatedGraph.id),
+      ),
+    });
+    return result!.id;
   }
 
   public async getClients(federatedGraphName: string): Promise<ClientDTO[]> {
@@ -872,5 +884,92 @@ export class FederatedGraphRepository {
     }
 
     return clients;
+  }
+
+  public async updatePersistedOperations(federatedGraphName: string, userId: string, clientId: string, operations: {hash: string, filePath: string;}[]) {
+    const graph = await this.db.query.targets.findFirst({
+      columns: {},
+      with: {
+        federatedGraph: {
+          columns: { id: true },
+        },
+      },
+      where: and(
+        eq(schema.targets.name, federatedGraphName),
+        eq(schema.targets.organizationId, this.organizationId),
+        eq(schema.targets.type, 'federated'),
+      ),
+    });
+    if (graph === undefined) {
+      throw new Error(`could not find graph ${federatedGraphName}`);
+    }
+    const now = new Date()
+    for (const operation of operations) {
+      await this.db.insert(federatedGraphPersistedOperations).values({
+        federatedGraphId: graph.federatedGraph.id,
+        clientId,
+        hash: operation.hash,
+        filePath: operation.filePath,
+        createdAt: now,
+        updatedAt: now,
+        createdBy: userId,
+        updatedBy: userId,
+      }).onConflictDoUpdate({ target: [federatedGraphPersistedOperations.federatedGraphId, federatedGraphPersistedOperations.hash],  set: { updatedAt: now, updatedBy: userId } });
+    }
+  }
+
+  public async getPersistedOperations(federatedGraphName: string): Promise<PersistedOperationDTO[]> {
+    const graph = await this.db.query.targets.findFirst({
+      columns: {},
+      with: {
+        federatedGraph: {
+          columns: { id: true },
+        },
+      },
+      where: and(
+        eq(schema.targets.name, federatedGraphName),
+        eq(schema.targets.organizationId, this.organizationId),
+        eq(schema.targets.type, 'federated'),
+      ),
+    });
+    if (graph === undefined) {
+      throw new Error(`could not find graph ${federatedGraphName}`);
+    }
+
+    const operationsResult = await this.db
+      .select()
+      .from(federatedGraphPersistedOperations)
+      .where(eq(federatedGraphPersistedOperations.federatedGraphId, graph.federatedGraph.id));
+
+    const operations: PersistedOperationDTO[] = [];
+
+    const userRepo = new UserRepository(this.db);
+    const users = new Map<string, UserDTO>();
+    const getUser = async (userId: string) => {
+      const user = users.get(userId);
+      if (user) {
+        return user;
+      }
+      const userResult = await userRepo.byId(userId);
+      if (userResult) {
+        users.set(userId, userResult);
+      }
+      return userResult;
+    };
+    for (const row of operationsResult) {
+      const creator = await getUser(row.createdBy);
+      const updater = await getUser(row.updatedBy);
+
+      operations.push({
+        id: row.id,
+        hash: row.hash,
+        filePath: row.filePath,
+        createdAt: row.createdAt.toISOString(),
+        lastUpdatedAt: row?.updatedAt?.toISOString() || '',
+        createdBy: creator?.email || '',
+        lastUpdatedBy: updater?.email || '',
+      });
+    }
+    return operations;
   }
 }

@@ -23,4 +23,12 @@ export interface BlobStorage {
    * @param key Key to retrieve the object from
    */
   getObject(key: string): Promise<ReadableStream>;
+
+  /**
+   * Remove a directory recursively, erasing all entries under the given key
+   * 
+   * @param key Path to the directory
+   * @returns Number of deleted objects
+   */
+  removeDirectory(key: string): Promise<number>;
 }

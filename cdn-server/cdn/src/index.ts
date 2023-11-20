@@ -76,7 +76,7 @@ const persistedOperation = (storage: BlobStorage) => {
     try {
       operationStream = await storage.getObject(c, key);
     } catch (e: any) {
-      if (e instanceof BlobNotFoundError) {
+      if (e instanceof Error && e.constructor.name === 'BlobNotFoundError') {
         return c.notFound();
       }
       throw e;

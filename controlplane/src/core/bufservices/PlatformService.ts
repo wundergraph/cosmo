@@ -73,7 +73,7 @@ import { OpenAIGraphql, isValidUrl } from '@wundergraph/cosmo-shared';
 import { DocumentNode, buildASTSchema, parse } from 'graphql';
 import { validate } from 'graphql/validation/index.js';
 import { uid } from 'uid';
-import { GraphApiKeyDTO, GraphApiKeyJwtPayload } from '../../types/index.js';
+import { ClientDTO, GraphApiKeyDTO, GraphApiKeyJwtPayload } from '../../types/index.js';
 import { Composer } from '../composition/composer.js';
 import { buildSchema, composeSubgraphs } from '../composition/composition.js';
 import { getDiffBetweenGraphs } from '../composition/schemaCheck.js';
@@ -1403,6 +1403,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             },
           };
         }
+
+        const blobStorageDirectory = `${authContext.organizationId}/${federatedGraph.id}`;
+        await opts.blobStorage.removeDirectory(blobStorageDirectory);
 
         const subgraphsTargetIDs: string[] = [];
         const subgraphs = await subgraphRepo.listByFederatedGraph(req.name);
@@ -3828,8 +3831,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             };
           }
         }
+        let clientId: string;
         try {
-          await federatedGraphRepo.registerClient(userId, req.graphName, req.clientName);
+          clientId = await federatedGraphRepo.registerClient(userId, req.graphName, req.clientName);
         } catch (e: any) {
           const message = e instanceof Error ? e.message : e.toString();
           return {
@@ -3841,17 +3845,21 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
         const operations: PublishedOperation[] = [];
+        const updatedOperations = [];
+        // Retrieve the operations that have already been published
+        const operationsResult = await federatedGraphRepo.getPersistedOperations(req.graphName);
+        const operationHashes = new Set(operationsResult.map((op) => op.hash));
         for (const operationContents of req.operations) {
           const operationHash = crypto.createHash('sha256').update(operationContents).digest('hex');
           const path = `${organizationId}/${federatedGraph.id}/operations/${req.clientName}/${operationHash}.json`;
+          updatedOperations.push({
+            hash: operationHash,
+            filePath: path,
+          });
           let status: PublishedOperationStatus;
-          try {
-            await opts.blobStorage.getObject(path);
+          if (operationHashes.has(operationHash)) {
             status = PublishedOperationStatus.UP_TO_DATE;
-          } catch (e: any) {
-            if (!(e instanceof BlobNotFoundError)) {
-              throw e;
-            }
+          } else {
             const data: PublishedOperationData = {
               version: 1,
               body: operationContents,
@@ -3866,6 +3874,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             }),
           );
         }
+
+        await federatedGraphRepo.updatePersistedOperations(req.graphName, userId, clientId, updatedOperations);
 
         return {
           response: {

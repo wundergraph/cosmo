@@ -127,7 +127,7 @@ const ClientsPage: NextPageWithLayout = () => {
                 <TableHead>Created By</TableHead>
                 <TableHead>Updated By</TableHead>
                 <TableHead>Created At</TableHead>
-                <TableHead>Last Updated At</TableHead>
+                <TableHead>Last Push</TableHead>
                 <TableHead></TableHead>
               </TableRow>
             </TableHeader>
