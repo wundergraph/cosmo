@@ -17,7 +17,7 @@ metadata:
     # Create a new change-group so the controlplane can be deployed after the database migration
     kapp.k14s.io/change-group: "cosmo.apps.controlplane.wundergraph.com/db-migration"
 spec:
-  backoffLimit: 3
+  backoffLimit: 5
   parallelism: 1
   template:
     metadata:

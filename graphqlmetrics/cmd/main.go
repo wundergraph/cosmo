@@ -87,7 +87,7 @@ func main() {
 	migrator.AutoDumpSchema = false
 	migrator.Log = zap.NewStdLog(logger).Writer()
 	migrator.MigrationsTableName = "graphqlmetrics_schema_migrations"
-	if err := migrator.Migrate(); err != nil {
+	if err := migrator.CreateAndMigrate(); err != nil {
 		log.Fatal("Could not migrate", zap.Error(err))
 	} else {
 		logger.Info("Migration is up to date")

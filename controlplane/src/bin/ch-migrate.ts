@@ -10,9 +10,13 @@ if (!CLICKHOUSE_DSN) {
 
 console.log(`Migrating ClickHouse database`);
 
-const child = execSync(
-  `dbmate --wait --wait-timeout 30s -u '${CLICKHOUSE_DSN}' --no-dump-schema -d clickhouse/migrations up`,
-);
-console.log(child.toString());
-
-console.log(`ClickHouse database migrated`);
+try {
+  const child = execSync(
+    `dbmate --wait --wait-timeout 30s -u '${CLICKHOUSE_DSN}' --no-dump-schema -d clickhouse/migrations up`,
+  );
+  console.log(child.toString());
+  console.log(`ClickHouse database migrated`);
+} catch (error: any) {
+  console.error(`ClickHouse database migration failed with exit code ${error.status}\n\tDetails: ${error.message}`);
+  process.exit(1);
+}
