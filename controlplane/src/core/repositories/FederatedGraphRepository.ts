@@ -819,7 +819,10 @@ export class FederatedGraphRepository {
         createdBy: userId,
         updatedBy: userId,
       })
-      .onConflictDoUpdate({ target: [federatedGraphClients.federatedGraphId, federatedGraphClients.name], set: { updatedAt, updatedBy: userId } });
+      .onConflictDoUpdate({
+        target: [federatedGraphClients.federatedGraphId, federatedGraphClients.name],
+        set: { updatedAt, updatedBy: userId },
+      });
 
     // To avoid depending on postgres, we do a second query to get the inserted client
     const result = await this.db.query.federatedGraphClients.findFirst({
@@ -886,7 +889,12 @@ export class FederatedGraphRepository {
     return clients;
   }
 
-  public async updatePersistedOperations(federatedGraphName: string, userId: string, clientId: string, operations: {hash: string, filePath: string;}[]) {
+  public async updatePersistedOperations(
+    federatedGraphName: string,
+    userId: string,
+    clientId: string,
+    operations: { hash: string; filePath: string }[],
+  ) {
     const graph = await this.db.query.targets.findFirst({
       columns: {},
       with: {
@@ -903,18 +911,24 @@ export class FederatedGraphRepository {
     if (graph === undefined) {
       throw new Error(`could not find graph ${federatedGraphName}`);
     }
-    const now = new Date()
+    const now = new Date();
     for (const operation of operations) {
-      await this.db.insert(federatedGraphPersistedOperations).values({
-        federatedGraphId: graph.federatedGraph.id,
-        clientId,
-        hash: operation.hash,
-        filePath: operation.filePath,
-        createdAt: now,
-        updatedAt: now,
-        createdBy: userId,
-        updatedBy: userId,
-      }).onConflictDoUpdate({ target: [federatedGraphPersistedOperations.federatedGraphId, federatedGraphPersistedOperations.hash],  set: { updatedAt: now, updatedBy: userId } });
+      await this.db
+        .insert(federatedGraphPersistedOperations)
+        .values({
+          federatedGraphId: graph.federatedGraph.id,
+          clientId,
+          hash: operation.hash,
+          filePath: operation.filePath,
+          createdAt: now,
+          updatedAt: now,
+          createdBy: userId,
+          updatedBy: userId,
+        })
+        .onConflictDoUpdate({
+          target: [federatedGraphPersistedOperations.federatedGraphId, federatedGraphPersistedOperations.hash],
+          set: { updatedAt: now, updatedBy: userId },
+        });
     }
   }
 

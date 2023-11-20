@@ -39,29 +39,33 @@ export const federatedGraphConfigs = pgTable('federated_graph_configs', {
   trafficCheckDays: integer('traffic_check_days').notNull().default(7),
 });
 
-export const federatedGraphClients = pgTable('federated_graph_clients', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  federatedGraphId: uuid('federated_graph_id')
-    .notNull()
-    .references(() => federatedGraphs.id, {
-      onDelete: 'cascade',
-    }),
-  name: text('name').notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }),
-  createdBy: uuid('created_by')
-    .notNull()
-    .references(() => users.id, {
-      onDelete: 'cascade',
-    }),
-  updatedBy: uuid('updated_by')
-    .notNull()
-    .references(() => users.id, {
-      onDelete: 'cascade',
-    }),
-}, (t) => ({
-  uniqueFederatedGraphClientName: unique('federated_graph_client_name').on(t.federatedGraphId, t.name),
-}));
+export const federatedGraphClients = pgTable(
+  'federated_graph_clients',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    federatedGraphId: uuid('federated_graph_id')
+      .notNull()
+      .references(() => federatedGraphs.id, {
+        onDelete: 'cascade',
+      }),
+    name: text('name').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }),
+    createdBy: uuid('created_by')
+      .notNull()
+      .references(() => users.id, {
+        onDelete: 'cascade',
+      }),
+    updatedBy: uuid('updated_by')
+      .notNull()
+      .references(() => users.id, {
+        onDelete: 'cascade',
+      }),
+  },
+  (t) => ({
+    uniqueFederatedGraphClientName: unique('federated_graph_client_name').on(t.federatedGraphId, t.name),
+  }),
+);
 
 export const federatedGraphPersistedOperations = pgTable(
   'federated_graph_persisted_operations',
