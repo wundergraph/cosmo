@@ -168,7 +168,8 @@ func prepareServer(tb testing.TB, opts ...core.Option) *core.Server {
 		core.WithStaticRouterConfig(routerConfig),
 		core.WithLogger(zapLogger),
 		core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
-			EnableSingleFlight: true,
+			EnableSingleFlight:   true,
+			EnableRequestTracing: true,
 		}),
 	}
 	routerOpts = append(routerOpts, opts...)
