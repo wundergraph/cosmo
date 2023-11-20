@@ -125,5 +125,6 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(routerCfg *node
 		PlanningVisitor:               debug.PlanningVisitor,
 		DatasourceVisitor:             debug.DatasourceVisitor,
 	}
+	planConfig.IncludeInfo = true
 	return planConfig, nil
 }

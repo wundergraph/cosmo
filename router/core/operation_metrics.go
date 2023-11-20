@@ -2,9 +2,10 @@ package core
 
 import (
 	"context"
-	"go.uber.org/zap"
 	"strconv"
 	"time"
+
+	"go.uber.org/zap"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"

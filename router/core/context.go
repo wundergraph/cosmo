@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/zap"
 
 	"github.com/wundergraph/cosmo/router/authentication"
@@ -347,6 +348,7 @@ type operationContext struct {
 	clientInfo *ClientInfo
 	// preparedPlan is the prepared plan of the operation
 	preparedPlan *planWithMetaData
+	traceOptions resolve.RequestTraceOptions
 }
 
 func (o *operationContext) Variables() []byte {

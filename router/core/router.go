@@ -207,6 +207,7 @@ func NewRouter(opts ...Option) (*Router, error) {
 		"graphql-client-version",
 		"apollographql-client-name",
 		"apollographql-client-version",
+		"x-wg-trace",
 	}
 
 	defaultMethods := []string{
@@ -660,6 +661,13 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		Headers:   r.headerRules,
 	}
 
+	if routerEngineConfig.Execution.EnableRequestTracing {
+		r.logger.Warn("Request tracing is enabled." +
+			"This is a security risk as it can leak sensitive information and internals of your subgraphs through the API." +
+			"Enabling request tracing negatively impacts performance because the execution plan cache is disabled." +
+			"You should only enable this for debugging purposes and not in production.")
+	}
+
 	executor, err := ecb.Build(ctx, routerConfig, routerEngineConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build plan configuration: %w", err)
@@ -707,12 +715,13 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	routerMetrics := NewRouterMetrics(metricStore, r.gqlMetricsExporter, routerConfig.GetVersion())
 
 	graphqlPreHandler := NewPreHandler(&PreHandlerOptions{
-		Logger:           r.logger,
-		Executor:         executor,
-		Metrics:          routerMetrics,
-		Parser:           operationParser,
-		Planner:          operationPlanner,
-		AccessController: r.accessController,
+		Logger:                r.logger,
+		Executor:              executor,
+		Metrics:               routerMetrics,
+		Parser:                operationParser,
+		Planner:               operationPlanner,
+		AccessController:      r.accessController,
+		DisableRequestTracing: !routerEngineConfig.Execution.EnableRequestTracing,
 	})
 
 	var traceHandler *trace.Middleware
