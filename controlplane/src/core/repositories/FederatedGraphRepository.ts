@@ -134,7 +134,7 @@ export class FederatedGraphRepository {
     };
   }
 
-  public update(data: { name: string; routingUrl: string; labelMatchers: string[] }) {
+  public update(data: { name: string; routingUrl: string; labelMatchers: string[]; updatedBy: string }) {
     const labelMatchers = normalizeLabelMatchers(data.labelMatchers);
     const routingUrl = normalizeURL(data.routingUrl);
 
@@ -205,7 +205,7 @@ export class FederatedGraphRepository {
         const composer = new Composer(fedGraphRepo, subgraphRepo, compositionRepo);
         const composedGraph = await composer.composeFederatedGraph(federatedGraph);
 
-        await composer.deployComposition(composedGraph);
+        await composer.deployComposition(composedGraph, data.updatedBy);
 
         return composedGraph.errors;
       }
@@ -371,12 +371,14 @@ export class FederatedGraphRepository {
     compositionErrors,
     routerConfig,
     subgraphSchemaVersionIds,
+    composedBy,
   }: {
     graphName: string;
     composedSDL?: string;
     compositionErrors?: Error[];
     routerConfig?: JsonValue;
     subgraphSchemaVersionIds: string[];
+    composedBy: string;
   }) {
     return this.db.transaction<FederatedGraphDTO | undefined>(async (tx) => {
       const fedGraphRepo = new FederatedGraphRepository(tx, this.organizationId);
@@ -418,6 +420,7 @@ export class FederatedGraphRepository {
         subgraphSchemaVersionIds,
         compositionErrorString,
         routerConfig,
+        composedBy,
       });
 
       return {

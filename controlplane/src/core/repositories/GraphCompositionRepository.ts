@@ -12,11 +12,13 @@ export class GraphCompositionRepository {
     compositionErrorString,
     routerConfig,
     subgraphSchemaVersionIds,
+    composedBy,
   }: {
     fedGraphSchemaVersionId: string;
     compositionErrorString: string;
     routerConfig?: JsonValue;
     subgraphSchemaVersionIds: string[];
+    composedBy: string;
   }) {
     await this.db.transaction(async (tx) => {
       const insertedComposition = await tx
@@ -26,6 +28,7 @@ export class GraphCompositionRepository {
           routerConfig: routerConfig || null,
           compositionErrors: compositionErrorString,
           isComposable: compositionErrorString === '',
+          createdBy: composedBy,
         })
         .returning()
         .execute();
