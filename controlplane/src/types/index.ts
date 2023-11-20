@@ -243,7 +243,7 @@ export type AuthContext = {
   organizationSlug: string;
   hasWriteAccess: boolean;
   isAdmin: boolean;
-  userId?: string;
+  userId: string;
 };
 
 export interface GraphApiKeyJwtPayload extends JWTPayload {

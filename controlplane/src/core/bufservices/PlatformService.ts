@@ -189,7 +189,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             })),
           );
 
-          await compChecker.deployComposition(composition);
+          await compChecker.deployComposition(composition, authContext.userId);
         });
 
         orgWebhooks.send(OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED, {
@@ -979,6 +979,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           subscriptionProtocol: req.subscriptionProtocol
             ? formatSubscriptionProtocol(req.subscriptionProtocol)
             : undefined,
+          updatedBy: authContext.userId,
         });
 
         for (const graph of updatedFederatedGraphs) {
@@ -1469,7 +1470,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           for (const federatedGraph of affectedFederatedGraphs) {
             const composition = await composer.composeFederatedGraph(federatedGraph);
 
-            await composer.deployComposition(composition);
+            await composer.deployComposition(composition, authContext.userId);
 
             // Collect all composition errors
 
@@ -1565,6 +1566,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           name: req.name,
           labelMatchers: req.labelMatchers,
           routingUrl: req.routingUrl,
+          updatedBy: authContext.userId,
         });
 
         if (errors) {
@@ -1665,6 +1667,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           subscriptionProtocol: req.subscriptionProtocol
             ? formatSubscriptionProtocol(req.subscriptionProtocol)
             : undefined,
+          updatedBy: authContext.userId,
         });
 
         for (const graph of updatedFederatedGraphs) {
@@ -2665,7 +2668,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
           const composition = await composer.composeFederatedGraph(federatedGraph);
 
-          await composer.deployComposition(composition);
+          await composer.deployComposition(composition, authContext.userId);
         });
 
         const migratedGraph = await fedGraphRepo.byName(graph.name);

@@ -64,7 +64,7 @@ export class Composer {
    * Build and store the final router config and federated schema to the database. A diff between the
    * previous and current schema is stored as changelog.
    */
-  async deployComposition(composedGraph: ComposedFederatedGraph) {
+  async deployComposition(composedGraph: ComposedFederatedGraph, composedBy: string) {
     const hasCompositionErrors = composedGraph.errors.length > 0;
 
     let routerConfigJson: JsonValue = null;
@@ -87,6 +87,7 @@ export class Composer {
       subgraphSchemaVersionIds: composedGraph.subgraphs.map((s) => s.schemaVersionId!),
       compositionErrors: composedGraph.errors,
       routerConfig: routerConfigJson,
+      composedBy,
     });
 
     // Only create changelog when the composed schema is valid
