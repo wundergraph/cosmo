@@ -12,11 +12,13 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/buger/jsonparser"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/routerconfig"
@@ -127,6 +129,14 @@ func sendData(server *core.Server, data []byte) *httptest.ResponseRecorder {
 	return rr
 }
 
+func sendCustomData(server *core.Server, data []byte, reqMw func(r *http.Request)) *httptest.ResponseRecorder {
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest("POST", "/graphql", bytes.NewBuffer(data))
+	reqMw(req)
+	server.Server.Handler.ServeHTTP(rr, req)
+	return rr
+}
+
 func prepareServer(tb testing.TB, opts ...core.Option) *core.Server {
 	ctx := context.Background()
 	cfg := config.Config{
@@ -158,7 +168,8 @@ func prepareServer(tb testing.TB, opts ...core.Option) *core.Server {
 		core.WithStaticRouterConfig(routerConfig),
 		core.WithLogger(zapLogger),
 		core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
-			EnableSingleFlight: true,
+			EnableSingleFlight:   true,
+			EnableRequestTracing: true,
 		}),
 	}
 	routerOpts = append(routerOpts, opts...)
@@ -227,6 +238,50 @@ func TestAnonymousQuery(t *testing.T) {
 	result := sendData(server, []byte(`{"query":"{ employees { id } }"}`))
 	assert.Equal(t, http.StatusOK, result.Code)
 	assert.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`, result.Body.String())
+}
+
+func TestTracing(t *testing.T) {
+	server := setupServer(t)
+	result := sendCustomData(server, []byte(fmt.Sprintf(`{"query":"%s"}`, bigEmployeesQuery)), func(r *http.Request) {
+		r.Header.Add("X-WG-Trace", "true")
+		r.Header.Add("X-WG-Trace", "enable_predictable_debug_timings")
+	})
+	assert.Equal(t, http.StatusOK, result.Result().StatusCode)
+	tracingJsonBytes, err := os.ReadFile("testdata/tracing.json")
+	require.NoError(t, err)
+	// we generate a random port for the test server, so we need to replace the port in the tracing json
+	rex, err := regexp.Compile(`http://localhost:\d+/graphql`)
+	require.NoError(t, err)
+	tracingJson := string(rex.ReplaceAll(tracingJsonBytes, []byte("http://localhost/graphql")))
+	resultBody := rex.ReplaceAllString(result.Body.String(), "http://localhost/graphql")
+	assert.Equal(t, prettifyJSON(t, tracingJson), prettifyJSON(t, resultBody))
+	if t.Failed() {
+		t.Log(resultBody)
+	}
+	// make the request again, but with "enable_predictable_debug_timings" disabled
+	// compare the result and ensure that the timings are different
+	result2 := sendCustomData(server, []byte(fmt.Sprintf(`{"query":"%s"}`, bigEmployeesQuery)), func(r *http.Request) {
+		r.Header.Add("X-WG-Trace", "true")
+	})
+	assert.Equal(t, http.StatusOK, result2.Result().StatusCode)
+	body := result2.Body.Bytes()
+	data, _, _, err := jsonparser.Get(body, "data")
+	require.NoError(t, err)
+	assert.NotNilf(t, data, "data should not be nil: %s", body)
+	tracing, _, _, err := jsonparser.Get(body, "extensions", "trace")
+	require.NoError(t, err)
+	assert.NotNilf(t, tracing, "tracing should not be nil: %s", body)
+	cleanedBody := rex.ReplaceAllString(string(body), "http://localhost/graphql")
+	assert.NotEqual(t, prettifyJSON(t, tracingJson), prettifyJSON(t, cleanedBody))
+}
+
+func prettifyJSON(t *testing.T, jsonStr string) string {
+	var v interface{}
+	err := json.Unmarshal([]byte(jsonStr), &v)
+	require.NoError(t, err)
+	normalized, err := json.MarshalIndent(v, "", "  ")
+	require.NoError(t, err)
+	return string(normalized)
 }
 
 func TestMultipleAnonymousQueries(t *testing.T) {

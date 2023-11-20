@@ -12,6 +12,7 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astvalidation"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/postprocess"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"golang.org/x/sync/singleflight"
 )
 
@@ -64,14 +65,28 @@ func (p *OperationPlanner) preparePlan(requestOperationName []byte, requestOpera
 	}, nil
 }
 
-func (p *OperationPlanner) Plan(operation *ParsedOperation, clientInfo *ClientInfo) (*operationContext, error) {
+func (p *OperationPlanner) Plan(operation *ParsedOperation, clientInfo *ClientInfo, traceOptions resolve.RequestTraceOptions) (*operationContext, error) {
+
 	opContext := &operationContext{
-		name:       operation.Name,
-		opType:     operation.Type,
-		content:    operation.NormalizedRepresentation,
-		hash:       operation.ID,
-		clientInfo: clientInfo,
-		variables:  operation.Variables,
+		name:         operation.Name,
+		opType:       operation.Type,
+		content:      operation.NormalizedRepresentation,
+		hash:         operation.ID,
+		clientInfo:   clientInfo,
+		variables:    operation.Variables,
+		traceOptions: traceOptions,
+	}
+
+	if traceOptions.Enable {
+		// if we have tracing enabled we always prepare a new plan
+		// this is because we're writing trace data to the plan
+		requestOperationNameBytes := unsafebytes.StringToBytes(opContext.Name())
+		prepared, err := p.preparePlan(requestOperationNameBytes, opContext.Content())
+		if err != nil {
+			return nil, err
+		}
+		opContext.preparedPlan = &prepared
+		return opContext, nil
 	}
 
 	operationID := opContext.Hash()
