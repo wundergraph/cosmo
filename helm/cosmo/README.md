@@ -25,9 +25,11 @@ For your convenience, we included two different value presets:
 To apply the changes, run:
 
 ```shell
-# Install the helm dependencies (Only needed once)
+# Add bitnami repo to install dependencies like postgresql, keycloak and clickhouse
+helm repo add bitnami https://charts.bitnami.com/bitnami
+# Install the helm dependencies
 helm dependency build
-# Install the helm chart with the release name e.g "cosmo"
+# Install the helm chart with the release name "cosmo" the name is important it used to reference services in values file.
 helm install cosmo -f values.full.yaml ./cosmo
 ```
 
@@ -45,7 +47,7 @@ helm uninstall cosmo
 We ***strongly recommend*** that if you want to ship this helm chart to production you either:
 - Use a hosted version of Clickhouse ([Clickhouse Cloud](https://clickhouse.com/)), PostgreSQL ([Aiven.io](https://aiven.io/postgresql)), Keycloak ([Cloud-IAM](https://www.cloud-iam.com/))
 - Use a dedicated [Clickhouse](https://github.com/Altinity/clickhouse-operator), [Postgres](https://github.com/zalando/postgres-operator), [Keycloak](https://www.keycloak.org/operator/installation) Kubernetes operator of your choice.
-- Use [WunderGraph Cosmo Cloud](https://wundergraph.com/cosmo-cloud) ✨
+- Use [WunderGraph Cosmo Cloud](https://cosmo.wundergraph.com/login) ✨
 
 ## Configuration and installation details
 

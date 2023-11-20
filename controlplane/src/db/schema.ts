@@ -193,12 +193,6 @@ export const schemaVersion = pgTable('schema_versions', {
   // For a monolithic GraphQL, it is the SDL.
   // For a federated Graph, this is the composition result.
   schemaSDL: text('schema_sdl'),
-  // Determines if the schema is valid.
-  isComposable: boolean('is_composable').default(false),
-  // The errors that occurred during the composition of the schema. This is only set when isComposable is false.
-  compositionErrors: text('composition_errors'),
-  // This is router config based on the composed schema. Only set for federated graphs.
-  routerConfig: jsonb('router_config'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -416,7 +410,9 @@ export const apiKeys = pgTable(
   'api_keys',
   {
     id: uuid('id').notNull().primaryKey().defaultRandom(),
-    userId: uuid('user_id').references(() => users.id),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id),
     organizationId: uuid('organization_id')
       .notNull()
       .references(() => organizations.id),
@@ -698,4 +694,39 @@ export const oidcProviders = pgTable('oidc_providers', {
   name: text('name').notNull(),
   alias: text('alias').notNull().unique(),
   endpoint: text('endpoint').notNull(),
+});
+
+export const graphCompositions = pgTable('graph_compositions', {
+  id: uuid('id').notNull().primaryKey().defaultRandom(),
+  schemaVersionId: uuid('schema_version_id')
+    .notNull()
+    .references(() => schemaVersion.id, {
+      onDelete: 'cascade',
+    }),
+  // Determines if the schema is valid.
+  isComposable: boolean('is_composable').default(false),
+  // The errors that occurred during the composition of the schema. This is only set when isComposable is false.
+  compositionErrors: text('composition_errors'),
+  // This is router config based on the composed schema. Only set for federated graphs.
+  routerConfig: jsonb('router_config'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  createdBy: uuid('created_by').references(() => users.id, {
+    onDelete: 'cascade',
+  }),
+});
+
+// stores the relation between the fedGraph schema versions and its respective subgraph schema versions
+export const graphCompositionSubgraphs = pgTable('graph_composition_subgraphs', {
+  id: uuid('id').notNull().primaryKey().defaultRandom(),
+  graphCompositionId: uuid('graph_composition_id')
+    .notNull()
+    .references(() => graphCompositions.id, {
+      onDelete: 'cascade',
+    }),
+  schemaVersionId: uuid('schema_version_id')
+    .notNull()
+    .references(() => schemaVersion.id, {
+      onDelete: 'cascade',
+    }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });

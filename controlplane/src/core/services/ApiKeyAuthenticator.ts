@@ -1,17 +1,16 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { addDays } from 'date-fns';
 import { eq } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema.js';
-import { AuthenticationError, FreeTrialExpiredError } from '../errors/errors.js';
+import { AuthenticationError } from '../errors/errors.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
-import { calLink } from './Authentication.js';
 
 export type ApiKeyAuthContext = {
   organizationId: string;
   organizationSlug: string;
   hasWriteAccess: boolean;
   isAdmin: boolean;
+  userId: string;
 };
 
 export default class ApiKeyAuthenticator {
@@ -47,15 +46,6 @@ export default class ApiKeyAuthenticator {
       throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, 'Organization does not exist');
     }
 
-    const isFreeTrialExpired = organization.isFreeTrial && new Date() > addDays(new Date(organization.createdAt), 10);
-
-    if (isFreeTrialExpired) {
-      throw new FreeTrialExpiredError(
-        EnumStatusCode.ERR_FREE_TRIAL_EXPIRED,
-        `Free trial has concluded. Please talk to sales to upgrade your plan.\n${calLink}\n`,
-      );
-    }
-
     /**
      * Update the last used at timestamp.
      */
@@ -67,6 +57,7 @@ export default class ApiKeyAuthenticator {
       .where(eq(schema.apiKeys.id, apiKeyModel.id));
 
     return {
+      userId: apiKeyModel.userId,
       organizationId: apiKeyModel.organizationId,
       organizationSlug: organization.slug,
       // sending true as the api key has admin permissions

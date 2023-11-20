@@ -14,13 +14,13 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 
 | Repository | Name | Version |
 |------------|------|---------|
-|  | clickhouse | ^0 |
 |  | controlplane | ^0 |
 |  | graphqlmetrics | ^0 |
-|  | keycloak | ^0 |
 |  | otelcollector | ^0 |
 |  | router | ^0 |
 |  | studio | ^0 |
+| https://charts.bitnami.com/bitnami | clickhouse | ^4.1.5 |
+| https://charts.bitnami.com/bitnami | keycloak | ^17.3.1 |
 | https://charts.bitnami.com/bitnami | postgresql | 12.8.0 |
 
 ## Values
@@ -37,8 +37,8 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | global.graphqlmetrics.webUrl | string | `"http://graphqlmetrics.wundergraph.local"` |  |
 | global.helmTests.enabled | bool | `false` |  |
 | global.keycloak.adminPassword | string | `"changeme"` |  |
-| global.keycloak.adminUrl | string | `"http://keycloak.wundergraph.local"` |  |
 | global.keycloak.adminUser | string | `"admin"` |  |
+| global.keycloak.apiUrl | string | `"http://cosmo-keycloak:8080"` |  |
 | global.keycloak.enabled | bool | `false` |  |
 | global.keycloak.port | int | `8080` |  |
 | global.keycloak.realm | string | `"cosmo"` |  |

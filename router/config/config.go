@@ -18,8 +18,10 @@ import (
 const defaultConfigPath = "config.yaml"
 
 type Graph struct {
-	Name  string `yaml:"name" envconfig:"FEDERATED_GRAPH_NAME" validate:"required"`
-	Token string `yaml:"token" envconfig:"GRAPH_API_TOKEN" validate:"required"`
+	// Name is required if no router config path is provided
+	Name string `yaml:"name" envconfig:"FEDERATED_GRAPH_NAME" validate:"required_without_router_config"`
+	// Token is required if no router config path is provided
+	Token string `yaml:"token" envconfig:"GRAPH_API_TOKEN" validate:"required_without_router_config"`
 }
 
 type TracingExporterConfig struct {
@@ -222,6 +224,18 @@ type Config struct {
 	EngineExecutionConfiguration EngineExecutionConfiguration
 }
 
+// ValidateRequiredWithRouterConfigPath validates that either the field or the router config path is set
+func ValidateRequiredWithRouterConfigPath(fl validator.FieldLevel) bool {
+	if valuer, ok := fl.Top().Interface().(Config); ok {
+		if fl.Field().String() == "" && valuer.RouterConfigPath == "" {
+			return false
+		}
+	} else {
+		return false
+	}
+	return true
+}
+
 func LoadConfig(envOverride string) (*Config, error) {
 	godotenv.Load(".env.local")
 	godotenv.Load()
@@ -275,7 +289,9 @@ func LoadConfig(envOverride string) (*Config, error) {
 		}
 	}
 
-	err = validator.New().Struct(c)
+	validate := validator.New()
+	_ = validate.RegisterValidation("required_without_router_config", ValidateRequiredWithRouterConfigPath)
+	err = validate.Struct(c)
 	if err != nil {
 		return nil, err
 	}

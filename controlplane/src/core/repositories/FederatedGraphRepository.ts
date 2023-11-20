@@ -8,6 +8,7 @@ import {
   federatedGraphConfigs,
   federatedGraphs,
   graphApiTokens,
+  graphCompositions,
   schemaChecks,
   schemaVersion,
   schemaVersionChangeAction,
@@ -24,8 +25,9 @@ import {
 import { normalizeLabelMatchers, normalizeLabels } from '../util.js';
 import { Composer } from '../composition/composer.js';
 import { SchemaDiff } from '../composition/schemaCheck.js';
+import { Target } from '../../db/models.js';
 import { SubgraphRepository } from './SubgraphRepository.js';
-import { Target } from 'src/db/models.js';
+import { GraphCompositionRepository } from './GraphCompositionRepository.js';
 
 export interface FederatedGraphConfig {
   trafficCheckDays: number;
@@ -128,13 +130,14 @@ export class FederatedGraphRepository {
     };
   }
 
-  public update(data: { name: string; routingUrl: string; labelMatchers: string[] }) {
+  public update(data: { name: string; routingUrl: string; labelMatchers: string[]; updatedBy: string }) {
     const labelMatchers = normalizeLabelMatchers(data.labelMatchers);
     const routingUrl = normalizeURL(data.routingUrl);
 
     return this.db.transaction(async (tx) => {
       const fedGraphRepo = new FederatedGraphRepository(tx, this.organizationId);
       const subgraphRepo = new SubgraphRepository(tx, this.organizationId);
+      const compositionRepo = new GraphCompositionRepository(tx);
 
       const federatedGraph = await fedGraphRepo.byName(data.name);
       if (!federatedGraph) {
@@ -195,10 +198,10 @@ export class FederatedGraphRepository {
             .execute();
         }
 
-        const composer = new Composer(fedGraphRepo, subgraphRepo);
+        const composer = new Composer(fedGraphRepo, subgraphRepo, compositionRepo);
         const composedGraph = await composer.composeFederatedGraph(federatedGraph);
 
-        await composer.deployComposition(composedGraph);
+        await composer.deployComposition(composedGraph, data.updatedBy);
 
         return composedGraph.errors;
       }
@@ -251,15 +254,6 @@ export class FederatedGraphRepository {
       with: {
         federatedGraph: {
           with: {
-            composedSchemaVersion: {
-              // Don't load the schema SDL, since it can be very large.
-              columns: {
-                id: true,
-                isComposable: true,
-                compositionErrors: true,
-                createdAt: true,
-              },
-            },
             subgraphs: {
               columns: {
                 subgraphId: true,
@@ -275,15 +269,28 @@ export class FederatedGraphRepository {
       return undefined;
     }
 
-    // Composed schema version is not set when the federated graph was not composed.
+    const latestVersion = await this.db
+      .select({
+        id: schemaVersion.id,
+        isComposable: graphCompositions.isComposable,
+        compositionErrors: graphCompositions.compositionErrors,
+        createdAt: schemaVersion.createdAt,
+      })
+      .from(schemaVersion)
+      .innerJoin(graphCompositions, eq(schemaVersion.id, graphCompositions.schemaVersionId))
+      .where(eq(schemaVersion.targetId, resp.federatedGraph.targetId))
+      .orderBy(desc(schemaVersion.createdAt))
+      .limit(1)
+      .execute();
 
+    // Composed schema version is not set when the federated graph was not composed.
     return {
       id: resp.federatedGraph.id,
       name: resp.name,
       routingUrl: resp.federatedGraph.routingUrl,
-      isComposable: resp.federatedGraph.composedSchemaVersion?.isComposable ?? false,
-      compositionErrors: resp.federatedGraph.composedSchemaVersion?.compositionErrors ?? '',
-      lastUpdatedAt: resp.federatedGraph.composedSchemaVersion?.createdAt?.toISOString() ?? '',
+      isComposable: latestVersion?.[0]?.isComposable ?? false,
+      compositionErrors: latestVersion?.[0]?.compositionErrors ?? '',
+      lastUpdatedAt: latestVersion?.[0]?.createdAt?.toISOString() ?? '',
       targetId: resp.id,
       schemaVersionId: resp.federatedGraph.composedSchemaVersionId ?? undefined,
       subgraphsCount: resp.federatedGraph.subgraphs.length ?? 0,
@@ -359,14 +366,19 @@ export class FederatedGraphRepository {
     graphName,
     compositionErrors,
     routerConfig,
+    subgraphSchemaVersionIds,
+    composedBy,
   }: {
     graphName: string;
     composedSDL?: string;
     compositionErrors?: Error[];
     routerConfig?: JsonValue;
+    subgraphSchemaVersionIds: string[];
+    composedBy: string;
   }) {
     return this.db.transaction<FederatedGraphDTO | undefined>(async (tx) => {
       const fedGraphRepo = new FederatedGraphRepository(tx, this.organizationId);
+      const compositionRepo = new GraphCompositionRepository(tx);
       const fedGraph = await fedGraphRepo.byName(graphName);
       if (fedGraph === undefined) {
         return undefined;
@@ -383,9 +395,6 @@ export class FederatedGraphRepository {
         .values({
           targetId: fedGraph.targetId,
           schemaSDL: composedSDL,
-          routerConfig: routerConfig || null,
-          isComposable: compositionErrorString === '' && !!composedSDL,
-          compositionErrors: compositionErrorString,
         })
         .returning({
           insertedId: schemaVersion.id,
@@ -400,6 +409,15 @@ export class FederatedGraphRepository {
           composedSchemaVersionId: insertedVersion[0].insertedId,
         })
         .where(eq(federatedGraphs.id, fedGraph.id));
+
+      // adding the composition entry and the relation between fedGraph schema version and subgraph schema version
+      await compositionRepo.addComposition({
+        fedGraphSchemaVersionId: insertedVersion[0].insertedId,
+        subgraphSchemaVersionIds,
+        compositionErrorString,
+        routerConfig,
+        composedBy,
+      });
 
       return {
         id: fedGraph.id,
@@ -422,15 +440,18 @@ export class FederatedGraphRepository {
   }
 
   public async isLatestValidRouterConfigVersion(targetId: string, schemaVersionId: string): Promise<boolean> {
-    const latestVersion = await this.db.query.schemaVersion.findFirst({
-      columns: {
-        id: true,
-      },
-      where: and(eq(schema.schemaVersion.targetId, targetId), eq(schema.schemaVersion.isComposable, true)),
-      orderBy: desc(schema.schemaVersion.createdAt),
-    });
+    const latestValidVersion = await this.db
+      .select({
+        id: schemaVersion.id,
+      })
+      .from(schemaVersion)
+      .innerJoin(graphCompositions, eq(schemaVersion.id, graphCompositions.schemaVersionId))
+      .where(and(eq(schemaVersion.targetId, targetId), eq(graphCompositions.isComposable, true)))
+      .orderBy(desc(schemaVersion.createdAt))
+      .limit(1)
+      .execute();
 
-    return latestVersion?.id === schemaVersionId;
+    return latestValidVersion?.[0]?.id === schemaVersionId;
   }
 
   public async getLatestValidRouterConfig(targetId: string): Promise<
@@ -440,43 +461,49 @@ export class FederatedGraphRepository {
       }
     | undefined
   > {
-    const latestVersion = await this.db.query.schemaVersion.findFirst({
-      columns: {
-        id: true,
-        routerConfig: true,
-      },
-      where: and(eq(schema.schemaVersion.targetId, targetId), eq(schema.schemaVersion.isComposable, true)),
-      orderBy: desc(schema.schemaVersion.createdAt),
-    });
+    const latestValidVersion = await this.db
+      .select({
+        id: schemaVersion.id,
+        routerConfig: graphCompositions.routerConfig,
+      })
+      .from(schemaVersion)
+      .innerJoin(graphCompositions, eq(schemaVersion.id, graphCompositions.schemaVersionId))
+      .where(and(eq(schemaVersion.targetId, targetId), eq(graphCompositions.isComposable, true)))
+      .orderBy(desc(schemaVersion.createdAt))
+      .limit(1)
+      .execute();
 
-    if (!latestVersion) {
+    if (!latestValidVersion || latestValidVersion.length === 0) {
       return undefined;
     }
 
     return {
-      config: RouterConfig.fromJson(latestVersion.routerConfig as JsonValue),
-      schemaVersionId: latestVersion.id,
+      config: RouterConfig.fromJson(latestValidVersion[0].routerConfig as JsonValue),
+      schemaVersionId: latestValidVersion[0].id,
     };
   }
 
-  public async getLatestValidSdlOfFederatedGraph(name: string) {
+  // returns the latest valid schema version of a federated graph
+  public async getLatestValidSchemaVersion(name: string) {
     const latestValidVersion = await this.db
       .select({
         name: targets.name,
         schemaSDL: schemaVersion.schemaSDL,
+        schemaVersionId: schemaVersion.id,
       })
       .from(targets)
       .innerJoin(federatedGraphs, eq(federatedGraphs.targetId, targets.id))
       .innerJoin(schemaVersion, eq(schema.schemaVersion.targetId, targets.id))
+      .innerJoin(graphCompositions, eq(schemaVersion.id, graphCompositions.schemaVersionId))
       .where(
         and(
           eq(targets.type, 'federated'),
           eq(targets.organizationId, this.organizationId),
           eq(targets.name, name),
-          eq(schemaVersion.isComposable, true),
+          eq(graphCompositions.isComposable, true),
         ),
       )
-      .orderBy(desc(schemaVersion.createdAt))
+      .orderBy(desc(graphCompositions.createdAt))
       .limit(1)
       .execute();
 
@@ -484,7 +511,10 @@ export class FederatedGraphRepository {
       return undefined;
     }
 
-    return latestValidVersion[0].schemaSDL;
+    return {
+      schema: latestValidVersion[0].schemaSDL,
+      schemaVersionId: latestValidVersion[0].schemaVersionId,
+    };
   }
 
   public createFederatedGraphChangelog(data: { schemaVersionID: string; changes: SchemaDiff[] }) {

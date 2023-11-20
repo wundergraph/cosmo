@@ -1,23 +1,22 @@
+import { ChangeType } from '@graphql-inspector/core';
 import { ClickHouseClient } from '../clickhouse/index.js';
 import { SchemaDiff } from '../composition/schemaCheck.js';
 import { SchemaCheckChangeAction } from '../../db/models.js';
 
 export interface InspectorSchemaChange {
   schemaChangeId: string;
-  typeName: string;
+  typeName?: string;
   namedType?: string;
   fieldName?: string;
+  path?: string[];
+  isInput?: boolean;
+  isArgument?: boolean;
 }
 
 export interface InspectorFilter {
   federatedGraphId: string;
   organizationId: string;
   daysToConsider: number;
-}
-
-export interface InspectorChanges {
-  inspectable: boolean;
-  changes: InspectorSchemaChange[];
 }
 
 export interface InspectorOperationResult {
@@ -44,16 +43,28 @@ export class SchemaUsageTrafficInspector {
 
     for (const change of changes) {
       const where: string[] = [];
-      // Only for enum value changes
+      // Used for arguments usage check
+      if (change.path) {
+        where.push(
+          `startsWith(Path, [${change.path.map((seg) => `'${seg}'`).join(',')}]) AND length(Path) = ${
+            change.path.length
+          }`,
+        );
+      }
       if (change.namedType) {
         where.push(`NamedType = '${change.namedType}'`);
       }
       if (change.typeName) {
         where.push(`hasAny(TypeNames, ['${change.typeName}'])`);
-        // fieldName can be empty if a type was removed
-        if (change.fieldName) {
-          where.push(`FieldName = '${change.fieldName}'`);
-        }
+      }
+      // fieldName can be empty if a type was removed
+      if (change.fieldName) {
+        where.push(`FieldName = '${change.fieldName}'`);
+      }
+      if (change.isInput) {
+        where.push(`IsInput = true`);
+      } else if (change.isArgument) {
+        where.push(`IsArgument = true`);
       }
 
       const query = `
@@ -64,6 +75,7 @@ export class SchemaUsageTrafficInspector {
                max(toUnixTimestamp(Timestamp)) as lastSeen
         FROM ${this.client.database}.gql_metrics_schema_usage_5m_90d
         WHERE
+          -- Filter first on date and customer to reduce the amount of data
           Timestamp >= toStartOfDay(now()) - interval ${filter.daysToConsider} day AND
           FederatedGraphID = '${filter.federatedGraphId}' AND
           OrganizationID = '${filter.organizationId}' AND
@@ -99,97 +111,28 @@ export class SchemaUsageTrafficInspector {
   }
 
   /**
-   * Check if a schema change is fully inspectable.
-   * Fully inspectable means that we can translate the schema change to an inspector change.
-   * If this is not given, we add the risk to release breaking changes that are not covered by the traffic analysis.
-   */
-  private isInspectable(schemaChanges: SchemaDiff[]): boolean {
-    return schemaChanges.every((change) => {
-      switch (change.changeType) {
-        case 'INPUT_FIELD_TYPE_CHANGED':
-        case 'INPUT_FIELD_REMOVED':
-        case 'INPUT_FIELD_DEFAULT_VALUE_CHANGED':
-        case 'FIELD_ARGUMENT_REMOVED':
-        case 'FIELD_ARGUMENT_TYPE_CHANGED':
-        case 'FIELD_ARGUMENT_DEFAULT_CHANGED':
-        case 'DIRECTIVE_REMOVED':
-        case 'DIRECTIVE_ARGUMENT_REMOVED':
-        case 'DIRECTIVE_ARGUMENT_DEFAULT_VALUE_CHANGED':
-        case 'DIRECTIVE_LOCATION_REMOVED': {
-          return false;
-        }
-        default: {
-          return true;
-        }
-      }
-    });
-  }
-
-  /**
-   * Convert schema changes to inspector changes.
+   * Convert schema changes to inspector changes. Throws an error if a change is not supported.
+   * Ultimately, will result in a breaking change because the change is not inspectable with the current implementation.
    */
   public schemaChangesToInspectorChanges(
     schemaChanges: SchemaDiff[],
     schemaCheckActions: SchemaCheckChangeAction[],
-  ): InspectorChanges {
-    const inspectable = this.isInspectable(schemaChanges);
-    if (!inspectable) {
-      return { inspectable: false, changes: [] };
-    }
-
+  ): InspectorSchemaChange[] {
     const operations = schemaChanges
       .map((change) => {
-        const path = change.path.split('.');
         // find the schema check action that matches the change
         const schemaCheckAction = schemaCheckActions.find(
           (action) => action.path === change.path && action.changeType === change.changeType,
         );
-
         // there must be a schema check action for every change otherwise it is a bug
         if (!schemaCheckAction) {
-          return null;
+          throw new Error(`Could not find schema check action for change ${change.message}`);
         }
-
-        switch (change.changeType) {
-          // 1. When a type is removed we know the exact type name e.g. 'Engineer'. We have no field name.
-          // 2. When an interface type is removed or added we know the interface 'RoleType'. We have no field name.
-          case 'TYPE_REMOVED':
-          case 'OBJECT_TYPE_INTERFACE_ADDED':
-          case 'OBJECT_TYPE_INTERFACE_REMOVED': {
-            return {
-              schemaChangeId: schemaCheckAction.id,
-              typeName: path[0],
-            } as InspectorSchemaChange;
-          }
-          // 1. When a field is removed we know the exact type and field name e.g. 'Engineer.name'
-          // 2. When a field type has changed in a breaking way, we know the exact type name and field name e.g. 'Engineer.name'
-          case 'FIELD_REMOVED':
-          case 'FIELD_TYPE_CHANGED': {
-            return {
-              schemaChangeId: schemaCheckAction.id,
-              typeName: path[0],
-              fieldName: path[1],
-            } as InspectorSchemaChange;
-          }
-          // 1. When an enum value is added or removed, we only know the affected type. This is fine because any change to an enum value is breaking.
-          // 2. When a union member is removed, we only know the affected parent type. We use namedType to check for the usage of the union member.
-          case 'UNION_MEMBER_REMOVED':
-          case 'ENUM_VALUE_ADDED':
-          case 'ENUM_VALUE_REMOVED': {
-            return {
-              schemaChangeId: schemaCheckAction.id,
-              namedType: path[0],
-            } as InspectorSchemaChange;
-          }
-          default: {
-            // ignore all other changes
-            throw new Error(`Unsupported change type ${change.changeType}`);
-          }
-        }
+        return toInspectorChange(change, schemaCheckAction.id);
       })
       .filter((change) => change !== null) as InspectorSchemaChange[];
 
-    return { inspectable: true, changes: operations };
+    return operations;
   }
 }
 
@@ -235,4 +178,113 @@ export function collectOperationUsageStats(inspectorResult: InspectorOperationRe
     firstSeenAt: firstSeenAt.toUTCString(),
     lastSeenAt: lastSeenAt.toUTCString(),
   };
+}
+
+/**
+ * Convert a schema change to an inspector change. Throws an error if the change is not supported.
+ * Only breaking changes should be passed to this function because we only care about breaking changes.
+ */
+export function toInspectorChange(change: SchemaDiff, schemaCheckId: string): InspectorSchemaChange | null {
+  const path = change.path.split('.');
+
+  switch (change.changeType) {
+    // Not inspectable yet
+    case ChangeType.SchemaMutationTypeChanged:
+    case ChangeType.SchemaQueryTypeChanged:
+    case ChangeType.SchemaSubscriptionTypeChanged:
+    case ChangeType.DirectiveRemoved:
+    case ChangeType.DirectiveArgumentAdded:
+    case ChangeType.DirectiveArgumentRemoved:
+    case ChangeType.DirectiveArgumentDefaultValueChanged:
+    case ChangeType.DirectiveArgumentTypeChanged:
+    case ChangeType.DirectiveLocationRemoved: {
+      throw new Error(`Directive or schema root type changes are not inspectable`);
+    }
+    // Safe to ignore
+    case ChangeType.DirectiveAdded:
+    case ChangeType.FieldArgumentDescriptionChanged:
+    case ChangeType.FieldArgumentDefaultChanged:
+    case ChangeType.DirectiveDescriptionChanged:
+    case ChangeType.DirectiveArgumentDescriptionChanged:
+    case ChangeType.DirectiveLocationAdded:
+    case ChangeType.EnumValueDescriptionChanged:
+    case ChangeType.EnumValueDeprecationReasonChanged:
+    case ChangeType.EnumValueDeprecationReasonAdded:
+    case ChangeType.EnumValueDeprecationReasonRemoved:
+    case ChangeType.FieldDescriptionChanged:
+    case ChangeType.FieldDescriptionAdded:
+    case ChangeType.FieldDescriptionRemoved:
+    case ChangeType.FieldDeprecationAdded:
+    case ChangeType.FieldDeprecationRemoved:
+    case ChangeType.FieldDeprecationReasonChanged:
+    case ChangeType.FieldDeprecationReasonAdded:
+    case ChangeType.FieldDeprecationReasonRemoved:
+    case ChangeType.InputFieldDescriptionAdded:
+    case ChangeType.InputFieldDescriptionRemoved:
+    case ChangeType.InputFieldDescriptionChanged:
+    case ChangeType.InputFieldDefaultValueChanged:
+    case ChangeType.TypeDescriptionChanged:
+    case ChangeType.TypeDescriptionRemoved:
+    case ChangeType.TypeDescriptionAdded:
+    case ChangeType.TypeAdded:
+    case ChangeType.FieldAdded:
+    case ChangeType.UnionMemberAdded: {
+      return null;
+    }
+    // 1. When a type is removed we know the exact type name e.g. 'Engineer'. We have no field name.
+    // 2. When an interface type is removed or added we know the interface 'RoleType'. We have no field name.
+    case ChangeType.TypeRemoved:
+    case ChangeType.TypeKindChanged:
+    case ChangeType.ObjectTypeInterfaceAdded:
+    case ChangeType.ObjectTypeInterfaceRemoved: {
+      return {
+        schemaChangeId: schemaCheckId,
+        typeName: path[0],
+      };
+    }
+    // 1. When a field is removed we know the exact type and field name e.g. 'Engineer.name'
+    // 2. When a field type has changed in a breaking way, we know the exact type name and field name e.g. 'Engineer.name'
+    case ChangeType.FieldRemoved:
+    case ChangeType.FieldTypeChanged: {
+      return {
+        schemaChangeId: schemaCheckId,
+        typeName: path[0],
+        fieldName: path[1],
+      };
+    }
+    // 1. When an enum value is added or removed, we only know the affected type. This is fine because any change to an enum value is breaking.
+    // 2. When a union member is removed, we only know the affected parent type. We use namedType to check for the usage of the union member.
+    case ChangeType.UnionMemberRemoved:
+    case ChangeType.EnumValueAdded:
+    case ChangeType.EnumValueRemoved: {
+      return {
+        schemaChangeId: schemaCheckId,
+        namedType: path[0],
+      };
+    }
+    // 1. When the type of input field has changed, we know the exact type name and field name e.g. 'MyInput.name'
+    case ChangeType.InputFieldTypeChanged:
+    case ChangeType.InputFieldRemoved:
+    case ChangeType.InputFieldAdded: {
+      return {
+        schemaChangeId: schemaCheckId,
+        fieldName: path[1],
+        typeName: path[0],
+        isInput: true,
+      };
+    }
+    // 1. When an argument has changed, we know the exact path to the argument e.g. 'Query.engineer.id'
+    // and the type name e.g. 'Query'
+    case ChangeType.FieldArgumentRemoved:
+    case ChangeType.FieldArgumentAdded: // Only when a required argument is added
+    case ChangeType.FieldArgumentTypeChanged: {
+      return {
+        schemaChangeId: schemaCheckId,
+        path: path.slice(1), // The path to the updated argument e.g. 'engineer.name' of the type names
+        typeName: path[0], // Enclosing type e.g. 'Query' or 'Engineer' when the argument is on a field of type Engineer
+        isArgument: true,
+      };
+    }
+  }
+  // no return to enforce that all cases are handled
 }

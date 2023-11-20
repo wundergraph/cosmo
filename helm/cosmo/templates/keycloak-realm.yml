@@ -1,9 +1,10 @@
+{{- if .Values.global.keycloak.enabled }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ include "keycloak.fullname" . }}-realm
+  name: keycloak-realm
   labels:
-    {{- include "keycloak.labels" . | nindent 6 }}
+    {{- include "cosmo.labels" . | nindent 6 }}
 data:
   realm.json: |
     {
@@ -1779,3 +1780,4 @@ data:
         "policies": []
       }
     }
+{{- end }}
