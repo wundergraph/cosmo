@@ -64,6 +64,8 @@ const RequestChart = ({
   const color1 = useId();
   const color2 = useId();
 
+  const requestsColor = "hsl(var(--chart-primary))";
+
   return (
     <div className="flex h-full w-full flex-col gap-y-8 rounded-md border p-4 lg:w-3/5 lg:gap-y-4">
       <div className="flex flex-col gap-x-6 gap-y-2 md:flex-row md:items-center">
@@ -73,7 +75,7 @@ const RequestChart = ({
           <span className="text-xs text-muted-foreground">1 Week</span>
         </h2>
         <div className="flex items-center gap-x-2 text-sm md:ml-auto">
-          <div className="h-3 w-3 rounded-full bg-primary" />
+          <div className="h-3 w-3 rounded-full bg-blue-600" />
           Total
           <Badge variant="secondary">{formatMetric(count)}</Badge>
         </div>
@@ -97,8 +99,8 @@ const RequestChart = ({
         >
           <defs>
             <linearGradient id={color1} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#0da2e7" stopOpacity={0.8} />
-              <stop offset="95%" stopColor="#0da2e7" stopOpacity={0} />
+              <stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.8} />
+              <stop offset="95%" stopColor="#0ea5e9" stopOpacity={0} />
             </linearGradient>
             <linearGradient id={color2} x1="0" y1="0" x2="0" y2="1">
               <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8} />
@@ -123,29 +125,13 @@ const RequestChart = ({
           />
           <CartesianGrid strokeDasharray="3 3" className="stroke-secondary" />
 
-          <ChartTooltip
-            content={(props) => {
-              return (
-                <div className={cn(props.wrapperClassName, "space-y-2")}>
-                  <p>{dateFormatter(props.label, false)}</p>
-                  <p className="text-success">
-                    Success:{" "}
-                    {props.payload?.[0]?.payload?.totalRequests
-                      ? props.payload?.[0]?.payload?.totalRequests -
-                          props.payload?.[0]?.payload?.erroredRequests ?? 0
-                      : 0}
-                  </p>
-                  <p className="text-destructive">
-                    Errors: {props.payload?.[0]?.payload?.erroredRequests ?? 0}
-                  </p>
-                </div>
-              );
-            }}
-          />
+          <ChartTooltip formatter={valueFormatter} />
+
           <Area
             name="Total requests"
             type="monotone"
             dataKey="totalRequests"
+            stroke={requestsColor}
             fill={`url(#${color1})`}
           />
           <Area
@@ -189,6 +175,7 @@ const MostRequested = ({ data }: { data: OperationRequestCount[] }) => {
         <span className="text-xs text-muted-foreground">1 Week</span>
       </h2>
       <BarList
+        rowClassName="bg-purple-400/20"
         data={operations.map((op) => ({
           ...op,
           name: (
