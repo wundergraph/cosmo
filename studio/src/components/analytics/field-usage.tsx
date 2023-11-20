@@ -350,6 +350,7 @@ export const FieldUsageSheet = () => {
       },
     }),
     enabled: !!showUsage && !!graph?.graph?.name,
+    refetchOnWindowFocus: false,
   });
 
   let content: React.ReactNode;

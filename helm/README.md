@@ -1,5 +1,7 @@
 # Cosmo Helm Chart
 
+[![Helm Deployment](https://github.com/wundergraph/cosmo/actions/workflows/helm-deployment.yaml/badge.svg)](https://github.com/wundergraph/cosmo/actions/workflows/helm-deployment.yaml)
+
 ## Getting started for local development
 
 ### Prerequisites
@@ -7,7 +9,7 @@
     - [Minikube](https://minikube.sigs.k8s.io/docs/start/)
       - Requires enabling `minikube addons enable ingress`
 - [Helm 3.2.0+](https://helm.sh/docs/intro/install/) installed locally
-- [Kapp](https://get-kapp.io/) installed locally
+- [Kapp](https://carvel.dev/kapp/) installed locally
 - [Kubectl](https://kubernetes.io/docs/tasks/tools/) installed locally
 
 ### Install helm dependencies

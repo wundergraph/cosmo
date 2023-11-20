@@ -11,8 +11,10 @@ import (
 	"github.com/buger/jsonparser"
 	"github.com/cespare/xxhash/v2"
 	"github.com/pkg/errors"
+
 	"github.com/wundergraph/cosmo/router/internal/pool"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/astjson"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astnormalization"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astprinter"
@@ -59,10 +61,15 @@ func NewOperationParser(executor *Executor, maxOperationSizeInBytes int64) *Oper
 		parseKitPool: &sync.Pool{
 			New: func() interface{} {
 				return &parseKit{
-					parser:              astparser.NewParser(),
-					doc:                 ast.NewSmallDocument(),
-					keyGen:              xxhash.New(),
-					normalizer:          astnormalization.NewWithOpts(astnormalization.WithInlineFragmentSpreads(), astnormalization.WithRemoveFragmentDefinitions(), astnormalization.WithRemoveNotMatchingOperationDefinitions()),
+					parser: astparser.NewParser(),
+					doc:    ast.NewSmallDocument(),
+					keyGen: xxhash.New(),
+					normalizer: astnormalization.NewWithOpts(
+						astnormalization.WithExtractVariables(),
+						astnormalization.WithInlineFragmentSpreads(),
+						astnormalization.WithRemoveFragmentDefinitions(),
+						astnormalization.WithRemoveNotMatchingOperationDefinitions(),
+					),
 					printer:             &astprinter.Printer{},
 					normalizedOperation: &bytes.Buffer{},
 					unescapedDocument:   make([]byte, 1024),
@@ -242,6 +249,11 @@ func (p *OperationParser) parse(body []byte) (*ParsedOperation, error) {
 	if err != nil {
 		return nil, errors.WithStack(fmt.Errorf("failed to print normalized operation: %w", err))
 	}
+	// hash extracted variables
+	_, err = kit.keyGen.Write(kit.doc.Input.Variables)
+	if err != nil {
+		return nil, errors.WithStack(fmt.Errorf("failed to write variables: %w", err))
+	}
 	operationID := kit.keyGen.Sum64() // generate the operation ID
 	// print the operation with the original operation name
 	kit.doc.OperationDefinitions[operationDefinitionRef].Name = originalOperationNameRef
@@ -250,11 +262,33 @@ func (p *OperationParser) parse(body []byte) (*ParsedOperation, error) {
 		return nil, errors.WithStack(fmt.Errorf("failed to print normalized operation: %w", err))
 	}
 
+	if requestVariableBytes == nil || bytes.Equal(requestVariableBytes, []byte("null")) {
+		requestVariableBytes = []byte("{}")
+	}
+
+	js := &astjson.JSON{}
+	err = js.ParseObject(requestVariableBytes)
+	if err != nil {
+		return nil, errors.WithStack(fmt.Errorf("failed to parse variables: %w", err))
+	}
+	if kit.doc.Input.Variables != nil {
+		extractedVariables, err := js.AppendObject(kit.doc.Input.Variables)
+		if err != nil {
+			return nil, errors.WithStack(fmt.Errorf("failed to append variables: %w", err))
+		}
+		js.MergeNodes(js.RootNode, extractedVariables)
+	}
+	merged := bytes.NewBuffer(make([]byte, 0, len(requestVariableBytes)+len(kit.doc.Input.Variables)))
+	err = js.PrintRoot(merged)
+	if err != nil {
+		return nil, errors.WithStack(fmt.Errorf("failed to print variables: %w", err))
+	}
+
 	return &ParsedOperation{
 		ID:                       operationID,
 		Name:                     string(requestOperationNameBytes),
 		Type:                     requestOperationType,
-		Variables:                requestVariableBytes,
+		Variables:                merged.Bytes(),
 		NormalizedRepresentation: kit.normalizedOperation.String(),
 	}, nil
 }

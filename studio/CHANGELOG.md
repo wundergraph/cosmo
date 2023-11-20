@@ -4,6 +4,41 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.35.3](https://github.com/wundergraph/cosmo/compare/studio@0.35.2...studio@0.35.3) (2023-11-20)
+
+**Note:** Version bump only for package studio
+
+## [0.35.2](https://github.com/wundergraph/cosmo/compare/studio@0.35.1...studio@0.35.2) (2023-11-17)
+
+### Bug Fixes
+
+* show latest valid subgraph schema ([#259](https://github.com/wundergraph/cosmo/issues/259)) ([d954b91](https://github.com/wundergraph/cosmo/commit/d954b91bd212ae1a33257c662a4ff8a2ac8c2b56)) (@JivusAyrus)
+
+## [0.35.1](https://github.com/wundergraph/cosmo/compare/studio@0.35.0...studio@0.35.1) (2023-11-16)
+
+### Bug Fixes
+
+* populate studio build with all envs ([#266](https://github.com/wundergraph/cosmo/issues/266)) ([4a827c8](https://github.com/wundergraph/cosmo/commit/4a827c88141a5f9f8d999c94861f37642970ef27)) (@StarpTech)
+
+# [0.35.0](https://github.com/wundergraph/cosmo/compare/studio@0.34.0...studio@0.35.0) (2023-11-15)
+
+### Features
+
+* consider input and argument usage for breaking change detection ([#255](https://github.com/wundergraph/cosmo/issues/255)) ([e10ac40](https://github.com/wundergraph/cosmo/commit/e10ac401f543f5540b5ada8f80533ddfbd0bc728)) (@jensneuse)
+
+# [0.34.0](https://github.com/wundergraph/cosmo/compare/studio@0.33.2...studio@0.34.0) (2023-11-15)
+
+### Bug Fixes
+
+* link button styles in safari ([#257](https://github.com/wundergraph/cosmo/issues/257)) ([a22b7cb](https://github.com/wundergraph/cosmo/commit/a22b7cb6b6390b729fec045353e7bedd7208d7b2)) (@Pagebakers)
+* prettify operation and add play button to run the operation ([#252](https://github.com/wundergraph/cosmo/issues/252)) ([289838f](https://github.com/wundergraph/cosmo/commit/289838f7a095735d48f64e9c9656adaf4d7805d2)) (@JivusAyrus)
+* remove 10 day limit for free trial ([#260](https://github.com/wundergraph/cosmo/issues/260)) ([9e59f58](https://github.com/wundergraph/cosmo/commit/9e59f583cd7195a74012795e3e2401ae9cae4bfb)) (@JivusAyrus)
+
+### Features
+
+* add check for deleted subgraphs ([#258](https://github.com/wundergraph/cosmo/issues/258)) ([ba87fe5](https://github.com/wundergraph/cosmo/commit/ba87fe51631ece9c2efaea6350dc93590f1846c5)) (@Pagebakers)
+* **studio:** upgrade to Next 14 ([#261](https://github.com/wundergraph/cosmo/issues/261)) ([b8ebc3a](https://github.com/wundergraph/cosmo/commit/b8ebc3a873682304062c397ed5e42b919e9332a7)) (@StarpTech)
+
 ## [0.33.2](https://github.com/wundergraph/cosmo/compare/studio@0.33.1...studio@0.33.2) (2023-11-10)
 
 ### Bug Fixes

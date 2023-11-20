@@ -138,35 +138,6 @@ const GraphLayout = ({ children }: LayoutProps) => {
   return (
     <div className="2xl:flex 2xl:flex-1 2xl:flex-col 2xl:items-center">
       <div className="min-h-screen w-full max-w-screen-4xl bg-background font-sans antialiased">
-        {user?.currentOrganization.isFreeTrial && (
-          <Link
-            className="sticky top-0 z-50 flex cursor-pointer justify-center rounded bg-primary px-2 py-1 text-sm text-secondary-foreground"
-            href={calURL}
-            target="_blank"
-            rel="noreferrer"
-          >
-            {!user.currentOrganization.isFreeTrialExpired ? (
-              <span>
-                Limited trial version (
-                {formatDistance(
-                  addDays(new Date(user.currentOrganization.createdAt), 10),
-                  new Date(),
-                )}{" "}
-                left).{" "}
-                <span className="underline underline-offset-2">
-                  Talk to sales
-                </span>{" "}
-                for Production use.
-              </span>
-            ) : (
-              <span>
-                Limited trial has concluded.{" "}
-                <span className="underline underline-offset-2">Click here</span>{" "}
-                to contact us and upgrade your plan for continued usage.
-              </span>
-            )}
-          </Link>
-        )}
         <Nav links={links}>{render}</Nav>
       </div>
     </div>

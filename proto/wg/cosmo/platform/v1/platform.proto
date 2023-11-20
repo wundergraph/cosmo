@@ -127,6 +127,8 @@ message CheckSubgraphSchemaResponse {
   repeated SchemaChange breakingChanges = 2;
   repeated SchemaChange nonBreakingChanges = 3;
   repeated CompositionError compositionErrors = 4;
+  // Contains the operation usage stats for the operations that are impacted by the schema changes.
+  // Can be undefined when the schema changes are not inspectable by real traffic breaking change detection.
   CheckOperationUsageStats operationUsageStats = 5;
 }
 
@@ -225,11 +227,12 @@ message GetSubgraphByNameResponse {
   Subgraph graph = 2;
 }
 
-message GetFederatedSubgraphSDLByNameRequest {
+message GetLatestValidSubgraphSDLByNameRequest {
   string name = 1;
+  string fedGraphName = 2;
 }
 
-message GetFederatedSubgraphSDLByNameResponse {
+message GetLatestValidSubgraphSDLByNameResponse {
   Response response = 1;
   optional string sdl = 2;
 }
@@ -1057,7 +1060,7 @@ service PlatformService {
   // GetSubgraphByName returns the subgraph by name.
   rpc GetSubgraphByName(GetSubgraphByNameRequest) returns (GetSubgraphByNameResponse) {}
   // GetFederatedSubgraphSDLByName returns the SDL of the subgraph by name.
-  rpc GetFederatedSubgraphSDLByName(GetFederatedSubgraphSDLByNameRequest) returns (GetFederatedSubgraphSDLByNameResponse) {}
+  rpc GetLatestValidSubgraphSDLByName(GetLatestValidSubgraphSDLByNameRequest) returns (GetLatestValidSubgraphSDLByNameResponse) {}
 
 
   // GetChecksByFederatedGraphName return schema and composition checks that concern a federated graph

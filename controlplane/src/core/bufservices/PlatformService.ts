@@ -6,7 +6,6 @@ import { OrganizationEventName, PlatformEventName } from '@wundergraph/cosmo-con
 import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
 import {
   CheckFederatedGraphResponse,
-  CheckOperationUsageStats,
   CheckSubgraphSchemaResponse,
   CompositionError,
   CreateAPIKeyResponse,
@@ -33,7 +32,6 @@ import {
   GetFederatedGraphChangelogResponse,
   GetFederatedGraphSDLByNameResponse,
   GetFederatedGraphsResponse,
-  GetFederatedSubgraphSDLByNameResponse,
   GetFieldUsageResponse,
   GetGraphMetricsResponse,
   GetMetricsErrorRateResponse,
@@ -64,6 +62,7 @@ import {
   LeaveOrganizationResponse,
   DeleteOrganizationResponse,
   UpdateOrgMemberRoleResponse,
+  GetLatestValidSubgraphSDLByNameResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { OpenAIGraphql, isValidUrl } from '@wundergraph/cosmo-shared';
 import { parse } from 'graphql';
@@ -91,6 +90,7 @@ import {
   InspectorOperationResult,
   SchemaUsageTrafficInspector,
   collectOperationUsageStats,
+  InspectorSchemaChange,
 } from '../services/SchemaUsageTrafficInspector.js';
 import Slack from '../services/Slack.js';
 import {
@@ -104,6 +104,7 @@ import {
 import { FederatedGraphSchemaUpdate, OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
 import { OidcRepository } from '../repositories/OidcRepository.js';
 import OidcProvider from '../services/OidcProvider.js';
+import { GraphCompositionRepository } from '../repositories/GraphCompositionRepository.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -177,7 +178,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         await opts.db.transaction(async (tx) => {
           const fedGraphRepo = new FederatedGraphRepository(tx, authContext.organizationId);
           const subgraphRepo = new SubgraphRepository(tx, authContext.organizationId);
-          const compChecker = new Composer(fedGraphRepo, subgraphRepo);
+          const compositionRepo = new GraphCompositionRepository(tx);
+          const compChecker = new Composer(fedGraphRepo, subgraphRepo, compositionRepo);
           const composition = await compChecker.composeFederatedGraph(federatedGraph);
 
           compositionErrors.push(
@@ -187,7 +189,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             })),
           );
 
-          await compChecker.deployComposition(composition);
+          await compChecker.deployComposition(composition, authContext.userId);
         });
 
         orgWebhooks.send(OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED, {
@@ -395,14 +397,14 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
       return handleError<PlainMessage<GetFederatedGraphSDLByNameResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const repo = new FederatedGraphRepository(opts.db, authContext.organizationId);
-        const sdl = await repo.getLatestValidSdlOfFederatedGraph(req.name);
-        if (sdl) {
+        const fedRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+        const schemaVersion = await fedRepo.getLatestValidSchemaVersion(req.name);
+        if (schemaVersion && schemaVersion.schema) {
           return {
             response: {
               code: EnumStatusCode.OK,
             },
-            sdl,
+            sdl: schemaVersion.schema,
           };
         }
         return {
@@ -413,27 +415,37 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    getFederatedSubgraphSDLByName: (req, ctx) => {
+    getLatestValidSubgraphSDLByName: (req, ctx) => {
       const logger = opts.logger.child({
         service: ctx.service.typeName,
         method: ctx.method.name,
       });
-      return handleError<PlainMessage<GetFederatedSubgraphSDLByNameResponse>>(logger, async () => {
+      return handleError<PlainMessage<GetLatestValidSubgraphSDLByNameResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const subgraph = await subgraphRepo.byName(req.name);
-        if (subgraph?.schemaSDL) {
+        if (!subgraph) {
           return {
             response: {
-              code: EnumStatusCode.OK,
+              code: EnumStatusCode.ERR_NOT_FOUND,
             },
-            sdl: subgraph.schemaSDL,
           };
         }
+
+        const schemaVersion = await subgraphRepo.getLatestValidSchemaVersion(req.name, req.fedGraphName);
+        if (!schemaVersion) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+            },
+          };
+        }
+
         return {
           response: {
-            code: EnumStatusCode.ERR_NOT_FOUND,
+            code: EnumStatusCode.OK,
           },
+          sdl: schemaVersion.schema || undefined,
         };
       });
     },
@@ -536,6 +548,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const orgRepo = new OrganizationRepository(opts.db);
         const schemaCheckRepo = new SchemaCheckRepository(opts.db);
+        const compositionRepo = new GraphCompositionRepository(opts.db);
 
         if (!authContext.hasWriteAccess) {
           return {
@@ -598,6 +611,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
+        let isInspectable = true;
         const hasBreakingChanges = schemaChanges.breakingChanges.length > 0;
 
         await schemaCheckRepo.createSchemaCheckChanges({
@@ -610,7 +624,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           schemaCheckID,
         });
 
-        const composer = new Composer(fedGraphRepo, subgraphRepo);
+        const composer = new Composer(fedGraphRepo, subgraphRepo, compositionRepo);
 
         const result = req.delete
           ? await composer.composeWithDeletedSubgraph(subgraph.labels, subgraph.name)
@@ -627,11 +641,17 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const inspectedOperations: InspectorOperationResult[] = [];
         const compositionErrors: PlainMessage<CompositionError>[] = [];
 
-        // For operations checks we only consider breaking changes
-        const inspectorChanges = trafficInspector.schemaChangesToInspectorChanges(
-          schemaChanges.breakingChanges,
-          storedBreakingChanges,
-        );
+        let inspectorChanges: InspectorSchemaChange[] = [];
+        try {
+          // For operations checks we only consider breaking changes
+          // This method will throw if the schema changes cannot be converted to inspector changes
+          inspectorChanges = trafficInspector.schemaChangesToInspectorChanges(
+            schemaChanges.breakingChanges,
+            storedBreakingChanges,
+          );
+        } catch {
+          isInspectable = false;
+        }
 
         for (const composition of result.compositions) {
           const graphConfig = await fedGraphRepo.getConfig(composition.id);
@@ -652,13 +672,14 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             }
           }
 
-          // We don't collect operation usage when we have composition errors
-          if (composition.errors.length === 0 && inspectorChanges.inspectable && inspectorChanges.changes.length > 0) {
+          // We don't collect operation usage when we have composition errors or
+          // when we don't have any inspectable changes. That means any breaking change is really breaking
+          if (composition.errors.length === 0 && isInspectable && inspectorChanges.length > 0) {
             if (graphConfig.trafficCheckDays <= 0) {
               continue;
             }
 
-            const result = await trafficInspector.inspect(inspectorChanges.changes, {
+            const result = await trafficInspector.inspect(inspectorChanges, {
               daysToConsider: graphConfig.trafficCheckDays,
               federatedGraphId: composition.id,
               organizationId: authContext.organizationId,
@@ -687,9 +708,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           hasBreakingChanges,
         });
 
-        const operationUsageStats: PlainMessage<CheckOperationUsageStats> =
-          collectOperationUsageStats(inspectedOperations);
-
         if (req.gitInfo && opts.githubApp) {
           const githubRepo = new GitHubRepository(opts.db, opts.githubApp);
           await githubRepo.createCommitCheck({
@@ -711,7 +729,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           },
           breakingChanges: schemaChanges.breakingChanges,
           nonBreakingChanges: schemaChanges.nonBreakingChanges,
-          operationUsageStats,
+          operationUsageStats: isInspectable ? collectOperationUsageStats(inspectedOperations) : undefined,
           compositionErrors,
         };
       });
@@ -728,7 +746,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const subgraph = await subgraphRepo.byName(req.subgraphName);
-        const compChecker = new Composer(fedGraphRepo, subgraphRepo);
+        const compositionRepo = new GraphCompositionRepository(opts.db);
+        const compChecker = new Composer(fedGraphRepo, subgraphRepo, compositionRepo);
 
         if (!authContext.hasWriteAccess) {
           return {
@@ -960,6 +979,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           subscriptionProtocol: req.subscriptionProtocol
             ? formatSubscriptionProtocol(req.subscriptionProtocol)
             : undefined,
+          updatedBy: authContext.userId,
         });
 
         for (const graph of updatedFederatedGraphs) {
@@ -1426,7 +1446,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         await opts.db.transaction(async (tx) => {
           const fedGraphRepo = new FederatedGraphRepository(tx, authContext.organizationId);
           const subgraphRepo = new SubgraphRepository(tx, authContext.organizationId);
-          const composer = new Composer(fedGraphRepo, subgraphRepo);
+          const compositionRepo = new GraphCompositionRepository(tx);
+          const composer = new Composer(fedGraphRepo, subgraphRepo, compositionRepo);
 
           // Collect all federated graphs that used this subgraph before deleting subgraph to include them in the composition
           const affectedFederatedGraphs = await fedGraphRepo.bySubgraphLabels(subgraph.labels);
@@ -1449,7 +1470,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           for (const federatedGraph of affectedFederatedGraphs) {
             const composition = await composer.composeFederatedGraph(federatedGraph);
 
-            await composer.deployComposition(composition);
+            await composer.deployComposition(composition, authContext.userId);
 
             // Collect all composition errors
 
@@ -1545,6 +1566,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           name: req.name,
           labelMatchers: req.labelMatchers,
           routingUrl: req.routingUrl,
+          updatedBy: authContext.userId,
         });
 
         if (errors) {
@@ -1645,6 +1667,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           subscriptionProtocol: req.subscriptionProtocol
             ? formatSubscriptionProtocol(req.subscriptionProtocol)
             : undefined,
+          updatedBy: authContext.userId,
         });
 
         for (const graph of updatedFederatedGraphs) {
@@ -2630,7 +2653,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         await opts.db.transaction(async (tx) => {
           const fedGraphRepo = new FederatedGraphRepository(tx, authContext.organizationId);
           const subgraphRepo = new SubgraphRepository(tx, authContext.organizationId);
-          const composer = new Composer(fedGraphRepo, subgraphRepo);
+          const compositionRepo = new GraphCompositionRepository(tx);
+          const composer = new Composer(fedGraphRepo, subgraphRepo, compositionRepo);
 
           const federatedGraph = await apolloMigrator.migrateGraphFromApollo({
             fedGraph: {
@@ -2644,7 +2668,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
           const composition = await composer.composeFederatedGraph(federatedGraph);
 
-          await composer.deployComposition(composition);
+          await composer.deployComposition(composition, authContext.userId);
         });
 
         const migratedGraph = await fedGraphRepo.byName(graph.name);
