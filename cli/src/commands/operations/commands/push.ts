@@ -102,7 +102,7 @@ export default (opts: BaseCommandOptions) => {
         pc.green(`pushed ${result.operations?.length ?? 0} operations: ${created} created, ${upToDate} up to date`),
       );
     } else {
-      console.log(pc.red(`could not push operations: ${result.response?.details ?? 'unknown error'}`));
+      command.error(pc.red(`could not push operations: ${result.response?.details ?? 'unknown error'}`));
     }
   });
   return command;
