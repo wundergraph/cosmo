@@ -147,4 +147,15 @@ export class InMemoryBlobStorage implements BlobStorage {
     });
     return Promise.resolve(stream);
   }
+
+  removeDirectory(key: string): Promise<number> {
+    let count = 0;
+    for (const objectKey of this.objects.keys()) {
+      if (objectKey.startsWith(key)) {
+        this.objects.delete(objectKey);
+        count++;
+      }
+    }
+    return Promise.resolve(count);
+  }
 }

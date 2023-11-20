@@ -1,4 +1,11 @@
-import { DeleteObjectsCommand, GetObjectCommand, ListObjectsV2Command, NoSuchKey, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import {
+  DeleteObjectsCommand,
+  GetObjectCommand,
+  ListObjectsV2Command,
+  NoSuchKey,
+  PutObjectCommand,
+  S3Client,
+} from '@aws-sdk/client-s3';
 import { BlobNotFoundError, type BlobStorage } from './index.js';
 
 /**
@@ -60,7 +67,7 @@ export class S3BlobStorage implements BlobStorage {
       if (deleted.Errors) {
         throw new Error(`could not delete files: ${deleted.Errors}`);
       }
+    }
+    return objectsToDelete?.length ?? 0;
   }
-  return objectsToDelete?.length ?? 0;
-}
 }

@@ -46,35 +46,7 @@ export const federatedGraphClients = pgTable('federated_graph_clients', {
     .references(() => federatedGraphs.id, {
       onDelete: 'cascade',
     }),
-  name: text('name').notNull().unique(),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }),
-  createdBy: uuid('created_by')
-    .notNull()
-    .references(() => users.id, {
-      onDelete: 'cascade',
-    }),
-  updatedBy: uuid('updated_by')
-    .notNull()
-    .references(() => users.id, {
-      onDelete: 'cascade',
-    }),
-});
-
-export const federatedGraphPersistedOperations = pgTable('federated_graph_persisted_operations', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  federatedGraphId: uuid('federated_graph_id')
-    .notNull()
-    .references(() => federatedGraphs.id, {
-      onDelete: 'cascade',
-    }),
-  clientId: uuid('client_id')
-    .notNull()
-    .references(() => federatedGraphClients.id, {
-      onDelete: 'cascade',
-    }),
-  hash: text('hash').notNull().unique(),
-  filePath: text('file_path').notNull().unique(),
+  name: text('name').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }),
   createdBy: uuid('created_by')
@@ -88,10 +60,46 @@ export const federatedGraphPersistedOperations = pgTable('federated_graph_persis
       onDelete: 'cascade',
     }),
 }, (t) => ({
-  uniqueFederatedGraphOperationHash: unique('federated_graph_operation_hash').on(t.federatedGraphId, t.hash),
-  uniqueFederatedGraphOperationFilePath: unique('federated_graph_operation_file_hash').on(t.federatedGraphId, t.filePath),
+  uniqueFederatedGraphClientName: unique('federated_graph_client_name').on(t.federatedGraphId, t.name),
 }));
 
+export const federatedGraphPersistedOperations = pgTable(
+  'federated_graph_persisted_operations',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    federatedGraphId: uuid('federated_graph_id')
+      .notNull()
+      .references(() => federatedGraphs.id, {
+        onDelete: 'cascade',
+      }),
+    clientId: uuid('client_id')
+      .notNull()
+      .references(() => federatedGraphClients.id, {
+        onDelete: 'cascade',
+      }),
+    hash: text('hash').notNull().unique(),
+    filePath: text('file_path').notNull().unique(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }),
+    createdBy: uuid('created_by')
+      .notNull()
+      .references(() => users.id, {
+        onDelete: 'cascade',
+      }),
+    updatedBy: uuid('updated_by')
+      .notNull()
+      .references(() => users.id, {
+        onDelete: 'cascade',
+      }),
+  },
+  (t) => ({
+    uniqueFederatedGraphOperationHash: unique('federated_graph_operation_hash').on(t.federatedGraphId, t.hash),
+    uniqueFederatedGraphOperationFilePath: unique('federated_graph_operation_file_hash').on(
+      t.federatedGraphId,
+      t.filePath,
+    ),
+  }),
+);
 
 export const subscriptionProtocolEnum = pgEnum('subscription_protocol', ['ws', 'sse', 'sse_post'] as const);
 

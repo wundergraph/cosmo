@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS "federated_graph_clients" (
 	"updated_at" timestamp with time zone,
 	"created_by" uuid NOT NULL,
 	"updated_by" uuid NOT NULL,
-	CONSTRAINT "federated_graph_clients_name_unique" UNIQUE("name")
+	CONSTRAINT "federated_graph_client_name" UNIQUE("federated_graph_id","name")
 );
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "federated_graph_persisted_operations" (

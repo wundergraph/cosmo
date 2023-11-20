@@ -26,7 +26,7 @@ export interface BlobStorage {
 
   /**
    * Remove a directory recursively, erasing all entries under the given key
-   * 
+   *
    * @param key Path to the directory
    * @returns Number of deleted objects
    */

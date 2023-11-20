@@ -1,7 +1,7 @@
 {
   "version": "5",
   "dialect": "pg",
-  "id": "cbe8646e-f1dc-4dfa-904c-cbb230bb0143",
+  "id": "45bd23a5-e55d-4fa8-9389-2dd1a18cc15c",
   "prevId": "cb19aae4-6a6d-4124-845d-64c80aed06a2",
   "tables": {
     "api_keys": {
@@ -201,10 +201,11 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "federated_graph_clients_name_unique": {
-          "name": "federated_graph_clients_name_unique",
+        "federated_graph_client_name": {
+          "name": "federated_graph_client_name",
           "nullsNotDistinct": false,
           "columns": [
+            "federated_graph_id",
             "name"
           ]
         }

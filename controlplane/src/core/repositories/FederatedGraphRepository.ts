@@ -811,7 +811,7 @@ export class FederatedGraphRepository {
     }
     const updatedAt = new Date();
     await this.db
-      .insert(schema.federatedGraphClients)
+      .insert(federatedGraphClients)
       .values({
         federatedGraphId: graph.federatedGraph.id,
         name: clientName,
@@ -825,8 +825,8 @@ export class FederatedGraphRepository {
     const result = await this.db.query.federatedGraphClients.findFirst({
       columns: { id: true },
       where: and(
-        eq(schema.federatedGraphClients.name, clientName),
-        eq(schema.federatedGraphClients.federatedGraphId, graph.federatedGraph.id),
+        eq(federatedGraphClients.name, clientName),
+        eq(federatedGraphClients.federatedGraphId, graph.federatedGraph.id),
       ),
     });
     return result!.id;
