@@ -75,7 +75,7 @@ const RequestChart = ({
           <span className="text-xs text-muted-foreground">1 Week</span>
         </h2>
         <div className="flex items-center gap-x-2 text-sm md:ml-auto">
-          <div className="h-3 w-3 rounded-full bg-blue-600" />
+          <div className="h-3 w-3 rounded-full bg-sky-500" />
           Total
           <Badge variant="secondary">{formatMetric(count)}</Badge>
         </div>
@@ -99,11 +99,11 @@ const RequestChart = ({
         >
           <defs>
             <linearGradient id={color1} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.8} />
+              <stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.4} />
               <stop offset="95%" stopColor="#0ea5e9" stopOpacity={0} />
             </linearGradient>
             <linearGradient id={color2} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8} />
+              <stop offset="5%" stopColor="#ef4444" stopOpacity={0.4} />
               <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
             </linearGradient>
           </defs>
