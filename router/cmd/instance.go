@@ -25,47 +25,48 @@ func NewRouter(params Params) (*core.Router, error) {
 	var err error
 	var cp controlplane.ConfigFetcher
 
+	cfg := params.Config
 	logger := params.Logger
 
-	if params.Config.RouterConfigPath != "" {
-		routerConfig, err = core.SerializeConfigFromFile(params.Config.RouterConfigPath)
+	if cfg.RouterConfigPath != "" {
+		routerConfig, err = core.SerializeConfigFromFile(cfg.RouterConfigPath)
 		if err != nil {
-			logger.Fatal("Could not read router config", zap.Error(err), zap.String("path", params.Config.RouterConfigPath))
+			logger.Fatal("Could not read router config", zap.Error(err), zap.String("path", cfg.RouterConfigPath))
 		}
 
-		if params.Config.Graph.Token == "" {
+		if cfg.Graph.Token == "" {
 			logger.Warn("Static router config file provided, but no graph token. Disabling schema usage tracking, thus breaking change detection. Not recommended for production use.")
-			params.Config.GraphqlMetrics.Enabled = false
+			cfg.GraphqlMetrics.Enabled = false
 
 			// Only disable default tracing and metrics if no custom OTLP exporter is configured
-			if params.Config.Telemetry.Tracing.Enabled && len(params.Config.Telemetry.Tracing.Exporters) == 0 {
-				params.Config.Telemetry.Tracing.Enabled = false
+			if cfg.Telemetry.Tracing.Enabled && len(cfg.Telemetry.Tracing.Exporters) == 0 {
+				cfg.Telemetry.Tracing.Enabled = false
 			}
-			if params.Config.Telemetry.Metrics.OTLP.Enabled && len(params.Config.Telemetry.Metrics.OTLP.Exporters) == 0 {
-				params.Config.Telemetry.Metrics.OTLP.Enabled = false
+			if cfg.Telemetry.Metrics.OTLP.Enabled && len(cfg.Telemetry.Metrics.OTLP.Exporters) == 0 {
+				cfg.Telemetry.Metrics.OTLP.Enabled = false
 			}
 
 			// Show warning when no custom OTLP exporter is configured and default tracing/metrics are disabled
 			// due to missing graph token
-			if !params.Config.Telemetry.Tracing.Enabled && len(params.Config.Telemetry.Tracing.Exporters) == 0 {
+			if !cfg.Telemetry.Tracing.Enabled && len(cfg.Telemetry.Tracing.Exporters) == 0 {
 				logger.Warn("Static router config file provided, but no graph token. Disabling default tracing. Not recommended for production use.")
 			}
-			if !params.Config.Telemetry.Metrics.OTLP.Enabled && len(params.Config.Telemetry.Metrics.OTLP.Exporters) == 0 {
+			if !cfg.Telemetry.Metrics.OTLP.Enabled && len(cfg.Telemetry.Metrics.OTLP.Exporters) == 0 {
 				logger.Warn("Static router config file provided, but no graph token. Disabling default OTLP metrics. Not recommended for production use.")
 			}
 		}
 	} else {
 		cp = controlplane.New(
-			controlplane.WithControlPlaneEndpoint(params.Config.ControlplaneURL),
-			controlplane.WithFederatedGraph(params.Config.Graph.Name),
+			controlplane.WithControlPlaneEndpoint(cfg.ControlplaneURL),
+			controlplane.WithFederatedGraph(cfg.Graph.Name),
 			controlplane.WithLogger(logger),
-			controlplane.WithGraphApiToken(params.Config.Graph.Token),
-			controlplane.WithPollInterval(params.Config.PollInterval),
+			controlplane.WithGraphApiToken(cfg.Graph.Token),
+			controlplane.WithPollInterval(cfg.PollInterval),
 		)
 	}
 
 	var authenticators []authentication.Authenticator
-	for i, auth := range params.Config.Authentication.Providers {
+	for i, auth := range cfg.Authentication.Providers {
 		if auth.JWKS != nil {
 			name := auth.Name
 			if name == "" {
@@ -87,54 +88,54 @@ func NewRouter(params Params) (*core.Router, error) {
 	}
 
 	return core.NewRouter(
-		core.WithFederatedGraphName(params.Config.Graph.Name),
-		core.WithListenerAddr(params.Config.ListenAddr),
-		core.WithOverrideRoutingURL(params.Config.OverrideRoutingURL),
+		core.WithFederatedGraphName(cfg.Graph.Name),
+		core.WithListenerAddr(cfg.ListenAddr),
+		core.WithOverrideRoutingURL(cfg.OverrideRoutingURL),
 		core.WithLogger(logger),
 		core.WithConfigFetcher(cp),
-		core.WithIntrospection(params.Config.IntrospectionEnabled),
-		core.WithPlayground(params.Config.PlaygroundEnabled),
-		core.WithGraphApiToken(params.Config.Graph.Token),
-		core.WithGraphQLPath(params.Config.GraphQLPath),
-		core.WithModulesConfig(params.Config.Modules),
-		core.WithGracePeriod(params.Config.GracePeriod),
-		core.WithHealthCheckPath(params.Config.HealthCheckPath),
-		core.WithLivenessCheckPath(params.Config.LivenessCheckPath),
+		core.WithIntrospection(cfg.IntrospectionEnabled),
+		core.WithPlayground(cfg.PlaygroundEnabled),
+		core.WithGraphApiToken(cfg.Graph.Token),
+		core.WithGraphQLPath(cfg.GraphQLPath),
+		core.WithModulesConfig(cfg.Modules),
+		core.WithGracePeriod(cfg.GracePeriod),
+		core.WithHealthCheckPath(cfg.HealthCheckPath),
+		core.WithLivenessCheckPath(cfg.LivenessCheckPath),
 		core.WithGraphQLMetrics(&core.GraphQLMetricsConfig{
-			Enabled:           params.Config.GraphqlMetrics.Enabled,
-			CollectorEndpoint: params.Config.GraphqlMetrics.CollectorEndpoint,
+			Enabled:           cfg.GraphqlMetrics.Enabled,
+			CollectorEndpoint: cfg.GraphqlMetrics.CollectorEndpoint,
 		}),
-		core.WithReadinessCheckPath(params.Config.ReadinessCheckPath),
-		core.WithHeaderRules(params.Config.Headers),
+		core.WithReadinessCheckPath(cfg.ReadinessCheckPath),
+		core.WithHeaderRules(cfg.Headers),
 		core.WithStaticRouterConfig(routerConfig),
-		core.WithRouterTrafficConfig(&params.Config.TrafficShaping.Router),
+		core.WithRouterTrafficConfig(&cfg.TrafficShaping.Router),
 		core.WithSubgraphTransportOptions(&core.SubgraphTransportOptions{
-			RequestTimeout:         params.Config.TrafficShaping.All.RequestTimeout,
-			ResponseHeaderTimeout:  params.Config.TrafficShaping.All.ResponseHeaderTimeout,
-			ExpectContinueTimeout:  params.Config.TrafficShaping.All.ExpectContinueTimeout,
-			KeepAliveIdleTimeout:   params.Config.TrafficShaping.All.KeepAliveIdleTimeout,
-			DialTimeout:            params.Config.TrafficShaping.All.DialTimeout,
-			TLSHandshakeTimeout:    params.Config.TrafficShaping.All.TLSHandshakeTimeout,
-			KeepAliveProbeInterval: params.Config.TrafficShaping.All.KeepAliveProbeInterval,
+			RequestTimeout:         cfg.TrafficShaping.All.RequestTimeout,
+			ResponseHeaderTimeout:  cfg.TrafficShaping.All.ResponseHeaderTimeout,
+			ExpectContinueTimeout:  cfg.TrafficShaping.All.ExpectContinueTimeout,
+			KeepAliveIdleTimeout:   cfg.TrafficShaping.All.KeepAliveIdleTimeout,
+			DialTimeout:            cfg.TrafficShaping.All.DialTimeout,
+			TLSHandshakeTimeout:    cfg.TrafficShaping.All.TLSHandshakeTimeout,
+			KeepAliveProbeInterval: cfg.TrafficShaping.All.KeepAliveProbeInterval,
 		}),
 		core.WithSubgraphRetryOptions(
-			params.Config.TrafficShaping.All.BackoffJitterRetry.Enabled,
-			params.Config.TrafficShaping.All.BackoffJitterRetry.MaxAttempts,
-			params.Config.TrafficShaping.All.BackoffJitterRetry.MaxDuration,
-			params.Config.TrafficShaping.All.BackoffJitterRetry.Interval,
+			cfg.TrafficShaping.All.BackoffJitterRetry.Enabled,
+			cfg.TrafficShaping.All.BackoffJitterRetry.MaxAttempts,
+			cfg.TrafficShaping.All.BackoffJitterRetry.MaxDuration,
+			cfg.TrafficShaping.All.BackoffJitterRetry.Interval,
 		),
 		core.WithCors(&cors.Config{
-			AllowOrigins:     params.Config.CORS.AllowOrigins,
-			AllowMethods:     params.Config.CORS.AllowMethods,
-			AllowCredentials: params.Config.CORS.AllowCredentials,
-			AllowHeaders:     params.Config.CORS.AllowHeaders,
-			MaxAge:           params.Config.CORS.MaxAge,
+			AllowOrigins:     cfg.CORS.AllowOrigins,
+			AllowMethods:     cfg.CORS.AllowMethods,
+			AllowCredentials: cfg.CORS.AllowCredentials,
+			AllowHeaders:     cfg.CORS.AllowHeaders,
+			MaxAge:           cfg.CORS.MaxAge,
 		}),
-		core.WithTracing(traceConfig(&params.Config.Telemetry)),
-		core.WithMetrics(metricsConfig(&params.Config.Telemetry)),
-		core.WithEngineExecutionConfig(params.Config.EngineExecutionConfiguration),
-		core.WithAccessController(core.NewAccessController(authenticators, params.Config.Authorization.RequireAuthentication)),
-		core.WithLocalhostFallbackInsideDocker(params.Config.LocalhostFallbackInsideDocker),
+		core.WithTracing(traceConfig(&cfg.Telemetry)),
+		core.WithMetrics(metricsConfig(&cfg.Telemetry)),
+		core.WithEngineExecutionConfig(cfg.EngineExecutionConfiguration),
+		core.WithAccessController(core.NewAccessController(authenticators, cfg.Authorization.RequireAuthentication)),
+		core.WithLocalhostFallbackInsideDocker(cfg.LocalhostFallbackInsideDocker),
 	)
 }
 
