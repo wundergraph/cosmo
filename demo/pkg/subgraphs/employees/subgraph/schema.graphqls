@@ -2,6 +2,14 @@ type Query {
   employee(id: Int!): Employee
   employees: [Employee!]!
   team_mates(team: Department!): [Employee!]!
+  products: [Products!]!
+}
+
+type Subscription {
+  """
+  `currentTime` will return a stream of `Time` objects.
+  """
+  currentTime: Time!
 }
 
 enum Department {
@@ -76,9 +84,27 @@ type Time {
   timeStamp: String!
 }
 
-type Subscription {
-  """
-  `currentTime` will return a stream of `Time` objects.
-  """
-  currentTime: Time!
+union Products = Consultancy | Cosmo | SDK
+
+interface IProduct {
+  upc: ID!
+  engineers: [Employee!]!
+}
+
+type Consultancy @key(fields: "upc") {
+  upc: ID!
+  lead: Employee!
+  test: String!
+}
+
+type Cosmo implements IProduct @key(fields: "upc") {
+  upc: ID!
+  engineers: [Employee!]!
+  lead: Employee!
+}
+
+type SDK implements IProduct @key(fields: "upc") {
+  upc: ID!
+  engineers: [Employee!]!
+  owner: Employee!
 }

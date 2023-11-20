@@ -10,6 +10,7 @@ export type ApiKeyAuthContext = {
   organizationSlug: string;
   hasWriteAccess: boolean;
   isAdmin: boolean;
+  userId: string;
 };
 
 export default class ApiKeyAuthenticator {
@@ -56,6 +57,7 @@ export default class ApiKeyAuthenticator {
       .where(eq(schema.apiKeys.id, apiKeyModel.id));
 
     return {
+      userId: apiKeyModel.userId,
       organizationId: apiKeyModel.organizationId,
       organizationSlug: organization.slug,
       // sending true as the api key has admin permissions

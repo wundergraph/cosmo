@@ -80,6 +80,46 @@ func (ec *executionContext) __resolve_entities(ctx context.Context, representati
 		}()
 
 		switch typeName {
+		case "Consultancy":
+			resolverName, err := entityResolverNameForConsultancy(ctx, rep)
+			if err != nil {
+				return fmt.Errorf(`finding resolver for Entity "Consultancy": %w`, err)
+			}
+			switch resolverName {
+
+			case "findConsultancyByUpc":
+				id0, err := ec.unmarshalNID2string(ctx, rep["upc"])
+				if err != nil {
+					return fmt.Errorf(`unmarshalling param 0 for findConsultancyByUpc(): %w`, err)
+				}
+				entity, err := ec.resolvers.Entity().FindConsultancyByUpc(ctx, id0)
+				if err != nil {
+					return fmt.Errorf(`resolving Entity "Consultancy": %w`, err)
+				}
+
+				list[idx[i]] = entity
+				return nil
+			}
+		case "Cosmo":
+			resolverName, err := entityResolverNameForCosmo(ctx, rep)
+			if err != nil {
+				return fmt.Errorf(`finding resolver for Entity "Cosmo": %w`, err)
+			}
+			switch resolverName {
+
+			case "findCosmoByUpc":
+				id0, err := ec.unmarshalNID2string(ctx, rep["upc"])
+				if err != nil {
+					return fmt.Errorf(`unmarshalling param 0 for findCosmoByUpc(): %w`, err)
+				}
+				entity, err := ec.resolvers.Entity().FindCosmoByUpc(ctx, id0)
+				if err != nil {
+					return fmt.Errorf(`resolving Entity "Cosmo": %w`, err)
+				}
+
+				list[idx[i]] = entity
+				return nil
+			}
 		case "Employee":
 			resolverName, err := entityResolverNameForEmployee(ctx, rep)
 			if err != nil {
@@ -95,6 +135,26 @@ func (ec *executionContext) __resolve_entities(ctx context.Context, representati
 				entity, err := ec.resolvers.Entity().FindEmployeeByID(ctx, id0)
 				if err != nil {
 					return fmt.Errorf(`resolving Entity "Employee": %w`, err)
+				}
+
+				list[idx[i]] = entity
+				return nil
+			}
+		case "SDK":
+			resolverName, err := entityResolverNameForSDK(ctx, rep)
+			if err != nil {
+				return fmt.Errorf(`finding resolver for Entity "SDK": %w`, err)
+			}
+			switch resolverName {
+
+			case "findSDKByUpc":
+				id0, err := ec.unmarshalNID2string(ctx, rep["upc"])
+				if err != nil {
+					return fmt.Errorf(`unmarshalling param 0 for findSDKByUpc(): %w`, err)
+				}
+				entity, err := ec.resolvers.Entity().FindSDKByUpc(ctx, id0)
+				if err != nil {
+					return fmt.Errorf(`resolving Entity "SDK": %w`, err)
 				}
 
 				list[idx[i]] = entity
@@ -169,6 +229,40 @@ func (ec *executionContext) __resolve_entities(ctx context.Context, representati
 	}
 }
 
+func entityResolverNameForConsultancy(ctx context.Context, rep map[string]interface{}) (string, error) {
+	for {
+		var (
+			m   map[string]interface{}
+			val interface{}
+			ok  bool
+		)
+		_ = val
+		m = rep
+		if _, ok = m["upc"]; !ok {
+			break
+		}
+		return "findConsultancyByUpc", nil
+	}
+	return "", fmt.Errorf("%w for Consultancy", ErrTypeNotFound)
+}
+
+func entityResolverNameForCosmo(ctx context.Context, rep map[string]interface{}) (string, error) {
+	for {
+		var (
+			m   map[string]interface{}
+			val interface{}
+			ok  bool
+		)
+		_ = val
+		m = rep
+		if _, ok = m["upc"]; !ok {
+			break
+		}
+		return "findCosmoByUpc", nil
+	}
+	return "", fmt.Errorf("%w for Cosmo", ErrTypeNotFound)
+}
+
 func entityResolverNameForEmployee(ctx context.Context, rep map[string]interface{}) (string, error) {
 	for {
 		var (
@@ -184,4 +278,21 @@ func entityResolverNameForEmployee(ctx context.Context, rep map[string]interface
 		return "findEmployeeByID", nil
 	}
 	return "", fmt.Errorf("%w for Employee", ErrTypeNotFound)
+}
+
+func entityResolverNameForSDK(ctx context.Context, rep map[string]interface{}) (string, error) {
+	for {
+		var (
+			m   map[string]interface{}
+			val interface{}
+			ok  bool
+		)
+		_ = val
+		m = rep
+		if _, ok = m["upc"]; !ok {
+			break
+		}
+		return "findSDKByUpc", nil
+	}
+	return "", fmt.Errorf("%w for SDK", ErrTypeNotFound)
 }

@@ -100,6 +100,26 @@ func (ec *executionContext) __resolve_entities(ctx context.Context, representati
 				list[idx[i]] = entity
 				return nil
 			}
+		case "SDK":
+			resolverName, err := entityResolverNameForSDK(ctx, rep)
+			if err != nil {
+				return fmt.Errorf(`finding resolver for Entity "SDK": %w`, err)
+			}
+			switch resolverName {
+
+			case "findSDKByUpc":
+				id0, err := ec.unmarshalNID2string(ctx, rep["upc"])
+				if err != nil {
+					return fmt.Errorf(`unmarshalling param 0 for findSDKByUpc(): %w`, err)
+				}
+				entity, err := ec.resolvers.Entity().FindSDKByUpc(ctx, id0)
+				if err != nil {
+					return fmt.Errorf(`resolving Entity "SDK": %w`, err)
+				}
+
+				list[idx[i]] = entity
+				return nil
+			}
 
 		}
 		return fmt.Errorf("%w: %s", ErrUnknownType, typeName)
@@ -184,4 +204,21 @@ func entityResolverNameForEmployee(ctx context.Context, rep map[string]interface
 		return "findEmployeeByID", nil
 	}
 	return "", fmt.Errorf("%w for Employee", ErrTypeNotFound)
+}
+
+func entityResolverNameForSDK(ctx context.Context, rep map[string]interface{}) (string, error) {
+	for {
+		var (
+			m   map[string]interface{}
+			val interface{}
+			ok  bool
+		)
+		_ = val
+		m = rep
+		if _, ok = m["upc"]; !ok {
+			break
+		}
+		return "findSDKByUpc", nil
+	}
+	return "", fmt.Errorf("%w for SDK", ErrTypeNotFound)
 }
