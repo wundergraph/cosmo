@@ -2,11 +2,12 @@ package core
 
 import (
 	"errors"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
 	"io"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 )
 
 func TestNoError(t *testing.T) {
@@ -28,7 +29,7 @@ func TestNoError(t *testing.T) {
 	body, err := io.ReadAll(rr.Result().Body)
 	require.NoError(t, err)
 
-	require.Equal(t, `{"errors":[{"message":"Internal Error"}]}`, string(body))
+	require.Equal(t, `{"errors":[{"message":"Internal Error"}],"data":null}`, string(body))
 }
 
 func TestSingleError(t *testing.T) {
@@ -50,5 +51,5 @@ func TestSingleError(t *testing.T) {
 	body, err := io.ReadAll(rr.Result().Body)
 	require.NoError(t, err)
 
-	require.Equal(t, `{"errors":[{"message":"test"}]}`, string(body))
+	require.Equal(t, `{"errors":[{"message":"test"}],"data":null}`, string(body))
 }

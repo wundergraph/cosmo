@@ -254,6 +254,11 @@ func TestTracing(t *testing.T) {
 	require.NoError(t, err)
 	tracingJson := string(rex.ReplaceAll(tracingJsonBytes, []byte("http://localhost/graphql")))
 	resultBody := rex.ReplaceAllString(result.Body.String(), "http://localhost/graphql")
+	// all nodes have UUIDs, so we need to replace them with a static UUID
+	rex2, err := regexp.Compile(`"id":"[a-f0-9\-]{36}"`)
+	require.NoError(t, err)
+	tracingJson = rex2.ReplaceAllString(tracingJson, `"id":"00000000-0000-0000-0000-000000000000"`)
+	resultBody = rex2.ReplaceAllString(resultBody, `"id":"00000000-0000-0000-0000-000000000000"`)
 	assert.Equal(t, prettifyJSON(t, tracingJson), prettifyJSON(t, resultBody))
 	if t.Failed() {
 		t.Log(resultBody)
@@ -271,8 +276,7 @@ func TestTracing(t *testing.T) {
 	tracing, _, _, err := jsonparser.Get(body, "extensions", "trace")
 	require.NoError(t, err)
 	assert.NotNilf(t, tracing, "tracing should not be nil: %s", body)
-	cleanedBody := rex.ReplaceAllString(string(body), "http://localhost/graphql")
-	assert.NotEqual(t, prettifyJSON(t, tracingJson), prettifyJSON(t, cleanedBody))
+	assert.NotEqual(t, prettifyJSON(t, tracingJson), prettifyJSON(t, string(body)))
 }
 
 func prettifyJSON(t *testing.T, jsonStr string) string {
@@ -288,7 +292,28 @@ func TestMultipleAnonymousQueries(t *testing.T) {
 	server := setupServer(t)
 	result := sendData(server, []byte(`{"query":"{ employees { id } } { employees { id } }"}`))
 	assert.Equal(t, http.StatusOK, result.Result().StatusCode)
-	assert.Equal(t, `{"errors":[{"message":"operation name is required when multiple operations are defined"}]}`, result.Body.String())
+	assert.Equal(t, `{"errors":[{"message":"operation name is required when multiple operations are defined"}],"data":null}`, result.Body.String())
+}
+
+func TestOperationNameNullReturnsData(t *testing.T) {
+	server := setupServer(t)
+	result := sendData(server, []byte(`{"query":"{ employees { id } }","operationName":null}`))
+	assert.Equal(t, http.StatusOK, result.Result().StatusCode)
+	assert.Equal(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`, result.Body.String())
+}
+
+func TestOperationNameWrongOnAnonymousOperation(t *testing.T) {
+	server := setupServer(t)
+	result := sendData(server, []byte(`{"query":"{ employees { id } }","operationName":"Missing"}`))
+	assert.Equal(t, http.StatusOK, result.Result().StatusCode)
+	assert.Equal(t, `{"errors":[{"message":"operation with name 'Missing' not found"}],"data":null}`, result.Body.String())
+}
+
+func TestOperationNameWrongOnNamedOperation(t *testing.T) {
+	server := setupServer(t)
+	result := sendData(server, []byte(`{"query":"query Exists { employees { id } }","operationName":"Missing"}`))
+	assert.Equal(t, http.StatusOK, result.Result().StatusCode)
+	assert.Equal(t, `{"errors":[{"message":"operation with name 'Missing' not found"}],"data":null}`, result.Body.String())
 }
 
 func TestMultipleNamedOperations(t *testing.T) {
@@ -309,7 +334,7 @@ func TestMultipleNamedOperationsC(t *testing.T) {
 	server := setupServer(t)
 	result := sendData(server, []byte(`{"query":"query A { employees { id } } query B { employees { id details { forename surname } } }","operationName":"C"}`))
 	assert.Equal(t, http.StatusOK, result.Result().StatusCode)
-	assert.Equal(t, `{"errors":[{"message":"operation with name 'C' not found"}]}`, result.Body.String())
+	assert.Equal(t, `{"errors":[{"message":"operation with name 'C' not found"}],"data":null}`, result.Body.String())
 }
 
 func TestTestdataQueries(t *testing.T) {
@@ -348,7 +373,7 @@ func TestIntegrationWithUndefinedField(t *testing.T) {
 	result := sendQueryOK(t, server, &testQuery{
 		Body: "{ employees { id notDefined } }",
 	})
-	assert.JSONEq(t, `{"errors":[{"message":"field: notDefined not defined on type: Employee","path":["query","employees","notDefined"]}]}`, result)
+	assert.JSONEq(t, `{"errors":[{"message":"field: notDefined not defined on type: Employee","path":["query","employees","notDefined"]}],"data":null}`, result)
 }
 
 func TestIntegrationWithVariables(t *testing.T) {

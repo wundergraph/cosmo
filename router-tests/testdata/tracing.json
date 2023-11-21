@@ -388,6 +388,7 @@
         }
       },
       "fetch": {
+        "id": "00000000-0000-0000-0000-000000000000",
         "type": "single",
         "data_source_id": "0",
         "datasource_load_trace": {
@@ -574,9 +575,11 @@
             "items": [
               {
                 "fetch": {
+                  "id": "00000000-0000-0000-0000-000000000000",
                   "type": "parallel",
                   "fetches": [
                     {
+                      "id": "00000000-0000-0000-0000-000000000000",
                       "type": "batchEntity",
                       "data_source_id": "1",
                       "datasource_load_trace": {
@@ -888,6 +891,7 @@
                       }
                     },
                     {
+                      "id": "00000000-0000-0000-0000-000000000000",
                       "type": "batchEntity",
                       "data_source_id": "2",
                       "datasource_load_trace": {

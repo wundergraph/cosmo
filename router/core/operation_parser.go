@@ -11,6 +11,7 @@ import (
 	"github.com/buger/jsonparser"
 	"github.com/cespare/xxhash/v2"
 	"github.com/pkg/errors"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/lexer/literal"
 
 	"github.com/wundergraph/cosmo/router/internal/pool"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
@@ -166,7 +167,10 @@ func (p *OperationParser) parse(body []byte) (*ParsedOperation, error) {
 		}
 	}, parseOperationKeys...)
 
-	requestHasOperationName := requestOperationNameBytes != nil
+	requestHasOperationName := requestOperationNameBytes != nil && !bytes.Equal(requestOperationNameBytes, literal.NULL)
+	if !requestHasOperationName {
+		requestOperationNameBytes = nil
+	}
 
 	report := &operationreport.Report{}
 	kit.doc.Input.ResetInputBytes(requestDocumentBytes)
@@ -206,6 +210,13 @@ func (p *OperationParser) parse(body []byte) (*ParsedOperation, error) {
 	if !requestHasOperationName && operationCount > 1 {
 		return nil, &inputError{
 			message:    "operation name is required when multiple operations are defined",
+			statusCode: http.StatusOK,
+		}
+	}
+
+	if requestHasOperationName && operationCount != 0 && operationDefinitionRef == -1 {
+		return nil, &inputError{
+			message:    fmt.Sprintf("operation with name '%s' not found", string(requestOperationNameBytes)),
 			statusCode: http.StatusOK,
 		}
 	}
