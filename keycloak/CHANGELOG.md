@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.8.4](https://github.com/wundergraph/cosmo/compare/keycloak@0.8.3...keycloak@0.8.4) (2023-11-21)
+
+### Bug Fixes
+
+*  color scheme in keycloak templates ([#279](https://github.com/wundergraph/cosmo/issues/279)) ([86c9529](https://github.com/wundergraph/cosmo/commit/86c952985950e59b4cfc5adec71ed303f684ebf6)) (@Pagebakers)
+
 ## [0.8.3](https://github.com/wundergraph/cosmo/compare/keycloak@0.8.2...keycloak@0.8.3) (2023-11-20)
 
 ### Bug Fixes
