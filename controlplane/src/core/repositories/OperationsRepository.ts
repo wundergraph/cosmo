@@ -31,13 +31,18 @@ export class OperationsRepository {
     }
   }
 
-  public async getPersistedOperations(): Promise<PersistedOperationDTO[]> {
+  public async getPersistedOperations(pagination?: {
+    limit: number;
+    offset: number;
+  }): Promise<PersistedOperationDTO[]> {
     const operationsResult = await this.db.query.federatedGraphPersistedOperations.findMany({
       where: eq(federatedGraphPersistedOperations.federatedGraphId, this.federatedGraphId),
       with: {
         createdBy: true,
         updatedBy: true,
       },
+      offset: pagination?.offset,
+      limit: pagination?.limit,
     });
 
     const operations: PersistedOperationDTO[] = [];
