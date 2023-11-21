@@ -6,10 +6,10 @@ metadata:
     {{- include "controlplane.labels" . | nindent 4 }}
   annotations:
     # Run migration job before helm install/upgrade
-    "helm.sh/hook": pre-install,pre-upgrade
-    "helm.sh/hook-delete-policy": before-hook-creation
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
     # Less priority than the migration job so the secret is created before the migration job
-    "helm.sh/hook-weight": "-10"
+    "helm.sh/hook-weight": "-5"
     # Support for k14s.io. This annotation ensure that the job is run after the postgresql deployment
     {{- if .Values.global.postgresql.enabled }}
     kapp.k14s.io/change-rule.postgres: "upsert after upserting cosmo.apps.postgresql.wundergraph.com/deployment"

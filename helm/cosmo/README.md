@@ -30,7 +30,8 @@ helm repo add bitnami https://charts.bitnami.com/bitnami
 # Install the helm dependencies
 helm dependency build
 # Install the helm chart with the release name "cosmo" the name is important it used to reference services in values file.
-helm install cosmo -f values.full.yaml ./cosmo
+# --atomic ensures that the release is rolled back if it fails to install
+helm install cosmo --atomic -f values.full.yaml .
 ```
 
 ### Removing stack after use
