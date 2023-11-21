@@ -34,6 +34,49 @@ helm dependency build
 helm install cosmo --atomic -f values.full.yaml .
 ```
 
+### Run Helm Tests
+
+The Helm chart comes with a set of tests that you can run to ensure that the stack is working as expected.
+Modify the `values.yaml` file to enable the tests:
+
+```yaml
+global:
+  helmTests:
+    enabled: true
+```
+
+and run:
+```shell
+helm test cosmo
+```
+
+you should see the following output after a few seconds:
+
+```shell
+❯ helm test cosmo
+NAME: cosmo cosmo                                  
+LAST DEPLOYED: Tue Nov 21 22:50:40 2023
+NAMESPACE: default
+STATUS: deployed
+REVISION: 2
+TEST SUITE:     cosmo-controlplane-test-connection
+Last Started:   Tue Nov 21 22:51:07 2023
+Last Completed: Tue Nov 21 22:51:10 2023
+Phase:          Succeeded
+TEST SUITE:     cosmo-graphqlmetrics-test-connection
+Last Started:   Tue Nov 21 22:51:10 2023
+Last Completed: Tue Nov 21 22:51:14 2023
+Phase:          Succeeded
+TEST SUITE:     cosmo-otelcollector-test-connection
+Last Started:   Tue Nov 21 22:51:14 2023
+Last Completed: Tue Nov 21 22:51:18 2023
+Phase:          Succeeded
+TEST SUITE:     cosmo-studio-test-connection
+Last Started:   Tue Nov 21 22:51:18 2023
+Last Completed: Tue Nov 21 22:51:22 2023
+Phase:          Succeeded
+```
+
 ### Removing stack after use
 In order to prevent any costs, you can remove the stack after use with:
 
