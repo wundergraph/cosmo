@@ -1,20 +1,21 @@
+import { EmptyState } from "@/components/empty-state";
 import { getGraphLayout } from "@/components/layout/graph-layout";
 import { PageHeader } from "@/components/layout/head";
-import { NextPageWithLayout } from "@/lib/page";
-import { GraphiQL } from "graphiql";
-import { createGraphiQLFetcher } from "@graphiql/toolkit";
-import { useTheme } from "next-themes";
-import { useEffect, useMemo, useState } from "react";
-import { useExplorerPlugin } from "@graphiql/plugin-explorer";
-import { ExclamationTriangleIcon, MobileIcon } from "@radix-ui/react-icons";
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { useQuery } from "@tanstack/react-query";
-import { getFederatedGraphByName } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { Loader } from "@/components/ui/loader";
-import { useRouter } from "next/router";
-import { EmptyState } from "@/components/empty-state";
+import { tracePlugin } from "@/components/playground/trace-plugin";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Loader } from "@/components/ui/loader";
+import { NextPageWithLayout } from "@/lib/page";
+import { explorerPlugin } from "@graphiql/plugin-explorer";
+import { createGraphiQLFetcher } from "@graphiql/toolkit";
+import { ExclamationTriangleIcon, MobileIcon } from "@radix-ui/react-icons";
+import { useQuery } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
+import { getFederatedGraphByName } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+import { GraphiQL } from "graphiql";
+import { useTheme } from "next-themes";
+import { useRouter } from "next/router";
+import { useEffect, useMemo, useState } from "react";
 
 const graphiQLFetch: typeof fetch = async (...args) => {
   try {
@@ -94,12 +95,6 @@ const PlaygroundPage: NextPageWithLayout = () => {
     });
   }, [data?.graph?.routingURL]);
 
-  const explorerPlugin = useExplorerPlugin({
-    query: query as string,
-    onEdit: setQuery,
-    showAttribution: false,
-  });
-
   const { theme } = useTheme();
 
   useEffect(() => {
@@ -137,10 +132,17 @@ const PlaygroundPage: NextPageWithLayout = () => {
     <PageHeader title="Studio | Playground">
       <div className="hidden h-[100%] flex-1 md:flex">
         <GraphiQL
+          shouldPersistHeaders
+          showPersistHeadersSettings={false}
           fetcher={fetcher}
           query={query}
           onEditQuery={setQuery}
-          plugins={[explorerPlugin]}
+          plugins={[
+            explorerPlugin({
+              showAttribution: false,
+            }),
+            tracePlugin(),
+          ]}
         />
       </div>
       <div className="flex flex-1 items-center justify-center md:hidden">
