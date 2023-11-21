@@ -37,7 +37,7 @@ helm install cosmo --atomic -f values.full.yaml .
 ### Run Helm Tests
 
 The Helm chart comes with a set of tests that you can run to ensure that the stack is working as expected.
-Modify the `values.yaml` file to enable the tests:
+Modify the `values.full.yaml` file to enable the tests:
 
 ```yaml
 global:
