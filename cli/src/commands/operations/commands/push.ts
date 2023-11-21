@@ -88,7 +88,7 @@ export default (opts: BaseCommandOptions) => {
 
     const result = await opts.client.platform.publishPersistedOperations(
       {
-        graphName: name,
+        fedGraphName: name,
         clientName: options.client,
         operations,
       },
