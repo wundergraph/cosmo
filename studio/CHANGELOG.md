@@ -4,6 +4,19 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.35.5](https://github.com/wundergraph/cosmo/compare/studio@0.35.4...studio@0.35.5) (2023-11-21)
+
+### Bug Fixes
+
+*  color scheme in keycloak templates ([#279](https://github.com/wundergraph/cosmo/issues/279)) ([86c9529](https://github.com/wundergraph/cosmo/commit/86c952985950e59b4cfc5adec71ed303f684ebf6)) (@Pagebakers)
+* implement new color scheme ([#277](https://github.com/wundergraph/cosmo/issues/277)) ([8b0cdec](https://github.com/wundergraph/cosmo/commit/8b0cdec2afcbfb33a6d560802d7466d5eed930bb)) (@Pagebakers)
+
+## [0.35.4](https://github.com/wundergraph/cosmo/compare/studio@0.35.3...studio@0.35.4) (2023-11-20)
+
+### Bug Fixes
+
+* add env var that allows to inject custom scripts into the head ([#262](https://github.com/wundergraph/cosmo/issues/262)) ([e2e1316](https://github.com/wundergraph/cosmo/commit/e2e1316d86cfb6a39a66f40fc4af2120de5e6242)) (@Pagebakers)
+
 ## [0.35.3](https://github.com/wundergraph/cosmo/compare/studio@0.35.2...studio@0.35.3) (2023-11-20)
 
 **Note:** Version bump only for package studio

@@ -4,6 +4,23 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.35.0](https://github.com/wundergraph/cosmo/compare/router@0.34.1...router@0.35.0) (2023-11-21)
+
+### Features
+
+* improve correctness of resolving ([#281](https://github.com/wundergraph/cosmo/issues/281)) ([0398fa1](https://github.com/wundergraph/cosmo/commit/0398fa18dbb631e31ec450fd3c16786eb8b4dfdc)) (@jensneuse)
+
+## [0.34.1](https://github.com/wundergraph/cosmo/compare/router@0.34.0...router@0.34.1) (2023-11-20)
+
+**Note:** Version bump only for package router
+
+# [0.34.0](https://github.com/wundergraph/cosmo/compare/router@0.33.2...router@0.34.0) (2023-11-20)
+
+### Features
+
+* add tracing to request ([#263](https://github.com/wundergraph/cosmo/issues/263)) ([c43ee1c](https://github.com/wundergraph/cosmo/commit/c43ee1c56552ff0fe614634a81de89e3e95c1aa7)) (@jensneuse)
+* auto set GOMAXPROCS to avoid CPU throttling on cont envs ([#276](https://github.com/wundergraph/cosmo/issues/276)) ([757a60a](https://github.com/wundergraph/cosmo/commit/757a60ab6d64d25e65a5ad9c5bb5ffe9edd5e649)) (@StarpTech)
+
 ## [0.33.2](https://github.com/wundergraph/cosmo/compare/router@0.33.1...router@0.33.2) (2023-11-20)
 
 ### Bug Fixes

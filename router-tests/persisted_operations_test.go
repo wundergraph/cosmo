@@ -26,7 +26,7 @@ func TestPersistedOperationNotFound(t *testing.T) {
 	server := setupServer(t)
 	result := sendData(server, persistedOperationPayload("does-not-exist"))
 	assert.Equal(t, http.StatusOK, result.Code)
-	assert.JSONEq(t, `{"errors": [{ "message": "PersistedQueryNotFound" }]}`, result.Body.String())
+	assert.JSONEq(t, `{"data": null, "errors": [{ "message": "PersistedQueryNotFound" }]}`, result.Body.String())
 }
 
 func TestPersistedOperation(t *testing.T) {

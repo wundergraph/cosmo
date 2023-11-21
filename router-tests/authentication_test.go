@@ -131,7 +131,7 @@ func TestAuthorization(t *testing.T) {
 		server.Server.Handler.ServeHTTP(rr, req)
 		assert.Equal(t, http.StatusOK, rr.Code)
 		assert.Equal(t, "", rr.Header().Get(xAuthenticatedByHeader))
-		assert.JSONEq(t, `{"errors":[{"message":"unauthorized"}]}`, rr.Body.String())
+		assert.JSONEq(t, `{"errors":[{"message":"unauthorized"}],"data":null}`, rr.Body.String())
 	})
 
 	t.Run("invalid token", func(t *testing.T) {

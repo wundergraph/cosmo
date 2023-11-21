@@ -653,17 +653,17 @@ importers:
         specifier: ^2.7.2
         version: 2.7.2(prop-types@15.8.1)(react-dom@18.2.0)(react@18.2.0)
       tailwind-merge:
-        specifier: ^1.13.2
-        version: 1.13.2
+        specifier: ^2.0.0
+        version: 2.0.0
       tailwind-scrollbar:
-        specifier: ^3.0.4
-        version: 3.0.4(tailwindcss@3.3.2)
+        specifier: ^3.0.5
+        version: 3.0.5(tailwindcss@3.3.5)
       tailwindcss:
-        specifier: 3.3.2
-        version: 3.3.2(ts-node@10.9.1)
+        specifier: ^3.3.5
+        version: 3.3.5(ts-node@10.9.1)
       tailwindcss-animate:
-        specifier: ^1.0.6
-        version: 1.0.6(tailwindcss@3.3.2)
+        specifier: ^1.0.7
+        version: 1.0.7(tailwindcss@3.3.5)
       use-deep-compare-effect:
         specifier: ^1.8.1
         version: 1.8.1(react@18.2.0)
@@ -673,7 +673,7 @@ importers:
     devDependencies:
       '@tailwindcss/typography':
         specifier: ^0.5.9
-        version: 0.5.9(tailwindcss@3.3.2)
+        version: 0.5.9(tailwindcss@3.3.5)
       '@types/canvas-confetti':
         specifier: ^1.6.0
         version: 1.6.0
@@ -1338,6 +1338,13 @@ packages:
     engines: {node: '>=6.9.0'}
     dependencies:
       regenerator-runtime: 0.13.11
+
+  /@babel/runtime@7.23.4:
+    resolution: {integrity: sha512-2Yv65nlWnWlSpe3fXEyX5i7fx5kIKo4Qbcj+hMO0odwaneFjfXw5fdum+4yL20O0QiaHpia0cYQ9xpNMqrBwHg==}
+    engines: {node: '>=6.9.0'}
+    dependencies:
+      regenerator-runtime: 0.14.0
+    dev: false
 
   /@bufbuild/buf-darwin-arm64@1.27.2:
     resolution: {integrity: sha512-ob1IAhFVsAVUr5o4EAwoeQ6FOGJdiS6eYGTGQiZzJEAYSs2dX/WQ9+Xz9EPQUb93n7PMjNs38DLDfwGQ3u3dsg==}
@@ -5892,7 +5899,7 @@ packages:
       zod: 3.22.3
     dev: false
 
-  /@tailwindcss/typography@0.5.9(tailwindcss@3.3.2):
+  /@tailwindcss/typography@0.5.9(tailwindcss@3.3.5):
     resolution: {integrity: sha512-t8Sg3DyynFysV9f4JDOVISGsjazNb48AeIYQwcL+Bsq5uf4RYL75C1giZ43KISjeDGBaTN3Kxh7Xj/vRSMJUUg==}
     peerDependencies:
       tailwindcss: '>=3.0.0 || insiders'
@@ -5901,7 +5908,7 @@ packages:
       lodash.isplainobject: 4.0.6
       lodash.merge: 4.6.2
       postcss-selector-parser: 6.0.10
-      tailwindcss: 3.3.2(ts-node@10.9.1)
+      tailwindcss: 3.3.5(ts-node@10.9.1)
     dev: true
 
   /@tanstack/query-core@5.4.3:
@@ -13626,6 +13633,10 @@ packages:
   /regenerator-runtime@0.13.11:
     resolution: {integrity: sha512-kY1AZVr2Ra+t+piVaJ4gxaFaReZVH40AKNo7UCX6W+dEwBo/2oZJzqfuN1qLq1oL45o56cPaTXELwrTh8Fpggg==}
 
+  /regenerator-runtime@0.14.0:
+    resolution: {integrity: sha512-srw17NI0TUWHuGa5CFGGmhfNIeja30WMBfbslPNhf6JrqQlLN5gcrvig1oqPxiVaXb0oW0XRKtH6Nngs5lKCIA==}
+    dev: false
+
   /regexp-tree@0.1.27:
     resolution: {integrity: sha512-iETxpjK6YoRWJG5o6hXLwvjYAoW+FEZn9os0PD/b6AP6xQwsa/Y7lCVgIixBbUPMfhu+i2LtdeAqVTgGlQarfA==}
     hasBin: true
@@ -14337,29 +14348,31 @@ packages:
     resolution: {integrity: sha512-H1XoH1URcBOa/rZZWxLxHCtOdVUEev+9vo5YdYhC9tCY4wnybX+VQrCYuy9ubkg69fCBxCONJOSLGfw0DWMffQ==}
     dev: false
 
-  /tailwind-merge@1.13.2:
-    resolution: {integrity: sha512-R2/nULkdg1VR/EL4RXg4dEohdoxNUJGLMnWIQnPKL+O9Twu7Cn3Rxi4dlXkDzZrEGtR+G+psSXFouWlpTyLhCQ==}
+  /tailwind-merge@2.0.0:
+    resolution: {integrity: sha512-WO8qghn9yhsldLSg80au+3/gY9E4hFxIvQ3qOmlpXnqpDKoMruKfi/56BbbMg6fHTQJ9QD3cc79PoWqlaQE4rw==}
+    dependencies:
+      '@babel/runtime': 7.23.4
     dev: false
 
-  /tailwind-scrollbar@3.0.4(tailwindcss@3.3.2):
-    resolution: {integrity: sha512-X/QBsn/C5u9x6/YvTc1Zo7b09Gqs5BfDe0UK/8LDQUv8IEBKF+p2ISTRwvAr50MH0hn/wTyCEOann7uXoa1/2Q==}
+  /tailwind-scrollbar@3.0.5(tailwindcss@3.3.5):
+    resolution: {integrity: sha512-0ZwxTivevqq9BY9fRP9zDjHl7Tu+J5giBGbln+0O1R/7nHtBUKnjQcA1aTIhK7Oyjp6Uc/Dj6/dn8Dq58k5Uww==}
     engines: {node: '>=12.13.0'}
     peerDependencies:
       tailwindcss: 3.x
     dependencies:
-      tailwindcss: 3.3.2(ts-node@10.9.1)
+      tailwindcss: 3.3.5(ts-node@10.9.1)
     dev: false
 
-  /tailwindcss-animate@1.0.6(tailwindcss@3.3.2):
-    resolution: {integrity: sha512-4WigSGMvbl3gCCact62ZvOngA+PRqhAn7si3TQ3/ZuPuQZcIEtVap+ENSXbzWhpojKB8CpvnIsrwBu8/RnHtuw==}
+  /tailwindcss-animate@1.0.7(tailwindcss@3.3.5):
+    resolution: {integrity: sha512-bl6mpH3T7I3UFxuvDEXLxy/VuFxBk5bbzplh7tXI68mwMokNYd1t9qPBHlnyTwfa4JGC4zP516I1hYYtQ/vspA==}
     peerDependencies:
       tailwindcss: '>=3.0.0 || insiders'
     dependencies:
-      tailwindcss: 3.3.2(ts-node@10.9.1)
+      tailwindcss: 3.3.5(ts-node@10.9.1)
     dev: false
 
-  /tailwindcss@3.3.2(ts-node@10.9.1):
-    resolution: {integrity: sha512-9jPkMiIBXvPc2KywkraqsUfbfj+dHDb+JPWtSJa9MLFdrPyazI7q6WX2sUrm7R9eVR7qqv3Pas7EvQFzxKnI6w==}
+  /tailwindcss@3.3.5(ts-node@10.9.1):
+    resolution: {integrity: sha512-5SEZU4J7pxZgSkv7FP1zY8i2TIAOooNZ1e/OGtxIEv6GltpoiXUqWvLy89+a10qYTB1N5Ifkuw9lqQkN9sscvA==}
     engines: {node: '>=14.0.0'}
     hasBin: true
     dependencies:
@@ -14383,7 +14396,6 @@ packages:
       postcss-load-config: 4.0.1(postcss@8.4.24)(ts-node@10.9.1)
       postcss-nested: 6.0.1(postcss@8.4.24)
       postcss-selector-parser: 6.0.13
-      postcss-value-parser: 4.2.0
       resolve: 1.22.2
       sucrase: 3.34.0
     transitivePeerDependencies:
