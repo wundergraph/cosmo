@@ -111,7 +111,7 @@ helm upgrade cosmo ./cosmo \
 
 ### CLI Key
 
-In the `global.seed.apiKey` of your `values.yaml` we defined your API key. You can use this API key to authenticate with the Cosmo CLI.
+In the `global.seed.apiKey` of your `values.full.yaml` we defined your API key. You can use this API key to authenticate with the Cosmo CLI.
 
 ```sh
 export COSMO_API_KEY="cosmo_669b576aaadc10ee1ae81d9193425705"
@@ -120,7 +120,7 @@ npx wgc -h
 ```
 
 ### Router
-The router is not enabled by default because it requires an API token to be set and a published federated graph. After you have created an API token with the Cosmo CLI `wgc federated-graph create-token <graph-name>`, set the right configurations in the `values.yaml` file.
+The router is not enabled by default because it requires an API token to be set and a published federated graph. After you have created an API token with the Cosmo CLI `wgc federated-graph create-token <graph-name>`, set the right configurations in the `values.full.yaml` file.
 
 ```yaml
 router:
@@ -129,7 +129,7 @@ router:
     graphApiToken: "<changeme>"
 ```
 
-Run `helm install cosmo` to apply the changes.
+Run `helm upgrade cosmo -f values.full.yaml .` to apply the changes.
 
 ## Kapp support
 
