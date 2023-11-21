@@ -1,10 +1,10 @@
 import { UserContext } from "@/components/app-provider";
 import { EmptyState } from "@/components/empty-state";
-import { getDashboardLayout } from "@/components/layout/dashboard-layout";
+import { getSettingsLayout } from "@/components/layout/settings-layout";
 import {
   EventsMeta,
   Meta,
-  NotificationTabs,
+  NotificationToolbar,
   notificationEvents,
 } from "@/components/notifications/components";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -589,13 +589,13 @@ const WebhooksPage: NextPageWithLayout = () => {
 };
 
 WebhooksPage.getLayout = (page) => {
-  return getDashboardLayout(
-    <div className="flex flex-col gap-y-4">
-      <NotificationTabs tab="webhooks" />
-      <>{page}</>
-    </div>,
+  return getSettingsLayout(
+    page,
     "Webhooks",
     "Configure webhooks for your organization",
+    null,
+
+    <NotificationToolbar tab="webhooks" />,
   );
 };
 

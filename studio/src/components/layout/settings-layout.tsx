@@ -1,19 +1,12 @@
-import { Component2Icon } from "@radix-ui/react-icons";
-import { addDays, formatDistance } from "date-fns";
 import { useRouter } from "next/router";
-import { useContext, useMemo } from "react";
-import {
-  IoKeyOutline,
-  IoNotificationsOutline,
-  IoPeopleOutline,
-} from "react-icons/io5";
-import { PiGear, PiGraphLight } from "react-icons/pi";
+import { useMemo } from "react";
+import { FiBell, FiUsers, FiKey, FiSliders } from "react-icons/fi";
 import { PageHeader } from "./head";
 import { LayoutProps } from "./layout";
 import { SideNav, NavLink } from "./sidenav";
 import { TitleLayout } from "./title-layout";
 
-export const DashboardLayout = ({ children }: LayoutProps) => {
+export const SettingsLayout = ({ children }: LayoutProps) => {
   const router = useRouter();
   const organizationSlug = router.query.organizationSlug as string;
 
@@ -22,14 +15,24 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
 
     return [
       {
-        title: "Overview",
-        href: basePath + "/graphs",
-        icon: <PiGraphLight size="1.2em" />,
+        title: "General",
+        href: basePath + "/settings",
+        icon: <FiSliders />,
       },
       {
-        title: "Subgraphs",
-        href: basePath + "/subgraphs",
-        icon: <Component2Icon />,
+        title: "Members",
+        href: basePath + "/settings/members",
+        icon: <FiUsers />,
+      },
+      {
+        title: "API Keys",
+        href: basePath + "/settings/apikeys",
+        icon: <FiKey />,
+      },
+      {
+        title: "Notifications",
+        href: basePath + "/settings/webhooks",
+        icon: <FiBell />,
       },
     ];
   }, [organizationSlug]);
@@ -44,19 +47,25 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
   );
 };
 
-export const getDashboardLayout = (
+export const getSettingsLayout = (
   page: React.ReactNode,
   title: string,
   subtitle: string,
   items?: React.ReactNode,
+  toolbar?: React.ReactNode,
 ) => {
   return (
-    <DashboardLayout>
+    <SettingsLayout>
       <PageHeader title={`Dashboard | ${title}`}>
-        <TitleLayout title={title} subtitle={subtitle} items={items}>
+        <TitleLayout
+          title={title}
+          subtitle={subtitle}
+          items={items}
+          toolbar={toolbar}
+        >
           {page}
         </TitleLayout>
       </PageHeader>
-    </DashboardLayout>
+    </SettingsLayout>
   );
 };

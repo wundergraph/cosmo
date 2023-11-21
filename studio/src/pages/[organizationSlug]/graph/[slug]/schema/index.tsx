@@ -256,7 +256,7 @@ const Type = (props: {
   return (
     <div className="flex flex-col">
       <div className="flex items-center gap-x-4">
-        <div className="flex flex-wrap items-center gap-x-2 text-xl font-semibold tracking-tight">
+        <div className="flex flex-wrap items-center gap-x-2 text-lg font-semibold tracking-tight">
           <h3>{props.name}</h3>
           {props.interfaces && props.interfaces.length > 0 && (
             <div className="font-normal text-muted-foreground">implements</div>
@@ -286,7 +286,7 @@ const Type = (props: {
           </Link>
         </Badge>
       </div>
-      <p className="mt-2 text-muted-foreground">
+      <p className="mt-2 text-sm text-muted-foreground">
         {props.description || getRootDescription(props.name) || (
           <span className="italic">No description provided</span>
         )}

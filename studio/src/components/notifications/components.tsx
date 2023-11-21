@@ -46,7 +46,7 @@ export const SelectFederatedGraphs = ({
   const graphIds = useMemo(() => {
     const entry = meta.find(
       (m) =>
-        m.eventName === OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED
+        m.eventName === OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
     );
     if (entry?.meta?.case !== "federatedGraphSchemaUpdated") return [];
     return entry.meta.value.graphIds ?? [];
@@ -74,7 +74,7 @@ export const SelectFederatedGraphs = ({
 
     const idx = tempMeta.findIndex(
       (v) =>
-        v.eventName === OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED
+        v.eventName === OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
     );
 
     if (idx === -1) {
@@ -129,35 +129,37 @@ export const Meta = ({
   return null;
 };
 
-export const NotificationTabs = ({ tab }: { tab: NotificationTab }) => {
+export const NotificationToolbar = ({ tab }: { tab: NotificationTab }) => {
   const router = useRouter();
 
   return (
-    <Tabs defaultValue={tab}>
-      <TabsList>
-        <TabsTrigger value="webhooks" asChild>
-          <Link
-            href={{
-              pathname: `/${router.query.organizationSlug}/webhooks`,
-            }}
-            className="flex gap-x-[6px]"
-          >
-            <PiWebhooksLogo />
-            Webhooks
-          </Link>
-        </TabsTrigger>
-        <TabsTrigger value="integrations" asChild>
-          <Link
-            href={{
-              pathname: `/${router.query.organizationSlug}/integrations`,
-            }}
-            className="flex gap-x-2"
-          >
-            <FaSlack />
-            Slack Integration
-          </Link>
-        </TabsTrigger>
-      </TabsList>
-    </Tabs>
+    <div className="flex items-center gap-2 border-b px-4 py-3 lg:px-8">
+      <Tabs defaultValue={tab}>
+        <TabsList>
+          <TabsTrigger value="webhooks" asChild>
+            <Link
+              href={{
+                pathname: `/${router.query.organizationSlug}/settings/webhooks`,
+              }}
+              className="flex gap-x-[6px]"
+            >
+              <PiWebhooksLogo />
+              Webhooks
+            </Link>
+          </TabsTrigger>
+          <TabsTrigger value="integrations" asChild>
+            <Link
+              href={{
+                pathname: `/${router.query.organizationSlug}/settings/integrations`,
+              }}
+              className="flex gap-x-2"
+            >
+              <FaSlack />
+              Slack Integration
+            </Link>
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+    </div>
   );
 };

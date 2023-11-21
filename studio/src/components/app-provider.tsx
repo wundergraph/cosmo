@@ -10,14 +10,14 @@ import { addDays } from "date-fns";
 import { useRouter } from "next/router";
 import { createContext, ReactNode, useEffect, useState } from "react";
 
-interface User {
+export interface User {
   id: string;
   email: string;
   currentOrganization: Organization;
   organizations: Organization[];
 }
 
-interface Organization {
+export interface Organization {
   id: string;
   name: string;
   slug: string;
@@ -27,7 +27,7 @@ interface Organization {
   createdAt: string;
 }
 
-interface Session {
+export interface Session {
   id: string;
   email: string;
   organizations: Organization[];

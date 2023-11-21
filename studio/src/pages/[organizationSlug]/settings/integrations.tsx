@@ -1,6 +1,6 @@
 import { UserContext } from "@/components/app-provider";
 import { EmptyState } from "@/components/empty-state";
-import { getDashboardLayout } from "@/components/layout/dashboard-layout";
+import { getSettingsLayout } from "@/components/layout/settings-layout";
 import {
   EventsMeta,
   Meta,
@@ -724,7 +724,7 @@ const IntegrationsPage: NextPageWithLayout = () => {
 };
 
 IntegrationsPage.getLayout = (page) => {
-  return getDashboardLayout(
+  return getSettingsLayout(
     <div className="flex flex-col gap-y-4">
       <NotificationTabs tab="integrations" />
       <>{page}</>

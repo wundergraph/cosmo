@@ -311,9 +311,8 @@ const Toolbar = () => {
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-2 border-b px-4 py-2">
+    <div className="flex flex-wrap items-center justify-start gap-2 border-b px-4 py-3 lg:px-8">
       <DateRangePicker
-        className="ml-auto"
         selectedDateRange={{ from: startDate, to: endDate }}
         onDateRangeChange={onDateRangeChange}
       />

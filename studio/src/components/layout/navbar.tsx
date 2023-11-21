@@ -1,6 +1,10 @@
 import { docsBaseURL } from "@/lib/constants";
 import { cn } from "@/lib/utils";
-import { Cross2Icon, HamburgerMenuIcon } from "@radix-ui/react-icons";
+import {
+  Cross2Icon,
+  HamburgerMenuIcon,
+  QuestionMarkCircledIcon,
+} from "@radix-ui/react-icons";
 import { useQuery } from "@tanstack/react-query";
 import { getFederatedGraphs } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import Link from "next/link";
@@ -8,7 +12,6 @@ import { useRouter } from "next/router";
 import { ReactNode, useContext, useState } from "react";
 import { UserContext } from "../app-provider";
 import { Logo } from "../logo";
-import { ThemeToggle } from "../theme-toggle";
 import {
   Select,
   SelectContent,
@@ -19,6 +22,8 @@ import {
 import { Separator } from "../ui/separator";
 import { UserMenu, UserMenuMobile } from "../user-menu";
 import { LayoutProps } from "./layout";
+import { useUser } from "@/hooks/use-user";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 
 export type NavLink = {
   title: string;
@@ -57,9 +62,7 @@ const MobileNav = () => {
           </Link>
         </nav>
         <UserMenuMobile />
-        <div className="mx-auto">
-          <ThemeToggle />
-        </div>
+        <div className="mx-auto">{/* <ThemeToggle /> */}</div>
       </div>
     </div>
   );
@@ -147,11 +150,11 @@ const Organizations = () => {
 export const Nav = ({ children, links }: SideNavLayoutProps) => {
   const router = useRouter();
   const [showMobileMenu, setShowMobileMenu] = useState(false);
-  const user = useContext(UserContext);
+  const user = useUser();
 
   return (
     <div className="flex min-h-screen flex-1 flex-col lg:grid lg:grid-cols-[auto_1fr] lg:divide-x">
-      <aside className="sticky top-[0] z-40 flex min-w-[248px] flex-shrink-0 flex-col bg-background pt-4 lg:h-screen lg:min-w-[280px] lg:px-6 lg:pb-4">
+      <aside className="sticky top-[0] z-40 flex w-[60px] flex-shrink-0 flex-col bg-background pt-4 lg:h-screen lg:px-3 lg:pb-4">
         <div className="flex flex-col gap-y-4 px-4 lg:gap-y-8 lg:px-0">
           <div className="flex items-center justify-between gap-x-4">
             <div className="flex w-full items-center gap-x-4 gap-y-8 lg:flex-col lg:items-start">
@@ -165,9 +168,9 @@ export const Nav = ({ children, links }: SideNavLayoutProps) => {
                 >
                   <Logo />
                 </Link>
-                <Organizations />
+                {/* <Organizations /> */}
               </div>
-              <Graphs />
+              {/* <Graphs /> */}
             </div>
             <button
               className="flex items-center space-x-2 lg:hidden"
@@ -192,17 +195,21 @@ export const Nav = ({ children, links }: SideNavLayoutProps) => {
               return (
                 <div key={index}>
                   {item.href && (
-                    <Link key={index} href={item.href}>
-                      <span
-                        className={cn(
-                          "group flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground",
-                          isCurrent ? "bg-accent/80" : "transparent",
-                        )}
-                      >
-                        {item.icon}
-                        <span className="whitespace-nowrap">{item.title}</span>
-                      </span>
-                    </Link>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Link
+                          key={index}
+                          href={item.href}
+                          className={cn(
+                            "text-md font-sm group flex h-9 w-9 items-center justify-center rounded-md hover:bg-accent hover:text-accent-foreground",
+                            isCurrent ? "bg-accent/80" : "transparent",
+                          )}
+                        >
+                          {item.icon}
+                        </Link>
+                      </TooltipTrigger>
+                      <TooltipContent side="left">{item.title}</TooltipContent>
+                    </Tooltip>
                   )}
                   {item.separator && (
                     <Separator
@@ -219,20 +226,18 @@ export const Nav = ({ children, links }: SideNavLayoutProps) => {
           orientation="horizontal"
           className="mt-4 lg:mb-4 lg:mt-auto"
         />
-        <div className="hidden items-center justify-between lg:flex">
+        <div className="hidden flex-col items-center space-y-2 lg:flex">
           <Link
             href={docsBaseURL}
-            className="flex items-center text-lg font-medium text-foreground/80 transition-colors hover:text-foreground sm:text-sm"
+            className="text-md font-sm group flex h-9 w-9 items-center justify-center rounded-md hover:bg-accent hover:text-accent-foreground"
             target="_blank"
             rel="noreferrer"
           >
-            Documentation
+            <QuestionMarkCircledIcon />
           </Link>
-          <ThemeToggle />
           <UserMenu />
         </div>
       </aside>
-      <main className="flex-1 pt-4 lg:pt-0">{children}</main>
     </div>
   );
 };

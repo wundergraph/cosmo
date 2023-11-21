@@ -1,6 +1,6 @@
 import { UserContext } from "@/components/app-provider";
 import { EmptyState } from "@/components/empty-state";
-import { getDashboardLayout } from "@/components/layout/dashboard-layout";
+import { getSettingsLayout } from "@/components/layout/settings-layout";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -12,7 +12,6 @@ import { Input } from "@/components/ui/input";
 import { Loader } from "@/components/ui/loader";
 import { useToast } from "@/components/ui/use-toast";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
-import { calURL } from "@/lib/constants";
 import { NextPageWithLayout } from "@/lib/page";
 import { cn, getHighestPriorityRole } from "@/lib/utils";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
@@ -27,7 +26,6 @@ import {
 import { sentenceCase } from "change-case";
 import { useContext } from "react";
 import { HiOutlineDotsVertical } from "react-icons/hi";
-import { IoInformationCircle } from "react-icons/io5";
 import { z } from "zod";
 
 const emailInputSchema = z.object({
@@ -295,9 +293,7 @@ const MembersPage: NextPageWithLayout = () => {
 
   return (
     <div className="flex flex-col gap-y-6">
-      {isAdmin && (
-        <InviteForm refresh={() => refetch()} />
-      )}
+      {isAdmin && <InviteForm refresh={() => refetch()} />}
       <div className="flex flex-col divide-y rounded-md border">
         {data.members?.map((member) => {
           return (
@@ -319,7 +315,7 @@ const MembersPage: NextPageWithLayout = () => {
 };
 
 MembersPage.getLayout = (page) => {
-  return getDashboardLayout(
+  return getSettingsLayout(
     page,
     "Members",
     "Manage all the members of your organization",

@@ -70,11 +70,11 @@ const Toolbar = () => {
   );
 
   return (
-    <div className="flex w-full justify-center border-b px-4 py-2 md:justify-start lg:justify-end">
+    <div className="flex w-full justify-start border-b px-4 py-3 lg:px-8">
       <DateRangePicker
         selectedDateRange={{ from: startDate, to: endDate }}
         onDateRangeChange={onDateRangeChange}
-        align="end"
+        align="start"
       />
     </div>
   );

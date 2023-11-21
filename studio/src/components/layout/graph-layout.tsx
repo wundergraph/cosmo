@@ -19,12 +19,9 @@ import { EmptyState } from "../empty-state";
 import { Button } from "../ui/button";
 import { Loader } from "../ui/loader";
 import { LayoutProps } from "./layout";
-import { Nav, NavLink } from "./nav";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
-import { addDays, formatDistance } from "date-fns";
 import { UserContext } from "../app-provider";
-import { calURL } from "@/lib/constants";
-import Link from "next/link";
+import { SideNav, NavLink } from "./sidenav";
 
 const icons: { [key: string]: ReactNode } = {
   Overview: <HomeIcon />,
@@ -137,8 +134,9 @@ const GraphLayout = ({ children }: LayoutProps) => {
 
   return (
     <div className="2xl:flex 2xl:flex-1 2xl:flex-col 2xl:items-center">
-      <div className="min-h-screen w-full max-w-screen-4xl bg-background font-sans antialiased">
-        <Nav links={links}>{render}</Nav>
+      <div className="flex min-h-screen w-full flex-1 flex-col bg-background font-sans antialiased lg:grid lg:grid-cols-[auto_1fr] lg:divide-x">
+        <SideNav links={links} />
+        <main className="flex-1 pt-4 lg:pt-0">{render}</main>
       </div>
     </div>
   );

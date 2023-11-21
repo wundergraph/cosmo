@@ -1,6 +1,6 @@
 import { UserContext } from "@/components/app-provider";
 import { EmptyState } from "@/components/empty-state";
-import { getDashboardLayout } from "@/components/layout/dashboard-layout";
+import { getSettingsLayout } from "@/components/layout/settings-layout";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -610,7 +610,7 @@ const APIKeysPage: NextPageWithLayout = () => {
 };
 
 APIKeysPage.getLayout = (page) => {
-  return getDashboardLayout(
+  return getSettingsLayout(
     page,
     "API Keys",
     "Manage all the API keys of your organization",
