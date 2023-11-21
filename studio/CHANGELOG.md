@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.35.4](https://github.com/wundergraph/cosmo/compare/studio@0.35.3...studio@0.35.4) (2023-11-20)
+
+### Bug Fixes
+
+* add env var that allows to inject custom scripts into the head ([#262](https://github.com/wundergraph/cosmo/issues/262)) ([e2e1316](https://github.com/wundergraph/cosmo/commit/e2e1316d86cfb6a39a66f40fc4af2120de5e6242)) (@Pagebakers)
+
 ## [0.35.3](https://github.com/wundergraph/cosmo/compare/studio@0.35.2...studio@0.35.3) (2023-11-20)
 
 **Note:** Version bump only for package studio
