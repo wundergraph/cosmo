@@ -73,7 +73,7 @@ import { OpenAIGraphql, isValidUrl } from '@wundergraph/cosmo-shared';
 import { DocumentNode, buildASTSchema, parse } from 'graphql';
 import { validate } from 'graphql/validation/index.js';
 import { uid } from 'uid';
-import { ClientDTO, GraphApiKeyDTO, GraphApiKeyJwtPayload } from '../../types/index.js';
+import { ClientDTO, GraphApiKeyDTO, GraphApiKeyJwtPayload, PublishedOperationData } from '../../types/index.js';
 import { Composer } from '../composition/composer.js';
 import { buildSchema, composeSubgraphs } from '../composition/composition.js';
 import { getDiffBetweenGraphs } from '../composition/schemaCheck.js';
@@ -110,14 +110,8 @@ import {
 import { FederatedGraphSchemaUpdate, OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
 import { OidcRepository } from '../repositories/OidcRepository.js';
 import OidcProvider from '../services/OidcProvider.js';
-import { BlobNotFoundError } from '../blobstorage/index.js';
 import { GraphCompositionRepository } from '../repositories/GraphCompositionRepository.js';
 import { OperationsRepository } from '../repositories/OperationsRepository.js';
-
-interface PublishedOperationData {
-  version: 1;
-  body: string;
-}
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
