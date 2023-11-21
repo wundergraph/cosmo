@@ -69,7 +69,7 @@ func TestSubgraphReturnsSuccessfully(t *testing.T) {
 	server.Server.Handler.ServeHTTP(rr, req)
 
 	assert.Equal(t, 200, rr.Code)
-	assert.JSONEq(t, fmt.Sprintf(`{"data":{"hello": "John Doe"}}`), rr.Body.String())
+	assert.JSONEq(t, `{"data":{"hello": "John Doe"}}`, rr.Body.String())
 }
 
 func TestSubgraphReturnsGraphQLErrorWithNullData(t *testing.T) {
@@ -126,7 +126,7 @@ func TestSubgraphReturnsGraphQLErrorWithNullData(t *testing.T) {
 	server.Server.Handler.ServeHTTP(rr, req)
 
 	assert.Equal(t, 200, rr.Code)
-	assert.JSONEq(t, fmt.Sprintf(`{"errors":[{"message":"Something went wrong"}],"data":null}`), rr.Body.String())
+	assert.JSONEq(t, `{"errors":[{"message":"Something went wrong"}],"data":null}`, rr.Body.String())
 	if t.Failed() {
 		t.Log(rr.Body.String())
 	}
@@ -186,7 +186,7 @@ func TestSubgraphReturnsGraphQLErrorWithMissingData(t *testing.T) {
 	server.Server.Handler.ServeHTTP(rr, req)
 
 	assert.Equal(t, 200, rr.Code)
-	assert.JSONEq(t, fmt.Sprintf(`{"errors":[{"message":"Something went wrong"}],"data":null}`), rr.Body.String())
+	assert.JSONEq(t, `{"errors":[{"message":"Something went wrong"}],"data":null}`, rr.Body.String())
 	if t.Failed() {
 		t.Log(rr.Body.String())
 	}
@@ -244,7 +244,7 @@ func TestSubgraphReturnsHttpError(t *testing.T) {
 	server.Server.Handler.ServeHTTP(rr, req)
 
 	assert.Equal(t, 200, rr.Code)
-	assert.JSONEq(t, fmt.Sprintf(`{"errors":[{"message":"origin server returned non-200 status code"}],"data":null}`), rr.Body.String())
+	assert.JSONEq(t, `{"errors":[{"message":"origin server returned non-200 status code"}],"data":null}`, rr.Body.String())
 	if t.Failed() {
 		t.Log(rr.Body.String())
 	}
