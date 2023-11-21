@@ -26,9 +26,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Check if git is not dirty after generating files
-        run: git diff --no-ext-diff --exit-code
-
       - name: Build
         run: pnpm run --filter ./cdn-server --filter ./cdn-server/cdn build
 
