@@ -42,7 +42,13 @@
         <div class="${properties.kcFormCardClass!}">
             <div id="kc-header" class="${properties.kcHeaderClass!}">
                 <div id="kc-header-wrapper"
-                     class="${properties.kcHeaderWrapperClass!}">${kcSanitize(msg("loginTitleHtml",(realm.displayNameHtml!'')))?no_esc}</div>
+                     class="${properties.kcHeaderWrapperClass!}">
+                     <div class="logo">
+                        <img id="kc-header-logo" class="${properties.kcHeaderLogoClass!}"
+                         src="${url.resourcesPath}/img/logo-dark.svg" alt="${msg("loginTitle",(realm.displayName!''))}"/>
+                        <span>${kcSanitize(msg("loginTitleHtml",(realm.displayNameHtml!'')))?no_esc}</span>
+                     </div>
+                </div>
             </div>
             <header class="${properties.kcFormHeaderClass!}">
                 <#if realm.internationalizationEnabled  && locale.supported?size gt 1>

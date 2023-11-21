@@ -33,8 +33,8 @@
             <form class="form-actions" action="${url.oauthAction}" method="POST">
                 <input type="hidden" name="code" value="${oauth.code}">
                 <div id="kc-form-buttons" class="flex gap-x-2 my-4">
-                    <input tabindex="4" class="flex h-10 w-full text-base justify-center items-center space-x-3 rounded-md border font-semibold focus:outline-none focus:ring-2 focus:ring-sky-900 transition disabled:cursor-not-allowed text-white bg-sky-600 border-sky-500 hover:bg-sky-500 hover:border-sky-400" name="accept" id="kc-login" type="submit" value="${msg("doYes")}"/>
-                    <input tabindex="4" class="flex h-10 w-full text-base justify-center items-center space-x-3 rounded-md border font-semibold focus:outline-none focus:ring-2 focus:ring-sky-900 transition disabled:cursor-not-allowed text-white bg-sky-600 border-sky-500 hover:bg-sky-500 hover:border-sky-400" name="cancel" id="kc-cancel" type="submit" value="${msg("doNo")}"/>
+                    <input tabindex="4" class="flex h-10 w-full text-base justify-center items-center space-x-3 rounded-md border font-semibold focus:outline-none focus:ring-2 focus:ring-pink-900 transition disabled:cursor-not-allowed text-white bg-pink-600 border-pink-500 hover:bg-pink-500 hover:border-pink-400" name="accept" id="kc-login" type="submit" value="${msg("doYes")}"/>
+                    <input tabindex="4" class="flex h-10 w-full text-base justify-center items-center space-x-3 rounded-md border font-semibold focus:outline-none focus:ring-2 focus:ring-pink-900 transition disabled:cursor-not-allowed text-white bg-pink-600 border-pink-500 hover:bg-pink-500 hover:border-pink-400" name="cancel" id="kc-cancel" type="submit" value="${msg("doNo")}"/>
                 </div>
             </form>
             <div class="clearfix"></div>

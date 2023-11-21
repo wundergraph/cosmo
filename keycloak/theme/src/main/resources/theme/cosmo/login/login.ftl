@@ -18,7 +18,6 @@
                     </#list>
                 </div>
             </#if>
-            <hr class="border-gray-700 my-8"/>
             <div id="kc-form-wrapper">
                 <#if realm.password>
                     <form id="kc-form-login" onsubmit="login.disabled = true; return true;" action="${url.loginAction}"
@@ -82,7 +81,7 @@
                             <input type="hidden" id="id-hidden-input" name="credentialId"
                                    <#if auth.selectedCredential?has_content>value="${auth.selectedCredential}"</#if>/>
                             <input tabindex="4"
-                                   class="flex h-10 w-full text-base justify-center items-center space-x-3 rounded-md border font-semibold focus:outline-none focus:ring-2 focus:ring-sky-900 transition disabled:cursor-not-allowed text-white bg-sky-600 border-sky-500 hover:bg-sky-500 hover:border-sky-400"
+                                   class="flex h-10 w-full text-base justify-center items-center space-x-3 rounded-md border font-semibold focus:outline-none focus:ring-2 focus:ring-pink-900 transition disabled:cursor-not-allowed text-white bg-pink-600 border-pink-500 hover:bg-pink-500 hover:border-pink-400"
                                    name="login" id="kc-login" type="submit" value="${msg("doLogIn")}"/>
                         </div>
                     </form>
