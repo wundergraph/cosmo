@@ -710,7 +710,7 @@ message DeleteRouterTokenResponse {
 }
 
 message PublishPersistedOperationsRequest {
-  string graphName = 1;
+  string fedGraphName = 1;
   string clientName = 2;
   repeated string operations = 3;
 }

@@ -58,7 +58,7 @@ describe('Persisted operations', (ctx) => {
       await setupFederatedGraph(fedGraphName, client);
 
       const publishOperationsResp = await client.publishPersistedOperations({
-        graphName: fedGraphName,
+        fedGraphName,
         clientName: 'test-client',
         operations: [`query { hello }`],
       });
@@ -74,7 +74,7 @@ describe('Persisted operations', (ctx) => {
       await setupFederatedGraph(fedGraphName, client);
 
       const publishOperationsResp = await client.publishPersistedOperations({
-        graphName: fedGraphName,
+        fedGraphName,
         operations: [`query { hello }`],
       });
 
@@ -89,7 +89,7 @@ describe('Persisted operations', (ctx) => {
       await setupFederatedGraph(fedGraphName, client);
 
       const publishOperationsResp = await client.publishPersistedOperations({
-        graphName: fedGraphName,
+        fedGraphName,
         operations: [`query { does_not_exist }`],
       });
 
@@ -104,7 +104,7 @@ describe('Persisted operations', (ctx) => {
       await setupFederatedGraph(fedGraphName, client);
 
       const publishOperationsResp = await client.publishPersistedOperations({
-        graphName: `not_${fedGraphName}`,
+        fedGraphName: `not_${fedGraphName}`,
         operations: [`query { hello }`],
       });
 
@@ -121,7 +121,7 @@ describe('Persisted operations', (ctx) => {
       const query = `query { hello }`;
 
       const publishOperationsResp = await client.publishPersistedOperations({
-        graphName: fedGraphName,
+        fedGraphName,
         clientName: 'test-client',
         operations: [query],
       });
@@ -145,7 +145,7 @@ describe('Persisted operations', (ctx) => {
       const query = `query { hello }`;
 
       const publishOperationsResp = await client.publishPersistedOperations({
-        graphName: fedGraphName,
+        fedGraphName,
         clientName: 'test-client',
         operations: [query],
       });

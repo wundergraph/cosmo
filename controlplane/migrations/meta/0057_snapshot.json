@@ -1,7 +1,7 @@
 {
   "version": "5",
   "dialect": "pg",
-  "id": "ecfb96d9-61e7-4aff-ac91-74c0a2b1b2ea",
+  "id": "a1d88a6a-1976-4acb-9430-6f44b7d87dd1",
   "prevId": "cb19aae4-6a6d-4124-845d-64c80aed06a2",
   "tables": {
     "api_keys": {
@@ -144,17 +144,17 @@
           "primaryKey": false,
           "notNull": false
         },
-        "created_by": {
-          "name": "created_by",
+        "created_by_id": {
+          "name": "created_by_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
         },
-        "updated_by": {
-          "name": "updated_by",
+        "updated_by_id": {
+          "name": "updated_by_id",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         }
       },
       "indexes": {},
@@ -172,12 +172,12 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "federated_graph_clients_created_by_users_id_fk": {
-          "name": "federated_graph_clients_created_by_users_id_fk",
+        "federated_graph_clients_created_by_id_users_id_fk": {
+          "name": "federated_graph_clients_created_by_id_users_id_fk",
           "tableFrom": "federated_graph_clients",
           "tableTo": "users",
           "columnsFrom": [
-            "created_by"
+            "created_by_id"
           ],
           "columnsTo": [
             "id"
@@ -185,12 +185,12 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "federated_graph_clients_updated_by_users_id_fk": {
-          "name": "federated_graph_clients_updated_by_users_id_fk",
+        "federated_graph_clients_updated_by_id_users_id_fk": {
+          "name": "federated_graph_clients_updated_by_id_users_id_fk",
           "tableFrom": "federated_graph_clients",
           "tableTo": "users",
           "columnsFrom": [
-            "updated_by"
+            "updated_by_id"
           ],
           "columnsTo": [
             "id"
@@ -303,17 +303,17 @@
           "primaryKey": false,
           "notNull": false
         },
-        "created_by": {
-          "name": "created_by",
+        "created_by_id": {
+          "name": "created_by_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
         },
-        "updated_by": {
-          "name": "updated_by",
+        "updated_by_id": {
+          "name": "updated_by_id",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         }
       },
       "indexes": {},
@@ -344,12 +344,12 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "federated_graph_persisted_operations_created_by_users_id_fk": {
-          "name": "federated_graph_persisted_operations_created_by_users_id_fk",
+        "federated_graph_persisted_operations_created_by_id_users_id_fk": {
+          "name": "federated_graph_persisted_operations_created_by_id_users_id_fk",
           "tableFrom": "federated_graph_persisted_operations",
           "tableTo": "users",
           "columnsFrom": [
-            "created_by"
+            "created_by_id"
           ],
           "columnsTo": [
             "id"
@@ -357,12 +357,12 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "federated_graph_persisted_operations_updated_by_users_id_fk": {
-          "name": "federated_graph_persisted_operations_updated_by_users_id_fk",
+        "federated_graph_persisted_operations_updated_by_id_users_id_fk": {
+          "name": "federated_graph_persisted_operations_updated_by_id_users_id_fk",
           "tableFrom": "federated_graph_persisted_operations",
           "tableTo": "users",
           "columnsFrom": [
-            "updated_by"
+            "updated_by_id"
           ],
           "columnsTo": [
             "id"

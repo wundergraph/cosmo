@@ -5450,9 +5450,9 @@ export class DeleteRouterTokenResponse extends Message<DeleteRouterTokenResponse
  */
 export class PublishPersistedOperationsRequest extends Message<PublishPersistedOperationsRequest> {
   /**
-   * @generated from field: string graphName = 1;
+   * @generated from field: string fedGraphName = 1;
    */
-  graphName = "";
+  fedGraphName = "";
 
   /**
    * @generated from field: string clientName = 2;
@@ -5472,7 +5472,7 @@ export class PublishPersistedOperationsRequest extends Message<PublishPersistedO
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "wg.cosmo.platform.v1.PublishPersistedOperationsRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "graphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "fedGraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "clientName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "operations", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);

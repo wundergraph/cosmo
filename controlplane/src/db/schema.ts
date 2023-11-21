@@ -51,21 +51,30 @@ export const federatedGraphClients = pgTable(
     name: text('name').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }),
-    createdBy: uuid('created_by')
+    createdById: uuid('created_by_id')
       .notNull()
       .references(() => users.id, {
         onDelete: 'cascade',
       }),
-    updatedBy: uuid('updated_by')
-      .notNull()
-      .references(() => users.id, {
-        onDelete: 'cascade',
-      }),
+    updatedById: uuid('updated_by_id').references(() => users.id, {
+      onDelete: 'cascade',
+    }),
   },
   (t) => ({
     uniqueFederatedGraphClientName: unique('federated_graph_client_name').on(t.federatedGraphId, t.name),
   }),
 );
+
+export const federatedGraphClientsRelations = relations(federatedGraphClients, ({ many, one }) => ({
+  createdBy: one(users, {
+    fields: [federatedGraphClients.createdById],
+    references: [users.id],
+  }),
+  updatedBy: one(users, {
+    fields: [federatedGraphClients.updatedById],
+    references: [users.id],
+  }),
+}));
 
 export const federatedGraphPersistedOperations = pgTable(
   'federated_graph_persisted_operations',
@@ -85,16 +94,14 @@ export const federatedGraphPersistedOperations = pgTable(
     filePath: text('file_path').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }),
-    createdBy: uuid('created_by')
+    createdById: uuid('created_by_id')
       .notNull()
       .references(() => users.id, {
         onDelete: 'cascade',
       }),
-    updatedBy: uuid('updated_by')
-      .notNull()
-      .references(() => users.id, {
-        onDelete: 'cascade',
-      }),
+    updatedById: uuid('updated_by_id').references(() => users.id, {
+      onDelete: 'cascade',
+    }),
   },
   (t) => ({
     uniqueFederatedGraphOperationHash: unique('federated_graph_operation_hash').on(t.federatedGraphId, t.hash),
@@ -102,6 +109,20 @@ export const federatedGraphPersistedOperations = pgTable(
       t.federatedGraphId,
       t.filePath,
     ),
+  }),
+);
+
+export const federatedGraphPersistedOperationsRelations = relations(
+  federatedGraphPersistedOperations,
+  ({ many, one }) => ({
+    createdBy: one(users, {
+      fields: [federatedGraphPersistedOperations.createdById],
+      references: [users.id],
+    }),
+    updatedBy: one(users, {
+      fields: [federatedGraphPersistedOperations.updatedById],
+      references: [users.id],
+    }),
   }),
 );
 

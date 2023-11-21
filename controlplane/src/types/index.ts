@@ -286,3 +286,8 @@ export interface PersistedOperationDTO {
   lastUpdatedAt: string;
   lastUpdatedBy: string;
 }
+
+export interface UpdatedPersistedOperation {
+  hash: string;
+  filePath: string;
+}

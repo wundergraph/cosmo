@@ -4,8 +4,8 @@ CREATE TABLE IF NOT EXISTS "federated_graph_clients" (
 	"name" text NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone,
-	"created_by" uuid NOT NULL,
-	"updated_by" uuid NOT NULL,
+	"created_by_id" uuid NOT NULL,
+	"updated_by_id" uuid,
 	CONSTRAINT "federated_graph_client_name" UNIQUE("federated_graph_id","name")
 );
 --> statement-breakpoint
@@ -17,8 +17,8 @@ CREATE TABLE IF NOT EXISTS "federated_graph_persisted_operations" (
 	"file_path" text NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone,
-	"created_by" uuid NOT NULL,
-	"updated_by" uuid NOT NULL,
+	"created_by_id" uuid NOT NULL,
+	"updated_by_id" uuid,
 	CONSTRAINT "federated_graph_operation_hash" UNIQUE("federated_graph_id","hash"),
 	CONSTRAINT "federated_graph_operation_file_hash" UNIQUE("federated_graph_id","file_path")
 );
@@ -30,13 +30,13 @@ EXCEPTION
 END $$;
 --> statement-breakpoint
 DO $$ BEGIN
- ALTER TABLE "federated_graph_clients" ADD CONSTRAINT "federated_graph_clients_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE cascade ON UPDATE no action;
+ ALTER TABLE "federated_graph_clients" ADD CONSTRAINT "federated_graph_clients_created_by_id_users_id_fk" FOREIGN KEY ("created_by_id") REFERENCES "users"("id") ON DELETE cascade ON UPDATE no action;
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
 --> statement-breakpoint
 DO $$ BEGIN
- ALTER TABLE "federated_graph_clients" ADD CONSTRAINT "federated_graph_clients_updated_by_users_id_fk" FOREIGN KEY ("updated_by") REFERENCES "users"("id") ON DELETE cascade ON UPDATE no action;
+ ALTER TABLE "federated_graph_clients" ADD CONSTRAINT "federated_graph_clients_updated_by_id_users_id_fk" FOREIGN KEY ("updated_by_id") REFERENCES "users"("id") ON DELETE cascade ON UPDATE no action;
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
@@ -54,13 +54,13 @@ EXCEPTION
 END $$;
 --> statement-breakpoint
 DO $$ BEGIN
- ALTER TABLE "federated_graph_persisted_operations" ADD CONSTRAINT "federated_graph_persisted_operations_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE cascade ON UPDATE no action;
+ ALTER TABLE "federated_graph_persisted_operations" ADD CONSTRAINT "federated_graph_persisted_operations_created_by_id_users_id_fk" FOREIGN KEY ("created_by_id") REFERENCES "users"("id") ON DELETE cascade ON UPDATE no action;
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
 --> statement-breakpoint
 DO $$ BEGIN
- ALTER TABLE "federated_graph_persisted_operations" ADD CONSTRAINT "federated_graph_persisted_operations_updated_by_users_id_fk" FOREIGN KEY ("updated_by") REFERENCES "users"("id") ON DELETE cascade ON UPDATE no action;
+ ALTER TABLE "federated_graph_persisted_operations" ADD CONSTRAINT "federated_graph_persisted_operations_updated_by_id_users_id_fk" FOREIGN KEY ("updated_by_id") REFERENCES "users"("id") ON DELETE cascade ON UPDATE no action;
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
