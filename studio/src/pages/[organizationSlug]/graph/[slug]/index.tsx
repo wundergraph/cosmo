@@ -56,7 +56,7 @@ const Details = () => {
         <Card className="flex grow flex-col justify-between">
           <CardHeader>
             <CardTitle>Graph details</CardTitle>
-            <CardDescription>
+            <CardDescription className="text-xs">
               Last updated:{" "}
               {lastUpdatedAt
                 ? `on ${formatDateTime(new Date(lastUpdatedAt))}`
@@ -65,11 +65,13 @@ const Details = () => {
           </CardHeader>
           <CardContent className="flex flex-col gap-y-2 text-sm">
             <div className="flex gap-x-4">
-              <span className="w-28">Subgraphs</span> :
+              <span className="w-28 text-muted-foreground">Subgraphs</span>
               <span className="w-32">{connectedSubgraphs}</span>
             </div>
             <div className="flex items-start gap-x-4">
-              <span className="w-28 flex-shrink-0">Matchers</span> :
+              <span className="w-28 flex-shrink-0 text-muted-foreground">
+                Matchers
+              </span>
               <div className="flex flex-wrap gap-2 overflow-hidden">
                 {labelMatchers.map((lm) => {
                   return (
@@ -81,14 +83,12 @@ const Details = () => {
               </div>
             </div>
             <div className="flex items-center gap-x-4">
-              <span className="w-28">Schema Check</span> :
+              <span className="w-28 text-muted-foreground">Schema Check</span>
               <ComposeStatus validGraph={validGraph} emptyGraph={emptyGraph} />
             </div>
           </CardContent>
-          <CardFooter className="flex-col items-start">
-            <span className="text-xs text-slate-500 dark:text-slate-300">
-              Router Url:
-            </span>
+          <CardFooter className="flex-col items-start text-sm">
+            <span className="text-muted-foreground">Router Url</span>
             <CLI className="mt-1 md:w-full" command={routingURL} />
 
             <RunRouterCommand
