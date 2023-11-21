@@ -1,6 +1,10 @@
 import { FiInfo } from "react-icons/fi";
-import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
-import { TooltipArrow } from "@radix-ui/react-tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+  TooltipArrow,
+} from "./ui/tooltip";
 
 export interface InfoTooltipProps {
   children: React.ReactNode;
