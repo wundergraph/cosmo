@@ -239,7 +239,7 @@ const ChecksPage: NextPageWithLayout = () => {
           </Select>
         </div>
         <div className="flex w-[100px] items-center justify-center text-sm font-medium">
-          Page {pageNumber} of {noOfPages}
+          Page {noOfPages === 0 ? "0" : pageNumber} of {noOfPages}
         </div>
         <div className="flex items-center space-x-2">
           <Button
@@ -270,7 +270,7 @@ const ChecksPage: NextPageWithLayout = () => {
             onClick={() => {
               applyNewParams({ page: (pageNumber + 1).toString() });
             }}
-            disabled={pageNumber === noOfPages}
+            disabled={pageNumber === noOfPages || noOfPages === 0}
           >
             <span className="sr-only">Go to next page</span>
             <ChevronRightIcon className="h-4 w-4" />
@@ -281,7 +281,7 @@ const ChecksPage: NextPageWithLayout = () => {
             onClick={() => {
               applyNewParams({ page: noOfPages.toString() });
             }}
-            disabled={pageNumber === noOfPages}
+            disabled={pageNumber === noOfPages || noOfPages === 0}
           >
             <span className="sr-only">Go to last page</span>
             <DoubleArrowRightIcon className="h-4 w-4" />
