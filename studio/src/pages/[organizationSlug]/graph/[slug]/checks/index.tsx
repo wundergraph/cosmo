@@ -56,7 +56,7 @@ const useDateRange = () => {
   const dateRange = router.query.dateRange
     ? JSON.parse(router.query.dateRange as string)
     : {
-        start: subDays(new Date(), 2),
+        start: subDays(new Date(), 7),
         end: new Date(),
       };
   const startDate = new Date(dateRange.start);
