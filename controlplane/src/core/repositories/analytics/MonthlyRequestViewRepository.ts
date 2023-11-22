@@ -1,7 +1,7 @@
 import { PlainMessage } from '@bufbuild/protobuf';
 import { RequestSeriesItem } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { ClickHouseClient } from 'src/core/clickhouse/index.js';
 import { formatISO } from 'date-fns';
+import { ClickHouseClient } from '../../../core/clickhouse/index.js';
 import { getDateRange, isoDateRangeToTimestamps } from './util.js';
 
 export class MonthlyRequestViewRepository {
