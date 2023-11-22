@@ -15,6 +15,8 @@
 ### Install helm dependencies
 
 ```shell
+# Add bitnami repo to install dependencies like postgresql, keycloak and clickhouse
+helm repo add bitnami https://charts.bitnami.com/bitnami
 # Install the helm dependencies (Only needed once)
 helm dependency build ./cosmo
 ```
