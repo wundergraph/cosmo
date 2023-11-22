@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, desc, eq, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema.js';
 import { federatedGraphClients, federatedGraphPersistedOperations } from '../../db/schema.js';
@@ -41,6 +41,9 @@ export class OperationsRepository {
         createdBy: true,
         updatedBy: true,
       },
+      orderBy: desc(
+        sql`coalesce(${federatedGraphPersistedOperations.updatedAt}, ${federatedGraphPersistedOperations.createdAt})`,
+      ),
       offset: pagination?.offset,
       limit: pagination?.limit,
     });
@@ -97,6 +100,7 @@ export class OperationsRepository {
         createdBy: true,
         updatedBy: true,
       },
+      orderBy: desc(sql`coalesce(${federatedGraphClients.updatedAt}, ${federatedGraphClients.createdAt})`),
     });
     const clients: ClientDTO[] = [];
 
