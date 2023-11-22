@@ -286,9 +286,9 @@ export function FetchFlow({
       onEdgesChange={onEdgesChange}
       onConnect={onConnect as any}
       fitView
-      fitViewOptions={{ minZoom: 0.1, maxZoom: 11 }}
+      fitViewOptions={{ minZoom: 0.1, maxZoom: 1 }}
       minZoom={0.1}
-      maxZoom={11}
+      maxZoom={2}
       connectionLineType={ConnectionLineType.SmoothStep}
       proOptions={{ hideAttribution: true }}
       attributionPosition="top-right"
