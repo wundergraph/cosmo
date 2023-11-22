@@ -12,23 +12,24 @@ export class OperationsRepository {
 
   public async updatePersistedOperations(clientId: string, userId: string, operations: UpdatedPersistedOperation[]) {
     const now = new Date();
-    for (const operation of operations) {
-      await this.db
-        .insert(federatedGraphPersistedOperations)
-        .values({
-          federatedGraphId: this.federatedGraphId,
-          clientId,
-          hash: operation.hash,
-          filePath: operation.filePath,
-          createdAt: now,
-          updatedAt: now,
-          createdById: userId,
-        })
-        .onConflictDoUpdate({
-          target: [federatedGraphPersistedOperations.federatedGraphId, federatedGraphPersistedOperations.hash],
-          set: { updatedAt: now, updatedById: userId },
-        });
-    }
+    const inserts = operations.map((operation) => {
+      return {
+        federatedGraphId: this.federatedGraphId,
+      clientId,
+      hash: operation.hash,
+      filePath: operation.filePath,
+      createdAt: now,
+      updatedAt: now,
+      createdById: userId,
+      }
+    });
+    await this.db
+      .insert(federatedGraphPersistedOperations)
+      .values(inserts)
+      .onConflictDoUpdate({
+        target: [federatedGraphPersistedOperations.federatedGraphId, federatedGraphPersistedOperations.hash],
+        set: { updatedAt: now, updatedById: userId },
+      });
   }
 
   public async getPersistedOperations(pagination?: {
