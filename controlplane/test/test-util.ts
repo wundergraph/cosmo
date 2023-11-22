@@ -12,6 +12,7 @@ import { createTestAuthenticator, seedTest } from '../src/core/test-util';
 import Keycloak from '../src/core/services/Keycloak';
 import { MockPlatformWebhookService } from '../src/core/webhooks/PlatformWebhookService';
 import routes from '../src/core/routes';
+import { BlobNotFoundError, BlobStorage } from '../src/core/blobstorage';
 import { Label } from '../src/types';
 
 export const SetupTest = async function (testContext: TestContext, dbname: string) {
@@ -47,6 +48,7 @@ export const SetupTest = async function (testContext: TestContext, dbname: strin
 
   const platformWebhooks = new MockPlatformWebhookService();
 
+  const blobStorage = new InMemoryBlobStorage();
   await server.register(fastifyConnectPlugin, {
     routes: routes({
       db: server.db,
@@ -62,6 +64,7 @@ export const SetupTest = async function (testContext: TestContext, dbname: strin
         clientSecret: '',
       },
       keycloakApiUrl: apiUrl,
+      blobStorage,
     }),
   });
 
@@ -79,7 +82,7 @@ export const SetupTest = async function (testContext: TestContext, dbname: strin
   const platformClient = createPromiseClient(PlatformService, transport);
   const nodeClient = createPromiseClient(NodeService, transport);
 
-  return { client: platformClient, nodeClient, server, userTestData };
+  return { client: platformClient, nodeClient, server, userTestData, blobStorage };
 };
 
 export const createSubgraph = async (
@@ -118,3 +121,41 @@ export const createFederatedGraph = async (
   expect(createFedGraphRes.response?.code).toBe(EnumStatusCode.OK);
   return createFedGraphRes;
 };
+
+export class InMemoryBlobStorage implements BlobStorage {
+  private objects: Map<string, Buffer> = new Map();
+
+  keys() {
+    return [...this.objects.keys()];
+  }
+
+  putObject(key: string, body: Buffer): Promise<void> {
+    this.objects.set(key, body);
+    return Promise.resolve();
+  }
+
+  getObject(key: string): Promise<ReadableStream> {
+    const obj = this.objects.get(key);
+    if (!obj) {
+      return Promise.reject(new BlobNotFoundError(`Object with key ${key} not found`));
+    }
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(obj);
+        controller.close();
+      },
+    });
+    return Promise.resolve(stream);
+  }
+
+  removeDirectory(key: string): Promise<number> {
+    let count = 0;
+    for (const objectKey of this.objects.keys()) {
+      if (objectKey.startsWith(key)) {
+        this.objects.delete(objectKey);
+        count++;
+      }
+    }
+    return Promise.resolve(count);
+  }
+}

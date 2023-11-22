@@ -7,3 +7,5 @@ packages:
   - shared
   - studio
   - connect
+  - cdn-server
+  - cdn-server/cdn

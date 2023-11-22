@@ -24,7 +24,8 @@
     "otelcollector",
     "graphqlmetrics",
     "studio",
-    "keycloak"
+    "keycloak",
+    "cdn-server/cdn"
   ],
   "npmClient": "pnpm",
   "loglevel": "verbose"

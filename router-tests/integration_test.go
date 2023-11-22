@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/buger/jsonparser"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/routerconfig"
@@ -123,8 +124,15 @@ func sendQueryOK(tb testing.TB, server *core.Server, query *testQuery) string {
 }
 
 func sendData(server *core.Server, data []byte) *httptest.ResponseRecorder {
+	return sendDataWithHeader(server, data, nil)
+}
+
+func sendDataWithHeader(server *core.Server, data []byte, header http.Header) *httptest.ResponseRecorder {
 	rr := httptest.NewRecorder()
 	req := httptest.NewRequest("POST", "/graphql", bytes.NewBuffer(data))
+	if header != nil {
+		req.Header = header
+	}
 	server.Server.Handler.ServeHTTP(rr, req)
 	return rr
 }
@@ -137,7 +145,14 @@ func sendCustomData(server *core.Server, data []byte, reqMw func(r *http.Request
 	return rr
 }
 
-func prepareServer(tb testing.TB, opts ...core.Option) *core.Server {
+// setupServer sets up the router server without making it listen on a local
+// port, allowing tests by calling the server directly via server.Server.Handler.ServeHTTP
+func setupServer(tb testing.TB, opts ...core.Option) *core.Server {
+	server, _ := setupServerConfig(tb, opts...)
+	return server
+}
+
+func setupServerConfig(tb testing.TB, opts ...core.Option) (*core.Server, config.Config) {
 	ctx := context.Background()
 	cfg := config.Config{
 		Graph: config.Graph{
@@ -163,10 +178,46 @@ func prepareServer(tb testing.TB, opts ...core.Option) *core.Server {
 		zapcore.ErrorLevel,
 	))
 
+	t := jwt.New(jwt.SigningMethodHS256)
+	t.Claims = jwt.MapClaims{
+		"federated_graph_id": "graph",
+		"organization_id":    "organization",
+	}
+	graphApiToken, err := t.SignedString([]byte("hunter2"))
+	require.NoError(tb, err)
+
+	cdnFileServer := http.FileServer(http.Dir(filepath.Join("testdata", "cdn")))
+	var cdnRequestLog []string
+	cdnServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/" {
+			requestLog, err := json.Marshal(cdnRequestLog)
+			require.NoError(tb, err)
+			w.Header().Set("Content-Type", "application/json")
+			w.Write(requestLog)
+			return
+		}
+		cdnRequestLog = append(cdnRequestLog, r.Method+" "+r.URL.Path)
+		// Ensure we have an authorization header with a valid token
+		authorization := r.Header.Get("Authorization")
+		token := authorization[len("Bearer "):]
+		parsedClaims := make(jwt.MapClaims)
+		jwtParser := new(jwt.Parser)
+		_, _, err = jwtParser.ParseUnverified(token, parsedClaims)
+		assert.NoError(tb, err)
+		assert.Equal(tb, t.Claims, parsedClaims)
+		cdnFileServer.ServeHTTP(w, r)
+	}))
+
+	tb.Cleanup(cdnServer.Close)
+
+	cfg.CDN.URL = cdnServer.URL
+
 	routerOpts := []core.Option{
 		core.WithFederatedGraphName(cfg.Graph.Name),
 		core.WithStaticRouterConfig(routerConfig),
 		core.WithLogger(zapLogger),
+		core.WithGraphApiToken(graphApiToken),
+		core.WithCDNURL(cfg.CDN.URL),
 		core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
 			EnableSingleFlight:   true,
 			EnableRequestTracing: true,
@@ -181,13 +232,7 @@ func prepareServer(tb testing.TB, opts ...core.Option) *core.Server {
 
 	server, err := rs.NewTestServer(ctx)
 	require.NoError(tb, err)
-	return server
-}
-
-// setupServer sets up the router server without making it listen on a local
-// port, allowing tests by calling the server directly via server.Server.Handler.ServeHTTP
-func setupServer(tb testing.TB) *core.Server {
-	return prepareServer(tb)
+	return server, cfg
 }
 
 // setupListeningServer calls setupServer to set up the server but makes it listen
@@ -202,7 +247,7 @@ func setupListeningServer(tb testing.TB, opts ...core.Option) (*core.Server, int
 	serverOpts := append([]core.Option{
 		core.WithListenerAddr(":" + strconv.Itoa(port)),
 	}, opts...)
-	server := prepareServer(tb, serverOpts...)
+	server := setupServer(tb, serverOpts...)
 	go func() {
 		err := server.Server.ListenAndServe()
 		if err != http.ErrServerClosed {

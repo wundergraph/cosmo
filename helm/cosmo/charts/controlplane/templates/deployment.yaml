@@ -187,6 +187,12 @@ spec:
                 secretKeyRef:
                   name: {{ include "controlplane.fullname" . }}-secret
                   key: slackAppClientSecret
+            - name: S3_STORAGE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-secret
+                  key: s3StorageUrl
+
           ports:
             - name: http
               containerPort: {{ .Values.service.port }}

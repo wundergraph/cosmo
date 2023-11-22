@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import { PlainMessage } from '@bufbuild/protobuf';
 import { ServiceImpl } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
@@ -48,6 +49,7 @@ import {
   IsGitHubAppInstalledResponse,
   MigrateFromApolloResponse,
   PublishFederatedSubgraphResponse,
+  PublishPersistedOperationsResponse,
   RemoveInvitationResponse,
   RequestSeriesItem,
   UpdateFederatedGraphResponse,
@@ -62,12 +64,16 @@ import {
   LeaveOrganizationResponse,
   DeleteOrganizationResponse,
   UpdateOrgMemberRoleResponse,
+  GetClientsResponse,
+  PublishedOperation,
+  PublishedOperationStatus,
   GetLatestValidSubgraphSDLByNameResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { OpenAIGraphql, isValidUrl } from '@wundergraph/cosmo-shared';
-import { parse } from 'graphql';
+import { DocumentNode, buildASTSchema, parse } from 'graphql';
+import { validate } from 'graphql/validation/index.js';
 import { uid } from 'uid';
-import { GraphApiKeyDTO, GraphApiKeyJwtPayload } from '../../types/index.js';
+import { ClientDTO, GraphApiKeyDTO, GraphApiKeyJwtPayload, PublishedOperationData } from '../../types/index.js';
 import { Composer } from '../composition/composer.js';
 import { buildSchema, composeSubgraphs } from '../composition/composition.js';
 import { getDiffBetweenGraphs } from '../composition/schemaCheck.js';
@@ -105,6 +111,7 @@ import { FederatedGraphSchemaUpdate, OrganizationWebhookService } from '../webho
 import { OidcRepository } from '../repositories/OidcRepository.js';
 import OidcProvider from '../services/OidcProvider.js';
 import { GraphCompositionRepository } from '../repositories/GraphCompositionRepository.js';
+import { OperationsRepository } from '../repositories/OperationsRepository.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -1391,6 +1398,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             },
           };
         }
+
+        const blobStorageDirectory = `${authContext.organizationId}/${federatedGraph.id}`;
+        await opts.blobStorage.removeDirectory(blobStorageDirectory);
 
         const subgraphsTargetIDs: string[] = [];
         const subgraphs = await subgraphRepo.listByFederatedGraph(req.name);
@@ -3883,6 +3893,169 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           response: {
             code: EnumStatusCode.OK,
           },
+        };
+      });
+    },
+
+    publishPersistedOperations: (req, ctx) => {
+      /**
+       * Receives a federated graph name and a list of persisted operation contents.
+       * First, it validates that the graph exists and all the operations are valid,
+       * then it stores them. Additionally, if the provided client name for registering
+       * the operations has never been seen before, we create an entry in the database
+       * with it.
+       */
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<PublishPersistedOperationsResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        if (!authContext.hasWriteAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+            operations: [],
+          };
+        }
+        const userId = authContext.userId;
+        if (!userId) {
+          return {
+            response: {
+              code: EnumStatusCode.ERROR_NOT_AUTHENTICATED,
+              details: `User not found in the authentication context`,
+            },
+            operations: [],
+          };
+        }
+        const organizationId = authContext.organizationId;
+        const federatedGraphRepo = new FederatedGraphRepository(opts.db, organizationId);
+
+        // Validate everything before we update any data
+        const schema = await federatedGraphRepo.getLatestValidSchemaVersion(req.fedGraphName);
+        const federatedGraph = await federatedGraphRepo.byName(req.fedGraphName);
+        if (!schema?.schema || federatedGraph === undefined) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Federated graph '${req.fedGraphName}' does not exist`,
+            },
+            operations: [],
+          };
+        }
+        const graphAST = parse(schema.schema);
+        const graphSchema = buildASTSchema(graphAST);
+        for (const operationContents of req.operations) {
+          let opAST: DocumentNode;
+          try {
+            opAST = parse(operationContents);
+          } catch (e: any) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR,
+                details: `Operation ${operationContents} is not valid: ${e}`,
+              },
+              operations: [],
+            };
+          }
+          const errors = validate(graphSchema, opAST, undefined, { maxErrors: 1 });
+          if (errors.length > 0) {
+            const errorDetails = errors.map((e) => `${e.toString()}`).join(', ');
+            return {
+              response: {
+                code: EnumStatusCode.ERR,
+                details: `Operation "${operationContents}" is not valid: ${errorDetails}`,
+              },
+              operations: [],
+            };
+          }
+        }
+        const operationsRepo = new OperationsRepository(opts.db, federatedGraph.id);
+        let clientId: string;
+        try {
+          clientId = await operationsRepo.registerClient(req.clientName, userId);
+        } catch (e: any) {
+          const message = e instanceof Error ? e.message : e.toString();
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `Could not register client "${req.clientName}": ${message}`,
+            },
+            operations: [],
+          };
+        }
+        const operations: PublishedOperation[] = [];
+        const updatedOperations = [];
+        // Retrieve the operations that have already been published
+        const operationsResult = await operationsRepo.getPersistedOperations();
+        const operationHashes = new Set(operationsResult.map((op) => op.hash));
+        for (const operationContents of req.operations) {
+          const operationHash = crypto.createHash('sha256').update(operationContents).digest('hex');
+          const path = `${organizationId}/${federatedGraph.id}/operations/${req.clientName}/${operationHash}.json`;
+          updatedOperations.push({
+            hash: operationHash,
+            filePath: path,
+          });
+          let status: PublishedOperationStatus;
+          if (operationHashes.has(operationHash)) {
+            status = PublishedOperationStatus.UP_TO_DATE;
+          } else {
+            const data: PublishedOperationData = {
+              version: 1,
+              body: operationContents,
+            };
+            opts.blobStorage.putObject(path, Buffer.from(JSON.stringify(data), 'utf8'));
+            status = PublishedOperationStatus.CREATED;
+          }
+          operations.push(
+            new PublishedOperation({
+              hash: operationHash,
+              status,
+            }),
+          );
+        }
+
+        await operationsRepo.updatePersistedOperations(clientId, userId, updatedOperations);
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          operations,
+        };
+      });
+    },
+
+    getClients: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetClientsResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const fedRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+        const federatedGraph = await fedRepo.byName(req.fedGraphName);
+        if (!federatedGraph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Federated graph '${req.fedGraphName}' does not exist`,
+            },
+            clients: [],
+          };
+        }
+        const operationsRepo = new OperationsRepository(opts.db, federatedGraph.id);
+        const clients = await operationsRepo.getRegisteredClients();
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          clients,
         };
       });
     },
