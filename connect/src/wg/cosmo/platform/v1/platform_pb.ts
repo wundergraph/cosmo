@@ -7736,6 +7736,80 @@ export class DeleteOIDCProviderResponse extends Message<DeleteOIDCProviderRespon
 }
 
 /**
+ * @generated from message wg.cosmo.platform.v1.GetOrganizationRequestsCountRequest
+ */
+export class GetOrganizationRequestsCountRequest extends Message<GetOrganizationRequestsCountRequest> {
+  constructor(data?: PartialMessage<GetOrganizationRequestsCountRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetOrganizationRequestsCountRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetOrganizationRequestsCountRequest {
+    return new GetOrganizationRequestsCountRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetOrganizationRequestsCountRequest {
+    return new GetOrganizationRequestsCountRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetOrganizationRequestsCountRequest {
+    return new GetOrganizationRequestsCountRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetOrganizationRequestsCountRequest | PlainMessage<GetOrganizationRequestsCountRequest> | undefined, b: GetOrganizationRequestsCountRequest | PlainMessage<GetOrganizationRequestsCountRequest> | undefined): boolean {
+    return proto3.util.equals(GetOrganizationRequestsCountRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetOrganizationRequestsCountResponse
+ */
+export class GetOrganizationRequestsCountResponse extends Message<GetOrganizationRequestsCountResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: int64 count = 2;
+   */
+  count = protoInt64.zero;
+
+  constructor(data?: PartialMessage<GetOrganizationRequestsCountResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetOrganizationRequestsCountResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "count", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetOrganizationRequestsCountResponse {
+    return new GetOrganizationRequestsCountResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetOrganizationRequestsCountResponse {
+    return new GetOrganizationRequestsCountResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetOrganizationRequestsCountResponse {
+    return new GetOrganizationRequestsCountResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetOrganizationRequestsCountResponse | PlainMessage<GetOrganizationRequestsCountResponse> | undefined, b: GetOrganizationRequestsCountResponse | PlainMessage<GetOrganizationRequestsCountResponse> | undefined): boolean {
+    return proto3.util.equals(GetOrganizationRequestsCountResponse, a, b);
+  }
+}
+
+/**
  * @generated from message wg.cosmo.platform.v1.GetFieldUsageRequest
  */
 export class GetFieldUsageRequest extends Message<GetFieldUsageRequest> {

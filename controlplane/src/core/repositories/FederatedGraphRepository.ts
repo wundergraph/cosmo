@@ -5,7 +5,6 @@ import { RouterConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { joinLabel, normalizeURL } from '@wundergraph/cosmo-shared';
 import * as schema from '../../db/schema.js';
 import {
-  federatedGraphConfigs,
   federatedGraphs,
   graphApiTokens,
   graphCompositions,
@@ -104,30 +103,6 @@ export class FederatedGraphRepository {
         subgraphsCount: subgraphs.length,
       };
     });
-  }
-
-  public createConfig(federatedGraphId: string, trafficCheckDays: number) {
-    return this.db.insert(federatedGraphConfigs).values({ federatedGraphId, trafficCheckDays }).execute();
-  }
-
-  public async getConfig(federatedGraphId: string): Promise<FederatedGraphConfig> {
-    const config = await this.db.query.federatedGraphConfigs.findFirst({
-      columns: {
-        trafficCheckDays: true,
-      },
-      where: eq(schema.federatedGraphConfigs.federatedGraphId, federatedGraphId),
-    });
-
-    // return default config
-    if (!config) {
-      return {
-        trafficCheckDays: 7,
-      };
-    }
-
-    return {
-      trafficCheckDays: config.trafficCheckDays,
-    };
   }
 
   public update(data: { name: string; routingUrl: string; labelMatchers: string[]; updatedBy: string }) {

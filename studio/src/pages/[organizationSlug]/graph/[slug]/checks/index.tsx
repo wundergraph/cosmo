@@ -1,3 +1,4 @@
+import { UserContext } from "@/components/app-provider";
 import {
   getCheckBadge,
   getCheckIcon,
@@ -293,6 +294,7 @@ const ChecksPage: NextPageWithLayout = () => {
 
 const Toolbar = () => {
   const router = useRouter();
+  const user = useContext(UserContext);
 
   const { startDate, endDate } = useDateRange();
 
@@ -316,6 +318,9 @@ const Toolbar = () => {
         className="ml-auto"
         selectedDateRange={{ from: startDate, to: endDate }}
         onDateRangeChange={onDateRangeChange}
+        calendarDaysLimit={
+          user?.currentOrganization.limits.breakingChangeRetentionLimit || 7
+        }
       />
     </div>
   );

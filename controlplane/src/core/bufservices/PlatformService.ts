@@ -63,10 +63,14 @@ import {
   DeleteOrganizationResponse,
   UpdateOrgMemberRoleResponse,
   GetLatestValidSubgraphSDLByNameResponse,
+  DateRange,
+  GetOrganizationRequestsCountResponse,
+  AnalyticsConfig,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { OpenAIGraphql, isValidUrl } from '@wundergraph/cosmo-shared';
 import { parse } from 'graphql';
 import { uid } from 'uid';
+import { formatISO, subHours } from 'date-fns';
 import { GraphApiKeyDTO, GraphApiKeyJwtPayload } from '../../types/index.js';
 import { Composer } from '../composition/composer.js';
 import { buildSchema, composeSubgraphs } from '../composition/composition.js';
@@ -105,6 +109,7 @@ import { FederatedGraphSchemaUpdate, OrganizationWebhookService } from '../webho
 import { OidcRepository } from '../repositories/OidcRepository.js';
 import OidcProvider from '../services/OidcProvider.js';
 import { GraphCompositionRepository } from '../repositories/GraphCompositionRepository.js';
+import { MonthlyRequestViewRepository } from '../repositories/analytics/MonthlyRequestViewRepository.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -155,8 +160,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           labelMatchers: req.labelMatchers,
           routingUrl: req.routingUrl,
         });
-
-        await fedGraphRepo.createConfig(federatedGraph.id, 7);
 
         const subgraphs = await subgraphRepo.listByFederatedGraph(req.name, {
           published: true,
@@ -654,12 +657,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         }
 
         for (const composition of result.compositions) {
-          const graphConfig = await fedGraphRepo.getConfig(composition.id);
+          const orgLimits = await orgRepo.getOrganizationLimits({ organizationID: authContext.organizationId });
 
           await schemaCheckRepo.createCheckedFederatedGraph(
             schemaCheckID,
             composition.id,
-            graphConfig.trafficCheckDays,
+            orgLimits.breakingChangeRetentionLimit,
           );
 
           // We collect composition errors for all federated graphs
@@ -675,12 +678,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           // We don't collect operation usage when we have composition errors or
           // when we don't have any inspectable changes. That means any breaking change is really breaking
           if (composition.errors.length === 0 && isInspectable && inspectorChanges.length > 0) {
-            if (graphConfig.trafficCheckDays <= 0) {
+            if (orgLimits.breakingChangeRetentionLimit <= 0) {
               continue;
             }
 
             const result = await trafficInspector.inspect(inspectorChanges, {
-              daysToConsider: graphConfig.trafficCheckDays,
+              daysToConsider: orgLimits.breakingChangeRetentionLimit,
               federatedGraphId: composition.id,
               organizationId: authContext.organizationId,
             });
@@ -1024,6 +1027,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<GetFederatedGraphChangelogResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const fedgraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+        const orgRepo = new OrganizationRepository(opts.db);
 
         const federatedGraph = await fedgraphRepo.byName(req.name);
         if (!federatedGraph) {
@@ -1045,6 +1049,21 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             federatedGraphChangelogOutput: [],
             hasNextPage: false,
           };
+        }
+
+        const dateRange: DateRange | undefined = req.dateRange;
+
+        const orgLimits = await orgRepo.getOrganizationLimits({ organizationID: authContext.organizationId });
+
+        if (dateRange) {
+          const startDate = new Date(dateRange.start);
+          const endDate = new Date(dateRange.end);
+          if (startDate < subHours(new Date(), orgLimits.changelogDataRetentionLimit * 24)) {
+            dateRange.start = formatISO(subHours(new Date(), orgLimits.changelogDataRetentionLimit * 24));
+          }
+          if (endDate > new Date()) {
+            dateRange.end = formatISO(new Date());
+          }
         }
 
         const result = await fedgraphRepo.fetchFederatedGraphChangelog(
@@ -1082,6 +1101,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<GetChecksByFederatedGraphNameResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const fedgraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+        const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
+        const orgRepo = new OrganizationRepository(opts.db);
 
         const federatedGraph = await fedgraphRepo.byName(req.name);
         if (!federatedGraph) {
@@ -1095,13 +1116,28 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
+        const dateRange = {
+          start: req.startDate,
+          end: req.endDate,
+        };
+
+        const orgLimits = await orgRepo.getOrganizationLimits({ organizationID: authContext.organizationId });
+
+        const startDate = new Date(dateRange.start);
+        const endDate = new Date(dateRange.end);
+        if (startDate < subHours(new Date(), orgLimits.breakingChangeRetentionLimit * 24)) {
+          dateRange.start = formatISO(subHours(new Date(), orgLimits.breakingChangeRetentionLimit * 24));
+        }
+        if (endDate > new Date()) {
+          dateRange.end = formatISO(new Date());
+        }
+
         const checksData = await subgraphRepo.checks({
           federatedGraphName: req.name,
           limit: req.limit,
           offset: req.offset,
-          startDate: req.startDate,
-          endDate: req.endDate,
+          startDate: dateRange.start,
+          endDate: dateRange.end,
         });
         const totalChecksCount = await subgraphRepo.getChecksCount({ federatedGraphName: req.name });
 
@@ -1720,6 +1756,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const analyticsRepo = new AnalyticsRequestViewRepository(opts.chClient);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+        const orgRepo = new OrganizationRepository(opts.db);
 
         const graph = await fedGraphRepo.byName(req.federatedGraphName);
         if (!graph) {
@@ -1731,11 +1768,34 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
+        let range: number | undefined = req.config?.range;
+        const dateRange: DateRange | undefined = req.config?.dateRange;
+
+        const orgLimits = await orgRepo.getOrganizationLimits({ organizationID: authContext.organizationId });
+        if (range && range > orgLimits.tracingRetentionLimit * 24) {
+          range = orgLimits.tracingRetentionLimit * 24;
+        }
+
+        if (dateRange) {
+          const startDate = new Date(dateRange.start);
+          const endDate = new Date(dateRange.end);
+          if (startDate < subHours(new Date(), orgLimits.tracingRetentionLimit * 24)) {
+            dateRange.start = formatISO(subHours(new Date(), orgLimits.tracingRetentionLimit * 24));
+          }
+          if (endDate > new Date()) {
+            dateRange.end = formatISO(new Date());
+          }
+        }
+
         return {
           response: {
             code: EnumStatusCode.OK,
           },
-          view: await analyticsRepo.getView(authContext.organizationId, graph.id, req.name, req.config),
+          view: await analyticsRepo.getView(authContext.organizationId, graph.id, req.name, {
+            ...req.config,
+            range,
+            dateRange,
+          } as AnalyticsConfig),
         };
       });
     },
@@ -1805,6 +1865,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const repo = new MetricsRepository(opts.chClient);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+        const orgRepo = new OrganizationRepository(opts.db);
 
         const graph = await fedGraphRepo.byName(req.federatedGraphName);
         if (!graph) {
@@ -1817,9 +1878,28 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
+        let range: number = req.range;
+        const dateRange: DateRange | undefined = req.dateRange;
+
+        const orgLimits = await orgRepo.getOrganizationLimits({ organizationID: authContext.organizationId });
+        if (range > orgLimits.analyticsRetentionLimit * 24) {
+          range = orgLimits.analyticsRetentionLimit * 24;
+        }
+
+        if (dateRange) {
+          const startDate = new Date(dateRange.start);
+          const endDate = new Date(dateRange.end);
+          if (startDate < subHours(new Date(), orgLimits.analyticsRetentionLimit * 24)) {
+            dateRange.start = formatISO(subHours(new Date(), orgLimits.analyticsRetentionLimit * 24));
+          }
+          if (endDate > new Date()) {
+            dateRange.end = formatISO(new Date());
+          }
+        }
+
         const view = await repo.getMetricsView({
-          range: req.range,
-          dateRange: req.dateRange,
+          range,
+          dateRange,
           filters: req.filters,
           organizationId: authContext.organizationId,
           graphId: graph.id,
@@ -1852,6 +1932,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const repo = new MetricsRepository(opts.chClient);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+        const orgRepo = new OrganizationRepository(opts.db);
 
         const graph = await fedGraphRepo.byName(req.federatedGraphName);
         if (!graph) {
@@ -1864,9 +1945,28 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
+        let range: number = req.range;
+        const dateRange: DateRange | undefined = req.dateRange;
+
+        const orgLimits = await orgRepo.getOrganizationLimits({ organizationID: authContext.organizationId });
+        if (range > orgLimits.analyticsRetentionLimit * 24) {
+          range = orgLimits.analyticsRetentionLimit * 24;
+        }
+
+        if (dateRange) {
+          const startDate = new Date(dateRange.start);
+          const endDate = new Date(dateRange.end);
+          if (startDate < subHours(new Date(), orgLimits.analyticsRetentionLimit * 24)) {
+            dateRange.start = formatISO(subHours(new Date(), orgLimits.analyticsRetentionLimit * 24));
+          }
+          if (endDate > new Date()) {
+            dateRange.end = formatISO(new Date());
+          }
+        }
+
         const metrics = await repo.getErrorsView({
-          range: req.range,
-          dateRange: req.dateRange,
+          range,
+          dateRange,
           filters: req.filters,
           organizationId: authContext.organizationId,
           graphId: graph.id,
@@ -3883,6 +3983,35 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           response: {
             code: EnumStatusCode.OK,
           },
+        };
+      });
+    },
+
+    getOrganizationRequestsCount: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetOrganizationRequestsCountResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+
+        if (!opts.chClient) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_ANALYTICS_DISABLED,
+            },
+            count: BigInt(0),
+          };
+        }
+        const monthlyRequestsRepo = new MonthlyRequestViewRepository(opts.chClient);
+        const count = await monthlyRequestsRepo.getMonthlyRequestCount(authContext.organizationId);
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          count: BigInt(count),
         };
       });
     },

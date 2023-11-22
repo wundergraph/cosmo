@@ -12,6 +12,7 @@ import {
   timestamp,
   uniqueIndex,
   uuid,
+  decimal,
 } from 'drizzle-orm/pg-core';
 
 export const federatedGraphs = pgTable('federated_graphs', {
@@ -26,16 +27,6 @@ export const federatedGraphs = pgTable('federated_graphs', {
   composedSchemaVersionId: uuid('composed_schema_version_id').references(() => schemaVersion.id, {
     onDelete: 'no action',
   }),
-});
-
-export const federatedGraphConfigs = pgTable('federated_graph_configs', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  federatedGraphId: uuid('federated_graph_id')
-    .notNull()
-    .references(() => federatedGraphs.id, {
-      onDelete: 'cascade',
-    }),
-  trafficCheckDays: integer('traffic_check_days').notNull().default(7),
 });
 
 export const subscriptionProtocolEnum = pgEnum('subscription_protocol', ['ws', 'sse', 'sse_post'] as const);
@@ -64,10 +55,6 @@ export const federatedGraphRelations = relations(federatedGraphs, ({ many, one }
   composedSchemaVersion: one(schemaVersion, {
     fields: [federatedGraphs.composedSchemaVersionId],
     references: [schemaVersion.id],
-  }),
-  config: one(federatedGraphConfigs, {
-    fields: [federatedGraphs.id],
-    references: [federatedGraphConfigs.federatedGraphId],
   }),
   subgraphs: many(subgraphsToFederatedGraph),
 }));
@@ -729,4 +716,20 @@ export const graphCompositionSubgraphs = pgTable('graph_composition_subgraphs', 
       onDelete: 'cascade',
     }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const organizationLimits = pgTable('organization_limits', {
+  id: uuid('id').notNull().primaryKey().defaultRandom(),
+  organizationId: uuid('organization_id')
+    .notNull()
+    .references(() => organizations.id, {
+      onDelete: 'cascade',
+    }),
+  // requestsLimit is in millions
+  requestsLimit: integer('requests_limit').notNull().default(10),
+  analyticsRetentionLimit: integer('analytics_retention_limit').notNull().default(7),
+  tracingRetentionLimit: integer('tracing_retention_limit').notNull().default(7),
+  changelogDataRetentionLimit: integer('changelog_data_retention_limit').notNull().default(7),
+  breakingChangeRetentionLimit: integer('breaking_change_retention_limit').notNull().default(7),
+  traceSamplingRateLimit: decimal('trace_sampling_rate_limit', { precision: 3, scale: 2 }).notNull().default('0.10'),
 });
