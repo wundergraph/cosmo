@@ -581,6 +581,21 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	}
 
 	recoveryHandler := recovery.New(recovery.WithLogger(r.logger), recovery.WithPrintStack())
+	var traceHandler *trace.Middleware
+	if r.traceConfig.Enabled {
+		traceHandler = trace.NewMiddleware(otel.RouterServerAttribute,
+			otelhttp.WithSpanOptions(
+				oteltrace.WithAttributes(
+					otel.WgRouterGraphName.String(r.federatedGraphName),
+					otel.WgRouterConfigVersion.String(routerConfig.GetVersion()),
+					otel.WgRouterVersion.String(Version),
+				),
+			),
+			// Disable built-in metrics
+			otelhttp.WithMeterProvider(sdkmetric.NewMeterProvider()),
+			otelhttp.WithSpanNameFormatter(SpanNameFormatter),
+		)
+	}
 	requestLogger := requestlogger.New(
 		r.logger,
 		requestlogger.WithDefaultOptions(),
@@ -603,6 +618,10 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	httpRouter.Use(recoveryHandler)
 	httpRouter.Use(middleware.RequestID)
 	httpRouter.Use(middleware.RealIP)
+	// Register the trace middleware before the request logger, so we can log trace/span ids
+	if traceHandler != nil {
+		httpRouter.Use(traceHandler.Handler)
+	}
 	httpRouter.Use(requestLogger)
 	httpRouter.Use(cors.New(*r.corsOptions))
 
@@ -724,31 +743,8 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		DisableRequestTracing: !routerEngineConfig.Execution.EnableRequestTracing,
 	})
 
-	var traceHandler *trace.Middleware
-
-	if r.traceConfig.Enabled {
-		h := trace.NewMiddleware(otel.RouterServerAttribute,
-			otelhttp.WithSpanOptions(
-				oteltrace.WithAttributes(
-					otel.WgRouterGraphName.String(r.federatedGraphName),
-					otel.WgRouterConfigVersion.String(routerConfig.GetVersion()),
-					otel.WgRouterVersion.String(Version),
-				),
-			),
-			// Disable built-in metrics
-			otelhttp.WithMeterProvider(sdkmetric.NewMeterProvider()),
-			otelhttp.WithSpanNameFormatter(SpanNameFormatter),
-		)
-
-		traceHandler = h
-	}
-
 	// Serve GraphQL. Metrics are collected after the request is handled and classified as r GraphQL request.
 	httpRouter.Route(r.graphqlPath, func(subChiRouter chi.Router) {
-		if traceHandler != nil {
-			subChiRouter.Use(traceHandler.Handler)
-		}
-
 		subChiRouter.Use(NewWebsocketMiddleware(rootContext, WebsocketMiddlewareOptions{
 			Parser:           operationParser,
 			Planner:          operationPlanner,
