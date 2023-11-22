@@ -15,13 +15,13 @@ export class OperationsRepository {
     const inserts = operations.map((operation) => {
       return {
         federatedGraphId: this.federatedGraphId,
-      clientId,
-      hash: operation.hash,
-      filePath: operation.filePath,
-      createdAt: now,
-      updatedAt: now,
-      createdById: userId,
-      }
+        clientId,
+        hash: operation.hash,
+        filePath: operation.filePath,
+        createdAt: now,
+        updatedAt: now,
+        createdById: userId,
+      };
     });
     await this.db
       .insert(federatedGraphPersistedOperations)
