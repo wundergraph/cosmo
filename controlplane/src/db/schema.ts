@@ -65,7 +65,7 @@ export const federatedGraphClients = pgTable(
   }),
 );
 
-export const federatedGraphClientsRelations = relations(federatedGraphClients, ({ many, one }) => ({
+export const federatedGraphClientsRelations = relations(federatedGraphClients, ({ one }) => ({
   createdBy: one(users, {
     fields: [federatedGraphClients.createdById],
     references: [users.id],
