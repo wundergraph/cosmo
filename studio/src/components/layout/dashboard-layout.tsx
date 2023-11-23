@@ -1,17 +1,12 @@
 import { Component2Icon } from "@radix-ui/react-icons";
-import { addDays, formatDistance } from "date-fns";
 import { useRouter } from "next/router";
-import { useContext, useMemo } from "react";
-import {
-  IoKeyOutline,
-  IoNotificationsOutline,
-  IoPeopleOutline,
-} from "react-icons/io5";
-import { PiGear, PiGraphLight } from "react-icons/pi";
+import { useMemo } from "react";
+import { PiGraphLight } from "react-icons/pi";
 import { PageHeader } from "./head";
 import { LayoutProps } from "./layout";
 import { SideNav, NavLink } from "./sidenav";
 import { TitleLayout } from "./title-layout";
+import { FiBell, FiKey, FiSettings, FiUsers } from "react-icons/fi";
 
 export const DashboardLayout = ({ children }: LayoutProps) => {
   const router = useRouter();
@@ -22,7 +17,7 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
 
     return [
       {
-        title: "Overview",
+        title: "Federated Graphs",
         href: basePath + "/graphs",
         icon: <PiGraphLight size="1.2em" />,
       },
@@ -30,6 +25,27 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
         title: "Subgraphs",
         href: basePath + "/subgraphs",
         icon: <Component2Icon />,
+        separator: true,
+      },
+      {
+        title: "Members",
+        href: basePath + "/members",
+        icon: <FiUsers />,
+      },
+      {
+        title: "API Keys",
+        href: basePath + "/apikeys",
+        icon: <FiKey />,
+      },
+      {
+        title: "Notifications",
+        href: basePath + "/webhooks",
+        icon: <FiBell />,
+      },
+      {
+        title: "Settings",
+        href: basePath + "/settings",
+        icon: <FiSettings />,
       },
     ];
   }, [organizationSlug]);
@@ -49,11 +65,17 @@ export const getDashboardLayout = (
   title: string,
   subtitle: string,
   items?: React.ReactNode,
+  toolbar?: React.ReactNode,
 ) => {
   return (
     <DashboardLayout>
       <PageHeader title={`Dashboard | ${title}`}>
-        <TitleLayout title={title} subtitle={subtitle} items={items}>
+        <TitleLayout
+          title={title}
+          subtitle={subtitle}
+          items={items}
+          toolbar={toolbar}
+        >
           {page}
         </TitleLayout>
       </PageHeader>

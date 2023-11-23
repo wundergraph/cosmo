@@ -30,7 +30,10 @@ module.exports = {
         sans: ["Inter", ...defaultTheme.fontFamily.sans],
       },
       colors: {
-        border: "hsl(var(--border))",
+        border: {
+          DEFAULT: "hsl(var(--border))",
+          emphasized: "hsl(var(--border-emphasized))",
+        },
         input: {
           DEFAULT: "hsl(var(--input))",
           active: "hsl(var(--input-active))",
@@ -56,11 +59,11 @@ module.exports = {
         },
         muted: {
           DEFAULT: "hsl(var(--muted), <alpha-value>)",
-          foreground: "hsl(var(--muted-foreground))",
+          foreground: "hsl(var(--muted-foreground), <alpha-value>)",
         },
         accent: {
           DEFAULT: "hsl(var(--accent), <alpha-value>)",
-          foreground: "hsl(var(--accent-foreground))",
+          foreground: "hsl(var(--accent-foreground), <alpha-value>)",
         },
         popover: {
           DEFAULT: "hsl(var(--popover))",

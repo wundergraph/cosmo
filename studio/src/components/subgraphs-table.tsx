@@ -68,29 +68,29 @@ export const SubgraphsTable = ({
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Name</TableHead>
-          <TableHead>Url</TableHead>
-          <TableHead>Last Published</TableHead>
-          <TableHead>Labels</TableHead>
+          <TableHead className="px-4">Name</TableHead>
+          <TableHead className="w-4/12 px-4">Url</TableHead>
+          <TableHead className="w-4/12 px-4 text-right">Labels</TableHead>
+          <TableHead className="w-2/12 px-4 text-right">
+            Last Published
+          </TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {subgraphs.map(({ name, routingURL, lastUpdatedAt, labels }) => {
           return (
-            <TableRow key={name}>
-              <TableCell className="font-medium">{name}</TableCell>
-              <TableCell>
+            <TableRow
+              key={name}
+              className="group py-1 even:bg-secondary/20 hover:bg-secondary/40"
+            >
+              <TableCell className="px-4 font-medium">{name}</TableCell>
+              <TableCell className="px-4 text-muted-foreground hover:text-current">
                 <Link target="_blank" rel="noreferrer" href={routingURL}>
                   {routingURL}
                 </Link>
               </TableCell>
-              <TableCell>
-                {lastUpdatedAt
-                  ? formatDistanceToNow(new Date(lastUpdatedAt))
-                  : "Never"}
-              </TableCell>
-              <TableCell className="flex items-center">
-                <div className="flex space-x-2">
+              <TableCell className="px-4">
+                <div className="flex justify-end space-x-2">
                   {labels.map(({ key, value }) => {
                     return (
                       <Badge variant="secondary" key={key + value}>
@@ -99,6 +99,13 @@ export const SubgraphsTable = ({
                     );
                   })}
                 </div>
+              </TableCell>
+              <TableCell className="px-4 text-right text-muted-foreground">
+                {lastUpdatedAt
+                  ? formatDistanceToNow(new Date(lastUpdatedAt), {
+                      addSuffix: true,
+                    })
+                  : "Never"}
               </TableCell>
             </TableRow>
           );

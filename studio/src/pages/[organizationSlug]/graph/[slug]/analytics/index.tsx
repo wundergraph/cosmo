@@ -19,8 +19,11 @@ import {
 } from "@/components/date-picker-with-range";
 import { EmptyState } from "@/components/empty-state";
 import { InfoTooltip } from "@/components/info-tooltip";
-import { GraphContext, getGraphLayout } from "@/components/layout/graph-layout";
-import { PageHeader } from "@/components/layout/head";
+import {
+  GraphContext,
+  GraphPageLayout,
+  getGraphLayout,
+} from "@/components/layout/graph-layout";
 import { TitleLayout } from "@/components/layout/title-layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -966,14 +969,15 @@ const OverviewToolbar = () => {
 
 AnalyticsPage.getLayout = (page) =>
   getGraphLayout(
-    <PageHeader title="Studio | Analytics">
-      <TitleLayout
-        title="Analytics"
-        subtitle="Comprehensive view into Federated GraphQL Performance"
-        toolbar={<AnalyticsToolbar tab="overview" />}
-      >
-        {page}
-      </TitleLayout>
-    </PageHeader>,
+    <GraphPageLayout
+      title="Analytics"
+      subtitle="Comprehensive view into Federated GraphQL Performance"
+      toolbar={<AnalyticsToolbar tab="overview" />}
+    >
+      {page}
+    </GraphPageLayout>,
+    {
+      title: "Analytics",
+    },
   );
 export default AnalyticsPage;

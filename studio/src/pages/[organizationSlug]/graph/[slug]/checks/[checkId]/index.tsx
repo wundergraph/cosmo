@@ -5,9 +5,11 @@ import {
 } from "@/components/check-badge-icon";
 import { ChecksToolbar } from "@/components/checks/toolbar";
 import { EmptyState } from "@/components/empty-state";
-import { GraphContext, getGraphLayout } from "@/components/layout/graph-layout";
-import { PageHeader } from "@/components/layout/head";
-import { TitleLayout } from "@/components/layout/title-layout";
+import {
+  GraphContext,
+  GraphPageLayout,
+  getGraphLayout,
+} from "@/components/layout/graph-layout";
 import { SchemaViewer, SchemaViewerActions } from "@/components/schema-viewer";
 import {
   AlertDialog,
@@ -378,15 +380,16 @@ const CheckOverviewPage: NextPageWithLayout = () => {
 
 CheckOverviewPage.getLayout = (page) =>
   getGraphLayout(
-    <PageHeader title="Studio | Checks">
-      <TitleLayout
-        title="Check Summary"
-        subtitle="A quick glance of the details for this check run"
-        toolbar={<ChecksToolbar tab="overview" />}
-      >
-        {page}
-      </TitleLayout>
-    </PageHeader>,
+    <GraphPageLayout
+      title="Check Summary"
+      subtitle="A quick glance of the details for this check run"
+      toolbar={<ChecksToolbar tab="overview" />}
+    >
+      {page}
+    </GraphPageLayout>,
+    {
+      title: "Check Summary",
+    },
   );
 
 export default CheckOverviewPage;

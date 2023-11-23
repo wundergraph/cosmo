@@ -1,5 +1,6 @@
 import { UserContext } from "@/components/app-provider";
 import { EmptyState } from "@/components/empty-state";
+import { getDashboardLayout } from "@/components/layout/dashboard-layout";
 import { getSettingsLayout } from "@/components/layout/settings-layout";
 import {
   EventsMeta,
@@ -589,12 +590,11 @@ const WebhooksPage: NextPageWithLayout = () => {
 };
 
 WebhooksPage.getLayout = (page) => {
-  return getSettingsLayout(
+  return getDashboardLayout(
     page,
     "Webhooks",
     "Configure webhooks for your organization",
     null,
-
     <NotificationToolbar tab="webhooks" />,
   );
 };

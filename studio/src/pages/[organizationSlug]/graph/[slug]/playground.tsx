@@ -1,4 +1,4 @@
-import { getGraphLayout } from "@/components/layout/graph-layout";
+import { GraphLayout, getGraphLayout } from "@/components/layout/graph-layout";
 import { PageHeader } from "@/components/layout/head";
 import { NextPageWithLayout } from "@/lib/page";
 import { GraphiQL } from "graphiql";
@@ -157,6 +157,10 @@ const PlaygroundPage: NextPageWithLayout = () => {
   );
 };
 
-PlaygroundPage.getLayout = getGraphLayout;
+PlaygroundPage.getLayout = (page: React.ReactNode) => {
+  return getGraphLayout(page, {
+    title: "Playground",
+  });
+};
 
 export default PlaygroundPage;

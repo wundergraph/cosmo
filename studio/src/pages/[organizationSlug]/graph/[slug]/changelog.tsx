@@ -1,14 +1,22 @@
 import { UserContext } from "@/components/app-provider";
 import { CompositionErrorsBanner } from "@/components/composition-errors-banner";
+import {
+  DatePickerWithRange,
+  DateRange,
+  DateRangePickerChangeHandler,
+} from "@/components/date-picker-with-range";
 import { DateRangePicker } from "@/components/date-range-picker";
 import { EmptyState } from "@/components/empty-state";
-import { getGraphLayout, GraphContext } from "@/components/layout/graph-layout";
-import { PageHeader } from "@/components/layout/head";
-import { TitleLayout } from "@/components/layout/title-layout";
+import {
+  getGraphLayout,
+  GraphContext,
+  GraphPageLayout,
+} from "@/components/layout/graph-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CLI } from "@/components/ui/cli";
 import { Loader } from "@/components/ui/loader";
+import { Toolbar } from "@/components/ui/toolbar";
 import { docsBaseURL } from "@/lib/constants";
 import { formatDateTime } from "@/lib/format-date";
 import { NextPageWithLayout } from "@/lib/page";
@@ -32,9 +40,8 @@ import { noCase } from "change-case";
 import { endOfDay, formatISO, startOfDay, subDays } from "date-fns";
 import { useRouter } from "next/router";
 import { useCallback, useContext, useEffect, useState } from "react";
-import { DateRange } from "react-day-picker";
 
-const Toolbar = () => {
+const ChangelogToolbar = () => {
   const router = useRouter();
 
   const dateRange = router.query.dateRange
@@ -46,10 +53,10 @@ const Toolbar = () => {
   const startDate = new Date(dateRange.from);
   const endDate = new Date(dateRange.to);
 
-  const onDateRangeChange = (val: DateRange) => {
+  const onDateRangeChange: DateRangePickerChangeHandler = ({ dateRange }) => {
     const stringifiedDateRange = JSON.stringify({
-      from: val.from as Date,
-      to: (val.to as Date) ?? (val.from as Date),
+      from: dateRange?.start as Date,
+      to: (dateRange?.end as Date) ?? (dateRange?.start as Date),
     });
 
     applyNewParams({
@@ -70,13 +77,13 @@ const Toolbar = () => {
   );
 
   return (
-    <div className="flex w-full justify-start border-b px-4 py-3 lg:px-8">
-      <DateRangePicker
-        selectedDateRange={{ from: startDate, to: endDate }}
-        onDateRangeChange={onDateRangeChange}
+    <Toolbar>
+      <DatePickerWithRange
+        dateRange={{ start: startDate, end: endDate }}
+        onChange={onDateRangeChange}
         align="start"
       />
-    </div>
+    </Toolbar>
   );
 };
 
@@ -393,15 +400,16 @@ const ChangelogPage: NextPageWithLayout = () => {
 
 ChangelogPage.getLayout = (page) =>
   getGraphLayout(
-    <PageHeader title="Studio | Changelog">
-      <TitleLayout
-        title="Changelog"
-        subtitle="Keep track of changes made to your federated graph"
-        toolbar={<Toolbar />}
-      >
-        {page}
-      </TitleLayout>
-    </PageHeader>,
+    <GraphPageLayout
+      title="Changelog"
+      subtitle="Keep track of changes made to your federated graph"
+      toolbar={<ChangelogToolbar />}
+    >
+      {page}
+    </GraphPageLayout>,
+    {
+      title: "Changelog",
+    },
   );
 
 export default ChangelogPage;

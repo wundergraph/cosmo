@@ -11,7 +11,10 @@ import {
 } from "@radix-ui/react-icons";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/router";
-import { getFederatedGraphByName } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+import {
+  getFederatedGraphByName,
+  getFederatedGraphs,
+} from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { GetFederatedGraphByNameResponse } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { ReactNode, createContext, useContext, useMemo } from "react";
 import { PiGitBranch } from "react-icons/pi";
@@ -22,6 +25,17 @@ import { LayoutProps } from "./layout";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { UserContext } from "../app-provider";
 import { SideNav, NavLink } from "./sidenav";
+import { PageHeader } from "./head";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
+import { cn } from "@/lib/utils";
 
 const icons: { [key: string]: ReactNode } = {
   Overview: <HomeIcon />,
@@ -43,7 +57,7 @@ export const GraphContext = createContext<GraphContextProps | undefined>(
   undefined,
 );
 
-const GraphLayout = ({ children }: LayoutProps) => {
+export const GraphLayout = ({ children }: LayoutProps) => {
   const router = useRouter();
   const organizationSlug = router.query.organizationSlug as string;
   const slug = router.query.slug as string;
@@ -142,6 +156,102 @@ const GraphLayout = ({ children }: LayoutProps) => {
   );
 };
 
-export const getGraphLayout = (page: React.ReactNode) => {
-  return <GraphLayout>{page}</GraphLayout>;
+export const GraphSelect = () => {
+  const { data } = useQuery(getFederatedGraphs.useQuery());
+
+  const router = useRouter();
+  const slug = router.query.slug as string;
+  const organizationSlug = router.query.organizationSlug as string;
+  if (router.pathname.split("/")[2] !== "graph") return null;
+
+  return (
+    <Select
+      value={slug}
+      onValueChange={(gID) => router.push(`/${organizationSlug}/graph/${gID}`)}
+    >
+      <SelectTrigger
+        value={slug}
+        className="flex h-8 gap-x-2 border-0 bg-transparent pl-3 pr-1 text-muted-foreground shadow-none data-[state=open]:bg-accent data-[state=open]:text-accent-foreground hover:bg-accent hover:text-accent-foreground focus:ring-0"
+      >
+        <SelectValue aria-label={slug}>{slug}</SelectValue>
+      </SelectTrigger>
+      <SelectContent className="min-w-[200px]">
+        {data?.graphs?.map(({ name }) => {
+          return (
+            <SelectItem key={name} value={name}>
+              {name}
+            </SelectItem>
+          );
+        })}
+      </SelectContent>
+    </Select>
+  );
+};
+
+export const getGraphLayout = (page: React.ReactNode, { title }: any = {}) => {
+  return (
+    <GraphLayout>
+      <PageHeader title={`${title} | Studio`}>{page}</PageHeader>
+    </GraphLayout>
+  );
+};
+
+export interface TitleLayoutProps {
+  breadcrumbs?: React.ReactNode[];
+  title: React.ReactNode;
+  subtitle: string;
+  items?: React.ReactNode;
+  toolbar?: React.ReactNode;
+  noPadding?: boolean;
+  children?: React.ReactNode;
+}
+
+export const GraphPageLayout = ({
+  title,
+  breadcrumbs,
+  items,
+  toolbar,
+  noPadding,
+  children,
+}: TitleLayoutProps) => {
+  const breadcrumb = (
+    <div className="-ml-2 flex flex-row items-center space-x-2 text-sm">
+      <GraphSelect /> <span className="text-muted-foreground">/</span>
+      {breadcrumbs?.map((b) => (
+        <>
+          <span className="text-muted-foreground hover:text-current">{b}</span>
+          <span className="text-muted-foreground">/</span>
+        </>
+      ))}
+      <h1 className="whitespace-nowrap font-medium">{title}</h1>
+    </div>
+  );
+
+  return (
+    <div className="flex h-screen flex-col">
+      <div className="bg-background">
+        <div
+          className={cn(
+            "flex flex-col justify-between gap-y-4 px-4 pb-2 pt-4 lg:flex-row lg:items-center lg:px-8",
+            {
+              "border-b": !toolbar,
+              "pb-4": !toolbar,
+            },
+          )}
+        >
+          {breadcrumb}
+          {items}
+        </div>
+        {toolbar}
+      </div>
+      <div
+        className={cn(
+          "h-auto flex-1 overflow-y-auto",
+          noPadding !== true && "px-4 py-6 lg:px-8",
+        )}
+      >
+        {children}
+      </div>
+    </div>
+  );
 };

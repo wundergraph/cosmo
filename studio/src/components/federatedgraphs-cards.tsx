@@ -158,7 +158,7 @@ const MigrationDialog = ({
           "h-52": !isEmptyState,
         })}
       >
-        <Card className="flex h-full flex-col justify-center gap-y-2  p-4 group-hover:border-ring dark:hover:border-input">
+        <Card className="flex h-full flex-col justify-center gap-y-2 bg-transparent p-4 group-hover:border-ring dark:hover:border-input-active ">
           <div className="flex items-center justify-center gap-x-5">
             <SiApollographql className="h-10 w-10" />
             <ChevronDoubleRightIcon className="animation h-8 w-8" />
@@ -444,8 +444,8 @@ const GraphCard = ({ graph }: { graph: FederatedGraph }) => {
       href={`/${user?.currentOrganization?.slug}/graph/${graph.name}`}
       className="project-list-item group"
     >
-      <Card className="flex h-full flex-col py-4 group-hover:border-ring dark:group-hover:border-input">
-        <div className="h-20 pb-6">
+      <Card className="flex h-full flex-col py-4 transition-all group-hover:border-ring dark:group-hover:border-input-active">
+        <div className="pointer-events-none -mx-1.5 h-20 pb-6">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data}>
               <Line
@@ -508,14 +508,6 @@ const GraphCard = ({ graph }: { graph: FederatedGraph }) => {
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
-          <style global jsx>{`
-            /* Enforce a cursor pointer on the sparkline */
-            .project-list-item
-              .recharts-responsive-container
-              .recharts-wrapper {
-              cursor: pointer !important;
-            }
-          `}</style>
         </div>
       </Card>
     </Link>

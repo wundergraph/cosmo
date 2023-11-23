@@ -41,7 +41,7 @@ export const UserMenu = () => {
         <div className="flex flex-row px-2 text-sm">
           <Avatar className="h-6 w-6 cursor-pointer">
             {/* <AvatarImage alt={user.email} /> */}
-            <AvatarFallback className="rounded-full bg-gradient-to-r from-indigo-500 to-pink-500 text-xs">
+            <AvatarFallback className="rounded-full bg-gradient-to-r from-indigo-500 to-pink-500 text-xs text-white">
               {user.email[0]}
             </AvatarFallback>
           </Avatar>

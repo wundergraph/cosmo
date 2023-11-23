@@ -17,6 +17,7 @@ import { useSessionStorage } from "@/hooks/use-session-storage";
 import { ChevronDownIcon } from "@heroicons/react/24/outline";
 import { UpdateIcon } from "@radix-ui/react-icons";
 import {
+  Table as TableInstance,
   ColumnFiltersState,
   PaginationState,
   Row,
@@ -38,14 +39,13 @@ import {
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { formatISO, subHours } from "date-fns";
 import { useRouter } from "next/router";
-import { useMemo, useState } from "react";
+import { useImperativeHandle, useMemo, useState } from "react";
 import useDeepCompareEffect from "use-deep-compare-effect";
 import {
   DatePickerWithRange,
   DateRange,
   DateRangePickerChangeHandler,
   Range,
-  getRange,
 } from "../date-picker-with-range";
 import { Loader } from "../ui/loader";
 import { DataTableGroupMenu } from "./data-table-group-menu";
@@ -56,9 +56,10 @@ import { getDataTableFilters } from "./getDataTableFilters";
 import { RefreshInterval, refreshIntervals } from "./refresh-interval";
 import { useApplyParams } from "./use-apply-params";
 import { getDefaultSort, useSyncTableWithQuery } from "./useSyncTableWithQuery";
-import { useAnalyticsQueryState } from "./useAnalyticsQueryState";
+import { cn } from "@/lib/utils";
 
 export function AnalyticsDataTable<T>({
+  tableRef,
   data,
   columnsList,
   filters,
@@ -67,6 +68,7 @@ export function AnalyticsDataTable<T>({
   pageCount,
   refresh,
 }: {
+  tableRef?: React.Ref<TableInstance<T>>;
   data: T[];
   columnsList: AnalyticsViewColumn[];
   filters: Array<AnalyticsViewResultFilter>;
@@ -119,7 +121,7 @@ export function AnalyticsDataTable<T>({
 
   const [{ pageIndex, pageSize }, setPagination] = useState<PaginationState>({
     pageIndex: 0,
-    pageSize: 10,
+    pageSize: 20,
   });
 
   const pagination = useMemo(
@@ -201,6 +203,8 @@ export function AnalyticsDataTable<T>({
     },
   });
 
+  useImperativeHandle(tableRef, () => table, [tableRef]);
+
   const onGroupChange = (val: AnalyticsViewGroupName) => {
     applyNewParams(
       {
@@ -281,17 +285,12 @@ export function AnalyticsDataTable<T>({
 
     switch (selectedGroup) {
       case AnalyticsViewGroupName.None: {
-        const { slug } = router.query;
-        const { organizationSlug } = router.query;
-
         // Save the current route in sessionStorage so we can go back to it
         setRouteCache(router.query);
 
-        router.push(
-          `/${organizationSlug}/graph/${slug}/analytics/${row.getValue(
-            "traceId",
-          )}`,
-        );
+        applyNewParams({
+          traceID: row.getValue("traceId"),
+        });
         return;
       }
       case AnalyticsViewGroupName.Client: {
@@ -419,7 +418,10 @@ export function AnalyticsDataTable<T>({
                 key={row.id}
                 data-state={row.getIsSelected() && "selected"}
                 onClick={() => relinkTable(row)}
-                className="cursor-pointer hover:bg-secondary/50"
+                className={cn("group cursor-pointer hover:bg-secondary/30", {
+                  "bg-secondary/50":
+                    row.original.traceId === router.query.traceID,
+                })}
               >
                 {row.getVisibleCells().map((cell) => (
                   <TableCell key={cell.id}>

@@ -1,8 +1,9 @@
 import { FieldUsageSheet } from "@/components/analytics/field-usage";
 import { EmptyState } from "@/components/empty-state";
-import { getGraphLayout } from "@/components/layout/graph-layout";
-import { PageHeader } from "@/components/layout/head";
-import { TitleLayout } from "@/components/layout/title-layout";
+import {
+  GraphPageLayout,
+  getGraphLayout,
+} from "@/components/layout/graph-layout";
 import { SchemaToolbar } from "@/components/schema/toolbar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,6 +15,12 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
+import { Kbd } from "@/components/ui/kbd";
 import { Loader } from "@/components/ui/loader";
 import {
   Select,
@@ -65,7 +72,8 @@ import { useCommandState } from "cmdk";
 import { GraphQLSchema } from "graphql";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { Dispatch, SetStateAction, useEffect, useState } from "react";
+import { Dispatch, SetStateAction, useEffect, useMemo, useState } from "react";
+import { FiEye } from "react-icons/fi";
 
 const TypeLink = ({
   name,
@@ -135,22 +143,16 @@ const Fields = (props: {
       <TableHeader>
         <TableRow>
           <TableHead className="w-3/12">Field</TableHead>
-          {(hasArgs || hasDetails) && (
-            <TableHead className="w-8/12 lg:w-7/12 2xl:w-8/12">
-              Details
-            </TableHead>
-          )}
+          {(hasArgs || hasDetails) && <TableHead>Details</TableHead>}
           {hasUsage && (
-            <TableHead className="w-1/12 lg:w-2/12 2xl:w-1/12">
-              Actions
-            </TableHead>
+            <TableHead className="w-2/12 text-right lg:w-3/12 2xl:w-2/12" />
           )}
         </TableRow>
       </TableHeader>
       <TableBody>
         {props.fields.map((field) => (
           <TableRow
-            className="py-1 even:bg-secondary/30 hover:bg-transparent even:hover:bg-secondary/30"
+            className="group py-1 even:bg-secondary/20 hover:bg-secondary/40"
             key={field.name}
           >
             <TableCell className="align-top font-semibold">
@@ -172,65 +174,71 @@ const Fields = (props: {
               </p>
             </TableCell>
             {(hasDetails || hasArgs) && (
-              <TableCell
-                className={cn("flex flex-col py-4", {
-                  "gap-y-4": hasDetails && field.args && field.args.length > 0,
-                })}
-              >
-                {(!field.args || field.args?.length === 0) && !hasDetails && (
-                  <span>-</span>
-                )}
-                {hasDetails && (
-                  <p className="text-muted-foreground">{field.description}</p>
-                )}
-                {field.args && (
-                  <div className="flex flex-col gap-y-2">
-                    {field.args.map((arg) => {
-                      return (
-                        <div
-                          key={arg.name}
-                          className="flex flex-wrap items-center gap-x-1"
-                        >
-                          <Tooltip
-                            delayDuration={200}
-                            open={
-                              !arg.description && !arg.deprecationReason
-                                ? false
-                                : undefined
-                            }
+              <TableCell>
+                <div
+                  className={cn("flex flex-col", {
+                    "gap-y-4":
+                      hasDetails && field.args && field.args.length > 0,
+                  })}
+                >
+                  {(!field.args || field.args?.length === 0) && !hasDetails && (
+                    <span>-</span>
+                  )}
+                  {hasDetails && (
+                    <p className="text-muted-foreground group-hover:text-current">
+                      {field.description}
+                    </p>
+                  )}
+                  {field.args && (
+                    <div className="flex flex-col gap-y-2">
+                      {field.args.map((arg) => {
+                        return (
+                          <div
+                            key={arg.name}
+                            className="flex flex-wrap items-center gap-x-1"
                           >
-                            <TooltipTrigger>
-                              <Badge variant="secondary">{arg.name}</Badge>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <div className="flex w-96 flex-col gap-y-4">
-                                {arg.description && <p>{arg.description}</p>}
-                                {arg.deprecationReason && (
-                                  <p className="flex flex-col items-start gap-x-1">
-                                    <span className="flex items-center gap-x-1 font-semibold">
-                                      <ExclamationTriangleIcon className="h-3 w-3 flex-shrink-0" />
-                                      Deprecated
-                                    </span>{" "}
-                                    {arg.deprecationReason}
-                                  </p>
-                                )}
-                              </div>
-                            </TooltipContent>
-                          </Tooltip>
-                          <TypeLink ast={props.ast} name={`: ${arg.type}`} />
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
+                            <Tooltip
+                              delayDuration={200}
+                              open={
+                                !arg.description && !arg.deprecationReason
+                                  ? false
+                                  : undefined
+                              }
+                            >
+                              <TooltipTrigger>
+                                <Badge variant="secondary">{arg.name}</Badge>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <div className="flex w-96 flex-col gap-y-4">
+                                  {arg.description && <p>{arg.description}</p>}
+                                  {arg.deprecationReason && (
+                                    <p className="flex flex-col items-start gap-x-1">
+                                      <span className="flex items-center gap-x-1 font-semibold">
+                                        <ExclamationTriangleIcon className="h-3 w-3 flex-shrink-0" />
+                                        Deprecated
+                                      </span>{" "}
+                                      {arg.deprecationReason}
+                                    </p>
+                                  )}
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
+                            <TypeLink ast={props.ast} name={`: ${arg.type}`} />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               </TableCell>
             )}
             {hasUsage && (
-              <TableCell className="align-top text-primary">
+              <TableCell className="text-right align-top">
                 <Button
                   onClick={() => openUsage(field.name)}
-                  className="p-0"
-                  variant="link"
+                  variant="ghost"
+                  size="sm"
+                  className="table-action"
                 >
                   View usage
                 </Button>
@@ -352,25 +360,28 @@ const TypeWrapper = ({ ast }: { ast: GraphQLSchema }) => {
                   Description
                 </TableHead>
                 {hasUsage && (
-                  <TableHead className="w-1/12 lg:w-2/12 2xl:w-1/12">
-                    Actions
-                  </TableHead>
+                  <TableHead className="w-2/12 text-right lg:w-3/12 2xl:w-2/12" />
                 )}
               </TableRow>
             </TableHeader>
             <TableBody>
               {list.map((l) => (
-                <TableRow key={l.name}>
+                <TableRow
+                  key={l.name}
+                  className="group py-1 even:bg-secondary/20 hover:bg-secondary/40"
+                >
                   <TableCell>
                     <TypeLink ast={ast} name={l.name} />
                   </TableCell>
-                  <TableCell>{l.description || "-"}</TableCell>
+                  <TableCell className="text-muted-foreground group-hover:text-current">
+                    {l.description || "-"}
+                  </TableCell>
                   {hasUsage && (
-                    <TableCell className="align-top text-primary">
+                    <TableCell className="text-right align-top">
                       <Button
                         onClick={() => openUsage(l.name)}
-                        className="p-0"
-                        variant="link"
+                        variant="ghost"
+                        size="sm"
                       >
                         View usage
                       </Button>
@@ -514,14 +525,10 @@ const SearchType = ({
 
 const Toolbar = ({ ast }: { ast: GraphQLSchema | null }) => {
   const router = useRouter();
-  const [selectedCategory, setSelectedCategory] = useState("query");
+  const selectedCategory = (router.query.category as string) ?? "query";
   const [open, setOpen] = useState(false);
 
   const typeCounts = ast ? getTypeCounts(ast) : undefined;
-
-  useEffect(() => {
-    setSelectedCategory((router.query.category || "query") as string);
-  }, [router.query.category]);
 
   return (
     <SchemaToolbar tab="explorer">
@@ -535,10 +542,7 @@ const Toolbar = ({ ast }: { ast: GraphQLSchema | null }) => {
             className="gap-x-2 text-muted-foreground shadow-none"
           >
             <MagnifyingGlassIcon />
-            Search{" "}
-            <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
-              Cmd K
-            </kbd>
+            Search <Kbd>Cmd K</Kbd>
           </Button>
         </>
       )}
@@ -558,7 +562,7 @@ const Toolbar = ({ ast }: { ast: GraphQLSchema | null }) => {
           });
         }}
       >
-        <SelectTrigger className="flex-1 md:w-[200px] md:flex-none">
+        <SelectTrigger className="flex-1 md:w-[200px] md:flex-none xl:hidden">
           <SelectValue aria-label={selectedCategory}>
             {sentenceCase(selectedCategory)}
           </SelectValue>
@@ -599,7 +603,11 @@ const Toolbar = ({ ast }: { ast: GraphQLSchema | null }) => {
 
 const SchemaExplorerPage: NextPageWithLayout = () => {
   const router = useRouter();
+
+  const organizationSlug = router.query.organizationSlug as string;
   const graphName = router.query.slug as string;
+  const selectedCategory = router.query.category as string;
+  const typename = router.query.typename as string;
 
   const { data, isLoading, error, refetch } = useQuery(
     getFederatedGraphSDLByName.useQuery({
@@ -607,36 +615,128 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
     }),
   );
 
-  const ast = parseSchema(data?.sdl);
+  const ast = useMemo(() => parseSchema(data?.sdl), [data?.sdl]);
+
+  const typeCounts = ast ? getTypeCounts(ast) : undefined;
+
+  let title = "Schema";
+  let breadcrumbs = [];
+  if (selectedCategory) {
+    title = sentenceCase(selectedCategory);
+    breadcrumbs.push(
+      <Link href={`/${organizationSlug}/graph/${graphName}/schema`}>
+        Schema
+      </Link>,
+    );
+  }
+
+  if (typename) {
+    title = sentenceCase(typename);
+    breadcrumbs.push(
+      <Link
+        href={`/${organizationSlug}/graph/${graphName}/schema?category=${selectedCategory}`}
+      >
+        {sentenceCase(selectedCategory)}
+      </Link>,
+    );
+  }
 
   return (
-    <PageHeader title="Studio | SDL">
-      <TitleLayout
-        title="Schema Explorer"
-        subtitle="Explore schema and field level metrics of your federated graph"
-        toolbar={<Toolbar ast={ast} />}
-      >
-        {isLoading && <Loader fullscreen />}
-        {!isLoading &&
-          (error || data?.response?.code !== EnumStatusCode.OK || !ast) && (
-            <EmptyState
-              icon={<ExclamationTriangleIcon />}
-              title="Could not retrieve schema"
-              description={
-                data?.response?.details ||
-                error?.message ||
-                "Please try again. The schema might be invalid or does not exist"
-              }
-              actions={<Button onClick={() => refetch()}>Retry</Button>}
-            />
-          )}
-        {ast && <TypeWrapper ast={ast} />}
-        <FieldUsageSheet />
-      </TitleLayout>
-    </PageHeader>
+    <GraphPageLayout
+      title={title}
+      breadcrumbs={breadcrumbs}
+      subtitle="Explore schema and field level metrics of your federated graph"
+      toolbar={<Toolbar ast={ast} />}
+      noPadding
+    >
+      <div className="flex h-full flex-row">
+        <div className="hidden h-full min-w-[200px] max-w-[240px] overflow-y-auto border-r py-2 scrollbar-thin xl:block">
+          <div className="flex flex-col items-stretch gap-2 px-4 py-4 lg:px-6">
+            {graphqlRootCategories.map((category) => (
+              <Button
+                key={category}
+                asChild
+                variant="ghost"
+                className={cn("justify-start px-3", {
+                  "bg-accent text-accent-foreground":
+                    selectedCategory === category,
+                })}
+              >
+                <Link
+                  href={`/${organizationSlug}/graph/${graphName}/schema?category=${category}&typename=${sentenceCase(
+                    category,
+                  )}`}
+                >
+                  {sentenceCase(category)}
+                  {typeCounts && (
+                    <Badge
+                      variant="secondary"
+                      className="ml-auto bg-accent/50 px-1.5"
+                    >
+                      {typeCounts[category]}
+                    </Badge>
+                  )}
+                </Link>
+              </Button>
+            ))}
+          </div>
+          <Separator className="my-2" />
+          <div className="flex flex-col items-stretch gap-2 px-4 py-4 lg:px-8">
+            {graphqlTypeCategories.map((gType) => {
+              return (
+                <Button
+                  key={gType}
+                  asChild
+                  variant="ghost"
+                  className={cn("justify-start px-3", {
+                    "bg-accent text-accent-foreground":
+                      selectedCategory === gType,
+                  })}
+                >
+                  <Link
+                    href={`/${organizationSlug}/graph/${graphName}/schema?category=${gType}`}
+                  >
+                    <span>{sentenceCase(gType)}</span>
+                    {typeCounts && (
+                      <Badge
+                        variant="secondary"
+                        className="ml-auto bg-accent/50 px-1.5"
+                      >
+                        {typeCounts[gType]}
+                      </Badge>
+                    )}
+                  </Link>
+                </Button>
+              );
+            })}
+          </div>
+        </div>
+        <div className="flex-1 overflow-y-auto px-4 py-4 scrollbar-thin lg:px-8">
+          {isLoading && <Loader fullscreen />}
+          {!isLoading &&
+            (error || data?.response?.code !== EnumStatusCode.OK || !ast) && (
+              <EmptyState
+                icon={<ExclamationTriangleIcon />}
+                title="Could not retrieve schema"
+                description={
+                  data?.response?.details ||
+                  error?.message ||
+                  "Please try again. The schema might be invalid or does not exist"
+                }
+                actions={<Button onClick={() => refetch()}>Retry</Button>}
+              />
+            )}
+          {ast && <TypeWrapper ast={ast} />}
+          <FieldUsageSheet />
+        </div>
+      </div>
+    </GraphPageLayout>
   );
 };
 
-SchemaExplorerPage.getLayout = (page) => getGraphLayout(page);
+SchemaExplorerPage.getLayout = (page) =>
+  getGraphLayout(page, {
+    title: "Schema Explorer",
+  });
 
 export default SchemaExplorerPage;

@@ -1,10 +1,10 @@
 import { UserContext } from "@/components/app-provider";
 import { EmptyState } from "@/components/empty-state";
-import { getSettingsLayout } from "@/components/layout/settings-layout";
+import { getDashboardLayout } from "@/components/layout/dashboard-layout";
 import {
   EventsMeta,
   Meta,
-  NotificationTabs,
+  NotificationToolbar,
   notificationEvents,
 } from "@/components/notifications/components";
 import { Badge } from "@/components/ui/badge";
@@ -724,13 +724,12 @@ const IntegrationsPage: NextPageWithLayout = () => {
 };
 
 IntegrationsPage.getLayout = (page) => {
-  return getSettingsLayout(
-    <div className="flex flex-col gap-y-4">
-      <NotificationTabs tab="integrations" />
-      <>{page}</>
-    </div>,
+  return getDashboardLayout(
+    page,
     "Integrations",
     "Configure integrations for your organization",
+    undefined,
+    <NotificationToolbar tab="integrations" />,
   );
 };
 

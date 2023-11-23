@@ -52,6 +52,7 @@
     --card-foreground: var(--gray-950);
 
     --border: var(--gray-100);
+    --border-emphasized: var(--gray-200);
     --input: var(--gray-100);
     --input-active: var(--gray-200);
 
@@ -95,6 +96,7 @@
     --card-foreground: var(--gray-50);
 
     --border: var(--gray-850);
+    --border-emphasized: var(--gray-700);
     --input: var(--gray-850);
     --input-active: var(--gray-800);
 
@@ -113,7 +115,7 @@
     --success: 142 76% 36%;
     --success-foreground: 0 85.7% 97.3%;
 
-    --ring: 217.2 32.6% 17.5%;
+    --ring: var(--gray-400);
 
     --chart-primary-gradient: 200, 100%, 15%;
   }
@@ -131,6 +133,9 @@
   }
   body {
     @apply scrollbar-custom bg-background text-foreground;
+  }
+  .table-action {
+    @apply border border-transparent group-hover:border group-hover:border-border group-hover:bg-background data-[state=open]:border data-[state=open]:border-border data-[state=open]:bg-background group-hover:hover:bg-accent/50;
   }
 }
 

@@ -139,7 +139,7 @@ export const NotificationToolbar = ({ tab }: { tab: NotificationTab }) => {
           <TabsTrigger value="webhooks" asChild>
             <Link
               href={{
-                pathname: `/${router.query.organizationSlug}/settings/webhooks`,
+                pathname: `/${router.query.organizationSlug}/webhooks`,
               }}
               className="flex gap-x-[6px]"
             >
@@ -150,7 +150,7 @@ export const NotificationToolbar = ({ tab }: { tab: NotificationTab }) => {
           <TabsTrigger value="integrations" asChild>
             <Link
               href={{
-                pathname: `/${router.query.organizationSlug}/settings/integrations`,
+                pathname: `/${router.query.organizationSlug}/integrations`,
               }}
               className="flex gap-x-2"
             >

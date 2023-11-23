@@ -1,6 +1,6 @@
 import { UserContext } from "@/components/app-provider";
 import { EmptyState } from "@/components/empty-state";
-import { getSettingsLayout } from "@/components/layout/settings-layout";
+import { getDashboardLayout } from "@/components/layout/dashboard-layout";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -315,7 +315,7 @@ const MembersPage: NextPageWithLayout = () => {
 };
 
 MembersPage.getLayout = (page) => {
-  return getSettingsLayout(
+  return getDashboardLayout(
     page,
     "Members",
     "Manage all the members of your organization",

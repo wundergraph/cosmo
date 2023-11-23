@@ -98,7 +98,7 @@ const formatColumnData = (data: string | number, type: Unit): ReactNode => {
               {formatInTimeZone(
                 Number(data) * 1000,
                 "UTC",
-                "MMM dd yyyy HH:mm:ss"
+                "MMM dd yyyy HH:mm:ss",
               )}
             </span>
           </TooltipTrigger>
@@ -161,19 +161,12 @@ const ActionsDropdown = ({
       <DropdownMenu>
         <div className="flex justify-center">
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon-sm" className="table-action">
               <EllipsisVerticalIcon className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
         </div>
         <DropdownMenuContent align="end">
-          <DropdownMenuLabel
-            onClick={(event) => {
-              event.stopPropagation();
-            }}
-          >
-            Actions
-          </DropdownMenuLabel>
           {actionColumns.map((action) => {
             return (
               <DropdownMenuItem
@@ -247,7 +240,7 @@ const DialogActions = ({
     <div
       className={cn(
         "flex w-full items-center gap-x-2 md:ml-auto md:w-auto",
-        className
+        className,
       )}
     >
       <Button variant="secondary" className="flex-1" onClick={() => copyText()}>
@@ -259,7 +252,7 @@ const DialogActions = ({
 };
 
 export const getColumnData = (
-  columnData: AnalyticsViewColumn[]
+  columnData: AnalyticsViewColumn[],
 ): ColumnDef<any>[] => {
   const actionColumns: AnalyticsViewColumn[] = [];
 
@@ -292,7 +285,7 @@ export const getColumnData = (
               className={cn(
                 "inline-flex items-center space-x-1 text-left",
                 config?.header?.className,
-                sortedProps?.className
+                sortedProps?.className,
               )}
             >
               <span>{each.title}</span>
@@ -318,14 +311,14 @@ export const getColumnData = (
         },
         filterFn: defaultFilterFn,
       } satisfies ColumnDef<any>;
-    })
+    }),
   );
 
   if (actionColumns.length) {
     const actionColumn: ColumnDef<any> = {
       id: "actions",
       enableHiding: false,
-      header: () => <div className="text-center">Actions</div>,
+      header: () => <div className="text-center"></div>,
       cell: ({ row }) => {
         const rowData = row.original;
 

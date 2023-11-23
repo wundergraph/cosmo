@@ -2,6 +2,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { GlobeIcon, ReaderIcon } from "@radix-ui/react-icons";
 import Link from "next/link";
 import { useRouter } from "next/router";
+import { Toolbar } from "../ui/toolbar";
 
 export const SchemaToolbar = ({
   tab,
@@ -18,7 +19,7 @@ export const SchemaToolbar = ({
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-2 border-b px-4 py-3 lg:px-8">
+    <Toolbar>
       <Tabs value={tab} className="w-full md:w-auto">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="explorer" asChild>
@@ -48,6 +49,6 @@ export const SchemaToolbar = ({
         </TabsList>
       </Tabs>
       {children}
-    </div>
+    </Toolbar>
   );
 };

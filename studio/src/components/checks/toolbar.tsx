@@ -6,6 +6,7 @@ import { useRouter } from "next/router";
 import { useCallback } from "react";
 import { PiBracketsCurlyBold } from "react-icons/pi";
 import { Button } from "../ui/button";
+import { Toolbar } from "../ui/toolbar";
 
 export const ChecksToolbar = ({
   tab,
@@ -35,7 +36,7 @@ export const ChecksToolbar = ({
   }, [checksRoute, router]);
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-2">
+    <Toolbar>
       <Button
         onClick={() => handleViewAll()}
         variant="link"
@@ -87,6 +88,6 @@ export const ChecksToolbar = ({
           </TabsTrigger>
         </TabsList>
       </Tabs>
-    </div>
+    </Toolbar>
   );
 };

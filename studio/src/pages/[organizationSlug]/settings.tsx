@@ -1,6 +1,5 @@
 import { UserContext } from "@/components/app-provider";
 import { getDashboardLayout } from "@/components/layout/dashboard-layout";
-import { getSettingsLayout } from "@/components/layout/settings-layout";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -1047,7 +1046,11 @@ const SettingsDashboardPage: NextPageWithLayout = () => {
 };
 
 SettingsDashboardPage.getLayout = (page) => {
-  return getSettingsLayout(page, "Settings", "Settings for this organization.");
+  return getDashboardLayout(
+    page,
+    "Settings",
+    "Settings for this organization.",
+  );
 };
 
 export default SettingsDashboardPage;

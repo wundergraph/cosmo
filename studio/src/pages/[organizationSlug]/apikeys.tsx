@@ -1,6 +1,6 @@
 import { UserContext } from "@/components/app-provider";
 import { EmptyState } from "@/components/empty-state";
-import { getSettingsLayout } from "@/components/layout/settings-layout";
+import { getDashboardLayout } from "@/components/layout/dashboard-layout";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -541,9 +541,7 @@ const APIKeysPage: NextPageWithLayout = () => {
                   rolesToBe: ["admin", "developer"],
                   userRoles: user?.currentOrganization.roles || [],
                 }) && (
-                  <TableHead className="flex items-center justify-center">
-                    Actions
-                  </TableHead>
+                  <TableHead className="flex items-center justify-center" />
                 )}
               </TableRow>
             </TableHeader>
@@ -610,7 +608,7 @@ const APIKeysPage: NextPageWithLayout = () => {
 };
 
 APIKeysPage.getLayout = (page) => {
-  return getSettingsLayout(
+  return getDashboardLayout(
     page,
     "API Keys",
     "Manage all the API keys of your organization",

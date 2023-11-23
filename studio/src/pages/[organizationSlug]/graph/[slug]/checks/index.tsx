@@ -3,10 +3,17 @@ import {
   getCheckIcon,
   isCheckSuccessful,
 } from "@/components/check-badge-icon";
+import {
+  DatePickerWithRange,
+  DateRangePickerChangeHandler,
+} from "@/components/date-picker-with-range";
 import { DateRangePicker } from "@/components/date-range-picker";
 import { EmptyState } from "@/components/empty-state";
-import { GraphContext, getGraphLayout } from "@/components/layout/graph-layout";
-import { PageHeader } from "@/components/layout/head";
+import {
+  GraphContext,
+  GraphPageLayout,
+  getGraphLayout,
+} from "@/components/layout/graph-layout";
 import { TitleLayout } from "@/components/layout/title-layout";
 import { Button } from "@/components/ui/button";
 import { CLI } from "@/components/ui/cli";
@@ -26,6 +33,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Toolbar } from "@/components/ui/toolbar";
 import { useSessionStorage } from "@/hooks/use-session-storage";
 import { docsBaseURL } from "@/lib/constants";
 import { formatDateTime } from "@/lib/format-date";
@@ -291,15 +299,15 @@ const ChecksPage: NextPageWithLayout = () => {
   );
 };
 
-const Toolbar = () => {
+const ChecksToolbar = () => {
   const router = useRouter();
 
   const { startDate, endDate } = useDateRange();
 
-  const onDateRangeChange = (val: DateRange) => {
+  const onDateRangeChange: DateRangePickerChangeHandler = ({ dateRange }) => {
     const stringifiedDateRange = JSON.stringify({
-      start: val.from as Date,
-      end: (val.to as Date) ?? (val.from as Date),
+      start: dateRange?.start as Date,
+      end: (dateRange?.end as Date) ?? (dateRange?.end as Date),
     });
 
     router.push({
@@ -311,26 +319,27 @@ const Toolbar = () => {
   };
 
   return (
-    <div className="flex flex-wrap items-center justify-start gap-2 border-b px-4 py-3 lg:px-8">
-      <DateRangePicker
-        selectedDateRange={{ from: startDate, to: endDate }}
-        onDateRangeChange={onDateRangeChange}
+    <Toolbar>
+      <DatePickerWithRange
+        dateRange={{ start: startDate, end: endDate }}
+        onChange={onDateRangeChange}
       />
-    </div>
+    </Toolbar>
   );
 };
 
 ChecksPage.getLayout = (page) =>
   getGraphLayout(
-    <PageHeader title="Studio | Checks">
-      <TitleLayout
-        title="Checks"
-        subtitle="A record of composition and schema checks"
-        toolbar={<Toolbar />}
-      >
-        {page}
-      </TitleLayout>
-    </PageHeader>,
+    <GraphPageLayout
+      title="Checks"
+      subtitle="A record of composition and schema checks"
+      toolbar={<ChecksToolbar />}
+    >
+      {page}
+    </GraphPageLayout>,
+    {
+      title: "Checks",
+    },
   );
 
 export default ChecksPage;
