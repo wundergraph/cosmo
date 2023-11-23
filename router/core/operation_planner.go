@@ -95,6 +95,7 @@ func (p *OperationPlanner) Plan(operation *ParsedOperation, clientInfo *ClientIn
 	if ok && cachedPlan != nil {
 		// re-use a prepared plan
 		opContext.preparedPlan = cachedPlan.(*planWithMetaData)
+		opContext.planCacheHit = true
 	} else {
 		// prepare a new plan using single flight
 		// this ensures that we only prepare the plan once for this operation ID

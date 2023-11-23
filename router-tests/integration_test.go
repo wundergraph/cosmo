@@ -219,8 +219,9 @@ func setupServerConfig(tb testing.TB, opts ...core.Option) (*core.Server, config
 		core.WithGraphApiToken(graphApiToken),
 		core.WithCDNURL(cfg.CDN.URL),
 		core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
-			EnableSingleFlight:   true,
-			EnableRequestTracing: true,
+			EnableSingleFlight:                     true,
+			EnableRequestTracing:                   true,
+			EnableExecutionPlanCacheResponseHeader: true,
 		}),
 	}
 	routerOpts = append(routerOpts, opts...)
@@ -276,6 +277,52 @@ func TestIntegration(t *testing.T) {
 		Body: "{ employees { id } }",
 	})
 	assert.JSONEq(t, result, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`)
+}
+
+func TestExecutionPlanCache(t *testing.T) {
+	server := setupServer(t)
+	result := sendData(server, []byte(`{"query":"query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}","variables": {"criteria": {"nationality": "GERMAN"}}}`))
+	assert.Equal(t, http.StatusOK, result.Result().StatusCode)
+	assert.Equal(t, "MISS", result.Header().Get("X-WG-Execution-Plan-Cache"))
+	assert.Equal(t, `{"data":{"findEmployees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"}},{"id":2,"details":{"forename":"Dustin","surname":"Deus"}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"}}]}}`, result.Body.String())
+
+	result2 := sendData(server, []byte(`{"query":"query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}","variables": {"criteria": {"nationality": "ENGLISH"}}}`))
+	assert.Equal(t, http.StatusOK, result2.Result().StatusCode)
+	assert.Equal(t, "HIT", result2.Header().Get("X-WG-Execution-Plan-Cache"))
+	assert.Equal(t, `{"data":{"findEmployees":[{"id":12,"details":{"forename":"David","surname":"Stutt"}}]}}`, result2.Body.String())
+
+	result3 := sendData(server, []byte(`{"query":"query Find($criteria: SearchInput! = { nationality: ENGLISH }) {findEmployees(criteria: $criteria){id details {forename surname}}}"}`))
+	assert.Equal(t, http.StatusOK, result3.Result().StatusCode)
+	assert.Equal(t, "HIT", result3.Header().Get("X-WG-Execution-Plan-Cache"))
+	assert.Equal(t, `{"data":{"findEmployees":[{"id":12,"details":{"forename":"David","surname":"Stutt"}}]}}`, result3.Body.String())
+}
+
+func TestInvalidVariablesNumber(t *testing.T) {
+	server := setupServer(t)
+	result := sendData(server, []byte(`{"query":"query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}","variables":1}`))
+	assert.Equal(t, http.StatusBadRequest, result.Result().StatusCode)
+	assert.Equal(t, `{"errors":[{"message":"variables value must not be a number"}],"data":null}`, result.Body.String())
+}
+
+func TestInvalidVariablesString(t *testing.T) {
+	server := setupServer(t)
+	result := sendData(server, []byte(`{"query":"query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}","variables":"1"}`))
+	assert.Equal(t, http.StatusBadRequest, result.Result().StatusCode)
+	assert.Equal(t, `{"errors":[{"message":"variables value must not be a string"}],"data":null}`, result.Body.String())
+}
+
+func TestInvalidVariablesBoolean(t *testing.T) {
+	server := setupServer(t)
+	result := sendData(server, []byte(`{"query":"query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}","variables":true}`))
+	assert.Equal(t, http.StatusBadRequest, result.Result().StatusCode)
+	assert.Equal(t, `{"errors":[{"message":"variables value must not be a boolean"}],"data":null}`, result.Body.String())
+}
+
+func TestInvalidVariablesArray(t *testing.T) {
+	server := setupServer(t)
+	result := sendData(server, []byte(`{"query":"query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}","variables":[]}`))
+	assert.Equal(t, http.StatusBadRequest, result.Result().StatusCode)
+	assert.Equal(t, `{"errors":[{"message":"variables value must not be an array"}],"data":null}`, result.Body.String())
 }
 
 func TestAnonymousQuery(t *testing.T) {

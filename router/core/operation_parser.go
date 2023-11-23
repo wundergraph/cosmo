@@ -17,7 +17,6 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/cdn"
 	"github.com/wundergraph/cosmo/router/internal/pool"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/astjson"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astnormalization"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astprinter"
@@ -176,12 +175,12 @@ func (p *OperationParser) parse(ctx context.Context, clientInfo *ClientInfo, bod
 		requestVariableBytes            []byte
 		persistedQueryVersion           []byte
 		persistedQuerySha256Hash        []byte
+		parseErr                        error
+		variablesValueType              jsonparser.ValueType
 	)
 
 	kit := p.getKit()
 	defer p.freeKit(kit)
-
-	var parseErr error
 
 	jsonparser.EachKey(body, func(i int, value []byte, valueType jsonparser.ValueType, err error) {
 		if err != nil {
@@ -196,6 +195,7 @@ func (p *OperationParser) parse(ctx context.Context, clientInfo *ClientInfo, bod
 				return
 			}
 		case parseOperationKeysVariablesIndex:
+			variablesValueType = valueType
 			requestVariableBytes = value
 		case parseOperationKeysOperationNameIndex:
 			requestOperationNameBytes = value
@@ -231,6 +231,36 @@ func (p *OperationParser) parse(ctx context.Context, clientInfo *ClientInfo, bod
 			}
 		}
 	}, parseOperationKeys...)
+
+	switch variablesValueType {
+	case jsonparser.Null, jsonparser.Unknown, jsonparser.Object, jsonparser.NotExist:
+	// valid, continue
+	case jsonparser.Array:
+		return nil, &inputError{
+			message:    "variables value must not be an array",
+			statusCode: http.StatusBadRequest,
+		}
+	case jsonparser.String:
+		return nil, &inputError{
+			message:    "variables value must not be a string",
+			statusCode: http.StatusBadRequest,
+		}
+	case jsonparser.Number:
+		return nil, &inputError{
+			message:    "variables value must not be a number",
+			statusCode: http.StatusBadRequest,
+		}
+	case jsonparser.Boolean:
+		return nil, &inputError{
+			message:    "variables value must not be a boolean",
+			statusCode: http.StatusBadRequest,
+		}
+	default:
+		return nil, &inputError{
+			message:    "variables value must be a JSON object",
+			statusCode: http.StatusBadRequest,
+		}
+	}
 
 	if parseErr != nil {
 		return nil, errors.WithStack(parseErr)
@@ -323,6 +353,16 @@ func (p *OperationParser) parse(ctx context.Context, clientInfo *ClientInfo, bod
 		requestOperationType = "subscription"
 	}
 
+	// set variables to empty object if they are null or not present
+	if requestVariableBytes == nil || bytes.Equal(requestVariableBytes, []byte("null")) {
+		requestVariableBytes = []byte("{}")
+	}
+
+	// set variables on doc input before normalization
+	// IMPORTANT: this is required for the normalization to work correctly!
+	// Normalization reads/rewrites/adds variables
+	kit.doc.Input.Variables = requestVariableBytes
+
 	// replace the operation name with a static name to avoid different IDs for the same operation
 	replaceOperationName := kit.doc.Input.AppendInputBytes(staticOperationName)
 	kit.doc.OperationDefinitions[operationDefinitionRef].Name = replaceOperationName
@@ -337,11 +377,6 @@ func (p *OperationParser) parse(ctx context.Context, clientInfo *ClientInfo, bod
 	if err != nil {
 		return nil, errors.WithStack(fmt.Errorf("failed to print normalized operation: %w", err))
 	}
-	// hash extracted variables
-	_, err = kit.keyGen.Write(kit.doc.Input.Variables)
-	if err != nil {
-		return nil, errors.WithStack(fmt.Errorf("failed to write variables: %w", err))
-	}
 	operationID := kit.keyGen.Sum64() // generate the operation ID
 	// print the operation with the original operation name
 	kit.doc.OperationDefinitions[operationDefinitionRef].Name = originalOperationNameRef
@@ -350,33 +385,14 @@ func (p *OperationParser) parse(ctx context.Context, clientInfo *ClientInfo, bod
 		return nil, errors.WithStack(fmt.Errorf("failed to print normalized operation: %w", err))
 	}
 
-	if requestVariableBytes == nil || bytes.Equal(requestVariableBytes, []byte("null")) {
-		requestVariableBytes = []byte("{}")
-	}
-
-	js := &astjson.JSON{}
-	err = js.ParseObject(requestVariableBytes)
-	if err != nil {
-		return nil, errors.WithStack(fmt.Errorf("failed to parse variables: %w", err))
-	}
-	if kit.doc.Input.Variables != nil {
-		extractedVariables, err := js.AppendObject(kit.doc.Input.Variables)
-		if err != nil {
-			return nil, errors.WithStack(fmt.Errorf("failed to append variables: %w", err))
-		}
-		js.MergeNodes(js.RootNode, extractedVariables)
-	}
-	merged := bytes.NewBuffer(make([]byte, 0, len(requestVariableBytes)+len(kit.doc.Input.Variables)))
-	err = js.PrintRoot(merged)
-	if err != nil {
-		return nil, errors.WithStack(fmt.Errorf("failed to print variables: %w", err))
-	}
+	variablesCopy := make([]byte, len(kit.doc.Input.Variables))
+	copy(variablesCopy, kit.doc.Input.Variables)
 
 	return &ParsedOperation{
 		ID:                       operationID,
 		Name:                     string(requestOperationNameBytes),
 		Type:                     requestOperationType,
-		Variables:                merged.Bytes(),
+		Variables:                variablesCopy,
 		NormalizedRepresentation: kit.normalizedOperation.String(),
 	}, nil
 }

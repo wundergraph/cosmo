@@ -68,7 +68,7 @@ func TestAuthentication(t *testing.T) {
 		req.Header.Set("Authorization", "Bearer invalid")
 		server.Server.Handler.ServeHTTP(rr, req)
 
-		assert.Equal(t, http.StatusOK, rr.Code)
+		assert.Equal(t, http.StatusUnauthorized, rr.Code)
 		assert.Equal(t, "", rr.Header().Get(xAuthenticatedByHeader))
 		assert.NotEqual(t, employeesExpectedData, rr.Body.String())
 	})
@@ -125,11 +125,11 @@ func TestAuthorization(t *testing.T) {
 	server, jwksServer := setupServerWithJWKS(t, nil, true)
 
 	t.Run("no token", func(t *testing.T) {
-		// Operations without token should work succeed
+		// Operations without token should fail
 		rr := httptest.NewRecorder()
 		req := httptest.NewRequest("POST", "/graphql", strings.NewReader(employeesQuery))
 		server.Server.Handler.ServeHTTP(rr, req)
-		assert.Equal(t, http.StatusOK, rr.Code)
+		assert.Equal(t, http.StatusUnauthorized, rr.Code)
 		assert.Equal(t, "", rr.Header().Get(xAuthenticatedByHeader))
 		assert.JSONEq(t, `{"errors":[{"message":"unauthorized"}],"data":null}`, rr.Body.String())
 	})
@@ -141,7 +141,7 @@ func TestAuthorization(t *testing.T) {
 		req.Header.Set("Authorization", "Bearer invalid")
 		server.Server.Handler.ServeHTTP(rr, req)
 
-		assert.Equal(t, http.StatusOK, rr.Code)
+		assert.Equal(t, http.StatusUnauthorized, rr.Code)
 		assert.Equal(t, "", rr.Header().Get(xAuthenticatedByHeader))
 		assertHasGraphQLErrors(t, rr)
 	})
@@ -229,7 +229,7 @@ func TestAuthenticationMultipleProviders(t *testing.T) {
 		req.Header.Set("Authorization", "Bearer invalid")
 		server.Server.Handler.ServeHTTP(rr, req)
 
-		assert.Equal(t, http.StatusOK, rr.Code)
+		assert.Equal(t, http.StatusUnauthorized, rr.Code)
 		assert.Equal(t, "", rr.Header().Get(xAuthenticatedByHeader))
 		assertHasGraphQLErrors(t, rr)
 	})

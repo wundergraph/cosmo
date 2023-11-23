@@ -722,8 +722,9 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	}
 
 	graphqlHandler := NewGraphQLHandler(HandlerOptions{
-		Executor: executor,
-		Log:      r.logger,
+		Executor:                               executor,
+		Log:                                    r.logger,
+		EnableExecutionPlanCacheResponseHeader: routerEngineConfig.Execution.EnableExecutionPlanCacheResponseHeader,
 	})
 
 	var metricStore *metric.Metrics

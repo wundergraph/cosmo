@@ -83,7 +83,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		if err != nil {
 			hasRequestError = true
 			requestLogger.Error(err.Error())
-			writeRequestErrors(r, graphql.RequestErrorsFromError(err), w, requestLogger)
+			writeRequestErrors(r, http.StatusUnauthorized, graphql.RequestErrorsFromError(err), w, requestLogger)
 			return
 		}
 		r = validatedReq
@@ -98,20 +98,20 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			switch {
 			case errors.As(err, &inputErr):
 				requestLogger.Error(inputErr.Error())
-				writeRequestErrors(r, graphql.RequestErrorsFromError(err), w, requestLogger)
+				writeRequestErrors(r, inputErr.StatusCode(), graphql.RequestErrorsFromError(err), w, requestLogger)
 			case errors.As(err, &reportErr):
 				report := reportErr.Report()
 				logInternalErrorsFromReport(reportErr.Report(), requestLogger)
-				writeRequestErrors(r, graphql.RequestErrorsFromOperationReport(*report), w, requestLogger)
+				writeRequestErrors(r, http.StatusOK, graphql.RequestErrorsFromOperationReport(*report), w, requestLogger)
 			case errors.As(err, &poNotFoundErr):
 				requestLogger.Debug("persisted operation not found",
 					zap.String("sha256Hash", poNotFoundErr.Sha256Hash()),
 					zap.String("clientName", poNotFoundErr.ClientName()))
-				writeRequestErrors(r, graphql.RequestErrorsFromError(errors.New(cdn.PersistedOperationNotFoundErrorCode)), w, requestLogger)
+				writeRequestErrors(r, http.StatusBadRequest, graphql.RequestErrorsFromError(errors.New(cdn.PersistedOperationNotFoundErrorCode)), w, requestLogger)
 
 			default: // If we have an unknown error, we log it and return an internal server error
 				requestLogger.Error(err.Error())
-				writeRequestErrors(r, graphql.RequestErrorsFromError(errInternalServer), w, requestLogger)
+				writeRequestErrors(r, http.StatusInternalServerError, graphql.RequestErrorsFromError(errInternalServer), w, requestLogger)
 			}
 			return
 		}
@@ -132,7 +132,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		if err != nil {
 			hasRequestError = true
 			requestLogger.Error("failed to plan operation", zap.Error(err))
-			writeRequestErrors(r, graphql.RequestErrorsFromError(errMsgOperationParseFailed), w, requestLogger)
+			writeRequestErrors(r, http.StatusBadRequest, graphql.RequestErrorsFromError(errMsgOperationParseFailed), w, requestLogger)
 			return
 		}
 		if traceOptions.ExcludePlannerStats {
