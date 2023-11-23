@@ -6,6 +6,7 @@ import {
   MinusIcon,
   PlusIcon,
 } from "@radix-ui/react-icons";
+import { sentenceCase } from "change-case";
 import { useState } from "react";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
@@ -21,17 +22,34 @@ const bigintE3 = BigInt(1e3);
 const bigintE2 = BigInt(1e2);
 const initialCollapsedSpanDepth = 4;
 
-export const FetchSpanNode = ({
-  span,
-  parentSpan,
+const Attribute = ({ name, value }: { name: string; value: any }) => {
+  return (
+    <TooltipProvider>
+      <Tooltip delayDuration={300}>
+        <TooltipTrigger>
+          <div className="flex items-center gap-x-1">
+            <span className="text-accent-foreground">{name}</span>{" "}
+            <span className="text-accent-foreground">=</span>{" "}
+            <span className="truncate text-accent-foreground/80">{value}</span>
+          </div>
+        </TooltipTrigger>
+        <TooltipContent>{value}</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+};
+
+export const FetchWaterfall = ({
+  fetch,
+  parentFetch,
   level,
   globalDuration,
   globalStartTime,
   isParentDetailsOpen,
   paneWidth,
 }: {
-  span: FetchNode;
-  parentSpan?: FetchNode;
+  fetch: FetchNode;
+  parentFetch?: FetchNode;
   level: number;
   globalDuration: bigint;
   globalStartTime: bigint;
@@ -40,16 +58,16 @@ export const FetchSpanNode = ({
 }) => {
   const [showDetails, setShowDetails] = useState(false);
 
-  const statusCode = span.outputTrace?.response?.statusCode ?? 0;
+  const statusCode = fetch.outputTrace?.response?.statusCode ?? 0;
 
-  const hasChildren = span.children && span.children.length > 0;
-  const parentChildrenCount = parentSpan?.children
-    ? parentSpan.children.length
+  const hasChildren = fetch.children && fetch.children.length > 0;
+  const parentChildrenCount = parentFetch?.children
+    ? parentFetch.children.length
     : 0;
 
   // Work with smaller units (picosecond) on numerator to circumvent bigint division
-  const elapsedDurationPs = BigInt(span.durationSinceStart!) * bigintE3;
-  const spanDurationPs = BigInt(span.durationLoad!) * bigintE3;
+  const elapsedDurationPs = BigInt(fetch.durationSinceStart!) * bigintE3;
+  const spanDurationPs = BigInt(fetch.durationLoad!) * bigintE3;
   const visualOffsetPercentage = Number(
     ((elapsedDurationPs / globalDuration) * bigintE2) / bigintE3,
   );
@@ -74,11 +92,11 @@ export const FetchSpanNode = ({
   };
 
   const [isError, setIsError] = useState<boolean>(
-    () => statusCode >= 400 || (!isOpen && hasChildrenError(span)),
+    () => statusCode >= 400 || (!isOpen && hasChildrenError(fetch)),
   );
 
   const getDurationOffset = () => {
-    const durationCharCount = (nsToTime(BigInt(span.durationLoad!)) as string)
+    const durationCharCount = (nsToTime(BigInt(fetch.durationLoad!)) as string)
       .length;
     if (visualWidthPercentage < 8 && durationCharCount < 9) {
       if (visualOffsetPercentage < 90) {
@@ -95,7 +113,7 @@ export const FetchSpanNode = ({
     setIsOpen((prevOpen) => {
       if (hasChildren) {
         if (prevOpen) {
-          setIsError(hasChildrenError(span));
+          setIsError(hasChildrenError(fetch));
         } else {
           setIsError(statusCode >= 400);
         }
@@ -153,123 +171,137 @@ export const FetchSpanNode = ({
                 {!hasChildren && <CubeIcon className="h-4 w-4 flex-shrink-0" />}
               </>
             </Button>
-            <button
-              type="button"
-              onClick={() => setShowDetails(!showDetails)}
-              className="flex flex-nowrap items-start gap-x-2 overflow-hidden rounded-md px-2 py-1 text-left text-sm group-hover:bg-accent group-hover:text-accent-foreground"
-            >
-              <TooltipProvider>
-                <Tooltip delayDuration={500}>
-                  <TooltipTrigger className="space-y-1">
-                    <div className="flex flex-col">
-                      <div className="flex items-center gap-x-1">
-                        {isError && (
-                          <ExclamationTriangleIcon className="mt-1 h-4 w-4 text-destructive" />
-                        )}
-                        <div className="flex flex-1 items-center gap-x-1.5 truncate font-medium">
-                          {span.dataSourceName || "-"}
-                          {statusCode ? <Badge>{statusCode}</Badge> : <div />}
+            {["parallel", "serial", "parallelListItem"].includes(fetch.type) ? (
+              <div className="-translate-y-px px-2.5 py-2 text-xs text-muted-foreground">
+                {sentenceCase(fetch.type)}
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowDetails(!showDetails)}
+                className="flex flex-nowrap items-start gap-x-2 overflow-hidden rounded-md px-2 py-1 text-left text-sm group-hover:bg-accent group-hover:text-accent-foreground"
+              >
+                <TooltipProvider>
+                  <Tooltip delayDuration={500}>
+                    <TooltipTrigger className="space-y-1">
+                      <div className="flex flex-col">
+                        <div className="flex items-center gap-x-1">
+                          {isError && (
+                            <ExclamationTriangleIcon className="mt-1 h-4 w-4 text-destructive" />
+                          )}
+                          <div className="flex flex-1 items-center gap-x-1.5 truncate font-medium">
+                            {fetch.dataSourceName}
+                            {statusCode ? <Badge>{statusCode}</Badge> : <div />}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    <div
-                      style={{
-                        width: `${paneWidth - level * 32 - 44}px`,
-                      }}
-                      className="truncate text-start text-xs"
-                    >
-                      <div className="text-xs text-muted-foreground">
-                        {span.type}
+                      <div
+                        style={{
+                          width: `${paneWidth - level * 32 - 44}px`,
+                        }}
+                        className="truncate text-start text-xs"
+                      >
+                        <div className="text-xs text-muted-foreground">
+                          {sentenceCase(fetch.type)}
+                        </div>
                       </div>
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent>{span.dataSourceName}</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {fetch.dataSourceName || "-"}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </button>
+            )}
           </div>
           <button
             type="button"
             onClick={() => setShowDetails(!showDetails)}
             className="group relative flex flex-1 items-center group-hover:brightness-90"
           >
-            <div className="absolute h-px w-full bg-input" />
-            <div
-              style={{
-                minWidth: "2px",
-                maxWidth: "500px !important",
-                width: `${visualWidthPercentage}%`,
-                left: `${visualOffsetPercentage}%`,
-                // backgroundColor: service?.color,
-              }}
-              className="z-8 absolute mx-2 h-3/5 max-h-6 rounded bg-primary/50"
-            />
-            <div
-              style={{
-                left: getDurationOffset(),
-              }}
-              className={cn("z-8 absolute bg-transparent text-xs", {
-                "px-2": visualWidthPercentage < 8,
-                "!text-white": visualWidthPercentage >= 8,
-              })}
-            >
-              {nsToTime(BigInt(span.durationLoad!))}
-            </div>
+            {!["parallel", "serial", "parallelListItem"].includes(
+              fetch.type,
+            ) && (
+              <>
+                <div className="absolute h-px w-full bg-input" />
+                <div
+                  style={{
+                    minWidth: "2px",
+                    maxWidth: "500px !important",
+                    width: `${visualWidthPercentage}%`,
+                    left: `${visualOffsetPercentage}%`,
+                  }}
+                  className="z-8 absolute mx-2 h-3/5 max-h-6 rounded bg-primary/50"
+                />
+                <div
+                  style={{
+                    left: getDurationOffset(),
+                  }}
+                  className={cn("z-8 absolute bg-transparent text-xs", {
+                    "px-2": visualWidthPercentage < 8,
+                    "!text-white": visualWidthPercentage >= 8,
+                  })}
+                >
+                  {nsToTime(BigInt(fetch.durationLoad!))}
+                </div>
+              </>
+            )}
           </button>
         </div>
-        {/* {showDetails && (
-          <div className="my-2 flex px-4 pr-6">
-            <div
-              style={{
-                width: `${paneWidth - level * 32}px`,
-              }}
-              className="flex flex-none flex-col gap-x-4 gap-y-1 overflow-hidden border-0 px-4 text-xs"
-            >
-              <Attribute key="spanID" name="spanID" value={span.spanID} />
+        {showDetails && (
+          <div className="my-2 grid grid-cols-3 gap-x-4 gap-y-1 overflow-hidden border-0 px-10 pr-6 text-xs">
+            {fetch.outputTrace && (
               <Attribute
-                key="timing"
-                name="startTime"
-                value={
-                  parentSpan
-                    ? nsToTime(span.timestamp - parentSpan.timestamp)
-                    : nsToTime(BigInt(0))
-                }
+                name="method"
+                value={fetch.outputTrace.request.method}
               />
-              {span.statusCode && (
-                <Attribute
-                  key="status"
-                  name="status"
-                  value={mapStatusCode[span.statusCode]}
-                />
-              )}
-            </div>
-            <div className="grid grow grid-cols-2 place-content-between gap-x-4 gap-y-1 overflow-hidden border-0 px-4 text-xs">
-              {span.statusMessage && (
-                <Attribute
-                  key="statusMessage"
-                  name="statusMessage"
-                  value={span.statusMessage}
-                />
-              )}
-              {Object.entries(span.attributes ?? {})
-                .sort((a, b) =>
-                  a[0].toUpperCase().localeCompare(b[0].toUpperCase()),
-                )
-                .filter(([key, value], _) => !!value)
-                .map(([key, value]) => {
-                  return <Attribute key={key} name={key} value={value} />;
-                })}
+            )}
+            {fetch.outputTrace && (
+              <Attribute
+                name="endpoint"
+                value={fetch.outputTrace.request.url}
+              />
+            )}
+
+            <Attribute
+              name="single flight used"
+              value={`${fetch.singleFlightUsed}`}
+            />
+            <Attribute
+              name="single flight shared response"
+              value={`${fetch.singleFlightSharedResponse}`}
+            />
+            <Attribute name="load skipped" value={`${fetch.loadSkipped}`} />
+
+            <div className="col-span-full mt-4 flex w-full justify-start px-1">
+              <div className="z-50 flex w-max items-center justify-end gap-8">
+                {fetch.outputTrace && (
+                  <Button variant="link" size="sm" className="flex-1 px-0">
+                    <span className="flex-shrink-0">View Headers</span>
+                  </Button>
+                )}
+                {(fetch.input || fetch.rawInput) && (
+                  <Button variant="link" size="sm" className="flex-1 px-0">
+                    <span className="flex-shrink-0">View Input</span>
+                  </Button>
+                )}
+                {fetch.output && (
+                  <Button variant="link" size="sm" className="flex-1 px-0">
+                    <span className="flex-shrink-0">View Output</span>
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
-        )} */}
+        )}
       </li>
       {hasChildren && isOpen && (
         <>
-          {span.children?.map((child) => (
-            <FetchSpanNode
+          {fetch.children?.map((child) => (
+            <FetchWaterfall
               key={child.id}
-              span={child}
-              parentSpan={span}
+              fetch={child}
+              parentFetch={fetch}
               level={level + 1}
               globalDuration={globalDuration}
               globalStartTime={globalStartTime}

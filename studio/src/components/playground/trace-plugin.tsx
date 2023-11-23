@@ -5,21 +5,31 @@ import {
   useExecutionContext,
 } from "@graphiql/react";
 import { useCallback, useContext, useEffect, useState } from "react";
+import { BiRename } from "react-icons/bi";
 import { LuNetwork } from "react-icons/lu";
 import { useMovable } from "react-move-hook";
-import { Edge, Node } from "reactflow";
+import { Edge, Node, ReactFlowProvider } from "reactflow";
 import { EmptyState } from "../empty-state";
 import { GraphContext } from "../layout/graph-layout";
 import { Card } from "../ui/card";
 import { CLI } from "../ui/cli";
 import { Loader } from "../ui/loader";
+import { Tabs, TabsList, TabsTrigger } from "../ui/tabs";
 import { FetchFlow } from "./fetch-flow";
-import { FetchSpanNode } from "./fetch-waterfall";
+import { FetchWaterfall } from "./fetch-waterfall";
 import { FetchNode } from "./types";
 
 const initialPaneWidth = 360;
 
-const TraceTree = ({ headers, response }: { headers: any; response: any }) => {
+const Trace = ({
+  view,
+  headers,
+  response,
+}: {
+  headers: any;
+  response: any;
+  view: "tree" | "waterfall";
+}) => {
   const [tree, setTree] = useState<FetchNode>();
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
@@ -215,7 +225,6 @@ const TraceTree = ({ headers, response }: { headers: any; response: any }) => {
       );
 
       const traceTree = parseJson(parsedResponse.extensions.trace);
-      console.log(traceTree);
       setTree(traceTree);
       setNodes(tempNodes);
       setEdges(tempEdges);
@@ -226,7 +235,25 @@ const TraceTree = ({ headers, response }: { headers: any; response: any }) => {
     }
   }, [response, graph?.subgraphs]);
 
-  if (tree) {
+  if (view === "waterfall" && tree) {
+    try {
+      const wgTraceHeader = JSON.parse(headers)["X-WG-TRACE"];
+      if (
+        typeof wgTraceHeader === "string" &&
+        wgTraceHeader.includes("exclude_load_stats")
+      ) {
+        return (
+          <EmptyState
+            icon={<LuNetwork />}
+            title="Cannot show waterfall view"
+            description="Please omit exclude_load_stats from the header and retry"
+          />
+        );
+      }
+    } catch {
+      return;
+    }
+
     return (
       <Card className="flex w-full flex-col overflow-hidden">
         <div className="scrollbar-custom relative resize-none overflow-x-auto">
@@ -255,8 +282,8 @@ const TraceTree = ({ headers, response }: { headers: any; response: any }) => {
           </div>
 
           <div className="pb-4 pr-4">
-            <FetchSpanNode
-              span={tree}
+            <FetchWaterfall
+              fetch={tree}
               level={1}
               globalDuration={globalDuration}
               globalStartTime={globalStartTime}
@@ -269,7 +296,11 @@ const TraceTree = ({ headers, response }: { headers: any; response: any }) => {
     );
   }
 
-  return <FetchFlow initialEdges={edges} initialNodes={nodes} />;
+  return (
+    <ReactFlowProvider>
+      <FetchFlow initialEdges={edges} initialNodes={nodes} />
+    </ReactFlowProvider>
+  );
 };
 
 const TracePlugin = () => {
@@ -280,16 +311,46 @@ const TracePlugin = () => {
 
   const executionContext = useExecutionContext();
 
-  const [headers] = useEditorState("header");
+  const [activeHeader] = useEditorState("header");
+
+  const [headers, setHeaders] = useState<string>();
+
+  useEffect(() => {
+    if (!response) return;
+    setHeaders(activeHeader);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [response]);
+
+  const [view, setView] = useState<"tree" | "waterfall">("tree");
 
   return (
     <div className="flex h-full flex-1 flex-col font-sans">
-      <div className="mb-4 text-2xl font-bold text-primary-foreground">
-        Request Trace
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-4 text-2xl font-bold text-primary-foreground">
+        <h1>Request Trace</h1>
+        <Tabs
+          defaultValue="tree"
+          className="w-max"
+          onValueChange={(v: any) => setView(v)}
+        >
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="tree">
+              <div className="flex items-center gap-x-2">
+                <LuNetwork />
+                Tree View
+              </div>
+            </TabsTrigger>
+            <TabsTrigger value="waterfall">
+              <div className="flex items-center gap-x-2">
+                <BiRename />
+                Waterfall View
+              </div>
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
       </div>
       {executionContext?.isFetching && <Loader fullscreen />}
       {response && headers && (
-        <TraceTree headers={headers} response={response} />
+        <Trace headers={headers} response={response} view={view} />
       )}
       {(!response || !headers) && !executionContext?.isFetching && (
         <EmptyState

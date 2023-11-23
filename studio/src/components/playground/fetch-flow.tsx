@@ -1,4 +1,6 @@
+import { nsToTime } from "@/lib/insights-helpers";
 import { cn } from "@/lib/utils";
+import { ArrowsPointingInIcon } from "@heroicons/react/24/outline";
 import { CheckCircledIcon, CrossCircledIcon } from "@radix-ui/react-icons";
 import { sentenceCase } from "change-case";
 import dagre from "dagre";
@@ -12,18 +14,20 @@ import ReactFlow, {
   EdgeProps,
   Handle,
   Node,
+  Panel,
   Position,
   addEdge,
   getBezierPath,
   useEdgesState,
+  useNodesInitialized,
   useNodesState,
+  useReactFlow,
 } from "reactflow";
 import "reactflow/dist/style.css";
 import { Badge } from "../ui/badge";
-import { Button } from "../ui/button";
+import { Button, buttonVariants } from "../ui/button";
 import { Separator } from "../ui/separator";
 import { FetchNode } from "./types";
-import { nsToTime } from "@/lib/insights-helpers";
 
 const dagreGraph = new dagre.graphlib.Graph();
 dagreGraph.setDefaultEdgeLabel(function () {
@@ -88,7 +92,7 @@ function CustomEdge({
   return (
     <>
       <BaseEdge path={edgePath} markerEnd={markerEnd} style={style} />
-      {data?.durationLoad && (
+      {data?.durationLoad && Number.isInteger(data?.durationLoad) && (
         <EdgeLabelRenderer>
           <div
             style={{
@@ -201,6 +205,8 @@ const ReactFlowFetchNode = ({ data }: Node<FetchNode>) => {
   );
 };
 
+const defaultZoom = { minZoom: 0.1, maxZoom: 1 };
+
 export function FetchFlow({
   initialNodes,
   initialEdges,
@@ -214,6 +220,9 @@ export function FetchFlow({
   );
   const [nodes, setNodes, onNodesChange] = useNodesState(layoutedNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(layoutedEdges);
+
+  const reactFlowInstance = useReactFlow();
+  const nodesInitialized = useNodesInitialized();
 
   const onConnect = useCallback(
     (params: Edge) =>
@@ -231,6 +240,13 @@ export function FetchFlow({
     setEdges(initialEdges);
   }, [initialNodes, initialEdges, setNodes, setEdges]);
 
+  useEffect(() => {
+    if (nodesInitialized) {
+      reactFlowInstance.fitView(defaultZoom);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nodesInitialized]);
+
   const nodeTypes = useMemo<any>(
     () => ({ fetch: ReactFlowFetchNode, multi: ReactFlowMultiFetchNode }),
     [],
@@ -246,7 +262,7 @@ export function FetchFlow({
       onEdgesChange={onEdgesChange}
       onConnect={onConnect as any}
       fitView
-      fitViewOptions={{ minZoom: 0.1, maxZoom: 1 }}
+      fitViewOptions={defaultZoom}
       minZoom={0.1}
       maxZoom={2}
       connectionLineType={ConnectionLineType.SmoothStep}
@@ -256,6 +272,18 @@ export function FetchFlow({
       edgeTypes={edgeTypes}
     >
       <Background />
+      <Panel
+        position="bottom-left"
+        onClick={() => reactFlowInstance.fitView(defaultZoom)}
+      >
+        <ArrowsPointingInIcon
+          className={cn(
+            buttonVariants({ variant: "secondary", size: "icon" }),
+            "h-8 w-8 shrink-0 cursor-pointer select-none p-1.5",
+          )}
+          title="Center"
+        />
+      </Panel>
     </ReactFlow>
   );
 }
