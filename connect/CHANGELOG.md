@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.32.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.30.2...@wundergraph/cosmo-connect@0.32.0) (2023-11-23)
+
+### Features
+
+* add organization limits ([#285](https://github.com/wundergraph/cosmo/issues/285)) ([52a5664](https://github.com/wundergraph/cosmo/commit/52a566400dfa111a78a4bbdcf0a824dd2205da2d)) (@JivusAyrus)
+* add support for persisted operations ([#249](https://github.com/wundergraph/cosmo/issues/249)) ([a9ad47f](https://github.com/wundergraph/cosmo/commit/a9ad47ff5cf7db6bccf774e168b1d1ce3ee7bcdd)) (@fiam)
+
 # [0.31.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.30.2...@wundergraph/cosmo-connect@0.31.0) (2023-11-23)
 
 ### Features
