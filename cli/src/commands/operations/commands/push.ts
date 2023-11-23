@@ -9,6 +9,11 @@ import { PublishedOperationStatus } from '@wundergraph/cosmo-connect/dist/platfo
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { baseHeaders } from '../../../core/config.js';
 
+interface OperationOutput {
+  body: string;
+  status: 'created' | 'up_to_date';
+}
+
 const collect = (value: string, previous: string[]): string[] => {
   return [...previous, value];
 };
@@ -72,6 +77,8 @@ export default (opts: BaseCommandOptions) => {
     collect,
     [],
   );
+  command.option('-q, --quiet', 'Do not print any output', false)
+  command.option('--format <output-format>', 'Output format: supported ones are text and json', 'text');
   command.action(async (name, options) => {
     if (options.file.length === 0) {
       command.error(pc.red('No files provided'));
@@ -95,12 +102,42 @@ export default (opts: BaseCommandOptions) => {
       { headers: baseHeaders },
     );
     if (result.response?.code === EnumStatusCode.OK) {
-      const upToDate = (result.operations?.filter((op) => op.status === PublishedOperationStatus.UP_TO_DATE) ?? [])
-        .length;
-      const created = (result.operations?.filter((op) => op.status === PublishedOperationStatus.CREATED) ?? []).length;
-      console.log(
-        pc.green(`pushed ${result.operations?.length ?? 0} operations: ${created} created, ${upToDate} up to date`),
-      );
+      if (options.quiet) {
+        return;
+      }
+      switch (options.format) {
+        case 'text': {
+          for (const op of result.operations) {
+            console.log(
+              pc.green(
+                `pushed operation ${op.hash} (${
+                  op.status === PublishedOperationStatus.CREATED ? 'created' : 'up to date'
+                })`,
+              ),
+            );
+          }
+          const upToDate = (result.operations?.filter((op) => op.status === PublishedOperationStatus.UP_TO_DATE) ?? [])
+            .length;
+          const created = (result.operations?.filter((op) => op.status === PublishedOperationStatus.CREATED) ?? [])
+            .length;
+          console.log(
+            pc.green(`pushed ${result.operations?.length ?? 0} operations: ${created} created, ${upToDate} up to date`),
+          );
+          break;
+        }
+        case 'json': {
+          const returnedOperations: Record<string, OperationOutput> = {};
+          for (let ii = 0; ii < result.operations.length; ii++) {
+            const op = result.operations[ii];
+            returnedOperations[op.hash] = {
+              body: operations[ii],
+              status: op.status === PublishedOperationStatus.CREATED ? 'created' : 'up_to_date',
+            };
+          }
+          console.log(JSON.stringify(returnedOperations, null, 2));
+          break;
+        }
+      }
     } else {
       command.error(pc.red(`could not push operations: ${result.response?.details ?? 'unknown error'}`));
     }
