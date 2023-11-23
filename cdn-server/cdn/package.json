@@ -5,6 +5,9 @@
     "name": "WunderGraph Maintainers",
     "email": "info@wundergraph.com"
   },
+  "publishConfig": {
+    "access": "public"
+  },
   "license": "Apache-2.0",
   "scripts": {
     "dev": "tsc --watch",
