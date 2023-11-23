@@ -93,9 +93,6 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if spanContext.HasTraceID() {
 			fields = append(fields, zap.String("traceID", spanContext.TraceID().String()))
 		}
-		if spanContext.HasSpanID() {
-			fields = append(fields, zap.String("spanID", spanContext.SpanID().String()))
-		}
 	}
 
 	if h.context != nil {
