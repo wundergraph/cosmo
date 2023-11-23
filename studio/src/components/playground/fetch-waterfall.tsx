@@ -129,7 +129,6 @@ export const FetchWaterfall = ({
     <ul
       style={{
         marginLeft: `${16}px`,
-        minWidth: `${1200 - level * 32}px`,
       }}
       className={cn(
         `trace-ul relative before:-top-4 before:h-[34px] lg:max-w-none`,

@@ -1,19 +1,18 @@
 import { cn } from "@/lib/utils";
 import {
-  GraphiQLPlugin,
-  useEditorState,
-  useExecutionContext,
-} from "@graphiql/react";
-import { useCallback, useContext, useEffect, useState } from "react";
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 import { BiRename } from "react-icons/bi";
 import { LuNetwork } from "react-icons/lu";
 import { useMovable } from "react-move-hook";
 import { Edge, Node, ReactFlowProvider } from "reactflow";
 import { EmptyState } from "../empty-state";
-import { GraphContext } from "../layout/graph-layout";
 import { Card } from "../ui/card";
 import { CLI } from "../ui/cli";
-import { Loader } from "../ui/loader";
 import { Tabs, TabsList, TabsTrigger } from "../ui/tabs";
 import { FetchFlow } from "./fetch-flow";
 import { FetchWaterfall } from "./fetch-waterfall";
@@ -21,14 +20,26 @@ import { FetchNode } from "./types";
 
 const initialPaneWidth = 360;
 
+export const TraceContext = createContext<{
+  subgraphs: { id: string; name: string }[];
+  headers: string;
+  response: string;
+}>({
+  subgraphs: [],
+  headers: "",
+  response: "",
+});
+
 const Trace = ({
   view,
   headers,
   response,
+  subgraphs,
 }: {
   headers: any;
   response: any;
   view: "tree" | "waterfall";
+  subgraphs: { id: string; name: string }[];
 }) => {
   const [tree, setTree] = useState<FetchNode>();
   const [nodes, setNodes] = useState<Node[]>([]);
@@ -78,8 +89,6 @@ const Trace = ({
       : mouseState.position.x,
   };
 
-  const graph = useContext(GraphContext);
-
   useEffect(() => {
     const tempNodes: Node[] = [];
     const tempEdges: Edge[] = [];
@@ -92,9 +101,9 @@ const Trace = ({
         parentId,
         type: fetch.type,
         dataSourceId: fetch.data_source_id,
-        dataSourceName: graph?.subgraphs.find(
-          (s) => s.id === fetch.data_source_id,
-        )?.name,
+        dataSourceName:
+          subgraphs?.find((s) => s.id === fetch.data_source_id)?.name ??
+          "subgraph",
         input: fetch.datasource_load_trace?.input,
         rawInput: fetch.datasource_load_trace?.raw_input_data,
         output: fetch.datasource_load_trace?.output,
@@ -216,7 +225,7 @@ const Trace = ({
 
     try {
       const parsedResponse = JSON.parse(response);
-      if (!parsedResponse?.extensions?.trace || !graph?.subgraphs) {
+      if (!parsedResponse?.extensions?.trace) {
         return;
       }
 
@@ -230,10 +239,11 @@ const Trace = ({
       setEdges(tempEdges);
       setGlobalStartTime(gStartTimeNano);
       setGlobalDuration(gEndTimeNano - gStartTimeNano);
-    } catch {
+    } catch (e) {
+      console.error(e);
       return;
     }
-  }, [response, graph?.subgraphs]);
+  }, [response, subgraphs]);
 
   if (view === "waterfall" && tree) {
     try {
@@ -250,13 +260,14 @@ const Trace = ({
           />
         );
       }
-    } catch {
-      return;
+    } catch (e) {
+      console.error(e);
+      return null;
     }
 
     return (
       <Card className="flex w-full flex-col overflow-hidden">
-        <div className="scrollbar-custom relative resize-none overflow-x-auto">
+        <div className="scrollbar-custom relative w-full resize-none overflow-x-auto">
           <div className="flex items-center px-4 py-4">
             <span
               className="flex-shrink-0 pl-2"
@@ -303,56 +314,55 @@ const Trace = ({
   );
 };
 
-const TracePlugin = () => {
-  const [response] = useEditorState(
-    // @ts-expect-error
-    "response",
-  );
-
-  const executionContext = useExecutionContext();
-
-  const [activeHeader] = useEditorState("header");
+export const TraceView = () => {
+  const {
+    response,
+    subgraphs,
+    headers: activeHeader,
+  } = useContext(TraceContext);
 
   const [headers, setHeaders] = useState<string>();
 
   useEffect(() => {
     if (!response) return;
     setHeaders(activeHeader);
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [response]);
 
   const [view, setView] = useState<"tree" | "waterfall">("tree");
 
   return (
-    <div className="flex h-full flex-1 flex-col font-sans">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-4 text-2xl font-bold text-primary-foreground">
-        <h1>Request Trace</h1>
-        <Tabs
-          defaultValue="tree"
-          className="w-max"
-          onValueChange={(v: any) => setView(v)}
-        >
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="tree">
-              <div className="flex items-center gap-x-2">
-                <LuNetwork />
-                Tree View
-              </div>
-            </TabsTrigger>
-            <TabsTrigger value="waterfall">
-              <div className="flex items-center gap-x-2">
-                <BiRename />
-                Waterfall View
-              </div>
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-      </div>
-      {executionContext?.isFetching && <Loader fullscreen />}
+    <div className="relative flex h-full w-full flex-1 flex-col font-sans">
+      <Tabs
+        defaultValue="tree"
+        className="absolute bottom-3 right-4 z-30 w-max"
+        onValueChange={(v: any) => setView(v)}
+      >
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="tree">
+            <div className="flex items-center gap-x-2">
+              <LuNetwork />
+              Tree View
+            </div>
+          </TabsTrigger>
+          <TabsTrigger value="waterfall">
+            <div className="flex items-center gap-x-2">
+              <BiRename />
+              Waterfall View
+            </div>
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
       {response && headers && (
-        <Trace headers={headers} response={response} view={view} />
+        <Trace
+          headers={headers}
+          response={response}
+          view={view}
+          subgraphs={subgraphs}
+        />
       )}
-      {(!response || !headers) && !executionContext?.isFetching && (
+      {(!response || !headers) && (
         <EmptyState
           icon={<LuNetwork />}
           title="No trace found"
@@ -362,12 +372,4 @@ const TracePlugin = () => {
       )}
     </div>
   );
-};
-
-export const tracePlugin = (): GraphiQLPlugin => {
-  return {
-    title: "Request Trace",
-    icon: LuNetwork,
-    content: () => <TracePlugin />,
-  };
 };

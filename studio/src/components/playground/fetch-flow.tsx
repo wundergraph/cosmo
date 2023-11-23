@@ -153,9 +153,12 @@ const ReactFlowFetchNode = ({ data }: Node<FetchNode>) => {
         )}
       >
         <div className="absolute inset-0 -z-10 bg-secondary/30 backdrop-blur-lg" />
-        <div className="flex items-center justify-between gap-x-4 border-b px-4 pb-4">
-          <p className="text-base font-medium subpixel-antialiased">
-            Fetch from {data.dataSourceName}
+        <div className="flex items-start justify-between gap-x-4 border-b px-4 pb-4">
+          <p className="flex flex-col gap-y-2 text-base font-medium subpixel-antialiased">
+            <span>Fetch from {data.dataSourceName}</span>
+            <span className="text-xs font-normal text-muted-foreground">
+              {data.dataSourceId}
+            </span>
           </p>
           {data.outputTrace && (
             <Badge variant={isFailure ? "destructive" : "success"}>
@@ -268,7 +271,6 @@ export function FetchFlow({
       maxZoom={2}
       connectionLineType={ConnectionLineType.SmoothStep}
       proOptions={{ hideAttribution: true }}
-      attributionPosition="top-right"
       nodeTypes={nodeTypes}
       edgeTypes={edgeTypes}
     >

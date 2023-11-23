@@ -58,7 +58,7 @@ export const ViewInput = ({
           <TabsContent value="query">
             <div className="scrollbar-custom h-96 max-w-[calc(42rem_-_3rem)] overflow-auto rounded border">
               <CodeViewer
-                code={input.body.query}
+                code={input.body?.query ?? ""}
                 language="graphql"
                 disableLinking
               />
