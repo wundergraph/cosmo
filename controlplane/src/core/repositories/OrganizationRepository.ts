@@ -125,10 +125,19 @@ export class OrganizationRepository {
         isFreeTrial: organizations.isFreeTrial,
         isPersonal: organizations.isPersonal,
         createdAt: organizations.createdAt,
+        limits: {
+          analyticsRetentionLimit: organizationLimits.analyticsRetentionLimit,
+          tracingRetentionLimit: organizationLimits.tracingRetentionLimit,
+          breakingChangeRetentionLimit: organizationLimits.breakingChangeRetentionLimit,
+          changelogDataRetentionLimit: organizationLimits.changelogDataRetentionLimit,
+          traceSamplingRateLimit: organizationLimits.traceSamplingRateLimit,
+          requestsLimit: organizationLimits.requestsLimit,
+        },
       })
       .from(organizationsMembers)
       .innerJoin(organizations, eq(organizations.id, organizationsMembers.organizationId))
       .innerJoin(users, eq(users.id, organizationsMembers.userId))
+      .innerJoin(organizationLimits, eq(organizations.id, organizationLimits.organizationId))
       .where(eq(users.id, input.userId))
       .execute();
 
@@ -145,7 +154,14 @@ export class OrganizationRepository {
           userID: input.userId,
           organizationID: org.id,
         }),
-        limits: await this.getOrganizationLimits({ organizationID: org.id }),
+        limits: {
+          analyticsRetentionLimit: org.limits.analyticsRetentionLimit,
+          tracingRetentionLimit: org.limits.tracingRetentionLimit,
+          breakingChangeRetentionLimit: org.limits.breakingChangeRetentionLimit,
+          changelogDataRetentionLimit: org.limits.changelogDataRetentionLimit,
+          traceSamplingRateLimit: Number(org.limits.traceSamplingRateLimit),
+          requestsLimit: org.limits.requestsLimit,
+        },
       })),
     );
 

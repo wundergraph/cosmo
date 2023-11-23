@@ -115,6 +115,7 @@ import {
   isValidLabelMatchers,
   isValidLabels,
   isValidOrganizationSlug,
+  validateDateRanges,
 } from '../util.js';
 import { FederatedGraphSchemaUpdate, OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
 
@@ -1058,25 +1059,17 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const dateRange: DateRange | undefined = req.dateRange;
-
         const orgLimits = await orgRepo.getOrganizationLimits({ organizationID: authContext.organizationId });
 
-        if (dateRange) {
-          const startDate = new Date(dateRange.start);
-          const endDate = new Date(dateRange.end);
-          if (startDate < subHours(new Date(), orgLimits.changelogDataRetentionLimit * 24)) {
-            dateRange.start = formatISO(subHours(new Date(), orgLimits.changelogDataRetentionLimit * 24));
-          }
-          if (endDate > new Date()) {
-            dateRange.end = formatISO(new Date());
-          }
-        }
+        const { dateRange } = validateDateRanges({
+          limit: orgLimits.changelogDataRetentionLimit,
+          dateRange: req.dateRange,
+        });
 
         const result = await fedgraphRepo.fetchFederatedGraphChangelog(
           federatedGraph.targetId,
           req.pagination,
-          req.dateRange,
+          dateRange!,
         );
 
         if (!result) {
@@ -1123,28 +1116,22 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const dateRange = {
-          start: req.startDate,
-          end: req.endDate,
-        };
-
         const orgLimits = await orgRepo.getOrganizationLimits({ organizationID: authContext.organizationId });
 
-        const startDate = new Date(dateRange.start);
-        const endDate = new Date(dateRange.end);
-        if (startDate < subHours(new Date(), orgLimits.breakingChangeRetentionLimit * 24)) {
-          dateRange.start = formatISO(subHours(new Date(), orgLimits.breakingChangeRetentionLimit * 24));
-        }
-        if (endDate > new Date()) {
-          dateRange.end = formatISO(new Date());
-        }
+        const { dateRange } = validateDateRanges({
+          limit: orgLimits.breakingChangeRetentionLimit,
+          dateRange: {
+            start: req.startDate,
+            end: req.endDate,
+          } as DateRange,
+        });
 
         const checksData = await subgraphRepo.checks({
           federatedGraphName: req.name,
           limit: req.limit,
           offset: req.offset,
-          startDate: dateRange.start,
-          endDate: dateRange.end,
+          startDate: dateRange!.start,
+          endDate: dateRange!.end,
         });
         const totalChecksCount = await subgraphRepo.getChecksCount({ federatedGraphName: req.name });
 
@@ -1778,24 +1765,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        let range: number | undefined = req.config?.range;
-        const dateRange: DateRange | undefined = req.config?.dateRange;
-
         const orgLimits = await orgRepo.getOrganizationLimits({ organizationID: authContext.organizationId });
-        if (range && range > orgLimits.tracingRetentionLimit * 24) {
-          range = orgLimits.tracingRetentionLimit * 24;
-        }
-
-        if (dateRange) {
-          const startDate = new Date(dateRange.start);
-          const endDate = new Date(dateRange.end);
-          if (startDate < subHours(new Date(), orgLimits.tracingRetentionLimit * 24)) {
-            dateRange.start = formatISO(subHours(new Date(), orgLimits.tracingRetentionLimit * 24));
-          }
-          if (endDate > new Date()) {
-            dateRange.end = formatISO(new Date());
-          }
-        }
+        const { range, dateRange } = validateDateRanges({
+          limit: orgLimits.tracingRetentionLimit,
+          range: req.config?.range,
+          dateRange: req.config?.dateRange,
+        });
 
         return {
           response: {
@@ -1888,24 +1863,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        let range: number = req.range;
-        const dateRange: DateRange | undefined = req.dateRange;
-
         const orgLimits = await orgRepo.getOrganizationLimits({ organizationID: authContext.organizationId });
-        if (range > orgLimits.analyticsRetentionLimit * 24) {
-          range = orgLimits.analyticsRetentionLimit * 24;
-        }
-
-        if (dateRange) {
-          const startDate = new Date(dateRange.start);
-          const endDate = new Date(dateRange.end);
-          if (startDate < subHours(new Date(), orgLimits.analyticsRetentionLimit * 24)) {
-            dateRange.start = formatISO(subHours(new Date(), orgLimits.analyticsRetentionLimit * 24));
-          }
-          if (endDate > new Date()) {
-            dateRange.end = formatISO(new Date());
-          }
-        }
+        const { range, dateRange } = validateDateRanges({
+          limit: orgLimits.analyticsRetentionLimit,
+          range: req.range,
+          dateRange: req.dateRange,
+        });
 
         const view = await repo.getMetricsView({
           range,
@@ -1955,24 +1918,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        let range: number = req.range;
-        const dateRange: DateRange | undefined = req.dateRange;
-
         const orgLimits = await orgRepo.getOrganizationLimits({ organizationID: authContext.organizationId });
-        if (range > orgLimits.analyticsRetentionLimit * 24) {
-          range = orgLimits.analyticsRetentionLimit * 24;
-        }
-
-        if (dateRange) {
-          const startDate = new Date(dateRange.start);
-          const endDate = new Date(dateRange.end);
-          if (startDate < subHours(new Date(), orgLimits.analyticsRetentionLimit * 24)) {
-            dateRange.start = formatISO(subHours(new Date(), orgLimits.analyticsRetentionLimit * 24));
-          }
-          if (endDate > new Date()) {
-            dateRange.end = formatISO(new Date());
-          }
-        }
+        const { range, dateRange } = validateDateRanges({
+          limit: orgLimits.analyticsRetentionLimit,
+          range: req.range,
+          dateRange: req.dateRange,
+        });
 
         const metrics = await repo.getErrorsView({
           range,
