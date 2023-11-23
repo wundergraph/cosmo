@@ -77,7 +77,7 @@ export default (opts: BaseCommandOptions) => {
     collect,
     [],
   );
-  command.option('-q, --quiet', 'Do not print any output', false)
+  command.option('-q, --quiet', 'Do not print any output', false);
   command.option('--format <output-format>', 'Output format: supported ones are text and json', 'text');
   command.action(async (name, options) => {
     if (options.file.length === 0) {
