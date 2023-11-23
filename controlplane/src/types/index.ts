@@ -268,6 +268,15 @@ export interface SlackAccessTokenResponse {
   webhookURL: string;
 }
 
+export interface OrganizationLimitsDTO {
+  analyticsRetentionLimit: number;
+  tracingRetentionLimit: number;
+  changelogDataRetentionLimit: number;
+  breakingChangeRetentionLimit: number;
+  traceSamplingRateLimit: number;
+  requestsLimit: number;
+}
+
 export interface ClientDTO {
   id: string;
   name: string;

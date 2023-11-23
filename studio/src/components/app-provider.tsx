@@ -25,6 +25,16 @@ interface Organization {
   isFreeTrial: boolean;
   roles: string[];
   createdAt: string;
+  limits: OrganizationLimitsDTO;
+}
+
+interface OrganizationLimitsDTO {
+  analyticsRetentionLimit: number;
+  tracingRetentionLimit: number;
+  changelogDataRetentionLimit: number;
+  breakingChangeRetentionLimit: number;
+  traceSamplingRateLimit: number;
+  requestsLimit: number;
 }
 
 interface Session {

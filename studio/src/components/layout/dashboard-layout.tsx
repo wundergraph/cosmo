@@ -1,26 +1,21 @@
 import { Component2Icon } from "@radix-ui/react-icons";
-import { addDays, formatDistance } from "date-fns";
 import { useRouter } from "next/router";
-import { useContext, useMemo } from "react";
+import { useMemo } from "react";
 import {
   IoKeyOutline,
   IoNotificationsOutline,
   IoPeopleOutline,
 } from "react-icons/io5";
+import { MdDataUsage } from "react-icons/md";
 import { PiGear, PiGraphLight } from "react-icons/pi";
-import { UserContext } from "../app-provider";
 import { PageHeader } from "./head";
 import { LayoutProps } from "./layout";
 import { Nav, NavLink } from "./nav";
 import { TitleLayout } from "./title-layout";
-import Link from "next/link";
-import { calURL } from "@/lib/constants";
 
 export const DashboardLayout = ({ children }: LayoutProps) => {
   const router = useRouter();
   const organizationSlug = router.query.organizationSlug as string;
-
-  const user = useContext(UserContext);
 
   const links: NavLink[] = useMemo(() => {
     const basePath = `/${organizationSlug}`;
@@ -51,6 +46,11 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
         title: "Notifications",
         href: basePath + "/webhooks",
         icon: <IoNotificationsOutline />,
+      },
+      {
+        title: "Usages",
+        href: basePath + "/usages",
+        icon: <MdDataUsage />,
       },
       {
         title: "Settings",
