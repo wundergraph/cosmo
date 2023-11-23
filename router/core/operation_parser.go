@@ -14,7 +14,6 @@ import (
 
 	"github.com/wundergraph/cosmo/router/internal/pool"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/astjson"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astnormalization"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astprinter"
@@ -235,6 +234,16 @@ func (p *OperationParser) parse(body []byte) (*ParsedOperation, error) {
 		requestOperationType = "subscription"
 	}
 
+	// set variables to empty object if they are null or not present
+	if requestVariableBytes == nil || bytes.Equal(requestVariableBytes, []byte("null")) {
+		requestVariableBytes = []byte("{}")
+	}
+
+	// set variables on doc input before normalization
+	// IMPORTANT: this is required for the normalization to work correctly!
+	// Normalization reads/rewrites/adds variables
+	kit.doc.Input.Variables = requestVariableBytes
+
 	// replace the operation name with a static name to avoid different IDs for the same operation
 	replaceOperationName := kit.doc.Input.AppendInputBytes(staticOperationName)
 	kit.doc.OperationDefinitions[operationDefinitionRef].Name = replaceOperationName
@@ -262,33 +271,13 @@ func (p *OperationParser) parse(body []byte) (*ParsedOperation, error) {
 		return nil, errors.WithStack(fmt.Errorf("failed to print normalized operation: %w", err))
 	}
 
-	if requestVariableBytes == nil || bytes.Equal(requestVariableBytes, []byte("null")) {
-		requestVariableBytes = []byte("{}")
-	}
-
-	js := &astjson.JSON{}
-	err = js.ParseObject(requestVariableBytes)
-	if err != nil {
-		return nil, errors.WithStack(fmt.Errorf("failed to parse variables: %w", err))
-	}
-	if kit.doc.Input.Variables != nil {
-		extractedVariables, err := js.AppendObject(kit.doc.Input.Variables)
-		if err != nil {
-			return nil, errors.WithStack(fmt.Errorf("failed to append variables: %w", err))
-		}
-		js.MergeNodes(js.RootNode, extractedVariables)
-	}
-	merged := bytes.NewBuffer(make([]byte, 0, len(requestVariableBytes)+len(kit.doc.Input.Variables)))
-	err = js.PrintRoot(merged)
-	if err != nil {
-		return nil, errors.WithStack(fmt.Errorf("failed to print variables: %w", err))
-	}
+	variables := bytes.NewBuffer(kit.doc.Input.Variables)
 
 	return &ParsedOperation{
 		ID:                       operationID,
 		Name:                     string(requestOperationNameBytes),
 		Type:                     requestOperationType,
-		Variables:                merged.Bytes(),
+		Variables:                variables.Bytes(),
 		NormalizedRepresentation: kit.normalizedOperation.String(),
 	}, nil
 }
