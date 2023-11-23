@@ -103,7 +103,7 @@ controlplane:
     githubAppWebhookSecret: ""
     slackAppClientId: ""
     slackAppClientSecret: ""
-    s3StorageUrl: "http://minio:changeme@minio.wundergraph.local:9000/cosmo"
+    s3StorageUrl: "http://minio:changeme@cosmo-minio:9000/cosmo"
 
 # Cosmo Router
 router:
@@ -238,6 +238,10 @@ postgresql:
 # Minio for the Cosmo Controlplane
 # https://artifacthub.io/packages/helm/bitnami/minio
 minio:
+  persistence:
+    annotations:
+      # Support for k14s.io. This annotation will allow kapp to delete the PVCs.
+      kapp.k14s.io/owned-for-deletion: ""
   commonAnnotations:
     # Support for Kapp. This annotation will form a group to coordinate deployments with kapp.
     kapp.k14s.io/change-group: "cosmo.apps.minio.wundergraph.com/deployment"
