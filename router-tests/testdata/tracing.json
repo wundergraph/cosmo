@@ -381,10 +381,10 @@
         "trace_start_time": "",
         "trace_start_unix": 0,
         "planner_stats": {
-          "planning_time_nanoseconds": 0,
-          "planning_time_pretty": "",
-          "duration_since_start_nanoseconds": 0,
-          "duration_since_start_pretty": ""
+          "planning_time_nanoseconds": 5,
+          "planning_time_pretty": "5ns",
+          "duration_since_start_nanoseconds": 5,
+          "duration_since_start_pretty": "5ns"
         }
       },
       "fetch": {
@@ -559,7 +559,63 @@
           "duration_load_pretty": "1ns",
           "single_flight_used": true,
           "single_flight_shared_response": false,
-          "load_skipped": false
+          "load_skipped": false,
+          "load_stats": {
+            "get_conn": {
+              "duration_since_start_nanoseconds": 1,
+              "duration_since_start_pretty": "1ns",
+              "host_port": ""
+            },
+            "got_conn": {
+              "duration_since_start_nanoseconds": 1,
+              "duration_since_start_pretty": "1ns",
+              "reused": false,
+              "was_idle": false,
+              "idle_time_nanoseconds": 0,
+              "idle_time_pretty": ""
+            },
+            "got_first_response_byte": {
+              "duration_since_start_nanoseconds": 1,
+              "duration_since_start_pretty": "1ns"
+            },
+            "dns_start": {
+              "duration_since_start_nanoseconds": 1,
+              "duration_since_start_pretty": "1ns",
+              "host": ""
+            },
+            "dns_done": {
+              "duration_since_start_nanoseconds": 1,
+              "duration_since_start_pretty": "1ns"
+            },
+            "connect_start": {
+              "duration_since_start_nanoseconds": 1,
+              "duration_since_start_pretty": "1ns",
+              "network": "",
+              "addr": ""
+            },
+            "connect_done": {
+              "duration_since_start_nanoseconds": 1,
+              "duration_since_start_pretty": "1ns",
+              "network": "",
+              "addr": ""
+            },
+            "tls_handshake_start": {
+              "duration_since_start_nanoseconds": 0,
+              "duration_since_start_pretty": ""
+            },
+            "tls_handshake_done": {
+              "duration_since_start_nanoseconds": 0,
+              "duration_since_start_pretty": ""
+            },
+            "wrote_headers": {
+              "duration_since_start_nanoseconds": 1,
+              "duration_since_start_pretty": "1ns"
+            },
+            "wrote_request": {
+              "duration_since_start_nanoseconds": 1,
+              "duration_since_start_pretty": "1ns"
+            }
+          }
         }
       },
       "node_type": "object",
@@ -887,7 +943,63 @@
                         "duration_load_pretty": "1ns",
                         "single_flight_used": true,
                         "single_flight_shared_response": false,
-                        "load_skipped": false
+                        "load_skipped": false,
+                        "load_stats": {
+                          "get_conn": {
+                            "duration_since_start_nanoseconds": 1,
+                            "duration_since_start_pretty": "1ns",
+                            "host_port": ""
+                          },
+                          "got_conn": {
+                            "duration_since_start_nanoseconds": 1,
+                            "duration_since_start_pretty": "1ns",
+                            "reused": false,
+                            "was_idle": false,
+                            "idle_time_nanoseconds": 0,
+                            "idle_time_pretty": ""
+                          },
+                          "got_first_response_byte": {
+                            "duration_since_start_nanoseconds": 1,
+                            "duration_since_start_pretty": "1ns"
+                          },
+                          "dns_start": {
+                            "duration_since_start_nanoseconds": 1,
+                            "duration_since_start_pretty": "1ns",
+                            "host": ""
+                          },
+                          "dns_done": {
+                            "duration_since_start_nanoseconds": 1,
+                            "duration_since_start_pretty": "1ns"
+                          },
+                          "connect_start": {
+                            "duration_since_start_nanoseconds": 1,
+                            "duration_since_start_pretty": "1ns",
+                            "network": "",
+                            "addr": ""
+                          },
+                          "connect_done": {
+                            "duration_since_start_nanoseconds": 1,
+                            "duration_since_start_pretty": "1ns",
+                            "network": "",
+                            "addr": ""
+                          },
+                          "tls_handshake_start": {
+                            "duration_since_start_nanoseconds": 0,
+                            "duration_since_start_pretty": ""
+                          },
+                          "tls_handshake_done": {
+                            "duration_since_start_nanoseconds": 0,
+                            "duration_since_start_pretty": ""
+                          },
+                          "wrote_headers": {
+                            "duration_since_start_nanoseconds": 1,
+                            "duration_since_start_pretty": "1ns"
+                          },
+                          "wrote_request": {
+                            "duration_since_start_nanoseconds": 1,
+                            "duration_since_start_pretty": "1ns"
+                          }
+                        }
                       }
                     },
                     {
@@ -1392,7 +1504,63 @@
                         "duration_load_pretty": "1ns",
                         "single_flight_used": true,
                         "single_flight_shared_response": false,
-                        "load_skipped": false
+                        "load_skipped": false,
+                        "load_stats": {
+                          "get_conn": {
+                            "duration_since_start_nanoseconds": 1,
+                            "duration_since_start_pretty": "1ns",
+                            "host_port": ""
+                          },
+                          "got_conn": {
+                            "duration_since_start_nanoseconds": 1,
+                            "duration_since_start_pretty": "1ns",
+                            "reused": false,
+                            "was_idle": false,
+                            "idle_time_nanoseconds": 0,
+                            "idle_time_pretty": ""
+                          },
+                          "got_first_response_byte": {
+                            "duration_since_start_nanoseconds": 1,
+                            "duration_since_start_pretty": "1ns"
+                          },
+                          "dns_start": {
+                            "duration_since_start_nanoseconds": 1,
+                            "duration_since_start_pretty": "1ns",
+                            "host": ""
+                          },
+                          "dns_done": {
+                            "duration_since_start_nanoseconds": 1,
+                            "duration_since_start_pretty": "1ns"
+                          },
+                          "connect_start": {
+                            "duration_since_start_nanoseconds": 1,
+                            "duration_since_start_pretty": "1ns",
+                            "network": "",
+                            "addr": ""
+                          },
+                          "connect_done": {
+                            "duration_since_start_nanoseconds": 1,
+                            "duration_since_start_pretty": "1ns",
+                            "network": "",
+                            "addr": ""
+                          },
+                          "tls_handshake_start": {
+                            "duration_since_start_nanoseconds": 0,
+                            "duration_since_start_pretty": ""
+                          },
+                          "tls_handshake_done": {
+                            "duration_since_start_nanoseconds": 0,
+                            "duration_since_start_pretty": ""
+                          },
+                          "wrote_headers": {
+                            "duration_since_start_nanoseconds": 1,
+                            "duration_since_start_pretty": "1ns"
+                          },
+                          "wrote_request": {
+                            "duration_since_start_nanoseconds": 1,
+                            "duration_since_start_pretty": "1ns"
+                          }
+                        }
                       }
                     }
                   ]
