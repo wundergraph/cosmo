@@ -25,7 +25,7 @@ func persistedOperationPayload(sha56Hash string) []byte {
 func TestPersistedOperationNotFound(t *testing.T) {
 	server := setupServer(t)
 	result := sendData(server, persistedOperationPayload("does-not-exist"))
-	assert.Equal(t, http.StatusOK, result.Code)
+	assert.Equal(t, http.StatusBadRequest, result.Code)
 	assert.JSONEq(t, `{"data": null, "errors": [{ "message": "PersistedQueryNotFound" }]}`, result.Body.String())
 }
 
