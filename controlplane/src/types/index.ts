@@ -267,3 +267,32 @@ export interface SlackAccessTokenResponse {
   slackChannelName: string;
   webhookURL: string;
 }
+
+export interface ClientDTO {
+  id: string;
+  name: string;
+  createdAt: string;
+  createdBy: string;
+  lastUpdatedAt: string;
+  lastUpdatedBy: string;
+}
+
+export interface PersistedOperationDTO {
+  id: string;
+  hash: string;
+  filePath: string;
+  createdAt: string;
+  createdBy: string;
+  lastUpdatedAt: string;
+  lastUpdatedBy: string;
+}
+
+export interface PublishedOperationData {
+  version: 1;
+  body: string;
+}
+
+export interface UpdatedPersistedOperation {
+  hash: string;
+  filePath: string;
+}
