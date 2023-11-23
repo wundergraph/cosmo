@@ -1,9 +1,10 @@
 package requestlogger
 
 import (
-	"github.com/go-chi/chi/middleware"
 	"net/http"
 	"time"
+
+	"github.com/go-chi/chi/middleware"
 
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
@@ -87,7 +88,8 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		fields = append(fields, zap.String("time", end.Format(h.timeFormat)))
 	}
 	if h.traceID {
-		spanContext := trace.SpanFromContext(r.Context()).SpanContext()
+		span := trace.SpanFromContext(r.Context())
+		spanContext := span.SpanContext()
 		if spanContext.HasTraceID() {
 			fields = append(fields, zap.String("traceID", spanContext.TraceID().String()))
 		}

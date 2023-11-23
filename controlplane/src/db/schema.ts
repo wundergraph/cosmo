@@ -12,6 +12,8 @@ import {
   timestamp,
   uniqueIndex,
   uuid,
+  decimal,
+  unique,
 } from 'drizzle-orm/pg-core';
 
 export const federatedGraphs = pgTable('federated_graphs', {
@@ -28,15 +30,92 @@ export const federatedGraphs = pgTable('federated_graphs', {
   }),
 });
 
-export const federatedGraphConfigs = pgTable('federated_graph_configs', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  federatedGraphId: uuid('federated_graph_id')
-    .notNull()
-    .references(() => federatedGraphs.id, {
+export const federatedGraphClients = pgTable(
+  'federated_graph_clients',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    federatedGraphId: uuid('federated_graph_id')
+      .notNull()
+      .references(() => federatedGraphs.id, {
+        onDelete: 'cascade',
+      }),
+    name: text('name').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }),
+    createdById: uuid('created_by_id')
+      .notNull()
+      .references(() => users.id, {
+        onDelete: 'cascade',
+      }),
+    updatedById: uuid('updated_by_id').references(() => users.id, {
       onDelete: 'cascade',
     }),
-  trafficCheckDays: integer('traffic_check_days').notNull().default(7),
-});
+  },
+  (t) => ({
+    uniqueFederatedGraphClientName: unique('federated_graph_client_name').on(t.federatedGraphId, t.name),
+  }),
+);
+
+export const federatedGraphClientsRelations = relations(federatedGraphClients, ({ one }) => ({
+  createdBy: one(users, {
+    fields: [federatedGraphClients.createdById],
+    references: [users.id],
+  }),
+  updatedBy: one(users, {
+    fields: [federatedGraphClients.updatedById],
+    references: [users.id],
+  }),
+}));
+
+export const federatedGraphPersistedOperations = pgTable(
+  'federated_graph_persisted_operations',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    federatedGraphId: uuid('federated_graph_id')
+      .notNull()
+      .references(() => federatedGraphs.id, {
+        onDelete: 'cascade',
+      }),
+    clientId: uuid('client_id')
+      .notNull()
+      .references(() => federatedGraphClients.id, {
+        onDelete: 'cascade',
+      }),
+    hash: text('hash').notNull(),
+    filePath: text('file_path').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }),
+    createdById: uuid('created_by_id')
+      .notNull()
+      .references(() => users.id, {
+        onDelete: 'cascade',
+      }),
+    updatedById: uuid('updated_by_id').references(() => users.id, {
+      onDelete: 'cascade',
+    }),
+  },
+  (t) => ({
+    uniqueFederatedGraphOperationHash: unique('federated_graph_operation_hash').on(t.federatedGraphId, t.hash),
+    uniqueFederatedGraphOperationFilePath: unique('federated_graph_operation_file_hash').on(
+      t.federatedGraphId,
+      t.filePath,
+    ),
+  }),
+);
+
+export const federatedGraphPersistedOperationsRelations = relations(
+  federatedGraphPersistedOperations,
+  ({ many, one }) => ({
+    createdBy: one(users, {
+      fields: [federatedGraphPersistedOperations.createdById],
+      references: [users.id],
+    }),
+    updatedBy: one(users, {
+      fields: [federatedGraphPersistedOperations.updatedById],
+      references: [users.id],
+    }),
+  }),
+);
 
 export const subscriptionProtocolEnum = pgEnum('subscription_protocol', ['ws', 'sse', 'sse_post'] as const);
 
@@ -64,10 +143,6 @@ export const federatedGraphRelations = relations(federatedGraphs, ({ many, one }
   composedSchemaVersion: one(schemaVersion, {
     fields: [federatedGraphs.composedSchemaVersionId],
     references: [schemaVersion.id],
-  }),
-  config: one(federatedGraphConfigs, {
-    fields: [federatedGraphs.id],
-    references: [federatedGraphConfigs.federatedGraphId],
   }),
   subgraphs: many(subgraphsToFederatedGraph),
 }));
@@ -729,4 +804,20 @@ export const graphCompositionSubgraphs = pgTable('graph_composition_subgraphs', 
       onDelete: 'cascade',
     }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const organizationLimits = pgTable('organization_limits', {
+  id: uuid('id').notNull().primaryKey().defaultRandom(),
+  organizationId: uuid('organization_id')
+    .notNull()
+    .references(() => organizations.id, {
+      onDelete: 'cascade',
+    }),
+  // requestsLimit is in millions
+  requestsLimit: integer('requests_limit').notNull().default(10),
+  analyticsRetentionLimit: integer('analytics_retention_limit').notNull().default(7),
+  tracingRetentionLimit: integer('tracing_retention_limit').notNull().default(7),
+  changelogDataRetentionLimit: integer('changelog_data_retention_limit').notNull().default(7),
+  breakingChangeRetentionLimit: integer('breaking_change_retention_limit').notNull().default(7),
+  traceSamplingRateLimit: decimal('trace_sampling_rate_limit', { precision: 3, scale: 2 }).notNull().default('0.10'),
 });

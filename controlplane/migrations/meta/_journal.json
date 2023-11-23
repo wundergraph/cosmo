@@ -400,6 +400,20 @@
       "when": 1700255510749,
       "tag": "0056_kind_wallop",
       "breakpoints": true
+    },
+    {
+      "idx": 57,
+      "version": "5",
+      "when": 1700597273329,
+      "tag": "0057_late_golden_guardian",
+      "breakpoints": true
+    },
+    {
+      "idx": 58,
+      "version": "5",
+      "when": 1700740018380,
+      "tag": "0058_goofy_kronos",
+      "breakpoints": true
     }
   ]
 }

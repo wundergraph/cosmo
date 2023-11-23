@@ -4,6 +4,20 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.39.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.37.2...controlplane@0.39.0) (2023-11-23)
+
+### Features
+
+* add organization limits ([#285](https://github.com/wundergraph/cosmo/issues/285)) ([52a5664](https://github.com/wundergraph/cosmo/commit/52a566400dfa111a78a4bbdcf0a824dd2205da2d)) (@JivusAyrus)
+* add support for persisted operations ([#249](https://github.com/wundergraph/cosmo/issues/249)) ([a9ad47f](https://github.com/wundergraph/cosmo/commit/a9ad47ff5cf7db6bccf774e168b1d1ce3ee7bcdd)) (@fiam)
+
+# [0.38.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.37.2...controlplane@0.38.0) (2023-11-23)
+
+### Features
+
+* add organization limits ([#285](https://github.com/wundergraph/cosmo/issues/285)) ([52a5664](https://github.com/wundergraph/cosmo/commit/52a566400dfa111a78a4bbdcf0a824dd2205da2d)) (@JivusAyrus)
+* add support for persisted operations ([#249](https://github.com/wundergraph/cosmo/issues/249)) ([a9ad47f](https://github.com/wundergraph/cosmo/commit/a9ad47ff5cf7db6bccf774e168b1d1ce3ee7bcdd)) (@fiam)
+
 ## [0.37.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.37.1...controlplane@0.37.2) (2023-11-20)
 
 ### Bug Fixes

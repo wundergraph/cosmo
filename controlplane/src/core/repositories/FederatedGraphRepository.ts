@@ -1,11 +1,11 @@
 import { JsonValue } from '@bufbuild/protobuf';
-import { and, asc, desc, eq, gt, inArray, lt, not, notExists, notInArray, SQL, sql } from 'drizzle-orm';
-import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { RouterConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { joinLabel, normalizeURL } from '@wundergraph/cosmo-shared';
+import { and, asc, desc, eq, gt, inArray, lt, not, notExists, notInArray, SQL, sql } from 'drizzle-orm';
+import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { Target } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
 import {
-  federatedGraphConfigs,
   federatedGraphs,
   graphApiTokens,
   graphCompositions,
@@ -22,12 +22,11 @@ import {
   Label,
   ListFilterOptions,
 } from '../../types/index.js';
-import { normalizeLabelMatchers, normalizeLabels } from '../util.js';
 import { Composer } from '../composition/composer.js';
 import { SchemaDiff } from '../composition/schemaCheck.js';
-import { Target } from '../../db/models.js';
-import { SubgraphRepository } from './SubgraphRepository.js';
+import { normalizeLabelMatchers, normalizeLabels } from '../util.js';
 import { GraphCompositionRepository } from './GraphCompositionRepository.js';
+import { SubgraphRepository } from './SubgraphRepository.js';
 
 export interface FederatedGraphConfig {
   trafficCheckDays: number;
@@ -104,30 +103,6 @@ export class FederatedGraphRepository {
         subgraphsCount: subgraphs.length,
       };
     });
-  }
-
-  public createConfig(federatedGraphId: string, trafficCheckDays: number) {
-    return this.db.insert(federatedGraphConfigs).values({ federatedGraphId, trafficCheckDays }).execute();
-  }
-
-  public async getConfig(federatedGraphId: string): Promise<FederatedGraphConfig> {
-    const config = await this.db.query.federatedGraphConfigs.findFirst({
-      columns: {
-        trafficCheckDays: true,
-      },
-      where: eq(schema.federatedGraphConfigs.federatedGraphId, federatedGraphId),
-    });
-
-    // return default config
-    if (!config) {
-      return {
-        trafficCheckDays: 7,
-      };
-    }
-
-    return {
-      trafficCheckDays: config.trafficCheckDays,
-    };
   }
 
   public update(data: { name: string; routingUrl: string; labelMatchers: string[]; updatedBy: string }) {

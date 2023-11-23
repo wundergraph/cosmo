@@ -30,7 +30,51 @@ helm repo add bitnami https://charts.bitnami.com/bitnami
 # Install the helm dependencies
 helm dependency build
 # Install the helm chart with the release name "cosmo" the name is important it used to reference services in values file.
-helm install cosmo -f values.full.yaml ./cosmo
+# --atomic ensures that the release is rolled back if it fails to install
+helm install cosmo --atomic -f values.full.yaml .
+```
+
+### Run Helm Tests
+
+The Helm chart comes with a set of tests that you can run to ensure that the stack is working as expected.
+Modify the `values.full.yaml` file to enable the tests:
+
+```yaml
+global:
+  helmTests:
+    enabled: true
+```
+
+and run:
+```shell
+helm test cosmo
+```
+
+you should see the following output after a few seconds:
+
+```shell
+❯ helm test cosmo
+NAME: cosmo cosmo                                  
+LAST DEPLOYED: Tue Nov 21 22:50:40 2023
+NAMESPACE: default
+STATUS: deployed
+REVISION: 2
+TEST SUITE:     cosmo-controlplane-test-connection
+Last Started:   Tue Nov 21 22:51:07 2023
+Last Completed: Tue Nov 21 22:51:10 2023
+Phase:          Succeeded
+TEST SUITE:     cosmo-graphqlmetrics-test-connection
+Last Started:   Tue Nov 21 22:51:10 2023
+Last Completed: Tue Nov 21 22:51:14 2023
+Phase:          Succeeded
+TEST SUITE:     cosmo-otelcollector-test-connection
+Last Started:   Tue Nov 21 22:51:14 2023
+Last Completed: Tue Nov 21 22:51:18 2023
+Phase:          Succeeded
+TEST SUITE:     cosmo-studio-test-connection
+Last Started:   Tue Nov 21 22:51:18 2023
+Last Completed: Tue Nov 21 22:51:22 2023
+Phase:          Succeeded
 ```
 
 ### Removing stack after use
@@ -67,7 +111,7 @@ helm upgrade cosmo ./cosmo \
 
 ### CLI Key
 
-In the `global.seed.apiKey` of your `values.yaml` we defined your API key. You can use this API key to authenticate with the Cosmo CLI.
+In the `global.seed.apiKey` of your `values.full.yaml` we defined your API key. You can use this API key to authenticate with the Cosmo CLI.
 
 ```sh
 export COSMO_API_KEY="cosmo_669b576aaadc10ee1ae81d9193425705"
@@ -76,7 +120,7 @@ npx wgc -h
 ```
 
 ### Router
-The router is not enabled by default because it requires an API token to be set and a published federated graph. After you have created an API token with the Cosmo CLI `wgc federated-graph create-token <graph-name>`, set the right configurations in the `values.yaml` file.
+The router is not enabled by default because it requires an API token to be set and a published federated graph. After you have created an API token with the Cosmo CLI `wgc federated-graph create-token <graph-name>`, set the right configurations in the `values.full.yaml` file.
 
 ```yaml
 router:
@@ -85,7 +129,7 @@ router:
     graphApiToken: "<changeme>"
 ```
 
-Run `helm install cosmo` to apply the changes.
+Run `helm upgrade cosmo -f values.full.yaml .` to apply the changes.
 
 ## Kapp support
 

@@ -4,6 +4,20 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.37.0](https://github.com/wundergraph/cosmo/compare/router@0.35.0...router@0.37.0) (2023-11-23)
+
+### Features
+
+* add support for persisted operations ([#249](https://github.com/wundergraph/cosmo/issues/249)) ([a9ad47f](https://github.com/wundergraph/cosmo/commit/a9ad47ff5cf7db6bccf774e168b1d1ce3ee7bcdd)) (@fiam)
+* log traceID ([#284](https://github.com/wundergraph/cosmo/issues/284)) ([257de81](https://github.com/wundergraph/cosmo/commit/257de819a9735afddfc497d5b388dc3cb0e30bab)) (@fiam)
+
+# [0.36.0](https://github.com/wundergraph/cosmo/compare/router@0.35.0...router@0.36.0) (2023-11-23)
+
+### Features
+
+* add support for persisted operations ([#249](https://github.com/wundergraph/cosmo/issues/249)) ([a9ad47f](https://github.com/wundergraph/cosmo/commit/a9ad47ff5cf7db6bccf774e168b1d1ce3ee7bcdd)) (@fiam)
+* log traceID ([#284](https://github.com/wundergraph/cosmo/issues/284)) ([257de81](https://github.com/wundergraph/cosmo/commit/257de819a9735afddfc497d5b388dc3cb0e30bab)) (@fiam)
+
 # [0.35.0](https://github.com/wundergraph/cosmo/compare/router@0.34.1...router@0.35.0) (2023-11-21)
 
 ### Features
