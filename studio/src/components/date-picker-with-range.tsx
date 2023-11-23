@@ -9,7 +9,7 @@ import useWindowSize from "@/hooks/use-window-size";
 import { formatDate } from "@/lib/format-date";
 import { cn } from "@/lib/utils";
 import CalendarIcon from "@heroicons/react/24/outline/CalendarIcon";
-import { addDays, addYears, subHours } from "date-fns";
+import { addDays, addYears, subHours, subYears } from "date-fns";
 import { useCallback, useEffect, useState } from "react";
 import { Input } from "./ui/input";
 
@@ -80,6 +80,7 @@ export function DatePickerWithRange({
   className,
   align = "start",
   size,
+  calendarDaysLimit,
 }: Omit<React.HTMLAttributes<HTMLDivElement>, "onChange"> & {
   range?: Range;
   dateRange: DateRange;
@@ -87,6 +88,7 @@ export function DatePickerWithRange({
   onCancel?: () => void;
   align?: "start" | "center" | "end";
   size?: ButtonProps["size"];
+  calendarDaysLimit: number;
 }) {
   const { isMobile } = useWindowSize();
 
@@ -225,6 +227,7 @@ export function DatePickerWithRange({
                   className="w-full justify-start"
                   data-active={selectedRange === Number(id) ? "" : undefined}
                   onClick={() => onRangeClick(Number(id) as Range)}
+                  disabled={calendarDaysLimit * 24 < Number(id)}
                 >
                   {label}
                 </Button>
@@ -278,6 +281,10 @@ export function DatePickerWithRange({
                 {
                   from: addDays(new Date(), 1),
                   to: addYears(new Date(), 1000),
+                },
+                {
+                  from: subHours(new Date(), (calendarDaysLimit + 1) * 24),
+                  to: subYears(new Date(), 1000),
                 },
               ]}
             />
