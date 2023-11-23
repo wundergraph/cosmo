@@ -135,7 +135,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			writeRequestErrors(r, http.StatusBadRequest, graphql.RequestErrorsFromError(errMsgOperationParseFailed), w, requestLogger)
 			return
 		}
-		if traceOptions.ExcludePlannerStats {
+		if !traceOptions.ExcludePlannerStats {
 			planningTime := resolve.GetDurationNanoSinceTraceStart(r.Context()) - tracePlanStart
 			resolve.SetPlannerStats(r.Context(), resolve.PlannerStats{
 				DurationSinceStartNano:   tracePlanStart,
