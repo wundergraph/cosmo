@@ -1,6 +1,6 @@
 import { Command } from 'commander';
-import { checkAPIKey } from '../../utils';
-import { BaseCommandOptions } from '../../core/types/types';
+import { checkAPIKey } from '../../utils.js';
+import { BaseCommandOptions } from '../../core/types/types.js';
 
 import PushOperationsCommand from './commands/push';
 
