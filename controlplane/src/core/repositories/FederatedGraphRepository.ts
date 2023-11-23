@@ -1,8 +1,9 @@
 import { JsonValue } from '@bufbuild/protobuf';
-import { and, asc, desc, eq, gt, inArray, lt, not, notExists, notInArray, SQL, sql } from 'drizzle-orm';
-import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { RouterConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { joinLabel, normalizeURL } from '@wundergraph/cosmo-shared';
+import { and, asc, desc, eq, gt, inArray, lt, not, notExists, notInArray, SQL, sql } from 'drizzle-orm';
+import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { Target } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
 import {
   federatedGraphs,
@@ -12,21 +13,20 @@ import {
   schemaVersion,
   schemaVersionChangeAction,
   targetLabelMatchers,
-  targets,
+  targets
 } from '../../db/schema.js';
 import {
   FederatedGraphChangelogDTO,
   FederatedGraphDTO,
   GraphApiKeyDTO,
   Label,
-  ListFilterOptions,
+  ListFilterOptions
 } from '../../types/index.js';
-import { normalizeLabelMatchers, normalizeLabels } from '../util.js';
 import { Composer } from '../composition/composer.js';
 import { SchemaDiff } from '../composition/schemaCheck.js';
-import { Target } from '../../db/models.js';
-import { SubgraphRepository } from './SubgraphRepository.js';
+import { normalizeLabelMatchers, normalizeLabels } from '../util.js';
 import { GraphCompositionRepository } from './GraphCompositionRepository.js';
+import { SubgraphRepository } from './SubgraphRepository.js';
 
 export interface FederatedGraphConfig {
   trafficCheckDays: number;

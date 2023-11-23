@@ -23,5 +23,8 @@ dependencies:
 - name: clickhouse
   repository: https://charts.bitnami.com/bitnami
   version: 4.1.7
-digest: sha256:d4b25197a67d2223e46b8d89db5cdcd5a6cef1e7026789902751610ae5c0ac00
-generated: "2023-11-21T22:21:23.451763679+01:00"
+- name: minio
+  repository: https://charts.bitnami.com/bitnami
+  version: 12.10.0
+digest: sha256:b659783ca2fb3ed8f1e92ed6121e17158b5d62de3673c6d85148ca55c1c6ea92
+generated: "2023-11-22T11:09:07.627353Z"
