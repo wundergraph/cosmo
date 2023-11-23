@@ -1007,6 +1007,13 @@ message DeleteOIDCProviderResponse {
   Response response = 1;
 }
 
+message GetOrganizationRequestsCountRequest {}
+
+message GetOrganizationRequestsCountResponse {
+  Response response = 1;
+  int64 count = 2;
+}
+
 message ClientInfo{
   string name = 1;
   string id = 2;
@@ -1204,4 +1211,6 @@ service PlatformService {
   rpc GetFieldUsage(GetFieldUsageRequest) returns (GetFieldUsageResponse) {
     option idempotency_level = NO_SIDE_EFFECTS;
   }
+
+  rpc GetOrganizationRequestsCount(GetOrganizationRequestsCountRequest) returns (GetOrganizationRequestsCountResponse) {}
 }

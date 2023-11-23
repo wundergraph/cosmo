@@ -6,6 +6,7 @@ import { GetConfigResponse } from '@wundergraph/cosmo-connect/dist/node/v1/node_
 import { OrganizationEventName, PlatformEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
 import {
+  AnalyticsConfig,
   CheckFederatedGraphResponse,
   CheckSubgraphSchemaResponse,
   CompositionError,
@@ -14,11 +15,15 @@ import {
   CreateFederatedGraphTokenResponse,
   CreateFederatedSubgraphResponse,
   CreateIntegrationResponse,
+  CreateOIDCProviderResponse,
   CreateOrganizationWebhookConfigResponse,
+  DateRange,
   DeleteAPIKeyResponse,
   DeleteFederatedGraphResponse,
   DeleteFederatedSubgraphResponse,
   DeleteIntegrationResponse,
+  DeleteOIDCProviderResponse,
+  DeleteOrganizationResponse,
   DeleteRouterTokenResponse,
   FixSubgraphSchemaResponse,
   ForceCheckSuccessResponse,
@@ -28,6 +33,7 @@ import {
   GetCheckOperationsResponse,
   GetCheckSummaryResponse,
   GetChecksByFederatedGraphNameResponse,
+  GetClientsResponse,
   GetDashboardAnalyticsViewResponse,
   GetFederatedGraphByNameResponse,
   GetFederatedGraphChangelogResponse,
@@ -35,10 +41,13 @@ import {
   GetFederatedGraphsResponse,
   GetFieldUsageResponse,
   GetGraphMetricsResponse,
+  GetLatestValidSubgraphSDLByNameResponse,
   GetMetricsErrorRateResponse,
+  GetOIDCProviderResponse,
   GetOperationContentResponse,
   GetOrganizationIntegrationsResponse,
   GetOrganizationMembersResponse,
+  GetOrganizationRequestsCountResponse,
   GetOrganizationWebhookConfigsResponse,
   GetOrganizationWebhookMetaResponse,
   GetRouterTokensResponse,
@@ -47,39 +56,37 @@ import {
   GetTraceResponse,
   InviteUserResponse,
   IsGitHubAppInstalledResponse,
+  LeaveOrganizationResponse,
   MigrateFromApolloResponse,
   PublishFederatedSubgraphResponse,
   PublishPersistedOperationsResponse,
+  PublishedOperation,
+  PublishedOperationStatus,
   RemoveInvitationResponse,
   RequestSeriesItem,
   UpdateFederatedGraphResponse,
   UpdateIntegrationConfigResponse,
+  UpdateOrgMemberRoleResponse,
   UpdateOrganizationDetailsResponse,
   UpdateOrganizationWebhookConfigResponse,
   UpdateSubgraphResponse,
   WhoAmIResponse,
-  CreateOIDCProviderResponse,
-  GetOIDCProviderResponse,
-  DeleteOIDCProviderResponse,
-  LeaveOrganizationResponse,
-  DeleteOrganizationResponse,
-  UpdateOrgMemberRoleResponse,
-  GetClientsResponse,
-  PublishedOperation,
-  PublishedOperationStatus,
-  GetLatestValidSubgraphSDLByNameResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { OpenAIGraphql, isValidUrl } from '@wundergraph/cosmo-shared';
+import { formatISO, subHours } from 'date-fns';
 import { DocumentNode, buildASTSchema, parse } from 'graphql';
 import { validate } from 'graphql/validation/index.js';
 import { uid } from 'uid';
-import { ClientDTO, GraphApiKeyDTO, GraphApiKeyJwtPayload, PublishedOperationData } from '../../types/index.js';
+import { GraphApiKeyDTO, GraphApiKeyJwtPayload, PublishedOperationData } from '../../types/index.js';
 import { Composer } from '../composition/composer.js';
 import { buildSchema, composeSubgraphs } from '../composition/composition.js';
 import { getDiffBetweenGraphs } from '../composition/schemaCheck.js';
 import { signJwt } from '../crypto/jwt.js';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
 import { GitHubRepository } from '../repositories/GitHubRepository.js';
+import { GraphCompositionRepository } from '../repositories/GraphCompositionRepository.js';
+import { OidcRepository } from '../repositories/OidcRepository.js';
+import { OperationsRepository } from '../repositories/OperationsRepository.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import { SchemaCheckRepository } from '../repositories/SchemaCheckRepository.js';
 import { SubgraphRepository } from '../repositories/SubgraphRepository.js';
@@ -87,16 +94,18 @@ import { UserRepository } from '../repositories/UserRepository.js';
 import { AnalyticsDashboardViewRepository } from '../repositories/analytics/AnalyticsDashboardViewRepository.js';
 import { AnalyticsRequestViewRepository } from '../repositories/analytics/AnalyticsRequestViewRepository.js';
 import { MetricsRepository } from '../repositories/analytics/MetricsRepository.js';
+import { MonthlyRequestViewRepository } from '../repositories/analytics/MonthlyRequestViewRepository.js';
 import { TraceRepository } from '../repositories/analytics/TraceRepository.js';
 import { UsageRepository } from '../repositories/analytics/UsageRepository.js';
 import type { RouterOptions } from '../routes.js';
 import { ApiKeyGenerator } from '../services/ApiGenerator.js';
 import ApolloMigrator from '../services/ApolloMigrator.js';
+import OidcProvider from '../services/OidcProvider.js';
 import {
   InspectorOperationResult,
+  InspectorSchemaChange,
   SchemaUsageTrafficInspector,
   collectOperationUsageStats,
-  InspectorSchemaChange,
 } from '../services/SchemaUsageTrafficInspector.js';
 import Slack from '../services/Slack.js';
 import {
@@ -106,12 +115,9 @@ import {
   isValidLabelMatchers,
   isValidLabels,
   isValidOrganizationSlug,
+  validateDateRanges,
 } from '../util.js';
 import { FederatedGraphSchemaUpdate, OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
-import { OidcRepository } from '../repositories/OidcRepository.js';
-import OidcProvider from '../services/OidcProvider.js';
-import { GraphCompositionRepository } from '../repositories/GraphCompositionRepository.js';
-import { OperationsRepository } from '../repositories/OperationsRepository.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -162,8 +168,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           labelMatchers: req.labelMatchers,
           routingUrl: req.routingUrl,
         });
-
-        await fedGraphRepo.createConfig(federatedGraph.id, 7);
 
         const subgraphs = await subgraphRepo.listByFederatedGraph(req.name, {
           published: true,
@@ -661,12 +665,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         }
 
         for (const composition of result.compositions) {
-          const graphConfig = await fedGraphRepo.getConfig(composition.id);
+          const orgLimits = await orgRepo.getOrganizationLimits({ organizationID: authContext.organizationId });
 
           await schemaCheckRepo.createCheckedFederatedGraph(
             schemaCheckID,
             composition.id,
-            graphConfig.trafficCheckDays,
+            orgLimits.breakingChangeRetentionLimit,
           );
 
           // We collect composition errors for all federated graphs
@@ -682,12 +686,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           // We don't collect operation usage when we have composition errors or
           // when we don't have any inspectable changes. That means any breaking change is really breaking
           if (composition.errors.length === 0 && isInspectable && inspectorChanges.length > 0) {
-            if (graphConfig.trafficCheckDays <= 0) {
+            if (orgLimits.breakingChangeRetentionLimit <= 0) {
               continue;
             }
 
             const result = await trafficInspector.inspect(inspectorChanges, {
-              daysToConsider: graphConfig.trafficCheckDays,
+              daysToConsider: orgLimits.breakingChangeRetentionLimit,
               federatedGraphId: composition.id,
               organizationId: authContext.organizationId,
             });
@@ -1031,6 +1035,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<GetFederatedGraphChangelogResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const fedgraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+        const orgRepo = new OrganizationRepository(opts.db);
 
         const federatedGraph = await fedgraphRepo.byName(req.name);
         if (!federatedGraph) {
@@ -1054,10 +1059,17 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
+        const orgLimits = await orgRepo.getOrganizationLimits({ organizationID: authContext.organizationId });
+
+        const { dateRange } = validateDateRanges({
+          limit: orgLimits.changelogDataRetentionLimit,
+          dateRange: req.dateRange,
+        });
+
         const result = await fedgraphRepo.fetchFederatedGraphChangelog(
           federatedGraph.targetId,
           req.pagination,
-          req.dateRange,
+          dateRange!,
         );
 
         if (!result) {
@@ -1089,6 +1101,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<GetChecksByFederatedGraphNameResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const fedgraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+        const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
+        const orgRepo = new OrganizationRepository(opts.db);
 
         const federatedGraph = await fedgraphRepo.byName(req.name);
         if (!federatedGraph) {
@@ -1102,13 +1116,22 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
+        const orgLimits = await orgRepo.getOrganizationLimits({ organizationID: authContext.organizationId });
+
+        const { dateRange } = validateDateRanges({
+          limit: orgLimits.breakingChangeRetentionLimit,
+          dateRange: {
+            start: req.startDate,
+            end: req.endDate,
+          } as DateRange,
+        });
+
         const checksData = await subgraphRepo.checks({
           federatedGraphName: req.name,
           limit: req.limit,
           offset: req.offset,
-          startDate: req.startDate,
-          endDate: req.endDate,
+          startDate: dateRange!.start,
+          endDate: dateRange!.end,
         });
         const totalChecksCount = await subgraphRepo.getChecksCount({ federatedGraphName: req.name });
 
@@ -1730,6 +1753,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const analyticsRepo = new AnalyticsRequestViewRepository(opts.chClient);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+        const orgRepo = new OrganizationRepository(opts.db);
 
         const graph = await fedGraphRepo.byName(req.federatedGraphName);
         if (!graph) {
@@ -1741,11 +1765,22 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
+        const orgLimits = await orgRepo.getOrganizationLimits({ organizationID: authContext.organizationId });
+        const { range, dateRange } = validateDateRanges({
+          limit: orgLimits.tracingRetentionLimit,
+          range: req.config?.range,
+          dateRange: req.config?.dateRange,
+        });
+
         return {
           response: {
             code: EnumStatusCode.OK,
           },
-          view: await analyticsRepo.getView(authContext.organizationId, graph.id, req.name, req.config),
+          view: await analyticsRepo.getView(authContext.organizationId, graph.id, req.name, {
+            ...req.config,
+            range,
+            dateRange,
+          } as AnalyticsConfig),
         };
       });
     },
@@ -1815,6 +1850,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const repo = new MetricsRepository(opts.chClient);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+        const orgRepo = new OrganizationRepository(opts.db);
 
         const graph = await fedGraphRepo.byName(req.federatedGraphName);
         if (!graph) {
@@ -1827,9 +1863,16 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const view = await repo.getMetricsView({
+        const orgLimits = await orgRepo.getOrganizationLimits({ organizationID: authContext.organizationId });
+        const { range, dateRange } = validateDateRanges({
+          limit: orgLimits.analyticsRetentionLimit,
           range: req.range,
           dateRange: req.dateRange,
+        });
+
+        const view = await repo.getMetricsView({
+          range,
+          dateRange,
           filters: req.filters,
           organizationId: authContext.organizationId,
           graphId: graph.id,
@@ -1862,6 +1905,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const repo = new MetricsRepository(opts.chClient);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+        const orgRepo = new OrganizationRepository(opts.db);
 
         const graph = await fedGraphRepo.byName(req.federatedGraphName);
         if (!graph) {
@@ -1874,9 +1918,16 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const metrics = await repo.getErrorsView({
+        const orgLimits = await orgRepo.getOrganizationLimits({ organizationID: authContext.organizationId });
+        const { range, dateRange } = validateDateRanges({
+          limit: orgLimits.analyticsRetentionLimit,
           range: req.range,
           dateRange: req.dateRange,
+        });
+
+        const metrics = await repo.getErrorsView({
+          range,
+          dateRange,
           filters: req.filters,
           organizationId: authContext.organizationId,
           graphId: graph.id,
@@ -4056,6 +4107,35 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             code: EnumStatusCode.OK,
           },
           clients,
+        };
+      });
+    },
+
+    getOrganizationRequestsCount: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetOrganizationRequestsCountResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+
+        if (!opts.chClient) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_ANALYTICS_DISABLED,
+            },
+            count: BigInt(0),
+          };
+        }
+        const monthlyRequestsRepo = new MonthlyRequestViewRepository(opts.chClient);
+        const count = await monthlyRequestsRepo.getMonthlyRequestCount(authContext.organizationId);
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          count: BigInt(count),
         };
       });
     },

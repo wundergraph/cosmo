@@ -9,7 +9,7 @@ import useWindowSize from "@/hooks/use-window-size";
 import { formatDate } from "@/lib/format-date";
 import { cn } from "@/lib/utils";
 import CalendarIcon from "@heroicons/react/24/outline/CalendarIcon";
-import { addDays, addYears } from "date-fns";
+import { addDays, addYears, subHours, subYears } from "date-fns";
 import { useEffect, useState } from "react";
 import { DateRange } from "react-day-picker";
 
@@ -19,11 +19,13 @@ export function DateRangePicker({
   className,
   align = "start",
   size,
+  calendarDaysLimit,
 }: React.HTMLAttributes<HTMLDivElement> & {
   selectedDateRange: DateRange;
   onDateRangeChange: (newVal: DateRange) => unknown;
   align?: "start" | "center" | "end";
   size?: ButtonProps["size"];
+  calendarDaysLimit: number;
 }) {
   const { isMobile } = useWindowSize();
 
@@ -55,7 +57,7 @@ export function DateRangePicker({
           className={cn(
             "w-[240px] justify-center text-left font-normal",
             className,
-            !selected && "text-muted-foreground"
+            !selected && "text-muted-foreground",
           )}
         >
           <CalendarIcon className="mr-2 h-4 w-4" />
@@ -97,7 +99,14 @@ export function DateRangePicker({
           numberOfMonths={isMobile ? 1 : 2}
           showOutsideDays={false}
           disabled={[
-            { from: addDays(new Date(), 1), to: addYears(new Date(), 1000) },
+            {
+              from: addDays(new Date(), 1),
+              to: addYears(new Date(), 1000),
+            },
+            {
+              from: subHours(new Date(), (calendarDaysLimit + 1) * 24),
+              to: subYears(new Date(), 1000),
+            },
           ]}
         />
       </PopoverContent>

@@ -38,7 +38,7 @@ import {
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { formatISO, subHours } from "date-fns";
 import { useRouter } from "next/router";
-import { useMemo, useState } from "react";
+import { useContext, useMemo, useState } from "react";
 import useDeepCompareEffect from "use-deep-compare-effect";
 import {
   DatePickerWithRange,
@@ -57,6 +57,7 @@ import { RefreshInterval, refreshIntervals } from "./refresh-interval";
 import { useApplyParams } from "./use-apply-params";
 import { getDefaultSort, useSyncTableWithQuery } from "./useSyncTableWithQuery";
 import { useAnalyticsQueryState } from "./useAnalyticsQueryState";
+import { UserContext } from "../app-provider";
 
 export function AnalyticsDataTable<T>({
   data,
@@ -76,6 +77,7 @@ export function AnalyticsDataTable<T>({
   refresh: () => void;
 }) {
   const router = useRouter();
+  const user = useContext(UserContext);
 
   const [, setRouteCache] = useSessionStorage("analytics.route", router.query);
 
@@ -320,6 +322,9 @@ export function AnalyticsDataTable<T>({
             range={selectedRange}
             dateRange={selectedDateRange}
             onChange={onDateRangeChange}
+            calendarDaysLimit={
+              user?.currentOrganization.limits.tracingRetentionLimit || 7
+            }
           />
           <AnalyticsFilters filters={filtersList} />
         </div>

@@ -269,6 +269,16 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
               memberID: orgMember.id,
               roles: ['admin'],
             });
+
+            await orgRepo.addOrganizationLimits({
+              organizationID: insertedOrg.id,
+              analyticsRetentionLimit: 7,
+              tracingRetentionLimit: 7,
+              changelogDataRetentionLimit: 7,
+              breakingChangeRetentionLimit: 7,
+              traceSamplingRateLimit: 0.1,
+              requestsLimit: 10,
+            });
           });
 
           opts.platformWebhooks.send(PlatformEventName.USER_REGISTER_SUCCESS, {

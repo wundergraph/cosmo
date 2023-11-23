@@ -13,6 +13,7 @@ import {
   apiKeys,
   integrationTypeEnum,
   organizationIntegrations,
+  organizationLimits,
   organizationMemberRoles,
   organizationWebhooks,
   organizations,
@@ -22,7 +23,13 @@ import {
   targets,
   users,
 } from '../../db/schema.js';
-import { APIKeyDTO, OrganizationDTO, OrganizationMemberDTO, WebhooksConfigDTO } from '../../types/index.js';
+import {
+  APIKeyDTO,
+  OrganizationDTO,
+  OrganizationLimitsDTO,
+  OrganizationMemberDTO,
+  WebhooksConfigDTO,
+} from '../../types/index.js';
 import { MemberRole } from '../../db/models.js';
 
 /**
@@ -106,7 +113,9 @@ export class OrganizationRepository {
     };
   }
 
-  public async memberships(input: { userId: string }): Promise<(OrganizationDTO & { roles: string[] })[]> {
+  public async memberships(input: {
+    userId: string;
+  }): Promise<(OrganizationDTO & { roles: string[]; limits: OrganizationLimitsDTO })[]> {
     const userOrganizations = await this.db
       .select({
         id: organizations.id,
@@ -116,10 +125,19 @@ export class OrganizationRepository {
         isFreeTrial: organizations.isFreeTrial,
         isPersonal: organizations.isPersonal,
         createdAt: organizations.createdAt,
+        limits: {
+          analyticsRetentionLimit: organizationLimits.analyticsRetentionLimit,
+          tracingRetentionLimit: organizationLimits.tracingRetentionLimit,
+          breakingChangeRetentionLimit: organizationLimits.breakingChangeRetentionLimit,
+          changelogDataRetentionLimit: organizationLimits.changelogDataRetentionLimit,
+          traceSamplingRateLimit: organizationLimits.traceSamplingRateLimit,
+          requestsLimit: organizationLimits.requestsLimit,
+        },
       })
       .from(organizationsMembers)
       .innerJoin(organizations, eq(organizations.id, organizationsMembers.organizationId))
       .innerJoin(users, eq(users.id, organizationsMembers.userId))
+      .innerJoin(organizationLimits, eq(organizations.id, organizationLimits.organizationId))
       .where(eq(users.id, input.userId))
       .execute();
 
@@ -136,6 +154,14 @@ export class OrganizationRepository {
           userID: input.userId,
           organizationID: org.id,
         }),
+        limits: {
+          analyticsRetentionLimit: org.limits.analyticsRetentionLimit,
+          tracingRetentionLimit: org.limits.tracingRetentionLimit,
+          breakingChangeRetentionLimit: org.limits.breakingChangeRetentionLimit,
+          changelogDataRetentionLimit: org.limits.changelogDataRetentionLimit,
+          traceSamplingRateLimit: Number(org.limits.traceSamplingRateLimit),
+          requestsLimit: org.limits.requestsLimit,
+        },
       })),
     );
 
@@ -859,5 +885,63 @@ export class OrganizationRepository {
           eq(organizationIntegrations.organizationId, input.organizationId),
         ),
       );
+  }
+
+  public async addOrganizationLimits(input: {
+    organizationID: string;
+    analyticsRetentionLimit: number;
+    tracingRetentionLimit: number;
+    changelogDataRetentionLimit: number;
+    breakingChangeRetentionLimit: number;
+    traceSamplingRateLimit: number;
+    requestsLimit: number;
+  }) {
+    await this.db
+      .insert(organizationLimits)
+      .values({
+        requestsLimit: input.requestsLimit,
+        analyticsRetentionLimit: input.analyticsRetentionLimit,
+        tracingRetentionLimit: input.tracingRetentionLimit,
+        breakingChangeRetentionLimit: input.breakingChangeRetentionLimit,
+        changelogDataRetentionLimit: input.changelogDataRetentionLimit,
+        traceSamplingRateLimit: input.traceSamplingRateLimit.toString(),
+        organizationId: input.organizationID,
+      })
+      .execute();
+  }
+
+  public async getOrganizationLimits(input: { organizationID: string }): Promise<OrganizationLimitsDTO> {
+    const limits = await this.db
+      .select({
+        analyticsRetentionLimit: organizationLimits.analyticsRetentionLimit,
+        tracingRetentionLimit: organizationLimits.tracingRetentionLimit,
+        breakingChangeRetentionLimit: organizationLimits.breakingChangeRetentionLimit,
+        changelogDataRetentionLimit: organizationLimits.changelogDataRetentionLimit,
+        traceSamplingRateLimit: organizationLimits.traceSamplingRateLimit,
+        requestsLimit: organizationLimits.requestsLimit,
+      })
+      .from(organizationLimits)
+      .where(eq(organizationLimits.organizationId, input.organizationID))
+      .execute();
+
+    if (limits.length === 0) {
+      return {
+        analyticsRetentionLimit: 7,
+        tracingRetentionLimit: 7,
+        changelogDataRetentionLimit: 7,
+        breakingChangeRetentionLimit: 7,
+        traceSamplingRateLimit: 0.1,
+        requestsLimit: 10,
+      };
+    }
+
+    return {
+      analyticsRetentionLimit: limits[0].analyticsRetentionLimit,
+      tracingRetentionLimit: limits[0].tracingRetentionLimit,
+      changelogDataRetentionLimit: limits[0].changelogDataRetentionLimit,
+      breakingChangeRetentionLimit: limits[0].breakingChangeRetentionLimit,
+      requestsLimit: limits[0].requestsLimit,
+      traceSamplingRateLimit: Number.parseFloat(limits[0].traceSamplingRateLimit),
+    };
   }
 }
