@@ -17,6 +17,9 @@ import {
   TooltipTrigger,
 } from "../ui/tooltip";
 import { FetchNode } from "./types";
+import { ViewHeaders } from "./view-headers";
+import { ViewInput } from "./view-input";
+import { ViewOutput } from "./view-output";
 
 const bigintE3 = BigInt(1e3);
 const bigintE2 = BigInt(1e2);
@@ -276,20 +279,19 @@ export const FetchWaterfall = ({
             <div className="col-span-full mt-4 flex w-full">
               <div className="z-50 flex w-max items-center gap-8">
                 {fetch.outputTrace && (
-                  <Button variant="link" size="sm" className="flex-1 px-0">
-                    <span className="flex-shrink-0">View Headers</span>
-                  </Button>
+                  <ViewHeaders
+                    requestHeaders={JSON.stringify(
+                      fetch.outputTrace.request.headers,
+                    )}
+                    responseHeaders={JSON.stringify(
+                      fetch.outputTrace.response.headers,
+                    )}
+                  />
                 )}
                 {(fetch.input || fetch.rawInput) && (
-                  <Button variant="link" size="sm" className="flex-1 px-0">
-                    <span className="flex-shrink-0">View Input</span>
-                  </Button>
+                  <ViewInput input={fetch.input} rawInput={fetch.rawInput} />
                 )}
-                {fetch.output && (
-                  <Button variant="link" size="sm" className="flex-1 px-0">
-                    <span className="flex-shrink-0">View Output</span>
-                  </Button>
-                )}
+                {fetch.output && <ViewOutput output={fetch.output} />}
               </div>
             </div>
           </div>

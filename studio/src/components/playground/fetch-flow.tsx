@@ -25,9 +25,12 @@ import ReactFlow, {
 } from "reactflow";
 import "reactflow/dist/style.css";
 import { Badge } from "../ui/badge";
-import { Button, buttonVariants } from "../ui/button";
+import { buttonVariants } from "../ui/button";
 import { Separator } from "../ui/separator";
 import { FetchNode } from "./types";
+import { ViewHeaders } from "./view-headers";
+import { ViewInput } from "./view-input";
+import { ViewOutput } from "./view-output";
 
 const dagreGraph = new dagre.graphlib.Graph();
 dagreGraph.setDefaultEdgeLabel(function () {
@@ -184,20 +187,18 @@ const ReactFlowFetchNode = ({ data }: Node<FetchNode>) => {
         )}
         <div className="flex gap-2 px-4">
           {data.outputTrace && (
-            <Button variant="secondary" size="sm" className="flex-1">
-              <span className="flex-shrink-0">View Headers</span>
-            </Button>
+            <ViewHeaders
+              requestHeaders={JSON.stringify(data.outputTrace.request.headers)}
+              responseHeaders={JSON.stringify(
+                data.outputTrace.response.headers,
+              )}
+              asChild
+            />
           )}
           {(data.input || data.rawInput) && (
-            <Button variant="secondary" size="sm" className="flex-1">
-              <span className="flex-shrink-0">View Input</span>
-            </Button>
+            <ViewInput input={data.input} rawInput={data.rawInput} asChild />
           )}
-          {data.output && (
-            <Button variant="secondary" size="sm" className="flex-1">
-              <span className="flex-shrink-0">View Output</span>
-            </Button>
-          )}
+          {data.output && <ViewOutput output={data.output} asChild />}
         </div>
       </div>
       <Handle type="source" position={Position.Right} isConnectable={false} />
