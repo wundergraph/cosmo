@@ -2,7 +2,7 @@ import { Command } from 'commander';
 import { checkAPIKey } from '../../utils.js';
 import { BaseCommandOptions } from '../../core/types/types.js';
 
-import PushOperationsCommand from './commands/push';
+import PushOperationsCommand from './commands/push.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('operations');
