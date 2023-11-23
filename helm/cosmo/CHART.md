@@ -44,6 +44,7 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | global.keycloak.port | int | `8080` |  |
 | global.keycloak.realm | string | `"cosmo"` |  |
 | global.keycloak.webUrl | string | `"http://keycloak.wundergraph.local"` |  |
+| global.minio.enabled | bool | `false` |  |
 | global.otelcollector.enabled | bool | `false` |  |
 | global.otelcollector.port | int | `4318` |  |
 | global.otelcollector.webUrl | string | `"http://otelcollector.wundergraph.local"` |  |
