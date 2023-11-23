@@ -13,14 +13,14 @@ import {
   schemaVersion,
   schemaVersionChangeAction,
   targetLabelMatchers,
-  targets
+  targets,
 } from '../../db/schema.js';
 import {
   FederatedGraphChangelogDTO,
   FederatedGraphDTO,
   GraphApiKeyDTO,
   Label,
-  ListFilterOptions
+  ListFilterOptions,
 } from '../../types/index.js';
 import { Composer } from '../composition/composer.js';
 import { SchemaDiff } from '../composition/schemaCheck.js';
