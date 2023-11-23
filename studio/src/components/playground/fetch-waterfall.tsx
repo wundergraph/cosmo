@@ -273,8 +273,8 @@ export const FetchWaterfall = ({
             />
             <Attribute name="load skipped" value={`${fetch.loadSkipped}`} />
 
-            <div className="col-span-full mt-4 flex w-full justify-start px-1">
-              <div className="z-50 flex w-max items-center justify-end gap-8">
+            <div className="col-span-full mt-4 flex w-full">
+              <div className="z-50 flex w-max items-center gap-8">
                 {fetch.outputTrace && (
                   <Button variant="link" size="sm" className="flex-1 px-0">
                     <span className="flex-shrink-0">View Headers</span>

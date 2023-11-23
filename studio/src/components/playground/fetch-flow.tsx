@@ -128,7 +128,7 @@ const ReactFlowMultiFetchNode = ({
 
 const ReactFlowFetchNode = ({ data }: Node<FetchNode>) => {
   const statusCode = data.outputTrace?.response?.statusCode;
-  const isSuccess = statusCode?.toString().startsWith("2");
+  const isFailure = (statusCode ?? 0) >= 400;
 
   const getIcon = (val: boolean) => {
     if (val) {
@@ -145,7 +145,7 @@ const ReactFlowFetchNode = ({ data }: Node<FetchNode>) => {
         className={cn(
           "relative flex flex-col  rounded-md border py-4 text-secondary-foreground",
           {
-            "!border-destructive": !isSuccess,
+            "!border-destructive": isFailure,
           },
         )}
       >
@@ -155,7 +155,7 @@ const ReactFlowFetchNode = ({ data }: Node<FetchNode>) => {
             Fetch from {data.dataSourceName}
           </p>
           {data.outputTrace && (
-            <Badge variant={isSuccess ? "success" : "destructive"}>
+            <Badge variant={isFailure ? "destructive" : "success"}>
               {data.outputTrace?.response?.statusCode}
             </Badge>
           )}
