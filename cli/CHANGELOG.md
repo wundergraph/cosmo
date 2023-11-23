@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.30.0](https://github.com/wundergraph/cosmo/compare/wgc@0.28.2...wgc@0.30.0) (2023-11-23)
+
+### Features
+
+* add support for persisted operations ([#249](https://github.com/wundergraph/cosmo/issues/249)) ([a9ad47f](https://github.com/wundergraph/cosmo/commit/a9ad47ff5cf7db6bccf774e168b1d1ce3ee7bcdd)) (@fiam)
+
 # [0.29.0](https://github.com/wundergraph/cosmo/compare/wgc@0.28.2...wgc@0.29.0) (2023-11-23)
 
 ### Features
