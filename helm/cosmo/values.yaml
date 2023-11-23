@@ -23,6 +23,9 @@ global:
   router:
     enabled: false
 
+  minio:
+    enabled: false
+
   clickhouse:
     enabled: false
 
