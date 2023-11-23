@@ -66,3 +66,7 @@ dependencies:
     version: "^4.1.5"
     condition: global.clickhouse.enabled
     repository: "https://charts.bitnami.com/bitnami"
+  - name: minio
+    version: "12.10.0"
+    condition: global.minio.enabled
+    repository: "https://charts.bitnami.com/bitnami"
