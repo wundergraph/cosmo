@@ -137,7 +137,7 @@ const GraphLayout = ({ children }: LayoutProps) => {
 
   return (
     <div className="2xl:flex 2xl:flex-1 2xl:flex-col 2xl:items-center">
-      <div className="min-h-screen w-full max-w-screen-4xl bg-background font-sans antialiased">
+      <div className="max-w-screen min-h-screen w-full bg-background font-sans antialiased">
         <Nav links={links}>{render}</Nav>
       </div>
     </div>

@@ -22,40 +22,8 @@ import "reactflow/dist/style.css";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Separator } from "../ui/separator";
-
-export type TraceInfo = {
-  startUnixSeconds: number;
-};
-
-export type FetchNode = {
-  id: string;
-  parentId?: string;
-  type: string;
-  dataSourceId?: string;
-  dataSourceName?: string;
-  children: FetchNode[];
-  input?: any;
-  rawInput?: any;
-  output?: any;
-  outputTrace?: {
-    request: {
-      method: string;
-      url: string;
-      headers: Record<string, Array<string>>;
-    };
-    response: {
-      statusCode: number;
-      headers: Record<string, Array<string>>;
-    };
-  };
-  durationSinceStart?: number;
-  durationSinceStartPretty?: string;
-  durationLoad?: number;
-  durationLoadPretty?: string;
-  singleFlightUsed: boolean;
-  singleFlightSharedResponse: boolean;
-  loadSkipped: boolean;
-};
+import { FetchNode } from "./types";
+import { nsToTime } from "@/lib/insights-helpers";
 
 const dagreGraph = new dagre.graphlib.Graph();
 dagreGraph.setDefaultEdgeLabel(function () {
@@ -117,18 +85,10 @@ function CustomEdge({
     targetPosition,
   });
 
-  const formatDuration = (duration: string) => {
-    const units = duration.slice(-2);
-    const value = duration.slice(0, -2);
-
-    const decimals = value.split(".")[1].slice(0, 3);
-    return duration.split(".")[0] + "." + decimals + " " + units;
-  };
-
   return (
     <>
       <BaseEdge path={edgePath} markerEnd={markerEnd} style={style} />
-      {data?.durationLoadPretty && (
+      {data?.durationLoad && (
         <EdgeLabelRenderer>
           <div
             style={{
@@ -139,7 +99,7 @@ function CustomEdge({
             className="nodrag nopan"
           >
             <div className="rounded-full bg-secondary px-3 py-1.5 text-xs text-secondary-foreground">
-              {formatDuration(data.durationLoadPretty)}
+              {nsToTime(BigInt(data.durationLoad))}
             </div>
           </div>
         </EdgeLabelRenderer>
@@ -154,8 +114,8 @@ const ReactFlowMultiFetchNode = ({
   return (
     <>
       <Handle type="target" position={Position.Left} isConnectable={false} />
-      <div className="flex flex-col rounded-full bg-primary/30 px-4 py-2 text-primary-foreground backdrop-blur-[2px]">
-        <p>{sentenceCase(data.type)} Fetch</p>
+      <div className="flex flex-col rounded-full bg-primary/50 px-6 py-2 text-lg text-primary-foreground backdrop-blur-lg">
+        <p>{sentenceCase(data.type)}</p>
       </div>
       <Handle type="source" position={Position.Right} isConnectable={false} />
     </>
@@ -179,14 +139,14 @@ const ReactFlowFetchNode = ({ data }: Node<FetchNode>) => {
       <Handle type="target" position={Position.Left} isConnectable={false} />
       <div
         className={cn(
-          "relative flex flex-col  border py-2 text-secondary-foreground",
+          "relative flex flex-col  rounded-md border py-4 text-secondary-foreground",
           {
             "!border-destructive": !isSuccess,
           },
         )}
       >
-        <div className="absolute inset-0 -z-10 bg-secondary/30 backdrop-blur-[2px]" />
-        <div className="mb-2 flex items-center justify-between gap-x-4 border-b px-4 pb-2">
+        <div className="absolute inset-0 -z-10 bg-secondary/30 backdrop-blur-lg" />
+        <div className="flex items-center justify-between gap-x-4 border-b px-4 pb-4">
           <p className="text-base font-medium subpixel-antialiased">
             Fetch from {data.dataSourceName}
           </p>
@@ -196,7 +156,7 @@ const ReactFlowFetchNode = ({ data }: Node<FetchNode>) => {
             </Badge>
           )}
         </div>
-        <div className="flex flex-col gap-y-1 px-4 py-2 text-sm">
+        <div className="flex flex-col gap-y-1 px-4 py-4 text-sm">
           <p>Fetch Type: {sentenceCase(data.type)}</p>
           {data.outputTrace && (
             <>
@@ -216,7 +176,7 @@ const ReactFlowFetchNode = ({ data }: Node<FetchNode>) => {
           </p>
         </div>
         {(data.outputTrace || data.input || data.rawInput || data.output) && (
-          <Separator className="mb-2" />
+          <Separator className="mb-4" />
         )}
         <div className="flex gap-2 px-4">
           {data.outputTrace && (
