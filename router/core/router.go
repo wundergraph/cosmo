@@ -12,6 +12,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
+	"github.com/wundergraph/cosmo/router/internal/cdn"
 	"github.com/wundergraph/cosmo/router/internal/docker"
 	"github.com/wundergraph/cosmo/router/internal/graphqlmetrics"
 	brotli "go.withmatt.com/connect-brotli"
@@ -94,6 +95,8 @@ type (
 		healthCheckPath          string
 		readinessCheckPath       string
 		livenessCheckPath        string
+		cdnURL                   string
+		cdn                      *cdn.CDN
 		prometheusServer         *http.Server
 		modulesConfig            map[string]interface{}
 		routerMiddlewares        []func(http.Handler) http.Handler
@@ -207,6 +210,7 @@ func NewRouter(opts ...Option) (*Router, error) {
 		"graphql-client-version",
 		"apollographql-client-name",
 		"apollographql-client-version",
+		"x-wg-trace",
 	}
 
 	defaultMethods := []string{
@@ -266,6 +270,14 @@ func NewRouter(opts ...Option) (*Router, error) {
 			})
 		}
 	}
+	routerCDN, err := cdn.New(cdn.CDNOptions{
+		URL:                 r.cdnURL,
+		AuthenticationToken: r.graphApiToken,
+	})
+	if err != nil {
+		return nil, err
+	}
+	r.cdn = routerCDN
 	return r, nil
 }
 
@@ -660,12 +672,23 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		Headers:   r.headerRules,
 	}
 
+	if routerEngineConfig.Execution.EnableRequestTracing {
+		r.logger.Warn("Request tracing is enabled." +
+			"This is a security risk as it can leak sensitive information and internals of your subgraphs through the API." +
+			"Enabling request tracing negatively impacts performance because the execution plan cache is disabled." +
+			"You should only enable this for debugging purposes and not in production.")
+	}
+
 	executor, err := ecb.Build(ctx, routerConfig, routerEngineConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build plan configuration: %w", err)
 	}
 
-	operationParser := NewOperationParser(executor, int64(r.routerTrafficConfig.MaxRequestBodyBytes))
+	operationParser := NewOperationParser(OperationParserOptions{
+		Executor:                executor,
+		MaxOperationSizeInBytes: int64(r.routerTrafficConfig.MaxRequestBodyBytes),
+		CDN:                     r.cdn,
+	})
 	operationPlanner := NewOperationPlanner(executor, planCache)
 
 	var graphqlPlaygroundHandler http.Handler
@@ -707,12 +730,13 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	routerMetrics := NewRouterMetrics(metricStore, r.gqlMetricsExporter, routerConfig.GetVersion())
 
 	graphqlPreHandler := NewPreHandler(&PreHandlerOptions{
-		Logger:           r.logger,
-		Executor:         executor,
-		Metrics:          routerMetrics,
-		Parser:           operationParser,
-		Planner:          operationPlanner,
-		AccessController: r.accessController,
+		Logger:                r.logger,
+		Executor:              executor,
+		Metrics:               routerMetrics,
+		Parser:                operationParser,
+		Planner:               operationPlanner,
+		AccessController:      r.accessController,
+		DisableRequestTracing: !routerEngineConfig.Execution.EnableRequestTracing,
 	})
 
 	var traceHandler *trace.Middleware
@@ -1017,6 +1041,13 @@ func WithReadinessCheckPath(path string) Option {
 func WithLivenessCheckPath(path string) Option {
 	return func(r *Router) {
 		r.livenessCheckPath = path
+	}
+}
+
+// WithCDNURL sets the root URL for the CDN to use
+func WithCDNURL(cdnURL string) Option {
+	return func(r *Router) {
+		r.cdnURL = cdnURL
 	}
 }
 

@@ -5,7 +5,9 @@ import { RouterConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { joinLabel, normalizeURL } from '@wundergraph/cosmo-shared';
 import * as schema from '../../db/schema.js';
 import {
+  federatedGraphClients,
   federatedGraphConfigs,
+  federatedGraphPersistedOperations,
   federatedGraphs,
   graphApiTokens,
   graphCompositions,
@@ -16,17 +18,21 @@ import {
   targets,
 } from '../../db/schema.js';
 import {
+  ClientDTO,
   FederatedGraphChangelogDTO,
   FederatedGraphDTO,
   GraphApiKeyDTO,
   Label,
   ListFilterOptions,
+  PersistedOperationDTO,
+  UserDTO,
 } from '../../types/index.js';
 import { normalizeLabelMatchers, normalizeLabels } from '../util.js';
 import { Composer } from '../composition/composer.js';
 import { SchemaDiff } from '../composition/schemaCheck.js';
 import { Target } from '../../db/models.js';
 import { SubgraphRepository } from './SubgraphRepository.js';
+import { UserRepository } from './UserRepository.js';
 import { GraphCompositionRepository } from './GraphCompositionRepository.js';
 
 export interface FederatedGraphConfig {

@@ -19,9 +19,12 @@ dependencies:
   version: 12.8.0
 - name: keycloak
   repository: https://charts.bitnami.com/bitnami
-  version: 17.3.1
+  version: 17.3.4
 - name: clickhouse
   repository: https://charts.bitnami.com/bitnami
-  version: 4.1.5
-digest: sha256:29b383d0573b51532a262fbf0ec65c78c5e78c754aa6fcad02fc520a38c4268a
-generated: "2023-11-20T10:48:23.4318274+01:00"
+  version: 4.1.7
+- name: minio
+  repository: https://charts.bitnami.com/bitnami
+  version: 12.10.0
+digest: sha256:b659783ca2fb3ed8f1e92ed6121e17158b5d62de3673c6d85148ca55c1c6ea92
+generated: "2023-11-22T11:09:07.627353Z"

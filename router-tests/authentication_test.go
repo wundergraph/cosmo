@@ -39,7 +39,7 @@ func setupServerWithJWKS(tb testing.TB, jwksOpts *authentication.JWKSAuthenticat
 		core.WithAccessController(core.NewAccessController(authenticators, authRequired)),
 	}
 	serverOpts = append(serverOpts, opts...)
-	return prepareServer(tb, serverOpts...), authServer
+	return setupServer(tb, serverOpts...), authServer
 }
 
 func assertHasGraphQLErrors(t *testing.T, rr *httptest.ResponseRecorder) {
@@ -131,7 +131,7 @@ func TestAuthorization(t *testing.T) {
 		server.Server.Handler.ServeHTTP(rr, req)
 		assert.Equal(t, http.StatusOK, rr.Code)
 		assert.Equal(t, "", rr.Header().Get(xAuthenticatedByHeader))
-		assert.JSONEq(t, `{"errors":[{"message":"unauthorized"}]}`, rr.Body.String())
+		assert.JSONEq(t, `{"errors":[{"message":"unauthorized"}],"data":null}`, rr.Body.String())
 	})
 
 	t.Run("invalid token", func(t *testing.T) {
@@ -187,7 +187,7 @@ func TestAuthenticationMultipleProviders(t *testing.T) {
 	require.NoError(t, err)
 	authenticators := []authentication.Authenticator{authenticator1, authenticator2}
 	accessController := core.NewAccessController(authenticators, false)
-	server := prepareServer(t, core.WithAccessController(accessController))
+	server := setupServer(t, core.WithAccessController(accessController))
 
 	t.Run("authenticate with first provider", func(t *testing.T) {
 		for _, prefix := range authenticator1HeaderValuePrefixes {

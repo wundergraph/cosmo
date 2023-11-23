@@ -414,11 +414,11 @@ func (h *WebSocketConnectionHandler) writeErrorMessage(operationID string, err e
 }
 
 func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperation, *operationContext, error) {
-	operation, err := h.parser.Parse(payload)
+	operation, err := h.parser.Parse(h.ctx, h.clientInfo, payload, h.logger)
 	if err != nil {
 		return nil, nil, err
 	}
-	opContext, err := h.planner.Plan(operation, h.clientInfo)
+	opContext, err := h.planner.Plan(operation, h.clientInfo, ParseRequestTraceOptions(h.r, false))
 	if err != nil {
 		return operation, nil, err
 	}

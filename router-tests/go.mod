@@ -11,6 +11,7 @@ replace github.com/wundergraph/cosmo/composition-go => ../composition-go
 go 1.21
 
 require (
+	github.com/buger/jsonparser v1.1.1
 	github.com/golang-jwt/jwt/v5 v5.0.0
 	github.com/gorilla/websocket v1.5.0
 	github.com/hasura/go-graphql-client v0.10.0
@@ -28,7 +29,6 @@ require (
 	github.com/agnivade/levenshtein v1.1.1 // indirect
 	github.com/andybalholm/brotli v1.0.5 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
-	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/bytedance/sonic v1.10.0-rc // indirect
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
@@ -55,7 +55,7 @@ require (
 	github.com/golang/glog v1.1.1 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/pprof v0.0.0-20230207041349-798e818bf904 // indirect
-	github.com/google/uuid v1.3.1 // indirect
+	github.com/google/uuid v1.4.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.16.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
@@ -90,7 +90,7 @@ require (
 	github.com/tidwall/sjson v1.2.5 // indirect
 	github.com/urfave/cli/v2 v2.25.5 // indirect
 	github.com/vektah/gqlparser/v2 v2.5.10 // indirect
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.2.0.20231116174705-a5a34bb45e2a // indirect
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.2.0.20231121184110-e85c1264c3b5 // indirect
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.45.0 // indirect
 	go.opentelemetry.io/otel v1.19.0 // indirect

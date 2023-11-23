@@ -12,15 +12,25 @@ body,
   @apply min-h-screen bg-gray-950 flex flex-col justify-center py-0 md:py-12 md:px-6 lg:px-8;
 }
 
+#kc-page-title {
+  @apply font-medium text-left;
+}
+
 #kc-header,
 .login-pf-page-header {
   @apply mb-4;
 }
 
 #kc-header-wrapper {
-  background-image: url(../img/WG_Cosmonauts_Super_Cosmo.svg);
-  background-size: 6rem;
-  @apply h-24 w-full bg-no-repeat bg-center text-transparent;
+  @apply flex flex-row justify-center items-center space-x-2;
+}
+
+#kc-header-logo {
+  @apply w-[40px] h-[40px];
+}
+
+#kc-header .logo {
+  @apply flex flex-row items-center space-x-2 text-lg font-semibold mb-8 text-white;
 }
 
 #kc-locale-wrapper {
@@ -32,7 +42,7 @@ div.kc-logo-text span {
 }
 
 .card-pf {
-  @apply mx-auto w-full md:max-w-md bg-gray-950 md:bg-gray-900 py-8 px-4 shadow md:rounded-lg md:px-10;
+  @apply mx-auto w-full border border-t border-gray-850 md:max-w-md bg-gray-950 md:bg-gray-900 py-8 px-4 shadow md:rounded-lg md:px-10;
 }
 
 .form-group label {
@@ -40,12 +50,16 @@ div.kc-logo-text span {
 }
 
 .form-group input[type='password'],
-.form-group input[type='text'] {
-  @apply block w-full flex-1 rounded-md text-sm disabled:cursor-not-allowed border border-gray-600 bg-gray-800 text-gray-100 placeholder-gray-400 focus:border-sky-500 hover:border-gray-500 hover:focus:border-sky-500 disabled:hover:border-gray-600;
+.form-group input[type='text'],
+.form-group .form-input:focus,
+.form-group .form-textarea:focus,
+.form-group .form-select:focus,
+.form-group .form-multiselect:focus {
+  @apply block w-full flex-1 rounded-md text-sm disabled:cursor-not-allowed border border-gray-600 bg-gray-800 text-gray-100 placeholder-gray-400 focus:border-pink-500 focus:ring-pink-400 hover:border-gray-500 hover:focus:border-pink-500 disabled:hover:border-gray-600;
 }
 
 .form-group input[type='checkbox'] {
-  @apply rounded border-gray-300 text-purple-600 shadow-sm focus:border-purple-300 focus:ring focus:ring-offset-0 focus:ring-purple-200 focus:ring-opacity-50;
+  @apply rounded border-gray-300 text-pink-600 shadow-sm focus:border-pink-300 focus:ring focus:ring-offset-0 focus:ring-pink-200 focus:ring-opacity-50;
 }
 
 .login-pf-header h1 {
@@ -57,7 +71,7 @@ div.kc-logo-text span {
 }
 
 #rememberMe {
-  @apply h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded;
+  @apply h-4 w-4 text-pink-600 focus:ring-pink-500 border-gray-300 rounded;
 }
 
 #kc-form-options {
@@ -65,7 +79,7 @@ div.kc-logo-text span {
     @apply block text-sm text-gray-500;
   }
   a {
-    @apply text-sky-600 hover:text-sky-700 no-underline text-sm;
+    @apply text-link hover:text-link-hover no-underline text-sm;
   }
 }
 
@@ -75,7 +89,7 @@ div.kc-logo-text span {
 
 .login-pf-settings div span a,
 .instruction a {
-  @apply font-medium text-sky-600 hover:text-sky-700 no-underline text-sm;
+  @apply font-medium text-link hover:text-link-hover no-underline text-sm;
 }
 
 .login-pf-settings div span a:hover,
@@ -89,7 +103,7 @@ div.kc-logo-text span {
 }
 
 #kc-registration a {
-  @apply font-medium text-sky-600 hover:text-sky-700 no-underline text-base;
+  @apply font-medium text-link hover:text-link-hover no-underline text-base;
 }
 
 #kc-registration a:hover {
@@ -98,6 +112,10 @@ div.kc-logo-text span {
 
 .form-group input[type='checkbox'] {
   @apply p-0;
+}
+
+.login-pf-page .card-pf {
+  @apply p-8;
 }
 
 .login-pf-page .login-pf-signup {
@@ -130,7 +148,7 @@ div.kc-logo-text span {
 }
 
 .form-group-cgu input {
-  @apply h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded mb-0.5;
+  @apply h-4 w-4 text-pink-600 focus:ring-pink-500 border-gray-300 rounded mb-0.5;
 }
 
 .form-group-cgu label {
@@ -138,7 +156,7 @@ div.kc-logo-text span {
 }
 
 .form-group-cgu label a {
-  @apply font-medium text-purple-600 hover:text-purple-500 no-underline text-base;
+  @apply font-medium text-pink-600 hover:text-pink-500 no-underline text-base;
 }
 
 #input-error {
@@ -154,7 +172,7 @@ div.kc-logo-text span {
 }
 
 #kc-current-locale-link {
-  @apply font-medium text-purple-600 hover:text-purple-500;
+  @apply font-medium text-pink-600 hover:text-pink-500;
 }
 
 #kc-current-locale-link:hover + .pf-c-dropdown__menu {
@@ -181,7 +199,7 @@ div.kc-logo-text span {
   margin-bottom: 40px;
   text-align: justify;
   a {
-    @apply text-purple-600 hover:text-purple-700 no-underline;
+    @apply text-pink-600 hover:text-pink-700 no-underline;
   }
 }
 
@@ -192,13 +210,17 @@ div.kc-logo-text span {
 }
 
 .pf-c-button {
-  @apply w-full flex py-2 px-4 border border-transparent rounded-md justify-center text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-50;
+  @apply w-full flex py-2 px-4 border border-transparent rounded-md justify-center text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-pink-50;
 }
 
 .pf-c-button.pf-m-primary {
-  @apply shadow-sm text-white bg-purple-600 hover:bg-purple-700;
+  @apply shadow-sm text-white bg-pink-600 hover:bg-pink-700;
 }
 
 .pf-c-button.btn-default {
-  @apply shadow-none bg-none bg-white text-purple-600 hover:text-purple-500;
+  @apply shadow-none bg-none bg-white text-pink-600 hover:text-pink-500;
+}
+
+a:focus {
+  @apply outline-none focus:ring-1 focus:ring-offset-0 focus:ring-pink-500 rounded-md;
 }

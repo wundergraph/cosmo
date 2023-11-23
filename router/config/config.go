@@ -159,8 +159,9 @@ type EngineDebugConfiguration struct {
 }
 
 type EngineExecutionConfiguration struct {
-	Debug              EngineDebugConfiguration
-	EnableSingleFlight bool `default:"true" envconfig:"ENGINE_ENABLE_SINGLE_FLIGHT"`
+	Debug                EngineDebugConfiguration
+	EnableSingleFlight   bool `default:"true" envconfig:"ENGINE_ENABLE_SINGLE_FLIGHT"`
+	EnableRequestTracing bool `default:"true" envconfig:"ENGINE_ENABLE_REQUEST_TRACING"`
 }
 
 type OverrideRoutingURLConfiguration struct {
@@ -185,6 +186,10 @@ type AuthenticationConfiguration struct {
 
 type AuthorizationConfiguration struct {
 	RequireAuthentication bool `yaml:"require_authentication" default:"false" envconfig:"REQUIRE_AUTHENTICATION"`
+}
+
+type CDNConfiguration struct {
+	URL string `yaml:"url" validate:"url" envconfig:"CDN_URL" default:"https://cosmo-cdn.wundergraph.com"`
 }
 
 type Config struct {
@@ -215,6 +220,7 @@ type Config struct {
 	Authentication                AuthenticationConfiguration `yaml:"authentication"`
 	Authorization                 AuthorizationConfiguration  `yaml:"authorization"`
 	LocalhostFallbackInsideDocker bool                        `yaml:"localhost_fallback_inside_docker" default:"true" envconfig:"LOCALHOST_FALLBACK_INSIDE_DOCKER"`
+	CDN                           CDNConfiguration            `yaml:"cdn"`
 
 	ConfigPath       string `envconfig:"CONFIG_PATH" validate:"omitempty,filepath"`
 	RouterConfigPath string `yaml:"router_config_path" envconfig:"ROUTER_CONFIG_PATH" validate:"omitempty,filepath"`

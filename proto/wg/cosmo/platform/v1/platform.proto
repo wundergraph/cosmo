@@ -709,6 +709,27 @@ message DeleteRouterTokenResponse {
   Response response = 1;
 }
 
+message PublishPersistedOperationsRequest {
+  string fedGraphName = 1;
+  string clientName = 2;
+  repeated string operations = 3;
+}
+
+enum PublishedOperationStatus {
+  UP_TO_DATE = 0;
+  CREATED = 1;
+}
+
+message PublishedOperation {
+  string hash = 1;
+  PublishedOperationStatus status = 2;
+}
+
+message PublishPersistedOperationsResponse {
+  Response response = 1;
+  repeated PublishedOperation operations = 2;
+}
+
 message Header{
   string key = 1;
   string value = 2;
@@ -986,6 +1007,24 @@ message DeleteOIDCProviderResponse {
   Response response = 1;
 }
 
+message ClientInfo{
+  string name = 1;
+  string id = 2;
+  string createdAt = 3;
+  string lastUpdatedAt = 4;
+  string createdBy = 5;
+  string lastUpdatedBy = 6;
+}
+
+message GetClientsRequest {
+  string fedGraphName = 1;
+}
+
+message GetClientsResponse {
+  Response response = 1;
+  repeated ClientInfo clients = 2;
+}
+
 message GetFieldUsageRequest {
   string graph_name = 1;
   optional string namedType = 2;
@@ -1046,6 +1085,8 @@ service PlatformService {
   rpc GetRouterTokens(GetRouterTokensRequest) returns (GetRouterTokensResponse) {}
   // DeleteRouterToken deletes the router token of a federated graph.
   rpc DeleteRouterToken(DeleteRouterTokenRequest) returns (DeleteRouterTokenResponse) {}
+  // Add persisted operations
+  rpc PublishPersistedOperations(PublishPersistedOperationsRequest) returns (PublishPersistedOperationsResponse) {}
 
   // For Studio and CLI
 
@@ -1136,6 +1177,9 @@ service PlatformService {
   rpc GetOIDCProvider(GetOIDCProviderRequest) returns (GetOIDCProviderResponse) {}
   // DeleteOIDCProvider deletes the oidc provider connected the organization
   rpc DeleteOIDCProvider(DeleteOIDCProviderRequest) returns (DeleteOIDCProviderResponse) {}
+  // GetClients returns all the clients of the organization
+  rpc GetClients(GetClientsRequest) returns (GetClientsResponse) {}
+
 
   // Analytics
 
