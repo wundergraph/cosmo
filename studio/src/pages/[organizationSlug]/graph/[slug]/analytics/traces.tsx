@@ -28,7 +28,7 @@ import { formatISO } from "date-fns";
 import { useRouter } from "next/router";
 import { useContext, useRef, useState } from "react";
 import { useHotkeys } from "@saas-ui/use-hotkeys";
-import { FiArrowUpLeft, FiChevronDown, FiChevronUp } from "react-icons/fi";
+import { FiChevronDown, FiChevronUp } from "react-icons/fi";
 import TracePage from "./[traceID]";
 import { CopyButton } from "@/components/ui/copy-button";
 import { Table } from "@tanstack/react-table";
@@ -185,7 +185,7 @@ export const TraceSheet: React.FC<any> = (props) => {
 
   return (
     <Sheet
-      modal
+      modal={false}
       open={!!traceId}
       onOpenChange={(isOpen) => {
         if (!isOpen) {
@@ -198,6 +198,8 @@ export const TraceSheet: React.FC<any> = (props) => {
       }}
     >
       <SheetContent
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        onPointerDownOutside={(e) => e.preventDefault()}
         hideOverlay
         className={cn(
           "scrollbar-custom w-full max-w-full overflow-y-scroll shadow-xl sm:max-w-full",

@@ -2,10 +2,8 @@ import { UserContext } from "@/components/app-provider";
 import { CompositionErrorsBanner } from "@/components/composition-errors-banner";
 import {
   DatePickerWithRange,
-  DateRange,
   DateRangePickerChangeHandler,
 } from "@/components/date-picker-with-range";
-import { DateRangePicker } from "@/components/date-range-picker";
 import { EmptyState } from "@/components/empty-state";
 import {
   getGraphLayout,
