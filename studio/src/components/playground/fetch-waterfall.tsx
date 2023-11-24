@@ -173,7 +173,9 @@ export const FetchWaterfall = ({
                 {!hasChildren && <CubeIcon className="h-4 w-4 flex-shrink-0" />}
               </>
             </Button>
-            {["parallel", "serial", "parallelListItem"].includes(fetch.type) ? (
+            {["plan", "parallel", "serial", "parallelListItem"].includes(
+              fetch.type,
+            ) ? (
               <div className="-translate-y-px px-2.5 py-2 text-xs text-muted-foreground">
                 {sentenceCase(fetch.type)}
               </div>
@@ -181,7 +183,7 @@ export const FetchWaterfall = ({
               <button
                 type="button"
                 onClick={() => setShowDetails(!showDetails)}
-                className="flex flex-nowrap items-start gap-x-2 overflow-hidden rounded-md px-2 py-1 text-left text-sm group-hover:bg-accent group-hover:text-accent-foreground"
+                className=" flex flex-nowrap items-start gap-x-2 overflow-hidden rounded-md px-2 py-1 text-left text-sm group-hover:bg-accent group-hover:text-accent-foreground disabled:cursor-not-allowed"
               >
                 <TooltipProvider>
                   <Tooltip delayDuration={500}>
@@ -204,7 +206,7 @@ export const FetchWaterfall = ({
                         className="truncate text-start text-xs"
                       >
                         <div className="text-xs text-muted-foreground">
-                          {sentenceCase(fetch.type)}
+                          {sentenceCase(fetch.type)} fetch
                         </div>
                       </div>
                     </TooltipTrigger>
@@ -219,7 +221,13 @@ export const FetchWaterfall = ({
           <button
             type="button"
             onClick={() => setShowDetails(!showDetails)}
-            className="group relative flex flex-1 items-center group-hover:brightness-90"
+            disabled={[
+              "plan",
+              "parallel",
+              "serial",
+              "parallelListItem",
+            ].includes(fetch.type)}
+            className="group relative flex flex-1 items-center group-hover:brightness-90 disabled:cursor-not-allowed "
           >
             {!["parallel", "serial", "parallelListItem"].includes(
               fetch.type,
@@ -233,7 +241,7 @@ export const FetchWaterfall = ({
                     width: `${visualWidthPercentage}%`,
                     left: `${visualOffsetPercentage}%`,
                   }}
-                  className="z-8 absolute mx-2 h-3/5 max-h-6 rounded bg-primary/50"
+                  className="z-8 absolute mx-2 h-3/5 max-h-6 rounded bg-primary"
                 />
                 <div
                   style={{

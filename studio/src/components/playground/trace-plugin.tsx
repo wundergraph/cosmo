@@ -233,7 +233,50 @@ const Trace = ({
         parsedResponse.extensions.trace.info.trace_start_unix * 1e9,
       );
 
-      const traceTree = parseJson(parsedResponse.extensions.trace);
+      const plannerStats = parsedResponse.extensions.trace.info.planner_stats;
+      const planId = Date.now().toString();
+
+      let traceTree = parseJson(
+        parsedResponse.extensions.trace,
+        plannerStats ? planId : undefined,
+      );
+
+      if (plannerStats) {
+        const plan = {
+          id: planId,
+          type: "plan",
+          durationSinceStart: plannerStats.duration_since_start_nanoseconds,
+          durationLoad: plannerStats.planning_time_nanoseconds,
+          children: [traceTree],
+        } as FetchNode;
+        traceTree = plan;
+
+        tempNodes.unshift({
+          id: plan.id,
+          type: "multi",
+          data: {
+            ...plan,
+          },
+          connectable: false,
+          deletable: false,
+          position: {
+            x: 0,
+            y: 0,
+          },
+        });
+
+        tempEdges.unshift({
+          id: `edge-${plan.id}-${plan.parentId}`,
+          source: `${plan.parentId}`,
+          animated: true,
+          target: `${plan.id}`,
+          type: "fetch",
+          data: {
+            ...plan,
+          },
+        });
+      }
+
       setTree(traceTree);
       setNodes(tempNodes);
       setEdges(tempEdges);
