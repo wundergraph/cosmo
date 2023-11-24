@@ -367,7 +367,7 @@ export const TraceView = () => {
           icon={<LuNetwork />}
           title="No trace found"
           description="Include the below header before executing your queries"
-          actions={<CLI command={`"X-WG-TRACE" : true"`} />}
+          actions={<CLI command={`"X-WG-TRACE" : "true"`} />}
         />
       )}
     </div>
