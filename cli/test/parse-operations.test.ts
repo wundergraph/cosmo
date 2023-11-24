@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { describe, test, expect } from 'vitest';
 
-import { parseOperations } from '../src/commands/operations/commands/push';
+import { parseOperations } from '../src/commands/operations/commands/push.js';
 
 
 describe('parse operations from different formats', () => {

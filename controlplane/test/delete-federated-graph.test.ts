@@ -6,8 +6,8 @@ import {
   beforeAllSetup,
   genID,
   genUniqueLabel,
-} from '../src/core/test-util';
-import { SetupTest } from './test-util';
+} from '../src/core/test-util.js';
+import { SetupTest } from './test-util.js';
 
 let dbname = '';
 

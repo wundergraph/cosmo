@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import Fastify from 'fastify';
-import health from '../src/core/plugins/health';
+import health from '../src/core/plugins/health.js';
 
 describe('Health endpoint', () => {
   test('Should return 200', async (testContext) => {

@@ -188,6 +188,9 @@ importers:
       eslint-config-unjs:
         specifier: ^0.2.1
         version: 0.2.1(eslint@8.52.0)(typescript@5.2.2)
+      eslint-plugin-require-extensions:
+        specifier: ^0.1.3
+        version: 0.1.3(eslint@8.52.0)
       prettier:
         specifier: ^3.0.3
         version: 3.0.3
@@ -414,6 +417,9 @@ importers:
       eslint-config-unjs:
         specifier: ^0.2.1
         version: 0.2.1(eslint@8.52.0)(typescript@5.2.2)
+      eslint-plugin-require-extensions:
+        specifier: ^0.1.3
+        version: 0.1.3(eslint@8.52.0)
       pino-pretty:
         specifier: ^10.2.3
         version: 10.2.3
@@ -9408,6 +9414,15 @@ packages:
       resolve: 2.0.0-next.4
       semver: 6.3.1
       string.prototype.matchall: 4.0.8
+    dev: true
+
+  /eslint-plugin-require-extensions@0.1.3(eslint@8.52.0):
+    resolution: {integrity: sha512-T3c1PZ9PIdI3hjV8LdunfYI8gj017UQjzAnCrxuo3wAjneDbTPHdE3oNWInOjMA+z/aBkUtlW5vC0YepYMZIug==}
+    engines: {node: '>=16'}
+    peerDependencies:
+      eslint: '*'
+    dependencies:
+      eslint: 8.52.0
     dev: true
 
   /eslint-plugin-unicorn@47.0.0(eslint@8.52.0):
