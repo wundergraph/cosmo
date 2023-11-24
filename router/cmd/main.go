@@ -62,6 +62,8 @@ func Main() {
 			zap.String("service_version", core.Version),
 		)
 
+	initPprofHandlers(logger)
+
 	router, err := NewRouter(Params{
 		Config: cfg,
 		Logger: logger,
