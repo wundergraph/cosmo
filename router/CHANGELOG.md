@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.38.0](https://github.com/wundergraph/cosmo/compare/router@0.37.0...router@0.38.0) (2023-11-24)
+
+### Bug Fixes
+
+* correctly implement normalization ([#292](https://github.com/wundergraph/cosmo/issues/292)) ([6433074](https://github.com/wundergraph/cosmo/commit/64330740f39ac15cce7d378f689ace1901babd0d)) (@jensneuse)
+
+### Features
+
+* improve art ([#293](https://github.com/wundergraph/cosmo/issues/293)) ([ee9dd5d](https://github.com/wundergraph/cosmo/commit/ee9dd5d2633b230e28ee714492b4f7f121a0423d)) (@jensneuse)
+
 # [0.37.0](https://github.com/wundergraph/cosmo/compare/router@0.35.0...router@0.37.0) (2023-11-23)
 
 ### Features
