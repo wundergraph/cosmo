@@ -109,9 +109,9 @@ const Fields = (props: {
   const hasDetails = props.fields.some(
     (f) => !!f.description || !!f.deprecationReason,
   );
-  const hasUsage = !(
-    ["scalars", "enums", "inputs"] as GraphQLTypeCategory[]
-  ).includes(props.category);
+  const hasUsage = !(["scalars"] as GraphQLTypeCategory[]).includes(
+    props.category,
+  );
 
   const openUsage = (fieldName: string) => {
     const query: Record<string, string> = {};
@@ -119,6 +119,11 @@ const Fields = (props: {
       query.showUsage = fieldName;
     } else {
       query.showUsage = `${router.query.typename || "Query"}.${fieldName}`;
+    }
+
+    if (props.category === "enums") {
+      query.isNamedType = "true";
+      query.isEnum = "true";
     }
 
     router.replace({
@@ -312,7 +317,7 @@ const TypeWrapper = ({ ast }: { ast: GraphQLSchema }) => {
 
   if (category && !typename) {
     const list = getTypesByCategory(ast, category);
-    const hasUsage = category !== "inputs";
+    const hasUsage = true;
 
     const openUsage = (type: string) => {
       router.replace({
