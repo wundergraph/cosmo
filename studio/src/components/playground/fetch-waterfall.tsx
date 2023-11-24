@@ -19,6 +19,7 @@ import {
 import { FetchNode } from "./types";
 import { ViewHeaders } from "./view-headers";
 import { ViewInput } from "./view-input";
+import { ViewLoadStats } from "./view-load-stats";
 import { ViewOutput } from "./view-output";
 
 const bigintE3 = BigInt(1e3);
@@ -299,6 +300,9 @@ export const FetchWaterfall = ({
                   <ViewInput input={fetch.input} rawInput={fetch.rawInput} />
                 )}
                 {fetch.output && <ViewOutput output={fetch.output} />}
+                {fetch.loadStats && (
+                  <ViewLoadStats loadStats={fetch.loadStats} />
+                )}
               </div>
             </div>
           </div>

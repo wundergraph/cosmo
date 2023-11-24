@@ -31,6 +31,7 @@ import { FetchNode } from "./types";
 import { ViewHeaders } from "./view-headers";
 import { ViewInput } from "./view-input";
 import { ViewOutput } from "./view-output";
+import { ViewLoadStats } from "./view-load-stats";
 
 const dagreGraph = new dagre.graphlib.Graph();
 dagreGraph.setDefaultEdgeLabel(function () {
@@ -188,7 +189,15 @@ const ReactFlowFetchNode = ({ data }: Node<FetchNode>) => {
         {(data.outputTrace || data.input || data.rawInput || data.output) && (
           <Separator className="mb-4" />
         )}
-        <div className="flex gap-2 px-4">
+        <div
+          className={cn("flex gap-2 px-4", {
+            "grid grid-cols-2":
+              data.outputTrace &&
+              (data.input || data.rawInput) &&
+              data.output &&
+              data.loadStats,
+          })}
+        >
           {data.outputTrace && (
             <ViewHeaders
               requestHeaders={JSON.stringify(data.outputTrace.request.headers)}
@@ -202,6 +211,9 @@ const ReactFlowFetchNode = ({ data }: Node<FetchNode>) => {
             <ViewInput input={data.input} rawInput={data.rawInput} asChild />
           )}
           {data.output && <ViewOutput output={data.output} asChild />}
+          {data.loadStats && (
+            <ViewLoadStats loadStats={data.loadStats} asChild />
+          )}
         </div>
       </div>
       <Handle type="source" position={Position.Right} isConnectable={false} />
@@ -252,7 +264,10 @@ export function FetchFlow({
   }, [nodesInitialized]);
 
   const nodeTypes = useMemo<any>(
-    () => ({ fetch: ReactFlowFetchNode, multi: ReactFlowMultiFetchNode }),
+    () => ({
+      fetch: ReactFlowFetchNode,
+      multi: ReactFlowMultiFetchNode,
+    }),
     [],
   );
 

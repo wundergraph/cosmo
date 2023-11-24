@@ -1,6 +1,6 @@
 import { GraphContext, getGraphLayout } from "@/components/layout/graph-layout";
 import { PageHeader } from "@/components/layout/head";
-import { TraceContext, TraceView } from "@/components/playground/trace-plugin";
+import { TraceContext, TraceView } from "@/components/playground/trace-view";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { NextPageWithLayout } from "@/lib/page";

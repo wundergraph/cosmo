@@ -1,6 +1,11 @@
-export type TraceInfo = {
-  startUnixSeconds: number;
+export type LoadStatsEntry = {
+  name: string;
+  durationSinceStart: string;
+  idleTime?: string;
+  attributes: Record<string, any>;
 };
+
+export type LoadStats = LoadStatsEntry[];
 
 export type FetchNode = {
   id: string;
@@ -30,4 +35,5 @@ export type FetchNode = {
   singleFlightUsed: boolean;
   singleFlightSharedResponse: boolean;
   loadSkipped: boolean;
+  loadStats?: LoadStats;
 };

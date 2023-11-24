@@ -4,6 +4,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useState,
 } from "react";
 import { BiRename } from "react-icons/bi";
@@ -16,7 +17,7 @@ import { CLI } from "../ui/cli";
 import { Tabs, TabsList, TabsTrigger } from "../ui/tabs";
 import { FetchFlow } from "./fetch-flow";
 import { FetchWaterfall } from "./fetch-waterfall";
-import { FetchNode } from "./types";
+import { FetchNode, LoadStats } from "./types";
 
 const initialPaneWidth = 360;
 
@@ -119,6 +120,29 @@ const Trace = ({
         loadSkipped: fetch.datasource_load_trace?.load_skipped,
         children: [],
       };
+
+      if (fetch.datasource_load_trace?.load_stats) {
+        const mappedData: LoadStats = Object.entries(
+          fetch.datasource_load_trace.load_stats,
+        ).map(([key, val]: any) => {
+          const durationSinceStart = val.duration_since_start_pretty;
+          const idleTime = val.idle_time_pretty;
+
+          delete val.duration_since_start_pretty;
+          delete val.duration_since_start_nanoseconds;
+          delete val.idle_time_pretty;
+          delete val.idle_time_nanoseconds;
+
+          return {
+            name: key,
+            durationSinceStart,
+            attributes: val,
+            idleTime,
+          };
+        });
+
+        fetchNode.loadStats = mappedData;
+      }
 
       const fetchOutputTrace =
         fetch.datasource_load_trace?.output?.extensions?.trace;
@@ -292,7 +316,7 @@ const Trace = ({
     try {
       const wgTraceHeader = JSON.parse(headers)["X-WG-TRACE"];
       if (
-        typeof wgTraceHeader === "string" &&
+        (typeof wgTraceHeader === "string" || Array.isArray(wgTraceHeader)) &&
         wgTraceHeader.includes("exclude_load_stats")
       ) {
         return (
@@ -373,7 +397,34 @@ export const TraceView = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [response]);
 
+  const { hasTraceHeader, hasTraceInResponse } = useMemo(() => {
+    try {
+      const parsedHeaders = JSON.parse(headers || "{}");
+      const parsedResponse = JSON.parse(response || "{}");
+
+      return {
+        hasTraceHeader: !!parsedHeaders["X-WG-TRACE"],
+        hasTraceInResponse: !!parsedResponse?.extensions?.trace,
+      };
+    } catch {
+      return { hasTraceHeader: false, hasTraceInResponse: false };
+    }
+  }, [headers, response]);
+
+  const hasTrace = hasTraceHeader && hasTraceInResponse;
+
   const [view, setView] = useState<"tree" | "waterfall">("tree");
+
+  if (!hasTrace) {
+    return (
+      <EmptyState
+        icon={<LuNetwork />}
+        title="No trace found"
+        description="Include the below header before executing your queries"
+        actions={<CLI command={`"X-WG-TRACE" : "true"`} />}
+      />
+    );
+  }
 
   return (
     <div className="relative flex h-full w-full flex-1 flex-col font-sans">
@@ -403,14 +454,6 @@ export const TraceView = () => {
           response={response}
           view={view}
           subgraphs={subgraphs}
-        />
-      )}
-      {(!response || !headers) && (
-        <EmptyState
-          icon={<LuNetwork />}
-          title="No trace found"
-          description="Include the below header before executing your queries"
-          actions={<CLI command={`"X-WG-TRACE" : "true"`} />}
         />
       )}
     </div>
