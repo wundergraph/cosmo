@@ -13,6 +13,8 @@ import graphQLPlugin from "prettier/plugins/graphql";
 import babelPlugin from "prettier/plugins/babel";
 import estreePlugin from "prettier/plugins/estree";
 import * as prettier from "prettier/standalone";
+import * as Prism from "prismjs";
+import "prismjs/components/prism-json";
 
 export const CodeViewerActions = ({
   code,
@@ -102,6 +104,7 @@ export const CodeViewer = ({
       theme={selectedTheme === "dark" ? themes.nightOwl : themes.nightOwlLight}
       code={content}
       language={language}
+      prism={Prism}
     >
       {({ style, tokens, getLineProps, getTokenProps }) => (
         <pre
