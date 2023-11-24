@@ -4,6 +4,42 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.13.6](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.13.4...@wundergraph/cosmo-shared@0.13.6) (2023-11-23)
+
+**Note:** Version bump only for package @wundergraph/cosmo-shared
+
+## [0.13.5](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.13.4...@wundergraph/cosmo-shared@0.13.5) (2023-11-23)
+
+**Note:** Version bump only for package @wundergraph/cosmo-shared
+
+## [0.13.4](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.13.3...@wundergraph/cosmo-shared@0.13.4) (2023-11-20)
+
+**Note:** Version bump only for package @wundergraph/cosmo-shared
+
+## [0.13.3](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.13.2...@wundergraph/cosmo-shared@0.13.3) (2023-11-17)
+
+### Bug Fixes
+
+* show latest valid subgraph schema ([#259](https://github.com/wundergraph/cosmo/issues/259)) ([d954b91](https://github.com/wundergraph/cosmo/commit/d954b91bd212ae1a33257c662a4ff8a2ac8c2b56)) (@JivusAyrus)
+
+## [0.13.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.13.1...@wundergraph/cosmo-shared@0.13.2) (2023-11-15)
+
+**Note:** Version bump only for package @wundergraph/cosmo-shared
+
+## [0.13.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.13.0...@wundergraph/cosmo-shared@0.13.1) (2023-11-15)
+
+**Note:** Version bump only for package @wundergraph/cosmo-shared
+
+# [0.13.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.12.5...@wundergraph/cosmo-shared@0.13.0) (2023-11-10)
+
+### Features
+
+* implement [@override](https://github.com/override) ([#246](https://github.com/wundergraph/cosmo/issues/246)) ([b6d0448](https://github.com/wundergraph/cosmo/commit/b6d044861e918f7c82931e1d5374fc7f6fc01daa)) (@Aenimus)
+
+## [0.12.5](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.12.4...@wundergraph/cosmo-shared@0.12.5) (2023-11-09)
+
+**Note:** Version bump only for package @wundergraph/cosmo-shared
+
 ## [0.12.4](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.12.3...@wundergraph/cosmo-shared@0.12.4) (2023-11-08)
 
 **Note:** Version bump only for package @wundergraph/cosmo-shared

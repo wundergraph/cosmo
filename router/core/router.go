@@ -12,6 +12,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
+	"github.com/wundergraph/cosmo/router/internal/cdn"
 	"github.com/wundergraph/cosmo/router/internal/docker"
 	"github.com/wundergraph/cosmo/router/internal/graphqlmetrics"
 	brotli "go.withmatt.com/connect-brotli"
@@ -94,6 +95,8 @@ type (
 		healthCheckPath          string
 		readinessCheckPath       string
 		livenessCheckPath        string
+		cdnURL                   string
+		cdn                      *cdn.CDN
 		prometheusServer         *http.Server
 		modulesConfig            map[string]interface{}
 		routerMiddlewares        []func(http.Handler) http.Handler
@@ -207,6 +210,7 @@ func NewRouter(opts ...Option) (*Router, error) {
 		"graphql-client-version",
 		"apollographql-client-name",
 		"apollographql-client-version",
+		"x-wg-trace",
 	}
 
 	defaultMethods := []string{
@@ -255,6 +259,8 @@ func NewRouter(opts ...Option) (*Router, error) {
 			})
 		}
 	}
+
+	// Add default exporters if none are configured
 	if r.metricConfig.OpenTelemetry.Enabled && len(r.metricConfig.OpenTelemetry.Exporters) == 0 {
 		if endpoint := otelconfig.DefaultEndpoint(); endpoint != "" {
 			r.logger.Debug("using default metrics exporter", zap.String("endpoint", endpoint))
@@ -264,6 +270,14 @@ func NewRouter(opts ...Option) (*Router, error) {
 			})
 		}
 	}
+	routerCDN, err := cdn.New(cdn.CDNOptions{
+		URL:                 r.cdnURL,
+		AuthenticationToken: r.graphApiToken,
+	})
+	if err != nil {
+		return nil, err
+	}
+	r.cdn = routerCDN
 	return r, nil
 }
 
@@ -517,14 +531,15 @@ func (r *Router) Start(ctx context.Context) error {
 
 	// Start the server with the static config without polling
 	if r.routerConfig != nil {
-
-		r.logger.Info("Static router config provided. Polling is disabled.")
+		r.logger.Info("Static router config provided. Polling is disabled. Updating router config is only possible by restarting the router.")
 		return r.updateServer(ctx, r.routerConfig)
 	}
 
 	if r.configFetcher == nil {
 		return fmt.Errorf("config fetcher not provided. Please provide a static router config instead")
 	}
+
+	r.logger.Info("Polling for router config updates in the background", zap.String("interval", r.configFetcher.Interval().String()))
 
 	initCh := make(chan *nodev1.RouterConfig, 1)
 
@@ -577,6 +592,21 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	}
 
 	recoveryHandler := recovery.New(recovery.WithLogger(r.logger), recovery.WithPrintStack())
+	var traceHandler *trace.Middleware
+	if r.traceConfig.Enabled {
+		traceHandler = trace.NewMiddleware(otel.RouterServerAttribute,
+			otelhttp.WithSpanOptions(
+				oteltrace.WithAttributes(
+					otel.WgRouterGraphName.String(r.federatedGraphName),
+					otel.WgRouterConfigVersion.String(routerConfig.GetVersion()),
+					otel.WgRouterVersion.String(Version),
+				),
+			),
+			// Disable built-in metrics
+			otelhttp.WithMeterProvider(sdkmetric.NewMeterProvider()),
+			otelhttp.WithSpanNameFormatter(SpanNameFormatter),
+		)
+	}
 	requestLogger := requestlogger.New(
 		r.logger,
 		requestlogger.WithDefaultOptions(),
@@ -599,6 +629,10 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	httpRouter.Use(recoveryHandler)
 	httpRouter.Use(middleware.RequestID)
 	httpRouter.Use(middleware.RealIP)
+	// Register the trace middleware before the request logger, so we can log the trace ID
+	if traceHandler != nil {
+		httpRouter.Use(traceHandler.Handler)
+	}
 	httpRouter.Use(requestLogger)
 	httpRouter.Use(cors.New(*r.corsOptions))
 
@@ -657,12 +691,23 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		Headers:   r.headerRules,
 	}
 
+	if routerEngineConfig.Execution.EnableRequestTracing {
+		r.logger.Warn("Request tracing is enabled." +
+			"This is a security risk as it can leak sensitive information and internals of your subgraphs through the API." +
+			"Enabling request tracing negatively impacts performance because the execution plan cache is disabled." +
+			"You should only enable this for debugging purposes and not in production.")
+	}
+
 	executor, err := ecb.Build(ctx, routerConfig, routerEngineConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build plan configuration: %w", err)
 	}
 
-	operationParser := NewOperationParser(executor, int64(r.routerTrafficConfig.MaxRequestBodyBytes))
+	operationParser := NewOperationParser(OperationParserOptions{
+		Executor:                executor,
+		MaxOperationSizeInBytes: int64(r.routerTrafficConfig.MaxRequestBodyBytes),
+		CDN:                     r.cdn,
+	})
 	operationPlanner := NewOperationPlanner(executor, planCache)
 
 	var graphqlPlaygroundHandler http.Handler
@@ -677,8 +722,9 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	}
 
 	graphqlHandler := NewGraphQLHandler(HandlerOptions{
-		Executor: executor,
-		Log:      r.logger,
+		Executor:                               executor,
+		Log:                                    r.logger,
+		EnableExecutionPlanCacheResponseHeader: routerEngineConfig.Execution.EnableExecutionPlanCacheResponseHeader,
 	})
 
 	var metricStore *metric.Metrics
@@ -704,39 +750,17 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	routerMetrics := NewRouterMetrics(metricStore, r.gqlMetricsExporter, routerConfig.GetVersion())
 
 	graphqlPreHandler := NewPreHandler(&PreHandlerOptions{
-		Logger:           r.logger,
-		Executor:         executor,
-		Metrics:          routerMetrics,
-		Parser:           operationParser,
-		Planner:          operationPlanner,
-		AccessController: r.accessController,
+		Logger:                r.logger,
+		Executor:              executor,
+		Metrics:               routerMetrics,
+		Parser:                operationParser,
+		Planner:               operationPlanner,
+		AccessController:      r.accessController,
+		DisableRequestTracing: !routerEngineConfig.Execution.EnableRequestTracing,
 	})
-
-	var traceHandler *trace.Middleware
-
-	if r.traceConfig.Enabled {
-		h := trace.NewMiddleware(otel.RouterServerAttribute,
-			otelhttp.WithSpanOptions(
-				oteltrace.WithAttributes(
-					otel.WgRouterGraphName.String(r.federatedGraphName),
-					otel.WgRouterConfigVersion.String(routerConfig.GetVersion()),
-					otel.WgRouterVersion.String(Version),
-				),
-			),
-			// Disable built-in metrics
-			otelhttp.WithMeterProvider(sdkmetric.NewMeterProvider()),
-			otelhttp.WithSpanNameFormatter(SpanNameFormatter),
-		)
-
-		traceHandler = h
-	}
 
 	// Serve GraphQL. Metrics are collected after the request is handled and classified as r GraphQL request.
 	httpRouter.Route(r.graphqlPath, func(subChiRouter chi.Router) {
-		if traceHandler != nil {
-			subChiRouter.Use(traceHandler.Handler)
-		}
-
 		subChiRouter.Use(NewWebsocketMiddleware(rootContext, WebsocketMiddlewareOptions{
 			Parser:           operationParser,
 			Planner:          operationPlanner,
@@ -1014,6 +1038,13 @@ func WithReadinessCheckPath(path string) Option {
 func WithLivenessCheckPath(path string) Option {
 	return func(r *Router) {
 		r.livenessCheckPath = path
+	}
+}
+
+// WithCDNURL sets the root URL for the CDN to use
+func WithCDNURL(cdnURL string) Option {
+	return func(r *Router) {
+		r.cdnURL = cdnURL
 	}
 }
 

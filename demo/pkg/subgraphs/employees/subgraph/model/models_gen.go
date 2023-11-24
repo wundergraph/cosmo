@@ -8,9 +8,19 @@ import (
 	"strconv"
 )
 
+type IProduct interface {
+	IsIProduct()
+	GetUpc() string
+	GetEngineers() []*Employee
+}
+
 type Identifiable interface {
 	IsIdentifiable()
 	GetID() int
+}
+
+type Products interface {
+	IsProducts()
 }
 
 type RoleType interface {
@@ -18,6 +28,39 @@ type RoleType interface {
 	GetDepartment() Department
 	GetTitle() []string
 }
+
+type Consultancy struct {
+	Upc  string    `json:"upc"`
+	Lead *Employee `json:"lead"`
+	Test string    `json:"test"`
+}
+
+func (Consultancy) IsProducts() {}
+
+func (Consultancy) IsEntity() {}
+
+type Cosmo struct {
+	Upc       string      `json:"upc"`
+	Engineers []*Employee `json:"engineers"`
+	Lead      *Employee   `json:"lead"`
+}
+
+func (Cosmo) IsProducts() {}
+
+func (Cosmo) IsIProduct()         {}
+func (this Cosmo) GetUpc() string { return this.Upc }
+func (this Cosmo) GetEngineers() []*Employee {
+	if this.Engineers == nil {
+		return nil
+	}
+	interfaceSlice := make([]*Employee, 0, len(this.Engineers))
+	for _, concrete := range this.Engineers {
+		interfaceSlice = append(interfaceSlice, concrete)
+	}
+	return interfaceSlice
+}
+
+func (Cosmo) IsEntity() {}
 
 type Details struct {
 	Forename string  `json:"forename"`
@@ -29,6 +72,7 @@ type Employee struct {
 	Details *Details `json:"details"`
 	ID      int      `json:"id"`
 	Role    RoleType `json:"role"`
+	Notes   string   `json:"notes"`
 }
 
 func (Employee) IsIdentifiable() {}
@@ -91,6 +135,29 @@ func (this Operator) GetTitle() []string {
 	}
 	return interfaceSlice
 }
+
+type Sdk struct {
+	Upc       string      `json:"upc"`
+	Engineers []*Employee `json:"engineers"`
+	Owner     *Employee   `json:"owner"`
+}
+
+func (Sdk) IsProducts() {}
+
+func (Sdk) IsIProduct()         {}
+func (this Sdk) GetUpc() string { return this.Upc }
+func (this Sdk) GetEngineers() []*Employee {
+	if this.Engineers == nil {
+		return nil
+	}
+	interfaceSlice := make([]*Employee, 0, len(this.Engineers))
+	for _, concrete := range this.Engineers {
+		interfaceSlice = append(interfaceSlice, concrete)
+	}
+	return interfaceSlice
+}
+
+func (Sdk) IsEntity() {}
 
 type Time struct {
 	UnixTime  int    `json:"unixTime"`

@@ -414,11 +414,11 @@ func (h *WebSocketConnectionHandler) writeErrorMessage(operationID string, err e
 }
 
 func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperation, *operationContext, error) {
-	operation, err := h.parser.Parse(payload)
+	operation, err := h.parser.Parse(h.ctx, h.clientInfo, payload, h.logger)
 	if err != nil {
 		return nil, nil, err
 	}
-	opContext, err := h.planner.Plan(operation, h.clientInfo)
+	opContext, err := h.planner.Plan(operation, h.clientInfo, ParseRequestTraceOptions(h.r, false))
 	if err != nil {
 		return operation, nil, err
 	}
@@ -433,7 +433,7 @@ func (h *WebSocketConnectionHandler) executeSubscription(ctx context.Context, ms
 	statusCode := http.StatusOK
 	responseSize := 0
 
-	metrics := h.metrics.StartOperation(h.clientInfo, int64(len(msg.Payload)))
+	metrics := h.metrics.StartOperation(h.clientInfo, h.logger, int64(len(msg.Payload)))
 	defer func() {
 		metrics.Finish(hasRequestError, statusCode, responseSize)
 	}()
@@ -479,7 +479,7 @@ func (h *WebSocketConnectionHandler) executeSubscription(ctx context.Context, ms
 	rw := newWebsocketResponseWriter(msg.ID, h.protocol, h.logger)
 	defer h.Complete(rw)
 
-	requestContext := buildRequestContext(rw, h.r, opContext, operation, h.logger)
+	requestContext := buildRequestContext(rw, h.r, opContext, h.logger)
 	ctxWithOperation := withOperationContext(cancellableCtx, opContext)
 	r := h.r.WithContext(ctxWithOperation)
 

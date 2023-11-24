@@ -24,7 +24,7 @@ const graphiQLFetch: typeof fetch = async (...args) => {
     // @ts-expect-error
     if (e?.message?.includes("Failed to fetch")) {
       throw new Error(
-        "Unable to connect to the server. Please check if your server is running."
+        "Unable to connect to the server. Please check if your server is running.",
       );
     }
     throw e;
@@ -33,14 +33,17 @@ const graphiQLFetch: typeof fetch = async (...args) => {
 
 const PlaygroundPage: NextPageWithLayout = () => {
   const router = useRouter();
+  const operation = router.query.operation as string;
 
   const { data, isLoading, error, refetch } = useQuery(
     getFederatedGraphByName.useQuery({
       name: router.query.slug as string,
-    })
+    }),
   );
 
-  const [query, setQuery] = useState<string | undefined>(undefined);
+  const [query, setQuery] = useState<string | undefined>(
+    operation ? atob(operation) : undefined,
+  );
   const [isGraphiqlRendered, setIsGraphiqlRendered] = useState(false);
 
   useEffect(() => {

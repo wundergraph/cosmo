@@ -11,6 +11,16 @@ import (
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/employees/subgraph/model"
 )
 
+// FindConsultancyByUpc is the resolver for the findConsultancyByUpc field.
+func (r *entityResolver) FindConsultancyByUpc(ctx context.Context, upc string) (*model.Consultancy, error) {
+	return consultancy, nil
+}
+
+// FindCosmoByUpc is the resolver for the findCosmoByUpc field.
+func (r *entityResolver) FindCosmoByUpc(ctx context.Context, upc string) (*model.Cosmo, error) {
+	return cosmo, nil
+}
+
 // FindEmployeeByID is the resolver for the findEmployeeByID field.
 func (r *entityResolver) FindEmployeeByID(ctx context.Context, id int) (*model.Employee, error) {
 	switch id {
@@ -23,7 +33,12 @@ func (r *entityResolver) FindEmployeeByID(ctx context.Context, id int) (*model.E
 	}
 }
 
-// Entity returns generated1.EntityResolver implementation.
+// FindSDKByUpc is the resolver for the findSDKByUpc field.
+func (r *entityResolver) FindSDKByUpc(ctx context.Context, upc string) (*model.Sdk, error) {
+	return sdk, nil
+}
+
+// Entity returns generated.EntityResolver implementation.
 func (r *Resolver) Entity() generated.EntityResolver { return &entityResolver{r} }
 
 type entityResolver struct{ *Resolver }

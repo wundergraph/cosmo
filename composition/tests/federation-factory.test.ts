@@ -126,9 +126,9 @@ describe('FederationFactory tests', () => {
         dimensions: ProductDimension
         createdBy: User
         hidden: String
-        reviewsScore: Float!
         oldField: String
         reviewsCount: Int!
+        reviewsScore: Float!
         reviews: [Review!]!
       }
     `,

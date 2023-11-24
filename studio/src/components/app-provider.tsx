@@ -23,9 +23,18 @@ interface Organization {
   slug: string;
   isPersonal: boolean;
   isFreeTrial: boolean;
-  isFreeTrialExpired: boolean;
   roles: string[];
   createdAt: string;
+  limits: OrganizationLimitsDTO;
+}
+
+interface OrganizationLimitsDTO {
+  analyticsRetentionLimit: number;
+  tracingRetentionLimit: number;
+  changelogDataRetentionLimit: number;
+  breakingChangeRetentionLimit: number;
+  traceSamplingRateLimit: number;
+  requestsLimit: number;
 }
 
 interface Session {
@@ -67,6 +76,8 @@ const fetchSession = async () => {
   }
 };
 
+const publicPaths = ["/login", "/signup"];
+
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
   const currentOrgSlug = router.query.organizationSlug;
@@ -89,7 +100,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     if (
       error &&
       error instanceof UnauthorizedError &&
-      router.pathname !== "/login"
+      !publicPaths.includes(router.pathname)
     ) {
       const redirectURL = `${process.env.NEXT_PUBLIC_COSMO_STUDIO_URL}${router.asPath}`;
       router.replace(`/login?redirectURL=${redirectURL}`);
@@ -105,9 +116,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         email: data.email,
         currentOrganization: {
           ...organization,
-          isFreeTrialExpired:
-            organization.isFreeTrial &&
-            new Date() > addDays(new Date(organization.createdAt), 10),
         },
         organizations: data.organizations,
       });

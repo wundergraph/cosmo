@@ -23,6 +23,9 @@ global:
   router:
     enabled: false
 
+  minio:
+    enabled: false
+
   clickhouse:
     enabled: false
 
@@ -49,7 +52,8 @@ global:
   keycloak:
     enabled: false
     realm: "cosmo"
-    adminUrl: "http://keycloak.wundergraph.local"
+    # User internal DNS name to access Keycloak
+    apiUrl: "http://cosmo-keycloak:8080"
     webUrl: "http://keycloak.wundergraph.local"
     port: 8080
     adminUser: "admin"

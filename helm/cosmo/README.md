@@ -8,8 +8,8 @@ You can use it to deploy a fully functional Cosmo stack for development or produ
 ### Prerequisites
 
 - A running Kubernetes cluster, with support for:
-  - PersistentVolume (only development)
-  - Ingress Controller
+    - PersistentVolume (only development)
+    - Ingress Controller
 - [Helm 3.2.0+](https://helm.sh/docs/intro/install/) installed locally
 
 ### Configuring the stack
@@ -19,16 +19,62 @@ Helm offers two primary ways to configure your stack, statically by passing a `v
 
 For your convenience, we included two different value presets:
 
-1. `values.full.yaml` - Ready to deploy configuration. Include all subcharts, including Clickhouse, PostgreSQL and Keycloak. Intended for development use.
-2. `values.yaml`. - Only include the Cosmo stack. You need to provide your own Clickhouse, PostgreSQL, Keycloak and update the configuration accordingly.
+1. [`values.full.yaml`](values.full.yaml) - Ready to deploy configuration. Include all subcharts, including Clickhouse, PostgreSQL and Keycloak. Intended for development use only.
+2. [`values.yaml`](values.yaml). - Only includes the Cosmo Core components. You need to provide your own Clickhouse, PostgreSQL, Keycloak and update the configuration accordingly. See [`values.full.yaml`](values.full.yaml) for an example.
 
 To apply the changes, run:
 
 ```shell
-# Install the helm dependencies (Only needed once)
+# Add bitnami repo to install dependencies like postgresql, keycloak and clickhouse
+helm repo add bitnami https://charts.bitnami.com/bitnami
+# Install the helm dependencies
 helm dependency build
-# Install the helm chart with the release name e.g "cosmo"
-helm install cosmo -f values.full.yaml ./cosmo
+# Install the helm chart with the release name "cosmo" the name is important it used to reference services in values file.
+# --atomic ensures that the release is rolled back if it fails to install
+helm install cosmo --atomic -f values.full.yaml .
+```
+
+### Run Helm Tests
+
+The Helm chart comes with a set of tests that you can run to ensure that the stack is working as expected.
+Modify the `values.full.yaml` file to enable the tests:
+
+```yaml
+global:
+  helmTests:
+    enabled: true
+```
+
+and run:
+```shell
+helm test cosmo
+```
+
+you should see the following output after a few seconds:
+
+```shell
+❯ helm test cosmo
+NAME: cosmo cosmo                                  
+LAST DEPLOYED: Tue Nov 21 22:50:40 2023
+NAMESPACE: default
+STATUS: deployed
+REVISION: 2
+TEST SUITE:     cosmo-controlplane-test-connection
+Last Started:   Tue Nov 21 22:51:07 2023
+Last Completed: Tue Nov 21 22:51:10 2023
+Phase:          Succeeded
+TEST SUITE:     cosmo-graphqlmetrics-test-connection
+Last Started:   Tue Nov 21 22:51:10 2023
+Last Completed: Tue Nov 21 22:51:14 2023
+Phase:          Succeeded
+TEST SUITE:     cosmo-otelcollector-test-connection
+Last Started:   Tue Nov 21 22:51:14 2023
+Last Completed: Tue Nov 21 22:51:18 2023
+Phase:          Succeeded
+TEST SUITE:     cosmo-studio-test-connection
+Last Started:   Tue Nov 21 22:51:18 2023
+Last Completed: Tue Nov 21 22:51:22 2023
+Phase:          Succeeded
 ```
 
 ### Removing stack after use
@@ -43,19 +89,19 @@ helm uninstall cosmo
 ## Production use
 
 We ***strongly recommend*** that if you want to ship this helm chart to production you either:
-- Use a hosted version of Clickhouse ([Clickhouse Cloud](https://clickhouse.com/)), PostgreSQL ([Aiven.io](https://aiven.io/postgresql)), Keycloak ([Cloud-IAM](https://www.cloud-iam.com/))
-- Use a dedicated [Clickhouse](https://github.com/Altinity/clickhouse-operator), [Postgres](https://github.com/zalando/postgres-operator), [Keycloak](https://www.keycloak.org/operator/installation) Kubernetes operator of your choice.
-- Use [WunderGraph Cosmo Cloud](https://wundergraph.com/cosmo-cloud) ✨
+- Use a hosted version of Clickhouse ([Clickhouse Cloud](https://clickhouse.com/)), PostgreSQL ([Aiven.io](https://aiven.io/postgresql)), Keycloak ([Cloud-IAM](https://www.cloud-iam.com/)), Minio ([Minio Cloud](https://min.io/)) or any other S3 compatible storage provider.
+- Use a dedicated [Clickhouse](https://github.com/Altinity/clickhouse-operator), [Postgres](https://github.com/zalando/postgres-operator), [Keycloak](https://www.keycloak.org/operator/installation), [Minio](https://github.com/minio/operator) Kubernetes operator of your choice.
+- Use [WunderGraph Cosmo Cloud](https://cosmo.wundergraph.com/login) ✨
 
 ## Configuration and installation details
 
-By default, the chart deploys a production-grade Cosmo stack **without** Clickhouse, PostgreSQL and Keycloak.
-After you have provisioned the databases, you can set the right configuration in the `values.yaml` file.
-The studio, controlplane, router and otelcollector are exposed via ingress. Don't forget to update the public URL in the `values.yaml` file as well.
+By default, the chart deploys a production-grade Cosmo stack **without** Clickhouse, PostgreSQL, Keycloak and Minio.
+After you have provisioned the databases, you can set the right configuration in the `values.yaml` file and do a `helm upgrade` to apply the changes.
+The studio, controlplane, router and collectors are exposed via ingress. Don't forget to update the public URL in the `values.yaml` file as well.
 
 ## Seed your organization and account
 
-The seed is a special component that is used to seed your organization and account. It is only needed once and can be disabled after the initial setup. Ensure that your postgres and keycloak are running before you enable the seed.
+The seed is a special component that is used to seed your organization and admin account. It is only needed once and can be disabled after the initial setup. This user allows you to invite people or configure SSO. Ensure that your postgres and keycloak are running before you enable the seed to avoid any issues.
 Update the `global.seed` values in the `values.yaml` file accordingly and run:
 
 ```shell
@@ -63,9 +109,20 @@ helm upgrade cosmo ./cosmo \
   --set global.seed.enabled=true
 ```
 
+### Enable S3 storage
+
+The development preset [`values.full.yaml`](values.full.yaml) comes with a Minio instance that is used to store your persistent operations and router state. For production use, we recommend using a hosted version of Minio or any other S3 compatible storage provider.
+You need to update the `values.yaml` file accordingly:
+
+```yaml
+controlplane:
+  configuration:
+    s3StorageUrl: "http://minio:changeme@cosmo-minio:9000/cosmo"
+````
+
 ### CLI Key
 
-In the `global.seed.apiKey` of your `values.yaml` we defined your API key. You can use this API key to authenticate with the Cosmo CLI.
+In the `global.seed.apiKey` of your `values.full.yaml` we defined your API key. You can use this API key to authenticate with the Cosmo CLI.
 
 ```sh
 export COSMO_API_KEY="cosmo_669b576aaadc10ee1ae81d9193425705"
@@ -73,8 +130,8 @@ export COSMO_API_URL="http://<your-public-controlplane-url>"
 npx wgc -h
 ```
 
-### Router 
-The router is not enabled by default because it requires an API token. After you have created an API token with the Cosmo CLI `wgc federated-graph create-token <graph-name>`, set the right configurations in the `values.yaml` file.
+### Router
+The router is not enabled by default because it requires an API token to be set and a published federated graph. After you have created an API token with the Cosmo CLI `wgc federated-graph create-token <graph-name>`, set the right configurations in the `values.full.yaml` file.
 
 ```yaml
 router:
@@ -83,12 +140,12 @@ router:
     graphApiToken: "<changeme>"
 ```
 
-Run `helm install cosmo` to apply the changes.
+Run `helm upgrade cosmo -f values.full.yaml .` to apply the changes.
 
 ## Kapp support
 
 The Helm chart is also compatible with [Kapp](https://get-kapp.io/). Kapp is an alternative way to manage Kubernetes resources. We make use of [Versioned Resources](https://carvel.dev/kapp/docs/v0.58.x/diff/#versioned-resources) to ensure that your Pod is restarted when your config changes.
-We also make use of [Apply Ordering](https://carvel.dev/kapp/docs/v0.58.x/apply-ordering/) to avoid uncessary restarts of your Pods when the dependencies are not ready yet.
+We also make use of [Apply Ordering](https://carvel.dev/kapp/docs/v0.58.x/apply-ordering/) to avoid unnecessary restarts of your Pods when the dependencies are not ready yet.
 
 You can render the Helm chart and manage the stack with Kapp with the following command:
 

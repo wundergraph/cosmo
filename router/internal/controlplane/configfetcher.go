@@ -18,6 +18,7 @@ type Option func(cp *client)
 type ConfigFetcher interface {
 	Subscribe(ctx context.Context) chan *nodev1.RouterConfig
 	GetRouterConfig(ctx context.Context) (*nodev1.RouterConfig, error)
+	Interval() time.Duration
 	Version() string
 }
 
@@ -50,6 +51,10 @@ func New(opts ...Option) ConfigFetcher {
 	c.nodeServiceClient = nodev1connect.NewNodeServiceClient(http.DefaultClient, c.controlplaneEndpoint)
 
 	return c
+}
+
+func (c *client) Interval() time.Duration {
+	return c.pollInterval
 }
 
 // Version returns the latest router config version

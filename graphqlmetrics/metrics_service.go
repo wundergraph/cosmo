@@ -163,10 +163,70 @@ func (s *MetricsService) PublishGraphQLMetrics(
 				strconv.FormatInt(int64(schemaUsage.RequestInfo.StatusCode), 10),
 				schemaUsage.RequestInfo.Error,
 				fieldUsage.SubgraphIDs,
+				false,
+				false,
 				schemaUsage.Attributes,
 			)
 			if err != nil {
-				s.logger.Error("Failed to append metric to batch", zap.Error(err))
+				s.logger.Error("Failed to append field metric to batch", zap.Error(err))
+				return nil, errMetricWriteFailed
+			}
+		}
+
+		for _, argumentUsage := range schemaUsage.ArgumentMetrics {
+
+			err := metricBatch.Append(
+				insertTime,
+				claims.OrganizationID,
+				claims.FederatedGraphID,
+				schemaUsage.SchemaInfo.Version,
+				schemaUsage.OperationInfo.Hash,
+				schemaUsage.OperationInfo.Name,
+				operationType,
+				argumentUsage.Count,
+				argumentUsage.Path,
+				[]string{argumentUsage.TypeName},
+				argumentUsage.NamedType,
+				schemaUsage.ClientInfo.Name,
+				schemaUsage.ClientInfo.Version,
+				strconv.FormatInt(int64(schemaUsage.RequestInfo.StatusCode), 10),
+				schemaUsage.RequestInfo.Error,
+				[]string{},
+				true,
+				false,
+				schemaUsage.Attributes,
+			)
+			if err != nil {
+				s.logger.Error("Failed to append argument metric to batch", zap.Error(err))
+				return nil, errMetricWriteFailed
+			}
+		}
+
+		for _, inputUsage := range schemaUsage.InputMetrics {
+
+			err := metricBatch.Append(
+				insertTime,
+				claims.OrganizationID,
+				claims.FederatedGraphID,
+				schemaUsage.SchemaInfo.Version,
+				schemaUsage.OperationInfo.Hash,
+				schemaUsage.OperationInfo.Name,
+				operationType,
+				inputUsage.Count,
+				inputUsage.Path,
+				[]string{inputUsage.TypeName},
+				inputUsage.NamedType,
+				schemaUsage.ClientInfo.Name,
+				schemaUsage.ClientInfo.Version,
+				strconv.FormatInt(int64(schemaUsage.RequestInfo.StatusCode), 10),
+				schemaUsage.RequestInfo.Error,
+				[]string{},
+				false,
+				true,
+				schemaUsage.Attributes,
+			)
+			if err != nil {
+				s.logger.Error("Failed to append input metric to batch", zap.Error(err))
 				return nil, errMetricWriteFailed
 			}
 		}

@@ -8,60 +8,91 @@ import (
 	"strconv"
 )
 
+type Products interface {
+	IsProducts()
+}
+
+type Consultancy struct {
+	Upc  string      `json:"upc"`
+	Name ProductName `json:"name"`
+}
+
+func (Consultancy) IsProducts() {}
+
+func (Consultancy) IsEntity() {}
+
+type Cosmo struct {
+	Upc           string      `json:"upc"`
+	Name          ProductName `json:"name"`
+	RepositoryURL string      `json:"repositoryURL"`
+}
+
+func (Cosmo) IsProducts() {}
+
+func (Cosmo) IsEntity() {}
+
+type Documentation struct {
+	URL  string   `json:"url"`
+	Urls []string `json:"urls"`
+}
+
+func (Documentation) IsProducts() {}
+
 type Employee struct {
-	ID       int            `json:"id"`
-	Products []ProductNames `json:"products"`
+	ID       int           `json:"id"`
+	Products []ProductName `json:"products"`
+	Notes    string        `json:"notes"`
 }
 
 func (Employee) IsEntity() {}
 
-type ProductNames string
+type ProductName string
 
 const (
-	ProductNamesCloud          ProductNames = "CLOUD"
-	ProductNamesCosmo          ProductNames = "COSMO"
-	ProductNamesEngine         ProductNames = "ENGINE"
-	ProductNamesFinance        ProductNames = "FINANCE"
-	ProductNamesHumanResources ProductNames = "HUMAN_RESOURCES"
-	ProductNamesMarketing      ProductNames = "MARKETING"
-	ProductNamesSdk            ProductNames = "SDK"
+	ProductNameConsultancy    ProductName = "CONSULTANCY"
+	ProductNameCosmo          ProductName = "COSMO"
+	ProductNameEngine         ProductName = "ENGINE"
+	ProductNameFinance        ProductName = "FINANCE"
+	ProductNameHumanResources ProductName = "HUMAN_RESOURCES"
+	ProductNameMarketing      ProductName = "MARKETING"
+	ProductNameSdk            ProductName = "SDK"
 )
 
-var AllProductNames = []ProductNames{
-	ProductNamesCloud,
-	ProductNamesCosmo,
-	ProductNamesEngine,
-	ProductNamesFinance,
-	ProductNamesHumanResources,
-	ProductNamesMarketing,
-	ProductNamesSdk,
+var AllProductName = []ProductName{
+	ProductNameConsultancy,
+	ProductNameCosmo,
+	ProductNameEngine,
+	ProductNameFinance,
+	ProductNameHumanResources,
+	ProductNameMarketing,
+	ProductNameSdk,
 }
 
-func (e ProductNames) IsValid() bool {
+func (e ProductName) IsValid() bool {
 	switch e {
-	case ProductNamesCloud, ProductNamesCosmo, ProductNamesEngine, ProductNamesFinance, ProductNamesHumanResources, ProductNamesMarketing, ProductNamesSdk:
+	case ProductNameConsultancy, ProductNameCosmo, ProductNameEngine, ProductNameFinance, ProductNameHumanResources, ProductNameMarketing, ProductNameSdk:
 		return true
 	}
 	return false
 }
 
-func (e ProductNames) String() string {
+func (e ProductName) String() string {
 	return string(e)
 }
 
-func (e *ProductNames) UnmarshalGQL(v interface{}) error {
+func (e *ProductName) UnmarshalGQL(v interface{}) error {
 	str, ok := v.(string)
 	if !ok {
 		return fmt.Errorf("enums must be strings")
 	}
 
-	*e = ProductNames(str)
+	*e = ProductName(str)
 	if !e.IsValid() {
-		return fmt.Errorf("%s is not a valid ProductNames", str)
+		return fmt.Errorf("%s is not a valid ProductName", str)
 	}
 	return nil
 }
 
-func (e ProductNames) MarshalGQL(w io.Writer) {
+func (e ProductName) MarshalGQL(w io.Writer) {
 	fmt.Fprint(w, strconv.Quote(e.String()))
 }

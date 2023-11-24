@@ -269,6 +269,16 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
               memberID: orgMember.id,
               roles: ['admin'],
             });
+
+            await orgRepo.addOrganizationLimits({
+              organizationID: insertedOrg.id,
+              analyticsRetentionLimit: 7,
+              tracingRetentionLimit: 7,
+              changelogDataRetentionLimit: 7,
+              breakingChangeRetentionLimit: 7,
+              traceSamplingRateLimit: 0.1,
+              requestsLimit: 10,
+            });
           });
 
           opts.platformWebhooks.send(PlatformEventName.USER_REGISTER_SUCCESS, {
@@ -317,11 +327,32 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
   );
 
   fastify.get<{
-    Querystring: { redirectURL?: string; hint?: string };
+    Querystring: { redirectURL?: string; provider?: string; sso?: string };
   }>('/login', async (req, res) => {
     const redirectURL = req.query?.redirectURL;
-    const hint = req.query?.hint;
-    const { authorizationUrl, pkceCookie } = await opts.authUtils.handleLoginRequest(redirectURL, hint);
+    const provider = req.query?.provider;
+    const sso = req.query?.sso;
+    const { authorizationUrl, pkceCookie } = await opts.authUtils.handleLoginRequest({
+      redirectURL,
+      provider,
+      sso,
+    });
+
+    res.header('Set-Cookie', pkceCookie);
+
+    res.redirect(authorizationUrl);
+  });
+
+  fastify.get<{
+    Querystring: { redirectURL?: string; provider?: string };
+  }>('/signup', async (req, res) => {
+    const redirectURL = req.query?.redirectURL;
+    const provider = req.query?.provider;
+    const { authorizationUrl, pkceCookie } = await opts.authUtils.handleLoginRequest({
+      redirectURL,
+      provider,
+      action: 'signup',
+    });
 
     res.header('Set-Cookie', pkceCookie);
 

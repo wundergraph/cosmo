@@ -18,8 +18,10 @@ import (
 const defaultConfigPath = "config.yaml"
 
 type Graph struct {
-	Name  string `yaml:"name" envconfig:"FEDERATED_GRAPH_NAME" validate:"required"`
-	Token string `yaml:"token" envconfig:"GRAPH_API_TOKEN" validate:"required"`
+	// Name is required if no router config path is provided
+	Name string `yaml:"name" envconfig:"FEDERATED_GRAPH_NAME" validate:"required_without_router_config"`
+	// Token is required if no router config path is provided
+	Token string `yaml:"token" envconfig:"GRAPH_API_TOKEN" validate:"required_without_router_config"`
 }
 
 type TracingExporterConfig struct {
@@ -157,8 +159,10 @@ type EngineDebugConfiguration struct {
 }
 
 type EngineExecutionConfiguration struct {
-	Debug              EngineDebugConfiguration
-	EnableSingleFlight bool `default:"true" envconfig:"ENGINE_ENABLE_SINGLE_FLIGHT"`
+	Debug                                  EngineDebugConfiguration
+	EnableSingleFlight                     bool `default:"true" envconfig:"ENGINE_ENABLE_SINGLE_FLIGHT"`
+	EnableRequestTracing                   bool `default:"true" envconfig:"ENGINE_ENABLE_REQUEST_TRACING"`
+	EnableExecutionPlanCacheResponseHeader bool `default:"false" envconfig:"ENGINE_ENABLE_EXECUTION_PLAN_CACHE_RESPONSE_HEADER"`
 }
 
 type OverrideRoutingURLConfiguration struct {
@@ -183,6 +187,10 @@ type AuthenticationConfiguration struct {
 
 type AuthorizationConfiguration struct {
 	RequireAuthentication bool `yaml:"require_authentication" default:"false" envconfig:"REQUIRE_AUTHENTICATION"`
+}
+
+type CDNConfiguration struct {
+	URL string `yaml:"url" validate:"url" envconfig:"CDN_URL" default:"https://cosmo-cdn.wundergraph.com"`
 }
 
 type Config struct {
@@ -213,6 +221,7 @@ type Config struct {
 	Authentication                AuthenticationConfiguration `yaml:"authentication"`
 	Authorization                 AuthorizationConfiguration  `yaml:"authorization"`
 	LocalhostFallbackInsideDocker bool                        `yaml:"localhost_fallback_inside_docker" default:"true" envconfig:"LOCALHOST_FALLBACK_INSIDE_DOCKER"`
+	CDN                           CDNConfiguration            `yaml:"cdn"`
 
 	ConfigPath       string `envconfig:"CONFIG_PATH" validate:"omitempty,filepath"`
 	RouterConfigPath string `yaml:"router_config_path" envconfig:"ROUTER_CONFIG_PATH" validate:"omitempty,filepath"`
@@ -220,6 +229,18 @@ type Config struct {
 	OverrideRoutingURL OverrideRoutingURLConfiguration `yaml:"override_routing_url"`
 
 	EngineExecutionConfiguration EngineExecutionConfiguration
+}
+
+// ValidateRequiredWithRouterConfigPath validates that either the field or the router config path is set
+func ValidateRequiredWithRouterConfigPath(fl validator.FieldLevel) bool {
+	if valuer, ok := fl.Top().Interface().(Config); ok {
+		if fl.Field().String() == "" && valuer.RouterConfigPath == "" {
+			return false
+		}
+	} else {
+		return false
+	}
+	return true
 }
 
 func LoadConfig(envOverride string) (*Config, error) {
@@ -275,7 +296,9 @@ func LoadConfig(envOverride string) (*Config, error) {
 		}
 	}
 
-	err = validator.New().Struct(c)
+	validate := validator.New()
+	_ = validate.RegisterValidation("required_without_router_config", ValidateRequiredWithRouterConfigPath)
+	err = validate.Struct(c)
 	if err != nil {
 		return nil, err
 	}

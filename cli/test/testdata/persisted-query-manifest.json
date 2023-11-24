@@ -1,0 +1,12 @@
+{
+  "format": "apollo-persisted-query-manifest",
+  "version": 1,
+  "operations": [
+    {
+      "id": "2d9df67f96ce804da7a9107d33373132a53bf56aec29ef4b4e06569a43a16935",
+      "name": "Employees",
+      "type": "query",
+      "body": "query Employees {\n employees {\n id\n }\n}"
+    }
+  ]
+}

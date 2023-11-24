@@ -44,6 +44,7 @@ export interface SubgraphDTO {
   subscriptionUrl: string;
   subscriptionProtocol: 'ws' | 'sse' | 'sse_post';
   schemaSDL: string;
+  schemaVersionId: string;
   lastUpdatedAt: string;
   labels: Label[];
 }
@@ -63,6 +64,7 @@ export interface SchemaCheckDTO {
   isBreaking: boolean;
   hasClientTraffic: boolean;
   isForcedSuccess: boolean;
+  isDeleted: boolean;
 }
 
 export interface SchemaCheckSummaryDTO extends SchemaCheckDTO {
@@ -241,7 +243,7 @@ export type AuthContext = {
   organizationSlug: string;
   hasWriteAccess: boolean;
   isAdmin: boolean;
-  userId?: string;
+  userId: string;
 };
 
 export interface GraphApiKeyJwtPayload extends JWTPayload {
@@ -264,4 +266,42 @@ export interface SlackAccessTokenResponse {
   slackChannelId: string;
   slackChannelName: string;
   webhookURL: string;
+}
+
+export interface OrganizationLimitsDTO {
+  analyticsRetentionLimit: number;
+  tracingRetentionLimit: number;
+  changelogDataRetentionLimit: number;
+  breakingChangeRetentionLimit: number;
+  traceSamplingRateLimit: number;
+  requestsLimit: number;
+}
+
+export interface ClientDTO {
+  id: string;
+  name: string;
+  createdAt: string;
+  createdBy: string;
+  lastUpdatedAt: string;
+  lastUpdatedBy: string;
+}
+
+export interface PersistedOperationDTO {
+  id: string;
+  hash: string;
+  filePath: string;
+  createdAt: string;
+  createdBy: string;
+  lastUpdatedAt: string;
+  lastUpdatedBy: string;
+}
+
+export interface PublishedOperationData {
+  version: 1;
+  body: string;
+}
+
+export interface UpdatedPersistedOperation {
+  hash: string;
+  filePath: string;
 }

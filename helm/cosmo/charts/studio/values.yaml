@@ -115,11 +115,18 @@ probes:
 # Global configuration #
 ########################
 
+configuration:
+  # -- The client ID of the slack app to use for slack app integration
+  slackClientId: ""
+  # -- Custom scripts injected into the head of the studio, eg for analytics
+  #customHeadScripts: [{"id": "hello-world", "src": "console.log('hello world')", "inline": true}]
+
 #global:
 #  controlplane:
 #    port: 3001
-#    webUrl: "http://studio.wundergraph.local"
+#    webUrl: "http://controlplane.wundergraph.local"
 #  studio:
 #    port: 3000
+#    webUrl: "http://studio.wundergraph.local"
 #    image:
 #      tag: "latest"

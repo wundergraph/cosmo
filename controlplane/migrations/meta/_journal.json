@@ -379,6 +379,41 @@
       "when": 1699472077441,
       "tag": "0053_natural_goblin_queen",
       "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "5",
+      "when": 1699964989429,
+      "tag": "0054_mixed_dracula",
+      "breakpoints": true
+    },
+    {
+      "idx": 55,
+      "version": "5",
+      "when": 1700165366018,
+      "tag": "0055_omniscient_dragon_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 56,
+      "version": "5",
+      "when": 1700255510749,
+      "tag": "0056_kind_wallop",
+      "breakpoints": true
+    },
+    {
+      "idx": 57,
+      "version": "5",
+      "when": 1700597273329,
+      "tag": "0057_late_golden_guardian",
+      "breakpoints": true
+    },
+    {
+      "idx": 58,
+      "version": "5",
+      "when": 1700740018380,
+      "tag": "0058_goofy_kronos",
+      "breakpoints": true
     }
   ]
 }

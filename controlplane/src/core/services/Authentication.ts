@@ -1,8 +1,7 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { addDays } from 'date-fns';
 import { lru } from 'tiny-lru';
 import { AuthContext } from '../../types/index.js';
-import { AuthenticationError, FreeTrialExpiredError, isFreeTrialExpiredError } from '../errors/errors.js';
+import { AuthenticationError } from '../errors/errors.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import { checkUserAccess } from '../util.js';
 import AccessTokenAuthenticator from './AccessTokenAuthenticator.js';
@@ -12,8 +11,6 @@ import WebSessionAuthenticator from './WebSessionAuthenticator.js';
 
 // The maximum time to cache the user auth context for the web session authentication.
 const maxAuthCacheTtl = 30 * 1000; // 30 seconds
-
-export const calLink = 'https://cal.com/stefan-avram-wundergraph/wundergraph-introduction';
 
 export interface Authenticator {
   authenticate(headers: Headers): Promise<AuthContext>;
@@ -65,15 +62,6 @@ export class Authentication implements Authenticator {
         throw new Error('Organization not found');
       }
 
-      const isFreeTrialExpired = organization.isFreeTrial && new Date() > addDays(new Date(organization.createdAt), 10);
-
-      if (isFreeTrialExpired) {
-        throw new FreeTrialExpiredError(
-          EnumStatusCode.ERR_FREE_TRIAL_EXPIRED,
-          `Free trial has concluded. Please talk to sales to upgrade your plan.\n${calLink}\n`,
-        );
-      }
-
       const cacheKey = `${user.userId}:${organization.id}`;
       const cachedUserContext = this.#cache.get(cacheKey);
 
@@ -109,10 +97,7 @@ export class Authentication implements Authenticator {
       this.#cache.set(cacheKey, userContext);
 
       return userContext;
-    } catch (e: any) {
-      if (isFreeTrialExpiredError(e)) {
-        throw e;
-      }
+    } catch {
       throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, 'Not authenticated');
     }
   }

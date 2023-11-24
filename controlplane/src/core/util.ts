@@ -3,11 +3,14 @@ import pino from 'pino';
 import { joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
 import { uid } from 'uid/secure';
 import { GraphQLSubscriptionProtocol } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { DateRange } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { formatISO, subHours } from 'date-fns';
 import { Label, ResponseMessage } from '../types/index.js';
 import { MemberRole } from '../db/models.js';
-import { isAuthenticationError, isFreeTrialExpiredError, isPublicError } from './errors/errors.js';
+import { isAuthenticationError, isPublicError } from './errors/errors.js';
 
 const labelRegex = /^[\dA-Za-z](?:[\w.-]{0,61}[\dA-Za-z])?$/;
+const organizationSlugRegex = /^[\da-z]+(?:-[\da-z]+)*$/;
 
 /**
  * Wraps a function with a try/catch block and logs any errors that occur.
@@ -35,14 +38,8 @@ export async function handleError<T extends ResponseMessage>(
           details: error.message,
         },
       } as T;
-    } else if (isFreeTrialExpiredError(error)) {
-      return {
-        response: {
-          code: error.code,
-          details: error.message,
-        },
-      } as T;
     }
+
     logger.error(error);
 
     throw error;
@@ -180,4 +177,49 @@ export const getHighestPriorityRole = ({ userRoles }: { userRoles: string[] }) =
     return 'developer';
   }
   return 'viewer';
+};
+
+export const isValidOrganizationSlug = (slug: string): boolean => {
+  if (slug.length < 3 || slug.length > 24) {
+    return false;
+  }
+
+  if (!organizationSlugRegex.test(slug)) {
+    return false;
+  }
+
+  return true;
+};
+
+export const validateDateRanges = ({
+  limit,
+  range,
+  dateRange,
+}: {
+  limit: number;
+  range?: number;
+  dateRange?: DateRange;
+}): { range: number | undefined; dateRange: DateRange | undefined } => {
+  let validatedRange: number | undefined = range;
+  const validatedDateRange: DateRange | undefined = dateRange;
+
+  if (validatedRange && validatedRange > limit * 24) {
+    validatedRange = limit * 24;
+  }
+
+  if (validatedDateRange) {
+    const startDate = new Date(validatedDateRange.start);
+    const endDate = new Date(validatedDateRange.end);
+    if (startDate < subHours(new Date(), limit * 24)) {
+      validatedDateRange.start = formatISO(subHours(new Date(), limit * 24));
+    }
+    if (endDate > new Date()) {
+      validatedDateRange.end = formatISO(new Date());
+    }
+  }
+
+  return {
+    range: validatedRange,
+    dateRange: validatedDateRange,
+  };
 };

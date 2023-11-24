@@ -39,23 +39,45 @@ type Config struct {
 }
 
 type ResolverRoot interface {
+	Documentation() DocumentationResolver
 	Entity() EntityResolver
+	Queries() QueriesResolver
 }
 
 type DirectiveRoot struct {
 }
 
 type ComplexityRoot struct {
+	Consultancy struct {
+		Name func(childComplexity int) int
+		Upc  func(childComplexity int) int
+	}
+
+	Cosmo struct {
+		Name          func(childComplexity int) int
+		RepositoryURL func(childComplexity int) int
+		Upc           func(childComplexity int) int
+	}
+
+	Documentation struct {
+		URL  func(childComplexity int, product model.ProductName) int
+		Urls func(childComplexity int, products []model.ProductName) int
+	}
+
 	Employee struct {
 		ID       func(childComplexity int) int
+		Notes    func(childComplexity int) int
 		Products func(childComplexity int) int
 	}
 
 	Entity struct {
-		FindEmployeeByID func(childComplexity int, id int) int
+		FindConsultancyByUpc func(childComplexity int, upc string) int
+		FindCosmoByUpc       func(childComplexity int, upc string) int
+		FindEmployeeByID     func(childComplexity int, id int) int
 	}
 
-	Query struct {
+	Queries struct {
+		ProductTypes       func(childComplexity int) int
 		__resolve__service func(childComplexity int) int
 		__resolve_entities func(childComplexity int, representations []map[string]interface{}) int
 	}
@@ -65,8 +87,17 @@ type ComplexityRoot struct {
 	}
 }
 
+type DocumentationResolver interface {
+	URL(ctx context.Context, obj *model.Documentation, product model.ProductName) (string, error)
+	Urls(ctx context.Context, obj *model.Documentation, products []model.ProductName) ([]string, error)
+}
 type EntityResolver interface {
+	FindConsultancyByUpc(ctx context.Context, upc string) (*model.Consultancy, error)
+	FindCosmoByUpc(ctx context.Context, upc string) (*model.Cosmo, error)
 	FindEmployeeByID(ctx context.Context, id int) (*model.Employee, error)
+}
+type QueriesResolver interface {
+	ProductTypes(ctx context.Context) ([]model.Products, error)
 }
 
 type executableSchema struct {
@@ -88,6 +119,65 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 	_ = ec
 	switch typeName + "." + field {
 
+	case "Consultancy.name":
+		if e.complexity.Consultancy.Name == nil {
+			break
+		}
+
+		return e.complexity.Consultancy.Name(childComplexity), true
+
+	case "Consultancy.upc":
+		if e.complexity.Consultancy.Upc == nil {
+			break
+		}
+
+		return e.complexity.Consultancy.Upc(childComplexity), true
+
+	case "Cosmo.name":
+		if e.complexity.Cosmo.Name == nil {
+			break
+		}
+
+		return e.complexity.Cosmo.Name(childComplexity), true
+
+	case "Cosmo.repositoryURL":
+		if e.complexity.Cosmo.RepositoryURL == nil {
+			break
+		}
+
+		return e.complexity.Cosmo.RepositoryURL(childComplexity), true
+
+	case "Cosmo.upc":
+		if e.complexity.Cosmo.Upc == nil {
+			break
+		}
+
+		return e.complexity.Cosmo.Upc(childComplexity), true
+
+	case "Documentation.url":
+		if e.complexity.Documentation.URL == nil {
+			break
+		}
+
+		args, err := ec.field_Documentation_url_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Documentation.URL(childComplexity, args["product"].(model.ProductName)), true
+
+	case "Documentation.urls":
+		if e.complexity.Documentation.Urls == nil {
+			break
+		}
+
+		args, err := ec.field_Documentation_urls_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Documentation.Urls(childComplexity, args["products"].([]model.ProductName)), true
+
 	case "Employee.id":
 		if e.complexity.Employee.ID == nil {
 			break
@@ -95,12 +185,43 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Employee.ID(childComplexity), true
 
+	case "Employee.notes":
+		if e.complexity.Employee.Notes == nil {
+			break
+		}
+
+		return e.complexity.Employee.Notes(childComplexity), true
+
 	case "Employee.products":
 		if e.complexity.Employee.Products == nil {
 			break
 		}
 
 		return e.complexity.Employee.Products(childComplexity), true
+
+	case "Entity.findConsultancyByUpc":
+		if e.complexity.Entity.FindConsultancyByUpc == nil {
+			break
+		}
+
+		args, err := ec.field_Entity_findConsultancyByUpc_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Entity.FindConsultancyByUpc(childComplexity, args["upc"].(string)), true
+
+	case "Entity.findCosmoByUpc":
+		if e.complexity.Entity.FindCosmoByUpc == nil {
+			break
+		}
+
+		args, err := ec.field_Entity_findCosmoByUpc_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Entity.FindCosmoByUpc(childComplexity, args["upc"].(string)), true
 
 	case "Entity.findEmployeeByID":
 		if e.complexity.Entity.FindEmployeeByID == nil {
@@ -114,24 +235,31 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Entity.FindEmployeeByID(childComplexity, args["id"].(int)), true
 
-	case "Query._service":
-		if e.complexity.Query.__resolve__service == nil {
+	case "Queries.productTypes":
+		if e.complexity.Queries.ProductTypes == nil {
 			break
 		}
 
-		return e.complexity.Query.__resolve__service(childComplexity), true
+		return e.complexity.Queries.ProductTypes(childComplexity), true
 
-	case "Query._entities":
-		if e.complexity.Query.__resolve_entities == nil {
+	case "Queries._service":
+		if e.complexity.Queries.__resolve__service == nil {
 			break
 		}
 
-		args, err := ec.field_Query__entities_args(context.TODO(), rawArgs)
+		return e.complexity.Queries.__resolve__service(childComplexity), true
+
+	case "Queries._entities":
+		if e.complexity.Queries.__resolve_entities == nil {
+			break
+		}
+
+		args, err := ec.field_Queries__entities_args(context.TODO(), rawArgs)
 		if err != nil {
 			return 0, false
 		}
 
-		return e.complexity.Query.__resolve_entities(childComplexity, args["representations"].([]map[string]interface{})), true
+		return e.complexity.Queries.__resolve_entities(childComplexity, args["representations"].([]map[string]interface{})), true
 
 	case "_Service.sdl":
 		if e.complexity._Service.SDL == nil {
@@ -158,7 +286,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 			if first {
 				first = false
 				ctx = graphql.WithUnmarshalerMap(ctx, inputUnmarshalMap)
-				data = ec._Query(ctx, rc.Operation.SelectionSet)
+				data = ec._Queries(ctx, rc.Operation.SelectionSet)
 			} else {
 				if atomic.LoadInt32(&ec.pendingDeferred) > 0 {
 					result := <-ec.deferredResults
@@ -229,8 +357,16 @@ func (ec *executionContext) introspectType(name string) (*introspection.Type, er
 }
 
 var sources = []*ast.Source{
-	{Name: "../schema.graphqls", Input: `enum ProductNames {
-  CLOUD
+	{Name: "../schema.graphqls", Input: `schema {
+  query: Queries
+}
+
+type Queries {
+  productTypes: [Products!]!
+}
+
+enum ProductName {
+  CONSULTANCY
   COSMO
   ENGINE
   FINANCE
@@ -241,7 +377,26 @@ var sources = []*ast.Source{
 
 type Employee @key(fields: "id") {
   id: Int!
-  products: [ProductNames!]!
+  products: [ProductName!]!
+  notes: String! @override(from: "employees")
+}
+
+union Products = Consultancy | Cosmo | Documentation
+
+type Consultancy @key(fields: "upc") {
+  upc: ID!
+  name: ProductName!
+}
+
+type Cosmo @key(fields: "upc") {
+  upc: ID!
+  name: ProductName!
+  repositoryURL: String!
+}
+
+type Documentation {
+  url(product: ProductName!): String!
+  urls(products: [ProductName!]!): [String!]!
 }`, BuiltIn: false},
 	{Name: "../../federation/directives.graphql", Input: `
 	directive @authenticated on FIELD_DEFINITION | OBJECT | INTERFACE | SCALAR | ENUM
@@ -289,11 +444,13 @@ type Employee @key(fields: "id") {
 `, BuiltIn: true},
 	{Name: "../../federation/entity.graphql", Input: `
 # a union of all types that use the @key directive
-union _Entity = Employee
+union _Entity = Consultancy | Cosmo | Employee
 
 # fake type to build resolver interfaces for users to implement
 type Entity {
-		findEmployeeByID(id: Int!,): Employee!
+		findConsultancyByUpc(upc: ID!,): Consultancy!
+	findCosmoByUpc(upc: ID!,): Cosmo!
+	findEmployeeByID(id: Int!,): Employee!
 
 }
 
@@ -301,7 +458,7 @@ type _Service {
   sdl: String
 }
 
-extend type Query {
+extend type Queries {
   _entities(representations: [_Any!]!): [_Entity]!
   _service: _Service!
 }
@@ -312,6 +469,66 @@ var parsedSchema = gqlparser.MustLoadSchema(sources...)
 // endregion ************************** generated!.gotpl **************************
 
 // region    ***************************** args.gotpl *****************************
+
+func (ec *executionContext) field_Documentation_url_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 model.ProductName
+	if tmp, ok := rawArgs["product"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("product"))
+		arg0, err = ec.unmarshalNProductName2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐProductName(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["product"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Documentation_urls_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 []model.ProductName
+	if tmp, ok := rawArgs["products"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("products"))
+		arg0, err = ec.unmarshalNProductName2ᚕgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐProductNameᚄ(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["products"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Entity_findConsultancyByUpc_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["upc"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("upc"))
+		arg0, err = ec.unmarshalNID2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["upc"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Entity_findCosmoByUpc_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["upc"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("upc"))
+		arg0, err = ec.unmarshalNID2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["upc"] = arg0
+	return args, nil
+}
 
 func (ec *executionContext) field_Entity_findEmployeeByID_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
@@ -328,7 +545,7 @@ func (ec *executionContext) field_Entity_findEmployeeByID_args(ctx context.Conte
 	return args, nil
 }
 
-func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+func (ec *executionContext) field_Queries___type_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
 	var arg0 string
@@ -343,7 +560,7 @@ func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs
 	return args, nil
 }
 
-func (ec *executionContext) field_Query__entities_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+func (ec *executionContext) field_Queries__entities_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
 	var arg0 []map[string]interface{}
@@ -395,6 +612,336 @@ func (ec *executionContext) field___Type_fields_args(ctx context.Context, rawArg
 // endregion ************************** directives.gotpl **************************
 
 // region    **************************** field.gotpl *****************************
+
+func (ec *executionContext) _Consultancy_upc(ctx context.Context, field graphql.CollectedField, obj *model.Consultancy) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Consultancy_upc(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Upc, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Consultancy_upc(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Consultancy",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Consultancy_name(ctx context.Context, field graphql.CollectedField, obj *model.Consultancy) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Consultancy_name(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Name, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(model.ProductName)
+	fc.Result = res
+	return ec.marshalNProductName2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐProductName(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Consultancy_name(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Consultancy",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ProductName does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Cosmo_upc(ctx context.Context, field graphql.CollectedField, obj *model.Cosmo) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Cosmo_upc(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Upc, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Cosmo_upc(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Cosmo",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Cosmo_name(ctx context.Context, field graphql.CollectedField, obj *model.Cosmo) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Cosmo_name(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Name, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(model.ProductName)
+	fc.Result = res
+	return ec.marshalNProductName2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐProductName(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Cosmo_name(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Cosmo",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ProductName does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Cosmo_repositoryURL(ctx context.Context, field graphql.CollectedField, obj *model.Cosmo) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Cosmo_repositoryURL(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.RepositoryURL, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Cosmo_repositoryURL(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Cosmo",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Documentation_url(ctx context.Context, field graphql.CollectedField, obj *model.Documentation) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Documentation_url(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Documentation().URL(rctx, obj, fc.Args["product"].(model.ProductName))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Documentation_url(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Documentation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Documentation_url_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Documentation_urls(ctx context.Context, field graphql.CollectedField, obj *model.Documentation) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Documentation_urls(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Documentation().Urls(rctx, obj, fc.Args["products"].([]model.ProductName))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]string)
+	fc.Result = res
+	return ec.marshalNString2ᚕstringᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Documentation_urls(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Documentation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Documentation_urls_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
 
 func (ec *executionContext) _Employee_id(ctx context.Context, field graphql.CollectedField, obj *model.Employee) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Employee_id(ctx, field)
@@ -466,9 +1013,9 @@ func (ec *executionContext) _Employee_products(ctx context.Context, field graphq
 		}
 		return graphql.Null
 	}
-	res := resTmp.([]model.ProductNames)
+	res := resTmp.([]model.ProductName)
 	fc.Result = res
-	return ec.marshalNProductNames2ᚕgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐProductNamesᚄ(ctx, field.Selections, res)
+	return ec.marshalNProductName2ᚕgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐProductNameᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Employee_products(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -478,8 +1025,176 @@ func (ec *executionContext) fieldContext_Employee_products(ctx context.Context, 
 		IsMethod:   false,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type ProductNames does not have child fields")
+			return nil, errors.New("field of type ProductName does not have child fields")
 		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Employee_notes(ctx context.Context, field graphql.CollectedField, obj *model.Employee) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Employee_notes(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Notes, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Employee_notes(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Employee",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Entity_findConsultancyByUpc(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Entity_findConsultancyByUpc(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Entity().FindConsultancyByUpc(rctx, fc.Args["upc"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.Consultancy)
+	fc.Result = res
+	return ec.marshalNConsultancy2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐConsultancy(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Entity_findConsultancyByUpc(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Entity",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "upc":
+				return ec.fieldContext_Consultancy_upc(ctx, field)
+			case "name":
+				return ec.fieldContext_Consultancy_name(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Consultancy", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Entity_findConsultancyByUpc_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Entity_findCosmoByUpc(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Entity_findCosmoByUpc(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Entity().FindCosmoByUpc(rctx, fc.Args["upc"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.Cosmo)
+	fc.Result = res
+	return ec.marshalNCosmo2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐCosmo(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Entity_findCosmoByUpc(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Entity",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "upc":
+				return ec.fieldContext_Cosmo_upc(ctx, field)
+			case "name":
+				return ec.fieldContext_Cosmo_name(ctx, field)
+			case "repositoryURL":
+				return ec.fieldContext_Cosmo_repositoryURL(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Cosmo", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Entity_findCosmoByUpc_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
 	}
 	return fc, nil
 }
@@ -527,6 +1242,8 @@ func (ec *executionContext) fieldContext_Entity_findEmployeeByID(ctx context.Con
 				return ec.fieldContext_Employee_id(ctx, field)
 			case "products":
 				return ec.fieldContext_Employee_products(ctx, field)
+			case "notes":
+				return ec.fieldContext_Employee_notes(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Employee", field.Name)
 		},
@@ -545,8 +1262,52 @@ func (ec *executionContext) fieldContext_Entity_findEmployeeByID(ctx context.Con
 	return fc, nil
 }
 
-func (ec *executionContext) _Query__entities(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Query__entities(ctx, field)
+func (ec *executionContext) _Queries_productTypes(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Queries_productTypes(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Queries().ProductTypes(rctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]model.Products)
+	fc.Result = res
+	return ec.marshalNProducts2ᚕgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐProductsᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Queries_productTypes(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Queries",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Products does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Queries__entities(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Queries__entities(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -576,9 +1337,9 @@ func (ec *executionContext) _Query__entities(ctx context.Context, field graphql.
 	return ec.marshalN_Entity2ᚕgithubᚗcomᚋ99designsᚋgqlgenᚋpluginᚋfederationᚋfedruntimeᚐEntity(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Query__entities(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Queries__entities(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
-		Object:     "Query",
+		Object:     "Queries",
 		Field:      field,
 		IsMethod:   true,
 		IsResolver: false,
@@ -593,15 +1354,15 @@ func (ec *executionContext) fieldContext_Query__entities(ctx context.Context, fi
 		}
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Query__entities_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+	if fc.Args, err = ec.field_Queries__entities_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
 	return fc, nil
 }
 
-func (ec *executionContext) _Query__service(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Query__service(ctx, field)
+func (ec *executionContext) _Queries__service(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Queries__service(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -631,9 +1392,9 @@ func (ec *executionContext) _Query__service(ctx context.Context, field graphql.C
 	return ec.marshalN_Service2githubᚗcomᚋ99designsᚋgqlgenᚋpluginᚋfederationᚋfedruntimeᚐService(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Query__service(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Queries__service(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
-		Object:     "Query",
+		Object:     "Queries",
 		Field:      field,
 		IsMethod:   true,
 		IsResolver: false,
@@ -648,8 +1409,8 @@ func (ec *executionContext) fieldContext_Query__service(ctx context.Context, fie
 	return fc, nil
 }
 
-func (ec *executionContext) _Query___type(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Query___type(ctx, field)
+func (ec *executionContext) _Queries___type(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Queries___type(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -676,9 +1437,9 @@ func (ec *executionContext) _Query___type(ctx context.Context, field graphql.Col
 	return ec.marshalO__Type2ᚖgithubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐType(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Query___type(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Queries___type(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
-		Object:     "Query",
+		Object:     "Queries",
 		Field:      field,
 		IsMethod:   true,
 		IsResolver: false,
@@ -715,15 +1476,15 @@ func (ec *executionContext) fieldContext_Query___type(ctx context.Context, field
 		}
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Query___type_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+	if fc.Args, err = ec.field_Queries___type_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
 	return fc, nil
 }
 
-func (ec *executionContext) _Query___schema(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Query___schema(ctx, field)
+func (ec *executionContext) _Queries___schema(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Queries___schema(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -750,9 +1511,9 @@ func (ec *executionContext) _Query___schema(ctx context.Context, field graphql.C
 	return ec.marshalO__Schema2ᚖgithubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐSchema(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Query___schema(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Queries___schema(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
-		Object:     "Query",
+		Object:     "Queries",
 		Field:      field,
 		IsMethod:   true,
 		IsResolver: false,
@@ -2595,10 +3356,54 @@ func (ec *executionContext) fieldContext___Type_specifiedByURL(ctx context.Conte
 
 // region    ************************** interface.gotpl ***************************
 
+func (ec *executionContext) _Products(ctx context.Context, sel ast.SelectionSet, obj model.Products) graphql.Marshaler {
+	switch obj := (obj).(type) {
+	case nil:
+		return graphql.Null
+	case model.Consultancy:
+		return ec._Consultancy(ctx, sel, &obj)
+	case *model.Consultancy:
+		if obj == nil {
+			return graphql.Null
+		}
+		return ec._Consultancy(ctx, sel, obj)
+	case model.Cosmo:
+		return ec._Cosmo(ctx, sel, &obj)
+	case *model.Cosmo:
+		if obj == nil {
+			return graphql.Null
+		}
+		return ec._Cosmo(ctx, sel, obj)
+	case model.Documentation:
+		return ec._Documentation(ctx, sel, &obj)
+	case *model.Documentation:
+		if obj == nil {
+			return graphql.Null
+		}
+		return ec._Documentation(ctx, sel, obj)
+	default:
+		panic(fmt.Errorf("unexpected type %T", obj))
+	}
+}
+
 func (ec *executionContext) __Entity(ctx context.Context, sel ast.SelectionSet, obj fedruntime.Entity) graphql.Marshaler {
 	switch obj := (obj).(type) {
 	case nil:
 		return graphql.Null
+	case model.Consultancy:
+		return ec._Consultancy(ctx, sel, &obj)
+	case *model.Consultancy:
+		if obj == nil {
+			return graphql.Null
+		}
+		return ec._Consultancy(ctx, sel, obj)
+	case model.Cosmo:
+		return ec._Cosmo(ctx, sel, &obj)
+	case *model.Cosmo:
+		if obj == nil {
+			return graphql.Null
+		}
+		return ec._Cosmo(ctx, sel, obj)
 	case model.Employee:
 		return ec._Employee(ctx, sel, &obj)
 	case *model.Employee:
@@ -2614,6 +3419,205 @@ func (ec *executionContext) __Entity(ctx context.Context, sel ast.SelectionSet, 
 // endregion ************************** interface.gotpl ***************************
 
 // region    **************************** object.gotpl ****************************
+
+var consultancyImplementors = []string{"Consultancy", "Products", "_Entity"}
+
+func (ec *executionContext) _Consultancy(ctx context.Context, sel ast.SelectionSet, obj *model.Consultancy) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, consultancyImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Consultancy")
+		case "upc":
+			out.Values[i] = ec._Consultancy_upc(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "name":
+			out.Values[i] = ec._Consultancy_name(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var cosmoImplementors = []string{"Cosmo", "Products", "_Entity"}
+
+func (ec *executionContext) _Cosmo(ctx context.Context, sel ast.SelectionSet, obj *model.Cosmo) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, cosmoImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Cosmo")
+		case "upc":
+			out.Values[i] = ec._Cosmo_upc(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "name":
+			out.Values[i] = ec._Cosmo_name(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "repositoryURL":
+			out.Values[i] = ec._Cosmo_repositoryURL(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var documentationImplementors = []string{"Documentation", "Products"}
+
+func (ec *executionContext) _Documentation(ctx context.Context, sel ast.SelectionSet, obj *model.Documentation) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, documentationImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Documentation")
+		case "url":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Documentation_url(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "urls":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Documentation_urls(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
 
 var employeeImplementors = []string{"Employee", "_Entity"}
 
@@ -2633,6 +3637,11 @@ func (ec *executionContext) _Employee(ctx context.Context, sel ast.SelectionSet,
 			}
 		case "products":
 			out.Values[i] = ec._Employee_products(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "notes":
+			out.Values[i] = ec._Employee_notes(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -2678,6 +3687,50 @@ func (ec *executionContext) _Entity(ctx context.Context, sel ast.SelectionSet) g
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Entity")
+		case "findConsultancyByUpc":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Entity_findConsultancyByUpc(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "findCosmoByUpc":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Entity_findCosmoByUpc(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
 		case "findEmployeeByID":
 			field := field
 
@@ -2723,12 +3776,12 @@ func (ec *executionContext) _Entity(ctx context.Context, sel ast.SelectionSet) g
 	return out
 }
 
-var queryImplementors = []string{"Query"}
+var queriesImplementors = []string{"Queries"}
 
-func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, queryImplementors)
+func (ec *executionContext) _Queries(ctx context.Context, sel ast.SelectionSet) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, queriesImplementors)
 	ctx = graphql.WithFieldContext(ctx, &graphql.FieldContext{
-		Object: "Query",
+		Object: "Queries",
 	})
 
 	out := graphql.NewFieldSet(fields)
@@ -2741,7 +3794,29 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 
 		switch field.Name {
 		case "__typename":
-			out.Values[i] = graphql.MarshalString("Query")
+			out.Values[i] = graphql.MarshalString("Queries")
+		case "productTypes":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Queries_productTypes(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
 		case "_entities":
 			field := field
 
@@ -2751,7 +3826,7 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 						ec.Error(ctx, ec.Recover(ctx, r))
 					}
 				}()
-				res = ec._Query__entities(ctx, field)
+				res = ec._Queries__entities(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
@@ -2773,7 +3848,7 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 						ec.Error(ctx, ec.Recover(ctx, r))
 					}
 				}()
-				res = ec._Query__service(ctx, field)
+				res = ec._Queries__service(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
@@ -2788,11 +3863,11 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
 		case "__type":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Query___type(ctx, field)
+				return ec._Queries___type(ctx, field)
 			})
 		case "__schema":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Query___schema(ctx, field)
+				return ec._Queries___schema(ctx, field)
 			})
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
@@ -3194,6 +4269,34 @@ func (ec *executionContext) marshalNBoolean2bool(ctx context.Context, sel ast.Se
 	return res
 }
 
+func (ec *executionContext) marshalNConsultancy2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐConsultancy(ctx context.Context, sel ast.SelectionSet, v model.Consultancy) graphql.Marshaler {
+	return ec._Consultancy(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNConsultancy2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐConsultancy(ctx context.Context, sel ast.SelectionSet, v *model.Consultancy) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._Consultancy(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNCosmo2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐCosmo(ctx context.Context, sel ast.SelectionSet, v model.Cosmo) graphql.Marshaler {
+	return ec._Cosmo(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNCosmo2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐCosmo(ctx context.Context, sel ast.SelectionSet, v *model.Cosmo) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._Cosmo(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalNEmployee2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐEmployee(ctx context.Context, sel ast.SelectionSet, v model.Employee) graphql.Marshaler {
 	return ec._Employee(ctx, sel, &v)
 }
@@ -3223,6 +4326,21 @@ func (ec *executionContext) marshalNFieldSet2string(ctx context.Context, sel ast
 	return res
 }
 
+func (ec *executionContext) unmarshalNID2string(ctx context.Context, v interface{}) (string, error) {
+	res, err := graphql.UnmarshalID(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNID2string(ctx context.Context, sel ast.SelectionSet, v string) graphql.Marshaler {
+	res := graphql.MarshalID(v)
+	if res == graphql.Null {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+	}
+	return res
+}
+
 func (ec *executionContext) unmarshalNInt2int(ctx context.Context, v interface{}) (int, error) {
 	res, err := graphql.UnmarshalInt(v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -3238,26 +4356,26 @@ func (ec *executionContext) marshalNInt2int(ctx context.Context, sel ast.Selecti
 	return res
 }
 
-func (ec *executionContext) unmarshalNProductNames2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐProductNames(ctx context.Context, v interface{}) (model.ProductNames, error) {
-	var res model.ProductNames
+func (ec *executionContext) unmarshalNProductName2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐProductName(ctx context.Context, v interface{}) (model.ProductName, error) {
+	var res model.ProductName
 	err := res.UnmarshalGQL(v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalNProductNames2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐProductNames(ctx context.Context, sel ast.SelectionSet, v model.ProductNames) graphql.Marshaler {
+func (ec *executionContext) marshalNProductName2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐProductName(ctx context.Context, sel ast.SelectionSet, v model.ProductName) graphql.Marshaler {
 	return v
 }
 
-func (ec *executionContext) unmarshalNProductNames2ᚕgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐProductNamesᚄ(ctx context.Context, v interface{}) ([]model.ProductNames, error) {
+func (ec *executionContext) unmarshalNProductName2ᚕgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐProductNameᚄ(ctx context.Context, v interface{}) ([]model.ProductName, error) {
 	var vSlice []interface{}
 	if v != nil {
 		vSlice = graphql.CoerceList(v)
 	}
 	var err error
-	res := make([]model.ProductNames, len(vSlice))
+	res := make([]model.ProductName, len(vSlice))
 	for i := range vSlice {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
-		res[i], err = ec.unmarshalNProductNames2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐProductNames(ctx, vSlice[i])
+		res[i], err = ec.unmarshalNProductName2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐProductName(ctx, vSlice[i])
 		if err != nil {
 			return nil, err
 		}
@@ -3265,7 +4383,7 @@ func (ec *executionContext) unmarshalNProductNames2ᚕgithubᚗcomᚋwundergraph
 	return res, nil
 }
 
-func (ec *executionContext) marshalNProductNames2ᚕgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐProductNamesᚄ(ctx context.Context, sel ast.SelectionSet, v []model.ProductNames) graphql.Marshaler {
+func (ec *executionContext) marshalNProductName2ᚕgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐProductNameᚄ(ctx context.Context, sel ast.SelectionSet, v []model.ProductName) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -3289,7 +4407,61 @@ func (ec *executionContext) marshalNProductNames2ᚕgithubᚗcomᚋwundergraph�
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNProductNames2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐProductNames(ctx, sel, v[i])
+			ret[i] = ec.marshalNProductName2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐProductName(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNProducts2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐProducts(ctx context.Context, sel ast.SelectionSet, v model.Products) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._Products(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNProducts2ᚕgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐProductsᚄ(ctx context.Context, sel ast.SelectionSet, v []model.Products) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNProducts2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐProducts(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -3322,6 +4494,38 @@ func (ec *executionContext) marshalNString2string(ctx context.Context, sel ast.S
 		}
 	}
 	return res
+}
+
+func (ec *executionContext) unmarshalNString2ᚕstringᚄ(ctx context.Context, v interface{}) ([]string, error) {
+	var vSlice []interface{}
+	if v != nil {
+		vSlice = graphql.CoerceList(v)
+	}
+	var err error
+	res := make([]string, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNString2string(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalNString2ᚕstringᚄ(ctx context.Context, sel ast.SelectionSet, v []string) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	for i := range v {
+		ret[i] = ec.marshalNString2string(ctx, sel, v[i])
+	}
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
 }
 
 func (ec *executionContext) unmarshalN_Any2map(ctx context.Context, v interface{}) (map[string]interface{}, error) {

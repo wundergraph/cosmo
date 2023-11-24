@@ -1,0 +1,4 @@
+[
+    ["1","subscription {\n currentTime {\n unixTime \n }\n}"],
+    ["2","query { employee(id:1) { id } }"]
+]

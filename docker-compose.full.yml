@@ -107,21 +107,18 @@ services:
     image: ghcr.io/wundergraph/cosmo/keycloak:${DC_KEYCLOAK_VERSION:-latest}
     platform: linux/amd64
     environment:
+      KEYCLOAK_EXTRA_ARGS: "--import-realm --health-enabled=true"
       KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
       KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-changeme}
-      KC_DB: postgres
-      KC_DB_URL_HOST: postgres
-      KC_DB_URL_DATABASE: ${POSTGRES_DB:-keycloak}
-      KC_DB_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
-      KC_DB_USERNAME: ${POSTGRES_USER:-postgres}
-      KC_DB_SCHEMA: public
-    command:
-      - "start-dev"
-      - "--import-realm"
+      KEYCLOAK_DATABASE_PORT: ${POSTGRES_PORT:-5432}
+      KEYCLOAK_DATABASE_HOST: ${POSTGRES_HOST:-postgres}
+      KEYCLOAK_DATABASE_NAME: ${POSTGRES_DB_NAME:-keycloak}
+      KEYCLOAK_DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      KEYCLOAK_DATABASE_USER: ${POSTGRES_USER:-postgres}
     ports:
       - "8080:8080"
     volumes:
-      - ./docker/keycloak/realm.json:/opt/keycloak/data/import/realm.json:ro
+      - ./docker/keycloak/realm.json:/opt/bitnami/keycloak/data/import/realm.json:ro
     restart: unless-stopped
     networks:
       - primary
@@ -129,6 +126,21 @@ services:
       - default
     depends_on:
       - postgres
+  minio:
+    image: quay.io/minio/minio:${DC_MINIO_VERSION:-RELEASE.2023-11-06T22-26-08Z}
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER:-minio}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-changeme}
+    ports:
+      - "10000:9000"
+      - "10001:9001"
+    volumes:
+      - minio:/data
+      - ./docker/minio/entrypoint.sh:/entrypoint.sh
+    entrypoint: /entrypoint.sh
+    restart: unless-stopped
+    networks:
+      - primary
 
   # Cosmo Platform
 
@@ -186,6 +198,7 @@ services:
       KC_API_URL: "http://keycloak:8080"
       KC_FRONTEND_URL: "http://localhost:8080"
       PROMETHEUS_API_URL: "http://admin:test@prometheus:9090/api/v1"
+      S3_STORAGE_URL: http://minio:changeme@localhost:10000/cosmo
     ports:
       - '3001:3001'
     restart: on-failure
@@ -227,6 +240,7 @@ services:
     platform: linux/amd64
     environment:
       NEXT_PUBLIC_COSMO_CP_URL: http://localhost:3001
+      NEXT_PUBLIC_COSMO_STUDIO_URL: http://localhost:3000
       HOSTNAME: "0.0.0.0"
     profiles:
       - default
@@ -303,3 +317,4 @@ volumes:
   postgres:
   clickhouse:
   prometheus:
+  minio:

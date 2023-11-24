@@ -5,14 +5,18 @@ test: build-dev build-prod
 	helm lint -f ./cosmo/values.yaml ./cosmo
 	kubeconform -strict -summary generated/cosmo.yaml
 
+KAPP_ARGS := deploy
 dev: build-dev
-	kapp deploy -a cosmo -f generated/cosmo.full.yaml
+	kapp $(KAPP_ARGS) -a cosmo -f generated/cosmo.full.yaml
 
 prod: build-prod
 	kapp deploy -a cosmo -f ./cosmo.yaml
 
 delete:
 	kapp delete -a cosmo
+
+docs:
+	helm-docs ./cosmo -o CHART.md
 
 build-dev:
 	mkdir -p generated

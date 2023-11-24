@@ -39,7 +39,7 @@ func setupServerWithJWKS(tb testing.TB, jwksOpts *authentication.JWKSAuthenticat
 		core.WithAccessController(core.NewAccessController(authenticators, authRequired)),
 	}
 	serverOpts = append(serverOpts, opts...)
-	return prepareServer(tb, serverOpts...), authServer
+	return setupServer(tb, serverOpts...), authServer
 }
 
 func assertHasGraphQLErrors(t *testing.T, rr *httptest.ResponseRecorder) {
@@ -68,7 +68,7 @@ func TestAuthentication(t *testing.T) {
 		req.Header.Set("Authorization", "Bearer invalid")
 		server.Server.Handler.ServeHTTP(rr, req)
 
-		assert.Equal(t, http.StatusOK, rr.Code)
+		assert.Equal(t, http.StatusUnauthorized, rr.Code)
 		assert.Equal(t, "", rr.Header().Get(xAuthenticatedByHeader))
 		assert.NotEqual(t, employeesExpectedData, rr.Body.String())
 	})
@@ -125,13 +125,13 @@ func TestAuthorization(t *testing.T) {
 	server, jwksServer := setupServerWithJWKS(t, nil, true)
 
 	t.Run("no token", func(t *testing.T) {
-		// Operations without token should work succeed
+		// Operations without token should fail
 		rr := httptest.NewRecorder()
 		req := httptest.NewRequest("POST", "/graphql", strings.NewReader(employeesQuery))
 		server.Server.Handler.ServeHTTP(rr, req)
-		assert.Equal(t, http.StatusOK, rr.Code)
+		assert.Equal(t, http.StatusUnauthorized, rr.Code)
 		assert.Equal(t, "", rr.Header().Get(xAuthenticatedByHeader))
-		assert.JSONEq(t, `{"errors":[{"message":"unauthorized"}]}`, rr.Body.String())
+		assert.JSONEq(t, `{"errors":[{"message":"unauthorized"}],"data":null}`, rr.Body.String())
 	})
 
 	t.Run("invalid token", func(t *testing.T) {
@@ -141,7 +141,7 @@ func TestAuthorization(t *testing.T) {
 		req.Header.Set("Authorization", "Bearer invalid")
 		server.Server.Handler.ServeHTTP(rr, req)
 
-		assert.Equal(t, http.StatusOK, rr.Code)
+		assert.Equal(t, http.StatusUnauthorized, rr.Code)
 		assert.Equal(t, "", rr.Header().Get(xAuthenticatedByHeader))
 		assertHasGraphQLErrors(t, rr)
 	})
@@ -187,7 +187,7 @@ func TestAuthenticationMultipleProviders(t *testing.T) {
 	require.NoError(t, err)
 	authenticators := []authentication.Authenticator{authenticator1, authenticator2}
 	accessController := core.NewAccessController(authenticators, false)
-	server := prepareServer(t, core.WithAccessController(accessController))
+	server := setupServer(t, core.WithAccessController(accessController))
 
 	t.Run("authenticate with first provider", func(t *testing.T) {
 		for _, prefix := range authenticator1HeaderValuePrefixes {
@@ -229,7 +229,7 @@ func TestAuthenticationMultipleProviders(t *testing.T) {
 		req.Header.Set("Authorization", "Bearer invalid")
 		server.Server.Handler.ServeHTTP(rr, req)
 
-		assert.Equal(t, http.StatusOK, rr.Code)
+		assert.Equal(t, http.StatusUnauthorized, rr.Code)
 		assert.Equal(t, "", rr.Header().Get(xAuthenticatedByHeader))
 		assertHasGraphQLErrors(t, rr)
 	})

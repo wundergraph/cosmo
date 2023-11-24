@@ -63,6 +63,13 @@ type Programming struct {
 
 func (Programming) IsHobby() {}
 
+type Sdk struct {
+	Upc             string                `json:"upc"`
+	ClientLanguages []ProgrammingLanguage `json:"clientLanguages"`
+}
+
+func (Sdk) IsEntity() {}
+
 type Travelling struct {
 	CountriesLived []Country `json:"countriesLived"`
 }

@@ -4,6 +4,54 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.32.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.30.2...@wundergraph/cosmo-connect@0.32.0) (2023-11-23)
+
+### Features
+
+* add organization limits ([#285](https://github.com/wundergraph/cosmo/issues/285)) ([52a5664](https://github.com/wundergraph/cosmo/commit/52a566400dfa111a78a4bbdcf0a824dd2205da2d)) (@JivusAyrus)
+* add support for persisted operations ([#249](https://github.com/wundergraph/cosmo/issues/249)) ([a9ad47f](https://github.com/wundergraph/cosmo/commit/a9ad47ff5cf7db6bccf774e168b1d1ce3ee7bcdd)) (@fiam)
+
+# [0.31.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.30.2...@wundergraph/cosmo-connect@0.31.0) (2023-11-23)
+
+### Features
+
+* add organization limits ([#285](https://github.com/wundergraph/cosmo/issues/285)) ([52a5664](https://github.com/wundergraph/cosmo/commit/52a566400dfa111a78a4bbdcf0a824dd2205da2d)) (@JivusAyrus)
+* add support for persisted operations ([#249](https://github.com/wundergraph/cosmo/issues/249)) ([a9ad47f](https://github.com/wundergraph/cosmo/commit/a9ad47ff5cf7db6bccf774e168b1d1ce3ee7bcdd)) (@fiam)
+
+## [0.30.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.30.1...@wundergraph/cosmo-connect@0.30.2) (2023-11-20)
+
+### Bug Fixes
+
+* [connect] Move devDependencies to dependencies ([#273](https://github.com/wundergraph/cosmo/issues/273)) ([ee947ba](https://github.com/wundergraph/cosmo/commit/ee947ba12063ac59431f5c1e975ded7a90e932a1)) (@clayne11)
+
+## [0.30.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.30.0...@wundergraph/cosmo-connect@0.30.1) (2023-11-17)
+
+### Bug Fixes
+
+* show latest valid subgraph schema ([#259](https://github.com/wundergraph/cosmo/issues/259)) ([d954b91](https://github.com/wundergraph/cosmo/commit/d954b91bd212ae1a33257c662a4ff8a2ac8c2b56)) (@JivusAyrus)
+
+# [0.30.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.29.0...@wundergraph/cosmo-connect@0.30.0) (2023-11-15)
+
+### Features
+
+* consider input and argument usage for breaking change detection ([#255](https://github.com/wundergraph/cosmo/issues/255)) ([e10ac40](https://github.com/wundergraph/cosmo/commit/e10ac401f543f5540b5ada8f80533ddfbd0bc728)) (@jensneuse)
+
+# [0.29.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.28.0...@wundergraph/cosmo-connect@0.29.0) (2023-11-15)
+
+### Features
+
+* add check for deleted subgraphs ([#258](https://github.com/wundergraph/cosmo/issues/258)) ([ba87fe5](https://github.com/wundergraph/cosmo/commit/ba87fe51631ece9c2efaea6350dc93590f1846c5)) (@Pagebakers)
+
+# [0.28.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.27.0...@wundergraph/cosmo-connect@0.28.0) (2023-11-09)
+
+### Bug Fixes
+
+* minor issues of sso ([#247](https://github.com/wundergraph/cosmo/issues/247)) ([8bf61a9](https://github.com/wundergraph/cosmo/commit/8bf61a90751cf3b4aed3783cf07bab2560acac10)) (@JivusAyrus)
+
+### Features
+
+* link operations through hash ([#244](https://github.com/wundergraph/cosmo/issues/244)) ([24a7738](https://github.com/wundergraph/cosmo/commit/24a773884947c58183ee56bb9be82e2fae1c0bff)) (@thisisnithin)
+
 # [0.27.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.26.0...@wundergraph/cosmo-connect@0.27.0) (2023-11-08)
 
 ### Features

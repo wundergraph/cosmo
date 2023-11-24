@@ -13,8 +13,6 @@ import (
 
 	"github.com/go-chi/chi/middleware"
 	"github.com/hashicorp/go-multierror"
-	"github.com/tidwall/gjson"
-	"github.com/tidwall/sjson"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/zap"
 
@@ -24,7 +22,6 @@ import (
 
 	"github.com/wundergraph/cosmo/router/internal/logging"
 	"github.com/wundergraph/cosmo/router/internal/pool"
-	"github.com/wundergraph/cosmo/router/internal/unsafebytes"
 )
 
 var (
@@ -59,32 +56,18 @@ func (e *reportError) Report() *operationreport.Report {
 	return e.report
 }
 
-func MergeJsonRightIntoLeft(left, right []byte) []byte {
-	if len(left) == 0 {
-		return right
-	}
-	if len(right) == 0 {
-		return left
-	}
-	result := gjson.ParseBytes(right)
-	result.ForEach(func(key, value gjson.Result) bool {
-		left, _ = sjson.SetRawBytes(left, key.Str, unsafebytes.StringToBytes(value.Raw))
-		return true
-	})
-	return left
-}
-
 type HandlerOptions struct {
-	Executor *Executor
-	Log      *zap.Logger
+	Executor                               *Executor
+	Log                                    *zap.Logger
+	EnableExecutionPlanCacheResponseHeader bool
 }
 
 func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 	graphQLHandler := &GraphQLHandler{
-		log:      opts.Log,
-		executor: opts.Executor,
+		log:                                    opts.Log,
+		executor:                               opts.Executor,
+		enableExecutionPlanCacheResponseHeader: opts.EnableExecutionPlanCacheResponseHeader,
 	}
-
 	return graphQLHandler
 }
 
@@ -99,25 +82,22 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 // https://github.com/graphql/graphql-over-http/blob/main/spec/GraphQLOverHTTP.md#response
 
 type GraphQLHandler struct {
-	log      *zap.Logger
-	executor *Executor
+	log                                    *zap.Logger
+	executor                               *Executor
+	enableExecutionPlanCacheResponseHeader bool
 }
 
 func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	requestLogger := h.log.With(logging.WithRequestID(middleware.GetReqID(r.Context())))
 	operationCtx := getOperationContext(r.Context())
 
-	extractedVariables := make([]byte, len(operationCtx.preparedPlan.variables))
-	copy(extractedVariables, operationCtx.preparedPlan.variables)
-	requestVariables := operationCtx.Variables()
-	combinedVariables := MergeJsonRightIntoLeft(requestVariables, extractedVariables)
-
 	ctx := &resolve.Context{
-		Variables: combinedVariables,
+		Variables: operationCtx.Variables(),
 		Request: resolve.Request{
 			Header: r.Header,
 		},
-		RenameTypeNames: h.executor.RenameTypeNames,
+		RenameTypeNames:       h.executor.RenameTypeNames,
+		RequestTracingOptions: operationCtx.traceOptions,
 	}
 	ctx = ctx.WithContext(r.Context())
 
@@ -133,16 +113,17 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			var nErr net.Error
 
 			if errors.Is(err, context.Canceled) {
-				writeRequestErrors(r, graphql.RequestErrorsFromError(errServerCanceled), w, requestLogger)
+				writeRequestErrors(r, http.StatusRequestTimeout, graphql.RequestErrorsFromError(errServerCanceled), w, requestLogger)
 			} else if errors.As(err, &nErr) && nErr.Timeout() {
-				writeRequestErrors(r, graphql.RequestErrorsFromError(errServerTimeout), w, requestLogger)
+				writeRequestErrors(r, http.StatusRequestTimeout, graphql.RequestErrorsFromError(errServerTimeout), w, requestLogger)
 			} else {
-				writeRequestErrors(r, graphql.RequestErrorsFromError(errCouldNotResolveResponse), w, requestLogger)
+				writeRequestErrors(r, http.StatusInternalServerError, graphql.RequestErrorsFromError(errCouldNotResolveResponse), w, requestLogger)
 			}
 
 			requestLogger.Error("unable to resolve GraphQL response", zap.Error(err))
 			return
 		}
+		h.setExecutionPlanCacheResponseHeader(w, operationCtx.planCacheHit)
 		_, err = executionBuf.WriteTo(w)
 		if err != nil {
 			requestLogger.Error("respond to client", zap.Error(err))
@@ -153,28 +134,43 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			flushWriter resolve.FlushWriter
 			ok          bool
 		)
+		h.setExecutionPlanCacheResponseHeader(w, operationCtx.planCacheHit)
 		ctx, flushWriter, ok = GetFlushWriter(ctx, ctx.Variables, r, w)
 		if !ok {
 			requestLogger.Error("connection not flushable")
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-
 		err := h.executor.Resolver.ResolveGraphQLSubscription(ctx, p.Response, flushWriter)
 		if err != nil {
 			if errors.Is(err, context.Canceled) {
 				requestLogger.Debug("context canceled: unable to resolve subscription response", zap.Error(err))
-				writeRequestErrors(r, graphql.RequestErrorsFromError(errCouldNotResolveResponse), w, requestLogger)
+				writeRequestErrors(r, http.StatusInternalServerError, graphql.RequestErrorsFromError(errCouldNotResolveResponse), w, requestLogger)
 				return
 			}
 
 			requestLogger.Error("unable to resolve subscription response", zap.Error(err))
-			writeRequestErrors(r, graphql.RequestErrorsFromError(errCouldNotResolveResponse), w, requestLogger)
+			writeRequestErrors(r, http.StatusInternalServerError, graphql.RequestErrorsFromError(errCouldNotResolveResponse), w, requestLogger)
 			return
 		}
 	default:
 		requestLogger.Error("unsupported plan kind")
 		w.WriteHeader(http.StatusInternalServerError)
+	}
+}
+
+const (
+	ExecutionPlanCacheHeader = "X-WG-Execution-Plan-Cache"
+)
+
+func (h *GraphQLHandler) setExecutionPlanCacheResponseHeader(w http.ResponseWriter, planCacheHit bool) {
+	if !h.enableExecutionPlanCacheResponseHeader {
+		return
+	}
+	if planCacheHit {
+		w.Header().Set(ExecutionPlanCacheHeader, "HIT")
+	} else {
+		w.Header().Set(ExecutionPlanCacheHeader, "MISS")
 	}
 }
 
@@ -189,7 +185,7 @@ func logInternalErrorsFromReport(report *operationreport.Report, requestLogger *
 	}
 }
 
-func writeRequestErrors(r *http.Request, requestErrors graphql.RequestErrors, w http.ResponseWriter, requestLogger *zap.Logger) {
+func writeRequestErrors(r *http.Request, statusCode int, requestErrors graphql.RequestErrors, w http.ResponseWriter, requestLogger *zap.Logger) {
 	ctx := getRequestContext(r.Context())
 	span := trace.SpanFromContext(r.Context())
 
@@ -207,6 +203,10 @@ func writeRequestErrors(r *http.Request, requestErrors graphql.RequestErrors, w 
 		// do it only when there is an error to avoid storing the attribute in the span
 		// in queries we use mapContains to check if the attribute is set
 		span.SetAttributes(otel.WgRequestError.Bool(true))
+
+		if statusCode != 0 {
+			w.WriteHeader(statusCode)
+		}
 
 		if _, err := requestErrors.WriteResponse(w); err != nil {
 			if requestLogger != nil {

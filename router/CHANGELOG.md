@@ -4,6 +4,65 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.37.0](https://github.com/wundergraph/cosmo/compare/router@0.35.0...router@0.37.0) (2023-11-23)
+
+### Features
+
+* add support for persisted operations ([#249](https://github.com/wundergraph/cosmo/issues/249)) ([a9ad47f](https://github.com/wundergraph/cosmo/commit/a9ad47ff5cf7db6bccf774e168b1d1ce3ee7bcdd)) (@fiam)
+* log traceID ([#284](https://github.com/wundergraph/cosmo/issues/284)) ([257de81](https://github.com/wundergraph/cosmo/commit/257de819a9735afddfc497d5b388dc3cb0e30bab)) (@fiam)
+
+# [0.36.0](https://github.com/wundergraph/cosmo/compare/router@0.35.0...router@0.36.0) (2023-11-23)
+
+### Features
+
+* add support for persisted operations ([#249](https://github.com/wundergraph/cosmo/issues/249)) ([a9ad47f](https://github.com/wundergraph/cosmo/commit/a9ad47ff5cf7db6bccf774e168b1d1ce3ee7bcdd)) (@fiam)
+* log traceID ([#284](https://github.com/wundergraph/cosmo/issues/284)) ([257de81](https://github.com/wundergraph/cosmo/commit/257de819a9735afddfc497d5b388dc3cb0e30bab)) (@fiam)
+
+# [0.35.0](https://github.com/wundergraph/cosmo/compare/router@0.34.1...router@0.35.0) (2023-11-21)
+
+### Features
+
+* improve correctness of resolving ([#281](https://github.com/wundergraph/cosmo/issues/281)) ([0398fa1](https://github.com/wundergraph/cosmo/commit/0398fa18dbb631e31ec450fd3c16786eb8b4dfdc)) (@jensneuse)
+
+## [0.34.1](https://github.com/wundergraph/cosmo/compare/router@0.34.0...router@0.34.1) (2023-11-20)
+
+**Note:** Version bump only for package router
+
+# [0.34.0](https://github.com/wundergraph/cosmo/compare/router@0.33.2...router@0.34.0) (2023-11-20)
+
+### Features
+
+* add tracing to request ([#263](https://github.com/wundergraph/cosmo/issues/263)) ([c43ee1c](https://github.com/wundergraph/cosmo/commit/c43ee1c56552ff0fe614634a81de89e3e95c1aa7)) (@jensneuse)
+* auto set GOMAXPROCS to avoid CPU throttling on cont envs ([#276](https://github.com/wundergraph/cosmo/issues/276)) ([757a60a](https://github.com/wundergraph/cosmo/commit/757a60ab6d64d25e65a5ad9c5bb5ffe9edd5e649)) (@StarpTech)
+
+## [0.33.2](https://github.com/wundergraph/cosmo/compare/router@0.33.1...router@0.33.2) (2023-11-20)
+
+### Bug Fixes
+
+* (router) refactor cmd/main to expose router instance ([#216](https://github.com/wundergraph/cosmo/issues/216)) ([e72172a](https://github.com/wundergraph/cosmo/commit/e72172a5186866b2f3d712294eea2fddae0719e2)) (@clayne11)
+
+## [0.33.1](https://github.com/wundergraph/cosmo/compare/router@0.33.0...router@0.33.1) (2023-11-16)
+
+### Bug Fixes
+
+* parsing null variables ([#270](https://github.com/wundergraph/cosmo/issues/270)) ([568357c](https://github.com/wundergraph/cosmo/commit/568357c0832571c365ca990fe05e85ce30740c36)) (@devsergiy)
+
+# [0.33.0](https://github.com/wundergraph/cosmo/compare/router@0.32.1...router@0.33.0) (2023-11-16)
+
+### Features
+
+* **router:** allow to start router without token and graph name when providing static config ([#264](https://github.com/wundergraph/cosmo/issues/264)) ([fa056b4](https://github.com/wundergraph/cosmo/commit/fa056b4bff1586676f156c0892bfd5cbe6a428d1)) (@StarpTech)
+
+## [0.32.1](https://github.com/wundergraph/cosmo/compare/router@0.32.0...router@0.32.1) (2023-11-16)
+
+**Note:** Version bump only for package router
+
+# [0.32.0](https://github.com/wundergraph/cosmo/compare/router@0.31.0...router@0.32.0) (2023-11-15)
+
+### Features
+
+* consider input and argument usage for breaking change detection ([#255](https://github.com/wundergraph/cosmo/issues/255)) ([e10ac40](https://github.com/wundergraph/cosmo/commit/e10ac401f543f5540b5ada8f80533ddfbd0bc728)) (@jensneuse)
+
 # [0.31.0](https://github.com/wundergraph/cosmo/compare/router@0.30.0...router@0.31.0) (2023-11-08)
 
 ### Features

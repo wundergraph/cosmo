@@ -4,6 +4,24 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.6.0](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.5.1...graphqlmetrics@0.6.0) (2023-11-20)
+
+### Features
+
+* auto set GOMAXPROCS to avoid CPU throttling on cont envs ([#276](https://github.com/wundergraph/cosmo/issues/276)) ([757a60a](https://github.com/wundergraph/cosmo/commit/757a60ab6d64d25e65a5ad9c5bb5ffe9edd5e649)) (@StarpTech)
+
+## [0.5.1](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.5.0...graphqlmetrics@0.5.1) (2023-11-20)
+
+### Bug Fixes
+
+* move to bitnami charts and exit 1 on migration issues ([#275](https://github.com/wundergraph/cosmo/issues/275)) ([90d9d93](https://github.com/wundergraph/cosmo/commit/90d9d938cefdc78a9f34d69387f306b4d691c7f0)) (@StarpTech)
+
+# [0.5.0](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.4.0...graphqlmetrics@0.5.0) (2023-11-15)
+
+### Features
+
+* consider input and argument usage for breaking change detection ([#255](https://github.com/wundergraph/cosmo/issues/255)) ([e10ac40](https://github.com/wundergraph/cosmo/commit/e10ac401f543f5540b5ada8f80533ddfbd0bc728)) (@jensneuse)
+
 # [0.4.0](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.3.0...graphqlmetrics@0.4.0) (2023-11-07)
 
 ### Features
