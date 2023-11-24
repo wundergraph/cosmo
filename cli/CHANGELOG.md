@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.31.0](https://github.com/wundergraph/cosmo/compare/wgc@0.30.1...wgc@0.31.0) (2023-11-24)
+
+### Features
+
+* add support for outputting pushed operations as JSON ([#294](https://github.com/wundergraph/cosmo/issues/294)) ([98d188d](https://github.com/wundergraph/cosmo/commit/98d188db01ee494de1e8a4d5a2cb9f571582045c)) (@fiam)
+
 ## [0.30.1](https://github.com/wundergraph/cosmo/compare/wgc@0.30.0...wgc@0.30.1) (2023-11-23)
 
 ### Bug Fixes
