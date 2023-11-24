@@ -5,6 +5,8 @@
 // -cpuprofile: write cpu profile to file
 // -memprofile: write memory profile to this file
 // -pprof-port: port for pprof server, set to zero to disable (only with pprof build tag)
+//
+// Note that exposing pprof handlers in production is a security risk.
 package profile
 
 import (

@@ -34,7 +34,7 @@ func initPprofHandlers() {
 	server := &http.Server{
 		Addr: ":" + strconv.Itoa(*pprofPort),
 	}
-	log.Printf("starting pprof server on port %d", *pprofPort)
+	log.Printf("starting pprof server on port %d - do not use this in production, it is a security risk", *pprofPort)
 	go func() {
 		if err := server.ListenAndServe(); err != nil {
 			log.Fatal("error starting pprof server", err)
