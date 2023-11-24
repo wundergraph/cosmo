@@ -29,3 +29,38 @@ body.graphiql-dark .graphiql-tooltip,
 body.graphiql-dark [data-radix-popper-content-wrapper] {
   --color-base: var(--background);
 }
+
+.CodeMirror-vscrollbar,
+.CodeMirror-hscrollbar {
+  @apply scrollbar-custom;
+}
+
+.graphiql-history-header,
+.graphiql-doc-explorer-title,
+.doc-explorer-title {
+  @apply text-2xl font-bold text-primary-foreground;
+}
+
+.doc-explorer-title {
+  @apply mb-8;
+}
+
+.graphiql-container {
+  @apply h-screen !font-sans;
+}
+
+.graphiql-plugin {
+  @apply scrollbar-custom;
+}
+
+.graphiql-button {
+  @apply !px-6;
+}
+
+.graphiql-dialog {
+  @apply bg-background/30 backdrop-blur-2xl;
+}
+
+.graphiql-dialog-overlay {
+  @apply bg-background/80 backdrop-blur-sm;
+}

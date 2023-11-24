@@ -8,7 +8,7 @@ import { EmptyState } from "@/components/empty-state";
 import { GraphContext, getGraphLayout } from "@/components/layout/graph-layout";
 import { PageHeader } from "@/components/layout/head";
 import { TitleLayout } from "@/components/layout/title-layout";
-import { SchemaViewer, SchemaViewerActions } from "@/components/schema-viewer";
+import { CodeViewer, CodeViewerActions } from "@/components/code-viewer";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -71,9 +71,9 @@ const ProposedSchema = ({
           <DialogTitle>Schema</DialogTitle>
         </DialogHeader>
         <div className="scrollbar-custom h-[70vh] overflow-auto rounded border">
-          <SchemaViewer sdl={sdl} disableLinking />
+          <CodeViewer code={sdl} disableLinking />
         </div>
-        <SchemaViewerActions sdl={sdl} subgraphName={subgraphName} />
+        <CodeViewerActions code={sdl} subgraphName={subgraphName} />
       </DialogContent>
     </Dialog>
   );

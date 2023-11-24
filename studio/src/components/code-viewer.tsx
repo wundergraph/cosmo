@@ -1,34 +1,46 @@
+import { useResolvedTheme } from "@/hooks/use-resolved-theme";
 import { downloadStringAsFile } from "@/lib/download-string-as-file";
 import { cn } from "@/lib/utils";
 import { ClipboardCopyIcon, DownloadIcon } from "@radix-ui/react-icons";
 import copy from "copy-to-clipboard";
-import { useTheme } from "next-themes";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { Highlight, themes } from "prism-react-renderer";
-import { useMemo } from "react";
 import { Button } from "./ui/button";
 import { useToast } from "./ui/use-toast";
-import { useResolvedTheme } from "@/hooks/use-resolved-theme";
+import { useEffect, useState } from "react";
+import graphQLPlugin from "prettier/plugins/graphql";
+import babelPlugin from "prettier/plugins/babel";
+import estreePlugin from "prettier/plugins/estree";
+import * as prettier from "prettier/standalone";
+import * as Prism from "prismjs";
+import "prismjs/components/prism-json";
+import "prismjs/components/prism-graphql";
 
-export const SchemaViewerActions = ({
-  sdl,
+export const CodeViewerActions = ({
+  code,
   subgraphName,
   className,
+  extension = "graphql",
 }: {
-  sdl: string;
+  code: string;
   subgraphName: string;
   className?: string;
+  extension?: "graphql" | "json";
 }) => {
   const { toast, dismiss } = useToast();
 
   const downloadSDL = () => {
-    downloadStringAsFile(sdl, `${subgraphName}.graphql`, "application/graphql");
+    downloadStringAsFile(
+      code,
+      `${subgraphName}.${extension}`,
+      `application/${extension}`,
+    );
   };
 
   const copySDL = () => {
-    copy(sdl);
-    const { id } = toast({ description: "Copied SDL to clipboard" });
+    copy(code);
+    const { id } = toast({ description: "Copied contents to clipboard" });
 
     const t = setTimeout(() => {
       dismiss(id);
@@ -56,26 +68,44 @@ export const SchemaViewerActions = ({
   );
 };
 
-export const SchemaViewer = ({
-  sdl,
+export const CodeViewer = ({
+  code,
   disableLinking,
   className,
+  language = "graphql",
 }: {
-  sdl: string;
+  code: string;
   disableLinking?: boolean;
   className?: string;
+  language?: "graphql" | "json";
 }) => {
   const router = useRouter();
   const pathname = router.asPath.split("#")[0];
   const hash = router.asPath.split("#")?.[1];
+
+  const [content, setContent] = useState("");
+
+  useEffect(() => {
+    const set = async (source: string) => {
+      const res = await prettier.format(source, {
+        parser: language,
+        plugins: [graphQLPlugin, estreePlugin, babelPlugin],
+      });
+      setContent(res);
+    };
+
+    if (!code) return;
+    set(code);
+  }, [code, language]);
 
   const selectedTheme = useResolvedTheme();
 
   return (
     <Highlight
       theme={selectedTheme === "dark" ? themes.nightOwl : themes.nightOwlLight}
-      code={sdl}
-      language="graphql"
+      code={content}
+      language={language}
+      prism={Prism}
     >
       {({ style, tokens, getLineProps, getTokenProps }) => (
         <pre

@@ -14,7 +14,7 @@ import copy from "copy-to-clipboard";
 import { formatInTimeZone } from "date-fns-tz";
 import compact from "lodash/compact";
 import { ReactNode, useState } from "react";
-import { SchemaViewer } from "../schema-viewer";
+import { CodeViewer } from "../code-viewer";
 import { Button } from "../ui/button";
 import { Dialog2, Dialog2Content, Dialog2Title } from "../ui/dialog2";
 import {
@@ -98,7 +98,7 @@ const formatColumnData = (data: string | number, type: Unit): ReactNode => {
               {formatInTimeZone(
                 Number(data) * 1000,
                 "UTC",
-                "MMM dd yyyy HH:mm:ss"
+                "MMM dd yyyy HH:mm:ss",
               )}
             </span>
           </TooltipTrigger>
@@ -205,7 +205,7 @@ const QueryContent = ({ query }: { query: string }) => {
   return (
     <>
       <div className="scrollbar-custom !my-4 max-h-[70vh] overflow-auto rounded border">
-        <SchemaViewer sdl={query} disableLinking />
+        <CodeViewer code={query} disableLinking />
       </div>
       <DialogActions text={query} />
     </>
@@ -247,7 +247,7 @@ const DialogActions = ({
     <div
       className={cn(
         "flex w-full items-center gap-x-2 md:ml-auto md:w-auto",
-        className
+        className,
       )}
     >
       <Button variant="secondary" className="flex-1" onClick={() => copyText()}>
@@ -259,7 +259,7 @@ const DialogActions = ({
 };
 
 export const getColumnData = (
-  columnData: AnalyticsViewColumn[]
+  columnData: AnalyticsViewColumn[],
 ): ColumnDef<any>[] => {
   const actionColumns: AnalyticsViewColumn[] = [];
 
@@ -292,7 +292,7 @@ export const getColumnData = (
               className={cn(
                 "inline-flex items-center space-x-1 text-left",
                 config?.header?.className,
-                sortedProps?.className
+                sortedProps?.className,
               )}
             >
               <span>{each.title}</span>
@@ -318,7 +318,7 @@ export const getColumnData = (
         },
         filterFn: defaultFilterFn,
       } satisfies ColumnDef<any>;
-    })
+    }),
   );
 
   if (actionColumns.length) {

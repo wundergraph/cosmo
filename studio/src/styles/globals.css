@@ -127,7 +127,7 @@
 
 @layer base {
   * {
-    @apply border-border;
+    @apply !border-border;
   }
   body {
     @apply scrollbar-custom bg-background text-foreground;
