@@ -349,6 +349,7 @@ type operationContext struct {
 	// preparedPlan is the prepared plan of the operation
 	preparedPlan *planWithMetaData
 	traceOptions resolve.RequestTraceOptions
+	planCacheHit bool
 }
 
 func (o *operationContext) Variables() []byte {
