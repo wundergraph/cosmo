@@ -1,9 +1,7 @@
 //go:build !pprof
 
-package cmd
-
-import "go.uber.org/zap"
+package profile
 
 // This is a dummy function to disable pprof handlers
 // at compile time. See pprof.go
-func initPprofHandlers(logger *zap.Logger) {}
+func initPprofHandlers() {}
