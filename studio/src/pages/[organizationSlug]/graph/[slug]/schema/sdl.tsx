@@ -2,7 +2,7 @@ import { CompositionErrorsBanner } from "@/components/composition-errors-banner"
 import { GraphContext, getGraphLayout } from "@/components/layout/graph-layout";
 import { PageHeader } from "@/components/layout/head";
 import { TitleLayout } from "@/components/layout/title-layout";
-import { SchemaViewer, SchemaViewerActions } from "@/components/schema-viewer";
+import { CodeViewer, CodeViewerActions } from "@/components/code-viewer";
 import { SchemaToolbar } from "@/components/schema/toolbar";
 import {
   Select,
@@ -150,9 +150,9 @@ const SDLPage: NextPageWithLayout = () => {
                   </SelectGroup>
                 </SelectContent>
               </Select>
-              <SchemaViewerActions
+              <CodeViewerActions
                 className="md:ml-0"
-                sdl={activeGraphWithSDL.sdl ?? ""}
+                code={activeGraphWithSDL.sdl ?? ""}
                 subgraphName={activeGraphWithSDL.title}
               />
             </div>
@@ -169,9 +169,9 @@ const SDLPage: NextPageWithLayout = () => {
             id="schema-container"
             className="scrollbar-custom flex-1 overflow-auto rounded border"
           >
-            <SchemaViewer
+            <CodeViewer
               className="h-0 w-0"
-              sdl={activeGraphWithSDL.sdl ?? ""}
+              code={activeGraphWithSDL.sdl ?? ""}
             />
           </div>
           <div className="flex w-full flex-col items-center justify-end gap-x-8 gap-y-1 rounded border bg-card p-2 text-xs md:flex-row md:border-none md:bg-transparent md:p-0">
