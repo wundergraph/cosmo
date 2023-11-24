@@ -15,6 +15,7 @@ import estreePlugin from "prettier/plugins/estree";
 import * as prettier from "prettier/standalone";
 import * as Prism from "prismjs";
 import "prismjs/components/prism-json";
+import "prismjs/components/prism-graphql";
 
 export const CodeViewerActions = ({
   code,
