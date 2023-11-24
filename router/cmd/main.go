@@ -26,7 +26,6 @@ func Main() {
 	flag.Parse()
 
 	profile := profile.Start()
-	defer profile.Finish()
 
 	cfg, err := config.LoadConfig(*overrideEnv)
 	if err != nil {
@@ -81,6 +80,7 @@ func Main() {
 		logger.Error("Could not shutdown server", zap.Error(err))
 	}
 
+	profile.Finish()
 	logger.Debug("Server exiting")
 	os.Exit(0)
 }

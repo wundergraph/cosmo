@@ -35,6 +35,7 @@ func (p *profiler) Finish() {
 	if p.cpuProfileFile != nil {
 		pprof.StopCPUProfile()
 		p.cpuProfileFile.Close()
+		log.Println("CPU profile written to", p.cpuProfileFile.Name())
 		p.cpuProfileFile = nil
 	}
 	createMemprofileIfNeeded()
@@ -72,5 +73,6 @@ func createMemprofileIfNeeded() {
 		if err := pprof.WriteHeapProfile(f); err != nil {
 			log.Fatal("error writing heap profile", err)
 		}
+		log.Println("heap profile written to", f.Name())
 	}
 }
