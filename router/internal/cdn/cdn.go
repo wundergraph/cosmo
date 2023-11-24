@@ -100,7 +100,7 @@ type CDN struct {
 	operationsCache cdnPersistedOperationsCache
 }
 
-func (cdn *CDN) PersistentOperation(ctx context.Context, clientName string, sha256Hash []byte) ([]byte, error) {
+func (cdn *CDN) PersistedOperation(ctx context.Context, clientName string, sha256Hash []byte) ([]byte, error) {
 	if data := cdn.operationsCache.Get(clientName, sha256Hash); data != nil {
 		return data, nil
 	}

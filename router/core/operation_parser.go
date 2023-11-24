@@ -267,7 +267,7 @@ func (p *OperationParser) parse(ctx context.Context, clientInfo *ClientInfo, bod
 	}
 
 	if len(persistedQuerySha256Hash) > 0 {
-		persistedOperationData, err := p.cdn.PersistentOperation(ctx, clientInfo.Name, persistedQuerySha256Hash)
+		persistedOperationData, err := p.cdn.PersistedOperation(ctx, clientInfo.Name, persistedQuerySha256Hash)
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
