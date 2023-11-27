@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.39.0](https://github.com/wundergraph/cosmo/compare/router@0.38.1...router@0.39.0) (2023-11-27)
+
+### Bug Fixes
+
+* store JSONB as json, avoid custom log in automaxprocs ([#301](https://github.com/wundergraph/cosmo/issues/301)) ([c6a1486](https://github.com/wundergraph/cosmo/commit/c6a1486a69c383f247e0d3eb3723d883633b8780)) (@StarpTech)
+
+### Features
+
+* add support for enabling pprof handlers ([#298](https://github.com/wundergraph/cosmo/issues/298)) ([98988a1](https://github.com/wundergraph/cosmo/commit/98988a1e6962d15e59d660a31861fccbe9a86153)) (@fiam)
+
 ## [0.38.1](https://github.com/wundergraph/cosmo/compare/router@0.38.0...router@0.38.1) (2023-11-24)
 
 **Note:** Version bump only for package router

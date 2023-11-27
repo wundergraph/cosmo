@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.38.1](https://github.com/wundergraph/cosmo/compare/studio@0.38.0...studio@0.38.1) (2023-11-27)
+
+### Bug Fixes
+
+* view usage for enums and inputs ([#299](https://github.com/wundergraph/cosmo/issues/299)) ([0d652b2](https://github.com/wundergraph/cosmo/commit/0d652b2e83d02dec8523a261816ddbb6f2d1e551)) (@thisisnithin)
+
 # [0.38.0](https://github.com/wundergraph/cosmo/compare/studio@0.37.0...studio@0.38.0) (2023-11-24)
 
 ### Features
