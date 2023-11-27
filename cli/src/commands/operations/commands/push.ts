@@ -10,7 +10,6 @@ import { PublishedOperationStatus, PersistedOperation } from '@wundergraph/cosmo
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { baseHeaders } from '../../../core/config.js';
 
-
 type OperationOutputStatus = 'created' | 'up_to_date' | 'conflict';
 
 interface OperationOutput {
@@ -40,29 +39,35 @@ const parseApolloPersistedQueryManifest = (data: ApolloPersistedQueryManifest): 
   if (data.version !== 1) {
     throw new Error(`unknown Apollo persisted query manifest version ${data.version}`);
   }
-  return data.operations?.filter((op) => op.id && op.body ).map((op) => new PersistedOperation({ id: op.id, contents: op.body })) ?? [];
+  return (
+    data.operations
+      ?.filter((op) => op.id && op.body)
+      .map((op) => new PersistedOperation({ id: op.id, contents: op.body })) ?? []
+  );
 };
 
 const isRelayQueryMap = (data: any): boolean => {
-    // Check if all elements are 2-element arrays of strings. In that case
+  // Check if all elements are 2-element arrays of strings. In that case
   // the data is a relay query map
-  return Array.isArray(data) &&
-  data.length ===
-    data.filter((x) => Array.isArray(x) && x.length === 2 && typeof x[0] === 'string' && typeof x[1] === 'string')
-      .length;
-}
+  return (
+    Array.isArray(data) &&
+    data.length ===
+      data.filter((x) => Array.isArray(x) && x.length === 2 && typeof x[0] === 'string' && typeof x[1] === 'string')
+        .length
+  );
+};
 
 const parseRelayQueryMap = (data: Array<any>): PersistedOperation[] => {
-  return data.map((x:any) => new PersistedOperation({ id: x[0], contents: x[1] }));
-}
+  return data.map((x: any) => new PersistedOperation({ id: x[0], contents: x[1] }));
+};
 
 const isRelayQueryObject = (data: any): boolean => {
   return Object.keys(data).every((key) => typeof key === 'string' && typeof data[key] === 'string');
-}
+};
 
 const parseRelayQueryObject = (data: any): PersistedOperation[] => {
   return Object.keys(data).map((key) => new PersistedOperation({ id: key, contents: data[key] }));
-}
+};
 
 const parseOperationsJson = (data: any): PersistedOperation[] => {
   if (data.format === 'apollo-persisted-query-manifest') {
@@ -90,8 +95,7 @@ const humanReadableOperationStatus = (status: PublishedOperationStatus): string 
     }
   }
   throw new Error('unknown operation status');
-}
-
+};
 
 const jsonOperationStatus = (status: PublishedOperationStatus): OperationOutputStatus => {
   switch (status) {
@@ -106,7 +110,7 @@ const jsonOperationStatus = (status: PublishedOperationStatus): OperationOutputS
     }
   }
   throw new Error('unknown operation status');
-}
+};
 
 export const parseOperations = (contents: string): PersistedOperation[] => {
   let data: any;
@@ -164,9 +168,7 @@ export default (opts: BaseCommandOptions) => {
         case 'text': {
           for (const op of result.operations) {
             console.log(
-              pc.green(
-                `pushed operation ${op.id} (${op.hash}) (${humanReadableOperationStatus(op.status)})`,
-              ),
+              pc.green(`pushed operation ${op.id} (${op.hash}) (${humanReadableOperationStatus(op.status)})`),
             );
           }
           const upToDate = (result.operations?.filter((op) => op.status === PublishedOperationStatus.UP_TO_DATE) ?? [])
@@ -177,7 +179,11 @@ export default (opts: BaseCommandOptions) => {
             .length;
           const color = conflict === 0 ? pc.green : pc.yellow;
           console.log(
-            color(`pushed ${result.operations?.length ?? 0} operations: ${created} created, ${upToDate} up to date, ${conflict} conflicts`),
+            color(
+              `pushed ${
+                result.operations?.length ?? 0
+              } operations: ${created} created, ${upToDate} up to date, ${conflict} conflicts`,
+            ),
           );
           if (conflict > 0 && !options.allowConflicts) {
             command.error(pc.red('conflicts detected'));
