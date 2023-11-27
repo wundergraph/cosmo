@@ -76,6 +76,7 @@ import { OpenAIGraphql, isValidUrl } from '@wundergraph/cosmo-shared';
 import { DocumentNode, buildASTSchema, parse } from 'graphql';
 import { validate } from 'graphql/validation/index.js';
 import { uid } from 'uid';
+import { eq } from 'drizzle-orm';
 import { GraphApiKeyDTO, GraphApiKeyJwtPayload, PublishedOperationData } from '../../types/index.js';
 import { Composer } from '../composition/composer.js';
 import { buildSchema, composeSubgraphs } from '../composition/composition.js';
@@ -118,7 +119,6 @@ import {
 } from '../util.js';
 import { FederatedGraphSchemaUpdate, OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
 import * as schema from '../../db/schema.js';
-import { eq } from 'drizzle-orm';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
