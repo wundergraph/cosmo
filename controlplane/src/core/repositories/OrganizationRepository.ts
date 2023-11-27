@@ -138,7 +138,7 @@ export class OrganizationRepository {
       .innerJoin(organizations, eq(organizations.id, organizationsMembers.organizationId))
       .innerJoin(users, eq(users.id, organizationsMembers.userId))
       .innerJoin(organizationLimits, eq(organizations.id, organizationLimits.organizationId))
-      .where(eq(users.id, input.userId))
+      .where(and(eq(users.id, input.userId), eq(organizationsMembers.acceptedInvite, true)))
       .execute();
 
     const userMemberships = await Promise.all(
@@ -166,6 +166,35 @@ export class OrganizationRepository {
     );
 
     return userMemberships;
+  }
+
+  public async invitations(input: { userId: string }): Promise<OrganizationDTO[]> {
+    const userOrganizations = await this.db
+      .select({
+        id: organizations.id,
+        name: organizations.name,
+        slug: organizations.slug,
+        creatorUserId: organizations.createdBy,
+        createdAt: organizations.createdAt,
+      })
+      .from(organizationsMembers)
+      .innerJoin(organizations, eq(organizations.id, organizationsMembers.organizationId))
+      .innerJoin(users, eq(users.id, organizationsMembers.userId))
+      .innerJoin(organizationLimits, eq(organizations.id, organizationLimits.organizationId))
+      .where(and(eq(users.id, input.userId), eq(organizationsMembers.acceptedInvite, false)))
+      .execute();
+
+    const userInvitations = await Promise.all(
+      userOrganizations.map((org) => ({
+        id: org.id,
+        name: org.name,
+        slug: org.slug,
+        creatorUserId: org.creatorUserId,
+        createdAt: org.createdAt.toISOString(),
+      })),
+    );
+
+    return userInvitations;
   }
 
   public async getOrganizationMember(input: {

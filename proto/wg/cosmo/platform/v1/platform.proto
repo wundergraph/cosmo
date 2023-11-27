@@ -1014,6 +1014,30 @@ message GetOrganizationRequestsCountResponse {
   int64 count = 2;
 }
 
+message Organization{
+  string id = 1;
+  string name = 2;
+  string slug = 3;
+  string creatorUserId = 4;
+  string createdAt = 5;
+}
+
+message GetInvitationsRequest {}
+
+message GetInvitationsResponse {
+  Response response = 1;
+  repeated Organization invitations = 2;
+}
+
+message AcceptOrDeclineInvitationRequest {
+  string organizationId = 1;
+  bool accept = 2;
+}
+
+message AcceptOrDeclineInvitationResponse {
+  Response response = 1;
+}
+
 message ClientInfo{
   string name = 1;
   string id = 2;
@@ -1186,7 +1210,10 @@ service PlatformService {
   rpc DeleteOIDCProvider(DeleteOIDCProviderRequest) returns (DeleteOIDCProviderResponse) {}
   // GetClients returns all the clients of the organization
   rpc GetClients(GetClientsRequest) returns (GetClientsResponse) {}
-
+  // GetInvitations returns all the invitations a user has recieved
+  rpc GetInvitations(GetInvitationsRequest) returns (GetInvitationsResponse) {}
+  // AcceptOrDeclineInvitation accepts or declines the invitation
+  rpc AcceptOrDeclineInvitation(AcceptOrDeclineInvitationRequest) returns (AcceptOrDeclineInvitationResponse) {}
 
   // Analytics
 

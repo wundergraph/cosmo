@@ -25,6 +25,7 @@ import { PlatformWebhookService } from './webhooks/PlatformWebhookService.js';
 import AccessTokenAuthenticator from './services/AccessTokenAuthenticator.js';
 import { GitHubRepository } from './repositories/GitHubRepository.js';
 import { S3BlobStorage } from './blobstorage/index.js';
+import Postmark from './services/Postmark.js';
 
 export interface BuildConfig {
   logger: LoggerOptions;
@@ -69,6 +70,7 @@ export interface BuildConfig {
   };
   slack: { clientID?: string; clientSecret?: string };
   s3StorageUrl: string;
+  postmarkServerToken: string;
 }
 
 const developmentLoggerOpts: LoggerOptions = {
@@ -181,6 +183,8 @@ export default async function build(opts: BuildConfig) {
     adminPassword: opts.keycloak.adminPassword,
   });
 
+  const postmarkClient = new Postmark(opts.postmarkServerToken);
+
   let githubApp: App | undefined;
   if (opts.githubApp?.clientId) {
     githubApp = new App({
@@ -263,6 +267,7 @@ export default async function build(opts: BuildConfig) {
       webBaseUrl: opts.auth.webBaseUrl,
       slack: opts.slack,
       blobStorage,
+      postmarkClient,
     }),
     logLevel: opts.logger.level as pino.LevelWithSilent,
     // Avoid compression for small requests

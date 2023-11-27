@@ -1,7 +1,7 @@
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema.js';
-import { users } from '../../db/schema.js';
+import { organizationsMembers, users } from '../../db/schema.js';
 import { UserDTO } from '../../types/index.js';
 import { OrganizationRepository } from './OrganizationRepository.js';
 
@@ -83,6 +83,21 @@ export class UserRepository {
       });
 
       await orgRepo.addOrganizationMemberRoles({ memberID: insertedMember.id, roles: ['developer'] });
+    });
+  }
+
+  public async acceptInvite(input: { userId: string; organizationID: string }) {
+    await this.db.transaction(async (tx) => {
+      await tx
+        .update(organizationsMembers)
+        .set({ acceptedInvite: true })
+        .where(
+          and(
+            eq(organizationsMembers.userId, input.userId),
+            eq(organizationsMembers.organizationId, input.organizationID),
+          ),
+        )
+        .execute();
     });
   }
 }
