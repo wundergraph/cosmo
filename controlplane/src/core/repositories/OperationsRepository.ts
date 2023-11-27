@@ -28,17 +28,27 @@ export class OperationsRepository {
       .insert(federatedGraphPersistedOperations)
       .values(inserts)
       .onConflictDoUpdate({
-        target: [federatedGraphPersistedOperations.federatedGraphId, federatedGraphPersistedOperations.hash],
+        target: [
+          federatedGraphPersistedOperations.federatedGraphId,
+          federatedGraphPersistedOperations.clientId,
+          federatedGraphPersistedOperations.operationId,
+        ],
         set: { updatedAt: now, updatedById: userId },
       });
   }
 
-  public async getPersistedOperations(pagination?: {
-    limit: number;
-    offset: number;
-  }): Promise<PersistedOperationDTO[]> {
+  public async getPersistedOperations(
+    clientId: string,
+    pagination?: {
+      limit: number;
+      offset: number;
+    },
+  ): Promise<PersistedOperationDTO[]> {
     const operationsResult = await this.db.query.federatedGraphPersistedOperations.findMany({
-      where: eq(federatedGraphPersistedOperations.federatedGraphId, this.federatedGraphId),
+      where: and(
+        eq(federatedGraphPersistedOperations.federatedGraphId, this.federatedGraphId),
+        eq(federatedGraphPersistedOperations.clientId, clientId),
+      ),
       with: {
         createdBy: true,
         updatedBy: true,

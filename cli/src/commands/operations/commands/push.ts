@@ -132,6 +132,7 @@ export default (opts: BaseCommandOptions) => {
     [],
   );
   command.option('-q, --quiet', 'Do not print any output', false);
+  command.option('--allow-conflicts', 'Exit with success even if there are conflicts', false);
   command.option('--format <output-format>', 'Output format: supported ones are text and json', 'text');
   command.action(async (name, options) => {
     if (options.file.length === 0) {
@@ -178,6 +179,9 @@ export default (opts: BaseCommandOptions) => {
           console.log(
             color(`pushed ${result.operations?.length ?? 0} operations: ${created} created, ${upToDate} up to date, ${conflict} conflicts`),
           );
+          if (conflict > 0 && !options.allowConflicts) {
+            command.error(pc.red('conflicts detected'));
+          }
           break;
         }
         case 'json': {

@@ -4043,39 +4043,40 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const operations: PublishedOperation[] = [];
         const updatedOperations = [];
         // Retrieve the operations that have already been published
-        const operationsResult = await operationsRepo.getPersistedOperations();
-        const operationById = new Map(operationsResult.map((op) => [op.id, op]));
+        const operationsResult = await operationsRepo.getPersistedOperations(clientId);
+        const operationsByOperationId = new Map(operationsResult.map((op) => [op.operationId, op.hash]));
         for (const operation of req.operations) {
           const operationId = operation.id;
           const operationHash = crypto.createHash('sha256').update(operation.contents).digest('hex');
-          const prevOperation = operationById.get(operationId);
-          if (prevOperation && prevOperation.hash !== operationHash) {
+          const prevHash = operationsByOperationId.get(operationId);
+          if (prevHash !== undefined && prevHash !== operationHash) {
             // We're trying to update an operation with the same ID but different hash
             operations.push(
               new PublishedOperation({
                 id: operationId,
-                hash: prevOperation.hash,
+                hash: prevHash,
                 status: PublishedOperationStatus.CONFLICT,
               }),
             );
             continue;
           }
-          const path = `${organizationId}/${federatedGraph.id}/operations/${req.clientName}/${operationHash}.json`;
+          operationsByOperationId.set(operationId, operationHash);
+          const path = `${organizationId}/${federatedGraph.id}/operations/${req.clientName}/${operationId}.json`;
           updatedOperations.push({
             operationId,
             hash: operationHash,
             filePath: path,
           });
           let status: PublishedOperationStatus;
-          if (prevOperation) {
-            status = PublishedOperationStatus.UP_TO_DATE;
-          } else {
+          if (prevHash === undefined) {
             const data: PublishedOperationData = {
               version: 1,
               body: operation.contents,
             };
             opts.blobStorage.putObject(path, Buffer.from(JSON.stringify(data), 'utf8'));
             status = PublishedOperationStatus.CREATED;
+          } else {
+            status = PublishedOperationStatus.UP_TO_DATE;
           }
           operations.push(
             new PublishedOperation({
