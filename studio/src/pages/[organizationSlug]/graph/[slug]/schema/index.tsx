@@ -632,13 +632,15 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
 
   if (typename) {
     title = sentenceCase(typename);
-    breadcrumbs.push(
-      <Link
-        href={`/${organizationSlug}/graph/${graphName}/schema?category=${selectedCategory}`}
-      >
-        {sentenceCase(selectedCategory)}
-      </Link>,
-    );
+    if (selectedCategory) {
+      breadcrumbs.push(
+        <Link
+          href={`/${organizationSlug}/graph/${graphName}/schema?category=${selectedCategory}`}
+        >
+          {sentenceCase(selectedCategory)}
+        </Link>,
+      );
+    }
   }
 
   return (

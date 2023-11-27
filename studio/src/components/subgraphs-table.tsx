@@ -70,7 +70,7 @@ export const SubgraphsTable = ({
         <TableRow>
           <TableHead className="px-4">Name</TableHead>
           <TableHead className="w-4/12 px-4">Url</TableHead>
-          <TableHead className="w-4/12 px-4 text-right">Labels</TableHead>
+          <TableHead className="w-4/12 px-4">Labels</TableHead>
           <TableHead className="w-2/12 px-4 text-right">
             Last Published
           </TableHead>
@@ -90,7 +90,7 @@ export const SubgraphsTable = ({
                 </Link>
               </TableCell>
               <TableCell className="px-4">
-                <div className="flex justify-end space-x-2">
+                <div className="flex space-x-2">
                   {labels.map(({ key, value }) => {
                     return (
                       <Badge variant="secondary" key={key + value}>

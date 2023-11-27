@@ -5,6 +5,7 @@ import { useRouter } from "next/router";
 import { BiAnalyse } from "react-icons/bi";
 import { IoBarcodeSharp } from "react-icons/io5";
 import { Tabs, TabsList, TabsTrigger } from "../ui/tabs";
+import { Toolbar } from "../ui/toolbar";
 
 export const AnalyticsToolbar: React.FC<{
   tab: string;
@@ -42,7 +43,7 @@ export const AnalyticsToolbar: React.FC<{
   };
 
   return (
-    <div className="flex items-center gap-2 border-b px-4 py-3 lg:px-8">
+    <Toolbar>
       <Tabs value={props.tab} className="w-full md:w-auto">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="overview" asChild>
@@ -74,6 +75,6 @@ export const AnalyticsToolbar: React.FC<{
         </TabsList>
       </Tabs>
       {props.children}
-    </div>
+    </Toolbar>
   );
 };

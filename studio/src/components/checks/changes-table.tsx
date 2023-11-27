@@ -84,13 +84,16 @@ export const ChangesTable = ({
             <TableHead className="w-[200px]">Change</TableHead>
             <TableHead className="w-[200px]">Type</TableHead>
             <TableHead>Description</TableHead>
-            <TableHead className="w-2/12 2xl:w-1/12">Actions</TableHead>
+            <TableHead className="w-2/12 2xl:w-1/12"></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {changes.map(({ changeType, message, isBreaking, path }) => {
             return (
-              <TableRow key={changeType + message}>
+              <TableRow
+                key={changeType + message}
+                className="group hover:bg-secondary/20"
+              >
                 <TableCell className={cn(isBreaking && "text-destructive")}>
                   {isBreaking ? "Breaking" : "Non-Breaking"}
                 </TableCell>
@@ -103,9 +106,10 @@ export const ChangesTable = ({
                         <TooltipTrigger>
                           <Button
                             disabled={!path}
-                            variant="secondary"
+                            variant="ghost"
                             size="icon-sm"
                             asChild
+                            className="table-action"
                           >
                             <Link
                               href={
@@ -138,8 +142,9 @@ export const ChangesTable = ({
                         <TooltipTrigger>
                           <Button
                             onClick={() => openUsage(changeType, path)}
-                            variant="secondary"
+                            variant="ghost"
                             size="icon-sm"
+                            className="table-action"
                           >
                             <BarChartIcon />
                           </Button>

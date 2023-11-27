@@ -171,7 +171,7 @@ export const GraphSelect = () => {
     >
       <SelectTrigger
         value={slug}
-        className="flex h-8 gap-x-2 border-0 bg-transparent pl-3 pr-1 text-muted-foreground shadow-none data-[state=open]:bg-accent data-[state=open]:text-accent-foreground hover:bg-accent hover:text-accent-foreground focus:ring-0"
+        className="flex h-8 w-auto gap-x-2 border-0 bg-transparent pl-3 pr-1 text-muted-foreground shadow-none data-[state=open]:bg-accent data-[state=open]:text-accent-foreground hover:bg-accent hover:text-accent-foreground focus:ring-0"
       >
         <SelectValue aria-label={slug}>{slug}</SelectValue>
       </SelectTrigger>
@@ -223,7 +223,7 @@ export const GraphPageLayout = ({
           <span className="text-muted-foreground">/</span>
         </>
       ))}
-      <h1 className="whitespace-nowrap font-medium">{title}</h1>
+      <h1 className="truncate whitespace-nowrap font-medium">{title}</h1>
     </div>
   );
 

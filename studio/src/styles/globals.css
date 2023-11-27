@@ -23,18 +23,18 @@
   :root {
     --white: 0 0% 100%;
 
-    --gray-50: 258, 16%, 94%;
-    --gray-100: 258, 14%, 91%;
-    --gray-200: 258, 12%, 83%;
-    --gray-300: 258, 10%, 71%;
-    --gray-400: 258, 10%, 57%;
-    --gray-500: 258, 10%, 45%;
-    --gray-600: 258, 10%, 36%;
-    --gray-700: 258, 12%, 29%;
-    --gray-800: 258, 14%, 24%;
-    --gray-850: 258, 14%, 17%;
-    --gray-900: 258, 21%, 9%;
-    --gray-950: 273, 52%, 4%;
+    --gray-50: 258 16% 94%;
+    --gray-100: 258 14% 91%;
+    --gray-200: 258 12% 83%;
+    --gray-300: 258 10% 71%;
+    --gray-400: 258 10% 57%;
+    --gray-500: 258 10% 45%;
+    --gray-600: 258 10% 36%;
+    --gray-700: 258 12% 29%;
+    --gray-800: 258 14% 24%;
+    --gray-850: 258 14% 17%;
+    --gray-900: 258 21% 9%;
+    --gray-950: 273 52% 4%;
 
     --background: var(--white);
     --foreground: var(--gray-950);
@@ -56,7 +56,7 @@
     --input: var(--gray-100);
     --input-active: var(--gray-200);
 
-    --primary: 330, 81%, 60%;
+    --primary: 330 81% 60%;
     --primary-foreground: var(--white);
 
     --secondary: var(--gray-100);
@@ -65,23 +65,23 @@
     --accent: var(--gray-50);
     --accent-foreground: var(--gray-950);
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 358 75% 59%;
+    --destructive-foreground: 2 100% 79%;
 
     --success: 142 71% 45%;
     --success-foreground: 210 40% 98%;
 
     --ring: 215 20.2% 65.1%;
 
-    --chart-primary: 199, 89%, 48%; /* sky blue */
-    --chart-primary-gradient: 200, 100%, 90%;
+    --chart-primary: 199 89% 48%; /* sky blue */
+    --chart-primary-gradient: 200 100% 90%;
 
     --radius: 0.5rem;
   }
 
   .dark {
     --background: var(--gray-950);
-    --foreground: 300, 5%, 96%;
+    --foreground: 300 5% 96%;
 
     --muted: var(--gray-850);
     --muted-foreground: var(--gray-400);
@@ -100,7 +100,7 @@
     --input: var(--gray-850);
     --input-active: var(--gray-800);
 
-    --primary: 330, 81%, 60%;
+    --primary: 330 81% 60%;
     --primary-foreground: var(--gray-50);
 
     --secondary: var(--gray-850);
@@ -109,15 +109,15 @@
     --accent: var(--gray-850);
     --accent-foreground: var(--gray-50);
 
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 0 85.7% 97.3%;
+    --destructive: 358 75% 59%;
+    --destructive-foreground: 2 100% 79%;
 
-    --success: 142 76% 36%;
-    --success-foreground: 0 85.7% 97.3%;
+    --success: 131 41% 46%;
+    --success-foreground: 120 61% 85%;
 
     --ring: var(--gray-400);
 
-    --chart-primary-gradient: 200, 100%, 15%;
+    --chart-primary-gradient: 200 100% 15%;
   }
 }
 
