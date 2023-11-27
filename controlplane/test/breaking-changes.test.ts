@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
-import { getDiffBetweenGraphs } from '../src/core/composition/schemaCheck';
-import { SchemaChangeType } from '../src/types';
+import { getDiffBetweenGraphs } from '../src/core/composition/schemaCheck.js';
+import { SchemaChangeType } from '../src/types/index.js';
 
 describe('BreakingChanges', () => {
   test('Should cause breaking changes on removing a field', async () => {

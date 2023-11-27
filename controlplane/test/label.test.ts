@@ -1,9 +1,9 @@
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
-import { Label } from '../src/types';
-import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util';
-import { createFederatedGraph, createSubgraph, SetupTest } from './test-util';
+import { Label } from '../src/types/index.js';
+import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util.js';
+import { createFederatedGraph, createSubgraph, SetupTest } from './test-util.js';
 
 let dbname = '';
 

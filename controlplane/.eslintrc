@@ -1,5 +1,8 @@
 {
-  "extends": ["eslint-config-unjs"],
+  "extends": ["eslint-config-unjs", "plugin:require-extensions/recommended"],
+  "plugins": [
+    "require-extensions"
+  ],
   "rules": {
     "space-before-function-paren": 0,
     "arrow-parens": 0,

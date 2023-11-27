@@ -3,8 +3,8 @@ import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { EnumStatusCode, GraphQLSubscriptionProtocol } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
-import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util';
-import { SetupTest } from './test-util';
+import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util.js';
+import { SetupTest } from './test-util.js';
 
 let dbname = '';
 

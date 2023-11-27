@@ -2,8 +2,8 @@ import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { CreateAPIKeyResponse, ExpiresAt } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { uid } from 'uid';
-import { afterAllSetup, beforeAllSetup } from '../src/core/test-util';
-import { SetupTest } from './test-util';
+import { afterAllSetup, beforeAllSetup } from '../src/core/test-util.js';
+import { SetupTest } from './test-util.js';
 
 let dbname = '';
 
