@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.2.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-cdn@0.2.0...@wundergraph/cosmo-cdn@0.2.1) (2023-11-27)
+
+### Bug Fixes
+
+* add typescript to cdn deps ([#300](https://github.com/wundergraph/cosmo/issues/300)) ([1f4e6c7](https://github.com/wundergraph/cosmo/commit/1f4e6c70ef52013dc309d1d0b914a7300dcbbeca)) (@thisisnithin)
+
 # 0.2.0 (2023-11-23)
 
 ### Bug Fixes
