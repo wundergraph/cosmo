@@ -16,6 +16,7 @@ export class OperationsRepository {
       return {
         federatedGraphId: this.federatedGraphId,
         clientId,
+        operationId: operation.operationId,
         hash: operation.hash,
         filePath: operation.filePath,
         createdAt: now,
@@ -54,6 +55,7 @@ export class OperationsRepository {
     for (const row of operationsResult) {
       operations.push({
         id: row.id,
+        operationId: row.operationId,
         hash: row.hash,
         filePath: row.filePath,
         createdAt: row.createdAt.toISOString(),

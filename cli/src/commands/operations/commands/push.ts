@@ -1,17 +1,22 @@
+import crypto from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 
 import { Command } from 'commander';
 import pc from 'picocolors';
 
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { PublishedOperationStatus } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { PublishedOperationStatus, PersistedOperation } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { baseHeaders } from '../../../core/config.js';
 
+
+type OperationOutputStatus = 'created' | 'up_to_date' | 'conflict';
+
 interface OperationOutput {
-  body: string;
-  status: 'created' | 'up_to_date';
+  hash: string;
+  contents: string;
+  status: OperationOutputStatus;
 }
 
 const collect = (value: string, previous: string[]): string[] => {
@@ -31,37 +36,86 @@ interface ApolloPersistedQueryManifest {
   ];
 }
 
-const parseApolloPersistedQueryManifest = (data: ApolloPersistedQueryManifest): string[] => {
+const parseApolloPersistedQueryManifest = (data: ApolloPersistedQueryManifest): PersistedOperation[] => {
   if (data.version !== 1) {
     throw new Error(`unknown Apollo persisted query manifest version ${data.version}`);
   }
-  return data.operations?.map((op) => op.body).filter((x): x is string => !!x) ?? [];
+  return data.operations?.filter((op) => op.id && op.body ).map((op) => new PersistedOperation({ id: op.id, contents: op.body })) ?? [];
 };
 
-const parseOperationsJson = (data: any): string[] => {
+const isRelayQueryMap = (data: any): boolean => {
+    // Check if all elements are 2-element arrays of strings. In that case
+  // the data is a relay query map
+  return Array.isArray(data) &&
+  data.length ===
+    data.filter((x) => Array.isArray(x) && x.length === 2 && typeof x[0] === 'string' && typeof x[1] === 'string')
+      .length;
+}
+
+const parseRelayQueryMap = (data: Array<any>): PersistedOperation[] => {
+  return data.map((x:any) => new PersistedOperation({ id: x[0], contents: x[1] }));
+}
+
+const isRelayQueryObject = (data: any): boolean => {
+  return Object.keys(data).every((key) => typeof key === 'string' && typeof data[key] === 'string');
+}
+
+const parseRelayQueryObject = (data: any): PersistedOperation[] => {
+  return Object.keys(data).map((key) => new PersistedOperation({ id: key, contents: data[key] }));
+}
+
+const parseOperationsJson = (data: any): PersistedOperation[] => {
   if (data.format === 'apollo-persisted-query-manifest') {
     return parseApolloPersistedQueryManifest(data);
   }
-  // Check if all elements are 2-element arrays of strings. In that case
-  // the data is a relay query map
-  if (
-    Array.isArray(data) &&
-    data.length ===
-      data.filter((x) => Array.isArray(x) && x.length === 2 && typeof x[0] === 'string' && typeof x[1] === 'string')
-        .length
-  ) {
-    return data.map((x) => x[1]).filter((x): x is string => !!x);
+  if (isRelayQueryMap(data)) {
+    return parseRelayQueryMap(data);
+  }
+  if (isRelayQueryObject(data)) {
+    return parseRelayQueryObject(data);
   }
   throw new Error(`unknown data format`);
 };
 
-export const parseOperations = (contents: string): string[] => {
+const humanReadableOperationStatus = (status: PublishedOperationStatus): string => {
+  switch (status) {
+    case PublishedOperationStatus.CREATED: {
+      return 'created';
+    }
+    case PublishedOperationStatus.UP_TO_DATE: {
+      return 'up to date';
+    }
+    case PublishedOperationStatus.CONFLICT: {
+      return 'conflict';
+    }
+  }
+  throw new Error('unknown operation status');
+}
+
+
+const jsonOperationStatus = (status: PublishedOperationStatus): OperationOutputStatus => {
+  switch (status) {
+    case PublishedOperationStatus.CREATED: {
+      return 'created';
+    }
+    case PublishedOperationStatus.UP_TO_DATE: {
+      return 'up_to_date';
+    }
+    case PublishedOperationStatus.CONFLICT: {
+      return 'conflict';
+    }
+  }
+  throw new Error('unknown operation status');
+}
+
+export const parseOperations = (contents: string): PersistedOperation[] => {
   let data: any;
   try {
     data = JSON.parse(contents);
   } catch {
     // Assume it's plain graphql
-    return [contents];
+    const id = crypto.createHash('sha256').update(contents).digest('hex');
+    return [new PersistedOperation({ id, contents })];
   }
   return parseOperationsJson(data);
 };
@@ -83,7 +137,7 @@ export default (opts: BaseCommandOptions) => {
     if (options.file.length === 0) {
       command.error(pc.red('No files provided'));
     }
-    const operations: string[] = [];
+    const operations: PersistedOperation[] = [];
     for (const file of options.file) {
       const contents = await readFile(file, 'utf8');
       try {
@@ -110,9 +164,7 @@ export default (opts: BaseCommandOptions) => {
           for (const op of result.operations) {
             console.log(
               pc.green(
-                `pushed operation ${op.hash} (${
-                  op.status === PublishedOperationStatus.CREATED ? 'created' : 'up to date'
-                })`,
+                `pushed operation ${op.id} (${op.hash}) (${humanReadableOperationStatus(op.status)})`,
               ),
             );
           }
@@ -120,8 +172,11 @@ export default (opts: BaseCommandOptions) => {
             .length;
           const created = (result.operations?.filter((op) => op.status === PublishedOperationStatus.CREATED) ?? [])
             .length;
+          const conflict = (result.operations?.filter((op) => op.status === PublishedOperationStatus.CONFLICT) ?? [])
+            .length;
+          const color = conflict === 0 ? pc.green : pc.yellow;
           console.log(
-            pc.green(`pushed ${result.operations?.length ?? 0} operations: ${created} created, ${upToDate} up to date`),
+            color(`pushed ${result.operations?.length ?? 0} operations: ${created} created, ${upToDate} up to date, ${conflict} conflicts`),
           );
           break;
         }
@@ -129,9 +184,10 @@ export default (opts: BaseCommandOptions) => {
           const returnedOperations: Record<string, OperationOutput> = {};
           for (let ii = 0; ii < result.operations.length; ii++) {
             const op = result.operations[ii];
-            returnedOperations[op.hash] = {
-              body: operations[ii],
-              status: op.status === PublishedOperationStatus.CREATED ? 'created' : 'up_to_date',
+            returnedOperations[op.id] = {
+              hash: op.hash,
+              contents: operations[ii].contents,
+              status: jsonOperationStatus(op.status),
             };
           }
           console.log(JSON.stringify(returnedOperations, null, 2));

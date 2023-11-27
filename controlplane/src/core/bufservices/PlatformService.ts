@@ -3999,15 +3999,16 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         }
         const graphAST = parse(schema.schema);
         const graphSchema = buildASTSchema(graphAST);
-        for (const operationContents of req.operations) {
+        for (const operation of req.operations) {
+          const contents = operation.contents;
           let opAST: DocumentNode;
           try {
-            opAST = parse(operationContents);
+            opAST = parse(operation.contents);
           } catch (e: any) {
             return {
               response: {
                 code: EnumStatusCode.ERR,
-                details: `Operation ${operationContents} is not valid: ${e}`,
+                details: `Operation ${operation.id} (${contents}) is not valid: ${e}`,
               },
               operations: [],
             };
@@ -4018,7 +4019,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             return {
               response: {
                 code: EnumStatusCode.ERR,
-                details: `Operation "${operationContents}" is not valid: ${errorDetails}`,
+                details: `Operation ${operation.id} ("${contents}") is not valid: ${errorDetails}`,
               },
               operations: [],
             };
@@ -4042,27 +4043,42 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const updatedOperations = [];
         // Retrieve the operations that have already been published
         const operationsResult = await operationsRepo.getPersistedOperations();
-        const operationHashes = new Set(operationsResult.map((op) => op.hash));
-        for (const operationContents of req.operations) {
-          const operationHash = crypto.createHash('sha256').update(operationContents).digest('hex');
+        const operationById = new Map(operationsResult.map((op) => [op.id, op]));
+        for (const operation of req.operations) {
+          const operationId = operation.id;
+          const operationHash = crypto.createHash('sha256').update(operation.contents).digest('hex');
+          const prevOperation = operationById.get(operationId);
+          if (prevOperation && prevOperation.hash !== operationHash) {
+            // We're trying to update an operation with the same ID but different hash
+            operations.push(
+              new PublishedOperation({
+                id: operationId,
+                hash: prevOperation.hash,
+                status: PublishedOperationStatus.CONFLICT,
+              }),
+            );
+            continue;
+          }
           const path = `${organizationId}/${federatedGraph.id}/operations/${req.clientName}/${operationHash}.json`;
           updatedOperations.push({
+            operationId,
             hash: operationHash,
             filePath: path,
           });
           let status: PublishedOperationStatus;
-          if (operationHashes.has(operationHash)) {
+          if (prevOperation) {
             status = PublishedOperationStatus.UP_TO_DATE;
           } else {
             const data: PublishedOperationData = {
               version: 1,
-              body: operationContents,
+              body: operation.contents,
             };
             opts.blobStorage.putObject(path, Buffer.from(JSON.stringify(data), 'utf8'));
             status = PublishedOperationStatus.CREATED;
           }
           operations.push(
             new PublishedOperation({
+              id: operationId,
               hash: operationHash,
               status,
             }),

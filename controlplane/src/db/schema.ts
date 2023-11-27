@@ -81,6 +81,7 @@ export const federatedGraphPersistedOperations = pgTable(
       .references(() => federatedGraphClients.id, {
         onDelete: 'cascade',
       }),
+    operationId: text('operation_id').notNull(),
     hash: text('hash').notNull(),
     filePath: text('file_path').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -95,6 +96,7 @@ export const federatedGraphPersistedOperations = pgTable(
     }),
   },
   (t) => ({
+    uniqueFederatedGraphOperationId: unique('federated_graph_operation_id').on(t.federatedGraphId, t.operationId),
     uniqueFederatedGraphOperationHash: unique('federated_graph_operation_hash').on(t.federatedGraphId, t.hash),
     uniqueFederatedGraphOperationFilePath: unique('federated_graph_operation_file_hash').on(
       t.federatedGraphId,
