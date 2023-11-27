@@ -7,13 +7,13 @@ import { createConnectTransport } from '@connectrpc/connect-node';
 import { createPromiseClient, PromiseClient } from '@connectrpc/connect';
 import { NodeService } from '@wundergraph/cosmo-connect/dist/node/v1/node_connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import database from '../src/core/plugins/database';
-import { createTestAuthenticator, seedTest } from '../src/core/test-util';
-import Keycloak from '../src/core/services/Keycloak';
-import { MockPlatformWebhookService } from '../src/core/webhooks/PlatformWebhookService';
-import routes from '../src/core/routes';
-import { BlobNotFoundError, BlobStorage } from '../src/core/blobstorage';
-import { Label } from '../src/types';
+import database from '../src/core/plugins/database.js';
+import { createTestAuthenticator, seedTest } from '../src/core/test-util.js';
+import Keycloak from '../src/core/services/Keycloak.js';
+import { MockPlatformWebhookService } from '../src/core/webhooks/PlatformWebhookService.js';
+import routes from '../src/core/routes.js';
+import { BlobNotFoundError, BlobStorage } from '../src/core/blobstorage/index.js';
+import { Label } from '../src/types/index.js';
 
 export const SetupTest = async function (testContext: TestContext, dbname: string) {
   const databaseConnectionUrl = `postgresql://postgres:changeme@localhost:5432/${dbname}`;
