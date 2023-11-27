@@ -7,7 +7,6 @@ import { ArrowRightIcon, GitHubLogoIcon } from "@radix-ui/react-icons";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { FaGoogle } from "react-icons/fa";
-
 import { BsBuildingLock } from "react-icons/bs";
 import { useCookies } from "react-cookie";
 import { useEffect } from "react";

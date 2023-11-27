@@ -52,10 +52,15 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
         userId: userSession.userId,
       });
 
+      const invitations = await opts.organizationRepository.invitations({
+        userId: userSession.userId,
+      });
+
       return {
         id: userSession.userId,
         email: userInfoData.email,
         organizations: orgs,
+        invitations,
         expiresAt: userSession.expiresAt,
       };
     } catch (err: any) {
@@ -195,13 +200,6 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
                 .execute();
             }
           }
-
-          // update the organizationMember table to indicate that the user has accepted the invite
-          await tx
-            .update(organizationsMembers)
-            .set({ acceptedInvite: true })
-            .where(eq(organizationsMembers.userId, userId))
-            .execute();
 
           // If there is already a session for this user, update it.
           // Otherwise, insert a new session. Because we use an Idp like keycloak,

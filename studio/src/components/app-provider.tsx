@@ -6,7 +6,6 @@ import {
   QueryClientProvider,
   useQuery,
 } from "@tanstack/react-query";
-import { addDays } from "date-fns";
 import { useRouter } from "next/router";
 import { createContext, ReactNode, useEffect, useState } from "react";
 
@@ -15,6 +14,13 @@ interface User {
   email: string;
   currentOrganization: Organization;
   organizations: Organization[];
+  invitations: InvitedOrgs[];
+}
+
+interface InvitedOrgs {
+  id: string;
+  name: string;
+  slug: string;
 }
 
 interface Organization {
@@ -41,6 +47,7 @@ interface Session {
   id: string;
   email: string;
   organizations: Organization[];
+  invitations: InvitedOrgs[];
 }
 
 class UnauthorizedError extends Error {
@@ -118,6 +125,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           ...organization,
         },
         organizations: data.organizations,
+        invitations: data.invitations,
       });
       const organizationSlug = currentOrg?.slug || data.organizations[0].slug;
 
@@ -137,9 +145,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       );
 
       if (
-        router.pathname === "/" ||
-        router.pathname === "/login" ||
-        !currentOrg
+        (router.pathname === "/" ||
+          router.pathname === "/login" ||
+          !currentOrg) &&
+        router.pathname !== "/user/invitations"
       ) {
         const url = new URL(
           window.location.origin + router.basePath + router.asPath,

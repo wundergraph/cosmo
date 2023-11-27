@@ -37,6 +37,7 @@ const {
   SLACK_APP_CLIENT_ID,
   SLACK_APP_CLIENT_SECRET,
   S3_STORAGE_URL,
+  POSTMARK_SERVER_API_TOKEN,
 } = envVariables.parse(process.env);
 
 const options: BuildConfig = {
@@ -82,6 +83,7 @@ const options: BuildConfig = {
     clientSecret: SLACK_APP_CLIENT_SECRET,
   },
   s3StorageUrl: S3_STORAGE_URL,
+  postmarkServerToken: POSTMARK_SERVER_API_TOKEN,
 };
 
 if (DB_CERT_PATH || DB_KEY_PATH || DB_CA_PATH) {

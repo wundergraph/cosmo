@@ -7965,6 +7965,221 @@ export class GetOrganizationRequestsCountResponse extends Message<GetOrganizatio
 }
 
 /**
+ * @generated from message wg.cosmo.platform.v1.Organization
+ */
+export class Organization extends Message<Organization> {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id = "";
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name = "";
+
+  /**
+   * @generated from field: string slug = 3;
+   */
+  slug = "";
+
+  /**
+   * @generated from field: string creatorUserId = 4;
+   */
+  creatorUserId = "";
+
+  /**
+   * @generated from field: string createdAt = 5;
+   */
+  createdAt = "";
+
+  constructor(data?: PartialMessage<Organization>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.Organization";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "slug", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "creatorUserId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "createdAt", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Organization {
+    return new Organization().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Organization {
+    return new Organization().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Organization {
+    return new Organization().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: Organization | PlainMessage<Organization> | undefined, b: Organization | PlainMessage<Organization> | undefined): boolean {
+    return proto3.util.equals(Organization, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetInvitationsRequest
+ */
+export class GetInvitationsRequest extends Message<GetInvitationsRequest> {
+  constructor(data?: PartialMessage<GetInvitationsRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetInvitationsRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetInvitationsRequest {
+    return new GetInvitationsRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetInvitationsRequest {
+    return new GetInvitationsRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetInvitationsRequest {
+    return new GetInvitationsRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetInvitationsRequest | PlainMessage<GetInvitationsRequest> | undefined, b: GetInvitationsRequest | PlainMessage<GetInvitationsRequest> | undefined): boolean {
+    return proto3.util.equals(GetInvitationsRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetInvitationsResponse
+ */
+export class GetInvitationsResponse extends Message<GetInvitationsResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.Organization invitations = 2;
+   */
+  invitations: Organization[] = [];
+
+  constructor(data?: PartialMessage<GetInvitationsResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetInvitationsResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "invitations", kind: "message", T: Organization, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetInvitationsResponse {
+    return new GetInvitationsResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetInvitationsResponse {
+    return new GetInvitationsResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetInvitationsResponse {
+    return new GetInvitationsResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetInvitationsResponse | PlainMessage<GetInvitationsResponse> | undefined, b: GetInvitationsResponse | PlainMessage<GetInvitationsResponse> | undefined): boolean {
+    return proto3.util.equals(GetInvitationsResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.AcceptOrDeclineInvitationRequest
+ */
+export class AcceptOrDeclineInvitationRequest extends Message<AcceptOrDeclineInvitationRequest> {
+  /**
+   * @generated from field: string organizationId = 1;
+   */
+  organizationId = "";
+
+  /**
+   * @generated from field: bool accept = 2;
+   */
+  accept = false;
+
+  constructor(data?: PartialMessage<AcceptOrDeclineInvitationRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.AcceptOrDeclineInvitationRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "organizationId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "accept", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AcceptOrDeclineInvitationRequest {
+    return new AcceptOrDeclineInvitationRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): AcceptOrDeclineInvitationRequest {
+    return new AcceptOrDeclineInvitationRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): AcceptOrDeclineInvitationRequest {
+    return new AcceptOrDeclineInvitationRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: AcceptOrDeclineInvitationRequest | PlainMessage<AcceptOrDeclineInvitationRequest> | undefined, b: AcceptOrDeclineInvitationRequest | PlainMessage<AcceptOrDeclineInvitationRequest> | undefined): boolean {
+    return proto3.util.equals(AcceptOrDeclineInvitationRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.AcceptOrDeclineInvitationResponse
+ */
+export class AcceptOrDeclineInvitationResponse extends Message<AcceptOrDeclineInvitationResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  constructor(data?: PartialMessage<AcceptOrDeclineInvitationResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.AcceptOrDeclineInvitationResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AcceptOrDeclineInvitationResponse {
+    return new AcceptOrDeclineInvitationResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): AcceptOrDeclineInvitationResponse {
+    return new AcceptOrDeclineInvitationResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): AcceptOrDeclineInvitationResponse {
+    return new AcceptOrDeclineInvitationResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: AcceptOrDeclineInvitationResponse | PlainMessage<AcceptOrDeclineInvitationResponse> | undefined, b: AcceptOrDeclineInvitationResponse | PlainMessage<AcceptOrDeclineInvitationResponse> | undefined): boolean {
+    return proto3.util.equals(AcceptOrDeclineInvitationResponse, a, b);
+  }
+}
+
+/**
  * @generated from message wg.cosmo.platform.v1.ClientInfo
  */
 export class ClientInfo extends Message<ClientInfo> {

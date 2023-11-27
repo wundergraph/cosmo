@@ -37,4 +37,5 @@ export const envVariables = z.object({
   SLACK_APP_CLIENT_ID: z.string().optional(),
   SLACK_APP_CLIENT_SECRET: z.string().optional(),
   S3_STORAGE_URL: z.string(),
+  POSTMARK_SERVER_API_TOKEN: z.string(),
 });

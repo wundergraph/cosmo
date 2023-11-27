@@ -6,6 +6,7 @@ import { GetConfigResponse } from '@wundergraph/cosmo-connect/dist/node/v1/node_
 import { OrganizationEventName, PlatformEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
 import {
+  AcceptOrDeclineInvitationResponse,
   AnalyticsConfig,
   CheckFederatedGraphResponse,
   CheckSubgraphSchemaResponse,
@@ -41,6 +42,7 @@ import {
   GetFederatedGraphsResponse,
   GetFieldUsageResponse,
   GetGraphMetricsResponse,
+  GetInvitationsResponse,
   GetLatestValidSubgraphSDLByNameResponse,
   GetMetricsErrorRateResponse,
   GetOIDCProviderResponse,
@@ -2220,24 +2222,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const groupName = organization.slug;
-
-        const organizationGroups = await opts.keycloakClient.client.groups.find({
-          max: 1,
-          search: groupName,
-          realm: opts.keycloakRealm,
-        });
-
-        if (organizationGroups.length === 0) {
-          throw new Error(`Organization group '${groupName}' not found`);
-        }
-
-        const devGroup = await opts.keycloakClient.fetchDevChildGroup({
-          realm: opts.keycloakRealm,
-          kcGroupId: organizationGroups[0].id!,
-          orgSlug: groupName,
-        });
-
         const keycloakUser = await opts.keycloakClient.client.users.find({
           max: 1,
           email: req.email,
@@ -2246,6 +2230,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         });
 
         let keycloakUserID;
+        let keycloakUserExists = false;
 
         if (keycloakUser.length === 0) {
           keycloakUserID = await opts.keycloakClient.addKeycloakUser({
@@ -2254,31 +2239,23 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             realm: opts.keycloakRealm,
           });
         } else {
+          keycloakUserExists = true;
           keycloakUserID = keycloakUser[0].id;
         }
 
-        const userGroups = await opts.keycloakClient.client.users.listGroups({
-          search: groupName,
-          realm: opts.keycloakRealm,
-          id: keycloakUserID!,
-          max: 1,
-        });
-
-        if (userGroups.length === 0) {
-          // By default, all invited users are added to the developer group of the org
-          // This is the at least privilege approach
-          await opts.keycloakClient.client.users.addToGroup({
-            id: keycloakUserID!,
-            groupId: devGroup.id!,
+        if (keycloakUserExists) {
+          await opts.postmarkClient.sendInviteEmail({
+            inviteLink: `${process.env.WEB_BASE_URL}/user/invitations`,
+            organizationName: organization.name,
+            recieverEmail: req.email,
+          });
+        } else {
+          await opts.keycloakClient.executeActionsEmail({
+            userID: keycloakUserID!,
+            redirectURI: `${process.env.WEB_BASE_URL}/login?redirectURL=${process.env.WEB_BASE_URL}/user/invitations`,
             realm: opts.keycloakRealm,
           });
         }
-
-        await opts.keycloakClient.executeActionsEmail({
-          userID: keycloakUserID!,
-          redirectURI: `${process.env.WEB_BASE_URL}/login`,
-          realm: opts.keycloakRealm,
-        });
 
         // TODO: rate limit this
         await userRepo.inviteUser({
@@ -4137,6 +4114,107 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             code: EnumStatusCode.OK,
           },
           count: BigInt(count),
+        };
+      });
+    },
+
+    getInvitations: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetInvitationsResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const orgRepo = new OrganizationRepository(opts.db);
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          invitations: await orgRepo.invitations({ userId: authContext.userId }),
+        };
+      });
+    },
+
+    acceptOrDeclineInvitation: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<AcceptOrDeclineInvitationResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const orgRepo = new OrganizationRepository(opts.db);
+        const userRepo = new UserRepository(opts.db);
+
+        const user = await userRepo.byId(authContext.userId);
+        if (!user) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `User ${authContext.userId} not found`,
+            },
+          };
+        }
+
+        const organization = await orgRepo.byId(req.organizationId);
+        if (!organization) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Organization ${req.organizationId} not found`,
+            },
+          };
+        }
+
+        if (req.accept) {
+          const groupName = organization.slug;
+
+          await opts.keycloakClient.authenticateClient();
+
+          const organizationGroups = await opts.keycloakClient.client.groups.find({
+            max: 1,
+            search: groupName,
+            realm: opts.keycloakRealm,
+          });
+
+          if (organizationGroups.length === 0) {
+            throw new Error(`Organization group '${groupName}' not found`);
+          }
+
+          const devGroup = await opts.keycloakClient.fetchDevChildGroup({
+            realm: opts.keycloakRealm,
+            kcGroupId: organizationGroups[0].id!,
+            orgSlug: groupName,
+          });
+
+          const keycloakUser = await opts.keycloakClient.client.users.find({
+            max: 1,
+            email: user.email,
+            realm: opts.keycloakRealm,
+            exact: true,
+          });
+
+          if (keycloakUser.length === 0) {
+            throw new Error(`Keycloak user with email '${user.email}' not found`);
+          }
+
+          await opts.keycloakClient.client.users.addToGroup({
+            id: keycloakUser[0].id!,
+            groupId: devGroup.id!,
+            realm: opts.keycloakRealm,
+          });
+
+          await userRepo.acceptInvite({ userId: user.id, organizationID: req.organizationId });
+        } else {
+          await orgRepo.removeOrganizationMember({ organizationID: req.organizationId, userID: user.id });
+        }
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
         };
       });
     },
