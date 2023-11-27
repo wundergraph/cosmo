@@ -73,10 +73,10 @@ import {
   WhoAmIResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { OpenAIGraphql, isValidUrl } from '@wundergraph/cosmo-shared';
-import { formatISO, subHours } from 'date-fns';
 import { DocumentNode, buildASTSchema, parse } from 'graphql';
 import { validate } from 'graphql/validation/index.js';
 import { uid } from 'uid';
+import { eq } from 'drizzle-orm';
 import { GraphApiKeyDTO, GraphApiKeyJwtPayload, PublishedOperationData } from '../../types/index.js';
 import { Composer } from '../composition/composer.js';
 import { buildSchema, composeSubgraphs } from '../composition/composition.js';
@@ -118,6 +118,7 @@ import {
   validateDateRanges,
 } from '../util.js';
 import { FederatedGraphSchemaUpdate, OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
+import * as schema from '../../db/schema.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {

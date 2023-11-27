@@ -3,8 +3,6 @@ import {
   boolean,
   integer,
   bigint,
-  json,
-  jsonb,
   pgEnum,
   pgTable,
   primaryKey,
@@ -14,7 +12,36 @@ import {
   uuid,
   decimal,
   unique,
+  customType,
 } from 'drizzle-orm/pg-core';
+
+// JSON/JSONB custom types to workaround insert bug
+// Should not be used with other drivers than postgres-js
+// See https://github.com/drizzle-team/drizzle-orm/issues/724
+export const customJson = <TData>(name: string) =>
+  customType<{ data: TData; driverData: TData }>({
+    dataType() {
+      return 'json';
+    },
+    toDriver(val: TData) {
+      return val;
+    },
+    fromDriver(value): TData {
+      return value as TData;
+    },
+  })(name);
+export const customJsonb = <TData>(name: string) =>
+  customType<{ data: TData; driverData: TData }>({
+    dataType() {
+      return 'jsonb';
+    },
+    toDriver(val: TData) {
+      return val;
+    },
+    fromDriver(value): TData {
+      return value as TData;
+    },
+  })(name);
 
 export const federatedGraphs = pgTable('federated_graphs', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -364,7 +391,7 @@ export const schemaChecks = pgTable('schema_checks', {
   hasClientTraffic: boolean('has_client_traffic').default(false),
   proposedSubgraphSchemaSDL: text('proposed_subgraph_schema_sdl'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  ghDetails: json('gh_details').$type<{
+  ghDetails: customJson('gh_details').$type<{
     accountId: number;
     repositorySlug: string;
     ownerSlug: string;
@@ -783,7 +810,7 @@ export const graphCompositions = pgTable('graph_compositions', {
   // The errors that occurred during the composition of the schema. This is only set when isComposable is false.
   compositionErrors: text('composition_errors'),
   // This is router config based on the composed schema. Only set for federated graphs.
-  routerConfig: jsonb('router_config'),
+  routerConfig: customJsonb('router_config'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   createdBy: uuid('created_by').references(() => users.id, {
     onDelete: 'cascade',
