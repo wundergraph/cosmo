@@ -709,20 +709,27 @@ message DeleteRouterTokenResponse {
   Response response = 1;
 }
 
+message PersistedOperation {
+  string id = 1;
+  string contents = 2;
+}
+
 message PublishPersistedOperationsRequest {
   string fedGraphName = 1;
   string clientName = 2;
-  repeated string operations = 3;
+  repeated PersistedOperation operations = 3;
 }
 
 enum PublishedOperationStatus {
   UP_TO_DATE = 0;
   CREATED = 1;
+  CONFLICT = 2;
 }
 
 message PublishedOperation {
-  string hash = 1;
-  PublishedOperationStatus status = 2;
+  string id = 1;
+  string hash = 2;
+  PublishedOperationStatus status = 3;
 }
 
 message PublishPersistedOperationsResponse {
