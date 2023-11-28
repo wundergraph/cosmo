@@ -20,7 +20,7 @@ WunderGraph Cosmo CDN
 | fullnameOverride | string | `""` |  |
 | image.pullPolicy | string | `"IfNotPresent"` |  |
 | image.registry | string | `"ghcr.io"` |  |
-| image.repository | string | `"wundergraph/cosmo/cdn-server"` |  |
+| image.repository | string | `"wundergraph/cosmo/cdn"` |  |
 | image.version | string | `"latest"` |  |
 | imagePullSecrets | list | `[]` |  |
 | ingress.hosts | string | `nil` |  |
