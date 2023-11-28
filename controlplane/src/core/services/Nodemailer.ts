@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import * as postmark from 'postmark';
+import { createTransport, Transporter } from 'nodemailer';
 import * as ejs from 'ejs';
 
 interface OrganizationInviteBody {
@@ -8,11 +8,19 @@ interface OrganizationInviteBody {
   inviteLink: string;
 }
 
-export default class Postmark {
-  client: postmark.ServerClient;
+export default class Nodemailer {
+  client: Transporter;
 
   constructor(serverToken: string) {
-    this.client = new postmark.ServerClient(serverToken);
+    this.client = createTransport({
+      host: 'smtp.postmarkapp.com',
+      port: 587,
+      secure: false,
+      auth: {
+        user: serverToken,
+        pass: serverToken,
+      },
+    });
   }
 
   public async sendInviteEmail({
@@ -34,12 +42,11 @@ export default class Postmark {
     const template = ejs.compile(emailBody);
     const htmlBody = template(data);
 
-    await this.client.sendEmail({
-      From: 'system@wundergraph.com',
-      To: recieverEmail,
-      Subject: '[WunderGraph Cosmo] You are invited to join' + organizationName,
-      HtmlBody: htmlBody,
-      TrackOpens: true,
+    await this.client.sendMail({
+      from: 'system@wundergraph.com',
+      to: recieverEmail,
+      subject: '[WunderGraph Cosmo] You are invited to join ' + organizationName,
+      html: htmlBody,
     });
   }
 }

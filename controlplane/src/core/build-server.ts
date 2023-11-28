@@ -25,7 +25,7 @@ import { PlatformWebhookService } from './webhooks/PlatformWebhookService.js';
 import AccessTokenAuthenticator from './services/AccessTokenAuthenticator.js';
 import { GitHubRepository } from './repositories/GitHubRepository.js';
 import { S3BlobStorage } from './blobstorage/index.js';
-import Postmark from './services/Postmark.js';
+import Nodemailer from './services/Nodemailer.js';
 
 export interface BuildConfig {
   logger: LoggerOptions;
@@ -183,7 +183,7 @@ export default async function build(opts: BuildConfig) {
     adminPassword: opts.keycloak.adminPassword,
   });
 
-  const postmarkClient = new Postmark(opts.postmarkServerToken);
+  const nodemailerClient = new Nodemailer(opts.postmarkServerToken);
 
   let githubApp: App | undefined;
   if (opts.githubApp?.clientId) {
@@ -267,7 +267,7 @@ export default async function build(opts: BuildConfig) {
       webBaseUrl: opts.auth.webBaseUrl,
       slack: opts.slack,
       blobStorage,
-      postmarkClient,
+      nodemailerClient,
     }),
     logLevel: opts.logger.level as pino.LevelWithSilent,
     // Avoid compression for small requests
