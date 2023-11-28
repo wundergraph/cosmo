@@ -229,11 +229,17 @@ export enum PublishedOperationStatus {
    * @generated from enum value: CREATED = 1;
    */
   CREATED = 1,
+
+  /**
+   * @generated from enum value: CONFLICT = 2;
+   */
+  CONFLICT = 2,
 }
 // Retrieve enum metadata with: proto3.getEnumType(PublishedOperationStatus)
 proto3.util.setEnumType(PublishedOperationStatus, "wg.cosmo.platform.v1.PublishedOperationStatus", [
   { no: 0, name: "UP_TO_DATE" },
   { no: 1, name: "CREATED" },
+  { no: 2, name: "CONFLICT" },
 ]);
 
 /**
@@ -5563,6 +5569,49 @@ export class DeleteRouterTokenResponse extends Message<DeleteRouterTokenResponse
 }
 
 /**
+ * @generated from message wg.cosmo.platform.v1.PersistedOperation
+ */
+export class PersistedOperation extends Message<PersistedOperation> {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id = "";
+
+  /**
+   * @generated from field: string contents = 2;
+   */
+  contents = "";
+
+  constructor(data?: PartialMessage<PersistedOperation>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.PersistedOperation";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "contents", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PersistedOperation {
+    return new PersistedOperation().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PersistedOperation {
+    return new PersistedOperation().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PersistedOperation {
+    return new PersistedOperation().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: PersistedOperation | PlainMessage<PersistedOperation> | undefined, b: PersistedOperation | PlainMessage<PersistedOperation> | undefined): boolean {
+    return proto3.util.equals(PersistedOperation, a, b);
+  }
+}
+
+/**
  * @generated from message wg.cosmo.platform.v1.PublishPersistedOperationsRequest
  */
 export class PublishPersistedOperationsRequest extends Message<PublishPersistedOperationsRequest> {
@@ -5577,9 +5626,9 @@ export class PublishPersistedOperationsRequest extends Message<PublishPersistedO
   clientName = "";
 
   /**
-   * @generated from field: repeated string operations = 3;
+   * @generated from field: repeated wg.cosmo.platform.v1.PersistedOperation operations = 3;
    */
-  operations: string[] = [];
+  operations: PersistedOperation[] = [];
 
   constructor(data?: PartialMessage<PublishPersistedOperationsRequest>) {
     super();
@@ -5591,7 +5640,7 @@ export class PublishPersistedOperationsRequest extends Message<PublishPersistedO
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "fedGraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "clientName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "operations", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 3, name: "operations", kind: "message", T: PersistedOperation, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PublishPersistedOperationsRequest {
@@ -5616,12 +5665,17 @@ export class PublishPersistedOperationsRequest extends Message<PublishPersistedO
  */
 export class PublishedOperation extends Message<PublishedOperation> {
   /**
-   * @generated from field: string hash = 1;
+   * @generated from field: string id = 1;
+   */
+  id = "";
+
+  /**
+   * @generated from field: string hash = 2;
    */
   hash = "";
 
   /**
-   * @generated from field: wg.cosmo.platform.v1.PublishedOperationStatus status = 2;
+   * @generated from field: wg.cosmo.platform.v1.PublishedOperationStatus status = 3;
    */
   status = PublishedOperationStatus.UP_TO_DATE;
 
@@ -5633,8 +5687,9 @@ export class PublishedOperation extends Message<PublishedOperation> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "wg.cosmo.platform.v1.PublishedOperation";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "hash", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "status", kind: "enum", T: proto3.getEnumType(PublishedOperationStatus) },
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "hash", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "status", kind: "enum", T: proto3.getEnumType(PublishedOperationStatus) },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PublishedOperation {
