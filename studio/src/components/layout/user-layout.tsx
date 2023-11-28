@@ -11,7 +11,7 @@ export const UserLayout = ({ children }: LayoutProps) => {
     return [
       {
         title: "Invitations",
-        href: "/user/invitations",
+        href: "/account/invitations",
         icon: <AiOutlineMail />,
       },
     ];

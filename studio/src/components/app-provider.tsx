@@ -148,7 +148,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         (router.pathname === "/" ||
           router.pathname === "/login" ||
           !currentOrg) &&
-        router.pathname !== "/user/invitations"
+        router.pathname !== "/account/invitations"
       ) {
         const url = new URL(
           window.location.origin + router.basePath + router.asPath,
