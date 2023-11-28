@@ -288,6 +288,7 @@ export interface ClientDTO {
 
 export interface PersistedOperationDTO {
   id: string;
+  operationId: string;
   hash: string;
   filePath: string;
   createdAt: string;
@@ -302,6 +303,7 @@ export interface PublishedOperationData {
 }
 
 export interface UpdatedPersistedOperation {
+  operationId: string;
   hash: string;
   filePath: string;
 }
