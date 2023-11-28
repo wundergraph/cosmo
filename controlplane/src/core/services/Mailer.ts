@@ -8,17 +8,17 @@ interface OrganizationInviteBody {
   inviteLink: string;
 }
 
-export default class Nodemailer {
+export default class Mailer {
   client: Transporter;
 
-  constructor(serverToken: string) {
+  constructor({ username, password }: { username: string; password: string }) {
     this.client = createTransport({
       host: 'smtp.postmarkapp.com',
       port: 587,
       secure: false,
       auth: {
-        user: serverToken,
-        pass: serverToken,
+        user: username,
+        pass: password,
       },
     });
   }
@@ -32,7 +32,7 @@ export default class Nodemailer {
     inviteLink: string;
     organizationName: string;
   }) {
-    const emailBody = readFileSync('./src/resources/organizationInvite.html').toString('utf8');
+    const emailBody = readFileSync('./src/templates/email/organizationInvite.html').toString('utf8');
     const data: OrganizationInviteBody = {
       organizationName,
       email: recieverEmail,

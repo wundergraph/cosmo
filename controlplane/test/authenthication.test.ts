@@ -50,7 +50,8 @@ describe('Authentication', (ctx) => {
         clientSecret: '',
       },
       s3StorageUrl: 'http://localhost:9000',
-      postmarkServerToken: '',
+      smtpUsername: '',
+      smtpPassword: '',
     });
 
     testContext.onTestFailed(async () => {

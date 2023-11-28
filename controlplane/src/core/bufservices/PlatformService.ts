@@ -2244,7 +2244,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         }
 
         if (keycloakUserExists) {
-          await opts.nodemailerClient.sendInviteEmail({
+          await opts.mailerClient.sendInviteEmail({
             inviteLink: `${process.env.WEB_BASE_URL}/user/invitations`,
             organizationName: organization.name,
             recieverEmail: req.email,
