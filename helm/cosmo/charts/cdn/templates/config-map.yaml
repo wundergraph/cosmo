@@ -10,5 +10,3 @@ metadata:
     {{- include "cdn.labels" . | nindent 4 }}
 data:
   port: "{{ .Values.service.port }}"
-  authJwtSecret: "{{ .Values.global.controlplane.jwtSecret }}"
-  s3StorageUrl: "{{ .Values.global.controlplane.s3StorageUrl }}"

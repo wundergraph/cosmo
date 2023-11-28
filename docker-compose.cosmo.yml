@@ -4,6 +4,7 @@ name: cosmo
 services:
 
   cdn:
+    image: ghcr.io/wundergraph/cosmo/cdn:${DC_CDN_VERSION:-latest}
     build:
       context: .
       dockerfile: cdn-server/Dockerfile

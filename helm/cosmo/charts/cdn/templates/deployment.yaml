@@ -58,13 +58,14 @@ spec:
 
             - name: S3_STORAGE_URL
               valueFrom:
-                configMapKeyRef:
-                  name: {{ include "cdn.fullname" . }}-configmap
+                secretKeyRef:
+                  name: {{ include "cdn.fullname" . }}-secret
                   key: s3StorageUrl
+
             - name: AUTH_JWT_SECRET
               valueFrom:
-                configMapKeyRef:
-                  name: {{ include "cdn.fullname" . }}-configmap
+                secretKeyRef:
+                  name: {{ include "cdn.fullname" . }}-secret
                   key: authJwtSecret
 
           ports:
