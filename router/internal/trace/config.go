@@ -1,6 +1,7 @@
 package trace
 
 import (
+	"net/url"
 	"time"
 
 	"github.com/wundergraph/cosmo/router/internal/otel/otelconfig"
@@ -33,6 +34,23 @@ type Config struct {
 	// Sampler represents the sampler for tracing. The default value is 1.
 	Sampler   float64
 	Exporters []*Exporter
+}
+
+func HasDefaultExporter(cfg *Config) bool {
+	for _, exporter := range cfg.Exporters {
+		u, err := url.Parse(exporter.Endpoint)
+		if err != nil {
+			continue
+		}
+		u2, err := url.Parse(otelconfig.DefaultEndpoint())
+		if err != nil {
+			continue
+		}
+		if u.Host == u2.Host {
+			return true
+		}
+	}
+	return false
 }
 
 // DefaultConfig returns the default config.

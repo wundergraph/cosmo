@@ -39,28 +39,6 @@ func NewRouter(params Params) (*core.Router, error) {
 		if err != nil {
 			logger.Fatal("Could not read router config", zap.Error(err), zap.String("path", cfg.RouterConfigPath))
 		}
-
-		if cfg.Graph.Token == "" {
-			logger.Warn("Static router config file provided, but no graph token. Disabling schema usage tracking, thus breaking change detection. Not recommended for production use.")
-			cfg.GraphqlMetrics.Enabled = false
-
-			// Only disable default tracing and metrics if no custom OTLP exporter is configured
-			if cfg.Telemetry.Tracing.Enabled && len(cfg.Telemetry.Tracing.Exporters) == 0 {
-				cfg.Telemetry.Tracing.Enabled = false
-			}
-			if cfg.Telemetry.Metrics.OTLP.Enabled && len(cfg.Telemetry.Metrics.OTLP.Exporters) == 0 {
-				cfg.Telemetry.Metrics.OTLP.Enabled = false
-			}
-
-			// Show warning when no custom OTLP exporter is configured and default tracing/metrics are disabled
-			// due to missing graph token
-			if !cfg.Telemetry.Tracing.Enabled && len(cfg.Telemetry.Tracing.Exporters) == 0 {
-				logger.Warn("Static router config file provided, but no graph token. Disabling default tracing. Not recommended for production use.")
-			}
-			if !cfg.Telemetry.Metrics.OTLP.Enabled && len(cfg.Telemetry.Metrics.OTLP.Exporters) == 0 {
-				logger.Warn("Static router config file provided, but no graph token. Disabling default OTLP metrics. Not recommended for production use.")
-			}
-		}
 	} else {
 		configPoller = configpoller.New(cfg.Graph.Name, cfg.ControlplaneURL, cfg.Graph.Token,
 			configpoller.WithLogger(logger),

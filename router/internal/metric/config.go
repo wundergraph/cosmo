@@ -2,6 +2,7 @@ package metric
 
 import (
 	"github.com/wundergraph/cosmo/router/internal/otel/otelconfig"
+	"net/url"
 	"regexp"
 )
 
@@ -34,6 +35,23 @@ type OpenTelemetryExporter struct {
 type OpenTelemetry struct {
 	Enabled   bool
 	Exporters []*OpenTelemetryExporter
+}
+
+func HasDefaultExporter(cfg *Config) bool {
+	for _, exporter := range cfg.OpenTelemetry.Exporters {
+		u, err := url.Parse(exporter.Endpoint)
+		if err != nil {
+			continue
+		}
+		u2, err := url.Parse(otelconfig.DefaultEndpoint())
+		if err != nil {
+			continue
+		}
+		if u.Host == u2.Host {
+			return true
+		}
+	}
+	return false
 }
 
 // Config represents the configuration for the agent.

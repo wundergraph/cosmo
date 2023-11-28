@@ -253,10 +253,32 @@ func NewRouter(opts ...Option) (*Router, error) {
 		ExpectContinueTimeout: r.subgraphTransportOptions.ExpectContinueTimeout,
 	}
 
-	// Add default exporters if needed
+	// The user might want to start the server with a static config
+	// Disable all features that requires a valid graph token and inform the user
+	if r.graphApiToken == "" {
+		r.graphqlMetricsConfig.Enabled = false
+		r.logger.Warn("No graph token provided. Disabling schema usage tracking, thus breaking change detection. Not recommended for production use.")
+
+		if r.traceConfig.Enabled {
+			// Only disable default tracing if no custom OTLP exporter is configured
+			if len(r.traceConfig.Exporters) == 0 {
+				r.traceConfig.Enabled = false
+				r.logger.Warn("No graph token provided. Tracing disabled. Please specify a custom trace exporter or provide a graph token.")
+			}
+		}
+		if r.metricConfig.OpenTelemetry.Enabled {
+			// Only disable default metrics if no custom OTLP exporter is configured
+			if len(r.metricConfig.OpenTelemetry.Exporters) == 0 {
+				r.metricConfig.OpenTelemetry.Enabled = false
+				r.logger.Warn("No graph token provided. OTLP Metrics disabled. Please specify a custom metrics exporter or provide a graph token.")
+			}
+		}
+	}
+
+	// Add default tracing exporter if needed
 	if r.traceConfig.Enabled && len(r.traceConfig.Exporters) == 0 {
 		if endpoint := otelconfig.DefaultEndpoint(); endpoint != "" {
-			r.logger.Debug("using default trace exporter", zap.String("endpoint", endpoint))
+			r.logger.Debug("Using default trace exporter", zap.String("endpoint", endpoint))
 			r.traceConfig.Exporters = append(r.traceConfig.Exporters, &trace.Exporter{
 				Endpoint: endpoint,
 				Headers:  otelconfig.DefaultEndpointHeaders(r.graphApiToken),
@@ -264,16 +286,17 @@ func NewRouter(opts ...Option) (*Router, error) {
 		}
 	}
 
-	// Add default exporters if none are configured
+	// Add default metric exporter if none are configured
 	if r.metricConfig.OpenTelemetry.Enabled && len(r.metricConfig.OpenTelemetry.Exporters) == 0 {
 		if endpoint := otelconfig.DefaultEndpoint(); endpoint != "" {
-			r.logger.Debug("using default metrics exporter", zap.String("endpoint", endpoint))
+			r.logger.Debug("Using default metrics exporter", zap.String("endpoint", endpoint))
 			r.metricConfig.OpenTelemetry.Exporters = append(r.metricConfig.OpenTelemetry.Exporters, &metric.OpenTelemetryExporter{
 				Endpoint: endpoint,
 				Headers:  otelconfig.DefaultEndpointHeaders(r.graphApiToken),
 			})
 		}
 	}
+
 	routerCDN, err := cdn.New(cdn.CDNOptions{
 		URL:                 r.cdnURL,
 		AuthenticationToken: r.graphApiToken,
@@ -522,15 +545,19 @@ func (r *Router) Start(ctx context.Context) error {
 	if r.selfRegister != nil {
 		ri, registerErr := r.selfRegister.Register(ctx)
 		if registerErr != nil {
-			r.logger.Error("Failed to register router. If this error persists, please contact support", zap.Error(registerErr))
+			r.logger.Error("Failed to register router. Falling back to default limits. If this error persists, please contact support.", zap.Error(registerErr))
+			r.traceConfig.Sampler = 0.1
 		} else if registerErr == nil {
 			r.registrationInfo = ri
-			if r.traceConfig.Sampler > float64(r.registrationInfo.AccountLimits.TraceSamplingRate) {
-				r.logger.Warn("Trace sampling rate is higher than account limit. Using account limit instead. Please contact support to increase your account limit.",
-					zap.Float64("sampler", r.traceConfig.Sampler),
-					zap.String("account_limit", fmt.Sprintf("%.2f", r.registrationInfo.AccountLimits.TraceSamplingRate)),
-				)
-				r.traceConfig.Sampler = float64(r.registrationInfo.AccountLimits.TraceSamplingRate)
+
+			if r.traceConfig.Enabled && trace.HasDefaultExporter(r.traceConfig) {
+				if r.traceConfig.Sampler > float64(r.registrationInfo.AccountLimits.TraceSamplingRate) {
+					r.logger.Warn("Trace sampling rate is higher than account limit. Using account limit instead. Please contact support to increase your account limit.",
+						zap.Float64("sampler", r.traceConfig.Sampler),
+						zap.String("account_limit", fmt.Sprintf("%.2f", r.registrationInfo.AccountLimits.TraceSamplingRate)),
+					)
+					r.traceConfig.Sampler = float64(r.registrationInfo.AccountLimits.TraceSamplingRate)
+				}
 			}
 		}
 	}
