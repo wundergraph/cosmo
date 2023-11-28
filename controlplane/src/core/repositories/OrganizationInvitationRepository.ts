@@ -1,8 +1,8 @@
 import { and, asc, eq } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { OrganizationDTO, OrganizationInvitationDTO, UserDTO } from 'src/types/index.js';
 import * as schema from '../../db/schema.js';
 import { organizationInvitations, organizations, users } from '../../db/schema.js';
+import { OrganizationDTO, OrganizationInvitationDTO, UserDTO } from '../../types/index.js';
 import { OrganizationRepository } from './OrganizationRepository.js';
 import { UserRepository } from './UserRepository.js';
 
