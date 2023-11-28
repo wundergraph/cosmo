@@ -1,0 +1,14 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "cdn.fullname" . }}-configmap
+  annotations:
+    # Support for k14s.io. This annotation will produce a redeployment when the configmap changes.
+    kapp.k14s.io/versioned: ""
+  labels:
+    {{- include "cdn.labels" . | nindent 4 }}
+data:
+  port: "{{ .Values.service.port }}"
+  authJwtSecret: "{{ .Values.global.controlplane.jwtSecret }}"
+  s3StorageUrl: "{{ .Values.global.controlplane.s3StorageUrl }}"

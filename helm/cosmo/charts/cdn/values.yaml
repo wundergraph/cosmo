@@ -1,0 +1,145 @@
+# Default values for cdn.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+image:
+  repository: wundergraph/cosmo/cdn-server
+  registry: ghcr.io
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  version: "latest"
+
+deploymentStrategy: {}
+
+imagePullSecrets: []
+
+# String to partially override common.names.fullname template (will maintain the release name)
+nameOverride: ""
+
+# String to fully override common.names.fullname template
+fullnameOverride: ""
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+serviceAnnotations: {}
+
+podAnnotations: {}
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+service:
+  type: ClusterIP
+  port: 8787
+
+ingress:
+#  enabled: true
+#  className: ""
+#  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+  hosts:
+#    - host: cdn.wundergraph.local
+#      paths:
+#        - path: /
+#          pathType: ImplementationSpecific
+  tls: []
+  #  - secretName: chart-example-tls
+  #    hosts:
+  #      - chart-example.local
+
+resources: {}
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+#initContainers:
+#  - name: init-postgresql
+#    image: busybox:1.28
+#    imagePullPolicy: "IfNotPresent"
+#    command: ['sh', '-c', 'until nslookup {{ include "postgresql.fullname" . }}; do echo waiting for postgresql; sleep 2; done;']
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+
+volumes: []
+
+volumeMounts: []
+
+tolerations: []
+
+affinity: {}
+
+# -- Sets the [pod disruption budget](https://kubernetes.io/docs/tasks/run-application/configure-pdb/) for Deployment pods
+podDisruptionBudget: {}
+
+# -- Set to existing PriorityClass name to control pod preemption by the scheduler
+priorityClassName: ""
+
+# -- Sets the [termination grace period](https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#hook-handler-execution) for Deployment pods
+terminationGracePeriodSeconds: 60
+
+probes:
+  # -- Configure readiness probe
+  readiness:
+    httpGet:
+      path: /health
+      port: http
+    initialDelaySeconds: 5
+    timeoutSeconds: 3
+    periodSeconds: 5
+    failureThreshold: 5
+  # -- Configure liveness probe
+  liveness:
+    httpGet:
+      path: /health
+      port: http
+    initialDelaySeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 5
+    periodSeconds: 10
+
+########################
+# Global configuration #
+########################
+
+#global:
+#  controlplane:
+#    jwtSecret: "changeme"
+#    s3StorageUrl: "http://minio:changeme@minio.wundergraph.local:9000/cosmo"
+
+#############################
+# Application configuration #
+#############################
+
+configuration:
