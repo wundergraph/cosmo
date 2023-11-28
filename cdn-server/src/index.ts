@@ -1,6 +1,7 @@
 import dotenv from 'dotenv';
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
+import { logger } from 'hono/logger';
 import { cdn } from '../cdn/src/index';
 import { createS3BlobStorage } from './s3';
 
@@ -13,6 +14,9 @@ if (!process.env.S3_STORAGE_URL) {
 const blobStorage = createS3BlobStorage(process.env.S3_STORAGE_URL);
 
 const app = new Hono();
+if (process.env.NODE_ENV !== 'production') {
+  app.use('*', logger());
+}
 cdn(app, {
   authJwtSecret: process.env.AUTH_JWT_SECRET!,
   blobStorage,
