@@ -300,13 +300,11 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
           // Set the sso cookie.
           opts.authUtils.createSsoCookie(res, ssoSlug);
         }
-
-        if (orgs.length === 0) {
+        if (redirectURL) {
+          res.redirect(redirectURL);
+        } else if (orgs.length === 0) {
           res.redirect(opts.webBaseUrl + '?migrate=true');
         } else {
-          if (redirectURL) {
-            res.redirect(redirectURL);
-          }
           res.redirect(opts.webBaseUrl);
         }
       } catch (err: any) {
