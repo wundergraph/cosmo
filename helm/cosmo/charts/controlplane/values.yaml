@@ -161,3 +161,5 @@ configuration:
   slackAppClientId: ""
   slackAppClientSecret: ""
   s3StorageUrl: "http://minio:changeme@minio.wundergraph.local:9000/cosmo"
+  smtpUsername: ""
+  smtpPassword: ""
