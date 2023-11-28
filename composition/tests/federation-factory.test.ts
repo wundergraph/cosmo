@@ -302,6 +302,24 @@ describe('FederationFactory tests', () => {
   });
 });
 
+test('that _entities and _service are removed even if a root type is renamed', () => {
+  const { errors, federationResult } = federateSubgraphs([subgraphF, subgraphO]);
+  expect(errors).toBeUndefined();
+  expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
+    normalizeString(versionOnePersistedBaseSchema + `
+      type Query {
+        string: String
+        user: User!
+      }
+      
+      type User {
+        id: ID!
+        name: String!
+      }
+    `),
+  );
+});
+
 const subgraphA = {
   name: 'subgraph-a',
   url: '',
@@ -731,5 +749,34 @@ const subgraphN: Subgraph = {
       fieldOne: String!
       fieldTwo: Int!
     }
+`),
+};
+
+const subgraphO: Subgraph = {
+  name: 'subgraph-o',
+  url: '',
+  definitions: parse(`
+    schema {
+      query: Queries
+    }
+    
+    type Queries {
+      user: User!
+      _entities(representations: [_Any!]!): [_Entity]
+      _service: _Service
+    }
+    
+    type User @key(fields: "id") {
+      id: ID!
+      name: String!
+    }
+    
+    union _Entity = User
+    
+    type _Service {
+      sdl: String
+    }
+    
+    scalar _Any
 `),
 };
