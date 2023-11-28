@@ -2246,7 +2246,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         if (keycloakUserExists) {
           if (opts.mailerClient) {
             await opts.mailerClient.sendInviteEmail({
-              inviteLink: `${process.env.WEB_BASE_URL}/user/invitations`,
+              inviteLink: `${process.env.WEB_BASE_URL}/account/invitations`,
               organizationName: organization.name,
               recieverEmail: req.email,
             });
@@ -2254,7 +2254,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         } else {
           await opts.keycloakClient.executeActionsEmail({
             userID: keycloakUserID!,
-            redirectURI: `${process.env.WEB_BASE_URL}/login?redirectURL=${process.env.WEB_BASE_URL}/user/invitations`,
+            redirectURI: `${process.env.WEB_BASE_URL}/login?redirectURL=${process.env.WEB_BASE_URL}/account/invitations`,
             realm: opts.keycloakRealm,
           });
         }

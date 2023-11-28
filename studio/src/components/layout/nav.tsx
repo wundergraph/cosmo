@@ -45,7 +45,7 @@ const InvitationButton = ({ hasInvitaions }: { hasInvitaions: boolean }) => {
   return (
     <Button variant="ghost" size="icon">
       <Link
-        href="/user/invitations"
+        href="/account/invitations"
         className="flex items-center text-lg font-medium text-foreground/80 transition-colors hover:text-foreground sm:text-sm"
       >
         <AiOutlineMail className="h-4 w-4" />
