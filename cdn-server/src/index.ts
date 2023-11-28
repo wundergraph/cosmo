@@ -28,7 +28,7 @@ app.get('/health', (c) => {
     c.status(503);
     return c.json({ status: 'exiting' });
   }
-  return c.json({ status: 'ok' })
+  return c.json({ status: 'ok' });
 });
 
 const port = process.env.PORT ? Number.parseInt(process.env.PORT, 10) : 8787;
