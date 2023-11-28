@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.11.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.11.0...@wundergraph/composition@0.11.1) (2023-11-28)
+
+### Bug Fixes
+
+* remove federation fields from renamed root types ([#304](https://github.com/wundergraph/cosmo/issues/304)) ([659cbaf](https://github.com/wundergraph/cosmo/commit/659cbaf9647075a16f3d00fb7c0ae2239a0174b7)) (@Aenimus)
+
 # [0.11.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.10.1...@wundergraph/composition@0.11.0) (2023-11-10)
 
 ### Features
