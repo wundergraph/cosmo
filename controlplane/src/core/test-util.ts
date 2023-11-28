@@ -64,7 +64,6 @@ export async function seedTest(databaseConnectionUrl: string, userTestData: User
   const orgMember = await orgRepo.addOrganizationMember({
     organizationID: insertedOrg.id,
     userID: userTestData.userId,
-    acceptedInvite: true,
   });
 
   await orgRepo.addOrganizationMemberRoles({

@@ -26,6 +26,7 @@ import AccessTokenAuthenticator from './services/AccessTokenAuthenticator.js';
 import { GitHubRepository } from './repositories/GitHubRepository.js';
 import { S3BlobStorage } from './blobstorage/index.js';
 import Mailer from './services/Mailer.js';
+import { OrganizationInvitationRepository } from './repositories/OrganizationInvitationRepository.js';
 
 export interface BuildConfig {
   logger: LoggerOptions;
@@ -170,6 +171,7 @@ export default async function build(opts: BuildConfig) {
   });
 
   const organizationRepository = new OrganizationRepository(fastify.db);
+  const orgInvitationRepository = new OrganizationInvitationRepository(fastify.db);
   const apiKeyAuth = new ApiKeyAuthenticator(fastify.db, organizationRepository);
   const webAuth = new WebSessionAuthenticator(opts.auth.secret);
   const graphKeyAuth = new GraphApiTokenAuthenticator(opts.auth.secret);
@@ -236,6 +238,7 @@ export default async function build(opts: BuildConfig) {
 
   await fastify.register(AuthController, {
     organizationRepository,
+    orgInvitationRepository,
     webAuth,
     authUtils,
     prefix: '/v1/auth',

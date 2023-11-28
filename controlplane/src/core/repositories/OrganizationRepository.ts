@@ -13,6 +13,7 @@ import {
   apiKeys,
   integrationTypeEnum,
   organizationIntegrations,
+  organizationInvitations,
   organizationLimits,
   organizationMemberRoles,
   organizationWebhooks,
@@ -26,6 +27,7 @@ import {
 import {
   APIKeyDTO,
   OrganizationDTO,
+  OrganizationInvitationDTO,
   OrganizationLimitsDTO,
   OrganizationMemberDTO,
   WebhooksConfigDTO,
@@ -38,21 +40,45 @@ import { MemberRole } from '../../db/models.js';
 export class OrganizationRepository {
   constructor(private db: PostgresJsDatabase<typeof schema>) {}
 
-  public async isMemberOf(input: { organizationId: string; userId: string }): Promise<boolean> {
-    const userOrganizations = await this.db
-      .select({
-        userId: users.id,
-        organizationId: organizations.id,
-        slug: organizations.slug,
+  public async createOrganization(input: {
+    organizationID?: string;
+    organizationName: string;
+    organizationSlug: string;
+    ownerID: string;
+    isPersonal?: boolean;
+    isFreeTrial?: boolean;
+  }): Promise<OrganizationDTO> {
+    const insertedOrg = await this.db
+      .insert(organizations)
+      .values({
+        id: input.organizationID,
+        name: input.organizationName,
+        slug: input.organizationSlug,
+        createdBy: input.ownerID,
+        isPersonal: input.isPersonal,
+        isFreeTrial: input.isFreeTrial,
       })
-      .from(organizationsMembers)
-      .innerJoin(organizations, eq(organizations.id, input.organizationId))
-      .innerJoin(users, eq(users.id, organizationsMembers.userId))
-      .limit(1)
-      .where(eq(users.id, input.userId))
+      .returning()
       .execute();
 
-    return userOrganizations.length > 0;
+    return {
+      id: insertedOrg[0].id,
+      name: insertedOrg[0].name,
+      slug: insertedOrg[0].slug,
+      creatorUserId: insertedOrg[0].createdBy,
+      createdAt: insertedOrg[0].createdAt.toISOString(),
+    };
+  }
+
+  public async updateOrganization(input: { id: string; slug?: string; name?: string }) {
+    await this.db
+      .update(organizations)
+      .set({
+        name: input.name,
+        slug: input.slug,
+      })
+      .where(eq(organizations.id, input.id))
+      .execute();
   }
 
   public async bySlug(slug: string): Promise<OrganizationDTO | null> {
@@ -113,6 +139,23 @@ export class OrganizationRepository {
     };
   }
 
+  public async isMemberOf(input: { organizationId: string; userId: string }): Promise<boolean> {
+    const userOrganizations = await this.db
+      .select({
+        userId: users.id,
+        organizationId: organizations.id,
+        slug: organizations.slug,
+      })
+      .from(organizationsMembers)
+      .innerJoin(organizations, eq(organizations.id, input.organizationId))
+      .innerJoin(users, eq(users.id, organizationsMembers.userId))
+      .limit(1)
+      .where(eq(users.id, input.userId))
+      .execute();
+
+    return userOrganizations.length > 0;
+  }
+
   public async memberships(input: {
     userId: string;
   }): Promise<(OrganizationDTO & { roles: string[]; limits: OrganizationLimitsDTO })[]> {
@@ -138,7 +181,7 @@ export class OrganizationRepository {
       .innerJoin(organizations, eq(organizations.id, organizationsMembers.organizationId))
       .innerJoin(users, eq(users.id, organizationsMembers.userId))
       .innerJoin(organizationLimits, eq(organizations.id, organizationLimits.organizationId))
-      .where(and(eq(users.id, input.userId), eq(organizationsMembers.acceptedInvite, true)))
+      .where(eq(users.id, input.userId))
       .execute();
 
     const userMemberships = await Promise.all(
@@ -168,35 +211,6 @@ export class OrganizationRepository {
     return userMemberships;
   }
 
-  public async invitations(input: { userId: string }): Promise<OrganizationDTO[]> {
-    const userOrganizations = await this.db
-      .select({
-        id: organizations.id,
-        name: organizations.name,
-        slug: organizations.slug,
-        creatorUserId: organizations.createdBy,
-        createdAt: organizations.createdAt,
-      })
-      .from(organizationsMembers)
-      .innerJoin(organizations, eq(organizations.id, organizationsMembers.organizationId))
-      .innerJoin(users, eq(users.id, organizationsMembers.userId))
-      .innerJoin(organizationLimits, eq(organizations.id, organizationLimits.organizationId))
-      .where(and(eq(users.id, input.userId), eq(organizationsMembers.acceptedInvite, false)))
-      .execute();
-
-    const userInvitations = await Promise.all(
-      userOrganizations.map((org) => ({
-        id: org.id,
-        name: org.name,
-        slug: org.slug,
-        creatorUserId: org.creatorUserId,
-        createdAt: org.createdAt.toISOString(),
-      })),
-    );
-
-    return userInvitations;
-  }
-
   public async getOrganizationMember(input: {
     organizationID: string;
     userID: string;
@@ -205,7 +219,6 @@ export class OrganizationRepository {
       .select({
         userID: users.id,
         email: users.email,
-        acceptedInvite: organizationsMembers.acceptedInvite,
         memberID: organizationsMembers.id,
       })
       .from(organizationsMembers)
@@ -228,7 +241,6 @@ export class OrganizationRepository {
       orgMemberID: orgMember[0].memberID,
       email: orgMember[0].email,
       roles: userRoles,
-      acceptedInvite: orgMember[0].acceptedInvite,
     } as OrganizationMemberDTO;
   }
 
@@ -237,7 +249,6 @@ export class OrganizationRepository {
       .select({
         userID: users.id,
         email: users.email,
-        acceptedInvite: organizationsMembers.acceptedInvite,
         memberID: organizationsMembers.id,
       })
       .from(organizationsMembers)
@@ -261,60 +272,17 @@ export class OrganizationRepository {
         orgMemberID: member.memberID,
         email: member.email,
         roles: roles.map((role) => role.role),
-        acceptedInvite: member.acceptedInvite,
       } as OrganizationMemberDTO);
     }
     return members;
   }
 
-  public async createOrganization(input: {
-    organizationID?: string;
-    organizationName: string;
-    organizationSlug: string;
-    ownerID: string;
-    isPersonal?: boolean;
-    isFreeTrial?: boolean;
-  }): Promise<OrganizationDTO> {
-    const insertedOrg = await this.db
-      .insert(organizations)
-      .values({
-        id: input.organizationID,
-        name: input.organizationName,
-        slug: input.organizationSlug,
-        createdBy: input.ownerID,
-        isPersonal: input.isPersonal,
-        isFreeTrial: input.isFreeTrial,
-      })
-      .returning()
-      .execute();
-
-    return {
-      id: insertedOrg[0].id,
-      name: insertedOrg[0].name,
-      slug: insertedOrg[0].slug,
-      creatorUserId: insertedOrg[0].createdBy,
-      createdAt: insertedOrg[0].createdAt.toISOString(),
-    };
-  }
-
-  public async updateOrganization(input: { id: string; slug?: string; name?: string }) {
-    await this.db
-      .update(organizations)
-      .set({
-        name: input.name,
-        slug: input.slug,
-      })
-      .where(eq(organizations.id, input.id))
-      .execute();
-  }
-
-  public async addOrganizationMember(input: { userID: string; organizationID: string; acceptedInvite: boolean }) {
+  public async addOrganizationMember(input: { userID: string; organizationID: string }) {
     const insertedMember = await this.db
       .insert(organizationsMembers)
       .values({
         userId: input.userID,
         organizationId: input.organizationID,
-        acceptedInvite: input.acceptedInvite,
       })
       .returning()
       .execute();

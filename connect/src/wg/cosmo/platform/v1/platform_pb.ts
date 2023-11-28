@@ -4215,17 +4215,12 @@ export class OrgMember extends Message<OrgMember> {
   email = "";
 
   /**
-   * @generated from field: bool acceptedInvite = 3;
-   */
-  acceptedInvite = false;
-
-  /**
-   * @generated from field: repeated string roles = 4;
+   * @generated from field: repeated string roles = 3;
    */
   roles: string[] = [];
 
   /**
-   * @generated from field: string orgMemberID = 5;
+   * @generated from field: string orgMemberID = 4;
    */
   orgMemberID = "";
 
@@ -4239,9 +4234,8 @@ export class OrgMember extends Message<OrgMember> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "userID", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "email", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "acceptedInvite", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 4, name: "roles", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 5, name: "orgMemberID", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "roles", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 4, name: "orgMemberID", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): OrgMember {
@@ -4258,6 +4252,49 @@ export class OrgMember extends Message<OrgMember> {
 
   static equals(a: OrgMember | PlainMessage<OrgMember> | undefined, b: OrgMember | PlainMessage<OrgMember> | undefined): boolean {
     return proto3.util.equals(OrgMember, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.PendingOrgInvitation
+ */
+export class PendingOrgInvitation extends Message<PendingOrgInvitation> {
+  /**
+   * @generated from field: string userID = 1;
+   */
+  userID = "";
+
+  /**
+   * @generated from field: string email = 2;
+   */
+  email = "";
+
+  constructor(data?: PartialMessage<PendingOrgInvitation>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.PendingOrgInvitation";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "userID", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "email", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PendingOrgInvitation {
+    return new PendingOrgInvitation().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PendingOrgInvitation {
+    return new PendingOrgInvitation().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PendingOrgInvitation {
+    return new PendingOrgInvitation().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: PendingOrgInvitation | PlainMessage<PendingOrgInvitation> | undefined, b: PendingOrgInvitation | PlainMessage<PendingOrgInvitation> | undefined): boolean {
+    return proto3.util.equals(PendingOrgInvitation, a, b);
   }
 }
 
@@ -4306,6 +4343,11 @@ export class GetOrganizationMembersResponse extends Message<GetOrganizationMembe
    */
   members: OrgMember[] = [];
 
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.PendingOrgInvitation pendingInvitations = 3;
+   */
+  pendingInvitations: PendingOrgInvitation[] = [];
+
   constructor(data?: PartialMessage<GetOrganizationMembersResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -4316,6 +4358,7 @@ export class GetOrganizationMembersResponse extends Message<GetOrganizationMembe
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "members", kind: "message", T: OrgMember, repeated: true },
+    { no: 3, name: "pendingInvitations", kind: "message", T: PendingOrgInvitation, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetOrganizationMembersResponse {
@@ -4713,6 +4756,80 @@ export class DeleteAPIKeyResponse extends Message<DeleteAPIKeyResponse> {
 
   static equals(a: DeleteAPIKeyResponse | PlainMessage<DeleteAPIKeyResponse> | undefined, b: DeleteAPIKeyResponse | PlainMessage<DeleteAPIKeyResponse> | undefined): boolean {
     return proto3.util.equals(DeleteAPIKeyResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.RemoveOrganizationMemberRequest
+ */
+export class RemoveOrganizationMemberRequest extends Message<RemoveOrganizationMemberRequest> {
+  /**
+   * @generated from field: string email = 1;
+   */
+  email = "";
+
+  constructor(data?: PartialMessage<RemoveOrganizationMemberRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.RemoveOrganizationMemberRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "email", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RemoveOrganizationMemberRequest {
+    return new RemoveOrganizationMemberRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RemoveOrganizationMemberRequest {
+    return new RemoveOrganizationMemberRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RemoveOrganizationMemberRequest {
+    return new RemoveOrganizationMemberRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RemoveOrganizationMemberRequest | PlainMessage<RemoveOrganizationMemberRequest> | undefined, b: RemoveOrganizationMemberRequest | PlainMessage<RemoveOrganizationMemberRequest> | undefined): boolean {
+    return proto3.util.equals(RemoveOrganizationMemberRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.RemoveOrganizationMemberResponse
+ */
+export class RemoveOrganizationMemberResponse extends Message<RemoveOrganizationMemberResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  constructor(data?: PartialMessage<RemoveOrganizationMemberResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.RemoveOrganizationMemberResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RemoveOrganizationMemberResponse {
+    return new RemoveOrganizationMemberResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RemoveOrganizationMemberResponse {
+    return new RemoveOrganizationMemberResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RemoveOrganizationMemberResponse {
+    return new RemoveOrganizationMemberResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RemoveOrganizationMemberResponse | PlainMessage<RemoveOrganizationMemberResponse> | undefined, b: RemoveOrganizationMemberResponse | PlainMessage<RemoveOrganizationMemberResponse> | undefined): boolean {
+    return proto3.util.equals(RemoveOrganizationMemberResponse, a, b);
   }
 }
 
