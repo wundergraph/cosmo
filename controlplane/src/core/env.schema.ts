@@ -37,6 +37,6 @@ export const envVariables = z.object({
   SLACK_APP_CLIENT_ID: z.string().optional(),
   SLACK_APP_CLIENT_SECRET: z.string().optional(),
   S3_STORAGE_URL: z.string(),
-  SMTP_USERNAME: z.string(),
-  SMTP_PASSWORD: z.string(),
+  SMTP_USERNAME: z.string().optional(),
+  SMTP_PASSWORD: z.string().optional(),
 });

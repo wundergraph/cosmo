@@ -70,8 +70,8 @@ export interface BuildConfig {
   };
   slack: { clientID?: string; clientSecret?: string };
   s3StorageUrl: string;
-  smtpUsername: string;
-  smtpPassword: string;
+  smtpUsername?: string;
+  smtpPassword?: string;
 }
 
 const developmentLoggerOpts: LoggerOptions = {
@@ -184,7 +184,10 @@ export default async function build(opts: BuildConfig) {
     adminPassword: opts.keycloak.adminPassword,
   });
 
-  const mailerClient = new Mailer({ username: opts.smtpUsername, password: opts.smtpPassword });
+  let mailerClient: Mailer | undefined;
+  if (opts.smtpUsername && opts.smtpPassword) {
+    mailerClient = new Mailer({ username: opts.smtpUsername, password: opts.smtpPassword });
+  }
 
   let githubApp: App | undefined;
   if (opts.githubApp?.clientId) {

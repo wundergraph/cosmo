@@ -2244,11 +2244,13 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         }
 
         if (keycloakUserExists) {
-          await opts.mailerClient.sendInviteEmail({
-            inviteLink: `${process.env.WEB_BASE_URL}/user/invitations`,
-            organizationName: organization.name,
-            recieverEmail: req.email,
-          });
+          if (opts.mailerClient) {
+            await opts.mailerClient.sendInviteEmail({
+              inviteLink: `${process.env.WEB_BASE_URL}/user/invitations`,
+              organizationName: organization.name,
+              recieverEmail: req.email,
+            });
+          }
         } else {
           await opts.keycloakClient.executeActionsEmail({
             userID: keycloakUserID!,
