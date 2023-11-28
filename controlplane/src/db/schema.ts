@@ -585,7 +585,6 @@ export const organizationsMembers = pgTable(
       .references(() => organizations.id, {
         onDelete: 'cascade',
       }),
-    acceptedInvite: boolean('accepted_invite').default(false),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => {
@@ -847,4 +846,18 @@ export const organizationLimits = pgTable('organization_limits', {
   changelogDataRetentionLimit: integer('changelog_data_retention_limit').notNull().default(7),
   breakingChangeRetentionLimit: integer('breaking_change_retention_limit').notNull().default(7),
   traceSamplingRateLimit: decimal('trace_sampling_rate_limit', { precision: 3, scale: 2 }).notNull().default('0.10'),
+});
+
+export const organizationInvitations = pgTable('organization_invitations', {
+  id: uuid('id').notNull().primaryKey().defaultRandom(),
+  organizationId: uuid('organization_id')
+    .notNull()
+    .references(() => organizations.id, {
+      onDelete: 'cascade',
+    }),
+  userId: uuid('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  acceptedInvite: boolean('accepted_invite').default(false),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });

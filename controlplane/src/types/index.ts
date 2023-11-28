@@ -110,8 +110,12 @@ export interface OrganizationMemberDTO {
   userID: string;
   orgMemberID: string;
   email: string;
-  acceptedInvite: boolean;
   roles: string[];
+}
+
+export interface OrganizationInvitationDTO {
+  userID: string;
+  email: string;
 }
 
 export interface APIKeyDTO {

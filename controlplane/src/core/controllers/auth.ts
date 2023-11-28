@@ -16,10 +16,12 @@ import Keycloak from '../services/Keycloak.js';
 import { IPlatformWebhookService } from '../webhooks/PlatformWebhookService.js';
 import { AuthenticationError } from '../errors/errors.js';
 import { MemberRole } from '../../db/models.js';
+import { OrganizationInvitationRepository } from '../repositories/OrganizationInvitationRepository.js';
 
 export type AuthControllerOptions = {
   db: PostgresJsDatabase<typeof schema>;
   organizationRepository: OrganizationRepository;
+  orgInvitationRepository: OrganizationInvitationRepository;
   webAuth: WebSessionAuthenticator;
   authUtils: AuthUtils;
   webBaseUrl: string;
@@ -52,7 +54,7 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
         userId: userSession.userId,
       });
 
-      const invitations = await opts.organizationRepository.invitations({
+      const invitations = await opts.orgInvitationRepository.getPendingInvitationsOfUser({
         userId: userSession.userId,
       });
 
@@ -175,7 +177,6 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
                 .values({
                   userId,
                   organizationId: dbOrg.id,
-                  acceptedInvite: true,
                 })
                 .onConflictDoUpdate({
                   target: [organizationsMembers.userId, organizationsMembers.organizationId],
@@ -183,7 +184,6 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
                   set: {
                     userId,
                     organizationId: dbOrg.id,
-                    acceptedInvite: true,
                   },
                 })
                 .returning()
@@ -260,7 +260,6 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
             const orgMember = await orgRepo.addOrganizationMember({
               organizationID: insertedOrg.id,
               userID: userId,
-              acceptedInvite: true,
             });
 
             await orgRepo.addOrganizationMemberRoles({

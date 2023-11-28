@@ -1,9 +1,8 @@
-import { and, eq } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema.js';
-import { organizationsMembers, users } from '../../db/schema.js';
+import { users } from '../../db/schema.js';
 import { UserDTO } from '../../types/index.js';
-import { OrganizationRepository } from './OrganizationRepository.js';
 
 /**
  * Repository for user related operations.
@@ -57,47 +56,5 @@ export class UserRepository {
 
   public async deleteUser(input: { id: string }) {
     await this.db.delete(users).where(eq(users.id, input.id)).execute();
-  }
-
-  public async inviteUser(input: {
-    email: string;
-    keycloakUserID: string;
-    organizationID: string;
-    dbUser: UserDTO | null;
-  }) {
-    await this.db.transaction(async (db) => {
-      const userRepo = new UserRepository(db);
-      const orgRepo = new OrganizationRepository(db);
-
-      if (!input.dbUser) {
-        await userRepo.addUser({
-          id: input.keycloakUserID,
-          email: input.email,
-        });
-      }
-
-      const insertedMember = await orgRepo.addOrganizationMember({
-        userID: input.keycloakUserID,
-        organizationID: input.organizationID,
-        acceptedInvite: false,
-      });
-
-      await orgRepo.addOrganizationMemberRoles({ memberID: insertedMember.id, roles: ['developer'] });
-    });
-  }
-
-  public async acceptInvite(input: { userId: string; organizationID: string }) {
-    await this.db.transaction(async (tx) => {
-      await tx
-        .update(organizationsMembers)
-        .set({ acceptedInvite: true })
-        .where(
-          and(
-            eq(organizationsMembers.userId, input.userId),
-            eq(organizationsMembers.organizationId, input.organizationID),
-          ),
-        )
-        .execute();
-    });
   }
 }
