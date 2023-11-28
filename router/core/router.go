@@ -550,10 +550,6 @@ func (r *Router) Start(ctx context.Context) error {
 			select {
 			case <-ctx.Done(): // context cancelled
 				return nil
-			case cfg := <-initCh: // initial config
-				if err := r.updateServer(ctx, cfg); err != nil {
-					return fmt.Errorf("failed to start server with initial config: %w", err)
-				}
 			case cfg := <-r.configFetcher.Subscribe(ctx): // new config
 				if err := r.updateServer(ctx, cfg); err != nil {
 					r.logger.Error("Failed to start server with new config", zap.Error(err))
@@ -561,6 +557,15 @@ func (r *Router) Start(ctx context.Context) error {
 				}
 			}
 		}
+	})
+
+	eg.Go(func() error {
+		cfg := <-initCh
+		if err := r.updateServer(ctx, cfg); err != nil {
+			return fmt.Errorf("failed to start server with initial config: %w", err)
+		}
+
+		return nil
 	})
 
 	// Poll control-plane to get initial router config

@@ -1,16 +1,19 @@
 package controlplane
 
 import (
-	"connectrpc.com/connect"
 	"context"
 	"fmt"
+
+	"connectrpc.com/connect"
+
+	"net/http"
+	"sync"
+	"time"
+
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1/nodev1connect"
 	"go.uber.org/zap"
-	"net/http"
-	"sync"
-	"time"
 )
 
 type Option func(cp *client)
@@ -77,12 +80,12 @@ func (c *client) Subscribe(ctx context.Context) chan *nodev1.RouterConfig {
 
 				cfg, err := c.getRouterConfigFromCP(ctx, &c.latestRouterVersion)
 				if err != nil {
-					c.logger.Error("Could not get latest router config, trying again in 10 seconds", zap.Error(err))
+					c.logger.Error("Could not get latest router config, trying again in "+c.pollInterval.String(), zap.Error(err))
 					continue
 				}
 
 				if cfg == nil {
-					c.logger.Debug("No new router config available, received nil router config, trying again in 10 seconds")
+					c.logger.Debug("No new router config available, received nil router config, trying again in " + c.pollInterval.String())
 					continue
 				}
 
@@ -93,7 +96,7 @@ func (c *client) Subscribe(ctx context.Context) chan *nodev1.RouterConfig {
 				c.mu.Unlock()
 
 				if newVersion == latestVersion {
-					c.logger.Debug("No new router config available, trying again in 10 seconds")
+					c.logger.Debug("No new router config available, trying again in " + c.pollInterval.String())
 					continue
 				}
 
