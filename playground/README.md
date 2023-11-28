@@ -3,7 +3,7 @@
 A version of playground available in studio that can be built and bundled into the router.
 
 ```
-pnpm run build
+npm run build
 ```
 
 This will build a single html file and update the [graphiql.html](/router/internal/graphiql/graphiql.html) in the router.

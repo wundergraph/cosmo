@@ -7,7 +7,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build && pnpm copy-html",
+    "build": "tsc && vite build && npm run copy-html",
     "preview": "vite preview",
     "copy-html": "cp dist/index.html ../router/internal/graphiql/graphiql.html"
   },

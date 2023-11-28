@@ -9,4 +9,3 @@ packages:
   - connect
   - cdn-server
   - cdn-server/cdn
-  - playground
