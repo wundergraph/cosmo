@@ -307,7 +307,7 @@ const employees = `
 type Query {
   employee(id: Int!): Employee
   employees: [Employee!]!
-  team_mates(team: Department!): [Employee!]!
+  teammates(team: Department!): [Employee!]!
 }
 
 enum Department {
@@ -332,13 +332,13 @@ interface Identifiable {
 }
 
 type Engineer implements RoleType {
-  department: Department!
+  departments: [Department!]!
   engineerType: EngineerType!
   title: [String!]!
 }
 
 type Marketer implements RoleType{
-  department: Department!
+  departments: [Department!]!
   title: [String!]!
 }
 
@@ -348,7 +348,7 @@ enum OperationType {
 }
 
 type Operator implements RoleType {
-  department: Department!
+  departments: [Department!]!
   operatorType: [OperationType!]!
   title: [String!]!
 }
