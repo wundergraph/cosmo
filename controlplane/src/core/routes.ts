@@ -13,7 +13,7 @@ import { Authenticator } from './services/Authentication.js';
 import Keycloak from './services/Keycloak.js';
 import { IPlatformWebhookService } from './webhooks/PlatformWebhookService.js';
 import { BlobStorage } from './blobstorage/index.js';
-import Nodemailer from './services/Nodemailer.js';
+import Mailer from './services/Mailer.js';
 
 export interface RouterOptions {
   db: PostgresJsDatabase<typeof schema>;
@@ -29,7 +29,7 @@ export interface RouterOptions {
   githubApp?: App;
   slack: { clientID?: string; clientSecret?: string };
   blobStorage: BlobStorage;
-  nodemailerClient: Nodemailer;
+  mailerClient: Mailer;
 }
 const handlerOptions: Partial<ConnectRouterOptions> = {
   maxTimeoutMs: 5000,

@@ -20,7 +20,7 @@ import {
 } from '../src/core/test-util.js';
 import Keycloak from '../src/core/services/Keycloak.js';
 import { MockPlatformWebhookService } from '../src/core/webhooks/PlatformWebhookService.js';
-import Nodemailer from '../src/core/services/Nodemailer.js';
+import Mailer from '../src/core/services/Mailer.js';
 import { InMemoryBlobStorage, SetupTest } from './test-util.js';
 
 let dbname = '';
@@ -109,7 +109,7 @@ describe('CheckSubgraphSchema', (ctx) => {
       adminPassword,
     });
 
-    const nodemailerClient = new Nodemailer('');
+    const mailerClient = new Mailer({ username: '', password: '' });
     const platformWebhooks = new MockPlatformWebhookService();
 
     await server.register(fastifyConnectPlugin, {
@@ -128,7 +128,7 @@ describe('CheckSubgraphSchema', (ctx) => {
         },
         keycloakApiUrl: apiUrl,
         blobStorage: new InMemoryBlobStorage(),
-        nodemailerClient,
+        mailerClient,
       }),
     });
 
@@ -215,7 +215,7 @@ describe('CheckSubgraphSchema', (ctx) => {
     });
 
     const platformWebhooks = new MockPlatformWebhookService();
-    const nodemailerClient = new Nodemailer('');
+    const mailerClient = new Mailer({ username: '', password: '' });
 
     await server.register(fastifyConnectPlugin, {
       routes: routes({
@@ -233,7 +233,7 @@ describe('CheckSubgraphSchema', (ctx) => {
         },
         keycloakApiUrl: apiUrl,
         blobStorage: new InMemoryBlobStorage(),
-        nodemailerClient,
+        mailerClient,
       }),
     });
 
