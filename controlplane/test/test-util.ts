@@ -14,6 +14,7 @@ import { MockPlatformWebhookService } from '../src/core/webhooks/PlatformWebhook
 import routes from '../src/core/routes.js';
 import { BlobNotFoundError, BlobStorage } from '../src/core/blobstorage/index.js';
 import { Label } from '../src/types/index.js';
+import Nodemailer from '../src/core/services/Nodemailer.js';
 
 export const SetupTest = async function (testContext: TestContext, dbname: string) {
   const databaseConnectionUrl = `postgresql://postgres:changeme@localhost:5432/${dbname}`;
@@ -47,6 +48,7 @@ export const SetupTest = async function (testContext: TestContext, dbname: strin
   });
 
   const platformWebhooks = new MockPlatformWebhookService();
+  const nodemailerClient = new Nodemailer('');
 
   const blobStorage = new InMemoryBlobStorage();
   await server.register(fastifyConnectPlugin, {
@@ -65,6 +67,7 @@ export const SetupTest = async function (testContext: TestContext, dbname: strin
       },
       keycloakApiUrl: apiUrl,
       blobStorage,
+      nodemailerClient,
     }),
   });
 
