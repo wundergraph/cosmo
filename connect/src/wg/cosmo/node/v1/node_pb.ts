@@ -418,6 +418,200 @@ export class GetConfigResponse extends Message<GetConfigResponse> {
 }
 
 /**
+ * @generated from message wg.cosmo.node.v1.RegistrationInfo
+ */
+export class RegistrationInfo extends Message<RegistrationInfo> {
+  /**
+   * @generated from field: wg.cosmo.node.v1.AccountLimits accountLimits = 1;
+   */
+  accountLimits?: AccountLimits;
+
+  /**
+   * @generated from field: wg.cosmo.node.v1.TokenInfo tokenInfo = 2;
+   */
+  tokenInfo?: TokenInfo;
+
+  constructor(data?: PartialMessage<RegistrationInfo>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.node.v1.RegistrationInfo";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "accountLimits", kind: "message", T: AccountLimits },
+    { no: 2, name: "tokenInfo", kind: "message", T: TokenInfo },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RegistrationInfo {
+    return new RegistrationInfo().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RegistrationInfo {
+    return new RegistrationInfo().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RegistrationInfo {
+    return new RegistrationInfo().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RegistrationInfo | PlainMessage<RegistrationInfo> | undefined, b: RegistrationInfo | PlainMessage<RegistrationInfo> | undefined): boolean {
+    return proto3.util.equals(RegistrationInfo, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.node.v1.TokenInfo
+ */
+export class TokenInfo extends Message<TokenInfo> {
+  /**
+   * @generated from field: string token = 1;
+   */
+  token = "";
+
+  constructor(data?: PartialMessage<TokenInfo>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.node.v1.TokenInfo";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "token", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): TokenInfo {
+    return new TokenInfo().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): TokenInfo {
+    return new TokenInfo().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): TokenInfo {
+    return new TokenInfo().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: TokenInfo | PlainMessage<TokenInfo> | undefined, b: TokenInfo | PlainMessage<TokenInfo> | undefined): boolean {
+    return proto3.util.equals(TokenInfo, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.node.v1.AccountLimits
+ */
+export class AccountLimits extends Message<AccountLimits> {
+  /**
+   * The maximum sampling rate for traces. Must be between 0 and 1.
+   * 0 means no traces will be sampled and 1 means all traces will be sampled.
+   *
+   * @generated from field: float trace_sampling_rate = 1;
+   */
+  traceSamplingRate = 0;
+
+  constructor(data?: PartialMessage<AccountLimits>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.node.v1.AccountLimits";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "trace_sampling_rate", kind: "scalar", T: 2 /* ScalarType.FLOAT */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AccountLimits {
+    return new AccountLimits().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): AccountLimits {
+    return new AccountLimits().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): AccountLimits {
+    return new AccountLimits().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: AccountLimits | PlainMessage<AccountLimits> | undefined, b: AccountLimits | PlainMessage<AccountLimits> | undefined): boolean {
+    return proto3.util.equals(AccountLimits, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.node.v1.SelfRegisterRequest
+ */
+export class SelfRegisterRequest extends Message<SelfRegisterRequest> {
+  constructor(data?: PartialMessage<SelfRegisterRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.node.v1.SelfRegisterRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SelfRegisterRequest {
+    return new SelfRegisterRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SelfRegisterRequest {
+    return new SelfRegisterRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SelfRegisterRequest {
+    return new SelfRegisterRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: SelfRegisterRequest | PlainMessage<SelfRegisterRequest> | undefined, b: SelfRegisterRequest | PlainMessage<SelfRegisterRequest> | undefined): boolean {
+    return proto3.util.equals(SelfRegisterRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.node.v1.SelfRegisterResponse
+ */
+export class SelfRegisterResponse extends Message<SelfRegisterResponse> {
+  /**
+   * @generated from field: wg.cosmo.node.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: optional wg.cosmo.node.v1.RegistrationInfo registrationInfo = 2;
+   */
+  registrationInfo?: RegistrationInfo;
+
+  constructor(data?: PartialMessage<SelfRegisterResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.node.v1.SelfRegisterResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "registrationInfo", kind: "message", T: RegistrationInfo, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SelfRegisterResponse {
+    return new SelfRegisterResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SelfRegisterResponse {
+    return new SelfRegisterResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SelfRegisterResponse {
+    return new SelfRegisterResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: SelfRegisterResponse | PlainMessage<SelfRegisterResponse> | undefined, b: SelfRegisterResponse | PlainMessage<SelfRegisterResponse> | undefined): boolean {
+    return proto3.util.equals(SelfRegisterResponse, a, b);
+  }
+}
+
+/**
  * @generated from message wg.cosmo.node.v1.EngineConfiguration
  */
 export class EngineConfiguration extends Message<EngineConfiguration> {

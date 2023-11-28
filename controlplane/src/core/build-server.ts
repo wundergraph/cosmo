@@ -115,17 +115,6 @@ export default async function build(opts: BuildConfig) {
     debugSQL: opts.debugSQL,
   });
 
-  // await fastify.register(fastifyPgBoss, {
-  //   databaseConnectionUrl: opts.database.url,
-  // });
-
-  // PgBoss Workers
-
-  // Example
-  // const tw = new TrafficAnalyzerWorker(fastify.pgboss);
-  // await tw.register({ graphId: 'test' });
-  // await tw.subscribe();
-
   await fastify.register(fastifyCors, {
     // Produce an error if allowedOrigins is undefined
     origin: opts.allowedOrigins || [],
@@ -267,6 +256,8 @@ export default async function build(opts: BuildConfig) {
     logLevel: opts.logger.level as pino.LevelWithSilent,
     // Avoid compression for small requests
     compressMinBytes: 1024,
+    maxTimeoutMs: 120_000,
+    shutdownTimeoutMs: 30_000,
     // The default limit is the maximum supported value of ~4GiB
     // We go with 32MiB to avoid allocating too much memory for large requests
     writeMaxBytes: 32 * 1024 * 1024,

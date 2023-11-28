@@ -1,14 +1,64 @@
 import { ServiceImpl } from '@connectrpc/connect';
 import { NodeService } from '@wundergraph/cosmo-connect/dist/node/v1/node_connect';
 import { PlainMessage } from '@bufbuild/protobuf';
-import { GetConfigResponse } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+import { lru } from 'tiny-lru';
+import {
+  GetConfigResponse,
+  RegistrationInfo,
+  SelfRegisterResponse,
+} from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { handleError } from '../util.js';
 import type { RouterOptions } from '../routes.js';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
+import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof NodeService>> {
+  const registrationInfoCache = lru<PlainMessage<RegistrationInfo>>(1000, 300_000);
   return {
+    selfRegister: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<SelfRegisterResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticateRouter(ctx.requestHeader);
+        const orgRepo = new OrganizationRepository(opts.db);
+
+        const cachedInfo = registrationInfoCache.get(authContext.federatedGraphId);
+        if (cachedInfo) {
+          return {
+            response: {
+              code: EnumStatusCode.OK,
+            },
+            registrationInfo: cachedInfo,
+          };
+        }
+
+        const org = await orgRepo.getOrganizationLimits({
+          organizationID: authContext.organizationId,
+        });
+
+        const registrationInfo: PlainMessage<RegistrationInfo> = {
+          accountLimits: {
+            traceSamplingRate: org.traceSamplingRateLimit,
+          },
+          tokenInfo: {
+            token: '',
+          },
+        };
+
+        registrationInfoCache.set(authContext.federatedGraphId, registrationInfo);
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          registrationInfo,
+        };
+      });
+    },
     getLatestValidRouterConfig: (req, ctx) => {
       const logger = opts.logger.child({
         service: ctx.service.typeName,

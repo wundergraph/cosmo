@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/internal/controlplane/configpoller"
+	"github.com/wundergraph/cosmo/router/internal/controlplane/selfregister"
 	"net"
 	"net/http"
 	"net/url"
@@ -24,18 +26,9 @@ import (
 	"github.com/go-chi/chi/middleware"
 	"github.com/mitchellh/mapstructure"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/wundergraph/cosmo/router/internal/graphiql"
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
-	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	oteltrace "go.opentelemetry.io/otel/trace"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
-	"golang.org/x/sync/errgroup"
-
 	"github.com/wundergraph/cosmo/router/config"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
-	"github.com/wundergraph/cosmo/router/internal/controlplane"
+	"github.com/wundergraph/cosmo/router/internal/graphiql"
 	"github.com/wundergraph/cosmo/router/internal/handler/cors"
 	"github.com/wundergraph/cosmo/router/internal/handler/health"
 	"github.com/wundergraph/cosmo/router/internal/handler/recovery"
@@ -45,6 +38,12 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"github.com/wundergraph/cosmo/router/internal/stringsx"
 	"github.com/wundergraph/cosmo/router/internal/trace"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	oteltrace "go.opentelemetry.io/otel/trace"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 type (
@@ -81,7 +80,6 @@ type (
 		meterProvider            *sdkmetric.MeterProvider
 		gqlMetricsExporter       *graphqlmetrics.Exporter
 		corsOptions              *cors.Config
-		configFetcher            controlplane.ConfigFetcher
 		routerConfig             *nodev1.RouterConfig
 		gracePeriod              time.Duration
 		shutdown                 bool
@@ -111,6 +109,12 @@ type (
 		retryOptions             retrytransport.RetryOptions
 		// If connecting to localhost inside Docker fails, fallback to the docker internal address for the host
 		localhostFallbackInsideDocker bool
+
+		// Poller
+		configPoller configpoller.ConfigPoller
+		selfRegister selfregister.SelfRegister
+
+		registrationInfo *nodev1.RegistrationInfo
 
 		engineExecutionConfiguration config.EngineExecutionConfiguration
 
@@ -337,7 +341,7 @@ func (r *Router) updateServer(ctx context.Context, cfg *nodev1.RouterConfig) err
 	// In case of an error, we return early and keep the old Server running
 	newRouter, err := r.newServer(ctx, cfg)
 	if err != nil {
-		r.logger.Error("Failed to create r new router. Keeping old router running", zap.Error(err))
+		r.logger.Error("Failed to create a new router instance. Keeping old router running", zap.Error(err))
 		return err
 	}
 
@@ -357,22 +361,12 @@ func (r *Router) updateServer(ctx context.Context, cfg *nodev1.RouterConfig) err
 
 	// Start new Server
 	go func() {
-		if prevRouter != nil {
-			r.logger.Info("Starting Server with new config",
-				zap.String("version", cfg.GetVersion()),
-			)
-		} else {
-			r.logger.Info("Server listening",
-				zap.String("listen_addr", r.listenAddr),
-				zap.Bool("playground", r.playground),
-				zap.Bool("introspection", r.introspection),
-				zap.String("config_version", cfg.GetVersion()),
-			)
-
-			if r.playground && r.introspection {
-				r.logger.Info("Playground available at", zap.String("url", r.baseURL))
-			}
-		}
+		r.logger.Info("Server listening",
+			zap.String("listen_addr", r.listenAddr),
+			zap.Bool("playground", r.playground),
+			zap.Bool("introspection", r.introspection),
+			zap.String("config_version", cfg.GetVersion()),
+		)
 
 		r.activeRouter.healthChecks.SetReady(true)
 
@@ -525,6 +519,22 @@ func (r *Router) Start(ctx context.Context) error {
 		return fmt.Errorf("router is closed. Create r new instance with router.NewRouter()")
 	}
 
+	if r.selfRegister != nil {
+		ri, registerErr := r.selfRegister.Register(ctx)
+		if registerErr != nil {
+			r.logger.Error("Failed to register router. If this error persists, please contact support", zap.Error(registerErr))
+		} else if registerErr == nil {
+			r.registrationInfo = ri
+			if r.traceConfig.Sampler > float64(r.registrationInfo.AccountLimits.TraceSamplingRate) {
+				r.logger.Warn("Trace sampling rate is higher than account limit. Using account limit instead. Please contact support to increase your account limit.",
+					zap.Float64("sampler", r.traceConfig.Sampler),
+					zap.String("account_limit", fmt.Sprintf("%.2f", r.registrationInfo.AccountLimits.TraceSamplingRate)),
+				)
+				r.traceConfig.Sampler = float64(r.registrationInfo.AccountLimits.TraceSamplingRate)
+			}
+		}
+	}
+
 	if err := r.bootstrap(ctx); err != nil {
 		return fmt.Errorf("failed to bootstrap application: %w", err)
 	}
@@ -535,44 +545,35 @@ func (r *Router) Start(ctx context.Context) error {
 		return r.updateServer(ctx, r.routerConfig)
 	}
 
-	if r.configFetcher == nil {
+	if r.configPoller == nil {
 		return fmt.Errorf("config fetcher not provided. Please provide a static router config instead")
 	}
 
-	r.logger.Info("Polling for router config updates in the background", zap.String("interval", r.configFetcher.Interval().String()))
-
-	initCh := make(chan *nodev1.RouterConfig, 1)
-
-	eg, ctx := errgroup.WithContext(ctx)
-
-	eg.Go(func() error {
-		for {
-			select {
-			case <-ctx.Done(): // context cancelled
-				return nil
-			case cfg := <-initCh: // initial config
-				if err := r.updateServer(ctx, cfg); err != nil {
-					return fmt.Errorf("failed to start server with initial config: %w", err)
-				}
-			case cfg := <-r.configFetcher.Subscribe(ctx): // new config
-				if err := r.updateServer(ctx, cfg); err != nil {
-					r.logger.Error("Failed to start server with new config", zap.Error(err))
-					continue
-				}
-			}
-		}
-	})
-
-	// Poll control-plane to get initial router config
-	initialCfg, err := r.configFetcher.GetRouterConfig(ctx)
+	routerConfig, err := r.configPoller.GetRouterConfig(ctx)
 	if err != nil {
-		// The router can't work without a config there we exit hard
 		return fmt.Errorf("failed to get initial router config: %w", err)
 	}
 
-	initCh <- initialCfg
+	if err := r.updateServer(ctx, routerConfig); err != nil {
+		r.logger.Error("Failed to start server with initial config", zap.Error(err))
+		return err
+	}
 
-	return eg.Wait()
+	r.logger.Info("Polling for router config updates in the background")
+
+	r.configPoller.Subscribe(ctx, func(newConfig *nodev1.RouterConfig, oldVersion string) error {
+		r.logger.Info("Router config has changed, upgrading server",
+			zap.String("old_version", oldVersion),
+			zap.String("new_version", newConfig.GetVersion()),
+		)
+		if err := r.updateServer(ctx, newConfig); err != nil {
+			r.logger.Error("Failed to start server with new config. Trying again on the next update cycle.", zap.Error(err))
+			return err
+		}
+		return nil
+	})
+
+	return nil
 }
 
 // newServer creates a new Server instance.
@@ -692,10 +693,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	}
 
 	if routerEngineConfig.Execution.EnableRequestTracing {
-		r.logger.Warn("Request tracing is enabled." +
-			"This is a security risk as it can leak sensitive information and internals of your subgraphs through the API." +
-			"Enabling request tracing negatively impacts performance because the execution plan cache is disabled." +
-			"You should only enable this for debugging purposes and not in production.")
+		r.logger.Warn("Request tracing is enabled. You should only enable this for debugging purposes and not in production. For more information see https://wundergraph.com/docs/advanced/request-tracing")
 	}
 
 	executor, err := ecb.Build(ctx, routerConfig, routerEngineConfig)
@@ -814,6 +812,18 @@ func (r *Server) listenAndServe() error {
 // Shutdown gracefully shuts down the router.
 func (r *Router) Shutdown(ctx context.Context) (err error) {
 	r.shutdown = true
+
+	if r.configPoller != nil {
+		if subErr := r.configPoller.Stop(ctx); subErr != nil {
+			err = errors.Join(err, fmt.Errorf("failed to stop config poller: %w", subErr))
+		}
+	}
+
+	if r.selfRegister != nil {
+		if subErr := r.selfRegister.Stop(ctx); subErr != nil {
+			err = errors.Join(err, fmt.Errorf("failed to stop self registration: %w", subErr))
+		}
+	}
 
 	if r.activeRouter != nil {
 		if subErr := r.activeRouter.Shutdown(ctx); subErr != nil {
@@ -967,9 +977,15 @@ func WithGraphQLPath(path string) Option {
 	}
 }
 
-func WithConfigFetcher(cf controlplane.ConfigFetcher) Option {
+func WithConfigPoller(cf configpoller.ConfigPoller) Option {
 	return func(r *Router) {
-		r.configFetcher = cf
+		r.configPoller = cf
+	}
+}
+
+func WithSelfRegistration(sr selfregister.SelfRegister) Option {
+	return func(r *Router) {
+		r.selfRegister = sr
 	}
 }
 

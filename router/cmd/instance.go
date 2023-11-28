@@ -2,13 +2,14 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/wundergraph/cosmo/router/internal/controlplane/configpoller"
+	"github.com/wundergraph/cosmo/router/internal/controlplane/selfregister"
 	"go.uber.org/automaxprocs/maxprocs"
 
 	"github.com/wundergraph/cosmo/router/authentication"
 	"github.com/wundergraph/cosmo/router/config"
 	"github.com/wundergraph/cosmo/router/core"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
-	"github.com/wundergraph/cosmo/router/internal/controlplane"
 	"github.com/wundergraph/cosmo/router/internal/handler/cors"
 	"github.com/wundergraph/cosmo/router/internal/metric"
 	"github.com/wundergraph/cosmo/router/internal/trace"
@@ -28,7 +29,7 @@ func NewRouter(params Params) (*core.Router, error) {
 	}
 
 	var routerConfig *nodev1.RouterConfig
-	var cp controlplane.ConfigFetcher
+	var configPoller configpoller.ConfigPoller
 
 	cfg := params.Config
 	logger := params.Logger
@@ -61,14 +62,15 @@ func NewRouter(params Params) (*core.Router, error) {
 			}
 		}
 	} else {
-		cp = controlplane.New(
-			controlplane.WithControlPlaneEndpoint(cfg.ControlplaneURL),
-			controlplane.WithFederatedGraph(cfg.Graph.Name),
-			controlplane.WithLogger(logger),
-			controlplane.WithGraphApiToken(cfg.Graph.Token),
-			controlplane.WithPollInterval(cfg.PollInterval),
+		configPoller = configpoller.New(cfg.Graph.Name, cfg.ControlplaneURL, cfg.Graph.Token,
+			configpoller.WithLogger(logger),
+			configpoller.WithPollInterval(cfg.PollInterval),
 		)
 	}
+
+	selfRegister := selfregister.New(cfg.ControlplaneURL, cfg.Graph.Token,
+		selfregister.WithLogger(logger),
+	)
 
 	var authenticators []authentication.Authenticator
 	for i, auth := range cfg.Authentication.Providers {
@@ -97,7 +99,8 @@ func NewRouter(params Params) (*core.Router, error) {
 		core.WithListenerAddr(cfg.ListenAddr),
 		core.WithOverrideRoutingURL(cfg.OverrideRoutingURL),
 		core.WithLogger(logger),
-		core.WithConfigFetcher(cp),
+		core.WithConfigPoller(configPoller),
+		core.WithSelfRegistration(selfRegister),
 		core.WithIntrospection(cfg.IntrospectionEnabled),
 		core.WithPlayground(cfg.PlaygroundEnabled),
 		core.WithGraphApiToken(cfg.Graph.Token),
