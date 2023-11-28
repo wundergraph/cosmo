@@ -29,7 +29,7 @@ export interface RouterOptions {
   githubApp?: App;
   slack: { clientID?: string; clientSecret?: string };
   blobStorage: BlobStorage;
-  mailerClient: Mailer;
+  mailerClient?: Mailer;
 }
 const handlerOptions: Partial<ConnectRouterOptions> = {
   maxTimeoutMs: 5000,
