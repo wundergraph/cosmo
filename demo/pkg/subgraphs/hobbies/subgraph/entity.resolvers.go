@@ -13,14 +13,15 @@ import (
 
 // FindEmployeeByID is the resolver for the findEmployeeByID field.
 func (r *entityResolver) FindEmployeeByID(ctx context.Context, id int) (*model.Employee, error) {
-	switch id {
-	case 1, 2, 3, 4, 5:
-		return employees[id-1], nil
-	case 7, 8, 9, 10, 11, 12:
-		return employees[id-2], nil
-	default:
+	if id < 1 {
 		return nil, nil
 	}
+	for _, employee := range employees {
+		if id == employee.ID {
+			return employee, nil
+		}
+	}
+	return nil, nil
 }
 
 // FindSDKByUpc is the resolver for the findSDKByUpc field.

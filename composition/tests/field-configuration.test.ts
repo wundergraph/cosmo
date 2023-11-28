@@ -11,12 +11,12 @@ describe('Field Configuration tests', () => {
       const configurationDataMap = normalizationResult!.configurationDataMap;
       expect(configurationDataMap).toStrictEqual(new Map<string, ConfigurationData>([
         ['Query', {
-          fieldNames: new Set<string>(['employee', 'employees', 'team_mates']),
+          fieldNames: new Set<string>(['employee', 'employees', 'teammates']),
           isRootNode: true,
           typeName: 'Query',
         }],
         ['RoleType', {
-          fieldNames: new Set<string>(['department', 'title']),
+          fieldNames: new Set<string>(['departments', 'title']),
           isRootNode: false,
           typeName: 'RoleType',
         }],
@@ -26,17 +26,17 @@ describe('Field Configuration tests', () => {
           typeName: 'Identifiable',
         }],
         ['Engineer', {
-          fieldNames: new Set<string>(['department', 'engineerType', 'title']),
+          fieldNames: new Set<string>(['departments', 'engineerType', 'title']),
           isRootNode: false,
           typeName: 'Engineer',
         }],
         ['Marketer', {
-          fieldNames: new Set<string>(['department', 'title']),
+          fieldNames: new Set<string>(['departments', 'title']),
           isRootNode: false,
           typeName: 'Marketer',
         }],
         ['Operator', {
-          fieldNames: new Set<string>(['department', 'operatorType', 'title']),
+          fieldNames: new Set<string>(['departments', 'operatorType', 'title']),
           isRootNode: false,
           typeName: 'Operator',
         }],
@@ -295,7 +295,7 @@ describe('Field Configuration tests', () => {
         },
         {
           argumentNames: ['team'],
-          fieldName: 'team_mates',
+          fieldName: 'teammates',
           typeName: 'Query',
         },
       ])
@@ -317,7 +317,7 @@ enum Department {
 }
 
 interface RoleType {
-  department: Department!
+  departments: [Department!]!
   title: [String!]!
 }
 

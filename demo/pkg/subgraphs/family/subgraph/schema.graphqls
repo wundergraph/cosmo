@@ -3,9 +3,9 @@ type Query {
 }
 
 enum Class {
-  Fish
-  Mammal
-  Reptile
+  FISH
+  MAMMAL
+  REPTILE
 }
 
 enum Gender {
