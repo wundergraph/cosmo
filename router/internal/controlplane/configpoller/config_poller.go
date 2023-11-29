@@ -11,6 +11,7 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/controlplane"
 	"go.uber.org/zap"
 	brotli "go.withmatt.com/connect-brotli"
+	"net/http"
 	"sync"
 	"time"
 )
@@ -61,6 +62,11 @@ func New(graphName, endpoint, token string, opts ...Option) ConfigPoller {
 	retryClient.RetryMax = 5
 	retryClient.Backoff = retryablehttp.DefaultBackoff
 	retryClient.Logger = nil
+	retryClient.RequestLogHook = func(_ retryablehttp.Logger, _ *http.Request, retry int) {
+		if retry > 0 {
+			c.logger.Info("Fetch router config from controlplane", zap.Int("retry", retry))
+		}
+	}
 
 	// Uses connect binary protocol by default + gzip compression
 	c.nodeServiceClient = nodev1connect.NewNodeServiceClient(retryClient.StandardClient(), c.controlplaneEndpoint,

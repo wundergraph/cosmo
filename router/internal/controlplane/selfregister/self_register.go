@@ -10,6 +10,7 @@ import (
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1/nodev1connect"
 	"go.uber.org/zap"
 	brotli "go.withmatt.com/connect-brotli"
+	"net/http"
 	"sync"
 	"time"
 )
@@ -46,10 +47,15 @@ func New(endpoint, token string, opts ...Option) SelfRegister {
 	}
 
 	retryClient := retryablehttp.NewClient()
-	retryClient.RetryWaitMax = 30 * time.Second
-	retryClient.RetryMax = 5
+	retryClient.RetryWaitMax = 10 * time.Second
+	retryClient.RetryMax = 3
 	retryClient.Backoff = retryablehttp.DefaultBackoff
 	retryClient.Logger = nil
+	retryClient.RequestLogHook = func(_ retryablehttp.Logger, _ *http.Request, retry int) {
+		if retry > 0 {
+			c.logger.Info("Register router on controlplane", zap.Int("retry", retry))
+		}
+	}
 
 	// Uses connect binary protocol by default + gzip compression
 	c.nodeServiceClient = nodev1connect.NewNodeServiceClient(retryClient.StandardClient(), c.controlplaneEndpoint,
@@ -66,7 +72,7 @@ func (c *selfRegister) Stop(_ context.Context) error {
 }
 
 func (c *selfRegister) Register(ctx context.Context) (*nodev1.RegistrationInfo, error) {
-	c.logger.Info("Self registering router on controlplane")
+	c.logger.Info("Registering router on controlplane")
 
 	req := connect.NewRequest(&nodev1.SelfRegisterRequest{})
 

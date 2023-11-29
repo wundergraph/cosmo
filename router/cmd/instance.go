@@ -117,6 +117,7 @@ func NewRouter(params Params) (*core.Router, error) {
 			AllowHeaders:     cfg.CORS.AllowHeaders,
 			MaxAge:           cfg.CORS.MaxAge,
 		}),
+		core.WithDevelopemtMode(cfg.DevelopmentMode),
 		core.WithTracing(traceConfig(&cfg.Telemetry)),
 		core.WithMetrics(metricsConfig(&cfg.Telemetry)),
 		core.WithEngineExecutionConfig(cfg.EngineExecutionConfiguration),
@@ -130,6 +131,7 @@ func traceConfig(cfg *config.Telemetry) *trace.Config {
 	var exporters []*trace.Exporter
 	for _, exp := range cfg.Tracing.Exporters {
 		exporters = append(exporters, &trace.Exporter{
+			Disabled:      exp.Disabled,
 			Endpoint:      exp.Endpoint,
 			Exporter:      exp.Exporter,
 			BatchTimeout:  exp.BatchTimeout,
@@ -150,6 +152,7 @@ func metricsConfig(cfg *config.Telemetry) *metric.Config {
 	var openTelemetryExporters []*metric.OpenTelemetryExporter
 	for _, exp := range cfg.Metrics.OTLP.Exporters {
 		openTelemetryExporters = append(openTelemetryExporters, &metric.OpenTelemetryExporter{
+			Disabled: exp.Disabled,
 			Endpoint: exp.Endpoint,
 			Exporter: exp.Exporter,
 			Headers:  exp.Headers,

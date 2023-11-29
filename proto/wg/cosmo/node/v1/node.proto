@@ -45,11 +45,11 @@ message GetConfigResponse {
 
 message RegistrationInfo {
     AccountLimits accountLimits = 1;
-    TokenInfo tokenInfo = 2;
+    CsrfInfo csrf = 2;
 }
 
-message TokenInfo {
-  string token = 1;
+message CsrfInfo {
+  string key = 1;
 }
 
 message AccountLimits {

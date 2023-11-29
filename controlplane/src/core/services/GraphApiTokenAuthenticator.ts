@@ -23,7 +23,7 @@ export default class GraphApiTokenAuthenticator {
 
     return {
       organizationId: jwtPayload.organization_id,
-      federatedGraphId: jwtPayload.organization_id,
+      federatedGraphId: jwtPayload.federated_graph_id,
     };
   }
 }

@@ -107,6 +107,7 @@ type (
 		routerTrafficConfig      *config.RouterTrafficConfiguration
 		accessController         *AccessController
 		retryOptions             retrytransport.RetryOptions
+		developmentMode          bool
 		// If connecting to localhost inside Docker fails, fallback to the docker internal address for the host
 		localhostFallbackInsideDocker bool
 
@@ -215,6 +216,7 @@ func NewRouter(opts ...Option) (*Router, error) {
 		"apollographql-client-name",
 		"apollographql-client-version",
 		"x-wg-trace",
+		"x-wg-csrf",
 	}
 
 	defaultMethods := []string{
@@ -259,18 +261,22 @@ func NewRouter(opts ...Option) (*Router, error) {
 		r.graphqlMetricsConfig.Enabled = false
 		r.logger.Warn("No graph token provided. Disabling schema usage tracking, thus breaking change detection. Not recommended for production use.")
 
+		if !r.developmentMode {
+			r.logger.Warn("No graph token provided. Advanced Request Tracing disabled and can only be used in dev mode.")
+		}
+
 		if r.traceConfig.Enabled {
-			// Only disable default tracing if no custom OTLP exporter is configured
-			if len(r.traceConfig.Exporters) == 0 {
-				r.traceConfig.Enabled = false
-				r.logger.Warn("No graph token provided. Tracing disabled. Please specify a custom trace exporter or provide a graph token.")
+			defaultExporter := trace.GetDefaultExporter(r.traceConfig)
+			if defaultExporter != nil {
+				r.logger.Warn("No graph token provided. Tracing ingestion to Cosmo disabled. Please specify a custom trace exporter or provide a graph token.")
+				defaultExporter.Disabled = true
 			}
 		}
 		if r.metricConfig.OpenTelemetry.Enabled {
-			// Only disable default metrics if no custom OTLP exporter is configured
-			if len(r.metricConfig.OpenTelemetry.Exporters) == 0 {
-				r.metricConfig.OpenTelemetry.Enabled = false
-				r.logger.Warn("No graph token provided. OTLP Metrics disabled. Please specify a custom metrics exporter or provide a graph token.")
+			defaultExporter := metric.GetDefaultExporter(r.metricConfig)
+			if defaultExporter != nil {
+				r.logger.Warn("No graph token provided. Metrics ingestion to Cosmo disabled. Please specify a custom trace exporter or provide a graph token.")
+				defaultExporter.Disabled = true
 			}
 		}
 	}
@@ -281,6 +287,8 @@ func NewRouter(opts ...Option) (*Router, error) {
 			r.logger.Debug("Using default trace exporter", zap.String("endpoint", endpoint))
 			r.traceConfig.Exporters = append(r.traceConfig.Exporters, &trace.Exporter{
 				Endpoint: endpoint,
+				Exporter: otelconfig.ExporterOLTPHTTP,
+				HTTPPath: "/v1/traces",
 				Headers:  otelconfig.DefaultEndpointHeaders(r.graphApiToken),
 			})
 		}
@@ -292,6 +300,8 @@ func NewRouter(opts ...Option) (*Router, error) {
 			r.logger.Debug("Using default metrics exporter", zap.String("endpoint", endpoint))
 			r.metricConfig.OpenTelemetry.Exporters = append(r.metricConfig.OpenTelemetry.Exporters, &metric.OpenTelemetryExporter{
 				Endpoint: endpoint,
+				Exporter: otelconfig.ExporterOLTPHTTP,
+				HTTPPath: "/v1/metrics",
 				Headers:  otelconfig.DefaultEndpointHeaders(r.graphApiToken),
 			})
 		}
@@ -305,6 +315,11 @@ func NewRouter(opts ...Option) (*Router, error) {
 		return nil, err
 	}
 	r.cdn = routerCDN
+
+	if r.developmentMode {
+		r.logger.Warn("Development mode enabled. This should only be used for testing purposes")
+	}
+
 	return r, nil
 }
 
@@ -542,18 +557,19 @@ func (r *Router) Start(ctx context.Context) error {
 		return fmt.Errorf("router is closed. Create r new instance with router.NewRouter()")
 	}
 
-	if r.selfRegister != nil {
-		ri, registerErr := r.selfRegister.Register(ctx)
-		if registerErr != nil {
-			r.logger.Error("Failed to register router. Falling back to default limits. If this error persists, please contact support.", zap.Error(registerErr))
-			r.traceConfig.Sampler = 0.1
-		} else if registerErr == nil {
-			r.registrationInfo = ri
+	defaultExporter := metric.GetDefaultExporter(r.metricConfig)
 
-			if r.traceConfig.Enabled && trace.HasDefaultExporter(r.traceConfig) {
-				if r.traceConfig.Sampler > float64(r.registrationInfo.AccountLimits.TraceSamplingRate) {
+	if r.selfRegister != nil {
+		if defaultExporter != nil {
+			ri, registerErr := r.selfRegister.Register(ctx)
+			if registerErr != nil {
+				r.logger.Error("Failed to register router. If this error persists, please contact support.", zap.Error(registerErr))
+			} else {
+				r.registrationInfo = ri
+
+				if !defaultExporter.Disabled && r.traceConfig.Sampler > float64(r.registrationInfo.AccountLimits.TraceSamplingRate) {
 					r.logger.Warn("Trace sampling rate is higher than account limit. Using account limit instead. Please contact support to increase your account limit.",
-						zap.Float64("sampler", r.traceConfig.Sampler),
+						zap.Float64("limit", r.traceConfig.Sampler),
 						zap.String("account_limit", fmt.Sprintf("%.2f", r.registrationInfo.AccountLimits.TraceSamplingRate)),
 					)
 					r.traceConfig.Sampler = float64(r.registrationInfo.AccountLimits.TraceSamplingRate)
@@ -719,8 +735,8 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		Headers:   r.headerRules,
 	}
 
-	if routerEngineConfig.Execution.EnableRequestTracing {
-		r.logger.Warn("Request tracing is enabled. You should only enable this for debugging purposes and not in production. For more information see https://wundergraph.com/docs/advanced/request-tracing")
+	if r.developmentMode {
+		r.logger.Debug("Request tracing is enabled but requires controlplane token to function in production. For more information see https://wundergraph.com/docs/advanced/request-tracing")
 	}
 
 	executor, err := ecb.Build(ctx, routerConfig, routerEngineConfig)
@@ -775,13 +791,14 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	routerMetrics := NewRouterMetrics(metricStore, r.gqlMetricsExporter, routerConfig.GetVersion())
 
 	graphqlPreHandler := NewPreHandler(&PreHandlerOptions{
-		Logger:                r.logger,
-		Executor:              executor,
-		Metrics:               routerMetrics,
-		Parser:                operationParser,
-		Planner:               operationPlanner,
-		AccessController:      r.accessController,
-		DisableRequestTracing: !routerEngineConfig.Execution.EnableRequestTracing,
+		Logger:           r.logger,
+		Executor:         executor,
+		Metrics:          routerMetrics,
+		Parser:           operationParser,
+		Planner:          operationPlanner,
+		AccessController: r.accessController,
+		CSRFKey:          r.registrationInfo.GetCsrf().GetKey(),
+		DevelopmentMode:  r.developmentMode,
 	})
 
 	// Serve GraphQL. Metrics are collected after the request is handled and classified as r GraphQL request.
@@ -1172,5 +1189,11 @@ func DefaultGraphQLMetricsConfig() *GraphQLMetricsConfig {
 func WithGraphQLMetrics(cfg *GraphQLMetricsConfig) Option {
 	return func(r *Router) {
 		r.graphqlMetricsConfig = cfg
+	}
+}
+
+func WithDevelopemtMode(enabled bool) Option {
+	return func(r *Router) {
+		r.developmentMode = enabled
 	}
 }

@@ -258,6 +258,12 @@ export interface GraphApiKeyDTO {
   createdAt: string;
 }
 
+export interface RouterCsrfKeyDTO {
+  id: string;
+  key: string;
+  createdAt: string;
+}
+
 export interface SlackAccessTokenResponse {
   slackUserId: string;
   accessToken: string;

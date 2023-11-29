@@ -32,14 +32,18 @@ type ClientInfo struct {
 	Name string
 	// Version contains the client version, derived from the request headers
 	Version string
+	// CSRFToken contains the CSRF token, derived from the request body
+	CSRFToken string
 }
 
 func NewClientInfoFromRequest(r *http.Request) *ClientInfo {
 	clientName := ctrace.GetClientInfo(r.Header, "graphql-client-name", "apollographql-client-name", "unknown")
 	clientVersion := ctrace.GetClientInfo(r.Header, "graphql-client-version", "apollographql-client-version", "missing")
+	csrfToken := r.Header.Get("X-WG-CSRF")
 	return &ClientInfo{
-		Name:    clientName,
-		Version: clientVersion,
+		Name:      clientName,
+		Version:   clientVersion,
+		CSRFToken: csrfToken,
 	}
 }
 

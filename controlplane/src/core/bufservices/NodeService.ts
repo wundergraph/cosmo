@@ -25,6 +25,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof NodeSe
       return handleError<PlainMessage<SelfRegisterResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticateRouter(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db);
+        const fedRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
 
         const cachedInfo = registrationInfoCache.get(authContext.federatedGraphId);
         if (cachedInfo) {
@@ -40,12 +41,26 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof NodeSe
           organizationID: authContext.organizationId,
         });
 
+        const routerCsrf = await fedRepo.getGraphCsrfKey({
+          federatedGraphId: authContext.federatedGraphId,
+          organizationId: authContext.organizationId,
+        });
+
+        if (!routerCsrf) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: 'Graph CSRF key not found',
+            },
+          };
+        }
+
         const registrationInfo: PlainMessage<RegistrationInfo> = {
           accountLimits: {
             traceSamplingRate: org.traceSamplingRateLimit,
           },
-          tokenInfo: {
-            token: '',
+          csrf: {
+            key: routerCsrf.key,
           },
         };
 

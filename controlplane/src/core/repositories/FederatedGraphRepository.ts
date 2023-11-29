@@ -9,6 +9,7 @@ import {
   federatedGraphs,
   graphApiTokens,
   graphCompositions,
+  graphCsrfKeys,
   schemaChecks,
   schemaVersion,
   schemaVersionChangeAction,
@@ -21,6 +22,7 @@ import {
   GraphApiKeyDTO,
   Label,
   ListFilterOptions,
+  RouterCsrfKeyDTO,
 } from '../../types/index.js';
 import { Composer } from '../composition/composer.js';
 import { SchemaDiff } from '../composition/schemaCheck.js';
@@ -730,7 +732,11 @@ export class FederatedGraphRepository {
     } as GraphApiKeyDTO;
   }
 
-  public async getRouterTokens(input: { organizationId: string; federatedGraphId: string }): Promise<GraphApiKeyDTO[]> {
+  public async getRouterTokens(input: {
+    organizationId: string;
+    federatedGraphId: string;
+    limit: number;
+  }): Promise<GraphApiKeyDTO[]> {
     const tokens = await this.db
       .select({
         id: graphApiTokens.id,
@@ -745,6 +751,8 @@ export class FederatedGraphRepository {
           eq(graphApiTokens.federatedGraphId, input.federatedGraphId),
         ),
       )
+      .orderBy(desc(graphApiTokens.createdAt))
+      .limit(input.limit)
       .execute();
 
     return tokens.map(
@@ -756,5 +764,63 @@ export class FederatedGraphRepository {
           token: token.token,
         }) as GraphApiKeyDTO,
     );
+  }
+
+  public async createGraphCsrfKey(input: {
+    key: string;
+    organizationId: string;
+    federatedGraphId: string;
+  }): Promise<RouterCsrfKeyDTO> {
+    const keys = await this.db
+      .insert(graphCsrfKeys)
+      .values({
+        key: input.key,
+        organizationId: input.organizationId,
+        federatedGraphId: input.federatedGraphId,
+      })
+      .returning()
+      .execute();
+
+    if (keys.length === 0) {
+      throw new Error('Failed to create csrf key');
+    }
+
+    const key = keys[0];
+
+    return {
+      id: key.id,
+      key: key.key,
+      createdAt: key.createdAt.toISOString(),
+    };
+  }
+
+  public async getGraphCsrfKey(input: {
+    organizationId: string;
+    federatedGraphId: string;
+  }): Promise<RouterCsrfKeyDTO | undefined> {
+    const keys = await this.db
+      .select({
+        id: graphCsrfKeys.id,
+        createdAt: graphCsrfKeys.createdAt,
+        token: graphCsrfKeys.key,
+      })
+      .from(graphCsrfKeys)
+      .where(
+        and(
+          eq(graphCsrfKeys.organizationId, input.organizationId),
+          eq(graphCsrfKeys.federatedGraphId, input.federatedGraphId),
+        ),
+      )
+      .execute();
+
+    if (keys.length === 0) {
+      return undefined;
+    }
+
+    return {
+      id: keys[0].id,
+      createdAt: keys[0].createdAt.toISOString(),
+      key: keys[0].token,
+    } as RouterCsrfKeyDTO;
   }
 }

@@ -21,10 +21,6 @@ import { Loader } from "../ui/loader";
 import { LayoutProps } from "./layout";
 import { Nav, NavLink } from "./nav";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
-import { addDays, formatDistance } from "date-fns";
-import { UserContext } from "../app-provider";
-import { calURL } from "@/lib/constants";
-import Link from "next/link";
 import { MdDevices } from "react-icons/md";
 
 const icons: { [key: string]: ReactNode } = {
@@ -42,6 +38,7 @@ export interface GraphContextProps {
   graph: GetFederatedGraphByNameResponse["graph"];
   subgraphs: GetFederatedGraphByNameResponse["subgraphs"];
   graphToken: string;
+  graphCsrfKey: string;
 }
 
 export const GraphContext = createContext<GraphContextProps | undefined>(
@@ -52,7 +49,6 @@ const GraphLayout = ({ children }: LayoutProps) => {
   const router = useRouter();
   const organizationSlug = router.query.organizationSlug as string;
   const slug = router.query.slug as string;
-  const user = useContext(UserContext);
 
   const { data, isLoading, error, refetch } = useQuery(
     getFederatedGraphByName.useQuery({
@@ -68,6 +64,7 @@ const GraphLayout = ({ children }: LayoutProps) => {
       graph: data.graph,
       subgraphs: data.subgraphs,
       graphToken: data.graphToken,
+      graphCsrfKey: data.graphCsrfKey,
     };
   }, [data]);
 

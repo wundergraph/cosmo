@@ -1,6 +1,9 @@
 package core
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"net/http"
 	"time"
@@ -14,34 +17,38 @@ import (
 )
 
 type PreHandlerOptions struct {
-	Logger                *zap.Logger
-	Executor              *Executor
-	Metrics               *RouterMetrics
-	Parser                *OperationParser
-	Planner               *OperationPlanner
-	AccessController      *AccessController
-	DisableRequestTracing bool
+	Logger           *zap.Logger
+	Executor         *Executor
+	Metrics          *RouterMetrics
+	Parser           *OperationParser
+	Planner          *OperationPlanner
+	AccessController *AccessController
+	DevelopmentMode  bool
+	CSRFKey          string
 }
 
 type PreHandler struct {
-	log                   *zap.Logger
-	executor              *Executor
-	metrics               *RouterMetrics
-	parser                *OperationParser
-	planner               *OperationPlanner
-	accessController      *AccessController
-	disableRequestTracing bool
+	log                  *zap.Logger
+	executor             *Executor
+	metrics              *RouterMetrics
+	parser               *OperationParser
+	planner              *OperationPlanner
+	accessController     *AccessController
+	enableRequestTracing bool
+	developmentMode      bool
+	csrfKey              []byte
 }
 
 func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 	return &PreHandler{
-		log:                   opts.Logger,
-		executor:              opts.Executor,
-		metrics:               opts.Metrics,
-		parser:                opts.Parser,
-		planner:               opts.Planner,
-		accessController:      opts.AccessController,
-		disableRequestTracing: opts.DisableRequestTracing,
+		log:              opts.Logger,
+		executor:         opts.Executor,
+		metrics:          opts.Metrics,
+		parser:           opts.Parser,
+		planner:          opts.Planner,
+		accessController: opts.AccessController,
+		csrfKey:          []byte(opts.CSRFKey),
+		developmentMode:  opts.DevelopmentMode,
 	}
 }
 
@@ -65,19 +72,45 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			hasRequestError bool
 			writtenBytes    int
 			statusCode      = http.StatusOK
-			traceOptions    = ParseRequestTraceOptions(r, h.disableRequestTracing)
+			traceOptions    = ParseRequestTraceOptions(r)
 			tracePlanStart  int64
 		)
 
 		clientInfo := NewClientInfoFromRequest(r)
 		metrics := h.metrics.StartOperation(clientInfo, requestLogger, r.ContentLength)
-		if traceOptions.Enable {
-			r = r.WithContext(resolve.SetTraceStart(r.Context(), traceOptions.EnablePredictableDebugTimings))
-		}
-
 		defer func() {
 			metrics.Finish(hasRequestError, statusCode, writtenBytes)
 		}()
+
+		body, err := h.parser.ReadBody(r.Context(), r.Body)
+		if err != nil {
+			hasRequestError = true
+			requestLogger.Error(err.Error())
+			writeRequestErrors(r, http.StatusBadRequest, graphql.RequestErrorsFromError(err), w, requestLogger)
+			return
+		}
+
+		// If we have a CSRF token we validate it
+		if clientInfo.CSRFToken != "" {
+			hmacHasher := hmac.New(sha256.New, h.csrfKey)
+			hmacHasher.Write(body)
+			signature := hex.EncodeToString(hmacHasher.Sum(nil))
+
+			if signature != clientInfo.CSRFToken {
+				err := errors.New("invalid csrf token")
+				hasRequestError = true
+				requestLogger.Error(err.Error())
+				writeRequestErrors(r, http.StatusForbidden, graphql.RequestErrorsFromError(err), w, requestLogger)
+				return
+			}
+		} else if !h.developmentMode {
+			// In production, without request signing, we disable ART because it's not safe to use
+			traceOptions.DisableAll()
+		}
+
+		if traceOptions.Enable {
+			r = r.WithContext(resolve.SetTraceStart(r.Context(), traceOptions.EnablePredictableDebugTimings))
+		}
 
 		validatedReq, err := h.accessController.Access(w, r)
 		if err != nil {
@@ -88,7 +121,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		}
 		r = validatedReq
 
-		operation, err := h.parser.ParseReader(r.Context(), clientInfo, r.Body, requestLogger)
+		operation, err := h.parser.ParseReader(r.Context(), clientInfo, body, requestLogger)
 		if err != nil {
 			hasRequestError = true
 

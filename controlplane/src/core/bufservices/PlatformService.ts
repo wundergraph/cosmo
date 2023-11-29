@@ -169,6 +169,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           routingUrl: req.routingUrl,
         });
 
+        await fedGraphRepo.createGraphCsrfKey({
+          federatedGraphId: federatedGraph.id,
+          organizationId: authContext.organizationId,
+          key: uid(32),
+        });
+
         const subgraphs = await subgraphRepo.listByFederatedGraph(req.name, {
           published: true,
         });
@@ -478,6 +484,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           return {
             subgraphs: [],
             graphToken: '',
+            graphCsrfKey: '',
             response: {
               code: EnumStatusCode.ERR_NOT_FOUND,
               details: `Federated graph '${req.name}' not found`,
@@ -494,9 +501,27 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const list = await subgraphRepo.listByFederatedGraph(req.name, { published: true });
 
+        const routerCsrf = await fedRepo.getGraphCsrfKey({
+          federatedGraphId: federatedGraph.id,
+          organizationId: authContext.organizationId,
+        });
+
+        if (!routerCsrf) {
+          return {
+            subgraphs: [],
+            graphToken: '',
+            graphCsrfKey: '',
+            response: {
+              code: EnumStatusCode.ERR,
+              details: 'Graph CSRF key not found',
+            },
+          };
+        }
+
         const tokens = await fedRepo.getRouterTokens({
           organizationId: authContext.organizationId,
           federatedGraphId: federatedGraph.id,
+          limit: 1,
         });
 
         let graphToken: GraphApiKeyDTO;
@@ -540,6 +565,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             labels: g.labels,
           })),
           graphToken: graphToken.token,
+          graphCsrfKey: routerCsrf.key,
           response: {
             code: EnumStatusCode.OK,
           },
@@ -3413,6 +3439,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const tokens = await fedRepo.getRouterTokens({
           organizationId: authContext.organizationId,
           federatedGraphId: federatedGraph.id,
+          limit: 100,
         });
 
         return {
