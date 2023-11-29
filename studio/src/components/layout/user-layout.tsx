@@ -36,7 +36,7 @@ export const getUserLayout = (
 ) => {
   return (
     <UserLayout>
-      <PageHeader title={`User | ${title}`}>
+      <PageHeader title={`Account | ${title}`}>
         <TitleLayout title={title} subtitle={subtitle} items={items}>
           {page}
         </TitleLayout>
