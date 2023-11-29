@@ -4,6 +4,26 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.40.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.39.2...controlplane@0.40.0) (2023-11-29)
+
+### Bug Fixes
+
+* add migrations ([4592682](https://github.com/wundergraph/cosmo/commit/4592682f50160020e2600f4131f45d05b8c36fe9)) (@JivusAyrus)
+* change path of invitations ([bf4f289](https://github.com/wundergraph/cosmo/commit/bf4f2899d415a1920cfdc47899475efbfb7f08fa)) (@JivusAyrus)
+* ci ([eb1a3b6](https://github.com/wundergraph/cosmo/commit/eb1a3b66bf5b07b2eab6e446a4b0bf8e5ed518d0)) (@JivusAyrus)
+* ci ([6486867](https://github.com/wundergraph/cosmo/commit/6486867cbbdd48a5c512204309188c6b836c9ca6)) (@JivusAyrus)
+* invite flow rework ([c27f150](https://github.com/wundergraph/cosmo/commit/c27f15049fedff923b4bcb0f9e2effed874be408)) (@JivusAyrus)
+* make mailer optional ([a14adb5](https://github.com/wundergraph/cosmo/commit/a14adb5ac8cac9b5e7e9426c32b6ca9dc0ad5c5e)) (@JivusAyrus)
+* pr suggestions ([1397969](https://github.com/wundergraph/cosmo/commit/1397969ea6b17b2830f5c8fa45cc70f2bc45f68b)) (@JivusAyrus)
+* pr suggestions ([67a76a0](https://github.com/wundergraph/cosmo/commit/67a76a034b67dce5caf25d96bca8ca0942a60c9e)) (@JivusAyrus)
+* pr suggestions ([c719b5e](https://github.com/wundergraph/cosmo/commit/c719b5e9394c2899e53244592feabd6b3ca1d227)) (@JivusAyrus)
+* remove migrations ([11283c5](https://github.com/wundergraph/cosmo/commit/11283c54e45b063efd95e83cba66f76373b98d91)) (@JivusAyrus)
+
+### Features
+
+* accept custom operation IDs for persisted operations ([#302](https://github.com/wundergraph/cosmo/issues/302)) ([a535a62](https://github.com/wundergraph/cosmo/commit/a535a62bb7f70d2e58d1a04066fb74e78d932653)) (@fiam)
+* add new invitations table ([5d96c18](https://github.com/wundergraph/cosmo/commit/5d96c1807700d75fdf9c2a91dcf082170c5bc522)) (@JivusAyrus)
+
 ## [0.39.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.39.1...controlplane@0.39.2) (2023-11-28)
 
 **Note:** Version bump only for package controlplane

@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.11.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.11.1...@wundergraph/composition@0.11.2) (2023-11-29)
+
+### Bug Fixes
+
+* fixed bug in path finding logic ([#312](https://github.com/wundergraph/cosmo/issues/312)) ([14ae242](https://github.com/wundergraph/cosmo/commit/14ae24268cca5418f0b049aba946cf71c4a391bc)) (@Aenimus)
+* handle missing query root type without fields ([#311](https://github.com/wundergraph/cosmo/issues/311)) ([6334fac](https://github.com/wundergraph/cosmo/commit/6334facd66a925fa07e8444570031b644979e9a3)) (@Aenimus)
+
 ## [0.11.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.11.0...@wundergraph/composition@0.11.1) (2023-11-28)
 
 ### Bug Fixes
