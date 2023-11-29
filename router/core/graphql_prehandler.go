@@ -109,9 +109,10 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			} else if !h.developmentMode {
 				// In production, without request signing, we disable ART because it's not safe to use
 				traceOptions.DisableAll()
+			} else {
+				// In development, without request signing, we enable ART
+				traceOptions = ParseRequestTraceOptions(r)
 			}
-
-			traceOptions = ParseRequestTraceOptions(r)
 		}
 
 		if traceOptions.Enable {
