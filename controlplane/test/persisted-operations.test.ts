@@ -6,8 +6,8 @@ import {
   beforeAllSetup,
   genID,
   genUniqueLabel,
-} from '../src/core/test-util';
-import { SetupTest } from './test-util';
+} from '../src/core/test-util.js';
+import { SetupTest } from './test-util.js';
 
 let dbname = '';
 
@@ -60,7 +60,9 @@ describe('Persisted operations', (ctx) => {
       const publishOperationsResp = await client.publishPersistedOperations({
         fedGraphName,
         clientName: 'test-client',
-        operations: [`query { hello }`],
+        operations: [
+          { id: genID('hello'), contents: `query { hello }` },
+        ],
       });
 
       expect(publishOperationsResp.response?.code).toBe(EnumStatusCode.OK);
@@ -75,7 +77,9 @@ describe('Persisted operations', (ctx) => {
 
       const publishOperationsResp = await client.publishPersistedOperations({
         fedGraphName,
-        operations: [`query { hello }`],
+        operations: [
+          { id: genID('hello'), contents: `query { hello }` },
+        ],
       });
 
       expect(publishOperationsResp.response?.code).not.toBe(EnumStatusCode.OK);
@@ -90,7 +94,8 @@ describe('Persisted operations', (ctx) => {
 
       const publishOperationsResp = await client.publishPersistedOperations({
         fedGraphName,
-        operations: [`query { does_not_exist }`],
+        operations: [
+          { id: genID('hello'), contents: `query { does_not_exist }` }],
       });
 
       expect(publishOperationsResp.response?.code).not.toBe(EnumStatusCode.OK);
@@ -105,7 +110,8 @@ describe('Persisted operations', (ctx) => {
 
       const publishOperationsResp = await client.publishPersistedOperations({
         fedGraphName: `not_${fedGraphName}`,
-        operations: [`query { hello }`],
+        operations: [
+          { id: 'hello4', contents: `query { does_not_exist }` }],
       });
 
       expect(publishOperationsResp.response?.code).not.toBe(EnumStatusCode.OK);
@@ -118,18 +124,23 @@ describe('Persisted operations', (ctx) => {
       const fedGraphName = genID('fedGraph');
       await setupFederatedGraph(fedGraphName, client);
 
+      const id = genID('hello');
       const query = `query { hello }`;
 
       const publishOperationsResp = await client.publishPersistedOperations({
         fedGraphName,
         clientName: 'test-client',
-        operations: [query],
+        operations: [{ id, contents: query }],
       });
 
       expect(publishOperationsResp.response?.code).toBe(EnumStatusCode.OK);
 
       const storageKeys = blobStorage.keys();
       expect(storageKeys.length).toBe(1);
+      const keyComponents = storageKeys[0].split('/');
+      const keyFilename = keyComponents.at(-1)!;
+      const keyBasename = keyFilename.split('.')[0];
+      expect(keyBasename).toBe(id);
 
       const stream = await blobStorage.getObject(storageKeys[0]);
       const text = await new Response(stream).text();
@@ -147,7 +158,7 @@ describe('Persisted operations', (ctx) => {
       const publishOperationsResp = await client.publishPersistedOperations({
         fedGraphName,
         clientName: 'test-client',
-        operations: [query],
+        operations: [{ id: genID('hello'), contents: query }],
       });
 
       expect(publishOperationsResp.response?.code).toBe(EnumStatusCode.OK);

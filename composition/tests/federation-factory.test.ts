@@ -1,4 +1,10 @@
-import { federateSubgraphs, invalidSubgraphNamesError, noBaseTypeExtensionError, Subgraph } from '../src';
+import {
+  federateSubgraphs,
+  invalidSubgraphNamesError,
+  noBaseTypeExtensionError,
+  noQueryRootTypeError,
+  Subgraph,
+} from '../src';
 import { parse } from 'graphql';
 import { describe, expect, test } from 'vitest';
 import {
@@ -23,11 +29,11 @@ describe('FederationFactory tests', () => {
     const errorMessage = errors![0].message;
     expect(errorMessage).contains(
       `Subgraphs to be federated must each have a unique, non-empty name.\n` +
-        ` The 1st subgraph in the array did not define a name.`,
+      ` The 1st subgraph in the array did not define a name.`,
     );
     expect(errorMessage).contains(
       ` The 2nd subgraph in the array did not define a name.` +
-        ` Consequently, any further errors will temporarily identify this subgraph as "`,
+      ` Consequently, any further errors will temporarily identify this subgraph as "`,
     );
   });
 
@@ -38,17 +44,17 @@ describe('FederationFactory tests', () => {
     const errorMessage = errors![0].message;
     expect(errorMessage).contains(
       `Subgraphs to be federated must each have a unique, non-empty name.\n` +
-        ` The following subgraph names are not unique:\n  "users", "pandas"\n` +
-        ` The 5th subgraph in the array did not define a name.` +
-        ` Consequently, any further errors will temporarily identify this subgraph as "`,
+      ` The following subgraph names are not unique:\n  "users", "pandas"\n` +
+      ` The 5th subgraph in the array did not define a name.` +
+      ` Consequently, any further errors will temporarily identify this subgraph as "`,
     );
     expect(errorMessage).contains(
       ` The 6th subgraph in the array did not define a name.` +
-        ` Consequently, any further errors will temporarily identify this subgraph as "`,
+      ` Consequently, any further errors will temporarily identify this subgraph as "`,
     );
     expect(errorMessage).contains(
       ` The 7th subgraph in the array did not define a name.` +
-        ` Consequently, any further errors will temporarily identify this subgraph as "`,
+      ` Consequently, any further errors will temporarily identify this subgraph as "`,
     );
   });
 
@@ -58,7 +64,7 @@ describe('FederationFactory tests', () => {
     expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
       normalizeString(
         versionTwoPersistedBaseSchema +
-          `
+        `
       interface SkuItf {
         sku: String
       }
@@ -142,7 +148,7 @@ describe('FederationFactory tests', () => {
     expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
       normalizeString(
         versionTwoPersistedBaseSchema +
-          `
+        `
       type Query {
         pokemon: [Pokemon]
         trainer: [Trainer!]!
@@ -182,7 +188,7 @@ describe('FederationFactory tests', () => {
     expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
       normalizeString(
         versionOnePersistedBaseSchema +
-          `
+        `
       type Query {
         string: String
       }  
@@ -299,6 +305,35 @@ describe('FederationFactory tests', () => {
     }
       `),
     );
+  });
+  test('that _entities and _service are removed even if a root type is renamed', () => {
+    const { errors, federationResult } = federateSubgraphs([subgraphF, subgraphO]);
+    expect(errors).toBeUndefined();
+    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
+      normalizeString(versionOnePersistedBaseSchema + `
+      type Query {
+        string: String
+        user: User!
+      }
+      
+      type User {
+        id: ID!
+        name: String!
+      }
+    `),
+    );
+  });
+
+  test('that an error is returned if the federated graph has no query object', () => {
+    const { errors } = federateSubgraphs([subgraphP]);
+    expect(errors).toBeDefined();
+    expect(errors![0]).toStrictEqual(noQueryRootTypeError);
+  });
+
+  test('that an error is returned if the federated graph has no populated query object', () => {
+    const { errors } = federateSubgraphs([subgraphP, subgraphQ]);
+    expect(errors).toBeDefined();
+    expect(errors![0]).toStrictEqual(noQueryRootTypeError);
   });
 });
 
@@ -733,3 +768,49 @@ const subgraphN: Subgraph = {
     }
 `),
 };
+
+const subgraphO: Subgraph = {
+  name: 'subgraph-o',
+  url: '',
+  definitions: parse(`
+    schema {
+      query: Queries
+    }
+    
+    type Queries {
+      user: User!
+      _entities(representations: [_Any!]!): [_Entity]
+      _service: _Service
+    }
+    
+    type User @key(fields: "id") {
+      id: ID!
+      name: String!
+    }
+    
+    union _Entity = User
+    
+    type _Service {
+      sdl: String
+    }
+    
+    scalar _Any
+`),
+};
+
+const subgraphP: Subgraph = {
+  name: 'subgraph-p',
+  url: '',
+  definitions: parse(`
+    scalar Dummy
+  `),
+};
+
+const subgraphQ: Subgraph = {
+  name: 'subgraph-q',
+  url: '',
+  definitions: parse(`
+    type Query
+  `),
+};
+

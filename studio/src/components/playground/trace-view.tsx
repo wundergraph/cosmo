@@ -96,7 +96,14 @@ const Trace = ({
     let gStartTimeNano = BigInt(Number.MAX_VALUE);
     let gEndTimeNano = BigInt(0);
 
-    const parseFetch = (fetch: any, parentId?: string): FetchNode => {
+    const fetchMap = new Map<string, FetchNode>();
+
+    const parseFetch = (
+      fetch: any,
+      parentId?: string,
+    ): FetchNode | undefined => {
+      if (!fetch) return;
+
       const fetchNode: FetchNode = {
         id: fetch.id,
         parentId,
@@ -169,24 +176,11 @@ const Trace = ({
 
       if (fetch.fetches || fetch.traces) {
         (fetch.fetches || fetch.traces).forEach((f: any) => {
-          fetchNode.children.push(parseFetch(f, fetch.id));
+          const node = parseFetch(f, fetch.id);
+          if (node) {
+            fetchMap.set(node.id, node);
+          }
         });
-      }
-
-      if (!fetchNode.durationSinceStart) {
-        const durations = fetchNode.children
-          .filter((c) => !!c.durationSinceStart)
-          .map((c) => c.durationSinceStart!);
-        fetchNode.durationSinceStart = Math.min(...durations);
-      }
-
-      if (!fetchNode.durationLoad) {
-        const durations = fetchNode.children
-          .filter((c) => !!c.durationSinceStart && !!c.durationLoad)
-          .map((c) => c.durationSinceStart! + c.durationLoad!);
-
-        fetchNode.durationLoad =
-          Math.max(...durations) - fetchNode.durationSinceStart;
       }
 
       tempNodes.push({
@@ -220,26 +214,24 @@ const Trace = ({
     };
 
     const parseJson = (json: any, parentId?: string): FetchNode | undefined => {
-      if (!json.fetch) return;
-
       const fetchNode = parseFetch(json.fetch, parentId);
 
       json.fields.forEach((field: any) => {
         if (field.value && field.value.node_type === "array") {
           field.value.items.forEach((fieldItem: any) => {
             if (fieldItem.node_type === "object") {
-              const node = parseJson(fieldItem, fetchNode.id);
+              const node = parseJson(fieldItem, fetchNode?.id ?? parentId);
               if (node) {
-                fetchNode.children.push(node);
+                fetchMap.set(node.id, node);
               }
             }
           });
         }
 
         if (field.value && field.value.node_type === "object") {
-          const node = parseJson(field.value, fetchNode.id);
+          const node = parseJson(field.value, fetchNode?.id ?? parentId);
           if (node) {
-            fetchNode.children.push(node);
+            fetchMap.set(node.id, node);
           }
         }
       });
@@ -264,6 +256,19 @@ const Trace = ({
         parsedResponse.extensions.trace,
         plannerStats ? planId : undefined,
       );
+
+      if (traceTree) {
+        fetchMap.set(traceTree.id, traceTree);
+      }
+
+      fetchMap.forEach((fetchNode) => {
+        if (fetchNode.parentId) {
+          const parent = fetchMap.get(fetchNode.parentId);
+          if (parent) {
+            parent.children.push(fetchNode);
+          }
+        }
+      });
 
       if (plannerStats) {
         const plan = {
@@ -390,6 +395,19 @@ export const TraceView = () => {
 
   const [headers, setHeaders] = useState<string>();
 
+  const [isNotIntrospection, setIsNotIntrospection] = useState(false);
+
+  useEffect(() => {
+    try {
+      const res = JSON.parse(response);
+      if (!res.data.__schema) {
+        setIsNotIntrospection(true);
+      }
+    } catch {
+      return;
+    }
+  }, [response]);
+
   useEffect(() => {
     if (!response) return;
     setHeaders(activeHeader);
@@ -421,6 +439,17 @@ export const TraceView = () => {
         icon={<LuNetwork />}
         title="No trace found"
         description="Include the below header before executing your queries. Router version 0.40.0 or above is required."
+        actions={<CLI command={`"X-WG-TRACE" : "true"`} />}
+      />
+    );
+  }
+
+  if (!isNotIntrospection) {
+    return (
+      <EmptyState
+        icon={<LuNetwork />}
+        title="Execute a query"
+        description="Include the below header to view the trace"
         actions={<CLI command={`"X-WG-TRACE" : "true"`} />}
       />
     );

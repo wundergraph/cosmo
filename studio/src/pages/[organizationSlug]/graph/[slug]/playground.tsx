@@ -85,14 +85,16 @@ const ResponseTabs = () => {
       onValueChange={onValueChange}
     >
       <TabsList className="grid w-full grid-cols-2">
-        <TabsTrigger className="" value="response" asChild>
-          <div>
+        <TabsTrigger className="!cursor-pointer" value="response" asChild>
+          <div className="flex items-center gap-x-2">
             <PiBracketsCurly className="h-4 w-4 flex-shrink-0" />
+            Response
           </div>
         </TabsTrigger>
-        <TabsTrigger className="" value="plan" asChild>
-          <div>
+        <TabsTrigger className="!cursor-pointer" value="plan" asChild>
+          <div className="flex items-center gap-x-2">
             <FaNetworkWired className="h-4 w-4 flex-shrink-0" />
+            Trace
           </div>
         </TabsTrigger>
       </TabsList>
@@ -132,16 +134,18 @@ const PlaygroundPage: NextPageWithLayout = () => {
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
-    if (!isGraphiqlRendered || isMounted) return;
+    if (isMounted) return;
 
     const header = document.getElementsByClassName(
       "graphiql-session-header-right",
     )[0] as any as HTMLDivElement;
 
     if (header) {
+      const logo = document.getElementsByClassName("graphiql-logo")[0];
+      logo.classList.add("hidden");
       const div = document.createElement("div");
       div.id = "response-tabs";
-      div.className = "flex items-center justify-center mr-2";
+      div.className = "flex items-center justify-center mx-2";
       header.append(div);
     }
 
@@ -160,7 +164,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
     }
 
     setIsMounted(true);
-  }, [isGraphiqlRendered, isMounted]);
+  }, [isMounted]);
 
   useEffect(() => {
     if (!isGraphiqlRendered && typeof query === "string") {

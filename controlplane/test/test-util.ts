@@ -1,19 +1,20 @@
+import { createPromiseClient, PromiseClient } from '@connectrpc/connect';
+import { fastifyConnectPlugin } from '@connectrpc/connect-fastify';
+import { createConnectTransport } from '@connectrpc/connect-node';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { NodeService } from '@wundergraph/cosmo-connect/dist/node/v1/node_connect';
+import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
 import Fastify from 'fastify';
 import { pino } from 'pino';
 import { expect, TestContext } from 'vitest';
-import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
-import { fastifyConnectPlugin } from '@connectrpc/connect-fastify';
-import { createConnectTransport } from '@connectrpc/connect-node';
-import { createPromiseClient, PromiseClient } from '@connectrpc/connect';
-import { NodeService } from '@wundergraph/cosmo-connect/dist/node/v1/node_connect';
-import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import database from '../src/core/plugins/database';
-import { createTestAuthenticator, seedTest } from '../src/core/test-util';
-import Keycloak from '../src/core/services/Keycloak';
-import { MockPlatformWebhookService } from '../src/core/webhooks/PlatformWebhookService';
-import routes from '../src/core/routes';
-import { BlobNotFoundError, BlobStorage } from '../src/core/blobstorage';
-import { Label } from '../src/types';
+import { BlobNotFoundError, BlobStorage } from '../src/core/blobstorage/index.js';
+import database from '../src/core/plugins/database.js';
+import routes from '../src/core/routes.js';
+import Keycloak from '../src/core/services/Keycloak.js';
+import Mailer from '../src/core/services/Mailer.js';
+import { createTestAuthenticator, seedTest } from '../src/core/test-util.js';
+import { MockPlatformWebhookService } from '../src/core/webhooks/PlatformWebhookService.js';
+import { Label } from '../src/types/index.js';
 
 export const SetupTest = async function (testContext: TestContext, dbname: string) {
   const databaseConnectionUrl = `postgresql://postgres:changeme@localhost:5432/${dbname}`;
@@ -47,6 +48,7 @@ export const SetupTest = async function (testContext: TestContext, dbname: strin
   });
 
   const platformWebhooks = new MockPlatformWebhookService();
+  const mailerClient = new Mailer({ username: '', password: '' });
 
   const blobStorage = new InMemoryBlobStorage();
   await server.register(fastifyConnectPlugin, {
@@ -65,6 +67,7 @@ export const SetupTest = async function (testContext: TestContext, dbname: strin
       },
       keycloakApiUrl: apiUrl,
       blobStorage,
+      mailerClient,
     }),
   });
 

@@ -6,6 +6,7 @@ import { GetConfigResponse } from '@wundergraph/cosmo-connect/dist/node/v1/node_
 import { OrganizationEventName, PlatformEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
 import {
+  AcceptOrDeclineInvitationResponse,
   AnalyticsConfig,
   CheckFederatedGraphResponse,
   CheckSubgraphSchemaResponse,
@@ -41,6 +42,7 @@ import {
   GetFederatedGraphsResponse,
   GetFieldUsageResponse,
   GetGraphMetricsResponse,
+  GetInvitationsResponse,
   GetLatestValidSubgraphSDLByNameResponse,
   GetMetricsErrorRateResponse,
   GetOIDCProviderResponse,
@@ -118,6 +120,7 @@ import {
 } from '../util.js';
 import { FederatedGraphSchemaUpdate, OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
 import * as schema from '../../db/schema.js';
+import { OrganizationInvitationRepository } from '../repositories/OrganizationInvitationRepository.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -2172,14 +2175,19 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<GetOrganizationMembersResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db);
+        const orgInvitationRepo = new OrganizationInvitationRepository(opts.db);
 
         const orgMembers = await orgRepo.getMembers({ organizationID: authContext.organizationId });
+        const pendingInvitations = await orgInvitationRepo.getPendingInvitationsOfOrganization({
+          organizationId: authContext.organizationId,
+        });
 
         return {
           response: {
             code: EnumStatusCode.OK,
           },
           members: orgMembers,
+          pendingInvitations,
         };
       });
     },
@@ -2194,6 +2202,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const userRepo = new UserRepository(opts.db);
         const orgRepo = new OrganizationRepository(opts.db);
+        const orgInvitationRepo = new OrganizationInvitationRepository(opts.db);
 
         if (!authContext.hasWriteAccess) {
           return {
@@ -2202,37 +2211,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               details: `The user doesnt have the permissions to perform this operation`,
             },
           };
-        }
-
-        await opts.keycloakClient.authenticateClient();
-
-        const user = await userRepo.byEmail(req.email);
-        if (user) {
-          const orgMember = await orgRepo.getOrganizationMember({
-            organizationID: authContext.organizationId,
-            userID: user.id,
-          });
-          if (orgMember && !orgMember.acceptedInvite) {
-            await opts.keycloakClient.executeActionsEmail({
-              userID: user.id,
-              redirectURI: `${process.env.WEB_BASE_URL}/login`,
-              realm: opts.keycloakRealm,
-            });
-
-            return {
-              response: {
-                code: EnumStatusCode.OK,
-                details: 'Invited member successfully.',
-              },
-            };
-          } else if (orgMember && orgMember.acceptedInvite) {
-            return {
-              response: {
-                code: EnumStatusCode.ERR_ALREADY_EXISTS,
-                details: `${req.email} is already a member of this organization`,
-              },
-            };
-          }
         }
 
         const organization = await orgRepo.byId(authContext.organizationId);
@@ -2245,23 +2223,57 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const groupName = organization.slug;
+        await opts.keycloakClient.authenticateClient();
 
-        const organizationGroups = await opts.keycloakClient.client.groups.find({
-          max: 1,
-          search: groupName,
-          realm: opts.keycloakRealm,
-        });
+        const user = await userRepo.byEmail(req.email);
+        if (user) {
+          const orgMember = await orgRepo.getOrganizationMember({
+            organizationID: authContext.organizationId,
+            userID: user.id,
+          });
+          if (orgMember) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR_ALREADY_EXISTS,
+                details: `${req.email} is already a member of this organization`,
+              },
+            };
+          }
 
-        if (organizationGroups.length === 0) {
-          throw new Error(`Organization group '${groupName}' not found`);
+          const orgInvitation = await orgInvitationRepo.getPendingOrganizationInvitation({
+            organizationID: authContext.organizationId,
+            userID: user.id,
+          });
+          if (orgInvitation) {
+            const userMemberships = await orgRepo.memberships({ userId: user.id });
+            // if the user memberships are empty, that means the user has not logged in till now,
+            // so we send the user a mail form keycloak
+            if (userMemberships.length === 0) {
+              await opts.keycloakClient.executeActionsEmail({
+                userID: user.id,
+                redirectURI: `${process.env.WEB_BASE_URL}/login?redirectURL=${process.env.WEB_BASE_URL}/account/invitations`,
+                realm: opts.keycloakRealm,
+              });
+            } else {
+              // the user has already logged in, so we send our custom org invitation email
+              // eslint-disable-next-line no-lonely-if
+              if (opts.mailerClient) {
+                await opts.mailerClient.sendInviteEmail({
+                  inviteLink: `${process.env.WEB_BASE_URL}/account/invitations`,
+                  organizationName: organization.name,
+                  recieverEmail: req.email,
+                });
+              }
+            }
+
+            return {
+              response: {
+                code: EnumStatusCode.OK,
+                details: 'Invited member successfully.',
+              },
+            };
+          }
         }
-
-        const devGroup = await opts.keycloakClient.fetchDevChildGroup({
-          realm: opts.keycloakRealm,
-          kcGroupId: organizationGroups[0].id!,
-          orgSlug: groupName,
-        });
 
         const keycloakUser = await opts.keycloakClient.client.users.find({
           max: 1,
@@ -2282,34 +2294,29 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           keycloakUserID = keycloakUser[0].id;
         }
 
-        const userGroups = await opts.keycloakClient.client.users.listGroups({
-          search: groupName,
-          realm: opts.keycloakRealm,
-          id: keycloakUserID!,
-          max: 1,
-        });
-
-        if (userGroups.length === 0) {
-          // By default, all invited users are added to the developer group of the org
-          // This is the at least privilege approach
-          await opts.keycloakClient.client.users.addToGroup({
-            id: keycloakUserID!,
-            groupId: devGroup.id!,
+        const userMemberships = await orgRepo.memberships({ userId: keycloakUserID! });
+        // to verify if the user is a new user or not, we check the memberships of the user
+        if (userMemberships.length > 0) {
+          if (opts.mailerClient) {
+            await opts.mailerClient.sendInviteEmail({
+              inviteLink: `${process.env.WEB_BASE_URL}/account/invitations`,
+              organizationName: organization.name,
+              recieverEmail: req.email,
+            });
+          }
+        } else {
+          await opts.keycloakClient.executeActionsEmail({
+            userID: keycloakUserID!,
+            redirectURI: `${process.env.WEB_BASE_URL}/login?redirectURL=${process.env.WEB_BASE_URL}/account/invitations`,
             realm: opts.keycloakRealm,
           });
         }
 
-        await opts.keycloakClient.executeActionsEmail({
-          userID: keycloakUserID!,
-          redirectURI: `${process.env.WEB_BASE_URL}/login`,
-          realm: opts.keycloakRealm,
-        });
-
         // TODO: rate limit this
-        await userRepo.inviteUser({
+        await orgInvitationRepo.inviteUser({
           email: req.email,
-          keycloakUserID: keycloakUserID!,
-          organizationID: authContext.organizationId,
+          userId: keycloakUserID!,
+          organizationId: authContext.organizationId,
           dbUser: user,
         });
 
@@ -2537,7 +2544,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    removeInvitation: (req, ctx) => {
+    removeOrganizationMember: (req, ctx) => {
       const logger = opts.logger.child({
         service: ctx.service.typeName,
         method: ctx.method.name,
@@ -2601,9 +2608,11 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         await opts.keycloakClient.authenticateClient();
 
+        const groupName = org.slug;
+
         const organizationGroup = await opts.keycloakClient.client.groups.find({
           max: 1,
-          search: org.slug,
+          search: groupName,
           realm: opts.keycloakRealm,
         });
 
@@ -2611,11 +2620,52 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           throw new Error(`Organization group '${org.slug}' not found`);
         }
 
-        await opts.keycloakClient.client.users.delFromGroup({
-          id: user.id,
-          groupId: organizationGroup[0].id!,
-          realm: opts.keycloakRealm,
-        });
+        for (const role of orgMember.roles) {
+          switch (role) {
+            case 'admin': {
+              const adminGroup = await opts.keycloakClient.fetchAdminChildGroup({
+                realm: opts.keycloakRealm,
+                kcGroupId: organizationGroup[0].id!,
+                orgSlug: groupName,
+              });
+              await opts.keycloakClient.client.users.delFromGroup({
+                id: user.id,
+                groupId: adminGroup.id!,
+                realm: opts.keycloakRealm,
+              });
+              break;
+            }
+            case 'developer': {
+              const devGroup = await opts.keycloakClient.fetchDevChildGroup({
+                realm: opts.keycloakRealm,
+                kcGroupId: organizationGroup[0].id!,
+                orgSlug: groupName,
+              });
+              await opts.keycloakClient.client.users.delFromGroup({
+                id: user.id,
+                groupId: devGroup.id!,
+                realm: opts.keycloakRealm,
+              });
+              break;
+            }
+            case 'viewer': {
+              const viewerGroup = await opts.keycloakClient.fetchViewerChildGroup({
+                realm: opts.keycloakRealm,
+                kcGroupId: organizationGroup[0].id!,
+                orgSlug: groupName,
+              });
+              await opts.keycloakClient.client.users.delFromGroup({
+                id: user.id,
+                groupId: viewerGroup.id!,
+                realm: opts.keycloakRealm,
+              });
+              break;
+            }
+            default: {
+              throw new Error(`Role ${role} does not exist`);
+            }
+          }
+        }
 
         await orgRepo.removeOrganizationMember({ organizationID: authContext.organizationId, userID: user.id });
 
@@ -2625,6 +2675,89 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         // this will happen only when the user was invited but the user didnt login and the admin removed that user,
         // in this case the user will not have a personal org
         if (userMemberships.length === 0) {
+          // deleting the user from keycloak
+          await opts.keycloakClient.client.users.del({
+            id: user.id,
+            realm: opts.keycloakRealm,
+          });
+          // deleting the user from the db
+          await userRepo.deleteUser({ id: user.id });
+        }
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+        };
+      });
+    },
+
+    removeInvitation: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<RemoveInvitationResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const orgRepo = new OrganizationRepository(opts.db);
+        const orgInvitationRepo = new OrganizationInvitationRepository(opts.db);
+        const userRepo = new UserRepository(opts.db);
+
+        if (!authContext.hasWriteAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+          };
+        }
+
+        const user = await userRepo.byEmail(req.email);
+        if (!user) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `User ${req.email} not found`,
+            },
+          };
+        }
+
+        const org = await orgRepo.byId(authContext.organizationId);
+        if (!org) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Organization not found`,
+            },
+          };
+        }
+
+        const orgInvitation = await orgInvitationRepo.getPendingOrganizationInvitation({
+          organizationID: authContext.organizationId,
+          userID: user.id,
+        });
+        if (!orgInvitation) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Invite to the user ${req.email} does not exist.`,
+            },
+          };
+        }
+
+        await orgInvitationRepo.removeInvite({
+          organizationId: authContext.organizationId,
+          userId: user.id,
+        });
+
+        const userMemberships = await orgRepo.memberships({ userId: user.id });
+        const userPendingInvitations = await orgInvitationRepo.getPendingInvitationsOfUser({ userId: user.id });
+
+        // delete the user only when user doesnt have any memberships and pending invitations
+        // this will happen only when the user was invited but the user didnt login and the admin removed that user,
+        // in this case the user will not have a personal org
+        if (userMemberships.length === 0 && userPendingInvitations.length === 0) {
           // deleting the user from keycloak
           await opts.keycloakClient.client.users.del({
             id: user.id,
@@ -4026,15 +4159,16 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         }
         const graphAST = parse(schema.schema);
         const graphSchema = buildASTSchema(graphAST);
-        for (const operationContents of req.operations) {
+        for (const operation of req.operations) {
+          const contents = operation.contents;
           let opAST: DocumentNode;
           try {
-            opAST = parse(operationContents);
+            opAST = parse(operation.contents);
           } catch (e: any) {
             return {
               response: {
                 code: EnumStatusCode.ERR,
-                details: `Operation ${operationContents} is not valid: ${e}`,
+                details: `Operation ${operation.id} (${contents}) is not valid: ${e}`,
               },
               operations: [],
             };
@@ -4045,7 +4179,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             return {
               response: {
                 code: EnumStatusCode.ERR,
-                details: `Operation "${operationContents}" is not valid: ${errorDetails}`,
+                details: `Operation ${operation.id} ("${contents}") is not valid: ${errorDetails}`,
               },
               operations: [],
             };
@@ -4068,28 +4202,44 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const operations: PublishedOperation[] = [];
         const updatedOperations = [];
         // Retrieve the operations that have already been published
-        const operationsResult = await operationsRepo.getPersistedOperations();
-        const operationHashes = new Set(operationsResult.map((op) => op.hash));
-        for (const operationContents of req.operations) {
-          const operationHash = crypto.createHash('sha256').update(operationContents).digest('hex');
-          const path = `${organizationId}/${federatedGraph.id}/operations/${req.clientName}/${operationHash}.json`;
+        const operationsResult = await operationsRepo.getPersistedOperations(clientId);
+        const operationsByOperationId = new Map(operationsResult.map((op) => [op.operationId, op.hash]));
+        for (const operation of req.operations) {
+          const operationId = operation.id;
+          const operationHash = crypto.createHash('sha256').update(operation.contents).digest('hex');
+          const prevHash = operationsByOperationId.get(operationId);
+          if (prevHash !== undefined && prevHash !== operationHash) {
+            // We're trying to update an operation with the same ID but different hash
+            operations.push(
+              new PublishedOperation({
+                id: operationId,
+                hash: prevHash,
+                status: PublishedOperationStatus.CONFLICT,
+              }),
+            );
+            continue;
+          }
+          operationsByOperationId.set(operationId, operationHash);
+          const path = `${organizationId}/${federatedGraph.id}/operations/${req.clientName}/${operationId}.json`;
           updatedOperations.push({
+            operationId,
             hash: operationHash,
             filePath: path,
           });
           let status: PublishedOperationStatus;
-          if (operationHashes.has(operationHash)) {
-            status = PublishedOperationStatus.UP_TO_DATE;
-          } else {
+          if (prevHash === undefined) {
             const data: PublishedOperationData = {
               version: 1,
-              body: operationContents,
+              body: operation.contents,
             };
             opts.blobStorage.putObject(path, Buffer.from(JSON.stringify(data), 'utf8'));
             status = PublishedOperationStatus.CREATED;
+          } else {
+            status = PublishedOperationStatus.UP_TO_DATE;
           }
           operations.push(
             new PublishedOperation({
+              id: operationId,
               hash: operationHash,
               status,
             }),
@@ -4163,6 +4313,109 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             code: EnumStatusCode.OK,
           },
           count: BigInt(count),
+        };
+      });
+    },
+
+    // returns the pending invites of a user
+    getInvitations: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetInvitationsResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const orgInvitationRepo = new OrganizationInvitationRepository(opts.db);
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          invitations: await orgInvitationRepo.getPendingInvitationsOfUser({ userId: authContext.userId }),
+        };
+      });
+    },
+
+    acceptOrDeclineInvitation: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<AcceptOrDeclineInvitationResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const orgRepo = new OrganizationRepository(opts.db);
+        const userRepo = new UserRepository(opts.db);
+        const orgInvitationRepo = new OrganizationInvitationRepository(opts.db);
+
+        const user = await userRepo.byId(authContext.userId);
+        if (!user) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `User ${authContext.userId} not found`,
+            },
+          };
+        }
+
+        const organization = await orgRepo.byId(req.organizationId);
+        if (!organization) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Organization ${req.organizationId} not found`,
+            },
+          };
+        }
+
+        if (req.accept) {
+          const groupName = organization.slug;
+
+          await opts.keycloakClient.authenticateClient();
+
+          const organizationGroups = await opts.keycloakClient.client.groups.find({
+            max: 1,
+            search: groupName,
+            realm: opts.keycloakRealm,
+          });
+
+          if (organizationGroups.length === 0) {
+            throw new Error(`Organization group '${groupName}' not found`);
+          }
+
+          const devGroup = await opts.keycloakClient.fetchDevChildGroup({
+            realm: opts.keycloakRealm,
+            kcGroupId: organizationGroups[0].id!,
+            orgSlug: groupName,
+          });
+
+          const keycloakUser = await opts.keycloakClient.client.users.find({
+            max: 1,
+            email: user.email,
+            realm: opts.keycloakRealm,
+            exact: true,
+          });
+
+          if (keycloakUser.length === 0) {
+            throw new Error(`Keycloak user with email '${user.email}' not found`);
+          }
+
+          await opts.keycloakClient.client.users.addToGroup({
+            id: keycloakUser[0].id!,
+            groupId: devGroup.id!,
+            realm: opts.keycloakRealm,
+          });
+
+          await orgInvitationRepo.acceptInvite({ userId: user.id, organizationId: req.organizationId });
+        } else {
+          await orgInvitationRepo.removeInvite({ organizationId: req.organizationId, userId: user.id });
+        }
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
         };
       });
     },

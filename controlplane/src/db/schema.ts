@@ -108,8 +108,12 @@ export const federatedGraphPersistedOperations = pgTable(
       .references(() => federatedGraphClients.id, {
         onDelete: 'cascade',
       }),
+    // operationId indicated by the client
+    operationId: text('operation_id').notNull(),
+    // sha256 hash of the operation body, calculated by us
     hash: text('hash').notNull(),
-    filePath: text('file_path').notNull(),
+    // path in the blob storage where the operation is stored
+    filePath: text('file_path').notNull().unique(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }),
     createdById: uuid('created_by_id')
@@ -122,10 +126,10 @@ export const federatedGraphPersistedOperations = pgTable(
     }),
   },
   (t) => ({
-    uniqueFederatedGraphOperationHash: unique('federated_graph_operation_hash').on(t.federatedGraphId, t.hash),
-    uniqueFederatedGraphOperationFilePath: unique('federated_graph_operation_file_hash').on(
+    uniqueFederatedGraphClientIdOperationId: unique('federated_graph_operation_id').on(
       t.federatedGraphId,
-      t.filePath,
+      t.clientId,
+      t.operationId,
     ),
   }),
 );
@@ -597,7 +601,6 @@ export const organizationsMembers = pgTable(
       .references(() => organizations.id, {
         onDelete: 'cascade',
       }),
-    acceptedInvite: boolean('accepted_invite').default(false),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => {
@@ -859,4 +862,18 @@ export const organizationLimits = pgTable('organization_limits', {
   changelogDataRetentionLimit: integer('changelog_data_retention_limit').notNull().default(7),
   breakingChangeRetentionLimit: integer('breaking_change_retention_limit').notNull().default(7),
   traceSamplingRateLimit: decimal('trace_sampling_rate_limit', { precision: 3, scale: 2 }).notNull().default('0.10'),
+});
+
+export const organizationInvitations = pgTable('organization_invitations', {
+  id: uuid('id').notNull().primaryKey().defaultRandom(),
+  organizationId: uuid('organization_id')
+    .notNull()
+    .references(() => organizations.id, {
+      onDelete: 'cascade',
+    }),
+  userId: uuid('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  accepted: boolean('accepted').default(false),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });

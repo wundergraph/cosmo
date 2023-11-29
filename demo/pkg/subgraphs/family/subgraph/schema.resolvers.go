@@ -6,6 +6,7 @@ package subgraph
 
 import (
 	"context"
+
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/family/subgraph/generated"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/family/subgraph/model"
 )

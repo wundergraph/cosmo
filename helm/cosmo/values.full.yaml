@@ -104,6 +104,8 @@ controlplane:
     slackAppClientId: ""
     slackAppClientSecret: ""
     s3StorageUrl: "http://minio:changeme@cosmo-minio:9000/cosmo"
+    smtpUsername: ""
+    smtpPassword: ""
 
 # Cosmo Router
 router:

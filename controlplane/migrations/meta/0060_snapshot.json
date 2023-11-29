@@ -1,7 +1,7 @@
 {
   "version": "5",
   "dialect": "pg",
-  "id": "d6e858d9-98d9-490d-842f-30869949b227",
+  "id": "3b18836a-e70b-47fc-948c-624fbbfdfad3",
   "prevId": "44713cf4-d4eb-4415-8b6c-9a6a63e942a7",
   "tables": {
     "api_keys": {
@@ -234,6 +234,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "operation_id": {
+          "name": "operation_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
         "hash": {
           "name": "hash",
           "type": "text",
@@ -329,20 +335,20 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "federated_graph_operation_hash": {
-          "name": "federated_graph_operation_hash",
+        "federated_graph_persisted_operations_file_path_unique": {
+          "name": "federated_graph_persisted_operations_file_path_unique",
           "nullsNotDistinct": false,
           "columns": [
-            "federated_graph_id",
-            "hash"
+            "file_path"
           ]
         },
-        "federated_graph_operation_file_hash": {
-          "name": "federated_graph_operation_file_hash",
+        "federated_graph_operation_id": {
+          "name": "federated_graph_operation_id",
           "nullsNotDistinct": false,
           "columns": [
             "federated_graph_id",
-            "file_path"
+            "client_id",
+            "operation_id"
           ]
         }
       }
@@ -711,83 +717,6 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
-    },
-    "graph_csrf_keys": {
-      "name": "graph_csrf_keys",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "organization_id": {
-          "name": "organization_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "federated_graph_id": {
-          "name": "federated_graph_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "token": {
-          "name": "token",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "graph_csrf_keys_organization_id_organizations_id_fk": {
-          "name": "graph_csrf_keys_organization_id_organizations_id_fk",
-          "tableFrom": "graph_csrf_keys",
-          "tableTo": "organizations",
-          "columnsFrom": [
-            "organization_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "graph_csrf_keys_federated_graph_id_federated_graphs_id_fk": {
-          "name": "graph_csrf_keys_federated_graph_id_federated_graphs_id_fk",
-          "tableFrom": "graph_csrf_keys",
-          "tableTo": "federated_graphs",
-          "columnsFrom": [
-            "federated_graph_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "graph_csrf_keys_token_unique": {
-          "name": "graph_csrf_keys_token_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "token"
-          ]
-        }
-      }
     },
     "oidc_providers": {
       "name": "oidc_providers",

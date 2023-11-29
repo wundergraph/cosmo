@@ -110,8 +110,12 @@ export interface OrganizationMemberDTO {
   userID: string;
   orgMemberID: string;
   email: string;
-  acceptedInvite: boolean;
   roles: string[];
+}
+
+export interface OrganizationInvitationDTO {
+  userID: string;
+  email: string;
 }
 
 export interface APIKeyDTO {
@@ -294,6 +298,7 @@ export interface ClientDTO {
 
 export interface PersistedOperationDTO {
   id: string;
+  operationId: string;
   hash: string;
   filePath: string;
   createdAt: string;
@@ -308,6 +313,7 @@ export interface PublishedOperationData {
 }
 
 export interface UpdatedPersistedOperation {
+  operationId: string;
   hash: string;
   filePath: string;
 }

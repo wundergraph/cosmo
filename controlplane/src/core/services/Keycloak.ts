@@ -233,6 +233,28 @@ export default class Keycloak {
       },
     );
 
+    const devGroup = await this.client.groups.createChildGroup(
+      {
+        realm,
+        id: organizationGroup.id,
+      },
+      {
+        name: 'developer',
+        realmRoles: ['developer'],
+      },
+    );
+
+    const viewerGroup = await this.client.groups.createChildGroup(
+      {
+        realm,
+        id: organizationGroup.id,
+      },
+      {
+        name: 'viewer',
+        realmRoles: ['viewer'],
+      },
+    );
+
     await this.client.users.addToGroup({
       id: userID,
       realm: realm || this.realm,

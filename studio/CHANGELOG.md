@@ -4,6 +4,33 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.39.1](https://github.com/wundergraph/cosmo/compare/studio@0.39.0...studio@0.39.1) (2023-11-29)
+
+### Bug Fixes
+
+* invitations icon ([#317](https://github.com/wundergraph/cosmo/issues/317)) ([a1e2f4b](https://github.com/wundergraph/cosmo/commit/a1e2f4b91a6ac7e4019aa50131b16d084e5ded21)) (@JivusAyrus)
+* limit banners ([#316](https://github.com/wundergraph/cosmo/issues/316)) ([cf715b2](https://github.com/wundergraph/cosmo/commit/cf715b2bf23d969a410e6f260f75277178fa672c)) (@JivusAyrus)
+
+# [0.39.0](https://github.com/wundergraph/cosmo/compare/studio@0.38.1...studio@0.39.0) (2023-11-29)
+
+### Bug Fixes
+
+* change path of invitations ([bf4f289](https://github.com/wundergraph/cosmo/commit/bf4f2899d415a1920cfdc47899475efbfb7f08fa)) (@JivusAyrus)
+* invite flow rework ([c27f150](https://github.com/wundergraph/cosmo/commit/c27f15049fedff923b4bcb0f9e2effed874be408)) (@JivusAyrus)
+* replace user with account ([0e45987](https://github.com/wundergraph/cosmo/commit/0e459879b8949a4eab4eb6f745204870fd1f06a7)) (@JivusAyrus)
+* trace parsing and ui ([#310](https://github.com/wundergraph/cosmo/issues/310)) ([5eb9f67](https://github.com/wundergraph/cosmo/commit/5eb9f675a9294b26963bdd1c8ac8215448de0c4e)) (@thisisnithin)
+
+### Features
+
+* add banners to inform when limits crossed certain threshold ([#313](https://github.com/wundergraph/cosmo/issues/313)) ([a05971f](https://github.com/wundergraph/cosmo/commit/a05971f2955c263c15387b4ed8d7d0a7c21c7811)) (@JivusAyrus)
+* add new invitations table ([5d96c18](https://github.com/wundergraph/cosmo/commit/5d96c1807700d75fdf9c2a91dcf082170c5bc522)) (@JivusAyrus)
+
+## [0.38.1](https://github.com/wundergraph/cosmo/compare/studio@0.38.0...studio@0.38.1) (2023-11-27)
+
+### Bug Fixes
+
+* view usage for enums and inputs ([#299](https://github.com/wundergraph/cosmo/issues/299)) ([0d652b2](https://github.com/wundergraph/cosmo/commit/0d652b2e83d02dec8523a261816ddbb6f2d1e551)) (@thisisnithin)
+
 # [0.38.0](https://github.com/wundergraph/cosmo/compare/studio@0.37.0...studio@0.38.0) (2023-11-24)
 
 ### Features

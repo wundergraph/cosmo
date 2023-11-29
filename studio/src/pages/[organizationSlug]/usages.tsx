@@ -33,8 +33,10 @@ import {
   Legend,
   ResponsiveContainer,
   XAxis,
-  YAxis
+  YAxis,
 } from "recharts";
+import { CgDanger } from "react-icons/cg";
+import { IoWarningOutline } from "react-icons/io5";
 
 const valueFormatter = (number: number) => `${formatMetric(number)}`;
 
@@ -107,9 +109,7 @@ const UsagesPage: NextPageWithLayout = () => {
   const chartData: { usage: number; capacity: number }[] = [
     {
       usage:
-        Number(data.count) > requestLimit
-          ? requestLimit
-          : Number(data.count),
+        Number(data.count) > requestLimit ? requestLimit : Number(data.count),
       capacity:
         Number(data.count) > requestLimit
           ? 0
@@ -131,14 +131,71 @@ const UsagesPage: NextPageWithLayout = () => {
         </Link>{" "}
         to increase the limits.
       </p>
+      {chartData[0].usage / requestLimit === 1 ? (
+        <div className="flex items-center gap-x-2 rounded-lg border !border-destructive px-4 py-2 text-destructive">
+          <CgDanger size={20} className="text-destructive" />
+          <span>
+            {
+              "Your organization has reached 100% of your request limit. It might affect the product's functionality. "
+            }
+            Please{" "}
+            <a
+              className="underline underline-offset-2"
+              href={calURL}
+              target="_blank"
+              rel="noreferrer"
+            >
+              contact us
+            </a>{" "}
+            to upgrade.
+          </span>
+        </div>
+      ) : chartData[0].usage / requestLimit >= 0.9 ? (
+        <div className="flex items-center gap-x-2 rounded-lg border !border-amber-400 px-4 py-2 text-amber-400">
+          <IoWarningOutline size={20} />
+          <span>
+            {
+              "Your organization has crossed 90% of your request limit. Reaching 100% might affect the product's functionality. "
+            }
+            Please{" "}
+            <a
+              className="text-amber-500 underline underline-offset-2"
+              href={calURL}
+              target="_blank"
+              rel="noreferrer"
+            >
+              contact us
+            </a>{" "}
+            to upgrade.
+          </span>
+        </div>
+      ) : chartData[0].usage / requestLimit >= 0.75 ? (
+        <div className="flex items-center gap-x-2 rounded-lg border !border-amber-400 px-4 py-2 text-amber-400">
+          <IoWarningOutline size={20} />
+          <span>
+            {
+              "Your organization has crossed 75% of your request limit. Reaching 100% might affect the product's functionality. "
+            }
+            Please{" "}
+            <a
+              className="text-amber-500 underline underline-offset-2"
+              href={calURL}
+              target="_blank"
+              rel="noreferrer"
+            >
+              contact us
+            </a>{" "}
+            to upgrade.
+          </span>
+        </div>
+      ) : (
+        <></>
+      )}
       <div className="grid grid-cols-3 gap-4">
         <Card className="col-span-2 flex flex-col gap-y-3 p-3">
           <div className="flex items-center gap-x-2">
             <h1 className="text-lg font-medium">Requests Usage</h1>
-            <Separator
-              orientation="vertical"
-              className="h-6"
-            />
+            <Separator orientation="vertical" className="h-6" />
             <span className="text-xs text-muted-foreground">{`${formatMetric(
               requestLimit,
             )} / month`}</span>

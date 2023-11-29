@@ -25,6 +25,8 @@ import { PlatformWebhookService } from './webhooks/PlatformWebhookService.js';
 import AccessTokenAuthenticator from './services/AccessTokenAuthenticator.js';
 import { GitHubRepository } from './repositories/GitHubRepository.js';
 import { S3BlobStorage } from './blobstorage/index.js';
+import Mailer from './services/Mailer.js';
+import { OrganizationInvitationRepository } from './repositories/OrganizationInvitationRepository.js';
 
 export interface BuildConfig {
   logger: LoggerOptions;
@@ -69,6 +71,8 @@ export interface BuildConfig {
   };
   slack: { clientID?: string; clientSecret?: string };
   s3StorageUrl: string;
+  smtpUsername?: string;
+  smtpPassword?: string;
 }
 
 const developmentLoggerOpts: LoggerOptions = {
@@ -156,6 +160,7 @@ export default async function build(opts: BuildConfig) {
   });
 
   const organizationRepository = new OrganizationRepository(fastify.db);
+  const orgInvitationRepository = new OrganizationInvitationRepository(fastify.db);
   const apiKeyAuth = new ApiKeyAuthenticator(fastify.db, organizationRepository);
   const webAuth = new WebSessionAuthenticator(opts.auth.secret);
   const graphKeyAuth = new GraphApiTokenAuthenticator(opts.auth.secret);
@@ -169,6 +174,11 @@ export default async function build(opts: BuildConfig) {
     adminUser: opts.keycloak.adminUser,
     adminPassword: opts.keycloak.adminPassword,
   });
+
+  let mailerClient: Mailer | undefined;
+  if (opts.smtpUsername && opts.smtpPassword) {
+    mailerClient = new Mailer({ username: opts.smtpUsername, password: opts.smtpPassword });
+  }
 
   let githubApp: App | undefined;
   if (opts.githubApp?.clientId) {
@@ -217,6 +227,7 @@ export default async function build(opts: BuildConfig) {
 
   await fastify.register(AuthController, {
     organizationRepository,
+    orgInvitationRepository,
     webAuth,
     authUtils,
     prefix: '/v1/auth',
@@ -252,6 +263,7 @@ export default async function build(opts: BuildConfig) {
       webBaseUrl: opts.auth.webBaseUrl,
       slack: opts.slack,
       blobStorage,
+      mailerClient,
     }),
     logLevel: opts.logger.level as pino.LevelWithSilent,
     // Avoid compression for small requests

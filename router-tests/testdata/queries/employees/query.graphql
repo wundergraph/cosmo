@@ -33,7 +33,7 @@ query {
     }
     # resolved through employees subgraph
     role {
-      department
+      departments
       title
       ... on Engineer {
         engineerType

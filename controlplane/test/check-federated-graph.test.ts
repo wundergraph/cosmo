@@ -2,8 +2,8 @@ import { join } from 'node:path';
 import { readFile } from 'node:fs/promises';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
-import { afterAllSetup, beforeAllSetup, genID } from '../src/core/test-util';
-import { SetupTest } from './test-util';
+import { afterAllSetup, beforeAllSetup, genID } from '../src/core/test-util.js';
+import { SetupTest } from './test-util.js';
 
 let dbname = '';
 

@@ -804,6 +804,44 @@ export class NormalizationFactory {
     const definedDirectives = new Set<string>();
     let isCurrentParentRootType: boolean = false;
     let fieldName = '';
+    // Collect any renamed root types
+    visit(document, {
+      OperationTypeDefinition: {
+        enter(node) {
+          const operationType = node.operation;
+          const operationPath = `${factory.parentTypeName}.${operationType}`;
+          const definitionNode = factory.schemaDefinition.operationTypes.get(operationType);
+          const newTypeName = getNamedTypeForChild(operationPath, node.type);
+          if (definitionNode) {
+            duplicateOperationTypeDefinitionError(
+              operationType,
+              newTypeName,
+              getNamedTypeForChild(operationPath, definitionNode.type),
+            );
+            return false;
+          }
+          const existingOperationType = factory.operationTypeNames.get(newTypeName);
+          if (existingOperationType) {
+            factory.errors.push(invalidOperationTypeDefinitionError(existingOperationType, newTypeName, operationType));
+          } else {
+            factory.operationTypeNames.set(newTypeName, operationType);
+            factory.schemaDefinition.operationTypes.set(operationType, node);
+          }
+          return false;
+        },
+      },
+      SchemaDefinition: {
+        enter(node) {
+          factory.extractDirectives(node, factory.schemaDefinition.directives);
+          factory.schemaDefinition.description = node.description;
+        },
+      },
+      SchemaExtension: {
+        enter(node) {
+          factory.extractDirectives(node, factory.schemaDefinition.directives);
+        },
+      },
+    });
     visit(document, {
       DirectiveDefinition: {
         enter(node) {
@@ -1127,7 +1165,7 @@ export class NormalizationFactory {
           if (name === SERVICE_OBJECT) {
             return false;
           }
-          isCurrentParentRootType = ROOT_TYPES.has(name);
+          isCurrentParentRootType = ROOT_TYPES.has(name) || factory.operationTypeNames.has(name);
           factory.parentTypeName = name;
           factory.lastParentNodeKind = node.kind;
           addConcreteTypesForImplementedInterfaces(node, factory.abstractToConcreteTypeNames);
@@ -1169,7 +1207,7 @@ export class NormalizationFactory {
           if (name === SERVICE_OBJECT) {
             return false;
           }
-          isCurrentParentRootType = ROOT_TYPES.has(name);
+          isCurrentParentRootType = ROOT_TYPES.has(name) || factory.operationTypeNames.has(name);
           factory.parentTypeName = name;
           factory.lastParentNodeKind = node.kind;
           addConcreteTypesForImplementedInterfaces(node, factory.abstractToConcreteTypeNames);
@@ -1180,30 +1218,6 @@ export class NormalizationFactory {
           factory.isCurrentParentExtension = false;
           factory.parentTypeName = '';
           factory.lastParentNodeKind = Kind.NULL;
-        },
-      },
-      OperationTypeDefinition: {
-        enter(node) {
-          const operationType = node.operation;
-          const operationPath = `${factory.parentTypeName}.${operationType}`;
-          const definitionNode = factory.schemaDefinition.operationTypes.get(operationType);
-          const newTypeName = getNamedTypeForChild(operationPath, node.type);
-          if (definitionNode) {
-            duplicateOperationTypeDefinitionError(
-              operationType,
-              newTypeName,
-              getNamedTypeForChild(operationPath, definitionNode.type),
-            );
-            return false;
-          }
-          const existingOperationType = factory.operationTypeNames.get(newTypeName);
-          if (existingOperationType) {
-            factory.errors.push(invalidOperationTypeDefinitionError(existingOperationType, newTypeName, operationType));
-          } else {
-            factory.operationTypeNames.set(newTypeName, operationType);
-            factory.schemaDefinition.operationTypes.set(operationType, node);
-          }
-          return false;
         },
       },
       ScalarTypeDefinition: {
@@ -1258,17 +1272,6 @@ export class NormalizationFactory {
         leave() {
           factory.parentTypeName = '';
           factory.lastParentNodeKind = Kind.NULL;
-        },
-      },
-      SchemaDefinition: {
-        enter(node) {
-          factory.extractDirectives(node, factory.schemaDefinition.directives);
-          factory.schemaDefinition.description = node.description;
-        },
-      },
-      SchemaExtension: {
-        enter(node) {
-          factory.extractDirectives(node, factory.schemaDefinition.directives);
         },
       },
       UnionTypeDefinition: {
