@@ -141,6 +141,8 @@ services:
     restart: unless-stopped
     networks:
       - primary
+    profiles:
+      - default
 
   # Cosmo Platform
 
@@ -156,6 +158,8 @@ services:
       - "11000:11000"
     networks:
       - primary
+    profiles:
+      - default
 
   graphqlmetrics:
     image: ghcr.io/wundergraph/cosmo/graphqlmetrics:${DC_GRAPHQLMETRICS_VERSION:-latest}
