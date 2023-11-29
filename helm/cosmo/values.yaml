@@ -33,6 +33,7 @@ global:
     enabled: false
 
   cdn:
+    enabled: false
     s3StorageUrl: "http://minio:changeme@cosmo-minio:9000/cosmo"
 
   controlplane:
