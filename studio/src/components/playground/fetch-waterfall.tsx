@@ -31,7 +31,7 @@ const Attribute = ({ name, value }: { name: string; value: any }) => {
     <TooltipProvider>
       <Tooltip delayDuration={300}>
         <TooltipTrigger>
-          <div className="flex items-center gap-x-1">
+          <div className="flex w-60 items-center gap-x-1">
             <span className="text-accent-foreground">{name}</span>{" "}
             <span className="text-accent-foreground">=</span>{" "}
             <span className="truncate text-accent-foreground/80">{value}</span>
@@ -69,9 +69,11 @@ export const FetchWaterfall = ({
     ? parentFetch.children.length
     : 0;
 
+  const isLoadSkipped = fetch.loadSkipped;
+
   // Work with smaller units (picosecond) on numerator to circumvent bigint division
-  const elapsedDurationPs = BigInt(fetch.durationSinceStart!) * bigintE3;
-  const spanDurationPs = BigInt(fetch.durationLoad!) * bigintE3;
+  const elapsedDurationPs = BigInt(fetch.durationSinceStart ?? 0) * bigintE3;
+  const spanDurationPs = BigInt(fetch.durationLoad ?? 0) * bigintE3;
   const visualOffsetPercentage = Number(
     ((elapsedDurationPs / globalDuration) * bigintE2) / bigintE3,
   );
@@ -100,9 +102,11 @@ export const FetchWaterfall = ({
   );
 
   const getDurationOffset = () => {
-    const durationCharCount = (nsToTime(BigInt(fetch.durationLoad!)) as string)
-      .length;
-    if (visualWidthPercentage < 8 && durationCharCount < 9) {
+    const durationCharCount = (
+      nsToTime(BigInt(fetch.durationLoad ?? 0)) as string
+    ).length;
+
+    if (visualWidthPercentage < 10 && durationCharCount < 12) {
       if (visualOffsetPercentage < 90) {
         return `calc(${visualOffsetPercentage + visualWidthPercentage + 2}%)`;
       }
@@ -253,14 +257,16 @@ export const FetchWaterfall = ({
                     "!text-white": visualWidthPercentage >= 8,
                   })}
                 >
-                  {nsToTime(BigInt(fetch.durationLoad!))}
+                  {isLoadSkipped
+                    ? "Load Skipped"
+                    : nsToTime(BigInt(fetch.durationLoad ?? 0))}
                 </div>
               </>
             )}
           </button>
         </div>
         {showDetails && (
-          <div className="my-2 grid grid-cols-3 gap-x-4 gap-y-1 overflow-hidden border-0 px-10 pr-6 text-xs">
+          <div className="my-2 flex flex-wrap gap-x-4 gap-y-1 overflow-hidden border-0 px-10 pr-6 text-xs">
             {fetch.outputTrace && (
               <Attribute
                 name="method"
