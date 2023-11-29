@@ -17,37 +17,40 @@ import (
 )
 
 type PreHandlerOptions struct {
-	Logger           *zap.Logger
-	Executor         *Executor
-	Metrics          *RouterMetrics
-	Parser           *OperationParser
-	Planner          *OperationPlanner
-	AccessController *AccessController
-	DevelopmentMode  bool
-	CSRFKey          string
+	Logger               *zap.Logger
+	Executor             *Executor
+	Metrics              *RouterMetrics
+	Parser               *OperationParser
+	Planner              *OperationPlanner
+	AccessController     *AccessController
+	DevelopmentMode      bool
+	CSRFKey              string
+	EnableRequestTracing bool
 }
 
 type PreHandler struct {
-	log              *zap.Logger
-	executor         *Executor
-	metrics          *RouterMetrics
-	parser           *OperationParser
-	planner          *OperationPlanner
-	accessController *AccessController
-	developmentMode  bool
-	csrfKey          []byte
+	log                  *zap.Logger
+	executor             *Executor
+	metrics              *RouterMetrics
+	parser               *OperationParser
+	planner              *OperationPlanner
+	accessController     *AccessController
+	developmentMode      bool
+	csrfKey              []byte
+	enableRequestTracing bool
 }
 
 func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 	return &PreHandler{
-		log:              opts.Logger,
-		executor:         opts.Executor,
-		metrics:          opts.Metrics,
-		parser:           opts.Parser,
-		planner:          opts.Planner,
-		accessController: opts.AccessController,
-		csrfKey:          []byte(opts.CSRFKey),
-		developmentMode:  opts.DevelopmentMode,
+		log:                  opts.Logger,
+		executor:             opts.Executor,
+		metrics:              opts.Metrics,
+		parser:               opts.Parser,
+		planner:              opts.Planner,
+		accessController:     opts.AccessController,
+		csrfKey:              []byte(opts.CSRFKey),
+		developmentMode:      opts.DevelopmentMode,
+		enableRequestTracing: opts.EnableRequestTracing,
 	}
 }
 
@@ -71,7 +74,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			hasRequestError bool
 			writtenBytes    int
 			statusCode      = http.StatusOK
-			traceOptions    = ParseRequestTraceOptions(r)
+			traceOptions    = resolve.RequestTraceOptions{}
 			tracePlanStart  int64
 		)
 
@@ -89,22 +92,26 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			return
 		}
 
-		// If we have a CSRF token we validate it
-		if clientInfo.CSRFToken != "" {
-			hmacHasher := hmac.New(sha256.New, h.csrfKey)
-			hmacHasher.Write(body)
-			signature := hex.EncodeToString(hmacHasher.Sum(nil))
+		if h.enableRequestTracing {
 
-			if signature != clientInfo.CSRFToken {
-				err := errors.New("invalid csrf token")
-				hasRequestError = true
-				requestLogger.Error(err.Error())
-				writeRequestErrors(r, http.StatusForbidden, graphql.RequestErrorsFromError(err), w, requestLogger)
-				return
+			if clientInfo.CSRFToken != "" {
+				hmacHasher := hmac.New(sha256.New, h.csrfKey)
+				hmacHasher.Write(body)
+				signature := hex.EncodeToString(hmacHasher.Sum(nil))
+
+				if signature != clientInfo.CSRFToken {
+					err := errors.New("invalid csrf token")
+					hasRequestError = true
+					requestLogger.Error(err.Error())
+					writeRequestErrors(r, http.StatusForbidden, graphql.RequestErrorsFromError(err), w, requestLogger)
+					return
+				}
+			} else if !h.developmentMode {
+				// In production, without request signing, we disable ART because it's not safe to use
+				traceOptions.DisableAll()
 			}
-		} else if !h.developmentMode {
-			// In production, without request signing, we disable ART because it's not safe to use
-			traceOptions.DisableAll()
+
+			traceOptions = ParseRequestTraceOptions(r)
 		}
 
 		if traceOptions.Enable {

@@ -554,20 +554,26 @@ func (r *Router) bootstrap(ctx context.Context) error {
 // Start starts the Server. It blocks until the context is cancelled or when the initial config could not be fetched.
 func (r *Router) Start(ctx context.Context) error {
 	if r.shutdown {
-		return fmt.Errorf("router is closed. Create r new instance with router.NewRouter()")
+		return fmt.Errorf("router is closed. Create a new instance with router.NewRouter()")
 	}
 
-	defaultExporter := metric.GetDefaultExporter(r.metricConfig)
+	cosmoCloudTracing := r.traceConfig.Enabled && metric.GetDefaultExporter(r.metricConfig) != nil
+	artInProduction := r.engineExecutionConfiguration.EnableRequestTracing && !r.developmentMode
+	needsRegistration := cosmoCloudTracing || artInProduction
 
-	if r.selfRegister != nil {
-		if defaultExporter != nil {
-			ri, registerErr := r.selfRegister.Register(ctx)
-			if registerErr != nil {
-				r.logger.Error("Failed to register router. If this error persists, please contact support.", zap.Error(registerErr))
-			} else {
-				r.registrationInfo = ri
+	if needsRegistration && r.selfRegister != nil {
 
-				if !defaultExporter.Disabled && r.traceConfig.Sampler > float64(r.registrationInfo.AccountLimits.TraceSamplingRate) {
+		r.logger.Info("Registering router with control plane because some features requires it.")
+
+		ri, registerErr := r.selfRegister.Register(ctx)
+		if registerErr != nil {
+			r.logger.Error("Failed to register router. If this error persists, please contact support.", zap.Error(registerErr))
+		} else {
+			r.registrationInfo = ri
+
+			// Only ensure sampling rate if the user exports traces to Cosmo Cloud
+			if cosmoCloudTracing {
+				if r.traceConfig.Sampler > float64(r.registrationInfo.AccountLimits.TraceSamplingRate) {
 					r.logger.Warn("Trace sampling rate is higher than account limit. Using account limit instead. Please contact support to increase your account limit.",
 						zap.Float64("limit", r.traceConfig.Sampler),
 						zap.String("account_limit", fmt.Sprintf("%.2f", r.registrationInfo.AccountLimits.TraceSamplingRate)),
@@ -791,14 +797,15 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	routerMetrics := NewRouterMetrics(metricStore, r.gqlMetricsExporter, routerConfig.GetVersion())
 
 	graphqlPreHandler := NewPreHandler(&PreHandlerOptions{
-		Logger:           r.logger,
-		Executor:         executor,
-		Metrics:          routerMetrics,
-		Parser:           operationParser,
-		Planner:          operationPlanner,
-		AccessController: r.accessController,
-		CSRFKey:          r.registrationInfo.GetCsrf().GetKey(),
-		DevelopmentMode:  r.developmentMode,
+		Logger:               r.logger,
+		Executor:             executor,
+		Metrics:              routerMetrics,
+		Parser:               operationParser,
+		Planner:              operationPlanner,
+		AccessController:     r.accessController,
+		CSRFKey:              r.registrationInfo.GetCsrf().GetKey(),
+		EnableRequestTracing: r.engineExecutionConfiguration.EnableRequestTracing,
+		DevelopmentMode:      r.developmentMode,
 	})
 
 	// Serve GraphQL. Metrics are collected after the request is handled and classified as r GraphQL request.

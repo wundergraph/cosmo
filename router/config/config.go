@@ -163,6 +163,7 @@ type EngineDebugConfiguration struct {
 type EngineExecutionConfiguration struct {
 	Debug                                  EngineDebugConfiguration
 	EnableSingleFlight                     bool `default:"true" envconfig:"ENGINE_ENABLE_SINGLE_FLIGHT"`
+	EnableRequestTracing                   bool `default:"true" envconfig:"ENGINE_ENABLE_REQUEST_TRACING"`
 	EnableExecutionPlanCacheResponseHeader bool `default:"false" envconfig:"ENGINE_ENABLE_EXECUTION_PLAN_CACHE_RESPONSE_HEADER"`
 }
 
@@ -225,8 +226,9 @@ type Config struct {
 	CDN                           CDNConfiguration            `yaml:"cdn"`
 	DevelopmentMode               bool                        `yaml:"dev_mode" default:"false" envconfig:"DEV_MODE"`
 
-	ConfigPath       string `envconfig:"CONFIG_PATH" validate:"omitempty,filepath"`
-	RouterConfigPath string `yaml:"router_config_path" envconfig:"ROUTER_CONFIG_PATH" validate:"omitempty,filepath"`
+	ConfigPath         string `envconfig:"CONFIG_PATH" validate:"omitempty,filepath"`
+	RouterConfigPath   string `yaml:"router_config_path" envconfig:"ROUTER_CONFIG_PATH" validate:"omitempty,filepath"`
+	RouterRegistration bool   `yaml:"router_registration" envconfig:"ROUTER_REGISTRATION" default:"true"`
 
 	OverrideRoutingURL OverrideRoutingURLConfiguration `yaml:"override_routing_url"`
 

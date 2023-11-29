@@ -70,7 +70,7 @@ func (c *selfRegister) Stop(_ context.Context) error {
 }
 
 func (c *selfRegister) Register(ctx context.Context) (*nodev1.RegistrationInfo, error) {
-	c.logger.Info("Registering router on controlplane")
+	c.logger.Debug("Registering router on controlplane")
 
 	req := connect.NewRequest(&nodev1.SelfRegisterRequest{})
 

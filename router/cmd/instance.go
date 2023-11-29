@@ -30,6 +30,7 @@ func NewRouter(params Params) (*core.Router, error) {
 
 	var routerConfig *nodev1.RouterConfig
 	var configPoller configpoller.ConfigPoller
+	var selfRegister selfregister.SelfRegister
 
 	cfg := params.Config
 	logger := params.Logger
@@ -46,9 +47,11 @@ func NewRouter(params Params) (*core.Router, error) {
 		)
 	}
 
-	selfRegister := selfregister.New(cfg.ControlplaneURL, cfg.Graph.Token,
-		selfregister.WithLogger(logger),
-	)
+	if cfg.RouterRegistration {
+		selfRegister = selfregister.New(cfg.ControlplaneURL, cfg.Graph.Token,
+			selfregister.WithLogger(logger),
+		)
+	}
 
 	var authenticators []authentication.Authenticator
 	for i, auth := range cfg.Authentication.Providers {
