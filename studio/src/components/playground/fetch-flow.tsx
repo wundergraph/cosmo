@@ -32,6 +32,12 @@ import { ViewHeaders } from "./view-headers";
 import { ViewInput } from "./view-input";
 import { ViewOutput } from "./view-output";
 import { ViewLoadStats } from "./view-load-stats";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "../ui/tooltip";
 
 const dagreGraph = new dagre.graphlib.Graph();
 dagreGraph.setDefaultEdgeLabel(function () {
@@ -73,7 +79,6 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
 };
 
 function CustomEdge({
-  id,
   sourceX,
   sourceY,
   targetX,
@@ -172,7 +177,18 @@ const ReactFlowFetchNode = ({ data }: Node<FetchNode>) => {
           {data.outputTrace && (
             <>
               <p>Method: {data.outputTrace?.request?.method}</p>
-              <p>URL: {data.outputTrace?.request?.url}</p>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <p className="max-w-sm truncate">
+                      URL: {data.outputTrace?.request?.url}
+                    </p>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {data.outputTrace?.request?.url}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </>
           )}
           <p className="flex items-center gap-x-2">

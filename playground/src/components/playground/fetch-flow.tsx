@@ -1,10 +1,10 @@
-import { nsToTime } from "@/lib/utils";
-import { cn } from "@/lib/utils";
-import { ArrowsPointingInIcon } from "@heroicons/react/24/outline";
-import { CheckCircledIcon, CrossCircledIcon } from "@radix-ui/react-icons";
-import { sentenceCase } from "change-case";
-import dagre from "dagre";
-import { useCallback, useEffect, useMemo } from "react";
+import { nsToTime } from '@/lib/utils';
+import { cn } from '@/lib/utils';
+import { ArrowsPointingInIcon } from '@heroicons/react/24/outline';
+import { CheckCircledIcon, CrossCircledIcon } from '@radix-ui/react-icons';
+import { sentenceCase } from 'change-case';
+import dagre from 'dagre';
+import { useCallback, useEffect, useMemo } from 'react';
 import ReactFlow, {
   Background,
   BaseEdge,
@@ -22,16 +22,17 @@ import ReactFlow, {
   useNodesInitialized,
   useNodesState,
   useReactFlow,
-} from "reactflow";
-import "reactflow/dist/style.css";
-import { Badge } from "../ui/badge";
-import { buttonVariants } from "../ui/button";
-import { Separator } from "../ui/separator";
-import { FetchNode } from "./types";
-import { ViewHeaders } from "./view-headers";
-import { ViewInput } from "./view-input";
-import { ViewOutput } from "./view-output";
-import { ViewLoadStats } from "./view-load-stats";
+} from 'reactflow';
+import 'reactflow/dist/style.css';
+import { Badge } from '../ui/badge';
+import { buttonVariants } from '../ui/button';
+import { Separator } from '../ui/separator';
+import { FetchNode } from './types';
+import { ViewHeaders } from './view-headers';
+import { ViewInput } from './view-input';
+import { ViewOutput } from './view-output';
+import { ViewLoadStats } from './view-load-stats';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 
 const dagreGraph = new dagre.graphlib.Graph();
 dagreGraph.setDefaultEdgeLabel(function () {
@@ -42,7 +43,7 @@ const nodeWidth = 400;
 const nodeHeight = 400;
 
 const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
-  dagreGraph.setGraph({ rankdir: "LR", nodesep: 15 });
+  dagreGraph.setGraph({ rankdir: 'LR', nodesep: 15 });
 
   nodes.forEach((node) => {
     dagreGraph.setNode(node.id, { width: nodeWidth, height: nodeHeight });
@@ -99,9 +100,9 @@ function CustomEdge({
         <EdgeLabelRenderer>
           <div
             style={{
-              position: "absolute",
+              position: 'absolute',
               transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
-              pointerEvents: "all",
+              pointerEvents: 'all',
             }}
             className="nodrag nopan"
           >
@@ -115,9 +116,7 @@ function CustomEdge({
   );
 }
 
-const ReactFlowMultiFetchNode = ({
-  data,
-}: Node<Pick<FetchNode, "id" | "type">>) => {
+const ReactFlowMultiFetchNode = ({ data }: Node<Pick<FetchNode, 'id' | 'type'>>) => {
   return (
     <>
       <Handle type="target" position={Position.Left} isConnectable={false} />
@@ -145,25 +144,18 @@ const ReactFlowFetchNode = ({ data }: Node<FetchNode>) => {
     <>
       <Handle type="target" position={Position.Left} isConnectable={false} />
       <div
-        className={cn(
-          "relative flex flex-col  rounded-md border py-4 text-secondary-foreground",
-          {
-            "!border-destructive": isFailure,
-          }
-        )}
+        className={cn('relative flex flex-col  rounded-md border py-4 text-secondary-foreground', {
+          '!border-destructive': isFailure,
+        })}
       >
         <div className="absolute inset-0 -z-10 bg-secondary/30 backdrop-blur-lg" />
         <div className="flex items-start justify-between gap-x-4 border-b px-4 pb-4">
           <p className="flex flex-col gap-y-2 text-base font-medium subpixel-antialiased">
             <span>Fetch from {data.dataSourceName}</span>
-            <span className="text-xs font-normal text-muted-foreground">
-              {data.dataSourceId}
-            </span>
+            <span className="text-xs font-normal text-muted-foreground">{data.dataSourceId}</span>
           </p>
           {data.outputTrace && (
-            <Badge variant={isFailure ? "destructive" : "success"}>
-              {data.outputTrace?.response?.statusCode}
-            </Badge>
+            <Badge variant={isFailure ? 'destructive' : 'success'}>{data.outputTrace?.response?.statusCode}</Badge>
           )}
         </div>
         <div className="flex flex-col gap-y-1 px-4 py-4 text-sm">
@@ -171,48 +163,38 @@ const ReactFlowFetchNode = ({ data }: Node<FetchNode>) => {
           {data.outputTrace && (
             <>
               <p>Method: {data.outputTrace?.request?.method}</p>
-              <p>URL: {data.outputTrace?.request?.url}</p>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <p className="max-w-sm truncate">URL: {data.outputTrace?.request?.url}</p>
+                  </TooltipTrigger>
+                  <TooltipContent>{data.outputTrace?.request?.url}</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </>
           )}
+          <p className="flex items-center gap-x-2">Single Flight: {getIcon(data.singleFlightUsed)}</p>
           <p className="flex items-center gap-x-2">
-            Single Flight: {getIcon(data.singleFlightUsed)}
+            Single Flight Shared Response: {getIcon(data.singleFlightSharedResponse)}
           </p>
-          <p className="flex items-center gap-x-2">
-            Single Flight Shared Response:{" "}
-            {getIcon(data.singleFlightSharedResponse)}
-          </p>
-          <p className="flex items-center gap-x-2">
-            Load Skipped: {getIcon(data.loadSkipped)}
-          </p>
+          <p className="flex items-center gap-x-2">Load Skipped: {getIcon(data.loadSkipped)}</p>
         </div>
-        {(data.outputTrace || data.input || data.rawInput || data.output) && (
-          <Separator className="mb-4" />
-        )}
+        {(data.outputTrace || data.input || data.rawInput || data.output) && <Separator className="mb-4" />}
         <div
-          className={cn("flex gap-2 px-4", {
-            "grid grid-cols-2":
-              data.outputTrace &&
-              (data.input || data.rawInput) &&
-              data.output &&
-              data.loadStats,
+          className={cn('flex gap-2 px-4', {
+            'grid grid-cols-2': data.outputTrace && (data.input || data.rawInput) && data.output && data.loadStats,
           })}
         >
           {data.outputTrace && (
             <ViewHeaders
               requestHeaders={JSON.stringify(data.outputTrace.request.headers)}
-              responseHeaders={JSON.stringify(
-                data.outputTrace.response.headers
-              )}
+              responseHeaders={JSON.stringify(data.outputTrace.response.headers)}
               asChild
             />
           )}
-          {(data.input || data.rawInput) && (
-            <ViewInput input={data.input} rawInput={data.rawInput} asChild />
-          )}
+          {(data.input || data.rawInput) && <ViewInput input={data.input} rawInput={data.rawInput} asChild />}
           {data.output && <ViewOutput output={data.output} asChild />}
-          {data.loadStats && (
-            <ViewLoadStats loadStats={data.loadStats} asChild />
-          )}
+          {data.loadStats && <ViewLoadStats loadStats={data.loadStats} asChild />}
         </div>
       </div>
       <Handle type="source" position={Position.Right} isConnectable={false} />
@@ -222,17 +204,8 @@ const ReactFlowFetchNode = ({ data }: Node<FetchNode>) => {
 
 const defaultZoom = { minZoom: 0.1, maxZoom: 1 };
 
-export function FetchFlow({
-  initialNodes,
-  initialEdges,
-}: {
-  initialNodes: Node[];
-  initialEdges: Edge[];
-}) {
-  const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
-    initialNodes,
-    initialEdges
-  );
+export function FetchFlow({ initialNodes, initialEdges }: { initialNodes: Node[]; initialEdges: Edge[] }) {
+  const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(initialNodes, initialEdges);
   const [nodes, setNodes, onNodesChange] = useNodesState(layoutedNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(layoutedEdges);
 
@@ -241,13 +214,8 @@ export function FetchFlow({
 
   const onConnect = useCallback(
     (params: Edge) =>
-      setEdges((eds) =>
-        addEdge(
-          { ...params, type: ConnectionLineType.SmoothStep, animated: true },
-          eds
-        )
-      ),
-    [setEdges]
+      setEdges((eds) => addEdge({ ...params, type: ConnectionLineType.SmoothStep, animated: true }, eds)),
+    [setEdges],
   );
 
   useEffect(() => {
@@ -267,7 +235,7 @@ export function FetchFlow({
       fetch: ReactFlowFetchNode,
       multi: ReactFlowMultiFetchNode,
     }),
-    []
+    [],
   );
 
   const edgeTypes = useMemo<any>(() => ({ fetch: CustomEdge }), []);
@@ -289,14 +257,11 @@ export function FetchFlow({
       edgeTypes={edgeTypes}
     >
       <Background />
-      <Panel
-        position="bottom-left"
-        onClick={() => reactFlowInstance.fitView(defaultZoom)}
-      >
+      <Panel position="bottom-left" onClick={() => reactFlowInstance.fitView(defaultZoom)}>
         <ArrowsPointingInIcon
           className={cn(
-            buttonVariants({ variant: "secondary", size: "icon" }),
-            "h-8 w-8 shrink-0 cursor-pointer select-none p-1.5"
+            buttonVariants({ variant: 'secondary', size: 'icon' }),
+            'h-8 w-8 shrink-0 cursor-pointer select-none p-1.5',
           )}
           title="Center"
         />
