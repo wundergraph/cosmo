@@ -119,6 +119,7 @@ export type FieldContainer = {
   directives: PersistedDirectivesContainer;
   isShareable: boolean;
   node: MutableFieldDefinitionNode;
+  overrideTargetSubgraphName: string;
   namedTypeName: string;
   subgraphs: Set<string>;
   subgraphsByExternal: Map<String, boolean>;
