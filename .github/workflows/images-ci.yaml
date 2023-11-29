@@ -31,6 +31,9 @@ jobs:
     strategy:
       matrix:
         include:
+          - container_name: cdn
+            dockerfile: cdn-server/Dockerfile
+            context_path: .
           - container_name: controlplane
             dockerfile: controlplane/Dockerfile
             context_path: .
