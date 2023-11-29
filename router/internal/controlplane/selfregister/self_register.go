@@ -45,7 +45,7 @@ func New(endpoint, token string, opts ...Option) SelfRegister {
 	}
 
 	retryClient := retryablehttp.NewClient()
-	retryClient.RetryWaitMax = 10 * time.Second
+	retryClient.RetryWaitMax = 15 * time.Second
 	retryClient.RetryMax = 3
 	retryClient.Backoff = retryablehttp.DefaultBackoff
 	retryClient.Logger = nil

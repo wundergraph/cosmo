@@ -557,13 +557,13 @@ func (r *Router) Start(ctx context.Context) error {
 		return fmt.Errorf("router is closed. Create a new instance with router.NewRouter()")
 	}
 
-	cosmoCloudTracing := r.traceConfig.Enabled && metric.GetDefaultExporter(r.metricConfig) != nil
+	cosmoCloudTracing := r.traceConfig.Enabled && trace.GetDefaultExporter(r.traceConfig) != nil
 	artInProduction := r.engineExecutionConfiguration.EnableRequestTracing && !r.developmentMode
 	needsRegistration := cosmoCloudTracing || artInProduction
 
 	if needsRegistration && r.selfRegister != nil {
 
-		r.logger.Info("Registering router with control plane because some features requires it.")
+		r.logger.Info("Registering router with control plane because you opted in to send telemetry to Cosmo Cloud or advanced request tracing (ART) in production")
 
 		ri, registerErr := r.selfRegister.Register(ctx)
 		if registerErr != nil {
