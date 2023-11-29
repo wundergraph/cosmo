@@ -2,14 +2,14 @@ CREATE TABLE IF NOT EXISTS "organization_invitations" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"organization_id" uuid NOT NULL,
 	"user_id" uuid NOT NULL,
-	"accepted_invite" boolean DEFAULT false,
+	"accepted" boolean DEFAULT false,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 
 --> Moving the pending invitations from org members to org invitations
 BEGIN TRANSACTION;
-INSERT INTO "organization_invitations" ("organization_id", "user_id", "accepted_invite", "created_at")
+INSERT INTO "organization_invitations" ("organization_id", "user_id", "accepted", "created_at")
 SELECT "organization_id", "user_id", "accepted_invite", "created_at"
 FROM "organization_members"
 WHERE "accepted_invite" = false;

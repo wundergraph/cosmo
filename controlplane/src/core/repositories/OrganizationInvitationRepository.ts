@@ -23,7 +23,7 @@ export class OrganizationInvitationRepository {
       .where(
         and(
           eq(organizationInvitations.organizationId, input.organizationId),
-          eq(organizationInvitations.acceptedInvite, false),
+          eq(organizationInvitations.accepted, false),
         ),
       )
       .orderBy(asc(organizationInvitations.createdAt))
@@ -45,7 +45,7 @@ export class OrganizationInvitationRepository {
       .from(organizationInvitations)
       .innerJoin(organizations, eq(organizations.id, organizationInvitations.organizationId))
       .innerJoin(users, eq(users.id, organizationInvitations.userId))
-      .where(and(eq(users.id, input.userId), eq(organizationInvitations.acceptedInvite, false)))
+      .where(and(eq(users.id, input.userId), eq(organizationInvitations.accepted, false)))
       .execute();
 
     const userInvitations = pendingOrgInvites.map((org) => ({
@@ -74,7 +74,7 @@ export class OrganizationInvitationRepository {
         and(
           eq(organizationInvitations.organizationId, input.organizationID),
           eq(users.id, input.userID),
-          eq(organizationInvitations.acceptedInvite, false),
+          eq(organizationInvitations.accepted, false),
         ),
       )
       .orderBy(asc(organizationInvitations.createdAt))
@@ -106,7 +106,7 @@ export class OrganizationInvitationRepository {
         .values({
           userId: input.userId,
           organizationId: input.organizationId,
-          acceptedInvite: false,
+          accepted: false,
         })
         .execute();
     });
@@ -117,7 +117,7 @@ export class OrganizationInvitationRepository {
       const orgRepo = new OrganizationRepository(tx);
       await tx
         .update(organizationInvitations)
-        .set({ acceptedInvite: true })
+        .set({ accepted: true })
         .where(
           and(
             eq(organizationInvitations.userId, input.userId),
@@ -142,7 +142,7 @@ export class OrganizationInvitationRepository {
         and(
           eq(organizationInvitations.organizationId, input.organizationId),
           eq(organizationInvitations.userId, input.userId),
-          eq(organizationInvitations.acceptedInvite, false),
+          eq(organizationInvitations.accepted, false),
         ),
       )
       .execute();

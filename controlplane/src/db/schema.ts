@@ -862,6 +862,6 @@ export const organizationInvitations = pgTable('organization_invitations', {
   userId: uuid('user_id')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
-  acceptedInvite: boolean('accepted_invite').default(false),
+  accepted: boolean('accepted').default(false),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
