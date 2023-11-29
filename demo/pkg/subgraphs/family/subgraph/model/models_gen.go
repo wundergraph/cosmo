@@ -161,9 +161,9 @@ func (e CatType) MarshalGQL(w io.Writer) {
 type Class string
 
 const (
-	ClassFish    Class = "Fish"
-	ClassMammal  Class = "Mammal"
-	ClassReptile Class = "Reptile"
+	ClassFish    Class = "FISH"
+	ClassMammal  Class = "MAMMAL"
+	ClassReptile Class = "REPTILE"
 )
 
 var AllClass = []Class{

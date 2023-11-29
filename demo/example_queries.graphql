@@ -33,7 +33,7 @@ query {
     }
     # resolved through employees subgraph
     role {
-      department
+      departments
       title
       ... on Engineer {
         engineerType
@@ -78,7 +78,7 @@ query {
       location
     }
   }
-  team_mates(team: OPERATIONS) {
+  teammates(team: OPERATIONS) {
     # resolved through employees subgraph
     id
     ...EmployeeNameFragment

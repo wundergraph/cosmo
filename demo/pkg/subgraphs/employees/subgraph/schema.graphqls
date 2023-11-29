@@ -1,8 +1,8 @@
 type Query {
   employee(id: Int!): Employee
   employees: [Employee!]!
-  team_mates(team: Department!): [Employee!]!
   products: [Products!]!
+  teammates(team: Department!): [Employee!]!
 }
 
 type Subscription {
@@ -19,13 +19,13 @@ enum Department {
 }
 
 interface RoleType {
-  department: Department!
+  departments: [Department!]!
   title: [String!]!
 }
 
 enum EngineerType {
-  FRONTEND
   BACKEND
+  FRONTEND
   FULLSTACK
 }
 
@@ -34,13 +34,13 @@ interface Identifiable {
 }
 
 type Engineer implements RoleType {
-  department: Department!
+  departments: [Department!]!
   engineerType: EngineerType!
   title: [String!]!
 }
 
 type Marketer implements RoleType{
-  department: Department!
+  departments: [Department!]!
   title: [String!]!
 }
 
@@ -50,7 +50,7 @@ enum OperationType {
 }
 
 type Operator implements RoleType {
-  department: Department!
+  departments: [Department!]!
   operatorType: [OperationType!]!
   title: [String!]!
 }
@@ -94,7 +94,6 @@ interface IProduct {
 type Consultancy @key(fields: "upc") {
   upc: ID!
   lead: Employee!
-  test: String!
 }
 
 type Cosmo implements IProduct @key(fields: "upc") {

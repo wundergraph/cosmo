@@ -17,7 +17,6 @@ var sdk = &model.Sdk{
 var consultancy = &model.Consultancy{
 	Upc:  "consultancy",
 	Lead: employees[0],
-	Test: "Test!",
 }
 
 var products = []model.Products{
