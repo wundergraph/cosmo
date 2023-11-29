@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.39.1](https://github.com/wundergraph/cosmo/compare/studio@0.39.0...studio@0.39.1) (2023-11-29)
+
+### Bug Fixes
+
+* invitations icon ([#317](https://github.com/wundergraph/cosmo/issues/317)) ([a1e2f4b](https://github.com/wundergraph/cosmo/commit/a1e2f4b91a6ac7e4019aa50131b16d084e5ded21)) (@JivusAyrus)
+* limit banners ([#316](https://github.com/wundergraph/cosmo/issues/316)) ([cf715b2](https://github.com/wundergraph/cosmo/commit/cf715b2bf23d969a410e6f260f75277178fa672c)) (@JivusAyrus)
+
 # [0.39.0](https://github.com/wundergraph/cosmo/compare/studio@0.38.1...studio@0.39.0) (2023-11-29)
 
 ### Bug Fixes
