@@ -106,12 +106,15 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 					writeRequestErrors(r, http.StatusForbidden, graphql.RequestErrorsFromError(err), w, requestLogger)
 					return
 				}
-			} else if !h.developmentMode {
-				// In production, without request signing, we disable ART because it's not safe to use
-				traceOptions.DisableAll()
-			} else {
+
+				// Enable ART after successful CSRF check
+				traceOptions = ParseRequestTraceOptions(r)
+			} else if h.developmentMode {
 				// In development, without request signing, we enable ART
 				traceOptions = ParseRequestTraceOptions(r)
+			} else {
+				// In production, without request signing, we disable ART because it's not safe to use
+				traceOptions.DisableAll()
 			}
 		}
 
