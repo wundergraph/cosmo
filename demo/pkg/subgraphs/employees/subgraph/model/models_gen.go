@@ -25,7 +25,7 @@ type Products interface {
 
 type RoleType interface {
 	IsRoleType()
-	GetDepartment() Department
+	GetDepartments() []Department
 	GetTitle() []string
 }
 
@@ -81,13 +81,22 @@ func (this Employee) GetID() int { return this.ID }
 func (Employee) IsEntity() {}
 
 type Engineer struct {
-	Department   Department   `json:"department"`
+	Departments  []Department `json:"departments"`
 	EngineerType EngineerType `json:"engineerType"`
 	Title        []string     `json:"title"`
 }
 
-func (Engineer) IsRoleType()                    {}
-func (this Engineer) GetDepartment() Department { return this.Department }
+func (Engineer) IsRoleType() {}
+func (this Engineer) GetDepartments() []Department {
+	if this.Departments == nil {
+		return nil
+	}
+	interfaceSlice := make([]Department, 0, len(this.Departments))
+	for _, concrete := range this.Departments {
+		interfaceSlice = append(interfaceSlice, concrete)
+	}
+	return interfaceSlice
+}
 func (this Engineer) GetTitle() []string {
 	if this.Title == nil {
 		return nil
@@ -100,12 +109,21 @@ func (this Engineer) GetTitle() []string {
 }
 
 type Marketer struct {
-	Department Department `json:"department"`
-	Title      []string   `json:"title"`
+	Departments []Department `json:"departments"`
+	Title       []string     `json:"title"`
 }
 
-func (Marketer) IsRoleType()                    {}
-func (this Marketer) GetDepartment() Department { return this.Department }
+func (Marketer) IsRoleType() {}
+func (this Marketer) GetDepartments() []Department {
+	if this.Departments == nil {
+		return nil
+	}
+	interfaceSlice := make([]Department, 0, len(this.Departments))
+	for _, concrete := range this.Departments {
+		interfaceSlice = append(interfaceSlice, concrete)
+	}
+	return interfaceSlice
+}
 func (this Marketer) GetTitle() []string {
 	if this.Title == nil {
 		return nil
@@ -118,13 +136,22 @@ func (this Marketer) GetTitle() []string {
 }
 
 type Operator struct {
-	Department   Department      `json:"department"`
+	Departments  []Department    `json:"departments"`
 	OperatorType []OperationType `json:"operatorType"`
 	Title        []string        `json:"title"`
 }
 
-func (Operator) IsRoleType()                    {}
-func (this Operator) GetDepartment() Department { return this.Department }
+func (Operator) IsRoleType() {}
+func (this Operator) GetDepartments() []Department {
+	if this.Departments == nil {
+		return nil
+	}
+	interfaceSlice := make([]Department, 0, len(this.Departments))
+	for _, concrete := range this.Departments {
+		interfaceSlice = append(interfaceSlice, concrete)
+	}
+	return interfaceSlice
+}
 func (this Operator) GetTitle() []string {
 	if this.Title == nil {
 		return nil
@@ -263,20 +290,20 @@ func (e Department) MarshalGQL(w io.Writer) {
 type EngineerType string
 
 const (
-	EngineerTypeFrontend  EngineerType = "FRONTEND"
 	EngineerTypeBackend   EngineerType = "BACKEND"
+	EngineerTypeFrontend  EngineerType = "FRONTEND"
 	EngineerTypeFullstack EngineerType = "FULLSTACK"
 )
 
 var AllEngineerType = []EngineerType{
-	EngineerTypeFrontend,
 	EngineerTypeBackend,
+	EngineerTypeFrontend,
 	EngineerTypeFullstack,
 }
 
 func (e EngineerType) IsValid() bool {
 	switch e {
-	case EngineerTypeFrontend, EngineerTypeBackend, EngineerTypeFullstack:
+	case EngineerTypeBackend, EngineerTypeFrontend, EngineerTypeFullstack:
 		return true
 	}
 	return false

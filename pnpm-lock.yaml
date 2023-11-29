@@ -34,13 +34,13 @@ importers:
         version: 0.6.0(@bufbuild/protoc-gen-es@1.4.1)
       '@lerna-lite/cli':
         specifier: 2.5.1
-        version: 2.5.1(@lerna-lite/publish@2.5.1)(@lerna-lite/version@2.5.1)(typescript@5.2.2)
+        version: 2.5.1(@lerna-lite/publish@2.5.1)(@lerna-lite/version@2.5.1)(typescript@5.3.2)
       '@lerna-lite/publish':
         specifier: 2.5.1
-        version: 2.5.1(typescript@5.2.2)
+        version: 2.5.1(typescript@5.3.2)
       '@lerna-lite/version':
         specifier: 2.5.1
-        version: 2.5.1(@lerna-lite/publish@2.5.1)(typescript@5.2.2)
+        version: 2.5.1(@lerna-lite/publish@2.5.1)(typescript@5.3.2)
       del-cli:
         specifier: ^5.0.0
         version: 5.0.0
@@ -84,6 +84,9 @@ importers:
       tsx:
         specifier: ^3.12.2
         version: 3.12.2
+      typescript:
+        specifier: ^5.3.2
+        version: 5.3.2
 
   cdn-server/cdn:
     dependencies:
@@ -1580,13 +1583,13 @@ packages:
       '@types/node': 18.17.0
       chalk: 4.1.2
       cosmiconfig: 8.2.0
-      cosmiconfig-typescript-loader: 4.4.0(@types/node@18.17.0)(cosmiconfig@8.2.0)(ts-node@10.9.1)(typescript@5.2.2)
+      cosmiconfig-typescript-loader: 4.4.0(@types/node@18.17.0)(cosmiconfig@8.2.0)(ts-node@10.9.1)(typescript@5.3.2)
       lodash.isplainobject: 4.0.6
       lodash.merge: 4.6.2
       lodash.uniq: 4.5.0
       resolve-from: 5.0.0
-      ts-node: 10.9.1(@types/node@18.17.0)(typescript@5.2.2)
-      typescript: 5.2.2
+      ts-node: 10.9.1(@types/node@18.17.0)(typescript@5.3.2)
+      typescript: 5.3.2
     transitivePeerDependencies:
       - '@swc/core'
       - '@swc/wasm'
@@ -3043,7 +3046,7 @@ packages:
       url-template: 3.1.0
     dev: false
 
-  /@lerna-lite/cli@2.5.1(@lerna-lite/publish@2.5.1)(@lerna-lite/version@2.5.1)(typescript@5.2.2):
+  /@lerna-lite/cli@2.5.1(@lerna-lite/publish@2.5.1)(@lerna-lite/version@2.5.1)(typescript@5.3.2):
     resolution: {integrity: sha512-6Bs/w4rB/SVbiwbHfahm2W9wfUcvKcA34VBkVE8UrYOmwxOqODNdBUOUiZj76OTl5n5yByBf6MHWZN2MREPECw==}
     engines: {node: '>=16.15.0', npm: '>=8.5.0'}
     hasBin: true
@@ -3068,10 +3071,10 @@ packages:
       '@lerna-lite/watch':
         optional: true
     dependencies:
-      '@lerna-lite/core': 2.5.1(typescript@5.2.2)
-      '@lerna-lite/init': 2.5.1(typescript@5.2.2)
-      '@lerna-lite/publish': 2.5.1(typescript@5.2.2)
-      '@lerna-lite/version': 2.5.1(@lerna-lite/publish@2.5.1)(typescript@5.2.2)
+      '@lerna-lite/core': 2.5.1(typescript@5.3.2)
+      '@lerna-lite/init': 2.5.1(typescript@5.3.2)
+      '@lerna-lite/publish': 2.5.1(typescript@5.3.2)
+      '@lerna-lite/version': 2.5.1(@lerna-lite/publish@2.5.1)(typescript@5.3.2)
       dedent: 1.5.1
       dotenv: 16.3.1
       import-local: 3.1.0
@@ -3084,7 +3087,7 @@ packages:
       - typescript
     dev: true
 
-  /@lerna-lite/core@2.5.1(typescript@5.2.2):
+  /@lerna-lite/core@2.5.1(typescript@5.3.2):
     resolution: {integrity: sha512-Bqx5e7/QiK1NzX8qfQyW3WP63Cw5mByCS0ZvrMUioQFJKw7BgXytOmg1OrcB2A7+hYwkZOiz25GWIUzHMvxVAA==}
     engines: {node: '>=16.15.0', npm: '>=8.5.0'}
     dependencies:
@@ -3092,7 +3095,7 @@ packages:
       chalk: 5.3.0
       clone-deep: 4.0.1
       config-chain: 1.1.13
-      cosmiconfig: 8.3.5(typescript@5.2.2)
+      cosmiconfig: 8.3.5(typescript@5.3.2)
       dedent: 1.5.1
       execa: 8.0.1
       fs-extra: 11.1.1
@@ -3120,11 +3123,11 @@ packages:
       - typescript
     dev: true
 
-  /@lerna-lite/init@2.5.1(typescript@5.2.2):
+  /@lerna-lite/init@2.5.1(typescript@5.3.2):
     resolution: {integrity: sha512-6deyLNCt2w3xS4oAho/B24LXeUBH6h3PE+D0BmX/vxvfq1UXDTXyBs+Ch2/H+oi6CMlWIQvYP/+oH7VZ9daVyQ==}
     engines: {node: '>=16.15.0', npm: '>=8.5.0'}
     dependencies:
-      '@lerna-lite/core': 2.5.1(typescript@5.2.2)
+      '@lerna-lite/core': 2.5.1(typescript@5.3.2)
       fs-extra: 11.1.1
       p-map: 6.0.0
       write-json-file: 5.0.0
@@ -3134,13 +3137,13 @@ packages:
       - typescript
     dev: true
 
-  /@lerna-lite/publish@2.5.1(typescript@5.2.2):
+  /@lerna-lite/publish@2.5.1(typescript@5.3.2):
     resolution: {integrity: sha512-bxvaaFUcQ1wiOLc1xWtekmsyobd7kqUoehzZ8HIStDIASMo+DZGVNyM+OZirI1F3Fz3PM/JbyRz+yo7Qp6kEVA==}
     engines: {node: '>=16.15.0', npm: '>=8.5.0'}
     dependencies:
-      '@lerna-lite/cli': 2.5.1(@lerna-lite/publish@2.5.1)(@lerna-lite/version@2.5.1)(typescript@5.2.2)
-      '@lerna-lite/core': 2.5.1(typescript@5.2.2)
-      '@lerna-lite/version': 2.5.1(@lerna-lite/publish@2.5.1)(typescript@5.2.2)
+      '@lerna-lite/cli': 2.5.1(@lerna-lite/publish@2.5.1)(@lerna-lite/version@2.5.1)(typescript@5.3.2)
+      '@lerna-lite/core': 2.5.1(typescript@5.3.2)
+      '@lerna-lite/version': 2.5.1(@lerna-lite/publish@2.5.1)(typescript@5.3.2)
       '@npmcli/arborist': 7.1.0
       byte-size: 8.1.1
       chalk: 5.3.0
@@ -3176,12 +3179,12 @@ packages:
       - typescript
     dev: true
 
-  /@lerna-lite/version@2.5.1(@lerna-lite/publish@2.5.1)(typescript@5.2.2):
+  /@lerna-lite/version@2.5.1(@lerna-lite/publish@2.5.1)(typescript@5.3.2):
     resolution: {integrity: sha512-d7b2ZiCwTGbxE5LPkt43kRNSCBCgAEMYKVGMhpabm6YXOs9J5Si7gmcSQ9eTYctUjwY+QBUimRr/KFT4PvBfEw==}
     engines: {node: '>=16.15.0', npm: '>=8.5.0'}
     dependencies:
-      '@lerna-lite/cli': 2.5.1(@lerna-lite/publish@2.5.1)(@lerna-lite/version@2.5.1)(typescript@5.2.2)
-      '@lerna-lite/core': 2.5.1(typescript@5.2.2)
+      '@lerna-lite/cli': 2.5.1(@lerna-lite/publish@2.5.1)(@lerna-lite/version@2.5.1)(typescript@5.3.2)
+      '@lerna-lite/core': 2.5.1(typescript@5.3.2)
       '@octokit/plugin-enterprise-rest': 6.0.1
       '@octokit/rest': 19.0.13
       chalk: 5.3.0
@@ -7728,7 +7731,7 @@ packages:
     resolution: {integrity: sha512-ZQBvi1DcpJ4GDqanjucZ2Hj3wEO5pZDS89BWbkcrvdxksJorwUDDZamX9ldFkp9aw2lmBDLgkObEA4DWNJ9FYQ==}
     dev: true
 
-  /cosmiconfig-typescript-loader@4.4.0(@types/node@18.17.0)(cosmiconfig@8.2.0)(ts-node@10.9.1)(typescript@5.2.2):
+  /cosmiconfig-typescript-loader@4.4.0(@types/node@18.17.0)(cosmiconfig@8.2.0)(ts-node@10.9.1)(typescript@5.3.2):
     resolution: {integrity: sha512-BabizFdC3wBHhbI4kJh0VkQP9GkBfoHPydD0COMce1nJ1kJAB3F2TmJ/I7diULBKtmEWSwEbuN/KDtgnmUUVmw==}
     engines: {node: '>=v14.21.3'}
     peerDependencies:
@@ -7739,8 +7742,8 @@ packages:
     dependencies:
       '@types/node': 18.17.0
       cosmiconfig: 8.2.0
-      ts-node: 10.9.1(@types/node@18.17.0)(typescript@5.2.2)
-      typescript: 5.2.2
+      ts-node: 10.9.1(@types/node@18.17.0)(typescript@5.3.2)
+      typescript: 5.3.2
     dev: true
 
   /cosmiconfig@8.2.0:
@@ -7753,7 +7756,7 @@ packages:
       path-type: 4.0.0
     dev: true
 
-  /cosmiconfig@8.3.5(typescript@5.2.2):
+  /cosmiconfig@8.3.5(typescript@5.3.2):
     resolution: {integrity: sha512-A5Xry3xfS96wy2qbiLkQLAg4JUrR2wvfybxj6yqLmrUfMAvhS3MZxIP2oQn0grgYIvJqzpeTEWu4vK0t+12NNw==}
     engines: {node: '>=14'}
     peerDependencies:
@@ -7766,7 +7769,7 @@ packages:
       js-yaml: 4.1.0
       parse-json: 5.2.0
       path-type: 4.0.0
-      typescript: 5.2.2
+      typescript: 5.3.2
     dev: true
 
   /create-require@1.1.1:
@@ -12847,7 +12850,7 @@ packages:
     dependencies:
       lilconfig: 2.1.0
       postcss: 8.4.24
-      ts-node: 10.9.1(@types/node@18.17.0)(typescript@5.2.2)
+      ts-node: 10.9.1(@types/node@18.17.0)(typescript@5.3.2)
       yaml: 2.3.1
 
   /postcss-load-config@4.0.1(ts-node@10.9.1):
@@ -12863,7 +12866,7 @@ packages:
         optional: true
     dependencies:
       lilconfig: 2.1.0
-      ts-node: 10.9.1(@types/node@18.17.0)(typescript@5.2.2)
+      ts-node: 10.9.1(@types/node@18.17.0)(typescript@5.3.2)
       yaml: 2.3.1
     dev: true
 
@@ -14484,7 +14487,7 @@ packages:
   /ts-interface-checker@0.1.13:
     resolution: {integrity: sha512-Y/arvbn+rrz3JCKl9C4kVNfTfSm2/mEp5FSz5EsZSANGPSlQrpRI5M4PKF+mJnE52jOO90PnPSc3Ur3bTQw0gA==}
 
-  /ts-node@10.9.1(@types/node@18.17.0)(typescript@5.2.2):
+  /ts-node@10.9.1(@types/node@18.17.0)(typescript@5.3.2):
     resolution: {integrity: sha512-NtVysVPkxxrwFGUUxGYhfux8k78pQB3JqYBXlLRZgdGUqTO5wU/UyHop5p70iEbGhB7q5KmiZiU0Y3KlJrScEw==}
     hasBin: true
     peerDependencies:
@@ -14510,7 +14513,7 @@ packages:
       create-require: 1.1.1
       diff: 4.0.2
       make-error: 1.3.6
-      typescript: 5.2.2
+      typescript: 5.3.2
       v8-compile-cache-lib: 3.0.1
       yn: 3.1.1
 
@@ -14771,12 +14774,12 @@ packages:
     resolution: {integrity: sha512-mI4WrpHsbCIcwT9cF4FZvr80QUeKvsUsUvKDoR+X/7XHQH98xYD8YHZg7ANtz2GtZt/CBq2QJ0thkGJMHfqc1w==}
     engines: {node: '>=14.17'}
     hasBin: true
+    dev: true
 
   /typescript@5.3.2:
     resolution: {integrity: sha512-6l+RyNy7oAHDfxC4FzSJcz9vnjTKxrLpDG5M2Vu4SHRVNg6xzqZp6LYSR9zjqQTu8DU/f5xwxUdADOkbrIX2gQ==}
     engines: {node: '>=14.17'}
     hasBin: true
-    dev: true
 
   /uc.micro@1.0.6:
     resolution: {integrity: sha512-8Y75pvTYkLJW2hWQHXxoqRgV7qb9B+9vFEtidML+7koHUFapnVJAZ6cKs+Qjz5Aw3aZWHMC6u0wJE3At+nSGwA==}
