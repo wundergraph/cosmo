@@ -11,7 +11,6 @@ import (
 	"go.uber.org/zap"
 	brotli "go.withmatt.com/connect-brotli"
 	"net/http"
-	"sync"
 	"time"
 )
 
@@ -29,7 +28,6 @@ type selfRegister struct {
 	graphApiToken        string
 	controlplaneEndpoint string
 	logger               *zap.Logger
-	mu                   sync.Mutex
 }
 
 func New(endpoint, token string, opts ...Option) SelfRegister {

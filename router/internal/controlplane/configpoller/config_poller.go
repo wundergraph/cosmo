@@ -12,7 +12,6 @@ import (
 	"go.uber.org/zap"
 	brotli "go.withmatt.com/connect-brotli"
 	"net/http"
-	"sync"
 	"time"
 )
 
@@ -37,7 +36,6 @@ type configPoller struct {
 	federatedGraphName        string
 	logger                    *zap.Logger
 	latestRouterConfigVersion string
-	mu                        sync.Mutex
 	poller                    controlplane.Poller
 	pollInterval              time.Duration
 }
@@ -103,9 +101,7 @@ func (c *configPoller) Subscribe(ctx context.Context, handler func(newConfig *no
 
 		newVersion := cfg.GetVersion()
 
-		c.mu.Lock()
 		latestVersion := c.latestRouterConfigVersion
-		c.mu.Unlock()
 
 		// If the version hasn't changed, don't invoke the handler
 		if newVersion == latestVersion {
@@ -119,11 +115,7 @@ func (c *configPoller) Subscribe(ctx context.Context, handler func(newConfig *no
 		}
 
 		// only update the version if the handler was invoked successfully
-		c.mu.Lock()
 		c.latestRouterConfigVersion = cfg.GetVersion()
-		c.mu.Unlock()
-
-		return
 	})
 }
 
@@ -159,6 +151,7 @@ func (c *configPoller) getRouterConfigFromCP(ctx context.Context, version *strin
 	return resp.Msg.GetConfig(), nil
 }
 
+// GetRouterConfig returns the latest router config from the controlplane. Not safe for concurrent use.
 func (c *configPoller) GetRouterConfig(ctx context.Context) (*nodev1.RouterConfig, error) {
 
 	c.logger.Info("Fetching initial router configuration from control plane")
@@ -172,9 +165,7 @@ func (c *configPoller) GetRouterConfig(ctx context.Context) (*nodev1.RouterConfi
 		return nil, fmt.Errorf("received nil router config from control plane")
 	}
 
-	c.mu.Lock()
 	c.latestRouterConfigVersion = cfg.GetVersion()
-	c.mu.Unlock()
 
 	return cfg, nil
 }

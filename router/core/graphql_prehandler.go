@@ -28,15 +28,14 @@ type PreHandlerOptions struct {
 }
 
 type PreHandler struct {
-	log                  *zap.Logger
-	executor             *Executor
-	metrics              *RouterMetrics
-	parser               *OperationParser
-	planner              *OperationPlanner
-	accessController     *AccessController
-	enableRequestTracing bool
-	developmentMode      bool
-	csrfKey              []byte
+	log              *zap.Logger
+	executor         *Executor
+	metrics          *RouterMetrics
+	parser           *OperationParser
+	planner          *OperationPlanner
+	accessController *AccessController
+	developmentMode  bool
+	csrfKey          []byte
 }
 
 func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
