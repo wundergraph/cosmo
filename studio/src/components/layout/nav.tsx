@@ -81,7 +81,9 @@ const MobileNav = () => {
         <UserMenuMobile />
         <div className="mx-auto flex items-center">
           <ThemeToggle />
-          <InvitationButton hasInvitaions={user?.invitations.length !== 0} />
+          <InvitationButton
+            hasInvitaions={user ? user.invitations.length !== 0 : false}
+          />
         </div>
       </div>
     </div>
@@ -267,7 +269,7 @@ export const Nav = ({ children, links, isUserLayout }: SideNavLayoutProps) => {
             {!isUserLayout && (
               <div className="pr-2">
                 <InvitationButton
-                  hasInvitaions={user?.invitations.length !== 0}
+                  hasInvitaions={user ? user.invitations.length !== 0 : false}
                 />
               </div>
             )}
