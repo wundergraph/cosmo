@@ -169,7 +169,7 @@ const UsagesPage: NextPageWithLayout = () => {
             to upgrade.
           </span>
         </div>
-      ) : chartData[0].usage >= 0.75 ? (
+      ) : chartData[0].usage / requestLimit >= 0.75 ? (
         <div className="flex items-center gap-x-2 rounded-lg border !border-amber-400 px-4 py-2 text-amber-400">
           <IoWarningOutline size={20} />
           <span>
