@@ -129,14 +129,6 @@ probes:
     failureThreshold: 5
     periodSeconds: 10
 
-########################
-# Global configuration #
-########################
-
-#global:
-#  controlplane:
-#    jwtSecret: "changeme"
-#    s3StorageUrl: "http://minio:changeme@minio.wundergraph.local:9000/cosmo"
 
 #############################
 # Application configuration #
