@@ -559,9 +559,13 @@ message CreateFederatedGraphTokenResponse {
 message OrgMember{
   string userID = 1;
   string email = 2;
-  bool acceptedInvite = 3;
-  repeated string roles = 4;
-  string orgMemberID = 5;
+  repeated string roles = 3;
+  string orgMemberID = 4;
+}
+
+message PendingOrgInvitation{
+  string userID = 1;
+  string email = 2;
 }
 
 message GetOrganizationMembersRequest {}
@@ -569,6 +573,7 @@ message GetOrganizationMembersRequest {}
 message GetOrganizationMembersResponse {
   Response response = 1;
   repeated OrgMember members = 2;
+  repeated PendingOrgInvitation pendingInvitations = 3;
 }
 
 message InviteUserRequest {
@@ -618,6 +623,14 @@ message DeleteAPIKeyRequest {
 }
 
 message DeleteAPIKeyResponse {
+  Response response = 1;
+}
+
+message RemoveOrganizationMemberRequest {
+  string email = 1;
+}
+
+message RemoveOrganizationMemberResponse {
   Response response = 1;
 }
 
@@ -1021,6 +1034,30 @@ message GetOrganizationRequestsCountResponse {
   int64 count = 2;
 }
 
+message Organization{
+  string id = 1;
+  string name = 2;
+  string slug = 3;
+  string creatorUserId = 4;
+  string createdAt = 5;
+}
+
+message GetInvitationsRequest {}
+
+message GetInvitationsResponse {
+  Response response = 1;
+  repeated Organization invitations = 2;
+}
+
+message AcceptOrDeclineInvitationRequest {
+  string organizationId = 1;
+  bool accept = 2;
+}
+
+message AcceptOrDeclineInvitationResponse {
+  Response response = 1;
+}
+
 message ClientInfo{
   string name = 1;
   string id = 2;
@@ -1147,6 +1184,8 @@ service PlatformService {
   // DeleteAPIKey deletes an API key for the organization
   rpc DeleteAPIKey(DeleteAPIKeyRequest) returns (DeleteAPIKeyResponse){}
   // RemoveOrganizationMember removes the user from the organization
+  rpc RemoveOrganizationMember(RemoveOrganizationMemberRequest) returns (RemoveOrganizationMemberResponse){}
+  // RemoveInvitation removes the org invitation of the user
   rpc RemoveInvitation(RemoveInvitationRequest) returns (RemoveInvitationResponse){}
   // GetLatestValidRouterConfig returns the router config for the federated graph
   rpc GetLatestValidRouterConfig(wg.cosmo.node.v1.GetConfigRequest) returns (wg.cosmo.node.v1.GetConfigResponse) {}
@@ -1193,7 +1232,10 @@ service PlatformService {
   rpc DeleteOIDCProvider(DeleteOIDCProviderRequest) returns (DeleteOIDCProviderResponse) {}
   // GetClients returns all the clients of the organization
   rpc GetClients(GetClientsRequest) returns (GetClientsResponse) {}
-
+  // GetInvitations returns all the invitations a user has recieved
+  rpc GetInvitations(GetInvitationsRequest) returns (GetInvitationsResponse) {}
+  // AcceptOrDeclineInvitation accepts or declines the invitation
+  rpc AcceptOrDeclineInvitation(AcceptOrDeclineInvitationRequest) returns (AcceptOrDeclineInvitationResponse) {}
 
   // Analytics
 
