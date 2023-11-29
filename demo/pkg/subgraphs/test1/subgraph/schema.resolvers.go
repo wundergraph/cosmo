@@ -57,7 +57,7 @@ func (r *subscriptionResolver) HeaderValue(ctx context.Context, name string, rep
 
 	payload := injector.InitPayload(ctx)
 	if payload == nil {
-		return nil, errors.New("payload not injected into context.Context")
+		payload = map[string]any{}
 	}
 
 	go func() {

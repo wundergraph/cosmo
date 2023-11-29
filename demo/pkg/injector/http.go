@@ -18,11 +18,13 @@ func HTTPFunc(next http.HandlerFunc) http.HandlerFunc {
 		if err != nil {
 			panic(err)
 		}
-		payload := map[string]interface{}{}
-		if err := json.Unmarshal(body, &payload); err != nil {
-			panic(err)
+		if len(body) > 0 {
+			payload := map[string]interface{}{}
+			if err := json.Unmarshal(body, &payload); err != nil {
+				panic(err)
+			}
+			r = r.WithContext(NewContextWithInitPayload(r.Context(), payload))
 		}
-		r = r.WithContext(NewContextWithInitPayload(r.Context(), payload))
 		r.Body = io.NopCloser(bytes.NewReader(body))
 		next.ServeHTTP(w, r)
 	}
