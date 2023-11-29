@@ -212,7 +212,6 @@ export function hasSimplePath(graph: MultiGraph, source: string, target: string)
 
     if (!child) {
       stack.pop();
-      visited.pop();
       continue;
     }
     if (visited.has(child)) {
@@ -225,11 +224,11 @@ export function hasSimplePath(graph: MultiGraph, source: string, target: string)
 
     visited.push(child);
 
-    if (!visited.has(target)) {
-      stack.push(graph.outboundNeighbors(child));
-    } else {
-      visited.pop();
+    const outboundNeighbours = graph.outboundNeighbors(child)
+    if (outboundNeighbours.length < 0) {
+      continue;
     }
+    stack.push(outboundNeighbours);
   }
   return false;
 }
