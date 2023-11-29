@@ -8,7 +8,7 @@ query {
       location
     }
   }
-  team_mates(team: OPERATIONS) {
+  teammates(team: OPERATIONS) {
     # resolved through employees subgraph
     id
     details {

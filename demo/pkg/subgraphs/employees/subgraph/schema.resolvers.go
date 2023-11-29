@@ -15,14 +15,15 @@ import (
 
 // Employee is the resolver for the employee field.
 func (r *queryResolver) Employee(ctx context.Context, id int) (*model.Employee, error) {
-	switch id {
-	case 1, 2, 3, 4, 5:
-		return employees[id-1], nil
-	case 7, 8, 9, 10, 11, 12:
-		return employees[id-2], nil
-	default:
+	if id < 1 {
 		return nil, nil
 	}
+	for _, employee := range employees {
+		if id == employee.ID {
+			return employee, nil
+		}
+	}
+	return nil, nil
 }
 
 // Employees is the resolver for the employees field.
@@ -30,21 +31,21 @@ func (r *queryResolver) Employees(ctx context.Context) ([]*model.Employee, error
 	return employees, nil
 }
 
-// TeamMates is the resolver for the team_mates field.
-func (r *queryResolver) TeamMates(ctx context.Context, team model.Department) ([]*model.Employee, error) {
-	switch team {
-	case model.DepartmentOperations:
-		return []*model.Employee{employees[3], employees[9]}, nil
-	case model.DepartmentMarketing:
-		return []*model.Employee{employees[0], employees[2], employees[3]}, nil
-	default:
-		return engineers, nil
-	}
-}
-
 // Products is the resolver for the products field.
 func (r *queryResolver) Products(ctx context.Context) ([]model.Products, error) {
 	return products, nil
+}
+
+// Teammates is the resolver for the teammates field.
+func (r *queryResolver) Teammates(ctx context.Context, team model.Department) ([]*model.Employee, error) {
+	switch team {
+	case model.DepartmentMarketing:
+		return marketers, nil
+	case model.DepartmentOperations:
+		return operators, nil
+	default:
+		return engineers, nil
+	}
 }
 
 // CurrentTime is the resolver for the currentTime field.

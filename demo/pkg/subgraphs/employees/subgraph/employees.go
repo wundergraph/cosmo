@@ -1,6 +1,9 @@
 package subgraph
 
-import "github.com/wundergraph/cosmo/demo/pkg/subgraphs/employees/subgraph/model"
+import (
+	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/employees/subgraph/model"
+	"slices"
+)
 
 var employees = []*model.Employee{
 	{
@@ -11,7 +14,7 @@ var employees = []*model.Employee{
 		},
 		ID: 1,
 		Role: model.Engineer{
-			Department:   model.DepartmentEngineering,
+			Departments:  []model.Department{model.DepartmentEngineering, model.DepartmentMarketing},
 			EngineerType: model.EngineerTypeBackend,
 			Title:        []string{"Founder", "CEO"},
 		},
@@ -25,7 +28,7 @@ var employees = []*model.Employee{
 		},
 		ID: 2,
 		Role: model.Engineer{
-			Department:   model.DepartmentEngineering,
+			Departments:  []model.Department{model.DepartmentEngineering},
 			EngineerType: model.EngineerTypeFullstack,
 			Title:        []string{"Co-founder", "Tech Lead"},
 		},
@@ -39,8 +42,8 @@ var employees = []*model.Employee{
 		},
 		ID: 3,
 		Role: model.Marketer{
-			Department: model.DepartmentMarketing,
-			Title:      []string{"Co-founder", "Head of Growth"},
+			Departments: []model.Department{model.DepartmentMarketing},
+			Title:       []string{"Co-founder", "Head of Growth"},
 		},
 		Notes: "Stefan notes resolved by employees",
 	},
@@ -52,7 +55,7 @@ var employees = []*model.Employee{
 		},
 		ID: 4,
 		Role: model.Operator{
-			Department: model.DepartmentOperations,
+			Departments: []model.Department{model.DepartmentOperations, model.DepartmentMarketing},
 			OperatorType: []model.OperationType{
 				model.OperationTypeHumanResources, model.OperationTypeFinance,
 			},
@@ -68,7 +71,7 @@ var employees = []*model.Employee{
 			Surname:  "Petrunin",
 		},
 		Role: model.Engineer{
-			Department:   model.DepartmentEngineering,
+			Departments:  []model.Department{model.DepartmentEngineering},
 			EngineerType: model.EngineerTypeBackend,
 			Title:        []string{"Senior GO Engineer"},
 		},
@@ -82,7 +85,7 @@ var employees = []*model.Employee{
 		},
 		ID: 7,
 		Role: model.Engineer{
-			Department:   model.DepartmentEngineering,
+			Departments:  []model.Department{model.DepartmentEngineering},
 			EngineerType: model.EngineerTypeFullstack,
 			Title:        []string{"Software Engineer"},
 		},
@@ -96,7 +99,7 @@ var employees = []*model.Employee{
 		},
 		ID: 8,
 		Role: model.Engineer{
-			Department:   model.DepartmentEngineering,
+			Departments:  []model.Department{model.DepartmentEngineering},
 			EngineerType: model.EngineerTypeFullstack,
 			Title:        []string{"Software Engineer"},
 		},
@@ -110,7 +113,7 @@ var employees = []*model.Employee{
 		},
 		ID: 9,
 		Role: model.Engineer{
-			Department:   model.DepartmentEngineering,
+			Departments:  []model.Department{model.DepartmentEngineering},
 			EngineerType: model.EngineerTypeBackend,
 			Title:        []string{"Senior Backend Engineer"},
 		},
@@ -124,7 +127,7 @@ var employees = []*model.Employee{
 		},
 		ID: 10,
 		Role: model.Engineer{
-			Department:   model.DepartmentEngineering,
+			Departments:  []model.Department{model.DepartmentEngineering},
 			EngineerType: model.EngineerTypeFrontend,
 			Title:        []string{"Senior Frontend Engineer"},
 		},
@@ -138,7 +141,7 @@ var employees = []*model.Employee{
 		},
 		ID: 11,
 		Role: model.Operator{
-			Department: model.DepartmentOperations,
+			Departments: []model.Department{model.DepartmentOperations},
 			OperatorType: []model.OperationType{
 				model.OperationTypeFinance,
 			},
@@ -154,7 +157,7 @@ var employees = []*model.Employee{
 		},
 		ID: 12,
 		Role: model.Engineer{
-			Department:   model.DepartmentEngineering,
+			Departments:  []model.Department{model.DepartmentEngineering},
 			EngineerType: model.EngineerTypeFullstack,
 			Title:        []string{"Software Engineer"},
 		},
@@ -162,6 +165,23 @@ var employees = []*model.Employee{
 	},
 }
 
-var engineers = []*model.Employee{
-	employees[0], employees[1], employees[4], employees[5], employees[6], employees[7], employees[8], employees[10],
+func filterEmployees(predicate func(employee *model.Employee) bool) (filtered []*model.Employee) {
+	for _, employee := range employees {
+		if predicate(employee) {
+			filtered = append(filtered, employee)
+		}
+	}
+	return
 }
+
+var engineers = filterEmployees(func(e *model.Employee) bool {
+	return slices.Contains(e.Role.GetDepartments(), model.DepartmentEngineering)
+})
+
+var marketers = filterEmployees(func(e *model.Employee) bool {
+	return slices.Contains(e.Role.GetDepartments(), model.DepartmentMarketing)
+})
+
+var operators = filterEmployees(func(e *model.Employee) bool {
+	return slices.Contains(e.Role.GetDepartments(), model.DepartmentOperations)
+})

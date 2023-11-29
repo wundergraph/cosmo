@@ -3,7 +3,7 @@
     "employees": [
       {
         "id": 1,
-        "notes": "1 notes resolved by products",
+        "notes": "Jens notes resolved by products",
         "details": {
           "forename": "Jens",
           "surname": "Neuse",
@@ -14,7 +14,7 @@
           "pets": null
         },
         "role": {
-          "department": "ENGINEERING",
+          "departments": ["ENGINEERING", "MARKETING"],
           "title": [
             "Founder",
             "CEO"
@@ -49,14 +49,16 @@
           }
         ],
         "products": [
+          "CONSULTANCY",
           "COSMO",
           "ENGINE",
+          "MARKETING",
           "SDK"
         ]
       },
       {
         "id": 2,
-        "notes": "2, 7, 8 notes resolved by products",
+        "notes": "Dustin notes resolved by products",
         "details": {
           "forename": "Dustin",
           "surname": "Deus",
@@ -67,7 +69,7 @@
           "pets": null
         },
         "role": {
-          "department": "ENGINEERING",
+          "departments": ["ENGINEERING"],
           "title": [
             "Co-founder",
             "Tech Lead"
@@ -99,7 +101,7 @@
       },
       {
         "id": 3,
-        "notes": "3 notes resolved by products",
+        "notes": "Stefan notes resolved by products",
         "details": {
           "forename": "Stefan",
           "surname": "Avram",
@@ -109,7 +111,7 @@
           "nationality": "AMERICAN",
           "pets": [
             {
-              "class": "Reptile",
+              "class": "REPTILE",
               "gender": "UNKNOWN",
               "name": "Snappy",
               "dangerous": "yes"
@@ -117,7 +119,7 @@
           ]
         },
         "role": {
-          "department": "MARKETING",
+          "departments": ["MARKETING"],
           "title": [
             "Co-founder",
             "Head of Growth"
@@ -141,12 +143,13 @@
           }
         ],
         "products": [
+          "CONSULTANCY",
           "MARKETING"
         ]
       },
       {
         "id": 4,
-        "notes": "4 notes resolved by products",
+        "notes": "Björn notes resolved by products",
         "details": {
           "forename": "Björn",
           "surname": "Schwenzer",
@@ -156,20 +159,20 @@
           "nationality": "GERMAN",
           "pets": [
             {
-              "class": "Mammal",
+              "class": "MAMMAL",
               "gender": "FEMALE",
               "name": "Abby",
               "breed": "GOLDEN_RETRIEVER"
             },
             {
-              "class": "Mammal",
+              "class": "MAMMAL",
               "gender": "MALE",
               "name": "Survivor"
             }
           ]
         },
         "role": {
-          "department": "OPERATIONS",
+          "departments": ["OPERATIONS", "MARKETING"],
           "title": [
             "Co-founder",
             "COO"
@@ -214,7 +217,7 @@
       },
       {
         "id": 5,
-        "notes": "5 notes resolved by products",
+        "notes": "Sergiy notes resolved by products",
         "details": {
           "forename": "Sergiy",
           "surname": "Petrunin",
@@ -224,61 +227,61 @@
           "nationality": "UKRAINIAN",
           "pets": [
             {
-              "class": "Mammal",
+              "class": "MAMMAL",
               "gender": "FEMALE",
               "name": "Blotch",
               "type": "STREET"
             },
             {
-              "class": "Mammal",
+              "class": "MAMMAL",
               "gender": "MALE",
               "name": "Grayone",
               "type": "STREET"
             },
             {
-              "class": "Mammal",
+              "class": "MAMMAL",
               "gender": "MALE",
               "name": "Rusty",
               "type": "STREET"
             },
             {
-              "class": "Mammal",
+              "class": "MAMMAL",
               "gender": "FEMALE",
               "name": "Manya",
               "type": "HOME"
             },
             {
-              "class": "Mammal",
+              "class": "MAMMAL",
               "gender": "MALE",
               "name": "Peach",
               "type": "STREET"
             },
             {
-              "class": "Mammal",
+              "class": "MAMMAL",
               "gender": "MALE",
               "name": "Panda",
               "type": "HOME"
             },
             {
-              "class": "Mammal",
+              "class": "MAMMAL",
               "gender": "FEMALE",
               "name": "Mommy",
               "type": "STREET"
             },
             {
-              "class": "Mammal",
+              "class": "MAMMAL",
               "gender": "FEMALE",
               "name": "Terry",
               "type": "HOME"
             },
             {
-              "class": "Mammal",
+              "class": "MAMMAL",
               "gender": "FEMALE",
               "name": "Tilda",
               "type": "HOME"
             },
             {
-              "class": "Mammal",
+              "class": "MAMMAL",
               "gender": "MALE",
               "name": "Vasya",
               "type": "HOME"
@@ -286,7 +289,7 @@
           ]
         },
         "role": {
-          "department": "ENGINEERING",
+          "departments": ["ENGINEERING"],
           "title": [
             "Senior GO Engineer"
           ],
@@ -310,7 +313,7 @@
       },
       {
         "id": 7,
-        "notes": "2, 7, 8 notes resolved by products",
+        "notes": "Suvij notes resolved by products",
         "details": {
           "forename": "Suvij",
           "surname": "Surya",
@@ -321,7 +324,7 @@
           "pets": null
         },
         "role": {
-          "department": "ENGINEERING",
+          "departments": ["ENGINEERING"],
           "title": [
             "Software Engineer"
           ],
@@ -346,7 +349,7 @@
       },
       {
         "id": 8,
-        "notes": "2, 7, 8 notes resolved by products",
+        "notes": "Nithin notes resolved by products",
         "details": {
           "forename": "Nithin",
           "surname": "Kumar",
@@ -357,7 +360,7 @@
           "pets": null
         },
         "role": {
-          "department": "ENGINEERING",
+          "departments": ["ENGINEERING"],
           "title": [
             "Software Engineer"
           ],
@@ -388,7 +391,7 @@
       },
       {
         "id": 9,
-        "notes": "9, 12 notes resolved by products",
+        "notes": "Alberto notes resolved by products",
         "details": {
           "forename": "Alberto",
           "surname": "Garcia Hierro",
@@ -398,7 +401,7 @@
           "nationality": "SPANISH",
           "pets": [
             {
-              "class": "Mammal",
+              "class": "MAMMAL",
               "gender": "MALE",
               "name": "Thor",
               "type": "HOME"
@@ -406,7 +409,7 @@
           ]
         },
         "role": {
-          "department": "ENGINEERING",
+          "departments": ["ENGINEERING"],
           "title": [
             "Senior Backend Engineer"
           ],
@@ -430,6 +433,7 @@
           }
         ],
         "products": [
+          "CONSULTANCY",
           "COSMO",
           "ENGINE",
           "SDK"
@@ -437,7 +441,7 @@
       },
       {
         "id": 10,
-        "notes": "10 notes resolved by products",
+        "notes": "Eelco notes resolved by products",
         "details": {
           "forename": "Eelco",
           "surname": "Wiersma",
@@ -447,14 +451,14 @@
           "nationality": "DUTCH",
           "pets": [
             {
-              "class": "Mammal",
+              "class": "MAMMAL",
               "gender": "UNKNOWN",
               "name": "Vanson"
             }
           ]
         },
         "role": {
-          "department": "ENGINEERING",
+          "departments": ["ENGINEERING"],
           "title": [
             "Senior Frontend Engineer"
           ],
@@ -490,13 +494,14 @@
           }
         ],
         "products": [
+          "CONSULTANCY",
           "COSMO",
           "SDK"
         ]
       },
       {
         "id": 11,
-        "notes": "11 notes resolved by products",
+        "notes": "Alexandra notes resolved by products",
         "details": {
           "forename": "Alexandra",
           "surname": "Neuse",
@@ -507,7 +512,7 @@
           "pets": null
         },
         "role": {
-          "department": "OPERATIONS",
+          "departments": ["OPERATIONS"],
           "title": [
             "Accounting & Finance"
           ],
@@ -526,7 +531,7 @@
       },
       {
         "id": 12,
-        "notes": "9, 12 notes resolved by products",
+        "notes": "David notes resolved by products",
         "details": {
           "forename": "David",
           "surname": "Stutt",
@@ -536,7 +541,7 @@
           "nationality": "ENGLISH",
           "pets": [
             {
-              "class": "Mammal",
+              "class": "MAMMAL",
               "gender": "FEMALE",
               "name": "Pepper",
               "type": "HOME"
@@ -544,7 +549,7 @@
           ]
         },
         "role": {
-          "department": "ENGINEERING",
+          "departments": ["ENGINEERING"],
           "title": [
             "Software Engineer"
           ],
@@ -584,6 +589,7 @@
           }
         ],
         "products": [
+          "CONSULTANCY",
           "COSMO",
           "ENGINE",
           "SDK"
@@ -597,7 +603,7 @@
         "location": "GERMANY"
       }
     },
-    "team_mates": [
+    "teammates": [
       {
         "id": 4,
         "details": {

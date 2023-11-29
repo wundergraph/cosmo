@@ -75,7 +75,7 @@ type ComplexityRoot struct {
 	}
 
 	Engineer struct {
-		Department   func(childComplexity int) int
+		Departments  func(childComplexity int) int
 		EngineerType func(childComplexity int) int
 		Title        func(childComplexity int) int
 	}
@@ -88,12 +88,12 @@ type ComplexityRoot struct {
 	}
 
 	Marketer struct {
-		Department func(childComplexity int) int
-		Title      func(childComplexity int) int
+		Departments func(childComplexity int) int
+		Title       func(childComplexity int) int
 	}
 
 	Operator struct {
-		Department   func(childComplexity int) int
+		Departments  func(childComplexity int) int
 		OperatorType func(childComplexity int) int
 		Title        func(childComplexity int) int
 	}
@@ -102,7 +102,7 @@ type ComplexityRoot struct {
 		Employee           func(childComplexity int, id int) int
 		Employees          func(childComplexity int) int
 		Products           func(childComplexity int) int
-		TeamMates          func(childComplexity int, team model.Department) int
+		Teammates          func(childComplexity int, team model.Department) int
 		__resolve__service func(childComplexity int) int
 		__resolve_entities func(childComplexity int, representations []map[string]interface{}) int
 	}
@@ -136,8 +136,8 @@ type EntityResolver interface {
 type QueryResolver interface {
 	Employee(ctx context.Context, id int) (*model.Employee, error)
 	Employees(ctx context.Context) ([]*model.Employee, error)
-	TeamMates(ctx context.Context, team model.Department) ([]*model.Employee, error)
 	Products(ctx context.Context) ([]model.Products, error)
+	Teammates(ctx context.Context, team model.Department) ([]*model.Employee, error)
 }
 type SubscriptionResolver interface {
 	CurrentTime(ctx context.Context) (<-chan *model.Time, error)
@@ -253,12 +253,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Employee.Role(childComplexity), true
 
-	case "Engineer.department":
-		if e.complexity.Engineer.Department == nil {
+	case "Engineer.departments":
+		if e.complexity.Engineer.Departments == nil {
 			break
 		}
 
-		return e.complexity.Engineer.Department(childComplexity), true
+		return e.complexity.Engineer.Departments(childComplexity), true
 
 	case "Engineer.engineerType":
 		if e.complexity.Engineer.EngineerType == nil {
@@ -322,12 +322,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Entity.FindSDKByUpc(childComplexity, args["upc"].(string)), true
 
-	case "Marketer.department":
-		if e.complexity.Marketer.Department == nil {
+	case "Marketer.departments":
+		if e.complexity.Marketer.Departments == nil {
 			break
 		}
 
-		return e.complexity.Marketer.Department(childComplexity), true
+		return e.complexity.Marketer.Departments(childComplexity), true
 
 	case "Marketer.title":
 		if e.complexity.Marketer.Title == nil {
@@ -336,12 +336,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Marketer.Title(childComplexity), true
 
-	case "Operator.department":
-		if e.complexity.Operator.Department == nil {
+	case "Operator.departments":
+		if e.complexity.Operator.Departments == nil {
 			break
 		}
 
-		return e.complexity.Operator.Department(childComplexity), true
+		return e.complexity.Operator.Departments(childComplexity), true
 
 	case "Operator.operatorType":
 		if e.complexity.Operator.OperatorType == nil {
@@ -383,17 +383,17 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Query.Products(childComplexity), true
 
-	case "Query.team_mates":
-		if e.complexity.Query.TeamMates == nil {
+	case "Query.teammates":
+		if e.complexity.Query.Teammates == nil {
 			break
 		}
 
-		args, err := ec.field_Query_team_mates_args(context.TODO(), rawArgs)
+		args, err := ec.field_Query_teammates_args(context.TODO(), rawArgs)
 		if err != nil {
 			return 0, false
 		}
 
-		return e.complexity.Query.TeamMates(childComplexity, args["team"].(model.Department)), true
+		return e.complexity.Query.Teammates(childComplexity, args["team"].(model.Department)), true
 
 	case "Query._service":
 		if e.complexity.Query.__resolve__service == nil {
@@ -572,8 +572,8 @@ var sources = []*ast.Source{
 	{Name: "../schema.graphqls", Input: `type Query {
   employee(id: Int!): Employee
   employees: [Employee!]!
-  team_mates(team: Department!): [Employee!]!
   products: [Products!]!
+  teammates(team: Department!): [Employee!]!
 }
 
 type Subscription {
@@ -590,13 +590,13 @@ enum Department {
 }
 
 interface RoleType {
-  department: Department!
+  departments: [Department!]!
   title: [String!]!
 }
 
 enum EngineerType {
-  FRONTEND
   BACKEND
+  FRONTEND
   FULLSTACK
 }
 
@@ -605,13 +605,13 @@ interface Identifiable {
 }
 
 type Engineer implements RoleType {
-  department: Department!
+  departments: [Department!]!
   engineerType: EngineerType!
   title: [String!]!
 }
 
 type Marketer implements RoleType{
-  department: Department!
+  departments: [Department!]!
   title: [String!]!
 }
 
@@ -621,7 +621,7 @@ enum OperationType {
 }
 
 type Operator implements RoleType {
-  department: Department!
+  departments: [Department!]!
   operatorType: [OperationType!]!
   title: [String!]!
 }
@@ -857,7 +857,7 @@ func (ec *executionContext) field_Query_employee_args(ctx context.Context, rawAr
 	return args, nil
 }
 
-func (ec *executionContext) field_Query_team_mates_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+func (ec *executionContext) field_Query_teammates_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
 	var arg0 model.Department
@@ -1520,8 +1520,8 @@ func (ec *executionContext) fieldContext_Employee_notes(ctx context.Context, fie
 	return fc, nil
 }
 
-func (ec *executionContext) _Engineer_department(ctx context.Context, field graphql.CollectedField, obj *model.Engineer) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Engineer_department(ctx, field)
+func (ec *executionContext) _Engineer_departments(ctx context.Context, field graphql.CollectedField, obj *model.Engineer) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Engineer_departments(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -1534,7 +1534,7 @@ func (ec *executionContext) _Engineer_department(ctx context.Context, field grap
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Department, nil
+		return obj.Departments, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1546,12 +1546,12 @@ func (ec *executionContext) _Engineer_department(ctx context.Context, field grap
 		}
 		return graphql.Null
 	}
-	res := resTmp.(model.Department)
+	res := resTmp.([]model.Department)
 	fc.Result = res
-	return ec.marshalNDepartment2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋemployeesᚋsubgraphᚋmodelᚐDepartment(ctx, field.Selections, res)
+	return ec.marshalNDepartment2ᚕgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋemployeesᚋsubgraphᚋmodelᚐDepartmentᚄ(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Engineer_department(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Engineer_departments(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Engineer",
 		Field:      field,
@@ -1906,8 +1906,8 @@ func (ec *executionContext) fieldContext_Entity_findSDKByUpc(ctx context.Context
 	return fc, nil
 }
 
-func (ec *executionContext) _Marketer_department(ctx context.Context, field graphql.CollectedField, obj *model.Marketer) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Marketer_department(ctx, field)
+func (ec *executionContext) _Marketer_departments(ctx context.Context, field graphql.CollectedField, obj *model.Marketer) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Marketer_departments(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -1920,7 +1920,7 @@ func (ec *executionContext) _Marketer_department(ctx context.Context, field grap
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Department, nil
+		return obj.Departments, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1932,12 +1932,12 @@ func (ec *executionContext) _Marketer_department(ctx context.Context, field grap
 		}
 		return graphql.Null
 	}
-	res := resTmp.(model.Department)
+	res := resTmp.([]model.Department)
 	fc.Result = res
-	return ec.marshalNDepartment2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋemployeesᚋsubgraphᚋmodelᚐDepartment(ctx, field.Selections, res)
+	return ec.marshalNDepartment2ᚕgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋemployeesᚋsubgraphᚋmodelᚐDepartmentᚄ(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Marketer_department(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Marketer_departments(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Marketer",
 		Field:      field,
@@ -1994,8 +1994,8 @@ func (ec *executionContext) fieldContext_Marketer_title(ctx context.Context, fie
 	return fc, nil
 }
 
-func (ec *executionContext) _Operator_department(ctx context.Context, field graphql.CollectedField, obj *model.Operator) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Operator_department(ctx, field)
+func (ec *executionContext) _Operator_departments(ctx context.Context, field graphql.CollectedField, obj *model.Operator) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Operator_departments(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -2008,7 +2008,7 @@ func (ec *executionContext) _Operator_department(ctx context.Context, field grap
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Department, nil
+		return obj.Departments, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2020,12 +2020,12 @@ func (ec *executionContext) _Operator_department(ctx context.Context, field grap
 		}
 		return graphql.Null
 	}
-	res := resTmp.(model.Department)
+	res := resTmp.([]model.Department)
 	fc.Result = res
-	return ec.marshalNDepartment2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋemployeesᚋsubgraphᚋmodelᚐDepartment(ctx, field.Selections, res)
+	return ec.marshalNDepartment2ᚕgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋemployeesᚋsubgraphᚋmodelᚐDepartmentᚄ(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Operator_department(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Operator_departments(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Operator",
 		Field:      field,
@@ -2242,71 +2242,6 @@ func (ec *executionContext) fieldContext_Query_employees(ctx context.Context, fi
 	return fc, nil
 }
 
-func (ec *executionContext) _Query_team_mates(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Query_team_mates(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().TeamMates(rctx, fc.Args["team"].(model.Department))
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.([]*model.Employee)
-	fc.Result = res
-	return ec.marshalNEmployee2ᚕᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋemployeesᚋsubgraphᚋmodelᚐEmployeeᚄ(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Query_team_mates(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Query",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "details":
-				return ec.fieldContext_Employee_details(ctx, field)
-			case "id":
-				return ec.fieldContext_Employee_id(ctx, field)
-			case "role":
-				return ec.fieldContext_Employee_role(ctx, field)
-			case "notes":
-				return ec.fieldContext_Employee_notes(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Employee", field.Name)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Query_team_mates_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _Query_products(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Query_products(ctx, field)
 	if err != nil {
@@ -2347,6 +2282,71 @@ func (ec *executionContext) fieldContext_Query_products(ctx context.Context, fie
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Products does not have child fields")
 		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_teammates(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_teammates(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().Teammates(rctx, fc.Args["team"].(model.Department))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.Employee)
+	fc.Result = res
+	return ec.marshalNEmployee2ᚕᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋemployeesᚋsubgraphᚋmodelᚐEmployeeᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_teammates(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "details":
+				return ec.fieldContext_Employee_details(ctx, field)
+			case "id":
+				return ec.fieldContext_Employee_id(ctx, field)
+			case "role":
+				return ec.fieldContext_Employee_role(ctx, field)
+			case "notes":
+				return ec.fieldContext_Employee_notes(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Employee", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_teammates_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
 	}
 	return fc, nil
 }
@@ -5057,8 +5057,8 @@ func (ec *executionContext) _Engineer(ctx context.Context, sel ast.SelectionSet,
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Engineer")
-		case "department":
-			out.Values[i] = ec._Engineer_department(ctx, field, obj)
+		case "departments":
+			out.Values[i] = ec._Engineer_departments(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -5236,8 +5236,8 @@ func (ec *executionContext) _Marketer(ctx context.Context, sel ast.SelectionSet,
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Marketer")
-		case "department":
-			out.Values[i] = ec._Marketer_department(ctx, field, obj)
+		case "departments":
+			out.Values[i] = ec._Marketer_departments(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -5280,8 +5280,8 @@ func (ec *executionContext) _Operator(ctx context.Context, sel ast.SelectionSet,
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Operator")
-		case "department":
-			out.Values[i] = ec._Operator_department(ctx, field, obj)
+		case "departments":
+			out.Values[i] = ec._Operator_departments(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -5378,7 +5378,7 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
-		case "team_mates":
+		case "products":
 			field := field
 
 			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
@@ -5387,7 +5387,7 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 						ec.Error(ctx, ec.Recover(ctx, r))
 					}
 				}()
-				res = ec._Query_team_mates(ctx, field)
+				res = ec._Query_products(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
@@ -5400,7 +5400,7 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
-		case "products":
+		case "teammates":
 			field := field
 
 			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
@@ -5409,7 +5409,7 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 						ec.Error(ctx, ec.Recover(ctx, r))
 					}
 				}()
-				res = ec._Query_products(ctx, field)
+				res = ec._Query_teammates(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
@@ -6033,6 +6033,67 @@ func (ec *executionContext) unmarshalNDepartment2githubᚗcomᚋwundergraphᚋco
 
 func (ec *executionContext) marshalNDepartment2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋemployeesᚋsubgraphᚋmodelᚐDepartment(ctx context.Context, sel ast.SelectionSet, v model.Department) graphql.Marshaler {
 	return v
+}
+
+func (ec *executionContext) unmarshalNDepartment2ᚕgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋemployeesᚋsubgraphᚋmodelᚐDepartmentᚄ(ctx context.Context, v interface{}) ([]model.Department, error) {
+	var vSlice []interface{}
+	if v != nil {
+		vSlice = graphql.CoerceList(v)
+	}
+	var err error
+	res := make([]model.Department, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNDepartment2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋemployeesᚋsubgraphᚋmodelᚐDepartment(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalNDepartment2ᚕgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋemployeesᚋsubgraphᚋmodelᚐDepartmentᚄ(ctx context.Context, sel ast.SelectionSet, v []model.Department) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNDepartment2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋemployeesᚋsubgraphᚋmodelᚐDepartment(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
 }
 
 func (ec *executionContext) marshalNDetails2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋemployeesᚋsubgraphᚋmodelᚐDetails(ctx context.Context, sel ast.SelectionSet, v *model.Details) graphql.Marshaler {

@@ -464,9 +464,9 @@ var sources = []*ast.Source{
 }
 
 enum Class {
-  Fish
-  Mammal
-  Reptile
+  FISH
+  MAMMAL
+  REPTILE
 }
 
 enum Gender {

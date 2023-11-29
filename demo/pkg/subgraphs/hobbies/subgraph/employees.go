@@ -5,6 +5,7 @@ import "github.com/wundergraph/cosmo/demo/pkg/subgraphs/hobbies/subgraph/model"
 var employees = []*model.Employee{
 	{
 		// Jens
+		ID: 1,
 		Hobbies: []model.Hobby{
 			model.Exercise{
 				Category: model.ExerciseTypeSport,
@@ -34,6 +35,7 @@ var employees = []*model.Employee{
 	},
 	{
 		// Dustin
+		ID: 2,
 		Hobbies: []model.Hobby{
 			model.Exercise{
 				Category: model.ExerciseTypeStrengthTraining,
@@ -55,6 +57,7 @@ var employees = []*model.Employee{
 	},
 	{
 		// Stefan
+		ID: 3,
 		Hobbies: []model.Hobby{
 			model.Exercise{
 				Category: model.ExerciseTypeHiking,
@@ -74,6 +77,7 @@ var employees = []*model.Employee{
 	},
 	{
 		// Björn
+		ID: 4,
 		Hobbies: []model.Hobby{
 			model.Exercise{
 				Category: model.ExerciseTypeHiking,
@@ -94,6 +98,7 @@ var employees = []*model.Employee{
 	},
 	{
 		// Sergiy
+		ID: 5,
 		Hobbies: []model.Hobby{
 			model.Other{
 				Name: "Building a house",
@@ -108,6 +113,7 @@ var employees = []*model.Employee{
 	},
 	{
 		// Suvij
+		ID: 7,
 		Hobbies: []model.Hobby{
 			model.Gaming{
 				Genres: []model.GameGenre{
@@ -123,6 +129,7 @@ var employees = []*model.Employee{
 	},
 	{
 		// Nithin
+		ID: 8,
 		Hobbies: []model.Hobby{
 			model.Exercise{
 				Category: model.ExerciseTypeStrengthTraining,
@@ -141,6 +148,7 @@ var employees = []*model.Employee{
 	},
 	{
 		// Alberto
+		ID: 9,
 		Hobbies: []model.Hobby{
 			model.Exercise{
 				Category: model.ExerciseTypeCalisthenics,
@@ -161,6 +169,7 @@ var employees = []*model.Employee{
 	},
 	{
 		// Eelco
+		ID: 10,
 		Hobbies: []model.Hobby{
 			model.Programming{
 				Languages: []model.ProgrammingLanguage{
@@ -189,6 +198,7 @@ var employees = []*model.Employee{
 	},
 	{
 		// Alexandra
+		ID: 11,
 		Hobbies: []model.Hobby{
 			model.Other{
 				Name: "Spending time with the family",
@@ -197,6 +207,7 @@ var employees = []*model.Employee{
 	},
 	{
 		// David
+		ID: 12,
 		Hobbies: []model.Hobby{
 			model.Programming{
 				Languages: model.AllProgrammingLanguage,
