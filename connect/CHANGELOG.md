@@ -4,6 +4,17 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.33.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.32.0...@wundergraph/cosmo-connect@0.33.0) (2023-11-29)
+
+### Bug Fixes
+
+* invite flow rework ([c27f150](https://github.com/wundergraph/cosmo/commit/c27f15049fedff923b4bcb0f9e2effed874be408)) (@JivusAyrus)
+
+### Features
+
+* accept custom operation IDs for persisted operations ([#302](https://github.com/wundergraph/cosmo/issues/302)) ([a535a62](https://github.com/wundergraph/cosmo/commit/a535a62bb7f70d2e58d1a04066fb74e78d932653)) (@fiam)
+* add new invitations table ([5d96c18](https://github.com/wundergraph/cosmo/commit/5d96c1807700d75fdf9c2a91dcf082170c5bc522)) (@JivusAyrus)
+
 # [0.32.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.30.2...@wundergraph/cosmo-connect@0.32.0) (2023-11-23)
 
 ### Features
