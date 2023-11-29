@@ -33,6 +33,15 @@ func (r *queryResolver) InitPayloadValue(ctx context.Context, key string) (strin
 	return fmt.Sprintf("%v", payload[key]), nil
 }
 
+// InitialPayload is the resolver for the initialPayload field.
+func (r *queryResolver) InitialPayload(ctx context.Context) (map[string]interface{}, error) {
+	payload := injector.InitPayload(ctx)
+	if payload == nil {
+		return nil, errors.New("payload not injected into context.Context")
+	}
+	return payload, nil
+}
+
 // HeaderValue is the resolver for the headerValue field.
 func (r *subscriptionResolver) HeaderValue(ctx context.Context, name string, repeat *int) (<-chan *model.TimestampedString, error) {
 	header := injector.Header(ctx)
@@ -46,6 +55,11 @@ func (r *subscriptionResolver) HeaderValue(ctx context.Context, name string, rep
 		*repeat = 1
 	}
 
+	payload := injector.InitPayload(ctx)
+	if payload == nil {
+		payload = map[string]any{}
+	}
+
 	go func() {
 		defer close(ch)
 
@@ -57,10 +71,11 @@ func (r *subscriptionResolver) HeaderValue(ctx context.Context, name string, rep
 				return
 
 			case ch <- &model.TimestampedString{
-				Value:    header.Get(name),
-				UnixTime: int(time.Now().Unix()),
-				Seq:      ii,
-				Total:    *repeat,
+				Value:          header.Get(name),
+				UnixTime:       int(time.Now().Unix()),
+				Seq:            ii,
+				Total:          *repeat,
+				InitialPayload: payload,
 			}:
 			}
 		}
@@ -92,10 +107,11 @@ func (r *subscriptionResolver) InitPayloadValue(ctx context.Context, key string,
 				return
 
 			case ch <- &model.TimestampedString{
-				Value:    fmt.Sprintf("%v", payload[key]),
-				UnixTime: int(time.Now().Unix()),
-				Seq:      ii,
-				Total:    *repeat,
+				Value:          fmt.Sprintf("%v", payload[key]),
+				UnixTime:       int(time.Now().Unix()),
+				Seq:            ii,
+				Total:          *repeat,
+				InitialPayload: payload,
 			}:
 			}
 		}

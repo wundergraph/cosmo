@@ -66,6 +66,13 @@ func TestForwardHeaders(t *testing.T) {
 		}
 	})
 
+	t.Run("HTTP with client extension", func(t *testing.T) {
+		rr := httptest.NewRecorder()
+		req := httptest.NewRequest("POST", "/graphql", strings.NewReader(`{"query": "query { initialPayload }","extensions":{"token":"123"}}`))
+		server.Server.Handler.ServeHTTP(rr, req)
+		assert.Equal(t, `{"data":{"initialPayload":{"extensions":{"token":"123"},"query":"{initialPayload}"}}}`, rr.Body.String())
+	})
+
 	t.Run("ws", func(t *testing.T) {
 		cases := []struct {
 			headerName string
@@ -94,6 +101,20 @@ func TestForwardHeaders(t *testing.T) {
 				assert.JSONEq(t, `{"data":{"headerValue":{"value":"`+headerValue+`"}}}`, string(msg.Payload))
 			})
 		}
+	})
+
+	t.Run("ws with client extension", func(t *testing.T) {
+		conn := connectedWebsocket(t, serverPort, nil)
+		err := conn.WriteJSON(&wsMessage{
+			ID:      "1",
+			Type:    "subscribe",
+			Payload: []byte(`{"query":"subscription { headerValue(name:\"foo\", repeat:3) { value initialPayload }}","extensions":{"token":"123"}}`),
+		})
+		assert.NoError(t, err)
+		var msg wsMessage
+		err = connReadJSON(conn, &msg)
+		require.NoError(t, err)
+		assert.JSONEq(t, `{"data":{"headerValue":{"value":"","initialPayload":{"extensions":{"token":"123"}}}}}`, string(msg.Payload))
 	})
 
 	t.Run("ws with multiple conns", func(t *testing.T) {

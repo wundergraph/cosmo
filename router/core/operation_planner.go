@@ -75,6 +75,7 @@ func (p *OperationPlanner) Plan(operation *ParsedOperation, clientInfo *ClientIn
 		clientInfo:   clientInfo,
 		variables:    operation.Variables,
 		traceOptions: traceOptions,
+		extensions:   operation.Extensions,
 	}
 
 	if traceOptions.Enable {
