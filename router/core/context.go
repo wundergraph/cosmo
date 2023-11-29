@@ -354,6 +354,7 @@ type operationContext struct {
 	preparedPlan *planWithMetaData
 	traceOptions resolve.RequestTraceOptions
 	planCacheHit bool
+	extensions   []byte
 }
 
 func (o *operationContext) Variables() []byte {

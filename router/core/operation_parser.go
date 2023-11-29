@@ -40,6 +40,7 @@ type ParsedOperation struct {
 	// as a string. This is provided for modules to be able to access the
 	// operation.
 	NormalizedRepresentation string
+	Extensions               []byte
 }
 
 type OperationParser struct {
@@ -175,6 +176,7 @@ func (p *OperationParser) parse(ctx context.Context, clientInfo *ClientInfo, bod
 		requestOperationType            string
 		operationDefinitionRef          = -1
 		requestOperationNameBytes       []byte
+		requestExtensions               []byte
 		operationCount                  = 0
 		anonymousOperationCount         = 0
 		anonymousOperationDefinitionRef = -1
@@ -208,9 +210,9 @@ func (p *OperationParser) parse(ctx context.Context, clientInfo *ClientInfo, bod
 		case parseOperationKeysOperationNameIndex:
 			requestOperationNameBytes = value
 		case parseOperationKeysExtensionsIndex:
+			requestExtensions = value
 			persistedQuery, _, _, err := jsonparser.Get(value, "persistedQuery")
 			if err != nil {
-				parseErr = err
 				return
 			}
 			if len(persistedQuery) > 0 {
@@ -410,5 +412,6 @@ func (p *OperationParser) parse(ctx context.Context, clientInfo *ClientInfo, bod
 		Type:                     requestOperationType,
 		Variables:                variablesCopy,
 		NormalizedRepresentation: kit.normalizedOperation.String(),
+		Extensions:               requestExtensions,
 	}, nil
 }

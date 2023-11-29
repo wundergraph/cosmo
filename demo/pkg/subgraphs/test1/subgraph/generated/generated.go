@@ -51,6 +51,7 @@ type ComplexityRoot struct {
 	Query struct {
 		HeaderValue        func(childComplexity int, name string) int
 		InitPayloadValue   func(childComplexity int, key string) int
+		InitialPayload     func(childComplexity int) int
 		__resolve__service func(childComplexity int) int
 	}
 
@@ -60,10 +61,11 @@ type ComplexityRoot struct {
 	}
 
 	TimestampedString struct {
-		Seq      func(childComplexity int) int
-		Total    func(childComplexity int) int
-		UnixTime func(childComplexity int) int
-		Value    func(childComplexity int) int
+		InitialPayload func(childComplexity int) int
+		Seq            func(childComplexity int) int
+		Total          func(childComplexity int) int
+		UnixTime       func(childComplexity int) int
+		Value          func(childComplexity int) int
 	}
 
 	_Service struct {
@@ -74,6 +76,7 @@ type ComplexityRoot struct {
 type QueryResolver interface {
 	HeaderValue(ctx context.Context, name string) (string, error)
 	InitPayloadValue(ctx context.Context, key string) (string, error)
+	InitialPayload(ctx context.Context) (map[string]interface{}, error)
 }
 type SubscriptionResolver interface {
 	HeaderValue(ctx context.Context, name string, repeat *int) (<-chan *model.TimestampedString, error)
@@ -123,6 +126,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Query.InitPayloadValue(childComplexity, args["key"].(string)), true
 
+	case "Query.initialPayload":
+		if e.complexity.Query.InitialPayload == nil {
+			break
+		}
+
+		return e.complexity.Query.InitialPayload(childComplexity), true
+
 	case "Query._service":
 		if e.complexity.Query.__resolve__service == nil {
 			break
@@ -153,6 +163,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Subscription.InitPayloadValue(childComplexity, args["key"].(string), args["repeat"].(*int)), true
+
+	case "TimestampedString.initialPayload":
+		if e.complexity.TimestampedString.InitialPayload == nil {
+			break
+		}
+
+		return e.complexity.TimestampedString.InitialPayload(childComplexity), true
 
 	case "TimestampedString.seq":
 		if e.complexity.TimestampedString.Seq == nil {
@@ -300,17 +317,21 @@ var sources = []*ast.Source{
   headerValue(name: String!): String!
   "Returns the value of the given key in the WS initial payload."
   initPayloadValue(key: String!): String!
+  initialPayload: Map
 }
+
+scalar Map
 
 type TimestampedString {
   "The value of the string."
   value: String!
   "The timestamp when the response was generated."
-  unixTime: Int! 
+  unixTime: Int!
   "Sequence number"
   seq: Int!
   "Total number of responses to be sent"
   total: Int!
+  initialPayload: Map
 }
 
 type Subscription {
@@ -621,6 +642,47 @@ func (ec *executionContext) fieldContext_Query_initPayloadValue(ctx context.Cont
 	return fc, nil
 }
 
+func (ec *executionContext) _Query_initialPayload(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_initialPayload(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().InitialPayload(rctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(map[string]interface{})
+	fc.Result = res
+	return ec.marshalOMap2map(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_initialPayload(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Map does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Query__service(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Query__service(ctx, field)
 	if err != nil {
@@ -859,6 +921,8 @@ func (ec *executionContext) fieldContext_Subscription_headerValue(ctx context.Co
 				return ec.fieldContext_TimestampedString_seq(ctx, field)
 			case "total":
 				return ec.fieldContext_TimestampedString_total(ctx, field)
+			case "initialPayload":
+				return ec.fieldContext_TimestampedString_initialPayload(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type TimestampedString", field.Name)
 		},
@@ -938,6 +1002,8 @@ func (ec *executionContext) fieldContext_Subscription_initPayloadValue(ctx conte
 				return ec.fieldContext_TimestampedString_seq(ctx, field)
 			case "total":
 				return ec.fieldContext_TimestampedString_total(ctx, field)
+			case "initialPayload":
+				return ec.fieldContext_TimestampedString_initialPayload(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type TimestampedString", field.Name)
 		},
@@ -1127,6 +1193,47 @@ func (ec *executionContext) fieldContext_TimestampedString_total(ctx context.Con
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _TimestampedString_initialPayload(ctx context.Context, field graphql.CollectedField, obj *model.TimestampedString) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_TimestampedString_initialPayload(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.InitialPayload, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(map[string]interface{})
+	fc.Result = res
+	return ec.marshalOMap2map(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_TimestampedString_initialPayload(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "TimestampedString",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Map does not have child fields")
 		},
 	}
 	return fc, nil
@@ -3017,6 +3124,25 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "initialPayload":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_initialPayload(ctx, field)
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
 		case "_service":
 			field := field
 
@@ -3123,6 +3249,8 @@ func (ec *executionContext) _TimestampedString(ctx context.Context, sel ast.Sele
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "initialPayload":
+			out.Values[i] = ec._TimestampedString_initialPayload(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -3957,6 +4085,22 @@ func (ec *executionContext) marshalOInt2ᚖint(ctx context.Context, sel ast.Sele
 		return graphql.Null
 	}
 	res := graphql.MarshalInt(*v)
+	return res
+}
+
+func (ec *executionContext) unmarshalOMap2map(ctx context.Context, v interface{}) (map[string]interface{}, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := graphql.UnmarshalMap(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOMap2map(ctx context.Context, sel ast.SelectionSet, v map[string]interface{}) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	res := graphql.MarshalMap(v)
 	return res
 }
 

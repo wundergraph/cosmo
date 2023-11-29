@@ -98,6 +98,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		},
 		RenameTypeNames:       h.executor.RenameTypeNames,
 		RequestTracingOptions: operationCtx.traceOptions,
+		Extensions:            operationCtx.extensions,
 	}
 	ctx = ctx.WithContext(r.Context())
 
