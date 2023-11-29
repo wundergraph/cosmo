@@ -19,6 +19,16 @@ export const ViewInput = ({
   input?: any;
   asChild?: boolean;
 }) => {
+  const getDefaultValue = () => {
+    if (input && input?.body?.query) {
+      return "query";
+    }
+    if (rawInput) {
+      return "rawInput";
+    }
+    return "input";
+  };
+
   return (
     <Dialog>
       <DialogTrigger
@@ -37,9 +47,9 @@ export const ViewInput = ({
         <DialogHeader>
           <DialogTitle>Input</DialogTitle>
         </DialogHeader>
-        <Tabs defaultValue="query" className="w-full">
+        <Tabs defaultValue={getDefaultValue()} className="w-full">
           <TabsList className="w-full">
-            {input && (
+            {input && input.body?.query && (
               <TabsTrigger className="flex-1" value="query">
                 Query
               </TabsTrigger>
@@ -58,7 +68,7 @@ export const ViewInput = ({
           <TabsContent value="query">
             <div className="scrollbar-custom h-96 max-w-[calc(42rem_-_3rem)] overflow-auto rounded border">
               <CodeViewer
-                code={input.body?.query ?? ""}
+                code={input?.body?.query ?? ""}
                 language="graphql"
                 disableLinking
               />
