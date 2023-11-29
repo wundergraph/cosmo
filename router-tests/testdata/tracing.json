@@ -13,7 +13,7 @@
             "Founder",
             "CEO"
           ],
-          "department": "ENGINEERING"
+          "departments": ["ENGINEERING", "MARKETING"]
         },
         "hobbies": [
           {
@@ -55,7 +55,7 @@
             "Co-founder",
             "Tech Lead"
           ],
-          "department": "ENGINEERING"
+          "departments": ["ENGINEERING"]
         },
         "hobbies": [
           {
@@ -88,7 +88,7 @@
             "Co-founder",
             "Head of Growth"
           ],
-          "department": "MARKETING"
+          "departments": ["MARKETING"]
         },
         "hobbies": [
           {
@@ -120,7 +120,7 @@
             "Co-founder",
             "COO"
           ],
-          "department": "OPERATIONS"
+          "departments": ["OPERATIONS", "MARKETING"]
         },
         "hobbies": [
           {
@@ -161,7 +161,7 @@
           "title": [
             "Senior GO Engineer"
           ],
-          "department": "ENGINEERING"
+          "departments": ["ENGINEERING"]
         },
         "hobbies": [
           {
@@ -186,7 +186,7 @@
           "title": [
             "Software Engineer"
           ],
-          "department": "ENGINEERING"
+          "departments": ["ENGINEERING"]
         },
         "hobbies": [
           {
@@ -212,7 +212,7 @@
           "title": [
             "Software Engineer"
           ],
-          "department": "ENGINEERING"
+          "departments": ["ENGINEERING"]
         },
         "hobbies": [
           {
@@ -244,7 +244,7 @@
           "title": [
             "Senior Backend Engineer"
           ],
-          "department": "ENGINEERING"
+          "departments": ["ENGINEERING"]
         },
         "hobbies": [
           {
@@ -275,7 +275,7 @@
           "title": [
             "Senior Frontend Engineer"
           ],
-          "department": "ENGINEERING"
+          "departments": ["ENGINEERING"]
         },
         "hobbies": [
           {
@@ -318,7 +318,7 @@
           "title": [
             "Accounting \u0026 Finance"
           ],
-          "department": "OPERATIONS"
+          "departments": ["OPERATIONS"]
         },
         "hobbies": [
           {
@@ -337,7 +337,7 @@
           "title": [
             "Software Engineer"
           ],
-          "department": "ENGINEERING"
+          "departments": ["ENGINEERING"]
         },
         "hobbies": [
           {
@@ -396,7 +396,7 @@
           "raw_input_data": {},
           "input": {
             "body": {
-              "query": "{employees {id role {title department} __typename}}"
+              "query": "{employees {id role {title departments} __typename}}"
             },
             "header": {},
             "url": "http://localhost/graphql",
@@ -412,7 +412,7 @@
                       "Founder",
                       "CEO"
                     ],
-                    "department": "ENGINEERING"
+                    "departments": ["ENGINEERING", "MARKETING"]
                   },
                   "__typename": "Employee"
                 },
@@ -423,7 +423,7 @@
                       "Co-founder",
                       "Tech Lead"
                     ],
-                    "department": "ENGINEERING"
+                    "departments": ["ENGINEERING"]
                   },
                   "__typename": "Employee"
                 },
@@ -434,7 +434,7 @@
                       "Co-founder",
                       "Head of Growth"
                     ],
-                    "department": "MARKETING"
+                    "departments": ["MARKETING"]
                   },
                   "__typename": "Employee"
                 },
@@ -445,7 +445,7 @@
                       "Co-founder",
                       "COO"
                     ],
-                    "department": "OPERATIONS"
+                    "departments": ["OPERATIONS", "MARKETING"]
                   },
                   "__typename": "Employee"
                 },
@@ -455,7 +455,7 @@
                     "title": [
                       "Senior GO Engineer"
                     ],
-                    "department": "ENGINEERING"
+                    "departments": ["ENGINEERING"]
                   },
                   "__typename": "Employee"
                 },
@@ -465,7 +465,7 @@
                     "title": [
                       "Software Engineer"
                     ],
-                    "department": "ENGINEERING"
+                    "departments": ["ENGINEERING"]
                   },
                   "__typename": "Employee"
                 },
@@ -475,7 +475,7 @@
                     "title": [
                       "Software Engineer"
                     ],
-                    "department": "ENGINEERING"
+                    "departments": ["ENGINEERING"]
                   },
                   "__typename": "Employee"
                 },
@@ -485,7 +485,7 @@
                     "title": [
                       "Senior Backend Engineer"
                     ],
-                    "department": "ENGINEERING"
+                    "departments": ["ENGINEERING"]
                   },
                   "__typename": "Employee"
                 },
@@ -495,7 +495,7 @@
                     "title": [
                       "Senior Frontend Engineer"
                     ],
-                    "department": "ENGINEERING"
+                    "departments": ["ENGINEERING"]
                   },
                   "__typename": "Employee"
                 },
@@ -505,7 +505,7 @@
                     "title": [
                       "Accounting \u0026 Finance"
                     ],
-                    "department": "OPERATIONS"
+                    "departments": ["OPERATIONS"]
                   },
                   "__typename": "Employee"
                 },
@@ -515,7 +515,7 @@
                     "title": [
                       "Software Engineer"
                     ],
-                    "department": "ENGINEERING"
+                    "departments": ["ENGINEERING"]
                   },
                   "__typename": "Employee"
                 }
@@ -544,13 +544,13 @@
                   "status": "200 OK",
                   "headers": {
                     "Content-Length": [
-                      "1144"
+                      "1201"
                     ],
                     "Content-Type": [
                       "application/json"
                     ]
                   },
-                  "body_size": 1144
+                  "body_size": 1201
                 }
               }
             }
@@ -651,7 +651,10 @@
                                 "Founder",
                                 "CEO"
                               ],
-                              "department": "ENGINEERING"
+                              "departments": [
+                                "ENGINEERING",
+                                "MARKETING"
+                              ]
                             },
                             "__typename": "Employee"
                           },
@@ -662,7 +665,9 @@
                                 "Co-founder",
                                 "Tech Lead"
                               ],
-                              "department": "ENGINEERING"
+                              "departments": [
+                                "ENGINEERING"
+                              ]
                             },
                             "__typename": "Employee"
                           },
@@ -673,7 +678,9 @@
                                 "Co-founder",
                                 "Head of Growth"
                               ],
-                              "department": "MARKETING"
+                              "departments": [
+                                "MARKETING"
+                              ]
                             },
                             "__typename": "Employee"
                           },
@@ -684,7 +691,10 @@
                                 "Co-founder",
                                 "COO"
                               ],
-                              "department": "OPERATIONS"
+                              "departments": [
+                                "OPERATIONS",
+                                "MARKETING"
+                              ]
                             },
                             "__typename": "Employee"
                           },
@@ -694,7 +704,9 @@
                               "title": [
                                 "Senior GO Engineer"
                               ],
-                              "department": "ENGINEERING"
+                              "departments": [
+                                "ENGINEERING"
+                              ]
                             },
                             "__typename": "Employee"
                           },
@@ -704,7 +716,9 @@
                               "title": [
                                 "Software Engineer"
                               ],
-                              "department": "ENGINEERING"
+                              "departments": [
+                                "ENGINEERING"
+                              ]
                             },
                             "__typename": "Employee"
                           },
@@ -714,7 +728,9 @@
                               "title": [
                                 "Software Engineer"
                               ],
-                              "department": "ENGINEERING"
+                              "departments": [
+                                "ENGINEERING"
+                              ]
                             },
                             "__typename": "Employee"
                           },
@@ -724,7 +740,9 @@
                               "title": [
                                 "Senior Backend Engineer"
                               ],
-                              "department": "ENGINEERING"
+                              "departments": [
+                                "ENGINEERING"
+                              ]
                             },
                             "__typename": "Employee"
                           },
@@ -734,7 +752,9 @@
                               "title": [
                                 "Senior Frontend Engineer"
                               ],
-                              "department": "ENGINEERING"
+                              "departments": [
+                                "ENGINEERING"
+                              ]
                             },
                             "__typename": "Employee"
                           },
@@ -744,7 +764,9 @@
                               "title": [
                                 "Accounting \u0026 Finance"
                               ],
-                              "department": "OPERATIONS"
+                              "departments": [
+                                "OPERATIONS"
+                              ]
                             },
                             "__typename": "Employee"
                           },
@@ -754,7 +776,9 @@
                               "title": [
                                 "Software Engineer"
                               ],
-                              "department": "ENGINEERING"
+                              "departments": [
+                                "ENGINEERING"
+                              ]
                             },
                             "__typename": "Employee"
                           }
@@ -1021,7 +1045,7 @@
                                 "Founder",
                                 "CEO"
                               ],
-                              "department": "ENGINEERING"
+                              "departments": ["ENGINEERING", "MARKETING"]
                             },
                             "__typename": "Employee"
                           },
@@ -1032,7 +1056,7 @@
                                 "Co-founder",
                                 "Tech Lead"
                               ],
-                              "department": "ENGINEERING"
+                              "departments": ["ENGINEERING"]
                             },
                             "__typename": "Employee"
                           },
@@ -1043,7 +1067,7 @@
                                 "Co-founder",
                                 "Head of Growth"
                               ],
-                              "department": "MARKETING"
+                              "departments": ["MARKETING"]
                             },
                             "__typename": "Employee"
                           },
@@ -1054,7 +1078,10 @@
                                 "Co-founder",
                                 "COO"
                               ],
-                              "department": "OPERATIONS"
+                              "departments": [
+                                "OPERATIONS",
+                                "MARKETING"
+                              ]
                             },
                             "__typename": "Employee"
                           },
@@ -1064,7 +1091,9 @@
                               "title": [
                                 "Senior GO Engineer"
                               ],
-                              "department": "ENGINEERING"
+                              "departments": [
+                                "ENGINEERING"
+                              ]
                             },
                             "__typename": "Employee"
                           },
@@ -1074,7 +1103,9 @@
                               "title": [
                                 "Software Engineer"
                               ],
-                              "department": "ENGINEERING"
+                              "departments": [
+                                "ENGINEERING"
+                              ]
                             },
                             "__typename": "Employee"
                           },
@@ -1084,7 +1115,9 @@
                               "title": [
                                 "Software Engineer"
                               ],
-                              "department": "ENGINEERING"
+                              "departments": [
+                                "ENGINEERING"
+                              ]
                             },
                             "__typename": "Employee"
                           },
@@ -1094,7 +1127,9 @@
                               "title": [
                                 "Senior Backend Engineer"
                               ],
-                              "department": "ENGINEERING"
+                              "departments": [
+                                "ENGINEERING"
+                              ]
                             },
                             "__typename": "Employee"
                           },
@@ -1104,7 +1139,9 @@
                               "title": [
                                 "Senior Frontend Engineer"
                               ],
-                              "department": "ENGINEERING"
+                              "departments": [
+                                "ENGINEERING"
+                              ]
                             },
                             "__typename": "Employee"
                           },
@@ -1114,7 +1151,9 @@
                               "title": [
                                 "Accounting \u0026 Finance"
                               ],
-                              "department": "OPERATIONS"
+                              "departments": [
+                                "OPERATIONS"
+                              ]
                             },
                             "__typename": "Employee"
                           },
@@ -1124,7 +1163,9 @@
                               "title": [
                                 "Software Engineer"
                               ],
-                              "department": "ENGINEERING"
+                              "departments": [
+                                "ENGINEERING"
+                              ]
                             },
                             "__typename": "Employee"
                           }
@@ -1688,11 +1729,17 @@
                           ]
                         },
                         {
-                          "name": "department",
+                          "name": "departments",
                           "value": {
-                            "node_type": "string",
+                            "items": [
+                              {
+                                "node_type": "string",
+                                "nullable": true
+                              }
+                            ],
+                            "node_type": "array",
                             "path": [
-                              "department"
+                              "departments"
                             ]
                           },
                           "parent_type_names": [
