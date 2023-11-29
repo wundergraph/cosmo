@@ -16,9 +16,6 @@ export const TitleLayout = ({
   toolbar?: React.ReactNode;
   children?: React.ReactNode;
 }) => {
-  const router = useRouter();
-  const user = useContext(UserContext);
-
   return (
     <div className="flex h-full flex-col">
       <div className="sticky top-0 z-10 bg-background md:top-6 lg:top-0">
