@@ -557,9 +557,9 @@ func (r *Router) Start(ctx context.Context) error {
 		return fmt.Errorf("router is closed. Create a new instance with router.NewRouter()")
 	}
 
-	cosmoCloudTracing := r.traceConfig.Enabled && trace.GetDefaultExporter(r.traceConfig) != nil
-	artInProduction := r.engineExecutionConfiguration.EnableRequestTracing && !r.developmentMode
-	needsRegistration := cosmoCloudTracing || artInProduction
+	cosmoCloudTracingEnabled := r.traceConfig.Enabled && trace.GetDefaultExporter(r.traceConfig) != nil
+	artInProductionEnabled := r.engineExecutionConfiguration.EnableRequestTracing && !r.developmentMode
+	needsRegistration := cosmoCloudTracingEnabled || artInProductionEnabled
 
 	if needsRegistration && r.selfRegister != nil {
 
@@ -572,7 +572,7 @@ func (r *Router) Start(ctx context.Context) error {
 			r.registrationInfo = ri
 
 			// Only ensure sampling rate if the user exports traces to Cosmo Cloud
-			if cosmoCloudTracing {
+			if cosmoCloudTracingEnabled {
 				if r.traceConfig.Sampler > float64(r.registrationInfo.AccountLimits.TraceSamplingRate) {
 					r.logger.Warn("Trace sampling rate is higher than account limit. Using account limit instead. Please contact support to increase your account limit.",
 						zap.Float64("limit", r.traceConfig.Sampler),

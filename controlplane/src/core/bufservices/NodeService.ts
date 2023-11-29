@@ -37,10 +37,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof NodeSe
           };
         }
 
-        const org = await orgRepo.getOrganizationLimits({
-          organizationID: authContext.organizationId,
-        });
-
         const routerCsrf = await fedRepo.getGraphCsrfKey({
           federatedGraphId: authContext.federatedGraphId,
           organizationId: authContext.organizationId,
@@ -54,6 +50,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof NodeSe
             },
           };
         }
+
+        const org = await orgRepo.getOrganizationLimits({
+          organizationID: authContext.organizationId,
+        });
 
         const registrationInfo: PlainMessage<RegistrationInfo> = {
           accountLimits: {
