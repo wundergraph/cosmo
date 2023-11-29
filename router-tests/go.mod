@@ -6,7 +6,7 @@ replace github.com/wundergraph/cosmo/demo => ../demo
 
 replace github.com/wundergraph/cosmo/composition-go => ../composition-go
 
-replace github.com/wundergraph/graphql-go-tools/v2 => ../../../graphql-go-tools/v2
+//replace github.com/wundergraph/graphql-go-tools/v2 => ../../../graphql-go-tools/v2
 
 go 1.21
 
