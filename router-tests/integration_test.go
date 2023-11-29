@@ -325,6 +325,27 @@ func TestInvalidVariablesArray(t *testing.T) {
 	assert.Equal(t, `{"errors":[{"message":"variables value must not be an array"}],"data":null}`, result.Body.String())
 }
 
+func TestVariablesValidationVariableMissing(t *testing.T) {
+	server := setupServer(t)
+	result := sendData(server, []byte(`{"query":"query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}","variables":{}}`))
+	assert.Equal(t, http.StatusBadRequest, result.Result().StatusCode)
+	assert.Equal(t, `{"errors":[{"message":"Variable \"$criteria\" of required type \"SearchInput!\" was not provided."}],"data":null}`, result.Body.String())
+}
+
+func TestVariablesValidationVariableWrong(t *testing.T) {
+	server := setupServer(t)
+	result := sendData(server, []byte(`{"query":"query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}","variables":{"criteria":1}}`))
+	assert.Equal(t, http.StatusBadRequest, result.Result().StatusCode)
+	assert.Equal(t, `{"errors":[{"message":"Variable \"$criteria\" got invalid value 1; Expected type \"SearchInput\" to be an object."}],"data":null}`, result.Body.String())
+}
+
+func TestVariablesValidationVariableCorrect(t *testing.T) {
+	server := setupServer(t)
+	result := sendData(server, []byte(`{"query":"query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}","variables":{"criteria":{"nationality":"GERMAN"}}}`))
+	assert.Equal(t, http.StatusOK, result.Result().StatusCode)
+	assert.Equal(t, `{"data":{"findEmployees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"}},{"id":2,"details":{"forename":"Dustin","surname":"Deus"}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"}}]}}`, result.Body.String())
+}
+
 func TestAnonymousQuery(t *testing.T) {
 	server := setupServer(t)
 	result := sendData(server, []byte(`{"query":"{ employees { id } }"}`))
