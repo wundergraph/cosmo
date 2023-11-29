@@ -741,8 +741,8 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		Headers:   r.headerRules,
 	}
 
-	if r.developmentMode {
-		r.logger.Debug("Request tracing is enabled but requires controlplane token to function in production. For more information see https://wundergraph.com/docs/advanced/request-tracing")
+	if r.developmentMode && r.engineExecutionConfiguration.EnableRequestTracing {
+		r.logger.Debug("Request tracing is enabled in development mode but requires a graph token to work securely in production. For more information see https://wundergraph.com/docs/advanced/request-tracing")
 	}
 
 	executor, err := ecb.Build(ctx, routerConfig, routerEngineConfig)
