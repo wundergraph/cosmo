@@ -1,7 +1,7 @@
 {
   "version": "5",
   "dialect": "pg",
-  "id": "a520c7f7-9525-42e8-8f17-804dafe24155",
+  "id": "589b0578-b622-434d-88ca-be22469a2897",
   "prevId": "3b18836a-e70b-47fc-948c-624fbbfdfad3",
   "tables": {
     "api_keys": {
@@ -875,8 +875,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "accepted_invite": {
-          "name": "accepted_invite",
+        "accepted": {
+          "name": "accepted",
           "type": "boolean",
           "primaryKey": false,
           "notNull": false,
