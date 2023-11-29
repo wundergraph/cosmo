@@ -13,6 +13,7 @@ import (
 	"github.com/cespare/xxhash/v2"
 	"github.com/pkg/errors"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/lexer/literal"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/variablesvalidation"
 
 	"github.com/wundergraph/cosmo/router/internal/cdn"
 	"github.com/wundergraph/cosmo/router/internal/pool"
@@ -56,6 +57,7 @@ type parseKit struct {
 	printer             *astprinter.Printer
 	normalizedOperation *bytes.Buffer
 	unescapedDocument   []byte
+	variablesValidator  *variablesvalidation.VariablesValidator
 }
 
 type OperationParserOptions struct {
@@ -84,6 +86,7 @@ func NewOperationParser(opts OperationParserOptions) *OperationParser {
 					printer:             &astprinter.Printer{},
 					normalizedOperation: &bytes.Buffer{},
 					unescapedDocument:   make([]byte, 1024),
+					variablesValidator:  variablesvalidation.NewVariablesValidator(),
 				}
 			},
 		},
@@ -387,6 +390,14 @@ func (p *OperationParser) parse(ctx context.Context, clientInfo *ClientInfo, bod
 
 	variablesCopy := make([]byte, len(kit.doc.Input.Variables))
 	copy(variablesCopy, kit.doc.Input.Variables)
+
+	err = kit.variablesValidator.Validate(kit.doc, p.executor.Definition, variablesCopy)
+	if err != nil {
+		return nil, &inputError{
+			message:    err.Error(),
+			statusCode: http.StatusBadRequest,
+		}
+	}
 
 	return &ParsedOperation{
 		ID:                       operationID,

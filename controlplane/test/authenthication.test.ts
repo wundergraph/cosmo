@@ -49,7 +49,9 @@ describe('Authentication', (ctx) => {
         clientID: '',
         clientSecret: '',
       },
-      s3StorageUrl: "http://localhost:9000",
+      s3StorageUrl: 'http://localhost:9000',
+      smtpUsername: '',
+      smtpPassword: '',
     });
 
     testContext.onTestFailed(async () => {

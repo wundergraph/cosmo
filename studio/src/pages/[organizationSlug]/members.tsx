@@ -22,6 +22,7 @@ import {
   getOrganizationMembers,
   inviteUser,
   removeInvitation,
+  removeOrganizationMember,
   updateOrgMemberRole,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { sentenceCase } from "change-case";
@@ -108,7 +109,7 @@ const MemberCard = ({
   refresh,
 }: {
   email: string;
-  role: string;
+  role?: string;
   memberUserID: string;
   acceptedInvite: boolean;
   isAdmin: boolean;
@@ -120,6 +121,9 @@ const MemberCard = ({
   const { mutate: resendInvitation } = useMutation(inviteUser.useMutation());
   const { mutate: revokeInvitation } = useMutation(
     removeInvitation.useMutation(),
+  );
+  const { mutate: removeMember } = useMutation(
+    removeOrganizationMember.useMutation(),
   );
   const { mutate: updateUserRole } = useMutation(
     updateOrgMemberRole.useMutation(),
@@ -134,7 +138,7 @@ const MemberCard = ({
       </div>
       <div className="flex items-center gap-x-4 text-muted-foreground">
         <div className={cn({ "pr-[14px]": isAdmin && isCurrentUser })}>
-          {acceptedInvite ? (
+          {acceptedInvite && role ? (
             <span className="text-sm">{sentenceCase(role)}</span>
           ) : (
             <span className="text-sm text-gray-800 dark:text-gray-400">
@@ -187,30 +191,51 @@ const MemberCard = ({
                 )}
                 <DropdownMenuItem
                   onClick={() => {
-                    revokeInvitation(
-                      { email },
-                      {
-                        onSuccess: (d) => {
-                          toast({
-                            description:
-                              d.response?.details ||
-                              (acceptedInvite
-                                ? "Removed member successfully."
-                                : "Removed invitation successfully."),
-                            duration: 3000,
-                          });
-                          refresh();
+                    if (acceptedInvite) {
+                      removeMember(
+                        { email },
+                        {
+                          onSuccess: (d) => {
+                            toast({
+                              description:
+                                d.response?.details ||
+                                "Removed member successfully.",
+                              duration: 3000,
+                            });
+                            refresh();
+                          },
+                          onError: (error) => {
+                            toast({
+                              description:
+                                "Could not remove member. Please try again.",
+                              duration: 3000,
+                            });
+                          },
                         },
-                        onError: (error) => {
-                          toast({
-                            description: acceptedInvite
-                              ? "Could not remove member. Please try again."
-                              : "Could not remove invitation. Please try again.",
-                            duration: 3000,
-                          });
+                      );
+                    } else {
+                      revokeInvitation(
+                        { email },
+                        {
+                          onSuccess: (d) => {
+                            toast({
+                              description:
+                                d.response?.details ||
+                                "Removed invitation successfully.",
+                              duration: 3000,
+                            });
+                            refresh();
+                          },
+                          onError: (error) => {
+                            toast({
+                              description:
+                                "Could not remove invitation. Please try again.",
+                              duration: 3000,
+                            });
+                          },
                         },
-                      },
-                    );
+                      );
+                    }
                   }}
                 >
                   {acceptedInvite ? "Remove member" : "Remove invitation"}
@@ -295,9 +320,7 @@ const MembersPage: NextPageWithLayout = () => {
 
   return (
     <div className="flex flex-col gap-y-6">
-      {isAdmin && (
-        <InviteForm refresh={() => refetch()} />
-      )}
+      {isAdmin && <InviteForm refresh={() => refetch()} />}
       <div className="flex flex-col divide-y rounded-md border">
         {data.members?.map((member) => {
           return (
@@ -306,7 +329,20 @@ const MembersPage: NextPageWithLayout = () => {
               email={member.email}
               role={getHighestPriorityRole({ userRoles: member.roles })}
               memberUserID={member.userID}
-              acceptedInvite={member.acceptedInvite}
+              acceptedInvite={true}
+              isAdmin={isAdmin || false}
+              isCurrentUser={member.email === user.email}
+              refresh={() => refetch()}
+            />
+          );
+        })}
+        {data.pendingInvitations?.map((member) => {
+          return (
+            <MemberCard
+              key={member.userID}
+              email={member.email}
+              memberUserID={member.userID}
+              acceptedInvite={false}
               isAdmin={isAdmin || false}
               isCurrentUser={member.email === user.email}
               refresh={() => refetch()}

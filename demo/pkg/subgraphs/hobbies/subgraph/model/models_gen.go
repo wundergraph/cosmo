@@ -82,9 +82,9 @@ const (
 	CountryAmerica     Country = "AMERICA"
 	CountryEngland     Country = "ENGLAND"
 	CountryGermany     Country = "GERMANY"
+	CountryIndonesia   Country = "INDONESIA"
 	CountryKorea       Country = "KOREA"
 	CountryNetherlands Country = "NETHERLANDS"
-	CountryIndonesia   Country = "INDONESIA"
 	CountryPortugal    Country = "PORTUGAL"
 	CountrySerbia      Country = "SERBIA"
 	CountrySpain       Country = "SPAIN"
@@ -96,9 +96,9 @@ var AllCountry = []Country{
 	CountryAmerica,
 	CountryEngland,
 	CountryGermany,
+	CountryIndonesia,
 	CountryKorea,
 	CountryNetherlands,
-	CountryIndonesia,
 	CountryPortugal,
 	CountrySerbia,
 	CountrySpain,
@@ -108,7 +108,7 @@ var AllCountry = []Country{
 
 func (e Country) IsValid() bool {
 	switch e {
-	case CountryAmerica, CountryEngland, CountryGermany, CountryKorea, CountryNetherlands, CountryIndonesia, CountryPortugal, CountrySerbia, CountrySpain, CountryTaiwan, CountryThailand:
+	case CountryAmerica, CountryEngland, CountryGermany, CountryIndonesia, CountryKorea, CountryNetherlands, CountryPortugal, CountrySerbia, CountrySpain, CountryTaiwan, CountryThailand:
 		return true
 	}
 	return false

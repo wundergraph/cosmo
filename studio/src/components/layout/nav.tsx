@@ -6,6 +6,7 @@ import { getFederatedGraphs } from "@wundergraph/cosmo-connect/dist/platform/v1/
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { ReactNode, useContext, useState } from "react";
+import { AiOutlineMail } from "react-icons/ai";
 import { UserContext } from "../app-provider";
 import { Logo } from "../logo";
 import { ThemeToggle } from "../theme-toggle";
@@ -19,6 +20,7 @@ import {
 import { Separator } from "../ui/separator";
 import { UserMenu, UserMenuMobile } from "../user-menu";
 import { LayoutProps } from "./layout";
+import { Button } from "../ui/button";
 
 export type NavLink = {
   title: string;
@@ -36,9 +38,29 @@ const isExternalUrl = (link: string): boolean => !link?.startsWith("/");
 
 interface SideNavLayoutProps extends LayoutProps {
   links?: NavLink[];
+  isUserLayout?: boolean;
 }
 
+const InvitationButton = ({ hasInvitaions }: { hasInvitaions: boolean }) => {
+  return (
+    <Button variant="ghost" size="icon">
+      <Link
+        href="/account/invitations"
+        className="flex items-center text-lg font-medium text-foreground/80 transition-colors hover:text-foreground sm:text-sm"
+      >
+        <AiOutlineMail className="h-4 w-4" />
+        {hasInvitaions && (
+          <div className="absolute pb-3 pl-3">
+            <div className="h-2 w-2 rounded-full bg-destructive" />
+          </div>
+        )}
+      </Link>
+    </Button>
+  );
+};
+
 const MobileNav = () => {
+  const user = useContext(UserContext);
   return (
     <div
       className={cn(
@@ -57,8 +79,9 @@ const MobileNav = () => {
           </Link>
         </nav>
         <UserMenuMobile />
-        <div className="mx-auto">
+        <div className="mx-auto flex items-center">
           <ThemeToggle />
+          <InvitationButton hasInvitaions={user?.invitations.length !== 0} />
         </div>
       </div>
     </div>
@@ -144,7 +167,7 @@ const Organizations = () => {
   );
 };
 
-export const Nav = ({ children, links }: SideNavLayoutProps) => {
+export const Nav = ({ children, links, isUserLayout }: SideNavLayoutProps) => {
   const router = useRouter();
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const user = useContext(UserContext);
@@ -165,7 +188,13 @@ export const Nav = ({ children, links }: SideNavLayoutProps) => {
                 >
                   <Logo />
                 </Link>
-                <Organizations />
+                {isUserLayout ? (
+                  <span className="hidden w-40 truncate font-semibold capitalize sm:inline-block">
+                    Wundergraph
+                  </span>
+                ) : (
+                  <Organizations />
+                )}
               </div>
               <Graphs />
             </div>
@@ -228,8 +257,22 @@ export const Nav = ({ children, links }: SideNavLayoutProps) => {
           >
             Documentation
           </Link>
-          <ThemeToggle />
-          <UserMenu />
+          <div
+            className={cn("flex items-center", {
+              "gap-x-3": isUserLayout,
+              "gap-x-1": !isUserLayout,
+            })}
+          >
+            <ThemeToggle />
+            {!isUserLayout && (
+              <div className="pr-2">
+                <InvitationButton
+                  hasInvitaions={user?.invitations.length !== 0}
+                />
+              </div>
+            )}
+            <UserMenu />
+          </div>
         </div>
       </aside>
       <main className="flex-1 pt-4 lg:pt-0">{children}</main>
