@@ -1465,7 +1465,8 @@ export class FederationFactory {
       container.node.interfaces = this.getAndValidateImplementedInterfaces(container);
       definitions.push(container.node);
     }
-    if (!this.parents.has(QUERY)) {
+    const query = this.parents.get(QUERY);
+    if (!query || query.kind !== Kind.OBJECT_TYPE_DEFINITION || query.fields.size < 1) {
       this.errors.push(noQueryRootTypeError);
     }
     // return any composition errors before checking whether all fields are resolvable

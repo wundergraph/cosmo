@@ -1,4 +1,10 @@
-import { federateSubgraphs, invalidSubgraphNamesError, noBaseTypeExtensionError, Subgraph } from '../src';
+import {
+  federateSubgraphs,
+  invalidSubgraphNamesError,
+  noBaseTypeExtensionError,
+  noQueryRootTypeError,
+  Subgraph,
+} from '../src';
 import { parse } from 'graphql';
 import { describe, expect, test } from 'vitest';
 import {
@@ -300,13 +306,11 @@ describe('FederationFactory tests', () => {
       `),
     );
   });
-});
-
-test('that _entities and _service are removed even if a root type is renamed', () => {
-  const { errors, federationResult } = federateSubgraphs([subgraphF, subgraphO]);
-  expect(errors).toBeUndefined();
-  expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
-    normalizeString(versionOnePersistedBaseSchema + `
+  test('that _entities and _service are removed even if a root type is renamed', () => {
+    const { errors, federationResult } = federateSubgraphs([subgraphF, subgraphO]);
+    expect(errors).toBeUndefined();
+    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
+      normalizeString(versionOnePersistedBaseSchema + `
       type Query {
         string: String
         user: User!
@@ -317,7 +321,20 @@ test('that _entities and _service are removed even if a root type is renamed', (
         name: String!
       }
     `),
-  );
+    );
+  });
+
+  test('that an error is returned if the federated graph has no query object', () => {
+    const { errors } = federateSubgraphs([subgraphP]);
+    expect(errors).toBeDefined();
+    expect(errors![0]).toStrictEqual(noQueryRootTypeError);
+  });
+
+  test('that an error is returned if the federated graph has no populated query object', () => {
+    const { errors } = federateSubgraphs([subgraphP, subgraphQ]);
+    expect(errors).toBeDefined();
+    expect(errors![0]).toStrictEqual(noQueryRootTypeError);
+  });
 });
 
 const subgraphA = {
@@ -780,3 +797,20 @@ const subgraphO: Subgraph = {
     scalar _Any
 `),
 };
+
+const subgraphP: Subgraph = {
+  name: 'subgraph-p',
+  url: '',
+  definitions: parse(`
+    scalar Dummy
+`),
+};
+
+const subgraphQ: Subgraph = {
+  name: 'subgraph-q',
+  url: '',
+  definitions: parse(`
+    type Query
+`),
+};
+
