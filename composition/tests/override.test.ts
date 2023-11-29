@@ -138,6 +138,38 @@ describe('@override directive Tests', () => {
     `));
   });
 
+  test('that an overridden field does not need to be declared shareable #6', () => {
+    const { errors, federationResult } = federateSubgraphs([subgraphE, subgraphP]);
+    expect(errors).toBeUndefined();
+    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST))
+      .toBe(normalizeString(versionTwoPersistedBaseSchema + `
+        type Entity {
+          id: ID!
+          name: String!
+        }
+        
+        type Query {
+          query: Entity!
+        }
+    `));
+  });
+
+  test('that an overridden field does not need to be declared shareable #7', () => {
+    const { errors, federationResult } = federateSubgraphs([subgraphP, subgraphE]);
+    expect(errors).toBeUndefined();
+    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST))
+      .toBe(normalizeString(versionTwoPersistedBaseSchema + `
+        type Query {
+          query: Entity!
+        }
+        
+        type Entity {
+          id: ID!
+          name: String!
+        }
+    `));
+  });
+
   test('that > 1 instance of an un-shareable field returns an error regardless of override', () => {
     const { errors } = federateSubgraphs([subgraphA, subgraphC, subgraphE]);
     expect(errors).toBeDefined();
@@ -415,6 +447,21 @@ const subgraphO: Subgraph = {
     type Entity @key(fields: "id") {
       id: ID!
       name: String! @override(from: "subgraph-n")
+    }
+  `),
+};
+
+const subgraphP: Subgraph = {
+  name: 'subgraph-p',
+  url: '',
+  definitions: parse(`
+    type Query @shareable {
+      query: Entity!
+    }
+    
+    type Entity @key(fields: "id") {
+      id: ID!
+      name: String! @override(from: "subgraph-e")
     }
   `),
 };

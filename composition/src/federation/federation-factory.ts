@@ -487,7 +487,16 @@ export class FederationFactory {
       if (fieldContainer.subgraphsByExternal.get(subgraphName)) {
         continue;
       }
+      // if the current field is overridden, its shareability doesn't matter
       if (fieldContainer.overrideTargetSubgraphName === subgraphName) {
+        continue;
+      }
+      // shareability doesn't matter if:
+      // the field has only been seen exactly twice—the target override and the source override
+      if (
+        fieldContainer.subgraphs.size === 2
+        && fieldContainer.subgraphs.has(fieldContainer.overrideTargetSubgraphName)
+      ) {
         continue;
       }
       unshareableFields += 1;
