@@ -255,32 +255,6 @@ func NewRouter(opts ...Option) (*Router, error) {
 		ExpectContinueTimeout: r.subgraphTransportOptions.ExpectContinueTimeout,
 	}
 
-	// The user might want to start the server with a static config
-	// Disable all features that requires a valid graph token and inform the user
-	if r.graphApiToken == "" {
-		r.graphqlMetricsConfig.Enabled = false
-		r.logger.Warn("No graph token provided. Disabling schema usage tracking, thus breaking change detection. Not recommended for production use.")
-
-		if !r.developmentMode {
-			r.logger.Warn("No graph token provided. Advanced Request Tracing disabled and can only be used in dev mode.")
-		}
-
-		if r.traceConfig.Enabled {
-			defaultExporter := trace.GetDefaultExporter(r.traceConfig)
-			if defaultExporter != nil {
-				r.logger.Warn("No graph token provided. Tracing ingestion to Cosmo disabled. Please specify a custom trace exporter or provide a graph token.")
-				defaultExporter.Disabled = true
-			}
-		}
-		if r.metricConfig.OpenTelemetry.Enabled {
-			defaultExporter := metric.GetDefaultExporter(r.metricConfig)
-			if defaultExporter != nil {
-				r.logger.Warn("No graph token provided. Metrics ingestion to Cosmo disabled. Please specify a custom trace exporter or provide a graph token.")
-				defaultExporter.Disabled = true
-			}
-		}
-	}
-
 	// Add default tracing exporter if needed
 	if r.traceConfig.Enabled && len(r.traceConfig.Exporters) == 0 {
 		if endpoint := otelconfig.DefaultEndpoint(); endpoint != "" {
@@ -304,6 +278,32 @@ func NewRouter(opts ...Option) (*Router, error) {
 				HTTPPath: "/v1/metrics",
 				Headers:  otelconfig.DefaultEndpointHeaders(r.graphApiToken),
 			})
+		}
+	}
+
+	// The user might want to start the server with a static config
+	// Disable all features that requires a valid graph token and inform the user
+	if r.graphApiToken == "" {
+		r.graphqlMetricsConfig.Enabled = false
+		r.logger.Warn("No graph token provided. Disabling schema usage tracking, thus breaking change detection. Not recommended for production use.")
+
+		if !r.developmentMode {
+			r.logger.Warn("No graph token provided. Advanced Request Tracing disabled and can only be used with a graph token or in dev mode.")
+		}
+
+		if r.traceConfig.Enabled {
+			defaultExporter := trace.GetDefaultExporter(r.traceConfig)
+			if defaultExporter != nil {
+				r.logger.Warn("No graph token provided. Tracing ingestion to Cosmo Cloud disabled. Please specify a custom trace exporter or provide a graph token.")
+				defaultExporter.Disabled = true
+			}
+		}
+		if r.metricConfig.OpenTelemetry.Enabled {
+			defaultExporter := metric.GetDefaultExporter(r.metricConfig)
+			if defaultExporter != nil {
+				r.logger.Warn("No graph token provided. Metrics ingestion to Cosmo Cloud disabled. Please specify a custom trace exporter or provide a graph token.")
+				defaultExporter.Disabled = true
+			}
 		}
 	}
 
@@ -584,7 +584,7 @@ func (r *Router) Start(ctx context.Context) error {
 
 	// Start the server with the static config without polling
 	if r.routerConfig != nil {
-		r.logger.Info("Static router config provided. Polling is disabled. Updating router config is only possible by restarting the router.")
+		r.logger.Info("Static router config provided. Polling is disabled. Updating router config is only possible by providing a config.")
 		return r.updateServer(ctx, r.routerConfig)
 	}
 
