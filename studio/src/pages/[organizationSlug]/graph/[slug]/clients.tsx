@@ -1,9 +1,27 @@
+import { UserContext } from "@/components/app-provider";
 import { EmptyState } from "@/components/empty-state";
 import { getGraphLayout } from "@/components/layout/graph-layout";
 import { PageHeader } from "@/components/layout/head";
 import { TitleLayout } from "@/components/layout/title-layout";
 import { Button } from "@/components/ui/button";
 import { CLI } from "@/components/ui/cli";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -17,21 +35,119 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useToast } from "@/components/ui/use-toast";
+import { SubmitHandler, useZodForm } from "@/hooks/use-form";
 import { docsBaseURL } from "@/lib/constants";
 import { NextPageWithLayout } from "@/lib/page";
-import { cn } from "@/lib/utils";
+import { checkUserAccess, cn } from "@/lib/utils";
 import { CommandLineIcon } from "@heroicons/react/24/outline";
-import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
-import { useQuery } from "@tanstack/react-query";
+import { ExclamationTriangleIcon, PlusIcon } from "@radix-ui/react-icons";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
-import { getClients } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+import {
+  getClients,
+  publishPersistedOperations,
+} from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/router";
+import { useContext, useState } from "react";
 import { BiAnalyse } from "react-icons/bi";
 import { IoBarcodeSharp } from "react-icons/io5";
+import { z } from "zod";
+
+const FormSchema = z.object({
+  clientName: z.string().min(1),
+});
+
+type Input = z.infer<typeof FormSchema>;
+
+const CreateClient = ({ refresh }: { refresh: () => void }) => {
+  const router = useRouter();
+  const slug = router.query.slug as string;
+  const [isOpen, setIsOpen] = useState(false);
+
+  const { toast } = useToast();
+
+  const form = useZodForm<Input>({
+    schema: FormSchema,
+  });
+
+  const { mutate, isPending } = useMutation({
+    ...publishPersistedOperations.useMutation(),
+    onSuccess(data) {
+      if (data.response?.code !== EnumStatusCode.OK) {
+        toast({
+          variant: "destructive",
+          title: "Could not create client",
+          description: data.response?.details ?? "Please try again",
+        });
+        return;
+      }
+
+      toast({
+        title: "Client created successfully",
+      });
+
+      form.setValue("clientName", "");
+      refresh();
+      setIsOpen(false);
+    },
+  });
+
+  const onSubmit: SubmitHandler<Input> = (formData) => {
+    mutate({
+      fedGraphName: slug,
+      clientName: formData.clientName,
+      operations: [],
+    });
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
+        <Button>
+          <PlusIcon className="mr-2" />
+          Create Client
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Create Client</DialogTitle>
+          <DialogDescription>
+            Create a new client to store persisted operations by providing a
+            name
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-4 py-4">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+              <FormField
+                control={form.control}
+                name="clientName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Client Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter new client name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Button className="w-full" type="submit">
+                Submit
+              </Button>
+            </form>
+          </Form>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
 
 const ClientsPage: NextPageWithLayout = () => {
+  const user = useContext(UserContext);
   const router = useRouter();
   const organizationSlug = router.query.organizationSlug as string;
   const slug = router.query.slug as string;
@@ -108,18 +224,25 @@ const ClientsPage: NextPageWithLayout = () => {
         />
       ) : (
         <>
-          <p className="px-2 text-sm text-muted-foreground">
-            Registered clients can be created by publishing persisted operations
-            for them.{" "}
-            <Link
-              href={docsBaseURL + "/router/persisted-operations"}
-              className="text-primary"
-              target="_blank"
-              rel="noreferrer"
-            >
-              Learn more
-            </Link>
-          </p>
+          <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
+            <p className="text-sm text-muted-foreground">
+              Registered clients can be created by publishing persisted
+              operations for them.{" "}
+              <Link
+                href={docsBaseURL + "/router/persisted-operations"}
+                className="text-primary"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Learn more
+              </Link>
+            </p>
+            {checkUserAccess({
+              rolesToBe: ["admin", "developer"],
+              userRoles: user?.currentOrganization.roles || [],
+            }) && <CreateClient refresh={() => refetch()} />}
+          </div>
+
           <Table>
             <TableHeader>
               <TableRow>
@@ -170,20 +293,21 @@ const ClientsPage: NextPageWithLayout = () => {
                       <TableCell className="flex items-center justify-end gap-x-3 pr-8">
                         <Tooltip delayDuration={0}>
                           <TooltipTrigger>
-                            <Link href={constructLink(name, "metrics")}>
-                              <BiAnalyse size="24px" className="text-primary" />
-                            </Link>
+                            <Button variant="secondary" size="icon-sm">
+                              <Link href={constructLink(name, "metrics")}>
+                                <BiAnalyse />
+                              </Link>
+                            </Button>
                           </TooltipTrigger>
                           <TooltipContent>Metrics</TooltipContent>
                         </Tooltip>
                         <Tooltip delayDuration={0}>
                           <TooltipTrigger>
-                            <Link href={constructLink(name, "traces")}>
-                              <IoBarcodeSharp
-                                size="28px"
-                                className="text-primary"
-                              />
-                            </Link>
+                            <Button variant="secondary" size="icon-sm">
+                              <Link href={constructLink(name, "traces")}>
+                                <IoBarcodeSharp />
+                              </Link>
+                            </Button>
                           </TooltipTrigger>
                           <TooltipContent>Traces</TooltipContent>
                         </Tooltip>
