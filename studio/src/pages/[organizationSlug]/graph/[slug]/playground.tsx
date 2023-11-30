@@ -211,7 +211,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
           args[1] as RequestInit,
         ),
     });
-  }, [graphContext?.graph?.routingURL]);
+  }, [graphContext?.graph?.routingURL, graphContext?.graphRequestToken]);
 
   const { theme } = useTheme();
 
