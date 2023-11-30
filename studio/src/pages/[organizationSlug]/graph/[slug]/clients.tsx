@@ -230,8 +230,8 @@ const ClientsPage: NextPageWithLayout = () => {
         <>
           <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
             <p className="text-sm text-muted-foreground">
-              Registered clients can be created by publishing persisted
-              operations for them.{" "}
+              Create and view clients to which you can publish persisted
+              operations.{" "}
               <Link
                 href={docsBaseURL + "/router/persisted-operations"}
                 className="text-primary"
