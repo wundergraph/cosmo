@@ -17,7 +17,7 @@
     "start": "tsx src/index.ts",
     "lint": "eslint --cache && prettier -c src",
     "format:fix": "prettier --write -c src",
-    "postversion": "name=\"$(node -p \"var a = require('./package.json');process.stdout.write(a.name);process.exit(0)\")\"; version=\"$(node -p \"var a = require('./package.json');process.stdout.write(a.version);process.exit(0)\")\"; gh workflow run image-release.yml -F name=$name -F tag=$version -F dockerContext=."
+    "postversion": "name=\"$(node -p \"var a = require('./package.json');process.stdout.write(a.name);process.exit(0)\")\"; version=\"$(node -p \"var a = require('./package.json');process.stdout.write(a.version);process.exit(0)\")\"; gh workflow run image-release.yml -F name=$name-server -F tag=$version -F dockerContext=."
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.445.0",
