@@ -506,7 +506,8 @@ const CheckOverviewPage: NextPageWithLayout = () => {
                         ) : (
                           <>
                             The proposed schema changes can be composed, but
-                            there are breaking changes.
+                            there are breaking changes affecting client
+                            operations.
                             <br />
                             You can manually override the state of this check to
                             accept the changes.
