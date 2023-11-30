@@ -22,10 +22,12 @@ import { FetchNode, LoadStats } from "./types";
 const initialPaneWidth = 360;
 
 export const TraceContext = createContext<{
+  query?: string;
   subgraphs: { id: string; name: string }[];
   headers: string;
   response: string;
 }>({
+  query: undefined,
   subgraphs: [],
   headers: "",
   response: "",
