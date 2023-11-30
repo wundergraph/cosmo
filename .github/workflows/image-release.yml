@@ -10,7 +10,7 @@ on:
         options:
           - keycloak
           - otelcollector
-          - cdn
+          - cdn-server
           - controlplane
           - studio
           - graphqlmetrics
