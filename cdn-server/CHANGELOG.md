@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.3.1](https://github.com/wundergraph/cosmo/compare/cdn@0.2.0...cdn@0.3.1) (2023-11-30)
+
+### Bug Fixes
+
+* change cdn-server package name ([8b00be6](https://github.com/wundergraph/cosmo/commit/8b00be672032a74c16b914fc5f6d09590b1beff7)) (@StarpTech)
+* change cdn-server to cdn ([3b6092f](https://github.com/wundergraph/cosmo/commit/3b6092f9926d92925fd907f6c6b787247b6831b8)) (@StarpTech)
+
 # 0.3.0 (2023-11-30)
 
 ### Bug Fixes
