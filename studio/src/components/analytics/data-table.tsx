@@ -205,7 +205,7 @@ export function AnalyticsDataTable<T>({
     },
   });
 
-  useImperativeHandle(tableRef, () => table, [tableRef]);
+  useImperativeHandle(tableRef, () => table, [table]);
 
   const onGroupChange = (val: AnalyticsViewGroupName) => {
     applyNewParams(
