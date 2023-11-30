@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.40.0](https://github.com/wundergraph/cosmo/compare/studio@0.39.1...studio@0.40.0) (2023-11-30)
+
+### Bug Fixes
+
+* undo usage for enum values ([#322](https://github.com/wundergraph/cosmo/issues/322)) ([22c71fd](https://github.com/wundergraph/cosmo/commit/22c71fd108098060670ff602ee2447d37afe4d06)) (@thisisnithin)
+
+### Features
+
+* register router on the controlplane ([#318](https://github.com/wundergraph/cosmo/issues/318)) ([10f86df](https://github.com/wundergraph/cosmo/commit/10f86dfebd80265d42015eaf3b9c15f941aef66b)) (@StarpTech)
+
 ## [0.39.1](https://github.com/wundergraph/cosmo/compare/studio@0.39.0...studio@0.39.1) (2023-11-29)
 
 ### Bug Fixes
