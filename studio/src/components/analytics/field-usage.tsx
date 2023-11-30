@@ -54,6 +54,7 @@ import { ChartTooltip } from "./charts";
 import { createFilterState } from "./constructAnalyticsTableQueryState";
 import { useApplyParams } from "./use-apply-params";
 import { useAnalyticsQueryState } from "./useAnalyticsQueryState";
+import { UserContext } from "../app-provider";
 
 export const FieldUsage = ({
   usageData,
@@ -62,6 +63,7 @@ export const FieldUsage = ({
 }) => {
   const router = useRouter();
   const { slug, organizationSlug } = router.query;
+  const user = useContext(UserContext);
 
   const subgraphs = useContext(GraphContext)?.subgraphs ?? [];
 
@@ -119,6 +121,7 @@ export const FieldUsage = ({
           range={range}
           dateRange={dateRange}
           onChange={onDateRangeChange}
+          calendarDaysLimit={90}
         />
       </div>
       <div className="h-64">

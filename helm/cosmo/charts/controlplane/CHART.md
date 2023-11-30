@@ -27,8 +27,11 @@ WunderGraph Cosmo Controlplane
 | configuration.githubAppPrivateKey | string | `""` |  |
 | configuration.githubAppWebhookSecret | string | `""` |  |
 | configuration.logLevel | string | `"info"` |  |
+| configuration.s3StorageUrl | string | `"http://minio:changeme@minio.wundergraph.local:9000/cosmo"` |  |
 | configuration.slackAppClientId | string | `""` |  |
 | configuration.slackAppClientSecret | string | `""` |  |
+| configuration.smtpPassword | string | `""` |  |
+| configuration.smtpUsername | string | `""` |  |
 | configuration.webhookSecret | string | `""` |  |
 | configuration.webhookUrl | string | `""` |  |
 | deploymentStrategy | object | `{}` |  |

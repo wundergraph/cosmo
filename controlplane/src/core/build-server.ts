@@ -1,4 +1,5 @@
 import Fastify from 'fastify';
+import { S3Client } from '@aws-sdk/client-s3';
 import { fastifyConnectPlugin } from '@connectrpc/connect-fastify';
 import { cors } from '@connectrpc/connect';
 import fastifyCors from '@fastify/cors';
@@ -23,6 +24,9 @@ import Keycloak from './services/Keycloak.js';
 import { PlatformWebhookService } from './webhooks/PlatformWebhookService.js';
 import AccessTokenAuthenticator from './services/AccessTokenAuthenticator.js';
 import { GitHubRepository } from './repositories/GitHubRepository.js';
+import { S3BlobStorage } from './blobstorage/index.js';
+import Mailer from './services/Mailer.js';
+import { OrganizationInvitationRepository } from './repositories/OrganizationInvitationRepository.js';
 
 export interface BuildConfig {
   logger: LoggerOptions;
@@ -66,6 +70,9 @@ export interface BuildConfig {
     privateKey?: string;
   };
   slack: { clientID?: string; clientSecret?: string };
+  s3StorageUrl: string;
+  smtpUsername?: string;
+  smtpPassword?: string;
 }
 
 const developmentLoggerOpts: LoggerOptions = {
@@ -164,6 +171,7 @@ export default async function build(opts: BuildConfig) {
   });
 
   const organizationRepository = new OrganizationRepository(fastify.db);
+  const orgInvitationRepository = new OrganizationInvitationRepository(fastify.db);
   const apiKeyAuth = new ApiKeyAuthenticator(fastify.db, organizationRepository);
   const webAuth = new WebSessionAuthenticator(opts.auth.secret);
   const graphKeyAuth = new GraphApiTokenAuthenticator(opts.auth.secret);
@@ -177,6 +185,11 @@ export default async function build(opts: BuildConfig) {
     adminUser: opts.keycloak.adminUser,
     adminPassword: opts.keycloak.adminPassword,
   });
+
+  let mailerClient: Mailer | undefined;
+  if (opts.smtpUsername && opts.smtpPassword) {
+    mailerClient = new Mailer({ username: opts.smtpUsername, password: opts.smtpPassword });
+  }
 
   let githubApp: App | undefined;
   if (opts.githubApp?.clientId) {
@@ -199,6 +212,24 @@ export default async function build(opts: BuildConfig) {
     });
   }
 
+  if (!opts.s3StorageUrl) {
+    throw new Error('S3 storage URL is required');
+  }
+
+  const url = new URL(opts.s3StorageUrl);
+  const s3Client = new S3Client({
+    // For AWS S3, the region can be set via the endpoint
+    region: 'auto',
+    endpoint: url.origin,
+    credentials: {
+      accessKeyId: url.username ?? '',
+      secretAccessKey: url.password ?? '',
+    },
+    forcePathStyle: true,
+  });
+  const bucketName = url.pathname.slice(1);
+  const blobStorage = new S3BlobStorage(s3Client, bucketName);
+
   /**
    * Controllers registration
    */
@@ -207,6 +238,7 @@ export default async function build(opts: BuildConfig) {
 
   await fastify.register(AuthController, {
     organizationRepository,
+    orgInvitationRepository,
     webAuth,
     authUtils,
     prefix: '/v1/auth',
@@ -241,6 +273,8 @@ export default async function build(opts: BuildConfig) {
       githubApp,
       webBaseUrl: opts.auth.webBaseUrl,
       slack: opts.slack,
+      blobStorage,
+      mailerClient,
     }),
     logLevel: opts.logger.level as pino.LevelWithSilent,
     // Avoid compression for small requests

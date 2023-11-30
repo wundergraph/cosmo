@@ -4,6 +4,65 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.41.0](https://github.com/wundergraph/cosmo/compare/router@0.40.1...router@0.41.0) (2023-11-29)
+
+### Features
+
+* add client extensions ([#319](https://github.com/wundergraph/cosmo/issues/319)) ([b9269f3](https://github.com/wundergraph/cosmo/commit/b9269f3342def04be2047b7bdc997d7d19890cbe)) (@jensneuse)
+
+## [0.40.1](https://github.com/wundergraph/cosmo/compare/router@0.40.0...router@0.40.1) (2023-11-29)
+
+**Note:** Version bump only for package router
+
+# [0.40.0](https://github.com/wundergraph/cosmo/compare/router@0.39.0...router@0.40.0) (2023-11-29)
+
+### Bug Fixes
+
+* trace parsing and ui ([#310](https://github.com/wundergraph/cosmo/issues/310)) ([5eb9f67](https://github.com/wundergraph/cosmo/commit/5eb9f675a9294b26963bdd1c8ac8215448de0c4e)) (@thisisnithin)
+
+### Features
+
+* add variables validation ([#309](https://github.com/wundergraph/cosmo/issues/309)) ([2454df4](https://github.com/wundergraph/cosmo/commit/2454df40833e62499c113cf038ca63e82e37912e)) (@jensneuse)
+* bundle custom graphiql in router ([#308](https://github.com/wundergraph/cosmo/issues/308)) ([de2779f](https://github.com/wundergraph/cosmo/commit/de2779faa48ae5fef23855091400292c0e118c7d)) (@thisisnithin)
+
+# [0.39.0](https://github.com/wundergraph/cosmo/compare/router@0.38.1...router@0.39.0) (2023-11-27)
+
+### Bug Fixes
+
+* store JSONB as json, avoid custom log in automaxprocs ([#301](https://github.com/wundergraph/cosmo/issues/301)) ([c6a1486](https://github.com/wundergraph/cosmo/commit/c6a1486a69c383f247e0d3eb3723d883633b8780)) (@StarpTech)
+
+### Features
+
+* add support for enabling pprof handlers ([#298](https://github.com/wundergraph/cosmo/issues/298)) ([98988a1](https://github.com/wundergraph/cosmo/commit/98988a1e6962d15e59d660a31861fccbe9a86153)) (@fiam)
+
+## [0.38.1](https://github.com/wundergraph/cosmo/compare/router@0.38.0...router@0.38.1) (2023-11-24)
+
+**Note:** Version bump only for package router
+
+# [0.38.0](https://github.com/wundergraph/cosmo/compare/router@0.37.0...router@0.38.0) (2023-11-24)
+
+### Bug Fixes
+
+* correctly implement normalization ([#292](https://github.com/wundergraph/cosmo/issues/292)) ([6433074](https://github.com/wundergraph/cosmo/commit/64330740f39ac15cce7d378f689ace1901babd0d)) (@jensneuse)
+
+### Features
+
+* improve art ([#293](https://github.com/wundergraph/cosmo/issues/293)) ([ee9dd5d](https://github.com/wundergraph/cosmo/commit/ee9dd5d2633b230e28ee714492b4f7f121a0423d)) (@jensneuse)
+
+# [0.37.0](https://github.com/wundergraph/cosmo/compare/router@0.35.0...router@0.37.0) (2023-11-23)
+
+### Features
+
+* add support for persisted operations ([#249](https://github.com/wundergraph/cosmo/issues/249)) ([a9ad47f](https://github.com/wundergraph/cosmo/commit/a9ad47ff5cf7db6bccf774e168b1d1ce3ee7bcdd)) (@fiam)
+* log traceID ([#284](https://github.com/wundergraph/cosmo/issues/284)) ([257de81](https://github.com/wundergraph/cosmo/commit/257de819a9735afddfc497d5b388dc3cb0e30bab)) (@fiam)
+
+# [0.36.0](https://github.com/wundergraph/cosmo/compare/router@0.35.0...router@0.36.0) (2023-11-23)
+
+### Features
+
+* add support for persisted operations ([#249](https://github.com/wundergraph/cosmo/issues/249)) ([a9ad47f](https://github.com/wundergraph/cosmo/commit/a9ad47ff5cf7db6bccf774e168b1d1ce3ee7bcdd)) (@fiam)
+* log traceID ([#284](https://github.com/wundergraph/cosmo/issues/284)) ([257de81](https://github.com/wundergraph/cosmo/commit/257de819a9735afddfc497d5b388dc3cb0e30bab)) (@fiam)
+
 # [0.35.0](https://github.com/wundergraph/cosmo/compare/router@0.34.1...router@0.35.0) (2023-11-21)
 
 ### Features

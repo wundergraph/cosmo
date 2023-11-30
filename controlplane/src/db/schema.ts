@@ -3,8 +3,6 @@ import {
   boolean,
   integer,
   bigint,
-  json,
-  jsonb,
   pgEnum,
   pgTable,
   primaryKey,
@@ -12,7 +10,38 @@ import {
   timestamp,
   uniqueIndex,
   uuid,
+  decimal,
+  unique,
+  customType,
 } from 'drizzle-orm/pg-core';
+
+// JSON/JSONB custom types to workaround insert bug
+// Should not be used with other drivers than postgres-js
+// See https://github.com/drizzle-team/drizzle-orm/issues/724
+export const customJson = <TData>(name: string) =>
+  customType<{ data: TData; driverData: TData }>({
+    dataType() {
+      return 'json';
+    },
+    toDriver(val: TData) {
+      return val;
+    },
+    fromDriver(value): TData {
+      return value as TData;
+    },
+  })(name);
+export const customJsonb = <TData>(name: string) =>
+  customType<{ data: TData; driverData: TData }>({
+    dataType() {
+      return 'jsonb';
+    },
+    toDriver(val: TData) {
+      return val;
+    },
+    fromDriver(value): TData {
+      return value as TData;
+    },
+  })(name);
 
 export const federatedGraphs = pgTable('federated_graphs', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -28,15 +57,96 @@ export const federatedGraphs = pgTable('federated_graphs', {
   }),
 });
 
-export const federatedGraphConfigs = pgTable('federated_graph_configs', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  federatedGraphId: uuid('federated_graph_id')
-    .notNull()
-    .references(() => federatedGraphs.id, {
+export const federatedGraphClients = pgTable(
+  'federated_graph_clients',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    federatedGraphId: uuid('federated_graph_id')
+      .notNull()
+      .references(() => federatedGraphs.id, {
+        onDelete: 'cascade',
+      }),
+    name: text('name').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }),
+    createdById: uuid('created_by_id')
+      .notNull()
+      .references(() => users.id, {
+        onDelete: 'cascade',
+      }),
+    updatedById: uuid('updated_by_id').references(() => users.id, {
       onDelete: 'cascade',
     }),
-  trafficCheckDays: integer('traffic_check_days').notNull().default(7),
-});
+  },
+  (t) => ({
+    uniqueFederatedGraphClientName: unique('federated_graph_client_name').on(t.federatedGraphId, t.name),
+  }),
+);
+
+export const federatedGraphClientsRelations = relations(federatedGraphClients, ({ one }) => ({
+  createdBy: one(users, {
+    fields: [federatedGraphClients.createdById],
+    references: [users.id],
+  }),
+  updatedBy: one(users, {
+    fields: [federatedGraphClients.updatedById],
+    references: [users.id],
+  }),
+}));
+
+export const federatedGraphPersistedOperations = pgTable(
+  'federated_graph_persisted_operations',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    federatedGraphId: uuid('federated_graph_id')
+      .notNull()
+      .references(() => federatedGraphs.id, {
+        onDelete: 'cascade',
+      }),
+    clientId: uuid('client_id')
+      .notNull()
+      .references(() => federatedGraphClients.id, {
+        onDelete: 'cascade',
+      }),
+    // operationId indicated by the client
+    operationId: text('operation_id').notNull(),
+    // sha256 hash of the operation body, calculated by us
+    hash: text('hash').notNull(),
+    // path in the blob storage where the operation is stored
+    filePath: text('file_path').notNull().unique(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }),
+    createdById: uuid('created_by_id')
+      .notNull()
+      .references(() => users.id, {
+        onDelete: 'cascade',
+      }),
+    updatedById: uuid('updated_by_id').references(() => users.id, {
+      onDelete: 'cascade',
+    }),
+  },
+  (t) => ({
+    uniqueFederatedGraphClientIdOperationId: unique('federated_graph_operation_id').on(
+      t.federatedGraphId,
+      t.clientId,
+      t.operationId,
+    ),
+  }),
+);
+
+export const federatedGraphPersistedOperationsRelations = relations(
+  federatedGraphPersistedOperations,
+  ({ many, one }) => ({
+    createdBy: one(users, {
+      fields: [federatedGraphPersistedOperations.createdById],
+      references: [users.id],
+    }),
+    updatedBy: one(users, {
+      fields: [federatedGraphPersistedOperations.updatedById],
+      references: [users.id],
+    }),
+  }),
+);
 
 export const subscriptionProtocolEnum = pgEnum('subscription_protocol', ['ws', 'sse', 'sse_post'] as const);
 
@@ -64,10 +174,6 @@ export const federatedGraphRelations = relations(federatedGraphs, ({ many, one }
   composedSchemaVersion: one(schemaVersion, {
     fields: [federatedGraphs.composedSchemaVersionId],
     references: [schemaVersion.id],
-  }),
-  config: one(federatedGraphConfigs, {
-    fields: [federatedGraphs.id],
-    references: [federatedGraphConfigs.federatedGraphId],
   }),
   subgraphs: many(subgraphsToFederatedGraph),
 }));
@@ -289,7 +395,7 @@ export const schemaChecks = pgTable('schema_checks', {
   hasClientTraffic: boolean('has_client_traffic').default(false),
   proposedSubgraphSchemaSDL: text('proposed_subgraph_schema_sdl'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  ghDetails: json('gh_details').$type<{
+  ghDetails: customJson('gh_details').$type<{
     accountId: number;
     repositorySlug: string;
     ownerSlug: string;
@@ -483,7 +589,6 @@ export const organizationsMembers = pgTable(
       .references(() => organizations.id, {
         onDelete: 'cascade',
       }),
-    acceptedInvite: boolean('accepted_invite').default(false),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => {
@@ -708,7 +813,7 @@ export const graphCompositions = pgTable('graph_compositions', {
   // The errors that occurred during the composition of the schema. This is only set when isComposable is false.
   compositionErrors: text('composition_errors'),
   // This is router config based on the composed schema. Only set for federated graphs.
-  routerConfig: jsonb('router_config'),
+  routerConfig: customJsonb('router_config'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   createdBy: uuid('created_by').references(() => users.id, {
     onDelete: 'cascade',
@@ -728,5 +833,35 @@ export const graphCompositionSubgraphs = pgTable('graph_composition_subgraphs', 
     .references(() => schemaVersion.id, {
       onDelete: 'cascade',
     }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const organizationLimits = pgTable('organization_limits', {
+  id: uuid('id').notNull().primaryKey().defaultRandom(),
+  organizationId: uuid('organization_id')
+    .notNull()
+    .references(() => organizations.id, {
+      onDelete: 'cascade',
+    }),
+  // requestsLimit is in millions
+  requestsLimit: integer('requests_limit').notNull().default(10),
+  analyticsRetentionLimit: integer('analytics_retention_limit').notNull().default(7),
+  tracingRetentionLimit: integer('tracing_retention_limit').notNull().default(7),
+  changelogDataRetentionLimit: integer('changelog_data_retention_limit').notNull().default(7),
+  breakingChangeRetentionLimit: integer('breaking_change_retention_limit').notNull().default(7),
+  traceSamplingRateLimit: decimal('trace_sampling_rate_limit', { precision: 3, scale: 2 }).notNull().default('0.10'),
+});
+
+export const organizationInvitations = pgTable('organization_invitations', {
+  id: uuid('id').notNull().primaryKey().defaultRandom(),
+  organizationId: uuid('organization_id')
+    .notNull()
+    .references(() => organizations.id, {
+      onDelete: 'cascade',
+    }),
+  userId: uuid('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  accepted: boolean('accepted').default(false),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });

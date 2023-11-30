@@ -13,6 +13,8 @@ import {
   apiKeys,
   integrationTypeEnum,
   organizationIntegrations,
+  organizationInvitations,
+  organizationLimits,
   organizationMemberRoles,
   organizationWebhooks,
   organizations,
@@ -22,7 +24,14 @@ import {
   targets,
   users,
 } from '../../db/schema.js';
-import { APIKeyDTO, OrganizationDTO, OrganizationMemberDTO, WebhooksConfigDTO } from '../../types/index.js';
+import {
+  APIKeyDTO,
+  OrganizationDTO,
+  OrganizationInvitationDTO,
+  OrganizationLimitsDTO,
+  OrganizationMemberDTO,
+  WebhooksConfigDTO,
+} from '../../types/index.js';
 import { MemberRole } from '../../db/models.js';
 
 /**
@@ -31,21 +40,45 @@ import { MemberRole } from '../../db/models.js';
 export class OrganizationRepository {
   constructor(private db: PostgresJsDatabase<typeof schema>) {}
 
-  public async isMemberOf(input: { organizationId: string; userId: string }): Promise<boolean> {
-    const userOrganizations = await this.db
-      .select({
-        userId: users.id,
-        organizationId: organizations.id,
-        slug: organizations.slug,
+  public async createOrganization(input: {
+    organizationID?: string;
+    organizationName: string;
+    organizationSlug: string;
+    ownerID: string;
+    isPersonal?: boolean;
+    isFreeTrial?: boolean;
+  }): Promise<OrganizationDTO> {
+    const insertedOrg = await this.db
+      .insert(organizations)
+      .values({
+        id: input.organizationID,
+        name: input.organizationName,
+        slug: input.organizationSlug,
+        createdBy: input.ownerID,
+        isPersonal: input.isPersonal,
+        isFreeTrial: input.isFreeTrial,
       })
-      .from(organizationsMembers)
-      .innerJoin(organizations, eq(organizations.id, input.organizationId))
-      .innerJoin(users, eq(users.id, organizationsMembers.userId))
-      .limit(1)
-      .where(eq(users.id, input.userId))
+      .returning()
       .execute();
 
-    return userOrganizations.length > 0;
+    return {
+      id: insertedOrg[0].id,
+      name: insertedOrg[0].name,
+      slug: insertedOrg[0].slug,
+      creatorUserId: insertedOrg[0].createdBy,
+      createdAt: insertedOrg[0].createdAt.toISOString(),
+    };
+  }
+
+  public async updateOrganization(input: { id: string; slug?: string; name?: string }) {
+    await this.db
+      .update(organizations)
+      .set({
+        name: input.name,
+        slug: input.slug,
+      })
+      .where(eq(organizations.id, input.id))
+      .execute();
   }
 
   public async bySlug(slug: string): Promise<OrganizationDTO | null> {
@@ -106,7 +139,26 @@ export class OrganizationRepository {
     };
   }
 
-  public async memberships(input: { userId: string }): Promise<(OrganizationDTO & { roles: string[] })[]> {
+  public async isMemberOf(input: { organizationId: string; userId: string }): Promise<boolean> {
+    const userOrganizations = await this.db
+      .select({
+        userId: users.id,
+        organizationId: organizations.id,
+        slug: organizations.slug,
+      })
+      .from(organizationsMembers)
+      .innerJoin(organizations, eq(organizations.id, input.organizationId))
+      .innerJoin(users, eq(users.id, organizationsMembers.userId))
+      .limit(1)
+      .where(eq(users.id, input.userId))
+      .execute();
+
+    return userOrganizations.length > 0;
+  }
+
+  public async memberships(input: {
+    userId: string;
+  }): Promise<(OrganizationDTO & { roles: string[]; limits: OrganizationLimitsDTO })[]> {
     const userOrganizations = await this.db
       .select({
         id: organizations.id,
@@ -116,10 +168,19 @@ export class OrganizationRepository {
         isFreeTrial: organizations.isFreeTrial,
         isPersonal: organizations.isPersonal,
         createdAt: organizations.createdAt,
+        limits: {
+          analyticsRetentionLimit: organizationLimits.analyticsRetentionLimit,
+          tracingRetentionLimit: organizationLimits.tracingRetentionLimit,
+          breakingChangeRetentionLimit: organizationLimits.breakingChangeRetentionLimit,
+          changelogDataRetentionLimit: organizationLimits.changelogDataRetentionLimit,
+          traceSamplingRateLimit: organizationLimits.traceSamplingRateLimit,
+          requestsLimit: organizationLimits.requestsLimit,
+        },
       })
       .from(organizationsMembers)
       .innerJoin(organizations, eq(organizations.id, organizationsMembers.organizationId))
       .innerJoin(users, eq(users.id, organizationsMembers.userId))
+      .innerJoin(organizationLimits, eq(organizations.id, organizationLimits.organizationId))
       .where(eq(users.id, input.userId))
       .execute();
 
@@ -136,6 +197,14 @@ export class OrganizationRepository {
           userID: input.userId,
           organizationID: org.id,
         }),
+        limits: {
+          analyticsRetentionLimit: org.limits.analyticsRetentionLimit,
+          tracingRetentionLimit: org.limits.tracingRetentionLimit,
+          breakingChangeRetentionLimit: org.limits.breakingChangeRetentionLimit,
+          changelogDataRetentionLimit: org.limits.changelogDataRetentionLimit,
+          traceSamplingRateLimit: Number(org.limits.traceSamplingRateLimit),
+          requestsLimit: org.limits.requestsLimit,
+        },
       })),
     );
 
@@ -150,7 +219,6 @@ export class OrganizationRepository {
       .select({
         userID: users.id,
         email: users.email,
-        acceptedInvite: organizationsMembers.acceptedInvite,
         memberID: organizationsMembers.id,
       })
       .from(organizationsMembers)
@@ -173,7 +241,6 @@ export class OrganizationRepository {
       orgMemberID: orgMember[0].memberID,
       email: orgMember[0].email,
       roles: userRoles,
-      acceptedInvite: orgMember[0].acceptedInvite,
     } as OrganizationMemberDTO;
   }
 
@@ -182,7 +249,6 @@ export class OrganizationRepository {
       .select({
         userID: users.id,
         email: users.email,
-        acceptedInvite: organizationsMembers.acceptedInvite,
         memberID: organizationsMembers.id,
       })
       .from(organizationsMembers)
@@ -206,60 +272,17 @@ export class OrganizationRepository {
         orgMemberID: member.memberID,
         email: member.email,
         roles: roles.map((role) => role.role),
-        acceptedInvite: member.acceptedInvite,
       } as OrganizationMemberDTO);
     }
     return members;
   }
 
-  public async createOrganization(input: {
-    organizationID?: string;
-    organizationName: string;
-    organizationSlug: string;
-    ownerID: string;
-    isPersonal?: boolean;
-    isFreeTrial?: boolean;
-  }): Promise<OrganizationDTO> {
-    const insertedOrg = await this.db
-      .insert(organizations)
-      .values({
-        id: input.organizationID,
-        name: input.organizationName,
-        slug: input.organizationSlug,
-        createdBy: input.ownerID,
-        isPersonal: input.isPersonal,
-        isFreeTrial: input.isFreeTrial,
-      })
-      .returning()
-      .execute();
-
-    return {
-      id: insertedOrg[0].id,
-      name: insertedOrg[0].name,
-      slug: insertedOrg[0].slug,
-      creatorUserId: insertedOrg[0].createdBy,
-      createdAt: insertedOrg[0].createdAt.toISOString(),
-    };
-  }
-
-  public async updateOrganization(input: { id: string; slug?: string; name?: string }) {
-    await this.db
-      .update(organizations)
-      .set({
-        name: input.name,
-        slug: input.slug,
-      })
-      .where(eq(organizations.id, input.id))
-      .execute();
-  }
-
-  public async addOrganizationMember(input: { userID: string; organizationID: string; acceptedInvite: boolean }) {
+  public async addOrganizationMember(input: { userID: string; organizationID: string }) {
     const insertedMember = await this.db
       .insert(organizationsMembers)
       .values({
         userId: input.userID,
         organizationId: input.organizationID,
-        acceptedInvite: input.acceptedInvite,
       })
       .returning()
       .execute();
@@ -859,5 +882,63 @@ export class OrganizationRepository {
           eq(organizationIntegrations.organizationId, input.organizationId),
         ),
       );
+  }
+
+  public async addOrganizationLimits(input: {
+    organizationID: string;
+    analyticsRetentionLimit: number;
+    tracingRetentionLimit: number;
+    changelogDataRetentionLimit: number;
+    breakingChangeRetentionLimit: number;
+    traceSamplingRateLimit: number;
+    requestsLimit: number;
+  }) {
+    await this.db
+      .insert(organizationLimits)
+      .values({
+        requestsLimit: input.requestsLimit,
+        analyticsRetentionLimit: input.analyticsRetentionLimit,
+        tracingRetentionLimit: input.tracingRetentionLimit,
+        breakingChangeRetentionLimit: input.breakingChangeRetentionLimit,
+        changelogDataRetentionLimit: input.changelogDataRetentionLimit,
+        traceSamplingRateLimit: input.traceSamplingRateLimit.toString(),
+        organizationId: input.organizationID,
+      })
+      .execute();
+  }
+
+  public async getOrganizationLimits(input: { organizationID: string }): Promise<OrganizationLimitsDTO> {
+    const limits = await this.db
+      .select({
+        analyticsRetentionLimit: organizationLimits.analyticsRetentionLimit,
+        tracingRetentionLimit: organizationLimits.tracingRetentionLimit,
+        breakingChangeRetentionLimit: organizationLimits.breakingChangeRetentionLimit,
+        changelogDataRetentionLimit: organizationLimits.changelogDataRetentionLimit,
+        traceSamplingRateLimit: organizationLimits.traceSamplingRateLimit,
+        requestsLimit: organizationLimits.requestsLimit,
+      })
+      .from(organizationLimits)
+      .where(eq(organizationLimits.organizationId, input.organizationID))
+      .execute();
+
+    if (limits.length === 0) {
+      return {
+        analyticsRetentionLimit: 7,
+        tracingRetentionLimit: 7,
+        changelogDataRetentionLimit: 7,
+        breakingChangeRetentionLimit: 7,
+        traceSamplingRateLimit: 0.1,
+        requestsLimit: 10,
+      };
+    }
+
+    return {
+      analyticsRetentionLimit: limits[0].analyticsRetentionLimit,
+      tracingRetentionLimit: limits[0].tracingRetentionLimit,
+      changelogDataRetentionLimit: limits[0].changelogDataRetentionLimit,
+      breakingChangeRetentionLimit: limits[0].breakingChangeRetentionLimit,
+      requestsLimit: limits[0].requestsLimit,
+      traceSamplingRateLimit: Number.parseFloat(limits[0].traceSamplingRateLimit),
+    };
   }
 }

@@ -16,10 +16,12 @@ import Keycloak from '../services/Keycloak.js';
 import { IPlatformWebhookService } from '../webhooks/PlatformWebhookService.js';
 import { AuthenticationError } from '../errors/errors.js';
 import { MemberRole } from '../../db/models.js';
+import { OrganizationInvitationRepository } from '../repositories/OrganizationInvitationRepository.js';
 
 export type AuthControllerOptions = {
   db: PostgresJsDatabase<typeof schema>;
   organizationRepository: OrganizationRepository;
+  orgInvitationRepository: OrganizationInvitationRepository;
   webAuth: WebSessionAuthenticator;
   authUtils: AuthUtils;
   webBaseUrl: string;
@@ -52,10 +54,15 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
         userId: userSession.userId,
       });
 
+      const invitations = await opts.orgInvitationRepository.getPendingInvitationsOfUser({
+        userId: userSession.userId,
+      });
+
       return {
         id: userSession.userId,
         email: userInfoData.email,
         organizations: orgs,
+        invitations,
         expiresAt: userSession.expiresAt,
       };
     } catch (err: any) {
@@ -170,7 +177,6 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
                 .values({
                   userId,
                   organizationId: dbOrg.id,
-                  acceptedInvite: true,
                 })
                 .onConflictDoUpdate({
                   target: [organizationsMembers.userId, organizationsMembers.organizationId],
@@ -178,7 +184,6 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
                   set: {
                     userId,
                     organizationId: dbOrg.id,
-                    acceptedInvite: true,
                   },
                 })
                 .returning()
@@ -195,13 +200,6 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
                 .execute();
             }
           }
-
-          // update the organizationMember table to indicate that the user has accepted the invite
-          await tx
-            .update(organizationsMembers)
-            .set({ acceptedInvite: true })
-            .where(eq(organizationsMembers.userId, userId))
-            .execute();
 
           // If there is already a session for this user, update it.
           // Otherwise, insert a new session. Because we use an Idp like keycloak,
@@ -262,12 +260,21 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
             const orgMember = await orgRepo.addOrganizationMember({
               organizationID: insertedOrg.id,
               userID: userId,
-              acceptedInvite: true,
             });
 
             await orgRepo.addOrganizationMemberRoles({
               memberID: orgMember.id,
               roles: ['admin'],
+            });
+
+            await orgRepo.addOrganizationLimits({
+              organizationID: insertedOrg.id,
+              analyticsRetentionLimit: 7,
+              tracingRetentionLimit: 7,
+              changelogDataRetentionLimit: 7,
+              breakingChangeRetentionLimit: 7,
+              traceSamplingRateLimit: 0.1,
+              requestsLimit: 10,
             });
           });
 
@@ -293,13 +300,11 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
           // Set the sso cookie.
           opts.authUtils.createSsoCookie(res, ssoSlug);
         }
-
-        if (orgs.length === 0) {
+        if (redirectURL) {
+          res.redirect(redirectURL);
+        } else if (orgs.length === 0) {
           res.redirect(opts.webBaseUrl + '?migrate=true');
         } else {
-          if (redirectURL) {
-            res.redirect(redirectURL);
-          }
           res.redirect(opts.webBaseUrl);
         }
       } catch (err: any) {

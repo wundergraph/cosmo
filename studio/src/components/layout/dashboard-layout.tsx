@@ -1,7 +1,13 @@
 import { Component2Icon } from "@radix-ui/react-icons";
 import { useRouter } from "next/router";
 import { useMemo } from "react";
-import { PiGraphLight } from "react-icons/pi";
+import {
+  IoKeyOutline,
+  IoNotificationsOutline,
+  IoPeopleOutline,
+} from "react-icons/io5";
+import { MdDataUsage } from "react-icons/md";
+import { PiGear, PiGraphLight } from "react-icons/pi";
 import { PageHeader } from "./head";
 import { LayoutProps } from "./layout";
 import { SideNav, NavLink } from "./sidenav";
@@ -41,6 +47,11 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
         title: "Notifications",
         href: basePath + "/webhooks",
         icon: <FiBell />,
+      },
+      {
+        title: "Usages",
+        href: basePath + "/usages",
+        icon: <MdDataUsage />,
       },
       {
         title: "Settings",

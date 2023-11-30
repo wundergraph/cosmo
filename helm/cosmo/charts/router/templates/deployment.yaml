@@ -70,7 +70,7 @@ spec:
                 configMapKeyRef:
                   name: {{ include "router.fullname" . }}
                   key: controlplaneUrl
-            - name: TELEMETRY_ENDPOINT
+            - name: DEFAULT_TELEMETRY_ENDPOINT
               valueFrom:
                 configMapKeyRef:
                   name: {{ include "router.fullname" . }}

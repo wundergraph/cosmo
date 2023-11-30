@@ -57,6 +57,7 @@ import { RefreshInterval, refreshIntervals } from "./refresh-interval";
 import { useApplyParams } from "./use-apply-params";
 import { getDefaultSort, useSyncTableWithQuery } from "./useSyncTableWithQuery";
 import { cn } from "@/lib/utils";
+import { useUser } from "@/hooks/use-user";
 
 export function AnalyticsDataTable<T>({
   tableRef,
@@ -78,6 +79,7 @@ export function AnalyticsDataTable<T>({
   refresh: () => void;
 }) {
   const router = useRouter();
+  const user = useUser();
 
   const [, setRouteCache] = useSessionStorage("analytics.route", router.query);
 
@@ -319,6 +321,9 @@ export function AnalyticsDataTable<T>({
             range={selectedRange}
             dateRange={selectedDateRange}
             onChange={onDateRangeChange}
+            calendarDaysLimit={
+              user?.currentOrganization.limits.tracingRetentionLimit || 7
+            }
           />
           <AnalyticsFilters filters={filtersList} />
         </div>

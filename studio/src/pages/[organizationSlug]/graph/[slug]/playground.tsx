@@ -1,24 +1,27 @@
-import { GraphLayout, getGraphLayout } from "@/components/layout/graph-layout";
+import { GraphContext, getGraphLayout } from "@/components/layout/graph-layout";
 import { PageHeader } from "@/components/layout/head";
+import { TraceContext, TraceView } from "@/components/playground/trace-view";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { NextPageWithLayout } from "@/lib/page";
-import { GraphiQL } from "graphiql";
+import { explorerPlugin } from "@graphiql/plugin-explorer";
 import { createGraphiQLFetcher } from "@graphiql/toolkit";
+import { MobileIcon } from "@radix-ui/react-icons";
+import { GraphiQL } from "graphiql";
 import { useTheme } from "next-themes";
-import { useEffect, useMemo, useState } from "react";
-import { useExplorerPlugin } from "@graphiql/plugin-explorer";
-import { ExclamationTriangleIcon, MobileIcon } from "@radix-ui/react-icons";
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { useQuery } from "@tanstack/react-query";
-import { getFederatedGraphByName } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { Loader } from "@/components/ui/loader";
 import { useRouter } from "next/router";
-import { EmptyState } from "@/components/empty-state";
-import { Button } from "@/components/ui/button";
-import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
+import { useContext, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
+import { FaNetworkWired } from "react-icons/fa";
+import { PiBracketsCurly } from "react-icons/pi";
 
-const graphiQLFetch: typeof fetch = async (...args) => {
+const graphiQLFetch = async (
+  onFetch: any,
+  ...args: [input: RequestInfo | URL, init?: RequestInit | undefined]
+) => {
   try {
     const response = await fetch(...args);
+    onFetch(await response.clone().json());
     return response;
   } catch (e) {
     // @ts-expect-error
@@ -31,20 +34,118 @@ const graphiQLFetch: typeof fetch = async (...args) => {
   }
 };
 
+const ResponseTabs = () => {
+  const onValueChange = (val: string) => {
+    const response = document.getElementsByClassName(
+      "graphiql-response",
+    )[0] as HTMLDivElement;
+
+    const visual = document.getElementById(
+      "response-visualization",
+    ) as HTMLDivElement;
+
+    if (!response || !visual) {
+      return;
+    }
+
+    if (val === "plan") {
+      response.classList.add("!invisible");
+      visual.classList.remove("invisible");
+      visual.classList.remove("-z-50");
+    } else {
+      response.classList.remove("!invisible");
+      visual.classList.add("-z-50");
+      visual.classList.add("invisible");
+    }
+  };
+
+  return (
+    <Tabs
+      defaultValue="response"
+      className="w-full md:w-auto"
+      onValueChange={onValueChange}
+    >
+      <TabsList className="grid w-full grid-cols-2">
+        <TabsTrigger className="!cursor-pointer" value="response" asChild>
+          <div className="flex items-center gap-x-2">
+            <PiBracketsCurly className="h-4 w-4 flex-shrink-0" />
+            Response
+          </div>
+        </TabsTrigger>
+        <TabsTrigger className="!cursor-pointer" value="plan" asChild>
+          <div className="flex items-center gap-x-2">
+            <FaNetworkWired className="h-4 w-4 flex-shrink-0" />
+            Trace
+          </div>
+        </TabsTrigger>
+      </TabsList>
+    </Tabs>
+  );
+};
+
+const PlaygroundPortal = () => {
+  const tabDiv = document.getElementById("response-tabs");
+  const visDiv = document.getElementById("response-visualization");
+
+  if (!tabDiv || !visDiv) return null;
+
+  return (
+    <>
+      {createPortal(<ResponseTabs />, tabDiv)}
+      {createPortal(<TraceView />, visDiv)}
+    </>
+  );
+};
+
 const PlaygroundPage: NextPageWithLayout = () => {
   const router = useRouter();
   const operation = router.query.operation as string;
 
-  const { data, isLoading, error, refetch } = useQuery(
-    getFederatedGraphByName.useQuery({
-      name: router.query.slug as string,
-    }),
-  );
+  const graphContext = useContext(GraphContext);
 
   const [query, setQuery] = useState<string | undefined>(
     operation ? atob(operation) : undefined,
   );
+  const [headers, setHeaders] = useState(`{
+  "X-WG-TRACE" : "true"
+}`);
+  const [response, setResponse] = useState<string>("");
+
   const [isGraphiqlRendered, setIsGraphiqlRendered] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    if (isMounted) return;
+
+    const header = document.getElementsByClassName(
+      "graphiql-session-header-right",
+    )[0] as any as HTMLDivElement;
+
+    if (header) {
+      const logo = document.getElementsByClassName("graphiql-logo")[0];
+      logo.classList.add("hidden");
+      const div = document.createElement("div");
+      div.id = "response-tabs";
+      div.className = "flex items-center justify-center mx-2";
+      header.append(div);
+    }
+
+    const responseSection =
+      document.getElementsByClassName("graphiql-response")[0];
+    const responseSectionParent =
+      responseSection.parentElement as any as HTMLDivElement;
+
+    if (responseSectionParent) {
+      responseSectionParent.id = "response-parent";
+      responseSectionParent.classList.add("relative");
+      const div = document.createElement("div");
+      div.id = "response-visualization";
+      div.className = "flex flex-1 h-full w-full absolute invisible -z-50";
+      responseSectionParent.append(div);
+    }
+
+    setIsMounted(true);
+  }, [isMounted]);
 
   useEffect(() => {
     if (!isGraphiqlRendered && typeof query === "string") {
@@ -86,19 +187,17 @@ const PlaygroundPage: NextPageWithLayout = () => {
   }, [query, isGraphiqlRendered]);
 
   const fetcher = useMemo(() => {
-    const url = data?.graph?.routingURL ?? "";
+    const onFetch = (response: any) => {
+      setResponse(JSON.stringify(response));
+    };
+
+    const url = graphContext?.graph?.routingURL ?? "";
     return createGraphiQLFetcher({
       url: url,
       subscriptionUrl: url.replace("http", "ws"),
-      fetch: graphiQLFetch,
+      fetch: (...args) => graphiQLFetch(onFetch, ...args),
     });
-  }, [data?.graph?.routingURL]);
-
-  const explorerPlugin = useExplorerPlugin({
-    query: query as string,
-    onEdit: setQuery,
-    showAttribution: false,
-  });
+  }, [graphContext?.graph?.routingURL]);
 
   const { theme } = useTheme();
 
@@ -117,32 +216,35 @@ const PlaygroundPage: NextPageWithLayout = () => {
     };
   }, [theme]);
 
-  if (isLoading) return <Loader fullscreen />;
-
-  if (error || data?.response?.code !== EnumStatusCode.OK)
-    return (
-      <EmptyState
-        icon={<ExclamationTriangleIcon />}
-        title="Could not retrieve subgraphs"
-        description={
-          data?.response?.details || error?.message || "Please try again"
-        }
-        actions={<Button onClick={() => refetch()}>Retry</Button>}
-      />
-    );
-
-  if (!data?.graph) return null;
+  if (!graphContext?.graph) return null;
 
   return (
     <PageHeader title="Studio | Playground">
-      <div className="hidden h-[100%] flex-1 md:flex">
-        <GraphiQL
-          fetcher={fetcher}
-          query={query}
-          onEditQuery={setQuery}
-          plugins={[explorerPlugin]}
-        />
-      </div>
+      <TraceContext.Provider
+        value={{
+          headers,
+          response,
+          subgraphs: graphContext.subgraphs,
+        }}
+      >
+        <div className="hidden h-[100%] flex-1 md:flex">
+          <GraphiQL
+            shouldPersistHeaders
+            showPersistHeadersSettings={false}
+            fetcher={fetcher}
+            query={query}
+            onEditQuery={setQuery}
+            headers={headers}
+            onEditHeaders={setHeaders}
+            plugins={[
+              explorerPlugin({
+                showAttribution: false,
+              }),
+            ]}
+          />
+          {isMounted && <PlaygroundPortal />}
+        </div>
+      </TraceContext.Provider>
       <div className="flex flex-1 items-center justify-center md:hidden">
         <Alert className="m-8">
           <MobileIcon className="h-4 w-4" />

@@ -13,6 +13,7 @@ import { AnalyticsToolbar } from "@/components/analytics/toolbar";
 import { useApplyParams } from "@/components/analytics/use-apply-params";
 import { useRange } from "@/components/analytics/use-range";
 import { useAnalyticsQueryState } from "@/components/analytics/useAnalyticsQueryState";
+import { UserContext } from "@/components/app-provider";
 import {
   DatePickerWithRange,
   DateRangePickerChangeHandler,
@@ -858,6 +859,7 @@ const ErrorRateOverTimeCard = () => {
 const OverviewToolbar = () => {
   const graphContext = useContext(GraphContext);
   const client = useQueryClient();
+  const user = useContext(UserContext);
 
   const { filters, range, dateRange, refreshInterval } =
     useAnalyticsQueryState();
@@ -932,6 +934,9 @@ const OverviewToolbar = () => {
             range={range}
             dateRange={dateRange}
             onChange={onDateRangeChange}
+            calendarDaysLimit={
+              user?.currentOrganization.limits.analyticsRetentionLimit || 7
+            }
           />
 
           <MetricsFilters filters={data?.filters ?? []} />

@@ -7,8 +7,8 @@ import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/pla
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
-import database from '../src/core/plugins/database';
-import routes from '../src/core/routes';
+import database from '../src/core/plugins/database.js';
+import routes from '../src/core/routes.js';
 import {
   afterAllSetup,
   beforeAllSetup,
@@ -16,10 +16,11 @@ import {
   genID,
   genUniqueLabel,
   seedTest,
-} from '../src/core/test-util';
-import Keycloak from '../src/core/services/Keycloak';
-import { MockPlatformWebhookService } from '../src/core/webhooks/PlatformWebhookService';
-import { SetupTest } from './test-util';
+} from '../src/core/test-util.js';
+import Keycloak from '../src/core/services/Keycloak.js';
+import { MockPlatformWebhookService } from '../src/core/webhooks/PlatformWebhookService.js';
+import Mailer from '../src/core/services/Mailer.js';
+import { InMemoryBlobStorage, SetupTest } from './test-util.js';
 
 let dbname = '';
 
@@ -106,6 +107,7 @@ describe('Federated Graph', (ctx) => {
     });
 
     const platformWebhooks = new MockPlatformWebhookService();
+    const mailerClient = new Mailer({ username: '', password: '' });
 
     await server.register(fastifyConnectPlugin, {
       routes: routes({
@@ -122,6 +124,8 @@ describe('Federated Graph', (ctx) => {
           clientSecret: '',
         },
         keycloakApiUrl: apiUrl,
+        blobStorage: new InMemoryBlobStorage(),
+        mailerClient,
       }),
     });
 
@@ -208,6 +212,7 @@ describe('Federated Graph', (ctx) => {
     });
 
     const platformWebhooks = new MockPlatformWebhookService();
+    const mailerClient = new Mailer({ username: '', password: '' });
 
     await server.register(fastifyConnectPlugin, {
       routes: routes({
@@ -224,6 +229,8 @@ describe('Federated Graph', (ctx) => {
           clientSecret: '',
         },
         keycloakApiUrl: apiUrl,
+        blobStorage: new InMemoryBlobStorage(),
+        mailerClient,
       }),
     });
 
@@ -310,6 +317,7 @@ describe('Federated Graph', (ctx) => {
     });
 
     const platformWebhooks = new MockPlatformWebhookService();
+    const mailerClient = new Mailer({ username: '', password: '' });
 
     await server.register(fastifyConnectPlugin, {
       routes: routes({
@@ -326,6 +334,8 @@ describe('Federated Graph', (ctx) => {
           clientSecret: '',
         },
         keycloakApiUrl: apiUrl,
+        blobStorage: new InMemoryBlobStorage(),
+        mailerClient,
       }),
     });
 
@@ -441,6 +451,7 @@ describe('Federated Graph', (ctx) => {
     });
 
     const platformWebhooks = new MockPlatformWebhookService();
+    const mailerClient = new Mailer({ username: '', password: '' });
 
     await server.register(fastifyConnectPlugin, {
       routes: routes({
@@ -457,6 +468,8 @@ describe('Federated Graph', (ctx) => {
           clientSecret: '',
         },
         keycloakApiUrl: apiUrl,
+        blobStorage: new InMemoryBlobStorage(),
+        mailerClient,
       }),
     });
 

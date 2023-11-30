@@ -8,7 +8,7 @@ import {
   versionTwoPersistedBaseSchema,
 } from './utils/utils';
 
-describe('Query federation tests', () => {
+describe('Field resolvability tests', () => {
   test('that shared queries that return a nested type that is only resolvable over multiple subgraphs are valid', () => {
     const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphB]);
     expect(errors).toBeUndefined();
@@ -16,7 +16,7 @@ describe('Query federation tests', () => {
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
         versionTwoPersistedBaseSchema +
-          `
+        `
       type Query {
         query: Nested
       }
@@ -146,7 +146,7 @@ describe('Query federation tests', () => {
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
         versionTwoPersistedBaseSchema +
-          `
+        `
       type Query {
         friend: Friend
       }
@@ -167,7 +167,7 @@ describe('Query federation tests', () => {
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
         versionOnePersistedBaseSchema +
-          `
+        `
       interface Human {
         name: String!
         age: Int!
@@ -237,7 +237,7 @@ describe('Query federation tests', () => {
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
         versionOnePersistedBaseSchema +
-          `
+        `
       union Human = Friend | Enemy
       
       type Query {

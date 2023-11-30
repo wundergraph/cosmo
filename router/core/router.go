@@ -12,6 +12,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
+	"github.com/wundergraph/cosmo/router/internal/cdn"
 	"github.com/wundergraph/cosmo/router/internal/docker"
 	"github.com/wundergraph/cosmo/router/internal/graphqlmetrics"
 	brotli "go.withmatt.com/connect-brotli"
@@ -94,6 +95,8 @@ type (
 		healthCheckPath          string
 		readinessCheckPath       string
 		livenessCheckPath        string
+		cdnURL                   string
+		cdn                      *cdn.CDN
 		prometheusServer         *http.Server
 		modulesConfig            map[string]interface{}
 		routerMiddlewares        []func(http.Handler) http.Handler
@@ -267,6 +270,14 @@ func NewRouter(opts ...Option) (*Router, error) {
 			})
 		}
 	}
+	routerCDN, err := cdn.New(cdn.CDNOptions{
+		URL:                 r.cdnURL,
+		AuthenticationToken: r.graphApiToken,
+	})
+	if err != nil {
+		return nil, err
+	}
+	r.cdn = routerCDN
 	return r, nil
 }
 
@@ -581,6 +592,21 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	}
 
 	recoveryHandler := recovery.New(recovery.WithLogger(r.logger), recovery.WithPrintStack())
+	var traceHandler *trace.Middleware
+	if r.traceConfig.Enabled {
+		traceHandler = trace.NewMiddleware(otel.RouterServerAttribute,
+			otelhttp.WithSpanOptions(
+				oteltrace.WithAttributes(
+					otel.WgRouterGraphName.String(r.federatedGraphName),
+					otel.WgRouterConfigVersion.String(routerConfig.GetVersion()),
+					otel.WgRouterVersion.String(Version),
+				),
+			),
+			// Disable built-in metrics
+			otelhttp.WithMeterProvider(sdkmetric.NewMeterProvider()),
+			otelhttp.WithSpanNameFormatter(SpanNameFormatter),
+		)
+	}
 	requestLogger := requestlogger.New(
 		r.logger,
 		requestlogger.WithDefaultOptions(),
@@ -603,6 +629,10 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	httpRouter.Use(recoveryHandler)
 	httpRouter.Use(middleware.RequestID)
 	httpRouter.Use(middleware.RealIP)
+	// Register the trace middleware before the request logger, so we can log the trace ID
+	if traceHandler != nil {
+		httpRouter.Use(traceHandler.Handler)
+	}
 	httpRouter.Use(requestLogger)
 	httpRouter.Use(cors.New(*r.corsOptions))
 
@@ -673,7 +703,11 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		return nil, fmt.Errorf("failed to build plan configuration: %w", err)
 	}
 
-	operationParser := NewOperationParser(executor, int64(r.routerTrafficConfig.MaxRequestBodyBytes))
+	operationParser := NewOperationParser(OperationParserOptions{
+		Executor:                executor,
+		MaxOperationSizeInBytes: int64(r.routerTrafficConfig.MaxRequestBodyBytes),
+		CDN:                     r.cdn,
+	})
 	operationPlanner := NewOperationPlanner(executor, planCache)
 
 	var graphqlPlaygroundHandler http.Handler
@@ -688,8 +722,9 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	}
 
 	graphqlHandler := NewGraphQLHandler(HandlerOptions{
-		Executor: executor,
-		Log:      r.logger,
+		Executor:                               executor,
+		Log:                                    r.logger,
+		EnableExecutionPlanCacheResponseHeader: routerEngineConfig.Execution.EnableExecutionPlanCacheResponseHeader,
 	})
 
 	var metricStore *metric.Metrics
@@ -724,31 +759,8 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		DisableRequestTracing: !routerEngineConfig.Execution.EnableRequestTracing,
 	})
 
-	var traceHandler *trace.Middleware
-
-	if r.traceConfig.Enabled {
-		h := trace.NewMiddleware(otel.RouterServerAttribute,
-			otelhttp.WithSpanOptions(
-				oteltrace.WithAttributes(
-					otel.WgRouterGraphName.String(r.federatedGraphName),
-					otel.WgRouterConfigVersion.String(routerConfig.GetVersion()),
-					otel.WgRouterVersion.String(Version),
-				),
-			),
-			// Disable built-in metrics
-			otelhttp.WithMeterProvider(sdkmetric.NewMeterProvider()),
-			otelhttp.WithSpanNameFormatter(SpanNameFormatter),
-		)
-
-		traceHandler = h
-	}
-
 	// Serve GraphQL. Metrics are collected after the request is handled and classified as r GraphQL request.
 	httpRouter.Route(r.graphqlPath, func(subChiRouter chi.Router) {
-		if traceHandler != nil {
-			subChiRouter.Use(traceHandler.Handler)
-		}
-
 		subChiRouter.Use(NewWebsocketMiddleware(rootContext, WebsocketMiddlewareOptions{
 			Parser:           operationParser,
 			Planner:          operationPlanner,
@@ -1026,6 +1038,13 @@ func WithReadinessCheckPath(path string) Option {
 func WithLivenessCheckPath(path string) Option {
 	return func(r *Router) {
 		r.livenessCheckPath = path
+	}
+}
+
+// WithCDNURL sets the root URL for the CDN to use
+func WithCDNURL(cdnURL string) Option {
+	return func(r *Router) {
+		r.cdnURL = cdnURL
 	}
 }
 

@@ -7,7 +7,7 @@ import {
   GraphPageLayout,
   getGraphLayout,
 } from "@/components/layout/graph-layout";
-import { SchemaViewer } from "@/components/schema-viewer";
+import { CodeViewer } from "@/components/code-viewer";
 import {
   Accordion,
   AccordionContent,
@@ -97,7 +97,7 @@ const OperationContent = ({
 
   return (
     <div className="scrollbar-custom h-[50vh] overflow-auto rounded border">
-      <SchemaViewer sdl={content} disableLinking />
+      <CodeViewer code={content} disableLinking />
     </div>
   );
 };

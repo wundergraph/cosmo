@@ -5,8 +5,8 @@ import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/pla
 
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { NodeService } from '@wundergraph/cosmo-connect/dist/node/v1/node_connect';
-import build from '../src/core/build-server';
-import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util';
+import build from '../src/core/build-server.js';
+import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util.js';
 
 let dbname = '';
 
@@ -49,6 +49,9 @@ describe('Authentication', (ctx) => {
         clientID: '',
         clientSecret: '',
       },
+      s3StorageUrl: 'http://localhost:9000',
+      smtpUsername: '',
+      smtpPassword: '',
     });
 
     testContext.onTestFailed(async () => {

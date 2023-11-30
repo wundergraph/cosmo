@@ -4,6 +4,44 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.32.1](https://github.com/wundergraph/cosmo/compare/wgc@0.32.0...wgc@0.32.1) (2023-11-29)
+
+**Note:** Version bump only for package wgc
+
+# [0.32.0](https://github.com/wundergraph/cosmo/compare/wgc@0.31.1...wgc@0.32.0) (2023-11-29)
+
+### Features
+
+* accept custom operation IDs for persisted operations ([#302](https://github.com/wundergraph/cosmo/issues/302)) ([a535a62](https://github.com/wundergraph/cosmo/commit/a535a62bb7f70d2e58d1a04066fb74e78d932653)) (@fiam)
+
+## [0.31.1](https://github.com/wundergraph/cosmo/compare/wgc@0.31.0...wgc@0.31.1) (2023-11-28)
+
+**Note:** Version bump only for package wgc
+
+# [0.31.0](https://github.com/wundergraph/cosmo/compare/wgc@0.30.1...wgc@0.31.0) (2023-11-24)
+
+### Features
+
+* add support for outputting pushed operations as JSON ([#294](https://github.com/wundergraph/cosmo/issues/294)) ([98d188d](https://github.com/wundergraph/cosmo/commit/98d188db01ee494de1e8a4d5a2cb9f571582045c)) (@fiam)
+
+## [0.30.1](https://github.com/wundergraph/cosmo/compare/wgc@0.30.0...wgc@0.30.1) (2023-11-23)
+
+### Bug Fixes
+
+* import files with extension in new commands ([#289](https://github.com/wundergraph/cosmo/issues/289)) ([3e337de](https://github.com/wundergraph/cosmo/commit/3e337de5929a81f6076b5057d0796819da2a7811)) (@fiam)
+
+# [0.30.0](https://github.com/wundergraph/cosmo/compare/wgc@0.28.2...wgc@0.30.0) (2023-11-23)
+
+### Features
+
+* add support for persisted operations ([#249](https://github.com/wundergraph/cosmo/issues/249)) ([a9ad47f](https://github.com/wundergraph/cosmo/commit/a9ad47ff5cf7db6bccf774e168b1d1ce3ee7bcdd)) (@fiam)
+
+# [0.29.0](https://github.com/wundergraph/cosmo/compare/wgc@0.28.2...wgc@0.29.0) (2023-11-23)
+
+### Features
+
+* add support for persisted operations ([#249](https://github.com/wundergraph/cosmo/issues/249)) ([a9ad47f](https://github.com/wundergraph/cosmo/commit/a9ad47ff5cf7db6bccf774e168b1d1ce3ee7bcdd)) (@fiam)
+
 ## [0.28.2](https://github.com/wundergraph/cosmo/compare/wgc@0.28.1...wgc@0.28.2) (2023-11-20)
 
 **Note:** Version bump only for package wgc

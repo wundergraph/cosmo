@@ -55,7 +55,7 @@ fragment EmployeeFragment on Employee {
     maritalStatus
   }
   role {
-    department
+    departments
     title
   }
   products

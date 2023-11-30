@@ -4,7 +4,7 @@ import {
   GraphPageLayout,
   getGraphLayout,
 } from "@/components/layout/graph-layout";
-import { SchemaViewer } from "@/components/schema-viewer";
+import { CodeViewer } from "@/components/code-viewer";
 import { Button } from "@/components/ui/button";
 import { Loader } from "@/components/ui/loader";
 import { NextPageWithLayout } from "@/lib/page";
@@ -74,7 +74,7 @@ export const TracePage: NextPageWithLayout = () => {
     <div>
       <Trace spans={data.spans} />
       <div className="scrollbar-custom !mt-6 flex max-h-96 justify-between overflow-auto rounded border">
-        <SchemaViewer sdl={content} disableLinking />
+        <CodeViewer code={content} disableLinking />
         <div className="px-2 py-2">
           <Tooltip delayDuration={0}>
             <TooltipTrigger asChild>

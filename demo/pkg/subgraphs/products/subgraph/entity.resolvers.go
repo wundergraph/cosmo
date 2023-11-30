@@ -23,79 +23,15 @@ func (r *entityResolver) FindCosmoByUpc(ctx context.Context, upc string) (*model
 
 // FindEmployeeByID is the resolver for the findEmployeeByID field.
 func (r *entityResolver) FindEmployeeByID(ctx context.Context, id int) (*model.Employee, error) {
-	switch id {
-	// Dustin, Nithin, Suvij
-	case 2, 7, 8:
-		return &model.Employee{
-			Products: []model.ProductName{
-				model.ProductNameCosmo,
-				model.ProductNameSdk,
-			},
-			Notes: "2, 7, 8 notes resolved by products",
-		}, nil
-	// Stefan,
-	case 3:
-		return &model.Employee{
-			Products: []model.ProductName{
-				model.ProductNameMarketing,
-			},
-			Notes: "3 notes resolved by products",
-		}, nil
-	// Björn
-	case 4:
-		return &model.Employee{
-			Products: []model.ProductName{
-				model.ProductNameFinance,
-				model.ProductNameHumanResources,
-				model.ProductNameMarketing,
-			},
-			Notes: "4 notes resolved by products",
-		}, nil
-	// Sergiy
-	case 5:
-		return &model.Employee{
-			Products: []model.ProductName{
-				model.ProductNameEngine,
-				model.ProductNameSdk,
-			},
-			Notes: "5 notes resolved by products",
-		}, nil
-	// Alexandra
-	case 11:
-		return &model.Employee{
-			Products: []model.ProductName{
-				model.ProductNameFinance,
-			},
-			Notes: "11 notes resolved by products",
-		}, nil
-	// Alberto, David
-	case 9, 12:
-		return &model.Employee{
-			Products: []model.ProductName{
-				model.ProductNameCosmo, model.ProductNameEngine, model.ProductNameSdk,
-			},
-			Notes: "9, 12 notes resolved by products",
-		}, nil
-	// Eelco
-	case 10:
-		return &model.Employee{
-			Products: []model.ProductName{
-				model.ProductNameCosmo,
-				model.ProductNameSdk,
-			},
-			Notes: "10 notes resolved by products",
-		}, nil
-	// Jens
-	default:
-		return &model.Employee{
-			Products: []model.ProductName{
-				model.ProductNameCosmo,
-				model.ProductNameEngine,
-				model.ProductNameSdk,
-			},
-			Notes: "1 notes resolved by products",
-		}, nil
+	if id < 1 {
+		return nil, nil
 	}
+	for _, employee := range employees {
+		if id == employee.ID {
+			return employee, nil
+		}
+	}
+	return nil, nil
 }
 
 // Entity returns generated.EntityResolver implementation.

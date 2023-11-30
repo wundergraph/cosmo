@@ -36,6 +36,9 @@ const {
   GITHUB_APP_PRIVATE_KEY,
   SLACK_APP_CLIENT_ID,
   SLACK_APP_CLIENT_SECRET,
+  S3_STORAGE_URL,
+  SMTP_USERNAME,
+  SMTP_PASSWORD,
 } = envVariables.parse(process.env);
 
 const options: BuildConfig = {
@@ -80,6 +83,9 @@ const options: BuildConfig = {
     clientID: SLACK_APP_CLIENT_ID,
     clientSecret: SLACK_APP_CLIENT_SECRET,
   },
+  s3StorageUrl: S3_STORAGE_URL,
+  smtpUsername: SMTP_USERNAME,
+  smtpPassword: SMTP_PASSWORD,
 };
 
 if (DB_CERT_PATH || DB_KEY_PATH || DB_CA_PATH) {

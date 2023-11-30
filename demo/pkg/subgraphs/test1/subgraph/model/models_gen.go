@@ -10,5 +10,6 @@ type TimestampedString struct {
 	// Sequence number
 	Seq int `json:"seq"`
 	// Total number of responses to be sent
-	Total int `json:"total"`
+	Total          int                    `json:"total"`
+	InitialPayload map[string]interface{} `json:"initialPayload,omitempty"`
 }

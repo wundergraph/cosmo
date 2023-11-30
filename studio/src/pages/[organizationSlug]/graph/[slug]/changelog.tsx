@@ -41,6 +41,7 @@ import { useCallback, useContext, useEffect, useState } from "react";
 
 const ChangelogToolbar = () => {
   const router = useRouter();
+  const user = useContext(UserContext);
 
   const dateRange = router.query.dateRange
     ? JSON.parse(router.query.dateRange as string)
@@ -80,6 +81,9 @@ const ChangelogToolbar = () => {
         dateRange={{ start: startDate, end: endDate }}
         onChange={onDateRangeChange}
         align="start"
+        calendarDaysLimit={
+          user?.currentOrganization.limits.changelogDataRetentionLimit || 7
+        }
       />
     </Toolbar>
   );
@@ -243,7 +247,7 @@ const ChangelogPage: NextPageWithLayout = () => {
     if (isSuccess && data) {
       setItems((prev) => [...prev, ...data.federatedGraphChangelogOutput]);
     }
-  }, [data]);
+  }, [data, isSuccess]);
 
   useEffect(() => {
     // We need to fetch from scratch on date change

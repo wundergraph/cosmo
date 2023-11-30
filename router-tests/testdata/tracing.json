@@ -13,7 +13,7 @@
             "Founder",
             "CEO"
           ],
-          "department": "ENGINEERING"
+          "departments": ["ENGINEERING", "MARKETING"]
         },
         "hobbies": [
           {
@@ -55,7 +55,7 @@
             "Co-founder",
             "Tech Lead"
           ],
-          "department": "ENGINEERING"
+          "departments": ["ENGINEERING"]
         },
         "hobbies": [
           {
@@ -88,7 +88,7 @@
             "Co-founder",
             "Head of Growth"
           ],
-          "department": "MARKETING"
+          "departments": ["MARKETING"]
         },
         "hobbies": [
           {
@@ -120,7 +120,7 @@
             "Co-founder",
             "COO"
           ],
-          "department": "OPERATIONS"
+          "departments": ["OPERATIONS", "MARKETING"]
         },
         "hobbies": [
           {
@@ -161,7 +161,7 @@
           "title": [
             "Senior GO Engineer"
           ],
-          "department": "ENGINEERING"
+          "departments": ["ENGINEERING"]
         },
         "hobbies": [
           {
@@ -186,7 +186,7 @@
           "title": [
             "Software Engineer"
           ],
-          "department": "ENGINEERING"
+          "departments": ["ENGINEERING"]
         },
         "hobbies": [
           {
@@ -212,7 +212,7 @@
           "title": [
             "Software Engineer"
           ],
-          "department": "ENGINEERING"
+          "departments": ["ENGINEERING"]
         },
         "hobbies": [
           {
@@ -244,7 +244,7 @@
           "title": [
             "Senior Backend Engineer"
           ],
-          "department": "ENGINEERING"
+          "departments": ["ENGINEERING"]
         },
         "hobbies": [
           {
@@ -275,7 +275,7 @@
           "title": [
             "Senior Frontend Engineer"
           ],
-          "department": "ENGINEERING"
+          "departments": ["ENGINEERING"]
         },
         "hobbies": [
           {
@@ -318,7 +318,7 @@
           "title": [
             "Accounting \u0026 Finance"
           ],
-          "department": "OPERATIONS"
+          "departments": ["OPERATIONS"]
         },
         "hobbies": [
           {
@@ -337,7 +337,7 @@
           "title": [
             "Software Engineer"
           ],
-          "department": "ENGINEERING"
+          "departments": ["ENGINEERING"]
         },
         "hobbies": [
           {
@@ -381,21 +381,22 @@
         "trace_start_time": "",
         "trace_start_unix": 0,
         "planner_stats": {
-          "planning_time_nanoseconds": 0,
-          "planning_time_pretty": "",
-          "duration_since_start_nanoseconds": 0,
-          "duration_since_start_pretty": ""
+          "planning_time_nanoseconds": 5,
+          "planning_time_pretty": "5ns",
+          "duration_since_start_nanoseconds": 5,
+          "duration_since_start_pretty": "5ns"
         }
       },
       "fetch": {
         "id": "00000000-0000-0000-0000-000000000000",
         "type": "single",
+        "path": "query",
         "data_source_id": "0",
         "datasource_load_trace": {
           "raw_input_data": {},
           "input": {
             "body": {
-              "query": "{employees {id role {title department} __typename}}"
+              "query": "{employees {id role {title departments} __typename}}"
             },
             "header": {},
             "url": "http://localhost/graphql",
@@ -411,7 +412,7 @@
                       "Founder",
                       "CEO"
                     ],
-                    "department": "ENGINEERING"
+                    "departments": ["ENGINEERING", "MARKETING"]
                   },
                   "__typename": "Employee"
                 },
@@ -422,7 +423,7 @@
                       "Co-founder",
                       "Tech Lead"
                     ],
-                    "department": "ENGINEERING"
+                    "departments": ["ENGINEERING"]
                   },
                   "__typename": "Employee"
                 },
@@ -433,7 +434,7 @@
                       "Co-founder",
                       "Head of Growth"
                     ],
-                    "department": "MARKETING"
+                    "departments": ["MARKETING"]
                   },
                   "__typename": "Employee"
                 },
@@ -444,7 +445,7 @@
                       "Co-founder",
                       "COO"
                     ],
-                    "department": "OPERATIONS"
+                    "departments": ["OPERATIONS", "MARKETING"]
                   },
                   "__typename": "Employee"
                 },
@@ -454,7 +455,7 @@
                     "title": [
                       "Senior GO Engineer"
                     ],
-                    "department": "ENGINEERING"
+                    "departments": ["ENGINEERING"]
                   },
                   "__typename": "Employee"
                 },
@@ -464,7 +465,7 @@
                     "title": [
                       "Software Engineer"
                     ],
-                    "department": "ENGINEERING"
+                    "departments": ["ENGINEERING"]
                   },
                   "__typename": "Employee"
                 },
@@ -474,7 +475,7 @@
                     "title": [
                       "Software Engineer"
                     ],
-                    "department": "ENGINEERING"
+                    "departments": ["ENGINEERING"]
                   },
                   "__typename": "Employee"
                 },
@@ -484,7 +485,7 @@
                     "title": [
                       "Senior Backend Engineer"
                     ],
-                    "department": "ENGINEERING"
+                    "departments": ["ENGINEERING"]
                   },
                   "__typename": "Employee"
                 },
@@ -494,7 +495,7 @@
                     "title": [
                       "Senior Frontend Engineer"
                     ],
-                    "department": "ENGINEERING"
+                    "departments": ["ENGINEERING"]
                   },
                   "__typename": "Employee"
                 },
@@ -504,7 +505,7 @@
                     "title": [
                       "Accounting \u0026 Finance"
                     ],
-                    "department": "OPERATIONS"
+                    "departments": ["OPERATIONS"]
                   },
                   "__typename": "Employee"
                 },
@@ -514,7 +515,7 @@
                     "title": [
                       "Software Engineer"
                     ],
-                    "department": "ENGINEERING"
+                    "departments": ["ENGINEERING"]
                   },
                   "__typename": "Employee"
                 }
@@ -543,12 +544,13 @@
                   "status": "200 OK",
                   "headers": {
                     "Content-Length": [
-                      "1144"
+                      "1201"
                     ],
                     "Content-Type": [
                       "application/json"
                     ]
-                  }
+                  },
+                  "body_size": 1201
                 }
               }
             }
@@ -559,7 +561,63 @@
           "duration_load_pretty": "1ns",
           "single_flight_used": true,
           "single_flight_shared_response": false,
-          "load_skipped": false
+          "load_skipped": false,
+          "load_stats": {
+            "get_conn": {
+              "duration_since_start_nanoseconds": 1,
+              "duration_since_start_pretty": "1ns",
+              "host_port": ""
+            },
+            "got_conn": {
+              "duration_since_start_nanoseconds": 1,
+              "duration_since_start_pretty": "1ns",
+              "reused": false,
+              "was_idle": false,
+              "idle_time_nanoseconds": 0,
+              "idle_time_pretty": ""
+            },
+            "got_first_response_byte": {
+              "duration_since_start_nanoseconds": 1,
+              "duration_since_start_pretty": "1ns"
+            },
+            "dns_start": {
+              "duration_since_start_nanoseconds": 1,
+              "duration_since_start_pretty": "1ns",
+              "host": ""
+            },
+            "dns_done": {
+              "duration_since_start_nanoseconds": 1,
+              "duration_since_start_pretty": "1ns"
+            },
+            "connect_start": {
+              "duration_since_start_nanoseconds": 1,
+              "duration_since_start_pretty": "1ns",
+              "network": "",
+              "addr": ""
+            },
+            "connect_done": {
+              "duration_since_start_nanoseconds": 1,
+              "duration_since_start_pretty": "1ns",
+              "network": "",
+              "addr": ""
+            },
+            "tls_handshake_start": {
+              "duration_since_start_nanoseconds": 0,
+              "duration_since_start_pretty": ""
+            },
+            "tls_handshake_done": {
+              "duration_since_start_nanoseconds": 0,
+              "duration_since_start_pretty": ""
+            },
+            "wrote_headers": {
+              "duration_since_start_nanoseconds": 1,
+              "duration_since_start_pretty": "1ns"
+            },
+            "wrote_request": {
+              "duration_since_start_nanoseconds": 1,
+              "duration_since_start_pretty": "1ns"
+            }
+          }
         }
       },
       "node_type": "object",
@@ -577,10 +635,12 @@
                 "fetch": {
                   "id": "00000000-0000-0000-0000-000000000000",
                   "type": "parallel",
+                  "path": "query.employees.@",
                   "fetches": [
                     {
                       "id": "00000000-0000-0000-0000-000000000000",
                       "type": "batchEntity",
+                      "path": "query.employees.@",
                       "data_source_id": "1",
                       "datasource_load_trace": {
                         "raw_input_data": [
@@ -591,7 +651,10 @@
                                 "Founder",
                                 "CEO"
                               ],
-                              "department": "ENGINEERING"
+                              "departments": [
+                                "ENGINEERING",
+                                "MARKETING"
+                              ]
                             },
                             "__typename": "Employee"
                           },
@@ -602,7 +665,9 @@
                                 "Co-founder",
                                 "Tech Lead"
                               ],
-                              "department": "ENGINEERING"
+                              "departments": [
+                                "ENGINEERING"
+                              ]
                             },
                             "__typename": "Employee"
                           },
@@ -613,7 +678,9 @@
                                 "Co-founder",
                                 "Head of Growth"
                               ],
-                              "department": "MARKETING"
+                              "departments": [
+                                "MARKETING"
+                              ]
                             },
                             "__typename": "Employee"
                           },
@@ -624,7 +691,10 @@
                                 "Co-founder",
                                 "COO"
                               ],
-                              "department": "OPERATIONS"
+                              "departments": [
+                                "OPERATIONS",
+                                "MARKETING"
+                              ]
                             },
                             "__typename": "Employee"
                           },
@@ -634,7 +704,9 @@
                               "title": [
                                 "Senior GO Engineer"
                               ],
-                              "department": "ENGINEERING"
+                              "departments": [
+                                "ENGINEERING"
+                              ]
                             },
                             "__typename": "Employee"
                           },
@@ -644,7 +716,9 @@
                               "title": [
                                 "Software Engineer"
                               ],
-                              "department": "ENGINEERING"
+                              "departments": [
+                                "ENGINEERING"
+                              ]
                             },
                             "__typename": "Employee"
                           },
@@ -654,7 +728,9 @@
                               "title": [
                                 "Software Engineer"
                               ],
-                              "department": "ENGINEERING"
+                              "departments": [
+                                "ENGINEERING"
+                              ]
                             },
                             "__typename": "Employee"
                           },
@@ -664,7 +740,9 @@
                               "title": [
                                 "Senior Backend Engineer"
                               ],
-                              "department": "ENGINEERING"
+                              "departments": [
+                                "ENGINEERING"
+                              ]
                             },
                             "__typename": "Employee"
                           },
@@ -674,7 +752,9 @@
                               "title": [
                                 "Senior Frontend Engineer"
                               ],
-                              "department": "ENGINEERING"
+                              "departments": [
+                                "ENGINEERING"
+                              ]
                             },
                             "__typename": "Employee"
                           },
@@ -684,7 +764,9 @@
                               "title": [
                                 "Accounting \u0026 Finance"
                               ],
-                              "department": "OPERATIONS"
+                              "departments": [
+                                "OPERATIONS"
+                              ]
                             },
                             "__typename": "Employee"
                           },
@@ -694,7 +776,9 @@
                               "title": [
                                 "Software Engineer"
                               ],
-                              "department": "ENGINEERING"
+                              "departments": [
+                                "ENGINEERING"
+                              ]
                             },
                             "__typename": "Employee"
                           }
@@ -876,7 +960,8 @@
                                   "Content-Type": [
                                     "application/json"
                                   ]
-                                }
+                                },
+                                "body_size": 1091
                               }
                             }
                           }
@@ -887,12 +972,69 @@
                         "duration_load_pretty": "1ns",
                         "single_flight_used": true,
                         "single_flight_shared_response": false,
-                        "load_skipped": false
+                        "load_skipped": false,
+                        "load_stats": {
+                          "get_conn": {
+                            "duration_since_start_nanoseconds": 1,
+                            "duration_since_start_pretty": "1ns",
+                            "host_port": ""
+                          },
+                          "got_conn": {
+                            "duration_since_start_nanoseconds": 1,
+                            "duration_since_start_pretty": "1ns",
+                            "reused": false,
+                            "was_idle": false,
+                            "idle_time_nanoseconds": 0,
+                            "idle_time_pretty": ""
+                          },
+                          "got_first_response_byte": {
+                            "duration_since_start_nanoseconds": 1,
+                            "duration_since_start_pretty": "1ns"
+                          },
+                          "dns_start": {
+                            "duration_since_start_nanoseconds": 1,
+                            "duration_since_start_pretty": "1ns",
+                            "host": ""
+                          },
+                          "dns_done": {
+                            "duration_since_start_nanoseconds": 1,
+                            "duration_since_start_pretty": "1ns"
+                          },
+                          "connect_start": {
+                            "duration_since_start_nanoseconds": 1,
+                            "duration_since_start_pretty": "1ns",
+                            "network": "",
+                            "addr": ""
+                          },
+                          "connect_done": {
+                            "duration_since_start_nanoseconds": 1,
+                            "duration_since_start_pretty": "1ns",
+                            "network": "",
+                            "addr": ""
+                          },
+                          "tls_handshake_start": {
+                            "duration_since_start_nanoseconds": 0,
+                            "duration_since_start_pretty": ""
+                          },
+                          "tls_handshake_done": {
+                            "duration_since_start_nanoseconds": 0,
+                            "duration_since_start_pretty": ""
+                          },
+                          "wrote_headers": {
+                            "duration_since_start_nanoseconds": 1,
+                            "duration_since_start_pretty": "1ns"
+                          },
+                          "wrote_request": {
+                            "duration_since_start_nanoseconds": 1,
+                            "duration_since_start_pretty": "1ns"
+                          }
+                        }
                       }
                     },
                     {
                       "id": "00000000-0000-0000-0000-000000000000",
                       "type": "batchEntity",
+                      "path": "query.employees.@",
                       "data_source_id": "2",
                       "datasource_load_trace": {
                         "raw_input_data": [
@@ -903,7 +1045,7 @@
                                 "Founder",
                                 "CEO"
                               ],
-                              "department": "ENGINEERING"
+                              "departments": ["ENGINEERING", "MARKETING"]
                             },
                             "__typename": "Employee"
                           },
@@ -914,7 +1056,7 @@
                                 "Co-founder",
                                 "Tech Lead"
                               ],
-                              "department": "ENGINEERING"
+                              "departments": ["ENGINEERING"]
                             },
                             "__typename": "Employee"
                           },
@@ -925,7 +1067,7 @@
                                 "Co-founder",
                                 "Head of Growth"
                               ],
-                              "department": "MARKETING"
+                              "departments": ["MARKETING"]
                             },
                             "__typename": "Employee"
                           },
@@ -936,7 +1078,10 @@
                                 "Co-founder",
                                 "COO"
                               ],
-                              "department": "OPERATIONS"
+                              "departments": [
+                                "OPERATIONS",
+                                "MARKETING"
+                              ]
                             },
                             "__typename": "Employee"
                           },
@@ -946,7 +1091,9 @@
                               "title": [
                                 "Senior GO Engineer"
                               ],
-                              "department": "ENGINEERING"
+                              "departments": [
+                                "ENGINEERING"
+                              ]
                             },
                             "__typename": "Employee"
                           },
@@ -956,7 +1103,9 @@
                               "title": [
                                 "Software Engineer"
                               ],
-                              "department": "ENGINEERING"
+                              "departments": [
+                                "ENGINEERING"
+                              ]
                             },
                             "__typename": "Employee"
                           },
@@ -966,7 +1115,9 @@
                               "title": [
                                 "Software Engineer"
                               ],
-                              "department": "ENGINEERING"
+                              "departments": [
+                                "ENGINEERING"
+                              ]
                             },
                             "__typename": "Employee"
                           },
@@ -976,7 +1127,9 @@
                               "title": [
                                 "Senior Backend Engineer"
                               ],
-                              "department": "ENGINEERING"
+                              "departments": [
+                                "ENGINEERING"
+                              ]
                             },
                             "__typename": "Employee"
                           },
@@ -986,7 +1139,9 @@
                               "title": [
                                 "Senior Frontend Engineer"
                               ],
-                              "department": "ENGINEERING"
+                              "departments": [
+                                "ENGINEERING"
+                              ]
                             },
                             "__typename": "Employee"
                           },
@@ -996,7 +1151,9 @@
                               "title": [
                                 "Accounting \u0026 Finance"
                               ],
-                              "department": "OPERATIONS"
+                              "departments": [
+                                "OPERATIONS"
+                              ]
                             },
                             "__typename": "Employee"
                           },
@@ -1006,7 +1163,9 @@
                               "title": [
                                 "Software Engineer"
                               ],
-                              "department": "ENGINEERING"
+                              "departments": [
+                                "ENGINEERING"
+                              ]
                             },
                             "__typename": "Employee"
                           }
@@ -1381,7 +1540,8 @@
                                   "Content-Type": [
                                     "application/json"
                                   ]
-                                }
+                                },
+                                "body_size": 2938
                               }
                             }
                           }
@@ -1392,7 +1552,63 @@
                         "duration_load_pretty": "1ns",
                         "single_flight_used": true,
                         "single_flight_shared_response": false,
-                        "load_skipped": false
+                        "load_skipped": false,
+                        "load_stats": {
+                          "get_conn": {
+                            "duration_since_start_nanoseconds": 1,
+                            "duration_since_start_pretty": "1ns",
+                            "host_port": ""
+                          },
+                          "got_conn": {
+                            "duration_since_start_nanoseconds": 1,
+                            "duration_since_start_pretty": "1ns",
+                            "reused": false,
+                            "was_idle": false,
+                            "idle_time_nanoseconds": 0,
+                            "idle_time_pretty": ""
+                          },
+                          "got_first_response_byte": {
+                            "duration_since_start_nanoseconds": 1,
+                            "duration_since_start_pretty": "1ns"
+                          },
+                          "dns_start": {
+                            "duration_since_start_nanoseconds": 1,
+                            "duration_since_start_pretty": "1ns",
+                            "host": ""
+                          },
+                          "dns_done": {
+                            "duration_since_start_nanoseconds": 1,
+                            "duration_since_start_pretty": "1ns"
+                          },
+                          "connect_start": {
+                            "duration_since_start_nanoseconds": 1,
+                            "duration_since_start_pretty": "1ns",
+                            "network": "",
+                            "addr": ""
+                          },
+                          "connect_done": {
+                            "duration_since_start_nanoseconds": 1,
+                            "duration_since_start_pretty": "1ns",
+                            "network": "",
+                            "addr": ""
+                          },
+                          "tls_handshake_start": {
+                            "duration_since_start_nanoseconds": 0,
+                            "duration_since_start_pretty": ""
+                          },
+                          "tls_handshake_done": {
+                            "duration_since_start_nanoseconds": 0,
+                            "duration_since_start_pretty": ""
+                          },
+                          "wrote_headers": {
+                            "duration_since_start_nanoseconds": 1,
+                            "duration_since_start_pretty": "1ns"
+                          },
+                          "wrote_request": {
+                            "duration_since_start_nanoseconds": 1,
+                            "duration_since_start_pretty": "1ns"
+                          }
+                        }
                       }
                     }
                   ]
@@ -1513,11 +1729,17 @@
                           ]
                         },
                         {
-                          "name": "department",
+                          "name": "departments",
                           "value": {
-                            "node_type": "string",
+                            "items": [
+                              {
+                                "node_type": "string",
+                                "nullable": true
+                              }
+                            ],
+                            "node_type": "array",
                             "path": [
-                              "department"
+                              "departments"
                             ]
                           },
                           "parent_type_names": [

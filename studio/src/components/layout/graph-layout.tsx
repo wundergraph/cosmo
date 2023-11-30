@@ -29,13 +29,12 @@ import { PageHeader } from "./head";
 import {
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
-  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
 import { cn } from "@/lib/utils";
+import { MdDevices } from "react-icons/md";
 
 const icons: { [key: string]: ReactNode } = {
   Overview: <HomeIcon />,
@@ -45,6 +44,7 @@ const icons: { [key: string]: ReactNode } = {
   Changelog: <PiGitBranch />,
   Checks: <CheckCircledIcon />,
   Analytics: <ChartBarIcon className="h-4 w-4" />,
+  Clients: <MdDevices className="h-4 w-4" />,
 };
 
 export interface GraphContextProps {
@@ -100,6 +100,11 @@ export const GraphLayout = ({ children }: LayoutProps) => {
         href: basePath + "/schema",
         matchExact: false,
         icon: <FileTextIcon />,
+      },
+      {
+        title: "Clients",
+        href: basePath + "/clients",
+        icon: <MdDevices className="h-4 w-4" />,
       },
       {
         title: "Analytics",

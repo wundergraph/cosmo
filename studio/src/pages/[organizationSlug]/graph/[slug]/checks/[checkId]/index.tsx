@@ -9,7 +9,7 @@ import {
   GraphPageLayout,
   getGraphLayout,
 } from "@/components/layout/graph-layout";
-import { SchemaViewer, SchemaViewerActions } from "@/components/schema-viewer";
+import { CodeViewer, CodeViewerActions } from "@/components/code-viewer";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -538,15 +538,15 @@ const CheckOverviewPage: NextPageWithLayout = () => {
                 </TabsContent>
                 <TabsContent value="schema" className="relative max-w-full">
                   <div className="absolute right-8 top-5">
-                    <SchemaViewerActions
-                      sdl={sdl}
+                    <CodeViewerActions
+                      code={sdl}
                       subgraphName={data.check.subgraphName}
                       size="sm"
                       variant="outline"
                     />
                   </div>
                   <div className="scrollbar-custom h-full w-full overflow-auto">
-                    <SchemaViewer sdl={sdl} disableLinking />
+                    <CodeViewer code={sdl} disableLinking />
                   </div>
                 </TabsContent>
               </div>

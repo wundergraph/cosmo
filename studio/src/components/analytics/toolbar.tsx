@@ -6,12 +6,24 @@ import { BiAnalyse } from "react-icons/bi";
 import { IoBarcodeSharp } from "react-icons/io5";
 import { Tabs, TabsList, TabsTrigger } from "../ui/tabs";
 import { Toolbar } from "../ui/toolbar";
+import { Button } from "../ui/button";
+import { calURL } from "@/lib/constants";
+import { BsQuestionCircle } from "react-icons/bs";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "../ui/tooltip";
+import { useContext } from "react";
+import { UserContext } from "../app-provider";
 
 export const AnalyticsToolbar: React.FC<{
   tab: string;
   children?: React.ReactNode;
 }> = (props) => {
   const router = useRouter();
+  const user = useContext(UserContext);
 
   const query: ParsedUrlQueryInput = {
     organizationSlug: router.query.organizationSlug,
@@ -74,6 +86,19 @@ export const AnalyticsToolbar: React.FC<{
           </TabsTrigger>
         </TabsList>
       </Tabs>
+      <Button variant="outline" className="flex items-center gap-x-2">
+        <TooltipProvider>
+          <Tooltip delayDuration={200}>
+            <TooltipTrigger>
+              <BsQuestionCircle />
+            </TooltipTrigger>
+            <TooltipContent>{`Your current data retention is ${
+              user?.currentOrganization.limits.analyticsRetentionLimit || 7
+            } days. Please get in touch with us to increase the limit.`}</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+        <Link href={calURL}>Increase data retention</Link>
+      </Button>
       {props.children}
     </Toolbar>
   );

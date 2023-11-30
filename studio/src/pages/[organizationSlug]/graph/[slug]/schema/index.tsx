@@ -117,9 +117,9 @@ const Fields = (props: {
   const hasDetails = props.fields.some(
     (f) => !!f.description || !!f.deprecationReason,
   );
-  const hasUsage = !(
-    ["scalars", "enums", "inputs"] as GraphQLTypeCategory[]
-  ).includes(props.category);
+  const hasUsage = !(["scalars", "enums"] as GraphQLTypeCategory[]).includes(
+    props.category,
+  );
 
   const openUsage = (fieldName: string) => {
     const query: Record<string, string> = {};
@@ -320,7 +320,6 @@ const TypeWrapper = ({ ast }: { ast: GraphQLSchema }) => {
 
   if (category && !typename) {
     const list = getTypesByCategory(ast, category);
-    const hasUsage = category !== "inputs";
 
     const openUsage = (type: string) => {
       router.replace({
@@ -359,9 +358,7 @@ const TypeWrapper = ({ ast }: { ast: GraphQLSchema }) => {
                 <TableHead className="w-8/12 lg:w-7/12 2xl:w-8/12">
                   Description
                 </TableHead>
-                {hasUsage && (
-                  <TableHead className="w-2/12 text-right lg:w-3/12 2xl:w-2/12" />
-                )}
+                <TableHead className="w-2/12 text-right lg:w-3/12 2xl:w-2/12" />
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -376,17 +373,15 @@ const TypeWrapper = ({ ast }: { ast: GraphQLSchema }) => {
                   <TableCell className="text-muted-foreground group-hover:text-current">
                     {l.description || "-"}
                   </TableCell>
-                  {hasUsage && (
-                    <TableCell className="text-right align-top">
-                      <Button
-                        onClick={() => openUsage(l.name)}
-                        variant="ghost"
-                        size="sm"
-                      >
-                        View usage
-                      </Button>
-                    </TableCell>
-                  )}
+                  <TableCell className="text-right align-top">
+                    <Button
+                      onClick={() => openUsage(l.name)}
+                      variant="ghost"
+                      size="sm"
+                    >
+                      View usage
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -606,7 +601,7 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
 
   const organizationSlug = router.query.organizationSlug as string;
   const graphName = router.query.slug as string;
-  const selectedCategory = router.query.category as string;
+  const selectedCategory = (router.query.category as string) ?? "query";
   const typename = router.query.typename as string;
 
   const { data, isLoading, error, refetch } = useQuery(
@@ -630,7 +625,7 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
     );
   }
 
-  if (typename) {
+  if (typename && typename.toLowerCase() !== selectedCategory) {
     title = sentenceCase(typename);
     if (selectedCategory) {
       breadcrumbs.push(

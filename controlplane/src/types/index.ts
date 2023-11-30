@@ -110,8 +110,12 @@ export interface OrganizationMemberDTO {
   userID: string;
   orgMemberID: string;
   email: string;
-  acceptedInvite: boolean;
   roles: string[];
+}
+
+export interface OrganizationInvitationDTO {
+  userID: string;
+  email: string;
 }
 
 export interface APIKeyDTO {
@@ -266,4 +270,44 @@ export interface SlackAccessTokenResponse {
   slackChannelId: string;
   slackChannelName: string;
   webhookURL: string;
+}
+
+export interface OrganizationLimitsDTO {
+  analyticsRetentionLimit: number;
+  tracingRetentionLimit: number;
+  changelogDataRetentionLimit: number;
+  breakingChangeRetentionLimit: number;
+  traceSamplingRateLimit: number;
+  requestsLimit: number;
+}
+
+export interface ClientDTO {
+  id: string;
+  name: string;
+  createdAt: string;
+  createdBy: string;
+  lastUpdatedAt: string;
+  lastUpdatedBy: string;
+}
+
+export interface PersistedOperationDTO {
+  id: string;
+  operationId: string;
+  hash: string;
+  filePath: string;
+  createdAt: string;
+  createdBy: string;
+  lastUpdatedAt: string;
+  lastUpdatedBy: string;
+}
+
+export interface PublishedOperationData {
+  version: 1;
+  body: string;
+}
+
+export interface UpdatedPersistedOperation {
+  operationId: string;
+  hash: string;
+  filePath: string;
 }

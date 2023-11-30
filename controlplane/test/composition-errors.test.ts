@@ -12,9 +12,9 @@ import {
   noQueryRootTypeError,
   unimplementedInterfaceFieldsError,
 } from '@wundergraph/composition';
-import { composeSubgraphs } from '../src/core/composition/composition';
-import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util';
-import { SetupTest } from './test-util';
+import { composeSubgraphs } from '../src/core/composition/composition.js';
+import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util.js';
+import { SetupTest } from './test-util.js';
 
 let dbname = '';
 

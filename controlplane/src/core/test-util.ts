@@ -64,7 +64,6 @@ export async function seedTest(databaseConnectionUrl: string, userTestData: User
   const orgMember = await orgRepo.addOrganizationMember({
     organizationID: insertedOrg.id,
     userID: userTestData.userId,
-    acceptedInvite: true,
   });
 
   await orgRepo.addOrganizationMemberRoles({
@@ -78,6 +77,16 @@ export async function seedTest(databaseConnectionUrl: string, userTestData: User
     organizationID: insertedOrg.id,
     userID: userTestData.userId,
     expiresAt: ExpiresAt.NEVER,
+  });
+
+  await orgRepo.addOrganizationLimits({
+    organizationID: insertedOrg.id,
+    analyticsRetentionLimit: 7,
+    tracingRetentionLimit: 7,
+    changelogDataRetentionLimit: 7,
+    breakingChangeRetentionLimit: 7,
+    traceSamplingRateLimit: 0.1,
+    requestsLimit: 10,
   });
 
   await queryConnection.end({

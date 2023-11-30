@@ -117,7 +117,7 @@ export const SideNav = (props: SideNavLayoutProps) => {
   return (
     <div className="lg:grid lg:grid-cols-[auto_1fr] lg:divide-x">
       <aside className="z-40 flex min-w-[210px] flex-shrink-0 flex-col bg-background pt-4 lg:h-screen lg:px-3 lg:pb-4">
-        <div className="flex min-h-0 flex-1 flex-col gap-y-4 px-4 lg:gap-y-5 lg:px-0">
+        <div className="flex min-h-0 flex-1 flex-col gap-y-4 px-4 lg:gap-y-6 lg:px-0">
           <div className="flex items-center justify-between gap-x-4">
             <div className="flex w-full items-center space-x-2">
               <Tooltip>

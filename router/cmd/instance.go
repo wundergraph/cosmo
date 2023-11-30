@@ -2,8 +2,7 @@ package cmd
 
 import (
 	"fmt"
-
-	_ "go.uber.org/automaxprocs" // Automatically set GOMAXPROCS to avoid CPU throttling on containerized environments
+	"go.uber.org/automaxprocs/maxprocs"
 
 	"github.com/wundergraph/cosmo/router/authentication"
 	"github.com/wundergraph/cosmo/router/config"
@@ -22,8 +21,13 @@ type Params struct {
 }
 
 func NewRouter(params Params) (*core.Router, error) {
+	// Automatically set GOMAXPROCS to avoid CPU throttling on containerized environments
+	_, err := maxprocs.Set(maxprocs.Logger(params.Logger.Sugar().Debugf))
+	if err != nil {
+		return nil, fmt.Errorf("could not set max GOMAXPROCS: %w", err)
+	}
+
 	var routerConfig *nodev1.RouterConfig
-	var err error
 	var cp controlplane.ConfigFetcher
 
 	cfg := params.Config
@@ -137,6 +141,7 @@ func NewRouter(params Params) (*core.Router, error) {
 		core.WithEngineExecutionConfig(cfg.EngineExecutionConfiguration),
 		core.WithAccessController(core.NewAccessController(authenticators, cfg.Authorization.RequireAuthentication)),
 		core.WithLocalhostFallbackInsideDocker(cfg.LocalhostFallbackInsideDocker),
+		core.WithCDNURL(cfg.CDN.URL),
 	)
 }
 

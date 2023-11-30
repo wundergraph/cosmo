@@ -2,6 +2,7 @@ package core
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"hash"
 	"io"
@@ -12,14 +13,16 @@ import (
 	"github.com/cespare/xxhash/v2"
 	"github.com/pkg/errors"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/lexer/literal"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/variablesvalidation"
 
+	"github.com/wundergraph/cosmo/router/internal/cdn"
 	"github.com/wundergraph/cosmo/router/internal/pool"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/astjson"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astnormalization"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astprinter"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
+	"go.uber.org/zap"
 )
 
 type ParsedOperation struct {
@@ -37,11 +40,13 @@ type ParsedOperation struct {
 	// as a string. This is provided for modules to be able to access the
 	// operation.
 	NormalizedRepresentation string
+	Extensions               []byte
 }
 
 type OperationParser struct {
 	executor                *Executor
 	maxOperationSizeInBytes int64
+	cdn                     *cdn.CDN
 	parseKitPool            *sync.Pool
 }
 
@@ -53,12 +58,20 @@ type parseKit struct {
 	printer             *astprinter.Printer
 	normalizedOperation *bytes.Buffer
 	unescapedDocument   []byte
+	variablesValidator  *variablesvalidation.VariablesValidator
 }
 
-func NewOperationParser(executor *Executor, maxOperationSizeInBytes int64) *OperationParser {
+type OperationParserOptions struct {
+	Executor                *Executor
+	MaxOperationSizeInBytes int64
+	CDN                     *cdn.CDN
+}
+
+func NewOperationParser(opts OperationParserOptions) *OperationParser {
 	return &OperationParser{
-		executor:                executor,
-		maxOperationSizeInBytes: maxOperationSizeInBytes,
+		executor:                opts.Executor,
+		maxOperationSizeInBytes: opts.MaxOperationSizeInBytes,
+		cdn:                     opts.CDN,
 		parseKitPool: &sync.Pool{
 			New: func() interface{} {
 				return &parseKit{
@@ -74,6 +87,7 @@ func NewOperationParser(executor *Executor, maxOperationSizeInBytes int64) *Oper
 					printer:             &astprinter.Printer{},
 					normalizedOperation: &bytes.Buffer{},
 					unescapedDocument:   make([]byte, 1024),
+					variablesValidator:  variablesvalidation.NewVariablesValidator(),
 				}
 			},
 		},
@@ -98,7 +112,7 @@ func (p *OperationParser) entityTooLarge() error {
 	}
 }
 
-func (p *OperationParser) ParseReader(r io.Reader) (*ParsedOperation, error) {
+func (p *OperationParser) ParseReader(ctx context.Context, clientInfo *ClientInfo, r io.Reader, log *zap.Logger) (*ParsedOperation, error) {
 	// Use an extra byte for the max size. This way we can check if N became
 	// zero to detect if the request body was too large.
 	limitedReader := &io.LimitedReader{R: r, N: p.maxOperationSizeInBytes + 1}
@@ -112,14 +126,14 @@ func (p *OperationParser) ParseReader(r io.Reader) (*ParsedOperation, error) {
 	if limitedReader.N == 0 {
 		return nil, p.entityTooLarge()
 	}
-	return p.parse(buf.Bytes())
+	return p.parse(ctx, clientInfo, buf.Bytes(), log)
 }
 
-func (p *OperationParser) Parse(data []byte) (*ParsedOperation, error) {
+func (p *OperationParser) Parse(ctx context.Context, clientInfo *ClientInfo, data []byte, log *zap.Logger) (*ParsedOperation, error) {
 	if len(data) > int(p.maxOperationSizeInBytes) {
 		return nil, p.entityTooLarge()
 	}
-	return p.parse(data)
+	return p.parse(ctx, clientInfo, data, log)
 }
 
 var (
@@ -130,21 +144,44 @@ var (
 		{"query"},
 		{"variables"},
 		{"operationName"},
+		{"extensions"},
+	}
+
+	persistedQueryKeys = [][]string{
+		{"version"},
+		{"sha256Hash"},
 	}
 )
 
-func (p *OperationParser) parse(body []byte) (*ParsedOperation, error) {
+const (
+	parseOperationKeysQueryIndex = iota
+	parseOperationKeysVariablesIndex
+	parseOperationKeysOperationNameIndex
+	parseOperationKeysExtensionsIndex
+)
+
+const (
+	persistedQueryKeysVersionIndex = iota
+	persistedQueryKeysSha256HashIndex
+)
+
+func (p *OperationParser) parse(ctx context.Context, clientInfo *ClientInfo, body []byte, log *zap.Logger) (*ParsedOperation, error) {
 
 	var (
 		requestOperationType            string
 		operationDefinitionRef          = -1
 		requestOperationNameBytes       []byte
+		requestExtensions               []byte
 		operationCount                  = 0
 		anonymousOperationCount         = 0
 		anonymousOperationDefinitionRef = -1
 		originalOperationNameRef        ast.ByteSliceReference
 		requestDocumentBytes            []byte
 		requestVariableBytes            []byte
+		persistedQueryVersion           []byte
+		persistedQuerySha256Hash        []byte
+		parseErr                        error
+		variablesValueType              jsonparser.ValueType
 	)
 
 	kit := p.getKit()
@@ -152,20 +189,95 @@ func (p *OperationParser) parse(body []byte) (*ParsedOperation, error) {
 
 	jsonparser.EachKey(body, func(i int, value []byte, valueType jsonparser.ValueType, err error) {
 		if err != nil {
+			parseErr = err
 			return
 		}
 		switch i {
-		case 0:
+		case parseOperationKeysQueryIndex:
 			requestDocumentBytes, err = jsonparser.Unescape(value, kit.unescapedDocument)
+			if err != nil {
+				parseErr = fmt.Errorf("error unescaping query: %w", err)
+				return
+			}
+		case parseOperationKeysVariablesIndex:
+			variablesValueType = valueType
+			requestVariableBytes = value
+		case parseOperationKeysOperationNameIndex:
+			requestOperationNameBytes = value
+		case parseOperationKeysExtensionsIndex:
+			requestExtensions = value
+			persistedQuery, _, _, err := jsonparser.Get(value, "persistedQuery")
 			if err != nil {
 				return
 			}
-		case 1:
-			requestVariableBytes = value
-		case 2:
-			requestOperationNameBytes = value
+			if len(persistedQuery) > 0 {
+				jsonparser.EachKey(persistedQuery, func(i int, value []byte, valueType jsonparser.ValueType, err error) {
+					if err != nil {
+						parseErr = err
+						return
+					}
+					switch i {
+					case persistedQueryKeysVersionIndex:
+						persistedQueryVersion = value
+					case persistedQueryKeysSha256HashIndex:
+						persistedQuerySha256Hash = value
+					}
+				}, persistedQueryKeys...)
+				if persistedQueryVersion == nil {
+					log.Warn("persistedQuery.version is missing")
+					persistedQuerySha256Hash = nil
+					return
+				}
+				if len(persistedQueryVersion) != 1 || persistedQueryVersion[0] != '1' {
+					log.Warn("unsupported persistedQuery.version", zap.String("version", string(persistedQueryVersion)))
+					persistedQuerySha256Hash = nil
+					return
+				}
+			}
 		}
 	}, parseOperationKeys...)
+
+	switch variablesValueType {
+	case jsonparser.Null, jsonparser.Unknown, jsonparser.Object, jsonparser.NotExist:
+	// valid, continue
+	case jsonparser.Array:
+		return nil, &inputError{
+			message:    "variables value must not be an array",
+			statusCode: http.StatusBadRequest,
+		}
+	case jsonparser.String:
+		return nil, &inputError{
+			message:    "variables value must not be a string",
+			statusCode: http.StatusBadRequest,
+		}
+	case jsonparser.Number:
+		return nil, &inputError{
+			message:    "variables value must not be a number",
+			statusCode: http.StatusBadRequest,
+		}
+	case jsonparser.Boolean:
+		return nil, &inputError{
+			message:    "variables value must not be a boolean",
+			statusCode: http.StatusBadRequest,
+		}
+	default:
+		return nil, &inputError{
+			message:    "variables value must be a JSON object",
+			statusCode: http.StatusBadRequest,
+		}
+	}
+
+	if parseErr != nil {
+		return nil, errors.WithStack(parseErr)
+	}
+
+	if len(persistedQuerySha256Hash) > 0 {
+		persistedOperationData, err := p.cdn.PersistedOperation(ctx, clientInfo.Name, persistedQuerySha256Hash)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+		requestDocumentBytes = persistedOperationData
+	}
 
 	requestHasOperationName := requestOperationNameBytes != nil && !bytes.Equal(requestOperationNameBytes, literal.NULL)
 	if !requestHasOperationName {
@@ -246,6 +358,16 @@ func (p *OperationParser) parse(body []byte) (*ParsedOperation, error) {
 		requestOperationType = "subscription"
 	}
 
+	// set variables to empty object if they are null or not present
+	if requestVariableBytes == nil || bytes.Equal(requestVariableBytes, []byte("null")) {
+		requestVariableBytes = []byte("{}")
+	}
+
+	// set variables on doc input before normalization
+	// IMPORTANT: this is required for the normalization to work correctly!
+	// Normalization reads/rewrites/adds variables
+	kit.doc.Input.Variables = requestVariableBytes
+
 	// replace the operation name with a static name to avoid different IDs for the same operation
 	replaceOperationName := kit.doc.Input.AppendInputBytes(staticOperationName)
 	kit.doc.OperationDefinitions[operationDefinitionRef].Name = replaceOperationName
@@ -260,11 +382,6 @@ func (p *OperationParser) parse(body []byte) (*ParsedOperation, error) {
 	if err != nil {
 		return nil, errors.WithStack(fmt.Errorf("failed to print normalized operation: %w", err))
 	}
-	// hash extracted variables
-	_, err = kit.keyGen.Write(kit.doc.Input.Variables)
-	if err != nil {
-		return nil, errors.WithStack(fmt.Errorf("failed to write variables: %w", err))
-	}
 	operationID := kit.keyGen.Sum64() // generate the operation ID
 	// print the operation with the original operation name
 	kit.doc.OperationDefinitions[operationDefinitionRef].Name = originalOperationNameRef
@@ -273,33 +390,23 @@ func (p *OperationParser) parse(body []byte) (*ParsedOperation, error) {
 		return nil, errors.WithStack(fmt.Errorf("failed to print normalized operation: %w", err))
 	}
 
-	if requestVariableBytes == nil || bytes.Equal(requestVariableBytes, []byte("null")) {
-		requestVariableBytes = []byte("{}")
-	}
+	variablesCopy := make([]byte, len(kit.doc.Input.Variables))
+	copy(variablesCopy, kit.doc.Input.Variables)
 
-	js := &astjson.JSON{}
-	err = js.ParseObject(requestVariableBytes)
+	err = kit.variablesValidator.Validate(kit.doc, p.executor.Definition, variablesCopy)
 	if err != nil {
-		return nil, errors.WithStack(fmt.Errorf("failed to parse variables: %w", err))
-	}
-	if kit.doc.Input.Variables != nil {
-		extractedVariables, err := js.AppendObject(kit.doc.Input.Variables)
-		if err != nil {
-			return nil, errors.WithStack(fmt.Errorf("failed to append variables: %w", err))
+		return nil, &inputError{
+			message:    err.Error(),
+			statusCode: http.StatusBadRequest,
 		}
-		js.MergeNodes(js.RootNode, extractedVariables)
-	}
-	merged := bytes.NewBuffer(make([]byte, 0, len(requestVariableBytes)+len(kit.doc.Input.Variables)))
-	err = js.PrintRoot(merged)
-	if err != nil {
-		return nil, errors.WithStack(fmt.Errorf("failed to print variables: %w", err))
 	}
 
 	return &ParsedOperation{
 		ID:                       operationID,
 		Name:                     string(requestOperationNameBytes),
 		Type:                     requestOperationType,
-		Variables:                merged.Bytes(),
+		Variables:                variablesCopy,
 		NormalizedRepresentation: kit.normalizedOperation.String(),
+		Extensions:               requestExtensions,
 	}, nil
 }

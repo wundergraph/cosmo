@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import { PlainMessage } from '@bufbuild/protobuf';
 import { ServiceImpl } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
@@ -5,6 +6,8 @@ import { GetConfigResponse } from '@wundergraph/cosmo-connect/dist/node/v1/node_
 import { OrganizationEventName, PlatformEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
 import {
+  AcceptOrDeclineInvitationResponse,
+  AnalyticsConfig,
   CheckFederatedGraphResponse,
   CheckSubgraphSchemaResponse,
   CompositionError,
@@ -13,11 +16,15 @@ import {
   CreateFederatedGraphTokenResponse,
   CreateFederatedSubgraphResponse,
   CreateIntegrationResponse,
+  CreateOIDCProviderResponse,
   CreateOrganizationWebhookConfigResponse,
+  DateRange,
   DeleteAPIKeyResponse,
   DeleteFederatedGraphResponse,
   DeleteFederatedSubgraphResponse,
   DeleteIntegrationResponse,
+  DeleteOIDCProviderResponse,
+  DeleteOrganizationResponse,
   DeleteRouterTokenResponse,
   FixSubgraphSchemaResponse,
   ForceCheckSuccessResponse,
@@ -27,6 +34,7 @@ import {
   GetCheckOperationsResponse,
   GetCheckSummaryResponse,
   GetChecksByFederatedGraphNameResponse,
+  GetClientsResponse,
   GetDashboardAnalyticsViewResponse,
   GetFederatedGraphByNameResponse,
   GetFederatedGraphChangelogResponse,
@@ -34,10 +42,14 @@ import {
   GetFederatedGraphsResponse,
   GetFieldUsageResponse,
   GetGraphMetricsResponse,
+  GetInvitationsResponse,
+  GetLatestValidSubgraphSDLByNameResponse,
   GetMetricsErrorRateResponse,
+  GetOIDCProviderResponse,
   GetOperationContentResponse,
   GetOrganizationIntegrationsResponse,
   GetOrganizationMembersResponse,
+  GetOrganizationRequestsCountResponse,
   GetOrganizationWebhookConfigsResponse,
   GetOrganizationWebhookMetaResponse,
   GetRouterTokensResponse,
@@ -46,34 +58,37 @@ import {
   GetTraceResponse,
   InviteUserResponse,
   IsGitHubAppInstalledResponse,
+  LeaveOrganizationResponse,
   MigrateFromApolloResponse,
   PublishFederatedSubgraphResponse,
+  PublishPersistedOperationsResponse,
+  PublishedOperation,
+  PublishedOperationStatus,
   RemoveInvitationResponse,
   RequestSeriesItem,
   UpdateFederatedGraphResponse,
   UpdateIntegrationConfigResponse,
+  UpdateOrgMemberRoleResponse,
   UpdateOrganizationDetailsResponse,
   UpdateOrganizationWebhookConfigResponse,
   UpdateSubgraphResponse,
   WhoAmIResponse,
-  CreateOIDCProviderResponse,
-  GetOIDCProviderResponse,
-  DeleteOIDCProviderResponse,
-  LeaveOrganizationResponse,
-  DeleteOrganizationResponse,
-  UpdateOrgMemberRoleResponse,
-  GetLatestValidSubgraphSDLByNameResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { OpenAIGraphql, isValidUrl } from '@wundergraph/cosmo-shared';
-import { parse } from 'graphql';
+import { DocumentNode, buildASTSchema, parse } from 'graphql';
+import { validate } from 'graphql/validation/index.js';
 import { uid } from 'uid';
-import { GraphApiKeyDTO, GraphApiKeyJwtPayload } from '../../types/index.js';
+import { eq } from 'drizzle-orm';
+import { GraphApiKeyDTO, GraphApiKeyJwtPayload, PublishedOperationData } from '../../types/index.js';
 import { Composer } from '../composition/composer.js';
 import { buildSchema, composeSubgraphs } from '../composition/composition.js';
 import { getDiffBetweenGraphs } from '../composition/schemaCheck.js';
 import { signJwt } from '../crypto/jwt.js';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
 import { GitHubRepository } from '../repositories/GitHubRepository.js';
+import { GraphCompositionRepository } from '../repositories/GraphCompositionRepository.js';
+import { OidcRepository } from '../repositories/OidcRepository.js';
+import { OperationsRepository } from '../repositories/OperationsRepository.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import { SchemaCheckRepository } from '../repositories/SchemaCheckRepository.js';
 import { SubgraphRepository } from '../repositories/SubgraphRepository.js';
@@ -81,16 +96,18 @@ import { UserRepository } from '../repositories/UserRepository.js';
 import { AnalyticsDashboardViewRepository } from '../repositories/analytics/AnalyticsDashboardViewRepository.js';
 import { AnalyticsRequestViewRepository } from '../repositories/analytics/AnalyticsRequestViewRepository.js';
 import { MetricsRepository } from '../repositories/analytics/MetricsRepository.js';
+import { MonthlyRequestViewRepository } from '../repositories/analytics/MonthlyRequestViewRepository.js';
 import { TraceRepository } from '../repositories/analytics/TraceRepository.js';
 import { UsageRepository } from '../repositories/analytics/UsageRepository.js';
 import type { RouterOptions } from '../routes.js';
 import { ApiKeyGenerator } from '../services/ApiGenerator.js';
 import ApolloMigrator from '../services/ApolloMigrator.js';
+import OidcProvider from '../services/OidcProvider.js';
 import {
   InspectorOperationResult,
+  InspectorSchemaChange,
   SchemaUsageTrafficInspector,
   collectOperationUsageStats,
-  InspectorSchemaChange,
 } from '../services/SchemaUsageTrafficInspector.js';
 import Slack from '../services/Slack.js';
 import {
@@ -100,11 +117,11 @@ import {
   isValidLabelMatchers,
   isValidLabels,
   isValidOrganizationSlug,
+  validateDateRanges,
 } from '../util.js';
 import { FederatedGraphSchemaUpdate, OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
-import { OidcRepository } from '../repositories/OidcRepository.js';
-import OidcProvider from '../services/OidcProvider.js';
-import { GraphCompositionRepository } from '../repositories/GraphCompositionRepository.js';
+import * as schema from '../../db/schema.js';
+import { OrganizationInvitationRepository } from '../repositories/OrganizationInvitationRepository.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -155,8 +172,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           labelMatchers: req.labelMatchers,
           routingUrl: req.routingUrl,
         });
-
-        await fedGraphRepo.createConfig(federatedGraph.id, 7);
 
         const subgraphs = await subgraphRepo.listByFederatedGraph(req.name, {
           published: true,
@@ -654,12 +669,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         }
 
         for (const composition of result.compositions) {
-          const graphConfig = await fedGraphRepo.getConfig(composition.id);
+          const orgLimits = await orgRepo.getOrganizationLimits({ organizationID: authContext.organizationId });
 
           await schemaCheckRepo.createCheckedFederatedGraph(
             schemaCheckID,
             composition.id,
-            graphConfig.trafficCheckDays,
+            orgLimits.breakingChangeRetentionLimit,
           );
 
           // We collect composition errors for all federated graphs
@@ -675,12 +690,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           // We don't collect operation usage when we have composition errors or
           // when we don't have any inspectable changes. That means any breaking change is really breaking
           if (composition.errors.length === 0 && isInspectable && inspectorChanges.length > 0) {
-            if (graphConfig.trafficCheckDays <= 0) {
+            if (orgLimits.breakingChangeRetentionLimit <= 0) {
               continue;
             }
 
             const result = await trafficInspector.inspect(inspectorChanges, {
-              daysToConsider: graphConfig.trafficCheckDays,
+              daysToConsider: orgLimits.breakingChangeRetentionLimit,
               federatedGraphId: composition.id,
               organizationId: authContext.organizationId,
             });
@@ -1024,6 +1039,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<GetFederatedGraphChangelogResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const fedgraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+        const orgRepo = new OrganizationRepository(opts.db);
 
         const federatedGraph = await fedgraphRepo.byName(req.name);
         if (!federatedGraph) {
@@ -1047,10 +1063,17 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
+        const orgLimits = await orgRepo.getOrganizationLimits({ organizationID: authContext.organizationId });
+
+        const { dateRange } = validateDateRanges({
+          limit: orgLimits.changelogDataRetentionLimit,
+          dateRange: req.dateRange,
+        });
+
         const result = await fedgraphRepo.fetchFederatedGraphChangelog(
           federatedGraph.targetId,
           req.pagination,
-          req.dateRange,
+          dateRange!,
         );
 
         if (!result) {
@@ -1082,6 +1105,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<GetChecksByFederatedGraphNameResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const fedgraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+        const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
+        const orgRepo = new OrganizationRepository(opts.db);
 
         const federatedGraph = await fedgraphRepo.byName(req.name);
         if (!federatedGraph) {
@@ -1095,13 +1120,22 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
+        const orgLimits = await orgRepo.getOrganizationLimits({ organizationID: authContext.organizationId });
+
+        const { dateRange } = validateDateRanges({
+          limit: orgLimits.breakingChangeRetentionLimit,
+          dateRange: {
+            start: req.startDate,
+            end: req.endDate,
+          } as DateRange,
+        });
+
         const checksData = await subgraphRepo.checks({
           federatedGraphName: req.name,
           limit: req.limit,
           offset: req.offset,
-          startDate: req.startDate,
-          endDate: req.endDate,
+          startDate: dateRange!.start,
+          endDate: dateRange!.end,
         });
         const totalChecksCount = await subgraphRepo.getChecksCount({ federatedGraphName: req.name });
 
@@ -1386,6 +1420,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             },
           };
         }
+
+        const blobStorageDirectory = `${authContext.organizationId}/${federatedGraph.id}`;
+        await opts.blobStorage.removeDirectory(blobStorageDirectory);
 
         const subgraphsTargetIDs: string[] = [];
         const subgraphs = await subgraphRepo.listByFederatedGraph(req.name);
@@ -1715,6 +1752,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const analyticsRepo = new AnalyticsRequestViewRepository(opts.chClient);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+        const orgRepo = new OrganizationRepository(opts.db);
 
         const graph = await fedGraphRepo.byName(req.federatedGraphName);
         if (!graph) {
@@ -1726,11 +1764,22 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
+        const orgLimits = await orgRepo.getOrganizationLimits({ organizationID: authContext.organizationId });
+        const { range, dateRange } = validateDateRanges({
+          limit: orgLimits.tracingRetentionLimit,
+          range: req.config?.range,
+          dateRange: req.config?.dateRange,
+        });
+
         return {
           response: {
             code: EnumStatusCode.OK,
           },
-          view: await analyticsRepo.getView(authContext.organizationId, graph.id, req.name, req.config),
+          view: await analyticsRepo.getView(authContext.organizationId, graph.id, req.name, {
+            ...req.config,
+            range,
+            dateRange,
+          } as AnalyticsConfig),
         };
       });
     },
@@ -1800,6 +1849,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const repo = new MetricsRepository(opts.chClient);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+        const orgRepo = new OrganizationRepository(opts.db);
 
         const graph = await fedGraphRepo.byName(req.federatedGraphName);
         if (!graph) {
@@ -1812,9 +1862,16 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const view = await repo.getMetricsView({
+        const orgLimits = await orgRepo.getOrganizationLimits({ organizationID: authContext.organizationId });
+        const { range, dateRange } = validateDateRanges({
+          limit: orgLimits.analyticsRetentionLimit,
           range: req.range,
           dateRange: req.dateRange,
+        });
+
+        const view = await repo.getMetricsView({
+          range,
+          dateRange,
           filters: req.filters,
           organizationId: authContext.organizationId,
           graphId: graph.id,
@@ -1847,6 +1904,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const repo = new MetricsRepository(opts.chClient);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+        const orgRepo = new OrganizationRepository(opts.db);
 
         const graph = await fedGraphRepo.byName(req.federatedGraphName);
         if (!graph) {
@@ -1859,9 +1917,16 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const metrics = await repo.getErrorsView({
+        const orgLimits = await orgRepo.getOrganizationLimits({ organizationID: authContext.organizationId });
+        const { range, dateRange } = validateDateRanges({
+          limit: orgLimits.analyticsRetentionLimit,
           range: req.range,
           dateRange: req.dateRange,
+        });
+
+        const metrics = await repo.getErrorsView({
+          range,
+          dateRange,
           filters: req.filters,
           organizationId: authContext.organizationId,
           graphId: graph.id,
@@ -2080,14 +2145,19 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<GetOrganizationMembersResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db);
+        const orgInvitationRepo = new OrganizationInvitationRepository(opts.db);
 
         const orgMembers = await orgRepo.getMembers({ organizationID: authContext.organizationId });
+        const pendingInvitations = await orgInvitationRepo.getPendingInvitationsOfOrganization({
+          organizationId: authContext.organizationId,
+        });
 
         return {
           response: {
             code: EnumStatusCode.OK,
           },
           members: orgMembers,
+          pendingInvitations,
         };
       });
     },
@@ -2102,6 +2172,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const userRepo = new UserRepository(opts.db);
         const orgRepo = new OrganizationRepository(opts.db);
+        const orgInvitationRepo = new OrganizationInvitationRepository(opts.db);
 
         if (!authContext.hasWriteAccess) {
           return {
@@ -2110,37 +2181,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               details: `The user doesnt have the permissions to perform this operation`,
             },
           };
-        }
-
-        await opts.keycloakClient.authenticateClient();
-
-        const user = await userRepo.byEmail(req.email);
-        if (user) {
-          const orgMember = await orgRepo.getOrganizationMember({
-            organizationID: authContext.organizationId,
-            userID: user.id,
-          });
-          if (orgMember && !orgMember.acceptedInvite) {
-            await opts.keycloakClient.executeActionsEmail({
-              userID: user.id,
-              redirectURI: `${process.env.WEB_BASE_URL}/login`,
-              realm: opts.keycloakRealm,
-            });
-
-            return {
-              response: {
-                code: EnumStatusCode.OK,
-                details: 'Invited member successfully.',
-              },
-            };
-          } else if (orgMember && orgMember.acceptedInvite) {
-            return {
-              response: {
-                code: EnumStatusCode.ERR_ALREADY_EXISTS,
-                details: `${req.email} is already a member of this organization`,
-              },
-            };
-          }
         }
 
         const organization = await orgRepo.byId(authContext.organizationId);
@@ -2153,23 +2193,57 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const groupName = organization.slug;
+        await opts.keycloakClient.authenticateClient();
 
-        const organizationGroups = await opts.keycloakClient.client.groups.find({
-          max: 1,
-          search: groupName,
-          realm: opts.keycloakRealm,
-        });
+        const user = await userRepo.byEmail(req.email);
+        if (user) {
+          const orgMember = await orgRepo.getOrganizationMember({
+            organizationID: authContext.organizationId,
+            userID: user.id,
+          });
+          if (orgMember) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR_ALREADY_EXISTS,
+                details: `${req.email} is already a member of this organization`,
+              },
+            };
+          }
 
-        if (organizationGroups.length === 0) {
-          throw new Error(`Organization group '${groupName}' not found`);
+          const orgInvitation = await orgInvitationRepo.getPendingOrganizationInvitation({
+            organizationID: authContext.organizationId,
+            userID: user.id,
+          });
+          if (orgInvitation) {
+            const userMemberships = await orgRepo.memberships({ userId: user.id });
+            // if the user memberships are empty, that means the user has not logged in till now,
+            // so we send the user a mail form keycloak
+            if (userMemberships.length === 0) {
+              await opts.keycloakClient.executeActionsEmail({
+                userID: user.id,
+                redirectURI: `${process.env.WEB_BASE_URL}/login?redirectURL=${process.env.WEB_BASE_URL}/account/invitations`,
+                realm: opts.keycloakRealm,
+              });
+            } else {
+              // the user has already logged in, so we send our custom org invitation email
+              // eslint-disable-next-line no-lonely-if
+              if (opts.mailerClient) {
+                await opts.mailerClient.sendInviteEmail({
+                  inviteLink: `${process.env.WEB_BASE_URL}/account/invitations`,
+                  organizationName: organization.name,
+                  recieverEmail: req.email,
+                });
+              }
+            }
+
+            return {
+              response: {
+                code: EnumStatusCode.OK,
+                details: 'Invited member successfully.',
+              },
+            };
+          }
         }
-
-        const devGroup = await opts.keycloakClient.fetchDevChildGroup({
-          realm: opts.keycloakRealm,
-          kcGroupId: organizationGroups[0].id!,
-          orgSlug: groupName,
-        });
 
         const keycloakUser = await opts.keycloakClient.client.users.find({
           max: 1,
@@ -2190,34 +2264,29 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           keycloakUserID = keycloakUser[0].id;
         }
 
-        const userGroups = await opts.keycloakClient.client.users.listGroups({
-          search: groupName,
-          realm: opts.keycloakRealm,
-          id: keycloakUserID!,
-          max: 1,
-        });
-
-        if (userGroups.length === 0) {
-          // By default, all invited users are added to the developer group of the org
-          // This is the at least privilege approach
-          await opts.keycloakClient.client.users.addToGroup({
-            id: keycloakUserID!,
-            groupId: devGroup.id!,
+        const userMemberships = await orgRepo.memberships({ userId: keycloakUserID! });
+        // to verify if the user is a new user or not, we check the memberships of the user
+        if (userMemberships.length > 0) {
+          if (opts.mailerClient) {
+            await opts.mailerClient.sendInviteEmail({
+              inviteLink: `${process.env.WEB_BASE_URL}/account/invitations`,
+              organizationName: organization.name,
+              recieverEmail: req.email,
+            });
+          }
+        } else {
+          await opts.keycloakClient.executeActionsEmail({
+            userID: keycloakUserID!,
+            redirectURI: `${process.env.WEB_BASE_URL}/login?redirectURL=${process.env.WEB_BASE_URL}/account/invitations`,
             realm: opts.keycloakRealm,
           });
         }
 
-        await opts.keycloakClient.executeActionsEmail({
-          userID: keycloakUserID!,
-          redirectURI: `${process.env.WEB_BASE_URL}/login`,
-          realm: opts.keycloakRealm,
-        });
-
         // TODO: rate limit this
-        await userRepo.inviteUser({
+        await orgInvitationRepo.inviteUser({
           email: req.email,
-          keycloakUserID: keycloakUserID!,
-          organizationID: authContext.organizationId,
+          userId: keycloakUserID!,
+          organizationId: authContext.organizationId,
           dbUser: user,
         });
 
@@ -2445,7 +2514,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    removeInvitation: (req, ctx) => {
+    removeOrganizationMember: (req, ctx) => {
       const logger = opts.logger.child({
         service: ctx.service.typeName,
         method: ctx.method.name,
@@ -2509,9 +2578,11 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         await opts.keycloakClient.authenticateClient();
 
+        const groupName = org.slug;
+
         const organizationGroup = await opts.keycloakClient.client.groups.find({
           max: 1,
-          search: org.slug,
+          search: groupName,
           realm: opts.keycloakRealm,
         });
 
@@ -2519,11 +2590,52 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           throw new Error(`Organization group '${org.slug}' not found`);
         }
 
-        await opts.keycloakClient.client.users.delFromGroup({
-          id: user.id,
-          groupId: organizationGroup[0].id!,
-          realm: opts.keycloakRealm,
-        });
+        for (const role of orgMember.roles) {
+          switch (role) {
+            case 'admin': {
+              const adminGroup = await opts.keycloakClient.fetchAdminChildGroup({
+                realm: opts.keycloakRealm,
+                kcGroupId: organizationGroup[0].id!,
+                orgSlug: groupName,
+              });
+              await opts.keycloakClient.client.users.delFromGroup({
+                id: user.id,
+                groupId: adminGroup.id!,
+                realm: opts.keycloakRealm,
+              });
+              break;
+            }
+            case 'developer': {
+              const devGroup = await opts.keycloakClient.fetchDevChildGroup({
+                realm: opts.keycloakRealm,
+                kcGroupId: organizationGroup[0].id!,
+                orgSlug: groupName,
+              });
+              await opts.keycloakClient.client.users.delFromGroup({
+                id: user.id,
+                groupId: devGroup.id!,
+                realm: opts.keycloakRealm,
+              });
+              break;
+            }
+            case 'viewer': {
+              const viewerGroup = await opts.keycloakClient.fetchViewerChildGroup({
+                realm: opts.keycloakRealm,
+                kcGroupId: organizationGroup[0].id!,
+                orgSlug: groupName,
+              });
+              await opts.keycloakClient.client.users.delFromGroup({
+                id: user.id,
+                groupId: viewerGroup.id!,
+                realm: opts.keycloakRealm,
+              });
+              break;
+            }
+            default: {
+              throw new Error(`Role ${role} does not exist`);
+            }
+          }
+        }
 
         await orgRepo.removeOrganizationMember({ organizationID: authContext.organizationId, userID: user.id });
 
@@ -2533,6 +2645,89 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         // this will happen only when the user was invited but the user didnt login and the admin removed that user,
         // in this case the user will not have a personal org
         if (userMemberships.length === 0) {
+          // deleting the user from keycloak
+          await opts.keycloakClient.client.users.del({
+            id: user.id,
+            realm: opts.keycloakRealm,
+          });
+          // deleting the user from the db
+          await userRepo.deleteUser({ id: user.id });
+        }
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+        };
+      });
+    },
+
+    removeInvitation: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<RemoveInvitationResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const orgRepo = new OrganizationRepository(opts.db);
+        const orgInvitationRepo = new OrganizationInvitationRepository(opts.db);
+        const userRepo = new UserRepository(opts.db);
+
+        if (!authContext.hasWriteAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+          };
+        }
+
+        const user = await userRepo.byEmail(req.email);
+        if (!user) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `User ${req.email} not found`,
+            },
+          };
+        }
+
+        const org = await orgRepo.byId(authContext.organizationId);
+        if (!org) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Organization not found`,
+            },
+          };
+        }
+
+        const orgInvitation = await orgInvitationRepo.getPendingOrganizationInvitation({
+          organizationID: authContext.organizationId,
+          userID: user.id,
+        });
+        if (!orgInvitation) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Invite to the user ${req.email} does not exist.`,
+            },
+          };
+        }
+
+        await orgInvitationRepo.removeInvite({
+          organizationId: authContext.organizationId,
+          userId: user.id,
+        });
+
+        const userMemberships = await orgRepo.memberships({ userId: user.id });
+        const userPendingInvitations = await orgInvitationRepo.getPendingInvitationsOfUser({ userId: user.id });
+
+        // delete the user only when user doesnt have any memberships and pending invitations
+        // this will happen only when the user was invited but the user didnt login and the admin removed that user,
+        // in this case the user will not have a personal org
+        if (userMemberships.length === 0 && userPendingInvitations.length === 0) {
           // deleting the user from keycloak
           await opts.keycloakClient.client.users.del({
             id: user.id,
@@ -3873,6 +4068,318 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           alias: provider.alias,
           db: opts.db,
         });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+        };
+      });
+    },
+
+    publishPersistedOperations: (req, ctx) => {
+      /**
+       * Receives a federated graph name and a list of persisted operation contents.
+       * First, it validates that the graph exists and all the operations are valid,
+       * then it stores them. Additionally, if the provided client name for registering
+       * the operations has never been seen before, we create an entry in the database
+       * with it.
+       */
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<PublishPersistedOperationsResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        if (!authContext.hasWriteAccess) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+            operations: [],
+          };
+        }
+        const userId = authContext.userId;
+        if (!userId) {
+          return {
+            response: {
+              code: EnumStatusCode.ERROR_NOT_AUTHENTICATED,
+              details: `User not found in the authentication context`,
+            },
+            operations: [],
+          };
+        }
+        const organizationId = authContext.organizationId;
+        const federatedGraphRepo = new FederatedGraphRepository(opts.db, organizationId);
+
+        // Validate everything before we update any data
+        const schema = await federatedGraphRepo.getLatestValidSchemaVersion(req.fedGraphName);
+        const federatedGraph = await federatedGraphRepo.byName(req.fedGraphName);
+        if (!schema?.schema || federatedGraph === undefined) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Federated graph '${req.fedGraphName}' does not exist`,
+            },
+            operations: [],
+          };
+        }
+        const graphAST = parse(schema.schema);
+        const graphSchema = buildASTSchema(graphAST);
+        for (const operation of req.operations) {
+          const contents = operation.contents;
+          let opAST: DocumentNode;
+          try {
+            opAST = parse(operation.contents);
+          } catch (e: any) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR,
+                details: `Operation ${operation.id} (${contents}) is not valid: ${e}`,
+              },
+              operations: [],
+            };
+          }
+          const errors = validate(graphSchema, opAST, undefined, { maxErrors: 1 });
+          if (errors.length > 0) {
+            const errorDetails = errors.map((e) => `${e.toString()}`).join(', ');
+            return {
+              response: {
+                code: EnumStatusCode.ERR,
+                details: `Operation ${operation.id} ("${contents}") is not valid: ${errorDetails}`,
+              },
+              operations: [],
+            };
+          }
+        }
+        const operationsRepo = new OperationsRepository(opts.db, federatedGraph.id);
+        let clientId: string;
+        try {
+          clientId = await operationsRepo.registerClient(req.clientName, userId);
+        } catch (e: any) {
+          const message = e instanceof Error ? e.message : e.toString();
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `Could not register client "${req.clientName}": ${message}`,
+            },
+            operations: [],
+          };
+        }
+        const operations: PublishedOperation[] = [];
+        const updatedOperations = [];
+        // Retrieve the operations that have already been published
+        const operationsResult = await operationsRepo.getPersistedOperations(clientId);
+        const operationsByOperationId = new Map(operationsResult.map((op) => [op.operationId, op.hash]));
+        for (const operation of req.operations) {
+          const operationId = operation.id;
+          const operationHash = crypto.createHash('sha256').update(operation.contents).digest('hex');
+          const prevHash = operationsByOperationId.get(operationId);
+          if (prevHash !== undefined && prevHash !== operationHash) {
+            // We're trying to update an operation with the same ID but different hash
+            operations.push(
+              new PublishedOperation({
+                id: operationId,
+                hash: prevHash,
+                status: PublishedOperationStatus.CONFLICT,
+              }),
+            );
+            continue;
+          }
+          operationsByOperationId.set(operationId, operationHash);
+          const path = `${organizationId}/${federatedGraph.id}/operations/${req.clientName}/${operationId}.json`;
+          updatedOperations.push({
+            operationId,
+            hash: operationHash,
+            filePath: path,
+          });
+          let status: PublishedOperationStatus;
+          if (prevHash === undefined) {
+            const data: PublishedOperationData = {
+              version: 1,
+              body: operation.contents,
+            };
+            opts.blobStorage.putObject(path, Buffer.from(JSON.stringify(data), 'utf8'));
+            status = PublishedOperationStatus.CREATED;
+          } else {
+            status = PublishedOperationStatus.UP_TO_DATE;
+          }
+          operations.push(
+            new PublishedOperation({
+              id: operationId,
+              hash: operationHash,
+              status,
+            }),
+          );
+        }
+
+        await operationsRepo.updatePersistedOperations(clientId, userId, updatedOperations);
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          operations,
+        };
+      });
+    },
+
+    getClients: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetClientsResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const fedRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+        const federatedGraph = await fedRepo.byName(req.fedGraphName);
+        if (!federatedGraph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Federated graph '${req.fedGraphName}' does not exist`,
+            },
+            clients: [],
+          };
+        }
+        const operationsRepo = new OperationsRepository(opts.db, federatedGraph.id);
+        const clients = await operationsRepo.getRegisteredClients();
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          clients,
+        };
+      });
+    },
+
+    getOrganizationRequestsCount: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetOrganizationRequestsCountResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+
+        if (!opts.chClient) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_ANALYTICS_DISABLED,
+            },
+            count: BigInt(0),
+          };
+        }
+        const monthlyRequestsRepo = new MonthlyRequestViewRepository(opts.chClient);
+        const count = await monthlyRequestsRepo.getMonthlyRequestCount(authContext.organizationId);
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          count: BigInt(count),
+        };
+      });
+    },
+
+    // returns the pending invites of a user
+    getInvitations: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetInvitationsResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const orgInvitationRepo = new OrganizationInvitationRepository(opts.db);
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          invitations: await orgInvitationRepo.getPendingInvitationsOfUser({ userId: authContext.userId }),
+        };
+      });
+    },
+
+    acceptOrDeclineInvitation: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<AcceptOrDeclineInvitationResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const orgRepo = new OrganizationRepository(opts.db);
+        const userRepo = new UserRepository(opts.db);
+        const orgInvitationRepo = new OrganizationInvitationRepository(opts.db);
+
+        const user = await userRepo.byId(authContext.userId);
+        if (!user) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `User ${authContext.userId} not found`,
+            },
+          };
+        }
+
+        const organization = await orgRepo.byId(req.organizationId);
+        if (!organization) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Organization ${req.organizationId} not found`,
+            },
+          };
+        }
+
+        if (req.accept) {
+          const groupName = organization.slug;
+
+          await opts.keycloakClient.authenticateClient();
+
+          const organizationGroups = await opts.keycloakClient.client.groups.find({
+            max: 1,
+            search: groupName,
+            realm: opts.keycloakRealm,
+          });
+
+          if (organizationGroups.length === 0) {
+            throw new Error(`Organization group '${groupName}' not found`);
+          }
+
+          const devGroup = await opts.keycloakClient.fetchDevChildGroup({
+            realm: opts.keycloakRealm,
+            kcGroupId: organizationGroups[0].id!,
+            orgSlug: groupName,
+          });
+
+          const keycloakUser = await opts.keycloakClient.client.users.find({
+            max: 1,
+            email: user.email,
+            realm: opts.keycloakRealm,
+            exact: true,
+          });
+
+          if (keycloakUser.length === 0) {
+            throw new Error(`Keycloak user with email '${user.email}' not found`);
+          }
+
+          await opts.keycloakClient.client.users.addToGroup({
+            id: keycloakUser[0].id!,
+            groupId: devGroup.id!,
+            realm: opts.keycloakRealm,
+          });
+
+          await orgInvitationRepo.acceptInvite({ userId: user.id, organizationId: req.organizationId });
+        } else {
+          await orgInvitationRepo.removeInvite({ organizationId: req.organizationId, userId: user.id });
+        }
 
         return {
           response: {
