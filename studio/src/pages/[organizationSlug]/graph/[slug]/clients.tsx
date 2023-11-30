@@ -14,6 +14,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
+import { CLI } from "@/components/ui/cli";
 import {
   Dialog,
   DialogContent,
@@ -63,11 +64,13 @@ import { docsBaseURL } from "@/lib/constants";
 import { formatDateTime } from "@/lib/format-date";
 import { NextPageWithLayout } from "@/lib/page";
 import { checkUserAccess, cn } from "@/lib/utils";
-import { CommandLineIcon } from "@heroicons/react/24/outline";
+import {
+  CommandLineIcon,
+  ExclamationTriangleIcon,
+} from "@heroicons/react/24/outline";
 import {
   CopyIcon,
   Cross1Icon,
-  ExclamationTriangleIcon,
   MagnifyingGlassIcon,
   PlayIcon,
   PlusIcon,
@@ -86,7 +89,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useRouter } from "next/router";
 import { useContext, useState } from "react";
-import { BiAnalyse } from "react-icons/bi";
+import { BiAnalyse, BiTerminal } from "react-icons/bi";
 import { IoBarcodeSharp } from "react-icons/io5";
 import { z } from "zod";
 
@@ -174,6 +177,33 @@ const ClientOperations = () => {
             data?.response?.details || error?.message || "Please try again"
           }
           actions={<Button onClick={() => refetch()}>Retry</Button>}
+        />
+      </div>
+    );
+  } else if (data.operations.length == 0) {
+    content = (
+      <div className="my-auto">
+        <EmptyState
+          icon={<CommandLineIcon />}
+          title="No operations found."
+          description={
+            <>
+              Push new operations to this client using the CLI.{" "}
+              <a
+                target="_blank"
+                rel="noreferrer"
+                href={docsBaseURL + "/router/persisted-operations"}
+                className="text-primary"
+              >
+                Learn more.
+              </a>
+            </>
+          }
+          actions={
+            <CLI
+              command={`npx wgc operations push ${slug} -c ${clientName} -f <path-to-file>`}
+            />
+          }
         />
       </div>
     );
