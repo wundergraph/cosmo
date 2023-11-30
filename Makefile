@@ -116,5 +116,6 @@ docker-build-minikube: docker-build-local
 	minikube image load ghcr.io/wundergraph/cosmo/otelcollector:latest & \
 	minikube image load ghcr.io/wundergraph/cosmo/router:latest & \
 	minikube image load ghcr.io/wundergraph/cosmo/graphqlmetrics:latest & \
-	minikube image load ghcr.io/wundergraph/cosmo/keycloak:latest
+	minikube image load ghcr.io/wundergraph/cosmo/keycloak:latest & \
+	minikube image load ghcr.io/wundergraph/cosmo/cdn:latest
 	minikube cache reload

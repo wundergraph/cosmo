@@ -32,6 +32,10 @@ global:
   postgresql:
     enabled: false
 
+  cdn:
+    enabled: false
+    s3StorageUrl: "http://minio:changeme@cosmo-minio:9000/cosmo"
+
   controlplane:
     enabled: false
     port: 3001

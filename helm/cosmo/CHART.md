@@ -28,6 +28,8 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
+| global.cdn.enabled | bool | `false` |  |
+| global.cdn.s3StorageUrl | string | `"http://minio:changeme@cosmo-minio:9000/cosmo"` |  |
 | global.clickhouse.enabled | bool | `false` |  |
 | global.controlplane.enabled | bool | `false` |  |
 | global.controlplane.jwtSecret | string | `"1YQ4YR18WWNEWCLUIUKN5WVQ31HWDHEM"` |  |

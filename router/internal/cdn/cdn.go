@@ -2,6 +2,7 @@ package cdn
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -126,6 +127,9 @@ func (cdn *CDN) PersistedOperation(ctx context.Context, clientName string, sha25
 				clientName: clientName,
 				sha256Hash: sha256Hash,
 			}
+		}
+		if resp.StatusCode == http.StatusForbidden {
+			return nil, errors.New("could not authenticate against CDN")
 		}
 		data, _ := io.ReadAll(resp.Body)
 		return nil, fmt.Errorf("unexpected status code when loading persisted operation %d: %s", resp.StatusCode, string(data))

@@ -141,8 +141,25 @@ services:
     restart: unless-stopped
     networks:
       - primary
+    profiles:
+      - default
 
   # Cosmo Platform
+
+  cdn:
+    build:
+      context: .
+      dockerfile: cdn-server/Dockerfile
+    environment:
+      - PORT=11000
+      - AUTH_JWT_SECRET=fkczyomvdprgvtmvkuhvprxuggkbgwld
+      - S3_STORAGE_URL=http://${MINIO_ROOT_USER:-minio}:${MINIO_ROOT_PASSWORD:-changeme}@minio:9000/cosmo
+    ports:
+      - "11000:11000"
+    networks:
+      - primary
+    profiles:
+      - default
 
   graphqlmetrics:
     image: ghcr.io/wundergraph/cosmo/graphqlmetrics:${DC_GRAPHQLMETRICS_VERSION:-latest}

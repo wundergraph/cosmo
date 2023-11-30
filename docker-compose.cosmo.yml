@@ -3,6 +3,17 @@ version: "3.8"
 name: cosmo
 services:
 
+  cdn:
+    image: ghcr.io/wundergraph/cosmo/cdn:${DC_CDN_VERSION:-latest}
+    build:
+      context: .
+      dockerfile: cdn-server/Dockerfile
+      cache_from:
+        - ghcr.io/wundergraph/cosmo/cdn:buildcache
+      args:
+        GITHUB_SHA: ${GITHUB_SHA:-latest}
+        GITHUB_REF: ${GITHUB_REF:-latest}
+
   keycloak:
     image: ghcr.io/wundergraph/cosmo/keycloak:${DC_KEYCLOAK_VERSION:-latest}
     build:
