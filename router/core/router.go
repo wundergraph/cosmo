@@ -1199,7 +1199,9 @@ func WithGraphQLMetrics(cfg *GraphQLMetricsConfig) Option {
 	}
 }
 
-func WithDevelopemtMode(enabled bool) Option {
+// WithDevelopmentMode enables development mode. This should only be used for testing purposes.
+// Development mode allows e.g. to use ART (Advanced Request Tracing) without request signing.
+func WithDevelopmentMode(enabled bool) Option {
 	return func(r *Router) {
 		r.developmentMode = enabled
 	}

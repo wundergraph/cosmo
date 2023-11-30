@@ -53,6 +53,7 @@ func TestMyModule(t *testing.T) {
 		core.WithFederatedGraphName(cfg.Graph.Name),
 		core.WithStaticRouterConfig(routerConfig),
 		core.WithModulesConfig(cfg.Modules),
+		core.WithDevelopmentMode(true),
 		core.WithListenerAddr("http://localhost:3002"),
 	)
 	require.NoError(t, err)

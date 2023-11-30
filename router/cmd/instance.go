@@ -120,7 +120,7 @@ func NewRouter(params Params) (*core.Router, error) {
 			AllowHeaders:     cfg.CORS.AllowHeaders,
 			MaxAge:           cfg.CORS.MaxAge,
 		}),
-		core.WithDevelopemtMode(cfg.DevelopmentMode),
+		core.WithDevelopmentMode(cfg.DevelopmentMode),
 		core.WithTracing(traceConfig(&cfg.Telemetry)),
 		core.WithMetrics(metricsConfig(&cfg.Telemetry)),
 		core.WithEngineExecutionConfig(cfg.EngineExecutionConfiguration),

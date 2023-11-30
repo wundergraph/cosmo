@@ -102,6 +102,7 @@ func TestJWTModule(t *testing.T) {
 		core.WithFederatedGraphName(cfg.Graph.Name),
 		core.WithStaticRouterConfig(routerConfig),
 		core.WithModulesConfig(cfg.Modules),
+		core.WithDevelopmentMode(true),
 		core.WithAccessController(core.NewAccessController([]authentication.Authenticator{authenticator}, false)),
 		core.WithListenerAddr("localhost:3002"),
 	)
