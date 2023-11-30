@@ -648,7 +648,7 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
     >
       <div className="flex h-full flex-row">
         <div className="hidden h-full min-w-[200px] max-w-[240px] overflow-y-auto border-r py-2 scrollbar-thin xl:block">
-          <div className="flex flex-col items-stretch gap-2 px-4 py-4 lg:px-6">
+          <div className="flex flex-col items-stretch gap-2 px-4 py-4 lg:px-8">
             {graphqlRootCategories.map((category) => (
               <Button
                 key={category}
