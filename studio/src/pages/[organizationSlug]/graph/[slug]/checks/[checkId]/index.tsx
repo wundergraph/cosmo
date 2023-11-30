@@ -286,7 +286,7 @@ const CheckOverviewPage: NextPageWithLayout = () => {
                   className="flex items-center space-x-1.5 py-2"
                 >
                   {getCheckIcon(data.check.isComposable)}
-                  <span className="truncate">Composition</span>
+                  <span className="flex-1 truncate">Composition</span>
                   <InfoTooltip>
                     Describes if the proposed schema can be composed with all
                     other subgraphs in the federated graph.
@@ -298,7 +298,7 @@ const CheckOverviewPage: NextPageWithLayout = () => {
                   className="flex items-center space-x-1.5  py-2"
                 >
                   {getCheckIcon(!data.check.isBreaking)}
-                  <span className="truncate">Breaking Changes</span>
+                  <span className="flex-1 truncate">Breaking Changes</span>
                   <InfoTooltip>
                     Describes if the proposed schema is free of changes that
                     break existing client operations.
@@ -311,7 +311,7 @@ const CheckOverviewPage: NextPageWithLayout = () => {
                     className="flex items-center space-x-1.5  py-2"
                   >
                     {getCheckIcon(!data.check.hasClientTraffic)}
-                    <span className="truncate">Operations</span>
+                    <span className="flex-1 truncate">Operations</span>
                     <InfoTooltip>
                       Describes if the proposed schema affects any client
                       operations based on real usage data.
