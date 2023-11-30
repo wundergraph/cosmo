@@ -28,7 +28,7 @@
     "db:migrate": "tsx src/bin/db-migrate.ts",
     "ch:migrate": "tsx src/bin/ch-migrate.ts",
     "ch:new-migration": "dbmate -d \"./clickhouse/migrations\" new",
-    "postversion": "name=\"$(node -p \"var a = require('./package.json');process.stdout.write(a.name);process.exit(0)\")\"; version=\"$(node -p \"var a = require('./package.json');process.stdout.write(a.version);process.exit(0)\")\"; gh workflow run image-release.yml -F name=$name -F tag=$version -F dockerContext=."
+    "postversion": "name=\"$(node -p \"var a = require('./package.json');process.stdout.write(a.name);process.exit(0)\")\"; version=\"$(node -p \"var a = require('./package.json');process.stdout.write(a.version);process.exit(0)\")\"; gh workflow run image-release.yml -F name=$name -F workingDirectory=controlplane -F tag=$version -F dockerContext=."
   },
   "keywords": [
     "controlplane",
