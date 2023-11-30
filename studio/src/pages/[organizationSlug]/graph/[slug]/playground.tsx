@@ -224,6 +224,11 @@ const PersistOperation = () => {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
+                          <SelectItem value="">
+                            <span className="flex items-center gap-x-2">
+                              <SparklesIcon className="h-4 w-4" /> Create New
+                            </span>
+                          </SelectItem>
                           {data?.clients?.map((c) => {
                             return (
                               <SelectItem key={c.id} value={c.id}>
@@ -233,11 +238,6 @@ const PersistOperation = () => {
                               </SelectItem>
                             );
                           })}
-                          <SelectItem value="">
-                            <span className="flex items-center gap-x-2">
-                              <SparklesIcon className="h-4 w-4" /> Create New
-                            </span>
-                          </SelectItem>
                         </SelectContent>
                       </Select>
 
