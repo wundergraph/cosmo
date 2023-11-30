@@ -4,7 +4,11 @@ import {
 } from "@/components/compose-status";
 import { RunRouterCommand } from "@/components/federatedgraphs-cards";
 import GraphVisualization from "@/components/graph-visualization";
-import { GraphContext, getGraphLayout } from "@/components/layout/graph-layout";
+import {
+  GraphContext,
+  GraphPageLayout,
+  getGraphLayout,
+} from "@/components/layout/graph-layout";
 import { PageHeader } from "@/components/layout/head";
 import { TitleLayout } from "@/components/layout/title-layout";
 import { OperationsOverview } from "@/components/operations-overview";
@@ -31,7 +35,7 @@ import { useContext, useState } from "react";
 import { ReactFlowProvider } from "reactflow";
 import { CompositionErrorsDialog } from "@/components/composition-errors-dialog";
 
-const Details = () => {
+const GraphOverviewPage = () => {
   const graphData = useContext(GraphContext);
   const [open, setOpen] = useState(false);
 
@@ -147,19 +151,18 @@ const Details = () => {
   );
 };
 
-const GraphPage: NextPageWithLayout = () => {
-  const router = useRouter();
-  const slug = router.query.slug as string;
-
-  return (
-    <PageHeader title="Studio | Overview">
-      <TitleLayout title={slug} subtitle="An overview of your federated graph">
-        <Details />
-      </TitleLayout>
-    </PageHeader>
+GraphOverviewPage.getLayout = (page: React.ReactNode) => {
+  return getGraphLayout(
+    <GraphPageLayout
+      title="Graph Overview"
+      subtitle="An overview of your federated graph"
+    >
+      {page}
+    </GraphPageLayout>,
+    {
+      title: "Graph Overview",
+    },
   );
 };
 
-GraphPage.getLayout = getGraphLayout;
-
-export default GraphPage;
+export default GraphOverviewPage;

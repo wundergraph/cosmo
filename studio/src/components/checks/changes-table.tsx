@@ -1,5 +1,10 @@
 import { cn } from "@/lib/utils";
-import { BarChartIcon, GlobeIcon } from "@radix-ui/react-icons";
+import {
+  BarChartIcon,
+  CheckIcon,
+  Cross1Icon,
+  GlobeIcon,
+} from "@radix-ui/react-icons";
 import { SchemaChange } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { formatISO, subHours } from "date-fns";
 import Link from "next/link";
@@ -77,24 +82,37 @@ export const ChangesTable = ({
   };
 
   return (
-    <div className="scrollbar-custom max-h-[70vh] overflow-auto">
+    <div>
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead className="w-[200px]">Change</TableHead>
-            <TableHead className="w-[200px]">Type</TableHead>
             <TableHead>Description</TableHead>
-            <TableHead className="w-2/12 2xl:w-1/12">Actions</TableHead>
+            <TableHead className="w-2/12 2xl:w-1/12"></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {changes.map(({ changeType, message, isBreaking, path }) => {
             return (
-              <TableRow key={changeType + message}>
-                <TableCell className={cn(isBreaking && "text-destructive")}>
-                  {isBreaking ? "Breaking" : "Non-Breaking"}
+              <TableRow
+                key={changeType + message}
+                className="group hover:bg-secondary/20"
+              >
+                <TableCell
+                  className={cn(
+                    isBreaking ? "text-destructive" : "text-muted-foreground",
+                  )}
+                >
+                  <div className="flex items-center gap-2">
+                    {isBreaking ? <Cross1Icon /> : <CheckIcon />}
+                    <span
+                      className="block w-[160px] truncate"
+                      title={changeType}
+                    >
+                      {changeType}
+                    </span>
+                  </div>
                 </TableCell>
-                <TableCell>{changeType}</TableCell>
                 <TableCell>{message}</TableCell>
                 <TableCell>
                   <div className="flex items-center gap-x-2">
@@ -103,9 +121,10 @@ export const ChangesTable = ({
                         <TooltipTrigger>
                           <Button
                             disabled={!path}
-                            variant="secondary"
+                            variant="ghost"
                             size="icon-sm"
                             asChild
+                            className="table-action"
                           >
                             <Link
                               href={
@@ -138,8 +157,9 @@ export const ChangesTable = ({
                         <TooltipTrigger>
                           <Button
                             onClick={() => openUsage(changeType, path)}
-                            variant="secondary"
+                            variant="ghost"
                             size="icon-sm"
+                            className="table-action"
                           >
                             <BarChartIcon />
                           </Button>

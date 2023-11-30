@@ -6,7 +6,7 @@ import { UserContext } from "@/components/app-provider";
 import { EmptyState } from "@/components/empty-state";
 import { getDashboardLayout } from "@/components/layout/dashboard-layout";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader } from "@/components/ui/loader";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -119,18 +119,6 @@ const UsagesPage: NextPageWithLayout = () => {
 
   return (
     <div className="flex flex-col gap-y-4">
-      <p className="text-sm text-muted-foreground">
-        Usages and limits of the current month. Click{" "}
-        <Link
-          href={calURL}
-          className="text-primary"
-          target="_blank"
-          rel="noreferrer"
-        >
-          here
-        </Link>{" "}
-        to increase the limits.
-      </p>
       {chartData[0].usage / requestLimit === 1 ? (
         <div className="flex items-center gap-x-2 rounded-lg border !border-destructive px-4 py-2 text-destructive">
           <CgDanger size={20} className="text-destructive" />
@@ -194,70 +182,96 @@ const UsagesPage: NextPageWithLayout = () => {
       <div className="grid grid-cols-3 gap-4">
         <Card className="col-span-2 flex flex-col gap-y-3 p-3">
           <div className="flex items-center gap-x-2">
-            <h1 className="text-lg font-medium">Requests Usage</h1>
+            <h1 className="text-lg font-medium">Requests</h1>
             <Separator orientation="vertical" className="h-6" />
-            <span className="text-xs text-muted-foreground">{`${formatMetric(
-              requestLimit,
-            )} / month`}</span>
+            <span className="text-xs text-muted-foreground">
+              Max {`${formatMetric(requestLimit)} / month`}
+            </span>
           </div>
           <CustomBarChart data={chartData} />
         </Card>
-        <div className="col-span-1">
-          <Card className="col-span-2 flex flex-col gap-y-3 p-3">
-            <h1 className="text-lg font-medium">Organization Limits</h1>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Limit</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                <TableRow>
-                  <TableCell>Analytics Data Retention</TableCell>
-                  <TableCell>{`${
+
+        <Card className="col-span-1 flex flex-col">
+          <CardHeader>
+            <CardTitle>Organization Limits</CardTitle>
+          </CardHeader>
+          <CardContent className="px-4 pt-0">
+            <dl className="space-y-2">
+              <div className="flex">
+                <dt className="flex-1 px-2 text-sm text-muted-foreground">
+                  Analytics Data Retention
+                </dt>
+                <dd className="w-1/3 px-2 text-right text-sm font-medium">
+                  {`${
                     user?.currentOrganization.limits.analyticsRetentionLimit ||
                     7
-                  } days`}</TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell>Tracing Data Retention</TableCell>
-                  <TableCell>{`${
+                  } days`}
+                </dd>
+              </div>
+              <div className="flex">
+                <dt className="flex-1 px-2 text-sm text-muted-foreground">
+                  Tracing Data Retention
+                </dt>
+                <dd className="w-1/3 px-2 text-right text-sm font-medium">
+                  {`${
                     user?.currentOrganization.limits.tracingRetentionLimit || 7
-                  } days`}</TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell>Breaking Changes Retention</TableCell>
-                  <TableCell>{`${
+                  } days`}
+                </dd>
+              </div>
+              <div className="flex">
+                <dt className="flex-1 px-2 text-sm text-muted-foreground">
+                  Breaking Changes Retention
+                </dt>
+                <dd className="w-1/3 px-2 text-right text-sm font-medium">
+                  {`${
                     user?.currentOrganization.limits
                       .breakingChangeRetentionLimit || 7
-                  } days`}</TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell>Changelog Data Retention</TableCell>
-                  <TableCell>{`${
+                  } days`}
+                </dd>
+              </div>
+              <div className="flex">
+                <dt className="flex-1 px-2 text-sm text-muted-foreground">
+                  Changelog Data Retention
+                </dt>
+                <dd className="w-1/3 px-2 text-right text-sm font-medium">
+                  {`${
                     user?.currentOrganization.limits
                       .changelogDataRetentionLimit || 7
-                  } days`}</TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell>Trace Sampling Rate</TableCell>
-                  <TableCell>{`${
+                  } days`}
+                </dd>
+              </div>
+              <div className="flex">
+                <dt className="flex-1 px-2 text-sm text-muted-foreground">
+                  Trace Sampling Rate
+                </dt>
+                <dd className="w-1/3 px-2 text-right text-sm font-medium">
+                  {`${
                     (user?.currentOrganization.limits.traceSamplingRateLimit ||
                       0.1) * 100
-                  }%`}</TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
-          </Card>
-        </div>
+                  }%`}
+                </dd>
+              </div>
+            </dl>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
 };
 
 UsagesPage.getLayout = (page) => {
-  return getDashboardLayout(page, "Usage", "View all your usages and limits.");
+  return getDashboardLayout(
+    page,
+    "Usage",
+    "Usage and limits of the current billing cycle",
+    <>
+      <Button asChild variant="outline">
+        <Link href={calURL} target="_blank" rel="noreferrer">
+          Increase limits
+        </Link>
+      </Button>
+    </>,
+  );
 };
 
 export default UsagesPage;

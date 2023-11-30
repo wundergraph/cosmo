@@ -3,7 +3,7 @@ type LogoProps = {
   height?: number;
 };
 
-export const Logo = ({ width = 40, height = 40 }: LogoProps) => {
+export const Logo = ({ width = 24, height = 24 }: LogoProps) => {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"

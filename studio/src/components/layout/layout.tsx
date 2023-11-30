@@ -1,4 +1,4 @@
-import { Nav } from "./nav";
+import { SideNav } from "./sidenav";
 
 export interface LayoutProps {
   children?: React.ReactNode;
@@ -6,8 +6,9 @@ export interface LayoutProps {
 
 export const Layout = ({ children }: LayoutProps) => {
   return (
-    <div className="mx-auto min-h-screen w-full max-w-screen-4xl bg-background font-sans antialiased">
-      <Nav>{children}</Nav>
+    <div className="mx-auto min-h-screen w-full bg-background font-sans antialiased">
+      <SideNav />
+      <main className="flex-1 pt-4 lg:pt-0">{children}</main>
     </div>
   );
 };

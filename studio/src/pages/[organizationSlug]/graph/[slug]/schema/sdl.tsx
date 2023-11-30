@@ -1,7 +1,10 @@
 import { CompositionErrorsBanner } from "@/components/composition-errors-banner";
-import { GraphContext, getGraphLayout } from "@/components/layout/graph-layout";
+import {
+  GraphContext,
+  GraphPageLayout,
+  getGraphLayout,
+} from "@/components/layout/graph-layout";
 import { PageHeader } from "@/components/layout/head";
-import { TitleLayout } from "@/components/layout/title-layout";
 import { CodeViewer, CodeViewerActions } from "@/components/code-viewer";
 import { SchemaToolbar } from "@/components/schema/toolbar";
 import {
@@ -113,9 +116,10 @@ const SDLPage: NextPageWithLayout = () => {
 
   return (
     <PageHeader title="Studio | SDL">
-      <TitleLayout
+      <GraphPageLayout
         title="SDL"
         subtitle="View the SDL of your federated graph and subgraphs"
+        noPadding
         toolbar={
           <SchemaToolbar tab="sdl">
             <div className="mt-2 flex flex-1 flex-row flex-wrap gap-2 md:mt-0">
@@ -164,17 +168,17 @@ const SDLPage: NextPageWithLayout = () => {
             errors={graphData?.graph?.compositionErrors}
           />
         )}
-        <div className="relative flex h-full min-h-[60vh] flex-col-reverse gap-y-4 md:flex-col">
+        <div className="relative flex h-full min-h-[60vh] flex-col-reverse  md:flex-col">
           <div
             id="schema-container"
-            className="scrollbar-custom flex-1 overflow-auto rounded border"
+            className="scrollbar-custom flex-1 overflow-auto"
           >
             <CodeViewer
               className="h-0 w-0"
               code={activeGraphWithSDL.sdl ?? ""}
             />
           </div>
-          <div className="flex w-full flex-col items-center justify-end gap-x-8 gap-y-1 rounded border bg-card p-2 text-xs md:flex-row md:border-none md:bg-transparent md:p-0">
+          <div className="flex w-full flex-col items-center justify-end gap-x-8 gap-y-1 border-t bg-card p-2 text-xs md:flex-row">
             <p className="flex items-center gap-x-1">
               Routing URL :
               <Link
@@ -194,7 +198,7 @@ const SDLPage: NextPageWithLayout = () => {
             )}
           </div>
         </div>
-      </TitleLayout>
+      </GraphPageLayout>
     </PageHeader>
   );
 };

@@ -1,10 +1,7 @@
 import { FieldUsageSheet } from "@/components/analytics/field-usage";
 import { ChangesTable } from "@/components/checks/changes-table";
-import { ChecksToolbar } from "@/components/checks/toolbar";
 import { EmptyState } from "@/components/empty-state";
-import { GraphContext, getGraphLayout } from "@/components/layout/graph-layout";
-import { PageHeader } from "@/components/layout/head";
-import { TitleLayout } from "@/components/layout/title-layout";
+import { GraphContext } from "@/components/layout/graph-layout";
 import { CodeViewer } from "@/components/code-viewer";
 import {
   Accordion,
@@ -25,7 +22,6 @@ import { Input } from "@/components/ui/input";
 import { Loader } from "@/components/ui/loader";
 import { useToast } from "@/components/ui/use-toast";
 import { formatDateTime } from "@/lib/format-date";
-import { NextPageWithLayout } from "@/lib/page";
 import {
   CheckCircleIcon,
   ExclamationTriangleIcon,
@@ -124,7 +120,7 @@ const OperationContentDialog = ({ hash }: { hash: string }) => {
   );
 };
 
-const CheckOperationsPage: NextPageWithLayout = () => {
+export const CheckOperations = () => {
   const graphContext = useContext(GraphContext);
   const router = useRouter();
   const { toast } = useToast();
@@ -278,18 +274,3 @@ const CheckOperationsPage: NextPageWithLayout = () => {
     </div>
   );
 };
-
-CheckOperationsPage.getLayout = (page) =>
-  getGraphLayout(
-    <PageHeader title="Studio | Checks">
-      <TitleLayout
-        title="Check Operations"
-        subtitle="View all affected operations for this check run"
-        toolbar={<ChecksToolbar tab="operations" />}
-      >
-        {page}
-      </TitleLayout>
-    </PageHeader>,
-  );
-
-export default CheckOperationsPage;

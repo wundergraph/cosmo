@@ -1,8 +1,9 @@
 import Trace from "@/components/analytics/trace";
 import { EmptyState } from "@/components/empty-state";
-import { getGraphLayout } from "@/components/layout/graph-layout";
-import { PageHeader } from "@/components/layout/head";
-import { TitleLayout } from "@/components/layout/title-layout";
+import {
+  GraphPageLayout,
+  getGraphLayout,
+} from "@/components/layout/graph-layout";
 import { CodeViewer } from "@/components/code-viewer";
 import { Button } from "@/components/ui/button";
 import { Loader } from "@/components/ui/loader";
@@ -25,7 +26,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-const TracePage: NextPageWithLayout = () => {
+export const TracePage: NextPageWithLayout = () => {
   const { query } = useRouter();
   const organizationSlug = query.organizationSlug as string;
   const slug = query.slug as string;
@@ -111,15 +112,16 @@ const TraceToolbar = () => {
 
 TracePage.getLayout = (page) =>
   getGraphLayout(
-    <PageHeader title="Analytics | Trace">
-      <TitleLayout
-        title="Analytics"
-        subtitle="Comprehensive view into Federated GraphQL Performance"
-        toolbar={<TraceToolbar />}
-      >
-        {page}
-      </TitleLayout>
-    </PageHeader>,
+    <GraphPageLayout
+      title="Analytics"
+      subtitle="Comprehensive view into Federated GraphQL Performance"
+      toolbar={<TraceToolbar />}
+    >
+      {page}
+    </GraphPageLayout>,
+    {
+      title: "Analytics",
+    },
   );
 
 export default TracePage;

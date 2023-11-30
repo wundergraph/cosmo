@@ -3,11 +3,12 @@ import {
   getCheckIcon,
   isCheckSuccessful,
 } from "@/components/check-badge-icon";
-import { ChecksToolbar } from "@/components/checks/toolbar";
 import { EmptyState } from "@/components/empty-state";
-import { GraphContext, getGraphLayout } from "@/components/layout/graph-layout";
-import { PageHeader } from "@/components/layout/head";
-import { TitleLayout } from "@/components/layout/title-layout";
+import {
+  GraphContext,
+  GraphPageLayout,
+  getGraphLayout,
+} from "@/components/layout/graph-layout";
 import { CodeViewer, CodeViewerActions } from "@/components/code-viewer";
 import {
   AlertDialog,
@@ -21,26 +22,18 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { Loader } from "@/components/ui/loader";
-import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 import { useToast } from "@/components/ui/use-toast";
-import { formatDateTime } from "@/lib/format-date";
+import { formatDate, formatDateTime } from "@/lib/format-date";
 import { NextPageWithLayout } from "@/lib/page";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
-import { CubeIcon, DashIcon, MinusIcon, PlusIcon } from "@radix-ui/react-icons";
+import {
+  CheckCircledIcon,
+  CubeIcon,
+  DashIcon,
+  ReaderIcon,
+  UpdateIcon,
+} from "@radix-ui/react-icons";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
@@ -48,34 +41,53 @@ import {
   getCheckSummary,
   getFederatedGraphs,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { subDays } from "date-fns";
-import Link from "next/link";
+import { formatDistanceToNow, subDays } from "date-fns";
+import { Link } from "@/components/ui/link";
 import { useRouter } from "next/router";
-import React, { useContext } from "react";
-import { PiGraphLight } from "react-icons/pi";
+import React, { useContext, useMemo } from "react";
+import { PiBracketsCurlyBold, PiGraphLight } from "react-icons/pi";
 import { InfoTooltip } from "@/components/info-tooltip";
 import { Badge } from "@/components/ui/badge";
+import { useSessionStorage } from "@/hooks/use-session-storage";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { ChangesTable } from "@/components/checks/changes-table";
+import { FieldUsageSheet } from "@/components/analytics/field-usage";
+import { CheckOperations } from "@/components/checks/operations";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
-const ProposedSchema = ({
-  sdl,
-  subgraphName,
-}: {
-  sdl: string;
-  subgraphName: string;
-}) => {
+const ForceSuccess: React.FC<{ onSubmit: () => void }> = (props) => {
   return (
-    <Dialog>
-      <DialogTrigger className="text-primary">View</DialogTrigger>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>Schema</DialogTitle>
-        </DialogHeader>
-        <div className="scrollbar-custom h-[70vh] overflow-auto rounded border">
-          <CodeViewer code={sdl} disableLinking />
-        </div>
-        <CodeViewerActions code={sdl} subgraphName={subgraphName} />
-      </DialogContent>
-    </Dialog>
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button
+          className="flex-shrink-0 space-x-2"
+          variant="secondary"
+          size="sm"
+        >
+          <CheckCircledIcon /> <span>Force Success</span>
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This action cannot be undone. This will forcefully mark the check as
+            successful.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={props.onSubmit}>
+            Force Success
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 };
 
@@ -87,6 +99,7 @@ const CheckOverviewPage: NextPageWithLayout = () => {
   const organizationSlug = router.query.organizationSlug as string;
   const slug = router.query.slug as string;
   const id = router.query.checkId as string;
+  const tab = router.query.tab as string;
 
   const { data, isLoading, error, refetch } = useQuery({
     ...getCheckSummary.useQuery({
@@ -119,6 +132,31 @@ const CheckOverviewPage: NextPageWithLayout = () => {
       });
     },
   });
+
+  const [checksRoute] = useSessionStorage<string | undefined>(
+    "checks.route",
+    undefined,
+  );
+
+  const changeCounts = useMemo(() => {
+    let additions = 0;
+    let deletions = 0;
+    for (const log of data?.changes ?? []) {
+      if (log.changeType.includes("REMOVED")) {
+        deletions += 1;
+      } else if (log.changeType.includes("ADDED")) {
+        additions += 1;
+      } else if (log.changeType.includes("CHANGED")) {
+        additions += 1;
+        deletions += 1;
+      }
+    }
+
+    return {
+      additions,
+      deletions,
+    };
+  }, [data?.changes]);
 
   if (isLoading) return <Loader fullscreen />;
 
@@ -156,237 +194,376 @@ const CheckOverviewPage: NextPageWithLayout = () => {
     ? "No operations were affected by breaking changes"
     : "All tasks were successful";
 
+  const setTab = (tab: string) => {
+    const query: Record<string, any> = {
+      ...router.query,
+      tab,
+    };
+
+    if (tab === "changes") {
+      delete query.tab;
+    }
+
+    router.push({
+      pathname: router.pathname,
+      query,
+    });
+  };
+
   return (
-    <div className="flex flex-col gap-y-6">
-      <div className="flex flex-col gap-y-2">
-        <h3 className="mb-2 text-xl font-semibold">Overview</h3>
-
-        <div className="flex items-center gap-x-4">
-          <span className="w-24 flex-shrink-0 md:w-36">Status</span> :
-          {getCheckBadge(isSuccessful, data.check.isForcedSuccess)}
-        </div>
-
-        <div className="flex gap-x-4">
-          <span className="w-24 flex-shrink-0 md:w-36">Reason</span> :
-          <p>{reason}</p>
-        </div>
-
-        <div className="flex items-center gap-x-4">
-          <span className="w-24 flex-shrink-0 md:w-36">Action</span> :
-          {data.check.isDeleted ? (
-            <Badge variant="outline">Delete subgraph</Badge>
-          ) : (
-            <Badge variant="outline">Update schema</Badge>
-          )}
-        </div>
-
-        <div className="flex gap-x-4">
-          <span className="w-24 flex-shrink-0 md:w-36">Subgraph</span> :
-          <Link
-            key={id}
-            href={`/${organizationSlug}/graph/${slug}/schema/sdl?subgraph=${data.check.subgraphName}`}
-            className="text-primary"
-          >
-            <div className="flex items-center gap-x-1">
-              <CubeIcon />
-              {data.check.subgraphName}
+    <GraphPageLayout
+      title={id}
+      subtitle="A quick glance of the details for this check run"
+      breadcrumbs={[
+        <Link
+          key={0}
+          href={checksRoute || `/${organizationSlug}/graph/${slug}/checks`}
+        >
+          Checks
+        </Link>,
+      ]}
+      noPadding
+    >
+      <div className="flex h-full flex-col">
+        <div className="flex-shrink-0 overflow-x-auto border-b scrollbar-thin">
+          <dl className="flex w-full flex-row gap-y-2 space-x-4 px-4 py-4 text-sm lg:px-8">
+            <div className="flex-start flex max-w-[100px] flex-1 flex-col gap-1">
+              <dt className="text-sm text-muted-foreground">Status</dt>
+              <dd>{getCheckBadge(isSuccessful, data.check.isForcedSuccess)}</dd>
             </div>
-          </Link>
-        </div>
 
-        {data.affectedGraphs.length > 0 && (
-          <div className="flex items-start gap-x-4">
-            <span className="w-24 flex-shrink-0 md:w-36">Affected Graphs</span>{" "}
-            :
-            <div className="flex flex-wrap items-center gap-2">
-              {data.affectedGraphs.map((ag) => {
-                const graph = allGraphsData?.graphs.find((g) => g.id === ag.id);
-
-                if (!graph) return null;
-
-                return (
-                  <Link
-                    key={ag.id}
-                    href={`/${organizationSlug}/graph/${graph.name}`}
-                    className="text-primary"
-                  >
-                    <div className="flex items-center gap-x-1">
-                      <PiGraphLight />
-                      {graph.name}
-                    </div>
-                  </Link>
-                );
-              })}
+            <div className="flex-start flex-1 flex-col gap-1 lg:flex">
+              <dt className="text-sm text-muted-foreground">Reason</dt>
+              <dd className="whitespace-nowrap">{reason}</dd>
             </div>
-          </div>
-        )}
 
-        {!data.check.isDeleted && (
-          <div className="flex items-center gap-x-4">
-            <span className="w-24 flex-shrink-0 md:w-36">Proposed Schema</span>{" "}
-            :
-            <ProposedSchema sdl={sdl} subgraphName={data.check.subgraphName} />
-          </div>
-        )}
+            <div className="flex-start flex max-w-[200px] flex-1 flex-col gap-1">
+              <dt className="text-sm text-muted-foreground">Action</dt>
+              <dd className="whitespace-nowrap">
+                {data.check.isDeleted ? "Delete subgraph" : "Update schema"}
+              </dd>
+            </div>
 
-        <div className="flex gap-x-4">
-          <span className="w-24 flex-shrink-0 md:w-36">Created At</span> :
-          <p>{formatDateTime(new Date(data.check.timestamp))}</p>
-        </div>
-      </div>
-      <div className="flex flex-col">
-        <h3 className="text-xl font-semibold">Tasks</h3>
-        <div className="mt-4 md:w-96">
-          <Table>
-            <TableBody>
-              <TableRow>
-                <TableCell>
-                  <div className="flex items-center space-x-1.5">
-                    <div>Composition Check</div>
-                    <InfoTooltip>
-                      Describes if the proposed schema can be composed with all
-                      other subgraphs in the federated graph.
-                    </InfoTooltip>
+            <div className="flex-start flex max-w-[200px] flex-1 flex-col gap-1 ">
+              <dt className="text-sm text-muted-foreground">Subgraph</dt>
+              <dd>
+                <Link
+                  key={id}
+                  href={`/${organizationSlug}/graph/${slug}/schema/sdl?subgraph=${data.check.subgraphName}`}
+                >
+                  <div className="flex items-center gap-x-1">
+                    <CubeIcon />
+                    {data.check.subgraphName}
                   </div>
-                </TableCell>
+                </Link>
+              </dd>
+            </div>
 
-                <TableCell className="border-l text-center">
+            <div className="flex-start flex max-w-[200px] flex-1 flex-col gap-1 ">
+              <dt className="text-sm text-muted-foreground">Executed</dt>
+              <dd className="whitespace-nowrap text-sm">
+                <Tooltip>
+                  <TooltipTrigger>
+                    {formatDistanceToNow(new Date(data.check.timestamp), {
+                      addSuffix: true,
+                    })}
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {formatDateTime(new Date(data.check.timestamp))}
+                  </TooltipContent>
+                </Tooltip>
+              </dd>
+            </div>
+          </dl>
+        </div>
+        <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
+          <dl className="grid flex-shrink-0 grid-cols-3 space-y-6 overflow-hidden border-b px-4 py-4 lg:block lg:min-h-full lg:w-[240px] lg:space-y-8 lg:overflow-auto lg:border-b-0 lg:border-r lg:px-6 xl:w-[260px]">
+            <div className="col-span-3 flex flex-col">
+              <dt className="mb-2 text-sm text-muted-foreground">Tasks</dt>
+              <dd className="grid grid-cols-3 flex-row gap-2 lg:flex lg:flex-col">
+                <Badge
+                  variant="outline"
+                  className="flex items-center space-x-1.5 py-2"
+                >
                   {getCheckIcon(data.check.isComposable)}
-                </TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell>
-                  <div className="flex items-center space-x-1.5">
-                    <div>Breaking Change Detection</div>
-                    <InfoTooltip>
-                      Describes if the proposed schema is free of changes that
-                      break existing client operations.
-                    </InfoTooltip>
-                  </div>
-                </TableCell>
-                <TableCell className="border-l text-center">
+                  <span className="flex-1 truncate">Composition</span>
+                  <InfoTooltip>
+                    Describes if the proposed schema can be composed with all
+                    other subgraphs in the federated graph.
+                  </InfoTooltip>
+                </Badge>
+
+                <Badge
+                  variant="outline"
+                  className="flex items-center space-x-1.5  py-2"
+                >
                   {getCheckIcon(!data.check.isBreaking)}
-                </TableCell>
-              </TableRow>
-              {data.check.isBreaking && (
-                <TableRow>
-                  <TableCell>
-                    <div className="flex items-center space-x-1.5">
-                      <div>Operations Check</div>
-                      <InfoTooltip>
-                        Describes if the proposed schema affects any client
-                        operations based on real usage data.
-                      </InfoTooltip>
-                    </div>
-                  </TableCell>
-                  <TableCell className="border-l text-center">
+                  <span className="flex-1 truncate">Breaking Changes</span>
+                  <InfoTooltip>
+                    Describes if the proposed schema is free of changes that
+                    break existing client operations.
+                  </InfoTooltip>
+                </Badge>
+
+                {data.check.isBreaking && (
+                  <Badge
+                    variant="outline"
+                    className="flex items-center space-x-1.5  py-2"
+                  >
                     {getCheckIcon(!data.check.hasClientTraffic)}
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </div>
-      {data.changeCounts && (
-        <div className="flex flex-col">
-          <h3 className="mb-4 text-xl font-semibold">Changes</h3>
-          <div>
-            <div className="flex items-center gap-x-1">
-              <PlusIcon className="text-success" />
-              <p className="text-sm text-success">
-                {data.changeCounts.additions} additions
-              </p>
+                    <span className="flex-1 truncate">Operations</span>
+                    <InfoTooltip>
+                      Describes if the proposed schema affects any client
+                      operations based on real usage data.
+                    </InfoTooltip>
+                  </Badge>
+                )}
+              </dd>
             </div>
-            <div className="flex items-center gap-x-1">
-              <MinusIcon className="text-destructive" />
-              <p className="text-sm text-destructive">
-                {data.changeCounts.deletions} deletions
-              </p>
-            </div>
+
+            {data.affectedGraphs.length > 0 && (
+              <div className="flex-start flex flex-col gap-1">
+                <dt className="text-sm text-muted-foreground">
+                  Affected Graphs
+                </dt>
+                <dd className="flex flex-wrap items-center gap-2">
+                  {data.affectedGraphs.map((ag) => {
+                    const graph = allGraphsData?.graphs.find(
+                      (g) => g.id === ag.id,
+                    );
+
+                    if (!graph) return null;
+
+                    return (
+                      <Link
+                        key={ag.id}
+                        href={`/${organizationSlug}/graph/${graph.name}`}
+                        className="flex items-center gap-x-1 text-sm"
+                      >
+                        <PiGraphLight />
+                        {graph.name}
+                      </Link>
+                    );
+                  })}
+                </dd>
+              </div>
+            )}
+
+            {changeCounts && (
+              <div className="flex flex-col">
+                <dt className="mb-2 text-sm text-muted-foreground">Changes</dt>
+                <dd>
+                  <div className="flex items-center">
+                    <p className="text-sm">
+                      <span className="font-bold text-success">
+                        +{changeCounts.additions}
+                      </span>{" "}
+                      additions
+                    </p>
+                  </div>
+                  <div className="flex items-center">
+                    <p className="text-sm">
+                      <span className="font-bold text-destructive">
+                        -{changeCounts.deletions}
+                      </span>{" "}
+                      deletions
+                    </p>
+                  </div>
+                </dd>
+              </div>
+            )}
+            {currentAffectedGraph && (
+              <div className="flex flex-col">
+                <dt className="mb-2 text-sm text-muted-foreground">
+                  Timeframe checked
+                </dt>
+                <dd className="flex items-center gap-x-2 text-sm">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="truncate whitespace-nowrap">
+                        {formatDate(
+                          subDays(
+                            new Date(data.check.timestamp),
+                            currentAffectedGraph.trafficCheckDays,
+                          ),
+                          {
+                            dateStyle: "short",
+                          },
+                        )}
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {formatDateTime(
+                        subDays(
+                          new Date(data.check.timestamp),
+                          currentAffectedGraph.trafficCheckDays,
+                        ),
+                      )}
+                    </TooltipContent>
+                  </Tooltip>
+                  -
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="truncate whitespace-nowrap">
+                        {formatDate(new Date(data.check.timestamp), {
+                          dateStyle: "short",
+                        })}
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {formatDateTime(new Date(data.check.timestamp))}
+                    </TooltipContent>
+                  </Tooltip>
+                </dd>
+              </div>
+            )}
+          </dl>
+          <div className="h-full flex-1">
+            <Tabs
+              value={tab ?? "changes"}
+              className="flex h-full min-h-0 flex-col"
+            >
+              <div className="flex flex-row px-4 py-4 lg:px-6">
+                <TabsList>
+                  <TabsTrigger
+                    value="changes"
+                    className="flex items-center gap-x-2"
+                    asChild
+                  >
+                    <Link href={{ query: { ...router.query, tab: "changes" } }}>
+                      <UpdateIcon />
+                      Changes{" "}
+                      {data.changes.length ? (
+                        <Badge
+                          variant="muted"
+                          className="bg-white px-1.5 text-current dark:bg-gray-900/60"
+                        >
+                          {data.changes.length}
+                        </Badge>
+                      ) : null}
+                    </Link>
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="operations"
+                    className="flex items-center gap-x-2"
+                    asChild
+                  >
+                    <Link
+                      href={{ query: { ...router.query, tab: "operations" } }}
+                    >
+                      <PiBracketsCurlyBold className="flex-shrink-0" />
+                      Operations
+                    </Link>
+                  </TabsTrigger>
+                  {!data.check.isDeleted && (
+                    <TabsTrigger
+                      value="schema"
+                      onClick={() => setTab("schema")}
+                      className="flex items-center gap-x-2"
+                      asChild
+                    >
+                      <Link
+                        href={{ query: { ...router.query, tab: "schema" } }}
+                      >
+                        <ReaderIcon />
+                        Schema
+                      </Link>
+                    </TabsTrigger>
+                  )}
+                </TabsList>
+              </div>
+              <div className="flex min-h-0 flex-1">
+                <TabsContent
+                  value="changes"
+                  className="w-full space-y-4 px-4 lg:px-6"
+                >
+                  {data.compositionErrors?.length ? (
+                    <Alert variant="destructive">
+                      <AlertTitle>Composition Errors</AlertTitle>
+                      <AlertDescription>
+                        <pre className="">
+                          {data.compositionErrors.length > 0
+                            ? data.compositionErrors.join("\n")
+                            : "No composition errors"}
+                        </pre>
+                      </AlertDescription>
+                    </Alert>
+                  ) : null}
+                  {data.check.isBreaking &&
+                  data.check.isComposable &&
+                  data.check.hasClientTraffic ? (
+                    <Alert variant="default">
+                      <CheckCircledIcon className="h-4 w-4" />
+
+                      <AlertTitle>
+                        {data.check.isForcedSuccess
+                          ? "Forced Success"
+                          : "Checks Failed"}
+                      </AlertTitle>
+                      <AlertDescription>
+                        {data.check.isForcedSuccess ? (
+                          <>This check was manually marked as successful.</>
+                        ) : (
+                          <>
+                            The proposed schema changes can be composed, but
+                            there are breaking changes affecting client
+                            operations.
+                            <br />
+                            You can manually override the state of this check to
+                            accept the changes.
+                          </>
+                        )}
+                      </AlertDescription>
+                      {data.check.isForcedSuccess ? (
+                        <div className="mt-2 flex space-x-2">
+                          <ForceSuccess
+                            onSubmit={() =>
+                              forceSuccess({
+                                checkId: id,
+                                graphName: slug,
+                              })
+                            }
+                          />
+                        </div>
+                      ) : null}
+                    </Alert>
+                  ) : null}
+                  <ChangesTable
+                    changes={data.changes}
+                    caption={`${data.changes.length} changes found`}
+                    trafficCheckDays={data.trafficCheckDays}
+                    createdAt={data.check.timestamp}
+                  />
+                  <FieldUsageSheet />
+                </TabsContent>
+                <TabsContent value="operations" className="w-full">
+                  <CheckOperations />
+                </TabsContent>
+                <TabsContent value="schema" className="relative w-full flex-1">
+                  <div className="absolute right-8 top-5">
+                    <CodeViewerActions
+                      code={sdl}
+                      subgraphName={data.check.subgraphName}
+                      size="sm"
+                      variant="outline"
+                    />
+                  </div>
+                  <div className="scrollbar-custom h-full w-full">
+                    <CodeViewer code={sdl} disableLinking />
+                  </div>
+                </TabsContent>
+              </div>
+            </Tabs>
           </div>
         </div>
-      )}
-      {currentAffectedGraph && (
-        <div className="flex flex-col">
-          <h3 className="mb-4 text-xl font-semibold">Timeframe checked</h3>
-          <p className="flex items-center gap-x-2 text-muted-foreground">
-            {formatDateTime(
-              subDays(
-                new Date(data.check.timestamp),
-                currentAffectedGraph.trafficCheckDays,
-              ),
-            )}
-            <DashIcon />
-            {formatDateTime(new Date(data.check.timestamp))}
-          </p>
-        </div>
-      )}
-      {!data.check.isForcedSuccess &&
-        data.check.isBreaking &&
-        data.check.isComposable && (
-          <>
-            <hr />
-            <Card>
-              <CardHeader className="gap-y-6 md:flex-row">
-                <div className="space-y-1.5">
-                  <CardTitle>Override</CardTitle>
-                  <CardDescription>
-                    Manually set the state of the check to be successful.
-                    Affects GitHub commit check if integrated.
-                  </CardDescription>
-                </div>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      className="flex-shrink-0 md:ml-auto"
-                      variant="secondary"
-                    >
-                      Force Success
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        This action cannot be undone. This will forcefully mark
-                        the check as successful.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={() => {
-                          forceSuccess({
-                            checkId: id,
-                            graphName: graphContext.graph?.name,
-                          });
-                        }}
-                      >
-                        Force Success
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </CardHeader>
-            </Card>
-          </>
-        )}
-    </div>
+      </div>
+    </GraphPageLayout>
   );
 };
 
 CheckOverviewPage.getLayout = (page) =>
-  getGraphLayout(
-    <PageHeader title="Studio | Checks">
-      <TitleLayout
-        title="Check Summary"
-        subtitle="A quick glance of the details for this check run"
-        toolbar={<ChecksToolbar tab="overview" />}
-      >
-        {page}
-      </TitleLayout>
-    </PageHeader>,
-  );
+  getGraphLayout(page, {
+    title: "Check Summary",
+  });
 
 export default CheckOverviewPage;
