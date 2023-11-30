@@ -44,6 +44,9 @@ create-docker-demo:
 create-demo:
 	cd scripts && ./create-local-demo.sh
 
+delete-demo:
+	cd scripts && ./delete-local-demo.sh
+
 dev-setup: prerequisites
 	pnpm install
 	pnpm generate

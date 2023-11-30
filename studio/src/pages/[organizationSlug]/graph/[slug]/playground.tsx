@@ -17,10 +17,18 @@ import { PiBracketsCurly } from "react-icons/pi";
 
 const graphiQLFetch = async (
   onFetch: any,
-  ...args: [input: RequestInfo | URL, init?: RequestInit | undefined]
+  graphRequestToken: string,
+  url: URL,
+  init: RequestInit,
 ) => {
   try {
-    const response = await fetch(...args);
+    const response = await fetch(url, {
+      ...init,
+      headers: {
+        ...init.headers,
+        "X-WG-Token": graphRequestToken,
+      },
+    });
     onFetch(await response.clone().json());
     return response;
   } catch (e) {
@@ -195,7 +203,13 @@ const PlaygroundPage: NextPageWithLayout = () => {
     return createGraphiQLFetcher({
       url: url,
       subscriptionUrl: url.replace("http", "ws"),
-      fetch: (...args) => graphiQLFetch(onFetch, ...args),
+      fetch: (...args) =>
+        graphiQLFetch(
+          onFetch,
+          graphContext?.graphRequestToken!,
+          args[0] as URL,
+          args[1] as RequestInit,
+        ),
     });
   }, [graphContext?.graph?.routingURL]);
 

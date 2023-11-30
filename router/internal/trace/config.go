@@ -1,6 +1,7 @@
 package trace
 
 import (
+	"net/url"
 	"time"
 
 	"github.com/wundergraph/cosmo/router/internal/otel/otelconfig"
@@ -10,6 +11,7 @@ import (
 const ServerName = "cosmo-router"
 
 type Exporter struct {
+	Disabled bool
 	Endpoint string
 
 	Exporter      otelconfig.Exporter
@@ -35,6 +37,26 @@ type Config struct {
 	Exporters []*Exporter
 }
 
+func GetDefaultExporter(cfg *Config) *Exporter {
+	for _, exporter := range cfg.Exporters {
+		if exporter.Disabled {
+			continue
+		}
+		u, err := url.Parse(exporter.Endpoint)
+		if err != nil {
+			continue
+		}
+		u2, err := url.Parse(otelconfig.DefaultEndpoint())
+		if err != nil {
+			continue
+		}
+		if u.Host == u2.Host {
+			return exporter
+		}
+	}
+	return nil
+}
+
 // DefaultConfig returns the default config.
 func DefaultConfig() *Config {
 	return &Config{
@@ -43,7 +65,10 @@ func DefaultConfig() *Config {
 		Sampler: 1,
 		Exporters: []*Exporter{
 			{
+				Disabled:      false,
 				Endpoint:      "http://localhost:4318",
+				Exporter:      otelconfig.ExporterOLTPHTTP,
+				HTTPPath:      "/v1/traces",
 				BatchTimeout:  defaultBatchTimeout,
 				ExportTimeout: defaultExportTimeout,
 			},
