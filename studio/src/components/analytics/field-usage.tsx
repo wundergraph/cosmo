@@ -334,7 +334,6 @@ export const FieldUsageSheet = () => {
 
   const { range, dateRange } = useAnalyticsQueryState();
   const isNamedType = searchParams.get("isNamedType") === "true";
-  const isEnum = searchParams.get("isEnum") === "true";
   const showUsage = searchParams.get("showUsage");
 
   const [type, field] = showUsage?.split(".") ?? [];
@@ -343,8 +342,8 @@ export const FieldUsageSheet = () => {
 
   const { data, error, isLoading, refetch } = useQuery({
     ...getFieldUsage.useQuery({
-      field: isEnum ? undefined : field,
-      typename: isEnum ? field : isNamedType ? undefined : type,
+      field,
+      typename: isNamedType ? undefined : type,
       namedType: isNamedType ? type : undefined,
       graphName: graph?.graph?.name,
       range: range,
