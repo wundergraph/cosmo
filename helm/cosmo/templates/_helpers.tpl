@@ -8,6 +8,10 @@ Define the chart full names
 {{/*
 Define subcharts full names
 */}}
+{{- define "cdn.fullname" -}}
+{{- printf "%s-%s" .Release.Name "cdn" | replace "+" "_" | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+
 {{- define "postgresql.fullname" -}}
 {{- printf "%s-%s" .Release.Name "postgresql" | replace "+" "_" | trunc 63 | trimSuffix "-" -}}
 {{- end -}}

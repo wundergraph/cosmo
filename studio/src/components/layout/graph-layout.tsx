@@ -29,6 +29,7 @@ import { Button } from "../ui/button";
 import { Loader } from "../ui/loader";
 import { LayoutProps } from "./layout";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
+<<<<<<< HEAD
 import { UserContext } from "../app-provider";
 import { SideNav, NavLink } from "./sidenav";
 import { PageHeader } from "./head";
@@ -40,11 +41,26 @@ import {
   SelectValue,
 } from "../ui/select";
 import { cn } from "@/lib/utils";
+=======
+import { MdDevices } from "react-icons/md";
+
+const icons: { [key: string]: ReactNode } = {
+  Overview: <HomeIcon />,
+  Subgraphs: <Component2Icon />,
+  Explorer: <PlayIcon />,
+  Schema: <FileTextIcon />,
+  Changelog: <PiGitBranch />,
+  Checks: <CheckCircledIcon />,
+  Analytics: <ChartBarIcon className="h-4 w-4" />,
+  Clients: <MdDevices className="h-4 w-4" />,
+};
+>>>>>>> origin/main
 
 export interface GraphContextProps {
   graph: GetFederatedGraphByNameResponse["graph"];
   subgraphs: GetFederatedGraphByNameResponse["subgraphs"];
   graphToken: string;
+  graphRequestToken: string;
 }
 
 export const GraphContext = createContext<GraphContextProps | undefined>(
@@ -55,7 +71,6 @@ export const GraphLayout = ({ children }: LayoutProps) => {
   const router = useRouter();
   const organizationSlug = router.query.organizationSlug as string;
   const slug = router.query.slug as string;
-  const user = useContext(UserContext);
 
   const { data, isLoading, error, refetch } = useQuery(
     getFederatedGraphByName.useQuery({
@@ -71,6 +86,7 @@ export const GraphLayout = ({ children }: LayoutProps) => {
       graph: data.graph,
       subgraphs: data.subgraphs,
       graphToken: data.graphToken,
+      graphRequestToken: data.graphRequestToken,
     };
   }, [data]);
 

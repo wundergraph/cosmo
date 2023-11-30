@@ -44,6 +44,9 @@ create-docker-demo:
 create-demo:
 	cd scripts && ./create-local-demo.sh
 
+delete-demo:
+	cd scripts && ./delete-local-demo.sh
+
 dev-setup: prerequisites
 	pnpm install
 	pnpm generate
@@ -116,5 +119,6 @@ docker-build-minikube: docker-build-local
 	minikube image load ghcr.io/wundergraph/cosmo/otelcollector:latest & \
 	minikube image load ghcr.io/wundergraph/cosmo/router:latest & \
 	minikube image load ghcr.io/wundergraph/cosmo/graphqlmetrics:latest & \
-	minikube image load ghcr.io/wundergraph/cosmo/keycloak:latest
+	minikube image load ghcr.io/wundergraph/cosmo/keycloak:latest & \
+	minikube image load ghcr.io/wundergraph/cosmo/cdn:latest
 	minikube cache reload

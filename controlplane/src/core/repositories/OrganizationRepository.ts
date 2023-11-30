@@ -13,7 +13,6 @@ import {
   apiKeys,
   integrationTypeEnum,
   organizationIntegrations,
-  organizationInvitations,
   organizationLimits,
   organizationMemberRoles,
   organizationWebhooks,
@@ -27,7 +26,6 @@ import {
 import {
   APIKeyDTO,
   OrganizationDTO,
-  OrganizationInvitationDTO,
   OrganizationLimitsDTO,
   OrganizationMemberDTO,
   WebhooksConfigDTO,
@@ -919,6 +917,7 @@ export class OrganizationRepository {
       })
       .from(organizationLimits)
       .where(eq(organizationLimits.organizationId, input.organizationID))
+      .limit(1)
       .execute();
 
     if (limits.length === 0) {
