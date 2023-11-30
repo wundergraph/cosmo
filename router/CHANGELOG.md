@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.42.2](https://github.com/wundergraph/cosmo/compare/router@0.42.1...router@0.42.2) (2023-11-30)
+
+### Bug Fixes
+
+* correct warning about supported router version ([86c3ca9](https://github.com/wundergraph/cosmo/commit/86c3ca9e4256e7c48b9c3a41af8e87a876fdecfb)) (@StarpTech)
+
 ## [0.42.1](https://github.com/wundergraph/cosmo/compare/router@0.42.0...router@0.42.1) (2023-11-30)
 
 ### Bug Fixes
