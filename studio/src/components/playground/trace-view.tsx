@@ -438,7 +438,7 @@ export const TraceView = () => {
       <EmptyState
         icon={<LuNetwork />}
         title="No trace found"
-        description="Include the below header before executing your queries. Router version 0.42.0 or above is required."
+        description="Include the below header before executing your queries. Router version 0.42.1 or above is required."
         actions={<CLI command={`"X-WG-TRACE" : "true"`} />}
       />
     );

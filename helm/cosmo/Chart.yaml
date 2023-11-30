@@ -53,6 +53,9 @@ dependencies:
   - name: graphqlmetrics
     version: "^0"
     condition: global.graphqlmetrics.enabled
+  - name: cdn
+    version: "^0"
+    condition: global.cdn.enabled
     # Only designed for development. For production use a managed Postgres / Keycloak / ClickHouse instance
   - name: postgresql
     version: "12.8.0"

@@ -857,7 +857,7 @@ export class FederatedGraphRepository {
 
     const ecPrivateKey = await importPKCS8(keys[0].privateKey, 'ES256');
 
-    return new SignJWT({ 'urn:example:claim': true })
+    return new SignJWT({})
       .setProtectedHeader({ alg: 'ES256' })
       .setIssuedAt()
       .setIssuer(input.organizationId)
