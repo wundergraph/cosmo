@@ -172,10 +172,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           routingUrl: req.routingUrl,
         });
 
-        await fedGraphRepo.createGraphCsrfKey({
+        await fedGraphRepo.createGraphCryptoKeyPairs({
           federatedGraphId: federatedGraph.id,
           organizationId: authContext.organizationId,
-          key: uid(32),
         });
 
         const subgraphs = await subgraphRepo.listByFederatedGraph(req.name, {
@@ -487,7 +486,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           return {
             subgraphs: [],
             graphToken: '',
-            graphCsrfKey: '',
+            graphRequestToken: '',
             response: {
               code: EnumStatusCode.ERR_NOT_FOUND,
               details: `Federated graph '${req.name}' not found`,
@@ -504,19 +503,19 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const list = await subgraphRepo.listByFederatedGraph(req.name, { published: true });
 
-        const routerCsrf = await fedRepo.getGraphCsrfKey({
+        const routerRequestToken = await fedRepo.getGraphSignedToken({
           federatedGraphId: federatedGraph.id,
           organizationId: authContext.organizationId,
         });
 
-        if (!routerCsrf) {
+        if (!routerRequestToken) {
           return {
             subgraphs: [],
             graphToken: '',
-            graphCsrfKey: '',
+            graphRequestToken: '',
             response: {
               code: EnumStatusCode.ERR,
-              details: 'Graph CSRF key not found',
+              details: 'Router Request token not found',
             },
           };
         }
@@ -568,7 +567,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             labels: g.labels,
           })),
           graphToken: graphToken.token,
-          graphCsrfKey: routerCsrf.key,
+          graphRequestToken: routerRequestToken,
           response: {
             code: EnumStatusCode.OK,
           },

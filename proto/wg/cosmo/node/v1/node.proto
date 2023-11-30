@@ -44,12 +44,8 @@ message GetConfigResponse {
 }
 
 message RegistrationInfo {
-    AccountLimits accountLimits = 1;
-    CsrfInfo csrf = 2;
-}
-
-message CsrfInfo {
-  string key = 1;
+  AccountLimits account_limits = 1;
+  string graph_public_key = 2;
 }
 
 message AccountLimits {

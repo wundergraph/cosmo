@@ -37,16 +37,16 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof NodeSe
           };
         }
 
-        const routerCsrf = await fedRepo.getGraphCsrfKey({
+        const publicKey = await fedRepo.getGraphPublicKey({
           federatedGraphId: authContext.federatedGraphId,
           organizationId: authContext.organizationId,
         });
 
-        if (!routerCsrf) {
+        if (!publicKey) {
           return {
             response: {
               code: EnumStatusCode.ERR,
-              details: 'Graph CSRF key not found',
+              details: 'Graph public key not found',
             },
           };
         }
@@ -59,9 +59,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof NodeSe
           accountLimits: {
             traceSamplingRate: org.traceSamplingRateLimit,
           },
-          csrf: {
-            key: routerCsrf.key,
-          },
+          graphPublicKey: publicKey,
         };
 
         registrationInfoCache.set(authContext.federatedGraphId, registrationInfo);

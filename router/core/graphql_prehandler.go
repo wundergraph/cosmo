@@ -1,10 +1,10 @@
 package core
 
 import (
-	"crypto/hmac"
-	"crypto/sha256"
-	"encoding/hex"
+	"crypto/ecdsa"
 	"errors"
+	"fmt"
+	"github.com/golang-jwt/jwt/v5"
 	"net/http"
 	"time"
 
@@ -24,7 +24,7 @@ type PreHandlerOptions struct {
 	Planner              *OperationPlanner
 	AccessController     *AccessController
 	DevelopmentMode      bool
-	CSRFKey              string
+	RouterPublicKey      *ecdsa.PublicKey
 	EnableRequestTracing bool
 }
 
@@ -36,7 +36,7 @@ type PreHandler struct {
 	planner              *OperationPlanner
 	accessController     *AccessController
 	developmentMode      bool
-	csrfKey              []byte
+	routerPublicKey      *ecdsa.PublicKey
 	enableRequestTracing bool
 }
 
@@ -48,7 +48,7 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 		parser:               opts.Parser,
 		planner:              opts.Planner,
 		accessController:     opts.AccessController,
-		csrfKey:              []byte(opts.CSRFKey),
+		routerPublicKey:      opts.RouterPublicKey,
 		developmentMode:      opts.DevelopmentMode,
 		enableRequestTracing: opts.EnableRequestTracing,
 	}
@@ -93,17 +93,14 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		}
 
 		if h.enableRequestTracing {
-
-			if clientInfo.CSRFToken != "" {
-				hmacHasher := hmac.New(sha256.New, h.csrfKey)
-				hmacHasher.Write(body)
-				signature := hex.EncodeToString(hmacHasher.Sum(nil))
-
-				if signature != clientInfo.CSRFToken {
-					err := errors.New("invalid csrf token")
+			if clientInfo.WGRequestToken != "" && h.routerPublicKey != nil {
+				_, err = jwt.Parse(clientInfo.WGRequestToken, func(token *jwt.Token) (interface{}, error) {
+					return h.routerPublicKey, nil
+				}, jwt.WithValidMethods([]string{jwt.SigningMethodES256.Name}))
+				if err != nil {
 					hasRequestError = true
-					requestLogger.Error(err.Error())
-					writeRequestErrors(r, http.StatusForbidden, graphql.RequestErrorsFromError(err), w, requestLogger)
+					requestLogger.Error(fmt.Sprintf("failed to parse request token: %s", err.Error()))
+					writeRequestErrors(r, http.StatusForbidden, graphql.RequestErrorsFromError(errors.New("invalid request token")), w, requestLogger)
 					return
 				}
 

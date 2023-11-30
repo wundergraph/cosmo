@@ -11,33 +11,22 @@ import { GraphiQL } from "graphiql";
 import { useTheme } from "next-themes";
 import { useRouter } from "next/router";
 import { useContext, useEffect, useMemo, useState } from "react";
-import crypto from "crypto";
 import { createPortal } from "react-dom";
 import { FaNetworkWired } from "react-icons/fa";
 import { PiBracketsCurly } from "react-icons/pi";
 
-function createSignature(body: Uint8Array, secret: Uint8Array) {
-  return crypto.createHmac("sha256", secret).update(body).digest("hex");
-}
-
 const graphiQLFetch = async (
   onFetch: any,
-  graphCsrfKey: string,
+  graphRequestToken: string,
   url: URL,
   init: RequestInit,
 ) => {
   try {
-    const enc = new TextEncoder();
-    const sign = createSignature(
-      enc.encode(init.body as string),
-      enc.encode(graphCsrfKey),
-    );
-
     const response = await fetch(url, {
       ...init,
       headers: {
         ...init.headers,
-        "X-WG-CSRF": sign,
+        "X-WG-Token": graphRequestToken,
       },
     });
     onFetch(await response.clone().json());
@@ -217,7 +206,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
       fetch: (...args) =>
         graphiQLFetch(
           onFetch,
-          graphContext?.graphCsrfKey!,
+          graphContext?.graphRequestToken!,
           args[0] as URL,
           args[1] as RequestInit,
         ),

@@ -2,8 +2,10 @@ package core
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"errors"
 	"fmt"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/wundergraph/cosmo/router/internal/controlplane/configpoller"
 	"github.com/wundergraph/cosmo/router/internal/controlplane/selfregister"
 	"net"
@@ -216,7 +218,8 @@ func NewRouter(opts ...Option) (*Router, error) {
 		"apollographql-client-name",
 		"apollographql-client-version",
 		"x-wg-trace",
-		"x-wg-csrf",
+		"x-wg-token",
+		"authorization",
 	}
 
 	defaultMethods := []string{
@@ -796,6 +799,15 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 
 	routerMetrics := NewRouterMetrics(metricStore, r.gqlMetricsExporter, routerConfig.GetVersion())
 
+	var publicKey *ecdsa.PublicKey
+
+	if r.registrationInfo != nil {
+		publicKey, err = jwt.ParseECPublicKeyFromPEM([]byte(r.registrationInfo.GetGraphPublicKey()))
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse router public key: %w", err)
+		}
+	}
+
 	graphqlPreHandler := NewPreHandler(&PreHandlerOptions{
 		Logger:               r.logger,
 		Executor:             executor,
@@ -803,7 +815,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		Parser:               operationParser,
 		Planner:              operationPlanner,
 		AccessController:     r.accessController,
-		CSRFKey:              r.registrationInfo.GetCsrf().GetKey(),
+		RouterPublicKey:      publicKey,
 		EnableRequestTracing: r.engineExecutionConfiguration.EnableRequestTracing,
 		DevelopmentMode:      r.developmentMode,
 	})

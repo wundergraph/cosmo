@@ -422,14 +422,14 @@ export class GetConfigResponse extends Message<GetConfigResponse> {
  */
 export class RegistrationInfo extends Message<RegistrationInfo> {
   /**
-   * @generated from field: wg.cosmo.node.v1.AccountLimits accountLimits = 1;
+   * @generated from field: wg.cosmo.node.v1.AccountLimits account_limits = 1;
    */
   accountLimits?: AccountLimits;
 
   /**
-   * @generated from field: wg.cosmo.node.v1.CsrfInfo csrf = 2;
+   * @generated from field: string graph_public_key = 2;
    */
-  csrf?: CsrfInfo;
+  graphPublicKey = "";
 
   constructor(data?: PartialMessage<RegistrationInfo>) {
     super();
@@ -439,8 +439,8 @@ export class RegistrationInfo extends Message<RegistrationInfo> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "wg.cosmo.node.v1.RegistrationInfo";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "accountLimits", kind: "message", T: AccountLimits },
-    { no: 2, name: "csrf", kind: "message", T: CsrfInfo },
+    { no: 1, name: "account_limits", kind: "message", T: AccountLimits },
+    { no: 2, name: "graph_public_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RegistrationInfo {
@@ -457,43 +457,6 @@ export class RegistrationInfo extends Message<RegistrationInfo> {
 
   static equals(a: RegistrationInfo | PlainMessage<RegistrationInfo> | undefined, b: RegistrationInfo | PlainMessage<RegistrationInfo> | undefined): boolean {
     return proto3.util.equals(RegistrationInfo, a, b);
-  }
-}
-
-/**
- * @generated from message wg.cosmo.node.v1.CsrfInfo
- */
-export class CsrfInfo extends Message<CsrfInfo> {
-  /**
-   * @generated from field: string key = 1;
-   */
-  key = "";
-
-  constructor(data?: PartialMessage<CsrfInfo>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.node.v1.CsrfInfo";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CsrfInfo {
-    return new CsrfInfo().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CsrfInfo {
-    return new CsrfInfo().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CsrfInfo {
-    return new CsrfInfo().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: CsrfInfo | PlainMessage<CsrfInfo> | undefined, b: CsrfInfo | PlainMessage<CsrfInfo> | undefined): boolean {
-    return proto3.util.equals(CsrfInfo, a, b);
   }
 }
 

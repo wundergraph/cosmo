@@ -13,7 +13,6 @@ import {
   apiKeys,
   integrationTypeEnum,
   organizationIntegrations,
-  organizationInvitations,
   organizationLimits,
   organizationMemberRoles,
   organizationWebhooks,
@@ -27,7 +26,6 @@ import {
 import {
   APIKeyDTO,
   OrganizationDTO,
-  OrganizationInvitationDTO,
   OrganizationLimitsDTO,
   OrganizationMemberDTO,
   WebhooksConfigDTO,

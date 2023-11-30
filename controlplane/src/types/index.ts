@@ -262,9 +262,10 @@ export interface GraphApiKeyDTO {
   createdAt: string;
 }
 
-export interface RouterCsrfKeyDTO {
+export interface RouterRequestKeysDTO {
   id: string;
-  key: string;
+  privateKey: string;
+  publicKey: string;
   createdAt: string;
 }
 

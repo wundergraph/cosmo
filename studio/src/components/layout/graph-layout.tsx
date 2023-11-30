@@ -38,7 +38,7 @@ export interface GraphContextProps {
   graph: GetFederatedGraphByNameResponse["graph"];
   subgraphs: GetFederatedGraphByNameResponse["subgraphs"];
   graphToken: string;
-  graphCsrfKey: string;
+  graphRequestToken: string;
 }
 
 export const GraphContext = createContext<GraphContextProps | undefined>(
@@ -64,7 +64,7 @@ const GraphLayout = ({ children }: LayoutProps) => {
       graph: data.graph,
       subgraphs: data.subgraphs,
       graphToken: data.graphToken,
-      graphCsrfKey: data.graphCsrfKey,
+      graphRequestToken: data.graphRequestToken,
     };
   }, [data]);
 

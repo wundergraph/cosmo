@@ -1702,9 +1702,9 @@ export class GetFederatedGraphByNameResponse extends Message<GetFederatedGraphBy
   graphToken = "";
 
   /**
-   * @generated from field: string graphCsrfKey = 5;
+   * @generated from field: string graphRequestToken = 5;
    */
-  graphCsrfKey = "";
+  graphRequestToken = "";
 
   constructor(data?: PartialMessage<GetFederatedGraphByNameResponse>) {
     super();
@@ -1718,7 +1718,7 @@ export class GetFederatedGraphByNameResponse extends Message<GetFederatedGraphBy
     { no: 2, name: "graph", kind: "message", T: FederatedGraph },
     { no: 3, name: "subgraphs", kind: "message", T: Subgraph, repeated: true },
     { no: 4, name: "graphToken", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 5, name: "graphCsrfKey", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "graphRequestToken", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetFederatedGraphByNameResponse {

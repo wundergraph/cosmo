@@ -1,6 +1,8 @@
+import { KeyObject } from 'node:crypto';
 import { JsonValue } from '@bufbuild/protobuf';
 import { RouterConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { joinLabel, normalizeURL } from '@wundergraph/cosmo-shared';
+import { generateKeyPair, importPKCS8, SignJWT } from 'jose';
 import { and, asc, desc, eq, gt, inArray, lt, not, notExists, notInArray, SQL, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { Target } from '../../db/models.js';
@@ -9,7 +11,7 @@ import {
   federatedGraphs,
   graphApiTokens,
   graphCompositions,
-  graphCsrfKeys,
+  graphRequestKeys,
   schemaChecks,
   schemaVersion,
   schemaVersionChangeAction,
@@ -22,7 +24,7 @@ import {
   GraphApiKeyDTO,
   Label,
   ListFilterOptions,
-  RouterCsrfKeyDTO,
+  RouterRequestKeysDTO,
 } from '../../types/index.js';
 import { Composer } from '../composition/composer.js';
 import { SchemaDiff } from '../composition/schemaCheck.js';
@@ -766,61 +768,101 @@ export class FederatedGraphRepository {
     );
   }
 
-  public async createGraphCsrfKey(input: {
-    key: string;
+  public async createGraphCryptoKeyPairs(input: {
     organizationId: string;
     federatedGraphId: string;
-  }): Promise<RouterCsrfKeyDTO> {
-    const keys = await this.db
-      .insert(graphCsrfKeys)
+  }): Promise<RouterRequestKeysDTO> {
+    const keys = await generateKeyPair('ES256');
+
+    const privateKey = (keys.privateKey as KeyObject).export({
+      format: 'pem',
+      type: 'pkcs8',
+    });
+    const publicKey = (keys.publicKey as KeyObject).export({
+      format: 'pem',
+      type: 'spki',
+    });
+
+    const items = await this.db
+      .insert(graphRequestKeys)
       .values({
-        key: input.key,
+        privateKey: privateKey.toString(),
+        publicKey: publicKey.toString(),
         organizationId: input.organizationId,
         federatedGraphId: input.federatedGraphId,
       })
       .returning()
       .execute();
 
-    if (keys.length === 0) {
-      throw new Error('Failed to create csrf key');
+    if (items.length === 0) {
+      throw new Error('Failed to create request keys');
     }
 
-    const key = keys[0];
+    const key = items[0];
 
     return {
       id: key.id,
-      key: key.key,
+      privateKey: key.privateKey,
+      publicKey: key.publicKey,
       createdAt: key.createdAt.toISOString(),
     };
   }
 
-  public async getGraphCsrfKey(input: {
+  public async getGraphPublicKey(input: {
     organizationId: string;
     federatedGraphId: string;
-  }): Promise<RouterCsrfKeyDTO | undefined> {
+  }): Promise<string | undefined> {
     const keys = await this.db
       .select({
-        id: graphCsrfKeys.id,
-        createdAt: graphCsrfKeys.createdAt,
-        token: graphCsrfKeys.key,
+        publicKey: graphRequestKeys.publicKey,
       })
-      .from(graphCsrfKeys)
+      .from(graphRequestKeys)
       .where(
         and(
-          eq(graphCsrfKeys.organizationId, input.organizationId),
-          eq(graphCsrfKeys.federatedGraphId, input.federatedGraphId),
+          eq(graphRequestKeys.organizationId, input.organizationId),
+          eq(graphRequestKeys.federatedGraphId, input.federatedGraphId),
         ),
       )
+      .limit(1)
       .execute();
 
     if (keys.length === 0) {
       return undefined;
     }
 
-    return {
-      id: keys[0].id,
-      createdAt: keys[0].createdAt.toISOString(),
-      key: keys[0].token,
-    } as RouterCsrfKeyDTO;
+    return keys[0].publicKey;
+  }
+
+  public async getGraphSignedToken(input: {
+    organizationId: string;
+    federatedGraphId: string;
+  }): Promise<string | undefined> {
+    const keys = await this.db
+      .select({
+        privateKey: graphRequestKeys.privateKey,
+      })
+      .from(graphRequestKeys)
+      .where(
+        and(
+          eq(graphRequestKeys.organizationId, input.organizationId),
+          eq(graphRequestKeys.federatedGraphId, input.federatedGraphId),
+        ),
+      )
+      .limit(1)
+      .execute();
+
+    if (keys.length === 0) {
+      return undefined;
+    }
+
+    const ecPrivateKey = await importPKCS8(keys[0].privateKey, 'ES256');
+
+    return new SignJWT({ 'urn:example:claim': true })
+      .setProtectedHeader({ alg: 'ES256' })
+      .setIssuedAt()
+      .setIssuer(input.organizationId)
+      .setAudience(input.federatedGraphId)
+      .setExpirationTime('1d')
+      .sign(ecPrivateKey);
   }
 }

@@ -14,6 +14,7 @@
     "debug": "tsx watch src/index.ts",
     "build": "del dist && tsc",
     "seed": "API_KEY=cosmo_669b576aaadc10ee1ae81d9193425705 tsx src/bin/seed.ts",
+    "db:migration-graph": "tsx --no-cache src/bin/create-request-tokens.ts",
     "db:generate": "drizzle-kit generate:pg --config=drizzle.config.ts",
     "db:custom": "drizzle-kit generate:pg --custom --config=drizzle.config.ts",
     "db:check": "drizzle-kit check:pg --config=drizzle.config.ts",
