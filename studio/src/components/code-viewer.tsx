@@ -87,11 +87,15 @@ export const CodeViewer = ({
 
   useEffect(() => {
     const set = async (source: string) => {
-      const res = await prettier.format(source, {
-        parser: language,
-        plugins: [graphQLPlugin, estreePlugin, babelPlugin],
-      });
-      setContent(res);
+      try {
+        const res = await prettier.format(source, {
+          parser: language,
+          plugins: [graphQLPlugin, estreePlugin, babelPlugin],
+        });
+        setContent(res);
+      } catch {
+        setContent("INVALID CONTENT");
+      }
     };
 
     if (!code) return;
