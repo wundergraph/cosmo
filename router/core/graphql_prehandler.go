@@ -104,7 +104,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 					return
 				}
 
-				// Enable ART after successful CSRF check
+				// Enable ART after successful request token validation
 				traceOptions = ParseRequestTraceOptions(r)
 			} else if h.developmentMode {
 				// In development, without request signing, we enable ART

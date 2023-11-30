@@ -917,6 +917,7 @@ export class OrganizationRepository {
       })
       .from(organizationLimits)
       .where(eq(organizationLimits.organizationId, input.organizationID))
+      .limit(1)
       .execute();
 
     if (limits.length === 0) {
