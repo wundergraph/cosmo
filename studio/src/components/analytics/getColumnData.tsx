@@ -161,19 +161,12 @@ const ActionsDropdown = ({
       <DropdownMenu>
         <div className="flex justify-center">
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon-sm" className="table-action">
               <EllipsisVerticalIcon className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
         </div>
         <DropdownMenuContent align="end">
-          <DropdownMenuLabel
-            onClick={(event) => {
-              event.stopPropagation();
-            }}
-          >
-            Actions
-          </DropdownMenuLabel>
           {actionColumns.map((action) => {
             return (
               <DropdownMenuItem
@@ -325,7 +318,7 @@ export const getColumnData = (
     const actionColumn: ColumnDef<any> = {
       id: "actions",
       enableHiding: false,
-      header: () => <div className="text-center">Actions</div>,
+      header: () => <div className="text-center"></div>,
       cell: ({ row }) => {
         const rowData = row.original;
 

@@ -1,5 +1,5 @@
 import { EmptyState } from "@/components/empty-state";
-import { getUserLayout } from "@/components/layout/user-layout";
+import { getDashboardLayout } from "@/components/layout/dashboard-layout";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Loader } from "@/components/ui/loader";
@@ -104,7 +104,11 @@ const InvitationsPage: NextPageWithLayout = () => {
 };
 
 InvitationsPage.getLayout = (page) => {
-  return getUserLayout(page, "Invitations", "View all your invitations.");
+  return getDashboardLayout(
+    page,
+    "Invitations",
+    "Invitations to other organizations",
+  );
 };
 
 export default InvitationsPage;

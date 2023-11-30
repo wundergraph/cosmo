@@ -1,7 +1,7 @@
 {
   "version": "5",
   "dialect": "pg",
-  "id": "5a3b3031-e02c-405c-90e2-3f1e886e3dc8",
+  "id": "6a29b327-bf05-4d1f-9223-165f565a54ae",
   "prevId": "589b0578-b622-434d-88ca-be22469a2897",
   "tables": {
     "api_keys": {
@@ -262,12 +262,6 @@
         "updated_at": {
           "name": "updated_at",
           "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "operation_content": {
-          "name": "operation_content",
-          "type": "text",
           "primaryKey": false,
           "notNull": false
         },
@@ -723,6 +717,103 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
+    },
+    "graph_request_keys": {
+      "name": "graph_request_keys",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "organization_id": {
+          "name": "organization_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "federated_graph_id": {
+          "name": "federated_graph_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "privateKey": {
+          "name": "privateKey",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "publicKey": {
+          "name": "publicKey",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "graph_request_keys_organization_id_organizations_id_fk": {
+          "name": "graph_request_keys_organization_id_organizations_id_fk",
+          "tableFrom": "graph_request_keys",
+          "tableTo": "organizations",
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "graph_request_keys_federated_graph_id_federated_graphs_id_fk": {
+          "name": "graph_request_keys_federated_graph_id_federated_graphs_id_fk",
+          "tableFrom": "graph_request_keys",
+          "tableTo": "federated_graphs",
+          "columnsFrom": [
+            "federated_graph_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "graph_request_keys_federated_graph_id_unique": {
+          "name": "graph_request_keys_federated_graph_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "federated_graph_id"
+          ]
+        },
+        "graph_request_keys_privateKey_unique": {
+          "name": "graph_request_keys_privateKey_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "privateKey"
+          ]
+        },
+        "graph_request_keys_publicKey_unique": {
+          "name": "graph_request_keys_publicKey_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "publicKey"
+          ]
+        }
+      }
     },
     "oidc_providers": {
       "name": "oidc_providers",

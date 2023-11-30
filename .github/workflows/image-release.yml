@@ -10,6 +10,7 @@ on:
         options:
           - keycloak
           - otelcollector
+          - cdn
           - controlplane
           - studio
           - graphqlmetrics
@@ -18,6 +19,11 @@ on:
         description: 'Tag to release'
         required: true
         type: string
+
+      workingDirectory:
+        description: 'Working directory to use'
+        type: string
+        required: true
 
       dockerContext:
         description: 'Docker context to use'
@@ -72,7 +78,7 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           push: true
-          file: ${{ inputs.name }}/Dockerfile
+          file: ${{ inputs.workingDirectory }}/Dockerfile
           context: ${{ inputs.dockerContext }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

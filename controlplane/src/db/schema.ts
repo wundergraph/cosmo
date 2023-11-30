@@ -565,6 +565,21 @@ export const graphApiTokens = pgTable(
   },
 );
 
+export const graphRequestKeys = pgTable('graph_request_keys', {
+  id: uuid('id').notNull().primaryKey().defaultRandom(),
+  organizationId: uuid('organization_id')
+    .notNull()
+    .references(() => organizations.id),
+  federatedGraphId: uuid('federated_graph_id')
+    .notNull()
+    // Only one request key per federated graph
+    .unique()
+    .references(() => federatedGraphs.id, { onDelete: 'cascade' }),
+  privateKey: text('privateKey').unique().notNull(),
+  publicKey: text('publicKey').unique().notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const organizations = pgTable('organizations', {
   id: uuid('id').notNull().primaryKey().defaultRandom(),
   name: text('name').notNull(),

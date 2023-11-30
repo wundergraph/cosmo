@@ -541,9 +541,7 @@ const APIKeysPage: NextPageWithLayout = () => {
                   rolesToBe: ["admin", "developer"],
                   userRoles: user?.currentOrganization.roles || [],
                 }) && (
-                  <TableHead className="flex items-center justify-center">
-                    Actions
-                  </TableHead>
+                  <TableHead className="flex items-center justify-center" />
                 )}
               </TableRow>
             </TableHeader>

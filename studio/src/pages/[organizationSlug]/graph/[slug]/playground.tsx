@@ -59,10 +59,32 @@ import { z } from "zod";
 
 const graphiQLFetch = async (
   onFetch: any,
-  ...args: [input: RequestInfo | URL, init?: RequestInit | undefined]
+  graphRequestToken: string,
+  url: URL,
+  init: RequestInit,
 ) => {
   try {
-    const response = await fetch(...args);
+    const headers: Record<string, string> = {
+      ...(init.headers as Record<string, string>),
+    };
+
+    let hasTraceHeader = false;
+    for (const headersKey in headers) {
+      if (headersKey.toLowerCase() === "x-wg-trace") {
+        hasTraceHeader = headers[headersKey] === "true";
+        break;
+      }
+    }
+
+    // add token if trace header is present
+    if (hasTraceHeader) {
+      headers["X-WG-Token"] = graphRequestToken;
+    }
+
+    const response = await fetch(url, {
+      ...init,
+      headers,
+    });
     onFetch(await response.clone().json());
     return response;
   } catch (e) {
@@ -445,9 +467,15 @@ const PlaygroundPage: NextPageWithLayout = () => {
     return createGraphiQLFetcher({
       url: url,
       subscriptionUrl: url.replace("http", "ws"),
-      fetch: (...args) => graphiQLFetch(onFetch, ...args),
+      fetch: (...args) =>
+        graphiQLFetch(
+          onFetch,
+          graphContext?.graphRequestToken!,
+          args[0] as URL,
+          args[1] as RequestInit,
+        ),
     });
-  }, [graphContext?.graph?.routingURL]);
+  }, [graphContext?.graph?.routingURL, graphContext?.graphRequestToken]);
 
   const { theme } = useTheme();
 
@@ -510,6 +538,10 @@ const PlaygroundPage: NextPageWithLayout = () => {
   );
 };
 
-PlaygroundPage.getLayout = getGraphLayout;
+PlaygroundPage.getLayout = (page: React.ReactNode) => {
+  return getGraphLayout(page, {
+    title: "Playground",
+  });
+};
 
 export default PlaygroundPage;

@@ -2,9 +2,11 @@ import { createFilterState } from "@/components/analytics/constructAnalyticsTabl
 import { UserContext } from "@/components/app-provider";
 import { CodeViewer } from "@/components/code-viewer";
 import { EmptyState } from "@/components/empty-state";
-import { getGraphLayout } from "@/components/layout/graph-layout";
+import {
+  GraphPageLayout,
+  getGraphLayout,
+} from "@/components/layout/graph-layout";
 import { PageHeader } from "@/components/layout/head";
-import { TitleLayout } from "@/components/layout/title-layout";
 import {
   Accordion,
   AccordionContent,
@@ -654,12 +656,12 @@ const ClientsPage: NextPageWithLayout = () => {
 ClientsPage.getLayout = (page) =>
   getGraphLayout(
     <PageHeader title="Studio | Clients">
-      <TitleLayout
+      <GraphPageLayout
         title="Clients"
         subtitle="View registered clients and their persisted operations"
       >
         {page}
-      </TitleLayout>
+      </GraphPageLayout>
     </PageHeader>,
   );
 

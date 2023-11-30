@@ -1,6 +1,8 @@
-import { GraphContext, getGraphLayout } from "@/components/layout/graph-layout";
-import { PageHeader } from "@/components/layout/head";
-import { TitleLayout } from "@/components/layout/title-layout";
+import {
+  GraphContext,
+  GraphPageLayout,
+  getGraphLayout,
+} from "@/components/layout/graph-layout";
 import { SubgraphsTable } from "@/components/subgraphs-table";
 import { NextPageWithLayout } from "@/lib/page";
 import { useContext } from "react";
@@ -17,14 +19,13 @@ const SubGraphsPage: NextPageWithLayout = () => {
 
 SubGraphsPage.getLayout = (page) =>
   getGraphLayout(
-    <PageHeader title="Studio | Subgraphs">
-      <TitleLayout
-        title="Subgraphs"
-        subtitle="View the subgraphs that compose this federated graph"
-      >
-        {page}
-      </TitleLayout>
-    </PageHeader>
+    <GraphPageLayout
+      title="Subgraphs"
+      subtitle="View the subgraphs that compose this federated graph"
+    >
+      {page}
+    </GraphPageLayout>,
+    { title: "Subgraphs" },
   );
 
 export default SubGraphsPage;

@@ -4,6 +4,31 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.42.3](https://github.com/wundergraph/cosmo/compare/router@0.42.2...router@0.42.3) (2023-11-30)
+
+### Bug Fixes
+
+* image releases ([230fcef](https://github.com/wundergraph/cosmo/commit/230fcef52db8c36dd54ee8b5568eb627811d4fb1)) (@StarpTech)
+
+## [0.42.2](https://github.com/wundergraph/cosmo/compare/router@0.42.1...router@0.42.2) (2023-11-30)
+
+### Bug Fixes
+
+* correct warning about supported router version ([86c3ca9](https://github.com/wundergraph/cosmo/commit/86c3ca9e4256e7c48b9c3a41af8e87a876fdecfb)) (@StarpTech)
+
+## [0.42.1](https://github.com/wundergraph/cosmo/compare/router@0.42.0...router@0.42.1) (2023-11-30)
+
+### Bug Fixes
+
+* add X-WG-TOKEN optionally ([af22058](https://github.com/wundergraph/cosmo/commit/af220582167b4130ef50a6a2449957621835800e)) (@StarpTech)
+
+# [0.42.0](https://github.com/wundergraph/cosmo/compare/router@0.41.0...router@0.42.0) (2023-11-30)
+
+### Features
+
+* add helm chart for CDN ([#307](https://github.com/wundergraph/cosmo/issues/307)) ([5e70d88](https://github.com/wundergraph/cosmo/commit/5e70d8834d2a676caee691a344ff1beb01689002)) (@fiam)
+* register router on the controlplane ([#318](https://github.com/wundergraph/cosmo/issues/318)) ([10f86df](https://github.com/wundergraph/cosmo/commit/10f86dfebd80265d42015eaf3b9c15f941aef66b)) (@StarpTech)
+
 # [0.41.0](https://github.com/wundergraph/cosmo/compare/router@0.40.1...router@0.41.0) (2023-11-29)
 
 ### Features

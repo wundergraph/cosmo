@@ -4,6 +4,24 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.41.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.41.1...controlplane@0.41.2) (2023-11-30)
+
+### Bug Fixes
+
+* image releases ([230fcef](https://github.com/wundergraph/cosmo/commit/230fcef52db8c36dd54ee8b5568eb627811d4fb1)) (@StarpTech)
+
+## [0.41.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.41.0...controlplane@0.41.1) (2023-11-30)
+
+### Bug Fixes
+
+* remove jwt payload from request token ([6dcda3c](https://github.com/wundergraph/cosmo/commit/6dcda3ca174a7c002ce2a0ab0ef3a1db18304d69)) (@StarpTech)
+
+# [0.41.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.40.1...controlplane@0.41.0) (2023-11-30)
+
+### Features
+
+* register router on the controlplane ([#318](https://github.com/wundergraph/cosmo/issues/318)) ([10f86df](https://github.com/wundergraph/cosmo/commit/10f86dfebd80265d42015eaf3b9c15f941aef66b)) (@StarpTech)
+
 ## [0.40.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.40.0...controlplane@0.40.1) (2023-11-29)
 
 **Note:** Version bump only for package controlplane

@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { GetConfigRequest, GetConfigResponse } from "./node_pb.js";
+import { GetConfigRequest, GetConfigResponse, SelfRegisterRequest, SelfRegisterResponse } from "./node_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 import { createQueryService, createUnaryHooks, UnaryFunctionsWithHooks } from "@connectrpc/connect-query";
 
@@ -24,6 +24,15 @@ export const NodeService = {
       O: GetConfigResponse,
       kind: MethodKind.Unary,
     },
+    /**
+     * @generated from rpc wg.cosmo.node.v1.NodeService.SelfRegister
+     */
+    selfRegister: {
+      name: "SelfRegister",
+      I: SelfRegisterRequest,
+      O: SelfRegisterResponse,
+      kind: MethodKind.Unary,
+    },
   }
 } as const;
 
@@ -33,3 +42,8 @@ const $queryService = createQueryService({  service: NodeService,});
  * @generated from rpc wg.cosmo.node.v1.NodeService.GetLatestValidRouterConfig
  */
 export const getLatestValidRouterConfig: UnaryFunctionsWithHooks<GetConfigRequest, GetConfigResponse> = {   ...$queryService.getLatestValidRouterConfig,  ...createUnaryHooks($queryService.getLatestValidRouterConfig)};
+
+/**
+ * @generated from rpc wg.cosmo.node.v1.NodeService.SelfRegister
+ */
+export const selfRegister: UnaryFunctionsWithHooks<SelfRegisterRequest, SelfRegisterResponse> = {   ...$queryService.selfRegister,  ...createUnaryHooks($queryService.selfRegister)};

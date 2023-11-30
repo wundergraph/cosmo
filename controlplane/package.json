@@ -1,6 +1,6 @@
 {
   "name": "controlplane",
-  "version": "0.40.1",
+  "version": "0.41.2",
   "private": true,
   "description": "WunderGraph Cosmo Controlplane",
   "type": "module",
@@ -14,6 +14,7 @@
     "debug": "tsx watch src/index.ts",
     "build": "del dist && tsc",
     "seed": "API_KEY=cosmo_669b576aaadc10ee1ae81d9193425705 tsx src/bin/seed.ts",
+    "db:migration-graph": "tsx --no-cache src/bin/create-request-tokens.ts",
     "db:generate": "drizzle-kit generate:pg --config=drizzle.config.ts",
     "db:custom": "drizzle-kit generate:pg --custom --config=drizzle.config.ts",
     "db:check": "drizzle-kit check:pg --config=drizzle.config.ts",
@@ -27,7 +28,7 @@
     "db:migrate": "tsx src/bin/db-migrate.ts",
     "ch:migrate": "tsx src/bin/ch-migrate.ts",
     "ch:new-migration": "dbmate -d \"./clickhouse/migrations\" new",
-    "postversion": "name=\"$(node -p \"var a = require('./package.json');process.stdout.write(a.name);process.exit(0)\")\"; version=\"$(node -p \"var a = require('./package.json');process.stdout.write(a.version);process.exit(0)\")\"; gh workflow run image-release.yml -F name=$name -F tag=$version -F dockerContext=."
+    "postversion": "name=\"$(node -p \"var a = require('./package.json');process.stdout.write(a.name);process.exit(0)\")\"; version=\"$(node -p \"var a = require('./package.json');process.stdout.write(a.version);process.exit(0)\")\"; gh workflow run image-release.yml -F name=$name -F workingDirectory=controlplane -F tag=$version -F dockerContext=."
   },
   "keywords": [
     "controlplane",
@@ -63,7 +64,6 @@
     "nodemailer": "^6.9.7",
     "nuid": "^1.1.6",
     "octokit": "^3.1.1",
-    "pg-boss": "^9.0.3",
     "pino": "^8.16.1",
     "postgres": "^3.4.3",
     "rxjs": "^7.8.1",

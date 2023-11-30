@@ -69,6 +69,9 @@ global:
   minio:
     enabled: true
 
+  cdn:
+    enabled: true
+
 # Overall Ingress for the Cosmo Platform
 ingress:
   enabled: true
@@ -78,6 +81,12 @@ ingress:
   #  - secretName: chart-example-tls
   #    hosts:
   #      - chart-example.local
+
+# Cosmo CDN
+cdn:
+  configuration:
+    # This must match the value used in controlplane.configuration.s3StorageUrl
+    s3StorageUrl: "http://minio:changeme@cosmo-minio:9000/cosmo"
 
 # Cosmo Controlplane
 controlplane:

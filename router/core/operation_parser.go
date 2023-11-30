@@ -113,7 +113,7 @@ func (p *OperationParser) entityTooLarge() error {
 	}
 }
 
-func (p *OperationParser) ParseReader(ctx context.Context, clientInfo *ClientInfo, r io.Reader, log *zap.Logger) (*ParsedOperation, error) {
+func (p *OperationParser) ReadBody(ctx context.Context, r io.Reader) ([]byte, error) {
 	// Use an extra byte for the max size. This way we can check if N became
 	// zero to detect if the request body was too large.
 	limitedReader := &io.LimitedReader{R: r, N: p.maxOperationSizeInBytes + 1}
@@ -127,7 +127,12 @@ func (p *OperationParser) ParseReader(ctx context.Context, clientInfo *ClientInf
 	if limitedReader.N == 0 {
 		return nil, p.entityTooLarge()
 	}
-	return p.parse(ctx, clientInfo, buf.Bytes(), log)
+
+	return buf.Bytes(), nil
+}
+
+func (p *OperationParser) ParseReader(ctx context.Context, clientInfo *ClientInfo, body []byte, log *zap.Logger) (*ParsedOperation, error) {
+	return p.parse(ctx, clientInfo, body, log)
 }
 
 func (p *OperationParser) Parse(ctx context.Context, clientInfo *ClientInfo, data []byte, log *zap.Logger) (*ParsedOperation, error) {

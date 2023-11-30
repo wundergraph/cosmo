@@ -21,11 +21,15 @@ export const CodeViewerActions = ({
   code,
   subgraphName,
   className,
+  variant = "secondary",
+  size = "default",
   extension = "graphql",
 }: {
   code: string;
   subgraphName: string;
   className?: string;
+  variant?: any;
+  size?: any;
   extension?: "graphql" | "json";
 }) => {
   const { toast, dismiss } = useToast();
@@ -51,16 +55,23 @@ export const CodeViewerActions = ({
 
   return (
     <div
-      className={cn(
-        "flex w-full items-center gap-x-2 md:ml-auto md:w-auto",
-        className,
-      )}
+      className={cn("flex w-full items-center gap-x-2 md:w-auto", className)}
     >
-      <Button variant="secondary" className="flex-1" onClick={() => copySDL()}>
+      <Button
+        variant={variant}
+        size={size}
+        className="flex-1"
+        onClick={() => copySDL()}
+      >
         <ClipboardCopyIcon className="mr-3" />
         Copy
       </Button>
-      <Button variant="secondary" className="flex-1" onClick={downloadSDL}>
+      <Button
+        variant={variant}
+        size={size}
+        className="flex-1"
+        onClick={downloadSDL}
+      >
         <DownloadIcon className="mr-3" />
         Download
       </Button>
