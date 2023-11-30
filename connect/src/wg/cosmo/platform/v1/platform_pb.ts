@@ -2229,6 +2229,49 @@ export class GetCheckSummaryRequest extends Message<GetCheckSummaryRequest> {
 }
 
 /**
+ * @generated from message wg.cosmo.platform.v1.ChangeCounts
+ */
+export class ChangeCounts extends Message<ChangeCounts> {
+  /**
+   * @generated from field: int32 additions = 1;
+   */
+  additions = 0;
+
+  /**
+   * @generated from field: int32 deletions = 2;
+   */
+  deletions = 0;
+
+  constructor(data?: PartialMessage<ChangeCounts>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.ChangeCounts";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "additions", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 2, name: "deletions", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ChangeCounts {
+    return new ChangeCounts().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ChangeCounts {
+    return new ChangeCounts().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ChangeCounts {
+    return new ChangeCounts().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ChangeCounts | PlainMessage<ChangeCounts> | undefined, b: ChangeCounts | PlainMessage<ChangeCounts> | undefined): boolean {
+    return proto3.util.equals(ChangeCounts, a, b);
+  }
+}
+
+/**
  * @generated from message wg.cosmo.platform.v1.GetCheckSummaryResponse
  */
 export class GetCheckSummaryResponse extends Message<GetCheckSummaryResponse> {
@@ -8323,6 +8366,324 @@ export class AcceptOrDeclineInvitationResponse extends Message<AcceptOrDeclineIn
 
   static equals(a: AcceptOrDeclineInvitationResponse | PlainMessage<AcceptOrDeclineInvitationResponse> | undefined, b: AcceptOrDeclineInvitationResponse | PlainMessage<AcceptOrDeclineInvitationResponse> | undefined): boolean {
     return proto3.util.equals(AcceptOrDeclineInvitationResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GraphComposition
+ */
+export class GraphComposition extends Message<GraphComposition> {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id = "";
+
+  /**
+   * @generated from field: string schemaVersionId = 2;
+   */
+  schemaVersionId = "";
+
+  /**
+   * @generated from field: string createdAt = 3;
+   */
+  createdAt = "";
+
+  /**
+   * @generated from field: bool isComposable = 4;
+   */
+  isComposable = false;
+
+  /**
+   * @generated from field: optional string compositionErrors = 5;
+   */
+  compositionErrors?: string;
+
+  /**
+   * @generated from field: optional string createdBy = 6;
+   */
+  createdBy?: string;
+
+  /**
+   * @generated from field: bool isCurrentDeployed = 7;
+   */
+  isCurrentDeployed = false;
+
+  constructor(data?: PartialMessage<GraphComposition>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GraphComposition";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "schemaVersionId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "createdAt", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "isComposable", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 5, name: "compositionErrors", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 6, name: "createdBy", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 7, name: "isCurrentDeployed", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GraphComposition {
+    return new GraphComposition().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GraphComposition {
+    return new GraphComposition().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GraphComposition {
+    return new GraphComposition().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GraphComposition | PlainMessage<GraphComposition> | undefined, b: GraphComposition | PlainMessage<GraphComposition> | undefined): boolean {
+    return proto3.util.equals(GraphComposition, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GraphCompositionSubgraph
+ */
+export class GraphCompositionSubgraph extends Message<GraphCompositionSubgraph> {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id = "";
+
+  /**
+   * @generated from field: string schemaVersionId = 2;
+   */
+  schemaVersionId = "";
+
+  /**
+   * @generated from field: string name = 3;
+   */
+  name = "";
+
+  constructor(data?: PartialMessage<GraphCompositionSubgraph>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GraphCompositionSubgraph";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "schemaVersionId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GraphCompositionSubgraph {
+    return new GraphCompositionSubgraph().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GraphCompositionSubgraph {
+    return new GraphCompositionSubgraph().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GraphCompositionSubgraph {
+    return new GraphCompositionSubgraph().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GraphCompositionSubgraph | PlainMessage<GraphCompositionSubgraph> | undefined, b: GraphCompositionSubgraph | PlainMessage<GraphCompositionSubgraph> | undefined): boolean {
+    return proto3.util.equals(GraphCompositionSubgraph, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetCompositionsRequest
+ */
+export class GetCompositionsRequest extends Message<GetCompositionsRequest> {
+  /**
+   * @generated from field: string fedGraphName = 1;
+   */
+  fedGraphName = "";
+
+  /**
+   * @generated from field: int32 limit = 2;
+   */
+  limit = 0;
+
+  /**
+   * @generated from field: int32 offset = 3;
+   */
+  offset = 0;
+
+  /**
+   * @generated from field: string startDate = 4;
+   */
+  startDate = "";
+
+  /**
+   * @generated from field: string endDate = 5;
+   */
+  endDate = "";
+
+  constructor(data?: PartialMessage<GetCompositionsRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetCompositionsRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "fedGraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "limit", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 3, name: "offset", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 4, name: "startDate", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "endDate", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCompositionsRequest {
+    return new GetCompositionsRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetCompositionsRequest {
+    return new GetCompositionsRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetCompositionsRequest {
+    return new GetCompositionsRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetCompositionsRequest | PlainMessage<GetCompositionsRequest> | undefined, b: GetCompositionsRequest | PlainMessage<GetCompositionsRequest> | undefined): boolean {
+    return proto3.util.equals(GetCompositionsRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetCompositionsResponse
+ */
+export class GetCompositionsResponse extends Message<GetCompositionsResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.GraphComposition compositions = 2;
+   */
+  compositions: GraphComposition[] = [];
+
+  constructor(data?: PartialMessage<GetCompositionsResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetCompositionsResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "compositions", kind: "message", T: GraphComposition, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCompositionsResponse {
+    return new GetCompositionsResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetCompositionsResponse {
+    return new GetCompositionsResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetCompositionsResponse {
+    return new GetCompositionsResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetCompositionsResponse | PlainMessage<GetCompositionsResponse> | undefined, b: GetCompositionsResponse | PlainMessage<GetCompositionsResponse> | undefined): boolean {
+    return proto3.util.equals(GetCompositionsResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetCompositionDetailsRequest
+ */
+export class GetCompositionDetailsRequest extends Message<GetCompositionDetailsRequest> {
+  /**
+   * @generated from field: string compositionId = 1;
+   */
+  compositionId = "";
+
+  constructor(data?: PartialMessage<GetCompositionDetailsRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetCompositionDetailsRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "compositionId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCompositionDetailsRequest {
+    return new GetCompositionDetailsRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetCompositionDetailsRequest {
+    return new GetCompositionDetailsRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetCompositionDetailsRequest {
+    return new GetCompositionDetailsRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetCompositionDetailsRequest | PlainMessage<GetCompositionDetailsRequest> | undefined, b: GetCompositionDetailsRequest | PlainMessage<GetCompositionDetailsRequest> | undefined): boolean {
+    return proto3.util.equals(GetCompositionDetailsRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetCompositionDetailsResponse
+ */
+export class GetCompositionDetailsResponse extends Message<GetCompositionDetailsResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: wg.cosmo.platform.v1.GraphComposition composition = 2;
+   */
+  composition?: GraphComposition;
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.GraphCompositionSubgraph compositionSubgraphs = 3;
+   */
+  compositionSubgraphs: GraphCompositionSubgraph[] = [];
+
+  /**
+   * @generated from field: wg.cosmo.platform.v1.ChangeCounts changeCounts = 4;
+   */
+  changeCounts?: ChangeCounts;
+
+  constructor(data?: PartialMessage<GetCompositionDetailsResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetCompositionDetailsResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "composition", kind: "message", T: GraphComposition },
+    { no: 3, name: "compositionSubgraphs", kind: "message", T: GraphCompositionSubgraph, repeated: true },
+    { no: 4, name: "changeCounts", kind: "message", T: ChangeCounts },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCompositionDetailsResponse {
+    return new GetCompositionDetailsResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetCompositionDetailsResponse {
+    return new GetCompositionDetailsResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetCompositionDetailsResponse {
+    return new GetCompositionDetailsResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetCompositionDetailsResponse | PlainMessage<GetCompositionDetailsResponse> | undefined, b: GetCompositionDetailsResponse | PlainMessage<GetCompositionDetailsResponse> | undefined): boolean {
+    return proto3.util.equals(GetCompositionDetailsResponse, a, b);
   }
 }
 

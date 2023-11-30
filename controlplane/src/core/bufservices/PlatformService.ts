@@ -35,6 +35,8 @@ import {
   GetCheckSummaryResponse,
   GetChecksByFederatedGraphNameResponse,
   GetClientsResponse,
+  GetCompositionDetailsResponse,
+  GetCompositionsResponse,
   GetDashboardAnalyticsViewResponse,
   GetFederatedGraphByNameResponse,
   GetFederatedGraphChangelogResponse,
@@ -4409,6 +4411,119 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         return {
           response: {
             code: EnumStatusCode.OK,
+          },
+        };
+      });
+    },
+
+    getCompositions: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetCompositionsResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const fedRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+        const orgRepo = new OrganizationRepository(opts.db);
+        const graphCompositionRepository = new GraphCompositionRepository(opts.db);
+
+        const federatedGraph = await fedRepo.byName(req.fedGraphName);
+
+        if (!federatedGraph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Federated graph '${req.fedGraphName}' does not exist`,
+            },
+            compositions: [],
+          };
+        }
+
+        const orgLimits = await orgRepo.getOrganizationLimits({ organizationID: authContext.organizationId });
+
+        const { dateRange } = validateDateRanges({
+          limit: orgLimits.analyticsRetentionLimit,
+          dateRange: {
+            start: req.startDate,
+            end: req.endDate,
+          } as DateRange,
+        });
+
+        const compositions = await graphCompositionRepository.getGraphCompositions({
+          fedGraphTargetId: federatedGraph.targetId,
+          organizationId: authContext.organizationId,
+          limit: req.limit,
+          offset: req.offset,
+          startDate: dateRange!.start,
+          endDate: dateRange!.end,
+        });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          compositions,
+        };
+      });
+    },
+
+    getCompositionDetails: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetCompositionDetailsResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const fedRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+        const compositionRepo = new GraphCompositionRepository(opts.db);
+
+        const composition = await compositionRepo.getGraphComposition({
+          compositionId: req.compositionId,
+          organizationId: authContext.organizationId,
+        });
+
+        if (!composition) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `Graph composition with '${req.compositionId}' does not exist`,
+            },
+            compositionSubgraphs: [],
+          };
+        }
+
+        const compositionSubgraphs = await compositionRepo.getCompositionSubgraphs({
+          compositionId: req.compositionId,
+        });
+
+        const changelogs = await fedRepo.fetchChangelogByVersion({
+          schemaVersionId: composition.schemaVersionId,
+        });
+
+        let addCount = 0;
+        let minusCount = 0;
+        for (const log of changelogs) {
+          if (log.changeType.includes('REMOVED')) {
+            minusCount += 1;
+          } else if (log.changeType.includes('ADDED')) {
+            addCount += 1;
+          } else if (log.changeType.includes('CHANGED')) {
+            addCount += 1;
+            minusCount += 1;
+          }
+        }
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          composition,
+          compositionSubgraphs,
+          changeCounts: {
+            additions: addCount,
+            deletions: minusCount,
           },
         };
       });

@@ -45,7 +45,7 @@ export default class Mailer {
     await this.client.sendMail({
       from: 'system@wundergraph.com',
       to: recieverEmail,
-      subject: '[WunderGraph Cosmo] You are invited to join ' + organizationName,
+      subject: '[WunderGraph Cosmo] You have been invited to the organization ' + organizationName,
       html: htmlBody,
     });
   }

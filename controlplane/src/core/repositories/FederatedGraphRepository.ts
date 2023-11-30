@@ -418,7 +418,7 @@ export class FederatedGraphRepository {
     return res !== undefined;
   }
 
-  public async isLatestValidRouterConfigVersion(targetId: string, schemaVersionId: string): Promise<boolean> {
+  public async isLatestValidSchemaVersion(targetId: string, schemaVersionId: string): Promise<boolean> {
     const latestValidVersion = await this.db
       .select({
         id: schemaVersion.id,
@@ -426,6 +426,21 @@ export class FederatedGraphRepository {
       .from(schemaVersion)
       .innerJoin(graphCompositions, eq(schemaVersion.id, graphCompositions.schemaVersionId))
       .where(and(eq(schemaVersion.targetId, targetId), eq(graphCompositions.isComposable, true)))
+      .orderBy(desc(schemaVersion.createdAt))
+      .limit(1)
+      .execute();
+
+    return latestValidVersion?.[0]?.id === schemaVersionId;
+  }
+
+  public async isLatestSchemaVersion(targetId: string, schemaVersionId: string): Promise<boolean> {
+    const latestValidVersion = await this.db
+      .select({
+        id: schemaVersion.id,
+      })
+      .from(schemaVersion)
+      .innerJoin(graphCompositions, eq(schemaVersion.id, graphCompositions.schemaVersionId))
+      .where(eq(schemaVersion.targetId, targetId))
       .orderBy(desc(schemaVersion.createdAt))
       .limit(1)
       .execute();
@@ -619,16 +634,7 @@ export class FederatedGraphRepository {
       return undefined;
     }
 
-    const changelogs = await this.db
-      .select({
-        id: schemaVersionChangeAction.id,
-        path: schemaVersionChangeAction.path,
-        changeType: schemaVersionChangeAction.changeType,
-        changeMessage: schemaVersionChangeAction.changeMessage,
-        createdAt: schemaVersionChangeAction.createdAt,
-      })
-      .from(schemaVersionChangeAction)
-      .where(eq(schemaVersionChangeAction.schemaVersionId, federatedGraph[0].schemaVersionId));
+    const changelogs = await this.fetchChangelogByVersion({ schemaVersionId: federatedGraph[0].schemaVersionId });
 
     if (changelogs.length === 0) {
       return undefined;
@@ -645,6 +651,21 @@ export class FederatedGraphRepository {
         createdAt: c.createdAt.toString(),
       })),
     };
+  }
+
+  public async fetchChangelogByVersion({ schemaVersionId }: { schemaVersionId: string }) {
+    const changelogs = await this.db
+      .select({
+        id: schemaVersionChangeAction.id,
+        path: schemaVersionChangeAction.path,
+        changeType: schemaVersionChangeAction.changeType,
+        changeMessage: schemaVersionChangeAction.changeMessage,
+        createdAt: schemaVersionChangeAction.createdAt,
+      })
+      .from(schemaVersionChangeAction)
+      .where(eq(schemaVersionChangeAction.schemaVersionId, schemaVersionId));
+
+    return changelogs;
   }
 
   public delete(targetID: string, subgraphsTargetIDs: string[]) {

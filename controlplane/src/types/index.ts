@@ -318,3 +318,13 @@ export interface UpdatedPersistedOperation {
   hash: string;
   filePath: string;
 }
+
+export interface GraphCompositionDTO {
+  id: string;
+  schemaVersionId: string;
+  createdAt: string;
+  createdBy?: string;
+  compositionErrors?: string;
+  isComposable: boolean;
+  isCurrentDeployed: boolean;
+}

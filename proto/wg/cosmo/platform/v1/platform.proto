@@ -270,6 +270,11 @@ message GetCheckSummaryRequest {
   string graph_name = 2;
 }
 
+message ChangeCounts {
+  int32 additions = 1;
+  int32 deletions = 2;
+}
+
 message GetCheckSummaryResponse {
   message AffectedGraph {
     string id = 1;
@@ -1056,6 +1061,46 @@ message AcceptOrDeclineInvitationResponse {
   Response response = 1;
 }
 
+message GraphComposition {
+  string id = 1;
+  string schemaVersionId = 2;
+  string createdAt = 3;
+  bool isComposable = 4;
+  optional string compositionErrors = 5;
+  optional string createdBy = 6;
+  bool isCurrentDeployed = 7;
+}
+
+message GraphCompositionSubgraph {
+  string id = 1;
+  string schemaVersionId = 2;
+  string name = 3;
+}
+
+message GetCompositionsRequest {
+  string fedGraphName = 1;
+  int32 limit = 2;
+  int32 offset = 3;
+  string startDate = 4;
+  string endDate = 5;
+}
+
+message GetCompositionsResponse {
+  Response response = 1;
+  repeated GraphComposition compositions = 2;
+}
+
+message GetCompositionDetailsRequest {
+  string compositionId = 1;
+}
+
+message GetCompositionDetailsResponse {
+  Response response = 1;
+  GraphComposition composition = 2;
+  repeated GraphCompositionSubgraph compositionSubgraphs = 3;
+  ChangeCounts changeCounts = 4;
+}
+
 message ClientInfo{
   string name = 1;
   string id = 2;
@@ -1234,6 +1279,10 @@ service PlatformService {
   rpc GetInvitations(GetInvitationsRequest) returns (GetInvitationsResponse) {}
   // AcceptOrDeclineInvitation accepts or declines the invitation
   rpc AcceptOrDeclineInvitation(AcceptOrDeclineInvitationRequest) returns (AcceptOrDeclineInvitationResponse) {}
+  // GetCompositions returns all the compositions of the federated graph
+  rpc GetCompositions(GetCompositionsRequest) returns (GetCompositionsResponse) {}
+   // GetCompositionDetails returns the details of that composition
+  rpc GetCompositionDetails(GetCompositionDetailsRequest) returns (GetCompositionDetailsResponse) {}
 
   // Analytics
 

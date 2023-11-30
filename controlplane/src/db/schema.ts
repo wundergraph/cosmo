@@ -292,7 +292,7 @@ export const targetsRelations = relations(targets, ({ one, many }) => ({
 
 export const schemaVersion = pgTable('schema_versions', {
   id: uuid('id').primaryKey().defaultRandom(),
-  targetId: uuid('target_id').references(() => targets.id, {
+  targetId: uuid('target_id').notNull().references(() => targets.id, {
     onDelete: 'cascade',
   }),
   // The actual schema definition of the graph. For GraphQL, this is the SDL.
@@ -850,6 +850,12 @@ export const graphCompositionSubgraphs = pgTable('graph_composition_subgraphs', 
     }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+export const graphCompositionsRelations = relations(graphCompositions, ({ many, one }) => ({
+  graphCompositionSubgraphs: many(graphCompositionSubgraphs),
+  schemaVersion: one(schemaVersion),
+  user: one(users),
+}));
 
 export const organizationLimits = pgTable('organization_limits', {
   id: uuid('id').notNull().primaryKey().defaultRandom(),
