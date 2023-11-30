@@ -488,7 +488,10 @@ const CheckOverviewPage: NextPageWithLayout = () => {
                         </pre>
                       </AlertDescription>
                     </Alert>
-                  ) : (
+                  ) : null}
+                  {data.check.isBreaking &&
+                  data.check.isComposable &&
+                  data.check.hasClientTraffic ? (
                     <Alert variant="default">
                       <CheckCircledIcon className="h-4 w-4" />
 
@@ -510,23 +513,20 @@ const CheckOverviewPage: NextPageWithLayout = () => {
                           </>
                         )}
                       </AlertDescription>
-
-                      {!data.check.isForcedSuccess &&
-                        data.check.isBreaking &&
-                        data.check.isComposable && (
-                          <div className="mt-2 flex space-x-2">
-                            <ForceSuccess
-                              onSubmit={() =>
-                                forceSuccess({
-                                  checkId: id,
-                                  graphName: slug,
-                                })
-                              }
-                            />
-                          </div>
-                        )}
+                      {data.check.isForcedSuccess ? (
+                        <div className="mt-2 flex space-x-2">
+                          <ForceSuccess
+                            onSubmit={() =>
+                              forceSuccess({
+                                checkId: id,
+                                graphName: slug,
+                              })
+                            }
+                          />
+                        </div>
+                      ) : null}
                     </Alert>
-                  )}
+                  ) : null}
                   <ChangesTable
                     changes={data.changes}
                     caption={`${data.changes.length} changes found`}
