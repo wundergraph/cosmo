@@ -54,6 +54,122 @@ describe('@override directive Tests', () => {
     `));
   });
 
+  test('that an overridden field does not need to be declared shareable #1', () => {
+    const { errors, federationResult } = federateSubgraphs([subgraphI, subgraphJ]);
+    expect(errors).toBeUndefined();
+    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST))
+      .toBe(normalizeString(versionTwoPersistedBaseSchema + `
+      type Query {
+        query: Entity!
+      }
+      
+      type Entity {
+        id: ID!
+        age: Int!
+        name: String!
+      }
+    `));
+  });
+
+  test('that an overridden field does not need to be declared shareable #2', () => {
+    const { errors, federationResult } = federateSubgraphs([subgraphJ, subgraphI]);
+    expect(errors).toBeUndefined();
+    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST))
+      .toBe(normalizeString(versionTwoPersistedBaseSchema + `
+      type Entity {
+        id: ID!
+        name: String!
+        age: Int!
+      }
+      
+      type Query {
+        query: Entity!
+      }
+    `));
+  });
+
+  test('that an overridden field does not need to be declared shareable #3', () => {
+    const { errors, federationResult } = federateSubgraphs([subgraphI, subgraphJ, subgraphK]);
+    expect(errors).toBeUndefined();
+    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST))
+      .toBe(normalizeString(versionTwoPersistedBaseSchema + `
+      type Query {
+        query: Entity!
+      }
+      
+      type Entity {
+        id: ID!
+        age: Int!
+        name: String!
+        number: Int!
+      }
+    `));
+  });
+
+  test('that an overridden field does not need to be declared shareable #4', () => {
+    const { errors, federationResult } = federateSubgraphs([subgraphL, subgraphM]);
+    expect(errors).toBeUndefined();
+    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST))
+      .toBe(normalizeString(versionTwoPersistedBaseSchema + `
+       type Entity {
+        id: ID!
+        name: String!
+      }
+      
+      type Query {
+        query: Entity!
+      }
+    `));
+  });
+
+  test('that an overridden field does not need to be declared shareable #5', () => {
+    const { errors, federationResult } = federateSubgraphs([subgraphN, subgraphO]);
+    expect(errors).toBeUndefined();
+    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST))
+      .toBe(normalizeString(versionTwoPersistedBaseSchema + `
+       type Entity {
+        id: ID!
+        name: String!
+      }
+      
+      type Query {
+        query: Entity!
+      }
+    `));
+  });
+
+  test('that an overridden field does not need to be declared shareable #6', () => {
+    const { errors, federationResult } = federateSubgraphs([subgraphE, subgraphP]);
+    expect(errors).toBeUndefined();
+    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST))
+      .toBe(normalizeString(versionTwoPersistedBaseSchema + `
+        type Entity {
+          id: ID!
+          name: String!
+        }
+        
+        type Query {
+          query: Entity!
+        }
+    `));
+  });
+
+  test('that an overridden field does not need to be declared shareable #7', () => {
+    const { errors, federationResult } = federateSubgraphs([subgraphP, subgraphE]);
+    expect(errors).toBeUndefined();
+    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST))
+      .toBe(normalizeString(versionTwoPersistedBaseSchema + `
+        type Query {
+          query: Entity!
+        }
+        
+        type Entity {
+          id: ID!
+          name: String!
+        }
+    `));
+  });
+
   test('that > 1 instance of an un-shareable field returns an error regardless of override', () => {
     const { errors } = federateSubgraphs([subgraphA, subgraphC, subgraphE]);
     expect(errors).toBeDefined();
@@ -65,6 +181,24 @@ describe('@override directive Tests', () => {
           {
             node: { name: { value: 'name' } },
             subgraphsByShareable: new Map<string, boolean>([['subgraph-c', false], ['subgraph-e', true]]),
+          } as FieldContainer,
+        ]]),
+      } as ObjectContainer,
+      new Set<string>(['name']),
+    ));
+  });
+
+  test('that > 1 instance of an un-shareable field returns an error regardless of override #2', () => {
+    const { errors } = federateSubgraphs([subgraphA, subgraphI, subgraphJ]);
+    expect(errors).toBeDefined();
+    expect(errors![0]).toStrictEqual(shareableFieldDefinitionsError(
+      {
+        node: { name: { value: 'Entity' } },
+        fields: new Map<string, FieldContainer>([[
+          'name',
+          {
+            node: { name: { value: 'name' } },
+            subgraphsByShareable: new Map<string, boolean>([['subgraph-a', false], ['subgraph-j', true]]),
           } as FieldContainer,
         ]]),
       } as ObjectContainer,
@@ -126,7 +260,7 @@ const subgraphA: Subgraph = {
   name: 'subgraph-a',
   url: '',
   definitions: parse(`
-    type Query {
+    type Query @shareable {
       query: Entity!
     }
     
@@ -198,7 +332,7 @@ const subgraphG: Subgraph = {
   name: 'subgraph-g',
   url: '',
   definitions: parse(`
-    type Query {
+    type Query @shareable {
       query: Entity
     }
 
@@ -216,6 +350,118 @@ const subgraphH: Subgraph = {
     type Entity @key(fields: "id") @shareable {
       id: ID!
       name(argOne: String!): String!
+    }
+  `),
+};
+
+const subgraphI: Subgraph = {
+  name: 'subgraph-i',
+  url: '',
+  definitions: parse(`
+    type Query @shareable {
+      query: Entity!
+    }
+    
+    type Entity @key(fields: "id") {
+      id: ID!
+      name: String!
+      age: Int! @shareable
+    }
+  `),
+};
+
+const subgraphJ: Subgraph = {
+  name: 'subgraph-j',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id") {
+      id: ID!
+      name: String! @shareable @override(from: "subgraph-i")
+    }
+  `),
+};
+
+const subgraphK: Subgraph = {
+  name: 'subgraph-k',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id") {
+      id: ID!
+      name: String! @shareable
+      number: Int!
+    }
+  `),
+};
+
+const subgraphL: Subgraph = {
+  name: 'subgraph-l',
+  url: '',
+  definitions: parse(`
+    type Query @shareable {
+      query: Entity!
+    }
+    
+    type Entity @key(fields: "id") {
+      id: ID!
+    }
+    
+    extend type Entity {
+      name: String! @shareable @override(from: "subgraph-m")
+    }
+  `),
+};
+
+const subgraphM: Subgraph = {
+  name: 'subgraph-m',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id") {
+      id: ID!
+      name: String!
+    }
+  `),
+};
+
+const subgraphN: Subgraph = {
+  name: 'subgraph-n',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id") {
+      id: ID!
+    }
+    
+    extend type Entity {
+      name: String!
+    }
+  `),
+};
+
+const subgraphO: Subgraph = {
+  name: 'subgraph-o',
+  url: '',
+  definitions: parse(`
+    type Query @shareable {
+      query: Entity!
+    }
+    
+    type Entity @key(fields: "id") {
+      id: ID!
+      name: String! @override(from: "subgraph-n")
+    }
+  `),
+};
+
+const subgraphP: Subgraph = {
+  name: 'subgraph-p',
+  url: '',
+  definitions: parse(`
+    type Query @shareable {
+      query: Entity!
+    }
+    
+    type Entity @key(fields: "id") {
+      id: ID!
+      name: String! @override(from: "subgraph-e")
     }
   `),
 };
