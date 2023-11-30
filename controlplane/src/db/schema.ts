@@ -116,6 +116,7 @@ export const federatedGraphPersistedOperations = pgTable(
     filePath: text('file_path').notNull().unique(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }),
+    operationContent: text('operation_content'),
     createdById: uuid('created_by_id')
       .notNull()
       .references(() => users.id, {

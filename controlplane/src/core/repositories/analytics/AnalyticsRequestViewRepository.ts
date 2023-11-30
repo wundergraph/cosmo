@@ -60,6 +60,10 @@ export class AnalyticsRequestViewRepository {
     operationType: {
       title: 'Type',
     },
+    operationPersistedId: {
+      title: 'Operation Persisted ID',
+      isHidden: true,
+    },
     operationContent: {
       title: 'Operation Content',
       isCta: true,
@@ -129,6 +133,14 @@ export class AnalyticsRequestViewRepository {
       dbClause: 'where',
       columnName: 'operationHash',
       title: 'Operation Hash',
+      options: [],
+      customOptions: true,
+    },
+    operationPersistedId: {
+      dbField: 'OperationPersistedID',
+      dbClause: 'where',
+      columnName: 'operationPersistedId',
+      title: 'Operation Persisted ID',
       options: [],
       customOptions: true,
     },
@@ -244,6 +256,7 @@ export class AnalyticsRequestViewRepository {
             OperationName as operationName,
             OperationHash as operationHash,
             OperationType as operationType,
+            OperationPersistedID as operationPersistedId,
             Duration as durationInNano,
             StatusCode as statusCode,
             StatusMessage as statusMessage,

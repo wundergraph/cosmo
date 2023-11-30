@@ -52,6 +52,7 @@ import {
   GetOrganizationRequestsCountResponse,
   GetOrganizationWebhookConfigsResponse,
   GetOrganizationWebhookMetaResponse,
+  GetPersistedOperationsResponse,
   GetRouterTokensResponse,
   GetSubgraphByNameResponse,
   GetSubgraphsResponse,
@@ -79,7 +80,12 @@ import { DocumentNode, buildASTSchema, parse } from 'graphql';
 import { validate } from 'graphql/validation/index.js';
 import { uid } from 'uid';
 import { eq } from 'drizzle-orm';
-import { GraphApiKeyDTO, GraphApiKeyJwtPayload, PublishedOperationData } from '../../types/index.js';
+import {
+  GraphApiKeyDTO,
+  GraphApiKeyJwtPayload,
+  PublishedOperationData,
+  UpdatedPersistedOperation,
+} from '../../types/index.js';
 import { Composer } from '../composition/composer.js';
 import { buildSchema, composeSubgraphs } from '../composition/composition.js';
 import { getDiffBetweenGraphs } from '../composition/schemaCheck.js';
@@ -4174,7 +4180,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
         const operations: PublishedOperation[] = [];
-        const updatedOperations = [];
+        const updatedOperations: UpdatedPersistedOperation[] = [];
         // Retrieve the operations that have already been published
         const operationsResult = await operationsRepo.getPersistedOperations(clientId);
         const operationsByOperationId = new Map(operationsResult.map((op) => [op.operationId, op.hash]));
@@ -4199,6 +4205,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             operationId,
             hash: operationHash,
             filePath: path,
+            contents: operation.contents,
           });
           let status: PublishedOperationStatus;
           if (prevHash === undefined) {
@@ -4227,6 +4234,42 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             code: EnumStatusCode.OK,
           },
           operations,
+        };
+      });
+    },
+
+    getPersistedOperations: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetPersistedOperationsResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const fedRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+        const federatedGraph = await fedRepo.byName(req.federatedGraphName);
+
+        if (!federatedGraph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Federated graph '${req.federatedGraphName}' does not exist`,
+            },
+            operations: [],
+          };
+        }
+
+        const operationsRepo = new OperationsRepository(opts.db, federatedGraph.id);
+        const operations = await operationsRepo.getPersistedOperations(req.clientId);
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          operations: operations.map((op) => ({
+            ...op,
+            id: op.operationId,
+          })),
         };
       });
     },

@@ -5753,6 +5753,147 @@ export class PublishPersistedOperationsResponse extends Message<PublishPersisted
 }
 
 /**
+ * @generated from message wg.cosmo.platform.v1.GetPersistedOperationsRequest
+ */
+export class GetPersistedOperationsRequest extends Message<GetPersistedOperationsRequest> {
+  /**
+   * @generated from field: string federated_graph_name = 1;
+   */
+  federatedGraphName = "";
+
+  /**
+   * @generated from field: string client_id = 2;
+   */
+  clientId = "";
+
+  constructor(data?: PartialMessage<GetPersistedOperationsRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetPersistedOperationsRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "federated_graph_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "client_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetPersistedOperationsRequest {
+    return new GetPersistedOperationsRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetPersistedOperationsRequest {
+    return new GetPersistedOperationsRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetPersistedOperationsRequest {
+    return new GetPersistedOperationsRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetPersistedOperationsRequest | PlainMessage<GetPersistedOperationsRequest> | undefined, b: GetPersistedOperationsRequest | PlainMessage<GetPersistedOperationsRequest> | undefined): boolean {
+    return proto3.util.equals(GetPersistedOperationsRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetPersistedOperationsResponse
+ */
+export class GetPersistedOperationsResponse extends Message<GetPersistedOperationsResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.GetPersistedOperationsResponse.Operation operations = 2;
+   */
+  operations: GetPersistedOperationsResponse_Operation[] = [];
+
+  constructor(data?: PartialMessage<GetPersistedOperationsResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetPersistedOperationsResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "operations", kind: "message", T: GetPersistedOperationsResponse_Operation, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetPersistedOperationsResponse {
+    return new GetPersistedOperationsResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetPersistedOperationsResponse {
+    return new GetPersistedOperationsResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetPersistedOperationsResponse {
+    return new GetPersistedOperationsResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetPersistedOperationsResponse | PlainMessage<GetPersistedOperationsResponse> | undefined, b: GetPersistedOperationsResponse | PlainMessage<GetPersistedOperationsResponse> | undefined): boolean {
+    return proto3.util.equals(GetPersistedOperationsResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetPersistedOperationsResponse.Operation
+ */
+export class GetPersistedOperationsResponse_Operation extends Message<GetPersistedOperationsResponse_Operation> {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id = "";
+
+  /**
+   * @generated from field: string contents = 2;
+   */
+  contents = "";
+
+  /**
+   * @generated from field: string created_at = 3;
+   */
+  createdAt = "";
+
+  /**
+   * @generated from field: string last_updated_at = 4;
+   */
+  lastUpdatedAt = "";
+
+  constructor(data?: PartialMessage<GetPersistedOperationsResponse_Operation>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetPersistedOperationsResponse.Operation";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "contents", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "created_at", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "last_updated_at", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetPersistedOperationsResponse_Operation {
+    return new GetPersistedOperationsResponse_Operation().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetPersistedOperationsResponse_Operation {
+    return new GetPersistedOperationsResponse_Operation().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetPersistedOperationsResponse_Operation {
+    return new GetPersistedOperationsResponse_Operation().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetPersistedOperationsResponse_Operation | PlainMessage<GetPersistedOperationsResponse_Operation> | undefined, b: GetPersistedOperationsResponse_Operation | PlainMessage<GetPersistedOperationsResponse_Operation> | undefined): boolean {
+    return proto3.util.equals(GetPersistedOperationsResponse_Operation, a, b);
+  }
+}
+
+/**
  * @generated from message wg.cosmo.platform.v1.Header
  */
 export class Header extends Message<Header> {

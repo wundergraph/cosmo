@@ -555,6 +555,14 @@ export class MetricsRepository {
       options: [],
       customOptions: true,
     },
+    operationPersistedId: {
+      dbField: 'OperationPersistedID',
+      dbClause: 'where',
+      columnName: 'operationPersistedId',
+      title: 'Operation Persisted ID',
+      options: [],
+      customOptions: true,
+    },
     clientName: {
       dbField: 'ClientName',
       dbClause: 'where',
@@ -624,7 +632,7 @@ export class MetricsRepository {
     }
 
     return buildAnalyticsViewFilters(
-      { operationName: '', operationHash: '', clientName: '', clientVersion: '' },
+      { operationName: '', operationHash: '', operationPersistedId: '', clientName: '', clientVersion: '' },
       filters,
     );
   }

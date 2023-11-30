@@ -1,10 +1,17 @@
+import { createFilterState } from "@/components/analytics/constructAnalyticsTableQueryState";
 import { UserContext } from "@/components/app-provider";
+import { CodeViewer } from "@/components/code-viewer";
 import { EmptyState } from "@/components/empty-state";
 import { getGraphLayout } from "@/components/layout/graph-layout";
 import { PageHeader } from "@/components/layout/head";
 import { TitleLayout } from "@/components/layout/title-layout";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
-import { CLI } from "@/components/ui/cli";
 import {
   Dialog,
   DialogContent,
@@ -14,6 +21,12 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Form,
   FormControl,
   FormField,
@@ -22,6 +35,13 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Loader } from "@/components/ui/loader";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import {
   Table,
   TableBody,
@@ -38,23 +58,309 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
 import { docsBaseURL } from "@/lib/constants";
+import { formatDateTime } from "@/lib/format-date";
 import { NextPageWithLayout } from "@/lib/page";
 import { checkUserAccess, cn } from "@/lib/utils";
 import { CommandLineIcon } from "@heroicons/react/24/outline";
-import { ExclamationTriangleIcon, PlusIcon } from "@radix-ui/react-icons";
+import {
+  CopyIcon,
+  Cross1Icon,
+  ExclamationTriangleIcon,
+  MagnifyingGlassIcon,
+  PlayIcon,
+  PlusIcon,
+} from "@radix-ui/react-icons";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   getClients,
+  getPersistedOperations,
   publishPersistedOperations,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+import copy from "copy-to-clipboard";
 import { formatDistanceToNow } from "date-fns";
+import Fuse from "fuse.js";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useRouter } from "next/router";
 import { useContext, useState } from "react";
 import { BiAnalyse } from "react-icons/bi";
 import { IoBarcodeSharp } from "react-icons/io5";
 import { z } from "zod";
+
+const getSnippets = ({
+  clientName,
+  operationId,
+}: {
+  clientName: string;
+  operationId: string;
+}) => {
+  const curl = `curl 'http://127.0.0.1:3002/graphql' \\
+    -H 'graphql-client-name: ${clientName}' \\
+    --json '{"extensions":{"persistedQuery":{"version":1,"sha256Hash":"${operationId}"}}}'
+  `;
+
+  const js = `const url = 'http://127.0.0.1:3002/graphql';
+const headers = {
+  'Content-Type': 'application/json',
+  'graphql-client-name': '${clientName}',
+};
+
+const body = {
+  extensions: {
+    persistedQuery: {
+      version: 1,
+      sha256Hash: '${operationId}',
+    },
+  },
+};
+
+fetch(url, {
+  method: 'POST',
+  headers,
+  body: JSON.stringify(body),
+})
+  .then(response => response.json())
+  .then(data => console.log(data))
+  .catch(error => console.error('Error:', error));`;
+
+  return { curl, js };
+};
+
+const ClientOperations = () => {
+  const router = useRouter();
+  const slug = router.query.slug as string;
+  const organizationSlug = router.query.organizationSlug as string;
+  const { toast } = useToast();
+  const searchParams = useSearchParams();
+  const clientId = searchParams.get("clientId");
+  const clientName = searchParams.get("clientName");
+
+  const [search, setSearch] = useState(router.query.search as string);
+  const applyParams = (search: string) => {
+    const query = { ...router.query };
+    query.search = search;
+
+    if (!search) {
+      delete query.search;
+    }
+
+    router.replace({
+      query,
+    });
+  };
+
+  const { data, isLoading, error, refetch } = useQuery({
+    ...getPersistedOperations.useQuery({
+      clientId: clientId ?? "",
+      federatedGraphName: slug,
+    }),
+    enabled: !!clientId,
+  });
+
+  let content: React.ReactNode;
+
+  if (isLoading) {
+    content = <Loader fullscreen />;
+  } else if (error || data?.response?.code !== EnumStatusCode.OK) {
+    content = (
+      <div className="my-auto">
+        <EmptyState
+          icon={<ExclamationTriangleIcon />}
+          title="Could not retrieve operations"
+          description={
+            data?.response?.details || error?.message || "Please try again"
+          }
+          actions={<Button onClick={() => refetch()}>Retry</Button>}
+        />
+      </div>
+    );
+  } else if (data) {
+    const fuse = new Fuse(data.operations, {
+      keys: ["id"],
+      minMatchCharLength: 8,
+    });
+
+    const filteredOperations = search
+      ? fuse.search(search).map(({ item }) => item)
+      : data.operations;
+
+    content = (
+      <div>
+        <div className="relative">
+          <MagnifyingGlassIcon className="absolute bottom-0 left-3 top-0 my-auto" />
+          <Input
+            placeholder="Search by ID"
+            className="pl-8 pr-10"
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              applyParams(e.target.value);
+            }}
+          />
+          {search && (
+            <Button
+              variant="ghost"
+              className="absolute bottom-0 right-0 top-0 my-auto rounded-l-none"
+              onClick={() => {
+                setSearch("");
+                applyParams("");
+              }}
+            >
+              <Cross1Icon />
+            </Button>
+          )}
+        </div>
+        <Accordion type="single" collapsible className="mt-4 w-full">
+          {filteredOperations.map((op) => {
+            const [base, _] = window.location.href.split("?");
+            const link =
+              base +
+              `?clientId=${clientId}&clientName=${clientName}&search=${op.id}`;
+
+            const snippets = getSnippets({
+              clientName: clientName ?? "",
+              operationId: op.id,
+            });
+
+            return (
+              <AccordionItem key={op.id} value={op.id}>
+                <AccordionTrigger className="truncate px-2 hover:bg-secondary/30 hover:no-underline">
+                  <span className="truncate">{op.id}</span>
+                </AccordionTrigger>
+                <AccordionContent className="mt-2 px-2">
+                  <div>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      {op.lastUpdatedAt ? (
+                        <p className="text-muted-foreground">
+                          Updated at{" "}
+                          {formatDateTime(new Date(op.lastUpdatedAt))}
+                        </p>
+                      ) : (
+                        <p className="text-muted-foreground">
+                          Created at {formatDateTime(new Date(op.createdAt))}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-x-2">
+                        <Tooltip delayDuration={100}>
+                          <TooltipTrigger>
+                            <Button variant="outline" size="icon" asChild>
+                              <Link
+                                href={{
+                                  pathname: `/[organizationSlug]/graph/[slug]/analytics`,
+                                  query: {
+                                    organizationSlug:
+                                      router.query.organizationSlug,
+                                    slug: router.query.slug,
+                                    filterState: createFilterState({
+                                      operationPersistedId: op.id,
+                                    }),
+                                  },
+                                }}
+                              >
+                                <BiAnalyse />
+                              </Link>
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>View Metrics</TooltipContent>
+                        </Tooltip>
+                        <Tooltip delayDuration={100}>
+                          <TooltipTrigger>
+                            <Button variant="outline" size="icon" asChild>
+                              <Link
+                                href={`/${organizationSlug}/graph/${slug}/playground?operation=${btoa(
+                                  op.contents || "",
+                                )}`}
+                              >
+                                <PlayIcon />
+                              </Link>
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Run in Playground</TooltipContent>
+                        </Tooltip>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="icon">
+                              <CopyIcon />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() => {
+                                copy(link);
+                                toast({
+                                  description: "Copied link to operation",
+                                });
+                              }}
+                            >
+                              Link to operation
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                copy(snippets.js);
+                                toast({
+                                  description: "Copied snippet",
+                                });
+                              }}
+                            >
+                              Javascript snippet
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                copy(snippets.curl);
+                                toast({
+                                  description: "Copied snippet",
+                                });
+                              }}
+                            >
+                              curl snippet
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </div>
+                    <div className="scrollbar-custom mt-2 h-96 overflow-auto rounded border">
+                      <CodeViewer code={op.contents} disableLinking />
+                    </div>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            );
+          })}
+        </Accordion>
+      </div>
+    );
+  }
+
+  return (
+    <Sheet
+      modal
+      open={!!clientId}
+      onOpenChange={(isOpen) => {
+        if (!isOpen) {
+          const newQuery = { ...router.query };
+          delete newQuery["clientId"];
+          delete newQuery["clientName"];
+          router.replace({
+            query: newQuery,
+          });
+        }
+      }}
+    >
+      <SheetContent className="scrollbar-custom w-full max-w-full overflow-y-scroll sm:max-w-full md:max-w-2xl lg:max-w-3xl">
+        <SheetHeader className="mb-12">
+          <SheetTitle className="flex flex-wrap items-center gap-x-1.5">
+            Persisted Operations in{" "}
+            <code className="break-all rounded bg-secondary px-1.5 text-left text-secondary-foreground">
+              {clientName}
+            </code>
+          </SheetTitle>
+        </SheetHeader>
+        {content}
+      </SheetContent>
+    </Sheet>
+  );
+};
 
 const FormSchema = z.object({
   clientName: z.string().trim().min(1, "The name cannot be empty"),
@@ -252,7 +558,8 @@ const ClientsPage: NextPageWithLayout = () => {
                 <TableHead>Updated By</TableHead>
                 <TableHead>Created At</TableHead>
                 <TableHead>Last Push</TableHead>
-                <TableHead></TableHead>
+                <TableHead>Operations</TableHead>
+                <TableHead className="w-32"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -291,12 +598,30 @@ const ClientsPage: NextPageWithLayout = () => {
                           ? formatDistanceToNow(new Date(lastUpdatedAt))
                           : "Never"}
                       </TableCell>
-                      <TableCell className="flex items-center justify-end gap-x-3 pr-8">
+                      <TableCell>
+                        <Button
+                          variant="link"
+                          className="px-0 hover:no-underline"
+                          onClick={() => {
+                            router.replace({
+                              pathname: router.pathname,
+                              query: {
+                                ...router.query,
+                                clientId: id,
+                                clientName: name,
+                              },
+                            });
+                          }}
+                        >
+                          View Operations
+                        </Button>
+                      </TableCell>
+                      <TableCell className="flex items-center gap-x-3 pr-8">
                         <Tooltip delayDuration={0}>
                           <TooltipTrigger>
-                            <Button variant="secondary" size="icon-sm">
+                            <Button variant="ghost" size="icon" asChild>
                               <Link href={constructLink(name, "metrics")}>
-                                <BiAnalyse />
+                                <BiAnalyse className="h-5 w-5" />
                               </Link>
                             </Button>
                           </TooltipTrigger>
@@ -304,9 +629,9 @@ const ClientsPage: NextPageWithLayout = () => {
                         </Tooltip>
                         <Tooltip delayDuration={0}>
                           <TooltipTrigger>
-                            <Button variant="secondary" size="icon-sm">
+                            <Button variant="ghost" size="icon" asChild>
                               <Link href={constructLink(name, "traces")}>
-                                <IoBarcodeSharp />
+                                <IoBarcodeSharp className="h-5 w-5" />
                               </Link>
                             </Button>
                           </TooltipTrigger>
@@ -321,6 +646,7 @@ const ClientsPage: NextPageWithLayout = () => {
           </Table>
         </>
       )}
+      <ClientOperations />
     </div>
   );
 };
