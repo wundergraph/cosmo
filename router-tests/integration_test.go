@@ -218,6 +218,7 @@ func setupServerConfig(tb testing.TB, opts ...core.Option) (*core.Server, config
 		core.WithLogger(zapLogger),
 		core.WithGraphApiToken(graphApiToken),
 		core.WithCDNURL(cfg.CDN.URL),
+		core.WithDevelopmentMode(true),
 		core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
 			EnableSingleFlight:                     true,
 			EnableRequestTracing:                   true,

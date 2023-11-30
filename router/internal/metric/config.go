@@ -2,6 +2,7 @@ package metric
 
 import (
 	"github.com/wundergraph/cosmo/router/internal/otel/otelconfig"
+	"net/url"
 	"regexp"
 )
 
@@ -19,6 +20,7 @@ type Prometheus struct {
 }
 
 type OpenTelemetryExporter struct {
+	Disabled bool
 	Exporter otelconfig.Exporter
 	Endpoint string
 	// Headers represents the headers for HTTP transport.
@@ -34,6 +36,26 @@ type OpenTelemetryExporter struct {
 type OpenTelemetry struct {
 	Enabled   bool
 	Exporters []*OpenTelemetryExporter
+}
+
+func GetDefaultExporter(cfg *Config) *OpenTelemetryExporter {
+	for _, exporter := range cfg.OpenTelemetry.Exporters {
+		if exporter.Disabled {
+			continue
+		}
+		u, err := url.Parse(exporter.Endpoint)
+		if err != nil {
+			continue
+		}
+		u2, err := url.Parse(otelconfig.DefaultEndpoint())
+		if err != nil {
+			continue
+		}
+		if u.Host == u2.Host {
+			return exporter
+		}
+	}
+	return nil
 }
 
 // Config represents the configuration for the agent.
@@ -59,7 +81,10 @@ func DefaultConfig() *Config {
 			Enabled: false,
 			Exporters: []*OpenTelemetryExporter{
 				{
+					Disabled: false,
 					Endpoint: "http://localhost:4318",
+					Exporter: otelconfig.ExporterOLTPHTTP,
+					HTTPPath: "/v1/metrics",
 				},
 			},
 		},

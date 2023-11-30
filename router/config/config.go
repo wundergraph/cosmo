@@ -30,6 +30,7 @@ type TracingExporterConfig struct {
 }
 
 type TracingExporter struct {
+	Disabled              bool                `yaml:"disabled"`
 	Exporter              otelconfig.Exporter `yaml:"exporter" validate:"oneof=http grpc"`
 	Endpoint              string              `yaml:"endpoint" validate:"http_url"`
 	HTTPPath              string              `yaml:"path"`
@@ -52,6 +53,7 @@ type Prometheus struct {
 }
 
 type MetricsOTLPExporter struct {
+	Disabled bool                `yaml:"disabled"`
 	Exporter otelconfig.Exporter `yaml:"exporter" validate:"oneof=http grpc"`
 	Endpoint string              `yaml:"endpoint" validate:"http_url"`
 	HTTPPath string              `yaml:"path"`
@@ -222,9 +224,11 @@ type Config struct {
 	Authorization                 AuthorizationConfiguration  `yaml:"authorization"`
 	LocalhostFallbackInsideDocker bool                        `yaml:"localhost_fallback_inside_docker" default:"true" envconfig:"LOCALHOST_FALLBACK_INSIDE_DOCKER"`
 	CDN                           CDNConfiguration            `yaml:"cdn"`
+	DevelopmentMode               bool                        `yaml:"dev_mode" default:"false" envconfig:"DEV_MODE"`
 
-	ConfigPath       string `envconfig:"CONFIG_PATH" validate:"omitempty,filepath"`
-	RouterConfigPath string `yaml:"router_config_path" envconfig:"ROUTER_CONFIG_PATH" validate:"omitempty,filepath"`
+	ConfigPath         string `envconfig:"CONFIG_PATH" validate:"omitempty,filepath"`
+	RouterConfigPath   string `yaml:"router_config_path" envconfig:"ROUTER_CONFIG_PATH" validate:"omitempty,filepath"`
+	RouterRegistration bool   `yaml:"router_registration" envconfig:"ROUTER_REGISTRATION" default:"true"`
 
 	OverrideRoutingURL OverrideRoutingURLConfiguration `yaml:"override_routing_url"`
 
@@ -267,6 +271,10 @@ func LoadConfig(envOverride string) (*Config, error) {
 		c.ConfigPath = defaultConfigPath
 	}
 
+	if c.DevelopmentMode {
+		c.JSONLog = false
+	}
+
 	// Configuration from environment variables. We don't have the config here.
 	logLevel, err := logging.ZapLogLevelFromString(c.LogLevel)
 	if err != nil {
@@ -301,6 +309,10 @@ func LoadConfig(envOverride string) (*Config, error) {
 	err = validate.Struct(c)
 	if err != nil {
 		return nil, err
+	}
+
+	if c.DevelopmentMode {
+		c.JSONLog = false
 	}
 
 	return &c, nil

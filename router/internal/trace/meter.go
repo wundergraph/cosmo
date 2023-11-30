@@ -125,6 +125,10 @@ func NewTracerProvider(ctx context.Context, log *zap.Logger, c *Config) (*sdktra
 
 	if c.Enabled {
 		for _, exp := range c.Exporters {
+			if exp.Disabled {
+				continue
+			}
+
 			exporter, err := createExporter(log, exp)
 			if err != nil {
 				log.Error("creating exporter", zap.Error(err))

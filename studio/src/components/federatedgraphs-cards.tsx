@@ -278,12 +278,13 @@ export const RunRouterCommand = ({
   const dockerRunCommand = `docker run \\
   --name cosmo-router \\
   --rm \\
-  -e FEDERATED_GRAPH_NAME="${graphName}" \\
-  -e GRAPH_API_TOKEN=${token} \\
-  -e LISTEN_ADDR=0.0.0.0:3002 \\
+  -p 3002:3002 \\
   --add-host=host.docker.internal:host-gateway \\
   --platform=linux/amd64 \\
-  -p 3002:3002 \\
+  -e FEDERATED_GRAPH_NAME="${graphName}" \\
+  -e DEV_MODE=true \\
+  -e LISTEN_ADDR=0.0.0.0:3002 \\
+  -e GRAPH_API_TOKEN=${token} \\
   ghcr.io/wundergraph/cosmo/router:latest`;
 
   const [copyDockerCommand, setCopyDockerCommand] = useState(false);

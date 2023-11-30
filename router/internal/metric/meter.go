@@ -155,6 +155,10 @@ func NewMeterProvider(ctx context.Context, log *zap.Logger, c *Config) (*sdkmetr
 
 	if c.OpenTelemetry.Enabled {
 		for _, exp := range c.OpenTelemetry.Exporters {
+			if exp.Disabled {
+				continue
+			}
+
 			exporter, err := createOTELExporter(log, exp)
 			if err != nil {
 				log.Error("creating OTEL metrics exporter", zap.Error(err))

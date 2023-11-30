@@ -49,6 +49,7 @@ func TestSubgraphReturnsSuccessfully(t *testing.T) {
 	rs, err := core.NewRouter(
 		core.WithFederatedGraphName(cfg.Graph.Name),
 		core.WithStaticRouterConfig(routerConfig),
+		core.WithDevelopmentMode(true),
 		core.WithModulesConfig(cfg.Modules),
 		core.WithListenerAddr("localhost:3002"),
 	)
@@ -106,6 +107,7 @@ func TestSubgraphReturnsGraphQLErrorWithNullData(t *testing.T) {
 	rs, err := core.NewRouter(
 		core.WithFederatedGraphName(cfg.Graph.Name),
 		core.WithStaticRouterConfig(routerConfig),
+		core.WithDevelopmentMode(true),
 		core.WithModulesConfig(cfg.Modules),
 		core.WithListenerAddr("localhost:3002"),
 	)
@@ -166,6 +168,7 @@ func TestSubgraphReturnsGraphQLErrorWithMissingData(t *testing.T) {
 	rs, err := core.NewRouter(
 		core.WithFederatedGraphName(cfg.Graph.Name),
 		core.WithStaticRouterConfig(routerConfig),
+		core.WithDevelopmentMode(true),
 		core.WithModulesConfig(cfg.Modules),
 		core.WithListenerAddr("localhost:3002"),
 	)
@@ -224,6 +227,7 @@ func TestSubgraphReturnsHttpError(t *testing.T) {
 	rs, err := core.NewRouter(
 		core.WithFederatedGraphName(cfg.Graph.Name),
 		core.WithStaticRouterConfig(routerConfig),
+		core.WithDevelopmentMode(true),
 		core.WithModulesConfig(cfg.Modules),
 		core.WithListenerAddr("localhost:3002"),
 	)

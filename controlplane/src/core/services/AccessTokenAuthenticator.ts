@@ -20,8 +20,6 @@ export default class AccessTokenAuthenticator {
 
   /**
    * Authenticates the user with the given access token. Returns the user's organization ID and user's ID.
-   *
-   * @param accessToken
    */
   public async authenticate(accessToken: string, organizationSlug: string | null): Promise<AccessTokenAuthContext> {
     const userInfoData = await this.authUtils.getUserInfo(accessToken);

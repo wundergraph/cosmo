@@ -43,8 +43,29 @@ message GetConfigResponse {
 
 }
 
+message RegistrationInfo {
+  AccountLimits account_limits = 1;
+  string graph_public_key = 2;
+}
+
+message AccountLimits {
+  // The maximum sampling rate for traces. Must be between 0 and 1.
+  // 0 means no traces will be sampled and 1 means all traces will be sampled.
+  float trace_sampling_rate = 1;
+}
+
+message SelfRegisterRequest {
+
+}
+
+message SelfRegisterResponse {
+  Response response = 1;
+  optional RegistrationInfo registrationInfo = 2;
+}
+
 service NodeService {
   rpc GetLatestValidRouterConfig(GetConfigRequest) returns (GetConfigResponse) {}
+  rpc SelfRegister(SelfRegisterRequest) returns (SelfRegisterResponse) {}
 }
 
 message EngineConfiguration {

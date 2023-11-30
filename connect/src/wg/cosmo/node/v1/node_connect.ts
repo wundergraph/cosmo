@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { GetConfigRequest, GetConfigResponse } from "./node_pb.js";
+import { GetConfigRequest, GetConfigResponse, SelfRegisterRequest, SelfRegisterResponse } from "./node_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -19,6 +19,15 @@ export const NodeService = {
       name: "GetLatestValidRouterConfig",
       I: GetConfigRequest,
       O: GetConfigResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc wg.cosmo.node.v1.NodeService.SelfRegister
+     */
+    selfRegister: {
+      name: "SelfRegister",
+      I: SelfRegisterRequest,
+      O: SelfRegisterResponse,
       kind: MethodKind.Unary,
     },
   }

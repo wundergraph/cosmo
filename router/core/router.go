@@ -2,8 +2,12 @@ package core
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"errors"
 	"fmt"
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/wundergraph/cosmo/router/internal/controlplane/configpoller"
+	"github.com/wundergraph/cosmo/router/internal/controlplane/selfregister"
 	"net"
 	"net/http"
 	"net/url"
@@ -24,18 +28,9 @@ import (
 	"github.com/go-chi/chi/middleware"
 	"github.com/mitchellh/mapstructure"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/wundergraph/cosmo/router/internal/graphiql"
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
-	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	oteltrace "go.opentelemetry.io/otel/trace"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
-	"golang.org/x/sync/errgroup"
-
 	"github.com/wundergraph/cosmo/router/config"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
-	"github.com/wundergraph/cosmo/router/internal/controlplane"
+	"github.com/wundergraph/cosmo/router/internal/graphiql"
 	"github.com/wundergraph/cosmo/router/internal/handler/cors"
 	"github.com/wundergraph/cosmo/router/internal/handler/health"
 	"github.com/wundergraph/cosmo/router/internal/handler/recovery"
@@ -45,6 +40,12 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"github.com/wundergraph/cosmo/router/internal/stringsx"
 	"github.com/wundergraph/cosmo/router/internal/trace"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	oteltrace "go.opentelemetry.io/otel/trace"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 type (
@@ -81,7 +82,6 @@ type (
 		meterProvider            *sdkmetric.MeterProvider
 		gqlMetricsExporter       *graphqlmetrics.Exporter
 		corsOptions              *cors.Config
-		configFetcher            controlplane.ConfigFetcher
 		routerConfig             *nodev1.RouterConfig
 		gracePeriod              time.Duration
 		shutdown                 bool
@@ -109,8 +109,15 @@ type (
 		routerTrafficConfig      *config.RouterTrafficConfiguration
 		accessController         *AccessController
 		retryOptions             retrytransport.RetryOptions
+		developmentMode          bool
 		// If connecting to localhost inside Docker fails, fallback to the docker internal address for the host
 		localhostFallbackInsideDocker bool
+
+		// Poller
+		configPoller configpoller.ConfigPoller
+		selfRegister selfregister.SelfRegister
+
+		registrationInfo *nodev1.RegistrationInfo
 
 		engineExecutionConfiguration config.EngineExecutionConfiguration
 
@@ -211,6 +218,8 @@ func NewRouter(opts ...Option) (*Router, error) {
 		"apollographql-client-name",
 		"apollographql-client-version",
 		"x-wg-trace",
+		"x-wg-token",
+		"authorization",
 	}
 
 	defaultMethods := []string{
@@ -249,27 +258,58 @@ func NewRouter(opts ...Option) (*Router, error) {
 		ExpectContinueTimeout: r.subgraphTransportOptions.ExpectContinueTimeout,
 	}
 
-	// Add default exporters if needed
+	// Add default tracing exporter if needed
 	if r.traceConfig.Enabled && len(r.traceConfig.Exporters) == 0 {
 		if endpoint := otelconfig.DefaultEndpoint(); endpoint != "" {
-			r.logger.Debug("using default trace exporter", zap.String("endpoint", endpoint))
+			r.logger.Debug("Using default trace exporter", zap.String("endpoint", endpoint))
 			r.traceConfig.Exporters = append(r.traceConfig.Exporters, &trace.Exporter{
 				Endpoint: endpoint,
+				Exporter: otelconfig.ExporterOLTPHTTP,
+				HTTPPath: "/v1/traces",
 				Headers:  otelconfig.DefaultEndpointHeaders(r.graphApiToken),
 			})
 		}
 	}
 
-	// Add default exporters if none are configured
+	// Add default metric exporter if none are configured
 	if r.metricConfig.OpenTelemetry.Enabled && len(r.metricConfig.OpenTelemetry.Exporters) == 0 {
 		if endpoint := otelconfig.DefaultEndpoint(); endpoint != "" {
-			r.logger.Debug("using default metrics exporter", zap.String("endpoint", endpoint))
+			r.logger.Debug("Using default metrics exporter", zap.String("endpoint", endpoint))
 			r.metricConfig.OpenTelemetry.Exporters = append(r.metricConfig.OpenTelemetry.Exporters, &metric.OpenTelemetryExporter{
 				Endpoint: endpoint,
+				Exporter: otelconfig.ExporterOLTPHTTP,
+				HTTPPath: "/v1/metrics",
 				Headers:  otelconfig.DefaultEndpointHeaders(r.graphApiToken),
 			})
 		}
 	}
+
+	// The user might want to start the server with a static config
+	// Disable all features that requires a valid graph token and inform the user
+	if r.graphApiToken == "" {
+		r.graphqlMetricsConfig.Enabled = false
+		r.logger.Warn("No graph token provided. Disabling schema usage tracking, thus breaking change detection. Not recommended for production use.")
+
+		if !r.developmentMode {
+			r.logger.Warn("No graph token provided. Advanced Request Tracing disabled and can only be used with a graph token or in dev mode.")
+		}
+
+		if r.traceConfig.Enabled {
+			defaultExporter := trace.GetDefaultExporter(r.traceConfig)
+			if defaultExporter != nil {
+				r.logger.Warn("No graph token provided. Tracing ingestion to Cosmo Cloud disabled. Please specify a custom trace exporter or provide a graph token.")
+				defaultExporter.Disabled = true
+			}
+		}
+		if r.metricConfig.OpenTelemetry.Enabled {
+			defaultExporter := metric.GetDefaultExporter(r.metricConfig)
+			if defaultExporter != nil {
+				r.logger.Warn("No graph token provided. Metrics ingestion to Cosmo Cloud disabled. Please specify a custom trace exporter or provide a graph token.")
+				defaultExporter.Disabled = true
+			}
+		}
+	}
+
 	routerCDN, err := cdn.New(cdn.CDNOptions{
 		URL:                 r.cdnURL,
 		AuthenticationToken: r.graphApiToken,
@@ -278,6 +318,11 @@ func NewRouter(opts ...Option) (*Router, error) {
 		return nil, err
 	}
 	r.cdn = routerCDN
+
+	if r.developmentMode {
+		r.logger.Warn("Development mode enabled. This should only be used for testing purposes")
+	}
+
 	return r, nil
 }
 
@@ -337,7 +382,7 @@ func (r *Router) updateServer(ctx context.Context, cfg *nodev1.RouterConfig) err
 	// In case of an error, we return early and keep the old Server running
 	newRouter, err := r.newServer(ctx, cfg)
 	if err != nil {
-		r.logger.Error("Failed to create r new router. Keeping old router running", zap.Error(err))
+		r.logger.Error("Failed to create a new router instance. Keeping old router running", zap.Error(err))
 		return err
 	}
 
@@ -357,22 +402,12 @@ func (r *Router) updateServer(ctx context.Context, cfg *nodev1.RouterConfig) err
 
 	// Start new Server
 	go func() {
-		if prevRouter != nil {
-			r.logger.Info("Starting Server with new config",
-				zap.String("version", cfg.GetVersion()),
-			)
-		} else {
-			r.logger.Info("Server listening",
-				zap.String("listen_addr", r.listenAddr),
-				zap.Bool("playground", r.playground),
-				zap.Bool("introspection", r.introspection),
-				zap.String("config_version", cfg.GetVersion()),
-			)
-
-			if r.playground && r.introspection {
-				r.logger.Info("Playground available at", zap.String("url", r.baseURL))
-			}
-		}
+		r.logger.Info("Server listening",
+			zap.String("listen_addr", r.listenAddr),
+			zap.Bool("playground", r.playground),
+			zap.Bool("introspection", r.introspection),
+			zap.String("config_version", cfg.GetVersion()),
+		)
 
 		r.activeRouter.healthChecks.SetReady(true)
 
@@ -522,7 +557,34 @@ func (r *Router) bootstrap(ctx context.Context) error {
 // Start starts the Server. It blocks until the context is cancelled or when the initial config could not be fetched.
 func (r *Router) Start(ctx context.Context) error {
 	if r.shutdown {
-		return fmt.Errorf("router is closed. Create r new instance with router.NewRouter()")
+		return fmt.Errorf("router is closed. Create a new instance with router.NewRouter()")
+	}
+
+	cosmoCloudTracingEnabled := r.traceConfig.Enabled && trace.GetDefaultExporter(r.traceConfig) != nil
+	artInProductionEnabled := r.engineExecutionConfiguration.EnableRequestTracing && !r.developmentMode
+	needsRegistration := cosmoCloudTracingEnabled || artInProductionEnabled
+
+	if needsRegistration && r.selfRegister != nil {
+
+		r.logger.Info("Registering router with control plane because you opted in to send telemetry to Cosmo Cloud or advanced request tracing (ART) in production")
+
+		ri, registerErr := r.selfRegister.Register(ctx)
+		if registerErr != nil {
+			r.logger.Error("Failed to register router. If this error persists, please contact support.", zap.Error(registerErr))
+		} else {
+			r.registrationInfo = ri
+
+			// Only ensure sampling rate if the user exports traces to Cosmo Cloud
+			if cosmoCloudTracingEnabled {
+				if r.traceConfig.Sampler > float64(r.registrationInfo.AccountLimits.TraceSamplingRate) {
+					r.logger.Warn("Trace sampling rate is higher than account limit. Using account limit instead. Please contact support to increase your account limit.",
+						zap.Float64("limit", r.traceConfig.Sampler),
+						zap.String("account_limit", fmt.Sprintf("%.2f", r.registrationInfo.AccountLimits.TraceSamplingRate)),
+					)
+					r.traceConfig.Sampler = float64(r.registrationInfo.AccountLimits.TraceSamplingRate)
+				}
+			}
+		}
 	}
 
 	if err := r.bootstrap(ctx); err != nil {
@@ -531,48 +593,39 @@ func (r *Router) Start(ctx context.Context) error {
 
 	// Start the server with the static config without polling
 	if r.routerConfig != nil {
-		r.logger.Info("Static router config provided. Polling is disabled. Updating router config is only possible by restarting the router.")
+		r.logger.Info("Static router config provided. Polling is disabled. Updating router config is only possible by providing a config.")
 		return r.updateServer(ctx, r.routerConfig)
 	}
 
-	if r.configFetcher == nil {
+	if r.configPoller == nil {
 		return fmt.Errorf("config fetcher not provided. Please provide a static router config instead")
 	}
 
-	r.logger.Info("Polling for router config updates in the background", zap.String("interval", r.configFetcher.Interval().String()))
-
-	initCh := make(chan *nodev1.RouterConfig, 1)
-
-	eg, ctx := errgroup.WithContext(ctx)
-
-	eg.Go(func() error {
-		for {
-			select {
-			case <-ctx.Done(): // context cancelled
-				return nil
-			case cfg := <-initCh: // initial config
-				if err := r.updateServer(ctx, cfg); err != nil {
-					return fmt.Errorf("failed to start server with initial config: %w", err)
-				}
-			case cfg := <-r.configFetcher.Subscribe(ctx): // new config
-				if err := r.updateServer(ctx, cfg); err != nil {
-					r.logger.Error("Failed to start server with new config", zap.Error(err))
-					continue
-				}
-			}
-		}
-	})
-
-	// Poll control-plane to get initial router config
-	initialCfg, err := r.configFetcher.GetRouterConfig(ctx)
+	routerConfig, err := r.configPoller.GetRouterConfig(ctx)
 	if err != nil {
-		// The router can't work without a config there we exit hard
 		return fmt.Errorf("failed to get initial router config: %w", err)
 	}
 
-	initCh <- initialCfg
+	if err := r.updateServer(ctx, routerConfig); err != nil {
+		r.logger.Error("Failed to start server with initial config", zap.Error(err))
+		return err
+	}
 
-	return eg.Wait()
+	r.logger.Info("Polling for router config updates in the background")
+
+	r.configPoller.Subscribe(ctx, func(newConfig *nodev1.RouterConfig, oldVersion string) error {
+		r.logger.Info("Router config has changed, upgrading server",
+			zap.String("old_version", oldVersion),
+			zap.String("new_version", newConfig.GetVersion()),
+		)
+		if err := r.updateServer(ctx, newConfig); err != nil {
+			r.logger.Error("Failed to start server with new config. Trying again on the next update cycle.", zap.Error(err))
+			return err
+		}
+		return nil
+	})
+
+	return nil
 }
 
 // newServer creates a new Server instance.
@@ -691,11 +744,8 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		Headers:   r.headerRules,
 	}
 
-	if routerEngineConfig.Execution.EnableRequestTracing {
-		r.logger.Warn("Request tracing is enabled." +
-			"This is a security risk as it can leak sensitive information and internals of your subgraphs through the API." +
-			"Enabling request tracing negatively impacts performance because the execution plan cache is disabled." +
-			"You should only enable this for debugging purposes and not in production.")
+	if r.developmentMode && r.engineExecutionConfiguration.EnableRequestTracing && r.graphApiToken == "" {
+		r.logger.Warn("Request tracing is enabled in development mode but requires a graph token to work in production. For more information see https://cosmo-docs.wundergraph.com/router/advanced-request-tracing-art")
 	}
 
 	executor, err := ecb.Build(ctx, routerConfig, routerEngineConfig)
@@ -749,14 +799,25 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 
 	routerMetrics := NewRouterMetrics(metricStore, r.gqlMetricsExporter, routerConfig.GetVersion())
 
+	var publicKey *ecdsa.PublicKey
+
+	if r.registrationInfo != nil {
+		publicKey, err = jwt.ParseECPublicKeyFromPEM([]byte(r.registrationInfo.GetGraphPublicKey()))
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse router public key: %w", err)
+		}
+	}
+
 	graphqlPreHandler := NewPreHandler(&PreHandlerOptions{
-		Logger:                r.logger,
-		Executor:              executor,
-		Metrics:               routerMetrics,
-		Parser:                operationParser,
-		Planner:               operationPlanner,
-		AccessController:      r.accessController,
-		DisableRequestTracing: !routerEngineConfig.Execution.EnableRequestTracing,
+		Logger:               r.logger,
+		Executor:             executor,
+		Metrics:              routerMetrics,
+		Parser:               operationParser,
+		Planner:              operationPlanner,
+		AccessController:     r.accessController,
+		RouterPublicKey:      publicKey,
+		EnableRequestTracing: r.engineExecutionConfiguration.EnableRequestTracing,
+		DevelopmentMode:      r.developmentMode,
 	})
 
 	// Serve GraphQL. Metrics are collected after the request is handled and classified as r GraphQL request.
@@ -814,6 +875,18 @@ func (r *Server) listenAndServe() error {
 // Shutdown gracefully shuts down the router.
 func (r *Router) Shutdown(ctx context.Context) (err error) {
 	r.shutdown = true
+
+	if r.configPoller != nil {
+		if subErr := r.configPoller.Stop(ctx); subErr != nil {
+			err = errors.Join(err, fmt.Errorf("failed to stop config poller: %w", subErr))
+		}
+	}
+
+	if r.selfRegister != nil {
+		if subErr := r.selfRegister.Stop(ctx); subErr != nil {
+			err = errors.Join(err, fmt.Errorf("failed to stop self registration: %w", subErr))
+		}
+	}
 
 	if r.activeRouter != nil {
 		if subErr := r.activeRouter.Shutdown(ctx); subErr != nil {
@@ -967,9 +1040,15 @@ func WithGraphQLPath(path string) Option {
 	}
 }
 
-func WithConfigFetcher(cf controlplane.ConfigFetcher) Option {
+func WithConfigPoller(cf configpoller.ConfigPoller) Option {
 	return func(r *Router) {
-		r.configFetcher = cf
+		r.configPoller = cf
+	}
+}
+
+func WithSelfRegistration(sr selfregister.SelfRegister) Option {
+	return func(r *Router) {
+		r.selfRegister = sr
 	}
 }
 
@@ -1129,5 +1208,13 @@ func DefaultGraphQLMetricsConfig() *GraphQLMetricsConfig {
 func WithGraphQLMetrics(cfg *GraphQLMetricsConfig) Option {
 	return func(r *Router) {
 		r.graphqlMetricsConfig = cfg
+	}
+}
+
+// WithDevelopmentMode enables development mode. This should only be used for testing purposes.
+// Development mode allows e.g. to use ART (Advanced Request Tracing) without request signing.
+func WithDevelopmentMode(enabled bool) Option {
+	return func(r *Router) {
+		r.developmentMode = enabled
 	}
 }
