@@ -94,13 +94,14 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 		if h.enableRequestTracing {
 			if clientInfo.WGRequestToken != "" && h.routerPublicKey != nil {
-				_, err = jwt.Parse(clientInfo.WGRequestToken, func(token *jwt.Token) (interface{}, error) {
+				_, err = jwt.Parse(clientInfo.WGRequestToken+"d", func(token *jwt.Token) (interface{}, error) {
 					return h.routerPublicKey, nil
 				}, jwt.WithValidMethods([]string{jwt.SigningMethodES256.Name}))
 				if err != nil {
+					err := errors.New("invalid request token. Router version 0.42.0 or above is required to use request tracing in production")
 					hasRequestError = true
 					requestLogger.Error(fmt.Sprintf("failed to parse request token: %s", err.Error()))
-					writeRequestErrors(r, http.StatusForbidden, graphql.RequestErrorsFromError(errors.New("invalid request token")), w, requestLogger)
+					writeRequestErrors(r, http.StatusForbidden, graphql.RequestErrorsFromError(err), w, requestLogger)
 					return
 				}
 
