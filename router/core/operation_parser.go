@@ -43,6 +43,24 @@ type ParsedOperation struct {
 	Extensions               []byte
 }
 
+type invalidExtensionsTypeError jsonparser.ValueType
+
+func (e invalidExtensionsTypeError) Error() string {
+	return fmt.Sprintf("invalid extensions type: %s, most be object or null", jsonparser.ValueType(e))
+}
+
+func (e invalidExtensionsTypeError) Message() string {
+	return e.Error()
+}
+
+func (e invalidExtensionsTypeError) StatusCode() int {
+	return http.StatusBadRequest
+}
+
+var (
+	_ InputError = invalidExtensionsTypeError(0)
+)
+
 type OperationParser struct {
 	executor                *Executor
 	maxOperationSizeInBytes int64
@@ -188,6 +206,10 @@ func (p *OperationParser) parse(ctx context.Context, clientInfo *ClientInfo, bod
 	defer p.freeKit(kit)
 
 	jsonparser.EachKey(body, func(i int, value []byte, valueType jsonparser.ValueType, err error) {
+		if parseErr != nil {
+			// If we already have an error, don't overwrite it
+			return
+		}
 		if err != nil {
 			parseErr = err
 			return
@@ -205,6 +227,10 @@ func (p *OperationParser) parse(ctx context.Context, clientInfo *ClientInfo, bod
 		case parseOperationKeysOperationNameIndex:
 			requestOperationNameBytes = value
 		case parseOperationKeysExtensionsIndex:
+			if valueType != jsonparser.Null && valueType != jsonparser.Object {
+				parseErr = invalidExtensionsTypeError(valueType)
+				return
+			}
 			requestExtensions = value
 			persistedQuery, _, _, err := jsonparser.Get(value, "persistedQuery")
 			if err != nil {
