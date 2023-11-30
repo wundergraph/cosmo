@@ -1032,19 +1032,20 @@ message GetOrganizationRequestsCountResponse {
   int64 count = 2;
 }
 
-message Organization{
+message OrganizationInvite{
   string id = 1;
   string name = 2;
   string slug = 3;
   string creatorUserId = 4;
   string createdAt = 5;
+  optional string invitedBy = 6;
 }
 
 message GetInvitationsRequest {}
 
 message GetInvitationsResponse {
   Response response = 1;
-  repeated Organization invitations = 2;
+  repeated OrganizationInvite invitations = 2;
 }
 
 message AcceptOrDeclineInvitationRequest {

@@ -8112,9 +8112,9 @@ export class GetOrganizationRequestsCountResponse extends Message<GetOrganizatio
 }
 
 /**
- * @generated from message wg.cosmo.platform.v1.Organization
+ * @generated from message wg.cosmo.platform.v1.OrganizationInvite
  */
-export class Organization extends Message<Organization> {
+export class OrganizationInvite extends Message<OrganizationInvite> {
   /**
    * @generated from field: string id = 1;
    */
@@ -8140,35 +8140,41 @@ export class Organization extends Message<Organization> {
    */
   createdAt = "";
 
-  constructor(data?: PartialMessage<Organization>) {
+  /**
+   * @generated from field: optional string invitedBy = 6;
+   */
+  invitedBy?: string;
+
+  constructor(data?: PartialMessage<OrganizationInvite>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.platform.v1.Organization";
+  static readonly typeName = "wg.cosmo.platform.v1.OrganizationInvite";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "slug", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "creatorUserId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "createdAt", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 6, name: "invitedBy", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Organization {
-    return new Organization().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): OrganizationInvite {
+    return new OrganizationInvite().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Organization {
-    return new Organization().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): OrganizationInvite {
+    return new OrganizationInvite().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Organization {
-    return new Organization().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): OrganizationInvite {
+    return new OrganizationInvite().fromJsonString(jsonString, options);
   }
 
-  static equals(a: Organization | PlainMessage<Organization> | undefined, b: Organization | PlainMessage<Organization> | undefined): boolean {
-    return proto3.util.equals(Organization, a, b);
+  static equals(a: OrganizationInvite | PlainMessage<OrganizationInvite> | undefined, b: OrganizationInvite | PlainMessage<OrganizationInvite> | undefined): boolean {
+    return proto3.util.equals(OrganizationInvite, a, b);
   }
 }
 
@@ -8213,9 +8219,9 @@ export class GetInvitationsResponse extends Message<GetInvitationsResponse> {
   response?: Response;
 
   /**
-   * @generated from field: repeated wg.cosmo.platform.v1.Organization invitations = 2;
+   * @generated from field: repeated wg.cosmo.platform.v1.OrganizationInvite invitations = 2;
    */
-  invitations: Organization[] = [];
+  invitations: OrganizationInvite[] = [];
 
   constructor(data?: PartialMessage<GetInvitationsResponse>) {
     super();
@@ -8226,7 +8232,7 @@ export class GetInvitationsResponse extends Message<GetInvitationsResponse> {
   static readonly typeName = "wg.cosmo.platform.v1.GetInvitationsResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
-    { no: 2, name: "invitations", kind: "message", T: Organization, repeated: true },
+    { no: 2, name: "invitations", kind: "message", T: OrganizationInvite, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetInvitationsResponse {

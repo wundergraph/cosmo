@@ -116,6 +116,7 @@ export interface OrganizationMemberDTO {
 export interface OrganizationInvitationDTO {
   userID: string;
   email: string;
+  invitedBy?: string;
 }
 
 export interface APIKeyDTO {

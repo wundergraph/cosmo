@@ -2256,6 +2256,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
                   inviteLink: `${process.env.WEB_BASE_URL}/account/invitations`,
                   organizationName: organization.name,
                   recieverEmail: req.email,
+                  invitedBy: orgInvitation.invitedBy,
                 });
               }
             }
@@ -2292,10 +2293,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         // to verify if the user is a new user or not, we check the memberships of the user
         if (userMemberships.length > 0) {
           if (opts.mailerClient) {
+            const inviter = await userRepo.byId(authContext.userId);
             await opts.mailerClient.sendInviteEmail({
               inviteLink: `${process.env.WEB_BASE_URL}/account/invitations`,
               organizationName: organization.name,
               recieverEmail: req.email,
+              invitedBy: inviter?.email,
             });
           }
         } else {
@@ -2312,6 +2315,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           userId: keycloakUserID!,
           organizationId: authContext.organizationId,
           dbUser: user,
+          inviterUserId: authContext.userId,
         });
 
         return {

@@ -4,7 +4,7 @@ import * as ejs from 'ejs';
 
 interface OrganizationInviteBody {
   organizationName: string;
-  email: string;
+  inviteBody: string;
   inviteLink: string;
 }
 
@@ -27,16 +27,27 @@ export default class Mailer {
     recieverEmail,
     inviteLink,
     organizationName,
+    invitedBy,
   }: {
     recieverEmail: string;
     inviteLink: string;
     organizationName: string;
+    invitedBy?: string;
   }) {
     const emailBody = readFileSync('./src/templates/email/organizationInvite.html').toString('utf8');
+    let inviteBody;
+    if (invitedBy) {
+      inviteBody = `Hello <strong>${recieverEmail}</strong>, you have been invited to the
+            <strong>${organizationName}</strong> organization by <strong>${invitedBy}</strong>.`;
+    } else {
+      inviteBody = `Hello <strong>${recieverEmail}</strong>, you have been invited to the
+            <strong>${organizationName}</strong> organization.`;
+    }
+
     const data: OrganizationInviteBody = {
       organizationName,
-      email: recieverEmail,
       inviteLink,
+      inviteBody,
     };
 
     const template = ejs.compile(emailBody);
@@ -45,7 +56,7 @@ export default class Mailer {
     await this.client.sendMail({
       from: 'system@wundergraph.com',
       to: recieverEmail,
-      subject: '[WunderGraph Cosmo] You are invited to join ' + organizationName,
+      subject: `[WunderGraph Cosmo] You have been invited to the ${organizationName} organization.`,
       html: htmlBody,
     });
   }
