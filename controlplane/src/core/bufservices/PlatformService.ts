@@ -1184,6 +1184,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
+        const schemaCheckRepo = new SchemaCheckRepository(opts.db);
 
         const graph = await fedGraphRepo.byName(req.graphName);
 
@@ -1193,7 +1194,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               code: EnumStatusCode.ERR_NOT_FOUND,
               details: 'Requested graph does not exist',
             },
+            compositionErrors: [],
+            changes: [],
             affectedGraphs: [],
+            trafficCheckDays: 0,
           };
         }
 
@@ -1206,22 +1210,14 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               code: EnumStatusCode.ERR_NOT_FOUND,
               details: 'Requested check not found',
             },
+            compositionErrors: [],
+            changes: [],
             affectedGraphs: [],
+            trafficCheckDays: 0,
           };
         }
 
-        let addCount = 0;
-        let minusCount = 0;
-        for (const log of checkDetails.changes) {
-          if (log.changeType.includes('REMOVED')) {
-            minusCount += 1;
-          } else if (log.changeType.includes('ADDED')) {
-            addCount += 1;
-          } else if (log.changeType.includes('CHANGED')) {
-            addCount += 1;
-            minusCount += 1;
-          }
-        }
+        const { trafficCheckDays } = await schemaCheckRepo.getFederatedGraphConfigForCheckId(req.checkId, graph.id);
 
         return {
           response: {
@@ -1230,10 +1226,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           check,
           affectedGraphs: check.affectedGraphs,
           proposedSubgraphSchemaSDL: check.proposedSubgraphSchemaSDL,
-          changeCounts: {
-            additions: addCount,
-            deletions: minusCount,
-          },
+          changes: checkDetails.changes,
+          compositionErrors: checkDetails.compositionErrors,
+          trafficCheckDays,
         };
       });
     },

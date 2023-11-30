@@ -17,9 +17,7 @@ export const useAnalyticsQueryState = () => {
   const { query } = useRouter();
 
   return useMemo(() => {
-    const { filterState, pageSize, page, group, refreshInterval } = query;
-
-    let filterStateObject = parse(filterState as string, []);
+    let filterStateObject = parse(query.filterState as string, []);
 
     const filters = filterStateObject
       .map((each: { id: string; value: string[] }) => {
@@ -38,12 +36,12 @@ export const useAnalyticsQueryState = () => {
       })
       .flat();
 
-    const limit = Number(pageSize) || 10;
-    const offset = (Number(page) || 0) * limit;
+    const limit = Number(query.pageSize) || 20;
+    const offset = (Number(query.page) || 0) * limit;
 
-    const name = group
+    const name = query.group
       ? AnalyticsViewGroupName[
-          group as string as keyof typeof AnalyticsViewGroupName
+          query.group as string as keyof typeof AnalyticsViewGroupName
         ]
       : AnalyticsViewGroupName.None;
 
@@ -71,12 +69,12 @@ export const useAnalyticsQueryState = () => {
     }
 
     let refreshIntervalObject = parse(
-      refreshInterval as string,
+      query.refreshInterval as string,
       refreshIntervals[0].value,
     );
 
     let sort =
-      group && group !== "None"
+      query.group && query.group !== "None"
         ? {
             id: "totalRequests",
             desc: true,
@@ -97,9 +95,19 @@ export const useAnalyticsQueryState = () => {
       pagination: { limit, offset },
       dateRange,
       range,
-      page,
+      page: query.page,
       refreshInterval: refreshIntervalObject,
       sort,
     };
-  }, [query]);
+  }, [
+    query.filterState,
+    query.pageSize,
+    query.page,
+    query.group,
+    query.sort,
+    query.dateRange,
+    query.sortDir,
+    query.range,
+    query.refreshInterval,
+  ]);
 };

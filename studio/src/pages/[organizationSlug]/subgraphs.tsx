@@ -38,7 +38,7 @@ const SubgraphsDashboardPage: NextPageWithLayout = () => {
 };
 
 SubgraphsDashboardPage.getLayout = (page) => {
-  return getDashboardLayout(page, "Subgraphs", "View all your subgraphs");
+  return getDashboardLayout(page, "Subgraphs", "An overview of all subgraphs");
 };
 
 export default SubgraphsDashboardPage;

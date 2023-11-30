@@ -1,14 +1,19 @@
-import { UserContext } from "@/components/app-provider";
 import {
   getCheckBadge,
   getCheckIcon,
   isCheckSuccessful,
 } from "@/components/check-badge-icon";
-import { DateRangePicker } from "@/components/date-range-picker";
+import {
+  DatePickerWithRange,
+  DateRangePickerChangeHandler,
+} from "@/components/date-picker-with-range";
 import { EmptyState } from "@/components/empty-state";
-import { GraphContext, getGraphLayout } from "@/components/layout/graph-layout";
-import { PageHeader } from "@/components/layout/head";
-import { TitleLayout } from "@/components/layout/title-layout";
+import {
+  GraphContext,
+  GraphPageLayout,
+  getGraphLayout,
+} from "@/components/layout/graph-layout";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CLI } from "@/components/ui/cli";
 import { Loader } from "@/components/ui/loader";
@@ -27,7 +32,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Toolbar } from "@/components/ui/toolbar";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useSessionStorage } from "@/hooks/use-session-storage";
+import { useUser } from "@/hooks/use-user";
 import { docsBaseURL } from "@/lib/constants";
 import { formatDateTime } from "@/lib/format-date";
 import { NextPageWithLayout } from "@/lib/page";
@@ -44,11 +56,16 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { getChecksByFederatedGraphName } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { endOfDay, formatISO, startOfDay, subDays } from "date-fns";
+import {
+  endOfDay,
+  formatDistanceToNow,
+  formatISO,
+  startOfDay,
+  subDays,
+} from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useCallback, useContext } from "react";
-import { DateRange } from "react-day-picker";
 
 const useDateRange = () => {
   const router = useRouter();
@@ -155,15 +172,10 @@ const ChecksPage: NextPageWithLayout = () => {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[200px]">Timestamp</TableHead>
+            <TableHead>Check</TableHead>
             <TableHead>Subgraph</TableHead>
-            <TableHead className="text-center">Status</TableHead>
-            <TableHead className="text-center">Composition Check</TableHead>
-            <TableHead className="text-center">
-              Breaking Change Detection
-            </TableHead>
-            <TableHead className="text-center">Operations Check</TableHead>
-            <TableHead className="text-center">Details</TableHead>
+            <TableHead>Tasks</TableHead>
+            <TableHead></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -184,25 +196,72 @@ const ChecksPage: NextPageWithLayout = () => {
                   hasClientTraffic,
                 );
 
+                const path = `${router.asPath.split("?")[0]}/${id}`;
+
                 return (
-                  <TableRow key={id}>
-                    <TableCell className="font-medium ">
-                      {formatDateTime(new Date(timestamp))}
+                  <TableRow
+                    key={id}
+                    className="group cursor-pointer hover:bg-secondary/30"
+                    onClick={() => router.push(path)}
+                  >
+                    <TableCell>
+                      <div className="flex flex-row items-center gap-1">
+                        <div className="w-20">
+                          {getCheckBadge(isSuccessful, isForcedSuccess)}
+                        </div>
+
+                        <div className="flex flex-col items-start">
+                          <Link
+                            href={path}
+                            className="font-medium text-foreground"
+                          >
+                            {id}
+                          </Link>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="text-xs text-muted-foreground">
+                                {formatDistanceToNow(new Date(timestamp), {
+                                  addSuffix: true,
+                                })}
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent side="bottom">
+                              {formatDateTime(new Date(timestamp))}
+                            </TooltipContent>
+                          </Tooltip>
+                        </div>
+                      </div>
                     </TableCell>
                     <TableCell>{subgraphName}</TableCell>
-                    <TableCell className="text-center">
-                      {getCheckBadge(isSuccessful, isForcedSuccess)}
+                    <TableCell>
+                      <div className="flex items-start gap-2">
+                        <Badge variant="outline" className="gap-2 py-1.5">
+                          {getCheckIcon(isComposable)} <span>Composes</span>
+                        </Badge>
+
+                        <Badge variant="outline" className="gap-2 py-1.5">
+                          {getCheckIcon(!isBreaking)}{" "}
+                          <span>Breaking changes</span>
+                        </Badge>
+                        <Badge variant="outline" className="gap-2 py-1.5">
+                          {getCheckIcon(!hasClientTraffic)}{" "}
+                          <span>Operations</span>
+                        </Badge>
+                      </div>
                     </TableCell>
-                    <TableCell>{getCheckIcon(isComposable)}</TableCell>
-                    <TableCell>{getCheckIcon(!isBreaking)}</TableCell>
-                    <TableCell>{getCheckIcon(!hasClientTraffic)}</TableCell>
-                    <TableCell className="text-center text-primary">
-                      <Link
-                        onClick={() => setRouteCache(router.asPath)}
-                        href={`${router.asPath.split("?")[0]}/${id}`}
+
+                    <TableCell className="text-right">
+                      <Button
+                        asChild
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setRouteCache(router.asPath);
+                        }}
+                        className="table-action"
                       >
-                        View
-                      </Link>
+                        <Link href={path}>View</Link>
+                      </Button>
                     </TableCell>
                   </TableRow>
                 );
@@ -292,16 +351,16 @@ const ChecksPage: NextPageWithLayout = () => {
   );
 };
 
-const Toolbar = () => {
+const ChecksToolbar = () => {
   const router = useRouter();
-  const user = useContext(UserContext);
+  const user = useUser();
 
   const { startDate, endDate } = useDateRange();
 
-  const onDateRangeChange = (val: DateRange) => {
+  const onDateRangeChange: DateRangePickerChangeHandler = ({ dateRange }) => {
     const stringifiedDateRange = JSON.stringify({
-      start: val.from as Date,
-      end: (val.to as Date) ?? (val.from as Date),
+      start: dateRange?.start as Date,
+      end: (dateRange?.end as Date) ?? (dateRange?.end as Date),
     });
 
     router.push({
@@ -313,30 +372,30 @@ const Toolbar = () => {
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-2 border-b px-4 py-2">
-      <DateRangePicker
-        className="ml-auto"
-        selectedDateRange={{ from: startDate, to: endDate }}
-        onDateRangeChange={onDateRangeChange}
+    <Toolbar>
+      <DatePickerWithRange
+        dateRange={{ start: startDate, end: endDate }}
+        onChange={onDateRangeChange}
         calendarDaysLimit={
           user?.currentOrganization.limits.breakingChangeRetentionLimit || 7
         }
       />
-    </div>
+    </Toolbar>
   );
 };
 
 ChecksPage.getLayout = (page) =>
   getGraphLayout(
-    <PageHeader title="Studio | Checks">
-      <TitleLayout
-        title="Checks"
-        subtitle="A record of composition and schema checks"
-        toolbar={<Toolbar />}
-      >
-        {page}
-      </TitleLayout>
-    </PageHeader>,
+    <GraphPageLayout
+      title="Checks"
+      subtitle="A record of composition and schema checks"
+      toolbar={<ChecksToolbar />}
+    >
+      {page}
+    </GraphPageLayout>,
+    {
+      title: "Checks",
+    },
   );
 
 export default ChecksPage;
