@@ -135,7 +135,11 @@ const CreateClient = ({ refresh }: { refresh: () => void }) => {
                   </FormItem>
                 )}
               />
-              <Button className="w-full" type="submit">
+              <Button
+                disabled={!form.formState.isValid}
+                className="w-full"
+                type="submit"
+              >
                 Submit
               </Button>
             </form>
