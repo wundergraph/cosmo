@@ -495,7 +495,7 @@ const CheckOverviewPage: NextPageWithLayout = () => {
                       <AlertTitle>
                         {data.check.isForcedSuccess
                           ? "Forced Success"
-                          : "Checks Passed"}
+                          : "Checks Failed"}
                       </AlertTitle>
                       <AlertDescription>
                         {data.check.isForcedSuccess ? (
