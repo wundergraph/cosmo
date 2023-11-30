@@ -1,8 +1,8 @@
 import { and, desc, eq, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { ClientDTO, PersistedOperationDTO, UpdatedPersistedOperation } from 'src/types/index.js';
 import * as schema from '../../db/schema.js';
 import { federatedGraphClients, federatedGraphPersistedOperations } from '../../db/schema.js';
-import { ClientDTO, PersistedOperationDTO, UpdatedPersistedOperation } from 'src/types/index.js';
 
 export class OperationsRepository {
   constructor(
@@ -24,6 +24,11 @@ export class OperationsRepository {
         createdById: userId,
       };
     });
+
+    if (inserts.length === 0) {
+      return;
+    }
+
     await this.db
       .insert(federatedGraphPersistedOperations)
       .values(inserts)

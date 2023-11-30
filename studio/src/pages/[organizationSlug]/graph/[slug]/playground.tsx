@@ -107,7 +107,10 @@ const PersistOperation = () => {
         return;
       }
 
-      if (data.operations[0].status === PublishedOperationStatus.CONFLICT) {
+      if (
+        data.operations.length > 0 &&
+        data.operations[0].status === PublishedOperationStatus.CONFLICT
+      ) {
         toast({
           variant: "destructive",
           title: "Could not save operation",
