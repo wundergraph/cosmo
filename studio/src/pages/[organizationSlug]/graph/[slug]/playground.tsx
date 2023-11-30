@@ -177,8 +177,8 @@ const PersistOperation = () => {
       <DialogTrigger asChild>
         <Button variant="secondary">Persist Operation</Button>
       </DialogTrigger>
-      <DialogContent className="grid max-w-4xl grid-cols-5 items-start divide-x">
-        <div className="col-span-3">
+      <DialogContent className="grid  max-w-4xl grid-cols-5 items-start divide-x">
+        <div className="scrollbar-custom col-span-3 h-full max-h-[450px] overflow-auto">
           <CodeViewer code={query} />
         </div>
         <div className="col-span-2 flex h-full w-full flex-col pl-4">
