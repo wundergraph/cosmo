@@ -109,7 +109,7 @@ const Fields = (props: {
   const hasDetails = props.fields.some(
     (f) => !!f.description || !!f.deprecationReason,
   );
-  const hasUsage = !(["scalars"] as GraphQLTypeCategory[]).includes(
+  const hasUsage = !(["scalars", "enums"] as GraphQLTypeCategory[]).includes(
     props.category,
   );
 
@@ -119,11 +119,6 @@ const Fields = (props: {
       query.showUsage = fieldName;
     } else {
       query.showUsage = `${router.query.typename || "Query"}.${fieldName}`;
-    }
-
-    if (props.category === "enums") {
-      query.isNamedType = "true";
-      query.isEnum = "true";
     }
 
     router.replace({
@@ -317,7 +312,6 @@ const TypeWrapper = ({ ast }: { ast: GraphQLSchema }) => {
 
   if (category && !typename) {
     const list = getTypesByCategory(ast, category);
-    const hasUsage = true;
 
     const openUsage = (type: string) => {
       router.replace({
@@ -356,11 +350,9 @@ const TypeWrapper = ({ ast }: { ast: GraphQLSchema }) => {
                 <TableHead className="w-8/12 lg:w-7/12 2xl:w-8/12">
                   Description
                 </TableHead>
-                {hasUsage && (
-                  <TableHead className="w-1/12 lg:w-2/12 2xl:w-1/12">
-                    Actions
-                  </TableHead>
-                )}
+                <TableHead className="w-1/12 lg:w-2/12 2xl:w-1/12">
+                  Actions
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -370,17 +362,16 @@ const TypeWrapper = ({ ast }: { ast: GraphQLSchema }) => {
                     <TypeLink ast={ast} name={l.name} />
                   </TableCell>
                   <TableCell>{l.description || "-"}</TableCell>
-                  {hasUsage && (
-                    <TableCell className="align-top text-primary">
-                      <Button
-                        onClick={() => openUsage(l.name)}
-                        className="p-0"
-                        variant="link"
-                      >
-                        View usage
-                      </Button>
-                    </TableCell>
-                  )}
+
+                  <TableCell className="align-top text-primary">
+                    <Button
+                      onClick={() => openUsage(l.name)}
+                      className="p-0"
+                      variant="link"
+                    >
+                      View usage
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
