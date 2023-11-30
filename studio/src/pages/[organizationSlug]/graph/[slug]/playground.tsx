@@ -22,12 +22,26 @@ const graphiQLFetch = async (
   init: RequestInit,
 ) => {
   try {
+    const headers: Record<string, string> = {
+      ...(init.headers as Record<string, string>),
+    };
+
+    let hasTraceHeader = false;
+    for (const headersKey in headers) {
+      if (headersKey.toLowerCase() === "x-wg-trace") {
+        hasTraceHeader = headers[headersKey] === "true";
+        break;
+      }
+    }
+
+    // add token if trace header is present
+    if (hasTraceHeader) {
+      headers["X-WG-Token"] = graphRequestToken;
+    }
+
     const response = await fetch(url, {
       ...init,
-      headers: {
-        ...init.headers,
-        "X-WG-Token": graphRequestToken,
-      },
+      headers,
     });
     onFetch(await response.clone().json());
     return response;
