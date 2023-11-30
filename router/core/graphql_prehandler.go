@@ -68,9 +68,9 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		requestLogger := h.log.With(logging.WithRequestID(middleware.GetReqID(r.Context())))
 
-		// In GraphQL the statusCode does not always express the error state of the request
-		// we use this flag to determine if we have an error for the request metrics
 		var (
+			// In GraphQL the statusCode does not always express the error state of the request
+			// we use this flag to determine if we have an error for the request metrics
 			hasRequestError bool
 			writtenBytes    int
 			statusCode      = http.StatusOK
