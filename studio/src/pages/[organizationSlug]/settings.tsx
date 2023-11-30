@@ -1046,11 +1046,7 @@ const SettingsDashboardPage: NextPageWithLayout = () => {
 };
 
 SettingsDashboardPage.getLayout = (page) => {
-  return getDashboardLayout(
-    page,
-    "Settings",
-    "Settings for this organization.",
-  );
+  return getDashboardLayout(page, "Settings", "Settings for this organization");
 };
 
 export default SettingsDashboardPage;

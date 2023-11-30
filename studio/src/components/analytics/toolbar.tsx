@@ -17,6 +17,7 @@ import {
 } from "../ui/tooltip";
 import { useContext } from "react";
 import { UserContext } from "../app-provider";
+import { Spacer } from "../ui/spacer";
 
 export const AnalyticsToolbar: React.FC<{
   tab: string;
@@ -86,7 +87,8 @@ export const AnalyticsToolbar: React.FC<{
           </TabsTrigger>
         </TabsList>
       </Tabs>
-      <Button variant="outline" className="flex items-center gap-x-2">
+      <Spacer />
+      <Button variant="ghost" className="flex items-center gap-x-2">
         <TooltipProvider>
           <Tooltip delayDuration={200}>
             <TooltipTrigger>

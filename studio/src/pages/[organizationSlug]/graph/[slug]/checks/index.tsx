@@ -1,4 +1,3 @@
-import { UserContext } from "@/components/app-provider";
 import {
   getCheckBadge,
   getCheckIcon,
@@ -40,6 +39,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useSessionStorage } from "@/hooks/use-session-storage";
+import { useUser } from "@/hooks/use-user";
 import { docsBaseURL } from "@/lib/constants";
 import { formatDateTime } from "@/lib/format-date";
 import { NextPageWithLayout } from "@/lib/page";
@@ -353,7 +353,7 @@ const ChecksPage: NextPageWithLayout = () => {
 
 const ChecksToolbar = () => {
   const router = useRouter();
-  const user = useContext(UserContext);
+  const user = useUser();
 
   const { startDate, endDate } = useDateRange();
 

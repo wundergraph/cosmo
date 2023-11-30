@@ -240,11 +240,7 @@ const CheckOverviewPage: NextPageWithLayout = () => {
             <div className="flex-start flex max-w-[200px] flex-1 flex-col gap-1">
               <dt className="text-sm text-muted-foreground">Action</dt>
               <dd className="whitespace-nowrap">
-                {data.check.isDeleted ? (
-                  <Badge variant="outline">Delete subgraph</Badge>
-                ) : (
-                  <Badge variant="outline">Update schema</Badge>
-                )}
+                {data.check.isDeleted ? "Delete subgraph" : "Update schema"}
               </dd>
             </div>
 
@@ -280,8 +276,8 @@ const CheckOverviewPage: NextPageWithLayout = () => {
             </div>
           </dl>
         </div>
-        <div className="flex h-full flex-1 flex-col lg:flex-row">
-          <dl className="grid flex-shrink-0 grid-cols-3 space-y-6 overflow-hidden border-b px-4 py-4 lg:block lg:h-full lg:w-[280px] lg:space-y-8 lg:overflow-auto lg:border-r lg:px-6">
+        <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
+          <dl className="grid flex-shrink-0 grid-cols-3 space-y-6 overflow-hidden border-b px-4 py-4 lg:block lg:min-h-full lg:w-[240px] lg:space-y-8 lg:overflow-auto lg:border-b-0 lg:border-r lg:px-6 xl:w-[260px]">
             <div className="col-span-3 flex flex-col">
               <dt className="mb-2 text-sm text-muted-foreground">Tasks</dt>
               <dd className="grid grid-cols-3 flex-row gap-2 lg:flex lg:flex-col">
@@ -422,8 +418,11 @@ const CheckOverviewPage: NextPageWithLayout = () => {
               </div>
             )}
           </dl>
-          <div className="flex-1">
-            <Tabs value={tab ?? "changes"}>
+          <div className="h-full flex-1">
+            <Tabs
+              value={tab ?? "changes"}
+              className="flex h-full min-h-0 flex-col"
+            >
               <div className="flex flex-row px-4 py-4 lg:px-6">
                 <TabsList>
                   <TabsTrigger
@@ -473,8 +472,11 @@ const CheckOverviewPage: NextPageWithLayout = () => {
                   )}
                 </TabsList>
               </div>
-              <div>
-                <TabsContent value="changes" className="space-y-4 px-4 lg:px-6">
+              <div className="flex min-h-0 flex-1">
+                <TabsContent
+                  value="changes"
+                  className="w-full space-y-4 px-4 lg:px-6"
+                >
                   {data.compositionErrors?.length ? (
                     <Alert variant="destructive">
                       <AlertTitle>Composition Errors</AlertTitle>
@@ -533,10 +535,10 @@ const CheckOverviewPage: NextPageWithLayout = () => {
                   />
                   <FieldUsageSheet />
                 </TabsContent>
-                <TabsContent value="operations">
+                <TabsContent value="operations" className="w-full">
                   <CheckOperations />
                 </TabsContent>
-                <TabsContent value="schema" className="relative max-w-full">
+                <TabsContent value="schema" className="relative w-full flex-1">
                   <div className="absolute right-8 top-5">
                     <CodeViewerActions
                       code={sdl}
@@ -545,7 +547,7 @@ const CheckOverviewPage: NextPageWithLayout = () => {
                       variant="outline"
                     />
                   </div>
-                  <div className="scrollbar-custom h-full w-full overflow-auto">
+                  <div className="scrollbar-custom h-full w-full">
                     <CodeViewer code={sdl} disableLinking />
                   </div>
                 </TabsContent>

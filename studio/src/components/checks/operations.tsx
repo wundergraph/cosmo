@@ -22,7 +22,6 @@ import { Input } from "@/components/ui/input";
 import { Loader } from "@/components/ui/loader";
 import { useToast } from "@/components/ui/use-toast";
 import { formatDateTime } from "@/lib/format-date";
-import { NextPageWithLayout } from "@/lib/page";
 import {
   CheckCircleIcon,
   ExclamationTriangleIcon,

@@ -1,6 +1,7 @@
 import {
   ChartBarIcon,
   ExclamationTriangleIcon,
+  DevicePhoneMobileIcon,
 } from "@heroicons/react/24/outline";
 import {
   Component2Icon,
@@ -17,7 +18,12 @@ import {
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { GetFederatedGraphByNameResponse } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { ReactNode, createContext, useContext, useMemo } from "react";
-import { PiGitBranch } from "react-icons/pi";
+import {
+  PiGitBranch,
+  PiDevicesLight,
+  PiHouse,
+  PiDevices,
+} from "react-icons/pi";
 import { EmptyState } from "../empty-state";
 import { Button } from "../ui/button";
 import { Loader } from "../ui/loader";
@@ -34,18 +40,6 @@ import {
   SelectValue,
 } from "../ui/select";
 import { cn } from "@/lib/utils";
-import { MdDevices } from "react-icons/md";
-
-const icons: { [key: string]: ReactNode } = {
-  Overview: <HomeIcon />,
-  Subgraphs: <Component2Icon />,
-  Explorer: <PlayIcon />,
-  Schema: <FileTextIcon />,
-  Changelog: <PiGitBranch />,
-  Checks: <CheckCircledIcon />,
-  Analytics: <ChartBarIcon className="h-4 w-4" />,
-  Clients: <MdDevices className="h-4 w-4" />,
-};
 
 export interface GraphContextProps {
   graph: GetFederatedGraphByNameResponse["graph"];
@@ -84,27 +78,31 @@ export const GraphLayout = ({ children }: LayoutProps) => {
     const basePath = `/${organizationSlug}/graph/${slug}`;
 
     return [
-      { title: "Overview", href: basePath, icon: <HomeIcon /> },
+      {
+        title: "Overview",
+        href: basePath,
+        icon: <HomeIcon className="h-4 w-4" />,
+      },
       {
         title: "Subgraphs",
         href: basePath + "/subgraphs",
-        icon: <Component2Icon />,
+        icon: <Component2Icon className="h-4 w-4" />,
       },
       {
         title: "Playground",
         href: basePath + "/playground",
-        icon: <PlayIcon />,
+        icon: <PlayIcon className="h-4 w-4" />,
       },
       {
         title: "Schema",
         href: basePath + "/schema",
         matchExact: false,
-        icon: <FileTextIcon />,
+        icon: <FileTextIcon className="h-4 w-4" />,
       },
       {
         title: "Clients",
         href: basePath + "/clients",
-        icon: <MdDevices className="h-4 w-4" />,
+        icon: <PiDevices className="h-4 w-4" />,
       },
       {
         title: "Analytics",
@@ -115,13 +113,13 @@ export const GraphLayout = ({ children }: LayoutProps) => {
       {
         title: "Changelog",
         href: basePath + "/changelog",
-        icon: <PiGitBranch />,
+        icon: <PiGitBranch className="h-4 w-4" />,
       },
       {
         title: "Checks",
         href: basePath + "/checks",
         matchExact: false,
-        icon: <CheckCircledIcon />,
+        icon: <CheckCircledIcon className="h-4 w-4" />,
       },
     ];
   }, [slug, organizationSlug]);
@@ -155,7 +153,7 @@ export const GraphLayout = ({ children }: LayoutProps) => {
     <div className="2xl:flex 2xl:flex-1 2xl:flex-col 2xl:items-center">
       <div className="flex min-h-screen w-full flex-1 flex-col bg-background font-sans antialiased lg:grid lg:grid-cols-[auto_1fr] lg:divide-x">
         <SideNav links={links} />
-        <main className="flex-1 pt-4 lg:pt-0">{render}</main>
+        <main className="flex-1">{render}</main>
       </div>
     </div>
   );
@@ -233,7 +231,7 @@ export const GraphPageLayout = ({
   );
 
   return (
-    <div className="flex h-screen flex-col">
+    <div className="flex flex-col lg:h-screen">
       <div className="bg-background">
         <div
           className={cn(

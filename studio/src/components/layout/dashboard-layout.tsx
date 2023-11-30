@@ -1,18 +1,18 @@
-import { Component2Icon } from "@radix-ui/react-icons";
+import { Component2Icon, EnvelopeClosedIcon } from "@radix-ui/react-icons";
 import { useRouter } from "next/router";
 import { useMemo } from "react";
 import {
-  IoKeyOutline,
-  IoNotificationsOutline,
-  IoPeopleOutline,
-} from "react-icons/io5";
-import { MdDataUsage } from "react-icons/md";
-import { PiGear, PiGraphLight } from "react-icons/pi";
+  PiBell,
+  PiChartDonut,
+  PiGear,
+  PiGraphLight,
+  PiKey,
+  PiUsers,
+} from "react-icons/pi";
 import { PageHeader } from "./head";
 import { LayoutProps } from "./layout";
 import { SideNav, NavLink } from "./sidenav";
 import { TitleLayout } from "./title-layout";
-import { FiBell, FiKey, FiSettings, FiUsers } from "react-icons/fi";
 
 export const DashboardLayout = ({ children }: LayoutProps) => {
   const router = useRouter();
@@ -25,38 +25,47 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
       {
         title: "Federated Graphs",
         href: basePath + "/graphs",
-        icon: <PiGraphLight size="1.2em" />,
+        icon: <PiGraphLight className="h-4 w-4" />,
       },
       {
         title: "Subgraphs",
         href: basePath + "/subgraphs",
-        icon: <Component2Icon />,
+        icon: <Component2Icon className="h-4 w-4" />,
         separator: true,
       },
       {
         title: "Members",
         href: basePath + "/members",
-        icon: <FiUsers />,
+        icon: <PiUsers className="h-4 w-4" />,
       },
       {
         title: "API Keys",
         href: basePath + "/apikeys",
-        icon: <FiKey />,
+        icon: <PiKey className="h-4 w-4" />,
       },
       {
         title: "Notifications",
         href: basePath + "/webhooks",
-        icon: <FiBell />,
+        icon: <PiBell className="h-4 w-4" />,
       },
       {
-        title: "Usages",
+        title: "Usage",
         href: basePath + "/usages",
-        icon: <MdDataUsage />,
+        icon: <PiChartDonut className="h-4 w-4" />,
       },
       {
         title: "Settings",
         href: basePath + "/settings",
-        icon: <FiSettings />,
+        icon: <PiGear className="h-4 w-4" />,
+        separator: true,
+      },
+      {
+        title: "Account",
+      },
+      {
+        title: "Invitations",
+        href: "/account/invitations",
+        icon: <EnvelopeClosedIcon className="h-4 w-4" />,
       },
     ];
   }, [organizationSlug]);

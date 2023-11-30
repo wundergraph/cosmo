@@ -1,6 +1,10 @@
 import { docsBaseURL } from "@/lib/constants";
 import { cn } from "@/lib/utils";
-import { Cross2Icon, HamburgerMenuIcon } from "@radix-ui/react-icons";
+import {
+  Cross2Icon,
+  EnvelopeClosedIcon,
+  HamburgerMenuIcon,
+} from "@radix-ui/react-icons";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { ReactNode, useContext, useMemo, useState } from "react";
@@ -19,6 +23,7 @@ import { LayoutProps } from "./layout";
 import { useUser } from "@/hooks/use-user";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { FiHelpCircle } from "react-icons/fi";
+import { Button } from "../ui/button";
 
 export type NavLink = {
   title: string;
@@ -32,12 +37,6 @@ const isActive = (path: string, currentPath: string, exact = true) => {
   return path === "/" || exact ? path === currentPath : currentPath.match(path);
 };
 
-const isExternalUrl = (link: string): boolean => !link?.startsWith("/");
-
-interface SideNavLayoutProps extends LayoutProps {
-  links?: NavLink[];
-}
-
 const MobileNav = () => {
   return (
     <div
@@ -46,7 +45,9 @@ const MobileNav = () => {
       )}
     >
       <div className="relative z-20 grid gap-6 rounded-md p-4 text-popover-foreground">
-        <nav className="grid grid-flow-row auto-rows-max items-center justify-center text-center text-sm">
+        <nav className="grid grid-flow-row auto-rows-max items-center justify-center space-y-2 text-center text-sm">
+          <Link href="/account/invitations">Invitations</Link>
+
           <Link
             href={docsBaseURL}
             className="flex items-center text-sm font-medium text-foreground/80 transition-colors hover:text-foreground"
@@ -57,7 +58,6 @@ const MobileNav = () => {
           </Link>
         </nav>
         <UserMenuMobile />
-        <div className="mx-auto">{/* <ThemeToggle /> */}</div>
       </div>
     </div>
   );
@@ -88,10 +88,10 @@ const Organizations = () => {
     >
       <SelectTrigger
         value={user.currentOrganization.name}
-        className="flex h-8 w-[200px] gap-x-2 border-0 bg-transparent px-2 shadow-none data-[state=open]:bg-accent hover:bg-accent hover:text-accent-foreground focus:ring-0 lg:w-full"
+        className="flex h-8 w-auto flex-1 gap-x-2 border-0 bg-transparent px-2 shadow-none data-[state=open]:bg-accent hover:bg-accent hover:text-accent-foreground focus:ring-0"
       >
         <SelectValue aria-label={user.currentOrganization.name}>
-          <span className="flex w-36 truncate font-medium capitalize">
+          <span className="flex truncate font-medium capitalize">
             {user.currentOrganization.name}
           </span>
         </SelectValue>
@@ -108,6 +108,10 @@ const Organizations = () => {
     </Select>
   );
 };
+
+interface SideNavLayoutProps extends LayoutProps {
+  links?: Partial<NavLink>[];
+}
 
 export const SideNav = (props: SideNavLayoutProps) => {
   const router = useRouter();
@@ -153,15 +157,17 @@ export const SideNav = (props: SideNavLayoutProps) => {
           </div>
           <nav className="flex items-center space-y-1 overflow-x-auto scrollbar-none lg:block lg:overflow-y-auto lg:overflow-x-visible lg:scrollbar-thin">
             {props.links?.map((item, index) => {
-              const isCurrent = isActive(
-                encodeURI(item.href),
-                router.asPath.split("?")[0],
-                item.matchExact,
-              );
+              const isCurrent =
+                item.href &&
+                isActive(
+                  encodeURI(item.href),
+                  router.asPath.split("?")[0],
+                  item.matchExact,
+                );
 
               return (
                 <div key={index}>
-                  {item.href && (
+                  {item.href ? (
                     <Link
                       key={index}
                       href={item.href}
@@ -174,6 +180,10 @@ export const SideNav = (props: SideNavLayoutProps) => {
 
                       <span className="whitespace-nowrap">{item.title}</span>
                     </Link>
+                  ) : (
+                    <h4 className="px-3 py-2 text-sm text-muted-foreground">
+                      {item.title}
+                    </h4>
                   )}
                   {item.separator && (
                     <Separator
