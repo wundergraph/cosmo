@@ -1,7 +1,6 @@
 import {
   ChartBarIcon,
   ExclamationTriangleIcon,
-  DevicePhoneMobileIcon,
 } from "@heroicons/react/24/outline";
 import {
   Component2Icon,
@@ -18,19 +17,12 @@ import {
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { GetFederatedGraphByNameResponse } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { ReactNode, createContext, useContext, useMemo } from "react";
-import {
-  PiGitBranch,
-  PiDevicesLight,
-  PiHouse,
-  PiDevices,
-} from "react-icons/pi";
+import { PiGitBranch, PiDevices } from "react-icons/pi";
 import { EmptyState } from "../empty-state";
 import { Button } from "../ui/button";
 import { Loader } from "../ui/loader";
 import { LayoutProps } from "./layout";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
-<<<<<<< HEAD
-import { UserContext } from "../app-provider";
 import { SideNav, NavLink } from "./sidenav";
 import { PageHeader } from "./head";
 import {
@@ -41,20 +33,6 @@ import {
   SelectValue,
 } from "../ui/select";
 import { cn } from "@/lib/utils";
-=======
-import { MdDevices } from "react-icons/md";
-
-const icons: { [key: string]: ReactNode } = {
-  Overview: <HomeIcon />,
-  Subgraphs: <Component2Icon />,
-  Explorer: <PlayIcon />,
-  Schema: <FileTextIcon />,
-  Changelog: <PiGitBranch />,
-  Checks: <CheckCircledIcon />,
-  Analytics: <ChartBarIcon className="h-4 w-4" />,
-  Clients: <MdDevices className="h-4 w-4" />,
-};
->>>>>>> origin/main
 
 export interface GraphContextProps {
   graph: GetFederatedGraphByNameResponse["graph"];
