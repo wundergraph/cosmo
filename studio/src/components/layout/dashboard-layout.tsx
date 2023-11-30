@@ -18,7 +18,7 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
   const router = useRouter();
   const organizationSlug = router.query.organizationSlug as string;
 
-  const links: NavLink[] = useMemo(() => {
+  const links: Partial<NavLink>[] = useMemo(() => {
     const basePath = `/${organizationSlug}`;
 
     return [
