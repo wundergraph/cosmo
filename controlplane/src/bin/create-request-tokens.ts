@@ -1,8 +1,8 @@
 import 'dotenv/config';
 
 import postgres from 'postgres';
-import { FederatedGraphRepository } from '../core/repositories/FederatedGraphRepository.js';
 import { drizzle } from 'drizzle-orm/postgres-js';
+import { FederatedGraphRepository } from '../core/repositories/FederatedGraphRepository.js';
 import * as schema from '../db/schema.js';
 
 const queryConnection = postgres(process.env.DB_URL!, {
