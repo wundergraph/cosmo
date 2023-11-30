@@ -57,7 +57,7 @@ import { IoBarcodeSharp } from "react-icons/io5";
 import { z } from "zod";
 
 const FormSchema = z.object({
-  clientName: z.string().min(1),
+  clientName: z.string().trim().min(1, "The name cannot be empty"),
 });
 
 type Input = z.infer<typeof FormSchema>;
