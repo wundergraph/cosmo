@@ -444,7 +444,7 @@ const GraphCard = ({ graph }: { graph: FederatedGraph }) => {
       href={`/${user?.currentOrganization?.slug}/graph/${graph.name}`}
       className="project-list-item group"
     >
-      <Card className="flex h-full flex-col py-4 transition-all group-hover:border-ring dark:group-hover:border-input-active">
+      <Card className="flex h-full flex-col py-4 transition-all group-hover:border-input-active">
         <div className="pointer-events-none -mx-1.5 h-20 pb-6">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data}>

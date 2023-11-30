@@ -1,7 +1,9 @@
 import { EmptyState } from "@/components/empty-state";
-import { getGraphLayout } from "@/components/layout/graph-layout";
+import {
+  GraphPageLayout,
+  getGraphLayout,
+} from "@/components/layout/graph-layout";
 import { PageHeader } from "@/components/layout/head";
-import { TitleLayout } from "@/components/layout/title-layout";
 import { Button } from "@/components/ui/button";
 import { CLI } from "@/components/ui/cli";
 import {
@@ -203,12 +205,12 @@ const ClientsPage: NextPageWithLayout = () => {
 ClientsPage.getLayout = (page) =>
   getGraphLayout(
     <PageHeader title="Studio | Clients">
-      <TitleLayout
+      <GraphPageLayout
         title="Clients"
         subtitle="View the clients of this federated graph"
       >
         {page}
-      </TitleLayout>
+      </GraphPageLayout>
     </PageHeader>,
   );
 

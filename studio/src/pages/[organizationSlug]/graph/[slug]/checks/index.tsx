@@ -219,7 +219,7 @@ const ChecksPage: NextPageWithLayout = () => {
                           </Link>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <span className="text-sm text-muted-foreground">
+                              <span className="text-xs text-muted-foreground">
                                 {formatDistanceToNow(new Date(timestamp), {
                                   addSuffix: true,
                                 })}
