@@ -206,10 +206,11 @@ const ClientsPage: NextPageWithLayout = () => {
       {data.clients.length === 0 ? (
         <EmptyState
           icon={<CommandLineIcon />}
-          title="Push new operations to the registry using the CLI"
+          title="No clients found"
           description={
             <>
-              No clients found. Use the CLI tool to create one.{" "}
+              Create one and use the CLI tool to publish persisted operations to
+              it.{" "}
               <a
                 target="_blank"
                 rel="noreferrer"
@@ -220,11 +221,7 @@ const ClientsPage: NextPageWithLayout = () => {
               </a>
             </>
           }
-          actions={
-            <CLI
-              command={`npx wgc operations push ${slug} -c <client-name> -f <path-to-file>`}
-            />
-          }
+          actions={<CreateClient refresh={() => refetch()} />}
         />
       ) : (
         <>
@@ -333,7 +330,7 @@ ClientsPage.getLayout = (page) =>
     <PageHeader title="Studio | Clients">
       <TitleLayout
         title="Clients"
-        subtitle="View the clients of this federated graph"
+        subtitle="View registered clients and their persisted operations"
       >
         {page}
       </TitleLayout>
