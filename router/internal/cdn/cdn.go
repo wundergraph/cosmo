@@ -69,10 +69,6 @@ func (c *cdnPersistedOperationsCache) key(clientName string, operationHash []byt
 }
 
 func (c *cdnPersistedOperationsCache) Get(clientName string, operationHash []byte) []byte {
-	// Cache might be disabled
-	if c.cache == nil {
-		return nil
-	}
 	// Since we're returning nil when the item is not found, we don't need to
 	// check the return value from the cache nor the type assertion
 	item, _ := c.cache.Get(c.key(clientName, operationHash))
@@ -81,9 +77,7 @@ func (c *cdnPersistedOperationsCache) Get(clientName string, operationHash []byt
 }
 
 func (c *cdnPersistedOperationsCache) Set(clientName string, operationHash []byte, operationBody []byte) {
-	if c.cache != nil {
-		c.cache.Set(c.key(clientName, operationHash), operationBody, int64(len(operationBody)))
-	}
+	c.cache.Set(c.key(clientName, operationHash), operationBody, int64(len(operationBody)))
 }
 
 type CDNOptions struct {
