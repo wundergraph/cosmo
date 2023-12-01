@@ -216,6 +216,11 @@ func commonMetricAttributes(operation *ParsedOperation, protocol OperationProtoc
 	baseMetricAttributeValues = append(baseMetricAttributeValues, otel.WgOperationProtocol.String(protocol.String()))
 	baseMetricAttributeValues = append(baseMetricAttributeValues, otel.WgOperationHash.String(strconv.FormatUint(operation.ID, 10)))
 
+	// Common Field that will be present in both metrics and traces if not empty
+	if operation.PersistedID != "" {
+		baseMetricAttributeValues = append(baseMetricAttributeValues, otel.WgOperationPersistedID.String(operation.PersistedID))
+	}
+
 	return baseMetricAttributeValues
 }
 

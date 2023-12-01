@@ -46,19 +46,19 @@ func (p *graphQLWSProtocol) Subprotocol() string {
 	return graphQLWSSubprotocol
 }
 
-func (p *graphQLWSProtocol) Initialize() error {
+func (p *graphQLWSProtocol) Initialize() (json.RawMessage, error) {
 	// First message must be a connection_init
 	var msg graphQLWSMessage
 	if err := p.conn.ReadJSON(&msg); err != nil {
-		return fmt.Errorf("error reading connection_init: %w", err)
+		return nil, fmt.Errorf("error reading connection_init: %w", err)
 	}
 	if msg.Type != graphQLWSMessageTypeConnectionInit {
-		return fmt.Errorf("first message should be %s, got %s", graphQLWSMessageTypeConnectionInit, msg.Type)
+		return nil, fmt.Errorf("first message should be %s, got %s", graphQLWSMessageTypeConnectionInit, msg.Type)
 	}
 	if _, err := p.conn.WriteJSON(graphQLWSMessage{Type: graphQLWSMessageTypeConnectionAck}); err != nil {
-		return fmt.Errorf("sending %s: %w", graphQLWSMessageTypeConnectionAck, err)
+		return nil, fmt.Errorf("sending %s: %w", graphQLWSMessageTypeConnectionAck, err)
 	}
-	return nil
+	return msg.Payload, nil
 }
 
 func (p *graphQLWSProtocol) ReadMessage() (*Message, error) {

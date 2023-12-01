@@ -58,6 +58,7 @@ type ComplexityRoot struct {
 	Subscription struct {
 		HeaderValue      func(childComplexity int, name string, repeat *int) int
 		InitPayloadValue func(childComplexity int, key string, repeat *int) int
+		InitialPayload   func(childComplexity int, repeat *int) int
 	}
 
 	TimestampedString struct {
@@ -81,6 +82,7 @@ type QueryResolver interface {
 type SubscriptionResolver interface {
 	HeaderValue(ctx context.Context, name string, repeat *int) (<-chan *model.TimestampedString, error)
 	InitPayloadValue(ctx context.Context, key string, repeat *int) (<-chan *model.TimestampedString, error)
+	InitialPayload(ctx context.Context, repeat *int) (<-chan map[string]interface{}, error)
 }
 
 type executableSchema struct {
@@ -163,6 +165,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Subscription.InitPayloadValue(childComplexity, args["key"].(string), args["repeat"].(*int)), true
+
+	case "Subscription.initialPayload":
+		if e.complexity.Subscription.InitialPayload == nil {
+			break
+		}
+
+		args, err := ec.field_Subscription_initialPayload_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Subscription.InitialPayload(childComplexity, args["repeat"].(*int)), true
 
 	case "TimestampedString.initialPayload":
 		if e.complexity.TimestampedString.InitialPayload == nil {
@@ -339,6 +353,8 @@ type Subscription {
   headerValue(name: String!, repeat: Int): TimestampedString!
   "Returns a stream with the value of value of the given key in the WS initial payload."
   initPayloadValue(key: String!, repeat: Int): TimestampedString!
+  "Returns a stream with the value of the WS initial payload."
+  initialPayload(repeat: Int): Map
 }
 `, BuiltIn: false},
 	{Name: "../../federation/directives.graphql", Input: `
@@ -491,6 +507,21 @@ func (ec *executionContext) field_Subscription_initPayloadValue_args(ctx context
 		}
 	}
 	args["repeat"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Subscription_initialPayload_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 *int
+	if tmp, ok := rawArgs["repeat"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("repeat"))
+		arg0, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["repeat"] = arg0
 	return args, nil
 }
 
@@ -1016,6 +1047,72 @@ func (ec *executionContext) fieldContext_Subscription_initPayloadValue(ctx conte
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Subscription_initPayloadValue_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Subscription_initialPayload(ctx context.Context, field graphql.CollectedField) (ret func(ctx context.Context) graphql.Marshaler) {
+	fc, err := ec.fieldContext_Subscription_initialPayload(ctx, field)
+	if err != nil {
+		return nil
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = nil
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Subscription().InitialPayload(rctx, fc.Args["repeat"].(*int))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return nil
+	}
+	if resTmp == nil {
+		return nil
+	}
+	return func(ctx context.Context) graphql.Marshaler {
+		select {
+		case res, ok := <-resTmp.(<-chan map[string]interface{}):
+			if !ok {
+				return nil
+			}
+			return graphql.WriterFunc(func(w io.Writer) {
+				w.Write([]byte{'{'})
+				graphql.MarshalString(field.Alias).MarshalGQL(w)
+				w.Write([]byte{':'})
+				ec.marshalOMap2map(ctx, field.Selections, res).MarshalGQL(w)
+				w.Write([]byte{'}'})
+			})
+		case <-ctx.Done():
+			return nil
+		}
+	}
+}
+
+func (ec *executionContext) fieldContext_Subscription_initialPayload(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Subscription",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Map does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Subscription_initialPayload_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -3213,6 +3310,8 @@ func (ec *executionContext) _Subscription(ctx context.Context, sel ast.Selection
 		return ec._Subscription_headerValue(ctx, fields[0])
 	case "initPayloadValue":
 		return ec._Subscription_initPayloadValue(ctx, fields[0])
+	case "initialPayload":
+		return ec._Subscription_initialPayload(ctx, fields[0])
 	default:
 		panic("unknown field " + strconv.Quote(fields[0].Name))
 	}

@@ -325,6 +325,8 @@ const TopList: React.FC<{
   const range = router.query.range;
   const dateRange = router.query.dateRange;
 
+  const hasPersisted = items.some((i) => i.isPersisted);
+
   return (
     <CardContent className="pt-6">
       <div className="mb-2 flex space-x-2 text-sm">
@@ -359,11 +361,25 @@ const TopList: React.FC<{
           key: row.hash + row.name,
           value: Number.parseFloat(row.value ?? "0"),
           name: (
-            <div className="flex">
-              <span className="flex w-16 shrink-0">{row.hash.slice(0, 6)}</span>
+            <div className="flex items-center">
+              <span className="flex w-16 shrink-0">
+                {row.hash.slice(0, 6) || "-------"}
+              </span>
               <span className="truncate">
                 {row.name === "" ? "-" : row.name}
               </span>
+              {row.isPersisted && (
+                <Tooltip>
+                  <TooltipTrigger>
+                    <div className="ml-2">
+                      <div className="flex h-3.5 items-center justify-center rounded bg-success/40 px-1 text-[10px] font-bold text-primary-foreground">
+                        P
+                      </div>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>Persisted Query</TooltipContent>
+                </Tooltip>
+              )}
             </div>
           ),
           href: {
