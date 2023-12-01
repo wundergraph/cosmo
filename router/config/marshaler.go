@@ -3,9 +3,10 @@ package config
 import (
 	b64 "encoding/base64"
 	"fmt"
-	"github.com/dustin/go-humanize"
 	"regexp"
 	"strings"
+
+	"github.com/dustin/go-humanize"
 )
 
 type Base64Decoder []byte
@@ -50,6 +51,10 @@ func (b *RegExArray) UnmarshalYAML(unmarshal func(interface{}) error) error {
 }
 
 type BytesString uint64
+
+func (b BytesString) Uint64() uint64 {
+	return uint64(b)
+}
 
 func (b *BytesString) Decode(value string) error {
 	decoded, err := humanize.ParseBytes(value)
