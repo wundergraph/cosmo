@@ -1,5 +1,6 @@
 import { and, asc, eq } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { alias } from 'drizzle-orm/pg-core';
 import * as schema from '../../db/schema.js';
 import { organizationInvitations, organizations, users } from '../../db/schema.js';
 import { OrganizationDTO, OrganizationInvitationDTO, UserDTO } from '../../types/index.js';
@@ -33,7 +34,11 @@ export class OrganizationInvitationRepository {
   }
 
   // returns the organizations to which the user has a pending invite.
-  public async getPendingInvitationsOfUser(input: { userId: string }): Promise<OrganizationDTO[]> {
+  public async getPendingInvitationsOfUser(input: {
+    userId: string;
+  }): Promise<(OrganizationDTO & { invitedBy: string | undefined })[]> {
+    const users1 = alias(users, 'users1');
+
     const pendingOrgInvites = await this.db
       .select({
         id: organizations.id,
@@ -41,10 +46,12 @@ export class OrganizationInvitationRepository {
         slug: organizations.slug,
         creatorUserId: organizations.createdBy,
         createdAt: organizations.createdAt,
+        invitedBy: users1.email,
       })
       .from(organizationInvitations)
       .innerJoin(organizations, eq(organizations.id, organizationInvitations.organizationId))
       .innerJoin(users, eq(users.id, organizationInvitations.userId))
+      .leftJoin(users1, eq(users1.id, organizationInvitations.invitedBy))
       .where(and(eq(users.id, input.userId), eq(organizationInvitations.accepted, false)))
       .execute();
 
@@ -54,6 +61,7 @@ export class OrganizationInvitationRepository {
       slug: org.slug,
       creatorUserId: org.creatorUserId,
       createdAt: org.createdAt.toISOString(),
+      invitedBy: org.invitedBy || undefined,
     }));
 
     return userInvitations;
@@ -63,13 +71,17 @@ export class OrganizationInvitationRepository {
     organizationID: string;
     userID: string;
   }): Promise<OrganizationInvitationDTO | null> {
+    const users1 = alias(users, 'users1');
+
     const orgMember = await this.db
       .select({
         userID: users.id,
         email: users.email,
+        invitedBy: users1.email,
       })
       .from(organizationInvitations)
       .innerJoin(users, eq(users.id, organizationInvitations.userId))
+      .leftJoin(users1, eq(users1.id, organizationInvitations.invitedBy))
       .where(
         and(
           eq(organizationInvitations.organizationId, input.organizationID),
@@ -87,10 +99,17 @@ export class OrganizationInvitationRepository {
     return {
       userID: orgMember[0].userID,
       email: orgMember[0].email,
+      invitedBy: orgMember[0].invitedBy || undefined,
     } as OrganizationInvitationDTO;
   }
 
-  public async inviteUser(input: { email: string; userId: string; organizationId: string; dbUser: UserDTO | null }) {
+  public async inviteUser(input: {
+    email: string;
+    userId: string;
+    organizationId: string;
+    dbUser: UserDTO | null;
+    inviterUserId: string;
+  }) {
     await this.db.transaction(async (tx) => {
       const userRepo = new UserRepository(tx);
 
@@ -107,6 +126,7 @@ export class OrganizationInvitationRepository {
           userId: input.userId,
           organizationId: input.organizationId,
           accepted: false,
+          invitedBy: input.inviterUserId,
         })
         .execute();
     });

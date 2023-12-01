@@ -16,7 +16,15 @@ import {
   getInvitations,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 
-const InvitationCard = ({ id, name }: { id: string; name: string }) => {
+const InvitationCard = ({
+  id,
+  name,
+  invitedBy,
+}: {
+  id: string;
+  name: string;
+  invitedBy?: string;
+}) => {
   const { mutate } = useMutation(acceptOrDeclineInvitation.useMutation());
   const { refetch } = useQuery(getInvitations.useQuery());
   const { toast } = useToast();
@@ -48,10 +56,17 @@ const InvitationCard = ({ id, name }: { id: string; name: string }) => {
 
   return (
     <Card className="flex items-center justify-between p-4">
-      <span>
-        <span className="font-semibold capitalize">{name}</span> invites you to
-        their organization.
-      </span>
+      {invitedBy ? (
+        <span>
+          <span className="font-semibold">{invitedBy}</span> invites you to the{" "}
+          <span className="font-semibold">{name}</span> organization.
+        </span>
+      ) : (
+        <span>
+          You have been invited to the{" "}
+          <span className="font-semibold capitalize">{name}</span> organization.
+        </span>
+      )}
       <div className="flex gap-x-3">
         <Button type="submit" variant="default" onClick={() => onSubmit(true)}>
           Accept
@@ -96,8 +111,10 @@ const InvitationsPage: NextPageWithLayout = () => {
 
   return (
     <div className="flex flex-col gap-y-4 pt-2">
-      {data.invitations.map(({ id, name }) => {
-        return <InvitationCard key={id} name={name} id={id} />;
+      {data.invitations.map(({ id, name, invitedBy }) => {
+        return (
+          <InvitationCard key={id} name={name} id={id} invitedBy={invitedBy} />
+        );
       })}
     </div>
   );
