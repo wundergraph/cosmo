@@ -8,7 +8,8 @@ import (
 
 type Proto interface {
 	Subprotocol() string
-	Initialize() error
+	// Initialize starts the protocol and returns the initial payload received from the client
+	Initialize() (json.RawMessage, error)
 	ReadMessage() (*Message, error)
 
 	Pong(*Message) (int, error)
