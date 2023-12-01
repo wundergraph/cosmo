@@ -37,7 +37,7 @@ import {
 import { noCase } from "change-case";
 import { endOfDay, formatISO, startOfDay, subDays } from "date-fns";
 import { useRouter } from "next/router";
-import { useCallback, useContext, useEffect, useState } from "react";
+import { useCallback, useContext, useEffect, useRef, useState } from "react";
 
 const ChangelogToolbar = () => {
   const router = useRouter();
@@ -207,10 +207,10 @@ const Changes = ({ changes }: { changes: FederatedGraphChangelog[] }) => {
 
 const ChangelogPage: NextPageWithLayout = () => {
   const router = useRouter();
-  const user = useContext(UserContext);
   const limit = 10;
   const [items, setItems] = useState<FederatedGraphChangelogOutput[]>([]);
   const [offset, setOffset] = useState(0);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const graphData = useContext(GraphContext);
 
@@ -320,98 +320,103 @@ const ChangelogPage: NextPageWithLayout = () => {
     );
 
   return (
-    <div className="relative h-full w-full">
-      {!validGraph && (
-        <CompositionErrorsBanner errors={graphData?.graph?.compositionErrors} />
-      )}
-      <div className="sticky top-[184px] z-20 h-0 overflow-visible">
-        <div className="absolute right-0 hidden w-[280px] grid-cols-2 rounded border bg-card px-4 py-2 lg:grid">
-          <h2 className="text-sm font-semibold">Jump to log</h2>
-          <div className="scrollbar-custom flex max-h-96 flex-col overflow-y-auto text-xs">
-            {items.map(({ schemaVersionId: id, createdAt }) => {
-              return (
-                <button
-                  onClick={() => {
-                    const element = document.getElementById(id)!;
-                    const offset = 112;
-
-                    const elementPosition = element.getBoundingClientRect().top;
-                    const scrollPosition =
-                      window.scrollY + elementPosition - offset;
-
-                    window.scrollTo({ top: scrollPosition });
-                  }}
-                  key={createdAt}
-                  className="text-left text-muted-foreground hover:text-foreground hover:underline"
-                >
-                  {formatDateTime(new Date(createdAt))}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-      <div className="absolute left-40 ml-1.5 hidden h-full w-px border-r lg:block" />
-      <ol className="relative w-full">
-        {items.map(({ schemaVersionId: id, createdAt, changelogs }) => {
-          return (
-            <li
-              id={id}
-              key={id}
-              className="flex w-full flex-col gap-y-8 py-10 first:pt-2"
-            >
-              <div className="absolute left-40 mt-2 hidden h-3 w-3 rounded-full border bg-accent lg:block"></div>
-              <div className="flex w-full flex-col items-start gap-x-16 gap-y-4 lg:flex-row">
-                <div className="flex flex-col items-end gap-y-1">
-                  <time className="mt-2 text-sm font-bold leading-none">
-                    {formatDateTime(new Date(createdAt))}
-                  </time>
-                  <p className="text-sm font-bold text-muted-foreground">
-                    {id.slice(0, 6)}
-                  </p>
-                  <div>
-                    <div className="flex items-center gap-x-1">
-                      <PlusIcon className="text-success" />
-                      <p className="text-sm text-success">
-                        {getDiffCount(changelogs).addCount}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-x-1">
-                      <MinusIcon className="text-destructive" />
-                      <p className="text-sm text-destructive">
-                        {getDiffCount(changelogs).minusCount}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                <hr className="w-full lg:hidden" />
-                <Changes changes={changelogs} />
-              </div>
-            </li>
-          );
-        })}
-      </ol>
-      {!data?.hasNextPage && (
-        <p className="mx-auto py-12 text-sm font-bold leading-none">
-          End of changelog
-        </p>
-      )}
-    </div>
-  );
-};
-
-ChangelogPage.getLayout = (page) =>
-  getGraphLayout(
     <GraphPageLayout
       title="Changelog"
       subtitle="Keep track of changes made to your federated graph"
       toolbar={<ChangelogToolbar />}
+      scrollRef={scrollRef}
     >
-      {page}
-    </GraphPageLayout>,
-    {
-      title: "Changelog",
-    },
+      <div className="relative h-full w-full">
+        {!validGraph && (
+          <CompositionErrorsBanner
+            errors={graphData?.graph?.compositionErrors}
+          />
+        )}
+        <div className="sticky top-[184px] z-20 h-0 overflow-visible">
+          <div className="absolute right-0 hidden w-[280px] grid-cols-2 rounded border bg-card px-4 py-2 lg:grid">
+            <h2 className="text-sm font-semibold">Jump to log</h2>
+            <div className="scrollbar-custom flex max-h-96 flex-col overflow-y-auto text-xs">
+              {items.map(({ schemaVersionId: id, createdAt }) => {
+                return (
+                  <button
+                    onClick={() => {
+                      const parent = scrollRef.current || window;
+                      const element = document.getElementById(id)!;
+                      const offset = 112;
+
+                      const top = scrollRef.current
+                        ? scrollRef.current.scrollTop
+                        : window.scrollY;
+
+                      const elementPosition =
+                        element.getBoundingClientRect().top;
+                      const scrollPosition = top + elementPosition - offset;
+
+                      parent.scrollTo({ top: scrollPosition });
+                    }}
+                    key={createdAt}
+                    className="text-left text-muted-foreground hover:text-foreground hover:underline"
+                  >
+                    {formatDateTime(new Date(createdAt))}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+        <div className="absolute left-40 ml-1.5 hidden h-full w-px border-r lg:block" />
+        <ol className="relative w-full">
+          {items.map(({ schemaVersionId: id, createdAt, changelogs }) => {
+            return (
+              <li
+                id={id}
+                key={id}
+                className="flex w-full flex-col gap-y-8 py-10 first:pt-2"
+              >
+                <div className="absolute left-40 mt-2 hidden h-3 w-3 rounded-full border bg-accent lg:block"></div>
+                <div className="flex w-full flex-col items-start gap-x-16 gap-y-4 lg:flex-row">
+                  <div className="flex flex-col items-end gap-y-1">
+                    <time className="mt-2 text-sm font-bold leading-none">
+                      {formatDateTime(new Date(createdAt))}
+                    </time>
+                    <p className="text-sm font-bold text-muted-foreground">
+                      {id.slice(0, 6)}
+                    </p>
+                    <div>
+                      <div className="flex items-center gap-x-1">
+                        <PlusIcon className="text-success" />
+                        <p className="text-sm text-success">
+                          {getDiffCount(changelogs).addCount}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-x-1">
+                        <MinusIcon className="text-destructive" />
+                        <p className="text-sm text-destructive">
+                          {getDiffCount(changelogs).minusCount}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <hr className="w-full lg:hidden" />
+                  <Changes changes={changelogs} />
+                </div>
+              </li>
+            );
+          })}
+        </ol>
+        {!data?.hasNextPage && (
+          <p className="mx-auto py-12 text-sm font-bold leading-none">
+            End of changelog
+          </p>
+        )}
+      </div>
+    </GraphPageLayout>
   );
+};
+
+ChangelogPage.getLayout = (page) =>
+  getGraphLayout(page, {
+    title: "Changelog",
+  });
 
 export default ChangelogPage;
