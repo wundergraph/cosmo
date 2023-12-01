@@ -16,7 +16,7 @@ import {
   getFederatedGraphs,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { GetFederatedGraphByNameResponse } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { ReactNode, createContext, useContext, useMemo } from "react";
+import { Fragment, ReactNode, createContext, useContext, useMemo } from "react";
 import { PiGitBranch, PiDevices } from "react-icons/pi";
 import { EmptyState } from "../empty-state";
 import { Button } from "../ui/button";
@@ -221,11 +221,11 @@ export const GraphPageLayout = ({
   const breadcrumb = (
     <div className="-ml-2 flex flex-row items-center space-x-2 text-sm">
       <GraphSelect /> <span className="text-muted-foreground">/</span>
-      {breadcrumbs?.map((b) => (
-        <>
+      {breadcrumbs?.map((b, i) => (
+        <Fragment key={i}>
           <span className="text-muted-foreground hover:text-current">{b}</span>
           <span className="text-muted-foreground">/</span>
-        </>
+        </Fragment>
       ))}
       <h1 className="truncate whitespace-nowrap font-medium">{title}</h1>
     </div>

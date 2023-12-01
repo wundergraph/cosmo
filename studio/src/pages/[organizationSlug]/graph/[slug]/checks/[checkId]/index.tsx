@@ -128,8 +128,11 @@ const CheckOverviewPage: NextPageWithLayout = () => {
         }
         actions={
           <div className="flex items-center space-x-2">
-            <Button asChild variant="outline">
-              <Link href={`/${organizationSlug}/graph/${slug}/checks`}>
+            <Button variant="outline">
+              <Link
+                href={`/${organizationSlug}/graph/${slug}/checks`}
+                className="flex items-center"
+              >
                 <ArrowLeftIcon className="mr-2 h-4 w-4" />
                 All checks
               </Link>
@@ -151,7 +154,7 @@ const CheckOverviewPage: NextPageWithLayout = () => {
       subtitle="A quick glance of the details for this check run"
       breadcrumbs={[
         <Link
-          key={0}
+          key="checks"
           href={checksRoute || `/${organizationSlug}/graph/${slug}/checks`}
         >
           Checks
