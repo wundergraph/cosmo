@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 
 import { Command } from 'commander';
+import { parse, visit } from 'graphql';
 import pc from 'picocolors';
 
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
@@ -16,6 +17,7 @@ interface OperationOutput {
   hash: string;
   contents: string;
   status: OperationOutputStatus;
+  operationNames: string[];
 }
 
 const collect = (value: string, previous: string[]): string[] => {
@@ -112,6 +114,22 @@ const jsonOperationStatus = (status: PublishedOperationStatus): OperationOutputS
   throw new Error('unknown operation status');
 };
 
+export const extractOperationNames = (contents: string): string[] => {
+  // parse contents using graphql library and extract operation names
+  // return operation names
+  const names: string[] = [];
+  const doc = parse(contents);
+  visit(doc, {
+    OperationDefinition(node) {
+      const operationName = node.name?.value ?? '';
+      if (operationName) {
+        names.push(operationName);
+      }
+    },
+  });
+  return names;
+};
+
 export const parseOperations = (contents: string): PersistedOperation[] => {
   let data: any;
   try {
@@ -167,9 +185,16 @@ export default (opts: BaseCommandOptions) => {
       switch (options.format) {
         case 'text': {
           for (const op of result.operations) {
-            console.log(
-              pc.green(`pushed operation ${op.id} (${op.hash}) (${humanReadableOperationStatus(op.status)})`),
-            );
+            const message: string[] = [`pushed operation ${op.id}`];
+            if (op.hash !== op.id) {
+              message.push(`(${op.hash})`);
+            }
+            message.push(`(${humanReadableOperationStatus(op.status)})`);
+            const operationNames = extractOperationNames(operations.find((x) => x.id === op.id)?.contents ?? '');
+            if (operationNames.length > 0) {
+              message.push(`: ${operationNames.join(', ')}`);
+            }
+            console.log(message.join(' '));
           }
           const upToDate = (result.operations?.filter((op) => op.status === PublishedOperationStatus.UP_TO_DATE) ?? [])
             .length;
@@ -198,6 +223,7 @@ export default (opts: BaseCommandOptions) => {
               hash: op.hash,
               contents: operations[ii].contents,
               status: jsonOperationStatus(op.status),
+              operationNames: extractOperationNames(operations[ii].contents),
             };
           }
           console.log(JSON.stringify(returnedOperations, null, 2));
