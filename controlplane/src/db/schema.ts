@@ -294,9 +294,11 @@ export const targetsRelations = relations(targets, ({ one, many }) => ({
 
 export const schemaVersion = pgTable('schema_versions', {
   id: uuid('id').primaryKey().defaultRandom(),
-  targetId: uuid('target_id').notNull().references(() => targets.id, {
-    onDelete: 'cascade',
-  }),
+  targetId: uuid('target_id')
+    .notNull()
+    .references(() => targets.id, {
+      onDelete: 'cascade',
+    }),
   // The actual schema definition of the graph. For GraphQL, this is the SDL.
   // For a monolithic GraphQL, it is the SDL.
   // For a federated Graph, this is the composition result.

@@ -22,14 +22,14 @@ import {
   slackIntegrationConfigs,
   slackSchemaUpdateEventConfigs,
   targets,
-  users
+  users,
 } from '../../db/schema.js';
 import {
   APIKeyDTO,
   OrganizationDTO,
   OrganizationLimitsDTO,
   OrganizationMemberDTO,
-  WebhooksConfigDTO
+  WebhooksConfigDTO,
 } from '../../types/index.js';
 
 /**
