@@ -749,6 +749,24 @@ message PublishPersistedOperationsResponse {
   repeated PublishedOperation operations = 2;
 }
 
+message GetPersistedOperationsRequest {
+  string federated_graph_name = 1;
+  string client_id = 2;
+}
+
+message GetPersistedOperationsResponse {
+  message Operation {
+    string id = 1;
+    string contents = 2;
+    string created_at = 3;
+    string last_updated_at = 4;
+  }
+
+  Response response = 1;
+  repeated Operation operations = 2;
+}
+
+
 message Header{
   string key = 1;
   string value = 2;
@@ -935,6 +953,7 @@ message MetricsTopItem {
   string hash = 1;
   string name = 2;
   string value = 3;
+  bool isPersisted = 4;
 }
 
 message MetricsSeriesItem {
@@ -1137,6 +1156,8 @@ service PlatformService {
   rpc DeleteRouterToken(DeleteRouterTokenRequest) returns (DeleteRouterTokenResponse) {}
   // Add persisted operations
   rpc PublishPersistedOperations(PublishPersistedOperationsRequest) returns (PublishPersistedOperationsResponse) {}
+  // GetPersistedOperations returns operations for the registered client id
+  rpc GetPersistedOperations(GetPersistedOperationsRequest) returns (GetPersistedOperationsResponse) {}
 
   // For Studio and CLI
 

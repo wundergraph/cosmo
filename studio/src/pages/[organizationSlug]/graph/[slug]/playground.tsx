@@ -1,19 +1,63 @@
+import { CodeViewer } from "@/components/code-viewer";
 import { GraphContext, getGraphLayout } from "@/components/layout/graph-layout";
 import { PageHeader } from "@/components/layout/head";
 import { TraceContext, TraceView } from "@/components/playground/trace-view";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tooltip } from "@/components/ui/tooltip";
+import { useToast } from "@/components/ui/use-toast";
+import { SubmitHandler, useZodForm } from "@/hooks/use-form";
 import { NextPageWithLayout } from "@/lib/page";
 import { explorerPlugin } from "@graphiql/plugin-explorer";
 import { createGraphiQLFetcher } from "@graphiql/toolkit";
+import { SparklesIcon } from "@heroicons/react/24/outline";
 import { MobileIcon } from "@radix-ui/react-icons";
+import { TooltipContent, TooltipTrigger } from "@radix-ui/react-tooltip";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
+import {
+  getClients,
+  publishPersistedOperations,
+} from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+import {
+  PersistedOperation,
+  PublishedOperationStatus,
+} from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
+import crypto from "crypto";
 import { GraphiQL } from "graphiql";
 import { useTheme } from "next-themes";
 import { useRouter } from "next/router";
 import { useContext, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { FaNetworkWired } from "react-icons/fa";
-import { PiBracketsCurly } from "react-icons/pi";
+import { FiSave } from "react-icons/fi";
+import { PiBracketsCurly, PiDevices } from "react-icons/pi";
+import { z } from "zod";
 
 const graphiQLFetch = async (
   onFetch: any,
@@ -56,6 +100,225 @@ const graphiQLFetch = async (
   }
 };
 
+const FormSchema = z.object({
+  clientId: z.string().optional(),
+  clientName: z.string().trim().min(1, "The name cannot be empty"),
+});
+
+type Input = z.infer<typeof FormSchema>;
+
+const PersistOperation = () => {
+  const router = useRouter();
+  const slug = router.query.slug as string;
+
+  const { query } = useContext(TraceContext);
+
+  const [isOpen, setIsOpen] = useState(false);
+
+  const [isNew, setIsNew] = useState(false);
+
+  const { toast } = useToast();
+
+  const { mutate, isPending } = useMutation({
+    ...publishPersistedOperations.useMutation(),
+    onSuccess(data) {
+      if (data.response?.code !== EnumStatusCode.OK) {
+        toast({
+          variant: "destructive",
+          title: "Could not save operation",
+          description: data.response?.details ?? "Please try again",
+        });
+        return;
+      }
+
+      if (
+        data.operations.length > 0 &&
+        data.operations[0].status === PublishedOperationStatus.CONFLICT
+      ) {
+        toast({
+          variant: "destructive",
+          title: "Could not save operation",
+          description: "There were conflicts detected while saving",
+        });
+        return;
+      }
+
+      toast({
+        title: "Operation persisted successfully",
+      });
+
+      setIsOpen(false);
+    },
+  });
+
+  const { data } = useQuery(
+    getClients.useQuery({
+      fedGraphName: slug,
+    }),
+  );
+
+  const form = useZodForm<Input>({
+    schema: FormSchema,
+  });
+
+  const onSubmit: SubmitHandler<Input> = (formData) => {
+    const clientName = formData.clientId
+      ? data?.clients.find((c) => c.id === formData.clientId)?.name
+      : formData.clientName;
+
+    if (!query) {
+      toast({
+        description: "Please save a valid query",
+      });
+      return;
+    }
+
+    if (!clientName) {
+      toast({
+        description: "Please use a valid client name",
+      });
+      return;
+    }
+
+    const operations = [
+      new PersistedOperation({
+        id: crypto.createHash("sha256").update(query).digest("hex"),
+        contents: query,
+      }),
+    ];
+
+    mutate({
+      fedGraphName: slug,
+      clientName,
+      operations,
+    });
+  };
+
+  if (!query) return null;
+
+  return (
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <Tooltip delayDuration={100}>
+        <TooltipTrigger asChild>
+          <DialogTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="graphiql-toolbar-button"
+            >
+              <FiSave className="graphiql-toolbar-icon" />
+            </Button>
+          </DialogTrigger>
+        </TooltipTrigger>
+        <TooltipContent className="rounded-md border-2 bg-background px-2 py-1">
+          Persist query
+        </TooltipContent>
+      </Tooltip>
+
+      <DialogContent className="grid  max-w-4xl grid-cols-5 items-start divide-x">
+        <div className="scrollbar-custom col-span-3 h-full max-h-[450px] overflow-auto">
+          <CodeViewer code={query} />
+        </div>
+        <div className="col-span-2 flex h-full w-full flex-col pl-4">
+          <DialogHeader>
+            <DialogTitle>Persist Operation</DialogTitle>
+            <DialogDescription>
+              Save query to persisted operations
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-4 flex-1">
+            <Form {...form}>
+              <form
+                onSubmit={form.handleSubmit(onSubmit)}
+                className="flex h-full flex-col gap-y-6"
+              >
+                <FormField
+                  control={form.control}
+                  name="clientId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Client</FormLabel>
+                      <Select
+                        onValueChange={(val) => {
+                          if (!val) {
+                            setIsNew(true);
+                            form.setValue("clientName", "");
+                          } else {
+                            setIsNew(false);
+                            form.setValue(
+                              "clientName",
+                              data?.clients.find((c) => c.id === val)?.name ??
+                                "",
+                            );
+                          }
+
+                          field.onChange(val);
+                        }}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a client" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="">
+                            <span className="flex items-center gap-x-2">
+                              <SparklesIcon className="h-4 w-4" /> Create New
+                            </span>
+                          </SelectItem>
+                          {data?.clients?.map((c) => {
+                            return (
+                              <SelectItem key={c.id} value={c.id}>
+                                <span className="flex items-center gap-x-2">
+                                  <PiDevices className="h-4 w-4" /> {c.name}
+                                </span>
+                              </SelectItem>
+                            );
+                          })}
+                        </SelectContent>
+                      </Select>
+
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                {isNew && (
+                  <FormField
+                    control={form.control}
+                    name="clientName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Enter name</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Enter new client name"
+                            {...field}
+                          />
+                        </FormControl>
+
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+                <Button
+                  isLoading={isPending}
+                  disabled={!form.formState.isValid}
+                  className="mt-auto w-full"
+                  type="submit"
+                >
+                  Save
+                </Button>
+              </form>
+            </Form>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 const ResponseTabs = () => {
   const onValueChange = (val: string) => {
     const response = document.getElementsByClassName(
@@ -82,39 +345,43 @@ const ResponseTabs = () => {
   };
 
   return (
-    <Tabs
-      defaultValue="response"
-      className="w-full md:w-auto"
-      onValueChange={onValueChange}
-    >
-      <TabsList className="grid w-full grid-cols-2">
-        <TabsTrigger className="!cursor-pointer" value="response" asChild>
-          <div className="flex items-center gap-x-2">
-            <PiBracketsCurly className="h-4 w-4 flex-shrink-0" />
-            Response
-          </div>
-        </TabsTrigger>
-        <TabsTrigger className="!cursor-pointer" value="plan" asChild>
-          <div className="flex items-center gap-x-2">
-            <FaNetworkWired className="h-4 w-4 flex-shrink-0" />
-            Trace
-          </div>
-        </TabsTrigger>
-      </TabsList>
-    </Tabs>
+    <div className="flex items-center justify-center gap-x-2">
+      <Tabs
+        defaultValue="response"
+        className="w-full md:w-auto"
+        onValueChange={onValueChange}
+      >
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger className="!cursor-pointer" value="response" asChild>
+            <div className="flex items-center gap-x-2">
+              <PiBracketsCurly className="h-4 w-4 flex-shrink-0" />
+              Response
+            </div>
+          </TabsTrigger>
+          <TabsTrigger className="!cursor-pointer" value="plan" asChild>
+            <div className="flex items-center gap-x-2">
+              <FaNetworkWired className="h-4 w-4 flex-shrink-0" />
+              Trace
+            </div>
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+    </div>
   );
 };
 
 const PlaygroundPortal = () => {
   const tabDiv = document.getElementById("response-tabs");
   const visDiv = document.getElementById("response-visualization");
+  const saveDiv = document.getElementById("save-button");
 
-  if (!tabDiv || !visDiv) return null;
+  if (!tabDiv || !visDiv || !saveDiv) return null;
 
   return (
     <>
       {createPortal(<ResponseTabs />, tabDiv)}
       {createPortal(<TraceView />, visDiv)}
+      {createPortal(<PersistOperation />, saveDiv)}
     </>
   );
 };
@@ -164,6 +431,16 @@ const PlaygroundPage: NextPageWithLayout = () => {
       div.id = "response-visualization";
       div.className = "flex flex-1 h-full w-full absolute invisible -z-50";
       responseSectionParent.append(div);
+    }
+
+    const toolbar = document.getElementsByClassName(
+      "graphiql-toolbar",
+    )[0] as any as HTMLDivElement;
+
+    if (toolbar) {
+      const div = document.createElement("div");
+      div.id = "save-button";
+      toolbar.append(div);
     }
 
     setIsMounted(true);
@@ -250,6 +527,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
     <PageHeader title="Studio | Playground">
       <TraceContext.Provider
         value={{
+          query,
           headers,
           response,
           subgraphs: graphContext.subgraphs,

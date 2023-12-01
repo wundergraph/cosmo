@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS traces (
    StatusMessage String CODEC (ZSTD(1)),
    OperationHash String CODEC (ZSTD(1)),
    OperationContent String CODEC (ZSTD(1)),
+   OperationPersistedID String CODEC (ZSTD(1)),
    HttpStatusCode String CODEC (ZSTD(1)),
    HttpHost String CODEC (ZSTD(1)),
    HttpUserAgent String CODEC (ZSTD(1)),

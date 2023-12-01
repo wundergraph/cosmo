@@ -12,7 +12,7 @@ export class OperationsRepository {
 
   public async updatePersistedOperations(clientId: string, userId: string, operations: UpdatedPersistedOperation[]) {
     const now = new Date();
-    const inserts = operations.map((operation) => {
+    const inserts: (typeof federatedGraphPersistedOperations.$inferInsert)[] = operations.map((operation) => {
       return {
         federatedGraphId: this.federatedGraphId,
         clientId,
@@ -22,8 +22,14 @@ export class OperationsRepository {
         createdAt: now,
         updatedAt: now,
         createdById: userId,
+        operationContent: operation.contents,
       };
     });
+
+    if (inserts.length === 0) {
+      return;
+    }
+
     await this.db
       .insert(federatedGraphPersistedOperations)
       .values(inserts)
@@ -72,6 +78,7 @@ export class OperationsRepository {
         lastUpdatedAt: row?.updatedAt?.toISOString() || '',
         createdBy: row.createdBy.email,
         lastUpdatedBy: row.updatedBy?.email ?? '',
+        contents: row.operationContent ?? '',
       });
     }
     return operations;
