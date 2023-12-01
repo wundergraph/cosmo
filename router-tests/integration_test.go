@@ -223,7 +223,7 @@ func setupServerConfig(tb testing.TB, opts ...core.Option) (*core.Server, config
 		core.WithStaticRouterConfig(routerConfig),
 		core.WithLogger(zapLogger),
 		core.WithGraphApiToken(graphApiToken),
-		core.WithCDNConfig(config.CDNConfiguration{URL: cfg.CDN.URL, CacheSize: 1024 * 1024}),
+		core.WithCDN(config.CDNConfiguration{URL: cfg.CDN.URL, CacheSize: 1024 * 1024}),
 		core.WithDevelopmentMode(true),
 		core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
 			EnableSingleFlight:                     true,

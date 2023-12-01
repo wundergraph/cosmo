@@ -83,7 +83,7 @@ func TestPersistedOperationsCache(t *testing.T) {
 
 	t.Run("without cache", func(t *testing.T) {
 		cdnURL := setupCDNServer(t)
-		server, _ := setupServerConfig(t, core.WithCDNConfig(config.CDNConfiguration{
+		server, _ := setupServerConfig(t, core.WithCDN(config.CDNConfiguration{
 			URL:       cdnURL,
 			CacheSize: 0,
 		}))
