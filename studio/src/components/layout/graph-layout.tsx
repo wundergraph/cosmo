@@ -208,6 +208,7 @@ export interface TitleLayoutProps {
   toolbar?: React.ReactNode;
   noPadding?: boolean;
   children?: React.ReactNode;
+  scrollRef?: React.RefObject<HTMLDivElement>;
 }
 
 export const GraphPageLayout = ({
@@ -217,6 +218,7 @@ export const GraphPageLayout = ({
   toolbar,
   noPadding,
   children,
+  scrollRef,
 }: TitleLayoutProps) => {
   const breadcrumb = (
     <div className="-ml-2 flex flex-row items-center space-x-2 text-sm">
@@ -249,8 +251,9 @@ export const GraphPageLayout = ({
         {toolbar}
       </div>
       <div
+        ref={scrollRef}
         className={cn(
-          "h-auto flex-1 overflow-y-auto",
+          "scrollbar-custom h-auto flex-1 overflow-y-auto",
           noPadding !== true && "px-4 py-6 lg:px-8",
         )}
       >
