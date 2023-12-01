@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.33.0](https://github.com/wundergraph/cosmo/compare/wgc@0.32.2...wgc@0.33.0) (2023-12-01)
+
+### Features
+
+* persist ops from playground and view all client ops ([#323](https://github.com/wundergraph/cosmo/issues/323)) ([042d7db](https://github.com/wundergraph/cosmo/commit/042d7db00dbf2945a6be2b30e31d7851befc407b)) (@thisisnithin)
+
 ## [0.32.2](https://github.com/wundergraph/cosmo/compare/wgc@0.32.1...wgc@0.32.2) (2023-11-30)
 
 **Note:** Version bump only for package wgc

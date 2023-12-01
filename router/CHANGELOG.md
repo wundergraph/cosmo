@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.43.0](https://github.com/wundergraph/cosmo/compare/router@0.42.3...router@0.43.0) (2023-12-01)
+
+### Features
+
+* improve support for extensions and initial payloads ([#324](https://github.com/wundergraph/cosmo/issues/324)) ([77a033f](https://github.com/wundergraph/cosmo/commit/77a033ffdce094b612ed69467a8cef6ee9f2fdc0)) (@fiam)
+* persist ops from playground and view all client ops ([#323](https://github.com/wundergraph/cosmo/issues/323)) ([042d7db](https://github.com/wundergraph/cosmo/commit/042d7db00dbf2945a6be2b30e31d7851befc407b)) (@thisisnithin)
+
 ## [0.42.3](https://github.com/wundergraph/cosmo/compare/router@0.42.2...router@0.42.3) (2023-11-30)
 
 ### Bug Fixes

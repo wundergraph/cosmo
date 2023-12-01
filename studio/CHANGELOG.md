@@ -4,6 +4,17 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.41.0](https://github.com/wundergraph/cosmo/compare/studio@0.40.3...studio@0.41.0) (2023-12-01)
+
+### Bug Fixes
+
+* minor bug fixes in ui ([#328](https://github.com/wundergraph/cosmo/issues/328)) ([6e77713](https://github.com/wundergraph/cosmo/commit/6e77713e93e413eb84af3e146dce1a1ec4511cff)) (@Pagebakers)
+
+### Features
+
+* persist ops from playground and view all client ops ([#323](https://github.com/wundergraph/cosmo/issues/323)) ([042d7db](https://github.com/wundergraph/cosmo/commit/042d7db00dbf2945a6be2b30e31d7851befc407b)) (@thisisnithin)
+* restructure navigation ([#280](https://github.com/wundergraph/cosmo/issues/280)) ([df23357](https://github.com/wundergraph/cosmo/commit/df23357ceae0d7b37daf489a020f65777778e38b)) (@Pagebakers)
+
 ## [0.40.3](https://github.com/wundergraph/cosmo/compare/studio@0.40.2...studio@0.40.3) (2023-11-30)
 
 ### Bug Fixes
