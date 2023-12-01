@@ -217,7 +217,7 @@ const PersistOperation = () => {
           </DialogTrigger>
         </TooltipTrigger>
         <TooltipContent className="rounded-md border bg-background px-2 py-1">
-          Persist query
+          Persist Operation
         </TooltipContent>
       </Tooltip>
 
