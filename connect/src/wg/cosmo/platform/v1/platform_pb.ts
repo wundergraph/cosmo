@@ -8688,6 +8688,172 @@ export class GetCompositionDetailsResponse extends Message<GetCompositionDetails
 }
 
 /**
+ * @generated from message wg.cosmo.platform.v1.GetSdlBySchemaVersionRequest
+ */
+export class GetSdlBySchemaVersionRequest extends Message<GetSdlBySchemaVersionRequest> {
+  /**
+   * @generated from field: string schemaVersionId = 1;
+   */
+  schemaVersionId = "";
+
+  /**
+   * @generated from field: string graphName = 2;
+   */
+  graphName = "";
+
+  constructor(data?: PartialMessage<GetSdlBySchemaVersionRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetSdlBySchemaVersionRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "schemaVersionId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "graphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetSdlBySchemaVersionRequest {
+    return new GetSdlBySchemaVersionRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetSdlBySchemaVersionRequest {
+    return new GetSdlBySchemaVersionRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetSdlBySchemaVersionRequest {
+    return new GetSdlBySchemaVersionRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetSdlBySchemaVersionRequest | PlainMessage<GetSdlBySchemaVersionRequest> | undefined, b: GetSdlBySchemaVersionRequest | PlainMessage<GetSdlBySchemaVersionRequest> | undefined): boolean {
+    return proto3.util.equals(GetSdlBySchemaVersionRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetSdlBySchemaVersionResponse
+ */
+export class GetSdlBySchemaVersionResponse extends Message<GetSdlBySchemaVersionResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: string sdl = 2;
+   */
+  sdl = "";
+
+  constructor(data?: PartialMessage<GetSdlBySchemaVersionResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetSdlBySchemaVersionResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "sdl", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetSdlBySchemaVersionResponse {
+    return new GetSdlBySchemaVersionResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetSdlBySchemaVersionResponse {
+    return new GetSdlBySchemaVersionResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetSdlBySchemaVersionResponse {
+    return new GetSdlBySchemaVersionResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetSdlBySchemaVersionResponse | PlainMessage<GetSdlBySchemaVersionResponse> | undefined, b: GetSdlBySchemaVersionResponse | PlainMessage<GetSdlBySchemaVersionResponse> | undefined): boolean {
+    return proto3.util.equals(GetSdlBySchemaVersionResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetChangelogBySchemaVersionRequest
+ */
+export class GetChangelogBySchemaVersionRequest extends Message<GetChangelogBySchemaVersionRequest> {
+  /**
+   * @generated from field: string schemaVersionId = 1;
+   */
+  schemaVersionId = "";
+
+  constructor(data?: PartialMessage<GetChangelogBySchemaVersionRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetChangelogBySchemaVersionRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "schemaVersionId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetChangelogBySchemaVersionRequest {
+    return new GetChangelogBySchemaVersionRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetChangelogBySchemaVersionRequest {
+    return new GetChangelogBySchemaVersionRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetChangelogBySchemaVersionRequest {
+    return new GetChangelogBySchemaVersionRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetChangelogBySchemaVersionRequest | PlainMessage<GetChangelogBySchemaVersionRequest> | undefined, b: GetChangelogBySchemaVersionRequest | PlainMessage<GetChangelogBySchemaVersionRequest> | undefined): boolean {
+    return proto3.util.equals(GetChangelogBySchemaVersionRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetChangelogBySchemaVersionResponse
+ */
+export class GetChangelogBySchemaVersionResponse extends Message<GetChangelogBySchemaVersionResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: wg.cosmo.platform.v1.FederatedGraphChangelogOutput changelog = 2;
+   */
+  changelog?: FederatedGraphChangelogOutput;
+
+  constructor(data?: PartialMessage<GetChangelogBySchemaVersionResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetChangelogBySchemaVersionResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "changelog", kind: "message", T: FederatedGraphChangelogOutput },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetChangelogBySchemaVersionResponse {
+    return new GetChangelogBySchemaVersionResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetChangelogBySchemaVersionResponse {
+    return new GetChangelogBySchemaVersionResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetChangelogBySchemaVersionResponse {
+    return new GetChangelogBySchemaVersionResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetChangelogBySchemaVersionResponse | PlainMessage<GetChangelogBySchemaVersionResponse> | undefined, b: GetChangelogBySchemaVersionResponse | PlainMessage<GetChangelogBySchemaVersionResponse> | undefined): boolean {
+    return proto3.util.equals(GetChangelogBySchemaVersionResponse, a, b);
+  }
+}
+
+/**
  * @generated from message wg.cosmo.platform.v1.ClientInfo
  */
 export class ClientInfo extends Message<ClientInfo> {

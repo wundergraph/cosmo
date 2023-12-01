@@ -1,10 +1,8 @@
-import { UserContext } from "@/components/app-provider";
 import { getCheckIcon } from "@/components/check-badge-icon";
 import {
   DatePickerWithRange,
   DateRangePickerChangeHandler,
 } from "@/components/date-picker-with-range";
-import { DateRangePicker } from "@/components/date-range-picker";
 import { EmptyState } from "@/components/empty-state";
 import {
   GraphContext,
@@ -38,7 +36,6 @@ import {
 import { useUser } from "@/hooks/use-user";
 import { formatDateTime } from "@/lib/format-date";
 import { NextPageWithLayout } from "@/lib/page";
-import { cn } from "@/lib/utils";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import {
   ChevronLeftIcon,
@@ -59,7 +56,6 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useCallback, useContext } from "react";
-import { DateRange } from "react-day-picker";
 
 const useDateRange = () => {
   const router = useRouter();

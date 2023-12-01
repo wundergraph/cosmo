@@ -30,6 +30,7 @@ import {
   ForceCheckSuccessResponse,
   GetAPIKeysResponse,
   GetAnalyticsViewResponse,
+  GetChangelogBySchemaVersionResponse,
   GetCheckDetailsResponse,
   GetCheckOperationsResponse,
   GetCheckSummaryResponse,
@@ -55,6 +56,7 @@ import {
   GetOrganizationWebhookConfigsResponse,
   GetOrganizationWebhookMetaResponse,
   GetRouterTokensResponse,
+  GetSdlBySchemaVersionResponse,
   GetSubgraphByNameResponse,
   GetSubgraphsResponse,
   GetTraceResponse,
@@ -4524,6 +4526,57 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           changeCounts: {
             additions: addCount,
             deletions: minusCount,
+          },
+        };
+      });
+    },
+
+    getSdlBySchemaVersion: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetSdlBySchemaVersionResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const fedRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+
+        const sdl = await fedRepo.getSdlBasedOnSchemaVersion({
+          graphName: req.graphName,
+          schemaVersionId: req.schemaVersionId,
+        });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          sdl: sdl || '',
+        };
+      });
+    },
+
+    getChangelogBySchemaVersion: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetChangelogBySchemaVersionResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const fedRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+
+        const changelogs = await fedRepo.fetchChangelogByVersion({
+          schemaVersionId: req.schemaVersionId,
+        });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          changelog: {
+            changelogs,
+            schemaVersionId: req.schemaVersionId,
+            createdAt: changelogs.length === 0 ? '' : changelogs[0].createdAt,
           },
         };
       });

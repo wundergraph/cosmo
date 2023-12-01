@@ -5,7 +5,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { AcceptOrDeclineInvitationRequest, AcceptOrDeclineInvitationResponse, CheckFederatedGraphRequest, CheckFederatedGraphResponse, CheckSubgraphSchemaRequest, CheckSubgraphSchemaResponse, CreateAPIKeyRequest, CreateAPIKeyResponse, CreateFederatedGraphRequest, CreateFederatedGraphResponse, CreateFederatedGraphTokenRequest, CreateFederatedGraphTokenResponse, CreateFederatedSubgraphRequest, CreateFederatedSubgraphResponse, CreateIntegrationRequest, CreateIntegrationResponse, CreateOIDCProviderRequest, CreateOIDCProviderResponse, CreateOrganizationWebhookConfigRequest, CreateOrganizationWebhookConfigResponse, DeleteAPIKeyRequest, DeleteAPIKeyResponse, DeleteFederatedGraphRequest, DeleteFederatedGraphResponse, DeleteFederatedSubgraphRequest, DeleteFederatedSubgraphResponse, DeleteIntegrationRequest, DeleteIntegrationResponse, DeleteOIDCProviderRequest, DeleteOIDCProviderResponse, DeleteOrganizationRequest, DeleteOrganizationResponse, DeleteOrganizationWebhookConfigRequest, DeleteOrganizationWebhookConfigResponse, DeleteRouterTokenRequest, DeleteRouterTokenResponse, FixSubgraphSchemaRequest, FixSubgraphSchemaResponse, ForceCheckSuccessRequest, ForceCheckSuccessResponse, GetAnalyticsViewRequest, GetAnalyticsViewResponse, GetAPIKeysRequest, GetAPIKeysResponse, GetCheckDetailsRequest, GetCheckDetailsResponse, GetCheckOperationsRequest, GetCheckOperationsResponse, GetChecksByFederatedGraphNameRequest, GetChecksByFederatedGraphNameResponse, GetCheckSummaryRequest, GetCheckSummaryResponse, GetClientsRequest, GetClientsResponse, GetCompositionDetailsRequest, GetCompositionDetailsResponse, GetCompositionsRequest, GetCompositionsResponse, GetDashboardAnalyticsViewRequest, GetDashboardAnalyticsViewResponse, GetFederatedGraphByNameRequest, GetFederatedGraphByNameResponse, GetFederatedGraphChangelogRequest, GetFederatedGraphChangelogResponse, GetFederatedGraphSDLByNameRequest, GetFederatedGraphSDLByNameResponse, GetFederatedGraphsRequest, GetFederatedGraphsResponse, GetFieldUsageRequest, GetFieldUsageResponse, GetGraphMetricsRequest, GetGraphMetricsResponse, GetInvitationsRequest, GetInvitationsResponse, GetLatestValidSubgraphSDLByNameRequest, GetLatestValidSubgraphSDLByNameResponse, GetMetricsErrorRateRequest, GetMetricsErrorRateResponse, GetOIDCProviderRequest, GetOIDCProviderResponse, GetOperationContentRequest, GetOperationContentResponse, GetOrganizationIntegrationsRequest, GetOrganizationIntegrationsResponse, GetOrganizationMembersRequest, GetOrganizationMembersResponse, GetOrganizationRequestsCountRequest, GetOrganizationRequestsCountResponse, GetOrganizationWebhookConfigsRequest, GetOrganizationWebhookConfigsResponse, GetOrganizationWebhookMetaRequest, GetOrganizationWebhookMetaResponse, GetRouterTokensRequest, GetRouterTokensResponse, GetSubgraphByNameRequest, GetSubgraphByNameResponse, GetSubgraphsRequest, GetSubgraphsResponse, GetTraceRequest, GetTraceResponse, InviteUserRequest, InviteUserResponse, IsGitHubAppInstalledRequest, IsGitHubAppInstalledResponse, LeaveOrganizationRequest, LeaveOrganizationResponse, MigrateFromApolloRequest, MigrateFromApolloResponse, PublishFederatedSubgraphRequest, PublishFederatedSubgraphResponse, PublishPersistedOperationsRequest, PublishPersistedOperationsResponse, RemoveInvitationRequest, RemoveInvitationResponse, RemoveOrganizationMemberRequest, RemoveOrganizationMemberResponse, UpdateFederatedGraphRequest, UpdateFederatedGraphResponse, UpdateIntegrationConfigRequest, UpdateIntegrationConfigResponse, UpdateOrganizationDetailsRequest, UpdateOrganizationDetailsResponse, UpdateOrganizationWebhookConfigRequest, UpdateOrganizationWebhookConfigResponse, UpdateOrgMemberRoleRequest, UpdateOrgMemberRoleResponse, UpdateSubgraphRequest, UpdateSubgraphResponse, WhoAmIRequest, WhoAmIResponse } from "./platform_pb.js";
+import { AcceptOrDeclineInvitationRequest, AcceptOrDeclineInvitationResponse, CheckFederatedGraphRequest, CheckFederatedGraphResponse, CheckSubgraphSchemaRequest, CheckSubgraphSchemaResponse, CreateAPIKeyRequest, CreateAPIKeyResponse, CreateFederatedGraphRequest, CreateFederatedGraphResponse, CreateFederatedGraphTokenRequest, CreateFederatedGraphTokenResponse, CreateFederatedSubgraphRequest, CreateFederatedSubgraphResponse, CreateIntegrationRequest, CreateIntegrationResponse, CreateOIDCProviderRequest, CreateOIDCProviderResponse, CreateOrganizationWebhookConfigRequest, CreateOrganizationWebhookConfigResponse, DeleteAPIKeyRequest, DeleteAPIKeyResponse, DeleteFederatedGraphRequest, DeleteFederatedGraphResponse, DeleteFederatedSubgraphRequest, DeleteFederatedSubgraphResponse, DeleteIntegrationRequest, DeleteIntegrationResponse, DeleteOIDCProviderRequest, DeleteOIDCProviderResponse, DeleteOrganizationRequest, DeleteOrganizationResponse, DeleteOrganizationWebhookConfigRequest, DeleteOrganizationWebhookConfigResponse, DeleteRouterTokenRequest, DeleteRouterTokenResponse, FixSubgraphSchemaRequest, FixSubgraphSchemaResponse, ForceCheckSuccessRequest, ForceCheckSuccessResponse, GetAnalyticsViewRequest, GetAnalyticsViewResponse, GetAPIKeysRequest, GetAPIKeysResponse, GetChangelogBySchemaVersionRequest, GetChangelogBySchemaVersionResponse, GetCheckDetailsRequest, GetCheckDetailsResponse, GetCheckOperationsRequest, GetCheckOperationsResponse, GetChecksByFederatedGraphNameRequest, GetChecksByFederatedGraphNameResponse, GetCheckSummaryRequest, GetCheckSummaryResponse, GetClientsRequest, GetClientsResponse, GetCompositionDetailsRequest, GetCompositionDetailsResponse, GetCompositionsRequest, GetCompositionsResponse, GetDashboardAnalyticsViewRequest, GetDashboardAnalyticsViewResponse, GetFederatedGraphByNameRequest, GetFederatedGraphByNameResponse, GetFederatedGraphChangelogRequest, GetFederatedGraphChangelogResponse, GetFederatedGraphSDLByNameRequest, GetFederatedGraphSDLByNameResponse, GetFederatedGraphsRequest, GetFederatedGraphsResponse, GetFieldUsageRequest, GetFieldUsageResponse, GetGraphMetricsRequest, GetGraphMetricsResponse, GetInvitationsRequest, GetInvitationsResponse, GetLatestValidSubgraphSDLByNameRequest, GetLatestValidSubgraphSDLByNameResponse, GetMetricsErrorRateRequest, GetMetricsErrorRateResponse, GetOIDCProviderRequest, GetOIDCProviderResponse, GetOperationContentRequest, GetOperationContentResponse, GetOrganizationIntegrationsRequest, GetOrganizationIntegrationsResponse, GetOrganizationMembersRequest, GetOrganizationMembersResponse, GetOrganizationRequestsCountRequest, GetOrganizationRequestsCountResponse, GetOrganizationWebhookConfigsRequest, GetOrganizationWebhookConfigsResponse, GetOrganizationWebhookMetaRequest, GetOrganizationWebhookMetaResponse, GetRouterTokensRequest, GetRouterTokensResponse, GetSdlBySchemaVersionRequest, GetSdlBySchemaVersionResponse, GetSubgraphByNameRequest, GetSubgraphByNameResponse, GetSubgraphsRequest, GetSubgraphsResponse, GetTraceRequest, GetTraceResponse, InviteUserRequest, InviteUserResponse, IsGitHubAppInstalledRequest, IsGitHubAppInstalledResponse, LeaveOrganizationRequest, LeaveOrganizationResponse, MigrateFromApolloRequest, MigrateFromApolloResponse, PublishFederatedSubgraphRequest, PublishFederatedSubgraphResponse, PublishPersistedOperationsRequest, PublishPersistedOperationsResponse, RemoveInvitationRequest, RemoveInvitationResponse, RemoveOrganizationMemberRequest, RemoveOrganizationMemberResponse, UpdateFederatedGraphRequest, UpdateFederatedGraphResponse, UpdateIntegrationConfigRequest, UpdateIntegrationConfigResponse, UpdateOrganizationDetailsRequest, UpdateOrganizationDetailsResponse, UpdateOrganizationWebhookConfigRequest, UpdateOrganizationWebhookConfigResponse, UpdateOrgMemberRoleRequest, UpdateOrgMemberRoleResponse, UpdateSubgraphRequest, UpdateSubgraphResponse, WhoAmIRequest, WhoAmIResponse } from "./platform_pb.js";
 import { MethodIdempotency, MethodKind } from "@bufbuild/protobuf";
 import { GetConfigRequest, GetConfigResponse } from "../../node/v1/node_pb.js";
 import { createQueryService, createUnaryHooks, UnaryFunctionsWithHooks } from "@connectrpc/connect-query";
@@ -666,6 +666,28 @@ export const PlatformService = {
       kind: MethodKind.Unary,
     },
     /**
+     * GetSdlBySchemaVersion returns the sdl based on the schema version
+     *
+     * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetSdlBySchemaVersion
+     */
+    getSdlBySchemaVersion: {
+      name: "GetSdlBySchemaVersion",
+      I: GetSdlBySchemaVersionRequest,
+      O: GetSdlBySchemaVersionResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * GetChangelogBySchemaVersion returns the changelog based on the schema version
+     *
+     * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetChangelogBySchemaVersion
+     */
+    getChangelogBySchemaVersion: {
+      name: "GetChangelogBySchemaVersion",
+      I: GetChangelogBySchemaVersionRequest,
+      O: GetChangelogBySchemaVersionResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetAnalyticsView
      */
     getAnalyticsView: {
@@ -1148,6 +1170,20 @@ export const getCompositions: UnaryFunctionsWithHooks<GetCompositionsRequest, Ge
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetCompositionDetails
  */
 export const getCompositionDetails: UnaryFunctionsWithHooks<GetCompositionDetailsRequest, GetCompositionDetailsResponse> = {   ...$queryService.getCompositionDetails,  ...createUnaryHooks($queryService.getCompositionDetails)};
+
+/**
+ * GetSdlBySchemaVersion returns the sdl based on the schema version
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetSdlBySchemaVersion
+ */
+export const getSdlBySchemaVersion: UnaryFunctionsWithHooks<GetSdlBySchemaVersionRequest, GetSdlBySchemaVersionResponse> = {   ...$queryService.getSdlBySchemaVersion,  ...createUnaryHooks($queryService.getSdlBySchemaVersion)};
+
+/**
+ * GetChangelogBySchemaVersion returns the changelog based on the schema version
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetChangelogBySchemaVersion
+ */
+export const getChangelogBySchemaVersion: UnaryFunctionsWithHooks<GetChangelogBySchemaVersionRequest, GetChangelogBySchemaVersionResponse> = {   ...$queryService.getChangelogBySchemaVersion,  ...createUnaryHooks($queryService.getChangelogBySchemaVersion)};
 
 /**
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetAnalyticsView

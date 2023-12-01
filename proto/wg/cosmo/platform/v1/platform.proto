@@ -1101,6 +1101,25 @@ message GetCompositionDetailsResponse {
   ChangeCounts changeCounts = 4;
 }
 
+message GetSdlBySchemaVersionRequest {
+  string schemaVersionId = 1;
+  string graphName = 2;
+}
+
+message GetSdlBySchemaVersionResponse {
+  Response response = 1;
+  string sdl = 2;
+}
+
+message GetChangelogBySchemaVersionRequest {
+  string schemaVersionId = 1;
+}
+
+message GetChangelogBySchemaVersionResponse {
+  Response response = 1;
+  FederatedGraphChangelogOutput changelog = 2;
+}
+
 message ClientInfo{
   string name = 1;
   string id = 2;
@@ -1283,6 +1302,10 @@ service PlatformService {
   rpc GetCompositions(GetCompositionsRequest) returns (GetCompositionsResponse) {}
    // GetCompositionDetails returns the details of that composition
   rpc GetCompositionDetails(GetCompositionDetailsRequest) returns (GetCompositionDetailsResponse) {}
+  // GetSdlBySchemaVersion returns the sdl based on the schema version
+  rpc GetSdlBySchemaVersion(GetSdlBySchemaVersionRequest) returns (GetSdlBySchemaVersionResponse) {}
+  // GetChangelogBySchemaVersion returns the changelog based on the schema version
+  rpc GetChangelogBySchemaVersion(GetChangelogBySchemaVersionRequest) returns (GetChangelogBySchemaVersionResponse) {}
 
   // Analytics
 

@@ -511,6 +511,37 @@ export class FederatedGraphRepository {
     };
   }
 
+  public async getSdlBasedOnSchemaVersion({
+    graphName,
+    schemaVersionId,
+  }: {
+    graphName: string;
+    schemaVersionId: string;
+  }) {
+    const version = await this.db
+      .select({
+        name: targets.name,
+        schemaSDL: schemaVersion.schemaSDL,
+        schemaVersionId: schemaVersion.id,
+      })
+      .from(targets)
+      .innerJoin(schemaVersion, eq(schema.schemaVersion.targetId, targets.id))
+      .where(
+        and(
+          eq(targets.organizationId, this.organizationId),
+          eq(targets.name, graphName),
+          eq(schemaVersion.id, schemaVersionId),
+        ),
+      )
+      .execute();
+
+    if (version.length === 0) {
+      return undefined;
+    }
+
+    return version[0].schemaSDL;
+  }
+
   public createFederatedGraphChangelog(data: { schemaVersionID: string; changes: SchemaDiff[] }) {
     return this.db
       .insert(schemaVersionChangeAction)
@@ -665,7 +696,17 @@ export class FederatedGraphRepository {
       .from(schemaVersionChangeAction)
       .where(eq(schemaVersionChangeAction.schemaVersionId, schemaVersionId));
 
-    return changelogs;
+    if (changelogs.length === 0) {
+      return [];
+    }
+
+    return changelogs.map((c) => ({
+      id: c.id,
+      path: c.path || '',
+      changeType: c.changeType,
+      changeMessage: c.changeMessage,
+      createdAt: c.createdAt.toString(),
+    }));
   }
 
   public delete(targetID: string, subgraphsTargetIDs: string[]) {
