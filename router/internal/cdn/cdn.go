@@ -20,7 +20,7 @@ const (
 
 	PersistedOperationNotFoundErrorCode = "PersistedQueryNotFound"
 
-	averageCacheEntrySize = 1024 // 1kb
+	averageCacheEntrySize = 4 * 1024 // 4kb
 )
 
 var (
