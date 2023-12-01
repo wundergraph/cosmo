@@ -305,19 +305,17 @@ const CheckOverviewPage: NextPageWithLayout = () => {
                   </InfoTooltip>
                 </Badge>
 
-                {data.check.isBreaking && (
-                  <Badge
-                    variant="outline"
-                    className="flex items-center space-x-1.5  py-2"
-                  >
-                    {getCheckIcon(!data.check.hasClientTraffic)}
-                    <span className="flex-1 truncate">Operations</span>
-                    <InfoTooltip>
-                      Describes if the proposed schema affects any client
-                      operations based on real usage data.
-                    </InfoTooltip>
-                  </Badge>
-                )}
+                <Badge
+                  variant="outline"
+                  className="flex items-center space-x-1.5  py-2"
+                >
+                  {getCheckIcon(!data.check.hasClientTraffic)}
+                  <span className="flex-1 truncate">Operations</span>
+                  <InfoTooltip>
+                    Describes if the proposed schema affects any client
+                    operations based on real usage data.
+                  </InfoTooltip>
+                </Badge>
               </dd>
             </div>
 
@@ -352,23 +350,29 @@ const CheckOverviewPage: NextPageWithLayout = () => {
             {changeCounts && (
               <div className="flex flex-col">
                 <dt className="mb-2 text-sm text-muted-foreground">Changes</dt>
-                <dd>
-                  <div className="flex items-center">
-                    <p className="text-sm">
-                      <span className="font-bold text-success">
-                        +{changeCounts.additions}
-                      </span>{" "}
-                      additions
-                    </p>
-                  </div>
-                  <div className="flex items-center">
-                    <p className="text-sm">
-                      <span className="font-bold text-destructive">
-                        -{changeCounts.deletions}
-                      </span>{" "}
-                      deletions
-                    </p>
-                  </div>
+                <dd className="text-sm">
+                  {data.changes.length ? (
+                    <>
+                      <div className="flex items-center">
+                        <p>
+                          <span className="font-bold text-success">
+                            +{changeCounts.additions}
+                          </span>{" "}
+                          additions
+                        </p>
+                      </div>
+                      <div className="flex items-center">
+                        <p>
+                          <span className="font-bold text-destructive">
+                            -{changeCounts.deletions}
+                          </span>{" "}
+                          deletions
+                        </p>
+                      </div>
+                    </>
+                  ) : (
+                    <p>No changes</p>
+                  )}
                 </dd>
               </div>
             )}
@@ -528,12 +532,41 @@ const CheckOverviewPage: NextPageWithLayout = () => {
                       ) : null}
                     </Alert>
                   ) : null}
-                  <ChangesTable
-                    changes={data.changes}
-                    caption={`${data.changes.length} changes found`}
-                    trafficCheckDays={data.trafficCheckDays}
-                    createdAt={data.check.timestamp}
-                  />
+
+                  {isSuccessful ? (
+                    <Alert variant="default">
+                      <CheckCircledIcon className="h-4 w-4" />
+
+                      <AlertTitle>Schema check passed</AlertTitle>
+                      <AlertDescription>
+                        {data.changes.length
+                          ? "This schema change didn&apos;t affect any operations from existing client traffic."
+                          : "There were no schema changes detected."}
+                      </AlertDescription>
+                      {data.check.isForcedSuccess ? (
+                        <div className="mt-2 flex space-x-2">
+                          <ForceSuccess
+                            onSubmit={() =>
+                              forceSuccess({
+                                checkId: id,
+                                graphName: slug,
+                              })
+                            }
+                          />
+                        </div>
+                      ) : null}
+                    </Alert>
+                  ) : null}
+
+                  {data.changes.length ? (
+                    <ChangesTable
+                      changes={data.changes}
+                      caption={`${data.changes.length} changes found`}
+                      trafficCheckDays={data.trafficCheckDays}
+                      createdAt={data.check.timestamp}
+                    />
+                  ) : null}
+
                   <FieldUsageSheet />
                 </TabsContent>
                 <TabsContent value="operations" className="w-full">
