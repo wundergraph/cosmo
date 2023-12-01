@@ -578,10 +578,15 @@ export class SubgraphRepository {
       published: true,
     });
 
+    const subgraph = subgraphs.find((s) => s.targetId === check.targetId);
+    if (!subgraph) {
+      return;
+    }
+
     return {
       id: check.id,
       targetID: check.targetId,
-      subgraphName: subgraphs.find((s) => s.targetId === check.targetId)?.name ?? '',
+      subgraphName: subgraph.name ?? '',
       timestamp: check.createdAt.toISOString(),
       isBreaking: check.hasBreakingChanges ?? false,
       isComposable: check.isComposable ?? false,

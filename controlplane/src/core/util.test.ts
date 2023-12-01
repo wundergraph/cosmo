@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { hasLabelsChanged, isValidLabels, isValidOrganizationSlug } from './util.js';
+import { extractOperationNames, hasLabelsChanged, isValidLabels, isValidOrganizationSlug } from './util.js';
 
 describe('Util', (ctx) => {
   test('Should validate label', () => {
@@ -206,5 +206,39 @@ describe('Util', (ctx) => {
     for (const entry of slugs) {
       expect(isValidOrganizationSlug(entry.slug)).equal(entry.expected);
     }
+  });
+});
+
+describe('extract operation names', () => {
+  test('parse operations without names', () => {
+    const contents = `query {
+          hello
+      }`;
+    const operationNames = extractOperationNames(contents);
+    expect(operationNames).toEqual([]);
+  });
+  test('parse operations with names', () => {
+    const contents = `query getTaskAndUser {
+          getTask(id: "0x3") {
+            id
+            title
+            completed
+          }
+          queryUser(filter: {username: {eq: "john"}}) {
+            username
+            name
+          }
+        }
+        
+        query completedTasks {
+          queryTask(filter: {completed: true}) {
+            title
+            completed
+          }
+        }
+      `;
+
+    const operationNames = extractOperationNames(contents);
+    expect(operationNames).toEqual(['getTaskAndUser', 'completedTasks']);
   });
 });

@@ -114,8 +114,10 @@ export const federatedGraphPersistedOperations = pgTable(
     hash: text('hash').notNull(),
     // path in the blob storage where the operation is stored
     filePath: text('file_path').notNull().unique(),
+    operationNames: text('operation_names').array(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }),
+    operationContent: text('operation_content'),
     createdById: uuid('created_by_id')
       .notNull()
       .references(() => users.id, {
