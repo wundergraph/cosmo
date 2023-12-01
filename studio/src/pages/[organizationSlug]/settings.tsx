@@ -161,7 +161,7 @@ const OrganizationDetails = () => {
           defaultValue={user?.currentOrganization.name}
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Organization Name</FormLabel>
+              <FormLabel>Organization name</FormLabel>
               <FormControl>
                 <Input {...field} />
               </FormControl>
@@ -179,7 +179,7 @@ const OrganizationDetails = () => {
           defaultValue={user?.currentOrganization.slug}
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Organization Slug</FormLabel>
+              <FormLabel>Organization slug</FormLabel>
               <FormControl>
                 <Input {...field} />
               </FormControl>
@@ -1046,11 +1046,7 @@ const SettingsDashboardPage: NextPageWithLayout = () => {
 };
 
 SettingsDashboardPage.getLayout = (page) => {
-  return getDashboardLayout(
-    page,
-    "Settings",
-    "Settings for this organization.",
-  );
+  return getDashboardLayout(page, "Settings", "Settings for this organization");
 };
 
 export default SettingsDashboardPage;

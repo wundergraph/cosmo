@@ -12,7 +12,6 @@ import { Input } from "@/components/ui/input";
 import { Loader } from "@/components/ui/loader";
 import { useToast } from "@/components/ui/use-toast";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
-import { calURL } from "@/lib/constants";
 import { NextPageWithLayout } from "@/lib/page";
 import { cn, getHighestPriorityRole } from "@/lib/utils";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
@@ -28,7 +27,6 @@ import {
 import { sentenceCase } from "change-case";
 import { useContext } from "react";
 import { HiOutlineDotsVertical } from "react-icons/hi";
-import { IoInformationCircle } from "react-icons/io5";
 import { z } from "zod";
 
 const emailInputSchema = z.object({

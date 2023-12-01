@@ -207,6 +207,7 @@ message GetFederatedGraphByNameResponse {
   FederatedGraph graph = 2;
   repeated Subgraph subgraphs = 3;
   string graphToken = 4;
+  string graphRequestToken = 5;
 }
 
 message GetFederatedGraphSDLByNameRequest {
@@ -270,11 +271,6 @@ message GetCheckSummaryRequest {
 }
 
 message GetCheckSummaryResponse {
-  message ChangeCounts {
-    int32 additions = 1;
-    int32 deletions = 2;
-  }
-
   message AffectedGraph {
     string id = 1;
     int32 traffic_check_days = 2;
@@ -284,7 +280,9 @@ message GetCheckSummaryResponse {
   SchemaCheck check = 2;
   repeated AffectedGraph affected_graphs = 3;
   optional string proposedSubgraphSchemaSDL = 4;
-  ChangeCounts changeCounts = 5;
+  repeated SchemaChange changes = 6;
+  repeated string compositionErrors = 7;
+  int32 traffic_check_days = 8;
 }
 
 message GetCheckDetailsRequest {

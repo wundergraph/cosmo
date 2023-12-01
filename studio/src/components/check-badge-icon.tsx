@@ -25,13 +25,13 @@ const getCheckIcon = (check: boolean) => {
   if (check) {
     return (
       <div className="flex justify-center">
-        <CheckCircledIcon className="h-5 w-5 text-success" />
+        <CheckCircledIcon className="h-4 w-4 text-success" />
       </div>
     );
   }
   return (
     <div className="flex justify-center">
-      <CrossCircledIcon className="h-5 w-5 text-destructive" />
+      <CrossCircledIcon className="h-4 w-4 text-destructive" />
     </div>
   );
 };

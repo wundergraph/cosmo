@@ -45,7 +45,7 @@ GraphsDashboardPage.getLayout = (page) => {
   return getDashboardLayout(
     page,
     "Federated Graphs",
-    "View all your federated graphs",
+    "An overview of all your federated graphs",
   );
 };
 
