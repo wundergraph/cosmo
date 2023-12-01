@@ -97,14 +97,17 @@ import { z } from "zod";
 const getSnippets = ({
   clientName,
   operationId,
+  operationNames,
 }: {
   clientName: string;
   operationId: string;
+  operationNames: string[];
 }) => {
   const curl = `curl 'http://127.0.0.1:3002/graphql' \\
     -H 'graphql-client-name: ${clientName}' \\
-    --json '{"extensions":{"persistedQuery":{"version":1,"sha256Hash":"${operationId}"}}}'
-  `;
+    --json '{${
+      operationNames.length > 1 ? `"operationName":"${operationNames[0]}",` : ""
+    }"extensions":{"persistedQuery":{"version":1,"sha256Hash":"${operationId}"}}}'`;
 
   const js = `const url = 'http://127.0.0.1:3002/graphql';
 const headers = {
@@ -113,6 +116,7 @@ const headers = {
 };
 
 const body = {
+  ${operationNames.length > 1 ? `operationName: "${operationNames[0]}",` : ""}
   extensions: {
     persistedQuery: {
       version: 1,
@@ -254,6 +258,7 @@ const ClientOperations = () => {
             const snippets = getSnippets({
               clientName: clientName ?? "",
               operationId: op.id,
+              operationNames: op.operationNames,
             });
 
             return (
@@ -265,10 +270,17 @@ const ClientOperations = () => {
                   >
                     {op.id.slice(0, 6)}
                   </Badge>
-                  <span className="w-full truncate text-start">
+                  <span
+                    className={cn("w-full truncate text-start", {
+                      "italic text-muted-foreground":
+                        op.operationNames.length === 0,
+                    })}
+                  >
                     {op.operationNames.length > 0
-                      ? op.operationNames.join("+")
-                      : "Unnamed Operation"}
+                      ? op.operationNames.length > 1
+                        ? `[ ${op.operationNames.join(", ")} ]`
+                        : op.operationNames[0]
+                      : "unnamed Operation"}
                   </span>
                 </AccordionTrigger>
                 <AccordionContent className="mt-2 px-2">
