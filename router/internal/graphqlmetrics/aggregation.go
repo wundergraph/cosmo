@@ -72,6 +72,55 @@ func isSchemaUsageInfoEqual(a, b *graphqlmetricsv12.SchemaUsageInfo) bool {
 		return false
 	}
 
+	// Can vary between requests when different variables are used
+	if !areInputUsageInfosEqual(a.InputMetrics, b.InputMetrics) {
+		return false
+	}
+
+	return true
+}
+
+func areInputUsageInfosEqual(a, b []*graphqlmetricsv12.InputUsageInfo) bool {
+	if len(a) != len(b) {
+		return false
+	}
+
+	for i, v := range a {
+		if !isInputUsageInfoEqual(v, b[i]) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func isInputUsageInfoEqual(a, b *graphqlmetricsv12.InputUsageInfo) bool {
+	if a.NamedType != b.NamedType {
+		return false
+	}
+
+	if a.TypeName != b.TypeName {
+		return false
+	}
+
+	if !isStringSliceEqual(a.Path, b.Path) {
+		return false
+	}
+
+	return true
+}
+
+func isStringSliceEqual(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+
+	for i, v := range a {
+		if b[i] != v {
+			return false
+		}
+	}
+
 	return true
 }
 
