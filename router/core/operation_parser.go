@@ -41,6 +41,7 @@ type ParsedOperation struct {
 	// operation.
 	NormalizedRepresentation string
 	Extensions               []byte
+	PersistedID              string
 }
 
 type invalidExtensionsTypeError jsonparser.ValueType
@@ -443,5 +444,6 @@ func (p *OperationParser) parse(ctx context.Context, clientInfo *ClientInfo, bod
 		Variables:                variablesCopy,
 		NormalizedRepresentation: kit.normalizedOperation.String(),
 		Extensions:               requestExtensions,
+		PersistedID:              string(persistedQuerySha256Hash),
 	}, nil
 }
