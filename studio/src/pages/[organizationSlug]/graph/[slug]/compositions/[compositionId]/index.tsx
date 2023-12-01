@@ -196,15 +196,21 @@ const CompositionDetailsPage: NextPageWithLayout = () => {
             <div className="flex-start flex max-w-[250px] flex-1 flex-col gap-2 ">
               <dt className="text-sm text-muted-foreground">Changelog</dt>
               <dd>
-                <Link
-                  key={id}
-                  href={`/${organizationSlug}/graph/${slug}/changelog/${schemaVersionId}`}
-                >
-                  <div className="flex items-center gap-x-1">
-                    <PiGitBranch />
-                    {schemaVersionId.split("-")[0]}
-                  </div>
-                </Link>
+                {changeCounts &&
+                changeCounts.additions === 0 &&
+                changeCounts.deletions === 0 ? (
+                  <span className="pl-0.5">No changes</span>
+                ) : (
+                  <Link
+                    key={id}
+                    href={`/${organizationSlug}/graph/${slug}/changelog/${schemaVersionId}`}
+                  >
+                    <div className="flex items-center gap-x-1">
+                      <PiGitBranch />
+                      {schemaVersionId.split("-")[0]}
+                    </div>
+                  </Link>
+                )}
               </dd>
               <dd className="whitespace-nowrap text-sm"></dd>
             </div>
@@ -261,8 +267,10 @@ const CompositionDetailsPage: NextPageWithLayout = () => {
             )}
             {routerVersion !== "" && (
               <div className="flex flex-col">
-                <dt className="mb-1 text-sm text-muted-foreground">Router version</dt>
-                <dd className="text-sm pl-0.5">{routerVersion}</dd>
+                <dt className="mb-1 text-sm text-muted-foreground">
+                  Router version
+                </dt>
+                <dd className="pl-0.5 text-sm">{routerVersion}</dd>
               </div>
             )}
           </dl>
@@ -275,7 +283,7 @@ const CompositionDetailsPage: NextPageWithLayout = () => {
                 <TabsList>
                   <TabsTrigger value="output" asChild>
                     <Link href={{ query: { ...router.query, tab: "output" } }}>
-                      Output Schema
+                      Composed Schema
                     </Link>
                   </TabsTrigger>
                   <TabsTrigger value="input" asChild>
