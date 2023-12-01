@@ -7,9 +7,9 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"sync"
 
 	"github.com/buger/jsonparser"
+	"github.com/dgraph-io/ristretto"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/wundergraph/cosmo/router/internal/unsafebytes"
 )
@@ -19,6 +19,8 @@ const (
 	OrganizationIDClaim   = "organization_id"
 
 	PersistedOperationNotFoundErrorCode = "PersistedQueryNotFound"
+
+	averageCacheEntrySize = 4 * 1024 // 4kb
 )
 
 var (
@@ -57,26 +59,25 @@ func (e *persistentOperationNotFoundError) Error() string {
 }
 
 type cdnPersistedOperationsCache struct {
-	operations map[string][]byte
-	mu         sync.RWMutex
+	// cache is the backing store for the in-memory cache. Note
+	// that if the cache is disabled, this will be nil
+	cache *ristretto.Cache
+}
+
+func (c *cdnPersistedOperationsCache) key(clientName string, operationHash []byte) string {
+	return clientName + unsafebytes.BytesToString(operationHash)
 }
 
 func (c *cdnPersistedOperationsCache) Get(clientName string, operationHash []byte) []byte {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	return c.operations[clientName+unsafebytes.BytesToString(operationHash)]
+	// Since we're returning nil when the item is not found, we don't need to
+	// check the return value from the cache nor the type assertion
+	item, _ := c.cache.Get(c.key(clientName, operationHash))
+	data, _ := item.([]byte)
+	return data
 }
 
 func (c *cdnPersistedOperationsCache) Set(clientName string, operationHash []byte, operationBody []byte) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	if c.operations == nil {
-		c.operations = make(map[string][]byte)
-	}
-	// operationBody might be a subslice of something else, make a copy
-	data := make([]byte, len(operationBody))
-	copy(data, operationBody)
-	c.operations[clientName+unsafebytes.BytesToString(operationHash)] = data
+	c.cache.Set(c.key(clientName, operationHash), operationBody, int64(len(operationBody)))
 }
 
 type CDNOptions struct {
@@ -86,6 +87,9 @@ type CDNOptions struct {
 	// usually the same as the GRAPH_API_TOKEN
 	AuthenticationToken string
 	HTTPClient          *http.Client
+	// CacheSize indicates the in-memory cache size, in bytes. If 0, no in-memory
+	// cache is used.
+	CacheSize uint64
 }
 
 type CDN struct {
@@ -98,7 +102,7 @@ type CDN struct {
 	// from the token, already url-escaped
 	organizationID  string
 	httpClient      *http.Client
-	operationsCache cdnPersistedOperationsCache
+	operationsCache *cdnPersistedOperationsCache
 }
 
 func (cdn *CDN) PersistedOperation(ctx context.Context, clientName string, sha256Hash []byte) ([]byte, error) {
@@ -197,11 +201,28 @@ func New(opts CDNOptions) (*CDN, error) {
 	if httpClient == nil {
 		httpClient = http.DefaultClient
 	}
+	cacheSize := int64(opts.CacheSize)
+	var cache *ristretto.Cache
+	if cacheSize > 0 {
+		cache, err = ristretto.NewCache(&ristretto.Config{
+			// assume an average of averageCacheEntrySize per operation, then
+			// multiply by 10 to obtain the recommended number of counters
+			NumCounters: (cacheSize * 10) / averageCacheEntrySize,
+			MaxCost:     cacheSize,
+			BufferItems: 64,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("initializing CDN cache: %v", err)
+		}
+	}
 	return &CDN{
 		cdnURL:              u,
 		authenticationToken: opts.AuthenticationToken,
 		federatedGraphID:    url.PathEscape(federatedGraphID),
 		organizationID:      url.PathEscape(organizationID),
 		httpClient:          httpClient,
+		operationsCache: &cdnPersistedOperationsCache{
+			cache: cache,
+		},
 	}, nil
 }
