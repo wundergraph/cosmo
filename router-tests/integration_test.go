@@ -145,11 +145,44 @@ func sendCustomData(server *core.Server, data []byte, reqMw func(r *http.Request
 	return rr
 }
 
+func testTokenClaims() jwt.MapClaims {
+	return jwt.MapClaims{
+		"federated_graph_id": "graph",
+		"organization_id":    "organization",
+	}
+}
+
 // setupServer sets up the router server without making it listen on a local
 // port, allowing tests by calling the server directly via server.Server.Handler.ServeHTTP
 func setupServer(tb testing.TB, opts ...core.Option) *core.Server {
 	server, _ := setupServerConfig(tb, opts...)
 	return server
+}
+
+func setupCDNServer(tb testing.TB) string {
+	cdnFileServer := http.FileServer(http.Dir(filepath.Join("testdata", "cdn")))
+	var cdnRequestLog []string
+	cdnServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/" {
+			requestLog, err := json.Marshal(cdnRequestLog)
+			require.NoError(tb, err)
+			w.Header().Set("Content-Type", "application/json")
+			w.Write(requestLog)
+			return
+		}
+		cdnRequestLog = append(cdnRequestLog, r.Method+" "+r.URL.Path)
+		// Ensure we have an authorization header with a valid token
+		authorization := r.Header.Get("Authorization")
+		token := authorization[len("Bearer "):]
+		parsedClaims := make(jwt.MapClaims)
+		jwtParser := new(jwt.Parser)
+		_, _, err := jwtParser.ParseUnverified(token, parsedClaims)
+		assert.NoError(tb, err)
+		assert.Equal(tb, testTokenClaims(), parsedClaims)
+		cdnFileServer.ServeHTTP(w, r)
+	}))
+	tb.Cleanup(cdnServer.Close)
+	return cdnServer.URL
 }
 
 func setupServerConfig(tb testing.TB, opts ...core.Option) (*core.Server, config.Config) {
@@ -179,45 +212,18 @@ func setupServerConfig(tb testing.TB, opts ...core.Option) (*core.Server, config
 	))
 
 	t := jwt.New(jwt.SigningMethodHS256)
-	t.Claims = jwt.MapClaims{
-		"federated_graph_id": "graph",
-		"organization_id":    "organization",
-	}
+	t.Claims = testTokenClaims()
 	graphApiToken, err := t.SignedString([]byte("hunter2"))
 	require.NoError(tb, err)
 
-	cdnFileServer := http.FileServer(http.Dir(filepath.Join("testdata", "cdn")))
-	var cdnRequestLog []string
-	cdnServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/" {
-			requestLog, err := json.Marshal(cdnRequestLog)
-			require.NoError(tb, err)
-			w.Header().Set("Content-Type", "application/json")
-			w.Write(requestLog)
-			return
-		}
-		cdnRequestLog = append(cdnRequestLog, r.Method+" "+r.URL.Path)
-		// Ensure we have an authorization header with a valid token
-		authorization := r.Header.Get("Authorization")
-		token := authorization[len("Bearer "):]
-		parsedClaims := make(jwt.MapClaims)
-		jwtParser := new(jwt.Parser)
-		_, _, err = jwtParser.ParseUnverified(token, parsedClaims)
-		assert.NoError(tb, err)
-		assert.Equal(tb, t.Claims, parsedClaims)
-		cdnFileServer.ServeHTTP(w, r)
-	}))
-
-	tb.Cleanup(cdnServer.Close)
-
-	cfg.CDN.URL = cdnServer.URL
+	cfg.CDN.URL = setupCDNServer(tb)
 
 	routerOpts := []core.Option{
 		core.WithFederatedGraphName(cfg.Graph.Name),
 		core.WithStaticRouterConfig(routerConfig),
 		core.WithLogger(zapLogger),
 		core.WithGraphApiToken(graphApiToken),
-		core.WithCDNURL(cfg.CDN.URL),
+		core.WithCDNConfig(config.CDNConfiguration{URL: cfg.CDN.URL, CacheSize: 1024 * 1024}),
 		core.WithDevelopmentMode(true),
 		core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
 			EnableSingleFlight:                     true,

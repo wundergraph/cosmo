@@ -192,7 +192,8 @@ type AuthorizationConfiguration struct {
 }
 
 type CDNConfiguration struct {
-	URL string `yaml:"url" validate:"url" envconfig:"CDN_URL" default:"https://cosmo-cdn.wundergraph.com"`
+	URL       string      `yaml:"url" validate:"url" envconfig:"CDN_URL" default:"https://cosmo-cdn.wundergraph.com"`
+	CacheSize BytesString `yaml:"cache_size" envconfig:"CDN_CACHE_SIZE" default:"100MB"`
 }
 
 type Config struct {

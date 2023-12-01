@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+
 	"github.com/wundergraph/cosmo/router/internal/controlplane/configpoller"
 	"github.com/wundergraph/cosmo/router/internal/controlplane/selfregister"
 	"go.uber.org/automaxprocs/maxprocs"
@@ -126,7 +127,7 @@ func NewRouter(params Params) (*core.Router, error) {
 		core.WithEngineExecutionConfig(cfg.EngineExecutionConfiguration),
 		core.WithAccessController(core.NewAccessController(authenticators, cfg.Authorization.RequireAuthentication)),
 		core.WithLocalhostFallbackInsideDocker(cfg.LocalhostFallbackInsideDocker),
-		core.WithCDNURL(cfg.CDN.URL),
+		core.WithCDNConfig(cfg.CDN),
 	)
 }
 

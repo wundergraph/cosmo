@@ -5,14 +5,15 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
-	"github.com/golang-jwt/jwt/v5"
-	"github.com/wundergraph/cosmo/router/internal/controlplane/configpoller"
-	"github.com/wundergraph/cosmo/router/internal/controlplane/selfregister"
 	"net"
 	"net/http"
 	"net/url"
 	"sync"
 	"time"
+
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/wundergraph/cosmo/router/internal/controlplane/configpoller"
+	"github.com/wundergraph/cosmo/router/internal/controlplane/selfregister"
 
 	"connectrpc.com/connect"
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
@@ -95,7 +96,7 @@ type (
 		healthCheckPath          string
 		readinessCheckPath       string
 		livenessCheckPath        string
-		cdnURL                   string
+		cdnConfig                config.CDNConfiguration
 		cdn                      *cdn.CDN
 		prometheusServer         *http.Server
 		modulesConfig            map[string]interface{}
@@ -311,8 +312,9 @@ func NewRouter(opts ...Option) (*Router, error) {
 	}
 
 	routerCDN, err := cdn.New(cdn.CDNOptions{
-		URL:                 r.cdnURL,
+		URL:                 r.cdnConfig.URL,
 		AuthenticationToken: r.graphApiToken,
+		CacheSize:           r.cdnConfig.CacheSize.Uint64(),
 	})
 	if err != nil {
 		return nil, err
@@ -1120,10 +1122,10 @@ func WithLivenessCheckPath(path string) Option {
 	}
 }
 
-// WithCDNURL sets the root URL for the CDN to use
-func WithCDNURL(cdnURL string) Option {
+// WithCDNConfig sets the configuration for the CDN client
+func WithCDNConfig(cfg config.CDNConfiguration) Option {
 	return func(r *Router) {
-		r.cdnURL = cdnURL
+		r.cdnConfig = cfg
 	}
 }
 
