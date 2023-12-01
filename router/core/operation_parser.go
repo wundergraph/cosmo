@@ -148,8 +148,12 @@ func (p *OperationParser) ReadBody(ctx context.Context, r io.Reader) ([]byte, er
 	return buf.Bytes(), nil
 }
 
-func (p *OperationParser) ParseReader(ctx context.Context, clientInfo *ClientInfo, body []byte, log *zap.Logger) (*ParsedOperation, error) {
-	return p.parse(ctx, clientInfo, body, log)
+func (p *OperationParser) ParseReader(ctx context.Context, clientInfo *ClientInfo, r io.Reader, log *zap.Logger) (*ParsedOperation, error) {
+	data, err := p.ReadBody(ctx, r)
+	if err != nil {
+		return nil, err
+	}
+	return p.parse(ctx, clientInfo, data, log)
 }
 
 func (p *OperationParser) Parse(ctx context.Context, clientInfo *ClientInfo, data []byte, log *zap.Logger) (*ParsedOperation, error) {
