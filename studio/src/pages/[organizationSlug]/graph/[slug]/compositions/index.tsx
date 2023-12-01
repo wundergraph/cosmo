@@ -332,7 +332,7 @@ CompositionsPage.getLayout = (page) =>
       {page}
     </GraphPageLayout>,
     {
-      title: "Checks",
+      title: "Compositions",
     },
   );
 
