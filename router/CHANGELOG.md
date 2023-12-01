@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.43.2](https://github.com/wundergraph/cosmo/compare/router@0.43.1...router@0.43.2) (2023-12-01)
+
+### Bug Fixes
+
+* check equality of InputMetrics when aggregating same metrics ([#331](https://github.com/wundergraph/cosmo/issues/331)) ([0b4d3eb](https://github.com/wundergraph/cosmo/commit/0b4d3eba43e2e035f829eadcaf15ae5a424734c4)) (@StarpTech)
+
 ## [0.43.1](https://github.com/wundergraph/cosmo/compare/router@0.43.0...router@0.43.1) (2023-12-01)
 
 **Note:** Version bump only for package router
