@@ -117,6 +117,7 @@ import {
 } from '../services/SchemaUsageTrafficInspector.js';
 import Slack from '../services/Slack.js';
 import {
+  extractOperationNames,
   formatSubscriptionProtocol,
   getHighestPriorityRole,
   handleError,
@@ -4204,32 +4205,35 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const updatedOperations: UpdatedPersistedOperation[] = [];
         // Retrieve the operations that have already been published
         const operationsResult = await operationsRepo.getPersistedOperations(clientId);
-        const operationsByOperationId = new Map(operationsResult.map((op) => [op.operationId, op.hash]));
+        const operationsByOperationId = new Map(operationsResult.map((op) => [op.operationId, { hash: op.hash, operationNames: op.operationNames }]));
         for (const operation of req.operations) {
           const operationId = operation.id;
           const operationHash = crypto.createHash('sha256').update(operation.contents).digest('hex');
-          const prevHash = operationsByOperationId.get(operationId);
-          if (prevHash !== undefined && prevHash !== operationHash) {
+          const prev = operationsByOperationId.get(operationId);
+          if (prev !== undefined && prev.hash !== operationHash) {
             // We're trying to update an operation with the same ID but different hash
             operations.push(
               new PublishedOperation({
                 id: operationId,
-                hash: prevHash,
+                hash: prev.hash,
                 status: PublishedOperationStatus.CONFLICT,
+                operationNames: prev.operationNames,
               }),
             );
             continue;
           }
-          operationsByOperationId.set(operationId, operationHash);
+          const operationNames = extractOperationNames(operation.contents);
+          operationsByOperationId.set(operationId, { hash: operationHash, operationNames });
           const path = `${organizationId}/${federatedGraph.id}/operations/${req.clientName}/${operationId}.json`;
           updatedOperations.push({
             operationId,
             hash: operationHash,
             filePath: path,
             contents: operation.contents,
+            operationNames,
           });
           let status: PublishedOperationStatus;
-          if (prevHash === undefined) {
+          if (prev === undefined) {
             const data: PublishedOperationData = {
               version: 1,
               body: operation.contents,
@@ -4244,6 +4248,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               id: operationId,
               hash: operationHash,
               status,
+              operationNames,
             }),
           );
         }
