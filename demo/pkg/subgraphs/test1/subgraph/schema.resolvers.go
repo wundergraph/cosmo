@@ -119,6 +119,37 @@ func (r *subscriptionResolver) InitPayloadValue(ctx context.Context, key string,
 	return ch, nil
 }
 
+// InitialPayload is the resolver for the initialPayload field.
+func (r *subscriptionResolver) InitialPayload(ctx context.Context, repeat *int) (<-chan map[string]interface{}, error) {
+	payload := injector.InitPayload(ctx)
+	if payload == nil {
+		payload = make(map[string]any)
+	}
+	ch := make(chan map[string]any, 1)
+
+	if repeat == nil {
+		repeat = new(int)
+		*repeat = 1
+	}
+
+	go func() {
+		defer close(ch)
+
+		for ii := 0; ii < *repeat; ii++ {
+			// In our example we'll send the current time every second.
+			time.Sleep(1 * time.Second)
+			select {
+			case <-ctx.Done():
+				return
+
+			case ch <- payload:
+
+			}
+		}
+	}()
+	return ch, nil
+}
+
 // Query returns generated.QueryResolver implementation.
 func (r *Resolver) Query() generated.QueryResolver { return &queryResolver{r} }
 

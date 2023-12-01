@@ -4,9 +4,10 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
-	"github.com/golang-jwt/jwt/v5"
 	"net/http"
 	"time"
+
+	"github.com/golang-jwt/jwt/v5"
 
 	"github.com/go-chi/chi/middleware"
 	"github.com/wundergraph/cosmo/router/internal/cdn"
@@ -129,7 +130,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		}
 		r = validatedReq
 
-		operation, err := h.parser.ParseReader(r.Context(), clientInfo, body, requestLogger)
+		operation, err := h.parser.Parse(r.Context(), clientInfo, body, requestLogger)
 		if err != nil {
 			hasRequestError = true
 

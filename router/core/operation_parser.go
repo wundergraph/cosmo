@@ -44,6 +44,24 @@ type ParsedOperation struct {
 	PersistedID              string
 }
 
+type invalidExtensionsTypeError jsonparser.ValueType
+
+func (e invalidExtensionsTypeError) Error() string {
+	return fmt.Sprintf("invalid extensions type: %s, most be object or null", jsonparser.ValueType(e))
+}
+
+func (e invalidExtensionsTypeError) Message() string {
+	return e.Error()
+}
+
+func (e invalidExtensionsTypeError) StatusCode() int {
+	return http.StatusBadRequest
+}
+
+var (
+	_ InputError = invalidExtensionsTypeError(0)
+)
+
 type OperationParser struct {
 	executor                *Executor
 	maxOperationSizeInBytes int64
@@ -131,8 +149,12 @@ func (p *OperationParser) ReadBody(ctx context.Context, r io.Reader) ([]byte, er
 	return buf.Bytes(), nil
 }
 
-func (p *OperationParser) ParseReader(ctx context.Context, clientInfo *ClientInfo, body []byte, log *zap.Logger) (*ParsedOperation, error) {
-	return p.parse(ctx, clientInfo, body, log)
+func (p *OperationParser) ParseReader(ctx context.Context, clientInfo *ClientInfo, r io.Reader, log *zap.Logger) (*ParsedOperation, error) {
+	data, err := p.ReadBody(ctx, r)
+	if err != nil {
+		return nil, err
+	}
+	return p.parse(ctx, clientInfo, data, log)
 }
 
 func (p *OperationParser) Parse(ctx context.Context, clientInfo *ClientInfo, data []byte, log *zap.Logger) (*ParsedOperation, error) {
@@ -194,6 +216,10 @@ func (p *OperationParser) parse(ctx context.Context, clientInfo *ClientInfo, bod
 	defer p.freeKit(kit)
 
 	jsonparser.EachKey(body, func(i int, value []byte, valueType jsonparser.ValueType, err error) {
+		if parseErr != nil {
+			// If we already have an error, don't overwrite it
+			return
+		}
 		if err != nil {
 			parseErr = err
 			return
@@ -211,6 +237,10 @@ func (p *OperationParser) parse(ctx context.Context, clientInfo *ClientInfo, bod
 		case parseOperationKeysOperationNameIndex:
 			requestOperationNameBytes = value
 		case parseOperationKeysExtensionsIndex:
+			if valueType != jsonparser.Null && valueType != jsonparser.Object {
+				parseErr = invalidExtensionsTypeError(valueType)
+				return
+			}
 			requestExtensions = value
 			persistedQuery, _, _, err := jsonparser.Get(value, "persistedQuery")
 			if err != nil {
