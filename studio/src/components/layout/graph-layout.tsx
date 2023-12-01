@@ -158,13 +158,20 @@ export const GraphSelect = () => {
 
   const router = useRouter();
   const slug = router.query.slug as string;
-  const organizationSlug = router.query.organizationSlug as string;
   if (router.pathname.split("/")[2] !== "graph") return null;
 
   return (
     <Select
       value={slug}
-      onValueChange={(gID) => router.push(`/${organizationSlug}/graph/${gID}`)}
+      onValueChange={(gID) =>
+        router.push({
+          pathname: router.pathname,
+          query: {
+            ...router.query,
+            slug: gID,
+          },
+        })
+      }
     >
       <SelectTrigger
         value={slug}
