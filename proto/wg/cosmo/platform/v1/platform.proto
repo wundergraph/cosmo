@@ -741,6 +741,7 @@ message PublishedOperation {
   string id = 1;
   string hash = 2;
   PublishedOperationStatus status = 3;
+  repeated string operationNames = 4;
 }
 
 message PublishPersistedOperationsResponse {

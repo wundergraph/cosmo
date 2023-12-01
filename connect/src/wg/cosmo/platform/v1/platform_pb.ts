@@ -5654,6 +5654,11 @@ export class PublishedOperation extends Message<PublishedOperation> {
    */
   status = PublishedOperationStatus.UP_TO_DATE;
 
+  /**
+   * @generated from field: repeated string operationNames = 4;
+   */
+  operationNames: string[] = [];
+
   constructor(data?: PartialMessage<PublishedOperation>) {
     super();
     proto3.util.initPartial(data, this);
@@ -5665,6 +5670,7 @@ export class PublishedOperation extends Message<PublishedOperation> {
     { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "hash", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "status", kind: "enum", T: proto3.getEnumType(PublishedOperationStatus) },
+    { no: 4, name: "operationNames", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PublishedOperation {

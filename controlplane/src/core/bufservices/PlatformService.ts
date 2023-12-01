@@ -110,6 +110,7 @@ import {
 } from '../services/SchemaUsageTrafficInspector.js';
 import Slack from '../services/Slack.js';
 import {
+  extractOperationNames,
   formatSubscriptionProtocol,
   getHighestPriorityRole,
   handleError,
@@ -4215,10 +4216,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           }
           operationsByOperationId.set(operationId, operationHash);
           const path = `${organizationId}/${federatedGraph.id}/operations/${req.clientName}/${operationId}.json`;
+          const operationNames = extractOperationNames(operation.contents);
           updatedOperations.push({
             operationId,
             hash: operationHash,
             filePath: path,
+            operationNames,
           });
           let status: PublishedOperationStatus;
           if (prevHash === undefined) {
@@ -4236,6 +4239,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               id: operationId,
               hash: operationHash,
               status,
+              operationNames,
             }),
           );
         }

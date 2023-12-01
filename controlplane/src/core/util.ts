@@ -5,6 +5,7 @@ import { uid } from 'uid/secure';
 import { GraphQLSubscriptionProtocol } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { DateRange } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { formatISO, subHours } from 'date-fns';
+import { parse, visit } from 'graphql';
 import { Label, ResponseMessage } from '../types/index.js';
 import { MemberRole } from '../db/models.js';
 import { isAuthenticationError, isPublicError } from './errors/errors.js';
@@ -222,4 +223,20 @@ export const validateDateRanges = ({
     range: validatedRange,
     dateRange: validatedDateRange,
   };
+};
+
+export const extractOperationNames = (contents: string): string[] => {
+  // parse contents using graphql library and extract operation names
+  // return operation names
+  const names: string[] = [];
+  const doc = parse(contents);
+  visit(doc, {
+    OperationDefinition(node) {
+      const operationName = node.name?.value ?? '';
+      if (operationName) {
+        names.push(operationName);
+      }
+    },
+  });
+  return names;
 };

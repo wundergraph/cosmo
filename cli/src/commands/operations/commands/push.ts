@@ -2,7 +2,6 @@ import crypto from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 
 import { Command } from 'commander';
-import { parse, visit } from 'graphql';
 import pc from 'picocolors';
 
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
@@ -114,22 +113,6 @@ const jsonOperationStatus = (status: PublishedOperationStatus): OperationOutputS
   throw new Error('unknown operation status');
 };
 
-export const extractOperationNames = (contents: string): string[] => {
-  // parse contents using graphql library and extract operation names
-  // return operation names
-  const names: string[] = [];
-  const doc = parse(contents);
-  visit(doc, {
-    OperationDefinition(node) {
-      const operationName = node.name?.value ?? '';
-      if (operationName) {
-        names.push(operationName);
-      }
-    },
-  });
-  return names;
-};
-
 export const parseOperations = (contents: string): PersistedOperation[] => {
   let data: any;
   try {
@@ -190,9 +173,8 @@ export default (opts: BaseCommandOptions) => {
               message.push(`(${op.hash})`);
             }
             message.push(`(${humanReadableOperationStatus(op.status)})`);
-            const operationNames = extractOperationNames(operations.find((x) => x.id === op.id)?.contents ?? '');
-            if (operationNames.length > 0) {
-              message.push(`: ${operationNames.join(', ')}`);
+            if (op.operationNames.length > 0) {
+              message.push(`: ${op.operationNames.join(', ')}`);
             }
             console.log(message.join(' '));
           }
@@ -219,11 +201,12 @@ export default (opts: BaseCommandOptions) => {
           const returnedOperations: Record<string, OperationOutput> = {};
           for (let ii = 0; ii < result.operations.length; ii++) {
             const op = result.operations[ii];
+
             returnedOperations[op.id] = {
               hash: op.hash,
               contents: operations[ii].contents,
               status: jsonOperationStatus(op.status),
-              operationNames: extractOperationNames(operations[ii].contents),
+              operationNames: op.operationNames ?? [],
             };
           }
           console.log(JSON.stringify(returnedOperations, null, 2));
