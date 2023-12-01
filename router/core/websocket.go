@@ -369,6 +369,7 @@ type WebSocketConnectionHandler struct {
 	r              *http.Request
 	conn           *wsConnectionWrapper
 	protocol       wsproto.Proto
+	initialPayload json.RawMessage
 	clientInfo     *ClientInfo
 	logger         *zap.Logger
 }
@@ -422,6 +423,7 @@ func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperat
 	if err != nil {
 		return operation, nil, err
 	}
+	opContext.initialPayload = h.initialPayload
 	return operation, opContext, nil
 }
 
@@ -528,10 +530,12 @@ func (h *WebSocketConnectionHandler) handleConnectedMessage(msg *wsproto.Message
 func (h *WebSocketConnectionHandler) Serve() {
 	h.logger.Debug("websocket connection", zap.String("protocol", h.protocol.Subprotocol()))
 
-	if err := h.protocol.Initialize(); err != nil {
+	initialPayload, err := h.protocol.Initialize()
+	if err != nil {
 		h.requestError(fmt.Errorf("error initializing session: %w", err))
 		return
 	}
+	h.initialPayload = initialPayload
 	for {
 		msg, err := h.protocol.ReadMessage()
 		if err != nil {

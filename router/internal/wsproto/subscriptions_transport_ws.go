@@ -50,22 +50,22 @@ func (subscriptionsTransportWSProtocol) Subprotocol() string {
 	return subscriptionsTransportWSSubprotocol
 }
 
-func (p *subscriptionsTransportWSProtocol) Initialize() error {
+func (p *subscriptionsTransportWSProtocol) Initialize() (json.RawMessage, error) {
 	// First message must be a connection_init
 	var msg subscriptionsTransportWSMessage
 	if err := p.conn.ReadJSON(&msg); err != nil {
-		return fmt.Errorf("error reading connection_init: %w", err)
+		return nil, fmt.Errorf("error reading connection_init: %w", err)
 	}
 	if msg.Type != subscriptionsTransportWSMessageTypeConnectionInit {
-		return fmt.Errorf("first message should be %s, got %s", subscriptionsTransportWSMessageTypeConnectionInit, msg.Type)
+		return nil, fmt.Errorf("first message should be %s, got %s", subscriptionsTransportWSMessageTypeConnectionInit, msg.Type)
 	}
 	if _, err := p.conn.WriteJSON(subscriptionsTransportWSMessage{Type: subscriptionsTransportWSMessageTypeConnectionAck}); err != nil {
-		return fmt.Errorf("sending %s: %w", subscriptionsTransportWSMessageTypeConnectionAck, err)
+		return nil, fmt.Errorf("sending %s: %w", subscriptionsTransportWSMessageTypeConnectionAck, err)
 	}
 	if _, err := p.conn.WriteJSON(subscriptionsTransportWSMessage{Type: subscriptionsTransportWSMessageTypeKeepAlive}); err != nil {
-		return fmt.Errorf("sending %s: %w", subscriptionsTransportWSMessageTypeKeepAlive, err)
+		return nil, fmt.Errorf("sending %s: %w", subscriptionsTransportWSMessageTypeKeepAlive, err)
 	}
-	return nil
+	return msg.Payload, nil
 }
 
 func (p *subscriptionsTransportWSProtocol) ReadMessage() (*Message, error) {

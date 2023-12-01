@@ -28,14 +28,31 @@ func connReadJSON(conn *websocket.Conn, v interface{}) error {
 	return conn.ReadJSON(v)
 }
 
-func connectedWebsocket(tb testing.TB, serverPort int, header http.Header) *websocket.Conn {
+type connectedWebsocketOptions struct {
+	Header         http.Header
+	InitialPayload map[string]interface{}
+}
+
+func connectedWebsocket(tb testing.TB, serverPort int, opts *connectedWebsocketOptions) *websocket.Conn {
 	dialer := websocket.Dialer{
 		Subprotocols: []string{"graphql-transport-ws"},
+	}
+	var header http.Header
+	var payload []byte
+	if opts != nil {
+		header = opts.Header
+
+		if len(opts.InitialPayload) > 0 {
+			var err error
+			payload, err = json.Marshal(opts.InitialPayload)
+			require.NoError(tb, err)
+		}
 	}
 	conn, _, err := dialer.Dial(fmt.Sprintf("ws://localhost:%d/graphql", serverPort), header)
 	require.NoError(tb, err)
 	err = conn.WriteJSON(&wsMessage{
-		Type: "connection_init",
+		Type:    "connection_init",
+		Payload: payload,
 	})
 	require.NoError(tb, err)
 	var msg wsMessage
@@ -239,5 +256,114 @@ func TestSubscriptionsOverWebsocketLibrary(t *testing.T) {
 	}
 }
 
-func TestHeaderForwardingOverWebsocket(t *testing.T) {
+func TestExtensionsForwardingOverWebsocket(t *testing.T) {
+	// Make sure sending two simultaneous subscriptions with different extensions
+	// triggers two subscriptions to the upstream
+	_, port := setupListeningServer(t)
+	conn1 := connectedWebsocket(t, port, nil)
+	conn2 := connectedWebsocket(t, port, nil)
+	var err error
+	err = conn1.WriteJSON(&wsMessage{
+		ID:      "1",
+		Type:    "subscribe",
+		Payload: []byte(`{"query":"subscription { initialPayload(repeat:3) }","extensions":{"token":"123"}}`),
+	})
+	require.NoError(t, err)
+
+	err = conn2.WriteJSON(&wsMessage{
+		ID:      "2",
+		Type:    "subscribe",
+		Payload: []byte(`{"query":"subscription { initialPayload(repeat:3) }","extensions":{"token":"456"}}`),
+	})
+	require.NoError(t, err)
+
+	var msg wsMessage
+	var payload struct {
+		Data struct {
+			InitialPayload struct {
+				Extensions struct {
+					Token string `json:"token"`
+				} `json:"extensions"`
+			} `json:"initialPayload"`
+		} `json:"data"`
+	}
+	err = connReadJSON(conn1, &msg)
+	require.NoError(t, err)
+	err = json.Unmarshal(msg.Payload, &payload)
+	require.NoError(t, err)
+	assert.Equal(t, "123", payload.Data.InitialPayload.Extensions.Token)
+
+	err = connReadJSON(conn2, &msg)
+	require.NoError(t, err)
+	err = json.Unmarshal(msg.Payload, &payload)
+	require.NoError(t, err)
+	assert.Equal(t, "456", payload.Data.InitialPayload.Extensions.Token)
+}
+
+func TestExtensionsForwardingOverWebsocketWithInitialPayload(t *testing.T) {
+	_, port := setupListeningServer(t)
+	t.Run("single connection with initial payload", func(t *testing.T) {
+		conn := connectedWebsocket(t, port, &connectedWebsocketOptions{
+			InitialPayload: map[string]any{"123": 456, "extensions": map[string]any{"hello": "world"}},
+		})
+		var err error
+		err = conn.WriteJSON(&wsMessage{
+			ID:      "1",
+			Type:    "subscribe",
+			Payload: []byte(`{"query":"subscription { initialPayload(repeat:3) }"}`),
+		})
+		require.NoError(t, err)
+		var msg wsMessage
+		err = connReadJSON(conn, &msg)
+		require.NoError(t, err)
+		assert.JSONEq(t, `{"data":{"initialPayload":{"123":456,"extensions":{"hello":"world"}}}}`, string(msg.Payload))
+	})
+	t.Run("single connection with initial payload and extensions in the request", func(t *testing.T) {
+		// "extensions" in the request should override the "extensions" in initial payload
+		conn := connectedWebsocket(t, port, &connectedWebsocketOptions{
+			InitialPayload: map[string]any{"123": 456, "extensions": map[string]any{"hello": "world"}},
+		})
+		var err error
+		err = conn.WriteJSON(&wsMessage{
+			ID:      "1",
+			Type:    "subscribe",
+			Payload: []byte(`{"query":"subscription { initialPayload(repeat:3) }", "extensions": {"hello": "world2"}}`),
+		})
+		require.NoError(t, err)
+		var msg wsMessage
+		err = connReadJSON(conn, &msg)
+		require.NoError(t, err)
+		assert.JSONEq(t, `{"data":{"initialPayload":{"123":456,"extensions":{"hello":"world2"}}}}`, string(msg.Payload))
+	})
+
+	t.Run("multiple connections with different initial payloads", func(t *testing.T) {
+		// "extensions" in the request should override the "extensions" in initial payload
+		conn1 := connectedWebsocket(t, port, &connectedWebsocketOptions{
+			InitialPayload: map[string]any{"id": 1},
+		})
+		conn2 := connectedWebsocket(t, port, &connectedWebsocketOptions{
+			InitialPayload: map[string]any{"id": 2},
+		})
+		var err error
+		err = conn1.WriteJSON(&wsMessage{
+			ID:      "1",
+			Type:    "subscribe",
+			Payload: []byte(`{"query":"subscription { initialPayload(repeat:3) }"}`),
+		})
+		require.NoError(t, err)
+		err = conn2.WriteJSON(&wsMessage{
+			ID:      "2",
+			Type:    "subscribe",
+			Payload: []byte(`{"query":"subscription { initialPayload(repeat:3) }"}`),
+		})
+		require.NoError(t, err)
+		var msg wsMessage
+		err = connReadJSON(conn1, &msg)
+		require.NoError(t, err)
+		assert.JSONEq(t, `{"data":{"initialPayload":{"id":1}}}`, string(msg.Payload))
+
+		err = connReadJSON(conn2, &msg)
+		require.NoError(t, err)
+		assert.JSONEq(t, `{"data":{"initialPayload":{"id":2}}}`, string(msg.Payload))
+	})
 }
