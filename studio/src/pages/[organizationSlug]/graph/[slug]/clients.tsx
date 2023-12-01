@@ -1,11 +1,51 @@
+import { createFilterState } from "@/components/analytics/constructAnalyticsTableQueryState";
+import { UserContext } from "@/components/app-provider";
+import { CodeViewer } from "@/components/code-viewer";
 import { EmptyState } from "@/components/empty-state";
 import {
   GraphPageLayout,
   getGraphLayout,
 } from "@/components/layout/graph-layout";
 import { PageHeader } from "@/components/layout/head";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CLI } from "@/components/ui/cli";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Loader } from "@/components/ui/loader";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import {
   Table,
   TableBody,
@@ -19,21 +59,471 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useToast } from "@/components/ui/use-toast";
+import { SubmitHandler, useZodForm } from "@/hooks/use-form";
 import { docsBaseURL } from "@/lib/constants";
+import { formatDateTime } from "@/lib/format-date";
 import { NextPageWithLayout } from "@/lib/page";
-import { cn } from "@/lib/utils";
-import { CommandLineIcon } from "@heroicons/react/24/outline";
-import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
-import { useQuery } from "@tanstack/react-query";
+import { checkUserAccess, cn } from "@/lib/utils";
+import {
+  CommandLineIcon,
+  ExclamationTriangleIcon,
+} from "@heroicons/react/24/outline";
+import {
+  CopyIcon,
+  Cross1Icon,
+  MagnifyingGlassIcon,
+  PlayIcon,
+  PlusIcon,
+} from "@radix-ui/react-icons";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
-import { getClients } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+import {
+  getClients,
+  getPersistedOperations,
+  publishPersistedOperations,
+} from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+import copy from "copy-to-clipboard";
 import { formatDistanceToNow } from "date-fns";
+import Fuse from "fuse.js";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useRouter } from "next/router";
-import { BiAnalyse } from "react-icons/bi";
+import { useContext, useState } from "react";
+import { BiAnalyse, BiTerminal } from "react-icons/bi";
 import { IoBarcodeSharp } from "react-icons/io5";
+import { z } from "zod";
+
+const getSnippets = ({
+  clientName,
+  operationId,
+  operationNames,
+}: {
+  clientName: string;
+  operationId: string;
+  operationNames: string[];
+}) => {
+  const curl = `curl 'http://127.0.0.1:3002/graphql' \\
+    -H 'graphql-client-name: ${clientName}' \\
+    --json '{${
+      operationNames.length > 1 ? `"operationName":"${operationNames[0]}",` : ""
+    }"extensions":{"persistedQuery":{"version":1,"sha256Hash":"${operationId}"}}}'`;
+
+  const js = `const url = 'http://127.0.0.1:3002/graphql';
+const headers = {
+  'Content-Type': 'application/json',
+  'graphql-client-name': '${clientName}',
+};
+
+const body = {
+  ${operationNames.length > 1 ? `operationName: "${operationNames[0]}",` : ""}
+  extensions: {
+    persistedQuery: {
+      version: 1,
+      sha256Hash: '${operationId}',
+    },
+  },
+};
+
+fetch(url, {
+  method: 'POST',
+  headers,
+  body: JSON.stringify(body),
+})
+  .then(response => response.json())
+  .then(data => console.log(data))
+  .catch(error => console.error('Error:', error));`;
+
+  return { curl, js };
+};
+
+const ClientOperations = () => {
+  const router = useRouter();
+  const slug = router.query.slug as string;
+  const organizationSlug = router.query.organizationSlug as string;
+  const { toast } = useToast();
+  const searchParams = useSearchParams();
+  const clientId = searchParams.get("clientId");
+  const clientName = searchParams.get("clientName");
+
+  const [search, setSearch] = useState(router.query.search as string);
+  const applyParams = (search: string) => {
+    const query = { ...router.query };
+    query.search = search;
+
+    if (!search) {
+      delete query.search;
+    }
+
+    router.replace({
+      query,
+    });
+  };
+
+  const { data, isLoading, error, refetch } = useQuery({
+    ...getPersistedOperations.useQuery({
+      clientId: clientId ?? "",
+      federatedGraphName: slug,
+    }),
+    enabled: !!clientId,
+  });
+
+  let content: React.ReactNode;
+
+  if (isLoading) {
+    content = <Loader fullscreen />;
+  } else if (error || data?.response?.code !== EnumStatusCode.OK) {
+    content = (
+      <div className="my-auto">
+        <EmptyState
+          icon={<ExclamationTriangleIcon />}
+          title="Could not retrieve operations"
+          description={
+            data?.response?.details || error?.message || "Please try again"
+          }
+          actions={<Button onClick={() => refetch()}>Retry</Button>}
+        />
+      </div>
+    );
+  } else if (data.operations.length == 0) {
+    content = (
+      <div className="my-auto">
+        <EmptyState
+          icon={<CommandLineIcon />}
+          title="No operations found."
+          description={
+            <>
+              Push new operations to this client using the CLI.{" "}
+              <a
+                target="_blank"
+                rel="noreferrer"
+                href={docsBaseURL + "/router/persisted-operations"}
+                className="text-primary"
+              >
+                Learn more.
+              </a>
+            </>
+          }
+          actions={
+            <CLI
+              command={`npx wgc operations push ${slug} -c ${clientName} -f <path-to-file>`}
+            />
+          }
+        />
+      </div>
+    );
+  } else if (data) {
+    const fuse = new Fuse(data.operations, {
+      keys: ["id", "operationNames"],
+      minMatchCharLength: 1,
+    });
+
+    const filteredOperations = search
+      ? fuse.search(search).map(({ item }) => item)
+      : data.operations;
+
+    content = (
+      <div>
+        <div className="relative">
+          <MagnifyingGlassIcon className="absolute bottom-0 left-3 top-0 my-auto" />
+          <Input
+            placeholder="Search by Name or ID"
+            className="pl-8 pr-10"
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              applyParams(e.target.value);
+            }}
+          />
+          {search && (
+            <Button
+              variant="ghost"
+              className="absolute bottom-0 right-0 top-0 my-auto rounded-l-none"
+              onClick={() => {
+                setSearch("");
+                applyParams("");
+              }}
+            >
+              <Cross1Icon />
+            </Button>
+          )}
+        </div>
+        <Accordion type="single" collapsible className="mt-4 w-full">
+          {filteredOperations.map((op) => {
+            const [base, _] = window.location.href.split("?");
+            const link =
+              base +
+              `?clientId=${clientId}&clientName=${clientName}&search=${op.id}`;
+
+            const snippets = getSnippets({
+              clientName: clientName ?? "",
+              operationId: op.id,
+              operationNames: op.operationNames,
+            });
+
+            return (
+              <AccordionItem key={op.id} value={op.id}>
+                <AccordionTrigger className="gap-x-4 truncate px-2 hover:bg-secondary/30 hover:no-underline">
+                  <Badge
+                    className="flex w-20 items-center justify-center"
+                    variant="secondary"
+                  >
+                    {op.id.slice(0, 6)}
+                  </Badge>
+                  <span
+                    className={cn("w-full truncate text-start", {
+                      "italic text-muted-foreground":
+                        op.operationNames.length === 0,
+                    })}
+                  >
+                    {op.operationNames.length > 0
+                      ? op.operationNames.length > 1
+                        ? `[ ${op.operationNames.join(", ")} ]`
+                        : op.operationNames[0]
+                      : "unnamed Operation"}
+                  </span>
+                </AccordionTrigger>
+                <AccordionContent className="mt-2 px-2">
+                  <div>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      {op.lastUpdatedAt ? (
+                        <p className="text-muted-foreground">
+                          Updated at{" "}
+                          {formatDateTime(new Date(op.lastUpdatedAt))}
+                        </p>
+                      ) : (
+                        <p className="text-muted-foreground">
+                          Created at {formatDateTime(new Date(op.createdAt))}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-x-2">
+                        <Tooltip delayDuration={100}>
+                          <TooltipTrigger>
+                            <Button variant="outline" size="icon" asChild>
+                              <Link
+                                href={{
+                                  pathname: `/[organizationSlug]/graph/[slug]/analytics`,
+                                  query: {
+                                    organizationSlug:
+                                      router.query.organizationSlug,
+                                    slug: router.query.slug,
+                                    filterState: createFilterState({
+                                      operationPersistedId: op.id,
+                                    }),
+                                  },
+                                }}
+                              >
+                                <BiAnalyse />
+                              </Link>
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>View Metrics</TooltipContent>
+                        </Tooltip>
+                        <Tooltip delayDuration={100}>
+                          <TooltipTrigger>
+                            <Button variant="outline" size="icon" asChild>
+                              <Link
+                                href={`/${organizationSlug}/graph/${slug}/playground?operation=${btoa(
+                                  op.contents || "",
+                                )}`}
+                              >
+                                <PlayIcon />
+                              </Link>
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Run in Playground</TooltipContent>
+                        </Tooltip>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="icon">
+                              <CopyIcon />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() => {
+                                copy(op.id);
+                                toast({
+                                  description:
+                                    "Copied persisted ID of operation",
+                                });
+                              }}
+                            >
+                              Operation Persisted ID
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                copy(link);
+                                toast({
+                                  description: "Copied link to operation",
+                                });
+                              }}
+                            >
+                              Link to operation
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                copy(snippets.js);
+                                toast({
+                                  description: "Copied snippet",
+                                });
+                              }}
+                            >
+                              Javascript snippet
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                copy(snippets.curl);
+                                toast({
+                                  description: "Copied snippet",
+                                });
+                              }}
+                            >
+                              curl snippet
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </div>
+                    <div className="scrollbar-custom mt-2 h-96 overflow-auto rounded border">
+                      <CodeViewer code={op.contents} disableLinking />
+                    </div>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            );
+          })}
+        </Accordion>
+      </div>
+    );
+  }
+
+  return (
+    <Sheet
+      modal
+      open={!!clientId}
+      onOpenChange={(isOpen) => {
+        if (!isOpen) {
+          const newQuery = { ...router.query };
+          delete newQuery["clientId"];
+          delete newQuery["clientName"];
+          router.replace({
+            query: newQuery,
+          });
+        }
+      }}
+    >
+      <SheetContent className="scrollbar-custom w-full max-w-full overflow-y-scroll sm:max-w-full md:max-w-2xl lg:max-w-3xl">
+        <SheetHeader className="mb-12">
+          <SheetTitle className="flex flex-wrap items-center gap-x-1.5">
+            Persisted Operations in{" "}
+            <code className="break-all rounded bg-secondary px-1.5 text-left text-secondary-foreground">
+              {clientName}
+            </code>
+          </SheetTitle>
+        </SheetHeader>
+        {content}
+      </SheetContent>
+    </Sheet>
+  );
+};
+
+const FormSchema = z.object({
+  clientName: z.string().trim().min(1, "The name cannot be empty"),
+});
+
+type Input = z.infer<typeof FormSchema>;
+
+const CreateClient = ({ refresh }: { refresh: () => void }) => {
+  const router = useRouter();
+  const slug = router.query.slug as string;
+  const [isOpen, setIsOpen] = useState(false);
+
+  const { toast } = useToast();
+
+  const form = useZodForm<Input>({
+    schema: FormSchema,
+  });
+
+  const { mutate, isPending } = useMutation({
+    ...publishPersistedOperations.useMutation(),
+    onSuccess(data) {
+      if (data.response?.code !== EnumStatusCode.OK) {
+        toast({
+          variant: "destructive",
+          title: "Could not create client",
+          description: data.response?.details ?? "Please try again",
+        });
+        return;
+      }
+
+      toast({
+        title: "Client created successfully",
+      });
+
+      form.setValue("clientName", "");
+      refresh();
+      setIsOpen(false);
+    },
+  });
+
+  const onSubmit: SubmitHandler<Input> = (formData) => {
+    mutate({
+      fedGraphName: slug,
+      clientName: formData.clientName,
+      operations: [],
+    });
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
+        <Button>
+          <PlusIcon className="mr-2" />
+          Create Client
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Create Client</DialogTitle>
+          <DialogDescription>
+            Create a new client to store persisted operations by providing a
+            name
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-4 py-4">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+              <FormField
+                control={form.control}
+                name="clientName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Client Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter new client name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Button
+                disabled={!form.formState.isValid}
+                className="w-full"
+                type="submit"
+              >
+                Submit
+              </Button>
+            </form>
+          </Form>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
 
 const ClientsPage: NextPageWithLayout = () => {
+  const user = useContext(UserContext);
   const router = useRouter();
   const organizationSlug = router.query.organizationSlug as string;
   const slug = router.query.slug as string;
@@ -88,10 +578,11 @@ const ClientsPage: NextPageWithLayout = () => {
       {data.clients.length === 0 ? (
         <EmptyState
           icon={<CommandLineIcon />}
-          title="Push new operations to the registry using the CLI"
+          title="No clients found"
           description={
             <>
-              No clients found. Use the CLI tool to create one.{" "}
+              Create one and use the CLI tool to publish persisted operations to
+              it.{" "}
               <a
                 target="_blank"
                 rel="noreferrer"
@@ -102,26 +593,29 @@ const ClientsPage: NextPageWithLayout = () => {
               </a>
             </>
           }
-          actions={
-            <CLI
-              command={`npx wgc operations push ${slug} -c <client-name> -f <path-to-file>`}
-            />
-          }
+          actions={<CreateClient refresh={() => refetch()} />}
         />
       ) : (
         <>
-          <p className="px-2 text-sm text-muted-foreground">
-            Registered clients can be created by publishing persisted operations
-            for them.{" "}
-            <Link
-              href={docsBaseURL + "/router/persisted-operations"}
-              className="text-primary"
-              target="_blank"
-              rel="noreferrer"
-            >
-              Learn more
-            </Link>
-          </p>
+          <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
+            <p className="text-sm text-muted-foreground">
+              Create and view clients to which you can publish persisted
+              operations.{" "}
+              <Link
+                href={docsBaseURL + "/router/persisted-operations"}
+                className="text-primary"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Learn more
+              </Link>
+            </p>
+            {checkUserAccess({
+              rolesToBe: ["admin", "developer"],
+              userRoles: user?.currentOrganization.roles || [],
+            }) && <CreateClient refresh={() => refetch()} />}
+          </div>
+
           <Table>
             <TableHeader>
               <TableRow>
@@ -130,7 +624,8 @@ const ClientsPage: NextPageWithLayout = () => {
                 <TableHead>Updated By</TableHead>
                 <TableHead>Created At</TableHead>
                 <TableHead>Last Push</TableHead>
-                <TableHead></TableHead>
+                <TableHead>Operations</TableHead>
+                <TableHead className="w-32"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -169,23 +664,42 @@ const ClientsPage: NextPageWithLayout = () => {
                           ? formatDistanceToNow(new Date(lastUpdatedAt))
                           : "Never"}
                       </TableCell>
-                      <TableCell className="flex items-center justify-end gap-x-3 pr-8">
+                      <TableCell>
+                        <Button
+                          variant="link"
+                          className="px-0 hover:no-underline"
+                          onClick={() => {
+                            router.replace({
+                              pathname: router.pathname,
+                              query: {
+                                ...router.query,
+                                clientId: id,
+                                clientName: name,
+                              },
+                            });
+                          }}
+                        >
+                          View Operations
+                        </Button>
+                      </TableCell>
+                      <TableCell className="flex items-center gap-x-3 pr-8">
                         <Tooltip delayDuration={0}>
                           <TooltipTrigger>
-                            <Link href={constructLink(name, "metrics")}>
-                              <BiAnalyse size="24px" className="text-primary" />
-                            </Link>
+                            <Button variant="ghost" size="icon" asChild>
+                              <Link href={constructLink(name, "metrics")}>
+                                <BiAnalyse className="h-5 w-5" />
+                              </Link>
+                            </Button>
                           </TooltipTrigger>
                           <TooltipContent>Metrics</TooltipContent>
                         </Tooltip>
                         <Tooltip delayDuration={0}>
                           <TooltipTrigger>
-                            <Link href={constructLink(name, "traces")}>
-                              <IoBarcodeSharp
-                                size="28px"
-                                className="text-primary"
-                              />
-                            </Link>
+                            <Button variant="ghost" size="icon" asChild>
+                              <Link href={constructLink(name, "traces")}>
+                                <IoBarcodeSharp className="h-5 w-5" />
+                              </Link>
+                            </Button>
                           </TooltipTrigger>
                           <TooltipContent>Traces</TooltipContent>
                         </Tooltip>
@@ -198,6 +712,7 @@ const ClientsPage: NextPageWithLayout = () => {
           </Table>
         </>
       )}
+      <ClientOperations />
     </div>
   );
 };
@@ -207,7 +722,7 @@ ClientsPage.getLayout = (page) =>
     <PageHeader title="Studio | Clients">
       <GraphPageLayout
         title="Clients"
-        subtitle="View the clients of this federated graph"
+        subtitle="View registered clients and their persisted operations"
       >
         {page}
       </GraphPageLayout>

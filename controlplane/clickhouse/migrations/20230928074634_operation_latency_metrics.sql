@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS cosmo.operation_latency_metrics_5_30 (
    OperationName LowCardinality(String) CODEC (ZSTD(1)),
    OperationHash String CODEC (ZSTD(1)),
    OperationType LowCardinality(String) CODEC (ZSTD(1)),
+   OperationPersistedID String CODEC (ZSTD(1)),
    RouterConfigVersion LowCardinality(String) CODEC(ZSTD(1)),
    FederatedGraphID LowCardinality(String) CODEC(ZSTD(1)),
    OrganizationID LowCardinality(String) CODEC(ZSTD(1)),

@@ -351,10 +351,11 @@ type operationContext struct {
 	variables  []byte
 	clientInfo *ClientInfo
 	// preparedPlan is the prepared plan of the operation
-	preparedPlan *planWithMetaData
-	traceOptions resolve.RequestTraceOptions
-	planCacheHit bool
-	extensions   []byte
+	preparedPlan   *planWithMetaData
+	traceOptions   resolve.RequestTraceOptions
+	planCacheHit   bool
+	initialPayload []byte
+	extensions     []byte
 }
 
 func (o *operationContext) Variables() []byte {
