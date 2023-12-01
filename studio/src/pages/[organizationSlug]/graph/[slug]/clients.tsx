@@ -3,6 +3,7 @@ import { UserContext } from "@/components/app-provider";
 import { CodeViewer } from "@/components/code-viewer";
 import { EmptyState } from "@/components/empty-state";
 import {
+  GraphContext,
   GraphPageLayout,
   getGraphLayout,
 } from "@/components/layout/graph-layout";
@@ -90,7 +91,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useRouter } from "next/router";
 import { useContext, useState } from "react";
-import { BiAnalyse, BiTerminal } from "react-icons/bi";
+import { BiAnalyse } from "react-icons/bi";
 import { IoBarcodeSharp } from "react-icons/io5";
 import { z } from "zod";
 
@@ -98,18 +99,20 @@ const getSnippets = ({
   clientName,
   operationId,
   operationNames,
+  routingURL,
 }: {
   clientName: string;
   operationId: string;
   operationNames: string[];
+  routingURL: string;
 }) => {
-  const curl = `curl 'http://127.0.0.1:3002/graphql' \\
+  const curl = `curl '${routingURL}' \\
     -H 'graphql-client-name: ${clientName}' \\
     --json '{${
       operationNames.length > 1 ? `"operationName":"${operationNames[0]}",` : ""
     }"extensions":{"persistedQuery":{"version":1,"sha256Hash":"${operationId}"}}}'`;
 
-  const js = `const url = 'http://127.0.0.1:3002/graphql';
+  const js = `const url = '${routingURL}';
 const headers = {
   'Content-Type': 'application/json',
   'graphql-client-name': '${clientName}',
@@ -145,6 +148,7 @@ const ClientOperations = () => {
   const searchParams = useSearchParams();
   const clientId = searchParams.get("clientId");
   const clientName = searchParams.get("clientName");
+  const graphContext = useContext(GraphContext);
 
   const [search, setSearch] = useState(router.query.search as string);
   const applyParams = (search: string) => {
@@ -212,7 +216,7 @@ const ClientOperations = () => {
         />
       </div>
     );
-  } else if (data) {
+  } else if (data && graphContext?.graph) {
     const fuse = new Fuse(data.operations, {
       keys: ["id", "operationNames"],
       minMatchCharLength: 1,
@@ -259,6 +263,7 @@ const ClientOperations = () => {
               clientName: clientName ?? "",
               operationId: op.id,
               operationNames: op.operationNames,
+              routingURL: graphContext.graph?.routingURL ?? "",
             });
 
             return (
