@@ -1,7 +1,7 @@
 import { PlainMessage } from '@bufbuild/protobuf';
 import { Span } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { ClickHouseClient } from '../../clickhouse/index.js';
-import { timestampToNanoseconds } from './util.js';
+import { getDateRange, isoDateRangeToTimestamps, timestampToNanoseconds } from './util.js';
 
 export class TraceRepository {
   constructor(private client: ClickHouseClient) {}
@@ -77,5 +77,46 @@ export class TraceRepository {
         subgraphName: result.attrSubgraphName,
       },
     }));
+  }
+
+  public async getRouterVersion(organizationID: string, startDate: string): Promise<string> {
+    const parsedDateRange = isoDateRangeToTimestamps({ start: startDate, end: startDate });
+    const [start] = getDateRange(parsedDateRange);
+
+    const queryWithTimeConstraint = `
+    WITH 
+      toDateTime('${start}') AS startDate
+    SELECT  
+        SpanAttributes['wg.router.version'] as routerVersion
+    FROM ${this.client.database}.otel_traces
+    WHERE Timestamp >= startDate AND SpanAttributes['wg.router.version'] != '' AND SpanAttributes['wg.organization.id'] = '${organizationID}' 
+    ORDER BY Timestamp ASC
+    LIMIT 1 OFFSET 0
+    `;
+
+    const res = await this.client.queryPromise(queryWithTimeConstraint);
+
+    if (Array.isArray(res)) {
+      if (res.length === 0) {
+        const query = `
+          SELECT  
+              SpanAttributes['wg.router.version'] as routerVersion
+          FROM ${this.client.database}.otel_traces
+          WHERE SpanAttributes['wg.router.version'] != '' AND SpanAttributes['wg.organization.id'] = '${organizationID}' 
+          ORDER BY Timestamp DESC
+          LIMIT 1 OFFSET 0
+          `;
+        const res = await this.client.queryPromise(query);
+
+        if (Array.isArray(res)) {
+          return res?.[0]?.routerVersion || '';
+        }
+        return res;
+      }
+
+      return res[0].routerVersion;
+    }
+
+    return res;
   }
 }

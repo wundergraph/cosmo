@@ -8815,6 +8815,11 @@ export class GetCompositionDetailsResponse extends Message<GetCompositionDetails
    */
   changeCounts?: ChangeCounts;
 
+  /**
+   * @generated from field: string routerVersion = 5;
+   */
+  routerVersion = "";
+
   constructor(data?: PartialMessage<GetCompositionDetailsResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -8827,6 +8832,7 @@ export class GetCompositionDetailsResponse extends Message<GetCompositionDetails
     { no: 2, name: "composition", kind: "message", T: GraphComposition },
     { no: 3, name: "compositionSubgraphs", kind: "message", T: GraphCompositionSubgraph, repeated: true },
     { no: 4, name: "changeCounts", kind: "message", T: ChangeCounts },
+    { no: 5, name: "routerVersion", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCompositionDetailsResponse {

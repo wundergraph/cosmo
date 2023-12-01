@@ -114,7 +114,8 @@ const CompositionDetailsPage: NextPageWithLayout = () => {
       </GraphPageLayout>
     );
 
-  const { composition, changeCounts, compositionSubgraphs } = data;
+  const { composition, changeCounts, compositionSubgraphs, routerVersion } =
+    data;
   const {
     isComposable,
     isCurrentDeployed,
@@ -256,6 +257,12 @@ const CompositionDetailsPage: NextPageWithLayout = () => {
                     })
                   )}
                 </dd>
+              </div>
+            )}
+            {routerVersion !== "" && (
+              <div className="flex flex-col">
+                <dt className="mb-1 text-sm text-muted-foreground">Router version</dt>
+                <dd className="text-sm pl-0.5">{routerVersion}</dd>
               </div>
             )}
           </dl>

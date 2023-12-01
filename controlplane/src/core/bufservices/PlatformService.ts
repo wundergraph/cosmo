@@ -4544,6 +4544,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               details: `Graph composition with '${req.compositionId}' does not exist`,
             },
             compositionSubgraphs: [],
+            routerVersion: '',
           };
         }
 
@@ -4568,6 +4569,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           }
         }
 
+        let routerVersion = '';
+        if (opts.chClient) {
+          const traceRepo = new TraceRepository(opts.chClient);
+          routerVersion = await traceRepo.getRouterVersion(authContext.organizationId, composition.createdAt);
+        }
+
         return {
           response: {
             code: EnumStatusCode.OK,
@@ -4578,6 +4585,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             additions: addCount,
             deletions: minusCount,
           },
+          routerVersion,
         };
       });
     },
