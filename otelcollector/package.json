@@ -1,6 +1,6 @@
 {
   "name": "otelcollector",
-  "version": "0.11.0",
+  "version": "0.11.1",
   "private": true,
   "description": "Placeholder package to simplify versioning and releasing with lerna.",
   "keywords": [
@@ -9,7 +9,7 @@
     "cosmo"
   ],
   "scripts": {
-    "postversion": "name=\"$(node -p \"var a = require('./package.json');process.stdout.write(a.name);process.exit(0)\")\"; version=\"$(node -p \"var a = require('./package.json');process.stdout.write(a.version);process.exit(0)\")\"; gh workflow run image-release.yml -F name=$name -F tag=$version -F dockerContext=otelcollector"
+    "postversion": "name=\"$(node -p \"var a = require('./package.json');process.stdout.write(a.name);process.exit(0)\")\"; version=\"$(node -p \"var a = require('./package.json');process.stdout.write(a.version);process.exit(0)\")\"; gh workflow run image-release.yml -F name=$name -F workingDirectory=otelcollector -F tag=$version -F dockerContext=otelcollector"
   },
   "author": {
     "name": "WunderGraph Maintainers",

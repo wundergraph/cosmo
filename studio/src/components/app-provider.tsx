@@ -9,7 +9,7 @@ import {
 import { useRouter } from "next/router";
 import { createContext, ReactNode, useEffect, useState } from "react";
 
-interface User {
+export interface User {
   id: string;
   email: string;
   currentOrganization: Organization;
@@ -23,7 +23,7 @@ interface InvitedOrgs {
   slug: string;
 }
 
-interface Organization {
+export interface Organization {
   id: string;
   name: string;
   slug: string;
@@ -43,7 +43,7 @@ interface OrganizationLimitsDTO {
   requestsLimit: number;
 }
 
-interface Session {
+export interface Session {
   id: string;
   email: string;
   organizations: Organization[];

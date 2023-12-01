@@ -36,11 +36,15 @@ const (
 	// NodeServiceGetLatestValidRouterConfigProcedure is the fully-qualified name of the NodeService's
 	// GetLatestValidRouterConfig RPC.
 	NodeServiceGetLatestValidRouterConfigProcedure = "/wg.cosmo.node.v1.NodeService/GetLatestValidRouterConfig"
+	// NodeServiceSelfRegisterProcedure is the fully-qualified name of the NodeService's SelfRegister
+	// RPC.
+	NodeServiceSelfRegisterProcedure = "/wg.cosmo.node.v1.NodeService/SelfRegister"
 )
 
 // NodeServiceClient is a client for the wg.cosmo.node.v1.NodeService service.
 type NodeServiceClient interface {
 	GetLatestValidRouterConfig(context.Context, *connect.Request[v1.GetConfigRequest]) (*connect.Response[v1.GetConfigResponse], error)
+	SelfRegister(context.Context, *connect.Request[v1.SelfRegisterRequest]) (*connect.Response[v1.SelfRegisterResponse], error)
 }
 
 // NewNodeServiceClient constructs a client for the wg.cosmo.node.v1.NodeService service. By
@@ -58,12 +62,18 @@ func NewNodeServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			baseURL+NodeServiceGetLatestValidRouterConfigProcedure,
 			opts...,
 		),
+		selfRegister: connect.NewClient[v1.SelfRegisterRequest, v1.SelfRegisterResponse](
+			httpClient,
+			baseURL+NodeServiceSelfRegisterProcedure,
+			opts...,
+		),
 	}
 }
 
 // nodeServiceClient implements NodeServiceClient.
 type nodeServiceClient struct {
 	getLatestValidRouterConfig *connect.Client[v1.GetConfigRequest, v1.GetConfigResponse]
+	selfRegister               *connect.Client[v1.SelfRegisterRequest, v1.SelfRegisterResponse]
 }
 
 // GetLatestValidRouterConfig calls wg.cosmo.node.v1.NodeService.GetLatestValidRouterConfig.
@@ -71,9 +81,15 @@ func (c *nodeServiceClient) GetLatestValidRouterConfig(ctx context.Context, req 
 	return c.getLatestValidRouterConfig.CallUnary(ctx, req)
 }
 
+// SelfRegister calls wg.cosmo.node.v1.NodeService.SelfRegister.
+func (c *nodeServiceClient) SelfRegister(ctx context.Context, req *connect.Request[v1.SelfRegisterRequest]) (*connect.Response[v1.SelfRegisterResponse], error) {
+	return c.selfRegister.CallUnary(ctx, req)
+}
+
 // NodeServiceHandler is an implementation of the wg.cosmo.node.v1.NodeService service.
 type NodeServiceHandler interface {
 	GetLatestValidRouterConfig(context.Context, *connect.Request[v1.GetConfigRequest]) (*connect.Response[v1.GetConfigResponse], error)
+	SelfRegister(context.Context, *connect.Request[v1.SelfRegisterRequest]) (*connect.Response[v1.SelfRegisterResponse], error)
 }
 
 // NewNodeServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -87,10 +103,17 @@ func NewNodeServiceHandler(svc NodeServiceHandler, opts ...connect.HandlerOption
 		svc.GetLatestValidRouterConfig,
 		opts...,
 	)
+	nodeServiceSelfRegisterHandler := connect.NewUnaryHandler(
+		NodeServiceSelfRegisterProcedure,
+		svc.SelfRegister,
+		opts...,
+	)
 	return "/wg.cosmo.node.v1.NodeService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case NodeServiceGetLatestValidRouterConfigProcedure:
 			nodeServiceGetLatestValidRouterConfigHandler.ServeHTTP(w, r)
+		case NodeServiceSelfRegisterProcedure:
+			nodeServiceSelfRegisterHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -102,4 +125,8 @@ type UnimplementedNodeServiceHandler struct{}
 
 func (UnimplementedNodeServiceHandler) GetLatestValidRouterConfig(context.Context, *connect.Request[v1.GetConfigRequest]) (*connect.Response[v1.GetConfigResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.node.v1.NodeService.GetLatestValidRouterConfig is not implemented"))
+}
+
+func (UnimplementedNodeServiceHandler) SelfRegister(context.Context, *connect.Request[v1.SelfRegisterRequest]) (*connect.Response[v1.SelfRegisterResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.node.v1.NodeService.SelfRegister is not implemented"))
 }

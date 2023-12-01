@@ -1,7 +1,10 @@
 package core
 
 import (
+	"crypto/ecdsa"
 	"errors"
+	"fmt"
+	"github.com/golang-jwt/jwt/v5"
 	"net/http"
 	"time"
 
@@ -14,34 +17,40 @@ import (
 )
 
 type PreHandlerOptions struct {
-	Logger                *zap.Logger
-	Executor              *Executor
-	Metrics               *RouterMetrics
-	Parser                *OperationParser
-	Planner               *OperationPlanner
-	AccessController      *AccessController
-	DisableRequestTracing bool
+	Logger               *zap.Logger
+	Executor             *Executor
+	Metrics              *RouterMetrics
+	Parser               *OperationParser
+	Planner              *OperationPlanner
+	AccessController     *AccessController
+	DevelopmentMode      bool
+	RouterPublicKey      *ecdsa.PublicKey
+	EnableRequestTracing bool
 }
 
 type PreHandler struct {
-	log                   *zap.Logger
-	executor              *Executor
-	metrics               *RouterMetrics
-	parser                *OperationParser
-	planner               *OperationPlanner
-	accessController      *AccessController
-	disableRequestTracing bool
+	log                  *zap.Logger
+	executor             *Executor
+	metrics              *RouterMetrics
+	parser               *OperationParser
+	planner              *OperationPlanner
+	accessController     *AccessController
+	developmentMode      bool
+	routerPublicKey      *ecdsa.PublicKey
+	enableRequestTracing bool
 }
 
 func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 	return &PreHandler{
-		log:                   opts.Logger,
-		executor:              opts.Executor,
-		metrics:               opts.Metrics,
-		parser:                opts.Parser,
-		planner:               opts.Planner,
-		accessController:      opts.AccessController,
-		disableRequestTracing: opts.DisableRequestTracing,
+		log:                  opts.Logger,
+		executor:             opts.Executor,
+		metrics:              opts.Metrics,
+		parser:               opts.Parser,
+		planner:              opts.Planner,
+		accessController:     opts.AccessController,
+		routerPublicKey:      opts.RouterPublicKey,
+		developmentMode:      opts.DevelopmentMode,
+		enableRequestTracing: opts.EnableRequestTracing,
 	}
 }
 
@@ -59,25 +68,57 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		requestLogger := h.log.With(logging.WithRequestID(middleware.GetReqID(r.Context())))
 
-		// In GraphQL the statusCode does not always express the error state of the request
-		// we use this flag to determine if we have an error for the request metrics
 		var (
+			// In GraphQL the statusCode does not always express the error state of the request
+			// we use this flag to determine if we have an error for the request metrics
 			hasRequestError bool
 			writtenBytes    int
 			statusCode      = http.StatusOK
-			traceOptions    = ParseRequestTraceOptions(r, h.disableRequestTracing)
+			traceOptions    = resolve.RequestTraceOptions{}
 			tracePlanStart  int64
 		)
 
 		clientInfo := NewClientInfoFromRequest(r)
 		metrics := h.metrics.StartOperation(clientInfo, requestLogger, r.ContentLength)
-		if traceOptions.Enable {
-			r = r.WithContext(resolve.SetTraceStart(r.Context(), traceOptions.EnablePredictableDebugTimings))
-		}
-
 		defer func() {
 			metrics.Finish(hasRequestError, statusCode, writtenBytes)
 		}()
+
+		body, err := h.parser.ReadBody(r.Context(), r.Body)
+		if err != nil {
+			hasRequestError = true
+			requestLogger.Error(err.Error())
+			writeRequestErrors(r, http.StatusBadRequest, graphql.RequestErrorsFromError(err), w, requestLogger)
+			return
+		}
+
+		if h.enableRequestTracing {
+			if clientInfo.WGRequestToken != "" && h.routerPublicKey != nil {
+				_, err = jwt.Parse(clientInfo.WGRequestToken, func(token *jwt.Token) (interface{}, error) {
+					return h.routerPublicKey, nil
+				}, jwt.WithValidMethods([]string{jwt.SigningMethodES256.Name}))
+				if err != nil {
+					err := errors.New("invalid request token. Router version 0.42.1 or above is required to use request tracing in production")
+					hasRequestError = true
+					requestLogger.Error(fmt.Sprintf("failed to parse request token: %s", err.Error()))
+					writeRequestErrors(r, http.StatusForbidden, graphql.RequestErrorsFromError(err), w, requestLogger)
+					return
+				}
+
+				// Enable ART after successful request token validation
+				traceOptions = ParseRequestTraceOptions(r)
+			} else if h.developmentMode {
+				// In development, without request signing, we enable ART
+				traceOptions = ParseRequestTraceOptions(r)
+			} else {
+				// In production, without request signing, we disable ART because it's not safe to use
+				traceOptions.DisableAll()
+			}
+		}
+
+		if traceOptions.Enable {
+			r = r.WithContext(resolve.SetTraceStart(r.Context(), traceOptions.EnablePredictableDebugTimings))
+		}
 
 		validatedReq, err := h.accessController.Access(w, r)
 		if err != nil {
@@ -88,7 +129,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		}
 		r = validatedReq
 
-		operation, err := h.parser.ParseReader(r.Context(), clientInfo, r.Body, requestLogger)
+		operation, err := h.parser.ParseReader(r.Context(), clientInfo, body, requestLogger)
 		if err != nil {
 			hasRequestError = true
 

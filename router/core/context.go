@@ -32,14 +32,18 @@ type ClientInfo struct {
 	Name string
 	// Version contains the client version, derived from the request headers
 	Version string
+	// WGRequestToken contains the token to authenticate the request from the platform
+	WGRequestToken string
 }
 
 func NewClientInfoFromRequest(r *http.Request) *ClientInfo {
 	clientName := ctrace.GetClientInfo(r.Header, "graphql-client-name", "apollographql-client-name", "unknown")
 	clientVersion := ctrace.GetClientInfo(r.Header, "graphql-client-version", "apollographql-client-version", "missing")
+	requestToken := r.Header.Get("X-WG-Token")
 	return &ClientInfo{
-		Name:    clientName,
-		Version: clientVersion,
+		Name:           clientName,
+		Version:        clientVersion,
+		WGRequestToken: requestToken,
 	}
 }
 
