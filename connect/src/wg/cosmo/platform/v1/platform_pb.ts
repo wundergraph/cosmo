@@ -5843,6 +5843,11 @@ export class GetPersistedOperationsResponse_Operation extends Message<GetPersist
    */
   lastUpdatedAt = "";
 
+  /**
+   * @generated from field: repeated string operation_names = 5;
+   */
+  operationNames: string[] = [];
+
   constructor(data?: PartialMessage<GetPersistedOperationsResponse_Operation>) {
     super();
     proto3.util.initPartial(data, this);
@@ -5855,6 +5860,7 @@ export class GetPersistedOperationsResponse_Operation extends Message<GetPersist
     { no: 2, name: "contents", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "created_at", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "last_updated_at", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "operation_names", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetPersistedOperationsResponse_Operation {

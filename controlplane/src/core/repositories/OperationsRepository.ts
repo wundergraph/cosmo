@@ -23,6 +23,7 @@ export class OperationsRepository {
         updatedAt: now,
         createdById: userId,
         operationContent: operation.contents,
+        operationNames: operation.operationNames,
       };
     });
 
@@ -79,6 +80,7 @@ export class OperationsRepository {
         createdBy: row.createdBy.email,
         lastUpdatedBy: row.updatedBy?.email ?? '',
         contents: row.operationContent ?? '',
+        operationNames: row.operationNames ?? [],
       });
     }
     return operations;

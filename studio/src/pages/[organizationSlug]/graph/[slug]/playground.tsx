@@ -151,11 +151,17 @@ const PersistOperation = () => {
     },
   });
 
-  const { data } = useQuery(
+  const { data, refetch } = useQuery(
     getClients.useQuery({
       fedGraphName: slug,
     }),
   );
+
+  useEffect(() => {
+    if (isOpen) {
+      refetch();
+    }
+  }, [isOpen, refetch]);
 
   const form = useZodForm<Input>({
     schema: FormSchema,

@@ -13,6 +13,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CLI } from "@/components/ui/cli";
 import {
@@ -209,8 +210,8 @@ const ClientOperations = () => {
     );
   } else if (data) {
     const fuse = new Fuse(data.operations, {
-      keys: ["id"],
-      minMatchCharLength: 8,
+      keys: ["id", "operationNames"],
+      minMatchCharLength: 1,
     });
 
     const filteredOperations = search
@@ -222,7 +223,7 @@ const ClientOperations = () => {
         <div className="relative">
           <MagnifyingGlassIcon className="absolute bottom-0 left-3 top-0 my-auto" />
           <Input
-            placeholder="Search by ID"
+            placeholder="Search by Name or ID"
             className="pl-8 pr-10"
             value={search}
             onChange={(e) => {
@@ -257,8 +258,18 @@ const ClientOperations = () => {
 
             return (
               <AccordionItem key={op.id} value={op.id}>
-                <AccordionTrigger className="truncate px-2 hover:bg-secondary/30 hover:no-underline">
-                  <span className="truncate">{op.id}</span>
+                <AccordionTrigger className="gap-x-4 truncate px-2 hover:bg-secondary/30 hover:no-underline">
+                  <Badge
+                    className="flex w-20 items-center justify-center"
+                    variant="secondary"
+                  >
+                    {op.id.slice(0, 6)}
+                  </Badge>
+                  <span className="w-full truncate text-start">
+                    {op.operationNames.length > 0
+                      ? op.operationNames.join("+")
+                      : "Unnamed Operation"}
+                  </span>
                 </AccordionTrigger>
                 <AccordionContent className="mt-2 px-2">
                   <div>
@@ -317,6 +328,17 @@ const ClientOperations = () => {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() => {
+                                copy(op.id);
+                                toast({
+                                  description:
+                                    "Copied persisted ID of operation",
+                                });
+                              }}
+                            >
+                              Operation Persisted ID
+                            </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => {
                                 copy(link);
