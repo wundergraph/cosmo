@@ -1122,8 +1122,8 @@ func WithLivenessCheckPath(path string) Option {
 	}
 }
 
-// WithCDNConfig sets the configuration for the CDN client
-func WithCDNConfig(cfg config.CDNConfiguration) Option {
+// WithCDN sets the configuration for the CDN client
+func WithCDN(cfg config.CDNConfiguration) Option {
 	return func(r *Router) {
 		r.cdnConfig = cfg
 	}
