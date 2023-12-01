@@ -67,7 +67,70 @@ func TestAggregateCountWithEqualUsages(t *testing.T) {
 					Path:        []string{"user", "id"},
 					TypeNames:   []string{"User", "ID"},
 					SubgraphIDs: []string{"1", "2"},
-					Count:       1,
+					Count:       5,
+				},
+				{
+					Path:        []string{"user", "name"},
+					TypeNames:   []string{"User", "String"},
+					SubgraphIDs: []string{"1", "2"},
+					Count:       2,
+				},
+			},
+			ArgumentMetrics: []*graphqlmetricsv1.ArgumentUsageInfo{
+				{
+					Path:      []string{"user", "id"},
+					TypeName:  "User",
+					Count:     2,
+					NamedType: "ID",
+				},
+			},
+			InputMetrics: []*graphqlmetricsv1.InputUsageInfo{
+				{
+					Path:      []string{"user", "id"},
+					TypeName:  "User",
+					Count:     2,
+					NamedType: "ID",
+				},
+			},
+			OperationInfo: &graphqlmetricsv1.OperationInfo{
+				Type: graphqlmetricsv1.OperationType_QUERY,
+				Hash: "123",
+				Name: "user",
+			},
+			SchemaInfo: &graphqlmetricsv1.SchemaInfo{
+				Version: "1",
+			},
+			ClientInfo: &graphqlmetricsv1.ClientInfo{
+				Name:    "wundergraph",
+				Version: "1.0.0",
+			},
+			RequestInfo: &graphqlmetricsv1.RequestInfo{
+				Error:      false,
+				StatusCode: http.StatusOK,
+			},
+			Attributes: map[string]string{
+				"foo": "bar",
+			},
+		},
+	})
+
+	require.Equal(t, 1, len(result))
+	require.Equal(t, uint64(7), result[0].TypeFieldMetrics[0].Count)
+	require.Equal(t, uint64(3), result[0].TypeFieldMetrics[1].Count)
+	require.Equal(t, uint64(3), result[0].ArgumentMetrics[0].Count)
+	require.Equal(t, uint64(3), result[0].InputMetrics[0].Count)
+}
+
+func TestAggregateCountWithDifferentInputs(t *testing.T) {
+
+	result := Aggregate([]*graphqlmetricsv1.SchemaUsageInfo{
+		{
+			TypeFieldMetrics: []*graphqlmetricsv1.TypeFieldUsageInfo{
+				{
+					Path:        []string{"user", "id"},
+					TypeNames:   []string{"User", "ID"},
+					SubgraphIDs: []string{"1", "2"},
+					Count:       2,
 				},
 				{
 					Path:        []string{"user", "name"},
@@ -112,13 +175,77 @@ func TestAggregateCountWithEqualUsages(t *testing.T) {
 				"foo": "bar",
 			},
 		},
+		{
+			TypeFieldMetrics: []*graphqlmetricsv1.TypeFieldUsageInfo{
+				{
+					Path:        []string{"user", "id"},
+					TypeNames:   []string{"User", "ID"},
+					SubgraphIDs: []string{"1", "2"},
+					Count:       5,
+				},
+				{
+					Path:        []string{"user", "name"},
+					TypeNames:   []string{"User", "String"},
+					SubgraphIDs: []string{"1", "2"},
+					Count:       2,
+				},
+			},
+			ArgumentMetrics: []*graphqlmetricsv1.ArgumentUsageInfo{
+				{
+					Path:      []string{"user", "id"},
+					TypeName:  "User",
+					Count:     2,
+					NamedType: "ID",
+				},
+			},
+			InputMetrics: []*graphqlmetricsv1.InputUsageInfo{
+				{
+					Path:      []string{"user", "id"},
+					TypeName:  "User",
+					Count:     2,
+					NamedType: "ID",
+				},
+				{
+					Path:      []string{"user", "name"},
+					TypeName:  "User",
+					Count:     1,
+					NamedType: "String",
+				},
+			},
+			OperationInfo: &graphqlmetricsv1.OperationInfo{
+				Type: graphqlmetricsv1.OperationType_QUERY,
+				Hash: "123",
+				Name: "user",
+			},
+			SchemaInfo: &graphqlmetricsv1.SchemaInfo{
+				Version: "1",
+			},
+			ClientInfo: &graphqlmetricsv1.ClientInfo{
+				Name:    "wundergraph",
+				Version: "1.0.0",
+			},
+			RequestInfo: &graphqlmetricsv1.RequestInfo{
+				Error:      false,
+				StatusCode: http.StatusOK,
+			},
+			Attributes: map[string]string{
+				"foo": "bar",
+			},
+		},
 	})
 
-	require.Equal(t, 1, len(result))
-	require.Equal(t, uint64(3), result[0].TypeFieldMetrics[0].Count)
-	require.Equal(t, uint64(2), result[0].TypeFieldMetrics[1].Count)
-	require.Equal(t, uint64(2), result[0].ArgumentMetrics[0].Count)
-	require.Equal(t, uint64(2), result[0].InputMetrics[0].Count)
+	require.Equal(t, 2, len(result))
+	require.Equal(t, uint64(2), result[0].TypeFieldMetrics[0].Count)
+	require.Equal(t, uint64(1), result[0].TypeFieldMetrics[1].Count)
+	require.Equal(t, uint64(1), result[0].ArgumentMetrics[0].Count)
+	require.Equal(t, 1, len(result[0].InputMetrics))
+	require.Equal(t, uint64(1), result[0].InputMetrics[0].Count)
+
+	require.Equal(t, uint64(5), result[1].TypeFieldMetrics[0].Count)
+	require.Equal(t, uint64(2), result[1].TypeFieldMetrics[1].Count)
+	require.Equal(t, uint64(2), result[1].ArgumentMetrics[0].Count)
+	require.Equal(t, 2, len(result[1].InputMetrics))
+	require.Equal(t, uint64(2), result[1].InputMetrics[0].Count)
 }
 
 func TestAggregateWithDifferentOperationInfo(t *testing.T) {
