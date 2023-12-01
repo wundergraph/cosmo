@@ -7394,6 +7394,11 @@ export class MetricsTopItem extends Message<MetricsTopItem> {
    */
   value = "";
 
+  /**
+   * @generated from field: bool isPersisted = 4;
+   */
+  isPersisted = false;
+
   constructor(data?: PartialMessage<MetricsTopItem>) {
     super();
     proto3.util.initPartial(data, this);
@@ -7405,6 +7410,7 @@ export class MetricsTopItem extends Message<MetricsTopItem> {
     { no: 1, name: "hash", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "value", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "isPersisted", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MetricsTopItem {

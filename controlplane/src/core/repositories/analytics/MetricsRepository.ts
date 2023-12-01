@@ -89,24 +89,25 @@ export class MetricsRepository {
     const prevRequestRate = queryRate(prevDateRange.start, prevDateRange.end);
 
     // get top 5 operations in last [range] hours
-    const top5 = this.chClient.queryPromise<{ hash: string; name: string; value: string }>(
+    const top5 = this.chClient.queryPromise<{ hash: string; name: string; value: string; isPersisted: boolean }>(
       `
       WITH
         toDateTime('${dateRange.start}') AS startDate,
         toDateTime('${dateRange.end}') AS endDate
-      SELECT hash, name, round(sum(total) / ${multiplier}, 4) AS value FROM (
+      SELECT hash, name, isPersisted, round(sum(total) / ${multiplier}, 4) AS value FROM (
         SELECT
           Timestamp as timestamp,
           OperationHash as hash,
           OperationName as name,
+          IF(empty(OperationPersistedID), false, true) as isPersisted,
           sum(TotalRequests) as total
         FROM operation_request_metrics_5_30_mv
         WHERE Timestamp >= startDate AND Timestamp <= endDate
           AND OrganizationID = '${organizationId}'
           AND FederatedGraphID = '${graphId}'
           ${whereSql ? `AND ${whereSql}` : ''}
-        GROUP BY Timestamp, OperationName, OperationHash 
-      ) GROUP BY name, hash ORDER BY value DESC LIMIT 5
+        GROUP BY Timestamp, OperationName, OperationHash, OperationPersistedID
+      ) GROUP BY name, hash, isPersisted ORDER BY value DESC LIMIT 5
     `,
       queryParams,
     );
@@ -156,6 +157,7 @@ export class MetricsRepository {
           hash: v.hash,
           name: v.name,
           value: parseValue(v.value),
+          isPersisted: v.isPersisted,
         })),
         series: this.mapSeries(range, seriesResponse, prevSeriesResponse),
       },
@@ -208,7 +210,7 @@ export class MetricsRepository {
 
     // get top 5 operations in last [range] hours
     const queryTop5 = (quantile: string, start: number, end: number) => {
-      return this.chClient.queryPromise<{ hash: string; name: string; value: string }>(
+      return this.chClient.queryPromise<{ hash: string; name: string; value: string; isPersisted: boolean }>(
         `
         WITH
           toDateTime('${start}') AS startDate,
@@ -216,6 +218,7 @@ export class MetricsRepository {
         SELECT
           OperationHash as hash,
           OperationName as name,
+          IF(empty(OperationPersistedID), false, true) as isPersisted,
           func_rank(${quantile}, BucketCounts) as rank,
           func_rank_bucket_lower_index(rank, BucketCounts) as b,
           round(func_histogram_v2(
@@ -232,7 +235,7 @@ export class MetricsRepository {
           AND OrganizationID = '${organizationId}'
           AND FederatedGraphID = '${graphId}'
           ${whereSql ? `AND ${whereSql}` : ''}
-        GROUP BY OperationName, OperationHash ORDER BY value DESC LIMIT 5
+        GROUP BY OperationName, OperationHash, OperationPersistedID ORDER BY value DESC LIMIT 5
     `,
         queryParams,
       );
@@ -295,6 +298,7 @@ export class MetricsRepository {
           hash: v.hash,
           name: v.name,
           value: parseValue(v.value),
+          isPersisted: v.isPersisted,
         })),
         series: this.mapSeries(range, seriesResponse, prevSeriesResponse),
       },
@@ -345,7 +349,7 @@ export class MetricsRepository {
     const prevValue = queryPercentage(prevDateRange.start, prevDateRange.end);
 
     // get top 5 operations in last [range] hours
-    const top5 = this.chClient.queryPromise<{ hash: string; name: string; value: string }>(
+    const top5 = this.chClient.queryPromise<{ hash: string; name: string; value: string; isPersisted: boolean }>(
       `
       WITH
         toDateTime('${dateRange.start}') AS startDate,
@@ -353,6 +357,7 @@ export class MetricsRepository {
       SELECT
         hash,
         name,
+        isPersisted,
         median(errorPercentage) as value
       FROM (
         SELECT
@@ -361,14 +366,15 @@ export class MetricsRepository {
           OperationName as name,
           sum(TotalRequests) as totalRequests,
           sum(TotalErrors) as totalErrors,
-          if(totalErrors > 0, round(totalErrors / totalRequests * 100, 2), 0) AS errorPercentage
+          if(totalErrors > 0, round(totalErrors / totalRequests * 100, 2), 0) AS errorPercentage,
+          IF(empty(OperationPersistedID), false, true) as isPersisted
         FROM operation_request_metrics_5_30_mv
         WHERE Timestamp >= startDate AND Timestamp <= endDate
           AND OrganizationID = '${organizationId}'
           AND FederatedGraphID = '${graphId}'
           ${whereSql ? `AND ${whereSql}` : ''}
-        GROUP BY Timestamp, OperationName, OperationHash 
-      ) GROUP BY name, hash ORDER BY value DESC LIMIT 5
+        GROUP BY Timestamp, OperationName, OperationHash, OperationPersistedID
+      ) GROUP BY name, hash, isPersisted ORDER BY value DESC LIMIT 5
     `,
       queryParams,
     );
@@ -420,6 +426,7 @@ export class MetricsRepository {
           hash: v.hash,
           name: v.name,
           value: parseValue(v.value),
+          isPersisted: v.isPersisted,
         })),
         series: this.mapSeries(range, seriesResponse, prevSeriesResponse),
       },

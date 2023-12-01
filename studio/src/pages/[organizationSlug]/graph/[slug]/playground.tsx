@@ -54,11 +54,9 @@ import { useTheme } from "next-themes";
 import { useRouter } from "next/router";
 import { useContext, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { BiSave } from "react-icons/bi";
 import { FaNetworkWired } from "react-icons/fa";
 import { FiSave } from "react-icons/fi";
-import { MdDevices } from "react-icons/md";
-import { PiBracketsCurly } from "react-icons/pi";
+import { PiBracketsCurly, PiDevices } from "react-icons/pi";
 import { z } from "zod";
 
 const graphiQLFetch = async (
@@ -273,7 +271,7 @@ const PersistOperation = () => {
                             return (
                               <SelectItem key={c.id} value={c.id}>
                                 <span className="flex items-center gap-x-2">
-                                  <MdDevices className="h-4 w-4" /> {c.name}
+                                  <PiDevices className="h-4 w-4" /> {c.name}
                                 </span>
                               </SelectItem>
                             );

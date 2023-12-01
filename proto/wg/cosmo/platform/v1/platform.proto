@@ -952,6 +952,7 @@ message MetricsTopItem {
   string hash = 1;
   string name = 2;
   string value = 3;
+  bool isPersisted = 4;
 }
 
 message MetricsSeriesItem {
