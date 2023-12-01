@@ -4205,7 +4205,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const updatedOperations: UpdatedPersistedOperation[] = [];
         // Retrieve the operations that have already been published
         const operationsResult = await operationsRepo.getPersistedOperations(clientId);
-        const operationsByOperationId = new Map(operationsResult.map((op) => [op.operationId, { hash: op.hash, operationNames: op.operationNames }]));
+        const operationsByOperationId = new Map(
+          operationsResult.map((op) => [op.operationId, { hash: op.hash, operationNames: op.operationNames }]),
+        );
         for (const operation of req.operations) {
           const operationId = operation.id;
           const operationHash = crypto.createHash('sha256').update(operation.contents).digest('hex');
