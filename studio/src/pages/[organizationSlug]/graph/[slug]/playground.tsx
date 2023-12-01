@@ -29,6 +29,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tooltip } from "@/components/ui/tooltip";
 import { useToast } from "@/components/ui/use-toast";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
 import { NextPageWithLayout } from "@/lib/page";
@@ -36,6 +37,7 @@ import { explorerPlugin } from "@graphiql/plugin-explorer";
 import { createGraphiQLFetcher } from "@graphiql/toolkit";
 import { SparklesIcon } from "@heroicons/react/24/outline";
 import { MobileIcon } from "@radix-ui/react-icons";
+import { TooltipContent, TooltipTrigger } from "@radix-ui/react-tooltip";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
@@ -52,7 +54,9 @@ import { useTheme } from "next-themes";
 import { useRouter } from "next/router";
 import { useContext, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
+import { BiSave } from "react-icons/bi";
 import { FaNetworkWired } from "react-icons/fa";
+import { FiSave } from "react-icons/fi";
 import { MdDevices } from "react-icons/md";
 import { PiBracketsCurly } from "react-icons/pi";
 import { z } from "zod";
@@ -196,9 +200,23 @@ const PersistOperation = () => {
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        <Button variant="secondary">Persist Operation</Button>
-      </DialogTrigger>
+      <Tooltip delayDuration={100}>
+        <TooltipTrigger asChild>
+          <DialogTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="graphiql-toolbar-button"
+            >
+              <FiSave className="graphiql-toolbar-icon" />
+            </Button>
+          </DialogTrigger>
+        </TooltipTrigger>
+        <TooltipContent className="rounded-md border-2 bg-background px-2 py-1">
+          Persist query
+        </TooltipContent>
+      </Tooltip>
+
       <DialogContent className="grid  max-w-4xl grid-cols-5 items-start divide-x">
         <div className="scrollbar-custom col-span-3 h-full max-h-[450px] overflow-auto">
           <CodeViewer code={query} />
@@ -350,7 +368,6 @@ const ResponseTabs = () => {
           </TabsTrigger>
         </TabsList>
       </Tabs>
-      <PersistOperation />
     </div>
   );
 };
@@ -358,13 +375,15 @@ const ResponseTabs = () => {
 const PlaygroundPortal = () => {
   const tabDiv = document.getElementById("response-tabs");
   const visDiv = document.getElementById("response-visualization");
+  const saveDiv = document.getElementById("save-button");
 
-  if (!tabDiv || !visDiv) return null;
+  if (!tabDiv || !visDiv || !saveDiv) return null;
 
   return (
     <>
       {createPortal(<ResponseTabs />, tabDiv)}
       {createPortal(<TraceView />, visDiv)}
+      {createPortal(<PersistOperation />, saveDiv)}
     </>
   );
 };
@@ -414,6 +433,16 @@ const PlaygroundPage: NextPageWithLayout = () => {
       div.id = "response-visualization";
       div.className = "flex flex-1 h-full w-full absolute invisible -z-50";
       responseSectionParent.append(div);
+    }
+
+    const toolbar = document.getElementsByClassName(
+      "graphiql-toolbar",
+    )[0] as any as HTMLDivElement;
+
+    if (toolbar) {
+      const div = document.createElement("div");
+      div.id = "save-button";
+      toolbar.append(div);
     }
 
     setIsMounted(true);
