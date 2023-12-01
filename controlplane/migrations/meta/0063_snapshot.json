@@ -1,7 +1,7 @@
 {
   "version": "5",
   "dialect": "pg",
-  "id": "1f0dfbea-6990-479e-9b5d-dffd6f1b5ca8",
+  "id": "cc96bc8f-da4f-4b5e-b50e-522c5472640b",
   "prevId": "6a29b327-bf05-4d1f-9223-165f565a54ae",
   "tables": {
     "api_keys": {
@@ -251,6 +251,12 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "operation_names": {
+          "name": "operation_names",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",
