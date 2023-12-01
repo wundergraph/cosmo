@@ -306,6 +306,8 @@ export interface PersistedOperationDTO {
   createdBy: string;
   lastUpdatedAt: string;
   lastUpdatedBy: string;
+  contents: string;
+  operationNames: string[];
 }
 
 export interface PublishedOperationData {
@@ -317,4 +319,6 @@ export interface UpdatedPersistedOperation {
   operationId: string;
   hash: string;
   filePath: string;
+  contents: string;
+  operationNames: string[];
 }

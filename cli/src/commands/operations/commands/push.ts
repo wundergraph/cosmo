@@ -16,6 +16,7 @@ interface OperationOutput {
   hash: string;
   contents: string;
   status: OperationOutputStatus;
+  operationNames: string[];
 }
 
 const collect = (value: string, previous: string[]): string[] => {
@@ -167,9 +168,15 @@ export default (opts: BaseCommandOptions) => {
       switch (options.format) {
         case 'text': {
           for (const op of result.operations) {
-            console.log(
-              pc.green(`pushed operation ${op.id} (${op.hash}) (${humanReadableOperationStatus(op.status)})`),
-            );
+            const message: string[] = [`pushed operation ${op.id}`];
+            if (op.hash !== op.id) {
+              message.push(`(${op.hash})`);
+            }
+            message.push(`(${humanReadableOperationStatus(op.status)})`);
+            if (op.operationNames.length > 0) {
+              message.push(`: ${op.operationNames.join(', ')}`);
+            }
+            console.log(message.join(' '));
           }
           const upToDate = (result.operations?.filter((op) => op.status === PublishedOperationStatus.UP_TO_DATE) ?? [])
             .length;
@@ -194,10 +201,12 @@ export default (opts: BaseCommandOptions) => {
           const returnedOperations: Record<string, OperationOutput> = {};
           for (let ii = 0; ii < result.operations.length; ii++) {
             const op = result.operations[ii];
+
             returnedOperations[op.id] = {
               hash: op.hash,
               contents: operations[ii].contents,
               status: jsonOperationStatus(op.status),
+              operationNames: op.operationNames ?? [],
             };
           }
           console.log(JSON.stringify(returnedOperations, null, 2));

@@ -116,7 +116,7 @@ export function DataTableFilterCommands<TData, TValue>({
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder={`Enter ${title}`}
-              className="border-none p-0 focus-visible:ring-0"
+              className="border-none !bg-transparent p-0 focus-visible:ring-0"
             />
             <Button
               size="icon-sm"

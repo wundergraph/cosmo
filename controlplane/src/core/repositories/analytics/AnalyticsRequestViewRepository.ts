@@ -60,6 +60,13 @@ export class AnalyticsRequestViewRepository {
     operationType: {
       title: 'Type',
     },
+    isPersisted: {
+      title: 'Persisted',
+    },
+    operationPersistedId: {
+      title: 'Operation Persisted ID',
+      isHidden: true,
+    },
     operationContent: {
       title: 'Operation Content',
       isCta: true,
@@ -129,6 +136,14 @@ export class AnalyticsRequestViewRepository {
       dbClause: 'where',
       columnName: 'operationHash',
       title: 'Operation Hash',
+      options: [],
+      customOptions: true,
+    },
+    operationPersistedId: {
+      dbField: 'OperationPersistedID',
+      dbClause: 'where',
+      columnName: 'operationPersistedId',
+      title: 'Operation Persisted ID',
       options: [],
       customOptions: true,
     },
@@ -244,6 +259,7 @@ export class AnalyticsRequestViewRepository {
             OperationName as operationName,
             OperationHash as operationHash,
             OperationType as operationType,
+            OperationPersistedID as operationPersistedId,
             Duration as durationInNano,
             StatusCode as statusCode,
             StatusMessage as statusMessage,
@@ -254,7 +270,8 @@ export class AnalyticsRequestViewRepository {
             HttpMethod as httpMethod,
             HttpTarget as httpTarget,
             ClientName as clientName,
-            ClientVersion as clientVersion
+            ClientVersion as clientVersion,
+            IF(empty(OperationPersistedID), 'false', 'true') as isPersisted
           FROM
             ${this.client.database}.traces_mv
           WHERE

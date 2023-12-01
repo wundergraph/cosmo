@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS cosmo.operation_request_metrics_5_30 (
    Timestamp DateTime('UTC') CODEC (Delta(4), ZSTD(1)),
    OperationName LowCardinality(String) CODEC (ZSTD(1)),
    OperationHash String CODEC (ZSTD(1)),
+   OperationPersistedID String CODEC (ZSTD(1)),
    TotalRequests UInt64 CODEC(ZSTD(1)),
    TotalErrors UInt64 CODEC(ZSTD(1)),
    TotalClientErrors UInt64 CODEC(ZSTD(1)),

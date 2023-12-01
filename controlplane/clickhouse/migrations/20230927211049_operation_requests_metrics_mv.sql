@@ -5,6 +5,7 @@ SELECT
     toStartOfFiveMinute(TimeUnix) AS Timestamp,
     toLowCardinality(Attributes [ 'wg.operation.name' ]) AS OperationName,
     Attributes [ 'wg.operation.hash' ] AS OperationHash,
+    Attributes [ 'wg.operation.persisted_id' ] as OperationPersistedID,
     toUInt64(sum(Value)) as TotalRequests,
     toUInt64(sumIf(Value, position(Attributes['http.status_code'],'5') = 1 OR position(Attributes['http.status_code'],'4') = 1 OR mapContains(Attributes, 'wg.request.error'))) as TotalErrors,
     toUInt64(sumIf(Value, position(Attributes['http.status_code'],'4') = 1)) AS TotalClientErrors,
@@ -21,6 +22,7 @@ WHERE ScopeName = 'cosmo.router' AND ScopeVersion = '0.0.1' AND IsMonotonic = tr
 GROUP BY
     OperationName,
     OperationHash,
+    OperationPersistedID,
     FederatedGraphID,
     RouterConfigVersion,
     OrganizationID,

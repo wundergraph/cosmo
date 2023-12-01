@@ -14,6 +14,7 @@ SELECT
     StatusMessage,
     SpanAttributes [ 'wg.operation.hash' ] as OperationHash,
     SpanAttributes [ 'wg.operation.content' ] as OperationContent,
+    SpanAttributes [ 'wg.operation.persisted_id' ] as OperationPersistedID,
     SpanAttributes [ 'http.status_code' ] as HttpStatusCode,
     SpanAttributes [ 'http.host' ] as HttpHost,
     SpanAttributes [ 'http.user_agent' ] as HttpUserAgent,

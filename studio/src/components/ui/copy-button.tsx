@@ -37,7 +37,7 @@ export const CopyButton: React.FC<CopyButtonProps> = (props) => {
   };
 
   return (
-    <Tooltip>
+    <Tooltip delayDuration={100}>
       <TooltipTrigger asChild>
         <Button variant="ghost" size="icon-sm" {...props} onClick={handleClick}>
           {copy ? <FiCheck /> : <FiCopy className="h-3 w-3" />}

@@ -6,6 +6,7 @@
 .graphiql-tooltip,
 [data-radix-popper-content-wrapper] {
   --color-base: var(--background);
+  @apply !border-border;
 }
 
 @media (prefers-color-scheme: dark) {
