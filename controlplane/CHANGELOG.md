@@ -4,6 +4,17 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.43.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.42.0...controlplane@0.43.0) (2023-12-04)
+
+### Bug Fixes
+
+* filter out invalid filters ([#336](https://github.com/wundergraph/cosmo/issues/336)) ([777279e](https://github.com/wundergraph/cosmo/commit/777279eb252c8d7c754bedb2ac5e86bb94980b93)) (@Pagebakers)
+* invitations ([#326](https://github.com/wundergraph/cosmo/issues/326)) ([8915cd8](https://github.com/wundergraph/cosmo/commit/8915cd80ab20285b768fa8af8b02e1572d452a40)) (@JivusAyrus)
+
+### Features
+
+* add compositions page ([#325](https://github.com/wundergraph/cosmo/issues/325)) ([fb7a018](https://github.com/wundergraph/cosmo/commit/fb7a0180579872c486bd59b6b3adc9c19f8f302d)) (@JivusAyrus)
+
 # [0.42.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.41.2...controlplane@0.42.0) (2023-12-01)
 
 ### Bug Fixes
