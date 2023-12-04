@@ -141,12 +141,15 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
           className={cn(
             "flex w-full flex-1 flex-col bg-background font-sans antialiased lg:grid lg:grid-cols-[auto_1fr] lg:divide-x",
             {
-              "min-h-[calc(100vh-32px)]": disableStarBanner !== "true",
-              "min-h-screen": disableStarBanner === "true",
+              "min-h-[calc(100vh-32px)]": disableStarBanner === "false",
+              "min-h-screen": disableStarBanner !== "false",
             },
           )}
         >
-          <SideNav links={links} disableStarBanner={disableStarBanner}>
+          <SideNav
+            links={links}
+            disableStarBanner={disableStarBanner === "true" ? "true" : "false"}
+          >
             {children}
           </SideNav>
           <main className="flex-1 pt-4 lg:pt-0">{children}</main>
