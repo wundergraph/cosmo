@@ -30,6 +30,7 @@ import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import {
   ArrowLeftIcon,
   CheckCircledIcon,
+  CrossCircledIcon,
   CubeIcon,
   ReaderIcon,
   UpdateIcon,
@@ -320,7 +321,7 @@ const CheckDetails = ({
         </dl>
       </div>
       <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-        <dl className="grid flex-shrink-0 grid-cols-3 space-y-6 overflow-hidden border-b px-4 py-4 lg:block lg:min-h-full lg:w-[240px] lg:space-y-8 lg:overflow-auto lg:border-b-0 lg:border-r lg:px-6 xl:w-[260px]">
+        <dl className="grid flex-shrink-0 grid-cols-3 space-y-6 overflow-hidden border-b px-4 py-4 lg:block lg:min-h-full lg:w-[240px] lg:space-y-8 lg:overflow-auto lg:border-b-0 lg:border-r lg:px-6 xl:w-[260px] xl:px-8">
           <div className="col-span-3 flex flex-col">
             <dt className="mb-2 text-sm text-muted-foreground">Tasks</dt>
             <dd className="grid grid-cols-3 flex-row gap-2 lg:flex lg:flex-col">
@@ -536,7 +537,11 @@ const CheckDetails = ({
                 data.check.isComposable &&
                 data.check.hasClientTraffic ? (
                   <Alert variant="default">
-                    <CheckCircledIcon className="h-4 w-4" />
+                    {data.check.isForcedSuccess ? (
+                      <CheckCircledIcon className="h-4 w-4" />
+                    ) : (
+                      <CrossCircledIcon className="h-4 w-4" />
+                    )}
 
                     <AlertTitle>
                       {data.check.isForcedSuccess
@@ -578,7 +583,7 @@ const CheckDetails = ({
                     <AlertTitle>Schema check passed</AlertTitle>
                     <AlertDescription>
                       {data.changes.length
-                        ? "This schema change didn&apos;t affect any operations from existing client traffic."
+                        ? "This schema change didn't affect any operations from existing client traffic."
                         : "There were no schema changes detected."}
                     </AlertDescription>
                     {data.check.isForcedSuccess ? (
@@ -619,7 +624,7 @@ const CheckDetails = ({
                     variant="outline"
                   />
                 </div>
-                <div className="scrollbar-custom h-full w-full">
+                <div className="scrollbar-custom h-full w-full overflow-auto">
                   <CodeViewer code={sdl} disableLinking />
                 </div>
               </TabsContent>

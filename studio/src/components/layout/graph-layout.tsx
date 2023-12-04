@@ -238,7 +238,7 @@ export const GraphPageLayout = ({
       <div className="bg-background">
         <div
           className={cn(
-            "flex flex-col justify-between gap-y-4 px-4 pb-2 pt-4 lg:flex-row lg:items-center lg:px-8",
+            "flex flex-col justify-between gap-y-4 px-4 pb-2 pt-4 lg:flex-row lg:items-center lg:px-6 xl:px-8",
             {
               "border-b": !toolbar,
               "pb-4": !toolbar,
