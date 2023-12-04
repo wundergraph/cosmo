@@ -128,6 +128,7 @@ func NewRouter(params Params) (*core.Router, error) {
 		core.WithAccessController(core.NewAccessController(authenticators, cfg.Authorization.RequireAuthentication)),
 		core.WithLocalhostFallbackInsideDocker(cfg.LocalhostFallbackInsideDocker),
 		core.WithCDN(cfg.CDN),
+		core.WithNATS(cfg.NATS),
 	)
 }
 
