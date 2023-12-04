@@ -12,7 +12,7 @@ export default function (_: BaseCommandOptions) {
   command.description(
     'Downloads the latest router binary for the detected machine platform and architecture.',
   );
-  command.option('-o, --out [string', 'Destination directory for the router binary.');
+  command.option('-o, --out [string]', 'Destination directory for the downloaded router binary.');
   command.action(async (options) => {
     const path = join(process.cwd(), options.out ?? './router');
     const fullPath = path + '/router';
