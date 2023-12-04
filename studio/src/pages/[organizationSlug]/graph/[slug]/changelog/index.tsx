@@ -326,13 +326,13 @@ const ChangelogPage: NextPageWithLayout = () => {
       toolbar={<ChangelogToolbar />}
       scrollRef={scrollRef}
     >
-      <div className="relative h-full w-full">
+      <div className="relative">
         {!validGraph && (
           <CompositionErrorsBanner
             errors={graphData?.graph?.compositionErrors}
           />
         )}
-        <div className="sticky top-[184px] z-20 h-0 overflow-visible">
+        <div className="sticky top-[20px] z-20 h-0 overflow-visible">
           <div className="absolute right-0 hidden w-[280px] grid-cols-2 rounded border bg-card px-4 py-2 lg:grid">
             <h2 className="text-sm font-semibold">Jump to log</h2>
             <div className="scrollbar-custom flex max-h-96 flex-col overflow-y-auto text-xs">

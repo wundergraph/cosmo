@@ -294,7 +294,7 @@ const Type = (props: {
           </Link>
         </Badge>
       </div>
-      <p className="mt-2 text-sm text-muted-foreground">
+      <p className="mt-1 text-sm text-muted-foreground">
         {props.description || getRootDescription(props.name) || (
           <span className="italic">No description provided</span>
         )}
@@ -344,10 +344,10 @@ const TypeWrapper = ({ ast }: { ast: GraphQLSchema }) => {
 
     return (
       <div className="mt-2 flex flex-col">
-        <h3 className="text-xl font-semibold tracking-tight">
+        <h3 className="text-lg font-semibold tracking-tight">
           {sentenceCase(category)}
         </h3>
-        <p className="mt-2 text-muted-foreground">
+        <p className="mt-1 text-sm text-muted-foreground">
           {getCategoryDescription(category)}
         </p>
         <div className="mt-6">
@@ -648,7 +648,7 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
     >
       <div className="flex h-full flex-row">
         <div className="hidden h-full min-w-[200px] max-w-[240px] overflow-y-auto border-r py-2 scrollbar-thin xl:block">
-          <div className="flex flex-col items-stretch gap-2 px-4 py-4 lg:px-8">
+          <div className="flex flex-col items-stretch gap-2 px-4 py-4 lg:px-6 xl:px-8">
             {graphqlRootCategories.map((category) => (
               <Button
                 key={category}

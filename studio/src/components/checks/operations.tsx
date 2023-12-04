@@ -192,7 +192,7 @@ export const CheckOperations = () => {
     : data.operations;
 
   return (
-    <div>
+    <div className="px-4 lg:px-6">
       <div className="relative">
         <MagnifyingGlassIcon className="absolute bottom-0 left-3 top-0 my-auto" />
         <Input
@@ -228,7 +228,10 @@ export const CheckOperations = () => {
                       {hash.slice(0, 6)}
                     </p>
                     <p>{name}</p>
-                    <Badge className="!inline-block !decoration-[none]">
+                    <Badge
+                      className="!inline-block !decoration-[none]"
+                      variant="outline"
+                    >
                       {type}
                     </Badge>
                   </div>
