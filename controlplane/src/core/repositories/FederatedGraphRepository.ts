@@ -418,7 +418,7 @@ export class FederatedGraphRepository {
     return res !== undefined;
   }
 
-  public async isLatestValidRouterConfigVersion(targetId: string, schemaVersionId: string): Promise<boolean> {
+  public async isLatestValidSchemaVersion(targetId: string, schemaVersionId: string): Promise<boolean> {
     const latestValidVersion = await this.db
       .select({
         id: schemaVersion.id,
@@ -426,6 +426,21 @@ export class FederatedGraphRepository {
       .from(schemaVersion)
       .innerJoin(graphCompositions, eq(schemaVersion.id, graphCompositions.schemaVersionId))
       .where(and(eq(schemaVersion.targetId, targetId), eq(graphCompositions.isComposable, true)))
+      .orderBy(desc(schemaVersion.createdAt))
+      .limit(1)
+      .execute();
+
+    return latestValidVersion?.[0]?.id === schemaVersionId;
+  }
+
+  public async isLatestSchemaVersion(targetId: string, schemaVersionId: string): Promise<boolean> {
+    const latestValidVersion = await this.db
+      .select({
+        id: schemaVersion.id,
+      })
+      .from(schemaVersion)
+      .innerJoin(graphCompositions, eq(schemaVersion.id, graphCompositions.schemaVersionId))
+      .where(eq(schemaVersion.targetId, targetId))
       .orderBy(desc(schemaVersion.createdAt))
       .limit(1)
       .execute();
@@ -494,6 +509,37 @@ export class FederatedGraphRepository {
       schema: latestValidVersion[0].schemaSDL,
       schemaVersionId: latestValidVersion[0].schemaVersionId,
     };
+  }
+
+  public async getSdlBasedOnSchemaVersion({
+    graphName,
+    schemaVersionId,
+  }: {
+    graphName: string;
+    schemaVersionId: string;
+  }) {
+    const version = await this.db
+      .select({
+        name: targets.name,
+        schemaSDL: schemaVersion.schemaSDL,
+        schemaVersionId: schemaVersion.id,
+      })
+      .from(targets)
+      .innerJoin(schemaVersion, eq(schema.schemaVersion.targetId, targets.id))
+      .where(
+        and(
+          eq(targets.organizationId, this.organizationId),
+          eq(targets.name, graphName),
+          eq(schemaVersion.id, schemaVersionId),
+        ),
+      )
+      .execute();
+
+    if (version.length === 0) {
+      return undefined;
+    }
+
+    return version[0].schemaSDL;
   }
 
   public createFederatedGraphChangelog(data: { schemaVersionID: string; changes: SchemaDiff[] }) {
@@ -619,16 +665,7 @@ export class FederatedGraphRepository {
       return undefined;
     }
 
-    const changelogs = await this.db
-      .select({
-        id: schemaVersionChangeAction.id,
-        path: schemaVersionChangeAction.path,
-        changeType: schemaVersionChangeAction.changeType,
-        changeMessage: schemaVersionChangeAction.changeMessage,
-        createdAt: schemaVersionChangeAction.createdAt,
-      })
-      .from(schemaVersionChangeAction)
-      .where(eq(schemaVersionChangeAction.schemaVersionId, federatedGraph[0].schemaVersionId));
+    const changelogs = await this.fetchChangelogByVersion({ schemaVersionId: federatedGraph[0].schemaVersionId });
 
     if (changelogs.length === 0) {
       return undefined;
@@ -645,6 +682,31 @@ export class FederatedGraphRepository {
         createdAt: c.createdAt.toString(),
       })),
     };
+  }
+
+  public async fetchChangelogByVersion({ schemaVersionId }: { schemaVersionId: string }) {
+    const changelogs = await this.db
+      .select({
+        id: schemaVersionChangeAction.id,
+        path: schemaVersionChangeAction.path,
+        changeType: schemaVersionChangeAction.changeType,
+        changeMessage: schemaVersionChangeAction.changeMessage,
+        createdAt: schemaVersionChangeAction.createdAt,
+      })
+      .from(schemaVersionChangeAction)
+      .where(eq(schemaVersionChangeAction.schemaVersionId, schemaVersionId));
+
+    if (changelogs.length === 0) {
+      return [];
+    }
+
+    return changelogs.map((c) => ({
+      id: c.id,
+      path: c.path || '',
+      changeType: c.changeType,
+      changeMessage: c.changeMessage,
+      createdAt: c.createdAt.toString(),
+    }));
   }
 
   public delete(targetID: string, subgraphsTargetIDs: string[]) {

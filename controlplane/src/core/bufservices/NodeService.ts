@@ -94,7 +94,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof NodeSe
 
         // Avoid downloading the config to check if it's the latest version
         if (req.version) {
-          const isLatestVersion = await fedGraphRepo.isLatestValidRouterConfigVersion(target.id, req.version);
+          const isLatestVersion = await fedGraphRepo.isLatestValidSchemaVersion(target.id, req.version);
 
           if (isLatestVersion) {
             return {

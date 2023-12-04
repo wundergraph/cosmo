@@ -1,7 +1,7 @@
 import { PlainMessage } from '@bufbuild/protobuf';
 import { Span } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { ClickHouseClient } from '../../clickhouse/index.js';
-import { timestampToNanoseconds } from './util.js';
+import { getDateRange, isoDateRangeToTimestamps, timestampToNanoseconds } from './util.js';
 
 export class TraceRepository {
   constructor(private client: ClickHouseClient) {}
