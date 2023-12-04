@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/nats-io/nats.go"
 	"github.com/wundergraph/cosmo/router/internal/controlplane/configpoller"
 	"github.com/wundergraph/cosmo/router/internal/controlplane/selfregister"
 
@@ -98,6 +99,7 @@ type (
 		livenessCheckPath        string
 		cdnConfig                config.CDNConfiguration
 		cdn                      *cdn.CDN
+		natsConfig               config.NATSConfiguration
 		prometheusServer         *http.Server
 		modulesConfig            map[string]interface{}
 		routerMiddlewares        []func(http.Handler) http.Handler
@@ -323,6 +325,14 @@ func NewRouter(opts ...Option) (*Router, error) {
 
 	if r.developmentMode {
 		r.logger.Warn("Development mode enabled. This should only be used for testing purposes")
+	}
+
+	if r.natsConfig.URL != "" {
+		r.logger.Info("NATS enabled", zap.String("url", r.natsConfig.URL))
+		_, err := nats.Connect(r.natsConfig.URL)
+		if err != nil {
+			return nil, fmt.Errorf("could not connect to NATS: %w", err)
+		}
 	}
 
 	return r, nil
@@ -1126,6 +1136,13 @@ func WithLivenessCheckPath(path string) Option {
 func WithCDN(cfg config.CDNConfiguration) Option {
 	return func(r *Router) {
 		r.cdnConfig = cfg
+	}
+}
+
+// WithNATS sets the configuration for the NATS client
+func WithNATS(cfg config.NATSConfiguration) Option {
+	return func(r *Router) {
+		r.natsConfig = cfg
 	}
 }
 

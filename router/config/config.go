@@ -196,6 +196,10 @@ type CDNConfiguration struct {
 	CacheSize BytesString `yaml:"cache_size" envconfig:"CDN_CACHE_SIZE" default:"100MB"`
 }
 
+type NATSConfiguration struct {
+	URL string `yaml:"url" validate:"omitempty,url" envconfig:"NATS_URL"`
+}
+
 type Config struct {
 	Version string `yaml:"version"`
 
@@ -226,6 +230,7 @@ type Config struct {
 	LocalhostFallbackInsideDocker bool                        `yaml:"localhost_fallback_inside_docker" default:"true" envconfig:"LOCALHOST_FALLBACK_INSIDE_DOCKER"`
 	CDN                           CDNConfiguration            `yaml:"cdn"`
 	DevelopmentMode               bool                        `yaml:"dev_mode" default:"false" envconfig:"DEV_MODE"`
+	NATS                          NATSConfiguration           `yaml:"nats"`
 
 	ConfigPath         string `envconfig:"CONFIG_PATH" validate:"omitempty,filepath"`
 	RouterConfigPath   string `yaml:"router_config_path" envconfig:"ROUTER_CONFIG_PATH" validate:"omitempty,filepath"`
