@@ -80,7 +80,7 @@ export class TraceRepository {
   }
 
   public async getRouterVersion(organizationID: string, startDate: string): Promise<string> {
-    const parsedDateRange = isoDateRangeToTimestamps({ start: startDate, end: startDate });
+    const parsedDateRange = isoDateRangeToTimestamps({ start: startDate, end: '' });
     const [start] = getDateRange(parsedDateRange);
 
     const queryWithTimeConstraint = `
