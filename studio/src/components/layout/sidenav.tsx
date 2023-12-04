@@ -23,7 +23,6 @@ import { LayoutProps } from "./layout";
 import { useUser } from "@/hooks/use-user";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { FiHelpCircle } from "react-icons/fi";
-import { Button } from "../ui/button";
 
 export type NavLink = {
   title: string;
@@ -111,7 +110,7 @@ const Organizations = () => {
 
 interface SideNavLayoutProps extends LayoutProps {
   links?: Partial<NavLink>[];
-  disableStarBanner?: string;
+  disableStarBanner?: "false" | "true";
 }
 
 export const SideNav = (props: SideNavLayoutProps) => {
@@ -125,8 +124,9 @@ export const SideNav = (props: SideNavLayoutProps) => {
         className={cn(
           "z-40 flex min-w-[210px] flex-shrink-0 flex-col bg-background pt-4 lg:px-3 lg:pb-4",
           {
-            "lg:h-[calc(100vh-32px)]": props.disableStarBanner !== "true",
-            "lg:h-screen": props.disableStarBanner === "true",
+            "lg:h-[calc(100vh-32px)]": props.disableStarBanner && props.disableStarBanner === "false",
+            "lg:h-screen":
+              !props.disableStarBanner || props.disableStarBanner === "true",
           },
         )}
       >
