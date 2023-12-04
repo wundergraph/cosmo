@@ -97,24 +97,7 @@ export class TraceRepository {
     const res = await this.client.queryPromise(queryWithTimeConstraint);
 
     if (Array.isArray(res)) {
-      if (res.length === 0) {
-        const query = `
-          SELECT  
-              SpanAttributes['wg.router.version'] as routerVersion
-          FROM ${this.client.database}.otel_traces
-          WHERE SpanAttributes['wg.router.version'] != '' AND SpanAttributes['wg.organization.id'] = '${organizationID}' 
-          ORDER BY Timestamp DESC
-          LIMIT 1 OFFSET 0
-          `;
-        const res = await this.client.queryPromise(query);
-
-        if (Array.isArray(res)) {
-          return res?.[0]?.routerVersion || '';
-        }
-        return res;
-      }
-
-      return res[0].routerVersion;
+      return res?.[0]?.routerVersion || '';
     }
 
     return res;
