@@ -330,5 +330,5 @@ export interface GraphCompositionDTO {
   createdBy?: string;
   compositionErrors?: string;
   isComposable: boolean;
-  isCurrentDeployed: boolean;
+  isLatestValid: boolean;
 }

@@ -8563,9 +8563,9 @@ export class GraphComposition extends Message<GraphComposition> {
   createdBy?: string;
 
   /**
-   * @generated from field: bool isCurrentDeployed = 7;
+   * @generated from field: bool isLatestValid = 7;
    */
-  isCurrentDeployed = false;
+  isLatestValid = false;
 
   constructor(data?: PartialMessage<GraphComposition>) {
     super();
@@ -8581,7 +8581,7 @@ export class GraphComposition extends Message<GraphComposition> {
     { no: 4, name: "isComposable", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 5, name: "compositionErrors", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 6, name: "createdBy", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 7, name: "isCurrentDeployed", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 7, name: "isLatestValid", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GraphComposition {

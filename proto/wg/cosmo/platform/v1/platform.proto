@@ -1089,7 +1089,7 @@ message GraphComposition {
   bool isComposable = 4;
   optional string compositionErrors = 5;
   optional string createdBy = 6;
-  bool isCurrentDeployed = 7;
+  bool isLatestValid = 7;
 }
 
 message GraphCompositionSubgraph {

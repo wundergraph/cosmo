@@ -89,7 +89,7 @@ export class GraphCompositionRepository {
       isComposable: composition.isComposable || false,
       compositionErrors: composition.compositionErrors || undefined,
       createdBy: composition.createdBy || undefined,
-      isCurrentDeployed,
+      isLatestValid: isCurrentDeployed,
     };
   }
 
@@ -163,7 +163,7 @@ export class GraphCompositionRepository {
         isComposable: r.isComposable || false,
         compositionErrors: r.compositionErrors || undefined,
         createdBy: r.createdBy || undefined,
-        isCurrentDeployed,
+        isLatestValid: isCurrentDeployed,
       });
     }
 
