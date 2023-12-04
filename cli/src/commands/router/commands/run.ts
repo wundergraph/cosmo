@@ -35,7 +35,8 @@ export default function (_: BaseCommandOptions) {
     const releases = await octokit.request('GET /repos/wundergraph/cosmo/releases', {
       headers,
     });
-    const suffix = '.tar.gz';
+    const tarSuffix = '.tar.gz';
+    const zipSuffix = '.zip';
     let routerRelease;
     for (const release of releases.data) {
       if (!release.tag_name || !release.tag_name.startsWith('router@')) {
@@ -49,11 +50,11 @@ export default function (_: BaseCommandOptions) {
       case 'darwin': {
         switch (process.arch) {
           case 'arm64': {
-            targetRouter = 'darwin-arm64' + suffix;
+            targetRouter = 'darwin-arm64' + tarSuffix;
             break;
           }
           case 'x64': {
-            targetRouter = 'darwin-amd64' + suffix;
+            targetRouter = 'darwin-amd64' + tarSuffix;
             break;
           }
           default: {
@@ -66,15 +67,15 @@ export default function (_: BaseCommandOptions) {
       case 'linux': {
         switch (process.arch) {
           case 'arm64': {
-            targetRouter = 'linux-arm64' + suffix;
+            targetRouter = 'linux-arm64' + tarSuffix;
             break;
           }
           case 'ia32': {
-            targetRouter = 'linux-386' + suffix;
+            targetRouter = 'linux-386' + tarSuffix;
             break;
           }
           case 'x64': {
-            targetRouter = 'linux-amd64' + suffix;
+            targetRouter = 'linux-amd64' + tarSuffix;
             break;
           }
           default: {
@@ -87,11 +88,11 @@ export default function (_: BaseCommandOptions) {
       case 'win32': {
         switch (process.arch) {
           case 'x64': {
-            targetRouter = 'windows-amd64' + suffix;
+            targetRouter = 'windows-amd64' + zipSuffix;
             break;
           }
           case 'ia32': {
-            targetRouter = 'windows-386' + suffix;
+            targetRouter = 'windows-386' + zipSuffix;
             break;
           }
           default: {
