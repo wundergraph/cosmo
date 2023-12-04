@@ -323,3 +323,13 @@ export interface UpdatedPersistedOperation {
   contents: string;
   operationNames: string[];
 }
+
+export interface GraphCompositionDTO {
+  id: string;
+  schemaVersionId: string;
+  createdAt: string;
+  createdBy?: string;
+  compositionErrors?: string;
+  isComposable: boolean;
+  isLatestValid: boolean;
+}
