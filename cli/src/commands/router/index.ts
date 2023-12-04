@@ -4,7 +4,7 @@ import { checkAPIKey } from '../../utils.js';
 import ComposeRouterConfig from './commands/compose.js';
 import FetchRouterConfig from './commands/fetch.js';
 import RouterTokenCommands from './commands/token/index.js';
-import DownloadRouterConfig from './commands/run.js';
+import DownloadRouterConfig from './commands/download.js';
 
 export default (opts: BaseCommandOptions) => {
   const cmd = new Command('router');

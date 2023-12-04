@@ -45,16 +45,16 @@ export default function (_: BaseCommandOptions) {
       routerRelease = release;
       break;
     }
-    let targetRouter = '';
+    let routerTarget = '';
     switch (process.platform) {
       case 'darwin': {
         switch (process.arch) {
           case 'arm64': {
-            targetRouter = 'darwin-arm64' + tarSuffix;
+            routerTarget = 'darwin-arm64' + tarSuffix;
             break;
           }
           case 'x64': {
-            targetRouter = 'darwin-amd64' + tarSuffix;
+            routerTarget = 'darwin-amd64' + tarSuffix;
             break;
           }
           default: {
@@ -67,15 +67,15 @@ export default function (_: BaseCommandOptions) {
       case 'linux': {
         switch (process.arch) {
           case 'arm64': {
-            targetRouter = 'linux-arm64' + tarSuffix;
+            routerTarget = 'linux-arm64' + tarSuffix;
             break;
           }
           case 'ia32': {
-            targetRouter = 'linux-386' + tarSuffix;
+            routerTarget = 'linux-386' + tarSuffix;
             break;
           }
           case 'x64': {
-            targetRouter = 'linux-amd64' + tarSuffix;
+            routerTarget = 'linux-amd64' + tarSuffix;
             break;
           }
           default: {
@@ -88,11 +88,11 @@ export default function (_: BaseCommandOptions) {
       case 'win32': {
         switch (process.arch) {
           case 'x64': {
-            targetRouter = 'windows-amd64' + zipSuffix;
+            routerTarget = 'windows-amd64' + zipSuffix;
             break;
           }
           case 'ia32': {
-            targetRouter = 'windows-386' + zipSuffix;
+            routerTarget = 'windows-386' + zipSuffix;
             break;
           }
           default: {
@@ -107,13 +107,13 @@ export default function (_: BaseCommandOptions) {
         process.exit(1);
       }
     }
-    if (!targetRouter) {
+    if (!routerTarget) {
       console.log(pc.red(`Unsupported platform architecture: ${process.platform}-${process.arch}`));
       process.exit(1);
     }
     let url;
     for (const asset of routerRelease.assets) {
-      if (!asset.name.endsWith(targetRouter)) {
+      if (!asset.name.endsWith(routerTarget)) {
         continue;
       }
       url = asset.browser_download_url;
@@ -129,6 +129,7 @@ export default function (_: BaseCommandOptions) {
       console.log(pc.red(`Response had no body`));
       process.exit(1);
     }
+    console.log(`Beginning download for ${routerTarget} from ${url}`);
     let loaded = 0;
     const total = Number.parseInt(contentLength, 10);
     const bar = new cliProgress.SingleBar({});
