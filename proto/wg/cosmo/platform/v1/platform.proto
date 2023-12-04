@@ -1121,7 +1121,6 @@ message GetCompositionDetailsResponse {
   GraphComposition composition = 2;
   repeated GraphCompositionSubgraph compositionSubgraphs = 3;
   ChangeCounts changeCounts = 4;
-  string routerVersion = 5;
 }
 
 message GetSdlBySchemaVersionRequest {

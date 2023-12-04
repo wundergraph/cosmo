@@ -78,28 +78,4 @@ export class TraceRepository {
       },
     }));
   }
-
-  public async getRouterVersion(organizationID: string, startDate: string): Promise<string> {
-    const parsedDateRange = isoDateRangeToTimestamps({ start: startDate, end: '' });
-    const [start] = getDateRange(parsedDateRange);
-
-    const queryWithTimeConstraint = `
-    WITH 
-      toDateTime('${start}') AS startDate
-    SELECT  
-        SpanAttributes['wg.router.version'] as routerVersion
-    FROM ${this.client.database}.otel_traces
-    WHERE Timestamp >= startDate AND SpanAttributes['wg.router.version'] != '' AND SpanAttributes['wg.organization.id'] = '${organizationID}' 
-    ORDER BY Timestamp ASC
-    LIMIT 1 OFFSET 0
-    `;
-
-    const res = await this.client.queryPromise(queryWithTimeConstraint);
-
-    if (Array.isArray(res)) {
-      return res?.[0]?.routerVersion || '';
-    }
-
-    return res;
-  }
 }
