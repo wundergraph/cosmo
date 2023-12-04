@@ -265,6 +265,10 @@ export function coerceFilterValues(
     const id = `${index}_${filter.field}`;
     const baseFilter = baseFilters[filter.field];
 
+    if (!baseFilter) {
+      continue;
+    }
+
     filterMapper[id] = {
       fieldName: column?.name || filter.field,
       filter,

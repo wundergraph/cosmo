@@ -41,7 +41,10 @@ export const AnalyticsSelectedFilters: React.FC<
   AnalyticsSelectedFiltersProps
 > = (props) => {
   const { filters, selectedFilters = [], onReset } = props;
-  const isFiltered = selectedFilters.length > 0;
+  const availableFilters = filters.map(({ id }) => id);
+  const isFiltered =
+    selectedFilters.filter(({ id }) => availableFilters.includes(id)).length >
+    0;
 
   if (!filters.length) {
     return null;
