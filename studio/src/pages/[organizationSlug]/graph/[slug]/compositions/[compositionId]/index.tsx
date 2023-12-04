@@ -118,7 +118,7 @@ const CompositionDetailsPage: NextPageWithLayout = () => {
     data;
   const {
     isComposable,
-    isCurrentDeployed,
+    isLatestValid,
     createdAt,
     createdBy,
     schemaVersionId,
@@ -149,8 +149,8 @@ const CompositionDetailsPage: NextPageWithLayout = () => {
           <dl className="flex w-full flex-row gap-y-2 space-x-4 px-4 py-4 text-sm lg:px-8">
             <div
               className={cn("flex-start flex flex-1 flex-col gap-1", {
-                "max-w-[300px]": isCurrentDeployed,
-                "max-w-[200px]": !isCurrentDeployed,
+                "max-w-[300px]": isLatestValid,
+                "max-w-[200px]": !isLatestValid,
               })}
             >
               <dt className="text-sm text-muted-foreground">Status</dt>
@@ -159,7 +159,7 @@ const CompositionDetailsPage: NextPageWithLayout = () => {
                   <Badge variant="outline" className="gap-2 py-1.5">
                     {getCheckIcon(isComposable)} <span>Composes</span>
                   </Badge>
-                  {isCurrentDeployed && (
+                  {isLatestValid && (
                     <Badge variant="outline" className="gap-2 py-1.5">
                       <div className="h-2 w-2 rounded-full bg-success" />
                       <span>Current</span>

@@ -146,7 +146,7 @@ const CompositionsPage: NextPageWithLayout = () => {
                 isComposable,
                 createdAt,
                 createdBy,
-                isCurrentDeployed,
+                isLatestValid,
               }) => {
                 const path = `${router.asPath.split("?")[0]}/${id}`;
                 return (
@@ -183,7 +183,7 @@ const CompositionsPage: NextPageWithLayout = () => {
                         <Badge variant="outline" className="gap-2 py-1.5">
                           {getCheckIcon(isComposable)} <span>Composes</span>
                         </Badge>
-                        {isCurrentDeployed && (
+                        {isLatestValid && (
                           <Badge variant="outline" className="gap-2 py-1.5">
                             <div className="h-2 w-2 rounded-full bg-success" />
                             <span>Current</span>
