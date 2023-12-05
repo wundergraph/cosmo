@@ -45,7 +45,9 @@ export default function (_: BaseCommandOptions) {
     if (!response.body) {
       program.error(pc.red(`Response had no body`));
     }
-    console.log(`Beginning download for ${routerTarget}\nSource: ${url}\nTarget directory: ${path}/`);
+    console.log(
+      `Beginning download for ${routerTarget} (${routerRelease.tag_name})\nSource: ${url}\nTarget directory: ${path}/`,
+    );
     let loaded = 0;
     const total = Number.parseInt(contentLength, 10);
     const bar = new cliProgress.SingleBar({});
