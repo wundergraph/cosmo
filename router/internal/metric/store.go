@@ -31,6 +31,7 @@ type Metrics struct {
 	applicationVersion string
 
 	meterProvider  *metric.MeterProvider
+	meter          otelmetric.Meter
 	counters       map[string]otelmetric.Int64Counter
 	valueRecorders map[string]otelmetric.Float64Histogram
 	upDownCounters map[string]otelmetric.Int64UpDownCounter
@@ -47,14 +48,53 @@ func NewMetrics(meterProvider *metric.MeterProvider, opts ...Option) (*Metrics, 
 		opt(h)
 	}
 
-	if err := h.createMeasures(); err != nil {
+	h.meter = h.meterProvider.Meter(cosmoRouterMeterName,
+		otelmetric.WithInstrumentationVersion(cosmoRouterMeterVersion),
+	)
+
+	if err := h.createSyncMeasures(); err != nil {
+		return nil, err
+	}
+
+	if err := h.createAsyncMeasures(); err != nil {
 		return nil, err
 	}
 
 	return h, nil
 }
 
-func (h *Metrics) createMeasures() error {
+func (h *Metrics) createAsyncMeasures() error {
+	uptime, err := h.meter.Float64ObservableCounter(
+		"uptime",
+		otelmetric.WithDescription("The duration since the application started."),
+		otelmetric.WithUnit("s"),
+	)
+	if err != nil {
+		return err
+	}
+
+	a := time.Now()
+
+	_, err = h.meter.RegisterCallback(
+		func(ctx context.Context, o otelmetric.Observer) error {
+
+			elapsed := time.Since(a)
+
+			fmt.Println("elapsedSeconds", elapsed.Seconds())
+
+			o.ObserveFloat64(uptime, elapsed.Seconds())
+			return nil
+		},
+		uptime,
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (h *Metrics) createSyncMeasures() error {
 	if h.meterProvider == nil {
 		return fmt.Errorf("meter provider is nil")
 	}
@@ -63,10 +103,7 @@ func (h *Metrics) createMeasures() error {
 	h.valueRecorders = make(map[string]otelmetric.Float64Histogram)
 	h.upDownCounters = make(map[string]otelmetric.Int64UpDownCounter)
 
-	routerMeter := h.meterProvider.Meter(cosmoRouterMeterName,
-		otelmetric.WithInstrumentationVersion(cosmoRouterMeterVersion),
-	)
-	requestCounter, err := routerMeter.Int64Counter(
+	requestCounter, err := h.meter.Int64Counter(
 		RequestCounter,
 		otelmetric.WithDescription("Total number of requests"),
 	)
@@ -75,7 +112,7 @@ func (h *Metrics) createMeasures() error {
 	}
 	h.counters[RequestCounter] = requestCounter
 
-	serverLatencyMeasure, err := routerMeter.Float64Histogram(
+	serverLatencyMeasure, err := h.meter.Float64Histogram(
 		ServerLatencyHistogram,
 		otelmetric.WithUnit("ms"),
 		otelmetric.WithDescription("Server latency in milliseconds"),
@@ -85,7 +122,7 @@ func (h *Metrics) createMeasures() error {
 	}
 	h.valueRecorders[ServerLatencyHistogram] = serverLatencyMeasure
 
-	requestContentLengthCounter, err := routerMeter.Int64Counter(
+	requestContentLengthCounter, err := h.meter.Int64Counter(
 		RequestContentLengthCounter,
 		otelmetric.WithDescription("Total number of request bytes"),
 		otelmetric.WithUnit("bytes"),
@@ -95,7 +132,7 @@ func (h *Metrics) createMeasures() error {
 	}
 	h.counters[RequestContentLengthCounter] = requestContentLengthCounter
 
-	responseContentLengthCounter, err := routerMeter.Int64Counter(
+	responseContentLengthCounter, err := h.meter.Int64Counter(
 		ResponseContentLengthCounter,
 		otelmetric.WithDescription("Total number of response bytes"),
 	)
@@ -105,7 +142,7 @@ func (h *Metrics) createMeasures() error {
 
 	h.counters[ResponseContentLengthCounter] = responseContentLengthCounter
 
-	inFlightRequestsGauge, err := routerMeter.Int64UpDownCounter(
+	inFlightRequestsGauge, err := h.meter.Int64UpDownCounter(
 		InFlightRequestsUpDownCounter,
 		otelmetric.WithDescription("Number of requests in flight"),
 	)

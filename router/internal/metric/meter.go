@@ -3,17 +3,14 @@ package metric
 import (
 	"context"
 	"fmt"
-	"github.com/prometheus/client_golang/prometheus/collectors"
 	"net/url"
 	"regexp"
 	"time"
 
-	prom "github.com/prometheus/client_golang/prometheus"
 	"github.com/wundergraph/cosmo/router/internal/otel/otelconfig"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
-	otelprom "go.opentelemetry.io/otel/exporters/prometheus"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -36,23 +33,119 @@ const (
 	defaultExportInterval = 15 * time.Second
 )
 
-func createPromExporter(excludeMetrics, excludeMetricLabels []*regexp.Regexp) (*otelprom.Exporter, *PromRegistry, error) {
-	excludeMetricLabels = append(excludeMetricLabels, defaultExcludedPromMetricLabels...)
-	registry, err := NewPromRegistry(prom.NewRegistry(), excludeMetrics, excludeMetricLabels)
-	if err != nil {
-		return nil, nil, err
-	}
-	registry.MustRegister(collectors.NewGoCollector())
-	registry.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
+func NewMeterProvider(ctx context.Context, log *zap.Logger, c *Config) (*sdkmetric.MeterProvider, *PromRegistry, error) {
+	var registry *PromRegistry
+	opts := baseMeterOptions(ctx, c)
 
-	prometheusExporter, err := otelprom.New(
-		otelprom.WithoutUnits(),
-		otelprom.WithRegisterer(registry),
+	if c.OpenTelemetry.Enabled {
+		e, err := buildExporters(c.OpenTelemetry.Exporters, log)
+		if err != nil {
+			return nil, nil, err
+		}
+		opts = append(opts, e...)
+	}
+
+	if c.Prometheus.Enabled {
+		promExp, promReg, err := createPromExporter(
+			c.Prometheus.ExcludeMetrics,
+			c.Prometheus.ExcludeMetricLabels,
+		)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		registry = promReg
+
+		opts = append(opts, sdkmetric.WithReader(promExp))
+	}
+
+	mp = sdkmetric.NewMeterProvider(opts...)
+	// Set the global MeterProvider to the SDK metric provider.
+	otel.SetMeterProvider(mp)
+
+	return mp, registry, nil
+}
+
+func baseMeterOptions(ctx context.Context, c *Config) []sdkmetric.Option {
+	r, err := resource.New(ctx,
+		resource.WithAttributes(semconv.ServiceNameKey.String(c.Name)),
+		resource.WithProcessPID(),
+		resource.WithTelemetrySDK(),
+		resource.WithHost(),
 	)
 	if err != nil {
-		return nil, nil, err
+		return nil
 	}
-	return prometheusExporter, registry, nil
+
+	opts := []sdkmetric.Option{
+		// Record information about this application in a Resource.
+		sdkmetric.WithResource(r),
+	}
+
+	// Please version this meter name if you change the buckets.
+
+	msBucketHistogram := sdkmetric.AggregationExplicitBucketHistogram{
+		// 0ms-10s
+		Boundaries: []float64{
+			0, 5, 7, 10, 15, 25, 50, 75, 100, 125, 150, 175, 200, 225,
+			250, 275, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000, 1250,
+			1500, 1750, 2000, 2250, 2500, 2750, 3000, 3500, 4000, 5000, 10000,
+		},
+	}
+	bytesBucketHistogram := sdkmetric.AggregationExplicitBucketHistogram{
+		// 0kb-20MB
+		Boundaries: []float64{
+			0, 50, 100, 300, 500, 1000, 3000, 5000, 10000, 15000,
+			30000, 50000, 70000, 90000, 150000, 300000, 600000,
+			800000, 1000000, 5000000, 10000000, 20000000,
+		},
+	}
+
+	opts = append(opts,
+		sdkmetric.WithView(sdkmetric.NewView(
+			sdkmetric.Instrument{
+				Unit:  unitMilliseconds,
+				Scope: instrumentation.Scope{Name: cosmoRouterMeterName},
+			},
+			sdkmetric.Stream{
+				Aggregation: msBucketHistogram,
+			},
+		)),
+		sdkmetric.WithView(sdkmetric.NewView(
+			sdkmetric.Instrument{
+				Unit:  unitBytes,
+				Scope: instrumentation.Scope{Name: cosmoRouterMeterName},
+			},
+			sdkmetric.Stream{
+				Aggregation: bytesBucketHistogram,
+			},
+		)))
+
+	return opts
+}
+
+func buildExporters(exporters []*OpenTelemetryExporter, logger *zap.Logger) ([]sdkmetric.Option, error) {
+
+	var opts []sdkmetric.Option
+
+	for _, exp := range exporters {
+		if exp.Disabled {
+			logger.Debug("Exporter disabled", zap.String("endpoint", exp.Endpoint))
+			continue
+		}
+
+		e, err := createOTELExporter(logger, exp)
+		if err != nil {
+			return nil, err
+		}
+
+		opts = append(opts, sdkmetric.WithReader(sdkmetric.NewPeriodicReader(e,
+			sdkmetric.WithTimeout(defaultExportTimeout),
+			sdkmetric.WithInterval(defaultExportInterval),
+		)))
+	}
+
+	return opts, nil
 }
 
 func createOTELExporter(log *zap.Logger, exp *OpenTelemetryExporter) (sdkmetric.Exporter, error) {
@@ -133,102 +226,4 @@ func createOTELExporter(log *zap.Logger, exp *OpenTelemetryExporter) (sdkmetric.
 	}
 	log.Info("Metrics enabled", zap.String("exporter", string(exp.Exporter)), zap.String("endpoint", exp.Endpoint), zap.String("path", exp.HTTPPath))
 	return exporter, nil
-}
-
-func NewMeterProvider(ctx context.Context, log *zap.Logger, c *Config) (*sdkmetric.MeterProvider, *PromRegistry, error) {
-	r, err := resource.New(ctx,
-		resource.WithAttributes(semconv.ServiceNameKey.String(c.Name)),
-		resource.WithProcessPID(),
-		resource.WithTelemetrySDK(),
-		resource.WithHost(),
-	)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	opts := []sdkmetric.Option{
-		// Record information about this application in a Resource.
-		sdkmetric.WithResource(r),
-	}
-
-	var registry *PromRegistry
-
-	if c.OpenTelemetry.Enabled {
-		for _, exp := range c.OpenTelemetry.Exporters {
-			if exp.Disabled {
-				continue
-			}
-
-			exporter, err := createOTELExporter(log, exp)
-			if err != nil {
-				log.Error("creating OTEL metrics exporter", zap.Error(err))
-				return nil, nil, err
-			}
-
-			// Please version this meter name if you change the buckets.
-
-			msBucketHistogram := sdkmetric.AggregationExplicitBucketHistogram{
-				// 0ms-10s
-				Boundaries: []float64{
-					0, 5, 7, 10, 15, 25, 50, 75, 100, 125, 150, 175, 200, 225,
-					250, 275, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000, 1250,
-					1500, 1750, 2000, 2250, 2500, 2750, 3000, 3500, 4000, 5000, 10000,
-				},
-			}
-			bytesBucketHistogram := sdkmetric.AggregationExplicitBucketHistogram{
-				// 0kb-20MB
-				Boundaries: []float64{
-					0, 50, 100, 300, 500, 1000, 3000, 5000, 10000, 15000,
-					30000, 50000, 70000, 90000, 150000, 300000, 600000,
-					800000, 1000000, 5000000, 10000000, 20000000,
-				},
-			}
-
-			opts = append(opts,
-				sdkmetric.WithView(sdkmetric.NewView(
-					sdkmetric.Instrument{
-						Unit:  unitMilliseconds,
-						Scope: instrumentation.Scope{Name: cosmoRouterMeterName},
-					},
-					sdkmetric.Stream{
-						Aggregation: msBucketHistogram,
-					},
-				)),
-				sdkmetric.WithView(sdkmetric.NewView(
-					sdkmetric.Instrument{
-						Unit:  unitBytes,
-						Scope: instrumentation.Scope{Name: cosmoRouterMeterName},
-					},
-					sdkmetric.Stream{
-						Aggregation: bytesBucketHistogram,
-					},
-				)),
-				sdkmetric.WithReader(
-					sdkmetric.NewPeriodicReader(exporter,
-						sdkmetric.WithTimeout(defaultExportTimeout),
-						sdkmetric.WithInterval(defaultExportInterval),
-					),
-				))
-		}
-	}
-
-	if c.Prometheus.Enabled {
-		promExp, promReg, err := createPromExporter(
-			c.Prometheus.ExcludeMetrics,
-			c.Prometheus.ExcludeMetricLabels,
-		)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		registry = promReg
-
-		opts = append(opts, sdkmetric.WithReader(promExp))
-	}
-
-	mp = sdkmetric.NewMeterProvider(opts...)
-	// Set the global MeterProvider to the SDK metric provider.
-	otel.SetMeterProvider(mp)
-
-	return mp, registry, nil
 }

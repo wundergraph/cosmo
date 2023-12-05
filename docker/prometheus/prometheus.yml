@@ -5,7 +5,7 @@ global:
 scrape_configs:
   # The job name is added as a label `job=<job_name>` to any timeseries scraped from this config.
   - job_name: "router"
-    scrape_interval: 2s
+    scrape_interval: 10s
 
     # metrics_path defaults to '/metrics'
     # scheme defaults to 'http'.
