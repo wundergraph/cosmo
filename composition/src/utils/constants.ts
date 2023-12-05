@@ -21,7 +21,7 @@ import {
   NAME,
   OBJECT_UPPER,
   OVERRIDE,
-  PROVIDES,
+  PROVIDES, PUBSUB,
   REQUIRES,
   RESOLVABLE,
   SCALAR_UPPER,
@@ -29,7 +29,7 @@ import {
   SCHEMA_UPPER,
   SHAREABLE,
   STRING_TYPE,
-  TAG,
+  TAG, TOPIC,
   UNION_UPPER,
 } from './string-constants';
 
@@ -126,6 +126,23 @@ export const BASE_DIRECTIVE_DEFINITIONS: DirectiveDefinitionNode[] = [
     kind: Kind.DIRECTIVE_DEFINITION,
     locations: [stringToNameNode(FIELD_DEFINITION_UPPER)],
     name: stringToNameNode(PROVIDES),
+    repeatable: false,
+  },
+  // directive @pubsub(topic: String!) on FIELD_DEFINITION
+  {
+    arguments: [
+      {
+        kind: Kind.INPUT_VALUE_DEFINITION,
+        name: stringToNameNode(TOPIC),
+        type: {
+          kind: Kind.NON_NULL_TYPE,
+          type: stringToNamedTypeNode(STRING_TYPE),
+        },
+      },
+    ],
+    kind: Kind.DIRECTIVE_DEFINITION,
+    locations: [stringToNameNode(FIELD_DEFINITION_UPPER)],
+    name: stringToNameNode(PUBSUB),
     repeatable: false,
   },
   // directive @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION

@@ -11,6 +11,7 @@ export type ConfigurationData = {
   provides?: RequiredFieldConfiguration[];
   keys?: RequiredFieldConfiguration[];
   requires?: RequiredFieldConfiguration[];
+  pubsubs?: RequiredFieldConfiguration[];
   typeName: string;
 };
 
