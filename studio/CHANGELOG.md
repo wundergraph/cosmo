@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.42.1](https://github.com/wundergraph/cosmo/compare/studio@0.42.0...studio@0.42.1) (2023-12-05)
+
+### Bug Fixes
+
+* star banner on big screens ([#338](https://github.com/wundergraph/cosmo/issues/338)) ([83ec414](https://github.com/wundergraph/cosmo/commit/83ec414cf4bbf8577286ccb318b04ca1b4e3dafb)) (@JivusAyrus)
+
 # [0.42.0](https://github.com/wundergraph/cosmo/compare/studio@0.41.1...studio@0.42.0) (2023-12-04)
 
 ### Bug Fixes
