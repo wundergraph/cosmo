@@ -83,17 +83,17 @@ function Node({
   const elapsedDurationPs = (span.timestamp - globalStartTime) * bigintE3;
   const spanDurationPs = span.duration * bigintE3;
   const visualOffsetPercentage = Number(
-    ((elapsedDurationPs / globalDuration) * bigintE2) / bigintE3
+    ((elapsedDurationPs / globalDuration) * bigintE2) / bigintE3,
   );
   const visualWidthPercentage = Number(
-    ((spanDurationPs / globalDuration) * bigintE2) / bigintE3
+    ((spanDurationPs / globalDuration) * bigintE2) / bigintE3,
   );
 
   const [isOpen, setIsOpen] = useState(
-    () => level <= initialCollapsedSpanDepth
+    () => level <= initialCollapsedSpanDepth,
   );
   const service = services.find(
-    (service) => service.name === mapServiceName(span.serviceName)
+    (service) => service.name === mapServiceName(span.serviceName),
   );
 
   const hasChildrenError = (span: SpanNode) => {
@@ -113,7 +113,7 @@ function Node({
     () =>
       span.statusCode === "STATUS_CODE_ERROR" ||
       !!span.attributes?.httpStatusCode.startsWith("4") ||
-      (!isOpen && hasChildrenError(span))
+      (!isOpen && hasChildrenError(span)),
   );
 
   const getDurationOffset = () => {
@@ -137,7 +137,7 @@ function Node({
         } else {
           setIsError(
             span.statusCode === "STATUS_CODE_ERROR" ||
-              !!span.attributes?.httpStatusCode.startsWith("4")
+              !!span.attributes?.httpStatusCode.startsWith("4"),
           );
         }
       }
@@ -157,7 +157,7 @@ function Node({
           "before:top-0 before:h-[18px]": isParentDetailsOpen,
           "before:!h-full": parentChildrenCount > 1,
           "pl-4": level > 1,
-        }
+        },
       )}
     >
       <li
@@ -181,7 +181,7 @@ function Node({
                 "mt-1.5 h-min w-min rounded-sm border border-input p-px",
                 {
                   "border-none": !hasChildren,
-                }
+                },
               )}
             >
               <>
@@ -225,7 +225,7 @@ function Node({
                         span.spanName,
                         span.attributes?.httpTarget || "",
                         span.attributes?.httpURL || "",
-                        span.attributes?.httpMethod || ""
+                        span.attributes?.httpMethod || "",
                       )}
                     </div>
                   </TooltipTrigger>
@@ -234,7 +234,7 @@ function Node({
                       span.spanName,
                       span.attributes?.httpTarget || "",
                       span.attributes?.httpURL || "",
-                      span.attributes?.httpMethod || ""
+                      span.attributes?.httpMethod || "",
                     )}
                   </TooltipContent>
                 </Tooltip>
@@ -306,7 +306,7 @@ function Node({
               )}
               {Object.entries(span.attributes ?? {})
                 .sort((a, b) =>
-                  a[0].toUpperCase().localeCompare(b[0].toUpperCase())
+                  a[0].toUpperCase().localeCompare(b[0].toUpperCase()),
                 )
                 .filter(([key, value], _) => !!value)
                 .map(([key, value]) => {
@@ -476,7 +476,7 @@ const Trace = ({ spans }: { spans: Span[] }) => {
               return (
                 <span key={service.name} className="flex items-center gap-x-2">
                   <div
-                    className={"h-4 w-4 bg-sky-300"}
+                    className={"h-4 w-4 rounded-sm bg-sky-300"}
                     style={{ backgroundColor: service.color }}
                   />
                   <span>{service.name}</span>
@@ -509,7 +509,7 @@ const Trace = ({ spans }: { spans: Span[] }) => {
                   style={verticalResizeStyle}
                   className={clsx(
                     mouseState.moving ? "bg-primary" : "bg-transparent",
-                    "absolute z-50 ml-[-9px] h-full w-[2px] cursor-col-resize border-l-2 border-transparent hover:bg-primary"
+                    "absolute z-50 ml-[-9px] h-full w-[2px] cursor-col-resize border-l-2 border-transparent hover:bg-primary",
                   )}
                 ></div>
               </div>

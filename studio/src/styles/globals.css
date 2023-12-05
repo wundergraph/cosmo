@@ -66,7 +66,7 @@
     --accent-foreground: var(--gray-950);
 
     --destructive: 358 75% 59%;
-    --destructive-foreground: 2 100% 79%;
+    --destructive-foreground: 2 100% 98%;
 
     --success: 142 71% 45%;
     --success-foreground: 210 40% 98%;
@@ -110,7 +110,7 @@
     --accent-foreground: var(--gray-50);
 
     --destructive: 358 75% 59%;
-    --destructive-foreground: 2 100% 79%;
+    --destructive-foreground: 2 100% 98%;
 
     --success: 131 41% 46%;
     --success-foreground: 120 61% 85%;

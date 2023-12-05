@@ -1,3 +1,4 @@
+import { useLocalStorage } from "@/hooks/use-local-storage";
 import { cn } from "@/lib/utils";
 
 export interface TitleLayoutProps {
@@ -17,8 +18,15 @@ export const TitleLayout = ({
   noPadding,
   children,
 }: TitleLayoutProps) => {
+  const [disableStarBanner] = useLocalStorage("disableStarBanner", "false");
+
   return (
-    <div className="flex h-screen flex-col">
+    <div
+      className={cn("flex flex-col", {
+        "h-[calc(100vh-32px)]": disableStarBanner === "false",
+        "h-screen": disableStarBanner !== "false",
+      })}
+    >
       <div className="bg-background">
         <div
           className={cn(
