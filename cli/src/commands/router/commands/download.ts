@@ -20,19 +20,12 @@ export default function (_: BaseCommandOptions) {
       console.log(pc.red(`${path}/router already exists`));
       return;
     }
-    if (!process.platform) {
-      program.error(pc.red(`Could not determine machine platform`));
-    }
-    if (!process.arch) {
-      program.error(pc.red(`Could not determine architecture for ${process.platform} platform`));
-    }
+    const routerTarget = getBinaryTarget();
     const octokit = new Octokit();
     const headers = process.env.GITHUB_TOKEN
       ? { authorization: `token ${process.env.GITHUB_TOKEN}` }
       : {};
-    const releases = await octokit.request('GET /repos/wundergraph/cosmo/releases', {
-      headers,
-    });
+    const releases = await octokit.request('GET /repos/wundergraph/cosmo/releases', { headers });
     let routerRelease;
     for (const release of releases.data) {
       if (!release.tag_name || !release.tag_name.startsWith('router@')) {
@@ -40,10 +33,6 @@ export default function (_: BaseCommandOptions) {
       }
       routerRelease = release;
       break;
-    }
-    const routerTarget = getBinaryTarget();
-    if (!routerTarget) {
-      program.error(pc.red(`Unsupported platform architecture: ${process.platform}-${process.arch}`));
     }
     let url;
     for (const asset of routerRelease.assets) {
