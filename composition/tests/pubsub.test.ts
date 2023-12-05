@@ -12,7 +12,7 @@ describe('Pubsub Configuration tests', () => {
         fieldNames: new Set<string>(['entitySubscription']),
         isRootNode: true,
         typeName: 'Subscription',
-        pubsubs: [{ fieldName: '', selectionSet: 'entities.{{ args.id }}' }],
+        pubsubs: [{ fieldName: 'entitySubscription', selectionSet: 'entities.{{ args.id }}' }],
       }],
       ['Entity', {
         fieldNames: new Set<string>(['id', 'name', 'age']),
@@ -33,7 +33,7 @@ describe('Pubsub Configuration tests', () => {
         fieldNames: new Set<string>(['entitySubscription']),
         isRootNode: true,
         typeName: 'Subscription',
-        pubsubs: [{ fieldName: '', selectionSet: 'entities.{{ args.id }}' }],
+        pubsubs: [{ fieldName: 'entitySubscription', selectionSet: 'entities.{{ args.id }}' }],
       }],
       ['Entity', {
         fieldNames: new Set<string>(['id', 'name', 'age']),

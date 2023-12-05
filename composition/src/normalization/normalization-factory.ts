@@ -60,7 +60,8 @@ import {
   objectLikeContainerToNode,
   ObjectLikeExtensionContainer,
   ParentContainer,
-  ParentMap, rootTypeToOperationTypeNode,
+  ParentMap,
+  rootTypeToOperationTypeNode,
   scalarContainerToNode,
   ScalarExtensionContainer,
   SchemaContainer,
@@ -146,13 +147,14 @@ import {
   OPERATION_TO_DEFAULT,
   OVERRIDE,
   PARENTS,
-  PROVIDES, PUBSUB,
+  PROVIDES,
+  PUBSUB,
   REQUIRES,
   RESOLVABLE,
   ROOT_TYPES,
   SCHEMA,
   SERVICE_FIELD,
-  SERVICE_OBJECT, SUBSCRIPTION,
+  SERVICE_OBJECT,
 } from '../utils/string-constants';
 import { buildASTSchema } from '../buildASTSchema/buildASTSchema';
 import { ConfigurationData, ConfigurationDataMap, RequiredFieldConfiguration } from '../subgraph/field-configuration';
@@ -1006,11 +1008,11 @@ export class NormalizationFactory {
           if (factory.isCurrentParentRootType && (name === SERVICE_FIELD || name === ENTITIES_FIELD)) {
             return false;
           }
+          factory.childName = name;
+          factory.lastChildNodeKind = node.kind;
           if (factory.isFieldParentSubscription()) {
             factory.extractPubSubDirective(node);
           }
-          factory.childName = name;
-          factory.lastChildNodeKind = node.kind;
           const fieldPath = `${factory.parentTypeName}.${name}`;
           factory.lastChildNodeKind = node.kind;
           const fieldNamedTypeName = getNamedTypeForChild(fieldPath, node.type);
