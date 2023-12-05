@@ -19,7 +19,7 @@ export default (opts: BaseCommandOptions) => {
   cmd.addCommand(DownloadRouterBinaryConfig(opts));
 
   cmd.hook('preAction', (thisCmd) => {
-    if (thisCmd.args[0] === 'compose' || thisCmd.args[0] === 'download-binary') {
+    if (['compose', 'download-binary'].includes(thisCmd.args[0])) {
       return;
     }
     checkAPIKey();
