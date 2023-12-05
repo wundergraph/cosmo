@@ -15,7 +15,7 @@ export default function (_: BaseCommandOptions) {
     const path = join(process.cwd(), options.out ?? './router');
     const fullPath = join(path, 'router');
     if (fs.existsSync(fullPath)) {
-     program.error(pc.red(`${fullPath} already exists`));
+      program.error(pc.red(`${fullPath} already exists`));
     }
     const routerTarget = getBinaryTarget();
     const octokit = new Octokit();
