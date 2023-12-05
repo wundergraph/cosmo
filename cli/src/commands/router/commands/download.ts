@@ -9,9 +9,7 @@ import { BaseCommandOptions } from '../../../core/types/types.js';
 
 export default function (_: BaseCommandOptions) {
   const command = new Command('download');
-  command.description(
-    'Downloads the latest router binary for the detected machine platform and architecture.',
-  );
+  command.description('Downloads the latest router binary for the detected machine platform and architecture.');
   command.option('-o, --out [string]', 'Destination directory for the downloaded router binary.');
   command.action(async (options) => {
     const path = join(process.cwd(), options.out ?? './router');
@@ -22,9 +20,7 @@ export default function (_: BaseCommandOptions) {
     }
     const routerTarget = getBinaryTarget();
     const octokit = new Octokit();
-    const headers = process.env.GITHUB_TOKEN
-      ? { authorization: `token ${process.env.GITHUB_TOKEN}` }
-      : {};
+    const headers = process.env.GITHUB_TOKEN ? { authorization: `token ${process.env.GITHUB_TOKEN}` } : {};
     const releases = await octokit.request('GET /repos/wundergraph/cosmo/releases', { headers });
     let routerRelease;
     for (const release of releases.data) {
@@ -125,12 +121,12 @@ function getBinaryTarget(): string {
 
 function readChunks(reader: ReadableStreamDefaultReader<Uint8Array>) {
   return {
-    async* [Symbol.asyncIterator]() {
+    async *[Symbol.asyncIterator]() {
       let readResult = await reader.read();
       while (!readResult.done) {
         yield readResult.value;
         readResult = await reader.read();
       }
-    }
-  }
+    },
+  };
 }
