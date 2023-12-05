@@ -1,0 +1,6 @@
+type Subscription {
+    employeeUpdated(employeeID: ID!): Employee! @pubsub(topic: "employeeUpdated.{{ args.employeeID }}")
+}
+type Employee @key(fields: "id") {
+  id: Int!
+}
