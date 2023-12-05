@@ -14,6 +14,7 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 
 | Repository | Name | Version |
 |------------|------|---------|
+|  | cdn | ^0 |
 |  | controlplane | ^0 |
 |  | graphqlmetrics | ^0 |
 |  | otelcollector | ^0 |

@@ -64,7 +64,15 @@ spec:
                   name: {{ include "graphqlmetrics.fullname" . }}
                   key: jwtSecret
             - name: LISTEN_ADDR
-              value: "0.0.0.0:4005"
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "graphqlmetrics.fullname" . }}-configmap
+                  key: listenAddr
+            - name: LOG_LEVEL
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "graphqlmetrics.fullname" . }}-configmap
+                  key: logLevel
           livenessProbe:
             httpGet:
               path: /health
