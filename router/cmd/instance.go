@@ -20,6 +20,10 @@ import (
 type Params struct {
 	Config *config.Config
 	Logger *zap.Logger
+
+	// HealthChecks is an optional handler that will be used for the health check endpoint.
+	// If you don't provide it, the router will offer a default handler.
+	HealthChecks core.HealthChecks
 }
 
 func NewRouter(params Params) (*core.Router, error) {
@@ -90,6 +94,7 @@ func NewRouter(params Params) (*core.Router, error) {
 		core.WithModulesConfig(cfg.Modules),
 		core.WithGracePeriod(cfg.GracePeriod),
 		core.WithHealthCheckPath(cfg.HealthCheckPath),
+		core.WithHealthChecks(params.HealthChecks),
 		core.WithLivenessCheckPath(cfg.LivenessCheckPath),
 		core.WithGraphQLMetrics(&core.GraphQLMetricsConfig{
 			Enabled:           cfg.GraphqlMetrics.Enabled,

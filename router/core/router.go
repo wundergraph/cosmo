@@ -94,6 +94,7 @@ type (
 		federatedGraphName       string
 		graphApiToken            string
 		healthCheckPath          string
+		healthChecks             HealthChecks
 		readinessCheckPath       string
 		livenessCheckPath        string
 		cdnConfig                config.CDNConfiguration
@@ -134,12 +135,26 @@ type (
 		rootContext       context.Context
 		rootContextCancel func()
 		routerConfig      *nodev1.RouterConfig
-		healthChecks      *health.Checks
+		healthChecks      HealthChecks
 	}
 
 	// Option defines the method to customize Server.
 	Option func(svr *Router)
 )
+
+// HealthChecks defines an interface that must be implemented by a health check coordinator to
+// determine if the router can currently accept traffic.
+type HealthChecks interface {
+	// Liveness returns a handler that returns 200 OK if the server is alive (running).
+	Liveness() http.HandlerFunc
+
+	// Readiness returns a handler that returns 200 OK if the server is ready to accept traffic
+	// and 503 Service Unavailable if the server is not ready to serve traffic.
+	Readiness() http.HandlerFunc
+
+	// SetReady should atomatically be set to true when the server is ready to accept traffic.
+	SetReady(isReady bool)
+}
 
 // NewRouter creates a new Router instance. Router.Start() must be called to start the server.
 // Alternatively, use Router.NewTestServer() to create a new Server instance without starting it for testing purposes.
@@ -691,9 +706,14 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	httpRouter.Use(requestLogger)
 	httpRouter.Use(cors.New(*r.corsOptions))
 
-	ro.healthChecks = health.New(&health.Options{
-		Logger: r.logger,
-	})
+	if r.healthChecks != nil {
+		ro.healthChecks = r.healthChecks
+	} else {
+		ro.healthChecks = health.New(&health.Options{
+			Logger: r.logger,
+		})
+	}
+
 	httpRouter.Get(r.healthCheckPath, ro.healthChecks.Liveness())
 	httpRouter.Get(r.livenessCheckPath, ro.healthChecks.Liveness())
 	httpRouter.Get(r.readinessCheckPath, ro.healthChecks.Readiness())
@@ -1107,6 +1127,12 @@ func WithStaticRouterConfig(cfg *nodev1.RouterConfig) Option {
 func WithHealthCheckPath(path string) Option {
 	return func(r *Router) {
 		r.healthCheckPath = path
+	}
+}
+
+func WithHealthChecks(healthChecks HealthChecks) Option {
+	return func(r *Router) {
+		r.healthChecks = healthChecks
 	}
 }
 
