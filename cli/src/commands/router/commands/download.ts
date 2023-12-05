@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import { Octokit } from 'octokit';
-import { Command } from 'commander';
+import { Command, program } from 'commander';
 import pc from 'picocolors';
 import cliProgress from 'cli-progress';
 import decompress from 'decompress';
@@ -18,15 +18,13 @@ export default function (_: BaseCommandOptions) {
     const fullPath = path + '/router';
     if (fs.existsSync(fullPath)) {
       console.log(pc.red(`${path}/router already exists`));
-      process.exit(0);
+      return;
     }
     if (!process.platform) {
-      console.log(pc.red(`Could not determine machine platform`));
-      process.exit(1);
+      program.error(pc.red(`Could not determine machine platform`));
     }
     if (!process.arch) {
-      console.log(pc.red(`Could not determine architecture for ${process.platform} platform`));
-      process.exit(1);
+      program.error(pc.red(`Could not determine architecture for ${process.platform} platform`));
     }
     const octokit = new Octokit();
     const headers = process.env.GITHUB_TOKEN
@@ -35,8 +33,6 @@ export default function (_: BaseCommandOptions) {
     const releases = await octokit.request('GET /repos/wundergraph/cosmo/releases', {
       headers,
     });
-    const tarSuffix = '.tar.gz';
-    const zipSuffix = '.zip';
     let routerRelease;
     for (const release of releases.data) {
       if (!release.tag_name || !release.tag_name.startsWith('router@')) {
@@ -45,71 +41,9 @@ export default function (_: BaseCommandOptions) {
       routerRelease = release;
       break;
     }
-    let routerTarget = '';
-    switch (process.platform) {
-      case 'darwin': {
-        switch (process.arch) {
-          case 'arm64': {
-            routerTarget = 'darwin-arm64' + tarSuffix;
-            break;
-          }
-          case 'x64': {
-            routerTarget = 'darwin-amd64' + tarSuffix;
-            break;
-          }
-          default: {
-            console.log(pc.red(`Unsupported MacOS architecture: ${process.arch}`));
-            process.exit(1);
-          }
-        }
-        break;
-      }
-      case 'linux': {
-        switch (process.arch) {
-          case 'arm64': {
-            routerTarget = 'linux-arm64' + tarSuffix;
-            break;
-          }
-          case 'ia32': {
-            routerTarget = 'linux-386' + tarSuffix;
-            break;
-          }
-          case 'x64': {
-            routerTarget = 'linux-amd64' + tarSuffix;
-            break;
-          }
-          default: {
-            console.log(pc.red(`Unsupported Linux architecture: ${process.arch}`));
-            process.exit(1);
-          }
-        }
-        break;
-      }
-      case 'win32': {
-        switch (process.arch) {
-          case 'x64': {
-            routerTarget = 'windows-amd64' + zipSuffix;
-            break;
-          }
-          case 'ia32': {
-            routerTarget = 'windows-386' + zipSuffix;
-            break;
-          }
-          default: {
-            console.log(pc.red(`Unsupported Windows architecture: ${process.arch}`));
-            process.exit(1);
-          }
-        }
-        break;
-      }
-      default: {
-        console.log(pc.red(`Unsupported platform: ${process.platform}`));
-        process.exit(1);
-      }
-    }
+    const routerTarget = getBinaryTarget();
     if (!routerTarget) {
-      console.log(pc.red(`Unsupported platform architecture: ${process.platform}-${process.arch}`));
-      process.exit(1);
+      program.error(pc.red(`Unsupported platform architecture: ${process.platform}-${process.arch}`));
     }
     let url;
     for (const asset of routerRelease.assets) {
@@ -122,36 +56,92 @@ export default function (_: BaseCommandOptions) {
     const response = await fetch(url);
     const contentLength = response.headers.get('content-length');
     if (!contentLength) {
-      console.log(pc.red(`Could not get content-length of file`));
-      process.exit(1);
+      program.error(pc.red(`Could not get content-length of file`));
     }
     if (!response.body) {
-      console.log(pc.red(`Response had no body`));
-      process.exit(1);
+      program.error(pc.red(`Response had no body`));
     }
     console.log(`Beginning download for ${routerTarget} from ${url}`);
     let loaded = 0;
     const total = Number.parseInt(contentLength, 10);
     const bar = new cliProgress.SingleBar({});
     bar.start(total, 0);
-    const res = new Response(new ReadableStream({
-      async start (controller) {
-        const reader = response.body!.getReader();
-        while (true) {
-          const { done, value } = await reader.read();
-          bar.update(loaded);
-          if (done) {
-            bar.stop();
-            break;
-          }
-          loaded += value.byteLength;
-          controller.enqueue(value)
-        }
-        controller.close();
-      }
-    }));
-    const bytes = Buffer.from(await res.blob().then(blob => blob.arrayBuffer()));
-    await decompress(bytes, path);
+    const reader = response.body.getReader();
+    const chunks: Uint8Array[] = [];
+    for await (const chunk of readChunks(reader)) {
+      loaded += chunk.byteLength;
+      bar.update(loaded);
+      chunks.push(chunk);
+    }
+    bar.stop();
+    await decompress(Buffer.from(await new Blob(chunks).arrayBuffer()), path);
   });
   return command;
+}
+
+function getBinaryTarget(): string {
+  const tarSuffix = '.tar.gz';
+  const zipSuffix = '.zip';
+  switch (process.platform) {
+    case 'darwin': {
+      switch (process.arch) {
+        case 'arm64': {
+          return 'darwin-arm64' + tarSuffix;
+        }
+        case 'x64': {
+          return 'darwin-amd64' + tarSuffix;
+        }
+        default: {
+          program.error(pc.red(`Unsupported MacOS architecture: ${process.arch}`));
+        }
+      }
+      break;
+    }
+    case 'linux': {
+      switch (process.arch) {
+        case 'arm64': {
+          return 'linux-arm64' + tarSuffix;
+        }
+        case 'ia32': {
+          return 'linux-386' + tarSuffix;
+        }
+        case 'x64': {
+          return 'linux-amd64' + tarSuffix;
+        }
+        default: {
+          program.error(pc.red(`Unsupported Linux architecture: ${process.arch}`));
+        }
+      }
+      break;
+    }
+    case 'win32': {
+      switch (process.arch) {
+        case 'x64': {
+          return 'windows-amd64' + zipSuffix;
+        }
+        case 'ia32': {
+          return 'windows-386' + zipSuffix;
+        }
+        default: {
+          program.error(pc.red(`Unsupported Windows architecture: ${process.arch}`));
+        }
+      }
+      break;
+    }
+    default: {
+      program.error(pc.red(`Unsupported platform: ${process.platform}`));
+    }
+  }
+}
+
+function readChunks(reader: ReadableStreamDefaultReader<Uint8Array>) {
+  return {
+    async* [Symbol.asyncIterator]() {
+      let readResult = await reader.read();
+      while (!readResult.done) {
+        yield readResult.value;
+        readResult = await reader.read();
+      }
+    }
+  }
 }
