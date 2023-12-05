@@ -12,6 +12,7 @@ export type DataSourceConfiguration = {
   rootNodes: TypeField[];
   childNodes: TypeField[];
   provides: RequiredField[];
+  pubsubs: RequiredField[];
   keys: RequiredField[];
   requires: RequiredField[];
 };
@@ -41,6 +42,7 @@ export function configurationDataMapToDataSourceConfiguration(dataMap: Configura
     childNodes: [],
     keys: [],
     provides: [],
+    pubsubs: [],
     requires: [],
   };
   for (const data of dataMap.values()) {
@@ -54,6 +56,7 @@ export function configurationDataMapToDataSourceConfiguration(dataMap: Configura
     }
     addRequiredFields(data.keys, output.keys, typeName);
     addRequiredFields(data.provides, output.provides, typeName);
+    addRequiredFields(data.pubsubs, output.pubsubs, typeName);
     addRequiredFields(data.requires, output.requires, typeName);
   }
   return output;

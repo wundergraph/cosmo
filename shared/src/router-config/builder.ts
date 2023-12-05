@@ -94,7 +94,7 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
       engineConfig,
       printSchemaWithDirectives(lexicographicSortSchema(subgraph.schema)),
     );
-    const { childNodes, rootNodes, keys, provides, requires } = configurationDataMapToDataSourceConfiguration(
+    const { childNodes, rootNodes, keys, provides, pubsubs, requires } = configurationDataMapToDataSourceConfiguration(
       subgraph.configurationDataMap,
     );
     const subscriptionProtocol = parseGraphQLSubscriptionProtocol(subgraph.subscriptionProtocol);
@@ -105,6 +105,7 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
       rootNodes,
       keys,
       provides,
+      pubsubs,
       requires,
       kind: DataSourceKind.GRAPHQL,
       customGraphql: {

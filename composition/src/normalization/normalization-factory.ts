@@ -61,6 +61,7 @@ import {
   ObjectLikeExtensionContainer,
   ParentContainer,
   ParentMap,
+  rootTypeToOperationTypeNode,
   scalarContainerToNode,
   ScalarExtensionContainer,
   SchemaContainer,
@@ -147,6 +148,7 @@ import {
   OVERRIDE,
   PARENTS,
   PROVIDES,
+  PUBSUB,
   REQUIRES,
   RESOLVABLE,
   ROOT_TYPES,
@@ -155,7 +157,7 @@ import {
   SERVICE_OBJECT,
 } from '../utils/string-constants';
 import { buildASTSchema } from '../buildASTSchema/buildASTSchema';
-import { ConfigurationData, ConfigurationDataMap } from '../subgraph/field-configuration';
+import { ConfigurationData, ConfigurationDataMap, RequiredFieldConfiguration } from '../subgraph/field-configuration';
 import { printTypeNode } from '@graphql-tools/merge';
 import { inputValueDefinitionNodeToMutable, MutableInputValueDefinitionNode } from '../ast/ast';
 import { InternalSubgraph, recordSubgraphName, Subgraph } from '../subgraph/subgraph';
@@ -206,6 +208,7 @@ export class NormalizationFactory {
   entities = new Set<string>();
   extensions: ExtensionMap = new Map<string, ExtensionContainer>();
   isCurrentParentExtension = false;
+  isCurrentParentRootType = false;
   isSubgraphVersionTwo = false;
   fieldSetsByParent = new Map<string, FieldSetContainer>();
   handledRepeatedDirectivesByHostPath = new Map<string, Set<string>>();
@@ -216,6 +219,7 @@ export class NormalizationFactory {
   parents: ParentMap = new Map<string, ParentContainer>();
   parentTypeName = '';
   parentsWithChildArguments = new Set<string>();
+  pubsubConfigurations = new Map<string, RequiredFieldConfiguration[]>();
   overridesByTargetSubgraphName = new Map<string, Map<string, Set<string>>>();
   schemaDefinition: SchemaContainer;
   referencedDirectives = new Set<string>();
@@ -597,6 +601,17 @@ export class NormalizationFactory {
     }
   }
 
+  isFieldParentSubscription(): boolean {
+    if (!this.isCurrentParentRootType) {
+      return false;
+    }
+    const operationTypeNode = this.operationTypeNames.get(this.parentTypeName);
+    if (!operationTypeNode || operationTypeNode !== OperationTypeNode.SUBSCRIPTION) {
+      return false;
+    }
+    return true;
+  }
+
   extractKeyFieldSets(node: ObjectTypeDefinitionNode | ObjectTypeExtensionNode, rawFieldSets: Set<string>) {
     const parentTypeName = node.name.value;
     if (!node.directives?.length) {
@@ -796,14 +811,36 @@ export class NormalizationFactory {
     overriddenFieldNamesForParent.add(this.childName);
   }
 
+  extractPubSubDirective(node: FieldDefinitionNode) {
+    if (!node.directives) {
+      return;
+    }
+    for (const directive of node.directives) {
+      if (directive.name.value !== PUBSUB) {
+        continue;
+      }
+      if (!directive.arguments || directive.arguments.length !== 1) {
+        return;
+      }
+      if (directive.arguments[0].value.kind !== Kind.STRING) {
+        return;
+      }
+      const configuration = getValueOrDefault(this.pubsubConfigurations, this.parentTypeName, () => []);
+      configuration.push({
+        fieldName: this.childName, selectionSet: directive.arguments[0].value.value,
+      });
+      return;
+    }
+  }
+
   normalize(document: DocumentNode) {
     const factory = this;
     /* factory.allDirectiveDefinitions is initialized with v1 directive definitions, and v2 definitions are only added
     after the visitor has visited the entire schema and the subgraph is known to be a V2 graph. Consequently,
     allDirectiveDefinitions cannot be used to check for duplicate definitions, and another set (below) is required */
     const definedDirectives = new Set<string>();
-    let isCurrentParentRootType: boolean = false;
     let fieldName = '';
+    const handledRootTypes = new Set<string>();
     // Collect any renamed root types
     visit(document, {
       OperationTypeDefinition: {
@@ -824,6 +861,7 @@ export class NormalizationFactory {
           if (existingOperationType) {
             factory.errors.push(invalidOperationTypeDefinitionError(existingOperationType, newTypeName, operationType));
           } else {
+            handledRootTypes.add(operationType);
             factory.operationTypeNames.set(newTypeName, operationType);
             factory.schemaDefinition.operationTypes.set(operationType, node);
           }
@@ -842,6 +880,11 @@ export class NormalizationFactory {
         },
       },
     });
+    for (const rootType of ROOT_TYPES) {
+      if (!this.operationTypeNames.has(rootType)) {
+        this.operationTypeNames.set(rootType, rootTypeToOperationTypeNode(rootType));
+      }
+    }
     visit(document, {
       DirectiveDefinition: {
         enter(node) {
@@ -962,11 +1005,14 @@ export class NormalizationFactory {
       FieldDefinition: {
         enter(node) {
           const name = node.name.value;
-          if (isCurrentParentRootType && (name === SERVICE_FIELD || name === ENTITIES_FIELD)) {
+          if (factory.isCurrentParentRootType && (name === SERVICE_FIELD || name === ENTITIES_FIELD)) {
             return false;
           }
           factory.childName = name;
           factory.lastChildNodeKind = node.kind;
+          if (factory.isFieldParentSubscription()) {
+            factory.extractPubSubDirective(node);
+          }
           const fieldPath = `${factory.parentTypeName}.${name}`;
           factory.lastChildNodeKind = node.kind;
           const fieldNamedTypeName = getNamedTypeForChild(fieldPath, node.type);
@@ -1165,7 +1211,7 @@ export class NormalizationFactory {
           if (name === SERVICE_OBJECT) {
             return false;
           }
-          isCurrentParentRootType = ROOT_TYPES.has(name) || factory.operationTypeNames.has(name);
+          factory.isCurrentParentRootType = ROOT_TYPES.has(name) || factory.operationTypeNames.has(name);
           factory.parentTypeName = name;
           factory.lastParentNodeKind = node.kind;
           addConcreteTypesForImplementedInterfaces(node, factory.abstractToConcreteTypeNames);
@@ -1195,7 +1241,7 @@ export class NormalizationFactory {
           factory.extractKeyFieldSets(node, fieldSets.keys);
         },
         leave() {
-          isCurrentParentRootType = false;
+          factory.isCurrentParentRootType = false;
           factory.isCurrentParentExtension = false;
           factory.parentTypeName = '';
           factory.lastParentNodeKind = Kind.NULL;
@@ -1207,14 +1253,14 @@ export class NormalizationFactory {
           if (name === SERVICE_OBJECT) {
             return false;
           }
-          isCurrentParentRootType = ROOT_TYPES.has(name) || factory.operationTypeNames.has(name);
+          factory.isCurrentParentRootType = ROOT_TYPES.has(name) || factory.operationTypeNames.has(name);
           factory.parentTypeName = name;
           factory.lastParentNodeKind = node.kind;
           addConcreteTypesForImplementedInterfaces(node, factory.abstractToConcreteTypeNames);
           return factory.handleObjectLikeExtension(node);
         },
         leave() {
-          isCurrentParentRootType = false;
+          factory.isCurrentParentRootType = false;
           factory.isCurrentParentExtension = false;
           factory.parentTypeName = '';
           factory.lastParentNodeKind = Kind.NULL;
@@ -1466,9 +1512,18 @@ export class NormalizationFactory {
         // intentional fallthrough
         case Kind.OBJECT_TYPE_DEFINITION:
           const isEntity = this.entities.has(parentTypeName);
+          const configurationData: ConfigurationData = {
+            fieldNames: new Set<string>(),
+            isRootNode: isEntity,
+            typeName: parentTypeName,
+          };
           if (this.operationTypeNames.has(parentTypeName)) {
             parentContainer.fields.delete(SERVICE_FIELD);
             parentContainer.fields.delete(ENTITIES_FIELD);
+            const pubsubs = this.pubsubConfigurations.get(parentTypeName);
+            if (pubsubs) {
+              configurationData.pubsubs = pubsubs;
+            }
           }
           if (this.parentsWithChildArguments.has(parentTypeName)) {
             if (parentContainer.kind !== Kind.OBJECT_TYPE_DEFINITION
@@ -1480,11 +1535,6 @@ export class NormalizationFactory {
               this.validateArguments(fieldContainer, `${parentTypeName}.${fieldName}`);
             }
           }
-          const configurationData: ConfigurationData = {
-            fieldNames: new Set<string>(),
-            isRootNode: isEntity,
-            typeName: parentTypeName,
-          };
           this.configurationDataMap.set(parentTypeName, configurationData);
           addNonExternalFieldsToSet(parentContainer.fields, configurationData.fieldNames);
           this.validateInterfaceImplementations(parentContainer);

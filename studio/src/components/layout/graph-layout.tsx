@@ -1,30 +1,29 @@
+import { cn } from "@/lib/utils";
 import {
   ChartBarIcon,
   ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
 import {
+  CheckCircledIcon,
   Component2Icon,
+  FileTextIcon,
   HomeIcon,
   PlayIcon,
-  FileTextIcon,
-  CheckCircledIcon,
 } from "@radix-ui/react-icons";
 import { useQuery } from "@tanstack/react-query";
-import { useRouter } from "next/router";
+import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   getFederatedGraphByName,
   getFederatedGraphs,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { GetFederatedGraphByNameResponse } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { Fragment, ReactNode, createContext, useContext, useMemo } from "react";
-import { PiGitBranch, PiDevices } from "react-icons/pi";
+import { useRouter } from "next/router";
+import { Fragment, ReactNode, createContext, useMemo } from "react";
+import { MdDevices } from "react-icons/md";
+import { PiDevices, PiGitBranch } from "react-icons/pi";
 import { EmptyState } from "../empty-state";
 import { Button } from "../ui/button";
 import { Loader } from "../ui/loader";
-import { LayoutProps } from "./layout";
-import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
-import { SideNav, NavLink } from "./sidenav";
-import { PageHeader } from "./head";
 import {
   Select,
   SelectContent,
@@ -32,7 +31,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
-import { cn } from "@/lib/utils";
+import { PageHeader } from "./head";
+import { LayoutProps } from "./layout";
+import { NavLink, SideNav } from "./sidenav";
+
+const icons: { [key: string]: ReactNode } = {
+  Overview: <HomeIcon />,
+  Subgraphs: <Component2Icon />,
+  Explorer: <PlayIcon />,
+  Schema: <FileTextIcon />,
+  Compositions: <FileTextIcon />,
+  Changelog: <PiGitBranch />,
+  Checks: <CheckCircledIcon />,
+  Analytics: <ChartBarIcon className="h-4 w-4" />,
+  Clients: <MdDevices className="h-4 w-4" />,
+};
 
 export interface GraphContextProps {
   graph: GetFederatedGraphByNameResponse["graph"];
@@ -92,6 +105,11 @@ export const GraphLayout = ({ children }: LayoutProps) => {
         href: basePath + "/schema",
         matchExact: false,
         icon: <FileTextIcon className="h-4 w-4" />,
+      },
+      {
+        title: "Compositions",
+        href: basePath + "/compositions",
+        icon: <FileTextIcon />,
       },
       {
         title: "Clients",
@@ -238,7 +256,7 @@ export const GraphPageLayout = ({
       <div className="bg-background">
         <div
           className={cn(
-            "flex flex-col justify-between gap-y-4 px-4 pb-2 pt-4 lg:flex-row lg:items-center lg:px-8",
+            "flex flex-col justify-between gap-y-4 px-4 pb-2 pt-4 lg:flex-row lg:items-center lg:px-6 xl:px-8",
             {
               "border-b": !toolbar,
               "pb-4": !toolbar,

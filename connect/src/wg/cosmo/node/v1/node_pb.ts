@@ -711,6 +711,11 @@ export class DataSourceConfiguration extends Message<DataSourceConfiguration> {
    */
   requires: RequiredField[] = [];
 
+  /**
+   * @generated from field: repeated wg.cosmo.node.v1.RequiredField pubsubs = 13;
+   */
+  pubsubs: RequiredField[] = [];
+
   constructor(data?: PartialMessage<DataSourceConfiguration>) {
     super();
     proto3.util.initPartial(data, this);
@@ -731,6 +736,7 @@ export class DataSourceConfiguration extends Message<DataSourceConfiguration> {
     { no: 10, name: "keys", kind: "message", T: RequiredField, repeated: true },
     { no: 11, name: "provides", kind: "message", T: RequiredField, repeated: true },
     { no: 12, name: "requires", kind: "message", T: RequiredField, repeated: true },
+    { no: 13, name: "pubsubs", kind: "message", T: RequiredField, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DataSourceConfiguration {

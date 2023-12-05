@@ -39,12 +39,13 @@ import {
   INLINE_FRAGMENT_UPPER,
   INPUT_FIELD_DEFINITION_UPPER,
   INPUT_OBJECT_UPPER,
-  INTERFACE_UPPER,
+  INTERFACE_UPPER, MUTATION,
   MUTATION_UPPER,
-  OBJECT_UPPER,
+  OBJECT_UPPER, QUERY,
   QUERY_UPPER,
   SCALAR_UPPER,
   SCHEMA_UPPER,
+  SUBSCRIPTION,
   SUBSCRIPTION_UPPER,
   UNION_UPPER,
   VARIABLE_DEFINITION_UPPER,
@@ -1021,5 +1022,16 @@ export function validateDirectivesWithFieldSet(
   );
   if (requires) {
     configurationData.requires = requires;
+  }
+}
+
+export function rootTypeToOperationTypeNode(rootType: string): OperationTypeNode {
+  switch (rootType) {
+    case MUTATION:
+      return OperationTypeNode.MUTATION;
+    case QUERY:
+      return OperationTypeNode.QUERY;
+    default:
+      return OperationTypeNode.SUBSCRIPTION;
   }
 }

@@ -90,6 +90,7 @@ message DataSourceConfiguration {
   repeated RequiredField keys = 10;
   repeated RequiredField provides = 11;
   repeated RequiredField requires = 12;
+  repeated RequiredField pubsubs = 13;
 }
 
 message FieldConfiguration {

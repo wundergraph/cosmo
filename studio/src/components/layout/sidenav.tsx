@@ -23,7 +23,6 @@ import { LayoutProps } from "./layout";
 import { useUser } from "@/hooks/use-user";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { FiHelpCircle } from "react-icons/fi";
-import { Button } from "../ui/button";
 
 export type NavLink = {
   title: string;
@@ -111,6 +110,7 @@ const Organizations = () => {
 
 interface SideNavLayoutProps extends LayoutProps {
   links?: Partial<NavLink>[];
+  disableStarBanner?: "false" | "true";
 }
 
 export const SideNav = (props: SideNavLayoutProps) => {
@@ -120,7 +120,16 @@ export const SideNav = (props: SideNavLayoutProps) => {
 
   return (
     <div className="lg:grid lg:grid-cols-[auto_1fr] lg:divide-x">
-      <aside className="z-40 flex min-w-[210px] flex-shrink-0 flex-col bg-background pt-4 lg:h-screen lg:px-3 lg:pb-4">
+      <aside
+        className={cn(
+          "z-40 flex min-w-[210px] flex-shrink-0 flex-col bg-background pt-4 lg:px-3 lg:pb-4",
+          {
+            "lg:h-[calc(100vh-32px)]": props.disableStarBanner && props.disableStarBanner === "false",
+            "lg:h-screen":
+              !props.disableStarBanner || props.disableStarBanner === "true",
+          },
+        )}
+      >
         <div className="flex min-h-0 flex-1 flex-col gap-y-4 px-4 lg:gap-y-6 lg:px-0">
           <div className="flex items-center justify-between gap-x-4">
             <div className="flex w-full items-center space-x-2">
