@@ -8,15 +8,14 @@ import { join } from 'pathe';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 
 export default function (_: BaseCommandOptions) {
-  const command = new Command('download');
+  const command = new Command('download-binary');
   command.description('Downloads the latest router binary for the detected machine platform and architecture.');
   command.option('-o, --out [string]', 'Destination directory for the downloaded router binary.');
   command.action(async (options) => {
     const path = join(process.cwd(), options.out ?? './router');
-    const fullPath = path + '/router';
+    const fullPath = join(path, 'router');
     if (fs.existsSync(fullPath)) {
-      console.log(pc.red(`${path}/router already exists`));
-      return;
+     program.error(pc.red(`${fullPath} already exists`));
     }
     const routerTarget = getBinaryTarget();
     const octokit = new Octokit();
@@ -46,7 +45,7 @@ export default function (_: BaseCommandOptions) {
     if (!response.body) {
       program.error(pc.red(`Response had no body`));
     }
-    console.log(`Beginning download for ${routerTarget} from ${url}`);
+    console.log(`Beginning download for ${routerTarget}\nSource: ${url}\nTarget directory: ${path}/`);
     let loaded = 0;
     const total = Number.parseInt(contentLength, 10);
     const bar = new cliProgress.SingleBar({});

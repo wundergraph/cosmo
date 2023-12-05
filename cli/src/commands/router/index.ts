@@ -4,7 +4,7 @@ import { checkAPIKey } from '../../utils.js';
 import ComposeRouterConfig from './commands/compose.js';
 import FetchRouterConfig from './commands/fetch.js';
 import RouterTokenCommands from './commands/token/index.js';
-import DownloadRouterConfig from './commands/download.js';
+import DownloadRouterBinaryConfig from './commands/download-binary.js';
 
 export default (opts: BaseCommandOptions) => {
   const cmd = new Command('router');
@@ -16,7 +16,7 @@ export default (opts: BaseCommandOptions) => {
       client: opts.client,
     }),
   );
-  cmd.addCommand(DownloadRouterConfig(opts));
+  cmd.addCommand(DownloadRouterBinaryConfig(opts));
 
   cmd.hook('preAction', (thisCmd) => {
     if (thisCmd.args[0] === 'compose') {
