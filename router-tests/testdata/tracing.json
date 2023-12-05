@@ -1819,7 +1819,8 @@
                                 ]
                               },
                               "parent_type_names": [
-                                "Flying"
+                                "Flying",
+                                "Gaming"
                               ],
                               "named_type": "Float",
                               "data_source_ids": [
@@ -1835,7 +1836,9 @@
                                 ]
                               },
                               "parent_type_names": [
-                                "Gaming"
+                                "Gaming",
+                                "Other",
+                                "Travelling"
                               ],
                               "named_type": "String",
                               "data_source_ids": [
@@ -1864,23 +1867,7 @@
                                 "2"
                               ]
                             },
-                            {
-                              "name": "yearsOfExperience",
-                              "value": {
-                                "node_type": "float",
-                                "path": [
-                                  "yearsOfExperience"
-                                ]
-                              },
-                              "parent_type_names": [
-                                "Gaming"
-                              ],
-                              "named_type": "Float",
-                              "data_source_ids": [
-                                "2"
-                              ]
-                            },
-                            {
+                             {
                               "name": "languages",
                               "value": {
                                 "node_type": "array",
@@ -1920,22 +1907,6 @@
                                 "Travelling"
                               ],
                               "named_type": "Country",
-                              "data_source_ids": [
-                                "2"
-                              ]
-                            },
-                            {
-                              "name": "name",
-                              "value": {
-                                "node_type": "string",
-                                "path": [
-                                  "name"
-                                ]
-                              },
-                              "parent_type_names": [
-                                "Other"
-                              ],
-                              "named_type": "String",
                               "data_source_ids": [
                                 "2"
                               ]
