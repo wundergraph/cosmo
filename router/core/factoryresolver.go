@@ -7,7 +7,9 @@ import (
 	"time"
 
 	"github.com/jensneuse/abstractlogger"
+	"github.com/nats-io/nats.go"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/staticdatasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"go.uber.org/zap"
@@ -15,6 +17,7 @@ import (
 	"github.com/wundergraph/cosmo/router/config"
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/cosmo/router/internal/pubsub"
 )
 
 type Loader struct {
@@ -38,11 +41,12 @@ type DefaultFactoryResolver struct {
 	transportFactory ApiTransportFactory
 	graphql          *graphql_datasource.Factory
 	static           *staticdatasource.Factory
+	pubsub           *pubsub_datasource.Factory
 	log              *zap.Logger
 }
 
 func NewDefaultFactoryResolver(transportFactory ApiTransportFactory, baseTransport *http.Transport,
-	log *zap.Logger) *DefaultFactoryResolver {
+	natsConnection *nats.Conn, log *zap.Logger) *DefaultFactoryResolver {
 
 	defaultHttpClient := &http.Client{
 		Timeout:   transportFactory.DefaultTransportTimeout(),
@@ -66,6 +70,9 @@ func NewDefaultFactoryResolver(transportFactory ApiTransportFactory, baseTranspo
 			StreamingClient: streamingClient,
 			Logger:          factoryLogger,
 		},
+		pubsub: &pubsub_datasource.Factory{
+			Connector: pubsub.NewNATSConnector(natsConnection),
+		},
 		log: log,
 	}
 }
@@ -81,6 +88,8 @@ func (d *DefaultFactoryResolver) Resolve(ds *nodev1.DataSourceConfiguration) (pl
 		return factory, nil
 	case nodev1.DataSourceKind_STATIC:
 		return d.static, nil
+	case nodev1.DataSourceKind_PUBSUB:
+		return d.pubsub, nil
 	default:
 		return nil, fmt.Errorf("invalid datasource kind %q", ds.Kind)
 	}
@@ -105,6 +114,7 @@ func (l *Loader) LoadInternedString(engineConfig *nodev1.EngineConfiguration, st
 type RouterEngineConfiguration struct {
 	Execution config.EngineExecutionConfiguration
 	Headers   config.HeaderRules
+	NATS      config.NATSConfiguration
 }
 
 func (l *Loader) Load(routerConfig *nodev1.RouterConfig, routerEngineConfig *RouterEngineConfiguration) (*plan.Configuration, error) {
@@ -233,8 +243,12 @@ func (l *Loader) Load(routerConfig *nodev1.RouterConfig, routerEngineConfig *Rou
 				UpstreamSchema:         graphqlSchema,
 				CustomScalarTypeFields: customScalarTypeFields,
 			})
+		case nodev1.DataSourceKind_PUBSUB:
+			// out.Custom = pubsub_datasource.ConfigJson(pubsub_datasource.Configuration{
+			// 	URL: routerEngineConfig.NATS.URL,
+			// })
 		default:
-			continue
+			return nil, fmt.Errorf("unknown data source type %q", in.Kind)
 		}
 		for _, node := range in.RootNodes {
 			out.RootNodes = append(out.RootNodes, plan.TypeField{

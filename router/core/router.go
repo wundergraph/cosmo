@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/nats-io/nats.go"
 	"github.com/wundergraph/cosmo/router/internal/controlplane/configpoller"
 	"github.com/wundergraph/cosmo/router/internal/controlplane/selfregister"
 
@@ -329,10 +328,6 @@ func NewRouter(opts ...Option) (*Router, error) {
 
 	if r.natsConfig.URL != "" {
 		r.logger.Info("NATS enabled", zap.String("url", r.natsConfig.URL))
-		_, err := nats.Connect(r.natsConfig.URL)
-		if err != nil {
-			return nil, fmt.Errorf("could not connect to NATS: %w", err)
-		}
 	}
 
 	return r, nil
@@ -754,6 +749,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	routerEngineConfig := &RouterEngineConfiguration{
 		Execution: r.engineExecutionConfiguration,
 		Headers:   r.headerRules,
+		NATS:      r.natsConfig,
 	}
 
 	if r.developmentMode && r.engineExecutionConfiguration.EnableRequestTracing && r.graphApiToken == "" {

@@ -122,6 +122,7 @@ message TypeConfiguration {
 enum DataSourceKind {
   STATIC = 0;
   GRAPHQL = 1;
+  PUBSUB = 2;
 }
 
 message TypeField {

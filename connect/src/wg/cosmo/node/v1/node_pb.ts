@@ -66,11 +66,17 @@ export enum DataSourceKind {
    * @generated from enum value: GRAPHQL = 1;
    */
   GRAPHQL = 1,
+
+  /**
+   * @generated from enum value: PUBSUB = 2;
+   */
+  PUBSUB = 2,
 }
 // Retrieve enum metadata with: proto3.getEnumType(DataSourceKind)
 proto3.util.setEnumType(DataSourceKind, "wg.cosmo.node.v1.DataSourceKind", [
   { no: 0, name: "STATIC" },
   { no: 1, name: "GRAPHQL" },
+  { no: 2, name: "PUBSUB" },
 ]);
 
 /**
