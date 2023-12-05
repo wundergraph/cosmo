@@ -127,3 +127,5 @@ probes:
 
 configuration:
   clickhouseDsn: "clickhouse://default:changeme@cosmo-clickhouse:9000/cosmo?dial_timeout=15s&compress=lz4"
+  logLevel: "info"
+  listenAddr: "0.0.0.0:4005"

@@ -8,7 +8,7 @@ import (
 	"github.com/wundergraph/cosmo/graphqlmetrics"
 	"github.com/wundergraph/cosmo/graphqlmetrics/config"
 	"github.com/wundergraph/cosmo/graphqlmetrics/internal/logging"
-	_ "go.uber.org/automaxprocs" // Automatically set GOMAXPROCS to avoid CPU throttling on containerized environments
+	"go.uber.org/automaxprocs/maxprocs"
 	"go.uber.org/zap"
 	"log"
 	"net/url"
@@ -35,6 +35,12 @@ func main() {
 			zap.String("service_version", graphqlmetrics.Version),
 		)
 
+	// Automatically set GOMAXPROCS to avoid CPU throttling on containerized environments
+	_, err = maxprocs.Set(maxprocs.Logger(logger.Sugar().Debugf))
+	if err != nil {
+		logger.Fatal("Could not set max GOMAXPROCS", zap.Error(err))
+	}
+
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt,
 		syscall.SIGHUP,  // process is detached from terminal
 		syscall.SIGTERM, // default for kill
@@ -46,7 +52,7 @@ func main() {
 
 	options, err := clickhouse.ParseDSN(cfg.ClickHouseDSN)
 	if err != nil {
-		log.Fatal("Could not parse dsn", zap.Error(err))
+		logger.Fatal("Could not parse dsn", zap.Error(err))
 	}
 
 	options.Compression = &clickhouse.Compression{
@@ -69,13 +75,21 @@ func main() {
 	options.MaxIdleConns = 10
 	options.MaxOpenConns = 20
 
+	logger.Info("Connecting to clickhouse",
+		zap.Int("maxOpenConns", options.MaxOpenConns),
+		zap.Int("maxIdleConns", options.MaxIdleConns),
+		zap.String("dialTimeout", options.DialTimeout.String()),
+		zap.String("connMaxLifetime", options.ConnMaxLifetime.String()),
+		zap.Any("settings", options.Settings),
+	)
+
 	conn, err := clickhouse.Open(options)
 	if err != nil {
-		log.Fatal("Could not open clickhouse", zap.Error(err))
+		logger.Fatal("Could not open clickhouse", zap.Error(err))
 	}
 
 	if err := conn.Ping(ctx); err != nil {
-		log.Fatal("Could not ping clickhouse", zap.Error(err))
+		logger.Fatal("Could not ping clickhouse", zap.Error(err))
 	} else {
 		logger.Info("Connected to clickhouse")
 	}

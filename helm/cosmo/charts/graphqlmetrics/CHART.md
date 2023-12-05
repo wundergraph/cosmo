@@ -16,6 +16,8 @@ WunderGraph Cosmo GraphQL Metrics Collector
 | autoscaling.minReplicas | int | `1` |  |
 | autoscaling.targetCPUUtilizationPercentage | int | `80` |  |
 | configuration.clickhouseDsn | string | `"clickhouse://default:changeme@cosmo-clickhouse:9000/cosmo?dial_timeout=15s&compress=lz4"` |  |
+| configuration.listenAddr | string | `"0.0.0.0:4005"` |  |
+| configuration.logLevel | string | `"info"` |  |
 | deploymentStrategy | object | `{}` |  |
 | fullnameOverride | string | `""` |  |
 | image.pullPolicy | string | `"IfNotPresent"` |  |
