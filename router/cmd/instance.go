@@ -17,16 +17,16 @@ import (
 	"go.uber.org/zap"
 )
 
+// Params are all required for the router to start up
 type Params struct {
 	Config *config.Config
 	Logger *zap.Logger
-
-	// HealthChecks is an optional handler that will be used for the health check endpoint.
-	// If you don't provide it, the router will offer a default handler.
-	HealthChecks core.HealthChecks
 }
 
-func NewRouter(params Params) (*core.Router, error) {
+// NewRouter creates a new router instance.
+//
+// additionalOptions can be used to override default options or options provided in the config.
+func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, error) {
 	// Automatically set GOMAXPROCS to avoid CPU throttling on containerized environments
 	_, err := maxprocs.Set(maxprocs.Logger(params.Logger.Sugar().Debugf))
 	if err != nil {
@@ -80,7 +80,7 @@ func NewRouter(params Params) (*core.Router, error) {
 		}
 	}
 
-	return core.NewRouter(
+	options := []core.Option{
 		core.WithFederatedGraphName(cfg.Graph.Name),
 		core.WithListenerAddr(cfg.ListenAddr),
 		core.WithOverrideRoutingURL(cfg.OverrideRoutingURL),
@@ -94,7 +94,6 @@ func NewRouter(params Params) (*core.Router, error) {
 		core.WithModulesConfig(cfg.Modules),
 		core.WithGracePeriod(cfg.GracePeriod),
 		core.WithHealthCheckPath(cfg.HealthCheckPath),
-		core.WithHealthChecks(params.HealthChecks),
 		core.WithLivenessCheckPath(cfg.LivenessCheckPath),
 		core.WithGraphQLMetrics(&core.GraphQLMetricsConfig{
 			Enabled:           cfg.GraphqlMetrics.Enabled,
@@ -133,7 +132,11 @@ func NewRouter(params Params) (*core.Router, error) {
 		core.WithAccessController(core.NewAccessController(authenticators, cfg.Authorization.RequireAuthentication)),
 		core.WithLocalhostFallbackInsideDocker(cfg.LocalhostFallbackInsideDocker),
 		core.WithCDN(cfg.CDN),
-	)
+	}
+
+	options = append(options, additionalOptions...)
+
+	return core.NewRouter(options...)
 }
 
 func traceConfig(cfg *config.Telemetry) *trace.Config {

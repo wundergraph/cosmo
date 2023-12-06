@@ -31,9 +31,9 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/wundergraph/cosmo/router/config"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/cosmo/router/health"
 	"github.com/wundergraph/cosmo/router/internal/graphiql"
 	"github.com/wundergraph/cosmo/router/internal/handler/cors"
-	"github.com/wundergraph/cosmo/router/internal/handler/health"
 	"github.com/wundergraph/cosmo/router/internal/handler/recovery"
 	"github.com/wundergraph/cosmo/router/internal/handler/requestlogger"
 	"github.com/wundergraph/cosmo/router/internal/metric"
@@ -94,7 +94,7 @@ type (
 		federatedGraphName       string
 		graphApiToken            string
 		healthCheckPath          string
-		healthChecks             HealthChecks
+		healthChecks             health.Checker
 		readinessCheckPath       string
 		livenessCheckPath        string
 		cdnConfig                config.CDNConfiguration
@@ -135,26 +135,12 @@ type (
 		rootContext       context.Context
 		rootContextCancel func()
 		routerConfig      *nodev1.RouterConfig
-		healthChecks      HealthChecks
+		healthChecks      health.Checker
 	}
 
 	// Option defines the method to customize Server.
 	Option func(svr *Router)
 )
-
-// HealthChecks defines an interface that must be implemented by a health check coordinator to
-// determine if the router can currently accept traffic.
-type HealthChecks interface {
-	// Liveness returns a handler that returns 200 OK if the server is alive (running).
-	Liveness() http.HandlerFunc
-
-	// Readiness returns a handler that returns 200 OK if the server is ready to accept traffic
-	// and 503 Service Unavailable if the server is not ready to serve traffic.
-	Readiness() http.HandlerFunc
-
-	// SetReady should atomatically be set to true when the server is ready to accept traffic.
-	SetReady(isReady bool)
-}
 
 // NewRouter creates a new Router instance. Router.Start() must be called to start the server.
 // Alternatively, use Router.NewTestServer() to create a new Server instance without starting it for testing purposes.
@@ -1130,7 +1116,7 @@ func WithHealthCheckPath(path string) Option {
 	}
 }
 
-func WithHealthChecks(healthChecks HealthChecks) Option {
+func WithHealthChecks(healthChecks health.Checker) Option {
 	return func(r *Router) {
 		r.healthChecks = healthChecks
 	}
