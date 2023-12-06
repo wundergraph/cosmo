@@ -44,16 +44,18 @@ func (p *natsPubSub) Subscribe(ctx context.Context, topic string, next chan<- []
 	if err != nil {
 		return fmt.Errorf("error subscribing to NATS topic %s: %w", topic, err)
 	}
-	for {
-		select {
-		case <-ctx.Done():
-			_ = sub.Unsubscribe()
-			close(next)
-			close(ch)
-			return nil
-		case msg := <-ch:
-			next <- msg.Data
-			msg.Ack()
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				_ = sub.Unsubscribe()
+				close(ch)
+				return
+			case msg := <-ch:
+				next <- msg.Data
+				msg.Ack()
+			}
 		}
-	}
+	}()
+	return nil
 }

@@ -1,3 +1,5 @@
+directive @pubsub(topic: String!) on FIELD_DEFINITION
+
 type Subscription {
     employeeUpdated(employeeID: ID!): Employee! @pubsub(topic: "employeeUpdated.{{ args.employeeID }}")
 }
