@@ -31,9 +31,9 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/wundergraph/cosmo/router/config"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/cosmo/router/health"
 	"github.com/wundergraph/cosmo/router/internal/graphiql"
 	"github.com/wundergraph/cosmo/router/internal/handler/cors"
-	"github.com/wundergraph/cosmo/router/internal/handler/health"
 	"github.com/wundergraph/cosmo/router/internal/handler/recovery"
 	"github.com/wundergraph/cosmo/router/internal/handler/requestlogger"
 	"github.com/wundergraph/cosmo/router/internal/metric"
@@ -94,6 +94,7 @@ type (
 		federatedGraphName       string
 		graphApiToken            string
 		healthCheckPath          string
+		healthChecks             health.Checker
 		readinessCheckPath       string
 		livenessCheckPath        string
 		cdnConfig                config.CDNConfiguration
@@ -134,7 +135,7 @@ type (
 		rootContext       context.Context
 		rootContextCancel func()
 		routerConfig      *nodev1.RouterConfig
-		healthChecks      *health.Checks
+		healthChecks      health.Checker
 	}
 
 	// Option defines the method to customize Server.
@@ -691,9 +692,14 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	httpRouter.Use(requestLogger)
 	httpRouter.Use(cors.New(*r.corsOptions))
 
-	ro.healthChecks = health.New(&health.Options{
-		Logger: r.logger,
-	})
+	if r.healthChecks != nil {
+		ro.healthChecks = r.healthChecks
+	} else {
+		ro.healthChecks = health.New(&health.Options{
+			Logger: r.logger,
+		})
+	}
+
 	httpRouter.Get(r.healthCheckPath, ro.healthChecks.Liveness())
 	httpRouter.Get(r.livenessCheckPath, ro.healthChecks.Liveness())
 	httpRouter.Get(r.readinessCheckPath, ro.healthChecks.Readiness())
@@ -1107,6 +1113,12 @@ func WithStaticRouterConfig(cfg *nodev1.RouterConfig) Option {
 func WithHealthCheckPath(path string) Option {
 	return func(r *Router) {
 		r.healthCheckPath = path
+	}
+}
+
+func WithHealthChecks(healthChecks health.Checker) Option {
+	return func(r *Router) {
+		r.healthChecks = healthChecks
 	}
 }
 
