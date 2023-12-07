@@ -32,7 +32,6 @@ type RoleType interface {
 type Consultancy struct {
 	Upc  string    `json:"upc"`
 	Lead *Employee `json:"lead"`
-	Test string    `json:"test"`
 }
 
 func (Consultancy) IsProducts() {}
@@ -69,10 +68,11 @@ type Details struct {
 }
 
 type Employee struct {
-	Details *Details `json:"details"`
-	ID      int      `json:"id"`
-	Role    RoleType `json:"role"`
-	Notes   string   `json:"notes"`
+	Details   *Details `json:"details"`
+	ID        int      `json:"id"`
+	Role      RoleType `json:"role"`
+	Notes     string   `json:"notes"`
+	UpdatedAt string   `json:"updatedAt"`
 }
 
 func (Employee) IsIdentifiable() {}

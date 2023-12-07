@@ -5,6 +5,7 @@ go 1.21
 require (
 	github.com/99designs/gqlgen v0.17.39
 	github.com/gorilla/websocket v1.5.0
+	github.com/nats-io/nats.go v1.31.0
 	github.com/ravilushqa/otelgqlgen v0.13.1
 	github.com/rs/cors v1.10.1
 	github.com/vektah/gqlparser/v2 v2.5.10
@@ -31,7 +32,6 @@ require (
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.19 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
-	github.com/nats-io/nats.go v1.31.0 // indirect
 	github.com/nats-io/nkeys v0.4.5 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect

@@ -20,6 +20,7 @@ func (r *queryResolver) Employee(ctx context.Context, id int) (*model.Employee, 
 	}
 	for _, employee := range employees {
 		if id == employee.ID {
+			employee.UpdatedAt = time.Now().String()
 			return employee, nil
 		}
 	}
@@ -28,6 +29,9 @@ func (r *queryResolver) Employee(ctx context.Context, id int) (*model.Employee, 
 
 // Employees is the resolver for the employees field.
 func (r *queryResolver) Employees(ctx context.Context) ([]*model.Employee, error) {
+	for _, employee := range employees {
+		employee.UpdatedAt = time.Now().String()
+	}
 	return employees, nil
 }
 
