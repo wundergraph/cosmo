@@ -61,8 +61,10 @@ import {
   deleteOIDCProvider,
   deleteOrganization,
   getOIDCProvider,
+  isRBACEnabled,
   leaveOrganization,
   updateOrganizationDetails,
+  updateRBACSettings,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import Link from "next/link";
 import { useRouter } from "next/router";
@@ -814,6 +816,64 @@ const OpenIDConnectProvider = ({
   );
 };
 
+const RBAC = () => {
+  const { data, refetch } = useQuery(isRBACEnabled.useQuery());
+  const { mutate, isPending } = useMutation(updateRBACSettings.useMutation());
+  const { toast } = useToast();
+
+  return (
+    <Card>
+      <CardHeader className="gap-y-6 md:flex-row">
+        <div className="space-y-1.5">
+          <CardTitle>RBAC</CardTitle>
+          <CardDescription>
+            Enabling RBAC allows the fine grain access control of subgraphs and
+            federated graphs.
+          </CardDescription>
+        </div>
+        <Button
+          className="md:ml-auto"
+          type="submit"
+          variant={data?.enabled ? "destructive" : "default"}
+          isLoading={isPending}
+          onClick={() => {
+            mutate(
+              {
+                enable: data?.enabled ? false : true,
+              },
+              {
+                onSuccess: (d) => {
+                  refetch();
+                  if (d.response?.code === EnumStatusCode.OK) {
+                    toast({
+                      description: data?.enabled
+                        ? "Disabled RBAC successfully."
+                        : "Enabled RBAC successfully.",
+                      duration: 3000,
+                    });
+                  } else if (d.response?.details) {
+                    toast({ description: d.response.details, duration: 4000 });
+                  }
+                },
+                onError: (error) => {
+                  toast({
+                    description: data?.enabled
+                      ? "Could not disable RBAC. Please try again."
+                      : "Could not enable RBAC. Please try again.",
+                    duration: 3000,
+                  });
+                },
+              },
+            );
+          }}
+        >
+          {data?.enabled ? "Disable" : "Enable"}
+        </Button>
+      </CardHeader>
+    </Card>
+  );
+};
+
 const LeaveOrganization = () => {
   const user = useContext(UserContext);
   const router = useRouter();
@@ -1035,6 +1095,7 @@ const SettingsDashboardPage: NextPageWithLayout = () => {
       {user && !user.currentOrganization.isPersonal && (
         <>
           <Separator className="my-2" />
+          <RBAC />
           <OpenIDConnectProvider currentMode="create" />
           <Separator className="my-2" />
           <LeaveOrganization />

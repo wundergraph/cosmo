@@ -927,4 +927,26 @@ export class FederatedGraphRepository {
       .setExpirationTime('1d')
       .sign(ecPrivateKey);
   }
+
+  public async getAccessibleFederatedGraphs(userId: string): Promise<FederatedGraphDTO[]> {
+    const graphTargets = await this.db.query.targets.findMany({
+      where: and(
+        eq(targets.type, 'federated'),
+        eq(targets.organizationId, this.organizationId),
+        eq(targets.createdBy, userId),
+      ),
+    });
+
+    const federatedGraphs: FederatedGraphDTO[] = [];
+
+    for (const target of graphTargets) {
+      const fg = await this.byName(target.name);
+      if (fg === undefined) {
+        throw new Error(`FederatedGraph ${target.name} not found`);
+      }
+      federatedGraphs.push(fg);
+    }
+
+    return federatedGraphs;
+  }
 }

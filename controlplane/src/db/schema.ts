@@ -237,6 +237,9 @@ export const targets = pgTable(
     organizationId: uuid('organization_id')
       .notNull()
       .references(() => organizations.id),
+    createdBy: uuid('created_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
   },
   (t) => {
     return {
@@ -594,6 +597,7 @@ export const organizations = pgTable('organizations', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   isPersonal: boolean('is_personal').default(false),
   isFreeTrial: boolean('is_free_trial').default(false),
+  isRBACEnabled: boolean('is_rbac_enabled').notNull().default(false),
 });
 
 export const organizationsMembers = pgTable(
@@ -891,3 +895,36 @@ export const organizationInvitations = pgTable('organization_invitations', {
   accepted: boolean('accepted').default(false),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+export const apiKeyResources = pgTable('api_key_resources', {
+  id: uuid('id').notNull().primaryKey().defaultRandom(),
+  apiKeyId: uuid('api_key_id')
+    .notNull()
+    .references(() => apiKeys.id, {
+      onDelete: 'cascade',
+    }),
+  targetId: uuid('target_id')
+    .notNull()
+    .references(() => targets.id, { onDelete: 'cascade' }),
+});
+
+export const subgraphMembers = pgTable(
+  'subgraph_members',
+  {
+    id: uuid('id').notNull().primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    subgraphId: uuid('subgraph_id')
+      .notNull()
+      .references(() => subgraphs.id, {
+        onDelete: 'cascade',
+      }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => {
+    return {
+      memberIndex: uniqueIndex('unique_subgraph_member_idx').on(t.userId, t.subgraphId),
+    };
+  },
+);

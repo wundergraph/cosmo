@@ -65,6 +65,7 @@ export class OrganizationRepository {
       slug: insertedOrg[0].slug,
       creatorUserId: insertedOrg[0].createdBy,
       createdAt: insertedOrg[0].createdAt.toISOString(),
+      isRBACEnabled: insertedOrg[0].isRBACEnabled,
     };
   }
 
@@ -88,6 +89,7 @@ export class OrganizationRepository {
         creatorUserId: organizations.createdBy,
         createdAt: organizations.createdAt,
         isFreeTrial: organizations.isFreeTrial,
+        isRBACEnabled: organizations.isRBACEnabled,
       })
       .from(organizations)
       .where(eq(organizations.slug, slug))
@@ -105,6 +107,7 @@ export class OrganizationRepository {
       isFreeTrial: org[0].isFreeTrial || false,
       creatorUserId: org[0].creatorUserId,
       createdAt: org[0].createdAt.toISOString(),
+      isRBACEnabled: org[0].isRBACEnabled,
     };
   }
 
@@ -117,6 +120,7 @@ export class OrganizationRepository {
         creatorUserId: organizations.createdBy,
         createdAt: organizations.createdAt,
         isFreeTrial: organizations.isFreeTrial,
+        isRBACEnabled: organizations.isRBACEnabled,
       })
       .from(organizations)
       .where(eq(organizations.id, id))
@@ -134,6 +138,7 @@ export class OrganizationRepository {
       isFreeTrial: org[0].isFreeTrial || false,
       creatorUserId: org[0].creatorUserId,
       createdAt: org[0].createdAt.toISOString(),
+      isRBACEnabled: org[0].isRBACEnabled,
     };
   }
 
@@ -166,6 +171,7 @@ export class OrganizationRepository {
         isFreeTrial: organizations.isFreeTrial,
         isPersonal: organizations.isPersonal,
         createdAt: organizations.createdAt,
+        isRBACEnabled: organizations.isRBACEnabled,
         limits: {
           analyticsRetentionLimit: organizationLimits.analyticsRetentionLimit,
           tracingRetentionLimit: organizationLimits.tracingRetentionLimit,
@@ -191,6 +197,7 @@ export class OrganizationRepository {
         createdAt: org.createdAt.toISOString(),
         isFreeTrial: org.isFreeTrial || false,
         isPersonal: org.isPersonal || false,
+        isRBACEnabled: org.isRBACEnabled,
         roles: await this.getOrganizationMemberRoles({
           userID: input.userId,
           organizationID: org.id,
@@ -939,5 +946,9 @@ export class OrganizationRepository {
       requestsLimit: limits[0].requestsLimit,
       traceSamplingRateLimit: Number.parseFloat(limits[0].traceSamplingRateLimit),
     };
+  }
+
+  public async updateRBACSettings(organizationId: string, enabled: boolean) {
+    await this.db.update(organizations).set({ isRBACEnabled: enabled }).where(eq(organizations.id, organizationId));
   }
 }
