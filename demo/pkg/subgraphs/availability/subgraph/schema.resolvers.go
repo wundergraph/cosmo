@@ -14,6 +14,7 @@ import (
 // UpdateAvailability is the resolver for the updateAvailability field.
 func (r *mutationResolver) UpdateAvailability(ctx context.Context, employeeID int, isAvailable bool) (*model.Employee, error) {
 	storage.Set(employeeID, isAvailable)
+	pubsub.Publish("employeeUpdated", employeeID)
 	return &model.Employee{ID: employeeID, IsAvailable: isAvailable}, nil
 }
 

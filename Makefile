@@ -122,3 +122,6 @@ docker-build-minikube: docker-build-local
 	minikube image load ghcr.io/wundergraph/cosmo/keycloak:latest & \
 	minikube image load ghcr.io/wundergraph/cosmo/cdn:latest
 	minikube cache reload
+
+run-local-demo:
+	cd demo && go run cmd/all/main.go

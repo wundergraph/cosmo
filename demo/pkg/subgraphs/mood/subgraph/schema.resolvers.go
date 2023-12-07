@@ -14,6 +14,7 @@ import (
 // UpdateMood is the resolver for the updateMood field.
 func (r *mutationResolver) UpdateMood(ctx context.Context, employeeID int, mood model.Mood) (*model.Employee, error) {
 	storage.Set(employeeID, mood)
+	pubsub.Publish("employeeUpdated", employeeID)
 	return &model.Employee{ID: employeeID, CurrentMood: mood}, nil
 }
 
