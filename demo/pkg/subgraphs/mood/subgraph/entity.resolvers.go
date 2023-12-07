@@ -14,6 +14,10 @@ import (
 // FindEmployeeByID is the resolver for the findEmployeeByID field.
 func (r *entityResolver) FindEmployeeByID(ctx context.Context, id int) (*model.Employee, error) {
 	mood := storage.Get(id)
+	if mood == "" {
+		// By default, employees should be happy
+		mood = model.MoodHappy
+	}
 	return &model.Employee{ID: id, CurrentMood: mood}, nil
 }
 
