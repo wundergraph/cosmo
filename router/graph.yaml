@@ -21,15 +21,15 @@ subgraphs:
     routing_url: http://localhost:4006/graphql
     schema:
       file: ../demo/pkg/subgraphs/test1/subgraph/schema.graphqls
-  # - name: availability
-  #   routing_url: http://localhost:4007/graphql
-  #   schema:
-  #     file: ../demo/pkg/subgraphs/availability/subgraph/schema.graphqls
-  # - name: mood
-  #   routing_url: http://localhost:4008/graphql
-  #   schema:
-  #     file: ../demo/pkg/subgraphs/mood/subgraph/schema.graphqls
-#  - name: employeeupdated
-#    routing_url: http://does.not.exist
-#    schema:
-#      file: ../demo/pkg/subgraphs/employeeupdated/subgraph/schema.graphqls
+  - name: availability
+    routing_url: http://localhost:4007/graphql
+    schema:
+      file: ../demo/pkg/subgraphs/availability/subgraph/schema.graphqls
+  - name: mood
+    routing_url: http://localhost:4008/graphql
+    schema:
+      file: ../demo/pkg/subgraphs/mood/subgraph/schema.graphqls
+  - name: employeeupdated
+    routing_url: http://does.not.exist
+    schema:
+      file: ../demo/pkg/subgraphs/employeeupdated/subgraph/schema.graphqls
