@@ -22,12 +22,13 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+
 	"github.com/wundergraph/cosmo/router-tests/routerconfig"
 	"github.com/wundergraph/cosmo/router-tests/runner"
 	"github.com/wundergraph/cosmo/router/config"
 	"github.com/wundergraph/cosmo/router/core"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 )
 
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
