@@ -15,7 +15,9 @@ type GraphAPITokenClaims struct {
 	jwt.RegisteredClaims
 }
 
-const claimsKey = "claims"
+type claimsContextKey string
+
+const claimsKey claimsContextKey = "claims"
 
 func getClaims(ctx context.Context) (*GraphAPITokenClaims, error) {
 	claims, ok := ctx.Value(claimsKey).(*GraphAPITokenClaims)
