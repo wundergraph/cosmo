@@ -1,13 +1,12 @@
-package graphqlmetrics
+package core
 
 import (
 	"connectrpc.com/connect"
 	"context"
 	"errors"
-	"fmt"
 	"github.com/ClickHouse/clickhouse-go/v2"
-	"github.com/golang-jwt/jwt/v5"
 	lru "github.com/hashicorp/golang-lru/v2"
+	"github.com/sourcegraph/conc/pool"
 	graphqlmetricsv1 "github.com/wundergraph/cosmo/graphqlmetrics/gen/proto/wg/cosmo/graphqlmetrics/v1"
 	"go.uber.org/zap"
 	"sort"
@@ -17,18 +16,10 @@ import (
 )
 
 var (
-	errJWTInvalid                        = errors.New("the JWT is invalid")
-	errInvalidAuthenticationHeaderFormat = errors.New("invalid authorization header format")
-	errNotAuthenticated                  = errors.New("authentication didn't succeed")
-	errMetricWriteFailed                 = errors.New("failed to write metrics")
-	errOperationWriteFailed              = errors.New("operation write failed")
+	errNotAuthenticated     = errors.New("authentication didn't succeed")
+	errMetricWriteFailed    = errors.New("failed to write metrics")
+	errOperationWriteFailed = errors.New("operation write failed")
 )
-
-type GraphAPITokenClaims struct {
-	OrganizationID   string `json:"organization_id"`
-	FederatedGraphID string `json:"federated_graph_id"`
-	jwt.RegisteredClaims
-}
 
 type MetricsService struct {
 	logger *zap.Logger
@@ -38,13 +29,10 @@ type MetricsService struct {
 
 	// opGuardCache is used to prevent duplicate writes of the same operation
 	opGuardCache *lru.Cache[string, struct{}]
-
-	// jwtSecret is the secret used to validate the JWT
-	jwtSecret []byte
 }
 
 // NewMetricsService creates a new metrics service
-func NewMetricsService(logger *zap.Logger, chConn clickhouse.Conn, jwtSecret []byte) *MetricsService {
+func NewMetricsService(logger *zap.Logger, chConn clickhouse.Conn) *MetricsService {
 	c, err := lru.New[string, struct{}](25000)
 	if err != nil {
 		panic(err)
@@ -53,69 +41,19 @@ func NewMetricsService(logger *zap.Logger, chConn clickhouse.Conn, jwtSecret []b
 		logger:       logger,
 		conn:         chConn,
 		opGuardCache: c,
-		jwtSecret:    jwtSecret,
 	}
 }
 
-func (s *MetricsService) PublishGraphQLMetrics(
-	ctx context.Context,
-	req *connect.Request[graphqlmetricsv1.PublishGraphQLRequestMetricsRequest],
-) (*connect.Response[graphqlmetricsv1.PublishOperationCoverageReportResponse], error) {
-	res := connect.NewResponse(&graphqlmetricsv1.PublishOperationCoverageReportResponse{})
-
-	parts := strings.Split(req.Header().Get("Authorization"), " ")
-	if len(parts) != 2 {
-		return nil, errInvalidAuthenticationHeaderFormat
-	}
-
-	token, err := jwt.ParseWithClaims(parts[1], &GraphAPITokenClaims{}, func(token *jwt.Token) (interface{}, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-		}
-		return s.jwtSecret, nil
-	})
-	if err != nil {
-		s.logger.Debug("Failed to parse token", zap.Error(err))
-		return nil, errNotAuthenticated
-	}
-
-	if !token.Valid {
-		s.logger.Debug("Token is invalid", zap.Bool("valid", token.Valid))
-		return nil, errJWTInvalid
-	}
-
-	claims, ok := token.Claims.(*GraphAPITokenClaims)
-	if !ok {
-		return nil, errJWTInvalid
-	}
-
-	var sentMetrics, sentOps = 0, 0
-	insertTime := time.Now()
-
-	defer func() {
-		s.logger.Debug("metric write finished",
-			zap.Duration("duration", time.Since(insertTime)),
-			zap.Int("metrics", sentMetrics),
-			zap.Int("operations", sentOps),
-		)
-	}()
-
-	// TODO: Do async batching once it is supported by native protocol in clickhouse-go
-	// TODO: Think about a thresholds for batching once it becomes a problem
-
+// saveOperations saves the operation documents to the storage in a batch
+// TODO: Move to async inserts as soon as clickhouse 23.10 is released on cloud
+func (s *MetricsService) saveOperations(ctx context.Context, insertTime time.Time, schemaUsage []*graphqlmetricsv1.SchemaUsageInfo) (int, error) {
 	opBatch, err := s.conn.PrepareBatch(ctx, `INSERT INTO gql_metrics_operations`)
 	if err != nil {
 		s.logger.Error("Failed to prepare batch for operations", zap.Error(err))
-		return nil, errOperationWriteFailed
+		return 0, errOperationWriteFailed
 	}
 
-	metricBatch, err := s.conn.PrepareBatch(ctx, `INSERT INTO gql_metrics_schema_usage`)
-	if err != nil {
-		s.logger.Error("Failed to prepare batch for metrics", zap.Error(err))
-		return nil, errMetricWriteFailed
-	}
-
-	for _, schemaUsage := range req.Msg.SchemaUsage {
+	for _, schemaUsage := range schemaUsage {
 
 		operationType := strings.ToLower(schemaUsage.OperationInfo.Type.String())
 
@@ -130,9 +68,37 @@ func (s *MetricsService) PublishGraphQLMetrics(
 			)
 			if err != nil {
 				s.logger.Error("Failed to append operation to batch", zap.Error(err))
-				return nil, errOperationWriteFailed
+				return 0, errOperationWriteFailed
 			}
 		}
+
+	}
+
+	if err := opBatch.Send(); err != nil {
+		s.logger.Error("Failed to send operation batch", zap.Error(err))
+		return 0, errOperationWriteFailed
+	}
+
+	for _, su := range schemaUsage {
+		// Add the operation to the cache once it has been written
+		s.opGuardCache.Add(su.OperationInfo.Hash, struct{}{})
+	}
+
+	return opBatch.Rows(), nil
+}
+
+// saveUsageMetrics saves the usage metrics to the storage in a batch
+// TODO: Move to async inserts as soon as clickhouse 23.10 is released on cloud
+func (s *MetricsService) saveUsageMetrics(ctx context.Context, insertTime time.Time, claims *GraphAPITokenClaims, schemaUsage []*graphqlmetricsv1.SchemaUsageInfo) (int, error) {
+	metricBatch, err := s.conn.PrepareBatch(ctx, `INSERT INTO gql_metrics_schema_usage`)
+	if err != nil {
+		s.logger.Error("Failed to prepare batch for metrics", zap.Error(err))
+		return 0, errMetricWriteFailed
+	}
+
+	for _, schemaUsage := range schemaUsage {
+
+		operationType := strings.ToLower(schemaUsage.OperationInfo.Type.String())
 
 		for _, fieldUsage := range schemaUsage.TypeFieldMetrics {
 
@@ -169,7 +135,7 @@ func (s *MetricsService) PublishGraphQLMetrics(
 			)
 			if err != nil {
 				s.logger.Error("Failed to append field metric to batch", zap.Error(err))
-				return nil, errMetricWriteFailed
+				return 0, errMetricWriteFailed
 			}
 		}
 
@@ -198,7 +164,7 @@ func (s *MetricsService) PublishGraphQLMetrics(
 			)
 			if err != nil {
 				s.logger.Error("Failed to append argument metric to batch", zap.Error(err))
-				return nil, errMetricWriteFailed
+				return 0, errMetricWriteFailed
 			}
 		}
 
@@ -227,29 +193,64 @@ func (s *MetricsService) PublishGraphQLMetrics(
 			)
 			if err != nil {
 				s.logger.Error("Failed to append input metric to batch", zap.Error(err))
-				return nil, errMetricWriteFailed
+				return 0, errMetricWriteFailed
 			}
 		}
 	}
 
-	if err := opBatch.Send(); err != nil {
-		s.logger.Error("Failed to send operation batch", zap.Error(err))
-		return nil, errOperationWriteFailed
-	}
-
-	sentOps = opBatch.Rows()
-
-	for _, schemaUsage := range req.Msg.SchemaUsage {
-		// Add the operation to the cache once it has been written
-		s.opGuardCache.Add(schemaUsage.OperationInfo.Hash, struct{}{})
-	}
-
 	if err := metricBatch.Send(); err != nil {
 		s.logger.Error("Failed to send metrics batch", zap.Error(err))
-		return nil, errOperationWriteFailed
+		return 0, errOperationWriteFailed
 	}
 
-	sentMetrics = metricBatch.Rows()
+	return metricBatch.Rows(), nil
+}
+
+func (s *MetricsService) PublishGraphQLMetrics(
+	ctx context.Context,
+	req *connect.Request[graphqlmetricsv1.PublishGraphQLRequestMetricsRequest],
+) (*connect.Response[graphqlmetricsv1.PublishOperationCoverageReportResponse], error) {
+	res := connect.NewResponse(&graphqlmetricsv1.PublishOperationCoverageReportResponse{})
+
+	claims, err := getClaims(ctx)
+	if err != nil {
+		return nil, errNotAuthenticated
+	}
+
+	var sentMetrics, sentOps = 0, 0
+	insertTime := time.Now()
+
+	defer func() {
+		s.logger.Debug("metric write finished",
+			zap.Duration("duration", time.Since(insertTime)),
+			zap.Int("metrics", sentMetrics),
+			zap.Int("operations", sentOps),
+		)
+	}()
+
+	p := pool.New().WithErrors().WithContext(ctx)
+
+	p.Go(func(ctx context.Context) error {
+		writtenOps, err := s.saveOperations(ctx, insertTime, req.Msg.SchemaUsage)
+		if err != nil {
+			return err
+		}
+		sentOps += writtenOps
+		return nil
+	})
+
+	p.Go(func(ctx context.Context) error {
+		writtenMetrics, err := s.saveUsageMetrics(ctx, insertTime, claims, req.Msg.SchemaUsage)
+		if err != nil {
+			return err
+		}
+		sentMetrics += writtenMetrics
+		return nil
+	})
+
+	if err := p.Wait(); err != nil {
+		return nil, err
+	}
 
 	return res, nil
 }

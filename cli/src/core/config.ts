@@ -26,7 +26,8 @@ const getLoginDetails = (): { accessToken: string; organizationSlug: string } | 
 
 export const config = {
   baseURL: process.env.COSMO_API_URL || 'https://cosmo-cp.wundergraph.com',
-  apiKey: getLoginDetails()?.accessToken || process.env.COSMO_API_KEY,
+  // environment var first to allow overriding
+  apiKey: process.env.COSMO_API_KEY || getLoginDetails()?.accessToken,
   kcApiURL: process.env.KC_API_URL || 'https://accounts.wundergraph.com/auth',
   webURL: process.env.COSMO_WEB_URL || 'https://cosmo.wundergraph.com',
   kcClientId: process.env.KC_CLIENT_ID || 'cosmo-cli',
