@@ -701,3 +701,34 @@ func FuzzQuery(f *testing.F) {
 		}
 	})
 }
+
+func TestConcurrentQueries(t *testing.T) {
+	const (
+		numQueries   = 1000
+		queryDelayMs = 5000
+	)
+	server := setupServer(t, core.WithTransport(
+		&http.Transport{
+			DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+				// We need a delay here to ensure that the body has not been written to
+				// the subgraph server until this delay has elapsed. If the delay was
+				// only on the server, the body would be written immediately and the
+				// buffer could be reused without causing a race.
+				time.Sleep(queryDelayMs * time.Millisecond)
+				return net.Dial(network, addr)
+			},
+		}))
+	var wg sync.WaitGroup
+	wg.Add(numQueries)
+	for ii := 0; ii < numQueries; ii++ {
+		go func() {
+			defer wg.Done()
+			resp := strconv.FormatInt(rand.Int63(), 16)
+			query := fmt.Sprintf(`{"query":"{ delay(response:\"%s\", ms:%d) }"}`, resp, queryDelayMs)
+			result := sendData(server, []byte(query))
+			assert.Equal(t, http.StatusOK, result.Result().StatusCode)
+			assert.JSONEq(t, fmt.Sprintf(`{"data":{"delay":"%s"}}`, resp), result.Body.String())
+		}()
+	}
+	wg.Wait()
+}
