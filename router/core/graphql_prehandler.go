@@ -133,28 +133,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		operation, err := h.parser.Parse(r.Context(), clientInfo, body, requestLogger)
 		if err != nil {
 			hasRequestError = true
-
-			var reportErr ReportError
-			var inputErr InputError
-			var poNotFoundErr cdn.PersistentOperationNotFoundError
-			switch {
-			case errors.As(err, &inputErr):
-				requestLogger.Error(inputErr.Error())
-				writeRequestErrors(r, inputErr.StatusCode(), graphql.RequestErrorsFromError(err), w, requestLogger)
-			case errors.As(err, &reportErr):
-				report := reportErr.Report()
-				logInternalErrorsFromReport(reportErr.Report(), requestLogger)
-				writeRequestErrors(r, http.StatusOK, graphql.RequestErrorsFromOperationReport(*report), w, requestLogger)
-			case errors.As(err, &poNotFoundErr):
-				requestLogger.Debug("persisted operation not found",
-					zap.String("sha256Hash", poNotFoundErr.Sha256Hash()),
-					zap.String("clientName", poNotFoundErr.ClientName()))
-				writeRequestErrors(r, http.StatusBadRequest, graphql.RequestErrorsFromError(errors.New(cdn.PersistedOperationNotFoundErrorCode)), w, requestLogger)
-
-			default: // If we have an unknown error, we log it and return an internal server error
-				requestLogger.Error(err.Error())
-				writeRequestErrors(r, http.StatusInternalServerError, graphql.RequestErrorsFromError(errInternalServer), w, requestLogger)
-			}
+			h.writeOperationError(w, r, requestLogger, err)
 			return
 		}
 
@@ -174,7 +153,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		if err != nil {
 			hasRequestError = true
 			requestLogger.Error("failed to plan operation", zap.Error(err))
-			writeRequestErrors(r, http.StatusBadRequest, graphql.RequestErrorsFromError(errMsgOperationParseFailed), w, requestLogger)
+			h.writeOperationError(w, r, requestLogger, err)
 			return
 		}
 		if !traceOptions.ExcludePlannerStats {
@@ -206,4 +185,28 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		// Evaluate the request after the request has been handled by the engine
 		hasRequestError = requestContext.hasError
 	})
+}
+
+func (h *PreHandler) writeOperationError(w http.ResponseWriter, r *http.Request, requestLogger *zap.Logger, err error) {
+	var reportErr ReportError
+	var inputErr InputError
+	var poNotFoundErr cdn.PersistentOperationNotFoundError
+	switch {
+	case errors.As(err, &inputErr):
+		requestLogger.Error(inputErr.Error())
+		writeRequestErrors(r, inputErr.StatusCode(), graphql.RequestErrorsFromError(err), w, requestLogger)
+	case errors.As(err, &reportErr):
+		report := reportErr.Report()
+		logInternalErrorsFromReport(reportErr.Report(), requestLogger)
+		writeRequestErrors(r, http.StatusOK, graphql.RequestErrorsFromOperationReport(*report), w, requestLogger)
+	case errors.As(err, &poNotFoundErr):
+		requestLogger.Debug("persisted operation not found",
+			zap.String("sha256Hash", poNotFoundErr.Sha256Hash()),
+			zap.String("clientName", poNotFoundErr.ClientName()))
+		writeRequestErrors(r, http.StatusBadRequest, graphql.RequestErrorsFromError(errors.New(cdn.PersistedOperationNotFoundErrorCode)), w, requestLogger)
+
+	default: // If we have an unknown error, we log it and return an internal server error
+		requestLogger.Error(err.Error())
+		writeRequestErrors(r, http.StatusInternalServerError, graphql.RequestErrorsFromError(errInternalServer), w, requestLogger)
+	}
 }

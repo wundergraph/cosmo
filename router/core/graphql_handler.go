@@ -25,7 +25,6 @@ import (
 )
 
 var (
-	errMsgOperationParseFailed = errors.New("failed to parse operation")
 	errCouldNotResolveResponse = errors.New("could not resolve response")
 	errServerTimeout           = errors.New("server timeout")
 	errServerCanceled          = errors.New("server canceled")
