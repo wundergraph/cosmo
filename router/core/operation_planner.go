@@ -53,7 +53,7 @@ func (p *OperationPlanner) preparePlan(requestOperationName []byte, requestOpera
 	// create and postprocess the plan
 	preparedPlan := planner.Plan(&doc, p.executor.Definition, unsafebytes.BytesToString(requestOperationName), &report)
 	if report.HasErrors() {
-		return planWithMetaData{}, errors.Join(errMsgOperationParseFailed, report)
+		return planWithMetaData{}, &reportError{report: &report}
 	}
 	post := postprocess.DefaultProcessor()
 	post.Process(preparedPlan)

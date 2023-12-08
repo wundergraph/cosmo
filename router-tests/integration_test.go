@@ -702,6 +702,22 @@ func FuzzQuery(f *testing.F) {
 	})
 }
 
+func TestPlannerErrorMessage(t *testing.T) {
+	server := setupServer(t)
+	// Error message should contain the invalid argument name instead of a
+	// generic planning error message
+	rr := sendData(server, []byte(`{"query":"{  employee(id:3, does_not_exist: 42) { id } }"}`))
+	if rr.Code != http.StatusOK {
+		t.Error("unexpected status code", rr.Code)
+	}
+	var resp graphqlErrorResponse
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatal(err)
+	}
+	require.Len(t, resp.Errors, 1)
+	assert.Equal(t, `Unknown argument "does_not_exist" on field "Query.employee".`, resp.Errors[0].Message)
+}
+
 func TestConcurrentQueriesWithDelay(t *testing.T) {
 	const (
 		numQueries   = 1000
