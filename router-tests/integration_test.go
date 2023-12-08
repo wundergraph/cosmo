@@ -702,7 +702,7 @@ func FuzzQuery(f *testing.F) {
 	})
 }
 
-func TestConcurrentQueries(t *testing.T) {
+func TestConcurrentQueriesWithDelay(t *testing.T) {
 	const (
 		numQueries   = 1000
 		queryDelayMs = 5000
