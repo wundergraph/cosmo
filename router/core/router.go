@@ -232,32 +232,8 @@ func NewRouter(opts ...Option) (*Router, error) {
 
 	r.baseURL = fmt.Sprintf("http://%s", r.listenAddr)
 
-	dialer := &net.Dialer{
-		Timeout:   r.subgraphTransportOptions.DialTimeout,
-		KeepAlive: r.subgraphTransportOptions.KeepAliveProbeInterval,
-	}
-
-	// Great source of inspiration: https://gitlab.com/gitlab-org/gitlab-pages
-	// A pages proxy in go that handles tls to upstreams, rate limiting, and more
-	r.transport = &http.Transport{
-		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
-			return dialer.DialContext(ctx, network, addr)
-		},
-		// The defaults value 0 = unbounded.
-		// We set to some value to prevent resource exhaustion e.g max requests and ports.
-		MaxConnsPerHost: 100,
-		// The defaults value 0 = unbounded. 100 is used by the default go transport.
-		// This value should be significant higher than MaxIdleConnsPerHost.
-		MaxIdleConns: 1024,
-		// The default value is 2. Such a low limit will open and close connections too often.
-		// Details: https://gitlab.com/gitlab-org/gitlab-pages/-/merge_requests/274
-		MaxIdleConnsPerHost: 20,
-		ForceAttemptHTTP2:   true,
-		IdleConnTimeout:     r.subgraphTransportOptions.KeepAliveIdleTimeout,
-		// Set more timeouts https://gitlab.com/gitlab-org/gitlab-pages/-/issues/495
-		TLSHandshakeTimeout:   r.subgraphTransportOptions.TLSHandshakeTimeout,
-		ResponseHeaderTimeout: r.subgraphTransportOptions.ResponseHeaderTimeout,
-		ExpectContinueTimeout: r.subgraphTransportOptions.ExpectContinueTimeout,
+	if r.transport == nil {
+		r.transport = newHTTPTransport(r.subgraphTransportOptions)
 	}
 
 	// Add default tracing exporter if needed
@@ -1012,6 +988,12 @@ func WithListenerAddr(addr string) Option {
 	}
 }
 
+func WithTransport(transport *http.Transport) Option {
+	return func(r *Router) {
+		r.transport = transport
+	}
+}
+
 func WithLogger(logger *zap.Logger) Option {
 	return func(r *Router) {
 		r.logger = logger
@@ -1230,5 +1212,34 @@ func WithGraphQLMetrics(cfg *GraphQLMetricsConfig) Option {
 func WithDevelopmentMode(enabled bool) Option {
 	return func(r *Router) {
 		r.developmentMode = enabled
+	}
+}
+
+func newHTTPTransport(opts *SubgraphTransportOptions) *http.Transport {
+	dialer := &net.Dialer{
+		Timeout:   opts.DialTimeout,
+		KeepAlive: opts.KeepAliveProbeInterval,
+	}
+	// Great source of inspiration: https://gitlab.com/gitlab-org/gitlab-pages
+	// A pages proxy in go that handles tls to upstreams, rate limiting, and more
+	return &http.Transport{
+		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+			return dialer.DialContext(ctx, network, addr)
+		},
+		// The defaults value 0 = unbounded.
+		// We set to some value to prevent resource exhaustion e.g max requests and ports.
+		MaxConnsPerHost: 100,
+		// The defaults value 0 = unbounded. 100 is used by the default go transport.
+		// This value should be significant higher than MaxIdleConnsPerHost.
+		MaxIdleConns: 1024,
+		// The default value is 2. Such a low limit will open and close connections too often.
+		// Details: https://gitlab.com/gitlab-org/gitlab-pages/-/merge_requests/274
+		MaxIdleConnsPerHost: 20,
+		ForceAttemptHTTP2:   true,
+		IdleConnTimeout:     opts.KeepAliveIdleTimeout,
+		// Set more timeouts https://gitlab.com/gitlab-org/gitlab-pages/-/issues/495
+		TLSHandshakeTimeout:   opts.TLSHandshakeTimeout,
+		ResponseHeaderTimeout: opts.ResponseHeaderTimeout,
+		ExpectContinueTimeout: opts.ExpectContinueTimeout,
 	}
 }

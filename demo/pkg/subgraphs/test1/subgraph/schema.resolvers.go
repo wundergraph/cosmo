@@ -42,6 +42,12 @@ func (r *queryResolver) InitialPayload(ctx context.Context) (map[string]interfac
 	return payload, nil
 }
 
+// Delay is the resolver for the delay field.
+func (r *queryResolver) Delay(ctx context.Context, response string, ms int) (string, error) {
+	time.Sleep(time.Duration(ms) * time.Millisecond)
+	return response, nil
+}
+
 // HeaderValue is the resolver for the headerValue field.
 func (r *subscriptionResolver) HeaderValue(ctx context.Context, name string, repeat *int) (<-chan *model.TimestampedString, error) {
 	header := injector.Header(ctx)
