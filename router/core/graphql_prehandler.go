@@ -12,6 +12,7 @@ import (
 	"github.com/go-chi/chi/middleware"
 	"github.com/wundergraph/cosmo/router/internal/cdn"
 	"github.com/wundergraph/cosmo/router/internal/logging"
+	"github.com/wundergraph/cosmo/router/internal/pool"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphql"
 	"go.uber.org/zap"
@@ -85,7 +86,12 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			metrics.Finish(hasRequestError, statusCode, writtenBytes)
 		}()
 
-		body, err := h.parser.ReadBody(r.Context(), r.Body)
+		// XXX: This buffer needs to be returned to the pool only
+		// AFTER we're done with body (retrieved from parser.ReadBody())
+		buf := pool.GetBytesBuffer()
+		defer pool.PutBytesBuffer(buf)
+
+		body, err := h.parser.ReadBody(r.Context(), buf, r.Body)
 		if err != nil {
 			hasRequestError = true
 			requestLogger.Error(err.Error())

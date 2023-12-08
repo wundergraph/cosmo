@@ -4,6 +4,8 @@ type Query {
   "Returns the value of the given key in the WS initial payload."
   initPayloadValue(key: String!): String!
   initialPayload: Map
+  "Returns response after the given delay"
+  delay(response: String!, ms: Int!): String!
 }
 
 scalar Map
