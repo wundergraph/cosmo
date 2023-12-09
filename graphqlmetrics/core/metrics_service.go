@@ -285,7 +285,7 @@ func retryOnConnectionError(ctx context.Context, logger *zap.Logger, f func(ctx 
 		retry.MaxJitter(100*time.Millisecond),
 		retry.DelayType(retry.CombineDelay(retry.BackOffDelay, retry.RandomDelay)),
 		retry.OnRetry(func(n uint, err error) {
-			logger.Info("retrying after error",
+			logger.Debug("retrying after error",
 				zap.Error(err),
 				zap.Uint("attempt", n),
 			)
