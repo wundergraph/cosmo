@@ -7,7 +7,6 @@ import (
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/avast/retry-go"
 	lru "github.com/hashicorp/golang-lru/v2"
-	"github.com/sourcegraph/conc/pool"
 	graphqlmetricsv1 "github.com/wundergraph/cosmo/graphqlmetrics/gen/proto/wg/cosmo/graphqlmetrics/v1"
 	"go.uber.org/zap"
 	"net"
@@ -231,32 +230,31 @@ func (s *MetricsService) PublishGraphQLMetrics(
 		)
 	}()
 
-	p := pool.New().WithContext(ctx)
-
-	p.Go(func(ctx context.Context) error {
-		return retryOnConnectionError(ctx, s.logger.With(zap.String("component", "operations")), func(ctx context.Context) error {
-			writtenOps, err := s.saveOperations(ctx, insertTime, req.Msg.SchemaUsage)
-			if err != nil {
-				return err
-			}
-			sentOps += writtenOps
-			return nil
-		})
+	err = retryOnConnectionError(ctx, s.logger.With(zap.String("component", "operations")), func(ctx context.Context) error {
+		writtenOps, err := s.saveOperations(ctx, insertTime, req.Msg.SchemaUsage)
+		if err != nil {
+			return err
+		}
+		sentOps += writtenOps
+		return nil
 	})
 
-	p.Go(func(ctx context.Context) error {
-		return retryOnConnectionError(ctx, s.logger.With(zap.String("component", "metrics")), func(ctx context.Context) error {
-			writtenMetrics, err := s.saveUsageMetrics(ctx, insertTime, claims, req.Msg.SchemaUsage)
-			if err != nil {
-				return err
-			}
-			sentMetrics += writtenMetrics
-			return nil
-		})
+	if err != nil {
+		s.logger.Error("Failed to write operations", zap.Error(err))
+		return nil, errPublishFailed
+	}
+
+	err = retryOnConnectionError(ctx, s.logger.With(zap.String("component", "metrics")), func(ctx context.Context) error {
+		writtenMetrics, err := s.saveUsageMetrics(ctx, insertTime, claims, req.Msg.SchemaUsage)
+		if err != nil {
+			return err
+		}
+		sentMetrics += writtenMetrics
+		return nil
 	})
 
-	if err := p.Wait(); err != nil {
-		s.logger.Error("Failed to publish metrics", zap.Error(err))
+	if err != nil {
+		s.logger.Error("Failed to write metrics", zap.Error(err))
 		return nil, errPublishFailed
 	}
 
@@ -267,6 +265,13 @@ func retryOnConnectionError(ctx context.Context, logger *zap.Logger, f func(ctx 
 	err := retry.Do(
 		func() error {
 			err := f(ctx)
+
+			if err == nil {
+				return nil
+			}
+
+			// Retry on connection errors
+
 			if errors.Is(err, clickhouse.ErrAcquireConnTimeout) ||
 				errors.Is(err, os.ErrDeadlineExceeded) ||
 				errors.Is(err, syscall.ECONNRESET) ||
