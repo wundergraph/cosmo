@@ -1,14 +1,39 @@
+import { useUser } from "@/hooks/use-user";
 import { docsBaseURL } from "@/lib/constants";
 import { CommandLineIcon } from "@heroicons/react/24/outline";
-import { formatDistanceToNow } from "date-fns";
-import Link from "next/link";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import {
+  addSubgraphMember,
+  getOrganizationMembers,
+  getSubgraphMembers,
+  removeSubgraphMember,
+} from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import {
   FederatedGraph,
   Subgraph,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
+import { formatDistanceToNow } from "date-fns";
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { IoPersonAdd } from "react-icons/io5";
 import { EmptyState } from "./empty-state";
 import { Badge } from "./ui/badge";
+import { Button } from "./ui/button";
 import { CLISteps } from "./ui/cli";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "./ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select";
 import {
   Table,
   TableBody,
@@ -17,6 +42,14 @@ import {
   TableHeader,
   TableRow,
 } from "./ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "./ui/tooltip";
+import { useToast } from "./ui/use-toast";
+import { cn } from "@/lib/utils";
 
 export const Empty = ({ graph }: { graph?: FederatedGraph }) => {
   let label = "team=A";
@@ -55,6 +88,178 @@ export const Empty = ({ graph }: { graph?: FederatedGraph }) => {
   );
 };
 
+const InviteUsers = ({ subgraphName }: { subgraphName: string }) => {
+  const [open, setOpen] = useState(false);
+  const user = useUser();
+  const isAdmin = user?.currentOrganization.roles.includes("admin");
+  const { data } = useQuery(getOrganizationMembers.useQuery());
+
+  const { data: subgraphMembersData, refetch: refetchSubgraphMembers } =
+    useQuery(
+      getSubgraphMembers.useQuery({
+        subgraphName,
+      }),
+    );
+
+  const { mutate: addMember, isPending: addingMember } = useMutation(
+    addSubgraphMember.useMutation(),
+  );
+  const { mutate: removeMember, isPending: removingMember } = useMutation(
+    removeSubgraphMember.useMutation(),
+  );
+
+  const { toast } = useToast();
+
+  const sendToast = (description: string) => {
+    toast({ description, duration: 3000 });
+  };
+
+  const subgraphMembers = subgraphMembersData?.members || [];
+
+  const [inviteOptions, setInviteOptions] = useState<string[]>([]);
+  const [inviteeEmail, setInviteeEmail] = useState("");
+
+  useEffect(() => {
+    if (!data || !subgraphMembersData) return;
+    const orgMemberEmails = data.members.map((m) => m.email);
+    const subgraphMemberEmails = subgraphMembersData.members.map(
+      (m) => m.email,
+    );
+
+    const options = orgMemberEmails.filter(
+      (x) => !subgraphMemberEmails.includes(x),
+    );
+    setInviteOptions(options);
+    setInviteeEmail(options?.[0] || "");
+  }, [data, subgraphMembersData]);
+
+  const onSubmit = () => {
+    if (inviteeEmail === "") return;
+    addMember(
+      { userEmail: inviteeEmail, subgraphName },
+      {
+        onSuccess: (d) => {
+          sendToast(d.response?.details || "Added member successfully.");
+          setOpen(false);
+          // refetchSubgraphMembers();
+        },
+        onError: (error) => {
+          sendToast("Could not add the member. Please try again.");
+        },
+      },
+    );
+  };
+
+  return (
+    <div className="flex items-center justify-end px-2">
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger
+          disabled={!isAdmin}
+          className={cn({ "!cursor-not-allowed": !isAdmin })}
+        >
+          <Button variant="ghost" size="icon-sm" disabled={!isAdmin}>
+            <IoPersonAdd className="h-4 w-4" />
+          </Button>
+        </DialogTrigger>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              Invite users to <span className="italic">{subgraphName}</span>{" "}
+              subgraph
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-y-6">
+            {inviteOptions.length > 0 ? (
+              <form className="flex gap-x-4" onSubmit={onSubmit}>
+                <div className="flex-1">
+                  <Select
+                    value={inviteeEmail}
+                    onValueChange={(value) => setInviteeEmail(value)}
+                  >
+                    <SelectTrigger
+                      value={inviteeEmail}
+                      className="w-[200px] lg:w-full"
+                    >
+                      <SelectValue aria-label={inviteeEmail}>
+                        {inviteeEmail}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {inviteOptions.map((option) => {
+                        return (
+                          <SelectItem key={option} value={option}>
+                            {option}
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button
+                  type="submit"
+                  disabled={inviteOptions.length === 0}
+                  variant="default"
+                  isLoading={addingMember}
+                >
+                  Invite
+                </Button>
+              </form>
+            ) : (
+              <span className="text-sm text-muted-foreground">
+                All the organization members are a part of this subgraph
+              </span>
+            )}
+            {subgraphMembers.length > 0 && (
+              <Table>
+                <TableBody>
+                  {subgraphMembers.map(
+                    ({ email, userId, subgraphMemberId }) => {
+                      return (
+                        <TableRow key={userId} className="h-12 py-1">
+                          <TableCell className="px-4 font-medium">
+                            {email}
+                          </TableCell>
+                          <TableCell className="flex h-12 items-center justify-end px-4">
+                            <Button
+                              variant="ghost"
+                              className="text-primary"
+                              onClick={() => {
+                                removeMember(
+                                  { subgraphMemberId, subgraphName },
+                                  {
+                                    onSuccess: (d) => {
+                                      sendToast(
+                                        d.response?.details ||
+                                          "Removed member successfully.",
+                                      );
+                                      refetchSubgraphMembers();
+                                    },
+                                    onError: (error) => {
+                                      sendToast(
+                                        "Could not remove the member. Please try again.",
+                                      );
+                                    },
+                                  },
+                                );
+                              }}
+                            >
+                              Remove
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    },
+                  )}
+                </TableBody>
+              </Table>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
 export const SubgraphsTable = ({
   graph,
   subgraphs,
@@ -62,6 +267,8 @@ export const SubgraphsTable = ({
   graph?: FederatedGraph;
   subgraphs: Subgraph[];
 }) => {
+  const user = useUser();
+
   if (!subgraphs || subgraphs.length === 0) return <Empty graph={graph} />;
 
   return (
@@ -74,6 +281,9 @@ export const SubgraphsTable = ({
           <TableHead className="w-2/12 px-4 text-right">
             Last Published
           </TableHead>
+          {user?.currentOrganization.isRBACEnabled && (
+            <TableHead className="w-1/12"></TableHead>
+          )}
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -107,6 +317,11 @@ export const SubgraphsTable = ({
                     })
                   : "Never"}
               </TableCell>
+              {user?.currentOrganization.isRBACEnabled && (
+                <TableCell>
+                  <InviteUsers subgraphName={name} />
+                </TableCell>
+              )}
             </TableRow>
           );
         })}

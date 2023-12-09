@@ -137,6 +137,7 @@ import {
   validateDateRanges,
 } from '../util.js';
 import { FederatedGraphSchemaUpdate, OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
+import { ApiKeyRepository } from '../repositories/ApiKeyRepository.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -1523,7 +1524,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
       return handleError<PlainMessage<CreateAPIKeyResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const orgRepo = new OrganizationRepository(opts.db);
+        const apiKeyRepo = new ApiKeyRepository(opts.db);
 
         if (!authContext.hasWriteAccess) {
           return {
@@ -1537,7 +1538,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const keyName = req.name.trim();
 
-        const apiKeyModel = await orgRepo.getAPIKeyByName({
+        const apiKeyModel = await apiKeyRepo.getAPIKeyByName({
           organizationID: authContext.organizationId,
           name: keyName,
         });
@@ -1563,12 +1564,13 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const generatedAPIKey = ApiKeyGenerator.generate();
 
-        await orgRepo.addAPIKey({
+        await apiKeyRepo.addAPIKey({
           name: keyName,
           organizationID: authContext.organizationId,
           userID: authContext.userId || req.userID,
           key: generatedAPIKey,
           expiresAt: req.expires,
+          targetIds: [...req.federatedGraphTargetIds, ...req.subgraphTargetIds],
         });
         return {
           response: {
@@ -1588,6 +1590,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<DeleteAPIKeyResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db);
+        const apiKeyRepo = new ApiKeyRepository(opts.db);
 
         if (!authContext.hasWriteAccess) {
           return {
@@ -1598,7 +1601,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const apiKey = await orgRepo.getAPIKeyByName({ organizationID: authContext.organizationId, name: req.name });
+        const apiKey = await apiKeyRepo.getAPIKeyByName({ organizationID: authContext.organizationId, name: req.name });
         if (!apiKey) {
           return {
             response: {
@@ -1622,7 +1625,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        await orgRepo.removeAPIKey({
+        await apiKeyRepo.removeAPIKey({
           name: req.name,
           organizationID: authContext.organizationId,
         });
@@ -3187,7 +3190,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         // TODO add a check to see if the user adding has permissions to add
 
         // check if the user to be added exists and if the user is the member of the org
-        const user = await userRepo.byId(req.userEmail);
+        const user = await userRepo.byEmail(req.userEmail);
         if (!user) {
           return {
             response: {
@@ -3235,8 +3238,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
       return handleError<PlainMessage<RemoveSubgraphMemberResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const orgRepo = new OrganizationRepository(opts.db);
-        const userRepo = new UserRepository(opts.db);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
 
         // TODO add a check to see if the user adding has permissions to add
@@ -4147,9 +4148,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
       return handleError<PlainMessage<GetAPIKeysResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const orgRepo = new OrganizationRepository(opts.db);
+        const apiKeyRepo = new ApiKeyRepository(opts.db);
 
-        const apiKeys = await orgRepo.getAPIKeys({ organizationID: authContext.organizationId });
+        const apiKeys = await apiKeyRepo.getAPIKeys({ organizationID: authContext.organizationId });
 
         return {
           response: {
@@ -4793,22 +4794,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               code: EnumStatusCode.OK,
             },
             federatedGraphs: federatedGraphs.map((g) => ({
-              id: g.id,
+              targetId: g.targetId,
               name: g.name,
-              labelMatchers: g.labelMatchers,
-              routingURL: g.routingUrl,
-              lastUpdatedAt: g.lastUpdatedAt,
-              connectedSubgraphs: g.subgraphsCount,
-              compositionErrors: g.compositionErrors ?? '',
-              isComposable: g.isComposable,
-              requestSeries: [],
             })),
             subgraphs: subgraphs.map((g) => ({
-              id: g.id,
+              targetId: g.targetId,
               name: g.name,
-              routingURL: g.routingUrl,
-              lastUpdatedAt: g.lastUpdatedAt,
-              labels: g.labels,
             })),
           };
         }
@@ -4822,22 +4813,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             code: EnumStatusCode.OK,
           },
           federatedGraphs: federatedGraphs.map((g) => ({
-            id: g.id,
+            targetId: g.targetId,
             name: g.name,
-            labelMatchers: g.labelMatchers,
-            routingURL: g.routingUrl,
-            lastUpdatedAt: g.lastUpdatedAt,
-            connectedSubgraphs: g.subgraphsCount,
-            compositionErrors: g.compositionErrors ?? '',
-            isComposable: g.isComposable,
-            requestSeries: [],
           })),
           subgraphs: subgraphs.map((g) => ({
-            id: g.id,
+            targetId: g.targetId,
             name: g.name,
-            routingURL: g.routingUrl,
-            lastUpdatedAt: g.lastUpdatedAt,
-            labels: g.labels,
           })),
         };
       });

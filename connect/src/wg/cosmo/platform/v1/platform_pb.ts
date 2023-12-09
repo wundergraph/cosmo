@@ -4636,6 +4636,16 @@ export class CreateAPIKeyRequest extends Message<CreateAPIKeyRequest> {
    */
   expires = ExpiresAt.NEVER;
 
+  /**
+   * @generated from field: repeated string federatedGraphTargetIds = 4;
+   */
+  federatedGraphTargetIds: string[] = [];
+
+  /**
+   * @generated from field: repeated string subgraphTargetIds = 5;
+   */
+  subgraphTargetIds: string[] = [];
+
   constructor(data?: PartialMessage<CreateAPIKeyRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -4647,6 +4657,8 @@ export class CreateAPIKeyRequest extends Message<CreateAPIKeyRequest> {
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "userID", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "expires", kind: "enum", T: proto3.getEnumType(ExpiresAt) },
+    { no: 4, name: "federatedGraphTargetIds", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 5, name: "subgraphTargetIds", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateAPIKeyRequest {
@@ -9059,14 +9071,14 @@ export class GetUserAccessibleResourcesResponse extends Message<GetUserAccessibl
   response?: Response;
 
   /**
-   * @generated from field: repeated wg.cosmo.platform.v1.FederatedGraph federatedGraphs = 2;
+   * @generated from field: repeated wg.cosmo.platform.v1.GetUserAccessibleResourcesResponse.Graph federatedGraphs = 2;
    */
-  federatedGraphs: FederatedGraph[] = [];
+  federatedGraphs: GetUserAccessibleResourcesResponse_Graph[] = [];
 
   /**
-   * @generated from field: repeated wg.cosmo.platform.v1.Subgraph subgraphs = 3;
+   * @generated from field: repeated wg.cosmo.platform.v1.GetUserAccessibleResourcesResponse.Graph subgraphs = 3;
    */
-  subgraphs: Subgraph[] = [];
+  subgraphs: GetUserAccessibleResourcesResponse_Graph[] = [];
 
   constructor(data?: PartialMessage<GetUserAccessibleResourcesResponse>) {
     super();
@@ -9077,8 +9089,8 @@ export class GetUserAccessibleResourcesResponse extends Message<GetUserAccessibl
   static readonly typeName = "wg.cosmo.platform.v1.GetUserAccessibleResourcesResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
-    { no: 2, name: "federatedGraphs", kind: "message", T: FederatedGraph, repeated: true },
-    { no: 3, name: "subgraphs", kind: "message", T: Subgraph, repeated: true },
+    { no: 2, name: "federatedGraphs", kind: "message", T: GetUserAccessibleResourcesResponse_Graph, repeated: true },
+    { no: 3, name: "subgraphs", kind: "message", T: GetUserAccessibleResourcesResponse_Graph, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetUserAccessibleResourcesResponse {
@@ -9095,6 +9107,49 @@ export class GetUserAccessibleResourcesResponse extends Message<GetUserAccessibl
 
   static equals(a: GetUserAccessibleResourcesResponse | PlainMessage<GetUserAccessibleResourcesResponse> | undefined, b: GetUserAccessibleResourcesResponse | PlainMessage<GetUserAccessibleResourcesResponse> | undefined): boolean {
     return proto3.util.equals(GetUserAccessibleResourcesResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetUserAccessibleResourcesResponse.Graph
+ */
+export class GetUserAccessibleResourcesResponse_Graph extends Message<GetUserAccessibleResourcesResponse_Graph> {
+  /**
+   * @generated from field: string targetId = 1;
+   */
+  targetId = "";
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name = "";
+
+  constructor(data?: PartialMessage<GetUserAccessibleResourcesResponse_Graph>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetUserAccessibleResourcesResponse.Graph";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "targetId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetUserAccessibleResourcesResponse_Graph {
+    return new GetUserAccessibleResourcesResponse_Graph().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetUserAccessibleResourcesResponse_Graph {
+    return new GetUserAccessibleResourcesResponse_Graph().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetUserAccessibleResourcesResponse_Graph {
+    return new GetUserAccessibleResourcesResponse_Graph().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetUserAccessibleResourcesResponse_Graph | PlainMessage<GetUserAccessibleResourcesResponse_Graph> | undefined, b: GetUserAccessibleResourcesResponse_Graph | PlainMessage<GetUserAccessibleResourcesResponse_Graph> | undefined): boolean {
+    return proto3.util.equals(GetUserAccessibleResourcesResponse_Graph, a, b);
   }
 }
 

@@ -614,6 +614,8 @@ message CreateAPIKeyRequest {
   string name = 1;
   string userID = 2;
   ExpiresAt expires = 3;
+  repeated string federatedGraphTargetIds = 4;
+  repeated string subgraphTargetIds = 5;
 }
 
 message CreateAPIKeyResponse {
@@ -1145,9 +1147,13 @@ message GetChangelogBySchemaVersionResponse {
 message GetUserAccessibleResourcesRequest {}
 
 message GetUserAccessibleResourcesResponse {
+  message Graph {
+    string targetId = 1;
+    string name = 2;
+  }
   Response response = 1;
-  repeated FederatedGraph federatedGraphs = 2;
-  repeated Subgraph subgraphs = 3;
+  repeated Graph federatedGraphs = 2;
+  repeated Graph subgraphs = 3;
 }
 
 message UpdateRBACSettingsRequest {
