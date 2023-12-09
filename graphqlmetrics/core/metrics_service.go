@@ -46,9 +46,11 @@ func NewMetricsService(logger *zap.Logger, chConn clickhouse.Conn) *MetricsServi
 // saveOperations saves the operation documents to the storage in a batch
 // TODO: Move to async inserts as soon as clickhouse 23.10 is released on cloud
 func (s *MetricsService) saveOperations(ctx context.Context, insertTime time.Time, schemaUsage []*graphqlmetricsv1.SchemaUsageInfo) (int, error) {
+	requestLogger := s.logger.With(zap.String("method", "saveOperations"))
+
 	opBatch, err := s.conn.PrepareBatch(ctx, `INSERT INTO gql_metrics_operations`)
 	if err != nil {
-		s.logger.Error("Failed to prepare batch for operations", zap.Error(err))
+		requestLogger.Error("Failed to prepare batch for operations", zap.Error(err))
 		return 0, err
 	}
 
@@ -66,7 +68,7 @@ func (s *MetricsService) saveOperations(ctx context.Context, insertTime time.Tim
 				schemaUsage.RequestDocument,
 			)
 			if err != nil {
-				s.logger.Error("Failed to append operation to batch", zap.Error(err))
+				requestLogger.Error("Failed to append operation to batch", zap.Error(err))
 				return 0, err
 			}
 		}
@@ -74,7 +76,7 @@ func (s *MetricsService) saveOperations(ctx context.Context, insertTime time.Tim
 	}
 
 	if err := opBatch.Send(); err != nil {
-		s.logger.Error("Failed to send operation batch", zap.Error(err))
+		requestLogger.Error("Failed to send operation batch", zap.Error(err))
 		return 0, err
 	}
 
@@ -89,9 +91,11 @@ func (s *MetricsService) saveOperations(ctx context.Context, insertTime time.Tim
 // saveUsageMetrics saves the usage metrics to the storage in a batch
 // TODO: Move to async inserts as soon as clickhouse 23.10 is released on cloud
 func (s *MetricsService) saveUsageMetrics(ctx context.Context, insertTime time.Time, claims *GraphAPITokenClaims, schemaUsage []*graphqlmetricsv1.SchemaUsageInfo) (int, error) {
+	requestLogger := s.logger.With(zap.String("method", "saveUsageMetrics"))
+
 	metricBatch, err := s.conn.PrepareBatch(ctx, `INSERT INTO gql_metrics_schema_usage`)
 	if err != nil {
-		s.logger.Error("Failed to prepare batch for metrics", zap.Error(err))
+		requestLogger.Error("Failed to prepare batch for metrics", zap.Error(err))
 		return 0, err
 	}
 
@@ -133,7 +137,7 @@ func (s *MetricsService) saveUsageMetrics(ctx context.Context, insertTime time.T
 				schemaUsage.Attributes,
 			)
 			if err != nil {
-				s.logger.Error("Failed to append field metric to batch", zap.Error(err))
+				requestLogger.Error("Failed to append field metric to batch", zap.Error(err))
 				return 0, err
 			}
 		}
@@ -162,7 +166,7 @@ func (s *MetricsService) saveUsageMetrics(ctx context.Context, insertTime time.T
 				schemaUsage.Attributes,
 			)
 			if err != nil {
-				s.logger.Error("Failed to append argument metric to batch", zap.Error(err))
+				requestLogger.Error("Failed to append argument metric to batch", zap.Error(err))
 				return 0, err
 			}
 		}
@@ -191,14 +195,14 @@ func (s *MetricsService) saveUsageMetrics(ctx context.Context, insertTime time.T
 				schemaUsage.Attributes,
 			)
 			if err != nil {
-				s.logger.Error("Failed to append input metric to batch", zap.Error(err))
+				requestLogger.Error("Failed to append input metric to batch", zap.Error(err))
 				return 0, err
 			}
 		}
 	}
 
 	if err := metricBatch.Send(); err != nil {
-		s.logger.Error("Failed to send metrics batch", zap.Error(err))
+		requestLogger.Error("Failed to send metrics batch", zap.Error(err))
 		return 0, err
 	}
 
@@ -209,6 +213,8 @@ func (s *MetricsService) PublishGraphQLMetrics(
 	ctx context.Context,
 	req *connect.Request[graphqlmetricsv1.PublishGraphQLRequestMetricsRequest],
 ) (*connect.Response[graphqlmetricsv1.PublishOperationCoverageReportResponse], error) {
+
+	requestLogger := s.logger.With(zap.String("procedure", req.Spec().Procedure))
 	res := connect.NewResponse(&graphqlmetricsv1.PublishOperationCoverageReportResponse{})
 
 	claims, err := getClaims(ctx)
@@ -220,14 +226,14 @@ func (s *MetricsService) PublishGraphQLMetrics(
 	insertTime := time.Now()
 
 	defer func() {
-		s.logger.Debug("metric write finished",
+		requestLogger.Debug("metric write finished",
 			zap.Duration("duration", time.Since(insertTime)),
 			zap.Int("metrics", sentMetrics),
 			zap.Int("operations", sentOps),
 		)
 	}()
 
-	err = retryOnError(ctx, s.logger.With(zap.String("component", "operations")), func(ctx context.Context) error {
+	err = retryOnError(ctx, requestLogger.With(zap.String("component", "operations")), func(ctx context.Context) error {
 		writtenOps, err := s.saveOperations(ctx, insertTime, req.Msg.SchemaUsage)
 		if err != nil {
 			return err
@@ -237,11 +243,11 @@ func (s *MetricsService) PublishGraphQLMetrics(
 	})
 
 	if err != nil {
-		s.logger.Error("Failed to write operations", zap.Error(err))
+		requestLogger.Error("Failed to write operations", zap.Error(err))
 		return nil, errPublishFailed
 	}
 
-	err = retryOnError(ctx, s.logger.With(zap.String("component", "metrics")), func(ctx context.Context) error {
+	err = retryOnError(ctx, requestLogger.With(zap.String("component", "metrics")), func(ctx context.Context) error {
 		writtenMetrics, err := s.saveUsageMetrics(ctx, insertTime, claims, req.Msg.SchemaUsage)
 		if err != nil {
 			return err
@@ -251,7 +257,7 @@ func (s *MetricsService) PublishGraphQLMetrics(
 	})
 
 	if err != nil {
-		s.logger.Error("Failed to write metrics", zap.Error(err))
+		requestLogger.Error("Failed to write metrics", zap.Error(err))
 		return nil, errPublishFailed
 	}
 
