@@ -9,12 +9,9 @@ import (
 	lru "github.com/hashicorp/golang-lru/v2"
 	graphqlmetricsv1 "github.com/wundergraph/cosmo/graphqlmetrics/gen/proto/wg/cosmo/graphqlmetrics/v1"
 	"go.uber.org/zap"
-	"net"
-	"os"
 	"sort"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 )
 
@@ -230,7 +227,7 @@ func (s *MetricsService) PublishGraphQLMetrics(
 		)
 	}()
 
-	err = retryOnConnectionError(ctx, s.logger.With(zap.String("component", "operations")), func(ctx context.Context) error {
+	err = retryOnError(ctx, s.logger.With(zap.String("component", "operations")), func(ctx context.Context) error {
 		writtenOps, err := s.saveOperations(ctx, insertTime, req.Msg.SchemaUsage)
 		if err != nil {
 			return err
@@ -244,7 +241,7 @@ func (s *MetricsService) PublishGraphQLMetrics(
 		return nil, errPublishFailed
 	}
 
-	err = retryOnConnectionError(ctx, s.logger.With(zap.String("component", "metrics")), func(ctx context.Context) error {
+	err = retryOnError(ctx, s.logger.With(zap.String("component", "metrics")), func(ctx context.Context) error {
 		writtenMetrics, err := s.saveUsageMetrics(ctx, insertTime, claims, req.Msg.SchemaUsage)
 		if err != nil {
 			return err
@@ -261,29 +258,16 @@ func (s *MetricsService) PublishGraphQLMetrics(
 	return res, nil
 }
 
-func retryOnConnectionError(ctx context.Context, logger *zap.Logger, f func(ctx context.Context) error) error {
+func retryOnError(ctx context.Context, logger *zap.Logger, f func(ctx context.Context) error) error {
 	err := retry.Do(
 		func() error {
 			err := f(ctx)
 
-			if err == nil {
+			if err != nil {
 				return nil
 			}
 
-			// Retry on connection errors
-
-			if errors.Is(err, clickhouse.ErrAcquireConnTimeout) ||
-				errors.Is(err, os.ErrDeadlineExceeded) ||
-				errors.Is(err, syscall.ECONNRESET) ||
-				errors.Is(err, syscall.ECONNREFUSED) ||
-				errors.Is(err, syscall.ECONNABORTED) ||
-				errors.Is(err, syscall.ETIMEDOUT) ||
-				errors.Is(err, syscall.EPIPE) ||
-				errors.Is(err, net.ErrClosed) {
-				return err
-			}
-
-			return retry.Unrecoverable(err)
+			return nil
 		},
 		retry.Attempts(3),
 		retry.Delay(100*time.Millisecond),
