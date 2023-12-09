@@ -8,6 +8,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"net/url"
 	"os"
+	"path"
+	"runtime"
 	"testing"
 )
 
@@ -67,10 +69,13 @@ func GetTestDatabase(t *testing.T) clickhouse.Conn {
 	err = adminConn.Exec(ctx, "GRANT "+databaseName+" to "+databaseName)
 	require.NoError(t, err)
 
+	_, filename, _, _ := runtime.Caller(0)
+	dir := path.Join(path.Dir(filename), "..", "migrations")
+
 	dbUrl := "clickhouse://" + databaseName + "@localhost:9000/" + databaseName
 	u, _ := url.Parse(dbUrl)
 	migrator := dbmate.New(u)
-	migrator.MigrationsDir = []string{"migrations"}
+	migrator.MigrationsDir = []string{dir}
 	migrator.AutoDumpSchema = false
 
 	require.NoError(t, migrator.Wait())

@@ -2,7 +2,9 @@
   <configuration default="false" name="graphqlmetrics" type="GoApplicationRunConfiguration" factoryName="Go Application">
     <module name="cosmo" />
     <working_directory value="$PROJECT_DIR$/graphqlmetrics" />
+    <go_parameters value="-race" />
     <kind value="FILE" />
+    <package value="github.com/wundergraph/cosmo/graphqlmetrics" />
     <directory value="$PROJECT_DIR$" />
     <filePath value="$PROJECT_DIR$/graphqlmetrics/cmd/main.go" />
     <method v="2" />

@@ -5,8 +5,8 @@ import (
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/amacneil/dbmate/v2/pkg/dbmate"
 	_ "github.com/amacneil/dbmate/v2/pkg/driver/clickhouse"
-	"github.com/wundergraph/cosmo/graphqlmetrics"
 	"github.com/wundergraph/cosmo/graphqlmetrics/config"
+	"github.com/wundergraph/cosmo/graphqlmetrics/core"
 	"github.com/wundergraph/cosmo/graphqlmetrics/internal/logging"
 	"go.uber.org/automaxprocs/maxprocs"
 	"go.uber.org/zap"
@@ -32,7 +32,7 @@ func main() {
 	logger := logging.New(!cfg.JSONLog, isDebug, logLevel).
 		With(
 			zap.String("component", "@wundergraph/graphqlmetrics"),
-			zap.String("service_version", graphqlmetrics.Version),
+			zap.String("service_version", core.Version),
 		)
 
 	// Automatically set GOMAXPROCS to avoid CPU throttling on containerized environments
@@ -69,11 +69,11 @@ func main() {
 			Name    string
 			Version string
 		}{
-			{Name: "graphqlmetrics", Version: graphqlmetrics.Version},
+			{Name: "graphqlmetrics", Version: core.Version},
 		},
 	}
-	options.MaxIdleConns = 10
-	options.MaxOpenConns = 20
+	options.MaxIdleConns = 16
+	options.MaxOpenConns = 32
 
 	logger.Info("Connecting to clickhouse",
 		zap.Int("maxOpenConns", options.MaxOpenConns),
@@ -108,10 +108,11 @@ func main() {
 		logger.Info("Migration is up to date")
 	}
 
-	svr := graphqlmetrics.NewServer(
-		graphqlmetrics.NewMetricsService(logger, conn, []byte(cfg.IngestJWTSecret)),
-		graphqlmetrics.WithListenAddr(cfg.ListenAddr),
-		graphqlmetrics.WithLogger(logger),
+	svr := core.NewServer(
+		core.NewMetricsService(logger, conn),
+		core.WithJwtSecret([]byte(cfg.IngestJWTSecret)),
+		core.WithListenAddr(cfg.ListenAddr),
+		core.WithLogger(logger),
 	)
 
 	go func() {

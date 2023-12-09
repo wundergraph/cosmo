@@ -1,4 +1,4 @@
-package graphqlmetrics
+package core
 
 import (
 	"context"
@@ -14,10 +14,10 @@ import (
 type Option func(s *Server)
 
 type Server struct {
-	server     *http.Server
-	listenAddr string
-	logger     *zap.Logger
-
+	server         *http.Server
+	listenAddr     string
+	logger         *zap.Logger
+	jwtSecret      []byte
 	metricsService graphqlmetricsv1connect.GraphQLMetricsServiceHandler
 }
 
@@ -47,7 +47,7 @@ func (s *Server) bootstrap() {
 	mux.Handle("/health", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
-	mux.Handle(path, handler)
+	mux.Handle(path, authenticate(s.jwtSecret, s.logger, handler))
 
 	s.server = &http.Server{
 		Addr: s.listenAddr,
@@ -93,5 +93,11 @@ func WithLogger(logger *zap.Logger) Option {
 func WithListenAddr(addr string) Option {
 	return func(s *Server) {
 		s.listenAddr = addr
+	}
+}
+
+func WithJwtSecret(secret []byte) Option {
+	return func(s *Server) {
+		s.jwtSecret = secret
 	}
 }
