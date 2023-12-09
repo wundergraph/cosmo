@@ -4,6 +4,7 @@ import (
 	"connectrpc.com/connect"
 	"context"
 	"errors"
+	"fmt"
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/avast/retry-go"
 	lru "github.com/hashicorp/golang-lru/v2"
@@ -46,12 +47,10 @@ func NewMetricsService(logger *zap.Logger, chConn clickhouse.Conn) *MetricsServi
 // saveOperations saves the operation documents to the storage in a batch
 // TODO: Move to async inserts as soon as clickhouse 23.10 is released on cloud
 func (s *MetricsService) saveOperations(ctx context.Context, insertTime time.Time, schemaUsage []*graphqlmetricsv1.SchemaUsageInfo) (int, error) {
-	requestLogger := s.logger.With(zap.String("method", "saveOperations"))
 
 	opBatch, err := s.conn.PrepareBatch(ctx, `INSERT INTO gql_metrics_operations`)
 	if err != nil {
-		requestLogger.Error("Failed to prepare batch for operations", zap.Error(err))
-		return 0, err
+		return 0, fmt.Errorf("failed to prepare batch for operations: %w", err)
 	}
 
 	for _, schemaUsage := range schemaUsage {
@@ -68,16 +67,14 @@ func (s *MetricsService) saveOperations(ctx context.Context, insertTime time.Tim
 				schemaUsage.RequestDocument,
 			)
 			if err != nil {
-				requestLogger.Error("Failed to append operation to batch", zap.Error(err))
-				return 0, err
+				return 0, fmt.Errorf("failed to append operation to batch: %w", err)
 			}
 		}
 
 	}
 
 	if err := opBatch.Send(); err != nil {
-		requestLogger.Error("Failed to send operation batch", zap.Error(err))
-		return 0, err
+		return 0, fmt.Errorf("failed to send operation batch: %w", err)
 	}
 
 	for _, su := range schemaUsage {
@@ -91,12 +88,10 @@ func (s *MetricsService) saveOperations(ctx context.Context, insertTime time.Tim
 // saveUsageMetrics saves the usage metrics to the storage in a batch
 // TODO: Move to async inserts as soon as clickhouse 23.10 is released on cloud
 func (s *MetricsService) saveUsageMetrics(ctx context.Context, insertTime time.Time, claims *GraphAPITokenClaims, schemaUsage []*graphqlmetricsv1.SchemaUsageInfo) (int, error) {
-	requestLogger := s.logger.With(zap.String("method", "saveUsageMetrics"))
 
 	metricBatch, err := s.conn.PrepareBatch(ctx, `INSERT INTO gql_metrics_schema_usage`)
 	if err != nil {
-		requestLogger.Error("Failed to prepare batch for metrics", zap.Error(err))
-		return 0, err
+		return 0, fmt.Errorf("failed to prepare batch for metrics: %w", err)
 	}
 
 	for _, schemaUsage := range schemaUsage {
@@ -137,8 +132,7 @@ func (s *MetricsService) saveUsageMetrics(ctx context.Context, insertTime time.T
 				schemaUsage.Attributes,
 			)
 			if err != nil {
-				requestLogger.Error("Failed to append field metric to batch", zap.Error(err))
-				return 0, err
+				return 0, fmt.Errorf("failed to append field metric to batch: %w", err)
 			}
 		}
 
@@ -166,8 +160,7 @@ func (s *MetricsService) saveUsageMetrics(ctx context.Context, insertTime time.T
 				schemaUsage.Attributes,
 			)
 			if err != nil {
-				requestLogger.Error("Failed to append argument metric to batch", zap.Error(err))
-				return 0, err
+				return 0, fmt.Errorf("failed to append argument metric to batch: %w", err)
 			}
 		}
 
@@ -195,15 +188,13 @@ func (s *MetricsService) saveUsageMetrics(ctx context.Context, insertTime time.T
 				schemaUsage.Attributes,
 			)
 			if err != nil {
-				requestLogger.Error("Failed to append input metric to batch", zap.Error(err))
-				return 0, err
+				return 0, fmt.Errorf("failed to append input metric to batch: %w", err)
 			}
 		}
 	}
 
 	if err := metricBatch.Send(); err != nil {
-		requestLogger.Error("Failed to send metrics batch", zap.Error(err))
-		return 0, err
+		return 0, fmt.Errorf("failed to send metrics batch: %w", err)
 	}
 
 	return metricBatch.Rows(), nil
@@ -268,7 +259,7 @@ func retryOnError(ctx context.Context, logger *zap.Logger, f func(ctx context.Co
 	opts := []retry.Option{
 		retry.Attempts(3),
 		retry.Delay(100 * time.Millisecond),
-		retry.MaxJitter(100 * time.Millisecond),
+		retry.MaxJitter(1000 * time.Millisecond),
 		retry.DelayType(retry.CombineDelay(retry.BackOffDelay, retry.RandomDelay)),
 		retry.OnRetry(func(n uint, err error) {
 			logger.Debug("retrying after error",
