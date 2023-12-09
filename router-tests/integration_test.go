@@ -701,3 +701,50 @@ func FuzzQuery(f *testing.F) {
 		}
 	})
 }
+
+func TestPlannerErrorMessage(t *testing.T) {
+	server := setupServer(t)
+	// Error message should contain the invalid argument name instead of a
+	// generic planning error message
+	rr := sendData(server, []byte(`{"query":"{  employee(id:3, does_not_exist: 42) { id } }"}`))
+	if rr.Code != http.StatusOK {
+		t.Error("unexpected status code", rr.Code)
+	}
+	var resp graphqlErrorResponse
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatal(err)
+	}
+	require.Len(t, resp.Errors, 1)
+	assert.Equal(t, `Unknown argument "does_not_exist" on field "Query.employee".`, resp.Errors[0].Message)
+}
+
+func TestConcurrentQueriesWithDelay(t *testing.T) {
+	const (
+		numQueries   = 1000
+		queryDelayMs = 5000
+	)
+	server := setupServer(t, core.WithTransport(
+		&http.Transport{
+			DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+				// We need a delay here to ensure that the body has not been written to
+				// the subgraph server until this delay has elapsed. If the delay was
+				// only on the server, the body would be written immediately and the
+				// buffer could be reused without causing a race.
+				time.Sleep(queryDelayMs * time.Millisecond)
+				return net.Dial(network, addr)
+			},
+		}))
+	var wg sync.WaitGroup
+	wg.Add(numQueries)
+	for ii := 0; ii < numQueries; ii++ {
+		go func() {
+			defer wg.Done()
+			resp := strconv.FormatInt(rand.Int63(), 16)
+			query := fmt.Sprintf(`{"query":"{ delay(response:\"%s\", ms:%d) }"}`, resp, queryDelayMs)
+			result := sendData(server, []byte(query))
+			assert.Equal(t, http.StatusOK, result.Result().StatusCode)
+			assert.JSONEq(t, fmt.Sprintf(`{"data":{"delay":"%s"}}`, resp), result.Body.String())
+		}()
+	}
+	wg.Wait()
+}
