@@ -259,19 +259,10 @@ func (s *MetricsService) PublishGraphQLMetrics(
 }
 
 func retryOnError(ctx context.Context, logger *zap.Logger, f func(ctx context.Context) error) error {
-	err := retry.Do(
-		func() error {
-			err := f(ctx)
-
-			if err != nil {
-				return nil
-			}
-
-			return nil
-		},
+	opts := []retry.Option{
 		retry.Attempts(3),
-		retry.Delay(100*time.Millisecond),
-		retry.MaxJitter(100*time.Millisecond),
+		retry.Delay(100 * time.Millisecond),
+		retry.MaxJitter(100 * time.Millisecond),
 		retry.DelayType(retry.CombineDelay(retry.BackOffDelay, retry.RandomDelay)),
 		retry.OnRetry(func(n uint, err error) {
 			logger.Debug("retrying after error",
@@ -279,6 +270,19 @@ func retryOnError(ctx context.Context, logger *zap.Logger, f func(ctx context.Co
 				zap.Uint("attempt", n),
 			)
 		}),
+	}
+
+	err := retry.Do(
+		func() error {
+			err := f(ctx)
+
+			if err != nil {
+				return err
+			}
+
+			return nil
+		},
+		opts...,
 	)
 	if err != nil {
 		return err
