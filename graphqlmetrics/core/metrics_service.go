@@ -5,20 +5,23 @@ import (
 	"context"
 	"errors"
 	"github.com/ClickHouse/clickhouse-go/v2"
+	"github.com/avast/retry-go"
 	lru "github.com/hashicorp/golang-lru/v2"
 	"github.com/sourcegraph/conc/pool"
 	graphqlmetricsv1 "github.com/wundergraph/cosmo/graphqlmetrics/gen/proto/wg/cosmo/graphqlmetrics/v1"
 	"go.uber.org/zap"
+	"net"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 )
 
 var (
-	errNotAuthenticated     = errors.New("authentication didn't succeed")
-	errMetricWriteFailed    = errors.New("failed to write metrics")
-	errOperationWriteFailed = errors.New("operation write failed")
+	errNotAuthenticated = errors.New("authentication didn't succeed")
+	errPublishFailed    = errors.New("failed to publish metrics")
 )
 
 type MetricsService struct {
@@ -50,7 +53,7 @@ func (s *MetricsService) saveOperations(ctx context.Context, insertTime time.Tim
 	opBatch, err := s.conn.PrepareBatch(ctx, `INSERT INTO gql_metrics_operations`)
 	if err != nil {
 		s.logger.Error("Failed to prepare batch for operations", zap.Error(err))
-		return 0, errOperationWriteFailed
+		return 0, err
 	}
 
 	for _, schemaUsage := range schemaUsage {
@@ -68,7 +71,7 @@ func (s *MetricsService) saveOperations(ctx context.Context, insertTime time.Tim
 			)
 			if err != nil {
 				s.logger.Error("Failed to append operation to batch", zap.Error(err))
-				return 0, errOperationWriteFailed
+				return 0, err
 			}
 		}
 
@@ -76,7 +79,7 @@ func (s *MetricsService) saveOperations(ctx context.Context, insertTime time.Tim
 
 	if err := opBatch.Send(); err != nil {
 		s.logger.Error("Failed to send operation batch", zap.Error(err))
-		return 0, errOperationWriteFailed
+		return 0, err
 	}
 
 	for _, su := range schemaUsage {
@@ -93,7 +96,7 @@ func (s *MetricsService) saveUsageMetrics(ctx context.Context, insertTime time.T
 	metricBatch, err := s.conn.PrepareBatch(ctx, `INSERT INTO gql_metrics_schema_usage`)
 	if err != nil {
 		s.logger.Error("Failed to prepare batch for metrics", zap.Error(err))
-		return 0, errMetricWriteFailed
+		return 0, err
 	}
 
 	for _, schemaUsage := range schemaUsage {
@@ -135,7 +138,7 @@ func (s *MetricsService) saveUsageMetrics(ctx context.Context, insertTime time.T
 			)
 			if err != nil {
 				s.logger.Error("Failed to append field metric to batch", zap.Error(err))
-				return 0, errMetricWriteFailed
+				return 0, err
 			}
 		}
 
@@ -164,7 +167,7 @@ func (s *MetricsService) saveUsageMetrics(ctx context.Context, insertTime time.T
 			)
 			if err != nil {
 				s.logger.Error("Failed to append argument metric to batch", zap.Error(err))
-				return 0, errMetricWriteFailed
+				return 0, err
 			}
 		}
 
@@ -193,14 +196,14 @@ func (s *MetricsService) saveUsageMetrics(ctx context.Context, insertTime time.T
 			)
 			if err != nil {
 				s.logger.Error("Failed to append input metric to batch", zap.Error(err))
-				return 0, errMetricWriteFailed
+				return 0, err
 			}
 		}
 	}
 
 	if err := metricBatch.Send(); err != nil {
 		s.logger.Error("Failed to send metrics batch", zap.Error(err))
-		return 0, errOperationWriteFailed
+		return 0, err
 	}
 
 	return metricBatch.Rows(), nil
@@ -228,29 +231,69 @@ func (s *MetricsService) PublishGraphQLMetrics(
 		)
 	}()
 
-	p := pool.New().WithErrors().WithContext(ctx)
+	p := pool.New().WithContext(ctx)
 
 	p.Go(func(ctx context.Context) error {
-		writtenOps, err := s.saveOperations(ctx, insertTime, req.Msg.SchemaUsage)
-		if err != nil {
-			return err
-		}
-		sentOps += writtenOps
-		return nil
+		return retryOnConnectionError(ctx, s.logger.With(zap.String("component", "operations")), func(ctx context.Context) error {
+			writtenOps, err := s.saveOperations(ctx, insertTime, req.Msg.SchemaUsage)
+			if err != nil {
+				return err
+			}
+			sentOps += writtenOps
+			return nil
+		})
 	})
 
 	p.Go(func(ctx context.Context) error {
-		writtenMetrics, err := s.saveUsageMetrics(ctx, insertTime, claims, req.Msg.SchemaUsage)
-		if err != nil {
-			return err
-		}
-		sentMetrics += writtenMetrics
-		return nil
+		return retryOnConnectionError(ctx, s.logger.With(zap.String("component", "metrics")), func(ctx context.Context) error {
+			writtenMetrics, err := s.saveUsageMetrics(ctx, insertTime, claims, req.Msg.SchemaUsage)
+			if err != nil {
+				return err
+			}
+			sentMetrics += writtenMetrics
+			return nil
+		})
 	})
 
 	if err := p.Wait(); err != nil {
-		return nil, err
+		s.logger.Error("Failed to publish metrics", zap.Error(err))
+		return nil, errPublishFailed
 	}
 
 	return res, nil
+}
+
+func retryOnConnectionError(ctx context.Context, logger *zap.Logger, f func(ctx context.Context) error) error {
+	err := retry.Do(
+		func() error {
+			err := f(ctx)
+			if errors.Is(err, clickhouse.ErrAcquireConnTimeout) ||
+				errors.Is(err, os.ErrDeadlineExceeded) ||
+				errors.Is(err, syscall.ECONNRESET) ||
+				errors.Is(err, syscall.ECONNREFUSED) ||
+				errors.Is(err, syscall.ECONNABORTED) ||
+				errors.Is(err, syscall.ETIMEDOUT) ||
+				errors.Is(err, syscall.EPIPE) ||
+				errors.Is(err, net.ErrClosed) {
+				return err
+			}
+
+			return retry.Unrecoverable(err)
+		},
+		retry.Attempts(3),
+		retry.Delay(100*time.Millisecond),
+		retry.MaxJitter(100*time.Millisecond),
+		retry.DelayType(retry.CombineDelay(retry.BackOffDelay, retry.RandomDelay)),
+		retry.OnRetry(func(n uint, err error) {
+			logger.Info("retrying after error",
+				zap.Error(err),
+				zap.Uint("attempt", n),
+			)
+		}),
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
