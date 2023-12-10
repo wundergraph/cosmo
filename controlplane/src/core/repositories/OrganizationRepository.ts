@@ -1,10 +1,9 @@
 import { PartialMessage, PlainMessage } from '@bufbuild/protobuf';
 import { EventMeta, OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import {
-  ExpiresAt,
   Integration,
   IntegrationConfig,
-  IntegrationType,
+  IntegrationType
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { and, asc, eq } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
@@ -25,11 +24,10 @@ import {
   users,
 } from '../../db/schema.js';
 import {
-  APIKeyDTO,
   OrganizationDTO,
   OrganizationLimitsDTO,
   OrganizationMemberDTO,
-  WebhooksConfigDTO,
+  WebhooksConfigDTO
 } from '../../types/index.js';
 
 /**

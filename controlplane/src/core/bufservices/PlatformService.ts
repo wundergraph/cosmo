@@ -188,6 +188,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const federatedGraph = await fedGraphRepo.create({
           name: req.name,
+          createdBy: authContext.userId,
           labelMatchers: req.labelMatchers,
           routingUrl: req.routingUrl,
         });
@@ -296,6 +297,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         if (!exists) {
           const subgraph = await subgraphRepo.create({
             name: req.name,
+            createdBy: authContext.userId,
             labels: req.labels,
             routingUrl: req.routingUrl,
             subscriptionUrl: req.subscriptionUrl,
@@ -699,7 +701,19 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         let subgraph = await subgraphRepo.byName(req.name);
 
         // Check if the subgraph already exists and if it doesn't, validate input and create it
-        if (!subgraph) {
+        if (subgraph) {
+          // check if the user is authorized to perform the action
+          await opts.authorizer.authorize({
+            db: opts.db,
+            graph: {
+              targetId: subgraph.targetId,
+              name: subgraph.name,
+              targetType: 'subgraph',
+            },
+            headers: ctx.requestHeader,
+            authContext,
+          });
+        } else {
           if (!isValidLabels(req.labels)) {
             return {
               response: {
@@ -743,6 +757,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           // Create the subgraph if it doesn't exist
           subgraph = await subgraphRepo.create({
             name: req.name,
+            createdBy: authContext.userId,
             labels: req.labels,
             routingUrl: req.routingUrl!,
             subscriptionUrl: req.subscriptionUrl,
@@ -896,6 +911,18 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
+        // check if the user is authorized to perform the action
+        await opts.authorizer.authorize({
+          db: opts.db,
+          graph: {
+            targetId: federatedGraph.targetId,
+            name: federatedGraph.name,
+            targetType: 'federatedGraph',
+          },
+          headers: ctx.requestHeader,
+          authContext,
+        });
+
         const blobStorageDirectory = `${authContext.organizationId}/${federatedGraph.id}`;
         await opts.blobStorage.removeDirectory(blobStorageDirectory);
 
@@ -946,6 +973,18 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             compositionErrors: [],
           };
         }
+
+        // check if the user is authorized to perform the action
+        await opts.authorizer.authorize({
+          db: opts.db,
+          graph: {
+            targetId: subgraph.targetId,
+            name: subgraph.name,
+            targetType: 'subgraph',
+          },
+          headers: ctx.requestHeader,
+          authContext,
+        });
 
         const federatedGraphSchemaUpdates: FederatedGraphSchemaUpdate[] = [];
         const compositionErrors: PlainMessage<CompositionError>[] = [];
@@ -1057,6 +1096,18 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
+        // check if the user is authorized to perform the action
+        await opts.authorizer.authorize({
+          db: opts.db,
+          graph: {
+            targetId: federatedGraph.targetId,
+            name: federatedGraph.name,
+            targetType: 'federatedGraph',
+          },
+          headers: ctx.requestHeader,
+          authContext,
+        });
+
         if (!isValidLabelMatchers(req.labelMatchers)) {
           return {
             response: {
@@ -1145,6 +1196,18 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             compositionErrors: [],
           };
         }
+
+        // check if the user is authorized to perform the action
+        await opts.authorizer.authorize({
+          db: opts.db,
+          graph: {
+            targetId: subgraph.targetId,
+            name: subgraph.name,
+            targetType: 'subgraph',
+          },
+          headers: ctx.requestHeader,
+          authContext,
+        });
 
         if (!isValidLabels(req.labels)) {
           return {
@@ -1978,6 +2041,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             subgraphs: graphDetails.subgraphs,
             organizationID: authContext.organizationId,
             db: tx,
+            creatorUserId: authContext.userId,
           });
 
           const composition = await composer.composeFederatedGraph(federatedGraph);
@@ -3187,8 +3251,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const userRepo = new UserRepository(opts.db);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
 
-        // TODO add a check to see if the user adding has permissions to add
-
         // check if the user to be added exists and if the user is the member of the org
         const user = await userRepo.byEmail(req.userEmail);
         if (!user) {
@@ -3220,6 +3282,18 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
+        // check if the user is authorized to perform the action
+        await opts.authorizer.authorize({
+          db: opts.db,
+          graph: {
+            targetId: subgraph.targetId,
+            name: subgraph.name,
+            targetType: 'subgraph',
+          },
+          headers: ctx.requestHeader,
+          authContext,
+        });
+
         await subgraphRepo.addSubgraphMember({ subgraphId: subgraph.id, userId: user.id });
 
         return {
@@ -3240,8 +3314,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
 
-        // TODO add a check to see if the user adding has permissions to add
-
         // check if the subgraph exists
         const subgraph = await subgraphRepo.byName(req.subgraphName);
         if (!subgraph) {
@@ -3252,6 +3324,18 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             },
           };
         }
+
+        // check if the user is authorized to perform the action
+        await opts.authorizer.authorize({
+          db: opts.db,
+          graph: {
+            targetId: subgraph.targetId,
+            name: subgraph.name,
+            targetType: 'subgraph',
+          },
+          headers: ctx.requestHeader,
+          authContext,
+        });
 
         await subgraphRepo.removeSubgraphMember({ subgraphId: subgraph.id, subgraphMemberId: req.subgraphMemberId });
 
@@ -3288,6 +3372,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             routingURL: g.routingUrl,
             lastUpdatedAt: g.lastUpdatedAt,
             labels: g.labels,
+            createdUserId: g.creatorUserId,
           })),
           response: {
             code: EnumStatusCode.OK,

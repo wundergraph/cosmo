@@ -88,7 +88,13 @@ export const Empty = ({ graph }: { graph?: FederatedGraph }) => {
   );
 };
 
-const InviteUsers = ({ subgraphName }: { subgraphName: string }) => {
+const InviteUsers = ({
+  subgraphName,
+  creatorUserId,
+}: {
+  subgraphName: string;
+  creatorUserId?: string;
+}) => {
   const [open, setOpen] = useState(false);
   const user = useUser();
   const isAdmin = user?.currentOrganization.roles.includes("admin");
@@ -154,10 +160,19 @@ const InviteUsers = ({ subgraphName }: { subgraphName: string }) => {
     <div className="flex items-center justify-end px-2">
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger
-          disabled={!isAdmin}
-          className={cn({ "!cursor-not-allowed": !isAdmin })}
+          disabled={!isAdmin && !(creatorUserId && creatorUserId === user?.id)}
+          className={cn({
+            "!cursor-not-allowed":
+              !isAdmin && !(creatorUserId && creatorUserId === user?.id),
+          })}
         >
-          <Button variant="ghost" size="icon-sm" disabled={!isAdmin}>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            disabled={
+              !isAdmin && !(creatorUserId && creatorUserId === user?.id)
+            }
+          >
             <IoPersonAdd className="h-4 w-4" />
           </Button>
         </DialogTrigger>
@@ -287,44 +302,49 @@ export const SubgraphsTable = ({
         </TableRow>
       </TableHeader>
       <TableBody>
-        {subgraphs.map(({ name, routingURL, lastUpdatedAt, labels }) => {
-          return (
-            <TableRow
-              key={name}
-              className="group py-1 even:bg-secondary/20 hover:bg-secondary/40"
-            >
-              <TableCell className="px-4 font-medium">{name}</TableCell>
-              <TableCell className="px-4 text-muted-foreground hover:text-current">
-                <Link target="_blank" rel="noreferrer" href={routingURL}>
-                  {routingURL}
-                </Link>
-              </TableCell>
-              <TableCell className="px-4">
-                <div className="flex space-x-2">
-                  {labels.map(({ key, value }) => {
-                    return (
-                      <Badge variant="secondary" key={key + value}>
-                        {key}={value}
-                      </Badge>
-                    );
-                  })}
-                </div>
-              </TableCell>
-              <TableCell className="px-4 text-right text-muted-foreground">
-                {lastUpdatedAt
-                  ? formatDistanceToNow(new Date(lastUpdatedAt), {
-                      addSuffix: true,
-                    })
-                  : "Never"}
-              </TableCell>
-              {user?.currentOrganization.isRBACEnabled && (
-                <TableCell>
-                  <InviteUsers subgraphName={name} />
+        {subgraphs.map(
+          ({ name, routingURL, lastUpdatedAt, labels, creatorUserId }) => {
+            return (
+              <TableRow
+                key={name}
+                className="group py-1 even:bg-secondary/20 hover:bg-secondary/40"
+              >
+                <TableCell className="px-4 font-medium">{name}</TableCell>
+                <TableCell className="px-4 text-muted-foreground hover:text-current">
+                  <Link target="_blank" rel="noreferrer" href={routingURL}>
+                    {routingURL}
+                  </Link>
                 </TableCell>
-              )}
-            </TableRow>
-          );
-        })}
+                <TableCell className="px-4">
+                  <div className="flex space-x-2">
+                    {labels.map(({ key, value }) => {
+                      return (
+                        <Badge variant="secondary" key={key + value}>
+                          {key}={value}
+                        </Badge>
+                      );
+                    })}
+                  </div>
+                </TableCell>
+                <TableCell className="px-4 text-right text-muted-foreground">
+                  {lastUpdatedAt
+                    ? formatDistanceToNow(new Date(lastUpdatedAt), {
+                        addSuffix: true,
+                      })
+                    : "Never"}
+                </TableCell>
+                {user?.currentOrganization.isRBACEnabled && (
+                  <TableCell>
+                    <InviteUsers
+                      subgraphName={name}
+                      creatorUserId={creatorUserId}
+                    />
+                  </TableCell>
+                )}
+              </TableRow>
+            );
+          },
+        )}
       </TableBody>
     </Table>
   );

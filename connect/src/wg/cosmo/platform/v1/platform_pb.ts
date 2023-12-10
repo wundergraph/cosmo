@@ -1559,6 +1559,11 @@ export class Subgraph extends Message<Subgraph> {
    */
   labels: Label[] = [];
 
+  /**
+   * @generated from field: optional string creatorUserId = 6;
+   */
+  creatorUserId?: string;
+
   constructor(data?: PartialMessage<Subgraph>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1572,6 +1577,7 @@ export class Subgraph extends Message<Subgraph> {
     { no: 3, name: "routingURL", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "lastUpdatedAt", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "labels", kind: "message", T: Label, repeated: true },
+    { no: 6, name: "creatorUserId", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Subgraph {

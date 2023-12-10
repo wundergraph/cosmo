@@ -22,6 +22,7 @@ export interface FederatedGraphDTO {
   labelMatchers: string[];
   subgraphsCount: number;
   composedSchemaVersionId?: string;
+  creatorUserId?: string;
 }
 
 export interface FederatedGraphChangelogDTO {
@@ -47,6 +48,7 @@ export interface SubgraphDTO {
   schemaVersionId: string;
   lastUpdatedAt: string;
   labels: Label[];
+  creatorUserId?: string;
 }
 
 export interface MigrationSubgraph {

@@ -190,6 +190,7 @@ message Subgraph {
   string routingURL = 3;
   string lastUpdatedAt = 4;
   repeated Label labels = 5;
+  optional string creatorUserId = 6;
 }
 
 message GetSubgraphsResponse {

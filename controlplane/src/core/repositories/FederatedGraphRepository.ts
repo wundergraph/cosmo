@@ -45,7 +45,12 @@ export class FederatedGraphRepository {
     private organizationId: string,
   ) {}
 
-  public create(data: { name: string; routingUrl: string; labelMatchers: string[] }): Promise<FederatedGraphDTO> {
+  public create(data: {
+    name: string;
+    routingUrl: string;
+    labelMatchers: string[];
+    createdBy: string;
+  }): Promise<FederatedGraphDTO> {
     return this.db.transaction(async (tx) => {
       const subgraphRepo = new SubgraphRepository(tx, this.organizationId);
 
@@ -58,6 +63,7 @@ export class FederatedGraphRepository {
           organizationId: this.organizationId,
           name: data.name,
           type: 'federated',
+          createdBy: data.createdBy,
         })
         .returning()
         .execute();
@@ -274,6 +280,7 @@ export class FederatedGraphRepository {
       schemaVersionId: resp.federatedGraph.composedSchemaVersionId ?? undefined,
       subgraphsCount: resp.federatedGraph.subgraphs.length ?? 0,
       labelMatchers: resp.labelMatchers.map((s) => s.labelMatcher.join(',')),
+      creatorUserId: resp.createdBy || undefined,
     };
   }
 

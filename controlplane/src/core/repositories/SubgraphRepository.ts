@@ -35,6 +35,7 @@ type SubscriptionProtocol = 'ws' | 'sse' | 'sse_post';
 export interface Subgraph {
   name: string;
   routingUrl: string;
+  createdBy: string;
   labels: Label[];
   subscriptionUrl?: string;
   subscriptionProtocol?: SubscriptionProtocol;
@@ -76,6 +77,7 @@ export class SubgraphRepository {
         .insert(targets)
         .values({
           name: data.name,
+          createdBy: data.createdBy,
           type: 'subgraph',
           organizationId: this.organizationId,
           labels: uniqueLabels.map((ul) => joinLabel(ul)),
@@ -448,6 +450,7 @@ export class SubgraphRepository {
       schemaVersionId,
       lastUpdatedAt,
       labels: resp.labels?.map?.((l) => splitLabel(l)) ?? [],
+      creatorUserId: resp.createdBy || undefined,
     };
   }
 
@@ -782,6 +785,21 @@ export class SubgraphRepository {
       .from(subgraphMembers)
       .innerJoin(users, eq(users.id, subgraphMembers.userId))
       .where(eq(subgraphMembers.subgraphId, subgraphId));
+
+    return members;
+  }
+
+  public async getSubgraphMembersbyTargetId(targetId: string): Promise<SubgraphMemberDTO[]> {
+    const members = await this.db
+      .select({
+        subgraphMemberId: subgraphMembers.id,
+        userId: subgraphMembers.userId,
+        email: users.email,
+      })
+      .from(subgraphMembers)
+      .innerJoin(users, eq(users.id, subgraphMembers.userId))
+      .innerJoin(subgraphs, eq(subgraphs.id, subgraphMembers.subgraphId))
+      .where(eq(subgraphs.targetId, targetId));
 
     return members;
   }

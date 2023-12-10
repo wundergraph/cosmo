@@ -2,7 +2,7 @@ import { ExpiresAt } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_
 import { and, asc, eq } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema.js';
-import { apiKeys, users } from '../../db/schema.js';
+import { apiKeyResources, apiKeys, users } from '../../db/schema.js';
 import { APIKeyDTO } from '../../types/index.js';
 
 /**
@@ -141,8 +141,37 @@ export class ApiKeyRepository {
       return;
     }
     await this.db
-      .insert(schema.apiKeyResources)
+      .insert(apiKeyResources)
       .values(resources.map((r) => ({ apiKeyId: r.apiKeyId, targetId: r.targetId })))
       .execute();
+  }
+
+  public async verifyAPIKeyPermissions({
+    apiKey,
+    // accessedTargetId is the target id of the garph on which the user is trying to perform an action on.
+    accessedTargetId,
+  }: {
+    apiKey: string;
+    accessedTargetId: string;
+  }): Promise<boolean> {
+    const resources = await this.db
+      .select({
+        targetId: apiKeyResources.targetId,
+      })
+      .from(apiKeys)
+      .innerJoin(apiKeyResources, eq(apiKeyResources.apiKeyId, apiKeys.id))
+      .where(eq(apiKeys.key, apiKey));
+
+    if (resources.length === 0) {
+      return true;
+    }
+
+    const targetIds = resources.map((r) => r.targetId);
+
+    if (targetIds.includes(accessedTargetId)) {
+      return true;
+    }
+
+    return false;
   }
 }
