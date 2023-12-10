@@ -3,7 +3,7 @@ import { EventMeta, OrganizationEventName } from '@wundergraph/cosmo-connect/dis
 import {
   Integration,
   IntegrationConfig,
-  IntegrationType
+  IntegrationType,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { and, asc, eq } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
@@ -23,12 +23,7 @@ import {
   targets,
   users,
 } from '../../db/schema.js';
-import {
-  OrganizationDTO,
-  OrganizationLimitsDTO,
-  OrganizationMemberDTO,
-  WebhooksConfigDTO
-} from '../../types/index.js';
+import { OrganizationDTO, OrganizationLimitsDTO, OrganizationMemberDTO, WebhooksConfigDTO } from '../../types/index.js';
 
 /**
  * Repository for organization related operations.

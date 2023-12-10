@@ -1,12 +1,12 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { AuthContext } from 'src/types/index.js';
 import * as schema from '../../db/schema.js';
 import { AuthorizationError } from '../errors/errors.js';
 import { ApiKeyRepository } from '../repositories/ApiKeyRepository.js';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import { SubgraphRepository } from '../repositories/SubgraphRepository.js';
+import { AuthContext } from '../../types/index.js';
 
 export class Authorization {
   constructor() {}
