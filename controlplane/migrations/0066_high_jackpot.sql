@@ -10,9 +10,29 @@ CREATE TABLE IF NOT EXISTS "subgraph_members" (
 	"subgraph_id" uuid NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
+
 --> statement-breakpoint
 ALTER TABLE "organizations" ADD COLUMN "is_rbac_enabled" boolean DEFAULT false NOT NULL;--> statement-breakpoint
 ALTER TABLE "targets" ADD COLUMN "created_by" uuid;--> statement-breakpoint
+
+--> Populating the created_by column of targets with the creator of the organization.
+BEGIN TRANSACTION;
+UPDATE "targets"
+SET "created_by" = organizations.user_id
+FROM "organizations"
+WHERE organizations.id = targets.organization_id;
+
+COMMIT;
+
+--> Adding the creators of the subgraphs as the members of the subgraph
+BEGIN TRANSACTION;
+INSERT INTO "subgraph_members" ("user_id", "subgraph_id")
+SELECT targets.created_by, subgraphs.id
+FROM "subgraphs"
+INNER JOIN "targets" on subgraphs.target_id = targets.id;
+
+COMMIT;
+
 CREATE UNIQUE INDEX IF NOT EXISTS "unique_subgraph_member_idx" ON "subgraph_members" ("user_id","subgraph_id");--> statement-breakpoint
 DO $$ BEGIN
  ALTER TABLE "targets" ADD CONSTRAINT "targets_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE set null ON UPDATE no action;

@@ -118,6 +118,13 @@ export class SubgraphRepository {
           .execute();
       }
 
+      /**
+       * 4. Add the creator as a subgraph member
+       */
+
+      const subgraphRepo = new SubgraphRepository(tx, this.organizationId);
+      await subgraphRepo.addSubgraphMember({ subgraphId: insertedSubgraph[0].id, userId: data.createdBy });
+
       return {
         id: insertedSubgraph[0].id,
         name: data.name,
