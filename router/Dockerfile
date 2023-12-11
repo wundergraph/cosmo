@@ -7,7 +7,8 @@ ENV VERSION=$VERSION
 WORKDIR /app/
 
 # Copy only the files required for go mod download
-COPY ./router/go.* ./router/
+COPY ./router/go.mod ./router/
+COPY ./router/go.sum ./router/
 
 WORKDIR /app/router
 
