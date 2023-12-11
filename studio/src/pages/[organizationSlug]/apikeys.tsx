@@ -255,7 +255,7 @@ const CreateAPIKeyDialog = ({
                 {federatedGraphs.length > 0 && (
                   <div className="flex flex-col gap-y-1">
                     <span>Federated Graphs</span>
-                    <div className="ml-2">
+                    <div>
                       <DropdownMenu>
                         <DropdownMenuTrigger
                           asChild
@@ -308,7 +308,7 @@ const CreateAPIKeyDialog = ({
                 {subgraphs.length > 0 && (
                   <div className="flex flex-col gap-y-1">
                     <span>Subgraphs</span>
-                    <div className="ml-2">
+                    <div>
                       <DropdownMenu>
                         <DropdownMenuTrigger
                           asChild

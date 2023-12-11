@@ -52,6 +52,7 @@ export class Authorization {
         return;
       }
 
+      // we verify the permisions of the api key only if rbac is enabled
       // first dealing with api keys
       if (token && token.startsWith('cosmo')) {
         const verified = await apiKeyRepo.verifyAPIKeyPermissions({ apiKey: token, accessedTargetId: targetId });
@@ -82,7 +83,10 @@ export class Authorization {
         }
       }
     } catch {
-      throw new AuthorizationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, 'Not authorized');
+      throw new AuthorizationError(
+        EnumStatusCode.ERROR_NOT_AUTHENTICATED,
+        'You are not authorized to perform the cuurent action as RBAC is enabled. Please communicate with the organization admin to gain access.',
+      );
     }
   }
 }

@@ -50,6 +50,7 @@ import {
 } from "./ui/tooltip";
 import { useToast } from "./ui/use-toast";
 import { cn } from "@/lib/utils";
+import { InfoCircledIcon } from "@radix-ui/react-icons";
 
 export const Empty = ({ graph }: { graph?: FederatedGraph }) => {
   let label = "team=A";
@@ -147,7 +148,7 @@ const InviteUsers = ({
         onSuccess: (d) => {
           sendToast(d.response?.details || "Added member successfully.");
           setOpen(false);
-          // refetchSubgraphMembers();
+          refetchSubgraphMembers();
         },
         onError: (error) => {
           sendToast("Could not add the member. Please try again.");
@@ -161,68 +162,78 @@ const InviteUsers = ({
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger
           disabled={!isAdmin && !(creatorUserId && creatorUserId === user?.id)}
-          className={cn({
-            "!cursor-not-allowed":
-              !isAdmin && !(creatorUserId && creatorUserId === user?.id),
-          })}
         >
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            disabled={
-              !isAdmin && !(creatorUserId && creatorUserId === user?.id)
-            }
-          >
-            <IoPersonAdd className="h-4 w-4" />
-          </Button>
+          <TooltipProvider>
+            <Tooltip delayDuration={100}>
+              <TooltipTrigger>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  disabled={
+                    !isAdmin && !(creatorUserId && creatorUserId === user?.id)
+                  }
+                >
+                  <IoPersonAdd className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {isAdmin || (creatorUserId && creatorUserId === user?.id)
+                  ? "Add users"
+                  : "Only admins or the creator of the subgraph can add users."}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </DialogTrigger>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              Invite users to <span className="italic">{subgraphName}</span>{" "}
+              Add users to <span className="italic">{subgraphName}</span>{" "}
               subgraph
             </DialogTitle>
           </DialogHeader>
           <div className="flex flex-col gap-y-6">
-            {inviteOptions.length > 0 ? (
-              <form className="flex gap-x-4" onSubmit={onSubmit}>
-                <div className="flex-1">
-                  <Select
-                    value={inviteeEmail}
-                    onValueChange={(value) => setInviteeEmail(value)}
-                  >
-                    <SelectTrigger
-                      value={inviteeEmail}
-                      className="w-[200px] lg:w-full"
-                    >
-                      <SelectValue aria-label={inviteeEmail}>
-                        {inviteeEmail}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {inviteOptions.map((option) => {
-                        return (
-                          <SelectItem key={option} value={option}>
-                            {option}
-                          </SelectItem>
-                        );
-                      })}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <Button
-                  type="submit"
+            <form className="flex gap-x-4" onSubmit={onSubmit}>
+              <div className="flex-1">
+                <Select
+                  value={inviteeEmail}
+                  onValueChange={(value) => setInviteeEmail(value)}
                   disabled={inviteOptions.length === 0}
-                  variant="default"
-                  isLoading={addingMember}
                 >
-                  Invite
-                </Button>
-              </form>
-            ) : (
-              <span className="text-sm text-muted-foreground">
-                All the organization members are a part of this subgraph
-              </span>
+                  <SelectTrigger
+                    value={inviteeEmail}
+                    className="w-[200px] lg:w-full"
+                  >
+                    <SelectValue aria-label={inviteeEmail}>
+                      {inviteeEmail}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {inviteOptions.map((option) => {
+                      return (
+                        <SelectItem key={option} value={option}>
+                          {option}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button
+                type="submit"
+                disabled={inviteOptions.length === 0}
+                variant="default"
+                isLoading={addingMember}
+              >
+                Add
+              </Button>
+            </form>
+            {inviteOptions.length === 0 && (
+              <div className="flex items-center gap-x-3 rounded-lg border !border-muted-foreground px-4 py-2 text-sm text-muted-foreground">
+                <InfoCircledIcon />
+                <span>
+                  All the organization members are a part of this subgraph
+                </span>
+              </div>
             )}
             {subgraphMembers.length > 0 && (
               <Table>
@@ -238,6 +249,7 @@ const InviteUsers = ({
                             <Button
                               variant="ghost"
                               className="text-primary"
+                              isLoading={removingMember}
                               onClick={() => {
                                 removeMember(
                                   { subgraphMemberId, subgraphName },
