@@ -16,7 +16,6 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -50,7 +49,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
-import { docsBaseURL } from "@/lib/constants";
+import { calURL, docsBaseURL } from "@/lib/constants";
 import { NextPageWithLayout } from "@/lib/page";
 import { cn } from "@/lib/utils";
 import { MinusCircledIcon, PlusIcon } from "@radix-ui/react-icons";
@@ -194,7 +193,7 @@ const OrganizationDetails = () => {
           )}
         />
         <Button
-          className="ml-auto mr-6"
+          className="ml-auto"
           isLoading={isPending}
           type="submit"
           disabled={
@@ -825,7 +824,12 @@ const RBAC = () => {
     <Card>
       <CardHeader className="gap-y-6 md:flex-row">
         <div className="space-y-1.5">
-          <CardTitle>Resource Based Access Control (RBAC)</CardTitle>
+          <CardTitle className="flex items-center gap-x-2">
+            <span>Resource Based Access Control (RBAC)</span>
+            <div className="rounded-md border-2 px-2 py-0.5 text-sm italic text-muted-foreground">
+              Enterprise feature
+            </div>
+          </CardTitle>
           <CardDescription>
             Enabling RBAC allows the fine grain access control of subgraphs and
             federated graphs.{" "}
@@ -839,44 +843,56 @@ const RBAC = () => {
             </Link>
           </CardDescription>
         </div>
-        <Button
-          className="md:ml-auto"
-          type="submit"
-          variant={data?.enabled ? "destructive" : "default"}
-          isLoading={isPending}
-          onClick={() => {
-            mutate(
-              {
-                enable: data?.enabled ? false : true,
-              },
-              {
-                onSuccess: (d) => {
-                  refetch();
-                  if (d.response?.code === EnumStatusCode.OK) {
+        {data?.enabled ? (
+          <Button
+            className="md:ml-auto"
+            type="submit"
+            variant="destructive"
+            isLoading={isPending}
+            onClick={() => {
+              mutate(
+                {
+                  enable: false,
+                },
+                {
+                  onSuccess: (d) => {
+                    refetch();
+                    if (d.response?.code === EnumStatusCode.OK) {
+                      toast({
+                        description: "Disabled RBAC successfully.",
+                        duration: 3000,
+                      });
+                    } else if (d.response?.details) {
+                      toast({
+                        description: d.response.details,
+                        duration: 4000,
+                      });
+                    }
+                  },
+                  onError: () => {
                     toast({
-                      description: data?.enabled
-                        ? "Disabled RBAC successfully."
-                        : "Enabled RBAC successfully.",
+                      description: "Could not disable RBAC. Please try again.",
                       duration: 3000,
                     });
-                  } else if (d.response?.details) {
-                    toast({ description: d.response.details, duration: 4000 });
-                  }
+                  },
                 },
-                onError: (error) => {
-                  toast({
-                    description: data?.enabled
-                      ? "Could not disable RBAC. Please try again."
-                      : "Could not enable RBAC. Please try again.",
-                    duration: 3000,
-                  });
-                },
-              },
-            );
-          }}
-        >
-          {data?.enabled ? "Disable" : "Enable"}
-        </Button>
+              );
+            }}
+          >
+            Disable
+          </Button>
+        ) : (
+          <Button
+            className="md:ml-auto"
+            type="submit"
+            variant="default"
+            asChild
+          >
+            <Link href={calURL} target="_blank" rel="noreferrer">
+              Contact us
+            </Link>
+          </Button>
+        )}
       </CardHeader>
     </Card>
   );
