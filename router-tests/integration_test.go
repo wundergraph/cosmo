@@ -270,13 +270,13 @@ func setupListeningServer(tb testing.TB, opts ...core.Option) (*core.Server, int
 	return server, port
 }
 
-func normalizeJSON(tb testing.TB, data []byte) []byte {
+func normalizeJSON(tb testing.TB, data []byte) string {
 	var v interface{}
 	err := json.Unmarshal(data, &v)
 	require.NoError(tb, err)
 	normalized, err := json.MarshalIndent(v, "", "  ")
 	require.NoError(tb, err)
-	return normalized
+	return string(normalized)
 }
 
 func TestIntegration(t *testing.T) {
@@ -484,7 +484,10 @@ func TestTestdataQueries(t *testing.T) {
 			result := recorder.Body.String()
 			expectedData, err := os.ReadFile(filepath.Join(testDir, "result.json"))
 			require.NoError(t, err)
-			assert.Equal(t, normalizeJSON(t, expectedData), normalizeJSON(t, []byte(result)))
+
+			expected := normalizeJSON(t, expectedData)
+			actual := normalizeJSON(t, []byte(result))
+			assert.Equal(t, expected, actual)
 		})
 	}
 }

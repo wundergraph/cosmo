@@ -26,8 +26,12 @@
       }
     ],
     "productTypes": [
-      {},
       {
+        "__typename": "Cosmo",
+        "upc": "cosmo"
+      },
+      {
+        "__typename": "Consultancy",
         "lead": {
           "details": {
             "forename": "Jens"
@@ -36,6 +40,7 @@
         "name": "CONSULTANCY"
       },
       {
+        "__typename": "Documentation",
         "url": "https://cosmo-docs.wundergraph.com/",
         "urls": [
           "https://cal.com/stefan-avram-wundergraph/wundergraph-introduction",

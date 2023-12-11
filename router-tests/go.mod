@@ -92,7 +92,7 @@ require (
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/urfave/cli/v2 v2.25.5 // indirect
 	github.com/vektah/gqlparser/v2 v2.5.10 // indirect
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.2.0.20231204223728-80bf5986134f // indirect
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.2.0.20231211132707-0b57d5203e86 // indirect
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.45.0 // indirect
 	go.opentelemetry.io/otel v1.19.0 // indirect
