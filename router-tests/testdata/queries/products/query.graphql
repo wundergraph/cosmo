@@ -5,6 +5,7 @@ query {
     ...SDKFragment
   }
   productTypes {
+    __typename
     ... on Documentation {
       url(product: COSMO)
       urls(products: [CONSULTANCY, ENGINE, HUMAN_RESOURCES, SDK])
