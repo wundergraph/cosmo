@@ -4,6 +4,21 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.44.0](https://github.com/wundergraph/cosmo/compare/router@0.43.3...router@0.44.0) (2023-12-09)
+
+### Bug Fixes
+
+* provide more specific error messages when operation planning fails ([#349](https://github.com/wundergraph/cosmo/issues/349)) ([4baa54c](https://github.com/wundergraph/cosmo/commit/4baa54c61b30a418689b1d0dfa668177df08f514)) (@fiam)
+* race condition due to premature buffer reuse ([#350](https://github.com/wundergraph/cosmo/issues/350)) ([9ee2b43](https://github.com/wundergraph/cosmo/commit/9ee2b43b45b6a44e2deef01871d6a70e278af405)) (@fiam)
+
+### Features
+
+* add ability to pass a custom health checker ([#346](https://github.com/wundergraph/cosmo/issues/346)) ([29718a1](https://github.com/wundergraph/cosmo/commit/29718a1f75edd54af4b6cd43b5750f0222d031e4)) (@clayne11)
+
+## [0.43.3](https://github.com/wundergraph/cosmo/compare/router@0.43.2...router@0.43.3) (2023-12-05)
+
+**Note:** Version bump only for package router
+
 ## [0.43.2](https://github.com/wundergraph/cosmo/compare/router@0.43.1...router@0.43.2) (2023-12-01)
 
 ### Bug Fixes
