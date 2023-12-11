@@ -20,6 +20,7 @@ import {
 import Keycloak from '../src/core/services/Keycloak.js';
 import { MockPlatformWebhookService } from '../src/core/webhooks/PlatformWebhookService.js';
 import Mailer from '../src/core/services/Mailer.js';
+import { Authorization } from '../src/core/services/Authorization.js';
 import { InMemoryBlobStorage, SetupTest } from './test-util.js';
 
 let dbname = '';
@@ -126,6 +127,7 @@ describe('Federated Graph', (ctx) => {
         keycloakApiUrl: apiUrl,
         blobStorage: new InMemoryBlobStorage(),
         mailerClient,
+        authorizer: new Authorization(),
       }),
     });
 
@@ -231,6 +233,7 @@ describe('Federated Graph', (ctx) => {
         keycloakApiUrl: apiUrl,
         blobStorage: new InMemoryBlobStorage(),
         mailerClient,
+        authorizer: new Authorization(),
       }),
     });
 
@@ -336,6 +339,7 @@ describe('Federated Graph', (ctx) => {
         keycloakApiUrl: apiUrl,
         blobStorage: new InMemoryBlobStorage(),
         mailerClient,
+        authorizer: new Authorization(),
       }),
     });
 
@@ -470,6 +474,7 @@ describe('Federated Graph', (ctx) => {
         keycloakApiUrl: apiUrl,
         blobStorage: new InMemoryBlobStorage(),
         mailerClient,
+        authorizer: new Authorization(),
       }),
     });
 

@@ -8,7 +8,7 @@ import { formatISO, subHours } from 'date-fns';
 import { parse, visit } from 'graphql';
 import { Label, ResponseMessage } from '../types/index.js';
 import { MemberRole } from '../db/models.js';
-import { isAuthenticationError, isPublicError } from './errors/errors.js';
+import { isAuthenticationError, isAuthorizationError, isPublicError } from './errors/errors.js';
 
 const labelRegex = /^[\dA-Za-z](?:[\w.-]{0,61}[\dA-Za-z])?$/;
 const organizationSlugRegex = /^[\da-z]+(?:-[\da-z]+)*$/;
@@ -33,6 +33,13 @@ export async function handleError<T extends ResponseMessage>(
         },
       } as T;
     } else if (isPublicError(error)) {
+      return {
+        response: {
+          code: error.code,
+          details: error.message,
+        },
+      } as T;
+    } else if (isAuthorizationError(error)) {
       return {
         response: {
           code: error.code,

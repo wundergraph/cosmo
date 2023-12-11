@@ -463,6 +463,13 @@
       "when": 1701698010928,
       "tag": "0065_silly_venom",
       "breakpoints": true
+    },
+    {
+      "idx": 66,
+      "version": "5",
+      "when": 1701985767425,
+      "tag": "0066_high_jackpot",
+      "breakpoints": true
     }
   ]
 }

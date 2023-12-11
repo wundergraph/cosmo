@@ -22,6 +22,7 @@ export interface FederatedGraphDTO {
   labelMatchers: string[];
   subgraphsCount: number;
   composedSchemaVersionId?: string;
+  creatorUserId?: string;
 }
 
 export interface FederatedGraphChangelogDTO {
@@ -47,6 +48,7 @@ export interface SubgraphDTO {
   schemaVersionId: string;
   lastUpdatedAt: string;
   labels: Label[];
+  creatorUserId?: string;
 }
 
 export interface MigrationSubgraph {
@@ -99,6 +101,7 @@ export interface OrganizationDTO {
   createdAt: string;
   isFreeTrial?: boolean;
   isPersonal?: boolean;
+  isRBACEnabled?: boolean;
 }
 
 export interface UserDTO {
@@ -332,4 +335,10 @@ export interface GraphCompositionDTO {
   compositionErrors?: string;
   isComposable: boolean;
   isLatestValid: boolean;
+}
+
+export interface SubgraphMemberDTO {
+  userId: string;
+  subgraphMemberId: string;
+  email: string;
 }

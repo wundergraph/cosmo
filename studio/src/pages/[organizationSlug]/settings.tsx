@@ -16,7 +16,6 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -50,7 +49,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
-import { docsBaseURL } from "@/lib/constants";
+import { calURL, docsBaseURL } from "@/lib/constants";
 import { NextPageWithLayout } from "@/lib/page";
 import { cn } from "@/lib/utils";
 import { MinusCircledIcon, PlusIcon } from "@radix-ui/react-icons";
@@ -61,8 +60,10 @@ import {
   deleteOIDCProvider,
   deleteOrganization,
   getOIDCProvider,
+  isRBACEnabled,
   leaveOrganization,
   updateOrganizationDetails,
+  updateRBACSettings,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import Link from "next/link";
 import { useRouter } from "next/router";
@@ -814,6 +815,89 @@ const OpenIDConnectProvider = ({
   );
 };
 
+const RBAC = () => {
+  const { data, refetch } = useQuery(isRBACEnabled.useQuery());
+  const { mutate, isPending } = useMutation(updateRBACSettings.useMutation());
+  const { toast } = useToast();
+
+  return (
+    <Card>
+      <CardHeader className="gap-y-6 md:flex-row">
+        <div className="space-y-1.5">
+          <CardTitle className="flex items-center gap-x-2">
+            <span>Resource Based Access Control (RBAC)</span>
+            <div className="rounded-md border-2 px-2 py-0.5 text-sm italic text-muted-foreground">
+              Enterprise feature
+            </div>
+          </CardTitle>
+          <CardDescription>
+            Enabling RBAC allows the fine grain access control of subgraphs and
+            federated graphs.{" "}
+            <Link
+              href={docsBaseURL + "/studio/resource-based-access-control"}
+              className="text-sm text-primary"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Learn more
+            </Link>
+          </CardDescription>
+        </div>
+        {data?.enabled ? (
+          <Button
+            className="md:ml-auto"
+            type="submit"
+            variant="destructive"
+            isLoading={isPending}
+            onClick={() => {
+              mutate(
+                {
+                  enable: false,
+                },
+                {
+                  onSuccess: (d) => {
+                    refetch();
+                    if (d.response?.code === EnumStatusCode.OK) {
+                      toast({
+                        description: "Disabled RBAC successfully.",
+                        duration: 3000,
+                      });
+                    } else if (d.response?.details) {
+                      toast({
+                        description: d.response.details,
+                        duration: 4000,
+                      });
+                    }
+                  },
+                  onError: () => {
+                    toast({
+                      description: "Could not disable RBAC. Please try again.",
+                      duration: 3000,
+                    });
+                  },
+                },
+              );
+            }}
+          >
+            Disable
+          </Button>
+        ) : (
+          <Button
+            className="md:ml-auto"
+            type="submit"
+            variant="default"
+            asChild
+          >
+            <Link href={calURL} target="_blank" rel="noreferrer">
+              Contact us
+            </Link>
+          </Button>
+        )}
+      </CardHeader>
+    </Card>
+  );
+};
+
 const LeaveOrganization = () => {
   const user = useContext(UserContext);
   const router = useRouter();
@@ -949,14 +1033,14 @@ const DeleteOrganization = () => {
 
   return (
     <Card className="border-destructive">
-      <CardHeader>
-        <CardTitle>Delete Organization</CardTitle>
-        <CardDescription className="text-sm text-muted-foreground">
-          The organization will be permanently deleted. This action is
-          irreversible and can not be undone.
-        </CardDescription>
-      </CardHeader>
-      <CardFooter>
+      <CardHeader className="gap-y-6 md:flex-row">
+        <div className="space-y-1.5">
+          <CardTitle>Delete Organization</CardTitle>
+          <CardDescription className="text-sm text-muted-foreground">
+            The organization will be permanently deleted. This action is
+            irreversible and can not be undone.
+          </CardDescription>
+        </div>
         <Dialog
           open={
             user?.currentOrganization.roles.includes("admin") ? open : false
@@ -1021,7 +1105,7 @@ const DeleteOrganization = () => {
             </form>
           </DialogContent>
         </Dialog>
-      </CardFooter>
+      </CardHeader>
     </Card>
   );
 };
@@ -1035,6 +1119,7 @@ const SettingsDashboardPage: NextPageWithLayout = () => {
       {user && !user.currentOrganization.isPersonal && (
         <>
           <Separator className="my-2" />
+          <RBAC />
           <OpenIDConnectProvider currentMode="create" />
           <Separator className="my-2" />
           <LeaveOrganization />

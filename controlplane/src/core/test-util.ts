@@ -9,6 +9,7 @@ import { Authenticator } from './services/Authentication.js';
 import { UserRepository } from './repositories/UserRepository.js';
 import { OrganizationRepository } from './repositories/OrganizationRepository.js';
 import { GraphKeyAuthContext } from './services/GraphApiTokenAuthenticator.js';
+import { ApiKeyRepository } from './repositories/ApiKeyRepository.js';
 
 export type UserTestData = {
   userId: string;
@@ -48,6 +49,7 @@ export async function seedTest(databaseConnectionUrl: string, userTestData: User
 
   const userRepo = new UserRepository(db);
   const orgRepo = new OrganizationRepository(db);
+  const apiKeyRepo = new ApiKeyRepository(db);
 
   await userRepo.addUser({
     id: userTestData.userId,
@@ -71,12 +73,13 @@ export async function seedTest(databaseConnectionUrl: string, userTestData: User
     roles: ['admin'],
   });
 
-  await orgRepo.addAPIKey({
+  await apiKeyRepo.addAPIKey({
     key: userTestData.apiKey,
     name: 'myAdminKey',
     organizationID: insertedOrg.id,
     userID: userTestData.userId,
     expiresAt: ExpiresAt.NEVER,
+    targetIds: [],
   });
 
   await orgRepo.addOrganizationLimits({
