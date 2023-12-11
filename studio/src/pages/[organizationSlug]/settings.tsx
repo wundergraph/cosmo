@@ -194,7 +194,7 @@ const OrganizationDetails = () => {
           )}
         />
         <Button
-          className="ml-auto"
+          className="ml-auto mr-6"
           isLoading={isPending}
           type="submit"
           disabled={
@@ -825,10 +825,18 @@ const RBAC = () => {
     <Card>
       <CardHeader className="gap-y-6 md:flex-row">
         <div className="space-y-1.5">
-          <CardTitle>RBAC</CardTitle>
+          <CardTitle>Resource Based Access Control (RBAC)</CardTitle>
           <CardDescription>
             Enabling RBAC allows the fine grain access control of subgraphs and
-            federated graphs.
+            federated graphs.{" "}
+            <Link
+              href={docsBaseURL + "/studio/resource-based-access-control"}
+              className="text-sm text-primary"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Learn more
+            </Link>
           </CardDescription>
         </div>
         <Button
@@ -1009,14 +1017,14 @@ const DeleteOrganization = () => {
 
   return (
     <Card className="border-destructive">
-      <CardHeader>
-        <CardTitle>Delete Organization</CardTitle>
-        <CardDescription className="text-sm text-muted-foreground">
-          The organization will be permanently deleted. This action is
-          irreversible and can not be undone.
-        </CardDescription>
-      </CardHeader>
-      <CardFooter>
+      <CardHeader className="gap-y-6 md:flex-row">
+        <div className="space-y-1.5">
+          <CardTitle>Delete Organization</CardTitle>
+          <CardDescription className="text-sm text-muted-foreground">
+            The organization will be permanently deleted. This action is
+            irreversible and can not be undone.
+          </CardDescription>
+        </div>
         <Dialog
           open={
             user?.currentOrganization.roles.includes("admin") ? open : false
@@ -1081,7 +1089,7 @@ const DeleteOrganization = () => {
             </form>
           </DialogContent>
         </Dialog>
-      </CardFooter>
+      </CardHeader>
     </Card>
   );
 };
