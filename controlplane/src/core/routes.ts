@@ -14,11 +14,13 @@ import Keycloak from './services/Keycloak.js';
 import { IPlatformWebhookService } from './webhooks/PlatformWebhookService.js';
 import { BlobStorage } from './blobstorage/index.js';
 import Mailer from './services/Mailer.js';
+import { Authorization } from './services/Authorization.js';
 
 export interface RouterOptions {
   db: PostgresJsDatabase<typeof schema>;
   jwtSecret: string;
   authenticator: Authenticator;
+  authorizer: Authorization;
   keycloakRealm: string;
   keycloakApiUrl: string;
   chClient?: ClickHouseClient;
