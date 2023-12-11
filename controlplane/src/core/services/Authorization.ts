@@ -47,12 +47,12 @@ export class Authorization {
         throw new Error('Organization not found');
       }
 
-      // an admin is authorized to perform all the actions
       // checking if rbac is enabled, if not return
-      if (isAdmin || !organization.isRBACEnabled) {
+      if (!organization.isRBACEnabled) {
         return;
       }
 
+      // first dealing with api keys
       if (token && token.startsWith('cosmo')) {
         const verified = await apiKeyRepo.verifyAPIKeyPermissions({ apiKey: token, accessedTargetId: targetId });
         if (verified) {
@@ -60,6 +60,11 @@ export class Authorization {
         } else {
           throw new AuthorizationError(EnumStatusCode.ERROR_NOT_AUTHORIZED, 'Not authorized');
         }
+      }
+
+      // an admin is authorized to perform all the actions
+      if (isAdmin) {
+        return;
       }
 
       if (targetType === 'federatedGraph') {
@@ -77,7 +82,7 @@ export class Authorization {
         }
       }
     } catch {
-      throw new AuthorizationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, 'Not authenticated');
+      throw new AuthorizationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, 'Not authorized');
     }
   }
 }
