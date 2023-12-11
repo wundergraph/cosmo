@@ -137,11 +137,11 @@ const InviteUsers = ({
       (x) => !subgraphMemberEmails.includes(x),
     );
     setInviteOptions(options);
-    setInviteeEmail(options?.[0] || "");
+    setInviteeEmail(options?.[0] || "Select the member");
   }, [data, subgraphMembersData]);
 
   const onSubmit = () => {
-    if (inviteeEmail === "") return;
+    if (inviteeEmail === "Select the member" || inviteeEmail === "") return;
     addMember(
       { userEmail: inviteeEmail, subgraphName },
       {
@@ -192,6 +192,14 @@ const InviteUsers = ({
             </DialogTitle>
           </DialogHeader>
           <div className="flex flex-col gap-y-6">
+            {inviteOptions.length === 0 && (
+              <div className="mt-4 flex items-center gap-x-3 rounded-lg border !border-primary-foreground px-4 py-2 text-sm text-primary-foreground">
+                <InfoCircledIcon className="h-[14px] w-[14px]" />
+                <span>
+                  All organization members are already a part of this subgraph
+                </span>
+              </div>
+            )}
             <form className="flex gap-x-4" onSubmit={onSubmit}>
               <div className="flex-1">
                 <Select
@@ -227,14 +235,6 @@ const InviteUsers = ({
                 Add
               </Button>
             </form>
-            {inviteOptions.length === 0 && (
-              <div className="flex items-center gap-x-3 rounded-lg border !border-muted-foreground px-4 py-2 text-sm text-muted-foreground">
-                <InfoCircledIcon />
-                <span>
-                  All the organization members are a part of this subgraph
-                </span>
-              </div>
-            )}
             {subgraphMembers.length > 0 && (
               <Table>
                 <TableBody>

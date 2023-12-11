@@ -163,6 +163,7 @@ export class ApiKeyRepository {
       .where(eq(apiKeys.key, apiKey));
 
     if (resources.length === 0) {
+      // if no resources, it means that the api key has access to all the resources of the organization.
       return true;
     }
 

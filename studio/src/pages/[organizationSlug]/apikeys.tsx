@@ -232,7 +232,9 @@ const CreateAPIKeyDialog = ({
                   Select Resources
                 </span>
                 <span className="text-sm text-muted-foreground">
-                  Choose the resources that the API key is authorized to access.
+                  Choose the resources that the API key is authorized to access
+                  or Select all resources which will include all the resources,
+                  even the ones created in the future.
                 </span>
               </div>
               <div className="flex flex-col gap-y-2">
