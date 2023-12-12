@@ -14,7 +14,7 @@ import {
   FIELDS,
   INACCESSIBLE,
   INPUT_FIELD_DEFINITION_UPPER,
-  INPUT_OBJECT_UPPER,
+  INPUT_OBJECT_UPPER, INTERFACE_OBJECT,
   INTERFACE_UPPER,
   KEY,
   LINK,
@@ -85,7 +85,14 @@ export const BASE_DIRECTIVE_DEFINITIONS: DirectiveDefinitionNode[] = [
     name: stringToNameNode(EXTERNAL),
     repeatable: false,
   },
-  // directive @key(fields: openfed__FieldSet!) on OBJECT
+  // directive @interfaceObject on OBJECT
+  {
+    kind: Kind.DIRECTIVE_DEFINITION,
+    locations: [stringToNameNode(OBJECT_UPPER)],
+    name: stringToNameNode('interfaceObject'),
+    repeatable: false,
+  },
+  // directive @key(fields: openfed__FieldSet!) on INTERFACE | OBJECT
   {
     arguments: [
       {
@@ -107,7 +114,7 @@ export const BASE_DIRECTIVE_DEFINITIONS: DirectiveDefinitionNode[] = [
       },
     ],
     kind: Kind.DIRECTIVE_DEFINITION,
-    locations: [stringToNameNode(OBJECT_UPPER)],
+    locations: stringArrayToNameNodeArray([INTERFACE_UPPER, OBJECT_UPPER]),
     name: stringToNameNode(KEY),
     repeatable: true,
   },
@@ -214,6 +221,13 @@ export const VERSION_TWO_DIRECTIVE_DEFINITIONS: DirectiveDefinitionNode[] = [
       UNION_UPPER,
     ]),
     name: stringToNameNode(INACCESSIBLE),
+    repeatable: false,
+  },
+  // directive @interfaceObject on OBJECT
+  {
+    kind: Kind.DIRECTIVE_DEFINITION,
+    locations: stringArrayToNameNodeArray([OBJECT_UPPER]),
+    name: stringToNameNode(INTERFACE_OBJECT),
     repeatable: false,
   },
   // directive @link(url: String!, as: String!, for: String, import: [String]) repeatable on SCHEMA

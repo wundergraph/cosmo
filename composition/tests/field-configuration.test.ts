@@ -278,6 +278,54 @@ describe('Field Configuration tests', () => {
         }],
       ]));
     });
+
+    test('that entity interfaces produce the correct configuration', () => {
+      const { errors, normalizationResult } = normalizeSubgraphFromString(`
+        type Entity implements Interface @key(fields: "id") {
+          id: ID!
+          age: Int!
+          field: String!
+        }
+        
+        interface Interface @key(fields: "id") {
+          id: ID!
+          age: Int!
+        }
+      `);
+      expect(errors).toBeUndefined();
+      expect(normalizationResult!.configurationDataMap).toStrictEqual(new Map<string, ConfigurationData>([
+        ['Entity', {
+          fieldNames: new Set<string>(['id', 'age', 'field']),
+          isRootNode: true,
+          keys: [{ fieldName: '', selectionSet: 'id', }],
+          typeName: 'Entity',
+        }],
+        ['Interface', {
+          fieldNames: new Set<string>(['id', 'age']),
+          isRootNode: true,
+          keys: [{ fieldName: '', selectionSet: 'id', }],
+          typeName: 'Interface',
+        }],
+      ]));
+    });
+
+    test('that interface objects produce the correct configuration', () => {
+      const { errors, normalizationResult } = normalizeSubgraphFromString(`
+        type Interface @key(fields: "id") @interfaceObject {
+          id: ID!
+          name: String!
+        }
+      `);
+      expect(errors).toBeUndefined();
+      expect(normalizationResult!.configurationDataMap).toStrictEqual(new Map<string, ConfigurationData>([
+        ['Interface', {
+          fieldNames: new Set<string>(['id', 'name']),
+          isRootNode: true,
+          keys: [{ fieldName: '', selectionSet: 'id', }],
+          typeName: 'Interface',
+        }],
+      ]));
+    });
   });
 
   describe('Federation tests', () => {

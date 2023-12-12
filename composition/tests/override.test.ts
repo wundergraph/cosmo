@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { parse } from 'graphql/index';
+import { Kind, parse } from 'graphql';
 import {
   batchNormalize,
   ConfigurationData,
@@ -17,7 +17,6 @@ import {
 } from '../src';
 import { documentNodeToNormalizedString, normalizeString, versionTwoPersistedBaseSchema } from './utils/utils';
 import { OVERRIDE } from '../src/utils/string-constants';
-import { Kind } from 'graphql';
 
 describe('@override directive Tests', () => {
   test('that an error is returned if @override targets an unknown subgraph name', () => {
