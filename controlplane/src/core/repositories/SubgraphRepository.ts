@@ -1,7 +1,7 @@
 import { PlainMessage } from '@bufbuild/protobuf';
 import { CompositionError } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { joinLabel, normalizeURL, splitLabel } from '@wundergraph/cosmo-shared';
-import { SQL, and, asc, desc, eq, gt, inArray, lt, notInArray, sql } from 'drizzle-orm';
+import { SQL, and, asc, desc, eq, gt, inArray, lt, notInArray, or, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema.js';
 import {
@@ -9,9 +9,11 @@ import {
   graphCompositions,
   schemaChecks,
   schemaVersion,
+  subgraphMembers,
   subgraphs,
   subgraphsToFederatedGraph,
   targets,
+  users,
 } from '../../db/schema.js';
 import {
   FederatedGraphDTO,
@@ -21,6 +23,7 @@ import {
   SchemaCheckDetailsDTO,
   SchemaCheckSummaryDTO,
   SubgraphDTO,
+  SubgraphMemberDTO,
 } from '../../types/index.js';
 import { Composer } from '../composition/composer.js';
 import { hasLabelsChanged, normalizeLabels } from '../util.js';
@@ -32,6 +35,7 @@ type SubscriptionProtocol = 'ws' | 'sse' | 'sse_post';
 export interface Subgraph {
   name: string;
   routingUrl: string;
+  createdBy: string;
   labels: Label[];
   subscriptionUrl?: string;
   subscriptionProtocol?: SubscriptionProtocol;
@@ -73,6 +77,7 @@ export class SubgraphRepository {
         .insert(targets)
         .values({
           name: data.name,
+          createdBy: data.createdBy,
           type: 'subgraph',
           organizationId: this.organizationId,
           labels: uniqueLabels.map((ul) => joinLabel(ul)),
@@ -112,6 +117,13 @@ export class SubgraphRepository {
           )
           .execute();
       }
+
+      /**
+       * 4. Add the creator as a subgraph member
+       */
+
+      const subgraphRepo = new SubgraphRepository(tx, this.organizationId);
+      await subgraphRepo.addSubgraphMember({ subgraphId: insertedSubgraph[0].id, userId: data.createdBy });
 
       return {
         id: insertedSubgraph[0].id,
@@ -445,6 +457,7 @@ export class SubgraphRepository {
       schemaVersionId,
       lastUpdatedAt,
       labels: resp.labels?.map?.((l) => splitLabel(l)) ?? [],
+      creatorUserId: resp.createdBy || undefined,
     };
   }
 
@@ -740,5 +753,78 @@ export class SubgraphRepository {
       schema: latestValidVersion[0].schemaSDL,
       schemaVersionId: latestValidVersion[0].schemaVersionId,
     };
+  }
+
+  public async getAccessibleSubgraphs(userId: string): Promise<SubgraphDTO[]> {
+    const graphs = await this.db
+      .selectDistinctOn([targets.id], { targetId: targets.id, name: targets.name })
+      .from(targets)
+      .innerJoin(subgraphs, eq(targets.id, subgraphs.targetId))
+      .innerJoin(subgraphMembers, eq(subgraphs.id, subgraphMembers.subgraphId))
+      .where(
+        and(
+          eq(targets.type, 'subgraph'),
+          eq(targets.organizationId, this.organizationId),
+          or(eq(targets.createdBy, userId), eq(subgraphMembers.userId, userId)),
+        ),
+      );
+
+    const accessibleSubgraphs: SubgraphDTO[] = [];
+
+    for (const graph of graphs) {
+      const sg = await this.byName(graph.name);
+      if (sg === undefined) {
+        throw new Error(`Subgraph ${graph.name} not found`);
+      }
+      accessibleSubgraphs.push(sg);
+    }
+
+    return accessibleSubgraphs;
+  }
+
+  public async getSubgraphMembers(subgraphId: string): Promise<SubgraphMemberDTO[]> {
+    const members = await this.db
+      .select({
+        subgraphMemberId: subgraphMembers.id,
+        userId: subgraphMembers.userId,
+        email: users.email,
+      })
+      .from(subgraphMembers)
+      .innerJoin(users, eq(users.id, subgraphMembers.userId))
+      .where(eq(subgraphMembers.subgraphId, subgraphId));
+
+    return members;
+  }
+
+  public async getSubgraphMembersbyTargetId(targetId: string): Promise<SubgraphMemberDTO[]> {
+    const members = await this.db
+      .select({
+        subgraphMemberId: subgraphMembers.id,
+        userId: subgraphMembers.userId,
+        email: users.email,
+      })
+      .from(subgraphMembers)
+      .innerJoin(users, eq(users.id, subgraphMembers.userId))
+      .innerJoin(subgraphs, eq(subgraphs.id, subgraphMembers.subgraphId))
+      .where(eq(subgraphs.targetId, targetId));
+
+    return members;
+  }
+
+  public async addSubgraphMember({ subgraphId, userId }: { subgraphId: string; userId: string }) {
+    await this.db.insert(subgraphMembers).values({ subgraphId, userId }).execute();
+  }
+
+  public async removeSubgraphMember({
+    subgraphId,
+    subgraphMemberId,
+  }: {
+    subgraphId: string;
+    subgraphMemberId: string;
+  }) {
+    await this.db
+      .delete(subgraphMembers)
+      .where(and(eq(subgraphMembers.subgraphId, subgraphId), eq(subgraphMembers.id, subgraphMemberId)))
+      .execute();
   }
 }

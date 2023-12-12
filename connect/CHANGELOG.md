@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.36.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.35.0...@wundergraph/cosmo-connect@0.36.0) (2023-12-04)
+
+### Bug Fixes
+
+* invitations ([#326](https://github.com/wundergraph/cosmo/issues/326)) ([8915cd8](https://github.com/wundergraph/cosmo/commit/8915cd80ab20285b768fa8af8b02e1572d452a40)) (@JivusAyrus)
+
+### Features
+
+* add compositions page ([#325](https://github.com/wundergraph/cosmo/issues/325)) ([fb7a018](https://github.com/wundergraph/cosmo/commit/fb7a0180579872c486bd59b6b3adc9c19f8f302d)) (@JivusAyrus)
+
 # [0.35.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.34.0...@wundergraph/cosmo-connect@0.35.0) (2023-12-01)
 
 ### Features

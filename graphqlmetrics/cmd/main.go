@@ -5,10 +5,10 @@ import (
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/amacneil/dbmate/v2/pkg/dbmate"
 	_ "github.com/amacneil/dbmate/v2/pkg/driver/clickhouse"
-	"github.com/wundergraph/cosmo/graphqlmetrics"
 	"github.com/wundergraph/cosmo/graphqlmetrics/config"
+	"github.com/wundergraph/cosmo/graphqlmetrics/core"
 	"github.com/wundergraph/cosmo/graphqlmetrics/internal/logging"
-	_ "go.uber.org/automaxprocs" // Automatically set GOMAXPROCS to avoid CPU throttling on containerized environments
+	"go.uber.org/automaxprocs/maxprocs"
 	"go.uber.org/zap"
 	"log"
 	"net/url"
@@ -32,8 +32,14 @@ func main() {
 	logger := logging.New(!cfg.JSONLog, isDebug, logLevel).
 		With(
 			zap.String("component", "@wundergraph/graphqlmetrics"),
-			zap.String("service_version", graphqlmetrics.Version),
+			zap.String("service_version", core.Version),
 		)
+
+	// Automatically set GOMAXPROCS to avoid CPU throttling on containerized environments
+	_, err = maxprocs.Set(maxprocs.Logger(logger.Sugar().Debugf))
+	if err != nil {
+		logger.Fatal("Could not set max GOMAXPROCS", zap.Error(err))
+	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt,
 		syscall.SIGHUP,  // process is detached from terminal
@@ -46,7 +52,7 @@ func main() {
 
 	options, err := clickhouse.ParseDSN(cfg.ClickHouseDSN)
 	if err != nil {
-		log.Fatal("Could not parse dsn", zap.Error(err))
+		logger.Fatal("Could not parse dsn", zap.Error(err))
 	}
 
 	options.Compression = &clickhouse.Compression{
@@ -63,19 +69,27 @@ func main() {
 			Name    string
 			Version string
 		}{
-			{Name: "graphqlmetrics", Version: graphqlmetrics.Version},
+			{Name: "graphqlmetrics", Version: core.Version},
 		},
 	}
-	options.MaxIdleConns = 10
-	options.MaxOpenConns = 20
+	options.MaxIdleConns = 16
+	options.MaxOpenConns = 32
+
+	logger.Info("Connecting to clickhouse",
+		zap.Int("maxOpenConns", options.MaxOpenConns),
+		zap.Int("maxIdleConns", options.MaxIdleConns),
+		zap.String("dialTimeout", options.DialTimeout.String()),
+		zap.String("connMaxLifetime", options.ConnMaxLifetime.String()),
+		zap.Any("settings", options.Settings),
+	)
 
 	conn, err := clickhouse.Open(options)
 	if err != nil {
-		log.Fatal("Could not open clickhouse", zap.Error(err))
+		logger.Fatal("Could not open clickhouse", zap.Error(err))
 	}
 
 	if err := conn.Ping(ctx); err != nil {
-		log.Fatal("Could not ping clickhouse", zap.Error(err))
+		logger.Fatal("Could not ping clickhouse", zap.Error(err))
 	} else {
 		logger.Info("Connected to clickhouse")
 	}
@@ -94,10 +108,11 @@ func main() {
 		logger.Info("Migration is up to date")
 	}
 
-	svr := graphqlmetrics.NewServer(
-		graphqlmetrics.NewMetricsService(logger, conn, []byte(cfg.IngestJWTSecret)),
-		graphqlmetrics.WithListenAddr(cfg.ListenAddr),
-		graphqlmetrics.WithLogger(logger),
+	svr := core.NewServer(
+		core.NewMetricsService(logger, conn),
+		core.WithJwtSecret([]byte(cfg.IngestJWTSecret)),
+		core.WithListenAddr(cfg.ListenAddr),
+		core.WithLogger(logger),
 	)
 
 	go func() {

@@ -29,6 +29,7 @@ export interface Organization {
   slug: string;
   isPersonal: boolean;
   isFreeTrial: boolean;
+  isRBACEnabled: boolean;
   roles: string[];
   createdAt: string;
   limits: OrganizationLimitsDTO;
