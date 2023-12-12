@@ -16,7 +16,7 @@ import {
 import {
   FIELD_UPPER,
   FRAGMENT_DEFINITION_UPPER,
-  FRAGMENT_SPREAD_UPPER,
+  FRAGMENT_SPREAD_UPPER, INACCESSIBLE,
   INLINE_FRAGMENT_UPPER,
   MUTATION_UPPER,
   QUERY_UPPER,
@@ -201,3 +201,7 @@ export type NodeContainer = ArgumentContainer | ChildContainer | ParentContainer
 export type ExtensionContainer = ObjectExtensionContainer;
 export type ParentMap = Map<string, ParentContainer>;
 export type ObjectLikeContainer = ObjectContainer | InterfaceContainer;
+
+export function isFieldInaccessible(fieldContainer: FieldContainer): boolean {
+  return fieldContainer.directives.directives.has(INACCESSIBLE);
+}

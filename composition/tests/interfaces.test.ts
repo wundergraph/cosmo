@@ -1,17 +1,40 @@
 import {
   federateSubgraphs,
   ImplementationErrors,
-  InvalidFieldImplementation,
+  InvalidFieldImplementation, noFieldDefinitionsError,
   normalizeSubgraphFromString,
   Subgraph,
   unimplementedInterfaceFieldsError,
 } from '../src';
 import { parse } from 'graphql';
 import { describe, expect, test } from 'vitest';
-import { documentNodeToNormalizedString, normalizeString, versionTwoPersistedBaseSchema } from './utils/utils';
+import {
+  documentNodeToNormalizedString,
+  normalizeString,
+  versionOneBaseSchema,
+  versionTwoPersistedBaseSchema,
+} from './utils/utils';
 
 describe('Interface tests', () => {
   describe('Normalization tests', () => {
+    test('that an error is returned if an interface does not define any fields', () => {
+      const { errors} = normalizeSubgraphFromString(`
+        interface Interface
+      `);
+      expect(errors).toBeDefined();
+      expect(errors![0]).toStrictEqual(noFieldDefinitionsError('interface', 'Interface'));
+    });
+
+    test('that an error is returned if an extended interface does not define any fields', () => {
+      const { errors} = normalizeSubgraphFromString(`
+        interface Interface
+        
+        extend interface Interface @tag(name: "test")
+      `);
+      expect(errors).toBeDefined();
+      expect(errors![0]).toStrictEqual(noFieldDefinitionsError('interface', 'Interface'));
+    });
+
     test('that errors are returned if implemented interface fields are invalid #1', () => {
       const { errors } = normalizeSubgraphFromString(`
         interface Animal {

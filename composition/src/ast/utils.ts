@@ -22,7 +22,7 @@ import {
   MutableFieldDefinitionNode,
   MutableInputValueDefinitionNode,
   MutableTypeDefinitionNode,
-  ObjectLikeTypeDefinitionNode,
+  ObjectLikeTypeNode,
 } from './ast';
 import {
   ARGUMENT_DEFINITION_UPPER,
@@ -35,7 +35,7 @@ import {
   FRAGMENT_SPREAD_UPPER,
   INLINE_FRAGMENT_UPPER,
   INPUT_FIELD_DEFINITION_UPPER,
-  INPUT_OBJECT_UPPER,
+  INPUT_OBJECT_UPPER, INTERFACE_OBJECT,
   INTERFACE_UPPER,
   KEY,
   MUTATION,
@@ -52,15 +52,23 @@ import { duplicateInterfaceError, unexpectedKindFatalError } from '../errors/err
 import { UnionTypeDefinitionNode } from 'graphql/index';
 import { DirectiveContainer, EXECUTABLE_DIRECTIVE_LOCATIONS, NodeContainer } from '../federation/utils';
 
-export function isObjectLikeNodeEntity(node: ObjectLikeTypeDefinitionNode): boolean {
-  // Interface entities are currently unsupported
-  if (node.kind === Kind.INTERFACE_TYPE_DEFINITION
-    || node.kind === Kind.INTERFACE_TYPE_EXTENSION
-    || !node.directives?.length) {
+export function isObjectLikeNodeEntity(node: ObjectLikeTypeNode): boolean {
+  if (!node.directives?.length) {
     return false;
   }
   for (const directive of node.directives) {
     if (directive.name.value === KEY) {
+      return true;
+    }
+  }
+  return false;
+}
+export function isNodeInterfaceObject(node: ObjectTypeDefinitionNode): boolean {
+  if (!node.directives?.length) {
+    return false;
+  }
+  for (const directive of node.directives) {
+    if (directive.name.value === INTERFACE_OBJECT) {
       return true;
     }
   }

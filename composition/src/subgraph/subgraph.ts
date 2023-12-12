@@ -3,14 +3,14 @@ import { FederationFactory } from '../federation/federation-factory';
 import {
   addConcreteTypesForImplementedInterfaces,
   addConcreteTypesForUnion,
-  isNodeExternal,
+  isNodeExternal, isNodeInterfaceObject,
   isNodeShareable,
   isObjectLikeNodeEntity,
   operationTypeNodeToDefaultType,
   stringToNameNode,
 } from '../ast/utils';
 import { getNamedTypeForChild } from '../type-merging/type-merging';
-import { getOrThrowError } from '../utils/utils';
+import { EntityInterfaceData, getOrThrowError } from '../utils/utils';
 import { ENTITIES, ENTITIES_FIELD, OPERATION_TO_DEFAULT, SERVICE_FIELD } from '../utils/string-constants';
 import { ConfigurationDataMap } from './field-configuration';
 
@@ -21,13 +21,14 @@ export type Subgraph = {
 };
 
 export type InternalSubgraph = {
-  overriddenFieldNamesByParentTypeName: Map<string, Set<string>>;
   configurationDataMap: ConfigurationDataMap;
   definitions: DocumentNode;
+  entityInterfaces: Map<string, EntityInterfaceData>;
   isVersionTwo: boolean;
   keyFieldsByParentTypeName: Map<string, Set<string>>;
   name: string;
   operationTypes: Map<string, OperationTypeNode>;
+  overriddenFieldNamesByParentTypeName: Map<string, Set<string>>;
   schema: GraphQLSchema;
   url: string;
 };
@@ -62,7 +63,14 @@ export function walkSubgraphToCollectObjectLikesAndDirectiveDefinitions(
     },
     InterfaceTypeDefinition: {
       enter(node) {
+        const parentTypeName = node.name.value;
         factory.upsertParentNode(node);
+        if (!factory.graph.hasNode(parentTypeName)) {
+          factory.graph.addNode(parentTypeName);
+        }
+        if (isObjectLikeNodeEntity(node)) {
+          factory.upsertEntity(node);
+        }
       },
     },
     ObjectTypeDefinition: {
@@ -72,6 +80,9 @@ export function walkSubgraphToCollectObjectLikesAndDirectiveDefinitions(
         const parentTypeName = operationType
           ? getOrThrowError(operationTypeNodeToDefaultType, operationType, OPERATION_TO_DEFAULT) : name;
         addConcreteTypesForImplementedInterfaces(node, factory.abstractToConcreteTypeNames);
+        if (isNodeInterfaceObject(node)) {
+          return;
+        }
         if (!factory.graph.hasNode(parentTypeName)) {
           factory.graph.addNode(parentTypeName);
         }
@@ -165,10 +176,17 @@ export function walkSubgraphToCollectFields(
       },
     },
     InterfaceTypeDefinition: {
-      enter() {
-        // skip the interface fields
-        return false;
+      enter(node) {
+        factory.isCurrentParentEntity = isObjectLikeNodeEntity(node);
+        if (!factory.isCurrentParentEntity) {
+          return false;
+        }
+        factory.parentTypeName = node.name.value;
       },
+      leave() {
+        factory.isCurrentParentEntity = false;
+        factory.parentTypeName = '';
+      }
     },
   });
 }
@@ -281,6 +299,10 @@ export function walkSubgraphToFederate(
         factory.isCurrentParentEntity = isObjectLikeNodeEntity(node);
         factory.isParentRootType = factory.isObjectRootType(node);
         factory.parentTypeName = node.name.value;
+        if (isNodeInterfaceObject(node)) {
+          factory.upsertInterfaceObjectParentNode(node);
+          return;
+        }
         factory.upsertParentNode(node);
         overriddenFieldNames = overriddenFieldNamesByParentTypeName.get(factory.parentTypeName);
       },

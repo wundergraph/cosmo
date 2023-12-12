@@ -26,7 +26,7 @@ import {
   interfaceTypeDefinitionNodeToMutable,
   MutableEnumValueDefinitionNode,
   MutableInputValueDefinitionNode,
-  MutableTypeDefinitionNode,
+  MutableTypeDefinitionNode, ObjectLikeTypeNode,
   objectTypeDefinitionNodeToMutable,
   objectTypeExtensionNodeToMutable,
   objectTypeExtensionNodeToMutableDefinitionNode,
@@ -59,7 +59,7 @@ import {
   invalidRequiredArgumentsError,
   invalidTagDirectiveError,
   invalidUnionError,
-  minimumSubgraphRequirementError,
+  minimumSubgraphRequirementError, allFieldDefinitionsAreInaccessibleError,
   noBaseTypeExtensionError,
   noConcreteTypesForAbstractTypeError,
   noQueryRootTypeError,
@@ -90,7 +90,7 @@ import {
   FederationResultContainer,
   FieldContainer,
   InputValueContainer,
-  InterfaceContainer,
+  InterfaceContainer, isFieldInaccessible,
   MergeMethod,
   newPersistedDirectivesContainer,
   ObjectContainer,
@@ -127,15 +127,15 @@ import {
 } from '../utils/string-constants';
 import {
   addIterableValuesToSet,
-  doSetsHaveAnyOverlap,
+  doSetsHaveAnyOverlap, EntityInterfaceDatas,
   getAllMutualEntries,
   getEntriesNotInHashSet,
-  getOrThrowError,
+  getOrThrowError, getValueOrDefault,
   hasSimplePath,
   ImplementationErrors,
   InvalidFieldImplementation,
   InvalidRequiredArgument,
-  kindToTypeString,
+  kindToTypeString, newEntityInterfaceDatas, subtractSourceSetFromTargetSet, upsertEntityInterfaceDatas,
 } from '../utils/utils';
 import { printTypeNode } from '@graphql-tools/merge';
 import { ArgumentConfigurationData } from '../subgraph/field-configuration';
@@ -148,6 +148,7 @@ export class FederationFactory {
   areFieldsShareable = false;
   argumentTypeNameSet = new Set<string>();
   argumentConfigurations: ArgumentConfigurationData[] = [];
+  entityInterfaceDatasByTypeName: Map<string, EntityInterfaceDatas>;
   executableDirectives = new Set<string>();
   parentTypeName = '';
   persistedDirectives = new Set<string>([DEPRECATED, INACCESSIBLE, TAG]);
@@ -176,16 +177,21 @@ export class FederationFactory {
   shareableErrorTypeNames = new Map<string, Set<string>>();
   subgraphConfigBySubgraphName: Map<string, SubgraphConfig>;
 
-  constructor(subgraphs: InternalSubgraph[], subgraphConfigBySubgraphName: Map<string, SubgraphConfig>) {
+  constructor(
+    subgraphs: InternalSubgraph[],
+    subgraphConfigBySubgraphName: Map<string, SubgraphConfig>,
+    entityInterfaceDatasByTypeName: Map<string, EntityInterfaceDatas>,
+  ) {
     this.subgraphs = subgraphs;
     this.subgraphConfigBySubgraphName = subgraphConfigBySubgraphName;
+    this.entityInterfaceDatasByTypeName = entityInterfaceDatasByTypeName;
   }
 
   isObjectRootType(node: ObjectTypeDefinitionNode | ObjectTypeExtensionNode): boolean {
     return this.rootTypeNames.has(node.name.value);
   }
 
-  upsertEntity(node: ObjectTypeDefinitionNode | ObjectTypeExtensionNode) {
+  upsertEntity(node: ObjectLikeTypeNode) {
     const typeName = node.name.value;
     const entity = this.entities.get(typeName);
     if (entity) {
@@ -662,6 +668,34 @@ export class FederationFactory {
     }
   }
 
+  upsertInterfaceObjectParentNode(node: ObjectTypeDefinitionNode) {
+    const parentTypeName = node.name.value;
+    const parent = this.parents.get(parentTypeName);
+    if (parent) {
+      if (parent.kind !== Kind.INTERFACE_TYPE_DEFINITION) {
+        throw incompatibleParentKindFatalError(parentTypeName, node.kind, parent.kind);
+      }
+      setLongestDescriptionForNode(parent.node, node.description);
+      this.extractPersistedDirectives(node.directives || [], parent.directives);
+      extractInterfaces(node, parent.interfaces);
+      parent.subgraphs.add(this.currentSubgraphName);
+      return;
+    }
+    this.parents.set(parentTypeName, {
+      directives: this.extractPersistedDirectives(
+        node.directives || [], newPersistedDirectivesContainer(),
+      ),
+      fields: new Map<string, FieldContainer>(),
+      interfaces: extractInterfaces(node, new Set<string>()),
+      kind: Kind.INTERFACE_TYPE_DEFINITION,
+      node: interfaceTypeDefinitionNodeToMutable({
+        ...node,
+        kind: Kind.INTERFACE_TYPE_DEFINITION,
+      }),
+      subgraphs: new Set<string>([this.currentSubgraphName]),
+    });
+  }
+
   upsertParentNode(node: TypeDefinitionNode) {
     const parentTypeName = node.name.value;
     const parent = this.parents.get(parentTypeName);
@@ -715,14 +749,12 @@ export class FederationFactory {
           parent.subgraphs.add(this.currentSubgraphName);
           return;
         }
-        const nestedInterfaces = new Set<string>();
-        extractInterfaces(node, nestedInterfaces);
         this.parents.set(parentTypeName, {
           directives: this.extractPersistedDirectives(
             node.directives || [], newPersistedDirectivesContainer(),
           ),
           fields: new Map<string, FieldContainer>(),
-          interfaces: nestedInterfaces,
+          interfaces: extractInterfaces(node, new Set<string>()),
           kind: node.kind,
           node: interfaceTypeDefinitionNodeToMutable(node),
           subgraphs: new Set<string>([this.currentSubgraphName]),
@@ -752,14 +784,12 @@ export class FederationFactory {
           parent.subgraphs.add(this.currentSubgraphName);
           return;
         }
-        const interfaces = new Set<string>();
-        extractInterfaces(node, interfaces);
         this.parents.set(parentTypeName, {
           directives: this.extractPersistedDirectives(
             node.directives || [], newPersistedDirectivesContainer(),
           ),
           fields: new Map<string, FieldContainer>(),
-          interfaces,
+          interfaces: extractInterfaces(node, new Set<string>()),
           isRootType: this.isParentRootType,
           kind: node.kind,
           node: objectTypeDefinitionNodeToMutable(node),
@@ -1357,6 +1387,34 @@ export class FederationFactory {
       this.keyFieldsByParentTypeName = subgraph.keyFieldsByParentTypeName;
       walkSubgraphToFederate(subgraph.definitions, subgraph.overriddenFieldNamesByParentTypeName, factory);
     }
+    for (const [typeName, entityInterfaceData] of this.entityInterfaceDatasByTypeName) {
+      subtractSourceSetFromTargetSet(
+        entityInterfaceData.interfaceFieldNames, entityInterfaceData.interfaceObjectFieldNames,
+      );
+      const entityInterface = getOrThrowError(this.parents, typeName, 'parents');
+      if (entityInterface.kind !== Kind.INTERFACE_TYPE_DEFINITION) {
+        // TODO error
+        continue;
+      }
+      const concreteTypes = this.abstractToConcreteTypeNames.get(typeName) || [];
+      for (const concreteType of concreteTypes) {
+        const parentContainer = getOrThrowError(this.parents, concreteType, 'parents');
+        if (parentContainer.kind !== Kind.OBJECT_TYPE_DEFINITION) {
+          continue;
+        }
+        for (const fieldName of entityInterfaceData.interfaceObjectFieldNames) {
+          const existingFieldContainer = parentContainer.fields.get(fieldName);
+          if (existingFieldContainer) {
+            // TODO handle shareability
+            continue;
+          }
+          const interfaceFieldContainer = getOrThrowError(
+            entityInterface.fields, fieldName, 'entityInterface.fields'
+          );
+          parentContainer.fields.set(fieldName, { ...interfaceFieldContainer });
+        }
+      }
+    }
     const definitions: MutableTypeDefinitionNode[] = [];
     for (const [directiveName, directiveContainer] of this.directiveDefinitions) {
       if (this.persistedDirectives.has(directiveName)) {
@@ -1458,6 +1516,9 @@ export class FederationFactory {
         case Kind.INTERFACE_TYPE_DEFINITION:
           const interfaceFields: FieldDefinitionNode[] = [];
           for (const fieldContainer of parentContainer.fields.values()) {
+            if (isFieldInaccessible(fieldContainer)) {
+              continue;
+            }
             interfaceFields.push(this.getMergedFieldDefinitionNode(fieldContainer, parentTypeName));
           }
           parentContainer.node.fields = interfaceFields;
@@ -1468,10 +1529,16 @@ export class FederationFactory {
           } else {
             definitions.push(parentContainer.node);
           }
+          if (interfaceFields.length < 1) {
+            this.errors.push(allFieldDefinitionsAreInaccessibleError('interface', parentTypeName));
+          }
           break;
         case Kind.OBJECT_TYPE_DEFINITION:
           const fields: FieldDefinitionNode[] = [];
           for (const fieldContainer of parentContainer.fields.values()) {
+            if (isFieldInaccessible(fieldContainer)) {
+              continue;
+            }
             fields.push(this.getMergedFieldDefinitionNode(fieldContainer, parentTypeName));
           }
           parentContainer.node.fields = fields;
@@ -1481,6 +1548,9 @@ export class FederationFactory {
             objectLikeContainersWithInterfaces.push(parentContainer);
           } else {
             definitions.push(parentContainer.node);
+          }
+          if (fields.length < 1) {
+            this.errors.push(allFieldDefinitionsAreInaccessibleError('object', parentTypeName));
           }
           break;
         case Kind.SCALAR_TYPE_DEFINITION:
@@ -1600,14 +1670,25 @@ export function federateSubgraphs(subgraphs: Subgraph[]): FederationResultContai
     return { errors };
   }
   const internalSubgraphs: InternalSubgraph[] = [];
-  const subgraphConfigBySubgraphName: Map<string, SubgraphConfig> = new Map<string, SubgraphConfig>();
+  const subgraphConfigBySubgraphName = new Map<string, SubgraphConfig>();
+  const entityInterfaceDatas = new Map<string, EntityInterfaceDatas>();
   for (const [subgraphName, internalSubgraph] of internalSubgraphsBySubgraphName) {
     internalSubgraphs.push(internalSubgraph);
     subgraphConfigBySubgraphName.set(subgraphName, {
       configurationDataMap: internalSubgraph.configurationDataMap,
       schema: internalSubgraph.schema,
     });
+    for (const [typeName, entityInterfaceData] of internalSubgraph.entityInterfaces) {
+      const existingDatas = entityInterfaceDatas.get(typeName);
+      if (!existingDatas) {
+        entityInterfaceDatas.set(typeName, newEntityInterfaceDatas(entityInterfaceData, subgraphName));
+      } else {
+        upsertEntityInterfaceDatas(existingDatas, entityInterfaceData, subgraphName)
+      }
+    }
   }
-  const federationFactory = new FederationFactory(internalSubgraphs, subgraphConfigBySubgraphName);
+  const federationFactory = new FederationFactory(
+    internalSubgraphs, subgraphConfigBySubgraphName, entityInterfaceDatas,
+  );
   return federationFactory.federate();
 }
