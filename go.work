@@ -1,0 +1,9 @@
+go 1.21
+
+use (
+	./composition-go
+	./demo
+	./graphqlmetrics
+	./router
+	./router-tests
+)
