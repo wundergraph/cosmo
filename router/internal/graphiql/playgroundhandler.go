@@ -13,17 +13,41 @@ type PlaygroundOptions struct {
 	GraphqlURL string
 }
 
-func NewPlayground(opts *PlaygroundOptions) http.HandlerFunc {
-	fn := func(w http.ResponseWriter, r *http.Request) {
-		tpl := strings.Replace(opts.Html, "{{graphqlURL}}", opts.GraphqlURL, -1)
-		resp := []byte(tpl)
+type Playground struct {
+	next http.Handler
+	opts *PlaygroundOptions
+}
 
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.Header().Set("Content-Length", strconv.Itoa(len(resp)))
+func NewPlayground(opts *PlaygroundOptions) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return &Playground{
+			next: next,
+			opts: opts,
+		}
+	}
+}
 
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write(resp)
+func (p *Playground) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// Only serve the playground if the request is for text/html
+	// This is especially important for Upgrade websocket requests
+	// when the graphql endpoint is on the same path as the playground
+	if isWsUpgradeRequest(r) || !strings.Contains(r.Header.Get("Accept"), "text/html") {
+		if p.next != nil {
+			p.next.ServeHTTP(w, r)
+		}
+		return
 	}
 
-	return fn
+	tpl := strings.Replace(p.opts.Html, "{{graphqlURL}}", p.opts.GraphqlURL, -1)
+	resp := []byte(tpl)
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Content-Length", strconv.Itoa(len(resp)))
+
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(resp)
+}
+
+func isWsUpgradeRequest(r *http.Request) bool {
+	return r.Header.Get("Upgrade") == "websocket"
 }

@@ -2,7 +2,7 @@
 
 A version of playground available in studio that can be built and bundled into the router.
 
-```
+```bash
 npm run build
 ```
 

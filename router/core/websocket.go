@@ -167,14 +167,14 @@ type WebsocketHandler struct {
 	logger           *zap.Logger
 }
 
-func (h *WebsocketHandler) requestLooksLikeWebsocket(r *http.Request) bool {
+func isWsUpgradeRequest(r *http.Request) bool {
 	return r.Header.Get("Upgrade") == "websocket"
 }
 
 func (h *WebsocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Don't call upgrader.Upgrade unless the request looks like a websocket
 	// because if Upgrade() fails it sends an error response
-	if h.requestLooksLikeWebsocket(r) {
+	if isWsUpgradeRequest(r) {
 		// Check access control before upgrading the connection
 		validatedReq, err := h.accessController.Access(w, r)
 		if err != nil {
