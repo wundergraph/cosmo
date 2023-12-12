@@ -88,7 +88,7 @@ func TestForwardHeaders(t *testing.T) {
 				header := http.Header{
 					c.headerName: []string{headerValue},
 				}
-				conn := connectedWebsocket(t, serverPort, &connectedWebsocketOptions{Header: header})
+				conn := connectedWebsocket(t, serverPort, "/graphql", &connectedWebsocketOptions{Header: header})
 				err := conn.WriteJSON(&wsMessage{
 					ID:      "1",
 					Type:    "subscribe",
@@ -104,7 +104,7 @@ func TestForwardHeaders(t *testing.T) {
 	})
 
 	t.Run("ws with client extension", func(t *testing.T) {
-		conn := connectedWebsocket(t, serverPort, nil)
+		conn := connectedWebsocket(t, serverPort, "/graphql", nil)
 		err := conn.WriteJSON(&wsMessage{
 			ID:      "1",
 			Type:    "subscribe",
@@ -135,8 +135,8 @@ func TestForwardHeaders(t *testing.T) {
 				header2 := http.Header{
 					c.headerName: []string{headerValue2},
 				}
-				conn1 := connectedWebsocket(t, serverPort, &connectedWebsocketOptions{Header: header1})
-				conn2 := connectedWebsocket(t, serverPort, &connectedWebsocketOptions{Header: header2})
+				conn1 := connectedWebsocket(t, serverPort, "/graphql", &connectedWebsocketOptions{Header: header1})
+				conn2 := connectedWebsocket(t, serverPort, "/graphql", &connectedWebsocketOptions{Header: header2})
 				var err error
 				err = conn1.WriteJSON(&wsMessage{
 					ID:      "1",

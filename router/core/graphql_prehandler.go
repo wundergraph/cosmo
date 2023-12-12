@@ -199,7 +199,7 @@ func (h *PreHandler) writeOperationError(w http.ResponseWriter, r *http.Request,
 	var poNotFoundErr cdn.PersistentOperationNotFoundError
 	switch {
 	case errors.As(err, &inputErr):
-		requestLogger.Error(inputErr.Error())
+		requestLogger.Debug(inputErr.Error())
 		writeRequestErrors(r, inputErr.StatusCode(), graphql.RequestErrorsFromError(err), w, requestLogger)
 	case errors.As(err, &reportErr):
 		report := reportErr.Report()
