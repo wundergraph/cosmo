@@ -475,7 +475,36 @@ func (r *Router) NewTestServer(ctx context.Context) (*Server, error) {
 	return newRouter, nil
 }
 
+// bootstrap initializes the Router. It is called by Start() and NewTestServer().
+// It should only be called once for a Router instance.
 func (r *Router) bootstrap(ctx context.Context) error {
+	cosmoCloudTracingEnabled := r.traceConfig.Enabled && trace.GetDefaultExporter(r.traceConfig) != nil
+	artInProductionEnabled := r.engineExecutionConfiguration.EnableRequestTracing && !r.developmentMode
+	needsRegistration := cosmoCloudTracingEnabled || artInProductionEnabled
+
+	if needsRegistration && r.selfRegister != nil {
+
+		r.logger.Info("Registering router with control plane because you opted in to send telemetry to Cosmo Cloud or advanced request tracing (ART) in production")
+
+		ri, registerErr := r.selfRegister.Register(ctx)
+		if registerErr != nil {
+			r.logger.Error("Failed to register router. If this error persists, please contact support.", zap.Error(registerErr))
+		} else {
+			r.registrationInfo = ri
+
+			// Only ensure sampling rate if the user exports traces to Cosmo Cloud
+			if cosmoCloudTracingEnabled {
+				if r.traceConfig.Sampler > float64(r.registrationInfo.AccountLimits.TraceSamplingRate) {
+					r.logger.Warn("Trace sampling rate is higher than account limit. Using account limit instead. Please contact support to increase your account limit.",
+						zap.Float64("limit", r.traceConfig.Sampler),
+						zap.String("account_limit", fmt.Sprintf("%.2f", r.registrationInfo.AccountLimits.TraceSamplingRate)),
+					)
+					r.traceConfig.Sampler = float64(r.registrationInfo.AccountLimits.TraceSamplingRate)
+				}
+			}
+		}
+	}
+
 	if r.traceConfig.Enabled {
 		tp, err := trace.NewTracerProvider(ctx, r.logger, r.traceConfig)
 		if err != nil {
@@ -533,37 +562,11 @@ func (r *Router) bootstrap(ctx context.Context) error {
 	return nil
 }
 
-// Start starts the Server. It blocks until the context is cancelled or when the initial config could not be fetched.
+// Start starts the Server. It blocks until the context is cancelled or when the initial config could not be fetched
+// from the control plane. All bootstrapping logic should be done in bootstrap().
 func (r *Router) Start(ctx context.Context) error {
 	if r.shutdown {
-		return fmt.Errorf("router is closed. Create a new instance with router.NewRouter()")
-	}
-
-	cosmoCloudTracingEnabled := r.traceConfig.Enabled && trace.GetDefaultExporter(r.traceConfig) != nil
-	artInProductionEnabled := r.engineExecutionConfiguration.EnableRequestTracing && !r.developmentMode
-	needsRegistration := cosmoCloudTracingEnabled || artInProductionEnabled
-
-	if needsRegistration && r.selfRegister != nil {
-
-		r.logger.Info("Registering router with control plane because you opted in to send telemetry to Cosmo Cloud or advanced request tracing (ART) in production")
-
-		ri, registerErr := r.selfRegister.Register(ctx)
-		if registerErr != nil {
-			r.logger.Error("Failed to register router. If this error persists, please contact support.", zap.Error(registerErr))
-		} else {
-			r.registrationInfo = ri
-
-			// Only ensure sampling rate if the user exports traces to Cosmo Cloud
-			if cosmoCloudTracingEnabled {
-				if r.traceConfig.Sampler > float64(r.registrationInfo.AccountLimits.TraceSamplingRate) {
-					r.logger.Warn("Trace sampling rate is higher than account limit. Using account limit instead. Please contact support to increase your account limit.",
-						zap.Float64("limit", r.traceConfig.Sampler),
-						zap.String("account_limit", fmt.Sprintf("%.2f", r.registrationInfo.AccountLimits.TraceSamplingRate)),
-					)
-					r.traceConfig.Sampler = float64(r.registrationInfo.AccountLimits.TraceSamplingRate)
-				}
-			}
-		}
+		return fmt.Errorf("router is shutdown. Create a new instance with router.NewRouter()")
 	}
 
 	if err := r.bootstrap(ctx); err != nil {
@@ -576,6 +579,7 @@ func (r *Router) Start(ctx context.Context) error {
 		return r.updateServer(ctx, r.routerConfig)
 	}
 
+	// when no static config is provided and no poller is configured, we can't start the server
 	if r.configPoller == nil {
 		return fmt.Errorf("config fetcher not provided. Please provide a static router config instead")
 	}
