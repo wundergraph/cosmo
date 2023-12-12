@@ -80,16 +80,16 @@ export function walkSubgraphToCollectObjectLikesAndDirectiveDefinitions(
         const operationType = subgraph.operationTypes.get(name);
         const parentTypeName = operationType
           ? getOrThrowError(operationTypeNodeToDefaultType, operationType, OPERATION_TO_DEFAULT) : name;
-        addConcreteTypesForImplementedInterfaces(node, factory.abstractToConcreteTypeNames);
-        if (isNodeInterfaceObject(node)) {
-          return false;
-        }
         if (!factory.graph.hasNode(parentTypeName)) {
           factory.graph.addNode(parentTypeName);
         }
         if (isObjectLikeNodeEntity(node)) {
           factory.upsertEntity(node);
         }
+        if (isNodeInterfaceObject(node)) {
+          return false;
+        }
+        addConcreteTypesForImplementedInterfaces(node, factory.abstractToConcreteTypeNames);
         if (name !== parentTypeName) {
           return {
             ...node,
