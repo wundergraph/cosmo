@@ -747,7 +747,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	var graphqlPlaygroundHandler func(http.Handler) http.Handler
 
 	if r.playground {
-		r.logger.Debug("enabling GraphQL playground", zap.String("path", r.graphqlPath))
+		r.logger.Info("Serving GraphQL playground", zap.String("url", r.baseURL))
 		graphqlPlaygroundHandler = graphiql.NewPlayground(&graphiql.PlaygroundOptions{
 			Log:        r.logger,
 			Html:       graphiql.PlaygroundHTML(),
@@ -834,16 +834,9 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	// Serve GraphQL. Metrics are collected after the request is handled and classified as r GraphQL request.
 	httpRouter.Mount(r.graphqlPath, graphqlChiRouter)
 
-	if r.playground {
-		r.logger.Debug("GraphQLHandler playground registered",
-			zap.String("method", http.MethodGet),
-			zap.String("path", "/"),
-		)
-	}
-
-	r.logger.Debug("GraphQLHandler registered",
+	r.logger.Info("GraphQL endpoint",
 		zap.String("method", http.MethodPost),
-		zap.String("path", r.graphqlPath),
+		zap.String("url", r.baseURL+r.graphqlPath),
 	)
 
 	ro.Server = &http.Server{
