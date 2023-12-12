@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/core"
 	"net"
 	"net/http"
 	"testing"
@@ -33,7 +34,7 @@ type connectedWebsocketOptions struct {
 	InitialPayload map[string]interface{}
 }
 
-func connectedWebsocket(tb testing.TB, serverPort int, opts *connectedWebsocketOptions) *websocket.Conn {
+func connectedWebsocket(tb testing.TB, serverPort int, serverPath string, opts *connectedWebsocketOptions) *websocket.Conn {
 	dialer := websocket.Dialer{
 		Subprotocols: []string{"graphql-transport-ws"},
 	}
@@ -48,7 +49,7 @@ func connectedWebsocket(tb testing.TB, serverPort int, opts *connectedWebsocketO
 			require.NoError(tb, err)
 		}
 	}
-	conn, _, err := dialer.Dial(fmt.Sprintf("ws://localhost:%d/graphql", serverPort), header)
+	conn, _, err := dialer.Dial(fmt.Sprintf("ws://localhost:%d%s", serverPort, serverPath), header)
 	require.NoError(tb, err)
 	err = conn.WriteJSON(&wsMessage{
 		Type:    "connection_init",
@@ -73,7 +74,7 @@ func TestQueryOverWebsocket(t *testing.T) {
 		expectedPayload = `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`
 	)
 	_, port := setupListeningServer(t)
-	conn := connectedWebsocket(t, port, nil)
+	conn := connectedWebsocket(t, port, "/graphql", nil)
 	var err error
 	q := &testQuery{
 		Body: query,
@@ -115,7 +116,7 @@ func TestSubscriptionOverWebsocket(t *testing.T) {
 	}
 
 	_, port := setupListeningServer(t)
-	conn := connectedWebsocket(t, port, nil)
+	conn := connectedWebsocket(t, port, "/graphql", nil)
 	var err error
 	const messageID = "1"
 	err = conn.WriteJSON(&wsMessage{
@@ -172,7 +173,7 @@ type graphqlError struct {
 
 func TestErrorOverWebsocket(t *testing.T) {
 	_, port := setupListeningServer(t)
-	conn := connectedWebsocket(t, port, nil)
+	conn := connectedWebsocket(t, port, "/graphql", nil)
 	var err error
 	const messageID = "1"
 	err = conn.WriteJSON(&wsMessage{
@@ -195,7 +196,7 @@ func TestErrorOverWebsocket(t *testing.T) {
 
 func TestShutdownWithActiveWebsocket(t *testing.T) {
 	server, port := setupListeningServer(t)
-	conn := connectedWebsocket(t, port, nil)
+	conn := connectedWebsocket(t, port, "/graphql", nil)
 	var err error
 	const messageID = "1"
 	err = conn.WriteJSON(&wsMessage{
@@ -264,8 +265,8 @@ func TestExtensionsForwardingOverWebsocket(t *testing.T) {
 	// Make sure sending two simultaneous subscriptions with different extensions
 	// triggers two subscriptions to the upstream
 	_, port := setupListeningServer(t)
-	conn1 := connectedWebsocket(t, port, nil)
-	conn2 := connectedWebsocket(t, port, nil)
+	conn1 := connectedWebsocket(t, port, "/graphql", nil)
+	conn2 := connectedWebsocket(t, port, "/graphql", nil)
 	var err error
 	err = conn1.WriteJSON(&wsMessage{
 		ID:      "1",
@@ -304,10 +305,46 @@ func TestExtensionsForwardingOverWebsocket(t *testing.T) {
 	assert.Equal(t, "456", payload.Data.InitialPayload.Extensions.Token)
 }
 
+func TestWsConnectionWithSameGraphQLPathAsPlayground(t *testing.T) {
+	_, port := setupListeningServer(t, core.WithGraphQLPath("/"))
+	conn := connectedWebsocket(t, port, "/", &connectedWebsocketOptions{
+		InitialPayload: map[string]any{"123": 456, "extensions": map[string]any{"hello": "world"}},
+	})
+	var err error
+	err = conn.WriteJSON(&wsMessage{
+		ID:      "1",
+		Type:    "subscribe",
+		Payload: []byte(`{"query":"subscription { initialPayload(repeat:3) }"}`),
+	})
+	require.NoError(t, err)
+	var msg wsMessage
+	err = connReadJSON(conn, &msg)
+	require.NoError(t, err)
+	assert.JSONEq(t, `{"data":{"initialPayload":{"123":456,"extensions":{"hello":"world"}}}}`, string(msg.Payload))
+}
+
+func TestWsConnectionWithDifferentGraphQLPath(t *testing.T) {
+	_, port := setupListeningServer(t, core.WithGraphQLPath("/foo"))
+	conn := connectedWebsocket(t, port, "/foo", &connectedWebsocketOptions{
+		InitialPayload: map[string]any{"123": 456, "extensions": map[string]any{"hello": "world"}},
+	})
+	var err error
+	err = conn.WriteJSON(&wsMessage{
+		ID:      "1",
+		Type:    "subscribe",
+		Payload: []byte(`{"query":"subscription { initialPayload(repeat:3) }"}`),
+	})
+	require.NoError(t, err)
+	var msg wsMessage
+	err = connReadJSON(conn, &msg)
+	require.NoError(t, err)
+	assert.JSONEq(t, `{"data":{"initialPayload":{"123":456,"extensions":{"hello":"world"}}}}`, string(msg.Payload))
+}
+
 func TestExtensionsForwardingOverWebsocketWithInitialPayload(t *testing.T) {
 	_, port := setupListeningServer(t)
 	t.Run("single connection with initial payload", func(t *testing.T) {
-		conn := connectedWebsocket(t, port, &connectedWebsocketOptions{
+		conn := connectedWebsocket(t, port, "/graphql", &connectedWebsocketOptions{
 			InitialPayload: map[string]any{"123": 456, "extensions": map[string]any{"hello": "world"}},
 		})
 		var err error
@@ -324,7 +361,7 @@ func TestExtensionsForwardingOverWebsocketWithInitialPayload(t *testing.T) {
 	})
 	t.Run("single connection with initial payload and extensions in the request", func(t *testing.T) {
 		// "extensions" in the request should override the "extensions" in initial payload
-		conn := connectedWebsocket(t, port, &connectedWebsocketOptions{
+		conn := connectedWebsocket(t, port, "/graphql", &connectedWebsocketOptions{
 			InitialPayload: map[string]any{"123": 456, "extensions": map[string]any{"hello": "world"}},
 		})
 		var err error
@@ -342,10 +379,10 @@ func TestExtensionsForwardingOverWebsocketWithInitialPayload(t *testing.T) {
 
 	t.Run("multiple connections with different initial payloads", func(t *testing.T) {
 		// "extensions" in the request should override the "extensions" in initial payload
-		conn1 := connectedWebsocket(t, port, &connectedWebsocketOptions{
+		conn1 := connectedWebsocket(t, port, "/graphql", &connectedWebsocketOptions{
 			InitialPayload: map[string]any{"id": 1},
 		})
-		conn2 := connectedWebsocket(t, port, &connectedWebsocketOptions{
+		conn2 := connectedWebsocket(t, port, "/graphql", &connectedWebsocketOptions{
 			InitialPayload: map[string]any{"id": 2},
 		})
 		var err error
