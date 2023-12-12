@@ -671,9 +671,9 @@ export function unparsableFieldSetSelectionErrorMessage(fieldSet: string, fieldN
     `  This is because the selection set defined on "${fieldName}" could not be parsed.`;
 }
 
-export function undefinedObjectParentError(parentTypeName: string): Error {
+export function undefinedObjectLikeParentError(parentTypeName: string): Error {
   return new Error(
-    ` Expected an object or object extension named "${parentTypeName}" to exist.`,
+    ` Expected an object/interface or object/interface extension named "${parentTypeName}" to exist.`,
   );
 }
 
@@ -776,5 +776,17 @@ export function duplicateOverriddenFieldsError(errorMessages: string[]): Error {
     `The @override directive must only be declared on one single instance of a field.` +
     ` However, an @override directive was declared on more than one instance of the following field` +
     (errorMessages.length > 1 ? 's' : '') + `: "` + errorMessages.join(QUOTATION_JOIN) + `".\n`
+  );
+}
+
+export function noFieldDefinitionsError(typeString: string, typeName: string): Error {
+  return new Error(
+    `The ${typeString} "${typeName}" is invalid because it does not define any fields.`
+  );
+}
+
+export function allFieldDefinitionsAreInaccessibleError(typeString: string, typeName: string): Error {
+  return new Error(
+    `The ${typeString} "${typeName}" is invalid because all its field definitions are declared "@inaccessible".`
   );
 }

@@ -999,21 +999,6 @@ describe('Normalization tests', () => {
     ));
   });
 
-  test('Should give errors when key directive is applied to a interface', () => {
-    const { errors } = normalizeSubgraphFromString(`
-      interface User @key(fields: "name") {
-        name: String!
-        age: Int!
-      }
-    `);
-    expect(errors).toBeDefined();
-    expect(errors![0]).toStrictEqual(
-      invalidDirectiveError('key', 'User', [
-        ` "User" is type "InterfaceTypeDefinition", but the directive "key" does not define "INTERFACE" as a valid location.`,
-      ]),
-    );
-  });
-
   test('Should give errors when key directive is applied to a enum', () => {
     const { errors } = normalizeSubgraphFromString(`
       enum User @key(fields: "name") {

@@ -330,7 +330,7 @@ export type MutableTypeDefinitionNode =
   | MutableUnionTypeDefinitionNode;
 
 
-export type ObjectLikeTypeDefinitionNode =
+export type ObjectLikeTypeNode =
   InterfaceTypeDefinitionNode
   | InterfaceTypeExtensionNode
   | ObjectTypeDefinitionNode
