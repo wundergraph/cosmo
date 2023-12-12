@@ -8,6 +8,7 @@ import {
 } from "@tanstack/react-query";
 import { useRouter } from "next/router";
 import { createContext, ReactNode, useEffect, useState } from "react";
+import { useCookies } from "react-cookie";
 
 export interface User {
   id: string;
@@ -89,6 +90,22 @@ const publicPaths = ["/login", "/signup"];
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
   const currentOrgSlug = router.query.organizationSlug;
+
+  // we store the current org slug in a cookie, so that we can redirect to the correct org after login
+  // as well as being able to access the cookie on the server.
+  const [cookies, setCookie] = useCookies(["cosmo_org"]);
+
+  useEffect(() => {
+    if (!router.isReady) return;
+    if (currentOrgSlug && currentOrgSlug !== cookies.cosmo_org) {
+      setCookie("cosmo_org", currentOrgSlug, {
+        path: "/",
+        maxAge: 3600 * 24 * 365, // 1 year
+        sameSite: "lax",
+      });
+    }
+  }, [currentOrgSlug, router, cookies.cosmo_org, setCookie]);
+
   const { data, error, isFetching } = useQuery<
     Session | null,
     UnauthorizedError | Error
@@ -104,7 +121,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [transport, setTransport] = useState<Transport>();
 
   useEffect(() => {
-    if (isFetching) return;
+    if (isFetching || !router.isReady) return;
     if (
       error &&
       error instanceof UnauthorizedError &&
@@ -114,7 +131,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       router.replace(`/login?redirectURL=${redirectURL}`);
     } else if (data && !error) {
       const currentOrg = data.organizations.find(
-        (org) => org.slug === currentOrgSlug,
+        (org) => org.slug === cookies.cosmo_org,
       );
 
       const organization = currentOrg || data.organizations[0];
@@ -162,7 +179,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         );
       }
     }
-  }, [router, data, isFetching, error, currentOrgSlug]);
+  }, [router, data, isFetching, error, cookies.cosmo_org]);
 
   if (!transport) {
     return <UserContext.Provider value={user}>{children}</UserContext.Provider>;
