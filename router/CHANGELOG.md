@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.45.0](https://github.com/wundergraph/cosmo/compare/router@0.44.1...router@0.45.0) (2023-12-12)
+
+### Bug Fixes
+
+* allow to host graphql playground and handler on the same path ([#354](https://github.com/wundergraph/cosmo/issues/354)) ([f8f01a2](https://github.com/wundergraph/cosmo/commit/f8f01a2b8f12ac18b27eb05032985a5daacc80df)) (@StarpTech)
+
+### Features
+
+* add rbac for subgraphs and federated graphs ([#351](https://github.com/wundergraph/cosmo/issues/351)) ([72e39bc](https://github.com/wundergraph/cosmo/commit/72e39bc1ff914831499c0625e443ab2ec0af135c)) (@JivusAyrus)
+
 ## [0.44.1](https://github.com/wundergraph/cosmo/compare/router@0.44.0...router@0.44.1) (2023-12-11)
 
 **Note:** Version bump only for package router

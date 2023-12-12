@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.45.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.44.0...controlplane@0.45.0) (2023-12-12)
+
+### Bug Fixes
+
+* api key resource deletion on delete of target ([#355](https://github.com/wundergraph/cosmo/issues/355)) ([a8fa0e8](https://github.com/wundergraph/cosmo/commit/a8fa0e8a06b129cf0a1b7dd07b2ef94e168007e3)) (@JivusAyrus)
+
+### Features
+
+* add rbac for subgraphs and federated graphs ([#351](https://github.com/wundergraph/cosmo/issues/351)) ([72e39bc](https://github.com/wundergraph/cosmo/commit/72e39bc1ff914831499c0625e443ab2ec0af135c)) (@JivusAyrus)
+
 # [0.44.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.43.0...controlplane@0.44.0) (2023-12-09)
 
 ### Features

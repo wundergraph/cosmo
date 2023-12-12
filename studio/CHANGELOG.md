@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.43.0](https://github.com/wundergraph/cosmo/compare/studio@0.42.1...studio@0.43.0) (2023-12-12)
+
+### Features
+
+* add rbac for subgraphs and federated graphs ([#351](https://github.com/wundergraph/cosmo/issues/351)) ([72e39bc](https://github.com/wundergraph/cosmo/commit/72e39bc1ff914831499c0625e443ab2ec0af135c)) (@JivusAyrus)
+* remember and redirect to last used organisation ([#357](https://github.com/wundergraph/cosmo/issues/357)) ([934726d](https://github.com/wundergraph/cosmo/commit/934726d8fd72fd059e18b35babc79ff3494b40aa)) (@Pagebakers)
+
 ## [0.42.1](https://github.com/wundergraph/cosmo/compare/studio@0.42.0...studio@0.42.1) (2023-12-05)
 
 ### Bug Fixes
