@@ -26,7 +26,7 @@ func persistedOperationPayload(sha56Hash string) []byte {
 
 func TestPersistedOperationNotFound(t *testing.T) {
 	server := setupServer(t)
-	result := sendData(server, persistedOperationPayload("does-not-exist"))
+	result := sendData(server, "/graphql", persistedOperationPayload("does-not-exist"))
 	assert.Equal(t, http.StatusBadRequest, result.Code)
 	assert.JSONEq(t, `{"data": null, "errors": [{ "message": "PersistedQueryNotFound" }]}`, result.Body.String())
 }
@@ -41,7 +41,7 @@ func TestPersistedOperation(t *testing.T) {
 	header.Add("graphql-client-name", "my-client")
 	payload := persistedOperationPayload(operationID)
 	payload, _ = sjson.SetBytes(payload, "operationName", operationName)
-	res := sendDataWithHeader(server, payload, header)
+	res := sendDataWithHeader(server, "/graphql", payload, header)
 	assert.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`, res.Body.String())
 }
 
@@ -57,9 +57,9 @@ func TestPersistedOperationsCache(t *testing.T) {
 		header.Add("graphql-client-name", "my-client")
 		payload := persistedOperationPayload(operationID)
 		payload, _ = sjson.SetBytes(payload, "operationName", operationName)
-		res1 := sendDataWithHeader(server, payload, header)
+		res1 := sendDataWithHeader(server, "/graphql", payload, header)
 		assert.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`, res1.Body.String())
-		res2 := sendDataWithHeader(server, payload, header)
+		res2 := sendDataWithHeader(server, "/graphql", payload, header)
 		assert.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`, res2.Body.String())
 	}
 

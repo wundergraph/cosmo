@@ -903,9 +903,7 @@ export const apiKeyResources = pgTable('api_key_resources', {
     .references(() => apiKeys.id, {
       onDelete: 'cascade',
     }),
-  targetId: uuid('target_id')
-    .notNull()
-    .references(() => targets.id, { onDelete: 'cascade' }),
+  targetId: uuid('target_id').references(() => targets.id, { onDelete: 'set null' }),
 });
 
 export const subgraphMembers = pgTable(
