@@ -22,9 +22,9 @@ export const TitleLayout = ({
 
   return (
     <div
-      className={cn("flex h-[calc(100vh-32px)] flex-col", {
-        "h-[calc(100vh-32px)]": disableStarBanner !== "true",
-        "h-screen": disableStarBanner === "true",
+      className={cn("flex flex-col", {
+        "h-[calc(100vh-32px)]": disableStarBanner === "false",
+        "h-screen": disableStarBanner !== "false",
       })}
     >
       <div className="bg-background">

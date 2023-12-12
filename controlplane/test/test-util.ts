@@ -15,6 +15,7 @@ import Mailer from '../src/core/services/Mailer.js';
 import { createTestAuthenticator, seedTest } from '../src/core/test-util.js';
 import { MockPlatformWebhookService } from '../src/core/webhooks/PlatformWebhookService.js';
 import { Label } from '../src/types/index.js';
+import { Authorization } from '../src/core/services/Authorization.js';
 
 export const SetupTest = async function (testContext: TestContext, dbname: string) {
   const databaseConnectionUrl = `postgresql://postgres:changeme@localhost:5432/${dbname}`;
@@ -68,6 +69,7 @@ export const SetupTest = async function (testContext: TestContext, dbname: strin
       keycloakApiUrl: apiUrl,
       blobStorage,
       mailerClient,
+      authorizer: new Authorization(),
     }),
   });
 

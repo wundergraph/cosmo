@@ -7,6 +7,7 @@ import { OrganizationEventName, PlatformEventName } from '@wundergraph/cosmo-con
 import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
 import {
   AcceptOrDeclineInvitationResponse,
+  AddSubgraphMemberResponse,
   AnalyticsConfig,
   CheckFederatedGraphResponse,
   CheckSubgraphSchemaResponse,
@@ -59,10 +60,13 @@ import {
   GetRouterTokensResponse,
   GetSdlBySchemaVersionResponse,
   GetSubgraphByNameResponse,
+  GetSubgraphMembersResponse,
   GetSubgraphsResponse,
   GetTraceResponse,
+  GetUserAccessibleResourcesResponse,
   InviteUserResponse,
   IsGitHubAppInstalledResponse,
+  IsRBACEnabledResponse,
   LeaveOrganizationResponse,
   MigrateFromApolloResponse,
   PublishFederatedSubgraphResponse,
@@ -70,12 +74,14 @@ import {
   PublishedOperation,
   PublishedOperationStatus,
   RemoveInvitationResponse,
+  RemoveSubgraphMemberResponse,
   RequestSeriesItem,
   UpdateFederatedGraphResponse,
   UpdateIntegrationConfigResponse,
   UpdateOrgMemberRoleResponse,
   UpdateOrganizationDetailsResponse,
   UpdateOrganizationWebhookConfigResponse,
+  UpdateRBACSettingsResponse,
   UpdateSubgraphResponse,
   WhoAmIResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
@@ -83,7 +89,6 @@ import { OpenAIGraphql, isValidUrl } from '@wundergraph/cosmo-shared';
 import { DocumentNode, buildASTSchema, parse } from 'graphql';
 import { validate } from 'graphql/validation/index.js';
 import { uid } from 'uid';
-import { eq } from 'drizzle-orm';
 import {
   GraphApiKeyDTO,
   GraphApiKeyJwtPayload,
@@ -99,6 +104,7 @@ import { GitHubRepository } from '../repositories/GitHubRepository.js';
 import { GraphCompositionRepository } from '../repositories/GraphCompositionRepository.js';
 import { OidcRepository } from '../repositories/OidcRepository.js';
 import { OperationsRepository } from '../repositories/OperationsRepository.js';
+import { OrganizationInvitationRepository } from '../repositories/OrganizationInvitationRepository.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import { SchemaCheckRepository } from '../repositories/SchemaCheckRepository.js';
 import { SubgraphRepository } from '../repositories/SubgraphRepository.js';
@@ -131,11 +137,13 @@ import {
   validateDateRanges,
 } from '../util.js';
 import { FederatedGraphSchemaUpdate, OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
-import * as schema from '../../db/schema.js';
-import { OrganizationInvitationRepository } from '../repositories/OrganizationInvitationRepository.js';
+import { ApiKeyRepository } from '../repositories/ApiKeyRepository.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
+    /* 
+    Mutations
+    */
     createFederatedGraph: (req, ctx) => {
       const logger = opts.logger.child({
         service: ctx.service.typeName,
@@ -180,6 +188,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const federatedGraph = await fedGraphRepo.create({
           name: req.name,
+          createdBy: authContext.userId,
           labelMatchers: req.labelMatchers,
           routingUrl: req.routingUrl,
         });
@@ -288,6 +297,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         if (!exists) {
           const subgraph = await subgraphRepo.create({
             name: req.name,
+            createdBy: authContext.userId,
             labels: req.labels,
             routingUrl: req.routingUrl,
             subscriptionUrl: req.subscriptionUrl,
@@ -307,279 +317,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         }
 
         return {
-          response: {
-            code: EnumStatusCode.OK,
-          },
-        };
-      });
-    },
-
-    getSubgraphs: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
-
-      return handleError<PlainMessage<GetSubgraphsResponse>>(logger, async () => {
-        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const repo = new SubgraphRepository(opts.db, authContext.organizationId);
-
-        const list = await repo.list({
-          limit: req.limit,
-          offset: req.offset,
-        });
-
-        return {
-          graphs: list.map((g) => ({
-            id: g.id,
-            name: g.name,
-            routingURL: g.routingUrl,
-            lastUpdatedAt: g.lastUpdatedAt,
-            labels: g.labels,
-          })),
-          response: {
-            code: EnumStatusCode.OK,
-          },
-        };
-      });
-    },
-
-    getSubgraphByName: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
-
-      return handleError<PlainMessage<GetSubgraphByNameResponse>>(logger, async () => {
-        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const repo = new SubgraphRepository(opts.db, authContext.organizationId);
-
-        const subgraph = await repo.byName(req.name);
-
-        if (!subgraph) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_NOT_FOUND,
-              details: `Subgraph '${req.name}' not found`,
-            },
-          };
-        }
-
-        return {
-          graph: {
-            id: subgraph.id,
-            name: subgraph.name,
-            lastUpdatedAt: subgraph.lastUpdatedAt,
-            routingURL: subgraph.routingUrl,
-            labels: subgraph.labels,
-          },
-          response: {
-            code: EnumStatusCode.OK,
-          },
-        };
-      });
-    },
-
-    getFederatedGraphs: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
-
-      return handleError<PlainMessage<GetFederatedGraphsResponse>>(logger, async () => {
-        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
-
-        const list = await fedGraphRepo.list({
-          limit: req.limit,
-          offset: req.offset,
-        });
-
-        let requestSeriesList: Record<string, PlainMessage<RequestSeriesItem>[]> = {};
-
-        if (req.includeMetrics && opts.chClient) {
-          const analyticsDashRepo = new AnalyticsDashboardViewRepository(opts.chClient);
-          requestSeriesList = await analyticsDashRepo.getListView(authContext.organizationId);
-        }
-
-        return {
-          graphs: list.map((g) => ({
-            id: g.id,
-            name: g.name,
-            labelMatchers: g.labelMatchers,
-            routingURL: g.routingUrl,
-            lastUpdatedAt: g.lastUpdatedAt,
-            connectedSubgraphs: g.subgraphsCount,
-            compositionErrors: g.compositionErrors ?? '',
-            isComposable: g.isComposable,
-            requestSeries: requestSeriesList[g.id] ?? [],
-          })),
-          response: {
-            code: EnumStatusCode.OK,
-          },
-        };
-      });
-    },
-
-    getFederatedGraphSDLByName: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
-      return handleError<PlainMessage<GetFederatedGraphSDLByNameResponse>>(logger, async () => {
-        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const fedRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
-        const schemaVersion = await fedRepo.getLatestValidSchemaVersion(req.name);
-        if (schemaVersion && schemaVersion.schema) {
-          return {
-            response: {
-              code: EnumStatusCode.OK,
-            },
-            sdl: schemaVersion.schema,
-          };
-        }
-        return {
-          response: {
-            code: EnumStatusCode.ERR_NOT_FOUND,
-          },
-        };
-      });
-    },
-
-    getLatestValidSubgraphSDLByName: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
-      return handleError<PlainMessage<GetLatestValidSubgraphSDLByNameResponse>>(logger, async () => {
-        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
-        const subgraph = await subgraphRepo.byName(req.name);
-        if (!subgraph) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_NOT_FOUND,
-            },
-          };
-        }
-
-        const schemaVersion = await subgraphRepo.getLatestValidSchemaVersion(req.name, req.fedGraphName);
-        if (!schemaVersion) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_NOT_FOUND,
-            },
-          };
-        }
-
-        return {
-          response: {
-            code: EnumStatusCode.OK,
-          },
-          sdl: schemaVersion.schema || undefined,
-        };
-      });
-    },
-
-    getFederatedGraphByName: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
-
-      return handleError<PlainMessage<GetFederatedGraphByNameResponse>>(logger, async () => {
-        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const fedRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
-        const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
-
-        const federatedGraph = await fedRepo.byName(req.name);
-
-        if (!federatedGraph) {
-          return {
-            subgraphs: [],
-            graphToken: '',
-            graphRequestToken: '',
-            response: {
-              code: EnumStatusCode.ERR_NOT_FOUND,
-              details: `Federated graph '${req.name}' not found`,
-            },
-          };
-        }
-
-        let requestSeries: PlainMessage<RequestSeriesItem>[] = [];
-        if (req.includeMetrics && opts.chClient) {
-          const analyticsDashRepo = new AnalyticsDashboardViewRepository(opts.chClient);
-          const graphResponse = await analyticsDashRepo.getView(federatedGraph.id, authContext.organizationId);
-          requestSeries = graphResponse.requestSeries;
-        }
-
-        const list = await subgraphRepo.listByFederatedGraph(req.name, { published: true });
-
-        const routerRequestToken = await fedRepo.getGraphSignedToken({
-          federatedGraphId: federatedGraph.id,
-          organizationId: authContext.organizationId,
-        });
-
-        if (!routerRequestToken) {
-          return {
-            subgraphs: [],
-            graphToken: '',
-            graphRequestToken: '',
-            response: {
-              code: EnumStatusCode.ERR,
-              details: 'Router Request token not found',
-            },
-          };
-        }
-
-        const tokens = await fedRepo.getRouterTokens({
-          organizationId: authContext.organizationId,
-          federatedGraphId: federatedGraph.id,
-          limit: 1,
-        });
-
-        let graphToken: GraphApiKeyDTO;
-
-        if (tokens.length === 0) {
-          const tokenValue = await signJwt<GraphApiKeyJwtPayload>({
-            secret: opts.jwtSecret,
-            token: {
-              iss: authContext.userId,
-              federated_graph_id: federatedGraph.id,
-              organization_id: authContext.organizationId,
-            },
-          });
-
-          graphToken = await fedRepo.createToken({
-            token: tokenValue,
-            federatedGraphId: federatedGraph.id,
-            tokenName: federatedGraph.name,
-            organizationId: authContext.organizationId,
-          });
-        } else {
-          graphToken = tokens[0];
-        }
-        return {
-          graph: {
-            id: federatedGraph.id,
-            name: federatedGraph.name,
-            routingURL: federatedGraph.routingUrl,
-            labelMatchers: federatedGraph.labelMatchers,
-            lastUpdatedAt: federatedGraph.lastUpdatedAt,
-            connectedSubgraphs: federatedGraph.subgraphsCount,
-            compositionErrors: federatedGraph.compositionErrors ?? '',
-            isComposable: federatedGraph.isComposable,
-            requestSeries,
-          },
-          subgraphs: list.map((g) => ({
-            id: g.id,
-            name: g.name,
-            routingURL: g.routingUrl,
-            lastUpdatedAt: g.lastUpdatedAt,
-            labels: g.labels,
-          })),
-          graphToken: graphToken.token,
-          graphRequestToken: routerRequestToken,
           response: {
             code: EnumStatusCode.OK,
           },
@@ -964,7 +701,19 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         let subgraph = await subgraphRepo.byName(req.name);
 
         // Check if the subgraph already exists and if it doesn't, validate input and create it
-        if (!subgraph) {
+        if (subgraph) {
+          // check if the user is authorized to perform the action
+          await opts.authorizer.authorize({
+            db: opts.db,
+            graph: {
+              targetId: subgraph.targetId,
+              name: subgraph.name,
+              targetType: 'subgraph',
+            },
+            headers: ctx.requestHeader,
+            authContext,
+          });
+        } else {
           if (!isValidLabels(req.labels)) {
             return {
               response: {
@@ -1008,6 +757,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           // Create the subgraph if it doesn't exist
           subgraph = await subgraphRepo.create({
             name: req.name,
+            createdBy: authContext.userId,
             labels: req.labels,
             routingUrl: req.routingUrl!,
             subscriptionUrl: req.subscriptionUrl,
@@ -1062,302 +812,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             code: EnumStatusCode.OK,
           },
           compositionErrors: [],
-        };
-      });
-    },
-
-    getFederatedGraphChangelog: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
-
-      return handleError<PlainMessage<GetFederatedGraphChangelogResponse>>(logger, async () => {
-        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const fedgraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
-        const orgRepo = new OrganizationRepository(opts.db);
-
-        const federatedGraph = await fedgraphRepo.byName(req.name);
-        if (!federatedGraph) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_NOT_FOUND,
-            },
-            federatedGraphChangelogOutput: [],
-            hasNextPage: false,
-          };
-        }
-
-        if (!req.pagination || !req.dateRange) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR,
-              details: 'Please provide pagination and datetange',
-            },
-            federatedGraphChangelogOutput: [],
-            hasNextPage: false,
-          };
-        }
-
-        const orgLimits = await orgRepo.getOrganizationLimits({ organizationID: authContext.organizationId });
-
-        const { dateRange } = validateDateRanges({
-          limit: orgLimits.changelogDataRetentionLimit,
-          dateRange: req.dateRange,
-        });
-
-        const result = await fedgraphRepo.fetchFederatedGraphChangelog(
-          federatedGraph.targetId,
-          req.pagination,
-          dateRange!,
-        );
-
-        if (!result) {
-          return {
-            federatedGraphChangelogOutput: [],
-            hasNextPage: false,
-            response: {
-              code: EnumStatusCode.ERR_NOT_FOUND,
-            },
-          };
-        }
-
-        return {
-          response: {
-            code: EnumStatusCode.OK,
-          },
-          federatedGraphChangelogOutput: result.federatedGraphChangelog,
-          hasNextPage: result.hasNextPage,
-        };
-      });
-    },
-
-    getChecksByFederatedGraphName: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
-
-      return handleError<PlainMessage<GetChecksByFederatedGraphNameResponse>>(logger, async () => {
-        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const fedgraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
-        const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
-        const orgRepo = new OrganizationRepository(opts.db);
-
-        const federatedGraph = await fedgraphRepo.byName(req.name);
-        if (!federatedGraph) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_NOT_FOUND,
-            },
-            checks: [],
-            checksCountBasedOnDateRange: '0',
-            totalChecksCount: '0',
-          };
-        }
-
-        const orgLimits = await orgRepo.getOrganizationLimits({ organizationID: authContext.organizationId });
-
-        const { dateRange } = validateDateRanges({
-          limit: orgLimits.breakingChangeRetentionLimit,
-          dateRange: {
-            start: req.startDate,
-            end: req.endDate,
-          } as DateRange,
-        });
-
-        const checksData = await subgraphRepo.checks({
-          federatedGraphName: req.name,
-          limit: req.limit,
-          offset: req.offset,
-          startDate: dateRange!.start,
-          endDate: dateRange!.end,
-        });
-        const totalChecksCount = await subgraphRepo.getChecksCount({ federatedGraphName: req.name });
-
-        return {
-          response: {
-            code: EnumStatusCode.OK,
-          },
-          checks: checksData.checks,
-          checksCountBasedOnDateRange: checksData.checksCount.toString(),
-          totalChecksCount: totalChecksCount.toString(),
-        };
-      });
-    },
-
-    getCheckSummary: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
-
-      return handleError<PlainMessage<GetCheckSummaryResponse>>(logger, async () => {
-        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
-        const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
-        const schemaCheckRepo = new SchemaCheckRepository(opts.db);
-
-        const graph = await fedGraphRepo.byName(req.graphName);
-
-        if (!graph) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_NOT_FOUND,
-              details: 'Requested graph does not exist',
-            },
-            compositionErrors: [],
-            changes: [],
-            affectedGraphs: [],
-            trafficCheckDays: 0,
-          };
-        }
-
-        const check = await subgraphRepo.checkById(req.checkId, graph.name);
-        const checkDetails = await subgraphRepo.checkDetails(req.checkId, graph.targetId);
-
-        if (!check || !checkDetails) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_NOT_FOUND,
-              details: 'Requested check not found',
-            },
-            compositionErrors: [],
-            changes: [],
-            affectedGraphs: [],
-            trafficCheckDays: 0,
-          };
-        }
-
-        const { trafficCheckDays } = await schemaCheckRepo.getFederatedGraphConfigForCheckId(req.checkId, graph.id);
-
-        return {
-          response: {
-            code: EnumStatusCode.OK,
-          },
-          check,
-          affectedGraphs: check.affectedGraphs,
-          proposedSubgraphSchemaSDL: check.proposedSubgraphSchemaSDL,
-          changes: checkDetails.changes,
-          compositionErrors: checkDetails.compositionErrors,
-          trafficCheckDays,
-        };
-      });
-    },
-
-    getCheckOperations: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
-
-      return handleError<PlainMessage<GetCheckOperationsResponse>>(logger, async () => {
-        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
-        const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
-        const schemaCheckRepo = new SchemaCheckRepository(opts.db);
-
-        const graph = await fedGraphRepo.byName(req.graphName);
-
-        if (!graph) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_NOT_FOUND,
-              details: 'Requested graph does not exist',
-            },
-            operations: [],
-            trafficCheckDays: 0,
-            createdAt: '',
-          };
-        }
-
-        const check = await subgraphRepo.checkById(req.checkId, graph.name);
-        const checkDetails = await subgraphRepo.checkDetails(req.checkId, graph.targetId);
-
-        if (!check || !checkDetails) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_NOT_FOUND,
-              details: 'Requested check not found',
-            },
-            operations: [],
-            trafficCheckDays: 0,
-            createdAt: '',
-          };
-        }
-
-        const affectedOperations = await schemaCheckRepo.getAffectedOperationsByCheckId(req.checkId);
-
-        const { trafficCheckDays } = await schemaCheckRepo.getFederatedGraphConfigForCheckId(req.checkId, graph.id);
-
-        return {
-          response: {
-            code: EnumStatusCode.OK,
-          },
-          operations: affectedOperations.map((operation) => ({
-            ...operation,
-            firstSeenAt: operation.firstSeenAt.toUTCString(),
-            lastSeenAt: operation.lastSeenAt.toUTCString(),
-            impactingChanges: checkDetails.changes.filter(({ id }) => operation.schemaChangeIds.includes(id)),
-          })),
-          trafficCheckDays,
-          createdAt: check.timestamp,
-        };
-      });
-    },
-
-    getCheckDetails: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
-
-      return handleError<PlainMessage<GetCheckDetailsResponse>>(logger, async () => {
-        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
-        const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
-        const schemaCheckRepo = new SchemaCheckRepository(opts.db);
-
-        const graph = await fedGraphRepo.byName(req.graphName);
-
-        if (!graph) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_NOT_FOUND,
-              details: 'Requested graph does not exist',
-            },
-            changes: [],
-            compositionErrors: [],
-            trafficCheckDays: 0,
-            createdAt: '',
-          };
-        }
-
-        const check = await subgraphRepo.checkById(req.checkId, graph.name);
-        const details = await subgraphRepo.checkDetails(req.checkId, graph.targetId);
-
-        if (!check || !details) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_NOT_FOUND,
-              details: 'Requested check not found',
-            },
-            changes: [],
-            compositionErrors: [],
-            trafficCheckDays: 0,
-            createdAt: '',
-          };
-        }
-
-        const { trafficCheckDays } = await schemaCheckRepo.getFederatedGraphConfigForCheckId(req.checkId, graph.id);
-
-        return {
-          response: {
-            code: EnumStatusCode.OK,
-          },
-          ...details,
-          trafficCheckDays,
-          createdAt: check?.timestamp,
         };
       });
     },
@@ -1457,6 +911,18 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
+        // check if the user is authorized to perform the action
+        await opts.authorizer.authorize({
+          db: opts.db,
+          graph: {
+            targetId: federatedGraph.targetId,
+            name: federatedGraph.name,
+            targetType: 'federatedGraph',
+          },
+          headers: ctx.requestHeader,
+          authContext,
+        });
+
         const blobStorageDirectory = `${authContext.organizationId}/${federatedGraph.id}`;
         await opts.blobStorage.removeDirectory(blobStorageDirectory);
 
@@ -1507,6 +973,18 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             compositionErrors: [],
           };
         }
+
+        // check if the user is authorized to perform the action
+        await opts.authorizer.authorize({
+          db: opts.db,
+          graph: {
+            targetId: subgraph.targetId,
+            name: subgraph.name,
+            targetType: 'subgraph',
+          },
+          headers: ctx.requestHeader,
+          authContext,
+        });
 
         const federatedGraphSchemaUpdates: FederatedGraphSchemaUpdate[] = [];
         const compositionErrors: PlainMessage<CompositionError>[] = [];
@@ -1618,6 +1096,18 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
+        // check if the user is authorized to perform the action
+        await opts.authorizer.authorize({
+          db: opts.db,
+          graph: {
+            targetId: federatedGraph.targetId,
+            name: federatedGraph.name,
+            targetType: 'federatedGraph',
+          },
+          headers: ctx.requestHeader,
+          authContext,
+        });
+
         if (!isValidLabelMatchers(req.labelMatchers)) {
           return {
             response: {
@@ -1707,6 +1197,18 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
+        // check if the user is authorized to perform the action
+        await opts.authorizer.authorize({
+          db: opts.db,
+          graph: {
+            targetId: subgraph.targetId,
+            name: subgraph.name,
+            targetType: 'subgraph',
+          },
+          headers: ctx.requestHeader,
+          authContext,
+        });
+
         if (!isValidLabels(req.labels)) {
           return {
             response: {
@@ -1767,213 +1269,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             code: EnumStatusCode.OK,
           },
           compositionErrors: [],
-        };
-      });
-    },
-
-    getAnalyticsView: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
-
-      return handleError<PlainMessage<GetAnalyticsViewResponse>>(logger, async () => {
-        if (!opts.chClient) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_ANALYTICS_DISABLED,
-            },
-          };
-        }
-        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const analyticsRepo = new AnalyticsRequestViewRepository(opts.chClient);
-        const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
-        const orgRepo = new OrganizationRepository(opts.db);
-
-        const graph = await fedGraphRepo.byName(req.federatedGraphName);
-        if (!graph) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_NOT_FOUND,
-              details: `Federated graph '${req.federatedGraphName}' not found`,
-            },
-          };
-        }
-
-        const orgLimits = await orgRepo.getOrganizationLimits({ organizationID: authContext.organizationId });
-        const { range, dateRange } = validateDateRanges({
-          limit: orgLimits.tracingRetentionLimit,
-          range: req.config?.range,
-          dateRange: req.config?.dateRange,
-        });
-
-        return {
-          response: {
-            code: EnumStatusCode.OK,
-          },
-          view: await analyticsRepo.getView(authContext.organizationId, graph.id, req.name, {
-            ...req.config,
-            range,
-            dateRange,
-          } as AnalyticsConfig),
-        };
-      });
-    },
-
-    getDashboardAnalyticsView: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
-
-      return handleError<PlainMessage<GetDashboardAnalyticsViewResponse>>(logger, async () => {
-        if (!opts.chClient) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_ANALYTICS_DISABLED,
-            },
-            mostRequestedOperations: [],
-            requestSeries: [],
-          };
-        }
-        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const analyticsDashRepo = new AnalyticsDashboardViewRepository(opts.chClient);
-        const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
-
-        const graph = await fedGraphRepo.byName(req.federatedGraphName);
-        if (!graph) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_NOT_FOUND,
-              details: `Federated graph '${req.federatedGraphName}' not found`,
-            },
-            mostRequestedOperations: [],
-            requestSeries: [],
-          };
-        }
-
-        const { requestSeries, mostRequestedOperations } = await analyticsDashRepo.getView(
-          graph.id,
-          authContext.organizationId,
-        );
-
-        return {
-          response: {
-            code: EnumStatusCode.OK,
-          },
-          mostRequestedOperations,
-          requestSeries,
-        };
-      });
-    },
-
-    getGraphMetrics: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
-
-      return handleError<PlainMessage<GetGraphMetricsResponse>>(logger, async () => {
-        if (!opts.chClient) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_ANALYTICS_DISABLED,
-            },
-            filters: [],
-          };
-        }
-        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const repo = new MetricsRepository(opts.chClient);
-        const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
-        const orgRepo = new OrganizationRepository(opts.db);
-
-        const graph = await fedGraphRepo.byName(req.federatedGraphName);
-        if (!graph) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_NOT_FOUND,
-              details: `Federated graph '${req.federatedGraphName}' not found`,
-            },
-            filters: [],
-          };
-        }
-
-        const orgLimits = await orgRepo.getOrganizationLimits({ organizationID: authContext.organizationId });
-        const { range, dateRange } = validateDateRanges({
-          limit: orgLimits.analyticsRetentionLimit,
-          range: req.range,
-          dateRange: req.dateRange,
-        });
-
-        const view = await repo.getMetricsView({
-          range,
-          dateRange,
-          filters: req.filters,
-          organizationId: authContext.organizationId,
-          graphId: graph.id,
-        });
-
-        return {
-          response: {
-            code: EnumStatusCode.OK,
-          },
-          ...view,
-        };
-      });
-    },
-
-    getMetricsErrorRate: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
-
-      return handleError<PlainMessage<GetMetricsErrorRateResponse>>(logger, async () => {
-        if (!opts.chClient) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_ANALYTICS_DISABLED,
-            },
-            series: [],
-          };
-        }
-        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const repo = new MetricsRepository(opts.chClient);
-        const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
-        const orgRepo = new OrganizationRepository(opts.db);
-
-        const graph = await fedGraphRepo.byName(req.federatedGraphName);
-        if (!graph) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_NOT_FOUND,
-              details: `Federated graph '${req.federatedGraphName}' not found`,
-            },
-            series: [],
-          };
-        }
-
-        const orgLimits = await orgRepo.getOrganizationLimits({ organizationID: authContext.organizationId });
-        const { range, dateRange } = validateDateRanges({
-          limit: orgLimits.analyticsRetentionLimit,
-          range: req.range,
-          dateRange: req.dateRange,
-        });
-
-        const metrics = await repo.getErrorsView({
-          range,
-          dateRange,
-          filters: req.filters,
-          organizationId: authContext.organizationId,
-          graphId: graph.id,
-        });
-
-        return {
-          response: {
-            code: EnumStatusCode.OK,
-          },
-          series: metrics.errorRate.series,
-          resolution: metrics.resolution,
         };
       });
     },
@@ -2143,61 +1438,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    getTrace: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
-
-      return handleError<PlainMessage<GetTraceResponse>>(logger, async () => {
-        if (!opts.chClient) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_ANALYTICS_DISABLED,
-            },
-            spans: [],
-          };
-        }
-        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const traceRepo = new TraceRepository(opts.chClient);
-
-        const spans = await traceRepo.getTrace(req.id, authContext.organizationId);
-
-        return {
-          response: {
-            code: EnumStatusCode.OK,
-          },
-          spans,
-        };
-      });
-    },
-
-    getOrganizationMembers: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
-
-      return handleError<PlainMessage<GetOrganizationMembersResponse>>(logger, async () => {
-        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const orgRepo = new OrganizationRepository(opts.db);
-        const orgInvitationRepo = new OrganizationInvitationRepository(opts.db);
-
-        const orgMembers = await orgRepo.getMembers({ organizationID: authContext.organizationId });
-        const pendingInvitations = await orgInvitationRepo.getPendingInvitationsOfOrganization({
-          organizationId: authContext.organizationId,
-        });
-
-        return {
-          response: {
-            code: EnumStatusCode.OK,
-          },
-          members: orgMembers,
-          pendingInvitations,
-        };
-      });
-    },
-
     inviteUser: (req, ctx) => {
       const logger = opts.logger.child({
         service: ctx.service.typeName,
@@ -2339,70 +1579,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    getLatestValidRouterConfig: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
-
-      return handleError<PlainMessage<GetConfigResponse>>(logger, async () => {
-        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
-
-        const federatedGraph = await fedGraphRepo.byName(req.graphName);
-        if (!federatedGraph) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_NOT_FOUND,
-              details: 'Federated graph not found',
-            },
-          };
-        }
-
-        const config = await fedGraphRepo.getLatestValidRouterConfig(federatedGraph?.targetId);
-        if (!config) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_NOT_FOUND,
-              details: 'No valid router config found',
-            },
-          };
-        }
-
-        return {
-          response: {
-            code: EnumStatusCode.OK,
-          },
-          config: {
-            subgraphs: config.config.subgraphs,
-            engineConfig: config.config.engineConfig,
-            version: config.schemaVersionId,
-          },
-        };
-      });
-    },
-
-    getAPIKeys: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
-
-      return handleError<PlainMessage<GetAPIKeysResponse>>(logger, async () => {
-        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const orgRepo = new OrganizationRepository(opts.db);
-
-        const apiKeys = await orgRepo.getAPIKeys({ organizationID: authContext.organizationId });
-
-        return {
-          response: {
-            code: EnumStatusCode.OK,
-          },
-          apiKeys,
-        };
-      });
-    },
-
     createAPIKey: (req, ctx) => {
       const logger = opts.logger.child({
         service: ctx.service.typeName,
@@ -2411,7 +1587,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
       return handleError<PlainMessage<CreateAPIKeyResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const orgRepo = new OrganizationRepository(opts.db);
+        const apiKeyRepo = new ApiKeyRepository(opts.db);
 
         if (!authContext.hasWriteAccess) {
           return {
@@ -2425,7 +1601,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const keyName = req.name.trim();
 
-        const apiKeyModel = await orgRepo.getAPIKeyByName({
+        const apiKeyModel = await apiKeyRepo.getAPIKeyByName({
           organizationID: authContext.organizationId,
           name: keyName,
         });
@@ -2451,49 +1627,19 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const generatedAPIKey = ApiKeyGenerator.generate();
 
-        await orgRepo.addAPIKey({
+        await apiKeyRepo.addAPIKey({
           name: keyName,
           organizationID: authContext.organizationId,
           userID: authContext.userId || req.userID,
           key: generatedAPIKey,
           expiresAt: req.expires,
+          targetIds: [...req.federatedGraphTargetIds, ...req.subgraphTargetIds],
         });
         return {
           response: {
             code: EnumStatusCode.OK,
           },
           apiKey: generatedAPIKey,
-        };
-      });
-    },
-
-    whoAmI: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
-
-      return handleError<PlainMessage<WhoAmIResponse>>(logger, async () => {
-        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const orgRepo = new OrganizationRepository(opts.db);
-
-        const organization = await orgRepo.byId(authContext.organizationId);
-
-        if (!organization) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_NOT_FOUND,
-              details: `Organization not found`,
-            },
-            organizationName: '',
-          };
-        }
-
-        return {
-          response: {
-            code: EnumStatusCode.OK,
-          },
-          organizationName: organization.name,
         };
       });
     },
@@ -2507,6 +1653,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<DeleteAPIKeyResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db);
+        const apiKeyRepo = new ApiKeyRepository(opts.db);
 
         if (!authContext.hasWriteAccess) {
           return {
@@ -2517,7 +1664,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const apiKey = await orgRepo.getAPIKeyByName({ organizationID: authContext.organizationId, name: req.name });
+        const apiKey = await apiKeyRepo.getAPIKeyByName({ organizationID: authContext.organizationId, name: req.name });
         if (!apiKey) {
           return {
             response: {
@@ -2541,7 +1688,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        await orgRepo.removeAPIKey({
+        await apiKeyRepo.removeAPIKey({
           name: req.name,
           organizationID: authContext.organizationId,
         });
@@ -2894,6 +2041,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             subgraphs: graphDetails.subgraphs,
             organizationID: authContext.organizationId,
             db: tx,
+            creatorUserId: authContext.userId,
           });
 
           const composition = await composer.composeFederatedGraph(federatedGraph);
@@ -2986,48 +2134,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           response: {
             code: EnumStatusCode.OK,
           },
-        };
-      });
-    },
-
-    getOrganizationWebhookConfigs: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
-
-      return handleError<PlainMessage<GetOrganizationWebhookConfigsResponse>>(logger, async () => {
-        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const orgRepo = new OrganizationRepository(opts.db);
-
-        const configs = await orgRepo.getWebhookConfigs(authContext.organizationId);
-
-        return {
-          response: {
-            code: EnumStatusCode.OK,
-          },
-          configs,
-        };
-      });
-    },
-
-    getOrganizationWebhookMeta: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
-
-      return handleError<PlainMessage<GetOrganizationWebhookMetaResponse>>(logger, async () => {
-        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const orgRepo = new OrganizationRepository(opts.db);
-
-        const eventsMeta = await orgRepo.getWebhookMeta(req.id, authContext.organizationId);
-
-        return {
-          response: {
-            code: EnumStatusCode.OK,
-          },
-          eventsMeta,
         };
       });
     },
@@ -3558,42 +2664,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    getRouterTokens: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
-
-      return handleError<PlainMessage<GetRouterTokensResponse>>(logger, async () => {
-        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const fedRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
-
-        const federatedGraph = await fedRepo.byName(req.fedGraphName);
-        if (!federatedGraph) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_NOT_FOUND,
-              details: `Federated graph '${req.fedGraphName}' not found`,
-            },
-            tokens: [],
-          };
-        }
-
-        const tokens = await fedRepo.getRouterTokens({
-          organizationId: authContext.organizationId,
-          federatedGraphId: federatedGraph.id,
-          limit: 100,
-        });
-
-        return {
-          response: {
-            code: EnumStatusCode.OK,
-          },
-          tokens,
-        };
-      });
-    },
-
     deleteRouterToken: (req, ctx) => {
       const logger = opts.logger.child({
         service: ctx.service.typeName,
@@ -3729,27 +2799,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    getOrganizationIntegrations: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
-
-      return handleError<PlainMessage<GetOrganizationIntegrationsResponse>>(logger, async () => {
-        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const orgRepo = new OrganizationRepository(opts.db);
-
-        const integrations = await orgRepo.getIntegrations(authContext.organizationId);
-
-        return {
-          response: {
-            code: EnumStatusCode.OK,
-          },
-          integrations,
-        };
-      });
-    },
-
     updateIntegrationConfig: (req, ctx) => {
       const logger = opts.logger.child({
         service: ctx.service.typeName,
@@ -3814,163 +2863,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    isGitHubAppInstalled: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
-
-      return handleError<PlainMessage<IsGitHubAppInstalledResponse>>(logger, async () => {
-        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const orgRepository = new OrganizationRepository(opts.db);
-
-        if (!opts.githubApp) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR,
-              details: 'GitHub app integration is disabled',
-            },
-            isInstalled: false,
-          };
-        }
-
-        const org = orgRepository.byId(authContext.organizationId);
-        if (!org) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_NOT_FOUND,
-              details: 'Organization not found',
-            },
-            isInstalled: false,
-          };
-        }
-
-        if (!req.gitInfo) {
-          return {
-            response: {
-              code: EnumStatusCode.OK,
-            },
-            isInstalled: false,
-          };
-        }
-
-        const githubRepository = new GitHubRepository(opts.db, opts.githubApp);
-        const isInstalled = await githubRepository.isAppInstalledOnRepo({
-          accountId: req.gitInfo.accountId,
-          repoSlug: req.gitInfo.repositorySlug,
-          ownerSlug: req.gitInfo.ownerSlug,
-        });
-
-        return {
-          response: {
-            code: EnumStatusCode.OK,
-          },
-          isInstalled,
-        };
-      });
-    },
-
-    getFieldUsage: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
-
-      return handleError<PlainMessage<GetFieldUsageResponse>>(logger, async () => {
-        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const federatedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
-
-        if (!opts.chClient) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_ANALYTICS_DISABLED,
-            },
-            clients: [],
-            requestSeries: [],
-          };
-        }
-
-        const usageRepo = new UsageRepository(opts.chClient);
-
-        const graph = await federatedGraphRepo.byName(req.graphName);
-        if (!graph) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_NOT_FOUND,
-              details: 'Requested graph does not exist',
-            },
-            clients: [],
-            requestSeries: [],
-          };
-        }
-
-        const { clients, requestSeries, meta } = await usageRepo.getFieldUsage({
-          federatedGraphId: graph.id,
-          organizationId: authContext.organizationId,
-          typename: req.typename,
-          field: req.field,
-          namedType: req.namedType,
-          range: req.range,
-          dateRange: req.dateRange,
-        });
-
-        return {
-          response: {
-            code: EnumStatusCode.OK,
-          },
-          clients,
-          requestSeries,
-          meta,
-        };
-      });
-    },
-
-    getOperationContent: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
-
-      return handleError<PlainMessage<GetOperationContentResponse>>(logger, async () => {
-        await opts.authenticator.authenticate(ctx.requestHeader);
-
-        if (!opts.chClient) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_ANALYTICS_DISABLED,
-            },
-            operationContent: '',
-          };
-        }
-
-        const query = `
-          SELECT OperationContent as operationContent
-          FROM ${opts.chClient?.database}.gql_metrics_operations
-          WHERE OperationHash = '${req.hash}'
-          LIMIT 1 SETTINGS use_query_cache = true, query_cache_ttl = 2629800
-        `;
-
-        const result = await opts.chClient.queryPromise(query);
-
-        if (!Array.isArray(result)) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_NOT_FOUND,
-              details: 'Requested operation not found',
-            },
-            operationContent: '',
-          };
-        }
-
-        return {
-          response: {
-            code: EnumStatusCode.OK,
-          },
-          operationContent: result[0].operationContent,
-        };
-      });
-    },
-
     createOIDCProvider: (req, ctx) => {
       const logger = opts.logger.child({
         service: ctx.service.typeName,
@@ -4014,45 +2906,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           signInURL: `${opts.keycloakApiUrl}/realms/${opts.keycloakRealm}/broker/${alias}/endpoint`,
           signOutURL: `${opts.keycloakApiUrl}/realms/${opts.keycloakRealm}/broker/${alias}/endpoint/logout_response`,
           loginURL: `${opts.webBaseUrl}/login?sso=${alias}`,
-        };
-      });
-    },
-
-    getOIDCProvider: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
-
-      return handleError<PlainMessage<GetOIDCProviderResponse>>(logger, async () => {
-        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const oidcRepo = new OidcRepository(opts.db);
-
-        await opts.keycloakClient.authenticateClient();
-
-        const provider = await oidcRepo.getOidcProvider({ organizationId: authContext.organizationId });
-        if (!provider) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_NOT_FOUND,
-            },
-            name: '',
-            endpoint: '',
-            loginURL: '',
-            signInRedirectURL: '',
-            signOutRedirectURL: '',
-          };
-        }
-
-        return {
-          response: {
-            code: EnumStatusCode.OK,
-          },
-          name: provider.name,
-          endpoint: provider.endpoint,
-          loginURL: `${opts.webBaseUrl}/login?sso=${provider.alias}`,
-          signInRedirectURL: `${opts.keycloakApiUrl}/realms/${opts.keycloakRealm}/broker/${provider.alias}/endpoint`,
-          signOutRedirectURL: `${opts.keycloakApiUrl}/realms/${opts.keycloakRealm}/broker/${provider.alias}/endpoint/logout_response`,
         };
       });
     },
@@ -4274,6 +3127,1451 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
+    acceptOrDeclineInvitation: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<AcceptOrDeclineInvitationResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const orgRepo = new OrganizationRepository(opts.db);
+        const userRepo = new UserRepository(opts.db);
+        const orgInvitationRepo = new OrganizationInvitationRepository(opts.db);
+
+        const user = await userRepo.byId(authContext.userId);
+        if (!user) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `User ${authContext.userId} not found`,
+            },
+          };
+        }
+
+        const organization = await orgRepo.byId(req.organizationId);
+        if (!organization) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Organization ${req.organizationId} not found`,
+            },
+          };
+        }
+
+        if (req.accept) {
+          const groupName = organization.slug;
+
+          await opts.keycloakClient.authenticateClient();
+
+          const organizationGroups = await opts.keycloakClient.client.groups.find({
+            max: 1,
+            search: groupName,
+            realm: opts.keycloakRealm,
+          });
+
+          if (organizationGroups.length === 0) {
+            throw new Error(`Organization group '${groupName}' not found`);
+          }
+
+          const devGroup = await opts.keycloakClient.fetchDevChildGroup({
+            realm: opts.keycloakRealm,
+            kcGroupId: organizationGroups[0].id!,
+            orgSlug: groupName,
+          });
+
+          const keycloakUser = await opts.keycloakClient.client.users.find({
+            max: 1,
+            email: user.email,
+            realm: opts.keycloakRealm,
+            exact: true,
+          });
+
+          if (keycloakUser.length === 0) {
+            throw new Error(`Keycloak user with email '${user.email}' not found`);
+          }
+
+          await opts.keycloakClient.client.users.addToGroup({
+            id: keycloakUser[0].id!,
+            groupId: devGroup.id!,
+            realm: opts.keycloakRealm,
+          });
+
+          await orgInvitationRepo.acceptInvite({ userId: user.id, organizationId: req.organizationId });
+        } else {
+          await orgInvitationRepo.removeInvite({ organizationId: req.organizationId, userId: user.id });
+        }
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+        };
+      });
+    },
+
+    updateRBACSettings: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<UpdateRBACSettingsResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const orgRepo = new OrganizationRepository(opts.db);
+
+        if (!authContext.isAdmin) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `The user doesnt have the permissions to perform this operation`,
+            },
+          };
+        }
+
+        await orgRepo.updateRBACSettings(authContext.organizationId, req.enable);
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+        };
+      });
+    },
+
+    addSubgraphMember: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<AddSubgraphMemberResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const orgRepo = new OrganizationRepository(opts.db);
+        const userRepo = new UserRepository(opts.db);
+        const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
+
+        // check if the user to be added exists and if the user is the member of the org
+        const user = await userRepo.byEmail(req.userEmail);
+        if (!user) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `User with email ${req.userEmail} not found`,
+            },
+          };
+        }
+        const isMember = await orgRepo.isMemberOf({ organizationId: authContext.organizationId, userId: user.id });
+        if (!isMember) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `User with email ${req.userEmail} is not a member of the organization.`,
+            },
+          };
+        }
+
+        // check if the subgraph exists
+        const subgraph = await subgraphRepo.byName(req.subgraphName);
+        if (!subgraph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Subgraph ${req.subgraphName} not found`,
+            },
+          };
+        }
+
+        // check if the user is authorized to perform the action
+        await opts.authorizer.authorize({
+          db: opts.db,
+          graph: {
+            targetId: subgraph.targetId,
+            name: subgraph.name,
+            targetType: 'subgraph',
+          },
+          headers: ctx.requestHeader,
+          authContext,
+        });
+
+        await subgraphRepo.addSubgraphMember({ subgraphId: subgraph.id, userId: user.id });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+        };
+      });
+    },
+
+    removeSubgraphMember: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<RemoveSubgraphMemberResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
+
+        // check if the subgraph exists
+        const subgraph = await subgraphRepo.byName(req.subgraphName);
+        if (!subgraph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Subgraph ${req.subgraphName} not found`,
+            },
+          };
+        }
+
+        // check if the user is authorized to perform the action
+        await opts.authorizer.authorize({
+          db: opts.db,
+          graph: {
+            targetId: subgraph.targetId,
+            name: subgraph.name,
+            targetType: 'subgraph',
+          },
+          headers: ctx.requestHeader,
+          authContext,
+        });
+
+        await subgraphRepo.removeSubgraphMember({ subgraphId: subgraph.id, subgraphMemberId: req.subgraphMemberId });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+        };
+      });
+    },
+
+    /* 
+    Queries
+    */
+    getSubgraphs: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetSubgraphsResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const repo = new SubgraphRepository(opts.db, authContext.organizationId);
+
+        const list = await repo.list({
+          limit: req.limit,
+          offset: req.offset,
+        });
+
+        return {
+          graphs: list.map((g) => ({
+            id: g.id,
+            name: g.name,
+            routingURL: g.routingUrl,
+            lastUpdatedAt: g.lastUpdatedAt,
+            labels: g.labels,
+            createdUserId: g.creatorUserId,
+          })),
+          response: {
+            code: EnumStatusCode.OK,
+          },
+        };
+      });
+    },
+
+    getSubgraphByName: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetSubgraphByNameResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const repo = new SubgraphRepository(opts.db, authContext.organizationId);
+
+        const subgraph = await repo.byName(req.name);
+
+        if (!subgraph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Subgraph '${req.name}' not found`,
+            },
+          };
+        }
+
+        return {
+          graph: {
+            id: subgraph.id,
+            name: subgraph.name,
+            lastUpdatedAt: subgraph.lastUpdatedAt,
+            routingURL: subgraph.routingUrl,
+            labels: subgraph.labels,
+          },
+          response: {
+            code: EnumStatusCode.OK,
+          },
+        };
+      });
+    },
+
+    getFederatedGraphs: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetFederatedGraphsResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+
+        const list = await fedGraphRepo.list({
+          limit: req.limit,
+          offset: req.offset,
+        });
+
+        let requestSeriesList: Record<string, PlainMessage<RequestSeriesItem>[]> = {};
+
+        if (req.includeMetrics && opts.chClient) {
+          const analyticsDashRepo = new AnalyticsDashboardViewRepository(opts.chClient);
+          requestSeriesList = await analyticsDashRepo.getListView(authContext.organizationId);
+        }
+
+        return {
+          graphs: list.map((g) => ({
+            id: g.id,
+            name: g.name,
+            labelMatchers: g.labelMatchers,
+            routingURL: g.routingUrl,
+            lastUpdatedAt: g.lastUpdatedAt,
+            connectedSubgraphs: g.subgraphsCount,
+            compositionErrors: g.compositionErrors ?? '',
+            isComposable: g.isComposable,
+            requestSeries: requestSeriesList[g.id] ?? [],
+          })),
+          response: {
+            code: EnumStatusCode.OK,
+          },
+        };
+      });
+    },
+
+    getFederatedGraphSDLByName: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+      return handleError<PlainMessage<GetFederatedGraphSDLByNameResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const fedRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+        const schemaVersion = await fedRepo.getLatestValidSchemaVersion(req.name);
+        if (schemaVersion && schemaVersion.schema) {
+          return {
+            response: {
+              code: EnumStatusCode.OK,
+            },
+            sdl: schemaVersion.schema,
+          };
+        }
+        return {
+          response: {
+            code: EnumStatusCode.ERR_NOT_FOUND,
+          },
+        };
+      });
+    },
+
+    getLatestValidSubgraphSDLByName: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+      return handleError<PlainMessage<GetLatestValidSubgraphSDLByNameResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
+        const subgraph = await subgraphRepo.byName(req.name);
+        if (!subgraph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+            },
+          };
+        }
+
+        const schemaVersion = await subgraphRepo.getLatestValidSchemaVersion(req.name, req.fedGraphName);
+        if (!schemaVersion) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+            },
+          };
+        }
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          sdl: schemaVersion.schema || undefined,
+        };
+      });
+    },
+
+    getFederatedGraphByName: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetFederatedGraphByNameResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const fedRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+        const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
+
+        const federatedGraph = await fedRepo.byName(req.name);
+
+        if (!federatedGraph) {
+          return {
+            subgraphs: [],
+            graphToken: '',
+            graphRequestToken: '',
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Federated graph '${req.name}' not found`,
+            },
+          };
+        }
+
+        let requestSeries: PlainMessage<RequestSeriesItem>[] = [];
+        if (req.includeMetrics && opts.chClient) {
+          const analyticsDashRepo = new AnalyticsDashboardViewRepository(opts.chClient);
+          const graphResponse = await analyticsDashRepo.getView(federatedGraph.id, authContext.organizationId);
+          requestSeries = graphResponse.requestSeries;
+        }
+
+        const list = await subgraphRepo.listByFederatedGraph(req.name, { published: true });
+
+        const routerRequestToken = await fedRepo.getGraphSignedToken({
+          federatedGraphId: federatedGraph.id,
+          organizationId: authContext.organizationId,
+        });
+
+        if (!routerRequestToken) {
+          return {
+            subgraphs: [],
+            graphToken: '',
+            graphRequestToken: '',
+            response: {
+              code: EnumStatusCode.ERR,
+              details: 'Router Request token not found',
+            },
+          };
+        }
+
+        const tokens = await fedRepo.getRouterTokens({
+          organizationId: authContext.organizationId,
+          federatedGraphId: federatedGraph.id,
+          limit: 1,
+        });
+
+        let graphToken: GraphApiKeyDTO;
+
+        if (tokens.length === 0) {
+          const tokenValue = await signJwt<GraphApiKeyJwtPayload>({
+            secret: opts.jwtSecret,
+            token: {
+              iss: authContext.userId,
+              federated_graph_id: federatedGraph.id,
+              organization_id: authContext.organizationId,
+            },
+          });
+
+          graphToken = await fedRepo.createToken({
+            token: tokenValue,
+            federatedGraphId: federatedGraph.id,
+            tokenName: federatedGraph.name,
+            organizationId: authContext.organizationId,
+          });
+        } else {
+          graphToken = tokens[0];
+        }
+        return {
+          graph: {
+            id: federatedGraph.id,
+            name: federatedGraph.name,
+            routingURL: federatedGraph.routingUrl,
+            labelMatchers: federatedGraph.labelMatchers,
+            lastUpdatedAt: federatedGraph.lastUpdatedAt,
+            connectedSubgraphs: federatedGraph.subgraphsCount,
+            compositionErrors: federatedGraph.compositionErrors ?? '',
+            isComposable: federatedGraph.isComposable,
+            requestSeries,
+          },
+          subgraphs: list.map((g) => ({
+            id: g.id,
+            name: g.name,
+            routingURL: g.routingUrl,
+            lastUpdatedAt: g.lastUpdatedAt,
+            labels: g.labels,
+          })),
+          graphToken: graphToken.token,
+          graphRequestToken: routerRequestToken,
+          response: {
+            code: EnumStatusCode.OK,
+          },
+        };
+      });
+    },
+
+    getFederatedGraphChangelog: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetFederatedGraphChangelogResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const fedgraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+        const orgRepo = new OrganizationRepository(opts.db);
+
+        const federatedGraph = await fedgraphRepo.byName(req.name);
+        if (!federatedGraph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+            },
+            federatedGraphChangelogOutput: [],
+            hasNextPage: false,
+          };
+        }
+
+        if (!req.pagination || !req.dateRange) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: 'Please provide pagination and datetange',
+            },
+            federatedGraphChangelogOutput: [],
+            hasNextPage: false,
+          };
+        }
+
+        const orgLimits = await orgRepo.getOrganizationLimits({ organizationID: authContext.organizationId });
+
+        const { dateRange } = validateDateRanges({
+          limit: orgLimits.changelogDataRetentionLimit,
+          dateRange: req.dateRange,
+        });
+
+        const result = await fedgraphRepo.fetchFederatedGraphChangelog(
+          federatedGraph.targetId,
+          req.pagination,
+          dateRange!,
+        );
+
+        if (!result) {
+          return {
+            federatedGraphChangelogOutput: [],
+            hasNextPage: false,
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+            },
+          };
+        }
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          federatedGraphChangelogOutput: result.federatedGraphChangelog,
+          hasNextPage: result.hasNextPage,
+        };
+      });
+    },
+
+    getChecksByFederatedGraphName: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetChecksByFederatedGraphNameResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const fedgraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+        const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
+        const orgRepo = new OrganizationRepository(opts.db);
+
+        const federatedGraph = await fedgraphRepo.byName(req.name);
+        if (!federatedGraph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+            },
+            checks: [],
+            checksCountBasedOnDateRange: '0',
+            totalChecksCount: '0',
+          };
+        }
+
+        const orgLimits = await orgRepo.getOrganizationLimits({ organizationID: authContext.organizationId });
+
+        const { dateRange } = validateDateRanges({
+          limit: orgLimits.breakingChangeRetentionLimit,
+          dateRange: {
+            start: req.startDate,
+            end: req.endDate,
+          } as DateRange,
+        });
+
+        const checksData = await subgraphRepo.checks({
+          federatedGraphName: req.name,
+          limit: req.limit,
+          offset: req.offset,
+          startDate: dateRange!.start,
+          endDate: dateRange!.end,
+        });
+        const totalChecksCount = await subgraphRepo.getChecksCount({ federatedGraphName: req.name });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          checks: checksData.checks,
+          checksCountBasedOnDateRange: checksData.checksCount.toString(),
+          totalChecksCount: totalChecksCount.toString(),
+        };
+      });
+    },
+
+    getCheckSummary: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetCheckSummaryResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+        const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
+        const schemaCheckRepo = new SchemaCheckRepository(opts.db);
+
+        const graph = await fedGraphRepo.byName(req.graphName);
+
+        if (!graph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: 'Requested graph does not exist',
+            },
+            compositionErrors: [],
+            changes: [],
+            affectedGraphs: [],
+            trafficCheckDays: 0,
+          };
+        }
+
+        const check = await subgraphRepo.checkById(req.checkId, graph.name);
+        const checkDetails = await subgraphRepo.checkDetails(req.checkId, graph.targetId);
+
+        if (!check || !checkDetails) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: 'Requested check not found',
+            },
+            compositionErrors: [],
+            changes: [],
+            affectedGraphs: [],
+            trafficCheckDays: 0,
+          };
+        }
+
+        const { trafficCheckDays } = await schemaCheckRepo.getFederatedGraphConfigForCheckId(req.checkId, graph.id);
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          check,
+          affectedGraphs: check.affectedGraphs,
+          proposedSubgraphSchemaSDL: check.proposedSubgraphSchemaSDL,
+          changes: checkDetails.changes,
+          compositionErrors: checkDetails.compositionErrors,
+          trafficCheckDays,
+        };
+      });
+    },
+
+    getCheckOperations: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetCheckOperationsResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+        const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
+        const schemaCheckRepo = new SchemaCheckRepository(opts.db);
+
+        const graph = await fedGraphRepo.byName(req.graphName);
+
+        if (!graph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: 'Requested graph does not exist',
+            },
+            operations: [],
+            trafficCheckDays: 0,
+            createdAt: '',
+          };
+        }
+
+        const check = await subgraphRepo.checkById(req.checkId, graph.name);
+        const checkDetails = await subgraphRepo.checkDetails(req.checkId, graph.targetId);
+
+        if (!check || !checkDetails) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: 'Requested check not found',
+            },
+            operations: [],
+            trafficCheckDays: 0,
+            createdAt: '',
+          };
+        }
+
+        const affectedOperations = await schemaCheckRepo.getAffectedOperationsByCheckId(req.checkId);
+
+        const { trafficCheckDays } = await schemaCheckRepo.getFederatedGraphConfigForCheckId(req.checkId, graph.id);
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          operations: affectedOperations.map((operation) => ({
+            ...operation,
+            firstSeenAt: operation.firstSeenAt.toUTCString(),
+            lastSeenAt: operation.lastSeenAt.toUTCString(),
+            impactingChanges: checkDetails.changes.filter(({ id }) => operation.schemaChangeIds.includes(id)),
+          })),
+          trafficCheckDays,
+          createdAt: check.timestamp,
+        };
+      });
+    },
+
+    getCheckDetails: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetCheckDetailsResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+        const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
+        const schemaCheckRepo = new SchemaCheckRepository(opts.db);
+
+        const graph = await fedGraphRepo.byName(req.graphName);
+
+        if (!graph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: 'Requested graph does not exist',
+            },
+            changes: [],
+            compositionErrors: [],
+            trafficCheckDays: 0,
+            createdAt: '',
+          };
+        }
+
+        const check = await subgraphRepo.checkById(req.checkId, graph.name);
+        const details = await subgraphRepo.checkDetails(req.checkId, graph.targetId);
+
+        if (!check || !details) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: 'Requested check not found',
+            },
+            changes: [],
+            compositionErrors: [],
+            trafficCheckDays: 0,
+            createdAt: '',
+          };
+        }
+
+        const { trafficCheckDays } = await schemaCheckRepo.getFederatedGraphConfigForCheckId(req.checkId, graph.id);
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          ...details,
+          trafficCheckDays,
+          createdAt: check?.timestamp,
+        };
+      });
+    },
+
+    getAnalyticsView: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetAnalyticsViewResponse>>(logger, async () => {
+        if (!opts.chClient) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_ANALYTICS_DISABLED,
+            },
+          };
+        }
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const analyticsRepo = new AnalyticsRequestViewRepository(opts.chClient);
+        const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+        const orgRepo = new OrganizationRepository(opts.db);
+
+        const graph = await fedGraphRepo.byName(req.federatedGraphName);
+        if (!graph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Federated graph '${req.federatedGraphName}' not found`,
+            },
+          };
+        }
+
+        const orgLimits = await orgRepo.getOrganizationLimits({ organizationID: authContext.organizationId });
+        const { range, dateRange } = validateDateRanges({
+          limit: orgLimits.tracingRetentionLimit,
+          range: req.config?.range,
+          dateRange: req.config?.dateRange,
+        });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          view: await analyticsRepo.getView(authContext.organizationId, graph.id, req.name, {
+            ...req.config,
+            range,
+            dateRange,
+          } as AnalyticsConfig),
+        };
+      });
+    },
+
+    getDashboardAnalyticsView: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetDashboardAnalyticsViewResponse>>(logger, async () => {
+        if (!opts.chClient) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_ANALYTICS_DISABLED,
+            },
+            mostRequestedOperations: [],
+            requestSeries: [],
+          };
+        }
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const analyticsDashRepo = new AnalyticsDashboardViewRepository(opts.chClient);
+        const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+
+        const graph = await fedGraphRepo.byName(req.federatedGraphName);
+        if (!graph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Federated graph '${req.federatedGraphName}' not found`,
+            },
+            mostRequestedOperations: [],
+            requestSeries: [],
+          };
+        }
+
+        const { requestSeries, mostRequestedOperations } = await analyticsDashRepo.getView(
+          graph.id,
+          authContext.organizationId,
+        );
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          mostRequestedOperations,
+          requestSeries,
+        };
+      });
+    },
+
+    getGraphMetrics: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetGraphMetricsResponse>>(logger, async () => {
+        if (!opts.chClient) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_ANALYTICS_DISABLED,
+            },
+            filters: [],
+          };
+        }
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const repo = new MetricsRepository(opts.chClient);
+        const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+        const orgRepo = new OrganizationRepository(opts.db);
+
+        const graph = await fedGraphRepo.byName(req.federatedGraphName);
+        if (!graph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Federated graph '${req.federatedGraphName}' not found`,
+            },
+            filters: [],
+          };
+        }
+
+        const orgLimits = await orgRepo.getOrganizationLimits({ organizationID: authContext.organizationId });
+        const { range, dateRange } = validateDateRanges({
+          limit: orgLimits.analyticsRetentionLimit,
+          range: req.range,
+          dateRange: req.dateRange,
+        });
+
+        const view = await repo.getMetricsView({
+          range,
+          dateRange,
+          filters: req.filters,
+          organizationId: authContext.organizationId,
+          graphId: graph.id,
+        });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          ...view,
+        };
+      });
+    },
+
+    getMetricsErrorRate: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetMetricsErrorRateResponse>>(logger, async () => {
+        if (!opts.chClient) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_ANALYTICS_DISABLED,
+            },
+            series: [],
+          };
+        }
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const repo = new MetricsRepository(opts.chClient);
+        const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+        const orgRepo = new OrganizationRepository(opts.db);
+
+        const graph = await fedGraphRepo.byName(req.federatedGraphName);
+        if (!graph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Federated graph '${req.federatedGraphName}' not found`,
+            },
+            series: [],
+          };
+        }
+
+        const orgLimits = await orgRepo.getOrganizationLimits({ organizationID: authContext.organizationId });
+        const { range, dateRange } = validateDateRanges({
+          limit: orgLimits.analyticsRetentionLimit,
+          range: req.range,
+          dateRange: req.dateRange,
+        });
+
+        const metrics = await repo.getErrorsView({
+          range,
+          dateRange,
+          filters: req.filters,
+          organizationId: authContext.organizationId,
+          graphId: graph.id,
+        });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          series: metrics.errorRate.series,
+          resolution: metrics.resolution,
+        };
+      });
+    },
+
+    getTrace: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetTraceResponse>>(logger, async () => {
+        if (!opts.chClient) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_ANALYTICS_DISABLED,
+            },
+            spans: [],
+          };
+        }
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const traceRepo = new TraceRepository(opts.chClient);
+
+        const spans = await traceRepo.getTrace(req.id, authContext.organizationId);
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          spans,
+        };
+      });
+    },
+
+    getOrganizationMembers: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetOrganizationMembersResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const orgRepo = new OrganizationRepository(opts.db);
+        const orgInvitationRepo = new OrganizationInvitationRepository(opts.db);
+
+        const orgMembers = await orgRepo.getMembers({ organizationID: authContext.organizationId });
+        const pendingInvitations = await orgInvitationRepo.getPendingInvitationsOfOrganization({
+          organizationId: authContext.organizationId,
+        });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          members: orgMembers,
+          pendingInvitations,
+        };
+      });
+    },
+
+    getLatestValidRouterConfig: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetConfigResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+
+        const federatedGraph = await fedGraphRepo.byName(req.graphName);
+        if (!federatedGraph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: 'Federated graph not found',
+            },
+          };
+        }
+
+        const config = await fedGraphRepo.getLatestValidRouterConfig(federatedGraph?.targetId);
+        if (!config) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: 'No valid router config found',
+            },
+          };
+        }
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          config: {
+            subgraphs: config.config.subgraphs,
+            engineConfig: config.config.engineConfig,
+            version: config.schemaVersionId,
+          },
+        };
+      });
+    },
+
+    getAPIKeys: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetAPIKeysResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const apiKeyRepo = new ApiKeyRepository(opts.db);
+
+        const apiKeys = await apiKeyRepo.getAPIKeys({ organizationID: authContext.organizationId });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          apiKeys,
+        };
+      });
+    },
+
+    whoAmI: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<WhoAmIResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const orgRepo = new OrganizationRepository(opts.db);
+
+        const organization = await orgRepo.byId(authContext.organizationId);
+
+        if (!organization) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Organization not found`,
+            },
+            organizationName: '',
+          };
+        }
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          organizationName: organization.name,
+        };
+      });
+    },
+
+    getOrganizationWebhookConfigs: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetOrganizationWebhookConfigsResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const orgRepo = new OrganizationRepository(opts.db);
+
+        const configs = await orgRepo.getWebhookConfigs(authContext.organizationId);
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          configs,
+        };
+      });
+    },
+
+    getOrganizationWebhookMeta: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetOrganizationWebhookMetaResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const orgRepo = new OrganizationRepository(opts.db);
+
+        const eventsMeta = await orgRepo.getWebhookMeta(req.id, authContext.organizationId);
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          eventsMeta,
+        };
+      });
+    },
+
+    getRouterTokens: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetRouterTokensResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const fedRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+
+        const federatedGraph = await fedRepo.byName(req.fedGraphName);
+        if (!federatedGraph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Federated graph '${req.fedGraphName}' not found`,
+            },
+            tokens: [],
+          };
+        }
+
+        const tokens = await fedRepo.getRouterTokens({
+          organizationId: authContext.organizationId,
+          federatedGraphId: federatedGraph.id,
+          limit: 100,
+        });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          tokens,
+        };
+      });
+    },
+
+    getOrganizationIntegrations: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetOrganizationIntegrationsResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const orgRepo = new OrganizationRepository(opts.db);
+
+        const integrations = await orgRepo.getIntegrations(authContext.organizationId);
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          integrations,
+        };
+      });
+    },
+
+    isGitHubAppInstalled: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<IsGitHubAppInstalledResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const orgRepository = new OrganizationRepository(opts.db);
+
+        if (!opts.githubApp) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: 'GitHub app integration is disabled',
+            },
+            isInstalled: false,
+          };
+        }
+
+        const org = orgRepository.byId(authContext.organizationId);
+        if (!org) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: 'Organization not found',
+            },
+            isInstalled: false,
+          };
+        }
+
+        if (!req.gitInfo) {
+          return {
+            response: {
+              code: EnumStatusCode.OK,
+            },
+            isInstalled: false,
+          };
+        }
+
+        const githubRepository = new GitHubRepository(opts.db, opts.githubApp);
+        const isInstalled = await githubRepository.isAppInstalledOnRepo({
+          accountId: req.gitInfo.accountId,
+          repoSlug: req.gitInfo.repositorySlug,
+          ownerSlug: req.gitInfo.ownerSlug,
+        });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          isInstalled,
+        };
+      });
+    },
+
+    getFieldUsage: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetFieldUsageResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const federatedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+
+        if (!opts.chClient) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_ANALYTICS_DISABLED,
+            },
+            clients: [],
+            requestSeries: [],
+          };
+        }
+
+        const usageRepo = new UsageRepository(opts.chClient);
+
+        const graph = await federatedGraphRepo.byName(req.graphName);
+        if (!graph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: 'Requested graph does not exist',
+            },
+            clients: [],
+            requestSeries: [],
+          };
+        }
+
+        const { clients, requestSeries, meta } = await usageRepo.getFieldUsage({
+          federatedGraphId: graph.id,
+          organizationId: authContext.organizationId,
+          typename: req.typename,
+          field: req.field,
+          namedType: req.namedType,
+          range: req.range,
+          dateRange: req.dateRange,
+        });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          clients,
+          requestSeries,
+          meta,
+        };
+      });
+    },
+
+    getOperationContent: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetOperationContentResponse>>(logger, async () => {
+        await opts.authenticator.authenticate(ctx.requestHeader);
+
+        if (!opts.chClient) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_ANALYTICS_DISABLED,
+            },
+            operationContent: '',
+          };
+        }
+
+        const query = `
+          SELECT OperationContent as operationContent
+          FROM ${opts.chClient?.database}.gql_metrics_operations
+          WHERE OperationHash = '${req.hash}'
+          LIMIT 1 SETTINGS use_query_cache = true, query_cache_ttl = 2629800
+        `;
+
+        const result = await opts.chClient.queryPromise(query);
+
+        if (!Array.isArray(result)) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: 'Requested operation not found',
+            },
+            operationContent: '',
+          };
+        }
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          operationContent: result[0].operationContent,
+        };
+      });
+    },
+
+    getOIDCProvider: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetOIDCProviderResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const oidcRepo = new OidcRepository(opts.db);
+
+        await opts.keycloakClient.authenticateClient();
+
+        const provider = await oidcRepo.getOidcProvider({ organizationId: authContext.organizationId });
+        if (!provider) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+            },
+            name: '',
+            endpoint: '',
+            loginURL: '',
+            signInRedirectURL: '',
+            signOutRedirectURL: '',
+          };
+        }
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          name: provider.name,
+          endpoint: provider.endpoint,
+          loginURL: `${opts.webBaseUrl}/login?sso=${provider.alias}`,
+          signInRedirectURL: `${opts.keycloakApiUrl}/realms/${opts.keycloakRealm}/broker/${provider.alias}/endpoint`,
+          signOutRedirectURL: `${opts.keycloakApiUrl}/realms/${opts.keycloakRealm}/broker/${provider.alias}/endpoint/logout_response`,
+        };
+      });
+    },
+
     getPersistedOperations: (req, ctx) => {
       const logger = opts.logger.child({
         service: ctx.service.typeName,
@@ -4386,89 +4684,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             code: EnumStatusCode.OK,
           },
           invitations: await orgInvitationRepo.getPendingInvitationsOfUser({ userId: authContext.userId }),
-        };
-      });
-    },
-
-    acceptOrDeclineInvitation: (req, ctx) => {
-      const logger = opts.logger.child({
-        service: ctx.service.typeName,
-        method: ctx.method.name,
-      });
-
-      return handleError<PlainMessage<AcceptOrDeclineInvitationResponse>>(logger, async () => {
-        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const orgRepo = new OrganizationRepository(opts.db);
-        const userRepo = new UserRepository(opts.db);
-        const orgInvitationRepo = new OrganizationInvitationRepository(opts.db);
-
-        const user = await userRepo.byId(authContext.userId);
-        if (!user) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_NOT_FOUND,
-              details: `User ${authContext.userId} not found`,
-            },
-          };
-        }
-
-        const organization = await orgRepo.byId(req.organizationId);
-        if (!organization) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_NOT_FOUND,
-              details: `Organization ${req.organizationId} not found`,
-            },
-          };
-        }
-
-        if (req.accept) {
-          const groupName = organization.slug;
-
-          await opts.keycloakClient.authenticateClient();
-
-          const organizationGroups = await opts.keycloakClient.client.groups.find({
-            max: 1,
-            search: groupName,
-            realm: opts.keycloakRealm,
-          });
-
-          if (organizationGroups.length === 0) {
-            throw new Error(`Organization group '${groupName}' not found`);
-          }
-
-          const devGroup = await opts.keycloakClient.fetchDevChildGroup({
-            realm: opts.keycloakRealm,
-            kcGroupId: organizationGroups[0].id!,
-            orgSlug: groupName,
-          });
-
-          const keycloakUser = await opts.keycloakClient.client.users.find({
-            max: 1,
-            email: user.email,
-            realm: opts.keycloakRealm,
-            exact: true,
-          });
-
-          if (keycloakUser.length === 0) {
-            throw new Error(`Keycloak user with email '${user.email}' not found`);
-          }
-
-          await opts.keycloakClient.client.users.addToGroup({
-            id: keycloakUser[0].id!,
-            groupId: devGroup.id!,
-            realm: opts.keycloakRealm,
-          });
-
-          await orgInvitationRepo.acceptInvite({ userId: user.id, organizationId: req.organizationId });
-        } else {
-          await orgInvitationRepo.removeInvite({ organizationId: req.organizationId, userId: user.id });
-        }
-
-        return {
-          response: {
-            code: EnumStatusCode.OK,
-          },
         };
       });
     },
@@ -4633,6 +4848,124 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             schemaVersionId: req.schemaVersionId,
             createdAt: changelogs.length === 0 ? '' : changelogs[0].createdAt,
           },
+        };
+      });
+    },
+
+    getUserAccessibleResources: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetUserAccessibleResourcesResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const fedRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+        const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
+
+        if (authContext.isAdmin) {
+          const federatedGraphs = await fedRepo.list({
+            limit: 0,
+            offset: 0,
+          });
+
+          const subgraphs = await subgraphRepo.list({
+            limit: 0,
+            offset: 0,
+          });
+
+          return {
+            response: {
+              code: EnumStatusCode.OK,
+            },
+            federatedGraphs: federatedGraphs.map((g) => ({
+              targetId: g.targetId,
+              name: g.name,
+            })),
+            subgraphs: subgraphs.map((g) => ({
+              targetId: g.targetId,
+              name: g.name,
+            })),
+          };
+        }
+
+        const federatedGraphs = await fedRepo.getAccessibleFederatedGraphs(authContext.userId);
+
+        const subgraphs = await subgraphRepo.getAccessibleSubgraphs(authContext.userId);
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          federatedGraphs: federatedGraphs.map((g) => ({
+            targetId: g.targetId,
+            name: g.name,
+          })),
+          subgraphs: subgraphs.map((g) => ({
+            targetId: g.targetId,
+            name: g.name,
+          })),
+        };
+      });
+    },
+
+    getSubgraphMembers: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetSubgraphMembersResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
+
+        // check if the subgraph exists
+        const subgraph = await subgraphRepo.byName(req.subgraphName);
+        if (!subgraph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Subgraph ${req.subgraphName} not found`,
+            },
+            members: [],
+          };
+        }
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          members: await subgraphRepo.getSubgraphMembers(subgraph.id),
+        };
+      });
+    },
+
+    isRBACEnabled: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<IsRBACEnabledResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const orgRepo = new OrganizationRepository(opts.db);
+
+        const organization = await orgRepo.byId(authContext.organizationId);
+        if (!organization) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Organization not found`,
+            },
+            enabled: false,
+          };
+        }
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          enabled: organization.isRBACEnabled || false,
         };
       });
     },

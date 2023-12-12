@@ -31,9 +31,9 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/wundergraph/cosmo/router/config"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/cosmo/router/health"
 	"github.com/wundergraph/cosmo/router/internal/graphiql"
 	"github.com/wundergraph/cosmo/router/internal/handler/cors"
-	"github.com/wundergraph/cosmo/router/internal/handler/health"
 	"github.com/wundergraph/cosmo/router/internal/handler/recovery"
 	"github.com/wundergraph/cosmo/router/internal/handler/requestlogger"
 	"github.com/wundergraph/cosmo/router/internal/metric"
@@ -56,6 +56,7 @@ type (
 		activeRouter *Server
 		modules      []Module
 		mu           sync.Mutex
+		httpRouter   http.Handler
 	}
 
 	SubgraphTransportOptions struct {
@@ -94,6 +95,7 @@ type (
 		federatedGraphName       string
 		graphApiToken            string
 		healthCheckPath          string
+		healthChecks             health.Checker
 		readinessCheckPath       string
 		livenessCheckPath        string
 		cdnConfig                config.CDNConfiguration
@@ -118,7 +120,7 @@ type (
 		configPoller configpoller.ConfigPoller
 		selfRegister selfregister.SelfRegister
 
-		registrationInfo *nodev1.RegistrationInfo
+		publicKey *ecdsa.PublicKey
 
 		engineExecutionConfiguration config.EngineExecutionConfiguration
 
@@ -134,7 +136,11 @@ type (
 		rootContext       context.Context
 		rootContextCancel func()
 		routerConfig      *nodev1.RouterConfig
-		healthChecks      *health.Checks
+
+		requestLogger  func(http.Handler) http.Handler
+		traceHandler   *trace.Middleware
+		graphqlHandler chi.Router
+		subgraphs      []Subgraph
 	}
 
 	// Option defines the method to customize Server.
@@ -203,6 +209,11 @@ func NewRouter(opts ...Option) (*Router, error) {
 	if r.livenessCheckPath == "" {
 		r.livenessCheckPath = "/health/live"
 	}
+	if r.healthChecks == nil {
+		r.healthChecks = health.New(&health.Options{
+			Logger: r.logger,
+		})
+	}
 
 	hr, err := NewHeaderTransformer(r.headerRules)
 	if err != nil {
@@ -231,32 +242,8 @@ func NewRouter(opts ...Option) (*Router, error) {
 
 	r.baseURL = fmt.Sprintf("http://%s", r.listenAddr)
 
-	dialer := &net.Dialer{
-		Timeout:   r.subgraphTransportOptions.DialTimeout,
-		KeepAlive: r.subgraphTransportOptions.KeepAliveProbeInterval,
-	}
-
-	// Great source of inspiration: https://gitlab.com/gitlab-org/gitlab-pages
-	// A pages proxy in go that handles tls to upstreams, rate limiting, and more
-	r.transport = &http.Transport{
-		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
-			return dialer.DialContext(ctx, network, addr)
-		},
-		// The defaults value 0 = unbounded.
-		// We set to some value to prevent resource exhaustion e.g max requests and ports.
-		MaxConnsPerHost: 100,
-		// The defaults value 0 = unbounded. 100 is used by the default go transport.
-		// This value should be significant higher than MaxIdleConnsPerHost.
-		MaxIdleConns: 1024,
-		// The default value is 2. Such a low limit will open and close connections too often.
-		// Details: https://gitlab.com/gitlab-org/gitlab-pages/-/merge_requests/274
-		MaxIdleConnsPerHost: 20,
-		ForceAttemptHTTP2:   true,
-		IdleConnTimeout:     r.subgraphTransportOptions.KeepAliveIdleTimeout,
-		// Set more timeouts https://gitlab.com/gitlab-org/gitlab-pages/-/issues/495
-		TLSHandshakeTimeout:   r.subgraphTransportOptions.TLSHandshakeTimeout,
-		ResponseHeaderTimeout: r.subgraphTransportOptions.ResponseHeaderTimeout,
-		ExpectContinueTimeout: r.subgraphTransportOptions.ExpectContinueTimeout,
+	if r.transport == nil {
+		r.transport = newHTTPTransport(r.subgraphTransportOptions)
 	}
 
 	// Add default tracing exporter if needed
@@ -325,7 +312,65 @@ func NewRouter(opts ...Option) (*Router, error) {
 		r.logger.Warn("Development mode enabled. This should only be used for testing purposes")
 	}
 
+	r.httpRouter = r.buildHTTPRouter()
+
 	return r, nil
+}
+
+func (r *Router) buildHTTPRouter() http.Handler {
+	httpRouter := chi.NewRouter()
+	httpRouter.Use(func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			req = req.WithContext(withSubgraphs(req.Context(), r.activeRouter.subgraphs))
+			h.ServeHTTP(w, req)
+		})
+	})
+	recoveryHandler := recovery.New(recovery.WithLogger(r.logger), recovery.WithPrintStack())
+	httpRouter.Use(recoveryHandler)
+	httpRouter.Use(middleware.RequestID)
+	httpRouter.Use(middleware.RealIP)
+	// Register the trace middleware before the request logger, so we can log the trace ID
+	httpRouter.Use(func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			if r.activeRouter.traceHandler == nil {
+				h.ServeHTTP(w, req)
+				return
+			}
+
+			r.activeRouter.traceHandler.Handler(h).ServeHTTP(w, req)
+		})
+	})
+	httpRouter.Use(func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			r.activeRouter.requestLogger(h).ServeHTTP(w, req)
+		})
+	})
+	httpRouter.Use(cors.New(*r.corsOptions))
+
+	r.healthChecks = health.New(&health.Options{
+		Logger: r.logger,
+	})
+	httpRouter.Get(r.healthCheckPath, r.healthChecks.Liveness())
+	httpRouter.Get(r.livenessCheckPath, r.healthChecks.Liveness())
+	httpRouter.Get(r.readinessCheckPath, r.healthChecks.Readiness())
+	httpRouter.Mount(r.graphqlPath, http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		r.activeRouter.graphqlHandler.ServeHTTP(w, req)
+	}))
+
+	if r.playground {
+		r.logger.Debug("enabling GraphQL playground", zap.String("path", r.graphqlPath))
+		httpRouter.Handle("/", graphiql.NewPlayground(&graphiql.PlaygroundOptions{
+			Log:        r.logger,
+			Html:       graphiql.PlaygroundHTML(),
+			GraphqlURL: r.graphqlPath,
+		}))
+		r.logger.Debug("GraphQLHandler playground registered",
+			zap.String("method", http.MethodGet),
+			zap.String("path", "/"),
+		)
+	}
+
+	return httpRouter
 }
 
 func (r *Router) configureSubgraphOverwrites(cfg *nodev1.RouterConfig) ([]Subgraph, error) {
@@ -411,11 +456,11 @@ func (r *Router) updateServer(ctx context.Context, cfg *nodev1.RouterConfig) err
 			zap.String("config_version", cfg.GetVersion()),
 		)
 
-		r.activeRouter.healthChecks.SetReady(true)
+		r.healthChecks.SetReady(true)
 
 		// This is a blocking call
 		if err := r.activeRouter.listenAndServe(); err != nil {
-			r.activeRouter.healthChecks.SetReady(true)
+			r.healthChecks.SetReady(true)
 			r.logger.Error("Failed to start new server", zap.Error(err))
 		}
 
@@ -495,6 +540,8 @@ func (r *Router) NewTestServer(ctx context.Context) (*Server, error) {
 		return nil, err
 	}
 
+	r.activeRouter = newRouter
+
 	return newRouter, nil
 }
 
@@ -570,22 +617,27 @@ func (r *Router) Start(ctx context.Context) error {
 
 		r.logger.Info("Registering router with control plane because you opted in to send telemetry to Cosmo Cloud or advanced request tracing (ART) in production")
 
-		ri, registerErr := r.selfRegister.Register(ctx)
+		registrationInfo, registerErr := r.selfRegister.Register(ctx)
 		if registerErr != nil {
 			r.logger.Error("Failed to register router. If this error persists, please contact support.", zap.Error(registerErr))
 		} else {
-			r.registrationInfo = ri
-
 			// Only ensure sampling rate if the user exports traces to Cosmo Cloud
 			if cosmoCloudTracingEnabled {
-				if r.traceConfig.Sampler > float64(r.registrationInfo.AccountLimits.TraceSamplingRate) {
+				if r.traceConfig.Sampler > float64(registrationInfo.AccountLimits.TraceSamplingRate) {
 					r.logger.Warn("Trace sampling rate is higher than account limit. Using account limit instead. Please contact support to increase your account limit.",
 						zap.Float64("limit", r.traceConfig.Sampler),
-						zap.String("account_limit", fmt.Sprintf("%.2f", r.registrationInfo.AccountLimits.TraceSamplingRate)),
+						zap.String("account_limit", fmt.Sprintf("%.2f", registrationInfo.AccountLimits.TraceSamplingRate)),
 					)
-					r.traceConfig.Sampler = float64(r.registrationInfo.AccountLimits.TraceSamplingRate)
+					r.traceConfig.Sampler = float64(registrationInfo.AccountLimits.TraceSamplingRate)
 				}
 			}
+
+			publicKey, err := jwt.ParseECPublicKeyFromPEM([]byte(registrationInfo.GetGraphPublicKey()))
+			if err != nil {
+				return fmt.Errorf("failed to parse router public key: %w", err)
+			}
+
+			r.publicKey = publicKey
 		}
 	}
 
@@ -633,23 +685,28 @@ func (r *Router) Start(ctx context.Context) error {
 // newServer creates a new Server instance.
 // All stateful data is copied from the Router over to the new server instance.
 func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfig) (*Server, error) {
-	subgraphs, err := r.configureSubgraphOverwrites(routerConfig)
-	if err != nil {
-		return nil, err
-	}
-
 	rootContext, rootContextCancel := context.WithCancel(ctx)
+
 	ro := &Server{
+		Config:            r.Config,
 		rootContext:       rootContext,
 		rootContextCancel: rootContextCancel,
 		routerConfig:      routerConfig,
-		Config:            r.Config,
+		requestLogger: requestlogger.New(
+			r.logger,
+			requestlogger.WithDefaultOptions(),
+			requestlogger.WithContext(func(request *http.Request) []zapcore.Field {
+				return []zapcore.Field{
+					zap.String("config_version", routerConfig.GetVersion()),
+					zap.String("request_id", middleware.GetReqID(request.Context())),
+					zap.String("federated_graph_name", r.federatedGraphName),
+				}
+			}),
+		),
 	}
 
-	recoveryHandler := recovery.New(recovery.WithLogger(r.logger), recovery.WithPrintStack())
-	var traceHandler *trace.Middleware
 	if r.traceConfig.Enabled {
-		traceHandler = trace.NewMiddleware(otel.RouterServerAttribute,
+		ro.traceHandler = trace.NewMiddleware(otel.RouterServerAttribute,
 			otelhttp.WithSpanOptions(
 				oteltrace.WithAttributes(
 					otel.WgRouterGraphName.String(r.federatedGraphName),
@@ -662,41 +719,12 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 			otelhttp.WithSpanNameFormatter(SpanNameFormatter),
 		)
 	}
-	requestLogger := requestlogger.New(
-		r.logger,
-		requestlogger.WithDefaultOptions(),
-		requestlogger.WithContext(func(request *http.Request) []zapcore.Field {
-			return []zapcore.Field{
-				zap.String("config_version", routerConfig.GetVersion()),
-				zap.String("request_id", middleware.GetReqID(request.Context())),
-				zap.String("federated_graph_name", r.federatedGraphName),
-			}
-		}),
-	)
 
-	httpRouter := chi.NewRouter()
-	httpRouter.Use(func(h http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			r = r.WithContext(withSubgraphs(r.Context(), subgraphs))
-			h.ServeHTTP(w, r)
-		})
-	})
-	httpRouter.Use(recoveryHandler)
-	httpRouter.Use(middleware.RequestID)
-	httpRouter.Use(middleware.RealIP)
-	// Register the trace middleware before the request logger, so we can log the trace ID
-	if traceHandler != nil {
-		httpRouter.Use(traceHandler.Handler)
+	subgraphs, err := r.configureSubgraphOverwrites(routerConfig)
+	if err != nil {
+		return nil, err
 	}
-	httpRouter.Use(requestLogger)
-	httpRouter.Use(cors.New(*r.corsOptions))
-
-	ro.healthChecks = health.New(&health.Options{
-		Logger: r.logger,
-	})
-	httpRouter.Get(r.healthCheckPath, ro.healthChecks.Liveness())
-	httpRouter.Get(r.livenessCheckPath, ro.healthChecks.Liveness())
-	httpRouter.Get(r.readinessCheckPath, ro.healthChecks.Readiness())
+	ro.subgraphs = subgraphs
 
 	// when an execution plan was generated, which can be quite expensive, we want to cache it
 	// this means that we can hash the input and cache the generated plan
@@ -755,30 +783,6 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		return nil, fmt.Errorf("failed to build plan configuration: %w", err)
 	}
 
-	operationParser := NewOperationParser(OperationParserOptions{
-		Executor:                executor,
-		MaxOperationSizeInBytes: int64(r.routerTrafficConfig.MaxRequestBodyBytes),
-		CDN:                     r.cdn,
-	})
-	operationPlanner := NewOperationPlanner(executor, planCache)
-
-	var graphqlPlaygroundHandler http.Handler
-
-	if r.playground {
-		r.logger.Debug("enabling GraphQL playground", zap.String("path", r.graphqlPath))
-		graphqlPlaygroundHandler = graphiql.NewPlayground(&graphiql.PlaygroundOptions{
-			Log:        r.logger,
-			Html:       graphiql.PlaygroundHTML(),
-			GraphqlURL: r.graphqlPath,
-		})
-	}
-
-	graphqlHandler := NewGraphQLHandler(HandlerOptions{
-		Executor:                               executor,
-		Log:                                    r.logger,
-		EnableExecutionPlanCacheResponseHeader: routerEngineConfig.Execution.EnableExecutionPlanCacheResponseHeader,
-	})
-
 	var metricStore *metric.Metrics
 
 	// Prometheus metrics rely on OTLP metrics
@@ -799,16 +803,17 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		metricStore = m
 	}
 
+	// Serve GraphQL. Metrics are collected after the request is handled and classified as r GraphQL request.
+	subChiRouter := chi.NewRouter()
+
+	operationParser := NewOperationParser(OperationParserOptions{
+		Executor:                executor,
+		MaxOperationSizeInBytes: int64(r.routerTrafficConfig.MaxRequestBodyBytes),
+		CDN:                     r.cdn,
+	})
+	operationPlanner := NewOperationPlanner(executor, planCache)
+
 	routerMetrics := NewRouterMetrics(metricStore, r.gqlMetricsExporter, routerConfig.GetVersion())
-
-	var publicKey *ecdsa.PublicKey
-
-	if r.registrationInfo != nil {
-		publicKey, err = jwt.ParseECPublicKeyFromPEM([]byte(r.registrationInfo.GetGraphPublicKey()))
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse router public key: %w", err)
-		}
-	}
 
 	graphqlPreHandler := NewPreHandler(&PreHandlerOptions{
 		Logger:               r.logger,
@@ -817,40 +822,37 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		Parser:               operationParser,
 		Planner:              operationPlanner,
 		AccessController:     r.accessController,
-		RouterPublicKey:      publicKey,
+		RouterPublicKey:      r.publicKey,
 		EnableRequestTracing: r.engineExecutionConfiguration.EnableRequestTracing,
 		DevelopmentMode:      r.developmentMode,
 	})
 
-	// Serve GraphQL. Metrics are collected after the request is handled and classified as r GraphQL request.
-	httpRouter.Route(r.graphqlPath, func(subChiRouter chi.Router) {
-		subChiRouter.Use(NewWebsocketMiddleware(rootContext, WebsocketMiddlewareOptions{
-			Parser:           operationParser,
-			Planner:          operationPlanner,
-			Metrics:          routerMetrics,
-			GraphQLHandler:   graphqlHandler,
-			AccessController: r.accessController,
-			Logger:           r.logger,
-		}))
-
-		subChiRouter.Use(graphqlPreHandler.Handler)
-
-		subChiRouter.Use(r.routerMiddlewares...)
-		subChiRouter.Post("/", graphqlHandler.ServeHTTP)
+	graphqlHandler := NewGraphQLHandler(HandlerOptions{
+		Executor:                               executor,
+		Log:                                    r.logger,
+		EnableExecutionPlanCacheResponseHeader: routerEngineConfig.Execution.EnableExecutionPlanCacheResponseHeader,
 	})
+
+	subChiRouter.Use(NewWebsocketMiddleware(rootContext, WebsocketMiddlewareOptions{
+		Parser:           operationParser,
+		Planner:          operationPlanner,
+		Metrics:          routerMetrics,
+		GraphQLHandler:   graphqlHandler,
+		AccessController: r.accessController,
+		Logger:           r.logger,
+	}))
+
+	subChiRouter.Use(graphqlPreHandler.Handler)
+
+	subChiRouter.Use(r.routerMiddlewares...)
+	subChiRouter.Post("/", graphqlHandler.ServeHTTP)
+
+	ro.graphqlHandler = subChiRouter
 
 	r.logger.Debug("GraphQLHandler registered",
 		zap.String("method", http.MethodPost),
 		zap.String("path", r.graphqlPath),
 	)
-
-	if r.playground {
-		httpRouter.Get("/", graphqlPlaygroundHandler.ServeHTTP)
-		r.logger.Debug("GraphQLHandler playground registered",
-			zap.String("method", http.MethodGet),
-			zap.String("path", "/"),
-		)
-	}
 
 	ro.Server = &http.Server{
 		Addr: r.listenAddr,
@@ -858,7 +860,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		ReadTimeout:       1 * time.Minute,
 		WriteTimeout:      2 * time.Minute,
 		ReadHeaderTimeout: 20 * time.Second,
-		Handler:           httpRouter,
+		Handler:           r.httpRouter,
 		ErrorLog:          zap.NewStdLog(r.logger),
 	}
 
@@ -1006,6 +1008,12 @@ func WithListenerAddr(addr string) Option {
 	}
 }
 
+func WithTransport(transport *http.Transport) Option {
+	return func(r *Router) {
+		r.transport = transport
+	}
+}
+
 func WithLogger(logger *zap.Logger) Option {
 	return func(r *Router) {
 		r.logger = logger
@@ -1107,6 +1115,12 @@ func WithStaticRouterConfig(cfg *nodev1.RouterConfig) Option {
 func WithHealthCheckPath(path string) Option {
 	return func(r *Router) {
 		r.healthCheckPath = path
+	}
+}
+
+func WithHealthChecks(healthChecks health.Checker) Option {
+	return func(r *Router) {
+		r.healthChecks = healthChecks
 	}
 }
 
@@ -1218,5 +1232,34 @@ func WithGraphQLMetrics(cfg *GraphQLMetricsConfig) Option {
 func WithDevelopmentMode(enabled bool) Option {
 	return func(r *Router) {
 		r.developmentMode = enabled
+	}
+}
+
+func newHTTPTransport(opts *SubgraphTransportOptions) *http.Transport {
+	dialer := &net.Dialer{
+		Timeout:   opts.DialTimeout,
+		KeepAlive: opts.KeepAliveProbeInterval,
+	}
+	// Great source of inspiration: https://gitlab.com/gitlab-org/gitlab-pages
+	// A pages proxy in go that handles tls to upstreams, rate limiting, and more
+	return &http.Transport{
+		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+			return dialer.DialContext(ctx, network, addr)
+		},
+		// The defaults value 0 = unbounded.
+		// We set to some value to prevent resource exhaustion e.g max requests and ports.
+		MaxConnsPerHost: 100,
+		// The defaults value 0 = unbounded. 100 is used by the default go transport.
+		// This value should be significant higher than MaxIdleConnsPerHost.
+		MaxIdleConns: 1024,
+		// The default value is 2. Such a low limit will open and close connections too often.
+		// Details: https://gitlab.com/gitlab-org/gitlab-pages/-/merge_requests/274
+		MaxIdleConnsPerHost: 20,
+		ForceAttemptHTTP2:   true,
+		IdleConnTimeout:     opts.KeepAliveIdleTimeout,
+		// Set more timeouts https://gitlab.com/gitlab-org/gitlab-pages/-/issues/495
+		TLSHandshakeTimeout:   opts.TLSHandshakeTimeout,
+		ResponseHeaderTimeout: opts.ResponseHeaderTimeout,
+		ExpectContinueTimeout: opts.ExpectContinueTimeout,
 	}
 }

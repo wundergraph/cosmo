@@ -2,6 +2,7 @@ import { UserContext } from "@/components/app-provider";
 import { EmptyState } from "@/components/empty-state";
 import { getDashboardLayout } from "@/components/layout/dashboard-layout";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -11,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
@@ -50,6 +52,7 @@ import {
   createAPIKey,
   deleteAPIKey,
   getAPIKeys,
+  getUserAccessibleResources,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { ExpiresAt } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import copy from "copy-to-clipboard";
@@ -76,6 +79,11 @@ const CreateAPIKeyDialog = ({
 
   const { mutate, isPending } = useMutation(createAPIKey.useMutation());
 
+  const { data } = useQuery(getUserAccessibleResources.useQuery());
+  const federatedGraphs = data?.federatedGraphs || [];
+  const subgraphs = data?.subgraphs || [];
+  const isAdmin = user?.currentOrganization.roles.includes("admin");
+
   const expiresOptions = ["Never", "30 days", "6 months", "1 year"];
   const expiresOptionsMappingToEnum: {
     [key: string]: ExpiresAt;
@@ -88,6 +96,12 @@ const CreateAPIKeyDialog = ({
 
   const [expires, setExpires] = useState(expiresOptions[0]);
   const [open, setOpen] = useState(false);
+  const [selectedAllResources, setSelectedAllResources] = useState(false);
+  // target ids of the selected federated graphs
+  const [selectedFedGraphs, setSelectedFedGraphs] = useState<string[]>([]);
+  // target ids of the selected subgraphs
+  const [selectedSubgraphs, setSelectedSubgraphs] = useState<string[]>([]);
+  const [errorMsg, setErrorMsg] = useState<string>();
 
   const createAPIKeyInputSchema = z.object({
     name: z
@@ -110,11 +124,23 @@ const CreateAPIKeyDialog = ({
   });
 
   const onSubmit: SubmitHandler<CreateAPIKeyInput> = (data) => {
+    if (
+      user?.currentOrganization.isRBACEnabled &&
+      !selectedAllResources &&
+      selectedFedGraphs.length === 0 &&
+      selectedSubgraphs.length === 0
+    ) {
+      setErrorMsg("Please select atleast one of the resource.");
+      return;
+    }
+
     mutate(
       {
         name: data.name,
         userID: user?.id,
         expires: expiresOptionsMappingToEnum[expires],
+        federatedGraphTargetIds: selectedAllResources ? [] : selectedFedGraphs,
+        subgraphTargetIds: selectedAllResources ? [] : selectedSubgraphs,
       },
       {
         onSuccess: (d) => {
@@ -136,7 +162,21 @@ const CreateAPIKeyDialog = ({
       },
     );
     setOpen(false);
+    setSelectedAllResources(false);
+    setSelectedFedGraphs([]);
+    setSelectedSubgraphs([]);
   };
+
+  if (!(isAdmin || federatedGraphs.length > 0 || subgraphs.length > 0)) {
+    return (
+      <Button disabled>
+        <div className="flex items-center gap-x-2">
+          <PlusIcon />
+          <span>New API key</span>
+        </div>
+      </Button>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -185,10 +225,152 @@ const CreateAPIKeyDialog = ({
               </SelectContent>
             </Select>
           </div>
+          {user?.currentOrganization.isRBACEnabled && (
+            <div className="flex flex-col gap-y-3">
+              <div className="flex flex-col gap-y-1">
+                <span className="text-base font-semibold">
+                  Select Resources
+                </span>
+                <span className="text-sm text-muted-foreground">
+                  {
+                    "Select resources the API key can access, or choose 'All resources' to include current and future resources."
+                  }
+                </span>
+              </div>
+              <div className="flex flex-col gap-y-2">
+                {isAdmin && (
+                  <div className="flex items-center gap-x-2">
+                    <Checkbox
+                      checked={selectedAllResources}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setSelectedAllResources(true);
+                          setErrorMsg(undefined);
+                        } else {
+                          setSelectedAllResources(false);
+                        }
+                      }}
+                    />
+                    <span>All Resources</span>
+                  </div>
+                )}
+                {federatedGraphs.length > 0 && (
+                  <div className="flex flex-col gap-y-1">
+                    <span>Federated Graphs</span>
+                    <div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger
+                          asChild
+                          disabled={selectedAllResources}
+                        >
+                          <Button size="sm" variant="outline">
+                            {selectedFedGraphs.length > 0
+                              ? `${selectedFedGraphs.length} selected`
+                              : "Select federated graphs"}
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" className="">
+                          {federatedGraphs.map((graph) => {
+                            return (
+                              <DropdownMenuCheckboxItem
+                                key={graph.targetId}
+                                checked={selectedFedGraphs.includes(
+                                  graph.targetId,
+                                )}
+                                onCheckedChange={(val) => {
+                                  if (val) {
+                                    setSelectedFedGraphs([
+                                      ...Array.from(
+                                        new Set([
+                                          ...selectedFedGraphs,
+                                          graph.targetId,
+                                        ]),
+                                      ),
+                                    ]);
+                                    setErrorMsg(undefined);
+                                  } else {
+                                    setSelectedFedGraphs([
+                                      ...selectedFedGraphs.filter(
+                                        (g) => g !== graph.targetId,
+                                      ),
+                                    ]);
+                                  }
+                                }}
+                                onSelect={(e) => e.preventDefault()}
+                              >
+                                {graph.name}
+                              </DropdownMenuCheckboxItem>
+                            );
+                          })}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+                )}
+                {subgraphs.length > 0 && (
+                  <div className="flex flex-col gap-y-1">
+                    <span>Subgraphs</span>
+                    <div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger
+                          asChild
+                          disabled={selectedAllResources}
+                        >
+                          <Button size="sm" variant="outline">
+                            {selectedSubgraphs.length > 0
+                              ? `${selectedSubgraphs.length} selected`
+                              : "Select subgraphs"}
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" className="">
+                          {subgraphs.map((graph) => {
+                            return (
+                              <DropdownMenuCheckboxItem
+                                key={graph.targetId}
+                                checked={selectedSubgraphs.includes(
+                                  graph.targetId,
+                                )}
+                                onCheckedChange={(val) => {
+                                  if (val) {
+                                    setSelectedSubgraphs([
+                                      ...Array.from(
+                                        new Set([
+                                          ...selectedSubgraphs,
+                                          graph.targetId,
+                                        ]),
+                                      ),
+                                    ]);
+                                    setErrorMsg(undefined);
+                                  } else {
+                                    setSelectedSubgraphs([
+                                      ...selectedSubgraphs.filter(
+                                        (g) => g !== graph.targetId,
+                                      ),
+                                    ]);
+                                  }
+                                }}
+                                onSelect={(e) => e.preventDefault()}
+                              >
+                                {graph.name}
+                              </DropdownMenuCheckboxItem>
+                            );
+                          })}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          {errorMsg && (
+            <span className="px-2 text-xs text-destructive">{errorMsg}</span>
+          )}
+
           <Button
             className="mt-2"
             type="submit"
-            disabled={!isValid}
+            disabled={!isValid || !!errorMsg}
             variant="default"
             isLoading={isPending}
           >
@@ -546,59 +728,57 @@ const APIKeysPage: NextPageWithLayout = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              <>
-                {apiKeys.map(
-                  ({ name, createdBy, createdAt, lastUsedAt, expiresAt }) => {
-                    return (
-                      <TableRow key={name}>
-                        <TableCell className="font-medium">{name}</TableCell>
-                        <TableCell>{createdBy}</TableCell>
+              {apiKeys.map(
+                ({ name, createdBy, createdAt, lastUsedAt, expiresAt }) => {
+                  return (
+                    <TableRow key={name}>
+                      <TableCell className="font-medium">{name}</TableCell>
+                      <TableCell>{createdBy}</TableCell>
+                      <TableCell>
+                        {expiresAt
+                          ? formatDateTime(new Date(expiresAt))
+                          : "Never"}
+                      </TableCell>
+                      <TableCell>
+                        {createdAt
+                          ? formatDateTime(new Date(createdAt))
+                          : "Never"}
+                      </TableCell>
+                      <TableCell>
+                        {lastUsedAt
+                          ? formatDateTime(new Date(lastUsedAt))
+                          : "Never"}
+                      </TableCell>
+                      {checkUserAccess({
+                        rolesToBe: ["admin", "developer"],
+                        userRoles: user?.currentOrganization.roles || [],
+                      }) && (
                         <TableCell>
-                          {expiresAt
-                            ? formatDateTime(new Date(expiresAt))
-                            : "Never"}
+                          <DropdownMenu>
+                            <div className="flex justify-center">
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon">
+                                  <EllipsisVerticalIcon className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                            </div>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setDeleteApiKeyName(name);
+                                  setOpenDeleteDialog(true);
+                                }}
+                              >
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </TableCell>
-                        <TableCell>
-                          {createdAt
-                            ? formatDateTime(new Date(createdAt))
-                            : "Never"}
-                        </TableCell>
-                        <TableCell>
-                          {lastUsedAt
-                            ? formatDateTime(new Date(lastUsedAt))
-                            : "Never"}
-                        </TableCell>
-                        {checkUserAccess({
-                          rolesToBe: ["admin", "developer"],
-                          userRoles: user?.currentOrganization.roles || [],
-                        }) && (
-                          <TableCell>
-                            <DropdownMenu>
-                              <div className="flex justify-center">
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="icon">
-                                    <EllipsisVerticalIcon className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                              </div>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem
-                                  onClick={() => {
-                                    setDeleteApiKeyName(name);
-                                    setOpenDeleteDialog(true);
-                                  }}
-                                >
-                                  Delete
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TableCell>
-                        )}
-                      </TableRow>
-                    );
-                  },
-                )}
-              </>
+                      )}
+                    </TableRow>
+                  );
+                },
+              )}
             </TableBody>
           </Table>
         </>

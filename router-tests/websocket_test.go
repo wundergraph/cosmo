@@ -162,6 +162,10 @@ func TestSubscriptionOverWebsocket(t *testing.T) {
 	conn.SetReadDeadline(time.Time{})
 }
 
+type graphqlErrorResponse struct {
+	Errors []graphqlError `json:"errors"`
+}
+
 type graphqlError struct {
 	Message string `json:"message"`
 }

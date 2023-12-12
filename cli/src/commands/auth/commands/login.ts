@@ -49,13 +49,13 @@ export default (opts: BaseCommandOptions) => {
       program.error('Could not perform authentication. Please try again');
     }
 
-    const organizations = decoded.groups.map((group) => group.split('/')[1]);
+    const organizations = new Set(decoded.groups.map((group) => group.split('/')[1]));
 
     const selectedOrganization = await inquirer.prompt({
       name: 'organizationSlug',
       type: 'list',
       message: 'Select Organization:',
-      choices: organizations,
+      choices: [...organizations],
     });
 
     userConfig.loadToken({ ...accessTokenResp.response, organizationSlug: selectedOrganization.organizationSlug });
