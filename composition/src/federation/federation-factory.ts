@@ -141,6 +141,7 @@ import { printTypeNode } from '@graphql-tools/merge';
 import { ArgumentConfigurationData } from '../subgraph/field-configuration';
 import { BASE_SCALARS } from '../utils/constants';
 import { batchNormalize } from '../normalization/normalization-factory';
+import { isNodeQuery } from '../normalization/utils';
 
 export class FederationFactory {
   abstractToConcreteTypeNames = new Map<string, Set<string>>();
@@ -1550,7 +1551,11 @@ export class FederationFactory {
             definitions.push(parentContainer.node);
           }
           if (fields.length < 1) {
-            this.errors.push(allFieldDefinitionsAreInaccessibleError('object', parentTypeName));
+            if (isNodeQuery(parentTypeName)) {
+              this.errors.push(noQueryRootTypeError);
+            } else {
+              this.errors.push(allFieldDefinitionsAreInaccessibleError('object', parentTypeName));
+            }
           }
           break;
         case Kind.SCALAR_TYPE_DEFINITION:

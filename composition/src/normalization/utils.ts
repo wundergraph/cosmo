@@ -20,7 +20,7 @@ import {
   print,
   ScalarTypeDefinitionNode,
   SchemaDefinitionNode,
-  StringValueNode, TypeDefinitionNode, TypeExtensionNode,
+  StringValueNode,
   UnionTypeDefinitionNode,
   visit,
 } from 'graphql';
@@ -42,6 +42,7 @@ import {
   INTERFACE_UPPER,
   MUTATION_UPPER,
   OBJECT_UPPER,
+  QUERY,
   QUERY_UPPER,
   SCALAR_UPPER,
   SCHEMA_UPPER,
@@ -1020,4 +1021,8 @@ export function validateDirectivesWithFieldSet(
   if (requires) {
     configurationData.requires = requires;
   }
+}
+
+export function isNodeQuery(typeName: string, operationTypeNode?: OperationTypeNode): boolean {
+  return typeName === QUERY || operationTypeNode === OperationTypeNode.QUERY;
 }

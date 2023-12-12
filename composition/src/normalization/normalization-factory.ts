@@ -54,7 +54,7 @@ import {
   inputObjectContainerToNode,
   InputObjectExtensionContainer,
   InputValidationContainer,
-  InputValueContainer,
+  InputValueContainer, isNodeQuery,
   newFieldSetContainer,
   ObjectExtensionContainer,
   ObjectLikeContainer,
@@ -112,7 +112,6 @@ import {
   invalidDirectiveArgumentTypeErrorMessage,
   invalidDirectiveError,
   invalidDirectiveLocationErrorMessage,
-  noFieldDefinitionsError,
   invalidKeyDirectiveArgumentErrorMessage,
   invalidKeyDirectivesError,
   invalidOperationTypeDefinitionError,
@@ -123,6 +122,7 @@ import {
   invalidSubgraphNamesError,
   noBaseTypeExtensionError,
   noDefinedUnionMembersError,
+  noFieldDefinitionsError,
   operationDefinitionError,
   subgraphInvalidSyntaxError,
   subgraphValidationError,
@@ -1454,7 +1454,8 @@ export class NormalizationFactory {
         // intentional fallthrough
         case Kind.OBJECT_TYPE_DEFINITION:
           const objectLikeExtension = extensionContainer as ObjectLikeExtensionContainer;
-          if (this.operationTypeNames.has(extensionTypeName)) {
+          const operationTypeNode = this.operationTypeNames.get(extensionTypeName);
+          if (operationTypeNode) {
             objectLikeExtension.fields.delete(SERVICE_FIELD);
             objectLikeExtension.fields.delete(ENTITIES_FIELD);
           }
@@ -1476,7 +1477,7 @@ export class NormalizationFactory {
           this.validateInterfaceImplementations(baseType);
           definitions.push(objectLikeContainerToNode(this, baseType, objectLikeExtension));
           // interfaces and objects must define at least one field
-          if (baseType.fields.size < 1) {
+          if (baseType.fields.size < 1 && !isNodeQuery(extensionTypeName, operationTypeNode)) {
             this.errors.push(noFieldDefinitionsError(kindToTypeString(baseType.kind), extensionTypeName));
           }
           break;
@@ -1508,7 +1509,8 @@ export class NormalizationFactory {
           // intentional fallthrough
         case Kind.OBJECT_TYPE_DEFINITION:
           const isEntity = this.entities.has(parentTypeName);
-          if (this.operationTypeNames.has(parentTypeName)) {
+          const operationTypeNode = this.operationTypeNames.get(parentTypeName);
+          if (operationTypeNode) {
             parentContainer.fields.delete(SERVICE_FIELD);
             parentContainer.fields.delete(ENTITIES_FIELD);
           }
@@ -1532,7 +1534,7 @@ export class NormalizationFactory {
           this.validateInterfaceImplementations(parentContainer);
           definitions.push(objectLikeContainerToNode(this, parentContainer));
           // interfaces and objects must define at least one field
-          if (parentContainer.fields.size < 1) {
+          if (parentContainer.fields.size < 1 && !isNodeQuery(parentTypeName, operationTypeNode)) {
             this.errors.push(noFieldDefinitionsError(kindToTypeString(parentContainer.kind), parentTypeName));
           }
           break;

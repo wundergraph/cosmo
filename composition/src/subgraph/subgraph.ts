@@ -65,11 +65,12 @@ export function walkSubgraphToCollectObjectLikesAndDirectiveDefinitions(
       enter(node) {
         const parentTypeName = node.name.value;
         factory.upsertParentNode(node);
+        if (!isObjectLikeNodeEntity(node)) {
+          return false;
+        }
+        factory.upsertEntity(node);
         if (!factory.graph.hasNode(parentTypeName)) {
           factory.graph.addNode(parentTypeName);
-        }
-        if (isObjectLikeNodeEntity(node)) {
-          factory.upsertEntity(node);
         }
       },
     },
@@ -81,7 +82,7 @@ export function walkSubgraphToCollectObjectLikesAndDirectiveDefinitions(
           ? getOrThrowError(operationTypeNodeToDefaultType, operationType, OPERATION_TO_DEFAULT) : name;
         addConcreteTypesForImplementedInterfaces(node, factory.abstractToConcreteTypeNames);
         if (isNodeInterfaceObject(node)) {
-          return;
+          return false;
         }
         if (!factory.graph.hasNode(parentTypeName)) {
           factory.graph.addNode(parentTypeName);
