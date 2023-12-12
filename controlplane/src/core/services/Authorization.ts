@@ -85,7 +85,7 @@ export class Authorization {
     } catch {
       throw new AuthorizationError(
         EnumStatusCode.ERROR_NOT_AUTHENTICATED,
-        'You are not authorized to perform the cuurent action as RBAC is enabled. Please communicate with the organization admin to gain access.',
+        'You are not authorized to perform the current action as RBAC is enabled. Please communicate with the organization admin to gain access.',
       );
     }
   }
