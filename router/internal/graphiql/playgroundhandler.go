@@ -32,7 +32,9 @@ func (p *Playground) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// This is especially important for Upgrade websocket requests
 	// when the graphql endpoint is on the same path as the playground
 	if isWsUpgradeRequest(r) || !strings.Contains(r.Header.Get("Accept"), "text/html") {
-		p.next.ServeHTTP(w, r)
+		if p.next != nil {
+			p.next.ServeHTTP(w, r)
+		}
 		return
 	}
 

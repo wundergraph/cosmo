@@ -821,7 +821,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		graphqlChiRouter.Use(graphqlPlaygroundHandler, wsMiddleware)
 	} else {
 		if r.playground {
-			httpRouter.Get("/", graphqlPlaygroundHandler(httpRouter).ServeHTTP)
+			httpRouter.Get("/", graphqlPlaygroundHandler(nil).ServeHTTP)
 		}
 		graphqlChiRouter.Use(wsMiddleware)
 	}
