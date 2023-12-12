@@ -470,6 +470,13 @@
       "when": 1701985767425,
       "tag": "0066_high_jackpot",
       "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "5",
+      "when": 1702331936148,
+      "tag": "0067_third_multiple_man",
+      "breakpoints": true
     }
   ]
 }
