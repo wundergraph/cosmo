@@ -834,7 +834,7 @@ const RBAC = () => {
             Enabling RBAC allows the fine grain access control of subgraphs and
             federated graphs.{" "}
             <Link
-              href={docsBaseURL + "/studio/resource-based-access-control"}
+              href={docsBaseURL + "/studio/graph-access-control"}
               className="text-sm text-primary"
               target="_blank"
               rel="noreferrer"
