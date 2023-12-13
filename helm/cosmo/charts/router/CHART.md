@@ -13,11 +13,13 @@ WunderGraph Cosmo router.
 | autoscaling.maxReplicas | int | `100` |  |
 | autoscaling.minReplicas | int | `1` |  |
 | autoscaling.targetCPUUtilizationPercentage | int | `80` |  |
-| configuration.controlplaneUrl | string | `"http://cosmo-controlplane:3001"` |  |
+| configuration.controlplaneUrl | string | `"http://cosmo-controlplane:3001"` | The URL of the Cosmo Controlplane. Should be internal to the cluster. |
+| configuration.devMode | bool | `false` | Set to true to enable the development mode. This allows for Advanced Request Tracing (ART) in the GraphQL Playground |
 | configuration.federatedGraphName | string | `"production"` |  |
 | configuration.graphApiToken | string | `"secret"` |  |
+| configuration.graphqlMetricsCollectorUrl | string | `"http://cosmo-graphqlmetrics:4005"` | The URL of the Cosmo GraphQL Metrics Collector. Should be internal to the cluster. |
 | configuration.logLevel | string | `"info"` |  |
-| configuration.otelCollectorUrl | string | `"http://cosmo-otelcollector:4318"` |  |
+| configuration.otelCollectorUrl | string | `"http://cosmo-otelcollector:4318"` | The URL of the Cosmo GraphQL OTEL Collector. Should be internal to the cluster. |
 | deploymentStrategy | object | `{}` |  |
 | extraEnvVars | list | `[]` | Allows to set additional environment variables on the container |
 | fullnameOverride | string | `""` | String to fully override common.names.fullname template |

@@ -3,6 +3,10 @@
 Navigating the stars with the Cosmo Helm Chart. This chart is a collection of subcharts that make up the Cosmo stack.
 You can use it to deploy a fully functional Cosmo stack for development or production use.
 
+> [!TIP]
+> We provide production grade Helm charts, migration support and configuration guidance as part of an enterprise subscription. Don't spend time to tinker with its internals, let us do the heavy lifting for you.
+> [Contact us](https://wundergraph.com/contact/sales) for more information.
+
 ## Getting started
 
 ### Prerequisites
@@ -84,7 +88,8 @@ In order to prevent any costs, you can remove the stack after use with:
 helm uninstall cosmo
 ```
 
-**Volumes might not be automatically removed, so you may need to manually remove them with `kubectl delete pvc -l release=my-release`.**
+> [!CAUTION]
+> Volumes might not be automatically removed, so you may need to manually remove them with `kubectl delete pvc -l release=my-release`
 
 ## Production use
 

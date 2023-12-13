@@ -2,6 +2,10 @@
 
 [![Helm Deployment](https://github.com/wundergraph/cosmo/actions/workflows/helm-deployment.yaml/badge.svg)](https://github.com/wundergraph/cosmo/actions/workflows/helm-deployment.yaml)
 
+> [!TIP]
+> We provide production grade Helm charts, migration support and configuration guidance as part of an enterprise subscription. Don't spend time to tinker with its internals, let us do the heavy lifting for you.
+> [Contact us](https://wundergraph.com/contact/sales) for more information.
+
 ## Getting started for local development
 
 ### Prerequisites

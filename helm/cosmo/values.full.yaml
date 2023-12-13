@@ -117,7 +117,7 @@ controlplane:
     smtpUsername: ""
     smtpPassword: ""
 
-# Cosmo Router. For more options, please refer to the README.md
+# Cosmo Router. For more options, please refer to the CHART.md
 router:
   terminationGracePeriodSeconds: 60
   deploymentStrategy:
@@ -130,13 +130,13 @@ router:
     graphApiToken: ""
     logLevel: "info"
 
-# Cosmo Open Telemetry Collector.For more options, please refer to the README.md
+# Cosmo Open Telemetry Collector. For more options, please refer to the CHART.md
 otelcollector:
   configuration:
     # Use internal DNS name to access clickhouse
     clickhouseDsn: "clickhouse://default:changeme@cosmo-clickhouse:9000/cosmo?dial_timeout=15s&compress=lz4"
 
-# Cosmo GraphQL Metrics Collector. For more options, please refer to the README.md
+# Cosmo GraphQL Metrics Collector. For more options, please refer to the CHART.md
 graphqlmetrics:
   configuration:
     # Use internal DNS name to access clickhouse
@@ -144,9 +144,11 @@ graphqlmetrics:
 
 # The following configuration enables the stateful services of the Cosmo Platform
 # The charts aren't production ready and are intended for development and testing purposes
-# It is highly recommended to use a managed service in production environments
-# For more information, please refer to the README.md
+# We provide production grade Helm charts, migration support and configuration guidance as part of an enterprise subscription.
+# It is highly recommended to use a managed service in production environments.
 
+# Keycloak for the Cosmo Controlplane & Studio
+# https://artifacthub.io/packages/helm/bitnami/keycloak
 keycloak:
   # Production requires TLS
   production: false
@@ -193,6 +195,8 @@ keycloak:
     user: "postgres"
     database: keycloak
 
+# ClickHouse for the Cosmo Controlplane & Collectors
+# https://artifacthub.io/packages/helm/bitnami/clickhouse
 clickhouse:
   image:
     tag: "23.8.3"
