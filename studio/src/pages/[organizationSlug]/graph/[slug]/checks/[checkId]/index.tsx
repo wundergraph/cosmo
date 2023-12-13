@@ -109,7 +109,7 @@ const CheckOverviewPage: NextPageWithLayout = () => {
     enabled: !!graphContext?.graph?.name,
     refetchOnWindowFocus: false,
   });
-
+  console.log(data);
   const [checksRoute] = useSessionStorage<string | undefined>(
     "checks.route",
     undefined,
@@ -242,6 +242,8 @@ const CheckDetails = ({
   const currentAffectedGraph = data.affectedGraphs.find(
     (graph) => graph.id === graphContext.graph?.id,
   );
+
+  const ghDetails = data.check.ghDetails;
 
   const reason = !data.check.isComposable
     ? "Composition errors were found"
@@ -460,6 +462,23 @@ const CheckDetails = ({
                     {formatDateTime(new Date(data.check.timestamp))}
                   </TooltipContent>
                 </Tooltip>
+              </dd>
+            </div>
+          )}
+          {ghDetails && (
+            <div className="flex flex-col">
+              <dt className="mb-2 text-sm text-muted-foreground">
+                GitHub Commit
+              </dt>
+              <dd className="flex items-center gap-x-2 text-sm">
+                <Link
+                  href={`https://github.com/${ghDetails.ownerSlug}/${ghDetails.repositorySlug}/commit/${ghDetails.commitSha}`}
+                  className="inline-flex items-center gap-2 text-xs"
+                  aria-label="View on GitHub"
+                  target="_blank"
+                >
+                  {ghDetails.commitSha.substring(0, 7)}
+                </Link>
               </dd>
             </div>
           )}
