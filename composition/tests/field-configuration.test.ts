@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { ConfigurationData, federateSubgraphs, normalizeSubgraphFromString } from '../src';
+import { batchNormalize, ConfigurationData, federateSubgraphs, normalizeSubgraphFromString } from '../src';
 import { createSubgraph } from './utils/utils';
 
 describe('Field Configuration tests', () => {
@@ -346,7 +346,58 @@ describe('Field Configuration tests', () => {
           fieldName: 'teammates',
           typeName: 'Query',
         },
-      ])
+      ]);
+    });
+
+    test('that argument configurations are correctly generated', () => {
+      const { errors, internalSubgraphsBySubgraphName } = batchNormalize([
+        createSubgraph('monolith', monolith),
+        createSubgraph('reviews', reviews),
+        createSubgraph('users', users),
+      ]);
+      expect(errors).toBeUndefined();
+      expect(internalSubgraphsBySubgraphName.get('monolith')!.configurationDataMap).toStrictEqual(
+        new Map<string, ConfigurationData>([
+          ['Query', {
+            fieldNames: new Set<string>(['getUser']),
+            isRootNode: true,
+            typeName: 'Query',
+          }],
+        ]),
+      );
+      expect(internalSubgraphsBySubgraphName.get('reviews')!.configurationDataMap).toStrictEqual(
+        new Map<string, ConfigurationData>([
+          ['Query', {
+            fieldNames: new Set<string>(['getUser']),
+            isRootNode: true,
+            typeName: 'Query',
+          }],
+          ['Review', {
+            fieldNames: new Set<string>(['content', 'rating']),
+            isRootNode: false,
+            typeName: 'Review',
+          }],
+          ['User', {
+            fieldNames: new Set<string>(['id', 'reviews']),
+            isRootNode: false,
+            typeName: 'User',
+          }],
+        ]),
+      );
+      expect(internalSubgraphsBySubgraphName.get('users')!.configurationDataMap).toStrictEqual(
+        new Map<string, ConfigurationData>([
+          ['Query', {
+            fieldNames: new Set<string>(['getUser']),
+            isRootNode: true,
+            typeName: 'Query',
+          }],
+          ['User', {
+            fieldNames: new Set<string>(['id', 'username']),
+            isRootNode: false,
+            typeName: 'User',
+          }],
+        ]),
+      );
     });
   });
 });
@@ -619,4 +670,48 @@ type Employee @key(fields: "id") {
   id: Int!
   products: [ProductNames!]!
 }
+`;
+
+const monolith = `
+  type Query {
+    getUser(id: Int!): User
+  }
+  
+  type Review {
+    content: String!
+    rating: Int!
+  }
+  
+  type User {
+    id: ID!
+    username: String!
+    reviews: [Review!]
+  }
+`;
+
+const users = `
+  type Query {
+    getUser(id: Int!): User @shareable
+  }
+  
+  type User {
+    id: ID! @override(from: "monolith") @shareable
+    username: String! @override(from: "monolith")
+  }
+`;
+
+const reviews = `
+  type Query {
+    getUser(id: Int!): User @shareable
+  }
+  
+  type Review {
+    content: String! @override(from: "monolith")
+    rating: Int! @override(from: "monolith")
+  }
+  
+  type User {
+    id: ID! @shareable
+    reviews: [Review!] @override(from: "monolith")
+  }
 `;

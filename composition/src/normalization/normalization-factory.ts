@@ -81,6 +81,7 @@ import {
 } from '../utils/constants';
 import { getNamedTypeForChild } from '../type-merging/type-merging';
 import {
+  addIterableValuesToSet,
   EntityInterfaceData,
   getEntriesNotInHashSet,
   getOrThrowError,
@@ -1725,7 +1726,12 @@ export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationContain
           const overridesData = getValueOrDefault(
             allOverridesByTargetSubgraphName, targetSubgraphName, () => new Map<string, Set<string>>(),
           );
-          getValueOrDefault(overridesData, parentTypeName, () => new Set<string>(fieldNames));
+          const existingFieldNames = overridesData.get(parentTypeName);
+          if (existingFieldNames) {
+            addIterableValuesToSet(fieldNames, existingFieldNames);
+          } else {
+            overridesData.set(parentTypeName, new Set<string>(fieldNames));
+          }
         }
         for (const fieldName of fieldNames) {
           const fieldPath = `${parentTypeName}.${fieldName}`;
