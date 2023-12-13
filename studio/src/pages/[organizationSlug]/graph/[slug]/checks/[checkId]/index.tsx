@@ -109,7 +109,7 @@ const CheckOverviewPage: NextPageWithLayout = () => {
     enabled: !!graphContext?.graph?.name,
     refetchOnWindowFocus: false,
   });
-  console.log(data);
+
   const [checksRoute] = useSessionStorage<string | undefined>(
     "checks.route",
     undefined,

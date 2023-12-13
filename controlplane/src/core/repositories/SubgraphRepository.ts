@@ -605,13 +605,6 @@ export class SubgraphRepository {
       return;
     }
 
-    const ghDetails = {
-      commitSha: '23423423',
-      ownerSlug: 'wundergraph',
-      repositorySlug: 'cosmo',
-      checkRunId: 1,
-    };
-
     return {
       id: check.id,
       targetID: check.targetId,
