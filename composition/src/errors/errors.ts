@@ -790,3 +790,9 @@ export function allFieldDefinitionsAreInaccessibleError(typeString: string, type
     `The ${typeString} "${typeName}" is invalid because all its field definitions are declared "@inaccessible".`
   );
 }
+
+export function equivalentSourceAndTargetOverrideError(subgraphName: string, hostPath: string): Error {
+  return new Error(
+    `Cannot override field "${hostPath}" because the source and target subgraph names are both "${subgraphName}"`
+  );
+}

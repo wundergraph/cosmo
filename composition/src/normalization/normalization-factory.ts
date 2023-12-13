@@ -103,7 +103,7 @@ import {
   duplicateOverriddenFieldsError,
   duplicateTypeDefinitionError,
   duplicateUnionMemberError,
-  duplicateValueExtensionError,
+  duplicateValueExtensionError, equivalentSourceAndTargetOverrideError,
   expectedEntityError,
   incompatibleExtensionError,
   incompatibleExtensionKindsError,
@@ -194,8 +194,8 @@ export function normalizeSubgraphFromString(subgraphSDL: string): NormalizationR
   return normalizationFactory.normalize(documentNode);
 }
 
-export function normalizeSubgraph(document: DocumentNode): NormalizationResultContainer {
-  const normalizationFactory = new NormalizationFactory();
+export function normalizeSubgraph(document: DocumentNode, subgraphName?: string): NormalizationResultContainer {
+  const normalizationFactory = new NormalizationFactory(subgraphName);
   return normalizationFactory.normalize(document);
 }
 
@@ -223,13 +223,15 @@ export class NormalizationFactory {
   parentsWithChildArguments = new Set<string>();
   overridesByTargetSubgraphName = new Map<string, Map<string, Set<string>>>();
   schemaDefinition: SchemaContainer;
+  subgraphName?: string;
   referencedDirectives = new Set<string>();
   referencedTypeNames = new Set<string>();
 
-  constructor() {
+  constructor(subgraphName?: string) {
     for (const baseDirectiveDefinition of BASE_DIRECTIVE_DEFINITIONS) {
       this.allDirectiveDefinitions.set(baseDirectiveDefinition.name.value, baseDirectiveDefinition);
     }
+    this.subgraphName = subgraphName;
     this.schemaDefinition = {
       directives: new Map<string, ConstDirectiveNode[]>(),
       kind: Kind.SCHEMA_DEFINITION,
@@ -777,6 +779,9 @@ export class NormalizationFactory {
         } else {
           observedArguments.add(FROM);
           targetSubgraphName = argumentNode.value.value;
+          if (targetSubgraphName === this.subgraphName) {
+            this.errors.push(equivalentSourceAndTargetOverrideError(targetSubgraphName, hostPath));
+          }
         }
       }
       if (!observedArguments.has(FROM)) {
@@ -1680,7 +1685,9 @@ export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationContain
     if (!subgraph.name) {
       invalidNameErrorMessages.push(invalidSubgraphNameErrorMessage(i, subgraphName));
     }
-    const { errors, normalizationResult } = normalizeSubgraph(subgraph.definitions);
+    const { errors, normalizationResult } = normalizeSubgraph(
+      subgraph.definitions, subgraph.name,
+    );
     if (errors) {
       validationErrors.push(subgraphValidationError(subgraphName, errors));
       continue;
