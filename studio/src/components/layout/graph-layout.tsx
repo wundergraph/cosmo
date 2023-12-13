@@ -20,7 +20,7 @@ import { GetFederatedGraphByNameResponse } from "@wundergraph/cosmo-connect/dist
 import { useRouter } from "next/router";
 import { Fragment, ReactNode, createContext, useMemo } from "react";
 import { MdDevices } from "react-icons/md";
-import { PiDevices, PiGitBranch } from "react-icons/pi";
+import { PiCubeFocus, PiDevices, PiGitBranch } from "react-icons/pi";
 import { EmptyState } from "../empty-state";
 import { Button } from "../ui/button";
 import { Loader } from "../ui/loader";
@@ -40,7 +40,7 @@ const icons: { [key: string]: ReactNode } = {
   Subgraphs: <Component2Icon />,
   Explorer: <PlayIcon />,
   Schema: <FileTextIcon />,
-  Compositions: <FileTextIcon />,
+  Compositions: <PiCubeFocus />,
   Changelog: <PiGitBranch />,
   Checks: <CheckCircledIcon />,
   Analytics: <ChartBarIcon className="h-4 w-4" />,
@@ -109,7 +109,8 @@ export const GraphLayout = ({ children }: LayoutProps) => {
       {
         title: "Compositions",
         href: basePath + "/compositions",
-        icon: <FileTextIcon />,
+        matchExact: false,
+        icon: <PiCubeFocus className="h-4 w-4" />,
       },
       {
         title: "Clients",
