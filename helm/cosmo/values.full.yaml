@@ -144,7 +144,9 @@ graphqlmetrics:
 
 # The following configuration enables the stateful services of the Cosmo Platform
 # The charts aren't production ready and are intended for development and testing purposes
-# We provide production grade Helm charts, migration support and configuration guidance as part of an enterprise subscription.
+# As part of an enterprise subscription, we provide exclusive documentation about how to operate and run WunderGraph Cosmo effectively
+# on all common container platform like EKS, GKE. AKS, Fargate and Google Cloud Run.
+# This includes migration support and configuration guidance. Don't spend time to tinker with its internals, let us do the heavy lifting for you.
 # It is highly recommended to use a managed service in production environments or use our cloud offering https://cosmo.wundergraph.com
 
 # Keycloak for the Cosmo Controlplane & Studio
