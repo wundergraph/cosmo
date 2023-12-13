@@ -10,7 +10,9 @@ metadata:
     {{- include "router.labels" . | nindent 4 }}
 data:
   logLevel: "{{ .Values.configuration.logLevel }}"
+  devMode: "{{ .Values.configuration.devMode }}"
   listenAddress: "0.0.0.0:{{ .Values.service.port }}"
-  controlplaneUrl: "http://{{ include "controlplane.fullname" .}}:{{.Values.global.controlplane.port}}"
-  otelCollectorUrl: "http://{{ include "otelcollector.fullname" .}}:{{.Values.global.otelcollector.port}}"
+  controlplaneUrl: "{{ .Values.configuration.controlplaneUrl }}"
+  otelCollectorUrl: "{{ .Values.configuration.otelCollectorUrl }}"
+  graphqlMetricsCollectorUrl: "{{ .Values.configuration.graphqlMetricsCollectorUrl }}"
   federatedGraphName: "{{ .Values.configuration.federatedGraphName }}"
