@@ -8,25 +8,31 @@ image:
   repository: wundergraph/cosmo/router
   registry: ghcr.io
   pullPolicy: IfNotPresent
-  # Overrides the image tag whose default is the chart appVersion.
+  # -- Overrides the image tag whose default is the chart appVersion.
   version: "latest"
 
 deploymentStrategy: {}
 
 imagePullSecrets: []
 
-# String to partially override common.names.fullname template (will maintain the release name)
+# -- String to partially override common.names.fullname template (will maintain the release name)
 nameOverride: ""
 
-# String to fully override common.names.fullname template
+# -- String to fully override common.names.fullname template
 fullnameOverride: ""
 
+# -- Allows to set additional environment variables on the container
+extraEnvVars: []
+#extraEnvVars:
+#  - name: LOG_LEVEL
+#    value: "info"
+
 serviceAccount:
-  # Specifies whether a service account should be created
+  # -- Specifies whether a service account should be created
   create: true
-  # Annotations to add to the service account
+  # -- Annotations to add to the service account
   annotations: {}
-  # The name of the service account to use.
+  # -- The name of the service account to use.
   # If not set and create is true, a name is generated using the fullname template
   name: ""
 
@@ -127,3 +133,11 @@ configuration:
   federatedGraphName: "production"
   graphApiToken: "secret"
   logLevel: "info"
+  # -- The URL of the Cosmo Controlplane. Should be internal to the cluster.
+  controlplaneUrl: "http://cosmo-controlplane:3001"
+  # -- The URL of the Cosmo GraphQL OTEL Collector. Should be internal to the cluster.
+  otelCollectorUrl: "http://cosmo-otelcollector:4318"
+  # -- The URL of the Cosmo GraphQL Metrics Collector. Should be internal to the cluster.
+  graphqlMetricsCollectorUrl: "http://cosmo-graphqlmetrics:4005"
+  # -- Set to true to enable the development mode. This allows for Advanced Request Tracing (ART) in the GraphQL Playground
+  devMode: false

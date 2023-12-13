@@ -17,15 +17,15 @@ WunderGraph Cosmo CDN
 | autoscaling.targetCPUUtilizationPercentage | int | `80` |  |
 | configuration | string | `nil` |  |
 | deploymentStrategy | object | `{}` |  |
-| fullnameOverride | string | `""` |  |
+| fullnameOverride | string | `""` | String to fully override common.names.fullname template |
 | image.pullPolicy | string | `"IfNotPresent"` |  |
 | image.registry | string | `"ghcr.io"` |  |
 | image.repository | string | `"wundergraph/cosmo/cdn"` |  |
-| image.version | string | `"latest"` |  |
+| image.version | string | `"latest"` | Overrides the image tag whose default is the chart appVersion. |
 | imagePullSecrets | list | `[]` |  |
 | ingress.hosts | string | `nil` |  |
 | ingress.tls | list | `[]` |  |
-| nameOverride | string | `""` |  |
+| nameOverride | string | `""` | String to partially override common.names.fullname template (will maintain the release name) |
 | nodeSelector | object | `{}` |  |
 | podAnnotations | object | `{}` |  |
 | podDisruptionBudget | object | `{}` | Sets the [pod disruption budget](https://kubernetes.io/docs/tasks/run-application/configure-pdb/) for Deployment pods |
@@ -38,9 +38,9 @@ WunderGraph Cosmo CDN
 | securityContext | object | `{}` |  |
 | service.port | int | `8787` |  |
 | service.type | string | `"ClusterIP"` |  |
-| serviceAccount.annotations | object | `{}` |  |
-| serviceAccount.create | bool | `true` |  |
-| serviceAccount.name | string | `""` |  |
+| serviceAccount.annotations | object | `{}` | Annotations to add to the service account |
+| serviceAccount.create | bool | `true` | Specifies whether a service account should be created |
+| serviceAccount.name | string | `""` | The name of the service account to use. If not set and create is true, a name is generated using the fullname template |
 | serviceAnnotations | object | `{}` |  |
 | terminationGracePeriodSeconds | int | `60` | Sets the [termination grace period](https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#hook-handler-execution) for Deployment pods |
 | tolerations | list | `[]` |  |

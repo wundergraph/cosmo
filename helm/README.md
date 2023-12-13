@@ -2,6 +2,10 @@
 
 [![Helm Deployment](https://github.com/wundergraph/cosmo/actions/workflows/helm-deployment.yaml/badge.svg)](https://github.com/wundergraph/cosmo/actions/workflows/helm-deployment.yaml)
 
+> [!TIP]
+> As part of an enterprise subscription, we provide exclusive documentation on how to effectively operate and run WunderGraph Cosmo on all common container platforms such as EKS, GKE, AKS, Fargate, and Google Cloud Run. This includes migration support and configuration guidance. Don't spend time tinkering with its internals; let us do the heavy lifting for you.
+> [Contact us](https://wundergraph.com/contact/sales) for more information.
+
 ## Getting started for local development
 
 ### Prerequisites

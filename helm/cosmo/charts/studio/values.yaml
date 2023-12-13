@@ -8,25 +8,25 @@ image:
   repository: wundergraph/cosmo/studio
   registry: ghcr.io
   pullPolicy: IfNotPresent
-  # Overrides the image tag whose default is the chart appVersion.
+  # -- Overrides the image tag whose default is the chart appVersion.
   version: "latest"
 
 deploymentStrategy: {}
 
 imagePullSecrets: []
 
-# String to partially override common.names.fullname template (will maintain the release name)
+# -- String to partially override common.names.fullname template (will maintain the release name)
 nameOverride: ""
 
-# String to fully override common.names.fullname template
+# -- String to fully override common.names.fullname template
 fullnameOverride: ""
 
 serviceAccount:
-  # Specifies whether a service account should be created
+  # -- Specifies whether a service account should be created
   create: true
-  # Annotations to add to the service account
+  # -- Annotations to add to the service account
   annotations: {}
-  # The name of the service account to use.
+  # -- The name of the service account to use.
   # If not set and create is true, a name is generated using the fullname template
   name: ""
 
