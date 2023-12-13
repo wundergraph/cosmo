@@ -55,6 +55,14 @@ spec:
               containerPort: {{ .Values.service.port }}
               protocol: TCP
           env:
+            {{- if .Values.extraEnvVars }}
+            {{- toYaml .Values.extraEnvVars | nindent 12 }}
+            {{- end }}
+            - name: DEV_MODE
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "router.fullname" . }}
+                  key: devMode
             - name: LOG_LEVEL
               valueFrom:
                 configMapKeyRef:
@@ -70,6 +78,11 @@ spec:
                 configMapKeyRef:
                   name: {{ include "router.fullname" . }}
                   key: controlplaneUrl
+            - name: GRAPHQL_METRICS_COLLECTOR_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "router.fullname" . }}
+                  key: graphqlMetricsCollectorUrl
             - name: DEFAULT_TELEMETRY_ENDPOINT
               valueFrom:
                 configMapKeyRef:
