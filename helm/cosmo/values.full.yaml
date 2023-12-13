@@ -145,7 +145,7 @@ graphqlmetrics:
 # The following configuration enables the stateful services of the Cosmo Platform
 # The charts aren't production ready and are intended for development and testing purposes
 # We provide production grade Helm charts, migration support and configuration guidance as part of an enterprise subscription.
-# It is highly recommended to use a managed service in production environments.
+# It is highly recommended to use a managed service in production environments or use our cloud offering https://cosmo.wundergraph.com
 
 # Keycloak for the Cosmo Controlplane & Studio
 # https://artifacthub.io/packages/helm/bitnami/keycloak
