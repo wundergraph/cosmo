@@ -14,8 +14,7 @@
 
 <br/>
 
-WunderGraph Cosmo is the On-Premise Platform for building, maintaining, and collaborating on GraphQL Federation. A drop-in replacement for Apollo GraphOS.
-The repository consists of the following core components:
+WunderGraph Cosmo is the full Lifecycle API Management for (Federated) GraphQL. Schema Registry, composition checks, analytics, metrics, tracing and routing. Deploy 100% on-prem or use our [Managed Service](https://cosmo.wundergraph.com/login). Apache 2.0 licensed, no vendor-lock. The platform consists of the following components:
 
 Core:
 
