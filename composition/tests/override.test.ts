@@ -4,12 +4,12 @@ import {
   batchNormalize,
   ConfigurationData,
   duplicateOverriddenFieldErrorMessage,
-  duplicateOverriddenFieldsError,
+  duplicateOverriddenFieldsError, equivalentSourceAndTargetOverrideError,
   federateSubgraphs,
   FieldContainer,
   invalidDirectiveError,
   invalidDirectiveLocationErrorMessage,
-  invalidOverrideTargetSubgraphNameError,
+  invalidOverrideTargetSubgraphNameError, normalizeSubgraph,
   ObjectContainer,
   shareableFieldDefinitionsError,
   Subgraph,
@@ -34,6 +34,12 @@ describe('@override directive Tests', () => {
     expect(errors![0]).toStrictEqual(duplicateOverriddenFieldsError(
       [duplicateOverriddenFieldErrorMessage('Entity.name', ['subgraph-c', 'subgraph-d'])],
     ));
+  });
+
+  test('that an error is returned if the source and target subgraph name for @override are equivalent', () => {
+    const { errors } = normalizeSubgraph(subgraphQ.definitions, 'subgraph-q');
+    expect(errors).toBeDefined();
+    expect(errors![0]).toStrictEqual(equivalentSourceAndTargetOverrideError('subgraph-q', 'Entity.name'));
   });
 
   test('that an overridden field does not need to be declared shareable', () => {
@@ -461,6 +467,17 @@ const subgraphP: Subgraph = {
     type Entity @key(fields: "id") {
       id: ID!
       name: String! @override(from: "subgraph-e")
+    }
+  `),
+};
+
+const subgraphQ: Subgraph = {
+  name: 'subgraph-q',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id") {
+      id: ID!
+      name: String! @override(from: "subgraph-q")
     }
   `),
 };
