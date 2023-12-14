@@ -1,6 +1,11 @@
 import { federateSubgraphs, Subgraph } from '../src';
 import { describe, expect, test } from 'vitest';
-import { documentNodeToNormalizedString, normalizeString, versionOnePersistedBaseSchema } from './utils/utils';
+import {
+  documentNodeToNormalizedString,
+  normalizeString,
+  versionOnePersistedBaseSchema,
+  versionTwoPersistedBaseSchema,
+} from './utils/utils';
 
 import { parse } from 'graphql';
 describe('@interfaceObject Tests', () => {
@@ -10,7 +15,7 @@ describe('@interfaceObject Tests', () => {
     );
     expect(errors).toBeUndefined();
     expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST))
-      .toBe(normalizeString(versionOnePersistedBaseSchema + `
+      .toBe(normalizeString(versionTwoPersistedBaseSchema + `
       interface Interface {
         id: ID!
         name: String!
