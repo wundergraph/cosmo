@@ -36,7 +36,7 @@ import {
 import {
   extractExecutableDirectiveLocations,
   extractInterfaces,
-  isNodeExternal,
+  isNodeExternal, isNodeInterfaceObject,
   isNodeShareable,
   mergeExecutableDirectiveLocations,
   pushPersistedDirectivesAndGetNode,
@@ -117,7 +117,7 @@ import {
   ENTITIES,
   EXTENSIONS,
   FIELD,
-  INACCESSIBLE,
+  INACCESSIBLE, INTERFACE_OBJECT,
   OVERRIDE,
   PARENTS,
   QUERY,
@@ -566,6 +566,7 @@ export class FederationFactory {
         || isFieldExternal
         || (existingFieldContainer.isShareable && isFieldShareable)
         || this.isShareabilityOfAllFieldInstancesValid(existingFieldContainer)
+        || this.entityInterfaceDatasByTypeName.has(this.parentTypeName) // TODO handle shareability with interfaceObjects
       ) {
         return;
       }

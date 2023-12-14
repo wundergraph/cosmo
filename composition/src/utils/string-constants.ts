@@ -53,6 +53,7 @@ export const SELECTION_REPRESENTATION = ' { ... }';
 export const SERVICE_OBJECT = '_Service';
 export const SERVICE_FIELD = '_service';
 export const SHAREABLE = 'shareable';
+export const SPECIFIED_BY = 'specifiedBy';
 export const STRING_TYPE = 'String';
 export const SUBSCRIPTION = 'Subscription';
 export const SUBSCRIPTION_UPPER = 'SUBSCRIPTION';
