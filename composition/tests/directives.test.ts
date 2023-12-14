@@ -6,28 +6,27 @@ import { documentNodeToNormalizedString, normalizeString, versionOnePersistedBas
 describe('Directive tests', () => {
   describe('Normalization tests', () => {
     test('that @specifiedBy is supported', () => {
-      const { errors } = normalizeSubgraphFromString(
-        subgraphAString,
-      );
+      const { errors } = normalizeSubgraphFromString(subgraphAString);
       expect(errors).toBeUndefined();
     });
   });
 
   describe('Federation tests', () => {
     test('that @specifiedBy is supported', () => {
-      const { errors, federationResult, f } = federateSubgraphs(
-        [subgraphA, subgraphB],
-      );
+      const { errors, federationResult, f } = federateSubgraphs([subgraphA, subgraphB]);
       expect(errors).toBeUndefined();
       expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
-        normalizeString(versionOnePersistedBaseSchema + `
+        normalizeString(
+          versionOnePersistedBaseSchema +
+            `
           type Query {
             json: JSON!
             field: String!
           }
           
           scalar JSON
-        `),
+        `,
+        ),
       );
     });
   });
