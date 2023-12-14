@@ -80,13 +80,6 @@ func NewDefaultFactoryResolver(transportFactory ApiTransportFactory, baseTranspo
 func (d *DefaultFactoryResolver) Resolve(ds *nodev1.DataSourceConfiguration) (plan.PlannerFactory, error) {
 	switch ds.Kind {
 	case nodev1.DataSourceKind_GRAPHQL:
-		// TODO: Make this use a different Kind
-		if len(ds.Pubsubs) > 0 {
-			node := ds.RootNodes[1]
-			ds.RootNodes = ds.RootNodes[:1]
-			ds.ChildNodes = append(ds.ChildNodes, node)
-			return d.pubsub, nil
-		}
 		factory := &graphql_datasource.Factory{
 			HTTPClient:      d.graphql.HTTPClient,
 			StreamingClient: d.graphql.StreamingClient,
@@ -178,17 +171,6 @@ func (l *Loader) Load(routerConfig *nodev1.RouterConfig, routerEngineConfig *Rou
 				Data: config.LoadStringVariable(in.CustomStatic.Data),
 			})
 		case nodev1.DataSourceKind_GRAPHQL:
-			if len(in.Pubsubs) > 0 {
-				if len(in.Pubsubs) > 1 {
-					panic("unimplemented")
-				}
-				out.Custom = pubsub_datasource.ConfigJson(pubsub_datasource.Configuration{
-					TypeName:  in.Pubsubs[0].TypeName,
-					FieldName: in.Pubsubs[0].FieldName,
-					Topic:     in.Pubsubs[0].SelectionSet,
-				})
-				break
-			}
 			header := http.Header{}
 			for s, httpHeader := range in.CustomGraphql.Fetch.Header {
 				for _, value := range httpHeader.Values {
@@ -262,9 +244,23 @@ func (l *Loader) Load(routerConfig *nodev1.RouterConfig, routerEngineConfig *Rou
 				CustomScalarTypeFields: customScalarTypeFields,
 			})
 		case nodev1.DataSourceKind_PUBSUB:
-			// out.Custom = pubsub_datasource.ConfigJson(pubsub_datasource.Configuration{
-			// 	URL: routerEngineConfig.NATS.URL,
-			// })
+			pubsubEvents := in.GetCustomEvents().GetEvents()
+			events := make([]pubsub_datasource.EventConfiguration, len(pubsubEvents))
+			for ii, ev := range pubsubEvents {
+				eventType, err := pubsub_datasource.EventTypeFromString(ev.Type.String())
+				if err != nil {
+					return nil, fmt.Errorf("invalid event type %q for data source %q: %w", ev.Type.String(), in.Id, err)
+				}
+				events[ii] = pubsub_datasource.EventConfiguration{
+					Type:      eventType,
+					TypeName:  ev.TypeName,
+					FieldName: ev.FieldName,
+					Topic:     ev.Topic,
+				}
+			}
+			out.Custom = pubsub_datasource.ConfigJson(pubsub_datasource.Configuration{
+				Events: events,
+			})
 		default:
 			return nil, fmt.Errorf("unknown data source type %q", in.Kind)
 		}

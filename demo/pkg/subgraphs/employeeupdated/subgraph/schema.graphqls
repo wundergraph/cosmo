@@ -1,7 +1,22 @@
-directive @pubsub(topic: String!) on FIELD_DEFINITION
+type PublishEventResult {
+    success: Boolean!
+}
+
+type Query {
+    employeeFromEvent(id: ID!): Employee! @events_request_reply(topic: "getEmployee.{{ args.id }}")
+}
+
+input UpdateEmployeeInput {
+    name: String
+    email: String
+}
+
+type Mutation {
+    updateEmployee(id: ID!, update: UpdateEmployeeInput!): PublishEventResult! @events_publish(topic: "updateEmployee.{{ args.id }}")
+}
 
 type Subscription {
-    employeeUpdated(employeeID: ID!): Employee! @pubsub(topic: "employeeUpdated.{{ args.employeeID }}")
+    employeeUpdated(employeeID: ID!): Employee! @events_subscribe(topic: "employeeUpdated.{{ args.employeeID }}")
 }
 
 type Employee @key(fields: "id") {

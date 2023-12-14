@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 
 	"github.com/nats-io/nats.go"
 
@@ -35,9 +36,16 @@ type natsPubSub struct {
 	conn *nats.Conn
 }
 
-func (p *natsPubSub) Subscribe(ctx context.Context, topic string, next chan<- []byte) error {
+func (p *natsPubSub) ensureConn() error {
 	if p.conn == nil {
 		return errors.New("NATS is not configured")
+	}
+	return nil
+}
+
+func (p *natsPubSub) Subscribe(ctx context.Context, topic string, next chan<- []byte) error {
+	if err := p.ensureConn(); err != nil {
+		return err
 	}
 	ch := make(chan *nats.Msg)
 	sub, err := p.conn.ChanSubscribe(topic, ch)
@@ -58,4 +66,26 @@ func (p *natsPubSub) Subscribe(ctx context.Context, topic string, next chan<- []
 		}
 	}()
 	return nil
+}
+
+func (p *natsPubSub) Publish(ctx context.Context, topic string, data []byte) error {
+	if err := p.ensureConn(); err != nil {
+		return err
+	}
+	return p.conn.Publish(topic, data)
+}
+
+func (p *natsPubSub) Request(ctx context.Context, topic string, data []byte, w io.Writer) error {
+	if err := p.ensureConn(); err != nil {
+		return err
+	}
+	msg, err := p.conn.RequestWithContext(ctx, topic, []byte(`{"id": 3}`))
+	if err != nil {
+		return fmt.Errorf("error requesting NATS topic %s: %w", topic, err)
+	}
+	_, err = w.Write(msg.Data)
+	if err := msg.Ack(); err != nil {
+		return fmt.Errorf("error acknowledging NATS message: %w", err)
+	}
+	return err
 }
