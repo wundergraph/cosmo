@@ -90,7 +90,7 @@ message DataSourceConfiguration {
   repeated RequiredField keys = 10;
   repeated RequiredField provides = 11;
   repeated RequiredField requires = 12;
-  repeated RequiredField pubsubs = 13;
+  DataSourceCustom_Events custom_events = 13;
 }
 
 message FieldConfiguration {
@@ -170,6 +170,23 @@ message DataSourceCustom_GraphQL {
   GraphQLFederationConfiguration federation = 3;
   InternedString upstream_schema = 4;
   repeated SingleTypeField custom_scalar_type_fields = 6;
+}
+
+enum EventType {
+  PUBLISH = 0;
+  REQUEST_REPLY = 1;
+  SUBSCRIBE = 2;
+}
+
+message EventConfiguration {
+  EventType type = 1;
+  string type_name = 2;
+  string field_name = 3;
+  string topic = 4;
+}
+
+message DataSourceCustom_Events {
+  repeated EventConfiguration events = 1;
 }
 
 message DataSourceCustom_Static {

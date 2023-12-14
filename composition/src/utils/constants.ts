@@ -7,6 +7,9 @@ import {
   DEPRECATED,
   ENUM_UPPER,
   ENUM_VALUE_UPPER,
+  EVENTS_PUBLISH,
+  EVENTS_REQUEST_REPLY,
+  EVENTS_SUBSCRIBE,
   EXTENDS,
   EXTERNAL,
   FIELD_DEFINITION_UPPER,
@@ -21,7 +24,7 @@ import {
   NAME,
   OBJECT_UPPER,
   OVERRIDE,
-  PROVIDES, PUBSUB,
+  PROVIDES,
   REQUIRES,
   RESOLVABLE,
   SCALAR_UPPER,
@@ -29,21 +32,24 @@ import {
   SCHEMA_UPPER,
   SHAREABLE,
   STRING_TYPE,
-  TAG, TOPIC,
+  TAG,
+  TOPIC,
   UNION_UPPER,
 } from './string-constants';
 
-export const BASE_SCALARS = new Set<string>(
-  ['_Any', '_Entities', 'Boolean', 'Float', 'ID', 'Int', 'openfed__FieldSet', 'String'],
-);
-
-export const VERSION_ONE_DIRECTIVES = new Set<string>([
-  DEPRECATED, EXTENDS, EXTERNAL, KEY, PROVIDES, REQUIRES, TAG,
+export const BASE_SCALARS = new Set<string>([
+  '_Any',
+  '_Entities',
+  'Boolean',
+  'Float',
+  'ID',
+  'Int',
+  'openfed__FieldSet',
+  'String',
 ]);
-export const VERSION_TWO_DIRECTIVES = new Set<string>([
-  COMPOSE_DIRECTIVE, LINK, OVERRIDE, INACCESSIBLE, SHAREABLE,
-]);
 
+export const VERSION_ONE_DIRECTIVES = new Set<string>([DEPRECATED, EXTENDS, EXTERNAL, KEY, PROVIDES, REQUIRES, TAG]);
+export const VERSION_TWO_DIRECTIVES = new Set<string>([COMPOSE_DIRECTIVE, LINK, OVERRIDE, INACCESSIBLE, SHAREABLE]);
 
 export const BASE_DIRECTIVE_DEFINITIONS: DirectiveDefinitionNode[] = [
   /* directive @deprecated(reason: String = "No longer supported") on ARGUMENT_DEFINITION | ENUM_VALUE |
@@ -128,7 +134,7 @@ export const BASE_DIRECTIVE_DEFINITIONS: DirectiveDefinitionNode[] = [
     name: stringToNameNode(PROVIDES),
     repeatable: false,
   },
-  // directive @pubsub(topic: String!) on FIELD_DEFINITION
+  // directive @events_publish(topic: String!) on FIELD_DEFINITION
   {
     arguments: [
       {
@@ -142,7 +148,41 @@ export const BASE_DIRECTIVE_DEFINITIONS: DirectiveDefinitionNode[] = [
     ],
     kind: Kind.DIRECTIVE_DEFINITION,
     locations: [stringToNameNode(FIELD_DEFINITION_UPPER)],
-    name: stringToNameNode(PUBSUB),
+    name: stringToNameNode(EVENTS_PUBLISH),
+    repeatable: false,
+  },
+  // directive @events_request_reply(topic: String!) on FIELD_DEFINITION
+  {
+    arguments: [
+      {
+        kind: Kind.INPUT_VALUE_DEFINITION,
+        name: stringToNameNode(TOPIC),
+        type: {
+          kind: Kind.NON_NULL_TYPE,
+          type: stringToNamedTypeNode(STRING_TYPE),
+        },
+      },
+    ],
+    kind: Kind.DIRECTIVE_DEFINITION,
+    locations: [stringToNameNode(FIELD_DEFINITION_UPPER)],
+    name: stringToNameNode(EVENTS_REQUEST_REPLY),
+    repeatable: false,
+  },
+  // directive @events_subscribe(topic: String!) on FIELD_DEFINITION
+  {
+    arguments: [
+      {
+        kind: Kind.INPUT_VALUE_DEFINITION,
+        name: stringToNameNode(TOPIC),
+        type: {
+          kind: Kind.NON_NULL_TYPE,
+          type: stringToNamedTypeNode(STRING_TYPE),
+        },
+      },
+    ],
+    kind: Kind.DIRECTIVE_DEFINITION,
+    locations: [stringToNameNode(FIELD_DEFINITION_UPPER)],
+    name: stringToNameNode(EVENTS_SUBSCRIBE),
     repeatable: false,
   },
   // directive @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION

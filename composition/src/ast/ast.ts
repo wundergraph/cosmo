@@ -28,7 +28,8 @@ import { formatDescription } from './utils';
 
 function deepCopyFieldsAndInterfaces(
   node: InterfaceTypeDefinitionNode | ObjectTypeDefinitionNode | ObjectTypeExtensionNode,
-  fields: MutableFieldDefinitionNode[], interfaces: NamedTypeNode[],
+  fields: MutableFieldDefinitionNode[],
+  interfaces: NamedTypeNode[],
 ) {
   if (node.fields) {
     for (const field of node.fields) {
@@ -42,7 +43,12 @@ function deepCopyFieldsAndInterfaces(
   }
 }
 
-export type ConstValueNodeWithValue = IntValueNode | FloatValueNode | StringValueNode | BooleanValueNode | EnumValueNode;
+export type ConstValueNodeWithValue =
+  | IntValueNode
+  | FloatValueNode
+  | StringValueNode
+  | BooleanValueNode
+  | EnumValueNode;
 
 export function deepCopyTypeNode(node: TypeNode, parentName: string, fieldName: string): TypeNode {
   const deepCopy: MutableTypeNode = { kind: node.kind };
@@ -50,7 +56,7 @@ export function deepCopyTypeNode(node: TypeNode, parentName: string, fieldName: 
   for (let i = 0; i < maximumTypeNesting; i++) {
     switch (node.kind) {
       case Kind.NAMED_TYPE:
-        lastTypeNode.name = { ... node.name };
+        lastTypeNode.name = { ...node.name };
         return deepCopy as TypeNode;
       case Kind.LIST_TYPE:
         lastTypeNode.kind = node.kind;
@@ -126,7 +132,7 @@ export function enumValueDefinitionNodeToMutable(node: EnumValueDefinitionNode):
     description: formatDescription(node.description),
     kind: node.kind,
     name: { ...node.name },
-  }
+  };
 }
 
 export type MutableFieldDefinitionNode = {
@@ -138,7 +144,10 @@ export type MutableFieldDefinitionNode = {
   type: TypeNode;
 };
 
-export function fieldDefinitionNodeToMutable(node: FieldDefinitionNode, parentName: string): MutableFieldDefinitionNode {
+export function fieldDefinitionNodeToMutable(
+  node: FieldDefinitionNode,
+  parentName: string,
+): MutableFieldDefinitionNode {
   const args: MutableInputValueDefinitionNode[] = [];
   if (node.arguments) {
     for (const argument of node.arguments) {
@@ -162,7 +171,9 @@ export type MutableInputObjectTypeDefinitionNode = {
   name: NameNode;
 };
 
-export function inputObjectTypeDefinitionNodeToMutable(node: InputObjectTypeDefinitionNode): MutableInputObjectTypeDefinitionNode {
+export function inputObjectTypeDefinitionNodeToMutable(
+  node: InputObjectTypeDefinitionNode,
+): MutableInputObjectTypeDefinitionNode {
   const fields: MutableInputValueDefinitionNode[] = [];
   if (node.fields) {
     for (const field of node.fields) {
@@ -184,9 +195,12 @@ export type MutableInputValueDefinitionNode = {
   kind: Kind.INPUT_VALUE_DEFINITION;
   name: NameNode;
   type: TypeNode;
-}
+};
 
-export function inputValueDefinitionNodeToMutable(node: InputValueDefinitionNode, parentName: string): MutableInputValueDefinitionNode {
+export function inputValueDefinitionNodeToMutable(
+  node: InputValueDefinitionNode,
+  parentName: string,
+): MutableInputValueDefinitionNode {
   return {
     defaultValue: node.defaultValue ? { ...node.defaultValue } : undefined,
     description: formatDescription(node.description),
@@ -204,9 +218,11 @@ export type MutableInterfaceTypeDefinitionNode = {
   interfaces: NamedTypeNode[];
   kind: Kind.INTERFACE_TYPE_DEFINITION;
   name: NameNode;
-}
+};
 
-export function interfaceTypeDefinitionNodeToMutable(node: InterfaceTypeDefinitionNode): MutableInterfaceTypeDefinitionNode {
+export function interfaceTypeDefinitionNodeToMutable(
+  node: InterfaceTypeDefinitionNode,
+): MutableInterfaceTypeDefinitionNode {
   const fields: MutableFieldDefinitionNode[] = [];
   const interfaces: NamedTypeNode[] = [];
   deepCopyFieldsAndInterfaces(node, fields, interfaces);
@@ -262,7 +278,9 @@ export function objectTypeExtensionNodeToMutable(node: ObjectTypeExtensionNode):
   };
 }
 
-export function objectTypeExtensionNodeToMutableDefinitionNode(node: ObjectTypeExtensionNode): MutableObjectTypeDefinitionNode {
+export function objectTypeExtensionNodeToMutableDefinitionNode(
+  node: ObjectTypeExtensionNode,
+): MutableObjectTypeDefinitionNode {
   const fields: MutableFieldDefinitionNode[] = [];
   const interfaces: NamedTypeNode[] = [];
   deepCopyFieldsAndInterfaces(node, fields, interfaces);
@@ -271,7 +289,7 @@ export function objectTypeExtensionNodeToMutableDefinitionNode(node: ObjectTypeE
     interfaces,
     kind: Kind.OBJECT_TYPE_DEFINITION,
     name: { ...node.name },
-  }
+  };
 }
 
 export type MutableScalarTypeDefinitionNode = {
@@ -293,7 +311,7 @@ export type MutableTypeNode = {
   kind: Kind.NAMED_TYPE | Kind.LIST_TYPE | Kind.NON_NULL_TYPE;
   name?: NameNode;
   type?: MutableTypeNode;
-}
+};
 
 export const maximumTypeNesting = 30;
 
@@ -321,7 +339,7 @@ export function unionTypeDefinitionNodeToMutable(node: UnionTypeDefinitionNode):
 }
 
 export type MutableTypeDefinitionNode =
-  MutableDirectiveDefinitionNode
+  | MutableDirectiveDefinitionNode
   | MutableEnumTypeDefinitionNode
   | MutableInputObjectTypeDefinitionNode
   | MutableInterfaceTypeDefinitionNode
@@ -329,9 +347,8 @@ export type MutableTypeDefinitionNode =
   | MutableScalarTypeDefinitionNode
   | MutableUnionTypeDefinitionNode;
 
-
 export type ObjectLikeTypeDefinitionNode =
-  InterfaceTypeDefinitionNode
+  | InterfaceTypeDefinitionNode
   | InterfaceTypeExtensionNode
   | ObjectTypeDefinitionNode
   | ObjectTypeExtensionNode;

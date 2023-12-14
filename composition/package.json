@@ -13,7 +13,9 @@
     "dev": "tsc --watch",
     "build": "del dist && tsc",
     "test:watch": "vitest test",
-    "test": "vitest run"
+    "test": "vitest run",
+    "lint": "prettier -c src",
+    "format:fix": "prettier -w src"
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
