@@ -705,6 +705,13 @@ export class CreateFederatedGraphRequest extends Message<CreateFederatedGraphReq
    */
   labelMatchers: string[] = [];
 
+  /**
+   * readme of the fed graph
+   *
+   * @generated from field: optional string readme = 7;
+   */
+  readme?: string;
+
   constructor(data?: PartialMessage<CreateFederatedGraphRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -716,6 +723,7 @@ export class CreateFederatedGraphRequest extends Message<CreateFederatedGraphReq
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "routing_url", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "label_matchers", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 7, name: "readme", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateFederatedGraphRequest {
@@ -781,6 +789,13 @@ export class CreateFederatedSubgraphRequest extends Message<CreateFederatedSubgr
    */
   subscriptionUrl?: string;
 
+  /**
+   * readme of the subgraph
+   *
+   * @generated from field: optional string readme = 7;
+   */
+  readme?: string;
+
   constructor(data?: PartialMessage<CreateFederatedSubgraphRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -795,6 +810,7 @@ export class CreateFederatedSubgraphRequest extends Message<CreateFederatedSubgr
     { no: 4, name: "headers", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 5, name: "subscription_protocol", kind: "enum", T: proto3.getEnumType(GraphQLSubscriptionProtocol), opt: true },
     { no: 6, name: "subscription_url", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 7, name: "readme", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateFederatedSubgraphRequest {
@@ -9593,6 +9609,86 @@ export class GetSubgraphMembersResponse extends Message<GetSubgraphMembersRespon
 
   static equals(a: GetSubgraphMembersResponse | PlainMessage<GetSubgraphMembersResponse> | undefined, b: GetSubgraphMembersResponse | PlainMessage<GetSubgraphMembersResponse> | undefined): boolean {
     return proto3.util.equals(GetSubgraphMembersResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.AddReadmeRequest
+ */
+export class AddReadmeRequest extends Message<AddReadmeRequest> {
+  /**
+   * @generated from field: string targetName = 1;
+   */
+  targetName = "";
+
+  /**
+   * @generated from field: string readme = 2;
+   */
+  readme = "";
+
+  constructor(data?: PartialMessage<AddReadmeRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.AddReadmeRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "targetName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "readme", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AddReadmeRequest {
+    return new AddReadmeRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): AddReadmeRequest {
+    return new AddReadmeRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): AddReadmeRequest {
+    return new AddReadmeRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: AddReadmeRequest | PlainMessage<AddReadmeRequest> | undefined, b: AddReadmeRequest | PlainMessage<AddReadmeRequest> | undefined): boolean {
+    return proto3.util.equals(AddReadmeRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.AddReadmeResponse
+ */
+export class AddReadmeResponse extends Message<AddReadmeResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  constructor(data?: PartialMessage<AddReadmeResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.AddReadmeResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AddReadmeResponse {
+    return new AddReadmeResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): AddReadmeResponse {
+    return new AddReadmeResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): AddReadmeResponse {
+    return new AddReadmeResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: AddReadmeResponse | PlainMessage<AddReadmeResponse> | undefined, b: AddReadmeResponse | PlainMessage<AddReadmeResponse> | undefined): boolean {
+    return proto3.util.equals(AddReadmeResponse, a, b);
   }
 }
 

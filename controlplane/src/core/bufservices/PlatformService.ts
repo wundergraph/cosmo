@@ -7,6 +7,7 @@ import { OrganizationEventName, PlatformEventName } from '@wundergraph/cosmo-con
 import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
 import {
   AcceptOrDeclineInvitationResponse,
+  AddReadmeResponse,
   AddSubgraphMemberResponse,
   AnalyticsConfig,
   CheckFederatedGraphResponse,
@@ -138,6 +139,7 @@ import {
 } from '../util.js';
 import { FederatedGraphSchemaUpdate, OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
 import { ApiKeyRepository } from '../repositories/ApiKeyRepository.js';
+import { TargetRepository } from '../repositories/TargetRepository.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -4966,6 +4968,36 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             code: EnumStatusCode.OK,
           },
           enabled: organization.isRBACEnabled || false,
+        };
+      });
+    },
+
+    addReadme: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<AddReadmeResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const targetRepo = new TargetRepository(opts.db, authContext.organizationId);
+
+        const target = await targetRepo.byName(req.targetName);
+        if (!target) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Target ${req.targetName} not found`,
+            },
+          };
+        }
+
+        await targetRepo.updateReadmeOfTarget({ name: req.targetName, readme: req.readme });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
         };
       });
     },
