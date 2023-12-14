@@ -5,7 +5,7 @@ export type RequiredFieldConfiguration = {
   selectionSet: string;
 };
 
-export type EventType = 'subscribe' | 'publish' | 'request_reply';
+export type EventType = 'subscribe' | 'publish' | 'request';
 
 export type EventConfiguration = {
   type: EventType;

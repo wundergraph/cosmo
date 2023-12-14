@@ -139,7 +139,7 @@ import {
   ENTITIES_FIELD,
   ENTITY_UNION,
   EVENTS_PUBLISH,
-  EVENTS_REQUEST_REPLY,
+  EVENTS_REQUEST,
   EVENTS_SUBSCRIBE,
   EXTENDS,
   EXTENSIONS,
@@ -828,8 +828,8 @@ export class NormalizationFactory {
           eventType = 'publish';
           break;
         }
-        case EVENTS_REQUEST_REPLY: {
-          eventType = 'request_reply';
+        case EVENTS_REQUEST: {
+          eventType = 'request';
           break;
         }
         case EVENTS_SUBSCRIBE: {

@@ -3,7 +3,7 @@ type PublishEventResult {
 }
 
 type Query {
-    employeeFromEvent(id: ID!): Employee! @events_request_reply(topic: "getEmployee.{{ args.id }}")
+    employeeFromEvent(id: ID!): Employee! @events_request(topic: "getEmployee.{{ args.id }}")
 }
 
 input UpdateEmployeeInput {

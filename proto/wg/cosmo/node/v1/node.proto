@@ -174,7 +174,7 @@ message DataSourceCustom_GraphQL {
 
 enum EventType {
   PUBLISH = 0;
-  REQUEST_REPLY = 1;
+  REQUEST = 1;
   SUBSCRIBE = 2;
 }
 

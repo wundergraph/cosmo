@@ -89,9 +89,9 @@ export enum EventType {
   PUBLISH = 0,
 
   /**
-   * @generated from enum value: REQUEST_REPLY = 1;
+   * @generated from enum value: REQUEST = 1;
    */
-  REQUEST_REPLY = 1,
+  REQUEST = 1,
 
   /**
    * @generated from enum value: SUBSCRIBE = 2;
@@ -101,7 +101,7 @@ export enum EventType {
 // Retrieve enum metadata with: proto3.getEnumType(EventType)
 proto3.util.setEnumType(EventType, "wg.cosmo.node.v1.EventType", [
   { no: 0, name: "PUBLISH" },
-  { no: 1, name: "REQUEST_REPLY" },
+  { no: 1, name: "REQUEST" },
   { no: 2, name: "SUBSCRIBE" },
 ]);
 

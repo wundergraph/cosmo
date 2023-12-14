@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'vitest';
-import { ConfigurationData, normalizeSubgraphFromString, Subgraph } from '../src';
+import { ConfigurationData, normalizeSubgraphFromString } from '../src';
 
 describe('Pubsub Configuration tests', () => {
-  test('that pubsub configuration is correctly generated', () => {
+  test('that events configuration is correctly generated', () => {
     const { errors, normalizationResult } = normalizeSubgraphFromString(subgraphA);
     expect(errors).toBeUndefined();
     expect(normalizationResult).toBeDefined();
@@ -12,7 +12,19 @@ describe('Pubsub Configuration tests', () => {
         fieldNames: new Set<string>(['entitySubscription']),
         isRootNode: true,
         typeName: 'Subscription',
-        pubsubs: [{ fieldName: 'entitySubscription', selectionSet: 'entities.{{ args.id }}' }],
+        events: [{ fieldName: 'entitySubscription', topic: 'entities.{{ args.id }}', type: 'subscribe' }],
+      }],
+      ['Mutation', {
+        fieldNames: new Set<string>(['updateEntity']),
+        isRootNode: true,
+        typeName: 'Mutation',
+        events: [{ fieldName: 'updateEntity', topic: 'updateEntity.{{ args.id }}', type: 'publish' }],
+      }],
+      ['Query', {
+        fieldNames: new Set<string>(['findEntity']),
+        isRootNode: true,
+        typeName: 'Query',
+        events: [{ fieldName: 'findEntity', topic: 'findEntity.{{ args.id }}', type: 'request' }],
       }],
       ['Entity', {
         fieldNames: new Set<string>(['id', 'name', 'age']),
@@ -33,7 +45,7 @@ describe('Pubsub Configuration tests', () => {
         fieldNames: new Set<string>(['entitySubscription']),
         isRootNode: true,
         typeName: 'Subscription',
-        pubsubs: [{ fieldName: 'entitySubscription', selectionSet: 'entities.{{ args.id }}' }],
+        events: [{ fieldName: 'entitySubscription', topic: 'entities.{{ args.id }}', type: 'subscribe' }],
       }],
       ['Entity', {
         fieldNames: new Set<string>(['id', 'name', 'age']),
@@ -46,8 +58,16 @@ describe('Pubsub Configuration tests', () => {
 });
 
 const subgraphA = `
+  type Query {
+    findEntity(id: ID!): Entity! @events_request(topic: "findEntity.{{ args.id }}")
+  }
+
+  type Mutation {
+    updateEntity(id: ID!, name: String!): Entity! @events_publish(topic: "updateEntity.{{ args.id }}")
+  }
+
   type Subscription {
-    entitySubscription(id: ID!): Entity! @pubsub(topic: "entities.{{ args.id }}")
+    entitySubscription(id: ID!): Entity! @events_subscribe(topic: "entities.{{ args.id }}")
   }
   
   type Entity @key(fields: "id") {
@@ -63,7 +83,7 @@ const subgraphB = `
   }
   
   type Subscriptions {
-    entitySubscription(id: ID!): Entity! @pubsub(topic: "entities.{{ args.id }}")
+    entitySubscription(id: ID!): Entity! @events_subscribe(topic: "entities.{{ args.id }}")
   }
   
   type Entity @key(fields: "id") {

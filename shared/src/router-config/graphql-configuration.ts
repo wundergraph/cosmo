@@ -43,8 +43,8 @@ function eventType(type: CompositionEventType) {
     case 'publish': {
       return EventType.PUBLISH;
     }
-    case 'request_reply': {
-      return EventType.REQUEST_REPLY;
+    case 'request': {
+      return EventType.REQUEST;
     }
     case 'subscribe': {
       return EventType.SUBSCRIBE;
