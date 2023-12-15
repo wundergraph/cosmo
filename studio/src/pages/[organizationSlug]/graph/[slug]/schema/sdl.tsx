@@ -166,6 +166,7 @@ const SDLPage: NextPageWithLayout = () => {
         {!validGraph && (
           <CompositionErrorsBanner
             errors={graphData?.graph?.compositionErrors}
+            className="mx-4 mt-4"
           />
         )}
         <div className="relative flex h-full min-h-[60vh] flex-col-reverse  md:flex-col">
