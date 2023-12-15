@@ -257,6 +257,14 @@ message SchemaCheck {
   bool hasClientTraffic = 7;
   bool isForcedSuccess = 8;
   bool isDeleted = 9;
+  optional SchemaCheckGhDetails ghDetails = 10;
+}
+
+message SchemaCheckGhDetails {
+  string commitSha = 1;
+  string ownerSlug = 3;
+  string repositorySlug = 4;
+  int32 checkRunId = 5;
 }
 
 message GetChecksByFederatedGraphNameResponse {
