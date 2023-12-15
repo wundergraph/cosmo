@@ -847,22 +847,6 @@ export function invalidSelectionOnUnionErrorMessage(
   );
 }
 
-export function invalidOverrideTargetSubgraphNameError(
-  subgraphName: string,
-  parentTypeName: string,
-  fieldNames: string[],
-): Error {
-  return new Error(
-    ` The object type "${parentTypeName}" defines the directive "@override(from: "${subgraphName})" on the following field` +
-      (fieldNames.length > 1 ? 's' : '') +
-      `: "` +
-      fieldNames.join(QUOTATION_JOIN) +
-      `".\n` +
-      ` The required "from" argument of type "String!" must be provided with an existing subgraph name.\n` +
-      ` However, a subgraph by the name of "${subgraphName}" does not exist.`,
-  );
-}
-
 export function duplicateOverriddenFieldErrorMessage(fieldPath: string, subgraphNames: string[]): string {
   return (
     ` The field "${fieldPath}" declares an @override directive in the following subgraphs: "` +
