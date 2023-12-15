@@ -7,11 +7,28 @@ package subgraph
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/employees/subgraph/generated"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/employees/subgraph/model"
 )
+
+// UpdateEmployeeTag is the resolver for the updateEmployeeTag field.
+func (r *mutationResolver) UpdateEmployeeTag(ctx context.Context, id int, tag string) (*model.Employee, error) {
+	if id < 1 {
+		return nil, nil
+	}
+	r.mux.Lock()
+	defer r.mux.Unlock()
+	for i := range employees {
+		if employees[i].ID == id {
+			employees[i].Tag = tag
+		}
+		return employees[i], nil
+	}
+	return nil, nil
+}
 
 // Employee is the resolver for the employee field.
 func (r *queryResolver) Employee(ctx context.Context, id int) (*model.Employee, error) {
@@ -84,11 +101,42 @@ func (r *subscriptionResolver) CurrentTime(ctx context.Context) (<-chan *model.T
 	return ch, nil
 }
 
+// Mutation returns generated.MutationResolver implementation.
+func (r *Resolver) Mutation() generated.MutationResolver {
+	return &mutationResolver{
+		mux:      sync.Mutex{},
+		Resolver: r,
+	}
+}
+
 // Query returns generated.QueryResolver implementation.
 func (r *Resolver) Query() generated.QueryResolver { return &queryResolver{r} }
 
 // Subscription returns generated.SubscriptionResolver implementation.
 func (r *Resolver) Subscription() generated.SubscriptionResolver { return &subscriptionResolver{r} }
 
+type mutationResolver struct {
+	mux sync.Mutex
+	*Resolver
+}
 type queryResolver struct{ *Resolver }
 type subscriptionResolver struct{ *Resolver }
+
+// !!! WARNING !!!
+// The code below was going to be deleted when updating resolvers. It has been copied here so you have
+// one last chance to move it out of harms way if you want. There are two reasons this happens:
+//   - When renaming or deleting a resolver the old code will be put in here. You can safely delete
+//     it when you're done.
+//   - You have helper methods in this file. Move them out to keep these resolver files clean.
+func (r *mutationResolver) UpdateEmployeeNotes(ctx context.Context, id int, notes string) (*model.Employee, error) {
+	if id < 1 {
+		return nil, nil
+	}
+	for i := range employees {
+		if employees[i].ID == id {
+			employees[i].Notes = notes
+		}
+		return employees[i], nil
+	}
+	return nil, nil
+}

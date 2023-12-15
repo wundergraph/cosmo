@@ -1,7 +1,5 @@
 module github.com/wundergraph/cosmo/router-tests
 
-//replace github.com/wundergraph/graphql-go-tools/v2 => ../../../graphql-go-tools/v2
-
 go 1.21
 
 require (
@@ -87,7 +85,7 @@ require (
 	github.com/ugorji/go/codec v1.2.11 // indirect
 	github.com/urfave/cli/v2 v2.25.7 // indirect
 	github.com/vektah/gqlparser/v2 v2.5.10 // indirect
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.2.0.20231212134850-a312dae1f624 // indirect
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.2.0.20231215114324-a36c2926669a // indirect
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.45.0 // indirect
 	go.opentelemetry.io/otel v1.19.0 // indirect

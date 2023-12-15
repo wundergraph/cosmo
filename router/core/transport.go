@@ -1,9 +1,12 @@
 package core
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
+	"sort"
 	"strconv"
 	"time"
 
@@ -11,9 +14,13 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/otel"
 	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"github.com/wundergraph/cosmo/router/internal/trace"
+	"github.com/wundergraph/cosmo/router/internal/unsafebytes"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/pool"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	otrace "go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
+	"golang.org/x/sync/singleflight"
 )
 
 type TransportPreHandler func(req *http.Request, ctx RequestContext) (*http.Request, *http.Response)
@@ -24,19 +31,23 @@ type CustomTransport struct {
 	preHandlers  []TransportPreHandler
 	postHandlers []TransportPostHandler
 	logger       *zap.Logger
+
+	sf *singleflight.Group
 }
 
-func NewCustomTransport(logger *zap.Logger, roundTripper http.RoundTripper, retryOptions retrytransport.RetryOptions) *CustomTransport {
+func NewCustomTransport(logger *zap.Logger, roundTripper http.RoundTripper, retryOptions retrytransport.RetryOptions, enableSingleFlight bool) *CustomTransport {
 
+	ct := &CustomTransport{}
 	if retryOptions.Enabled {
-		return &CustomTransport{
-			roundTripper: retrytransport.NewRetryHTTPTransport(roundTripper, retryOptions, logger),
-		}
+		ct.roundTripper = retrytransport.NewRetryHTTPTransport(roundTripper, retryOptions, logger)
+	} else {
+		ct.roundTripper = roundTripper
+	}
+	if enableSingleFlight {
+		ct.sf = &singleflight.Group{}
 	}
 
-	return &CustomTransport{
-		roundTripper: roundTripper,
-	}
+	return ct
 }
 
 func (ct *CustomTransport) RoundTrip(req *http.Request) (*http.Response, error) {
@@ -54,7 +65,7 @@ func (ct *CustomTransport) RoundTrip(req *http.Request) (*http.Response, error) 
 		}
 	}
 
-	resp, err := ct.roundTripper.RoundTrip(req)
+	resp, err := ct.roundTripSingleFlight(req)
 
 	// Set the error on the request context so that it can be checked by the post handlers
 	if err != nil {
@@ -76,6 +87,107 @@ func (ct *CustomTransport) RoundTrip(req *http.Request) (*http.Response, error) 
 	}
 
 	return resp, err
+}
+
+type responseWithBody struct {
+	res  *http.Response
+	body []byte
+}
+
+func (ct *CustomTransport) allowSingleFlight(req *http.Request) bool {
+	if ct.sf == nil {
+		// Single flight is disabled
+		return false
+	}
+
+	if req.Header.Get("Upgrade") != "" {
+		// Websocket requests are not idempotent
+		return false
+	}
+
+	if req.Header.Get("Accept") == "text/event-stream" {
+		// SSE requests are not idempotent
+		return false
+	}
+
+	if resolve.SingleFlightDisallowed(req.Context()) {
+		// Single flight is disallowed for this request (e.g. because it is a Mutation)
+		return false
+	}
+
+	return true
+}
+
+func (ct *CustomTransport) roundTripSingleFlight(req *http.Request) (*http.Response, error) {
+
+	if ct.allowSingleFlight(req) == false {
+		return ct.roundTripper.RoundTrip(req)
+	}
+
+	keyGen := pool.Hash64.Get()
+	defer pool.Hash64.Put(keyGen)
+
+	if req.Body != nil {
+		body, err := io.ReadAll(req.Body)
+		if err != nil {
+			return nil, err
+		}
+		_, _ = keyGen.Write(body)
+		req.Body = io.NopCloser(bytes.NewReader(body))
+	}
+
+	unsortedHeaders := make([]string, 0, len(req.Header))
+
+	for key := range req.Header {
+		value := req.Header.Get(key)
+		unsortedHeaders = append(unsortedHeaders, key+value)
+	}
+
+	sort.Strings(unsortedHeaders)
+	for i := range unsortedHeaders {
+		_, _ = keyGen.Write(unsafebytes.StringToBytes(unsortedHeaders[i]))
+	}
+
+	sum := keyGen.Sum64()
+	key := strconv.FormatUint(sum, 10)
+
+	v, err, shared := ct.sf.Do(key, func() (interface{}, error) {
+		res, err := ct.roundTripper.RoundTrip(req)
+		if err != nil {
+			return nil, err
+		}
+		body, err := io.ReadAll(res.Body)
+		if err != nil {
+			return nil, err
+		}
+		return &responseWithBody{
+			res:  res,
+			body: body,
+		}, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	sfStats := resolve.GetSingleFlightStats(req.Context())
+	if sfStats != nil {
+		sfStats.SingleFlightUsed = true
+		sfStats.SingleFlightSharedResponse = shared
+	}
+	rwb := v.(*responseWithBody)
+	res := &http.Response{}
+	res.Status = rwb.res.Status
+	res.StatusCode = rwb.res.StatusCode
+	res.Header = rwb.res.Header.Clone()
+	res.Trailer = rwb.res.Trailer.Clone()
+	res.ContentLength = rwb.res.ContentLength
+	res.TransferEncoding = rwb.res.TransferEncoding
+	res.Close = rwb.res.Close
+	res.Uncompressed = rwb.res.Uncompressed
+	res.Request = req
+	res.Body = io.NopCloser(bytes.NewReader(rwb.body))
+
+	return res, nil
 }
 
 type TransportFactory struct {
@@ -109,7 +221,7 @@ func NewTransport(opts *TransportOptions) *TransportFactory {
 	}
 }
 
-func (t TransportFactory) RoundTripper(transport http.RoundTripper, enableStreamingMode bool) http.RoundTripper {
+func (t TransportFactory) RoundTripper(enableSingleFlight bool, transport http.RoundTripper) http.RoundTripper {
 	if t.localhostFallbackInsideDocker && docker.Inside() {
 		transport = docker.NewLocalhostFallbackRoundTripper(transport)
 	}
@@ -148,6 +260,7 @@ func (t TransportFactory) RoundTripper(transport http.RoundTripper, enableStream
 		t.logger,
 		traceTransport,
 		t.retryOptions,
+		enableSingleFlight,
 	)
 
 	tp.preHandlers = t.preHandlers
