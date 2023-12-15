@@ -14,9 +14,9 @@ export const versionOneBaseSchema = `
   directive @deprecated(reason: String = "No longer supported") on ARGUMENT_DEFINITION | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION
   directive @extends on INTERFACE | OBJECT
   directive @external on FIELD_DEFINITION | OBJECT
-  directive @events_publish(topic: String!) on FIELD_DEFINITION
-  directive @events_request(topic: String!) on FIELD_DEFINITION
-  directive @events_subscribe(topic: String!) on FIELD_DEFINITION
+  directive @eventsPublish(topic: String!) on FIELD_DEFINITION
+  directive @eventsRequest(topic: String!) on FIELD_DEFINITION
+  directive @eventsSubscribe(topic: String!) on FIELD_DEFINITION
   directive @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on OBJECT
   directive @provides(fields: openfed__FieldSet!) on FIELD_DEFINITION
   directive @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION

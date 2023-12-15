@@ -91,7 +91,7 @@ export const BASE_DIRECTIVE_DEFINITIONS: DirectiveDefinitionNode[] = [
     name: stringToNameNode(EXTERNAL),
     repeatable: false,
   },
-  // directive @events_publish(topic: String!) on FIELD_DEFINITION
+  // directive @eventsPublish(topic: String!) on FIELD_DEFINITION
   {
     arguments: [
       {
@@ -108,7 +108,7 @@ export const BASE_DIRECTIVE_DEFINITIONS: DirectiveDefinitionNode[] = [
     name: stringToNameNode(EVENTS_PUBLISH),
     repeatable: false,
   },
-  // directive @events_request(topic: String!) on FIELD_DEFINITION
+  // directive @eventsRequest(topic: String!) on FIELD_DEFINITION
   {
     arguments: [
       {
@@ -125,7 +125,7 @@ export const BASE_DIRECTIVE_DEFINITIONS: DirectiveDefinitionNode[] = [
     name: stringToNameNode(EVENTS_REQUEST),
     repeatable: false,
   },
-  // directive @events_subscribe(topic: String!) on FIELD_DEFINITION
+  // directive @eventsSubscribe(topic: String!) on FIELD_DEFINITION
   {
     arguments: [
       {

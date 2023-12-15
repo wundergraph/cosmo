@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import { ConfigurationData, normalizeSubgraphFromString } from '../src';
 
-describe('Pubsub Configuration tests', () => {
+describe('events Configuration tests', () => {
   test('that events configuration is correctly generated', () => {
     const { errors, normalizationResult } = normalizeSubgraphFromString(subgraphA);
     expect(errors).toBeUndefined();
@@ -35,7 +35,7 @@ describe('Pubsub Configuration tests', () => {
     ]));
   });
 
-  test('that pubsub configuration is correctly generated if Subscription is renamed', () => {
+  test('that events configuration is correctly generated if Subscription is renamed', () => {
     const { errors, normalizationResult } = normalizeSubgraphFromString(subgraphB);
     expect(errors).toBeUndefined();
     expect(normalizationResult).toBeDefined();
@@ -59,15 +59,15 @@ describe('Pubsub Configuration tests', () => {
 
 const subgraphA = `
   type Query {
-    findEntity(id: ID!): Entity! @events_request(topic: "findEntity.{{ args.id }}")
+    findEntity(id: ID!): Entity! @eventsRequest(topic: "findEntity.{{ args.id }}")
   }
 
   type Mutation {
-    updateEntity(id: ID!, name: String!): Entity! @events_publish(topic: "updateEntity.{{ args.id }}")
+    updateEntity(id: ID!, name: String!): Entity! @eventsPublish(topic: "updateEntity.{{ args.id }}")
   }
 
   type Subscription {
-    entitySubscription(id: ID!): Entity! @events_subscribe(topic: "entities.{{ args.id }}")
+    entitySubscription(id: ID!): Entity! @eventsSubscribe(topic: "entities.{{ args.id }}")
   }
   
   type Entity @key(fields: "id") {
@@ -83,7 +83,7 @@ const subgraphB = `
   }
   
   type Subscriptions {
-    entitySubscription(id: ID!): Entity! @events_subscribe(topic: "entities.{{ args.id }}")
+    entitySubscription(id: ID!): Entity! @eventsSubscribe(topic: "entities.{{ args.id }}")
   }
   
   type Entity @key(fields: "id") {

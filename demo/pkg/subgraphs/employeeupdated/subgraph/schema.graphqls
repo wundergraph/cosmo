@@ -3,7 +3,7 @@ type PublishEventResult {
 }
 
 type Query {
-    employeeFromEvent(id: ID!): Employee! @events_request(topic: "getEmployee.{{ args.id }}")
+    employeeFromEvent(id: ID!): Employee! @eventsRequest(topic: "getEmployee.{{ args.id }}")
 }
 
 input UpdateEmployeeInput {
@@ -12,11 +12,11 @@ input UpdateEmployeeInput {
 }
 
 type Mutation {
-    updateEmployee(id: ID!, update: UpdateEmployeeInput!): PublishEventResult! @events_publish(topic: "updateEmployee.{{ args.id }}")
+    updateEmployee(id: ID!, update: UpdateEmployeeInput!): PublishEventResult! @eventsPublish(topic: "updateEmployee.{{ args.id }}")
 }
 
 type Subscription {
-    employeeUpdated(employeeID: ID!): Employee! @events_subscribe(topic: "employeeUpdated.{{ args.employeeID }}")
+    employeeUpdated(employeeID: ID!): Employee! @eventsSubscribe(topic: "employeeUpdated.{{ args.employeeID }}")
 }
 
 type Employee @key(fields: "id") {
