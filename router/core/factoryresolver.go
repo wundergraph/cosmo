@@ -28,28 +28,32 @@ type FactoryResolver interface {
 }
 
 type ApiTransportFactory interface {
-	RoundTripper(transport http.RoundTripper, enableStreamingMode bool) http.RoundTripper
+	RoundTripper(enableSingleFlight bool, transport http.RoundTripper) http.RoundTripper
 	DefaultTransportTimeout() time.Duration
 	DefaultHTTPProxyURL() *url.URL
 }
 
 type DefaultFactoryResolver struct {
-	baseTransport    *http.Transport
+	baseTransport    http.RoundTripper
 	transportFactory ApiTransportFactory
 	graphql          *graphql_datasource.Factory
 	static           *staticdatasource.Factory
 	log              *zap.Logger
 }
 
-func NewDefaultFactoryResolver(transportFactory ApiTransportFactory, baseTransport *http.Transport,
-	log *zap.Logger) *DefaultFactoryResolver {
+func NewDefaultFactoryResolver(
+	transportFactory ApiTransportFactory,
+	baseTransport http.RoundTripper,
+	log *zap.Logger,
+	enableSingleFlight bool,
+) *DefaultFactoryResolver {
 
 	defaultHttpClient := &http.Client{
 		Timeout:   transportFactory.DefaultTransportTimeout(),
-		Transport: transportFactory.RoundTripper(baseTransport, false),
+		Transport: transportFactory.RoundTripper(enableSingleFlight, baseTransport),
 	}
 	streamingClient := &http.Client{
-		Transport: transportFactory.RoundTripper(baseTransport, true),
+		Transport: transportFactory.RoundTripper(enableSingleFlight, baseTransport),
 	}
 
 	var factoryLogger abstractlogger.Logger

@@ -7,3 +7,5 @@ use (
 	./router
 	./router-tests
 )
+
+//replace github.com/wundergraph/graphql-go-tools/v2 => ../../graphql-go-tools/v2

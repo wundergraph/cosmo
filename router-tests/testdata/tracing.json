@@ -13,18 +13,21 @@
             "Founder",
             "CEO"
           ],
-          "departments": ["ENGINEERING", "MARKETING"]
+          "departments": [
+            "ENGINEERING",
+            "MARKETING"
+          ]
         },
         "hobbies": [
           {
             "category": "SPORT"
           },
           {
+            "yearsOfExperience": 20,
             "name": "Counter Strike",
             "genres": [
               "FPS"
-            ],
-            "yearsOfExperience": 20
+            ]
           },
           {
             "name": "WunderGraph"
@@ -55,18 +58,20 @@
             "Co-founder",
             "Tech Lead"
           ],
-          "departments": ["ENGINEERING"]
+          "departments": [
+            "ENGINEERING"
+          ]
         },
         "hobbies": [
           {
             "category": "STRENGTH_TRAINING"
           },
           {
+            "yearsOfExperience": 0.5,
             "name": "Counter Strike",
             "genres": [
               "FPS"
-            ],
-            "yearsOfExperience": 0.5
+            ]
           },
           {
             "languages": [
@@ -88,7 +93,9 @@
             "Co-founder",
             "Head of Growth"
           ],
-          "departments": ["MARKETING"]
+          "departments": [
+            "MARKETING"
+          ]
         },
         "hobbies": [
           {
@@ -120,7 +127,10 @@
             "Co-founder",
             "COO"
           ],
-          "departments": ["OPERATIONS", "MARKETING"]
+          "departments": [
+            "OPERATIONS",
+            "MARKETING"
+          ]
         },
         "hobbies": [
           {
@@ -161,7 +171,9 @@
           "title": [
             "Senior GO Engineer"
           ],
-          "departments": ["ENGINEERING"]
+          "departments": [
+            "ENGINEERING"
+          ]
         },
         "hobbies": [
           {
@@ -186,15 +198,17 @@
           "title": [
             "Software Engineer"
           ],
-          "departments": ["ENGINEERING"]
+          "departments": [
+            "ENGINEERING"
+          ]
         },
         "hobbies": [
           {
+            "yearsOfExperience": 9.5,
             "name": "Chess",
             "genres": [
               "BOARD"
-            ],
-            "yearsOfExperience": 9.5
+            ]
           },
           {
             "name": "Watching anime"
@@ -212,21 +226,23 @@
           "title": [
             "Software Engineer"
           ],
-          "departments": ["ENGINEERING"]
+          "departments": [
+            "ENGINEERING"
+          ]
         },
         "hobbies": [
           {
             "category": "STRENGTH_TRAINING"
           },
           {
+            "yearsOfExperience": 17,
             "name": "Miscellaneous",
             "genres": [
               "ADVENTURE",
               "RPG",
               "SIMULATION",
               "STRATEGY"
-            ],
-            "yearsOfExperience": 17
+            ]
           },
           {
             "name": "Watching anime"
@@ -244,18 +260,20 @@
           "title": [
             "Senior Backend Engineer"
           ],
-          "departments": ["ENGINEERING"]
+          "departments": [
+            "ENGINEERING"
+          ]
         },
         "hobbies": [
           {
             "category": "CALISTHENICS"
           },
           {
+            "yearsOfExperience": 2,
             "name": "Chess",
             "genres": [
               "BOARD"
-            ],
-            "yearsOfExperience": 2
+            ]
           },
           {
             "languages": [
@@ -275,7 +293,9 @@
           "title": [
             "Senior Frontend Engineer"
           ],
-          "departments": ["ENGINEERING"]
+          "departments": [
+            "ENGINEERING"
+          ]
         },
         "hobbies": [
           {
@@ -318,7 +338,9 @@
           "title": [
             "Accounting \u0026 Finance"
           ],
-          "departments": ["OPERATIONS"]
+          "departments": [
+            "OPERATIONS"
+          ]
         },
         "hobbies": [
           {
@@ -337,7 +359,9 @@
           "title": [
             "Software Engineer"
           ],
-          "departments": ["ENGINEERING"]
+          "departments": [
+            "ENGINEERING"
+          ]
         },
         "hobbies": [
           {
@@ -352,6 +376,7 @@
             "category": "STRENGTH_TRAINING"
           },
           {
+            "yearsOfExperience": 25.5,
             "name": "Miscellaneous",
             "genres": [
               "ADVENTURE",
@@ -361,8 +386,7 @@
               "RPG",
               "SIMULATION",
               "STRATEGY"
-            ],
-            "yearsOfExperience": 25.5
+            ]
           },
           {
             "countriesLived": [
@@ -399,8 +423,8 @@
               "query": "{employees {id role {title departments} __typename}}"
             },
             "header": {},
-            "url": "http://localhost/graphql",
-            "method": "POST"
+            "method": "POST",
+            "url": "http://localhost/graphql"
           },
           "output": {
             "data": {
@@ -412,7 +436,10 @@
                       "Founder",
                       "CEO"
                     ],
-                    "departments": ["ENGINEERING", "MARKETING"]
+                    "departments": [
+                      "ENGINEERING",
+                      "MARKETING"
+                    ]
                   },
                   "__typename": "Employee"
                 },
@@ -423,7 +450,9 @@
                       "Co-founder",
                       "Tech Lead"
                     ],
-                    "departments": ["ENGINEERING"]
+                    "departments": [
+                      "ENGINEERING"
+                    ]
                   },
                   "__typename": "Employee"
                 },
@@ -434,7 +463,9 @@
                       "Co-founder",
                       "Head of Growth"
                     ],
-                    "departments": ["MARKETING"]
+                    "departments": [
+                      "MARKETING"
+                    ]
                   },
                   "__typename": "Employee"
                 },
@@ -445,7 +476,10 @@
                       "Co-founder",
                       "COO"
                     ],
-                    "departments": ["OPERATIONS", "MARKETING"]
+                    "departments": [
+                      "OPERATIONS",
+                      "MARKETING"
+                    ]
                   },
                   "__typename": "Employee"
                 },
@@ -455,7 +489,9 @@
                     "title": [
                       "Senior GO Engineer"
                     ],
-                    "departments": ["ENGINEERING"]
+                    "departments": [
+                      "ENGINEERING"
+                    ]
                   },
                   "__typename": "Employee"
                 },
@@ -465,7 +501,9 @@
                     "title": [
                       "Software Engineer"
                     ],
-                    "departments": ["ENGINEERING"]
+                    "departments": [
+                      "ENGINEERING"
+                    ]
                   },
                   "__typename": "Employee"
                 },
@@ -475,7 +513,9 @@
                     "title": [
                       "Software Engineer"
                     ],
-                    "departments": ["ENGINEERING"]
+                    "departments": [
+                      "ENGINEERING"
+                    ]
                   },
                   "__typename": "Employee"
                 },
@@ -485,7 +525,9 @@
                     "title": [
                       "Senior Backend Engineer"
                     ],
-                    "departments": ["ENGINEERING"]
+                    "departments": [
+                      "ENGINEERING"
+                    ]
                   },
                   "__typename": "Employee"
                 },
@@ -495,7 +537,9 @@
                     "title": [
                       "Senior Frontend Engineer"
                     ],
-                    "departments": ["ENGINEERING"]
+                    "departments": [
+                      "ENGINEERING"
+                    ]
                   },
                   "__typename": "Employee"
                 },
@@ -505,7 +549,9 @@
                     "title": [
                       "Accounting \u0026 Finance"
                     ],
-                    "departments": ["OPERATIONS"]
+                    "departments": [
+                      "OPERATIONS"
+                    ]
                   },
                   "__typename": "Employee"
                 },
@@ -515,7 +561,9 @@
                     "title": [
                       "Software Engineer"
                     ],
-                    "departments": ["ENGINEERING"]
+                    "departments": [
+                      "ENGINEERING"
+                    ]
                   },
                   "__typename": "Employee"
                 }
@@ -785,6 +833,7 @@
                         ],
                         "input": {
                           "body": {
+                            "query": "query($representations: [_Any!]!){_entities(representations: $representations){__typename ... on Employee {details {forename surname hasChildren}}}}",
                             "variables": {
                               "representations": [
                                 {
@@ -832,12 +881,11 @@
                                   "id": 12
                                 }
                               ]
-                            },
-                            "query": "query($representations: [_Any!]!){_entities(representations: $representations){__typename ... on Employee {details {forename surname hasChildren}}}}"
+                            }
                           },
                           "header": {},
-                          "url": "http://localhost/graphql",
-                          "method": "POST"
+                          "method": "POST",
+                          "url": "http://localhost/graphql"
                         },
                         "output": {
                           "data": {
@@ -1045,7 +1093,10 @@
                                 "Founder",
                                 "CEO"
                               ],
-                              "departments": ["ENGINEERING", "MARKETING"]
+                              "departments": [
+                                "ENGINEERING",
+                                "MARKETING"
+                              ]
                             },
                             "__typename": "Employee"
                           },
@@ -1056,7 +1107,9 @@
                                 "Co-founder",
                                 "Tech Lead"
                               ],
-                              "departments": ["ENGINEERING"]
+                              "departments": [
+                                "ENGINEERING"
+                              ]
                             },
                             "__typename": "Employee"
                           },
@@ -1067,7 +1120,9 @@
                                 "Co-founder",
                                 "Head of Growth"
                               ],
-                              "departments": ["MARKETING"]
+                              "departments": [
+                                "MARKETING"
+                              ]
                             },
                             "__typename": "Employee"
                           },
@@ -1172,6 +1227,7 @@
                         ],
                         "input": {
                           "body": {
+                            "query": "query($representations: [_Any!]!){_entities(representations: $representations){__typename ... on Employee {hobbies {__typename ... on Exercise {category} ... on Flying {planeModels yearsOfExperience} ... on Gaming {name genres yearsOfExperience} ... on Programming {languages} ... on Travelling {countriesLived} ... on Other {name}}}}}",
                             "variables": {
                               "representations": [
                                 {
@@ -1219,12 +1275,11 @@
                                   "id": 12
                                 }
                               ]
-                            },
-                            "query": "query($representations: [_Any!]!){_entities(representations: $representations){__typename ... on Employee {hobbies {__typename ... on Exercise {category} ... on Flying {planeModels yearsOfExperience} ... on Gaming {name genres yearsOfExperience} ... on Programming {languages} ... on Travelling {countriesLived} ... on Other {name}}}}}"
+                            }
                           },
                           "header": {},
-                          "url": "http://localhost/graphql",
-                          "method": "POST"
+                          "method": "POST",
+                          "url": "http://localhost/graphql"
                         },
                         "output": {
                           "data": {
@@ -1731,15 +1786,15 @@
                         {
                           "name": "departments",
                           "value": {
+                            "node_type": "array",
+                            "path": [
+                              "departments"
+                            ],
                             "items": [
                               {
                                 "node_type": "string",
                                 "nullable": true
                               }
-                            ],
-                            "node_type": "array",
-                            "path": [
-                              "departments"
                             ]
                           },
                           "parent_type_names": [
@@ -1837,8 +1892,7 @@
                               },
                               "parent_type_names": [
                                 "Gaming",
-                                "Other",
-                                "Travelling"
+                                "Other"
                               ],
                               "named_type": "String",
                               "data_source_ids": [
@@ -1867,7 +1921,7 @@
                                 "2"
                               ]
                             },
-                             {
+                            {
                               "name": "languages",
                               "value": {
                                 "node_type": "array",

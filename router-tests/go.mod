@@ -1,7 +1,5 @@
 module github.com/wundergraph/cosmo/router-tests
 
-//replace github.com/wundergraph/graphql-go-tools/v2 => ../../../graphql-go-tools/v2
-
 go 1.21
 
 require (
@@ -14,6 +12,7 @@ require (
 	github.com/wundergraph/cosmo/composition-go v0.0.0-20231210173116-4cf620b03fbb
 	github.com/wundergraph/cosmo/demo v0.0.0-20231210173116-4cf620b03fbb
 	github.com/wundergraph/cosmo/router v0.0.0-20231210173116-4cf620b03fbb
+	go.uber.org/atomic v1.11.0
 	go.uber.org/zap v1.26.0
 )
 
@@ -87,7 +86,7 @@ require (
 	github.com/ugorji/go/codec v1.2.11 // indirect
 	github.com/urfave/cli/v2 v2.25.7 // indirect
 	github.com/vektah/gqlparser/v2 v2.5.10 // indirect
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.2.0.20231212134850-a312dae1f624 // indirect
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.2.0.20231215114324-a36c2926669a // indirect
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.45.0 // indirect
 	go.opentelemetry.io/otel v1.19.0 // indirect
@@ -103,7 +102,6 @@ require (
 	go.opentelemetry.io/otel/sdk/metric v1.19.0 // indirect
 	go.opentelemetry.io/otel/trace v1.19.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.0.0 // indirect
-	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.withmatt.com/connect-brotli v0.4.0 // indirect
 	golang.org/x/crypto v0.14.0 // indirect
