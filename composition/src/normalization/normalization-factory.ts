@@ -118,7 +118,6 @@ import {
   invalidKeyDirectiveArgumentErrorMessage,
   invalidKeyDirectivesError,
   invalidOperationTypeDefinitionError,
-  invalidOverrideTargetSubgraphNameError,
   invalidRepeatedDirectiveErrorMessage,
   invalidRootTypeDefinitionError,
   invalidSubgraphNameErrorMessage,
@@ -165,6 +164,7 @@ import { ConfigurationData, ConfigurationDataMap } from '../subgraph/field-confi
 import { printTypeNode } from '@graphql-tools/merge';
 import { inputValueDefinitionNodeToMutable, MutableInputValueDefinitionNode, ObjectLikeTypeNode } from '../ast/ast';
 import { InternalSubgraph, recordSubgraphName, Subgraph } from '../subgraph/subgraph';
+import { invalidOverrideTargetSubgraphNameWarning } from '../warnings/warnings';
 
 export type NormalizationResult = {
   configurationDataMap: ConfigurationDataMap;
@@ -186,6 +186,7 @@ export type NormalizationResultContainer = {
 export type BatchNormalizationContainer = {
   errors?: Error[];
   internalSubgraphsBySubgraphName: Map<string, InternalSubgraph>;
+  warnings?: string[];
 };
 
 export function normalizeSubgraphFromString(subgraphSDL: string): NormalizationResultContainer {
@@ -229,6 +230,7 @@ export class NormalizationFactory {
   subgraphName?: string;
   referencedDirectives = new Set<string>();
   referencedTypeNames = new Set<string>();
+  warnings: string[] = [];
 
   constructor(subgraphName?: string) {
     for (const baseDirectiveDefinition of BASE_DIRECTIVE_DEFINITIONS) {
@@ -1675,6 +1677,7 @@ export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationContain
   const subgraphNames = new Set<string>();
   const nonUniqueSubgraphNames = new Set<string>();
   const invalidNameErrorMessages: string[] = [];
+  const warnings: string[] = [];
   // Record the subgraph names first, so that subgraph references can be validated
   for (const subgraph of subgraphs) {
     if (subgraph.name) {
@@ -1713,14 +1716,11 @@ export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationContain
     if (normalizationResult.overridesByTargetSubgraphName.size < 1) {
       continue;
     }
-    const invalidOverrideTargetSubgraphNameErrors: Error[] = [];
     for (const [targetSubgraphName, overridesData] of normalizationResult.overridesByTargetSubgraphName) {
       const isTargetValid = subgraphNames.has(targetSubgraphName);
       for (const [parentTypeName, fieldNames] of overridesData) {
         if (!isTargetValid) {
-          invalidOverrideTargetSubgraphNameErrors.push(
-            invalidOverrideTargetSubgraphNameError(targetSubgraphName, parentTypeName, [...fieldNames]),
-          );
+          warnings.push(invalidOverrideTargetSubgraphNameWarning(targetSubgraphName, parentTypeName, [...fieldNames]));
         } else {
           const overridesData = getValueOrDefault(
             allOverridesByTargetSubgraphName,
@@ -1746,9 +1746,6 @@ export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationContain
         }
       }
     }
-    if (invalidOverrideTargetSubgraphNameErrors.length > 0) {
-      validationErrors.push(subgraphValidationError(subgraphName, invalidOverrideTargetSubgraphNameErrors));
-    }
   }
   const allErrors: Error[] = [];
   if (invalidNameErrorMessages.length > 0 || nonUniqueSubgraphNames.size > 0) {
@@ -1767,8 +1764,9 @@ export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationContain
     allErrors.push(duplicateOverriddenFieldsError(duplicateOverriddenFieldErrorMessages));
   }
   allErrors.push(...validationErrors);
+  const warningsToPropagate = warnings.length > 0 ? warnings : undefined;
   if (allErrors.length > 0) {
-    return { errors: allErrors, internalSubgraphsBySubgraphName };
+    return { errors: allErrors, internalSubgraphsBySubgraphName, warnings: warningsToPropagate };
   }
   for (const [targetSubgraphName, overridesData] of allOverridesByTargetSubgraphName) {
     const internalSubgraph = getOrThrowError(
@@ -1788,5 +1786,8 @@ export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationContain
       }
     }
   }
-  return { internalSubgraphsBySubgraphName: internalSubgraphsBySubgraphName };
+  return {
+    internalSubgraphsBySubgraphName: internalSubgraphsBySubgraphName,
+    warnings: warningsToPropagate,
+  };
 }

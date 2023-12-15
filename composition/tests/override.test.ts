@@ -10,7 +10,6 @@ import {
   FieldContainer,
   invalidDirectiveError,
   invalidDirectiveLocationErrorMessage,
-  invalidOverrideTargetSubgraphNameError,
   normalizeSubgraph,
   ObjectContainer,
   shareableFieldDefinitionsError,
@@ -19,13 +18,29 @@ import {
 } from '../src';
 import { documentNodeToNormalizedString, normalizeString, versionTwoPersistedBaseSchema } from './utils/utils';
 import { OVERRIDE } from '../src/utils/string-constants';
+import { invalidOverrideTargetSubgraphNameWarning } from '../src/warnings/warnings';
 
 describe('@override directive Tests', () => {
-  test('that an error is returned if @override targets an unknown subgraph name', () => {
-    const { errors } = federateSubgraphs([subgraphA, subgraphB]);
-    expect(errors).toBeDefined();
-    expect(errors![0]).toStrictEqual(
-      subgraphValidationError('subgraph-b', [invalidOverrideTargetSubgraphNameError('subgraph-z', 'Entity', ['name'])]),
+  test('that a warning is returned if @override targets an unknown subgraph name', () => {
+    const { errors, federationResult, warnings } = federateSubgraphs([subgraphA, subgraphB]);
+    expect(errors).toBeUndefined();
+    expect(warnings).toBeDefined();
+    expect(warnings![0]).toStrictEqual(invalidOverrideTargetSubgraphNameWarning('subgraph-z', 'Entity', ['age']));
+    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
+      normalizeString(
+        versionTwoPersistedBaseSchema +
+          `
+      type Query {
+        query: Entity!
+      }
+      
+      type Entity {
+        id: ID!
+        name: String!
+        age: Int!
+      }
+    `,
+      ),
     );
   });
 
@@ -354,7 +369,7 @@ const subgraphB: Subgraph = {
   definitions: parse(`
     type Entity @key(fields: "id") {
       id: ID!
-      name: String! @override(from: "subgraph-z")
+      age: Int! @override(from: "subgraph-z") @shareable
     }
   `),
 };

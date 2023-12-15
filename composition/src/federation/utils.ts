@@ -28,6 +28,7 @@ import { SubgraphConfig } from '../subgraph/subgraph';
 export type FederationResultContainer = {
   errors?: Error[];
   federationResult?: FederationResult;
+  warnings?: String[];
 };
 
 export type FederationResult = {
