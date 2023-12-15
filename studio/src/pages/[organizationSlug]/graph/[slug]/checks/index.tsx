@@ -52,6 +52,7 @@ import {
   ChevronRightIcon,
   DoubleArrowLeftIcon,
   DoubleArrowRightIcon,
+  GitHubLogoIcon,
 } from "@radix-ui/react-icons";
 import { useQuery } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
@@ -189,6 +190,7 @@ const ChecksPage: NextPageWithLayout = () => {
                 isForcedSuccess,
                 subgraphName,
                 timestamp,
+                ghDetails,
               }) => {
                 const isSuccessful = isCheckSuccessful(
                   isComposable,
@@ -251,17 +253,46 @@ const ChecksPage: NextPageWithLayout = () => {
                     </TableCell>
 
                     <TableCell className="text-right">
-                      <Button
-                        asChild
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setRouteCache(router.asPath);
-                        }}
-                        className="table-action"
-                      >
-                        <Link href={path}>View</Link>
-                      </Button>
+                      <div className="flex items-center justify-end gap-2">
+                        {ghDetails ? (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                asChild
+                                variant="ghost"
+                                size="sm"
+                                className="table-action"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <Link
+                                  href={`https://github.com/${ghDetails.ownerSlug}/${ghDetails.repositorySlug}/commit/${ghDetails.commitSha}`}
+                                  className="inline-flex items-center gap-2 text-xs"
+                                  aria-label="View on GitHub"
+                                  target="_blank"
+                                >
+                                  <GitHubLogoIcon />
+                                </Link>
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              Commit {ghDetails.commitSha.substring(0, 7)}
+                              <br />
+                              <strong>View on GitHub</strong>
+                            </TooltipContent>
+                          </Tooltip>
+                        ) : null}
+                        <Button
+                          asChild
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setRouteCache(router.asPath);
+                          }}
+                          className="table-action"
+                        >
+                          <Link href={path}>View</Link>
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 );
