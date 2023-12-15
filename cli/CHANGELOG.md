@@ -4,6 +4,24 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.35.3](https://github.com/wundergraph/cosmo/compare/wgc@0.35.2...wgc@0.35.3) (2023-12-14)
+
+**Note:** Version bump only for package wgc
+
+## [0.35.2](https://github.com/wundergraph/cosmo/compare/wgc@0.35.1...wgc@0.35.2) (2023-12-13)
+
+**Note:** Version bump only for package wgc
+
+## [0.35.1](https://github.com/wundergraph/cosmo/compare/wgc@0.35.0...wgc@0.35.1) (2023-12-12)
+
+**Note:** Version bump only for package wgc
+
+# [0.35.0](https://github.com/wundergraph/cosmo/compare/wgc@0.34.2...wgc@0.35.0) (2023-12-12)
+
+### Features
+
+* add rbac for subgraphs and federated graphs ([#351](https://github.com/wundergraph/cosmo/issues/351)) ([72e39bc](https://github.com/wundergraph/cosmo/commit/72e39bc1ff914831499c0625e443ab2ec0af135c)) (@JivusAyrus)
+
 ## [0.34.2](https://github.com/wundergraph/cosmo/compare/wgc@0.34.1...wgc@0.34.2) (2023-12-09)
 
 **Note:** Version bump only for package wgc

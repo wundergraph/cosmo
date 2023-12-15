@@ -3,9 +3,10 @@ global:
   helmTests:
     enabled: false
 
-  # Enable this once to seed a new organization
+  # -- Enable this once to seed a new organization
   seed:
     enabled: true
+    # -- Important: Remove this once the organization has been seeded and create a new secret
     apiKey: "cosmo_669b576aaadc10ee1ae81d9193425705"
     userEmail: "foo@wundergraph.com"
     userPassword: "bar"
@@ -20,7 +21,7 @@ global:
     webUrl: "http://studio.wundergraph.local"
 
   router:
-    # Disabled because we don't have a token yet
+    # -- Disabled by default because we don't have a token yet
     enabled: false
     webUrl: "http://router.wundergraph.local"
     port: 3002
@@ -82,13 +83,13 @@ ingress:
   #    hosts:
   #      - chart-example.local
 
-# Cosmo CDN
+# Cosmo CDN. For more options, please refer to the README.md
 cdn:
   configuration:
     # This must match the value used in controlplane.configuration.s3StorageUrl
     s3StorageUrl: "http://minio:changeme@cosmo-minio:9000/cosmo"
 
-# Cosmo Controlplane
+# Cosmo Controlplane. For more options, please refer to the README.md
 controlplane:
   configuration:
     logLevel: "info"
@@ -116,7 +117,7 @@ controlplane:
     smtpUsername: ""
     smtpPassword: ""
 
-# Cosmo Router
+# Cosmo Router. For more options, please refer to the CHART.md
 router:
   terminationGracePeriodSeconds: 60
   deploymentStrategy:
@@ -127,15 +128,22 @@ router:
     federatedGraphName: "production"
     # You need to run `wgc federated-graph create-token production` to generate a token
     graphApiToken: ""
-    logLevel: "debug"
+    # -- Log level of the router
+    logLevel: "info"
+    # -- The URL of the Cosmo Controlplane. Should be internal to the cluster.
+    controlplaneUrl: "http://cosmo-controlplane:3001"
+    # -- The URL of the Cosmo GraphQL OTEL Collector. Should be internal to the cluster.
+    otelCollectorUrl: "http://cosmo-otelcollector:4318"
+    # -- The URL of the Cosmo GraphQL Metrics Collector. Should be internal to the cluster.
+    graphqlMetricsCollectorUrl: "http://cosmo-graphqlmetrics:4005"
 
-# Cosmo Open Telemetry Collector
+# Cosmo Open Telemetry Collector. For more options, please refer to the CHART.md
 otelcollector:
   configuration:
     # Use internal DNS name to access clickhouse
     clickhouseDsn: "clickhouse://default:changeme@cosmo-clickhouse:9000/cosmo?dial_timeout=15s&compress=lz4"
 
-# Cosmo GraphQL Metrics Collector
+# Cosmo GraphQL Metrics Collector. For more options, please refer to the CHART.md
 graphqlmetrics:
   configuration:
     # Use internal DNS name to access clickhouse
@@ -143,9 +151,13 @@ graphqlmetrics:
 
 # The following configuration enables the stateful services of the Cosmo Platform
 # The charts aren't production ready and are intended for development and testing purposes
-# It is highly recommended to use a managed service in production environments
-# For more information, please refer to the README.md
+# As part of an enterprise subscription, we provide exclusive documentation on how to effectively operate and
+# run WunderGraph Cosmo on all common container platforms such as EKS, GKE, AKS, Fargate, and Google Cloud Run.
+# This includes migration support and configuration guidance. Don't spend time tinkering with its internals; let us do the heavy lifting for you.
+# It is highly recommended to use a managed service in production environments or use our cloud offering https://cosmo.wundergraph.com
 
+# Keycloak for the Cosmo Controlplane & Studio
+# https://artifacthub.io/packages/helm/bitnami/keycloak
 keycloak:
   # Production requires TLS
   production: false
@@ -192,6 +204,8 @@ keycloak:
     user: "postgres"
     database: keycloak
 
+# ClickHouse for the Cosmo Controlplane & Collectors
+# https://artifacthub.io/packages/helm/bitnami/clickhouse
 clickhouse:
   image:
     tag: "23.8.3"

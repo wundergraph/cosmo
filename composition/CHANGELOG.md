@@ -4,6 +4,25 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.12.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.12.1...@wundergraph/composition@0.12.2) (2023-12-14)
+
+### Bug Fixes
+
+* accept specifiedBy directive ([#367](https://github.com/wundergraph/cosmo/issues/367)) ([49926da](https://github.com/wundergraph/cosmo/commit/49926daa7f9d17434f2b42893ec6a8b613e5731e)) (@Aenimus)
+
+## [0.12.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.12.0...@wundergraph/composition@0.12.1) (2023-12-13)
+
+### Bug Fixes
+
+* if a type has already been overridden, add the new field names t… ([#363](https://github.com/wundergraph/cosmo/issues/363)) ([fd0110d](https://github.com/wundergraph/cosmo/commit/fd0110d0069ff27a51a442ad8dc4133351f894af)) (@Aenimus)
+* return error if override source and target are equivalent ([#362](https://github.com/wundergraph/cosmo/issues/362)) ([e12e4fa](https://github.com/wundergraph/cosmo/commit/e12e4fad0e9d7415e62d7ddbfb0fbafb9025251c)) (@Aenimus)
+
+# [0.12.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.11.3...@wundergraph/composition@0.12.0) (2023-12-12)
+
+### Features
+
+* implement foundations for entity interfaces ([#359](https://github.com/wundergraph/cosmo/issues/359)) ([e2fcec7](https://github.com/wundergraph/cosmo/commit/e2fcec7aa3f286159a1ad21d606ead41cf1c883e)) (@Aenimus)
+
 ## [0.11.3](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.11.2...@wundergraph/composition@0.11.3) (2023-11-29)
 
 **Note:** Version bump only for package @wundergraph/composition

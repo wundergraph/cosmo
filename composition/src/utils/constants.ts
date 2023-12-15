@@ -15,6 +15,7 @@ import {
   INACCESSIBLE,
   INPUT_FIELD_DEFINITION_UPPER,
   INPUT_OBJECT_UPPER,
+  INTERFACE_OBJECT,
   INTERFACE_UPPER,
   KEY,
   LINK,
@@ -28,22 +29,41 @@ import {
   SCHEMA,
   SCHEMA_UPPER,
   SHAREABLE,
+  SPECIFIED_BY,
   STRING_TYPE,
   TAG,
   UNION_UPPER,
 } from './string-constants';
 
-export const BASE_SCALARS = new Set<string>(
-  ['_Any', '_Entities', 'Boolean', 'Float', 'ID', 'Int', 'openfed__FieldSet', 'String'],
-);
+export const BASE_SCALARS = new Set<string>([
+  '_Any',
+  '_Entities',
+  'Boolean',
+  'Float',
+  'ID',
+  'Int',
+  'openfed__FieldSet',
+  'String',
+]);
 
 export const VERSION_ONE_DIRECTIVES = new Set<string>([
-  DEPRECATED, EXTENDS, EXTERNAL, KEY, PROVIDES, REQUIRES, TAG,
+  DEPRECATED,
+  EXTENDS,
+  EXTERNAL,
+  KEY,
+  PROVIDES,
+  REQUIRES,
+  SPECIFIED_BY,
+  TAG,
 ]);
 export const VERSION_TWO_DIRECTIVES = new Set<string>([
-  COMPOSE_DIRECTIVE, LINK, OVERRIDE, INACCESSIBLE, SHAREABLE,
+  COMPOSE_DIRECTIVE,
+  LINK,
+  OVERRIDE,
+  INACCESSIBLE,
+  INTERFACE_OBJECT,
+  SHAREABLE,
 ]);
-
 
 export const BASE_DIRECTIVE_DEFINITIONS: DirectiveDefinitionNode[] = [
   /* directive @deprecated(reason: String = "No longer supported") on ARGUMENT_DEFINITION | ENUM_VALUE |
@@ -85,7 +105,7 @@ export const BASE_DIRECTIVE_DEFINITIONS: DirectiveDefinitionNode[] = [
     name: stringToNameNode(EXTERNAL),
     repeatable: false,
   },
-  // directive @key(fields: openfed__FieldSet!) on OBJECT
+  // directive @key(fields: openfed__FieldSet!) on INTERFACE | OBJECT
   {
     arguments: [
       {
@@ -107,7 +127,7 @@ export const BASE_DIRECTIVE_DEFINITIONS: DirectiveDefinitionNode[] = [
       },
     ],
     kind: Kind.DIRECTIVE_DEFINITION,
-    locations: [stringToNameNode(OBJECT_UPPER)],
+    locations: stringArrayToNameNodeArray([INTERFACE_UPPER, OBJECT_UPPER]),
     name: stringToNameNode(KEY),
     repeatable: true,
   },
@@ -143,6 +163,23 @@ export const BASE_DIRECTIVE_DEFINITIONS: DirectiveDefinitionNode[] = [
     kind: Kind.DIRECTIVE_DEFINITION,
     locations: [stringToNameNode(FIELD_DEFINITION_UPPER)],
     name: stringToNameNode(REQUIRES),
+    repeatable: false,
+  },
+  // directive @specifiedBy(url: String!) on SCALAR
+  {
+    arguments: [
+      {
+        kind: Kind.INPUT_VALUE_DEFINITION,
+        name: stringToNameNode('url'),
+        type: {
+          kind: Kind.NON_NULL_TYPE,
+          type: stringToNamedTypeNode(STRING_TYPE),
+        },
+      },
+    ],
+    kind: Kind.DIRECTIVE_DEFINITION,
+    locations: stringArrayToNameNodeArray([SCALAR_UPPER]),
+    name: stringToNameNode(SPECIFIED_BY),
     repeatable: false,
   },
   /* directive @tag(name: String!) on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_OBJECT |
@@ -214,6 +251,13 @@ export const VERSION_TWO_DIRECTIVE_DEFINITIONS: DirectiveDefinitionNode[] = [
       UNION_UPPER,
     ]),
     name: stringToNameNode(INACCESSIBLE),
+    repeatable: false,
+  },
+  // directive @interfaceObject on OBJECT
+  {
+    kind: Kind.DIRECTIVE_DEFINITION,
+    locations: stringArrayToNameNodeArray([OBJECT_UPPER]),
+    name: stringToNameNode(INTERFACE_OBJECT),
     repeatable: false,
   },
   // directive @link(url: String!, as: String!, for: String, import: [String]) repeatable on SCHEMA

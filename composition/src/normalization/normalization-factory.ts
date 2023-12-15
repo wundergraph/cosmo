@@ -31,6 +31,7 @@ import {
   extractInterfaces,
   formatDescription,
   isNodeExtension,
+  isNodeInterfaceObject,
   isObjectLikeNodeEntity,
   operationTypeNodeToDefaultType,
   safeParse,
@@ -54,6 +55,7 @@ import {
   InputObjectExtensionContainer,
   InputValidationContainer,
   InputValueContainer,
+  isNodeQuery,
   newFieldSetContainer,
   ObjectExtensionContainer,
   ObjectLikeContainer,
@@ -80,6 +82,8 @@ import {
 } from '../utils/constants';
 import { getNamedTypeForChild } from '../type-merging/type-merging';
 import {
+  addIterableValuesToSet,
+  EntityInterfaceData,
   getEntriesNotInHashSet,
   getOrThrowError,
   getValueOrDefault,
@@ -102,6 +106,7 @@ import {
   duplicateTypeDefinitionError,
   duplicateUnionMemberError,
   duplicateValueExtensionError,
+  equivalentSourceAndTargetOverrideError,
   expectedEntityError,
   incompatibleExtensionError,
   incompatibleExtensionKindsError,
@@ -120,12 +125,13 @@ import {
   invalidSubgraphNamesError,
   noBaseTypeExtensionError,
   noDefinedUnionMembersError,
+  noFieldDefinitionsError,
   operationDefinitionError,
   subgraphInvalidSyntaxError,
   subgraphValidationError,
   subgraphValidationFailureError,
   undefinedDirectiveError,
-  undefinedObjectParentError,
+  undefinedObjectLikeParentError,
   undefinedRequiredArgumentsErrorMessage,
   undefinedTypeError,
   unexpectedDirectiveArgumentErrorMessage,
@@ -157,11 +163,12 @@ import {
 import { buildASTSchema } from '../buildASTSchema/buildASTSchema';
 import { ConfigurationData, ConfigurationDataMap } from '../subgraph/field-configuration';
 import { printTypeNode } from '@graphql-tools/merge';
-import { inputValueDefinitionNodeToMutable, MutableInputValueDefinitionNode } from '../ast/ast';
+import { inputValueDefinitionNodeToMutable, MutableInputValueDefinitionNode, ObjectLikeTypeNode } from '../ast/ast';
 import { InternalSubgraph, recordSubgraphName, Subgraph } from '../subgraph/subgraph';
 
 export type NormalizationResult = {
   configurationDataMap: ConfigurationDataMap;
+  entityInterfaces: Map<string, EntityInterfaceData>;
   isVersionTwo: boolean;
   keyFieldsByParentTypeName: Map<string, Set<string>>;
   operationTypes: Map<string, OperationTypeNode>;
@@ -179,7 +186,7 @@ export type NormalizationResultContainer = {
 export type BatchNormalizationContainer = {
   errors?: Error[];
   internalSubgraphsBySubgraphName: Map<string, InternalSubgraph>;
-}
+};
 
 export function normalizeSubgraphFromString(subgraphSDL: string): NormalizationResultContainer {
   const { error, documentNode } = safeParse(subgraphSDL);
@@ -190,8 +197,8 @@ export function normalizeSubgraphFromString(subgraphSDL: string): NormalizationR
   return normalizationFactory.normalize(documentNode);
 }
 
-export function normalizeSubgraph(document: DocumentNode): NormalizationResultContainer {
-  const normalizationFactory = new NormalizationFactory();
+export function normalizeSubgraph(document: DocumentNode, subgraphName?: string): NormalizationResultContainer {
+  const normalizationFactory = new NormalizationFactory(subgraphName);
   return normalizationFactory.normalize(document);
 }
 
@@ -204,6 +211,7 @@ export class NormalizationFactory {
   customDirectiveDefinitions = new Map<string, DirectiveDefinitionNode>();
   errors: Error[] = [];
   entities = new Set<string>();
+  entityInterfaces = new Map<string, EntityInterfaceData>();
   extensions: ExtensionMap = new Map<string, ExtensionContainer>();
   isCurrentParentExtension = false;
   isSubgraphVersionTwo = false;
@@ -218,13 +226,15 @@ export class NormalizationFactory {
   parentsWithChildArguments = new Set<string>();
   overridesByTargetSubgraphName = new Map<string, Map<string, Set<string>>>();
   schemaDefinition: SchemaContainer;
+  subgraphName?: string;
   referencedDirectives = new Set<string>();
   referencedTypeNames = new Set<string>();
 
-  constructor() {
+  constructor(subgraphName?: string) {
     for (const baseDirectiveDefinition of BASE_DIRECTIVE_DEFINITIONS) {
       this.allDirectiveDefinitions.set(baseDirectiveDefinition.name.value, baseDirectiveDefinition);
     }
+    this.subgraphName = subgraphName;
     this.schemaDefinition = {
       directives: new Map<string, ConstDirectiveNode[]>(),
       kind: Kind.SCHEMA_DEFINITION,
@@ -469,6 +479,23 @@ export class NormalizationFactory {
     }
   }
 
+  handleInterfaceObject(node: ObjectTypeDefinitionNode) {
+    if (!isNodeInterfaceObject(node)) {
+      return;
+    }
+    const name = node.name.value;
+    if (this.entityInterfaces.has(name)) {
+      // TODO error
+      return;
+    }
+    this.entityInterfaces.set(name, {
+      interfaceObjectFieldNames: new Set<string>(node.fields?.map((field) => field.name.value)),
+      interfaceFieldNames: new Set<string>(),
+      isInterfaceObject: true,
+      typeName: name,
+    });
+  }
+
   handleObjectLikeExtension(
     node: InterfaceTypeDefinitionNode | InterfaceTypeExtensionNode | ObjectTypeDefinitionNode | ObjectTypeExtensionNode,
   ): false | undefined {
@@ -485,24 +512,19 @@ export class NormalizationFactory {
       return;
     }
     const isEntity = isObjectLikeNodeEntity(node);
-    const interfaces = new Set<string>();
     this.extensions.set(this.parentTypeName, {
       directives: this.extractDirectives(node, new Map<string, ConstDirectiveNode[]>()),
       fields: new Map<string, FieldContainer>(),
-      interfaces: extractInterfaces(node, interfaces, this.errors),
+      interfaces: extractInterfaces(node, new Set<string>(), this.errors),
       isEntity,
       kind: convertedKind,
       name: node.name,
     });
-    if (node.kind === Kind.INTERFACE_TYPE_DEFINITION
-      || node.kind === Kind.INTERFACE_TYPE_EXTENSION
-      || !isEntity) {
+    if (node.kind === Kind.INTERFACE_TYPE_DEFINITION || node.kind === Kind.INTERFACE_TYPE_EXTENSION || !isEntity) {
       return;
     }
     this.entities.add(this.parentTypeName);
-    const fieldSets = getValueOrDefault(
-      this.fieldSetsByParent, this.parentTypeName, newFieldSetContainer,
-    );
+    const fieldSets = getValueOrDefault(this.fieldSetsByParent, this.parentTypeName, newFieldSetContainer);
     this.extractKeyFieldSets(node, fieldSets.keys);
   }
 
@@ -533,9 +555,7 @@ export class NormalizationFactory {
         }
         if (!directive.arguments || directive.arguments.length < 1) {
           if (requiredArguments.size > 0) {
-            errorMessages.push(
-              undefinedRequiredArgumentsErrorMessage(directiveName, hostPath, [...requiredArguments]),
-            );
+            errorMessages.push(undefinedRequiredArgumentsErrorMessage(directiveName, hostPath, [...requiredArguments]));
           }
           continue;
         }
@@ -597,7 +617,7 @@ export class NormalizationFactory {
     }
   }
 
-  extractKeyFieldSets(node: ObjectTypeDefinitionNode | ObjectTypeExtensionNode, rawFieldSets: Set<string>) {
+  extractKeyFieldSets(node: ObjectLikeTypeNode, rawFieldSets: Set<string>) {
     const parentTypeName = node.name.value;
     if (!node.directives?.length) {
       // This should never happen
@@ -710,9 +730,13 @@ export class NormalizationFactory {
       }
     }
     if (implementationErrorsMap.size) {
-      this.errors.push(unimplementedInterfaceFieldsError(
-        container.name.value, kindToTypeString(container.kind), implementationErrorsMap,
-      ));
+      this.errors.push(
+        unimplementedInterfaceFieldsError(
+          container.name.value,
+          kindToTypeString(container.kind),
+          implementationErrorsMap,
+        ),
+      );
     }
   }
 
@@ -756,27 +780,30 @@ export class NormalizationFactory {
         } else {
           observedArguments.add(FROM);
           targetSubgraphName = argumentNode.value.value;
+          if (targetSubgraphName === this.subgraphName) {
+            this.errors.push(equivalentSourceAndTargetOverrideError(targetSubgraphName, hostPath));
+          }
         }
       }
       if (!observedArguments.has(FROM)) {
-        errorMessages.push(undefinedRequiredArgumentsErrorMessage(
-          OVERRIDE, hostPath, [FROM], [FROM],
-        ));
+        errorMessages.push(undefinedRequiredArgumentsErrorMessage(OVERRIDE, hostPath, [FROM], [FROM]));
       }
     } else {
-      errorMessages.push(
-        undefinedRequiredArgumentsErrorMessage(OVERRIDE, hostPath, [FROM], []),
-      );
+      errorMessages.push(undefinedRequiredArgumentsErrorMessage(OVERRIDE, hostPath, [FROM], []));
     }
     if (errorMessages.length > 0) {
       this.errors.push(invalidDirectiveError(OVERRIDE, hostPath, errorMessages));
       return;
     }
     const overrideDataForSubgraph = getValueOrDefault(
-      this.overridesByTargetSubgraphName, targetSubgraphName, () => new Map<string, Set<string>>(),
+      this.overridesByTargetSubgraphName,
+      targetSubgraphName,
+      () => new Map<string, Set<string>>(),
     );
     const overriddenFieldNamesForParent = getValueOrDefault(
-      overrideDataForSubgraph, this.parentTypeName, () => new Set<string>(),
+      overrideDataForSubgraph,
+      this.parentTypeName,
+      () => new Set<string>(),
     );
     if (overriddenFieldNamesForParent.has(this.childName)) {
       const handledRepeatedDirectives = this.handledRepeatedDirectivesByHostPath.get(hostPath);
@@ -785,12 +812,11 @@ export class NormalizationFactory {
         return;
       }
       // Add the directive name to the existing set (if other invalid repeated directives exist) or a new set
-      getValueOrDefault(this.handledRepeatedDirectivesByHostPath, hostPath, () => new Set<string>())
-        .add(OVERRIDE);
+      getValueOrDefault(this.handledRepeatedDirectivesByHostPath, hostPath, () => new Set<string>()).add(OVERRIDE);
       // The invalid repeated directive error should propagate only once per directive per host path
-      this.errors.push(invalidDirectiveError(
-        OVERRIDE, hostPath, [invalidRepeatedDirectiveErrorMessage(OVERRIDE, hostPath)],
-      ));
+      this.errors.push(
+        invalidDirectiveError(OVERRIDE, hostPath, [invalidRepeatedDirectiveErrorMessage(OVERRIDE, hostPath)]),
+      );
       return;
     }
     overriddenFieldNamesForParent.add(this.childName);
@@ -1019,7 +1045,9 @@ export class NormalizationFactory {
             return;
           }
           const fieldSetContainer = getValueOrDefault(
-            factory.fieldSetsByParent, factory.parentTypeName, newFieldSetContainer,
+            factory.fieldSetsByParent,
+            factory.parentTypeName,
+            newFieldSetContainer,
           );
           // @provides only makes sense on entities, but the field can be encountered before the type definition
           // When the FieldSet is evaluated, it will be checked whether the field is an entity.
@@ -1084,8 +1112,10 @@ export class NormalizationFactory {
         enter(node) {
           const name = node.name.value;
           // If the parent is not an object type definition/extension, this node is an argument
-          if (factory.lastParentNodeKind !== Kind.INPUT_OBJECT_TYPE_DEFINITION
-            && factory.lastParentNodeKind !== Kind.INPUT_OBJECT_TYPE_EXTENSION) {
+          if (
+            factory.lastParentNodeKind !== Kind.INPUT_OBJECT_TYPE_DEFINITION &&
+            factory.lastParentNodeKind !== Kind.INPUT_OBJECT_TYPE_EXTENSION
+          ) {
             factory.argumentName = name;
             return;
           }
@@ -1132,14 +1162,30 @@ export class NormalizationFactory {
             factory.errors.push(duplicateTypeDefinitionError(kindToTypeString(node.kind), name));
             return false;
           }
+          const isEntity = isObjectLikeNodeEntity(node);
+          if (isEntity) {
+            factory.entityInterfaces.set(name, {
+              interfaceFieldNames: new Set<string>(node.fields?.map((field) => field.name.value)),
+              interfaceObjectFieldNames: new Set<string>(),
+              isInterfaceObject: false,
+              typeName: name,
+            });
+          }
           factory.parents.set(name, {
             description: formatDescription(node.description),
             directives: factory.extractDirectives(node, new Map<string, ConstDirectiveNode[]>()),
             fields: new Map<string, FieldContainer>(),
             interfaces: extractInterfaces(node, new Set<string>(), factory.errors),
+            isEntity,
             kind: node.kind,
             name: node.name,
           });
+          if (!isEntity) {
+            return;
+          }
+          factory.entities.add(name);
+          const fieldSets = getValueOrDefault(factory.fieldSetsByParent, name, newFieldSetContainer);
+          factory.extractKeyFieldSets(node, fieldSets.keys);
         },
         leave() {
           factory.parentTypeName = '';
@@ -1169,6 +1215,7 @@ export class NormalizationFactory {
           factory.parentTypeName = name;
           factory.lastParentNodeKind = node.kind;
           addConcreteTypesForImplementedInterfaces(node, factory.abstractToConcreteTypeNames);
+          factory.handleInterfaceObject(node);
           // handling for @extends directive
           if (isNodeExtension(node)) {
             return factory.handleObjectLikeExtension(node);
@@ -1416,7 +1463,8 @@ export class NormalizationFactory {
         // intentional fallthrough
         case Kind.OBJECT_TYPE_DEFINITION:
           const objectLikeExtension = extensionContainer as ObjectLikeExtensionContainer;
-          if (this.operationTypeNames.has(extensionTypeName)) {
+          const operationTypeNode = this.operationTypeNames.get(extensionTypeName);
+          if (operationTypeNode) {
             objectLikeExtension.fields.delete(SERVICE_FIELD);
             objectLikeExtension.fields.delete(ENTITIES_FIELD);
           }
@@ -1437,6 +1485,10 @@ export class NormalizationFactory {
           this.mergeUniqueInterfaces(objectLikeExtension.interfaces, baseType.interfaces, extensionTypeName);
           this.validateInterfaceImplementations(baseType);
           definitions.push(objectLikeContainerToNode(this, baseType, objectLikeExtension));
+          // interfaces and objects must define at least one field
+          if (baseType.fields.size < 1 && !isNodeQuery(extensionTypeName, operationTypeNode)) {
+            this.errors.push(noFieldDefinitionsError(kindToTypeString(baseType.kind), extensionTypeName));
+          }
           break;
         case Kind.SCALAR_TYPE_DEFINITION:
           definitions.push(scalarContainerToNode(this, baseType, extensionContainer as ScalarExtensionContainer));
@@ -1466,13 +1518,16 @@ export class NormalizationFactory {
         // intentional fallthrough
         case Kind.OBJECT_TYPE_DEFINITION:
           const isEntity = this.entities.has(parentTypeName);
-          if (this.operationTypeNames.has(parentTypeName)) {
+          const operationTypeNode = this.operationTypeNames.get(parentTypeName);
+          if (operationTypeNode) {
             parentContainer.fields.delete(SERVICE_FIELD);
             parentContainer.fields.delete(ENTITIES_FIELD);
           }
           if (this.parentsWithChildArguments.has(parentTypeName)) {
-            if (parentContainer.kind !== Kind.OBJECT_TYPE_DEFINITION
-              && parentContainer.kind !== Kind.INTERFACE_TYPE_DEFINITION) {
+            if (
+              parentContainer.kind !== Kind.OBJECT_TYPE_DEFINITION &&
+              parentContainer.kind !== Kind.INTERFACE_TYPE_DEFINITION
+            ) {
               continue;
             }
             for (const [fieldName, fieldContainer] of parentContainer.fields) {
@@ -1489,6 +1544,10 @@ export class NormalizationFactory {
           addNonExternalFieldsToSet(parentContainer.fields, configurationData.fieldNames);
           this.validateInterfaceImplementations(parentContainer);
           definitions.push(objectLikeContainerToNode(this, parentContainer));
+          // interfaces and objects must define at least one field
+          if (parentContainer.fields.size < 1 && !isNodeQuery(parentTypeName, operationTypeNode)) {
+            this.errors.push(noFieldDefinitionsError(kindToTypeString(parentContainer.kind), parentTypeName));
+          }
           break;
         case Kind.SCALAR_TYPE_DEFINITION:
           definitions.push(scalarContainerToNode(this, parentContainer));
@@ -1505,8 +1564,7 @@ export class NormalizationFactory {
       const node = this.schemaDefinition.operationTypes.get(operationType);
       const defaultTypeName = getOrThrowError(operationTypeNodeToDefaultType, operationType, OPERATION_TO_DEFAULT);
       // If an operation type name was not declared, use the default
-      const operationTypeName = node ? getNamedTypeForChild(`schema.${operationType}`, node.type)
-        : defaultTypeName;
+      const operationTypeName = node ? getNamedTypeForChild(`schema.${operationType}`, node.type) : defaultTypeName;
       // If a custom type is used, the default type should not be defined
       if (
         operationTypeName !== defaultTypeName &&
@@ -1570,13 +1628,15 @@ export class NormalizationFactory {
       }
     }
     for (const [parentTypeName, fieldSets] of this.fieldSetsByParent) {
-      const parentContainer = this.parents.get(parentTypeName)
-        || this.extensions.get(parentTypeName);
+      const parentContainer = this.parents.get(parentTypeName) || this.extensions.get(parentTypeName);
       if (
-        !parentContainer
-        || (parentContainer.kind !== Kind.OBJECT_TYPE_DEFINITION && parentContainer.kind != Kind.OBJECT_TYPE_EXTENSION)
+        !parentContainer ||
+        (parentContainer.kind !== Kind.OBJECT_TYPE_DEFINITION &&
+          parentContainer.kind != Kind.OBJECT_TYPE_EXTENSION &&
+          parentContainer.kind !== Kind.INTERFACE_TYPE_DEFINITION &&
+          parentContainer.kind !== Kind.INTERFACE_TYPE_EXTENSION)
       ) {
-        this.errors.push(undefinedObjectParentError(parentTypeName));
+        this.errors.push(undefinedObjectLikeParentError(parentTypeName));
         continue;
       }
       validateDirectivesWithFieldSet(this, parentContainer, fieldSets);
@@ -1593,6 +1653,7 @@ export class NormalizationFactory {
         // configurationDataMap is map of ConfigurationData per type name.
         // It is an Intermediate configuration object that will be converted to an engine configuration in the router
         configurationDataMap: this.configurationDataMap,
+        entityInterfaces: this.entityInterfaces,
         isVersionTwo: this.isSubgraphVersionTwo,
         keyFieldsByParentTypeName: this.keyFieldsByParentTypeName,
         operationTypes: this.operationTypeNames,
@@ -1606,7 +1667,7 @@ export class NormalizationFactory {
 }
 
 export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationContainer {
-  const internalSubgraphsBySubgraphName = new Map<string, InternalSubgraph>;
+  const internalSubgraphsBySubgraphName = new Map<string, InternalSubgraph>();
   const allOverridesByTargetSubgraphName = new Map<string, Map<string, Set<string>>>();
   const overrideSourceSubgraphNamesByFieldPath = new Map<string, string[]>();
   const duplicateOverriddenFieldPaths = new Set<string>();
@@ -1626,7 +1687,7 @@ export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationContain
     if (!subgraph.name) {
       invalidNameErrorMessages.push(invalidSubgraphNameErrorMessage(i, subgraphName));
     }
-    const { errors, normalizationResult } = normalizeSubgraph(subgraph.definitions);
+    const { errors, normalizationResult } = normalizeSubgraph(subgraph.definitions, subgraph.name);
     if (errors) {
       validationErrors.push(subgraphValidationError(subgraphName, errors));
       continue;
@@ -1639,6 +1700,7 @@ export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationContain
       internalSubgraphsBySubgraphName.set(subgraphName, {
         configurationDataMap: normalizationResult.configurationDataMap,
         definitions: normalizationResult.subgraphAST,
+        entityInterfaces: normalizationResult.entityInterfaces,
         keyFieldsByParentTypeName: normalizationResult.keyFieldsByParentTypeName,
         isVersionTwo: normalizationResult.isVersionTwo,
         name: subgraphName,
@@ -1661,9 +1723,16 @@ export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationContain
           );
         } else {
           const overridesData = getValueOrDefault(
-            allOverridesByTargetSubgraphName, targetSubgraphName, () => new Map<string, Set<string>>(),
+            allOverridesByTargetSubgraphName,
+            targetSubgraphName,
+            () => new Map<string, Set<string>>(),
           );
-          getValueOrDefault(overridesData, parentTypeName, () => new Set<string>(fieldNames));
+          const existingFieldNames = getValueOrDefault(
+            overridesData,
+            parentTypeName,
+            () => new Set<string>(fieldNames),
+          );
+          addIterableValuesToSet(fieldNames, existingFieldNames);
         }
         for (const fieldName of fieldNames) {
           const fieldPath = `${parentTypeName}.${fieldName}`;
@@ -1689,7 +1758,9 @@ export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationContain
     const duplicateOverriddenFieldErrorMessages: string[] = [];
     for (const fieldPath of duplicateOverriddenFieldPaths) {
       const sourceSubgraphNames = getOrThrowError(
-        overrideSourceSubgraphNamesByFieldPath, fieldPath, 'overrideSourceSubgraphNamesByFieldPath',
+        overrideSourceSubgraphNamesByFieldPath,
+        fieldPath,
+        'overrideSourceSubgraphNamesByFieldPath',
       );
       duplicateOverriddenFieldErrorMessages.push(duplicateOverriddenFieldErrorMessage(fieldPath, sourceSubgraphNames));
     }
@@ -1701,7 +1772,9 @@ export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationContain
   }
   for (const [targetSubgraphName, overridesData] of allOverridesByTargetSubgraphName) {
     const internalSubgraph = getOrThrowError(
-      internalSubgraphsBySubgraphName, targetSubgraphName, 'normalizedSubgraphsByName',
+      internalSubgraphsBySubgraphName,
+      targetSubgraphName,
+      'normalizedSubgraphsByName',
     );
     internalSubgraph.overriddenFieldNamesByParentTypeName = overridesData;
     for (const [parentTypeName, fieldNames] of overridesData) {

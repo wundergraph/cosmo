@@ -22,7 +22,7 @@ import {
   MutableFieldDefinitionNode,
   MutableInputValueDefinitionNode,
   MutableTypeDefinitionNode,
-  ObjectLikeTypeDefinitionNode,
+  ObjectLikeTypeNode,
 } from './ast';
 import {
   ARGUMENT_DEFINITION_UPPER,
@@ -36,6 +36,7 @@ import {
   INLINE_FRAGMENT_UPPER,
   INPUT_FIELD_DEFINITION_UPPER,
   INPUT_OBJECT_UPPER,
+  INTERFACE_OBJECT,
   INTERFACE_UPPER,
   KEY,
   MUTATION,
@@ -52,15 +53,23 @@ import { duplicateInterfaceError, unexpectedKindFatalError } from '../errors/err
 import { UnionTypeDefinitionNode } from 'graphql/index';
 import { DirectiveContainer, EXECUTABLE_DIRECTIVE_LOCATIONS, NodeContainer } from '../federation/utils';
 
-export function isObjectLikeNodeEntity(node: ObjectLikeTypeDefinitionNode): boolean {
-  // Interface entities are currently unsupported
-  if (node.kind === Kind.INTERFACE_TYPE_DEFINITION
-    || node.kind === Kind.INTERFACE_TYPE_EXTENSION
-    || !node.directives?.length) {
+export function isObjectLikeNodeEntity(node: ObjectLikeTypeNode): boolean {
+  if (!node.directives?.length) {
     return false;
   }
   for (const directive of node.directives) {
     if (directive.name.value === KEY) {
+      return true;
+    }
+  }
+  return false;
+}
+export function isNodeInterfaceObject(node: ObjectTypeDefinitionNode): boolean {
+  if (!node.directives?.length) {
+    return false;
+  }
+  for (const directive of node.directives) {
+    if (directive.name.value === INTERFACE_OBJECT) {
       return true;
     }
   }
@@ -258,7 +267,8 @@ export function isKindAbstract(kind: Kind) {
 }
 
 export function extractExecutableDirectiveLocations(
-  nodes: readonly NameNode[] | NameNode[], set: Set<string>,
+  nodes: readonly NameNode[] | NameNode[],
+  set: Set<string>,
 ): Set<string> {
   for (const node of nodes) {
     const name = node.value;
@@ -270,7 +280,8 @@ export function extractExecutableDirectiveLocations(
 }
 
 export function mergeExecutableDirectiveLocations(
-  nodes: readonly NameNode[] | NameNode[], directiveContainer: DirectiveContainer,
+  nodes: readonly NameNode[] | NameNode[],
+  directiveContainer: DirectiveContainer,
 ): Set<string> {
   const mergedSet = new Set<string>();
   for (const node of nodes) {
@@ -316,7 +327,8 @@ export function addConcreteTypesForImplementedInterfaces(
 }
 
 export function addConcreteTypesForUnion(
-  node: UnionTypeDefinitionNode | UnionTypeExtensionNode, abstractToConcreteTypeNames: Map<string, Set<string>>,
+  node: UnionTypeDefinitionNode | UnionTypeExtensionNode,
+  abstractToConcreteTypeNames: Map<string, Set<string>>,
 ) {
   if (!node.types || node.types.length < 1) {
     return;
@@ -348,7 +360,11 @@ export function formatDescription(description?: StringValueNode): StringValueNod
 }
 
 export function setLongestDescriptionForNode(
-  existingNode: MutableFieldDefinitionNode | MutableEnumValueDefinitionNode | MutableInputValueDefinitionNode | MutableTypeDefinitionNode,
+  existingNode:
+    | MutableFieldDefinitionNode
+    | MutableEnumValueDefinitionNode
+    | MutableInputValueDefinitionNode
+    | MutableTypeDefinitionNode,
   newDescription?: StringValueNode,
 ) {
   if (!newDescription) {
@@ -377,7 +393,8 @@ export function lexicographicallySortSelectionSetNode(selectionSetNode: Selectio
         ...selection,
         arguments: lexicographicallySortArgumentNodes(selection),
         selectionSet: selection.selectionSet
-          ? lexicographicallySortSelectionSetNode(selection.selectionSet) : selection.selectionSet,
+          ? lexicographicallySortSelectionSetNode(selection.selectionSet)
+          : selection.selectionSet,
       })),
   };
 }
@@ -400,7 +417,7 @@ export function lexicographicallySortDocumentNode(documentNode: DocumentNode): D
 type ParseResult = {
   documentNode?: DocumentNode;
   error?: Error;
-}
+};
 
 export function safeParse(value: string): ParseResult {
   try {

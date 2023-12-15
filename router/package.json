@@ -1,6 +1,6 @@
 {
   "name": "router",
-  "version": "0.44.1",
+  "version": "0.45.2",
   "private": true,
   "description": "Placeholder package to simplify versioning and releasing with lerna.",
   "keywords": [
@@ -9,7 +9,7 @@
     "cosmo"
   ],
   "scripts": {
-    "postversion": "name=\"$(node -p \"var a = require('./package.json');process.stdout.write(a.name);process.exit(0)\")\"; version=\"$(node -p \"var a = require('./package.json');process.stdout.write(a.version);process.exit(0)\")\"; gh workflow run image-release.yml -F name=$name -F workingDirectory=router -F tag=$version -F dockerContext=."
+    "postversion": "name=\"$(node -p \"var a = require('./package.json');process.stdout.write(a.name);process.exit(0)\")\"; version=\"$(node -p \"var a = require('./package.json');process.stdout.write(a.version);process.exit(0)\")\"; gh workflow run image-release.yml -F name=$name -F workingDirectory=router -F tag=$version -F dockerContext=router"
   },
   "author": {
     "name": "WunderGraph Maintainers",
