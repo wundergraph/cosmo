@@ -16,7 +16,7 @@ describe('Field resolvability tests', () => {
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
         versionTwoPersistedBaseSchema +
-        `
+          `
       type Query {
         query: Nested
       }
@@ -54,13 +54,7 @@ describe('Field resolvability tests', () => {
     expect(errors).toBeDefined();
     expect(errors).toHaveLength(1);
     expect(errors![0]).toStrictEqual(
-      unresolvableFieldError(
-        rootTypeFieldData,
-        'name',
-        ['subgraph-c'],
-        'Query.query.nest.nest.nest.name',
-        'Nested4',
-      ),
+      unresolvableFieldError(rootTypeFieldData, 'name', ['subgraph-c'], 'Query.query.nest.nest.nest.name', 'Nested4'),
     );
   });
 
@@ -76,13 +70,7 @@ describe('Field resolvability tests', () => {
     expect(errors).toBeDefined();
     expect(errors).toHaveLength(1);
     expect(errors![0]).toStrictEqual(
-      unresolvableFieldError(
-        rootTypeFieldData,
-        'age',
-        ['subgraph-f'],
-        'Query.friend.age',
-        'Friend',
-      ),
+      unresolvableFieldError(rootTypeFieldData, 'age', ['subgraph-f'], 'Query.friend.age', 'Friend'),
     );
   });
 
@@ -98,13 +86,7 @@ describe('Field resolvability tests', () => {
     expect(errors).toBeDefined();
     expect(errors).toHaveLength(1);
     expect(errors![0]).toStrictEqual(
-      unresolvableFieldError(
-        rootTypeFieldData,
-        'age',
-        ['subgraph-f'],
-        'Query.friend.age',
-        'Friend',
-      ),
+      unresolvableFieldError(rootTypeFieldData, 'age', ['subgraph-f'], 'Query.friend.age', 'Friend'),
     );
   });
 
@@ -120,22 +102,10 @@ describe('Field resolvability tests', () => {
     expect(errors).toBeDefined();
     expect(errors).toHaveLength(2);
     expect(errors![0]).toStrictEqual(
-      unresolvableFieldError(
-        rootTypeFieldData,
-        'age',
-        ['subgraph-f'],
-        'Query.friend.age',
-        'Friend',
-      ),
+      unresolvableFieldError(rootTypeFieldData, 'age', ['subgraph-f'], 'Query.friend.age', 'Friend'),
     );
     expect(errors![1]).toStrictEqual(
-      unresolvableFieldError(
-        rootTypeFieldData,
-        'hobbies',
-        ['subgraph-g'],
-        'Query.friend.hobbies',
-        'Friend',
-      ),
+      unresolvableFieldError(rootTypeFieldData, 'hobbies', ['subgraph-g'], 'Query.friend.hobbies', 'Friend'),
     );
   });
 
@@ -146,7 +116,7 @@ describe('Field resolvability tests', () => {
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
         versionTwoPersistedBaseSchema +
-        `
+          `
       type Query {
         friend: Friend
       }
@@ -167,7 +137,7 @@ describe('Field resolvability tests', () => {
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
         versionOnePersistedBaseSchema +
-        `
+          `
       interface Human {
         name: String!
         age: Int!
@@ -198,13 +168,7 @@ describe('Field resolvability tests', () => {
     expect(result.errors).toBeDefined();
     expect(result.errors).toHaveLength(1);
     expect(result.errors![0]).toStrictEqual(
-      unresolvableFieldError(
-        rootTypeFieldData,
-        'name',
-        ['subgraph-j'],
-        'Query.humans ... on Friend name',
-        'Friend',
-      ),
+      unresolvableFieldError(rootTypeFieldData, 'name', ['subgraph-j'], 'Query.humans ... on Friend name', 'Friend'),
     );
   });
 
@@ -237,7 +201,7 @@ describe('Field resolvability tests', () => {
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
         versionOnePersistedBaseSchema +
-        `
+          `
       union Human = Friend | Enemy
       
       type Query {
@@ -268,21 +232,17 @@ describe('Field resolvability tests', () => {
     expect(result.errors).toBeDefined();
     expect(result.errors).toHaveLength(1);
     expect(result.errors![0]).toStrictEqual(
-      unresolvableFieldError(
-        rootTypeFieldData,
-        'age',
-        ['subgraph-p'],
-        'Query.humans ... on Enemy age',
-        'Enemy',
-      ),
+      unresolvableFieldError(rootTypeFieldData, 'age', ['subgraph-p'], 'Query.humans ... on Enemy age', 'Enemy'),
     );
   });
 
   test('that an entity ancestor provides access to an otherwise unreachable field', () => {
     const { errors, federationResult } = federateSubgraphs([subgraphQ, subgraphR]);
     expect(errors).toBeUndefined();
-    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(normalizeString(
-      versionOnePersistedBaseSchema + `
+    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
+      normalizeString(
+        versionOnePersistedBaseSchema +
+          `
         type Query {
           entity: SometimesEntity!
         }
@@ -300,14 +260,18 @@ describe('Field resolvability tests', () => {
             name: String!
             age: Int!
         }
-    `));
+    `,
+      ),
+    );
   });
 
   test('that a nested self-referential type does not create an infinite validation loop', () => {
     const { errors, federationResult } = federateSubgraphs([subgraphS, subgraphD]);
     expect(errors).toBeUndefined();
-    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(normalizeString(
-      versionTwoPersistedBaseSchema + `
+    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
+      normalizeString(
+        versionTwoPersistedBaseSchema +
+          `
         type Query {
           object: Object!
           friend: Friend
@@ -324,14 +288,18 @@ describe('Field resolvability tests', () => {
         type Friend {
           name: String!
         }
-    `));
+    `,
+      ),
+    );
   });
 
   test('that unreachable interface implementations do not return an error', () => {
     const { errors, federationResult } = federateSubgraphs([subgraphT, subgraphU]);
     expect(errors).toBeUndefined();
-    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(normalizeString(
-      versionOnePersistedBaseSchema + `
+    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
+      normalizeString(
+        versionOnePersistedBaseSchema +
+          `
         interface Interface {
           field: String!
         }
@@ -347,7 +315,9 @@ describe('Field resolvability tests', () => {
         type OtherObject implements Interface {
           field: String!
         }
-    `));
+    `,
+      ),
+    );
   });
 });
 
@@ -730,4 +700,3 @@ const subgraphU = {
     }
   `),
 };
-

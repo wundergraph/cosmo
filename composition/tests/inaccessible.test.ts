@@ -2,7 +2,10 @@ import { describe, expect, test } from 'vitest';
 import {
   allFieldDefinitionsAreInaccessibleError,
   federateSubgraphs,
-  FieldContainer, ImplementationErrors, InvalidFieldImplementation, normalizeSubgraph,
+  FieldContainer,
+  ImplementationErrors,
+  InvalidFieldImplementation,
+  normalizeSubgraph,
   ObjectContainer,
   shareableFieldDefinitionsError,
   Subgraph,
@@ -13,10 +16,12 @@ import { documentNodeToNormalizedString, normalizeString, versionTwoPersistedBas
 
 describe('@inaccessible tests', () => {
   test('that inaccessible fields are not included in the federated graph', () => {
-    const { errors, federationResult,} = federateSubgraphs([subgraphA, subgraphB]);
+    const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphB]);
     expect(errors).toBeUndefined();
-    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST))
-      .toBe(normalizeString(versionTwoPersistedBaseSchema + `
+    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
+      normalizeString(
+        versionTwoPersistedBaseSchema +
+          `
       type Query {
         entity: Entity!
       }
@@ -25,32 +30,43 @@ describe('@inaccessible tests', () => {
         id: ID!
         age: Int!
       }
-    `));
+    `,
+      ),
+    );
   });
 
   test('that inaccessible fields are still subject to @shareable errors', () => {
-    const { errors, federationResult,} = federateSubgraphs([subgraphA, subgraphC]);
+    const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphC]);
     expect(errors).toBeDefined();
-    expect(errors![0]).toStrictEqual(shareableFieldDefinitionsError(
-      {
-        node: { name: { value: 'Entity' } },
-        fields: new Map<string, FieldContainer>([[
-          'name',
-          {
-            node: { name: { value: 'name' } },
-            subgraphsByShareable: new Map<string, boolean>([['subgraph-a', true], ['subgraph-c', false]]),
-          } as FieldContainer,
-        ]]),
-      } as ObjectContainer,
-      new Set<string>(['name']),
-    ));
+    expect(errors![0]).toStrictEqual(
+      shareableFieldDefinitionsError(
+        {
+          node: { name: { value: 'Entity' } },
+          fields: new Map<string, FieldContainer>([
+            [
+              'name',
+              {
+                node: { name: { value: 'name' } },
+                subgraphsByShareable: new Map<string, boolean>([
+                  ['subgraph-a', true],
+                  ['subgraph-c', false],
+                ]),
+              } as FieldContainer,
+            ],
+          ]),
+        } as ObjectContainer,
+        new Set<string>(['name']),
+      ),
+    );
   });
 
   test('that composition is successful if a field is declared @inaccessible in both the interface definition and its implementation,', () => {
-    const { errors, federationResult,} = federateSubgraphs([subgraphA, subgraphD]);
+    const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphD]);
     expect(errors).toBeUndefined();
-    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST))
-      .toBe(normalizeString(versionTwoPersistedBaseSchema + `
+    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
+      normalizeString(
+        versionTwoPersistedBaseSchema +
+          `
       interface Interface {
         id: ID!
       }
@@ -62,14 +78,18 @@ describe('@inaccessible tests', () => {
       type Entity implements Interface {
         id: ID!
       }
-    `));
+    `,
+      ),
+    );
   });
 
   test('that composition is successful if a field is declared @inaccessible in the interface but not in the implementation,', () => {
-    const { errors, federationResult,} = federateSubgraphs([subgraphB, subgraphH]);
+    const { errors, federationResult } = federateSubgraphs([subgraphB, subgraphH]);
     expect(errors).toBeUndefined();
-    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST))
-      .toBe(normalizeString(versionTwoPersistedBaseSchema + `
+    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
+      normalizeString(
+        versionTwoPersistedBaseSchema +
+          `
       interface Interface {
         id: ID!
       }
@@ -83,59 +103,71 @@ describe('@inaccessible tests', () => {
         age: Int!
         name: String!
       }
-    `));
+    `,
+      ),
+    );
   });
 
   test('that an error is returned if an interface field is @inaccessible but the implementation field is not defined,', () => {
-    const { errors} = normalizeSubgraph(subgraphE.definitions);
+    const { errors } = normalizeSubgraph(subgraphE.definitions);
     expect(errors).toBeDefined();
-    expect(errors![0]).toStrictEqual(unimplementedInterfaceFieldsError(
-      'Entity',
-      'object',
-      new Map<string, ImplementationErrors>([
-        ['Interface', {
-          invalidFieldImplementations: new Map<string, InvalidFieldImplementation>(),
-          unimplementedFields: ['name'],
-        }]
-      ]),
-    ));
+    expect(errors![0]).toStrictEqual(
+      unimplementedInterfaceFieldsError(
+        'Entity',
+        'object',
+        new Map<string, ImplementationErrors>([
+          [
+            'Interface',
+            {
+              invalidFieldImplementations: new Map<string, InvalidFieldImplementation>(),
+              unimplementedFields: ['name'],
+            },
+          ],
+        ]),
+      ),
+    );
   });
 
   test('that an error is returned if an interface field is @inaccessible but the implementation field is not defined #2,', () => {
-    const { errors} = federateSubgraphs([subgraphF, subgraphG]);
+    const { errors } = federateSubgraphs([subgraphF, subgraphG]);
     expect(errors).toBeDefined();
-    expect(errors![0]).toStrictEqual(unimplementedInterfaceFieldsError(
-      'Entity',
-      'object',
-      new Map<string, ImplementationErrors>([
-        ['Interface', {
-          invalidFieldImplementations: new Map<string, InvalidFieldImplementation>(),
-          unimplementedFields: ['name'],
-        }]
-      ]),
-    ));
+    expect(errors![0]).toStrictEqual(
+      unimplementedInterfaceFieldsError(
+        'Entity',
+        'object',
+        new Map<string, ImplementationErrors>([
+          [
+            'Interface',
+            {
+              invalidFieldImplementations: new Map<string, InvalidFieldImplementation>(),
+              unimplementedFields: ['name'],
+            },
+          ],
+        ]),
+      ),
+    );
   });
 
   test('that an error is returned if all fields defined on an object are declared @inaccessible', () => {
-    const { errors} = federateSubgraphs([subgraphA, subgraphI]);
+    const { errors } = federateSubgraphs([subgraphA, subgraphI]);
     expect(errors).toBeDefined();
     expect(errors![0]).toStrictEqual(allFieldDefinitionsAreInaccessibleError('object', 'Object'));
   });
 
   test('that an error is returned if all fields defined on an extended object are declared @inaccessible', () => {
-    const { errors} = federateSubgraphs([subgraphA, subgraphJ]);
+    const { errors } = federateSubgraphs([subgraphA, subgraphJ]);
     expect(errors).toBeDefined();
     expect(errors![0]).toStrictEqual(allFieldDefinitionsAreInaccessibleError('object', 'Object'));
   });
 
   test('that an error is returned if all fields defined on an interface are declared @inaccessible', () => {
-    const { errors} = federateSubgraphs([subgraphA, subgraphK]);
+    const { errors } = federateSubgraphs([subgraphA, subgraphK]);
     expect(errors).toBeDefined();
     expect(errors![0]).toStrictEqual(allFieldDefinitionsAreInaccessibleError('interface', 'Interface'));
   });
 
   test('that an error is returned if all fields defined on an extended interface are declared', () => {
-    const { errors} = federateSubgraphs([subgraphA, subgraphL]);
+    const { errors } = federateSubgraphs([subgraphA, subgraphL]);
     expect(errors).toBeDefined();
     expect(errors![0]).toStrictEqual(allFieldDefinitionsAreInaccessibleError('interface', 'Interface'));
   });

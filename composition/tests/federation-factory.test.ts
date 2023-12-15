@@ -29,11 +29,11 @@ describe('FederationFactory tests', () => {
     const errorMessage = errors![0].message;
     expect(errorMessage).contains(
       `Subgraphs to be federated must each have a unique, non-empty name.\n` +
-      ` The 1st subgraph in the array did not define a name.`,
+        ` The 1st subgraph in the array did not define a name.`,
     );
     expect(errorMessage).contains(
       ` The 2nd subgraph in the array did not define a name.` +
-      ` Consequently, any further errors will temporarily identify this subgraph as "`,
+        ` Consequently, any further errors will temporarily identify this subgraph as "`,
     );
   });
 
@@ -44,17 +44,17 @@ describe('FederationFactory tests', () => {
     const errorMessage = errors![0].message;
     expect(errorMessage).contains(
       `Subgraphs to be federated must each have a unique, non-empty name.\n` +
-      ` The following subgraph names are not unique:\n  "users", "pandas"\n` +
-      ` The 5th subgraph in the array did not define a name.` +
-      ` Consequently, any further errors will temporarily identify this subgraph as "`,
+        ` The following subgraph names are not unique:\n  "users", "pandas"\n` +
+        ` The 5th subgraph in the array did not define a name.` +
+        ` Consequently, any further errors will temporarily identify this subgraph as "`,
     );
     expect(errorMessage).contains(
       ` The 6th subgraph in the array did not define a name.` +
-      ` Consequently, any further errors will temporarily identify this subgraph as "`,
+        ` Consequently, any further errors will temporarily identify this subgraph as "`,
     );
     expect(errorMessage).contains(
       ` The 7th subgraph in the array did not define a name.` +
-      ` Consequently, any further errors will temporarily identify this subgraph as "`,
+        ` Consequently, any further errors will temporarily identify this subgraph as "`,
     );
   });
 
@@ -64,7 +64,7 @@ describe('FederationFactory tests', () => {
     expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
       normalizeString(
         versionTwoPersistedBaseSchema +
-        `
+          `
       interface SkuItf {
         sku: String
       }
@@ -147,7 +147,7 @@ describe('FederationFactory tests', () => {
     expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
       normalizeString(
         versionTwoPersistedBaseSchema +
-        `
+          `
       type Query {
         pokemon: [Pokemon]
         trainer: [Trainer!]!
@@ -187,7 +187,7 @@ describe('FederationFactory tests', () => {
     expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
       normalizeString(
         versionOnePersistedBaseSchema +
-        `
+          `
       type Query {
         string: String
       }  
@@ -201,7 +201,8 @@ describe('FederationFactory tests', () => {
     expect(errors).toBeUndefined();
     expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
       normalizeString(
-        versionOnePersistedBaseSchema + `
+        versionOnePersistedBaseSchema +
+          `
       type Query {
         string: String
       }  
@@ -215,7 +216,8 @@ describe('FederationFactory tests', () => {
     expect(errors).toBeUndefined();
     expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
       normalizeString(
-        versionOnePersistedBaseSchema + `
+        versionOnePersistedBaseSchema +
+          `
       type Query {
         string: String
       }
@@ -234,7 +236,8 @@ describe('FederationFactory tests', () => {
     expect(errors).toBeUndefined();
     expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
       normalizeString(
-        versionTwoPersistedBaseSchema + `
+        versionTwoPersistedBaseSchema +
+          `
       interface I @tag(name: "interface1") @tag(name: "interface2") @inaccessible {
         i: Int!
       }
@@ -265,13 +268,16 @@ describe('FederationFactory tests', () => {
     const { errors, federationResult } = federateSubgraphs([subgraphK, subgraphL]);
     expect(errors).toBeUndefined();
     expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
-      normalizeString(versionOnePersistedBaseSchema + `
+      normalizeString(
+        versionOnePersistedBaseSchema +
+          `
         directive @executableDirective(requiredArgInAll: String!, requiredArgInSome: Int!, optionalArgInAll: Float) on FIELD
         
         type Query {
           dummy: String
         }  
-      `),
+      `,
+      ),
     );
   });
 
@@ -279,7 +285,9 @@ describe('FederationFactory tests', () => {
     const { errors, federationResult } = federateSubgraphs([subgraphM, subgraphN]);
     expect(errors).toBeUndefined();
     expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
-      normalizeString(versionTwoPersistedBaseSchema + `
+      normalizeString(
+        versionTwoPersistedBaseSchema +
+          `
     type Query {
       user: User!
     }
@@ -303,14 +311,17 @@ describe('FederationFactory tests', () => {
       fieldOne: String!
       fieldTwo: Int!
     }
-      `),
+      `,
+      ),
     );
   });
   test('that _entities and _service are removed even if a root type is renamed', () => {
     const { errors, federationResult } = federateSubgraphs([subgraphF, subgraphO]);
     expect(errors).toBeUndefined();
     expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
-      normalizeString(versionOnePersistedBaseSchema + `
+      normalizeString(
+        versionOnePersistedBaseSchema +
+          `
       type Query {
         string: String
         user: User!
@@ -320,7 +331,8 @@ describe('FederationFactory tests', () => {
         id: ID!
         name: String!
       }
-    `),
+    `,
+      ),
     );
   });
 
@@ -814,4 +826,3 @@ const subgraphQ: Subgraph = {
     type Query
   `),
 };
-

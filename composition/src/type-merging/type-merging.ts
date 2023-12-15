@@ -14,7 +14,11 @@ export type MergedTypeResult = {
 };
 
 function getMergedTypeNode(
-  current: TypeNode, other: TypeNode, parentName: string, childName: string, mostRestrictive: boolean
+  current: TypeNode,
+  other: TypeNode,
+  parentName: string,
+  childName: string,
+  mostRestrictive: boolean,
 ): MergedTypeResult {
   other = deepCopyTypeNode(other, parentName, childName); // current is already a deep copy
   // The first type of the pair to diverge in restriction takes precedence in all future differences.
@@ -85,17 +89,25 @@ function getMergedTypeNode(
     // At least one of the types must be a non-null wrapper, or the types are inconsistent
     return { typeErrors: [current.kind, other.kind] };
   }
-  throw new Error(`Field ${parentName}.${childName} has more than ${maximumTypeNesting} layers of nesting, or there is a cyclical error.`);
+  throw new Error(
+    `Field ${parentName}.${childName} has more than ${maximumTypeNesting} layers of nesting, or there is a cyclical error.`,
+  );
 }
 
 export function getLeastRestrictiveMergedTypeNode(
-  current: TypeNode, other: TypeNode, parentName: string, childName: string,
+  current: TypeNode,
+  other: TypeNode,
+  parentName: string,
+  childName: string,
 ): MergedTypeResult {
   return getMergedTypeNode(current, other, parentName, childName, false);
 }
 
 export function getMostRestrictiveMergedTypeNode(
-  current: TypeNode, other: TypeNode, parentName: string, fieldName: string,
+  current: TypeNode,
+  other: TypeNode,
+  parentName: string,
+  fieldName: string,
 ): MergedTypeResult {
   return getMergedTypeNode(current, other, parentName, fieldName, true);
 }
@@ -109,7 +121,7 @@ export function getNamedTypeForChild(childPath: string, typeNode: TypeNode): str
     case Kind.NAMED_TYPE:
       return typeNode.name.value;
     case Kind.LIST_TYPE:
-      // intentional fallthrough
+    // intentional fallthrough
     case Kind.NON_NULL_TYPE:
       return getNamedTypeForChild(childPath, typeNode.type);
     default:

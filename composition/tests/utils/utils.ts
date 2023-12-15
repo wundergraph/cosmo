@@ -30,7 +30,9 @@ export const versionOnePersistedBaseSchema = `
 `;
 
 // The V2 definitions that are required during normalization
-export const versionTwoBaseSchema = versionOneBaseSchema + `
+export const versionTwoBaseSchema =
+  versionOneBaseSchema +
+  `
   directive @composeDirective(name: String!) repeatable on SCHEMA
   directive @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
   directive @interfaceObject on OBJECT
@@ -40,7 +42,9 @@ export const versionTwoBaseSchema = versionOneBaseSchema + `
 `;
 
 // The V2 definitions that are persisted in the raw federated schema
-export const versionTwoPersistedBaseSchema = versionOnePersistedBaseSchema + `
+export const versionTwoPersistedBaseSchema =
+  versionOnePersistedBaseSchema +
+  `
   directive @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
 `;
 

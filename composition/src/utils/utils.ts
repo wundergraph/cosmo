@@ -28,7 +28,7 @@ export function getAllMutualEntries<T>(set: Set<T>, other: Set<T>): Set<T> {
 export function getOrThrowError<K, V>(map: Map<K, V>, key: K, mapName: string): V {
   const value = map.get(key);
   if (value === undefined) {
-    throw  invalidKeyFatalError(key, mapName);
+    throw invalidKeyFatalError(key, mapName);
   }
   return value;
 }
@@ -150,7 +150,7 @@ export type InvalidFieldImplementation = {
   invalidImplementedArguments: InvalidArgumentImplementation[];
   originalResponseType: string;
   unimplementedArguments: Set<string>;
-}
+};
 
 export type ImplementationErrors = {
   invalidFieldImplementations: Map<string, InvalidFieldImplementation>;
@@ -187,13 +187,16 @@ export type EntityInterfaceDatas = {
   typeName: string;
 };
 
-export function newEntityInterfaceDatas(entityInterfaceData: EntityInterfaceData, subgraphName: string): EntityInterfaceDatas {
+export function newEntityInterfaceDatas(
+  entityInterfaceData: EntityInterfaceData,
+  subgraphName: string,
+): EntityInterfaceDatas {
   return {
     interfaceFieldNames: entityInterfaceData.interfaceFieldNames,
     interfaceObjectFieldNames: entityInterfaceData.interfaceObjectFieldNames,
     interfaceObjectSubgraphs: new Set<string>(entityInterfaceData.isInterfaceObject ? [subgraphName] : []),
     typeName: entityInterfaceData.typeName,
-  }
+  };
 }
 
 export function upsertEntityInterfaceDatas(
@@ -230,7 +233,7 @@ class StackSet {
     if (value) {
       this.set.delete(value);
     }
-  };
+  }
 }
 
 export function hasSimplePath(graph: MultiGraph, source: string, target: string): boolean {
@@ -260,7 +263,7 @@ export function hasSimplePath(graph: MultiGraph, source: string, target: string)
 
     visited.push(child);
 
-    const outboundNeighbours = graph.outboundNeighbors(child)
+    const outboundNeighbours = graph.outboundNeighbors(child);
     if (outboundNeighbours.length < 0) {
       continue;
     }

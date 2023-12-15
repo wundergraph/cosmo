@@ -33,7 +33,8 @@ describe('Argument federation tests', () => {
     expect(errors).toBeUndefined();
     expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
       normalizeString(
-        versionTwoPersistedBaseSchema + `
+        versionTwoPersistedBaseSchema +
+          `
             type Query {
               dummy: String!
             }
@@ -54,7 +55,8 @@ describe('Argument federation tests', () => {
     expect(errors).toBeUndefined();
     expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
       normalizeString(
-        versionTwoPersistedBaseSchema + `
+        versionTwoPersistedBaseSchema +
+          `
         type Query {
           dummy: String!
         }
@@ -75,7 +77,8 @@ describe('Argument federation tests', () => {
     expect(errors).toBeUndefined();
     expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
       normalizeString(
-        versionTwoPersistedBaseSchema + `
+        versionTwoPersistedBaseSchema +
+          `
         type Query {
           dummy: String!
         }
@@ -96,7 +99,8 @@ describe('Argument federation tests', () => {
     expect(errors).toBeUndefined();
     expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
       normalizeString(
-        versionTwoPersistedBaseSchema + `
+        versionTwoPersistedBaseSchema +
+          `
         type Query {
           dummy: String!
         }
@@ -115,9 +119,7 @@ describe('Argument federation tests', () => {
       subgraphWithArgument('subgraph-b', 'Float'),
     ]);
     expect(errors).toHaveLength(1);
-    expect(errors![0]).toStrictEqual(
-      incompatibleArgumentTypesError(argName, parentName, childName, 'String', 'Float'),
-    );
+    expect(errors![0]).toStrictEqual(incompatibleArgumentTypesError(argName, parentName, childName, 'String', 'Float'));
   });
 
   test('that if arguments have different string-converted default values, an error is returned`', () => {
@@ -153,16 +155,16 @@ describe('Argument federation tests', () => {
     expect(errors![0]).toStrictEqual(
       incompatibleArgumentDefaultValueTypeError(argName, parentName, childName, Kind.INT, Kind.BOOLEAN),
     );
-    expect(errors![1]).toStrictEqual(
-      incompatibleArgumentDefaultValueError(argName, parentName, childName, '1', false),
-    );
+    expect(errors![1]).toStrictEqual(incompatibleArgumentDefaultValueError(argName, parentName, childName, '1', false));
   });
 
   test('that if an argument is optional but not included in all subgraphs, it is not present in the federated graph', () => {
     const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphB]);
     expect(errors).toBeUndefined();
     expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
-      normalizeString(versionTwoPersistedBaseSchema + `
+      normalizeString(
+        versionTwoPersistedBaseSchema +
+          `
       interface Interface {
         field(requiredInAll: Int!, requiredOrOptionalInAll: String!, optionalInAll: Boolean): String
       }
@@ -183,26 +185,32 @@ describe('Argument federation tests', () => {
     const { errors } = federateSubgraphs([subgraphA, subgraphC]);
     expect(errors).toBeDefined();
     expect(errors).toHaveLength(2);
-    const errorArrayOne: InvalidRequiredArgument[] = [{
-      argumentName: 'requiredInAll',
-      missingSubgraphs: ['subgraph-c'],
-      requiredSubgraphs: ['subgraph-a'],
-    }, {
-      argumentName: 'requiredOrOptionalInAll',
-      missingSubgraphs: ['subgraph-c'],
-      requiredSubgraphs: ['subgraph-a'],
-    }];
+    const errorArrayOne: InvalidRequiredArgument[] = [
+      {
+        argumentName: 'requiredInAll',
+        missingSubgraphs: ['subgraph-c'],
+        requiredSubgraphs: ['subgraph-a'],
+      },
+      {
+        argumentName: 'requiredOrOptionalInAll',
+        missingSubgraphs: ['subgraph-c'],
+        requiredSubgraphs: ['subgraph-a'],
+      },
+    ];
     expect(errors![0]).toStrictEqual(invalidRequiredArgumentsError(FIELD, 'Interface.field', errorArrayOne));
-    const errorArrayTwo: InvalidRequiredArgument[] = [{
-      argumentName: 'requiredInAll',
-      missingSubgraphs: ['subgraph-c'],
-      requiredSubgraphs: ['subgraph-a'],
-    }, {
-      argumentName: 'requiredOrOptionalInAll',
-      missingSubgraphs: ['subgraph-c'],
-      requiredSubgraphs: ['subgraph-a'],
-    }];
-    expect(errors![1]).toStrictEqual(invalidRequiredArgumentsError(FIELD,'Object.field', errorArrayTwo));
+    const errorArrayTwo: InvalidRequiredArgument[] = [
+      {
+        argumentName: 'requiredInAll',
+        missingSubgraphs: ['subgraph-c'],
+        requiredSubgraphs: ['subgraph-a'],
+      },
+      {
+        argumentName: 'requiredOrOptionalInAll',
+        missingSubgraphs: ['subgraph-c'],
+        requiredSubgraphs: ['subgraph-a'],
+      },
+    ];
+    expect(errors![1]).toStrictEqual(invalidRequiredArgumentsError(FIELD, 'Object.field', errorArrayTwo));
   });
 
   test('that if an argument is not a valid input type or defined more than once, an error is returned', () => {
@@ -231,28 +239,26 @@ describe('Argument federation tests', () => {
     `);
     expect(errors).toBeDefined();
     expect(errors).toHaveLength(2);
-    expect(errors![0]).toStrictEqual(duplicateArgumentsError(
-      'Object.field',
-      ['argThree', 'argOne'],
-    ));
-    expect(errors![1]).toStrictEqual(invalidArgumentsError(
-      'Object.field',
-      [{
-        argumentName: 'argThree',
-        namedType: 'AnotherObject',
-        typeName: 'AnotherObject!',
-        typeString: 'object',
-      }],
-    ));
+    expect(errors![0]).toStrictEqual(duplicateArgumentsError('Object.field', ['argThree', 'argOne']));
+    expect(errors![1]).toStrictEqual(
+      invalidArgumentsError('Object.field', [
+        {
+          argumentName: 'argThree',
+          namedType: 'AnotherObject',
+          typeName: 'AnotherObject!',
+          typeString: 'object',
+        },
+      ]),
+    );
   });
 
   test('that arguments are accounted for when merging extension and base definitions', () => {
-    const { errors, federationResult } = federateSubgraphs([
-      subgraphD, subgraphE, subgraphF,
-    ]);
+    const { errors, federationResult } = federateSubgraphs([subgraphD, subgraphE, subgraphF]);
     expect(errors).toBeUndefined();
-    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(normalizeString(
-      versionOnePersistedBaseSchema + `
+    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
+      normalizeString(
+        versionOnePersistedBaseSchema +
+          `
       interface Interface {
         field(one: Int = null, two: Int = null, three: String = null, four: String = null): String
       }
@@ -270,7 +276,9 @@ describe('Argument federation tests', () => {
           four: String = null @tag(name: "object")
         ): String
       }
-   `));
+   `,
+      ),
+    );
   });
 });
 

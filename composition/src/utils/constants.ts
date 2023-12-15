@@ -14,7 +14,8 @@ import {
   FIELDS,
   INACCESSIBLE,
   INPUT_FIELD_DEFINITION_UPPER,
-  INPUT_OBJECT_UPPER, INTERFACE_OBJECT,
+  INPUT_OBJECT_UPPER,
+  INTERFACE_OBJECT,
   INTERFACE_UPPER,
   KEY,
   LINK,
@@ -27,23 +28,42 @@ import {
   SCALAR_UPPER,
   SCHEMA,
   SCHEMA_UPPER,
-  SHAREABLE, SPECIFIED_BY,
+  SHAREABLE,
+  SPECIFIED_BY,
   STRING_TYPE,
   TAG,
   UNION_UPPER,
 } from './string-constants';
 
-export const BASE_SCALARS = new Set<string>(
-  ['_Any', '_Entities', 'Boolean', 'Float', 'ID', 'Int', 'openfed__FieldSet', 'String'],
-);
+export const BASE_SCALARS = new Set<string>([
+  '_Any',
+  '_Entities',
+  'Boolean',
+  'Float',
+  'ID',
+  'Int',
+  'openfed__FieldSet',
+  'String',
+]);
 
 export const VERSION_ONE_DIRECTIVES = new Set<string>([
-  DEPRECATED, EXTENDS, EXTERNAL, KEY, PROVIDES, REQUIRES, SPECIFIED_BY, TAG,
+  DEPRECATED,
+  EXTENDS,
+  EXTERNAL,
+  KEY,
+  PROVIDES,
+  REQUIRES,
+  SPECIFIED_BY,
+  TAG,
 ]);
 export const VERSION_TWO_DIRECTIVES = new Set<string>([
-  COMPOSE_DIRECTIVE, LINK, OVERRIDE, INACCESSIBLE, INTERFACE_OBJECT, SHAREABLE,
+  COMPOSE_DIRECTIVE,
+  LINK,
+  OVERRIDE,
+  INACCESSIBLE,
+  INTERFACE_OBJECT,
+  SHAREABLE,
 ]);
-
 
 export const BASE_DIRECTIVE_DEFINITIONS: DirectiveDefinitionNode[] = [
   /* directive @deprecated(reason: String = "No longer supported") on ARGUMENT_DEFINITION | ENUM_VALUE |

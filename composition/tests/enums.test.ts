@@ -12,7 +12,8 @@ describe('Enum federation tests', () => {
     const federatedGraph = federationResult!.federatedGraphAST;
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
-        versionTwoPersistedBaseSchema + `
+        versionTwoPersistedBaseSchema +
+          `
       type Query {
         dummy: String!
       }
@@ -34,7 +35,8 @@ describe('Enum federation tests', () => {
     const federatedGraph = federationResult!.federatedGraphAST;
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
-        versionTwoPersistedBaseSchema + `
+        versionTwoPersistedBaseSchema +
+          `
       type Query {
         dummy: String!
       }
@@ -58,7 +60,8 @@ describe('Enum federation tests', () => {
     const federatedGraph = federationResult!.federatedGraphAST;
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
-        versionTwoPersistedBaseSchema + `
+        versionTwoPersistedBaseSchema +
+          `
       type Query {
         dummy: String!
       }
@@ -80,7 +83,8 @@ describe('Enum federation tests', () => {
     expect(errors).toBeUndefined();
     expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
       normalizeString(
-        versionTwoPersistedBaseSchema + `
+        versionTwoPersistedBaseSchema +
+          `
       type Query {
         dummy: String!
       }

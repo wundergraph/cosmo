@@ -35,7 +35,8 @@ import {
   FRAGMENT_SPREAD_UPPER,
   INLINE_FRAGMENT_UPPER,
   INPUT_FIELD_DEFINITION_UPPER,
-  INPUT_OBJECT_UPPER, INTERFACE_OBJECT,
+  INPUT_OBJECT_UPPER,
+  INTERFACE_OBJECT,
   INTERFACE_UPPER,
   KEY,
   MUTATION,
@@ -266,7 +267,8 @@ export function isKindAbstract(kind: Kind) {
 }
 
 export function extractExecutableDirectiveLocations(
-  nodes: readonly NameNode[] | NameNode[], set: Set<string>,
+  nodes: readonly NameNode[] | NameNode[],
+  set: Set<string>,
 ): Set<string> {
   for (const node of nodes) {
     const name = node.value;
@@ -278,7 +280,8 @@ export function extractExecutableDirectiveLocations(
 }
 
 export function mergeExecutableDirectiveLocations(
-  nodes: readonly NameNode[] | NameNode[], directiveContainer: DirectiveContainer,
+  nodes: readonly NameNode[] | NameNode[],
+  directiveContainer: DirectiveContainer,
 ): Set<string> {
   const mergedSet = new Set<string>();
   for (const node of nodes) {
@@ -324,7 +327,8 @@ export function addConcreteTypesForImplementedInterfaces(
 }
 
 export function addConcreteTypesForUnion(
-  node: UnionTypeDefinitionNode | UnionTypeExtensionNode, abstractToConcreteTypeNames: Map<string, Set<string>>,
+  node: UnionTypeDefinitionNode | UnionTypeExtensionNode,
+  abstractToConcreteTypeNames: Map<string, Set<string>>,
 ) {
   if (!node.types || node.types.length < 1) {
     return;
@@ -356,7 +360,11 @@ export function formatDescription(description?: StringValueNode): StringValueNod
 }
 
 export function setLongestDescriptionForNode(
-  existingNode: MutableFieldDefinitionNode | MutableEnumValueDefinitionNode | MutableInputValueDefinitionNode | MutableTypeDefinitionNode,
+  existingNode:
+    | MutableFieldDefinitionNode
+    | MutableEnumValueDefinitionNode
+    | MutableInputValueDefinitionNode
+    | MutableTypeDefinitionNode,
   newDescription?: StringValueNode,
 ) {
   if (!newDescription) {
@@ -385,7 +393,8 @@ export function lexicographicallySortSelectionSetNode(selectionSetNode: Selectio
         ...selection,
         arguments: lexicographicallySortArgumentNodes(selection),
         selectionSet: selection.selectionSet
-          ? lexicographicallySortSelectionSetNode(selection.selectionSet) : selection.selectionSet,
+          ? lexicographicallySortSelectionSetNode(selection.selectionSet)
+          : selection.selectionSet,
       })),
   };
 }
@@ -408,7 +417,7 @@ export function lexicographicallySortDocumentNode(documentNode: DocumentNode): D
 type ParseResult = {
   documentNode?: DocumentNode;
   error?: Error;
-}
+};
 
 export function safeParse(value: string): ParseResult {
   try {

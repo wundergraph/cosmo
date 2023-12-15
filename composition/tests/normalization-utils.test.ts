@@ -4,7 +4,9 @@ import { parse } from 'graphql';
 
 describe('Utils tests', () => {
   test('that a deeply nested FieldSet is normalized', () => {
-    expect(getNormalizedFieldSet(parse(`{
+    expect(
+      getNormalizedFieldSet(
+        parse(`{
       field { one two, three {
       innerField {
       
@@ -15,6 +17,8 @@ describe('Utils tests', () => {
       
     }
     
-    `))).toStrictEqual(`field { four one three { innerField { innerField1 innerField2 } } two }`);
+    `),
+      ),
+    ).toStrictEqual(`field { four one three { innerField { innerField1 innerField2 } } two }`);
   });
 });

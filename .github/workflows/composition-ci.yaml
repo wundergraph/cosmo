@@ -47,6 +47,9 @@ jobs:
       - name: Test
         run: pnpm run --filter composition test
 
+      - name: Lint
+        run: pnpm run --filter composition lint
+
       - name: Run linter on composition-go
         uses: ./.github/actions/go-linter
         with:
