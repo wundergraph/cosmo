@@ -120,7 +120,7 @@ func (ct *CustomTransport) allowSingleFlight(req *http.Request) bool {
 
 func (ct *CustomTransport) roundTripSingleFlight(req *http.Request) (*http.Response, error) {
 
-	if ct.allowSingleFlight(req) == false {
+	if !ct.allowSingleFlight(req) {
 		return ct.roundTripper.RoundTrip(req)
 	}
 
