@@ -58,6 +58,10 @@ spec:
             {{- if .Values.extraEnvVars }}
             {{- toYaml .Values.extraEnvVars | nindent 12 }}
             {{- end }}
+            {{ if .Values.configuration.executionConfig }}
+            - name: ROUTER_CONFIG_PATH
+              value: /execution-config.json
+            {{- end }}
             - name: LISTEN_ADDR
               valueFrom:
                 configMapKeyRef:
@@ -133,12 +137,22 @@ spec:
               mountPath: /config.yaml
               subPath: config.yaml
             {{- end }}
+            {{ if .Values.configuration.executionConfig }}
+            - name: execution-config
+              mountPath: /execution-config.json
+              subPath: execution-config.json
+            {{- end }}
             {{- if .Values.extraVolumeMounts }}
             {{- .Values.extraVolumeMounts | nindent 12 }}
             {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       volumes:
+        {{- if .Values.configuration.executionConfig }}
+        - name: execution-config
+          configMap:
+            name: {{ include "router.fullname" . }}-execution-config
+        {{- end }}
         {{- if .Values.existingConfigmap }}
         - name: router-config
           configMap:
