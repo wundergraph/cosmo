@@ -20,4 +20,4 @@ cd "../scripts"
 
 cd "../cli"
 
-pnpm wgc federated-graph create-token production --name mytoken
+pnpm wgc router token create mytoken --graph-name production
