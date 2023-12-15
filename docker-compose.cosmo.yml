@@ -50,8 +50,8 @@ services:
   router:
     image: ghcr.io/wundergraph/cosmo/router:${DC_ROUTER_VERSION:-latest}
     build:
-      context: .
-      dockerfile: router/Dockerfile
+      context: router
+      dockerfile: Dockerfile
       cache_from:
         - ghcr.io/wundergraph/cosmo/router:buildcache
       args:

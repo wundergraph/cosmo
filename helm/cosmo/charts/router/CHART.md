@@ -13,16 +13,22 @@ WunderGraph Cosmo router.
 | autoscaling.maxReplicas | int | `100` |  |
 | autoscaling.minReplicas | int | `1` |  |
 | autoscaling.targetCPUUtilizationPercentage | int | `80` |  |
-| configuration.controlplaneUrl | string | `"http://cosmo-controlplane:3001"` | The URL of the Cosmo Controlplane. Should be internal to the cluster. |
+| configuration.controlplaneUrl | string | `""` | The URL of the Cosmo Controlplane. Should be internal to the cluster. Default to cloud if not set. |
 | configuration.devMode | bool | `false` | Set to true to enable the development mode. This allows for Advanced Request Tracing (ART) in the GraphQL Playground |
-| configuration.federatedGraphName | string | `"production"` |  |
-| configuration.graphApiToken | string | `"secret"` |  |
-| configuration.graphqlMetricsCollectorUrl | string | `"http://cosmo-graphqlmetrics:4005"` | The URL of the Cosmo GraphQL Metrics Collector. Should be internal to the cluster. |
-| configuration.logLevel | string | `"info"` |  |
-| configuration.otelCollectorUrl | string | `"http://cosmo-otelcollector:4318"` | The URL of the Cosmo GraphQL OTEL Collector. Should be internal to the cluster. |
+| configuration.federatedGraphName | string | `"production"` | The name of the graph to be served by the router (required) |
+| configuration.graphApiToken | string | `"replace-me"` | The router token is used to authenticate the router against the controlplane (required) |
+| configuration.graphqlMetricsCollectorUrl | string | `""` | The URL of the Cosmo GraphQL Metrics Collector. Should be internal to the cluster. Default to cloud if not set. |
+| configuration.logLevel | string | `"info"` | The log level of the router. Default to info if not set. |
+| configuration.otelCollectorUrl | string | `""` | The URL of the Cosmo GraphQL OTEL Collector. Should be internal to the cluster. Default to cloud if not set. |
 | deploymentStrategy | object | `{}` |  |
+| existingConfigmap | string | `""` | Optionally name of existing ConfigMap with Router configuration. The key config.yaml is required. |
 | extraEnvVars | list | `[]` | Allows to set additional environment variables on the container |
+| extraEnvVarsCM | string | `""` | Name of existing ConfigMap containing extra env vars |
+| extraEnvVarsSecret | string | `""` | Name of existing Secret containing extra env vars |
+| extraVolumeMounts | list | `[]` | Optionally specify extra list of additional volumeMounts for Router container's |
+| extraVolumes | list | `[]` | Optionally specify extra list of additional volumes for Router pods |
 | fullnameOverride | string | `""` | String to fully override common.names.fullname template |
+| global.helmTests | bool | `false` |  |
 | image.pullPolicy | string | `"IfNotPresent"` |  |
 | image.registry | string | `"ghcr.io"` |  |
 | image.repository | string | `"wundergraph/cosmo/router"` |  |

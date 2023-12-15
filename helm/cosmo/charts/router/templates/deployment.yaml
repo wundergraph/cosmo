@@ -58,46 +58,67 @@ spec:
             {{- if .Values.extraEnvVars }}
             {{- toYaml .Values.extraEnvVars | nindent 12 }}
             {{- end }}
-            - name: DEV_MODE
-              valueFrom:
-                configMapKeyRef:
-                  name: {{ include "router.fullname" . }}
-                  key: devMode
-            - name: LOG_LEVEL
-              valueFrom:
-                configMapKeyRef:
-                  name: {{ include "router.fullname" . }}
-                  key: logLevel
             - name: LISTEN_ADDR
               valueFrom:
                 configMapKeyRef:
                   name: {{ include "router.fullname" . }}
                   key: listenAddress
-            - name: CONTROLPLANE_URL
-              valueFrom:
-                configMapKeyRef:
-                  name: {{ include "router.fullname" . }}
-                  key: controlplaneUrl
-            - name: GRAPHQL_METRICS_COLLECTOR_ENDPOINT
-              valueFrom:
-                configMapKeyRef:
-                  name: {{ include "router.fullname" . }}
-                  key: graphqlMetricsCollectorUrl
-            - name: DEFAULT_TELEMETRY_ENDPOINT
-              valueFrom:
-                configMapKeyRef:
-                  name: {{ include "router.fullname" . }}
-                  key: otelCollectorUrl
             - name: FEDERATED_GRAPH_NAME
               valueFrom:
                 configMapKeyRef:
                   name: {{ include "router.fullname" . }}
                   key: federatedGraphName
+            {{ if .Values.configuration.devMode }}
+            - name: DEV_MODE
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "router.fullname" . }}
+                  key: devMode
+            {{- end }}
+            {{ if .Values.configuration.logLevel }}
+            - name: LOG_LEVEL
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "router.fullname" . }}
+                  key: logLevel
+            {{- end }}
+            {{ if .Values.configuration.controlplaneUrl }}
+            - name: CONTROLPLANE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "router.fullname" . }}
+                  key: controlplaneUrl
+            {{- end }}
+            {{ if .Values.configuration.graphqlMetricsCollectorUrl }}
+            - name: GRAPHQL_METRICS_COLLECTOR_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "router.fullname" . }}
+                  key: graphqlMetricsCollectorUrl
+            {{- end }}
+            {{ if .Values.configuration.otelCollectorUrl }}
+            - name: DEFAULT_TELEMETRY_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "router.fullname" . }}
+                  key: otelCollectorUrl
+            {{- end }}
+            {{ if .Values.configuration.graphApiToken }}
             - name: GRAPH_API_TOKEN
               valueFrom:
                 secretKeyRef:
                   name: {{ include "router.fullname" . }}
                   key: graphApiToken
+            {{- end }}
+          envFrom:
+            {{- if .Values.extraEnvVarsCM }}
+            - configMapRef:
+                name: {{ .Values.extraEnvVarsCM }}
+            {{- end }}
+            {{- if .Values.extraEnvVarsSecret }}
+            - secretRef:
+                name: {{ .Values.extraEnvVarsSecret }}
+            {{- end }}
           {{ with .Values.probes.liveness }}
           livenessProbe:
             {{- toYaml . | nindent 12 }}
@@ -106,8 +127,26 @@ spec:
           readinessProbe:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+          volumeMounts:
+            {{- if .Values.existingConfigmap }}
+            - name: router-config
+              mountPath: /config.yaml
+              subPath: config.yaml
+            {{- end }}
+            {{- if .Values.extraVolumeMounts }}
+            {{- .Values.extraVolumeMounts | nindent 12 }}
+            {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        {{- if .Values.existingConfigmap }}
+        - name: router-config
+          configMap:
+            name: {{ .Values.existingConfigmap }}
+        {{- end }}
+        {{- if .Values.extraVolumes }}
+        {{- .Values.extraVolumes | nindent 8 }}
+        {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

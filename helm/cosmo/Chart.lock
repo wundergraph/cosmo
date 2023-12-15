@@ -14,17 +14,20 @@ dependencies:
 - name: graphqlmetrics
   repository: ""
   version: ^0
+- name: cdn
+  repository: ""
+  version: ^0
 - name: postgresql
   repository: https://charts.bitnami.com/bitnami
   version: 12.8.0
 - name: keycloak
   repository: https://charts.bitnami.com/bitnami
-  version: 17.3.4
+  version: 17.3.6
 - name: clickhouse
   repository: https://charts.bitnami.com/bitnami
-  version: 4.1.7
+  version: 4.1.11
 - name: minio
   repository: https://charts.bitnami.com/bitnami
   version: 12.10.0
-digest: sha256:b659783ca2fb3ed8f1e92ed6121e17158b5d62de3673c6d85148ca55c1c6ea92
-generated: "2023-11-22T11:09:07.627353Z"
+digest: sha256:2a8c38f91feba1b8ff2810625431777e7d2c909cb883d31d435af5b11f7367f8
+generated: "2023-12-14T21:23:54.169431508+01:00"
