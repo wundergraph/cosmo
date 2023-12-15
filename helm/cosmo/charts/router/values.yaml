@@ -151,6 +151,8 @@ configuration:
   federatedGraphName: "production"
   # -- The router token is used to authenticate the router against the controlplane (required)
   graphApiToken: "replace-me"
+  # -- The execution config file to statically configure the router (If no pulling of the config is desired)
+  executionConfig: ""
   # -- The log level of the router. Default to info if not set.
   logLevel: "info"
   # -- The URL of the Cosmo Controlplane. Should be internal to the cluster. Default to cloud if not set.

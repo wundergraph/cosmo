@@ -1,0 +1,14 @@
+{{ if .Values.configuration.executionConfig }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "router.fullname" . }}-execution-config
+  annotations:
+    # Support for k14s.io. This annotation will produce a redeployment when the configmap changes.
+    kapp.k14s.io/versioned: ""
+  labels:
+    {{- include "router.labels" . | nindent 4 }}
+data:
+  execution-config.json: |-
+    {{- .Values.configuration.executionConfig | nindent 4 }}
+{{ end }}
