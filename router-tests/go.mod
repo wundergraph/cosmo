@@ -12,6 +12,7 @@ require (
 	github.com/wundergraph/cosmo/composition-go v0.0.0-20231210173116-4cf620b03fbb
 	github.com/wundergraph/cosmo/demo v0.0.0-20231210173116-4cf620b03fbb
 	github.com/wundergraph/cosmo/router v0.0.0-20231210173116-4cf620b03fbb
+	go.uber.org/atomic v1.11.0
 	go.uber.org/zap v1.26.0
 )
 
@@ -101,7 +102,6 @@ require (
 	go.opentelemetry.io/otel/sdk/metric v1.19.0 // indirect
 	go.opentelemetry.io/otel/trace v1.19.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.0.0 // indirect
-	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.withmatt.com/connect-brotli v0.4.0 // indirect
 	golang.org/x/crypto v0.14.0 // indirect
