@@ -31,6 +31,8 @@ func (r *mutationResolver) UpdateEmployeeTag(ctx context.Context, id int, tag st
 
 // Employee is the resolver for the employee field.
 func (r *queryResolver) Employee(ctx context.Context, id int) (*model.Employee, error) {
+	r.mux.Lock()
+	defer r.mux.Unlock()
 	if id < 1 {
 		return nil, nil
 	}
@@ -44,6 +46,8 @@ func (r *queryResolver) Employee(ctx context.Context, id int) (*model.Employee, 
 
 // Employees is the resolver for the employees field.
 func (r *queryResolver) Employees(ctx context.Context) ([]*model.Employee, error) {
+	r.mux.Lock()
+	defer r.mux.Unlock()
 	return employees, nil
 }
 
@@ -54,6 +58,8 @@ func (r *queryResolver) Products(ctx context.Context) ([]model.Products, error) 
 
 // Teammates is the resolver for the teammates field.
 func (r *queryResolver) Teammates(ctx context.Context, team model.Department) ([]*model.Employee, error) {
+	r.mux.Lock()
+	defer r.mux.Unlock()
 	switch team {
 	case model.DepartmentMarketing:
 		return marketers, nil
