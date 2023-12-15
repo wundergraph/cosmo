@@ -20,11 +20,23 @@ func (r *mutationResolver) UpdateEmployeeTag(ctx context.Context, id int, tag st
 	}
 	r.mux.Lock()
 	defer r.mux.Unlock()
-	for i := range employees {
-		if employees[i].ID == id {
-			employees[i].Tag = tag
+	for _, employee := range employees {
+		if id == employee.ID {
+			employee.Tag = tag
+			details := &model.Details{}
+			if employee.Details != nil {
+				details.Forename = employee.Details.Forename
+				details.Surname = employee.Details.Surname
+				details.Location = employee.Details.Location
+			}
+			return &model.Employee{
+				ID:      employee.ID,
+				Details: details,
+				Tag:     employee.Tag,
+				Role:    employee.Role,
+				Notes:   employee.Notes,
+			}, nil
 		}
-		return employees[i], nil
 	}
 	return nil, nil
 }
@@ -38,7 +50,19 @@ func (r *queryResolver) Employee(ctx context.Context, id int) (*model.Employee, 
 	}
 	for _, employee := range employees {
 		if id == employee.ID {
-			return employee, nil
+			details := &model.Details{}
+			if employee.Details != nil {
+				details.Forename = employee.Details.Forename
+				details.Surname = employee.Details.Surname
+				details.Location = employee.Details.Location
+			}
+			return &model.Employee{
+				ID:      employee.ID,
+				Details: details,
+				Tag:     employee.Tag,
+				Role:    employee.Role,
+				Notes:   employee.Notes,
+			}, nil
 		}
 	}
 	return nil, nil
