@@ -10,7 +10,8 @@ describe('Input federation tests', () => {
     const federatedGraph = federationResult!.federatedGraphAST;
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
-        versionOnePersistedBaseSchema + `
+        versionOnePersistedBaseSchema +
+          `
       type Query {
         dummy: String!
       }

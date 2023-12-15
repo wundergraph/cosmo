@@ -3,55 +3,81 @@ import { batchNormalize, ConfigurationData, federateSubgraphs, normalizeSubgraph
 import { createSubgraph } from './utils/utils';
 
 describe('Field Configuration tests', () => {
-  describe('Normalization tests' ,() => {
+  describe('Normalization tests', () => {
     test('that field configuration for employees.graphql is correctly generated', () => {
       const { errors, normalizationResult } = normalizeSubgraphFromString(employees);
       expect(errors).toBeUndefined();
       expect(normalizationResult).toBeDefined();
       const configurationDataMap = normalizationResult!.configurationDataMap;
-      expect(configurationDataMap).toStrictEqual(new Map<string, ConfigurationData>([
-        ['Query', {
-          fieldNames: new Set<string>(['employee', 'employees', 'teammates']),
-          isRootNode: true,
-          typeName: 'Query',
-        }],
-        ['RoleType', {
-          fieldNames: new Set<string>(['departments', 'title']),
-          isRootNode: false,
-          typeName: 'RoleType',
-        }],
-        ['Identifiable', {
-          fieldNames: new Set<string>(['id']),
-          isRootNode: false,
-          typeName: 'Identifiable',
-        }],
-        ['Engineer', {
-          fieldNames: new Set<string>(['departments', 'engineerType', 'title']),
-          isRootNode: false,
-          typeName: 'Engineer',
-        }],
-        ['Marketer', {
-          fieldNames: new Set<string>(['departments', 'title']),
-          isRootNode: false,
-          typeName: 'Marketer',
-        }],
-        ['Operator', {
-          fieldNames: new Set<string>(['departments', 'operatorType', 'title']),
-          isRootNode: false,
-          typeName: 'Operator',
-        }],
-        ['Details', {
-          fieldNames: new Set<string>(['forename', 'location', 'surname']),
-          isRootNode: false,
-          typeName: 'Details',
-        }],
-        ['Employee', {
-          fieldNames: new Set<string>(['details', 'id', 'role']),
-          isRootNode: true,
-          keys: [{ fieldName: '', selectionSet: 'id' }],
-          typeName: 'Employee',
-        }],
-      ]));
+      expect(configurationDataMap).toStrictEqual(
+        new Map<string, ConfigurationData>([
+          [
+            'Query',
+            {
+              fieldNames: new Set<string>(['employee', 'employees', 'teammates']),
+              isRootNode: true,
+              typeName: 'Query',
+            },
+          ],
+          [
+            'RoleType',
+            {
+              fieldNames: new Set<string>(['departments', 'title']),
+              isRootNode: false,
+              typeName: 'RoleType',
+            },
+          ],
+          [
+            'Identifiable',
+            {
+              fieldNames: new Set<string>(['id']),
+              isRootNode: false,
+              typeName: 'Identifiable',
+            },
+          ],
+          [
+            'Engineer',
+            {
+              fieldNames: new Set<string>(['departments', 'engineerType', 'title']),
+              isRootNode: false,
+              typeName: 'Engineer',
+            },
+          ],
+          [
+            'Marketer',
+            {
+              fieldNames: new Set<string>(['departments', 'title']),
+              isRootNode: false,
+              typeName: 'Marketer',
+            },
+          ],
+          [
+            'Operator',
+            {
+              fieldNames: new Set<string>(['departments', 'operatorType', 'title']),
+              isRootNode: false,
+              typeName: 'Operator',
+            },
+          ],
+          [
+            'Details',
+            {
+              fieldNames: new Set<string>(['forename', 'location', 'surname']),
+              isRootNode: false,
+              typeName: 'Details',
+            },
+          ],
+          [
+            'Employee',
+            {
+              fieldNames: new Set<string>(['details', 'id', 'role']),
+              isRootNode: true,
+              keys: [{ fieldName: '', selectionSet: 'id' }],
+              typeName: 'Employee',
+            },
+          ],
+        ]),
+      );
     });
 
     test('that field configuration for family.graphql is correctly generated', () => {
@@ -59,54 +85,83 @@ describe('Field Configuration tests', () => {
       expect(errors).toBeUndefined();
       expect(normalizationResult).toBeDefined();
       const configurationDataMap = normalizationResult!.configurationDataMap;
-      expect(configurationDataMap).toStrictEqual(new Map<string, ConfigurationData>([
-        ['Animal', {
-          fieldNames: new Set<string>(['class', 'gender']),
-          isRootNode: false,
-          typeName: 'Animal',
-        }],
-        ['Pet', {
-          fieldNames: new Set<string>(['class', 'gender', 'name']),
-          isRootNode: false,
-          typeName: 'Pet',
-        }],
-        ['Alligator', {
-          fieldNames: new Set<string>(['class', 'dangerous', 'gender', 'name']),
-          isRootNode: false,
-          typeName: 'Alligator',
-        }],
-        ['Cat', {
-          fieldNames: new Set<string>(['class', 'gender', 'name', 'type']),
-          isRootNode: false,
-          typeName: 'Cat',
-        }],
-        ['Dog', {
-          fieldNames: new Set<string>(['breed', 'class', 'gender', 'name']),
-          isRootNode: false,
-          typeName: 'Dog',
-        }],
-        ['Mouse', {
-          fieldNames: new Set<string>(['class', 'gender', 'name']),
-          isRootNode: false,
-          typeName: 'Mouse',
-        }],
-        ['Pony', {
-          fieldNames: new Set<string>(['class', 'gender', 'name']),
-          isRootNode: false,
-          typeName: 'Pony',
-        }],
-        ['Details', {
-          fieldNames: new Set<string>(['forename', 'surname']),
-          isRootNode: false,
-          typeName: 'Details',
-        }],
-        ['Employee', {
-          fieldNames: new Set<string>(['details', 'id', 'hasChildren', 'maritalStatus', 'nationality', 'pets']),
-          isRootNode: true,
-          keys: [{ fieldName: '', selectionSet: 'id', }],
-          typeName: 'Employee',
-        }],
-      ]));
+      expect(configurationDataMap).toStrictEqual(
+        new Map<string, ConfigurationData>([
+          [
+            'Animal',
+            {
+              fieldNames: new Set<string>(['class', 'gender']),
+              isRootNode: false,
+              typeName: 'Animal',
+            },
+          ],
+          [
+            'Pet',
+            {
+              fieldNames: new Set<string>(['class', 'gender', 'name']),
+              isRootNode: false,
+              typeName: 'Pet',
+            },
+          ],
+          [
+            'Alligator',
+            {
+              fieldNames: new Set<string>(['class', 'dangerous', 'gender', 'name']),
+              isRootNode: false,
+              typeName: 'Alligator',
+            },
+          ],
+          [
+            'Cat',
+            {
+              fieldNames: new Set<string>(['class', 'gender', 'name', 'type']),
+              isRootNode: false,
+              typeName: 'Cat',
+            },
+          ],
+          [
+            'Dog',
+            {
+              fieldNames: new Set<string>(['breed', 'class', 'gender', 'name']),
+              isRootNode: false,
+              typeName: 'Dog',
+            },
+          ],
+          [
+            'Mouse',
+            {
+              fieldNames: new Set<string>(['class', 'gender', 'name']),
+              isRootNode: false,
+              typeName: 'Mouse',
+            },
+          ],
+          [
+            'Pony',
+            {
+              fieldNames: new Set<string>(['class', 'gender', 'name']),
+              isRootNode: false,
+              typeName: 'Pony',
+            },
+          ],
+          [
+            'Details',
+            {
+              fieldNames: new Set<string>(['forename', 'surname']),
+              isRootNode: false,
+              typeName: 'Details',
+            },
+          ],
+          [
+            'Employee',
+            {
+              fieldNames: new Set<string>(['details', 'id', 'hasChildren', 'maritalStatus', 'nationality', 'pets']),
+              isRootNode: true,
+              keys: [{ fieldName: '', selectionSet: 'id' }],
+              typeName: 'Employee',
+            },
+          ],
+        ]),
+      );
     });
 
     test('that field configuration for hobbies.graphql is correctly generated', () => {
@@ -114,49 +169,75 @@ describe('Field Configuration tests', () => {
       expect(errors).toBeUndefined();
       expect(normalizationResult).toBeDefined();
       const configurationDataMap = normalizationResult!.configurationDataMap;
-      expect(configurationDataMap).toStrictEqual(new Map<string, ConfigurationData>([
-        ['Exercise', {
-          fieldNames: new Set<string>(['category']),
-          isRootNode: false,
-          typeName: 'Exercise',
-        }],
-        ['Experience', {
-          fieldNames: new Set<string>(['yearsOfExperience']),
-          isRootNode: false,
-          typeName: 'Experience',
-        }],
-        ['Flying', {
-          fieldNames: new Set<string>(['planeModels', 'yearsOfExperience']),
-          isRootNode: false,
-          typeName: 'Flying',
-        }],
-        ['Gaming', {
-          fieldNames: new Set<string>(['genres', 'name', 'yearsOfExperience']),
-          isRootNode: false,
-          typeName: 'Gaming',
-        }],
-        ['Other', {
-          fieldNames: new Set<string>(['name']),
-          isRootNode: false,
-          typeName: 'Other',
-        }],
-        ['Programming', {
-          fieldNames: new Set<string>(['languages']),
-          isRootNode: false,
-          typeName: 'Programming',
-        }],
-        ['Travelling', {
-          fieldNames: new Set<string>(['countriesLived']),
-          isRootNode: false,
-          typeName: 'Travelling',
-        }],
-        ['Employee', {
-          fieldNames: new Set<string>(['id', 'hobbies']),
-          isRootNode: true,
-          keys: [{ fieldName: '', selectionSet: 'id', }],
-          typeName: 'Employee',
-        }],
-      ]));
+      expect(configurationDataMap).toStrictEqual(
+        new Map<string, ConfigurationData>([
+          [
+            'Exercise',
+            {
+              fieldNames: new Set<string>(['category']),
+              isRootNode: false,
+              typeName: 'Exercise',
+            },
+          ],
+          [
+            'Experience',
+            {
+              fieldNames: new Set<string>(['yearsOfExperience']),
+              isRootNode: false,
+              typeName: 'Experience',
+            },
+          ],
+          [
+            'Flying',
+            {
+              fieldNames: new Set<string>(['planeModels', 'yearsOfExperience']),
+              isRootNode: false,
+              typeName: 'Flying',
+            },
+          ],
+          [
+            'Gaming',
+            {
+              fieldNames: new Set<string>(['genres', 'name', 'yearsOfExperience']),
+              isRootNode: false,
+              typeName: 'Gaming',
+            },
+          ],
+          [
+            'Other',
+            {
+              fieldNames: new Set<string>(['name']),
+              isRootNode: false,
+              typeName: 'Other',
+            },
+          ],
+          [
+            'Programming',
+            {
+              fieldNames: new Set<string>(['languages']),
+              isRootNode: false,
+              typeName: 'Programming',
+            },
+          ],
+          [
+            'Travelling',
+            {
+              fieldNames: new Set<string>(['countriesLived']),
+              isRootNode: false,
+              typeName: 'Travelling',
+            },
+          ],
+          [
+            'Employee',
+            {
+              fieldNames: new Set<string>(['id', 'hobbies']),
+              isRootNode: true,
+              keys: [{ fieldName: '', selectionSet: 'id' }],
+              typeName: 'Employee',
+            },
+          ],
+        ]),
+      );
     });
 
     test('that field configuration for products.graphql is correctly generated', () => {
@@ -164,14 +245,19 @@ describe('Field Configuration tests', () => {
       expect(errors).toBeUndefined();
       expect(normalizationResult).toBeDefined();
       const configurationDataMap = normalizationResult!.configurationDataMap;
-      expect(configurationDataMap).toStrictEqual(new Map<string, ConfigurationData>([
-        ['Employee', {
-          fieldNames: new Set<string>(['id', 'products']),
-          isRootNode: true,
-          keys: [{ fieldName: '', selectionSet: 'id', }],
-          typeName: 'Employee',
-        }],
-      ]));
+      expect(configurationDataMap).toStrictEqual(
+        new Map<string, ConfigurationData>([
+          [
+            'Employee',
+            {
+              fieldNames: new Set<string>(['id', 'products']),
+              isRootNode: true,
+              keys: [{ fieldName: '', selectionSet: 'id' }],
+              typeName: 'Employee',
+            },
+          ],
+        ]),
+      );
     });
 
     test('that external fields that are part of a key FieldSet are included in the root node', () => {
@@ -182,14 +268,19 @@ describe('Field Configuration tests', () => {
       expect(errors).toBeUndefined();
       expect(normalizationResult).toBeDefined();
       const configurationDataMap = normalizationResult!.configurationDataMap;
-      expect(configurationDataMap).toStrictEqual(new Map<string, ConfigurationData>([
-        ['Entity', {
-          fieldNames: new Set<string>(['id']),
-          isRootNode: true,
-          keys: [{ fieldName: '', selectionSet: 'id', }],
-          typeName: 'Entity',
-        }],
-      ]));
+      expect(configurationDataMap).toStrictEqual(
+        new Map<string, ConfigurationData>([
+          [
+            'Entity',
+            {
+              fieldNames: new Set<string>(['id']),
+              isRootNode: true,
+              keys: [{ fieldName: '', selectionSet: 'id' }],
+              typeName: 'Entity',
+            },
+          ],
+        ]),
+      );
     });
 
     test('that external fields that are not part of a key FieldSet are not included in the root node', () => {
@@ -201,14 +292,19 @@ describe('Field Configuration tests', () => {
       expect(errors).toBeUndefined();
       expect(normalizationResult).toBeDefined();
       const configurationDataMap = normalizationResult!.configurationDataMap;
-      expect(configurationDataMap).toStrictEqual(new Map<string, ConfigurationData>([
-        ['Entity', {
-          fieldNames: new Set<string>(['id']),
-          isRootNode: true,
-          keys: [{ fieldName: '', selectionSet: 'id', }],
-          typeName: 'Entity',
-        }],
-      ]));
+      expect(configurationDataMap).toStrictEqual(
+        new Map<string, ConfigurationData>([
+          [
+            'Entity',
+            {
+              fieldNames: new Set<string>(['id']),
+              isRootNode: true,
+              keys: [{ fieldName: '', selectionSet: 'id' }],
+              typeName: 'Entity',
+            },
+          ],
+        ]),
+      );
     });
 
     test('that FieldSet configuration is generated', () => {
@@ -246,37 +342,54 @@ describe('Field Configuration tests', () => {
       expect(errors).toBeUndefined();
       expect(normalizationResult).toBeDefined();
       const configurationDataMap = normalizationResult!.configurationDataMap;
-      expect(configurationDataMap).toStrictEqual(new Map<string, ConfigurationData>([
-        ['Entity', {
-          fieldNames: new Set<string>(['id']),
-          isRootNode: true,
-          keys: [{ fieldName: '', selectionSet: 'id', }],
-          typeName: 'Entity',
-        }],
-        ['Object', {
-          fieldNames: new Set<string>(['age', 'entity', 'name']),
-          isRootNode: false,
-          provides: [{ fieldName: 'entity', selectionSet: 'field', }],
-          typeName: 'Object',
-        }],
-        ['AnotherEntity', {
-          fieldNames: new Set<string>(['id', 'myField']),
-          isRootNode: true,
-          keys: [{ fieldName: '', selectionSet: 'id', }],
-          requires: [{ fieldName: 'myField', selectionSet: 'anotherField { age name nested { name } }', }],
-          typeName: 'AnotherEntity',
-        }],
-        ['OtherObject', {
-          fieldNames: new Set<string>(['age', 'name', 'nested']),
-          isRootNode: false,
-          typeName: 'OtherObject',
-        }],
-        ['NestedObject', {
-          fieldNames: new Set<string>(['name']),
-          isRootNode: false,
-          typeName: 'NestedObject',
-        }],
-      ]));
+      expect(configurationDataMap).toStrictEqual(
+        new Map<string, ConfigurationData>([
+          [
+            'Entity',
+            {
+              fieldNames: new Set<string>(['id']),
+              isRootNode: true,
+              keys: [{ fieldName: '', selectionSet: 'id' }],
+              typeName: 'Entity',
+            },
+          ],
+          [
+            'Object',
+            {
+              fieldNames: new Set<string>(['age', 'entity', 'name']),
+              isRootNode: false,
+              provides: [{ fieldName: 'entity', selectionSet: 'field' }],
+              typeName: 'Object',
+            },
+          ],
+          [
+            'AnotherEntity',
+            {
+              fieldNames: new Set<string>(['id', 'myField']),
+              isRootNode: true,
+              keys: [{ fieldName: '', selectionSet: 'id' }],
+              requires: [{ fieldName: 'myField', selectionSet: 'anotherField { age name nested { name } }' }],
+              typeName: 'AnotherEntity',
+            },
+          ],
+          [
+            'OtherObject',
+            {
+              fieldNames: new Set<string>(['age', 'name', 'nested']),
+              isRootNode: false,
+              typeName: 'OtherObject',
+            },
+          ],
+          [
+            'NestedObject',
+            {
+              fieldNames: new Set<string>(['name']),
+              isRootNode: false,
+              typeName: 'NestedObject',
+            },
+          ],
+        ]),
+      );
     });
 
     test('that entity interfaces produce the correct configuration', () => {
@@ -293,20 +406,28 @@ describe('Field Configuration tests', () => {
         }
       `);
       expect(errors).toBeUndefined();
-      expect(normalizationResult!.configurationDataMap).toStrictEqual(new Map<string, ConfigurationData>([
-        ['Entity', {
-          fieldNames: new Set<string>(['id', 'age', 'field']),
-          isRootNode: true,
-          keys: [{ fieldName: '', selectionSet: 'id', }],
-          typeName: 'Entity',
-        }],
-        ['Interface', {
-          fieldNames: new Set<string>(['id', 'age']),
-          isRootNode: true,
-          keys: [{ fieldName: '', selectionSet: 'id', }],
-          typeName: 'Interface',
-        }],
-      ]));
+      expect(normalizationResult!.configurationDataMap).toStrictEqual(
+        new Map<string, ConfigurationData>([
+          [
+            'Entity',
+            {
+              fieldNames: new Set<string>(['id', 'age', 'field']),
+              isRootNode: true,
+              keys: [{ fieldName: '', selectionSet: 'id' }],
+              typeName: 'Entity',
+            },
+          ],
+          [
+            'Interface',
+            {
+              fieldNames: new Set<string>(['id', 'age']),
+              isRootNode: true,
+              keys: [{ fieldName: '', selectionSet: 'id' }],
+              typeName: 'Interface',
+            },
+          ],
+        ]),
+      );
     });
 
     test('that interface objects produce the correct configuration', () => {
@@ -317,22 +438,29 @@ describe('Field Configuration tests', () => {
         }
       `);
       expect(errors).toBeUndefined();
-      expect(normalizationResult!.configurationDataMap).toStrictEqual(new Map<string, ConfigurationData>([
-        ['Interface', {
-          fieldNames: new Set<string>(['id', 'name']),
-          isRootNode: true,
-          keys: [{ fieldName: '', selectionSet: 'id', }],
-          typeName: 'Interface',
-        }],
-      ]));
+      expect(normalizationResult!.configurationDataMap).toStrictEqual(
+        new Map<string, ConfigurationData>([
+          [
+            'Interface',
+            {
+              fieldNames: new Set<string>(['id', 'name']),
+              isRootNode: true,
+              keys: [{ fieldName: '', selectionSet: 'id' }],
+              typeName: 'Interface',
+            },
+          ],
+        ]),
+      );
     });
   });
 
   describe('Federation tests', () => {
     test('that argument configurations are correctly generated', () => {
       const { errors, federationResult } = federateSubgraphs([
-        createSubgraph('employees', employees), createSubgraph('family', family),
-        createSubgraph('hobbies', hobbies), createSubgraph('products', products),
+        createSubgraph('employees', employees),
+        createSubgraph('family', family),
+        createSubgraph('hobbies', hobbies),
+        createSubgraph('products', products),
       ]);
       expect(errors).toBeUndefined();
       expect(federationResult!.argumentConfigurations).toStrictEqual([
@@ -358,44 +486,62 @@ describe('Field Configuration tests', () => {
       expect(errors).toBeUndefined();
       expect(internalSubgraphsBySubgraphName.get('monolith')!.configurationDataMap).toStrictEqual(
         new Map<string, ConfigurationData>([
-          ['Query', {
-            fieldNames: new Set<string>(['getUser']),
-            isRootNode: true,
-            typeName: 'Query',
-          }],
+          [
+            'Query',
+            {
+              fieldNames: new Set<string>(['getUser']),
+              isRootNode: true,
+              typeName: 'Query',
+            },
+          ],
         ]),
       );
       expect(internalSubgraphsBySubgraphName.get('reviews')!.configurationDataMap).toStrictEqual(
         new Map<string, ConfigurationData>([
-          ['Query', {
-            fieldNames: new Set<string>(['getUser']),
-            isRootNode: true,
-            typeName: 'Query',
-          }],
-          ['Review', {
-            fieldNames: new Set<string>(['content', 'rating']),
-            isRootNode: false,
-            typeName: 'Review',
-          }],
-          ['User', {
-            fieldNames: new Set<string>(['id', 'reviews']),
-            isRootNode: false,
-            typeName: 'User',
-          }],
+          [
+            'Query',
+            {
+              fieldNames: new Set<string>(['getUser']),
+              isRootNode: true,
+              typeName: 'Query',
+            },
+          ],
+          [
+            'Review',
+            {
+              fieldNames: new Set<string>(['content', 'rating']),
+              isRootNode: false,
+              typeName: 'Review',
+            },
+          ],
+          [
+            'User',
+            {
+              fieldNames: new Set<string>(['id', 'reviews']),
+              isRootNode: false,
+              typeName: 'User',
+            },
+          ],
         ]),
       );
       expect(internalSubgraphsBySubgraphName.get('users')!.configurationDataMap).toStrictEqual(
         new Map<string, ConfigurationData>([
-          ['Query', {
-            fieldNames: new Set<string>(['getUser']),
-            isRootNode: true,
-            typeName: 'Query',
-          }],
-          ['User', {
-            fieldNames: new Set<string>(['id', 'username']),
-            isRootNode: false,
-            typeName: 'User',
-          }],
+          [
+            'Query',
+            {
+              fieldNames: new Set<string>(['getUser']),
+              isRootNode: true,
+              typeName: 'Query',
+            },
+          ],
+          [
+            'User',
+            {
+              fieldNames: new Set<string>(['id', 'username']),
+              isRootNode: false,
+              typeName: 'User',
+            },
+          ],
         ]),
       );
     });

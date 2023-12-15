@@ -10,7 +10,8 @@ describe('Union federation tests', () => {
     const federatedGraph = federationResult!.federatedGraphAST;
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
-        versionOnePersistedBaseSchema + `
+        versionOnePersistedBaseSchema +
+          `
       union Starters = Bulbasaur | Squirtle | Charmander | Chikorita | Totodile | Cyndaquil
 
       type Bulbasaur {

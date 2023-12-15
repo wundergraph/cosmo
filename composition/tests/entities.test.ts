@@ -10,7 +10,8 @@ describe('Entities federation tests', () => {
     const federatedGraph = federationResult!.federatedGraphAST;
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
-        versionOnePersistedBaseSchema + `
+        versionOnePersistedBaseSchema +
+          `
       type Query {
         dummy: String!
       }
@@ -41,7 +42,8 @@ describe('Entities federation tests', () => {
     const federatedGraph = federationResult!.federatedGraphAST;
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
-        versionOnePersistedBaseSchema + `
+        versionOnePersistedBaseSchema +
+          `
       type Query {
         dummy: String!
         trainer: Trainer!
@@ -79,13 +81,7 @@ describe('Entities federation tests', () => {
     expect(result.errors).toBeDefined();
     expect(result.errors).toHaveLength(1);
     expect(result.errors![0]).toStrictEqual(
-      unresolvableFieldError(
-        rootTypeFieldData,
-        'details',
-        ['subgraph-d'],
-        'Query.trainer.details { ... }',
-        'Trainer'
-      ),
+      unresolvableFieldError(rootTypeFieldData, 'details', ['subgraph-d'], 'Query.trainer.details { ... }', 'Trainer'),
     );
   });
 
@@ -167,7 +163,8 @@ describe('Entities federation tests', () => {
     const federatedGraph = federationResult!.federatedGraphAST;
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
-        versionOnePersistedBaseSchema + `
+        versionOnePersistedBaseSchema +
+          `
       type Trainer {
         id: Int!
         pokemon: [Pokemon!]!
@@ -196,7 +193,10 @@ describe('Entities federation tests', () => {
     const { errors, federationResult } = federateSubgraphs([subgraphH]);
     expect(errors).toBeUndefined();
     const federatedGraph = federationResult!.federatedGraphAST;
-    expect(documentNodeToNormalizedString(federatedGraph)).toBe(normalizeString(versionOnePersistedBaseSchema + `
+    expect(documentNodeToNormalizedString(federatedGraph)).toBe(
+      normalizeString(
+        versionOnePersistedBaseSchema +
+          `
       interface Interface {
         id: ID!
         name: String!
@@ -206,7 +206,9 @@ describe('Entities federation tests', () => {
       type Query {
         dummy: String!
       }
-    `));
+    `,
+      ),
+    );
   });
 });
 
