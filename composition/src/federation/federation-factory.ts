@@ -38,7 +38,6 @@ import {
   extractExecutableDirectiveLocations,
   extractInterfaces,
   isNodeExternal,
-  isNodeInterfaceObject,
   isNodeShareable,
   mergeExecutableDirectiveLocations,
   pushPersistedDirectivesAndGetNode,
@@ -47,6 +46,7 @@ import {
   stringToNamedTypeNode,
 } from '../ast/utils';
 import {
+  allFieldDefinitionsAreInaccessibleError,
   argumentTypeMergeFatalError,
   federationInvalidParentTypeError,
   federationRequiredInputFieldError,
@@ -62,7 +62,6 @@ import {
   invalidTagDirectiveError,
   invalidUnionError,
   minimumSubgraphRequirementError,
-  allFieldDefinitionsAreInaccessibleError,
   noBaseTypeExtensionError,
   noConcreteTypesForAbstractTypeError,
   noQueryRootTypeError,
@@ -122,7 +121,6 @@ import {
   EXTENSIONS,
   FIELD,
   INACCESSIBLE,
-  INTERFACE_OBJECT,
   OVERRIDE,
   PARENTS,
   QUERY,
@@ -137,7 +135,6 @@ import {
   getAllMutualEntries,
   getEntriesNotInHashSet,
   getOrThrowError,
-  getValueOrDefault,
   hasSimplePath,
   ImplementationErrors,
   InvalidFieldImplementation,
@@ -187,15 +184,18 @@ export class FederationFactory {
   subgraphs: InternalSubgraph[] = [];
   shareableErrorTypeNames = new Map<string, Set<string>>();
   subgraphConfigBySubgraphName: Map<string, SubgraphConfig>;
+  warnings: string[];
 
   constructor(
     subgraphs: InternalSubgraph[],
     subgraphConfigBySubgraphName: Map<string, SubgraphConfig>,
     entityInterfaceDatasByTypeName: Map<string, EntityInterfaceDatas>,
+    warnings?: string[],
   ) {
     this.subgraphs = subgraphs;
     this.subgraphConfigBySubgraphName = subgraphConfigBySubgraphName;
     this.entityInterfaceDatasByTypeName = entityInterfaceDatasByTypeName;
+    this.warnings = warnings || [];
   }
 
   isObjectRootType(node: ObjectTypeDefinitionNode | ObjectTypeExtensionNode): boolean {
@@ -1666,8 +1666,9 @@ export class FederationFactory {
         }
       }
     }
+    const warnings = this.warnings.length > 0 ? this.warnings : undefined;
     if (this.errors.length > 0) {
-      return { errors: this.errors };
+      return { errors: this.errors, warnings };
     }
     const newAst: DocumentNode = {
       kind: Kind.DOCUMENT,
@@ -1680,6 +1681,7 @@ export class FederationFactory {
         federatedGraphAST: newAst,
         federatedGraphSchema: buildASTSchema(newAst),
       },
+      warnings,
     };
   }
 }
@@ -1688,7 +1690,7 @@ export function federateSubgraphs(subgraphs: Subgraph[]): FederationResultContai
   if (subgraphs.length < 1) {
     return { errors: [minimumSubgraphRequirementError] };
   }
-  const { errors, internalSubgraphsBySubgraphName } = batchNormalize(subgraphs);
+  const { errors, internalSubgraphsBySubgraphName, warnings } = batchNormalize(subgraphs);
   if (errors) {
     return { errors };
   }
@@ -1714,6 +1716,7 @@ export function federateSubgraphs(subgraphs: Subgraph[]): FederationResultContai
     internalSubgraphs,
     subgraphConfigBySubgraphName,
     entityInterfaceDatas,
+    warnings,
   );
   return federationFactory.federate();
 }
