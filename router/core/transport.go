@@ -132,7 +132,10 @@ func (ct *CustomTransport) roundTripSingleFlight(req *http.Request) (*http.Respo
 		if err != nil {
 			return nil, err
 		}
-		_, _ = keyGen.Write(body)
+		_, err = keyGen.Write(body)
+		if err != nil {
+			return nil, err
+		}
 		req.Body = io.NopCloser(bytes.NewReader(body))
 	}
 
@@ -145,7 +148,10 @@ func (ct *CustomTransport) roundTripSingleFlight(req *http.Request) (*http.Respo
 
 	sort.Strings(unsortedHeaders)
 	for i := range unsortedHeaders {
-		_, _ = keyGen.Write(unsafebytes.StringToBytes(unsortedHeaders[i]))
+		_, err := keyGen.Write(unsafebytes.StringToBytes(unsortedHeaders[i]))
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	sum := keyGen.Sum64()
