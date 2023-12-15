@@ -1,7 +1,8 @@
 import {
   federateSubgraphs,
   ImplementationErrors,
-  InvalidFieldImplementation, noFieldDefinitionsError,
+  InvalidFieldImplementation,
+  noFieldDefinitionsError,
   normalizeSubgraphFromString,
   Subgraph,
   unimplementedInterfaceFieldsError,
@@ -18,7 +19,7 @@ import {
 describe('Interface tests', () => {
   describe('Normalization tests', () => {
     test('that an error is returned if an interface does not define any fields', () => {
-      const { errors} = normalizeSubgraphFromString(`
+      const { errors } = normalizeSubgraphFromString(`
         interface Interface
       `);
       expect(errors).toBeDefined();
@@ -26,7 +27,7 @@ describe('Interface tests', () => {
     });
 
     test('that an error is returned if an extended interface does not define any fields', () => {
-      const { errors} = normalizeSubgraphFromString(`
+      const { errors } = normalizeSubgraphFromString(`
         interface Interface
         
         extend interface Interface @tag(name: "test")
@@ -55,52 +56,76 @@ describe('Interface tests', () => {
       `);
       expect(errors).toBeDefined();
       expect(errors).toHaveLength(2);
-      expect(errors![0]).toStrictEqual(unimplementedInterfaceFieldsError(
-        'Pet',
-        'interface',
-        new Map<string, ImplementationErrors>([
-          ['Animal', {
-            invalidFieldImplementations: new Map<string, InvalidFieldImplementation>([
-              ['sounds', {
-                implementedResponseType: '[String]!',
-                invalidAdditionalArguments: new Set<string>(),
-                invalidImplementedArguments: [{ actualType: 'String', argumentName: 'species', expectedType: 'String!' }],
-                originalResponseType: '[String!]',
-                unimplementedArguments: new Set<string>(),
-              }],
-            ]),
-            unimplementedFields: [],
-          }]
-        ]),
-      ));
-      expect(errors![1]).toStrictEqual(unimplementedInterfaceFieldsError(
-        'Cat',
-        'object',
-        new Map<string, ImplementationErrors>([
-          ['Pet', {
-            invalidFieldImplementations: new Map<string, InvalidFieldImplementation>([
-              ['sounds', {
-                invalidAdditionalArguments: new Set<string>(),
-                invalidImplementedArguments: [],
-                originalResponseType: '[String]!',
-                unimplementedArguments: new Set<string>(['species']),
-              }],
-            ]),
-            unimplementedFields: ['age', 'name'],
-          }],
-          ['Animal', {
-            invalidFieldImplementations: new Map<string, InvalidFieldImplementation>([
-              ['sounds', {
-                invalidAdditionalArguments: new Set<string>(),
-                invalidImplementedArguments: [],
-                originalResponseType: '[String!]',
-                unimplementedArguments: new Set<string>(['species']),
-              }],
-            ]),
-            unimplementedFields: ['name'],
-          }],
-        ]),
-      ));
+      expect(errors![0]).toStrictEqual(
+        unimplementedInterfaceFieldsError(
+          'Pet',
+          'interface',
+          new Map<string, ImplementationErrors>([
+            [
+              'Animal',
+              {
+                invalidFieldImplementations: new Map<string, InvalidFieldImplementation>([
+                  [
+                    'sounds',
+                    {
+                      implementedResponseType: '[String]!',
+                      invalidAdditionalArguments: new Set<string>(),
+                      invalidImplementedArguments: [
+                        { actualType: 'String', argumentName: 'species', expectedType: 'String!' },
+                      ],
+                      originalResponseType: '[String!]',
+                      unimplementedArguments: new Set<string>(),
+                    },
+                  ],
+                ]),
+                unimplementedFields: [],
+              },
+            ],
+          ]),
+        ),
+      );
+      expect(errors![1]).toStrictEqual(
+        unimplementedInterfaceFieldsError(
+          'Cat',
+          'object',
+          new Map<string, ImplementationErrors>([
+            [
+              'Pet',
+              {
+                invalidFieldImplementations: new Map<string, InvalidFieldImplementation>([
+                  [
+                    'sounds',
+                    {
+                      invalidAdditionalArguments: new Set<string>(),
+                      invalidImplementedArguments: [],
+                      originalResponseType: '[String]!',
+                      unimplementedArguments: new Set<string>(['species']),
+                    },
+                  ],
+                ]),
+                unimplementedFields: ['age', 'name'],
+              },
+            ],
+            [
+              'Animal',
+              {
+                invalidFieldImplementations: new Map<string, InvalidFieldImplementation>([
+                  [
+                    'sounds',
+                    {
+                      invalidAdditionalArguments: new Set<string>(),
+                      invalidImplementedArguments: [],
+                      originalResponseType: '[String!]',
+                      unimplementedArguments: new Set<string>(['species']),
+                    },
+                  ],
+                ]),
+                unimplementedFields: ['name'],
+              },
+            ],
+          ]),
+        ),
+      );
     });
 
     test('that errors are returned if implemented interface fields are invalid #2', () => {
@@ -131,54 +156,76 @@ describe('Interface tests', () => {
       `);
       expect(errors).toBeDefined();
       expect(errors).toHaveLength(2);
-      expect(errors![0]).toStrictEqual(unimplementedInterfaceFieldsError(
-        'Pet',
-        'interface',
-        new Map<string, ImplementationErrors>([
-          ['Animal', {
-            invalidFieldImplementations: new Map<string, InvalidFieldImplementation>([
-              ['sound', {
-                invalidAdditionalArguments: new Set<string>(),
-                invalidImplementedArguments: [
-                  { actualType: 'Int', argumentName: 'a', expectedType: 'String!' },
-                  { actualType: 'String!', argumentName: 'b', expectedType: 'Int' },
-                ],
-                originalResponseType: 'String!',
-                unimplementedArguments: new Set<string>(['c', 'd']),
-              }],
-            ]),
-            unimplementedFields: [],
-          }]
-        ]),
-      ));
-      expect(errors![1]).toStrictEqual(unimplementedInterfaceFieldsError(
-        'Cat',
-        'object',
-        new Map<string, ImplementationErrors>([
-          ['Pet', {
-            invalidFieldImplementations: new Map<string, InvalidFieldImplementation>([
-              ['sound', {
-                invalidAdditionalArguments: new Set<string>(['e']),
-                invalidImplementedArguments: [],
-                originalResponseType: 'String!',
-                unimplementedArguments: new Set<string>(['a', 'b']),
-              }],
-            ]),
-            unimplementedFields: ['age', 'price'],
-          }],
-          ['Animal', {
-            invalidFieldImplementations: new Map<string, InvalidFieldImplementation>([
-              ['sound', {
-                invalidAdditionalArguments: new Set<string>(['e']),
-                invalidImplementedArguments: [],
-                originalResponseType: 'String',
-                unimplementedArguments: new Set<string>(['a', 'b', 'c', 'd']),
-              }],
-            ]),
-            unimplementedFields: [],
-          }],
-        ]),
-      ));
+      expect(errors![0]).toStrictEqual(
+        unimplementedInterfaceFieldsError(
+          'Pet',
+          'interface',
+          new Map<string, ImplementationErrors>([
+            [
+              'Animal',
+              {
+                invalidFieldImplementations: new Map<string, InvalidFieldImplementation>([
+                  [
+                    'sound',
+                    {
+                      invalidAdditionalArguments: new Set<string>(),
+                      invalidImplementedArguments: [
+                        { actualType: 'Int', argumentName: 'a', expectedType: 'String!' },
+                        { actualType: 'String!', argumentName: 'b', expectedType: 'Int' },
+                      ],
+                      originalResponseType: 'String!',
+                      unimplementedArguments: new Set<string>(['c', 'd']),
+                    },
+                  ],
+                ]),
+                unimplementedFields: [],
+              },
+            ],
+          ]),
+        ),
+      );
+      expect(errors![1]).toStrictEqual(
+        unimplementedInterfaceFieldsError(
+          'Cat',
+          'object',
+          new Map<string, ImplementationErrors>([
+            [
+              'Pet',
+              {
+                invalidFieldImplementations: new Map<string, InvalidFieldImplementation>([
+                  [
+                    'sound',
+                    {
+                      invalidAdditionalArguments: new Set<string>(['e']),
+                      invalidImplementedArguments: [],
+                      originalResponseType: 'String!',
+                      unimplementedArguments: new Set<string>(['a', 'b']),
+                    },
+                  ],
+                ]),
+                unimplementedFields: ['age', 'price'],
+              },
+            ],
+            [
+              'Animal',
+              {
+                invalidFieldImplementations: new Map<string, InvalidFieldImplementation>([
+                  [
+                    'sound',
+                    {
+                      invalidAdditionalArguments: new Set<string>(['e']),
+                      invalidImplementedArguments: [],
+                      originalResponseType: 'String',
+                      unimplementedArguments: new Set<string>(['a', 'b', 'c', 'd']),
+                    },
+                  ],
+                ]),
+                unimplementedFields: [],
+              },
+            ],
+          ]),
+        ),
+      );
     });
   });
 
@@ -189,7 +236,8 @@ describe('Interface tests', () => {
       const federatedGraph = federationResult!.federatedGraphAST!;
       expect(documentNodeToNormalizedString(federatedGraph)).toBe(
         normalizeString(
-          versionTwoPersistedBaseSchema + `
+          versionTwoPersistedBaseSchema +
+            `
       interface Character {
         name: String!
         age: Int!
@@ -222,7 +270,8 @@ describe('Interface tests', () => {
       expect(errors).toBeUndefined();
       expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
         normalizeString(
-          versionTwoPersistedBaseSchema + `
+          versionTwoPersistedBaseSchema +
+            `
       interface Character {
         name: String!
         age: Int!
@@ -253,7 +302,8 @@ describe('Interface tests', () => {
       expect(errors).toBeUndefined();
       expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
         normalizeString(
-          versionTwoPersistedBaseSchema + `
+          versionTwoPersistedBaseSchema +
+            `
       interface Character {
         isFriend: Boolean!
       }
@@ -277,57 +327,79 @@ describe('Interface tests', () => {
     });
 
     test('that errors are returned if implemented interface fields are invalid #1', () => {
-      const { errors} = federateSubgraphs([subgraphE, subgraphF]);
+      const { errors } = federateSubgraphs([subgraphE, subgraphF]);
       expect(errors).toBeDefined();
       expect(errors).toHaveLength(2);
-      expect(errors![0]).toStrictEqual(unimplementedInterfaceFieldsError(
-        'Cat',
-        'object',
-        new Map<string, ImplementationErrors>([
-          ['Pet', {
-            invalidFieldImplementations: new Map<string, InvalidFieldImplementation>(),
-            unimplementedFields: ['name'],
-          }],
-          ['Animal', {
-            invalidFieldImplementations: new Map<string, InvalidFieldImplementation>(),
-            unimplementedFields: ['name'],
-          }],
-        ]),
-      ));
-      expect(errors![1]).toStrictEqual(unimplementedInterfaceFieldsError(
-        'Dog',
-        'object',
-        new Map<string, ImplementationErrors>([
-          ['Pet', {
-            invalidFieldImplementations: new Map<string, InvalidFieldImplementation>([
-              ['sounds', {
-                invalidAdditionalArguments: new Set<string>(),
-                invalidImplementedArguments: [
-                  { actualType: 'String', argumentName: 'a', expectedType: 'String!' },
-                  { actualType: 'Int', argumentName: 'b', expectedType: 'Int!' },
-                ],
-                originalResponseType: 'String',
-                unimplementedArguments: new Set<string>(),
-              }],
-            ]),
-            unimplementedFields: ['age'],
-          }],
-          ['Animal', {
-            invalidFieldImplementations: new Map<string, InvalidFieldImplementation>([
-              ['sounds', {
-                invalidAdditionalArguments: new Set<string>(),
-                invalidImplementedArguments: [
-                  { actualType: 'String', argumentName: 'a', expectedType: 'String!' },
-                  { actualType: 'Int', argumentName: 'b', expectedType: 'Int!' },
-                ],
-                originalResponseType: 'String',
-                unimplementedArguments: new Set<string>(),
-              }],
-            ]),
-            unimplementedFields: [],
-          }],
-        ]),
-      ));
+      expect(errors![0]).toStrictEqual(
+        unimplementedInterfaceFieldsError(
+          'Cat',
+          'object',
+          new Map<string, ImplementationErrors>([
+            [
+              'Pet',
+              {
+                invalidFieldImplementations: new Map<string, InvalidFieldImplementation>(),
+                unimplementedFields: ['name'],
+              },
+            ],
+            [
+              'Animal',
+              {
+                invalidFieldImplementations: new Map<string, InvalidFieldImplementation>(),
+                unimplementedFields: ['name'],
+              },
+            ],
+          ]),
+        ),
+      );
+      expect(errors![1]).toStrictEqual(
+        unimplementedInterfaceFieldsError(
+          'Dog',
+          'object',
+          new Map<string, ImplementationErrors>([
+            [
+              'Pet',
+              {
+                invalidFieldImplementations: new Map<string, InvalidFieldImplementation>([
+                  [
+                    'sounds',
+                    {
+                      invalidAdditionalArguments: new Set<string>(),
+                      invalidImplementedArguments: [
+                        { actualType: 'String', argumentName: 'a', expectedType: 'String!' },
+                        { actualType: 'Int', argumentName: 'b', expectedType: 'Int!' },
+                      ],
+                      originalResponseType: 'String',
+                      unimplementedArguments: new Set<string>(),
+                    },
+                  ],
+                ]),
+                unimplementedFields: ['age'],
+              },
+            ],
+            [
+              'Animal',
+              {
+                invalidFieldImplementations: new Map<string, InvalidFieldImplementation>([
+                  [
+                    'sounds',
+                    {
+                      invalidAdditionalArguments: new Set<string>(),
+                      invalidImplementedArguments: [
+                        { actualType: 'String', argumentName: 'a', expectedType: 'String!' },
+                        { actualType: 'Int', argumentName: 'b', expectedType: 'Int!' },
+                      ],
+                      originalResponseType: 'String',
+                      unimplementedArguments: new Set<string>(),
+                    },
+                  ],
+                ]),
+                unimplementedFields: [],
+              },
+            ],
+          ]),
+        ),
+      );
     });
   });
 });
@@ -464,4 +536,3 @@ const subgraphF: Subgraph = {
     }
   `),
 };
-

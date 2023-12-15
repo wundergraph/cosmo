@@ -1,6 +1,6 @@
 {
   "name": "@wundergraph/composition",
-  "version": "0.12.1",
+  "version": "0.12.2",
   "author": {
     "name": "WunderGraph Maintainers",
     "email": "info@wundergraph.com"
@@ -13,7 +13,9 @@
     "dev": "tsc --watch",
     "build": "del dist && tsc",
     "test:watch": "vitest test",
-    "test": "vitest run"
+    "test": "vitest run",
+    "lint": "prettier --check src tests",
+    "lint:fix": "prettier --write src tests"
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
