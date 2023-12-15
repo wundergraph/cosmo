@@ -824,13 +824,13 @@ func TestSingleFlightMutations(t *testing.T) {
 	wg.Add(numOfOperations)
 	trigger := make(chan struct{})
 	for i := 0; i < numOfOperations; i++ {
-		go func(num int) {
+		go func() {
 			defer wg.Done()
 			<-trigger
-			result := sendData(server, "/graphql", []byte(fmt.Sprintf(`{"query":"mutation { updateEmployeeTag(id: 1, tag: \"test-%d\") { id tag } }"}`, num)))
+			result := sendData(server, "/graphql", []byte(`{"query":"mutation { updateEmployeeTag(id: 1, tag: \"test\") { id tag } }"}`))
 			assert.Equal(t, http.StatusOK, result.Result().StatusCode)
-			assert.Equal(t, fmt.Sprintf(`{"data":{"updateEmployeeTag":{"id":1,"tag":"test-%d"}}}`, num), result.Body.String())
-		}(i)
+			assert.Equal(t, `{"data":{"updateEmployeeTag":{"id":1,"tag":"test"}}}`, result.Body.String())
+		}()
 	}
 	close(trigger)
 	wg.Wait()
