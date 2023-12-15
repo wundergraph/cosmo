@@ -31,6 +31,7 @@ import {
   ForceCheckSuccessResponse,
   GetAPIKeysResponse,
   GetAnalyticsViewResponse,
+  GetBillingPlansResponse,
   GetChangelogBySchemaVersionResponse,
   GetCheckDetailsResponse,
   GetCheckOperationsResponse,
@@ -138,6 +139,7 @@ import {
 } from '../util.js';
 import { FederatedGraphSchemaUpdate, OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
 import { ApiKeyRepository } from '../repositories/ApiKeyRepository.js';
+import { BillingRepository } from '../repositories/BillingRepository.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -4966,6 +4968,24 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             code: EnumStatusCode.OK,
           },
           enabled: organization.isRBACEnabled || false,
+        };
+      });
+    },
+
+    getBillingPlans: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetBillingPlansResponse>>(logger, async () => {
+        const billingRepo = new BillingRepository(opts.db);
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          plans: await billingRepo.listPlans(),
         };
       });
     },

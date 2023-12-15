@@ -166,6 +166,8 @@ export class OrganizationRepository {
         createdAt: organizations.createdAt,
         isRBACEnabled: organizations.isRBACEnabled,
         limits: {
+          users: organizationLimits.users,
+          graphs: organizationLimits.graphs,
           analyticsRetentionLimit: organizationLimits.analyticsRetentionLimit,
           tracingRetentionLimit: organizationLimits.tracingRetentionLimit,
           breakingChangeRetentionLimit: organizationLimits.breakingChangeRetentionLimit,
@@ -196,6 +198,8 @@ export class OrganizationRepository {
           organizationID: org.id,
         }),
         limits: {
+          users: org.limits.users,
+          graphs: org.limits.graphs,
           analyticsRetentionLimit: org.limits.analyticsRetentionLimit,
           tracingRetentionLimit: org.limits.tracingRetentionLimit,
           breakingChangeRetentionLimit: org.limits.breakingChangeRetentionLimit,

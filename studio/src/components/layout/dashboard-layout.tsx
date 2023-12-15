@@ -4,20 +4,14 @@ import {
   EnvelopeClosedIcon,
 } from "@radix-ui/react-icons";
 import { useRouter } from "next/router";
-import {
-  Dispatch,
-  SetStateAction,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { Dispatch, SetStateAction, useEffect, useMemo, useState } from "react";
 import {
   PiBell,
   PiChartDonut,
   PiGear,
   PiGraphLight,
   PiKey,
+  PiReceipt,
   PiUsers,
 } from "react-icons/pi";
 import { PageHeader } from "./head";
@@ -34,10 +28,10 @@ export const StarBanner = ({
 }) => {
   return (
     <div className="flex h-8 justify-center">
-      <div className="flex w-screen lg:justify-center bg-gradient-to-r from-purple-500 to-pink-400 text-xs xl:text-sm">
+      <div className="flex w-screen bg-gradient-to-r from-purple-500 to-pink-400 text-xs lg:justify-center xl:text-sm">
         <a
           href="//github.com/wundergraph/cosmo"
-          className="z-10 flex h-full items-center justify-between py-1.5 px-4"
+          className="z-10 flex h-full items-center justify-between px-4 py-1.5"
           target="_blank"
           rel="noreferrer"
         >
@@ -46,7 +40,7 @@ export const StarBanner = ({
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-pink-400 opacity-75 dark:bg-white"></span>
               <span className="relative inline-flex h-3 w-3 rounded-full bg-pink-400 dark:bg-white"></span>
             </span>
-            <span className="flex text-gray-950 dark:text-slate-100 gap-x-1">
+            <span className="flex gap-x-1 text-gray-950 dark:text-slate-100">
               If you like WunderGraph Cosmo,{" "}
               <span className="font-bold ">give it a star on GitHub! </span>
               <span className="hidden font-bold lg:flex">⭐️</span>
@@ -114,6 +108,11 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
         title: "Usage",
         href: basePath + "/usages",
         icon: <PiChartDonut className="h-4 w-4" />,
+      },
+      {
+        title: "Billing",
+        href: basePath + "/billing",
+        icon: <PiReceipt className="h-4 w-4" />,
       },
       {
         title: "Settings",

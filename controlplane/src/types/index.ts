@@ -145,6 +145,17 @@ export interface ResponseMessage {
   };
 }
 
+export interface BillingPlanDTO {
+  id: string;
+  name: string;
+  price: number;
+  features: {
+    id: string;
+    description: string;
+    limit?: number;
+  }[];
+}
+
 // https://github.com/kamilkisiela/graphql-inspector/blob/f3b9ed7e277f1a4928da7d0fdc212685ff77752a/packages/core/src/diff/changes/change.ts
 export enum SchemaChangeType {
   FIELD_ARGUMENT_DESCRIPTION_CHANGED = 'FIELD_ARGUMENT_DESCRIPTION_CHANGED',

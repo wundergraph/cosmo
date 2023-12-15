@@ -932,6 +932,28 @@ message UpdateOrgMemberRoleResponse {
   Response response = 1;
 }
 
+message GetBillingPlansRequest {
+}
+
+message GetBillingPlansResponse {
+  message BillingPlanFeature {
+    string id = 1;
+    string description = 3;
+    optional int32 limit = 4;
+  }
+
+  message BillingPlan {
+    string id = 1;
+    string name = 2;
+    int32 price = 3;
+    repeated BillingPlanFeature features = 4;
+  }
+
+  Response response = 1;
+  repeated BillingPlan plans = 2;
+}
+
+
 /**
  * MetricsDashboard
  */
@@ -1360,6 +1382,9 @@ service PlatformService {
   rpc UpdateIntegrationConfig(UpdateIntegrationConfigRequest) returns (UpdateIntegrationConfigResponse) {}
   // DeleteIntegration deletes an organization webhintegrationook
   rpc DeleteIntegration(DeleteIntegrationRequest) returns (DeleteIntegrationResponse) {}
+
+  // Return the available billing plans
+  rpc GetBillingPlans(GetBillingPlansRequest) returns (GetBillingPlansResponse){}
 
   // DeleteOrganization deletes an organization 
   rpc DeleteOrganization(DeleteOrganizationRequest) returns (DeleteOrganizationResponse) {}

@@ -598,6 +598,10 @@ export const organizations = pgTable('organizations', {
   isPersonal: boolean('is_personal').default(false),
   isFreeTrial: boolean('is_free_trial').default(false),
   isRBACEnabled: boolean('is_rbac_enabled').notNull().default(false),
+  plan: text('plan'),
+  stripeCustomerId: text('stripe_customer_id'),
+  stripeSubscriptionId: text('stripe_subscription_id'),
+  trialEndsAt: timestamp('trial_ends_at', { withTimezone: true }),
 });
 
 export const organizationsMembers = pgTable(
@@ -657,6 +661,38 @@ export const organizationMemberRolesRelations = relations(organizationMemberRole
     references: [organizationsMembers.id],
   }),
 }));
+
+export const organizationLimits = pgTable('organization_limits', {
+  id: uuid('id').notNull().primaryKey().defaultRandom(),
+  organizationId: uuid('organization_id')
+    .notNull()
+    .references(() => organizations.id, {
+      onDelete: 'cascade',
+    }),
+  users: integer('users').notNull().default(1),
+  graphs: integer('graphs').notNull().default(1),
+  requestsLimit: integer('requests_limit').notNull().default(10), // requestsLimit is in millions
+  analyticsRetentionLimit: integer('analytics_retention_limit').notNull().default(7),
+  tracingRetentionLimit: integer('tracing_retention_limit').notNull().default(7),
+  changelogDataRetentionLimit: integer('changelog_data_retention_limit').notNull().default(7),
+  breakingChangeRetentionLimit: integer('breaking_change_retention_limit').notNull().default(7),
+  traceSamplingRateLimit: decimal('trace_sampling_rate_limit', { precision: 3, scale: 2 }).notNull().default('0.10'),
+});
+
+export const organizationInvitations = pgTable('organization_invitations', {
+  id: uuid('id').notNull().primaryKey().defaultRandom(),
+  organizationId: uuid('organization_id')
+    .notNull()
+    .references(() => organizations.id, {
+      onDelete: 'cascade',
+    }),
+  userId: uuid('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  invitedBy: uuid('invited_by').references(() => users.id, { onDelete: 'cascade' }),
+  accepted: boolean('accepted').default(false),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
 
 export const organizationWebhooks = pgTable('organization_webhook_configs', {
   id: uuid('id').notNull().primaryKey().defaultRandom(),
@@ -864,37 +900,6 @@ export const graphCompositionsRelations = relations(graphCompositions, ({ many, 
   schemaVersion: one(schemaVersion),
   user: one(users),
 }));
-
-export const organizationLimits = pgTable('organization_limits', {
-  id: uuid('id').notNull().primaryKey().defaultRandom(),
-  organizationId: uuid('organization_id')
-    .notNull()
-    .references(() => organizations.id, {
-      onDelete: 'cascade',
-    }),
-  // requestsLimit is in millions
-  requestsLimit: integer('requests_limit').notNull().default(10),
-  analyticsRetentionLimit: integer('analytics_retention_limit').notNull().default(7),
-  tracingRetentionLimit: integer('tracing_retention_limit').notNull().default(7),
-  changelogDataRetentionLimit: integer('changelog_data_retention_limit').notNull().default(7),
-  breakingChangeRetentionLimit: integer('breaking_change_retention_limit').notNull().default(7),
-  traceSamplingRateLimit: decimal('trace_sampling_rate_limit', { precision: 3, scale: 2 }).notNull().default('0.10'),
-});
-
-export const organizationInvitations = pgTable('organization_invitations', {
-  id: uuid('id').notNull().primaryKey().defaultRandom(),
-  organizationId: uuid('organization_id')
-    .notNull()
-    .references(() => organizations.id, {
-      onDelete: 'cascade',
-    }),
-  userId: uuid('user_id')
-    .notNull()
-    .references(() => users.id, { onDelete: 'cascade' }),
-  invitedBy: uuid('invited_by').references(() => users.id, { onDelete: 'cascade' }),
-  accepted: boolean('accepted').default(false),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-});
 
 export const apiKeyResources = pgTable('api_key_resources', {
   id: uuid('id').notNull().primaryKey().defaultRandom(),
