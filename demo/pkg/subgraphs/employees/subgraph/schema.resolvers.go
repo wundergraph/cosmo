@@ -6,7 +6,6 @@ package subgraph
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/employees/subgraph/generated"
@@ -104,7 +103,6 @@ func (r *subscriptionResolver) CurrentTime(ctx context.Context) (<-chan *model.T
 		for {
 			// In our example we'll send the current time every second.
 			time.Sleep(1 * time.Second)
-			fmt.Println("Tick")
 
 			currentTime := time.Now()
 			t := &model.Time{
@@ -117,7 +115,6 @@ func (r *subscriptionResolver) CurrentTime(ctx context.Context) (<-chan *model.T
 			// This avoids goroutine getting blocked forever or panicking,
 			select {
 			case <-ctx.Done(): // This runs when context gets cancelled. Subscription closes.
-				fmt.Println("Subscription Closed")
 				// Handle deregistration of the channel here. `close(ch)`
 				return // Remember to return to end the routine.
 
