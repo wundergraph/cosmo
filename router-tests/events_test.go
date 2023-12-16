@@ -10,6 +10,7 @@ import (
 	"github.com/nats-io/nats.go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/atomic"
 )
 
 func TestEvents(t *testing.T) {
@@ -33,11 +34,11 @@ func TestEvents(t *testing.T) {
 		err := client.Close()
 		assert.NoError(t, err)
 	})
-	var triggers int
+	var triggers atomic.Int64
 	subscriptionID, err := client.Subscribe(&subscription, nil, func(dataValue []byte, errValue error) error {
 		require.NoError(t, errValue)
 		assert.JSONEq(t, `{"employeeUpdated":{"id":3,"details":{"forename":"Stefan","surname":"Avram"}}}`, string(dataValue))
-		triggers++
+		triggers.Inc()
 		return nil
 	})
 	require.NoError(t, err)
@@ -65,7 +66,7 @@ func TestEvents(t *testing.T) {
 
 	time.Sleep(1 * time.Second)
 
-	assert.Equal(t, 2, triggers)
+	assert.Equal(t, int64(2), triggers.Load())
 
 	client.Close()
 
