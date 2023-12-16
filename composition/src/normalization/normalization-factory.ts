@@ -638,7 +638,7 @@ export class NormalizationFactory {
     }
     const operationTypeNode = this.operationTypeNames.get(this.parentTypeName);
     if (!operationTypeNode) {
-      return ROOT_TYPES.has(this.parentTypeName)
+      return ROOT_TYPES.has(this.parentTypeName);
     }
     return (
       operationTypeNode === OperationTypeNode.QUERY ||
@@ -893,9 +893,7 @@ export class NormalizationFactory {
           }
           case SOURCE_ID: {
             if (sourceId !== undefined) {
-              throw new Error(
-                `Event directives must have exactly one sourceID argument, found multiple`,
-              );
+              throw new Error(`Event directives must have exactly one sourceID argument, found multiple`);
             }
             if (!arg.value.value) {
               throw new Error(`Event directives must have a non-empty sourceID argument`);
@@ -903,7 +901,7 @@ export class NormalizationFactory {
             sourceId = arg.value.value;
             break;
           }
-        default:
+          default:
             throw new Error(`Unknown argument ${arg.name.value} found in event directive`);
         }
       }

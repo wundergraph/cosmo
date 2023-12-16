@@ -7,20 +7,22 @@ import {
   ConfigurationVariable,
   ConfigurationVariableKind,
   DataSourceConfiguration,
+  // eslint-disable-next-line camelcase
   DataSourceCustom_Events,
+  // eslint-disable-next-line camelcase
   DataSourceCustom_GraphQL,
   DataSourceKind,
   EngineConfiguration,
   HTTPMethod,
   InternedString,
   RouterConfig,
+  TypeField,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import {
   argumentConfigurationDatasToFieldConfigurations,
   configurationDataMapToDataSourceConfiguration,
 } from './graphql-configuration.js';
 import { normalizationFailureError } from './errors.js';
-import { TypeField } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 
 export interface Input {
   argumentConfigurations: ArgumentConfigurationData[];
@@ -116,13 +118,13 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
       // while moving items that do not pass the filter to childNodes.
       const isWellKnownRootNode = (node: TypeField) => {
         return ['Query', 'Mutation', 'Subscription'].includes(node.typeName);
-      }
+      };
       let ii = 0;
       let filtered = 0;
       while (ii < rootNodes.length) {
         const node = rootNodes[ii];
         if (isWellKnownRootNode(node)) {
-          rootNodes[filtered++] = node
+          rootNodes[filtered++] = node;
         } else {
           childNodes.push(node);
         }

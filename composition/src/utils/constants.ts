@@ -123,7 +123,7 @@ export const BASE_DIRECTIVE_DEFINITIONS: DirectiveDefinitionNode[] = [
       {
         kind: Kind.INPUT_VALUE_DEFINITION,
         name: stringToNameNode(SOURCE_ID),
-        type : stringToNamedTypeNode(STRING_TYPE),
+        type: stringToNamedTypeNode(STRING_TYPE),
       },
     ],
     kind: Kind.DIRECTIVE_DEFINITION,
@@ -145,7 +145,7 @@ export const BASE_DIRECTIVE_DEFINITIONS: DirectiveDefinitionNode[] = [
       {
         kind: Kind.INPUT_VALUE_DEFINITION,
         name: stringToNameNode(SOURCE_ID),
-        type : stringToNamedTypeNode(STRING_TYPE),
+        type: stringToNamedTypeNode(STRING_TYPE),
       },
     ],
     kind: Kind.DIRECTIVE_DEFINITION,
@@ -167,7 +167,7 @@ export const BASE_DIRECTIVE_DEFINITIONS: DirectiveDefinitionNode[] = [
       {
         kind: Kind.INPUT_VALUE_DEFINITION,
         name: stringToNameNode(SOURCE_ID),
-        type : stringToNamedTypeNode(STRING_TYPE),
+        type: stringToNamedTypeNode(STRING_TYPE),
       },
     ],
     kind: Kind.DIRECTIVE_DEFINITION,

@@ -8,7 +8,12 @@ import {
   RequiredField,
   TypeField,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
-import { ArgumentConfigurationData, ConfigurationDataMap, RequiredFieldConfiguration, EventType as CompositionEventType } from '@wundergraph/composition';
+import {
+  ArgumentConfigurationData,
+  ConfigurationDataMap,
+  RequiredFieldConfiguration,
+  EventType as CompositionEventType,
+} from '@wundergraph/composition';
 
 export type DataSourceConfiguration = {
   rootNodes: TypeField[];
