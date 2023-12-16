@@ -16,6 +16,7 @@ import (
 )
 
 func TestSubgraphReturnsSuccessfully(t *testing.T) {
+	t.Parallel()
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		response := []byte(fmt.Sprintf(`{"data":{"hello": "%s"}}`, "John Doe"))
@@ -74,6 +75,7 @@ func TestSubgraphReturnsSuccessfully(t *testing.T) {
 }
 
 func TestSubgraphReturnsGraphQLErrorWithNullData(t *testing.T) {
+	t.Parallel()
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		response := []byte(`{"errors":[{"message":"Something went wrong"}],"data":null}`)
@@ -135,6 +137,7 @@ func TestSubgraphReturnsGraphQLErrorWithNullData(t *testing.T) {
 }
 
 func TestSubgraphReturnsGraphQLErrorWithMissingData(t *testing.T) {
+	t.Parallel()
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		response := []byte(`{"errors":[{"message":"Something went wrong"}]}`)
@@ -196,6 +199,7 @@ func TestSubgraphReturnsGraphQLErrorWithMissingData(t *testing.T) {
 }
 
 func TestSubgraphReturnsHttpError(t *testing.T) {
+	t.Parallel()
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
