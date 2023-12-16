@@ -180,7 +180,7 @@ const ReactFlowFetchNode = ({ data }: Node<FetchNode>) => {
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger>
-                    <p className="max-w-sm truncate">
+                    <p className="max-w-sm truncate text-left">
                       URL: {data.outputTrace?.request?.url}
                     </p>
                   </TooltipTrigger>
