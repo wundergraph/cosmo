@@ -161,6 +161,8 @@ import {
   SCHEMA,
   SERVICE_FIELD,
   SERVICE_OBJECT,
+  SOURCE_ID,
+  TOPIC,
 } from '../utils/string-constants';
 import { buildASTSchema } from '../buildASTSchema/buildASTSchema';
 import {
@@ -872,21 +874,50 @@ export class NormalizationFactory {
         default:
           continue;
       }
-      if (!directive.arguments || directive.arguments.length !== 1) {
-        throw new Error(
-          `Event directives must have exactly one argument, ${directive.name.value} has ${directive.arguments?.length}`,
-        );
+      let topic: string | undefined;
+      let sourceId: string | undefined;
+      for (const arg of directive.arguments || []) {
+        if (arg.value.kind !== Kind.STRING) {
+          throw new Error(`Event directive arguments must be strings, ${arg.value.kind} found in argument ${arg.name}`);
+        }
+        switch (arg.name.value) {
+          case TOPIC: {
+            if (topic !== undefined) {
+              throw new Error(`Event directives must have exactly one topic argument, found multiple`);
+            }
+            if (!arg.value.value) {
+              throw new Error(`Event directives must have a non-empty topic argument`);
+            }
+            topic = arg.value.value;
+            break;
+          }
+          case SOURCE_ID: {
+            if (sourceId !== undefined) {
+              throw new Error(
+                `Event directives must have exactly one sourceID argument, found multiple`,
+              );
+            }
+            if (!arg.value.value) {
+              throw new Error(`Event directives must have a non-empty sourceID argument`);
+            }
+            sourceId = arg.value.value;
+            break;
+          }
+        default:
+            throw new Error(`Unknown argument ${arg.name.value} found in event directive`);
+        }
       }
-      if (directive.arguments[0].value.kind !== Kind.STRING) {
-        throw new Error(
-          `Event directives must have a string argument, ${directive.name.value} has ${directive.arguments[0].value.kind}`,
-        );
+
+      if (!topic) {
+        throw new Error(`Event directives must have a topic argument`);
       }
+
       const configuration = getValueOrDefault(this.eventsConfigurations, this.parentTypeName, () => []);
       configuration.push({
         type: eventType,
         fieldName: this.childName,
-        topic: directive.arguments[0].value.value,
+        topic,
+        sourceId,
       });
     }
   }

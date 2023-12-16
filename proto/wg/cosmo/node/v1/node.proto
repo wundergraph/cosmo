@@ -183,6 +183,7 @@ message EventConfiguration {
   string type_name = 2;
   string field_name = 3;
   string topic = 4;
+  string source_id = 5;
 }
 
 message DataSourceCustom_Events {

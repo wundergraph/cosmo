@@ -12,7 +12,7 @@ describe('events Configuration tests', () => {
         fieldNames: new Set<string>(['entitySubscription']),
         isRootNode: true,
         typeName: 'Subscription',
-        events: [{ fieldName: 'entitySubscription', topic: 'entities.{{ args.id }}', type: 'subscribe' }],
+        events: [{ fieldName: 'entitySubscription', topic: 'entities.{{ args.id }}', type: 'subscribe', sourceId: 'kafka' }],
       }],
       ['Mutation', {
         fieldNames: new Set<string>(['updateEntity']),
@@ -67,7 +67,7 @@ const subgraphA = `
   }
 
   type Subscription {
-    entitySubscription(id: ID!): Entity! @eventsSubscribe(topic: "entities.{{ args.id }}")
+    entitySubscription(id: ID!): Entity! @eventsSubscribe(topic: "entities.{{ args.id }}", sourceID: "kafka")
   }
   
   type Entity @key(fields: "id") {

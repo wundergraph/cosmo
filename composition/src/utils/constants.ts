@@ -29,9 +29,9 @@ import {
   REQUIRES,
   RESOLVABLE,
   SCALAR_UPPER,
-  SCHEMA,
   SCHEMA_UPPER,
   SHAREABLE,
+  SOURCE_ID,
   SPECIFIED_BY,
   STRING_TYPE,
   TAG,
@@ -109,7 +109,7 @@ export const BASE_DIRECTIVE_DEFINITIONS: DirectiveDefinitionNode[] = [
     name: stringToNameNode(EXTERNAL),
     repeatable: false,
   },
-  // directive @eventsPublish(topic: String!) on FIELD_DEFINITION
+  // directive @eventsPublish(topic: String!, sourceID: String) on FIELD_DEFINITION
   {
     arguments: [
       {
@@ -119,6 +119,11 @@ export const BASE_DIRECTIVE_DEFINITIONS: DirectiveDefinitionNode[] = [
           kind: Kind.NON_NULL_TYPE,
           type: stringToNamedTypeNode(STRING_TYPE),
         },
+      },
+      {
+        kind: Kind.INPUT_VALUE_DEFINITION,
+        name: stringToNameNode(SOURCE_ID),
+        type : stringToNamedTypeNode(STRING_TYPE),
       },
     ],
     kind: Kind.DIRECTIVE_DEFINITION,
@@ -126,7 +131,7 @@ export const BASE_DIRECTIVE_DEFINITIONS: DirectiveDefinitionNode[] = [
     name: stringToNameNode(EVENTS_PUBLISH),
     repeatable: false,
   },
-  // directive @eventsRequest(topic: String!) on FIELD_DEFINITION
+  // directive @eventsRequest(topic: String!, sourceID: String) on FIELD_DEFINITION
   {
     arguments: [
       {
@@ -137,13 +142,18 @@ export const BASE_DIRECTIVE_DEFINITIONS: DirectiveDefinitionNode[] = [
           type: stringToNamedTypeNode(STRING_TYPE),
         },
       },
+      {
+        kind: Kind.INPUT_VALUE_DEFINITION,
+        name: stringToNameNode(SOURCE_ID),
+        type : stringToNamedTypeNode(STRING_TYPE),
+      },
     ],
     kind: Kind.DIRECTIVE_DEFINITION,
     locations: [stringToNameNode(FIELD_DEFINITION_UPPER)],
     name: stringToNameNode(EVENTS_REQUEST),
     repeatable: false,
   },
-  // directive @eventsSubscribe(topic: String!) on FIELD_DEFINITION
+  // directive @eventsSubscribe(topic: String!, sourceID: String) on FIELD_DEFINITION
   {
     arguments: [
       {
@@ -153,6 +163,11 @@ export const BASE_DIRECTIVE_DEFINITIONS: DirectiveDefinitionNode[] = [
           kind: Kind.NON_NULL_TYPE,
           type: stringToNamedTypeNode(STRING_TYPE),
         },
+      },
+      {
+        kind: Kind.INPUT_VALUE_DEFINITION,
+        name: stringToNameNode(SOURCE_ID),
+        type : stringToNamedTypeNode(STRING_TYPE),
       },
     ],
     kind: Kind.DIRECTIVE_DEFINITION,

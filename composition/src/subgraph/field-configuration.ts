@@ -11,6 +11,7 @@ export type EventConfiguration = {
   type: EventType;
   fieldName: string;
   topic: string;
+  sourceId?: string;
 };
 
 export type ConfigurationData = {
