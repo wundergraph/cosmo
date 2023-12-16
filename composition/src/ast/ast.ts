@@ -347,7 +347,7 @@ export type MutableTypeDefinitionNode =
   | MutableScalarTypeDefinitionNode
   | MutableUnionTypeDefinitionNode;
 
-export type ObjectLikeTypeDefinitionNode =
+export type ObjectLikeTypeNode =
   | InterfaceTypeDefinitionNode
   | InterfaceTypeExtensionNode
   | ObjectTypeDefinitionNode

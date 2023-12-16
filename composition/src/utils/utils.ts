@@ -172,6 +172,45 @@ export type InvalidArgument = {
   typeString: string;
 };
 
+export type EntityInterfaceData = {
+  interfaceFieldNames: Set<string>;
+  interfaceObjectFieldNames: Set<string>;
+  isInterfaceObject: boolean;
+  typeName: string;
+};
+
+// The accumulation of all EntityInterfaceData for the type name
+export type EntityInterfaceDatas = {
+  interfaceFieldNames: Set<string>;
+  interfaceObjectFieldNames: Set<string>;
+  interfaceObjectSubgraphs: Set<string>;
+  typeName: string;
+};
+
+export function newEntityInterfaceDatas(
+  entityInterfaceData: EntityInterfaceData,
+  subgraphName: string,
+): EntityInterfaceDatas {
+  return {
+    interfaceFieldNames: entityInterfaceData.interfaceFieldNames,
+    interfaceObjectFieldNames: entityInterfaceData.interfaceObjectFieldNames,
+    interfaceObjectSubgraphs: new Set<string>(entityInterfaceData.isInterfaceObject ? [subgraphName] : []),
+    typeName: entityInterfaceData.typeName,
+  };
+}
+
+export function upsertEntityInterfaceDatas(
+  entityInterfaceDatas: EntityInterfaceDatas,
+  entityInterfaceData: EntityInterfaceData,
+  subgraphName: string,
+) {
+  if (entityInterfaceData.isInterfaceObject) {
+    entityInterfaceDatas.interfaceObjectSubgraphs.add(subgraphName);
+  }
+  addIterableValuesToSet(entityInterfaceData.interfaceFieldNames, entityInterfaceDatas.interfaceFieldNames);
+  addIterableValuesToSet(entityInterfaceData.interfaceObjectFieldNames, entityInterfaceDatas.interfaceObjectFieldNames);
+}
+
 class StackSet {
   set = new Set<string>();
   stack: string[] = [];

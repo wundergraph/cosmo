@@ -8,25 +8,46 @@ image:
   repository: wundergraph/cosmo/router
   registry: ghcr.io
   pullPolicy: IfNotPresent
-  # Overrides the image tag whose default is the chart appVersion.
+  # -- Overrides the image tag whose default is the chart appVersion.
   version: "latest"
 
 deploymentStrategy: {}
 
 imagePullSecrets: []
 
-# String to partially override common.names.fullname template (will maintain the release name)
+# -- String to partially override common.names.fullname template (will maintain the release name)
 nameOverride: ""
 
-# String to fully override common.names.fullname template
+# -- String to fully override common.names.fullname template
 fullnameOverride: ""
 
+# -- Allows to set additional environment variables on the container
+extraEnvVars: []
+#extraEnvVars:
+#  - name: LOG_LEVEL
+#    value: "info"
+
+# -- Optionally specify extra list of additional volumes for Router pods
+extraVolumes: []
+
+# -- Optionally specify extra list of additional volumeMounts for Router container's
+extraVolumeMounts: []
+
+# -- Optionally name of existing ConfigMap with Router configuration. The key config.yaml is required.
+existingConfigmap: ""
+
+# -- Name of existing ConfigMap containing extra env vars
+extraEnvVarsCM: ""
+
+# -- Name of existing Secret containing extra env vars
+extraEnvVarsSecret: ""
+
 serviceAccount:
-  # Specifies whether a service account should be created
+  # -- Specifies whether a service account should be created
   create: true
-  # Annotations to add to the service account
+  # -- Annotations to add to the service account
   annotations: {}
-  # The name of the service account to use.
+  # -- The name of the service account to use.
   # If not set and create is true, a name is generated using the fullname template
   name: ""
 
@@ -119,11 +140,26 @@ probes:
       port: http
     initialDelaySeconds: 10
 
+global:
+  helmTests: false
 #############################
 # Application configuration #
 #############################
 
 configuration:
+  # -- The name of the graph to be served by the router (required)
   federatedGraphName: "production"
-  graphApiToken: "secret"
+  # -- The router token is used to authenticate the router against the controlplane (required)
+  graphApiToken: "replace-me"
+  # -- The execution config file to statically configure the router (If no pulling of the config is desired)
+  executionConfig: ""
+  # -- The log level of the router. Default to info if not set.
   logLevel: "info"
+  # -- The URL of the Cosmo Controlplane. Should be internal to the cluster. Default to cloud if not set.
+  controlplaneUrl: ""
+  # -- The URL of the Cosmo GraphQL OTEL Collector. Should be internal to the cluster. Default to cloud if not set.
+  otelCollectorUrl: ""
+  # -- The URL of the Cosmo GraphQL Metrics Collector. Should be internal to the cluster. Default to cloud if not set.
+  graphqlMetricsCollectorUrl: ""
+  # -- Set to true to enable the development mode. This allows for Advanced Request Tracing (ART) in the GraphQL Playground
+  devMode: false

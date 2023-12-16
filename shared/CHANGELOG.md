@@ -4,6 +4,30 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.14.3](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.14.2...@wundergraph/cosmo-shared@0.14.3) (2023-12-15)
+
+**Note:** Version bump only for package @wundergraph/cosmo-shared
+
+## [0.14.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.14.1...@wundergraph/cosmo-shared@0.14.2) (2023-12-14)
+
+### Bug Fixes
+
+* accept specifiedBy directive ([#367](https://github.com/wundergraph/cosmo/issues/367)) ([49926da](https://github.com/wundergraph/cosmo/commit/49926daa7f9d17434f2b42893ec6a8b613e5731e)) (@Aenimus)
+
+## [0.14.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.14.0...@wundergraph/cosmo-shared@0.14.1) (2023-12-13)
+
+**Note:** Version bump only for package @wundergraph/cosmo-shared
+
+# [0.14.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.13.13...@wundergraph/cosmo-shared@0.14.0) (2023-12-12)
+
+### Features
+
+* implement foundations for entity interfaces ([#359](https://github.com/wundergraph/cosmo/issues/359)) ([e2fcec7](https://github.com/wundergraph/cosmo/commit/e2fcec7aa3f286159a1ad21d606ead41cf1c883e)) (@Aenimus)
+
+## [0.13.13](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.13.12...@wundergraph/cosmo-shared@0.13.13) (2023-12-12)
+
+**Note:** Version bump only for package @wundergraph/cosmo-shared
+
 ## [0.13.12](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.13.11...@wundergraph/cosmo-shared@0.13.12) (2023-12-04)
 
 **Note:** Version bump only for package @wundergraph/cosmo-shared

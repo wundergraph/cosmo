@@ -203,6 +203,7 @@ export default class ApolloMigrator {
     subgraphs,
     organizationID,
     db,
+    creatorUserId,
   }: {
     fedGraph: {
       name: string;
@@ -210,6 +211,7 @@ export default class ApolloMigrator {
     };
     subgraphs: MigrationSubgraph[];
     organizationID: string;
+    creatorUserId: string;
     db: PostgresJsDatabase<typeof schema>;
   }): Promise<FederatedGraphDTO> {
     return db.transaction<FederatedGraphDTO>(async (tx) => {
@@ -220,11 +222,13 @@ export default class ApolloMigrator {
         name: fedGraph.name,
         labelMatchers: ['env=main', `name=${sanitizedGraphName}`],
         routingUrl: fedGraph.routingURL,
+        createdBy: creatorUserId,
       });
 
       for (const subgraph of subgraphs) {
         await subgraphRepo.create({
           name: subgraph.name,
+          createdBy: creatorUserId,
           labels: [
             { key: 'env', value: 'main' },
             { key: 'name', value: sanitizedGraphName },

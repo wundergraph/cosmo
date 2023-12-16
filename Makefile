@@ -1,9 +1,9 @@
 all: dev-setup
 
 setup-build-tools:
-	go install github.com/bufbuild/buf/cmd/buf@latest
-	go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
-	go install connectrpc.com/connect/cmd/protoc-gen-connect-go@latest
+	go install github.com/bufbuild/buf/cmd/buf@v1.28.1
+	go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.31.0
+	go install connectrpc.com/connect/cmd/protoc-gen-connect-go@v1.12.0
 
 setup-dev-tools: setup-build-tools
 	go install github.com/amacneil/dbmate/v2@v2.6.0

@@ -26,8 +26,7 @@ describe('Normalization tests', () => {
     expect(errors).toBeDefined();
     expect(errors).toHaveLength(1);
     expect(errors![0].message).toContain(
-      `The subgraph has syntax errors and could not be parsed.\n` +
-      ` The reason provided was: Syntax Error`,
+      `The subgraph has syntax errors and could not be parsed.\n` + ` The reason provided was: Syntax Error`,
     );
   });
 
@@ -57,7 +56,7 @@ describe('Normalization tests', () => {
     expect(normalizeString(subgraphString!)).toBe(
       normalizeString(
         versionOneBaseSchema +
-        `
+          `
       type Example {
         boolean: Boolean!
         float: Float
@@ -109,7 +108,7 @@ describe('Normalization tests', () => {
     expect(normalizeString(subgraphString!)).toBe(
       normalizeString(
         versionOneBaseSchema +
-        `
+          `
       type Entity @key(fields: "id") {
         name: String!
         id: ID!
@@ -134,7 +133,7 @@ describe('Normalization tests', () => {
     expect(normalizeString(subgraphString!)).toBe(
       normalizeString(
         versionOneBaseSchema +
-        `
+          `
       type Entity @key(fields: "id") {
         id: ID!
         name: String!
@@ -152,10 +151,9 @@ describe('Normalization tests', () => {
     `);
     expect(errors).toBeDefined();
     expect(errors).toHaveLength(1);
-    expect(errors![0]).toStrictEqual(invalidKeyDirectivesError(
-      'Entity',
-      [undefinedFieldInFieldSetErrorMessage('unknown', 'Entity', 'unknown')],
-    ));
+    expect(errors![0]).toStrictEqual(
+      invalidKeyDirectivesError('Entity', [undefinedFieldInFieldSetErrorMessage('unknown', 'Entity', 'unknown')]),
+    );
   });
 
   test('that an undefined key field returns an error #2', () => {
@@ -170,10 +168,9 @@ describe('Normalization tests', () => {
     `);
     expect(errors).toBeDefined();
     expect(errors).toHaveLength(1);
-    expect(errors![0]).toStrictEqual(invalidKeyDirectivesError(
-      'Entity',
-      [undefinedFieldInFieldSetErrorMessage('unknown', 'Entity', 'unknown')],
-    ));
+    expect(errors![0]).toStrictEqual(
+      invalidKeyDirectivesError('Entity', [undefinedFieldInFieldSetErrorMessage('unknown', 'Entity', 'unknown')]),
+    );
   });
 
   test('that an undefined key field returns an error #3', () => {
@@ -184,10 +181,9 @@ describe('Normalization tests', () => {
     `);
     expect(errors).toBeDefined();
     expect(errors).toHaveLength(1);
-    expect(errors![0]).toStrictEqual(invalidKeyDirectivesError(
-      'Entity',
-      [undefinedFieldInFieldSetErrorMessage('unknown', 'Entity', 'unknown')],
-    ));
+    expect(errors![0]).toStrictEqual(
+      invalidKeyDirectivesError('Entity', [undefinedFieldInFieldSetErrorMessage('unknown', 'Entity', 'unknown')]),
+    );
   });
 
   test('that extending an entity with the same key directive does not duplicate the directive', () => {
@@ -205,7 +201,7 @@ describe('Normalization tests', () => {
     expect(normalizeString(subgraphString!)).toBe(
       normalizeString(
         versionOneBaseSchema +
-        `
+          `
       type Entity @key(fields: "id") {
         id: ID!
         name: String!
@@ -238,7 +234,7 @@ describe('Normalization tests', () => {
     expect(normalizeString(subgraphString!)).toBe(
       normalizeString(
         versionOneBaseSchema +
-        `
+          `
       directive @CustomDirectiveOne on ENUM
       directive @CustomDirectiveTwo on ENUM_VALUE
       directive @CustomDirectiveThree on ENUM
@@ -320,7 +316,7 @@ describe('Normalization tests', () => {
     expect(normalizeString(subgraphString!)).toBe(
       normalizeString(
         versionOneBaseSchema +
-        `
+          `
       directive @CustomDirectiveOne on INTERFACE
       directive @CustomDirectiveTwo on FIELD_DEFINITION
       directive @CustomDirectiveThree on INTERFACE
@@ -398,7 +394,7 @@ describe('Normalization tests', () => {
     expect(normalizeString(subgraphString!)).toBe(
       normalizeString(
         versionOneBaseSchema +
-        `
+          `
       directive @CustomDirectiveOne on INPUT_OBJECT
       directive @CustomDirectiveTwo on INPUT_FIELD_DEFINITION
       directive @CustomDirectiveThree on INPUT_OBJECT
@@ -470,7 +466,7 @@ describe('Normalization tests', () => {
     expect(normalizeString(subgraphString!)).toBe(
       normalizeString(
         versionOneBaseSchema +
-        `
+          `
     type Object {
       name: String!
       age: Int!
@@ -487,8 +483,8 @@ describe('Normalization tests', () => {
     expect(errors).toBeDefined();
     expect(errors).toHaveLength(1);
     expect(errors![0].message).toBe(
-      `The subgraph has syntax errors and could not be parsed.\n`
-      + ` The reason provided was: Syntax Error: Expected Name, found "}".`,
+      `The subgraph has syntax errors and could not be parsed.\n` +
+        ` The reason provided was: Syntax Error: Expected Name, found "}".`,
     );
   });
 
@@ -519,7 +515,7 @@ describe('Normalization tests', () => {
     expect(normalizeString(subgraphString!)).toBe(
       normalizeString(
         versionOneBaseSchema +
-        `
+          `
       extend type Object {
         height: Int
       }
@@ -557,7 +553,7 @@ describe('Normalization tests', () => {
     expect(normalizeString(subgraphString!)).toBe(
       normalizeString(
         versionOneBaseSchema +
-        `
+          `
       directive @CustomDirectiveOne on SCALAR
       directive @CustomDirectiveTwo on SCALAR
       
@@ -618,7 +614,7 @@ describe('Normalization tests', () => {
     expect(normalizeString(subgraphString!)).toBe(
       normalizeString(
         versionOneBaseSchema +
-        `
+          `
       directive @CustomDirectiveOne on UNION
       directive @CustomDirectiveTwo on UNION
       
@@ -702,7 +698,7 @@ describe('Normalization tests', () => {
     expect(errors).toHaveLength(1);
     expect(errors![0].message).toBe(
       `The subgraph has syntax errors and could not be parsed.\n` +
-      ` The reason provided was: Syntax Error: Unexpected Name "Pepper".`,
+        ` The reason provided was: Syntax Error: Unexpected Name "Pepper".`,
     );
   });
 
@@ -726,7 +722,7 @@ describe('Normalization tests', () => {
     expect(errors).toBeDefined();
     expect(errors![0].message).toBe(
       `The subgraph has syntax errors and could not be parsed.\n` +
-      ` The reason provided was: Syntax Error: Expected Name, found Int "1".`,
+        ` The reason provided was: Syntax Error: Expected Name, found Int "1".`,
     );
   });
 
@@ -753,7 +749,7 @@ describe('Normalization tests', () => {
     expect(errors).toBeDefined();
     expect(errors![0].message).toBe(
       `The subgraph has syntax errors and could not be parsed.\n` +
-      ` The reason provided was: Syntax Error: Expected Name, found "!".`,
+        ` The reason provided was: Syntax Error: Expected Name, found "!".`,
     );
   });
 
@@ -796,7 +792,7 @@ describe('Normalization tests', () => {
     expect(normalizeString(subgraphString!)).toBe(
       normalizeString(
         versionOneBaseSchema +
-        `
+          `
         type Product @key(fields: "id") {
           name: String
           id: ID! @tag(name: "hi-from-inventory")
@@ -854,7 +850,7 @@ describe('Normalization tests', () => {
     expect(normalizeString(subgraphString!)).toBe(
       normalizeString(
         versionOneBaseSchema +
-        `
+          `
       extend type Query {
         allProducts: [Product]
         product(id: ID!): Product
@@ -895,7 +891,8 @@ describe('Normalization tests', () => {
     const subgraphString = normalizationResult!.subgraphString;
     expect(normalizeString(subgraphString!)).toBe(
       normalizeString(
-        versionTwoBaseSchema + `
+        versionTwoBaseSchema +
+          `
       directive @myDirective(a: String!) on FIELD_DEFINITION
       directive @hello on FIELD_DEFINITION
         
@@ -989,28 +986,8 @@ describe('Normalization tests', () => {
     `);
     expect(errors).toBeDefined();
     expect(errors).toHaveLength(1);
-    expect(errors![0]).toStrictEqual(invalidKeyDirectivesError(
-      'User',
-      [undefinedFieldInFieldSetErrorMessage(
-        'id',
-        'User',
-        'id',
-      )],
-    ));
-  });
-
-  test('Should give errors when key directive is applied to a interface', () => {
-    const { errors } = normalizeSubgraphFromString(`
-      interface User @key(fields: "name") {
-        name: String!
-        age: Int!
-      }
-    `);
-    expect(errors).toBeDefined();
     expect(errors![0]).toStrictEqual(
-      invalidDirectiveError('key', 'User', [
-        ` "User" is type "InterfaceTypeDefinition", but the directive "key" does not define "INTERFACE" as a valid location.`,
-      ]),
+      invalidKeyDirectivesError('User', [undefinedFieldInFieldSetErrorMessage('id', 'User', 'id')]),
     );
   });
 
@@ -1066,7 +1043,7 @@ describe('Normalization tests', () => {
     expect(errors![0]).toStrictEqual(
       invalidDirectiveError('tag', 'User', [
         ` The definition for the directive "tag" defines the following 1 required argument: "name".\n` +
-        ` However, the same directive that is declared on "User" does not define any arguments.`,
+          ` However, the same directive that is declared on "User" does not define any arguments.`,
       ]),
     );
   });
@@ -1082,7 +1059,7 @@ describe('Normalization tests', () => {
     expect(errors![0]).toStrictEqual(
       invalidDirectiveError('tag', 'User.name', [
         ` The definition for the directive "tag" defines the following 1 required argument: "name".\n` +
-        ` However, the same directive that is declared on "User.name" does not define any arguments.`,
+          ` However, the same directive that is declared on "User.name" does not define any arguments.`,
       ]),
     );
   });
@@ -1188,11 +1165,10 @@ describe('Normalization tests', () => {
     }
     `);
     expect(errors).toBeDefined();
-    expect(errors![0].message)
-      .toStrictEqual(
-        `The following "provides" directive is invalid:\n On "Review.user" —`
-        + undefinedFieldInFieldSetErrorMessage('age', 'User', 'age')
-      );
+    expect(errors![0].message).toStrictEqual(
+      `The following "provides" directive is invalid:\n On "Review.user" —` +
+        undefinedFieldInFieldSetErrorMessage('age', 'User', 'age'),
+    );
   });
 
   test('that declaring the @provides directive without the required fields argument returns an error', () => {
@@ -1211,7 +1187,7 @@ describe('Normalization tests', () => {
     expect(errors![0]).toStrictEqual(
       invalidDirectiveError('provides', 'Review.user', [
         ` The definition for the directive "provides" defines the following 1 required argument: "fields".\n` +
-        ` However, the same directive that is declared on "Review.user" does not define any arguments.`,
+          ` However, the same directive that is declared on "Review.user" does not define any arguments.`,
       ]),
     );
   });
@@ -1309,12 +1285,11 @@ describe('Normalization tests', () => {
     `);
     expect(errors).toBeDefined();
     expect(errors).toHaveLength(1);
-    expect(errors![0]).toStrictEqual(invalidProvidesOrRequiresDirectivesError(
-      'requires',
-      [` On "Product.shippingCost" —` +undefinedFieldInFieldSetErrorMessage(
-        'age', 'Product', 'age',
-      )],
-    ))
+    expect(errors![0]).toStrictEqual(
+      invalidProvidesOrRequiresDirectivesError('requires', [
+        ` On "Product.shippingCost" —` + undefinedFieldInFieldSetErrorMessage('age', 'Product', 'age'),
+      ]),
+    );
   });
 
   test('Should give errors if the requires directive doesnt have a fields argument', () => {
@@ -1421,7 +1396,7 @@ describe('Normalization tests', () => {
     expect(errors![0]).toStrictEqual(
       invalidDirectiveError('shareable', 'User', [
         ` The definition for the directive "shareable" does not define any arguments.\n` +
-        ` However, the same directive declared on "User" defines 1 argument.`,
+          ` However, the same directive declared on "User" defines 1 argument.`,
       ]),
     );
   });
@@ -1467,7 +1442,7 @@ describe('Normalization tests', () => {
     expect(errors![0]).toStrictEqual(
       invalidDirectiveError('shareable', 'User', [
         ` "User" is type "InputObjectTypeDefinition", but the directive "shareable"` +
-        ` does not define "INPUT_OBJECT" as a valid location.`,
+          ` does not define "INPUT_OBJECT" as a valid location.`,
       ]),
     );
   });
@@ -1524,7 +1499,7 @@ describe('Normalization tests', () => {
     expect(errors![0]).toStrictEqual(
       invalidDirectiveError('inaccessible', 'User', [
         ` The definition for the directive "inaccessible" does not define any arguments.\n` +
-        ` However, the same directive declared on "User" defines 1 argument.`,
+          ` However, the same directive declared on "User" defines 1 argument.`,
       ]),
     );
   });
@@ -1590,14 +1565,11 @@ describe('Normalization tests', () => {
         }
     `);
     expect(errors).toBeDefined();
-    expect(errors![0]).toStrictEqual(invalidKeyDirectivesError(
-      'Entity',
-      [undefinedFieldInFieldSetErrorMessage(
-        'id organization { id details { id age } }',
-        'Details',
-        'age',
-      )],
-    ));
+    expect(errors![0]).toStrictEqual(
+      invalidKeyDirectivesError('Entity', [
+        undefinedFieldInFieldSetErrorMessage('id organization { id details { id age } }', 'Details', 'age'),
+      ]),
+    );
   });
 
   test('that an empty selection set in a composite key returns a parse error', () => {
@@ -1619,13 +1591,14 @@ describe('Normalization tests', () => {
         }
     `);
     expect(errors).toBeDefined();
-    expect(errors![0]).toStrictEqual(invalidKeyDirectivesError(
-      'Entity',
-      [unparsableFieldSetErrorMessage(
-        'id organization { id details { } }',
-        new Error('Syntax Error: Expected Name, found "}".'),
-      )],
-    ));
+    expect(errors![0]).toStrictEqual(
+      invalidKeyDirectivesError('Entity', [
+        unparsableFieldSetErrorMessage(
+          'id organization { id details { } }',
+          new Error('Syntax Error: Expected Name, found "}".'),
+        ),
+      ]),
+    );
   });
 
   test('that if an object without its fields are passed in composite keys gives an error', () => {
@@ -1647,15 +1620,11 @@ describe('Normalization tests', () => {
         }
     `);
     expect(errors).toBeDefined();
-    expect(errors![0]).toStrictEqual(invalidKeyDirectivesError(
-      'Entity',
-      [invalidSelectionSetErrorMessage(
-        'id organization { id details }',
-        'Organization.details',
-        'Details',
-        'object',
-      )],
-    ));
+    expect(errors![0]).toStrictEqual(
+      invalidKeyDirectivesError('Entity', [
+        invalidSelectionSetErrorMessage('id organization { id details }', 'Organization.details', 'Details', 'object'),
+      ]),
+    );
   });
 
   test('that if multiple nested objects passed in composite keys are identified', () => {
@@ -1710,14 +1679,15 @@ describe('Normalization tests', () => {
     `);
     expect(errors).toBeDefined();
     expect(errors).toHaveLength(1);
-    expect(errors![0]).toStrictEqual(invalidKeyDirectivesError(
-      'Entity',
-      [undefinedFieldInFieldSetErrorMessage(
-        'id organization { details { id } somethingElse { id } }',
-        'SomethingElse',
-        'id',
-      )],
-    ));
+    expect(errors![0]).toStrictEqual(
+      invalidKeyDirectivesError('Entity', [
+        undefinedFieldInFieldSetErrorMessage(
+          'id organization { details { id } somethingElse { id } }',
+          'SomethingElse',
+          'id',
+        ),
+      ]),
+    );
   });
 
   test('that objects and interfaces can be extended using the @extends directive', () => {
@@ -1751,7 +1721,7 @@ describe('Normalization tests', () => {
     expect(normalizeString(subgraphString!)).toBe(
       normalizeString(
         versionOneBaseSchema +
-        `
+          `
         interface Account @tag(name: "interface test") {
           name: String!
           age: Int!
@@ -1779,7 +1749,7 @@ describe('Normalization tests', () => {
     expect(normalizeString(subgraphString!)).toBe(
       normalizeString(
         versionOneBaseSchema +
-        `
+          `
         extend type User @key(fields: "name") {
           name: String!
         }

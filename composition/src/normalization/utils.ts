@@ -123,6 +123,7 @@ export type InterfaceContainer = {
   directives: Map<string, ConstDirectiveNode[]>;
   fields: Map<string, FieldContainer>;
   interfaces: Set<string>;
+  isEntity: boolean;
   kind: Kind.INTERFACE_TYPE_DEFINITION;
   name: NameNode;
 };
@@ -542,7 +543,7 @@ export function getNormalizedFieldSet(documentNode: DocumentNode): string {
 
 function validateNonRepeatableFieldSet(
   factory: NormalizationFactory,
-  parentContainer: ObjectContainer | ObjectExtensionContainer,
+  parentContainer: ObjectLikeContainer,
   fieldSet: string,
   directiveFieldName: string,
 ): NonRepeatableFieldSetValidationResult {
@@ -552,9 +553,7 @@ function validateNonRepeatableFieldSet(
     return { errorMessage: unparsableFieldSetErrorMessage(fieldSet, error) };
   }
   let errorMessage;
-  const parentContainers: (InterfaceContainer | ObjectContainer | ObjectExtensionContainer | UnionContainer)[] = [
-    parentContainer,
-  ];
+  const parentContainers: (ObjectLikeContainer | UnionContainer)[] = [parentContainer];
   const definedFields: Set<string>[] = [];
   let currentDepth = -1;
   let shouldDefineSelectionSet = true;
@@ -568,7 +567,6 @@ function validateNonRepeatableFieldSet(
     },
     Field: {
       enter(node) {
-        // const grandparentContainer = parentContainers[currentDepth - 1];
         const parentContainer = parentContainers[currentDepth];
         const parentTypeName = parentContainer.name.value;
         if (parentContainer.kind === Kind.UNION_TYPE_DEFINITION) {
@@ -740,7 +738,7 @@ function validateNonRepeatableFieldSet(
 
 function validateKeyFieldSets(
   factory: NormalizationFactory,
-  entityContainer: ObjectContainer | ObjectExtensionContainer,
+  entityContainer: ObjectLikeContainer,
   fieldSets: Set<string>,
   fieldNames: Set<string>,
 ): RequiredFieldConfiguration[] | undefined {
@@ -755,7 +753,7 @@ function validateKeyFieldSets(
       errorMessages.push(unparsableFieldSetErrorMessage(fieldSet, error));
       continue;
     }
-    const parentContainers: (ObjectContainer | ObjectExtensionContainer)[] = [entityContainer];
+    const parentContainers: ObjectLikeContainer[] = [entityContainer];
     const definedFields: Set<string>[] = [];
     let currentDepth = -1;
     let shouldDefineSelectionSet = true;
@@ -932,13 +930,13 @@ enum FieldSetDirective {
 
 type FieldSetParentResult = {
   errorString?: string;
-  fieldSetParentContainer?: ObjectContainer | ObjectExtensionContainer;
+  fieldSetParentContainer?: ObjectLikeContainer;
 };
 
 function getFieldSetParent(
   factory: NormalizationFactory,
   fieldSetDirective: FieldSetDirective,
-  parentContainer: ObjectContainer | ObjectExtensionContainer,
+  parentContainer: ObjectLikeContainer,
   fieldName: string,
   parentTypeName: string,
 ): FieldSetParentResult {
@@ -965,7 +963,7 @@ function getFieldSetParent(
 
 function validateProvidesOrRequires(
   factory: NormalizationFactory,
-  parentContainer: ObjectContainer | ObjectExtensionContainer,
+  parentContainer: ObjectLikeContainer,
   fieldSetByFieldName: Map<string, string>,
   fieldSetDirective: FieldSetDirective,
 ): RequiredFieldConfiguration[] | undefined {
@@ -1020,7 +1018,7 @@ function validateProvidesOrRequires(
 
 export function validateDirectivesWithFieldSet(
   factory: NormalizationFactory,
-  parentContainer: ObjectContainer | ObjectExtensionContainer,
+  parentContainer: ObjectLikeContainer,
   fieldSetContainer: FieldSetContainer,
 ) {
   const configurationData = getOrThrowError(
@@ -1052,13 +1050,6 @@ export function validateDirectivesWithFieldSet(
   }
 }
 
-export function rootTypeToOperationTypeNode(rootType: string): OperationTypeNode {
-  switch (rootType) {
-    case MUTATION:
-      return OperationTypeNode.MUTATION;
-    case QUERY:
-      return OperationTypeNode.QUERY;
-    default:
-      return OperationTypeNode.SUBSCRIPTION;
-  }
+export function isNodeQuery(typeName: string, operationTypeNode?: OperationTypeNode): boolean {
+  return typeName === QUERY || operationTypeNode === OperationTypeNode.QUERY;
 }

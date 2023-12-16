@@ -10,7 +10,8 @@ describe('Entities federation tests', () => {
     const federatedGraph = federationResult!.federatedGraphAST;
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
-        versionOnePersistedBaseSchema + `
+        versionOnePersistedBaseSchema +
+          `
       type Query {
         dummy: String!
       }
@@ -41,7 +42,8 @@ describe('Entities federation tests', () => {
     const federatedGraph = federationResult!.federatedGraphAST;
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
-        versionOnePersistedBaseSchema + `
+        versionOnePersistedBaseSchema +
+          `
       type Query {
         dummy: String!
         trainer: Trainer!
@@ -79,13 +81,7 @@ describe('Entities federation tests', () => {
     expect(result.errors).toBeDefined();
     expect(result.errors).toHaveLength(1);
     expect(result.errors![0]).toStrictEqual(
-      unresolvableFieldError(
-        rootTypeFieldData,
-        'details',
-        ['subgraph-d'],
-        'Query.trainer.details { ... }',
-        'Trainer'
-      ),
+      unresolvableFieldError(rootTypeFieldData, 'details', ['subgraph-d'], 'Query.trainer.details { ... }', 'Trainer'),
     );
   });
 
@@ -164,10 +160,11 @@ describe('Entities federation tests', () => {
   test('that V1 and V2 entities merge successfully', () => {
     const { errors, federationResult } = federateSubgraphs([subgraphB, subgraphG]);
     expect(errors).toBeUndefined();
-    const federatedGraph = federationResult!.federatedGraphAST!;
+    const federatedGraph = federationResult!.federatedGraphAST;
     expect(documentNodeToNormalizedString(federatedGraph)).toBe(
       normalizeString(
-        versionOnePersistedBaseSchema + `
+        versionOnePersistedBaseSchema +
+          `
       type Trainer {
         id: Int!
         pokemon: [Pokemon!]!
@@ -186,6 +183,28 @@ describe('Entities federation tests', () => {
       type Details {
         name: String!
         age: Int!
+      }
+    `,
+      ),
+    );
+  });
+
+  test('that interfaces can declare the @key directive', () => {
+    const { errors, federationResult } = federateSubgraphs([subgraphH]);
+    expect(errors).toBeUndefined();
+    const federatedGraph = federationResult!.federatedGraphAST;
+    expect(documentNodeToNormalizedString(federatedGraph)).toBe(
+      normalizeString(
+        versionOnePersistedBaseSchema +
+          `
+      interface Interface {
+        id: ID!
+        name: String!
+        age: Int!
+      }
+      
+      type Query {
+        dummy: String!
       }
     `,
       ),
@@ -313,6 +332,22 @@ const subgraphG: Subgraph = {
     }
 
     type Details {
+      name: String!
+      age: Int!
+    }
+  `),
+};
+
+const subgraphH: Subgraph = {
+  name: 'subgraph-h',
+  url: '',
+  definitions: parse(`
+    type Query {
+      dummy: String!
+    }
+
+    interface Interface @key(fields: "id") {
+      id: ID!
       name: String!
       age: Int!
     }

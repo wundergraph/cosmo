@@ -17,7 +17,14 @@ func TestHealthCheckHandler(t *testing.T) {
 	})
 	rec := httptest.NewRecorder()
 
-	handler.ServeHTTP(rec, test.NewRequest(http.MethodGet, "/html"))
+	th := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("test"))
+	})
+
+	req := test.NewRequest(http.MethodGet, "/html")
+	req.Header.Set("Accept", "text/html")
+	handler(th).ServeHTTP(rec, req)
 
 	assert.Equal(t, http.StatusOK, rec.Code)
 	assert.Equal(t, "text/html; charset=utf-8", rec.Header().Get("Content-Type"))

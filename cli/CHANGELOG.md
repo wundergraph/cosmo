@@ -4,6 +4,44 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.35.4](https://github.com/wundergraph/cosmo/compare/wgc@0.35.3...wgc@0.35.4) (2023-12-15)
+
+**Note:** Version bump only for package wgc
+
+## [0.35.3](https://github.com/wundergraph/cosmo/compare/wgc@0.35.2...wgc@0.35.3) (2023-12-14)
+
+**Note:** Version bump only for package wgc
+
+## [0.35.2](https://github.com/wundergraph/cosmo/compare/wgc@0.35.1...wgc@0.35.2) (2023-12-13)
+
+**Note:** Version bump only for package wgc
+
+## [0.35.1](https://github.com/wundergraph/cosmo/compare/wgc@0.35.0...wgc@0.35.1) (2023-12-12)
+
+**Note:** Version bump only for package wgc
+
+# [0.35.0](https://github.com/wundergraph/cosmo/compare/wgc@0.34.2...wgc@0.35.0) (2023-12-12)
+
+### Features
+
+* add rbac for subgraphs and federated graphs ([#351](https://github.com/wundergraph/cosmo/issues/351)) ([72e39bc](https://github.com/wundergraph/cosmo/commit/72e39bc1ff914831499c0625e443ab2ec0af135c)) (@JivusAyrus)
+
+## [0.34.2](https://github.com/wundergraph/cosmo/compare/wgc@0.34.1...wgc@0.34.2) (2023-12-09)
+
+**Note:** Version bump only for package wgc
+
+## [0.34.1](https://github.com/wundergraph/cosmo/compare/wgc@0.34.0...wgc@0.34.1) (2023-12-05)
+
+### Bug Fixes
+
+* do not require login for download-binary ([#342](https://github.com/wundergraph/cosmo/issues/342)) ([78f894a](https://github.com/wundergraph/cosmo/commit/78f894a4f770e4657574b7bbd10137650d49dfc1)) (@Aenimus)
+
+# [0.34.0](https://github.com/wundergraph/cosmo/compare/wgc@0.33.1...wgc@0.34.0) (2023-12-05)
+
+### Features
+
+* implement wgc router download-binary ([#339](https://github.com/wundergraph/cosmo/issues/339)) ([5de5b4e](https://github.com/wundergraph/cosmo/commit/5de5b4e9aedf79143543fe56f99034510f5e8f43)) (@Aenimus)
+
 ## [0.33.1](https://github.com/wundergraph/cosmo/compare/wgc@0.33.0...wgc@0.33.1) (2023-12-04)
 
 **Note:** Version bump only for package wgc

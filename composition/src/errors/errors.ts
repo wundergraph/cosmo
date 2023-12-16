@@ -730,8 +730,8 @@ export function unparsableFieldSetSelectionErrorMessage(fieldSet: string, fieldN
   );
 }
 
-export function undefinedObjectParentError(parentTypeName: string): Error {
-  return new Error(` Expected an object or object extension named "${parentTypeName}" to exist.`);
+export function undefinedObjectLikeParentError(parentTypeName: string): Error {
+  return new Error(` Expected an object/interface or object/interface extension named "${parentTypeName}" to exist.`);
 }
 
 export function unexpectedArgumentErrorMessage(fieldSet: string, fieldPath: string, argumentName: string): string {
@@ -847,22 +847,6 @@ export function invalidSelectionOnUnionErrorMessage(
   );
 }
 
-export function invalidOverrideTargetSubgraphNameError(
-  subgraphName: string,
-  parentTypeName: string,
-  fieldNames: string[],
-): Error {
-  return new Error(
-    ` The object type "${parentTypeName}" defines the directive "@override(from: "${subgraphName})" on the following field` +
-      (fieldNames.length > 1 ? 's' : '') +
-      `: "` +
-      fieldNames.join(QUOTATION_JOIN) +
-      `".\n` +
-      ` The required "from" argument of type "String!" must be provided with an existing subgraph name.\n` +
-      ` However, a subgraph by the name of "${subgraphName}" does not exist.`,
-  );
-}
-
 export function duplicateOverriddenFieldErrorMessage(fieldPath: string, subgraphNames: string[]): string {
   return (
     ` The field "${fieldPath}" declares an @override directive in the following subgraphs: "` +
@@ -879,5 +863,21 @@ export function duplicateOverriddenFieldsError(errorMessages: string[]): Error {
       `: "` +
       errorMessages.join(QUOTATION_JOIN) +
       `".\n`,
+  );
+}
+
+export function noFieldDefinitionsError(typeString: string, typeName: string): Error {
+  return new Error(`The ${typeString} "${typeName}" is invalid because it does not define any fields.`);
+}
+
+export function allFieldDefinitionsAreInaccessibleError(typeString: string, typeName: string): Error {
+  return new Error(
+    `The ${typeString} "${typeName}" is invalid because all its field definitions are declared "@inaccessible".`,
+  );
+}
+
+export function equivalentSourceAndTargetOverrideError(subgraphName: string, hostPath: string): Error {
+  return new Error(
+    `Cannot override field "${hostPath}" because the source and target subgraph names are both "${subgraphName}"`,
   );
 }

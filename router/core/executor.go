@@ -23,7 +23,7 @@ type ExecutorConfigurationBuilder struct {
 	introspection bool
 	includeInfo   bool
 	baseURL       string
-	transport     *http.Transport
+	transport     http.RoundTripper
 	logger        *zap.Logger
 
 	transportOptions *TransportOptions
@@ -116,8 +116,9 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(routerCfg *node
 	loader := NewLoader(b.includeInfo, NewDefaultFactoryResolver(
 		NewTransport(b.transportOptions),
 		b.transport,
-		nc,
 		b.logger,
+		routerEngineCfg.Execution.EnableSingleFlight,
+		nc,
 	))
 
 	// this generates the plan config using the data source factories from the config package

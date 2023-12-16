@@ -4,6 +4,41 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.44.0](https://github.com/wundergraph/cosmo/compare/studio@0.43.2...studio@0.44.0) (2023-12-15)
+
+### Bug Fixes
+
+* changelog page ([#369](https://github.com/wundergraph/cosmo/issues/369)) ([7ba1a80](https://github.com/wundergraph/cosmo/commit/7ba1a802aea1956c79b7b1768d56e747e9f74710)) (@JivusAyrus)
+
+### Features
+
+* add git commit sha to checks ([#361](https://github.com/wundergraph/cosmo/issues/361)) ([c9ef0c8](https://github.com/wundergraph/cosmo/commit/c9ef0c8439f89ffb80a4ed2f6c319a75414a07cf)) (@Pagebakers)
+
+## [0.43.2](https://github.com/wundergraph/cosmo/compare/studio@0.43.1...studio@0.43.2) (2023-12-14)
+
+### Bug Fixes
+
+* minor ui fixes ([#366](https://github.com/wundergraph/cosmo/issues/366)) ([06a0365](https://github.com/wundergraph/cosmo/commit/06a03656df00abec09eecd441a85775217e28b0f)) (@JivusAyrus)
+
+## [0.43.1](https://github.com/wundergraph/cosmo/compare/studio@0.43.0...studio@0.43.1) (2023-12-12)
+
+### Bug Fixes
+
+* update link to docs for graph access control ([#358](https://github.com/wundergraph/cosmo/issues/358)) ([01d6ea1](https://github.com/wundergraph/cosmo/commit/01d6ea1a9cd57672fc60a54227edb1832671ac09)) (@StarpTech)
+
+# [0.43.0](https://github.com/wundergraph/cosmo/compare/studio@0.42.1...studio@0.43.0) (2023-12-12)
+
+### Features
+
+* add rbac for subgraphs and federated graphs ([#351](https://github.com/wundergraph/cosmo/issues/351)) ([72e39bc](https://github.com/wundergraph/cosmo/commit/72e39bc1ff914831499c0625e443ab2ec0af135c)) (@JivusAyrus)
+* remember and redirect to last used organisation ([#357](https://github.com/wundergraph/cosmo/issues/357)) ([934726d](https://github.com/wundergraph/cosmo/commit/934726d8fd72fd059e18b35babc79ff3494b40aa)) (@Pagebakers)
+
+## [0.42.1](https://github.com/wundergraph/cosmo/compare/studio@0.42.0...studio@0.42.1) (2023-12-05)
+
+### Bug Fixes
+
+* star banner on big screens ([#338](https://github.com/wundergraph/cosmo/issues/338)) ([83ec414](https://github.com/wundergraph/cosmo/commit/83ec414cf4bbf8577286ccb318b04ca1b4e3dafb)) (@JivusAyrus)
+
 # [0.42.0](https://github.com/wundergraph/cosmo/compare/studio@0.41.1...studio@0.42.0) (2023-12-04)
 
 ### Bug Fixes

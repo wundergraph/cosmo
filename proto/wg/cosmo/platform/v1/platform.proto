@@ -190,6 +190,7 @@ message Subgraph {
   string routingURL = 3;
   string lastUpdatedAt = 4;
   repeated Label labels = 5;
+  optional string creatorUserId = 6;
 }
 
 message GetSubgraphsResponse {
@@ -256,6 +257,14 @@ message SchemaCheck {
   bool hasClientTraffic = 7;
   bool isForcedSuccess = 8;
   bool isDeleted = 9;
+  optional SchemaCheckGhDetails ghDetails = 10;
+}
+
+message SchemaCheckGhDetails {
+  string commitSha = 1;
+  string ownerSlug = 3;
+  string repositorySlug = 4;
+  int32 checkRunId = 5;
 }
 
 message GetChecksByFederatedGraphNameResponse {
@@ -614,6 +623,8 @@ message CreateAPIKeyRequest {
   string name = 1;
   string userID = 2;
   ExpiresAt expires = 3;
+  repeated string federatedGraphTargetIds = 4;
+  repeated string subgraphTargetIds = 5;
 }
 
 message CreateAPIKeyResponse {
@@ -1142,6 +1153,66 @@ message GetChangelogBySchemaVersionResponse {
   FederatedGraphChangelogOutput changelog = 2;
 }
 
+message GetUserAccessibleResourcesRequest {}
+
+message GetUserAccessibleResourcesResponse {
+  message Graph {
+    string targetId = 1;
+    string name = 2;
+  }
+  Response response = 1;
+  repeated Graph federatedGraphs = 2;
+  repeated Graph subgraphs = 3;
+}
+
+message UpdateRBACSettingsRequest {
+  bool enable = 1;
+}
+
+message UpdateRBACSettingsResponse {
+  Response response = 1;
+}
+
+message IsRBACEnabledRequest {}
+
+message IsRBACEnabledResponse {
+  Response response = 1;
+  bool enabled = 2;
+}
+
+message AddSubgraphMemberRequest {
+  string subgraphName = 1;
+  string userEmail = 2;
+}
+
+message AddSubgraphMemberResponse {
+  Response response = 1;
+}
+
+message RemoveSubgraphMemberRequest {
+  string subgraphName = 1;
+  string subgraphMemberId = 2;
+}
+
+message RemoveSubgraphMemberResponse {
+  Response response = 1;
+}
+
+message GetSubgraphMembersRequest {
+  string subgraphName = 1;
+}
+
+message SubgraphMember{
+  string userId = 1;
+  string email = 2;
+  string subgraphMemberId = 4;
+}
+
+message GetSubgraphMembersResponse {
+  Response response = 1;
+  repeated SubgraphMember members = 2;
+}
+
 message ClientInfo{
   string name = 1;
   string id = 2;
@@ -1330,6 +1401,18 @@ service PlatformService {
   rpc GetSdlBySchemaVersion(GetSdlBySchemaVersionRequest) returns (GetSdlBySchemaVersionResponse) {}
   // GetChangelogBySchemaVersion returns the changelog based on the schema version
   rpc GetChangelogBySchemaVersion(GetChangelogBySchemaVersionRequest) returns (GetChangelogBySchemaVersionResponse) {}
+  // GetUserAccessibleResources returns all the federated and subgraphs where the user has write permissions
+  rpc GetUserAccessibleResources(GetUserAccessibleResourcesRequest) returns (GetUserAccessibleResourcesResponse) {}
+  // UpdateRBACSettings updates rbac setting of the organization
+  rpc UpdateRBACSettings(UpdateRBACSettingsRequest) returns (UpdateRBACSettingsResponse) {}
+  // IsRBACEnabled returns true if rbac is enabled or false
+  rpc IsRBACEnabled(IsRBACEnabledRequest) returns (IsRBACEnabledResponse) {}
+  // AddSubgraphMember adds a user to the subgraph
+  rpc AddSubgraphMember(AddSubgraphMemberRequest) returns (AddSubgraphMemberResponse) {}
+  // RemoveSubgraphMember removes a member from the subgraph
+  rpc RemoveSubgraphMember(RemoveSubgraphMemberRequest) returns (RemoveSubgraphMemberResponse) {}
+  // GetSubgraphMembers gets all the members of the subgraph
+  rpc GetSubgraphMembers(GetSubgraphMembersRequest) returns (GetSubgraphMembersResponse) {}
 
   // Analytics
 

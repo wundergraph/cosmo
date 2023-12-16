@@ -31,9 +31,9 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/wundergraph/cosmo/router/config"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/cosmo/router/health"
 	"github.com/wundergraph/cosmo/router/internal/graphiql"
 	"github.com/wundergraph/cosmo/router/internal/handler/cors"
-	"github.com/wundergraph/cosmo/router/internal/handler/health"
 	"github.com/wundergraph/cosmo/router/internal/handler/recovery"
 	"github.com/wundergraph/cosmo/router/internal/handler/requestlogger"
 	"github.com/wundergraph/cosmo/router/internal/metric"
@@ -75,7 +75,7 @@ type (
 
 	// Config defines the configuration options for the Router.
 	Config struct {
-		transport                *http.Transport
+		transport                http.RoundTripper
 		logger                   *zap.Logger
 		traceConfig              *trace.Config
 		metricConfig             *metric.Config
@@ -94,6 +94,7 @@ type (
 		federatedGraphName       string
 		graphApiToken            string
 		healthCheckPath          string
+		healthChecks             health.Checker
 		readinessCheckPath       string
 		livenessCheckPath        string
 		cdnConfig                config.CDNConfiguration
@@ -135,7 +136,7 @@ type (
 		rootContext       context.Context
 		rootContextCancel func()
 		routerConfig      *nodev1.RouterConfig
-		healthChecks      *health.Checks
+		healthChecks      health.Checker
 	}
 
 	// Option defines the method to customize Server.
@@ -232,32 +233,8 @@ func NewRouter(opts ...Option) (*Router, error) {
 
 	r.baseURL = fmt.Sprintf("http://%s", r.listenAddr)
 
-	dialer := &net.Dialer{
-		Timeout:   r.subgraphTransportOptions.DialTimeout,
-		KeepAlive: r.subgraphTransportOptions.KeepAliveProbeInterval,
-	}
-
-	// Great source of inspiration: https://gitlab.com/gitlab-org/gitlab-pages
-	// A pages proxy in go that handles tls to upstreams, rate limiting, and more
-	r.transport = &http.Transport{
-		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
-			return dialer.DialContext(ctx, network, addr)
-		},
-		// The defaults value 0 = unbounded.
-		// We set to some value to prevent resource exhaustion e.g max requests and ports.
-		MaxConnsPerHost: 100,
-		// The defaults value 0 = unbounded. 100 is used by the default go transport.
-		// This value should be significant higher than MaxIdleConnsPerHost.
-		MaxIdleConns: 1024,
-		// The default value is 2. Such a low limit will open and close connections too often.
-		// Details: https://gitlab.com/gitlab-org/gitlab-pages/-/merge_requests/274
-		MaxIdleConnsPerHost: 20,
-		ForceAttemptHTTP2:   true,
-		IdleConnTimeout:     r.subgraphTransportOptions.KeepAliveIdleTimeout,
-		// Set more timeouts https://gitlab.com/gitlab-org/gitlab-pages/-/issues/495
-		TLSHandshakeTimeout:   r.subgraphTransportOptions.TLSHandshakeTimeout,
-		ResponseHeaderTimeout: r.subgraphTransportOptions.ResponseHeaderTimeout,
-		ExpectContinueTimeout: r.subgraphTransportOptions.ExpectContinueTimeout,
+	if r.transport == nil {
+		r.transport = newHTTPTransport(r.subgraphTransportOptions)
 	}
 
 	// Add default tracing exporter if needed
@@ -503,7 +480,36 @@ func (r *Router) NewTestServer(ctx context.Context) (*Server, error) {
 	return newRouter, nil
 }
 
+// bootstrap initializes the Router. It is called by Start() and NewTestServer().
+// It should only be called once for a Router instance.
 func (r *Router) bootstrap(ctx context.Context) error {
+	cosmoCloudTracingEnabled := r.traceConfig.Enabled && trace.GetDefaultExporter(r.traceConfig) != nil
+	artInProductionEnabled := r.engineExecutionConfiguration.EnableRequestTracing && !r.developmentMode
+	needsRegistration := cosmoCloudTracingEnabled || artInProductionEnabled
+
+	if needsRegistration && r.selfRegister != nil {
+
+		r.logger.Info("Registering router with control plane because you opted in to send telemetry to Cosmo Cloud or advanced request tracing (ART) in production")
+
+		ri, registerErr := r.selfRegister.Register(ctx)
+		if registerErr != nil {
+			r.logger.Error("Failed to register router. If this error persists, please contact support.", zap.Error(registerErr))
+		} else {
+			r.registrationInfo = ri
+
+			// Only ensure sampling rate if the user exports traces to Cosmo Cloud
+			if cosmoCloudTracingEnabled {
+				if r.traceConfig.Sampler > float64(r.registrationInfo.AccountLimits.TraceSamplingRate) {
+					r.logger.Warn("Trace sampling rate is higher than account limit. Using account limit instead. Please contact support to increase your account limit.",
+						zap.Float64("limit", r.traceConfig.Sampler),
+						zap.String("account_limit", fmt.Sprintf("%.2f", r.registrationInfo.AccountLimits.TraceSamplingRate)),
+					)
+					r.traceConfig.Sampler = float64(r.registrationInfo.AccountLimits.TraceSamplingRate)
+				}
+			}
+		}
+	}
+
 	if r.traceConfig.Enabled {
 		tp, err := trace.NewTracerProvider(ctx, r.logger, r.traceConfig)
 		if err != nil {
@@ -561,37 +567,11 @@ func (r *Router) bootstrap(ctx context.Context) error {
 	return nil
 }
 
-// Start starts the Server. It blocks until the context is cancelled or when the initial config could not be fetched.
+// Start starts the Server. It blocks until the context is cancelled or when the initial config could not be fetched
+// from the control plane. All bootstrapping logic should be done in bootstrap().
 func (r *Router) Start(ctx context.Context) error {
 	if r.shutdown {
-		return fmt.Errorf("router is closed. Create a new instance with router.NewRouter()")
-	}
-
-	cosmoCloudTracingEnabled := r.traceConfig.Enabled && trace.GetDefaultExporter(r.traceConfig) != nil
-	artInProductionEnabled := r.engineExecutionConfiguration.EnableRequestTracing && !r.developmentMode
-	needsRegistration := cosmoCloudTracingEnabled || artInProductionEnabled
-
-	if needsRegistration && r.selfRegister != nil {
-
-		r.logger.Info("Registering router with control plane because you opted in to send telemetry to Cosmo Cloud or advanced request tracing (ART) in production")
-
-		ri, registerErr := r.selfRegister.Register(ctx)
-		if registerErr != nil {
-			r.logger.Error("Failed to register router. If this error persists, please contact support.", zap.Error(registerErr))
-		} else {
-			r.registrationInfo = ri
-
-			// Only ensure sampling rate if the user exports traces to Cosmo Cloud
-			if cosmoCloudTracingEnabled {
-				if r.traceConfig.Sampler > float64(r.registrationInfo.AccountLimits.TraceSamplingRate) {
-					r.logger.Warn("Trace sampling rate is higher than account limit. Using account limit instead. Please contact support to increase your account limit.",
-						zap.Float64("limit", r.traceConfig.Sampler),
-						zap.String("account_limit", fmt.Sprintf("%.2f", r.registrationInfo.AccountLimits.TraceSamplingRate)),
-					)
-					r.traceConfig.Sampler = float64(r.registrationInfo.AccountLimits.TraceSamplingRate)
-				}
-			}
-		}
+		return fmt.Errorf("router is shutdown. Create a new instance with router.NewRouter()")
 	}
 
 	if err := r.bootstrap(ctx); err != nil {
@@ -604,6 +584,7 @@ func (r *Router) Start(ctx context.Context) error {
 		return r.updateServer(ctx, r.routerConfig)
 	}
 
+	// when no static config is provided and no poller is configured, we can't start the server
 	if r.configPoller == nil {
 		return fmt.Errorf("config fetcher not provided. Please provide a static router config instead")
 	}
@@ -696,9 +677,14 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	httpRouter.Use(requestLogger)
 	httpRouter.Use(cors.New(*r.corsOptions))
 
-	ro.healthChecks = health.New(&health.Options{
-		Logger: r.logger,
-	})
+	if r.healthChecks != nil {
+		ro.healthChecks = r.healthChecks
+	} else {
+		ro.healthChecks = health.New(&health.Options{
+			Logger: r.logger,
+		})
+	}
+
 	httpRouter.Get(r.healthCheckPath, ro.healthChecks.Liveness())
 	httpRouter.Get(r.livenessCheckPath, ro.healthChecks.Liveness())
 	httpRouter.Get(r.readinessCheckPath, ro.healthChecks.Readiness())
@@ -768,10 +754,10 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	})
 	operationPlanner := NewOperationPlanner(executor, planCache)
 
-	var graphqlPlaygroundHandler http.Handler
+	var graphqlPlaygroundHandler func(http.Handler) http.Handler
 
 	if r.playground {
-		r.logger.Debug("enabling GraphQL playground", zap.String("path", r.graphqlPath))
+		r.logger.Info("Serving GraphQL playground", zap.String("url", r.baseURL))
 		graphqlPlaygroundHandler = graphiql.NewPlayground(&graphiql.PlaygroundOptions{
 			Log:        r.logger,
 			Html:       graphiql.PlaygroundHTML(),
@@ -828,35 +814,40 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		DevelopmentMode:      r.developmentMode,
 	})
 
-	// Serve GraphQL. Metrics are collected after the request is handled and classified as r GraphQL request.
-	httpRouter.Route(r.graphqlPath, func(subChiRouter chi.Router) {
-		subChiRouter.Use(NewWebsocketMiddleware(rootContext, WebsocketMiddlewareOptions{
-			Parser:           operationParser,
-			Planner:          operationPlanner,
-			Metrics:          routerMetrics,
-			GraphQLHandler:   graphqlHandler,
-			AccessController: r.accessController,
-			Logger:           r.logger,
-		}))
-
-		subChiRouter.Use(graphqlPreHandler.Handler)
-
-		subChiRouter.Use(r.routerMiddlewares...)
-		subChiRouter.Post("/", graphqlHandler.ServeHTTP)
+	wsMiddleware := NewWebsocketMiddleware(rootContext, WebsocketMiddlewareOptions{
+		Parser:           operationParser,
+		Planner:          operationPlanner,
+		Metrics:          routerMetrics,
+		GraphQLHandler:   graphqlHandler,
+		AccessController: r.accessController,
+		Logger:           r.logger,
 	})
 
-	r.logger.Debug("GraphQLHandler registered",
-		zap.String("method", http.MethodPost),
-		zap.String("path", r.graphqlPath),
-	)
+	graphqlChiRouter := chi.NewRouter()
 
-	if r.playground {
-		httpRouter.Get("/", graphqlPlaygroundHandler.ServeHTTP)
-		r.logger.Debug("GraphQLHandler playground registered",
-			zap.String("method", http.MethodGet),
-			zap.String("path", "/"),
-		)
+	// When the playground path is equal to the graphql path, we need to handle
+	// ws upgrades and html requests on the same route
+	if r.playground && r.graphqlPath == "/" {
+		graphqlChiRouter.Use(graphqlPlaygroundHandler, wsMiddleware)
+	} else {
+		if r.playground {
+			httpRouter.Get("/", graphqlPlaygroundHandler(nil).ServeHTTP)
+		}
+		graphqlChiRouter.Use(wsMiddleware)
 	}
+
+	graphqlChiRouter.Use(graphqlPreHandler.Handler)
+	graphqlChiRouter.Use(r.routerMiddlewares...)
+
+	graphqlChiRouter.Post("/", graphqlHandler.ServeHTTP)
+
+	// Serve GraphQL. Metrics are collected after the request is handled and classified as r GraphQL request.
+	httpRouter.Mount(r.graphqlPath, graphqlChiRouter)
+
+	r.logger.Info("GraphQL endpoint",
+		zap.String("method", http.MethodPost),
+		zap.String("url", r.baseURL+r.graphqlPath),
+	)
 
 	ro.Server = &http.Server{
 		Addr: r.listenAddr,
@@ -1012,6 +1003,12 @@ func WithListenerAddr(addr string) Option {
 	}
 }
 
+func WithCustomRoundTripper(transport http.RoundTripper) Option {
+	return func(r *Router) {
+		r.transport = transport
+	}
+}
+
 func WithLogger(logger *zap.Logger) Option {
 	return func(r *Router) {
 		r.logger = logger
@@ -1113,6 +1110,12 @@ func WithStaticRouterConfig(cfg *nodev1.RouterConfig) Option {
 func WithHealthCheckPath(path string) Option {
 	return func(r *Router) {
 		r.healthCheckPath = path
+	}
+}
+
+func WithHealthChecks(healthChecks health.Checker) Option {
+	return func(r *Router) {
+		r.healthChecks = healthChecks
 	}
 }
 
@@ -1231,5 +1234,34 @@ func WithGraphQLMetrics(cfg *GraphQLMetricsConfig) Option {
 func WithDevelopmentMode(enabled bool) Option {
 	return func(r *Router) {
 		r.developmentMode = enabled
+	}
+}
+
+func newHTTPTransport(opts *SubgraphTransportOptions) *http.Transport {
+	dialer := &net.Dialer{
+		Timeout:   opts.DialTimeout,
+		KeepAlive: opts.KeepAliveProbeInterval,
+	}
+	// Great source of inspiration: https://gitlab.com/gitlab-org/gitlab-pages
+	// A pages proxy in go that handles tls to upstreams, rate limiting, and more
+	return &http.Transport{
+		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+			return dialer.DialContext(ctx, network, addr)
+		},
+		// The defaults value 0 = unbounded.
+		// We set to some value to prevent resource exhaustion e.g max requests and ports.
+		MaxConnsPerHost: 100,
+		// The defaults value 0 = unbounded. 100 is used by the default go transport.
+		// This value should be significant higher than MaxIdleConnsPerHost.
+		MaxIdleConns: 1024,
+		// The default value is 2. Such a low limit will open and close connections too often.
+		// Details: https://gitlab.com/gitlab-org/gitlab-pages/-/merge_requests/274
+		MaxIdleConnsPerHost: 20,
+		ForceAttemptHTTP2:   true,
+		IdleConnTimeout:     opts.KeepAliveIdleTimeout,
+		// Set more timeouts https://gitlab.com/gitlab-org/gitlab-pages/-/issues/495
+		TLSHandshakeTimeout:   opts.TLSHandshakeTimeout,
+		ResponseHeaderTimeout: opts.ResponseHeaderTimeout,
+		ExpectContinueTimeout: opts.ExpectContinueTimeout,
 	}
 }

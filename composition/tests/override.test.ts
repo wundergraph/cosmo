@@ -1,15 +1,16 @@
 import { describe, expect, test } from 'vitest';
-import { parse } from 'graphql/index';
+import { Kind, parse } from 'graphql';
 import {
   batchNormalize,
   ConfigurationData,
   duplicateOverriddenFieldErrorMessage,
   duplicateOverriddenFieldsError,
+  equivalentSourceAndTargetOverrideError,
   federateSubgraphs,
   FieldContainer,
   invalidDirectiveError,
   invalidDirectiveLocationErrorMessage,
-  invalidOverrideTargetSubgraphNameError,
+  normalizeSubgraph,
   ObjectContainer,
   shareableFieldDefinitionsError,
   Subgraph,
@@ -17,31 +18,55 @@ import {
 } from '../src';
 import { documentNodeToNormalizedString, normalizeString, versionTwoPersistedBaseSchema } from './utils/utils';
 import { OVERRIDE } from '../src/utils/string-constants';
-import { Kind } from 'graphql';
+import { invalidOverrideTargetSubgraphNameWarning } from '../src/warnings/warnings';
 
 describe('@override directive Tests', () => {
-  test('that an error is returned if @override targets an unknown subgraph name', () => {
-    const { errors } = federateSubgraphs([subgraphA, subgraphB]);
-    expect(errors).toBeDefined();
-    expect(errors![0]).toStrictEqual(subgraphValidationError(
-      'subgraph-b',
-      [invalidOverrideTargetSubgraphNameError('subgraph-z', 'Entity', ['name'])],
-    ));
+  test('that a warning is returned if @override targets an unknown subgraph name', () => {
+    const { errors, federationResult, warnings } = federateSubgraphs([subgraphA, subgraphB]);
+    expect(errors).toBeUndefined();
+    expect(warnings).toBeDefined();
+    expect(warnings![0]).toStrictEqual(invalidOverrideTargetSubgraphNameWarning('subgraph-z', 'Entity', ['age']));
+    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
+      normalizeString(
+        versionTwoPersistedBaseSchema +
+          `
+      type Query {
+        query: Entity!
+      }
+      
+      type Entity {
+        id: ID!
+        name: String!
+        age: Int!
+      }
+    `,
+      ),
+    );
   });
 
   test('that an error is returned if @override is declared on multiple instances of a field', () => {
     const { errors } = federateSubgraphs([subgraphA, subgraphC, subgraphD]);
     expect(errors).toBeDefined();
-    expect(errors![0]).toStrictEqual(duplicateOverriddenFieldsError(
-      [duplicateOverriddenFieldErrorMessage('Entity.name', ['subgraph-c', 'subgraph-d'])],
-    ));
+    expect(errors![0]).toStrictEqual(
+      duplicateOverriddenFieldsError([
+        duplicateOverriddenFieldErrorMessage('Entity.name', ['subgraph-c', 'subgraph-d']),
+      ]),
+    );
+  });
+
+  test('that an error is returned if the source and target subgraph name for @override are equivalent', () => {
+    const { errors } = normalizeSubgraph(subgraphQ.definitions, 'subgraph-q');
+    expect(errors).toBeDefined();
+    expect(errors![0]).toStrictEqual(equivalentSourceAndTargetOverrideError('subgraph-q', 'Entity.name'));
   });
 
   test('that an overridden field does not need to be declared shareable', () => {
     const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphC]);
     expect(errors).toBeUndefined();
-    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST))
-      .toBe(normalizeString(versionTwoPersistedBaseSchema + `
+    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
+      normalizeString(
+        versionTwoPersistedBaseSchema +
+          `
       type Query {
         query: Entity!
       }
@@ -51,14 +76,18 @@ describe('@override directive Tests', () => {
         age: Int!
         name: String!
       }
-    `));
+    `,
+      ),
+    );
   });
 
   test('that an overridden field does not need to be declared shareable #1', () => {
     const { errors, federationResult } = federateSubgraphs([subgraphI, subgraphJ]);
     expect(errors).toBeUndefined();
-    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST))
-      .toBe(normalizeString(versionTwoPersistedBaseSchema + `
+    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
+      normalizeString(
+        versionTwoPersistedBaseSchema +
+          `
       type Query {
         query: Entity!
       }
@@ -68,14 +97,18 @@ describe('@override directive Tests', () => {
         age: Int!
         name: String!
       }
-    `));
+    `,
+      ),
+    );
   });
 
   test('that an overridden field does not need to be declared shareable #2', () => {
     const { errors, federationResult } = federateSubgraphs([subgraphJ, subgraphI]);
     expect(errors).toBeUndefined();
-    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST))
-      .toBe(normalizeString(versionTwoPersistedBaseSchema + `
+    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
+      normalizeString(
+        versionTwoPersistedBaseSchema +
+          `
       type Entity {
         id: ID!
         name: String!
@@ -85,14 +118,18 @@ describe('@override directive Tests', () => {
       type Query {
         query: Entity!
       }
-    `));
+    `,
+      ),
+    );
   });
 
   test('that an overridden field does not need to be declared shareable #3', () => {
     const { errors, federationResult } = federateSubgraphs([subgraphI, subgraphJ, subgraphK]);
     expect(errors).toBeUndefined();
-    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST))
-      .toBe(normalizeString(versionTwoPersistedBaseSchema + `
+    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
+      normalizeString(
+        versionTwoPersistedBaseSchema +
+          `
       type Query {
         query: Entity!
       }
@@ -103,14 +140,18 @@ describe('@override directive Tests', () => {
         name: String!
         number: Int!
       }
-    `));
+    `,
+      ),
+    );
   });
 
   test('that an overridden field does not need to be declared shareable #4', () => {
     const { errors, federationResult } = federateSubgraphs([subgraphL, subgraphM]);
     expect(errors).toBeUndefined();
-    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST))
-      .toBe(normalizeString(versionTwoPersistedBaseSchema + `
+    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
+      normalizeString(
+        versionTwoPersistedBaseSchema +
+          `
        type Entity {
         id: ID!
         name: String!
@@ -119,14 +160,18 @@ describe('@override directive Tests', () => {
       type Query {
         query: Entity!
       }
-    `));
+    `,
+      ),
+    );
   });
 
   test('that an overridden field does not need to be declared shareable #5', () => {
     const { errors, federationResult } = federateSubgraphs([subgraphN, subgraphO]);
     expect(errors).toBeUndefined();
-    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST))
-      .toBe(normalizeString(versionTwoPersistedBaseSchema + `
+    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
+      normalizeString(
+        versionTwoPersistedBaseSchema +
+          `
        type Entity {
         id: ID!
         name: String!
@@ -135,14 +180,18 @@ describe('@override directive Tests', () => {
       type Query {
         query: Entity!
       }
-    `));
+    `,
+      ),
+    );
   });
 
   test('that an overridden field does not need to be declared shareable #6', () => {
     const { errors, federationResult } = federateSubgraphs([subgraphE, subgraphP]);
     expect(errors).toBeUndefined();
-    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST))
-      .toBe(normalizeString(versionTwoPersistedBaseSchema + `
+    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
+      normalizeString(
+        versionTwoPersistedBaseSchema +
+          `
         type Entity {
           id: ID!
           name: String!
@@ -151,14 +200,18 @@ describe('@override directive Tests', () => {
         type Query {
           query: Entity!
         }
-    `));
+    `,
+      ),
+    );
   });
 
   test('that an overridden field does not need to be declared shareable #7', () => {
     const { errors, federationResult } = federateSubgraphs([subgraphP, subgraphE]);
     expect(errors).toBeUndefined();
-    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST))
-      .toBe(normalizeString(versionTwoPersistedBaseSchema + `
+    expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
+      normalizeString(
+        versionTwoPersistedBaseSchema +
+          `
         type Query {
           query: Entity!
         }
@@ -167,43 +220,59 @@ describe('@override directive Tests', () => {
           id: ID!
           name: String!
         }
-    `));
+    `,
+      ),
+    );
   });
 
   test('that > 1 instance of an un-shareable field returns an error regardless of override', () => {
     const { errors } = federateSubgraphs([subgraphA, subgraphC, subgraphE]);
     expect(errors).toBeDefined();
-    expect(errors![0]).toStrictEqual(shareableFieldDefinitionsError(
-      {
-        node: { name: { value: 'Entity' } },
-        fields: new Map<string, FieldContainer>([[
-          'name',
-          {
-            node: { name: { value: 'name' } },
-            subgraphsByShareable: new Map<string, boolean>([['subgraph-c', false], ['subgraph-e', true]]),
-          } as FieldContainer,
-        ]]),
-      } as ObjectContainer,
-      new Set<string>(['name']),
-    ));
+    expect(errors![0]).toStrictEqual(
+      shareableFieldDefinitionsError(
+        {
+          node: { name: { value: 'Entity' } },
+          fields: new Map<string, FieldContainer>([
+            [
+              'name',
+              {
+                node: { name: { value: 'name' } },
+                subgraphsByShareable: new Map<string, boolean>([
+                  ['subgraph-c', false],
+                  ['subgraph-e', true],
+                ]),
+              } as FieldContainer,
+            ],
+          ]),
+        } as ObjectContainer,
+        new Set<string>(['name']),
+      ),
+    );
   });
 
   test('that > 1 instance of an un-shareable field returns an error regardless of override #2', () => {
     const { errors } = federateSubgraphs([subgraphA, subgraphI, subgraphJ]);
     expect(errors).toBeDefined();
-    expect(errors![0]).toStrictEqual(shareableFieldDefinitionsError(
-      {
-        node: { name: { value: 'Entity' } },
-        fields: new Map<string, FieldContainer>([[
-          'name',
-          {
-            node: { name: { value: 'name' } },
-            subgraphsByShareable: new Map<string, boolean>([['subgraph-a', false], ['subgraph-j', true]]),
-          } as FieldContainer,
-        ]]),
-      } as ObjectContainer,
-      new Set<string>(['name']),
-    ));
+    expect(errors![0]).toStrictEqual(
+      shareableFieldDefinitionsError(
+        {
+          node: { name: { value: 'Entity' } },
+          fields: new Map<string, FieldContainer>([
+            [
+              'name',
+              {
+                node: { name: { value: 'name' } },
+                subgraphsByShareable: new Map<string, boolean>([
+                  ['subgraph-a', false],
+                  ['subgraph-j', true],
+                ]),
+              } as FieldContainer,
+            ],
+          ]),
+        } as ObjectContainer,
+        new Set<string>(['name']),
+      ),
+    );
   });
 
   test('that @override produces the correct engine configuration', () => {
@@ -215,44 +284,66 @@ describe('@override directive Tests', () => {
     expect(e).toBeDefined();
     const g = internalSubgraphsBySubgraphName.get('subgraph-f');
     expect(g).toBeDefined();
-    expect(a!.configurationDataMap).toStrictEqual(new Map<string, ConfigurationData>([
-      ['Query', {
-        fieldNames: new Set<string>(['query']),
-        isRootNode: true,
-        typeName: 'Query',
-      }],
-      ['Entity', {
-        fieldNames: new Set<string>(['id', 'age']),
-        isRootNode: true,
-        keys: [{ fieldName: '', selectionSet: 'id' }],
-        typeName: 'Entity',
-      }],
-    ]));
-    expect(e!.configurationDataMap).toStrictEqual(new Map<string, ConfigurationData>([
-      ['Entity', {
-        fieldNames: new Set<string>(['id', 'name']),
-        isRootNode: true,
-        keys: [{ fieldName: '', selectionSet: 'id' }],
-        typeName: 'Entity',
-      }],
-    ]));
-    expect(g!.configurationDataMap).toStrictEqual(new Map<string, ConfigurationData>([
-      ['Entity', {
-        fieldNames: new Set<string>(['id', 'name', 'age']),
-        isRootNode: true,
-        keys: [{ fieldName: '', selectionSet: 'id' }],
-        typeName: 'Entity',
-      }],
-    ]));
+    expect(a!.configurationDataMap).toStrictEqual(
+      new Map<string, ConfigurationData>([
+        [
+          'Query',
+          {
+            fieldNames: new Set<string>(['query']),
+            isRootNode: true,
+            typeName: 'Query',
+          },
+        ],
+        [
+          'Entity',
+          {
+            fieldNames: new Set<string>(['id', 'age']),
+            isRootNode: true,
+            keys: [{ fieldName: '', selectionSet: 'id' }],
+            typeName: 'Entity',
+          },
+        ],
+      ]),
+    );
+    expect(e!.configurationDataMap).toStrictEqual(
+      new Map<string, ConfigurationData>([
+        [
+          'Entity',
+          {
+            fieldNames: new Set<string>(['id', 'name']),
+            isRootNode: true,
+            keys: [{ fieldName: '', selectionSet: 'id' }],
+            typeName: 'Entity',
+          },
+        ],
+      ]),
+    );
+    expect(g!.configurationDataMap).toStrictEqual(
+      new Map<string, ConfigurationData>([
+        [
+          'Entity',
+          {
+            fieldNames: new Set<string>(['id', 'name', 'age']),
+            isRootNode: true,
+            keys: [{ fieldName: '', selectionSet: 'id' }],
+            typeName: 'Entity',
+          },
+        ],
+      ]),
+    );
   });
 
   test('that if @override is declared at an invalid location, an error is returned', () => {
     const { errors } = federateSubgraphs([subgraphG, subgraphH]);
     expect(errors).toBeDefined();
     const hostPath = 'Entity.name(argOne: ...)';
-    expect(errors![0]).toStrictEqual(subgraphValidationError('subgraph-g', [invalidDirectiveError(
-      OVERRIDE, hostPath, [invalidDirectiveLocationErrorMessage(hostPath, Kind.ARGUMENT, OVERRIDE)],
-    )]));
+    expect(errors![0]).toStrictEqual(
+      subgraphValidationError('subgraph-g', [
+        invalidDirectiveError(OVERRIDE, hostPath, [
+          invalidDirectiveLocationErrorMessage(hostPath, Kind.ARGUMENT, OVERRIDE),
+        ]),
+      ]),
+    );
   });
 });
 
@@ -278,7 +369,7 @@ const subgraphB: Subgraph = {
   definitions: parse(`
     type Entity @key(fields: "id") {
       id: ID!
-      name: String! @override(from: "subgraph-z")
+      age: Int! @override(from: "subgraph-z") @shareable
     }
   `),
 };
@@ -462,6 +553,17 @@ const subgraphP: Subgraph = {
     type Entity @key(fields: "id") {
       id: ID!
       name: String! @override(from: "subgraph-e")
+    }
+  `),
+};
+
+const subgraphQ: Subgraph = {
+  name: 'subgraph-q',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id") {
+      id: ID!
+      name: String! @override(from: "subgraph-q")
     }
   `),
 };

@@ -1,7 +1,6 @@
 import { PartialMessage, PlainMessage } from '@bufbuild/protobuf';
 import { EventMeta, OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import {
-  ExpiresAt,
   Integration,
   IntegrationConfig,
   IntegrationType,
@@ -24,13 +23,7 @@ import {
   targets,
   users,
 } from '../../db/schema.js';
-import {
-  APIKeyDTO,
-  OrganizationDTO,
-  OrganizationLimitsDTO,
-  OrganizationMemberDTO,
-  WebhooksConfigDTO,
-} from '../../types/index.js';
+import { OrganizationDTO, OrganizationLimitsDTO, OrganizationMemberDTO, WebhooksConfigDTO } from '../../types/index.js';
 
 /**
  * Repository for organization related operations.
@@ -65,6 +58,7 @@ export class OrganizationRepository {
       slug: insertedOrg[0].slug,
       creatorUserId: insertedOrg[0].createdBy,
       createdAt: insertedOrg[0].createdAt.toISOString(),
+      isRBACEnabled: insertedOrg[0].isRBACEnabled,
     };
   }
 
@@ -88,6 +82,7 @@ export class OrganizationRepository {
         creatorUserId: organizations.createdBy,
         createdAt: organizations.createdAt,
         isFreeTrial: organizations.isFreeTrial,
+        isRBACEnabled: organizations.isRBACEnabled,
       })
       .from(organizations)
       .where(eq(organizations.slug, slug))
@@ -105,6 +100,7 @@ export class OrganizationRepository {
       isFreeTrial: org[0].isFreeTrial || false,
       creatorUserId: org[0].creatorUserId,
       createdAt: org[0].createdAt.toISOString(),
+      isRBACEnabled: org[0].isRBACEnabled,
     };
   }
 
@@ -117,6 +113,7 @@ export class OrganizationRepository {
         creatorUserId: organizations.createdBy,
         createdAt: organizations.createdAt,
         isFreeTrial: organizations.isFreeTrial,
+        isRBACEnabled: organizations.isRBACEnabled,
       })
       .from(organizations)
       .where(eq(organizations.id, id))
@@ -134,6 +131,7 @@ export class OrganizationRepository {
       isFreeTrial: org[0].isFreeTrial || false,
       creatorUserId: org[0].creatorUserId,
       createdAt: org[0].createdAt.toISOString(),
+      isRBACEnabled: org[0].isRBACEnabled,
     };
   }
 
@@ -166,6 +164,7 @@ export class OrganizationRepository {
         isFreeTrial: organizations.isFreeTrial,
         isPersonal: organizations.isPersonal,
         createdAt: organizations.createdAt,
+        isRBACEnabled: organizations.isRBACEnabled,
         limits: {
           analyticsRetentionLimit: organizationLimits.analyticsRetentionLimit,
           tracingRetentionLimit: organizationLimits.tracingRetentionLimit,
@@ -191,6 +190,7 @@ export class OrganizationRepository {
         createdAt: org.createdAt.toISOString(),
         isFreeTrial: org.isFreeTrial || false,
         isPersonal: org.isPersonal || false,
+        isRBACEnabled: org.isRBACEnabled,
         roles: await this.getOrganizationMemberRoles({
           userID: input.userId,
           organizationID: org.id,
@@ -331,118 +331,6 @@ export class OrganizationRepository {
       .execute();
 
     return userRoles.map((role) => role.role);
-  }
-
-  public async addAPIKey(input: {
-    key: string;
-    name: string;
-    organizationID: string;
-    userID: string;
-    expiresAt: ExpiresAt;
-  }) {
-    let expiresAtDate: Date | undefined;
-    const present = new Date();
-    switch (input.expiresAt) {
-      case ExpiresAt.NEVER: {
-        expiresAtDate = undefined;
-        break;
-      }
-      case ExpiresAt.THIRTY_DAYS: {
-        expiresAtDate = new Date(new Date().setDate(present.getDate() + 30));
-        break;
-      }
-      case ExpiresAt.SIX_MONTHS: {
-        expiresAtDate = new Date(new Date().setMonth(present.getMonth() + 6));
-        break;
-      }
-      case ExpiresAt.ONE_YEAR: {
-        expiresAtDate = new Date(new Date().setFullYear(present.getFullYear() + 1));
-        break;
-      }
-      default: {
-        throw new Error('ExpiresAt value does not exist');
-      }
-    }
-
-    await this.db
-      .insert(apiKeys)
-      .values({
-        key: input.key,
-        name: input.name,
-        organizationId: input.organizationID,
-        userId: input.userID,
-        expiresAt: expiresAtDate,
-      })
-      .execute();
-  }
-
-  public async removeAPIKey(input: { name: string; organizationID: string }) {
-    await this.db
-      .delete(apiKeys)
-      .where(and(eq(apiKeys.organizationId, input.organizationID), eq(apiKeys.name, input.name)))
-      .execute();
-  }
-
-  public async getAPIKeyByName(input: { organizationID: string; name: string }): Promise<APIKeyDTO | undefined> {
-    const key = await this.db
-      .select({
-        id: apiKeys.id,
-        name: apiKeys.name,
-        createdAt: apiKeys.createdAt,
-        lastUsedAt: apiKeys.lastUsedAt,
-        expiresAt: apiKeys.expiresAt,
-        createdBy: users.email,
-        creatorUserID: users.id,
-      })
-      .from(apiKeys)
-      .innerJoin(users, eq(users.id, apiKeys.userId))
-      .where(and(eq(apiKeys.organizationId, input.organizationID), eq(apiKeys.name, input.name)))
-      .execute();
-
-    if (key.length === 0) {
-      return undefined;
-    }
-
-    return {
-      id: key[0].id,
-      name: key[0].name,
-      createdAt: key[0].createdAt.toISOString(),
-      lastUsedAt: key[0].lastUsedAt?.toISOString() ?? '',
-      expiresAt: key[0].expiresAt?.toISOString() ?? '',
-      createdBy: key[0].createdBy,
-      creatorUserID: key[0].creatorUserID,
-    } as APIKeyDTO;
-  }
-
-  public async getAPIKeys(input: { organizationID: string }): Promise<APIKeyDTO[]> {
-    const keys = await this.db
-      .select({
-        id: apiKeys.id,
-        name: apiKeys.name,
-        createdAt: apiKeys.createdAt,
-        lastUsedAt: apiKeys.lastUsedAt,
-        expiresAt: apiKeys.expiresAt,
-        createdBy: users.email,
-        creatorUserID: users.id,
-      })
-      .from(apiKeys)
-      .innerJoin(users, eq(users.id, apiKeys.userId))
-      .where(eq(apiKeys.organizationId, input.organizationID))
-      .orderBy(asc(apiKeys.createdAt))
-      .execute();
-
-    return keys.map(
-      (key) =>
-        ({
-          id: key.id,
-          name: key.name,
-          createdAt: key.createdAt.toISOString(),
-          lastUsedAt: key.lastUsedAt?.toISOString() ?? '',
-          expiresAt: key.expiresAt?.toISOString() ?? '',
-          createdBy: key.createdBy,
-          creatorUserID: key.creatorUserID,
-        }) as APIKeyDTO,
-    );
   }
 
   public async createWebhookConfig(input: {
@@ -939,5 +827,9 @@ export class OrganizationRepository {
       requestsLimit: limits[0].requestsLimit,
       traceSamplingRateLimit: Number.parseFloat(limits[0].traceSamplingRateLimit),
     };
+  }
+
+  public async updateRBACSettings(organizationId: string, enabled: boolean) {
+    await this.db.update(organizations).set({ isRBACEnabled: enabled }).where(eq(organizations.id, organizationId));
   }
 }

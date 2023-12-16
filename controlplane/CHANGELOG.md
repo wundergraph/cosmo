@@ -4,6 +4,42 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.47.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.46.2...controlplane@0.47.0) (2023-12-15)
+
+### Features
+
+* add git commit sha to checks ([#361](https://github.com/wundergraph/cosmo/issues/361)) ([c9ef0c8](https://github.com/wundergraph/cosmo/commit/c9ef0c8439f89ffb80a4ed2f6c319a75414a07cf)) (@Pagebakers)
+
+## [0.46.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.46.1...controlplane@0.46.2) (2023-12-14)
+
+**Note:** Version bump only for package controlplane
+
+## [0.46.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.46.0...controlplane@0.46.1) (2023-12-13)
+
+**Note:** Version bump only for package controlplane
+
+# [0.46.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.45.0...controlplane@0.46.0) (2023-12-12)
+
+### Features
+
+* implement foundations for entity interfaces ([#359](https://github.com/wundergraph/cosmo/issues/359)) ([e2fcec7](https://github.com/wundergraph/cosmo/commit/e2fcec7aa3f286159a1ad21d606ead41cf1c883e)) (@Aenimus)
+
+# [0.45.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.44.0...controlplane@0.45.0) (2023-12-12)
+
+### Bug Fixes
+
+* api key resource deletion on delete of target ([#355](https://github.com/wundergraph/cosmo/issues/355)) ([a8fa0e8](https://github.com/wundergraph/cosmo/commit/a8fa0e8a06b129cf0a1b7dd07b2ef94e168007e3)) (@JivusAyrus)
+
+### Features
+
+* add rbac for subgraphs and federated graphs ([#351](https://github.com/wundergraph/cosmo/issues/351)) ([72e39bc](https://github.com/wundergraph/cosmo/commit/72e39bc1ff914831499c0625e443ab2ec0af135c)) (@JivusAyrus)
+
+# [0.44.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.43.0...controlplane@0.44.0) (2023-12-09)
+
+### Features
+
+* extend graphqlmetrics chart ([#344](https://github.com/wundergraph/cosmo/issues/344)) ([bad337d](https://github.com/wundergraph/cosmo/commit/bad337d0f1fafab5772910b5cce97cab03992c38)) (@StarpTech)
+
 # [0.43.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.42.0...controlplane@0.43.0) (2023-12-04)
 
 ### Bug Fixes
