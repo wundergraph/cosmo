@@ -319,11 +319,7 @@ func (r *Router) configureSubgraphOverwrites(cfg *nodev1.RouterConfig) ([]Subgra
 			Name: sg.Name,
 		}
 
-		// Validate subgraph url
-		if sg.RoutingUrl == "" {
-			return nil, fmt.Errorf("subgraph '%s' has no routing url", sg.Name)
-		}
-
+		// Validate subgraph url. Note that that it can be empty if the subgraph is virtual
 		parsedURL, err := url.Parse(sg.RoutingUrl)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse subgraph url '%s': %w", sg.RoutingUrl, err)

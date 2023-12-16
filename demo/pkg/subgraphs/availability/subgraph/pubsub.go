@@ -24,7 +24,25 @@ type pubSub struct {
 	nc *nats.Conn
 }
 
+func (p *pubSub) initConnection() {
+	if p.nc != nil {
+		return
+	}
+	url := nats.DefaultURL
+	if u := os.Getenv("NATS_URL"); u != "" {
+		url = u
+	}
+	nc, err := nats.Connect(url)
+	if err != nil {
+		log.Printf("failed to connect to nats: %v", err)
+	} else {
+		log.Printf("connected to nats at %s", url)
+	}
+	p.nc = nc
+}
+
 func (p *pubSub) Publish(subscription string, id int) {
+	p.initConnection()
 	if p.nc == nil {
 		return
 	}
@@ -40,15 +58,5 @@ func (p *pubSub) Publish(subscription string, id int) {
 }
 
 func newPubSub() PubSub {
-	url := nats.DefaultURL
-	if u := os.Getenv("NATS_URL"); u != "" {
-		url = u
-	}
-	nc, err := nats.Connect(url)
-	if err != nil {
-		log.Printf("failed to connect to nats: %v", err)
-	} else {
-		log.Printf("connected to nats at %s", url)
-	}
-	return &pubSub{nc: nc}
+	return &pubSub{}
 }

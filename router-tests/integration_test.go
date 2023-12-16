@@ -21,6 +21,8 @@ import (
 
 	"github.com/buger/jsonparser"
 	"github.com/golang-jwt/jwt/v5"
+	natsserver "github.com/nats-io/nats-server/v2/server"
+	natstest "github.com/nats-io/nats-server/v2/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -37,6 +39,7 @@ const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 var (
 	subgraphsMode = flag.String("subgraphs", "in-process", "How to run the subgraphs: in-process | subprocess | external")
 	workers       = flag.Int("workers", 4, "Number of workers to use for parallel benchmarks")
+	natsPort      = flag.Int("nats-port", 53347, "Port to use for NATS")
 
 	subgraphsRunner     runner.SubgraphsRunner
 	subgraphsConfigFile string
@@ -44,6 +47,23 @@ var (
 
 func TestMain(m *testing.M) {
 	flag.Parse()
+
+	opts := natsserver.Options{
+		Host:   "localhost",
+		Port:   *natsPort,
+		NoLog:  true,
+		NoSigs: true,
+	}
+	nats := natstest.RunServer(&opts)
+	if nats == nil {
+		panic("could not start NATS test server")
+	}
+
+	defer nats.Shutdown()
+
+	// Set this to allow the subgraphs to connect to the NATS server
+	os.Setenv("NATS_URL", fmt.Sprintf("nats://localhost:%d", *natsPort))
+
 	ctx := context.Background()
 	var err error
 	switch *subgraphsMode {
@@ -243,6 +263,9 @@ func setupServerConfig(tb testing.TB, opts ...core.Option) (*core.Server, config
 			EnableSingleFlight:                     true,
 			EnableRequestTracing:                   true,
 			EnableExecutionPlanCacheResponseHeader: true,
+		}),
+		core.WithNATS(config.NATSConfiguration{
+			URL: fmt.Sprintf("nats://localhost:%d", *natsPort),
 		}),
 	}
 	routerOpts = append(routerOpts, opts...)
