@@ -635,6 +635,9 @@ export class NormalizationFactory {
       return false;
     }
     const operationTypeNode = this.operationTypeNames.get(this.parentTypeName);
+    if (!operationTypeNode) {
+      return ROOT_TYPES.has(this.parentTypeName)
+    }
     return (
       operationTypeNode === OperationTypeNode.QUERY ||
       operationTypeNode === OperationTypeNode.MUTATION ||
@@ -1588,19 +1591,10 @@ export class NormalizationFactory {
         // intentional fallthrough
         case Kind.OBJECT_TYPE_DEFINITION:
           const isEntity = this.entities.has(parentTypeName);
-          const configurationData: ConfigurationData = {
-            fieldNames: new Set<string>(),
-            isRootNode: isEntity,
-            typeName: parentTypeName,
-          };
           const operationTypeNode = this.operationTypeNames.get(parentTypeName);
           if (operationTypeNode) {
             parentContainer.fields.delete(SERVICE_FIELD);
             parentContainer.fields.delete(ENTITIES_FIELD);
-            const events = this.eventsConfigurations.get(parentTypeName);
-            if (events) {
-              configurationData.events = events;
-            }
           }
           if (this.parentsWithChildArguments.has(parentTypeName)) {
             if (
@@ -1613,6 +1607,15 @@ export class NormalizationFactory {
               // Arguments can only be fully validated once all parents types are known
               this.validateArguments(fieldContainer, `${parentTypeName}.${fieldName}`);
             }
+          }
+          const configurationData: ConfigurationData = {
+            fieldNames: new Set<string>(),
+            isRootNode: isEntity,
+            typeName: parentTypeName,
+          };
+          const events = this.eventsConfigurations.get(parentTypeName);
+          if (events) {
+            configurationData.events = events;
           }
           this.configurationDataMap.set(parentTypeName, configurationData);
           addNonExternalFieldsToSet(parentContainer.fields, configurationData.fieldNames);

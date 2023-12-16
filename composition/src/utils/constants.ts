@@ -160,7 +160,6 @@ export const BASE_DIRECTIVE_DEFINITIONS: DirectiveDefinitionNode[] = [
     name: stringToNameNode(EVENTS_SUBSCRIBE),
     repeatable: false,
   },
-  // directive @key(fields: openfed__FieldSet!) on OBJECT
   // directive @key(fields: openfed__FieldSet!) on INTERFACE | OBJECT
   {
     arguments: [
