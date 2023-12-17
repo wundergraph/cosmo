@@ -57,8 +57,8 @@ make full-demo-up
 make create-cli-demo
 
 # Copy the Router token from the previous log output and set it as environment variables
-export ROUTER_TOKEN=...
-export OTEL_AUTH_TOKEN=...
+export ROUTER_TOKEN="<token>"
+export OTEL_AUTH_TOKEN="<token>"
 
 # Start the subgraphs + router
 make dc-federation-demo
@@ -89,7 +89,7 @@ Bootstrapping your development environment is easy. Just run the following comma
 
 ```shell
 # 1️⃣ Setup the repository and start all services (Wait a few seconds until Keycloak is ready)
-make
+make infra-down-v && make infra-up
 
 # 2️⃣ Run migrations and seed the database
 make migrate && make seed
