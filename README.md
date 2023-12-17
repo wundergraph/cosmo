@@ -89,7 +89,7 @@ Bootstrapping your development environment is easy. Just run the following comma
 
 ```shell
 # 1️⃣ Setup the repository and start all services (Wait a few seconds until Keycloak is ready)
-make infra-down-v && make infra-up
+make
 
 # 2️⃣ Run migrations and seed the database
 make migrate && make seed
