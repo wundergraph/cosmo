@@ -522,9 +522,9 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		r.meterProvider = mp
 
 		if pr != nil && r.metricConfig.Prometheus.Enabled {
-			promSvr := createPrometheus(r.logger, pr, r.metricConfig.Prometheus.ListenAddr, r.metricConfig.Prometheus.Path)
+			r.prometheusServer = createPrometheus(r.logger, pr, r.metricConfig.Prometheus.ListenAddr, r.metricConfig.Prometheus.Path)
 			go func() {
-				if err := promSvr.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+				if err := r.prometheusServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 					r.logger.Error("Failed to start Prometheus server", zap.Error(err))
 				}
 			}()
