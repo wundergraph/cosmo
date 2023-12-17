@@ -3095,13 +3095,27 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             contents: operation.contents,
             operationNames,
           });
+
+          // New operation
           let status: PublishedOperationStatus;
           if (prev === undefined) {
             const data: PublishedOperationData = {
               version: 1,
               body: operation.contents,
             };
-            opts.blobStorage.putObject(path, Buffer.from(JSON.stringify(data), 'utf8'));
+            try {
+              await opts.blobStorage.putObject(path, Buffer.from(JSON.stringify(data), 'utf8'));
+            } catch (e) {
+              logger.error(e, `Could not store operation contents for ${operationId} at ${path}`);
+              return {
+                response: {
+                  code: EnumStatusCode.ERR,
+                  details: `Could not store operation contents for ${operationId} at ${path}`,
+                },
+                operations: [],
+              };
+            }
+
             status = PublishedOperationStatus.CREATED;
           } else {
             status = PublishedOperationStatus.UP_TO_DATE;

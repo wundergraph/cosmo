@@ -106,9 +106,11 @@ const getSnippets = ({
   operationNames: string[];
   routingURL: string;
 }) => {
+  // Compatability with curl >=7.81.0 (Release-Date: 2022-01-05)
   const curl = `curl '${routingURL}' \\
     -H 'graphql-client-name: ${clientName}' \\
-    --json '{${
+    -H 'Content-Type: application/json' \\
+    -d '{${
       operationNames.length > 1 ? `"operationName":"${operationNames[0]}",` : ""
     }"extensions":{"persistedQuery":{"version":1,"sha256Hash":"${operationId}"}}}'`;
 

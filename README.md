@@ -57,8 +57,8 @@ make full-demo-up
 make create-cli-demo
 
 # Copy the Router token from the previous log output and set it as environment variables
-export ROUTER_TOKEN=...
-export OTEL_AUTH_TOKEN=...
+export ROUTER_TOKEN="<token>"
+export OTEL_AUTH_TOKEN="<token>"
 
 # Start the subgraphs + router
 make dc-federation-demo
