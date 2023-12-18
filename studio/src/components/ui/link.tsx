@@ -4,7 +4,7 @@ import { forwardRef } from "react";
 
 export const Link = forwardRef<
   HTMLAnchorElement,
-  LinkProps & { className?: string; children: React.ReactNode }
+  LinkProps & Omit<React.AnchorHTMLAttributes<HTMLAnchorElement>, "href">
 >((props, ref) => {
   return (
     <NextLink

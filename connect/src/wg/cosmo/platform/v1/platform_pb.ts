@@ -2116,6 +2116,11 @@ export class SchemaCheck extends Message<SchemaCheck> {
    */
   isDeleted = false;
 
+  /**
+   * @generated from field: optional wg.cosmo.platform.v1.SchemaCheckGhDetails ghDetails = 10;
+   */
+  ghDetails?: SchemaCheckGhDetails;
+
   constructor(data?: PartialMessage<SchemaCheck>) {
     super();
     proto3.util.initPartial(data, this);
@@ -2133,6 +2138,7 @@ export class SchemaCheck extends Message<SchemaCheck> {
     { no: 7, name: "hasClientTraffic", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 8, name: "isForcedSuccess", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 9, name: "isDeleted", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 10, name: "ghDetails", kind: "message", T: SchemaCheckGhDetails, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SchemaCheck {
@@ -2149,6 +2155,61 @@ export class SchemaCheck extends Message<SchemaCheck> {
 
   static equals(a: SchemaCheck | PlainMessage<SchemaCheck> | undefined, b: SchemaCheck | PlainMessage<SchemaCheck> | undefined): boolean {
     return proto3.util.equals(SchemaCheck, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.SchemaCheckGhDetails
+ */
+export class SchemaCheckGhDetails extends Message<SchemaCheckGhDetails> {
+  /**
+   * @generated from field: string commitSha = 1;
+   */
+  commitSha = "";
+
+  /**
+   * @generated from field: string ownerSlug = 3;
+   */
+  ownerSlug = "";
+
+  /**
+   * @generated from field: string repositorySlug = 4;
+   */
+  repositorySlug = "";
+
+  /**
+   * @generated from field: int32 checkRunId = 5;
+   */
+  checkRunId = 0;
+
+  constructor(data?: PartialMessage<SchemaCheckGhDetails>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.SchemaCheckGhDetails";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "commitSha", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "ownerSlug", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "repositorySlug", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "checkRunId", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SchemaCheckGhDetails {
+    return new SchemaCheckGhDetails().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SchemaCheckGhDetails {
+    return new SchemaCheckGhDetails().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SchemaCheckGhDetails {
+    return new SchemaCheckGhDetails().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: SchemaCheckGhDetails | PlainMessage<SchemaCheckGhDetails> | undefined, b: SchemaCheckGhDetails | PlainMessage<SchemaCheckGhDetails> | undefined): boolean {
+    return proto3.util.equals(SchemaCheckGhDetails, a, b);
   }
 }
 

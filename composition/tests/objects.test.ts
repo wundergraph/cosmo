@@ -27,9 +27,14 @@ describe('Objects tests', () => {
         type Query
       `);
       expect(errors).toBeUndefined();
-      expect(normalizeString(normalizationResult!.subgraphString)).toBe(normalizeString(versionOneBaseSchema + `
+      expect(normalizeString(normalizationResult!.subgraphString)).toBe(
+        normalizeString(
+          versionOneBaseSchema +
+            `
         type Query
-      `));
+      `,
+        ),
+      );
     });
 
     test('that a renamed Query root type that defines no fields is valid', () => {
@@ -41,13 +46,18 @@ describe('Objects tests', () => {
         type Queries
       `);
       expect(errors).toBeUndefined();
-      expect(normalizeString(normalizationResult!.subgraphString)).toBe(normalizeString(versionOneBaseSchema + `
+      expect(normalizeString(normalizationResult!.subgraphString)).toBe(
+        normalizeString(
+          versionOneBaseSchema +
+            `
         schema {
           query: Queries
         }
         
         type Queries
-      `));
+      `,
+        ),
+      );
     });
   });
 });

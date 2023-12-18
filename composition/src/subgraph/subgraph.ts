@@ -3,7 +3,8 @@ import { FederationFactory } from '../federation/federation-factory';
 import {
   addConcreteTypesForImplementedInterfaces,
   addConcreteTypesForUnion,
-  isNodeExternal, isNodeInterfaceObject,
+  isNodeExternal,
+  isNodeInterfaceObject,
   isNodeShareable,
   isObjectLikeNodeEntity,
   operationTypeNodeToDefaultType,
@@ -79,7 +80,8 @@ export function walkSubgraphToCollectObjectLikesAndDirectiveDefinitions(
         const name = node.name.value;
         const operationType = subgraph.operationTypes.get(name);
         const parentTypeName = operationType
-          ? getOrThrowError(operationTypeNodeToDefaultType, operationType, OPERATION_TO_DEFAULT) : name;
+          ? getOrThrowError(operationTypeNodeToDefaultType, operationType, OPERATION_TO_DEFAULT)
+          : name;
         if (!factory.graph.hasNode(parentTypeName)) {
           factory.graph.addNode(parentTypeName);
         }
@@ -104,7 +106,8 @@ export function walkSubgraphToCollectObjectLikesAndDirectiveDefinitions(
         const name = node.name.value;
         const operationType = subgraph.operationTypes.get(name);
         const parentTypeName = operationType
-          ? getOrThrowError(operationTypeNodeToDefaultType, operationType, OPERATION_TO_DEFAULT) : name;
+          ? getOrThrowError(operationTypeNodeToDefaultType, operationType, OPERATION_TO_DEFAULT)
+          : name;
         addConcreteTypesForImplementedInterfaces(node, factory.abstractToConcreteTypeNames);
         if (!factory.graph.hasNode(parentTypeName)) {
           factory.graph.addNode(parentTypeName);
@@ -130,10 +133,7 @@ export function walkSubgraphToCollectObjectLikesAndDirectiveDefinitions(
   });
 }
 
-export function walkSubgraphToCollectFields(
-  factory: FederationFactory,
-  subgraph: InternalSubgraph,
-) {
+export function walkSubgraphToCollectFields(factory: FederationFactory, subgraph: InternalSubgraph) {
   let isCurrentParentRootType = false;
   let overriddenFieldNames: Set<string> | undefined;
   visit(subgraph.definitions, {
@@ -187,13 +187,15 @@ export function walkSubgraphToCollectFields(
       leave() {
         factory.isCurrentParentEntity = false;
         factory.parentTypeName = '';
-      }
+      },
     },
   });
 }
 
 export function walkSubgraphToFederate(
-  subgraph: DocumentNode, overriddenFieldNamesByParentTypeName: Map<string, Set<string>>, factory: FederationFactory,
+  subgraph: DocumentNode,
+  overriddenFieldNamesByParentTypeName: Map<string, Set<string>>,
+  factory: FederationFactory,
 ) {
   let overriddenFieldNames: Set<string> | undefined;
   visit(subgraph, {
@@ -229,7 +231,7 @@ export function walkSubgraphToFederate(
         const fieldPath = `${factory.parentTypeName}.${fieldName}`;
         const fieldNamedTypeName = getNamedTypeForChild(fieldPath, node.type);
         if (factory.isParentRootType && (fieldName === SERVICE_FIELD || fieldName === ENTITIES_FIELD)) {
-            return false;
+          return false;
         }
         factory.childName = fieldName;
         factory.upsertFieldNode(node);

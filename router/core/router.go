@@ -75,7 +75,7 @@ type (
 
 	// Config defines the configuration options for the Router.
 	Config struct {
-		transport                *http.Transport
+		transport                http.RoundTripper
 		logger                   *zap.Logger
 		traceConfig              *trace.Config
 		metricConfig             *metric.Config
@@ -522,9 +522,9 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		r.meterProvider = mp
 
 		if pr != nil && r.metricConfig.Prometheus.Enabled {
-			promSvr := createPrometheus(r.logger, pr, r.metricConfig.Prometheus.ListenAddr, r.metricConfig.Prometheus.Path)
+			r.prometheusServer = createPrometheus(r.logger, pr, r.metricConfig.Prometheus.ListenAddr, r.metricConfig.Prometheus.Path)
 			go func() {
-				if err := promSvr.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+				if err := r.prometheusServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 					r.logger.Error("Failed to start Prometheus server", zap.Error(err))
 				}
 			}()
@@ -997,7 +997,7 @@ func WithListenerAddr(addr string) Option {
 	}
 }
 
-func WithTransport(transport *http.Transport) Option {
+func WithCustomRoundTripper(transport http.RoundTripper) Option {
 	return func(r *Router) {
 		r.transport = transport
 	}
