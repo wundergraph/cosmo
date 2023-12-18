@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.44.1](https://github.com/wundergraph/cosmo/compare/studio@0.44.0...studio@0.44.1) (2023-12-17)
+
+### Bug Fixes
+
+* alignment of URL button in trace tree view ([#376](https://github.com/wundergraph/cosmo/issues/376)) ([ceab65d](https://github.com/wundergraph/cosmo/commit/ceab65d6e740cfa756514c7f4e06666e0a7f2bc6)) (@Aenimus)
+* po demo, await po upload ([#377](https://github.com/wundergraph/cosmo/issues/377)) ([ac0edd3](https://github.com/wundergraph/cosmo/commit/ac0edd3a3b1b6ce1192c7a355675b85f6187e72f)) (@StarpTech)
+
 # [0.44.0](https://github.com/wundergraph/cosmo/compare/studio@0.43.2...studio@0.44.0) (2023-12-15)
 
 ### Bug Fixes
