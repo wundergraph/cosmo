@@ -114,8 +114,7 @@ const CompositionDetailsPage: NextPageWithLayout = () => {
       </GraphPageLayout>
     );
 
-  const { composition, changeCounts, compositionSubgraphs } =
-    data;
+  const { composition, changeCounts, compositionSubgraphs } = data;
   const {
     isComposable,
     isLatestValid,
@@ -238,9 +237,9 @@ const CompositionDetailsPage: NextPageWithLayout = () => {
           </dl>
         </div>
         <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-          <dl className="grid flex-shrink-0 grid-cols-3 space-y-6 overflow-hidden border-b px-4 py-4 lg:block lg:h-full lg:w-[200px] lg:space-y-8 lg:overflow-auto lg:border-b-0 lg:border-r lg:px-6 xl:w-[220px]">
+          <dl className="grid w-full flex-shrink-0 grid-cols-3 space-y-6 overflow-hidden border-b px-4 py-4 lg:block lg:h-full lg:w-[200px] lg:space-y-8 lg:overflow-auto lg:border-b-0 lg:border-r lg:px-6 xl:w-[220px]">
             {compositionSubgraphs.length > 0 && (
-              <div className="flex-start flex flex-col gap-2">
+              <div className="flex-start col-span-full flex flex-1 flex-col gap-2">
                 <dt className="text-sm text-muted-foreground">
                   Composition Inputs
                 </dt>
@@ -303,8 +302,8 @@ const CompositionDetailsPage: NextPageWithLayout = () => {
                   ) : (
                     sdlData &&
                     sdlData.sdl !== "" && (
-                      <div className="relative flex h-full min-h-[60vh]">
-                        <div className="absolute -top-[60px] right-8">
+                      <div className="relative flex h-full min-h-[60vh] flex-col">
+                        <div className="-top-[60px] right-8 w-max px-5 md:absolute md:w-auto md:px-0">
                           <CodeViewerActions
                             code={sdlData.sdl}
                             subgraphName={slug}
@@ -332,8 +331,8 @@ const CompositionDetailsPage: NextPageWithLayout = () => {
                   ) : (
                     sdlData &&
                     sdlData.sdl !== "" && (
-                      <div className="relative flex h-full min-h-[60vh]">
-                        <div className="absolute -top-[60px] right-8">
+                      <div className="relative flex h-full min-h-[60vh] flex-col">
+                        <div className="-top-[60px] right-8 px-5 md:absolute md:px-0">
                           <div className="flex gap-x-2">
                             <Select
                               onValueChange={(subgraph) =>
