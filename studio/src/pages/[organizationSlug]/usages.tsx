@@ -179,7 +179,7 @@ const UsagesPage: NextPageWithLayout = () => {
       ) : (
         <></>
       )}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="flex grid-cols-3 flex-col gap-4 lg:grid">
         <Card className="col-span-2 flex flex-col gap-y-3 p-3">
           <div className="flex items-center gap-x-2">
             <h1 className="text-lg font-medium">Requests</h1>
