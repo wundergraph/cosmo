@@ -123,5 +123,5 @@ docker-build-minikube: docker-build-local
 	minikube image load ghcr.io/wundergraph/cosmo/cdn:latest
 	minikube cache reload
 
-run-local-demo:
+run-subgraphs-local:
 	cd demo && go run cmd/all/main.go

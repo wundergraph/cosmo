@@ -79,7 +79,7 @@ func (p *natsPubSub) Request(ctx context.Context, topic string, data []byte, w i
 	if err := p.ensureConn(); err != nil {
 		return err
 	}
-	msg, err := p.conn.RequestWithContext(ctx, topic, []byte(`{"id": 3}`))
+	msg, err := p.conn.RequestWithContext(ctx, topic, data)
 	if err != nil {
 		return fmt.Errorf("error requesting NATS topic %s: %w", topic, err)
 	}
