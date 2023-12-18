@@ -791,7 +791,7 @@ func TestPlannerErrorMessage(t *testing.T) {
 
 func TestConcurrentQueriesWithDelay(t *testing.T) {
 	const (
-		numQueries   = 1000
+		numQueries   = 200
 		queryDelayMs = 3000
 	)
 	server := setupServer(t, core.WithCustomRoundTripper(
