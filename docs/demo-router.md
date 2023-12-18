@@ -9,3 +9,7 @@ The command has to be run from the root of the repository.
 ```bash
 fly deploy -a demo-router -c demo-router.fly.toml --image ghcr.io/wundergraph/cosmo/router:0.46.1
 ```
+
+## Access Prometheus Metrics
+
+Navigate to the Fly.io [wundergraph-demos](https://fly.io/dashboard/wundergraph-demos) dashboard and click on [`"Need more metrics?" Open`](https://fly-metrics.net/d/fly-app/fly-app?orgId=65007) button.
