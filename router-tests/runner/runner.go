@@ -64,11 +64,13 @@ func (r externalSubgraphsRunner) Stop(ctx context.Context) error {
 func (r externalSubgraphsRunner) Ports() subgraphs.Ports {
 	// External subgraphs runner always uses the default ports
 	return subgraphs.Ports{
-		Employees: 4001,
-		Family:    4002,
-		Hobbies:   4003,
-		Products:  4004,
-		Test1:     4005,
+		Employees:    4001,
+		Family:       4002,
+		Hobbies:      4003,
+		Products:     4004,
+		Test1:        4006,
+		Availability: 4007,
+		Mood:         4008,
 	}
 }
 
@@ -103,7 +105,7 @@ func Wait(ctx context.Context, r SubgraphsRunner) error {
 }
 
 func randomFreePorts() *subgraphs.Ports {
-	ports := make([]int, 5)
+	ports := make([]int, 7)
 	for i := range ports {
 		listener, err := net.Listen("tcp", ":0")
 		if err != nil {
@@ -114,10 +116,12 @@ func randomFreePorts() *subgraphs.Ports {
 
 	}
 	return &subgraphs.Ports{
-		Employees: ports[0],
-		Family:    ports[1],
-		Hobbies:   ports[2],
-		Products:  ports[3],
-		Test1:     ports[4],
+		Employees:    ports[0],
+		Family:       ports[1],
+		Hobbies:      ports[2],
+		Products:     ports[3],
+		Test1:        ports[4],
+		Availability: ports[5],
+		Mood:         ports[6],
 	}
 }

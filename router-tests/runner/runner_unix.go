@@ -48,7 +48,9 @@ func NewSubprocessSubgraphsRunner(ports *subgraphs.Ports) (SubgraphsRunner, erro
 		"--family", strconv.Itoa(ports.Family),
 		"--hobbies", strconv.Itoa(ports.Hobbies),
 		"--products", strconv.Itoa(ports.Products),
-		"--test1", strconv.Itoa(ports.Test1))
+		"--test1", strconv.Itoa(ports.Test1),
+		"--availability", strconv.Itoa(ports.Availability),
+		"--mood", strconv.Itoa(ports.Mood))
 	// Create a process group ID so we can kill the process and all its children
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	cmd.Stdout = os.Stdout

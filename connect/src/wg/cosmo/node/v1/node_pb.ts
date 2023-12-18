@@ -66,11 +66,43 @@ export enum DataSourceKind {
    * @generated from enum value: GRAPHQL = 1;
    */
   GRAPHQL = 1,
+
+  /**
+   * @generated from enum value: PUBSUB = 2;
+   */
+  PUBSUB = 2,
 }
 // Retrieve enum metadata with: proto3.getEnumType(DataSourceKind)
 proto3.util.setEnumType(DataSourceKind, "wg.cosmo.node.v1.DataSourceKind", [
   { no: 0, name: "STATIC" },
   { no: 1, name: "GRAPHQL" },
+  { no: 2, name: "PUBSUB" },
+]);
+
+/**
+ * @generated from enum wg.cosmo.node.v1.EventType
+ */
+export enum EventType {
+  /**
+   * @generated from enum value: PUBLISH = 0;
+   */
+  PUBLISH = 0,
+
+  /**
+   * @generated from enum value: REQUEST = 1;
+   */
+  REQUEST = 1,
+
+  /**
+   * @generated from enum value: SUBSCRIBE = 2;
+   */
+  SUBSCRIBE = 2,
+}
+// Retrieve enum metadata with: proto3.getEnumType(EventType)
+proto3.util.setEnumType(EventType, "wg.cosmo.node.v1.EventType", [
+  { no: 0, name: "PUBLISH" },
+  { no: 1, name: "REQUEST" },
+  { no: 2, name: "SUBSCRIBE" },
 ]);
 
 /**
@@ -705,6 +737,11 @@ export class DataSourceConfiguration extends Message<DataSourceConfiguration> {
    */
   requires: RequiredField[] = [];
 
+  /**
+   * @generated from field: wg.cosmo.node.v1.DataSourceCustom_Events custom_events = 13;
+   */
+  customEvents?: DataSourceCustom_Events;
+
   constructor(data?: PartialMessage<DataSourceConfiguration>) {
     super();
     proto3.util.initPartial(data, this);
@@ -725,6 +762,7 @@ export class DataSourceConfiguration extends Message<DataSourceConfiguration> {
     { no: 10, name: "keys", kind: "message", T: RequiredField, repeated: true },
     { no: 11, name: "provides", kind: "message", T: RequiredField, repeated: true },
     { no: 12, name: "requires", kind: "message", T: RequiredField, repeated: true },
+    { no: 13, name: "custom_events", kind: "message", T: DataSourceCustom_Events },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DataSourceConfiguration {
@@ -1179,6 +1217,104 @@ export class DataSourceCustom_GraphQL extends Message<DataSourceCustom_GraphQL> 
 
   static equals(a: DataSourceCustom_GraphQL | PlainMessage<DataSourceCustom_GraphQL> | undefined, b: DataSourceCustom_GraphQL | PlainMessage<DataSourceCustom_GraphQL> | undefined): boolean {
     return proto3.util.equals(DataSourceCustom_GraphQL, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.node.v1.EventConfiguration
+ */
+export class EventConfiguration extends Message<EventConfiguration> {
+  /**
+   * @generated from field: wg.cosmo.node.v1.EventType type = 1;
+   */
+  type = EventType.PUBLISH;
+
+  /**
+   * @generated from field: string type_name = 2;
+   */
+  typeName = "";
+
+  /**
+   * @generated from field: string field_name = 3;
+   */
+  fieldName = "";
+
+  /**
+   * @generated from field: string topic = 4;
+   */
+  topic = "";
+
+  /**
+   * @generated from field: string source_id = 5;
+   */
+  sourceId = "";
+
+  constructor(data?: PartialMessage<EventConfiguration>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.node.v1.EventConfiguration";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "type", kind: "enum", T: proto3.getEnumType(EventType) },
+    { no: 2, name: "type_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "field_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "topic", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "source_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EventConfiguration {
+    return new EventConfiguration().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): EventConfiguration {
+    return new EventConfiguration().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): EventConfiguration {
+    return new EventConfiguration().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: EventConfiguration | PlainMessage<EventConfiguration> | undefined, b: EventConfiguration | PlainMessage<EventConfiguration> | undefined): boolean {
+    return proto3.util.equals(EventConfiguration, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.node.v1.DataSourceCustom_Events
+ */
+export class DataSourceCustom_Events extends Message<DataSourceCustom_Events> {
+  /**
+   * @generated from field: repeated wg.cosmo.node.v1.EventConfiguration events = 1;
+   */
+  events: EventConfiguration[] = [];
+
+  constructor(data?: PartialMessage<DataSourceCustom_Events>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.node.v1.DataSourceCustom_Events";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "events", kind: "message", T: EventConfiguration, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DataSourceCustom_Events {
+    return new DataSourceCustom_Events().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DataSourceCustom_Events {
+    return new DataSourceCustom_Events().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DataSourceCustom_Events {
+    return new DataSourceCustom_Events().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DataSourceCustom_Events | PlainMessage<DataSourceCustom_Events> | undefined, b: DataSourceCustom_Events | PlainMessage<DataSourceCustom_Events> | undefined): boolean {
+    return proto3.util.equals(DataSourceCustom_Events, a, b);
   }
 }
 

@@ -5,12 +5,22 @@ export type RequiredFieldConfiguration = {
   selectionSet: string;
 };
 
+export type EventType = 'subscribe' | 'publish' | 'request';
+
+export type EventConfiguration = {
+  type: EventType;
+  fieldName: string;
+  topic: string;
+  sourceId?: string;
+};
+
 export type ConfigurationData = {
   fieldNames: Set<string>;
   isRootNode: boolean;
   provides?: RequiredFieldConfiguration[];
   keys?: RequiredFieldConfiguration[];
   requires?: RequiredFieldConfiguration[];
+  events?: EventConfiguration[];
   typeName: string;
 };
 

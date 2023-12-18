@@ -2,16 +2,24 @@ import { Kind, TypeNode } from 'graphql';
 import {
   ArgumentConfiguration,
   ArgumentSource,
+  EventConfiguration,
+  EventType,
   FieldConfiguration,
   RequiredField,
   TypeField,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
-import { ArgumentConfigurationData, ConfigurationDataMap, RequiredFieldConfiguration } from '@wundergraph/composition';
+import {
+  ArgumentConfigurationData,
+  ConfigurationDataMap,
+  RequiredFieldConfiguration,
+  EventType as CompositionEventType,
+} from '@wundergraph/composition';
 
 export type DataSourceConfiguration = {
   rootNodes: TypeField[];
   childNodes: TypeField[];
   provides: RequiredField[];
+  events: EventConfiguration[];
   keys: RequiredField[];
   requires: RequiredField[];
 };
@@ -35,12 +43,28 @@ function addRequiredFields(
   }
 }
 
+function eventType(type: CompositionEventType) {
+  switch (type) {
+    case 'publish': {
+      return EventType.PUBLISH;
+    }
+    case 'request': {
+      return EventType.REQUEST;
+    }
+    case 'subscribe': {
+      return EventType.SUBSCRIBE;
+    }
+  }
+  throw new Error(`Unknown event type ${type}`);
+}
+
 export function configurationDataMapToDataSourceConfiguration(dataMap: ConfigurationDataMap): DataSourceConfiguration {
   const output: DataSourceConfiguration = {
     rootNodes: [],
     childNodes: [],
     keys: [],
     provides: [],
+    events: [],
     requires: [],
   };
   for (const data of dataMap.values()) {
@@ -55,6 +79,16 @@ export function configurationDataMapToDataSourceConfiguration(dataMap: Configura
     addRequiredFields(data.keys, output.keys, typeName);
     addRequiredFields(data.provides, output.provides, typeName);
     addRequiredFields(data.requires, output.requires, typeName);
+    for (const event of data.events ?? []) {
+      output.events.push(
+        new EventConfiguration({
+          type: eventType(event.type),
+          typeName,
+          fieldName: event.fieldName,
+          topic: event.topic,
+        }),
+      );
+    }
   }
   return output;
 }

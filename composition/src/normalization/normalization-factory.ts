@@ -142,6 +142,9 @@ import {
   ANY_SCALAR,
   ENTITIES_FIELD,
   ENTITY_UNION,
+  EVENTS_PUBLISH,
+  EVENTS_REQUEST,
+  EVENTS_SUBSCRIBE,
   EXTENDS,
   EXTENSIONS,
   EXTERNAL,
@@ -158,9 +161,17 @@ import {
   SCHEMA,
   SERVICE_FIELD,
   SERVICE_OBJECT,
+  SOURCE_ID,
+  TOPIC,
 } from '../utils/string-constants';
 import { buildASTSchema } from '../buildASTSchema/buildASTSchema';
-import { ConfigurationData, ConfigurationDataMap } from '../subgraph/field-configuration';
+import {
+  ConfigurationData,
+  ConfigurationDataMap,
+  EventConfiguration,
+  EventType,
+  RequiredFieldConfiguration,
+} from '../subgraph/field-configuration';
 import { printTypeNode } from '@graphql-tools/merge';
 import { inputValueDefinitionNodeToMutable, MutableInputValueDefinitionNode, ObjectLikeTypeNode } from '../ast/ast';
 import { InternalSubgraph, recordSubgraphName, Subgraph } from '../subgraph/subgraph';
@@ -215,6 +226,7 @@ export class NormalizationFactory {
   entityInterfaces = new Map<string, EntityInterfaceData>();
   extensions: ExtensionMap = new Map<string, ExtensionContainer>();
   isCurrentParentExtension = false;
+  isCurrentParentRootType = false;
   isSubgraphVersionTwo = false;
   fieldSetsByParent = new Map<string, FieldSetContainer>();
   handledRepeatedDirectivesByHostPath = new Map<string, Set<string>>();
@@ -225,6 +237,7 @@ export class NormalizationFactory {
   parents: ParentMap = new Map<string, ParentContainer>();
   parentTypeName = '';
   parentsWithChildArguments = new Set<string>();
+  eventsConfigurations = new Map<string, EventConfiguration[]>();
   overridesByTargetSubgraphName = new Map<string, Map<string, Set<string>>>();
   schemaDefinition: SchemaContainer;
   subgraphName?: string;
@@ -619,6 +632,21 @@ export class NormalizationFactory {
     }
   }
 
+  canContainEventDirectives(): boolean {
+    if (!this.isCurrentParentRootType) {
+      return false;
+    }
+    const operationTypeNode = this.operationTypeNames.get(this.parentTypeName);
+    if (!operationTypeNode) {
+      return ROOT_TYPES.has(this.parentTypeName);
+    }
+    return (
+      operationTypeNode === OperationTypeNode.QUERY ||
+      operationTypeNode === OperationTypeNode.MUTATION ||
+      operationTypeNode === OperationTypeNode.SUBSCRIPTION
+    );
+  }
+
   extractKeyFieldSets(node: ObjectLikeTypeNode, rawFieldSets: Set<string>) {
     const parentTypeName = node.name.value;
     if (!node.directives?.length) {
@@ -824,14 +852,82 @@ export class NormalizationFactory {
     overriddenFieldNamesForParent.add(this.childName);
   }
 
+  extractEventDirectives(node: FieldDefinitionNode) {
+    if (!node.directives) {
+      return;
+    }
+    for (const directive of node.directives) {
+      let eventType: EventType;
+      switch (directive.name.value) {
+        case EVENTS_PUBLISH: {
+          eventType = 'publish';
+          break;
+        }
+        case EVENTS_REQUEST: {
+          eventType = 'request';
+          break;
+        }
+        case EVENTS_SUBSCRIBE: {
+          eventType = 'subscribe';
+          break;
+        }
+        default:
+          continue;
+      }
+      let topic: string | undefined;
+      let sourceId: string | undefined;
+      for (const arg of directive.arguments || []) {
+        if (arg.value.kind !== Kind.STRING) {
+          throw new Error(`Event directive arguments must be strings, ${arg.value.kind} found in argument ${arg.name}`);
+        }
+        switch (arg.name.value) {
+          case TOPIC: {
+            if (topic !== undefined) {
+              throw new Error(`Event directives must have exactly one topic argument, found multiple`);
+            }
+            if (!arg.value.value) {
+              throw new Error(`Event directives must have a non-empty topic argument`);
+            }
+            topic = arg.value.value;
+            break;
+          }
+          case SOURCE_ID: {
+            if (sourceId !== undefined) {
+              throw new Error(`Event directives must have exactly one sourceID argument, found multiple`);
+            }
+            if (!arg.value.value) {
+              throw new Error(`Event directives must have a non-empty sourceID argument`);
+            }
+            sourceId = arg.value.value;
+            break;
+          }
+          default:
+            throw new Error(`Unknown argument ${arg.name.value} found in event directive`);
+        }
+      }
+
+      if (!topic) {
+        throw new Error(`Event directives must have a topic argument`);
+      }
+
+      const configuration = getValueOrDefault(this.eventsConfigurations, this.parentTypeName, () => []);
+      configuration.push({
+        type: eventType,
+        fieldName: this.childName,
+        topic,
+        sourceId,
+      });
+    }
+  }
+
   normalize(document: DocumentNode) {
     const factory = this;
     /* factory.allDirectiveDefinitions is initialized with v1 directive definitions, and v2 definitions are only added
     after the visitor has visited the entire schema and the subgraph is known to be a V2 graph. Consequently,
     allDirectiveDefinitions cannot be used to check for duplicate definitions, and another set (below) is required */
     const definedDirectives = new Set<string>();
-    let isCurrentParentRootType: boolean = false;
     let fieldName = '';
+    const handledRootTypes = new Set<string>();
     // Collect any renamed root types
     visit(document, {
       OperationTypeDefinition: {
@@ -852,6 +948,7 @@ export class NormalizationFactory {
           if (existingOperationType) {
             factory.errors.push(invalidOperationTypeDefinitionError(existingOperationType, newTypeName, operationType));
           } else {
+            handledRootTypes.add(operationType);
             factory.operationTypeNames.set(newTypeName, operationType);
             factory.schemaDefinition.operationTypes.set(operationType, node);
           }
@@ -990,11 +1087,14 @@ export class NormalizationFactory {
       FieldDefinition: {
         enter(node) {
           const name = node.name.value;
-          if (isCurrentParentRootType && (name === SERVICE_FIELD || name === ENTITIES_FIELD)) {
+          if (factory.isCurrentParentRootType && (name === SERVICE_FIELD || name === ENTITIES_FIELD)) {
             return false;
           }
           factory.childName = name;
           factory.lastChildNodeKind = node.kind;
+          if (factory.canContainEventDirectives()) {
+            factory.extractEventDirectives(node);
+          }
           const fieldPath = `${factory.parentTypeName}.${name}`;
           factory.lastChildNodeKind = node.kind;
           const fieldNamedTypeName = getNamedTypeForChild(fieldPath, node.type);
@@ -1213,7 +1313,7 @@ export class NormalizationFactory {
           if (name === SERVICE_OBJECT) {
             return false;
           }
-          isCurrentParentRootType = ROOT_TYPES.has(name) || factory.operationTypeNames.has(name);
+          factory.isCurrentParentRootType = ROOT_TYPES.has(name) || factory.operationTypeNames.has(name);
           factory.parentTypeName = name;
           factory.lastParentNodeKind = node.kind;
           addConcreteTypesForImplementedInterfaces(node, factory.abstractToConcreteTypeNames);
@@ -1244,7 +1344,7 @@ export class NormalizationFactory {
           factory.extractKeyFieldSets(node, fieldSets.keys);
         },
         leave() {
-          isCurrentParentRootType = false;
+          factory.isCurrentParentRootType = false;
           factory.isCurrentParentExtension = false;
           factory.parentTypeName = '';
           factory.lastParentNodeKind = Kind.NULL;
@@ -1256,14 +1356,14 @@ export class NormalizationFactory {
           if (name === SERVICE_OBJECT) {
             return false;
           }
-          isCurrentParentRootType = ROOT_TYPES.has(name) || factory.operationTypeNames.has(name);
+          factory.isCurrentParentRootType = ROOT_TYPES.has(name) || factory.operationTypeNames.has(name);
           factory.parentTypeName = name;
           factory.lastParentNodeKind = node.kind;
           addConcreteTypesForImplementedInterfaces(node, factory.abstractToConcreteTypeNames);
           return factory.handleObjectLikeExtension(node);
         },
         leave() {
-          isCurrentParentRootType = false;
+          factory.isCurrentParentRootType = false;
           factory.isCurrentParentExtension = false;
           factory.parentTypeName = '';
           factory.lastParentNodeKind = Kind.NULL;
@@ -1542,6 +1642,10 @@ export class NormalizationFactory {
             isRootNode: isEntity,
             typeName: parentTypeName,
           };
+          const events = this.eventsConfigurations.get(parentTypeName);
+          if (events) {
+            configurationData.events = events;
+          }
           this.configurationDataMap.set(parentTypeName, configurationData);
           addNonExternalFieldsToSet(parentContainer.fields, configurationData.fieldNames);
           this.validateInterfaceImplementations(parentContainer);
