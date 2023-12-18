@@ -72,7 +72,7 @@ type Employee struct {
 	ID        int      `json:"id"`
 	Tag       string   `json:"tag"`
 	Role      RoleType `json:"role"`
-	Notes     string   `json:"notes"`
+	Notes     *string  `json:"notes,omitempty"`
 	UpdatedAt string   `json:"updatedAt"`
 }
 

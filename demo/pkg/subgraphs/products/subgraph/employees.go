@@ -2,6 +2,10 @@ package subgraph
 
 import "github.com/wundergraph/cosmo/demo/pkg/subgraphs/products/subgraph/model"
 
+func strPtr(s string) *string {
+	return &s
+}
+
 var employees = []*model.Employee{
 	{
 		ID: 1,
@@ -12,7 +16,7 @@ var employees = []*model.Employee{
 			model.ProductNameMarketing,
 			model.ProductNameSdk,
 		},
-		Notes: "Jens notes resolved by products",
+		Notes: strPtr("Jens notes resolved by products"),
 	},
 	{
 		ID: 2,
@@ -20,7 +24,7 @@ var employees = []*model.Employee{
 			model.ProductNameCosmo,
 			model.ProductNameSdk,
 		},
-		Notes: "Dustin notes resolved by products",
+		Notes: strPtr("Dustin notes resolved by products"),
 	},
 	{
 		ID: 3,
@@ -28,7 +32,7 @@ var employees = []*model.Employee{
 			model.ProductNameConsultancy,
 			model.ProductNameMarketing,
 		},
-		Notes: "Stefan notes resolved by products",
+		Notes: strPtr("Stefan notes resolved by products"),
 	},
 	{
 		ID: 4,
@@ -37,7 +41,7 @@ var employees = []*model.Employee{
 			model.ProductNameHumanResources,
 			model.ProductNameMarketing,
 		},
-		Notes: "Björn notes resolved by products",
+		Notes: strPtr("Björn notes resolved by products"),
 	},
 	{
 		ID: 5,
@@ -45,7 +49,7 @@ var employees = []*model.Employee{
 			model.ProductNameEngine,
 			model.ProductNameSdk,
 		},
-		Notes: "Sergiy notes resolved by products",
+		Notes: strPtr("Sergiy notes resolved by products"),
 	},
 	{
 		ID: 7,
@@ -53,7 +57,7 @@ var employees = []*model.Employee{
 			model.ProductNameCosmo,
 			model.ProductNameSdk,
 		},
-		Notes: "Suvij notes resolved by products",
+		Notes: strPtr("Suvij notes resolved by products"),
 	},
 	{
 		ID: 8,
@@ -61,7 +65,7 @@ var employees = []*model.Employee{
 			model.ProductNameCosmo,
 			model.ProductNameSdk,
 		},
-		Notes: "Nithin notes resolved by products",
+		Notes: strPtr("Nithin notes resolved by products"),
 	},
 	{
 		ID: 9,
@@ -71,7 +75,7 @@ var employees = []*model.Employee{
 			model.ProductNameEngine,
 			model.ProductNameSdk,
 		},
-		Notes: "Alberto notes resolved by products",
+		Notes: strPtr("Alberto notes resolved by products"),
 	},
 	{
 		ID: 10,
@@ -80,14 +84,14 @@ var employees = []*model.Employee{
 			model.ProductNameCosmo,
 			model.ProductNameSdk,
 		},
-		Notes: "Eelco notes resolved by products",
+		Notes: strPtr("Eelco notes resolved by products"),
 	},
 	{
 		ID: 11,
 		Products: []model.ProductName{
 			model.ProductNameFinance,
 		},
-		Notes: "Alexandra notes resolved by products",
+		Notes: strPtr("Alexandra notes resolved by products"),
 	},
 	{
 		ID: 12,
@@ -97,6 +101,6 @@ var employees = []*model.Employee{
 			model.ProductNameEngine,
 			model.ProductNameSdk,
 		},
-		Notes: "David notes resolved by products",
+		Notes: strPtr("David notes resolved by products"),
 	},
 }
