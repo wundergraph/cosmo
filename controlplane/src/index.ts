@@ -39,6 +39,8 @@ const {
   S3_STORAGE_URL,
   SMTP_USERNAME,
   SMTP_PASSWORD,
+  STRIPE_SECRET_KEY,
+  STRIPE_WEBHOOK_SECRET,
 } = envVariables.parse(process.env);
 
 const options: BuildConfig = {
@@ -87,6 +89,13 @@ const options: BuildConfig = {
   smtpUsername: SMTP_USERNAME,
   smtpPassword: SMTP_PASSWORD,
 };
+
+if (STRIPE_SECRET_KEY && STRIPE_WEBHOOK_SECRET) {
+  options.stripe = {
+    secret: STRIPE_SECRET_KEY,
+    webhookSecret: STRIPE_WEBHOOK_SECRET,
+  };
+}
 
 if (DB_CERT_PATH || DB_KEY_PATH || DB_CA_PATH) {
   options.database.ssl = {

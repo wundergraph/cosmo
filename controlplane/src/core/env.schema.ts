@@ -39,4 +39,9 @@ export const envVariables = z.object({
   S3_STORAGE_URL: z.string(),
   SMTP_USERNAME: z.string().optional(),
   SMTP_PASSWORD: z.string().optional(),
+  /**
+   * Billing
+   */
+  STRIPE_SECRET_KEY: z.string().optional(),
+  STRIPE_WEBHOOK_SECRET: z.string().optional(),
 });

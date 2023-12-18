@@ -7269,6 +7269,9 @@ export class UpdateOrgMemberRoleResponse extends Message<UpdateOrgMemberRoleResp
 }
 
 /**
+ * *
+ * Billing
+ *
  * @generated from message wg.cosmo.platform.v1.GetBillingPlansRequest
  */
 export class GetBillingPlansRequest extends Message<GetBillingPlansRequest> {
@@ -7443,6 +7446,86 @@ export class GetBillingPlansResponse_BillingPlan extends Message<GetBillingPlans
 
   static equals(a: GetBillingPlansResponse_BillingPlan | PlainMessage<GetBillingPlansResponse_BillingPlan> | undefined, b: GetBillingPlansResponse_BillingPlan | PlainMessage<GetBillingPlansResponse_BillingPlan> | undefined): boolean {
     return proto3.util.equals(GetBillingPlansResponse_BillingPlan, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.CreateCheckoutSessionRequest
+ */
+export class CreateCheckoutSessionRequest extends Message<CreateCheckoutSessionRequest> {
+  /**
+   * @generated from field: string plan = 1;
+   */
+  plan = "";
+
+  constructor(data?: PartialMessage<CreateCheckoutSessionRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.CreateCheckoutSessionRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "plan", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateCheckoutSessionRequest {
+    return new CreateCheckoutSessionRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateCheckoutSessionRequest {
+    return new CreateCheckoutSessionRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateCheckoutSessionRequest {
+    return new CreateCheckoutSessionRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CreateCheckoutSessionRequest | PlainMessage<CreateCheckoutSessionRequest> | undefined, b: CreateCheckoutSessionRequest | PlainMessage<CreateCheckoutSessionRequest> | undefined): boolean {
+    return proto3.util.equals(CreateCheckoutSessionRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.CreateCheckoutSessionResponse
+ */
+export class CreateCheckoutSessionResponse extends Message<CreateCheckoutSessionResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: string sessionId = 2;
+   */
+  sessionId = "";
+
+  constructor(data?: PartialMessage<CreateCheckoutSessionResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.CreateCheckoutSessionResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "sessionId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateCheckoutSessionResponse {
+    return new CreateCheckoutSessionResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateCheckoutSessionResponse {
+    return new CreateCheckoutSessionResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateCheckoutSessionResponse {
+    return new CreateCheckoutSessionResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CreateCheckoutSessionResponse | PlainMessage<CreateCheckoutSessionResponse> | undefined, b: CreateCheckoutSessionResponse | PlainMessage<CreateCheckoutSessionResponse> | undefined): boolean {
+    return proto3.util.equals(CreateCheckoutSessionResponse, a, b);
   }
 }
 

@@ -599,9 +599,30 @@ export const organizations = pgTable('organizations', {
   isFreeTrial: boolean('is_free_trial').default(false),
   isRBACEnabled: boolean('is_rbac_enabled').notNull().default(false),
   plan: text('plan'),
+  billingEmail: text('billing_email'),
   stripeCustomerId: text('stripe_customer_id'),
-  stripeSubscriptionId: text('stripe_subscription_id'),
-  trialEndsAt: timestamp('trial_ends_at', { withTimezone: true }),
+});
+
+export const subscriptions = pgTable('subscriptions', {
+  id: text('id').notNull().primaryKey(),
+  organizationId: uuid('organization_id')
+    .notNull()
+    .references(() => organizations.id, {
+      onDelete: 'cascade',
+    }),
+  metadata: customJson<{ [key: string]: string }>('metadata').notNull(),
+  status: text('status').notNull(),
+  priceId: text('price_id').notNull(),
+  quantity: integer('quantity').notNull(),
+  cancelAtPeriodEnd: boolean('cancel_at_period_end').notNull(),
+  cancelAt: timestamp('cancel_at', { withTimezone: true }),
+  canceledAt: timestamp('canceled_at', { withTimezone: true }),
+  currentPeriodStart: timestamp('current_period_start', { withTimezone: true }).notNull(),
+  currentPeriodEnd: timestamp('current_period_end', { withTimezone: true }).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  endedAt: timestamp('ended_at', { withTimezone: true }),
+  trialStart: timestamp('trial_start', { withTimezone: true }),
+  trialEnd: timestamp('trial_end', { withTimezone: true }),
 });
 
 export const organizationsMembers = pgTable(

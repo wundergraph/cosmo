@@ -18,14 +18,23 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useToast } from "@/components/ui/use-toast";
 import { calURL } from "@/lib/constants";
 import { formatMetric } from "@/lib/format-metric";
 import { NextPageWithLayout } from "@/lib/page";
+import { getStripe } from "@/lib/stripe";
 import { cn } from "@/lib/utils";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
-import { getBillingPlans } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+import {
+  createCheckoutSession,
+  getBillingPlans,
+} from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+import {
+  GetBillingPlansResponse_BillingPlan,
+  GetBillingPlansResponse_BillingPlanFeature,
+} from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import Link from "next/link";
 import { useContext } from "react";
 import { PiCheck } from "react-icons/pi";
@@ -60,7 +69,6 @@ const UsagesPage: NextPageWithLayout = () => {
         actions={<Button onClick={() => refetch()}>Retry</Button>}
       />
     );
-  console.log(user);
 
   const currentPlan = data.plans.find(
     ({ id }) => id == user?.currentOrganization.plan || "developer",
@@ -75,22 +83,26 @@ const UsagesPage: NextPageWithLayout = () => {
         Enterprise plans.
       </p>
 
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         {data.plans.map((plan) => (
           <div
             key={plan.id}
-            className="flex flex-col gap-4 rounded-md border p-4"
+            className={cn("flex flex-col gap-4 rounded-md border p-4")}
           >
-            <h4 className="font-bold">{plan.name}</h4>
-            <p>{getPrice(plan.price)}</p>
             <div>
+              <h4 className="text-sm">{plan.name}</h4>
+              <p className="text-xl font-medium">{getPrice(plan.price)}</p>
+            </div>
+            <div className="space-y-1">
               {plan.features.map((feature) => (
                 <div
                   key={feature.id}
                   className="flex items-center gap-2 text-sm"
                 >
                   <PiCheck className="h-4 w-4 text-green-400" />
-                  <span>{feature.description}</span>
+                  <span className="text-muted-foreground">
+                    {feature.description}
+                  </span>
                 </div>
               ))}
             </div>
@@ -99,7 +111,9 @@ const UsagesPage: NextPageWithLayout = () => {
               <UpgradeButton
                 plan={plan}
                 isCurrent={currentPlan?.id === plan.id}
-                isDowngrade={currentPlan?.price > plan.price}
+                isDowngrade={
+                  !!currentPlan?.price && currentPlan?.price > plan.price
+                }
               />
             </div>
           </div>
@@ -114,10 +128,31 @@ const UpgradeButton = ({
   isCurrent,
   isDowngrade,
 }: {
-  plan: any;
+  plan: GetBillingPlansResponse_BillingPlan;
   isCurrent: boolean;
   isDowngrade?: boolean;
 }) => {
+  const { mutateAsync, isPending } = useMutation(
+    createCheckoutSession.useMutation(),
+  );
+
+  const { toast } = useToast();
+
+  const upgrade = async () => {
+    try {
+      const { sessionId } = await mutateAsync({ plan: plan.id });
+
+      if (sessionId) {
+        const stripe = await getStripe();
+        stripe?.redirectToCheckout({ sessionId });
+      }
+    } catch (e: any) {
+      toast({
+        description: e.message,
+      });
+    }
+  };
+
   if (isCurrent) {
     return (
       <Button variant="outline" disabled>
@@ -126,7 +161,7 @@ const UpgradeButton = ({
     );
   }
 
-  if (!plan.stripePricingId) {
+  if (plan.price <= 0) {
     return <Button variant="secondary">Contact us</Button>;
   }
 
@@ -139,9 +174,9 @@ const UpgradeButton = ({
   }
 
   return (
-    <Link href={`${calURL}/billing/upgrade?plan=${plan.stripePricingId}`}>
-      <Button>Upgrade</Button>
-    </Link>
+    <Button variant="secondary" disabled={isPending} onClick={() => upgrade()}>
+      Upgrade
+    </Button>
   );
 };
 

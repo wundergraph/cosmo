@@ -28,6 +28,7 @@ export interface Organization {
   id: string;
   name: string;
   slug: string;
+  plan?: string;
   isPersonal: boolean;
   isFreeTrial: boolean;
   isRBACEnabled: boolean;

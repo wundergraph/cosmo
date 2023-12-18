@@ -22,6 +22,7 @@ import {
   slackSchemaUpdateEventConfigs,
   targets,
   users,
+  subscriptions,
 } from '../../db/schema.js';
 import { OrganizationDTO, OrganizationLimitsDTO, OrganizationMemberDTO, WebhooksConfigDTO } from '../../types/index.js';
 
@@ -175,11 +176,18 @@ export class OrganizationRepository {
           traceSamplingRateLimit: organizationLimits.traceSamplingRateLimit,
           requestsLimit: organizationLimits.requestsLimit,
         },
+        subscriptions: {
+          status: subscriptions.status,
+          trialEnd: subscriptions.trialEnd,
+          cancelAtPeriodEnd: subscriptions.cancelAtPeriodEnd,
+          currentPeriodStart: subscriptions.currentPeriodStart,
+        },
       })
       .from(organizationsMembers)
       .innerJoin(organizations, eq(organizations.id, organizationsMembers.organizationId))
       .innerJoin(users, eq(users.id, organizationsMembers.userId))
       .innerJoin(organizationLimits, eq(organizations.id, organizationLimits.organizationId))
+      .innerJoin(subscriptions, eq(organizations.id, subscriptions.organizationId))
       .where(eq(users.id, input.userId))
       .execute();
 
@@ -206,6 +214,12 @@ export class OrganizationRepository {
           changelogDataRetentionLimit: org.limits.changelogDataRetentionLimit,
           traceSamplingRateLimit: Number(org.limits.traceSamplingRateLimit),
           requestsLimit: org.limits.requestsLimit,
+        },
+        subscription: {
+          status: org.subscriptions.status,
+          trialEnd: org.subscriptions.trialEnd?.toISOString(),
+          cancelAtPeriodEnd: org.subscriptions.cancelAtPeriodEnd,
+          currentPeriodStart: org.subscriptions.currentPeriodStart?.toISOString(),
         },
       })),
     );

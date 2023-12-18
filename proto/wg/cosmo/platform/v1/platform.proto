@@ -932,6 +932,9 @@ message UpdateOrgMemberRoleResponse {
   Response response = 1;
 }
 
+/**
+ * Billing
+ */
 message GetBillingPlansRequest {
 }
 
@@ -953,6 +956,14 @@ message GetBillingPlansResponse {
   repeated BillingPlan plans = 2;
 }
 
+message CreateCheckoutSessionRequest {
+  string plan = 1;
+}
+
+message CreateCheckoutSessionResponse {
+  Response response = 1;
+  string sessionId = 2;
+}
 
 /**
  * MetricsDashboard
@@ -1383,9 +1394,6 @@ service PlatformService {
   // DeleteIntegration deletes an organization webhintegrationook
   rpc DeleteIntegration(DeleteIntegrationRequest) returns (DeleteIntegrationResponse) {}
 
-  // Return the available billing plans
-  rpc GetBillingPlans(GetBillingPlansRequest) returns (GetBillingPlansResponse){}
-
   // DeleteOrganization deletes an organization 
   rpc DeleteOrganization(DeleteOrganizationRequest) returns (DeleteOrganizationResponse) {}
   // LeaveOrganization removes a member from the organization
@@ -1432,7 +1440,6 @@ service PlatformService {
   rpc GetSubgraphMembers(GetSubgraphMembersRequest) returns (GetSubgraphMembersResponse) {}
 
   // Analytics
-
   rpc GetAnalyticsView(GetAnalyticsViewRequest) returns (GetAnalyticsViewResponse) {
     option idempotency_level = NO_SIDE_EFFECTS;
   }
@@ -1456,4 +1463,12 @@ service PlatformService {
   }
 
   rpc GetOrganizationRequestsCount(GetOrganizationRequestsCountRequest) returns (GetOrganizationRequestsCountResponse) {}
+
+  //
+  // Billing
+  //-----------------------------------------------------------------------------------------------------------------------------
+  // Return the available billing plans
+  rpc GetBillingPlans(GetBillingPlansRequest) returns (GetBillingPlansResponse) { }
+  // Create a Stripe checkout session
+  rpc CreateCheckoutSession(CreateCheckoutSessionRequest) returns (CreateCheckoutSessionResponse) { }
 }

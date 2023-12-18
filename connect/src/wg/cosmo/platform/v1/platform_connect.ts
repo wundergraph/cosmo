@@ -5,7 +5,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { AcceptOrDeclineInvitationRequest, AcceptOrDeclineInvitationResponse, AddSubgraphMemberRequest, AddSubgraphMemberResponse, CheckFederatedGraphRequest, CheckFederatedGraphResponse, CheckSubgraphSchemaRequest, CheckSubgraphSchemaResponse, CreateAPIKeyRequest, CreateAPIKeyResponse, CreateFederatedGraphRequest, CreateFederatedGraphResponse, CreateFederatedGraphTokenRequest, CreateFederatedGraphTokenResponse, CreateFederatedSubgraphRequest, CreateFederatedSubgraphResponse, CreateIntegrationRequest, CreateIntegrationResponse, CreateOIDCProviderRequest, CreateOIDCProviderResponse, CreateOrganizationWebhookConfigRequest, CreateOrganizationWebhookConfigResponse, DeleteAPIKeyRequest, DeleteAPIKeyResponse, DeleteFederatedGraphRequest, DeleteFederatedGraphResponse, DeleteFederatedSubgraphRequest, DeleteFederatedSubgraphResponse, DeleteIntegrationRequest, DeleteIntegrationResponse, DeleteOIDCProviderRequest, DeleteOIDCProviderResponse, DeleteOrganizationRequest, DeleteOrganizationResponse, DeleteOrganizationWebhookConfigRequest, DeleteOrganizationWebhookConfigResponse, DeleteRouterTokenRequest, DeleteRouterTokenResponse, FixSubgraphSchemaRequest, FixSubgraphSchemaResponse, ForceCheckSuccessRequest, ForceCheckSuccessResponse, GetAnalyticsViewRequest, GetAnalyticsViewResponse, GetAPIKeysRequest, GetAPIKeysResponse, GetBillingPlansRequest, GetBillingPlansResponse, GetChangelogBySchemaVersionRequest, GetChangelogBySchemaVersionResponse, GetCheckDetailsRequest, GetCheckDetailsResponse, GetCheckOperationsRequest, GetCheckOperationsResponse, GetChecksByFederatedGraphNameRequest, GetChecksByFederatedGraphNameResponse, GetCheckSummaryRequest, GetCheckSummaryResponse, GetClientsRequest, GetClientsResponse, GetCompositionDetailsRequest, GetCompositionDetailsResponse, GetCompositionsRequest, GetCompositionsResponse, GetDashboardAnalyticsViewRequest, GetDashboardAnalyticsViewResponse, GetFederatedGraphByNameRequest, GetFederatedGraphByNameResponse, GetFederatedGraphChangelogRequest, GetFederatedGraphChangelogResponse, GetFederatedGraphSDLByNameRequest, GetFederatedGraphSDLByNameResponse, GetFederatedGraphsRequest, GetFederatedGraphsResponse, GetFieldUsageRequest, GetFieldUsageResponse, GetGraphMetricsRequest, GetGraphMetricsResponse, GetInvitationsRequest, GetInvitationsResponse, GetLatestValidSubgraphSDLByNameRequest, GetLatestValidSubgraphSDLByNameResponse, GetMetricsErrorRateRequest, GetMetricsErrorRateResponse, GetOIDCProviderRequest, GetOIDCProviderResponse, GetOperationContentRequest, GetOperationContentResponse, GetOrganizationIntegrationsRequest, GetOrganizationIntegrationsResponse, GetOrganizationMembersRequest, GetOrganizationMembersResponse, GetOrganizationRequestsCountRequest, GetOrganizationRequestsCountResponse, GetOrganizationWebhookConfigsRequest, GetOrganizationWebhookConfigsResponse, GetOrganizationWebhookMetaRequest, GetOrganizationWebhookMetaResponse, GetPersistedOperationsRequest, GetPersistedOperationsResponse, GetRouterTokensRequest, GetRouterTokensResponse, GetSdlBySchemaVersionRequest, GetSdlBySchemaVersionResponse, GetSubgraphByNameRequest, GetSubgraphByNameResponse, GetSubgraphMembersRequest, GetSubgraphMembersResponse, GetSubgraphsRequest, GetSubgraphsResponse, GetTraceRequest, GetTraceResponse, GetUserAccessibleResourcesRequest, GetUserAccessibleResourcesResponse, InviteUserRequest, InviteUserResponse, IsGitHubAppInstalledRequest, IsGitHubAppInstalledResponse, IsRBACEnabledRequest, IsRBACEnabledResponse, LeaveOrganizationRequest, LeaveOrganizationResponse, MigrateFromApolloRequest, MigrateFromApolloResponse, PublishFederatedSubgraphRequest, PublishFederatedSubgraphResponse, PublishPersistedOperationsRequest, PublishPersistedOperationsResponse, RemoveInvitationRequest, RemoveInvitationResponse, RemoveOrganizationMemberRequest, RemoveOrganizationMemberResponse, RemoveSubgraphMemberRequest, RemoveSubgraphMemberResponse, UpdateFederatedGraphRequest, UpdateFederatedGraphResponse, UpdateIntegrationConfigRequest, UpdateIntegrationConfigResponse, UpdateOrganizationDetailsRequest, UpdateOrganizationDetailsResponse, UpdateOrganizationWebhookConfigRequest, UpdateOrganizationWebhookConfigResponse, UpdateOrgMemberRoleRequest, UpdateOrgMemberRoleResponse, UpdateRBACSettingsRequest, UpdateRBACSettingsResponse, UpdateSubgraphRequest, UpdateSubgraphResponse, WhoAmIRequest, WhoAmIResponse } from "./platform_pb.js";
+import { AcceptOrDeclineInvitationRequest, AcceptOrDeclineInvitationResponse, AddSubgraphMemberRequest, AddSubgraphMemberResponse, CheckFederatedGraphRequest, CheckFederatedGraphResponse, CheckSubgraphSchemaRequest, CheckSubgraphSchemaResponse, CreateAPIKeyRequest, CreateAPIKeyResponse, CreateCheckoutSessionRequest, CreateCheckoutSessionResponse, CreateFederatedGraphRequest, CreateFederatedGraphResponse, CreateFederatedGraphTokenRequest, CreateFederatedGraphTokenResponse, CreateFederatedSubgraphRequest, CreateFederatedSubgraphResponse, CreateIntegrationRequest, CreateIntegrationResponse, CreateOIDCProviderRequest, CreateOIDCProviderResponse, CreateOrganizationWebhookConfigRequest, CreateOrganizationWebhookConfigResponse, DeleteAPIKeyRequest, DeleteAPIKeyResponse, DeleteFederatedGraphRequest, DeleteFederatedGraphResponse, DeleteFederatedSubgraphRequest, DeleteFederatedSubgraphResponse, DeleteIntegrationRequest, DeleteIntegrationResponse, DeleteOIDCProviderRequest, DeleteOIDCProviderResponse, DeleteOrganizationRequest, DeleteOrganizationResponse, DeleteOrganizationWebhookConfigRequest, DeleteOrganizationWebhookConfigResponse, DeleteRouterTokenRequest, DeleteRouterTokenResponse, FixSubgraphSchemaRequest, FixSubgraphSchemaResponse, ForceCheckSuccessRequest, ForceCheckSuccessResponse, GetAnalyticsViewRequest, GetAnalyticsViewResponse, GetAPIKeysRequest, GetAPIKeysResponse, GetBillingPlansRequest, GetBillingPlansResponse, GetChangelogBySchemaVersionRequest, GetChangelogBySchemaVersionResponse, GetCheckDetailsRequest, GetCheckDetailsResponse, GetCheckOperationsRequest, GetCheckOperationsResponse, GetChecksByFederatedGraphNameRequest, GetChecksByFederatedGraphNameResponse, GetCheckSummaryRequest, GetCheckSummaryResponse, GetClientsRequest, GetClientsResponse, GetCompositionDetailsRequest, GetCompositionDetailsResponse, GetCompositionsRequest, GetCompositionsResponse, GetDashboardAnalyticsViewRequest, GetDashboardAnalyticsViewResponse, GetFederatedGraphByNameRequest, GetFederatedGraphByNameResponse, GetFederatedGraphChangelogRequest, GetFederatedGraphChangelogResponse, GetFederatedGraphSDLByNameRequest, GetFederatedGraphSDLByNameResponse, GetFederatedGraphsRequest, GetFederatedGraphsResponse, GetFieldUsageRequest, GetFieldUsageResponse, GetGraphMetricsRequest, GetGraphMetricsResponse, GetInvitationsRequest, GetInvitationsResponse, GetLatestValidSubgraphSDLByNameRequest, GetLatestValidSubgraphSDLByNameResponse, GetMetricsErrorRateRequest, GetMetricsErrorRateResponse, GetOIDCProviderRequest, GetOIDCProviderResponse, GetOperationContentRequest, GetOperationContentResponse, GetOrganizationIntegrationsRequest, GetOrganizationIntegrationsResponse, GetOrganizationMembersRequest, GetOrganizationMembersResponse, GetOrganizationRequestsCountRequest, GetOrganizationRequestsCountResponse, GetOrganizationWebhookConfigsRequest, GetOrganizationWebhookConfigsResponse, GetOrganizationWebhookMetaRequest, GetOrganizationWebhookMetaResponse, GetPersistedOperationsRequest, GetPersistedOperationsResponse, GetRouterTokensRequest, GetRouterTokensResponse, GetSdlBySchemaVersionRequest, GetSdlBySchemaVersionResponse, GetSubgraphByNameRequest, GetSubgraphByNameResponse, GetSubgraphMembersRequest, GetSubgraphMembersResponse, GetSubgraphsRequest, GetSubgraphsResponse, GetTraceRequest, GetTraceResponse, GetUserAccessibleResourcesRequest, GetUserAccessibleResourcesResponse, InviteUserRequest, InviteUserResponse, IsGitHubAppInstalledRequest, IsGitHubAppInstalledResponse, IsRBACEnabledRequest, IsRBACEnabledResponse, LeaveOrganizationRequest, LeaveOrganizationResponse, MigrateFromApolloRequest, MigrateFromApolloResponse, PublishFederatedSubgraphRequest, PublishFederatedSubgraphResponse, PublishPersistedOperationsRequest, PublishPersistedOperationsResponse, RemoveInvitationRequest, RemoveInvitationResponse, RemoveOrganizationMemberRequest, RemoveOrganizationMemberResponse, RemoveSubgraphMemberRequest, RemoveSubgraphMemberResponse, UpdateFederatedGraphRequest, UpdateFederatedGraphResponse, UpdateIntegrationConfigRequest, UpdateIntegrationConfigResponse, UpdateOrganizationDetailsRequest, UpdateOrganizationDetailsResponse, UpdateOrganizationWebhookConfigRequest, UpdateOrganizationWebhookConfigResponse, UpdateOrgMemberRoleRequest, UpdateOrgMemberRoleResponse, UpdateRBACSettingsRequest, UpdateRBACSettingsResponse, UpdateSubgraphRequest, UpdateSubgraphResponse, WhoAmIRequest, WhoAmIResponse } from "./platform_pb.js";
 import { MethodIdempotency, MethodKind } from "@bufbuild/protobuf";
 import { GetConfigRequest, GetConfigResponse } from "../../node/v1/node_pb.js";
 
@@ -531,17 +531,6 @@ export const PlatformService = {
       kind: MethodKind.Unary,
     },
     /**
-     * Return the available billing plans
-     *
-     * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetBillingPlans
-     */
-    getBillingPlans: {
-      name: "GetBillingPlans",
-      I: GetBillingPlansRequest,
-      O: GetBillingPlansResponse,
-      kind: MethodKind.Unary,
-    },
-    /**
      * DeleteOrganization deletes an organization 
      *
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.DeleteOrganization
@@ -773,6 +762,8 @@ export const PlatformService = {
       kind: MethodKind.Unary,
     },
     /**
+     * Analytics
+     *
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetAnalyticsView
      */
     getAnalyticsView: {
@@ -838,6 +829,31 @@ export const PlatformService = {
       name: "GetOrganizationRequestsCount",
       I: GetOrganizationRequestsCountRequest,
       O: GetOrganizationRequestsCountResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     *
+     * Billing
+     * -----------------------------------------------------------------------------------------------------------------------------
+     * Return the available billing plans
+     *
+     * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetBillingPlans
+     */
+    getBillingPlans: {
+      name: "GetBillingPlans",
+      I: GetBillingPlansRequest,
+      O: GetBillingPlansResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Create a Stripe checkout session
+     *
+     * @generated from rpc wg.cosmo.platform.v1.PlatformService.CreateCheckoutSession
+     */
+    createCheckoutSession: {
+      name: "CreateCheckoutSession",
+      I: CreateCheckoutSessionRequest,
+      O: CreateCheckoutSessionResponse,
       kind: MethodKind.Unary,
     },
   }

@@ -13,6 +13,7 @@ import {
   CheckSubgraphSchemaResponse,
   CompositionError,
   CreateAPIKeyResponse,
+  CreateCheckoutSessionResponse,
   CreateFederatedGraphResponse,
   CreateFederatedGraphTokenResponse,
   CreateFederatedSubgraphResponse,
@@ -4986,6 +4987,31 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             code: EnumStatusCode.OK,
           },
           plans: await billingRepo.listPlans(),
+        };
+      });
+    },
+
+    createCheckoutSession: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<CreateCheckoutSessionResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const billingRepo = new BillingRepository(opts.db);
+
+        const session = await billingRepo.createCheckoutSession({
+          organizationId: authContext.organizationId,
+          organizationSlug: authContext.organizationSlug,
+          plan: req.plan,
+        });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          sessionId: session.id,
         };
       });
     },

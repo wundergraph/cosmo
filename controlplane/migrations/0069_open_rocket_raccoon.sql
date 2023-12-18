@@ -1,0 +1,1 @@
+ALTER TABLE "organizations" ADD COLUMN "billing_email" text;
