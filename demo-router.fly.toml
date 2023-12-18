@@ -8,6 +8,9 @@ primary_region = "lax"
 
 [env]
 PROMETHEUS_LISTEN_ADDR="0.0.0.0:8088"
+LISTEN_ADDR="0.0.0.0:3002"
+LOG_LEVEL="info"
+CORS_ALLOW_CREDENTIALS="true"
 
 [build]
   dockerfile = "./router/Dockerfile"
