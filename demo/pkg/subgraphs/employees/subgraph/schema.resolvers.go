@@ -49,6 +49,7 @@ func (r *queryResolver) Employee(ctx context.Context, id int) (*model.Employee, 
 	}
 	for _, employee := range employees {
 		if id == employee.ID {
+			employee.UpdatedAt = time.Now().String()
 			details := &model.Details{}
 			if employee.Details != nil {
 				details.Forename = employee.Details.Forename
@@ -71,6 +72,9 @@ func (r *queryResolver) Employee(ctx context.Context, id int) (*model.Employee, 
 func (r *queryResolver) Employees(ctx context.Context) ([]*model.Employee, error) {
 	r.mux.Lock()
 	defer r.mux.Unlock()
+	for _, employee := range employees {
+		employee.UpdatedAt = time.Now().String()
+	}
 	return employees, nil
 }
 

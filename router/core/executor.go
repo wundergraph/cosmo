@@ -7,6 +7,7 @@ import (
 
 	"go.uber.org/zap"
 
+	"github.com/nats-io/nats.go"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/asttransform"
@@ -103,11 +104,31 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(routerCfg *node
 	// the plan config is what the engine uses to turn a GraphQL Request into an execution plan
 	// the plan config is stateful as it carries connection pools and other things
 
+	// XXX: We support only a single NATS provider for now, but we can easily extend this
+	// since the configuration format already handles multiple sources
+	var nc *nats.Conn
+	for _, eventSource := range routerEngineCfg.Events.Sources {
+		switch eventSource.Provider {
+		case "NATS":
+			if nc != nil {
+				return nil, fmt.Errorf("multiple NATS event sources are not supported")
+			}
+			var err error
+			nc, err = nats.Connect(eventSource.URL)
+			if err != nil {
+				return nil, fmt.Errorf("failed to connect to NATS: %w", err)
+			}
+		default:
+			return nil, fmt.Errorf("unknown event source provider %s", eventSource.Provider)
+		}
+	}
+
 	loader := NewLoader(b.includeInfo, NewDefaultFactoryResolver(
 		NewTransport(b.transportOptions),
 		b.transport,
 		b.logger,
 		routerEngineCfg.Execution.EnableSingleFlight,
+		nc,
 	))
 
 	// this generates the plan config using the data source factories from the config package

@@ -1,0 +1,7 @@
+type Mutation {
+    updateAvailability(employeeID: Int!, isAvailable: Boolean!): Employee!
+}
+type Employee @key(fields: "id") {
+  id: Int!
+  isAvailable: Boolean!
+}

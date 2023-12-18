@@ -7,6 +7,9 @@ import {
   DEPRECATED,
   ENUM_UPPER,
   ENUM_VALUE_UPPER,
+  EVENTS_PUBLISH,
+  EVENTS_REQUEST,
+  EVENTS_SUBSCRIBE,
   EXTENDS,
   EXTERNAL,
   FIELD_DEFINITION_UPPER,
@@ -26,12 +29,13 @@ import {
   REQUIRES,
   RESOLVABLE,
   SCALAR_UPPER,
-  SCHEMA,
   SCHEMA_UPPER,
   SHAREABLE,
+  SOURCE_ID,
   SPECIFIED_BY,
   STRING_TYPE,
   TAG,
+  TOPIC,
   UNION_UPPER,
 } from './string-constants';
 
@@ -103,6 +107,72 @@ export const BASE_DIRECTIVE_DEFINITIONS: DirectiveDefinitionNode[] = [
     kind: Kind.DIRECTIVE_DEFINITION,
     locations: stringArrayToNameNodeArray([FIELD_DEFINITION_UPPER, OBJECT_UPPER]),
     name: stringToNameNode(EXTERNAL),
+    repeatable: false,
+  },
+  // directive @eventsPublish(topic: String!, sourceID: String) on FIELD_DEFINITION
+  {
+    arguments: [
+      {
+        kind: Kind.INPUT_VALUE_DEFINITION,
+        name: stringToNameNode(TOPIC),
+        type: {
+          kind: Kind.NON_NULL_TYPE,
+          type: stringToNamedTypeNode(STRING_TYPE),
+        },
+      },
+      {
+        kind: Kind.INPUT_VALUE_DEFINITION,
+        name: stringToNameNode(SOURCE_ID),
+        type: stringToNamedTypeNode(STRING_TYPE),
+      },
+    ],
+    kind: Kind.DIRECTIVE_DEFINITION,
+    locations: [stringToNameNode(FIELD_DEFINITION_UPPER)],
+    name: stringToNameNode(EVENTS_PUBLISH),
+    repeatable: false,
+  },
+  // directive @eventsRequest(topic: String!, sourceID: String) on FIELD_DEFINITION
+  {
+    arguments: [
+      {
+        kind: Kind.INPUT_VALUE_DEFINITION,
+        name: stringToNameNode(TOPIC),
+        type: {
+          kind: Kind.NON_NULL_TYPE,
+          type: stringToNamedTypeNode(STRING_TYPE),
+        },
+      },
+      {
+        kind: Kind.INPUT_VALUE_DEFINITION,
+        name: stringToNameNode(SOURCE_ID),
+        type: stringToNamedTypeNode(STRING_TYPE),
+      },
+    ],
+    kind: Kind.DIRECTIVE_DEFINITION,
+    locations: [stringToNameNode(FIELD_DEFINITION_UPPER)],
+    name: stringToNameNode(EVENTS_REQUEST),
+    repeatable: false,
+  },
+  // directive @eventsSubscribe(topic: String!, sourceID: String) on FIELD_DEFINITION
+  {
+    arguments: [
+      {
+        kind: Kind.INPUT_VALUE_DEFINITION,
+        name: stringToNameNode(TOPIC),
+        type: {
+          kind: Kind.NON_NULL_TYPE,
+          type: stringToNamedTypeNode(STRING_TYPE),
+        },
+      },
+      {
+        kind: Kind.INPUT_VALUE_DEFINITION,
+        name: stringToNameNode(SOURCE_ID),
+        type: stringToNamedTypeNode(STRING_TYPE),
+      },
+    ],
+    kind: Kind.DIRECTIVE_DEFINITION,
+    locations: [stringToNameNode(FIELD_DEFINITION_UPPER)],
+    name: stringToNameNode(EVENTS_SUBSCRIBE),
     repeatable: false,
   },
   // directive @key(fields: openfed__FieldSet!) on INTERFACE | OBJECT

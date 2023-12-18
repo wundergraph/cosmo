@@ -1,8 +1,10 @@
 package routerconfig
 
 import (
+	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/wundergraph/cosmo/composition-go"
 	"github.com/wundergraph/cosmo/router-tests/runner"
@@ -32,6 +34,32 @@ func SerializeSubgraphs(subgraphs []*Subgraph) (string, error) {
 func SerializeRunner(sg runner.SubgraphsRunner) (string, error) {
 	ports := sg.Ports()
 
+	// Look for the demo directory to find the employeeupdated schema, since
+	// we can't introspect that one because it is virtual
+	dir, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+
+	var demoDir string
+
+	for {
+		if dir == "/" {
+			return "", errors.New("could not find demo directory")
+		}
+		if _, err := os.Stat(filepath.Join(dir, "demo")); err == nil {
+			demoDir = dir
+			break
+		}
+		dir = filepath.Dir(dir)
+	}
+
+	employeeUpdatedSchemaPath := filepath.Join(demoDir, "demo", "pkg", "subgraphs", "employeeupdated", "subgraph", "schema.graphqls")
+	employeeUpdatedSchemaData, err := os.ReadFile(employeeUpdatedSchemaPath)
+	if err != nil {
+		return "", err
+	}
+
 	subgraphs := []*Subgraph{
 		{
 			Name: "employees",
@@ -52,6 +80,18 @@ func SerializeRunner(sg runner.SubgraphsRunner) (string, error) {
 		{
 			Name: "test1",
 			URL:  fmt.Sprintf("http://localhost:%d/graphql", ports.Test1),
+		},
+		{
+			Name: "availability",
+			URL:  fmt.Sprintf("http://localhost:%d/graphql", ports.Availability),
+		},
+		{
+			Name: "mood",
+			URL:  fmt.Sprintf("http://localhost:%d/graphql", ports.Mood),
+		},
+		{
+			Name:   "employeeupdated",
+			Schema: string(employeeUpdatedSchemaData),
 		},
 	}
 	return SerializeSubgraphs(subgraphs)
