@@ -187,49 +187,55 @@ func logInternalErrorsFromReport(report *operationreport.Report, requestLogger *
 	}
 }
 
-func propagateSubgraphErrors(ctx *resolve.Context) {
-	err := ctx.SubgraphErrors()
+func addErrorToTrace(ctx context.Context, err error) {
+	if ctx == nil {
+		return
+	}
 	if err == nil {
 		return
 	}
-	reqCtx := getRequestContext(ctx.Context())
+	span := trace.SpanFromContext(ctx)
+	if span == nil {
+		return
+	}
+	if err == nil {
+		return
+	}
+	reqCtx := getRequestContext(ctx)
 	if reqCtx == nil {
 		return
 	}
-	reqCtx.hasError = true
-	span := trace.SpanFromContext(ctx.Context())
-	description := err.Error()
-	span.SetStatus(codes.Error, description)
-	span.SetAttributes(otel.WgRequestError.Bool(true))
+	if reqCtx.hasError {
+		// already set status to codes.Error
+		// and added error attribute,
+		// so we can just record the error
+		// we call this function multiple times,
+		// e.g. if there are subgraph errors AND request errors,
+		// so we might want to record all errors
+		span.RecordError(err)
+	} else {
+		reqCtx.hasError = true
+		description := err.Error()
+		span.SetStatus(codes.Error, description)
+		span.SetAttributes(otel.WgRequestError.Bool(true))
+	}
+}
+
+func propagateSubgraphErrors(ctx *resolve.Context) {
+	err := ctx.SubgraphErrors()
+	addErrorToTrace(ctx.Context(), err)
 }
 
 func writeRequestErrors(r *http.Request, statusCode int, requestErrors graphql.RequestErrors, w http.ResponseWriter, requestLogger *zap.Logger) {
-	ctx := getRequestContext(r.Context())
-	span := trace.SpanFromContext(r.Context())
-
 	if requestErrors != nil {
-
-		// can be nil if an error occurred before the context was created e.g. in the pre-handler
-		// in that case hasError has to be set in the pre-handler manually
-		if ctx != nil {
-			ctx.hasError = true
-		}
-
-		// set the span status to error
-		span.SetStatus(codes.Error, requestErrors.Error())
-		// set the span attribute to indicate that the request had an error
-		// do it only when there is an error to avoid storing the attribute in the span
-		// in queries we use mapContains to check if the attribute is set
-		span.SetAttributes(otel.WgRequestError.Bool(true))
-
 		if statusCode != 0 {
 			w.WriteHeader(statusCode)
 		}
-
 		if _, err := requestErrors.WriteResponse(w); err != nil {
 			if requestLogger != nil {
 				requestLogger.Error("error writing response", zap.Error(err))
 			}
 		}
 	}
+	addErrorToTrace(r.Context(), requestErrors)
 }
