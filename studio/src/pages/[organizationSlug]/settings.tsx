@@ -11,6 +11,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
@@ -826,9 +827,7 @@ const RBAC = () => {
         <div className="space-y-1.5">
           <CardTitle className="flex items-center gap-x-2">
             <span>Resource Based Access Control (RBAC)</span>
-            <div className="rounded-md border-2 px-2 py-0.5 text-sm italic text-muted-foreground">
-              Enterprise feature
-            </div>
+            <Badge variant="outline">Enterprise feature</Badge>
           </CardTitle>
           <CardDescription>
             Enabling RBAC allows the fine grain access control of subgraphs and
