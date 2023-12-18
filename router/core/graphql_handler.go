@@ -101,6 +101,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Extensions:            operationCtx.extensions,
 	}
 	ctx = ctx.WithContext(r.Context())
+	defer propagateSubgraphErrors(ctx)
 
 	switch p := operationCtx.preparedPlan.preparedPlan.(type) {
 	case *plan.SynchronousResponsePlan:
@@ -184,6 +185,22 @@ func logInternalErrorsFromReport(report *operationreport.Report, requestLogger *
 	if internalErr != nil {
 		requestLogger.Error("internal error", zap.Error(internalErr))
 	}
+}
+
+func propagateSubgraphErrors(ctx *resolve.Context) {
+	err := ctx.SubgraphErrors()
+	if err == nil {
+		return
+	}
+	reqCtx := getRequestContext(ctx.Context())
+	if reqCtx == nil {
+		return
+	}
+	reqCtx.hasError = true
+	span := trace.SpanFromContext(ctx.Context())
+	description := err.Error()
+	span.SetStatus(codes.Error, description)
+	span.SetAttributes(otel.WgRequestError.Bool(true))
 }
 
 func writeRequestErrors(r *http.Request, statusCode int, requestErrors graphql.RequestErrors, w http.ResponseWriter, requestLogger *zap.Logger) {
