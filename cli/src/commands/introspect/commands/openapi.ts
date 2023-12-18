@@ -10,7 +10,7 @@ import { introspectOpenApi } from '../../../openapi.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('openapi');
-  command.description('Introspects an OpenAPI specification.');
+  command.description('Introspects an OpenApi specification.');
   command.argument('<source>', 'Path to the OpenApi specification file.');
   command.option('-o, --out [string]', 'Destination file for the SDL.');
   command.action(async (source, options) => {
