@@ -61,7 +61,6 @@ func (p *natsPubSub) Subscribe(ctx context.Context, topic string, next chan<- []
 				return
 			case msg := <-ch:
 				next <- msg.Data
-				_ = msg.Ack()
 			}
 		}
 	}()
@@ -84,6 +83,5 @@ func (p *natsPubSub) Request(ctx context.Context, topic string, data []byte, w i
 		return fmt.Errorf("error requesting NATS topic %s: %w", topic, err)
 	}
 	_, err = w.Write(msg.Data)
-	_ = msg.Ack()
 	return err
 }
