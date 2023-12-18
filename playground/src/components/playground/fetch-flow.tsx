@@ -166,7 +166,7 @@ const ReactFlowFetchNode = ({ data }: Node<FetchNode>) => {
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger>
-                    <p className="max-w-sm truncate">URL: {data.outputTrace?.request?.url}</p>
+                    <p className="max-w-sm truncate text-left">URL: {data.outputTrace?.request?.url}</p>
                   </TooltipTrigger>
                   <TooltipContent>{data.outputTrace?.request?.url}</TooltipContent>
                 </Tooltip>
