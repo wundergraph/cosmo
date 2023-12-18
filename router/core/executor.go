@@ -104,12 +104,22 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(routerCfg *node
 	// the plan config is what the engine uses to turn a GraphQL Request into an execution plan
 	// the plan config is stateful as it carries connection pools and other things
 
+	// XXX: We support only a single NATS provider for now, but we can easily extend this
+	// since the configuration format already handles multiple sources
 	var nc *nats.Conn
-	if routerEngineCfg.NATS.URL != "" {
-		var err error
-		nc, err = nats.Connect(routerEngineCfg.NATS.URL)
-		if err != nil {
-			return nil, fmt.Errorf("failed to connect to NATS: %w", err)
+	for _, eventSource := range routerEngineCfg.Events.Sources {
+		switch eventSource.Provider {
+		case "NATS":
+			if nc != nil {
+				return nil, fmt.Errorf("multiple NATS event sources are not supported")
+			}
+			var err error
+			nc, err = nats.Connect(eventSource.URL)
+			if err != nil {
+				return nil, fmt.Errorf("failed to connect to NATS: %w", err)
+			}
+		default:
+			return nil, fmt.Errorf("unknown event source provider %s", eventSource.Provider)
 		}
 	}
 

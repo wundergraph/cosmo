@@ -119,7 +119,7 @@ func (l *Loader) LoadInternedString(engineConfig *nodev1.EngineConfiguration, st
 type RouterEngineConfiguration struct {
 	Execution config.EngineExecutionConfiguration
 	Headers   config.HeaderRules
-	NATS      config.NATSConfiguration
+	Events    config.EventsConfiguration
 }
 
 func (l *Loader) Load(routerConfig *nodev1.RouterConfig, routerEngineConfig *RouterEngineConfiguration) (*plan.Configuration, error) {

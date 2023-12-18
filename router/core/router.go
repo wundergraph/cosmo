@@ -99,7 +99,7 @@ type (
 		livenessCheckPath        string
 		cdnConfig                config.CDNConfiguration
 		cdn                      *cdn.CDN
-		natsConfig               config.NATSConfiguration
+		eventsConfig             config.EventsConfiguration
 		prometheusServer         *http.Server
 		modulesConfig            map[string]interface{}
 		routerMiddlewares        []func(http.Handler) http.Handler
@@ -303,8 +303,8 @@ func NewRouter(opts ...Option) (*Router, error) {
 		r.logger.Warn("Development mode enabled. This should only be used for testing purposes")
 	}
 
-	if r.natsConfig.URL != "" {
-		r.logger.Info("NATS enabled", zap.String("url", r.natsConfig.URL))
+	for _, source := range r.eventsConfig.Sources {
+		r.logger.Info("event source", zap.String("provider", source.Provider), zap.String("url", source.URL))
 	}
 
 	return r, nil
@@ -731,7 +731,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	routerEngineConfig := &RouterEngineConfiguration{
 		Execution: r.engineExecutionConfiguration,
 		Headers:   r.headerRules,
-		NATS:      r.natsConfig,
+		Events:    r.eventsConfig,
 	}
 
 	if r.developmentMode && r.engineExecutionConfiguration.EnableRequestTracing && r.graphApiToken == "" {
@@ -1134,10 +1134,10 @@ func WithCDN(cfg config.CDNConfiguration) Option {
 	}
 }
 
-// WithNATS sets the configuration for the NATS client
-func WithNATS(cfg config.NATSConfiguration) Option {
+// WithEvents sets the configuration for the events client
+func WithEvents(cfg config.EventsConfiguration) Option {
 	return func(r *Router) {
-		r.natsConfig = cfg
+		r.eventsConfig = cfg
 	}
 }
 

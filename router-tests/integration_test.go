@@ -264,8 +264,13 @@ func setupServerConfig(tb testing.TB, opts ...core.Option) (*core.Server, config
 			EnableRequestTracing:                   true,
 			EnableExecutionPlanCacheResponseHeader: true,
 		}),
-		core.WithNATS(config.NATSConfiguration{
-			URL: fmt.Sprintf("nats://localhost:%d", *natsPort),
+		core.WithEvents(config.EventsConfiguration{
+			Sources: []config.EventSource{
+				{
+					Provider: "NATS",
+					URL:      fmt.Sprintf("nats://localhost:%d", *natsPort),
+				},
+			},
 		}),
 	}
 	routerOpts = append(routerOpts, opts...)
