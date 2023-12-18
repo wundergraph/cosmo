@@ -12,19 +12,23 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/wundergraph/cosmo/demo/pkg/injector"
+	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/availability"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/employees"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/family"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/hobbies"
+	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/mood"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/products"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/test1"
 )
 
 type Ports struct {
-	Employees int
-	Family    int
-	Hobbies   int
-	Products  int
-	Test1     int
+	Employees    int
+	Family       int
+	Hobbies      int
+	Products     int
+	Test1        int
+	Availability int
+	Mood         int
 }
 
 type Config struct {
@@ -91,6 +95,12 @@ func New(config *Config) (*Subgraphs, error) {
 		servers = append(servers, srv)
 	}
 	if srv := newServer("test1", config.EnableDebug, config.Ports.Test1, test1.NewSchema()); srv != nil {
+		servers = append(servers, srv)
+	}
+	if srv := newServer("availability", config.EnableDebug, config.Ports.Availability, availability.NewSchema()); srv != nil {
+		servers = append(servers, srv)
+	}
+	if srv := newServer("mood", config.EnableDebug, config.Ports.Mood, mood.NewSchema()); srv != nil {
 		servers = append(servers, srv)
 	}
 	return &Subgraphs{

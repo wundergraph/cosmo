@@ -121,6 +121,7 @@ type DataSourceKind int32
 const (
 	DataSourceKind_STATIC  DataSourceKind = 0
 	DataSourceKind_GRAPHQL DataSourceKind = 1
+	DataSourceKind_PUBSUB  DataSourceKind = 2
 )
 
 // Enum value maps for DataSourceKind.
@@ -128,10 +129,12 @@ var (
 	DataSourceKind_name = map[int32]string{
 		0: "STATIC",
 		1: "GRAPHQL",
+		2: "PUBSUB",
 	}
 	DataSourceKind_value = map[string]int32{
 		"STATIC":  0,
 		"GRAPHQL": 1,
+		"PUBSUB":  2,
 	}
 )
 
@@ -160,6 +163,55 @@ func (x DataSourceKind) Number() protoreflect.EnumNumber {
 // Deprecated: Use DataSourceKind.Descriptor instead.
 func (DataSourceKind) EnumDescriptor() ([]byte, []int) {
 	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{2}
+}
+
+type EventType int32
+
+const (
+	EventType_PUBLISH   EventType = 0
+	EventType_REQUEST   EventType = 1
+	EventType_SUBSCRIBE EventType = 2
+)
+
+// Enum value maps for EventType.
+var (
+	EventType_name = map[int32]string{
+		0: "PUBLISH",
+		1: "REQUEST",
+		2: "SUBSCRIBE",
+	}
+	EventType_value = map[string]int32{
+		"PUBLISH":   0,
+		"REQUEST":   1,
+		"SUBSCRIBE": 2,
+	}
+)
+
+func (x EventType) Enum() *EventType {
+	p := new(EventType)
+	*p = x
+	return p
+}
+
+func (x EventType) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (EventType) Descriptor() protoreflect.EnumDescriptor {
+	return file_wg_cosmo_node_v1_node_proto_enumTypes[3].Descriptor()
+}
+
+func (EventType) Type() protoreflect.EnumType {
+	return &file_wg_cosmo_node_v1_node_proto_enumTypes[3]
+}
+
+func (x EventType) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use EventType.Descriptor instead.
+func (EventType) EnumDescriptor() ([]byte, []int) {
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{3}
 }
 
 type ConfigurationVariableKind int32
@@ -195,11 +247,11 @@ func (x ConfigurationVariableKind) String() string {
 }
 
 func (ConfigurationVariableKind) Descriptor() protoreflect.EnumDescriptor {
-	return file_wg_cosmo_node_v1_node_proto_enumTypes[3].Descriptor()
+	return file_wg_cosmo_node_v1_node_proto_enumTypes[4].Descriptor()
 }
 
 func (ConfigurationVariableKind) Type() protoreflect.EnumType {
-	return &file_wg_cosmo_node_v1_node_proto_enumTypes[3]
+	return &file_wg_cosmo_node_v1_node_proto_enumTypes[4]
 }
 
 func (x ConfigurationVariableKind) Number() protoreflect.EnumNumber {
@@ -208,7 +260,7 @@ func (x ConfigurationVariableKind) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ConfigurationVariableKind.Descriptor instead.
 func (ConfigurationVariableKind) EnumDescriptor() ([]byte, []int) {
-	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{3}
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{4}
 }
 
 type HTTPMethod int32
@@ -250,11 +302,11 @@ func (x HTTPMethod) String() string {
 }
 
 func (HTTPMethod) Descriptor() protoreflect.EnumDescriptor {
-	return file_wg_cosmo_node_v1_node_proto_enumTypes[4].Descriptor()
+	return file_wg_cosmo_node_v1_node_proto_enumTypes[5].Descriptor()
 }
 
 func (HTTPMethod) Type() protoreflect.EnumType {
-	return &file_wg_cosmo_node_v1_node_proto_enumTypes[4]
+	return &file_wg_cosmo_node_v1_node_proto_enumTypes[5]
 }
 
 func (x HTTPMethod) Number() protoreflect.EnumNumber {
@@ -263,7 +315,7 @@ func (x HTTPMethod) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use HTTPMethod.Descriptor instead.
 func (HTTPMethod) EnumDescriptor() ([]byte, []int) {
-	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{4}
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{5}
 }
 
 type Subgraph struct {
@@ -919,6 +971,7 @@ type DataSourceConfiguration struct {
 	Keys                       []*RequiredField          `protobuf:"bytes,10,rep,name=keys,proto3" json:"keys,omitempty"`
 	Provides                   []*RequiredField          `protobuf:"bytes,11,rep,name=provides,proto3" json:"provides,omitempty"`
 	Requires                   []*RequiredField          `protobuf:"bytes,12,rep,name=requires,proto3" json:"requires,omitempty"`
+	CustomEvents               *DataSourceCustom_Events  `protobuf:"bytes,13,opt,name=custom_events,json=customEvents,proto3" json:"custom_events,omitempty"`
 }
 
 func (x *DataSourceConfiguration) Reset() {
@@ -1033,6 +1086,13 @@ func (x *DataSourceConfiguration) GetProvides() []*RequiredField {
 func (x *DataSourceConfiguration) GetRequires() []*RequiredField {
 	if x != nil {
 		return x.Requires
+	}
+	return nil
+}
+
+func (x *DataSourceConfiguration) GetCustomEvents() *DataSourceCustom_Events {
+	if x != nil {
+		return x.CustomEvents
 	}
 	return nil
 }
@@ -1597,6 +1657,132 @@ func (x *DataSourceCustom_GraphQL) GetCustomScalarTypeFields() []*SingleTypeFiel
 	return nil
 }
 
+type EventConfiguration struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Type      EventType `protobuf:"varint,1,opt,name=type,proto3,enum=wg.cosmo.node.v1.EventType" json:"type,omitempty"`
+	TypeName  string    `protobuf:"bytes,2,opt,name=type_name,json=typeName,proto3" json:"type_name,omitempty"`
+	FieldName string    `protobuf:"bytes,3,opt,name=field_name,json=fieldName,proto3" json:"field_name,omitempty"`
+	Topic     string    `protobuf:"bytes,4,opt,name=topic,proto3" json:"topic,omitempty"`
+	SourceId  string    `protobuf:"bytes,5,opt,name=source_id,json=sourceId,proto3" json:"source_id,omitempty"`
+}
+
+func (x *EventConfiguration) Reset() {
+	*x = EventConfiguration{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[20]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *EventConfiguration) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EventConfiguration) ProtoMessage() {}
+
+func (x *EventConfiguration) ProtoReflect() protoreflect.Message {
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[20]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EventConfiguration.ProtoReflect.Descriptor instead.
+func (*EventConfiguration) Descriptor() ([]byte, []int) {
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *EventConfiguration) GetType() EventType {
+	if x != nil {
+		return x.Type
+	}
+	return EventType_PUBLISH
+}
+
+func (x *EventConfiguration) GetTypeName() string {
+	if x != nil {
+		return x.TypeName
+	}
+	return ""
+}
+
+func (x *EventConfiguration) GetFieldName() string {
+	if x != nil {
+		return x.FieldName
+	}
+	return ""
+}
+
+func (x *EventConfiguration) GetTopic() string {
+	if x != nil {
+		return x.Topic
+	}
+	return ""
+}
+
+func (x *EventConfiguration) GetSourceId() string {
+	if x != nil {
+		return x.SourceId
+	}
+	return ""
+}
+
+type DataSourceCustom_Events struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Events []*EventConfiguration `protobuf:"bytes,1,rep,name=events,proto3" json:"events,omitempty"`
+}
+
+func (x *DataSourceCustom_Events) Reset() {
+	*x = DataSourceCustom_Events{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[21]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *DataSourceCustom_Events) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DataSourceCustom_Events) ProtoMessage() {}
+
+func (x *DataSourceCustom_Events) ProtoReflect() protoreflect.Message {
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[21]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DataSourceCustom_Events.ProtoReflect.Descriptor instead.
+func (*DataSourceCustom_Events) Descriptor() ([]byte, []int) {
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *DataSourceCustom_Events) GetEvents() []*EventConfiguration {
+	if x != nil {
+		return x.Events
+	}
+	return nil
+}
+
 type DataSourceCustom_Static struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -1608,7 +1794,7 @@ type DataSourceCustom_Static struct {
 func (x *DataSourceCustom_Static) Reset() {
 	*x = DataSourceCustom_Static{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[20]
+		mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[22]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1621,7 +1807,7 @@ func (x *DataSourceCustom_Static) String() string {
 func (*DataSourceCustom_Static) ProtoMessage() {}
 
 func (x *DataSourceCustom_Static) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[20]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[22]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1634,7 +1820,7 @@ func (x *DataSourceCustom_Static) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DataSourceCustom_Static.ProtoReflect.Descriptor instead.
 func (*DataSourceCustom_Static) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{20}
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *DataSourceCustom_Static) GetData() *ConfigurationVariable {
@@ -1659,7 +1845,7 @@ type ConfigurationVariable struct {
 func (x *ConfigurationVariable) Reset() {
 	*x = ConfigurationVariable{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[21]
+		mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[23]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1672,7 +1858,7 @@ func (x *ConfigurationVariable) String() string {
 func (*ConfigurationVariable) ProtoMessage() {}
 
 func (x *ConfigurationVariable) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[21]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[23]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1685,7 +1871,7 @@ func (x *ConfigurationVariable) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConfigurationVariable.ProtoReflect.Descriptor instead.
 func (*ConfigurationVariable) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{21}
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *ConfigurationVariable) GetKind() ConfigurationVariableKind {
@@ -1735,7 +1921,7 @@ type DirectiveConfiguration struct {
 func (x *DirectiveConfiguration) Reset() {
 	*x = DirectiveConfiguration{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[22]
+		mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[24]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1748,7 +1934,7 @@ func (x *DirectiveConfiguration) String() string {
 func (*DirectiveConfiguration) ProtoMessage() {}
 
 func (x *DirectiveConfiguration) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[22]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[24]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1761,7 +1947,7 @@ func (x *DirectiveConfiguration) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DirectiveConfiguration.ProtoReflect.Descriptor instead.
 func (*DirectiveConfiguration) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{22}
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *DirectiveConfiguration) GetDirectiveName() string {
@@ -1790,7 +1976,7 @@ type URLQueryConfiguration struct {
 func (x *URLQueryConfiguration) Reset() {
 	*x = URLQueryConfiguration{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[23]
+		mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[25]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1803,7 +1989,7 @@ func (x *URLQueryConfiguration) String() string {
 func (*URLQueryConfiguration) ProtoMessage() {}
 
 func (x *URLQueryConfiguration) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[23]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[25]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1816,7 +2002,7 @@ func (x *URLQueryConfiguration) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use URLQueryConfiguration.ProtoReflect.Descriptor instead.
 func (*URLQueryConfiguration) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{23}
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *URLQueryConfiguration) GetName() string {
@@ -1844,7 +2030,7 @@ type HTTPHeader struct {
 func (x *HTTPHeader) Reset() {
 	*x = HTTPHeader{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[24]
+		mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[26]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1857,7 +2043,7 @@ func (x *HTTPHeader) String() string {
 func (*HTTPHeader) ProtoMessage() {}
 
 func (x *HTTPHeader) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[24]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[26]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1870,7 +2056,7 @@ func (x *HTTPHeader) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HTTPHeader.ProtoReflect.Descriptor instead.
 func (*HTTPHeader) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{24}
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *HTTPHeader) GetValues() []*ConfigurationVariable {
@@ -1893,7 +2079,7 @@ type MTLSConfiguration struct {
 func (x *MTLSConfiguration) Reset() {
 	*x = MTLSConfiguration{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[25]
+		mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[27]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1906,7 +2092,7 @@ func (x *MTLSConfiguration) String() string {
 func (*MTLSConfiguration) ProtoMessage() {}
 
 func (x *MTLSConfiguration) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[25]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[27]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1919,7 +2105,7 @@ func (x *MTLSConfiguration) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MTLSConfiguration.ProtoReflect.Descriptor instead.
 func (*MTLSConfiguration) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{25}
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *MTLSConfiguration) GetKey() *ConfigurationVariable {
@@ -1958,7 +2144,7 @@ type GraphQLSubscriptionConfiguration struct {
 func (x *GraphQLSubscriptionConfiguration) Reset() {
 	*x = GraphQLSubscriptionConfiguration{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[26]
+		mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[28]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1971,7 +2157,7 @@ func (x *GraphQLSubscriptionConfiguration) String() string {
 func (*GraphQLSubscriptionConfiguration) ProtoMessage() {}
 
 func (x *GraphQLSubscriptionConfiguration) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[26]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[28]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1984,7 +2170,7 @@ func (x *GraphQLSubscriptionConfiguration) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GraphQLSubscriptionConfiguration.ProtoReflect.Descriptor instead.
 func (*GraphQLSubscriptionConfiguration) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{26}
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *GraphQLSubscriptionConfiguration) GetEnabled() bool {
@@ -2027,7 +2213,7 @@ type GraphQLFederationConfiguration struct {
 func (x *GraphQLFederationConfiguration) Reset() {
 	*x = GraphQLFederationConfiguration{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[27]
+		mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[29]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2040,7 +2226,7 @@ func (x *GraphQLFederationConfiguration) String() string {
 func (*GraphQLFederationConfiguration) ProtoMessage() {}
 
 func (x *GraphQLFederationConfiguration) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[27]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[29]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2053,7 +2239,7 @@ func (x *GraphQLFederationConfiguration) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GraphQLFederationConfiguration.ProtoReflect.Descriptor instead.
 func (*GraphQLFederationConfiguration) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{27}
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *GraphQLFederationConfiguration) GetEnabled() bool {
@@ -2082,7 +2268,7 @@ type InternedString struct {
 func (x *InternedString) Reset() {
 	*x = InternedString{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[28]
+		mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[30]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2095,7 +2281,7 @@ func (x *InternedString) String() string {
 func (*InternedString) ProtoMessage() {}
 
 func (x *InternedString) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[28]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[30]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2108,7 +2294,7 @@ func (x *InternedString) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InternedString.ProtoReflect.Descriptor instead.
 func (*InternedString) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{28}
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *InternedString) GetKey() string {
@@ -2130,7 +2316,7 @@ type SingleTypeField struct {
 func (x *SingleTypeField) Reset() {
 	*x = SingleTypeField{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[29]
+		mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[31]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2143,7 +2329,7 @@ func (x *SingleTypeField) String() string {
 func (*SingleTypeField) ProtoMessage() {}
 
 func (x *SingleTypeField) ProtoReflect() protoreflect.Message {
-	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[29]
+	mi := &file_wg_cosmo_node_v1_node_proto_msgTypes[31]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2156,7 +2342,7 @@ func (x *SingleTypeField) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SingleTypeField.ProtoReflect.Descriptor instead.
 func (*SingleTypeField) Descriptor() ([]byte, []int) {
-	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{29}
+	return file_wg_cosmo_node_v1_node_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *SingleTypeField) GetTypeName() string {
@@ -2283,7 +2469,7 @@ var file_wg_cosmo_node_v1_node_proto_rawDesc = []byte{
 	0x72, 0x61, 0x67, 0x65, 0x45, 0x6e, 0x74, 0x72, 0x79, 0x12, 0x10, 0x0a, 0x03, 0x6b, 0x65, 0x79,
 	0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x6b, 0x65, 0x79, 0x12, 0x14, 0x0a, 0x05, 0x76,
 	0x61, 0x6c, 0x75, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x76, 0x61, 0x6c, 0x75,
-	0x65, 0x3a, 0x02, 0x38, 0x01, 0x22, 0xf1, 0x05, 0x0a, 0x17, 0x44, 0x61, 0x74, 0x61, 0x53, 0x6f,
+	0x65, 0x3a, 0x02, 0x38, 0x01, 0x22, 0xc1, 0x06, 0x0a, 0x17, 0x44, 0x61, 0x74, 0x61, 0x53, 0x6f,
 	0x75, 0x72, 0x63, 0x65, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x75, 0x72, 0x61, 0x74, 0x69, 0x6f,
 	0x6e, 0x12, 0x34, 0x0a, 0x04, 0x6b, 0x69, 0x6e, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0e, 0x32,
 	0x20, 0x2e, 0x77, 0x67, 0x2e, 0x63, 0x6f, 0x73, 0x6d, 0x6f, 0x2e, 0x6e, 0x6f, 0x64, 0x65, 0x2e,
@@ -2330,7 +2516,12 @@ var file_wg_cosmo_node_v1_node_proto_rawDesc = []byte{
 	0x72, 0x65, 0x71, 0x75, 0x69, 0x72, 0x65, 0x73, 0x18, 0x0c, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x1f,
 	0x2e, 0x77, 0x67, 0x2e, 0x63, 0x6f, 0x73, 0x6d, 0x6f, 0x2e, 0x6e, 0x6f, 0x64, 0x65, 0x2e, 0x76,
 	0x31, 0x2e, 0x52, 0x65, 0x71, 0x75, 0x69, 0x72, 0x65, 0x64, 0x46, 0x69, 0x65, 0x6c, 0x64, 0x52,
-	0x08, 0x72, 0x65, 0x71, 0x75, 0x69, 0x72, 0x65, 0x73, 0x22, 0xb2, 0x01, 0x0a, 0x12, 0x46, 0x69,
+	0x08, 0x72, 0x65, 0x71, 0x75, 0x69, 0x72, 0x65, 0x73, 0x12, 0x4e, 0x0a, 0x0d, 0x63, 0x75, 0x73,
+	0x74, 0x6f, 0x6d, 0x5f, 0x65, 0x76, 0x65, 0x6e, 0x74, 0x73, 0x18, 0x0d, 0x20, 0x01, 0x28, 0x0b,
+	0x32, 0x29, 0x2e, 0x77, 0x67, 0x2e, 0x63, 0x6f, 0x73, 0x6d, 0x6f, 0x2e, 0x6e, 0x6f, 0x64, 0x65,
+	0x2e, 0x76, 0x31, 0x2e, 0x44, 0x61, 0x74, 0x61, 0x53, 0x6f, 0x75, 0x72, 0x63, 0x65, 0x43, 0x75,
+	0x73, 0x74, 0x6f, 0x6d, 0x5f, 0x45, 0x76, 0x65, 0x6e, 0x74, 0x73, 0x52, 0x0c, 0x63, 0x75, 0x73,
+	0x74, 0x6f, 0x6d, 0x45, 0x76, 0x65, 0x6e, 0x74, 0x73, 0x22, 0xb2, 0x01, 0x0a, 0x12, 0x46, 0x69,
 	0x65, 0x6c, 0x64, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x75, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e,
 	0x12, 0x1b, 0x0a, 0x09, 0x74, 0x79, 0x70, 0x65, 0x5f, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x01, 0x20,
 	0x01, 0x28, 0x09, 0x52, 0x08, 0x74, 0x79, 0x70, 0x65, 0x4e, 0x61, 0x6d, 0x65, 0x12, 0x1d, 0x0a,
@@ -2448,7 +2639,24 @@ var file_wg_cosmo_node_v1_node_proto_rawDesc = []byte{
 	0x03, 0x28, 0x0b, 0x32, 0x21, 0x2e, 0x77, 0x67, 0x2e, 0x63, 0x6f, 0x73, 0x6d, 0x6f, 0x2e, 0x6e,
 	0x6f, 0x64, 0x65, 0x2e, 0x76, 0x31, 0x2e, 0x53, 0x69, 0x6e, 0x67, 0x6c, 0x65, 0x54, 0x79, 0x70,
 	0x65, 0x46, 0x69, 0x65, 0x6c, 0x64, 0x52, 0x16, 0x63, 0x75, 0x73, 0x74, 0x6f, 0x6d, 0x53, 0x63,
-	0x61, 0x6c, 0x61, 0x72, 0x54, 0x79, 0x70, 0x65, 0x46, 0x69, 0x65, 0x6c, 0x64, 0x73, 0x22, 0x56,
+	0x61, 0x6c, 0x61, 0x72, 0x54, 0x79, 0x70, 0x65, 0x46, 0x69, 0x65, 0x6c, 0x64, 0x73, 0x22, 0xb4,
+	0x01, 0x0a, 0x12, 0x45, 0x76, 0x65, 0x6e, 0x74, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x75, 0x72,
+	0x61, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x2f, 0x0a, 0x04, 0x74, 0x79, 0x70, 0x65, 0x18, 0x01, 0x20,
+	0x01, 0x28, 0x0e, 0x32, 0x1b, 0x2e, 0x77, 0x67, 0x2e, 0x63, 0x6f, 0x73, 0x6d, 0x6f, 0x2e, 0x6e,
+	0x6f, 0x64, 0x65, 0x2e, 0x76, 0x31, 0x2e, 0x45, 0x76, 0x65, 0x6e, 0x74, 0x54, 0x79, 0x70, 0x65,
+	0x52, 0x04, 0x74, 0x79, 0x70, 0x65, 0x12, 0x1b, 0x0a, 0x09, 0x74, 0x79, 0x70, 0x65, 0x5f, 0x6e,
+	0x61, 0x6d, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x08, 0x74, 0x79, 0x70, 0x65, 0x4e,
+	0x61, 0x6d, 0x65, 0x12, 0x1d, 0x0a, 0x0a, 0x66, 0x69, 0x65, 0x6c, 0x64, 0x5f, 0x6e, 0x61, 0x6d,
+	0x65, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x09, 0x66, 0x69, 0x65, 0x6c, 0x64, 0x4e, 0x61,
+	0x6d, 0x65, 0x12, 0x14, 0x0a, 0x05, 0x74, 0x6f, 0x70, 0x69, 0x63, 0x18, 0x04, 0x20, 0x01, 0x28,
+	0x09, 0x52, 0x05, 0x74, 0x6f, 0x70, 0x69, 0x63, 0x12, 0x1b, 0x0a, 0x09, 0x73, 0x6f, 0x75, 0x72,
+	0x63, 0x65, 0x5f, 0x69, 0x64, 0x18, 0x05, 0x20, 0x01, 0x28, 0x09, 0x52, 0x08, 0x73, 0x6f, 0x75,
+	0x72, 0x63, 0x65, 0x49, 0x64, 0x22, 0x57, 0x0a, 0x17, 0x44, 0x61, 0x74, 0x61, 0x53, 0x6f, 0x75,
+	0x72, 0x63, 0x65, 0x43, 0x75, 0x73, 0x74, 0x6f, 0x6d, 0x5f, 0x45, 0x76, 0x65, 0x6e, 0x74, 0x73,
+	0x12, 0x3c, 0x0a, 0x06, 0x65, 0x76, 0x65, 0x6e, 0x74, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b,
+	0x32, 0x24, 0x2e, 0x77, 0x67, 0x2e, 0x63, 0x6f, 0x73, 0x6d, 0x6f, 0x2e, 0x6e, 0x6f, 0x64, 0x65,
+	0x2e, 0x76, 0x31, 0x2e, 0x45, 0x76, 0x65, 0x6e, 0x74, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x75,
+	0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x06, 0x65, 0x76, 0x65, 0x6e, 0x74, 0x73, 0x22, 0x56,
 	0x0a, 0x17, 0x44, 0x61, 0x74, 0x61, 0x53, 0x6f, 0x75, 0x72, 0x63, 0x65, 0x43, 0x75, 0x73, 0x74,
 	0x6f, 0x6d, 0x5f, 0x53, 0x74, 0x61, 0x74, 0x69, 0x63, 0x12, 0x3b, 0x0a, 0x04, 0x64, 0x61, 0x74,
 	0x61, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x27, 0x2e, 0x77, 0x67, 0x2e, 0x63, 0x6f, 0x73,
@@ -2543,49 +2751,53 @@ var file_wg_cosmo_node_v1_node_proto_rawDesc = []byte{
 	0x0a, 0x0e, 0x41, 0x72, 0x67, 0x75, 0x6d, 0x65, 0x6e, 0x74, 0x53, 0x6f, 0x75, 0x72, 0x63, 0x65,
 	0x12, 0x10, 0x0a, 0x0c, 0x4f, 0x42, 0x4a, 0x45, 0x43, 0x54, 0x5f, 0x46, 0x49, 0x45, 0x4c, 0x44,
 	0x10, 0x00, 0x12, 0x12, 0x0a, 0x0e, 0x46, 0x49, 0x45, 0x4c, 0x44, 0x5f, 0x41, 0x52, 0x47, 0x55,
-	0x4d, 0x45, 0x4e, 0x54, 0x10, 0x01, 0x2a, 0x29, 0x0a, 0x0e, 0x44, 0x61, 0x74, 0x61, 0x53, 0x6f,
+	0x4d, 0x45, 0x4e, 0x54, 0x10, 0x01, 0x2a, 0x35, 0x0a, 0x0e, 0x44, 0x61, 0x74, 0x61, 0x53, 0x6f,
 	0x75, 0x72, 0x63, 0x65, 0x4b, 0x69, 0x6e, 0x64, 0x12, 0x0a, 0x0a, 0x06, 0x53, 0x54, 0x41, 0x54,
 	0x49, 0x43, 0x10, 0x00, 0x12, 0x0b, 0x0a, 0x07, 0x47, 0x52, 0x41, 0x50, 0x48, 0x51, 0x4c, 0x10,
-	0x01, 0x2a, 0x86, 0x01, 0x0a, 0x19, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x75, 0x72, 0x61, 0x74,
-	0x69, 0x6f, 0x6e, 0x56, 0x61, 0x72, 0x69, 0x61, 0x62, 0x6c, 0x65, 0x4b, 0x69, 0x6e, 0x64, 0x12,
-	0x21, 0x0a, 0x1d, 0x53, 0x54, 0x41, 0x54, 0x49, 0x43, 0x5f, 0x43, 0x4f, 0x4e, 0x46, 0x49, 0x47,
-	0x55, 0x52, 0x41, 0x54, 0x49, 0x4f, 0x4e, 0x5f, 0x56, 0x41, 0x52, 0x49, 0x41, 0x42, 0x4c, 0x45,
-	0x10, 0x00, 0x12, 0x1e, 0x0a, 0x1a, 0x45, 0x4e, 0x56, 0x5f, 0x43, 0x4f, 0x4e, 0x46, 0x49, 0x47,
-	0x55, 0x52, 0x41, 0x54, 0x49, 0x4f, 0x4e, 0x5f, 0x56, 0x41, 0x52, 0x49, 0x41, 0x42, 0x4c, 0x45,
-	0x10, 0x01, 0x12, 0x26, 0x0a, 0x22, 0x50, 0x4c, 0x41, 0x43, 0x45, 0x48, 0x4f, 0x4c, 0x44, 0x45,
-	0x52, 0x5f, 0x43, 0x4f, 0x4e, 0x46, 0x49, 0x47, 0x55, 0x52, 0x41, 0x54, 0x49, 0x4f, 0x4e, 0x5f,
-	0x56, 0x41, 0x52, 0x49, 0x41, 0x42, 0x4c, 0x45, 0x10, 0x02, 0x2a, 0x41, 0x0a, 0x0a, 0x48, 0x54,
-	0x54, 0x50, 0x4d, 0x65, 0x74, 0x68, 0x6f, 0x64, 0x12, 0x07, 0x0a, 0x03, 0x47, 0x45, 0x54, 0x10,
-	0x00, 0x12, 0x08, 0x0a, 0x04, 0x50, 0x4f, 0x53, 0x54, 0x10, 0x01, 0x12, 0x07, 0x0a, 0x03, 0x50,
-	0x55, 0x54, 0x10, 0x02, 0x12, 0x0a, 0x0a, 0x06, 0x44, 0x45, 0x4c, 0x45, 0x54, 0x45, 0x10, 0x03,
-	0x12, 0x0b, 0x0a, 0x07, 0x4f, 0x50, 0x54, 0x49, 0x4f, 0x4e, 0x53, 0x10, 0x04, 0x32, 0xd7, 0x01,
-	0x0a, 0x0b, 0x4e, 0x6f, 0x64, 0x65, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x12, 0x67, 0x0a,
-	0x1a, 0x47, 0x65, 0x74, 0x4c, 0x61, 0x74, 0x65, 0x73, 0x74, 0x56, 0x61, 0x6c, 0x69, 0x64, 0x52,
-	0x6f, 0x75, 0x74, 0x65, 0x72, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x12, 0x22, 0x2e, 0x77, 0x67,
-	0x2e, 0x63, 0x6f, 0x73, 0x6d, 0x6f, 0x2e, 0x6e, 0x6f, 0x64, 0x65, 0x2e, 0x76, 0x31, 0x2e, 0x47,
-	0x65, 0x74, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a,
-	0x23, 0x2e, 0x77, 0x67, 0x2e, 0x63, 0x6f, 0x73, 0x6d, 0x6f, 0x2e, 0x6e, 0x6f, 0x64, 0x65, 0x2e,
-	0x76, 0x31, 0x2e, 0x47, 0x65, 0x74, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x52, 0x65, 0x73, 0x70,
-	0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x5f, 0x0a, 0x0c, 0x53, 0x65, 0x6c, 0x66, 0x52, 0x65,
-	0x67, 0x69, 0x73, 0x74, 0x65, 0x72, 0x12, 0x25, 0x2e, 0x77, 0x67, 0x2e, 0x63, 0x6f, 0x73, 0x6d,
-	0x6f, 0x2e, 0x6e, 0x6f, 0x64, 0x65, 0x2e, 0x76, 0x31, 0x2e, 0x53, 0x65, 0x6c, 0x66, 0x52, 0x65,
-	0x67, 0x69, 0x73, 0x74, 0x65, 0x72, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x26, 0x2e,
+	0x01, 0x12, 0x0a, 0x0a, 0x06, 0x50, 0x55, 0x42, 0x53, 0x55, 0x42, 0x10, 0x02, 0x2a, 0x34, 0x0a,
+	0x09, 0x45, 0x76, 0x65, 0x6e, 0x74, 0x54, 0x79, 0x70, 0x65, 0x12, 0x0b, 0x0a, 0x07, 0x50, 0x55,
+	0x42, 0x4c, 0x49, 0x53, 0x48, 0x10, 0x00, 0x12, 0x0b, 0x0a, 0x07, 0x52, 0x45, 0x51, 0x55, 0x45,
+	0x53, 0x54, 0x10, 0x01, 0x12, 0x0d, 0x0a, 0x09, 0x53, 0x55, 0x42, 0x53, 0x43, 0x52, 0x49, 0x42,
+	0x45, 0x10, 0x02, 0x2a, 0x86, 0x01, 0x0a, 0x19, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x75, 0x72,
+	0x61, 0x74, 0x69, 0x6f, 0x6e, 0x56, 0x61, 0x72, 0x69, 0x61, 0x62, 0x6c, 0x65, 0x4b, 0x69, 0x6e,
+	0x64, 0x12, 0x21, 0x0a, 0x1d, 0x53, 0x54, 0x41, 0x54, 0x49, 0x43, 0x5f, 0x43, 0x4f, 0x4e, 0x46,
+	0x49, 0x47, 0x55, 0x52, 0x41, 0x54, 0x49, 0x4f, 0x4e, 0x5f, 0x56, 0x41, 0x52, 0x49, 0x41, 0x42,
+	0x4c, 0x45, 0x10, 0x00, 0x12, 0x1e, 0x0a, 0x1a, 0x45, 0x4e, 0x56, 0x5f, 0x43, 0x4f, 0x4e, 0x46,
+	0x49, 0x47, 0x55, 0x52, 0x41, 0x54, 0x49, 0x4f, 0x4e, 0x5f, 0x56, 0x41, 0x52, 0x49, 0x41, 0x42,
+	0x4c, 0x45, 0x10, 0x01, 0x12, 0x26, 0x0a, 0x22, 0x50, 0x4c, 0x41, 0x43, 0x45, 0x48, 0x4f, 0x4c,
+	0x44, 0x45, 0x52, 0x5f, 0x43, 0x4f, 0x4e, 0x46, 0x49, 0x47, 0x55, 0x52, 0x41, 0x54, 0x49, 0x4f,
+	0x4e, 0x5f, 0x56, 0x41, 0x52, 0x49, 0x41, 0x42, 0x4c, 0x45, 0x10, 0x02, 0x2a, 0x41, 0x0a, 0x0a,
+	0x48, 0x54, 0x54, 0x50, 0x4d, 0x65, 0x74, 0x68, 0x6f, 0x64, 0x12, 0x07, 0x0a, 0x03, 0x47, 0x45,
+	0x54, 0x10, 0x00, 0x12, 0x08, 0x0a, 0x04, 0x50, 0x4f, 0x53, 0x54, 0x10, 0x01, 0x12, 0x07, 0x0a,
+	0x03, 0x50, 0x55, 0x54, 0x10, 0x02, 0x12, 0x0a, 0x0a, 0x06, 0x44, 0x45, 0x4c, 0x45, 0x54, 0x45,
+	0x10, 0x03, 0x12, 0x0b, 0x0a, 0x07, 0x4f, 0x50, 0x54, 0x49, 0x4f, 0x4e, 0x53, 0x10, 0x04, 0x32,
+	0xd7, 0x01, 0x0a, 0x0b, 0x4e, 0x6f, 0x64, 0x65, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x12,
+	0x67, 0x0a, 0x1a, 0x47, 0x65, 0x74, 0x4c, 0x61, 0x74, 0x65, 0x73, 0x74, 0x56, 0x61, 0x6c, 0x69,
+	0x64, 0x52, 0x6f, 0x75, 0x74, 0x65, 0x72, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x12, 0x22, 0x2e,
 	0x77, 0x67, 0x2e, 0x63, 0x6f, 0x73, 0x6d, 0x6f, 0x2e, 0x6e, 0x6f, 0x64, 0x65, 0x2e, 0x76, 0x31,
-	0x2e, 0x53, 0x65, 0x6c, 0x66, 0x52, 0x65, 0x67, 0x69, 0x73, 0x74, 0x65, 0x72, 0x52, 0x65, 0x73,
-	0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x42, 0xcb, 0x01, 0x0a, 0x14, 0x63, 0x6f, 0x6d, 0x2e,
-	0x77, 0x67, 0x2e, 0x63, 0x6f, 0x73, 0x6d, 0x6f, 0x2e, 0x6e, 0x6f, 0x64, 0x65, 0x2e, 0x76, 0x31,
-	0x42, 0x09, 0x4e, 0x6f, 0x64, 0x65, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x50, 0x01, 0x5a, 0x45, 0x67,
-	0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x77, 0x75, 0x6e, 0x64, 0x65, 0x72,
-	0x67, 0x72, 0x61, 0x70, 0x68, 0x2f, 0x63, 0x6f, 0x73, 0x6d, 0x6f, 0x2f, 0x72, 0x6f, 0x75, 0x74,
-	0x65, 0x72, 0x2f, 0x67, 0x65, 0x6e, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2f, 0x77, 0x67, 0x2f,
-	0x63, 0x6f, 0x73, 0x6d, 0x6f, 0x2f, 0x6e, 0x6f, 0x64, 0x65, 0x2f, 0x76, 0x31, 0x3b, 0x6e, 0x6f,
-	0x64, 0x65, 0x76, 0x31, 0xa2, 0x02, 0x03, 0x57, 0x43, 0x4e, 0xaa, 0x02, 0x10, 0x57, 0x67, 0x2e,
-	0x43, 0x6f, 0x73, 0x6d, 0x6f, 0x2e, 0x4e, 0x6f, 0x64, 0x65, 0x2e, 0x56, 0x31, 0xca, 0x02, 0x10,
-	0x57, 0x67, 0x5c, 0x43, 0x6f, 0x73, 0x6d, 0x6f, 0x5c, 0x4e, 0x6f, 0x64, 0x65, 0x5c, 0x56, 0x31,
-	0xe2, 0x02, 0x1c, 0x57, 0x67, 0x5c, 0x43, 0x6f, 0x73, 0x6d, 0x6f, 0x5c, 0x4e, 0x6f, 0x64, 0x65,
-	0x5c, 0x56, 0x31, 0x5c, 0x47, 0x50, 0x42, 0x4d, 0x65, 0x74, 0x61, 0x64, 0x61, 0x74, 0x61, 0xea,
-	0x02, 0x13, 0x57, 0x67, 0x3a, 0x3a, 0x43, 0x6f, 0x73, 0x6d, 0x6f, 0x3a, 0x3a, 0x4e, 0x6f, 0x64,
-	0x65, 0x3a, 0x3a, 0x56, 0x31, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x2e, 0x47, 0x65, 0x74, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73,
+	0x74, 0x1a, 0x23, 0x2e, 0x77, 0x67, 0x2e, 0x63, 0x6f, 0x73, 0x6d, 0x6f, 0x2e, 0x6e, 0x6f, 0x64,
+	0x65, 0x2e, 0x76, 0x31, 0x2e, 0x47, 0x65, 0x74, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x52, 0x65,
+	0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x5f, 0x0a, 0x0c, 0x53, 0x65, 0x6c, 0x66,
+	0x52, 0x65, 0x67, 0x69, 0x73, 0x74, 0x65, 0x72, 0x12, 0x25, 0x2e, 0x77, 0x67, 0x2e, 0x63, 0x6f,
+	0x73, 0x6d, 0x6f, 0x2e, 0x6e, 0x6f, 0x64, 0x65, 0x2e, 0x76, 0x31, 0x2e, 0x53, 0x65, 0x6c, 0x66,
+	0x52, 0x65, 0x67, 0x69, 0x73, 0x74, 0x65, 0x72, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a,
+	0x26, 0x2e, 0x77, 0x67, 0x2e, 0x63, 0x6f, 0x73, 0x6d, 0x6f, 0x2e, 0x6e, 0x6f, 0x64, 0x65, 0x2e,
+	0x76, 0x31, 0x2e, 0x53, 0x65, 0x6c, 0x66, 0x52, 0x65, 0x67, 0x69, 0x73, 0x74, 0x65, 0x72, 0x52,
+	0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x42, 0xcb, 0x01, 0x0a, 0x14, 0x63, 0x6f,
+	0x6d, 0x2e, 0x77, 0x67, 0x2e, 0x63, 0x6f, 0x73, 0x6d, 0x6f, 0x2e, 0x6e, 0x6f, 0x64, 0x65, 0x2e,
+	0x76, 0x31, 0x42, 0x09, 0x4e, 0x6f, 0x64, 0x65, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x50, 0x01, 0x5a,
+	0x45, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x77, 0x75, 0x6e, 0x64,
+	0x65, 0x72, 0x67, 0x72, 0x61, 0x70, 0x68, 0x2f, 0x63, 0x6f, 0x73, 0x6d, 0x6f, 0x2f, 0x72, 0x6f,
+	0x75, 0x74, 0x65, 0x72, 0x2f, 0x67, 0x65, 0x6e, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2f, 0x77,
+	0x67, 0x2f, 0x63, 0x6f, 0x73, 0x6d, 0x6f, 0x2f, 0x6e, 0x6f, 0x64, 0x65, 0x2f, 0x76, 0x31, 0x3b,
+	0x6e, 0x6f, 0x64, 0x65, 0x76, 0x31, 0xa2, 0x02, 0x03, 0x57, 0x43, 0x4e, 0xaa, 0x02, 0x10, 0x57,
+	0x67, 0x2e, 0x43, 0x6f, 0x73, 0x6d, 0x6f, 0x2e, 0x4e, 0x6f, 0x64, 0x65, 0x2e, 0x56, 0x31, 0xca,
+	0x02, 0x10, 0x57, 0x67, 0x5c, 0x43, 0x6f, 0x73, 0x6d, 0x6f, 0x5c, 0x4e, 0x6f, 0x64, 0x65, 0x5c,
+	0x56, 0x31, 0xe2, 0x02, 0x1c, 0x57, 0x67, 0x5c, 0x43, 0x6f, 0x73, 0x6d, 0x6f, 0x5c, 0x4e, 0x6f,
+	0x64, 0x65, 0x5c, 0x56, 0x31, 0x5c, 0x47, 0x50, 0x42, 0x4d, 0x65, 0x74, 0x61, 0x64, 0x61, 0x74,
+	0x61, 0xea, 0x02, 0x13, 0x57, 0x67, 0x3a, 0x3a, 0x43, 0x6f, 0x73, 0x6d, 0x6f, 0x3a, 0x3a, 0x4e,
+	0x6f, 0x64, 0x65, 0x3a, 0x3a, 0x56, 0x31, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -2600,104 +2812,110 @@ func file_wg_cosmo_node_v1_node_proto_rawDescGZIP() []byte {
 	return file_wg_cosmo_node_v1_node_proto_rawDescData
 }
 
-var file_wg_cosmo_node_v1_node_proto_enumTypes = make([]protoimpl.EnumInfo, 5)
-var file_wg_cosmo_node_v1_node_proto_msgTypes = make([]protoimpl.MessageInfo, 32)
+var file_wg_cosmo_node_v1_node_proto_enumTypes = make([]protoimpl.EnumInfo, 6)
+var file_wg_cosmo_node_v1_node_proto_msgTypes = make([]protoimpl.MessageInfo, 34)
 var file_wg_cosmo_node_v1_node_proto_goTypes = []interface{}{
 	(ArgumentRenderConfiguration)(0),         // 0: wg.cosmo.node.v1.ArgumentRenderConfiguration
 	(ArgumentSource)(0),                      // 1: wg.cosmo.node.v1.ArgumentSource
 	(DataSourceKind)(0),                      // 2: wg.cosmo.node.v1.DataSourceKind
-	(ConfigurationVariableKind)(0),           // 3: wg.cosmo.node.v1.ConfigurationVariableKind
-	(HTTPMethod)(0),                          // 4: wg.cosmo.node.v1.HTTPMethod
-	(*Subgraph)(nil),                         // 5: wg.cosmo.node.v1.Subgraph
-	(*RouterConfig)(nil),                     // 6: wg.cosmo.node.v1.RouterConfig
-	(*Response)(nil),                         // 7: wg.cosmo.node.v1.Response
-	(*ResponseStatus)(nil),                   // 8: wg.cosmo.node.v1.ResponseStatus
-	(*GetConfigRequest)(nil),                 // 9: wg.cosmo.node.v1.GetConfigRequest
-	(*GetConfigResponse)(nil),                // 10: wg.cosmo.node.v1.GetConfigResponse
-	(*RegistrationInfo)(nil),                 // 11: wg.cosmo.node.v1.RegistrationInfo
-	(*AccountLimits)(nil),                    // 12: wg.cosmo.node.v1.AccountLimits
-	(*SelfRegisterRequest)(nil),              // 13: wg.cosmo.node.v1.SelfRegisterRequest
-	(*SelfRegisterResponse)(nil),             // 14: wg.cosmo.node.v1.SelfRegisterResponse
-	(*EngineConfiguration)(nil),              // 15: wg.cosmo.node.v1.EngineConfiguration
-	(*DataSourceConfiguration)(nil),          // 16: wg.cosmo.node.v1.DataSourceConfiguration
-	(*FieldConfiguration)(nil),               // 17: wg.cosmo.node.v1.FieldConfiguration
-	(*ArgumentConfiguration)(nil),            // 18: wg.cosmo.node.v1.ArgumentConfiguration
-	(*TypeConfiguration)(nil),                // 19: wg.cosmo.node.v1.TypeConfiguration
-	(*TypeField)(nil),                        // 20: wg.cosmo.node.v1.TypeField
-	(*RequiredField)(nil),                    // 21: wg.cosmo.node.v1.RequiredField
-	(*FetchConfiguration)(nil),               // 22: wg.cosmo.node.v1.FetchConfiguration
-	(*StatusCodeTypeMapping)(nil),            // 23: wg.cosmo.node.v1.StatusCodeTypeMapping
-	(*DataSourceCustom_GraphQL)(nil),         // 24: wg.cosmo.node.v1.DataSourceCustom_GraphQL
-	(*DataSourceCustom_Static)(nil),          // 25: wg.cosmo.node.v1.DataSourceCustom_Static
-	(*ConfigurationVariable)(nil),            // 26: wg.cosmo.node.v1.ConfigurationVariable
-	(*DirectiveConfiguration)(nil),           // 27: wg.cosmo.node.v1.DirectiveConfiguration
-	(*URLQueryConfiguration)(nil),            // 28: wg.cosmo.node.v1.URLQueryConfiguration
-	(*HTTPHeader)(nil),                       // 29: wg.cosmo.node.v1.HTTPHeader
-	(*MTLSConfiguration)(nil),                // 30: wg.cosmo.node.v1.MTLSConfiguration
-	(*GraphQLSubscriptionConfiguration)(nil), // 31: wg.cosmo.node.v1.GraphQLSubscriptionConfiguration
-	(*GraphQLFederationConfiguration)(nil),   // 32: wg.cosmo.node.v1.GraphQLFederationConfiguration
-	(*InternedString)(nil),                   // 33: wg.cosmo.node.v1.InternedString
-	(*SingleTypeField)(nil),                  // 34: wg.cosmo.node.v1.SingleTypeField
-	nil,                                      // 35: wg.cosmo.node.v1.EngineConfiguration.StringStorageEntry
-	nil,                                      // 36: wg.cosmo.node.v1.FetchConfiguration.HeaderEntry
-	(common.EnumStatusCode)(0),               // 37: wg.cosmo.common.EnumStatusCode
-	(common.GraphQLSubscriptionProtocol)(0),  // 38: wg.cosmo.common.GraphQLSubscriptionProtocol
+	(EventType)(0),                           // 3: wg.cosmo.node.v1.EventType
+	(ConfigurationVariableKind)(0),           // 4: wg.cosmo.node.v1.ConfigurationVariableKind
+	(HTTPMethod)(0),                          // 5: wg.cosmo.node.v1.HTTPMethod
+	(*Subgraph)(nil),                         // 6: wg.cosmo.node.v1.Subgraph
+	(*RouterConfig)(nil),                     // 7: wg.cosmo.node.v1.RouterConfig
+	(*Response)(nil),                         // 8: wg.cosmo.node.v1.Response
+	(*ResponseStatus)(nil),                   // 9: wg.cosmo.node.v1.ResponseStatus
+	(*GetConfigRequest)(nil),                 // 10: wg.cosmo.node.v1.GetConfigRequest
+	(*GetConfigResponse)(nil),                // 11: wg.cosmo.node.v1.GetConfigResponse
+	(*RegistrationInfo)(nil),                 // 12: wg.cosmo.node.v1.RegistrationInfo
+	(*AccountLimits)(nil),                    // 13: wg.cosmo.node.v1.AccountLimits
+	(*SelfRegisterRequest)(nil),              // 14: wg.cosmo.node.v1.SelfRegisterRequest
+	(*SelfRegisterResponse)(nil),             // 15: wg.cosmo.node.v1.SelfRegisterResponse
+	(*EngineConfiguration)(nil),              // 16: wg.cosmo.node.v1.EngineConfiguration
+	(*DataSourceConfiguration)(nil),          // 17: wg.cosmo.node.v1.DataSourceConfiguration
+	(*FieldConfiguration)(nil),               // 18: wg.cosmo.node.v1.FieldConfiguration
+	(*ArgumentConfiguration)(nil),            // 19: wg.cosmo.node.v1.ArgumentConfiguration
+	(*TypeConfiguration)(nil),                // 20: wg.cosmo.node.v1.TypeConfiguration
+	(*TypeField)(nil),                        // 21: wg.cosmo.node.v1.TypeField
+	(*RequiredField)(nil),                    // 22: wg.cosmo.node.v1.RequiredField
+	(*FetchConfiguration)(nil),               // 23: wg.cosmo.node.v1.FetchConfiguration
+	(*StatusCodeTypeMapping)(nil),            // 24: wg.cosmo.node.v1.StatusCodeTypeMapping
+	(*DataSourceCustom_GraphQL)(nil),         // 25: wg.cosmo.node.v1.DataSourceCustom_GraphQL
+	(*EventConfiguration)(nil),               // 26: wg.cosmo.node.v1.EventConfiguration
+	(*DataSourceCustom_Events)(nil),          // 27: wg.cosmo.node.v1.DataSourceCustom_Events
+	(*DataSourceCustom_Static)(nil),          // 28: wg.cosmo.node.v1.DataSourceCustom_Static
+	(*ConfigurationVariable)(nil),            // 29: wg.cosmo.node.v1.ConfigurationVariable
+	(*DirectiveConfiguration)(nil),           // 30: wg.cosmo.node.v1.DirectiveConfiguration
+	(*URLQueryConfiguration)(nil),            // 31: wg.cosmo.node.v1.URLQueryConfiguration
+	(*HTTPHeader)(nil),                       // 32: wg.cosmo.node.v1.HTTPHeader
+	(*MTLSConfiguration)(nil),                // 33: wg.cosmo.node.v1.MTLSConfiguration
+	(*GraphQLSubscriptionConfiguration)(nil), // 34: wg.cosmo.node.v1.GraphQLSubscriptionConfiguration
+	(*GraphQLFederationConfiguration)(nil),   // 35: wg.cosmo.node.v1.GraphQLFederationConfiguration
+	(*InternedString)(nil),                   // 36: wg.cosmo.node.v1.InternedString
+	(*SingleTypeField)(nil),                  // 37: wg.cosmo.node.v1.SingleTypeField
+	nil,                                      // 38: wg.cosmo.node.v1.EngineConfiguration.StringStorageEntry
+	nil,                                      // 39: wg.cosmo.node.v1.FetchConfiguration.HeaderEntry
+	(common.EnumStatusCode)(0),               // 40: wg.cosmo.common.EnumStatusCode
+	(common.GraphQLSubscriptionProtocol)(0),  // 41: wg.cosmo.common.GraphQLSubscriptionProtocol
 }
 var file_wg_cosmo_node_v1_node_proto_depIdxs = []int32{
-	15, // 0: wg.cosmo.node.v1.RouterConfig.engine_config:type_name -> wg.cosmo.node.v1.EngineConfiguration
-	5,  // 1: wg.cosmo.node.v1.RouterConfig.subgraphs:type_name -> wg.cosmo.node.v1.Subgraph
-	37, // 2: wg.cosmo.node.v1.Response.code:type_name -> wg.cosmo.common.EnumStatusCode
-	7,  // 3: wg.cosmo.node.v1.GetConfigResponse.response:type_name -> wg.cosmo.node.v1.Response
-	6,  // 4: wg.cosmo.node.v1.GetConfigResponse.config:type_name -> wg.cosmo.node.v1.RouterConfig
-	12, // 5: wg.cosmo.node.v1.RegistrationInfo.account_limits:type_name -> wg.cosmo.node.v1.AccountLimits
-	7,  // 6: wg.cosmo.node.v1.SelfRegisterResponse.response:type_name -> wg.cosmo.node.v1.Response
-	11, // 7: wg.cosmo.node.v1.SelfRegisterResponse.registrationInfo:type_name -> wg.cosmo.node.v1.RegistrationInfo
-	16, // 8: wg.cosmo.node.v1.EngineConfiguration.datasource_configurations:type_name -> wg.cosmo.node.v1.DataSourceConfiguration
-	17, // 9: wg.cosmo.node.v1.EngineConfiguration.field_configurations:type_name -> wg.cosmo.node.v1.FieldConfiguration
-	19, // 10: wg.cosmo.node.v1.EngineConfiguration.type_configurations:type_name -> wg.cosmo.node.v1.TypeConfiguration
-	35, // 11: wg.cosmo.node.v1.EngineConfiguration.string_storage:type_name -> wg.cosmo.node.v1.EngineConfiguration.StringStorageEntry
+	16, // 0: wg.cosmo.node.v1.RouterConfig.engine_config:type_name -> wg.cosmo.node.v1.EngineConfiguration
+	6,  // 1: wg.cosmo.node.v1.RouterConfig.subgraphs:type_name -> wg.cosmo.node.v1.Subgraph
+	40, // 2: wg.cosmo.node.v1.Response.code:type_name -> wg.cosmo.common.EnumStatusCode
+	8,  // 3: wg.cosmo.node.v1.GetConfigResponse.response:type_name -> wg.cosmo.node.v1.Response
+	7,  // 4: wg.cosmo.node.v1.GetConfigResponse.config:type_name -> wg.cosmo.node.v1.RouterConfig
+	13, // 5: wg.cosmo.node.v1.RegistrationInfo.account_limits:type_name -> wg.cosmo.node.v1.AccountLimits
+	8,  // 6: wg.cosmo.node.v1.SelfRegisterResponse.response:type_name -> wg.cosmo.node.v1.Response
+	12, // 7: wg.cosmo.node.v1.SelfRegisterResponse.registrationInfo:type_name -> wg.cosmo.node.v1.RegistrationInfo
+	17, // 8: wg.cosmo.node.v1.EngineConfiguration.datasource_configurations:type_name -> wg.cosmo.node.v1.DataSourceConfiguration
+	18, // 9: wg.cosmo.node.v1.EngineConfiguration.field_configurations:type_name -> wg.cosmo.node.v1.FieldConfiguration
+	20, // 10: wg.cosmo.node.v1.EngineConfiguration.type_configurations:type_name -> wg.cosmo.node.v1.TypeConfiguration
+	38, // 11: wg.cosmo.node.v1.EngineConfiguration.string_storage:type_name -> wg.cosmo.node.v1.EngineConfiguration.StringStorageEntry
 	2,  // 12: wg.cosmo.node.v1.DataSourceConfiguration.kind:type_name -> wg.cosmo.node.v1.DataSourceKind
-	20, // 13: wg.cosmo.node.v1.DataSourceConfiguration.root_nodes:type_name -> wg.cosmo.node.v1.TypeField
-	20, // 14: wg.cosmo.node.v1.DataSourceConfiguration.child_nodes:type_name -> wg.cosmo.node.v1.TypeField
-	24, // 15: wg.cosmo.node.v1.DataSourceConfiguration.custom_graphql:type_name -> wg.cosmo.node.v1.DataSourceCustom_GraphQL
-	25, // 16: wg.cosmo.node.v1.DataSourceConfiguration.custom_static:type_name -> wg.cosmo.node.v1.DataSourceCustom_Static
-	27, // 17: wg.cosmo.node.v1.DataSourceConfiguration.directives:type_name -> wg.cosmo.node.v1.DirectiveConfiguration
-	21, // 18: wg.cosmo.node.v1.DataSourceConfiguration.keys:type_name -> wg.cosmo.node.v1.RequiredField
-	21, // 19: wg.cosmo.node.v1.DataSourceConfiguration.provides:type_name -> wg.cosmo.node.v1.RequiredField
-	21, // 20: wg.cosmo.node.v1.DataSourceConfiguration.requires:type_name -> wg.cosmo.node.v1.RequiredField
-	18, // 21: wg.cosmo.node.v1.FieldConfiguration.arguments_configuration:type_name -> wg.cosmo.node.v1.ArgumentConfiguration
-	1,  // 22: wg.cosmo.node.v1.ArgumentConfiguration.source_type:type_name -> wg.cosmo.node.v1.ArgumentSource
-	26, // 23: wg.cosmo.node.v1.FetchConfiguration.url:type_name -> wg.cosmo.node.v1.ConfigurationVariable
-	4,  // 24: wg.cosmo.node.v1.FetchConfiguration.method:type_name -> wg.cosmo.node.v1.HTTPMethod
-	36, // 25: wg.cosmo.node.v1.FetchConfiguration.header:type_name -> wg.cosmo.node.v1.FetchConfiguration.HeaderEntry
-	26, // 26: wg.cosmo.node.v1.FetchConfiguration.body:type_name -> wg.cosmo.node.v1.ConfigurationVariable
-	28, // 27: wg.cosmo.node.v1.FetchConfiguration.query:type_name -> wg.cosmo.node.v1.URLQueryConfiguration
-	30, // 28: wg.cosmo.node.v1.FetchConfiguration.mtls:type_name -> wg.cosmo.node.v1.MTLSConfiguration
-	26, // 29: wg.cosmo.node.v1.FetchConfiguration.base_url:type_name -> wg.cosmo.node.v1.ConfigurationVariable
-	26, // 30: wg.cosmo.node.v1.FetchConfiguration.path:type_name -> wg.cosmo.node.v1.ConfigurationVariable
-	26, // 31: wg.cosmo.node.v1.FetchConfiguration.http_proxy_url:type_name -> wg.cosmo.node.v1.ConfigurationVariable
-	22, // 32: wg.cosmo.node.v1.DataSourceCustom_GraphQL.fetch:type_name -> wg.cosmo.node.v1.FetchConfiguration
-	31, // 33: wg.cosmo.node.v1.DataSourceCustom_GraphQL.subscription:type_name -> wg.cosmo.node.v1.GraphQLSubscriptionConfiguration
-	32, // 34: wg.cosmo.node.v1.DataSourceCustom_GraphQL.federation:type_name -> wg.cosmo.node.v1.GraphQLFederationConfiguration
-	33, // 35: wg.cosmo.node.v1.DataSourceCustom_GraphQL.upstream_schema:type_name -> wg.cosmo.node.v1.InternedString
-	34, // 36: wg.cosmo.node.v1.DataSourceCustom_GraphQL.custom_scalar_type_fields:type_name -> wg.cosmo.node.v1.SingleTypeField
-	26, // 37: wg.cosmo.node.v1.DataSourceCustom_Static.data:type_name -> wg.cosmo.node.v1.ConfigurationVariable
-	3,  // 38: wg.cosmo.node.v1.ConfigurationVariable.kind:type_name -> wg.cosmo.node.v1.ConfigurationVariableKind
-	26, // 39: wg.cosmo.node.v1.HTTPHeader.values:type_name -> wg.cosmo.node.v1.ConfigurationVariable
-	26, // 40: wg.cosmo.node.v1.MTLSConfiguration.key:type_name -> wg.cosmo.node.v1.ConfigurationVariable
-	26, // 41: wg.cosmo.node.v1.MTLSConfiguration.cert:type_name -> wg.cosmo.node.v1.ConfigurationVariable
-	26, // 42: wg.cosmo.node.v1.GraphQLSubscriptionConfiguration.url:type_name -> wg.cosmo.node.v1.ConfigurationVariable
-	38, // 43: wg.cosmo.node.v1.GraphQLSubscriptionConfiguration.protocol:type_name -> wg.cosmo.common.GraphQLSubscriptionProtocol
-	29, // 44: wg.cosmo.node.v1.FetchConfiguration.HeaderEntry.value:type_name -> wg.cosmo.node.v1.HTTPHeader
-	9,  // 45: wg.cosmo.node.v1.NodeService.GetLatestValidRouterConfig:input_type -> wg.cosmo.node.v1.GetConfigRequest
-	13, // 46: wg.cosmo.node.v1.NodeService.SelfRegister:input_type -> wg.cosmo.node.v1.SelfRegisterRequest
-	10, // 47: wg.cosmo.node.v1.NodeService.GetLatestValidRouterConfig:output_type -> wg.cosmo.node.v1.GetConfigResponse
-	14, // 48: wg.cosmo.node.v1.NodeService.SelfRegister:output_type -> wg.cosmo.node.v1.SelfRegisterResponse
-	47, // [47:49] is the sub-list for method output_type
-	45, // [45:47] is the sub-list for method input_type
-	45, // [45:45] is the sub-list for extension type_name
-	45, // [45:45] is the sub-list for extension extendee
-	0,  // [0:45] is the sub-list for field type_name
+	21, // 13: wg.cosmo.node.v1.DataSourceConfiguration.root_nodes:type_name -> wg.cosmo.node.v1.TypeField
+	21, // 14: wg.cosmo.node.v1.DataSourceConfiguration.child_nodes:type_name -> wg.cosmo.node.v1.TypeField
+	25, // 15: wg.cosmo.node.v1.DataSourceConfiguration.custom_graphql:type_name -> wg.cosmo.node.v1.DataSourceCustom_GraphQL
+	28, // 16: wg.cosmo.node.v1.DataSourceConfiguration.custom_static:type_name -> wg.cosmo.node.v1.DataSourceCustom_Static
+	30, // 17: wg.cosmo.node.v1.DataSourceConfiguration.directives:type_name -> wg.cosmo.node.v1.DirectiveConfiguration
+	22, // 18: wg.cosmo.node.v1.DataSourceConfiguration.keys:type_name -> wg.cosmo.node.v1.RequiredField
+	22, // 19: wg.cosmo.node.v1.DataSourceConfiguration.provides:type_name -> wg.cosmo.node.v1.RequiredField
+	22, // 20: wg.cosmo.node.v1.DataSourceConfiguration.requires:type_name -> wg.cosmo.node.v1.RequiredField
+	27, // 21: wg.cosmo.node.v1.DataSourceConfiguration.custom_events:type_name -> wg.cosmo.node.v1.DataSourceCustom_Events
+	19, // 22: wg.cosmo.node.v1.FieldConfiguration.arguments_configuration:type_name -> wg.cosmo.node.v1.ArgumentConfiguration
+	1,  // 23: wg.cosmo.node.v1.ArgumentConfiguration.source_type:type_name -> wg.cosmo.node.v1.ArgumentSource
+	29, // 24: wg.cosmo.node.v1.FetchConfiguration.url:type_name -> wg.cosmo.node.v1.ConfigurationVariable
+	5,  // 25: wg.cosmo.node.v1.FetchConfiguration.method:type_name -> wg.cosmo.node.v1.HTTPMethod
+	39, // 26: wg.cosmo.node.v1.FetchConfiguration.header:type_name -> wg.cosmo.node.v1.FetchConfiguration.HeaderEntry
+	29, // 27: wg.cosmo.node.v1.FetchConfiguration.body:type_name -> wg.cosmo.node.v1.ConfigurationVariable
+	31, // 28: wg.cosmo.node.v1.FetchConfiguration.query:type_name -> wg.cosmo.node.v1.URLQueryConfiguration
+	33, // 29: wg.cosmo.node.v1.FetchConfiguration.mtls:type_name -> wg.cosmo.node.v1.MTLSConfiguration
+	29, // 30: wg.cosmo.node.v1.FetchConfiguration.base_url:type_name -> wg.cosmo.node.v1.ConfigurationVariable
+	29, // 31: wg.cosmo.node.v1.FetchConfiguration.path:type_name -> wg.cosmo.node.v1.ConfigurationVariable
+	29, // 32: wg.cosmo.node.v1.FetchConfiguration.http_proxy_url:type_name -> wg.cosmo.node.v1.ConfigurationVariable
+	23, // 33: wg.cosmo.node.v1.DataSourceCustom_GraphQL.fetch:type_name -> wg.cosmo.node.v1.FetchConfiguration
+	34, // 34: wg.cosmo.node.v1.DataSourceCustom_GraphQL.subscription:type_name -> wg.cosmo.node.v1.GraphQLSubscriptionConfiguration
+	35, // 35: wg.cosmo.node.v1.DataSourceCustom_GraphQL.federation:type_name -> wg.cosmo.node.v1.GraphQLFederationConfiguration
+	36, // 36: wg.cosmo.node.v1.DataSourceCustom_GraphQL.upstream_schema:type_name -> wg.cosmo.node.v1.InternedString
+	37, // 37: wg.cosmo.node.v1.DataSourceCustom_GraphQL.custom_scalar_type_fields:type_name -> wg.cosmo.node.v1.SingleTypeField
+	3,  // 38: wg.cosmo.node.v1.EventConfiguration.type:type_name -> wg.cosmo.node.v1.EventType
+	26, // 39: wg.cosmo.node.v1.DataSourceCustom_Events.events:type_name -> wg.cosmo.node.v1.EventConfiguration
+	29, // 40: wg.cosmo.node.v1.DataSourceCustom_Static.data:type_name -> wg.cosmo.node.v1.ConfigurationVariable
+	4,  // 41: wg.cosmo.node.v1.ConfigurationVariable.kind:type_name -> wg.cosmo.node.v1.ConfigurationVariableKind
+	29, // 42: wg.cosmo.node.v1.HTTPHeader.values:type_name -> wg.cosmo.node.v1.ConfigurationVariable
+	29, // 43: wg.cosmo.node.v1.MTLSConfiguration.key:type_name -> wg.cosmo.node.v1.ConfigurationVariable
+	29, // 44: wg.cosmo.node.v1.MTLSConfiguration.cert:type_name -> wg.cosmo.node.v1.ConfigurationVariable
+	29, // 45: wg.cosmo.node.v1.GraphQLSubscriptionConfiguration.url:type_name -> wg.cosmo.node.v1.ConfigurationVariable
+	41, // 46: wg.cosmo.node.v1.GraphQLSubscriptionConfiguration.protocol:type_name -> wg.cosmo.common.GraphQLSubscriptionProtocol
+	32, // 47: wg.cosmo.node.v1.FetchConfiguration.HeaderEntry.value:type_name -> wg.cosmo.node.v1.HTTPHeader
+	10, // 48: wg.cosmo.node.v1.NodeService.GetLatestValidRouterConfig:input_type -> wg.cosmo.node.v1.GetConfigRequest
+	14, // 49: wg.cosmo.node.v1.NodeService.SelfRegister:input_type -> wg.cosmo.node.v1.SelfRegisterRequest
+	11, // 50: wg.cosmo.node.v1.NodeService.GetLatestValidRouterConfig:output_type -> wg.cosmo.node.v1.GetConfigResponse
+	15, // 51: wg.cosmo.node.v1.NodeService.SelfRegister:output_type -> wg.cosmo.node.v1.SelfRegisterResponse
+	50, // [50:52] is the sub-list for method output_type
+	48, // [48:50] is the sub-list for method input_type
+	48, // [48:48] is the sub-list for extension type_name
+	48, // [48:48] is the sub-list for extension extendee
+	0,  // [0:48] is the sub-list for field type_name
 }
 
 func init() { file_wg_cosmo_node_v1_node_proto_init() }
@@ -2947,7 +3165,7 @@ func file_wg_cosmo_node_v1_node_proto_init() {
 			}
 		}
 		file_wg_cosmo_node_v1_node_proto_msgTypes[20].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*DataSourceCustom_Static); i {
+			switch v := v.(*EventConfiguration); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -2959,7 +3177,7 @@ func file_wg_cosmo_node_v1_node_proto_init() {
 			}
 		}
 		file_wg_cosmo_node_v1_node_proto_msgTypes[21].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ConfigurationVariable); i {
+			switch v := v.(*DataSourceCustom_Events); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -2971,7 +3189,7 @@ func file_wg_cosmo_node_v1_node_proto_init() {
 			}
 		}
 		file_wg_cosmo_node_v1_node_proto_msgTypes[22].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*DirectiveConfiguration); i {
+			switch v := v.(*DataSourceCustom_Static); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -2983,7 +3201,7 @@ func file_wg_cosmo_node_v1_node_proto_init() {
 			}
 		}
 		file_wg_cosmo_node_v1_node_proto_msgTypes[23].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*URLQueryConfiguration); i {
+			switch v := v.(*ConfigurationVariable); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -2995,7 +3213,7 @@ func file_wg_cosmo_node_v1_node_proto_init() {
 			}
 		}
 		file_wg_cosmo_node_v1_node_proto_msgTypes[24].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*HTTPHeader); i {
+			switch v := v.(*DirectiveConfiguration); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3007,7 +3225,7 @@ func file_wg_cosmo_node_v1_node_proto_init() {
 			}
 		}
 		file_wg_cosmo_node_v1_node_proto_msgTypes[25].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*MTLSConfiguration); i {
+			switch v := v.(*URLQueryConfiguration); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3019,7 +3237,7 @@ func file_wg_cosmo_node_v1_node_proto_init() {
 			}
 		}
 		file_wg_cosmo_node_v1_node_proto_msgTypes[26].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GraphQLSubscriptionConfiguration); i {
+			switch v := v.(*HTTPHeader); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3031,7 +3249,7 @@ func file_wg_cosmo_node_v1_node_proto_init() {
 			}
 		}
 		file_wg_cosmo_node_v1_node_proto_msgTypes[27].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GraphQLFederationConfiguration); i {
+			switch v := v.(*MTLSConfiguration); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3043,7 +3261,7 @@ func file_wg_cosmo_node_v1_node_proto_init() {
 			}
 		}
 		file_wg_cosmo_node_v1_node_proto_msgTypes[28].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*InternedString); i {
+			switch v := v.(*GraphQLSubscriptionConfiguration); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3055,6 +3273,30 @@ func file_wg_cosmo_node_v1_node_proto_init() {
 			}
 		}
 		file_wg_cosmo_node_v1_node_proto_msgTypes[29].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*GraphQLFederationConfiguration); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_wg_cosmo_node_v1_node_proto_msgTypes[30].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*InternedString); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_wg_cosmo_node_v1_node_proto_msgTypes[31].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*SingleTypeField); i {
 			case 0:
 				return &v.state
@@ -3072,14 +3314,14 @@ func file_wg_cosmo_node_v1_node_proto_init() {
 	file_wg_cosmo_node_v1_node_proto_msgTypes[5].OneofWrappers = []interface{}{}
 	file_wg_cosmo_node_v1_node_proto_msgTypes[9].OneofWrappers = []interface{}{}
 	file_wg_cosmo_node_v1_node_proto_msgTypes[17].OneofWrappers = []interface{}{}
-	file_wg_cosmo_node_v1_node_proto_msgTypes[26].OneofWrappers = []interface{}{}
+	file_wg_cosmo_node_v1_node_proto_msgTypes[28].OneofWrappers = []interface{}{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_wg_cosmo_node_v1_node_proto_rawDesc,
-			NumEnums:      5,
-			NumMessages:   32,
+			NumEnums:      6,
+			NumMessages:   34,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

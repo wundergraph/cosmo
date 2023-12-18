@@ -68,11 +68,12 @@ type ComplexityRoot struct {
 	}
 
 	Employee struct {
-		Details func(childComplexity int) int
-		ID      func(childComplexity int) int
-		Notes   func(childComplexity int) int
-		Role    func(childComplexity int) int
-		Tag     func(childComplexity int) int
+		Details   func(childComplexity int) int
+		ID        func(childComplexity int) int
+		Notes     func(childComplexity int) int
+		Role      func(childComplexity int) int
+		Tag       func(childComplexity int) int
+		UpdatedAt func(childComplexity int) int
 	}
 
 	Engineer struct {
@@ -260,6 +261,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Employee.Tag(childComplexity), true
+
+	case "Employee.updatedAt":
+		if e.complexity.Employee.UpdatedAt == nil {
+			break
+		}
+
+		return e.complexity.Employee.UpdatedAt(childComplexity), true
 
 	case "Engineer.departments":
 		if e.complexity.Engineer.Departments == nil {
@@ -688,6 +696,7 @@ type Employee implements Identifiable @key(fields: "id") {
   tag: String!
   role: RoleType!
   notes: String
+  updatedAt: String!
 }
 
 type Time {
@@ -717,7 +726,8 @@ type SDK implements IProduct @key(fields: "upc") {
   upc: ID!
   engineers: [Employee!]!
   owner: Employee!
-}`, BuiltIn: false},
+}
+`, BuiltIn: false},
 	{Name: "../../federation/directives.graphql", Input: `
 	directive @authenticated on FIELD_DEFINITION | OBJECT | INTERFACE | SCALAR | ENUM
 	directive @composeDirective(name: String!) repeatable on SCHEMA
@@ -1066,6 +1076,8 @@ func (ec *executionContext) fieldContext_Consultancy_lead(ctx context.Context, f
 				return ec.fieldContext_Employee_role(ctx, field)
 			case "notes":
 				return ec.fieldContext_Employee_notes(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_Employee_updatedAt(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Employee", field.Name)
 		},
@@ -1166,6 +1178,8 @@ func (ec *executionContext) fieldContext_Cosmo_engineers(ctx context.Context, fi
 				return ec.fieldContext_Employee_role(ctx, field)
 			case "notes":
 				return ec.fieldContext_Employee_notes(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_Employee_updatedAt(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Employee", field.Name)
 		},
@@ -1222,6 +1236,8 @@ func (ec *executionContext) fieldContext_Cosmo_lead(ctx context.Context, field g
 				return ec.fieldContext_Employee_role(ctx, field)
 			case "notes":
 				return ec.fieldContext_Employee_notes(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_Employee_updatedAt(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Employee", field.Name)
 		},
@@ -1586,6 +1602,50 @@ func (ec *executionContext) fieldContext_Employee_notes(ctx context.Context, fie
 	return fc, nil
 }
 
+func (ec *executionContext) _Employee_updatedAt(ctx context.Context, field graphql.CollectedField, obj *model.Employee) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Employee_updatedAt(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.UpdatedAt, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Employee_updatedAt(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Employee",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Engineer_departments(ctx context.Context, field graphql.CollectedField, obj *model.Engineer) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Engineer_departments(ctx, field)
 	if err != nil {
@@ -1891,6 +1951,8 @@ func (ec *executionContext) fieldContext_Entity_findEmployeeByID(ctx context.Con
 				return ec.fieldContext_Employee_role(ctx, field)
 			case "notes":
 				return ec.fieldContext_Employee_notes(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_Employee_updatedAt(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Employee", field.Name)
 		},
@@ -2106,6 +2168,8 @@ func (ec *executionContext) fieldContext_Mutation_updateEmployeeTag(ctx context.
 				return ec.fieldContext_Employee_role(ctx, field)
 			case "notes":
 				return ec.fieldContext_Employee_notes(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_Employee_updatedAt(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Employee", field.Name)
 		},
@@ -2302,6 +2366,8 @@ func (ec *executionContext) fieldContext_Query_employee(ctx context.Context, fie
 				return ec.fieldContext_Employee_role(ctx, field)
 			case "notes":
 				return ec.fieldContext_Employee_notes(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_Employee_updatedAt(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Employee", field.Name)
 		},
@@ -2369,6 +2435,8 @@ func (ec *executionContext) fieldContext_Query_employees(ctx context.Context, fi
 				return ec.fieldContext_Employee_role(ctx, field)
 			case "notes":
 				return ec.fieldContext_Employee_notes(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_Employee_updatedAt(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Employee", field.Name)
 		},
@@ -2469,6 +2537,8 @@ func (ec *executionContext) fieldContext_Query_teammates(ctx context.Context, fi
 				return ec.fieldContext_Employee_role(ctx, field)
 			case "notes":
 				return ec.fieldContext_Employee_notes(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_Employee_updatedAt(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Employee", field.Name)
 		},
@@ -2812,6 +2882,8 @@ func (ec *executionContext) fieldContext_SDK_engineers(ctx context.Context, fiel
 				return ec.fieldContext_Employee_role(ctx, field)
 			case "notes":
 				return ec.fieldContext_Employee_notes(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_Employee_updatedAt(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Employee", field.Name)
 		},
@@ -2868,6 +2940,8 @@ func (ec *executionContext) fieldContext_SDK_owner(ctx context.Context, field gr
 				return ec.fieldContext_Employee_role(ctx, field)
 			case "notes":
 				return ec.fieldContext_Employee_notes(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_Employee_updatedAt(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Employee", field.Name)
 		},
@@ -5160,6 +5234,11 @@ func (ec *executionContext) _Employee(ctx context.Context, sel ast.SelectionSet,
 			}
 		case "notes":
 			out.Values[i] = ec._Employee_notes(ctx, field, obj)
+		case "updatedAt":
+			out.Values[i] = ec._Employee_updatedAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}

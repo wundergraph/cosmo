@@ -68,11 +68,12 @@ type Details struct {
 }
 
 type Employee struct {
-	Details *Details `json:"details"`
-	ID      int      `json:"id"`
-	Tag     string   `json:"tag"`
-	Role    RoleType `json:"role"`
-	Notes   *string  `json:"notes,omitempty"`
+	Details   *Details `json:"details"`
+	ID        int      `json:"id"`
+	Tag       string   `json:"tag"`
+	Role      RoleType `json:"role"`
+	Notes     *string  `json:"notes,omitempty"`
+	UpdatedAt string   `json:"updatedAt"`
 }
 
 func (Employee) IsIdentifiable() {}

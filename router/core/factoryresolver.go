@@ -7,7 +7,9 @@ import (
 	"time"
 
 	"github.com/jensneuse/abstractlogger"
+	"github.com/nats-io/nats.go"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/staticdatasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"go.uber.org/zap"
@@ -15,6 +17,7 @@ import (
 	"github.com/wundergraph/cosmo/router/config"
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/cosmo/router/internal/pubsub"
 )
 
 type Loader struct {
@@ -38,6 +41,7 @@ type DefaultFactoryResolver struct {
 	transportFactory ApiTransportFactory
 	graphql          *graphql_datasource.Factory
 	static           *staticdatasource.Factory
+	pubsub           *pubsub_datasource.Factory
 	log              *zap.Logger
 }
 
@@ -46,6 +50,7 @@ func NewDefaultFactoryResolver(
 	baseTransport http.RoundTripper,
 	log *zap.Logger,
 	enableSingleFlight bool,
+	natsConnection *nats.Conn,
 ) *DefaultFactoryResolver {
 
 	defaultHttpClient := &http.Client{
@@ -70,6 +75,9 @@ func NewDefaultFactoryResolver(
 			StreamingClient: streamingClient,
 			Logger:          factoryLogger,
 		},
+		pubsub: &pubsub_datasource.Factory{
+			Connector: pubsub.NewNATSConnector(natsConnection),
+		},
 		log: log,
 	}
 }
@@ -85,6 +93,8 @@ func (d *DefaultFactoryResolver) Resolve(ds *nodev1.DataSourceConfiguration) (pl
 		return factory, nil
 	case nodev1.DataSourceKind_STATIC:
 		return d.static, nil
+	case nodev1.DataSourceKind_PUBSUB:
+		return d.pubsub, nil
 	default:
 		return nil, fmt.Errorf("invalid datasource kind %q", ds.Kind)
 	}
@@ -109,6 +119,7 @@ func (l *Loader) LoadInternedString(engineConfig *nodev1.EngineConfiguration, st
 type RouterEngineConfiguration struct {
 	Execution config.EngineExecutionConfiguration
 	Headers   config.HeaderRules
+	Events    config.EventsConfiguration
 }
 
 func (l *Loader) Load(routerConfig *nodev1.RouterConfig, routerEngineConfig *RouterEngineConfiguration) (*plan.Configuration, error) {
@@ -237,8 +248,26 @@ func (l *Loader) Load(routerConfig *nodev1.RouterConfig, routerEngineConfig *Rou
 				UpstreamSchema:         graphqlSchema,
 				CustomScalarTypeFields: customScalarTypeFields,
 			})
+		case nodev1.DataSourceKind_PUBSUB:
+			pubsubEvents := in.GetCustomEvents().GetEvents()
+			events := make([]pubsub_datasource.EventConfiguration, len(pubsubEvents))
+			for ii, ev := range pubsubEvents {
+				eventType, err := pubsub_datasource.EventTypeFromString(ev.Type.String())
+				if err != nil {
+					return nil, fmt.Errorf("invalid event type %q for data source %q: %w", ev.Type.String(), in.Id, err)
+				}
+				events[ii] = pubsub_datasource.EventConfiguration{
+					Type:      eventType,
+					TypeName:  ev.TypeName,
+					FieldName: ev.FieldName,
+					Topic:     ev.Topic,
+				}
+			}
+			out.Custom = pubsub_datasource.ConfigJson(pubsub_datasource.Configuration{
+				Events: events,
+			})
 		default:
-			continue
+			return nil, fmt.Errorf("unknown data source type %q", in.Kind)
 		}
 		for _, node := range in.RootNodes {
 			out.RootNodes = append(out.RootNodes, plan.TypeField{
