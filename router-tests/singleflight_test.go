@@ -16,7 +16,7 @@ import (
 type customTransport struct {
 	delay        time.Duration
 	requestCount atomic.Int64
-	baseRT       http.RoundTripper
+	roundTrip    func(r *http.Request) (*http.Response, error)
 }
 
 func (c *customTransport) RoundTrip(r *http.Request) (*http.Response, error) {
@@ -24,7 +24,7 @@ func (c *customTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 	if c.delay > 0 {
 		time.Sleep(c.delay)
 	}
-	return c.baseRT.RoundTrip(r)
+	return c.roundTrip(r)
 }
 
 func TestSingleFlight(t *testing.T) {
@@ -34,8 +34,10 @@ func TestSingleFlight(t *testing.T) {
 		wg              sync.WaitGroup
 	)
 	transport := &customTransport{
-		baseRT: http.DefaultTransport,
-		delay:  time.Millisecond * 10,
+		delay: time.Millisecond * 10,
+		roundTrip: func(r *http.Request) (*http.Response, error) {
+			return http.DefaultTransport.RoundTrip(r)
+		},
 	}
 	server := setupServer(t, core.WithCustomRoundTripper(transport))
 	wg.Add(numOfOperations)
@@ -63,8 +65,10 @@ func TestSingleFlightMutations(t *testing.T) {
 		wg              sync.WaitGroup
 	)
 	transport := &customTransport{
-		baseRT: http.DefaultTransport,
-		delay:  time.Millisecond * 10,
+		delay: time.Millisecond * 10,
+		roundTrip: func(r *http.Request) (*http.Response, error) {
+			return http.DefaultTransport.RoundTrip(r)
+		},
 	}
 	server := setupServer(t, core.WithCustomRoundTripper(transport))
 	wg.Add(numOfOperations)
@@ -91,8 +95,10 @@ func TestSingleFlightDifferentHeaders(t *testing.T) {
 		wg              sync.WaitGroup
 	)
 	transport := &customTransport{
-		baseRT: http.DefaultTransport,
-		delay:  time.Millisecond * 10,
+		delay: time.Millisecond * 10,
+		roundTrip: func(r *http.Request) (*http.Response, error) {
+			return http.DefaultTransport.RoundTrip(r)
+		},
 	}
 	server := setupServer(t,
 		core.WithCustomRoundTripper(transport),
@@ -131,8 +137,10 @@ func TestSingleFlightSameHeaders(t *testing.T) {
 		wg              sync.WaitGroup
 	)
 	transport := &customTransport{
-		baseRT: http.DefaultTransport,
-		delay:  time.Millisecond * 10,
+		delay: time.Millisecond * 10,
+		roundTrip: func(r *http.Request) (*http.Response, error) {
+			return http.DefaultTransport.RoundTrip(r)
+		},
 	}
 	server := setupServer(t,
 		core.WithCustomRoundTripper(transport),

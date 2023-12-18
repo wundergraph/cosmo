@@ -1,9 +1,14 @@
 package subgraph
 
 import (
-	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/employees/subgraph/model"
 	"slices"
+
+	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/employees/subgraph/model"
 )
+
+func strPtr(s string) *string {
+	return &s
+}
 
 var employees = []*model.Employee{
 	{
@@ -18,7 +23,7 @@ var employees = []*model.Employee{
 			EngineerType: model.EngineerTypeBackend,
 			Title:        []string{"Founder", "CEO"},
 		},
-		Notes: "Jens notes resolved by employees",
+		Notes: strPtr("Jens notes resolved by employees"),
 	},
 	{
 		Details: &model.Details{
@@ -32,7 +37,7 @@ var employees = []*model.Employee{
 			EngineerType: model.EngineerTypeFullstack,
 			Title:        []string{"Co-founder", "Tech Lead"},
 		},
-		Notes: "Dustin notes resolved by employees",
+		Notes: strPtr("Dustin notes resolved by employees"),
 	},
 	{
 		Details: &model.Details{
@@ -45,7 +50,7 @@ var employees = []*model.Employee{
 			Departments: []model.Department{model.DepartmentMarketing},
 			Title:       []string{"Co-founder", "Head of Growth"},
 		},
-		Notes: "Stefan notes resolved by employees",
+		Notes: strPtr("Stefan notes resolved by employees"),
 	},
 	{
 		Details: &model.Details{
@@ -61,7 +66,7 @@ var employees = []*model.Employee{
 			},
 			Title: []string{"Co-founder", "COO"},
 		},
-		Notes: "Björn notes resolved by employees",
+		Notes: strPtr("Björn notes resolved by employees"),
 	},
 	{
 		ID: 5,
@@ -75,7 +80,7 @@ var employees = []*model.Employee{
 			EngineerType: model.EngineerTypeBackend,
 			Title:        []string{"Senior GO Engineer"},
 		},
-		Notes: "Serigy notes resolved by employees",
+		Notes: strPtr("Serigy notes resolved by employees"),
 	},
 	{
 		Details: &model.Details{
@@ -89,7 +94,7 @@ var employees = []*model.Employee{
 			EngineerType: model.EngineerTypeFullstack,
 			Title:        []string{"Software Engineer"},
 		},
-		Notes: "Suvij notes resolved by employees",
+		Notes: strPtr("Suvij notes resolved by employees"),
 	},
 	{
 		Details: &model.Details{
@@ -103,7 +108,7 @@ var employees = []*model.Employee{
 			EngineerType: model.EngineerTypeFullstack,
 			Title:        []string{"Software Engineer"},
 		},
-		Notes: "Nithin notes resolved by employees",
+		Notes: strPtr("Nithin notes resolved by employees"),
 	},
 	{
 		Details: &model.Details{
@@ -117,7 +122,7 @@ var employees = []*model.Employee{
 			EngineerType: model.EngineerTypeBackend,
 			Title:        []string{"Senior Backend Engineer"},
 		},
-		Notes: "Alberto notes resolved by employees",
+		Notes: strPtr("Alberto notes resolved by employees"),
 	},
 	{
 		Details: &model.Details{
@@ -131,7 +136,7 @@ var employees = []*model.Employee{
 			EngineerType: model.EngineerTypeFrontend,
 			Title:        []string{"Senior Frontend Engineer"},
 		},
-		Notes: "Eelco notes resolved by employees",
+		Notes: strPtr("Eelco notes resolved by employees"),
 	},
 	{
 		Details: &model.Details{
@@ -147,7 +152,7 @@ var employees = []*model.Employee{
 			},
 			Title: []string{"Accounting & Finance"},
 		},
-		Notes: "Alexandra notes resolved by employees",
+		Notes: strPtr("Alexandra notes resolved by employees"),
 	},
 	{
 		Details: &model.Details{
@@ -161,7 +166,7 @@ var employees = []*model.Employee{
 			EngineerType: model.EngineerTypeFullstack,
 			Title:        []string{"Software Engineer"},
 		},
-		Notes: "David notes resolved by employees",
+		Notes: strPtr("David notes resolved by employees"),
 	},
 }
 

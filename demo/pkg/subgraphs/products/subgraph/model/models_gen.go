@@ -41,7 +41,7 @@ func (Documentation) IsProducts() {}
 type Employee struct {
 	ID       int           `json:"id"`
 	Products []ProductName `json:"products"`
-	Notes    string        `json:"notes"`
+	Notes    *string       `json:"notes,omitempty"`
 }
 
 func (Employee) IsEntity() {}

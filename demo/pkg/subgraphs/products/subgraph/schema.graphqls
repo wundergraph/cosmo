@@ -19,7 +19,7 @@ enum ProductName {
 type Employee @key(fields: "id") {
   id: Int!
   products: [ProductName!]!
-  notes: String! @override(from: "employees")
+  notes: String @override(from: "employees")
 }
 
 union Products = Consultancy | Cosmo | Documentation

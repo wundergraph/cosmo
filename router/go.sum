@@ -244,6 +244,8 @@ github.com/vektah/gqlparser/v2 v2.5.10 h1:6zSM4azXC9u4Nxy5YmdmGu4uKamfwsdKTwp5zs
 github.com/vektah/gqlparser/v2 v2.5.10/go.mod h1:1rCcfwB2ekJofmluGWXMSEnPMZgbxzwj6FaZ/4OT8Cc=
 github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.2.0.20231215114324-a36c2926669a h1:VpCaFhZ1oqFgOu1UoXr4H04daQb4PoexJLP6PDHtkno=
 github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.2.0.20231215114324-a36c2926669a/go.mod h1:P6rgQN3OgjqJ6wUw1lN1U3LREFDW3jy0NFyJdBr4THE=
+github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.2.0.20231218140341-92f315e1731b h1:mO+tQdC01nS/57a7PdaoArw+6gxA5Dz21COfu4iUVtM=
+github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.2.0.20231218140341-92f315e1731b/go.mod h1:hXjJPrZ+oyWMEG8Cqzt6cmCNCW8D8RAieoctDtR8fgg=
 go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.45.0 h1:x8Z78aZx8cOF0+Kkazoc7lwUNMGy0LrzEMxTm4BbTxg=
 go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.45.0/go.mod h1:62CPTSry9QZtOaSsE3tOzhx6LzDhHnXJ6xHeMNNiM6Q=
 go.opentelemetry.io/otel v1.19.0 h1:MuS/TNf4/j4IXsZuJegVzI1cwut7Qc00344rgH7p8bs=
