@@ -965,6 +965,16 @@ message CreateCheckoutSessionResponse {
   string sessionId = 2;
 }
 
+message CreateBillingPortalSessionRequest {
+
+}
+
+message CreateBillingPortalSessionResponse {
+  Response response = 1;
+  string sessionId = 2;
+  string url = 3;
+}
+
 /**
  * MetricsDashboard
  */
@@ -1471,4 +1481,6 @@ service PlatformService {
   rpc GetBillingPlans(GetBillingPlansRequest) returns (GetBillingPlansResponse) { }
   // Create a Stripe checkout session
   rpc CreateCheckoutSession(CreateCheckoutSessionRequest) returns (CreateCheckoutSessionResponse) { }
+  // Create a Stripe billing portal session
+  rpc CreateBillingPortalSession(CreateBillingPortalSessionRequest) returns (CreateBillingPortalSessionResponse) { }
 }

@@ -7530,6 +7530,86 @@ export class CreateCheckoutSessionResponse extends Message<CreateCheckoutSession
 }
 
 /**
+ * @generated from message wg.cosmo.platform.v1.CreateBillingPortalSessionRequest
+ */
+export class CreateBillingPortalSessionRequest extends Message<CreateBillingPortalSessionRequest> {
+  constructor(data?: PartialMessage<CreateBillingPortalSessionRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.CreateBillingPortalSessionRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateBillingPortalSessionRequest {
+    return new CreateBillingPortalSessionRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateBillingPortalSessionRequest {
+    return new CreateBillingPortalSessionRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateBillingPortalSessionRequest {
+    return new CreateBillingPortalSessionRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CreateBillingPortalSessionRequest | PlainMessage<CreateBillingPortalSessionRequest> | undefined, b: CreateBillingPortalSessionRequest | PlainMessage<CreateBillingPortalSessionRequest> | undefined): boolean {
+    return proto3.util.equals(CreateBillingPortalSessionRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.CreateBillingPortalSessionResponse
+ */
+export class CreateBillingPortalSessionResponse extends Message<CreateBillingPortalSessionResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: string sessionId = 2;
+   */
+  sessionId = "";
+
+  /**
+   * @generated from field: string url = 3;
+   */
+  url = "";
+
+  constructor(data?: PartialMessage<CreateBillingPortalSessionResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.CreateBillingPortalSessionResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "sessionId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "url", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateBillingPortalSessionResponse {
+    return new CreateBillingPortalSessionResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateBillingPortalSessionResponse {
+    return new CreateBillingPortalSessionResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateBillingPortalSessionResponse {
+    return new CreateBillingPortalSessionResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CreateBillingPortalSessionResponse | PlainMessage<CreateBillingPortalSessionResponse> | undefined, b: CreateBillingPortalSessionResponse | PlainMessage<CreateBillingPortalSessionResponse> | undefined): boolean {
+    return proto3.util.equals(CreateBillingPortalSessionResponse, a, b);
+  }
+}
+
+/**
  * *
  * MetricsDashboard
  *

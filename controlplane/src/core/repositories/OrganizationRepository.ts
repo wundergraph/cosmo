@@ -22,6 +22,7 @@ import {
   slackSchemaUpdateEventConfigs,
   targets,
   users,
+  organizationBilling,
   subscriptions,
 } from '../../db/schema.js';
 import { OrganizationDTO, OrganizationLimitsDTO, OrganizationMemberDTO, WebhooksConfigDTO } from '../../types/index.js';
@@ -157,7 +158,7 @@ export class OrganizationRepository {
     userId: string;
   }): Promise<(OrganizationDTO & { roles: string[]; limits: OrganizationLimitsDTO })[]> {
     const userOrganizations = await this.db
-      .select({
+      .selectDistinctOn([organizations.id], {
         id: organizations.id,
         name: organizations.name,
         slug: organizations.slug,
@@ -176,18 +177,23 @@ export class OrganizationRepository {
           traceSamplingRateLimit: organizationLimits.traceSamplingRateLimit,
           requestsLimit: organizationLimits.requestsLimit,
         },
-        subscriptions: {
+        billing: {
+          plan: organizationBilling.plan,
+          email: organizationBilling.email,
+        },
+        subscription: {
           status: subscriptions.status,
           trialEnd: subscriptions.trialEnd,
           cancelAtPeriodEnd: subscriptions.cancelAtPeriodEnd,
-          currentPeriodStart: subscriptions.currentPeriodStart,
+          currentPeriodEnd: subscriptions.currentPeriodEnd,
         },
       })
       .from(organizationsMembers)
       .innerJoin(organizations, eq(organizations.id, organizationsMembers.organizationId))
       .innerJoin(users, eq(users.id, organizationsMembers.userId))
       .innerJoin(organizationLimits, eq(organizations.id, organizationLimits.organizationId))
-      .innerJoin(subscriptions, eq(organizations.id, subscriptions.organizationId))
+      .leftJoin(organizationBilling, eq(organizations.id, organizationBilling.organizationId))
+      .leftJoin(subscriptions, eq(organizations.id, subscriptions.organizationId))
       .where(eq(users.id, input.userId))
       .execute();
 
@@ -215,12 +221,8 @@ export class OrganizationRepository {
           traceSamplingRateLimit: Number(org.limits.traceSamplingRateLimit),
           requestsLimit: org.limits.requestsLimit,
         },
-        subscription: {
-          status: org.subscriptions.status,
-          trialEnd: org.subscriptions.trialEnd?.toISOString(),
-          cancelAtPeriodEnd: org.subscriptions.cancelAtPeriodEnd,
-          currentPeriodStart: org.subscriptions.currentPeriodStart?.toISOString(),
-        },
+        billing: org.billing,
+        subscription: org.subscription,
       })),
     );
 
@@ -807,6 +809,17 @@ export class OrganizationRepository {
         changelogDataRetentionLimit: input.changelogDataRetentionLimit,
         traceSamplingRateLimit: input.traceSamplingRateLimit.toString(),
         organizationId: input.organizationID,
+      })
+      .execute();
+  }
+
+  public async addOrganizationBilling(input: { organizationID: string; email: string; plan: string }) {
+    await this.db
+      .insert(organizationBilling)
+      .values({
+        organizationId: input.organizationID,
+        plan: input.plan,
+        email: input.email,
       })
       .execute();
   }

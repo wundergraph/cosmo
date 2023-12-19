@@ -598,10 +598,40 @@ export const organizations = pgTable('organizations', {
   isPersonal: boolean('is_personal').default(false),
   isFreeTrial: boolean('is_free_trial').default(false),
   isRBACEnabled: boolean('is_rbac_enabled').notNull().default(false),
-  plan: text('plan'),
-  billingEmail: text('billing_email'),
-  stripeCustomerId: text('stripe_customer_id'),
 });
+
+export const organizationBilling = pgTable(
+  'organization_billing',
+  {
+    id: uuid('id').notNull().primaryKey().defaultRandom(),
+    organizationId: uuid('organization_id')
+      .notNull()
+      .references(() => organizations.id, {
+        onDelete: 'cascade',
+      }),
+    plan: text('plan'),
+    email: text('email'),
+    stripeCustomerId: text('stripe_customer_id'),
+  },
+  (t) => {
+    return {
+      orgIndex: uniqueIndex('organization_billing_idx').on(t.organizationId),
+      stripeIndex: uniqueIndex('organization_billing_stripe_idx').on(t.stripeCustomerId),
+    };
+  },
+);
+
+// These statuses map directly to Stripe's subscription statuses
+export const subscriptionStatusEnum = pgEnum('status', [
+  'incomplete',
+  'incomplete_expired',
+  'trialing',
+  'active',
+  'past_due',
+  'canceled',
+  'unpaid',
+  'paused',
+] as const);
 
 export const subscriptions = pgTable('subscriptions', {
   id: text('id').notNull().primaryKey(),
@@ -611,7 +641,7 @@ export const subscriptions = pgTable('subscriptions', {
       onDelete: 'cascade',
     }),
   metadata: customJson<{ [key: string]: string }>('metadata').notNull(),
-  status: text('status').notNull(),
+  status: subscriptionStatusEnum('status').notNull(),
   priceId: text('price_id').notNull(),
   quantity: integer('quantity').notNull(),
   cancelAtPeriodEnd: boolean('cancel_at_period_end').notNull(),

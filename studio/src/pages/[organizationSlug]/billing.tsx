@@ -1,26 +1,11 @@
-import {
-  ChartTooltip,
-  tooltipWrapperClassName,
-} from "@/components/analytics/charts";
-import { UserContext } from "@/components/app-provider";
 import { EmptyState } from "@/components/empty-state";
 import { getDashboardLayout } from "@/components/layout/dashboard-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader } from "@/components/ui/loader";
-import { Separator } from "@/components/ui/separator";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { useToast } from "@/components/ui/use-toast";
-import { calURL } from "@/lib/constants";
-import { formatMetric } from "@/lib/format-metric";
+import { useUser } from "@/hooks/use-user";
+import { formatDate } from "@/lib/format-date";
 import { NextPageWithLayout } from "@/lib/page";
 import { getStripe } from "@/lib/stripe";
 import { cn } from "@/lib/utils";
@@ -28,15 +13,13 @@ import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
+  createBillingPortalSession,
   createCheckoutSession,
   getBillingPlans,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import {
-  GetBillingPlansResponse_BillingPlan,
-  GetBillingPlansResponse_BillingPlanFeature,
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import Link from "next/link";
-import { useContext } from "react";
+import { GetBillingPlansResponse_BillingPlan } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
+import { useRouter } from "next/router";
+import React, { useEffect } from "react";
 import { PiCheck } from "react-icons/pi";
 
 const getPrice = (price?: number) => {
@@ -50,14 +33,37 @@ const getPrice = (price?: number) => {
   }
 };
 
-const UsagesPage: NextPageWithLayout = () => {
-  const user = useContext(UserContext);
+const BillingPage: NextPageWithLayout = () => {
+  const router = useRouter();
+  const user = useUser();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (router.query.success) {
+      toast({
+        title: "Account upgraded",
+        description:
+          "Your payment was successful and your account has been upgraded.",
+      });
+    }
+  }, [router.query.success, toast]);
+
   const { data, isLoading, error, refetch } = useQuery({
     ...getBillingPlans.useQuery(),
   });
 
+  const currentPlan = React.useMemo(
+    () =>
+      data?.plans.find(
+        ({ id }) => id === user?.currentOrganization.billing?.plan,
+      ) || data?.plans[0],
+    [data?.plans, user?.currentOrganization.billing?.plan],
+  );
+
+  const subscription = user?.currentOrganization.subscription;
+
   if (isLoading) return <Loader fullscreen />;
-  console.log(data);
+
   if (error || data?.response?.code !== EnumStatusCode.OK)
     return (
       <EmptyState
@@ -70,17 +76,12 @@ const UsagesPage: NextPageWithLayout = () => {
       />
     );
 
-  const currentPlan = data.plans.find(
-    ({ id }) => id == user?.currentOrganization.plan || "developer",
-  );
-
   return (
     <div className="flex flex-col gap-y-4">
       <p className="mb-8">
         You are currently on the{" "}
         <Badge variant="outline">{currentPlan?.name}</Badge> plan.{" "}
-        <Link href="">Contact sales</Link> for more information about our
-        Enterprise plans.
+        <SubscriptionStatus subscription={subscription} />
       </p>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -112,7 +113,7 @@ const UsagesPage: NextPageWithLayout = () => {
                 plan={plan}
                 isCurrent={currentPlan?.id === plan.id}
                 isDowngrade={
-                  !!currentPlan?.price && currentPlan?.price > plan.price
+                  currentPlan?.price ? currentPlan?.price > plan.price : false
                 }
               />
             </div>
@@ -120,6 +121,71 @@ const UsagesPage: NextPageWithLayout = () => {
         ))}
       </div>
     </div>
+  );
+};
+
+const SubscriptionStatus = ({
+  subscription,
+}: {
+  subscription?: {
+    status: string;
+    currentPeriodEnd: string;
+    cancelAtPeriodEnd: boolean;
+    trialEnd: string;
+  };
+}) => {
+  const router = useRouter();
+  const { mutateAsync, isPending } = useMutation(
+    createBillingPortalSession.useMutation(),
+  );
+
+  if (!subscription) return null;
+
+  const openPortal = async () => {
+    if (isPending) return;
+
+    try {
+      const { url } = await mutateAsync({});
+      router.push(url);
+    } catch (e: any) {
+      console.error(e);
+    }
+  };
+
+  let status;
+
+  if (subscription.status === "canceled") {
+    status = "Your subscription has been canceled.";
+  } else if (subscription.status === "trialing") {
+    status = (
+      <>Your trial will end on {formatDate(new Date(subscription.trialEnd))}</>
+    );
+  } else if (subscription.status === "active") {
+    status = subscription.cancelAtPeriodEnd ? (
+      <>
+        Your subscription will end on{" "}
+        {formatDate(new Date(subscription.currentPeriodEnd))}
+      </>
+    ) : (
+      <>
+        Your subscription will renew on{" "}
+        {formatDate(new Date(subscription.currentPeriodEnd))}
+      </>
+    );
+  }
+
+  return (
+    <span>
+      <Button
+        variant="link"
+        className="p-0 text-base"
+        onClick={() => openPortal()}
+        disabled={isPending}
+      >
+        Manage your payment settings
+      </Button>
+      . {status}
+    </span>
   );
 };
 
@@ -161,7 +227,7 @@ const UpgradeButton = ({
     );
   }
 
-  if (plan.price <= 0) {
+  if (plan.price === -1) {
     return <Button variant="secondary">Contact us</Button>;
   }
 
@@ -180,7 +246,7 @@ const UpgradeButton = ({
   );
 };
 
-UsagesPage.getLayout = (page) => {
+BillingPage.getLayout = (page) => {
   return getDashboardLayout(
     page,
     "Billing",
@@ -188,4 +254,4 @@ UsagesPage.getLayout = (page) => {
   );
 };
 
-export default UsagesPage;
+export default BillingPage;

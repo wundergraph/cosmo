@@ -276,6 +276,12 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
               traceSamplingRateLimit: 0.1,
               requestsLimit: 10,
             });
+
+            await orgRepo.addOrganizationBilling({
+              organizationID: insertedOrg.id,
+              plan: 'developer',
+              email: userEmail, // default to the owner's email
+            });
           });
 
           opts.platformWebhooks.send(PlatformEventName.USER_REGISTER_SUCCESS, {

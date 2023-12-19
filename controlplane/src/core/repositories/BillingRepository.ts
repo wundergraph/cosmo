@@ -1,7 +1,7 @@
 import { and, asc, eq } from 'drizzle-orm';
 import Stripe from 'stripe';
 import type { DB } from '../../db/index.js';
-import { organizations, subscriptions } from '../../db/schema.js';
+import { organizations, organizationBilling, subscriptions } from '../../db/schema.js';
 
 import { BillingPlanDTO } from '../../types/index.js';
 
@@ -11,6 +11,16 @@ export const toISODateTime = (secs: number) => {
   const t = new Date('1970-01-01T00:30:00Z'); // Unix epoch start.
   t.setSeconds(secs);
   return t;
+};
+
+type ValueOf<T> = T[keyof T];
+
+const getPriceId = (p: ValueOf<typeof billing.plans>) => {
+  if (!p || !('stripePriceId' in p)) {
+    return;
+  }
+
+  return p.stripePriceId;
 };
 
 /**
@@ -29,40 +39,42 @@ export class BillingRepository {
   }
 
   private createOrRetrieveCustomerId = async ({ id, email }: { id: string; email?: string }) => {
-    const org = await this.db.query.organizations.findFirst({
-      where: eq(organizations.id, id),
+    const billing = await this.db.query.organizationBilling.findFirst({
+      where: eq(organizationBilling.organizationId, id),
       columns: {
         id: true,
-        billingEmail: true,
+        email: true,
+        plan: true,
         stripeCustomerId: true,
       },
     });
 
-    if (!org) {
-      throw new Error(`Could not find organization with id: ${id}`);
+    if (billing?.stripeCustomerId) {
+      return billing.stripeCustomerId;
     }
-
-    if (org?.stripeCustomerId) {
-      return org.stripeCustomerId;
-    }
-
-    const billingEmail = org.billingEmail || email;
 
     const customer = await this.stripe.customers.create({
       metadata: {
-        cosmoId: org.id,
+        cosmoOrganizationId: id,
       },
-      email: billingEmail,
+      email, // this can be undefined, we'll update it after upgrading the plan
     });
 
     await this.db
-      .update(organizations)
-      .set({
+      .insert(organizationBilling)
+      .values({
+        organizationId: id,
         stripeCustomerId: customer.id,
-        billingEmail,
+        email,
       })
-      .where(eq(organizations.id, id))
-      .execute();
+      .onConflictDoUpdate({
+        target: organizationBilling.id,
+        set: {
+          organizationId: id,
+          stripeCustomerId: customer.id,
+          email,
+        },
+      });
 
     return customer.id;
   };
@@ -84,6 +96,19 @@ export class BillingRepository {
     return {
       id,
       ...plan,
+    };
+  }
+
+  public getPlanByPriceId(priceId: string) {
+    const plan = Object.entries(billing.plans).find(([, plan]) => getPriceId(plan) === priceId);
+
+    if (!plan) {
+      return null;
+    }
+
+    return {
+      id: plan[0],
+      ...plan[1],
     };
   }
 
@@ -115,26 +140,45 @@ export class BillingRepository {
     });
   }
 
-  syncSubscriptionStatus = async (subscriptionId: string, customerId: string, createAction = false) => {
-    const org = await this.db.query.organizations.findFirst({
-      where: eq(organizations.stripeCustomerId, customerId),
+  public async createBillingPortalSession(params: { organizationId: string; organizationSlug: string }) {
+    const billing = await this.db.query.organizationBilling.findFirst({
+      where: eq(organizationBilling.organizationId, params.organizationId),
       columns: {
         id: true,
-        billingEmail: true,
         stripeCustomerId: true,
       },
     });
 
-    if (!org) {
+    if (!billing || !billing.stripeCustomerId) {
+      throw new Error('Could not find billing information for this organization');
+    }
+
+    return this.stripe.billingPortal.sessions.create({
+      customer: billing.stripeCustomerId,
+      return_url: `${process.env.WEB_BASE_URL}/${params.organizationSlug}/billing`,
+    });
+  }
+
+  syncSubscriptionStatus = async (subscriptionId: string, customerId: string, isCreateEvent?: boolean) => {
+    const billing = await this.db.query.organizationBilling.findFirst({
+      where: eq(organizationBilling.stripeCustomerId, customerId),
+      columns: {
+        id: true,
+        organizationId: true,
+        stripeCustomerId: true,
+      },
+    });
+
+    if (!billing) {
       throw new Error(`Could not find organization with with stripeCustomerId: ${customerId}`);
     }
 
     const subscription = await this.stripe.subscriptions.retrieve(subscriptionId, {
-      expand: ['default_payment_method'],
+      expand: ['default_payment_method', 'customer'],
     });
 
     const values = {
-      organizationId: org.id,
+      organizationId: billing.organizationId,
       metadata: subscription.metadata,
       status: subscription.status,
       priceId: subscription.items.data[0].price.id,
@@ -160,5 +204,13 @@ export class BillingRepository {
         target: subscriptions.id,
         set: values,
       });
+
+    const plan = this.getPlanByPriceId(subscription.items.data[0].price.id);
+
+    if (plan) {
+      await this.db.update(organizationBilling).set({
+        plan: plan.id,
+      });
+    }
   };
 }

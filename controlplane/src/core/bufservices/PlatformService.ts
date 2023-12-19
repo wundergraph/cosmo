@@ -5015,5 +5015,30 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         };
       });
     },
+
+    createBillingPortalSession: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<CreateCheckoutSessionResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const billingRepo = new BillingRepository(opts.db);
+
+        const session = await billingRepo.createBillingPortalSession({
+          organizationId: authContext.organizationId,
+          organizationSlug: authContext.organizationSlug,
+        });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          sessionId: session.id,
+          url: session.url,
+        };
+      });
+    },
   };
 }
