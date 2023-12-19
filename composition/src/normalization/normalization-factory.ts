@@ -1061,18 +1061,18 @@ export class NormalizationFactory {
         default:
           throw new Error(`Unknown argument ${arg.name.value} found in httpOperation directive`);
       }
-      const configuration = getValueOrDefault(this.httpOperationsConfigurations, this.parentTypeName, () => []);
-      configuration.push({
-        fieldName: this.childName,
-        path,
-        operationSpecificHeaders,
-        httpMethod,
-        isBinary,
-        requestBaseBody,
-        queryParamArgMap,
-        queryStringOptionsByParam,
-      });
     }
+    const configuration = getValueOrDefault(this.httpOperationsConfigurations, this.parentTypeName, () => []);
+    configuration.push({
+      fieldName: this.childName,
+      path,
+      operationSpecificHeaders,
+      httpMethod,
+      isBinary,
+      requestBaseBody,
+      queryParamArgMap,
+      queryStringOptionsByParam,
+    });
   }
 
   normalize(document: DocumentNode) {
