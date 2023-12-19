@@ -6,7 +6,6 @@ import {
 import { AddSubgraphUsersContent } from "@/components/subgraphs-table";
 import { Badge } from "@/components/ui/badge";
 import { CLI } from "@/components/ui/cli";
-import { Separator } from "@/components/ui/separator";
 import {
   Tooltip,
   TooltipContent,
@@ -23,8 +22,6 @@ import {
   getSubgraphMembers,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { formatDistanceToNow } from "date-fns";
-import { Highlight, themes } from "prism-react-renderer";
-import Prism from "prismjs";
 import { useEffect, useState } from "react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -40,7 +37,7 @@ export const Empty = ({ subgraphName }: { subgraphName: string }) => {
           <a
             target="_blank"
             rel="noreferrer"
-            href={docsBaseURL + "/cli/subgraphs/update"}
+            href={docsBaseURL + "/cli/subgraph/update"}
             className="text-primary"
           >
             Learn more.
@@ -157,38 +154,12 @@ const SubgraphOverviewPage = () => {
         <div className="col-span-2 flex flex-col rounded-md border">
           <div className="border-b px-4 py-2 font-bold">README</div>
           {subgraph.readme ? (
-            <div className="scrollbar-custom flex h-full w-full flex-col gap-y-3 overflow-x-auto px-6 py-4">
-              <Markdown
-                remarkPlugins={[remarkGfm]}
-                components={{
-                  h1(props) {
-                    return (
-                      <div className="mb-2 flex flex-col gap-y-1">
-                        <h1 className="text-2xl font-bold">{props.children}</h1>
-                        <Separator orientation="horizontal" />
-                      </div>
-                    );
-                  },
-                  h2(props) {
-                    return (
-                      <div className="mb-2 flex flex-col gap-y-1">
-                        <h2 className="text-xl font-bold">{props.children}</h2>
-                        <Separator orientation="horizontal" />
-                      </div>
-                    );
-                  },
-                  h3(props) {
-                    return (
-                      <h3 className="text-lg font-bold">{props.children}</h3>
-                    );
-                  },
-                  code(props) {
-                    return <pre>{props.children}</pre>;
-                  },
-                }}
-              >
-                {subgraph.readme}
-              </Markdown>
+            <div className="scrollbar-custom flex h-full w-full px-6 py-4">
+              <div className="prose h-full w-full max-w-full flex-1 overflow-auto dark:prose-invert">
+                <Markdown remarkPlugins={[remarkGfm]}>
+                  {subgraph.readme}
+                </Markdown>
+              </div>
             </div>
           ) : (
             <Empty subgraphName={subgraph.name} />

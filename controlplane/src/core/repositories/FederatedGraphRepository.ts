@@ -140,7 +140,7 @@ export class FederatedGraphRepository {
       }
 
       // update routing URL when changed
-      if (federatedGraph.routingUrl && federatedGraph.routingUrl !== routingUrl) {
+      if (routingUrl && federatedGraph.routingUrl !== routingUrl) {
         await tx.update(federatedGraphs).set({ routingUrl }).where(eq(federatedGraphs.id, federatedGraph.id)).execute();
       }
 
@@ -296,6 +296,7 @@ export class FederatedGraphRepository {
       subgraphsCount: resp.federatedGraph.subgraphs.length ?? 0,
       labelMatchers: resp.labelMatchers.map((s) => s.labelMatcher.join(',')),
       creatorUserId: resp.createdBy || undefined,
+      readme: resp.readme || undefined,
     };
   }
 

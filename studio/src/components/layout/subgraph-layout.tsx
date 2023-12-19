@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { ExclamationTriangleIcon, HomeIcon } from "@radix-ui/react-icons";
+import { ExclamationTriangleIcon, FileTextIcon, HomeIcon } from "@radix-ui/react-icons";
 import { useQuery } from "@tanstack/react-query";
 import {
   getSubgraphByName,
@@ -62,6 +62,11 @@ export const SubgraphLayout = ({ children }: LayoutProps) => {
         title: "Overview",
         href: basePath,
         icon: <HomeIcon className="h-4 w-4" />,
+      },
+      {
+        title: "Schema",
+        href: basePath + "/schema",
+        icon: <FileTextIcon className="h-4 w-4" />,
       },
     ];
   }, [slug, organizationSlug]);

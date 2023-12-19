@@ -48,6 +48,7 @@ import {
   GetFieldUsageResponse,
   GetGraphMetricsResponse,
   GetInvitationsResponse,
+  GetLatestSubgraphSDLByNameResponse,
   GetLatestValidSubgraphSDLByNameResponse,
   GetMetricsErrorRateResponse,
   GetOIDCProviderResponse,
@@ -3574,6 +3575,32 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
+    getLatestSubgraphSDLByName: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+      return handleError<PlainMessage<GetLatestSubgraphSDLByNameResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
+        const subgraph = await subgraphRepo.byName(req.name);
+        if (!subgraph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+            },
+          };
+        }
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          sdl: subgraph.schemaSDL,
+        };
+      });
+    },
+
     getFederatedGraphByName: (req, ctx) => {
       const logger = opts.logger.child({
         service: ctx.service.typeName,
@@ -3663,6 +3690,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             compositionErrors: federatedGraph.compositionErrors ?? '',
             isComposable: federatedGraph.isComposable,
             requestSeries,
+            readme: federatedGraph.readme,
           },
           subgraphs: list.map((g) => ({
             id: g.id,

@@ -176,6 +176,7 @@ message FederatedGraph {
   string compositionErrors = 7;
   int32 connectedSubgraphs = 8;
   repeated RequestSeriesItem requestSeries = 9;
+  optional string readme = 10;
 }
 
 message GetFederatedGraphsResponse {
@@ -242,6 +243,15 @@ message GetLatestValidSubgraphSDLByNameRequest {
 }
 
 message GetLatestValidSubgraphSDLByNameResponse {
+  Response response = 1;
+  optional string sdl = 2;
+}
+
+message GetLatestSubgraphSDLByNameRequest {
+  string name = 1;
+}
+
+message GetLatestSubgraphSDLByNameResponse {
   Response response = 1;
   optional string sdl = 2;
 }
@@ -792,7 +802,6 @@ message GetPersistedOperationsResponse {
   repeated Operation operations = 2;
 }
 
-
 message Header{
   string key = 1;
   string value = 2;
@@ -1326,9 +1335,10 @@ service PlatformService {
   rpc GetSubgraphs(GetSubgraphsRequest) returns (GetSubgraphsResponse) {}
   // GetSubgraphByName returns the subgraph by name.
   rpc GetSubgraphByName(GetSubgraphByNameRequest) returns (GetSubgraphByNameResponse) {}
-  // GetFederatedSubgraphSDLByName returns the SDL of the subgraph by name.
+  // GetLatestValidSubgraphSDLByName returns the latest valid SDL of the subgraph by name.
   rpc GetLatestValidSubgraphSDLByName(GetLatestValidSubgraphSDLByNameRequest) returns (GetLatestValidSubgraphSDLByNameResponse) {}
-
+  // GetLatestSubgraphSDLByName returns the latest SDL of the subgraph by name.
+  rpc GetLatestSubgraphSDLByName(GetLatestSubgraphSDLByNameRequest) returns (GetLatestSubgraphSDLByNameResponse) {}
 
   // GetChecksByFederatedGraphName return schema and composition checks that concern a federated graph
   rpc GetChecksByFederatedGraphName(GetChecksByFederatedGraphNameRequest) returns (GetChecksByFederatedGraphNameResponse) {}
