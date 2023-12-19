@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.39.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.38.0...@wundergraph/cosmo-connect@0.39.0) (2023-12-19)
+
+### Features
+
+* add NATS to the router ([#333](https://github.com/wundergraph/cosmo/issues/333)) ([9c8303b](https://github.com/wundergraph/cosmo/commit/9c8303ba6d49a3dea682ff598210b2891a8dd29c)) (@fiam)
+
 # [0.38.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.37.0...@wundergraph/cosmo-connect@0.38.0) (2023-12-15)
 
 ### Features
