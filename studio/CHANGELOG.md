@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.44.2](https://github.com/wundergraph/cosmo/compare/studio@0.44.1...studio@0.44.2) (2023-12-19)
+
+### Bug Fixes
+
+* playground icon and introspect on focus ([#380](https://github.com/wundergraph/cosmo/issues/380)) ([efea2b5](https://github.com/wundergraph/cosmo/commit/efea2b5a19e633835ef135a0c094c1c0398973d2)) (@thisisnithin)
+* ui ([#379](https://github.com/wundergraph/cosmo/issues/379)) ([0246978](https://github.com/wundergraph/cosmo/commit/02469783a67451fd6c292236975a3be3ad98bd47)) (@thisisnithin)
+
 ## [0.44.1](https://github.com/wundergraph/cosmo/compare/studio@0.44.0...studio@0.44.1) (2023-12-17)
 
 ### Bug Fixes
