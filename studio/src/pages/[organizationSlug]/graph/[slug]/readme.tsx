@@ -52,7 +52,7 @@ const FederatedGraphReadmePage = () => {
   return (
     <div>
       {readme ? (
-        <div className="flex h-full w-full px-4 py-4">
+        <div className="flex h-full w-full">
           <div className="prose h-full w-full max-w-full dark:prose-invert">
             <Markdown remarkPlugins={[remarkGfm]}>{readme}</Markdown>
           </div>
