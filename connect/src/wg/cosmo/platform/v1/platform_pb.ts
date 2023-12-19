@@ -708,7 +708,7 @@ export class CreateFederatedGraphRequest extends Message<CreateFederatedGraphReq
   /**
    * readme of the fed graph
    *
-   * @generated from field: optional string readme = 7;
+   * @generated from field: optional string readme = 4;
    */
   readme?: string;
 
@@ -723,7 +723,7 @@ export class CreateFederatedGraphRequest extends Message<CreateFederatedGraphReq
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "routing_url", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "label_matchers", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 7, name: "readme", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 4, name: "readme", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateFederatedGraphRequest {
@@ -1580,6 +1580,16 @@ export class Subgraph extends Message<Subgraph> {
    */
   creatorUserId?: string;
 
+  /**
+   * @generated from field: optional string readme = 7;
+   */
+  readme?: string;
+
+  /**
+   * @generated from field: string subscriptionUrl = 8;
+   */
+  subscriptionUrl = "";
+
   constructor(data?: PartialMessage<Subgraph>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1594,6 +1604,8 @@ export class Subgraph extends Message<Subgraph> {
     { no: 4, name: "lastUpdatedAt", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "labels", kind: "message", T: Label, repeated: true },
     { no: 6, name: "creatorUserId", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 7, name: "readme", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 8, name: "subscriptionUrl", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Subgraph {
@@ -1891,6 +1903,11 @@ export class GetSubgraphByNameResponse extends Message<GetSubgraphByNameResponse
    */
   graph?: Subgraph;
 
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.SubgraphMember members = 3;
+   */
+  members: SubgraphMember[] = [];
+
   constructor(data?: PartialMessage<GetSubgraphByNameResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1901,6 +1918,7 @@ export class GetSubgraphByNameResponse extends Message<GetSubgraphByNameResponse
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "graph", kind: "message", T: Subgraph },
+    { no: 3, name: "members", kind: "message", T: SubgraphMember, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetSubgraphByNameResponse {
@@ -3108,6 +3126,11 @@ export class UpdateSubgraphRequest extends Message<UpdateSubgraphRequest> {
    */
   subscriptionUrl?: string;
 
+  /**
+   * @generated from field: optional string readme = 7;
+   */
+  readme?: string;
+
   constructor(data?: PartialMessage<UpdateSubgraphRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -3122,6 +3145,7 @@ export class UpdateSubgraphRequest extends Message<UpdateSubgraphRequest> {
     { no: 4, name: "headers", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 5, name: "subscription_protocol", kind: "enum", T: proto3.getEnumType(GraphQLSubscriptionProtocol), opt: true },
     { no: 6, name: "subscription_url", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 7, name: "readme", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateSubgraphRequest {
@@ -3203,6 +3227,11 @@ export class UpdateFederatedGraphRequest extends Message<UpdateFederatedGraphReq
    */
   labelMatchers: string[] = [];
 
+  /**
+   * @generated from field: optional string readme = 4;
+   */
+  readme?: string;
+
   constructor(data?: PartialMessage<UpdateFederatedGraphRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -3214,6 +3243,7 @@ export class UpdateFederatedGraphRequest extends Message<UpdateFederatedGraphReq
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "routing_url", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "label_matchers", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 4, name: "readme", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateFederatedGraphRequest {

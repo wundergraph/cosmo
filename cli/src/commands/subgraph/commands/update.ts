@@ -1,8 +1,11 @@
+import { readFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import Table from 'cli-table3';
 import { Command } from 'commander';
 import pc from 'picocolors';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { splitLabel, parseGraphQLSubscriptionProtocol } from '@wundergraph/cosmo-shared';
+import { resolve } from 'pathe';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { baseHeaders } from '../../../core/config.js';
 
@@ -30,7 +33,11 @@ export default (opts: BaseCommandOptions) => {
     '--subscription-protocol <protocol>',
     'The protocol to use when subscribing to the subgraph. The supported protocols are ws, sse, and sse-post.',
   );
+  command.option('--readme <path-to-readme>', 'The markdown file which describes the subgraph.');
+
   command.action(async (name, options) => {
+    const readmeFile = resolve(process.cwd(), options.readme);
+
     const resp = await opts.client.platform.updateSubgraph(
       {
         name,
@@ -49,6 +56,7 @@ export default (opts: BaseCommandOptions) => {
           ? parseGraphQLSubscriptionProtocol(options.subscriptionProtocol)
           : undefined,
         headers: options.header,
+        readme: existsSync(readmeFile) ? await readFile(readmeFile, 'utf8') : undefined,
       },
       {
         headers: baseHeaders,

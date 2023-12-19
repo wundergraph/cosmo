@@ -2,6 +2,7 @@ import {
   ComposeStatus,
   ComposeStatusMessage,
 } from "@/components/compose-status";
+import { CompositionErrorsDialog } from "@/components/composition-errors-dialog";
 import { RunRouterCommand } from "@/components/federatedgraphs-cards";
 import GraphVisualization from "@/components/graph-visualization";
 import {
@@ -9,8 +10,6 @@ import {
   GraphPageLayout,
   getGraphLayout,
 } from "@/components/layout/graph-layout";
-import { PageHeader } from "@/components/layout/head";
-import { TitleLayout } from "@/components/layout/title-layout";
 import { OperationsOverview } from "@/components/operations-overview";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -24,16 +23,13 @@ import {
 } from "@/components/ui/card";
 import { CLI } from "@/components/ui/cli";
 import { formatDateTime } from "@/lib/format-date";
-import { NextPageWithLayout } from "@/lib/page";
 import {
   ExclamationCircleIcon,
   ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
 import { RocketIcon } from "@radix-ui/react-icons";
-import { useRouter } from "next/router";
 import { useContext, useState } from "react";
 import { ReactFlowProvider } from "reactflow";
-import { CompositionErrorsDialog } from "@/components/composition-errors-dialog";
 
 const GraphOverviewPage = () => {
   const graphData = useContext(GraphContext);

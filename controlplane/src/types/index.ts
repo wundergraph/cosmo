@@ -49,6 +49,7 @@ export interface SubgraphDTO {
   lastUpdatedAt: string;
   labels: Label[];
   creatorUserId?: string;
+  readme?: string;
 }
 
 export interface MigrationSubgraph {

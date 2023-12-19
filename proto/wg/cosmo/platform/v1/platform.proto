@@ -79,7 +79,7 @@ message CreateFederatedGraphRequest {
   // label_matchers match the labels of the services which will form the federated graph. If the proposed schema composition is invalid, it will be rejected.
   repeated string label_matchers = 3;
   // readme of the fed graph
-  optional string readme = 7;
+  optional string readme = 4;
 }
 
 message CreateFederatedSubgraphRequest {
@@ -195,6 +195,8 @@ message Subgraph {
   string lastUpdatedAt = 4;
   repeated Label labels = 5;
   optional string creatorUserId = 6;
+  optional string readme = 7;
+  string subscriptionUrl = 8;
 }
 
 message GetSubgraphsResponse {
@@ -231,6 +233,7 @@ message GetSubgraphByNameRequest {
 message GetSubgraphByNameResponse {
   Response response = 1;
   Subgraph graph = 2;
+  repeated SubgraphMember members = 3;
 }
 
 message GetLatestValidSubgraphSDLByNameRequest {
@@ -386,6 +389,7 @@ message UpdateSubgraphRequest {
   optional wg.cosmo.common.GraphQLSubscriptionProtocol subscription_protocol = 5;
   // url used for subscriptions
   optional string subscription_url = 6;
+  optional string readme = 7;
 }
 
 message UpdateSubgraphResponse {
@@ -397,6 +401,7 @@ message UpdateFederatedGraphRequest {
   string name = 1;
   string routing_url = 2;
   repeated string label_matchers = 3;
+  optional string readme = 4;
 }
 
 message UpdateFederatedGraphResponse {
