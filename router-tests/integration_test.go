@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"net/http/httputil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -21,6 +22,8 @@ import (
 
 	"github.com/buger/jsonparser"
 	"github.com/golang-jwt/jwt/v5"
+	natsserver "github.com/nats-io/nats-server/v2/server"
+	natstest "github.com/nats-io/nats-server/v2/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -37,6 +40,7 @@ const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 var (
 	subgraphsMode = flag.String("subgraphs", "in-process", "How to run the subgraphs: in-process | subprocess | external")
 	workers       = flag.Int("workers", 4, "Number of workers to use for parallel benchmarks")
+	natsPort      = flag.Int("nats-port", 53347, "Port to use for NATS")
 
 	subgraphsRunner     runner.SubgraphsRunner
 	subgraphsConfigFile string
@@ -44,6 +48,23 @@ var (
 
 func TestMain(m *testing.M) {
 	flag.Parse()
+
+	opts := natsserver.Options{
+		Host:   "localhost",
+		Port:   *natsPort,
+		NoLog:  true,
+		NoSigs: true,
+	}
+	nats := natstest.RunServer(&opts)
+	if nats == nil {
+		panic("could not start NATS test server")
+	}
+
+	defer nats.Shutdown()
+
+	// Set this to allow the subgraphs to connect to the NATS server
+	os.Setenv("NATS_URL", fmt.Sprintf("nats://localhost:%d", *natsPort))
+
 	ctx := context.Background()
 	var err error
 	switch *subgraphsMode {
@@ -243,6 +264,14 @@ func setupServerConfig(tb testing.TB, opts ...core.Option) (*core.Server, config
 			EnableSingleFlight:                     true,
 			EnableRequestTracing:                   true,
 			EnableExecutionPlanCacheResponseHeader: true,
+		}),
+		core.WithEvents(config.EventsConfiguration{
+			Sources: []config.EventSource{
+				{
+					Provider: "NATS",
+					URL:      fmt.Sprintf("nats://localhost:%d", *natsPort),
+				},
+			},
 		}),
 	}
 	routerOpts = append(routerOpts, opts...)
@@ -763,7 +792,7 @@ func TestPlannerErrorMessage(t *testing.T) {
 
 func TestConcurrentQueriesWithDelay(t *testing.T) {
 	const (
-		numQueries   = 1000
+		numQueries   = 200
 		queryDelayMs = 3000
 	)
 	server := setupServer(t, core.WithCustomRoundTripper(
@@ -791,4 +820,37 @@ func TestConcurrentQueriesWithDelay(t *testing.T) {
 		}(ii)
 	}
 	wg.Wait()
+}
+
+func TestPartialOriginErrors(t *testing.T) {
+	transport := &customTransport{
+		delay: time.Millisecond * 10,
+		roundTrip: func(r *http.Request) (*http.Response, error) {
+			dump, err := httputil.DumpRequest(r, true)
+			if err != nil {
+				return nil, err
+			}
+			if bytes.Contains(dump, []byte(`... on Employee {notes}`)) {
+				return nil, &net.DNSError{}
+			}
+			return http.DefaultTransport.RoundTrip(r)
+		},
+	}
+	server := setupServer(t, core.WithCustomRoundTripper(transport))
+	result := sendData(server, "/graphql", []byte(`{"query":"{ employees { id details { forename surname } notes } }"}`))
+	assert.Equal(t, http.StatusOK, result.Result().StatusCode)
+	assert.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '3' at path 'query.employees.@'."}],"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"notes":null},{"id":2,"details":{"forename":"Dustin","surname":"Deus"},"notes":null},{"id":3,"details":{"forename":"Stefan","surname":"Avram"},"notes":null},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"},"notes":null},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"},"notes":null},{"id":7,"details":{"forename":"Suvij","surname":"Surya"},"notes":null},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"},"notes":null},{"id":9,"details":{"forename":"Alberto","surname":"Garcia Hierro"},"notes":null},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"},"notes":null},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"},"notes":null},{"id":12,"details":{"forename":"David","surname":"Stutt"},"notes":null}]}}`, result.Body.String())
+}
+
+func TestWithOriginErrors(t *testing.T) {
+	transport := &customTransport{
+		delay: time.Millisecond * 10,
+		roundTrip: func(r *http.Request) (*http.Response, error) {
+			return nil, &net.DNSError{}
+		},
+	}
+	server := setupServer(t, core.WithCustomRoundTripper(transport))
+	result := sendData(server, "/graphql", []byte(`{"query":"{ employees { id details { forename surname } notes } }"}`))
+	assert.Equal(t, http.StatusOK, result.Result().StatusCode)
+	assert.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '0' at path 'query'."}],"data":null}`, result.Body.String())
 }

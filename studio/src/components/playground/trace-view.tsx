@@ -390,37 +390,39 @@ const Trace = ({
 
 export const TraceView = () => {
   const {
-    response,
+    response: activeResponse,
     subgraphs,
     headers: activeHeader,
   } = useContext(TraceContext);
 
   const [headers, setHeaders] = useState<string>();
+  const [response, setResponse] = useState<string>();
 
   const [isNotIntrospection, setIsNotIntrospection] = useState(false);
 
   useEffect(() => {
     try {
-      const res = JSON.parse(response);
+      const res = JSON.parse(activeResponse);
       if (!res.data.__schema) {
+        setResponse(activeResponse);
         setIsNotIntrospection(true);
       }
     } catch {
       return;
     }
-  }, [response]);
+  }, [activeResponse]);
 
   useEffect(() => {
-    if (!response) return;
+    if (!activeResponse) return;
     setHeaders(activeHeader);
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [response]);
+  }, [activeResponse]);
 
   const { hasTraceHeader, hasTraceInResponse } = useMemo(() => {
     try {
       const parsedHeaders = JSON.parse(headers || "{}");
-      const parsedResponse = JSON.parse(response || "{}");
+      const parsedResponse = JSON.parse(activeResponse || "{}");
 
       return {
         hasTraceHeader: !!parsedHeaders["X-WG-TRACE"],
@@ -429,7 +431,7 @@ export const TraceView = () => {
     } catch {
       return { hasTraceHeader: false, hasTraceInResponse: false };
     }
-  }, [headers, response]);
+  }, [headers, activeResponse]);
 
   const hasTrace = hasTraceHeader && hasTraceInResponse;
 

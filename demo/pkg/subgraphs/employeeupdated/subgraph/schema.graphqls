@@ -1,0 +1,24 @@
+type PublishEventResult {
+    success: Boolean!
+}
+
+type Query {
+    employeeFromEvent(id: ID!): Employee! @eventsRequest(topic: "getEmployee.{{ args.id }}")
+}
+
+input UpdateEmployeeInput {
+    name: String
+    email: String
+}
+
+type Mutation {
+    updateEmployee(id: ID!, update: UpdateEmployeeInput!): PublishEventResult! @eventsPublish(topic: "updateEmployee.{{ args.id }}")
+}
+
+type Subscription {
+    employeeUpdated(employeeID: ID!): Employee! @eventsSubscribe(topic: "employeeUpdated.{{ args.employeeID }}")
+}
+
+type Employee @key(fields: "id") {
+  id: Int!
+}

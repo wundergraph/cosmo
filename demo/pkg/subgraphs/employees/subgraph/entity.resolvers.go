@@ -6,6 +6,7 @@ package subgraph
 
 import (
 	"context"
+	"time"
 
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/employees/subgraph/generated"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/employees/subgraph/model"
@@ -28,6 +29,7 @@ func (r *entityResolver) FindEmployeeByID(ctx context.Context, id int) (*model.E
 	}
 	for _, employee := range employees {
 		if id == employee.ID {
+			employee.UpdatedAt = time.Now().String()
 			return employee, nil
 		}
 	}

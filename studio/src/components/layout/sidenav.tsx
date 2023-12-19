@@ -124,7 +124,8 @@ export const SideNav = (props: SideNavLayoutProps) => {
         className={cn(
           "z-40 flex min-w-[210px] flex-shrink-0 flex-col bg-background pt-4 lg:px-3 lg:pb-4",
           {
-            "lg:h-[calc(100vh-32px)]": props.disableStarBanner && props.disableStarBanner === "false",
+            "lg:h-[calc(100vh-32px)]":
+              props.disableStarBanner && props.disableStarBanner === "false",
             "lg:h-screen":
               !props.disableStarBanner || props.disableStarBanner === "true",
           },
@@ -190,7 +191,7 @@ export const SideNav = (props: SideNavLayoutProps) => {
                       <span className="whitespace-nowrap">{item.title}</span>
                     </Link>
                   ) : (
-                    <h4 className="px-3 py-2 text-sm text-muted-foreground">
+                    <h4 className="hidden px-3 py-2 text-sm text-muted-foreground lg:block">
                       {item.title}
                     </h4>
                   )}

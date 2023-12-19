@@ -1,0 +1,29 @@
+# fly.toml app configuration file generated for demo-router on 2023-12-18T10:58:31+01:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = "demo-router"
+primary_region = "lax"
+
+[env]
+PROMETHEUS_LISTEN_ADDR="0.0.0.0:8088"
+LISTEN_ADDR="0.0.0.0:3002"
+LOG_LEVEL="info"
+CORS_ALLOW_CREDENTIALS="true"
+
+[build]
+  dockerfile = "./router/Dockerfile"
+
+[http_service]
+  internal_port = 3002
+  force_https = true
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ["app"]
+
+# scraped every 15 seconds
+[metrics]
+port = 8088
+path = "/metrics" # default for most prometheus exporters

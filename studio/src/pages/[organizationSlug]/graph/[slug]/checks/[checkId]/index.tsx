@@ -635,7 +635,7 @@ const CheckDetails = ({
                 <CheckOperations />
               </TabsContent>
               <TabsContent value="schema" className="relative w-full flex-1">
-                <div className="absolute right-8 top-5">
+                <div className="right-8 top-5 px-4 md:absolute md:px-0">
                   <CodeViewerActions
                     code={sdl}
                     subgraphName={data.check.subgraphName}
