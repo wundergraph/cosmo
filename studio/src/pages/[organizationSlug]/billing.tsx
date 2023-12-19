@@ -1,5 +1,6 @@
 import { EmptyState } from "@/components/empty-state";
 import { getDashboardLayout } from "@/components/layout/dashboard-layout";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Loader } from "@/components/ui/loader";
@@ -38,6 +39,8 @@ const BillingPage: NextPageWithLayout = () => {
   const user = useUser();
   const { toast } = useToast();
 
+  const { openPortal, isPending } = useBillingPortal();
+
   useEffect(() => {
     if (router.query.success) {
       toast({
@@ -62,6 +65,28 @@ const BillingPage: NextPageWithLayout = () => {
 
   const subscription = user?.currentOrganization.subscription;
 
+  let alert;
+  if (1 == 1 || subscription?.status === "past_due") {
+    alert = (
+      <Alert variant="destructive">
+        <AlertTitle>Payment required</AlertTitle>
+        <AlertDescription>
+          <p className="mb-2">
+            Your payment is past due. Please update your payment method to
+            continue using WunderGraph Cosmo.
+          </p>
+          <Button
+            variant="destructive"
+            onClick={() => openPortal()}
+            disabled={isPending}
+          >
+            Update payment method
+          </Button>
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
   if (isLoading) return <Loader fullscreen />;
 
   if (error || data?.response?.code !== EnumStatusCode.OK)
@@ -78,11 +103,15 @@ const BillingPage: NextPageWithLayout = () => {
 
   return (
     <div className="flex flex-col gap-y-4">
-      <p className="mb-8">
-        You are currently on the{" "}
-        <Badge variant="outline">{currentPlan?.name}</Badge> plan.{" "}
-        <SubscriptionStatus subscription={subscription} />
-      </p>
+      {alert ? (
+        alert
+      ) : (
+        <p className="mb-8">
+          You are currently on the{" "}
+          <Badge variant="outline">{currentPlan?.name}</Badge> plan.{" "}
+          <SubscriptionStatus subscription={subscription} />
+        </p>
+      )}
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         {data.plans.map((plan) => (
@@ -124,22 +153,11 @@ const BillingPage: NextPageWithLayout = () => {
   );
 };
 
-const SubscriptionStatus = ({
-  subscription,
-}: {
-  subscription?: {
-    status: string;
-    currentPeriodEnd: string;
-    cancelAtPeriodEnd: boolean;
-    trialEnd: string;
-  };
-}) => {
+const useBillingPortal = () => {
   const router = useRouter();
   const { mutateAsync, isPending } = useMutation(
     createBillingPortalSession.useMutation(),
   );
-
-  if (!subscription) return null;
 
   const openPortal = async () => {
     if (isPending) return;
@@ -151,6 +169,26 @@ const SubscriptionStatus = ({
       console.error(e);
     }
   };
+
+  return {
+    openPortal,
+    isPending,
+  };
+};
+
+const SubscriptionStatus = ({
+  subscription,
+}: {
+  subscription?: {
+    status: string;
+    currentPeriodEnd: string;
+    cancelAtPeriodEnd: boolean;
+    trialEnd: string;
+  };
+}) => {
+  const { openPortal, isPending } = useBillingPortal();
+
+  if (!subscription) return null;
 
   let status;
 

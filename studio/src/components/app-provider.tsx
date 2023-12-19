@@ -35,6 +35,22 @@ export interface Organization {
   roles: string[];
   createdAt: string;
   limits: OrganizationLimitsDTO;
+  billing?: {
+    plan: string;
+    email: string;
+  };
+  subscription?: {
+    status:
+      | "active"
+      | "canceled"
+      | "trialing"
+      | "incomplete"
+      | "incomplete_expired"
+      | "past_due";
+    currentPeriodEnd: string;
+    cancelAtPeriodEnd: boolean;
+    trialEnd: string;
+  };
 }
 
 interface OrganizationLimitsDTO {
