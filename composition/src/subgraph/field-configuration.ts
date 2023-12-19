@@ -14,6 +14,29 @@ export type EventConfiguration = {
   sourceId?: string;
 };
 
+export type HttpObjMap = {
+  [name: string]: string | HttpObjMap;
+};
+
+export type HttpConfiguration = {
+  sourceName?: string;
+  endpoint?: string;
+  operationHeaders?: HttpObjMap;
+  queryStringOptions?: HttpObjMap;
+  queryParams?: HttpObjMap;
+};
+
+export type HttpOperationConfiguration = {
+  fieldName: string;
+  path?: string;
+  operationSpecificHeaders?: HttpObjMap;
+  httpMethod?: string;
+  isBinary?: boolean;
+  requestBaseBody?: HttpObjMap;
+  queryParamArgMap?: HttpObjMap;
+  queryStringOptionsByParam?: HttpObjMap;
+};
+
 export type ConfigurationData = {
   fieldNames: Set<string>;
   isRootNode: boolean;
@@ -21,6 +44,8 @@ export type ConfigurationData = {
   keys?: RequiredFieldConfiguration[];
   requires?: RequiredFieldConfiguration[];
   events?: EventConfiguration[];
+  httpConfiguration?: HttpConfiguration;
+  httpOperations?: HttpOperationConfiguration[];
   typeName: string;
 };
 

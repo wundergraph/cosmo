@@ -1,4 +1,5 @@
 import {
+  ConstArgumentNode,
   ConstDirectiveNode,
   DefinitionNode,
   DirectiveDefinitionNode,
@@ -140,6 +141,7 @@ import {
 } from '../errors/errors';
 import {
   ANY_SCALAR,
+  ENDPOINT,
   ENTITIES_FIELD,
   ENTITY_UNION,
   EVENTS_PUBLISH,
@@ -150,11 +152,22 @@ import {
   EXTERNAL,
   FIELDS,
   FROM,
+  GLOBAL_OPTIONS,
+  HTTP_METHOD,
+  IS_BINARY,
   KEY,
+  OPERATION_HEADERS,
+  OPERATION_SPECIFIC_HEADERS,
   OPERATION_TO_DEFAULT,
   OVERRIDE,
   PARENTS,
+  PATH,
   PROVIDES,
+  QUERY_PARAM_ARG_MAP,
+  QUERY_PARAMS,
+  QUERY_STRING_OPTIONS,
+  QUERY_STRING_OPTIONS_BY_PARAM,
+  REQUEST_BASE_BODY,
   REQUIRES,
   RESOLVABLE,
   ROOT_TYPES,
@@ -162,6 +175,7 @@ import {
   SERVICE_FIELD,
   SERVICE_OBJECT,
   SOURCE_ID,
+  SOURCE_NAME,
   TOPIC,
 } from '../utils/string-constants';
 import { buildASTSchema } from '../buildASTSchema/buildASTSchema';
@@ -170,6 +184,9 @@ import {
   ConfigurationDataMap,
   EventConfiguration,
   EventType,
+  HttpConfiguration,
+  HttpObjMap,
+  HttpOperationConfiguration,
   RequiredFieldConfiguration,
 } from '../subgraph/field-configuration';
 import { printTypeNode } from '@graphql-tools/merge';
@@ -224,7 +241,10 @@ export class NormalizationFactory {
   errors: Error[] = [];
   entities = new Set<string>();
   entityInterfaces = new Map<string, EntityInterfaceData>();
+  eventsConfigurations = new Map<string, EventConfiguration[]>();
   extensions: ExtensionMap = new Map<string, ExtensionContainer>();
+  httpConfiguration?: HttpConfiguration;
+  httpOperationsConfigurations = new Map<string, HttpOperationConfiguration[]>();
   isCurrentParentExtension = false;
   isCurrentParentRootType = false;
   isSubgraphVersionTwo = false;
@@ -237,7 +257,6 @@ export class NormalizationFactory {
   parents: ParentMap = new Map<string, ParentContainer>();
   parentTypeName = '';
   parentsWithChildArguments = new Set<string>();
-  eventsConfigurations = new Map<string, EventConfiguration[]>();
   overridesByTargetSubgraphName = new Map<string, Map<string, Set<string>>>();
   schemaDefinition: SchemaContainer;
   subgraphName?: string;
@@ -632,21 +651,6 @@ export class NormalizationFactory {
     }
   }
 
-  canContainEventDirectives(): boolean {
-    if (!this.isCurrentParentRootType) {
-      return false;
-    }
-    const operationTypeNode = this.operationTypeNames.get(this.parentTypeName);
-    if (!operationTypeNode) {
-      return ROOT_TYPES.has(this.parentTypeName);
-    }
-    return (
-      operationTypeNode === OperationTypeNode.QUERY ||
-      operationTypeNode === OperationTypeNode.MUTATION ||
-      operationTypeNode === OperationTypeNode.SUBSCRIPTION
-    );
-  }
-
   extractKeyFieldSets(node: ObjectLikeTypeNode, rawFieldSets: Set<string>) {
     const parentTypeName = node.name.value;
     if (!node.directives?.length) {
@@ -852,6 +856,49 @@ export class NormalizationFactory {
     overriddenFieldNamesForParent.add(this.childName);
   }
 
+  extractRootTypeDirectives(node: TypeDefinitionNode) {
+    for (const directive of node.directives ?? []) {
+      switch (directive.name.value) {
+        case GLOBAL_OPTIONS: {
+          this.httpConfiguration = {};
+          for (const arg of directive.arguments ?? []) {
+            switch (arg.name.value) {
+              case SOURCE_NAME: {
+                if (arg.value.kind !== Kind.STRING) {
+                  throw new Error(`Expected string, found ${arg.value.kind} in argument ${arg.name.value}`);
+                }
+                this.httpConfiguration.sourceName = arg.value.value;
+                break;
+              }
+              case ENDPOINT: {
+                if (arg.value.kind !== Kind.STRING) {
+                  throw new Error(`Expected string, found ${arg.value.kind} in argument ${arg.name.value}`);
+                }
+                this.httpConfiguration.endpoint = arg.value.value;
+                break;
+              }
+              case OPERATION_HEADERS: {
+                this.httpConfiguration.operationHeaders = this.parseObjMap(node, arg);
+                break;
+              }
+              case QUERY_STRING_OPTIONS: {
+                this.httpConfiguration.queryStringOptions = this.parseObjMap(node, arg);
+                break;
+              }
+              case QUERY_PARAMS: {
+                this.httpConfiguration.queryParams = this.parseObjMap(node, arg);
+                break;
+              }
+              default:
+                throw new Error(`Unknown argument ${arg.name.value} found in globalOptions directive`);
+            }
+          }
+          break;
+        }
+      }
+    }
+  }
+
   extractEventDirectives(node: FieldDefinitionNode) {
     if (!node.directives) {
       return;
@@ -916,6 +963,114 @@ export class NormalizationFactory {
         fieldName: this.childName,
         topic,
         sourceId,
+      });
+    }
+  }
+
+  validateObjMap(
+    node: TypeDefinitionNode | FieldDefinitionNode,
+    directiveArgument: ConstArgumentNode,
+    map: HttpObjMap,
+    path: string[],
+  ) {
+    if (typeof map !== 'object') {
+      throw new Error(
+        `Expected object, found ${typeof map} in field ${node.name.value} in directive argument ${
+          directiveArgument.name.value
+        } at path ${path.join('.')}`,
+      );
+    }
+    for (const [key, value] of Object.entries(map)) {
+      if (typeof key !== 'string') {
+        throw new Error(
+          `Expected object key to be a string, found ${typeof key} in field ${node.name.value} in directive argument ${
+            directiveArgument.name.value
+          } at path ${path.join('.')}`,
+        );
+      }
+      if (typeof value === 'string') {
+        continue;
+      }
+      this.validateObjMap(node, directiveArgument, value, [...path, key]);
+    }
+  }
+
+  parseObjMap(node: TypeDefinitionNode | FieldDefinitionNode, directiveArgument: ConstArgumentNode): HttpObjMap {
+    if (directiveArgument.value.kind !== Kind.STRING) {
+      throw new Error(
+        `parsing field ${node.name.value}: httpOperation directive argument ${directiveArgument.name.value} must be a string, ${directiveArgument.value.kind} found`,
+      );
+    }
+
+    const objMap = JSON.parse(directiveArgument.value.value) as HttpObjMap;
+    this.validateObjMap(node, directiveArgument, objMap, []);
+    return objMap;
+  }
+
+  extractHttpFieldDirectives(node: FieldDefinitionNode) {
+    const directive = node.directives?.find((directive) => directive.name.value === 'httpOperation');
+    if (!directive) {
+      return;
+    }
+    let path: string | undefined;
+    let operationSpecificHeaders: HttpObjMap | undefined;
+    let httpMethod: string | undefined;
+    let isBinary: boolean | undefined;
+    let requestBaseBody: HttpObjMap | undefined;
+    let queryParamArgMap: HttpObjMap | undefined;
+    let queryStringOptionsByParam: HttpObjMap | undefined;
+    for (const arg of directive.arguments || []) {
+      switch (arg.name.value) {
+        case PATH: {
+          if (arg.value.kind !== Kind.STRING) {
+            throw new Error(`httpOperation directive path argument must be strings, ${arg.value.kind} found`);
+          }
+          path = arg.value.value;
+          break;
+        }
+        case OPERATION_SPECIFIC_HEADERS: {
+          operationSpecificHeaders = this.parseObjMap(node, arg);
+          break;
+        }
+        case HTTP_METHOD: {
+          if (arg.value.kind !== Kind.ENUM) {
+            throw new Error(`httpOperation directive httpMethod argument must be an enum, ${arg.value.kind} found`);
+          }
+          httpMethod = arg.value.value;
+          break;
+        }
+        case IS_BINARY: {
+          if (arg.value.kind !== Kind.BOOLEAN) {
+            throw new Error(`httpOperation directive isBinary argument must be a boolean, ${arg.value.kind} found`);
+          }
+          isBinary = arg.value.value;
+          break;
+        }
+        case REQUEST_BASE_BODY: {
+          requestBaseBody = this.parseObjMap(node, arg);
+          break;
+        }
+        case QUERY_PARAM_ARG_MAP: {
+          queryParamArgMap = this.parseObjMap(node, arg);
+          break;
+        }
+        case QUERY_STRING_OPTIONS_BY_PARAM: {
+          queryStringOptionsByParam = this.parseObjMap(node, arg);
+          break;
+        }
+        default:
+          throw new Error(`Unknown argument ${arg.name.value} found in httpOperation directive`);
+      }
+      const configuration = getValueOrDefault(this.httpOperationsConfigurations, this.parentTypeName, () => []);
+      configuration.push({
+        fieldName: this.childName,
+        path,
+        operationSpecificHeaders,
+        httpMethod,
+        isBinary,
+        requestBaseBody,
+        queryParamArgMap,
+        queryStringOptionsByParam,
       });
     }
   }
@@ -1092,9 +1247,10 @@ export class NormalizationFactory {
           }
           factory.childName = name;
           factory.lastChildNodeKind = node.kind;
-          if (factory.canContainEventDirectives()) {
+          if (factory.isCurrentParentRootType) {
             factory.extractEventDirectives(node);
           }
+          factory.extractHttpFieldDirectives(node);
           const fieldPath = `${factory.parentTypeName}.${name}`;
           factory.lastChildNodeKind = node.kind;
           const fieldNamedTypeName = getNamedTypeForChild(fieldPath, node.type);
@@ -1314,6 +1470,9 @@ export class NormalizationFactory {
             return false;
           }
           factory.isCurrentParentRootType = ROOT_TYPES.has(name) || factory.operationTypeNames.has(name);
+          if (factory.isCurrentParentRootType) {
+            factory.extractRootTypeDirectives(node);
+          }
           factory.parentTypeName = name;
           factory.lastParentNodeKind = node.kind;
           addConcreteTypesForImplementedInterfaces(node, factory.abstractToConcreteTypeNames);
@@ -1641,11 +1800,10 @@ export class NormalizationFactory {
             fieldNames: new Set<string>(),
             isRootNode: isEntity,
             typeName: parentTypeName,
+            events: this.eventsConfigurations.get(parentTypeName),
+            httpConfiguration: this.httpConfiguration,
+            httpOperations: this.httpOperationsConfigurations.get(parentTypeName),
           };
-          const events = this.eventsConfigurations.get(parentTypeName);
-          if (events) {
-            configurationData.events = events;
-          }
           this.configurationDataMap.set(parentTypeName, configurationData);
           addNonExternalFieldsToSet(parentContainer.fields, configurationData.fieldNames);
           this.validateInterfaceImplementations(parentContainer);
