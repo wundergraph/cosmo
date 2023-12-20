@@ -66,7 +66,7 @@ const BillingPage: NextPageWithLayout = () => {
   const subscription = user?.currentOrganization.subscription;
 
   let alert;
-  if (1 == 1 || subscription?.status === "past_due") {
+  if (subscription?.status === "past_due") {
     alert = (
       <Alert variant="destructive">
         <AlertTitle>Payment required</AlertTitle>
@@ -176,6 +176,16 @@ const useBillingPortal = () => {
   };
 };
 
+const ManagePaymentButton = () => {
+  const { openPortal, isPending } = useBillingPortal();
+
+  return (
+    <Button variant="outline" onClick={() => openPortal()} disabled={isPending}>
+      Manage your payment settings
+    </Button>
+  );
+};
+
 const SubscriptionStatus = ({
   subscription,
 }: {
@@ -186,8 +196,6 @@ const SubscriptionStatus = ({
     trialEnd: string;
   };
 }) => {
-  const { openPortal, isPending } = useBillingPortal();
-
   if (!subscription) return null;
 
   let status;
@@ -212,19 +220,7 @@ const SubscriptionStatus = ({
     );
   }
 
-  return (
-    <span>
-      <Button
-        variant="link"
-        className="p-0 text-base"
-        onClick={() => openPortal()}
-        disabled={isPending}
-      >
-        Manage your payment settings
-      </Button>
-      . {status}
-    </span>
-  );
+  return <span>{status}.</span>;
 };
 
 const UpgradeButton = ({
@@ -289,6 +285,7 @@ BillingPage.getLayout = (page) => {
     page,
     "Billing",
     "Manage your billing plan and payments",
+    <ManagePaymentButton />,
   );
 };
 

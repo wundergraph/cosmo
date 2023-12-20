@@ -14,6 +14,7 @@ import {
   unique,
   customType,
 } from 'drizzle-orm/pg-core';
+import { BillingPlans } from '../types/index.js';
 
 // JSON/JSONB custom types to workaround insert bug
 // Should not be used with other drivers than postgres-js
@@ -595,9 +596,18 @@ export const organizations = pgTable('organizations', {
     .references(() => users.id)
     .notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  isPersonal: boolean('is_personal').default(false),
-  isFreeTrial: boolean('is_free_trial').default(false),
-  isRBACEnabled: boolean('is_rbac_enabled').notNull().default(false),
+  /**
+   * @deprecated
+   */
+  isPersonal: boolean('is_personal'),
+  /**
+   * @deprecated
+   */
+  isFreeTrial: boolean('is_free_trial'),
+  /**
+   * @deprecated
+   */
+  isRBACEnabled: boolean('is_rbac_enabled'),
 });
 
 export const organizationBilling = pgTable(
@@ -609,7 +619,7 @@ export const organizationBilling = pgTable(
       .references(() => organizations.id, {
         onDelete: 'cascade',
       }),
-    plan: text('plan'),
+    plan: text('plan').$type<BillingPlans>(),
     email: text('email'),
     stripeCustomerId: text('stripe_customer_id'),
   },
@@ -622,7 +632,7 @@ export const organizationBilling = pgTable(
 );
 
 // These statuses map directly to Stripe's subscription statuses
-export const subscriptionStatusEnum = pgEnum('status', [
+const statuses = [
   'incomplete',
   'incomplete_expired',
   'trialing',
@@ -631,7 +641,11 @@ export const subscriptionStatusEnum = pgEnum('status', [
   'canceled',
   'unpaid',
   'paused',
-] as const);
+] as const;
+
+export const subscriptionStatusEnum = pgEnum('status', statuses);
+
+export type SubscriptionStatus = (typeof statuses)[number];
 
 export const subscriptions = pgTable('subscriptions', {
   id: text('id').notNull().primaryKey(),
@@ -712,6 +726,26 @@ export const organizationMemberRolesRelations = relations(organizationMemberRole
     references: [organizationsMembers.id],
   }),
 }));
+
+export const organizationFeatures = pgTable(
+  'organization_features',
+  {
+    id: uuid('id').notNull().primaryKey().defaultRandom(),
+    organizationId: uuid('organization_id')
+      .notNull()
+      .references(() => organizations.id, {
+        onDelete: 'cascade',
+      }),
+    feature: text('feature').notNull(),
+    enabled: boolean('enabled').default(true),
+    limit: integer('limit'),
+  },
+  (t) => {
+    return {
+      nameIndex: uniqueIndex('organization_feature_idx').on(t.organizationId, t.feature),
+    };
+  },
+);
 
 export const organizationLimits = pgTable('organization_limits', {
   id: uuid('id').notNull().primaryKey().defaultRandom(),

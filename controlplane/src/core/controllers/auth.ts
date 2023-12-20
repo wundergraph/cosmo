@@ -237,9 +237,7 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
           userId,
         });
 
-        const personalOrg = orgs.find((org) => org.isPersonal === true);
-
-        if (orgs.length === 0 || !personalOrg) {
+        if (orgs.length === 0) {
           await opts.keycloakClient.authenticateClient();
 
           const organizationSlug = uid(8);
@@ -253,8 +251,6 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
               organizationName: userEmail.split('@')[0],
               organizationSlug,
               ownerID: userId,
-              isFreeTrial: true,
-              isPersonal: true,
             });
 
             const orgMember = await orgRepo.addOrganizationMember({

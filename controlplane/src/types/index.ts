@@ -1,5 +1,15 @@
 import { JWTPayload } from 'jose';
 
+import billing from '../billing.json' assert { type: 'json' };
+
+export type BillingPlans = keyof typeof billing.plans;
+
+export type Feature = {
+  id: string;
+  enabled?: boolean | null;
+  limit?: number | null;
+};
+
 export interface ListFilterOptions {
   limit: number;
   offset: number;
@@ -99,9 +109,17 @@ export interface OrganizationDTO {
   slug: string;
   creatorUserId: string;
   createdAt: string;
-  isFreeTrial?: boolean;
-  isPersonal?: boolean;
-  isRBACEnabled?: boolean;
+  features?: Feature[];
+  billing: {
+    plan: BillingPlans;
+    email?: string;
+  };
+  subscription?: {
+    status: string;
+    trialEnd?: string;
+    currentPeriodEnd?: string;
+    cancelAtPeriodEnd?: boolean;
+  };
 }
 
 export interface UserDTO {

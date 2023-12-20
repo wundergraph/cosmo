@@ -2215,6 +2215,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db);
 
+        const memberships = await orgRepo.memberships({ userId: authContext.userId });
+        const orgCount = memberships.length;
+
         const org = await orgRepo.byId(authContext.organizationId);
         if (!org) {
           return {
@@ -2249,12 +2252,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        // the personal org cannot be deleted
-        if (org.isPersonal) {
+        // Minimum one organization is required for a user
+        if (orgCount <= 1) {
           return {
             response: {
               code: EnumStatusCode.ERR_NOT_FOUND,
-              details: `Personal organization cannot be deleted.`,
+              details: 'Minimum one organization is required for a user.',
             },
           };
         }
@@ -2321,11 +2324,11 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         }
 
         // the creator of the personal org cannot leave the organization.
-        if (org.isPersonal && org.creatorUserId === (authContext.userId || req.userID)) {
+        if (org.creatorUserId === (authContext.userId || req.userID)) {
           return {
             response: {
               code: EnumStatusCode.ERR_NOT_FOUND,
-              details: `Creator of a personal organization cannot leave the organization.`,
+              details: `Creator of a organization cannot leave the organization.`,
             },
           };
         }
@@ -3232,7 +3235,11 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        await orgRepo.updateRBACSettings(authContext.organizationId, req.enable);
+        await orgRepo.updateFeature({
+          organizationId: authContext.organizationId,
+          id: 'rbac',
+          enabled: req.enable,
+        });
 
         return {
           response: {
@@ -4953,22 +4960,13 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db);
 
-        const organization = await orgRepo.byId(authContext.organizationId);
-        if (!organization) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_NOT_FOUND,
-              details: `Organization not found`,
-            },
-            enabled: false,
-          };
-        }
+        const enabled = await orgRepo.isFeatureEnabled(authContext.organizationId, 'rbac');
 
         return {
           response: {
             code: EnumStatusCode.OK,
           },
-          enabled: organization.isRBACEnabled || false,
+          enabled,
         };
       });
     },

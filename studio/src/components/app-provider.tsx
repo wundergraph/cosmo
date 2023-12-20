@@ -29,15 +29,13 @@ export interface Organization {
   name: string;
   slug: string;
   plan?: string;
-  isPersonal: boolean;
-  isFreeTrial: boolean;
-  isRBACEnabled: boolean;
+  creatorUserId: string;
   roles: string[];
   createdAt: string;
   limits: OrganizationLimitsDTO;
-  billing?: {
+  billing: {
     plan: string;
-    email: string;
+    email?: string;
   };
   subscription?: {
     status:

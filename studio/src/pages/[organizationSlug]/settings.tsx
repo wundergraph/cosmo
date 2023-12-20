@@ -1,4 +1,5 @@
 import { UserContext } from "@/components/app-provider";
+import { EmptyState } from "@/components/empty-state";
 import { getDashboardLayout } from "@/components/layout/dashboard-layout";
 import {
   AlertDialog,
@@ -11,6 +12,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
@@ -49,6 +51,10 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
+import { useHas } from "@/hooks/use-has";
+import { useIsAdmin } from "@/hooks/use-is-admin";
+import { useIsCreator } from "@/hooks/use-is-creator";
+import { useUser } from "@/hooks/use-user";
 import { calURL, docsBaseURL } from "@/lib/constants";
 import { NextPageWithLayout } from "@/lib/page";
 import { cn } from "@/lib/utils";
@@ -365,7 +371,8 @@ const OpenIDConnectProvider = ({
 }: {
   currentMode: "create" | "map" | "result";
 }) => {
-  const user = useContext(UserContext);
+  const user = useUser();
+  const oidc = useHas("oidc");
   const [open, setOpen] = useState(false);
   const [alertOpen, setAlertOpen] = useState(false);
   const [mode, setMode] = useState(currentMode);
@@ -472,7 +479,10 @@ const OpenIDConnectProvider = ({
     <Card>
       <CardHeader className="gap-y-6 md:flex-row">
         <div className="space-y-1.5">
-          <CardTitle>Connect OIDC provider</CardTitle>
+          <CardTitle className="flex items-center gap-x-2">
+            <span>Connect OIDC provider</span>
+            <Badge variant="outline">Enterprise feature</Badge>
+          </CardTitle>
           <CardDescription>
             Connecting an OIDC provider allows users to automatically log in and
             be a part of this organization.{" "}
@@ -486,7 +496,19 @@ const OpenIDConnectProvider = ({
             </Link>
           </CardDescription>
         </div>
-        {!isLoading && (
+        {!oidc && (
+          <Button
+            className="md:ml-auto"
+            type="submit"
+            variant="default"
+            asChild
+          >
+            <Link href={calURL} target="_blank" rel="noreferrer">
+              Contact us
+            </Link>
+          </Button>
+        )}
+        {!isLoading && oidc && (
           <>
             {providerData && providerData.name ? (
               <AlertDialog
@@ -816,9 +838,92 @@ const OpenIDConnectProvider = ({
 };
 
 const RBAC = () => {
+  const rbac = useHas("rbac");
   const { data, refetch } = useQuery(isRBACEnabled.useQuery());
   const { mutate, isPending } = useMutation(updateRBACSettings.useMutation());
   const { toast } = useToast();
+
+  const disable = () => {
+    mutate(
+      {
+        enable: false,
+      },
+      {
+        onSuccess: (d) => {
+          refetch();
+          if (d.response?.code === EnumStatusCode.OK) {
+            toast({
+              description: "Disabled RBAC successfully.",
+              duration: 3000,
+            });
+          } else if (d.response?.details) {
+            toast({
+              description: d.response.details,
+              duration: 4000,
+            });
+          }
+        },
+        onError: () => {
+          toast({
+            description: "Could not disable RBAC. Please try again.",
+            duration: 3000,
+          });
+        },
+      },
+    );
+  };
+
+  const enable = () => {
+    mutate(
+      {
+        enable: false,
+      },
+      {
+        onSuccess: (d) => {
+          refetch();
+          if (d.response?.code === EnumStatusCode.OK) {
+            toast({
+              description: "Enabled RBAC successfully.",
+              duration: 3000,
+            });
+          } else if (d.response?.details) {
+            toast({
+              description: d.response.details,
+              duration: 4000,
+            });
+          }
+        },
+        onError: () => {
+          toast({
+            description: "Could not enable RBAC. Please try again.",
+            duration: 3000,
+          });
+        },
+      },
+    );
+  };
+
+  const action = data?.enabled ? (
+    <Button
+      className="md:ml-auto"
+      type="submit"
+      variant="destructive"
+      isLoading={isPending}
+      onClick={() => disable()}
+    >
+      Disable
+    </Button>
+  ) : (
+    <Button
+      className="md:ml-auto"
+      type="submit"
+      variant="default"
+      isLoading={isPending}
+      onClick={() => enable()}
+    >
+      Enable
+    </Button>
+  );
 
   return (
     <Card>
@@ -826,9 +931,7 @@ const RBAC = () => {
         <div className="space-y-1.5">
           <CardTitle className="flex items-center gap-x-2">
             <span>Resource Based Access Control (RBAC)</span>
-            <div className="rounded-md border-2 px-2 py-0.5 text-sm italic text-muted-foreground">
-              Enterprise feature
-            </div>
+            <Badge variant="outline">Enterprise feature</Badge>
           </CardTitle>
           <CardDescription>
             Enabling RBAC allows the fine grain access control of subgraphs and
@@ -843,44 +946,8 @@ const RBAC = () => {
             </Link>
           </CardDescription>
         </div>
-        {data?.enabled ? (
-          <Button
-            className="md:ml-auto"
-            type="submit"
-            variant="destructive"
-            isLoading={isPending}
-            onClick={() => {
-              mutate(
-                {
-                  enable: false,
-                },
-                {
-                  onSuccess: (d) => {
-                    refetch();
-                    if (d.response?.code === EnumStatusCode.OK) {
-                      toast({
-                        description: "Disabled RBAC successfully.",
-                        duration: 3000,
-                      });
-                    } else if (d.response?.details) {
-                      toast({
-                        description: d.response.details,
-                        duration: 4000,
-                      });
-                    }
-                  },
-                  onError: () => {
-                    toast({
-                      description: "Could not disable RBAC. Please try again.",
-                      duration: 3000,
-                    });
-                  },
-                },
-              );
-            }}
-          >
-            Disable
-          </Button>
+        {rbac ? (
+          action
         ) : (
           <Button
             className="md:ml-auto"
@@ -1111,21 +1178,35 @@ const DeleteOrganization = () => {
 };
 
 const SettingsDashboardPage: NextPageWithLayout = () => {
-  const user = useContext(UserContext);
+  const user = useUser();
+  const isAdmin = useIsAdmin();
+  const isCreator = useIsCreator();
+
+  const orgs = user?.organizations?.length || 0;
+
+  if (!isAdmin) {
+    return (
+      <EmptyState
+        title="Unauthorized"
+        description="You are not authorized to manage this organization."
+      />
+    );
+  }
 
   return (
     <div className="flex flex-col gap-y-4">
       <OrganizationDetails />
-      {user && !user.currentOrganization.isPersonal && (
-        <>
-          <Separator className="my-2" />
-          <RBAC />
-          <OpenIDConnectProvider currentMode="create" />
-          <Separator className="my-2" />
-          <LeaveOrganization />
-          <DeleteOrganization />
-        </>
-      )}
+      <Separator className="my-2" />
+
+      <RBAC />
+      <Separator className="my-2" />
+
+      <OpenIDConnectProvider currentMode="create" />
+      <Separator className="my-2" />
+
+      {!isCreator && <LeaveOrganization />}
+
+      {orgs > 1 && <DeleteOrganization />}
     </div>
   );
 };

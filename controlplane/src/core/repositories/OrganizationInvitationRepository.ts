@@ -36,7 +36,7 @@ export class OrganizationInvitationRepository {
   // returns the organizations to which the user has a pending invite.
   public async getPendingInvitationsOfUser(input: {
     userId: string;
-  }): Promise<(OrganizationDTO & { invitedBy: string | undefined })[]> {
+  }): Promise<(Omit<OrganizationDTO, 'billing' | 'subscription'> & { invitedBy: string | undefined })[]> {
     const users1 = alias(users, 'users1');
 
     const pendingOrgInvites = await this.db

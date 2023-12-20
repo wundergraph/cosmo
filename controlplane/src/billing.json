@@ -43,6 +43,7 @@
         { "id": "router", "description": "Self-Hosted Enterprise Router" },
         { "id": "users", "description": "Users", "limit": -1 },
         { "id": "federated-graphs", "description": "Max Federated Graphs", "limit": -1 },
+        { "id": "rbac", "description": "Role-based Access Control" },
         { "id": "sla", "description": "99.99% SLA" },
         { "id": "sso", "description": "Single Sign-On (SSO)" },
         { "id": "security", "description": "Advanced Security & Compliance" },

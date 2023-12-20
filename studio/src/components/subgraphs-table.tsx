@@ -51,6 +51,7 @@ import {
 import { useToast } from "./ui/use-toast";
 import { cn } from "@/lib/utils";
 import { InfoCircledIcon } from "@radix-ui/react-icons";
+import { useHas } from "@/hooks/use-has";
 
 export const Empty = ({ graph }: { graph?: FederatedGraph }) => {
   let label = "team=A";
@@ -294,7 +295,7 @@ export const SubgraphsTable = ({
   graph?: FederatedGraph;
   subgraphs: Subgraph[];
 }) => {
-  const user = useUser();
+  const rbac = useHas("rbac");
 
   if (!subgraphs || subgraphs.length === 0) return <Empty graph={graph} />;
 
@@ -308,9 +309,7 @@ export const SubgraphsTable = ({
           <TableHead className="w-2/12 px-4 text-right">
             Last Published
           </TableHead>
-          {user?.currentOrganization.isRBACEnabled && (
-            <TableHead className="w-1/12"></TableHead>
-          )}
+          {rbac && <TableHead className="w-1/12"></TableHead>}
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -345,7 +344,7 @@ export const SubgraphsTable = ({
                       })
                     : "Never"}
                 </TableCell>
-                {user?.currentOrganization.isRBACEnabled && (
+                {rbac && (
                   <TableCell>
                     <InviteUsers
                       subgraphName={name}

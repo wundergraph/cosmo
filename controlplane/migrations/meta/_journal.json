@@ -484,6 +484,13 @@
       "when": 1702991660381,
       "tag": "0068_fast_scourge",
       "breakpoints": true
+    },
+    {
+      "idx": 69,
+      "version": "5",
+      "when": 1703086425080,
+      "tag": "0069_early_lilandra",
+      "breakpoints": true
     }
   ]
 }

@@ -3,7 +3,7 @@ import Stripe from 'stripe';
 import type { DB } from '../../db/index.js';
 import { organizations, organizationBilling, subscriptions } from '../../db/schema.js';
 
-import { BillingPlanDTO } from '../../types/index.js';
+import { BillingPlans, BillingPlanDTO } from '../../types/index.js';
 
 import billing from '../../billing.json' assert { type: 'json' };
 
@@ -112,6 +112,11 @@ export class BillingRepository {
     };
   }
 
+  public hasFeature(planId: BillingPlans = 'developer', feature: string) {
+    const plan = this.getPlanById(planId);
+    return !!plan?.features?.find((f) => f.id === feature);
+  }
+
   public async createCheckoutSession(params: { organizationId: string; organizationSlug: string; plan: string }) {
     const plan = this.getPlanById(params.plan as any);
 
@@ -209,7 +214,7 @@ export class BillingRepository {
 
     if (plan) {
       await this.db.update(organizationBilling).set({
-        plan: plan.id,
+        plan: plan.id as BillingPlans,
       });
     }
   };

@@ -22,10 +22,20 @@ import {
   slackSchemaUpdateEventConfigs,
   targets,
   users,
+  organizationFeatures,
   organizationBilling,
   subscriptions,
 } from '../../db/schema.js';
-import { OrganizationDTO, OrganizationLimitsDTO, OrganizationMemberDTO, WebhooksConfigDTO } from '../../types/index.js';
+import {
+  BillingPlans,
+  Feature,
+  OrganizationDTO,
+  OrganizationLimitsDTO,
+  OrganizationMemberDTO,
+  WebhooksConfigDTO,
+} from '../../types/index.js';
+
+const defaultPlan = 'developer';
 
 /**
  * Repository for organization related operations.
@@ -38,8 +48,6 @@ export class OrganizationRepository {
     organizationName: string;
     organizationSlug: string;
     ownerID: string;
-    isPersonal?: boolean;
-    isFreeTrial?: boolean;
   }): Promise<OrganizationDTO> {
     const insertedOrg = await this.db
       .insert(organizations)
@@ -48,8 +56,6 @@ export class OrganizationRepository {
         name: input.organizationName,
         slug: input.organizationSlug,
         createdBy: input.ownerID,
-        isPersonal: input.isPersonal,
-        isFreeTrial: input.isFreeTrial,
       })
       .returning()
       .execute();
@@ -60,7 +66,9 @@ export class OrganizationRepository {
       slug: insertedOrg[0].slug,
       creatorUserId: insertedOrg[0].createdBy,
       createdAt: insertedOrg[0].createdAt.toISOString(),
-      isRBACEnabled: insertedOrg[0].isRBACEnabled,
+      billing: {
+        plan: defaultPlan,
+      },
     };
   }
 
@@ -83,10 +91,16 @@ export class OrganizationRepository {
         slug: organizations.slug,
         creatorUserId: organizations.createdBy,
         createdAt: organizations.createdAt,
-        isFreeTrial: organizations.isFreeTrial,
-        isRBACEnabled: organizations.isRBACEnabled,
+        billing: {
+          plan: organizationBilling.plan,
+        },
+        subscription: {
+          status: subscriptions.status,
+        },
       })
       .from(organizations)
+      .leftJoin(organizationBilling, eq(organizations.id, organizationBilling.organizationId))
+      .leftJoin(subscriptions, eq(organizations.id, subscriptions.organizationId))
       .where(eq(organizations.slug, slug))
       .limit(1)
       .execute();
@@ -99,10 +113,16 @@ export class OrganizationRepository {
       id: org[0].id,
       name: org[0].name,
       slug: org[0].slug,
-      isFreeTrial: org[0].isFreeTrial || false,
       creatorUserId: org[0].creatorUserId,
       createdAt: org[0].createdAt.toISOString(),
-      isRBACEnabled: org[0].isRBACEnabled,
+      billing: {
+        plan: org[0].billing?.plan || defaultPlan,
+      },
+      subscription: org[0].subscription
+        ? {
+            status: org[0].subscription.status,
+          }
+        : undefined,
     };
   }
 
@@ -114,10 +134,16 @@ export class OrganizationRepository {
         slug: organizations.slug,
         creatorUserId: organizations.createdBy,
         createdAt: organizations.createdAt,
-        isFreeTrial: organizations.isFreeTrial,
-        isRBACEnabled: organizations.isRBACEnabled,
+        billing: {
+          plan: organizationBilling.plan,
+        },
+        subscription: {
+          status: subscriptions.status,
+        },
       })
       .from(organizations)
+      .leftJoin(organizationBilling, eq(organizations.id, organizationBilling.organizationId))
+      .leftJoin(subscriptions, eq(organizations.id, subscriptions.organizationId))
       .where(eq(organizations.id, id))
       .limit(1)
       .execute();
@@ -130,10 +156,16 @@ export class OrganizationRepository {
       id: org[0].id,
       name: org[0].name,
       slug: org[0].slug,
-      isFreeTrial: org[0].isFreeTrial || false,
       creatorUserId: org[0].creatorUserId,
       createdAt: org[0].createdAt.toISOString(),
-      isRBACEnabled: org[0].isRBACEnabled,
+      billing: {
+        plan: org[0].billing?.plan || defaultPlan,
+      },
+      subscription: org[0].subscription
+        ? {
+            status: org[0].subscription.status,
+          }
+        : undefined,
     };
   }
 
@@ -163,10 +195,7 @@ export class OrganizationRepository {
         name: organizations.name,
         slug: organizations.slug,
         creatorUserId: organizations.createdBy,
-        isFreeTrial: organizations.isFreeTrial,
-        isPersonal: organizations.isPersonal,
         createdAt: organizations.createdAt,
-        isRBACEnabled: organizations.isRBACEnabled,
         limits: {
           users: organizationLimits.users,
           graphs: organizationLimits.graphs,
@@ -204,9 +233,6 @@ export class OrganizationRepository {
         slug: org.slug,
         creatorUserId: org.creatorUserId,
         createdAt: org.createdAt.toISOString(),
-        isFreeTrial: org.isFreeTrial || false,
-        isPersonal: org.isPersonal || false,
-        isRBACEnabled: org.isRBACEnabled,
         roles: await this.getOrganizationMemberRoles({
           userID: input.userId,
           organizationID: org.id,
@@ -221,8 +247,19 @@ export class OrganizationRepository {
           traceSamplingRateLimit: Number(org.limits.traceSamplingRateLimit),
           requestsLimit: org.limits.requestsLimit,
         },
-        billing: org.billing,
-        subscription: org.subscription,
+        features: await this.getFeatures({ organizationId: org.id }),
+        billing: {
+          plan: org.billing?.plan || defaultPlan,
+          email: org.billing?.email || undefined,
+        },
+        subscription: org.subscription
+          ? {
+              status: org.subscription.status,
+              trialEnd: org.subscription.trialEnd?.toISOString(),
+              cancelAtPeriodEnd: org.subscription.cancelAtPeriodEnd,
+              currentPeriodEnd: org.subscription.currentPeriodEnd?.toISOString(),
+            }
+          : undefined,
       })),
     );
 
@@ -351,6 +388,59 @@ export class OrganizationRepository {
       .execute();
 
     return userRoles.map((role) => role.role);
+  }
+
+  public async getFeatures(input: { organizationId: string }): Promise<Feature[]> {
+    const features = await this.db
+      .select({
+        feature: organizationFeatures.feature,
+        enabled: organizationFeatures.enabled,
+        limit: organizationFeatures.limit,
+      })
+      .from(organizationFeatures)
+      .where(eq(organizationFeatures.organizationId, input.organizationId))
+      .execute();
+
+    return features.map((feature) => ({
+      id: feature.feature,
+      enabled: feature.enabled,
+      limit: feature.limit,
+    }));
+  }
+
+  public async updateFeature(
+    input: {
+      organizationId: string;
+    } & Feature,
+  ) {
+    const feature: any = {
+      feature: input.id,
+      organizationId: input.organizationId,
+    };
+
+    if (input.enabled !== undefined) {
+      feature.enabled = input.enabled;
+    }
+
+    if (input.limit !== undefined) {
+      feature.limit = input.limit;
+    }
+
+    await this.db
+      .insert(organizationFeatures)
+      .values(feature)
+      .onConflictDoUpdate({
+        target: organizationFeatures.id,
+        set: feature,
+      })
+      .execute();
+  }
+
+  public async isFeatureEnabled(id: string, featureId: string) {
+    const feature = await this.db.query.organizationFeatures.findFirst({
+      where: and(eq(organizationFeatures.organizationId, id), eq(organizationFeatures.feature, featureId)),
+    });
+    return !!feature?.enabled;
   }
 
   public async createWebhookConfig(input: {
@@ -813,7 +903,7 @@ export class OrganizationRepository {
       .execute();
   }
 
-  public async addOrganizationBilling(input: { organizationID: string; email: string; plan: string }) {
+  public async addOrganizationBilling(input: { organizationID: string; email: string; plan: BillingPlans }) {
     await this.db
       .insert(organizationBilling)
       .values({
@@ -858,9 +948,5 @@ export class OrganizationRepository {
       requestsLimit: limits[0].requestsLimit,
       traceSamplingRateLimit: Number.parseFloat(limits[0].traceSamplingRateLimit),
     };
-  }
-
-  public async updateRBACSettings(organizationId: string, enabled: boolean) {
-    await this.db.update(organizations).set({ isRBACEnabled: enabled }).where(eq(organizations.id, organizationId));
   }
 }
