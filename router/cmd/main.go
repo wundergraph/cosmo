@@ -32,14 +32,16 @@ func Main() {
 		log.Fatal("Could not load config", zap.Error(err))
 	}
 
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt,
+	// Handling shutdown
+	shutdownCh := make(chan os.Signal, 1)
+	signal.Notify(shutdownCh, os.Interrupt,
 		syscall.SIGHUP,  // process is detached from terminal
 		syscall.SIGTERM, // default for kill
 		syscall.SIGKILL,
 		syscall.SIGQUIT, // ctrl + \
 		syscall.SIGINT,  // ctrl+c
 	)
-	defer stop()
+	ctx, stop := context.WithCancel(context.Background())
 
 	logLevel, err := logging.ZapLogLevelFromString(cfg.LogLevel)
 	if err != nil {
@@ -63,17 +65,15 @@ func Main() {
 
 	go func() {
 		if err := router.Start(ctx); err != nil {
-			logger.Error("Could not start server", zap.Error(err))
-			stop()
+			logger.Fatal("Could not start server", zap.Error(err))
 		}
 	}()
 
-	<-ctx.Done()
+	<-shutdownCh
 
 	logger.Info("Graceful shutdown ...", zap.String("shutdown_delay", cfg.ShutdownDelay.String()))
-
 	// enforce a maximum shutdown delay
-	ctx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownDelay)
+	ctx, cancel := context.WithTimeout(ctx, cfg.ShutdownDelay)
 	defer cancel()
 
 	if err := router.Shutdown(ctx); err != nil {
@@ -82,5 +82,5 @@ func Main() {
 
 	profile.Finish()
 	logger.Debug("Server exiting")
-	os.Exit(0)
+	stop()
 }

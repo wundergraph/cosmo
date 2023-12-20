@@ -950,8 +950,6 @@ func (r *Server) Shutdown(ctx context.Context) (err error) {
 		zap.String("grace_period", r.gracePeriod.String()),
 	)
 
-	r.rootContextCancel()
-
 	if r.gracePeriod > 0 {
 		ctxWithTimer, cancel := context.WithTimeout(ctx, r.gracePeriod)
 		ctx = ctxWithTimer
@@ -961,6 +959,7 @@ func (r *Server) Shutdown(ctx context.Context) (err error) {
 	r.healthChecks.SetReady(false)
 
 	if r.Server != nil {
+		<-ctx.Done()
 		if err := r.Server.Shutdown(ctx); err != nil {
 			return err
 		}
