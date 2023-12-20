@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useUser } from "./use-user";
 
 /**
@@ -9,9 +10,13 @@ import { useUser } from "./use-user";
 export const useHas = (feature: string, orgId?: string) => {
   const user = useUser();
 
-  const org = orgId
-    ? user?.organizations.find((org) => org.id === orgId)
-    : user?.currentOrganization;
+  const features = useMemo(() => {
+    const org = orgId
+      ? user?.organizations.find((org) => org.id === orgId)
+      : user?.currentOrganization;
 
-  return org?.features?.includes(feature);
+    return org?.features.map(({ id }) => id);
+  }, [orgId, user?.currentOrganization, user?.organizations]);
+
+  return features?.includes(feature);
 };

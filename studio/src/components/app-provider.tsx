@@ -33,6 +33,11 @@ export interface Organization {
   roles: string[];
   createdAt: string;
   limits: OrganizationLimitsDTO;
+  features: {
+    id: string;
+    enabled?: boolean;
+    limit?: number;
+  }[];
   billing: {
     plan: string;
     email?: string;

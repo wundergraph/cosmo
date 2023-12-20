@@ -34,6 +34,7 @@ import {
   OrganizationMemberDTO,
   WebhooksConfigDTO,
 } from '../../types/index.js';
+import { BillingRepository } from './BillingRepository.js';
 
 const defaultPlan = 'developer';
 
@@ -41,7 +42,11 @@ const defaultPlan = 'developer';
  * Repository for organization related operations.
  */
 export class OrganizationRepository {
-  constructor(private db: PostgresJsDatabase<typeof schema>) {}
+  protected billing: BillingRepository;
+
+  constructor(private db: PostgresJsDatabase<typeof schema>) {
+    this.billing = new BillingRepository(db);
+  }
 
   public async createOrganization(input: {
     organizationID?: string;
@@ -247,7 +252,7 @@ export class OrganizationRepository {
           traceSamplingRateLimit: Number(org.limits.traceSamplingRateLimit),
           requestsLimit: org.limits.requestsLimit,
         },
-        features: await this.getFeatures({ organizationId: org.id }),
+        features: await this.getFeatures({ organizationId: org.id, plan: org.billing?.plan || defaultPlan }),
         billing: {
           plan: org.billing?.plan || defaultPlan,
           email: org.billing?.email || undefined,
@@ -390,10 +395,22 @@ export class OrganizationRepository {
     return userRoles.map((role) => role.role);
   }
 
-  public async getFeatures(input: { organizationId: string }): Promise<Feature[]> {
-    const features = await this.db
+  public async getFeatures(input: { organizationId: string; plan?: BillingPlans }): Promise<Feature[]> {
+    let plan = input.plan;
+    if (!input.plan) {
+      const billing = await this.db.query.organizationBilling.findFirst({
+        where: eq(organizationBilling.organizationId, input.organizationId),
+        columns: {
+          plan: true,
+        },
+      });
+
+      plan = billing?.plan || defaultPlan;
+    }
+
+    const orgFeatures = await this.db
       .select({
-        feature: organizationFeatures.feature,
+        id: organizationFeatures.feature,
         enabled: organizationFeatures.enabled,
         limit: organizationFeatures.limit,
       })
@@ -401,11 +418,21 @@ export class OrganizationRepository {
       .where(eq(organizationFeatures.organizationId, input.organizationId))
       .execute();
 
-    return features.map((feature) => ({
-      id: feature.feature,
-      enabled: feature.enabled,
-      limit: feature.limit,
-    }));
+    // merge the features from the plan with the overrides from the organization
+    return this.billing.getPlanById(plan as BillingPlans).features?.map(({ id, limit }) => {
+      const feature = orgFeatures.find((f) => f.id === id);
+      if (feature) {
+        return {
+          ...feature,
+          limit: feature.limit || limit,
+        };
+      }
+
+      return {
+        id,
+        limit,
+      };
+    });
   }
 
   public async updateFeature(

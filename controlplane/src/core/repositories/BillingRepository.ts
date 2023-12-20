@@ -80,17 +80,21 @@ export class BillingRepository {
   };
 
   public listPlans(): BillingPlanDTO[] {
-    const plans = Object.entries(billing.plans).map(([id, plan]) => ({
+    const plans = Object.entries(billing.plans).map<BillingPlanDTO>(([id, plan]) => ({
       id,
       name: plan.name,
       price: plan.price,
-      features: plan.features,
+      features: plan.features.filter(({ description }) => !!description) as unknown as {
+        id: string;
+        description: string;
+        limit?: number;
+      }[],
     }));
 
     return plans;
   }
 
-  public getPlanById(id: keyof typeof billing.plans) {
+  public getPlanById(id: BillingPlans) {
     const plan = billing.plans[id];
 
     return {

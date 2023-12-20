@@ -142,7 +142,8 @@ const BillingPage: NextPageWithLayout = () => {
                 plan={plan}
                 isCurrent={currentPlan?.id === plan.id}
                 isDowngrade={
-                  currentPlan?.price ? currentPlan?.price > plan.price : false
+                  currentPlan?.price === -1 ||
+                  (currentPlan?.price ? currentPlan?.price > plan.price : false)
                 }
               />
             </div>
