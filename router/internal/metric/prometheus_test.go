@@ -36,6 +36,39 @@ func TestNameSanitizing(t *testing.T) {
 	require.Equal(t, findMetric(metrics, "my_test_counter_total").GetMetric()[0].GetCounter().GetValue(), float64(2))
 }
 
+func TestLabelExclusion(t *testing.T) {
+	p := NewPromClient(zap.NewNop(),
+		[]*regexp.Regexp{regexp.MustCompile("^test$")},
+		[]*regexp.Regexp{},
+	)
+
+	p.AddCounter("my.test.counter", "my test counter", 1, attribute.String("test2", "test2"), attribute.String("test", "test"))
+
+	metrics, err := p.Registry().Gather()
+	require.Nil(t, err)
+
+	require.Equal(t, 35, len(metrics))
+	require.Len(t, findMetric(metrics, "my_test_counter_total").GetMetric()[0].GetLabel(), 1)
+	require.Equal(t, findMetric(metrics, "my_test_counter_total").GetMetric()[0].GetLabel()[0].GetName(), "test2")
+}
+
+func TestMetricExclusion(t *testing.T) {
+	p := NewPromClient(zap.NewNop(),
+		[]*regexp.Regexp{},
+		[]*regexp.Regexp{regexp.MustCompile("^my_test_counter_total$")},
+	)
+
+	p.AddCounter("my.test.counter", "my test counter", 1, attribute.String("test", "test"))
+	p.AddCounter("my.test.counter2", "my test counter", 1, attribute.String("test", "test"))
+
+	metrics, err := p.Registry().Gather()
+	require.Nil(t, err)
+
+	require.Equal(t, 35, len(metrics))
+	require.Empty(t, findMetric(metrics, "my_test_counter_total").GetMetric())
+	require.NotEmpty(t, findMetric(metrics, "my_test_counter2_total").GetMetric())
+}
+
 func TestIgnoreOperationHashAttrByDefault(t *testing.T) {
 	p := NewPromClient(zap.NewNop(),
 		[]*regexp.Regexp{},
