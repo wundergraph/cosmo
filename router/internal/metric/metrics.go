@@ -76,9 +76,9 @@ type Metrics struct {
 // NewMetrics creates a new metrics instance.
 // Metrics abstract OTEL and Prometheus metrics with a single interface.
 // Previously, we used the OTEL Prometheus Exporter to export prometheus metrics with one solution, but the exporter
-// is implemented through a OTEL reader which does pipe the data through OTEL views for manipulation e.g. filtering.
+// is implemented through a OTEL reader which does not pipe the data through OTEL views for manipulation e.g. filtering.
 // This makes it impossible to filter metrics and labels before they are created as individual metrics.
-// For now, we track both OTEL and Prometheus metrics and use the default Prometheus client to export to Prometheus.
+// For now, we track both OTEL and Prometheus metrics and use the default Prometheus client to export them.
 func NewMetrics(serviceName, serviceVersion string, opts ...Option) (*Metrics, error) {
 	h := &Metrics{
 		counters:       map[string]otelmetric.Int64Counter{},
