@@ -28,7 +28,6 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/mitchellh/mapstructure"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/wundergraph/cosmo/router/config"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/health"
@@ -100,7 +99,8 @@ type (
 		cdnConfig                config.CDNConfiguration
 		cdn                      *cdn.CDN
 		eventsConfig             config.EventsConfiguration
-		prometheusServer         *http.Server
+		promServer               *http.Server
+		promClient               metric.PromClient
 		modulesConfig            map[string]interface{}
 		routerMiddlewares        []func(http.Handler) http.Handler
 		preOriginHandlers        []TransportPreHandler
@@ -164,11 +164,11 @@ func NewRouter(opts ...Option) (*Router, error) {
 	// Default values for trace and metric config
 
 	if r.traceConfig == nil {
-		r.traceConfig = trace.DefaultConfig()
+		r.traceConfig = trace.DefaultConfig(Version)
 	}
 
 	if r.metricConfig == nil {
-		r.metricConfig = metric.DefaultConfig()
+		r.metricConfig = metric.DefaultConfig(Version)
 	}
 
 	if r.corsOptions == nil {
@@ -516,16 +516,17 @@ func (r *Router) bootstrap(ctx context.Context) error {
 
 	// Prometheus metrics rely on OTLP metrics
 	if r.metricConfig.IsEnabled() {
-		mp, pr, err := metric.NewMeterProvider(ctx, r.logger, r.metricConfig)
+		mp, err := metric.NewMeterProvider(ctx, r.logger, r.metricConfig)
 		if err != nil {
 			return fmt.Errorf("failed to start trace agent: %w", err)
 		}
 		r.meterProvider = mp
 
-		if pr != nil && r.metricConfig.Prometheus.Enabled {
-			r.prometheusServer = createPrometheus(r.logger, pr, r.metricConfig.Prometheus.ListenAddr, r.metricConfig.Prometheus.Path)
+		if r.metricConfig.Prometheus.Enabled {
+			r.promClient = metric.NewPromClient(r.logger, r.metricConfig.Prometheus.ExcludeMetricLabels, r.metricConfig.Prometheus.ExcludeMetricLabels)
+			r.promServer = r.promClient.Serve(r.metricConfig.Prometheus.ListenAddr, r.metricConfig.Prometheus.Path)
 			go func() {
-				if err := r.prometheusServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+				if err := r.promServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 					r.logger.Error("Failed to start Prometheus server", zap.Error(err))
 				}
 			}()
@@ -772,8 +773,11 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	// Prometheus metrics rely on OTLP metrics
 	if r.metricConfig.IsEnabled() {
 		m, err := metric.NewMetrics(
-			r.meterProvider,
-			metric.WithApplicationVersion(Version),
+			r.metricConfig.Name,
+			Version,
+			metric.WithMeterProvider(r.meterProvider),
+			metric.WithPrometheusClient(r.promClient),
+			metric.WithLogger(r.logger),
 			metric.WithAttributes(
 				otel.WgRouterGraphName.String(r.federatedGraphName),
 				otel.WgRouterConfigVersion.String(routerConfig.GetVersion()),
@@ -891,11 +895,11 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 
 	var wg sync.WaitGroup
 
-	if r.prometheusServer != nil {
+	if r.promServer != nil {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			if subErr := r.prometheusServer.Close(); subErr != nil {
+			if subErr := r.promServer.Close(); subErr != nil {
 				err = errors.Join(err, fmt.Errorf("failed to shutdown prometheus server: %w", subErr))
 			}
 		}()
@@ -967,30 +971,6 @@ func (r *Server) Shutdown(ctx context.Context) (err error) {
 	}
 
 	return err
-}
-
-func createPrometheus(logger *zap.Logger, registry *metric.PromRegistry, listenAddr, path string) *http.Server {
-	r := chi.NewRouter()
-	r.Use(middleware.Recoverer)
-	r.Handle(path, promhttp.HandlerFor(registry, promhttp.HandlerOpts{
-		EnableOpenMetrics: true,
-		ErrorLog:          zap.NewStdLog(logger),
-		Registry:          registry,
-		Timeout:           0,
-	}))
-
-	svr := &http.Server{
-		Addr:              listenAddr,
-		ReadTimeout:       1 * time.Minute,
-		WriteTimeout:      2 * time.Minute,
-		ReadHeaderTimeout: 20 * time.Second,
-		ErrorLog:          zap.NewStdLog(logger),
-		Handler:           r,
-	}
-
-	logger.Info("Prometheus metrics enabled", zap.String("listen_addr", svr.Addr), zap.String("endpoint", path))
-
-	return svr
 }
 
 func WithListenerAddr(addr string) Option {
