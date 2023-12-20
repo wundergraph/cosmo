@@ -75,7 +75,7 @@ type (
 
 	// Config defines the configuration options for the Router.
 	Config struct {
-		transport                *http.Transport
+		transport                http.RoundTripper
 		logger                   *zap.Logger
 		traceConfig              *trace.Config
 		metricConfig             *metric.Config
@@ -99,6 +99,7 @@ type (
 		livenessCheckPath        string
 		cdnConfig                config.CDNConfiguration
 		cdn                      *cdn.CDN
+		eventsConfig             config.EventsConfiguration
 		prometheusServer         *http.Server
 		modulesConfig            map[string]interface{}
 		routerMiddlewares        []func(http.Handler) http.Handler
@@ -302,6 +303,10 @@ func NewRouter(opts ...Option) (*Router, error) {
 		r.logger.Warn("Development mode enabled. This should only be used for testing purposes")
 	}
 
+	for _, source := range r.eventsConfig.Sources {
+		r.logger.Info("event source", zap.String("provider", source.Provider), zap.String("url", source.URL))
+	}
+
 	return r, nil
 }
 
@@ -314,11 +319,7 @@ func (r *Router) configureSubgraphOverwrites(cfg *nodev1.RouterConfig) ([]Subgra
 			Name: sg.Name,
 		}
 
-		// Validate subgraph url
-		if sg.RoutingUrl == "" {
-			return nil, fmt.Errorf("subgraph '%s' has no routing url", sg.Name)
-		}
-
+		// Validate subgraph url. Note that that it can be empty if the subgraph is virtual
 		parsedURL, err := url.Parse(sg.RoutingUrl)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse subgraph url '%s': %w", sg.RoutingUrl, err)
@@ -522,9 +523,9 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		r.meterProvider = mp
 
 		if pr != nil && r.metricConfig.Prometheus.Enabled {
-			promSvr := createPrometheus(r.logger, pr, r.metricConfig.Prometheus.ListenAddr, r.metricConfig.Prometheus.Path)
+			r.prometheusServer = createPrometheus(r.logger, pr, r.metricConfig.Prometheus.ListenAddr, r.metricConfig.Prometheus.Path)
 			go func() {
-				if err := promSvr.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+				if err := r.prometheusServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 					r.logger.Error("Failed to start Prometheus server", zap.Error(err))
 				}
 			}()
@@ -730,6 +731,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	routerEngineConfig := &RouterEngineConfiguration{
 		Execution: r.engineExecutionConfiguration,
 		Headers:   r.headerRules,
+		Events:    r.eventsConfig,
 	}
 
 	if r.developmentMode && r.engineExecutionConfiguration.EnableRequestTracing && r.graphApiToken == "" {
@@ -997,7 +999,7 @@ func WithListenerAddr(addr string) Option {
 	}
 }
 
-func WithTransport(transport *http.Transport) Option {
+func WithCustomRoundTripper(transport http.RoundTripper) Option {
 	return func(r *Router) {
 		r.transport = transport
 	}
@@ -1129,6 +1131,13 @@ func WithLivenessCheckPath(path string) Option {
 func WithCDN(cfg config.CDNConfiguration) Option {
 	return func(r *Router) {
 		r.cdnConfig = cfg
+	}
+}
+
+// WithEvents sets the configuration for the events client
+func WithEvents(cfg config.EventsConfiguration) Option {
+	return func(r *Router) {
+		r.eventsConfig = cfg
 	}
 }
 

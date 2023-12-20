@@ -16,7 +16,8 @@ import {
 import {
   FIELD_UPPER,
   FRAGMENT_DEFINITION_UPPER,
-  FRAGMENT_SPREAD_UPPER, INACCESSIBLE,
+  FRAGMENT_SPREAD_UPPER,
+  INACCESSIBLE,
   INLINE_FRAGMENT_UPPER,
   MUTATION_UPPER,
   QUERY_UPPER,
@@ -27,6 +28,7 @@ import { SubgraphConfig } from '../subgraph/subgraph';
 export type FederationResultContainer = {
   errors?: Error[];
   federationResult?: FederationResult;
+  warnings?: String[];
 };
 
 export type FederationResult = {
@@ -34,7 +36,7 @@ export type FederationResult = {
   federatedGraphAST: DocumentNode;
   federatedGraphSchema: GraphQLSchema;
   subgraphConfigBySubgraphName: Map<string, SubgraphConfig>;
-}
+};
 
 export type RootTypeFieldData = {
   fieldName: string;
@@ -45,8 +47,13 @@ export type RootTypeFieldData = {
 };
 
 export const EXECUTABLE_DIRECTIVE_LOCATIONS = new Set<string>([
-  FIELD_UPPER, FRAGMENT_DEFINITION_UPPER, FRAGMENT_SPREAD_UPPER,
-  INLINE_FRAGMENT_UPPER, MUTATION_UPPER, QUERY_UPPER, SUBSCRIPTION_UPPER,
+  FIELD_UPPER,
+  FRAGMENT_DEFINITION_UPPER,
+  FRAGMENT_SPREAD_UPPER,
+  INLINE_FRAGMENT_UPPER,
+  MUTATION_UPPER,
+  QUERY_UPPER,
+  SUBSCRIPTION_UPPER,
 ]);
 
 export enum MergeMethod {

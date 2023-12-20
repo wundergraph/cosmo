@@ -4,6 +4,29 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.47.0](https://github.com/wundergraph/cosmo/compare/router@0.46.1...router@0.47.0) (2023-12-19)
+
+### Bug Fixes
+
+* playground icon and introspect on focus ([#380](https://github.com/wundergraph/cosmo/issues/380)) ([efea2b5](https://github.com/wundergraph/cosmo/commit/efea2b5a19e633835ef135a0c094c1c0398973d2)) (@thisisnithin)
+
+### Features
+
+* add NATS to the router ([#333](https://github.com/wundergraph/cosmo/issues/333)) ([9c8303b](https://github.com/wundergraph/cosmo/commit/9c8303ba6d49a3dea682ff598210b2891a8dd29c)) (@fiam)
+* improve subgraph error handling ([#382](https://github.com/wundergraph/cosmo/issues/382)) ([bf2f70e](https://github.com/wundergraph/cosmo/commit/bf2f70e0e2d0560dd69cff10dc38e413aa7c93a3)) (@jensneuse)
+
+## [0.46.1](https://github.com/wundergraph/cosmo/compare/router@0.46.0...router@0.46.1) (2023-12-17)
+
+### Bug Fixes
+
+* shutdown prom server on exit ([#378](https://github.com/wundergraph/cosmo/issues/378)) ([4ba6058](https://github.com/wundergraph/cosmo/commit/4ba605839cdf5ce7b719e204d47b128805440cfe)) (@StarpTech)
+
+# [0.46.0](https://github.com/wundergraph/cosmo/compare/router@0.45.2...router@0.46.0) (2023-12-17)
+
+### Features
+
+* add singleflight to transport ([#372](https://github.com/wundergraph/cosmo/issues/372)) ([d74d3bf](https://github.com/wundergraph/cosmo/commit/d74d3bf89fdaf3231f4343eb6c77f926429746e9)) (@jensneuse)
+
 ## [0.45.2](https://github.com/wundergraph/cosmo/compare/router@0.45.1...router@0.45.2) (2023-12-13)
 
 **Note:** Version bump only for package router

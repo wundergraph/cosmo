@@ -54,7 +54,8 @@ import {
   inputObjectContainerToNode,
   InputObjectExtensionContainer,
   InputValidationContainer,
-  InputValueContainer, isNodeQuery,
+  InputValueContainer,
+  isNodeQuery,
   newFieldSetContainer,
   ObjectExtensionContainer,
   ObjectLikeContainer,
@@ -104,7 +105,8 @@ import {
   duplicateOverriddenFieldsError,
   duplicateTypeDefinitionError,
   duplicateUnionMemberError,
-  duplicateValueExtensionError, equivalentSourceAndTargetOverrideError,
+  duplicateValueExtensionError,
+  equivalentSourceAndTargetOverrideError,
   expectedEntityError,
   incompatibleExtensionError,
   incompatibleExtensionKindsError,
@@ -116,7 +118,6 @@ import {
   invalidKeyDirectiveArgumentErrorMessage,
   invalidKeyDirectivesError,
   invalidOperationTypeDefinitionError,
-  invalidOverrideTargetSubgraphNameError,
   invalidRepeatedDirectiveErrorMessage,
   invalidRootTypeDefinitionError,
   invalidSubgraphNameErrorMessage,
@@ -141,6 +142,9 @@ import {
   ANY_SCALAR,
   ENTITIES_FIELD,
   ENTITY_UNION,
+  EVENTS_PUBLISH,
+  EVENTS_REQUEST,
+  EVENTS_SUBSCRIBE,
   EXTENDS,
   EXTENSIONS,
   EXTERNAL,
@@ -157,12 +161,21 @@ import {
   SCHEMA,
   SERVICE_FIELD,
   SERVICE_OBJECT,
+  SOURCE_ID,
+  TOPIC,
 } from '../utils/string-constants';
 import { buildASTSchema } from '../buildASTSchema/buildASTSchema';
-import { ConfigurationData, ConfigurationDataMap } from '../subgraph/field-configuration';
+import {
+  ConfigurationData,
+  ConfigurationDataMap,
+  EventConfiguration,
+  EventType,
+  RequiredFieldConfiguration,
+} from '../subgraph/field-configuration';
 import { printTypeNode } from '@graphql-tools/merge';
 import { inputValueDefinitionNodeToMutable, MutableInputValueDefinitionNode, ObjectLikeTypeNode } from '../ast/ast';
 import { InternalSubgraph, recordSubgraphName, Subgraph } from '../subgraph/subgraph';
+import { invalidOverrideTargetSubgraphNameWarning } from '../warnings/warnings';
 
 export type NormalizationResult = {
   configurationDataMap: ConfigurationDataMap;
@@ -184,7 +197,8 @@ export type NormalizationResultContainer = {
 export type BatchNormalizationContainer = {
   errors?: Error[];
   internalSubgraphsBySubgraphName: Map<string, InternalSubgraph>;
-}
+  warnings?: string[];
+};
 
 export function normalizeSubgraphFromString(subgraphSDL: string): NormalizationResultContainer {
   const { error, documentNode } = safeParse(subgraphSDL);
@@ -212,6 +226,7 @@ export class NormalizationFactory {
   entityInterfaces = new Map<string, EntityInterfaceData>();
   extensions: ExtensionMap = new Map<string, ExtensionContainer>();
   isCurrentParentExtension = false;
+  isCurrentParentRootType = false;
   isSubgraphVersionTwo = false;
   fieldSetsByParent = new Map<string, FieldSetContainer>();
   handledRepeatedDirectivesByHostPath = new Map<string, Set<string>>();
@@ -222,11 +237,13 @@ export class NormalizationFactory {
   parents: ParentMap = new Map<string, ParentContainer>();
   parentTypeName = '';
   parentsWithChildArguments = new Set<string>();
+  eventsConfigurations = new Map<string, EventConfiguration[]>();
   overridesByTargetSubgraphName = new Map<string, Map<string, Set<string>>>();
   schemaDefinition: SchemaContainer;
   subgraphName?: string;
   referencedDirectives = new Set<string>();
   referencedTypeNames = new Set<string>();
+  warnings: string[] = [];
 
   constructor(subgraphName?: string) {
     for (const baseDirectiveDefinition of BASE_DIRECTIVE_DEFINITIONS) {
@@ -487,7 +504,7 @@ export class NormalizationFactory {
       return;
     }
     this.entityInterfaces.set(name, {
-      interfaceObjectFieldNames: new Set<string>(node.fields?.map(field => field.name.value)),
+      interfaceObjectFieldNames: new Set<string>(node.fields?.map((field) => field.name.value)),
       interfaceFieldNames: new Set<string>(),
       isInterfaceObject: true,
       typeName: name,
@@ -518,15 +535,11 @@ export class NormalizationFactory {
       kind: convertedKind,
       name: node.name,
     });
-    if (node.kind === Kind.INTERFACE_TYPE_DEFINITION
-      || node.kind === Kind.INTERFACE_TYPE_EXTENSION
-      || !isEntity) {
+    if (node.kind === Kind.INTERFACE_TYPE_DEFINITION || node.kind === Kind.INTERFACE_TYPE_EXTENSION || !isEntity) {
       return;
     }
     this.entities.add(this.parentTypeName);
-    const fieldSets = getValueOrDefault(
-      this.fieldSetsByParent, this.parentTypeName, newFieldSetContainer,
-    );
+    const fieldSets = getValueOrDefault(this.fieldSetsByParent, this.parentTypeName, newFieldSetContainer);
     this.extractKeyFieldSets(node, fieldSets.keys);
   }
 
@@ -557,9 +570,7 @@ export class NormalizationFactory {
         }
         if (!directive.arguments || directive.arguments.length < 1) {
           if (requiredArguments.size > 0) {
-            errorMessages.push(
-              undefinedRequiredArgumentsErrorMessage(directiveName, hostPath, [...requiredArguments]),
-            );
+            errorMessages.push(undefinedRequiredArgumentsErrorMessage(directiveName, hostPath, [...requiredArguments]));
           }
           continue;
         }
@@ -619,6 +630,21 @@ export class NormalizationFactory {
         }
         return false;
     }
+  }
+
+  canContainEventDirectives(): boolean {
+    if (!this.isCurrentParentRootType) {
+      return false;
+    }
+    const operationTypeNode = this.operationTypeNames.get(this.parentTypeName);
+    if (!operationTypeNode) {
+      return ROOT_TYPES.has(this.parentTypeName);
+    }
+    return (
+      operationTypeNode === OperationTypeNode.QUERY ||
+      operationTypeNode === OperationTypeNode.MUTATION ||
+      operationTypeNode === OperationTypeNode.SUBSCRIPTION
+    );
   }
 
   extractKeyFieldSets(node: ObjectLikeTypeNode, rawFieldSets: Set<string>) {
@@ -734,9 +760,13 @@ export class NormalizationFactory {
       }
     }
     if (implementationErrorsMap.size) {
-      this.errors.push(unimplementedInterfaceFieldsError(
-        container.name.value, kindToTypeString(container.kind), implementationErrorsMap,
-      ));
+      this.errors.push(
+        unimplementedInterfaceFieldsError(
+          container.name.value,
+          kindToTypeString(container.kind),
+          implementationErrorsMap,
+        ),
+      );
     }
   }
 
@@ -786,24 +816,24 @@ export class NormalizationFactory {
         }
       }
       if (!observedArguments.has(FROM)) {
-        errorMessages.push(undefinedRequiredArgumentsErrorMessage(
-          OVERRIDE, hostPath, [FROM], [FROM],
-        ));
+        errorMessages.push(undefinedRequiredArgumentsErrorMessage(OVERRIDE, hostPath, [FROM], [FROM]));
       }
     } else {
-      errorMessages.push(
-        undefinedRequiredArgumentsErrorMessage(OVERRIDE, hostPath, [FROM], []),
-      );
+      errorMessages.push(undefinedRequiredArgumentsErrorMessage(OVERRIDE, hostPath, [FROM], []));
     }
     if (errorMessages.length > 0) {
       this.errors.push(invalidDirectiveError(OVERRIDE, hostPath, errorMessages));
       return;
     }
     const overrideDataForSubgraph = getValueOrDefault(
-      this.overridesByTargetSubgraphName, targetSubgraphName, () => new Map<string, Set<string>>(),
+      this.overridesByTargetSubgraphName,
+      targetSubgraphName,
+      () => new Map<string, Set<string>>(),
     );
     const overriddenFieldNamesForParent = getValueOrDefault(
-      overrideDataForSubgraph, this.parentTypeName, () => new Set<string>(),
+      overrideDataForSubgraph,
+      this.parentTypeName,
+      () => new Set<string>(),
     );
     if (overriddenFieldNamesForParent.has(this.childName)) {
       const handledRepeatedDirectives = this.handledRepeatedDirectivesByHostPath.get(hostPath);
@@ -812,15 +842,82 @@ export class NormalizationFactory {
         return;
       }
       // Add the directive name to the existing set (if other invalid repeated directives exist) or a new set
-      getValueOrDefault(this.handledRepeatedDirectivesByHostPath, hostPath, () => new Set<string>())
-        .add(OVERRIDE);
+      getValueOrDefault(this.handledRepeatedDirectivesByHostPath, hostPath, () => new Set<string>()).add(OVERRIDE);
       // The invalid repeated directive error should propagate only once per directive per host path
-      this.errors.push(invalidDirectiveError(
-        OVERRIDE, hostPath, [invalidRepeatedDirectiveErrorMessage(OVERRIDE, hostPath)],
-      ));
+      this.errors.push(
+        invalidDirectiveError(OVERRIDE, hostPath, [invalidRepeatedDirectiveErrorMessage(OVERRIDE, hostPath)]),
+      );
       return;
     }
     overriddenFieldNamesForParent.add(this.childName);
+  }
+
+  extractEventDirectives(node: FieldDefinitionNode) {
+    if (!node.directives) {
+      return;
+    }
+    for (const directive of node.directives) {
+      let eventType: EventType;
+      switch (directive.name.value) {
+        case EVENTS_PUBLISH: {
+          eventType = 'publish';
+          break;
+        }
+        case EVENTS_REQUEST: {
+          eventType = 'request';
+          break;
+        }
+        case EVENTS_SUBSCRIBE: {
+          eventType = 'subscribe';
+          break;
+        }
+        default:
+          continue;
+      }
+      let topic: string | undefined;
+      let sourceId: string | undefined;
+      for (const arg of directive.arguments || []) {
+        if (arg.value.kind !== Kind.STRING) {
+          throw new Error(`Event directive arguments must be strings, ${arg.value.kind} found in argument ${arg.name}`);
+        }
+        switch (arg.name.value) {
+          case TOPIC: {
+            if (topic !== undefined) {
+              throw new Error(`Event directives must have exactly one topic argument, found multiple`);
+            }
+            if (!arg.value.value) {
+              throw new Error(`Event directives must have a non-empty topic argument`);
+            }
+            topic = arg.value.value;
+            break;
+          }
+          case SOURCE_ID: {
+            if (sourceId !== undefined) {
+              throw new Error(`Event directives must have exactly one sourceID argument, found multiple`);
+            }
+            if (!arg.value.value) {
+              throw new Error(`Event directives must have a non-empty sourceID argument`);
+            }
+            sourceId = arg.value.value;
+            break;
+          }
+          default:
+            throw new Error(`Unknown argument ${arg.name.value} found in event directive`);
+        }
+      }
+
+      if (!topic) {
+        throw new Error(`Event directives must have a topic argument`);
+      }
+
+      const configuration = getValueOrDefault(this.eventsConfigurations, this.parentTypeName, () => []);
+      configuration.push({
+        type: eventType,
+        fieldName: this.childName,
+        topic,
+        sourceId,
+      });
+    }
   }
 
   normalize(document: DocumentNode) {
@@ -829,8 +926,8 @@ export class NormalizationFactory {
     after the visitor has visited the entire schema and the subgraph is known to be a V2 graph. Consequently,
     allDirectiveDefinitions cannot be used to check for duplicate definitions, and another set (below) is required */
     const definedDirectives = new Set<string>();
-    let isCurrentParentRootType: boolean = false;
     let fieldName = '';
+    const handledRootTypes = new Set<string>();
     // Collect any renamed root types
     visit(document, {
       OperationTypeDefinition: {
@@ -851,6 +948,7 @@ export class NormalizationFactory {
           if (existingOperationType) {
             factory.errors.push(invalidOperationTypeDefinitionError(existingOperationType, newTypeName, operationType));
           } else {
+            handledRootTypes.add(operationType);
             factory.operationTypeNames.set(newTypeName, operationType);
             factory.schemaDefinition.operationTypes.set(operationType, node);
           }
@@ -989,11 +1087,14 @@ export class NormalizationFactory {
       FieldDefinition: {
         enter(node) {
           const name = node.name.value;
-          if (isCurrentParentRootType && (name === SERVICE_FIELD || name === ENTITIES_FIELD)) {
+          if (factory.isCurrentParentRootType && (name === SERVICE_FIELD || name === ENTITIES_FIELD)) {
             return false;
           }
           factory.childName = name;
           factory.lastChildNodeKind = node.kind;
+          if (factory.canContainEventDirectives()) {
+            factory.extractEventDirectives(node);
+          }
           const fieldPath = `${factory.parentTypeName}.${name}`;
           factory.lastChildNodeKind = node.kind;
           const fieldNamedTypeName = getNamedTypeForChild(fieldPath, node.type);
@@ -1046,7 +1147,9 @@ export class NormalizationFactory {
             return;
           }
           const fieldSetContainer = getValueOrDefault(
-            factory.fieldSetsByParent, factory.parentTypeName, newFieldSetContainer,
+            factory.fieldSetsByParent,
+            factory.parentTypeName,
+            newFieldSetContainer,
           );
           // @provides only makes sense on entities, but the field can be encountered before the type definition
           // When the FieldSet is evaluated, it will be checked whether the field is an entity.
@@ -1111,8 +1214,10 @@ export class NormalizationFactory {
         enter(node) {
           const name = node.name.value;
           // If the parent is not an object type definition/extension, this node is an argument
-          if (factory.lastParentNodeKind !== Kind.INPUT_OBJECT_TYPE_DEFINITION
-            && factory.lastParentNodeKind !== Kind.INPUT_OBJECT_TYPE_EXTENSION) {
+          if (
+            factory.lastParentNodeKind !== Kind.INPUT_OBJECT_TYPE_DEFINITION &&
+            factory.lastParentNodeKind !== Kind.INPUT_OBJECT_TYPE_EXTENSION
+          ) {
             factory.argumentName = name;
             return;
           }
@@ -1162,7 +1267,7 @@ export class NormalizationFactory {
           const isEntity = isObjectLikeNodeEntity(node);
           if (isEntity) {
             factory.entityInterfaces.set(name, {
-              interfaceFieldNames: new Set<string>(node.fields?.map(field => field.name.value)),
+              interfaceFieldNames: new Set<string>(node.fields?.map((field) => field.name.value)),
               interfaceObjectFieldNames: new Set<string>(),
               isInterfaceObject: false,
               typeName: name,
@@ -1208,7 +1313,7 @@ export class NormalizationFactory {
           if (name === SERVICE_OBJECT) {
             return false;
           }
-          isCurrentParentRootType = ROOT_TYPES.has(name) || factory.operationTypeNames.has(name);
+          factory.isCurrentParentRootType = ROOT_TYPES.has(name) || factory.operationTypeNames.has(name);
           factory.parentTypeName = name;
           factory.lastParentNodeKind = node.kind;
           addConcreteTypesForImplementedInterfaces(node, factory.abstractToConcreteTypeNames);
@@ -1239,7 +1344,7 @@ export class NormalizationFactory {
           factory.extractKeyFieldSets(node, fieldSets.keys);
         },
         leave() {
-          isCurrentParentRootType = false;
+          factory.isCurrentParentRootType = false;
           factory.isCurrentParentExtension = false;
           factory.parentTypeName = '';
           factory.lastParentNodeKind = Kind.NULL;
@@ -1251,14 +1356,14 @@ export class NormalizationFactory {
           if (name === SERVICE_OBJECT) {
             return false;
           }
-          isCurrentParentRootType = ROOT_TYPES.has(name) || factory.operationTypeNames.has(name);
+          factory.isCurrentParentRootType = ROOT_TYPES.has(name) || factory.operationTypeNames.has(name);
           factory.parentTypeName = name;
           factory.lastParentNodeKind = node.kind;
           addConcreteTypesForImplementedInterfaces(node, factory.abstractToConcreteTypeNames);
           return factory.handleObjectLikeExtension(node);
         },
         leave() {
-          isCurrentParentRootType = false;
+          factory.isCurrentParentRootType = false;
           factory.isCurrentParentExtension = false;
           factory.parentTypeName = '';
           factory.lastParentNodeKind = Kind.NULL;
@@ -1512,7 +1617,7 @@ export class NormalizationFactory {
           definitions.push(inputObjectContainerToNode(this, parentContainer));
           break;
         case Kind.INTERFACE_TYPE_DEFINITION:
-          // intentional fallthrough
+        // intentional fallthrough
         case Kind.OBJECT_TYPE_DEFINITION:
           const isEntity = this.entities.has(parentTypeName);
           const operationTypeNode = this.operationTypeNames.get(parentTypeName);
@@ -1521,8 +1626,10 @@ export class NormalizationFactory {
             parentContainer.fields.delete(ENTITIES_FIELD);
           }
           if (this.parentsWithChildArguments.has(parentTypeName)) {
-            if (parentContainer.kind !== Kind.OBJECT_TYPE_DEFINITION
-              && parentContainer.kind !== Kind.INTERFACE_TYPE_DEFINITION) {
+            if (
+              parentContainer.kind !== Kind.OBJECT_TYPE_DEFINITION &&
+              parentContainer.kind !== Kind.INTERFACE_TYPE_DEFINITION
+            ) {
               continue;
             }
             for (const [fieldName, fieldContainer] of parentContainer.fields) {
@@ -1535,6 +1642,10 @@ export class NormalizationFactory {
             isRootNode: isEntity,
             typeName: parentTypeName,
           };
+          const events = this.eventsConfigurations.get(parentTypeName);
+          if (events) {
+            configurationData.events = events;
+          }
           this.configurationDataMap.set(parentTypeName, configurationData);
           addNonExternalFieldsToSet(parentContainer.fields, configurationData.fieldNames);
           this.validateInterfaceImplementations(parentContainer);
@@ -1559,8 +1670,7 @@ export class NormalizationFactory {
       const node = this.schemaDefinition.operationTypes.get(operationType);
       const defaultTypeName = getOrThrowError(operationTypeNodeToDefaultType, operationType, OPERATION_TO_DEFAULT);
       // If an operation type name was not declared, use the default
-      const operationTypeName = node ? getNamedTypeForChild(`schema.${operationType}`, node.type)
-        : defaultTypeName;
+      const operationTypeName = node ? getNamedTypeForChild(`schema.${operationType}`, node.type) : defaultTypeName;
       // If a custom type is used, the default type should not be defined
       if (
         operationTypeName !== defaultTypeName &&
@@ -1624,16 +1734,13 @@ export class NormalizationFactory {
       }
     }
     for (const [parentTypeName, fieldSets] of this.fieldSetsByParent) {
-      const parentContainer = this.parents.get(parentTypeName)
-        || this.extensions.get(parentTypeName);
+      const parentContainer = this.parents.get(parentTypeName) || this.extensions.get(parentTypeName);
       if (
-        !parentContainer
-        || (
-          parentContainer.kind !== Kind.OBJECT_TYPE_DEFINITION
-          && parentContainer.kind != Kind.OBJECT_TYPE_EXTENSION
-          && parentContainer.kind !== Kind.INTERFACE_TYPE_DEFINITION
-          && parentContainer.kind !== Kind.INTERFACE_TYPE_EXTENSION
-        )
+        !parentContainer ||
+        (parentContainer.kind !== Kind.OBJECT_TYPE_DEFINITION &&
+          parentContainer.kind != Kind.OBJECT_TYPE_EXTENSION &&
+          parentContainer.kind !== Kind.INTERFACE_TYPE_DEFINITION &&
+          parentContainer.kind !== Kind.INTERFACE_TYPE_EXTENSION)
       ) {
         this.errors.push(undefinedObjectLikeParentError(parentTypeName));
         continue;
@@ -1666,7 +1773,7 @@ export class NormalizationFactory {
 }
 
 export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationContainer {
-  const internalSubgraphsBySubgraphName = new Map<string, InternalSubgraph>;
+  const internalSubgraphsBySubgraphName = new Map<string, InternalSubgraph>();
   const allOverridesByTargetSubgraphName = new Map<string, Map<string, Set<string>>>();
   const overrideSourceSubgraphNamesByFieldPath = new Map<string, string[]>();
   const duplicateOverriddenFieldPaths = new Set<string>();
@@ -1674,6 +1781,7 @@ export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationContain
   const subgraphNames = new Set<string>();
   const nonUniqueSubgraphNames = new Set<string>();
   const invalidNameErrorMessages: string[] = [];
+  const warnings: string[] = [];
   // Record the subgraph names first, so that subgraph references can be validated
   for (const subgraph of subgraphs) {
     if (subgraph.name) {
@@ -1686,9 +1794,7 @@ export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationContain
     if (!subgraph.name) {
       invalidNameErrorMessages.push(invalidSubgraphNameErrorMessage(i, subgraphName));
     }
-    const { errors, normalizationResult } = normalizeSubgraph(
-      subgraph.definitions, subgraph.name,
-    );
+    const { errors, normalizationResult } = normalizeSubgraph(subgraph.definitions, subgraph.name);
     if (errors) {
       validationErrors.push(subgraphValidationError(subgraphName, errors));
       continue;
@@ -1714,20 +1820,21 @@ export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationContain
     if (normalizationResult.overridesByTargetSubgraphName.size < 1) {
       continue;
     }
-    const invalidOverrideTargetSubgraphNameErrors: Error[] = [];
     for (const [targetSubgraphName, overridesData] of normalizationResult.overridesByTargetSubgraphName) {
       const isTargetValid = subgraphNames.has(targetSubgraphName);
       for (const [parentTypeName, fieldNames] of overridesData) {
         if (!isTargetValid) {
-          invalidOverrideTargetSubgraphNameErrors.push(
-            invalidOverrideTargetSubgraphNameError(targetSubgraphName, parentTypeName, [...fieldNames]),
-          );
+          warnings.push(invalidOverrideTargetSubgraphNameWarning(targetSubgraphName, parentTypeName, [...fieldNames]));
         } else {
           const overridesData = getValueOrDefault(
-            allOverridesByTargetSubgraphName, targetSubgraphName, () => new Map<string, Set<string>>(),
+            allOverridesByTargetSubgraphName,
+            targetSubgraphName,
+            () => new Map<string, Set<string>>(),
           );
           const existingFieldNames = getValueOrDefault(
-            overridesData, parentTypeName, () => new Set<string>(fieldNames),
+            overridesData,
+            parentTypeName,
+            () => new Set<string>(fieldNames),
           );
           addIterableValuesToSet(fieldNames, existingFieldNames);
         }
@@ -1743,9 +1850,6 @@ export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationContain
         }
       }
     }
-    if (invalidOverrideTargetSubgraphNameErrors.length > 0) {
-      validationErrors.push(subgraphValidationError(subgraphName, invalidOverrideTargetSubgraphNameErrors));
-    }
   }
   const allErrors: Error[] = [];
   if (invalidNameErrorMessages.length > 0 || nonUniqueSubgraphNames.size > 0) {
@@ -1755,19 +1859,24 @@ export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationContain
     const duplicateOverriddenFieldErrorMessages: string[] = [];
     for (const fieldPath of duplicateOverriddenFieldPaths) {
       const sourceSubgraphNames = getOrThrowError(
-        overrideSourceSubgraphNamesByFieldPath, fieldPath, 'overrideSourceSubgraphNamesByFieldPath',
+        overrideSourceSubgraphNamesByFieldPath,
+        fieldPath,
+        'overrideSourceSubgraphNamesByFieldPath',
       );
       duplicateOverriddenFieldErrorMessages.push(duplicateOverriddenFieldErrorMessage(fieldPath, sourceSubgraphNames));
     }
     allErrors.push(duplicateOverriddenFieldsError(duplicateOverriddenFieldErrorMessages));
   }
   allErrors.push(...validationErrors);
+  const warningsToPropagate = warnings.length > 0 ? warnings : undefined;
   if (allErrors.length > 0) {
-    return { errors: allErrors, internalSubgraphsBySubgraphName };
+    return { errors: allErrors, internalSubgraphsBySubgraphName, warnings: warningsToPropagate };
   }
   for (const [targetSubgraphName, overridesData] of allOverridesByTargetSubgraphName) {
     const internalSubgraph = getOrThrowError(
-      internalSubgraphsBySubgraphName, targetSubgraphName, 'normalizedSubgraphsByName',
+      internalSubgraphsBySubgraphName,
+      targetSubgraphName,
+      'normalizedSubgraphsByName',
     );
     internalSubgraph.overriddenFieldNamesByParentTypeName = overridesData;
     for (const [parentTypeName, fieldNames] of overridesData) {
@@ -1781,5 +1890,8 @@ export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationContain
       }
     }
   }
-  return { internalSubgraphsBySubgraphName: internalSubgraphsBySubgraphName };
+  return {
+    internalSubgraphsBySubgraphName: internalSubgraphsBySubgraphName,
+    warnings: warningsToPropagate,
+  };
 }

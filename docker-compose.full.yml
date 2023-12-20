@@ -126,6 +126,7 @@ services:
       - default
     depends_on:
       - postgres
+
   minio:
     image: quay.io/minio/minio:${DC_MINIO_VERSION:-RELEASE.2023-11-06T22-26-08Z}
     environment:
@@ -143,6 +144,15 @@ services:
       - primary
     profiles:
       - default
+
+  nats:
+    image: nats:${DC_NATS_VERSION:-2.10.6}
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+      - "6222:6222"
+    networks:
+      - primary
 
   # Cosmo Platform
 
@@ -215,7 +225,7 @@ services:
       KC_API_URL: "http://keycloak:8080"
       KC_FRONTEND_URL: "http://localhost:8080"
       PROMETHEUS_API_URL: "http://admin:test@prometheus:9090/api/v1"
-      S3_STORAGE_URL: http://minio:changeme@localhost:10000/cosmo
+      S3_STORAGE_URL: http://minio:changeme@minio:9000/cosmo
     ports:
       - '3001:3001'
     restart: on-failure
@@ -239,6 +249,7 @@ services:
       DEFAULT_TELEMETRY_ENDPOINT: http://otelcollector:4318
       GRAPHQL_METRICS_COLLECTOR_ENDPOINT: http://graphqlmetrics:4005
       GRAPH_API_TOKEN: ${ROUTER_TOKEN}
+      CDN_URL: http://cdn:11000
     restart: on-failure
     volumes:
       # Mount the example config from the repo into the working dir of the router binary location

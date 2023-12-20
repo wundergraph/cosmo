@@ -243,6 +243,8 @@ const CheckDetails = ({
     (graph) => graph.id === graphContext.graph?.id,
   );
 
+  const ghDetails = data.check.ghDetails;
+
   const reason = !data.check.isComposable
     ? "Composition errors were found"
     : data.check.isBreaking && data.check.hasClientTraffic
@@ -463,6 +465,23 @@ const CheckDetails = ({
               </dd>
             </div>
           )}
+          {ghDetails && (
+            <div className="flex flex-col">
+              <dt className="mb-2 text-sm text-muted-foreground">
+                GitHub Commit
+              </dt>
+              <dd className="flex items-center gap-x-2 text-sm">
+                <Link
+                  href={`https://github.com/${ghDetails.ownerSlug}/${ghDetails.repositorySlug}/commit/${ghDetails.commitSha}`}
+                  className="inline-flex items-center gap-2 text-xs"
+                  aria-label="View on GitHub"
+                  target="_blank"
+                >
+                  {ghDetails.commitSha.substring(0, 7)}
+                </Link>
+              </dd>
+            </div>
+          )}
         </dl>
         <div className="h-full flex-1">
           <Tabs
@@ -616,7 +635,7 @@ const CheckDetails = ({
                 <CheckOperations />
               </TabsContent>
               <TabsContent value="schema" className="relative w-full flex-1">
-                <div className="absolute right-8 top-5">
+                <div className="right-8 top-5 px-4 md:absolute md:px-0">
                   <CodeViewerActions
                     code={sdl}
                     subgraphName={data.check.subgraphName}

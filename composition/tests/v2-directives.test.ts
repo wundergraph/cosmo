@@ -10,12 +10,12 @@ import { parse } from 'graphql';
 
 describe('V2 Directives Tests', () => {
   test('that external fields do not produce shareable errors', () => {
-    const { errors, federationResult } = federateSubgraphs(
-      [subgraphA, subgraphB, subgraphC]
-    );
+    const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphB, subgraphC]);
     expect(errors).toBeUndefined();
     expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
-      normalizeString(versionTwoPersistedBaseSchema + `
+      normalizeString(
+        versionTwoPersistedBaseSchema +
+          `
         type Query {
           query: Entity!
         }
@@ -25,17 +25,18 @@ describe('V2 Directives Tests', () => {
           name: String!
           age: Int!
         }
-      `),
+      `,
+      ),
     );
   });
 
   test('that if all fields but one are external, no shareable error is returned', () => {
-    const { errors, federationResult } = federateSubgraphs(
-      [subgraphA, subgraphB, subgraphE]
-    );
+    const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphB, subgraphE]);
     expect(errors).toBeUndefined();
     expect(documentNodeToNormalizedString(federationResult!.federatedGraphAST)).toBe(
-      normalizeString(versionOnePersistedBaseSchema + `
+      normalizeString(
+        versionOnePersistedBaseSchema +
+          `
         type Query {
           query: Entity!
         }
@@ -44,28 +45,35 @@ describe('V2 Directives Tests', () => {
           id: ID!
           name: String!
         }
-      `),
+      `,
+      ),
     );
   });
 
   test('that unshareable fields defined in multiple subgraphs return an error', () => {
-    const { errors } = federateSubgraphs(
-      [subgraphC, subgraphD]
-    );
+    const { errors } = federateSubgraphs([subgraphC, subgraphD]);
     expect(errors).toBeDefined();
     expect(errors).toHaveLength(1);
-    expect(errors![0]).toStrictEqual(shareableFieldDefinitionsError(
-      {
-        node: { name: stringToNameNode('Entity') },
-        fields: new Map<string, any>([
-          ['age', {
-            node: { name: stringToNameNode('age'), subgraphs: new Set<string>(['subgraph-c']) },
-            subgraphsByShareable: new Map<string, boolean>([['subgraph-c', true], ['subgraph-d', false]]),
-          }],
-        ]),
-      } as ObjectContainer,
-      new Set<string>(['age']),
-    ));
+    expect(errors![0]).toStrictEqual(
+      shareableFieldDefinitionsError(
+        {
+          node: { name: stringToNameNode('Entity') },
+          fields: new Map<string, any>([
+            [
+              'age',
+              {
+                node: { name: stringToNameNode('age'), subgraphs: new Set<string>(['subgraph-c']) },
+                subgraphsByShareable: new Map<string, boolean>([
+                  ['subgraph-c', true],
+                  ['subgraph-d', false],
+                ]),
+              },
+            ],
+          ]),
+        } as ObjectContainer,
+        new Set<string>(['age']),
+      ),
+    );
   });
 });
 

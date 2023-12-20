@@ -7,11 +7,16 @@ import {
   ConfigurationVariable,
   ConfigurationVariableKind,
   DataSourceConfiguration,
+  // eslint-disable-next-line camelcase
+  DataSourceCustom_Events,
+  // eslint-disable-next-line camelcase
+  DataSourceCustom_GraphQL,
   DataSourceKind,
   EngineConfiguration,
   HTTPMethod,
   InternedString,
   RouterConfig,
+  TypeField,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import {
   argumentConfigurationDatasToFieldConfigurations,
@@ -94,20 +99,41 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
       engineConfig,
       printSchemaWithDirectives(lexicographicSortSchema(subgraph.schema)),
     );
-    const { childNodes, rootNodes, keys, provides, requires } = configurationDataMapToDataSourceConfiguration(
+    const { childNodes, rootNodes, keys, provides, events, requires } = configurationDataMapToDataSourceConfiguration(
       subgraph.configurationDataMap,
     );
     const subscriptionProtocol = parseGraphQLSubscriptionProtocol(subgraph.subscriptionProtocol);
-    const datasourceConfig = new DataSourceConfiguration({
-      // When changing this, please do it in the router subgraph override as well
-      id: subgraph.id,
-      childNodes,
-      rootNodes,
-      keys,
-      provides,
-      requires,
-      kind: DataSourceKind.GRAPHQL,
-      customGraphql: {
+    let kind: DataSourceKind;
+    // eslint-disable-next-line camelcase
+    let customGraphql: DataSourceCustom_GraphQL | undefined;
+    // eslint-disable-next-line camelcase
+    let customEvents: DataSourceCustom_Events | undefined;
+    if (events.length > 0) {
+      kind = DataSourceKind.PUBSUB;
+      customEvents = new DataSourceCustom_Events({
+        events,
+      });
+      // PUBSUB data sources cannot have root nodes other than
+      // Query/Mutation/Subscription. Filter rootNodes in place
+      // while moving items that do not pass the filter to childNodes.
+      const isWellKnownRootNode = (node: TypeField) => {
+        return ['Query', 'Mutation', 'Subscription'].includes(node.typeName);
+      };
+      let ii = 0;
+      let filtered = 0;
+      while (ii < rootNodes.length) {
+        const node = rootNodes[ii];
+        if (isWellKnownRootNode(node)) {
+          rootNodes[filtered++] = node;
+        } else {
+          childNodes.push(node);
+        }
+        ii++;
+      }
+      rootNodes.length = filtered;
+    } else {
+      kind = DataSourceKind.GRAPHQL;
+      customGraphql = new DataSourceCustom_GraphQL({
         customScalarTypeFields: [],
         federation: {
           enabled: true,
@@ -134,7 +160,19 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
           }),
           protocol: subscriptionProtocol,
         },
-      },
+      });
+    }
+    const datasourceConfig = new DataSourceConfiguration({
+      // When changing this, please do it in the router subgraph override as well
+      id: subgraph.id,
+      childNodes,
+      rootNodes,
+      keys,
+      provides,
+      requires,
+      kind,
+      customGraphql,
+      customEvents,
       directives: [],
       overrideFieldPathFromAlias: true,
       requestTimeoutSeconds: BigInt(10),

@@ -6,7 +6,7 @@ import { useMovable } from 'react-move-hook';
 import { Edge, Node, ReactFlowProvider } from 'reactflow';
 import { EmptyState } from '../empty-state';
 import { Card } from '../ui/card';
-import { CLI } from '../ui/cli';
+import { CLI, CLISteps } from '../ui/cli';
 import { Tabs, TabsList, TabsTrigger } from '../ui/tabs';
 import { FetchFlow } from './fetch-flow';
 import { FetchWaterfall } from './fetch-waterfall';
@@ -358,34 +358,36 @@ const Trace = ({
 };
 
 export const TraceView = () => {
-  const { response, subgraphs, headers: activeHeader } = useContext(TraceContext);
+  const { response: activeResponse, subgraphs, headers: activeHeader } = useContext(TraceContext);
 
   const [headers, setHeaders] = useState<string>();
+  const [response, setResponse] = useState<string>();
 
   const [isNotIntrospection, setIsNotIntrospection] = useState(false);
 
   useEffect(() => {
     try {
-      const res = JSON.parse(response);
+      const res = JSON.parse(activeResponse);
       if (!res.data.__schema) {
+        setResponse(activeResponse);
         setIsNotIntrospection(true);
       }
     } catch {
       return;
     }
-  }, [response]);
+  }, [activeResponse]);
 
   useEffect(() => {
-    if (!response) return;
+    if (!activeResponse) return;
     setHeaders(activeHeader);
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [response]);
+  }, [activeResponse]);
 
   const { hasTraceHeader, hasTraceInResponse } = useMemo(() => {
     try {
       const parsedHeaders = JSON.parse(headers || '{}');
-      const parsedResponse = JSON.parse(response || '{}');
+      const parsedResponse = JSON.parse(activeResponse || '{}');
 
       return {
         hasTraceHeader: !!parsedHeaders['X-WG-TRACE'],
@@ -394,7 +396,7 @@ export const TraceView = () => {
     } catch {
       return { hasTraceHeader: false, hasTraceInResponse: false };
     }
-  }, [headers, response]);
+  }, [headers, activeResponse]);
 
   const hasTrace = hasTraceHeader && hasTraceInResponse;
 
@@ -405,8 +407,21 @@ export const TraceView = () => {
       <EmptyState
         icon={<LuNetwork />}
         title="No trace found"
-        description="Include the below header before executing your queries"
-        actions={<CLI command={`"X-WG-TRACE" : "true"`} />}
+        description="Please ensure the below are configured correctly"
+        actions={
+          <CLISteps
+            steps={[
+              {
+                description: 'Add this environment variable to the router',
+                command: `DEV_MODE=true`,
+              },
+              {
+                description: 'Add the below header to your requests',
+                command: `"X-WG-TRACE" : "true"`,
+              },
+            ]}
+          />
+        }
       />
     );
   }

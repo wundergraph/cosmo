@@ -77,6 +77,12 @@ export interface SchemaCheckDTO {
   hasClientTraffic: boolean;
   isForcedSuccess: boolean;
   isDeleted: boolean;
+  ghDetails?: {
+    commitSha: string;
+    ownerSlug: string;
+    repositorySlug: string;
+    checkRunId: number;
+  };
 }
 
 export interface SchemaCheckSummaryDTO extends SchemaCheckDTO {

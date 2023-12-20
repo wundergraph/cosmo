@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"net/http/httputil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -21,6 +22,8 @@ import (
 
 	"github.com/buger/jsonparser"
 	"github.com/golang-jwt/jwt/v5"
+	natsserver "github.com/nats-io/nats-server/v2/server"
+	natstest "github.com/nats-io/nats-server/v2/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -37,12 +40,31 @@ const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 var (
 	subgraphsMode = flag.String("subgraphs", "in-process", "How to run the subgraphs: in-process | subprocess | external")
 	workers       = flag.Int("workers", 4, "Number of workers to use for parallel benchmarks")
+	natsPort      = flag.Int("nats-port", 53347, "Port to use for NATS")
 
-	subgraphsRunner runner.SubgraphsRunner
+	subgraphsRunner     runner.SubgraphsRunner
+	subgraphsConfigFile string
 )
 
 func TestMain(m *testing.M) {
 	flag.Parse()
+
+	opts := natsserver.Options{
+		Host:   "localhost",
+		Port:   *natsPort,
+		NoLog:  true,
+		NoSigs: true,
+	}
+	nats := natstest.RunServer(&opts)
+	if nats == nil {
+		panic("could not start NATS test server")
+	}
+
+	defer nats.Shutdown()
+
+	// Set this to allow the subgraphs to connect to the NATS server
+	os.Setenv("NATS_URL", fmt.Sprintf("nats://localhost:%d", *natsPort))
+
 	ctx := context.Background()
 	var err error
 	switch *subgraphsMode {
@@ -76,6 +98,11 @@ func TestMain(m *testing.M) {
 	defer cancelFunc()
 	// Wait until the ports are open
 	if err := runner.Wait(timeoutCtx, subgraphsRunner); err != nil {
+		panic(err)
+	}
+
+	subgraphsConfigFile, err = routerconfig.SerializeRunner(subgraphsRunner)
+	if err != nil {
 		panic(err)
 	}
 
@@ -203,10 +230,7 @@ func setupServerConfig(tb testing.TB, opts ...core.Option) (*core.Server, config
 		},
 	}
 
-	configFile, err := routerconfig.SerializeRunner(subgraphsRunner)
-	require.NoError(tb, err)
-
-	routerConfig, err := core.SerializeConfigFromFile(configFile)
+	routerConfig, err := core.SerializeConfigFromFile(subgraphsConfigFile)
 	require.NoError(tb, err)
 
 	ec := zap.NewProductionEncoderConfig()
@@ -240,6 +264,14 @@ func setupServerConfig(tb testing.TB, opts ...core.Option) (*core.Server, config
 			EnableSingleFlight:                     true,
 			EnableRequestTracing:                   true,
 			EnableExecutionPlanCacheResponseHeader: true,
+		}),
+		core.WithEvents(config.EventsConfiguration{
+			Sources: []config.EventSource{
+				{
+					Provider: "NATS",
+					URL:      fmt.Sprintf("nats://localhost:%d", *natsPort),
+				},
+			},
 		}),
 	}
 	routerOpts = append(routerOpts, opts...)
@@ -321,53 +353,77 @@ func TestExecutionPlanCache(t *testing.T) {
 	assert.Equal(t, `{"data":{"findEmployees":[{"id":12,"details":{"forename":"David","surname":"Stutt"}}]}}`, result3.Body.String())
 }
 
-func TestInvalidVariablesNumber(t *testing.T) {
+func TestVariables(t *testing.T) {
+	t.Parallel()
 	server := setupServer(t)
-	result := sendData(server, "/graphql", []byte(`{"query":"query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}","variables":1}`))
-	assert.Equal(t, http.StatusBadRequest, result.Result().StatusCode)
-	assert.Equal(t, `{"errors":[{"message":"variables value must not be a number"}],"data":null}`, result.Body.String())
-}
 
-func TestInvalidVariablesString(t *testing.T) {
-	server := setupServer(t)
-	result := sendData(server, "/graphql", []byte(`{"query":"query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}","variables":"1"}`))
-	assert.Equal(t, http.StatusBadRequest, result.Result().StatusCode)
-	assert.Equal(t, `{"errors":[{"message":"variables value must not be a string"}],"data":null}`, result.Body.String())
-}
+	t.Run("correct validation", func(t *testing.T) {
+		t.Parallel()
+		result := sendData(server, "/graphql", []byte(`{"query":"query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}","variables":{"criteria":{"nationality":"GERMAN"}}}`))
+		assert.Equal(t, http.StatusOK, result.Result().StatusCode)
+		assert.Equal(t, `{"data":{"findEmployees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"}},{"id":2,"details":{"forename":"Dustin","surname":"Deus"}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"}}]}}`, result.Body.String())
+	})
 
-func TestInvalidVariablesBoolean(t *testing.T) {
-	server := setupServer(t)
-	result := sendData(server, "/graphql", []byte(`{"query":"query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}","variables":true}`))
-	assert.Equal(t, http.StatusBadRequest, result.Result().StatusCode)
-	assert.Equal(t, `{"errors":[{"message":"variables value must not be a boolean"}],"data":null}`, result.Body.String())
-}
+	t.Run("query with variables", func(t *testing.T) {
+		t.Parallel()
+		q := &testQuery{
+			Body:      "($n:Int!) { employee(id:$n) { id details { forename surname } } }",
+			Variables: map[string]interface{}{"n": 1},
+		}
+		result := sendQueryOK(t, server, "/graphql", q)
+		assert.JSONEq(t, `{"data":{"employee":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}}`, result)
+	})
 
-func TestInvalidVariablesArray(t *testing.T) {
-	server := setupServer(t)
-	result := sendData(server, "/graphql", []byte(`{"query":"query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}","variables":[]}`))
-	assert.Equal(t, http.StatusBadRequest, result.Result().StatusCode)
-	assert.Equal(t, `{"errors":[{"message":"variables value must not be an array"}],"data":null}`, result.Body.String())
-}
+	t.Run("inline variables", func(t *testing.T) {
+		t.Parallel()
+		q := &testQuery{
+			Body: "{ employee(id:1) { id details { forename surname } } }",
+		}
+		result := sendQueryOK(t, server, "/graphql", q)
+		assert.JSONEq(t, `{"data":{"employee":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}}`, result)
+	})
 
-func TestVariablesValidationVariableMissing(t *testing.T) {
-	server := setupServer(t)
-	result := sendData(server, "/graphql", []byte(`{"query":"query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}","variables":{}}`))
-	assert.Equal(t, http.StatusBadRequest, result.Result().StatusCode)
-	assert.Equal(t, `{"errors":[{"message":"Variable \"$criteria\" of required type \"SearchInput!\" was not provided."}],"data":null}`, result.Body.String())
-}
+	t.Run("invalid number", func(t *testing.T) {
+		t.Parallel()
+		result := sendData(server, "/graphql", []byte(`{"query":"query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}","variables":1}`))
+		assert.Equal(t, http.StatusBadRequest, result.Result().StatusCode)
+		assert.Equal(t, `{"errors":[{"message":"variables value must not be a number"}],"data":null}`, result.Body.String())
+	})
 
-func TestVariablesValidationVariableWrong(t *testing.T) {
-	server := setupServer(t)
-	result := sendData(server, "/graphql", []byte(`{"query":"query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}","variables":{"criteria":1}}`))
-	assert.Equal(t, http.StatusBadRequest, result.Result().StatusCode)
-	assert.Equal(t, `{"errors":[{"message":"Variable \"$criteria\" got invalid value 1; Expected type \"SearchInput\" to be an object."}],"data":null}`, result.Body.String())
-}
+	t.Run("invalid string", func(t *testing.T) {
+		t.Parallel()
+		result := sendData(server, "/graphql", []byte(`{"query":"query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}","variables":"1"}`))
+		assert.Equal(t, http.StatusBadRequest, result.Result().StatusCode)
+		assert.Equal(t, `{"errors":[{"message":"variables value must not be a string"}],"data":null}`, result.Body.String())
+	})
 
-func TestVariablesValidationVariableCorrect(t *testing.T) {
-	server := setupServer(t)
-	result := sendData(server, "/graphql", []byte(`{"query":"query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}","variables":{"criteria":{"nationality":"GERMAN"}}}`))
-	assert.Equal(t, http.StatusOK, result.Result().StatusCode)
-	assert.Equal(t, `{"data":{"findEmployees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"}},{"id":2,"details":{"forename":"Dustin","surname":"Deus"}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"}}]}}`, result.Body.String())
+	t.Run("invalid boolean", func(t *testing.T) {
+		t.Parallel()
+		result := sendData(server, "/graphql", []byte(`{"query":"query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}","variables":true}`))
+		assert.Equal(t, http.StatusBadRequest, result.Result().StatusCode)
+		assert.Equal(t, `{"errors":[{"message":"variables value must not be a boolean"}],"data":null}`, result.Body.String())
+	})
+
+	t.Run("invalid array", func(t *testing.T) {
+		t.Parallel()
+		result := sendData(server, "/graphql", []byte(`{"query":"query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}","variables":[]}`))
+		assert.Equal(t, http.StatusBadRequest, result.Result().StatusCode)
+		assert.Equal(t, `{"errors":[{"message":"variables value must not be an array"}],"data":null}`, result.Body.String())
+	})
+
+	t.Run("missing", func(t *testing.T) {
+		t.Parallel()
+		result := sendData(server, "/graphql", []byte(`{"query":"query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}","variables":{}}`))
+		assert.Equal(t, http.StatusBadRequest, result.Result().StatusCode)
+		assert.Equal(t, `{"errors":[{"message":"Variable \"$criteria\" of required type \"SearchInput!\" was not provided."}],"data":null}`, result.Body.String())
+	})
+
+	t.Run("wrong value variable", func(t *testing.T) {
+		t.Parallel()
+		result := sendData(server, "/graphql", []byte(`{"query":"query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}","variables":{"criteria":1}}`))
+		assert.Equal(t, http.StatusBadRequest, result.Result().StatusCode)
+		assert.Equal(t, `{"errors":[{"message":"Variable \"$criteria\" got invalid value 1; Expected type \"SearchInput\" to be an object."}],"data":null}`, result.Body.String())
+	})
 }
 
 func TestAnonymousQuery(t *testing.T) {
@@ -425,56 +481,69 @@ func prettifyJSON(t *testing.T, jsonStr string) string {
 	return string(normalized)
 }
 
-func TestMultipleAnonymousQueries(t *testing.T) {
+func TestOperationSelection(t *testing.T) {
+	t.Parallel()
 	server := setupServer(t)
-	result := sendData(server, "/graphql", []byte(`{"query":"{ employees { id } } { employees { id } }"}`))
-	assert.Equal(t, http.StatusOK, result.Result().StatusCode)
-	assert.Equal(t, `{"errors":[{"message":"operation name is required when multiple operations are defined"}],"data":null}`, result.Body.String())
-}
 
-func TestOperationNameNullReturnsData(t *testing.T) {
-	server := setupServer(t)
-	result := sendData(server, "/graphql", []byte(`{"query":"{ employees { id } }","operationName":null}`))
-	assert.Equal(t, http.StatusOK, result.Result().StatusCode)
-	assert.Equal(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`, result.Body.String())
-}
+	t.Run("anonymous query", func(t *testing.T) {
+		t.Parallel()
+		result := sendData(server, "/graphql", []byte(`{"query":"{ employees { id } }"}`))
+		assert.Equal(t, http.StatusOK, result.Code)
+		assert.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`, result.Body.String())
+	})
 
-func TestOperationNameWrongOnAnonymousOperation(t *testing.T) {
-	server := setupServer(t)
-	result := sendData(server, "/graphql", []byte(`{"query":"{ employees { id } }","operationName":"Missing"}`))
-	assert.Equal(t, http.StatusOK, result.Result().StatusCode)
-	assert.Equal(t, `{"errors":[{"message":"operation with name 'Missing' not found"}],"data":null}`, result.Body.String())
-}
+	t.Run("multiple anonymous queries", func(t *testing.T) {
+		t.Parallel()
+		result := sendData(server, "/graphql", []byte(`{"query":"{ employees { id } } { employees { id } }"}`))
+		assert.Equal(t, http.StatusOK, result.Result().StatusCode)
+		assert.Equal(t, `{"errors":[{"message":"operation name is required when multiple operations are defined"}],"data":null}`, result.Body.String())
+	})
 
-func TestOperationNameWrongOnNamedOperation(t *testing.T) {
-	server := setupServer(t)
-	result := sendData(server, "/graphql", []byte(`{"query":"query Exists { employees { id } }","operationName":"Missing"}`))
-	assert.Equal(t, http.StatusOK, result.Result().StatusCode)
-	assert.Equal(t, `{"errors":[{"message":"operation with name 'Missing' not found"}],"data":null}`, result.Body.String())
-}
+	t.Run("operation name null returns data", func(t *testing.T) {
+		result := sendData(server, "/graphql", []byte(`{"query":"{ employees { id } }","operationName":null}`))
+		t.Parallel()
+		assert.Equal(t, http.StatusOK, result.Result().StatusCode)
+		assert.Equal(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`, result.Body.String())
+	})
 
-func TestMultipleNamedOperations(t *testing.T) {
-	server := setupServer(t)
-	result := sendData(server, "/graphql", []byte(`{"query":"query A { employees { id } } query B { employees { id details { forename surname } } }","operationName":"A"}`))
-	assert.Equal(t, http.StatusOK, result.Result().StatusCode)
-	assert.Equal(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`, result.Body.String())
-}
+	t.Run("operation name wrong on anonymous operation", func(t *testing.T) {
+		t.Parallel()
+		result := sendData(server, "/graphql", []byte(`{"query":"{ employees { id } }","operationName":"Missing"}`))
+		assert.Equal(t, http.StatusOK, result.Result().StatusCode)
+		assert.Equal(t, `{"errors":[{"message":"operation with name 'Missing' not found"}],"data":null}`, result.Body.String())
+	})
 
-func TestMultipleNamedOperationsB(t *testing.T) {
-	server := setupServer(t)
-	result := sendData(server, "/graphql", []byte(`{"query":"query A { employees { id } } query B { employees { id details { forename surname } } }","operationName":"B"}`))
-	assert.Equal(t, http.StatusOK, result.Result().StatusCode)
-	assert.Equal(t, `{"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"}},{"id":2,"details":{"forename":"Dustin","surname":"Deus"}},{"id":3,"details":{"forename":"Stefan","surname":"Avram"}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"}},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"}},{"id":7,"details":{"forename":"Suvij","surname":"Surya"}},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"}},{"id":9,"details":{"forename":"Alberto","surname":"Garcia Hierro"}},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"}},{"id":12,"details":{"forename":"David","surname":"Stutt"}}]}}`, result.Body.String())
-}
+	t.Run("operation name wrong on named operation", func(t *testing.T) {
+		t.Parallel()
+		result := sendData(server, "/graphql", []byte(`{"query":"query Exists { employees { id } }","operationName":"Missing"}`))
+		assert.Equal(t, http.StatusOK, result.Result().StatusCode)
+		assert.Equal(t, `{"errors":[{"message":"operation with name 'Missing' not found"}],"data":null}`, result.Body.String())
+	})
 
-func TestMultipleNamedOperationsC(t *testing.T) {
-	server := setupServer(t)
-	result := sendData(server, "/graphql", []byte(`{"query":"query A { employees { id } } query B { employees { id details { forename surname } } }","operationName":"C"}`))
-	assert.Equal(t, http.StatusOK, result.Result().StatusCode)
-	assert.Equal(t, `{"errors":[{"message":"operation with name 'C' not found"}],"data":null}`, result.Body.String())
+	t.Run("multiple named operations", func(t *testing.T) {
+		t.Parallel()
+		result := sendData(server, "/graphql", []byte(`{"query":"query A { employees { id } } query B { employees { id details { forename surname } } }","operationName":"A"}`))
+		assert.Equal(t, http.StatusOK, result.Result().StatusCode)
+		assert.Equal(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`, result.Body.String())
+	})
+
+	t.Run("multiple named operations B", func(t *testing.T) {
+		t.Parallel()
+		result := sendData(server, "/graphql", []byte(`{"query":"query A { employees { id } } query B { employees { id details { forename surname } } }","operationName":"B"}`))
+		assert.Equal(t, http.StatusOK, result.Result().StatusCode)
+		assert.Equal(t, `{"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"}},{"id":2,"details":{"forename":"Dustin","surname":"Deus"}},{"id":3,"details":{"forename":"Stefan","surname":"Avram"}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"}},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"}},{"id":7,"details":{"forename":"Suvij","surname":"Surya"}},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"}},{"id":9,"details":{"forename":"Alberto","surname":"Garcia Hierro"}},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"}},{"id":12,"details":{"forename":"David","surname":"Stutt"}}]}}`, result.Body.String())
+	})
+
+	t.Run("multiple named operations B", func(t *testing.T) {
+		t.Parallel()
+		result := sendData(server, "/graphql", []byte(`{"query":"query A { employees { id } } query B { employees { id details { forename surname } } }","operationName":"C"}`))
+		assert.Equal(t, http.StatusOK, result.Result().StatusCode)
+		assert.Equal(t, `{"errors":[{"message":"operation with name 'C' not found"}],"data":null}`, result.Body.String())
+	})
 }
 
 func TestTestdataQueries(t *testing.T) {
+	t.Parallel()
 	server := setupServer(t)
 	queries := filepath.Join("testdata", "queries")
 	entries, err := os.ReadDir(queries)
@@ -485,6 +554,7 @@ func TestTestdataQueries(t *testing.T) {
 		}
 		name := entry.Name()
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			testDir := filepath.Join(queries, name)
 			queryData, err := os.ReadFile(filepath.Join(testDir, "query.graphql"))
 			require.NoError(t, err)
@@ -509,30 +579,12 @@ func TestTestdataQueries(t *testing.T) {
 }
 
 func TestIntegrationWithUndefinedField(t *testing.T) {
+	t.Parallel()
 	server := setupServer(t)
 	result := sendQueryOK(t, server, "/graphql", &testQuery{
 		Body: "{ employees { id notDefined } }",
 	})
 	assert.JSONEq(t, `{"errors":[{"message":"field: notDefined not defined on type: Employee","path":["query","employees","notDefined"]}],"data":null}`, result)
-}
-
-func TestIntegrationWithVariables(t *testing.T) {
-	server := setupServer(t)
-	q := &testQuery{
-		Body:      "($n:Int!) { employee(id:$n) { id details { forename surname } } }",
-		Variables: map[string]interface{}{"n": 1},
-	}
-	result := sendQueryOK(t, server, "/graphql", q)
-	assert.JSONEq(t, `{"data":{"employee":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}}`, result)
-}
-
-func TestIntegrationWithInlineVariables(t *testing.T) {
-	server := setupServer(t)
-	q := &testQuery{
-		Body: "{ employee(id:1) { id details { forename surname } } }",
-	}
-	result := sendQueryOK(t, server, "/graphql", q)
-	assert.JSONEq(t, `{"data":{"employee":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}}`, result)
 }
 
 func BenchmarkSequential(b *testing.B) {
@@ -722,6 +774,7 @@ func FuzzQuery(f *testing.F) {
 }
 
 func TestPlannerErrorMessage(t *testing.T) {
+	t.Parallel()
 	server := setupServer(t)
 	// Error message should contain the invalid argument name instead of a
 	// generic planning error message
@@ -739,10 +792,10 @@ func TestPlannerErrorMessage(t *testing.T) {
 
 func TestConcurrentQueriesWithDelay(t *testing.T) {
 	const (
-		numQueries   = 1000
-		queryDelayMs = 5000
+		numQueries   = 200
+		queryDelayMs = 3000
 	)
-	server := setupServer(t, core.WithTransport(
+	server := setupServer(t, core.WithCustomRoundTripper(
 		&http.Transport{
 			DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
 				// We need a delay here to ensure that the body has not been written to
@@ -756,14 +809,48 @@ func TestConcurrentQueriesWithDelay(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(numQueries)
 	for ii := 0; ii < numQueries; ii++ {
-		go func() {
+		go func(ii int) {
 			defer wg.Done()
 			resp := strconv.FormatInt(rand.Int63(), 16)
-			query := fmt.Sprintf(`{"query":"{ delay(response:\"%s\", ms:%d) }"}`, resp, queryDelayMs)
+			// For this test, we don't need any delays on the server side
+			query := fmt.Sprintf(`{"query":"{ delay(response:\"%s\", ms:0) }"}`, resp)
 			result := sendData(server, "/graphql", []byte(query))
 			assert.Equal(t, http.StatusOK, result.Result().StatusCode)
-			assert.JSONEq(t, fmt.Sprintf(`{"data":{"delay":"%s"}}`, resp), result.Body.String())
-		}()
+			assert.JSONEq(t, fmt.Sprintf(`{"data":{"delay":"%s"}}`, resp), result.Body.String(), "query %d failed", ii)
+		}(ii)
 	}
 	wg.Wait()
+}
+
+func TestPartialOriginErrors(t *testing.T) {
+	transport := &customTransport{
+		delay: time.Millisecond * 10,
+		roundTrip: func(r *http.Request) (*http.Response, error) {
+			dump, err := httputil.DumpRequest(r, true)
+			if err != nil {
+				return nil, err
+			}
+			if bytes.Contains(dump, []byte(`... on Employee {notes}`)) {
+				return nil, &net.DNSError{}
+			}
+			return http.DefaultTransport.RoundTrip(r)
+		},
+	}
+	server := setupServer(t, core.WithCustomRoundTripper(transport))
+	result := sendData(server, "/graphql", []byte(`{"query":"{ employees { id details { forename surname } notes } }"}`))
+	assert.Equal(t, http.StatusOK, result.Result().StatusCode)
+	assert.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '3' at path 'query.employees.@'."}],"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"notes":null},{"id":2,"details":{"forename":"Dustin","surname":"Deus"},"notes":null},{"id":3,"details":{"forename":"Stefan","surname":"Avram"},"notes":null},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"},"notes":null},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"},"notes":null},{"id":7,"details":{"forename":"Suvij","surname":"Surya"},"notes":null},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"},"notes":null},{"id":9,"details":{"forename":"Alberto","surname":"Garcia Hierro"},"notes":null},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"},"notes":null},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"},"notes":null},{"id":12,"details":{"forename":"David","surname":"Stutt"},"notes":null}]}}`, result.Body.String())
+}
+
+func TestWithOriginErrors(t *testing.T) {
+	transport := &customTransport{
+		delay: time.Millisecond * 10,
+		roundTrip: func(r *http.Request) (*http.Response, error) {
+			return nil, &net.DNSError{}
+		},
+	}
+	server := setupServer(t, core.WithCustomRoundTripper(transport))
+	result := sendData(server, "/graphql", []byte(`{"query":"{ employees { id details { forename surname } notes } }"}`))
+	assert.Equal(t, http.StatusOK, result.Result().StatusCode)
+	assert.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph '0' at path 'query'."}],"data":null}`, result.Body.String())
 }

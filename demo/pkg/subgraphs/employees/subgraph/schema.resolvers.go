@@ -6,21 +6,63 @@ package subgraph
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/employees/subgraph/generated"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/employees/subgraph/model"
 )
 
+// UpdateEmployeeTag is the resolver for the updateEmployeeTag field.
+func (r *mutationResolver) UpdateEmployeeTag(ctx context.Context, id int, tag string) (*model.Employee, error) {
+	if id < 1 {
+		return nil, nil
+	}
+	r.mux.Lock()
+	defer r.mux.Unlock()
+	for _, employee := range employees {
+		if id == employee.ID {
+			employee.Tag = tag
+			details := &model.Details{}
+			if employee.Details != nil {
+				details.Forename = employee.Details.Forename
+				details.Surname = employee.Details.Surname
+				details.Location = employee.Details.Location
+			}
+			return &model.Employee{
+				ID:      employee.ID,
+				Details: details,
+				Tag:     employee.Tag,
+				Role:    employee.Role,
+				Notes:   employee.Notes,
+			}, nil
+		}
+	}
+	return nil, nil
+}
+
 // Employee is the resolver for the employee field.
 func (r *queryResolver) Employee(ctx context.Context, id int) (*model.Employee, error) {
+	r.mux.Lock()
+	defer r.mux.Unlock()
 	if id < 1 {
 		return nil, nil
 	}
 	for _, employee := range employees {
 		if id == employee.ID {
-			return employee, nil
+			employee.UpdatedAt = time.Now().String()
+			details := &model.Details{}
+			if employee.Details != nil {
+				details.Forename = employee.Details.Forename
+				details.Surname = employee.Details.Surname
+				details.Location = employee.Details.Location
+			}
+			return &model.Employee{
+				ID:      employee.ID,
+				Details: details,
+				Tag:     employee.Tag,
+				Role:    employee.Role,
+				Notes:   employee.Notes,
+			}, nil
 		}
 	}
 	return nil, nil
@@ -28,6 +70,11 @@ func (r *queryResolver) Employee(ctx context.Context, id int) (*model.Employee, 
 
 // Employees is the resolver for the employees field.
 func (r *queryResolver) Employees(ctx context.Context) ([]*model.Employee, error) {
+	r.mux.Lock()
+	defer r.mux.Unlock()
+	for _, employee := range employees {
+		employee.UpdatedAt = time.Now().String()
+	}
 	return employees, nil
 }
 
@@ -38,6 +85,8 @@ func (r *queryResolver) Products(ctx context.Context) ([]model.Products, error) 
 
 // Teammates is the resolver for the teammates field.
 func (r *queryResolver) Teammates(ctx context.Context, team model.Department) ([]*model.Employee, error) {
+	r.mux.Lock()
+	defer r.mux.Unlock()
 	switch team {
 	case model.DepartmentMarketing:
 		return marketers, nil
@@ -58,7 +107,6 @@ func (r *subscriptionResolver) CurrentTime(ctx context.Context) (<-chan *model.T
 		for {
 			// In our example we'll send the current time every second.
 			time.Sleep(1 * time.Second)
-			fmt.Println("Tick")
 
 			currentTime := time.Now()
 			t := &model.Time{
@@ -71,7 +119,6 @@ func (r *subscriptionResolver) CurrentTime(ctx context.Context) (<-chan *model.T
 			// This avoids goroutine getting blocked forever or panicking,
 			select {
 			case <-ctx.Done(): // This runs when context gets cancelled. Subscription closes.
-				fmt.Println("Subscription Closed")
 				// Handle deregistration of the channel here. `close(ch)`
 				return // Remember to return to end the routine.
 
@@ -84,11 +131,15 @@ func (r *subscriptionResolver) CurrentTime(ctx context.Context) (<-chan *model.T
 	return ch, nil
 }
 
+// Mutation returns generated.MutationResolver implementation.
+func (r *Resolver) Mutation() generated.MutationResolver { return &mutationResolver{r} }
+
 // Query returns generated.QueryResolver implementation.
 func (r *Resolver) Query() generated.QueryResolver { return &queryResolver{r} }
 
 // Subscription returns generated.SubscriptionResolver implementation.
 func (r *Resolver) Subscription() generated.SubscriptionResolver { return &subscriptionResolver{r} }
 
+type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
 type subscriptionResolver struct{ *Resolver }
