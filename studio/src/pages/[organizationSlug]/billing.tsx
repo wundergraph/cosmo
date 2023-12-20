@@ -5,6 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Loader } from "@/components/ui/loader";
 import { useToast } from "@/components/ui/use-toast";
+import { useCurrentOrganization } from "@/hooks/use-current-organization";
+import { useSubscription } from "@/hooks/use-subscription";
 import { useUser } from "@/hooks/use-user";
 import { formatDate } from "@/lib/format-date";
 import { NextPageWithLayout } from "@/lib/page";
@@ -103,15 +105,7 @@ const BillingPage: NextPageWithLayout = () => {
 
   return (
     <div className="flex flex-col gap-y-4">
-      {alert ? (
-        alert
-      ) : (
-        <p className="mb-8">
-          You are currently on the{" "}
-          <Badge variant="outline">{currentPlan?.name}</Badge> plan.{" "}
-          <SubscriptionStatus subscription={subscription} />
-        </p>
-      )}
+      {alert}
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         {data.plans.map((plan) => (
@@ -187,16 +181,20 @@ const ManagePaymentButton = () => {
   );
 };
 
-const SubscriptionStatus = ({
-  subscription,
-}: {
-  subscription?: {
-    status: string;
-    currentPeriodEnd: string;
-    cancelAtPeriodEnd: boolean;
-    trialEnd: string;
-  };
-}) => {
+const SubscriptionStatus = () => {
+  const org = useCurrentOrganization();
+  const subscription = useSubscription();
+
+  const { data } = useQuery({
+    ...getBillingPlans.useQuery(),
+  });
+
+  const currentPlan = React.useMemo(
+    () =>
+      data?.plans.find(({ id }) => id === org?.billing?.plan) || data?.plans[0],
+    [data?.plans, org?.billing?.plan],
+  );
+
   if (!subscription) return null;
 
   let status;
@@ -205,23 +203,37 @@ const SubscriptionStatus = ({
     status = "Your subscription has been canceled.";
   } else if (subscription.status === "trialing") {
     status = (
-      <>Your trial will end on {formatDate(new Date(subscription.trialEnd))}</>
+      <>
+        Your trial will end on{" "}
+        <span className="font-medium text-foreground">
+          {formatDate(new Date(subscription.trialEnd))}
+        </span>
+      </>
     );
   } else if (subscription.status === "active") {
     status = subscription.cancelAtPeriodEnd ? (
       <>
         Your subscription will end on{" "}
-        {formatDate(new Date(subscription.currentPeriodEnd))}
+        <span className="font-medium text-foreground">
+          {formatDate(new Date(subscription.currentPeriodEnd))}
+        </span>
       </>
     ) : (
       <>
         Your subscription will renew on{" "}
-        {formatDate(new Date(subscription.currentPeriodEnd))}
+        <span className="font-medium text-foreground">
+          {formatDate(new Date(subscription.currentPeriodEnd))}
+        </span>
       </>
     );
   }
 
-  return <span>{status}.</span>;
+  return (
+    <span>
+      You are currently on the{" "}
+      <Badge variant="outline">{currentPlan?.name}</Badge> plan. {status}.
+    </span>
+  );
 };
 
 const UpgradeButton = ({
@@ -285,7 +297,7 @@ BillingPage.getLayout = (page) => {
   return getDashboardLayout(
     page,
     "Billing",
-    "Manage your billing plan and payments",
+    <SubscriptionStatus />,
     <ManagePaymentButton />,
   );
 };

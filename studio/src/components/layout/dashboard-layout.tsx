@@ -162,7 +162,7 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
 export const getDashboardLayout = (
   page: React.ReactNode,
   title: string,
-  subtitle: string,
+  subtitle: React.ReactNode,
   items?: React.ReactNode,
   toolbar?: React.ReactNode,
 ) => {
