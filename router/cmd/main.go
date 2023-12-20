@@ -42,6 +42,7 @@ func Main() {
 		syscall.SIGINT,  // ctrl+c
 	)
 	ctx, stop := context.WithCancel(context.Background())
+	defer stop()
 
 	logLevel, err := logging.ZapLogLevelFromString(cfg.LogLevel)
 	if err != nil {
@@ -82,5 +83,4 @@ func Main() {
 
 	profile.Finish()
 	logger.Debug("Server exiting")
-	stop()
 }
