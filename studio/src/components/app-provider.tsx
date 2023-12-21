@@ -32,7 +32,6 @@ export interface Organization {
   creatorUserId: string;
   roles: string[];
   createdAt: string;
-  limits: OrganizationLimitsDTO;
   features: {
     id: string;
     enabled?: boolean;
@@ -54,15 +53,6 @@ export interface Organization {
     cancelAtPeriodEnd: boolean;
     trialEnd: string;
   };
-}
-
-interface OrganizationLimitsDTO {
-  analyticsRetentionLimit: number;
-  tracingRetentionLimit: number;
-  changelogDataRetentionLimit: number;
-  breakingChangeRetentionLimit: number;
-  traceSamplingRateLimit: number;
-  requestsLimit: number;
 }
 
 export interface Session {

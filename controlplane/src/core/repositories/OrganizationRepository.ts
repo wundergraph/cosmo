@@ -26,13 +26,7 @@ import {
   organizationBilling,
   billingSubscriptions,
 } from '../../db/schema.js';
-import {
-  Feature,
-  OrganizationDTO,
-  OrganizationLimitsDTO,
-  OrganizationMemberDTO,
-  WebhooksConfigDTO,
-} from '../../types/index.js';
+import { Feature, OrganizationDTO, OrganizationMemberDTO, WebhooksConfigDTO } from '../../types/index.js';
 import { BillingRepository } from './BillingRepository.js';
 
 const defaultPlan = 'developer';
@@ -190,9 +184,7 @@ export class OrganizationRepository {
     return userOrganizations.length > 0;
   }
 
-  public async memberships(input: {
-    userId: string;
-  }): Promise<(OrganizationDTO & { roles: string[]; limits?: OrganizationLimitsDTO })[]> {
+  public async memberships(input: { userId: string }): Promise<(OrganizationDTO & { roles: string[] })[]> {
     const userOrganizations = await this.db
       .selectDistinctOn([organizations.id], {
         id: organizations.id,
@@ -200,14 +192,6 @@ export class OrganizationRepository {
         slug: organizations.slug,
         creatorUserId: organizations.createdBy,
         createdAt: organizations.createdAt,
-        limits: {
-          analyticsRetentionLimit: organizationLimits.analyticsRetentionLimit,
-          tracingRetentionLimit: organizationLimits.tracingRetentionLimit,
-          breakingChangeRetentionLimit: organizationLimits.breakingChangeRetentionLimit,
-          changelogDataRetentionLimit: organizationLimits.changelogDataRetentionLimit,
-          traceSamplingRateLimit: organizationLimits.traceSamplingRateLimit,
-          requestsLimit: organizationLimits.requestsLimit,
-        },
         billing: {
           plan: organizationBilling.plan,
           email: organizationBilling.email,
@@ -222,7 +206,6 @@ export class OrganizationRepository {
       .from(organizationsMembers)
       .innerJoin(organizations, eq(organizations.id, organizationsMembers.organizationId))
       .innerJoin(users, eq(users.id, organizationsMembers.userId))
-      .leftJoin(organizationLimits, eq(organizations.id, organizationLimits.organizationId))
       .leftJoin(organizationBilling, eq(organizations.id, organizationBilling.organizationId))
       .leftJoin(billingSubscriptions, eq(organizations.id, billingSubscriptions.organizationId))
       .where(eq(users.id, input.userId))
@@ -239,16 +222,6 @@ export class OrganizationRepository {
           userID: input.userId,
           organizationID: org.id,
         }),
-        limits: org.limits
-          ? {
-              analyticsRetentionLimit: org.limits.analyticsRetentionLimit,
-              tracingRetentionLimit: org.limits.tracingRetentionLimit,
-              breakingChangeRetentionLimit: org.limits.breakingChangeRetentionLimit,
-              changelogDataRetentionLimit: org.limits.changelogDataRetentionLimit,
-              traceSamplingRateLimit: Number(org.limits.traceSamplingRateLimit),
-              requestsLimit: org.limits.requestsLimit,
-            }
-          : undefined,
         features: await this.getFeatures({ organizationId: org.id, plan: org.billing?.plan || defaultPlan }),
         billing: {
           plan: org.billing?.plan || defaultPlan,
@@ -433,6 +406,38 @@ export class OrganizationRepository {
         };
       }) || []
     );
+  }
+
+  public async getFeature(input: { organizationId: string; featureId: string }): Promise<Feature | undefined> {
+    const billing = await this.db.query.organizationBilling.findFirst({
+      where: eq(organizationBilling.organizationId, input.organizationId),
+      columns: {
+        plan: true,
+      },
+    });
+
+    const plan = billing?.plan || defaultPlan;
+
+    const feature = await this.db.query.organizationFeatures.findFirst({
+      where: and(
+        eq(organizationFeatures.organizationId, input.organizationId),
+        eq(organizationFeatures.feature, input.featureId),
+      ),
+    });
+
+    // merge the features from the plan with the overrides from the organization
+    const billingPlan = await this.billing.getPlanById(plan as string);
+    const billingFeature = billingPlan?.features?.find((f) => f.id === input.featureId);
+
+    if (!billingFeature) {
+      return undefined;
+    }
+
+    return {
+      ...billingFeature,
+      enabled: feature?.enabled,
+      limit: feature?.limit || billingFeature?.limit,
+    };
   }
 
   public async updateFeature(
@@ -907,29 +912,6 @@ export class OrganizationRepository {
       );
   }
 
-  public async addOrganizationLimits(input: {
-    organizationID: string;
-    analyticsRetentionLimit: number;
-    tracingRetentionLimit: number;
-    changelogDataRetentionLimit: number;
-    breakingChangeRetentionLimit: number;
-    traceSamplingRateLimit: number;
-    requestsLimit: number;
-  }) {
-    await this.db
-      .insert(organizationLimits)
-      .values({
-        requestsLimit: input.requestsLimit,
-        analyticsRetentionLimit: input.analyticsRetentionLimit,
-        tracingRetentionLimit: input.tracingRetentionLimit,
-        breakingChangeRetentionLimit: input.breakingChangeRetentionLimit,
-        changelogDataRetentionLimit: input.changelogDataRetentionLimit,
-        traceSamplingRateLimit: input.traceSamplingRateLimit.toString(),
-        organizationId: input.organizationID,
-      })
-      .execute();
-  }
-
   public async addOrganizationBilling(input: { organizationID: string; email: string; plan: string }) {
     await this.db
       .insert(organizationBilling)
@@ -941,39 +923,25 @@ export class OrganizationRepository {
       .execute();
   }
 
-  public async getOrganizationLimits(input: { organizationID: string }): Promise<OrganizationLimitsDTO> {
-    const limits = await this.db
-      .select({
-        analyticsRetentionLimit: organizationLimits.analyticsRetentionLimit,
-        tracingRetentionLimit: organizationLimits.tracingRetentionLimit,
-        breakingChangeRetentionLimit: organizationLimits.breakingChangeRetentionLimit,
-        changelogDataRetentionLimit: organizationLimits.changelogDataRetentionLimit,
-        traceSamplingRateLimit: organizationLimits.traceSamplingRateLimit,
-        requestsLimit: organizationLimits.requestsLimit,
-      })
-      .from(organizationLimits)
-      .where(eq(organizationLimits.organizationId, input.organizationID))
-      .limit(1)
-      .execute();
+  public async getOrganizationLimits(input: { organizationID: string }) {
+    const features = await this.getFeatures({ organizationId: input.organizationID });
 
-    if (limits.length === 0) {
-      return {
-        analyticsRetentionLimit: 7,
-        tracingRetentionLimit: 7,
-        changelogDataRetentionLimit: 7,
-        breakingChangeRetentionLimit: 7,
-        traceSamplingRateLimit: 0.1,
-        requestsLimit: 10,
-      };
+    // fallback limits @todo: think of a better way to make this dynamic
+    const limits: Record<string, number> = {
+      'analytics-retention': 7,
+      'tracing-retention': 7,
+      'changelog-retention': 7,
+      'breaking-change-retetion': 7,
+      'trace-sampling-rate': 0.1,
+      requests: 10,
+    };
+
+    for (const feature of features) {
+      if (feature.limit !== undefined && feature.limit !== null) {
+        limits[feature.id] = feature.limit;
+      }
     }
 
-    return {
-      analyticsRetentionLimit: limits[0].analyticsRetentionLimit,
-      tracingRetentionLimit: limits[0].tracingRetentionLimit,
-      changelogDataRetentionLimit: limits[0].changelogDataRetentionLimit,
-      breakingChangeRetentionLimit: limits[0].breakingChangeRetentionLimit,
-      requestsLimit: limits[0].requestsLimit,
-      traceSamplingRateLimit: Number.parseFloat(limits[0].traceSamplingRateLimit),
-    };
+    return limits;
   }
 }

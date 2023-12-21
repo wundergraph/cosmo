@@ -38,6 +38,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useFeatureLimit } from "@/hooks/use-feature-limit";
 import { useSessionStorage } from "@/hooks/use-session-storage";
 import { useUser } from "@/hooks/use-user";
 import { docsBaseURL } from "@/lib/constants";
@@ -402,14 +403,17 @@ const ChecksToolbar = () => {
     });
   };
 
+  const breakingChangeRetention = useFeatureLimit(
+    "breaking-change-retention",
+    7,
+  );
+
   return (
     <Toolbar>
       <DatePickerWithRange
         dateRange={{ start: startDate, end: endDate }}
         onChange={onDateRangeChange}
-        calendarDaysLimit={
-          user?.currentOrganization.limits.breakingChangeRetentionLimit || 7
-        }
+        calendarDaysLimit={breakingChangeRetention}
       />
     </Toolbar>
   );

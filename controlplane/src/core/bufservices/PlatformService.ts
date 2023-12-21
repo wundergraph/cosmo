@@ -446,14 +446,15 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           isInspectable = false;
         }
 
-        for (const composition of result.compositions) {
-          const orgLimits = await orgRepo.getOrganizationLimits({ organizationID: authContext.organizationId });
+        const changeRetention = await orgRepo.getFeature({
+          organizationId: authContext.organizationId,
+          featureId: 'breaking-change-retention',
+        });
 
-          await schemaCheckRepo.createCheckedFederatedGraph(
-            schemaCheckID,
-            composition.id,
-            orgLimits.breakingChangeRetentionLimit,
-          );
+        const limit = changeRetention?.limit ?? 7;
+
+        for (const composition of result.compositions) {
+          await schemaCheckRepo.createCheckedFederatedGraph(schemaCheckID, composition.id, limit);
 
           // We collect composition errors for all federated graphs
           if (composition.errors.length > 0) {
@@ -468,12 +469,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           // We don't collect operation usage when we have composition errors or
           // when we don't have any inspectable changes. That means any breaking change is really breaking
           if (composition.errors.length === 0 && isInspectable && inspectorChanges.length > 0) {
-            if (orgLimits.breakingChangeRetentionLimit <= 0) {
+            if (limit <= 0) {
               continue;
             }
 
             const result = await trafficInspector.inspect(inspectorChanges, {
-              daysToConsider: orgLimits.breakingChangeRetentionLimit,
+              daysToConsider: limit,
               federatedGraphId: composition.id,
               organizationId: authContext.organizationId,
             });
@@ -3683,10 +3684,13 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const orgLimits = await orgRepo.getOrganizationLimits({ organizationID: authContext.organizationId });
+        const changelogRetention = await orgRepo.getFeature({
+          organizationId: authContext.organizationId,
+          featureId: 'changelog-retention',
+        });
 
         const { dateRange } = validateDateRanges({
-          limit: orgLimits.changelogDataRetentionLimit,
+          limit: changelogRetention?.limit ?? 7,
           dateRange: req.dateRange,
         });
 
@@ -3740,10 +3744,13 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const orgLimits = await orgRepo.getOrganizationLimits({ organizationID: authContext.organizationId });
+        const breakingChangeRetention = await orgRepo.getFeature({
+          organizationId: authContext.organizationId,
+          featureId: 'breaking-change-retention',
+        });
 
         const { dateRange } = validateDateRanges({
-          limit: orgLimits.breakingChangeRetentionLimit,
+          limit: breakingChangeRetention?.limit ?? 7,
           dateRange: {
             start: req.startDate,
             end: req.endDate,
@@ -3975,9 +3982,13 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const orgLimits = await orgRepo.getOrganizationLimits({ organizationID: authContext.organizationId });
+        const tracingRetention = await orgRepo.getFeature({
+          organizationId: authContext.organizationId,
+          featureId: 'tracing-retention',
+        });
+
         const { range, dateRange } = validateDateRanges({
-          limit: orgLimits.tracingRetentionLimit,
+          limit: tracingRetention?.limit ?? 7,
           range: req.config?.range,
           dateRange: req.config?.dateRange,
         });
@@ -4073,9 +4084,13 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const orgLimits = await orgRepo.getOrganizationLimits({ organizationID: authContext.organizationId });
+        const analyticsRetention = await orgRepo.getFeature({
+          organizationId: authContext.organizationId,
+          featureId: 'analytics-retention',
+        });
+
         const { range, dateRange } = validateDateRanges({
-          limit: orgLimits.analyticsRetentionLimit,
+          limit: analyticsRetention?.limit ?? 7,
           range: req.range,
           dateRange: req.dateRange,
         });
@@ -4128,9 +4143,13 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const orgLimits = await orgRepo.getOrganizationLimits({ organizationID: authContext.organizationId });
+        const analyticsRetention = await orgRepo.getFeature({
+          organizationId: authContext.organizationId,
+          featureId: 'analytics-retention',
+        });
+
         const { range, dateRange } = validateDateRanges({
-          limit: orgLimits.analyticsRetentionLimit,
+          limit: analyticsRetention?.limit ?? 7,
           range: req.range,
           dateRange: req.dateRange,
         });
@@ -4738,10 +4757,13 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const orgLimits = await orgRepo.getOrganizationLimits({ organizationID: authContext.organizationId });
+        const analyticsRetention = await orgRepo.getFeature({
+          organizationId: authContext.organizationId,
+          featureId: 'analytics-retention',
+        });
 
         const { dateRange } = validateDateRanges({
-          limit: orgLimits.analyticsRetentionLimit,
+          limit: analyticsRetention?.limit ?? 7,
           dateRange: {
             start: req.startDate,
             end: req.endDate,
