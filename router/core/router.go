@@ -100,7 +100,7 @@ type (
 		cdnConfig                config.CDNConfiguration
 		cdn                      *cdn.CDN
 		eventsConfig             config.EventsConfiguration
-		promServer               *http.Server
+		prometheusServer         *http.Server
 		modulesConfig            map[string]interface{}
 		routerMiddlewares        []func(http.Handler) http.Handler
 		preOriginHandlers        []TransportPreHandler
@@ -522,9 +522,9 @@ func (r *Router) bootstrap(ctx context.Context) error {
 				return fmt.Errorf("failed to create Prometheus exporter: %w", err)
 			}
 			r.promMeterProvider = mp
-			r.promServer = metric.ServePrometheus(r.logger, r.metricConfig.Prometheus.ListenAddr, r.metricConfig.Prometheus.Path, registry)
+			r.prometheusServer = metric.ServePrometheus(r.logger, r.metricConfig.Prometheus.ListenAddr, r.metricConfig.Prometheus.Path, registry)
 			go func() {
-				if err := r.promServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+				if err := r.prometheusServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 					r.logger.Error("Failed to start Prometheus server", zap.Error(err))
 				}
 			}()
@@ -898,11 +898,11 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 
 	var wg sync.WaitGroup
 
-	if r.promServer != nil {
+	if r.prometheusServer != nil {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			if subErr := r.promServer.Close(); subErr != nil {
+			if subErr := r.prometheusServer.Close(); subErr != nil {
 				err = errors.Join(err, fmt.Errorf("failed to shutdown prometheus server: %w", subErr))
 			}
 		}()
