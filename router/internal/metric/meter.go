@@ -220,11 +220,10 @@ func defaultPrometheusMetricOptions(ctx context.Context, serviceName, serviceVer
 
 	// Exclude attributes from metrics
 
-	for _, key := range defaultExcludedOtelKeys {
-		excludeMetricAttributes = append(excludeMetricAttributes, regexp.MustCompile(fmt.Sprintf(`^%s$`, sanitizeName(string(key)))))
-	}
-
 	attributeFilter := func(value attribute.KeyValue) bool {
+		if isKeyInSlice(value.Key, defaultExcludedOtelKeys) {
+			return false
+		}
 		name := sanitizeName(string(value.Key))
 		for _, re := range excludeMetricAttributes {
 			if re.MatchString(name) {
@@ -315,4 +314,13 @@ func defaultOtlpMetricOptions(ctx context.Context, serviceName, serviceVersion s
 			},
 		)),
 	}, nil
+}
+
+func isKeyInSlice(key attribute.Key, keys []attribute.Key) bool {
+	for _, k := range keys {
+		if k == key {
+			return true
+		}
+	}
+	return false
 }
