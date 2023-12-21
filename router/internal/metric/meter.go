@@ -64,7 +64,7 @@ func NewPrometheusMeterProvider(ctx context.Context, c *Config) (*sdkmetric.Mete
 		return nil, nil, err
 	}
 
-	opts, err := getDefaultPrometheusMetricOptions(
+	opts, err := defaultPrometheusMetricOptions(
 		ctx,
 		c.Name,
 		c.Version,
@@ -162,7 +162,7 @@ func createOTELExporter(log *zap.Logger, exp *OpenTelemetryExporter) (sdkmetric.
 }
 
 func NewOtlpMeterProvider(ctx context.Context, log *zap.Logger, c *Config) (*sdkmetric.MeterProvider, error) {
-	opts, err := getDefaultOtlpMetricOptions(ctx, c.Name, c.Version)
+	opts, err := defaultOtlpMetricOptions(ctx, c.Name, c.Version)
 	if err != nil {
 		return nil, err
 	}
@@ -210,7 +210,7 @@ func getResource(ctx context.Context, serviceName, serviceVersion string) (*reso
 	return r, nil
 }
 
-func getDefaultPrometheusMetricOptions(ctx context.Context, serviceName, serviceVersion string, excludeMetrics, excludeMetricAttributes []*regexp.Regexp) ([]sdkmetric.Option, error) {
+func defaultPrometheusMetricOptions(ctx context.Context, serviceName, serviceVersion string, excludeMetrics, excludeMetricAttributes []*regexp.Regexp) ([]sdkmetric.Option, error) {
 	r, err := getResource(ctx, serviceName, serviceVersion)
 	if err != nil {
 		return nil, err
@@ -277,13 +277,11 @@ func getDefaultPrometheusMetricOptions(ctx context.Context, serviceName, service
 	return opts, nil
 }
 
-func getDefaultOtlpMetricOptions(ctx context.Context, serviceName, serviceVersion string) ([]sdkmetric.Option, error) {
+func defaultOtlpMetricOptions(ctx context.Context, serviceName, serviceVersion string) ([]sdkmetric.Option, error) {
 	r, err := getResource(ctx, serviceName, serviceVersion)
 	if err != nil {
 		return nil, err
 	}
-
-	// Please version this meter name if you change the buckets.
 
 	msBucketHistogram := sdkmetric.AggregationExplicitBucketHistogram{
 		Boundaries: msBucketsBounds,
