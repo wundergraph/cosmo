@@ -211,7 +211,6 @@ func commonMetricAttributes(operation *ParsedOperation, protocol OperationProtoc
 	var baseMetricAttributeValues []attribute.KeyValue
 
 	// Fields that are always present in the metrics and traces
-	// Never add attributes conditionally, as this is incompatible with the prometheus exporter
 	baseMetricAttributeValues = append(baseMetricAttributeValues, otel.WgOperationName.String(operation.Name))
 	baseMetricAttributeValues = append(baseMetricAttributeValues, otel.WgOperationType.String(operation.Type))
 	baseMetricAttributeValues = append(baseMetricAttributeValues, otel.WgOperationProtocol.String(protocol.String()))
