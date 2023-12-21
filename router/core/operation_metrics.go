@@ -148,7 +148,10 @@ func (m *OperationMetrics) Finish(hasErrored bool, statusCode int, responseSize 
 
 	ctx := context.Background()
 
-	m.metricBaseFields = append(m.metricBaseFields, otel.WgRequestError.Bool(hasErrored))
+	if hasErrored {
+		m.metricBaseFields = append(m.metricBaseFields, otel.WgRequestError.Bool(hasErrored))
+	}
+
 	m.metricBaseFields = append(m.metricBaseFields, semconv.HTTPStatusCode(statusCode))
 	m.metrics.MeasureRequestCount(ctx, m.metricBaseFields...)
 	m.metrics.MeasureRequestSize(ctx, m.requestContentLength, m.metricBaseFields...)
@@ -213,7 +216,11 @@ func commonMetricAttributes(operation *ParsedOperation, protocol OperationProtoc
 	baseMetricAttributeValues = append(baseMetricAttributeValues, otel.WgOperationType.String(operation.Type))
 	baseMetricAttributeValues = append(baseMetricAttributeValues, otel.WgOperationProtocol.String(protocol.String()))
 	baseMetricAttributeValues = append(baseMetricAttributeValues, otel.WgOperationHash.String(strconv.FormatUint(operation.ID, 10)))
-	baseMetricAttributeValues = append(baseMetricAttributeValues, otel.WgOperationPersistedID.String(operation.PersistedID))
+
+	// Common Field that will be present in both metrics and traces if not empty
+	if operation.PersistedID != "" {
+		baseMetricAttributeValues = append(baseMetricAttributeValues, otel.WgOperationPersistedID.String(operation.PersistedID))
+	}
 
 	return baseMetricAttributeValues
 }

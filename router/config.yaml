@@ -2,3 +2,11 @@
 
 # See pkg/config/config.go for the full list of configuration options.
 # Please keep this file empty if you don't want to override the defaults.
+
+telemetry:
+  # OpenTelemetry Metrics
+  metrics:
+    # Expose OpenTelemetry metrics for scraping
+    prometheus:
+      exclude_metrics:
+        - "router_http_request_duration_milliseconds"

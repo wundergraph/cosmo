@@ -3,7 +3,6 @@ package metric
 import (
 	"context"
 	"fmt"
-	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"go.uber.org/zap"
 	"time"
 
@@ -23,12 +22,12 @@ const (
 	cosmoRouterMeterName    = "cosmo.router"
 	cosmoRouterMeterVersion = "0.0.1"
 
+	cosmoRouterPrometheusMeterName    = "cosmo.router.prometheus"
+	cosmoRouterPrometheusMeterVersion = "0.0.1"
+
 	unitBytes        = "bytes"
 	unitMilliseconds = "ms"
 )
-
-// IMPORTANT: Never add attributes conditionally, as this is incompatible with the prometheus exporter.
-// Prometheus client expects a fixed set of labels, and will panic if a label is missing.
 
 var (
 	RequestCounterDescription = "Total number of requests"
@@ -62,12 +61,15 @@ type Metrics struct {
 	serviceVersion string
 
 	otelMeterProvider *metric.MeterProvider
+	promMeterProvider *metric.MeterProvider
 
-	counters       map[string]otelmetric.Int64Counter
-	histograms     map[string]otelmetric.Float64Histogram
-	upDownCounters map[string]otelmetric.Int64UpDownCounter
+	otlpCounters       map[string]otelmetric.Int64Counter
+	otlpHistograms     map[string]otelmetric.Float64Histogram
+	otlpUpDownCounters map[string]otelmetric.Int64UpDownCounter
 
-	promClient PromClient
+	promCounters       map[string]otelmetric.Int64Counter
+	promHistograms     map[string]otelmetric.Float64Histogram
+	promUpDownCounters map[string]otelmetric.Int64UpDownCounter
 
 	baseFields []attribute.KeyValue
 	logger     *zap.Logger
@@ -75,47 +77,45 @@ type Metrics struct {
 
 // NewMetrics creates a new metrics instance.
 // Metrics abstract OTEL and Prometheus metrics with a single interface.
-// Previously, we used the OTEL Prometheus Exporter to export prometheus metrics with one solution, but the exporter
-// is implemented through a OTEL reader which does not pipe the data through OTEL views for manipulation e.g. filtering.
-// This makes it impossible to filter metrics and labels before they are created as individual metrics.
-// For now, we track both OTEL and Prometheus metrics and use the default Prometheus client to export them.
+// We create different meters for OTEL and Prometheus metrics.
 func NewMetrics(serviceName, serviceVersion string, opts ...Option) (*Metrics, error) {
 	h := &Metrics{
-		counters:       map[string]otelmetric.Int64Counter{},
-		histograms:     map[string]otelmetric.Float64Histogram{},
-		upDownCounters: map[string]otelmetric.Int64UpDownCounter{},
-		serviceName:    serviceName,
-		serviceVersion: serviceVersion,
+		otlpCounters:       map[string]otelmetric.Int64Counter{},
+		otlpHistograms:     map[string]otelmetric.Float64Histogram{},
+		otlpUpDownCounters: map[string]otelmetric.Int64UpDownCounter{},
+		promCounters:       map[string]otelmetric.Int64Counter{},
+		promHistograms:     map[string]otelmetric.Float64Histogram{},
+		promUpDownCounters: map[string]otelmetric.Int64UpDownCounter{},
+		serviceName:        serviceName,
+		serviceVersion:     serviceVersion,
 	}
 
 	for _, opt := range opts {
 		opt(h)
 	}
 
-	// Create target_info metric.
-	h.promClient.AddInfoMetric(
-		semconv.ServiceNameKey.String(serviceName),
-		semconv.ServiceVersionKey.String(serviceVersion),
-	)
+	if err := h.createPrometheusMeasures(); err != nil {
+		return nil, err
+	}
 
-	if err := h.createDefaultOtlpMeasures(); err != nil {
+	if err := h.createOtlpMeasures(); err != nil {
 		return nil, err
 	}
 
 	return h, nil
 }
 
-func (h *Metrics) createDefaultOtlpMeasures() error {
-	if h.otelMeterProvider == nil {
+func (h *Metrics) createPrometheusMeasures() error {
+	if h.promMeterProvider == nil {
 		return nil
 	}
 
 	// Used to export metrics to OpenTelemetry backend.
-	otelMeter := h.otelMeterProvider.Meter(cosmoRouterMeterName,
-		otelmetric.WithInstrumentationVersion(cosmoRouterMeterVersion),
+	meter := h.promMeterProvider.Meter(cosmoRouterPrometheusMeterName,
+		otelmetric.WithInstrumentationVersion(cosmoRouterPrometheusMeterVersion),
 	)
 
-	requestCounter, err := otelMeter.Int64Counter(
+	requestCounter, err := meter.Int64Counter(
 		RequestCounter,
 		RequestCounterOptions...,
 	)
@@ -123,9 +123,9 @@ func (h *Metrics) createDefaultOtlpMeasures() error {
 		return fmt.Errorf("failed to create request counter: %w", err)
 	}
 
-	h.counters[RequestCounter] = requestCounter
+	h.promCounters[RequestCounter] = requestCounter
 
-	serverLatencyMeasure, err := otelMeter.Float64Histogram(
+	serverLatencyMeasure, err := meter.Float64Histogram(
 		ServerLatencyHistogram,
 		ServerLatencyHistogramOptions...,
 	)
@@ -133,9 +133,9 @@ func (h *Metrics) createDefaultOtlpMeasures() error {
 		return fmt.Errorf("failed to create server latency measure: %w", err)
 	}
 
-	h.histograms[ServerLatencyHistogram] = serverLatencyMeasure
+	h.promHistograms[ServerLatencyHistogram] = serverLatencyMeasure
 
-	requestContentLengthCounter, err := otelMeter.Int64Counter(
+	requestContentLengthCounter, err := meter.Int64Counter(
 		RequestContentLengthCounter,
 		RequestContentLengthCounterOptions...,
 	)
@@ -143,9 +143,9 @@ func (h *Metrics) createDefaultOtlpMeasures() error {
 		return fmt.Errorf("failed to create request content length counter: %w", err)
 	}
 
-	h.counters[RequestContentLengthCounter] = requestContentLengthCounter
+	h.promCounters[RequestContentLengthCounter] = requestContentLengthCounter
 
-	responseContentLengthCounter, err := otelMeter.Int64Counter(
+	responseContentLengthCounter, err := meter.Int64Counter(
 		ResponseContentLengthCounter,
 		ResponseContentLengthCounterOptions...,
 	)
@@ -153,9 +153,9 @@ func (h *Metrics) createDefaultOtlpMeasures() error {
 		return fmt.Errorf("failed to create response content length counter: %w", err)
 	}
 
-	h.counters[ResponseContentLengthCounter] = responseContentLengthCounter
+	h.promCounters[ResponseContentLengthCounter] = responseContentLengthCounter
 
-	inFlightRequestsGauge, err := otelMeter.Int64UpDownCounter(
+	inFlightRequestsGauge, err := meter.Int64UpDownCounter(
 		InFlightRequestsUpDownCounter,
 		InFlightRequestsUpDownCounterOptions...,
 	)
@@ -163,7 +163,70 @@ func (h *Metrics) createDefaultOtlpMeasures() error {
 		return fmt.Errorf("failed to create in flight requests gauge: %w", err)
 	}
 
-	h.upDownCounters[InFlightRequestsUpDownCounter] = inFlightRequestsGauge
+	h.promUpDownCounters[InFlightRequestsUpDownCounter] = inFlightRequestsGauge
+
+	return nil
+}
+
+func (h *Metrics) createOtlpMeasures() error {
+	if h.otelMeterProvider == nil {
+		return nil
+	}
+
+	// Used to export metrics to OpenTelemetry backend.
+	meter := h.otelMeterProvider.Meter(cosmoRouterMeterName,
+		otelmetric.WithInstrumentationVersion(cosmoRouterMeterVersion),
+	)
+
+	requestCounter, err := meter.Int64Counter(
+		RequestCounter,
+		RequestCounterOptions...,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to create request counter: %w", err)
+	}
+
+	h.otlpCounters[RequestCounter] = requestCounter
+
+	serverLatencyMeasure, err := meter.Float64Histogram(
+		ServerLatencyHistogram,
+		ServerLatencyHistogramOptions...,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to create server latency measure: %w", err)
+	}
+
+	h.otlpHistograms[ServerLatencyHistogram] = serverLatencyMeasure
+
+	requestContentLengthCounter, err := meter.Int64Counter(
+		RequestContentLengthCounter,
+		RequestContentLengthCounterOptions...,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to create request content length counter: %w", err)
+	}
+
+	h.otlpCounters[RequestContentLengthCounter] = requestContentLengthCounter
+
+	responseContentLengthCounter, err := meter.Int64Counter(
+		ResponseContentLengthCounter,
+		ResponseContentLengthCounterOptions...,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to create response content length counter: %w", err)
+	}
+
+	h.otlpCounters[ResponseContentLengthCounter] = responseContentLengthCounter
+
+	inFlightRequestsGauge, err := meter.Int64UpDownCounter(
+		InFlightRequestsUpDownCounter,
+		InFlightRequestsUpDownCounterOptions...,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to create in flight requests gauge: %w", err)
+	}
+
+	h.otlpUpDownCounters[InFlightRequestsUpDownCounter] = inFlightRequestsGauge
 
 	return nil
 }
@@ -175,12 +238,12 @@ func (h *Metrics) MeasureInFlight(ctx context.Context) func() {
 
 	baseAttributes := otelmetric.WithAttributes(baseKeys...)
 
-	h.upDownCounters[InFlightRequestsUpDownCounter].Add(ctx, 1, baseAttributes)
-	h.promClient.AddGauge(InFlightRequestsUpDownCounter, InFlightRequestsUpDownCounterDescription, 1, baseKeys...)
+	h.otlpUpDownCounters[InFlightRequestsUpDownCounter].Add(ctx, 1, baseAttributes)
+	h.promUpDownCounters[InFlightRequestsUpDownCounter].Add(ctx, 1, baseAttributes)
 
 	return func() {
-		h.upDownCounters[InFlightRequestsUpDownCounter].Add(ctx, -1, baseAttributes)
-		h.promClient.AddGauge(InFlightRequestsUpDownCounter, InFlightRequestsUpDownCounterDescription, -1, baseKeys...)
+		h.otlpUpDownCounters[InFlightRequestsUpDownCounter].Add(ctx, -1, baseAttributes)
+		h.promUpDownCounters[InFlightRequestsUpDownCounter].Add(ctx, -1, baseAttributes)
 	}
 }
 
@@ -192,8 +255,8 @@ func (h *Metrics) MeasureRequestCount(ctx context.Context, attr ...attribute.Key
 
 	baseAttributes := otelmetric.WithAttributes(baseKeys...)
 
-	h.counters[RequestCounter].Add(ctx, 1, baseAttributes)
-	h.promClient.AddCounter(RequestCounter, RequestCounterDescription, 1, baseKeys...)
+	h.otlpCounters[RequestCounter].Add(ctx, 1, baseAttributes)
+	h.promCounters[RequestCounter].Add(ctx, 1, baseAttributes)
 }
 
 func (h *Metrics) MeasureRequestSize(ctx context.Context, contentLength int64, attr ...attribute.KeyValue) {
@@ -204,8 +267,8 @@ func (h *Metrics) MeasureRequestSize(ctx context.Context, contentLength int64, a
 
 	baseAttributes := otelmetric.WithAttributes(baseKeys...)
 
-	h.counters[RequestContentLengthCounter].Add(ctx, contentLength, baseAttributes)
-	h.promClient.AddCounter(RequestContentLengthCounter, RequestContentLengthCounterDescription, 1, baseKeys...)
+	h.otlpCounters[RequestContentLengthCounter].Add(ctx, contentLength, baseAttributes)
+	h.promCounters[RequestContentLengthCounter].Add(ctx, contentLength, baseAttributes)
 }
 
 func (h *Metrics) MeasureResponseSize(ctx context.Context, size int64, attr ...attribute.KeyValue) {
@@ -216,8 +279,8 @@ func (h *Metrics) MeasureResponseSize(ctx context.Context, size int64, attr ...a
 
 	baseAttributes := otelmetric.WithAttributes(baseKeys...)
 
-	h.counters[ResponseContentLengthCounter].Add(ctx, size, baseAttributes)
-	h.promClient.AddCounter(ResponseContentLengthCounter, ResponseContentLengthCounterDescription, float64(size), baseKeys...)
+	h.otlpCounters[ResponseContentLengthCounter].Add(ctx, size, baseAttributes)
+	h.promCounters[ResponseContentLengthCounter].Add(ctx, size, baseAttributes)
 }
 
 func (h *Metrics) MeasureLatency(ctx context.Context, requestStartTime time.Time, attr ...attribute.KeyValue) {
@@ -231,14 +294,8 @@ func (h *Metrics) MeasureLatency(ctx context.Context, requestStartTime time.Time
 	// Use floating point division here for higher precision (instead of Millisecond method).
 	elapsedTime := float64(time.Since(requestStartTime)) / float64(time.Millisecond)
 
-	h.histograms[ServerLatencyHistogram].Record(ctx, elapsedTime, baseAttributes)
-	h.promClient.AddHistogram(
-		ServerLatencyHistogram,
-		ServerLatencyHistogramDescription,
-		elapsedTime,
-		msBucketsBounds,
-		baseKeys...,
-	)
+	h.otlpHistograms[ServerLatencyHistogram].Record(ctx, elapsedTime, baseAttributes)
+	h.promHistograms[ServerLatencyHistogram].Record(ctx, elapsedTime, baseAttributes)
 }
 
 // WithAttributes adds attributes to the base attributes
@@ -254,14 +311,14 @@ func WithLogger(logger *zap.Logger) Option {
 	}
 }
 
-func WithMeterProvider(otelMeterProvider *metric.MeterProvider) Option {
+func WithOtlpMeterProvider(otelMeterProvider *metric.MeterProvider) Option {
 	return func(h *Metrics) {
 		h.otelMeterProvider = otelMeterProvider
 	}
 }
 
-func WithPrometheusClient(client PromClient) Option {
+func WithPromMeterProvider(promMeterProvider *metric.MeterProvider) Option {
 	return func(h *Metrics) {
-		h.promClient = client
+		h.promMeterProvider = promMeterProvider
 	}
 }

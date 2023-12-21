@@ -7,7 +7,7 @@ SELECT
     Attributes [ 'wg.operation.hash' ] AS OperationHash,
     Attributes [ 'wg.operation.persisted_id' ] as OperationPersistedID,
     toUInt64(sum(Value)) as TotalRequests,
-    toUInt64(sumIf(Value, position(Attributes['http.status_code'],'5') = 1 OR position(Attributes['http.status_code'],'4') = 1 OR Attributes['wg.request.error'] = 'true')) as TotalErrors,
+    toUInt64(sumIf(Value, position(Attributes['http.status_code'],'5') = 1 OR position(Attributes['http.status_code'],'4') = 1 OR mapContains(Attributes, 'wg.request.error'))) as TotalErrors,
     toUInt64(sumIf(Value, position(Attributes['http.status_code'],'4') = 1)) AS TotalClientErrors,
     toLowCardinality(Attributes [ 'wg.operation.type' ]) AS OperationType,
     toLowCardinality(Attributes [ 'wg.federated_graph.id']) AS FederatedGraphID,

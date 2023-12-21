@@ -79,7 +79,8 @@ type (
 		traceConfig              *trace.Config
 		metricConfig             *metric.Config
 		tracerProvider           *sdktrace.TracerProvider
-		meterProvider            *sdkmetric.MeterProvider
+		otlpMeterProvider        *sdkmetric.MeterProvider
+		promMeterProvider        *sdkmetric.MeterProvider
 		gqlMetricsExporter       *graphqlmetrics.Exporter
 		corsOptions              *cors.Config
 		routerConfig             *nodev1.RouterConfig
@@ -100,7 +101,6 @@ type (
 		cdn                      *cdn.CDN
 		eventsConfig             config.EventsConfiguration
 		promServer               *http.Server
-		promClient               metric.PromClient
 		modulesConfig            map[string]interface{}
 		routerMiddlewares        []func(http.Handler) http.Handler
 		preOriginHandlers        []TransportPreHandler
@@ -516,21 +516,24 @@ func (r *Router) bootstrap(ctx context.Context) error {
 
 	// Prometheus metrics rely on OTLP metrics
 	if r.metricConfig.IsEnabled() {
-		mp, err := metric.NewMeterProvider(ctx, r.logger, r.metricConfig)
-		if err != nil {
-			return fmt.Errorf("failed to start trace agent: %w", err)
-		}
-		r.meterProvider = mp
-
 		if r.metricConfig.Prometheus.Enabled {
-			r.promClient = metric.NewPromClient(r.logger, r.metricConfig.Prometheus.ExcludeMetricLabels, r.metricConfig.Prometheus.ExcludeMetricLabels)
-			r.promServer = r.promClient.Serve(r.metricConfig.Prometheus.ListenAddr, r.metricConfig.Prometheus.Path)
+			mp, registry, err := metric.NewPrometheusMeterProvider(ctx, r.metricConfig)
+			if err != nil {
+				return fmt.Errorf("failed to create Prometheus exporter: %w", err)
+			}
+			r.promMeterProvider = mp
+			r.promServer = metric.ServePrometheus(r.logger, r.metricConfig.Prometheus.ListenAddr, r.metricConfig.Prometheus.Path, registry)
 			go func() {
 				if err := r.promServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 					r.logger.Error("Failed to start Prometheus server", zap.Error(err))
 				}
 			}()
 		}
+		mp, err := metric.NewOtlpMeterProvider(ctx, r.logger, r.metricConfig)
+		if err != nil {
+			return fmt.Errorf("failed to start trace agent: %w", err)
+		}
+		r.otlpMeterProvider = mp
 	}
 
 	if r.graphqlMetricsConfig.Enabled {
@@ -775,8 +778,8 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		m, err := metric.NewMetrics(
 			r.metricConfig.Name,
 			Version,
-			metric.WithMeterProvider(r.meterProvider),
-			metric.WithPrometheusClient(r.promClient),
+			metric.WithPromMeterProvider(r.promMeterProvider),
+			metric.WithOtlpMeterProvider(r.otlpMeterProvider),
 			metric.WithLogger(r.logger),
 			metric.WithAttributes(
 				otel.WgRouterGraphName.String(r.federatedGraphName),
