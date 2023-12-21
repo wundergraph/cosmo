@@ -190,6 +190,7 @@ func getDefaultMetricOptions(ctx context.Context, serviceName, serviceVersion st
 		// Use different histogram buckets for Prometheus and OTLP
 		sdkmetric.WithView(sdkmetric.NewView(
 			sdkmetric.Instrument{
+				Kind: sdkmetric.InstrumentKindHistogram,
 				Unit: unitMilliseconds,
 			},
 			sdkmetric.Stream{
@@ -198,6 +199,7 @@ func getDefaultMetricOptions(ctx context.Context, serviceName, serviceVersion st
 		)),
 		sdkmetric.WithView(sdkmetric.NewView(
 			sdkmetric.Instrument{
+				Kind: sdkmetric.InstrumentKindHistogram,
 				Unit: unitBytes,
 			},
 			sdkmetric.Stream{
