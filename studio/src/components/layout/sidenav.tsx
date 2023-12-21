@@ -116,7 +116,9 @@ const Organizations = () => {
           })}
         </DropdownMenuRadioGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem>Create a new organization</DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/create">Create a new organization</Link>
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

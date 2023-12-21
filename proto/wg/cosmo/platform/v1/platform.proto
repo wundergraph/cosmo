@@ -940,6 +940,26 @@ message UpdateOrgMemberRoleResponse {
   Response response = 1;
 }
 
+message CreateOrganizationRequest {
+  string name = 1;
+  string slug = 2;
+  string plan = 3;
+}
+
+message CreateOrganizationResponse {
+  Response response = 1;
+  optional Organization organization = 2;
+  optional string stripeSessionId = 3;
+}
+
+message Organization {
+  string id = 1;
+  string name = 2;
+  string slug = 3;
+  string creatorUserId = 4;
+  string createdAt = 5;
+}
+
 /**
  * Billing
  */
@@ -1489,6 +1509,8 @@ service PlatformService {
   }
 
   rpc GetOrganizationRequestsCount(GetOrganizationRequestsCountRequest) returns (GetOrganizationRequestsCountResponse) {}
+
+  rpc CreateOrganization(CreateOrganizationRequest) returns (CreateOrganizationResponse) {}
 
   //
   // Billing

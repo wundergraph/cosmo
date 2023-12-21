@@ -19,6 +19,7 @@ import {
   CreateFederatedSubgraphResponse,
   CreateIntegrationResponse,
   CreateOIDCProviderResponse,
+  CreateOrganizationResponse,
   CreateOrganizationWebhookConfigResponse,
   DateRange,
   DeleteAPIKeyResponse,
@@ -5000,6 +5001,71 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             code: EnumStatusCode.OK,
           },
           plans: await billingRepo.listPlans(),
+        };
+      });
+    },
+
+    createOrganization: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+        organizationName: req.name,
+      });
+
+      return handleError<PlainMessage<CreateOrganizationResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const orgRepo = new OrganizationRepository(opts.db);
+        const billingRepo = new BillingRepository(opts.db);
+
+        const plans = await billingRepo.listPlans();
+
+        if (plans?.length && !plans.some((plan) => plan.id === req.plan && 'stripePriceId' in plan)) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: 'Invalid plan',
+            },
+          };
+        }
+
+        const organization = await orgRepo.createOrganization({
+          organizationName: req.name,
+          organizationSlug: req.slug,
+          ownerID: authContext.userId,
+        });
+
+        const orgMember = await orgRepo.addOrganizationMember({
+          organizationID: organization.id,
+          userID: authContext.userId,
+        });
+
+        await orgRepo.addOrganizationMemberRoles({
+          memberID: orgMember.id,
+          roles: ['admin'],
+        });
+
+        let sessionId;
+        if (plans?.length) {
+          const session = await billingRepo.createCheckoutSession({
+            organizationId: organization.id,
+            organizationSlug: organization.slug,
+            plan: req.plan,
+          });
+          sessionId = session.id;
+        }
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          organization: {
+            id: organization.id,
+            name: organization.name,
+            slug: organization.slug,
+            createdAt: organization.createdAt,
+            creatorUserId: organization.creatorUserId,
+          },
+          stripeSessionId: sessionId,
         };
       });
     },

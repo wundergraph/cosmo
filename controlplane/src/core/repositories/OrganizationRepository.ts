@@ -192,7 +192,7 @@ export class OrganizationRepository {
 
   public async memberships(input: {
     userId: string;
-  }): Promise<(OrganizationDTO & { roles: string[]; limits: OrganizationLimitsDTO })[]> {
+  }): Promise<(OrganizationDTO & { roles: string[]; limits?: OrganizationLimitsDTO })[]> {
     const userOrganizations = await this.db
       .selectDistinctOn([organizations.id], {
         id: organizations.id,
@@ -222,7 +222,7 @@ export class OrganizationRepository {
       .from(organizationsMembers)
       .innerJoin(organizations, eq(organizations.id, organizationsMembers.organizationId))
       .innerJoin(users, eq(users.id, organizationsMembers.userId))
-      .innerJoin(organizationLimits, eq(organizations.id, organizationLimits.organizationId))
+      .leftJoin(organizationLimits, eq(organizations.id, organizationLimits.organizationId))
       .leftJoin(organizationBilling, eq(organizations.id, organizationBilling.organizationId))
       .leftJoin(billingSubscriptions, eq(organizations.id, billingSubscriptions.organizationId))
       .where(eq(users.id, input.userId))
@@ -239,14 +239,16 @@ export class OrganizationRepository {
           userID: input.userId,
           organizationID: org.id,
         }),
-        limits: {
-          analyticsRetentionLimit: org.limits.analyticsRetentionLimit,
-          tracingRetentionLimit: org.limits.tracingRetentionLimit,
-          breakingChangeRetentionLimit: org.limits.breakingChangeRetentionLimit,
-          changelogDataRetentionLimit: org.limits.changelogDataRetentionLimit,
-          traceSamplingRateLimit: Number(org.limits.traceSamplingRateLimit),
-          requestsLimit: org.limits.requestsLimit,
-        },
+        limits: org.limits
+          ? {
+              analyticsRetentionLimit: org.limits.analyticsRetentionLimit,
+              tracingRetentionLimit: org.limits.tracingRetentionLimit,
+              breakingChangeRetentionLimit: org.limits.breakingChangeRetentionLimit,
+              changelogDataRetentionLimit: org.limits.changelogDataRetentionLimit,
+              traceSamplingRateLimit: Number(org.limits.traceSamplingRateLimit),
+              requestsLimit: org.limits.requestsLimit,
+            }
+          : undefined,
         features: await this.getFeatures({ organizationId: org.id, plan: org.billing?.plan || defaultPlan }),
         billing: {
           plan: org.billing?.plan || defaultPlan,

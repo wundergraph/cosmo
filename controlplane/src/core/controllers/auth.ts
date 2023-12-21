@@ -8,7 +8,7 @@ import { PlatformEventName } from '@wundergraph/cosmo-connect/dist/notifications
 import { cosmoIdpHintCookieName, decodeJWT, DEFAULT_SESSION_MAX_AGE_SEC, encrypt } from '../crypto/jwt.js';
 import { CustomAccessTokenClaims, UserInfoEndpointResponse, UserSession } from '../../types/index.js';
 import * as schema from '../../db/schema.js';
-import { organizationMemberRoles, organizations, organizationsMembers, sessions, users } from '../../db/schema.js';
+import { organizationMemberRoles, organizationsMembers, sessions, users } from '../../db/schema.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import AuthUtils from '../auth-utils.js';
 import WebSessionAuthenticator from '../services/WebSessionAuthenticator.js';

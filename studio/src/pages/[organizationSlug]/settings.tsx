@@ -103,7 +103,11 @@ const OrganizationDetails = () => {
       .min(3, {
         message: "Organization slug must be a minimum of 3 characters",
       })
-      .max(24, { message: "Organization slug must be maximum 24 characters" }),
+      .max(24, { message: "Organization slug must be maximum 24 characters" })
+      .refine(
+        (value) => !["login", "signup", "create"].includes(value),
+        "This slug is a reserved keyword",
+      ),
   });
 
   type OrganizationDetailsInput = z.infer<typeof schema>;
