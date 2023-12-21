@@ -3,18 +3,18 @@ package metric
 import (
 	"context"
 	"fmt"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
+	"go.opentelemetry.io/otel/attribute"
+	otelprom "go.opentelemetry.io/otel/exporters/prometheus"
 	"net/url"
 	"regexp"
 	"time"
 
-	prom "github.com/prometheus/client_golang/prometheus"
 	"github.com/wundergraph/cosmo/router/internal/otel/otelconfig"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
-	otelprom "go.opentelemetry.io/otel/exporters/prometheus"
-	"go.opentelemetry.io/otel/sdk/instrumentation"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -25,10 +25,24 @@ import (
 
 var (
 	mp *sdkmetric.MeterProvider
-	// Excluded by default from Prometheus export because of high cardinality
-	// This would produce a metric series for each unique operation
-	// Metric must be in snake case because that's how the Prometheus exporter converts them
-	defaultExcludedPromMetricLabels = []*regexp.Regexp{regexp.MustCompile("wg_operation_hash")}
+
+	// Please version the used meters if you change the buckets.
+
+	// 0kb-20MB
+	bytesBucketBounds = []float64{
+		0, 50, 100, 300, 500, 1000, 3000, 5000, 10000, 15000,
+		30000, 50000, 70000, 90000, 150000, 300000, 600000,
+		800000, 1000000, 5000000, 10000000, 20000000,
+	}
+
+	// Please version the used meters if you change the buckets.
+
+	// 0ms-10s
+	msBucketsBounds = []float64{
+		0, 5, 7, 10, 15, 25, 50, 75, 100, 125, 150, 175, 200, 225,
+		250, 275, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000, 1250,
+		1500, 1750, 2000, 2250, 2500, 2750, 3000, 3500, 4000, 5000, 10000,
+	}
 )
 
 const (
@@ -36,23 +50,35 @@ const (
 	defaultExportInterval = 15 * time.Second
 )
 
-func createPromExporter(excludeMetrics, excludeMetricLabels []*regexp.Regexp) (*otelprom.Exporter, *PromRegistry, error) {
-	excludeMetricLabels = append(excludeMetricLabels, defaultExcludedPromMetricLabels...)
-	registry, err := NewPromRegistry(prom.NewRegistry(), excludeMetrics, excludeMetricLabels)
-	if err != nil {
-		return nil, nil, err
-	}
+func NewPrometheusMeterProvider(ctx context.Context, c *Config) (*sdkmetric.MeterProvider, *prometheus.Registry, error) {
+	registry := prometheus.NewRegistry()
 	registry.MustRegister(collectors.NewGoCollector())
 	registry.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
 
-	prometheusExporter, err := otelprom.New(
+	promExporter, err := otelprom.New(
 		otelprom.WithoutUnits(),
 		otelprom.WithRegisterer(registry),
+	)
+
+	if err != nil {
+		return nil, nil, err
+	}
+
+	opts, err := defaultPrometheusMetricOptions(
+		ctx,
+		c.Name,
+		c.Version,
+		c.Prometheus.ExcludeMetrics,
+		c.Prometheus.ExcludeMetricLabels,
 	)
 	if err != nil {
 		return nil, nil, err
 	}
-	return prometheusExporter, registry, nil
+	opts = append(opts, sdkmetric.WithReader(promExporter))
+
+	mp = sdkmetric.NewMeterProvider(opts...)
+
+	return mp, registry, nil
 }
 
 func createOTELExporter(log *zap.Logger, exp *OpenTelemetryExporter) (sdkmetric.Exporter, error) {
@@ -60,7 +86,7 @@ func createOTELExporter(log *zap.Logger, exp *OpenTelemetryExporter) (sdkmetric.
 	if err != nil {
 		return nil, fmt.Errorf("invalid OpenTelemetry endpoint %q: %w", exp.Endpoint, err)
 	}
-	// Use delta temporalities for counters, gauge and histograms
+	// Use delta temporalities for otlpCounters, gauge and otlpHistograms
 	// Delta temporalities are reported as completed intervals. They don't build upon each other.
 	// This makes queries easier and reduce the amount of data to be transferred because the SDK
 	// client will aggregate the data before sending it to the collector.
@@ -135,23 +161,11 @@ func createOTELExporter(log *zap.Logger, exp *OpenTelemetryExporter) (sdkmetric.
 	return exporter, nil
 }
 
-func NewMeterProvider(ctx context.Context, log *zap.Logger, c *Config) (*sdkmetric.MeterProvider, *PromRegistry, error) {
-	r, err := resource.New(ctx,
-		resource.WithAttributes(semconv.ServiceNameKey.String(c.Name)),
-		resource.WithProcessPID(),
-		resource.WithTelemetrySDK(),
-		resource.WithHost(),
-	)
+func NewOtlpMeterProvider(ctx context.Context, log *zap.Logger, c *Config) (*sdkmetric.MeterProvider, error) {
+	opts, err := defaultOtlpMetricOptions(ctx, c.Name, c.Version)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-
-	opts := []sdkmetric.Option{
-		// Record information about this application in a Resource.
-		sdkmetric.WithResource(r),
-	}
-
-	var registry *PromRegistry
 
 	if c.OpenTelemetry.Enabled {
 		for _, exp := range c.OpenTelemetry.Exporters {
@@ -162,73 +176,151 @@ func NewMeterProvider(ctx context.Context, log *zap.Logger, c *Config) (*sdkmetr
 			exporter, err := createOTELExporter(log, exp)
 			if err != nil {
 				log.Error("creating OTEL metrics exporter", zap.Error(err))
-				return nil, nil, err
+				return nil, err
 			}
 
-			// Please version this meter name if you change the buckets.
-
-			msBucketHistogram := sdkmetric.AggregationExplicitBucketHistogram{
-				// 0ms-10s
-				Boundaries: []float64{
-					0, 5, 7, 10, 15, 25, 50, 75, 100, 125, 150, 175, 200, 225,
-					250, 275, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000, 1250,
-					1500, 1750, 2000, 2250, 2500, 2750, 3000, 3500, 4000, 5000, 10000,
-				},
-			}
-			bytesBucketHistogram := sdkmetric.AggregationExplicitBucketHistogram{
-				// 0kb-20MB
-				Boundaries: []float64{
-					0, 50, 100, 300, 500, 1000, 3000, 5000, 10000, 15000,
-					30000, 50000, 70000, 90000, 150000, 300000, 600000,
-					800000, 1000000, 5000000, 10000000, 20000000,
-				},
-			}
-
-			opts = append(opts,
-				sdkmetric.WithView(sdkmetric.NewView(
-					sdkmetric.Instrument{
-						Unit:  unitMilliseconds,
-						Scope: instrumentation.Scope{Name: cosmoRouterMeterName},
-					},
-					sdkmetric.Stream{
-						Aggregation: msBucketHistogram,
-					},
-				)),
-				sdkmetric.WithView(sdkmetric.NewView(
-					sdkmetric.Instrument{
-						Unit:  unitBytes,
-						Scope: instrumentation.Scope{Name: cosmoRouterMeterName},
-					},
-					sdkmetric.Stream{
-						Aggregation: bytesBucketHistogram,
-					},
-				)),
-				sdkmetric.WithReader(
-					sdkmetric.NewPeriodicReader(exporter,
-						sdkmetric.WithTimeout(defaultExportTimeout),
-						sdkmetric.WithInterval(defaultExportInterval),
-					),
-				))
+			opts = append(opts, sdkmetric.WithReader(
+				sdkmetric.NewPeriodicReader(exporter,
+					sdkmetric.WithTimeout(defaultExportTimeout),
+					sdkmetric.WithInterval(defaultExportInterval),
+				),
+			))
 		}
-	}
-
-	if c.Prometheus.Enabled {
-		promExp, promReg, err := createPromExporter(
-			c.Prometheus.ExcludeMetrics,
-			c.Prometheus.ExcludeMetricLabels,
-		)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		registry = promReg
-
-		opts = append(opts, sdkmetric.WithReader(promExp))
 	}
 
 	mp = sdkmetric.NewMeterProvider(opts...)
 	// Set the global MeterProvider to the SDK metric provider.
 	otel.SetMeterProvider(mp)
 
-	return mp, registry, nil
+	return mp, nil
+}
+
+func getResource(ctx context.Context, serviceName, serviceVersion string) (*resource.Resource, error) {
+	r, err := resource.New(ctx,
+		resource.WithAttributes(semconv.ServiceNameKey.String(serviceName)),
+		resource.WithAttributes(semconv.ServiceVersionKey.String(serviceVersion)),
+		resource.WithProcessPID(),
+		resource.WithTelemetrySDK(),
+		resource.WithHost(),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return r, nil
+}
+
+func defaultPrometheusMetricOptions(ctx context.Context, serviceName, serviceVersion string, excludeMetrics, excludeMetricAttributes []*regexp.Regexp) ([]sdkmetric.Option, error) {
+	r, err := getResource(ctx, serviceName, serviceVersion)
+	if err != nil {
+		return nil, err
+	}
+
+	var opts []sdkmetric.Option
+
+	// Exclude attributes from metrics
+
+	attributeFilter := func(value attribute.KeyValue) bool {
+		if isKeyInSlice(value.Key, defaultExcludedOtelKeys) {
+			return false
+		}
+		name := sanitizeName(string(value.Key))
+		for _, re := range excludeMetricAttributes {
+			if re.MatchString(name) {
+				return false
+			}
+		}
+		return true
+	}
+
+	msBucketHistogram := sdkmetric.AggregationExplicitBucketHistogram{
+		Boundaries: msBucketsBounds,
+	}
+	bytesBucketHistogram := sdkmetric.AggregationExplicitBucketHistogram{
+		Boundaries: bytesBucketBounds,
+	}
+
+	var view sdkmetric.View = func(i sdkmetric.Instrument) (sdkmetric.Stream, bool) {
+		// In a custom View function, we need to explicitly copy the name, description, and unit.
+		s := sdkmetric.Stream{Name: i.Name, Description: i.Description, Unit: i.Unit}
+
+		// Filter out metrics that match the excludeMetrics regexes
+		for _, re := range excludeMetrics {
+			promName := sanitizeName(i.Name)
+			if re.MatchString(promName) {
+				// Drop the metric
+				s.Aggregation = sdkmetric.AggregationDrop{}
+				return s, true
+			}
+		}
+
+		// Filter out attributes that match the excludeMetricAttributes regexes
+		s.AttributeFilter = attributeFilter
+
+		// Use different histogram buckets for Prometheus
+		if i.Unit == unitBytes && i.Kind == sdkmetric.InstrumentKindHistogram {
+			s.Aggregation = bytesBucketHistogram
+		} else if i.Unit == unitMilliseconds && i.Kind == sdkmetric.InstrumentKindHistogram {
+			s.Aggregation = msBucketHistogram
+		}
+
+		return s, true
+	}
+
+	opts = append(opts, sdkmetric.WithView(view))
+
+	opts = append(opts, // Record information about this application in a Resource.
+		sdkmetric.WithResource(r),
+	)
+
+	return opts, nil
+}
+
+func defaultOtlpMetricOptions(ctx context.Context, serviceName, serviceVersion string) ([]sdkmetric.Option, error) {
+	r, err := getResource(ctx, serviceName, serviceVersion)
+	if err != nil {
+		return nil, err
+	}
+
+	msBucketHistogram := sdkmetric.AggregationExplicitBucketHistogram{
+		Boundaries: msBucketsBounds,
+	}
+	bytesBucketHistogram := sdkmetric.AggregationExplicitBucketHistogram{
+		Boundaries: bytesBucketBounds,
+	}
+
+	// Info: There can be only a single view per instrument. A view with less restriction might override a view.
+
+	return []sdkmetric.Option{
+		// Record information about this application in a Resource.
+		sdkmetric.WithResource(r),
+		// Use different histogram buckets for Prometheus and OTLP
+		sdkmetric.WithView(sdkmetric.NewView(
+			sdkmetric.Instrument{
+				Kind: sdkmetric.InstrumentKindHistogram,
+				Unit: unitMilliseconds,
+			},
+			sdkmetric.Stream{
+				Aggregation: msBucketHistogram,
+			},
+		)),
+		sdkmetric.WithView(sdkmetric.NewView(
+			sdkmetric.Instrument{
+				Kind: sdkmetric.InstrumentKindHistogram,
+				Unit: unitBytes,
+			},
+			sdkmetric.Stream{
+				Aggregation: bytesBucketHistogram,
+			},
+		)),
+	}, nil
+}
+
+func isKeyInSlice(key attribute.Key, keys []attribute.Key) bool {
+	for _, k := range keys {
+		if k == key {
+			return true
+		}
+	}
+	return false
 }
