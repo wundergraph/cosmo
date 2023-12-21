@@ -1,5 +1,9 @@
 import { cn } from "@/lib/utils";
-import { ExclamationTriangleIcon, FileTextIcon, HomeIcon } from "@radix-ui/react-icons";
+import {
+  ExclamationTriangleIcon,
+  FileTextIcon,
+  HomeIcon,
+} from "@radix-ui/react-icons";
 import { useQuery } from "@tanstack/react-query";
 import {
   getSubgraphByName,
@@ -23,6 +27,7 @@ import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb
 import { EmptyState } from "../empty-state";
 import { Button } from "../ui/button";
 import { GetSubgraphByNameResponse } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
+import { PiGraphLight } from "react-icons/pi";
 
 export interface SubgraphContextProps {
   subgraph: GetSubgraphByNameResponse["graph"];
@@ -67,6 +72,11 @@ export const SubgraphLayout = ({ children }: LayoutProps) => {
         title: "Schema",
         href: basePath + "/schema",
         icon: <FileTextIcon className="h-4 w-4" />,
+      },
+      {
+        title: "Federated Graphs",
+        href: basePath + "/graphs",
+        icon: <PiGraphLight className="h-4 w-4" />,
       },
     ];
   }, [slug, organizationSlug]);

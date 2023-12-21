@@ -173,6 +173,7 @@ const SubgraphOverviewPage = () => {
               inviteOptions={inviteOptions}
               subgraphMembers={subgraphMembersData?.members || []}
               refetchSubgraphMembers={refetch}
+              creatorUserId={subgraph.creatorUserId}
             />
           </div>
         </div>

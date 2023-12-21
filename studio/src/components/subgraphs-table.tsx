@@ -96,14 +96,18 @@ export const AddSubgraphUsersContent = ({
   setOpen,
   inviteOptions,
   subgraphMembers,
+  creatorUserId,
   refetchSubgraphMembers,
 }: {
   subgraphName: string;
   setOpen?: Dispatch<SetStateAction<boolean>>;
   inviteOptions: string[];
   subgraphMembers: SubgraphMember[];
+  creatorUserId: string | undefined;
   refetchSubgraphMembers: () => void;
 }) => {
+  const user = useUser();
+  const isAdmin = user?.currentOrganization.roles.includes("admin");
   const { mutate: addMember, isPending: addingMember } = useMutation(
     addSubgraphMember.useMutation(),
   );
@@ -140,20 +144,31 @@ export const AddSubgraphUsersContent = ({
 
   return (
     <div className="flex flex-col gap-y-6">
-      {inviteOptions.length === 0 && (
+      {!user?.currentOrganization.isRBACEnabled ? (
         <div className="mt-4 flex items-center gap-x-2 rounded-lg border !border-primary-foreground px-4 py-2 text-sm text-primary-foreground">
-          <InfoCircledIcon className="h-[14px] w-[14px]" />
-          <span>
-            All organization members are already a part of this subgraph.
-          </span>
+          <InfoCircledIcon className="h-[18px] w-[18px]" />
+          <span>Enable RBAC in the settings to add subgraph members.</span>
         </div>
+      ) : (
+        inviteOptions.length === 0 && (
+          <div className="mt-4 flex items-center gap-x-2 rounded-lg border !border-primary-foreground px-4 py-2 text-sm text-primary-foreground">
+            <InfoCircledIcon className="h-[20px] w-[20px]" />
+            <span>
+              All organization members are already a part of this subgraph.
+            </span>
+          </div>
+        )
       )}
       <form className="flex gap-x-4" onSubmit={onSubmit}>
         <div className="flex-1">
           <Select
             value={inviteeEmail}
             onValueChange={(value) => setInviteeEmail(value)}
-            disabled={inviteOptions.length === 0}
+            disabled={
+              inviteOptions.length === 0 ||
+              !user?.currentOrganization.isRBACEnabled ||
+              (!isAdmin && !(creatorUserId && creatorUserId === user?.id))
+            }
           >
             <SelectTrigger
               value={inviteeEmail}
@@ -177,7 +192,12 @@ export const AddSubgraphUsersContent = ({
         </div>
         <Button
           type="submit"
-          disabled={inviteOptions.length === 0}
+          disabled={
+            inviteOptions.length === 0 ||
+            inviteeEmail === "Select the member" ||
+            !user?.currentOrganization.isRBACEnabled ||
+            (!isAdmin && !(creatorUserId && creatorUserId === user?.id))
+          }
           variant="default"
           isLoading={addingMember}
         >
@@ -191,34 +211,38 @@ export const AddSubgraphUsersContent = ({
               return (
                 <TableRow key={userId} className="h-12 py-1">
                   <TableCell className="px-4 font-medium">{email}</TableCell>
-                  <TableCell className="flex h-12 items-center justify-end px-4">
-                    <Button
-                      variant="ghost"
-                      className="text-primary"
-                      isLoading={removingMember}
-                      onClick={() => {
-                        removeMember(
-                          { subgraphMemberId, subgraphName },
-                          {
-                            onSuccess: (d) => {
-                              sendToast(
-                                d.response?.details ||
-                                  "Removed member successfully.",
-                              );
-                              refetchSubgraphMembers();
-                            },
-                            onError: (error) => {
-                              sendToast(
-                                "Could not remove the member. Please try again.",
-                              );
-                            },
-                          },
-                        );
-                      }}
-                    >
-                      Remove
-                    </Button>
-                  </TableCell>
+                  {(isAdmin ||
+                    (creatorUserId && creatorUserId === user?.id)) &&
+                    user?.currentOrganization.isRBACEnabled && (
+                      <TableCell className="flex h-12 items-center justify-end px-4">
+                        <Button
+                          variant="ghost"
+                          className="text-primary"
+                          isLoading={removingMember}
+                          onClick={() => {
+                            removeMember(
+                              { subgraphMemberId, subgraphName },
+                              {
+                                onSuccess: (d) => {
+                                  sendToast(
+                                    d.response?.details ||
+                                      "Removed member successfully.",
+                                  );
+                                  refetchSubgraphMembers();
+                                },
+                                onError: (error) => {
+                                  sendToast(
+                                    "Could not remove the member. Please try again.",
+                                  );
+                                },
+                              },
+                            );
+                          }}
+                        >
+                          Remove
+                        </Button>
+                      </TableCell>
+                    )}
                 </TableRow>
               );
             })}
@@ -302,6 +326,7 @@ const AddSubgraphUsers = ({
             inviteOptions={inviteOptions}
             subgraphMembers={subgraphMembersData?.members || []}
             refetchSubgraphMembers={refetch}
+            creatorUserId={creatorUserId}
           />
         </DialogContent>
       </Dialog>

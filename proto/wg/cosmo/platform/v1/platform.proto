@@ -184,6 +184,15 @@ message GetFederatedGraphsResponse {
   repeated FederatedGraph graphs = 2;
 }
 
+message GetFederatedGraphsBySubgraphLabelsRequest {
+  string subgraphName = 1;
+}
+
+message GetFederatedGraphsBySubgraphLabelsResponse {
+  Response response = 1;
+  repeated FederatedGraph graphs = 2;
+}
+
 message GetSubgraphsRequest {
   int32 limit = 1;
   int32 offset = 2;
@@ -1327,6 +1336,8 @@ service PlatformService {
 
   // GetFederatedGraphs returns the list of federated graphs.
   rpc GetFederatedGraphs(GetFederatedGraphsRequest) returns (GetFederatedGraphsResponse) {}
+  // GetFederatedGraphsBySubgraphLabels returns the list of federated graphs based on the subgraph labels
+  rpc GetFederatedGraphsBySubgraphLabels(GetFederatedGraphsBySubgraphLabelsRequest) returns (GetFederatedGraphsBySubgraphLabelsResponse) {}
   // GetFederatedGraphByName returns the federated graph by name.
   rpc GetFederatedGraphByName(GetFederatedGraphByNameRequest) returns (GetFederatedGraphByNameResponse) {}
   // GetFederatedGraphSDLByName returns the latest valid SDL of the federated graph by name.

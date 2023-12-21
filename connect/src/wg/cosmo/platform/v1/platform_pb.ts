@@ -1510,6 +1510,86 @@ export class GetFederatedGraphsResponse extends Message<GetFederatedGraphsRespon
 }
 
 /**
+ * @generated from message wg.cosmo.platform.v1.GetFederatedGraphsBySubgraphLabelsRequest
+ */
+export class GetFederatedGraphsBySubgraphLabelsRequest extends Message<GetFederatedGraphsBySubgraphLabelsRequest> {
+  /**
+   * @generated from field: string subgraphName = 1;
+   */
+  subgraphName = "";
+
+  constructor(data?: PartialMessage<GetFederatedGraphsBySubgraphLabelsRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetFederatedGraphsBySubgraphLabelsRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "subgraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetFederatedGraphsBySubgraphLabelsRequest {
+    return new GetFederatedGraphsBySubgraphLabelsRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetFederatedGraphsBySubgraphLabelsRequest {
+    return new GetFederatedGraphsBySubgraphLabelsRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetFederatedGraphsBySubgraphLabelsRequest {
+    return new GetFederatedGraphsBySubgraphLabelsRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetFederatedGraphsBySubgraphLabelsRequest | PlainMessage<GetFederatedGraphsBySubgraphLabelsRequest> | undefined, b: GetFederatedGraphsBySubgraphLabelsRequest | PlainMessage<GetFederatedGraphsBySubgraphLabelsRequest> | undefined): boolean {
+    return proto3.util.equals(GetFederatedGraphsBySubgraphLabelsRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetFederatedGraphsBySubgraphLabelsResponse
+ */
+export class GetFederatedGraphsBySubgraphLabelsResponse extends Message<GetFederatedGraphsBySubgraphLabelsResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.FederatedGraph graphs = 2;
+   */
+  graphs: FederatedGraph[] = [];
+
+  constructor(data?: PartialMessage<GetFederatedGraphsBySubgraphLabelsResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetFederatedGraphsBySubgraphLabelsResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "graphs", kind: "message", T: FederatedGraph, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetFederatedGraphsBySubgraphLabelsResponse {
+    return new GetFederatedGraphsBySubgraphLabelsResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetFederatedGraphsBySubgraphLabelsResponse {
+    return new GetFederatedGraphsBySubgraphLabelsResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetFederatedGraphsBySubgraphLabelsResponse {
+    return new GetFederatedGraphsBySubgraphLabelsResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetFederatedGraphsBySubgraphLabelsResponse | PlainMessage<GetFederatedGraphsBySubgraphLabelsResponse> | undefined, b: GetFederatedGraphsBySubgraphLabelsResponse | PlainMessage<GetFederatedGraphsBySubgraphLabelsResponse> | undefined): boolean {
+    return proto3.util.equals(GetFederatedGraphsBySubgraphLabelsResponse, a, b);
+  }
+}
+
+/**
  * @generated from message wg.cosmo.platform.v1.GetSubgraphsRequest
  */
 export class GetSubgraphsRequest extends Message<GetSubgraphsRequest> {

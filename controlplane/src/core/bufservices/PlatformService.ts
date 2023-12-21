@@ -44,6 +44,7 @@ import {
   GetFederatedGraphByNameResponse,
   GetFederatedGraphChangelogResponse,
   GetFederatedGraphSDLByNameResponse,
+  GetFederatedGraphsBySubgraphLabelsResponse,
   GetFederatedGraphsResponse,
   GetFieldUsageResponse,
   GetGraphMetricsResponse,
@@ -3507,6 +3508,50 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             compositionErrors: g.compositionErrors ?? '',
             isComposable: g.isComposable,
             requestSeries: requestSeriesList[g.id] ?? [],
+          })),
+          response: {
+            code: EnumStatusCode.OK,
+          },
+        };
+      });
+    },
+
+    getFederatedGraphsBySubgraphLabels: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetFederatedGraphsBySubgraphLabelsResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+        const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
+
+        const subgraph = await subgraphRepo.byName(req.subgraphName);
+
+        if (!subgraph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Subgraph '${req.subgraphName}' not found`,
+            },
+            graphs: [],
+          };
+        }
+
+        const federatedGraphs = await fedGraphRepo.bySubgraphLabels(subgraph.labels);
+
+        return {
+          graphs: federatedGraphs.map((g) => ({
+            id: g.id,
+            name: g.name,
+            labelMatchers: g.labelMatchers,
+            routingURL: g.routingUrl,
+            lastUpdatedAt: g.lastUpdatedAt,
+            connectedSubgraphs: g.subgraphsCount,
+            compositionErrors: g.compositionErrors ?? '',
+            isComposable: g.isComposable,
+            requestSeries: [],
           })),
           response: {
             code: EnumStatusCode.OK,

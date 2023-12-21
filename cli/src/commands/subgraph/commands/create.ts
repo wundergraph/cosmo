@@ -37,7 +37,10 @@ export default (opts: BaseCommandOptions) => {
   );
   schemaPush.option('--readme <path-to-readme>', 'The markdown file which describes the subgraph.');
   schemaPush.action(async (name, options) => {
-    const readmeFile = resolve(process.cwd(), options.readme);
+    let readmeFile;
+    if (options.readme) {
+      readmeFile = resolve(process.cwd(), options.readme);
+    }
 
     const resp = await opts.client.platform.createFederatedSubgraph(
       {
@@ -50,7 +53,7 @@ export default (opts: BaseCommandOptions) => {
         subscriptionProtocol: options.subscriptionProtocol
           ? parseGraphQLSubscriptionProtocol(options.subscriptionProtocol)
           : undefined,
-        readme: existsSync(readmeFile) ? await readFile(readmeFile, 'utf8') : undefined,
+        readme: readmeFile && existsSync(readmeFile) ? await readFile(readmeFile, 'utf8') : undefined,
       },
       {
         headers: baseHeaders,

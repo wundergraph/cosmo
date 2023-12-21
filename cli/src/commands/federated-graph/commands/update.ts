@@ -22,14 +22,17 @@ export default (opts: BaseCommandOptions) => {
   );
   command.option('--readme <path-to-readme>', 'The markdown file which describes the subgraph.');
   command.action(async (name, options) => {
-    const readmeFile = resolve(process.cwd(), options.readme);
+    let readmeFile;
+    if (options.readme) {
+      readmeFile = resolve(process.cwd(), options.readme);
+    }
 
     const resp = await opts.client.platform.updateFederatedGraph(
       {
         name,
         routingUrl: options.routingUrl,
         labelMatchers: options.labelMatcher,
-        readme: existsSync(readmeFile) ? await readFile(readmeFile, 'utf8') : undefined,
+        readme: readmeFile && existsSync(readmeFile) ? await readFile(readmeFile, 'utf8') : undefined,
       },
       {
         headers: baseHeaders,
