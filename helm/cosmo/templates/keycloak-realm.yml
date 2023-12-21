@@ -63,7 +63,7 @@ data:
         "containerId": "b6c8b6d7-7435-46d9-833a-d088cfc6f993"
       },
       "requiredCredentials": ["password"],
-      "passwordPolicy": "length(8) and specialChars(1) and maxLength(60) and digits(1)",
+      "passwordPolicy": "length(8) and specialChars(1) and maxLength(60) and digits(1) and notUsername(undefined)",
       "otpPolicyType": "totp",
       "otpPolicyAlgorithm": "HmacSHA1",
       "otpPolicyInitialCounter": 0,
