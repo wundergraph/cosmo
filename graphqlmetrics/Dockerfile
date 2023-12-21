@@ -21,11 +21,11 @@ RUN make test
 # Build router
 RUN make build VERSION=${VERSION}
 
-FROM gcr.io/distroless/static:latest
+FROM gcr.io/distroless/base-debian12
 
 COPY --from=builder /app/graphqlmetrics /graphqlmetrics
 COPY --from=builder /app/migrations /migrations
 
-ENTRYPOINT ["/graphqlmetrics"]
+CMD ["/graphqlmetrics"]
 
 EXPOSE 4005

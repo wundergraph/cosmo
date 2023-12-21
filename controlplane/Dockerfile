@@ -28,7 +28,7 @@ RUN curl -fsSL -o /usr/local/bin/dbmate https://github.com/amacneil/dbmate/relea
 # Deploy
 RUN pnpm --filter=./controlplane --prod deploy pruned
 
-FROM node:18-slim
+FROM node:18-alpine
 
 WORKDIR /app
 
