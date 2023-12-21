@@ -16,7 +16,6 @@ import (
 
 // Excluded by default from Prometheus export because of high cardinality
 // This would produce a metric series for each unique operation
-// Metric must be in snake case because that's how the Prometheus exporter converts them
 var defaultExcludedOtelKeys = []attribute.Key{
 	otel.WgOperationHash,
 }
