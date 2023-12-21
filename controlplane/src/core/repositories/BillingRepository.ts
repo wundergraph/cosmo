@@ -149,6 +149,42 @@ export class BillingRepository {
     });
   }
 
+  public async upgradePlan(params: { organizationId: string; plan: string }) {
+    const subscription = await this.db.query.billingSubscriptions.findFirst({
+      where: eq(billingSubscriptions.organizationId, params.organizationId),
+      orderBy: [asc(billingSubscriptions.createdAt)],
+    });
+
+    if (!subscription) {
+      throw new Error('Could not find subscription');
+    }
+
+    const plan = await this.getPlanById(params.plan);
+
+    if (!plan?.stripePriceId) {
+      throw new Error('Invalid billing plan');
+    }
+
+    const stripeSubscription = await this.stripe.subscriptions.retrieve(subscription.id);
+
+    await this.stripe.subscriptions.update(subscription.id, {
+      cancel_at_period_end: false,
+      items: [
+        {
+          id: stripeSubscription.items.data[0].id,
+          price: plan.stripePriceId,
+        },
+      ],
+    });
+
+    await this.db
+      .update(organizationBilling)
+      .set({
+        plan: plan.id,
+      })
+      .where(eq(organizationBilling.organizationId, params.organizationId));
+  }
+
   syncSubscriptionStatus = async (subscriptionId: string, customerId: string, isCreateEvent?: boolean) => {
     const billing = await this.db.query.organizationBilling.findFirst({
       where: eq(organizationBilling.stripeCustomerId, customerId),

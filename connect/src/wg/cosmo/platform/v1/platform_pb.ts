@@ -7671,6 +7671,80 @@ export class CreateBillingPortalSessionResponse extends Message<CreateBillingPor
 }
 
 /**
+ * @generated from message wg.cosmo.platform.v1.UpgradePlanRequest
+ */
+export class UpgradePlanRequest extends Message<UpgradePlanRequest> {
+  /**
+   * @generated from field: string plan = 1;
+   */
+  plan = "";
+
+  constructor(data?: PartialMessage<UpgradePlanRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.UpgradePlanRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "plan", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpgradePlanRequest {
+    return new UpgradePlanRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpgradePlanRequest {
+    return new UpgradePlanRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpgradePlanRequest {
+    return new UpgradePlanRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpgradePlanRequest | PlainMessage<UpgradePlanRequest> | undefined, b: UpgradePlanRequest | PlainMessage<UpgradePlanRequest> | undefined): boolean {
+    return proto3.util.equals(UpgradePlanRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.UpgradePlanResponse
+ */
+export class UpgradePlanResponse extends Message<UpgradePlanResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  constructor(data?: PartialMessage<UpgradePlanResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.UpgradePlanResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpgradePlanResponse {
+    return new UpgradePlanResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpgradePlanResponse {
+    return new UpgradePlanResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpgradePlanResponse {
+    return new UpgradePlanResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpgradePlanResponse | PlainMessage<UpgradePlanResponse> | undefined, b: UpgradePlanResponse | PlainMessage<UpgradePlanResponse> | undefined): boolean {
+    return proto3.util.equals(UpgradePlanResponse, a, b);
+  }
+}
+
+/**
  * *
  * MetricsDashboard
  *

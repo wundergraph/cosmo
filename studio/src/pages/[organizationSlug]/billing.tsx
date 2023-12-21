@@ -1,11 +1,16 @@
 import { EmptyState } from "@/components/empty-state";
 import { getDashboardLayout } from "@/components/layout/dashboard-layout";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Loader } from "@/components/ui/loader";
 import { useToast } from "@/components/ui/use-toast";
-import { useCurrentOrganization } from "@/hooks/use-current-organization";
 import { useCurrentPlan } from "@/hooks/use-current-plan";
 import { useSubscription } from "@/hooks/use-subscription";
 import { useUser } from "@/hooks/use-user";
@@ -14,12 +19,14 @@ import { NextPageWithLayout } from "@/lib/page";
 import { getStripe } from "@/lib/stripe";
 import { cn } from "@/lib/utils";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { AlertDialogDescription } from "@radix-ui/react-alert-dialog";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   createBillingPortalSession,
   createCheckoutSession,
   getBillingPlans,
+  upgradePlan,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { GetBillingPlansResponse_BillingPlan } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { useRouter } from "next/router";
@@ -139,6 +146,9 @@ const BillingPage: NextPageWithLayout = () => {
             <div className="mt-auto flex flex-col">
               <UpgradeButton
                 plan={plan}
+                hasSubscription={
+                  subscription && subscription?.status !== "canceled"
+                }
                 isCurrent={currentPlan?.id === plan.id}
                 isDowngrade={
                   currentPlan?.price === -1 ||
@@ -178,8 +188,10 @@ const useBillingPortal = () => {
 
 const ManagePaymentButton = () => {
   const { openPortal, isPending } = useBillingPortal();
-  const currentPlan = useCurrentPlan();
-  if (!currentPlan) return null;
+
+  const subscription = useSubscription();
+
+  if (!subscription) return null;
 
   return (
     <Button variant="outline" onClick={() => openPortal()} disabled={isPending}>
@@ -190,31 +202,30 @@ const ManagePaymentButton = () => {
 
 const SubscriptionStatus = () => {
   const subscription = useSubscription();
-
   const currentPlan = useCurrentPlan();
-
-  if (!subscription) return null;
 
   let status;
 
-  if (subscription.status === "canceled") {
+  if (subscription?.status === "canceled") {
     status = "Your subscription has been canceled.";
-  } else if (subscription.status === "trialing") {
+  } else if (subscription?.status === "trialing") {
     status = (
       <>
         Your trial will end on{" "}
         <span className="font-medium text-foreground">
           {formatDate(new Date(subscription.trialEnd))}
         </span>
+        .
       </>
     );
-  } else if (subscription.status === "active") {
+  } else if (subscription?.status === "active") {
     status = subscription.cancelAtPeriodEnd ? (
       <>
         Your subscription will end on{" "}
         <span className="font-medium text-foreground">
           {formatDate(new Date(subscription.currentPeriodEnd))}
         </span>
+        .
       </>
     ) : (
       <>
@@ -222,6 +233,7 @@ const SubscriptionStatus = () => {
         <span className="font-medium text-foreground">
           {formatDate(new Date(subscription.currentPeriodEnd))}
         </span>
+        .
       </>
     );
   }
@@ -229,34 +241,74 @@ const SubscriptionStatus = () => {
   return (
     <span>
       You are currently on the{" "}
-      <Badge variant="outline">{currentPlan?.name}</Badge> plan. {status}.
+      <Badge variant="outline">{currentPlan?.name}</Badge> plan. {status}
     </span>
   );
 };
 
 const UpgradeButton = ({
   plan,
+  hasSubscription,
   isCurrent,
   isDowngrade,
 }: {
   plan: GetBillingPlansResponse_BillingPlan;
+  hasSubscription?: boolean;
   isCurrent: boolean;
   isDowngrade?: boolean;
 }) => {
+  const router = useRouter();
+  const [open, setOpen] = React.useState(false);
   const { mutateAsync, isPending } = useMutation(
     createCheckoutSession.useMutation(),
   );
+  const { mutateAsync: upgradeAsync, isPending: isUpgrading } = useMutation(
+    upgradePlan.useMutation(),
+  );
 
+  const queryClient = useQueryClient();
+  console.log(queryClient);
+  console.log(router.asPath);
   const { toast } = useToast();
 
   const upgrade = async () => {
     try {
+      if (hasSubscription) {
+        setOpen(true);
+        return;
+      }
+
       const { sessionId } = await mutateAsync({ plan: plan.id });
 
       if (sessionId) {
         const stripe = await getStripe();
         stripe?.redirectToCheckout({ sessionId });
       }
+    } catch (e: any) {
+      toast({
+        description: e.message,
+      });
+    }
+  };
+
+  const confirmUpgrade = async () => {
+    try {
+      await upgradeAsync({ plan: plan.id });
+
+      setOpen(false);
+
+      toast({
+        title: "Account upgraded",
+        description: "Your account has been upgraded.",
+      });
+
+      router.push({
+        pathname: router.pathname,
+        query: {
+          ...router.query,
+          upgrade: "success",
+        },
+      });
     } catch (e: any) {
       toast({
         description: e.message,
@@ -285,9 +337,36 @@ const UpgradeButton = ({
   }
 
   return (
-    <Button variant="secondary" disabled={isPending} onClick={() => upgrade()}>
-      Upgrade
-    </Button>
+    <>
+      <Button
+        variant="secondary"
+        disabled={isPending}
+        onClick={() => upgrade()}
+      >
+        Upgrade
+      </Button>
+
+      <AlertDialog open={open} onOpenChange={setOpen}>
+        <AlertDialogContent>
+          <AlertDialogTitle>Are you sure you want to upgrade?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Your account will be upgraded immediately to the{" "}
+            <strong>{plan.name}</strong> plan, and we will charge the price
+            difference to your existing payment method.
+          </AlertDialogDescription>
+          <div className="flex justify-end gap-2">
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <Button
+              variant="default"
+              onClick={() => confirmUpgrade()}
+              disabled={isUpgrading}
+            >
+              Upgrade
+            </Button>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 };
 

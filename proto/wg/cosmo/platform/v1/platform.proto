@@ -983,6 +983,14 @@ message CreateBillingPortalSessionResponse {
   string url = 3;
 }
 
+message UpgradePlanRequest {
+  string plan = 1;
+}
+
+message UpgradePlanResponse {
+  Response response = 1;
+}
+
 /**
  * MetricsDashboard
  */
@@ -1491,4 +1499,6 @@ service PlatformService {
   rpc CreateCheckoutSession(CreateCheckoutSessionRequest) returns (CreateCheckoutSessionResponse) { }
   // Create a Stripe billing portal session
   rpc CreateBillingPortalSession(CreateBillingPortalSessionRequest) returns (CreateBillingPortalSessionResponse) { }
+  // Upgrade the current plan
+  rpc UpgradePlan(UpgradePlanRequest) returns (UpgradePlanResponse) { }
 }

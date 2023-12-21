@@ -1,6 +1,7 @@
 import { docsBaseURL } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import {
+  CaretSortIcon,
   Cross2Icon,
   EnvelopeClosedIcon,
   HamburgerMenuIcon,
@@ -23,6 +24,16 @@ import { LayoutProps } from "./layout";
 import { useUser } from "@/hooks/use-user";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { FiHelpCircle } from "react-icons/fi";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "../ui/dropdown-menu";
 
 export type NavLink = {
   title: string;
@@ -70,41 +81,44 @@ const Organizations = () => {
   if (!user?.currentOrganization) return null;
 
   return (
-    <Select
-      value={user.currentOrganization.slug}
-      onValueChange={(orgSlug) => {
-        const currentOrg = user.organizations.find(
-          (org) => org.slug === orgSlug,
-        );
-        if (currentOrg) {
-          router.replace(
-            currentPage === "graph"
-              ? `/${currentOrg.slug}/graphs`
-              : `/${currentOrg.slug}/${currentPage}`,
-          );
-        }
-      }}
-    >
-      <SelectTrigger
-        value={user.currentOrganization.name}
-        className="flex h-8 w-auto flex-1 gap-x-2 border-0 bg-transparent px-2 shadow-none data-[state=open]:bg-accent hover:bg-accent hover:text-accent-foreground focus:ring-0"
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        aria-label={user.currentOrganization.name}
+        className="flex h-8 w-auto flex-1 items-center gap-x-2 rounded-md border-0 bg-transparent px-2 shadow-none outline-none ring-pink-600/50 data-[state=open]:bg-accent hover:bg-accent hover:text-accent-foreground focus-visible:ring-2"
       >
-        <SelectValue aria-label={user.currentOrganization.name}>
-          <span className="flex truncate font-medium capitalize">
-            {user.currentOrganization.name}
-          </span>
-        </SelectValue>
-      </SelectTrigger>
-      <SelectContent>
-        {user?.organizations?.map(({ name, slug }) => {
-          return (
-            <SelectItem key={slug} value={slug}>
-              {name}
-            </SelectItem>
-          );
-        })}
-      </SelectContent>
-    </Select>
+        <DropdownMenuLabel className="flex flex-1 truncate px-0 font-medium">
+          {user.currentOrganization.name}
+        </DropdownMenuLabel>
+        <CaretSortIcon className="h-4 w-4 opacity-50" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="min-w-[240px]">
+        <DropdownMenuRadioGroup
+          value={user.currentOrganization.slug}
+          onValueChange={(orgSlug) => {
+            const currentOrg = user.organizations.find(
+              (org) => org.slug === orgSlug,
+            );
+            if (currentOrg) {
+              router.replace(
+                currentPage === "graph"
+                  ? `/${currentOrg.slug}/graphs`
+                  : `/${currentOrg.slug}/${currentPage}`,
+              );
+            }
+          }}
+        >
+          {user?.organizations?.map(({ name, slug }) => {
+            return (
+              <DropdownMenuRadioItem key={slug} value={slug}>
+                {name}
+              </DropdownMenuRadioItem>
+            );
+          })}
+        </DropdownMenuRadioGroup>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem>Create a new organization</DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 };
 

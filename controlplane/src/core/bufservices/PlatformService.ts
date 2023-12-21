@@ -85,6 +85,7 @@ import {
   UpdateOrganizationWebhookConfigResponse,
   UpdateRBACSettingsResponse,
   UpdateSubgraphResponse,
+  UpgradePlanResponse,
   WhoAmIResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { OpenAIGraphql, isValidUrl } from '@wundergraph/cosmo-shared';
@@ -5024,6 +5025,29 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             code: EnumStatusCode.OK,
           },
           sessionId: session.id,
+        };
+      });
+    },
+
+    upgradePlan: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<UpgradePlanResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const billingRepo = new BillingRepository(opts.db);
+
+        await billingRepo.upgradePlan({
+          organizationId: authContext.organizationId,
+          plan: req.plan,
+        });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
         };
       });
     },
