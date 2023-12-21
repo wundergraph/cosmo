@@ -37,7 +37,7 @@ export const Empty = ({ subgraphName }: { subgraphName: string }) => {
           <a
             target="_blank"
             rel="noreferrer"
-            href={docsBaseURL + "/cli/subgraph/update"}
+            href={docsBaseURL + "/studio/readme"}
             className="text-primary"
           >
             Learn more.

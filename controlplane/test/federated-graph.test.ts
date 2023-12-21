@@ -577,4 +577,68 @@ describe('Federated Graph', (ctx) => {
 
     await server.close();
   });
+
+  test('Should be able to create a federated graph with a readme', async (testContext) => {
+    const { client, server } = await SetupTest(testContext, dbname);
+
+    const fedGraphName = genID('fedGraph');
+    const label = genUniqueLabel();
+    const readme = `# ${fedGraphName}`;
+
+    const createFedGraphRes = await client.createFederatedGraph({
+      name: fedGraphName,
+      routingUrl: 'http://localhost:8081',
+      labelMatchers: [joinLabel(label)],
+      readme,
+    });
+
+    expect(createFedGraphRes.response?.code).toBe(EnumStatusCode.OK);
+
+    const graph = await client.getFederatedGraphByName({
+      name: fedGraphName,
+    });
+
+    expect(graph.response?.code).toBe(EnumStatusCode.OK);
+    expect(graph.graph?.readme).toBe(readme);
+    expect(graph.graph?.routingURL).toBe('http://localhost:8081');
+    expect(graph.graph?.labelMatchers).toEqual([joinLabel(label)]);
+
+    await server.close();
+  });
+
+  test('Should be able to create a federated graph with a readme and update the readme later', async (testContext) => {
+    const { client, server } = await SetupTest(testContext, dbname);
+
+    const fedGraphName = genID('fedGraph');
+    const label = genUniqueLabel();
+    const readme = `# ${fedGraphName}`;
+    const updatedReadme = `# ${fedGraphName} test`;
+
+    const createFedGraphRes = await client.createFederatedGraph({
+      name: fedGraphName,
+      routingUrl: 'http://localhost:8081',
+      labelMatchers: [joinLabel(label)],
+      readme,
+    });
+
+    expect(createFedGraphRes.response?.code).toBe(EnumStatusCode.OK);
+
+    const updateResponse = await client.updateFederatedGraph({
+      name: fedGraphName,
+      readme: updatedReadme,
+    });
+
+    expect(updateResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    const graph = await client.getFederatedGraphByName({
+      name: fedGraphName,
+    });
+
+    expect(graph.response?.code).toBe(EnumStatusCode.OK);
+    expect(graph.graph?.readme).toBe(updatedReadme);
+    expect(graph.graph?.routingURL).toBe('http://localhost:8081');
+    expect(graph.graph?.labelMatchers).toEqual([joinLabel(label)]);
+
+    await server.close();
+  });
 });

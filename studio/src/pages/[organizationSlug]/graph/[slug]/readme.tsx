@@ -1,8 +1,8 @@
 import { EmptyState } from "@/components/empty-state";
 import {
-    GraphContext,
-    GraphPageLayout,
-    getGraphLayout,
+  GraphContext,
+  GraphPageLayout,
+  getGraphLayout,
 } from "@/components/layout/graph-layout";
 import { CLI } from "@/components/ui/cli";
 import { docsBaseURL } from "@/lib/constants";
@@ -24,7 +24,7 @@ export const Empty = ({ fedGraphName }: { fedGraphName: string }) => {
           <a
             target="_blank"
             rel="noreferrer"
-            href={docsBaseURL + "/cli/federated-graph/update"}
+            href={docsBaseURL + "/studio/readme"}
             className="text-primary"
           >
             Learn more.
