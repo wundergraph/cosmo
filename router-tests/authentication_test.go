@@ -49,9 +49,11 @@ func assertHasGraphQLErrors(t *testing.T, rr *httptest.ResponseRecorder) {
 }
 
 func TestAuthentication(t *testing.T) {
+	t.Parallel()
 	server, jwksServer := setupServerWithJWKS(t, nil, false)
 
 	t.Run("no token", func(t *testing.T) {
+		t.Parallel()
 		// Operations without token should work succeed
 		rr := httptest.NewRecorder()
 		req := httptest.NewRequest("POST", "/graphql", strings.NewReader(employeesQuery))
@@ -62,6 +64,7 @@ func TestAuthentication(t *testing.T) {
 	})
 
 	t.Run("invalid token", func(t *testing.T) {
+		t.Parallel()
 		// Operations with an invalid token should fail
 		rr := httptest.NewRecorder()
 		req := httptest.NewRequest("POST", "/graphql", strings.NewReader(employeesQuery))
@@ -74,6 +77,7 @@ func TestAuthentication(t *testing.T) {
 	})
 
 	t.Run("valid token", func(t *testing.T) {
+		t.Parallel()
 		// Operations with an token should succeed
 		token, err := jwksServer.Token(nil)
 		require.NoError(t, err)
@@ -89,6 +93,8 @@ func TestAuthentication(t *testing.T) {
 }
 
 func TestAuthenticationWithCustomHeaders(t *testing.T) {
+	t.Parallel()
+
 	const (
 		headerName        = "X-My-Header"
 		headerValuePrefix = "Token"
@@ -122,9 +128,11 @@ func TestAuthenticationWithCustomHeaders(t *testing.T) {
 }
 
 func TestAuthorization(t *testing.T) {
+	t.Parallel()
 	server, jwksServer := setupServerWithJWKS(t, nil, true)
 
 	t.Run("no token", func(t *testing.T) {
+		t.Parallel()
 		// Operations without token should fail
 		rr := httptest.NewRecorder()
 		req := httptest.NewRequest("POST", "/graphql", strings.NewReader(employeesQuery))
@@ -135,6 +143,7 @@ func TestAuthorization(t *testing.T) {
 	})
 
 	t.Run("invalid token", func(t *testing.T) {
+		t.Parallel()
 		// Operations with an invalid token should fail
 		rr := httptest.NewRecorder()
 		req := httptest.NewRequest("POST", "/graphql", strings.NewReader(employeesQuery))
@@ -147,6 +156,7 @@ func TestAuthorization(t *testing.T) {
 	})
 
 	t.Run("valid token", func(t *testing.T) {
+		t.Parallel()
 		// Operations with an token should succeed
 		token, err := jwksServer.Token(nil)
 		require.NoError(t, err)
@@ -162,6 +172,7 @@ func TestAuthorization(t *testing.T) {
 }
 
 func TestAuthenticationMultipleProviders(t *testing.T) {
+	t.Parallel()
 	authServer1, err := jwks.NewServer()
 	require.NoError(t, err)
 	t.Cleanup(authServer1.Close)
@@ -190,6 +201,7 @@ func TestAuthenticationMultipleProviders(t *testing.T) {
 	server := setupServer(t, core.WithAccessController(accessController))
 
 	t.Run("authenticate with first provider", func(t *testing.T) {
+		t.Parallel()
 		for _, prefix := range authenticator1HeaderValuePrefixes {
 			prefix := prefix
 			t.Run("prefix "+prefix, func(t *testing.T) {
@@ -207,6 +219,7 @@ func TestAuthenticationMultipleProviders(t *testing.T) {
 	})
 
 	t.Run("authenticate with second provider", func(t *testing.T) {
+		t.Parallel()
 		for _, prefix := range authenticator2HeaderValuePrefixes {
 			prefix := prefix
 			t.Run("prefix "+prefix, func(t *testing.T) {
@@ -224,6 +237,7 @@ func TestAuthenticationMultipleProviders(t *testing.T) {
 	})
 
 	t.Run("invalid token", func(t *testing.T) {
+		t.Parallel()
 		rr := httptest.NewRecorder()
 		req := httptest.NewRequest("POST", "/graphql", strings.NewReader(employeesQuery))
 		req.Header.Set("Authorization", "Bearer invalid")

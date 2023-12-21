@@ -495,6 +495,7 @@ export class SubgraphRepository {
         hasBreakingChanges: true,
         hasClientTraffic: true,
         forcedSuccess: true,
+        ghDetails: true,
       },
       limit,
       offset,
@@ -522,6 +523,14 @@ export class SubgraphRepository {
         isDeleted: c.isDeleted ?? false,
         hasClientTraffic: c.hasClientTraffic ?? false,
         isForcedSuccess: c.forcedSuccess ?? false,
+        ghDetails: c.ghDetails
+          ? {
+              commitSha: c.ghDetails.commitSha,
+              ownerSlug: c.ghDetails.ownerSlug,
+              repositorySlug: c.ghDetails.repositorySlug,
+              checkRunId: c.ghDetails.checkRunId,
+            }
+          : undefined,
       })),
       checksCount,
     };
@@ -611,6 +620,14 @@ export class SubgraphRepository {
         id: federatedGraphId,
         trafficCheckDays,
       })),
+      ghDetails: check.ghDetails
+        ? {
+            commitSha: check.ghDetails.commitSha,
+            ownerSlug: check.ghDetails.ownerSlug,
+            repositorySlug: check.ghDetails.repositorySlug,
+            checkRunId: check.ghDetails.checkRunId,
+          }
+        : undefined,
     };
   }
 

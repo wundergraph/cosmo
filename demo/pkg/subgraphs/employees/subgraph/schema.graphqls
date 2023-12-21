@@ -5,6 +5,10 @@ type Query {
   teammates(team: Department!): [Employee!]!
 }
 
+type Mutation {
+  updateEmployeeTag(id: Int!, tag: String!): Employee
+}
+
 type Subscription {
   """
   `currentTime` will return a stream of `Time` objects.
@@ -75,8 +79,10 @@ type Details @shareable {
 type Employee implements Identifiable @key(fields: "id") {
   details: Details! @shareable
   id: Int!
+  tag: String!
   role: RoleType!
-  notes: String!
+  notes: String
+  updatedAt: String!
 }
 
 type Time {

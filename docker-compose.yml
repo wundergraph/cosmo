@@ -151,6 +151,15 @@ services:
     networks:
       - primary
 
+  nats:
+    image: nats:${DC_NATS_VERSION:-2.10.6}
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+      - "6222:6222"
+    networks:
+      - primary
+
 # This network is shared between this file and docker-compose.full.yml to
 # allow the demo subgraphs to communicate with the rest of the infra
 networks:

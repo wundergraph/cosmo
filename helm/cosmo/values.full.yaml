@@ -128,7 +128,14 @@ router:
     federatedGraphName: "production"
     # You need to run `wgc federated-graph create-token production` to generate a token
     graphApiToken: ""
+    # -- Log level of the router
     logLevel: "info"
+    # -- The URL of the Cosmo Controlplane. Should be internal to the cluster.
+    controlplaneUrl: "http://cosmo-controlplane:3001"
+    # -- The URL of the Cosmo GraphQL OTEL Collector. Should be internal to the cluster.
+    otelCollectorUrl: "http://cosmo-otelcollector:4318"
+    # -- The URL of the Cosmo GraphQL Metrics Collector. Should be internal to the cluster.
+    graphqlMetricsCollectorUrl: "http://cosmo-graphqlmetrics:4005"
 
 # Cosmo Open Telemetry Collector. For more options, please refer to the CHART.md
 otelcollector:

@@ -47,7 +47,7 @@ export const TitleLayout = ({
       </div>
       <div
         className={cn(
-          "h-auto flex-1 overflow-y-auto",
+          "scrollbar-custom h-auto flex-1 overflow-y-auto",
           noPadding !== true && "px-4 py-4 lg:px-8 lg:py-6",
         )}
       >

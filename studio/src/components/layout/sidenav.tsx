@@ -193,7 +193,7 @@ export const SideNav = (props: SideNavLayoutProps) => {
                       <span className="whitespace-nowrap">{item.title}</span>
                     </Link>
                   ) : (
-                    <h4 className="px-3 py-2 text-sm text-muted-foreground">
+                    <h4 className="hidden px-3 py-2 text-sm text-muted-foreground lg:block">
                       {item.title}
                     </h4>
                   )}

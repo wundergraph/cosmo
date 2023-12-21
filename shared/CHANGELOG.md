@@ -4,6 +4,22 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.15.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.14.3...@wundergraph/cosmo-shared@0.15.0) (2023-12-19)
+
+### Features
+
+* add NATS to the router ([#333](https://github.com/wundergraph/cosmo/issues/333)) ([9c8303b](https://github.com/wundergraph/cosmo/commit/9c8303ba6d49a3dea682ff598210b2891a8dd29c)) (@fiam)
+
+## [0.14.3](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.14.2...@wundergraph/cosmo-shared@0.14.3) (2023-12-15)
+
+**Note:** Version bump only for package @wundergraph/cosmo-shared
+
+## [0.14.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.14.1...@wundergraph/cosmo-shared@0.14.2) (2023-12-14)
+
+### Bug Fixes
+
+* accept specifiedBy directive ([#367](https://github.com/wundergraph/cosmo/issues/367)) ([49926da](https://github.com/wundergraph/cosmo/commit/49926daa7f9d17434f2b42893ec6a8b613e5731e)) (@Aenimus)
+
 ## [0.14.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.14.0...@wundergraph/cosmo-shared@0.14.1) (2023-12-13)
 
 **Note:** Version bump only for package @wundergraph/cosmo-shared

@@ -13,6 +13,7 @@ import (
 )
 
 func TestForwardHeaders(t *testing.T) {
+	t.Parallel()
 	const (
 		// Make sure you copy these to the struct tag in the subscription test
 		headerNameInGlobalRule   = "foo"
