@@ -14,7 +14,6 @@ import {
   unique,
   customType,
 } from 'drizzle-orm/pg-core';
-import { BillingPlans } from '../types/index.js';
 
 // JSON/JSONB custom types to workaround insert bug
 // Should not be used with other drivers than postgres-js
@@ -619,7 +618,7 @@ export const organizationBilling = pgTable(
       .references(() => organizations.id, {
         onDelete: 'cascade',
       }),
-    plan: text('plan').$type<BillingPlans>(),
+    plan: text('plan'),
     email: text('email'),
     stripeCustomerId: text('stripe_customer_id'),
   },
@@ -630,6 +629,22 @@ export const organizationBilling = pgTable(
     };
   },
 );
+
+export type Feature = {
+  id: string;
+  description?: string;
+  limit?: number;
+};
+
+export const billingPlans = pgTable('billing_plans', {
+  id: text('id').notNull().primaryKey(),
+  active: boolean('active').notNull().default(true),
+  name: text('name').notNull(),
+  price: integer('price').notNull(),
+  features: customJson<Feature[]>('features').notNull(),
+  stripePriceId: text('stripe_price_id'),
+  weight: integer('weight').notNull().default(0),
+});
 
 // These statuses map directly to Stripe's subscription statuses
 const statuses = [
@@ -647,7 +662,7 @@ export const subscriptionStatusEnum = pgEnum('status', statuses);
 
 export type SubscriptionStatus = (typeof statuses)[number];
 
-export const subscriptions = pgTable('subscriptions', {
+export const billingSubscriptions = pgTable('billing_subscriptions', {
   id: text('id').notNull().primaryKey(),
   organizationId: uuid('organization_id')
     .notNull()
@@ -747,6 +762,10 @@ export const organizationFeatures = pgTable(
   },
 );
 
+/**
+ * @deprecated
+ * Use organizationFeatures instead
+ */
 export const organizationLimits = pgTable('organization_limits', {
   id: uuid('id').notNull().primaryKey().defaultRandom(),
   organizationId: uuid('organization_id')
@@ -754,8 +773,6 @@ export const organizationLimits = pgTable('organization_limits', {
     .references(() => organizations.id, {
       onDelete: 'cascade',
     }),
-  users: integer('users').notNull().default(1),
-  graphs: integer('graphs').notNull().default(1),
   requestsLimit: integer('requests_limit').notNull().default(10), // requestsLimit is in millions
   analyticsRetentionLimit: integer('analytics_retention_limit').notNull().default(7),
   tracingRetentionLimit: integer('tracing_retention_limit').notNull().default(7),

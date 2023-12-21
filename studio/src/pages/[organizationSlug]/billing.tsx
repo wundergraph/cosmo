@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Loader } from "@/components/ui/loader";
 import { useToast } from "@/components/ui/use-toast";
 import { useCurrentOrganization } from "@/hooks/use-current-organization";
+import { useCurrentPlan } from "@/hooks/use-current-plan";
 import { useSubscription } from "@/hooks/use-subscription";
 import { useUser } from "@/hooks/use-user";
 import { formatDate } from "@/lib/format-date";
@@ -57,13 +58,7 @@ const BillingPage: NextPageWithLayout = () => {
     ...getBillingPlans.useQuery(),
   });
 
-  const currentPlan = React.useMemo(
-    () =>
-      data?.plans.find(
-        ({ id }) => id === user?.currentOrganization.billing?.plan,
-      ) || data?.plans[0],
-    [data?.plans, user?.currentOrganization.billing?.plan],
-  );
+  const currentPlan = useCurrentPlan();
 
   const subscription = user?.currentOrganization.subscription;
 
@@ -102,6 +97,16 @@ const BillingPage: NextPageWithLayout = () => {
         actions={<Button onClick={() => refetch()}>Retry</Button>}
       />
     );
+
+  if (!data.plans.length) {
+    return (
+      <EmptyState
+        icon={<ExclamationTriangleIcon />}
+        title="No billing information available"
+        description="Please contact us."
+      />
+    );
+  }
 
   return (
     <div className="flex flex-col gap-y-4">
@@ -173,6 +178,8 @@ const useBillingPortal = () => {
 
 const ManagePaymentButton = () => {
   const { openPortal, isPending } = useBillingPortal();
+  const currentPlan = useCurrentPlan();
+  if (!currentPlan) return null;
 
   return (
     <Button variant="outline" onClick={() => openPortal()} disabled={isPending}>
@@ -182,18 +189,9 @@ const ManagePaymentButton = () => {
 };
 
 const SubscriptionStatus = () => {
-  const org = useCurrentOrganization();
   const subscription = useSubscription();
 
-  const { data } = useQuery({
-    ...getBillingPlans.useQuery(),
-  });
-
-  const currentPlan = React.useMemo(
-    () =>
-      data?.plans.find(({ id }) => id === org?.billing?.plan) || data?.plans[0],
-    [data?.plans, org?.billing?.plan],
-  );
+  const currentPlan = useCurrentPlan();
 
   if (!subscription) return null;
 

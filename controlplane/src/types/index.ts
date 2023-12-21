@@ -1,9 +1,5 @@
 import { JWTPayload } from 'jose';
 
-import billing from '../billing.json' assert { type: 'json' };
-
-export type BillingPlans = keyof typeof billing.plans;
-
 export type Feature = {
   id: string;
   enabled?: boolean | null;
@@ -111,7 +107,7 @@ export interface OrganizationDTO {
   createdAt: string;
   features?: Feature[];
   billing: {
-    plan: BillingPlans;
+    plan: string;
     email?: string;
   };
   subscription?: {

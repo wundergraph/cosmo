@@ -1,26 +1,14 @@
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, eq, not } from 'drizzle-orm';
 import Stripe from 'stripe';
 import type { DB } from '../../db/index.js';
-import { organizations, organizationBilling, subscriptions } from '../../db/schema.js';
+import { organizationBilling, billingSubscriptions, billingPlans } from '../../db/schema.js';
 
-import { BillingPlans, BillingPlanDTO } from '../../types/index.js';
-
-import billing from '../../billing.json' assert { type: 'json' };
+import { BillingPlanDTO } from '../../types/index.js';
 
 export const toISODateTime = (secs: number) => {
   const t = new Date('1970-01-01T00:30:00Z'); // Unix epoch start.
   t.setSeconds(secs);
   return t;
-};
-
-type ValueOf<T> = T[keyof T];
-
-const getPriceId = (p: ValueOf<typeof billing.plans>) => {
-  if (!p || !('stripePriceId' in p)) {
-    return;
-  }
-
-  return p.stripePriceId;
 };
 
 /**
@@ -79,52 +67,45 @@ export class BillingRepository {
     return customer.id;
   };
 
-  public listPlans(): BillingPlanDTO[] {
-    const plans = Object.entries(billing.plans).map<BillingPlanDTO>(([id, plan]) => ({
-      id,
-      name: plan.name,
-      price: plan.price,
-      features: plan.features.filter(({ description }) => !!description) as unknown as {
-        id: string;
-        description: string;
-        limit?: number;
-      }[],
-    }));
+  public async listPlans(): Promise<BillingPlanDTO[]> {
+    const plans = await this.db.query.billingPlans.findMany({
+      where: not(eq(billingPlans.active, false)),
+      orderBy: [asc(billingPlans.weight)],
+    });
 
-    return plans;
+    return plans.map(({ active, features, ...plan }) => {
+      return {
+        ...plan,
+        features: features.filter(({ description }) => !!description) as unknown as {
+          id: string;
+          description: string;
+          limit?: number;
+        }[],
+      };
+    });
   }
 
-  public getPlanById(id: BillingPlans) {
-    const plan = billing.plans[id];
-
-    return {
-      id,
-      ...plan,
-    };
+  public async getPlanById(id: string) {
+    return await this.db.query.billingPlans.findFirst({
+      where: eq(billingPlans.id, id),
+    });
   }
 
-  public getPlanByPriceId(priceId: string) {
-    const plan = Object.entries(billing.plans).find(([, plan]) => getPriceId(plan) === priceId);
-
-    if (!plan) {
-      return null;
-    }
-
-    return {
-      id: plan[0],
-      ...plan[1],
-    };
+  public async getPlanByPriceId(priceId: string) {
+    return await this.db.query.billingPlans.findFirst({
+      where: and(eq(billingPlans.stripePriceId, priceId), not(eq(billingPlans.active, false))),
+    });
   }
 
-  public hasFeature(planId: BillingPlans = 'developer', feature: string) {
-    const plan = this.getPlanById(planId);
+  public async hasFeature(planId = 'developer@1', feature: string) {
+    const plan = await this.getPlanById(planId);
     return !!plan?.features?.find((f) => f.id === feature);
   }
 
   public async createCheckoutSession(params: { organizationId: string; organizationSlug: string; plan: string }) {
-    const plan = this.getPlanById(params.plan as any);
+    const plan = await this.getPlanById(params.plan as any);
 
-    if (!plan || !('stripePriceId' in plan)) {
+    if (!plan?.stripePriceId) {
       throw new Error('Invalid billing plan');
     }
 
@@ -204,21 +185,21 @@ export class BillingRepository {
     };
 
     await this.db
-      .insert(subscriptions)
+      .insert(billingSubscriptions)
       .values({
         id: subscriptionId,
         ...values,
       })
       .onConflictDoUpdate({
-        target: subscriptions.id,
+        target: billingSubscriptions.id,
         set: values,
       });
 
-    const plan = this.getPlanByPriceId(subscription.items.data[0].price.id);
+    const plan = await this.getPlanByPriceId(subscription.items.data[0].price.id);
 
     if (plan) {
       await this.db.update(organizationBilling).set({
-        plan: plan.id as BillingPlans,
+        plan: plan.id,
       });
     }
   };

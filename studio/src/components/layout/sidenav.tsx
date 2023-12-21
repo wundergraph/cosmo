@@ -124,7 +124,8 @@ export const SideNav = (props: SideNavLayoutProps) => {
         className={cn(
           "z-40 flex min-w-[210px] flex-shrink-0 flex-col bg-background pt-4 lg:px-3 lg:pb-4",
           {
-            "lg:h-[calc(100vh-32px)]": props.disableStarBanner && props.disableStarBanner === "false",
+            "lg:h-[calc(100vh-32px)]":
+              props.disableStarBanner && props.disableStarBanner === "false",
             "lg:h-screen":
               !props.disableStarBanner || props.disableStarBanner === "true",
           },
@@ -166,6 +167,8 @@ export const SideNav = (props: SideNavLayoutProps) => {
           </div>
           <nav className="flex items-center space-y-1 overflow-x-auto scrollbar-none lg:block lg:overflow-y-auto lg:overflow-x-visible lg:scrollbar-thin">
             {props.links?.map((item, index) => {
+              if (!item) return null;
+
               const isCurrent =
                 item.href &&
                 isActive(

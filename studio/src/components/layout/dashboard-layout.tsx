@@ -20,6 +20,8 @@ import { SideNav, NavLink } from "./sidenav";
 import { TitleLayout } from "./title-layout";
 import { cn } from "@/lib/utils";
 import { useLocalStorage } from "@/hooks/use-local-storage";
+import { useQuery } from "@tanstack/react-query";
+import { getBillingPlans } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 
 export const StarBanner = ({
   setDisableStarBanner,
@@ -69,13 +71,26 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
   );
   const [render, setRender] = useState<string>();
 
+  const plans = useQuery({
+    ...getBillingPlans.useQuery(),
+    gcTime: Infinity,
+  });
+
   useEffect(() => {
     if (!disableStarBanner) return;
     setRender(disableStarBanner);
   }, [disableStarBanner]);
 
-  const links: Partial<NavLink>[] = useMemo(() => {
+  const links = useMemo(() => {
     const basePath = `/${organizationSlug}`;
+
+    const billing = plans.data?.plans?.length
+      ? {
+          title: "Billing",
+          href: basePath + "/billing",
+          icon: <PiReceipt className="h-4 w-4" />,
+        }
+      : undefined;
 
     return [
       {
@@ -109,11 +124,7 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
         href: basePath + "/usages",
         icon: <PiChartDonut className="h-4 w-4" />,
       },
-      {
-        title: "Billing",
-        href: basePath + "/billing",
-        icon: <PiReceipt className="h-4 w-4" />,
-      },
+      billing,
       {
         title: "Settings",
         href: basePath + "/settings",
@@ -128,8 +139,8 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
         href: "/account/invitations",
         icon: <EnvelopeClosedIcon className="h-4 w-4" />,
       },
-    ];
-  }, [organizationSlug]);
+    ].filter(Boolean) as Partial<NavLink>[];
+  }, [organizationSlug, plans.data]);
 
   return (
     render && (

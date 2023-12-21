@@ -24,10 +24,9 @@ import {
   users,
   organizationFeatures,
   organizationBilling,
-  subscriptions,
+  billingSubscriptions,
 } from '../../db/schema.js';
 import {
-  BillingPlans,
   Feature,
   OrganizationDTO,
   OrganizationLimitsDTO,
@@ -100,12 +99,12 @@ export class OrganizationRepository {
           plan: organizationBilling.plan,
         },
         subscription: {
-          status: subscriptions.status,
+          status: billingSubscriptions.status,
         },
       })
       .from(organizations)
       .leftJoin(organizationBilling, eq(organizations.id, organizationBilling.organizationId))
-      .leftJoin(subscriptions, eq(organizations.id, subscriptions.organizationId))
+      .leftJoin(billingSubscriptions, eq(organizations.id, billingSubscriptions.organizationId))
       .where(eq(organizations.slug, slug))
       .limit(1)
       .execute();
@@ -143,12 +142,12 @@ export class OrganizationRepository {
           plan: organizationBilling.plan,
         },
         subscription: {
-          status: subscriptions.status,
+          status: billingSubscriptions.status,
         },
       })
       .from(organizations)
       .leftJoin(organizationBilling, eq(organizations.id, organizationBilling.organizationId))
-      .leftJoin(subscriptions, eq(organizations.id, subscriptions.organizationId))
+      .leftJoin(billingSubscriptions, eq(organizations.id, billingSubscriptions.organizationId))
       .where(eq(organizations.id, id))
       .limit(1)
       .execute();
@@ -202,8 +201,6 @@ export class OrganizationRepository {
         creatorUserId: organizations.createdBy,
         createdAt: organizations.createdAt,
         limits: {
-          users: organizationLimits.users,
-          graphs: organizationLimits.graphs,
           analyticsRetentionLimit: organizationLimits.analyticsRetentionLimit,
           tracingRetentionLimit: organizationLimits.tracingRetentionLimit,
           breakingChangeRetentionLimit: organizationLimits.breakingChangeRetentionLimit,
@@ -216,10 +213,10 @@ export class OrganizationRepository {
           email: organizationBilling.email,
         },
         subscription: {
-          status: subscriptions.status,
-          trialEnd: subscriptions.trialEnd,
-          cancelAtPeriodEnd: subscriptions.cancelAtPeriodEnd,
-          currentPeriodEnd: subscriptions.currentPeriodEnd,
+          status: billingSubscriptions.status,
+          trialEnd: billingSubscriptions.trialEnd,
+          cancelAtPeriodEnd: billingSubscriptions.cancelAtPeriodEnd,
+          currentPeriodEnd: billingSubscriptions.currentPeriodEnd,
         },
       })
       .from(organizationsMembers)
@@ -227,7 +224,7 @@ export class OrganizationRepository {
       .innerJoin(users, eq(users.id, organizationsMembers.userId))
       .innerJoin(organizationLimits, eq(organizations.id, organizationLimits.organizationId))
       .leftJoin(organizationBilling, eq(organizations.id, organizationBilling.organizationId))
-      .leftJoin(subscriptions, eq(organizations.id, subscriptions.organizationId))
+      .leftJoin(billingSubscriptions, eq(organizations.id, billingSubscriptions.organizationId))
       .where(eq(users.id, input.userId))
       .execute();
 
@@ -243,8 +240,6 @@ export class OrganizationRepository {
           organizationID: org.id,
         }),
         limits: {
-          users: org.limits.users,
-          graphs: org.limits.graphs,
           analyticsRetentionLimit: org.limits.analyticsRetentionLimit,
           tracingRetentionLimit: org.limits.tracingRetentionLimit,
           breakingChangeRetentionLimit: org.limits.breakingChangeRetentionLimit,
@@ -395,7 +390,7 @@ export class OrganizationRepository {
     return userRoles.map((role) => role.role);
   }
 
-  public async getFeatures(input: { organizationId: string; plan?: BillingPlans }): Promise<Feature[]> {
+  public async getFeatures(input: { organizationId: string; plan?: string }): Promise<Feature[]> {
     let plan = input.plan;
     if (!input.plan) {
       const billing = await this.db.query.organizationBilling.findFirst({
@@ -419,20 +414,23 @@ export class OrganizationRepository {
       .execute();
 
     // merge the features from the plan with the overrides from the organization
-    return this.billing.getPlanById(plan as BillingPlans).features?.map(({ id, limit }) => {
-      const feature = orgFeatures.find((f) => f.id === id);
-      if (feature) {
-        return {
-          ...feature,
-          limit: feature.limit || limit,
-        };
-      }
+    const billingPlan = await this.billing.getPlanById(plan as string);
+    return (
+      billingPlan?.features?.map(({ id, limit }) => {
+        const feature = orgFeatures.find((f) => f.id === id);
+        if (feature) {
+          return {
+            ...feature,
+            limit: feature.limit || limit,
+          };
+        }
 
-      return {
-        id,
-        limit,
-      };
-    });
+        return {
+          id,
+          limit,
+        };
+      }) || []
+    );
   }
 
   public async updateFeature(
@@ -930,7 +928,7 @@ export class OrganizationRepository {
       .execute();
   }
 
-  public async addOrganizationBilling(input: { organizationID: string; email: string; plan: BillingPlans }) {
+  public async addOrganizationBilling(input: { organizationID: string; email: string; plan: string }) {
     await this.db
       .insert(organizationBilling)
       .values({
