@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-
 	"github.com/wundergraph/cosmo/router/internal/controlplane/configpoller"
 	"github.com/wundergraph/cosmo/router/internal/controlplane/selfregister"
 	"go.uber.org/automaxprocs/maxprocs"
@@ -156,6 +155,7 @@ func traceConfig(cfg *config.Telemetry) *trace.Config {
 	return &trace.Config{
 		Enabled:   cfg.Tracing.Enabled,
 		Name:      cfg.ServiceName,
+		Version:   core.Version,
 		Sampler:   cfg.Tracing.SamplingRate,
 		Exporters: exporters,
 	}
@@ -174,7 +174,8 @@ func metricsConfig(cfg *config.Telemetry) *metric.Config {
 	}
 
 	return &metric.Config{
-		Name: cfg.ServiceName,
+		Name:    cfg.ServiceName,
+		Version: core.Version,
 		OpenTelemetry: metric.OpenTelemetry{
 			Enabled:   cfg.Metrics.OTLP.Enabled,
 			Exporters: openTelemetryExporters,
