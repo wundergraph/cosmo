@@ -80,14 +80,17 @@ type Metrics struct {
 // We create different meters for OTEL and Prometheus metrics.
 func NewMetrics(serviceName, serviceVersion string, opts ...Option) (*Metrics, error) {
 	h := &Metrics{
+		// OTEL metrics
 		otlpCounters:       map[string]otelmetric.Int64Counter{},
 		otlpHistograms:     map[string]otelmetric.Float64Histogram{},
 		otlpUpDownCounters: map[string]otelmetric.Int64UpDownCounter{},
+		// Prometheus metrics
 		promCounters:       map[string]otelmetric.Int64Counter{},
 		promHistograms:     map[string]otelmetric.Float64Histogram{},
 		promUpDownCounters: map[string]otelmetric.Int64UpDownCounter{},
-		serviceName:        serviceName,
-		serviceVersion:     serviceVersion,
+		// Base fields
+		serviceName:    serviceName,
+		serviceVersion: serviceVersion,
 	}
 
 	for _, opt := range opts {
@@ -238,12 +241,20 @@ func (h *Metrics) MeasureInFlight(ctx context.Context) func() {
 
 	baseAttributes := otelmetric.WithAttributes(baseKeys...)
 
-	h.otlpUpDownCounters[InFlightRequestsUpDownCounter].Add(ctx, 1, baseAttributes)
-	h.promUpDownCounters[InFlightRequestsUpDownCounter].Add(ctx, 1, baseAttributes)
+	if c, ok := h.otlpUpDownCounters[InFlightRequestsUpDownCounter]; ok {
+		c.Add(ctx, 1, baseAttributes)
+	}
+	if c, ok := h.promUpDownCounters[InFlightRequestsUpDownCounter]; ok {
+		c.Add(ctx, 1, baseAttributes)
+	}
 
 	return func() {
-		h.otlpUpDownCounters[InFlightRequestsUpDownCounter].Add(ctx, -1, baseAttributes)
-		h.promUpDownCounters[InFlightRequestsUpDownCounter].Add(ctx, -1, baseAttributes)
+		if c, ok := h.otlpUpDownCounters[InFlightRequestsUpDownCounter]; ok {
+			c.Add(ctx, -1, baseAttributes)
+		}
+		if c, ok := h.promUpDownCounters[InFlightRequestsUpDownCounter]; ok {
+			c.Add(ctx, -1, baseAttributes)
+		}
 	}
 }
 
@@ -255,8 +266,12 @@ func (h *Metrics) MeasureRequestCount(ctx context.Context, attr ...attribute.Key
 
 	baseAttributes := otelmetric.WithAttributes(baseKeys...)
 
-	h.otlpCounters[RequestCounter].Add(ctx, 1, baseAttributes)
-	h.promCounters[RequestCounter].Add(ctx, 1, baseAttributes)
+	if c, ok := h.otlpCounters[RequestCounter]; ok {
+		c.Add(ctx, 1, baseAttributes)
+	}
+	if c, ok := h.promCounters[RequestCounter]; ok {
+		c.Add(ctx, 1, baseAttributes)
+	}
 }
 
 func (h *Metrics) MeasureRequestSize(ctx context.Context, contentLength int64, attr ...attribute.KeyValue) {
@@ -267,8 +282,12 @@ func (h *Metrics) MeasureRequestSize(ctx context.Context, contentLength int64, a
 
 	baseAttributes := otelmetric.WithAttributes(baseKeys...)
 
-	h.otlpCounters[RequestContentLengthCounter].Add(ctx, contentLength, baseAttributes)
-	h.promCounters[RequestContentLengthCounter].Add(ctx, contentLength, baseAttributes)
+	if c, ok := h.otlpCounters[RequestContentLengthCounter]; ok {
+		c.Add(ctx, contentLength, baseAttributes)
+	}
+	if c, ok := h.promCounters[RequestContentLengthCounter]; ok {
+		c.Add(ctx, contentLength, baseAttributes)
+	}
 }
 
 func (h *Metrics) MeasureResponseSize(ctx context.Context, size int64, attr ...attribute.KeyValue) {
@@ -279,8 +298,12 @@ func (h *Metrics) MeasureResponseSize(ctx context.Context, size int64, attr ...a
 
 	baseAttributes := otelmetric.WithAttributes(baseKeys...)
 
-	h.otlpCounters[ResponseContentLengthCounter].Add(ctx, size, baseAttributes)
-	h.promCounters[ResponseContentLengthCounter].Add(ctx, size, baseAttributes)
+	if c, ok := h.otlpCounters[ResponseContentLengthCounter]; ok {
+		c.Add(ctx, size, baseAttributes)
+	}
+	if c, ok := h.promCounters[ResponseContentLengthCounter]; ok {
+		c.Add(ctx, size, baseAttributes)
+	}
 }
 
 func (h *Metrics) MeasureLatency(ctx context.Context, requestStartTime time.Time, attr ...attribute.KeyValue) {
@@ -294,8 +317,12 @@ func (h *Metrics) MeasureLatency(ctx context.Context, requestStartTime time.Time
 	// Use floating point division here for higher precision (instead of Millisecond method).
 	elapsedTime := float64(time.Since(requestStartTime)) / float64(time.Millisecond)
 
-	h.otlpHistograms[ServerLatencyHistogram].Record(ctx, elapsedTime, baseAttributes)
-	h.promHistograms[ServerLatencyHistogram].Record(ctx, elapsedTime, baseAttributes)
+	if c, ok := h.otlpHistograms[ServerLatencyHistogram]; ok {
+		c.Record(ctx, elapsedTime, baseAttributes)
+	}
+	if c, ok := h.promHistograms[ServerLatencyHistogram]; ok {
+		c.Record(ctx, elapsedTime, baseAttributes)
+	}
 }
 
 // WithAttributes adds attributes to the base attributes
