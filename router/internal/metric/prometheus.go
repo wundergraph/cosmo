@@ -28,14 +28,15 @@ func ServePrometheus(logger *zap.Logger, listenAddr string, path string, registr
 		EnableOpenMetrics: true,
 		ErrorLog:          zap.NewStdLog(logger),
 		Registry:          registry,
-		Timeout:           0,
+		Timeout:           10,
 	}))
 
 	svr := &http.Server{
 		Addr:              listenAddr,
 		ReadTimeout:       1 * time.Minute,
-		WriteTimeout:      2 * time.Minute,
-		ReadHeaderTimeout: 20 * time.Second,
+		WriteTimeout:      1 * time.Minute,
+		ReadHeaderTimeout: 2 * time.Second,
+		IdleTimeout:       30 * time.Second,
 		ErrorLog:          zap.NewStdLog(logger),
 		Handler:           r,
 	}
