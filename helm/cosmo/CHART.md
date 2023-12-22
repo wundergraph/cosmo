@@ -61,7 +61,7 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | global.seed.organizationSlug | string | `"wundergraph"` |  |
 | global.seed.userEmail | string | `"foo@wundergraph.com"` |  |
 | global.seed.userName | string | `"foo"` |  |
-| global.seed.userPassword | string | `"bar"` |  |
+| global.seed.userPassword | string | `"wunder@123"` |  |
 | global.studio.enabled | bool | `false` |  |
 | global.studio.port | int | `3000` |  |
 | global.studio.webUrl | string | `"http://studio.wundergraph.local"` |  |
