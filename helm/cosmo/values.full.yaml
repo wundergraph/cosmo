@@ -9,7 +9,7 @@ global:
     # -- Important: Remove this once the organization has been seeded and create a new secret
     apiKey: "cosmo_669b576aaadc10ee1ae81d9193425705"
     userEmail: "foo@wundergraph.com"
-    userPassword: "bar"
+    userPassword: "wunder@123"
     firstName: "Foo"
     lastName: "Bar"
     organizationName: "WunderGraph"

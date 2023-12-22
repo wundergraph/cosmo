@@ -70,7 +70,7 @@ Run `make full-demo-status` once more to see if all subgraphs and your router ar
 
 ```
 Username: foo@wundergraph.com
-Password: bar
+Password: wunder@123
 ```
 
 4. If you are done, you can clean up the demo by running `make full-demo-down`.
@@ -114,7 +114,7 @@ Navigate to [http://localhost:3000/](http://localhost:3000/) and login with the 
 
 ```
 Username: foo@wundergraph.com
-Password: bar
+Password: wunder@123
 ```
 
 Your API key to access the platform is: `cosmo_669b576aaadc10ee1ae81d9193425705`. Set the following environment variable to use it with the CLI:
