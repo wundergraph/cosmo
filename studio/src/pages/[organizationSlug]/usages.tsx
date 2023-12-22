@@ -224,6 +224,22 @@ const UsagesPage: NextPageWithLayout = () => {
             <dl className="space-y-2">
               <div className="flex">
                 <dt className="flex-1 px-2 text-sm text-muted-foreground">
+                  Users
+                </dt>
+                <dd className="w-1/3 px-2 text-right text-sm font-medium">
+                  <FeatureLimit id="users" fallback={1} />
+                </dd>
+              </div>
+              <div className="flex">
+                <dt className="flex-1 px-2 text-sm text-muted-foreground">
+                  Federated graphs
+                </dt>
+                <dd className="w-1/3 px-2 text-right text-sm font-medium">
+                  <FeatureLimit id="federated-graphs" fallback={1} />
+                </dd>
+              </div>
+              <div className="flex">
+                <dt className="flex-1 px-2 text-sm text-muted-foreground">
                   Analytics Data Retention
                 </dt>
                 <dd className="w-1/3 px-2 text-right text-sm font-medium">

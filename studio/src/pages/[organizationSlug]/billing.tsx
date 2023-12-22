@@ -20,7 +20,7 @@ import { getStripe } from "@/lib/stripe";
 import { cn } from "@/lib/utils";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { AlertDialogDescription } from "@radix-ui/react-alert-dialog";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   createBillingPortalSession,
@@ -266,9 +266,6 @@ const UpgradeButton = ({
     upgradePlan.useMutation(),
   );
 
-  const queryClient = useQueryClient();
-  console.log(queryClient);
-  console.log(router.asPath);
   const { toast } = useToast();
 
   const upgrade = async () => {

@@ -5,6 +5,8 @@ import { organizationBilling, billingSubscriptions, billingPlans } from '../../d
 
 import { BillingPlanDTO } from '../../types/index.js';
 
+export const defaultPlan = process.env.DEFAULT_PLAN || 'developer@1';
+
 export const toISODateTime = (secs: number) => {
   const t = new Date('1970-01-01T00:30:00Z'); // Unix epoch start.
   t.setSeconds(secs);

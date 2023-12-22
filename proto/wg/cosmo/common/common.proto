@@ -16,6 +16,7 @@ enum EnumStatusCode {
   ERR_OPENAI_DISABLED = 10;
   ERR_FREE_TRIAL_EXPIRED = 11;
   ERROR_NOT_AUTHORIZED = 12;
+  ERR_LIMIT_REACHED = 13;
 }
 
 enum GraphQLSubscriptionProtocol {

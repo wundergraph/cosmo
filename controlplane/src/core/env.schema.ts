@@ -44,4 +44,5 @@ export const envVariables = z.object({
    */
   STRIPE_SECRET_KEY: z.string().optional(),
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
+  DEFAULT_PLAN: z.string().optional(), // eg developer@1
 });

@@ -5,7 +5,7 @@ import {
   IntegrationConfig,
   IntegrationType,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, eq, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { MemberRole } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
@@ -13,7 +13,6 @@ import {
   apiKeys,
   integrationTypeEnum,
   organizationIntegrations,
-  organizationLimits,
   organizationMemberRoles,
   organizationWebhooks,
   organizations,
@@ -27,9 +26,7 @@ import {
   billingSubscriptions,
 } from '../../db/schema.js';
 import { Feature, OrganizationDTO, OrganizationMemberDTO, WebhooksConfigDTO } from '../../types/index.js';
-import { BillingRepository } from './BillingRepository.js';
-
-const defaultPlan = 'developer';
+import { BillingRepository, defaultPlan } from './BillingRepository.js';
 
 /**
  * Repository for organization related operations.
@@ -241,6 +238,19 @@ export class OrganizationRepository {
     return userMemberships;
   }
 
+  public async memberCount(organizationId: string): Promise<number> {
+    const count = await this.db
+      .select({
+        count: sql<number>`cast(count(${organizationsMembers.id}) as int)`,
+      })
+      .from(organizationsMembers)
+      .where(eq(organizationsMembers.organizationId, organizationId))
+      .groupBy(organizationsMembers.organizationId)
+      .execute();
+
+    return count[0].count;
+  }
+
   public async getOrganizationMember(input: {
     organizationID: string;
     userID: string;
@@ -388,8 +398,12 @@ export class OrganizationRepository {
       .where(eq(organizationFeatures.organizationId, input.organizationId))
       .execute();
 
+    console.log(orgFeatures);
+
     // merge the features from the plan with the overrides from the organization
     const billingPlan = await this.billing.getPlanById(plan as string);
+
+    console.log(billingPlan);
     return (
       billingPlan?.features?.map(({ id, limit }) => {
         const feature = orgFeatures.find((f) => f.id === id);

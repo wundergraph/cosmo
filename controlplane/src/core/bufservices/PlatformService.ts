@@ -157,6 +157,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
       return handleError<PlainMessage<CreateFederatedGraphResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const orgRepo = new OrganizationRepository(opts.db);
         const orgWebhooks = new OrganizationWebhookService(opts.db, authContext.organizationId, opts.logger);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
@@ -186,6 +187,25 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             response: {
               code: EnumStatusCode.ERR_INVALID_LABELS,
               details: `One or more labels in the matcher were found to be invalid`,
+            },
+            compositionErrors: [],
+          };
+        }
+
+        const count = await fedGraphRepo.count();
+
+        const feature = await orgRepo.getFeature({
+          organizationId: authContext.organizationId,
+          featureId: 'federated-graphs',
+        });
+
+        const limit = feature?.limit === -1 ? undefined : feature?.limit;
+
+        if (limit && count >= limit) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_LIMIT_REACHED,
+              details: `The organization reached the limit of federated graphs`,
             },
             compositionErrors: [],
           };
@@ -1471,6 +1491,24 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             response: {
               code: EnumStatusCode.ERR_NOT_FOUND,
               details: `Organization not found`,
+            },
+          };
+        }
+
+        const memberCount = await orgRepo.memberCount(authContext.organizationId);
+
+        const usersFeature = await orgRepo.getFeature({
+          organizationId: authContext.organizationId,
+          featureId: 'users',
+        });
+
+        const limit = usersFeature?.limit === -1 ? undefined : usersFeature?.limit;
+
+        if (limit && memberCount >= limit) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_LIMIT_REACHED,
+              details: `The user limit for this organization has been reached`,
             },
           };
         }
