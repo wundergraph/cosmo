@@ -28,6 +28,14 @@ export default (opts: BaseCommandOptions) => {
     let readmeFile;
     if (options.readme) {
       readmeFile = resolve(process.cwd(), options.readme);
+      if (!existsSync(readmeFile)) {
+        console.log(
+          pc.red(
+            pc.bold(`The readme file '${pc.bold(readmeFile)}' does not exist. Please check the path and try again.`),
+          ),
+        );
+        return;
+      }
     }
 
     const resp = await opts.client.platform.createFederatedGraph(
@@ -35,7 +43,7 @@ export default (opts: BaseCommandOptions) => {
         name,
         routingUrl: options.routingUrl,
         labelMatchers: options.labelMatcher,
-        readme: readmeFile && existsSync(readmeFile) ? await readFile(readmeFile, 'utf8') : undefined,
+        readme: readmeFile ? await readFile(readmeFile, 'utf8') : undefined,
       },
       {
         headers: baseHeaders,

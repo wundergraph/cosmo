@@ -40,6 +40,14 @@ export default (opts: BaseCommandOptions) => {
     let readmeFile;
     if (options.readme) {
       readmeFile = resolve(process.cwd(), options.readme);
+      if (!existsSync(readmeFile)) {
+        console.log(
+          pc.red(
+            pc.bold(`The readme file '${pc.bold(readmeFile)}' does not exist. Please check the path and try again.`),
+          ),
+        );
+        return;
+      }
     }
 
     const resp = await opts.client.platform.createFederatedSubgraph(
@@ -53,7 +61,7 @@ export default (opts: BaseCommandOptions) => {
         subscriptionProtocol: options.subscriptionProtocol
           ? parseGraphQLSubscriptionProtocol(options.subscriptionProtocol)
           : undefined,
-        readme: readmeFile && existsSync(readmeFile) ? await readFile(readmeFile, 'utf8') : undefined,
+        readme: readmeFile ? await readFile(readmeFile, 'utf8') : undefined,
       },
       {
         headers: baseHeaders,
