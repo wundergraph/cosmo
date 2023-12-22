@@ -2,6 +2,7 @@ import {
   ComposeStatus,
   ComposeStatusMessage,
 } from "@/components/compose-status";
+import { CompositionErrorsDialog } from "@/components/composition-errors-dialog";
 import { RunRouterCommand } from "@/components/federatedgraphs-cards";
 import GraphVisualization from "@/components/graph-visualization";
 import {
@@ -9,8 +10,6 @@ import {
   GraphPageLayout,
   getGraphLayout,
 } from "@/components/layout/graph-layout";
-import { PageHeader } from "@/components/layout/head";
-import { TitleLayout } from "@/components/layout/title-layout";
 import { OperationsOverview } from "@/components/operations-overview";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -23,17 +22,61 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { CLI } from "@/components/ui/cli";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Toolbar } from "@/components/ui/toolbar";
 import { formatDateTime } from "@/lib/format-date";
-import { NextPageWithLayout } from "@/lib/page";
 import {
   ExclamationCircleIcon,
   ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
-import { RocketIcon } from "@radix-ui/react-icons";
+import { HomeIcon, RocketIcon } from "@radix-ui/react-icons";
+import Link from "next/link";
 import { useRouter } from "next/router";
 import { useContext, useState } from "react";
+import { TbBook } from "react-icons/tb";
 import { ReactFlowProvider } from "reactflow";
-import { CompositionErrorsDialog } from "@/components/composition-errors-dialog";
+
+export const OverviewToolbar = ({ tab }: { tab: "overview" | "readme" }) => {
+  const router = useRouter();
+
+  const query = {
+    organizationSlug: router.query.organizationSlug,
+    slug: router.query.slug,
+  };
+
+  return (
+    <Toolbar>
+      <Tabs value={tab} className="w-full md:w-auto">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="overview" asChild>
+            <Link
+              href={{
+                pathname: "/[organizationSlug]/graph/[slug]",
+                query,
+              }}
+              className="flex items-center gap-x-2"
+            >
+              <HomeIcon />
+              Overview
+            </Link>
+          </TabsTrigger>
+          <TabsTrigger value="readme" asChild>
+            <Link
+              href={{
+                pathname: "/[organizationSlug]/graph/[slug]/readme",
+                query,
+              }}
+              className="flex items-center gap-x-2"
+            >
+              <TbBook />
+              README
+            </Link>
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+    </Toolbar>
+  );
+};
 
 const GraphOverviewPage = () => {
   const graphData = useContext(GraphContext);
@@ -156,6 +199,7 @@ GraphOverviewPage.getLayout = (page: React.ReactNode) => {
     <GraphPageLayout
       title="Graph Overview"
       subtitle="An overview of your federated graph"
+      toolbar={<OverviewToolbar tab="overview" />}
     >
       {page}
     </GraphPageLayout>,

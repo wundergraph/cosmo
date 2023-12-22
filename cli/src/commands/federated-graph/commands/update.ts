@@ -1,7 +1,10 @@
+import { existsSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
 import Table from 'cli-table3';
 import { Command } from 'commander';
 import pc from 'picocolors';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { resolve } from 'pathe';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { baseHeaders } from '../../../core/config.js';
 
@@ -17,12 +20,27 @@ export default (opts: BaseCommandOptions) => {
     '--label-matcher [labels...]',
     'The label matcher is used to select the subgraphs to federate. The labels are passed in the format <key>=<value> <key>=<value>. They are separated by spaces and grouped using comma. Example: --label-matcher team=A,team=B env=prod',
   );
+  command.option('--readme <path-to-readme>', 'The markdown file which describes the subgraph.');
   command.action(async (name, options) => {
+    let readmeFile;
+    if (options.readme) {
+      readmeFile = resolve(process.cwd(), options.readme);
+      if (!existsSync(readmeFile)) {
+        console.log(
+          pc.red(
+            pc.bold(`The readme file '${pc.bold(readmeFile)}' does not exist. Please check the path and try again.`),
+          ),
+        );
+        return;
+      }
+    }
+
     const resp = await opts.client.platform.updateFederatedGraph(
       {
         name,
         routingUrl: options.routingUrl,
         labelMatchers: options.labelMatcher,
+        readme: readmeFile ? await readFile(readmeFile, 'utf8') : undefined,
       },
       {
         headers: baseHeaders,

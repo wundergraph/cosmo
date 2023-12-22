@@ -1,9 +1,12 @@
-import { Command } from 'commander';
-import pc from 'picocolors';
+import { readFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { splitLabel, parseGraphQLSubscriptionProtocol } from '@wundergraph/cosmo-shared';
-import { BaseCommandOptions } from '../../../core/types/types.js';
+import { parseGraphQLSubscriptionProtocol, splitLabel } from '@wundergraph/cosmo-shared';
+import { Command } from 'commander';
+import { resolve } from 'pathe';
+import pc from 'picocolors';
 import { baseHeaders } from '../../../core/config.js';
+import { BaseCommandOptions } from '../../../core/types/types.js';
 
 export default (opts: BaseCommandOptions) => {
   const schemaPush = new Command('create');
@@ -32,7 +35,21 @@ export default (opts: BaseCommandOptions) => {
     '--subscription-protocol <protocol>',
     'The protocol to use when subscribing to the subgraph. The supported protocols are ws, sse, and sse-post.',
   );
+  schemaPush.option('--readme <path-to-readme>', 'The markdown file which describes the subgraph.');
   schemaPush.action(async (name, options) => {
+    let readmeFile;
+    if (options.readme) {
+      readmeFile = resolve(process.cwd(), options.readme);
+      if (!existsSync(readmeFile)) {
+        console.log(
+          pc.red(
+            pc.bold(`The readme file '${pc.bold(readmeFile)}' does not exist. Please check the path and try again.`),
+          ),
+        );
+        return;
+      }
+    }
+
     const resp = await opts.client.platform.createFederatedSubgraph(
       {
         name,
@@ -44,6 +61,7 @@ export default (opts: BaseCommandOptions) => {
         subscriptionProtocol: options.subscriptionProtocol
           ? parseGraphQLSubscriptionProtocol(options.subscriptionProtocol)
           : undefined,
+        readme: readmeFile ? await readFile(readmeFile, 'utf8') : undefined,
       },
       {
         headers: baseHeaders,

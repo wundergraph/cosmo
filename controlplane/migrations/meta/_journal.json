@@ -477,6 +477,13 @@
       "when": 1702331936148,
       "tag": "0067_third_multiple_man",
       "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "5",
+      "when": 1702564500994,
+      "tag": "0068_spicy_ghost_rider",
+      "breakpoints": true
     }
   ]
 }
