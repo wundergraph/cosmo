@@ -248,7 +248,7 @@ export class OrganizationRepository {
       .groupBy(organizationsMembers.organizationId)
       .execute();
 
-    return count[0].count;
+    return count[0]?.count || 0;
   }
 
   public async getOrganizationMember(input: {

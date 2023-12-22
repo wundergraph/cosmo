@@ -221,7 +221,7 @@ export class FederatedGraphRepository {
       .groupBy(targets.organizationId)
       .execute();
 
-    return result[0].count;
+    return result[0]?.count || 0;
   }
 
   public async targetByName(name: string): Promise<Target | undefined> {
