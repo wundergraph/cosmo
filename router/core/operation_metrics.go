@@ -149,6 +149,7 @@ func (m *OperationMetrics) Finish(hasErrored bool, statusCode int, responseSize 
 	ctx := context.Background()
 
 	if hasErrored {
+		// We don't store false values in the metrics, so only add the error attribute if it's true, DON'T CHANGE THIS
 		m.metricBaseFields = append(m.metricBaseFields, otel.WgRequestError.Bool(hasErrored))
 	}
 

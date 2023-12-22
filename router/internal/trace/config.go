@@ -32,6 +32,8 @@ type Config struct {
 	Enabled bool
 	// Name represents the service name for tracing. The default value is cosmo-router.
 	Name string
+	// Version represents the service version for tracing. The default value is dev.
+	Version string
 	// Sampler represents the sampler for tracing. The default value is 1.
 	Sampler   float64
 	Exporters []*Exporter
@@ -58,10 +60,11 @@ func GetDefaultExporter(cfg *Config) *Exporter {
 }
 
 // DefaultConfig returns the default config.
-func DefaultConfig() *Config {
+func DefaultConfig(serviceVersion string) *Config {
 	return &Config{
 		Enabled: false,
 		Name:    ServerName,
+		Version: serviceVersion,
 		Sampler: 1,
 		Exporters: []*Exporter{
 			{

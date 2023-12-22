@@ -21,10 +21,10 @@ RUN make test
 # Build router
 RUN make build VERSION=${VERSION}
 
-FROM gcr.io/distroless/static:latest
+FROM gcr.io/distroless/base-debian12
 
 COPY --from=builder /app/router /router
 
-ENTRYPOINT ["/router"]
+CMD ["/router"]
 
 EXPOSE 3002

@@ -6,8 +6,8 @@ import (
 	"regexp"
 )
 
-// ServerName Default resource name.
-const ServerName = "cosmo-router"
+// DefaultServerName Default resource name.
+const DefaultServerName = "cosmo-router"
 
 type Prometheus struct {
 	Enabled    bool
@@ -62,6 +62,8 @@ func GetDefaultExporter(cfg *Config) *OpenTelemetryExporter {
 type Config struct {
 	// Name represents the service name for metrics. The default value is cosmo-router.
 	Name string
+	// Version represents the service version for metrics. The default value is dev.
+	Version string
 
 	// OpenTelemetry includes the OpenTelemetry configuration
 	OpenTelemetry OpenTelemetry
@@ -74,9 +76,10 @@ func (c *Config) IsEnabled() bool {
 }
 
 // DefaultConfig returns the default config.
-func DefaultConfig() *Config {
+func DefaultConfig(serviceVersion string) *Config {
 	return &Config{
-		Name: ServerName,
+		Name:    DefaultServerName,
+		Version: serviceVersion,
 		OpenTelemetry: OpenTelemetry{
 			Enabled: false,
 			Exporters: []*OpenTelemetryExporter{
