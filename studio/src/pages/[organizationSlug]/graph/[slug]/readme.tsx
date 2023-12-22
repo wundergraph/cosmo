@@ -24,7 +24,7 @@ export const Empty = ({ fedGraphName }: { fedGraphName: string }) => {
           <a
             target="_blank"
             rel="noreferrer"
-            href={docsBaseURL + "/studio/readme"}
+            href={docsBaseURL + "/studio/graph-documentation"}
             className="text-primary"
           >
             Learn more.
