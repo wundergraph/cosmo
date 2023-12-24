@@ -1,0 +1,29 @@
+schema {
+  query: Query
+}
+
+directive @globalOptions(sourceName: String, endpoint: String, operationHeaders: ObjMap, queryStringOptions: ObjMap, queryParams: ObjMap) on OBJECT
+
+directive @httpOperation(path: String, operationSpecificHeaders: ObjMap, httpMethod: HTTPMethod, isBinary: Boolean, requestBaseBody: ObjMap, queryParamArgMap: ObjMap, queryStringOptionsByParam: ObjMap) on FIELD_DEFINITION
+
+type Query @globalOptions(sourceName: "hello-openapi.yaml", endpoint: "http://localhost:8080") {
+  "Say hello"
+  hello_by_what(
+    "What to say hello to"
+    what: String!
+  ): String @httpOperation(path: "/hello/{args.what}", operationSpecificHeaders: "{\"accept\":\"application/json\"}", httpMethod: GET)
+}
+
+scalar ObjMap
+
+enum HTTPMethod {
+  GET
+  HEAD
+  POST
+  PUT
+  DELETE
+  CONNECT
+  OPTIONS
+  TRACE
+  PATCH
+}

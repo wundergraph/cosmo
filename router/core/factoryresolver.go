@@ -9,6 +9,7 @@ import (
 	"github.com/jensneuse/abstractlogger"
 	"github.com/nats-io/nats.go"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/http_datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/staticdatasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
@@ -42,6 +43,7 @@ type DefaultFactoryResolver struct {
 	graphql          *graphql_datasource.Factory
 	static           *staticdatasource.Factory
 	pubsub           *pubsub_datasource.Factory
+	http             *http_datasource.Factory
 	log              *zap.Logger
 }
 
@@ -78,7 +80,8 @@ func NewDefaultFactoryResolver(
 		pubsub: &pubsub_datasource.Factory{
 			Connector: pubsub.NewNATSConnector(natsConnection),
 		},
-		log: log,
+		http: &http_datasource.Factory{},
+		log:  log,
 	}
 }
 
@@ -95,6 +98,8 @@ func (d *DefaultFactoryResolver) Resolve(ds *nodev1.DataSourceConfiguration) (pl
 		return d.static, nil
 	case nodev1.DataSourceKind_PUBSUB:
 		return d.pubsub, nil
+	case nodev1.DataSourceKind_HTTP:
+		return d.http, nil
 	default:
 		return nil, fmt.Errorf("invalid datasource kind %q", ds.Kind)
 	}
@@ -265,6 +270,27 @@ func (l *Loader) Load(routerConfig *nodev1.RouterConfig, routerEngineConfig *Rou
 			}
 			out.Custom = pubsub_datasource.ConfigJson(pubsub_datasource.Configuration{
 				Events: events,
+			})
+		case nodev1.DataSourceKind_HTTP:
+			httpConfig := in.GetCustomHttp()
+			fetch := httpConfig.GetFetch()
+			httpOperations := httpConfig.GetOperations()
+			operations := make([]http_datasource.OperationConfiguration, len(httpOperations))
+			for ii, op := range httpOperations {
+				operations[ii] = http_datasource.OperationConfiguration{
+					TypeName:  op.TypeName,
+					FieldName: op.FieldName,
+					// TODO: More fields
+					Path:       op.Path,
+					HTTPMethod: op.HttpMethod,
+				}
+			}
+			out.Custom = http_datasource.ConfigJson(http_datasource.Configuration{
+				Global: http_datasource.GlobalConfiguration{
+					SourceName: fetch.SourceName,
+					Endpoint:   fetch.Endpoint,
+				},
+				Operations: operations,
 			})
 		default:
 			return nil, fmt.Errorf("unknown data source type %q", in.Kind)
