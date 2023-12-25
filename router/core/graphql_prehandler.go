@@ -7,15 +7,16 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/golang-jwt/jwt/v5"
-
 	"github.com/go-chi/chi/middleware"
+	"github.com/golang-jwt/jwt/v5"
+	"go.uber.org/zap"
+
 	"github.com/wundergraph/cosmo/router/internal/cdn"
 	"github.com/wundergraph/cosmo/router/internal/logging"
 	"github.com/wundergraph/cosmo/router/internal/pool"
+
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphql"
-	"go.uber.org/zap"
 )
 
 type PreHandlerOptions struct {
@@ -201,18 +202,26 @@ func (h *PreHandler) writeOperationError(w http.ResponseWriter, r *http.Request,
 	case errors.As(err, &inputErr):
 		requestLogger.Debug(inputErr.Error())
 		writeRequestErrors(r, inputErr.StatusCode(), graphql.RequestErrorsFromError(err), w, requestLogger)
-	case errors.As(err, &reportErr):
-		report := reportErr.Report()
-		logInternalErrorsFromReport(reportErr.Report(), requestLogger)
-		writeRequestErrors(r, http.StatusOK, graphql.RequestErrorsFromOperationReport(*report), w, requestLogger)
 	case errors.As(err, &poNotFoundErr):
 		requestLogger.Debug("persisted operation not found",
 			zap.String("sha256Hash", poNotFoundErr.Sha256Hash()),
 			zap.String("clientName", poNotFoundErr.ClientName()))
 		writeRequestErrors(r, http.StatusBadRequest, graphql.RequestErrorsFromError(errors.New(cdn.PersistedOperationNotFoundErrorCode)), w, requestLogger)
+	case errors.As(err, &reportErr):
+		report := reportErr.Report()
+		logInternalErrorsFromReport(reportErr.Report(), requestLogger)
 
+		requestErrors := graphql.RequestErrorsFromOperationReport(*report)
+		if len(requestErrors) > 0 {
+			writeRequestErrors(r, http.StatusOK, requestErrors, w, requestLogger)
+			return
+		} else {
+			// there was no external errors to return to user,
+			// so we return an internal server error
+			writeInternalError(r, w, requestLogger)
+		}
 	default: // If we have an unknown error, we log it and return an internal server error
 		requestLogger.Error(err.Error())
-		writeRequestErrors(r, http.StatusInternalServerError, graphql.RequestErrorsFromError(errInternalServer), w, requestLogger)
+		writeInternalError(r, w, requestLogger)
 	}
 }

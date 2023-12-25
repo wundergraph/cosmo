@@ -7,21 +7,20 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/wundergraph/cosmo/router/internal/otel"
-	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/trace"
-
 	"github.com/go-chi/chi/middleware"
 	"github.com/hashicorp/go-multierror"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 
+	"github.com/wundergraph/cosmo/router/internal/logging"
+	"github.com/wundergraph/cosmo/router/internal/otel"
+	"github.com/wundergraph/cosmo/router/internal/pool"
+
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphql"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
-
-	"github.com/wundergraph/cosmo/router/internal/logging"
-	"github.com/wundergraph/cosmo/router/internal/pool"
 )
 
 var (
@@ -238,4 +237,8 @@ func writeRequestErrors(r *http.Request, statusCode int, requestErrors graphql.R
 		}
 	}
 	addErrorToTrace(r.Context(), requestErrors)
+}
+
+func writeInternalError(r *http.Request, w http.ResponseWriter, requestLogger *zap.Logger) {
+	writeRequestErrors(r, http.StatusInternalServerError, graphql.RequestErrorsFromError(errInternalServer), w, requestLogger)
 }
