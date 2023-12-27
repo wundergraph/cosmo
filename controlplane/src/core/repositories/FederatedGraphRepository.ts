@@ -218,7 +218,6 @@ export class FederatedGraphRepository {
       .select({ count: sql<number>`cast(count(${targets.id}) as int)` })
       .from(schema.targets)
       .where(and(eq(schema.targets.type, 'federated'), eq(schema.targets.organizationId, this.organizationId)))
-      .groupBy(targets.organizationId)
       .execute();
 
     return result[0]?.count || 0;

@@ -4,14 +4,9 @@ import type { DB } from '../../db/index.js';
 import { organizationBilling, billingSubscriptions, billingPlans } from '../../db/schema.js';
 
 import { BillingPlanDTO } from '../../types/index.js';
+import { toISODateTime } from '../webhooks/utils.js';
 
-export const defaultPlan = process.env.DEFAULT_PLAN || 'developer@1';
-
-export const toISODateTime = (secs: number) => {
-  const t = new Date('1970-01-01T00:30:00Z'); // Unix epoch start.
-  t.setSeconds(secs);
-  return t;
-};
+export const defaultPlan = process.env.DEFAULT_PLAN;
 
 /**
  * Repository for billing related operations.

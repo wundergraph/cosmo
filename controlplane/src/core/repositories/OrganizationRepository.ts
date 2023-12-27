@@ -55,16 +55,21 @@ export class OrganizationRepository {
       .returning()
       .execute();
 
-    return {
+    const org: OrganizationDTO = {
       id: insertedOrg[0].id,
       name: insertedOrg[0].name,
       slug: insertedOrg[0].slug,
       creatorUserId: insertedOrg[0].createdBy,
       createdAt: insertedOrg[0].createdAt.toISOString(),
-      billing: {
-        plan: defaultPlan,
-      },
     };
+
+    if (defaultPlan) {
+      org.billing = {
+        plan: defaultPlan,
+      };
+    }
+
+    return org;
   }
 
   public async updateOrganization(input: { id: string; slug?: string; name?: string }) {
@@ -104,15 +109,19 @@ export class OrganizationRepository {
       return null;
     }
 
+    const plan = org[0].billing?.plan || defaultPlan;
+
     return {
       id: org[0].id,
       name: org[0].name,
       slug: org[0].slug,
       creatorUserId: org[0].creatorUserId,
       createdAt: org[0].createdAt.toISOString(),
-      billing: {
-        plan: org[0].billing?.plan || defaultPlan,
-      },
+      billing: plan
+        ? {
+            plan,
+          }
+        : undefined,
       subscription: org[0].subscription
         ? {
             status: org[0].subscription.status,
@@ -147,15 +156,19 @@ export class OrganizationRepository {
       return null;
     }
 
+    const plan = org[0].billing?.plan || defaultPlan;
+
     return {
       id: org[0].id,
       name: org[0].name,
       slug: org[0].slug,
       creatorUserId: org[0].creatorUserId,
       createdAt: org[0].createdAt.toISOString(),
-      billing: {
-        plan: org[0].billing?.plan || defaultPlan,
-      },
+      billing: plan
+        ? {
+            plan,
+          }
+        : undefined,
       subscription: org[0].subscription
         ? {
             status: org[0].subscription.status,
@@ -209,30 +222,36 @@ export class OrganizationRepository {
       .execute();
 
     const userMemberships = await Promise.all(
-      userOrganizations.map(async (org) => ({
-        id: org.id,
-        name: org.name,
-        slug: org.slug,
-        creatorUserId: org.creatorUserId,
-        createdAt: org.createdAt.toISOString(),
-        roles: await this.getOrganizationMemberRoles({
-          userID: input.userId,
-          organizationID: org.id,
-        }),
-        features: await this.getFeatures({ organizationId: org.id, plan: org.billing?.plan || defaultPlan }),
-        billing: {
-          plan: org.billing?.plan || defaultPlan,
-          email: org.billing?.email || undefined,
-        },
-        subscription: org.subscription
-          ? {
-              status: org.subscription.status,
-              trialEnd: org.subscription.trialEnd?.toISOString(),
-              cancelAtPeriodEnd: org.subscription.cancelAtPeriodEnd,
-              currentPeriodEnd: org.subscription.currentPeriodEnd?.toISOString(),
-            }
-          : undefined,
-      })),
+      userOrganizations.map(async (org) => {
+        const plan = org.billing?.plan || defaultPlan;
+
+        return {
+          id: org.id,
+          name: org.name,
+          slug: org.slug,
+          creatorUserId: org.creatorUserId,
+          createdAt: org.createdAt.toISOString(),
+          roles: await this.getOrganizationMemberRoles({
+            userID: input.userId,
+            organizationID: org.id,
+          }),
+          features: await this.getFeatures({ organizationId: org.id, plan }),
+          billing: plan
+            ? {
+                plan,
+                email: org.billing?.email || undefined,
+              }
+            : undefined,
+          subscription: org.subscription
+            ? {
+                status: org.subscription.status,
+                trialEnd: org.subscription.trialEnd?.toISOString(),
+                cancelAtPeriodEnd: org.subscription.cancelAtPeriodEnd,
+                currentPeriodEnd: org.subscription.currentPeriodEnd?.toISOString(),
+              }
+            : undefined,
+        };
+      }),
     );
 
     return userMemberships;
@@ -388,6 +407,10 @@ export class OrganizationRepository {
       plan = billing?.plan || defaultPlan;
     }
 
+    if (!plan) {
+      return [];
+    }
+
     const orgFeatures = await this.db
       .select({
         id: organizationFeatures.feature,
@@ -398,12 +421,9 @@ export class OrganizationRepository {
       .where(eq(organizationFeatures.organizationId, input.organizationId))
       .execute();
 
-    console.log(orgFeatures);
-
     // merge the features from the plan with the overrides from the organization
     const billingPlan = await this.billing.getPlanById(plan as string);
 
-    console.log(billingPlan);
     return (
       billingPlan?.features?.map(({ id, limit }) => {
         const feature = orgFeatures.find((f) => f.id === id);
@@ -432,6 +452,10 @@ export class OrganizationRepository {
 
     const plan = billing?.plan || defaultPlan;
 
+    if (!plan) {
+      return;
+    }
+
     const feature = await this.db.query.organizationFeatures.findFirst({
       where: and(
         eq(organizationFeatures.organizationId, input.organizationId),
@@ -444,7 +468,7 @@ export class OrganizationRepository {
     const billingFeature = billingPlan?.features?.find((f) => f.id === input.featureId);
 
     if (!billingFeature) {
-      return undefined;
+      return;
     }
 
     return {

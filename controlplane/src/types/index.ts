@@ -112,7 +112,7 @@ export interface OrganizationDTO {
   creatorUserId: string;
   createdAt: string;
   features?: Feature[];
-  billing: {
+  billing?: {
     plan: string;
     email?: string;
   };

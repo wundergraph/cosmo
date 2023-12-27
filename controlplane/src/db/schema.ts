@@ -647,6 +647,7 @@ export const billingPlans = pgTable('billing_plans', {
 });
 
 // These statuses map directly to Stripe's subscription statuses
+// @see https://stripe.com/docs/api/subscriptions/object#subscription_object-status
 const statuses = [
   'incomplete',
   'incomplete_expired',
@@ -662,6 +663,10 @@ export const subscriptionStatusEnum = pgEnum('status', statuses);
 
 export type SubscriptionStatus = (typeof statuses)[number];
 
+/**
+ * These are the subscriptions that are created in Stripe.
+ * https://stripe.com/docs/api/subscriptions/object
+ */
 export const billingSubscriptions = pgTable('billing_subscriptions', {
   id: text('id').notNull().primaryKey(),
   organizationId: uuid('organization_id')
