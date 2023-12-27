@@ -4,6 +4,17 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.48.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.47.3...controlplane@0.48.0) (2023-12-22)
+
+### Features
+
+* add readme for subgraphs and federated graphs ([#384](https://github.com/wundergraph/cosmo/issues/384)) ([260ffac](https://github.com/wundergraph/cosmo/commit/260ffac99d5c81b82991d1261b937cf4fa344949)) (@JivusAyrus)
+* enable password policy and brute force protection ([#390](https://github.com/wundergraph/cosmo/issues/390)) ([0ab7032](https://github.com/wundergraph/cosmo/commit/0ab7032ca424ddb9e35280ebd45280e52889b0cd)) (@StarpTech)
+
+## [0.47.3](https://github.com/wundergraph/cosmo/compare/controlplane@0.47.2...controlplane@0.47.3) (2023-12-21)
+
+**Note:** Version bump only for package controlplane
+
 ## [0.47.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.47.1...controlplane@0.47.2) (2023-12-19)
 
 **Note:** Version bump only for package controlplane

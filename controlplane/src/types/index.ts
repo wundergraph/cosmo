@@ -23,6 +23,7 @@ export interface FederatedGraphDTO {
   subgraphsCount: number;
   composedSchemaVersionId?: string;
   creatorUserId?: string;
+  readme?: string;
 }
 
 export interface FederatedGraphChangelogDTO {
@@ -49,6 +50,7 @@ export interface SubgraphDTO {
   lastUpdatedAt: string;
   labels: Label[];
   creatorUserId?: string;
+  readme?: string;
 }
 
 export interface MigrationSubgraph {
