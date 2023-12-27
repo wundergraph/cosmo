@@ -64,7 +64,9 @@ func Main() {
 
 	go func() {
 		if err := router.Start(ctx); err != nil {
-			logger.Fatal("Could not start server", zap.Error(err))
+			logger.Error("Could not start server", zap.Error(err))
+			// Don't block and wait for shutdown. No fatal error because some sinks might be flushed.
+			stop()
 		}
 	}()
 
