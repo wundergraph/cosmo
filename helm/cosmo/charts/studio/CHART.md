@@ -16,6 +16,7 @@ WunderGraph Cosmo Studio.
 | autoscaling.minReplicas | int | `1` |  |
 | autoscaling.targetCPUUtilizationPercentage | int | `80` |  |
 | configuration.slackClientId | string | `""` | The client ID of the slack app to use for slack app integration |
+| configuration.stripePublishableKey | string | `""` | The publishable key of the stripe account to use for stripe integration |
 | deploymentStrategy | object | `{}` |  |
 | fullnameOverride | string | `""` | String to fully override common.names.fullname template |
 | image.pullPolicy | string | `"IfNotPresent"` |  |
@@ -44,5 +45,3 @@ WunderGraph Cosmo Studio.
 | serviceAnnotations | object | `{}` |  |
 | terminationGracePeriodSeconds | int | `5` | Sets the [termination grace period](https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#hook-handler-execution) for Deployment pods |
 | tolerations | list | `[]` |  |
-| stripePublishableKey | string | `""` | The publishable key of the stripe account to use for stripe integration |
-
