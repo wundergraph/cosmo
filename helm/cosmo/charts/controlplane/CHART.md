@@ -21,7 +21,7 @@ WunderGraph Cosmo Controlplane
 | configuration.clickhouseMigrationDsn | string | `"clickhouse://default:changeme@cosmo-clickhouse:9000?database=cosmo"` |  |
 | configuration.databaseUrl | string | `"postgres://postgres:changeme@cosmo-postgresql:5432/controlplane"` |  |
 | configuration.debugSQL | bool | `false` |  |
-| configuration.defaultPlan | string | `""` | The default billing plan, eg `developer@1` |
+| configuration.defaultPlan | string | `""` |  |
 | configuration.githubAppClientId | string | `""` |  |
 | configuration.githubAppClientSecret | string | `""` |  |
 | configuration.githubAppId | string | `""` |  |
