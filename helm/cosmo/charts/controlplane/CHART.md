@@ -34,6 +34,9 @@ WunderGraph Cosmo Controlplane
 | configuration.smtpUsername | string | `""` |  |
 | configuration.webhookSecret | string | `""` |  |
 | configuration.webhookUrl | string | `""` |  |
+| configuration.stripeSecretKey | string | `""` |  |
+| configuration.stripeWebhookSecret | string | `""` |  |
+| configuration.stripeWebhookSecret | string | `""` | eg: developer@1 |
 | deploymentStrategy | object | `{}` |  |
 | fullnameOverride | string | `""` | String to fully override common.names.fullname template |
 | image.pullPolicy | string | `"IfNotPresent"` |  |

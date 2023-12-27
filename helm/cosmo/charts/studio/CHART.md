@@ -44,4 +44,5 @@ WunderGraph Cosmo Studio.
 | serviceAnnotations | object | `{}` |  |
 | terminationGracePeriodSeconds | int | `5` | Sets the [termination grace period](https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#hook-handler-execution) for Deployment pods |
 | tolerations | list | `[]` |  |
+| stripePublishableKey | string | `""` | The publishable key of the stripe account to use for stripe integration |
 
