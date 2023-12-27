@@ -15,7 +15,7 @@ export class BillingRepository {
   public stripe: Stripe;
 
   constructor(private db: DB) {
-    this.stripe = new Stripe(process.env.STRIPE_SECRET_KEY_LIVE ?? process.env.STRIPE_SECRET_KEY ?? '', {
+    this.stripe = new Stripe(process.env.STRIPE_SECRET_KEY ?? '', {
       apiVersion: '2023-10-16',
       appInfo: {
         name: 'WunderGraph Cosmo',
