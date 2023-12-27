@@ -67,3 +67,4 @@ WunderGraph Cosmo Controlplane
 | tolerations | list | `[]` |  |
 | volumeMounts | list | `[]` |  |
 | volumes | list | `[]` |  |
+
