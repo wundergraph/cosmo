@@ -33,15 +33,13 @@ func Main() {
 	}
 
 	// Handling shutdown
-	shutdownCh := make(chan os.Signal, 1)
-	signal.Notify(shutdownCh, os.Interrupt,
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt,
 		syscall.SIGHUP,  // process is detached from terminal
 		syscall.SIGTERM, // default for kill
 		syscall.SIGKILL,
 		syscall.SIGQUIT, // ctrl + \
 		syscall.SIGINT,  // ctrl+c
 	)
-	ctx, stop := context.WithCancel(context.Background())
 	defer stop()
 
 	logLevel, err := logging.ZapLogLevelFromString(cfg.LogLevel)
@@ -70,17 +68,19 @@ func Main() {
 		}
 	}()
 
-	<-shutdownCh
+	<-ctx.Done()
 
 	logger.Info("Graceful shutdown ...", zap.String("shutdown_delay", cfg.ShutdownDelay.String()))
-	// enforce a maximum shutdown delay
-	ctx, cancel := context.WithTimeout(ctx, cfg.ShutdownDelay)
+	// Enforce a maximum shutdown delay to avoid waiting forever
+	// Don't use the parent context that is canceled by the signal handler
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownDelay)
 	defer cancel()
 
-	if err := router.Shutdown(ctx); err != nil {
+	if err := router.Shutdown(shutdownCtx); err != nil {
 		logger.Error("Could not shutdown server", zap.Error(err))
 	}
 
 	profile.Finish()
 	logger.Debug("Server exiting")
+	os.Exit(0)
 }

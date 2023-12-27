@@ -85,6 +85,9 @@ func (r *queryResolver) Products(ctx context.Context) ([]model.Products, error) 
 
 // Teammates is the resolver for the teammates field.
 func (r *queryResolver) Teammates(ctx context.Context, team model.Department) ([]*model.Employee, error) {
+
+	time.Sleep(10 * time.Second)
+
 	r.mux.Lock()
 	defer r.mux.Unlock()
 	switch team {
