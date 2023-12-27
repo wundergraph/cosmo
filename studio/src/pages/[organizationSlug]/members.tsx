@@ -327,7 +327,9 @@ const MembersPage: NextPageWithLayout = () => {
   const isAdmin = currentUser?.roles.includes("admin");
 
   const limitReached =
-    usersFeature?.limit && data.members.length >= usersFeature?.limit;
+    usersFeature?.limit &&
+    usersFeature?.limit > 0 &&
+    data.members.length >= usersFeature?.limit;
 
   return (
     <div className="flex flex-col gap-y-6">

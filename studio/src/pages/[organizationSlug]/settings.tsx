@@ -885,7 +885,7 @@ const RBAC = () => {
   const enable = () => {
     mutate(
       {
-        enable: false,
+        enable: true,
       },
       {
         onSuccess: (d) => {

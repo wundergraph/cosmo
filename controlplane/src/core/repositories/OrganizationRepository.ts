@@ -224,7 +224,6 @@ export class OrganizationRepository {
     const userMemberships = await Promise.all(
       userOrganizations.map(async (org) => {
         const plan = org.billing?.plan || defaultPlan;
-
         return {
           id: org.id,
           name: org.name,
@@ -500,10 +499,9 @@ export class OrganizationRepository {
       .insert(organizationFeatures)
       .values(feature)
       .onConflictDoUpdate({
-        target: organizationFeatures.id,
+        target: [organizationFeatures.organizationId, organizationFeatures.feature],
         set: feature,
-      })
-      .execute();
+      });
   }
 
   public async isFeatureEnabled(id: string, featureId: string) {
