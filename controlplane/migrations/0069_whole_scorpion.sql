@@ -10,7 +10,8 @@ CREATE TABLE IF NOT EXISTS "billing_plans" (
 	"name" text NOT NULL,
 	"price" integer NOT NULL,
 	"features" json NOT NULL,
-	"stripe_price_id" text
+	"stripe_price_id" text,
+	"weight" integer DEFAULT 0 NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "billing_subscriptions" (

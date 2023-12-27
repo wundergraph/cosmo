@@ -29,6 +29,7 @@ import { Composer } from '../composition/composer.js';
 import { hasLabelsChanged, normalizeLabels } from '../util.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 import { GraphCompositionRepository } from './GraphCompositionRepository.js';
+import { TargetRepository } from './TargetRepository.js';
 
 type SubscriptionProtocol = 'ws' | 'sse' | 'sse_post';
 
@@ -39,6 +40,7 @@ export interface Subgraph {
   labels: Label[];
   subscriptionUrl?: string;
   subscriptionProtocol?: SubscriptionProtocol;
+  readme?: string;
 }
 
 export interface UpdateSubgraphOptions {
@@ -49,6 +51,7 @@ export interface UpdateSubgraphOptions {
   schemaSDL?: string;
   subscriptionProtocol?: SubscriptionProtocol;
   updatedBy: string;
+  readme?: string;
 }
 
 /**
@@ -81,6 +84,7 @@ export class SubgraphRepository {
           type: 'subgraph',
           organizationId: this.organizationId,
           labels: uniqueLabels.map((ul) => joinLabel(ul)),
+          readme: data.readme,
         })
         .returning()
         .execute();
@@ -148,6 +152,7 @@ export class SubgraphRepository {
     await this.db.transaction(async (tx) => {
       const fedGraphRepo = new FederatedGraphRepository(tx, this.organizationId);
       const subgraphRepo = new SubgraphRepository(tx, this.organizationId);
+      const targetRepo = new TargetRepository(tx, this.organizationId);
       const compositionRepo = new GraphCompositionRepository(tx);
       const composer = new Composer(fedGraphRepo, subgraphRepo, compositionRepo);
       let subgraphChanged = false;
@@ -280,6 +285,11 @@ export class SubgraphRepository {
             message: e.message,
           })),
         );
+      }
+
+      // update the readme of the subgraph
+      if (data.readme) {
+        await targetRepo.updateReadmeOfTarget({ name: data.name, readme: data.readme });
       }
     });
 
@@ -450,6 +460,7 @@ export class SubgraphRepository {
       id: resp.subgraph.id,
       targetId: resp.id,
       routingUrl: resp.subgraph.routingUrl,
+      readme: resp.readme || undefined,
       subscriptionUrl: resp.subgraph.subscriptionUrl ?? '',
       subscriptionProtocol: resp.subgraph.subscriptionProtocol ?? 'ws',
       name: resp.name,

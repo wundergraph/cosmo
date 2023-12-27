@@ -1,8 +1,8 @@
 {
   "version": "5",
   "dialect": "pg",
-  "id": "11ca6cfc-e54e-4d5c-aba7-b51c16071b83",
-  "prevId": "dd4c8449-b47c-43ea-b153-74ab1ce0f853",
+  "id": "39f98685-71a8-43e4-aa83-f83ad0093fb6",
+  "prevId": "9a89ff66-385d-4935-9241-3cf07ba694b5",
   "tables": {
     "api_key_resources": {
       "name": "api_key_resources",
@@ -2801,6 +2801,12 @@
         "created_by": {
           "name": "created_by",
           "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "readme": {
+          "name": "readme",
+          "type": "text",
           "primaryKey": false,
           "notNull": false
         }

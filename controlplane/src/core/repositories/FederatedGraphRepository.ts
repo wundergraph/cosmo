@@ -31,6 +31,7 @@ import { SchemaDiff } from '../composition/schemaCheck.js';
 import { normalizeLabelMatchers, normalizeLabels } from '../util.js';
 import { GraphCompositionRepository } from './GraphCompositionRepository.js';
 import { SubgraphRepository } from './SubgraphRepository.js';
+import { TargetRepository } from './TargetRepository.js';
 
 export interface FederatedGraphConfig {
   trafficCheckDays: number;
@@ -50,6 +51,7 @@ export class FederatedGraphRepository {
     routingUrl: string;
     labelMatchers: string[];
     createdBy: string;
+    readme?: string;
   }): Promise<FederatedGraphDTO> {
     return this.db.transaction(async (tx) => {
       const subgraphRepo = new SubgraphRepository(tx, this.organizationId);
@@ -64,6 +66,7 @@ export class FederatedGraphRepository {
           name: data.name,
           type: 'federated',
           createdBy: data.createdBy,
+          readme: data.readme,
         })
         .returning()
         .execute();
@@ -115,13 +118,20 @@ export class FederatedGraphRepository {
     });
   }
 
-  public update(data: { name: string; routingUrl: string; labelMatchers: string[]; updatedBy: string }) {
+  public update(data: {
+    name: string;
+    routingUrl: string;
+    labelMatchers: string[];
+    updatedBy: string;
+    readme?: string;
+  }) {
     const labelMatchers = normalizeLabelMatchers(data.labelMatchers);
     const routingUrl = normalizeURL(data.routingUrl);
 
     return this.db.transaction(async (tx) => {
       const fedGraphRepo = new FederatedGraphRepository(tx, this.organizationId);
       const subgraphRepo = new SubgraphRepository(tx, this.organizationId);
+      const targetRepo = new TargetRepository(tx, this.organizationId);
       const compositionRepo = new GraphCompositionRepository(tx);
 
       const federatedGraph = await fedGraphRepo.byName(data.name);
@@ -130,8 +140,13 @@ export class FederatedGraphRepository {
       }
 
       // update routing URL when changed
-      if (federatedGraph.routingUrl && federatedGraph.routingUrl !== routingUrl) {
+      if (routingUrl && federatedGraph.routingUrl !== routingUrl) {
         await tx.update(federatedGraphs).set({ routingUrl }).where(eq(federatedGraphs.id, federatedGraph.id)).execute();
+      }
+
+      // update the readme of the fed graph
+      if (data.readme) {
+        await targetRepo.updateReadmeOfTarget({ name: data.name, readme: data.readme });
       }
 
       if (labelMatchers.length > 0) {
@@ -291,6 +306,7 @@ export class FederatedGraphRepository {
       subgraphsCount: resp.federatedGraph.subgraphs.length ?? 0,
       labelMatchers: resp.labelMatchers.map((s) => s.labelMatcher.join(',')),
       creatorUserId: resp.createdBy || undefined,
+      readme: resp.readme || undefined,
     };
   }
 

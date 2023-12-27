@@ -7,6 +7,7 @@ import { OrganizationEventName, PlatformEventName } from '@wundergraph/cosmo-con
 import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
 import {
   AcceptOrDeclineInvitationResponse,
+  AddReadmeResponse,
   AddSubgraphMemberResponse,
   AnalyticsConfig,
   CheckFederatedGraphResponse,
@@ -46,10 +47,12 @@ import {
   GetFederatedGraphByNameResponse,
   GetFederatedGraphChangelogResponse,
   GetFederatedGraphSDLByNameResponse,
+  GetFederatedGraphsBySubgraphLabelsResponse,
   GetFederatedGraphsResponse,
   GetFieldUsageResponse,
   GetGraphMetricsResponse,
   GetInvitationsResponse,
+  GetLatestSubgraphSDLByNameResponse,
   GetLatestValidSubgraphSDLByNameResponse,
   GetMetricsErrorRateResponse,
   GetOIDCProviderResponse,
@@ -143,6 +146,7 @@ import {
 import { FederatedGraphSchemaUpdate, OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
 import { ApiKeyRepository } from '../repositories/ApiKeyRepository.js';
 import { BillingRepository } from '../repositories/BillingRepository.js';
+import { TargetRepository } from '../repositories/TargetRepository.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -216,6 +220,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           createdBy: authContext.userId,
           labelMatchers: req.labelMatchers,
           routingUrl: req.routingUrl,
+          readme: req.readme,
         });
 
         await fedGraphRepo.createGraphCryptoKeyPairs({
@@ -325,6 +330,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             createdBy: authContext.userId,
             labels: req.labels,
             routingUrl: req.routingUrl,
+            readme: req.readme,
             subscriptionUrl: req.subscriptionUrl,
             subscriptionProtocol: req.subscriptionProtocol
               ? formatSubscriptionProtocol(req.subscriptionProtocol)
@@ -1151,6 +1157,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           labelMatchers: req.labelMatchers,
           routingUrl: req.routingUrl,
           updatedBy: authContext.userId,
+          readme: req.readme,
         });
 
         if (errors) {
@@ -1264,6 +1271,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             ? formatSubscriptionProtocol(req.subscriptionProtocol)
             : undefined,
           updatedBy: authContext.userId,
+          readme: req.readme,
         });
 
         for (const graph of updatedFederatedGraphs) {
@@ -1352,6 +1360,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           routingURL: s.routingUrl,
           labels: s.labels,
           lastUpdatedAt: s.lastUpdatedAt,
+          subscriptionUrl: s.subscriptionUrl,
         }));
 
         const result = composeSubgraphs(
@@ -3412,6 +3421,36 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
+    addReadme: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<AddReadmeResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const targetRepo = new TargetRepository(opts.db, authContext.organizationId);
+
+        const target = await targetRepo.byName(req.targetName);
+        if (!target) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Target ${req.targetName} not found`,
+            },
+          };
+        }
+
+        await targetRepo.updateReadmeOfTarget({ name: req.targetName, readme: req.readme });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+        };
+      });
+    },
+
     /* 
     Queries
     */
@@ -3438,6 +3477,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             lastUpdatedAt: g.lastUpdatedAt,
             labels: g.labels,
             createdUserId: g.creatorUserId,
+            subscriptionUrl: g.subscriptionUrl,
           })),
           response: {
             code: EnumStatusCode.OK,
@@ -3454,9 +3494,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
       return handleError<PlainMessage<GetSubgraphByNameResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const repo = new SubgraphRepository(opts.db, authContext.organizationId);
+        const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
 
-        const subgraph = await repo.byName(req.name);
+        const subgraph = await subgraphRepo.byName(req.name);
 
         if (!subgraph) {
           return {
@@ -3464,6 +3504,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               code: EnumStatusCode.ERR_NOT_FOUND,
               details: `Subgraph '${req.name}' not found`,
             },
+            members: [],
           };
         }
 
@@ -3474,7 +3515,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             lastUpdatedAt: subgraph.lastUpdatedAt,
             routingURL: subgraph.routingUrl,
             labels: subgraph.labels,
+            readme: subgraph.readme,
+            subscriptionUrl: subgraph.subscriptionUrl,
           },
+          members: await subgraphRepo.getSubgraphMembers(subgraph.id),
           response: {
             code: EnumStatusCode.OK,
           },
@@ -3515,6 +3559,50 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             compositionErrors: g.compositionErrors ?? '',
             isComposable: g.isComposable,
             requestSeries: requestSeriesList[g.id] ?? [],
+          })),
+          response: {
+            code: EnumStatusCode.OK,
+          },
+        };
+      });
+    },
+
+    getFederatedGraphsBySubgraphLabels: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetFederatedGraphsBySubgraphLabelsResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+        const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
+
+        const subgraph = await subgraphRepo.byName(req.subgraphName);
+
+        if (!subgraph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Subgraph '${req.subgraphName}' not found`,
+            },
+            graphs: [],
+          };
+        }
+
+        const federatedGraphs = await fedGraphRepo.bySubgraphLabels(subgraph.labels);
+
+        return {
+          graphs: federatedGraphs.map((g) => ({
+            id: g.id,
+            name: g.name,
+            labelMatchers: g.labelMatchers,
+            routingURL: g.routingUrl,
+            lastUpdatedAt: g.lastUpdatedAt,
+            connectedSubgraphs: g.subgraphsCount,
+            compositionErrors: g.compositionErrors ?? '',
+            isComposable: g.isComposable,
+            requestSeries: [],
           })),
           response: {
             code: EnumStatusCode.OK,
@@ -3579,6 +3667,32 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             code: EnumStatusCode.OK,
           },
           sdl: schemaVersion.schema || undefined,
+        };
+      });
+    },
+
+    getLatestSubgraphSDLByName: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+      return handleError<PlainMessage<GetLatestSubgraphSDLByNameResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
+        const subgraph = await subgraphRepo.byName(req.name);
+        if (!subgraph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+            },
+          };
+        }
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          sdl: subgraph.schemaSDL,
         };
       });
     },
@@ -3672,6 +3786,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             compositionErrors: federatedGraph.compositionErrors ?? '',
             isComposable: federatedGraph.isComposable,
             requestSeries,
+            readme: federatedGraph.readme,
           },
           subgraphs: list.map((g) => ({
             id: g.id,
@@ -3679,6 +3794,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             routingURL: g.routingUrl,
             lastUpdatedAt: g.lastUpdatedAt,
             labels: g.labels,
+            subscriptionUrl: g.subscriptionUrl,
           })),
           graphToken: graphToken.token,
           graphRequestToken: routerRequestToken,

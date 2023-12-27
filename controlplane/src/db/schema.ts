@@ -240,6 +240,7 @@ export const targets = pgTable(
     createdBy: uuid('created_by').references(() => users.id, {
       onDelete: 'set null',
     }),
+    readme: text('readme'),
   },
   (t) => {
     return {

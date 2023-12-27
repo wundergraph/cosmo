@@ -78,6 +78,8 @@ message CreateFederatedGraphRequest {
   string routing_url = 2;
   // label_matchers match the labels of the services which will form the federated graph. If the proposed schema composition is invalid, it will be rejected.
   repeated string label_matchers = 3;
+  // readme of the fed graph
+  optional string readme = 4;
 }
 
 message CreateFederatedSubgraphRequest {
@@ -93,6 +95,8 @@ message CreateFederatedSubgraphRequest {
   optional wg.cosmo.common.GraphQLSubscriptionProtocol subscription_protocol = 5;
     // url used for subscriptions
   optional string subscription_url = 6;
+  // readme of the subgraph
+  optional string readme = 7;
 }
 
 message DeleteFederatedGraphRequest {
@@ -172,9 +176,19 @@ message FederatedGraph {
   string compositionErrors = 7;
   int32 connectedSubgraphs = 8;
   repeated RequestSeriesItem requestSeries = 9;
+  optional string readme = 10;
 }
 
 message GetFederatedGraphsResponse {
+  Response response = 1;
+  repeated FederatedGraph graphs = 2;
+}
+
+message GetFederatedGraphsBySubgraphLabelsRequest {
+  string subgraphName = 1;
+}
+
+message GetFederatedGraphsBySubgraphLabelsResponse {
   Response response = 1;
   repeated FederatedGraph graphs = 2;
 }
@@ -191,6 +205,8 @@ message Subgraph {
   string lastUpdatedAt = 4;
   repeated Label labels = 5;
   optional string creatorUserId = 6;
+  optional string readme = 7;
+  string subscriptionUrl = 8;
 }
 
 message GetSubgraphsResponse {
@@ -227,6 +243,7 @@ message GetSubgraphByNameRequest {
 message GetSubgraphByNameResponse {
   Response response = 1;
   Subgraph graph = 2;
+  repeated SubgraphMember members = 3;
 }
 
 message GetLatestValidSubgraphSDLByNameRequest {
@@ -235,6 +252,15 @@ message GetLatestValidSubgraphSDLByNameRequest {
 }
 
 message GetLatestValidSubgraphSDLByNameResponse {
+  Response response = 1;
+  optional string sdl = 2;
+}
+
+message GetLatestSubgraphSDLByNameRequest {
+  string name = 1;
+}
+
+message GetLatestSubgraphSDLByNameResponse {
   Response response = 1;
   optional string sdl = 2;
 }
@@ -382,6 +408,7 @@ message UpdateSubgraphRequest {
   optional wg.cosmo.common.GraphQLSubscriptionProtocol subscription_protocol = 5;
   // url used for subscriptions
   optional string subscription_url = 6;
+  optional string readme = 7;
 }
 
 message UpdateSubgraphResponse {
@@ -393,6 +420,7 @@ message UpdateFederatedGraphRequest {
   string name = 1;
   string routing_url = 2;
   repeated string label_matchers = 3;
+  optional string readme = 4;
 }
 
 message UpdateFederatedGraphResponse {
@@ -782,7 +810,6 @@ message GetPersistedOperationsResponse {
   Response response = 1;
   repeated Operation operations = 2;
 }
-
 
 message Header{
   string key = 1;
@@ -1284,6 +1311,15 @@ message GetSubgraphMembersResponse {
   repeated SubgraphMember members = 2;
 }
 
+message AddReadmeRequest {
+  string targetName = 1;
+  string readme = 2;
+}
+
+message AddReadmeResponse {
+  Response response = 1;
+}
+
 message ClientInfo{
   string name = 1;
   string id = 2;
@@ -1371,6 +1407,8 @@ service PlatformService {
 
   // GetFederatedGraphs returns the list of federated graphs.
   rpc GetFederatedGraphs(GetFederatedGraphsRequest) returns (GetFederatedGraphsResponse) {}
+  // GetFederatedGraphsBySubgraphLabels returns the list of federated graphs based on the subgraph labels
+  rpc GetFederatedGraphsBySubgraphLabels(GetFederatedGraphsBySubgraphLabelsRequest) returns (GetFederatedGraphsBySubgraphLabelsResponse) {}
   // GetFederatedGraphByName returns the federated graph by name.
   rpc GetFederatedGraphByName(GetFederatedGraphByNameRequest) returns (GetFederatedGraphByNameResponse) {}
   // GetFederatedGraphSDLByName returns the latest valid SDL of the federated graph by name.
@@ -1379,9 +1417,10 @@ service PlatformService {
   rpc GetSubgraphs(GetSubgraphsRequest) returns (GetSubgraphsResponse) {}
   // GetSubgraphByName returns the subgraph by name.
   rpc GetSubgraphByName(GetSubgraphByNameRequest) returns (GetSubgraphByNameResponse) {}
-  // GetFederatedSubgraphSDLByName returns the SDL of the subgraph by name.
+  // GetLatestValidSubgraphSDLByName returns the latest valid SDL of the subgraph by name.
   rpc GetLatestValidSubgraphSDLByName(GetLatestValidSubgraphSDLByNameRequest) returns (GetLatestValidSubgraphSDLByNameResponse) {}
-
+  // GetLatestSubgraphSDLByName returns the latest SDL of the subgraph by name.
+  rpc GetLatestSubgraphSDLByName(GetLatestSubgraphSDLByNameRequest) returns (GetLatestSubgraphSDLByNameResponse) {}
 
   // GetChecksByFederatedGraphName return schema and composition checks that concern a federated graph
   rpc GetChecksByFederatedGraphName(GetChecksByFederatedGraphNameRequest) returns (GetChecksByFederatedGraphNameResponse) {}
@@ -1484,6 +1523,8 @@ service PlatformService {
   rpc RemoveSubgraphMember(RemoveSubgraphMemberRequest) returns (RemoveSubgraphMemberResponse) {}
   // GetSubgraphMembers gets all the members of the subgraph
   rpc GetSubgraphMembers(GetSubgraphMembersRequest) returns (GetSubgraphMembersResponse) {}
+  // AddReadme adds a readme of a target, can be a subgraph or a federated graph
+  rpc AddReadme(AddReadmeRequest) returns (AddReadmeResponse) {}
 
   // Analytics
   rpc GetAnalyticsView(GetAnalyticsViewRequest) returns (GetAnalyticsViewResponse) {

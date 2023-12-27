@@ -1,7 +1,7 @@
 {
   "version": "5",
   "dialect": "pg",
-  "id": "dd4c8449-b47c-43ea-b153-74ab1ce0f853",
+  "id": "9a89ff66-385d-4935-9241-3cf07ba694b5",
   "prevId": "7e39c0ce-c20c-4503-b5cd-34ca67061522",
   "tables": {
     "api_key_resources": {
@@ -163,168 +163,6 @@
           ]
         }
       }
-    },
-    "billing_plans": {
-      "name": "billing_plans",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "active": {
-          "name": "active",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": true
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "price": {
-          "name": "price",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "features": {
-          "name": "features",
-          "type": "json",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "stripe_price_id": {
-          "name": "stripe_price_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
-    },
-    "billing_subscriptions": {
-      "name": "billing_subscriptions",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "organization_id": {
-          "name": "organization_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "metadata": {
-          "name": "metadata",
-          "type": "json",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "status": {
-          "name": "status",
-          "type": "status",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "price_id": {
-          "name": "price_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "quantity": {
-          "name": "quantity",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "cancel_at_period_end": {
-          "name": "cancel_at_period_end",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "cancel_at": {
-          "name": "cancel_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "canceled_at": {
-          "name": "canceled_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "current_period_start": {
-          "name": "current_period_start",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "current_period_end": {
-          "name": "current_period_end",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "ended_at": {
-          "name": "ended_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "trial_start": {
-          "name": "trial_start",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "trial_end": {
-          "name": "trial_end",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "billing_subscriptions_organization_id_organizations_id_fk": {
-          "name": "billing_subscriptions_organization_id_organizations_id_fk",
-          "tableFrom": "billing_subscriptions",
-          "tableTo": "organizations",
-          "columnsFrom": [
-            "organization_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
     },
     "federated_graph_clients": {
       "name": "federated_graph_clients",
@@ -1108,141 +946,6 @@
         }
       }
     },
-    "organization_billing": {
-      "name": "organization_billing",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "organization_id": {
-          "name": "organization_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "plan": {
-          "name": "plan",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "email": {
-          "name": "email",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "stripe_customer_id": {
-          "name": "stripe_customer_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {
-        "organization_billing_idx": {
-          "name": "organization_billing_idx",
-          "columns": [
-            "organization_id"
-          ],
-          "isUnique": true
-        },
-        "organization_billing_stripe_idx": {
-          "name": "organization_billing_stripe_idx",
-          "columns": [
-            "stripe_customer_id"
-          ],
-          "isUnique": true
-        }
-      },
-      "foreignKeys": {
-        "organization_billing_organization_id_organizations_id_fk": {
-          "name": "organization_billing_organization_id_organizations_id_fk",
-          "tableFrom": "organization_billing",
-          "tableTo": "organizations",
-          "columnsFrom": [
-            "organization_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
-    },
-    "organization_features": {
-      "name": "organization_features",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "organization_id": {
-          "name": "organization_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "feature": {
-          "name": "feature",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "enabled": {
-          "name": "enabled",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": true
-        },
-        "limit": {
-          "name": "limit",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {
-        "organization_feature_idx": {
-          "name": "organization_feature_idx",
-          "columns": [
-            "organization_id",
-            "feature"
-          ],
-          "isUnique": true
-        }
-      },
-      "foreignKeys": {
-        "organization_features_organization_id_organizations_id_fk": {
-          "name": "organization_features_organization_id_organizations_id_fk",
-          "tableFrom": "organization_features",
-          "tableTo": "organizations",
-          "columnsFrom": [
-            "organization_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
-    },
     "organization_integrations": {
       "name": "organization_integrations",
       "schema": "",
@@ -1642,19 +1345,22 @@
           "name": "is_personal",
           "type": "boolean",
           "primaryKey": false,
-          "notNull": false
+          "notNull": false,
+          "default": false
         },
         "is_free_trial": {
           "name": "is_free_trial",
           "type": "boolean",
           "primaryKey": false,
-          "notNull": false
+          "notNull": false,
+          "default": false
         },
         "is_rbac_enabled": {
           "name": "is_rbac_enabled",
           "type": "boolean",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true,
+          "default": false
         }
       },
       "indexes": {},
@@ -2796,6 +2502,12 @@
           "type": "uuid",
           "primaryKey": false,
           "notNull": false
+        },
+        "readme": {
+          "name": "readme",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
@@ -3019,19 +2731,6 @@
         "ws": "ws",
         "sse": "sse",
         "sse_post": "sse_post"
-      }
-    },
-    "status": {
-      "name": "status",
-      "values": {
-        "incomplete": "incomplete",
-        "incomplete_expired": "incomplete_expired",
-        "trialing": "trialing",
-        "active": "active",
-        "past_due": "past_due",
-        "canceled": "canceled",
-        "unpaid": "unpaid",
-        "paused": "paused"
       }
     },
     "target_type": {

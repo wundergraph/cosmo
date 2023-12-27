@@ -15,7 +15,9 @@ export const useHas = (feature: string, orgId?: string) => {
       ? user?.organizations.find((org) => org.id === orgId)
       : user?.currentOrganization;
 
-    return org?.features.map(({ id }) => id);
+    return org?.features
+      .filter(({ enabled }) => enabled !== false)
+      .map(({ id }) => id);
   }, [orgId, user?.currentOrganization, user?.organizations]);
 
   return features?.includes(feature);

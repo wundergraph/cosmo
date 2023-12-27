@@ -1,1 +1,0 @@
-ALTER TABLE "billing_plans" ADD COLUMN "weight" integer DEFAULT 0 NOT NULL;
