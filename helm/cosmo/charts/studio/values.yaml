@@ -120,7 +120,7 @@ configuration:
   slackClientId: ""
   # -- Custom scripts injected into the head of the studio, eg for analytics
   #customHeadScripts: [{"id": "hello-world", "src": "console.log('hello world')", "inline": true}]
-  # -- The publisable key of the stripe account to use for stripe integration
+  # -- The publishable key of the stripe account to use for stripe integration
   stripePublishableKey: ""
 
 #global:
