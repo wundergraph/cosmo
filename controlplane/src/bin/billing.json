@@ -8,8 +8,16 @@
       "features": [
         { "id": "router", "description": "Self-Hosted Router" },
         { "id": "users", "description": "1 User", "limit": 1 },
-        { "id": "federated-graphs", "description": "1 Federated Graph", "limit": 1 },
-        { "id": "requests", "description": "Up to 10M Requests per month", "limit": 10 },
+        {
+          "id": "federated-graphs",
+          "description": "1 Federated Graph",
+          "limit": 1
+        },
+        {
+          "id": "requests",
+          "description": "Up to 10M Requests per month",
+          "limit": 10
+        },
         { "id": "support", "description": "Discord Community Support" },
         { "id": "analytics-retention", "limit": 7 },
         { "id": "tracing-retention", "limit": 7 },
@@ -27,14 +35,22 @@
       "features": [
         { "id": "router", "description": "Self-Hosted Router" },
         { "id": "users", "description": "10 Users", "limit": 10 },
-        { "id": "federated-graphs", "description": "2 Federated Graphs", "limit": 2 },
-        { "id": "requests", "description": "Up to 100M Requests per month", "limit": 100 },
+        {
+          "id": "federated-graphs",
+          "description": "2 Federated Graphs",
+          "limit": 2
+        },
+        {
+          "id": "requests",
+          "description": "Up to 100M Requests per month",
+          "limit": 100
+        },
         { "id": "support", "description": "Email Support" },
         { "id": "analytics-retention", "limit": 7 },
         { "id": "tracing-retention", "limit": 7 },
         { "id": "changelog-retention", "limit": 7 },
         { "id": "breaking-change-retention", "limit": 7 },
-        { "id": "trace-sampling-rate", "limit": 0.1 }
+        { "id": "trace-sampling-rate", "limit": 0.2 }
       ]
     },
     "scale@1": {
@@ -46,15 +62,30 @@
       "features": [
         { "id": "router", "description": "Self-Hosted Router" },
         { "id": "users", "description": "25 Users", "limit": 25 },
-        { "id": "federated-graphs", "description": "3 Federated Graphs", "limit": 3 },
-        { "id": "requests", "description": "Up to 250M Requests per month", "limit": 250 },
-        { "id": "retention", "description": "14 days of Data Retention", "limit": 14 },
-        { "id": "support", "description": "Slack Connect / Private Discord Channel" },
+        {
+          "id": "federated-graphs",
+          "description": "3 Federated Graphs",
+          "limit": 3
+        },
+        {
+          "id": "requests",
+          "description": "Up to 250M Requests per month",
+          "limit": 250
+        },
+        {
+          "id": "retention",
+          "description": "14 days of Data Retention",
+          "limit": 14
+        },
+        {
+          "id": "support",
+          "description": "Slack Connect / Private Discord Channel"
+        },
         { "id": "analytics-retention", "limit": 14 },
         { "id": "tracing-retention", "limit": 14 },
         { "id": "changelog-retention", "limit": 14 },
         { "id": "breaking-change-retention", "limit": 14 },
-        { "id": "trace-sampling-rate", "limit": 0.1 }
+        { "id": "trace-sampling-rate", "limit": 0.3 }
       ]
     },
     "enterprise": {
@@ -64,18 +95,26 @@
       "weight": 3,
       "features": [
         { "id": "router", "description": "Self-Hosted Enterprise Router" },
-        { "id": "users", "description": "Users", "limit": -1 },
-        { "id": "federated-graphs", "description": "Unlimited Federated Graphs", "limit": -1 },
-        { "id": "requests", "description": "Unlimited Requests per month", "limit": -1 },
+        { "id": "users", "description": "Users", "limit": 100 },
+        {
+          "id": "federated-graphs",
+          "description": "Unlimited Federated Graphs",
+          "limit": 25
+        },
+        {
+          "id": "requests",
+          "description": "Unlimited Requests per month",
+          "limit": 2000
+        },
         { "id": "rbac", "description": "Role-based Access Control" },
         { "id": "sla", "description": "99.99% SLA" },
         { "id": "sso", "description": "Single Sign-On (SSO)" },
         { "id": "security", "description": "Advanced Security & Compliance" },
         { "id": "support", "description": "Dedicated Priority Support" },
-        { "id": "analytics-retention", "limit": -1 },
-        { "id": "tracing-retention", "limit": -1 },
-        { "id": "changelog-retention", "limit": -1 },
-        { "id": "breaking-change-retention", "limit": -1 },
+        { "id": "analytics-retention", "limit": 30 },
+        { "id": "tracing-retention", "limit": 30 },
+        { "id": "changelog-retention", "limit": 30 },
+        { "id": "breaking-change-retention", "limit": 90 },
         { "id": "trace-sampling-rate", "limit": 0.1 },
         { "id": "oidc" }
       ]
