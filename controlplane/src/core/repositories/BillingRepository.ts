@@ -66,11 +66,17 @@ export class BillingRepository {
 
   public async listPlans(): Promise<BillingPlanDTO[]> {
     const plans = await this.db.query.billingPlans.findMany({
-      where: not(eq(billingPlans.active, false)),
+      where: eq(billingPlans.active, true),
+      columns: {
+        id: true,
+        name: true,
+        price: true,
+        features: true,
+      },
       orderBy: [asc(billingPlans.weight)],
     });
 
-    return plans.map(({ active, features, ...plan }) => {
+    return plans.map(({ features, ...plan }) => {
       return {
         ...plan,
         features: features.filter(({ description }) => !!description) as unknown as {
