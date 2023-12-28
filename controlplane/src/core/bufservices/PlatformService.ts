@@ -14,11 +14,13 @@ import {
   CheckSubgraphSchemaResponse,
   CompositionError,
   CreateAPIKeyResponse,
+  CreateCheckoutSessionResponse,
   CreateFederatedGraphResponse,
   CreateFederatedGraphTokenResponse,
   CreateFederatedSubgraphResponse,
   CreateIntegrationResponse,
   CreateOIDCProviderResponse,
+  CreateOrganizationResponse,
   CreateOrganizationWebhookConfigResponse,
   DateRange,
   DeleteAPIKeyResponse,
@@ -32,6 +34,7 @@ import {
   ForceCheckSuccessResponse,
   GetAPIKeysResponse,
   GetAnalyticsViewResponse,
+  GetBillingPlansResponse,
   GetChangelogBySchemaVersionResponse,
   GetCheckDetailsResponse,
   GetCheckOperationsResponse,
@@ -86,6 +89,7 @@ import {
   UpdateOrganizationWebhookConfigResponse,
   UpdateRBACSettingsResponse,
   UpdateSubgraphResponse,
+  UpgradePlanResponse,
   WhoAmIResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { OpenAIGraphql, isValidUrl } from '@wundergraph/cosmo-shared';
@@ -141,6 +145,7 @@ import {
 } from '../util.js';
 import { FederatedGraphSchemaUpdate, OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
 import { ApiKeyRepository } from '../repositories/ApiKeyRepository.js';
+import { BillingRepository } from '../repositories/BillingRepository.js';
 import { TargetRepository } from '../repositories/TargetRepository.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
@@ -156,6 +161,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
       return handleError<PlainMessage<CreateFederatedGraphResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const orgRepo = new OrganizationRepository(opts.db);
         const orgWebhooks = new OrganizationWebhookService(opts.db, authContext.organizationId, opts.logger);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
@@ -185,6 +191,25 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             response: {
               code: EnumStatusCode.ERR_INVALID_LABELS,
               details: `One or more labels in the matcher were found to be invalid`,
+            },
+            compositionErrors: [],
+          };
+        }
+
+        const count = await fedGraphRepo.count();
+
+        const feature = await orgRepo.getFeature({
+          organizationId: authContext.organizationId,
+          featureId: 'federated-graphs',
+        });
+
+        const limit = feature?.limit === -1 ? undefined : feature?.limit;
+
+        if (limit && count >= limit) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_LIMIT_REACHED,
+              details: `The organization reached the limit of federated graphs`,
             },
             compositionErrors: [],
           };
@@ -447,14 +472,15 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           isInspectable = false;
         }
 
-        for (const composition of result.compositions) {
-          const orgLimits = await orgRepo.getOrganizationLimits({ organizationID: authContext.organizationId });
+        const changeRetention = await orgRepo.getFeature({
+          organizationId: authContext.organizationId,
+          featureId: 'breaking-change-retention',
+        });
 
-          await schemaCheckRepo.createCheckedFederatedGraph(
-            schemaCheckID,
-            composition.id,
-            orgLimits.breakingChangeRetentionLimit,
-          );
+        const limit = changeRetention?.limit ?? 7;
+
+        for (const composition of result.compositions) {
+          await schemaCheckRepo.createCheckedFederatedGraph(schemaCheckID, composition.id, limit);
 
           // We collect composition errors for all federated graphs
           if (composition.errors.length > 0) {
@@ -469,12 +495,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           // We don't collect operation usage when we have composition errors or
           // when we don't have any inspectable changes. That means any breaking change is really breaking
           if (composition.errors.length === 0 && isInspectable && inspectorChanges.length > 0) {
-            if (orgLimits.breakingChangeRetentionLimit <= 0) {
+            if (limit <= 0) {
               continue;
             }
 
             const result = await trafficInspector.inspect(inspectorChanges, {
-              daysToConsider: orgLimits.breakingChangeRetentionLimit,
+              daysToConsider: limit,
               federatedGraphId: composition.id,
               organizationId: authContext.organizationId,
             });
@@ -1478,6 +1504,24 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
+        const memberCount = await orgRepo.memberCount(authContext.organizationId);
+
+        const usersFeature = await orgRepo.getFeature({
+          organizationId: authContext.organizationId,
+          featureId: 'users',
+        });
+
+        const limit = usersFeature?.limit === -1 ? undefined : usersFeature?.limit;
+
+        if (limit && memberCount >= limit) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_LIMIT_REACHED,
+              details: `The user limit for this organization has been reached`,
+            },
+          };
+        }
+
         await opts.keycloakClient.authenticateClient();
 
         const user = await userRepo.byEmail(req.email);
@@ -2221,6 +2265,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db);
 
+        const memberships = await orgRepo.memberships({ userId: authContext.userId });
+        const orgCount = memberships.length;
+
         const org = await orgRepo.byId(authContext.organizationId);
         if (!org) {
           return {
@@ -2255,12 +2302,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        // the personal org cannot be deleted
-        if (org.isPersonal) {
+        // Minimum one organization is required for a user
+        if (orgCount <= 1) {
           return {
             response: {
               code: EnumStatusCode.ERR_NOT_FOUND,
-              details: `Personal organization cannot be deleted.`,
+              details: 'Minimum one organization is required for a user.',
             },
           };
         }
@@ -2327,11 +2374,11 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         }
 
         // the creator of the personal org cannot leave the organization.
-        if (org.isPersonal && org.creatorUserId === (authContext.userId || req.userID)) {
+        if (org.creatorUserId === (authContext.userId || req.userID)) {
           return {
             response: {
               code: EnumStatusCode.ERR_NOT_FOUND,
-              details: `Creator of a personal organization cannot leave the organization.`,
+              details: `Creator of a organization cannot leave the organization.`,
             },
           };
         }
@@ -3252,7 +3299,11 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        await orgRepo.updateRBACSettings(authContext.organizationId, req.enable);
+        await orgRepo.updateFeature({
+          organizationId: authContext.organizationId,
+          id: 'rbac',
+          enabled: req.enable,
+        });
 
         return {
           response: {
@@ -3787,10 +3838,13 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const orgLimits = await orgRepo.getOrganizationLimits({ organizationID: authContext.organizationId });
+        const changelogRetention = await orgRepo.getFeature({
+          organizationId: authContext.organizationId,
+          featureId: 'changelog-retention',
+        });
 
         const { dateRange } = validateDateRanges({
-          limit: orgLimits.changelogDataRetentionLimit,
+          limit: changelogRetention?.limit ?? 7,
           dateRange: req.dateRange,
         });
 
@@ -3844,10 +3898,13 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const orgLimits = await orgRepo.getOrganizationLimits({ organizationID: authContext.organizationId });
+        const breakingChangeRetention = await orgRepo.getFeature({
+          organizationId: authContext.organizationId,
+          featureId: 'breaking-change-retention',
+        });
 
         const { dateRange } = validateDateRanges({
-          limit: orgLimits.breakingChangeRetentionLimit,
+          limit: breakingChangeRetention?.limit ?? 7,
           dateRange: {
             start: req.startDate,
             end: req.endDate,
@@ -4079,9 +4136,13 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const orgLimits = await orgRepo.getOrganizationLimits({ organizationID: authContext.organizationId });
+        const tracingRetention = await orgRepo.getFeature({
+          organizationId: authContext.organizationId,
+          featureId: 'tracing-retention',
+        });
+
         const { range, dateRange } = validateDateRanges({
-          limit: orgLimits.tracingRetentionLimit,
+          limit: tracingRetention?.limit ?? 7,
           range: req.config?.range,
           dateRange: req.config?.dateRange,
         });
@@ -4177,9 +4238,13 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const orgLimits = await orgRepo.getOrganizationLimits({ organizationID: authContext.organizationId });
+        const analyticsRetention = await orgRepo.getFeature({
+          organizationId: authContext.organizationId,
+          featureId: 'analytics-retention',
+        });
+
         const { range, dateRange } = validateDateRanges({
-          limit: orgLimits.analyticsRetentionLimit,
+          limit: analyticsRetention?.limit ?? 7,
           range: req.range,
           dateRange: req.dateRange,
         });
@@ -4232,9 +4297,13 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const orgLimits = await orgRepo.getOrganizationLimits({ organizationID: authContext.organizationId });
+        const analyticsRetention = await orgRepo.getFeature({
+          organizationId: authContext.organizationId,
+          featureId: 'analytics-retention',
+        });
+
         const { range, dateRange } = validateDateRanges({
-          limit: orgLimits.analyticsRetentionLimit,
+          limit: analyticsRetention?.limit ?? 7,
           range: req.range,
           dateRange: req.dateRange,
         });
@@ -4842,10 +4911,13 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const orgLimits = await orgRepo.getOrganizationLimits({ organizationID: authContext.organizationId });
+        const analyticsRetention = await orgRepo.getFeature({
+          organizationId: authContext.organizationId,
+          featureId: 'analytics-retention',
+        });
 
         const { dateRange } = validateDateRanges({
-          limit: orgLimits.analyticsRetentionLimit,
+          limit: analyticsRetention?.limit ?? 7,
           dateRange: {
             start: req.startDate,
             end: req.endDate,
@@ -5080,22 +5152,169 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const orgRepo = new OrganizationRepository(opts.db);
 
-        const organization = await orgRepo.byId(authContext.organizationId);
-        if (!organization) {
+        const enabled = await orgRepo.isFeatureEnabled(authContext.organizationId, 'rbac');
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          enabled,
+        };
+      });
+    },
+
+    getBillingPlans: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetBillingPlansResponse>>(logger, async () => {
+        const billingRepo = new BillingRepository(opts.db);
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          plans: await billingRepo.listPlans(),
+        };
+      });
+    },
+
+    createOrganization: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+        organizationName: req.name,
+      });
+
+      return handleError<PlainMessage<CreateOrganizationResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const orgRepo = new OrganizationRepository(opts.db);
+        const billingRepo = new BillingRepository(opts.db);
+
+        const plans = await billingRepo.listPlans();
+
+        if (plans?.length && !plans.some((plan) => plan.id === req.plan && 'stripePriceId' in plan)) {
           return {
             response: {
-              code: EnumStatusCode.ERR_NOT_FOUND,
-              details: `Organization not found`,
+              code: EnumStatusCode.ERR,
+              details: 'Invalid plan',
             },
-            enabled: false,
           };
+        }
+
+        const organization = await orgRepo.createOrganization({
+          organizationName: req.name,
+          organizationSlug: req.slug,
+          ownerID: authContext.userId,
+        });
+
+        const orgMember = await orgRepo.addOrganizationMember({
+          organizationID: organization.id,
+          userID: authContext.userId,
+        });
+
+        await orgRepo.addOrganizationMemberRoles({
+          memberID: orgMember.id,
+          roles: ['admin'],
+        });
+
+        let sessionId;
+        if (plans?.length) {
+          const session = await billingRepo.createCheckoutSession({
+            organizationId: organization.id,
+            organizationSlug: organization.slug,
+            plan: req.plan,
+          });
+          sessionId = session.id;
         }
 
         return {
           response: {
             code: EnumStatusCode.OK,
           },
-          enabled: organization.isRBACEnabled || false,
+          organization: {
+            id: organization.id,
+            name: organization.name,
+            slug: organization.slug,
+            createdAt: organization.createdAt,
+            creatorUserId: organization.creatorUserId,
+          },
+          stripeSessionId: sessionId,
+        };
+      });
+    },
+
+    createCheckoutSession: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<CreateCheckoutSessionResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const billingRepo = new BillingRepository(opts.db);
+
+        const session = await billingRepo.createCheckoutSession({
+          organizationId: authContext.organizationId,
+          organizationSlug: authContext.organizationSlug,
+          plan: req.plan,
+        });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          sessionId: session.id,
+        };
+      });
+    },
+
+    upgradePlan: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<UpgradePlanResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const billingRepo = new BillingRepository(opts.db);
+
+        await billingRepo.upgradePlan({
+          organizationId: authContext.organizationId,
+          plan: req.plan,
+        });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+        };
+      });
+    },
+
+    createBillingPortalSession: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<CreateCheckoutSessionResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const billingRepo = new BillingRepository(opts.db);
+
+        const session = await billingRepo.createBillingPortalSession({
+          organizationId: authContext.organizationId,
+          organizationSlug: authContext.organizationSlug,
+        });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          sessionId: session.id,
+          url: session.url,
         };
       });
     },

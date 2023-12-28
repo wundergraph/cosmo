@@ -65,6 +65,11 @@ spec:
                 configMapKeyRef:
                   name: {{ include "studio.fullname" . }}
                   key: customHeadScripts
+            - name: NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "studio.fullname" . }}
+                  key: stripePublishableKey
           ports:
             - name: http
               containerPort: {{ .Values.service.port }}

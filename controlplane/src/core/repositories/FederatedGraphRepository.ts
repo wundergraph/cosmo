@@ -228,6 +228,16 @@ export class FederatedGraphRepository {
     return federatedGraphs;
   }
 
+  public async count(): Promise<number> {
+    const result = await this.db
+      .select({ count: sql<number>`cast(count(${targets.id}) as int)` })
+      .from(schema.targets)
+      .where(and(eq(schema.targets.type, 'federated'), eq(schema.targets.organizationId, this.organizationId)))
+      .execute();
+
+    return result[0]?.count || 0;
+  }
+
   public async targetByName(name: string): Promise<Target | undefined> {
     const resp = await this.db.query.targets.findFirst({
       where: and(
