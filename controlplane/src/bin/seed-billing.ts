@@ -23,7 +23,7 @@ const billingSchema = z.object({
         z.object({
           id: z.string(),
           description: z.string().optional(),
-          limit: z.number().optional(),
+          limit: z.number().gt(0).optional(),
         }),
       ),
     }),
