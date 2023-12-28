@@ -71,6 +71,7 @@ export class BillingRepository {
         id: true,
         name: true,
         price: true,
+        stripePriceId: true,
         features: true,
       },
       orderBy: [asc(billingPlans.weight)],
