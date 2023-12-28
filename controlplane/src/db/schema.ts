@@ -10,9 +10,9 @@ import {
   timestamp,
   uniqueIndex,
   uuid,
-  decimal,
   unique,
   customType,
+  real,
 } from 'drizzle-orm/pg-core';
 
 // JSON/JSONB custom types to workaround insert bug
@@ -747,10 +747,7 @@ export const organizationFeatures = pgTable(
       }),
     feature: text('feature').notNull(),
     enabled: boolean('enabled').default(true),
-    limit: decimal('limit', {
-      precision: 4,
-      scale: 2,
-    }),
+    limit: real('limit'),
   },
   (t) => {
     return {

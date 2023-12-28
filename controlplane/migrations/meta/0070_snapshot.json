@@ -1,7 +1,7 @@
 {
   "version": "5",
   "dialect": "pg",
-  "id": "a4b022d5-1795-4809-a87e-e9bbcf12e02d",
+  "id": "40b66690-b14b-41d9-b618-a5b208b092de",
   "prevId": "39f98685-71a8-43e4-aa83-f83ad0093fb6",
   "tables": {
     "api_key_resources": {
@@ -1217,7 +1217,7 @@
         },
         "limit": {
           "name": "limit",
-          "type": "numeric(4, 2)",
+          "type": "real",
           "primaryKey": false,
           "notNull": false
         }
