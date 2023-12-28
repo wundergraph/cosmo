@@ -111,10 +111,10 @@
         { "id": "sso", "description": "Single Sign-On (SSO)" },
         { "id": "security", "description": "Advanced Security & Compliance" },
         { "id": "support", "description": "Dedicated Priority Support" },
-        { "id": "analytics-retention", "limit": 90 },
-        { "id": "tracing-retention", "limit": 90 },
-        { "id": "changelog-retention", "limit": 150 },
-        { "id": "breaking-change-retention", "limit": 150 },
+        { "id": "analytics-retention", "limit": 30 },
+        { "id": "tracing-retention", "limit": 30 },
+        { "id": "changelog-retention", "limit": 30 },
+        { "id": "breaking-change-retention", "limit": 90 },
         { "id": "trace-sampling-rate", "limit": 0.1 },
         { "id": "oidc" }
       ]
