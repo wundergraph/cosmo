@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.48.0](https://github.com/wundergraph/cosmo/compare/router@0.47.3...router@0.48.0) (2023-12-28)
+
+### Features
+
+* billing and limit refactoring ([#371](https://github.com/wundergraph/cosmo/issues/371)) ([0adfee1](https://github.com/wundergraph/cosmo/commit/0adfee146017a10c6e787a08723ef4d03ddf0f96)) (@Pagebakers)
+
 ## [0.47.3](https://github.com/wundergraph/cosmo/compare/router@0.47.2...router@0.47.3) (2023-12-27)
 
 ### Bug Fixes
