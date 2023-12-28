@@ -7,7 +7,28 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
+import { z } from 'zod';
+
 import * as schema from '../db/schema.js';
+
+const billingSchema = z.object({
+  plans: z.record(
+    z.object({
+      name: z.string(),
+      price: z.number(),
+      active: z.boolean(),
+      weight: z.number(),
+      stripePriceId: z.string().optional(),
+      features: z.array(
+        z.object({
+          id: z.string(),
+          description: z.string(),
+          limit: z.number().optional(),
+        }),
+      ),
+    }),
+  ),
+});
 
 const databaseConnectionUrl = process.env.DB_URL || 'postgresql://postgres:changeme@localhost:5432/controlplane';
 
@@ -20,20 +41,9 @@ const seedBilling = async () => {
     : path.join(path.dirname(fileURLToPath(import.meta.url)), 'billing.json');
 
   const data = readFileSync(configPath, 'utf8');
-  const json = JSON.parse(data);
+  const json = billingSchema.parse(JSON.parse(data));
 
-  const entries = Object.entries<{
-    name: string;
-    price: number;
-    active: boolean;
-    weight: number;
-    stripePriceId?: string;
-    features: {
-      id: string;
-      description: string;
-      limit?: number;
-    }[];
-  }>(json.plans);
+  const entries = Object.entries(json.plans);
 
   for (const [id, plan] of entries) {
     const values = {
