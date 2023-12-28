@@ -1,6 +1,7 @@
 import { UserContext } from "@/components/app-provider";
 import { EmptyState } from "@/components/empty-state";
 import { getDashboardLayout } from "@/components/layout/dashboard-layout";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -11,7 +12,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Loader } from "@/components/ui/loader";
 import { useToast } from "@/components/ui/use-toast";
+import { useFeature } from "@/hooks/use-feature";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
+import { useUser } from "@/hooks/use-user";
 import { NextPageWithLayout } from "@/lib/page";
 import { cn, getHighestPriorityRole } from "@/lib/utils";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
@@ -25,6 +28,8 @@ import {
   updateOrgMemberRole,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { sentenceCase } from "change-case";
+import Link from "next/link";
+import { useRouter } from "next/router";
 import { useContext } from "react";
 import { HiOutlineDotsVertical } from "react-icons/hi";
 import { z } from "zod";
@@ -285,7 +290,12 @@ const MemberCard = ({
 };
 
 const MembersPage: NextPageWithLayout = () => {
-  const user = useContext(UserContext);
+  const user = useUser();
+  const router = useRouter();
+  const organizationSlug = router.query.organizationSlug as string;
+
+  const usersFeature = useFeature("users");
+
   const { data, isLoading, error, refetch } = useQuery({
     ...getOrganizationMembers.useQuery(),
     queryKey: [
@@ -316,9 +326,28 @@ const MembersPage: NextPageWithLayout = () => {
   );
   const isAdmin = currentUser?.roles.includes("admin");
 
+  const limitReached =
+    usersFeature?.limit &&
+    usersFeature?.limit > 0 &&
+    data.members.length >= usersFeature?.limit;
+
   return (
     <div className="flex flex-col gap-y-6">
-      {isAdmin && <InviteForm refresh={() => refetch()} />}
+      {!limitReached && isAdmin && <InviteForm refresh={() => refetch()} />}
+      {limitReached && isAdmin && (
+        <Alert className="flex flex-row">
+          <div className="flex-1">
+            <AlertTitle>User limit reached</AlertTitle>
+            <AlertDescription>
+              You&apos;ve added {data.members.length} of {usersFeature?.limit}{" "}
+              users, please upgrade your account to increase your limits.
+            </AlertDescription>
+          </div>
+          <Button variant="outline" asChild>
+            <Link href={`/${organizationSlug}/billing`}>View plans</Link>
+          </Button>
+        </Alert>
+      )}
       <div className="flex flex-col divide-y rounded-md border">
         {data.members?.map((member) => {
           return (

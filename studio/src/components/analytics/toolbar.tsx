@@ -18,6 +18,7 @@ import {
 import { useContext } from "react";
 import { UserContext } from "../app-provider";
 import { Spacer } from "../ui/spacer";
+import { useFeature } from "@/hooks/use-feature";
 
 export const AnalyticsToolbar: React.FC<{
   tab: string;
@@ -55,6 +56,8 @@ export const AnalyticsToolbar: React.FC<{
     }
   };
 
+  const retention = useFeature("analytics-retention");
+
   return (
     <Toolbar>
       <Tabs value={props.tab} className="w-full md:w-auto">
@@ -88,19 +91,21 @@ export const AnalyticsToolbar: React.FC<{
         </TabsList>
       </Tabs>
       <Spacer />
-      <Button variant="ghost" className="flex items-center gap-x-2">
-        <TooltipProvider>
-          <Tooltip delayDuration={200}>
-            <TooltipTrigger>
-              <BsQuestionCircle />
-            </TooltipTrigger>
-            <TooltipContent>{`Your current data retention is ${
-              user?.currentOrganization.limits.analyticsRetentionLimit || 7
-            } days. Please get in touch with us to increase the limit.`}</TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-        <Link href={calURL}>Increase data retention</Link>
-      </Button>
+      {retention?.limit ? (
+        <Button variant="ghost" className="flex items-center gap-x-2">
+          <TooltipProvider>
+            <Tooltip delayDuration={200}>
+              <TooltipTrigger>
+                <BsQuestionCircle />
+              </TooltipTrigger>
+              <TooltipContent>{`Your current data retention is ${
+                retention?.limit || 7
+              } days. Please get in touch with us to increase the limit.`}</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <Link href={calURL}>Increase data retention</Link>
+        </Button>
+      ) : null}
       {props.children}
     </Toolbar>
   );

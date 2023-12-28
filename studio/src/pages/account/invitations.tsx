@@ -103,7 +103,8 @@ const InvitationsPage: NextPageWithLayout = () => {
     return (
       <EmptyState
         icon={<InformationCircleIcon />}
-        title="No invitations found"
+        title="No invitations"
+        description="You have no invitations to other organizations."
         className="pt-16"
       />
     );

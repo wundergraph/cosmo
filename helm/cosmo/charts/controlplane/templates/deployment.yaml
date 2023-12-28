@@ -192,17 +192,31 @@ spec:
                 secretKeyRef:
                   name: {{ include "controlplane.fullname" . }}-secret
                   key: s3StorageUrl
-            - name: SMTP_USERNAME
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "controlplane.fullname" . }}-secret
-                  key: smtpUsername
             - name: SMTP_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: {{ include "controlplane.fullname" . }}-secret
                   key: smtpPassword
-
+            - name: SMTP_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-secret
+                  key: smtpUsername
+            - name: STRIPE_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-secret
+                  key: stripeSecretKey
+            - name: STRIPE_WEBHOOK_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-secret
+                  key: stripeWebhookSecret
+            - name: DEFAULT_PLAN
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "controlplane.fullname" . }}-configmap
+                  key: defaultBillingPlan
           ports:
             - name: http
               containerPort: {{ .Values.service.port }}

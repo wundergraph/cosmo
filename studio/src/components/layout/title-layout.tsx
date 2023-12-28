@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 
 export interface TitleLayoutProps {
   title: React.ReactNode;
-  subtitle: string;
+  subtitle: React.ReactNode;
   items?: React.ReactNode;
   toolbar?: React.ReactNode;
   noPadding?: boolean;

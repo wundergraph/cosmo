@@ -58,6 +58,7 @@ import { useApplyParams } from "./use-apply-params";
 import { getDefaultSort, useSyncTableWithQuery } from "./useSyncTableWithQuery";
 import { cn } from "@/lib/utils";
 import { useUser } from "@/hooks/use-user";
+import { useFeatureLimit } from "@/hooks/use-feature-limit";
 
 export function AnalyticsDataTable<T>({
   tableRef,
@@ -313,6 +314,8 @@ export function AnalyticsDataTable<T>({
     applyNewParams(newQueryParams, ["sort", "sortDir"]);
   };
 
+  const tracingRetention = useFeatureLimit("tracing-retention", 7);
+
   return (
     <div>
       <div className="flex flex-row flex-wrap items-start gap-y-2">
@@ -321,9 +324,7 @@ export function AnalyticsDataTable<T>({
             range={selectedRange}
             dateRange={selectedDateRange}
             onChange={onDateRangeChange}
-            calendarDaysLimit={
-              user?.currentOrganization.limits.tracingRetentionLimit || 7
-            }
+            calendarDaysLimit={tracingRetention}
           />
           <AnalyticsFilters filters={filtersList} />
         </div>

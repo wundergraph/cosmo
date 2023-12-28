@@ -291,7 +291,7 @@ services:
       API_KEY: cosmo_669b576aaadc10ee1ae81d9193425705
       DB_URL: "postgresql://postgres:changeme@postgres:5432/controlplane"
       USER_EMAIL: foo@wundergraph.com
-      USER_PASSWORD: bar
+      USER_PASSWORD: wunder@123
       USER_FIRSTNAME: foo
       USER_LASTNAME: bar
       ORGANIZATION_NAME: wundergraph

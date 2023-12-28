@@ -35,6 +35,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useFeatureLimit } from "@/hooks/use-feature-limit";
 import useWindowSize from "@/hooks/use-window-size";
 import {
   formatDurationMetric,
@@ -875,7 +876,6 @@ const ErrorRateOverTimeCard = () => {
 const OverviewToolbar = () => {
   const graphContext = useContext(GraphContext);
   const client = useQueryClient();
-  const user = useContext(UserContext);
 
   const { filters, range, dateRange, refreshInterval } =
     useAnalyticsQueryState();
@@ -942,6 +942,8 @@ const OverviewToolbar = () => {
     });
   };
 
+  const analyticsRetention = useFeatureLimit("analytics-retention", 7);
+
   return (
     <div className="flex flex-col gap-2 space-y-2">
       <div className="flex gap-2">
@@ -950,9 +952,7 @@ const OverviewToolbar = () => {
             range={range}
             dateRange={dateRange}
             onChange={onDateRangeChange}
-            calendarDaysLimit={
-              user?.currentOrganization.limits.analyticsRetentionLimit || 7
-            }
+            calendarDaysLimit={analyticsRetention}
           />
 
           <MetricsFilters filters={data?.filters ?? []} />

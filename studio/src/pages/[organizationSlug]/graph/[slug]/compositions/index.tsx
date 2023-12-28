@@ -33,6 +33,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useFeatureLimit } from "@/hooks/use-feature-limit";
 import { useUser } from "@/hooks/use-user";
 import { formatDateTime } from "@/lib/format-date";
 import { NextPageWithLayout } from "@/lib/page";
@@ -141,13 +142,7 @@ const CompositionsPage: NextPageWithLayout = () => {
         <TableBody>
           {data.compositions.length !== 0 ? (
             data.compositions.map(
-              ({
-                id,
-                isComposable,
-                createdAt,
-                createdBy,
-                isLatestValid,
-              }) => {
+              ({ id, isComposable, createdAt, createdBy, isLatestValid }) => {
                 const path = `${router.asPath.split("?")[0]}/${id}`;
                 return (
                   <TableRow
@@ -309,14 +304,17 @@ const CompositionToolbar = () => {
     });
   };
 
+  const breakingChangeRetention = useFeatureLimit(
+    "breaking-change-retention",
+    7,
+  );
+
   return (
     <Toolbar>
       <DatePickerWithRange
         dateRange={{ start: startDate, end: endDate }}
         onChange={onDateRangeChange}
-        calendarDaysLimit={
-          user?.currentOrganization.limits.breakingChangeRetentionLimit || 7
-        }
+        calendarDaysLimit={breakingChangeRetention}
       />
     </Toolbar>
   );

@@ -967,6 +967,77 @@ message UpdateOrgMemberRoleResponse {
   Response response = 1;
 }
 
+message CreateOrganizationRequest {
+  string name = 1;
+  string slug = 2;
+  string plan = 3;
+}
+
+message CreateOrganizationResponse {
+  Response response = 1;
+  optional Organization organization = 2;
+  optional string stripeSessionId = 3;
+}
+
+message Organization {
+  string id = 1;
+  string name = 2;
+  string slug = 3;
+  string creatorUserId = 4;
+  string createdAt = 5;
+}
+
+/**
+ * Billing
+ */
+message GetBillingPlansRequest {
+}
+
+message GetBillingPlansResponse {
+  message BillingPlanFeature {
+    string id = 1;
+    string description = 3;
+    optional int32 limit = 4;
+  }
+
+  message BillingPlan {
+    string id = 1;
+    string name = 2;
+    int32 price = 3;
+    repeated BillingPlanFeature features = 4;
+  }
+
+  Response response = 1;
+  repeated BillingPlan plans = 2;
+}
+
+message CreateCheckoutSessionRequest {
+  string plan = 1;
+}
+
+message CreateCheckoutSessionResponse {
+  Response response = 1;
+  string sessionId = 2;
+}
+
+message CreateBillingPortalSessionRequest {
+
+}
+
+message CreateBillingPortalSessionResponse {
+  Response response = 1;
+  string sessionId = 2;
+  string url = 3;
+}
+
+message UpgradePlanRequest {
+  string plan = 1;
+}
+
+message UpgradePlanResponse {
+  Response response = 1;
+}
+
 /**
  * MetricsDashboard
  */
@@ -1456,7 +1527,6 @@ service PlatformService {
   rpc AddReadme(AddReadmeRequest) returns (AddReadmeResponse) {}
 
   // Analytics
-
   rpc GetAnalyticsView(GetAnalyticsViewRequest) returns (GetAnalyticsViewResponse) {
     option idempotency_level = NO_SIDE_EFFECTS;
   }
@@ -1480,4 +1550,18 @@ service PlatformService {
   }
 
   rpc GetOrganizationRequestsCount(GetOrganizationRequestsCountRequest) returns (GetOrganizationRequestsCountResponse) {}
+
+  rpc CreateOrganization(CreateOrganizationRequest) returns (CreateOrganizationResponse) {}
+
+  //
+  // Billing
+  //-----------------------------------------------------------------------------------------------------------------------------
+  // Return the available billing plans
+  rpc GetBillingPlans(GetBillingPlansRequest) returns (GetBillingPlansResponse) { }
+  // Create a Stripe checkout session
+  rpc CreateCheckoutSession(CreateCheckoutSessionRequest) returns (CreateCheckoutSessionResponse) { }
+  // Create a Stripe billing portal session
+  rpc CreateBillingPortalSession(CreateBillingPortalSessionRequest) returns (CreateBillingPortalSessionResponse) { }
+  // Upgrade the current plan
+  rpc UpgradePlan(UpgradePlanRequest) returns (UpgradePlanResponse) { }
 }

@@ -1,5 +1,23 @@
 import { JWTPayload } from 'jose';
 
+export type Limits = {
+  users: number;
+  'federated-graphs': number;
+  'analytics-retention': number;
+  'tracing-retention': number;
+  'changelog-retention': number;
+  'breaking-change-retention': number;
+  'trace-sampling-rate': number;
+  requests: number;
+  [key: string]: number;
+};
+
+export type Feature = {
+  id: string;
+  enabled?: boolean | null;
+  limit?: number | null;
+};
+
 export interface ListFilterOptions {
   limit: number;
   offset: number;
@@ -107,9 +125,17 @@ export interface OrganizationDTO {
   slug: string;
   creatorUserId: string;
   createdAt: string;
-  isFreeTrial?: boolean;
-  isPersonal?: boolean;
-  isRBACEnabled?: boolean;
+  features?: Feature[];
+  billing?: {
+    plan: string;
+    email?: string;
+  };
+  subscription?: {
+    status: string;
+    trialEnd?: string;
+    currentPeriodEnd?: string;
+    cancelAtPeriodEnd?: boolean;
+  };
 }
 
 export interface UserDTO {
@@ -151,6 +177,17 @@ export interface ResponseMessage {
     code: number;
     details?: string;
   };
+}
+
+export interface BillingPlanDTO {
+  id: string;
+  name: string;
+  price: number;
+  features: {
+    id: string;
+    description: string;
+    limit?: number;
+  }[];
 }
 
 // https://github.com/kamilkisiela/graphql-inspector/blob/f3b9ed7e277f1a4928da7d0fdc212685ff77752a/packages/core/src/diff/changes/change.ts
@@ -289,15 +326,6 @@ export interface SlackAccessTokenResponse {
   slackChannelId: string;
   slackChannelName: string;
   webhookURL: string;
-}
-
-export interface OrganizationLimitsDTO {
-  analyticsRetentionLimit: number;
-  tracingRetentionLimit: number;
-  changelogDataRetentionLimit: number;
-  breakingChangeRetentionLimit: number;
-  traceSamplingRateLimit: number;
-  requestsLimit: number;
 }
 
 export interface ClientDTO {

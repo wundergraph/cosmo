@@ -50,9 +50,10 @@ import {
   TooltipTrigger,
 } from "./ui/tooltip";
 import { useToast } from "./ui/use-toast";
-import { cn } from "@/lib/utils";
 import { InfoCircledIcon } from "@radix-ui/react-icons";
+import { useHas } from "@/hooks/use-has";
 import { useRouter } from "next/router";
+import { useFeature } from "@/hooks/use-feature";
 
 export const Empty = ({ graph }: { graph?: FederatedGraph }) => {
   let label = "team=A";
@@ -107,6 +108,7 @@ export const AddSubgraphUsersContent = ({
   refetchSubgraphMembers: () => void;
 }) => {
   const user = useUser();
+  const rbac = useFeature("rbac");
   const isAdmin = user?.currentOrganization.roles.includes("admin");
   const { mutate: addMember, isPending: addingMember } = useMutation(
     addSubgraphMember.useMutation(),
@@ -144,7 +146,7 @@ export const AddSubgraphUsersContent = ({
 
   return (
     <div className="flex flex-col gap-y-6">
-      {!user?.currentOrganization.isRBACEnabled ? (
+      {!rbac?.enabled ? (
         <div className="mt-4 flex items-center gap-x-2 rounded-lg border !border-primary-foreground px-4 py-2 text-sm text-primary-foreground">
           <InfoCircledIcon className="h-[18px] w-[18px]" />
           <span>Enable RBAC in the settings to add subgraph members.</span>
@@ -166,7 +168,7 @@ export const AddSubgraphUsersContent = ({
             onValueChange={(value) => setInviteeEmail(value)}
             disabled={
               inviteOptions.length === 0 ||
-              !user?.currentOrganization.isRBACEnabled ||
+              !rbac?.enabled ||
               (!isAdmin && !(creatorUserId && creatorUserId === user?.id))
             }
           >
@@ -195,7 +197,7 @@ export const AddSubgraphUsersContent = ({
           disabled={
             inviteOptions.length === 0 ||
             inviteeEmail === "Select the member" ||
-            !user?.currentOrganization.isRBACEnabled ||
+            !rbac?.enabled ||
             (!isAdmin && !(creatorUserId && creatorUserId === user?.id))
           }
           variant="default"
@@ -211,9 +213,8 @@ export const AddSubgraphUsersContent = ({
               return (
                 <TableRow key={userId} className="h-12 py-1">
                   <TableCell className="px-4 font-medium">{email}</TableCell>
-                  {(isAdmin ||
-                    (creatorUserId && creatorUserId === user?.id)) &&
-                    user?.currentOrganization.isRBACEnabled && (
+                  {(isAdmin || (creatorUserId && creatorUserId === user?.id)) &&
+                    rbac?.enabled && (
                       <TableCell className="flex h-12 items-center justify-end px-4">
                         <Button
                           variant="ghost"
@@ -341,7 +342,7 @@ export const SubgraphsTable = ({
   graph?: FederatedGraph;
   subgraphs: Subgraph[];
 }) => {
-  const user = useUser();
+  const rbac = useHas("rbac");
   const router = useRouter();
   const organizationSlug = router.query.organizationSlug;
 
@@ -357,9 +358,7 @@ export const SubgraphsTable = ({
           <TableHead className="w-2/12 px-4 text-right">
             Last Published
           </TableHead>
-          {user?.currentOrganization.isRBACEnabled && (
-            <TableHead className="w-1/12"></TableHead>
-          )}
+          {rbac && <TableHead className="w-1/12"></TableHead>}
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -396,7 +395,7 @@ export const SubgraphsTable = ({
                     : "Never"}
                 </TableCell>
                 <TableCell className="flex">
-                  {user?.currentOrganization.isRBACEnabled && (
+                  {rbac && (
                     <AddSubgraphUsers
                       subgraphName={name}
                       creatorUserId={creatorUserId}

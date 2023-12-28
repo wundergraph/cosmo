@@ -13,3 +13,4 @@ data:
   studioWebUrl: "{{ .Values.global.studio.webUrl }}"
   slackClientId: "{{ .Values.configuration.slackClientId }}"
   customHeadScripts: "{{ .Values.configuration.customHeadScripts }}"
+  stripePublishableKey: "{{ .Values.configuration.stripePublishableKey }}"

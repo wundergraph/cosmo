@@ -6,7 +6,7 @@ import { ApiKeyRepository } from '../repositories/ApiKeyRepository.js';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import { SubgraphRepository } from '../repositories/SubgraphRepository.js';
-import { AuthContext } from '../../types/index.js';
+import { AuthContext, OrganizationDTO } from '../../types/index.js';
 
 export class Authorization {
   constructor() {}
@@ -48,7 +48,7 @@ export class Authorization {
       }
 
       // checking if rbac is enabled, if not return
-      if (!organization.isRBACEnabled) {
+      if (!orgRepo.isFeatureEnabled(organization.id, 'rbac')) {
         return;
       }
 

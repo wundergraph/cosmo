@@ -51,13 +51,13 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof NodeSe
           };
         }
 
-        const org = await orgRepo.getOrganizationLimits({
+        const limits = await orgRepo.getOrganizationLimits({
           organizationID: authContext.organizationId,
         });
 
         const registrationInfo: PlainMessage<RegistrationInfo> = {
           accountLimits: {
-            traceSamplingRate: org.traceSamplingRateLimit,
+            traceSamplingRate: limits['trace-sampling-rate'],
           },
           graphPublicKey: publicKey,
         };

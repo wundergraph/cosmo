@@ -484,6 +484,13 @@
       "when": 1702564500994,
       "tag": "0068_spicy_ghost_rider",
       "breakpoints": true
+    },
+    {
+      "idx": 69,
+      "version": "5",
+      "when": 1703676058653,
+      "tag": "0069_whole_scorpion",
+      "breakpoints": true
     }
   ]
 }

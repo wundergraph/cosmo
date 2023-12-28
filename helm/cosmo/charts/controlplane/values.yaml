@@ -163,3 +163,8 @@ configuration:
   s3StorageUrl: "http://minio:changeme@minio.wundergraph.local:9000/cosmo"
   smtpUsername: ""
   smtpPassword: ""
+  stripeSecretKey: ""
+  stripeWebhookSecret: ""
+  # -- The default billing plan, eg `developer@1`
+  defaultBillingPlan: ""
+
