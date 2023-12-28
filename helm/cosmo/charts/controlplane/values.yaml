@@ -166,5 +166,5 @@ configuration:
   stripeSecretKey: ""
   stripeWebhookSecret: ""
   # -- The default billing plan, eg `developer@1`
-  defaultPlan: ""
+  defaultBillingPlan: ""
 

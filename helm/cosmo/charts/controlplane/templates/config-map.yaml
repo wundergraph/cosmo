@@ -25,4 +25,4 @@ data:
   githubAppClientId: "{{ .Values.configuration.githubAppClientId }}"
   githubAppId: "{{ .Values.configuration.githubAppId }}"
   slackAppClientId: "{{ .Values.configuration.slackAppClientId }}"
-  defaultPlan: "{{ .Values.configuration.defaultPlan }}"
+  defaultBillingPlan: "{{ .Values.configuration.defaultBillingPlan }}"
