@@ -100,7 +100,7 @@ export class BillingRepository {
     });
   }
 
-  public async hasFeature(planId = 'developer@1', feature: string) {
+  public async hasFeature(planId: string, feature: string) {
     const plan = await this.getPlanById(planId);
     return !!plan?.features?.find((f) => f.id === feature);
   }
