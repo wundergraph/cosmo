@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { CLI } from "@/components/ui/cli";
 import { Loader } from "@/components/ui/loader";
 import { Toolbar } from "@/components/ui/toolbar";
+import { useFeatureLimit } from "@/hooks/use-feature-limit";
 import { docsBaseURL } from "@/lib/constants";
 import { formatDateTime } from "@/lib/format-date";
 import { NextPageWithLayout } from "@/lib/page";
@@ -75,15 +76,15 @@ const ChangelogToolbar = () => {
     [router],
   );
 
+  const changelogRetention = useFeatureLimit("changelog-retention", 7);
+
   return (
     <Toolbar>
       <DatePickerWithRange
         dateRange={{ start: startDate, end: endDate }}
         onChange={onDateRangeChange}
         align="start"
-        calendarDaysLimit={
-          user?.currentOrganization.limits.changelogDataRetentionLimit || 7
-        }
+        calendarDaysLimit={changelogRetention}
       />
     </Toolbar>
   );

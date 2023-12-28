@@ -13,6 +13,7 @@ import fastifyDatabase from './plugins/database.js';
 import fastifyClickHouse from './plugins/clickhouse.js';
 import AuthController from './controllers/auth.js';
 import GitHubWebhookController from './controllers/github.js';
+import StripeWebhookController from './controllers/stripe.js';
 import { pkceCodeVerifierCookieName, userSessionCookieName } from './crypto/jwt.js';
 import ApiKeyAuthenticator from './services/ApiKeyAuthenticator.js';
 import WebSessionAuthenticator from './services/WebSessionAuthenticator.js';
@@ -28,6 +29,7 @@ import { S3BlobStorage } from './blobstorage/index.js';
 import Mailer from './services/Mailer.js';
 import { OrganizationInvitationRepository } from './repositories/OrganizationInvitationRepository.js';
 import { Authorization } from './services/Authorization.js';
+import { BillingRepository } from './repositories/BillingRepository.js';
 
 export interface BuildConfig {
   logger: LoggerOptions;
@@ -74,6 +76,10 @@ export interface BuildConfig {
   s3StorageUrl: string;
   smtpUsername?: string;
   smtpPassword?: string;
+  stripe?: {
+    secret: string;
+    webhookSecret?: string;
+  };
 }
 
 const developmentLoggerOpts: LoggerOptions = {
@@ -182,6 +188,13 @@ export default async function build(opts: BuildConfig) {
     mailerClient = new Mailer({ username: opts.smtpUsername, password: opts.smtpPassword });
   }
 
+  // required to verify webhook payloads
+  await fastify.register(import('fastify-raw-body'), {
+    field: 'rawBody',
+    global: false,
+    encoding: 'utf8',
+  });
+
   let githubApp: App | undefined;
   if (opts.githubApp?.clientId) {
     githubApp = new App({
@@ -199,6 +212,16 @@ export default async function build(opts: BuildConfig) {
       prefix: '/webhook/github',
       githubRepository,
       webhookSecret: opts.githubApp?.webhookSecret ?? '',
+      logger: log,
+    });
+  }
+
+  if (opts.stripe?.webhookSecret) {
+    const billingRepository = new BillingRepository(fastify.db);
+    await fastify.register(StripeWebhookController, {
+      prefix: '/webhook/stripe',
+      billingRepository,
+      webhookSecret: opts.stripe.webhookSecret,
       logger: log,
     });
   }

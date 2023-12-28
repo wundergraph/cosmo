@@ -28,21 +28,31 @@ export interface Organization {
   id: string;
   name: string;
   slug: string;
-  isPersonal: boolean;
-  isFreeTrial: boolean;
-  isRBACEnabled: boolean;
+  plan?: string;
+  creatorUserId: string;
   roles: string[];
   createdAt: string;
-  limits: OrganizationLimitsDTO;
-}
-
-interface OrganizationLimitsDTO {
-  analyticsRetentionLimit: number;
-  tracingRetentionLimit: number;
-  changelogDataRetentionLimit: number;
-  breakingChangeRetentionLimit: number;
-  traceSamplingRateLimit: number;
-  requestsLimit: number;
+  features: {
+    id: string;
+    enabled?: boolean;
+    limit?: number;
+  }[];
+  billing: {
+    plan: string;
+    email?: string;
+  };
+  subscription?: {
+    status:
+      | "active"
+      | "canceled"
+      | "trialing"
+      | "incomplete"
+      | "incomplete_expired"
+      | "past_due";
+    currentPeriodEnd: string;
+    cancelAtPeriodEnd: boolean;
+    trialEnd: string;
+  };
 }
 
 export interface Session {

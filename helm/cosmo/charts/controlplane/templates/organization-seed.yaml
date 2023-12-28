@@ -73,7 +73,6 @@ spec:
                 secretKeyRef:
                   name: {{ include "controlplane.fullname" . }}-secret
                   key: databaseUrl
-
             - name: USER_EMAIL
               value: "{{ .Values.global.seed.userEmail }}"
             - name: USER_PASSWORD

@@ -82,16 +82,6 @@ export async function seedTest(databaseConnectionUrl: string, userTestData: User
     targetIds: [],
   });
 
-  await orgRepo.addOrganizationLimits({
-    organizationID: insertedOrg.id,
-    analyticsRetentionLimit: 7,
-    tracingRetentionLimit: 7,
-    changelogDataRetentionLimit: 7,
-    breakingChangeRetentionLimit: 7,
-    traceSamplingRateLimit: 0.1,
-    requestsLimit: 10,
-  });
-
   await queryConnection.end({
     timeout: 3,
   });
