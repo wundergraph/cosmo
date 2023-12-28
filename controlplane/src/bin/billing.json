@@ -30,7 +30,7 @@
       "name": "Launch",
       "price": 499,
       "active": true,
-      "stripePriceId": "price_1OMuHkKHknvMloVzmo5roKDD",
+      "stripePriceId": "price_1OOfA8KHknvMloVz2OZrmrqI",
       "weight": 1,
       "features": [
         { "id": "router", "description": "Self-Hosted Router" },
