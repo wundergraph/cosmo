@@ -20,7 +20,6 @@
     "db:custom": "drizzle-kit generate:pg --custom --config=drizzle.config.ts",
     "db:check": "drizzle-kit check:pg --config=drizzle.config.ts",
     "db:drop": "drizzle-kit drop --config=drizzle.config.ts",
-    "db:studio": "drizzle-kit studio --config=drizzle-studio.config.ts",
     "start": "NODE_ENV=production node dist/index.js",
     "test": "pnpm lint && tsc -p tsconfig.test.json && vitest run --reporter=default --reporter=hanging-process",
     "lint": "eslint --cache --ext .ts,.mjs,.cjs . && prettier -c src",
