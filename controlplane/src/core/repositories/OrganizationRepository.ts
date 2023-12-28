@@ -25,7 +25,7 @@ import {
   organizationBilling,
   billingSubscriptions,
 } from '../../db/schema.js';
-import { Feature, OrganizationDTO, OrganizationMemberDTO, WebhooksConfigDTO } from '../../types/index.js';
+import { Feature, Limits, OrganizationDTO, OrganizationMemberDTO, WebhooksConfigDTO } from '../../types/index.js';
 import { BillingRepository, defaultPlan } from './BillingRepository.js';
 
 /**
@@ -978,6 +978,6 @@ export class OrganizationRepository {
       }
     }
 
-    return limits;
+    return limits as Limits;
   }
 }

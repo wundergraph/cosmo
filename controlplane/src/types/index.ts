@@ -1,5 +1,17 @@
 import { JWTPayload } from 'jose';
 
+export type Limits = {
+  users: number;
+  'federated-graphs': number;
+  'analytics-retention': number;
+  'tracing-retention': number;
+  'changelog-retention': number;
+  'breaking-change-retention': number;
+  'trace-sampling-rate': number;
+  requests: number;
+  [key: string]: number;
+};
+
 export type Feature = {
   id: string;
   enabled?: boolean | null;
