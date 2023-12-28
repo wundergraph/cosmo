@@ -30,7 +30,7 @@
       "name": "Launch",
       "price": 499,
       "active": true,
-      "stripePriceId": "price_1OOfA8KHknvMloVz2OZrmrqI",
+      "stripePriceId": "price_1OOfANKHknvMloVzGQsIPwBP",
       "weight": 1,
       "features": [
         { "id": "router", "description": "Self-Hosted Router" },
@@ -57,7 +57,7 @@
       "name": "Scale",
       "price": 999,
       "active": true,
-      "stripePriceId": "price_1OMuNXKHknvMloVzJ0Agipof",
+      "stripePriceId": "price_1OOfA8KHknvMloVz2OZrmrqI",
       "weight": 2,
       "features": [
         { "id": "router", "description": "Self-Hosted Router" },
