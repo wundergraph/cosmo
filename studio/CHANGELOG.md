@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.47.0](https://github.com/wundergraph/cosmo/compare/studio@0.46.0...studio@0.47.0) (2023-12-29)
+
+### Features
+
+* remove deprecated columns ([#397](https://github.com/wundergraph/cosmo/issues/397)) ([35e456a](https://github.com/wundergraph/cosmo/commit/35e456a14ee0bfc57fc50c520787dc7f486e6b72)) (@Pagebakers)
+
 # [0.46.0](https://github.com/wundergraph/cosmo/compare/studio@0.45.0...studio@0.46.0) (2023-12-28)
 
 ### Features
