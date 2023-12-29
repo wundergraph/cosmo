@@ -90,20 +90,15 @@ export class BillingRepository {
   }
 
   public async getPlanById(id: string) {
-    return await this.db.query.billingPlans.findFirst({
+    return this.db.query.billingPlans.findFirst({
       where: eq(billingPlans.id, id),
     });
   }
 
   public async getPlanByPriceId(priceId: string) {
-    return await this.db.query.billingPlans.findFirst({
+    return this.db.query.billingPlans.findFirst({
       where: and(eq(billingPlans.stripePriceId, priceId), not(eq(billingPlans.active, false))),
     });
-  }
-
-  public async hasFeature(planId: string, feature: string) {
-    const plan = await this.getPlanById(planId);
-    return !!plan?.features?.find((f) => f.id === feature);
   }
 
   public async createCheckoutSession(params: { organizationId: string; organizationSlug: string; plan: string }) {
