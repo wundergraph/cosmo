@@ -30,6 +30,8 @@ import {
 import { CgDanger } from "react-icons/cg";
 import { IoWarningOutline } from "react-icons/io5";
 import { useFeatureLimit } from "@/hooks/use-feature-limit";
+import { useRouter } from "next/router";
+import { useCurrentOrganization } from "@/hooks/use-current-organization";
 
 const valueFormatter = (number: number) => `${formatMetric(number)}`;
 
@@ -292,17 +294,25 @@ const UsagesPage: NextPageWithLayout = () => {
   );
 };
 
+const IncreaseLimits = () => {
+  const router = useRouter();
+
+  const slug = router.query.organizationSlug as string;
+
+  return (
+    <Button asChild variant="outline">
+      <Link href={`/${slug}/billing`}>Increase limits</Link>
+    </Button>
+  );
+};
+
 UsagesPage.getLayout = (page) => {
   return getDashboardLayout(
     page,
     "Usage",
     "Usage and limits of the current billing cycle",
     <>
-      <Button asChild variant="outline">
-        <Link href={calURL} target="_blank" rel="noreferrer">
-          Increase limits
-        </Link>
-      </Button>
+      <IncreaseLimits />
     </>,
   );
 };
