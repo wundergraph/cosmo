@@ -10,9 +10,9 @@ import {
   timestamp,
   uniqueIndex,
   uuid,
-  decimal,
   unique,
   customType,
+  real,
 } from 'drizzle-orm/pg-core';
 
 // JSON/JSONB custom types to workaround insert bug
@@ -596,18 +596,6 @@ export const organizations = pgTable('organizations', {
     .references(() => users.id)
     .notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  /**
-   * @deprecated
-   */
-  isPersonal: boolean('is_personal'),
-  /**
-   * @deprecated
-   */
-  isFreeTrial: boolean('is_free_trial'),
-  /**
-   * @deprecated
-   */
-  isRBACEnabled: boolean('is_rbac_enabled'),
 });
 
 export const organizationBilling = pgTable(
@@ -759,7 +747,7 @@ export const organizationFeatures = pgTable(
       }),
     feature: text('feature').notNull(),
     enabled: boolean('enabled').default(true),
-    limit: integer('limit'),
+    limit: real('limit'),
   },
   (t) => {
     return {
@@ -767,25 +755,6 @@ export const organizationFeatures = pgTable(
     };
   },
 );
-
-/**
- * @deprecated
- * Use organizationFeatures instead
- */
-export const organizationLimits = pgTable('organization_limits', {
-  id: uuid('id').notNull().primaryKey().defaultRandom(),
-  organizationId: uuid('organization_id')
-    .notNull()
-    .references(() => organizations.id, {
-      onDelete: 'cascade',
-    }),
-  requestsLimit: integer('requests_limit').notNull().default(10), // requestsLimit is in millions
-  analyticsRetentionLimit: integer('analytics_retention_limit').notNull().default(7),
-  tracingRetentionLimit: integer('tracing_retention_limit').notNull().default(7),
-  changelogDataRetentionLimit: integer('changelog_data_retention_limit').notNull().default(7),
-  breakingChangeRetentionLimit: integer('breaking_change_retention_limit').notNull().default(7),
-  traceSamplingRateLimit: decimal('trace_sampling_rate_limit', { precision: 3, scale: 2 }).notNull().default('0.10'),
-});
 
 export const organizationInvitations = pgTable('organization_invitations', {
   id: uuid('id').notNull().primaryKey().defaultRandom(),
