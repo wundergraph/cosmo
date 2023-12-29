@@ -4,6 +4,17 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.50.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.49.0...controlplane@0.50.0) (2023-12-29)
+
+### Bug Fixes
+
+* avoid -1 in limits, ensure always limits ([#396](https://github.com/wundergraph/cosmo/issues/396)) ([fe7de2d](https://github.com/wundergraph/cosmo/commit/fe7de2d5d7b10d0b3ae8283b3d225b8df6cf1345)) (@StarpTech)
+* make description optionally ([#395](https://github.com/wundergraph/cosmo/issues/395)) ([78c4bce](https://github.com/wundergraph/cosmo/commit/78c4bce26bd4439e8c37a91cb0d85d95e310612a)) (@StarpTech)
+
+### Features
+
+* remove deprecated columns ([#397](https://github.com/wundergraph/cosmo/issues/397)) ([35e456a](https://github.com/wundergraph/cosmo/commit/35e456a14ee0bfc57fc50c520787dc7f486e6b72)) (@Pagebakers)
+
 # [0.49.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.48.0...controlplane@0.49.0) (2023-12-28)
 
 ### Features
