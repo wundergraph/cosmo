@@ -26,12 +26,7 @@ const plugin: FastifyPluginCallback<WebhookControllerOptions> = function StripeW
       }
 
       const signature = req.headers['stripe-signature'] as string;
-
-      const event = await opts.billingRepository.stripe.webhooks.constructEvent(
-        req.rawBody,
-        signature,
-        opts.webhookSecret,
-      );
+      const event = opts.billingRepository.stripe.webhooks.constructEvent(req.rawBody, signature, opts.webhookSecret);
 
       if (relevantEvents.has(event.type)) {
         try {
@@ -42,11 +37,7 @@ const plugin: FastifyPluginCallback<WebhookControllerOptions> = function StripeW
             case 'customer.subscription.updated':
             case 'customer.subscription.deleted': {
               const subscription = event.data.object as Stripe.Subscription;
-              await opts.billingRepository.syncSubscriptionStatus(
-                subscription.id,
-                subscription.customer as string,
-                event.type === 'customer.subscription.created',
-              );
+              await opts.billingRepository.syncSubscriptionStatus(subscription.id, subscription.customer as string);
               break;
             }
             case 'checkout.session.completed': {
@@ -56,7 +47,6 @@ const plugin: FastifyPluginCallback<WebhookControllerOptions> = function StripeW
                 await opts.billingRepository.syncSubscriptionStatus(
                   subscriptionId as string,
                   checkoutSession.customer as string,
-                  true,
                 );
               }
               break;

@@ -189,7 +189,7 @@ export class BillingRepository {
       .where(eq(organizationBilling.organizationId, params.organizationId));
   }
 
-  syncSubscriptionStatus = async (subscriptionId: string, customerId: string, isCreateEvent?: boolean) => {
+  syncSubscriptionStatus = async (subscriptionId: string, customerId: string) => {
     const billing = await this.db.query.organizationBilling.findFirst({
       where: eq(organizationBilling.stripeCustomerId, customerId),
       columns: {

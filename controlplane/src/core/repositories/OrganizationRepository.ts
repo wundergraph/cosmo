@@ -963,21 +963,23 @@ export class OrganizationRepository {
     const features = await this.getFeatures({ organizationId: input.organizationID });
 
     // fallback limits @todo: think of a better way to make this dynamic
-    const limits: Record<string, number> = {
+    const limits: Limits = {
       'analytics-retention': 7,
       'tracing-retention': 7,
       'changelog-retention': 7,
       'breaking-change-retention': 7,
       'trace-sampling-rate': 0.1,
+      'federated-graphs': 1,
+      users: 1,
       requests: 10,
     };
 
     for (const feature of features) {
-      if (feature.limit !== undefined && feature.limit !== null) {
+      if (feature.limit && feature.limit > 0) {
         limits[feature.id] = feature.limit;
       }
     }
 
-    return limits as Limits;
+    return limits;
   }
 }
