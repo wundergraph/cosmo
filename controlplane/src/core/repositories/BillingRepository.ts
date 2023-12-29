@@ -89,13 +89,13 @@ export class BillingRepository {
     });
   }
 
-  public async getPlanById(id: string) {
+  public getPlanById(id: string) {
     return this.db.query.billingPlans.findFirst({
       where: eq(billingPlans.id, id),
     });
   }
 
-  public async getPlanByPriceId(priceId: string) {
+  public getPlanByPriceId(priceId: string) {
     return this.db.query.billingPlans.findFirst({
       where: and(eq(billingPlans.stripePriceId, priceId), not(eq(billingPlans.active, false))),
     });
