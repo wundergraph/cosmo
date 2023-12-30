@@ -110,7 +110,7 @@ const UsagesPage: NextPageWithLayout = () => {
     ],
   });
 
-  const requestLimitRaw = useFeatureLimit("requests", 10);
+  const requestLimitRaw = useFeatureLimit("requests", 1000);
   const requestLimit = requestLimitRaw === -1 ? -1 : requestLimitRaw * 10 ** 6;
 
   if (isLoading) return <Loader fullscreen />;
@@ -229,7 +229,7 @@ const UsagesPage: NextPageWithLayout = () => {
                   Users
                 </dt>
                 <dd className="w-1/3 px-2 text-right text-sm font-medium">
-                  <FeatureLimit id="users" fallback={1} />
+                  <FeatureLimit id="users" fallback={25} />
                 </dd>
               </div>
               <div className="flex">
