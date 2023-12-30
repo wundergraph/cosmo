@@ -426,7 +426,8 @@ export class OrganizationRepository {
     return (
       billingPlan?.features?.map(({ id, limit }) => {
         const feature = orgFeatures.find((f) => f.id === id);
-        if (feature) {
+        // Only override the limit if the feature is enabled
+        if (feature?.enabled) {
           return {
             ...feature,
             limit: feature.limit || limit,
@@ -976,6 +977,7 @@ export class OrganizationRepository {
     };
 
     for (const feature of features) {
+      // Only override the limit if the feature is enabled
       if (feature.enabled && feature.limit && feature.limit > 0) {
         limits[feature.id] = feature.limit;
       }
