@@ -24,7 +24,7 @@ export class BillingRepository {
     });
   }
 
-  private createOrRetrieveCustomerId = async ({ id, email }: { id: string; email?: string }) => {
+  private createStripeCustomer = async ({ id, email }: { id: string; email?: string }) => {
     const billing = await this.db.query.organizationBilling.findFirst({
       where: eq(organizationBilling.organizationId, id),
       columns: {
@@ -109,7 +109,7 @@ export class BillingRepository {
       throw new Error('Invalid billing plan');
     }
 
-    const customerId = await this.createOrRetrieveCustomerId({
+    const customerId = await this.createStripeCustomer({
       id: params.organizationId,
     });
 
