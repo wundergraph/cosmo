@@ -24,7 +24,7 @@ export class BillingRepository {
     });
   }
 
-  private upsertStripeCustomerId = async ({ id, email }: { id: string; email?: string }) => {
+  private upsertStripeCustomerId = async ({ id }: { id: string; email?: string }) => {
     const billing = await this.db.query.organizationBilling.findFirst({
       where: eq(organizationBilling.organizationId, id),
       columns: {
