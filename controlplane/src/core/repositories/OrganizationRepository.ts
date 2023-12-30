@@ -962,20 +962,21 @@ export class OrganizationRepository {
   public async getOrganizationLimits(input: { organizationID: string }) {
     const features = await this.getFeatures({ organizationId: input.organizationID });
 
-    // fallback limits @todo: think of a better way to make this dynamic
+    // Fallback when no plan or features are set
+    // TODO: Find a better way to handle this dynamically
     const limits: Limits = {
-      'analytics-retention': 7,
-      'tracing-retention': 7,
-      'changelog-retention': 7,
-      'breaking-change-retention': 7,
-      'trace-sampling-rate': 0.1,
-      'federated-graphs': 1,
-      users: 1,
-      requests: 10,
+      'analytics-retention': 30,
+      'tracing-retention': 30,
+      'changelog-retention': 30,
+      'breaking-change-retention': 90,
+      'trace-sampling-rate': 1,
+      'federated-graphs': 25,
+      users: 25,
+      requests: 1000,
     };
 
     for (const feature of features) {
-      if (feature.limit && feature.limit > 0) {
+      if (feature.enabled && feature.limit && feature.limit > 0) {
         limits[feature.id] = feature.limit;
       }
     }
