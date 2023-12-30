@@ -7,7 +7,7 @@ import {
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { and, asc, eq, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { MemberRole } from '../../db/models.js';
+import { MemberRole, NewOrganizationFeature } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
 import {
   apiKeys,
@@ -482,7 +482,7 @@ export class OrganizationRepository {
       organizationId: string;
     } & Feature,
   ) {
-    const feature: any = {
+    const feature: NewOrganizationFeature = {
       feature: input.id,
       organizationId: input.organizationId,
     };
