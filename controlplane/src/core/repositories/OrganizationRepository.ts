@@ -948,13 +948,15 @@ export class OrganizationRepository {
       );
   }
 
-  public async addOrganizationBilling(input: { organizationID: string; email: string; plan: string }) {
+  public async addOrganizationBilling(input: { organizationId: string; email: string; plan?: string }) {
+    const { organizationId, plan = defaultPlan, email } = input;
+
     await this.db
       .insert(organizationBilling)
       .values({
-        organizationId: input.organizationID,
-        plan: input.plan,
-        email: input.email,
+        organizationId,
+        plan,
+        email,
       })
       .execute();
   }

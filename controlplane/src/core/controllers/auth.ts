@@ -264,8 +264,7 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
             });
 
             await orgRepo.addOrganizationBilling({
-              organizationID: insertedOrg.id,
-              plan: 'developer',
+              organizationId: insertedOrg.id,
               email: userEmail, // default to the owner's email
             });
           });
