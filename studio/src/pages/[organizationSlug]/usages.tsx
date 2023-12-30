@@ -237,7 +237,7 @@ const UsagesPage: NextPageWithLayout = () => {
                   Federated graphs
                 </dt>
                 <dd className="w-1/3 px-2 text-right text-sm font-medium">
-                  <FeatureLimit id="federated-graphs" fallback={1} />
+                  <FeatureLimit id="federated-graphs" fallback={25} />
                 </dd>
               </div>
               <div className="flex">
@@ -245,7 +245,7 @@ const UsagesPage: NextPageWithLayout = () => {
                   Analytics Data Retention
                 </dt>
                 <dd className="w-1/3 px-2 text-right text-sm font-medium">
-                  <FeatureLimit id="analytics-retention" fallback={7} /> days
+                  <FeatureLimit id="analytics-retention" fallback={30} /> days
                 </dd>
               </div>
               <div className="flex">
@@ -253,7 +253,7 @@ const UsagesPage: NextPageWithLayout = () => {
                   Tracing Data Retention
                 </dt>
                 <dd className="w-1/3 px-2 text-right text-sm font-medium">
-                  <FeatureLimit id="tracing-retention" fallback={7} /> days
+                  <FeatureLimit id="tracing-retention" fallback={30} /> days
                 </dd>
               </div>
               <div className="flex">
@@ -261,7 +261,7 @@ const UsagesPage: NextPageWithLayout = () => {
                   Breaking Changes Retention
                 </dt>
                 <dd className="w-1/3 px-2 text-right text-sm font-medium">
-                  <FeatureLimit id="breaking-change-retention" fallback={7} />{" "}
+                  <FeatureLimit id="breaking-change-retention" fallback={90} />{" "}
                   days
                 </dd>
               </div>
@@ -270,7 +270,7 @@ const UsagesPage: NextPageWithLayout = () => {
                   Changelog Data Retention
                 </dt>
                 <dd className="w-1/3 px-2 text-right text-sm font-medium">
-                  <FeatureLimit id="changelog-retention" fallback={7} /> days
+                  <FeatureLimit id="changelog-retention" fallback={30} /> days
                 </dd>
               </div>
               <div className="flex">
@@ -281,7 +281,7 @@ const UsagesPage: NextPageWithLayout = () => {
                   <FeatureLimit
                     id="trace-sampling-rate"
                     multiplier={100}
-                    fallback={0.1 * 100}
+                    fallback={1}
                   />
                   %
                 </dd>
