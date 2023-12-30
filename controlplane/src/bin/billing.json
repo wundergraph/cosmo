@@ -95,7 +95,7 @@
       "weight": 3,
       "features": [
         { "id": "router", "description": "Self-Hosted Enterprise Router" },
-        { "id": "users", "description": "Users", "limit": 100 },
+        { "id": "users", "description": "Unlimited Users", "limit": 100 },
         {
           "id": "federated-graphs",
           "description": "Unlimited Federated Graphs",
@@ -105,6 +105,11 @@
           "id": "requests",
           "description": "Unlimited Requests per month",
           "limit": 2000
+        },
+        {
+          "id": "retention",
+          "description": "Unlimited days of Data Retention",
+          "limit": 365
         },
         { "id": "rbac", "description": "Role-based Access Control" },
         { "id": "sla", "description": "99.99% SLA" },
