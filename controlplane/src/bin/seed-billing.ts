@@ -49,7 +49,7 @@ const seedBilling = async () => {
 
   for (const [id, plan] of entries) {
     const values: NewBillingPlan = {
-      id: id as FeatureIds,
+      id: id,
       name: plan.name,
       price: plan.price,
       active: plan.active,
