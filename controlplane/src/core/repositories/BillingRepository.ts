@@ -5,6 +5,7 @@ import { organizationBilling, billingSubscriptions, billingPlans } from '../../d
 
 import { BillingPlanDTO } from '../../types/index.js';
 import { toISODateTime } from '../webhooks/utils.js';
+import { NewBillingSubscription } from '../../db/models.js';
 
 export const defaultPlan = process.env.DEFAULT_PLAN;
 
@@ -202,7 +203,8 @@ export class BillingRepository {
       expand: ['default_payment_method', 'customer'],
     });
 
-    const values = {
+    const values: NewBillingSubscription = {
+      id: subscriptionId,
       organizationId: billing.organizationId,
       metadata: subscription.metadata,
       status: subscription.status,
@@ -219,15 +221,17 @@ export class BillingRepository {
       trialEnd: subscription.trial_end ? toISODateTime(subscription.trial_end) : null,
     };
 
+    const { id, ...updatedFields } = values;
+
     await this.db
       .insert(billingSubscriptions)
       .values({
         id: subscriptionId,
-        ...values,
+        ...updatedFields,
       })
       .onConflictDoUpdate({
         target: billingSubscriptions.id,
-        set: values,
+        set: updatedFields,
       });
 
     const plan = await this.getPlanByPriceId(subscription.items.data[0].price.id);

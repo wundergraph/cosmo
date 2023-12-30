@@ -1964,8 +1964,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const userMemberships = await orgRepo.memberships({ userId: user.id });
         const userPendingInvitations = await orgInvitationRepo.getPendingInvitationsOfUser({ userId: user.id });
 
-        // delete the user only when user doesnt have any memberships and pending invitations
-        // this will happen only when the user was invited but the user didnt login and the admin removed that user,
+        // delete the user only when user doesn't have any memberships and pending invitations
+        // this will happen only when the user was invited but the user didn't login and the admin removed that user,
         // in this case the user will not have a personal org
         if (userMemberships.length === 0 && userPendingInvitations.length === 0) {
           // deleting the user from keycloak

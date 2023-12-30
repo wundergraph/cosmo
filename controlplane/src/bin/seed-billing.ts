@@ -10,6 +10,8 @@ import postgres from 'postgres';
 import { z } from 'zod';
 
 import * as schema from '../db/schema.js';
+import type { FeatureIds } from '../types/index.js';
+import { NewBillingPlan } from '../db/models.js';
 
 const billingSchema = z.object({
   plans: z.record(
@@ -46,14 +48,17 @@ const seedBilling = async () => {
   const entries = Object.entries(json.plans);
 
   for (const [id, plan] of entries) {
-    const values = {
-      id,
+    const values: NewBillingPlan = {
+      id: id as FeatureIds,
       name: plan.name,
       price: plan.price,
       active: plan.active,
       weight: plan.weight,
       stripePriceId: 'stripePriceId' in plan ? plan.stripePriceId : undefined,
-      features: plan.features,
+      features: plan.features.map((feature) => ({
+        ...feature,
+        id: feature.id as FeatureIds,
+      })),
     };
 
     await db

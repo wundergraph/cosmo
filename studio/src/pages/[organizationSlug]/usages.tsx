@@ -123,7 +123,8 @@ const UsagesPage: NextPageWithLayout = () => {
     ],
   });
 
-  const requestLimit = useFeatureLimit("requests", 1000);
+  const requestLimitRaw = useFeatureLimit("requests", 1000);
+  const requestLimit = requestLimitRaw === -1 ? -1 : requestLimitRaw * 10 ** 6;
 
   if (isLoading) return <Loader fullscreen />;
 
@@ -153,10 +154,11 @@ const UsagesPage: NextPageWithLayout = () => {
           : requestLimit - Number(data.count),
     },
   ];
+  const currentUsagePct = chartData[0].usage / requestLimit;
 
   return (
     <div className="flex flex-col gap-y-4">
-      {requestLimit > 0 && chartData[0].usage / requestLimit === 1 ? (
+      {requestLimit > 0 && currentUsagePct === 1 ? (
         <div className="flex items-center gap-x-2 rounded-lg border !border-destructive px-4 py-2 text-destructive">
           <CgDanger size={20} className="text-destructive" />
           <span>
@@ -175,7 +177,7 @@ const UsagesPage: NextPageWithLayout = () => {
             to upgrade.
           </span>
         </div>
-      ) : requestLimit > 0 && chartData[0].usage / requestLimit >= 0.9 ? (
+      ) : requestLimit > 0 && currentUsagePct >= 0.9 ? (
         <div className="flex items-center gap-x-2 rounded-lg border !border-amber-400 px-4 py-2 text-amber-400">
           <IoWarningOutline size={20} />
           <span>
@@ -194,7 +196,7 @@ const UsagesPage: NextPageWithLayout = () => {
             to upgrade.
           </span>
         </div>
-      ) : requestLimit > 0 && chartData[0].usage / requestLimit >= 0.75 ? (
+      ) : requestLimit > 0 && currentUsagePct >= 0.75 ? (
         <div className="flex items-center gap-x-2 rounded-lg border !border-amber-400 px-4 py-2 text-amber-400">
           <IoWarningOutline size={20} />
           <span>
