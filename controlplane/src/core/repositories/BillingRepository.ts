@@ -240,6 +240,7 @@ export class BillingRepository {
         });
       }
       // Give users a grace period to update their payment method
+      // After the grace period, the subscription will be marked as canceled
       else if (subscription.status !== 'past_due') {
         // Remove the plan if the subscription is no longer active
         await this.db.update(organizationBilling).set({
