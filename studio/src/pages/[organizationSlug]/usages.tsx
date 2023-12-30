@@ -12,7 +12,6 @@ import { Separator } from "@/components/ui/separator";
 import { calURL } from "@/lib/constants";
 import { formatMetric } from "@/lib/format-metric";
 import { NextPageWithLayout } from "@/lib/page";
-import { cn } from "@/lib/utils";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { useQuery } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
@@ -24,6 +23,7 @@ import {
   BarChart,
   Legend,
   ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
@@ -31,9 +31,26 @@ import { CgDanger } from "react-icons/cg";
 import { IoWarningOutline } from "react-icons/io5";
 import { useFeatureLimit } from "@/hooks/use-feature-limit";
 import { useRouter } from "next/router";
-import { useCurrentOrganization } from "@/hooks/use-current-organization";
+import { cn } from "@/lib/utils";
 
 const valueFormatter = (number: number) => `${formatMetric(number)}`;
+
+const FeatureLimitTooltip = ({
+  usage,
+  capacity,
+}: {
+  usage: number;
+  capacity?: number;
+}) => {
+  return (
+    <div>
+      <p className="text-[#82ca9d]">Usage: {formatMetric(usage)}</p>
+      {capacity ? (
+        <p className="text-[#8884d8]">Capacity: {formatMetric(capacity)}</p>
+      ) : null}
+    </div>
+  );
+};
 
 const FeatureLimit = ({
   id,
@@ -75,22 +92,18 @@ export const CustomBarChart = ({
         {data[0].capacity ? (
           <Bar dataKey="capacity" stackId="a" fill="#8884d8" name="Capacity" />
         ) : null}
-        <ChartTooltip
+        <Tooltip
           formatter={valueFormatter}
           position={{ y: 100 }}
+          wrapperClassName={cn(
+            tooltipWrapperClassName,
+            "flex flex-col gap-y-2",
+          )}
           content={
-            <div
-              className={cn(tooltipWrapperClassName, "flex flex-col gap-y-2")}
-            >
-              <p className="text-[#82ca9d]">
-                Usage: {formatMetric(data[0].usage)}
-              </p>
-              {data[0].capacity ? (
-                <p className="text-[#8884d8]">
-                  Capacity: {formatMetric(data[0].capacity)}
-                </p>
-              ) : null}
-            </div>
+            <FeatureLimitTooltip
+              usage={data[0].usage}
+              capacity={data[0].capacity}
+            />
           }
         />
         <Legend />
@@ -110,8 +123,7 @@ const UsagesPage: NextPageWithLayout = () => {
     ],
   });
 
-  const requestLimitRaw = useFeatureLimit("requests", 1000);
-  const requestLimit = requestLimitRaw === -1 ? -1 : requestLimitRaw * 10 ** 6;
+  const requestLimit = useFeatureLimit("requests", 1000);
 
   if (isLoading) return <Loader fullscreen />;
 
