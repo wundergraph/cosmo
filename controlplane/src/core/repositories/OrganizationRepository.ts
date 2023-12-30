@@ -978,7 +978,7 @@ export class OrganizationRepository {
       // Only override the limit if the feature is enabled with a valid limit
       if (feature.enabled && feature.limit && feature.limit > 0) {
         list[feature.id] = feature.limit;
-      } else {
+      } else if (typeof list[feature.id] === 'boolean') {
         // Enable or disable the boolean feature
         list[feature.id] = feature.enabled || false;
       }
