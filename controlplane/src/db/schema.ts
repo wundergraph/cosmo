@@ -609,7 +609,6 @@ export const organizationBilling = pgTable(
         onDelete: 'cascade',
       }),
     plan: text('plan'),
-    email: text('email'),
     stripeCustomerId: text('stripe_customer_id'),
   },
   (t) => {

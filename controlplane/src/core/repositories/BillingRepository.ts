@@ -29,7 +29,6 @@ export class BillingRepository {
       where: eq(organizationBilling.organizationId, id),
       columns: {
         id: true,
-        email: true,
         plan: true,
         stripeCustomerId: true,
       },
@@ -43,7 +42,6 @@ export class BillingRepository {
       metadata: {
         cosmoOrganizationId: id,
       },
-      email, // this can be undefined, we'll update it after upgrading the plan
     });
 
     await this.db
@@ -51,14 +49,12 @@ export class BillingRepository {
       .values({
         organizationId: id,
         stripeCustomerId: customer.id,
-        email,
       })
       .onConflictDoUpdate({
         target: organizationBilling.id,
         set: {
           organizationId: id,
           stripeCustomerId: customer.id,
-          email,
         },
       });
 

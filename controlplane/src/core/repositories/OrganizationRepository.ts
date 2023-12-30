@@ -204,7 +204,6 @@ export class OrganizationRepository {
         createdAt: organizations.createdAt,
         billing: {
           plan: organizationBilling.plan,
-          email: organizationBilling.email,
         },
         subscription: {
           status: billingSubscriptions.status,
@@ -238,7 +237,6 @@ export class OrganizationRepository {
           billing: plan
             ? {
                 plan,
-                email: org.billing?.email || undefined,
               }
             : undefined,
           subscription: org.subscription
