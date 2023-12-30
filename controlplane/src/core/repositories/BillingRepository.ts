@@ -233,9 +233,17 @@ export class BillingRepository {
     const plan = await this.getPlanByPriceId(subscription.items.data[0].price.id);
 
     if (plan) {
-      await this.db.update(organizationBilling).set({
-        plan: plan.id,
-      });
+      // Set the plan if the subscription is active or trialing (has to be set manually on the product)
+      if (subscription.status === 'active' || subscription.status === 'trialing') {
+        await this.db.update(organizationBilling).set({
+          plan: plan.id,
+        });
+      } else {
+        // Remove the plan if the subscription is no longer active or trialing
+        await this.db.update(organizationBilling).set({
+          plan: null,
+        });
+      }
     }
   };
 }
