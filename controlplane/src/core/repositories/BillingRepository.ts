@@ -238,8 +238,10 @@ export class BillingRepository {
         await this.db.update(organizationBilling).set({
           plan: plan.id,
         });
-      } else {
-        // Remove the plan if the subscription is no longer active or trialing
+      }
+      // Give users a grace period to update their payment method
+      else if (subscription.status !== 'past_due') {
+        // Remove the plan if the subscription is no longer active
         await this.db.update(organizationBilling).set({
           plan: null,
         });
