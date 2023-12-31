@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.50.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.50.1...controlplane@0.50.2) (2023-12-31)
+
+### Bug Fixes
+
+* create keycloak groups when creating organization ([#400](https://github.com/wundergraph/cosmo/issues/400)) ([67be8a6](https://github.com/wundergraph/cosmo/commit/67be8a6a0b5df3a608367669dcb64c52ec1ec335)) (@StarpTech)
+
 ## [0.50.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.50.0...controlplane@0.50.1) (2023-12-31)
 
 **Note:** Version bump only for package controlplane
