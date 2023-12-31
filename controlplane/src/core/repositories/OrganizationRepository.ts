@@ -659,14 +659,8 @@ export class OrganizationRepository {
       .where(and(eq(organizationWebhooks.id, input.id), eq(organizationWebhooks.organizationId, input.organizationId)));
   }
 
-  public async deleteOrganization(organizationID: string) {
-    await this.db.transaction(async (tx) => {
-      const orgRepo = new OrganizationRepository(tx);
-
-      await orgRepo.deleteOrganizationResources(organizationID);
-
-      await tx.delete(organizations).where(eq(organizations.id, organizationID)).execute();
-    });
+  public deleteOrganization(organizationID: string) {
+    return this.db.delete(organizations).where(eq(organizations.id, organizationID)).execute();
   }
 
   public async updateUserRole(input: {
@@ -697,13 +691,6 @@ export class OrganizationRepository {
     }
 
     return orgAdmins;
-  }
-
-  public async deleteOrganizationResources(organizationID: string) {
-    await this.db.transaction(async (tx) => {
-      await tx.delete(apiKeys).where(eq(apiKeys.organizationId, organizationID)).execute();
-      await tx.delete(targets).where(eq(targets.organizationId, organizationID)).execute();
-    });
   }
 
   public async createIntegration(input: {
