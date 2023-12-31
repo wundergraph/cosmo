@@ -235,17 +235,23 @@ export class BillingRepository {
     if (plan) {
       // Set the plan if the subscription is active or trialing (has to be set manually on the product)
       if (subscription.status === 'active' || subscription.status === 'trialing') {
-        await this.db.update(organizationBilling).set({
-          plan: plan.id,
-        });
+        await this.db
+          .update(organizationBilling)
+          .set({
+            plan: plan.id,
+          })
+          .where(eq(organizationBilling.organizationId, billing.organizationId));
       }
       // Give users a grace period to update their payment method
       // After the grace period, the subscription will be marked as canceled
       else if (subscription.status !== 'past_due') {
         // Remove the plan if the subscription is no longer active
-        await this.db.update(organizationBilling).set({
-          plan: null,
-        });
+        await this.db
+          .update(organizationBilling)
+          .set({
+            plan: null,
+          })
+          .where(eq(organizationBilling.organizationId, billing.organizationId));
       }
     }
   };
