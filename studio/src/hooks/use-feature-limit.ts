@@ -2,7 +2,7 @@ import { useFeature } from "./use-feature";
 
 /**
  * Returns the limit of feature for the current organization or the organization with the given id.
- * @param feature The feature id
+ * @param featureId The feature id
  * @param fallback Optional fallback value
  * @param orgId Optional organization id, defaults to the current organization
  * @returns The feature or undefined

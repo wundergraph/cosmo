@@ -5,6 +5,7 @@ import { organizationBilling, billingSubscriptions, billingPlans } from '../../d
 
 import { BillingPlanDTO } from '../../types/index.js';
 import { toISODateTime } from '../webhooks/utils.js';
+import { NewBillingSubscription } from '../../db/models.js';
 
 export const defaultPlan = process.env.DEFAULT_PLAN;
 
@@ -23,12 +24,11 @@ export class BillingRepository {
     });
   }
 
-  private createOrRetrieveCustomerId = async ({ id, email }: { id: string; email?: string }) => {
+  private upsertStripeCustomerId = async ({ id }: { id: string; email?: string }) => {
     const billing = await this.db.query.organizationBilling.findFirst({
       where: eq(organizationBilling.organizationId, id),
       columns: {
         id: true,
-        email: true,
         plan: true,
         stripeCustomerId: true,
       },
@@ -42,7 +42,6 @@ export class BillingRepository {
       metadata: {
         cosmoOrganizationId: id,
       },
-      email, // this can be undefined, we'll update it after upgrading the plan
     });
 
     await this.db
@@ -50,14 +49,12 @@ export class BillingRepository {
       .values({
         organizationId: id,
         stripeCustomerId: customer.id,
-        email,
       })
       .onConflictDoUpdate({
         target: organizationBilling.id,
         set: {
           organizationId: id,
           stripeCustomerId: customer.id,
-          email,
         },
       });
 
@@ -89,21 +86,16 @@ export class BillingRepository {
     });
   }
 
-  public async getPlanById(id: string) {
-    return await this.db.query.billingPlans.findFirst({
+  public getPlanById(id: string) {
+    return this.db.query.billingPlans.findFirst({
       where: eq(billingPlans.id, id),
     });
   }
 
-  public async getPlanByPriceId(priceId: string) {
-    return await this.db.query.billingPlans.findFirst({
+  public getPlanByPriceId(priceId: string) {
+    return this.db.query.billingPlans.findFirst({
       where: and(eq(billingPlans.stripePriceId, priceId), not(eq(billingPlans.active, false))),
     });
-  }
-
-  public async hasFeature(planId: string, feature: string) {
-    const plan = await this.getPlanById(planId);
-    return !!plan?.features?.find((f) => f.id === feature);
   }
 
   public async createCheckoutSession(params: { organizationId: string; organizationSlug: string; plan: string }) {
@@ -113,7 +105,7 @@ export class BillingRepository {
       throw new Error('Invalid billing plan');
     }
 
-    const customerId = await this.createOrRetrieveCustomerId({
+    const customerId = await this.upsertStripeCustomerId({
       id: params.organizationId,
     });
 
@@ -189,7 +181,7 @@ export class BillingRepository {
       .where(eq(organizationBilling.organizationId, params.organizationId));
   }
 
-  syncSubscriptionStatus = async (subscriptionId: string, customerId: string, isCreateEvent?: boolean) => {
+  syncSubscriptionStatus = async (subscriptionId: string, customerId: string) => {
     const billing = await this.db.query.organizationBilling.findFirst({
       where: eq(organizationBilling.stripeCustomerId, customerId),
       columns: {
@@ -207,7 +199,8 @@ export class BillingRepository {
       expand: ['default_payment_method', 'customer'],
     });
 
-    const values = {
+    const values: NewBillingSubscription = {
+      id: subscriptionId,
       organizationId: billing.organizationId,
       metadata: subscription.metadata,
       status: subscription.status,
@@ -224,23 +217,36 @@ export class BillingRepository {
       trialEnd: subscription.trial_end ? toISODateTime(subscription.trial_end) : null,
     };
 
+    const { id, ...updatedFields } = values;
+
     await this.db
       .insert(billingSubscriptions)
       .values({
         id: subscriptionId,
-        ...values,
+        ...updatedFields,
       })
       .onConflictDoUpdate({
         target: billingSubscriptions.id,
-        set: values,
+        set: updatedFields,
       });
 
     const plan = await this.getPlanByPriceId(subscription.items.data[0].price.id);
 
     if (plan) {
-      await this.db.update(organizationBilling).set({
-        plan: plan.id,
-      });
+      // Set the plan if the subscription is active or trialing (has to be set manually on the product)
+      if (subscription.status === 'active' || subscription.status === 'trialing') {
+        await this.db.update(organizationBilling).set({
+          plan: plan.id,
+        });
+      }
+      // Give users a grace period to update their payment method
+      // After the grace period, the subscription will be marked as canceled
+      else if (subscription.status !== 'past_due') {
+        // Remove the plan if the subscription is no longer active
+        await this.db.update(organizationBilling).set({
+          plan: null,
+        });
+      }
     }
   };
 }

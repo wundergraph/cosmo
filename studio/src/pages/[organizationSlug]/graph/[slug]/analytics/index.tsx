@@ -13,7 +13,6 @@ import { AnalyticsToolbar } from "@/components/analytics/toolbar";
 import { useApplyParams } from "@/components/analytics/use-apply-params";
 import { useRange } from "@/components/analytics/use-range";
 import { useAnalyticsQueryState } from "@/components/analytics/useAnalyticsQueryState";
-import { UserContext } from "@/components/app-provider";
 import {
   DatePickerWithRange,
   DateRangePickerChangeHandler,
@@ -25,7 +24,6 @@ import {
   GraphPageLayout,
   getGraphLayout,
 } from "@/components/layout/graph-layout";
-import { TitleLayout } from "@/components/layout/title-layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader } from "@/components/ui/loader";

@@ -2,7 +2,7 @@ import { formatNumber } from "./format-number";
 
 export const formatMetric = (
   number: number,
-  options?: Intl.NumberFormatOptions
+  options?: Intl.NumberFormatOptions,
 ) => {
   if (number === 0) {
     return "0";
@@ -25,7 +25,7 @@ export const formatMetric = (
 
 export const formatDurationMetric = (
   number: number,
-  options?: Intl.NumberFormatOptions
+  options?: Intl.NumberFormatOptions,
 ) => {
   if (number === 0) {
     return "0";
@@ -52,7 +52,7 @@ export const formatDurationMetric = (
 
 export const formatPercentMetric = (
   number: number,
-  options?: Intl.NumberFormatOptions
+  options?: Intl.NumberFormatOptions,
 ) => {
   const _options: Intl.NumberFormatOptions = {
     style: "unit",

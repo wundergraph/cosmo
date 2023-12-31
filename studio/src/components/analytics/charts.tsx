@@ -41,7 +41,7 @@ export const tooltipWrapperClassName =
   "rounded-md border !border-popover !bg-popover/60 p-2 text-sm shadow-md outline-0 backdrop-blur-lg";
 
 export const ChartTooltip = (
-  props: TooltipProps<any, any> & { utc?: boolean }
+  props: TooltipProps<any, any> & { utc?: boolean },
 ) => {
   const { utc, ...rest } = props;
   return (

@@ -12,18 +12,18 @@ import { Separator } from "@/components/ui/separator";
 import { calURL } from "@/lib/constants";
 import { formatMetric } from "@/lib/format-metric";
 import { NextPageWithLayout } from "@/lib/page";
-import { cn } from "@/lib/utils";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { useQuery } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { getOrganizationRequestsCount } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import Link from "next/link";
-import { useContext } from "react";
+import React, { useContext } from "react";
 import {
   Bar,
   BarChart,
   Legend,
   ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
@@ -31,7 +31,7 @@ import { CgDanger } from "react-icons/cg";
 import { IoWarningOutline } from "react-icons/io5";
 import { useFeatureLimit } from "@/hooks/use-feature-limit";
 import { useRouter } from "next/router";
-import { useCurrentOrganization } from "@/hooks/use-current-organization";
+import { cn } from "@/lib/utils";
 
 const valueFormatter = (number: number) => `${formatMetric(number)}`;
 
@@ -60,7 +60,7 @@ const FeatureLimit = ({
 export const CustomBarChart = ({
   data,
 }: {
-  data: { usage: number; capacity?: number }[];
+  data: { usage: number; capacity?: number; name: string }[];
 }) => {
   return (
     <ResponsiveContainer width="100%" height={175} className="my-auto text-xs">
@@ -70,28 +70,14 @@ export const CustomBarChart = ({
           domain={[0, (data[0].capacity || 0) + data[0].usage]}
           tickFormatter={valueFormatter}
         />
-        <YAxis type="category" hide={true} />
+        <YAxis type="category" hide />
         <Bar dataKey="usage" stackId="a" fill="#82ca9d" name="Usage" />
         {data[0].capacity ? (
           <Bar dataKey="capacity" stackId="a" fill="#8884d8" name="Capacity" />
         ) : null}
         <ChartTooltip
           formatter={valueFormatter}
-          position={{ y: 100 }}
-          content={
-            <div
-              className={cn(tooltipWrapperClassName, "flex flex-col gap-y-2")}
-            >
-              <p className="text-[#82ca9d]">
-                Usage: {formatMetric(data[0].usage)}
-              </p>
-              {data[0].capacity ? (
-                <p className="text-[#8884d8]">
-                  Capacity: {formatMetric(data[0].capacity)}
-                </p>
-              ) : null}
-            </div>
-          }
+          labelFormatter={() => "Requests"}
         />
         <Legend />
       </BarChart>
@@ -110,7 +96,7 @@ const UsagesPage: NextPageWithLayout = () => {
     ],
   });
 
-  const requestLimitRaw = useFeatureLimit("requests", 10);
+  const requestLimitRaw = useFeatureLimit("requests", 1000);
   const requestLimit = requestLimitRaw === -1 ? -1 : requestLimitRaw * 10 ** 6;
 
   if (isLoading) return <Loader fullscreen />;
@@ -127,8 +113,9 @@ const UsagesPage: NextPageWithLayout = () => {
       />
     );
 
-  const chartData: { usage: number; capacity?: number }[] = [
+  const chartData: { usage: number; capacity?: number; name: string }[] = [
     {
+      name: "Requests",
       usage:
         requestLimit > 0 && Number(data.count) > requestLimit
           ? 0
@@ -141,10 +128,11 @@ const UsagesPage: NextPageWithLayout = () => {
           : requestLimit - Number(data.count),
     },
   ];
+  const currentUsagePct = chartData[0].usage / requestLimit;
 
   return (
     <div className="flex flex-col gap-y-4">
-      {requestLimit > 0 && chartData[0].usage / requestLimit === 1 ? (
+      {requestLimit > 0 && currentUsagePct === 1 ? (
         <div className="flex items-center gap-x-2 rounded-lg border !border-destructive px-4 py-2 text-destructive">
           <CgDanger size={20} className="text-destructive" />
           <span>
@@ -163,7 +151,7 @@ const UsagesPage: NextPageWithLayout = () => {
             to upgrade.
           </span>
         </div>
-      ) : requestLimit > 0 && chartData[0].usage / requestLimit >= 0.9 ? (
+      ) : requestLimit > 0 && currentUsagePct >= 0.9 ? (
         <div className="flex items-center gap-x-2 rounded-lg border !border-amber-400 px-4 py-2 text-amber-400">
           <IoWarningOutline size={20} />
           <span>
@@ -182,7 +170,7 @@ const UsagesPage: NextPageWithLayout = () => {
             to upgrade.
           </span>
         </div>
-      ) : requestLimit > 0 && chartData[0].usage / requestLimit >= 0.75 ? (
+      ) : requestLimit > 0 && currentUsagePct >= 0.75 ? (
         <div className="flex items-center gap-x-2 rounded-lg border !border-amber-400 px-4 py-2 text-amber-400">
           <IoWarningOutline size={20} />
           <span>
@@ -229,7 +217,7 @@ const UsagesPage: NextPageWithLayout = () => {
                   Users
                 </dt>
                 <dd className="w-1/3 px-2 text-right text-sm font-medium">
-                  <FeatureLimit id="users" fallback={1} />
+                  <FeatureLimit id="users" fallback={25} />
                 </dd>
               </div>
               <div className="flex">
@@ -237,7 +225,7 @@ const UsagesPage: NextPageWithLayout = () => {
                   Federated graphs
                 </dt>
                 <dd className="w-1/3 px-2 text-right text-sm font-medium">
-                  <FeatureLimit id="federated-graphs" fallback={1} />
+                  <FeatureLimit id="federated-graphs" fallback={25} />
                 </dd>
               </div>
               <div className="flex">
@@ -245,7 +233,7 @@ const UsagesPage: NextPageWithLayout = () => {
                   Analytics Data Retention
                 </dt>
                 <dd className="w-1/3 px-2 text-right text-sm font-medium">
-                  <FeatureLimit id="analytics-retention" fallback={7} /> days
+                  <FeatureLimit id="analytics-retention" fallback={30} /> days
                 </dd>
               </div>
               <div className="flex">
@@ -253,7 +241,7 @@ const UsagesPage: NextPageWithLayout = () => {
                   Tracing Data Retention
                 </dt>
                 <dd className="w-1/3 px-2 text-right text-sm font-medium">
-                  <FeatureLimit id="tracing-retention" fallback={7} /> days
+                  <FeatureLimit id="tracing-retention" fallback={30} /> days
                 </dd>
               </div>
               <div className="flex">
@@ -261,7 +249,7 @@ const UsagesPage: NextPageWithLayout = () => {
                   Breaking Changes Retention
                 </dt>
                 <dd className="w-1/3 px-2 text-right text-sm font-medium">
-                  <FeatureLimit id="breaking-change-retention" fallback={7} />{" "}
+                  <FeatureLimit id="breaking-change-retention" fallback={90} />{" "}
                   days
                 </dd>
               </div>
@@ -270,7 +258,7 @@ const UsagesPage: NextPageWithLayout = () => {
                   Changelog Data Retention
                 </dt>
                 <dd className="w-1/3 px-2 text-right text-sm font-medium">
-                  <FeatureLimit id="changelog-retention" fallback={7} /> days
+                  <FeatureLimit id="changelog-retention" fallback={30} /> days
                 </dd>
               </div>
               <div className="flex">
@@ -281,7 +269,7 @@ const UsagesPage: NextPageWithLayout = () => {
                   <FeatureLimit
                     id="trace-sampling-rate"
                     multiplier={100}
-                    fallback={0.1 * 100}
+                    fallback={1}
                   />
                   %
                 </dd>

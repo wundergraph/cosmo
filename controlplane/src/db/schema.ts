@@ -14,6 +14,7 @@ import {
   customType,
   real,
 } from 'drizzle-orm/pg-core';
+import { FeatureIds } from '../types/index.js';
 
 // JSON/JSONB custom types to workaround insert bug
 // Should not be used with other drivers than postgres-js
@@ -608,7 +609,6 @@ export const organizationBilling = pgTable(
         onDelete: 'cascade',
       }),
     plan: text('plan'),
-    email: text('email'),
     stripeCustomerId: text('stripe_customer_id'),
   },
   (t) => {
@@ -620,7 +620,7 @@ export const organizationBilling = pgTable(
 );
 
 export type Feature = {
-  id: string;
+  id: FeatureIds;
   description?: string;
   limit?: number;
 };

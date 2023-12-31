@@ -6,7 +6,7 @@ import {
   RequestSeriesItem,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { ClickHouseClient } from '../../clickhouse/index.js';
-import { getDateRange, getEndDate, getGranularity, isoDateRangeToTimestamps } from './util.js';
+import { getDateRange, getGranularity, isoDateRangeToTimestamps } from './util.js';
 
 type TimeFilters = {
   granule: string;
