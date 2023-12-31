@@ -716,7 +716,7 @@ importers:
         specifier: ^11.9.2
         version: 11.9.2(@types/react@18.2.14)(react-dom@18.2.0)(react@18.2.0)
       recharts:
-        specifier: ^2.7.2
+        specifier: ^2.10.3
         version: 2.10.3(prop-types@15.8.1)(react-dom@18.2.0)(react@18.2.0)
       remark-gfm:
         specifier: ^4.0.0
