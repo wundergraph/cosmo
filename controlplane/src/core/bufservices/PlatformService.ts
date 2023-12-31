@@ -5190,59 +5190,100 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
       return handleError<PlainMessage<CreateOrganizationResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const orgRepo = new OrganizationRepository(opts.db);
         const billingRepo = new BillingRepository(opts.db);
-
         const plans = await billingRepo.listPlans();
 
-        if (plans?.length && !plans.some((plan) => plan.id === req.plan && 'stripePriceId' in plan)) {
+        if (!plans?.length) {
           return {
             response: {
               code: EnumStatusCode.ERR,
-              details: 'Invalid plan',
+              details: 'No billing plans configured. Please contact support.',
             },
           };
         }
 
-        const organization = await orgRepo.createOrganization({
-          organizationName: req.name,
-          organizationSlug: req.slug,
-          ownerID: authContext.userId,
-        });
-
-        const orgMember = await orgRepo.addOrganizationMember({
-          organizationID: organization.id,
-          userID: authContext.userId,
-        });
-
-        await orgRepo.addOrganizationMemberRoles({
-          memberID: orgMember.id,
-          roles: ['admin'],
-        });
-
-        let sessionId;
-        if (plans?.length) {
-          const session = await billingRepo.createCheckoutSession({
-            organizationId: organization.id,
-            organizationSlug: organization.slug,
-            plan: req.plan,
-          });
-          sessionId = session.id;
+        // Validate the plan
+        if (plans?.length && !plans.some((plan) => plan.id === req.plan && 'stripePriceId' in plan)) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: 'Invalid plan. Please contact support.',
+            },
+          };
         }
 
-        return {
-          response: {
-            code: EnumStatusCode.OK,
-          },
-          organization: {
-            id: organization.id,
-            name: organization.name,
-            slug: organization.slug,
-            createdAt: organization.createdAt,
-            creatorUserId: organization.creatorUserId,
-          },
-          stripeSessionId: sessionId,
-        };
+        await opts.keycloakClient.authenticateClient();
+
+        // Create the organization group in Keycloak + subgroups
+        await opts.keycloakClient.seedGroup({
+          userID: authContext.userId,
+          organizationSlug: req.slug,
+          realm: opts.keycloakRealm,
+        });
+
+        try {
+          const data = await opts.db.transaction(async (tx) => {
+            const orgRepo = new OrganizationRepository(tx);
+            const billingRepo = new BillingRepository(tx);
+
+            const organization = await orgRepo.createOrganization({
+              organizationName: req.name,
+              organizationSlug: req.slug,
+              ownerID: authContext.userId,
+            });
+
+            const orgMember = await orgRepo.addOrganizationMember({
+              organizationID: organization.id,
+              userID: authContext.userId,
+            });
+
+            await orgRepo.addOrganizationMemberRoles({
+              memberID: orgMember.id,
+              roles: ['admin'],
+            });
+
+            const session = await billingRepo.createCheckoutSession({
+              organizationId: organization.id,
+              organizationSlug: organization.slug,
+              plan: req.plan,
+            });
+
+            return {
+              organization,
+              sessionId: session.id,
+            };
+          });
+
+          return {
+            response: {
+              code: EnumStatusCode.OK,
+            },
+            organization: {
+              id: data.organization.id,
+              name: data.organization.name,
+              slug: data.organization.slug,
+              createdAt: data.organization.createdAt,
+              creatorUserId: data.organization.creatorUserId,
+            },
+            stripeSessionId: data.sessionId,
+          };
+        } catch (err) {
+          logger.error(err);
+
+          // Delete the organization group in Keycloak + subgroups
+          // when the organization creation fails
+          await opts.keycloakClient.deleteOrganizationGroup({
+            realm: opts.keycloakRealm,
+            organizationSlug: req.slug,
+          });
+
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: 'Organization creation failed',
+            },
+          };
+        }
       });
     },
 

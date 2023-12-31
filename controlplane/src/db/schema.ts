@@ -237,7 +237,9 @@ export const targets = pgTable(
     labels: text('labels').array(),
     organizationId: uuid('organization_id')
       .notNull()
-      .references(() => organizations.id),
+      .references(() => organizations.id, {
+        onDelete: 'cascade',
+      }),
     createdBy: uuid('created_by').references(() => users.id, {
       onDelete: 'set null',
     }),
@@ -530,7 +532,9 @@ export const apiKeys = pgTable(
       .references(() => users.id),
     organizationId: uuid('organization_id')
       .notNull()
-      .references(() => organizations.id),
+      .references(() => organizations.id, {
+        onDelete: 'cascade',
+      }),
     name: text('name').notNull(),
     key: text('key').unique().notNull(),
     lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
@@ -557,7 +561,7 @@ export const graphApiTokens = pgTable(
     id: uuid('id').notNull().primaryKey().defaultRandom(),
     organizationId: uuid('organization_id')
       .notNull()
-      .references(() => organizations.id),
+      .references(() => organizations.id, { onDelete: 'cascade' }),
     federatedGraphId: uuid('federated_graph_id')
       .notNull()
       .references(() => federatedGraphs.id, { onDelete: 'cascade' }),
@@ -577,7 +581,7 @@ export const graphRequestKeys = pgTable('graph_request_keys', {
   id: uuid('id').notNull().primaryKey().defaultRandom(),
   organizationId: uuid('organization_id')
     .notNull()
-    .references(() => organizations.id),
+    .references(() => organizations.id, { onDelete: 'cascade' }),
   federatedGraphId: uuid('federated_graph_id')
     .notNull()
     // Only one request key per federated graph
