@@ -17,7 +17,7 @@ import { useQuery } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { getOrganizationRequestsCount } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import Link from "next/link";
-import { useContext } from "react";
+import React, { useContext } from "react";
 import {
   Bar,
   BarChart,
@@ -34,23 +34,6 @@ import { useRouter } from "next/router";
 import { cn } from "@/lib/utils";
 
 const valueFormatter = (number: number) => `${formatMetric(number)}`;
-
-const FeatureLimitTooltip = ({
-  usage,
-  capacity,
-}: {
-  usage: number;
-  capacity?: number;
-}) => {
-  return (
-    <div>
-      <p className="text-[#82ca9d]">Usage: {formatMetric(usage)}</p>
-      {capacity ? (
-        <p className="text-[#8884d8]">Capacity: {formatMetric(capacity)}</p>
-      ) : null}
-    </div>
-  );
-};
 
 const FeatureLimit = ({
   id,
@@ -77,7 +60,7 @@ const FeatureLimit = ({
 export const CustomBarChart = ({
   data,
 }: {
-  data: { usage: number; capacity?: number }[];
+  data: { usage: number; capacity?: number; name: string }[];
 }) => {
   return (
     <ResponsiveContainer width="100%" height={175} className="my-auto text-xs">
@@ -87,24 +70,14 @@ export const CustomBarChart = ({
           domain={[0, (data[0].capacity || 0) + data[0].usage]}
           tickFormatter={valueFormatter}
         />
-        <YAxis type="category" hide={true} />
+        <YAxis type="category" hide />
         <Bar dataKey="usage" stackId="a" fill="#82ca9d" name="Usage" />
         {data[0].capacity ? (
           <Bar dataKey="capacity" stackId="a" fill="#8884d8" name="Capacity" />
         ) : null}
-        <Tooltip
+        <ChartTooltip
           formatter={valueFormatter}
-          position={{ y: 100 }}
-          wrapperClassName={cn(
-            tooltipWrapperClassName,
-            "flex flex-col gap-y-2",
-          )}
-          content={
-            <FeatureLimitTooltip
-              usage={data[0].usage}
-              capacity={data[0].capacity}
-            />
-          }
+          labelFormatter={() => "Requests"}
         />
         <Legend />
       </BarChart>
@@ -140,8 +113,9 @@ const UsagesPage: NextPageWithLayout = () => {
       />
     );
 
-  const chartData: { usage: number; capacity?: number }[] = [
+  const chartData: { usage: number; capacity?: number; name: string }[] = [
     {
+      name: "Requests",
       usage:
         requestLimit > 0 && Number(data.count) > requestLimit
           ? 0

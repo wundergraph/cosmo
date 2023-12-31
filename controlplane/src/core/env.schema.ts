@@ -66,7 +66,7 @@ export const envVariables = z
     SLACK_APP_CLIENT_ID: z.string().optional(),
     SLACK_APP_CLIENT_SECRET: z.string().optional(),
     /**
-     * Storage e.g. persistent operations
+     * S3 Storage e.g. for persistent operations
      */
     S3_STORAGE_URL: z.string(),
     /**

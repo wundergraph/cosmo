@@ -17,18 +17,7 @@ export type FeatureIds =
   | 'oidc';
 
 export type Features = {
-  users: Feature;
-  'federated-graphs': Feature;
-  'analytics-retention': Feature;
-  'tracing-retention': Feature;
-  'changelog-retention': Feature;
-  'breaking-change-retention': Feature;
-  'trace-sampling-rate': Feature;
-  requests: Feature;
-  rbac: Feature;
-  sso: Feature;
-  security: Feature;
-  support: Feature;
+  [key in FeatureIds]: Feature;
 };
 
 export type Feature = {
