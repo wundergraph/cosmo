@@ -262,12 +262,6 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
               memberID: orgMember.id,
               roles: ['admin'],
             });
-
-            await orgRepo.addOrganizationBilling({
-              organizationID: insertedOrg.id,
-              plan: 'developer',
-              email: userEmail, // default to the owner's email
-            });
           });
 
           opts.platformWebhooks.send(PlatformEventName.USER_REGISTER_SUCCESS, {
