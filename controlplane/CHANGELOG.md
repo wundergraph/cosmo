@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.50.4](https://github.com/wundergraph/cosmo/compare/controlplane@0.50.3...controlplane@0.50.4) (2024-01-01)
+
+### Bug Fixes
+
+* **payment:** handle customer deletion, cancel subs when org is deleted ([#401](https://github.com/wundergraph/cosmo/issues/401)) ([b58809d](https://github.com/wundergraph/cosmo/commit/b58809dca894a6aab879d1750bfd06a608da207f)) (@StarpTech)
+
 ## [0.50.3](https://github.com/wundergraph/cosmo/compare/controlplane@0.50.2...controlplane@0.50.3) (2023-12-31)
 
 ### Bug Fixes
