@@ -105,7 +105,15 @@ export class BillingService {
       throw new Error(`Could not find subscription with with subscriptionId: ${subscriptionId}.`);
     }
 
-    await this.db.delete(billingSubscriptions).where(eq(billingSubscriptions.id, subscriptionId));
+    return this.db.transaction(async (tx) => {
+      await tx.delete(billingSubscriptions).where(eq(billingSubscriptions.id, subscriptionId));
+      await tx
+        .update(organizationBilling)
+        .set({
+          plan: null,
+        })
+        .where(eq(organizationBilling.organizationId, billing.organizationId));
+    });
   }
 
   public async deleteCustomer(stripeCustomerId: string) {
@@ -163,6 +171,7 @@ export class BillingService {
 
     await this.stripe.subscriptions.update(subscription.id, {
       cancel_at_period_end: false,
+      billing_cycle_anchor: 'now',
       metadata: {
         cosmoOrganizationId: params.organizationId,
       },
