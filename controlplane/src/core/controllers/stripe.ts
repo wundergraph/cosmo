@@ -37,14 +37,20 @@ const plugin: FastifyPluginCallback<WebhookControllerOptions> = function StripeW
           log.debug(event, 'Received Stripe event');
 
           switch (event.type) {
+            // Deleting a customer will cancel any current subscriptions.
+            // Also, a 'customer.subscription.deleted' event will be sent for each subscription.
             case 'customer.deleted':
               await opts.billingService.deleteCustomer(event.data.object.id);
               break;
             case 'customer.subscription.created':
-            case 'customer.subscription.updated':
-            case 'customer.subscription.deleted': {
+            case 'customer.subscription.updated': {
               const subscription = event.data.object as Stripe.Subscription;
               await opts.billingService.syncSubscriptionStatus(subscription.id, subscription.customer as string);
+              break;
+            }
+            case 'customer.subscription.deleted': {
+              const subscription = event.data.object as Stripe.Subscription;
+              await opts.billingService.deleteSubscription(subscription.id);
               break;
             }
             case 'checkout.session.completed': {

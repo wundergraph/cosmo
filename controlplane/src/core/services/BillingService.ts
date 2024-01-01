@@ -92,6 +92,22 @@ export class BillingService {
     });
   }
 
+  public async deleteSubscription(subscriptionId: string) {
+    const billing = await this.db.query.billingSubscriptions.findFirst({
+      where: eq(billingSubscriptions.id, subscriptionId),
+      columns: {
+        id: true,
+        organizationId: true,
+      },
+    });
+
+    if (!billing) {
+      throw new Error(`Could not find subscription with with subscriptionId: ${subscriptionId}.`);
+    }
+
+    await this.db.delete(billingSubscriptions).where(eq(billingSubscriptions.id, subscriptionId));
+  }
+
   public async deleteCustomer(stripeCustomerId: string) {
     const billing = await this.db.query.organizationBilling.findFirst({
       where: eq(organizationBilling.stripeCustomerId, stripeCustomerId),
