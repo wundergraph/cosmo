@@ -24,7 +24,7 @@ export class BillingService {
     });
   }
 
-  private upsertStripeCustomerId = async ({ id }: { id: string; email?: string }) => {
+  private upsertStripeCustomerId = async ({ id, organizationSlug }: { id: string; organizationSlug: string }) => {
     const billing = await this.db.query.organizationBilling.findFirst({
       where: eq(organizationBilling.organizationId, id),
       columns: {
@@ -39,8 +39,10 @@ export class BillingService {
     }
 
     const customer = await this.stripe.customers.create({
+      name: organizationSlug,
       metadata: {
         cosmoOrganizationId: id,
+        cosmoOrganizationSlug: organizationSlug,
       },
     });
 
@@ -51,9 +53,8 @@ export class BillingService {
         stripeCustomerId: customer.id,
       })
       .onConflictDoUpdate({
-        target: organizationBilling.id,
+        target: organizationBilling.organizationId,
         set: {
-          organizationId: id,
           stripeCustomerId: customer.id,
         },
       });
@@ -70,6 +71,7 @@ export class BillingService {
 
     const customerId = await this.upsertStripeCustomerId({
       id: params.organizationId,
+      organizationSlug: params.organizationSlug,
     });
 
     return this.stripe.checkout.sessions.create({
