@@ -92,6 +92,22 @@ export class BillingService {
     });
   }
 
+  public async deleteCustomer(stripeCustomerId: string) {
+    const billing = await this.db.query.organizationBilling.findFirst({
+      where: eq(organizationBilling.stripeCustomerId, stripeCustomerId),
+      columns: {
+        id: true,
+        organizationId: true,
+      },
+    });
+
+    if (!billing) {
+      throw new Error(`Could not find stripeCustomerId: ${stripeCustomerId}`);
+    }
+
+    await this.db.delete(organizationBilling).where(eq(organizationBilling.organizationId, billing.organizationId));
+  }
+
   public async createBillingPortalSession(params: { organizationId: string; organizationSlug: string }) {
     const billing = await this.db.query.organizationBilling.findFirst({
       where: eq(organizationBilling.organizationId, params.organizationId),
@@ -161,7 +177,9 @@ export class BillingService {
     });
 
     if (!billing) {
-      throw new Error(`Could not find organization with with stripeCustomerId: ${customerId}`);
+      throw new Error(
+        `Could not find organization with with stripeCustomerId: ${customerId}. This can happen when the customer is deleted in Stripe.`,
+      );
     }
 
     const subscription = await this.stripe.subscriptions.retrieve(subscriptionId, {

@@ -10,6 +10,7 @@ const relevantEvents = new Set([
   'customer.subscription.created',
   'customer.subscription.updated',
   'customer.subscription.deleted',
+  'customer.deleted',
 ]);
 
 export type WebhookControllerOptions = {
@@ -22,6 +23,8 @@ const plugin: FastifyPluginCallback<WebhookControllerOptions> = function StripeW
   fastify.post('/events', {
     config: { rawBody: true },
     handler: async (req, res) => {
+      const log = opts.logger.child({ name: 'stripe-webhook' });
+
       if (!req.body || !req.rawBody) {
         return res.code(400).send('No body provided');
       }
@@ -31,9 +34,12 @@ const plugin: FastifyPluginCallback<WebhookControllerOptions> = function StripeW
 
       if (relevantEvents.has(event.type)) {
         try {
-          req.log.debug('Received Stripe event', event);
+          log.debug(event, 'Received Stripe event');
 
           switch (event.type) {
+            case 'customer.deleted':
+              await opts.billingService.deleteCustomer(event.data.object.id);
+              break;
             case 'customer.subscription.created':
             case 'customer.subscription.updated':
             case 'customer.subscription.deleted': {
@@ -53,14 +59,16 @@ const plugin: FastifyPluginCallback<WebhookControllerOptions> = function StripeW
               break;
             }
             default: {
-              req.log.error('Unhandled relevant event', event);
+              log.error('Unhandled relevant event', event);
               throw new Error('Unhandled relevant event');
             }
           }
         } catch (error) {
-          req.log.error(error);
+          log.error(error);
           return res.code(400).send('Webhook handler failed');
         }
+      } else {
+        log.debug(event.type, 'Received unhandled Stripe event');
       }
 
       return res.code(200).send();
