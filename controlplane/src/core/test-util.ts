@@ -16,6 +16,7 @@ export type UserTestData = {
   organizationId: string;
   organizationName: string;
   organizationSlug: string;
+  defaultBillingPlanId?: string;
   email: string;
   apiKey: string;
 };
@@ -48,7 +49,7 @@ export async function seedTest(databaseConnectionUrl: string, userTestData: User
   const db = drizzle(queryConnection, { schema: { ...schema } });
 
   const userRepo = new UserRepository(db);
-  const orgRepo = new OrganizationRepository(db);
+  const orgRepo = new OrganizationRepository(db, userTestData.defaultBillingPlanId);
   const apiKeyRepo = new ApiKeyRepository(db);
 
   await userRepo.addUser({

@@ -8,13 +8,14 @@ import { OrganizationRepository } from './OrganizationRepository.js';
 import { UserRepository } from './UserRepository.js';
 
 export class OrganizationInvitationRepository {
-  constructor(private db: PostgresJsDatabase<typeof schema>) {}
+  constructor(
+    private db: PostgresJsDatabase<typeof schema>,
+    private defaultBillingPlanId?: string,
+  ) {}
 
   // returns the members who have pending invites to the provided organization.
-  public async getPendingInvitationsOfOrganization(input: {
-    organizationId: string;
-  }): Promise<OrganizationInvitationDTO[]> {
-    const pendingInvites = await this.db
+  public getPendingInvitationsOfOrganization(input: { organizationId: string }): Promise<OrganizationInvitationDTO[]> {
+    return this.db
       .select({
         userID: users.id,
         email: users.email,
@@ -29,8 +30,6 @@ export class OrganizationInvitationRepository {
       )
       .orderBy(asc(organizationInvitations.createdAt))
       .execute();
-
-    return pendingInvites;
   }
 
   // returns the organizations to which the user has a pending invite.
@@ -55,7 +54,7 @@ export class OrganizationInvitationRepository {
       .where(and(eq(users.id, input.userId), eq(organizationInvitations.accepted, false)))
       .execute();
 
-    const userInvitations = pendingOrgInvites.map((org) => ({
+    return pendingOrgInvites.map((org) => ({
       id: org.id,
       name: org.name,
       slug: org.slug,
@@ -63,8 +62,6 @@ export class OrganizationInvitationRepository {
       createdAt: org.createdAt.toISOString(),
       invitedBy: org.invitedBy || undefined,
     }));
-
-    return userInvitations;
   }
 
   public async getPendingOrganizationInvitation(input: {
@@ -134,7 +131,7 @@ export class OrganizationInvitationRepository {
 
   public async acceptInvite(input: { userId: string; organizationId: string }) {
     await this.db.transaction(async (tx) => {
-      const orgRepo = new OrganizationRepository(tx);
+      const orgRepo = new OrganizationRepository(tx, this.defaultBillingPlanId);
       await tx
         .update(organizationInvitations)
         .set({ accepted: true })

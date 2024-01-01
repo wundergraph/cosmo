@@ -79,7 +79,7 @@ export const envVariables = z
      */
     STRIPE_SECRET_KEY: z.string().optional(),
     STRIPE_WEBHOOK_SECRET: z.string().optional(),
-    DEFAULT_PLAN: z.string().optional(), // eg developer@1
+    DEFAULT_PLAN: z.string().optional(), // e.g. developer@1
   })
   .refine((input) => {
     if (input.STRIPE_WEBHOOK_SECRET && !input.STRIPE_SECRET_KEY) {

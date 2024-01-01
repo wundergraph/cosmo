@@ -10,7 +10,6 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { MemberRole, NewOrganizationFeature } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
 import {
-  apiKeys,
   integrationTypeEnum,
   organizationIntegrations,
   organizationMemberRoles,
@@ -19,14 +18,13 @@ import {
   organizationsMembers,
   slackIntegrationConfigs,
   slackSchemaUpdateEventConfigs,
-  targets,
   users,
   organizationFeatures,
   organizationBilling,
   billingSubscriptions,
 } from '../../db/schema.js';
 import { Feature, FeatureIds, OrganizationDTO, OrganizationMemberDTO, WebhooksConfigDTO } from '../../types/index.js';
-import { BillingRepository, defaultPlan } from './BillingRepository.js';
+import { BillingRepository } from './BillingRepository.js';
 
 /**
  * Repository for organization related operations.
@@ -34,7 +32,10 @@ import { BillingRepository, defaultPlan } from './BillingRepository.js';
 export class OrganizationRepository {
   protected billing: BillingRepository;
 
-  constructor(private db: PostgresJsDatabase<typeof schema>) {
+  constructor(
+    private db: PostgresJsDatabase<typeof schema>,
+    private defaultBillingPlanId?: string,
+  ) {
     this.billing = new BillingRepository(db);
   }
 
@@ -63,9 +64,9 @@ export class OrganizationRepository {
       createdAt: insertedOrg[0].createdAt.toISOString(),
     };
 
-    if (defaultPlan) {
+    if (this.defaultBillingPlanId) {
       org.billing = {
-        plan: defaultPlan,
+        plan: this.defaultBillingPlanId,
       };
     }
 
@@ -109,7 +110,7 @@ export class OrganizationRepository {
       return null;
     }
 
-    const plan = org[0].billing?.plan || defaultPlan;
+    const plan = org[0].billing?.plan || this.defaultBillingPlanId;
 
     return {
       id: org[0].id,
@@ -156,7 +157,7 @@ export class OrganizationRepository {
       return null;
     }
 
-    const plan = org[0].billing?.plan || defaultPlan;
+    const plan = org[0].billing?.plan || this.defaultBillingPlanId;
 
     return {
       id: org[0].id,
@@ -222,7 +223,7 @@ export class OrganizationRepository {
 
     return Promise.all(
       userOrganizations.map(async (org) => {
-        const plan = org.billing?.plan || defaultPlan;
+        const plan = org.billing?.plan || this.defaultBillingPlanId;
         return {
           id: org.id,
           name: org.name,
@@ -404,7 +405,7 @@ export class OrganizationRepository {
       });
 
       // if no plan is set, we use the default plan
-      plan = billing?.plan || defaultPlan;
+      plan = billing?.plan || this.defaultBillingPlanId;
     }
 
     if (!plan) {
@@ -452,7 +453,7 @@ export class OrganizationRepository {
       },
     });
 
-    const plan = billing?.plan || defaultPlan;
+    const plan = billing?.plan || this.defaultBillingPlanId;
 
     if (!plan) {
       return;
@@ -508,7 +509,7 @@ export class OrganizationRepository {
       });
   }
 
-  public async isFeatureEnabled(id: string, featureId: string) {
+  public async isFeatureEnabled(id: string, featureId: FeatureIds) {
     const feature = await this.db.query.organizationFeatures.findFirst({
       where: and(eq(organizationFeatures.organizationId, id), eq(organizationFeatures.feature, featureId)),
     });
