@@ -30,6 +30,7 @@ import Mailer from './services/Mailer.js';
 import { OrganizationInvitationRepository } from './repositories/OrganizationInvitationRepository.js';
 import { Authorization } from './services/Authorization.js';
 import { BillingRepository } from './repositories/BillingRepository.js';
+import { BillingService } from './services/BillingService.js';
 
 export interface BuildConfig {
   logger: LoggerOptions;
@@ -77,8 +78,9 @@ export interface BuildConfig {
   smtpUsername?: string;
   smtpPassword?: string;
   stripe?: {
-    secret: string;
+    secret?: string;
     webhookSecret?: string;
+    defaultPlanId?: string;
   };
 }
 
@@ -166,14 +168,14 @@ export default async function build(opts: BuildConfig) {
     webErrorPath: opts.auth.webErrorPath,
   });
 
-  const organizationRepository = new OrganizationRepository(fastify.db);
-  const orgInvitationRepository = new OrganizationInvitationRepository(fastify.db);
+  const organizationRepository = new OrganizationRepository(fastify.db, opts.stripe?.defaultPlanId);
+  const orgInvitationRepository = new OrganizationInvitationRepository(fastify.db, opts.stripe?.defaultPlanId);
   const apiKeyAuth = new ApiKeyAuthenticator(fastify.db, organizationRepository);
   const webAuth = new WebSessionAuthenticator(opts.auth.secret);
   const graphKeyAuth = new GraphApiTokenAuthenticator(opts.auth.secret);
   const accessTokenAuth = new AccessTokenAuthenticator(organizationRepository, authUtils);
   const authenticator = new Authentication(webAuth, apiKeyAuth, accessTokenAuth, graphKeyAuth, organizationRepository);
-  const authorizer = new Authorization();
+  const authorizer = new Authorization(opts.stripe?.defaultPlanId);
 
   const keycloakClient = new Keycloak({
     apiUrl: opts.keycloak.apiUrl,
@@ -216,11 +218,12 @@ export default async function build(opts: BuildConfig) {
     });
   }
 
-  if (opts.stripe?.webhookSecret) {
-    const billingRepository = new BillingRepository(fastify.db);
+  if (opts.stripe?.secret && opts.stripe?.webhookSecret) {
+    const billingRepo = new BillingRepository(fastify.db);
+    const billingService = new BillingService(fastify.db, billingRepo);
     await fastify.register(StripeWebhookController, {
       prefix: '/webhook/stripe',
-      billingRepository,
+      billingService,
       webhookSecret: opts.stripe.webhookSecret,
       logger: log,
     });
@@ -268,6 +271,7 @@ export default async function build(opts: BuildConfig) {
     keycloakClient,
     keycloakRealm: opts.keycloak.realm,
     platformWebhooks,
+    defaultBillingPlanId: opts.stripe?.defaultPlanId,
   });
 
   // Must be registered after custom fastify routes
@@ -290,6 +294,7 @@ export default async function build(opts: BuildConfig) {
       slack: opts.slack,
       blobStorage,
       mailerClient,
+      billingDefaultPlanId: opts.stripe?.defaultPlanId,
     }),
     logLevel: opts.logger.level as pino.LevelWithSilent,
     // Avoid compression for small requests

@@ -3,6 +3,7 @@ import fp from 'fastify-plugin';
 import pino from 'pino';
 import Stripe from 'stripe';
 import { BillingRepository } from '../repositories/BillingRepository.js';
+import { BillingService } from '../services/BillingService.js';
 
 const relevantEvents = new Set([
   'checkout.session.completed',
@@ -12,7 +13,7 @@ const relevantEvents = new Set([
 ]);
 
 export type WebhookControllerOptions = {
-  billingRepository: BillingRepository;
+  billingService: BillingService;
   webhookSecret: string;
   logger: pino.Logger;
 };
@@ -26,7 +27,7 @@ const plugin: FastifyPluginCallback<WebhookControllerOptions> = function StripeW
       }
 
       const signature = req.headers['stripe-signature'] as string;
-      const event = opts.billingRepository.stripe.webhooks.constructEvent(req.rawBody, signature, opts.webhookSecret);
+      const event = opts.billingService.stripe.webhooks.constructEvent(req.rawBody, signature, opts.webhookSecret);
 
       if (relevantEvents.has(event.type)) {
         try {
@@ -37,14 +38,14 @@ const plugin: FastifyPluginCallback<WebhookControllerOptions> = function StripeW
             case 'customer.subscription.updated':
             case 'customer.subscription.deleted': {
               const subscription = event.data.object as Stripe.Subscription;
-              await opts.billingRepository.syncSubscriptionStatus(subscription.id, subscription.customer as string);
+              await opts.billingService.syncSubscriptionStatus(subscription.id, subscription.customer as string);
               break;
             }
             case 'checkout.session.completed': {
               const checkoutSession = event.data.object as Stripe.Checkout.Session;
               if (checkoutSession.mode === 'subscription') {
                 const subscriptionId = checkoutSession.subscription;
-                await opts.billingRepository.syncSubscriptionStatus(
+                await opts.billingService.syncSubscriptionStatus(
                   subscriptionId as string,
                   checkoutSession.customer as string,
                 );

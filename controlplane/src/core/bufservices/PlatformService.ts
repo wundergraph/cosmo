@@ -147,6 +147,7 @@ import { FederatedGraphSchemaUpdate, OrganizationWebhookService } from '../webho
 import { ApiKeyRepository } from '../repositories/ApiKeyRepository.js';
 import { BillingRepository } from '../repositories/BillingRepository.js';
 import { TargetRepository } from '../repositories/TargetRepository.js';
+import { BillingService } from '../services/BillingService.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -161,8 +162,13 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
       return handleError<PlainMessage<CreateFederatedGraphResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const orgRepo = new OrganizationRepository(opts.db);
-        const orgWebhooks = new OrganizationWebhookService(opts.db, authContext.organizationId, opts.logger);
+        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+        const orgWebhooks = new OrganizationWebhookService(
+          opts.db,
+          authContext.organizationId,
+          opts.logger,
+          opts.billingDefaultPlanId,
+        );
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
 
@@ -365,7 +371,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
-        const orgRepo = new OrganizationRepository(opts.db);
+        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
         const schemaCheckRepo = new SchemaCheckRepository(opts.db);
         const compositionRepo = new GraphCompositionRepository(opts.db);
 
@@ -693,7 +699,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
       return handleError<PlainMessage<PublishFederatedSubgraphResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const orgWebhooks = new OrganizationWebhookService(opts.db, authContext.organizationId, opts.logger);
+        const orgWebhooks = new OrganizationWebhookService(
+          opts.db,
+          authContext.organizationId,
+          opts.logger,
+          opts.billingDefaultPlanId,
+        );
 
         if (!authContext.hasWriteAccess) {
           return {
@@ -983,7 +994,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<DeleteFederatedSubgraphResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
-        const orgWebhooks = new OrganizationWebhookService(opts.db, authContext.organizationId, opts.logger);
+        const orgWebhooks = new OrganizationWebhookService(
+          opts.db,
+          authContext.organizationId,
+          opts.logger,
+          opts.billingDefaultPlanId,
+        );
 
         if (!authContext.hasWriteAccess) {
           return {
@@ -1105,7 +1121,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<UpdateFederatedGraphResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
-        const orgWebhooks = new OrganizationWebhookService(opts.db, authContext.organizationId, opts.logger);
+        const orgWebhooks = new OrganizationWebhookService(
+          opts.db,
+          authContext.organizationId,
+          opts.logger,
+          opts.billingDefaultPlanId,
+        );
 
         if (!authContext.hasWriteAccess) {
           return {
@@ -1207,7 +1228,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<UpdateSubgraphResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
-        const orgWebhooks = new OrganizationWebhookService(opts.db, authContext.organizationId, opts.logger);
+        const orgWebhooks = new OrganizationWebhookService(
+          opts.db,
+          authContext.organizationId,
+          opts.logger,
+          opts.billingDefaultPlanId,
+        );
 
         if (!authContext.hasWriteAccess) {
           return {
@@ -1482,8 +1508,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<InviteUserResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const userRepo = new UserRepository(opts.db);
-        const orgRepo = new OrganizationRepository(opts.db);
-        const orgInvitationRepo = new OrganizationInvitationRepository(opts.db);
+        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+        const orgInvitationRepo = new OrganizationInvitationRepository(opts.db, opts.billingDefaultPlanId);
 
         if (!authContext.hasWriteAccess) {
           return {
@@ -1705,7 +1731,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
       return handleError<PlainMessage<DeleteAPIKeyResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const orgRepo = new OrganizationRepository(opts.db);
+        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
         const apiKeyRepo = new ApiKeyRepository(opts.db);
 
         if (!authContext.hasWriteAccess) {
@@ -1762,7 +1788,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
       return handleError<PlainMessage<RemoveInvitationResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const orgRepo = new OrganizationRepository(opts.db);
+        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
         const userRepo = new UserRepository(opts.db);
 
         if (!authContext.hasWriteAccess) {
@@ -1910,8 +1936,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
       return handleError<PlainMessage<RemoveInvitationResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const orgRepo = new OrganizationRepository(opts.db);
-        const orgInvitationRepo = new OrganizationInvitationRepository(opts.db);
+        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+        const orgInvitationRepo = new OrganizationInvitationRepository(opts.db, opts.billingDefaultPlanId);
         const userRepo = new UserRepository(opts.db);
 
         if (!authContext.hasWriteAccess) {
@@ -1994,10 +2020,15 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<MigrateFromApolloResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const userRepo = new UserRepository(opts.db);
-        const orgRepo = new OrganizationRepository(opts.db);
+        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
-        const orgWebhooks = new OrganizationWebhookService(opts.db, authContext.organizationId, opts.logger);
+        const orgWebhooks = new OrganizationWebhookService(
+          opts.db,
+          authContext.organizationId,
+          opts.logger,
+          opts.billingDefaultPlanId,
+        );
 
         if (!authContext.hasWriteAccess) {
           return {
@@ -2167,7 +2198,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
       return handleError<PlainMessage<CreateOrganizationWebhookConfigResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const orgRepo = new OrganizationRepository(opts.db);
+        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
 
         if (!authContext.hasWriteAccess) {
           return {
@@ -2199,7 +2230,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
       return handleError<PlainMessage<UpdateOrganizationWebhookConfigResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const orgRepo = new OrganizationRepository(opts.db);
+        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
 
         if (!authContext.hasWriteAccess) {
           return {
@@ -2231,7 +2262,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
       return handleError<PlainMessage<UpdateOrganizationWebhookConfigResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const orgRepo = new OrganizationRepository(opts.db);
+        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
 
         if (!authContext.hasWriteAccess) {
           return {
@@ -2263,8 +2294,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
       return handleError<PlainMessage<DeleteOrganizationResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const orgRepo = new OrganizationRepository(opts.db);
-
+        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
         const memberships = await orgRepo.memberships({ userId: authContext.userId });
         const orgCount = memberships.length;
 
@@ -2329,13 +2359,20 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           realm: opts.keycloakRealm,
         });
 
-        await orgRepo.deleteOrganization(authContext.organizationId);
+        return opts.db.transaction(async (tx) => {
+          const orgRepo = new OrganizationRepository(tx, opts.billingDefaultPlanId);
+          const billingRepo = new BillingRepository(tx);
+          const billingService = new BillingService(tx, billingRepo);
 
-        return {
-          response: {
-            code: EnumStatusCode.OK,
-          },
-        };
+          await billingService.cancelSubscription(authContext.organizationId, 'Deleted by api');
+          await orgRepo.deleteOrganization(authContext.organizationId);
+
+          return {
+            response: {
+              code: EnumStatusCode.OK,
+            },
+          };
+        });
       });
     },
 
@@ -2347,7 +2384,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
       return handleError<PlainMessage<LeaveOrganizationResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const orgRepo = new OrganizationRepository(opts.db);
+        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
 
         const org = await orgRepo.byId(authContext.organizationId);
         if (!org) {
@@ -2438,7 +2475,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
       return handleError<PlainMessage<UpdateOrganizationDetailsResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const orgRepo = new OrganizationRepository(opts.db);
+        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
 
         const org = await orgRepo.byId(authContext.organizationId);
         if (!org) {
@@ -2539,7 +2576,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
       return handleError<PlainMessage<UpdateOrgMemberRoleResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const orgRepo = new OrganizationRepository(opts.db);
+        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
         const oidcRepo = new OidcRepository(opts.db);
 
         const org = await orgRepo.byId(authContext.organizationId);
@@ -2787,7 +2824,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
       return handleError<PlainMessage<CreateIntegrationResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const orgRepo = new OrganizationRepository(opts.db);
+        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
 
         if (!authContext.hasWriteAccess) {
           return {
@@ -2863,7 +2900,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
       return handleError<PlainMessage<UpdateIntegrationConfigResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const orgRepo = new OrganizationRepository(opts.db);
+        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
 
         if (!authContext.hasWriteAccess) {
           return {
@@ -2895,7 +2932,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
       return handleError<PlainMessage<DeleteIntegrationResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const orgRepo = new OrganizationRepository(opts.db);
+        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
 
         if (!authContext.hasWriteAccess) {
           return {
@@ -2974,7 +3011,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
       return handleError<PlainMessage<DeleteOIDCProviderResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const orgRepo = new OrganizationRepository(opts.db);
+        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
         const oidcRepo = new OidcRepository(opts.db);
         const oidcProvider = new OidcProvider();
 
@@ -3205,9 +3242,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
       return handleError<PlainMessage<AcceptOrDeclineInvitationResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const orgRepo = new OrganizationRepository(opts.db);
+        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
         const userRepo = new UserRepository(opts.db);
-        const orgInvitationRepo = new OrganizationInvitationRepository(opts.db);
+        const orgInvitationRepo = new OrganizationInvitationRepository(opts.db, opts.billingDefaultPlanId);
 
         const user = await userRepo.byId(authContext.userId);
         if (!user) {
@@ -3288,7 +3325,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
       return handleError<PlainMessage<UpdateRBACSettingsResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const orgRepo = new OrganizationRepository(opts.db);
+        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
 
         if (!authContext.isAdmin) {
           return {
@@ -3321,7 +3358,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
       return handleError<PlainMessage<AddSubgraphMemberResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const orgRepo = new OrganizationRepository(opts.db);
+        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
         const userRepo = new UserRepository(opts.db);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
 
@@ -3814,7 +3851,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<GetFederatedGraphChangelogResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const fedgraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
-        const orgRepo = new OrganizationRepository(opts.db);
+        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
 
         const federatedGraph = await fedgraphRepo.byName(req.name);
         if (!federatedGraph) {
@@ -3884,7 +3921,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const fedgraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
-        const orgRepo = new OrganizationRepository(opts.db);
+        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
 
         const federatedGraph = await fedgraphRepo.byName(req.name);
         if (!federatedGraph) {
@@ -4124,7 +4161,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const analyticsRepo = new AnalyticsRequestViewRepository(opts.chClient);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
-        const orgRepo = new OrganizationRepository(opts.db);
+        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
 
         const graph = await fedGraphRepo.byName(req.federatedGraphName);
         if (!graph) {
@@ -4225,7 +4262,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const repo = new MetricsRepository(opts.chClient);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
-        const orgRepo = new OrganizationRepository(opts.db);
+        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
 
         const graph = await fedGraphRepo.byName(req.federatedGraphName);
         if (!graph) {
@@ -4284,7 +4321,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const repo = new MetricsRepository(opts.chClient);
         const fedGraphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
-        const orgRepo = new OrganizationRepository(opts.db);
+        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
 
         const graph = await fedGraphRepo.byName(req.federatedGraphName);
         if (!graph) {
@@ -4363,8 +4400,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
       return handleError<PlainMessage<GetOrganizationMembersResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const orgRepo = new OrganizationRepository(opts.db);
-        const orgInvitationRepo = new OrganizationInvitationRepository(opts.db);
+        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+        const orgInvitationRepo = new OrganizationInvitationRepository(opts.db, opts.billingDefaultPlanId);
 
         const orgMembers = await orgRepo.getMembers({ organizationID: authContext.organizationId });
         const pendingInvitations = await orgInvitationRepo.getPendingInvitationsOfOrganization({
@@ -4453,7 +4490,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
       return handleError<PlainMessage<WhoAmIResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const orgRepo = new OrganizationRepository(opts.db);
+        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
 
         const organization = await orgRepo.byId(authContext.organizationId);
 
@@ -4484,7 +4521,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
       return handleError<PlainMessage<GetOrganizationWebhookConfigsResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const orgRepo = new OrganizationRepository(opts.db);
+        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
 
         const configs = await orgRepo.getWebhookConfigs(authContext.organizationId);
 
@@ -4505,7 +4542,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
       return handleError<PlainMessage<GetOrganizationWebhookMetaResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const orgRepo = new OrganizationRepository(opts.db);
+        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
 
         const eventsMeta = await orgRepo.getWebhookMeta(req.id, authContext.organizationId);
 
@@ -4562,7 +4599,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
       return handleError<PlainMessage<GetOrganizationIntegrationsResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const orgRepo = new OrganizationRepository(opts.db);
+        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
 
         const integrations = await orgRepo.getIntegrations(authContext.organizationId);
 
@@ -4583,7 +4620,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
       return handleError<PlainMessage<IsGitHubAppInstalledResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const orgRepository = new OrganizationRepository(opts.db);
+        const orgRepository = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
 
         if (!opts.githubApp) {
           return {
@@ -4876,7 +4913,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
       return handleError<PlainMessage<GetInvitationsResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const orgInvitationRepo = new OrganizationInvitationRepository(opts.db);
+        const orgInvitationRepo = new OrganizationInvitationRepository(opts.db, opts.billingDefaultPlanId);
 
         return {
           response: {
@@ -4896,7 +4933,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<GetCompositionsResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const fedRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
-        const orgRepo = new OrganizationRepository(opts.db);
+        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
         const graphCompositionRepository = new GraphCompositionRepository(opts.db);
 
         const federatedGraph = await fedRepo.byName(req.fedGraphName);
@@ -5150,7 +5187,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
       return handleError<PlainMessage<IsRBACEnabledResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const orgRepo = new OrganizationRepository(opts.db);
+        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
 
         const enabled = await orgRepo.isFeatureEnabled(authContext.organizationId, 'rbac');
 
@@ -5223,8 +5260,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         try {
           const data = await opts.db.transaction(async (tx) => {
-            const orgRepo = new OrganizationRepository(tx);
+            const orgRepo = new OrganizationRepository(tx, opts.billingDefaultPlanId);
             const billingRepo = new BillingRepository(tx);
+            const billingService = new BillingService(tx, billingRepo);
 
             const organization = await orgRepo.createOrganization({
               organizationName: req.name,
@@ -5242,7 +5280,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
               roles: ['admin'],
             });
 
-            const session = await billingRepo.createCheckoutSession({
+            const session = await billingService.createCheckoutSession({
               organizationId: organization.id,
               organizationSlug: organization.slug,
               plan: req.plan,
@@ -5296,8 +5334,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<CreateCheckoutSessionResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const billingRepo = new BillingRepository(opts.db);
+        const billingService = new BillingService(opts.db, billingRepo);
 
-        const session = await billingRepo.createCheckoutSession({
+        const session = await billingService.createCheckoutSession({
           organizationId: authContext.organizationId,
           organizationSlug: authContext.organizationSlug,
           plan: req.plan,
@@ -5321,8 +5360,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<UpgradePlanResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const billingRepo = new BillingRepository(opts.db);
+        const billingService = new BillingService(opts.db, billingRepo);
 
-        await billingRepo.upgradePlan({
+        await billingService.upgradePlan({
           organizationId: authContext.organizationId,
           plan: req.plan,
         });
@@ -5344,8 +5384,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return handleError<PlainMessage<CreateCheckoutSessionResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const billingRepo = new BillingRepository(opts.db);
+        const billingService = new BillingService(opts.db, billingRepo);
 
-        const session = await billingRepo.createBillingPortalSession({
+        const session = await billingService.createBillingPortalSession({
           organizationId: authContext.organizationId,
           organizationSlug: authContext.organizationSlug,
         });
