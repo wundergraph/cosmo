@@ -182,6 +182,13 @@ export class BillingService {
       .where(eq(organizationBilling.organizationId, params.organizationId));
   }
 
+  /**
+   * Sync the subscription status with the database. It upserts a organizationBilling entry which represents the
+   * customer in Stripe. It also upserts a billingSubscriptions entry which represents the subscription in Stripe.
+   *
+   * @param subscriptionId
+   * @param customerId
+   */
   syncSubscriptionStatus = async (subscriptionId: string, customerId: string) => {
     const billing = await this.db.query.organizationBilling.findFirst({
       where: eq(organizationBilling.stripeCustomerId, customerId),
