@@ -88,6 +88,7 @@ const developmentLoggerOpts: LoggerOptions = {
   transport: {
     target: 'pino-pretty',
     options: {
+      singleLine: true,
       translateTime: 'HH:MM:ss Z',
       ignore: 'pid,hostname',
     },
