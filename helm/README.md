@@ -95,7 +95,7 @@ Open [http://studio.local](http://studio.local) in your browser and login with t
 
 ```
 Username: foo@wundergraph.com
-Password: bar
+Password: wunder@123
 ```
 
 #### 6. Use the Cosmo CLI
