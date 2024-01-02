@@ -32,6 +32,7 @@ export interface RouterOptions {
   slack: { clientID?: string; clientSecret?: string };
   blobStorage: BlobStorage;
   mailerClient?: Mailer;
+  billingDefaultPlanId?: string;
 }
 const handlerOptions: Partial<ConnectRouterOptions> = {
   maxTimeoutMs: 5000,

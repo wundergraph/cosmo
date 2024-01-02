@@ -24,7 +24,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof NodeSe
 
       return handleError<PlainMessage<SelfRegisterResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticateRouter(ctx.requestHeader);
-        const orgRepo = new OrganizationRepository(opts.db);
+        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
         const fedRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
 
         const cachedInfo = registrationInfoCache.get(authContext.federatedGraphId);
@@ -51,13 +51,13 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof NodeSe
           };
         }
 
-        const limits = await orgRepo.getOrganizationLimits({
+        const features = await orgRepo.getOrganizationFeatures({
           organizationID: authContext.organizationId,
         });
 
         const registrationInfo: PlainMessage<RegistrationInfo> = {
           accountLimits: {
-            traceSamplingRate: limits['trace-sampling-rate'],
+            traceSamplingRate: (features['trace-sampling-rate'] as number) ?? 0.1,
           },
           graphPublicKey: publicKey,
         };

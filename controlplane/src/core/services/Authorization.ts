@@ -6,10 +6,10 @@ import { ApiKeyRepository } from '../repositories/ApiKeyRepository.js';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import { SubgraphRepository } from '../repositories/SubgraphRepository.js';
-import { AuthContext, OrganizationDTO } from '../../types/index.js';
+import { AuthContext } from '../../types/index.js';
 
 export class Authorization {
-  constructor() {}
+  constructor(private defaultBillingPlanId?: string) {}
 
   /**
    * Authorize a user.
@@ -34,7 +34,7 @@ export class Authorization {
       const { name, targetId, targetType } = graph;
       const { userId, organizationId, isAdmin } = authContext;
 
-      const orgRepo = new OrganizationRepository(db);
+      const orgRepo = new OrganizationRepository(db, this.defaultBillingPlanId);
       const fedRepo = new FederatedGraphRepository(db, organizationId);
       const subgraphRepo = new SubgraphRepository(db, organizationId);
       const apiKeyRepo = new ApiKeyRepository(db);
@@ -48,11 +48,12 @@ export class Authorization {
       }
 
       // checking if rbac is enabled, if not return
-      if (!orgRepo.isFeatureEnabled(organization.id, 'rbac')) {
+      const rbacEnabled = await orgRepo.isFeatureEnabled(organization.id, 'rbac');
+      if (!rbacEnabled) {
         return;
       }
 
-      // we verify the permisions of the api key only if rbac is enabled
+      // we verify the permissions of the api key only if rbac is enabled
       // first dealing with api keys
       if (token && token.startsWith('cosmo')) {
         const verified = await apiKeyRepo.verifyAPIKeyPermissions({ apiKey: token, accessedTargetId: targetId });

@@ -1,19 +1,27 @@
 import { JWTPayload } from 'jose';
 
-export type Limits = {
-  users: number;
-  'federated-graphs': number;
-  'analytics-retention': number;
-  'tracing-retention': number;
-  'changelog-retention': number;
-  'breaking-change-retention': number;
-  'trace-sampling-rate': number;
-  requests: number;
-  [key: string]: number;
+export type FeatureIds =
+  | 'users'
+  | 'federated-graphs'
+  | 'analytics-retention'
+  | 'tracing-retention'
+  | 'changelog-retention'
+  | 'breaking-change-retention'
+  | 'trace-sampling-rate'
+  | 'requests'
+  // Boolean features
+  | 'rbac'
+  | 'sso'
+  | 'security'
+  | 'support'
+  | 'oidc';
+
+export type Features = {
+  [key in FeatureIds]: Feature;
 };
 
 export type Feature = {
-  id: string;
+  id: FeatureIds;
   enabled?: boolean | null;
   limit?: number | null;
 };

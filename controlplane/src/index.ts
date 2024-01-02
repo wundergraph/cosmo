@@ -41,6 +41,7 @@ const {
   SMTP_PASSWORD,
   STRIPE_SECRET_KEY,
   STRIPE_WEBHOOK_SECRET,
+  DEFAULT_PLAN,
 } = envVariables.parse(process.env);
 
 const options: BuildConfig = {
@@ -90,10 +91,18 @@ const options: BuildConfig = {
   smtpPassword: SMTP_PASSWORD,
 };
 
-if (STRIPE_SECRET_KEY && STRIPE_WEBHOOK_SECRET) {
+if (STRIPE_SECRET_KEY) {
+  if (!STRIPE_WEBHOOK_SECRET) {
+    throw new Error('STRIPE_SECRET_KEY is set but STRIPE_WEBHOOK_SECRET is not');
+  }
+  if (!DEFAULT_PLAN) {
+    throw new Error('STRIPE_SECRET_KEY is set but DEFAULT_PLAN is not');
+  }
+
   options.stripe = {
     secret: STRIPE_SECRET_KEY,
     webhookSecret: STRIPE_WEBHOOK_SECRET,
+    defaultPlanId: DEFAULT_PLAN,
   };
 }
 
@@ -107,7 +116,7 @@ if (DB_CERT_PATH || DB_KEY_PATH || DB_CA_PATH) {
 
 const app = await build(options);
 
-const addr = await app.listen({
+await app.listen({
   host: HOST,
   port: PORT,
 });

@@ -4,6 +4,40 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.50.6](https://github.com/wundergraph/cosmo/compare/controlplane@0.50.5...controlplane@0.50.6) (2024-01-01)
+
+### Bug Fixes
+
+* conflict on orgID, use org slug as customer name ([877c84c](https://github.com/wundergraph/cosmo/commit/877c84ca69866af7f54139b8ae9cdabc609e5418)) (@StarpTech)
+
+## [0.50.5](https://github.com/wundergraph/cosmo/compare/controlplane@0.50.4...controlplane@0.50.5) (2024-01-01)
+
+### Bug Fixes
+
+* reset plan after subscription del, bill for upgrade immediately ([b649383](https://github.com/wundergraph/cosmo/commit/b649383446bf8a6187a61d795d4237604f401c87)) (@StarpTech)
+
+## [0.50.4](https://github.com/wundergraph/cosmo/compare/controlplane@0.50.3...controlplane@0.50.4) (2024-01-01)
+
+### Bug Fixes
+
+* **payment:** handle customer deletion, cancel subs when org is deleted ([#401](https://github.com/wundergraph/cosmo/issues/401)) ([b58809d](https://github.com/wundergraph/cosmo/commit/b58809dca894a6aab879d1750bfd06a608da207f)) (@StarpTech)
+
+## [0.50.3](https://github.com/wundergraph/cosmo/compare/controlplane@0.50.2...controlplane@0.50.3) (2023-12-31)
+
+### Bug Fixes
+
+* scope plan update to organization ([684927e](https://github.com/wundergraph/cosmo/commit/684927ef26ec25450f3bfd022618c831350cd080)) (@StarpTech)
+
+## [0.50.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.50.1...controlplane@0.50.2) (2023-12-31)
+
+### Bug Fixes
+
+* create keycloak groups when creating organization ([#400](https://github.com/wundergraph/cosmo/issues/400)) ([67be8a6](https://github.com/wundergraph/cosmo/commit/67be8a6a0b5df3a608367669dcb64c52ec1ec335)) (@StarpTech)
+
+## [0.50.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.50.0...controlplane@0.50.1) (2023-12-31)
+
+**Note:** Version bump only for package controlplane
+
 # [0.50.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.49.0...controlplane@0.50.0) (2023-12-29)
 
 ### Bug Fixes

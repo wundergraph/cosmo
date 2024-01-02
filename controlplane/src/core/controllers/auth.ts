@@ -35,6 +35,7 @@ export type AuthControllerOptions = {
   keycloakClient: Keycloak;
   keycloakRealm: string;
   platformWebhooks: IPlatformWebhookService;
+  defaultBillingPlanId?: string;
 };
 
 const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fastify, opts, done) {
@@ -144,7 +145,7 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
 
           if (accessTokenPayload.groups && accessTokenPayload.groups.length > 0) {
             const keycloakOrgs = new Set(accessTokenPayload.groups.map((grp) => grp.split('/')[1]));
-            const orgRepo = new OrganizationRepository(tx);
+            const orgRepo = new OrganizationRepository(tx, opts.defaultBillingPlanId);
 
             // delete all the org member roles
             for (const slug of keycloakOrgs) {
@@ -245,7 +246,7 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
           await opts.keycloakClient.seedGroup({ userID: userId, organizationSlug, realm: opts.keycloakRealm });
 
           await opts.db.transaction(async (tx) => {
-            const orgRepo = new OrganizationRepository(tx);
+            const orgRepo = new OrganizationRepository(tx, opts.defaultBillingPlanId);
 
             const insertedOrg = await orgRepo.createOrganization({
               organizationName: userEmail.split('@')[0],
@@ -261,12 +262,6 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
             await orgRepo.addOrganizationMemberRoles({
               memberID: orgMember.id,
               roles: ['admin'],
-            });
-
-            await orgRepo.addOrganizationBilling({
-              organizationID: insertedOrg.id,
-              plan: 'developer',
-              email: userEmail, // default to the owner's email
             });
           });
 

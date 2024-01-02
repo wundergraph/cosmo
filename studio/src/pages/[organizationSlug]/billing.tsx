@@ -279,7 +279,7 @@ const UpgradeButton = ({
 
       if (sessionId) {
         const stripe = await getStripe();
-        stripe?.redirectToCheckout({ sessionId });
+        await stripe?.redirectToCheckout({ sessionId });
       }
     } catch (e: any) {
       toast({

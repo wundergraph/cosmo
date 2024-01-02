@@ -7,10 +7,9 @@ import {
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { and, asc, eq, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { MemberRole } from '../../db/models.js';
+import { MemberRole, NewOrganizationFeature } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
 import {
-  apiKeys,
   integrationTypeEnum,
   organizationIntegrations,
   organizationMemberRoles,
@@ -19,14 +18,13 @@ import {
   organizationsMembers,
   slackIntegrationConfigs,
   slackSchemaUpdateEventConfigs,
-  targets,
   users,
   organizationFeatures,
   organizationBilling,
   billingSubscriptions,
 } from '../../db/schema.js';
-import { Feature, Limits, OrganizationDTO, OrganizationMemberDTO, WebhooksConfigDTO } from '../../types/index.js';
-import { BillingRepository, defaultPlan } from './BillingRepository.js';
+import { Feature, FeatureIds, OrganizationDTO, OrganizationMemberDTO, WebhooksConfigDTO } from '../../types/index.js';
+import { BillingRepository } from './BillingRepository.js';
 
 /**
  * Repository for organization related operations.
@@ -34,7 +32,10 @@ import { BillingRepository, defaultPlan } from './BillingRepository.js';
 export class OrganizationRepository {
   protected billing: BillingRepository;
 
-  constructor(private db: PostgresJsDatabase<typeof schema>) {
+  constructor(
+    private db: PostgresJsDatabase<typeof schema>,
+    private defaultBillingPlanId?: string,
+  ) {
     this.billing = new BillingRepository(db);
   }
 
@@ -63,9 +64,9 @@ export class OrganizationRepository {
       createdAt: insertedOrg[0].createdAt.toISOString(),
     };
 
-    if (defaultPlan) {
+    if (this.defaultBillingPlanId) {
       org.billing = {
-        plan: defaultPlan,
+        plan: this.defaultBillingPlanId,
       };
     }
 
@@ -109,7 +110,7 @@ export class OrganizationRepository {
       return null;
     }
 
-    const plan = org[0].billing?.plan || defaultPlan;
+    const plan = org[0].billing?.plan || this.defaultBillingPlanId;
 
     return {
       id: org[0].id,
@@ -156,7 +157,7 @@ export class OrganizationRepository {
       return null;
     }
 
-    const plan = org[0].billing?.plan || defaultPlan;
+    const plan = org[0].billing?.plan || this.defaultBillingPlanId;
 
     return {
       id: org[0].id,
@@ -204,7 +205,6 @@ export class OrganizationRepository {
         createdAt: organizations.createdAt,
         billing: {
           plan: organizationBilling.plan,
-          email: organizationBilling.email,
         },
         subscription: {
           status: billingSubscriptions.status,
@@ -221,9 +221,9 @@ export class OrganizationRepository {
       .where(eq(users.id, input.userId))
       .execute();
 
-    const userMemberships = await Promise.all(
+    return Promise.all(
       userOrganizations.map(async (org) => {
-        const plan = org.billing?.plan || defaultPlan;
+        const plan = org.billing?.plan || this.defaultBillingPlanId;
         return {
           id: org.id,
           name: org.name,
@@ -238,7 +238,6 @@ export class OrganizationRepository {
           billing: plan
             ? {
                 plan,
-                email: org.billing?.email || undefined,
               }
             : undefined,
           subscription: org.subscription
@@ -252,8 +251,6 @@ export class OrganizationRepository {
         };
       }),
     );
-
-    return userMemberships;
   }
 
   public async memberCount(organizationId: string): Promise<number> {
@@ -393,6 +390,10 @@ export class OrganizationRepository {
     return userRoles.map((role) => role.role);
   }
 
+  /**
+   * Get the features for an organization. A feature can be enabled or disabled and can have a limit.
+   * Usually, a feature without a limit is just a boolean flag.
+   */
   public async getFeatures(input: { organizationId: string; plan?: string }): Promise<Feature[]> {
     let plan = input.plan;
     if (!input.plan) {
@@ -403,7 +404,8 @@ export class OrganizationRepository {
         },
       });
 
-      plan = billing?.plan || defaultPlan;
+      // if no plan is set, we use the default plan
+      plan = billing?.plan || this.defaultBillingPlanId;
     }
 
     if (!plan) {
@@ -429,6 +431,7 @@ export class OrganizationRepository {
         if (feature) {
           return {
             ...feature,
+            id: feature.id as FeatureIds,
             limit: feature.limit || limit,
           };
         }
@@ -436,6 +439,7 @@ export class OrganizationRepository {
         return {
           id,
           limit,
+          enabled: true,
         };
       }) || []
     );
@@ -449,7 +453,7 @@ export class OrganizationRepository {
       },
     });
 
-    const plan = billing?.plan || defaultPlan;
+    const plan = billing?.plan || this.defaultBillingPlanId;
 
     if (!plan) {
       return;
@@ -472,6 +476,7 @@ export class OrganizationRepository {
 
     return {
       ...billingFeature,
+      // custom feature overrides the plan feature
       enabled: feature?.enabled,
       limit: feature?.limit || billingFeature?.limit,
     };
@@ -482,7 +487,7 @@ export class OrganizationRepository {
       organizationId: string;
     } & Feature,
   ) {
-    const feature: any = {
+    const feature: NewOrganizationFeature = {
       feature: input.id,
       organizationId: input.organizationId,
     };
@@ -504,7 +509,7 @@ export class OrganizationRepository {
       });
   }
 
-  public async isFeatureEnabled(id: string, featureId: string) {
+  public async isFeatureEnabled(id: string, featureId: FeatureIds) {
     const feature = await this.db.query.organizationFeatures.findFirst({
       where: and(eq(organizationFeatures.organizationId, id), eq(organizationFeatures.feature, featureId)),
     });
@@ -655,14 +660,8 @@ export class OrganizationRepository {
       .where(and(eq(organizationWebhooks.id, input.id), eq(organizationWebhooks.organizationId, input.organizationId)));
   }
 
-  public async deleteOrganization(organizationID: string) {
-    await this.db.transaction(async (tx) => {
-      const orgRepo = new OrganizationRepository(tx);
-
-      await orgRepo.deleteOrganizationResources(organizationID);
-
-      await tx.delete(organizations).where(eq(organizations.id, organizationID)).execute();
-    });
+  public deleteOrganization(organizationID: string) {
+    return this.db.delete(organizations).where(eq(organizations.id, organizationID)).execute();
   }
 
   public async updateUserRole(input: {
@@ -693,13 +692,6 @@ export class OrganizationRepository {
     }
 
     return orgAdmins;
-  }
-
-  public async deleteOrganizationResources(organizationID: string) {
-    await this.db.transaction(async (tx) => {
-      await tx.delete(apiKeys).where(eq(apiKeys.organizationId, organizationID)).execute();
-      await tx.delete(targets).where(eq(targets.organizationId, organizationID)).execute();
-    });
   }
 
   public async createIntegration(input: {
@@ -948,36 +940,38 @@ export class OrganizationRepository {
       );
   }
 
-  public async addOrganizationBilling(input: { organizationID: string; email: string; plan: string }) {
-    await this.db
-      .insert(organizationBilling)
-      .values({
-        organizationId: input.organizationID,
-        plan: input.plan,
-        email: input.email,
-      })
-      .execute();
-  }
-
-  public async getOrganizationLimits(input: { organizationID: string }) {
+  public async getOrganizationFeatures(input: {
+    organizationID: string;
+  }): Promise<{ [key in FeatureIds]: number | boolean }> {
     const features = await this.getFeatures({ organizationId: input.organizationID });
 
-    // fallback limits @todo: think of a better way to make this dynamic
-    const limits: Record<string, number> = {
-      'analytics-retention': 7,
-      'tracing-retention': 7,
-      'changelog-retention': 7,
-      'breaking-change-retention': 7,
-      'trace-sampling-rate': 0.1,
-      requests: 10,
+    // Full list of features with default values
+    const list: { [key in FeatureIds]: number | boolean } = {
+      'analytics-retention': 30,
+      'tracing-retention': 30,
+      'changelog-retention': 30,
+      'breaking-change-retention': 90,
+      'trace-sampling-rate': 1,
+      'federated-graphs': 30,
+      users: 25,
+      requests: 30,
+      rbac: false,
+      sso: false,
+      security: false,
+      support: false,
+      oidc: false,
     };
 
     for (const feature of features) {
-      if (feature.limit !== undefined && feature.limit !== null) {
-        limits[feature.id] = feature.limit;
+      // Only override the limit if the feature is enabled with a valid limit
+      if (feature.enabled && feature.limit && feature.limit > 0) {
+        list[feature.id] = feature.limit;
+      } else if (typeof list[feature.id] === 'boolean') {
+        // Enable or disable the boolean feature
+        list[feature.id] = feature.enabled || false;
       }
     }
 
-    return limits as Limits;
+    return list;
   }
 }
