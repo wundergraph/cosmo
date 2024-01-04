@@ -170,6 +170,7 @@ const CreateAPIKeyDialog = ({
     setSelectedSubgraphs([]);
   };
 
+  // check if the user has access to create api keys only when rbac is enabled
   if (rbac && !(isAdmin || federatedGraphs.length > 0 || subgraphs.length > 0)) {
     return (
       <Button disabled>
