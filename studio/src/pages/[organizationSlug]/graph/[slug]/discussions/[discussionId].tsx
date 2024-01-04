@@ -5,6 +5,7 @@ import {
 } from "@/components/layout/graph-layout";
 import { SDLViewerMonaco } from "@/components/schema/sdl-viewer-monaco";
 import { Thread } from "@/components/schema/thread";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Loader } from "@/components/ui/loader";
 import { Separator } from "@/components/ui/separator";
@@ -114,6 +115,9 @@ const DiscussionPage: NextPageWithLayout = () => {
               </TabsTrigger>
             </TabsList>
           </Tabs>
+          {discussionData?.discussion?.isResolved && (
+            <Badge className="ml-auto">resolved</Badge>
+          )}
         </Toolbar>
       }
       noPadding
