@@ -16,6 +16,7 @@ export type UserTestData = {
   organizationId: string;
   organizationName: string;
   organizationSlug: string;
+  defaultBillingPlanId?: string;
   email: string;
   apiKey: string;
 };
@@ -48,7 +49,7 @@ export async function seedTest(databaseConnectionUrl: string, userTestData: User
   const db = drizzle(queryConnection, { schema: { ...schema } });
 
   const userRepo = new UserRepository(db);
-  const orgRepo = new OrganizationRepository(db);
+  const orgRepo = new OrganizationRepository(db, userTestData.defaultBillingPlanId);
   const apiKeyRepo = new ApiKeyRepository(db);
 
   await userRepo.addUser({
@@ -80,16 +81,6 @@ export async function seedTest(databaseConnectionUrl: string, userTestData: User
     userID: userTestData.userId,
     expiresAt: ExpiresAt.NEVER,
     targetIds: [],
-  });
-
-  await orgRepo.addOrganizationLimits({
-    organizationID: insertedOrg.id,
-    analyticsRetentionLimit: 7,
-    tracingRetentionLimit: 7,
-    changelogDataRetentionLimit: 7,
-    breakingChangeRetentionLimit: 7,
-    traceSamplingRateLimit: 0.1,
-    requestsLimit: 10,
   });
 
   await queryConnection.end({

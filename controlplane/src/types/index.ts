@@ -1,5 +1,31 @@
 import { JWTPayload } from 'jose';
 
+export type FeatureIds =
+  | 'users'
+  | 'federated-graphs'
+  | 'analytics-retention'
+  | 'tracing-retention'
+  | 'changelog-retention'
+  | 'breaking-change-retention'
+  | 'trace-sampling-rate'
+  | 'requests'
+  // Boolean features
+  | 'rbac'
+  | 'sso'
+  | 'security'
+  | 'support'
+  | 'oidc';
+
+export type Features = {
+  [key in FeatureIds]: Feature;
+};
+
+export type Feature = {
+  id: FeatureIds;
+  enabled?: boolean | null;
+  limit?: number | null;
+};
+
 export interface ListFilterOptions {
   limit: number;
   offset: number;
@@ -23,6 +49,7 @@ export interface FederatedGraphDTO {
   subgraphsCount: number;
   composedSchemaVersionId?: string;
   creatorUserId?: string;
+  readme?: string;
 }
 
 export interface FederatedGraphChangelogDTO {
@@ -49,6 +76,7 @@ export interface SubgraphDTO {
   lastUpdatedAt: string;
   labels: Label[];
   creatorUserId?: string;
+  readme?: string;
 }
 
 export interface MigrationSubgraph {
@@ -105,9 +133,17 @@ export interface OrganizationDTO {
   slug: string;
   creatorUserId: string;
   createdAt: string;
-  isFreeTrial?: boolean;
-  isPersonal?: boolean;
-  isRBACEnabled?: boolean;
+  features?: Feature[];
+  billing?: {
+    plan: string;
+    email?: string;
+  };
+  subscription?: {
+    status: string;
+    trialEnd?: string;
+    currentPeriodEnd?: string;
+    cancelAtPeriodEnd?: boolean;
+  };
 }
 
 export interface UserDTO {
@@ -149,6 +185,17 @@ export interface ResponseMessage {
     code: number;
     details?: string;
   };
+}
+
+export interface BillingPlanDTO {
+  id: string;
+  name: string;
+  price: number;
+  features: {
+    id: string;
+    description: string;
+    limit?: number;
+  }[];
 }
 
 // https://github.com/kamilkisiela/graphql-inspector/blob/f3b9ed7e277f1a4928da7d0fdc212685ff77752a/packages/core/src/diff/changes/change.ts
@@ -287,15 +334,6 @@ export interface SlackAccessTokenResponse {
   slackChannelId: string;
   slackChannelName: string;
   webhookURL: string;
-}
-
-export interface OrganizationLimitsDTO {
-  analyticsRetentionLimit: number;
-  tracingRetentionLimit: number;
-  changelogDataRetentionLimit: number;
-  breakingChangeRetentionLimit: number;
-  traceSamplingRateLimit: number;
-  requestsLimit: number;
 }
 
 export interface ClientDTO {

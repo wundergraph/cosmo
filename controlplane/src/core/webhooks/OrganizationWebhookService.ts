@@ -34,25 +34,25 @@ type Config = {
 };
 
 export class OrganizationWebhookService {
-  private configs?: Config[];
-
+  private readonly configs?: Config[];
   private synced?: boolean;
-
-  private logger: pino.Logger;
+  private readonly logger: pino.Logger;
+  private readonly defaultBillingPlanId?: string;
 
   constructor(
     private db: PostgresJsDatabase<typeof schema>,
     private organizationId: string,
     logger: pino.Logger,
+    defaultBillingPlanId?: string,
   ) {
     this.logger = logger.child({ organizationId });
-
+    this.defaultBillingPlanId = defaultBillingPlanId;
     this.configs = [];
     this.synced = false;
   }
 
   private async syncOrganizationSettings() {
-    const orgRepo = new OrganizationRepository(this.db);
+    const orgRepo = new OrganizationRepository(this.db, this.defaultBillingPlanId);
     const orgConfigs = await this.db.query.organizationWebhooks.findMany({
       where: eq(schema.organizationWebhooks.organizationId, this.organizationId),
       with: {

@@ -44,7 +44,9 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, routerConfig *
 	}
 
 	// this is the resolver, it's stateful and manages all the client connections, etc...
-	resolver := resolve.New(ctx)
+	resolver := resolve.New(context.Background(), resolve.ResolverOptions{
+		MaxConcurrency: 1024,
+	})
 
 	// this is the GraphQL Schema that we will expose from our API
 	definition, report := astparser.ParseGraphqlDocumentString(routerConfig.EngineConfig.GraphqlSchema)

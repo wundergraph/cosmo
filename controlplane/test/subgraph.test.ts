@@ -138,4 +138,68 @@ describe('Subgraph', (ctx) => {
 
     await server.close();
   });
+
+  test('Should be able to create a subgraph with a readme', async (testContext) => {
+    const { client, server } = await SetupTest(testContext, dbname);
+
+    const subgraphName = genID('subgraph1');
+    const label = genUniqueLabel();
+    const readme = `# ${subgraphName}`;
+
+    const resp = await client.createFederatedSubgraph({
+      name: subgraphName,
+      labels: [label],
+      routingUrl: 'http://localhost:8080',
+      readme,
+    });
+
+    expect(resp.response?.code).toBe(EnumStatusCode.OK);
+
+    const subgraph = await client.getSubgraphByName({
+      name: subgraphName,
+    });
+
+    expect(subgraph.response?.code).toBe(EnumStatusCode.OK);
+    expect(subgraph.graph?.readme).toBe(readme);
+    expect(subgraph.graph?.routingURL).toBe('http://localhost:8080');
+    expect(subgraph.graph?.labels).toEqual([label]);
+
+    await server.close();
+  });
+
+  test('Should be able to create a subgraph with a readme and update it later.', async (testContext) => {
+    const { client, server } = await SetupTest(testContext, dbname);
+
+    const subgraphName = genID('subgraph1');
+    const label = genUniqueLabel();
+    const readme = `# ${subgraphName}`;
+    const updatedReadme = `# ${subgraphName} test`;
+
+    const resp = await client.createFederatedSubgraph({
+      name: subgraphName,
+      labels: [label],
+      routingUrl: 'http://localhost:8080',
+      readme,
+    });
+
+    expect(resp.response?.code).toBe(EnumStatusCode.OK);
+
+    const updateResponse = await client.updateSubgraph({
+      name: subgraphName,
+      readme: updatedReadme,
+    });
+
+    expect(updateResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    const subgraph = await client.getSubgraphByName({
+      name: subgraphName,
+    });
+
+    expect(subgraph.response?.code).toBe(EnumStatusCode.OK);
+    expect(subgraph.graph?.readme).toBe(updatedReadme);
+    expect(subgraph.graph?.routingURL).toBe('http://localhost:8080');
+    expect(subgraph.graph?.labels).toEqual([label]);
+
+    await server.close();
+  });
 });

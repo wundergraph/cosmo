@@ -8,7 +8,7 @@ import { PlatformEventName } from '@wundergraph/cosmo-connect/dist/notifications
 import { cosmoIdpHintCookieName, decodeJWT, DEFAULT_SESSION_MAX_AGE_SEC, encrypt } from '../crypto/jwt.js';
 import { CustomAccessTokenClaims, UserInfoEndpointResponse, UserSession } from '../../types/index.js';
 import * as schema from '../../db/schema.js';
-import { organizationMemberRoles, organizations, organizationsMembers, sessions, users } from '../../db/schema.js';
+import { organizationMemberRoles, organizationsMembers, sessions, users } from '../../db/schema.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import AuthUtils from '../auth-utils.js';
 import WebSessionAuthenticator from '../services/WebSessionAuthenticator.js';
@@ -35,6 +35,7 @@ export type AuthControllerOptions = {
   keycloakClient: Keycloak;
   keycloakRealm: string;
   platformWebhooks: IPlatformWebhookService;
+  defaultBillingPlanId?: string;
 };
 
 const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fastify, opts, done) {
@@ -144,7 +145,7 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
 
           if (accessTokenPayload.groups && accessTokenPayload.groups.length > 0) {
             const keycloakOrgs = new Set(accessTokenPayload.groups.map((grp) => grp.split('/')[1]));
-            const orgRepo = new OrganizationRepository(tx);
+            const orgRepo = new OrganizationRepository(tx, opts.defaultBillingPlanId);
 
             // delete all the org member roles
             for (const slug of keycloakOrgs) {
@@ -237,9 +238,7 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
           userId,
         });
 
-        const personalOrg = orgs.find((org) => org.isPersonal === true);
-
-        if (orgs.length === 0 || !personalOrg) {
+        if (orgs.length === 0) {
           await opts.keycloakClient.authenticateClient();
 
           const organizationSlug = uid(8);
@@ -247,14 +246,12 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
           await opts.keycloakClient.seedGroup({ userID: userId, organizationSlug, realm: opts.keycloakRealm });
 
           await opts.db.transaction(async (tx) => {
-            const orgRepo = new OrganizationRepository(tx);
+            const orgRepo = new OrganizationRepository(tx, opts.defaultBillingPlanId);
 
             const insertedOrg = await orgRepo.createOrganization({
               organizationName: userEmail.split('@')[0],
               organizationSlug,
               ownerID: userId,
-              isFreeTrial: true,
-              isPersonal: true,
             });
 
             const orgMember = await orgRepo.addOrganizationMember({
@@ -265,16 +262,6 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
             await orgRepo.addOrganizationMemberRoles({
               memberID: orgMember.id,
               roles: ['admin'],
-            });
-
-            await orgRepo.addOrganizationLimits({
-              organizationID: insertedOrg.id,
-              analyticsRetentionLimit: 7,
-              tracingRetentionLimit: 7,
-              changelogDataRetentionLimit: 7,
-              breakingChangeRetentionLimit: 7,
-              traceSamplingRateLimit: 0.1,
-              requestsLimit: 10,
             });
           });
 

@@ -17,7 +17,7 @@ const apiUrl = process.env.KC_API_URL || 'http://localhost:8080';
 const apiKey = process.env.API_KEY || ApiKeyGenerator.generate();
 
 const userEmail = process.env.USER_EMAIL || 'foo@wundergraph.com';
-const userPassword = process.env.USER_PASSWORD || 'bar';
+const userPassword = process.env.USER_PASSWORD || 'wunder@123';
 const userFirstName = process.env.USER_FIRST_NAME || 'foo';
 const userLastName = process.env.USER_LAST_NAME || 'bar';
 

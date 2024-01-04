@@ -10,10 +10,11 @@ import {
   timestamp,
   uniqueIndex,
   uuid,
-  decimal,
   unique,
   customType,
+  real,
 } from 'drizzle-orm/pg-core';
+import { FeatureIds } from '../types/index.js';
 
 // JSON/JSONB custom types to workaround insert bug
 // Should not be used with other drivers than postgres-js
@@ -236,10 +237,13 @@ export const targets = pgTable(
     labels: text('labels').array(),
     organizationId: uuid('organization_id')
       .notNull()
-      .references(() => organizations.id),
+      .references(() => organizations.id, {
+        onDelete: 'cascade',
+      }),
     createdBy: uuid('created_by').references(() => users.id, {
       onDelete: 'set null',
     }),
+    readme: text('readme'),
   },
   (t) => {
     return {
@@ -528,7 +532,9 @@ export const apiKeys = pgTable(
       .references(() => users.id),
     organizationId: uuid('organization_id')
       .notNull()
-      .references(() => organizations.id),
+      .references(() => organizations.id, {
+        onDelete: 'cascade',
+      }),
     name: text('name').notNull(),
     key: text('key').unique().notNull(),
     lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
@@ -555,7 +561,7 @@ export const graphApiTokens = pgTable(
     id: uuid('id').notNull().primaryKey().defaultRandom(),
     organizationId: uuid('organization_id')
       .notNull()
-      .references(() => organizations.id),
+      .references(() => organizations.id, { onDelete: 'cascade' }),
     federatedGraphId: uuid('federated_graph_id')
       .notNull()
       .references(() => federatedGraphs.id, { onDelete: 'cascade' }),
@@ -575,7 +581,7 @@ export const graphRequestKeys = pgTable('graph_request_keys', {
   id: uuid('id').notNull().primaryKey().defaultRandom(),
   organizationId: uuid('organization_id')
     .notNull()
-    .references(() => organizations.id),
+    .references(() => organizations.id, { onDelete: 'cascade' }),
   federatedGraphId: uuid('federated_graph_id')
     .notNull()
     // Only one request key per federated graph
@@ -595,9 +601,85 @@ export const organizations = pgTable('organizations', {
     .references(() => users.id)
     .notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  isPersonal: boolean('is_personal').default(false),
-  isFreeTrial: boolean('is_free_trial').default(false),
-  isRBACEnabled: boolean('is_rbac_enabled').notNull().default(false),
+});
+
+export const organizationBilling = pgTable(
+  'organization_billing',
+  {
+    id: uuid('id').notNull().primaryKey().defaultRandom(),
+    organizationId: uuid('organization_id')
+      .notNull()
+      .references(() => organizations.id, {
+        onDelete: 'cascade',
+      }),
+    plan: text('plan'),
+    stripeCustomerId: text('stripe_customer_id'),
+  },
+  (t) => {
+    return {
+      orgIndex: uniqueIndex('organization_billing_idx').on(t.organizationId),
+      stripeIndex: uniqueIndex('organization_billing_stripe_idx').on(t.stripeCustomerId),
+    };
+  },
+);
+
+export type Feature = {
+  id: FeatureIds;
+  description?: string;
+  limit?: number;
+};
+
+export const billingPlans = pgTable('billing_plans', {
+  id: text('id').notNull().primaryKey(),
+  active: boolean('active').notNull().default(true),
+  name: text('name').notNull(),
+  price: integer('price').notNull(),
+  features: customJson<Feature[]>('features').notNull(),
+  stripePriceId: text('stripe_price_id'),
+  weight: integer('weight').notNull().default(0),
+});
+
+// These statuses map directly to Stripe's subscription statuses
+// @see https://stripe.com/docs/api/subscriptions/object#subscription_object-status
+const statuses = [
+  'incomplete',
+  'incomplete_expired',
+  'trialing',
+  'active',
+  'past_due',
+  'canceled',
+  'unpaid',
+  'paused',
+] as const;
+
+export const subscriptionStatusEnum = pgEnum('status', statuses);
+
+export type SubscriptionStatus = (typeof statuses)[number];
+
+/**
+ * These are the subscriptions that are created in Stripe.
+ * https://stripe.com/docs/api/subscriptions/object
+ */
+export const billingSubscriptions = pgTable('billing_subscriptions', {
+  id: text('id').notNull().primaryKey(),
+  organizationId: uuid('organization_id')
+    .notNull()
+    .references(() => organizations.id, {
+      onDelete: 'cascade',
+    }),
+  metadata: customJson<{ [key: string]: string }>('metadata').notNull(),
+  status: subscriptionStatusEnum('status').notNull(),
+  priceId: text('price_id').notNull(),
+  quantity: integer('quantity').notNull(),
+  cancelAtPeriodEnd: boolean('cancel_at_period_end').notNull(),
+  cancelAt: timestamp('cancel_at', { withTimezone: true }),
+  canceledAt: timestamp('canceled_at', { withTimezone: true }),
+  currentPeriodStart: timestamp('current_period_start', { withTimezone: true }).notNull(),
+  currentPeriodEnd: timestamp('current_period_end', { withTimezone: true }).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  endedAt: timestamp('ended_at', { withTimezone: true }),
+  trialStart: timestamp('trial_start', { withTimezone: true }),
+  trialEnd: timestamp('trial_end', { withTimezone: true }),
 });
 
 export const organizationsMembers = pgTable(
@@ -657,6 +739,41 @@ export const organizationMemberRolesRelations = relations(organizationMemberRole
     references: [organizationsMembers.id],
   }),
 }));
+
+export const organizationFeatures = pgTable(
+  'organization_features',
+  {
+    id: uuid('id').notNull().primaryKey().defaultRandom(),
+    organizationId: uuid('organization_id')
+      .notNull()
+      .references(() => organizations.id, {
+        onDelete: 'cascade',
+      }),
+    feature: text('feature').notNull(),
+    enabled: boolean('enabled').default(true),
+    limit: real('limit'),
+  },
+  (t) => {
+    return {
+      nameIndex: uniqueIndex('organization_feature_idx').on(t.organizationId, t.feature),
+    };
+  },
+);
+
+export const organizationInvitations = pgTable('organization_invitations', {
+  id: uuid('id').notNull().primaryKey().defaultRandom(),
+  organizationId: uuid('organization_id')
+    .notNull()
+    .references(() => organizations.id, {
+      onDelete: 'cascade',
+    }),
+  userId: uuid('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  invitedBy: uuid('invited_by').references(() => users.id, { onDelete: 'cascade' }),
+  accepted: boolean('accepted').default(false),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
 
 export const organizationWebhooks = pgTable('organization_webhook_configs', {
   id: uuid('id').notNull().primaryKey().defaultRandom(),
@@ -864,37 +981,6 @@ export const graphCompositionsRelations = relations(graphCompositions, ({ many, 
   schemaVersion: one(schemaVersion),
   user: one(users),
 }));
-
-export const organizationLimits = pgTable('organization_limits', {
-  id: uuid('id').notNull().primaryKey().defaultRandom(),
-  organizationId: uuid('organization_id')
-    .notNull()
-    .references(() => organizations.id, {
-      onDelete: 'cascade',
-    }),
-  // requestsLimit is in millions
-  requestsLimit: integer('requests_limit').notNull().default(10),
-  analyticsRetentionLimit: integer('analytics_retention_limit').notNull().default(7),
-  tracingRetentionLimit: integer('tracing_retention_limit').notNull().default(7),
-  changelogDataRetentionLimit: integer('changelog_data_retention_limit').notNull().default(7),
-  breakingChangeRetentionLimit: integer('breaking_change_retention_limit').notNull().default(7),
-  traceSamplingRateLimit: decimal('trace_sampling_rate_limit', { precision: 3, scale: 2 }).notNull().default('0.10'),
-});
-
-export const organizationInvitations = pgTable('organization_invitations', {
-  id: uuid('id').notNull().primaryKey().defaultRandom(),
-  organizationId: uuid('organization_id')
-    .notNull()
-    .references(() => organizations.id, {
-      onDelete: 'cascade',
-    }),
-  userId: uuid('user_id')
-    .notNull()
-    .references(() => users.id, { onDelete: 'cascade' }),
-  invitedBy: uuid('invited_by').references(() => users.id, { onDelete: 'cascade' }),
-  accepted: boolean('accepted').default(false),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-});
 
 export const apiKeyResources = pgTable('api_key_resources', {
   id: uuid('id').notNull().primaryKey().defaultRandom(),

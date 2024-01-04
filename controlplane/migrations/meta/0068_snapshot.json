@@ -1,7 +1,7 @@
 {
   "version": "5",
   "dialect": "pg",
-  "id": "84fd102e-989b-4ee9-a294-42f15f88b5d6",
+  "id": "9a89ff66-385d-4935-9241-3cf07ba694b5",
   "prevId": "7e39c0ce-c20c-4503-b5cd-34ca67061522",
   "tables": {
     "api_key_resources": {
@@ -163,163 +163,6 @@
           ]
         }
       }
-    },
-    "discussion_thread": {
-      "name": "discussion_thread",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "discussion_id": {
-          "name": "discussion_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "content_markdown": {
-          "name": "content_markdown",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "content_json": {
-          "name": "content_json",
-          "type": "json",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_by_id": {
-          "name": "created_by_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "discussion_thread_discussion_id_discussions_id_fk": {
-          "name": "discussion_thread_discussion_id_discussions_id_fk",
-          "tableFrom": "discussion_thread",
-          "tableTo": "discussions",
-          "columnsFrom": [
-            "discussion_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "discussion_thread_created_by_id_users_id_fk": {
-          "name": "discussion_thread_created_by_id_users_id_fk",
-          "tableFrom": "discussion_thread",
-          "tableTo": "users",
-          "columnsFrom": [
-            "created_by_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
-    },
-    "discussions": {
-      "name": "discussions",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "target_id": {
-          "name": "target_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "schema_version_id": {
-          "name": "schema_version_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "reference_line": {
-          "name": "reference_line",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "is_resolved": {
-          "name": "is_resolved",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "discussions_target_id_targets_id_fk": {
-          "name": "discussions_target_id_targets_id_fk",
-          "tableFrom": "discussions",
-          "tableTo": "targets",
-          "columnsFrom": [
-            "target_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "discussions_schema_version_id_schema_versions_id_fk": {
-          "name": "discussions_schema_version_id_schema_versions_id_fk",
-          "tableFrom": "discussions",
-          "tableTo": "schema_versions",
-          "columnsFrom": [
-            "schema_version_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
     },
     "federated_graph_clients": {
       "name": "federated_graph_clients",
@@ -2657,6 +2500,12 @@
         "created_by": {
           "name": "created_by",
           "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "readme": {
+          "name": "readme",
+          "type": "text",
           "primaryKey": false,
           "notNull": false
         }

@@ -32,6 +32,7 @@ func Main() {
 		log.Fatal("Could not load config", zap.Error(err))
 	}
 
+	// Handling shutdown
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt,
 		syscall.SIGHUP,  // process is detached from terminal
 		syscall.SIGTERM, // default for kill
@@ -64,6 +65,7 @@ func Main() {
 	go func() {
 		if err := router.Start(ctx); err != nil {
 			logger.Error("Could not start server", zap.Error(err))
+			// Don't block and wait for shutdown. No fatal error because some sinks might be flushed.
 			stop()
 		}
 	}()
@@ -71,12 +73,12 @@ func Main() {
 	<-ctx.Done()
 
 	logger.Info("Graceful shutdown ...", zap.String("shutdown_delay", cfg.ShutdownDelay.String()))
-
-	// enforce a maximum shutdown delay
-	ctx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownDelay)
+	// Enforce a maximum shutdown delay to avoid waiting forever
+	// Don't use the parent context that is canceled by the signal handler
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownDelay)
 	defer cancel()
 
-	if err := router.Shutdown(ctx); err != nil {
+	if err := router.Shutdown(shutdownCtx); err != nil {
 		logger.Error("Could not shutdown server", zap.Error(err))
 	}
 

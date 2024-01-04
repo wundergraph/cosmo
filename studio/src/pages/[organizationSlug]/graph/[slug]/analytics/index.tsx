@@ -13,7 +13,6 @@ import { AnalyticsToolbar } from "@/components/analytics/toolbar";
 import { useApplyParams } from "@/components/analytics/use-apply-params";
 import { useRange } from "@/components/analytics/use-range";
 import { useAnalyticsQueryState } from "@/components/analytics/useAnalyticsQueryState";
-import { UserContext } from "@/components/app-provider";
 import {
   DatePickerWithRange,
   DateRangePickerChangeHandler,
@@ -25,7 +24,6 @@ import {
   GraphPageLayout,
   getGraphLayout,
 } from "@/components/layout/graph-layout";
-import { TitleLayout } from "@/components/layout/title-layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader } from "@/components/ui/loader";
@@ -35,6 +33,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useFeatureLimit } from "@/hooks/use-feature-limit";
 import useWindowSize from "@/hooks/use-window-size";
 import {
   formatDurationMetric,
@@ -875,7 +874,6 @@ const ErrorRateOverTimeCard = () => {
 const OverviewToolbar = () => {
   const graphContext = useContext(GraphContext);
   const client = useQueryClient();
-  const user = useContext(UserContext);
 
   const { filters, range, dateRange, refreshInterval } =
     useAnalyticsQueryState();
@@ -942,6 +940,8 @@ const OverviewToolbar = () => {
     });
   };
 
+  const analyticsRetention = useFeatureLimit("analytics-retention", 7);
+
   return (
     <div className="flex flex-col gap-2 space-y-2">
       <div className="flex gap-2">
@@ -950,9 +950,7 @@ const OverviewToolbar = () => {
             range={range}
             dateRange={dateRange}
             onChange={onDateRangeChange}
-            calendarDaysLimit={
-              user?.currentOrganization.limits.analyticsRetentionLimit || 7
-            }
+            calendarDaysLimit={analyticsRetention}
           />
 
           <MetricsFilters filters={data?.filters ?? []} />
