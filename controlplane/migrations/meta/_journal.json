@@ -477,6 +477,13 @@
       "when": 1702331936148,
       "tag": "0067_third_multiple_man",
       "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "5",
+      "when": 1704364190490,
+      "tag": "0068_misty_ricochet",
+      "breakpoints": true
     }
   ]
 }

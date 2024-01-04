@@ -5,7 +5,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { AcceptOrDeclineInvitationRequest, AcceptOrDeclineInvitationResponse, AddSubgraphMemberRequest, AddSubgraphMemberResponse, CheckFederatedGraphRequest, CheckFederatedGraphResponse, CheckSubgraphSchemaRequest, CheckSubgraphSchemaResponse, CreateAPIKeyRequest, CreateAPIKeyResponse, CreateFederatedGraphRequest, CreateFederatedGraphResponse, CreateFederatedGraphTokenRequest, CreateFederatedGraphTokenResponse, CreateFederatedSubgraphRequest, CreateFederatedSubgraphResponse, CreateIntegrationRequest, CreateIntegrationResponse, CreateOIDCProviderRequest, CreateOIDCProviderResponse, CreateOrganizationWebhookConfigRequest, CreateOrganizationWebhookConfigResponse, DeleteAPIKeyRequest, DeleteAPIKeyResponse, DeleteFederatedGraphRequest, DeleteFederatedGraphResponse, DeleteFederatedSubgraphRequest, DeleteFederatedSubgraphResponse, DeleteIntegrationRequest, DeleteIntegrationResponse, DeleteOIDCProviderRequest, DeleteOIDCProviderResponse, DeleteOrganizationRequest, DeleteOrganizationResponse, DeleteOrganizationWebhookConfigRequest, DeleteOrganizationWebhookConfigResponse, DeleteRouterTokenRequest, DeleteRouterTokenResponse, FixSubgraphSchemaRequest, FixSubgraphSchemaResponse, ForceCheckSuccessRequest, ForceCheckSuccessResponse, GetAnalyticsViewRequest, GetAnalyticsViewResponse, GetAPIKeysRequest, GetAPIKeysResponse, GetChangelogBySchemaVersionRequest, GetChangelogBySchemaVersionResponse, GetCheckDetailsRequest, GetCheckDetailsResponse, GetCheckOperationsRequest, GetCheckOperationsResponse, GetChecksByFederatedGraphNameRequest, GetChecksByFederatedGraphNameResponse, GetCheckSummaryRequest, GetCheckSummaryResponse, GetClientsRequest, GetClientsResponse, GetCompositionDetailsRequest, GetCompositionDetailsResponse, GetCompositionsRequest, GetCompositionsResponse, GetDashboardAnalyticsViewRequest, GetDashboardAnalyticsViewResponse, GetFederatedGraphByNameRequest, GetFederatedGraphByNameResponse, GetFederatedGraphChangelogRequest, GetFederatedGraphChangelogResponse, GetFederatedGraphSDLByNameRequest, GetFederatedGraphSDLByNameResponse, GetFederatedGraphsRequest, GetFederatedGraphsResponse, GetFieldUsageRequest, GetFieldUsageResponse, GetGraphMetricsRequest, GetGraphMetricsResponse, GetInvitationsRequest, GetInvitationsResponse, GetLatestValidSubgraphSDLByNameRequest, GetLatestValidSubgraphSDLByNameResponse, GetMetricsErrorRateRequest, GetMetricsErrorRateResponse, GetOIDCProviderRequest, GetOIDCProviderResponse, GetOperationContentRequest, GetOperationContentResponse, GetOrganizationIntegrationsRequest, GetOrganizationIntegrationsResponse, GetOrganizationMembersRequest, GetOrganizationMembersResponse, GetOrganizationRequestsCountRequest, GetOrganizationRequestsCountResponse, GetOrganizationWebhookConfigsRequest, GetOrganizationWebhookConfigsResponse, GetOrganizationWebhookMetaRequest, GetOrganizationWebhookMetaResponse, GetPersistedOperationsRequest, GetPersistedOperationsResponse, GetRouterTokensRequest, GetRouterTokensResponse, GetSdlBySchemaVersionRequest, GetSdlBySchemaVersionResponse, GetSubgraphByNameRequest, GetSubgraphByNameResponse, GetSubgraphMembersRequest, GetSubgraphMembersResponse, GetSubgraphsRequest, GetSubgraphsResponse, GetTraceRequest, GetTraceResponse, GetUserAccessibleResourcesRequest, GetUserAccessibleResourcesResponse, InviteUserRequest, InviteUserResponse, IsGitHubAppInstalledRequest, IsGitHubAppInstalledResponse, IsRBACEnabledRequest, IsRBACEnabledResponse, LeaveOrganizationRequest, LeaveOrganizationResponse, MigrateFromApolloRequest, MigrateFromApolloResponse, PublishFederatedSubgraphRequest, PublishFederatedSubgraphResponse, PublishPersistedOperationsRequest, PublishPersistedOperationsResponse, RemoveInvitationRequest, RemoveInvitationResponse, RemoveOrganizationMemberRequest, RemoveOrganizationMemberResponse, RemoveSubgraphMemberRequest, RemoveSubgraphMemberResponse, UpdateFederatedGraphRequest, UpdateFederatedGraphResponse, UpdateIntegrationConfigRequest, UpdateIntegrationConfigResponse, UpdateOrganizationDetailsRequest, UpdateOrganizationDetailsResponse, UpdateOrganizationWebhookConfigRequest, UpdateOrganizationWebhookConfigResponse, UpdateOrgMemberRoleRequest, UpdateOrgMemberRoleResponse, UpdateRBACSettingsRequest, UpdateRBACSettingsResponse, UpdateSubgraphRequest, UpdateSubgraphResponse, WhoAmIRequest, WhoAmIResponse } from "./platform_pb.js";
+import { AcceptOrDeclineInvitationRequest, AcceptOrDeclineInvitationResponse, AddSubgraphMemberRequest, AddSubgraphMemberResponse, CheckFederatedGraphRequest, CheckFederatedGraphResponse, CheckSubgraphSchemaRequest, CheckSubgraphSchemaResponse, CreateAPIKeyRequest, CreateAPIKeyResponse, CreateDiscussionRequest, CreateDiscussionResponse, CreateFederatedGraphRequest, CreateFederatedGraphResponse, CreateFederatedGraphTokenRequest, CreateFederatedGraphTokenResponse, CreateFederatedSubgraphRequest, CreateFederatedSubgraphResponse, CreateIntegrationRequest, CreateIntegrationResponse, CreateOIDCProviderRequest, CreateOIDCProviderResponse, CreateOrganizationWebhookConfigRequest, CreateOrganizationWebhookConfigResponse, DeleteAPIKeyRequest, DeleteAPIKeyResponse, DeleteDiscussionCommentRequest, DeleteDiscussionCommentResponse, DeleteFederatedGraphRequest, DeleteFederatedGraphResponse, DeleteFederatedSubgraphRequest, DeleteFederatedSubgraphResponse, DeleteIntegrationRequest, DeleteIntegrationResponse, DeleteOIDCProviderRequest, DeleteOIDCProviderResponse, DeleteOrganizationRequest, DeleteOrganizationResponse, DeleteOrganizationWebhookConfigRequest, DeleteOrganizationWebhookConfigResponse, DeleteRouterTokenRequest, DeleteRouterTokenResponse, FixSubgraphSchemaRequest, FixSubgraphSchemaResponse, ForceCheckSuccessRequest, ForceCheckSuccessResponse, GetAllDiscussionsRequest, GetAllDiscussionsResponse, GetAnalyticsViewRequest, GetAnalyticsViewResponse, GetAPIKeysRequest, GetAPIKeysResponse, GetChangelogBySchemaVersionRequest, GetChangelogBySchemaVersionResponse, GetCheckDetailsRequest, GetCheckDetailsResponse, GetCheckOperationsRequest, GetCheckOperationsResponse, GetChecksByFederatedGraphNameRequest, GetChecksByFederatedGraphNameResponse, GetCheckSummaryRequest, GetCheckSummaryResponse, GetClientsRequest, GetClientsResponse, GetCompositionDetailsRequest, GetCompositionDetailsResponse, GetCompositionsRequest, GetCompositionsResponse, GetDashboardAnalyticsViewRequest, GetDashboardAnalyticsViewResponse, GetDiscussionRequest, GetDiscussionResponse, GetDiscussionSchemasRequest, GetDiscussionSchemasResponse, GetFederatedGraphByNameRequest, GetFederatedGraphByNameResponse, GetFederatedGraphChangelogRequest, GetFederatedGraphChangelogResponse, GetFederatedGraphSDLByNameRequest, GetFederatedGraphSDLByNameResponse, GetFederatedGraphsRequest, GetFederatedGraphsResponse, GetFieldUsageRequest, GetFieldUsageResponse, GetGraphMetricsRequest, GetGraphMetricsResponse, GetInvitationsRequest, GetInvitationsResponse, GetLatestValidSubgraphSDLByNameRequest, GetLatestValidSubgraphSDLByNameResponse, GetMetricsErrorRateRequest, GetMetricsErrorRateResponse, GetOIDCProviderRequest, GetOIDCProviderResponse, GetOperationContentRequest, GetOperationContentResponse, GetOrganizationIntegrationsRequest, GetOrganizationIntegrationsResponse, GetOrganizationMembersRequest, GetOrganizationMembersResponse, GetOrganizationRequestsCountRequest, GetOrganizationRequestsCountResponse, GetOrganizationWebhookConfigsRequest, GetOrganizationWebhookConfigsResponse, GetOrganizationWebhookMetaRequest, GetOrganizationWebhookMetaResponse, GetPersistedOperationsRequest, GetPersistedOperationsResponse, GetRouterTokensRequest, GetRouterTokensResponse, GetSdlBySchemaVersionRequest, GetSdlBySchemaVersionResponse, GetSubgraphByNameRequest, GetSubgraphByNameResponse, GetSubgraphMembersRequest, GetSubgraphMembersResponse, GetSubgraphsRequest, GetSubgraphsResponse, GetTraceRequest, GetTraceResponse, GetUserAccessibleResourcesRequest, GetUserAccessibleResourcesResponse, InviteUserRequest, InviteUserResponse, IsGitHubAppInstalledRequest, IsGitHubAppInstalledResponse, IsRBACEnabledRequest, IsRBACEnabledResponse, LeaveOrganizationRequest, LeaveOrganizationResponse, MigrateFromApolloRequest, MigrateFromApolloResponse, PublishFederatedSubgraphRequest, PublishFederatedSubgraphResponse, PublishPersistedOperationsRequest, PublishPersistedOperationsResponse, RemoveInvitationRequest, RemoveInvitationResponse, RemoveOrganizationMemberRequest, RemoveOrganizationMemberResponse, RemoveSubgraphMemberRequest, RemoveSubgraphMemberResponse, ReplyToDiscussionRequest, ReplyToDiscussionResponse, SetDiscussionResolutionRequest, SetDiscussionResolutionResponse, UpdateDiscussionCommentRequest, UpdateDiscussionCommentResponse, UpdateFederatedGraphRequest, UpdateFederatedGraphResponse, UpdateIntegrationConfigRequest, UpdateIntegrationConfigResponse, UpdateOrganizationDetailsRequest, UpdateOrganizationDetailsResponse, UpdateOrganizationWebhookConfigRequest, UpdateOrganizationWebhookConfigResponse, UpdateOrgMemberRoleRequest, UpdateOrgMemberRoleResponse, UpdateRBACSettingsRequest, UpdateRBACSettingsResponse, UpdateSubgraphRequest, UpdateSubgraphResponse, WhoAmIRequest, WhoAmIResponse } from "./platform_pb.js";
 import { MethodIdempotency, MethodKind } from "@bufbuild/protobuf";
 import { GetConfigRequest, GetConfigResponse } from "../../node/v1/node_pb.js";
 import { createQueryService, createUnaryHooks, UnaryFunctionsWithHooks } from "@connectrpc/connect-query";
@@ -765,6 +765,94 @@ export const PlatformService = {
       kind: MethodKind.Unary,
     },
     /**
+     * CreateDiscussion creates a new discussion with an opening comment
+     *
+     * @generated from rpc wg.cosmo.platform.v1.PlatformService.CreateDiscussion
+     */
+    createDiscussion: {
+      name: "CreateDiscussion",
+      I: CreateDiscussionRequest,
+      O: CreateDiscussionResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * ReplyToDiscussion creates a new comment in the discussion
+     *
+     * @generated from rpc wg.cosmo.platform.v1.PlatformService.ReplyToDiscussion
+     */
+    replyToDiscussion: {
+      name: "ReplyToDiscussion",
+      I: ReplyToDiscussionRequest,
+      O: ReplyToDiscussionResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * GetAllDiscussions fetches all discussions which may be scoped to a schema version if passed
+     *
+     * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetAllDiscussions
+     */
+    getAllDiscussions: {
+      name: "GetAllDiscussions",
+      I: GetAllDiscussionsRequest,
+      O: GetAllDiscussionsResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * UpdateDiscussionComment edits the comment in the discussion
+     *
+     * @generated from rpc wg.cosmo.platform.v1.PlatformService.UpdateDiscussionComment
+     */
+    updateDiscussionComment: {
+      name: "UpdateDiscussionComment",
+      I: UpdateDiscussionCommentRequest,
+      O: UpdateDiscussionCommentResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * DeleteDiscussionComment deletes the comment or the discussion if it is an opening comment
+     *
+     * @generated from rpc wg.cosmo.platform.v1.PlatformService.DeleteDiscussionComment
+     */
+    deleteDiscussionComment: {
+      name: "DeleteDiscussionComment",
+      I: DeleteDiscussionCommentRequest,
+      O: DeleteDiscussionCommentResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * GetDiscussion gets the entire discussion thread
+     *
+     * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetDiscussion
+     */
+    getDiscussion: {
+      name: "GetDiscussion",
+      I: GetDiscussionRequest,
+      O: GetDiscussionResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * GetDiscussionSchemas gets the reference and latest schema of the target graph in which the discussion was created
+     *
+     * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetDiscussionSchemas
+     */
+    getDiscussionSchemas: {
+      name: "GetDiscussionSchemas",
+      I: GetDiscussionSchemasRequest,
+      O: GetDiscussionSchemasResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * SetDiscussionResolutionRequest marks the discussion as resolved or not
+     *
+     * @generated from rpc wg.cosmo.platform.v1.PlatformService.SetDiscussionResolution
+     */
+    setDiscussionResolution: {
+      name: "SetDiscussionResolution",
+      I: SetDiscussionResolutionRequest,
+      O: SetDiscussionResolutionResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
      * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetAnalyticsView
      */
     getAnalyticsView: {
@@ -1310,6 +1398,62 @@ export const removeSubgraphMember: UnaryFunctionsWithHooks<RemoveSubgraphMemberR
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetSubgraphMembers
  */
 export const getSubgraphMembers: UnaryFunctionsWithHooks<GetSubgraphMembersRequest, GetSubgraphMembersResponse> = {   ...$queryService.getSubgraphMembers,  ...createUnaryHooks($queryService.getSubgraphMembers)};
+
+/**
+ * CreateDiscussion creates a new discussion with an opening comment
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.CreateDiscussion
+ */
+export const createDiscussion: UnaryFunctionsWithHooks<CreateDiscussionRequest, CreateDiscussionResponse> = {   ...$queryService.createDiscussion,  ...createUnaryHooks($queryService.createDiscussion)};
+
+/**
+ * ReplyToDiscussion creates a new comment in the discussion
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.ReplyToDiscussion
+ */
+export const replyToDiscussion: UnaryFunctionsWithHooks<ReplyToDiscussionRequest, ReplyToDiscussionResponse> = {   ...$queryService.replyToDiscussion,  ...createUnaryHooks($queryService.replyToDiscussion)};
+
+/**
+ * GetAllDiscussions fetches all discussions which may be scoped to a schema version if passed
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetAllDiscussions
+ */
+export const getAllDiscussions: UnaryFunctionsWithHooks<GetAllDiscussionsRequest, GetAllDiscussionsResponse> = {   ...$queryService.getAllDiscussions,  ...createUnaryHooks($queryService.getAllDiscussions)};
+
+/**
+ * UpdateDiscussionComment edits the comment in the discussion
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.UpdateDiscussionComment
+ */
+export const updateDiscussionComment: UnaryFunctionsWithHooks<UpdateDiscussionCommentRequest, UpdateDiscussionCommentResponse> = {   ...$queryService.updateDiscussionComment,  ...createUnaryHooks($queryService.updateDiscussionComment)};
+
+/**
+ * DeleteDiscussionComment deletes the comment or the discussion if it is an opening comment
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.DeleteDiscussionComment
+ */
+export const deleteDiscussionComment: UnaryFunctionsWithHooks<DeleteDiscussionCommentRequest, DeleteDiscussionCommentResponse> = {   ...$queryService.deleteDiscussionComment,  ...createUnaryHooks($queryService.deleteDiscussionComment)};
+
+/**
+ * GetDiscussion gets the entire discussion thread
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetDiscussion
+ */
+export const getDiscussion: UnaryFunctionsWithHooks<GetDiscussionRequest, GetDiscussionResponse> = {   ...$queryService.getDiscussion,  ...createUnaryHooks($queryService.getDiscussion)};
+
+/**
+ * GetDiscussionSchemas gets the reference and latest schema of the target graph in which the discussion was created
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetDiscussionSchemas
+ */
+export const getDiscussionSchemas: UnaryFunctionsWithHooks<GetDiscussionSchemasRequest, GetDiscussionSchemasResponse> = {   ...$queryService.getDiscussionSchemas,  ...createUnaryHooks($queryService.getDiscussionSchemas)};
+
+/**
+ * SetDiscussionResolutionRequest marks the discussion as resolved or not
+ *
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.SetDiscussionResolution
+ */
+export const setDiscussionResolution: UnaryFunctionsWithHooks<SetDiscussionResolutionRequest, SetDiscussionResolutionResponse> = {   ...$queryService.setDiscussionResolution,  ...createUnaryHooks($queryService.setDiscussionResolution)};
 
 /**
  * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetAnalyticsView

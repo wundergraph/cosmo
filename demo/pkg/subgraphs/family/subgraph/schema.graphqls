@@ -28,6 +28,7 @@ interface Pet implements Animal {
 enum CatType {
   HOME
   STREET
+  COSMIC
 }
 
 type Alligator implements Pet & Animal {
@@ -85,7 +86,7 @@ enum Nationality {
   UKRAINIAN
 }
 
-type Details  {
+type Details {
   forename: String! @shareable
   surname: String! @shareable
   hasChildren: Boolean!

@@ -13,6 +13,7 @@ import {
   CheckSubgraphSchemaResponse,
   CompositionError,
   CreateAPIKeyResponse,
+  CreateDiscussionResponse,
   CreateFederatedGraphResponse,
   CreateFederatedGraphTokenResponse,
   CreateFederatedSubgraphResponse,
@@ -21,6 +22,7 @@ import {
   CreateOrganizationWebhookConfigResponse,
   DateRange,
   DeleteAPIKeyResponse,
+  DeleteDiscussionCommentResponse,
   DeleteFederatedGraphResponse,
   DeleteFederatedSubgraphResponse,
   DeleteIntegrationResponse,
@@ -30,6 +32,7 @@ import {
   FixSubgraphSchemaResponse,
   ForceCheckSuccessResponse,
   GetAPIKeysResponse,
+  GetAllDiscussionsResponse,
   GetAnalyticsViewResponse,
   GetChangelogBySchemaVersionResponse,
   GetCheckDetailsResponse,
@@ -40,6 +43,8 @@ import {
   GetCompositionDetailsResponse,
   GetCompositionsResponse,
   GetDashboardAnalyticsViewResponse,
+  GetDiscussionResponse,
+  GetDiscussionSchemasResponse,
   GetFederatedGraphByNameResponse,
   GetFederatedGraphChangelogResponse,
   GetFederatedGraphSDLByNameResponse,
@@ -75,7 +80,10 @@ import {
   PublishedOperationStatus,
   RemoveInvitationResponse,
   RemoveSubgraphMemberResponse,
+  ReplyToDiscussionResponse,
   RequestSeriesItem,
+  SetDiscussionResolutionResponse,
+  UpdateDiscussionCommentResponse,
   UpdateFederatedGraphResponse,
   UpdateIntegrationConfigResponse,
   UpdateOrgMemberRoleResponse,
@@ -86,9 +94,11 @@ import {
   WhoAmIResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { OpenAIGraphql, isValidUrl } from '@wundergraph/cosmo-shared';
+import { SQL, and, asc, desc, eq, inArray } from 'drizzle-orm';
 import { DocumentNode, buildASTSchema, parse } from 'graphql';
 import { validate } from 'graphql/validation/index.js';
 import { uid } from 'uid';
+import { discussionThread, discussions, schemaVersion as schemaVersionTable } from '../../db/schema.js';
 import {
   GraphApiKeyDTO,
   GraphApiKeyJwtPayload,
@@ -99,6 +109,7 @@ import { Composer } from '../composition/composer.js';
 import { buildSchema, composeSubgraphs } from '../composition/composition.js';
 import { getDiffBetweenGraphs } from '../composition/schemaCheck.js';
 import { signJwt } from '../crypto/jwt.js';
+import { ApiKeyRepository } from '../repositories/ApiKeyRepository.js';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
 import { GitHubRepository } from '../repositories/GitHubRepository.js';
 import { GraphCompositionRepository } from '../repositories/GraphCompositionRepository.js';
@@ -137,7 +148,6 @@ import {
   validateDateRanges,
 } from '../util.js';
 import { FederatedGraphSchemaUpdate, OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
-import { ApiKeyRepository } from '../repositories/ApiKeyRepository.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -1326,6 +1336,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           routingURL: s.routingUrl,
           labels: s.labels,
           lastUpdatedAt: s.lastUpdatedAt,
+          targetId: s.targetId,
         }));
 
         const result = composeSubgraphs(
@@ -3387,6 +3398,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             lastUpdatedAt: g.lastUpdatedAt,
             labels: g.labels,
             createdUserId: g.creatorUserId,
+            targetId: g.targetId,
           })),
           response: {
             code: EnumStatusCode.OK,
@@ -3423,6 +3435,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             lastUpdatedAt: subgraph.lastUpdatedAt,
             routingURL: subgraph.routingUrl,
             labels: subgraph.labels,
+            targetId: subgraph.targetId,
           },
           response: {
             code: EnumStatusCode.OK,
@@ -3456,6 +3469,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         return {
           graphs: list.map((g) => ({
             id: g.id,
+            targetId: g.targetId,
             name: g.name,
             labelMatchers: g.labelMatchers,
             routingURL: g.routingUrl,
@@ -3481,18 +3495,21 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const fedRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
         const schemaVersion = await fedRepo.getLatestValidSchemaVersion(req.name);
-        if (schemaVersion && schemaVersion.schema) {
+
+        if (!schemaVersion || !schemaVersion.schema) {
           return {
             response: {
-              code: EnumStatusCode.OK,
+              code: EnumStatusCode.ERR_NOT_FOUND,
             },
-            sdl: schemaVersion.schema,
           };
         }
+
         return {
           response: {
-            code: EnumStatusCode.ERR_NOT_FOUND,
+            code: EnumStatusCode.OK,
           },
+          sdl: schemaVersion.schema,
+          versionId: schemaVersion.schemaVersionId,
         };
       });
     },
@@ -3528,6 +3545,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             code: EnumStatusCode.OK,
           },
           sdl: schemaVersion.schema || undefined,
+          versionId: schemaVersion.schemaVersionId,
         };
       });
     },
@@ -3613,6 +3631,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         return {
           graph: {
             id: federatedGraph.id,
+            targetId: federatedGraph.targetId,
             name: federatedGraph.name,
             routingURL: federatedGraph.routingUrl,
             labelMatchers: federatedGraph.labelMatchers,
@@ -3628,6 +3647,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             routingURL: g.routingUrl,
             lastUpdatedAt: g.lastUpdatedAt,
             labels: g.labels,
+            targetId: g.targetId,
           })),
           graphToken: graphToken.token,
           graphRequestToken: routerRequestToken,
@@ -4980,6 +5000,453 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             code: EnumStatusCode.OK,
           },
           enabled: organization.isRBACEnabled || false,
+        };
+      });
+    },
+
+    createDiscussion: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<CreateDiscussionResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const graphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+        const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
+
+        const graph = await graphRepo.byName(req.graphName);
+        if (!graph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Federated graph ${req.graphName} not found`,
+            },
+          };
+        }
+
+        const subgraphs = await subgraphRepo.listByFederatedGraph(graph.name);
+        if (req.targetId !== graph.targetId && !subgraphs.some((s) => s.targetId === req.targetId)) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `The requested subgraph is not part of the federated graph ${req.graphName}`,
+            },
+          };
+        }
+
+        await opts.db.transaction(async (tx) => {
+          const discussion = (
+            await tx
+              .insert(discussions)
+              .values({
+                targetId: req.targetId,
+                schemaVersionId: req.schemaVersionId,
+                referenceLine: req.referenceLine,
+              })
+              .returning()
+          )[0];
+
+          await tx.insert(discussionThread).values({
+            discussionId: discussion.id,
+            contentMarkdown: req.contentMarkdown,
+            contentJson: JSON.parse(req.contentJson),
+            createdById: authContext.userId,
+          });
+        });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+        };
+      });
+    },
+
+    replyToDiscussion: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<ReplyToDiscussionResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const graphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+
+        const graph = await graphRepo.byName(req.graphName);
+        if (!graph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Federated graph ${req.graphName} not found`,
+            },
+          };
+        }
+
+        await opts.db.insert(discussionThread).values({
+          discussionId: req.discussionId,
+          contentMarkdown: req.contentMarkdown,
+          contentJson: JSON.parse(req.contentJson),
+          createdById: authContext.userId,
+        });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+        };
+      });
+    },
+
+    getAllDiscussions: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetAllDiscussionsResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const graphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+
+        const graph = await graphRepo.byName(req.graphName);
+        if (!graph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Federated graph ${req.graphName} not found`,
+            },
+            discussions: [],
+          };
+        }
+
+        let conditions: SQL<unknown> | undefined = eq(discussions.targetId, req.targetId);
+
+        if (req.schemaVersionId) {
+          conditions = and(conditions, eq(discussions.schemaVersionId, req.schemaVersionId));
+        }
+
+        const graphDiscussions = await opts.db.query.discussions.findMany({
+          where: conditions,
+          with: {
+            thread: {
+              limit: 1,
+              orderBy: asc(discussionThread.createdAt),
+            },
+          },
+          orderBy: desc(discussions.createdAt),
+        });
+
+        if (graphDiscussions.length > 0) {
+          const schemaVersions = await opts.db.query.schemaVersion.findMany({
+            where: inArray(
+              schemaVersionTable.id,
+              graphDiscussions.map((gd) => gd.schemaVersionId),
+            ),
+            columns: {
+              id: true,
+              createdAt: true,
+            },
+          });
+
+          graphDiscussions.sort((a, b) => {
+            const createdAtA = schemaVersions.find((sv) => sv.id === a.schemaVersionId)?.createdAt || new Date(0);
+            const createdAtB = schemaVersions.find((sv) => sv.id === b.schemaVersionId)?.createdAt || new Date(0);
+
+            return createdAtB.getTime() - createdAtA.getTime();
+          });
+        }
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          discussions: graphDiscussions.map((gd) => ({
+            id: gd.id,
+            schemaVersionId: gd.schemaVersionId,
+            targetId: gd.targetId,
+            referenceLine: gd.referenceLine ?? '',
+            isResolved: gd.isResolved,
+            openingComment: {
+              id: gd.thread[0].id,
+              contentJson: JSON.stringify(gd.thread[0].contentJson),
+              createdAt: gd.thread[0].createdAt.toISOString(),
+              updatedAt: gd.thread[0].updatedAt?.toISOString(),
+              createdBy: gd.thread[0].createdById,
+            },
+          })),
+        };
+      });
+    },
+
+    updateDiscussionComment: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<UpdateDiscussionCommentResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const graphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+
+        const graph = await graphRepo.byName(req.graphName);
+        if (!graph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Federated graph ${req.graphName} not found`,
+            },
+          };
+        }
+
+        const updated = await opts.db
+          .update(discussionThread)
+          .set({
+            contentMarkdown: req.contentMarkdown,
+            contentJson: JSON.parse(req.contentJson),
+            updatedAt: new Date(),
+          })
+          .where(and(eq(discussionThread.id, req.commentId), eq(discussionThread.createdById, authContext.userId)))
+          .returning();
+
+        if (updated.length === 0) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: 'Failed to update comment',
+            },
+          };
+        }
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+        };
+      });
+    },
+
+    deleteDiscussionComment: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<DeleteDiscussionCommentResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const graphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+
+        const graph = await graphRepo.byName(req.graphName);
+        if (!graph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Federated graph ${req.graphName} not found`,
+            },
+          };
+        }
+
+        const discussion = await opts.db.query.discussions.findFirst({
+          where: eq(discussions.id, req.discussionId),
+          with: {
+            thread: {
+              limit: 1,
+              orderBy: asc(discussionThread.createdAt),
+            },
+          },
+        });
+
+        if (!discussion) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Discussion not found`,
+            },
+          };
+        }
+
+        // We delete the discussion itself if it is the opening comment or else we only delete the comment
+        const isOpeningComment = discussion.thread[0].id === req.commentId;
+
+        await opts.db.transaction(async (tx) => {
+          if (isOpeningComment) {
+            await tx.delete(discussions).where(eq(discussions.id, req.discussionId));
+          } else {
+            await tx.delete(discussionThread).where(eq(discussionThread.id, req.commentId));
+          }
+        });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+        };
+      });
+    },
+
+    getDiscussion: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetDiscussionResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const graphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+        const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
+
+        const graph = await graphRepo.byName(req.graphName);
+        if (!graph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Federated graph ${req.graphName} not found`,
+            },
+            comments: [],
+          };
+        }
+
+        const subgraphs = await subgraphRepo.listByFederatedGraph(graph.name);
+
+        const graphDiscussion = await opts.db.query.discussions.findFirst({
+          where: and(
+            inArray(discussions.targetId, [graph.targetId, ...subgraphs.map((s) => s.targetId)]),
+            eq(discussions.id, req.discussionId),
+          ),
+          with: {
+            thread: {
+              orderBy: asc(discussionThread.createdAt),
+            },
+          },
+        });
+
+        if (!graphDiscussion) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Discussion not found`,
+            },
+            comments: [],
+          };
+        }
+
+        const comments = graphDiscussion.thread.map((t) => ({
+          id: t.id,
+          contentJson: JSON.stringify(t.contentJson),
+          createdAt: t.createdAt.toISOString(),
+          updatedAt: t.updatedAt?.toISOString(),
+          createdBy: t.createdById,
+        }));
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          discussion: {
+            id: graphDiscussion.id,
+            schemaVersionId: graphDiscussion.schemaVersionId,
+            targetId: graphDiscussion.targetId,
+            referenceLine: graphDiscussion.referenceLine ?? '',
+            openingComment: comments[0],
+            isResolved: graphDiscussion.isResolved,
+          },
+          comments,
+        };
+      });
+    },
+
+    getDiscussionSchemas: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<GetDiscussionSchemasResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const graphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+        const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
+
+        const graph = await graphRepo.byName(req.graphName);
+        if (!graph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Federated graph ${req.graphName} not found`,
+            },
+            comments: [],
+          };
+        }
+
+        const subgraphs = await subgraphRepo.listByFederatedGraph(graph.name);
+
+        const graphDiscussion = await opts.db.query.discussions.findFirst({
+          where: and(
+            inArray(discussions.targetId, [graph.targetId, ...subgraphs.map((s) => s.targetId)]),
+            eq(discussions.id, req.discussionId),
+          ),
+        });
+
+        if (!graphDiscussion) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Discussion not found`,
+            },
+            comments: [],
+          };
+        }
+
+        const referenceResult = await opts.db.query.schemaVersion.findFirst({
+          where: eq(schemaVersionTable.id, graphDiscussion.schemaVersionId),
+        });
+
+        const latestResult = await opts.db.query.schemaVersion.findFirst({
+          where: eq(schemaVersionTable.targetId, graphDiscussion.targetId),
+          orderBy: desc(schemaVersionTable.createdAt),
+        });
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
+          schemas: {
+            reference: referenceResult?.schemaSDL ?? '',
+            latest: latestResult?.schemaSDL ?? '',
+          },
+        };
+      });
+    },
+
+    setDiscussionResolution: (req, ctx) => {
+      const logger = opts.logger.child({
+        service: ctx.service.typeName,
+        method: ctx.method.name,
+      });
+
+      return handleError<PlainMessage<SetDiscussionResolutionResponse>>(logger, async () => {
+        const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
+        const graphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+
+        const graph = await graphRepo.byName(req.graphName);
+        if (!graph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: `Federated graph ${req.graphName} not found`,
+            },
+          };
+        }
+
+        await opts.db
+          .update(discussions)
+          .set({
+            isResolved: req.isResolved,
+          })
+          .where(eq(discussions.id, req.discussionId));
+
+        return {
+          response: {
+            code: EnumStatusCode.OK,
+          },
         };
       });
     },

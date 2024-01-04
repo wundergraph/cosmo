@@ -19,8 +19,7 @@ import {
 import { GetFederatedGraphByNameResponse } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { useRouter } from "next/router";
 import { Fragment, ReactNode, createContext, useMemo } from "react";
-import { MdDevices } from "react-icons/md";
-import { PiCubeFocus, PiDevices, PiGitBranch } from "react-icons/pi";
+import { PiChat, PiCubeFocus, PiDevices, PiGitBranch } from "react-icons/pi";
 import { EmptyState } from "../empty-state";
 import { Button } from "../ui/button";
 import { Loader } from "../ui/loader";
@@ -44,7 +43,8 @@ const icons: { [key: string]: ReactNode } = {
   Changelog: <PiGitBranch />,
   Checks: <CheckCircledIcon />,
   Analytics: <ChartBarIcon className="h-4 w-4" />,
-  Clients: <MdDevices className="h-4 w-4" />,
+  Clients: <PiDevices className="h-4 w-4" />,
+  Discussions: <PiChat className="h-4 w-4" />,
 };
 
 export interface GraphContextProps {
@@ -133,6 +133,12 @@ export const GraphLayout = ({ children }: LayoutProps) => {
         href: basePath + "/checks",
         matchExact: false,
         icon: <CheckCircledIcon className="h-4 w-4" />,
+      },
+      {
+        title: "Discussions",
+        href: basePath + "/discussions",
+        matchExact: false,
+        icon: <PiChat className="h-4 w-4" />,
       },
     ];
   }, [slug, organizationSlug]);

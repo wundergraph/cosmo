@@ -1,3 +1,5 @@
+import { useApplyParams } from "@/components/analytics/use-apply-params";
+import { CodeViewerActions } from "@/components/code-viewer";
 import { CompositionErrorsBanner } from "@/components/composition-errors-banner";
 import {
   GraphContext,
@@ -5,8 +7,10 @@ import {
   getGraphLayout,
 } from "@/components/layout/graph-layout";
 import { PageHeader } from "@/components/layout/head";
-import { CodeViewer, CodeViewerActions } from "@/components/code-viewer";
+import { SDLViewer } from "@/components/schema/sdl-viewer";
+import { ThreadSheet } from "@/components/schema/thread";
 import { SchemaToolbar } from "@/components/schema/toolbar";
+import { Loader } from "@/components/ui/loader";
 import {
   Select,
   SelectContent,
@@ -17,6 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import useWindowSize from "@/hooks/use-window-size";
 import { formatDateTime } from "@/lib/format-date";
 import { NextPageWithLayout } from "@/lib/page";
 import { Component2Icon } from "@radix-ui/react-icons";
@@ -61,13 +66,14 @@ const SDLPage: NextPageWithLayout = () => {
   const router = useRouter();
   const activeSubgraph = router.query.subgraph as string;
   const graphName = router.query.slug as string;
+  const discussionId = router.query.discussionId as string;
 
   const fullPath = router.asPath;
   const pathWithHash = fullPath.split("?")[0];
   const pathname = pathWithHash.split("#")[0];
   const hash = pathWithHash.split("#")?.[1];
 
-  const { data: federatedGraphSdl } = useQuery(
+  const { data: federatedGraphSdl, isLoading: loadingGraphSDL } = useQuery(
     getFederatedGraphSDLByName.useQuery({
       name: graphName,
     }),
@@ -78,7 +84,7 @@ const SDLPage: NextPageWithLayout = () => {
   const validGraph =
     graphData?.graph?.isComposable && !!graphData?.graph?.lastUpdatedAt;
 
-  const { data: subGraphSdl } = useQuery({
+  const { data: subgraphSdl, isLoading: loadingSubgraphSDL } = useQuery({
     ...getLatestValidSubgraphSDLByName.useQuery({
       name: activeSubgraph,
       fedGraphName: graphName,
@@ -96,26 +102,36 @@ const SDLPage: NextPageWithLayout = () => {
 
   useScrollIntoView(hash);
 
+  const applyParams = useApplyParams();
+
   const activeSubgraphObject = graphData?.subgraphs.find((each) => {
     return each.name === activeSubgraph;
   });
 
+  const { isTablet } = useWindowSize();
+
   const activeGraphWithSDL = activeSubgraph
     ? {
         title: activeSubgraphObject?.name ?? "",
+        targetId: activeSubgraphObject?.targetId ?? "",
         routingUrl: activeSubgraphObject?.routingURL ?? "",
-        sdl: subGraphSdl?.sdl ?? "",
+        sdl: subgraphSdl?.sdl ?? "",
+        versionId: subgraphSdl?.versionId,
         time: "",
       }
     : {
         title: graphName,
+        targetId: graphData?.graph?.targetId ?? "",
         routingUrl: graphData?.graph?.routingURL ?? "",
         sdl: federatedGraphSdl?.sdl ?? "",
         time: graphData?.graph?.lastUpdatedAt,
+        versionId: federatedGraphSdl?.versionId,
       };
 
+  const isLoading = loadingGraphSDL || loadingSubgraphSDL;
+
   return (
-    <PageHeader title="Studio | SDL">
+    <PageHeader title="SDL | Studio">
       <GraphPageLayout
         title="SDL"
         subtitle="View the SDL of your federated graph and subgraphs"
@@ -154,11 +170,11 @@ const SDLPage: NextPageWithLayout = () => {
                   </SelectGroup>
                 </SelectContent>
               </Select>
-              <CodeViewerActions
+              {/* <CodeViewerActions
                 className="md:ml-0"
                 code={activeGraphWithSDL.sdl ?? ""}
                 subgraphName={activeGraphWithSDL.title}
-              />
+              /> */}
             </div>
           </SchemaToolbar>
         }
@@ -169,36 +185,44 @@ const SDLPage: NextPageWithLayout = () => {
             className="mx-4 mt-4"
           />
         )}
-        <div className="relative flex h-full min-h-[60vh] flex-col-reverse  md:flex-col">
-          <div
-            id="schema-container"
-            className="scrollbar-custom flex-1 overflow-auto"
-          >
-            <CodeViewer
-              className="h-0 w-0"
-              code={activeGraphWithSDL.sdl ?? ""}
-            />
-          </div>
-          <div className="flex w-full flex-col items-center justify-end gap-x-8 gap-y-1 border-t bg-card p-2 text-xs md:flex-row">
-            <p className="flex items-center gap-x-1">
-              Routing URL :
-              <Link
-                className="hover:underline"
-                target="_blank"
-                rel="noreferrer"
-                href={activeGraphWithSDL.routingUrl}
-              >
-                {activeGraphWithSDL.routingUrl}
-              </Link>
-            </p>
-            {activeGraphWithSDL.time && (
+        {isLoading && <Loader fullscreen />}
+        {!isLoading && (
+          <div className="relative flex h-full min-h-[60vh] flex-col-reverse  md:flex-col">
+            <div
+              id="schema-container"
+              className="scrollbar-custom h-full flex-1 overflow-auto"
+            >
+              <SDLViewer
+                className="h-0 w-0"
+                code={activeGraphWithSDL.sdl ?? ""}
+                targetId={activeGraphWithSDL?.targetId}
+                versionId={activeGraphWithSDL.versionId ?? ""}
+              />
+            </div>
+            <ThreadSheet schemaVersionId={activeGraphWithSDL.versionId ?? ""} />
+            <div className="flex w-full flex-col items-center justify-end gap-x-8 gap-y-1 border-t bg-card p-2 text-xs md:flex-row">
               <p className="flex items-center gap-x-1">
-                Last updated :
-                <span>{formatDateTime(new Date(activeGraphWithSDL.time))}</span>
+                Routing URL :
+                <Link
+                  className="hover:underline"
+                  target="_blank"
+                  rel="noreferrer"
+                  href={activeGraphWithSDL.routingUrl}
+                >
+                  {activeGraphWithSDL.routingUrl}
+                </Link>
               </p>
-            )}
+              {activeGraphWithSDL.time && (
+                <p className="flex items-center gap-x-1">
+                  Last updated :
+                  <span>
+                    {formatDateTime(new Date(activeGraphWithSDL.time))}
+                  </span>
+                </p>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </GraphPageLayout>
     </PageHeader>
   );
