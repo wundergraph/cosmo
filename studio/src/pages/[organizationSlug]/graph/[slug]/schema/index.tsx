@@ -289,11 +289,13 @@ const Fields = (props: {
 const TypeDiscussions = ({
   name,
   schemaVersionId,
-  lineNo,
+  startLineNo,
+  endLineNo,
 }: {
   name: string;
   schemaVersionId: string;
-  lineNo: number;
+  startLineNo: number;
+  endLineNo: number;
 }) => {
   const router = useRouter();
   const graphName = router.query.slug as string;
@@ -342,7 +344,9 @@ const TypeDiscussions = ({
   }
 
   const discussions = data?.discussions
-    .filter((d) => d.referenceLine === lineNo)
+    .filter(
+      (d) => d.referenceLine >= startLineNo && d.referenceLine <= endLineNo,
+    )
     .filter((ld) => !(ld.isResolved && hideResolvedDiscussions));
 
   return (
@@ -352,7 +356,7 @@ const TypeDiscussions = ({
         <Button
           variant="secondary"
           size="sm"
-          onClick={() => setNewDiscussionLine(lineNo)}
+          onClick={() => setNewDiscussionLine(startLineNo)}
         >
           <PlusIcon className="mr-2" />
           New
@@ -366,19 +370,21 @@ const TypeDiscussions = ({
           description={`You can start a new one for type ${name}`}
         />
       )}
-      {lineNo && graphData?.graph?.targetId && newDiscussionLine !== -1 && (
-        <div className="mt-4">
-          <NewDiscussion
-            className="w-auto px-0"
-            lineNo={lineNo}
-            versionId={schemaVersionId}
-            targetId={graphData.graph.targetId}
-            setNewDiscussionLine={setNewDiscussionLine}
-            placeholder={`Write something to discuss about \`${name}\``}
-            refetch={() => refetch()}
-          />
-        </div>
-      )}
+      {startLineNo &&
+        graphData?.graph?.targetId &&
+        newDiscussionLine !== -1 && (
+          <div className="mt-4">
+            <NewDiscussion
+              className="w-auto px-0"
+              lineNo={startLineNo}
+              versionId={schemaVersionId}
+              targetId={graphData.graph.targetId}
+              setNewDiscussionLine={setNewDiscussionLine}
+              placeholder={`Write something to discuss about \`${name}\``}
+              refetch={() => refetch()}
+            />
+          </div>
+        )}
       <div className="scrollbar-custom mt-4 flex h-full flex-col gap-y-4 overflow-y-auto">
         {discussions.map((ld) => {
           return (
@@ -432,7 +438,8 @@ const Type = (props: {
   interfaces?: string[];
   fields?: GraphQLField[];
   ast: GraphQLSchema;
-  lineNo?: number;
+  startLineNo?: number;
+  endLineNo?: number;
   schemaVersionId: string;
 }) => {
   const [hideDiscussions] = useLocalStorage(hideDiscussionsKey, false);
@@ -501,26 +508,30 @@ const Type = (props: {
     <ResizablePanelGroup direction="horizontal" className="flex max-w-full">
       <ResizablePanel
         className={cn(
-          !!props.lineNo && !isMobile && !hideDiscussions && "pr-4",
+          !!props.startLineNo && !isMobile && !hideDiscussions && "pr-4",
         )}
         minSize={35}
         defaultSize={isMobile ? 1000 : 65}
       >
         {typeContent}
       </ResizablePanel>
-      {!!props.lineNo && !isMobile && !hideDiscussions && (
-        <>
-          <ResizableHandle withHandle />
-          <ResizablePanel className="pl-4" minSize={35} defaultSize={35}>
-            <TypeDiscussions
-              name={props.name}
-              schemaVersionId={props.schemaVersionId}
-              lineNo={props.lineNo}
-            />
-            <ThreadSheet schemaVersionId={props.schemaVersionId} />
-          </ResizablePanel>
-        </>
-      )}
+      {!!props.startLineNo &&
+        !!props.endLineNo &&
+        !isMobile &&
+        !hideDiscussions && (
+          <>
+            <ResizableHandle withHandle />
+            <ResizablePanel className="pl-4" minSize={35} defaultSize={35}>
+              <TypeDiscussions
+                name={props.name}
+                schemaVersionId={props.schemaVersionId}
+                startLineNo={props.startLineNo}
+                endLineNo={props.endLineNo}
+              />
+              <ThreadSheet schemaVersionId={props.schemaVersionId} />
+            </ResizablePanel>
+          </>
+        )}
     </ResizablePanelGroup>
   );
 };
@@ -632,7 +643,8 @@ const TypeWrapper = ({
         description={type.description}
         interfaces={type.interfaces}
         fields={type.fields}
-        lineNo={type.loc?.startToken.line}
+        startLineNo={type.loc?.startToken.line}
+        endLineNo={type.loc?.endToken.line}
         schemaVersionId={schemaVersionId}
         ast={ast}
       />
