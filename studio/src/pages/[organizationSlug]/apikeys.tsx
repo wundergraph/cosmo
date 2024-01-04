@@ -170,7 +170,7 @@ const CreateAPIKeyDialog = ({
     setSelectedSubgraphs([]);
   };
 
-  if (!(isAdmin || federatedGraphs.length > 0 || subgraphs.length > 0)) {
+  if (rbac && !(isAdmin || federatedGraphs.length > 0 || subgraphs.length > 0)) {
     return (
       <Button disabled>
         <div className="flex items-center gap-x-2">
