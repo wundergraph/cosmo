@@ -1,7 +1,7 @@
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { SQL, and, asc, desc, eq, inArray } from 'drizzle-orm';
-import { DiscussionDTO } from 'src/types/index.js';
 import * as schema from '../../db/schema.js';
+import { DiscussionDTO } from 'src/types/index.js';
 
 export class DiscussionRepository {
   constructor(
