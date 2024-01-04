@@ -28,7 +28,6 @@ interface Pet implements Animal {
 enum CatType {
   HOME
   STREET
-  COSMIC
 }
 
 type Alligator implements Pet & Animal {

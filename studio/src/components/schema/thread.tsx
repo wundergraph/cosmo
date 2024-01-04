@@ -18,11 +18,11 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
-  setDiscussionResolution,
   deleteDiscussionComment,
   getAllDiscussions,
   getDiscussion,
   getOrganizationMembers,
+  setDiscussionResolution,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { useRouter } from "next/router";
 import { useContext } from "react";
@@ -44,7 +44,6 @@ import { Button } from "../ui/button";
 import { Loader } from "../ui/loader";
 import { useToast } from "../ui/use-toast";
 import { CommentCard, NewComment } from "./discussion";
-import { Separator } from "../ui/separator";
 
 export const Thread = ({
   schemaVersionId,
@@ -169,7 +168,7 @@ export const Thread = ({
             <div key={dc.id} className="relative pb-8 first:pt-4">
               <div
                 className={cn(
-                  "absolute left-10 mt-2 h-full w-1 border-r-2",
+                  "absolute left-6 mt-2 h-full w-1 border-r-2",
                   idx === discussionData.comments.length - 1 && "hidden",
                 )}
               />
@@ -285,7 +284,7 @@ export const ThreadSheet = ({
         }
       }}
     >
-      <SheetContent className="w-screen px-0 pb-0 pt-12 lg:max-w-lg">
+      <SheetContent className="w-screen px-0 pb-0 pt-12 lg:w-full lg:max-w-lg">
         <div className="h-full w-full px-4">
           <Thread schemaVersionId={schemaVersionId} displayHideButton />
         </div>
