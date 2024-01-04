@@ -99,6 +99,7 @@
     "react-resizable-panels": "^1.0.5",
     "reactflow": "^11.9.2",
     "recharts": "^2.10.3",
+    "rehype-raw": "^7.0.0",
     "remark-gfm": "^4.0.0",
     "tailwind-merge": "^2.0.0",
     "tailwind-scrollbar": "^3.0.5",
