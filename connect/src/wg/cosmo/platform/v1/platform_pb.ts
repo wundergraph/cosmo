@@ -2185,6 +2185,11 @@ export class GetLatestSubgraphSDLByNameResponse extends Message<GetLatestSubgrap
    */
   sdl?: string;
 
+  /**
+   * @generated from field: optional string version_id = 3;
+   */
+  versionId?: string;
+
   constructor(data?: PartialMessage<GetLatestSubgraphSDLByNameResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -2195,6 +2200,7 @@ export class GetLatestSubgraphSDLByNameResponse extends Message<GetLatestSubgrap
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "sdl", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 3, name: "version_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetLatestSubgraphSDLByNameResponse {
@@ -10968,32 +10974,27 @@ export class GetFieldUsageResponse extends Message<GetFieldUsageResponse> {
  */
 export class CreateDiscussionRequest extends Message<CreateDiscussionRequest> {
   /**
-   * @generated from field: string graph_name = 1;
-   */
-  graphName = "";
-
-  /**
-   * @generated from field: string target_id = 2;
+   * @generated from field: string target_id = 1;
    */
   targetId = "";
 
   /**
-   * @generated from field: string content_markdown = 3;
+   * @generated from field: string content_markdown = 2;
    */
   contentMarkdown = "";
 
   /**
-   * @generated from field: string content_json = 4;
+   * @generated from field: string content_json = 3;
    */
   contentJson = "";
 
   /**
-   * @generated from field: string schema_version_id = 5;
+   * @generated from field: string schema_version_id = 4;
    */
   schemaVersionId = "";
 
   /**
-   * @generated from field: int32 reference_line = 6;
+   * @generated from field: int32 reference_line = 5;
    */
   referenceLine = 0;
 
@@ -11005,12 +11006,11 @@ export class CreateDiscussionRequest extends Message<CreateDiscussionRequest> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "wg.cosmo.platform.v1.CreateDiscussionRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "graph_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "target_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "content_markdown", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 4, name: "content_json", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 5, name: "schema_version_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 6, name: "reference_line", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 1, name: "target_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "content_markdown", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "content_json", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "schema_version_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "reference_line", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateDiscussionRequest {
@@ -11072,9 +11072,9 @@ export class CreateDiscussionResponse extends Message<CreateDiscussionResponse> 
  */
 export class UpdateDiscussionCommentRequest extends Message<UpdateDiscussionCommentRequest> {
   /**
-   * @generated from field: string graph_name = 1;
+   * @generated from field: string discussion_id = 1;
    */
-  graphName = "";
+  discussionId = "";
 
   /**
    * @generated from field: string comment_id = 2;
@@ -11099,7 +11099,7 @@ export class UpdateDiscussionCommentRequest extends Message<UpdateDiscussionComm
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "wg.cosmo.platform.v1.UpdateDiscussionCommentRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "graph_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "discussion_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "comment_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "content_markdown", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "content_json", kind: "scalar", T: 9 /* ScalarType.STRING */ },
@@ -11164,19 +11164,14 @@ export class UpdateDiscussionCommentResponse extends Message<UpdateDiscussionCom
  */
 export class DeleteDiscussionCommentRequest extends Message<DeleteDiscussionCommentRequest> {
   /**
-   * @generated from field: string graph_name = 1;
+   * @generated from field: string discussion_id = 1;
    */
-  graphName = "";
+  discussionId = "";
 
   /**
    * @generated from field: string comment_id = 2;
    */
   commentId = "";
-
-  /**
-   * @generated from field: string discussion_id = 3;
-   */
-  discussionId = "";
 
   constructor(data?: PartialMessage<DeleteDiscussionCommentRequest>) {
     super();
@@ -11186,9 +11181,8 @@ export class DeleteDiscussionCommentRequest extends Message<DeleteDiscussionComm
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "wg.cosmo.platform.v1.DeleteDiscussionCommentRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "graph_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "discussion_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "comment_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "discussion_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteDiscussionCommentRequest {
@@ -11250,11 +11244,6 @@ export class DeleteDiscussionCommentResponse extends Message<DeleteDiscussionCom
  */
 export class ReplyToDiscussionRequest extends Message<ReplyToDiscussionRequest> {
   /**
-   * @generated from field: string graph_name = 1;
-   */
-  graphName = "";
-
-  /**
    * @generated from field: string discussion_id = 2;
    */
   discussionId = "";
@@ -11277,7 +11266,6 @@ export class ReplyToDiscussionRequest extends Message<ReplyToDiscussionRequest> 
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "wg.cosmo.platform.v1.ReplyToDiscussionRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "graph_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "discussion_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "content_markdown", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "content_json", kind: "scalar", T: 9 /* ScalarType.STRING */ },
@@ -11342,17 +11330,12 @@ export class ReplyToDiscussionResponse extends Message<ReplyToDiscussionResponse
  */
 export class GetAllDiscussionsRequest extends Message<GetAllDiscussionsRequest> {
   /**
-   * @generated from field: string graph_name = 1;
-   */
-  graphName = "";
-
-  /**
-   * @generated from field: string target_id = 2;
+   * @generated from field: string target_id = 1;
    */
   targetId = "";
 
   /**
-   * @generated from field: optional string schema_version_id = 3;
+   * @generated from field: optional string schema_version_id = 2;
    */
   schemaVersionId?: string;
 
@@ -11364,9 +11347,8 @@ export class GetAllDiscussionsRequest extends Message<GetAllDiscussionsRequest> 
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "wg.cosmo.platform.v1.GetAllDiscussionsRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "graph_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "target_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "schema_version_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 1, name: "target_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "schema_version_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetAllDiscussionsRequest {
@@ -11562,12 +11544,7 @@ export class GetAllDiscussionsResponse extends Message<GetAllDiscussionsResponse
  */
 export class GetDiscussionRequest extends Message<GetDiscussionRequest> {
   /**
-   * @generated from field: string graph_name = 1;
-   */
-  graphName = "";
-
-  /**
-   * @generated from field: string discussion_id = 2;
+   * @generated from field: string discussion_id = 1;
    */
   discussionId = "";
 
@@ -11579,8 +11556,7 @@ export class GetDiscussionRequest extends Message<GetDiscussionRequest> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "wg.cosmo.platform.v1.GetDiscussionRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "graph_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "discussion_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "discussion_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetDiscussionRequest {
@@ -11654,12 +11630,7 @@ export class GetDiscussionResponse extends Message<GetDiscussionResponse> {
  */
 export class GetDiscussionSchemasRequest extends Message<GetDiscussionSchemasRequest> {
   /**
-   * @generated from field: string graph_name = 1;
-   */
-  graphName = "";
-
-  /**
-   * @generated from field: string discussion_id = 2;
+   * @generated from field: string discussion_id = 1;
    */
   discussionId = "";
 
@@ -11671,8 +11642,7 @@ export class GetDiscussionSchemasRequest extends Message<GetDiscussionSchemasReq
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "wg.cosmo.platform.v1.GetDiscussionSchemasRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "graph_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "discussion_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "discussion_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetDiscussionSchemasRequest {
@@ -11783,17 +11753,12 @@ export class GetDiscussionSchemasResponse_Schemas extends Message<GetDiscussionS
  */
 export class SetDiscussionResolutionRequest extends Message<SetDiscussionResolutionRequest> {
   /**
-   * @generated from field: string graph_name = 1;
-   */
-  graphName = "";
-
-  /**
-   * @generated from field: string discussion_id = 2;
+   * @generated from field: string discussion_id = 1;
    */
   discussionId = "";
 
   /**
-   * @generated from field: bool is_resolved = 3;
+   * @generated from field: bool is_resolved = 2;
    */
   isResolved = false;
 
@@ -11805,9 +11770,8 @@ export class SetDiscussionResolutionRequest extends Message<SetDiscussionResolut
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "wg.cosmo.platform.v1.SetDiscussionResolutionRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "graph_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "discussion_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "is_resolved", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 1, name: "discussion_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "is_resolved", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SetDiscussionResolutionRequest {

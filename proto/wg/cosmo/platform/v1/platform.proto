@@ -267,6 +267,7 @@ message GetLatestSubgraphSDLByNameRequest {
 message GetLatestSubgraphSDLByNameResponse {
   Response response = 1;
   optional string sdl = 2;
+  optional string version_id = 3;
 }
 
 message GetChecksByFederatedGraphNameRequest {
@@ -1377,12 +1378,11 @@ message GetFieldUsageResponse {
 }
 
 message CreateDiscussionRequest {
-  string graph_name = 1;
-  string target_id = 2;
-  string content_markdown = 3;
-  string content_json = 4;
-  string schema_version_id = 5;
-  int32 reference_line = 6;
+  string target_id = 1;
+  string content_markdown = 2;
+  string content_json = 3;
+  string schema_version_id = 4;
+  int32 reference_line = 5;
 }
 
 message CreateDiscussionResponse {
@@ -1390,7 +1390,7 @@ message CreateDiscussionResponse {
 }
 
 message UpdateDiscussionCommentRequest {
-  string graph_name = 1;
+  string discussion_id = 1;
   string comment_id = 2;
   string content_markdown = 3;
   string content_json = 4;
@@ -1401,9 +1401,8 @@ message UpdateDiscussionCommentResponse {
 }
 
 message DeleteDiscussionCommentRequest {
-  string graph_name = 1;
+  string discussion_id = 1;
   string comment_id = 2;
-  string discussion_id = 3;
 }
 
 message DeleteDiscussionCommentResponse {
@@ -1411,7 +1410,6 @@ message DeleteDiscussionCommentResponse {
 }
 
 message ReplyToDiscussionRequest {
-  string graph_name = 1;
   string discussion_id = 2;
   string content_markdown = 3;
   string content_json = 4;
@@ -1422,9 +1420,8 @@ message ReplyToDiscussionResponse {
 }
 
 message GetAllDiscussionsRequest {
-  string graph_name = 1;
-  string target_id = 2;
-  optional string schema_version_id = 3;
+  string target_id = 1;
+  optional string schema_version_id = 2;
 }
 
 message Discussion {
@@ -1450,8 +1447,7 @@ message GetAllDiscussionsResponse {
 }
 
 message GetDiscussionRequest {
-  string graph_name = 1;
-  string discussion_id = 2;
+  string discussion_id = 1;
 }
 
 message GetDiscussionResponse {
@@ -1461,8 +1457,7 @@ message GetDiscussionResponse {
 }
 
 message GetDiscussionSchemasRequest {
-  string graph_name = 1;
-  string discussion_id = 2;
+  string discussion_id = 1;
 }
 
 message GetDiscussionSchemasResponse {
@@ -1476,9 +1471,8 @@ message GetDiscussionSchemasResponse {
 }
 
 message SetDiscussionResolutionRequest {
-  string graph_name = 1;
-  string discussion_id = 2;
-  bool is_resolved = 3;
+  string discussion_id = 1;
+  bool is_resolved = 2;
 }
 
 message SetDiscussionResolutionResponse {

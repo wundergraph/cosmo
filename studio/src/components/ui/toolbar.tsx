@@ -11,7 +11,7 @@ export const Toolbar = ({
   return (
     <div
       className={cn(
-        "flex flex-wrap items-center gap-2 border-b px-4 py-4 lg:px-6 xl:px-8",
+        "flex w-full flex-shrink-0 flex-wrap items-center gap-2 px-4 lg:px-6 xl:px-8",
         className,
       )}
     >

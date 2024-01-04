@@ -84,9 +84,8 @@ export const Thread = ({
   } = useQuery({
     ...getDiscussion.useQuery({
       discussionId,
-      graphName: graph?.graph?.name,
     }),
-    enabled: !!graph?.graph?.name && !!discussionId,
+    enabled: !!discussionId,
   });
 
   const { mutate: deleteDiscussion } = useMutation({
@@ -107,7 +106,6 @@ export const Thread = ({
 
       client.invalidateQueries({
         queryKey: getAllDiscussions.getQueryKey({
-          graphName: graph?.graph?.name,
           schemaVersionId,
           targetId: discussionData?.discussion?.targetId,
         }),
@@ -135,7 +133,6 @@ export const Thread = ({
 
       client.invalidateQueries({
         queryKey: getAllDiscussions.getQueryKey({
-          graphName: graph?.graph?.name,
           schemaVersionId,
           targetId: discussionData?.discussion?.targetId,
         }),
@@ -210,7 +207,6 @@ export const Thread = ({
                 onClick={() => {
                   resolveDiscussion({
                     discussionId,
-                    graphName: graph?.graph?.name,
                     isResolved: !discussionData?.discussion?.isResolved,
                   });
                 }}
@@ -254,7 +250,6 @@ export const Thread = ({
               <AlertDialogAction
                 onClick={() => {
                   deleteDiscussion({
-                    graphName: graph?.graph?.name,
                     discussionId,
                     commentId: discussionData.comments[0]?.id,
                   });

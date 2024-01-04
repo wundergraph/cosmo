@@ -297,7 +297,6 @@ export const CommentCard = ({
                         deleteComment({
                           discussionId,
                           commentId: comment.id,
-                          graphName: graph?.graph?.name,
                         });
                       }}
                     >
@@ -320,7 +319,7 @@ export const CommentCard = ({
                   isLoading={isUpdating}
                   onClick={() => {
                     update({
-                      graphName: graph?.graph?.name,
+                      discussionId,
                       commentId: comment.id,
                       contentJson: JSON.stringify(editor?.getJSON()),
                       contentMarkdown:
@@ -408,7 +407,6 @@ export const NewDiscussion = ({
             onClick={() => {
               if (!editor) return;
               mutate({
-                graphName: graph?.graph?.name,
                 contentJson: JSON.stringify(editor.getJSON()),
                 contentMarkdown: editor?.storage["markdown"].getMarkdown(),
                 referenceLine: lineNo,
@@ -473,7 +471,6 @@ export const NewComment = ({
               onClick={() => {
                 if (!editor) return;
                 mutate({
-                  graphName: graph?.graph?.name,
                   discussionId,
                   contentJson: JSON.stringify(editor.getJSON()),
                   contentMarkdown: editor?.storage["markdown"].getMarkdown(),

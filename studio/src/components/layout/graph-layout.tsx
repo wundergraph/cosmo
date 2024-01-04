@@ -260,14 +260,10 @@ export const GraphPageLayout = ({
 
   return (
     <div className="flex flex-col lg:h-screen">
-      <div className="bg-background">
+      <div className="flex w-full flex-wrap items-center justify-between gap-4 border-b bg-background py-4">
         <div
           className={cn(
-            "flex flex-col justify-between gap-y-4 px-4 pb-2 pt-4 lg:flex-row lg:items-center lg:px-6 xl:px-8",
-            {
-              "border-b": !toolbar,
-              "pb-4": !toolbar,
-            },
+            "flex flex-col justify-between gap-y-4 px-4 lg:flex-row lg:items-center lg:px-6 xl:px-8",
           )}
         >
           {breadcrumb}

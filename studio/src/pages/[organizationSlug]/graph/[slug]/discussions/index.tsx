@@ -163,7 +163,6 @@ const DiscussionsPage: NextPageWithLayout = () => {
 
   const { data, isLoading, error, refetch } = useQuery({
     ...getAllDiscussions.useQuery({
-      graphName,
       targetId: selectedGraph?.targetId,
       schemaVersionId: undefined,
     }),

@@ -158,6 +158,7 @@ import { FederatedGraphSchemaUpdate, OrganizationWebhookService } from '../webho
 import { BillingRepository } from '../repositories/BillingRepository.js';
 import { TargetRepository } from '../repositories/TargetRepository.js';
 import { BillingService } from '../services/BillingService.js';
+import { DiscussionRepository } from '../repositories/DiscussionRepository.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -3749,6 +3750,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             code: EnumStatusCode.OK,
           },
           sdl: subgraph.schemaSDL,
+          versionId: subgraph.schemaVersionId,
         };
       });
     },
@@ -5430,47 +5432,21 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
       return handleError<PlainMessage<CreateDiscussionResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const graphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
-        const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
+        const discussionRepo = new DiscussionRepository(opts.db, authContext.organizationId);
 
-        const graph = await graphRepo.byName(req.graphName);
-        if (!graph) {
+        const canCreateDiscussion = await discussionRepo.canAccessTarget(req.targetId);
+        if (!canCreateDiscussion) {
           return {
             response: {
-              code: EnumStatusCode.ERR_NOT_FOUND,
-              details: `Federated graph ${req.graphName} not found`,
+              code: EnumStatusCode.ERROR_NOT_AUTHORIZED,
+              details: 'You are not authorized to create a discussion in this graph',
             },
           };
         }
 
-        const subgraphs = await subgraphRepo.listByFederatedGraph(graph.name);
-        if (req.targetId !== graph.targetId && !subgraphs.some((s) => s.targetId === req.targetId)) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_NOT_FOUND,
-              details: `The requested subgraph is not part of the federated graph ${req.graphName}`,
-            },
-          };
-        }
-
-        await opts.db.transaction(async (tx) => {
-          const discussion = (
-            await tx
-              .insert(discussions)
-              .values({
-                targetId: req.targetId,
-                schemaVersionId: req.schemaVersionId,
-                referenceLine: req.referenceLine,
-              })
-              .returning()
-          )[0];
-
-          await tx.insert(discussionThread).values({
-            discussionId: discussion.id,
-            contentMarkdown: req.contentMarkdown,
-            contentJson: JSON.parse(req.contentJson),
-            createdById: authContext.userId,
-          });
+        await discussionRepo.createDiscussion({
+          ...req,
+          createdById: authContext.userId,
         });
 
         return {
@@ -5489,22 +5465,20 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
       return handleError<PlainMessage<ReplyToDiscussionResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const graphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+        const discussionRepo = new DiscussionRepository(opts.db, authContext.organizationId);
 
-        const graph = await graphRepo.byName(req.graphName);
-        if (!graph) {
+        const canAccessDiscussion = await discussionRepo.canAccessDiscussion(req.discussionId);
+        if (!canAccessDiscussion) {
           return {
             response: {
-              code: EnumStatusCode.ERR_NOT_FOUND,
-              details: `Federated graph ${req.graphName} not found`,
+              code: EnumStatusCode.ERROR_NOT_AUTHORIZED,
+              details: 'You are not authorized to view or modify this discussion',
             },
           };
         }
 
-        await opts.db.insert(discussionThread).values({
-          discussionId: req.discussionId,
-          contentMarkdown: req.contentMarkdown,
-          contentJson: JSON.parse(req.contentJson),
+        await discussionRepo.replyToDiscussion({
+          ...req,
           createdById: authContext.userId,
         });
 
@@ -5524,55 +5498,22 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
       return handleError<PlainMessage<GetAllDiscussionsResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const graphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+        const discussionRepo = new DiscussionRepository(opts.db, authContext.organizationId);
 
-        const graph = await graphRepo.byName(req.graphName);
-        if (!graph) {
+        const canReply = await discussionRepo.canAccessTarget(req.targetId);
+        if (!canReply) {
           return {
             response: {
-              code: EnumStatusCode.ERR_NOT_FOUND,
-              details: `Federated graph ${req.graphName} not found`,
+              code: EnumStatusCode.ERROR_NOT_AUTHORIZED,
+              details: 'You are not authorized to the discussions of this graph',
             },
             discussions: [],
           };
         }
 
-        let conditions: SQL<unknown> | undefined = eq(discussions.targetId, req.targetId);
-
-        if (req.schemaVersionId) {
-          conditions = and(conditions, eq(discussions.schemaVersionId, req.schemaVersionId));
-        }
-
-        const graphDiscussions = await opts.db.query.discussions.findMany({
-          where: conditions,
-          with: {
-            thread: {
-              limit: 1,
-              orderBy: asc(discussionThread.createdAt),
-            },
-          },
-          orderBy: desc(discussions.createdAt),
+        const graphDiscussions = await discussionRepo.getAllDiscussions({
+          ...req,
         });
-
-        if (graphDiscussions.length > 0) {
-          const schemaVersions = await opts.db.query.schemaVersion.findMany({
-            where: inArray(
-              schemaVersionTable.id,
-              graphDiscussions.map((gd) => gd.schemaVersionId),
-            ),
-            columns: {
-              id: true,
-              createdAt: true,
-            },
-          });
-
-          graphDiscussions.sort((a, b) => {
-            const createdAtA = schemaVersions.find((sv) => sv.id === a.schemaVersionId)?.createdAt || new Date(0);
-            const createdAtB = schemaVersions.find((sv) => sv.id === b.schemaVersionId)?.createdAt || new Date(0);
-
-            return createdAtB.getTime() - createdAtA.getTime();
-          });
-        }
 
         return {
           response: {
@@ -5604,27 +5545,21 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
       return handleError<PlainMessage<UpdateDiscussionCommentResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const graphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+        const discussionRepo = new DiscussionRepository(opts.db, authContext.organizationId);
 
-        const graph = await graphRepo.byName(req.graphName);
-        if (!graph) {
+        const canAccessDiscussion = await discussionRepo.canAccessDiscussion(req.discussionId);
+        if (!canAccessDiscussion) {
           return {
             response: {
-              code: EnumStatusCode.ERR_NOT_FOUND,
-              details: `Federated graph ${req.graphName} not found`,
+              code: EnumStatusCode.ERROR_NOT_AUTHORIZED,
+              details: 'You are not authorized to view or modify this discussion',
             },
           };
         }
-
-        const updated = await opts.db
-          .update(discussionThread)
-          .set({
-            contentMarkdown: req.contentMarkdown,
-            contentJson: JSON.parse(req.contentJson),
-            updatedAt: new Date(),
-          })
-          .where(and(eq(discussionThread.id, req.commentId), eq(discussionThread.createdById, authContext.userId)))
-          .returning();
+        const updated = await discussionRepo.updateComment({
+          ...req,
+          createdById: authContext.userId,
+        });
 
         if (updated.length === 0) {
           return {
@@ -5651,47 +5586,29 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
       return handleError<PlainMessage<DeleteDiscussionCommentResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const graphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+        const discussionRepo = new DiscussionRepository(opts.db, authContext.organizationId);
 
-        const graph = await graphRepo.byName(req.graphName);
-        if (!graph) {
+        const canAccessDiscussion = await discussionRepo.canAccessDiscussion(req.discussionId);
+        if (!canAccessDiscussion) {
           return {
             response: {
-              code: EnumStatusCode.ERR_NOT_FOUND,
-              details: `Federated graph ${req.graphName} not found`,
+              code: EnumStatusCode.ERROR_NOT_AUTHORIZED,
+              details: 'You are not authorized to view or modify this discussion',
             },
           };
         }
 
-        const discussion = await opts.db.query.discussions.findFirst({
-          where: eq(discussions.id, req.discussionId),
-          with: {
-            thread: {
-              limit: 1,
-              orderBy: asc(discussionThread.createdAt),
-            },
-          },
+        const success = await discussionRepo.deleteComment({
+          ...req,
         });
 
-        if (!discussion) {
+        if (!success) {
           return {
             response: {
-              code: EnumStatusCode.ERR_NOT_FOUND,
-              details: `Discussion not found`,
+              code: EnumStatusCode.ERR,
             },
           };
         }
-
-        // We delete the discussion itself if it is the opening comment or else we only delete the comment
-        const isOpeningComment = discussion.thread[0].id === req.commentId;
-
-        await opts.db.transaction(async (tx) => {
-          if (isOpeningComment) {
-            await tx.delete(discussions).where(eq(discussions.id, req.discussionId));
-          } else {
-            await tx.delete(discussionThread).where(eq(discussionThread.id, req.commentId));
-          }
-        });
 
         return {
           response: {
@@ -5709,33 +5626,20 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
       return handleError<PlainMessage<GetDiscussionResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const graphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
-        const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
+        const discussionRepo = new DiscussionRepository(opts.db, authContext.organizationId);
 
-        const graph = await graphRepo.byName(req.graphName);
-        if (!graph) {
+        const canAccessDiscussion = await discussionRepo.canAccessDiscussion(req.discussionId);
+        if (!canAccessDiscussion) {
           return {
             response: {
-              code: EnumStatusCode.ERR_NOT_FOUND,
-              details: `Federated graph ${req.graphName} not found`,
+              code: EnumStatusCode.ERROR_NOT_AUTHORIZED,
+              details: 'You are not authorized to view or modify this discussion',
             },
             comments: [],
           };
         }
 
-        const subgraphs = await subgraphRepo.listByFederatedGraph(graph.name);
-
-        const graphDiscussion = await opts.db.query.discussions.findFirst({
-          where: and(
-            inArray(discussions.targetId, [graph.targetId, ...subgraphs.map((s) => s.targetId)]),
-            eq(discussions.id, req.discussionId),
-          ),
-          with: {
-            thread: {
-              orderBy: asc(discussionThread.createdAt),
-            },
-          },
-        });
+        const graphDiscussion = await discussionRepo.byId(req.discussionId);
 
         if (!graphDiscussion) {
           return {
@@ -5780,28 +5684,19 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
       return handleError<PlainMessage<GetDiscussionSchemasResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const graphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
-        const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
+        const discussionRepo = new DiscussionRepository(opts.db, authContext.organizationId);
 
-        const graph = await graphRepo.byName(req.graphName);
-        if (!graph) {
+        const canAccessDiscussion = await discussionRepo.canAccessDiscussion(req.discussionId);
+        if (!canAccessDiscussion) {
           return {
             response: {
-              code: EnumStatusCode.ERR_NOT_FOUND,
-              details: `Federated graph ${req.graphName} not found`,
+              code: EnumStatusCode.ERROR_NOT_AUTHORIZED,
+              details: 'You are not authorized to view or modify this discussion',
             },
-            comments: [],
           };
         }
 
-        const subgraphs = await subgraphRepo.listByFederatedGraph(graph.name);
-
-        const graphDiscussion = await opts.db.query.discussions.findFirst({
-          where: and(
-            inArray(discussions.targetId, [graph.targetId, ...subgraphs.map((s) => s.targetId)]),
-            eq(discussions.id, req.discussionId),
-          ),
-        });
+        const graphDiscussion = await discussionRepo.byId(req.discussionId);
 
         if (!graphDiscussion) {
           return {
@@ -5813,13 +5708,9 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
-        const referenceResult = await opts.db.query.schemaVersion.findFirst({
-          where: eq(schemaVersionTable.id, graphDiscussion.schemaVersionId),
-        });
-
-        const latestResult = await opts.db.query.schemaVersion.findFirst({
-          where: eq(schemaVersionTable.targetId, graphDiscussion.targetId),
-          orderBy: desc(schemaVersionTable.createdAt),
+        const { referenceResult, latestResult } = await discussionRepo.getSchemas({
+          targetId: graphDiscussion.targetId,
+          schemaVersionId: graphDiscussion.schemaVersionId,
         });
 
         return {
@@ -5842,24 +5733,21 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
       return handleError<PlainMessage<SetDiscussionResolutionResponse>>(logger, async () => {
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
-        const graphRepo = new FederatedGraphRepository(opts.db, authContext.organizationId);
+        const discussionRepo = new DiscussionRepository(opts.db, authContext.organizationId);
 
-        const graph = await graphRepo.byName(req.graphName);
-        if (!graph) {
+        const canAccessDiscussion = await discussionRepo.canAccessDiscussion(req.discussionId);
+        if (!canAccessDiscussion) {
           return {
             response: {
-              code: EnumStatusCode.ERR_NOT_FOUND,
-              details: `Federated graph ${req.graphName} not found`,
+              code: EnumStatusCode.ERROR_NOT_AUTHORIZED,
+              details: 'You are not authorized to view or modify this discussion',
             },
           };
         }
 
-        await opts.db
-          .update(discussions)
-          .set({
-            isResolved: req.isResolved,
-          })
-          .where(eq(discussions.id, req.discussionId));
+        await discussionRepo.setResolution({
+          ...req,
+        });
 
         return {
           response: {

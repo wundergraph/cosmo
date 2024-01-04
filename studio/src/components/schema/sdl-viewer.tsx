@@ -1,13 +1,22 @@
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useLocalStorage } from "@/hooks/use-local-storage";
 import { useResolvedTheme } from "@/hooks/use-resolved-theme";
 import { useUser } from "@/hooks/use-user";
+import { downloadStringAsFile } from "@/lib/download-string-as-file";
 import { cn } from "@/lib/utils";
-import { ArrowRightIcon, DotsHorizontalIcon } from "@radix-ui/react-icons";
+import {
+  ArrowRightIcon,
+  ClipboardCopyIcon,
+  DotsHorizontalIcon,
+  DownloadIcon,
+  GearIcon,
+} from "@radix-ui/react-icons";
 import { useQuery } from "@tanstack/react-query";
 import {
   getAllDiscussions,
@@ -24,13 +33,95 @@ import { Highlight, themes } from "prism-react-renderer";
 import * as Prism from "prismjs";
 import "prismjs/components/prism-graphql";
 import "prismjs/components/prism-json";
-import { useContext, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useApplyParams } from "../analytics/use-apply-params";
-import { GraphContext } from "../layout/graph-layout";
 import { Button } from "../ui/button";
 import { Separator } from "../ui/separator";
 import { useToast } from "../ui/use-toast";
 import { CommentCard, NewDiscussion } from "./discussion";
+
+export const hideDiscussionsKey = "hide-discussions";
+export const hideResolvedDiscussionsKey = "hide-resolved-discussions";
+
+export const SchemaSettings = ({
+  size = "icon",
+}: {
+  size?: "icon" | "icon-sm";
+}) => {
+  const [hideDiscussions, setHideDiscussions] = useLocalStorage(
+    hideDiscussionsKey,
+    false,
+  );
+
+  const [hideResolvedDiscussions, setHideResolvedDiscussions] = useLocalStorage(
+    hideResolvedDiscussionsKey,
+    false,
+  );
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button className="flex-shrink-0" variant="secondary" size={size}>
+          <GearIcon />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuCheckboxItem
+          checked={hideDiscussions}
+          onCheckedChange={setHideDiscussions}
+        >
+          Hide discussions
+        </DropdownMenuCheckboxItem>
+        <DropdownMenuCheckboxItem
+          checked={hideResolvedDiscussions}
+          onCheckedChange={setHideResolvedDiscussions}
+        >
+          Hide resolved discussions
+        </DropdownMenuCheckboxItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+};
+
+export const SDLViewerActions = ({
+  sdl,
+  className,
+  size = "icon",
+}: {
+  sdl: string;
+  className?: string;
+  size?: "icon" | "icon-sm";
+}) => {
+  const { toast, dismiss } = useToast();
+
+  const downloadSDL = () => {
+    downloadStringAsFile(sdl, `schema.graphql`, `application/graphql`);
+  };
+
+  const copySDL = () => {
+    copy(sdl);
+    const { id } = toast({ description: "Copied contents to clipboard" });
+
+    const t = setTimeout(() => {
+      dismiss(id);
+    }, 2000);
+
+    return () => clearTimeout(t);
+  };
+
+  return (
+    <div
+      className={cn("flex w-full items-center gap-x-2 md:w-auto", className)}
+    >
+      <Button variant="secondary" size={size} onClick={() => copySDL()}>
+        <ClipboardCopyIcon />
+      </Button>
+      <Button variant="secondary" size={size} onClick={downloadSDL}>
+        <DownloadIcon />
+      </Button>
+    </div>
+  );
+};
 
 const LineActions = ({
   lineNo,
@@ -79,12 +170,12 @@ const LineActions = ({
 };
 
 export const SDLViewer = ({
-  code,
+  sdl,
   className,
   versionId,
   targetId,
 }: {
-  code: string;
+  sdl: string;
   className?: string;
   versionId: string;
   targetId: string;
@@ -100,15 +191,11 @@ export const SDLViewer = ({
 
   const [content, setContent] = useState("");
 
-  const graph = useContext(GraphContext);
-
   const { data, refetch } = useQuery({
     ...getAllDiscussions.useQuery({
-      graphName: graph?.graph?.name,
       schemaVersionId: versionId,
       targetId,
     }),
-    enabled: !!graph?.graph?.name,
   });
 
   const user = useUser();
@@ -124,6 +211,13 @@ export const SDLViewer = ({
 
   const discussions = data?.discussions;
 
+  const [hideDiscussions] = useLocalStorage(hideDiscussionsKey, false);
+
+  const [hideResolvedDiscussions] = useLocalStorage(
+    hideResolvedDiscussionsKey,
+    false,
+  );
+
   useEffect(() => {
     const set = async (source: string) => {
       try {
@@ -137,9 +231,9 @@ export const SDLViewer = ({
       }
     };
 
-    if (!code) return;
-    set(code);
-  }, [code]);
+    if (!sdl) return;
+    set(sdl);
+  }, [sdl]);
 
   const selectedTheme = useResolvedTheme();
 
@@ -172,7 +266,10 @@ export const SDLViewer = ({
             const href = pathname + `#${lineNo}`;
 
             const lineDiscussions =
-              discussions?.filter((d) => d.referenceLine === i + 1) ?? [];
+              discussions
+                ?.filter((d) => d.referenceLine === i + 1)
+                .filter((ld) => !(ld.isResolved && hideResolvedDiscussions)) ??
+              [];
 
             return (
               <div
@@ -211,7 +308,7 @@ export const SDLViewer = ({
                     refetch={() => refetch()}
                   />
                 )}
-                {lineDiscussions.length > 0 && (
+                {lineDiscussions.length > 0 && !hideDiscussions && (
                   <div className="flex h-auto w-screen flex-1 flex-col items-start justify-start gap-y-4 border-y bg-background px-2 py-2 font-sans">
                     {lineDiscussions.map((ld) => (
                       <div

@@ -7,7 +7,11 @@ import {
   getGraphLayout,
 } from "@/components/layout/graph-layout";
 import { PageHeader } from "@/components/layout/head";
-import { SDLViewer } from "@/components/schema/sdl-viewer";
+import {
+  SDLViewer,
+  SDLViewerActions,
+  SchemaSettings,
+} from "@/components/schema/sdl-viewer";
 import { ThreadSheet } from "@/components/schema/thread";
 import { SchemaToolbar } from "@/components/schema/toolbar";
 import { Loader } from "@/components/ui/loader";
@@ -170,11 +174,8 @@ const SDLPage: NextPageWithLayout = () => {
                   </SelectGroup>
                 </SelectContent>
               </Select>
-              {/* <CodeViewerActions
-                className="md:ml-0"
-                code={activeGraphWithSDL.sdl ?? ""}
-                subgraphName={activeGraphWithSDL.title}
-              /> */}
+              <SDLViewerActions sdl={activeGraphWithSDL.sdl ?? ""} />
+              <SchemaSettings />
             </div>
           </SchemaToolbar>
         }
@@ -194,7 +195,7 @@ const SDLPage: NextPageWithLayout = () => {
             >
               <SDLViewer
                 className="h-0 w-0"
-                code={activeGraphWithSDL.sdl ?? ""}
+                sdl={activeGraphWithSDL.sdl ?? ""}
                 targetId={activeGraphWithSDL?.targetId}
                 versionId={activeGraphWithSDL.versionId ?? ""}
               />

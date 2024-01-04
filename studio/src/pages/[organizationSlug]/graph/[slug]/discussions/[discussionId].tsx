@@ -39,7 +39,6 @@ const Schemas = ({
   const { data, isLoading, error, refetch } = useQuery(
     getDiscussionSchemas.useQuery({
       discussionId: id,
-      graphName: slug,
     }),
   );
 
@@ -85,7 +84,6 @@ const DiscussionPage: NextPageWithLayout = () => {
   } = useQuery({
     ...getDiscussion.useQuery({
       discussionId: id,
-      graphName: slug,
     }),
   });
 

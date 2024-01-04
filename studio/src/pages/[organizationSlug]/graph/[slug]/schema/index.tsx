@@ -60,7 +60,11 @@ import {
   ExclamationTriangleIcon,
   InformationCircleIcon,
 } from "@heroicons/react/24/outline";
-import { ArrowRightIcon, MagnifyingGlassIcon } from "@radix-ui/react-icons";
+import {
+  ArrowRightIcon,
+  MagnifyingGlassIcon,
+  PlusIcon,
+} from "@radix-ui/react-icons";
 import { useQuery } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
@@ -99,6 +103,12 @@ import { PiChat } from "react-icons/pi";
 import { ThreadSheet } from "@/components/schema/thread";
 import { useApplyParams } from "@/components/analytics/use-apply-params";
 import useWindowSize from "@/hooks/use-window-size";
+import {
+  SchemaSettings,
+  hideDiscussionsKey,
+  hideResolvedDiscussionsKey,
+} from "@/components/schema/sdl-viewer";
+import { useLocalStorage } from "@/hooks/use-local-storage";
 
 const TypeLink = ({
   name,
@@ -289,6 +299,11 @@ const TypeDiscussions = ({
   const graphName = router.query.slug as string;
   const graphData = useContext(GraphContext);
 
+  const [hideResolvedDiscussions] = useLocalStorage(
+    hideResolvedDiscussionsKey,
+    false,
+  );
+
   const [newDiscussionLine, setNewDiscussionLine] = useState(-1);
 
   const applyParams = useApplyParams();
@@ -297,7 +312,6 @@ const TypeDiscussions = ({
 
   const { data, isLoading, error, refetch } = useQuery({
     ...getAllDiscussions.useQuery({
-      graphName,
       targetId: graphData?.graph?.targetId,
       schemaVersionId,
     }),
@@ -327,9 +341,9 @@ const TypeDiscussions = ({
     );
   }
 
-  const discussions = data?.discussions.filter(
-    (d) => d.referenceLine === lineNo,
-  );
+  const discussions = data?.discussions
+    .filter((d) => d.referenceLine === lineNo)
+    .filter((ld) => !(ld.isResolved && hideResolvedDiscussions));
 
   return (
     <div className="flex h-full flex-col">
@@ -340,6 +354,7 @@ const TypeDiscussions = ({
           size="sm"
           onClick={() => setNewDiscussionLine(lineNo)}
         >
+          <PlusIcon className="mr-2" />
           New
         </Button>
       </div>
@@ -420,6 +435,8 @@ const Type = (props: {
   lineNo?: number;
   schemaVersionId: string;
 }) => {
+  const [hideDiscussions] = useLocalStorage(hideDiscussionsKey, false);
+
   const router = useRouter();
 
   const { isMobile } = useWindowSize();
@@ -483,13 +500,15 @@ const Type = (props: {
   return (
     <ResizablePanelGroup direction="horizontal" className="flex max-w-full">
       <ResizablePanel
-        className={cn(!!props.lineNo && !isMobile && "pr-4")}
+        className={cn(
+          !!props.lineNo && !isMobile && !hideDiscussions && "pr-4",
+        )}
         minSize={35}
         defaultSize={isMobile ? 1000 : 65}
       >
         {typeContent}
       </ResizablePanel>
-      {!!props.lineNo && !isMobile && (
+      {!!props.lineNo && !isMobile && !hideDiscussions && (
         <>
           <ResizableHandle withHandle />
           <ResizablePanel className="pl-4" minSize={35} defaultSize={35}>
@@ -794,6 +813,7 @@ const Toolbar = ({ ast }: { ast: GraphQLSchema | null }) => {
           </SelectGroup>
         </SelectContent>
       </Select>
+      <SchemaSettings />
     </SchemaToolbar>
   );
 };
