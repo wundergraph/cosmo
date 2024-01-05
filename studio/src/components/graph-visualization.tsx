@@ -27,7 +27,6 @@ import ReactFlowGraphNode from "./reactflow-graph-node";
 import { buttonVariants } from "./ui/button";
 import SubgraphMetricsEdge from "@/components/reactflow-metrics-edge";
 import { useDateRangeQueryState } from "@/components/analytics/useAnalyticsQueryState";
-import { formatDate } from "@/lib/format-date";
 
 export interface Graph {
   id: string;
@@ -281,10 +280,10 @@ function GraphVisualization({
             role="none"
             className="h-4 w-[1px] shrink-0 bg-border"
           ></div>
-          <span className="text-xs text-muted-foreground">
-            {formatDate(dr.dateRange.start)} - {formatDate(dr.dateRange.end)}
-          </span>
         </h2>
+        <span className="text-xs text-muted-foreground">
+          P95 Request Latency and Request Per Minute
+        </span>
       </Panel>
       <Panel
         position="bottom-left"

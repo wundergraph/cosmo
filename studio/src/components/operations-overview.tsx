@@ -25,7 +25,6 @@ import {
   useAnalyticsQueryState,
   useDateRangeQueryState,
 } from "@/components/analytics/useAnalyticsQueryState";
-import { formatDate } from "@/lib/format-date";
 
 const valueFormatter = (number: number) => `${formatMetric(number)}`;
 
@@ -84,7 +83,7 @@ export const RequestChart = ({
           </span>
           <Separator orientation="vertical" className="h-4" />
           <span className="text-xs text-muted-foreground">
-            {formatDate(dateRange.start)} - {formatDate(dateRange.end)}
+            Incoming Router requests
           </span>
         </h2>
         <div className="flex items-center gap-x-2 text-sm md:ml-auto">
@@ -203,7 +202,7 @@ export const MostRequested = ({
         </span>
         <Separator orientation="vertical" className="h-4" />
         <span className="text-xs text-muted-foreground">
-          {formatDate(dr.dateRange.start)} - {formatDate(dr.dateRange.end)}
+          Most requested operations
         </span>
       </h2>
       <BarList
