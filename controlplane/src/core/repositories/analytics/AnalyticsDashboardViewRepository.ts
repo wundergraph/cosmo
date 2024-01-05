@@ -187,8 +187,8 @@ export class AnalyticsDashboardViewRepository {
     const query = `
       SELECT
         FederatedGraphID as federatedGraphID,
-        round(sum(TotalRequests) / 60, 2) AS requestRate,
-        round(sum(TotalErrors) / 60, 2) AS errorRate
+        round(sum(TotalRequests) / 60, 3) AS requestRate,
+        round(sum(TotalErrors) / 60, 3) AS errorRate
       FROM ${this.client.database}.operation_request_metrics_5_30_mv
       WHERE Timestamp >= toDateTime('${dateRange.startDate}')
       AND Timestamp <= toDateTime('${dateRange.endDate}')
@@ -236,8 +236,8 @@ export class AnalyticsDashboardViewRepository {
     const query = `
       SELECT
         SubgraphID as subgraphID,
-        round(sum(TotalRequests) / 60, 2) AS requestRate,
-        round(sum(TotalErrors) / 60, 2) AS errorRate
+        round(sum(TotalRequests) / 60, 3) AS requestRate,
+        round(sum(TotalErrors) / 60, 3) AS errorRate
       FROM ${this.client.database}.subgraph_request_metrics_5_30_mv
       WHERE Timestamp >= toDateTime('${dateRange.startDate}')
         AND Timestamp <= toDateTime('${dateRange.endDate}')
