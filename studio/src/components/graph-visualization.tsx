@@ -27,7 +27,7 @@ import ReactFlowGraphNode from "./reactflow-graph-node";
 import { buttonVariants } from "./ui/button";
 import SubgraphMetricsEdge from "@/components/reactflow-metrics-edge";
 import { useDateRangeQueryState } from "@/components/analytics/useAnalyticsQueryState";
-import { formatDateTime } from "@/lib/format-date";
+import { formatDate } from "@/lib/format-date";
 
 export interface Graph {
   id: string;
@@ -282,8 +282,7 @@ function GraphVisualization({
             className="h-4 w-[1px] shrink-0 bg-border"
           ></div>
           <span className="text-xs text-muted-foreground">
-            {formatDateTime(dr.dateRange.start)} -{" "}
-            {formatDateTime(dr.dateRange.end)}
+            {formatDate(dr.dateRange.start)} - {formatDate(dr.dateRange.end)}
           </span>
         </h2>
       </Panel>
