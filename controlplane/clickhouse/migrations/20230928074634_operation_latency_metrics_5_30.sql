@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS cosmo.operation_latency_metrics_5_30 (
 )
 ENGINE = AggregatingMergeTree
 PARTITION BY toDate(Timestamp)
+-- This allows us to fetch latency metrics by operation name in the most efficient way
 ORDER BY (
     OperationName, FederatedGraphID, OrganizationID, ClientName, ClientVersion, toUnixTimestamp(Timestamp), RouterConfigVersion, OperationType, OperationHash
 )

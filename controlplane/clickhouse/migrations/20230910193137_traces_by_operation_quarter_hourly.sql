@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS cosmo.traces_by_operation_quarter_hourly (
    LastCalled DateTime('UTC') CODEC (ZSTD(3))
 ) ENGINE = SummingMergeTree
 PARTITION BY toDate(Timestamp)
+-- This allows us to fetch traces by client name in the most efficient way
 ORDER BY (
     OperationName, FederatedGraphID, OrganizationID, toUnixTimestamp(Timestamp), OperationType, IsSubscription
 )

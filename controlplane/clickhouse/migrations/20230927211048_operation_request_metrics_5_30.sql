@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS cosmo.operation_request_metrics_5_30 (
    ClientVersion LowCardinality(String) CODEC (ZSTD(3))
 ) ENGINE = SummingMergeTree
 PARTITION BY toDate(Timestamp)
+-- This allows us to fetch request metrics by operation name in the most efficient way
 ORDER BY (
     OperationName, FederatedGraphID, OrganizationID, ClientName, ClientVersion, toUnixTimestamp(Timestamp), RouterConfigVersion, OperationType, IsSubscription, OperationHash
 )

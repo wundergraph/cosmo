@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS cosmo.subgraph_latency_metrics_5_30 (
    MaxDuration SimpleAggregateFunction(max, Float64) CODEC(ZSTD(3))
 ) ENGINE = AggregatingMergeTree
 PARTITION BY toDate(Timestamp)
+-- This allows us to fetch latency metrics by subgraph ID in the most efficient way
 ORDER BY (
     SubgraphID, FederatedGraphID, OrganizationID, toUnixTimestamp(Timestamp)
 )

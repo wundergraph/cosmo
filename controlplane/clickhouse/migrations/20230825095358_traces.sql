@@ -33,6 +33,7 @@ CREATE TABLE IF NOT EXISTS traces (
    INDEX idx_duration Duration TYPE minmax GRANULARITY 1
 ) ENGINE = MergeTree
 PARTITION BY toDate(Timestamp)
+-- This allows us to fetch traces by federated graph in the most efficient way
 ORDER BY (
     FederatedGraphID, OrganizationID, toUnixTimestamp(Timestamp)
 )

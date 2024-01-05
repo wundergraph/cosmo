@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS cosmo.subgraph_request_metrics_5_30 (
    TotalErrors UInt64 CODEC(ZSTD(1))
 ) ENGINE = SummingMergeTree
 PARTITION BY toDate(Timestamp)
+-- This allows us to fetch request metrics by subgraph ID in the most efficient way
 ORDER BY (
     SubgraphID, FederatedGraphID, OrganizationID, toUnixTimestamp(Timestamp)
 )

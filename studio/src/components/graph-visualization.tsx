@@ -282,7 +282,7 @@ function GraphVisualization({
           ></div>
         </h2>
         <span className="text-xs text-muted-foreground">
-          P95 Request Latency and Request Per Minute
+          P95 Request Latency & Request Per Minute (RPM)
         </span>
       </Panel>
       <Panel
