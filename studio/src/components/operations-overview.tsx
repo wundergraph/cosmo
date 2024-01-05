@@ -1,10 +1,6 @@
 import useWindowSize from "@/hooks/use-window-size";
-import { dateFormatter, useChartData } from "@/lib/insights-helpers";
-import { cn } from "@/lib/utils";
+import { useChartData } from "@/lib/insights-helpers";
 import { formatMetric, formatPercentMetric } from "@/lib/format-metric";
-import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
-import { useQuery } from "@tanstack/react-query";
-import { getDashboardAnalyticsView } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import {
   OperationRequestCount,
   RequestSeriesItem,
@@ -19,23 +15,28 @@ import {
   YAxis,
 } from "recharts";
 import BarList from "./analytics/barlist";
-import { EmptyState } from "./empty-state";
 import { Badge } from "./ui/badge";
-import { Button } from "./ui/button";
-import { Loader } from "./ui/loader";
 import { Separator } from "./ui/separator";
-import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { useRouter } from "next/router";
 import { constructAnalyticsTableQueryState } from "./analytics/constructAnalyticsTableQueryState";
 import { ChartTooltip } from "./analytics/charts";
+import { Loader } from "@/components/ui/loader";
+import {
+  useAnalyticsQueryState,
+  useDateRangeQueryState,
+} from "@/components/analytics/useAnalyticsQueryState";
+import { formatDate } from "@/lib/format-date";
 
 const valueFormatter = (number: number) => `${formatMetric(number)}`;
 
-const RequestChart = ({
+export const RequestChart = ({
   requestSeries,
+  isLoading,
 }: {
   requestSeries: RequestSeriesItem[];
+  isLoading: boolean;
 }) => {
+  const { range, dateRange } = useAnalyticsQueryState();
   const categorized = useMemo(() => {
     let success = 0;
     let error = 0;
@@ -57,7 +58,7 @@ const RequestChart = ({
   const { isMobile } = useWindowSize();
 
   const { data, ticks, domain, timeFormatter } = useChartData(
-    7 * 24,
+    range,
     requestSeries,
   );
 
@@ -66,13 +67,25 @@ const RequestChart = ({
 
   const requestsColor = "hsl(var(--chart-primary))";
 
+  if (isLoading) {
+    return (
+      <div className="h-full w-full border">
+        <Loader fullscreen />
+      </div>
+    );
+  }
+
   return (
-    <div className="flex h-full w-full flex-col gap-y-8 rounded-md border p-4 lg:w-3/5 lg:gap-y-4">
+    <div className="flex h-full w-full flex-col gap-y-8 rounded-md border p-4 lg:gap-y-4">
       <div className="flex flex-col gap-x-6 gap-y-2 md:flex-row md:items-center">
         <h2 className="flex items-center gap-x-2">
-          <span>Requests</span>
+          <span className="font-semibold leading-none tracking-tight">
+            Requests
+          </span>
           <Separator orientation="vertical" className="h-4" />
-          <span className="text-xs text-muted-foreground">1 Week</span>
+          <span className="text-xs text-muted-foreground">
+            {formatDate(dateRange.start)} - {formatDate(dateRange.end)}
+          </span>
         </h2>
         <div className="flex items-center gap-x-2 text-sm md:ml-auto">
           <div className="h-3 w-3 rounded-full bg-sky-500" />
@@ -90,7 +103,7 @@ const RequestChart = ({
       </div>
       <ResponsiveContainer
         width={"100%"}
-        height={200}
+        height={250}
         className="my-auto text-xs"
       >
         <AreaChart
@@ -99,11 +112,11 @@ const RequestChart = ({
         >
           <defs>
             <linearGradient id={color1} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.4} />
-              <stop offset="95%" stopColor="#0ea5e9" stopOpacity={0} />
+              <stop offset="5%" stopColor="#0da2e7" stopOpacity={0.8} />
+              <stop offset="95%" stopColor="#0da2e7" stopOpacity={0} />
             </linearGradient>
             <linearGradient id={color2} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#ef4444" stopOpacity={0.4} />
+              <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8} />
               <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
             </linearGradient>
           </defs>
@@ -147,8 +160,15 @@ const RequestChart = ({
   );
 };
 
-const MostRequested = ({ data }: { data: OperationRequestCount[] }) => {
+export const MostRequested = ({
+  data,
+  isLoading,
+}: {
+  data: OperationRequestCount[];
+  isLoading: boolean;
+}) => {
   const { asPath } = useRouter();
+  const dr = useDateRangeQueryState();
 
   const operations = useMemo(() => {
     return data.map((d) => {
@@ -167,12 +187,24 @@ const MostRequested = ({ data }: { data: OperationRequestCount[] }) => {
     });
   }, [data, asPath]);
 
+  if (isLoading) {
+    return (
+      <div className="h-full w-full border">
+        <Loader fullscreen />
+      </div>
+    );
+  }
+
   return (
-    <div className="flex h-full w-full flex-col gap-y-4 rounded-md border p-4 lg:w-2/5">
+    <div className="flex h-full w-full flex-col gap-y-4 rounded-md border p-4">
       <h2 className="flex items-center gap-x-2">
-        <span>Top 5 Operations</span>
+        <span className="font-semibold leading-none tracking-tight">
+          Top 10 Operations
+        </span>
         <Separator orientation="vertical" className="h-4" />
-        <span className="text-xs text-muted-foreground">1 Week</span>
+        <span className="text-xs text-muted-foreground">
+          {formatDate(dr.dateRange.start)} - {formatDate(dr.dateRange.end)}
+        </span>
       </h2>
       <BarList
         rowClassName="bg-purple-400/20"
@@ -186,52 +218,11 @@ const MostRequested = ({ data }: { data: OperationRequestCount[] }) => {
               <span className="truncate">{op.name}</span>
             </div>
           ),
-          key: op.name,
+          key: op.hash + "_" + op.name,
         }))}
         showAnimation={true}
         valueFormatter={valueFormatter}
       />
-    </div>
-  );
-};
-
-export const OperationsOverview = ({
-  federatedGraphName,
-}: {
-  federatedGraphName: string;
-}) => {
-  const { data, isLoading, error, refetch } = useQuery(
-    getDashboardAnalyticsView.useQuery({
-      federatedGraphName,
-    }),
-  );
-
-  if (isLoading) {
-    return (
-      <div className="order-2 h-72 w-full border lg:order-last">
-        <Loader fullscreen />
-      </div>
-    );
-  }
-
-  if (error || data?.response?.code !== EnumStatusCode.OK) {
-    return (
-      <EmptyState
-        className="order-2 h-72 border lg:order-last"
-        icon={<ExclamationTriangleIcon />}
-        title="Could not retrieve weekly analytics data"
-        description={
-          data?.response?.details || error?.message || "Please try again"
-        }
-        actions={<Button onClick={() => refetch()}>Retry</Button>}
-      />
-    );
-  }
-
-  return (
-    <div className="order-2 flex w-full flex-col items-center gap-4 lg:order-last lg:flex-row">
-      <RequestChart requestSeries={data?.requestSeries ?? []} />
-      <MostRequested data={data?.mostRequestedOperations ?? []} />
     </div>
   );
 };

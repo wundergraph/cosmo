@@ -1,51 +1,29 @@
 import { PlainMessage } from '@bufbuild/protobuf';
 import {
   ClientWithOperations,
-  DateRange,
   FieldUsageMeta,
   RequestSeriesItem,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { ClickHouseClient } from '../../clickhouse/index.js';
-import { getDateRange, getGranularity, isoDateRangeToTimestamps } from './util.js';
-
-type TimeFilters = {
-  granule: string;
-  dateRange: {
-    start: number;
-    end: number;
-  };
-};
+import { DateRange, TimeFilters } from '../../../types/index.js';
+import { parseTimeFilters } from './util.js';
 
 export class UsageRepository {
   constructor(private client: ClickHouseClient) {}
-
-  private parseTimeFilters(dateRange?: DateRange, range?: number): TimeFilters {
-    const granule = getGranularity(range);
-    const parsedDateRange = isoDateRangeToTimestamps(dateRange, range);
-    const [start, end] = getDateRange(parsedDateRange);
-
-    return {
-      granule,
-      dateRange: {
-        start,
-        end,
-      },
-    };
-  }
 
   private async getUsageRequestSeries(
     whereSql: string,
     timeFilters: TimeFilters,
   ): Promise<PlainMessage<RequestSeriesItem>[]> {
     const {
-      dateRange: { start, end },
+      dateRange: { startDate, endDate },
       granule,
     } = timeFilters;
 
     const query = `
       WITH 
-        toStartOfInterval(toDateTime('${start}'), INTERVAL ${granule} MINUTE) AS startDate,
-        toDateTime('${end}') AS endDate
+        toStartOfInterval(toDateTime('${startDate}'), INTERVAL ${granule} MINUTE) AS startDate,
+        toDateTime('${endDate}') AS endDate
       SELECT
           toStartOfInterval(Timestamp, INTERVAL ${granule} MINUTE) AS timestamp,
           SUM(TotalUsages) AS totalRequests,
@@ -54,8 +32,8 @@ export class UsageRepository {
       WHERE Timestamp >= startDate AND Timestamp <= endDate AND ${whereSql}
       GROUP BY timestamp
       ORDER BY timestamp WITH FILL 
-      FROM toStartOfInterval(toDateTime('${start}'), INTERVAL ${granule} MINUTE)
-      TO toDateTime('${end}')
+      FROM toStartOfInterval(toDateTime('${startDate}'), INTERVAL ${granule} MINUTE)
+      TO toDateTime('${endDate}')
       STEP INTERVAL ${granule} minute
     `;
 
@@ -77,13 +55,13 @@ export class UsageRepository {
     timeFilters: TimeFilters,
   ): Promise<PlainMessage<ClientWithOperations>[]> {
     const {
-      dateRange: { start, end },
+      dateRange: { startDate, endDate },
     } = timeFilters;
 
     const query = `
       WITH
-        toDateTime('${start}') AS startDate,
-        toDateTime('${end}') AS endDate
+        toDateTime('${startDate}') AS startDate,
+        toDateTime('${endDate}') AS endDate
       SELECT
         ClientName AS clientName,
         ClientVersion AS clientVersion,
@@ -123,13 +101,13 @@ export class UsageRepository {
 
   private async getMeta(whereSql: string, timeFilters: TimeFilters): Promise<PlainMessage<FieldUsageMeta> | undefined> {
     const {
-      dateRange: { start, end },
+      dateRange: { startDate, endDate },
     } = timeFilters;
 
     const query = `
     WITH
-      toDateTime('${start}') AS startDate,
-      toDateTime('${end}') AS endDate
+      toDateTime('${startDate}') AS startDate,
+      toDateTime('${endDate}') AS endDate
     SELECT
       arrayReduce('groupUniqArray', arrayFlatten(groupArray(SubgraphIDs))) as subgraphIds,
       toString(toUnixTimestamp(min(Timestamp))) as firstSeenTimestamp,
@@ -154,7 +132,7 @@ export class UsageRepository {
     organizationId: string;
     federatedGraphId: string;
   }) {
-    const timeFilters = this.parseTimeFilters(input.dateRange, input.range);
+    const timeFilters = parseTimeFilters(input.dateRange, input.range);
 
     let whereSql = `FederatedGraphID = '${input.federatedGraphId}' AND OrganizationID = '${input.organizationId}'`;
     if (input.typename) {

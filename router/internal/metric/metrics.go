@@ -234,10 +234,11 @@ func (h *Metrics) createOtlpMeasures() error {
 	return nil
 }
 
-func (h *Metrics) MeasureInFlight(ctx context.Context) func() {
+func (h *Metrics) MeasureInFlight(ctx context.Context, attr ...attribute.KeyValue) func() {
 	var baseKeys []attribute.KeyValue
 
 	baseKeys = append(baseKeys, h.baseFields...)
+	baseKeys = append(baseKeys, attr...)
 
 	baseAttributes := otelmetric.WithAttributes(baseKeys...)
 

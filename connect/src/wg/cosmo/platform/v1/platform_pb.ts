@@ -1764,7 +1764,7 @@ export class GetFederatedGraphByNameRequest extends Message<GetFederatedGraphByN
   name = "";
 
   /**
-   * @generated from field: bool includeMetrics = 3;
+   * @generated from field: bool includeMetrics = 2;
    */
   includeMetrics = false;
 
@@ -1777,7 +1777,7 @@ export class GetFederatedGraphByNameRequest extends Message<GetFederatedGraphByN
   static readonly typeName = "wg.cosmo.platform.v1.GetFederatedGraphByNameRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "includeMetrics", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 2, name: "includeMetrics", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetFederatedGraphByNameRequest {
@@ -4242,6 +4242,21 @@ export class GetDashboardAnalyticsViewRequest extends Message<GetDashboardAnalyt
    */
   federatedGraphName = "";
 
+  /**
+   * @generated from field: string startDate = 2;
+   */
+  startDate = "";
+
+  /**
+   * @generated from field: string endDate = 3;
+   */
+  endDate = "";
+
+  /**
+   * @generated from field: int32 range = 4;
+   */
+  range = 0;
+
   constructor(data?: PartialMessage<GetDashboardAnalyticsViewRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -4251,6 +4266,9 @@ export class GetDashboardAnalyticsViewRequest extends Message<GetDashboardAnalyt
   static readonly typeName = "wg.cosmo.platform.v1.GetDashboardAnalyticsViewRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "federatedGraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "startDate", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "endDate", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "range", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetDashboardAnalyticsViewRequest {
@@ -4369,6 +4387,116 @@ export class OperationRequestCount extends Message<OperationRequestCount> {
 }
 
 /**
+ * @generated from message wg.cosmo.platform.v1.FederatedGraphMetrics
+ */
+export class FederatedGraphMetrics extends Message<FederatedGraphMetrics> {
+  /**
+   * @generated from field: string federatedGraphID = 1;
+   */
+  federatedGraphID = "";
+
+  /**
+   * @generated from field: float requestRate = 2;
+   */
+  requestRate = 0;
+
+  /**
+   * @generated from field: float errorRate = 3;
+   */
+  errorRate = 0;
+
+  /**
+   * @generated from field: float latency = 4;
+   */
+  latency = 0;
+
+  constructor(data?: PartialMessage<FederatedGraphMetrics>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.FederatedGraphMetrics";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "federatedGraphID", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "requestRate", kind: "scalar", T: 2 /* ScalarType.FLOAT */ },
+    { no: 3, name: "errorRate", kind: "scalar", T: 2 /* ScalarType.FLOAT */ },
+    { no: 4, name: "latency", kind: "scalar", T: 2 /* ScalarType.FLOAT */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FederatedGraphMetrics {
+    return new FederatedGraphMetrics().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): FederatedGraphMetrics {
+    return new FederatedGraphMetrics().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): FederatedGraphMetrics {
+    return new FederatedGraphMetrics().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: FederatedGraphMetrics | PlainMessage<FederatedGraphMetrics> | undefined, b: FederatedGraphMetrics | PlainMessage<FederatedGraphMetrics> | undefined): boolean {
+    return proto3.util.equals(FederatedGraphMetrics, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.SubgraphMetrics
+ */
+export class SubgraphMetrics extends Message<SubgraphMetrics> {
+  /**
+   * @generated from field: string subgraphID = 1;
+   */
+  subgraphID = "";
+
+  /**
+   * @generated from field: float requestRate = 2;
+   */
+  requestRate = 0;
+
+  /**
+   * @generated from field: float errorRate = 3;
+   */
+  errorRate = 0;
+
+  /**
+   * @generated from field: float latency = 4;
+   */
+  latency = 0;
+
+  constructor(data?: PartialMessage<SubgraphMetrics>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.SubgraphMetrics";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "subgraphID", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "requestRate", kind: "scalar", T: 2 /* ScalarType.FLOAT */ },
+    { no: 3, name: "errorRate", kind: "scalar", T: 2 /* ScalarType.FLOAT */ },
+    { no: 4, name: "latency", kind: "scalar", T: 2 /* ScalarType.FLOAT */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SubgraphMetrics {
+    return new SubgraphMetrics().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SubgraphMetrics {
+    return new SubgraphMetrics().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SubgraphMetrics {
+    return new SubgraphMetrics().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: SubgraphMetrics | PlainMessage<SubgraphMetrics> | undefined, b: SubgraphMetrics | PlainMessage<SubgraphMetrics> | undefined): boolean {
+    return proto3.util.equals(SubgraphMetrics, a, b);
+  }
+}
+
+/**
  * @generated from message wg.cosmo.platform.v1.GetDashboardAnalyticsViewResponse
  */
 export class GetDashboardAnalyticsViewResponse extends Message<GetDashboardAnalyticsViewResponse> {
@@ -4387,6 +4515,16 @@ export class GetDashboardAnalyticsViewResponse extends Message<GetDashboardAnaly
    */
   mostRequestedOperations: OperationRequestCount[] = [];
 
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.SubgraphMetrics subgraphMetrics = 4;
+   */
+  subgraphMetrics: SubgraphMetrics[] = [];
+
+  /**
+   * @generated from field: wg.cosmo.platform.v1.FederatedGraphMetrics federatedGraphMetrics = 5;
+   */
+  federatedGraphMetrics?: FederatedGraphMetrics;
+
   constructor(data?: PartialMessage<GetDashboardAnalyticsViewResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -4398,6 +4536,8 @@ export class GetDashboardAnalyticsViewResponse extends Message<GetDashboardAnaly
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "requestSeries", kind: "message", T: RequestSeriesItem, repeated: true },
     { no: 3, name: "mostRequestedOperations", kind: "message", T: OperationRequestCount, repeated: true },
+    { no: 4, name: "subgraphMetrics", kind: "message", T: SubgraphMetrics, repeated: true },
+    { no: 5, name: "federatedGraphMetrics", kind: "message", T: FederatedGraphMetrics },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetDashboardAnalyticsViewResponse {

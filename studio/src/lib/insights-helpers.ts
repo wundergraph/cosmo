@@ -152,6 +152,12 @@ export const useChartData = (
 const bigintE3 = BigInt(1e3);
 const bigintE6 = BigInt(1e6);
 
+export const msToTime = (ms: number = 0) => {
+  if (ms > 1000) return ms / 1000 + " s";
+
+  return ms.toFixed(2) + " ms";
+};
+
 export const nsToTime = (ns: bigint) => {
   let seconds = Number(ns / BigInt(1e9)).toFixed(2);
   if (Number(seconds) > 1) return seconds + " s";

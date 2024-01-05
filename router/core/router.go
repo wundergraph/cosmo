@@ -708,6 +708,31 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		r.logger.Info("localhost fallback enabled, connections that fail to connect to localhost will be retried using host.docker.internal")
 	}
 
+	var metricStore *metric.Metrics
+
+	// Prometheus metrics rely on OTLP metrics
+	if r.metricConfig.IsEnabled() {
+		m, err := metric.NewMetrics(
+			r.metricConfig.Name,
+			Version,
+			metric.WithPromMeterProvider(r.promMeterProvider),
+			metric.WithOtlpMeterProvider(r.otlpMeterProvider),
+			metric.WithLogger(r.logger),
+			metric.WithAttributes(
+				otel.WgRouterGraphName.String(r.federatedGraphName),
+				otel.WgRouterConfigVersion.String(routerConfig.GetVersion()),
+				otel.WgRouterVersion.String(Version),
+			),
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create metric handler: %w", err)
+		}
+
+		metricStore = m
+	}
+
+	routerMetrics := NewRouterMetrics(metricStore, r.gqlMetricsExporter, routerConfig.GetVersion())
+
 	ecb := &ExecutorConfigurationBuilder{
 		introspection: r.introspection,
 		baseURL:       r.baseURL,
@@ -718,6 +743,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 			RequestTimeout: r.subgraphTransportOptions.RequestTimeout,
 			PreHandlers:    r.preOriginHandlers,
 			PostHandlers:   r.postOriginHandlers,
+			Metrics:        metricStore,
 			RetryOptions: retrytransport.RetryOptions{
 				Enabled:       r.retryOptions.Enabled,
 				MaxRetryCount: r.retryOptions.MaxRetryCount,
@@ -770,31 +796,6 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		Log:                                    r.logger,
 		EnableExecutionPlanCacheResponseHeader: routerEngineConfig.Execution.EnableExecutionPlanCacheResponseHeader,
 	})
-
-	var metricStore *metric.Metrics
-
-	// Prometheus metrics rely on OTLP metrics
-	if r.metricConfig.IsEnabled() {
-		m, err := metric.NewMetrics(
-			r.metricConfig.Name,
-			Version,
-			metric.WithPromMeterProvider(r.promMeterProvider),
-			metric.WithOtlpMeterProvider(r.otlpMeterProvider),
-			metric.WithLogger(r.logger),
-			metric.WithAttributes(
-				otel.WgRouterGraphName.String(r.federatedGraphName),
-				otel.WgRouterConfigVersion.String(routerConfig.GetVersion()),
-				otel.WgRouterVersion.String(Version),
-			),
-		)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create metric handler: %w", err)
-		}
-
-		metricStore = m
-	}
-
-	routerMetrics := NewRouterMetrics(metricStore, r.gqlMetricsExporter, routerConfig.GetVersion())
 
 	var publicKey *ecdsa.PublicKey
 

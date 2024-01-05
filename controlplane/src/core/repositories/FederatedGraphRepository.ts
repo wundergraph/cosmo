@@ -19,6 +19,7 @@ import {
   targets,
 } from '../../db/schema.js';
 import {
+  DateRange,
   FederatedGraphChangelogDTO,
   FederatedGraphDTO,
   GraphApiKeyDTO,
@@ -595,10 +596,7 @@ export class FederatedGraphRepository {
       limit: number;
       offset: number;
     },
-    dateRange: {
-      start: string;
-      end: string;
-    },
+    dateRange: DateRange,
   ): Promise<{ federatedGraphChangelog: FederatedGraphChangelogDTO[]; hasNextPage: boolean } | undefined> {
     return this.db.transaction<
       { federatedGraphChangelog: FederatedGraphChangelogDTO[]; hasNextPage: boolean } | undefined
@@ -606,7 +604,7 @@ export class FederatedGraphRepository {
       const federatedGraphChangelog: FederatedGraphChangelogDTO[] = [];
 
       const { offset, limit } = pagination;
-      const { start, end } = dateRange;
+      const { startDate, endDate } = dateRange;
 
       // Get all schema version ids which have changelogs
       const schemaVersionIds = (
@@ -618,8 +616,8 @@ export class FederatedGraphRepository {
           .where(
             and(
               eq(schemaVersion.targetId, targetId),
-              gt(schemaVersion.createdAt, new Date(start)),
-              lt(schemaVersion.createdAt, new Date(end)),
+              gt(schemaVersion.createdAt, new Date(startDate)),
+              lt(schemaVersion.createdAt, new Date(endDate)),
             ),
           )
           .innerJoin(schemaVersionChangeAction, eq(schemaVersionChangeAction.schemaVersionId, schemaVersion.id))
@@ -654,8 +652,8 @@ export class FederatedGraphRepository {
         .where(
           and(
             eq(schemaVersion.targetId, targetId),
-            gt(schemaVersion.createdAt, new Date(start)),
-            lt(schemaVersion.createdAt, new Date(end)),
+            gt(schemaVersion.createdAt, new Date(startDate)),
+            lt(schemaVersion.createdAt, new Date(endDate)),
           ),
         )
         .orderBy(desc(schemaVersion.createdAt))

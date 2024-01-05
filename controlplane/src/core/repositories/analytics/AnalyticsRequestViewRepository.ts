@@ -21,6 +21,7 @@ import {
   coerceFilterValues,
   fillColumnMetaData,
 } from './util.js';
+import { DateRange } from '../../../types/index.js';
 
 /**
  * Repository for clickhouse analytics data
@@ -654,8 +655,6 @@ export class AnalyticsRequestViewRepository {
         return filters.filter((f) => ['p95', 'httpStatusCode'].includes(f.field));
       }
     }
-
-    return [];
   }
 
   private getSortOrder = (id?: string, desc?: boolean) => {
@@ -693,12 +692,16 @@ export class AnalyticsRequestViewRepository {
       coercedQueryParams.endDate = endDate;
     }
 
-    const { havingSql, ...rest } = buildCoercedFilterSqlStatement(
-      columnMetaData,
-      coercedQueryParams,
-      filterMapper,
-      opts?.dateRange,
-    );
+    let dr: DateRange | undefined;
+
+    if (opts?.dateRange) {
+      dr = {
+        startDate: opts.dateRange.start,
+        endDate: opts.dateRange.end,
+      };
+    }
+
+    const { havingSql, ...rest } = buildCoercedFilterSqlStatement(columnMetaData, coercedQueryParams, filterMapper, dr);
     let { whereSql } = rest;
 
     // Important: This is the only place where we scope the data to a particular organization and graph.
@@ -727,12 +730,7 @@ export class AnalyticsRequestViewRepository {
 
     // we can't use the same whereSql as we need all values for the filters.
     // @todo include counts for each filter value.
-    let { whereSql: filterWhereSql } = buildCoercedFilterSqlStatement(
-      columnMetaData,
-      coercedQueryParams,
-      {},
-      opts?.dateRange,
-    );
+    let { whereSql: filterWhereSql } = buildCoercedFilterSqlStatement(columnMetaData, coercedQueryParams, {}, dr);
 
     filterWhereSql += scopedSql;
 

@@ -21,8 +21,8 @@ import (
 type OperationProtocol string
 
 const (
-	OperationProtocolHTTP      = OperationProtocol("http")
-	OperationProtocolGraphQLWS = OperationProtocol("graphql-ws")
+	OperationProtocolHTTP = OperationProtocol("http")
+	OperationProtocolWS   = OperationProtocol("ws")
 )
 
 func (p OperationProtocol) String() string {
@@ -193,8 +193,8 @@ func startOperationMetrics(mtr *metric.Metrics, logger *zap.Logger, requestConte
 
 	inflightMetric := mtr.MeasureInFlight(context.Background())
 	return &OperationMetrics{
-		metrics:              mtr,
 		requestContentLength: requestContentLength,
+		metrics:              mtr,
 		operationStartTime:   operationStartTime,
 		inflightMetric:       inflightMetric,
 		gqlMetricsExporter:   gqlMetricsExporter,
@@ -204,29 +204,31 @@ func startOperationMetrics(mtr *metric.Metrics, logger *zap.Logger, requestConte
 }
 
 // commonMetricAttributes returns the attributes that are common to both metrics and traces.
-func commonMetricAttributes(operation *ParsedOperation, protocol OperationProtocol) []attribute.KeyValue {
-	if operation == nil {
+func commonMetricAttributes(operationContext *operationContext) []attribute.KeyValue {
+	if operationContext == nil {
 		return nil
 	}
 
 	var baseMetricAttributeValues []attribute.KeyValue
 
 	// Fields that are always present in the metrics and traces
-	baseMetricAttributeValues = append(baseMetricAttributeValues, otel.WgOperationName.String(operation.Name))
-	baseMetricAttributeValues = append(baseMetricAttributeValues, otel.WgOperationType.String(operation.Type))
-	baseMetricAttributeValues = append(baseMetricAttributeValues, otel.WgOperationProtocol.String(protocol.String()))
-	baseMetricAttributeValues = append(baseMetricAttributeValues, otel.WgOperationHash.String(strconv.FormatUint(operation.ID, 10)))
+	baseMetricAttributeValues = append(baseMetricAttributeValues, otel.WgClientName.String(operationContext.clientInfo.Name))
+	baseMetricAttributeValues = append(baseMetricAttributeValues, otel.WgClientVersion.String(operationContext.clientInfo.Version))
+	baseMetricAttributeValues = append(baseMetricAttributeValues, otel.WgOperationName.String(operationContext.Name()))
+	baseMetricAttributeValues = append(baseMetricAttributeValues, otel.WgOperationType.String(operationContext.Type()))
+	baseMetricAttributeValues = append(baseMetricAttributeValues, otel.WgOperationProtocol.String(operationContext.Protocol().String()))
+	baseMetricAttributeValues = append(baseMetricAttributeValues, otel.WgOperationHash.String(strconv.FormatUint(operationContext.Hash(), 10)))
 
 	// Common Field that will be present in both metrics and traces if not empty
-	if operation.PersistedID != "" {
-		baseMetricAttributeValues = append(baseMetricAttributeValues, otel.WgOperationPersistedID.String(operation.PersistedID))
+	if operationContext.PersistedID() != "" {
+		baseMetricAttributeValues = append(baseMetricAttributeValues, otel.WgOperationPersistedID.String(operationContext.PersistedID()))
 	}
 
 	return baseMetricAttributeValues
 }
 
 // initializeSpan sets the correct span name and attributes for the operation on the current span.
-func initializeSpan(ctx context.Context, operation *ParsedOperation, clientInfo *ClientInfo, commonAttributeValues []attribute.KeyValue) {
+func initializeSpan(ctx context.Context, operation *ParsedOperation, commonAttributeValues []attribute.KeyValue) {
 	if operation == nil {
 		return
 	}
@@ -234,10 +236,6 @@ func initializeSpan(ctx context.Context, operation *ParsedOperation, clientInfo 
 	span := trace.SpanFromContext(ctx)
 	span.SetName(GetSpanName(operation.Name, operation.Type))
 	span.SetAttributes(commonAttributeValues...)
-	// Only set the query content on the span
+	// Only set the operation content on the span
 	span.SetAttributes(otel.WgOperationContent.String(operation.NormalizedRepresentation))
-
-	// Add client info to trace span attributes
-	span.SetAttributes(otel.WgClientName.String(clientInfo.Name))
-	span.SetAttributes(otel.WgClientVersion.String(clientInfo.Version))
 }
