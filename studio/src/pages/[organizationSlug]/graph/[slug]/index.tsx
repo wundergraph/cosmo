@@ -29,13 +29,17 @@ import {
   ExclamationCircleIcon,
   ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
-import { HomeIcon, RocketIcon } from "@radix-ui/react-icons";
+import { HomeIcon, RocketIcon, UpdateIcon } from "@radix-ui/react-icons";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import React, { useContext, useState } from "react";
 import { TbBook } from "react-icons/tb";
 import { ReactFlowProvider } from "reactflow";
-import { useQuery } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import {
   DatePickerWithRange,
   DateRangePickerChangeHandler,
@@ -44,8 +48,10 @@ import { Spacer } from "@/components/ui/spacer";
 import { formatISO } from "date-fns";
 import { useApplyParams } from "@/components/analytics/use-apply-params";
 import { useFeatureLimit } from "@/hooks/use-feature-limit";
-import { useDateRangeQueryState } from "@/components/analytics/useAnalyticsQueryState";
+import { useAnalyticsQueryState } from "@/components/analytics/useAnalyticsQueryState";
 import { getDashboardAnalyticsView } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+import { Button } from "@/components/ui/button";
+import { RefreshInterval } from "@/components/analytics/refresh-interval";
 
 export const OverviewToolbar = ({ tab }: { tab: "overview" | "readme" }) => {
   const router = useRouter();
@@ -93,19 +99,29 @@ const GraphOverviewPage = () => {
   const graphData = useContext(GraphContext);
   const [open, setOpen] = useState(false);
   const applyParams = useApplyParams();
-  const { range, dateRange } = useDateRangeQueryState();
+  const client = useQueryClient();
+  const { range, dateRange, refreshInterval } = useAnalyticsQueryState();
   const analyticsRetention = useFeatureLimit("analytics-retention", 7);
 
-  if (!graphData?.graph) return null;
-
-  const { data: dashboardView, isLoading: dashboardViewLoading } = useQuery({
-    ...getDashboardAnalyticsView.useQuery({
-      federatedGraphName: graphData.graph.name,
-      startDate: formatISO(dateRange.start),
-      endDate: formatISO(dateRange.end),
-      range,
-    }),
+  const getView = getDashboardAnalyticsView.useQuery({
+    federatedGraphName: graphData?.graph?.name,
+    startDate: formatISO(dateRange.start),
+    endDate: formatISO(dateRange.end),
+    range,
   });
+  const {
+    data: dashboardView,
+    isLoading: dashboardViewLoading,
+    isFetching,
+  } = useQuery({
+    ...getView,
+    enabled: !!graphData?.graph?.name,
+    placeholderData: keepPreviousData,
+    refetchInterval: refreshInterval,
+    refetchOnWindowFocus: false,
+  });
+
+  if (!graphData?.graph) return null;
 
   const {
     lastUpdatedAt,
@@ -142,6 +158,12 @@ const GraphOverviewPage = () => {
     }
   };
 
+  const onRefreshIntervalChange = (value?: number) => {
+    applyParams({
+      refreshInterval: value ? value.toString() : null,
+    });
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-2 space-y-2">
@@ -156,6 +178,23 @@ const GraphOverviewPage = () => {
           </div>
 
           <Spacer />
+
+          <Button
+            isLoading={!!isFetching}
+            onClick={() => {
+              client.invalidateQueries({
+                queryKey: getView.queryKey,
+              });
+            }}
+            variant="outline"
+            className="px-3"
+          >
+            <UpdateIcon />
+          </Button>
+          <RefreshInterval
+            value={refreshInterval}
+            onChange={onRefreshIntervalChange}
+          />
         </div>
       </div>
       <div className="grid grid-rows-3 gap-4 lg:grid-cols-2">

@@ -11,6 +11,7 @@ import {
   Unit,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { ClickHouseClient } from '../../clickhouse/index.js';
+import { DateRange } from '../../../types/index.js';
 import {
   BaseFilters,
   ColumnMetaData,
@@ -21,7 +22,6 @@ import {
   coerceFilterValues,
   fillColumnMetaData,
 } from './util.js';
-import { DateRange } from '../../../types/index.js';
 
 /**
  * Repository for clickhouse analytics data
