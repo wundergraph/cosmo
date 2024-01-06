@@ -503,7 +503,7 @@ func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperat
 	if err != nil {
 		return nil, nil, err
 	}
-	opContext, err := h.planner.Plan(operation, h.clientInfo, ParseRequestTraceOptions(h.r))
+	opContext, err := h.planner.Plan(operation, h.clientInfo, OperationProtocolWS, ParseRequestTraceOptions(h.r))
 	if err != nil {
 		return operation, nil, err
 	}
@@ -528,10 +528,11 @@ func (h *WebSocketConnectionHandler) executeSubscription(ctx context.Context, ms
 
 	metrics.AddOperationContext(operationCtx)
 
-	commonAttributeValues := commonMetricAttributes(operation, OperationProtocolGraphQLWS)
+	commonAttributeValues := commonMetricAttributes(opContext)
 	metrics.AddAttributes(commonAttributeValues...)
 
 	initializeSpan(ctx, operation, operationCtx.clientInfo, commonAttributeValues)
+	initializeSpan(ctx, operation, commonAttributeValues)
 
 	rw := newWebsocketResponseWriter(msg.ID, h.protocol, h.logger, h.stats)
 

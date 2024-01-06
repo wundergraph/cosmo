@@ -4,6 +4,50 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.48.0](https://github.com/wundergraph/cosmo/compare/studio@0.47.3...studio@0.48.0) (2024-01-06)
+
+### Bug Fixes
+
+* api keys creation when rbac is off ([#404](https://github.com/wundergraph/cosmo/issues/404)) ([cc4ed0e](https://github.com/wundergraph/cosmo/commit/cc4ed0e26ca1e4f58011c3a6c2c887d70a53a021)) (@JivusAyrus)
+
+### Features
+
+* track subgraphs in metrics ([#405](https://github.com/wundergraph/cosmo/issues/405)) ([7b9f307](https://github.com/wundergraph/cosmo/commit/7b9f3074ea718d49135c5f46943002e37bef48e2)) (@StarpTech)
+
+## [0.47.3](https://github.com/wundergraph/cosmo/compare/studio@0.47.2...studio@0.47.3) (2024-01-01)
+
+### Bug Fixes
+
+* reset plan after subscription del, bill for upgrade immediately ([b649383](https://github.com/wundergraph/cosmo/commit/b649383446bf8a6187a61d795d4237604f401c87)) (@StarpTech)
+
+## [0.47.2](https://github.com/wundergraph/cosmo/compare/studio@0.47.1...studio@0.47.2) (2024-01-01)
+
+### Bug Fixes
+
+* **payment:** handle customer deletion, cancel subs when org is deleted ([#401](https://github.com/wundergraph/cosmo/issues/401)) ([b58809d](https://github.com/wundergraph/cosmo/commit/b58809dca894a6aab879d1750bfd06a608da207f)) (@StarpTech)
+
+## [0.47.1](https://github.com/wundergraph/cosmo/compare/studio@0.47.0...studio@0.47.1) (2023-12-31)
+
+**Note:** Version bump only for package studio
+
+# [0.47.0](https://github.com/wundergraph/cosmo/compare/studio@0.46.0...studio@0.47.0) (2023-12-29)
+
+### Features
+
+* remove deprecated columns ([#397](https://github.com/wundergraph/cosmo/issues/397)) ([35e456a](https://github.com/wundergraph/cosmo/commit/35e456a14ee0bfc57fc50c520787dc7f486e6b72)) (@Pagebakers)
+
+# [0.46.0](https://github.com/wundergraph/cosmo/compare/studio@0.45.0...studio@0.46.0) (2023-12-28)
+
+### Features
+
+* billing and limit refactoring ([#371](https://github.com/wundergraph/cosmo/issues/371)) ([0adfee1](https://github.com/wundergraph/cosmo/commit/0adfee146017a10c6e787a08723ef4d03ddf0f96)) (@Pagebakers)
+
+# [0.45.0](https://github.com/wundergraph/cosmo/compare/studio@0.44.2...studio@0.45.0) (2023-12-22)
+
+### Features
+
+* add readme for subgraphs and federated graphs ([#384](https://github.com/wundergraph/cosmo/issues/384)) ([260ffac](https://github.com/wundergraph/cosmo/commit/260ffac99d5c81b82991d1261b937cf4fa344949)) (@JivusAyrus)
+
 ## [0.44.2](https://github.com/wundergraph/cosmo/compare/studio@0.44.1...studio@0.44.2) (2023-12-19)
 
 ### Bug Fixes

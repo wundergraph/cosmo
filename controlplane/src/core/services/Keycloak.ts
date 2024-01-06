@@ -208,6 +208,30 @@ export default class Keycloak {
     });
   }
 
+  public async deleteOrganizationGroup({ realm, organizationSlug }: { realm?: string; organizationSlug: string }) {
+    const orgGroups = await this.client.groups.find({
+      search: organizationSlug,
+      realm: realm || this.realm,
+      briefRepresentation: true,
+      max: 1,
+    });
+
+    if (orgGroups.length === 0) {
+      throw new Error(`Organization group '${organizationSlug}' not found`);
+    }
+
+    const orgGroup = orgGroups.find((group) => group.name === organizationSlug);
+
+    if (!orgGroup) {
+      throw new Error(`Organization group '${organizationSlug}' not found`);
+    }
+
+    await this.client.groups.del({
+      id: orgGroup.id!,
+      realm: realm || this.realm,
+    });
+  }
+
   public async seedGroup({
     realm,
     userID,
@@ -233,7 +257,7 @@ export default class Keycloak {
       },
     );
 
-    const devGroup = await this.client.groups.createChildGroup(
+    await this.client.groups.createChildGroup(
       {
         realm,
         id: organizationGroup.id,
@@ -244,7 +268,7 @@ export default class Keycloak {
       },
     );
 
-    const viewerGroup = await this.client.groups.createChildGroup(
+    await this.client.groups.createChildGroup(
       {
         realm,
         id: organizationGroup.id,

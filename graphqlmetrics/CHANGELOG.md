@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.9.0](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.8.2...graphqlmetrics@0.9.0) (2023-12-28)
+
+### Features
+
+* billing and limit refactoring ([#371](https://github.com/wundergraph/cosmo/issues/371)) ([0adfee1](https://github.com/wundergraph/cosmo/commit/0adfee146017a10c6e787a08723ef4d03ddf0f96)) (@Pagebakers)
+
+## [0.8.2](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.8.1...graphqlmetrics@0.8.2) (2023-12-21)
+
+**Note:** Version bump only for package graphqlmetrics
+
 ## [0.8.1](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.8.0...graphqlmetrics@0.8.1) (2023-12-12)
 
 **Note:** Version bump only for package graphqlmetrics

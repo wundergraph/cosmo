@@ -5,39 +5,45 @@ import {
   IntegrationConfig,
   IntegrationType,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, eq, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { MemberRole } from '../../db/models.js';
+import { MemberRole, NewOrganizationFeature } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
 import {
-  apiKeys,
   integrationTypeEnum,
   organizationIntegrations,
-  organizationLimits,
   organizationMemberRoles,
   organizationWebhooks,
   organizations,
   organizationsMembers,
   slackIntegrationConfigs,
   slackSchemaUpdateEventConfigs,
-  targets,
   users,
+  organizationFeatures,
+  organizationBilling,
+  billingSubscriptions,
 } from '../../db/schema.js';
-import { OrganizationDTO, OrganizationLimitsDTO, OrganizationMemberDTO, WebhooksConfigDTO } from '../../types/index.js';
+import { Feature, FeatureIds, OrganizationDTO, OrganizationMemberDTO, WebhooksConfigDTO } from '../../types/index.js';
+import { BillingRepository } from './BillingRepository.js';
 
 /**
  * Repository for organization related operations.
  */
 export class OrganizationRepository {
-  constructor(private db: PostgresJsDatabase<typeof schema>) {}
+  protected billing: BillingRepository;
+
+  constructor(
+    private db: PostgresJsDatabase<typeof schema>,
+    private defaultBillingPlanId?: string,
+  ) {
+    this.billing = new BillingRepository(db);
+  }
 
   public async createOrganization(input: {
     organizationID?: string;
     organizationName: string;
     organizationSlug: string;
     ownerID: string;
-    isPersonal?: boolean;
-    isFreeTrial?: boolean;
   }): Promise<OrganizationDTO> {
     const insertedOrg = await this.db
       .insert(organizations)
@@ -46,20 +52,25 @@ export class OrganizationRepository {
         name: input.organizationName,
         slug: input.organizationSlug,
         createdBy: input.ownerID,
-        isPersonal: input.isPersonal,
-        isFreeTrial: input.isFreeTrial,
       })
       .returning()
       .execute();
 
-    return {
+    const org: OrganizationDTO = {
       id: insertedOrg[0].id,
       name: insertedOrg[0].name,
       slug: insertedOrg[0].slug,
       creatorUserId: insertedOrg[0].createdBy,
       createdAt: insertedOrg[0].createdAt.toISOString(),
-      isRBACEnabled: insertedOrg[0].isRBACEnabled,
     };
+
+    if (this.defaultBillingPlanId) {
+      org.billing = {
+        plan: this.defaultBillingPlanId,
+      };
+    }
+
+    return org;
   }
 
   public async updateOrganization(input: { id: string; slug?: string; name?: string }) {
@@ -81,10 +92,16 @@ export class OrganizationRepository {
         slug: organizations.slug,
         creatorUserId: organizations.createdBy,
         createdAt: organizations.createdAt,
-        isFreeTrial: organizations.isFreeTrial,
-        isRBACEnabled: organizations.isRBACEnabled,
+        billing: {
+          plan: organizationBilling.plan,
+        },
+        subscription: {
+          status: billingSubscriptions.status,
+        },
       })
       .from(organizations)
+      .leftJoin(organizationBilling, eq(organizations.id, organizationBilling.organizationId))
+      .leftJoin(billingSubscriptions, eq(organizations.id, billingSubscriptions.organizationId))
       .where(eq(organizations.slug, slug))
       .limit(1)
       .execute();
@@ -93,14 +110,24 @@ export class OrganizationRepository {
       return null;
     }
 
+    const plan = org[0].billing?.plan || this.defaultBillingPlanId;
+
     return {
       id: org[0].id,
       name: org[0].name,
       slug: org[0].slug,
-      isFreeTrial: org[0].isFreeTrial || false,
       creatorUserId: org[0].creatorUserId,
       createdAt: org[0].createdAt.toISOString(),
-      isRBACEnabled: org[0].isRBACEnabled,
+      billing: plan
+        ? {
+            plan,
+          }
+        : undefined,
+      subscription: org[0].subscription
+        ? {
+            status: org[0].subscription.status,
+          }
+        : undefined,
     };
   }
 
@@ -112,10 +139,16 @@ export class OrganizationRepository {
         slug: organizations.slug,
         creatorUserId: organizations.createdBy,
         createdAt: organizations.createdAt,
-        isFreeTrial: organizations.isFreeTrial,
-        isRBACEnabled: organizations.isRBACEnabled,
+        billing: {
+          plan: organizationBilling.plan,
+        },
+        subscription: {
+          status: billingSubscriptions.status,
+        },
       })
       .from(organizations)
+      .leftJoin(organizationBilling, eq(organizations.id, organizationBilling.organizationId))
+      .leftJoin(billingSubscriptions, eq(organizations.id, billingSubscriptions.organizationId))
       .where(eq(organizations.id, id))
       .limit(1)
       .execute();
@@ -124,14 +157,24 @@ export class OrganizationRepository {
       return null;
     }
 
+    const plan = org[0].billing?.plan || this.defaultBillingPlanId;
+
     return {
       id: org[0].id,
       name: org[0].name,
       slug: org[0].slug,
-      isFreeTrial: org[0].isFreeTrial || false,
       creatorUserId: org[0].creatorUserId,
       createdAt: org[0].createdAt.toISOString(),
-      isRBACEnabled: org[0].isRBACEnabled,
+      billing: plan
+        ? {
+            plan,
+          }
+        : undefined,
+      subscription: org[0].subscription
+        ? {
+            status: org[0].subscription.status,
+          }
+        : undefined,
     };
   }
 
@@ -152,61 +195,75 @@ export class OrganizationRepository {
     return userOrganizations.length > 0;
   }
 
-  public async memberships(input: {
-    userId: string;
-  }): Promise<(OrganizationDTO & { roles: string[]; limits: OrganizationLimitsDTO })[]> {
+  public async memberships(input: { userId: string }): Promise<(OrganizationDTO & { roles: string[] })[]> {
     const userOrganizations = await this.db
-      .select({
+      .selectDistinctOn([organizations.id], {
         id: organizations.id,
         name: organizations.name,
         slug: organizations.slug,
         creatorUserId: organizations.createdBy,
-        isFreeTrial: organizations.isFreeTrial,
-        isPersonal: organizations.isPersonal,
         createdAt: organizations.createdAt,
-        isRBACEnabled: organizations.isRBACEnabled,
-        limits: {
-          analyticsRetentionLimit: organizationLimits.analyticsRetentionLimit,
-          tracingRetentionLimit: organizationLimits.tracingRetentionLimit,
-          breakingChangeRetentionLimit: organizationLimits.breakingChangeRetentionLimit,
-          changelogDataRetentionLimit: organizationLimits.changelogDataRetentionLimit,
-          traceSamplingRateLimit: organizationLimits.traceSamplingRateLimit,
-          requestsLimit: organizationLimits.requestsLimit,
+        billing: {
+          plan: organizationBilling.plan,
+        },
+        subscription: {
+          status: billingSubscriptions.status,
+          trialEnd: billingSubscriptions.trialEnd,
+          cancelAtPeriodEnd: billingSubscriptions.cancelAtPeriodEnd,
+          currentPeriodEnd: billingSubscriptions.currentPeriodEnd,
         },
       })
       .from(organizationsMembers)
       .innerJoin(organizations, eq(organizations.id, organizationsMembers.organizationId))
       .innerJoin(users, eq(users.id, organizationsMembers.userId))
-      .innerJoin(organizationLimits, eq(organizations.id, organizationLimits.organizationId))
+      .leftJoin(organizationBilling, eq(organizations.id, organizationBilling.organizationId))
+      .leftJoin(billingSubscriptions, eq(organizations.id, billingSubscriptions.organizationId))
       .where(eq(users.id, input.userId))
       .execute();
 
-    const userMemberships = await Promise.all(
-      userOrganizations.map(async (org) => ({
-        id: org.id,
-        name: org.name,
-        slug: org.slug,
-        creatorUserId: org.creatorUserId,
-        createdAt: org.createdAt.toISOString(),
-        isFreeTrial: org.isFreeTrial || false,
-        isPersonal: org.isPersonal || false,
-        isRBACEnabled: org.isRBACEnabled,
-        roles: await this.getOrganizationMemberRoles({
-          userID: input.userId,
-          organizationID: org.id,
-        }),
-        limits: {
-          analyticsRetentionLimit: org.limits.analyticsRetentionLimit,
-          tracingRetentionLimit: org.limits.tracingRetentionLimit,
-          breakingChangeRetentionLimit: org.limits.breakingChangeRetentionLimit,
-          changelogDataRetentionLimit: org.limits.changelogDataRetentionLimit,
-          traceSamplingRateLimit: Number(org.limits.traceSamplingRateLimit),
-          requestsLimit: org.limits.requestsLimit,
-        },
-      })),
+    return Promise.all(
+      userOrganizations.map(async (org) => {
+        const plan = org.billing?.plan || this.defaultBillingPlanId;
+        return {
+          id: org.id,
+          name: org.name,
+          slug: org.slug,
+          creatorUserId: org.creatorUserId,
+          createdAt: org.createdAt.toISOString(),
+          roles: await this.getOrganizationMemberRoles({
+            userID: input.userId,
+            organizationID: org.id,
+          }),
+          features: await this.getFeatures({ organizationId: org.id, plan }),
+          billing: plan
+            ? {
+                plan,
+              }
+            : undefined,
+          subscription: org.subscription
+            ? {
+                status: org.subscription.status,
+                trialEnd: org.subscription.trialEnd?.toISOString(),
+                cancelAtPeriodEnd: org.subscription.cancelAtPeriodEnd,
+                currentPeriodEnd: org.subscription.currentPeriodEnd?.toISOString(),
+              }
+            : undefined,
+        };
+      }),
     );
+  }
 
-    return userMemberships;
+  public async memberCount(organizationId: string): Promise<number> {
+    const count = await this.db
+      .select({
+        count: sql<number>`cast(count(${organizationsMembers.id}) as int)`,
+      })
+      .from(organizationsMembers)
+      .where(eq(organizationsMembers.organizationId, organizationId))
+      .groupBy(organizationsMembers.organizationId)
+      .execute();
+
+    return count[0]?.count || 0;
   }
 
   public async getOrganizationMember(input: {
@@ -331,6 +388,132 @@ export class OrganizationRepository {
       .execute();
 
     return userRoles.map((role) => role.role);
+  }
+
+  /**
+   * Get the features for an organization. A feature can be enabled or disabled and can have a limit.
+   * Usually, a feature without a limit is just a boolean flag.
+   */
+  public async getFeatures(input: { organizationId: string; plan?: string }): Promise<Feature[]> {
+    let plan = input.plan;
+    if (!input.plan) {
+      const billing = await this.db.query.organizationBilling.findFirst({
+        where: eq(organizationBilling.organizationId, input.organizationId),
+        columns: {
+          plan: true,
+        },
+      });
+
+      // if no plan is set, we use the default plan
+      plan = billing?.plan || this.defaultBillingPlanId;
+    }
+
+    if (!plan) {
+      return [];
+    }
+
+    const orgFeatures = await this.db
+      .select({
+        id: organizationFeatures.feature,
+        enabled: organizationFeatures.enabled,
+        limit: organizationFeatures.limit,
+      })
+      .from(organizationFeatures)
+      .where(eq(organizationFeatures.organizationId, input.organizationId))
+      .execute();
+
+    // merge the features from the plan with the overrides from the organization
+    const billingPlan = await this.billing.getPlanById(plan as string);
+
+    return (
+      billingPlan?.features?.map(({ id, limit }) => {
+        const feature = orgFeatures.find((f) => f.id === id);
+        if (feature) {
+          return {
+            ...feature,
+            id: feature.id as FeatureIds,
+            limit: feature.limit || limit,
+          };
+        }
+
+        return {
+          id,
+          limit,
+          enabled: true,
+        };
+      }) || []
+    );
+  }
+
+  public async getFeature(input: { organizationId: string; featureId: FeatureIds }): Promise<Feature | undefined> {
+    const billing = await this.db.query.organizationBilling.findFirst({
+      where: eq(organizationBilling.organizationId, input.organizationId),
+      columns: {
+        plan: true,
+      },
+    });
+
+    const plan = billing?.plan || this.defaultBillingPlanId;
+
+    if (!plan) {
+      return;
+    }
+
+    const feature = await this.db.query.organizationFeatures.findFirst({
+      where: and(
+        eq(organizationFeatures.organizationId, input.organizationId),
+        eq(organizationFeatures.feature, input.featureId),
+      ),
+    });
+
+    // merge the features from the plan with the overrides from the organization
+    const billingPlan = await this.billing.getPlanById(plan as string);
+    const billingFeature = billingPlan?.features?.find((f) => f.id === input.featureId);
+
+    if (!billingFeature) {
+      return;
+    }
+
+    return {
+      ...billingFeature,
+      // custom feature overrides the plan feature
+      enabled: feature?.enabled,
+      limit: feature?.limit || billingFeature?.limit,
+    };
+  }
+
+  public async updateFeature(
+    input: {
+      organizationId: string;
+    } & Feature,
+  ) {
+    const feature: NewOrganizationFeature = {
+      feature: input.id,
+      organizationId: input.organizationId,
+    };
+
+    if (input.enabled !== undefined) {
+      feature.enabled = input.enabled;
+    }
+
+    if (input.limit !== undefined) {
+      feature.limit = input.limit;
+    }
+
+    await this.db
+      .insert(organizationFeatures)
+      .values(feature)
+      .onConflictDoUpdate({
+        target: [organizationFeatures.organizationId, organizationFeatures.feature],
+        set: feature,
+      });
+  }
+
+  public async isFeatureEnabled(id: string, featureId: FeatureIds) {
+    const feature = await this.db.query.organizationFeatures.findFirst({
+      where: and(eq(organizationFeatures.organizationId, id), eq(organizationFeatures.feature, featureId)),
+    });
+    return !!feature?.enabled;
   }
 
   public async createWebhookConfig(input: {
@@ -477,14 +660,8 @@ export class OrganizationRepository {
       .where(and(eq(organizationWebhooks.id, input.id), eq(organizationWebhooks.organizationId, input.organizationId)));
   }
 
-  public async deleteOrganization(organizationID: string) {
-    await this.db.transaction(async (tx) => {
-      const orgRepo = new OrganizationRepository(tx);
-
-      await orgRepo.deleteOrganizationResources(organizationID);
-
-      await tx.delete(organizations).where(eq(organizations.id, organizationID)).execute();
-    });
+  public deleteOrganization(organizationID: string) {
+    return this.db.delete(organizations).where(eq(organizations.id, organizationID)).execute();
   }
 
   public async updateUserRole(input: {
@@ -515,13 +692,6 @@ export class OrganizationRepository {
     }
 
     return orgAdmins;
-  }
-
-  public async deleteOrganizationResources(organizationID: string) {
-    await this.db.transaction(async (tx) => {
-      await tx.delete(apiKeys).where(eq(apiKeys.organizationId, organizationID)).execute();
-      await tx.delete(targets).where(eq(targets.organizationId, organizationID)).execute();
-    });
   }
 
   public async createIntegration(input: {
@@ -770,66 +940,38 @@ export class OrganizationRepository {
       );
   }
 
-  public async addOrganizationLimits(input: {
+  public async getOrganizationFeatures(input: {
     organizationID: string;
-    analyticsRetentionLimit: number;
-    tracingRetentionLimit: number;
-    changelogDataRetentionLimit: number;
-    breakingChangeRetentionLimit: number;
-    traceSamplingRateLimit: number;
-    requestsLimit: number;
-  }) {
-    await this.db
-      .insert(organizationLimits)
-      .values({
-        requestsLimit: input.requestsLimit,
-        analyticsRetentionLimit: input.analyticsRetentionLimit,
-        tracingRetentionLimit: input.tracingRetentionLimit,
-        breakingChangeRetentionLimit: input.breakingChangeRetentionLimit,
-        changelogDataRetentionLimit: input.changelogDataRetentionLimit,
-        traceSamplingRateLimit: input.traceSamplingRateLimit.toString(),
-        organizationId: input.organizationID,
-      })
-      .execute();
-  }
+  }): Promise<{ [key in FeatureIds]: number | boolean }> {
+    const features = await this.getFeatures({ organizationId: input.organizationID });
 
-  public async getOrganizationLimits(input: { organizationID: string }): Promise<OrganizationLimitsDTO> {
-    const limits = await this.db
-      .select({
-        analyticsRetentionLimit: organizationLimits.analyticsRetentionLimit,
-        tracingRetentionLimit: organizationLimits.tracingRetentionLimit,
-        breakingChangeRetentionLimit: organizationLimits.breakingChangeRetentionLimit,
-        changelogDataRetentionLimit: organizationLimits.changelogDataRetentionLimit,
-        traceSamplingRateLimit: organizationLimits.traceSamplingRateLimit,
-        requestsLimit: organizationLimits.requestsLimit,
-      })
-      .from(organizationLimits)
-      .where(eq(organizationLimits.organizationId, input.organizationID))
-      .limit(1)
-      .execute();
+    // Full list of features with default values
+    const list: { [key in FeatureIds]: number | boolean } = {
+      'analytics-retention': 30,
+      'tracing-retention': 30,
+      'changelog-retention': 30,
+      'breaking-change-retention': 90,
+      'trace-sampling-rate': 1,
+      'federated-graphs': 30,
+      users: 25,
+      requests: 30,
+      rbac: false,
+      sso: false,
+      security: false,
+      support: false,
+      oidc: false,
+    };
 
-    if (limits.length === 0) {
-      return {
-        analyticsRetentionLimit: 7,
-        tracingRetentionLimit: 7,
-        changelogDataRetentionLimit: 7,
-        breakingChangeRetentionLimit: 7,
-        traceSamplingRateLimit: 0.1,
-        requestsLimit: 10,
-      };
+    for (const feature of features) {
+      // Only override the limit if the feature is enabled with a valid limit
+      if (feature.enabled && feature.limit && feature.limit > 0) {
+        list[feature.id] = feature.limit;
+      } else if (typeof list[feature.id] === 'boolean') {
+        // Enable or disable the boolean feature
+        list[feature.id] = feature.enabled || false;
+      }
     }
 
-    return {
-      analyticsRetentionLimit: limits[0].analyticsRetentionLimit,
-      tracingRetentionLimit: limits[0].tracingRetentionLimit,
-      changelogDataRetentionLimit: limits[0].changelogDataRetentionLimit,
-      breakingChangeRetentionLimit: limits[0].breakingChangeRetentionLimit,
-      requestsLimit: limits[0].requestsLimit,
-      traceSamplingRateLimit: Number.parseFloat(limits[0].traceSamplingRateLimit),
-    };
-  }
-
-  public async updateRBACSettings(organizationId: string, enabled: boolean) {
-    await this.db.update(organizations).set({ isRBACEnabled: enabled }).where(eq(organizations.id, organizationId));
+    return list;
   }
 }

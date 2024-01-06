@@ -477,6 +477,41 @@
       "when": 1702331936148,
       "tag": "0067_third_multiple_man",
       "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "5",
+      "when": 1702564500994,
+      "tag": "0068_spicy_ghost_rider",
+      "breakpoints": true
+    },
+    {
+      "idx": 69,
+      "version": "5",
+      "when": 1703676058653,
+      "tag": "0069_whole_scorpion",
+      "breakpoints": true
+    },
+    {
+      "idx": 70,
+      "version": "5",
+      "when": 1703785747860,
+      "tag": "0070_glorious_skaar",
+      "breakpoints": true
+    },
+    {
+      "idx": 71,
+      "version": "5",
+      "when": 1703965039796,
+      "tag": "0071_white_human_fly",
+      "breakpoints": true
+    },
+    {
+      "idx": 72,
+      "version": "5",
+      "when": 1704032955613,
+      "tag": "0072_messy_silvermane",
+      "breakpoints": true
     }
   ]
 }

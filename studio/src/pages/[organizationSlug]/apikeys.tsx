@@ -36,6 +36,8 @@ import {
 } from "@/components/ui/table";
 import { useToast } from "@/components/ui/use-toast";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
+import { useHas } from "@/hooks/use-has";
+import { useUser } from "@/hooks/use-user";
 import { docsBaseURL } from "@/lib/constants";
 import { formatDateTime } from "@/lib/format-date";
 import { NextPageWithLayout } from "@/lib/page";
@@ -74,7 +76,8 @@ const CreateAPIKeyDialog = ({
   setApiKey: Dispatch<SetStateAction<string | undefined>>;
   refresh: () => void;
 }) => {
-  const user = useContext(UserContext);
+  const user = useUser();
+  const rbac = useHas("rbac");
   const { toast } = useToast();
 
   const { mutate, isPending } = useMutation(createAPIKey.useMutation());
@@ -125,7 +128,7 @@ const CreateAPIKeyDialog = ({
 
   const onSubmit: SubmitHandler<CreateAPIKeyInput> = (data) => {
     if (
-      user?.currentOrganization.isRBACEnabled &&
+      rbac &&
       !selectedAllResources &&
       selectedFedGraphs.length === 0 &&
       selectedSubgraphs.length === 0
@@ -167,7 +170,8 @@ const CreateAPIKeyDialog = ({
     setSelectedSubgraphs([]);
   };
 
-  if (!(isAdmin || federatedGraphs.length > 0 || subgraphs.length > 0)) {
+  // check if the user has access to create api keys only when rbac is enabled
+  if (rbac && !(isAdmin || federatedGraphs.length > 0 || subgraphs.length > 0)) {
     return (
       <Button disabled>
         <div className="flex items-center gap-x-2">
@@ -225,7 +229,7 @@ const CreateAPIKeyDialog = ({
               </SelectContent>
             </Select>
           </div>
-          {user?.currentOrganization.isRBACEnabled && (
+          {rbac && (
             <div className="flex flex-col gap-y-3">
               <div className="flex flex-col gap-y-1">
                 <span className="text-base font-semibold">

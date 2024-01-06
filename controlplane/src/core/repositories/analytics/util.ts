@@ -1,6 +1,5 @@
 import { PlainMessage } from '@bufbuild/protobuf';
 import {
-  DateRange,
   AnalyticsFilter,
   AnalyticsViewColumn,
   AnalyticsViewFilterOperator,
@@ -8,6 +7,7 @@ import {
   RequestSeriesItem,
   Unit,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { DateRange, TimeFilters } from '../../../types/index.js';
 
 export type ColumnMetaData = Record<string, Partial<PlainMessage<AnalyticsViewColumn>>>;
 
@@ -290,11 +290,11 @@ export function coerceFilterValues(
   return { result, filterMapper };
 }
 
-export function padMissingDates(data: PlainMessage<RequestSeriesItem>[]) {
+export function padMissingDatesForCurrentWeek(data: PlainMessage<RequestSeriesItem>[]) {
   const dates = Array.from({ length: 7 }, (_, i) => {
     const d = new Date();
     d.setDate(d.getDate() - i);
-    return d.toISOString().slice(0, 10);
+    return d.getTime().toString();
   });
 
   for (const date of dates) {
@@ -313,7 +313,7 @@ export function timestampToNanoseconds(timestamp: string): bigint {
   return nanoseconds + BigInt(fractionalSeconds);
 }
 
-export function isoDateRangeToTimestamps(dateRange?: { start: string; end: string }, range = 24) {
+export function isoDateRangeToTimestamps(dateRange?: DateRange, range = 24) {
   if (!dateRange) {
     const endDate = getEndDate();
     return {
@@ -375,6 +375,20 @@ export const getDateRange = (dateRange?: { start?: number; end?: number }, offse
   const end = getUnixTimeInSeconds(endDate, offset);
 
   return [start, end];
+};
+
+export const parseTimeFilters = (dateRange?: DateRange, range?: number): TimeFilters => {
+  const granule = getGranularity(range);
+  const parsedDateRange = isoDateRangeToTimestamps(dateRange, range);
+  const [start, end] = getDateRange(parsedDateRange);
+
+  return {
+    granule,
+    dateRange: {
+      start,
+      end,
+    },
+  };
 };
 
 export const getGranularity = (range = 24) => {

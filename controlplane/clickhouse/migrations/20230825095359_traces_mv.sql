@@ -26,6 +26,7 @@ SELECT
 FROM
     cosmo.otel_traces
 WHERE
+    -- only include the root spans
     empty(ParentSpanId)
 ORDER BY
     Timestamp DESC;

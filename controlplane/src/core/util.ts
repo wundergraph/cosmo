@@ -3,10 +3,9 @@ import pino from 'pino';
 import { joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
 import { uid } from 'uid/secure';
 import { GraphQLSubscriptionProtocol } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { DateRange } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { formatISO, subHours } from 'date-fns';
 import { parse, visit } from 'graphql';
-import { Label, ResponseMessage } from '../types/index.js';
+import { Label, ResponseMessage, DateRange } from '../types/index.js';
 import { MemberRole } from '../db/models.js';
 import { isAuthenticationError, isAuthorizationError, isPublicError } from './errors/errors.js';
 

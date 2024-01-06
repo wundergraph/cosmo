@@ -28,7 +28,6 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/mitchellh/mapstructure"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/wundergraph/cosmo/router/config"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/health"
@@ -81,7 +80,8 @@ type (
 		traceConfig              *trace.Config
 		metricConfig             *metric.Config
 		tracerProvider           *sdktrace.TracerProvider
-		meterProvider            *sdkmetric.MeterProvider
+		otlpMeterProvider        *sdkmetric.MeterProvider
+		promMeterProvider        *sdkmetric.MeterProvider
 		gqlMetricsExporter       *graphqlmetrics.Exporter
 		corsOptions              *cors.Config
 		routerConfig             *nodev1.RouterConfig
@@ -165,11 +165,11 @@ func NewRouter(opts ...Option) (*Router, error) {
 	// Default values for trace and metric config
 
 	if r.traceConfig == nil {
-		r.traceConfig = trace.DefaultConfig()
+		r.traceConfig = trace.DefaultConfig(Version)
 	}
 
 	if r.metricConfig == nil {
-		r.metricConfig = metric.DefaultConfig()
+		r.metricConfig = metric.DefaultConfig(Version)
 	}
 
 	if r.corsOptions == nil {
@@ -513,20 +513,24 @@ func (r *Router) bootstrap(ctx context.Context) error {
 
 	// Prometheus metrics rely on OTLP metrics
 	if r.metricConfig.IsEnabled() {
-		mp, pr, err := metric.NewMeterProvider(ctx, r.logger, r.metricConfig)
-		if err != nil {
-			return fmt.Errorf("failed to start trace agent: %w", err)
-		}
-		r.meterProvider = mp
-
-		if pr != nil && r.metricConfig.Prometheus.Enabled {
-			r.prometheusServer = createPrometheus(r.logger, pr, r.metricConfig.Prometheus.ListenAddr, r.metricConfig.Prometheus.Path)
+		if r.metricConfig.Prometheus.Enabled {
+			mp, registry, err := metric.NewPrometheusMeterProvider(ctx, r.metricConfig)
+			if err != nil {
+				return fmt.Errorf("failed to create Prometheus exporter: %w", err)
+			}
+			r.promMeterProvider = mp
+			r.prometheusServer = metric.ServePrometheus(r.logger, r.metricConfig.Prometheus.ListenAddr, r.metricConfig.Prometheus.Path, registry)
 			go func() {
 				if err := r.prometheusServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 					r.logger.Error("Failed to start Prometheus server", zap.Error(err))
 				}
 			}()
 		}
+		mp, err := metric.NewOtlpMeterProvider(ctx, r.logger, r.metricConfig)
+		if err != nil {
+			return fmt.Errorf("failed to start trace agent: %w", err)
+		}
+		r.otlpMeterProvider = mp
 	}
 
 	if r.graphqlMetricsConfig.Enabled {
@@ -644,7 +648,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 					otel.WgRouterVersion.String(Version),
 				),
 			),
-			// Disable built-in metrics
+			// Disable built-in metricStore
 			otelhttp.WithMeterProvider(sdkmetric.NewMeterProvider()),
 			otelhttp.WithSpanNameFormatter(SpanNameFormatter),
 		)
@@ -709,6 +713,31 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		r.logger.Info("localhost fallback enabled, connections that fail to connect to localhost will be retried using host.docker.internal")
 	}
 
+	metricStore := metric.NewNoopMetrics()
+
+	// Prometheus metricStore rely on OTLP metricStore
+	if r.metricConfig.IsEnabled() {
+		m, err := metric.NewMetrics(
+			r.metricConfig.Name,
+			Version,
+			metric.WithPromMeterProvider(r.promMeterProvider),
+			metric.WithOtlpMeterProvider(r.otlpMeterProvider),
+			metric.WithLogger(r.logger),
+			metric.WithAttributes(
+				otel.WgRouterGraphName.String(r.federatedGraphName),
+				otel.WgRouterConfigVersion.String(routerConfig.GetVersion()),
+				otel.WgRouterVersion.String(Version),
+			),
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create metric handler: %w", err)
+		}
+
+		metricStore = m
+	}
+
+	routerMetrics := NewRouterMetrics(metricStore, r.gqlMetricsExporter, routerConfig.GetVersion())
+
 	transport := newHTTPTransport(r.subgraphTransportOptions)
 
 	ecb := &ExecutorConfigurationBuilder{
@@ -721,6 +750,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 			RequestTimeout: r.subgraphTransportOptions.RequestTimeout,
 			PreHandlers:    r.preOriginHandlers,
 			PostHandlers:   r.postOriginHandlers,
+			MetricStore:    metricStore,
 			RetryOptions: retrytransport.RetryOptions{
 				Enabled:       r.retryOptions.Enabled,
 				MaxRetryCount: r.retryOptions.MaxRetryCount,
@@ -775,28 +805,6 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		WebSocketStats:                         r.WebsocketStats,
 	})
 
-	var metricStore *metric.Metrics
-
-	// Prometheus metrics rely on OTLP metrics
-	if r.metricConfig.IsEnabled() {
-		m, err := metric.NewMetrics(
-			r.meterProvider,
-			metric.WithApplicationVersion(Version),
-			metric.WithAttributes(
-				otel.WgRouterGraphName.String(r.federatedGraphName),
-				otel.WgRouterConfigVersion.String(routerConfig.GetVersion()),
-				otel.WgRouterVersion.String(Version),
-			),
-		)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create metric handler: %w", err)
-		}
-
-		metricStore = m
-	}
-
-	routerMetrics := NewRouterMetrics(metricStore, r.gqlMetricsExporter, routerConfig.GetVersion())
-
 	var publicKey *ecdsa.PublicKey
 
 	if r.registrationInfo != nil {
@@ -848,7 +856,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 
 	graphqlChiRouter.Post("/", graphqlHandler.ServeHTTP)
 
-	// Serve GraphQL. Metrics are collected after the request is handled and classified as r GraphQL request.
+	// Serve GraphQL. MetricStore are collected after the request is handled and classified as r GraphQL request.
 	httpRouter.Mount(r.graphqlPath, graphqlChiRouter)
 
 	r.logger.Info("GraphQL endpoint",
@@ -978,30 +986,6 @@ func (r *Server) Shutdown(ctx context.Context) (err error) {
 	}
 
 	return err
-}
-
-func createPrometheus(logger *zap.Logger, registry *metric.PromRegistry, listenAddr, path string) *http.Server {
-	r := chi.NewRouter()
-	r.Use(middleware.Recoverer)
-	r.Handle(path, promhttp.HandlerFor(registry, promhttp.HandlerOpts{
-		EnableOpenMetrics: true,
-		ErrorLog:          zap.NewStdLog(logger),
-		Registry:          registry,
-		Timeout:           0,
-	}))
-
-	svr := &http.Server{
-		Addr:              listenAddr,
-		ReadTimeout:       1 * time.Minute,
-		WriteTimeout:      2 * time.Minute,
-		ReadHeaderTimeout: 20 * time.Second,
-		ErrorLog:          zap.NewStdLog(logger),
-		Handler:           r,
-	}
-
-	logger.Info("Prometheus metrics enabled", zap.String("listen_addr", svr.Addr), zap.String("endpoint", path))
-
-	return svr
 }
 
 func WithListenerAddr(addr string) Option {
