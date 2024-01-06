@@ -385,8 +385,8 @@ export const parseTimeFilters = (dateRange?: DateRange, range?: number): TimeFil
   return {
     granule,
     dateRange: {
-      start: start,
-      end: end,
+      start,
+      end,
     },
   };
 };
