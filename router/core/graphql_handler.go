@@ -59,6 +59,7 @@ type HandlerOptions struct {
 	Executor                               *Executor
 	Log                                    *zap.Logger
 	EnableExecutionPlanCacheResponseHeader bool
+	WebSocketStats                         *WebSocketStats
 }
 
 func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
@@ -66,6 +67,7 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 		log:                                    opts.Log,
 		executor:                               opts.Executor,
 		enableExecutionPlanCacheResponseHeader: opts.EnableExecutionPlanCacheResponseHeader,
+		websocketStats:                         opts.WebSocketStats,
 	}
 	return graphQLHandler
 }
@@ -84,6 +86,7 @@ type GraphQLHandler struct {
 	log                                    *zap.Logger
 	executor                               *Executor
 	enableExecutionPlanCacheResponseHeader bool
+	websocketStats                         *WebSocketStats
 }
 
 func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -133,17 +136,19 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	case *plan.SubscriptionResponsePlan:
 		var (
-			flushWriter resolve.FlushWriter
-			ok          bool
+			writer resolve.SubscriptionResponseWriter
+			ok     bool
 		)
 		h.setExecutionPlanCacheResponseHeader(w, operationCtx.planCacheHit)
-		ctx, flushWriter, ok = GetFlushWriter(ctx, ctx.Variables, r, w)
+		ctx, writer, ok = GetSubscriptionResponseWriter(ctx, ctx.Variables, r, w)
 		if !ok {
 			requestLogger.Error("connection not flushable")
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		err := h.executor.Resolver.ResolveGraphQLSubscription(ctx, p.Response, flushWriter)
+		h.websocketStats.SynchronousSubscriptionsInc()
+		defer h.websocketStats.SynchronousSubscriptionsDec()
+		err := h.executor.Resolver.ResolveGraphQLSubscription(ctx, p.Response, writer)
 		if err != nil {
 			if errors.Is(err, context.Canceled) {
 				requestLogger.Debug("context canceled: unable to resolve subscription response", zap.Error(err))

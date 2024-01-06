@@ -1,0 +1,3 @@
+go test fuzz v1
+string("($team:Department!= MARKETING) {\n\t\t\t\tte\t\t  ites(team:$team) {\n\t\tam_mad\n\t\t\t\t}\n\t\t\t  }")
+[]byte("{\"team\":\"MARK")

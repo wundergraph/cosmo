@@ -11,13 +11,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/golang-jwt/jwt/v5"
-	"github.com/wundergraph/cosmo/router/internal/controlplane/configpoller"
-	"github.com/wundergraph/cosmo/router/internal/controlplane/selfregister"
-
 	"connectrpc.com/connect"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
 	"github.com/wundergraph/cosmo/router/internal/cdn"
+	"github.com/wundergraph/cosmo/router/internal/controlplane/configpoller"
+	"github.com/wundergraph/cosmo/router/internal/controlplane/selfregister"
+	"github.com/wundergraph/cosmo/router/internal/debug"
 	"github.com/wundergraph/cosmo/router/internal/docker"
 	"github.com/wundergraph/cosmo/router/internal/graphqlmetrics"
 	brotli "go.withmatt.com/connect-brotli"
@@ -56,6 +56,8 @@ type (
 		activeRouter *Server
 		modules      []Module
 		mu           sync.Mutex
+
+		WebsocketStats *WebSocketStats
 	}
 
 	SubgraphTransportOptions struct {
@@ -75,7 +77,6 @@ type (
 
 	// Config defines the configuration options for the Router.
 	Config struct {
-		transport                http.RoundTripper
 		logger                   *zap.Logger
 		traceConfig              *trace.Config
 		metricConfig             *metric.Config
@@ -232,10 +233,6 @@ func NewRouter(opts ...Option) (*Router, error) {
 	r.corsOptions.AllowMethods = stringsx.RemoveDuplicates(append(r.corsOptions.AllowMethods, defaultMethods...))
 
 	r.baseURL = fmt.Sprintf("http://%s", r.listenAddr)
-
-	if r.transport == nil {
-		r.transport = newHTTPTransport(r.subgraphTransportOptions)
-	}
 
 	// Add default tracing exporter if needed
 	if r.traceConfig.Enabled && len(r.traceConfig.Exporters) == 0 {
@@ -489,7 +486,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 
 		ri, registerErr := r.selfRegister.Register(ctx)
 		if registerErr != nil {
-			r.logger.Error("Failed to register router. If this error persists, please contact support.", zap.Error(registerErr))
+			r.logger.Warn("Failed to register router on the control plane. If this warning persists, please contact support. During local development or testing, this can be ignored.")
 		} else {
 			r.registrationInfo = ri
 
@@ -553,6 +550,14 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		r.gqlMetricsExporter.Start()
 
 		r.logger.Info("GraphQL schema coverage metrics enabled")
+	}
+
+	if r.engineExecutionConfiguration.Debug.ReportWebSocketConnections {
+		r.WebsocketStats = NewWebSocketStats(ctx, r.logger)
+	}
+
+	if r.engineExecutionConfiguration.Debug.ReportMemoryUsage {
+		debug.ReportMemoryUsage(ctx, r.logger)
 	}
 
 	// Modules are only initialized once and not on every config change
@@ -704,10 +709,12 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		r.logger.Info("localhost fallback enabled, connections that fail to connect to localhost will be retried using host.docker.internal")
 	}
 
+	transport := newHTTPTransport(r.subgraphTransportOptions)
+
 	ecb := &ExecutorConfigurationBuilder{
 		introspection: r.introspection,
 		baseURL:       r.baseURL,
-		transport:     r.transport,
+		transport:     transport,
 		logger:        r.logger,
 		includeInfo:   r.graphqlMetricsConfig.Enabled,
 		transportOptions: &TransportOptions{
@@ -738,7 +745,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		r.logger.Warn("Request tracing is enabled in development mode but requires a graph token to work in production. For more information see https://cosmo-docs.wundergraph.com/router/advanced-request-tracing-art")
 	}
 
-	executor, err := ecb.Build(ctx, routerConfig, routerEngineConfig)
+	executor, err := ecb.Build(ctx, routerConfig, routerEngineConfig, r.WebsocketStats)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build plan configuration: %w", err)
 	}
@@ -765,6 +772,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		Executor:                               executor,
 		Log:                                    r.logger,
 		EnableExecutionPlanCacheResponseHeader: routerEngineConfig.Execution.EnableExecutionPlanCacheResponseHeader,
+		WebSocketStats:                         r.WebsocketStats,
 	})
 
 	var metricStore *metric.Metrics
@@ -811,12 +819,15 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 	})
 
 	wsMiddleware := NewWebsocketMiddleware(rootContext, WebsocketMiddlewareOptions{
-		Parser:           operationParser,
-		Planner:          operationPlanner,
-		Metrics:          routerMetrics,
-		GraphQLHandler:   graphqlHandler,
-		AccessController: r.accessController,
-		Logger:           r.logger,
+		Parser:                     operationParser,
+		Planner:                    operationPlanner,
+		Metrics:                    routerMetrics,
+		GraphQLHandler:             graphqlHandler,
+		AccessController:           r.accessController,
+		Logger:                     r.logger,
+		Stats:                      r.WebsocketStats,
+		EnableWebSocketEpollKqueue: r.engineExecutionConfiguration.EnableWebSocketEpollKqueue,
+		ReadTimeout:                r.engineExecutionConfiguration.WebSocketReadTimeout,
 	})
 
 	graphqlChiRouter := chi.NewRouter()
@@ -996,12 +1007,6 @@ func createPrometheus(logger *zap.Logger, registry *metric.PromRegistry, listenA
 func WithListenerAddr(addr string) Option {
 	return func(r *Router) {
 		r.listenAddr = addr
-	}
-}
-
-func WithCustomRoundTripper(transport http.RoundTripper) Option {
-	return func(r *Router) {
-		r.transport = transport
 	}
 }
 

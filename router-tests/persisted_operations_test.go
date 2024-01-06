@@ -8,9 +8,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/tidwall/sjson"
+	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/config"
-	"github.com/wundergraph/cosmo/router/core"
 )
 
 func persistedOperationPayload(sha56Hash string) []byte {
@@ -25,42 +24,46 @@ func persistedOperationPayload(sha56Hash string) []byte {
 }
 
 func TestPersistedOperationNotFound(t *testing.T) {
-	server := setupServer(t)
-	result := sendData(server, "/graphql", persistedOperationPayload("does-not-exist"))
-	assert.Equal(t, http.StatusBadRequest, result.Code)
-	assert.JSONEq(t, `{"data": null, "errors": [{ "message": "PersistedQueryNotFound" }]}`, result.Body.String())
+	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+		res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "does-not-exist"}}`),
+		})
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
+		assert.JSONEq(t, `{"data": null, "errors": [{ "message": "PersistedQueryNotFound" }]}`, res.Body)
+	})
 }
 
 func TestPersistedOperation(t *testing.T) {
-	const (
-		operationID   = "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"
-		operationName = "Employees"
-	)
-	server := setupServer(t)
-	header := make(http.Header)
-	header.Add("graphql-client-name", "my-client")
-	payload := persistedOperationPayload(operationID)
-	payload, _ = sjson.SetBytes(payload, "operationName", operationName)
-	res := sendDataWithHeader(server, "/graphql", payload, header)
-	assert.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`, res.Body.String())
+	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+		header := make(http.Header)
+		header.Add("graphql-client-name", "my-client")
+		res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			OperationName: []byte(`"Employees"`),
+			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
+			Header:        header,
+		})
+		require.NoError(t, err)
+		assert.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
+	})
 }
 
 func TestPersistedOperationsCache(t *testing.T) {
-	// Requesting the same persisted operation twice should only make one request to the CDN
-	const (
-		operationID   = "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"
-		operationName = "Employees"
-	)
 
-	sendTwoRequests := func(t *testing.T, server *core.Server) {
+	sendTwoRequests := func(t *testing.T, xEnv *testenv.Environment) {
 		header := make(http.Header)
 		header.Add("graphql-client-name", "my-client")
-		payload := persistedOperationPayload(operationID)
-		payload, _ = sjson.SetBytes(payload, "operationName", operationName)
-		res1 := sendDataWithHeader(server, "/graphql", payload, header)
-		assert.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`, res1.Body.String())
-		res2 := sendDataWithHeader(server, "/graphql", payload, header)
-		assert.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`, res2.Body.String())
+		req := testenv.GraphQLRequest{
+			OperationName: []byte(`"Employees"`),
+			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
+			Header:        header,
+		}
+		res1, err := xEnv.MakeGraphQLRequest(req)
+		require.NoError(t, err)
+		assert.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`, res1.Body)
+		res2, err := xEnv.MakeGraphQLRequest(req)
+		require.NoError(t, err)
+		assert.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12}]}}`, res2.Body)
 	}
 
 	retrieveNumberOfCDNRequests := func(t *testing.T, cdnURL string) int {
@@ -75,20 +78,22 @@ func TestPersistedOperationsCache(t *testing.T) {
 	}
 
 	t.Run("with cache", func(t *testing.T) {
-		server, cfg := setupServerConfig(t)
-		sendTwoRequests(t, server)
-		numberOfCDNRequests := retrieveNumberOfCDNRequests(t, cfg.CDN.URL)
-		assert.Equal(t, 1, numberOfCDNRequests)
+		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+			sendTwoRequests(t, xEnv)
+			numberOfCDNRequests := retrieveNumberOfCDNRequests(t, xEnv.CDN.URL)
+			assert.Equal(t, 1, numberOfCDNRequests)
+		})
 	})
 
 	t.Run("without cache", func(t *testing.T) {
-		cdnURL := setupCDNServer(t)
-		server, _ := setupServerConfig(t, core.WithCDN(config.CDNConfiguration{
-			URL:       cdnURL,
-			CacheSize: 0,
-		}))
-		sendTwoRequests(t, server)
-		numberOfCDNRequests := retrieveNumberOfCDNRequests(t, cdnURL)
-		assert.Equal(t, 2, numberOfCDNRequests)
+		testenv.Run(t, &testenv.Config{
+			ModifyCDNConfig: func(cfg *config.CDNConfiguration) {
+				cfg.CacheSize = 0
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			sendTwoRequests(t, xEnv)
+			numberOfCDNRequests := retrieveNumberOfCDNRequests(t, xEnv.CDN.URL)
+			assert.Equal(t, 2, numberOfCDNRequests)
+		})
 	})
 }

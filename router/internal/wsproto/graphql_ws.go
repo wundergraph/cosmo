@@ -55,7 +55,7 @@ func (p *graphQLWSProtocol) Initialize() (json.RawMessage, error) {
 	if msg.Type != graphQLWSMessageTypeConnectionInit {
 		return nil, fmt.Errorf("first message should be %s, got %s", graphQLWSMessageTypeConnectionInit, msg.Type)
 	}
-	if _, err := p.conn.WriteJSON(graphQLWSMessage{Type: graphQLWSMessageTypeConnectionAck}); err != nil {
+	if err := p.conn.WriteJSON(graphQLWSMessage{Type: graphQLWSMessageTypeConnectionAck}); err != nil {
 		return nil, fmt.Errorf("sending %s: %w", graphQLWSMessageTypeConnectionAck, err)
 	}
 	return msg.Payload, nil
@@ -87,11 +87,11 @@ func (p *graphQLWSProtocol) ReadMessage() (*Message, error) {
 	}, nil
 }
 
-func (p *graphQLWSProtocol) Pong(msg *Message) (int, error) {
+func (p *graphQLWSProtocol) Pong(msg *Message) error {
 	return p.conn.WriteJSON(graphQLWSMessage{ID: msg.ID, Type: graphQLWSMessageTypePong, Payload: msg.Payload})
 }
 
-func (p *graphQLWSProtocol) GraphQLData(id string, data json.RawMessage, extensions json.RawMessage) (int, error) {
+func (p *graphQLWSProtocol) GraphQLData(id string, data json.RawMessage, extensions json.RawMessage) error {
 	return p.conn.WriteJSON(graphQLWSMessage{
 		ID:         id,
 		Type:       graphQLWSMessageTypeNext,
@@ -100,7 +100,7 @@ func (p *graphQLWSProtocol) GraphQLData(id string, data json.RawMessage, extensi
 	})
 }
 
-func (p *graphQLWSProtocol) GraphQLErrors(id string, errors json.RawMessage, extensions json.RawMessage) (int, error) {
+func (p *graphQLWSProtocol) GraphQLErrors(id string, errors json.RawMessage, extensions json.RawMessage) error {
 	return p.conn.WriteJSON(graphQLWSMessage{
 		ID:         id,
 		Type:       graphQLWSMessageTypeError,
@@ -109,6 +109,6 @@ func (p *graphQLWSProtocol) GraphQLErrors(id string, errors json.RawMessage, ext
 	})
 }
 
-func (p *graphQLWSProtocol) Done(id string) (int, error) {
+func (p *graphQLWSProtocol) Done(id string) error {
 	return p.conn.WriteJSON(graphQLWSMessage{ID: id, Type: graphQLWSMessageTypeComplete})
 }

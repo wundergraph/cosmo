@@ -2,12 +2,13 @@ package runner
 
 import (
 	"context"
-	"net"
+	"fmt"
 	"net/http"
-	"strconv"
 	"time"
 
+	"github.com/phayes/freeport"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs"
+	"golang.org/x/sync/errgroup"
 )
 
 type SubgraphsRunner interface {
@@ -21,11 +22,7 @@ type inProcessSubgraphsRunner struct {
 }
 
 func (r *inProcessSubgraphsRunner) Start(ctx context.Context) error {
-	err := r.subgraphs.ListenAndServe(ctx)
-	if err == http.ErrServerClosed {
-		err = nil
-	}
-	return err
+	return r.subgraphs.ListenAndServe(ctx)
 }
 
 func (r *inProcessSubgraphsRunner) Stop(ctx context.Context) error {
@@ -79,41 +76,47 @@ func NewExternalSubgraphsRunner() (SubgraphsRunner, error) {
 }
 
 func Wait(ctx context.Context, r SubgraphsRunner) error {
-	pp := r.Ports()
-	ports := []int{
-		pp.Employees,
-		pp.Family,
-		pp.Hobbies,
-		pp.Products,
-		pp.Test1,
-	}
+	subgraphPorts := r.Ports()
+	ports := subgraphPorts.AsArray()
+
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	g, ctx := errgroup.WithContext(ctx)
 	for _, port := range ports {
-		for {
-			_, err := net.Dial("tcp", "127.0.0.1:"+strconv.Itoa(port))
-			if err == nil {
-				break
+		port := port
+		g.Go(func() error {
+			for {
+				select {
+				case <-ctx.Done():
+					return ctx.Err()
+				default:
+					req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("http://127.0.0.1:%d", port), nil)
+					if err != nil {
+						return err
+					}
+					res, err := http.DefaultClient.Do(req)
+					if err == nil {
+						_ = res.Body.Close()
+						fmt.Printf("Subgraph %d is ready\n", port)
+						return nil
+					}
+					fmt.Printf("retrying subgraph %d\n", port)
+				}
 			}
-			select {
-			case <-ctx.Done():
-				return ctx.Err()
-			default:
-			}
-			time.Sleep(100 * time.Millisecond)
-		}
+		})
+	}
+	err := g.Wait()
+	if err != nil {
+		return err
 	}
 	return nil
 }
 
 func randomFreePorts() *subgraphs.Ports {
-	ports := make([]int, 7)
-	for i := range ports {
-		listener, err := net.Listen("tcp", ":0")
-		if err != nil {
-			panic(err)
-		}
-		ports[i] = listener.Addr().(*net.TCPAddr).Port
-		listener.Close()
-
+	ports, err := freeport.GetFreePorts(7)
+	if err != nil {
+		panic(err)
 	}
 	return &subgraphs.Ports{
 		Employees:    ports[0],

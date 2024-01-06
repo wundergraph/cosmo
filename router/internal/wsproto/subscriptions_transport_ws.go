@@ -59,10 +59,10 @@ func (p *subscriptionsTransportWSProtocol) Initialize() (json.RawMessage, error)
 	if msg.Type != subscriptionsTransportWSMessageTypeConnectionInit {
 		return nil, fmt.Errorf("first message should be %s, got %s", subscriptionsTransportWSMessageTypeConnectionInit, msg.Type)
 	}
-	if _, err := p.conn.WriteJSON(subscriptionsTransportWSMessage{Type: subscriptionsTransportWSMessageTypeConnectionAck}); err != nil {
+	if err := p.conn.WriteJSON(subscriptionsTransportWSMessage{Type: subscriptionsTransportWSMessageTypeConnectionAck}); err != nil {
 		return nil, fmt.Errorf("sending %s: %w", subscriptionsTransportWSMessageTypeConnectionAck, err)
 	}
-	if _, err := p.conn.WriteJSON(subscriptionsTransportWSMessage{Type: subscriptionsTransportWSMessageTypeKeepAlive}); err != nil {
+	if err := p.conn.WriteJSON(subscriptionsTransportWSMessage{Type: subscriptionsTransportWSMessageTypeKeepAlive}); err != nil {
 		return nil, fmt.Errorf("sending %s: %w", subscriptionsTransportWSMessageTypeKeepAlive, err)
 	}
 	return msg.Payload, nil
@@ -75,6 +75,8 @@ func (p *subscriptionsTransportWSProtocol) ReadMessage() (*Message, error) {
 	}
 	var messageType MessageType
 	switch msg.Type {
+	case subscriptionsTransportWSMessageTypeConnectionTerminate:
+		messageType = MessageTypeTerminate
 	case subscriptionsTransportWSMessageTypeStart:
 		messageType = MessageTypeSubscribe
 	case subscriptionsTransportWSMessageTypeStop:
@@ -90,7 +92,7 @@ func (p *subscriptionsTransportWSProtocol) ReadMessage() (*Message, error) {
 	}, nil
 }
 
-func (p *subscriptionsTransportWSProtocol) Pong(msg *Message) (int, error) {
+func (p *subscriptionsTransportWSProtocol) Pong(msg *Message) error {
 	return p.conn.WriteJSON(subscriptionsTransportWSMessage{
 		ID:      msg.ID,
 		Type:    subscriptionsTransportWSMessageTypeKeepAlive,
@@ -98,7 +100,7 @@ func (p *subscriptionsTransportWSProtocol) Pong(msg *Message) (int, error) {
 	})
 }
 
-func (p *subscriptionsTransportWSProtocol) GraphQLData(id string, data json.RawMessage, extensions json.RawMessage) (int, error) {
+func (p *subscriptionsTransportWSProtocol) GraphQLData(id string, data json.RawMessage, extensions json.RawMessage) error {
 	return p.conn.WriteJSON(subscriptionsTransportWSMessage{
 		ID:         id,
 		Type:       subscriptionsTransportWSMessageTypeData,
@@ -107,11 +109,11 @@ func (p *subscriptionsTransportWSProtocol) GraphQLData(id string, data json.RawM
 	})
 }
 
-func (p *subscriptionsTransportWSProtocol) GraphQLErrors(id string, errors json.RawMessage, extensions json.RawMessage) (int, error) {
+func (p *subscriptionsTransportWSProtocol) GraphQLErrors(id string, errors json.RawMessage, extensions json.RawMessage) error {
 	// This protocol has errors inside an object, so we need to wrap it
 	data, err := sjson.SetBytes([]byte(`{}`), "errors", errors)
 	if err != nil {
-		return 0, fmt.Errorf("encoding JSON: %w", err)
+		return fmt.Errorf("encoding JSON: %w", err)
 	}
 	return p.conn.WriteJSON(subscriptionsTransportWSMessage{
 		ID:         id,
@@ -121,7 +123,7 @@ func (p *subscriptionsTransportWSProtocol) GraphQLErrors(id string, errors json.
 	})
 }
 
-func (p *subscriptionsTransportWSProtocol) Done(id string) (int, error) {
+func (p *subscriptionsTransportWSProtocol) Done(id string) error {
 	return p.conn.WriteJSON(subscriptionsTransportWSMessage{
 		ID:   id,
 		Type: subscriptionsTransportWSMessageTypeComplete,

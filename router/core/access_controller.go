@@ -7,9 +7,12 @@ import (
 	"github.com/wundergraph/cosmo/router/authentication"
 )
 
-// ErrUnauthorized is returned when no authentication information is available
-// and authorization requires authentication
-var ErrUnauthorized = errors.New("unauthorized")
+var (
+	// ErrUnauthorized is returned when no authentication information is available
+	// and authorization requires authentication
+	// or when authentication information is available but invalid
+	ErrUnauthorized = errors.New("unauthorized")
+)
 
 // AccessController handles both authentication and authorization for the Router
 type AccessController struct {
@@ -36,7 +39,7 @@ func DefaultAccessController() *AccessController {
 func (a *AccessController) Access(w http.ResponseWriter, r *http.Request) (*http.Request, error) {
 	auth, err := authentication.AuthenticateHTTPRequest(r.Context(), a.authenticators, r)
 	if err != nil {
-		return nil, err
+		return nil, ErrUnauthorized
 	}
 	if auth != nil {
 		w.Header().Set("X-Authenticated-By", auth.Authenticator())
