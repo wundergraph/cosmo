@@ -268,6 +268,8 @@ github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.2.0.20240106191127-7ea26a87
 github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.2.0.20240106191127-7ea26a874b41/go.mod h1:5yPXLXNnTMg0IvdH2zHLxD9g/6V+aITfRZQUYZyjVK8=
 github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.2.0.20240106200853-0e3626c962bc h1:eGBvgJ24efV9korWcMvLds04RjX2L8WeuiuqD8pQMH0=
 github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.2.0.20240106200853-0e3626c962bc/go.mod h1:5yPXLXNnTMg0IvdH2zHLxD9g/6V+aITfRZQUYZyjVK8=
+github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.2.0.20240106210756-18088120f677 h1:psycPAT0mIsGO5KG9Loluu5edsk6RpLgALNhWP1q928=
+github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.2.0.20240106210756-18088120f677/go.mod h1:5yPXLXNnTMg0IvdH2zHLxD9g/6V+aITfRZQUYZyjVK8=
 go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1 h1:aFJWCqJMNjENlcleuuOkGAPH82y0yULBScfXcIEdS24=
 go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1/go.mod h1:sEGXWArGqc3tVa+ekntsN65DmVbVeW+7lTKTjZF3/Fo=
 go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v0.44.0 h1:jd0+5t/YynESZqsSyPz+7PAFdEop0dlN0+PkyHYo8oI=
