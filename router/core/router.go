@@ -253,11 +253,11 @@ func NewRouter(opts ...Option) (*Router, error) {
 	// Add default metric exporter if none are configured
 	if r.metricConfig.OpenTelemetry.Enabled && len(r.metricConfig.OpenTelemetry.Exporters) == 0 {
 		if endpoint := otelconfig.DefaultEndpoint(); endpoint != "" {
-			r.logger.Debug("Using default metricStore exporter", zap.String("endpoint", endpoint))
+			r.logger.Debug("Using default metrics exporter", zap.String("endpoint", endpoint))
 			r.metricConfig.OpenTelemetry.Exporters = append(r.metricConfig.OpenTelemetry.Exporters, &metric.OpenTelemetryExporter{
 				Endpoint: endpoint,
 				Exporter: otelconfig.ExporterOLTPHTTP,
-				HTTPPath: "/v1/metricStore",
+				HTTPPath: "/v1/metrics",
 				Headers:  otelconfig.DefaultEndpointHeaders(r.graphApiToken),
 			})
 		}
@@ -283,7 +283,7 @@ func NewRouter(opts ...Option) (*Router, error) {
 		if r.metricConfig.OpenTelemetry.Enabled {
 			defaultExporter := metric.GetDefaultExporter(r.metricConfig)
 			if defaultExporter != nil {
-				r.logger.Warn("No graph token provided. MetricStore ingestion to Cosmo Cloud disabled. Please specify a custom trace exporter or provide a graph token.")
+				r.logger.Warn("No graph token provided. Metrics ingestion to Cosmo Cloud disabled. Please specify a custom trace exporter or provide a graph token.")
 				defaultExporter.Disabled = true
 			}
 		}
@@ -514,7 +514,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		r.tracerProvider = tp
 	}
 
-	// Prometheus metricStore rely on OTLP metricStore
+	// Prometheus metrics rely on OTLP metrics
 	if r.metricConfig.IsEnabled() {
 		if r.metricConfig.Prometheus.Enabled {
 			mp, registry, err := metric.NewPrometheusMeterProvider(ctx, r.metricConfig)
@@ -551,12 +551,12 @@ func (r *Router) bootstrap(ctx context.Context) error {
 			graphqlmetrics.NewDefaultExporterSettings(),
 		)
 		if err := r.gqlMetricsExporter.Validate(); err != nil {
-			return fmt.Errorf("failed to validate graphql metricStore exporter: %w", err)
+			return fmt.Errorf("failed to validate graphql metrics exporter: %w", err)
 		}
 
 		r.gqlMetricsExporter.Start()
 
-		r.logger.Info("GraphQL schema coverage metricStore enabled")
+		r.logger.Info("GraphQL schema coverage metrics enabled")
 	}
 
 	// Modules are only initialized once and not on every config change
@@ -928,7 +928,7 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 			defer wg.Done()
 
 			if subErr := r.gqlMetricsExporter.Shutdown(ctx); subErr != nil {
-				err = errors.Join(err, fmt.Errorf("failed to stop graphql metricStore exporter: %w", subErr))
+				err = errors.Join(err, fmt.Errorf("failed to stop graphql metrics exporter: %w", subErr))
 			}
 		}()
 	}

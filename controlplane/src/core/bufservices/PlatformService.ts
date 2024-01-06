@@ -4300,6 +4300,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           req.range,
         );
 
+        console.log('timeFilters', timeFilters);
+
         const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
         const subgraphs = await subgraphRepo.listByFederatedGraph(graph.name, { published: true });
         const view = await analyticsDashRepo.getView(graph.id, authContext.organizationId, timeFilters, subgraphs);
