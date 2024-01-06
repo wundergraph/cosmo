@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS traces (
 PARTITION BY toDate(Timestamp)
 -- This allows us to fetch traces by federated graph in the most efficient way
 ORDER BY (
-    FederatedGraphID, OrganizationID, toUnixTimestamp(Timestamp)
+    FederatedGraphID, OrganizationID, toUnixTimestamp(Timestamp), OperationType, ClientName, HttpStatusCode, ClientVersion, Duration, OperationName, OperationPersistedID, OperationHash
 )
 TTL toDateTime(Timestamp) + toIntervalDay(30) SETTINGS index_granularity = 8192, ttl_only_drop_parts = 1;
 
