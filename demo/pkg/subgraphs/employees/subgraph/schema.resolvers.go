@@ -72,10 +72,18 @@ func (r *queryResolver) Employee(ctx context.Context, id int) (*model.Employee, 
 func (r *queryResolver) Employees(ctx context.Context) ([]*model.Employee, error) {
 	r.mux.Lock()
 	defer r.mux.Unlock()
-	for _, employee := range employees {
-		employee.UpdatedAt = time.Now().String()
+	out := make([]*model.Employee, len(employees))
+	for i, employee := range employees {
+		out[i] = &model.Employee{
+			ID:        employee.ID,
+			Details:   employee.Details,
+			Tag:       employee.Tag,
+			Role:      employee.Role,
+			Notes:     employee.Notes,
+			UpdatedAt: time.Now().String(),
+		}
 	}
-	return employees, nil
+	return out, nil
 }
 
 // Products is the resolver for the products field.

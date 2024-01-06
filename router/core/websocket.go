@@ -58,14 +58,6 @@ func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions
 			stats:            opts.Stats,
 			readTimeout:      opts.ReadTimeout,
 		}
-		if opts.EnableWebSocketEpollKqueue {
-			poller, err := epoller.NewPoller()
-			if err == nil {
-				handler.epoll = poller
-				handler.connections = make(map[int]*WebSocketConnectionHandler)
-				go handler.runPoller()
-			}
-		}
 		handler.handlerPool = pond.New(
 			64,
 			0,
@@ -74,6 +66,14 @@ func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions
 			pond.Strategy(pond.Lazy()),
 			pond.MinWorkers(8),
 		)
+		if opts.EnableWebSocketEpollKqueue {
+			poller, err := epoller.NewPoller()
+			if err == nil {
+				handler.epoll = poller
+				handler.connections = make(map[int]*WebSocketConnectionHandler)
+				go handler.runPoller()
+			}
+		}
 		return handler
 	}
 }
@@ -317,7 +317,6 @@ func (h *WebsocketHandler) runPoller() {
 				h.logger.Warn("epoll wait", zap.Error(err))
 				continue
 			}
-			g := h.handlerPool.Group()
 			for i := 0; i < len(connections); i++ {
 				if connections[i] == nil {
 					continue
@@ -331,14 +330,11 @@ func (h *WebsocketHandler) runPoller() {
 				if !exists {
 					continue
 				}
-				g.Submit(func() {
-					err = h.HandleMessage(handler, time.Second*5)
-					if err != nil {
-						h.removeConnection(conn, handler, fd)
-					}
-				})
+				err = h.HandleMessage(handler, time.Second*5)
+				if err != nil {
+					h.removeConnection(conn, handler, fd)
+				}
 			}
-			g.Wait()
 		}
 	}
 }
@@ -624,10 +620,17 @@ func (h *WebsocketHandler) HandleMessage(handler *WebSocketConnectionHandler, ti
 		// "Furthermore, the Pong message may even be sent unsolicited as a unidirectional heartbeat"
 		return nil
 	case wsproto.MessageTypeSubscribe:
-		_ = handler.handleSubscribe(msg)
+		h.handlerPool.Submit(func() {
+			err := handler.handleSubscribe(msg)
+			if err != nil {
+				h.logger.Warn("handling subscribe", zap.Error(err))
+			}
+		})
 	case wsproto.MessageTypeComplete:
-		_ = handler.handleComplete(msg)
-
+		err = handler.handleComplete(msg)
+		if err != nil {
+			h.logger.Warn("handling complete", zap.Error(err))
+		}
 	default:
 		return handler.requestError(fmt.Errorf("unsupported message type %d", msg.Type))
 	}

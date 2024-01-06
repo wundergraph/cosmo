@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"sync"
 
 	"github.com/mattbaird/jsonpatch"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
@@ -30,6 +31,7 @@ type HttpFlushWriter struct {
 	lastMessage   *bytes.Buffer
 	variables     []byte
 	logger        *zap.Logger
+	mux           sync.Mutex
 }
 
 func (f *HttpFlushWriter) Complete() {
@@ -45,6 +47,10 @@ func (f *HttpFlushWriter) Close() {
 }
 
 func (f *HttpFlushWriter) Flush() {
+
+	f.mux.Lock()
+	defer f.mux.Unlock()
+
 	resp := f.buf.Bytes()
 	f.buf.Reset()
 
