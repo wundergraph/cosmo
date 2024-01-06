@@ -12,22 +12,7 @@ import (
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/config"
 	"github.com/wundergraph/cosmo/router/core"
-	"go.uber.org/atomic"
 )
-
-type customTransport struct {
-	delay        time.Duration
-	requestCount atomic.Int64
-	roundTrip    func(r *http.Request) (*http.Response, error)
-}
-
-func (c *customTransport) RoundTrip(r *http.Request) (*http.Response, error) {
-	c.requestCount.Inc()
-	if c.delay > 0 {
-		time.Sleep(c.delay)
-	}
-	return c.roundTrip(r)
-}
 
 func TestSingleFlight(t *testing.T) {
 	testenv.Run(t, &testenv.Config{

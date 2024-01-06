@@ -97,6 +97,7 @@ func TestWebSockets(t *testing.T) {
 			err = conn.SetReadDeadline(time.Now().Add(1 * time.Second))
 			require.NoError(t, err)
 			err = conn.ReadJSON(&complete)
+			require.NoError(t, err)
 			require.Equal(t, "1", complete.ID)
 			require.Equal(t, "complete", complete.Type)
 

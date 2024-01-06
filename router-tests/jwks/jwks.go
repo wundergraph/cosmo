@@ -69,7 +69,10 @@ func (s *Server) jwksJSON(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(data)
+	_, err = w.Write(data)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func (s *Server) JWKSURL() string {

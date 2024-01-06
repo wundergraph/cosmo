@@ -2,15 +2,11 @@ package integration_test
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
-	"errors"
-	"flag"
 	"fmt"
 	"io"
 	"math/rand"
 	"net/http"
-	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -21,110 +17,13 @@ import (
 	"time"
 
 	"github.com/buger/jsonparser"
-	"github.com/golang-jwt/jwt/v5"
-	"github.com/phayes/freeport"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
-
-	"github.com/wundergraph/cosmo/router-tests/runner"
 	"github.com/wundergraph/cosmo/router/config"
-	"github.com/wundergraph/cosmo/router/core"
 )
 
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-
-var (
-	subgraphsMode = flag.String("subgraphs", "in-process", "How to run the subgraphs: in-process | subprocess | external")
-	workers       = flag.Int("workers", 4, "Number of workers to use for parallel benchmarks")
-
-	subgraphsRunner     runner.SubgraphsRunner
-	subgraphsConfigFile string
-
-	natsPort int
-)
-
-/*func TestMain(m *testing.M) {
-	flag.Parse()
-
-	var (
-		err error
-	)
-
-	natsPort, err = freeport.GetFreePort()
-	if err != nil {
-		panic(err)
-	}
-
-	opts := natsserver.Options{
-		Host:   "localhost",
-		Port:   natsPort,
-		NoLog:  true,
-		NoSigs: true,
-	}
-	nats := natstest.RunServer(&opts)
-	if nats == nil {
-		panic("could not start NATS test server")
-	}
-
-	defer nats.Shutdown()
-
-	// Set this to allow the subgraphs to connect to the NATS server
-	err = os.Setenv("NATS_URL", fmt.Sprintf("nats://localhost:%d", natsPort))
-	if err != nil {
-		panic(err)
-	}
-
-	ctx := context.Background()
-
-	switch *subgraphsMode {
-	case "in-process":
-		subgraphsRunner, err = runner.NewInProcessSubgraphsRunner(nil)
-	case "subprocess":
-		subgraphsRunner, err = runner.NewSubprocessSubgraphsRunner(nil)
-	case "external":
-		subgraphsRunner, err = runner.NewExternalSubgraphsRunner()
-	default:
-		panic(fmt.Errorf("unknown subgraphs mode %q", *subgraphsMode))
-	}
-	if err != nil {
-		panic(err)
-	}
-	// defer this in case we panic, then call it manually before os.Exit()
-	stop := func() {
-		if err := subgraphsRunner.Stop(ctx); err != nil {
-			panic(err)
-		}
-	}
-	defer stop()
-	go func() {
-		err := subgraphsRunner.Start(ctx)
-		if err != nil {
-			if errors.Is(err, context.Canceled) {
-				return
-			}
-			panic(err)
-		}
-	}()
-
-	timeoutCtx, cancelFunc := context.WithTimeout(ctx, 50*time.Second)
-	defer cancelFunc()
-	// Wait until the ports are open
-	if err := runner.Wait(timeoutCtx, subgraphsRunner); err != nil {
-		panic(err)
-	}
-
-	subgraphsConfigFile, err = routerconfig.SerializeRunner(subgraphsRunner)
-	if err != nil {
-		panic(err)
-	}
-
-	res := m.Run()
-	stop()
-	os.Exit(res)
-}*/
 
 func randString(n int) string {
 	b := make([]byte, n)
@@ -159,179 +58,9 @@ func (t *testQuery) Data() []byte {
 	return data
 }
 
-func sendQueryOK(tb testing.TB, server *core.Server, graphqlPath string, query *testQuery) string {
-	rr := sendData(server, graphqlPath, query.Data())
-	if rr.Code != http.StatusOK {
-		tb.Error("unexpected status code", rr.Code)
-	}
-	return rr.Body.String()
-}
-
-func sendData(server *core.Server, graphqlPath string, data []byte) *httptest.ResponseRecorder {
-	return sendDataWithHeader(server, graphqlPath, data, nil)
-}
-
-func sendDataWithHeader(server *core.Server, graphqlPath string, data []byte, header http.Header) *httptest.ResponseRecorder {
-	rr := httptest.NewRecorder()
-	req := httptest.NewRequest("POST", graphqlPath, bytes.NewBuffer(data))
-	if header != nil {
-		req.Header = header
-	}
-	server.Server.Handler.ServeHTTP(rr, req)
-	return rr
-}
-
-func sendHtmlRequest(server *core.Server, path string) *httptest.ResponseRecorder {
-	rr := httptest.NewRecorder()
-	req := httptest.NewRequest("GET", path, nil)
-	req.Header.Set("Accept", "text/html")
-	server.Server.Handler.ServeHTTP(rr, req)
-	return rr
-}
-
-func sendCustomData(server *core.Server, data []byte, reqMw func(r *http.Request)) *httptest.ResponseRecorder {
-	rr := httptest.NewRecorder()
-	req := httptest.NewRequest("POST", "/graphql", bytes.NewBuffer(data))
-	reqMw(req)
-	server.Server.Handler.ServeHTTP(rr, req)
-	return rr
-}
-
-func testTokenClaims() jwt.MapClaims {
-	return jwt.MapClaims{
-		"federated_graph_id": "graph",
-		"organization_id":    "organization",
-	}
-}
-
-// setupServer sets up the router server without making it listen on a local
-// port, allowing tests by calling the server directly via server.Server.Handler.ServeHTTP
-func setupServer(tb testing.TB, opts ...core.Option) *core.Server {
-	server, _ := setupServerConfig(tb, opts...)
-	return server
-}
-
-func setupCDNServer(tb testing.TB) string {
-	cdnFileServer := http.FileServer(http.Dir(filepath.Join("testdata", "cdn")))
-	var cdnRequestLog []string
-	cdnServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/" {
-			requestLog, err := json.Marshal(cdnRequestLog)
-			require.NoError(tb, err)
-			w.Header().Set("Content-Type", "application/json")
-			w.Write(requestLog)
-			return
-		}
-		cdnRequestLog = append(cdnRequestLog, r.Method+" "+r.URL.Path)
-		// Ensure we have an authorization header with a valid token
-		authorization := r.Header.Get("Authorization")
-		token := authorization[len("Bearer "):]
-		parsedClaims := make(jwt.MapClaims)
-		jwtParser := new(jwt.Parser)
-		_, _, err := jwtParser.ParseUnverified(token, parsedClaims)
-		assert.NoError(tb, err)
-		assert.Equal(tb, testTokenClaims(), parsedClaims)
-		cdnFileServer.ServeHTTP(w, r)
-	}))
-	tb.Cleanup(cdnServer.Close)
-	return cdnServer.URL
-}
-
-func setupServerConfig(tb testing.TB, opts ...core.Option) (*core.Server, config.Config) {
-	ctx := context.Background()
-	cfg := config.Config{
-		Graph: config.Graph{
-			Name: "production",
-		},
-	}
-
-	routerConfig, err := core.SerializeConfigFromFile(subgraphsConfigFile)
-	require.NoError(tb, err)
-
-	ec := zap.NewProductionEncoderConfig()
-	ec.EncodeDuration = zapcore.SecondsDurationEncoder
-	ec.TimeKey = "time"
-
-	syncer := zapcore.AddSync(os.Stderr)
-
-	zapLogger := zap.New(zapcore.NewCore(
-		zapcore.NewConsoleEncoder(ec),
-		syncer,
-		zapcore.ErrorLevel,
-	))
-
-	t := jwt.New(jwt.SigningMethodHS256)
-	t.Claims = testTokenClaims()
-	graphApiToken, err := t.SignedString([]byte("hunter2"))
-	require.NoError(tb, err)
-
-	cfg.CDN.URL = setupCDNServer(tb)
-
-	routerOpts := []core.Option{
-		core.WithFederatedGraphName(cfg.Graph.Name),
-		core.WithStaticRouterConfig(routerConfig),
-		core.WithLogger(zapLogger),
-		core.WithGraphApiToken(graphApiToken),
-		core.WithCDN(config.CDNConfiguration{URL: cfg.CDN.URL, CacheSize: 1024 * 1024}),
-		core.WithDevelopmentMode(true),
-		core.WithPlayground(true),
-		core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
-			EnableSingleFlight:                     true,
-			EnableRequestTracing:                   true,
-			EnableExecutionPlanCacheResponseHeader: true,
-		}),
-		core.WithEvents(config.EventsConfiguration{
-			Sources: []config.EventSource{
-				{
-					Provider: "NATS",
-					URL:      fmt.Sprintf("nats://localhost:%d", natsPort),
-				},
-			},
-		}),
-	}
-	routerOpts = append(routerOpts, opts...)
-	rs, err := core.NewRouter(routerOpts...)
-	require.NoError(tb, err)
-	tb.Cleanup(func() {
-		assert.Nil(tb, rs.Shutdown(ctx))
-	})
-
-	server, err := rs.NewTestServer(ctx)
-	require.NoError(tb, err)
-	return server, cfg
-}
-
-// setupListeningServer calls setupServer to set up the server but makes it listen
-// on the network, automatically registering a cleanup function to shut it down.
-// It returns both the server and the local port where the server is listening.
-func setupListeningServer(tb testing.TB, opts ...core.Option) (*core.Server, int) {
-
-	port, err := freeport.GetFreePort()
-	require.NoError(tb, err)
-
-	serverOpts := append([]core.Option{
-		core.WithListenerAddr(":" + strconv.Itoa(port)),
-	}, opts...)
-	server := setupServer(tb, serverOpts...)
-	go func() {
-		err := server.Server.ListenAndServe()
-		if !errors.Is(err, http.ErrServerClosed) {
-			require.NoError(tb, err)
-		}
-	}()
-	tb.Cleanup(func() {
-		err := server.Shutdown(context.Background())
-		assert.NoError(tb, err)
-	})
-	return server, port
-}
-
 func normalizeJSON(tb testing.TB, data []byte) string {
 	var v interface{}
 	err := json.Unmarshal(data, &v)
-	if err != nil {
-		tb.Fatal(err)
-	}
 	require.NoError(tb, err)
 	normalized, err := json.MarshalIndent(v, "", "  ")
 	require.NoError(tb, err)

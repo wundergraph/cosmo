@@ -2,7 +2,6 @@ package integration_test
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"testing"
 
@@ -11,17 +10,6 @@ import (
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/config"
 )
-
-func persistedOperationPayload(sha56Hash string) []byte {
-	return []byte(fmt.Sprintf(`{
-		"extensions": {
-			"persistedQuery": {
-				"version":1,
-				"sha256Hash": "%s"
-			}
-		}
-	}`, sha56Hash))
-}
 
 func TestPersistedOperationNotFound(t *testing.T) {
 	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
