@@ -5,6 +5,7 @@ go 1.21
 require (
 	connectrpc.com/connect v1.11.1
 	github.com/MicahParks/keyfunc/v2 v2.1.0
+	github.com/alitto/pond v1.8.3
 	github.com/buger/jsonparser v1.1.1
 	github.com/cespare/xxhash/v2 v2.2.0
 	github.com/cloudflare/backoff v0.0.0-20161212185259-647f3cdfc87a
@@ -25,27 +26,12 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/nats-io/nats.go v1.31.0
 	github.com/pkg/errors v0.9.1
-	github.com/prometheus/client_golang v1.16.0
-	github.com/prometheus/client_model v0.4.0
-	github.com/smallnest/epoller v1.1.0
 	github.com/prometheus/client_golang v1.17.0
+	github.com/smallnest/epoller v1.1.0
 	github.com/stretchr/testify v1.8.4
 	github.com/tidwall/gjson v1.14.4
 	github.com/tidwall/sjson v1.2.5
 	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.2.0.20240106191127-7ea26a874b41
-	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.45.0
-	go.opentelemetry.io/otel v1.19.0
-	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v0.42.0
-	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp v0.42.0
-	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.19.0
-	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.19.0
-	go.opentelemetry.io/otel/exporters/prometheus v0.42.0
-	go.opentelemetry.io/otel/metric v1.19.0
-	go.opentelemetry.io/otel/sdk v1.19.0
-	go.opentelemetry.io/otel/sdk/metric v1.19.0
-	go.opentelemetry.io/otel/trace v1.19.0
-	go.uber.org/atomic v1.11.0
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.2.0.20231222113055-01835844e7c9
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1
 	go.opentelemetry.io/otel v1.21.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v0.44.0
@@ -57,6 +43,7 @@ require (
 	go.opentelemetry.io/otel/sdk v1.21.0
 	go.opentelemetry.io/otel/sdk/metric v1.21.0
 	go.opentelemetry.io/otel/trace v1.21.0
+	go.uber.org/atomic v1.11.0
 	go.uber.org/automaxprocs v1.5.3
 	go.uber.org/zap v1.26.0
 	go.withmatt.com/connect-brotli v0.4.0
@@ -67,7 +54,6 @@ require (
 
 require (
 	github.com/99designs/gqlgen v0.17.39 // indirect
-	github.com/alitto/pond v1.8.3 // indirect
 	github.com/andybalholm/brotli v1.0.6 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bytedance/sonic v1.10.0-rc // indirect
@@ -83,10 +69,9 @@ require (
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
-	github.com/golang/glog v1.1.2 // indirect
 	github.com/gobwas/httphead v0.1.0 // indirect
 	github.com/gobwas/pool v0.2.1 // indirect
-	github.com/golang/glog v1.1.1 // indirect
+	github.com/golang/glog v1.1.2 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/uuid v1.4.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.16.0 // indirect

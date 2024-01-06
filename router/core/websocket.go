@@ -528,10 +528,9 @@ func (h *WebSocketConnectionHandler) executeSubscription(ctx context.Context, ms
 
 	metrics.AddOperationContext(operationCtx)
 
-	commonAttributeValues := commonMetricAttributes(opContext)
+	commonAttributeValues := commonMetricAttributes(operationCtx)
 	metrics.AddAttributes(commonAttributeValues...)
 
-	initializeSpan(ctx, operation, operationCtx.clientInfo, commonAttributeValues)
 	initializeSpan(ctx, operation, commonAttributeValues)
 
 	rw := newWebsocketResponseWriter(msg.ID, h.protocol, h.logger, h.stats)
