@@ -18,7 +18,7 @@ SELECT
     toLowCardinality(Attributes [ 'wg.client.version' ]) AS ClientVersion
 FROM
     cosmo.otel_metrics_sum
-WHERE ScopeName = 'cosmo.router' AND ScopeVersion = '0.0.1' AND IsMonotonic = true AND MetricName = 'router.http.requests' AND OrganizationID != '' AND FederatedGraphID != ''
+WHERE ScopeName = 'cosmo.router' AND ScopeVersion = '0.0.1' AND IsMonotonic = true AND MetricName = 'router.http.requests' AND Attributes [ 'wg.subgraph.id' ] = '' AND OrganizationID != '' AND FederatedGraphID != ''
 GROUP BY
     OperationName,
     OperationHash,

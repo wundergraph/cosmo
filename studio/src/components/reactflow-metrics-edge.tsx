@@ -1,17 +1,13 @@
-import React from "react";
 import {
   BaseEdge,
   EdgeLabelRenderer,
   EdgeProps,
   getBezierPath,
 } from "reactflow";
+import { msToTime } from "@/lib/insights-helpers";
+import React from "react";
 
-/**
- * Example of a custom edge renderer.
- */
-
-export default function ReactFlowGraphEdge({
-  id,
+export default function SubgraphMetricsEdge({
   sourceX,
   sourceY,
   targetX,
@@ -20,6 +16,7 @@ export default function ReactFlowGraphEdge({
   targetPosition,
   style = {},
   markerEnd,
+  data,
 }: EdgeProps) {
   const [edgePath, labelX, labelY] = getBezierPath({
     sourceX,
@@ -38,14 +35,15 @@ export default function ReactFlowGraphEdge({
           style={{
             position: "absolute",
             transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
-            fontSize: 12,
-            // everything inside EdgeLabelRenderer has no pointer events by default
-            // if you have an interactive element, set pointer-events: all
+            fontSize: "0.7rem",
             pointerEvents: "all",
+            cursor: "pointer",
           }}
           className="nodrag nopan"
         >
-          <div>foo</div>
+          <div className="flex items-center justify-center gap-x-0.5 rounded-full bg-secondary bg-white px-1 py-0.5 text-secondary-foreground dark:bg-secondary dark:shadow-black/60">
+            {msToTime(data.latency)}
+          </div>
         </div>
       </EdgeLabelRenderer>
     </>
