@@ -3,12 +3,12 @@
 -- This table is used to aggregate subgraph request metrics.
 
 CREATE TABLE IF NOT EXISTS cosmo.subgraph_request_metrics_5_30 (
-   Timestamp DateTime('UTC') CODEC (Delta(4), ZSTD(1)),
-   FederatedGraphID LowCardinality(String) CODEC(ZSTD(1)),
-   OrganizationID LowCardinality(String) CODEC(ZSTD(1)),
-   SubgraphID String CODEC (ZSTD(1)),
-   TotalRequests UInt64 CODEC(ZSTD(1)),
-   TotalErrors UInt64 CODEC(ZSTD(1))
+   Timestamp DateTime('UTC') CODEC (Delta(4), ZSTD(3)),
+   FederatedGraphID LowCardinality(String) CODEC(ZSTD(3)),
+   OrganizationID LowCardinality(String) CODEC(ZSTD(3)),
+   SubgraphID String CODEC (ZSTD(3)),
+   TotalRequests UInt64 CODEC(ZSTD(3)),
+   TotalErrors UInt64 CODEC(ZSTD(3))
 ) ENGINE = SummingMergeTree
 PARTITION BY toDate(Timestamp)
 -- This allows us to fetch request metrics by subgraph ID in the most efficient way
