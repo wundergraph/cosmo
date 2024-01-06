@@ -30,10 +30,7 @@ export const CLI = ({
 
   return (
     <Button
-      className={cn(
-        "w-full max-w-xl justify-between text-muted-foreground md:w-auto",
-        className
-      )}
+      className={cn("w-full justify-between text-muted-foreground", className)}
       variant="outline"
       onClick={() => setCopied(true)}
     >

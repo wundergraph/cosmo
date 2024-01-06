@@ -643,7 +643,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 					otel.WgRouterVersion.String(Version),
 				),
 			),
-			// Disable built-in metrics
+			// Disable built-in metricStore
 			otelhttp.WithMeterProvider(sdkmetric.NewMeterProvider()),
 			otelhttp.WithSpanNameFormatter(SpanNameFormatter),
 		)
@@ -708,6 +708,31 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		r.logger.Info("localhost fallback enabled, connections that fail to connect to localhost will be retried using host.docker.internal")
 	}
 
+	metricStore := metric.NewNoopMetrics()
+
+	// Prometheus metricStore rely on OTLP metricStore
+	if r.metricConfig.IsEnabled() {
+		m, err := metric.NewMetrics(
+			r.metricConfig.Name,
+			Version,
+			metric.WithPromMeterProvider(r.promMeterProvider),
+			metric.WithOtlpMeterProvider(r.otlpMeterProvider),
+			metric.WithLogger(r.logger),
+			metric.WithAttributes(
+				otel.WgRouterGraphName.String(r.federatedGraphName),
+				otel.WgRouterConfigVersion.String(routerConfig.GetVersion()),
+				otel.WgRouterVersion.String(Version),
+			),
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create metric handler: %w", err)
+		}
+
+		metricStore = m
+	}
+
+	routerMetrics := NewRouterMetrics(metricStore, r.gqlMetricsExporter, routerConfig.GetVersion())
+
 	ecb := &ExecutorConfigurationBuilder{
 		introspection: r.introspection,
 		baseURL:       r.baseURL,
@@ -718,6 +743,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 			RequestTimeout: r.subgraphTransportOptions.RequestTimeout,
 			PreHandlers:    r.preOriginHandlers,
 			PostHandlers:   r.postOriginHandlers,
+			MetricStore:    metricStore,
 			RetryOptions: retrytransport.RetryOptions{
 				Enabled:       r.retryOptions.Enabled,
 				MaxRetryCount: r.retryOptions.MaxRetryCount,
@@ -771,31 +797,6 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		EnableExecutionPlanCacheResponseHeader: routerEngineConfig.Execution.EnableExecutionPlanCacheResponseHeader,
 	})
 
-	var metricStore *metric.Metrics
-
-	// Prometheus metrics rely on OTLP metrics
-	if r.metricConfig.IsEnabled() {
-		m, err := metric.NewMetrics(
-			r.metricConfig.Name,
-			Version,
-			metric.WithPromMeterProvider(r.promMeterProvider),
-			metric.WithOtlpMeterProvider(r.otlpMeterProvider),
-			metric.WithLogger(r.logger),
-			metric.WithAttributes(
-				otel.WgRouterGraphName.String(r.federatedGraphName),
-				otel.WgRouterConfigVersion.String(routerConfig.GetVersion()),
-				otel.WgRouterVersion.String(Version),
-			),
-		)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create metric handler: %w", err)
-		}
-
-		metricStore = m
-	}
-
-	routerMetrics := NewRouterMetrics(metricStore, r.gqlMetricsExporter, routerConfig.GetVersion())
-
 	var publicKey *ecdsa.PublicKey
 
 	if r.registrationInfo != nil {
@@ -844,7 +845,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 
 	graphqlChiRouter.Post("/", graphqlHandler.ServeHTTP)
 
-	// Serve GraphQL. Metrics are collected after the request is handled and classified as r GraphQL request.
+	// Serve GraphQL. MetricStore are collected after the request is handled and classified as r GraphQL request.
 	httpRouter.Mount(r.graphqlPath, graphqlChiRouter)
 
 	r.logger.Info("GraphQL endpoint",

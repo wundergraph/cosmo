@@ -13,8 +13,43 @@ const parse = (value: string, fallback: any) => {
   }
 };
 
+export const useDateRangeQueryState = () => {
+  const { query } = useRouter();
+
+  return useMemo(() => {
+    let range: Range | undefined = undefined;
+
+    const parsedRange = getRange(query.range?.toString());
+
+    let dateRange = {
+      start: subHours(new Date(), parsedRange),
+      end: new Date(),
+    };
+
+    if (query.dateRange) {
+      let tempRange = parse(query.dateRange as string, {
+        start: subHours(new Date(), parsedRange),
+        end: new Date(),
+      });
+
+      dateRange = {
+        start: new Date(tempRange.start),
+        end: new Date(tempRange.end),
+      };
+    } else {
+      range = parsedRange;
+    }
+
+    return {
+      dateRange,
+      range,
+    };
+  }, [query.dateRange, query.range]);
+};
+
 export const useAnalyticsQueryState = () => {
   const { query } = useRouter();
+  const { range, dateRange } = useDateRangeQueryState();
 
   return useMemo(() => {
     let filterStateObject = parse(query.filterState as string, []);
@@ -44,29 +79,6 @@ export const useAnalyticsQueryState = () => {
           query.group as string as keyof typeof AnalyticsViewGroupName
         ]
       : AnalyticsViewGroupName.None;
-
-    let range: Range | undefined = undefined;
-
-    const parsedRange = getRange(query.range?.toString());
-
-    let dateRange = {
-      start: subHours(new Date(), parsedRange),
-      end: new Date(),
-    };
-
-    if (query.dateRange) {
-      let tempRange = parse(query.dateRange as string, {
-        start: subHours(new Date(), parsedRange),
-        end: new Date(),
-      });
-
-      dateRange = {
-        start: new Date(tempRange.start),
-        end: new Date(tempRange.end),
-      };
-    } else if (!range) {
-      range = parsedRange;
-    }
 
     let refreshIntervalObject = parse(
       query.refreshInterval as string,

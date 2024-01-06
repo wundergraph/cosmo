@@ -445,7 +445,7 @@ export class OrganizationRepository {
     );
   }
 
-  public async getFeature(input: { organizationId: string; featureId: string }): Promise<Feature | undefined> {
+  public async getFeature(input: { organizationId: string; featureId: FeatureIds }): Promise<Feature | undefined> {
     const billing = await this.db.query.organizationBilling.findFirst({
       where: eq(organizationBilling.organizationId, input.organizationId),
       columns: {

@@ -3,6 +3,8 @@ package core
 import (
 	"bytes"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/internal/metric"
+	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"io"
 	"net/http"
 	"net/url"
@@ -30,14 +32,23 @@ type CustomTransport struct {
 	roundTripper http.RoundTripper
 	preHandlers  []TransportPreHandler
 	postHandlers []TransportPostHandler
+	metricStore  metric.Store
 	logger       *zap.Logger
 
 	sf *singleflight.Group
 }
 
-func NewCustomTransport(logger *zap.Logger, roundTripper http.RoundTripper, retryOptions retrytransport.RetryOptions, enableSingleFlight bool) *CustomTransport {
+func NewCustomTransport(
+	logger *zap.Logger,
+	roundTripper http.RoundTripper,
+	retryOptions retrytransport.RetryOptions,
+	metricStore metric.Store,
+	enableSingleFlight bool,
+) *CustomTransport {
 
-	ct := &CustomTransport{}
+	ct := &CustomTransport{
+		metricStore: metricStore,
+	}
 	if retryOptions.Enabled {
 		ct.roundTripper = retrytransport.NewRetryHTTPTransport(roundTripper, retryOptions, logger)
 	} else {
@@ -50,9 +61,47 @@ func NewCustomTransport(logger *zap.Logger, roundTripper http.RoundTripper, retr
 	return ct
 }
 
-func (ct *CustomTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+func (ct *CustomTransport) measureSubgraphMetrics(req *http.Request) func(err error, resp *http.Response) {
 
 	reqContext := getRequestContext(req.Context())
+	baseFields := commonMetricAttributes(reqContext.operation)
+
+	activeSubgraph := reqContext.ActiveSubgraph(req)
+	if activeSubgraph != nil {
+		baseFields = append(baseFields, otel.WgSubgraphName.String(activeSubgraph.Name))
+		baseFields = append(baseFields, otel.WgSubgraphID.String(activeSubgraph.Id))
+	}
+
+	inFlightDone := ct.metricStore.MeasureInFlight(req.Context(), baseFields...)
+	ct.metricStore.MeasureRequestSize(req.Context(), req.ContentLength, baseFields...)
+
+	operationStartTime := time.Now()
+
+	return func(err error, resp *http.Response) {
+		if err != nil {
+			baseFields = append(baseFields, otel.WgRequestError.Bool(true))
+		}
+
+		ct.metricStore.MeasureRequestCount(req.Context(), baseFields...)
+		ct.metricStore.MeasureLatency(req.Context(), operationStartTime, baseFields...)
+
+		if resp != nil {
+			baseFields = append(baseFields, semconv.HTTPStatusCode(resp.StatusCode))
+			ct.metricStore.MeasureResponseSize(req.Context(), resp.ContentLength, baseFields...)
+		}
+
+		inFlightDone()
+	}
+}
+
+func (ct *CustomTransport) RoundTrip(req *http.Request) (resp *http.Response, err error) {
+
+	reqContext := getRequestContext(req.Context())
+
+	done := ct.measureSubgraphMetrics(req)
+	defer func() {
+		done(err, resp)
+	}()
 
 	if ct.preHandlers != nil {
 		for _, preHandler := range ct.preHandlers {
@@ -65,7 +114,11 @@ func (ct *CustomTransport) RoundTrip(req *http.Request) (*http.Response, error) 
 		}
 	}
 
-	resp, err := ct.roundTripSingleFlight(req)
+	if !ct.allowSingleFlight(req) {
+		resp, err = ct.roundTripper.RoundTrip(req)
+	} else {
+		resp, err = ct.roundTripSingleFlight(req)
+	}
 
 	// Set the error on the request context so that it can be checked by the post handlers
 	if err != nil {
@@ -119,23 +172,22 @@ func (ct *CustomTransport) allowSingleFlight(req *http.Request) bool {
 }
 
 func (ct *CustomTransport) roundTripSingleFlight(req *http.Request) (*http.Response, error) {
-
-	if !ct.allowSingleFlight(req) {
-		return ct.roundTripper.RoundTrip(req)
-	}
-
 	keyGen := pool.Hash64.Get()
 	defer pool.Hash64.Put(keyGen)
 
+	// Hash the request body
 	if req.Body != nil {
-		body, err := io.ReadAll(req.Body)
+		executionBuf := pool.BytesBuffer.Get()
+		defer executionBuf.Reset()
+		if _, err := io.Copy(executionBuf, req.Body); err != nil {
+			return nil, err
+		}
+		body := executionBuf.Bytes()
+		_, err := keyGen.Write(body)
 		if err != nil {
 			return nil, err
 		}
-		_, err = keyGen.Write(body)
-		if err != nil {
-			return nil, err
-		}
+		// Restore the body
 		req.Body = io.NopCloser(bytes.NewReader(body))
 	}
 
@@ -157,18 +209,23 @@ func (ct *CustomTransport) roundTripSingleFlight(req *http.Request) (*http.Respo
 	sum := keyGen.Sum64()
 	key := strconv.FormatUint(sum, 10)
 
+	// We need to use the single flight group to ensure that the request is only sent once
 	v, err, shared := ct.sf.Do(key, func() (interface{}, error) {
 		res, err := ct.roundTripper.RoundTrip(req)
 		if err != nil {
 			return nil, err
 		}
-		body, err := io.ReadAll(res.Body)
+		executionBuf := pool.BytesBuffer.Get()
+		defer executionBuf.Reset()
 		if err != nil {
+			return nil, err
+		}
+		if _, err := io.Copy(executionBuf, res.Body); err != nil {
 			return nil, err
 		}
 		return &responseWithBody{
 			res:  res,
-			body: body,
+			body: executionBuf.Bytes(),
 		}, nil
 	})
 	if err != nil {
@@ -191,6 +248,8 @@ func (ct *CustomTransport) roundTripSingleFlight(req *http.Request) (*http.Respo
 	res.Close = rwb.res.Close
 	res.Uncompressed = rwb.res.Uncompressed
 	res.Request = req
+
+	// Restore the body
 	res.Body = io.NopCloser(bytes.NewReader(rwb.body))
 
 	return res, nil
@@ -202,6 +261,7 @@ type TransportFactory struct {
 	retryOptions                  retrytransport.RetryOptions
 	requestTimeout                time.Duration
 	localhostFallbackInsideDocker bool
+	metricStore                   metric.Store
 	logger                        *zap.Logger
 }
 
@@ -213,6 +273,7 @@ type TransportOptions struct {
 	RetryOptions                  retrytransport.RetryOptions
 	RequestTimeout                time.Duration
 	LocalhostFallbackInsideDocker bool
+	MetricStore                   metric.Store
 	Logger                        *zap.Logger
 }
 
@@ -223,6 +284,7 @@ func NewTransport(opts *TransportOptions) *TransportFactory {
 		retryOptions:                  opts.RetryOptions,
 		requestTimeout:                opts.RequestTimeout,
 		localhostFallbackInsideDocker: opts.LocalhostFallbackInsideDocker,
+		metricStore:                   opts.MetricStore,
 		logger:                        opts.Logger,
 	}
 }
@@ -242,23 +304,15 @@ func (t TransportFactory) RoundTripper(enableSingleFlight bool, transport http.R
 			reqContext := getRequestContext(r.Context())
 			operation := reqContext.operation
 
-			if operation != nil {
-				if operation.name != "" {
-					span.SetAttributes(otel.WgOperationName.String(operation.name))
-				}
-				if operation.opType != "" {
-					span.SetAttributes(otel.WgOperationType.String(operation.opType))
-				}
-				if operation.hash != 0 {
-					span.SetAttributes(otel.WgOperationHash.String(strconv.FormatUint(operation.hash, 10)))
-				}
-			}
+			commonAttributeValues := commonMetricAttributes(operation)
 
 			subgraph := reqContext.ActiveSubgraph(r)
 			if subgraph != nil {
-				span.SetAttributes(otel.WgSubgraphID.String(subgraph.Id))
-				span.SetAttributes(otel.WgSubgraphName.String(subgraph.Name))
+				commonAttributeValues = append(commonAttributeValues, otel.WgSubgraphID.String(subgraph.Id))
+				commonAttributeValues = append(commonAttributeValues, otel.WgSubgraphName.String(subgraph.Name))
 			}
+
+			span.SetAttributes(commonAttributeValues...)
 
 		}),
 	)
@@ -266,6 +320,7 @@ func (t TransportFactory) RoundTripper(enableSingleFlight bool, transport http.R
 		t.logger,
 		traceTransport,
 		t.retryOptions,
+		t.metricStore,
 		enableSingleFlight,
 	)
 

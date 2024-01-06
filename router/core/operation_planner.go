@@ -65,7 +65,7 @@ func (p *OperationPlanner) preparePlan(requestOperationName []byte, requestOpera
 	}, nil
 }
 
-func (p *OperationPlanner) Plan(operation *ParsedOperation, clientInfo *ClientInfo, traceOptions resolve.RequestTraceOptions) (*operationContext, error) {
+func (p *OperationPlanner) Plan(operation *ParsedOperation, clientInfo *ClientInfo, protocol OperationProtocol, traceOptions resolve.RequestTraceOptions) (*operationContext, error) {
 
 	opContext := &operationContext{
 		name:         operation.Name,
@@ -76,6 +76,8 @@ func (p *OperationPlanner) Plan(operation *ParsedOperation, clientInfo *ClientIn
 		variables:    operation.Variables,
 		traceOptions: traceOptions,
 		extensions:   operation.Extensions,
+		persistedID:  operation.PersistedID,
+		protocol:     protocol,
 	}
 
 	if traceOptions.Enable {

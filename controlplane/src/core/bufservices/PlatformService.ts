@@ -9,7 +9,6 @@ import {
   AcceptOrDeclineInvitationResponse,
   AddReadmeResponse,
   AddSubgraphMemberResponse,
-  AnalyticsConfig,
   CheckFederatedGraphResponse,
   CheckSubgraphSchemaResponse,
   CompositionError,
@@ -22,7 +21,6 @@ import {
   CreateOIDCProviderResponse,
   CreateOrganizationResponse,
   CreateOrganizationWebhookConfigResponse,
-  DateRange,
   DeleteAPIKeyResponse,
   DeleteFederatedGraphResponse,
   DeleteFederatedSubgraphResponse,
@@ -91,6 +89,7 @@ import {
   UpdateSubgraphResponse,
   UpgradePlanResponse,
   WhoAmIResponse,
+  DateRange as DateRangeProto,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { OpenAIGraphql, isValidUrl } from '@wundergraph/cosmo-shared';
 import { DocumentNode, buildASTSchema, parse } from 'graphql';
@@ -98,6 +97,7 @@ import { validate } from 'graphql/validation/index.js';
 import { uid } from 'uid';
 import {
   GraphApiKeyDTO,
+  DateRange,
   GraphApiKeyJwtPayload,
   PublishedOperationData,
   UpdatedPersistedOperation,
@@ -148,10 +148,11 @@ import { ApiKeyRepository } from '../repositories/ApiKeyRepository.js';
 import { BillingRepository } from '../repositories/BillingRepository.js';
 import { TargetRepository } from '../repositories/TargetRepository.js';
 import { BillingService } from '../services/BillingService.js';
+import { getGranularity, parseTimeFilters } from '../repositories/analytics/util.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
-    /* 
+    /*
     Mutations
     */
     createFederatedGraph: (req, ctx) => {
@@ -1586,7 +1587,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
                 await opts.mailerClient.sendInviteEmail({
                   inviteLink: `${process.env.WEB_BASE_URL}/account/invitations`,
                   organizationName: organization.name,
-                  recieverEmail: req.email,
+                  receiverEmail: req.email,
                   invitedBy: orgInvitation.invitedBy,
                 });
               }
@@ -1628,7 +1629,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             await opts.mailerClient.sendInviteEmail({
               inviteLink: `${process.env.WEB_BASE_URL}/account/invitations`,
               organizationName: organization.name,
-              recieverEmail: req.email,
+              receiverEmail: req.email,
               invitedBy: inviter?.email,
             });
           }
@@ -3488,7 +3489,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    /* 
+    /*
     Queries
     */
     getSubgraphs: (req, ctx) => {
@@ -3762,8 +3763,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         let requestSeries: PlainMessage<RequestSeriesItem>[] = [];
         if (req.includeMetrics && opts.chClient) {
           const analyticsDashRepo = new AnalyticsDashboardViewRepository(opts.chClient);
-          const graphResponse = await analyticsDashRepo.getView(federatedGraph.id, authContext.organizationId);
-          requestSeries = graphResponse.requestSeries;
+          requestSeries = await analyticsDashRepo.getWeeklyRequestSeries(federatedGraph.id, authContext.organizationId);
         }
 
         const list = await subgraphRepo.listByFederatedGraph(req.name, { published: true });
@@ -3885,10 +3885,21 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           dateRange: req.dateRange,
         });
 
+        if (!dateRange) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: 'Invalid date range',
+            },
+            federatedGraphChangelogOutput: [],
+            hasNextPage: false,
+          };
+        }
+
         const result = await fedgraphRepo.fetchFederatedGraphChangelog(
           federatedGraph.targetId,
           req.pagination,
-          dateRange!,
+          dateRange,
         );
 
         if (!result) {
@@ -3945,15 +3956,27 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           dateRange: {
             start: req.startDate,
             end: req.endDate,
-          } as DateRange,
+          },
         });
+
+        if (!dateRange) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: 'Invalid date range',
+            },
+            checks: [],
+            checksCountBasedOnDateRange: '0',
+            totalChecksCount: '0',
+          };
+        }
 
         const checksData = await subgraphRepo.checks({
           federatedGraphName: req.name,
           limit: req.limit,
           offset: req.offset,
-          startDate: dateRange!.start,
-          endDate: dateRange!.end,
+          startDate: dateRange.start,
+          endDate: dateRange.end,
         });
         const totalChecksCount = await subgraphRepo.getChecksCount({ federatedGraphName: req.name });
 
@@ -4184,15 +4207,25 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           dateRange: req.config?.dateRange,
         });
 
+        if (req.config) {
+          if (range) {
+            req.config.range = range;
+          }
+          if (dateRange) {
+            req.config.dateRange = new DateRangeProto({
+              start: dateRange.start,
+              end: dateRange.end,
+            });
+          }
+        }
+
+        const view = await analyticsRepo.getView(authContext.organizationId, graph.id, req.name, req.config);
+
         return {
           response: {
             code: EnumStatusCode.OK,
           },
-          view: await analyticsRepo.getView(authContext.organizationId, graph.id, req.name, {
-            ...req.config,
-            range,
-            dateRange,
-          } as AnalyticsConfig),
+          view,
         };
       });
     },
@@ -4211,6 +4244,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             },
             mostRequestedOperations: [],
             requestSeries: [],
+            subgraphMetrics: [],
           };
         }
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -4226,20 +4260,58 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
             },
             mostRequestedOperations: [],
             requestSeries: [],
+            subgraphMetrics: [],
           };
         }
 
-        const { requestSeries, mostRequestedOperations } = await analyticsDashRepo.getView(
-          graph.id,
-          authContext.organizationId,
+        const orgRepo = new OrganizationRepository(opts.db, opts.billingDefaultPlanId);
+
+        const analyticsRetention = await orgRepo.getFeature({
+          organizationId: authContext.organizationId,
+          featureId: 'analytics-retention',
+        });
+
+        const { dateRange } = validateDateRanges({
+          limit: analyticsRetention?.limit ?? 7,
+          range: 0,
+          dateRange: {
+            start: req.startDate,
+            end: req.endDate,
+          },
+        });
+
+        if (!dateRange) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: 'Invalid date range',
+            },
+            mostRequestedOperations: [],
+            requestSeries: [],
+            subgraphMetrics: [],
+          };
+        }
+
+        const timeFilters = parseTimeFilters(
+          {
+            start: dateRange.start,
+            end: dateRange.end,
+          },
+          req.range,
         );
+
+        const subgraphRepo = new SubgraphRepository(opts.db, authContext.organizationId);
+        const subgraphs = await subgraphRepo.listByFederatedGraph(graph.name, { published: true });
+        const view = await analyticsDashRepo.getView(graph.id, authContext.organizationId, timeFilters, subgraphs);
 
         return {
           response: {
             code: EnumStatusCode.OK,
           },
-          mostRequestedOperations,
-          requestSeries,
+          mostRequestedOperations: view.mostRequestedOperations,
+          requestSeries: view.requestSeries,
+          subgraphMetrics: view.subgraphMetrics,
+          federatedGraphMetrics: view.federatedGraphMetrics,
         };
       });
     },
@@ -4702,6 +4774,15 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           };
         }
 
+        let dr: DateRange | undefined;
+
+        if (req.dateRange?.start && req.dateRange?.end) {
+          dr = {
+            start: req.dateRange?.start,
+            end: req.dateRange?.end,
+          };
+        }
+
         const { clients, requestSeries, meta } = await usageRepo.getFieldUsage({
           federatedGraphId: graph.id,
           organizationId: authContext.organizationId,
@@ -4709,7 +4790,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           field: req.field,
           namedType: req.namedType,
           range: req.range,
-          dateRange: req.dateRange,
+          dateRange: dr,
         });
 
         return {
@@ -4958,16 +5039,28 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           dateRange: {
             start: req.startDate,
             end: req.endDate,
-          } as DateRange,
+          },
         });
+
+        if (!dateRange) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: 'Invalid date range',
+            },
+            compositions: [],
+          };
+        }
 
         const compositions = await graphCompositionRepository.getGraphCompositions({
           fedGraphTargetId: federatedGraph.targetId,
           organizationId: authContext.organizationId,
           limit: req.limit,
           offset: req.offset,
-          startDate: dateRange!.start,
-          endDate: dateRange!.end,
+          dateRange: {
+            start: dateRange.start,
+            end: dateRange.end,
+          },
         });
 
         return {

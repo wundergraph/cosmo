@@ -144,19 +144,20 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			return
 		}
 
-		commonAttributeValues := commonMetricAttributes(operation, OperationProtocolHTTP)
-
-		metrics.AddAttributes(commonAttributeValues...)
-
-		initializeSpan(r.Context(), operation, clientInfo, commonAttributeValues)
-
 		// If the request has a query parameter wg_trace=true we skip the cache
 		// and always plan the operation
 		// this allows us to "write" to the plan
 		if !traceOptions.ExcludePlannerStats {
 			tracePlanStart = resolve.GetDurationNanoSinceTraceStart(r.Context())
 		}
-		opContext, err := h.planner.Plan(operation, clientInfo, traceOptions)
+		opContext, err := h.planner.Plan(operation, clientInfo, OperationProtocolHTTP, traceOptions)
+
+		commonAttributeValues := commonMetricAttributes(opContext)
+
+		metrics.AddAttributes(commonAttributeValues...)
+
+		initializeSpan(r.Context(), operation, commonAttributeValues)
+
 		if err != nil {
 			hasRequestError = true
 			requestLogger.Error("failed to plan operation", zap.Error(err))

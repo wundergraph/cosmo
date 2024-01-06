@@ -3,7 +3,7 @@ import { desc, eq, gt, lt, and } from 'drizzle-orm';
 import { JsonValue } from '@bufbuild/protobuf';
 import * as schema from '../../db/schema.js';
 import { graphCompositionSubgraphs, graphCompositions, schemaVersion, targets, users } from '../../db/schema.js';
-import { GraphCompositionDTO } from '../../types/index.js';
+import { DateRange, GraphCompositionDTO } from '../../types/index.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 
 export class GraphCompositionRepository {
@@ -115,15 +115,13 @@ export class GraphCompositionRepository {
     organizationId,
     limit,
     offset,
-    startDate,
-    endDate,
+    dateRange,
   }: {
     fedGraphTargetId: string;
     organizationId: string;
     limit: number;
     offset: number;
-    startDate: string;
-    endDate: string;
+    dateRange: DateRange;
   }): Promise<GraphCompositionDTO[]> {
     const fedRepo = new FederatedGraphRepository(this.db, organizationId);
 
@@ -142,8 +140,8 @@ export class GraphCompositionRepository {
       .where(
         and(
           eq(schemaVersion.targetId, fedGraphTargetId),
-          gt(graphCompositions.createdAt, new Date(startDate)),
-          lt(graphCompositions.createdAt, new Date(endDate)),
+          gt(graphCompositions.createdAt, new Date(dateRange.start)),
+          lt(graphCompositions.createdAt, new Date(dateRange.end)),
         ),
       )
       .orderBy(desc(schemaVersion.createdAt))

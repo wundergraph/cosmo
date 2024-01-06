@@ -82,13 +82,9 @@ export const useChartData = (
     ...t,
     value: Number.parseFloat(t.value) || 0,
     previousValue: Number.parseFloat(t.previousValue) || 0,
-    // @todo different timestamp formats are used throughout the app, so this is a bit of a mess
+    // We use millisecond timestamp everywhere
     timestamp:
-      t.timestamp instanceof Date ||
-      (typeof t.timestamp === "string" &&
-        t.timestamp.match(/^(\d{4})-([0-1]\d)-([0-3]\d)/))
-        ? new Date(t.timestamp).getTime()
-        : typeof t.timestamp === "string"
+      t.timestamp instanceof Date || typeof t.timestamp === "string"
         ? Number.parseInt(t.timestamp)
         : t.timestamp,
   }));
@@ -151,6 +147,12 @@ export const useChartData = (
 
 const bigintE3 = BigInt(1e3);
 const bigintE6 = BigInt(1e6);
+
+export const msToTime = (ms: number = 0) => {
+  if (ms > 1000) return ms / 1000 + " s";
+
+  return ms.toFixed(2) + " ms";
+};
 
 export const nsToTime = (ns: bigint) => {
   let seconds = Number(ns / BigInt(1e9)).toFixed(2);

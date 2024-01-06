@@ -54,31 +54,41 @@ var (
 	}
 )
 
-type Option func(svr *Metrics)
+type (
+	Option func(svr *Metrics)
 
-type Metrics struct {
-	serviceName    string
-	serviceVersion string
+	Metrics struct {
+		serviceName    string
+		serviceVersion string
 
-	otelMeterProvider *metric.MeterProvider
-	promMeterProvider *metric.MeterProvider
+		otelMeterProvider *metric.MeterProvider
+		promMeterProvider *metric.MeterProvider
 
-	otlpCounters       map[string]otelmetric.Int64Counter
-	otlpHistograms     map[string]otelmetric.Float64Histogram
-	otlpUpDownCounters map[string]otelmetric.Int64UpDownCounter
+		otlpCounters       map[string]otelmetric.Int64Counter
+		otlpHistograms     map[string]otelmetric.Float64Histogram
+		otlpUpDownCounters map[string]otelmetric.Int64UpDownCounter
 
-	promCounters       map[string]otelmetric.Int64Counter
-	promHistograms     map[string]otelmetric.Float64Histogram
-	promUpDownCounters map[string]otelmetric.Int64UpDownCounter
+		promCounters       map[string]otelmetric.Int64Counter
+		promHistograms     map[string]otelmetric.Float64Histogram
+		promUpDownCounters map[string]otelmetric.Int64UpDownCounter
 
-	baseFields []attribute.KeyValue
-	logger     *zap.Logger
-}
+		baseFields []attribute.KeyValue
+		logger     *zap.Logger
+	}
+
+	Store interface {
+		MeasureInFlight(ctx context.Context, attr ...attribute.KeyValue) func()
+		MeasureRequestCount(ctx context.Context, attr ...attribute.KeyValue)
+		MeasureRequestSize(ctx context.Context, contentLength int64, attr ...attribute.KeyValue)
+		MeasureResponseSize(ctx context.Context, size int64, attr ...attribute.KeyValue)
+		MeasureLatency(ctx context.Context, requestStartTime time.Time, attr ...attribute.KeyValue)
+	}
+)
 
 // NewMetrics creates a new metrics instance.
 // Metrics abstract OTEL and Prometheus metrics with a single interface.
 // We create different meters for OTEL and Prometheus metrics.
-func NewMetrics(serviceName, serviceVersion string, opts ...Option) (*Metrics, error) {
+func NewMetrics(serviceName, serviceVersion string, opts ...Option) (Store, error) {
 	h := &Metrics{
 		// OTEL metrics
 		otlpCounters:       map[string]otelmetric.Int64Counter{},
@@ -234,10 +244,11 @@ func (h *Metrics) createOtlpMeasures() error {
 	return nil
 }
 
-func (h *Metrics) MeasureInFlight(ctx context.Context) func() {
+func (h *Metrics) MeasureInFlight(ctx context.Context, attr ...attribute.KeyValue) func() {
 	var baseKeys []attribute.KeyValue
 
 	baseKeys = append(baseKeys, h.baseFields...)
+	baseKeys = append(baseKeys, attr...)
 
 	baseAttributes := otelmetric.WithAttributes(baseKeys...)
 
