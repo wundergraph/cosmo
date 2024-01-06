@@ -313,7 +313,7 @@ export function timestampToNanoseconds(timestamp: string): bigint {
   return nanoseconds + BigInt(fractionalSeconds);
 }
 
-export function isoDateRangeToTimestamps(dateRange?: { startDate: string; endDate: string }, range = 24) {
+export function isoDateRangeToTimestamps(dateRange?: DateRange, range = 24) {
   if (!dateRange) {
     const endDate = getEndDate();
     return {
@@ -323,8 +323,8 @@ export function isoDateRangeToTimestamps(dateRange?: { startDate: string; endDat
   }
 
   return {
-    start: Math.round(new Date(dateRange.startDate).getTime() / 1000) * 1000,
-    end: Math.round(new Date(dateRange.endDate).getTime() / 1000) * 1000,
+    start: Math.round(new Date(dateRange.start).getTime() / 1000) * 1000,
+    end: Math.round(new Date(dateRange.end).getTime() / 1000) * 1000,
   };
 }
 
@@ -385,8 +385,8 @@ export const parseTimeFilters = (dateRange?: DateRange, range?: number): TimeFil
   return {
     granule,
     dateRange: {
-      startDate: start,
-      endDate: end,
+      start: start,
+      end: end,
     },
   };
 };

@@ -692,16 +692,12 @@ export class AnalyticsRequestViewRepository {
       coercedQueryParams.endDate = endDate;
     }
 
-    let dr: DateRange | undefined;
-
-    if (opts?.dateRange) {
-      dr = {
-        startDate: opts.dateRange.start,
-        endDate: opts.dateRange.end,
-      };
-    }
-
-    const { havingSql, ...rest } = buildCoercedFilterSqlStatement(columnMetaData, coercedQueryParams, filterMapper, dr);
+    const { havingSql, ...rest } = buildCoercedFilterSqlStatement(
+      columnMetaData,
+      coercedQueryParams,
+      filterMapper,
+      opts?.dateRange,
+    );
     let { whereSql } = rest;
 
     // Important: This is the only place where we scope the data to a particular organization and graph.
@@ -730,7 +726,12 @@ export class AnalyticsRequestViewRepository {
 
     // we can't use the same whereSql as we need all values for the filters.
     // @todo include counts for each filter value.
-    let { whereSql: filterWhereSql } = buildCoercedFilterSqlStatement(columnMetaData, coercedQueryParams, {}, dr);
+    let { whereSql: filterWhereSql } = buildCoercedFilterSqlStatement(
+      columnMetaData,
+      coercedQueryParams,
+      {},
+      opts?.dateRange,
+    );
 
     filterWhereSql += scopedSql;
 

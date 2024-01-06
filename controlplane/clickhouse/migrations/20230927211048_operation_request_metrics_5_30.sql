@@ -1,5 +1,7 @@
 -- migrate:up
 
+-- This table is used to aggregate operation request metrics.
+
 CREATE TABLE IF NOT EXISTS cosmo.operation_request_metrics_5_30 (
    Timestamp DateTime('UTC') CODEC (Delta(4), ZSTD(3)),
    OperationName LowCardinality(String) CODEC (ZSTD(3)),

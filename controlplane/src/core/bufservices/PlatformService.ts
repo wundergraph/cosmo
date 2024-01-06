@@ -9,7 +9,6 @@ import {
   AcceptOrDeclineInvitationResponse,
   AddReadmeResponse,
   AddSubgraphMemberResponse,
-  AnalyticsConfig,
   CheckFederatedGraphResponse,
   CheckSubgraphSchemaResponse,
   CompositionError,
@@ -90,6 +89,7 @@ import {
   UpdateSubgraphResponse,
   UpgradePlanResponse,
   WhoAmIResponse,
+  DateRange as DateRangeProto,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { OpenAIGraphql, isValidUrl } from '@wundergraph/cosmo-shared';
 import { DocumentNode, buildASTSchema, parse } from 'graphql';
@@ -152,7 +152,7 @@ import { getGranularity, parseTimeFilters } from '../repositories/analytics/util
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
-    /* 
+    /*
     Mutations
     */
     createFederatedGraph: (req, ctx) => {
@@ -3489,7 +3489,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       });
     },
 
-    /* 
+    /*
     Queries
     */
     getSubgraphs: (req, ctx) => {
@@ -3882,10 +3882,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const { dateRange } = validateDateRanges({
           limit: changelogRetention?.limit ?? 7,
-          dateRange: {
-            startDate: req.dateRange?.start,
-            endDate: req.dateRange?.end,
-          },
+          dateRange: req.dateRange,
         });
 
         if (!dateRange) {
@@ -3957,8 +3954,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const { dateRange } = validateDateRanges({
           limit: breakingChangeRetention?.limit ?? 7,
           dateRange: {
-            startDate: req.startDate,
-            endDate: req.endDate,
+            start: req.startDate,
+            end: req.endDate,
           },
         });
 
@@ -3978,8 +3975,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           federatedGraphName: req.name,
           limit: req.limit,
           offset: req.offset,
-          startDate: dateRange.startDate,
-          endDate: dateRange.endDate,
+          startDate: dateRange.start,
+          endDate: dateRange.end,
         });
         const totalChecksCount = await subgraphRepo.getChecksCount({ federatedGraphName: req.name });
 
@@ -4204,30 +4201,31 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           featureId: 'tracing-retention',
         });
 
-        let dr: DateRange | undefined;
-
-        if (req.config?.dateRange?.start && req.config?.dateRange?.end) {
-          dr = {
-            startDate: req.config?.dateRange?.start,
-            endDate: req.config?.dateRange?.end,
-          };
-        }
-
         const { range, dateRange } = validateDateRanges({
           limit: tracingRetention?.limit ?? 7,
           range: req.config?.range,
-          dateRange: dr,
+          dateRange: req.config?.dateRange,
         });
+
+        if (req.config) {
+          if (range) {
+            req.config.range = range;
+          }
+          if (dateRange) {
+            req.config.dateRange = new DateRangeProto({
+              start: dateRange.start,
+              end: dateRange.end,
+            });
+          }
+        }
+
+        const view = await analyticsRepo.getView(authContext.organizationId, graph.id, req.name, req.config);
 
         return {
           response: {
             code: EnumStatusCode.OK,
           },
-          view: await analyticsRepo.getView(authContext.organizationId, graph.id, req.name, {
-            ...req.config,
-            range,
-            dateRange,
-          } as AnalyticsConfig),
+          view,
         };
       });
     },
@@ -4277,8 +4275,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           limit: analyticsRetention?.limit ?? 7,
           range: 0,
           dateRange: {
-            startDate: req.startDate,
-            endDate: req.endDate,
+            start: req.startDate,
+            end: req.endDate,
           },
         });
 
@@ -4296,8 +4294,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         const timeFilters = parseTimeFilters(
           {
-            startDate: dateRange.startDate,
-            endDate: dateRange.endDate,
+            start: dateRange.start,
+            end: dateRange.end,
           },
           req.range,
         );
@@ -4354,19 +4352,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           featureId: 'analytics-retention',
         });
 
-        let dr: DateRange | undefined;
-
-        if (req.dateRange?.start && req.dateRange?.end) {
-          dr = {
-            startDate: req.dateRange?.start,
-            endDate: req.dateRange?.end,
-          };
-        }
-
         const { range, dateRange } = validateDateRanges({
           limit: analyticsRetention?.limit ?? 7,
           range: req.range,
-          dateRange: dr,
+          dateRange: req.dateRange,
         });
 
         const view = await repo.getMetricsView({
@@ -4422,19 +4411,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           featureId: 'analytics-retention',
         });
 
-        let dr: DateRange | undefined;
-
-        if (req.dateRange?.start && req.dateRange?.end) {
-          dr = {
-            startDate: req.dateRange?.start,
-            endDate: req.dateRange?.end,
-          };
-        }
-
         const { range, dateRange } = validateDateRanges({
           limit: analyticsRetention?.limit ?? 7,
           range: req.range,
-          dateRange: dr,
+          dateRange: req.dateRange,
         });
 
         const metrics = await repo.getErrorsView({
@@ -4798,8 +4778,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
         if (req.dateRange?.start && req.dateRange?.end) {
           dr = {
-            startDate: req.dateRange?.start,
-            endDate: req.dateRange?.end,
+            start: req.dateRange?.start,
+            end: req.dateRange?.end,
           };
         }
 
@@ -5057,8 +5037,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const { dateRange } = validateDateRanges({
           limit: analyticsRetention?.limit ?? 7,
           dateRange: {
-            startDate: req.startDate,
-            endDate: req.endDate,
+            start: req.startDate,
+            end: req.endDate,
           },
         });
 
@@ -5078,8 +5058,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
           limit: req.limit,
           offset: req.offset,
           dateRange: {
-            startDate: dateRange.startDate,
-            endDate: dateRange.endDate,
+            start: dateRange.start,
+            end: dateRange.end,
           },
         });
 

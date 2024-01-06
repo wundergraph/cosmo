@@ -604,7 +604,7 @@ export class FederatedGraphRepository {
       const federatedGraphChangelog: FederatedGraphChangelogDTO[] = [];
 
       const { offset, limit } = pagination;
-      const { startDate, endDate } = dateRange;
+      const { start, end } = dateRange;
 
       // Get all schema version ids which have changelogs
       const schemaVersionIds = (
@@ -616,8 +616,8 @@ export class FederatedGraphRepository {
           .where(
             and(
               eq(schemaVersion.targetId, targetId),
-              gt(schemaVersion.createdAt, new Date(startDate)),
-              lt(schemaVersion.createdAt, new Date(endDate)),
+              gt(schemaVersion.createdAt, new Date(start)),
+              lt(schemaVersion.createdAt, new Date(end)),
             ),
           )
           .innerJoin(schemaVersionChangeAction, eq(schemaVersionChangeAction.schemaVersionId, schemaVersion.id))
@@ -652,8 +652,8 @@ export class FederatedGraphRepository {
         .where(
           and(
             eq(schemaVersion.targetId, targetId),
-            gt(schemaVersion.createdAt, new Date(startDate)),
-            lt(schemaVersion.createdAt, new Date(endDate)),
+            gt(schemaVersion.createdAt, new Date(start)),
+            lt(schemaVersion.createdAt, new Date(end)),
           ),
         )
         .orderBy(desc(schemaVersion.createdAt))

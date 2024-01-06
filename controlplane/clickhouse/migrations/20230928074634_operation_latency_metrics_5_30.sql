@@ -1,5 +1,6 @@
-
 -- migrate:up
+
+-- This table is used to aggregate operation request latency metrics.
 
 CREATE TABLE IF NOT EXISTS cosmo.operation_latency_metrics_5_30 (
    Timestamp DateTime('UTC') CODEC (Delta(4), ZSTD(3)),

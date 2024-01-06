@@ -16,14 +16,14 @@ export class UsageRepository {
     timeFilters: TimeFilters,
   ): Promise<PlainMessage<RequestSeriesItem>[]> {
     const {
-      dateRange: { startDate, endDate },
+      dateRange: { start, end },
       granule,
     } = timeFilters;
 
     const query = `
       WITH 
-        toStartOfInterval(toDateTime('${startDate}'), INTERVAL ${granule} MINUTE) AS startDate,
-        toDateTime('${endDate}') AS endDate
+        toStartOfInterval(toDateTime('${start}'), INTERVAL ${granule} MINUTE) AS startDate,
+        toDateTime('${end}') AS endDate
       SELECT
           toStartOfInterval(Timestamp, INTERVAL ${granule} MINUTE) AS timestamp,
           SUM(TotalUsages) AS totalRequests,
@@ -32,8 +32,8 @@ export class UsageRepository {
       WHERE Timestamp >= startDate AND Timestamp <= endDate AND ${whereSql}
       GROUP BY timestamp
       ORDER BY timestamp WITH FILL 
-      FROM toStartOfInterval(toDateTime('${startDate}'), INTERVAL ${granule} MINUTE)
-      TO toDateTime('${endDate}')
+      FROM toStartOfInterval(toDateTime('${start}'), INTERVAL ${granule} MINUTE)
+      TO toDateTime('${end}')
       STEP INTERVAL ${granule} minute
     `;
 
@@ -55,13 +55,13 @@ export class UsageRepository {
     timeFilters: TimeFilters,
   ): Promise<PlainMessage<ClientWithOperations>[]> {
     const {
-      dateRange: { startDate, endDate },
+      dateRange: { start, end },
     } = timeFilters;
 
     const query = `
       WITH
-        toDateTime('${startDate}') AS startDate,
-        toDateTime('${endDate}') AS endDate
+        toDateTime('${start}') AS startDate,
+        toDateTime('${end}') AS endDate
       SELECT
         ClientName AS clientName,
         ClientVersion AS clientVersion,
@@ -101,13 +101,13 @@ export class UsageRepository {
 
   private async getMeta(whereSql: string, timeFilters: TimeFilters): Promise<PlainMessage<FieldUsageMeta> | undefined> {
     const {
-      dateRange: { startDate, endDate },
+      dateRange: { start, end },
     } = timeFilters;
 
     const query = `
     WITH
-      toDateTime('${startDate}') AS startDate,
-      toDateTime('${endDate}') AS endDate
+      toDateTime('${start}') AS startDate,
+      toDateTime('${end}') AS endDate
     SELECT
       arrayReduce('groupUniqArray', arrayFlatten(groupArray(SubgraphIDs))) as subgraphIds,
       toString(toUnixTimestamp(min(Timestamp))) as firstSeenTimestamp,

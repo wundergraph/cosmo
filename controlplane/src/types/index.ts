@@ -405,8 +405,8 @@ export interface FederatedGraphRequestRateResult {
 }
 
 export interface DateRange<T extends string | number = string> {
-  startDate: T;
-  endDate: T;
+  start: T;
+  end: T;
 }
 
 export type TimeFilters = {

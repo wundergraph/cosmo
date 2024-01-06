@@ -62,8 +62,8 @@ export class AnalyticsDashboardViewRepository {
   ): Promise<PlainMessage<RequestSeriesItem>[]> {
     const query = `
      WITH
-        toStartOfInterval(toDateTime('${filter.dateRange.startDate}'), INTERVAL ${filter.granule} MINUTE) AS startDate,
-        toDateTime('${filter.dateRange.endDate}') AS endDate
+        toStartOfInterval(toDateTime('${filter.dateRange.start}'), INTERVAL ${filter.granule} MINUTE) AS startDate,
+        toDateTime('${filter.dateRange.end}') AS endDate
     SELECT timestamp, totalRequests, erroredRequests
       FROM (
       SELECT
@@ -78,9 +78,9 @@ export class AnalyticsDashboardViewRepository {
       ORDER BY
         timestamp WITH FILL
       FROM
-        toStartOfInterval(toDateTime('${filter.dateRange.startDate}'), INTERVAL ${filter.granule} MINUTE)
+        toStartOfInterval(toDateTime('${filter.dateRange.start}'), INTERVAL ${filter.granule} MINUTE)
         TO
-          toDateTime('${filter.dateRange.endDate}')
+          toDateTime('${filter.dateRange.end}')
         STEP INTERVAL ${filter.granule} MINUTE
       )
     `;
@@ -156,8 +156,8 @@ export class AnalyticsDashboardViewRepository {
       OperationName as operationName,
       sum(TotalRequests) as totalRequests
     FROM ${this.client.database}.operation_request_metrics_5_30_mv
-    WHERE Timestamp >= toDateTime('${dateRange.startDate}') 
-      AND Timestamp <= toDateTime('${dateRange.endDate}')
+    WHERE Timestamp >= toDateTime('${dateRange.start}') 
+      AND Timestamp <= toDateTime('${dateRange.end}')
       AND OrganizationID = '${organizationId}'
       AND FederatedGraphID = '${federatedGraphId}'
     GROUP BY OperationName, OperationHash ORDER BY totalRequests DESC LIMIT 10
@@ -190,8 +190,8 @@ export class AnalyticsDashboardViewRepository {
         round(sum(TotalRequests) / 60, 3) AS requestRate,
         round(sum(TotalErrors) / 60, 3) AS errorRate
       FROM ${this.client.database}.operation_request_metrics_5_30_mv
-      WHERE Timestamp >= toDateTime('${dateRange.startDate}')
-      AND Timestamp <= toDateTime('${dateRange.endDate}')
+      WHERE Timestamp >= toDateTime('${dateRange.start}')
+      AND Timestamp <= toDateTime('${dateRange.end}')
       AND FederatedGraphID = '${federatedGraphId}'
       AND OrganizationID = '${organizationId}'
       GROUP BY FederatedGraphID
@@ -239,8 +239,8 @@ export class AnalyticsDashboardViewRepository {
         round(sum(TotalRequests) / 60, 3) AS requestRate,
         round(sum(TotalErrors) / 60, 3) AS errorRate
       FROM ${this.client.database}.subgraph_request_metrics_5_30_mv
-      WHERE Timestamp >= toDateTime('${dateRange.startDate}')
-        AND Timestamp <= toDateTime('${dateRange.endDate}')
+      WHERE Timestamp >= toDateTime('${dateRange.start}')
+        AND Timestamp <= toDateTime('${dateRange.end}')
         AND FederatedGraphID = '${federatedGraphId}'
         AND OrganizationID = '${organizationId}'
       AND SubgraphID IN (${subgraphs.map((s) => `'${s.id}'`).join(',')})
@@ -281,8 +281,8 @@ export class AnalyticsDashboardViewRepository {
           -- Histogram aggregations
           sumForEachMerge(BucketCounts)                    as BucketCounts
           from ${this.client.database}.subgraph_latency_metrics_5_30_mv
-        WHERE Timestamp >= toDateTime('${dateRange.startDate}')
-          AND Timestamp <= toDateTime('${dateRange.endDate}')
+        WHERE Timestamp >= toDateTime('${dateRange.start}')
+          AND Timestamp <= toDateTime('${dateRange.end}')
           AND FederatedGraphID = '${federatedGraphId}'
           AND OrganizationID = '${organizationId}'
           AND SubgraphID IN (${subgraphs.map((s) => `'${s.id}'`).join(',')})

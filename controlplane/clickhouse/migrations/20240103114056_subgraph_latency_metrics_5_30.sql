@@ -1,5 +1,7 @@
 -- migrate:up
 
+-- This table is used to aggregate subgraph latency metrics.
+
 CREATE TABLE IF NOT EXISTS cosmo.subgraph_latency_metrics_5_30 (
    Timestamp DateTime('UTC') CODEC (Delta(4), ZSTD(1)),
    FederatedGraphID LowCardinality(String) CODEC(ZSTD(1)),

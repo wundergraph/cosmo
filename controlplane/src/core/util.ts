@@ -215,13 +215,13 @@ export const validateDateRanges = ({
   }
 
   if (validatedDateRange) {
-    const startDate = new Date(validatedDateRange.startDate);
-    const endDate = new Date(validatedDateRange.endDate);
+    const startDate = new Date(validatedDateRange.start);
+    const endDate = new Date(validatedDateRange.end);
     if (startDate < subHours(new Date(), limit * 24)) {
-      validatedDateRange.startDate = formatISO(subHours(new Date(), limit * 24));
+      validatedDateRange.start = formatISO(subHours(new Date(), limit * 24));
     }
     if (endDate > new Date()) {
-      validatedDateRange.endDate = formatISO(new Date());
+      validatedDateRange.end = formatISO(new Date());
     }
   }
 

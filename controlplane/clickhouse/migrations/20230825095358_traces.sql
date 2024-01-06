@@ -1,5 +1,7 @@
 -- migrate:up
 
+-- This table is used to provide the raw data for the traces view. No aggregations are done here.
+
 CREATE TABLE IF NOT EXISTS traces (
    TraceId String CODEC (ZSTD(3)),
    Timestamp DateTime('UTC') CODEC (Delta(4), ZSTD(3)),

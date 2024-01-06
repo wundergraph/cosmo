@@ -140,8 +140,8 @@ export class GraphCompositionRepository {
       .where(
         and(
           eq(schemaVersion.targetId, fedGraphTargetId),
-          gt(graphCompositions.createdAt, new Date(dateRange.startDate)),
-          lt(graphCompositions.createdAt, new Date(dateRange.endDate)),
+          gt(graphCompositions.createdAt, new Date(dateRange.start)),
+          lt(graphCompositions.createdAt, new Date(dateRange.end)),
         ),
       )
       .orderBy(desc(schemaVersion.createdAt))

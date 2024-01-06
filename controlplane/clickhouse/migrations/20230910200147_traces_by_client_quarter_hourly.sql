@@ -1,5 +1,7 @@
 -- migrate:up
 
+-- This table is used to aggregate traces by client name, client version and to provide request metrics
+
 CREATE TABLE IF NOT EXISTS cosmo.traces_by_client_quarter_hourly (
     Timestamp DateTime('UTC') CODEC (Delta(4), ZSTD(3)),
     ClientName String CODEC (ZSTD(3)),
