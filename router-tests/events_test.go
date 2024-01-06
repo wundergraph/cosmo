@@ -81,6 +81,8 @@ func TestEventsNew(t *testing.T) {
 		})
 	})
 
+	// times out on github actions
+
 	/*t.Run("subscribe async epoll/kqueue disabled", func(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {

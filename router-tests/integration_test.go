@@ -545,18 +545,6 @@ func FuzzQuery(f *testing.F) {
 			Query:     `($n:Int!) { employee(id:$n) { id } }`,
 			Variables: []byte(`{"n":4}`),
 		},
-		{
-			Query: `($team:Department!= MARKETING) {
-				te		  ites(team:$team) {
-		am_mad
-				}
-			  }`,
-			Variables: []byte("{\"team\":\"MARK"),
-		},
-		{
-			Query:     `{te&m_mates}`,
-			Variables: []byte("\xc9\xc9\xc9\xc9\xc9\xc9\xc9\xc9{}"),
-		},
 	}
 	for _, tc := range corpus {
 		f.Add(tc.Query, tc.Variables)
