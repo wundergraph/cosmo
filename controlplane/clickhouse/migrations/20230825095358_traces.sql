@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS traces (
    ClientVersion String CODEC (ZSTD(3)),
    Subscription Bool CODEC(ZSTD(3)),
 
-   -- Indexes
+   -- Indexes for filtering because the table serve as a source for the raw traces view
    INDEX idx_operation_name OperationName TYPE bloom_filter(0.01) GRANULARITY 1,
    INDEX idx_operation_type OperationType TYPE bloom_filter(0.01) GRANULARITY 1,
    INDEX idx_operation_hash OperationHash TYPE bloom_filter(0.001) GRANULARITY 1,
