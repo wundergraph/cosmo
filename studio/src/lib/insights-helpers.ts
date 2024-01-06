@@ -84,11 +84,7 @@ export const useChartData = (
     previousValue: Number.parseFloat(t.previousValue) || 0,
     // @todo different timestamp formats are used throughout the app, so this is a bit of a mess
     timestamp:
-      t.timestamp instanceof Date ||
-      (typeof t.timestamp === "string" &&
-        t.timestamp.match(/^(\d{4})-([0-1]\d)-([0-3]\d)/))
-        ? new Date(t.timestamp).getTime()
-        : typeof t.timestamp === "string"
+      t.timestamp instanceof Date || typeof t.timestamp === "string"
         ? Number.parseInt(t.timestamp)
         : t.timestamp,
   }));

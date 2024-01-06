@@ -14,7 +14,7 @@ import {
   SubgraphRequestRateResult,
   TimeFilters,
 } from '../../../types/index.js';
-import { padMissingDates } from './util.js';
+import { padMissingDatesForCurrentWeek } from './util.js';
 
 export class AnalyticsDashboardViewRepository {
   constructor(private client: ClickHouseClient) {}
@@ -64,7 +64,7 @@ export class AnalyticsDashboardViewRepository {
      WITH
         toStartOfInterval(toDateTime('${filter.dateRange.start}'), INTERVAL ${filter.granule} MINUTE) AS startDate,
         toDateTime('${filter.dateRange.end}') AS endDate
-    SELECT timestamp, totalRequests, erroredRequests
+    SELECT toString(toUnixTimestamp(timestamp, 'UTC') * 1000) as timestamp, totalRequests, erroredRequests
       FROM (
       SELECT
           toStartOfInterval(Timestamp, INTERVAL ${filter.granule} MINUTE) AS timestamp,
@@ -103,7 +103,7 @@ export class AnalyticsDashboardViewRepository {
   ): Promise<Record<string, PlainMessage<RequestSeriesItem>[]>> {
     const query = `
         SELECT
-          toDate(toStartOfDay(Timestamp)) as timestamp,
+          toString(toUnixTimestamp(toDate(toStartOfDay(Timestamp))) * 1000) as timestamp,
           sum(TotalRequests) as totalRequests,
           sum(TotalErrors) as erroredRequests,
           FederatedGraphID as graphId
@@ -131,7 +131,7 @@ export class AnalyticsDashboardViewRepository {
       }
 
       for (const key in transformed) {
-        const padded = padMissingDates(transformed[key]);
+        const padded = padMissingDatesForCurrentWeek(transformed[key]);
         transformed[key] = padded;
         for (const item of padded) {
           item.totalRequests = Number(item.totalRequests);

@@ -290,11 +290,11 @@ export function coerceFilterValues(
   return { result, filterMapper };
 }
 
-export function padMissingDates(data: PlainMessage<RequestSeriesItem>[]) {
+export function padMissingDatesForCurrentWeek(data: PlainMessage<RequestSeriesItem>[]) {
   const dates = Array.from({ length: 7 }, (_, i) => {
     const d = new Date();
     d.setDate(d.getDate() - i);
-    return d.toISOString().slice(0, 10);
+    return d.getTime().toString();
   });
 
   for (const date of dates) {
