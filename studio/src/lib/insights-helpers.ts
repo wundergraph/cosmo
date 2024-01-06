@@ -82,7 +82,7 @@ export const useChartData = (
     ...t,
     value: Number.parseFloat(t.value) || 0,
     previousValue: Number.parseFloat(t.previousValue) || 0,
-    // @todo different timestamp formats are used throughout the app, so this is a bit of a mess
+    // We use millisecond timestamp everywhere
     timestamp:
       t.timestamp instanceof Date || typeof t.timestamp === "string"
         ? Number.parseInt(t.timestamp)
