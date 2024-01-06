@@ -31,7 +31,7 @@ func (p OperationProtocol) String() string {
 
 type OperationMetrics struct {
 	requestContentLength int64
-	metrics              *metric.Metrics
+	metrics              metric.Store
 	operationStartTime   time.Time
 	metricBaseFields     []attribute.KeyValue
 	inflightMetric       func()
@@ -149,7 +149,7 @@ func (m *OperationMetrics) Finish(hasErrored bool, statusCode int, responseSize 
 	ctx := context.Background()
 
 	if hasErrored {
-		// We don't store false values in the metrics, so only add the error attribute if it's true, DON'T CHANGE THIS
+		// We don't store false values in the metricStore, so only add the error attribute if it's true, DON'T CHANGE THIS
 		m.metricBaseFields = append(m.metricBaseFields, otel.WgRequestError.Bool(hasErrored))
 	}
 
@@ -174,27 +174,27 @@ func (m *OperationMetrics) AddAttributes(kv ...attribute.KeyValue) {
 	m.metricBaseFields = append(m.metricBaseFields, kv...)
 }
 
-// AddClientInfo adds the client info to the operation metrics. If OperationMetrics
+// AddClientInfo adds the client info to the operation metricStore. If OperationMetrics
 // is nil, it's a no-op.
 func (m *OperationMetrics) AddClientInfo(info *ClientInfo) {
 	if m == nil {
 		return
 	}
 
-	// Add client info to metrics base fields
+	// Add client info to metricStore base fields
 	m.metricBaseFields = append(m.metricBaseFields, otel.WgClientName.String(info.Name))
 	m.metricBaseFields = append(m.metricBaseFields, otel.WgClientVersion.String(info.Version))
 }
 
-// startOperationMetrics starts the metrics for an operation. This should only be called by
+// startOperationMetrics starts the metricStore for an operation. This should only be called by
 // RouterMetrics.StartOperation()
-func startOperationMetrics(mtr *metric.Metrics, logger *zap.Logger, requestContentLength int64, gqlMetricsExporter *graphqlmetrics.Exporter, routerConfigVersion string) *OperationMetrics {
+func startOperationMetrics(metricStore metric.Store, logger *zap.Logger, requestContentLength int64, gqlMetricsExporter *graphqlmetrics.Exporter, routerConfigVersion string) *OperationMetrics {
 	operationStartTime := time.Now()
 
-	inflightMetric := mtr.MeasureInFlight(context.Background())
+	inflightMetric := metricStore.MeasureInFlight(context.Background())
 	return &OperationMetrics{
 		requestContentLength: requestContentLength,
-		metrics:              mtr,
+		metrics:              metricStore,
 		operationStartTime:   operationStartTime,
 		inflightMetric:       inflightMetric,
 		gqlMetricsExporter:   gqlMetricsExporter,
@@ -203,7 +203,7 @@ func startOperationMetrics(mtr *metric.Metrics, logger *zap.Logger, requestConte
 	}
 }
 
-// commonMetricAttributes returns the attributes that are common to both metrics and traces.
+// commonMetricAttributes returns the attributes that are common to both metricStore and traces.
 func commonMetricAttributes(operationContext *operationContext) []attribute.KeyValue {
 	if operationContext == nil {
 		return nil
@@ -211,7 +211,7 @@ func commonMetricAttributes(operationContext *operationContext) []attribute.KeyV
 
 	var baseMetricAttributeValues []attribute.KeyValue
 
-	// Fields that are always present in the metrics and traces
+	// Fields that are always present in the metricStore and traces
 	baseMetricAttributeValues = append(baseMetricAttributeValues, otel.WgClientName.String(operationContext.clientInfo.Name))
 	baseMetricAttributeValues = append(baseMetricAttributeValues, otel.WgClientVersion.String(operationContext.clientInfo.Version))
 	baseMetricAttributeValues = append(baseMetricAttributeValues, otel.WgOperationName.String(operationContext.Name()))
@@ -219,7 +219,7 @@ func commonMetricAttributes(operationContext *operationContext) []attribute.KeyV
 	baseMetricAttributeValues = append(baseMetricAttributeValues, otel.WgOperationProtocol.String(operationContext.Protocol().String()))
 	baseMetricAttributeValues = append(baseMetricAttributeValues, otel.WgOperationHash.String(strconv.FormatUint(operationContext.Hash(), 10)))
 
-	// Common Field that will be present in both metrics and traces if not empty
+	// Common Field that will be present in both metricStore and traces if not empty
 	if operationContext.PersistedID() != "" {
 		baseMetricAttributeValues = append(baseMetricAttributeValues, otel.WgOperationPersistedID.String(operationContext.PersistedID()))
 	}

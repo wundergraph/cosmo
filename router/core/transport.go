@@ -32,7 +32,7 @@ type CustomTransport struct {
 	roundTripper http.RoundTripper
 	preHandlers  []TransportPreHandler
 	postHandlers []TransportPostHandler
-	metrics      *metric.Metrics
+	metricStore  metric.Store
 	logger       *zap.Logger
 
 	sf *singleflight.Group
@@ -42,12 +42,12 @@ func NewCustomTransport(
 	logger *zap.Logger,
 	roundTripper http.RoundTripper,
 	retryOptions retrytransport.RetryOptions,
-	metrics *metric.Metrics,
+	metricStore metric.Store,
 	enableSingleFlight bool,
 ) *CustomTransport {
 
 	ct := &CustomTransport{
-		metrics: metrics,
+		metricStore: metricStore,
 	}
 	if retryOptions.Enabled {
 		ct.roundTripper = retrytransport.NewRetryHTTPTransport(roundTripper, retryOptions, logger)
@@ -72,8 +72,8 @@ func (ct *CustomTransport) measureSubgraphMetrics(req *http.Request) func(err er
 		baseFields = append(baseFields, otel.WgSubgraphID.String(activeSubgraph.Id))
 	}
 
-	inFlightDone := ct.metrics.MeasureInFlight(req.Context(), baseFields...)
-	ct.metrics.MeasureRequestSize(req.Context(), req.ContentLength, baseFields...)
+	inFlightDone := ct.metricStore.MeasureInFlight(req.Context(), baseFields...)
+	ct.metricStore.MeasureRequestSize(req.Context(), req.ContentLength, baseFields...)
 
 	operationStartTime := time.Now()
 
@@ -82,12 +82,12 @@ func (ct *CustomTransport) measureSubgraphMetrics(req *http.Request) func(err er
 			baseFields = append(baseFields, otel.WgRequestError.Bool(true))
 		}
 
-		ct.metrics.MeasureRequestCount(req.Context(), baseFields...)
-		ct.metrics.MeasureLatency(req.Context(), operationStartTime, baseFields...)
+		ct.metricStore.MeasureRequestCount(req.Context(), baseFields...)
+		ct.metricStore.MeasureLatency(req.Context(), operationStartTime, baseFields...)
 
 		if resp != nil {
 			baseFields = append(baseFields, semconv.HTTPStatusCode(resp.StatusCode))
-			ct.metrics.MeasureResponseSize(req.Context(), resp.ContentLength, baseFields...)
+			ct.metricStore.MeasureResponseSize(req.Context(), resp.ContentLength, baseFields...)
 		}
 
 		inFlightDone()
@@ -261,7 +261,7 @@ type TransportFactory struct {
 	retryOptions                  retrytransport.RetryOptions
 	requestTimeout                time.Duration
 	localhostFallbackInsideDocker bool
-	metrics                       *metric.Metrics
+	metricStore                   metric.Store
 	logger                        *zap.Logger
 }
 
@@ -273,7 +273,7 @@ type TransportOptions struct {
 	RetryOptions                  retrytransport.RetryOptions
 	RequestTimeout                time.Duration
 	LocalhostFallbackInsideDocker bool
-	Metrics                       *metric.Metrics
+	MetricStore                   metric.Store
 	Logger                        *zap.Logger
 }
 
@@ -284,7 +284,7 @@ func NewTransport(opts *TransportOptions) *TransportFactory {
 		retryOptions:                  opts.RetryOptions,
 		requestTimeout:                opts.RequestTimeout,
 		localhostFallbackInsideDocker: opts.LocalhostFallbackInsideDocker,
-		metrics:                       opts.Metrics,
+		metricStore:                   opts.MetricStore,
 		logger:                        opts.Logger,
 	}
 }
@@ -320,7 +320,7 @@ func (t TransportFactory) RoundTripper(enableSingleFlight bool, transport http.R
 		t.logger,
 		traceTransport,
 		t.retryOptions,
-		t.metrics,
+		t.metricStore,
 		enableSingleFlight,
 	)
 

@@ -253,11 +253,11 @@ func NewRouter(opts ...Option) (*Router, error) {
 	// Add default metric exporter if none are configured
 	if r.metricConfig.OpenTelemetry.Enabled && len(r.metricConfig.OpenTelemetry.Exporters) == 0 {
 		if endpoint := otelconfig.DefaultEndpoint(); endpoint != "" {
-			r.logger.Debug("Using default metrics exporter", zap.String("endpoint", endpoint))
+			r.logger.Debug("Using default metricStore exporter", zap.String("endpoint", endpoint))
 			r.metricConfig.OpenTelemetry.Exporters = append(r.metricConfig.OpenTelemetry.Exporters, &metric.OpenTelemetryExporter{
 				Endpoint: endpoint,
 				Exporter: otelconfig.ExporterOLTPHTTP,
-				HTTPPath: "/v1/metrics",
+				HTTPPath: "/v1/metricStore",
 				Headers:  otelconfig.DefaultEndpointHeaders(r.graphApiToken),
 			})
 		}
@@ -283,7 +283,7 @@ func NewRouter(opts ...Option) (*Router, error) {
 		if r.metricConfig.OpenTelemetry.Enabled {
 			defaultExporter := metric.GetDefaultExporter(r.metricConfig)
 			if defaultExporter != nil {
-				r.logger.Warn("No graph token provided. Metrics ingestion to Cosmo Cloud disabled. Please specify a custom trace exporter or provide a graph token.")
+				r.logger.Warn("No graph token provided. MetricStore ingestion to Cosmo Cloud disabled. Please specify a custom trace exporter or provide a graph token.")
 				defaultExporter.Disabled = true
 			}
 		}
@@ -514,7 +514,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		r.tracerProvider = tp
 	}
 
-	// Prometheus metrics rely on OTLP metrics
+	// Prometheus metricStore rely on OTLP metricStore
 	if r.metricConfig.IsEnabled() {
 		if r.metricConfig.Prometheus.Enabled {
 			mp, registry, err := metric.NewPrometheusMeterProvider(ctx, r.metricConfig)
@@ -551,12 +551,12 @@ func (r *Router) bootstrap(ctx context.Context) error {
 			graphqlmetrics.NewDefaultExporterSettings(),
 		)
 		if err := r.gqlMetricsExporter.Validate(); err != nil {
-			return fmt.Errorf("failed to validate graphql metrics exporter: %w", err)
+			return fmt.Errorf("failed to validate graphql metricStore exporter: %w", err)
 		}
 
 		r.gqlMetricsExporter.Start()
 
-		r.logger.Info("GraphQL schema coverage metrics enabled")
+		r.logger.Info("GraphQL schema coverage metricStore enabled")
 	}
 
 	// Modules are only initialized once and not on every config change
@@ -643,7 +643,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 					otel.WgRouterVersion.String(Version),
 				),
 			),
-			// Disable built-in metrics
+			// Disable built-in metricStore
 			otelhttp.WithMeterProvider(sdkmetric.NewMeterProvider()),
 			otelhttp.WithSpanNameFormatter(SpanNameFormatter),
 		)
@@ -708,9 +708,9 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 		r.logger.Info("localhost fallback enabled, connections that fail to connect to localhost will be retried using host.docker.internal")
 	}
 
-	var metricStore *metric.Metrics
+	metricStore := metric.NewNoopMetrics()
 
-	// Prometheus metrics rely on OTLP metrics
+	// Prometheus metricStore rely on OTLP metricStore
 	if r.metricConfig.IsEnabled() {
 		m, err := metric.NewMetrics(
 			r.metricConfig.Name,
@@ -743,7 +743,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 			RequestTimeout: r.subgraphTransportOptions.RequestTimeout,
 			PreHandlers:    r.preOriginHandlers,
 			PostHandlers:   r.postOriginHandlers,
-			Metrics:        metricStore,
+			MetricStore:    metricStore,
 			RetryOptions: retrytransport.RetryOptions{
 				Enabled:       r.retryOptions.Enabled,
 				MaxRetryCount: r.retryOptions.MaxRetryCount,
@@ -845,7 +845,7 @@ func (r *Router) newServer(ctx context.Context, routerConfig *nodev1.RouterConfi
 
 	graphqlChiRouter.Post("/", graphqlHandler.ServeHTTP)
 
-	// Serve GraphQL. Metrics are collected after the request is handled and classified as r GraphQL request.
+	// Serve GraphQL. MetricStore are collected after the request is handled and classified as r GraphQL request.
 	httpRouter.Mount(r.graphqlPath, graphqlChiRouter)
 
 	r.logger.Info("GraphQL endpoint",
@@ -928,7 +928,7 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 			defer wg.Done()
 
 			if subErr := r.gqlMetricsExporter.Shutdown(ctx); subErr != nil {
-				err = errors.Join(err, fmt.Errorf("failed to stop graphql metrics exporter: %w", subErr))
+				err = errors.Join(err, fmt.Errorf("failed to stop graphql metricStore exporter: %w", subErr))
 			}
 		}()
 	}

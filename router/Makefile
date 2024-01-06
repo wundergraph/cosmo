@@ -2,8 +2,7 @@ dev:
 	go run cmd/router/main.go
 
 test:
-	# Add -race once new test suite is in place
-	go test ./...
+	go test -race ./...
 
 lint:
 	go vet ./...

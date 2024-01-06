@@ -184,7 +184,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		newReq := r.WithContext(ctxWithOperation)
 
 		// Call the final handler that resolves the operation
-		// and enrich the context to make it available in the request context as well for metrics etc.
+		// and enrich the context to make it available in the request context as well for metricStore etc.
 		next.ServeHTTP(ww, newReq)
 
 		statusCode = ww.Status()
