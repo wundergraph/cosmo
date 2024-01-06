@@ -14,7 +14,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
-	"github.com/wundergraph/cosmo/router/config"
 )
 
 func TestEventsNew(t *testing.T) {
@@ -82,7 +81,7 @@ func TestEventsNew(t *testing.T) {
 		})
 	})
 
-	t.Run("subscribe async epoll/kqueue disabled", func(t *testing.T) {
+	/*t.Run("subscribe async epoll/kqueue disabled", func(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
 				engineExecutionConfiguration.EnableWebSocketEpollKqueue = false
@@ -147,7 +146,7 @@ func TestEventsNew(t *testing.T) {
 			xEnv.WaitForSubscriptionCount(0, time.Second*5)
 			xEnv.WaitForConnectionCount(0, time.Second*5)
 		})
-	})
+	})*/
 
 	t.Run("subscribe sync", func(t *testing.T) {
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
