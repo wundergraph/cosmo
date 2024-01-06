@@ -561,6 +561,10 @@ func (h *WebSocketConnectionHandler) executeSubscription(ctx context.Context, ms
 		rw.Complete()
 	case *plan.SubscriptionResponsePlan:
 		err = h.graphqlHandler.executor.Resolver.AsyncResolveGraphQLSubscription(resolveCtx, p.Response, rw.SubscriptionResponseWriter(), id)
+		if err != nil {
+			h.logger.Warn("resolving GraphQL subscription", zap.Error(err))
+			return
+		}
 	}
 }
 
@@ -634,7 +638,7 @@ func (h *WebSocketConnectionHandler) Initialize() (err error) {
 	h.logger.Debug("websocket connection", zap.String("protocol", h.protocol.Subprotocol()))
 	h.initialPayload, err = h.protocol.Initialize()
 	if err != nil {
-		h.requestError(fmt.Errorf("error initializing session: %w", err))
+		_ = h.requestError(fmt.Errorf("error initializing session: %w", err))
 		return
 	}
 	return
