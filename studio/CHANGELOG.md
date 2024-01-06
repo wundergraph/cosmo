@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.48.0](https://github.com/wundergraph/cosmo/compare/studio@0.47.3...studio@0.48.0) (2024-01-06)
+
+### Bug Fixes
+
+* api keys creation when rbac is off ([#404](https://github.com/wundergraph/cosmo/issues/404)) ([cc4ed0e](https://github.com/wundergraph/cosmo/commit/cc4ed0e26ca1e4f58011c3a6c2c887d70a53a021)) (@JivusAyrus)
+
+### Features
+
+* track subgraphs in metrics ([#405](https://github.com/wundergraph/cosmo/issues/405)) ([7b9f307](https://github.com/wundergraph/cosmo/commit/7b9f3074ea718d49135c5f46943002e37bef48e2)) (@StarpTech)
+
 ## [0.47.3](https://github.com/wundergraph/cosmo/compare/studio@0.47.2...studio@0.47.3) (2024-01-01)
 
 ### Bug Fixes
