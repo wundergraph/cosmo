@@ -1,5 +1,3 @@
-import { useApplyParams } from "@/components/analytics/use-apply-params";
-import { CodeViewerActions } from "@/components/code-viewer";
 import { CompositionErrorsBanner } from "@/components/composition-errors-banner";
 import {
   GraphContext,
@@ -25,7 +23,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import useWindowSize from "@/hooks/use-window-size";
 import { formatDateTime } from "@/lib/format-date";
 import { NextPageWithLayout } from "@/lib/page";
 import { Component2Icon } from "@radix-ui/react-icons";
@@ -106,13 +103,9 @@ const SDLPage: NextPageWithLayout = () => {
 
   useScrollIntoView(hash);
 
-  const applyParams = useApplyParams();
-
   const activeSubgraphObject = graphData?.subgraphs.find((each) => {
     return each.name === activeSubgraph;
   });
-
-  const { isTablet } = useWindowSize();
 
   const activeGraphWithSDL = activeSubgraph
     ? {
