@@ -1,9 +1,6 @@
-import {
-  AnalyticsFilter,
-  AnalyticsViewFilterOperator,
-  DateRange,
-} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { AnalyticsFilter, AnalyticsViewFilterOperator } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { ClickHouseClient } from '../../clickhouse/index.js';
+import { DateRange } from '../../../types/index.js';
 import {
   BaseFilters,
   buildAnalyticsViewFilters,
@@ -32,7 +29,7 @@ interface GetMetricsViewProps {
 
 interface GetMetricsProps {
   granule: string;
-  range: number;
+  rangeInHours: number;
   dateRange: {
     start: number;
     end: number;
@@ -54,7 +51,7 @@ export class MetricsRepository {
    * Get request rate metrics
    */
   public async getRequestRateMetrics({
-    range,
+    rangeInHours,
     granule,
     dateRange,
     prevDateRange,
@@ -63,7 +60,8 @@ export class MetricsRepository {
     whereSql,
     queryParams,
   }: GetMetricsProps) {
-    const multiplier = range * 60;
+    // to minutes
+    const multiplier = rangeInHours * 60;
 
     // get request rate in last [range]h
     const queryRate = (start: number, end: number) => {
@@ -85,6 +83,7 @@ export class MetricsRepository {
         queryParams,
       );
     };
+
     const requestRate = queryRate(dateRange.start, dateRange.end);
     const prevRequestRate = queryRate(prevDateRange.start, prevDateRange.end);
 
@@ -159,7 +158,7 @@ export class MetricsRepository {
           value: parseValue(v.value),
           isPersisted: v.isPersisted,
         })),
-        series: this.mapSeries(range, seriesResponse, prevSeriesResponse),
+        series: this.mapSeries(rangeInHours, seriesResponse, prevSeriesResponse),
       },
     };
   }
@@ -168,7 +167,7 @@ export class MetricsRepository {
    * Get latency metrics
    */
   public async getLatencyMetrics({
-    range,
+    rangeInHours,
     granule,
     dateRange,
     prevDateRange,
@@ -300,7 +299,7 @@ export class MetricsRepository {
           value: parseValue(v.value),
           isPersisted: v.isPersisted,
         })),
-        series: this.mapSeries(range, seriesResponse, prevSeriesResponse),
+        series: this.mapSeries(rangeInHours, seriesResponse, prevSeriesResponse),
       },
     };
   }
@@ -309,7 +308,7 @@ export class MetricsRepository {
    * Get error metrics
    */
   public async getErrorMetrics({
-    range,
+    rangeInHours,
     granule,
     dateRange,
     prevDateRange,
@@ -428,7 +427,7 @@ export class MetricsRepository {
           value: parseValue(v.value),
           isPersisted: v.isPersisted,
         })),
-        series: this.mapSeries(range, seriesResponse, prevSeriesResponse),
+        series: this.mapSeries(rangeInHours, seriesResponse, prevSeriesResponse),
       },
     };
   }
@@ -530,7 +529,7 @@ export class MetricsRepository {
 
     return {
       granule,
-      range: (diff / 60) * 60,
+      rangeInHours: diff,
       dateRange: {
         start,
         end,

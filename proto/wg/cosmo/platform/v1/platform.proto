@@ -218,7 +218,7 @@ message GetSubgraphsResponse {
 
 message GetFederatedGraphByNameRequest {
   string name = 1;
-  bool includeMetrics = 3;
+  bool includeMetrics = 2;
 }
 
 message GetFederatedGraphByNameResponse {
@@ -571,6 +571,9 @@ message GetAnalyticsViewResponse {
 
 message GetDashboardAnalyticsViewRequest {
   string federatedGraphName  = 1;
+  string startDate = 2;
+  string endDate = 3;
+  int32 range = 4;
 }
 
 message RequestSeriesItem {
@@ -585,10 +588,26 @@ message OperationRequestCount {
   int32 totalRequests = 3;
 }
 
+message FederatedGraphMetrics {
+  string federatedGraphID = 1;
+  float requestRate = 2;
+  float errorRate = 3;
+  float latency = 4;
+}
+
+message SubgraphMetrics {
+  string subgraphID = 1;
+  float requestRate = 2;
+  float errorRate = 3;
+  float latency = 4;
+}
+
 message GetDashboardAnalyticsViewResponse {
   Response response = 1;
   repeated RequestSeriesItem requestSeries = 2;
   repeated OperationRequestCount mostRequestedOperations = 3;
+  repeated SubgraphMetrics subgraphMetrics = 4;
+  FederatedGraphMetrics federatedGraphMetrics = 5;
 }
 
 message CreateFederatedGraphTokenRequest {

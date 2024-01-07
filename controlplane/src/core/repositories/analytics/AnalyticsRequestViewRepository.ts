@@ -11,6 +11,7 @@ import {
   Unit,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { ClickHouseClient } from '../../clickhouse/index.js';
+import { DateRange } from '../../../types/index.js';
 import {
   BaseFilters,
   ColumnMetaData,
@@ -654,8 +655,6 @@ export class AnalyticsRequestViewRepository {
         return filters.filter((f) => ['p95', 'httpStatusCode'].includes(f.field));
       }
     }
-
-    return [];
   }
 
   private getSortOrder = (id?: string, desc?: boolean) => {

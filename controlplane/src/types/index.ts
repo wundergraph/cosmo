@@ -406,3 +406,29 @@ export type DiscussionThreadDTO = {
   updatedAt: Date | null;
   createdById: string;
 }[];
+export interface SubgraphLatencyResult {
+  subgraphID: string;
+  latency: number;
+}
+
+export interface SubgraphRequestRateResult {
+  subgraphID: string;
+  requestRate: number;
+  errorRate: number;
+}
+
+export interface FederatedGraphRequestRateResult {
+  federatedGraphID: string;
+  requestRate: number;
+  errorRate: number;
+}
+
+export interface DateRange<T extends string | number = string> {
+  start: T;
+  end: T;
+}
+
+export type TimeFilters = {
+  granule: string;
+  dateRange: DateRange<number>;
+};

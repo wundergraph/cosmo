@@ -9,7 +9,7 @@ import (
 // RouterMetrics encapsulates all data and configuration that the router
 // uses to collect and its metrics
 type RouterMetrics struct {
-	metrics             *metric.Metrics
+	metrics             metric.Store
 	gqlMetricsExporter  *graphqlmetrics.Exporter
 	routerConfigVersion string
 }
@@ -29,7 +29,7 @@ func (m *RouterMetrics) StartOperation(clientInfo *ClientInfo, logger *zap.Logge
 	return metrics
 }
 
-func NewRouterMetrics(metrics *metric.Metrics, gqlMetrics *graphqlmetrics.Exporter, configVersion string) *RouterMetrics {
+func NewRouterMetrics(metrics metric.Store, gqlMetrics *graphqlmetrics.Exporter, configVersion string) *RouterMetrics {
 	return &RouterMetrics{
 		metrics:             metrics,
 		gqlMetricsExporter:  gqlMetrics,

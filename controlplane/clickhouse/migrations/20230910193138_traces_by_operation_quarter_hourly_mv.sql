@@ -17,7 +17,9 @@ CREATE MATERIALIZED VIEW IF NOT EXISTS cosmo.traces_by_operation_quarter_hourly_
     toUnixTimestamp(MAX(Timestamp)) as LastCalled
 FROM
     cosmo.otel_traces
-WHERE empty(ParentSpanId)
+WHERE
+    -- Only include the root spans
+    empty(ParentSpanId)
 GROUP BY
     Timestamp,
     FederatedGraphID,
