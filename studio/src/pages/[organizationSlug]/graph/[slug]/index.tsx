@@ -1,8 +1,15 @@
+import { RefreshInterval } from "@/components/analytics/refresh-interval";
+import { useApplyParams } from "@/components/analytics/use-apply-params";
+import { useAnalyticsQueryState } from "@/components/analytics/useAnalyticsQueryState";
 import {
   ComposeStatus,
   ComposeStatusMessage,
 } from "@/components/compose-status";
 import { CompositionErrorsDialog } from "@/components/composition-errors-dialog";
+import {
+  DatePickerWithRange,
+  DateRangePickerChangeHandler,
+} from "@/components/date-picker-with-range";
 import { RunRouterCommand } from "@/components/federatedgraphs-cards";
 import GraphVisualization from "@/components/graph-visualization";
 import {
@@ -11,8 +18,10 @@ import {
   getGraphLayout,
 } from "@/components/layout/graph-layout";
 import { MostRequested, RequestChart } from "@/components/operations-overview";
+import { OverviewToolbar } from "@/components/overview/OverviewToolbar";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -22,80 +31,28 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { CLI } from "@/components/ui/cli";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Toolbar } from "@/components/ui/toolbar";
+import { Spacer } from "@/components/ui/spacer";
+import { useFeatureLimit } from "@/hooks/use-feature-limit";
 import { formatDateTime } from "@/lib/format-date";
+import { NextPageWithLayout } from "@/lib/page";
 import {
   ExclamationCircleIcon,
   ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
-import { HomeIcon, RocketIcon, UpdateIcon } from "@radix-ui/react-icons";
-import Link from "next/link";
-import { useRouter } from "next/router";
-import React, { useContext, useState } from "react";
-import { TbBook } from "react-icons/tb";
-import { ReactFlowProvider } from "reactflow";
+import { RocketIcon, UpdateIcon } from "@radix-ui/react-icons";
 import {
   keepPreviousData,
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import {
-  DatePickerWithRange,
-  DateRangePickerChangeHandler,
-} from "@/components/date-picker-with-range";
-import { Spacer } from "@/components/ui/spacer";
-import { formatISO } from "date-fns";
-import { useApplyParams } from "@/components/analytics/use-apply-params";
-import { useFeatureLimit } from "@/hooks/use-feature-limit";
-import { useAnalyticsQueryState } from "@/components/analytics/useAnalyticsQueryState";
 import { getDashboardAnalyticsView } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { Button } from "@/components/ui/button";
-import { RefreshInterval } from "@/components/analytics/refresh-interval";
+import { formatISO } from "date-fns";
+import { useRouter } from "next/router";
+import { useContext, useState } from "react";
+import { ReactFlowProvider } from "reactflow";
 
-export const OverviewToolbar = ({ tab }: { tab: "overview" | "readme" }) => {
+const GraphOverviewPage: NextPageWithLayout = () => {
   const router = useRouter();
-
-  const query = {
-    organizationSlug: router.query.organizationSlug,
-    slug: router.query.slug,
-  };
-
-  return (
-    <Toolbar>
-      <Tabs value={tab} className="w-full md:w-auto">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="overview" asChild>
-            <Link
-              href={{
-                pathname: "/[organizationSlug]/graph/[slug]",
-                query,
-              }}
-              className="flex items-center gap-x-2"
-            >
-              <HomeIcon />
-              Overview
-            </Link>
-          </TabsTrigger>
-          <TabsTrigger value="readme" asChild>
-            <Link
-              href={{
-                pathname: "/[organizationSlug]/graph/[slug]/readme",
-                query,
-              }}
-              className="flex items-center gap-x-2"
-            >
-              <TbBook />
-              README
-            </Link>
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
-    </Toolbar>
-  );
-};
-
-const GraphOverviewPage = () => {
   const graphData = useContext(GraphContext);
   const [open, setOpen] = useState(false);
   const applyParams = useApplyParams();
@@ -165,38 +122,43 @@ const GraphOverviewPage = () => {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-2 space-y-2">
-        <div className="flex gap-2">
-          <div className="flex flex-wrap gap-2">
-            <DatePickerWithRange
-              range={range}
-              dateRange={dateRange}
-              onChange={onDateRangeChange}
-              calendarDaysLimit={analyticsRetention}
+    <GraphPageLayout
+      title="Graph Overview"
+      subtitle="An overview of your federated graph"
+      toolbar={
+        <OverviewToolbar tab="overview">
+          <div className="flex flex-wrap items-center gap-2 md:ml-auto">
+            <div className="flex w-full flex-wrap gap-2 md:w-auto">
+              <DatePickerWithRange
+                range={range}
+                dateRange={dateRange}
+                onChange={onDateRangeChange}
+                calendarDaysLimit={analyticsRetention}
+              />
+            </div>
+
+            <Spacer className="hidden md:block" />
+
+            <Button
+              isLoading={!!isFetching}
+              onClick={() => {
+                client.invalidateQueries({
+                  queryKey: getView.queryKey,
+                });
+              }}
+              variant="outline"
+              size="icon"
+            >
+              <UpdateIcon />
+            </Button>
+            <RefreshInterval
+              value={refreshInterval}
+              onChange={onRefreshIntervalChange}
             />
           </div>
-
-          <Spacer />
-
-          <Button
-            isLoading={!!isFetching}
-            onClick={() => {
-              client.invalidateQueries({
-                queryKey: getView.queryKey,
-              });
-            }}
-            variant="outline"
-            className="px-3"
-          >
-            <UpdateIcon />
-          </Button>
-          <RefreshInterval
-            value={refreshInterval}
-            onChange={onRefreshIntervalChange}
-          />
-        </div>
-      </div>
+        </OverviewToolbar>
+      }
+    >
       <div className="grid grid-rows-3 gap-4 lg:grid-cols-2">
         <div className="space-y-2 lg:col-span-1">
           <Card className="flex grow flex-col justify-between">
@@ -295,35 +257,24 @@ const GraphOverviewPage = () => {
           </Card>
         </div>
         <div className="lg:col-span-1">
-          <RequestChart
-            requestSeries={dashboardView?.requestSeries ?? []}
-            isLoading={dashboardViewLoading}
-          />
-        </div>
-        <div className="lg:col-span-1">
           <MostRequested
             data={dashboardView?.mostRequestedOperations ?? []}
             isLoading={dashboardViewLoading}
           />
         </div>
+        <div className="lg:col-span-2">
+          <RequestChart
+            requestSeries={dashboardView?.requestSeries ?? []}
+            isLoading={dashboardViewLoading}
+          />
+        </div>
       </div>
-    </div>
+    </GraphPageLayout>
   );
 };
 
-GraphOverviewPage.getLayout = (page: React.ReactNode) => {
-  return getGraphLayout(
-    <GraphPageLayout
-      title="Graph Overview"
-      subtitle="An overview of your federated graph"
-      toolbar={<OverviewToolbar tab="overview" />}
-    >
-      {page}
-    </GraphPageLayout>,
-    {
-      title: "Graph Overview",
-    },
-  );
+GraphOverviewPage.getLayout = (page) => {
+  return getGraphLayout(page, { title: "Graph Overview" });
 };
 
 export default GraphOverviewPage;

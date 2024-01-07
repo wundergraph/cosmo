@@ -4,6 +4,7 @@ import {
   GraphPageLayout,
   getGraphLayout,
 } from "@/components/layout/graph-layout";
+import { OverviewToolbar } from "@/components/overview/OverviewToolbar";
 import { CLI } from "@/components/ui/cli";
 import { docsBaseURL } from "@/lib/constants";
 import { CommandLineIcon } from "@heroicons/react/24/outline";
@@ -12,7 +13,6 @@ import { useContext } from "react";
 import Markdown from "react-markdown";
 import rehypeRaw from "rehype-raw";
 import remarkGfm from "remark-gfm";
-import { OverviewToolbar } from "./index";
 
 export const Empty = ({ fedGraphName }: { fedGraphName: string }) => {
   return (
