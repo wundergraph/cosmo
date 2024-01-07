@@ -14,6 +14,7 @@ import {
   customType,
   real,
 } from 'drizzle-orm/pg-core';
+import type { JSONContent } from '@tiptap/core';
 import { FeatureIds } from '../types/index.js';
 
 // JSON/JSONB custom types to workaround insert bug
@@ -1038,7 +1039,7 @@ export const discussionThread = pgTable('discussion_thread', {
       onDelete: 'cascade',
     }),
   contentMarkdown: text('content_markdown'),
-  contentJson: customJson('content_json'),
+  contentJson: customJson<JSONContent>('content_json'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }),
   createdById: uuid('created_by_id')
