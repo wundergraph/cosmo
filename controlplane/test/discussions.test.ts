@@ -137,7 +137,6 @@ describe('Discussions', (ctx) => {
     const discussionAfterSecondDeleteRes = await client.getDiscussion({
       discussionId: discussion.id,
     });
-    console.log(discussionAfterSecondDeleteRes.response);
     expect(discussionAfterSecondDeleteRes.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
 
     await server.close();
