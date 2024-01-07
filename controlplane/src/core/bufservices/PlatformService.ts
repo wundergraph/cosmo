@@ -5721,6 +5721,17 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
         const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
         const discussionRepo = new DiscussionRepository(opts.db, authContext.organizationId);
 
+        const exists = await discussionRepo.exists(req.discussionId);
+        if (!exists) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_NOT_FOUND,
+              details: 'Could not find discussion',
+            },
+            comments: [],
+          };
+        }
+
         const canAccessDiscussion = await discussionRepo.canAccessDiscussion(req.discussionId);
         if (!canAccessDiscussion) {
           return {
