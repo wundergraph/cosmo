@@ -1,37 +1,15 @@
 import { PlainMessage } from '@bufbuild/protobuf';
 import {
   ClientWithOperations,
-  DateRange,
   FieldUsageMeta,
   RequestSeriesItem,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { ClickHouseClient } from '../../clickhouse/index.js';
-import { getDateRange, getGranularity, isoDateRangeToTimestamps } from './util.js';
-
-type TimeFilters = {
-  granule: string;
-  dateRange: {
-    start: number;
-    end: number;
-  };
-};
+import { DateRange, TimeFilters } from '../../../types/index.js';
+import { parseTimeFilters } from './util.js';
 
 export class UsageRepository {
   constructor(private client: ClickHouseClient) {}
-
-  private parseTimeFilters(dateRange?: DateRange, range?: number): TimeFilters {
-    const granule = getGranularity(range);
-    const parsedDateRange = isoDateRangeToTimestamps(dateRange, range);
-    const [start, end] = getDateRange(parsedDateRange);
-
-    return {
-      granule,
-      dateRange: {
-        start,
-        end,
-      },
-    };
-  }
 
   private async getUsageRequestSeries(
     whereSql: string,
@@ -154,7 +132,7 @@ export class UsageRepository {
     organizationId: string;
     federatedGraphId: string;
   }) {
-    const timeFilters = this.parseTimeFilters(input.dateRange, input.range);
+    const timeFilters = parseTimeFilters(input.dateRange, input.range);
 
     let whereSql = `FederatedGraphID = '${input.federatedGraphId}' AND OrganizationID = '${input.organizationId}'`;
     if (input.typename) {

@@ -24,12 +24,12 @@ export default class Mailer {
   }
 
   public async sendInviteEmail({
-    recieverEmail,
+    receiverEmail,
     inviteLink,
     organizationName,
     invitedBy,
   }: {
-    recieverEmail: string;
+    receiverEmail: string;
     inviteLink: string;
     organizationName: string;
     invitedBy?: string;
@@ -37,10 +37,10 @@ export default class Mailer {
     const emailBody = readFileSync('./src/templates/email/organizationInvite.html').toString('utf8');
     let inviteBody;
     if (invitedBy) {
-      inviteBody = `Hello <strong>${recieverEmail}</strong>, you have been invited to the
+      inviteBody = `Hello <strong>${receiverEmail}</strong>, you have been invited to the
             <strong>${organizationName}</strong> organization by <strong>${invitedBy}</strong>.`;
     } else {
-      inviteBody = `Hello <strong>${recieverEmail}</strong>, you have been invited to the
+      inviteBody = `Hello <strong>${receiverEmail}</strong>, you have been invited to the
             <strong>${organizationName}</strong> organization.`;
     }
 
@@ -55,7 +55,7 @@ export default class Mailer {
 
     await this.client.sendMail({
       from: 'system@wundergraph.com',
-      to: recieverEmail,
+      to: receiverEmail,
       subject: `[WunderGraph Cosmo] You have been invited to the ${organizationName} organization.`,
       html: htmlBody,
     });
