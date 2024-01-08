@@ -20,10 +20,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Toolbar } from "@/components/ui/toolbar";
 import { useUser } from "@/hooks/use-user";
 import { NextPageWithLayout } from "@/lib/page";
-import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
+import {
+  BookOpenIcon,
+  ExclamationTriangleIcon,
+} from "@heroicons/react/24/outline";
 import {
   ArrowRightIcon,
   CheckCircledIcon,
@@ -150,6 +154,7 @@ const DiscussionsPage: NextPageWithLayout = () => {
   const graphName = router.query.slug as string;
   const organizationSlug = router.query.organizationSlug as string;
   const subgraphName = router.query.subgraph as string;
+  const resolved = router.query.resolved as string;
 
   const graphData = useContext(GraphContext);
 
@@ -172,20 +177,22 @@ const DiscussionsPage: NextPageWithLayout = () => {
     enabled: !!selectedGraph,
   });
 
-  const discussionsBySchema = data?.discussions.reduce(
-    (acc, discussion) => {
-      const schemaVersionId = discussion.schemaVersionId;
+  const discussionsBySchema = data?.discussions
+    .filter((d) => d.isResolved === !!resolved)
+    .reduce(
+      (acc, discussion) => {
+        const schemaVersionId = discussion.schemaVersionId;
 
-      if (!acc[schemaVersionId]) {
-        acc[schemaVersionId] = [];
-      }
+        if (!acc[schemaVersionId]) {
+          acc[schemaVersionId] = [];
+        }
 
-      acc[schemaVersionId].push(discussion);
+        acc[schemaVersionId].push(discussion);
 
-      return acc;
-    },
-    {} as Record<string, Discussion[]>,
-  );
+        return acc;
+      },
+      {} as Record<string, Discussion[]>,
+    );
 
   return (
     <PageHeader title="Discussions | Studio">
@@ -194,7 +201,31 @@ const DiscussionsPage: NextPageWithLayout = () => {
         subtitle="View discussions across schema versions of your graph"
         toolbar={
           <Toolbar>
-            <div className="relative w-full md:w-auto">
+            <Tabs
+              defaultValue="open"
+              className="w-full md:w-max"
+              onValueChange={(v) =>
+                applyParams({
+                  resolved: v === "resolved" ? "true" : null,
+                })
+              }
+            >
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="open">
+                  <div className="flex items-center gap-x-2">
+                    <BookOpenIcon className="h-4 w-4" />
+                    Open
+                  </div>
+                </TabsTrigger>
+                <TabsTrigger value="resolved">
+                  <div className="flex items-center gap-x-2">
+                    <CheckCircledIcon className="h-4 w-4" />
+                    Resolved
+                  </div>
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+            <div className="relative ml-auto w-full md:w-auto">
               <MagnifyingGlassIcon className="absolute bottom-0 left-3 top-0 my-auto" />
               <Input
                 placeholder="Filter by schema version"
@@ -231,7 +262,7 @@ const DiscussionsPage: NextPageWithLayout = () => {
             >
               <SelectTrigger
                 value={selectedGraph?.name ?? ""}
-                className="w-full md:ml-auto md:w-[200px]"
+                className="w-full md:w-[200px]"
               >
                 <SelectValue aria-label={selectedGraph?.name ?? ""}>
                   {selectedGraph?.name ?? ""}
