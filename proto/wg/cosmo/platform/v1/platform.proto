@@ -177,6 +177,7 @@ message FederatedGraph {
   int32 connectedSubgraphs = 8;
   repeated RequestSeriesItem requestSeries = 9;
   optional string readme = 10;
+  string target_id = 11;
 }
 
 message GetFederatedGraphsResponse {
@@ -207,6 +208,7 @@ message Subgraph {
   optional string creatorUserId = 6;
   optional string readme = 7;
   string subscriptionUrl = 8;
+  string target_id = 9;
 }
 
 message GetSubgraphsResponse {
@@ -234,6 +236,7 @@ message GetFederatedGraphSDLByNameRequest {
 message GetFederatedGraphSDLByNameResponse {
   Response response = 1;
   optional string sdl = 2;
+  optional string version_id = 3;
 }
 
 message GetSubgraphByNameRequest {
@@ -254,6 +257,7 @@ message GetLatestValidSubgraphSDLByNameRequest {
 message GetLatestValidSubgraphSDLByNameResponse {
   Response response = 1;
   optional string sdl = 2;
+  optional string version_id = 3;
 }
 
 message GetLatestSubgraphSDLByNameRequest {
@@ -263,6 +267,7 @@ message GetLatestSubgraphSDLByNameRequest {
 message GetLatestSubgraphSDLByNameResponse {
   Response response = 1;
   optional string sdl = 2;
+  optional string version_id = 3;
 }
 
 message GetChecksByFederatedGraphNameRequest {
@@ -1391,6 +1396,108 @@ message GetFieldUsageResponse {
   FieldUsageMeta meta = 4;
 }
 
+message CreateDiscussionRequest {
+  string target_id = 1;
+  string content_markdown = 2;
+  string content_json = 3;
+  string schema_version_id = 4;
+  int32 reference_line = 5;
+}
+
+message CreateDiscussionResponse {
+  Response response = 1;
+}
+
+message UpdateDiscussionCommentRequest {
+  string discussion_id = 1;
+  string comment_id = 2;
+  string content_markdown = 3;
+  string content_json = 4;
+}
+
+message UpdateDiscussionCommentResponse {
+  Response response = 1;
+}
+
+message DeleteDiscussionCommentRequest {
+  string discussion_id = 1;
+  string comment_id = 2;
+}
+
+message DeleteDiscussionCommentResponse {
+  Response response = 1;
+}
+
+message ReplyToDiscussionRequest {
+  string discussion_id = 2;
+  string content_markdown = 3;
+  string content_json = 4;
+}
+
+message ReplyToDiscussionResponse {
+  Response response = 1;
+}
+
+message GetAllDiscussionsRequest {
+  string target_id = 1;
+  optional string schema_version_id = 2;
+}
+
+message Discussion {
+  string id = 1;
+  string schema_version_id = 2; 
+  string target_id = 3;
+  int32 reference_line = 4;
+  DiscussionComment openingComment = 5;
+  bool is_resolved = 6;
+}
+
+message DiscussionComment {
+  string id = 1;
+  string content_json = 2;
+  string created_by = 3;
+  string created_at = 4;
+  optional string updated_at = 5;
+}
+
+message GetAllDiscussionsResponse {  
+  Response response = 1;
+  repeated Discussion discussions = 2;
+}
+
+message GetDiscussionRequest {
+  string discussion_id = 1;
+}
+
+message GetDiscussionResponse {
+  Response response = 1;
+  Discussion discussion  = 2;
+  repeated DiscussionComment comments = 3;
+}
+
+message GetDiscussionSchemasRequest {
+  string discussion_id = 1;
+}
+
+message GetDiscussionSchemasResponse {
+  message Schemas {
+    string reference = 1;
+    string latest = 2;
+  }
+
+  Response response = 1;
+  Schemas schemas = 4;
+}
+
+message SetDiscussionResolutionRequest {
+  string discussion_id = 1;
+  bool is_resolved = 2;
+}
+
+message SetDiscussionResolutionResponse {
+  Response response = 1;
+}
+
 service PlatformService {
   // CreateFederatedGraph creates a federated graph on the control plane.
   rpc CreateFederatedGraph(CreateFederatedGraphRequest) returns (CreateFederatedGraphResponse) {}
@@ -1542,6 +1649,22 @@ service PlatformService {
   rpc RemoveSubgraphMember(RemoveSubgraphMemberRequest) returns (RemoveSubgraphMemberResponse) {}
   // GetSubgraphMembers gets all the members of the subgraph
   rpc GetSubgraphMembers(GetSubgraphMembersRequest) returns (GetSubgraphMembersResponse) {}
+  // CreateDiscussion creates a new discussion with an opening comment
+  rpc CreateDiscussion(CreateDiscussionRequest) returns (CreateDiscussionResponse) {}
+  // ReplyToDiscussion creates a new comment in the discussion
+  rpc ReplyToDiscussion(ReplyToDiscussionRequest) returns (ReplyToDiscussionResponse) {}
+  // GetAllDiscussions fetches all discussions which may be scoped to a schema version if passed
+  rpc GetAllDiscussions(GetAllDiscussionsRequest) returns (GetAllDiscussionsResponse) {}
+  // UpdateDiscussionComment edits the comment in the discussion
+  rpc UpdateDiscussionComment(UpdateDiscussionCommentRequest) returns (UpdateDiscussionCommentResponse) {}
+  // DeleteDiscussionComment deletes the comment or the discussion if it is an opening comment
+  rpc DeleteDiscussionComment(DeleteDiscussionCommentRequest) returns (DeleteDiscussionCommentResponse) {}
+  // GetDiscussion gets the entire discussion thread
+  rpc GetDiscussion(GetDiscussionRequest) returns (GetDiscussionResponse) {}
+  // GetDiscussionSchemas gets the reference and latest schema of the target graph in which the discussion was created
+  rpc GetDiscussionSchemas(GetDiscussionSchemasRequest) returns (GetDiscussionSchemasResponse) {}
+  // SetDiscussionResolutionRequest marks the discussion as resolved or not
+  rpc SetDiscussionResolution(SetDiscussionResolutionRequest) returns (SetDiscussionResolutionResponse) {}
   // AddReadme adds a readme of a target, can be a subgraph or a federated graph
   rpc AddReadme(AddReadmeRequest) returns (AddReadmeResponse) {}
 

@@ -7,10 +7,15 @@ import {
   GraphQLScalarType,
   GraphQLSchema,
   GraphQLUnionType,
+  Location,
   buildASTSchema,
   isObjectType,
   parse,
 } from "graphql";
+import babelPlugin from "prettier/plugins/babel";
+import estreePlugin from "prettier/plugins/estree";
+import graphQLPlugin from "prettier/plugins/graphql";
+import * as prettier from "prettier/standalone";
 
 export const graphqlTypeCategories = [
   "objects",
@@ -42,7 +47,9 @@ export type GraphQLField = {
     defaultValue: any;
     type: string;
     deprecationReason: string;
+    loc?: Location;
   }>;
+  loc?: Location;
 };
 
 export type GraphQLTypeDefinition = {
@@ -51,6 +58,7 @@ export type GraphQLTypeDefinition = {
   description: string;
   interfaces?: string[];
   fields?: GraphQLField[];
+  loc?: Location;
 };
 
 export const mapGraphQLType = (
@@ -65,6 +73,7 @@ export const mapGraphQLType = (
   const common = {
     name: graphqlType.name,
     description: graphqlType.description || "",
+    loc: graphqlType.astNode?.loc,
   };
 
   if (
@@ -88,7 +97,9 @@ export const mapGraphQLType = (
           defaultValue: arg.defaultValue,
           type: arg.type.toString(),
           deprecationReason: arg.deprecationReason || "",
+          loc: arg.astNode?.loc,
         })),
+        loc: field.astNode?.loc,
       })),
     };
   }
@@ -103,6 +114,7 @@ export const mapGraphQLType = (
         deprecationReason: field.deprecationReason || "",
         defaultValue: field.defaultValue,
         type: field.type.toString(),
+        loc: field.astNode?.loc,
       })),
     };
   }
@@ -115,6 +127,7 @@ export const mapGraphQLType = (
         name: value.name,
         description: value.description || "",
         deprecationReason: value.deprecationReason || "",
+        loc: value.astNode?.loc,
       })),
     };
   }
@@ -132,6 +145,7 @@ export const mapGraphQLType = (
       category: "unions",
       fields: graphqlType.getTypes().map((type) => ({
         name: type.name,
+        loc: type.astNode?.loc,
       })),
     };
   }
@@ -280,13 +294,18 @@ export const getRootDescription = (name: string) => {
   return getCategoryDescription(noCase(name) as GraphQLTypeCategory);
 };
 
-export const parseSchema = (schema?: string) => {
+export const parseSchema = async (schema?: string) => {
   if (!schema) {
     return null;
   }
 
   try {
-    const doc = parse(schema);
+    const res = await prettier.format(schema, {
+      parser: "graphql",
+      plugins: [graphQLPlugin, estreePlugin, babelPlugin],
+    });
+
+    const doc = parse(res);
 
     const ast = buildASTSchema(doc, {
       assumeValid: true,
@@ -297,4 +316,51 @@ export const parseSchema = (schema?: string) => {
   } catch {
     return null;
   }
+};
+
+export const getGraphQLTypeAtLineNumber = (
+  astSchema: GraphQLSchema,
+  lineNumber: number,
+): GraphQLTypeDefinition | null => {
+  const allTypes = Object.values(astSchema.getTypeMap()).filter(
+    (type) => !type.name.startsWith("__"),
+  );
+
+  for (const type of allTypes) {
+    if (type.astNode && type.astNode.loc) {
+      const { startToken, endToken } = type.astNode.loc;
+
+      if (startToken.line <= lineNumber && endToken.line >= lineNumber) {
+        return mapGraphQLType(type);
+      }
+    }
+
+    if (isObjectType(type)) {
+      const fields = type.getFields();
+
+      for (const field of Object.values(fields)) {
+        if (field.astNode && field.astNode.loc) {
+          const { startToken, endToken } = field.astNode.loc;
+
+          if (startToken.line <= lineNumber && endToken.line >= lineNumber) {
+            return mapGraphQLType(type);
+          }
+        }
+
+        const args = field.args;
+
+        for (const arg of args) {
+          if (arg.astNode && arg.astNode.loc) {
+            const { startToken, endToken } = arg.astNode.loc;
+
+            if (startToken.line <= lineNumber && endToken.line >= lineNumber) {
+              return mapGraphQLType(type);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return null;
 };

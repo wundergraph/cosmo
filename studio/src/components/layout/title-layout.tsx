@@ -27,14 +27,10 @@ export const TitleLayout = ({
         "h-screen": disableStarBanner !== "false",
       })}
     >
-      <div className="bg-background">
+      <div className="flex w-full flex-wrap items-center justify-between gap-4 border-b bg-background py-4">
         <div
           className={cn(
-            "flex flex-col justify-between gap-y-4 px-4 pb-2 pt-4 lg:flex-row lg:items-center lg:px-8",
-            {
-              "border-b": !toolbar,
-              "pb-6": !toolbar,
-            },
+            "flex flex-col justify-between gap-y-4 px-4 lg:flex-row lg:items-center lg:px-8",
           )}
         >
           <div>

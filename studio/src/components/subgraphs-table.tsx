@@ -1,6 +1,10 @@
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useFeature } from "@/hooks/use-feature";
+import { useHas } from "@/hooks/use-has";
 import { useUser } from "@/hooks/use-user";
 import { docsBaseURL } from "@/lib/constants";
 import { CommandLineIcon } from "@heroicons/react/24/outline";
+import { InfoCircledIcon } from "@radix-ui/react-icons";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   addSubgraphMember,
@@ -15,6 +19,7 @@ import {
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
+import { useRouter } from "next/router";
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
 import { IoPersonAdd } from "react-icons/io5";
 import { EmptyState } from "./empty-state";
@@ -50,10 +55,6 @@ import {
   TooltipTrigger,
 } from "./ui/tooltip";
 import { useToast } from "./ui/use-toast";
-import { InfoCircledIcon } from "@radix-ui/react-icons";
-import { useHas } from "@/hooks/use-has";
-import { useRouter } from "next/router";
-import { useFeature } from "@/hooks/use-feature";
 
 export const Empty = ({ graph }: { graph?: FederatedGraph }) => {
   let label = "team=A";
@@ -147,10 +148,13 @@ export const AddSubgraphUsersContent = ({
   return (
     <div className="flex flex-col gap-y-6">
       {!rbac?.enabled ? (
-        <div className="mt-4 flex items-center gap-x-2 rounded-lg border !border-primary-foreground px-4 py-2 text-sm text-primary-foreground">
-          <InfoCircledIcon className="h-[18px] w-[18px]" />
-          <span>Enable RBAC in the settings to add subgraph members.</span>
-        </div>
+        <Alert>
+          <InfoCircledIcon className="h-4 w-4" />
+          <AlertTitle>Attention!</AlertTitle>
+          <AlertDescription>
+            Enable RBAC in the settings to add subgraph members.
+          </AlertDescription>
+        </Alert>
       ) : (
         inviteOptions.length === 0 && (
           <div className="mt-4 flex items-center gap-x-2 rounded-lg border !border-primary-foreground px-4 py-2 text-sm text-primary-foreground">
@@ -394,7 +398,7 @@ export const SubgraphsTable = ({
                       })
                     : "Never"}
                 </TableCell>
-                <TableCell className="flex">
+                <TableCell className="flex justify-end">
                   {rbac && (
                     <AddSubgraphUsers
                       subgraphName={name}
